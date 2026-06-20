@@ -74,7 +74,7 @@ export async function fetchCustomerById(id) {
 export async function createCustomer(customerData) {
   await delay(500); // شبیه‌سازی تاخیر شبکه
   
-  const newId = `C${String(allCustomers.length + 1).padStart(3, "0")}`;
+  const newId = `${String(allCustomers.length + 1)}`;
   
   const newCustomer = {
     id: newId,

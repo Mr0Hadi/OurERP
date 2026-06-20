@@ -18,7 +18,6 @@
     CUSTOMERS: '/customers',
     CUSTOMERS_LIST: '/customers',
     CUSTOMERS_NEW: '/customers/new',
-    CUSTOMERS_EDIT: '/customers/edit/:id',
     CUSTOMERS_DETAIL: '/customers/:id',
     
     // محصولات/کالاها
