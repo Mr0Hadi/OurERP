@@ -221,21 +221,7 @@ export const navigationData = {
           permission: "inventory_create",
           icon: PlusCircle,
           description: "ثبت کالای جدید",
-        },
-        {
-          title: "موجودی انبار",
-          url: ROUTES.WAREHOUSE_STOCK,
-          permission: "inventory_stock",
-          icon: Warehouse,
-          description: "مشاهده موجودی کالاها",
-        },
-        {
-          title: "ورود و خروج کالا",
-          url: ROUTES.WAREHOUSE_TRANSACTIONS,
-          permission: "inventory_stock",
-          icon: ClipboardList,
-          description: "مدیریت ورود و خروج کالا",
-        },
+        }
       ],
     },
     {

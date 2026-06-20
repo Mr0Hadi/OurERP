@@ -25,7 +25,6 @@
     PRODUCTS: '/products',
     PRODUCTS_LIST: '/products',
     PRODUCTS_NEW: '/products/new',
-    PRODUCTS_EDIT: '/products/edit/:id',
     PRODUCTS_DETAIL: '/products/:id',
     
     // خرید
