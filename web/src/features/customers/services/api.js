@@ -23,7 +23,7 @@ export async function fetchCustomers({
     result = result.filter(
       (c) =>
         `${c.firstName} ${c.lastName}`.toLowerCase().includes(q) ||
-        c.id.toLowerCase().includes(q)
+        c.id.toString().toLowerCase().includes(q)
     );
   }
 
@@ -65,7 +65,50 @@ export async function fetchCustomers({
 
 export async function fetchCustomerById(id) {
   await delay(300);
-  const customer = allCustomers.find((c) => c.id === id);
+  const customer = allCustomers.find((c) => c.id == id);
   if (!customer) throw new Error("مشتری یافت نشد");
   return customer;
 }
+
+
+export async function createCustomer(customerData) {
+  await delay(500); // شبیه‌سازی تاخیر شبکه
+  
+  const newId = `C${String(allCustomers.length + 1).padStart(3, "0")}`;
+  
+  const newCustomer = {
+    id: newId,
+    ...customerData,
+  };
+
+  // اضافه کردن به داده‌های موک (در واقعیت سمت سرور انجام می‌شود)
+  allCustomers.push(newCustomer);
+  
+  return newCustomer;
+}
+
+// گرفتن اطلاعات یک مشتری با ID
+export const getCustomerById = async (id) => {
+  // شبیه‌سازی تاخیر شبکه
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  
+  const customer = allCustomers.find((c) => c.id == id);
+  if (!customer) {
+    throw new Error("مشتری یافت نشد");
+  }
+  return customer;
+};
+
+// ویرایش اطلاعات مشتری
+export const updateCustomer = async (id, updatedData) => {
+  await new Promise((resolve) => setTimeout(resolve, 800));
+  
+  const index = allCustomers.findIndex((c) => c.id === id);
+  if (index === -1) {
+    throw new Error("مشتری یافت نشد");
+  }
+  
+  // به‌روزرسانی در لیست موک شده
+  allCustomers[index] = { ...allCustomers[index], ...updatedData };
+  return allCustomers[index];
+};
