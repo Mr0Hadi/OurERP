@@ -1,42 +1,35 @@
-// features/inventory/services/api.js
 import { allProducts } from './mockData';
 
-// تابع شبیه‌سازی فیلتر و صفحه‌بندی
 export const fetchProducts = async (params) => {
-  // شبیه‌سازی تأخیر شبکه
   await new Promise(resolve => setTimeout(resolve, 500));
 
   let filteredProducts = [...allProducts];
 
-  // جستجوی سراسری (در sku، name، brand)
   if (params.search) {
     const searchTerm = params.search.toLowerCase();
     filteredProducts = filteredProducts.filter(p =>
-      p.sku.toLowerCase().includes(searchTerm) ||
+      p.code.toLowerCase().includes(searchTerm) ||
       p.name.toLowerCase().includes(searchTerm) ||
       p.brand.toLowerCase().includes(searchTerm)
     );
   }
 
-  // فیلتر برند
   if (params.brand) {
     filteredProducts = filteredProducts.filter(p => p.brand === params.brand);
   }
 
-  // فیلتر دسته‌بندی
   if (params.category) {
     filteredProducts = filteredProducts.filter(p => p.category === params.category);
   }
 
-  // فیلتر محدوده قیمت
+  // فیلتر محدوده قیمت - اصلاح price به retailPrice
   if (params.minPrice) {
-    filteredProducts = filteredProducts.filter(p => p.price >= Number(params.minPrice));
+    filteredProducts = filteredProducts.filter(p => p.retailPrice >= Number(params.minPrice));
   }
   if (params.maxPrice) {
-    filteredProducts = filteredProducts.filter(p => p.price <= Number(params.maxPrice));
+    filteredProducts = filteredProducts.filter(p => p.retailPrice <= Number(params.maxPrice));
   }
 
-  // فیلتر وضعیت موجودی
   if (params.stockStatus) {
     switch (params.stockStatus) {
       case 'inStock':
@@ -53,7 +46,6 @@ export const fetchProducts = async (params) => {
     }
   }
 
-  // مرتب‌سازی
   if (params.sortBy) {
     const sortField = params.sortBy;
     const sortOrder = params.sortOrder === 'desc' ? -1 : 1;
@@ -64,7 +56,6 @@ export const fetchProducts = async (params) => {
     });
   }
 
-  // صفحه‌بندی
   const page = params.page || 1;
   const limit = params.limit || 10;
   const startIndex = (page - 1) * limit;
@@ -79,7 +70,6 @@ export const fetchProducts = async (params) => {
   };
 };
 
-// سایر توابع (مثل fetchProductById) نیز می‌توانند از داده‌های mock استفاده کنند
 export const fetchProductById = async (id) => {
   await new Promise(resolve => setTimeout(resolve, 300));
   const product = allProducts.find(p => p.id === Number(id));

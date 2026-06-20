@@ -1,8 +1,8 @@
 import { useProductsQuery } from "../services/queries";
 import useProductFilterStore from "../store/productFilterStore";
 import { useDebouncedFilters } from "../hooks/useDebouncedFilters";
-import ProductTable from "../components/ProductTable";
-import ProductFilters from "../components/ProductFilters";
+import ProductTable from "../components/table/ProductTable";
+import ProductFilters from "../components/table/ProductFilters";
 import {
   Card,
   CardContent,

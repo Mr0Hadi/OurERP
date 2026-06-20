@@ -88,7 +88,7 @@ const ProductTable = ({
   const columns = useMemo(
     () => [
       {
-        accessorKey: "sku",
+        accessorKey: "code",
         header: "کد کالا",
         cell: (info) => (
           <span className="font-mono text-xs text-muted-foreground">
@@ -106,7 +106,7 @@ const ProductTable = ({
       { accessorKey: "brand", header: "برند" },
       { accessorKey: "category", header: "دسته‌بندی" },
       {
-        accessorKey: "price",
+        accessorKey: "retailPrice",
         header: "قیمت (تومان)",
         cell: (info) => (
           <span className="tabular-nums">

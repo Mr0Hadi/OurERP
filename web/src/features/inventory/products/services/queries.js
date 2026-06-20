@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { keepPreviousData } from "@tanstack/react-query";
-import { fetchProducts } from "./api";
+import { fetchProducts, fetchProductById } from "./api"; 
 import { productKeys } from "./queryKeys";
 
 export function useProductsQuery(filters, pagination, sorting) {
@@ -33,5 +33,15 @@ export function useProductsQuery(filters, pagination, sorting) {
     placeholderData: keepPreviousData, // جایگزین keepPreviousData قدیمی در v5
     staleTime: 1000 * 60 * 3,         // 3 دقیقه برای لیست
     gcTime: 1000 * 60 * 10,           // 10 دقیقه cache
+  });
+}
+
+// اضافه کردن هوک برای یک محصول
+export function useProductQuery(id) {
+  return useQuery({
+    queryKey: productKeys.detail(id),
+    queryFn: () => fetchProductById(id), // استفاده از تابع موجود در api.js
+    enabled: !!id,
+    staleTime: 1000 * 60 * 5, 
   });
 }

@@ -165,3 +165,23 @@
     border-radius: 9999px;
   }
 }
+
+
+/* برای راحتی بهتر کارکردن با ورودی های عددی : dir="ltr" */
+.input-rtl-placeholder::placeholder {
+  text-align: right;
+}
+
+input[type="number"]::placeholder {
+  text-align: right;
+  direction: rtl;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}

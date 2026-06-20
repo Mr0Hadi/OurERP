@@ -11,24 +11,44 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import useProductFilterStore from "../store/productFilterStore";
+import useProductFilterStore from "../../store/productFilterStore";
 
 // ─── ثابت‌ها (خارج از کامپوننت تا در هر رندر بازسازی نشوند) ─────────────────
 
 const BRANDS = [
-  "بوش", "مان", "ساکس", "لنکر", "تویس", "ماله", "فیلیپس",
-  "سپاهان باتری", "مونرو", "لوک", "ویدا", "دنسو", "الرینگ",
-  "قطعه گستر", "میتسوبیشی", "برمبو", "هالا",
+  "بوش",
+  "مان",
+  "ساکس",
+  "لنکر",
+  "تویس",
+  "ماله",
+  "فیلیپس",
+  "سپاهان باتری",
+  "مونرو",
+  "لوک",
+  "ویدا",
+  "دنسو",
+  "الرینگ",
+  "قطعه گستر",
+  "میتسوبیشی",
+  "برمبو",
+  "هالا",
 ];
 
 const CATEGORIES = [
-  "موتور", "سیستم ترمز", "سیستم تعلیق", "بدنه",
-  "گیربکس", "سیستم خنک کننده", "برق و روشنایی", "برق و الکترونیک",
+  "موتور",
+  "سیستم ترمز",
+  "سیستم تعلیق",
+  "بدنه",
+  "گیربکس",
+  "سیستم خنک کننده",
+  "برق و روشنایی",
+  "برق و الکترونیک",
 ];
 
 const STOCK_OPTIONS = [
-  { value: "inStock",    label: "موجود (بیش از ۱۰)" },
-  { value: "lowStock",   label: "کمتر از ۱۰" },
+  { value: "inStock", label: "موجود (بیش از ۱۰)" },
+  { value: "lowStock", label: "کمتر از ۱۰" },
   { value: "outOfStock", label: "ناموجود" },
 ];
 
@@ -46,12 +66,21 @@ const normalize = (value) => (value === "all" ? "" : value);
  * @param {string}   allLabel    - متن گزینه «همه» (پیش‌فرض: «همه»)
  * @param {object[]} options     - آرایه‌ای از { value, label } یا رشته
  */
-const FilterSelect = ({ label, value, onChange, allLabel = "همه", options }) => (
+const FilterSelect = ({
+  label,
+  value,
+  onChange,
+  allLabel = "همه",
+  options,
+}) => (
   <div className="flex flex-col sm:flex-row sm:items-center gap-3">
     <Label className="whitespace-nowrap font-medium text-foreground">
       {label}
     </Label>
-    <Select value={value || "all"} onValueChange={(v) => onChange(normalize(v))}>
+    <Select
+      value={value || "all"}
+      onValueChange={(v) => onChange(normalize(v))}
+    >
       <SelectTrigger className="flex-1 w-full">
         <SelectValue placeholder={allLabel} />
       </SelectTrigger>
@@ -87,6 +116,7 @@ const PriceInput = ({ label, value, onChange, placeholder }) => (
     </Label>
     <Input
       type="number"
+      
       placeholder={placeholder}
       value={value}
       onChange={onChange}
@@ -136,10 +166,8 @@ const ProductFilters = () => {
 
   return (
     <div className="p-3 bg-card border border-border rounded-xl shadow-sm space-y-3">
-
       {/* ردیف اول: جستجو، برند، دسته‌بندی، وضعیت موجودی */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-
         {/* جستجوی متنی */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <Label className="whitespace-nowrap font-medium text-foreground">
@@ -180,7 +208,6 @@ const ProductFilters = () => {
 
       {/* ردیف دوم: محدوده قیمت + دکمه ریست */}
       <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-5 gap-5 pt-3 border-t border-border">
-
         <PriceInput
           label="حداقل قیمت (تومان)"
           value={minPrice}
