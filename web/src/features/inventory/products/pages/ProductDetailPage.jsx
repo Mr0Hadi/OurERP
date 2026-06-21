@@ -1,22 +1,21 @@
 // src/features/inventory/products/pages/ProductDetailPage.jsx
 import { useNavigate, useParams } from "react-router-dom";
-import toast from "react-hot-toast";
 import { Save } from "lucide-react";
+import { useEffect } from "react";
 
 import { Button } from "#/shared/components/ui/button";
 import { useProductQuery } from "../services/queries";
+import { useUpdateProductMutation } from "../services/mutations";
 import { useProductForm } from "../hooks/useProductForm";
 import ProductBasicInfoForm from "../components/forms/ProductBasicInfoForm";
 import ProductPricingForm from "../components/forms/ProductPricingForm";
 import ProductImageUpload from "../components/forms/ProductImageUpload";
 import ProductBarcodeDisplay from "../components/forms/ProductBarcodeDisplay";
 import ProductDetailLoading from "../components/forms/ProductDetailLoading";
-
 import { useHeaderStore } from "#/shared/store/headerStore";
-import { useEffect } from "react";
 
 function ProductDetailForm({ productData }) {
-  const navigate = useNavigate();
+  const updateMutation = useUpdateProductMutation(productData.id);
 
   const {
     formMethods,
@@ -34,18 +33,15 @@ function ProductDetailForm({ productData }) {
     formState: { errors, isSubmitting },
   } = formMethods;
 
-  const onSubmit = async (data) => {
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      const payload = { ...data, image: imagePreview };
-      console.log("Product Data to update:", payload);
-      toast.success("کالا با موفقیت ویرایش شد!");
-      navigate("/products");
-    } catch (error) {
-      console.error("Error updating product:", error);
-      toast.error("خطا در ویرایش کالا");
-    }
+  const onSubmit = (data) => {
+    const payload = {
+      ...data,
+      imageUrl: imagePreview ?? productData.imageUrl ?? "",
+    };
+    updateMutation.mutate(payload);
   };
+
+  const isBusy = isSubmitting || updateMutation.isPending;
 
   return (
     <div className="container mx-auto animate-in fade-in zoom-in-95 duration-300">
@@ -73,9 +69,9 @@ function ProductDetailForm({ productData }) {
           <Button
             type="submit"
             className="w-full h-12 text-md"
-            disabled={isSubmitting}
+            disabled={isBusy}
           >
-            {isSubmitting ? (
+            {isBusy ? (
               "در حال به‌روزرسانی..."
             ) : (
               <>
@@ -93,7 +89,6 @@ function ProductDetailForm({ productData }) {
 export default function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-
   const setHeader = useHeaderStore((state) => state.setHeader);
   const clearHeader = useHeaderStore((state) => state.clearHeader);
 
@@ -107,13 +102,9 @@ export default function ProductDetailPage() {
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader]);
 
-  const { data: productData, isLoading: isProductLoading } =
-    useProductQuery(id);
+  const { data: productData, isLoading } = useProductQuery(id);
 
-  // loading page
-  if (isProductLoading || !productData) {
-    // console.log(productData);
-
+  if (isLoading || !productData) {
     return <ProductDetailLoading />;
   }
 

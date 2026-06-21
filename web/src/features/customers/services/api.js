@@ -63,13 +63,6 @@ export async function fetchCustomers({
   return { items, total, page, totalPages };
 }
 
-export async function fetchCustomerById(id) {
-  await delay(300);
-  const customer = allCustomers.find((c) => c.id == id);
-  if (!customer) throw new Error("مشتری یافت نشد");
-  return customer;
-}
-
 
 export async function createCustomer(customerData) {
   await delay(500); // شبیه‌سازی تاخیر شبکه

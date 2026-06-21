@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { useCreateCustomerMutation } from "../services/mutations";
 import { Button } from "@/shared/components/ui/button";
 import CustomerIdentityForm from "../components/forms/CustomerIdentityForm";
@@ -44,6 +44,7 @@ export default function CustomerNewPage() {
       ...buildCustomerPayload(data),
       avatar: data.avatar?.[0] ? URL.createObjectURL(data.avatar[0]) : null,
     };
+    
     createMutation.mutate(payload, { onSuccess: () => navigate("/customers") });
   };
 
