@@ -44,7 +44,6 @@ export default function CustomerNewPage() {
       ...buildCustomerPayload(data),
       avatar: data.avatar?.[0] ? URL.createObjectURL(data.avatar[0]) : null,
     };
-    
     createMutation.mutate(payload, { onSuccess: () => navigate("/customers") });
   };
 
