@@ -1,5 +1,5 @@
 // src/features/customers/hooks/useCustomerForm.js
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 function buildDefaultValues(data) {
@@ -18,7 +18,8 @@ function buildDefaultValues(data) {
     };
   }
 
-  let balanceType = "none", balanceAmount = "";
+  let balanceType = "none",
+    balanceAmount = "";
   if (data.balance < 0) {
     balanceType = "debtor";
     balanceAmount = Math.abs(data.balance).toString();

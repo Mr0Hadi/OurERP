@@ -1,4 +1,3 @@
-import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { Save } from "lucide-react";
 import { useCreateCustomerMutation } from "../services/mutations";
@@ -6,10 +5,7 @@ import { Button } from "@/shared/components/ui/button";
 import CustomerIdentityForm from "../components/forms/CustomerIdentityForm";
 import CustomerFinanceForm from "../components/forms/CustomerFinanceForm";
 import CustomerAddressForm from "../components/forms/CustomerAddressForm";
-import {
-  buildCustomerPayload,
-  defaultCustomerValues,
-} from "../hooks/useCustomerForm";
+import { useCustomerForm } from "../hooks/useCustomerForm";
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { useEffect } from "react";
 
@@ -18,6 +14,7 @@ export default function CustomerNewPage() {
   const createMutation = useCreateCustomerMutation();
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
+
   useEffect(() => {
     setHeader({
       title: "اضافه کردن مشتری جدید",
@@ -27,30 +24,39 @@ export default function CustomerNewPage() {
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader]);
 
+  // استفاده از هوک جدید فرم که همه چیز (پیش‌فرض‌ها، آواتار و متدهای form) را مدیریت می‌کند
+  const {
+    formMethods,
+    balanceType,
+    avatarPreview,
+    handleAvatarChange,
+    handleRemoveAvatar,
+    buildCustomerPayload,
+  } = useCustomerForm();
+
   const {
     register,
     handleSubmit,
-    watch,
     setValue,
     formState: { errors },
-  } = useForm({
-    defaultValues: defaultCustomerValues,
-  });
-
-  const balanceType = watch("balanceType");
+  } = formMethods;
 
   const onSubmit = (data) => {
-    const payload = {
-      ...buildCustomerPayload(data),
-      avatar: data.avatar?.[0] ? URL.createObjectURL(data.avatar[0]) : null,
-    };
+    // هوک مقادیر ارسالی را به درستی می‌سازد و نیازی به مدیریت دستی عکس در اینجا نیست
+    const payload = buildCustomerPayload(data);
     createMutation.mutate(payload, { onSuccess: () => navigate("/customers") });
   };
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-10">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <CustomerIdentityForm register={register} errors={errors} />
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <CustomerIdentityForm 
+          register={register} 
+          errors={errors} 
+          avatarPreview={avatarPreview}
+          onAvatarChange={handleAvatarChange}
+          onRemoveAvatar={handleRemoveAvatar}
+        />
         <CustomerFinanceForm
           register={register}
           errors={errors}

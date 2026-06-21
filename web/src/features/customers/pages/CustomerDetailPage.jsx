@@ -1,3 +1,4 @@
+// src/features/customers/pages/CustomerDetailPage.jsx
 import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Save } from "lucide-react";
@@ -5,7 +6,7 @@ import { useCustomerQuery } from "../services/queries";
 import { useUpdateCustomerMutation } from "../services/mutations";
 import { useHeaderStore } from "#/shared/store/headerStore";
 import { Button } from "@/shared/components/ui/button";
-import CustomerDetailLoading from "../components/CustomerDetailLoading";
+import CustomerDetailLoading from "../components/forms/CustomerDetailLoading";
 import { useCustomerForm } from "../hooks/useCustomerForm";
 import CustomerIdentityForm from "../components/forms/CustomerIdentityForm";
 import CustomerFinanceForm from "../components/forms/CustomerFinanceForm";
@@ -15,7 +16,14 @@ function CustomerDetailForm({ customerData }) {
   const navigate = useNavigate();
   const updateMutation = useUpdateCustomerMutation();
 
-  const { formMethods, balanceType, buildCustomerPayload } = useCustomerForm(customerData);
+  const {
+    formMethods,
+    balanceType,
+    avatarPreview,
+    handleAvatarChange,
+    handleRemoveAvatar,
+    buildCustomerPayload,
+  } = useCustomerForm(customerData);
 
   const { register, handleSubmit, setValue, formState: { errors } } = formMethods;
 
@@ -29,14 +37,20 @@ function CustomerDetailForm({ customerData }) {
   const isBusy = updateMutation.isPending;
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="container max-w-4xl mx-auto">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <CustomerIdentityForm register={register} errors={errors} />
-        <CustomerFinanceForm 
-          register={register} 
-          errors={errors} 
-          balanceType={balanceType} 
-          setValue={setValue} 
+        <CustomerIdentityForm
+          register={register}
+          errors={errors}
+          avatarPreview={avatarPreview}
+          onAvatarChange={handleAvatarChange}
+          onRemoveAvatar={handleRemoveAvatar}
+        />
+        <CustomerFinanceForm
+          register={register}
+          errors={errors}
+          balanceType={balanceType}
+          setValue={setValue}
         />
         <CustomerAddressForm register={register} />
 
