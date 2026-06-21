@@ -2,7 +2,7 @@
 
 export const productsMock = [
   {
-    id: 1,
+    id: '1',
     code: 'BRK-1001',
     barcode: '6260000000001',
     name: 'لنت ترمز جلو',
@@ -15,10 +15,10 @@ export const productsMock = [
     tax: 9,
     stock: 45,
     compatibleCars: ['پژو ۲۰۶', 'پژو پارس', 'سمند'],
-    imageUrl: '', // آدرس عکس در صورت وجود
+    imageUrl: '',
   },
   {
-    id: 2,
+    id: '2',
     code: 'FLT-2022',
     barcode: '6260000000002',
     name: 'فیلتر روغن',
@@ -34,7 +34,7 @@ export const productsMock = [
     imageUrl: '',
   },
   {
-    id: 3,
+    id: '3',
     code: 'SHK-305',
     barcode: '6260000000003',
     name: 'کمک فنر جلو',
@@ -50,7 +50,7 @@ export const productsMock = [
     imageUrl: '',
   },
   {
-    id: 4,
+    id: '4',
     code: 'LMP-98H',
     barcode: '6260000000004',
     name: 'لامپ هدلایت H4',
@@ -66,7 +66,7 @@ export const productsMock = [
     imageUrl: '',
   },
   {
-    id: 5,
+    id: '5',
     code: 'BTY-755',
     barcode: '6260000000005',
     name: 'باتری ۶۰ آمپر',
@@ -82,7 +82,7 @@ export const productsMock = [
     imageUrl: '',
   },
   {
-    id: 6,
+    id: '6',
     code: 'BRK-220',
     barcode: '6260000000006',
     name: 'کاسه چرخ عقب',
@@ -98,7 +98,7 @@ export const productsMock = [
     imageUrl: '',
   },
   {
-    id: 7,
+    id: '7',
     code: 'FLT-415',
     barcode: '6260000000007',
     name: 'فیلتر هوای موتور',
@@ -114,7 +114,7 @@ export const productsMock = [
     imageUrl: '',
   },
   {
-    id: 8,
+    id: '8',
     code: 'SHK-190',
     barcode: '6260000000008',
     name: 'کمک فنر عقب',
@@ -130,7 +130,7 @@ export const productsMock = [
     imageUrl: '',
   },
   {
-    id: 9,
+    id: '9',
     code: 'BRG-006',
     barcode: '6260000000009',
     name: 'یاتاقان شاتون',
@@ -146,7 +146,7 @@ export const productsMock = [
     imageUrl: '',
   },
   {
-    id: 10,
+    id: '10',
     code: 'CLT-884',
     barcode: '6260000000010',
     name: 'کلاچ کامل',
@@ -173,11 +173,11 @@ const generateMoreProducts = (count) => {
   
   for (let i = productsMock.length + 1; i <= count; i++) {
     const retailPrice = 100000 + (i * 25000);
-    const purchasePrice = retailPrice * 0.75; // فرض: قیمت خرید ۲۵٪ کمتر از فروش است
-    const wholesalePrice = retailPrice * 0.90; // فرض: قیمت عمده ۱۰٪ کمتر از فروش است
+    const purchasePrice = retailPrice * 0.75;
+    const wholesalePrice = retailPrice * 0.90;
 
     products.push({
-      id: i,
+      id: String(i),
       code: `MOCK-${i}`,
       barcode: `6260000000${String(i).padStart(3, '0')}`,
       name: `قطعه نمونه ${i}`,

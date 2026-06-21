@@ -71,7 +71,7 @@ export const fetchProducts = async (params) => {
 
 export const fetchProductById = async (id) => {
   await delay(300);
-  const product = allProducts.find(p => p.id === Number(id));
+  const product = allProducts.find(p => p.id === String(id));
   if (!product) throw new Error('محصول یافت نشد');
   return product;
 };
@@ -83,8 +83,10 @@ export const createProduct = async (productData) => {
     throw new Error("خطای سرور در ایجاد کالا");
   }
 
+  const newId = `${String(allProducts.length + 1)}`;
+  
   const newProduct = {
-    id: Date.now().toString(),
+    id: newId,
     ...productData,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -97,7 +99,7 @@ export const createProduct = async (productData) => {
 export const updateProduct = async (id, productData) => {
   await delay(500);
 
-  const index = allProducts.findIndex((p) => p.id === Number(id));
+  const index = allProducts.findIndex((p) => p.id === String(id));
   
   if (index === -1) {
     throw new Error("محصول یافت نشد");
@@ -106,7 +108,7 @@ export const updateProduct = async (id, productData) => {
   const updatedProduct = {
     ...allProducts[index],
     ...productData,
-    id: Number(id),
+    id: allProducts[index].id,
     updatedAt: new Date().toISOString()
   };
   
