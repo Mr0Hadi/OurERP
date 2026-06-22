@@ -1,7 +1,7 @@
 // src/features/customers/pages/CustomerNewPage.jsx
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Save } from "lucide-react";
+import { Save, X } from "lucide-react";
 import { useCreateCustomerMutation } from "../services/mutations";
 import { useCustomerForm } from "../hooks/useCustomerForm";
 import { useHeaderStore } from "@/shared/store/headerStore";
@@ -79,21 +79,28 @@ export default function CustomerNewPage() {
             <CustomerAddressForm register={register} />
 
             {/* دکمه‌های عملیات */}
-            <div className="flex items-center justify-end gap-4">
+            <div className="flex items-center justify-end gap-3">
               <Button
                 type="button"
-                variant="ghost"
-                onClick={() => navigate("/customers")}
+                variant="outline"
+                onClick={() => navigate('/customers')}
+                disabled={isBusy}
+                className="gap-2"
               >
+                <X className="h-4 w-4" />
                 انصراف
               </Button>
-              <Button type="submit" disabled={isBusy}>
+              <Button 
+                type="submit" 
+                disabled={isBusy}
+                className="gap-2"
+              >
                 {isBusy ? (
                   "در حال ثبت..."
                 ) : (
                   <>
-                    <Save className="ml-2 h-4 w-4" />
-                    ثبت مشتری
+                    <Save className="h-4 w-4" />
+                    ثبت کالا
                   </>
                 )}
               </Button>

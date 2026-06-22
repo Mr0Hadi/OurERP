@@ -1,7 +1,7 @@
 // src/features/suppliers/pages/SupplierNewPage.jsx
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Save } from "lucide-react";
+import { Save, X } from "lucide-react";
 import { useCreateSupplierMutation } from "../services/mutations";
 import { useSupplierForm } from "../hooks/useSupplierForm";
 import { useHeaderStore } from "@/shared/store/headerStore";
@@ -79,21 +79,28 @@ export default function SupplierNewPage() {
             <SupplierAddressForm register={register} />
 
             {/* دکمه‌های عملیات */}
-            <div className="flex items-center justify-end gap-4">
+            <div className="flex items-center justify-end gap-3">
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 onClick={() => navigate("/suppliers")}
+                disabled={isBusy}
+                className="gap-2"
               >
+                <X className="h-4 w-4" />
                 انصراف
               </Button>
-              <Button type="submit" disabled={isBusy}>
+              <Button 
+                type="submit" 
+                disabled={isBusy}
+                className="gap-2"
+              >
                 {isBusy ? (
                   "در حال ثبت..."
                 ) : (
                   <>
-                    <Save className="ml-2 h-4 w-4" />
-                    ثبت تامین کننده
+                    <Save className="h-4 w-4" />
+                    ثبت کالا
                   </>
                 )}
               </Button>

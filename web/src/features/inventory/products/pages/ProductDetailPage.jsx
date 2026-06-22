@@ -1,6 +1,6 @@
 // src/features/inventory/products/pages/ProductDetailPage.jsx
 import { useNavigate, useParams } from "react-router-dom";
-import { Save } from "lucide-react";
+import { Save, X } from "lucide-react";
 import { useEffect } from "react";
 
 import { Button } from "#/shared/components/ui/button";
@@ -15,6 +15,7 @@ import ProductDetailLoading from "../components/forms/ProductDetailLoading";
 import { useHeaderStore } from "#/shared/store/headerStore";
 
 function ProductDetailForm({ productData }) {
+  const navigate = useNavigate();
   const updateMutation = useUpdateProductMutation(productData.id);
 
   const {
@@ -61,23 +62,29 @@ function ProductDetailForm({ productData }) {
               onImageRemove={handleImageRemove}
             />
             <ProductBarcodeDisplay value={barcodeValue} />
+            <div className="flex items-center justify-end gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate(-1)}
+                disabled={isBusy}
+                className="gap-2"
+              >
+                <X className="h-4 w-4" />
+                انصراف
+              </Button>
+              <Button type="submit" disabled={isBusy} className="gap-2">
+                {isBusy ? (
+                  "در حال ثبت..."
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    ثبت کالا
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
-        </div>
-        <div className="mt-6">
-          <Button
-            type="submit"
-            className="w-full h-12 text-md"
-            disabled={isBusy}
-          >
-            {isBusy ? (
-              "در حال به‌روزرسانی..."
-            ) : (
-              <>
-                <Save className="w-5 h-5 ml-2" />
-                به‌روزرسانی کالا
-              </>
-            )}
-          </Button>
         </div>
       </form>
     </div>

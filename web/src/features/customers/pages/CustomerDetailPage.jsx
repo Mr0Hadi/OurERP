@@ -1,7 +1,7 @@
 // src/features/customers/pages/CustomerDetailPage.jsx
 import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Save } from "lucide-react";
+import { Save, X } from "lucide-react";
 import { useCustomerQuery } from "../services/queries";
 import { useUpdateCustomerMutation } from "../services/mutations";
 import { useHeaderStore } from "#/shared/store/headerStore";
@@ -71,21 +71,28 @@ function CustomerDetailForm({ customerData }) {
             <CustomerAddressForm register={register} />
 
             {/* دکمه‌های عملیات - استیکی در دسکتاپ */}
-            <div className="flex items-center justify-end gap-4">
+                        <div className="flex items-center justify-end gap-3">
               <Button
                 type="button"
-                variant="ghost"
-                onClick={() => navigate("/customers")}
+                variant="outline"
+                onClick={() => navigate(-1)}
+                disabled={isBusy}
+                className="gap-2"
               >
+                <X className="h-4 w-4" />
                 انصراف
               </Button>
-              <Button type="submit" disabled={isBusy}>
+              <Button 
+                type="submit" 
+                disabled={isBusy}
+                className="gap-2"
+              >
                 {isBusy ? (
-                  "در حال ذخیره..."
+                  "در حال ثبت..."
                 ) : (
                   <>
-                    <Save className="ml-2 h-4 w-4" />
-                    ذخیره تغییرات
+                    <Save className="h-4 w-4" />
+                    ثبت کالا
                   </>
                 )}
               </Button>

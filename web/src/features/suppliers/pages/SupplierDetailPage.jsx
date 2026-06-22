@@ -1,7 +1,7 @@
 // src/features/suppliers/pages/SupplierDetailPage.jsx
 import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Save, AlertCircle } from "lucide-react";
+import { Save, AlertCircle, X } from "lucide-react";
 import { useUpdateSupplierMutation } from "../services/mutations";
 import { useSupplierQuery } from "../services/queries";
 import { useSupplierForm } from "../hooks/useSupplierForm";
@@ -73,21 +73,28 @@ function SupplierDetailForm({ supplierData }) {
             <SupplierAddressForm register={register} />
 
             {/* دکمه‌های عملیات */}
-            <div className="flex items-center justify-end gap-4">
+            <div className="flex items-center justify-end gap-3">
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 onClick={() => navigate("/suppliers")}
+                disabled={isBusy}
+                className="gap-2"
               >
+                <X className="h-4 w-4" />
                 انصراف
               </Button>
-              <Button type="submit" disabled={isBusy}>
+              <Button 
+                type="submit" 
+                disabled={isBusy}
+                className="gap-2"
+              >
                 {isBusy ? (
-                  "در حال ذخیره..."
+                  "در حال ثبت..."
                 ) : (
                   <>
-                    <Save className="ml-2 h-4 w-4" />
-                    ذخیره تغییرات
+                    <Save className="h-4 w-4" />
+                    ثبت کالا
                   </>
                 )}
               </Button>
