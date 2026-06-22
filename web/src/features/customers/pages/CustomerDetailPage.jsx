@@ -25,7 +25,12 @@ function CustomerDetailForm({ customerData }) {
     buildCustomerPayload,
   } = useCustomerForm(customerData);
 
-  const { register, handleSubmit, setValue, formState: { errors } } = formMethods;
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+  } = formMethods;
 
   const onSubmit = (data) => {
     updateMutation.mutate(
@@ -37,30 +42,55 @@ function CustomerDetailForm({ customerData }) {
   const isBusy = updateMutation.isPending;
 
   return (
-    <div className="container max-w-4xl mx-auto">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <CustomerIdentityForm
-          register={register}
-          errors={errors}
-          avatarPreview={avatarPreview}
-          onAvatarChange={handleAvatarChange}
-          onRemoveAvatar={handleRemoveAvatar}
-        />
-        <CustomerFinanceForm
-          register={register}
-          errors={errors}
-          balanceType={balanceType}
-          setValue={setValue}
-        />
-        <CustomerAddressForm register={register} />
+    <div className="m-auto bg-background">
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-4">
+          {/* ستون راست - اطلاعات اصلی */}
+          <div className="lg:col-span-1 space-y-4">
+            <CustomerIdentityForm
+              register={register}
+              errors={errors}
+              avatarPreview={avatarPreview}
+              onAvatarChange={handleAvatarChange}
+              onRemoveAvatar={handleRemoveAvatar}
+            />
 
-        <div className="flex items-center justify-end gap-4">
-          <Button type="button" variant="ghost" onClick={() => navigate("/customers")}>
-            انصراف
-          </Button>
-          <Button type="submit" disabled={isBusy}>
-            {isBusy ? "در حال ذخیره..." : <><Save className="ml-2 h-4 w-4" />ذخیره تغییرات</>}
-          </Button>
+            <CustomerFinanceForm
+              register={register}
+              errors={errors}
+              balanceType={balanceType}
+              setValue={setValue}
+            />
+          </div>
+
+          {/* ستون چپ - اطلاعات مالی و دکمه‌ها */}
+          <div className="lg:col-span-1 space-y-4">
+            <CustomerAddressForm register={register} />
+
+            {/* دکمه‌های عملیات - استیکی در دسکتاپ */}
+            <div className="flex items-center justify-end gap-4">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => navigate("/customers")}
+              >
+                انصراف
+              </Button>
+              <Button type="submit" disabled={isBusy}>
+                {isBusy ? (
+                  "در حال ذخیره..."
+                ) : (
+                  <>
+                    <Save className="ml-2 h-4 w-4" />
+                    ذخیره تغییرات
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
       </form>
     </div>
@@ -74,14 +104,23 @@ export default function CustomerDetailPage() {
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   useEffect(() => {
-    setHeader({ title: "جزئیات و ویرایش مشتری", showBack: true, onBack: () => navigate(-1) });
+    setHeader({
+      title: "جزئیات و ویرایش مشتری",
+      showBack: true,
+      onBack: () => navigate(-1),
+    });
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader]);
 
   const { data: customer, isLoading, isError } = useCustomerQuery(id);
 
   if (isLoading || !customer) return <CustomerDetailLoading />;
-  if (isError) return <div className="text-center py-20 text-red-500">مشکلی در دریافت اطلاعات مشتری به وجود آمد.</div>;
+  if (isError)
+    return (
+      <div className="text-center py-20 text-destructive">
+        مشکلی در دریافت اطلاعات مشتری به وجود آمد.
+      </div>
+    );
 
   return <CustomerDetailForm key={customer.id} customerData={customer} />;
 }

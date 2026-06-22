@@ -55,7 +55,7 @@ export function buildCustomerPayload(data, avatarPreview, existingAvatar) {
     address: data.address || null,
     postalCode: data.postalCode || null,
     balance,
-    // اگر عکس جدید انتخاب شده از آن استفاده کن، وگرنه عکس قبلی را نگه دار
+    
     avatar: avatarPreview ?? existingAvatar ?? null,
     coordinates: {
       lat: data.lat ? parseFloat(data.lat) : null,
@@ -68,6 +68,7 @@ export function useCustomerForm(initialData = null) {
   const [avatarPreview, setAvatarPreview] = useState(
     initialData?.avatar || null
   );
+   const [avatarRemoved, setAvatarRemoved] = useState(false);
 
   const formMethods = useForm({
     defaultValues: buildDefaultValues(initialData),
@@ -80,6 +81,7 @@ export function useCustomerForm(initialData = null) {
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setAvatarRemoved(false);
 
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -90,6 +92,7 @@ export function useCustomerForm(initialData = null) {
 
   const handleRemoveAvatar = () => {
     setAvatarPreview(null);
+    setAvatarRemoved(true);
     formMethods.setValue("avatar", null);
   };
 
@@ -100,6 +103,6 @@ export function useCustomerForm(initialData = null) {
     handleAvatarChange,
     handleRemoveAvatar,
     buildCustomerPayload: (data) =>
-      buildCustomerPayload(data, avatarPreview, initialData?.avatar),
+      buildCustomerPayload(data, avatarPreview, avatarRemoved ? null : initialData?.avatar),
   };
 }
