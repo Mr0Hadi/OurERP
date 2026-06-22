@@ -6,7 +6,8 @@ function buildDefaultValues(data) {
   if (!data) {
     return {
       companyName: "",
-      contactPerson: "",
+      firstName: "",
+      lastName: "",
       phone: "",
       address: "",
       lat: "",
@@ -30,7 +31,8 @@ function buildDefaultValues(data) {
 
   return {
     companyName: data.companyName || "",
-    contactPerson: data.contactPerson || "",
+    firstName: data.firstName || "",
+    lastName: data.lastName || "",
     phone: data.phone || "",
     address: data.address || "",
     lat: data.coordinates?.lat?.toString() || "",
@@ -50,7 +52,8 @@ export function buildSupplierPayload(data, avatarPreview, existingAvatar) {
 
   return {
     companyName: data.companyName,
-    contactPerson: data.contactPerson || null,
+    firstName: data.firstName || null,
+    lastName: data.lastName || null,
     phone: data.phone || null,
     address: data.address || null,
     postalCode: data.postalCode || null,

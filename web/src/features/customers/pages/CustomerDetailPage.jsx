@@ -103,16 +103,21 @@ export default function CustomerDetailPage() {
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
+  const { data: customer, isLoading, isError } = useCustomerQuery(id);
+
   useEffect(() => {
     setHeader({
-      title: "جزئیات و ویرایش مشتری",
+      title: isLoading
+        ? "در حال بارگذاری..."
+        : customer
+        ? `ویرایش تامین‌کننده: ${`${customer.firstName} ${customer.lastName}`}`
+        : "خطا",
       showBack: true,
       onBack: () => navigate(-1),
     });
     return () => clearHeader();
-  }, [navigate, setHeader, clearHeader]);
+  }, [navigate, setHeader, clearHeader, customer, isLoading]);
 
-  const { data: customer, isLoading, isError } = useCustomerQuery(id);
 
   if (isLoading || !customer) return <CustomerDetailLoading />;
   if (isError)

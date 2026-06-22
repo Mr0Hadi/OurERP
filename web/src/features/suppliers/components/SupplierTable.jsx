@@ -119,9 +119,9 @@ const SupplierTable = ({
         ),
       },
       {
-        id: "contactPerson", // یا accessorKey: "contactPerson"
-        accessorKey: "contactPerson",
-        header: "نام رابط",
+        id: "fullName",
+        accessorFn: (row) => `${row.firstName} ${row.lastName}`,
+        header: "نام مسئول",
         cell: (info) => (
           <span className="font-light text-lg">{info.getValue() || "-"}</span>
         ),

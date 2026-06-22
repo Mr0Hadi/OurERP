@@ -33,7 +33,6 @@ export default function SupplierIdentityForm({
 
       <CardContent className="px-6 py-5">
         <div className="flex flex-col sm:flex-row gap-6 items-start">
-          
           {/* بخش آواتار */}
           <div className="flex flex-col items-center gap-3 shrink-0 w-full sm:w-auto">
             <div className="relative group">
@@ -49,7 +48,7 @@ export default function SupplierIdentityForm({
                   <>
                     <img
                       src={avatarPreview}
-                      alt="لوگو تامین کننده"
+                      alt="تصویر تامین کننده"
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex flex-col items-center justify-center gap-1">
@@ -84,7 +83,7 @@ export default function SupplierIdentityForm({
                 className="cursor-pointer inline-flex items-center justify-center gap-1.5 h-8 sm:h-9 px-3 sm:px-4 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 transition-all text-xs sm:text-sm font-medium shadow-sm hover:shadow-md select-none"
               >
                 <Upload className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                {avatarPreview ? "تغییر لوگو" : "بارگذاری لوگو"}
+                {avatarPreview ? "تغییر تصویر" : "بارگذاری تصویر"}
               </Label>
 
               <Input
@@ -119,7 +118,7 @@ export default function SupplierIdentityForm({
                 >
                   <img
                     src={avatarPreview}
-                    alt="لوگو تامین کننده"
+                    alt="تصویر تامین کننده"
                     className="w-full h-auto rounded-2xl shadow-2xl"
                   />
                   <Button
@@ -137,35 +136,42 @@ export default function SupplierIdentityForm({
 
           {/* فیلدهای فرم */}
           <div className="flex-1 w-full space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="companyName" className="text-sm font-medium">
-                نام شرکت <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="companyName"
-                placeholder="نام شرکت"
-                className="h-10 rounded-lg transition-all"
-                {...register("companyName", {
-                  required: "وارد کردن نام شرکت الزامی است",
-                })}
-              />
-              {errors.companyName && (
-                <span className="text-xs text-destructive block mt-1 font-medium">
-                  {errors.companyName.message}
-                </span>
-              )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="firstName" className="text-sm font-medium">
+                  نام مسئول
+                </Label>
+                <Input
+                  id="firstName"
+                  placeholder="نام"
+                  className="h-10 rounded-lg transition-all"
+                  {...register("firstName")}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="lastName" className="text-sm font-medium">
+                  نام خانوادگی 
+                </Label>
+                <Input
+                  id="lastName"
+                  placeholder="نام خانوادگی"
+                  className="h-10 rounded-lg transition-all"
+                  {...register("lastName")}
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="contactPerson" className="text-sm font-medium">
-                  نام مسئول
+                <Label htmlFor="companyName" className="text-sm font-medium">
+                  نام شرکت
                 </Label>
                 <Input
-                  id="contactPerson"
-                  placeholder="نام مسئول"
+                  id="companyName"
+                  placeholder="نام شرکت"
                   className="h-10 rounded-lg transition-all"
-                  {...register("contactPerson")}
+                  {...register("companyName")}
                 />
               </div>
 

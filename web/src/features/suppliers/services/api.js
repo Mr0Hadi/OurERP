@@ -19,7 +19,7 @@ export async function fetchSuppliers({
     result = result.filter(
       (s) =>
         s.companyName?.toLowerCase().includes(q) ||
-        s.contactPerson?.toLowerCase().includes(q) ||
+        `${s.firstName} ${s.lastName}`.toLowerCase().includes(q) ||
         s.id.toString().toLowerCase().includes(q)
     );
   }
@@ -33,10 +33,9 @@ export async function fetchSuppliers({
 
   result.sort((a, b) => {
     let aVal, bVal;
-    // اگر sortBy برابر contactPerson باشد مستقیماً از همان فیلد استفاده می‌کنیم
-    if (sortBy === "contactPerson") {
-      aVal = a.contactPerson || "";
-      bVal = b.contactPerson || "";
+    if (sortBy === "fullName") {  
+      aVal = `${a.firstName} ${a.lastName}`;
+      bVal = `${b.firstName} ${b.lastName}`;
     } else {
       aVal = a[sortBy];
       bVal = b[sortBy];

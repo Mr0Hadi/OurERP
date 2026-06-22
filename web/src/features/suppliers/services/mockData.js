@@ -2,7 +2,8 @@ export const allSuppliers = [
   {
     id: "1",
     companyName: "ایران قطعه",
-    contactPerson: "رضا تقوی",
+    firstName: "رضا",
+    lastName: "تقوی",
     phone: "02112345678",
     address: "تهران، خیابان امیرکبیر، پلاک ۱۲",
     postalCode: "1234567890",
@@ -13,7 +14,9 @@ export const allSuppliers = [
   {
     id: "2",
     companyName: "لنت پارس موتور",
-    contactPerson: "محمد راد",
+    firstName: "محمد",
+    lastName: "راد",
+
     phone: "09121234567",
     address: "کرج، منطقه صنعتی، سوله ۵",
     postalCode: "8134567890",
@@ -24,12 +27,14 @@ export const allSuppliers = [
   {
     id: "3",
     companyName: "پخش بلبرینگ مرکزی",
-    contactPerson: "حسن کریمی",
+
+    firstName: "حسن",
+    lastName: "کریمی",
     phone: "02198765432",
     address: "تهران، میدان توپخانه",
     postalCode: "6514567890",
     balance: 0,
     avatar: null,
-    coordinates: { lat: 35.6850, lng: 51.4230 },
+    coordinates: { lat: 35.685, lng: 51.423 },
   },
 ];
