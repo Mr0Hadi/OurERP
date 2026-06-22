@@ -9,9 +9,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  /* --font-heading: var(--font-sans); */
   --font-sans: "Vazirmatn Variable", system-ui, sans-serif;
-  /* --font-sans: "Geist Variable", "Vazirmatn Variable", system-ui, sans-serif; */
   --font-serif: "Geist Variable", "Vazirmatn Variable", serif;
   --font-mono: "Geist Mono", "Fira Code", monospace;
 
@@ -55,41 +53,44 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ─── Light (بهبود یافته) ─────────────────────────────────────────────────── */
+/* پس‌زمینه خنثی و گرم، کنتراست بهتر، بدون hue سبزآبی مزاحم */
 :root {
-  --background: oklch(0.95 0.01 190);
-  --foreground: oklch(0.22 0.008 190);
-  --card: oklch(0.99 0.006 190);
-  --card-foreground: oklch(0.22 0.008 190);
-  --popover: oklch(0.99 0.006 190);
-  --popover-foreground: oklch(0.22 0.008 190);
-  --primary: oklch(0.488 0.243 264.376);
-  --primary-foreground: oklch(0.97 0.014 254.604);
-  --secondary: oklch(0.92 0.012 190);
-  --secondary-foreground: oklch(0.28 0.008 190);
-  --muted: oklch(0.92 0.012 190);
-  --muted-foreground: oklch(0.50 0.008 190);
-  --accent: oklch(0.92 0.012 190);
-  --accent-foreground: oklch(0.28 0.008 190);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.85 0.01 190);
-  --input: oklch(0.85 0.01 190);
-  --ring: oklch(0.60 0.015 190);
-  --chart-1: oklch(0.785 0.115 274.713);
-  --chart-2: oklch(0.585 0.233 277.117);
-  --chart-3: oklch(0.511 0.262 276.966);
-  --chart-4: oklch(0.457 0.24 277.023);
-  --chart-5: oklch(0.398 0.195 277.366);
+  --background: oklch(0.98 0.003 80);          /* سفید گرم، نه سرد */
+  --foreground: oklch(0.18 0.008 240);          /* تیره با کمی آبی — خوانا */
+  --card: oklch(1 0 0);                         /* سفید خالص */
+  --card-foreground: oklch(0.18 0.008 240);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.008 240);
+  --primary: oklch(0.50 0.22 264);              /* بنفش‌آبی — شاد ولی ملایم */
+  --primary-foreground: oklch(0.99 0.005 264);
+  --secondary: oklch(0.94 0.008 240);
+  --secondary-foreground: oklch(0.25 0.008 240);
+  --muted: oklch(0.93 0.006 240);
+  --muted-foreground: oklch(0.50 0.010 240);
+  --accent: oklch(0.93 0.010 264);             /* کمی رنگ primary */
+  --accent-foreground: oklch(0.25 0.010 264);
+  --destructive: oklch(0.57 0.22 27);
+  --border: oklch(0.88 0.006 240);
+  --input: oklch(0.88 0.006 240);
+  --ring: oklch(0.55 0.18 264);
+  --chart-1: oklch(0.65 0.18 264);
+  --chart-2: oklch(0.58 0.20 310);
+  --chart-3: oklch(0.62 0.16 180);
+  --chart-4: oklch(0.70 0.17 80);
+  --chart-5: oklch(0.60 0.19 30);
   --radius: 0.625rem;
-  --sidebar: oklch(0.97 0.008 190);
-  --sidebar-foreground: oklch(0.24 0.008 190);
-  --sidebar-primary: oklch(0.546 0.245 262.881);
-  --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
-  --sidebar-accent: oklch(0.92 0.012 190);
-  --sidebar-accent-foreground: oklch(0.28 0.008 190);
-  --sidebar-border: oklch(0.85 0.01 190);
-  --sidebar-ring: oklch(0.60 0.015 190);
+  --sidebar: oklch(0.96 0.005 240);
+  --sidebar-foreground: oklch(0.22 0.008 240);
+  --sidebar-primary: oklch(0.50 0.22 264);
+  --sidebar-primary-foreground: oklch(0.99 0.005 264);
+  --sidebar-accent: oklch(0.92 0.008 264);
+  --sidebar-accent-foreground: oklch(0.25 0.010 264);
+  --sidebar-border: oklch(0.88 0.006 240);
+  --sidebar-ring: oklch(0.55 0.18 264);
 }
 
+/* ─── Dark ────────────────────────────────────────────────────────────────── */
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -97,32 +98,145 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.424 0.199 265.638);
-  --primary-foreground: oklch(0.97 0.014 254.604);
-  --secondary: oklch(0.274 0.006 286.033);
+  --primary: oklch(0.60 0.20 264);
+  --primary-foreground: oklch(0.97 0.014 254);
+  --secondary: oklch(0.27 0.006 286);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  --destructive: oklch(0.70 0.19 22);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.785 0.115 274.713);
-  --chart-2: oklch(0.585 0.233 277.117);
-  --chart-3: oklch(0.511 0.262 276.966);
-  --chart-4: oklch(0.457 0.24 277.023);
-  --chart-5: oklch(0.398 0.195 277.366);
+  --chart-1: oklch(0.70 0.18 264);
+  --chart-2: oklch(0.60 0.22 310);
+  --chart-3: oklch(0.65 0.16 180);
+  --chart-4: oklch(0.72 0.17 80);
+  --chart-5: oklch(0.62 0.19 30);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.623 0.214 259.815);
-  --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
+  --sidebar-primary: oklch(0.623 0.214 259);
+  --sidebar-primary-foreground: oklch(0.97 0.014 254);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
 }
+
+/* ─── Warm — کرم/عسلی گرم ────────────────────────────────────────────────── */
+/* استفاده: <html class="theme-warm"> */
+.theme-warm {
+  --background: oklch(0.97 0.015 80);
+  --foreground: oklch(0.20 0.020 55);
+  --card: oklch(0.99 0.010 75);
+  --card-foreground: oklch(0.20 0.020 55);
+  --popover: oklch(0.99 0.010 75);
+  --popover-foreground: oklch(0.20 0.020 55);
+  --primary: oklch(0.55 0.16 42);             /* نارنجی‌قهوه‌ای */
+  --primary-foreground: oklch(0.98 0.008 75);
+  --secondary: oklch(0.92 0.018 80);
+  --secondary-foreground: oklch(0.28 0.018 55);
+  --muted: oklch(0.92 0.012 80);
+  --muted-foreground: oklch(0.52 0.015 65);
+  --accent: oklch(0.90 0.025 55);
+  --accent-foreground: oklch(0.28 0.018 55);
+  --destructive: oklch(0.57 0.22 27);
+  --border: oklch(0.86 0.018 75);
+  --input: oklch(0.86 0.018 75);
+  --ring: oklch(0.55 0.16 42);
+  --chart-1: oklch(0.62 0.18 42);
+  --chart-2: oklch(0.68 0.16 70);
+  --chart-3: oklch(0.58 0.14 20);
+  --chart-4: oklch(0.72 0.12 100);
+  --chart-5: oklch(0.55 0.18 30);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.95 0.018 78);
+  --sidebar-foreground: oklch(0.22 0.020 55);
+  --sidebar-primary: oklch(0.55 0.16 42);
+  --sidebar-primary-foreground: oklch(0.98 0.008 75);
+  --sidebar-accent: oklch(0.90 0.022 75);
+  --sidebar-accent-foreground: oklch(0.28 0.018 55);
+  --sidebar-border: oklch(0.86 0.018 75);
+  --sidebar-ring: oklch(0.55 0.16 42);
+}
+
+/* ─── Rose — صورتی/گل‌بهی ────────────────────────────────────────────────── */
+/* استفاده: <html class="theme-rose"> */
+.theme-rose {
+  --background: oklch(0.98 0.008 10);
+  --foreground: oklch(0.20 0.015 350);
+  --card: oklch(0.995 0.005 10);
+  --card-foreground: oklch(0.20 0.015 350);
+  --popover: oklch(0.995 0.005 10);
+  --popover-foreground: oklch(0.20 0.015 350);
+  --primary: oklch(0.56 0.22 355);            /* رز/قرمز ملایم */
+  --primary-foreground: oklch(0.99 0.005 355);
+  --secondary: oklch(0.93 0.012 355);
+  --secondary-foreground: oklch(0.28 0.015 350);
+  --muted: oklch(0.94 0.008 355);
+  --muted-foreground: oklch(0.52 0.012 355);
+  --accent: oklch(0.93 0.018 340);
+  --accent-foreground: oklch(0.28 0.015 350);
+  --destructive: oklch(0.57 0.22 27);
+  --border: oklch(0.88 0.010 355);
+  --input: oklch(0.88 0.010 355);
+  --ring: oklch(0.56 0.22 355);
+  --chart-1: oklch(0.62 0.22 355);
+  --chart-2: oklch(0.60 0.20 320);
+  --chart-3: oklch(0.65 0.18 20);
+  --chart-4: oklch(0.68 0.14 280);
+  --chart-5: oklch(0.58 0.16 350);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.96 0.010 10);
+  --sidebar-foreground: oklch(0.22 0.015 350);
+  --sidebar-primary: oklch(0.56 0.22 355);
+  --sidebar-primary-foreground: oklch(0.99 0.005 355);
+  --sidebar-accent: oklch(0.92 0.015 355);
+  --sidebar-accent-foreground: oklch(0.28 0.015 350);
+  --sidebar-border: oklch(0.88 0.010 355);
+  --sidebar-ring: oklch(0.56 0.22 355);
+}
+
+/* ─── Forest — سبز طبیعی/جنگلی ──────────────────────────────────────────── */
+/* استفاده: <html class="theme-forest"> */
+.theme-forest {
+  --background: oklch(0.97 0.010 145);
+  --foreground: oklch(0.18 0.025 150);
+  --card: oklch(0.99 0.006 145);
+  --card-foreground: oklch(0.18 0.025 150);
+  --popover: oklch(0.99 0.006 145);
+  --popover-foreground: oklch(0.18 0.025 150);
+  --primary: oklch(0.46 0.16 152);            /* سبز جنگلی */
+  --primary-foreground: oklch(0.98 0.008 145);
+  --secondary: oklch(0.92 0.015 145);
+  --secondary-foreground: oklch(0.25 0.022 150);
+  --muted: oklch(0.92 0.010 145);
+  --muted-foreground: oklch(0.50 0.015 150);
+  --accent: oklch(0.91 0.020 140);
+  --accent-foreground: oklch(0.25 0.022 150);
+  --destructive: oklch(0.57 0.22 27);
+  --border: oklch(0.86 0.014 145);
+  --input: oklch(0.86 0.014 145);
+  --ring: oklch(0.46 0.16 152);
+  --chart-1: oklch(0.55 0.16 152);
+  --chart-2: oklch(0.62 0.14 120);
+  --chart-3: oklch(0.58 0.18 175);
+  --chart-4: oklch(0.68 0.12 90);
+  --chart-5: oklch(0.50 0.14 200);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.95 0.014 145);
+  --sidebar-foreground: oklch(0.20 0.025 150);
+  --sidebar-primary: oklch(0.46 0.16 152);
+  --sidebar-primary-foreground: oklch(0.98 0.008 145);
+  --sidebar-accent: oklch(0.90 0.018 145);
+  --sidebar-accent-foreground: oklch(0.25 0.022 150);
+  --sidebar-border: oklch(0.86 0.014 145);
+  --sidebar-ring: oklch(0.46 0.16 152);
+}
+
+
 
 @layer base {
   * {
@@ -166,8 +280,6 @@
   }
 }
 
-
-/* برای راحتی بهتر کارکردن با ورودی های عددی : dir="ltr" */
 .input-rtl-placeholder::placeholder {
   text-align: right;
 }
