@@ -97,7 +97,19 @@ export function useProductForm(initialData = null) {
   };
 
   const buildProductPayload = (formData) => {
-    const payload = { ...formData };
+    const payload = {
+      name: formData.name,
+      code: formData.code,
+      barcode: formData.barcode,
+      category: formData.category,
+      brand: formData.brand,
+      unit: formData.unit,
+      stock: Number(formData.initialStock) || 0,
+      purchasePrice: Number(formData.purchasePrice) || 0,
+      retailPrice: Number(formData.sellPrice1) || 0,
+      wholesalePrice: Number(formData.sellPrice2) || 0,
+      tax: Number(formData.vat) || 0,
+    };
 
     if (imageRemoved) {
       payload.imageUrl = "";
