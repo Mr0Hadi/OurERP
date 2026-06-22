@@ -22,8 +22,9 @@ function ProductDetailForm({ productData }) {
     imagePreview,
     barcodeValue,
     categories,
-    handleAddCategory,
     handleImageChange,
+    handleImageRemove,
+    buildProductPayload,
   } = useProductForm(productData);
 
   const {
@@ -34,10 +35,7 @@ function ProductDetailForm({ productData }) {
   } = formMethods;
 
   const onSubmit = (data) => {
-    const payload = {
-      ...data,
-      imageUrl: imagePreview ?? productData.imageUrl ?? "",
-    };
+    const payload = buildProductPayload(data);
     updateMutation.mutate(payload);
   };
 
@@ -53,7 +51,6 @@ function ProductDetailForm({ productData }) {
               control={control}
               errors={errors}
               categories={categories}
-              onAddCategory={handleAddCategory}
             />
             <ProductPricingForm register={register} />
           </div>
@@ -61,6 +58,7 @@ function ProductDetailForm({ productData }) {
             <ProductImageUpload
               preview={imagePreview}
               onImageChange={handleImageChange}
+              onImageRemove={handleImageRemove}
             />
             <ProductBarcodeDisplay value={barcodeValue} />
           </div>

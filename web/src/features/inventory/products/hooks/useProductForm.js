@@ -45,6 +45,8 @@ export function useProductForm(initialData = null) {
   const [imagePreview, setImagePreview] = useState(
     initialData?.imageUrl || null
   );
+  const [imageFile, setImageFile] = useState(null);
+  const [imageRemoved, setImageRemoved] = useState(false);
   const [barcodeValue, setBarcodeValue] = useState(initialData?.barcode || "");
   const [categories] = useState(() => {
     if (
@@ -60,12 +62,11 @@ export function useProductForm(initialData = null) {
   });
 
   const formMethods = useForm({
-    defaultValues: buildDefaultValues(initialData), // initialData حالا همیشه مقدار داره
+    defaultValues: buildDefaultValues(initialData),
   });
 
-  const {watch } = formMethods;
+  const { watch } = formMethods;
   const watchedBarcode = watch("barcode");
-
 
   useEffect(() => {
     if (watchedBarcode?.trim()) {
@@ -79,21 +80,47 @@ export function useProductForm(initialData = null) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
-
-  const handleImageChange = (e) => {
-    const file = e.target.files?.[0];
+  const handleImageChange = (file) => {
     if (file) {
+      setImageFile(file);
+      setImageRemoved(false);
       const reader = new FileReader();
       reader.onloadend = () => setImagePreview(reader.result);
       reader.readAsDataURL(file);
     }
   };
 
+  const handleImageRemove = () => {
+    setImagePreview(null);
+    setImageFile(null);
+    setImageRemoved(true);
+  };
+
+  const buildProductPayload = (formData) => {
+    const payload = { ...formData };
+
+    if (imageRemoved) {
+      payload.imageUrl = "";
+    } else if (imageFile) {
+      payload.imageUrl = imagePreview;
+    } else if (initialData?.imageUrl) {
+      payload.imageUrl = initialData.imageUrl;
+    } else {
+      payload.imageUrl = "";
+    }
+
+    return payload;
+  };
+
   return {
     formMethods,
     imagePreview,
+    imageFile,
+    imageRemoved,
     barcodeValue,
     categories,
     handleImageChange,
+    handleImageRemove,
+    buildProductPayload,
   };
 }

@@ -1,19 +1,16 @@
 // src/features/inventory/products/pages/ProductNewPage.jsx
 import { useNavigate } from "react-router-dom";
 import { Save } from "lucide-react";
+import { useEffect } from "react";
 
 import { Button } from "#/shared/components/ui/button";
-
 import { useCreateProductMutation } from "../services/mutations";
-
 import { useProductForm } from "../hooks/useProductForm";
 import ProductBasicInfoForm from "../components/forms/ProductBasicInfoForm";
 import ProductPricingForm from "../components/forms/ProductPricingForm";
 import ProductImageUpload from "../components/forms/ProductImageUpload";
 import ProductBarcodeDisplay from "../components/forms/ProductBarcodeDisplay";
-
 import { useHeaderStore } from "#/shared/store/headerStore";
-import { useEffect } from "react";
 
 export default function ProductNewPage() {
   const navigate = useNavigate();
@@ -37,8 +34,9 @@ export default function ProductNewPage() {
     imagePreview,
     barcodeValue,
     categories,
-    handleAddCategory,
     handleImageChange,
+    handleImageRemove,
+    buildProductPayload,
   } = useProductForm();
 
   const {
@@ -49,11 +47,7 @@ export default function ProductNewPage() {
   } = formMethods;
 
   const onSubmit = async (data) => {
-    const payload = {
-      ...data,
-      imageUrl: imagePreview ?? "",
-    };
-
+    const payload = buildProductPayload(data);
     createMutation.mutate(payload);
   };
 
@@ -62,29 +56,25 @@ export default function ProductNewPage() {
   return (
     <div className="container mx-auto animate-in fade-in zoom-in-95 duration-300">
       <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-2 space-y-3">
             <ProductBasicInfoForm
               register={register}
               control={control}
               errors={errors}
               categories={categories}
-              onAddCategory={handleAddCategory}
             />
-
             <ProductPricingForm register={register} />
           </div>
-
-          <div className="flex flex-row md:flex-col gap-4 md:gap-6">
+          <div className="flex flex-col gap-4 md:gap-3">
             <ProductImageUpload
               preview={imagePreview}
               onImageChange={handleImageChange}
+              onImageRemove={handleImageRemove}
             />
-
             <ProductBarcodeDisplay value={barcodeValue} />
           </div>
         </div>
-
         <div className="mt-6">
           <Button
             type="submit"
