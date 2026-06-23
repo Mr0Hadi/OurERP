@@ -1,4 +1,4 @@
-import { Leaf, Moon, Palette, Sun } from "lucide-react"
+import { Eye, Leaf, Moon, Palette, Sun } from "lucide-react"
 
 import { Button } from "@/shared/components/ui/button"
 import {
@@ -14,7 +14,7 @@ import { useTheme } from "@/shared/components/theme/theme-provider"
 // آیکون داینامیک بر اساس تم فعلی
 function ThemeIcon({ theme }) {
   if (theme === "dark") return <Moon className="h-[1.2rem] w-[1.2rem]" />
-  if (theme === "theme-warm") return <Sun className="h-[1.2rem] w-[1.2rem] text-amber-500" />
+  if (theme === "theme-accessible") return <Eye className="h-[1.2rem] w-[1.2rem] text-blue-600" />
   if (theme === "theme-rose") return <Palette className="h-[1.2rem] w-[1.2rem] text-rose-500" />
   if (theme === "theme-forest") return <Leaf className="h-[1.2rem] w-[1.2rem] text-green-600" />
   // light / system
@@ -51,9 +51,9 @@ export function ModeToggle() {
         <DropdownMenuSeparator />
         <DropdownMenuLabel>تم‌های رنگی</DropdownMenuLabel>
 
-        <DropdownMenuItem onClick={() => setTheme("theme-warm")}>
-          <Sun className="mr-2 h-4 w-4 text-amber-500" />
-          گرم
+        <DropdownMenuItem onClick={() => setTheme("theme-accessible")}>
+          <Eye className="mr-2 h-4 w-4 text-blue-600" />
+          دسترس‌پذیر
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setTheme("theme-rose")}>
           <Palette className="mr-2 h-4 w-4 text-rose-500" />

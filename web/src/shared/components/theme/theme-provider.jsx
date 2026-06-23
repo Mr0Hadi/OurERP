@@ -1,7 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react"
 
-
-
 const initialState = {
   theme: "system",
   setTheme: () => null,
@@ -13,11 +11,10 @@ const ThemeProviderContext = createContext(initialState)
 const THEME_CLASSES = [
   "light",
   "dark",
-  "theme-warm",
+  "theme-accessible",
   "theme-rose",
   "theme-forest",
 ]
-
 
 export function ThemeProvider({
   children,
