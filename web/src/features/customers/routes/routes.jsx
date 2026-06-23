@@ -1,7 +1,6 @@
 import { ROUTES } from '@/shared/constants/routes';
-import CustomersPage from './pages/CustomersPage';
-import CustomerDetailPage from './pages/CustomerDetailPage';
-import CustomerNewPage from './pages/CustomerNewPage';
+import { CustomersPage, CustomerDetailPage, CustomerNewPage } from "./index";
+
 
 export const customersRoutes = [
   {
