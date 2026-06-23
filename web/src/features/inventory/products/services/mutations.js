@@ -4,17 +4,16 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { createProduct, updateProduct } from "./api";
 import { ROUTES } from '@/shared/constants/routes';
+import { productKeys } from "./queryKeys";
 
 export const useCreateProductMutation = () => {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: createProduct,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
       toast.success("کالا با موفقیت ایجاد شد");
-      navigate(ROUTES.PRODUCTS_LIST);
+      queryClient.invalidateQueries({ queryKey: productKeys.lists() });
     },
     onError: (error) => {
       toast.error(error?.message || "خطا در ایجاد کالا");

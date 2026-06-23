@@ -46,10 +46,10 @@ export default function ProductNewPage() {
     formState: { errors, isSubmitting },
   } = formMethods;
 
-  const onSubmit = async (data) => {
+const onSubmit = async (data) => {
     const payload = buildProductPayload(data);
     createMutation.mutate(payload);
-  };
+};
 
   const isBusy = isSubmitting || createMutation.isPending;
 
@@ -77,7 +77,7 @@ export default function ProductNewPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate('/products')}
+                onClick={() => navigate(-1)}
                 disabled={isBusy}
                 className="gap-2"
               >

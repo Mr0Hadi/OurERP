@@ -18,7 +18,7 @@ import { suppliersRoutes } from "../../features/suppliers/routes/routes";
 import { reportsRoutes } from "../../features/reports/routes";
 import { settingsRoutes } from "../../features/settings/routes";
 import { transactionsRoutes } from "../../features/transactions/routes";
-import { purchasesRoutes } from "@/features/purchases/routes";
+import { purchasesRoutes } from "@/features/purchases/routes/routes";
 import { salesRoutes } from "@/features/sales/routes";
 
 

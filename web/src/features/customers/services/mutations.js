@@ -16,7 +16,6 @@ export function useCreateCustomerMutation() {
       toast.success("مشتری جدید با موفقیت ثبت شد.");
       // پاک کردن کش لیست مشتریان برای دریافت داده‌های جدید
       queryClient.invalidateQueries({ queryKey: customerKeys.lists() });
-      navigate("/customers"); // هدایت به صفحه لیست مشتریان
     },
     onError: (error) => {
       toast.error(error.message || "خطا در ثبت مشتری جدید.");

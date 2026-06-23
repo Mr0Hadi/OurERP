@@ -1,11 +1,6 @@
 // src/features/purchases/routes.jsx
 import { ROUTES } from '@/shared/constants/routes';
-import PurchasesListPage from './pages/PurchasesListPage';
-import PurchasesNewPage from './pages/PurchasesNewPage';
-import PurchasesInvoicesPage from './pages/PurchasesInvoicesPage';
-import PurchaseInvoiceDetailPage from './pages/PurchaseInvoiceDetailPage';
-import PurchaseReturnNewPage from './pages/PurchaseReturnNewPage';
-import PurchaseReturnsListPage from './pages/PurchaseReturnsListPage';
+import { PurchasesListPage, PurchasesNewPage, PurchasesInvoicesPage, PurchaseInvoiceDetailPage, PurchaseReturnNewPage, PurchaseReturnsListPage} from "./index";
 
 export const purchasesRoutes = [
   {

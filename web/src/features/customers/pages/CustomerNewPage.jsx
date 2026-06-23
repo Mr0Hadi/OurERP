@@ -43,7 +43,7 @@ export default function CustomerNewPage() {
 
   const onSubmit = (data) => {
     createMutation.mutate(buildCustomerPayload(data), {
-      onSuccess: () => navigate("/customers"),
+      onSuccess: () => navigate(-1),
     });
   };
 

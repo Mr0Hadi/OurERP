@@ -41,11 +41,11 @@ export default function SupplierNewPage() {
     formState: { errors },
   } = formMethods;
 
-  const onSubmit = (data) => {
-    createMutation.mutate(buildSupplierPayload(data), {
+const onSubmit = (data) => {
+  createMutation.mutate(buildSupplierPayload(data), {
       onSuccess: () => navigate("/suppliers"),
-    });
-  };
+  });
+};
 
   const isBusy = createMutation.isPending;
 
@@ -83,7 +83,7 @@ export default function SupplierNewPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate("/suppliers")}
+                onClick={() => navigate(-1)}
                 disabled={isBusy}
                 className="gap-2"
               >
@@ -100,7 +100,7 @@ export default function SupplierNewPage() {
                 ) : (
                   <>
                     <Save className="h-4 w-4" />
-                    ثبت کالا
+                    ثبت تامین کننده
                   </>
                 )}
               </Button>
