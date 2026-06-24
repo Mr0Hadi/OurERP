@@ -28,8 +28,13 @@ const SORTING = { id: "name", desc: false };
 function PurchaseDetailForm({ purchaseData }) {
   const navigate = useNavigate();
   const { setFormData, setItems, resetForm, formData } = usePurchaseFormStore();
-    const { formMethods, items, handleItemsChange, computedTotal, buildPurchasePayload } =
-    usePurchaseForm(purchaseData);
+  const {
+    formMethods,
+    items,
+    handleItemsChange,
+    computedTotal,
+    buildPurchasePayload,
+  } = usePurchaseForm(purchaseData);
 
   const { data: suppliersData, isLoading: suppliersLoading } =
     useSuppliersQuery(ALL_FILTERS, PAGINATION, SORTING);
@@ -182,7 +187,7 @@ export default function PurchaseDetailPage() {
       title: isLoading
         ? "در حال بارگذاری..."
         : purchase
-        ? `ویرایش خرید: ${purchase.invoiceNumber || `شناسه ${purchase.id}`}`
+        ? `ویرایش خرید`
         : "خطا",
       showBack: true,
       onBack: () => {

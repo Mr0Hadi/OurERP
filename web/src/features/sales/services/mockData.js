@@ -159,14 +159,36 @@ function generateMoreSales(count = 20) {
 
     const itemsCount = Math.floor(Math.random() * 4) + 1;
     const items = [];
+    const usedProductIds = new Set();
     let totalAmount = 0;
 
     for (let j = 0; j < itemsCount; j++) {
-      const product = products[Math.floor(Math.random() * products.length)];
+      // انتخاب محصول تصادفی که قبلاً استفاده نشده باشد
+      let product;
+      let attempts = 0;
+      const maxAttempts = 50; // برای جلوگیری از حلقه بی‌نهایت
+
+      // اگر تعداد محصولات موجود کمتر از تعداد آیتم‌های درخواستی باشد، ممکن است نتوانیم محصول جدید پیدا کنیم
+      // در این حالت از محصولات باقی‌مانده استفاده می‌کنیم
+      const availableProducts = products.filter(
+        (p) => !usedProductIds.has(p.id)
+      );
+      if (availableProducts.length === 0) {
+        // اگر همه محصولات استفاده شده‌اند، از حلقه خارج می‌شویم
+        break;
+      }
+
+      // انتخاب تصادفی از محصولات باقی‌مانده
+      const randomIndex = Math.floor(Math.random() * availableProducts.length);
+      product = availableProducts[randomIndex];
+      usedProductIds.add(product.id);
+
+      // محاسبه تعداد و تخفیف
       const qty = Math.floor(Math.random() * 20) + 1;
-      const discount =
-        Math.random() < 0.3 ? Math.floor(Math.random() * 15) : 0;
+      const discount = Math.random() < 0.3 ? Math.floor(Math.random() * 15) : 0;
       const lineTotal = qty * product.price * (1 - discount / 100);
+
+      // افزودن آیتم
       items.push({
         productId: product.id,
         productCode: product.code,
@@ -196,7 +218,10 @@ function generateMoreSales(count = 20) {
       id: String(salesMock.length + i + 1),
       customerId: customer.id,
       customerName: customer.name,
-      invoiceNumber: `SALE-2026-${String(salesMock.length + i + 1).padStart(3, "0")}`,
+      invoiceNumber: `SALE-2026-${String(salesMock.length + i + 1).padStart(
+        3,
+        "0"
+      )}`,
       invoiceDate: toJalali(saleDate),
       status,
       paymentType,
@@ -214,7 +239,9 @@ function generateMoreSales(count = 20) {
         Math.floor(Math.random() * 9000000000) + 1000000000
       );
     } else if (paymentType === PAYMENT_TYPES.TRANSFER) {
-      sale.transferRef = `TRN-${Math.floor(Math.random() * 90000000) + 10000000}`;
+      sale.transferRef = `TRN-${
+        Math.floor(Math.random() * 90000000) + 10000000
+      }`;
     }
 
     sales.push(sale);
