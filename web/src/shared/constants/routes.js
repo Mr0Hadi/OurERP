@@ -38,6 +38,7 @@
     // فروش
     SALES: '/sales',
     SALES_NEW: '/sales/new',
+    SALES_DETAIL: '/sales/:id',
     SALES_ORDERS: '/sales/orders',
     SALES_ORDER_DETAIL: '/sales/orders/:id',
     SALES_INVOICES_NEW: '/sales/invoices/new',

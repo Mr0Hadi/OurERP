@@ -1,5 +1,5 @@
 import { ROUTES } from "@/shared/constants/routes";
-import { SaleNewPage, SalesOrdersPage,SalesInvoiceNewPage, SalesProformaPage, SalesReturnNewPage, SalesReturnsListPage, SalePage } from './index'
+import { SaleNewPage, SalesOrdersPage,SalesInvoiceNewPage, SalesProformaPage, SalesReturnNewPage, SalesReturnsListPage, SalePage, SaleDetailPage } from './index'
 
 
 export const salesRoutes = [
@@ -10,6 +10,10 @@ export const salesRoutes = [
   {
     path: ROUTES.SALES,
     element: <SalePage />,
+  },
+  {
+    path: ROUTES.SALES_DETAIL,
+    element: <SaleDetailPage />,
   },
   {
     path: ROUTES.SALES_ORDERS,
