@@ -19,7 +19,7 @@ import { reportsRoutes } from "../../features/reports/routes";
 import { settingsRoutes } from "../../features/settings/routes";
 import { transactionsRoutes } from "../../features/transactions/routes";
 import { purchasesRoutes } from "@/features/purchases/routes/routes";
-import { salesRoutes } from "@/features/sales/routes";
+import { salesRoutes } from "@/features/sales/routes/routes";
 
 
 export const router = createBrowserRouter([

@@ -1,6 +1,6 @@
 // src/features/purchases/services/api.js
 
-import { allPurchases, PURCHASE_STATUSES } from './mockData';
+import { allPurchases, PURCHASE_STATUSES } from "./mockData";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -12,7 +12,7 @@ export async function createPurchase(purchaseData) {
 
   // شبیه‌سازی خطای تصادفی
   if (Math.random() < 0.05) {
-    throw new Error('خطا در ثبت خرید');
+    throw new Error("خطا در ثبت خرید");
   }
 
   const newPurchase = {
@@ -36,14 +36,14 @@ export async function fetchPurchases(params = {}) {
   const {
     page = 1,
     limit = 10,
-    search = '',
-    supplierId = '',
-    status = '',
-    paymentType = '',
-    fromDate = '',
-    toDate = '',
-    sortBy = 'createdAt',
-    sortOrder = 'desc',
+    search = "",
+    supplierIds = [],
+    status = "",
+    paymentType = "",
+    fromDate = "",
+    toDate = "",
+    sortBy = "createdAt",
+    sortOrder = "desc",
   } = params;
 
   let filtered = [...allPurchases];
@@ -60,8 +60,8 @@ export async function fetchPurchases(params = {}) {
   }
 
   // فیلتر تامین‌کننده
-  if (supplierId) {
-    filtered = filtered.filter((p) => p.supplierId === supplierId);
+  if (Array.isArray(supplierIds) && supplierIds.length > 0) {
+    filtered = filtered.filter((p) => supplierIds.includes(p.supplierId));
   }
 
   // فیلتر وضعیت
@@ -76,10 +76,14 @@ export async function fetchPurchases(params = {}) {
 
   // فیلتر تاریخ
   if (fromDate) {
-    filtered = filtered.filter((p) => new Date(p.createdAt) >= new Date(fromDate));
+    filtered = filtered.filter(
+      (p) => new Date(p.createdAt) >= new Date(fromDate)
+    );
   }
   if (toDate) {
-    filtered = filtered.filter((p) => new Date(p.createdAt) <= new Date(toDate));
+    filtered = filtered.filter(
+      (p) => new Date(p.createdAt) <= new Date(toDate)
+    );
   }
 
   // مرتب‌سازی
@@ -87,19 +91,19 @@ export async function fetchPurchases(params = {}) {
     let aVal = a[sortBy];
     let bVal = b[sortBy];
 
-    if (sortBy === 'createdAt' || sortBy === 'updatedAt') {
+    if (sortBy === "createdAt" || sortBy === "updatedAt") {
       aVal = new Date(aVal).getTime();
       bVal = new Date(bVal).getTime();
-    } else if (sortBy === 'totalAmount' || sortBy === 'paidAmount') {
+    } else if (sortBy === "totalAmount" || sortBy === "paidAmount") {
       aVal = Number(aVal);
       bVal = Number(bVal);
-    } else if (typeof aVal === 'string') {
-      return sortOrder === 'asc'
-        ? aVal.localeCompare(bVal, 'fa')
-        : bVal.localeCompare(aVal, 'fa');
+    } else if (typeof aVal === "string") {
+      return sortOrder === "asc"
+        ? aVal.localeCompare(bVal, "fa")
+        : bVal.localeCompare(aVal, "fa");
     }
 
-    if (sortOrder === 'asc') {
+    if (sortOrder === "asc") {
       return aVal > bVal ? 1 : -1;
     }
     return aVal < bVal ? 1 : -1;
@@ -129,7 +133,7 @@ export async function fetchPurchaseById(id) {
   const purchase = allPurchases.find((p) => p.id === id);
 
   if (!purchase) {
-    throw new Error('خرید یافت نشد');
+    throw new Error("خرید یافت نشد");
   }
 
   return purchase;
@@ -144,7 +148,7 @@ export async function updatePurchase(id, updates) {
   const index = allPurchases.findIndex((p) => p.id === id);
 
   if (index === -1) {
-    throw new Error('خرید یافت نشد');
+    throw new Error("خرید یافت نشد");
   }
 
   allPurchases[index] = {
@@ -179,7 +183,7 @@ export async function updatePurchasePayment(id, paymentData) {
   const index = allPurchases.findIndex((p) => p.id === id);
 
   if (index === -1) {
-    throw new Error('خرید یافت نشد');
+    throw new Error("خرید یافت نشد");
   }
 
   const currentPurchase = allPurchases[index];

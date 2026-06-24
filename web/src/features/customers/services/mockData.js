@@ -8,7 +8,7 @@ export const allCustomers = [
     phone: "09121234567",
     address: "تهران، خیابان ولیعصر، پلاک ۱۲",
     postalCode: "1234567890",
-    balance: -500000, // منفی = بدهکار، مثبت = طلبکار
+    balance: -500000,
     avatar: null,
     coordinates: { lat: 35.6892, lng: 51.389 },
   },
@@ -21,7 +21,7 @@ export const allCustomers = [
     postalCode: "8134567890",
     balance: 1200000,
     avatar: null,
-    coordinates: { lat: 32.6539, lng: 51.6660 },
+    coordinates: { lat: 32.6539, lng: 51.666 },
   },
   {
     id: "3",
@@ -32,6 +32,6 @@ export const allCustomers = [
     postalCode: "6514567890",
     balance: -1100000,
     avatar: null,
-    coordinates: { lat: 34.7990, lng: 48.5150 },
+    coordinates: { lat: 34.799, lng: 48.515 },
   },
 ];

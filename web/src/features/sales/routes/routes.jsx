@@ -1,16 +1,15 @@
 import { ROUTES } from "@/shared/constants/routes";
-import SalesOrdersPage from "./pages/SalesOrdersPage";
-import SaleNewPage from "./pages/SaleNewPage";
-import SalesInvoiceNewPage from "./pages/SalesInvoiceNewPage";
-import SalesProformaPage from "./pages/SalesProformaPage";
-import SalesReturnsListPage from "./pages/SalesReturnsListPage";
-import SalesReturnNewPage from "./pages/SalesReturnNewPage";
+import { SaleNewPage, SalesOrdersPage,SalesInvoiceNewPage, SalesProformaPage, SalesReturnNewPage, SalesReturnsListPage, SalePage } from './index'
 
 
 export const salesRoutes = [
+  // {
+  //   path: ROUTES.SALES,
+  //   element: <SalesOrdersPage />,
+  // },
   {
     path: ROUTES.SALES,
-    element: <SalesOrdersPage />,
+    element: <SalePage />,
   },
   {
     path: ROUTES.SALES_ORDERS,
@@ -26,7 +25,7 @@ export const salesRoutes = [
   },
   {
     path: ROUTES.SALES_PROFORMA,
-    element: <SalesProformaPage />,
+    element: <SalesProformaPage/>,
   },
   {
     path: ROUTES.SALES_RETURNS_NEW,

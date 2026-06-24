@@ -275,6 +275,13 @@ export const navigationData = {
       permission: "sales",
       items: [
         {
+          title: "لیست فروش ها",
+          url: ROUTES.SALES,
+          permission: "purchases_create",
+          icon: FilePlus,
+          description: "لیست فروش های ثبت شده",
+        },
+        {
           title: "ثبت فروش جدید",
           url: ROUTES.SALES_NEW,
           permission: "sales_create",

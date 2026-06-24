@@ -175,7 +175,7 @@ export default function PurchasesNewPage() {
 
             {/* دکمه‌های عملیات */}
             <div className="flex gap-2">
-              <Button type="submit" className="flex-1 gap-2" disabled={isBusy}>
+              <Button type="submit" className="flex-1 gap-2" disabled={isBusy || !formData.supplierId}>
                 <Save className="h-4 w-4" />
                 {isBusy ? "در حال ذخیره..." : "ذخیره خرید"}
               </Button>
