@@ -1,3 +1,4 @@
+// src/features/purchases/store/purchaseFormStore.js
 import { create } from 'zustand';
 
 const EMPTY_FORM = {
@@ -5,6 +6,7 @@ const EMPTY_FORM = {
   supplierName: '',
   invoiceNumber: '',
   invoiceDate: '',
+  dueDate: '',
   description: '',
   paymentType: 'cash',
   paidAmount: '',

@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { createProduct, updateProduct } from "./api";
-import { ROUTES } from '@/shared/constants/routes';
+import { ROUTES } from "@/shared/constants/routes";
 import { productKeys } from "./queryKeys";
 
 export const useCreateProductMutation = () => {
@@ -28,11 +28,11 @@ export const useUpdateProductMutation = (id) => {
   return useMutation({
     mutationFn: (productData) => updateProduct(id, productData),
     onSuccess: () => {
-      queryClient.invalidateQueries({ 
-        queryKey: ["products", "detail", String(id)]
+      queryClient.invalidateQueries({
+        queryKey: ["products", "detail", String(id)],
       });
-      queryClient.invalidateQueries({ 
-        queryKey: ["products", "list"]
+      queryClient.invalidateQueries({
+        queryKey: ["products", "list"],
       });
       toast.success("کالا با موفقیت ویرایش شد");
       navigate(ROUTES.PRODUCTS_LIST);

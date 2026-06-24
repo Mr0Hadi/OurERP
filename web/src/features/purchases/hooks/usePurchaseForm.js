@@ -26,7 +26,15 @@ export function usePurchaseForm() {
       return;
     }
     const sub = watch((values) => {
-      setFormData(values);
+      // فقط فیلدهای فرم را آپدیت می‌کنیم، نه supplierId/supplierName
+      setFormData({
+        invoiceNumber: values.invoiceNumber,
+        invoiceDate: values.invoiceDate,
+        dueDate: values.dueDate,
+        description: values.description,
+        paymentType: values.paymentType,
+        paidAmount: values.paidAmount,
+      });
     });
     return () => sub.unsubscribe();
   }, [watch, setFormData]);

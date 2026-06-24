@@ -33,7 +33,7 @@ export async function fetchSuppliers({
 
   result.sort((a, b) => {
     let aVal, bVal;
-    if (sortBy === "fullName") {  
+    if (sortBy === "fullName") {
       aVal = `${a.firstName} ${a.lastName}`;
       bVal = `${b.firstName} ${b.lastName}`;
     } else {
