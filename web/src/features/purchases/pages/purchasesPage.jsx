@@ -36,7 +36,6 @@ const PurchasesPage = () => {
   const totalPages = data?.totalPages ?? 1;
   const currentPage = data?.page ? data.page - 1 : pagination.pageIndex;
 
-  console.log(suppliers);
 
   return (
     <div className="container mx-auto space-y-6">

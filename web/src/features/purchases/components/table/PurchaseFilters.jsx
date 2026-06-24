@@ -159,11 +159,11 @@ const SupplierFilterInput = ({
       <div ref={wrapperRef} className="relative flex-1">
         <div className="relative">
           <div
-            className="min-h-[38px] w-full bg-transparent rounded-lg border border-input px-3 py-2 text-sm cursor-pointer hover:border-ring transition-colors dark:bg-input/30 dark:hover:bg-input/50"
+            className="w-full bg-transparent rounded-lg border border-input px-3 py-2 text-sm cursor-pointer hover:border-ring transition-colors dark:bg-input/30 dark:hover:bg-input/50"
             onClick={() => setIsOpen(!isOpen)}
           >
             <div className="flex items-center gap-2 flex-wrap">
-              <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+              {/* <Search className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" /> */}
 
               {selectedSuppliers.length === 0 ? (
                 <span className="text-muted-foreground">
