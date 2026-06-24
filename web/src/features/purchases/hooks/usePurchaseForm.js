@@ -2,19 +2,19 @@ import { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { usePurchaseFormStore } from '#/features/purchases/store/purchaseFormStore';
 
-export function usePurchaseForm() {
+export function usePurchaseForm(initialData = {}) {
   const { formData, setFormData, setItems } = usePurchaseFormStore();
   const isFirstMount = useRef(true);
 
   const formMethods = useForm({
     defaultValues: {
-      supplierId: formData.supplierId || '',
-      supplierName: formData.supplierName || '',
-      invoiceNumber: formData.invoiceNumber || '',
-      invoiceDate: formData.invoiceDate || '',
-      description: formData.description || '',
-      paymentType: formData.paymentType || 'cash',
-      paidAmount: formData.paidAmount || '',
+      invoiceNumber: initialData.invoiceNumber || '',
+      invoiceDate: initialData.invoiceDate || '',
+      description: initialData.description || '',
+      paymentType: initialData.paymentType || 'cash',
+      paidAmount: initialData.paidAmount?.toString() || '',
+      checkNumber: initialData.checkNumber || '',
+      transferRef: initialData.transferRef || '',
     },
   });
 

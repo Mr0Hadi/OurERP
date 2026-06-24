@@ -28,6 +28,7 @@
     
     // خرید
     PURCHASES: '/purchases',
+    PURCHASES_DETAIL: '/purchases/:id',
     PURCHASES_NEW: '/purchases/new',
     PURCHASES_INVOICES: '/purchases/invoices',
     PURCHASES_INVOICE_DETAIL: '/purchases/invoices/:id',

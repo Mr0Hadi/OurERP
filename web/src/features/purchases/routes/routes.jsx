@@ -1,11 +1,19 @@
 // src/features/purchases/routes.jsx
-import { ROUTES } from '@/shared/constants/routes';
-import { PurchasesListPage, PurchasesNewPage, PurchasesInvoicesPage, PurchaseInvoiceDetailPage, PurchaseReturnNewPage, PurchaseReturnsListPage} from "./index";
+import { ROUTES } from "@/shared/constants/routes";
+import {
+  PurchasesPage,
+  PurchasesNewPage,
+  PurchaseDetailPage,
+  PurchasesInvoicesPage,
+  PurchaseInvoiceDetailPage,
+  PurchaseReturnNewPage,
+  PurchaseReturnsListPage,
+} from "./index";
 
 export const purchasesRoutes = [
   {
     path: ROUTES.PURCHASES,
-    element: <PurchasesListPage />,
+    element: <PurchasesPage />,
   },
   {
     path: ROUTES.PURCHASES_NEW,
@@ -14,6 +22,10 @@ export const purchasesRoutes = [
   {
     path: ROUTES.PURCHASES_INVOICES,
     element: <PurchasesInvoicesPage />,
+  },
+  {
+    path: ROUTES.PURCHASES_DETAIL,
+    element: <PurchaseDetailPage />,
   },
   {
     path: ROUTES.PURCHASES_INVOICE_DETAIL,

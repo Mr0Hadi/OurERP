@@ -49,6 +49,7 @@ export default function PurchasesNewPage() {
 
   const { data: suppliersData, isLoading: suppliersLoading } =
     useSuppliersQuery(ALL_FILTERS, PAGINATION, SORTING);
+    
   const { data: productsData, isLoading: productsLoading } = useProductsQuery(
     ALL_FILTERS,
     PAGINATION,

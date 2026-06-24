@@ -29,7 +29,6 @@ import {
 
   // Financial
   DollarSign,
-  CreditCard,
   Percent,
   TrendingUp,
   TrendingDown,
@@ -231,6 +230,13 @@ export const navigationData = {
       isActive: false,
       permission: "purchases",
       items: [
+        {
+          title: "لیست خرید ها",
+          url: ROUTES.PURCHASES,
+          permission: "purchases_create",
+          icon: FilePlus,
+          description: "لیست خرید های ثبت شده",
+        },
         {
           title: "ثبت خرید جدید",
           url: ROUTES.PURCHASES_NEW,
