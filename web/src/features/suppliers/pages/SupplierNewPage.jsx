@@ -41,11 +41,11 @@ export default function SupplierNewPage() {
     formState: { errors },
   } = formMethods;
 
-const onSubmit = (data) => {
-  createMutation.mutate(buildSupplierPayload(data), {
-      onSuccess: () => navigate("/suppliers"),
-  });
-};
+  const onSubmit = (data) => {
+    createMutation.mutate(buildSupplierPayload(data), {
+      onSuccess: () => navigate(-1),
+    });
+  };
 
   const isBusy = createMutation.isPending;
 
@@ -79,30 +79,20 @@ const onSubmit = (data) => {
             <SupplierAddressForm register={register} />
 
             {/* دکمه‌های عملیات */}
-            <div className="flex items-center justify-end gap-3">
+            <div className="flex gap-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => navigate(-1)}
                 disabled={isBusy}
-                className="gap-2"
+                className="flex-1 gap-2"
               >
                 <X className="h-4 w-4" />
                 انصراف
               </Button>
-              <Button 
-                type="submit" 
-                disabled={isBusy}
-                className="gap-2"
-              >
-                {isBusy ? (
-                  "در حال ثبت..."
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    ثبت تامین کننده
-                  </>
-                )}
+              <Button type="submit" disabled={isBusy} className="flex-1 gap-2">
+                <Save className="h-4 w-4" />
+                {isBusy ? "در حال ثبت..." : "ثبت تامین کننده"}
               </Button>
             </div>
           </div>

@@ -1,8 +1,197 @@
+import { useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Save, X } from "lucide-react";
 
-function PurchasesNewPage() {
+
+import { Button } from "#/shared/components/ui/button";
+import { useHeaderStore } from "#/shared/store/headerStore";
+import { usePurchaseFormStore } from "#/features/purchases/store/purchaseFormStore";
+import { usePurchaseForm } from "#/features/purchases/hooks/usePurchaseForm";
+import { useCreatePurchaseMutation } from "#/features/purchases/services/mutations";
+import { useSuppliersQuery } from "#/features/suppliers/services/queries";
+import { useProductsQuery } from "#/features/inventory/products/services/queries";
+
+import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection";
+import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
+import PurchaseInfoSection from "../components/forms/PurchaseInfoSection";
+import PurchasePaymentSection from "../components/forms/PurchasePaymentSection";
+
+const ALL_FILTERS = {};
+const PAGINATION = { pageIndex: 0, pageSize: 200 };
+const SORTING = { id: "name", desc: false };
+
+export default function PurchasesNewPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const setHeader = useHeaderStore((s) => s.setHeader);
+  const clearHeader = useHeaderStore((s) => s.clearHeader);
+
+  const { setFormData, resetForm, formData } = usePurchaseFormStore();
+
+  const {
+    formMethods,
+    items,
+    handleItemsChange,
+    computedTotal,
+    buildPurchasePayload,
+  } = usePurchaseForm();
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    control,
+    formState: { errors },
+  } = formMethods;
+
+  const createMutation = useCreatePurchaseMutation();
+
+  const { data: suppliersData, isLoading: suppliersLoading } =
+    useSuppliersQuery(ALL_FILTERS, PAGINATION, SORTING);
+  const { data: productsData, isLoading: productsLoading } = useProductsQuery(
+    ALL_FILTERS,
+    PAGINATION,
+    SORTING
+  );
+
+  const suppliers = suppliersData?.items || [];
+  const products = productsData?.items || [];
+
+  // اگر از SupplierNewPage برگشتیم، تامین‌کننده جدید را set می‌کنیم
+  useEffect(() => {
+    const state = location.state;
+    if (state?.newSupplierId && suppliers.length > 0) {
+      const found = suppliers.find((s) => s.id === state.newSupplierId);
+      if (found) {
+        const name =
+          found.companyName || `${found.firstName} ${found.lastName}`;
+        setFormData({ supplierId: found.id, supplierName: name });
+        navigate(location.pathname, { replace: true, state: {} });
+      }
+    }
+  }, [location.state, suppliers, setFormData, navigate, location.pathname]);
+
+
+  useEffect(() => {
+    if (!location.state?.newProductId || !products.length) return;
+
+    const newProductId = location.state.newProductId;
+    const product = products.find((p) => p.id === newProductId);
+
+    if (product) {
+      const alreadyAdded = items.some((i) => i.productId === product.id);
+      if (!alreadyAdded) {
+        handleItemsChange([
+          ...items,
+          {
+            productId: product.id,
+            productName: product.name,
+            productCode: product.code,
+            unit: product.unit,
+            qty: 1,
+            unitPrice: product.purchasePrice ?? 0,
+            discount: 0,
+          },
+        ]);
+      }
+    }
+
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [
+    handleItemsChange,
+    items,
+    location.pathname,
+    location.state,
+    navigate,
+    products,
+  ]);
+
+  useEffect(() => {
+    setHeader({
+      title: "ثبت خرید جدید",
+      showBack: true,
+      onBack: () => {
+        resetForm();
+        navigate(-1);
+      },
+    });
+    return () => clearHeader();
+  }, [setHeader, clearHeader, navigate, resetForm]);
+
+  const onSubmit = (formValues) => {
+    if (!formData.supplierId) return;
+    const payload = buildPurchasePayload(formValues);
+    createMutation.mutate(payload, {
+      onSuccess: () => {
+        resetForm();
+        navigate("/purchases");
+      },
+    });
+  };
+
+  const handleCancel = () => {
+    resetForm();
+    navigate(-1);
+  };
+
+  const isBusy = createMutation.isPending;
+
   return (
-    <div>PurchasesNewPage</div>
-  )
-}
+    <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in zoom-in-95 duration-300">
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* ستون اصلی - کالاها + اطلاعات فاکتور */}
+          <div className="lg:col-span-2 space-y-4">
+            <PurchaseItemsSection
+              items={items}
+              products={products}
+              isLoadingProducts={productsLoading}
+              onItemsChange={handleItemsChange}
+            />
+            <PurchaseInfoSection register={register} errors={errors} />
+          </div>
 
-export default PurchasesNewPage
+          {/* ستون کناری - تامین‌کننده + پرداخت */}
+          <div className="space-y-4">
+            <PurchaseSupplierSection
+              suppliers={suppliers}
+              isLoading={suppliersLoading}
+              selectedId={formData.supplierId}
+              onSelect={(id, name) =>
+                setFormData({ supplierId: id, supplierName: name })
+              }
+              onClear={() => setFormData({ supplierId: "", supplierName: "" })}
+              error={!formData.supplierId && errors._supplier?.message}
+            />
+            <PurchasePaymentSection
+              register={register}
+              errors={errors}
+              control={control}
+              setValue={setValue}
+              totalAmount={computedTotal}
+            />
+
+            {/* دکمه‌های عملیات */}
+            <div className="flex gap-2">
+              <Button type="submit" className="flex-1 gap-2" disabled={isBusy}>
+                <Save className="h-4 w-4" />
+                {isBusy ? "در حال ذخیره..." : "ذخیره خرید"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="gap-2"
+                onClick={handleCancel}
+                disabled={isBusy}
+              >
+                <X className="h-4 w-4" />
+                انصراف
+              </Button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  );
+}

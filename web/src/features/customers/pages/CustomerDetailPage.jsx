@@ -71,30 +71,20 @@ function CustomerDetailForm({ customerData }) {
             <CustomerAddressForm register={register} />
 
             {/* دکمه‌های عملیات - استیکی در دسکتاپ */}
-                        <div className="flex items-center justify-end gap-3">
+            <div className="flex gap-2">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate(-1)}
+                onClick={() => navigate("/customers")}
                 disabled={isBusy}
-                className="gap-2"
+                className="flex-1 gap-2"
               >
                 <X className="h-4 w-4" />
                 انصراف
               </Button>
-              <Button 
-                type="submit" 
-                disabled={isBusy}
-                className="gap-2"
-              >
-                {isBusy ? (
-                  "در حال ثبت..."
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    ثبت کالا
-                  </>
-                )}
+              <Button type="submit" disabled={isBusy} className="flex-1 gap-2">
+                <Save className="h-4 w-4" />
+                {isBusy ? "در حال ثبت..." : "ویرایش مشتری"}
               </Button>
             </div>
           </div>
