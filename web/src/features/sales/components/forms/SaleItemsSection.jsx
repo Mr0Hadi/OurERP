@@ -87,7 +87,7 @@ export default function SaleItemsSection({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-base font-semibold text-card-foreground">
-          اقلام خرید
+          اقلام فروش
         </CardTitle>
         <Button
           type="button"

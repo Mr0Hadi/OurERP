@@ -3,12 +3,10 @@ import { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { usePurchaseFormStore } from '#/features/purchases/store/purchaseFormStore';
 
-export function usePurchaseForm(initialData = {}) {
+export function usePurchaseForm() {
   const { formData, setFormData, setItems } = usePurchaseFormStore();
   const isFirstMount = useRef(true);
 
-  // defaultValues از store می‌آیند (که قبلاً توسط initializeFromPurchase پر شده)
-  // این باعث می‌شود وقتی کاربر برمی‌گردد، فرم مقادیر ذخیره‌شده را نشان دهد
   const formMethods = useForm({
     defaultValues: {
       invoiceNumber: formData.invoiceNumber || '',
@@ -22,7 +20,30 @@ export function usePurchaseForm(initialData = {}) {
     },
   });
 
-  const { watch } = formMethods;
+  const { watch, reset } = formMethods;
+
+  // وقتی store ریست می‌شه (initializedForId برمی‌گرده به null)، فرم را هم ریست کن
+  const initializedForId = usePurchaseFormStore((s) => s.initializedForId);
+  const prevInitializedRef = useRef(initializedForId);
+
+  useEffect(() => {
+    const prev = prevInitializedRef.current;
+    prevInitializedRef.current = initializedForId;
+
+    // اگر از یه مقداری به null رفت، یعنی resetForm صدا زده شده
+    if (prev !== null && initializedForId === null) {
+      reset({
+        invoiceNumber: '',
+        invoiceDate: '',
+        dueDate: '',
+        description: '',
+        paymentType: 'cash',
+        paidAmount: '',
+        checkNumber: '',
+        transferRef: '',
+      });
+    }
+  }, [initializedForId, reset]);
 
   useEffect(() => {
     if (isFirstMount.current) {
@@ -66,8 +87,7 @@ export function usePurchaseForm(initialData = {}) {
     paidAmount: Number(formValues.paidAmount) || 0,
     items: items.map((item) => ({
       ...item,
-      lineTotal:
-        item.qty * item.unitPrice * (1 - (item.discount || 0) / 100),
+      lineTotal: item.qty * item.unitPrice * (1 - (item.discount || 0) / 100),
     })),
     totalAmount: computedTotal,
   });

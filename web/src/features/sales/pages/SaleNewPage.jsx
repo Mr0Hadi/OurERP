@@ -1,4 +1,3 @@
-// src/features/sales/pages/SaleNewPage.jsx
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Save, X } from "lucide-react";
@@ -26,8 +25,8 @@ export default function SaleNewPage() {
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  const returnPath = useNavigationStore((s) => s.returnPath);
   const setReturnPath = useNavigationStore((s) => s.setReturnPath);
+  const setCurrentPath = useNavigationStore((s) => s.setCurrentPath);
 
   const {
     formData,
@@ -36,31 +35,41 @@ export default function SaleNewPage() {
     initializeForNew,
   } = useSaleFormStore();
 
-  // منطق حفظ/ریست فرم بر اساس returnPath
+  // منطق حفظ/ریست فرم بر اساس مسیر ورود
   useEffect(() => {
     const fromValidReturn =
       location.state?.newCustomerId || location.state?.newProductId;
 
+    const currentPath = location.pathname;
+
+    // اول currentPath رو آپدیت کن تا previousPath درست باشه
+    setCurrentPath(currentPath);
+
+    // بعد previousPath رو بخون
+    const { previousPath: prevPath } = useNavigationStore.getState();
+
     if (fromValidReturn) {
-      // از صفحه فرعی برگشتیم
-      setReturnPath(location.pathname);
+      // از صفحه فرعی با state برگشتیم
+      setReturnPath(currentPath);
       initializeForNew();
-    } else if (returnPath && returnPath !== location.pathname) {
-      // از مسیر دیگری اومدیم
-      resetForm();
-      setReturnPath(location.pathname);
-    } else {
-      // اولین بار یا همون مسیر
-      initializeForNew();
+      return;
     }
-  }, [
-    location.pathname,
-    location.state,
-    returnPath,
-    setReturnPath,
-    initializeForNew,
-    resetForm,
-  ]);
+
+    const isReturningFromSubPage =
+      prevPath === '/products/new' || prevPath === '/customers/new';
+
+    if (isReturningFromSubPage) {
+      // از صفحه فرعی بدون state برگشتیم
+      setReturnPath(currentPath);
+      initializeForNew();
+      return;
+    }
+
+    // از مسیر دیگری اومدیم — فرم رو ریست کن
+    resetForm();
+    setReturnPath(currentPath);
+    initializeForNew();
+  }, [location.pathname, location.state, setCurrentPath]);
 
   const {
     formMethods,
@@ -151,7 +160,7 @@ export default function SaleNewPage() {
   };
 
   const handleClearCustomer = () => {
-    setFormData({ customerId: "", customerName: "" });
+    setFormData({ customerId: '', customerName: '' });
   };
 
   const onSubmit = formMethods.handleSubmit((formValues) => {

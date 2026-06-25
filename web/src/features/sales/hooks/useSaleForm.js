@@ -1,13 +1,12 @@
-// src/features/sales/hooks/useSaleForm.js
 import { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSaleFormStore } from '#/features/sales/store/saleFormStore';
 
 export function useSaleForm() {
-  const { formData, setFormData, setItems } = useSaleFormStore();
+  const { formData, setFormData, setItems, initializedForId } = useSaleFormStore();
   const isFirstMount = useRef(true);
+  const prevInitializedRef = useRef(initializedForId);
 
-  // defaultValues مستقیم از store — وقتی کاربر برمی‌گردد مقادیر حفظ شده‌اند
   const formMethods = useForm({
     defaultValues: {
       invoiceNumber: formData.invoiceNumber || '',
@@ -21,9 +20,26 @@ export function useSaleForm() {
     },
   });
 
-  const { watch } = formMethods;
+  const { watch, reset } = formMethods;
 
-  // فقط sync یک‌طرفه: form → store
+  // وقتی resetForm صدا زده می‌شه، react-hook-form هم ریست بشه
+  useEffect(() => {
+    if (prevInitializedRef.current !== null && initializedForId === null) {
+      reset({
+        invoiceNumber: '',
+        invoiceDate: '',
+        dueDate: '',
+        description: '',
+        paymentType: 'cash',
+        paidAmount: '',
+        checkNumber: '',
+        transferRef: '',
+      });
+    }
+    prevInitializedRef.current = initializedForId;
+  }, [initializedForId, reset]);
+
+  // sync یک‌طرفه: form → store
   useEffect(() => {
     if (isFirstMount.current) {
       isFirstMount.current = false;

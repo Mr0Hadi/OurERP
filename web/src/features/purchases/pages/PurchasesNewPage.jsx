@@ -29,39 +29,49 @@ export default function PurchasesNewPage() {
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   const returnPath = useNavigationStore((s) => s.returnPath);
+  const previousPath = useNavigationStore((s) => s.previousPath);
   const setReturnPath = useNavigationStore((s) => s.setReturnPath);
+  const setCurrentPath = useNavigationStore((s) => s.setCurrentPath);
 
-  const {
-    setFormData,
-    formData,
-    resetForm,
-    initializeForNew,
-  } = usePurchaseFormStore();
+  const { setFormData, formData, resetForm, initializeForNew } =
+    usePurchaseFormStore();
 
-  useEffect(() => {
-    const fromValidReturn =
-      location.state?.newSupplierId || location.state?.newProductId;
+useEffect(() => {
+  const fromValidReturn =
+    location.state?.newSupplierId || location.state?.newProductId;
 
-    if (fromValidReturn) {
-      // از صفحه فرعی برگشتیم — state باید حفظ شود
-      setReturnPath(location.pathname);
-      initializeForNew();
-    } else if (returnPath && returnPath !== location.pathname) {
-      // از جای دیگه‌ای اومدیم — reset کن
-      resetForm();
-      setReturnPath(location.pathname);
-    } else {
-      // اولین بار یا همون صفحه‌ایم
-      initializeForNew();
-    }
-  }, [
-    location.pathname,
-    location.state,
-    returnPath,
-    setReturnPath,
-    initializeForNew,
-    resetForm,
-  ]);
+  const currentPath = location.pathname;
+  
+  // اول currentPath رو آپدیت کن
+  setCurrentPath(currentPath);
+  
+  // بعد previousPath رو بخون
+  const { previousPath: prevPath } = useNavigationStore.getState();
+
+  console.log(fromValidReturn);
+  console.log(currentPath);
+  console.log(prevPath);
+
+  if (fromValidReturn) {
+    setReturnPath(currentPath);
+    initializeForNew();
+    return;
+  }
+
+  const isReturningFromSubPage =
+    prevPath === '/products/new' || prevPath === '/suppliers/new';
+
+  if (isReturningFromSubPage) {
+    setReturnPath(currentPath);
+    initializeForNew();
+    return;
+  }
+
+  resetForm();
+  setReturnPath(currentPath);
+  initializeForNew();
+}, [location.pathname, location.state, setCurrentPath]);
+
 
   const {
     formMethods,
