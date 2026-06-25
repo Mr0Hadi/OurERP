@@ -1,8 +1,10 @@
+// src/features/sales/pages/SaleNewPage.jsx
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Save, X } from "lucide-react";
 import { Button } from "#/shared/components/ui/button";
 import { useHeaderStore } from "#/shared/store/headerStore";
+import { useNavigationStore } from "@/shared/store/navigationStore";
 import { useSaleFormStore } from "#/features/sales/store/saleFormStore";
 import { useSaleForm } from "#/features/sales/hooks/useSaleForm";
 import { useCreateSaleMutation } from "#/features/sales/services/mutations";
@@ -20,8 +22,46 @@ const SORTING = { id: "name", desc: false };
 export default function SaleNewPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { setHeader } = useHeaderStore();
-  const { formData, setFormData, resetForm } = useSaleFormStore();
+
+  const setHeader = useHeaderStore((s) => s.setHeader);
+  const clearHeader = useHeaderStore((s) => s.clearHeader);
+
+  const returnPath = useNavigationStore((s) => s.returnPath);
+  const setReturnPath = useNavigationStore((s) => s.setReturnPath);
+
+  const {
+    formData,
+    setFormData,
+    resetForm,
+    initializeForNew,
+  } = useSaleFormStore();
+
+  // منطق حفظ/ریست فرم بر اساس returnPath
+  useEffect(() => {
+    const fromValidReturn =
+      location.state?.newCustomerId || location.state?.newProductId;
+
+    if (fromValidReturn) {
+      // از صفحه فرعی برگشتیم
+      setReturnPath(location.pathname);
+      initializeForNew();
+    } else if (returnPath && returnPath !== location.pathname) {
+      // از مسیر دیگری اومدیم
+      resetForm();
+      setReturnPath(location.pathname);
+    } else {
+      // اولین بار یا همون مسیر
+      initializeForNew();
+    }
+  }, [
+    location.pathname,
+    location.state,
+    returnPath,
+    setReturnPath,
+    initializeForNew,
+    resetForm,
+  ]);
+
   const {
     formMethods,
     items,
@@ -29,6 +69,7 @@ export default function SaleNewPage() {
     computedTotal,
     buildSalePayload,
   } = useSaleForm();
+
   const createMutation = useCreateSaleMutation();
 
   const { data: customersData, isLoading: customersLoading } =
@@ -42,62 +83,68 @@ export default function SaleNewPage() {
   const customers = customersData?.items || [];
   const products = productsData?.items || [];
 
-  // اگر از صفحه مشتری جدید برگشتیم
+  // اگر مشتری جدید اضافه شد
   useEffect(() => {
-    if (location.state?.newCustomerId && customers.length > 0) {
-      const newCustomer = customers.find(
-        (c) => c.id === location.state.newCustomerId
-      );
+    const state = location.state;
+    if (state?.newCustomerId && customers.length > 0) {
+      const newCustomer = customers.find((c) => c.id === state.newCustomerId);
       if (newCustomer) {
         const name =
           newCustomer.companyName ||
           `${newCustomer.firstName} ${newCustomer.lastName}`;
-        setFormData({
-          customerId: newCustomer.id,
-          customerName: name,
-        });
+        setFormData({ customerId: newCustomer.id, customerName: name });
+        navigate(location.pathname, { replace: true, state: {} });
       }
-      window.history.replaceState({}, document.title);
     }
-  }, [location.state, customers, setFormData]);
+  }, [location.state, customers, setFormData, navigate, location.pathname]);
 
   // اگر محصول جدید اضافه شد
   useEffect(() => {
-    if (location.state?.newProductId && products.length > 0) {
-      const newProduct = products.find(
-        (p) => p.id === location.state.newProductId
-      );
-      if (
-        newProduct &&
-        !items.some((item) => item.productId === newProduct.id)
-      ) {
+    if (!location.state?.newProductId || !products.length) return;
+
+    const newProductId = location.state.newProductId;
+    const newProduct = products.find((p) => p.id === newProductId);
+
+    if (newProduct) {
+      const alreadyAdded = items.some((i) => i.productId === newProduct.id);
+      if (!alreadyAdded) {
         handleItemsChange([
           ...items,
           {
             productId: newProduct.id,
             productCode: newProduct.code,
             productName: newProduct.name,
+            unit: newProduct.unit,
             qty: 1,
             unitPrice: newProduct.salePrice || 0,
             discount: 0,
-            lineTotal: newProduct.salePrice || 0,
           },
         ]);
       }
-      window.history.replaceState({}, document.title);
     }
-  }, [location.state, products, items, handleItemsChange]);
+
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [
+    handleItemsChange,
+    items,
+    location.pathname,
+    location.state,
+    navigate,
+    products,
+  ]);
 
   useEffect(() => {
+    const { resetForm: reset } = useSaleFormStore.getState();
     setHeader({
       title: "ثبت فروش جدید",
       showBack: true,
       onBack: () => {
-        resetForm();
+        reset();
         navigate(-1);
       },
     });
-  }, [setHeader, navigate, resetForm]);
+    return () => clearHeader();
+  }, [setHeader, clearHeader, navigate]);
 
   const handleSelectCustomer = (id, name) => {
     setFormData({ customerId: id, customerName: name });
@@ -108,24 +155,20 @@ export default function SaleNewPage() {
   };
 
   const onSubmit = formMethods.handleSubmit((formValues) => {
-    if (!formData.customerId) {
-      return;
-    }
+    if (!formData.customerId) return;
 
     const payload = buildSalePayload(formValues);
     createMutation.mutate(payload, {
       onSuccess: () => {
-        resetForm();
-        formMethods.reset();
         navigate("/sales");
+        resetForm();
       },
     });
   });
 
   const handleCancel = () => {
-    resetForm();
-    formMethods.reset();
     navigate(-1);
+    resetForm();
   };
 
   const isBusy = createMutation.isPending;
@@ -137,7 +180,6 @@ export default function SaleNewPage() {
         onSubmit={onSubmit}
         className="grid grid-cols-1 lg:grid-cols-3 gap-4"
       >
-        {/* ستون اصلی */}
         <div className="lg:col-span-2 space-y-4">
           <SaleItemsSection
             items={items}
@@ -151,7 +193,6 @@ export default function SaleNewPage() {
           />
         </div>
 
-        {/* ستون کناری */}
         <div className="space-y-4">
           <SaleCustomerSection
             customers={customers}

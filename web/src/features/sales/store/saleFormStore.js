@@ -1,3 +1,4 @@
+// src/features/sales/store/saleFormStore.js
 import { create } from 'zustand';
 
 const EMPTY_FORM = {
@@ -12,9 +13,9 @@ const EMPTY_FORM = {
   items: [],
 };
 
-export const useSaleFormStore = create((set) => ({
+export const useSaleFormStore = create((set, get) => ({
   formData: { ...EMPTY_FORM },
-  returnPath: null,
+  initializedForId: null,
 
   setFormData: (data) =>
     set((state) => ({
@@ -26,8 +27,35 @@ export const useSaleFormStore = create((set) => ({
       formData: { ...state.formData, items },
     })),
 
-  setReturnPath: (path) => set({ returnPath: path }),
-  clearReturnPath: () => set({ returnPath: null }),
+  initializeForNew: () => {
+    const { initializedForId } = get();
+    if (initializedForId === 'new') return; // guard: اگر قبلاً init شده، کاری نکن
 
-  resetForm: () => set({ formData: { ...EMPTY_FORM }, returnPath: null }),
+    set({
+      initializedForId: 'new',
+      formData: { ...EMPTY_FORM },
+    });
+  },
+
+  initializeFromSale: (sale) => {
+    const { initializedForId } = get();
+    if (initializedForId === sale.id) return;
+
+    set({
+      initializedForId: sale.id,
+      formData: {
+        customerId: sale.customerId || '',
+        customerName: sale.customerName || '',
+        invoiceNumber: sale.invoiceNumber || '',
+        invoiceDate: sale.invoiceDate || '',
+        dueDate: sale.dueDate || '',
+        description: sale.description || '',
+        paymentType: sale.paymentType || 'cash',
+        paidAmount: sale.paidAmount?.toString() || '',
+        items: sale.items || [],
+      },
+    });
+  },
+
+  resetForm: () => set({ formData: { ...EMPTY_FORM }, initializedForId: null }),
 }));

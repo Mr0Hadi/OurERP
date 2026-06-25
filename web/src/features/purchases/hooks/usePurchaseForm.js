@@ -1,3 +1,4 @@
+// src/features/purchases/hooks/usePurchaseForm.js
 import { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { usePurchaseFormStore } from '#/features/purchases/store/purchaseFormStore';
@@ -6,15 +7,18 @@ export function usePurchaseForm(initialData = {}) {
   const { formData, setFormData, setItems } = usePurchaseFormStore();
   const isFirstMount = useRef(true);
 
+  // defaultValues از store می‌آیند (که قبلاً توسط initializeFromPurchase پر شده)
+  // این باعث می‌شود وقتی کاربر برمی‌گردد، فرم مقادیر ذخیره‌شده را نشان دهد
   const formMethods = useForm({
     defaultValues: {
-      invoiceNumber: initialData.invoiceNumber || '',
-      invoiceDate: initialData.invoiceDate || '',
-      description: initialData.description || '',
-      paymentType: initialData.paymentType || 'cash',
-      paidAmount: initialData.paidAmount?.toString() || '',
-      checkNumber: initialData.checkNumber || '',
-      transferRef: initialData.transferRef || '',
+      invoiceNumber: formData.invoiceNumber || '',
+      invoiceDate: formData.invoiceDate || '',
+      dueDate: formData.dueDate || '',
+      description: formData.description || '',
+      paymentType: formData.paymentType || 'cash',
+      paidAmount: formData.paidAmount || '',
+      checkNumber: formData.checkNumber || '',
+      transferRef: formData.transferRef || '',
     },
   });
 
@@ -26,7 +30,6 @@ export function usePurchaseForm(initialData = {}) {
       return;
     }
     const sub = watch((values) => {
-      // فقط فیلدهای فرم را آپدیت می‌کنیم، نه supplierId/supplierName
       setFormData({
         invoiceNumber: values.invoiceNumber,
         invoiceDate: values.invoiceDate,
@@ -34,6 +37,8 @@ export function usePurchaseForm(initialData = {}) {
         description: values.description,
         paymentType: values.paymentType,
         paidAmount: values.paidAmount,
+        checkNumber: values.checkNumber,
+        transferRef: values.transferRef,
       });
     });
     return () => sub.unsubscribe();
@@ -61,7 +66,8 @@ export function usePurchaseForm(initialData = {}) {
     paidAmount: Number(formValues.paidAmount) || 0,
     items: items.map((item) => ({
       ...item,
-      lineTotal: (item.qty * item.unitPrice) * (1 - (item.discount || 0) / 100),
+      lineTotal:
+        item.qty * item.unitPrice * (1 - (item.discount || 0) / 100),
     })),
     totalAmount: computedTotal,
   });

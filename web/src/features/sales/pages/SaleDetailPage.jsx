@@ -1,11 +1,11 @@
 // src/features/sales/pages/SaleDetailPage.jsx
-
 import { useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Save, X } from "lucide-react";
 
 import { Button } from "#/shared/components/ui/button";
 import { useHeaderStore } from "#/shared/store/headerStore";
+import { useNavigationStore } from "@/shared/store/navigationStore";
 import { useSaleFormStore } from "#/features/sales/store/saleFormStore";
 import { useSaleForm } from "#/features/sales/hooks/useSaleForm";
 import { useSaleQuery } from "#/features/sales/services/queries";
@@ -23,26 +23,31 @@ const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
 const SORTING = { id: "name", desc: false };
 
-// تابع کمکی برای تبدیل تاریخ شمسی به فرمت ISO (YYYY-MM-DD)
-// در پروژه واقعی از کتابخانه‌ای مانند 'moment-jalaali' یا 'date-fns-jalali' استفاده کنید
 function convertPersianDateToISO(persianDate) {
   if (!persianDate) return "";
-  // اگر تاریخ به فرمت 'YYYY/MM/DD' باشد، اسلش‌ها را با خط تیره جایگزین می‌کنیم
   if (persianDate.includes('/')) {
     return persianDate.replace(/\//g, '-');
   }
-  // در غیر این صورت فرض می‌کنیم تاریخ به فرمت ISO است (یا قبلاً تبدیل شده)
   return persianDate;
 }
 
 export default function SaleDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  const { formData, setFormData, setItems, resetForm } = useSaleFormStore();
+  const returnPath = useNavigationStore((s) => s.returnPath);
+  const setReturnPath = useNavigationStore((s) => s.setReturnPath);
+
+  const {
+    formData,
+    setFormData,
+    resetForm,
+    initializeFromSale,
+  } = useSaleFormStore();
 
   const {
     data: sale,
@@ -76,63 +81,85 @@ export default function SaleDetailPage() {
 
   const updateMutation = useUpdateSaleMutation(id);
 
-  // ------------------------------------------------------------
-  // ۱) بارگذاری داده‌های فروش در استور فرم
-  // ------------------------------------------------------------
+  // منطق حفظ/ریست فرم
+  useEffect(() => {
+    const fromValidReturn = location.state?.newProductId;
+
+    if (fromValidReturn) {
+      setReturnPath(location.pathname);
+    } else if (returnPath && returnPath !== location.pathname) {
+      resetForm();
+      setReturnPath(location.pathname);
+    }
+  }, [
+    location.pathname,
+    location.state,
+    returnPath,
+    setReturnPath,
+    resetForm,
+  ]);
+
+  // بارگذاری داده‌های فروش
   useEffect(() => {
     if (!sale) return;
 
-    // تنظیم اطلاعات اصلی فرم
-    setFormData({
-      customerId: sale.customerId || "",
-      customerName: sale.customerName || "",
-      invoiceNumber: sale.invoiceNumber || "",
-      invoiceDate: sale.invoiceDate || "",
-      description: sale.description || "",
-      paymentType: sale.paymentType || "cash",
-      paidAmount: sale.paidAmount?.toString() || "",
-    });
+    initializeFromSale(sale);
 
-    // فرمت‌دهی آیتم‌ها
-    const formattedItems = (sale.items || []).map((item) => ({
-      productId: item.productId,
-      productName: item.productName,
-      productCode: item.productCode,
-      unit: item.unit || "",
-      qty: item.qty,
-      unitPrice: item.unitPrice,
-      discount: item.discount || 0,
-    }));
-    setItems(formattedItems);
-
-    // تنظیم مقادیر react-hook-form (با تبدیل تاریخ)
     setValue("invoiceNumber", sale.invoiceNumber || "");
     setValue("invoiceDate", convertPersianDateToISO(sale.invoiceDate) || "");
     setValue("description", sale.description || "");
     setValue("paymentType", sale.paymentType || "cash");
     setValue("paidAmount", sale.paidAmount?.toString() || "");
-  }, [sale, setFormData, setItems, setValue]);
+  }, [sale, initializeFromSale, setValue]);
 
-  // ------------------------------------------------------------
-  // ۲) تنظیم هدر صفحه
-  // ------------------------------------------------------------
+  // اگر محصول جدید اضافه شد
   useEffect(() => {
+    if (!location.state?.newProductId || !products.length) return;
+
+    const newProductId = location.state.newProductId;
+    const newProduct = products.find((p) => p.id === newProductId);
+
+    if (newProduct) {
+      const alreadyAdded = items.some((i) => i.productId === newProduct.id);
+      if (!alreadyAdded) {
+        handleItemsChange([
+          ...items,
+          {
+            productId: newProduct.id,
+            productCode: newProduct.code,
+            productName: newProduct.name,
+            unit: newProduct.unit || "",
+            qty: 1,
+            unitPrice: newProduct.salePrice || 0,
+            discount: 0,
+          },
+        ]);
+      }
+    }
+
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [
+    handleItemsChange,
+    items,
+    location.pathname,
+    location.state,
+    navigate,
+    products,
+  ]);
+
+  useEffect(() => {
+    const { resetForm: reset } = useSaleFormStore.getState();
     setHeader({
       title: "ویرایش فروش",
       showBack: true,
       onBack: () => {
-        resetForm();
+        reset();
         navigate(-1);
       },
     });
-    return () => {
-      clearHeader();
-    };
-  }, [setHeader, clearHeader, navigate, resetForm]);
+    return () => clearHeader();
+  }, [setHeader, clearHeader, navigate]);
 
-  // ------------------------------------------------------------
-  // ۳) هندلرهای ارسال و انصراف
-  // ------------------------------------------------------------
   const onSubmit = handleSubmit((formValues) => {
     if (!formData.customerId) {
       alert("لطفاً مشتری را انتخاب کنید.");
@@ -142,23 +169,18 @@ export default function SaleDetailPage() {
     const payload = buildSalePayload(formValues);
     updateMutation.mutate(payload, {
       onSuccess: () => {
-        resetForm();
         navigate("/sales");
+        resetForm();
       },
     });
   });
 
   const handleCancel = () => {
-    resetForm();
     navigate(-1);
+    resetForm();
   };
 
-  // ------------------------------------------------------------
-  // ۴) نمایش وضعیت‌های بارگذاری و خطا
-  // ------------------------------------------------------------
-  if (saleLoading) {
-    return <SaleDetailLoading />;
-  }
+  if (saleLoading) return <SaleDetailLoading />;
 
   if (saleError) {
     return (
@@ -186,7 +208,6 @@ export default function SaleDetailPage() {
   return (
     <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in zoom-in-95 duration-300">
       <form onSubmit={onSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* ستون اصلی */}
         <div className="lg:col-span-2 space-y-4">
           <SaleItemsSection
             items={items}
@@ -194,13 +215,9 @@ export default function SaleDetailPage() {
             products={products}
             isLoadingProducts={productsLoading}
           />
-          <SaleInfoSection
-            register={register}
-            errors={errors}
-          />
+          <SaleInfoSection register={register} errors={errors} />
         </div>
 
-        {/* ستون کناری */}
         <div className="space-y-4">
           <SaleCustomerSection
             customers={customers}
@@ -219,7 +236,7 @@ export default function SaleDetailPage() {
             errors={errors}
             watch={formMethods.watch}
             totalAmount={computedTotal}
-            setValue={setValue} // 👈 ارسال setValue به کامپوننت
+            setValue={setValue}
           />
 
           <div className="flex gap-2">

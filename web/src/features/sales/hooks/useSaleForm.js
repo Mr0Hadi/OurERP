@@ -1,25 +1,29 @@
+// src/features/sales/hooks/useSaleForm.js
 import { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSaleFormStore } from '#/features/sales/store/saleFormStore';
 
-export function useSaleForm(initialData = {}) {
+export function useSaleForm() {
   const { formData, setFormData, setItems } = useSaleFormStore();
   const isFirstMount = useRef(true);
 
+  // defaultValues مستقیم از store — وقتی کاربر برمی‌گردد مقادیر حفظ شده‌اند
   const formMethods = useForm({
     defaultValues: {
-      invoiceNumber: initialData.invoiceNumber || '',
-      invoiceDate: initialData.invoiceDate || '',
-      description: initialData.description || '',
-      paymentType: initialData.paymentType || 'cash',
-      paidAmount: initialData.paidAmount?.toString() || '',
-      checkNumber: initialData.checkNumber || '',
-      transferRef: initialData.transferRef || '',
+      invoiceNumber: formData.invoiceNumber || '',
+      invoiceDate: formData.invoiceDate || '',
+      dueDate: formData.dueDate || '',
+      description: formData.description || '',
+      paymentType: formData.paymentType || 'cash',
+      paidAmount: formData.paidAmount || '',
+      checkNumber: formData.checkNumber || '',
+      transferRef: formData.transferRef || '',
     },
   });
 
   const { watch } = formMethods;
 
+  // فقط sync یک‌طرفه: form → store
   useEffect(() => {
     if (isFirstMount.current) {
       isFirstMount.current = false;
@@ -33,6 +37,8 @@ export function useSaleForm(initialData = {}) {
         description: values.description,
         paymentType: values.paymentType,
         paidAmount: values.paidAmount,
+        checkNumber: values.checkNumber,
+        transferRef: values.transferRef,
       });
     });
     return () => sub.unsubscribe();
@@ -50,12 +56,12 @@ export function useSaleForm(initialData = {}) {
     return sum + base - disc;
   }, 0);
 
-  // قیمت فروش از salePrice استفاده می‌کند نه purchasePrice
   const buildSalePayload = (formValues) => ({
     customerId: formData.customerId,
     customerName: formData.customerName,
     invoiceNumber: formValues.invoiceNumber,
     invoiceDate: formValues.invoiceDate,
+    dueDate: formValues.dueDate,
     description: formValues.description,
     paymentType: formValues.paymentType,
     paidAmount: Number(formValues.paidAmount) || 0,

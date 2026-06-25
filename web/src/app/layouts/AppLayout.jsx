@@ -8,16 +8,27 @@ import {
   SidebarTrigger,
 } from "@/shared/components/ui/sidebar";
 import { ModeToggle } from "@/shared/components/theme/mode-toggle";
+import { useNavigationStore } from "@/shared/store/navigationStore";
 
 import { AppBreadcrumb } from "@/shared/components/breadcrumb/AppBreadcrumb";
-import { Outlet } from "react-router-dom";
+import { useEffect } from "react";
+import { Outlet, useLocation } from "react-router-dom";
 
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { Button } from "@/shared/components/ui/button";
 import { ArrowRight } from "lucide-react";
 
+
+
 export default function AppLayout() {
   const { title, showBack, onBack } = useHeaderStore();
+  
+  const location = useLocation();
+  const setCurrentPath = useNavigationStore((s) => s.setCurrentPath);
+
+  useEffect(() => {
+    setCurrentPath(location.pathname);
+  }, [location.pathname, setCurrentPath]);
 
   return (
     <TooltipProvider>

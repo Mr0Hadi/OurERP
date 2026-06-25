@@ -27,7 +27,13 @@ const SORTING = { id: "name", desc: false };
 // ============================================================
 function PurchaseDetailForm({ purchaseData }) {
   const navigate = useNavigate();
-  const { setFormData, setItems, resetForm, formData } = usePurchaseFormStore();
+  const { setFormData, resetForm, formData, initializeFromPurchase } =
+    usePurchaseFormStore();
+
+  // مقداردهی اولیه — فقط اگر store هنوز برای این خرید init نشده باشد
+  // اگر کاربر از صفحه دیگری برگشته، این خط کاری نمی‌کند و تغییرات حفظ می‌شوند
+  initializeFromPurchase(purchaseData);
+
   const {
     formMethods,
     items,
@@ -56,55 +62,22 @@ function PurchaseDetailForm({ purchaseData }) {
   } = formMethods;
 
   const updateMutation = useUpdatePurchaseMutation(purchaseData.id);
-  useEffect(() => {
-    if (!purchaseData) return;
-
-    // ست کردن استور
-    setFormData({
-      supplierId: purchaseData.supplierId || "",
-      supplierName: purchaseData.supplierName || "",
-    });
-
-    const formattedItems = (purchaseData.items || []).map((item) => ({
-      productId: item.productId,
-      productName: item.productName,
-      productCode: item.productCode,
-      unit: item.unit || "",
-      qty: item.qty,
-      unitPrice: item.unitPrice,
-      discount: item.discount || 0,
-    }));
-    setItems(formattedItems);
-
-    // استفاده از reset به جای setValue تکی
-    formMethods.reset({
-      invoiceNumber: purchaseData.invoiceNumber || "",
-      invoiceDate: purchaseData.invoiceDate || "",
-      description: purchaseData.description || "",
-      paymentType: purchaseData.paymentType || "cash",
-      paidAmount: purchaseData.paidAmount?.toString() || "",
-      checkNumber: purchaseData.checkNumber || "",
-      transferRef: purchaseData.transferRef || "",
-    });
-  }, [formMethods, purchaseData, setFormData, setItems]);
 
   const onSubmit = (formValues) => {
     if (!formData.supplierId) {
-      alert("لطفاً تامین‌کننده را انتخاب کنید.");
+      alert('لطفاً تامین‌کننده را انتخاب کنید.');
       return;
     }
-
     const payload = buildPurchasePayload(formValues);
     updateMutation.mutate(payload, {
       onSuccess: () => {
         resetForm();
-        navigate("/purchases");
+        navigate('/purchases');
       },
     });
   };
 
   const handleCancel = () => {
-    resetForm();
     navigate(-1);
   };
 
@@ -114,7 +87,6 @@ function PurchaseDetailForm({ purchaseData }) {
     <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in zoom-in-95 duration-300">
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* ستون اصلی - کالاها + اطلاعات فاکتور */}
           <div className="lg:col-span-2 space-y-4">
             <PurchaseItemsSection
               items={items}
@@ -125,7 +97,6 @@ function PurchaseDetailForm({ purchaseData }) {
             <PurchaseInfoSection register={register} errors={errors} />
           </div>
 
-          {/* ستون کناری - تامین‌کننده + پرداخت */}
           <div className="space-y-4">
             <PurchaseSupplierSection
               suppliers={suppliers}
@@ -134,7 +105,7 @@ function PurchaseDetailForm({ purchaseData }) {
               onSelect={(id, name) =>
                 setFormData({ supplierId: id, supplierName: name })
               }
-              onClear={() => setFormData({ supplierId: "", supplierName: "" })}
+              onClear={() => setFormData({ supplierId: '', supplierName: '' })}
               error={!formData.supplierId && errors._supplier?.message}
             />
             <PurchasePaymentSection
@@ -145,7 +116,6 @@ function PurchaseDetailForm({ purchaseData }) {
               totalAmount={computedTotal}
             />
 
-            {/* دکمه‌های عملیات */}
             <div className="flex gap-2">
               <Button
                 type="button"
@@ -159,7 +129,7 @@ function PurchaseDetailForm({ purchaseData }) {
               </Button>
               <Button type="submit" className="flex-1 gap-2" disabled={isBusy}>
                 <Save className="h-4 w-4" />
-                {isBusy ? "در حال ذخیره..." : "به‌روزرسانی خرید"}
+                {isBusy ? 'در حال ذخیره...' : 'به‌روزرسانی خرید'}
               </Button>
             </div>
           </div>
@@ -168,6 +138,7 @@ function PurchaseDetailForm({ purchaseData }) {
     </div>
   );
 }
+
 
 // ============================================================
 // صفحه‌ی اصلی
@@ -191,7 +162,6 @@ export default function PurchaseDetailPage() {
         : "خطا",
       showBack: true,
       onBack: () => {
-        resetForm();
         navigate(-1);
       },
     });
