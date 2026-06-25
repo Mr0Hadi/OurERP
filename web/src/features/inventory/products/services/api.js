@@ -115,3 +115,16 @@ export const updateProduct = async (id, productData) => {
   allProducts[index] = updatedProduct;
   return updatedProduct;
 };
+
+export const deleteProduct = async (id) => {
+  await delay(500);
+
+  const index = allProducts.findIndex((p) => p.id === String(id));
+  
+  if (index === -1) {
+    throw new Error("محصول یافت نشد");
+  }
+
+  allProducts.splice(index, 1);
+  return { success: true, id };
+};

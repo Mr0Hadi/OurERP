@@ -1,23 +1,36 @@
 // src/features/suppliers/pages/SupplierDetailPage.jsx
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Save, AlertCircle, X } from "lucide-react";
-import { useUpdateSupplierMutation } from "../services/mutations";
+import { Save, AlertCircle, X, Trash2 } from "lucide-react";
+import {
+  useUpdateSupplierMutation,
+  useDeleteSupplierMutation,
+} from "../services/mutations";
 import { useSupplierQuery } from "../services/queries";
 import { useSupplierForm } from "../hooks/useSupplierForm";
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { Button } from "@/shared/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog";
 import SupplierIdentityForm from "../components/forms/SupplierIdentityForm";
 import SupplierFinanceForm from "../components/forms/SupplierFinanceForm";
 import SupplierAddressForm from "../components/forms/SupplierAddressForm";
 import SupplierDetailLoading from "../components/forms/SupplierDetailLoading";
 
-// ============================================================
-// کامپوننت فرم (مشابه CustomerDetailForm)
-// ============================================================
 function SupplierDetailForm({ supplierData }) {
   const navigate = useNavigate();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
   const updateMutation = useUpdateSupplierMutation();
+  const deleteMutation = useDeleteSupplierMutation();
 
   const {
     formMethods,
@@ -42,7 +55,17 @@ function SupplierDetailForm({ supplierData }) {
     );
   };
 
-  const isBusy = updateMutation.isPending;
+  const handleDelete = () => {
+    deleteMutation.mutate(supplierData.id, {
+      onSuccess: () => navigate("/suppliers"),
+    });
+  };
+
+  const isBusy = updateMutation.isPending || deleteMutation.isPending;
+
+  const supplierDisplayName =
+    supplierData.companyName ||
+    `${supplierData.firstName} ${supplierData.lastName}`;
 
   return (
     <div className="m-auto bg-background">
@@ -51,7 +74,6 @@ function SupplierDetailForm({ supplierData }) {
         className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
       >
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-4">
-          {/* ستون راست - اطلاعات اصلی */}
           <div className="lg:col-span-1 space-y-4">
             <SupplierIdentityForm
               register={register}
@@ -68,16 +90,14 @@ function SupplierDetailForm({ supplierData }) {
             />
           </div>
 
-          {/* ستون چپ - اطلاعات مالی و دکمه‌ها */}
           <div className="lg:col-span-1 space-y-4">
             <SupplierAddressForm register={register} />
 
-            {/* دکمه‌های عملیات */}
             <div className="flex gap-2">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate('/suppliers')}
+                onClick={() => navigate("/suppliers")}
                 disabled={isBusy}
                 className="flex-1 gap-2"
               >
@@ -89,32 +109,64 @@ function SupplierDetailForm({ supplierData }) {
                 {isBusy ? "در حال ثبت..." : "ویرایش تامین کننده"}
               </Button>
             </div>
+
+            <Button
+              type="button"
+              variant="destructive"
+              className="w-full gap-2"
+              onClick={() => setShowDeleteDialog(true)}
+              disabled={isBusy}
+            >
+              <Trash2 className="h-4 w-4" />
+              حذف تامین‌کننده
+            </Button>
           </div>
         </div>
       </form>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف تامین‌کننده</AlertDialogTitle>
+            <AlertDialogDescription>
+              آیا از حذف {supplierDisplayName} اطمینان دارید؟ این عملیات غیرقابل
+              بازگشت است.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>
+              انصراف
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? "در حال حذف..." : "حذف"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
-// ============================================================
-// صفحه‌ی اصلی (مشابه CustomerDetailPage)
-// ============================================================
 export default function SupplierDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  // دریافت اطلاعات تامین‌کننده
   const { data: supplier, isLoading, isError } = useSupplierQuery(id);
 
-  // تنظیم هدر (عنوان پویا – تفاوت جزئی با مشتری)
   useEffect(() => {
     setHeader({
       title: isLoading
         ? "در حال بارگذاری..."
         : supplier
-        ? `ویرایش تامین‌کننده: ${supplier.companyName || `${supplier.firstName} ${supplier.lastName}`}`
+        ? `ویرایش تامین‌کننده: ${
+            supplier.companyName || `${supplier.firstName} ${supplier.lastName}`
+          }`
         : "خطا",
       showBack: true,
       onBack: () => navigate(-1),
@@ -122,12 +174,8 @@ export default function SupplierDetailPage() {
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader, supplier, isLoading]);
 
-  // حالت بارگذاری
-  if (isLoading) {
-    return <SupplierDetailLoading />;
-  }
+  if (isLoading) return <SupplierDetailLoading />;
 
-  // حالت خطا
   if (isError || !supplier) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -142,6 +190,5 @@ export default function SupplierDetailPage() {
     );
   }
 
-  // رندر فرم با کلید یکتا برای بازسازی در صورت تغییر id
   return <SupplierDetailForm key={supplier.id} supplierData={supplier} />;
 }

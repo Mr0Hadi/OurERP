@@ -1,7 +1,7 @@
 // src/features/suppliers/services/mutations.js
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { createSupplier, updateSupplier } from "./api";
+import { createSupplier, updateSupplier, deleteSupplier } from "./api";
 import { supplierKeys } from "./queryKeys";
 
 export function useCreateSupplierMutation() {
@@ -31,6 +31,21 @@ export function useUpdateSupplierMutation() {
     },
     onError: (error) => {
       toast.error(error.message || "خطا در ویرایش تامین کننده");
+    },
+  });
+}
+
+export function useDeleteSupplierMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteSupplier,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: supplierKeys.lists() });
+      toast.success("تامین‌کننده با موفقیت حذف شد.");
+    },
+    onError: (error) => {
+      toast.error(error?.message || "خطا در حذف تامین‌کننده.");
     },
   });
 }

@@ -1,11 +1,21 @@
 // src/features/inventory/products/pages/ProductDetailPage.jsx
 import { useNavigate, useParams } from "react-router-dom";
-import { Save, X } from "lucide-react";
-import { useEffect } from "react";
+import { Save, X, Trash2, AlertCircle } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { Button } from "#/shared/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "#/shared/components/ui/alert-dialog";
 import { useProductQuery } from "../services/queries";
-import { useUpdateProductMutation } from "../services/mutations";
+import { useUpdateProductMutation, useDeleteProductMutation } from "../services/mutations";
 import { useProductForm } from "../hooks/useProductForm";
 import ProductBasicInfoForm from "../components/forms/ProductBasicInfoForm";
 import ProductPricingForm from "../components/forms/ProductPricingForm";
@@ -16,7 +26,10 @@ import { useHeaderStore } from "#/shared/store/headerStore";
 
 function ProductDetailForm({ productData }) {
   const navigate = useNavigate();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  
   const updateMutation = useUpdateProductMutation(productData.id);
+  const deleteMutation = useDeleteProductMutation();
 
   const {
     formMethods,
@@ -40,7 +53,15 @@ function ProductDetailForm({ productData }) {
     updateMutation.mutate(payload);
   };
 
-  const isBusy = isSubmitting || updateMutation.isPending;
+  const handleDelete = () => {
+    deleteMutation.mutate(productData.id, {
+      onSuccess: () => {
+        navigate("/products");
+      },
+    });
+  };
+
+  const isBusy = isSubmitting || updateMutation.isPending || deleteMutation.isPending;
 
   return (
     <div className="container mx-auto animate-in fade-in zoom-in-95 duration-300">
@@ -66,7 +87,7 @@ function ProductDetailForm({ productData }) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={()=>{navigate('/products')}}
+                onClick={() => navigate("/products")}
                 disabled={isBusy}
                 className="flex-1 gap-2"
               >
@@ -78,9 +99,42 @@ function ProductDetailForm({ productData }) {
                 {isBusy ? "در حال ذخیره..." : "ویرایش کالا"}
               </Button>
             </div>
+            <Button
+              type="button"
+              variant="destructive"
+              className="w-full gap-2"
+              onClick={() => setShowDeleteDialog(true)}
+              disabled={isBusy}
+            >
+              <Trash2 className="h-4 w-4" />
+              حذف کالا
+            </Button>
           </div>
         </div>
       </form>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف کالا</AlertDialogTitle>
+            <AlertDialogDescription>
+              آیا از حذف این کالا اطمینان دارید؟ این عملیات غیرقابل بازگشت است.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>
+              انصراف
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? "در حال حذف..." : "حذف"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -91,20 +145,38 @@ export default function ProductDetailPage() {
   const setHeader = useHeaderStore((state) => state.setHeader);
   const clearHeader = useHeaderStore((state) => state.clearHeader);
 
+  const { data: productData, isLoading, isError } = useProductQuery(id);
+
   useEffect(() => {
     setHeader({
-      title: "جزئیات و ویرایش کالا",
+      title: isLoading
+        ? "در حال بارگذاری..."
+        : productData
+        ? "جزئیات و ویرایش کالا"
+        : "خطا",
       showBack: true,
       onBack: () => navigate(-1),
     });
 
     return () => clearHeader();
-  }, [navigate, setHeader, clearHeader]);
+  }, [navigate, setHeader, clearHeader, productData, isLoading]);
 
-  const { data: productData, isLoading } = useProductQuery(id);
-
-  if (isLoading || !productData) {
+  if (isLoading) {
     return <ProductDetailLoading />;
+  }
+
+  if (isError || !productData) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <p className="text-lg text-muted-foreground">
+          کالا مورد نظر یافت نشد یا خطایی رخ داده است.
+        </p>
+        <Button variant="outline" onClick={() => navigate("/products")}>
+          بازگشت به لیست
+        </Button>
+      </div>
+    );
   }
 
   return <ProductDetailForm key={productData.id} productData={productData} />;

@@ -1,17 +1,31 @@
 // src/features/sales/pages/SaleDetailPage.jsx
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { Save, X, AlertCircle } from "lucide-react";
+import { Save, X, AlertCircle, Trash2 } from "lucide-react";
 
 import { Button } from "#/shared/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog";
 import { useHeaderStore } from "#/shared/store/headerStore";
 import { useNavigationStore } from "@/shared/store/navigationStore";
 import { useSaleFormStore } from "#/features/sales/store/saleFormStore";
 import { useSaleForm } from "#/features/sales/hooks/useSaleForm";
 import { useSaleQuery } from "#/features/sales/services/queries";
-import { useUpdateSaleMutation } from "#/features/sales/services/mutations";
+import {
+  useUpdateSaleMutation,
+  useUpdateSaleStatusMutation,
+} from "#/features/sales/services/mutations";
 import { useCustomersQuery } from "#/features/customers/services/queries";
 import { useProductsQuery } from "#/features/inventory/products/services/queries";
+import { SALE_STATUSES } from "#/features/sales/services/mockData";
 
 import SaleCustomerSection from "../components/forms/SaleCustomerSection";
 import SaleItemsSection from "../components/forms/SaleItemsSection";
@@ -29,6 +43,7 @@ const SORTING = { id: "name", desc: false };
 function SaleDetailForm({ saleData }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const { setFormData, resetForm, formData, initializeFromSale } =
     useSaleFormStore();
@@ -67,6 +82,7 @@ function SaleDetailForm({ saleData }) {
   const products = productsData?.items || [];
 
   const updateMutation = useUpdateSaleMutation(saleData.id);
+  const deleteMutation = useUpdateSaleStatusMutation();
 
   // منطق حفظ/ریست فرم
   useEffect(() => {
@@ -133,7 +149,19 @@ function SaleDetailForm({ saleData }) {
     resetForm();
   };
 
-  const isBusy = updateMutation.isPending;
+  const handleDelete = () => {
+    deleteMutation.mutate(
+      { id: saleData.id, status: SALE_STATUSES.CANCELLED },
+      {
+        onSuccess: () => {
+          resetForm();
+          navigate("/sales");
+        },
+      }
+    );
+  };
+
+  const isBusy = updateMutation.isPending || deleteMutation.isPending;
   const customerError = errors.customerId?.message;
 
   return (
@@ -180,7 +208,9 @@ function SaleDetailForm({ saleData }) {
               disabled={isBusy || !formData.customerId}
             >
               <Save className="h-4 w-4" />
-              {isBusy ? "در حال ذخیره..." : "به‌روزرسانی فروش"}
+              {updateMutation.isPending
+                ? "در حال ذخیره..."
+                : "به‌روزرسانی فروش"}
             </Button>
             <Button
               type="button"
@@ -193,8 +223,43 @@ function SaleDetailForm({ saleData }) {
               انصراف
             </Button>
           </div>
+
+          <Button
+            type="button"
+            variant="destructive"
+            className="w-full gap-2"
+            onClick={() => setShowDeleteDialog(true)}
+            disabled={isBusy}
+          >
+            <Trash2 className="h-4 w-4" />
+            حذف فروش
+          </Button>
         </div>
       </form>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف فروش</AlertDialogTitle>
+            <AlertDialogDescription>
+              آیا از حذف این فروش اطمینان دارید؟ این عملیات وضعیت فروش را به لغو
+              شده تغییر می‌دهد.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>
+              انصراف
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? "در حال حذف..." : "حذف"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

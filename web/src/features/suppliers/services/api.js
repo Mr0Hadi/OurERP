@@ -79,3 +79,11 @@ export const updateSupplier = async (id, updatedData) => {
   allSuppliers[index] = { ...allSuppliers[index], ...updatedData };
   return allSuppliers[index];
 };
+
+export const deleteSupplier = async (id) => {
+  await delay(500);
+  const index = allSuppliers.findIndex((s) => s.id == id);
+  if (index === -1) throw new Error("تامین‌کننده یافت نشد");
+  allSuppliers.splice(index, 1);
+  return { success: true, id };
+};

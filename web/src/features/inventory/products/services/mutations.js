@@ -2,7 +2,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { createProduct, updateProduct } from "./api";
+import { createProduct, updateProduct, deleteProduct } from "./api";
 import { ROUTES } from "@/shared/constants/routes";
 import { productKeys } from "./queryKeys";
 
@@ -39,6 +39,21 @@ export const useUpdateProductMutation = (id) => {
     },
     onError: (error) => {
       toast.error(error.message || "خطا در ویرایش کالا");
+    },
+  });
+};
+
+export const useDeleteProductMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteProduct,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: productKeys.lists() });
+      toast.success("کالا با موفقیت حذف شد");
+    },
+    onError: (error) => {
+      toast.error(error?.message || "خطا در حذف کالا");
     },
   });
 };
