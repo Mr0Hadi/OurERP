@@ -1,7 +1,7 @@
 // src/features/sales/pages/SaleDetailPage.jsx
 import { useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { Save, X } from "lucide-react";
+import { Save, X, AlertCircle } from "lucide-react";
 
 import { Button } from "#/shared/components/ui/button";
 import { useHeaderStore } from "#/shared/store/headerStore";
@@ -23,45 +23,21 @@ const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
 const SORTING = { id: "name", desc: false };
 
-function convertPersianDateToISO(persianDate) {
-  if (!persianDate) return "";
-  if (persianDate.includes('/')) {
-    return persianDate.replace(/\//g, '-');
-  }
-  return persianDate;
-}
-
-export default function SaleDetailPage() {
-  const { id } = useParams();
+// ============================================================
+// کامپوننت فرم — جدا از صفحه اصلی
+// ============================================================
+function SaleDetailForm({ saleData }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
+  const { setFormData, resetForm, formData, initializeFromSale } =
+    useSaleFormStore();
 
   const returnPath = useNavigationStore((s) => s.returnPath);
   const setReturnPath = useNavigationStore((s) => s.setReturnPath);
 
-  const {
-    formData,
-    setFormData,
-    resetForm,
-    initializeFromSale,
-  } = useSaleFormStore();
-
-  const {
-    data: sale,
-    isLoading: saleLoading,
-    error: saleError,
-  } = useSaleQuery(id);
-
-  const { data: customersData, isLoading: customersLoading } =
-    useCustomersQuery(ALL_FILTERS, PAGINATION, SORTING);
-  const { data: productsData, isLoading: productsLoading } =
-    useProductsQuery(ALL_FILTERS, PAGINATION, SORTING);
-
-  const customers = customersData?.items || [];
-  const products = productsData?.items || [];
+  // مقداردهی اولیه store — قبل از ساخت فرم
+  initializeFromSale(saleData);
 
   const {
     formMethods,
@@ -79,38 +55,29 @@ export default function SaleDetailPage() {
     formState: { errors },
   } = formMethods;
 
-  const updateMutation = useUpdateSaleMutation(id);
+  const { data: customersData, isLoading: customersLoading } =
+    useCustomersQuery(ALL_FILTERS, PAGINATION, SORTING);
+  const { data: productsData, isLoading: productsLoading } = useProductsQuery(
+    ALL_FILTERS,
+    PAGINATION,
+    SORTING
+  );
+
+  const customers = customersData?.items || [];
+  const products = productsData?.items || [];
+
+  const updateMutation = useUpdateSaleMutation(saleData.id);
 
   // منطق حفظ/ریست فرم
   useEffect(() => {
     const fromValidReturn = location.state?.newProductId;
-
     if (fromValidReturn) {
       setReturnPath(location.pathname);
     } else if (returnPath && returnPath !== location.pathname) {
       resetForm();
       setReturnPath(location.pathname);
     }
-  }, [
-    location.pathname,
-    location.state,
-    returnPath,
-    setReturnPath,
-    resetForm,
-  ]);
-
-  // بارگذاری داده‌های فروش
-  useEffect(() => {
-    if (!sale) return;
-
-    initializeFromSale(sale);
-
-    setValue("invoiceNumber", sale.invoiceNumber || "");
-    setValue("invoiceDate", convertPersianDateToISO(sale.invoiceDate) || "");
-    setValue("description", sale.description || "");
-    setValue("paymentType", sale.paymentType || "cash");
-    setValue("paidAmount", sale.paidAmount?.toString() || "");
-  }, [sale, initializeFromSale, setValue]);
+  }, [location.pathname, location.state, returnPath, setReturnPath, resetForm]);
 
   // اگر محصول جدید اضافه شد
   useEffect(() => {
@@ -147,67 +114,34 @@ export default function SaleDetailPage() {
     products,
   ]);
 
-  useEffect(() => {
-    const { resetForm: reset } = useSaleFormStore.getState();
-    setHeader({
-      title: "ویرایش فروش",
-      showBack: true,
-      onBack: () => {
-        reset();
-        navigate(-1);
-      },
-    });
-    return () => clearHeader();
-  }, [setHeader, clearHeader, navigate]);
-
-  const onSubmit = handleSubmit((formValues) => {
+  const onSubmit = (formValues) => {
     if (!formData.customerId) {
       alert("لطفاً مشتری را انتخاب کنید.");
       return;
     }
-
     const payload = buildSalePayload(formValues);
     updateMutation.mutate(payload, {
       onSuccess: () => {
-        navigate("/sales");
         resetForm();
+        navigate("/sales");
       },
     });
-  });
+  };
 
   const handleCancel = () => {
     navigate(-1);
     resetForm();
   };
 
-  if (saleLoading) return <SaleDetailLoading />;
-
-  if (saleError) {
-    return (
-      <div className="container max-w-7xl mx-auto px-4 py-8">
-        <div className="bg-red-50 border border-red-200 rounded p-4 text-red-700">
-          خطا در بارگذاری اطلاعات: {saleError.message}
-        </div>
-      </div>
-    );
-  }
-
-  if (!sale) {
-    return (
-      <div className="container max-w-7xl mx-auto px-4 py-8">
-        <div className="bg-yellow-50 border border-yellow-200 rounded p-4 text-yellow-700">
-          فروشی با این شناسه یافت نشد.
-        </div>
-      </div>
-    );
-  }
-
   const isBusy = updateMutation.isPending;
   const customerError = errors.customerId?.message;
 
   return (
     <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in zoom-in-95 duration-300">
-      <form onSubmit={onSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="grid grid-cols-1 lg:grid-cols-3 gap-4"
+      >
         <div className="lg:col-span-2 space-y-4">
           <SaleItemsSection
             items={items}
@@ -263,4 +197,54 @@ export default function SaleDetailPage() {
       </form>
     </div>
   );
+}
+
+// ============================================================
+// صفحه اصلی
+// ============================================================
+export default function SaleDetailPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+
+  const setHeader = useHeaderStore((s) => s.setHeader);
+  const clearHeader = useHeaderStore((s) => s.clearHeader);
+  const resetForm = useSaleFormStore((s) => s.resetForm);
+
+  const {
+    data: sale,
+    isLoading: saleLoading,
+    isError: saleError,
+  } = useSaleQuery(id);
+
+  useEffect(() => {
+    setHeader({
+      title: saleLoading ? "در حال بارگذاری..." : sale ? "ویرایش فروش" : "خطا",
+      showBack: true,
+      onBack: () => {
+        resetForm();
+        navigate(-1);
+      },
+    });
+    return () => clearHeader();
+  }, [setHeader, clearHeader, navigate, resetForm, sale, saleLoading]);
+
+  if (saleLoading) return <SaleDetailLoading />;
+
+  if (saleError || !sale) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <p className="text-lg text-muted-foreground">
+          {saleError
+            ? `خطا در بارگذاری اطلاعات`
+            : "فروشی با این شناسه یافت نشد."}
+        </p>
+        <Button variant="outline" onClick={() => navigate("/sales")}>
+          بازگشت به لیست
+        </Button>
+      </div>
+    );
+  }
+
+  return <SaleDetailForm key={sale.id} saleData={sale} />;
 }
