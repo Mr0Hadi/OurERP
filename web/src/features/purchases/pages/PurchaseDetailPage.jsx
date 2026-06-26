@@ -19,10 +19,7 @@ import { useHeaderStore } from "#/shared/store/headerStore";
 import { usePurchaseFormStore } from "#/features/purchases/store/purchaseFormStore";
 import { usePurchaseForm } from "#/features/purchases/hooks/usePurchaseForm";
 import { usePurchaseQuery } from "#/features/purchases/services/queries";
-import {
-  useUpdatePurchaseMutation,
-  useUpdatePurchaseStatusMutation,
-} from "#/features/purchases/services/mutations";
+import { useUpdatePurchaseMutation } from "#/features/purchases/services/mutations";
 import { useSuppliersQuery } from "#/features/suppliers/services/queries";
 import { useProductsQuery } from "#/features/inventory/products/services/queries";
 import { PURCHASE_STATUSES } from "#/features/purchases/services/mockData";
@@ -32,6 +29,7 @@ import PurchaseInfoSection from "../components/forms/PurchaseInfoSection";
 import PurchasePaymentSection from "../components/forms/PurchasePaymentSection";
 import PurchasesDetailLoading from "../components/forms/PurchasesDetailLoading";
 import PurchaseStatusSection from "../components/forms/PurchaseStatusSection";
+import { useRemovePurchaseMutation } from "../services/mutations";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -78,7 +76,7 @@ function PurchaseDetailForm({ purchaseData }) {
   } = formMethods;
 
   const updateMutation = useUpdatePurchaseMutation(purchaseData.id);
-  const deleteMutation = useUpdatePurchaseStatusMutation();
+  const deleteMutation = useRemovePurchaseMutation();
 
   const onSubmit = (formValues) => {
     if (!formData.supplierId) {
@@ -100,7 +98,7 @@ function PurchaseDetailForm({ purchaseData }) {
 
   const handleDelete = () => {
     deleteMutation.mutate(
-      { id: purchaseData.id, status: PURCHASE_STATUSES.CANCELLED },
+      purchaseData.id,
       {
         onSuccess: () => {
           resetForm();
@@ -146,8 +144,8 @@ function PurchaseDetailForm({ purchaseData }) {
             />
 
             <PurchaseStatusSection
-              status={formData.status} 
-              selectedStatus={formData.status} 
+              status={formData.status}
+              selectedStatus={formData.status}
               onStatusChange={(val) => setFormData({ status: val })}
             />
 

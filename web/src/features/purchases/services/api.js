@@ -14,7 +14,6 @@ export async function createPurchase(purchaseData) {
   const newPurchase = {
     id: String(Date.now()),
     ...purchaseData,
-    status: PURCHASE_STATUSES.PENDING,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -112,9 +111,12 @@ export async function fetchPurchases(params = {}) {
 
 export async function fetchPurchaseById(id) {
   await delay(300);
-
+  console.log(id);
+  
+  
   const purchase = allPurchases.find((p) => p.id === id);
-
+  console.log(purchase);
+  
   if (!purchase) {
     throw new Error("خرید یافت نشد");
   }
@@ -147,7 +149,10 @@ export async function updatePurchaseStatus(id, newStatus) {
 export async function removePurchase(id) {
   await delay(600);
 
-  const index = allPurchases.findIndex((p) => p.id === id);
+  
+  const index = allPurchases.findIndex((p) => p.id == id);
+  const purchase = allPurchases.find((p) => p.id === id);
+  
 
   if (index === -1) {
     throw new Error("خرید یافت نشد");

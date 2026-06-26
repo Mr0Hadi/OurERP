@@ -16,6 +16,7 @@ import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection
 import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
 import PurchaseInfoSection from "../components/forms/PurchaseInfoSection";
 import PurchasePaymentSection from "../components/forms/PurchasePaymentSection";
+import PurchaseStatusSection from "../components/forms/PurchaseStatusSection";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -36,42 +37,41 @@ export default function PurchasesNewPage() {
   const { setFormData, formData, resetForm, initializeForNew } =
     usePurchaseFormStore();
 
-useEffect(() => {
-  const fromValidReturn =
-    location.state?.newSupplierId || location.state?.newProductId;
+  useEffect(() => {
+    const fromValidReturn =
+      location.state?.newSupplierId || location.state?.newProductId;
 
-  const currentPath = location.pathname;
-  
-  // اول currentPath رو آپدیت کن
-  setCurrentPath(currentPath);
-  
-  // بعد previousPath رو بخون
-  const { previousPath: prevPath } = useNavigationStore.getState();
+    const currentPath = location.pathname;
 
-  console.log(fromValidReturn);
-  console.log(currentPath);
-  console.log(prevPath);
+    // اول currentPath رو آپدیت کن
+    setCurrentPath(currentPath);
 
-  if (fromValidReturn) {
+    // بعد previousPath رو بخون
+    const { previousPath: prevPath } = useNavigationStore.getState();
+
+    console.log(fromValidReturn);
+    console.log(currentPath);
+    console.log(prevPath);
+
+    if (fromValidReturn) {
+      setReturnPath(currentPath);
+      initializeForNew();
+      return;
+    }
+
+    const isReturningFromSubPage =
+      prevPath === "/products/new" || prevPath === "/suppliers/new";
+
+    if (isReturningFromSubPage) {
+      setReturnPath(currentPath);
+      initializeForNew();
+      return;
+    }
+
+    resetForm();
     setReturnPath(currentPath);
     initializeForNew();
-    return;
-  }
-
-  const isReturningFromSubPage =
-    prevPath === '/products/new' || prevPath === '/suppliers/new';
-
-  if (isReturningFromSubPage) {
-    setReturnPath(currentPath);
-    initializeForNew();
-    return;
-  }
-
-  resetForm();
-  setReturnPath(currentPath);
-  initializeForNew();
-}, [location.pathname, location.state, setCurrentPath]);
-
+  }, [location.pathname, location.state, setCurrentPath]);
 
   const {
     formMethods,
@@ -212,6 +212,12 @@ useEffect(() => {
               control={control}
               setValue={setValue}
               totalAmount={computedTotal}
+            />
+
+            <PurchaseStatusSection
+              status={formData.status}
+              selectedStatus={formData.status}
+              onStatusChange={(val) => setFormData({ status: val })}
             />
 
             <div className="flex gap-2">
