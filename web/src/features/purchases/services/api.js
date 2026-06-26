@@ -4,13 +4,9 @@ import { allPurchases, PURCHASE_STATUSES } from "./mockData";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/**
- * ایجاد خرید جدید
- */
 export async function createPurchase(purchaseData) {
   await delay(800);
 
-  // شبیه‌سازی خطای تصادفی
   if (Math.random() < 0.05) {
     throw new Error("خطا در ثبت خرید");
   }
@@ -27,9 +23,6 @@ export async function createPurchase(purchaseData) {
   return newPurchase;
 }
 
-/**
- * دریافت لیست خریدها با فیلتر و صفحه‌بندی
- */
 export async function fetchPurchases(params = {}) {
   await delay(500);
 
@@ -48,7 +41,6 @@ export async function fetchPurchases(params = {}) {
 
   let filtered = [...allPurchases];
 
-  // جستجو
   if (search) {
     const searchLower = search.toLowerCase();
     filtered = filtered.filter(
@@ -59,22 +51,18 @@ export async function fetchPurchases(params = {}) {
     );
   }
 
-  // فیلتر تامین‌کننده
   if (Array.isArray(supplierIds) && supplierIds.length > 0) {
     filtered = filtered.filter((p) => supplierIds.includes(p.supplierId));
   }
 
-  // فیلتر وضعیت
   if (status) {
     filtered = filtered.filter((p) => p.status === status);
   }
 
-  // فیلتر نوع پرداخت
   if (paymentType) {
     filtered = filtered.filter((p) => p.paymentType === paymentType);
   }
 
-  // فیلتر تاریخ
   if (fromDate) {
     filtered = filtered.filter(
       (p) => new Date(p.createdAt) >= new Date(fromDate)
@@ -86,7 +74,6 @@ export async function fetchPurchases(params = {}) {
     );
   }
 
-  // مرتب‌سازی
   filtered.sort((a, b) => {
     let aVal = a[sortBy];
     let bVal = b[sortBy];
@@ -109,7 +96,6 @@ export async function fetchPurchases(params = {}) {
     return aVal < bVal ? 1 : -1;
   });
 
-  // صفحه‌بندی
   const total = filtered.length;
   const totalPages = Math.ceil(total / limit);
   const start = (page - 1) * limit;
@@ -124,9 +110,6 @@ export async function fetchPurchases(params = {}) {
   };
 }
 
-/**
- * دریافت جزئیات یک خرید
- */
 export async function fetchPurchaseById(id) {
   await delay(300);
 
@@ -139,9 +122,6 @@ export async function fetchPurchaseById(id) {
   return purchase;
 }
 
-/**
- * به‌روزرسانی خرید
- */
 export async function updatePurchase(id, updates) {
   await delay(600);
 
@@ -160,23 +140,27 @@ export async function updatePurchase(id, updates) {
   return allPurchases[index];
 }
 
-/**
- * به‌روزرسانی وضعیت خرید
- */
 export async function updatePurchaseStatus(id, newStatus) {
   return updatePurchase(id, { status: newStatus });
 }
 
-/**
- * حذف خرید (soft delete - تغییر وضعیت به cancelled)
- */
+export async function removePurchase(id) {
+  await delay(600);
+
+  const index = allPurchases.findIndex((p) => p.id === id);
+
+  if (index === -1) {
+    throw new Error("خرید یافت نشد");
+  }
+
+  const removed = allPurchases.splice(index, 1)[0];
+  return removed;
+}
+
 export async function deletePurchase(id) {
   return updatePurchaseStatus(id, PURCHASE_STATUSES.CANCELLED);
 }
 
-/**
- * به‌روزرسانی اطلاعات پرداخت
- */
 export async function updatePurchasePayment(id, paymentData) {
   await delay(600);
 
@@ -198,3 +182,4 @@ export async function updatePurchasePayment(id, paymentData) {
 
   return allPurchases[index];
 }
+

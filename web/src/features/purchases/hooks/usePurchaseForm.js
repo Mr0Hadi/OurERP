@@ -85,6 +85,7 @@ export function usePurchaseForm() {
     description: formValues.description,
     paymentType: formValues.paymentType,
     paidAmount: Number(formValues.paidAmount) || 0,
+    status: formData.status,
     items: items.map((item) => ({
       ...item,
       lineTotal: item.qty * item.unitPrice * (1 - (item.discount || 0) / 100),

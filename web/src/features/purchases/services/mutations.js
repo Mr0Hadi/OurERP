@@ -8,6 +8,7 @@ import {
   updatePurchase,
   updatePurchaseStatus,
   updatePurchasePayment,
+  removePurchase,
 } from "./api";
 import { purchaseKeys } from "./queryKeys";
 import { ROUTES } from "@/shared/constants/routes";
@@ -127,6 +128,24 @@ export const useRecordPaymentMutation = () => {
         );
       }
       toast.error(error?.message || "خطا در ثبت پرداخت");
+    },
+  });
+};
+
+export const useRemovePurchaseMutation = () => {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  return useMutation({
+    mutationFn: removePurchase,
+    onSuccess: (removedPurchase) => {
+      queryClient.removeQueries({ queryKey: purchaseKeys.detail(String(removedPurchase.id)) });
+      queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
+      toast.success("خرید با موفقیت حذف شد");
+      navigate(ROUTES.PURCHASES_LIST);
+    },
+    onError: (error) => {
+      toast.error(error?.message || "خطا در حذف خرید");
     },
   });
 };

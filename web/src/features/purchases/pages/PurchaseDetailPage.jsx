@@ -31,6 +31,7 @@ import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
 import PurchaseInfoSection from "../components/forms/PurchaseInfoSection";
 import PurchasePaymentSection from "../components/forms/PurchasePaymentSection";
 import PurchasesDetailLoading from "../components/forms/PurchasesDetailLoading";
+import PurchaseStatusSection from "../components/forms/PurchaseStatusSection";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -42,7 +43,7 @@ const SORTING = { id: "name", desc: false };
 function PurchaseDetailForm({ purchaseData }) {
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  
+
   const { setFormData, resetForm, formData, initializeFromPurchase } =
     usePurchaseFormStore();
 
@@ -144,6 +145,12 @@ function PurchaseDetailForm({ purchaseData }) {
               totalAmount={computedTotal}
             />
 
+            <PurchaseStatusSection
+              status={formData.status} 
+              selectedStatus={formData.status} 
+              onStatusChange={(val) => setFormData({ status: val })}
+            />
+
             <div className="flex gap-2">
               <Button
                 type="button"
@@ -157,7 +164,9 @@ function PurchaseDetailForm({ purchaseData }) {
               </Button>
               <Button type="submit" className="flex-1 gap-2" disabled={isBusy}>
                 <Save className="h-4 w-4" />
-                {updateMutation.isPending ? "در حال ذخیره..." : "به‌روزرسانی خرید"}
+                {updateMutation.isPending
+                  ? "در حال ذخیره..."
+                  : "به‌روزرسانی خرید"}
               </Button>
             </div>
 
