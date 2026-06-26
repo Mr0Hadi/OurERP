@@ -41,15 +41,23 @@ export function NavMain({ items }) {
           >
             <SidebarMenuItem>
               <SidebarMenuButton
-                asChild
+                asChild={!item.items?.length}
                 tooltip={item.title}
                 onClick={() => item.items?.length && toggleItem(item.title)}
               >
-                <Link to={item.url}>
-                  <item.icon />
-                  <span>{item.title}</span>
-                </Link>
+                {item.items?.length ? (
+                  <>
+                    <item.icon />
+                    <span>{item.title}</span>
+                  </>
+                ) : (
+                  <Link to={item.url}>
+                    <item.icon />
+                    <span>{item.title}</span>
+                  </Link>
+                )}
               </SidebarMenuButton>
+
               {item.items?.length ? (
                 <>
                   <CollapsibleTrigger asChild>
