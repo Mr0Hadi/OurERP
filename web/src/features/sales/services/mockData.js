@@ -33,17 +33,9 @@ export const PAYMENT_TYPE_LABELS = {
 };
 
 // ── helper ──────────────────────────────────────────────────────────────────
-function toJalali(date) {
-  const formatter = new Intl.DateTimeFormat("fa-IR-u-nu-latn", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  const parts = formatter.formatToParts(new Date(date));
-  const y = parts.find((p) => p.type === "year").value;
-  const m = parts.find((p) => p.type === "month").value;
-  const d = parts.find((p) => p.type === "day").value;
-  return `${y}/${m}/${d}`;
+// تابع کمکی برای فرمت‌دهی تاریخ میلادی به فرمت استاندارد YYYY-MM-DD
+function formatDate(year, month, day) {
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
 // ── مشتریان برای فروش ──────────────────────────────────────────────────────
@@ -54,14 +46,14 @@ const SALE_CUSTOMERS = [
   { id: "3", name: "لیلا ابراهیمی" },
 ];
 
-// ── فروش‌های ثابت ────────────────────────────────────────────────────────────
+// ── فروش‌های ثابت با تاریخ میلادی ────────────────────────────────────────────
 export const salesMock = [
   {
     id: "1",
     customerId: "1",
     customerName: "علی محمدی",
     invoiceNumber: "SALE-2026-001",
-    invoiceDate: toJalali("2026-06-04"),
+    invoiceDate: "2026-06-04", // 4 June 2026
     status: SALE_STATUSES.DELIVERED,
     paymentType: PAYMENT_TYPES.CASH,
     paidAmount: 45000000,
@@ -95,7 +87,7 @@ export const salesMock = [
     customerId: "2",
     customerName: "فاطمه احمدی",
     invoiceNumber: "SALE-2026-002",
-    invoiceDate: toJalali("2026-06-09"),
+    invoiceDate: "2026-06-09", // 9 June 2026
     status: SALE_STATUSES.PROCESSING,
     paymentType: PAYMENT_TYPES.CREDIT,
     paidAmount: 0,
@@ -126,7 +118,7 @@ export const salesMock = [
   },
 ];
 
-// ── فروش‌های تولیدی ──────────────────────────────────────────────────────────
+// ── فروش‌های تولیدی با تاریخ میلادی ──────────────────────────────────────────
 function generateMoreSales(count = 20) {
   const products = [
     { id: "1", code: "BRK-001", name: "لنت ترمز جلو", price: 2000000 },
@@ -210,9 +202,16 @@ function generateMoreSales(count = 20) {
       paidAmount = totalAmount;
     }
 
+    // تاریخ تصادفی در 6 ماه گذشته با فرمت میلادی (YYYY-MM-DD)
     const daysAgo = Math.floor(Math.random() * 180);
     const saleDate = new Date(baseDate);
     saleDate.setDate(saleDate.getDate() + daysAgo);
+    
+    // استخراج سال، ماه و روز به صورت میلادی
+    const year = saleDate.getFullYear();
+    const month = saleDate.getMonth() + 1; // ماه‌ها از 0 شروع می‌شوند
+    const day = saleDate.getDate();
+    const invoiceDate = formatDate(year, month, day);
 
     const sale = {
       id: String(salesMock.length + i + 1),
@@ -222,7 +221,7 @@ function generateMoreSales(count = 20) {
         3,
         "0"
       )}`,
-      invoiceDate: toJalali(saleDate),
+      invoiceDate,
       status,
       paymentType,
       paidAmount,

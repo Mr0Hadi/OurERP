@@ -32,14 +32,19 @@ export const PAYMENT_TYPE_LABELS = {
   [PAYMENT_TYPES.MIXED]: "ترکیبی",
 };
 
-// داده‌های نمونه خرید
+// تابع کمکی برای تبدیل تاریخ میلادی به فرمت ISO
+function formatDate(year, month, day) {
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+// داده‌های نمونه خرید با تاریخ میلادی
 export const purchasesMock = [
   {
     id: "1",
     supplierId: "1",
     supplierName: "ایران قطعه",
     invoiceNumber: "INV-2026-001",
-    invoiceDate: "1405/03/15",
+    invoiceDate: "2026-03-15", // 15 March 2026
     status: PURCHASE_STATUSES.RECEIVED,
     paymentType: PAYMENT_TYPES.CASH,
     paidAmount: 45000000,
@@ -73,7 +78,7 @@ export const purchasesMock = [
     supplierId: "2",
     supplierName: "لنت پارس موتور",
     invoiceNumber: "INV-2026-002",
-    invoiceDate: "1405/03/20",
+    invoiceDate: "2026-03-20", // 20 March 2026
     status: PURCHASE_STATUSES.SHIPPED,
     paymentType: PAYMENT_TYPES.CREDIT,
     paidAmount: 0,
@@ -107,7 +112,7 @@ export const purchasesMock = [
     supplierId: "3",
     supplierName: "پخش بلبرینگ مرکزی",
     invoiceNumber: "INV-2026-003",
-    invoiceDate: "1405/03/25",
+    invoiceDate: "2026-03-25", // 25 March 2026
     status: PURCHASE_STATUSES.PARTIALLY_RECEIVED,
     paymentType: PAYMENT_TYPES.CHECK,
     paidAmount: 50000000,
@@ -142,7 +147,7 @@ export const purchasesMock = [
     supplierId: "1",
     supplierName: "ایران قطعه",
     invoiceNumber: "INV-2026-004",
-    invoiceDate: "1405/03/28",
+    invoiceDate: "2026-03-28", // 28 March 2026
     status: PURCHASE_STATUSES.PENDING,
     paymentType: PAYMENT_TYPES.TRANSFER,
     paidAmount: 35000000,
@@ -177,7 +182,7 @@ export const purchasesMock = [
     supplierId: "2",
     supplierName: "لنت پارس موتور",
     invoiceNumber: "INV-2026-005",
-    invoiceDate: "1405/04/01",
+    invoiceDate: "2026-04-01", // 1 April 2026
     status: PURCHASE_STATUSES.RECEIVED,
     paymentType: PAYMENT_TYPES.MIXED,
     paidAmount: 60000000,
@@ -202,7 +207,7 @@ export const purchasesMock = [
     supplierId: "1",
     supplierName: "ایران قطعه",
     invoiceNumber: "INV-2026-006",
-    invoiceDate: "1405/04/02",
+    invoiceDate: "2026-04-02", // 2 April 2026
     status: PURCHASE_STATUSES.CANCELLED,
     paymentType: PAYMENT_TYPES.CREDIT,
     paidAmount: 0,
@@ -224,7 +229,7 @@ export const purchasesMock = [
   },
 ];
 
-// تابع تولید خریدهای بیشتر
+// تابع تولید خریدهای بیشتر با تاریخ میلادی
 function generateMorePurchases(count = 20) {
   const suppliers = [
     { id: "1", name: "ایران قطعه" },
@@ -316,10 +321,16 @@ function generateMorePurchases(count = 20) {
       paidAmount = totalAmount;
     }
 
-    // تاریخ تصادفی در 6 ماه گذشته
+    // تاریخ تصادفی در 6 ماه گذشته با فرمت میلادی (YYYY-MM-DD)
     const daysAgo = Math.floor(Math.random() * 180);
     const purchaseDate = new Date(baseDate);
     purchaseDate.setDate(purchaseDate.getDate() + daysAgo);
+    
+    // استخراج سال، ماه و روز به صورت میلادی
+    const year = purchaseDate.getFullYear();
+    const month = purchaseDate.getMonth() + 1; // ماه‌ها از 0 شروع می‌شوند
+    const day = purchaseDate.getDate();
+    const invoiceDate = formatDate(year, month, day);
 
     const purchase = {
       id: String(purchasesMock.length + i + 1),
@@ -329,7 +340,7 @@ function generateMorePurchases(count = 20) {
         3,
         "0"
       )}`,
-      invoiceDate: new Intl.DateTimeFormat("fa-IR").format(purchaseDate),
+      invoiceDate,
       status,
       paymentType,
       paidAmount,
