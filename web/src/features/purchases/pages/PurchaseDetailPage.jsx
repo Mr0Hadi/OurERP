@@ -42,9 +42,9 @@ function PurchaseDetailForm({ purchaseData }) {
     usePurchaseFormStore();
 
   // initializeFromPurchase باید فقط یک‌بار هنگام mount اجرا شود
-  useEffect(() => {
+
     initializeFromPurchase(purchaseData);
-  }, [purchaseData.id]);
+
 
   const { data: suppliersData, isLoading: suppliersLoading } =
     useSuppliersQuery(ALL_FILTERS, PAGINATION, SORTING);
@@ -85,8 +85,7 @@ function PurchaseDetailForm({ purchaseData }) {
       description: formData.description || "",
       items: items.map((item) => ({
         ...item,
-        lineTotal:
-          item.qty * item.unitPrice * (1 - (item.discount || 0) / 100),
+        lineTotal: item.qty * item.unitPrice * (1 - (item.discount || 0) / 100),
       })),
       paymentType: formData.paymentType || "cash",
       paidAmount: Number(formData.paidAmount) || 0,
@@ -160,6 +159,12 @@ function PurchaseDetailForm({ purchaseData }) {
             />
 
             <div className="flex gap-2">
+              <Button type="submit" className="flex-1 gap-2" disabled={isBusy}>
+                <Save className="h-4 w-4" />
+                {updateMutation.isPending
+                  ? "در حال ذخیره..."
+                  : "به‌روزرسانی خرید"}
+              </Button>
               <Button
                 type="button"
                 variant="outline"
@@ -169,14 +174,6 @@ function PurchaseDetailForm({ purchaseData }) {
               >
                 <X className="h-4 w-4" />
                 انصراف
-              </Button>
-              <Button
-                type="submit"
-                className="flex-1 gap-2"
-                disabled={isBusy}
-              >
-                <Save className="h-4 w-4" />
-                {updateMutation.isPending ? "در حال ذخیره..." : "به‌روزرسانی خرید"}
               </Button>
             </div>
 
@@ -231,7 +228,11 @@ export default function PurchaseDetailPage() {
 
   useEffect(() => {
     setHeader({
-      title: isLoading ? "در حال بارگذاری..." : purchase ? "ویرایش خرید" : "خطا",
+      title: isLoading
+        ? "در حال بارگذاری..."
+        : purchase
+        ? "ویرایش خرید"
+        : "خطا",
       showBack: true,
       onBack: () => navigate(-1),
     });

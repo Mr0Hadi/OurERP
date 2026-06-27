@@ -111,11 +111,11 @@ export async function fetchPurchases(params = {}) {
 
 export async function fetchPurchaseById(id) {
   await delay(300);
-  console.log(id);
+
   
   
   const purchase = allPurchases.find((p) => p.id === id);
-  console.log(purchase);
+
   
   if (!purchase) {
     throw new Error("خرید یافت نشد");

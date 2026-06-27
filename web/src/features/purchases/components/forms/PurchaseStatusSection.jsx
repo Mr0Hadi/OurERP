@@ -7,7 +7,6 @@ import {
   CardTitle,
 } from "@/shared/components/ui/card";
 import { Label } from "@/shared/components/ui/label";
-import { Separator } from "@/shared/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -73,9 +72,9 @@ export default function PurchaseStatusSection({
   selectedStatus,
   onStatusChange,
 }) {
-  const currentLabel = PURCHASE_STATUS_LABELS[status] || status;
-  const config = STATUS_CONFIG[status] ?? DEFAULT_CONFIG;
-  const StatusIcon = config.icon;
+  
+
+  
 
   return (
     <Card>

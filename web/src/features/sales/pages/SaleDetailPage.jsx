@@ -20,7 +20,6 @@ import { useSaleQuery } from "#/features/sales/services/queries";
 import { useUpdateSaleMutation } from "#/features/sales/services/mutations";
 import { useCustomersQuery } from "#/features/customers/services/queries";
 import { useProductsQuery } from "#/features/inventory/products/services/queries";
-import { SALE_STATUSES } from "#/features/sales/services/mockData";
 import { useRemoveSaleMutation } from "#/features/sales/services/mutations";
 
 import SaleCustomerSection from "../components/forms/SaleCustomerSection";
@@ -46,9 +45,9 @@ function SaleDetailForm({ saleData }) {
     useSaleFormStore();
 
   // initializeFromSale باید فقط یک‌بار هنگام mount اجرا شود
-  useEffect(() => {
-    initializeFromSale(saleData);
-  }, [saleData.id]);
+
+  initializeFromSale(saleData);
+
 
   const { data: customersData, isLoading: customersLoading } =
     useCustomersQuery(ALL_FILTERS, PAGINATION, SORTING);
@@ -86,16 +85,16 @@ function SaleDetailForm({ saleData }) {
       invoiceNumber: formData.invoiceNumber,
       invoiceDate: formData.invoiceDate,
       dueDate: formData.dueDate || null,
-      description: formData.description || '',
+      description: formData.description || "",
       items: items.map((item) => ({
         ...item,
         lineTotal: item.qty * item.unitPrice * (1 - (item.discount || 0) / 100),
       })),
-      paymentType: formData.paymentType || 'cash',
+      paymentType: formData.paymentType || "cash",
       paidAmount: Number(formData.paidAmount) || 0,
       checkNumber: formData.checkNumber || null,
       transferRef: formData.transferRef || null,
-      status: formData.status || 'pending',
+      status: formData.status || "pending",
       totalAmount: computedTotal,
     };
 
@@ -168,6 +167,12 @@ function SaleDetailForm({ saleData }) {
             />
 
             <div className="flex gap-2">
+              <Button type="submit" className="flex-1 gap-2" disabled={isBusy}>
+                <Save className="h-4 w-4" />
+                {updateMutation.isPending
+                  ? "در حال ذخیره..."
+                  : "به‌روزرسانی فروش"}
+              </Button>
               <Button
                 type="button"
                 variant="outline"
@@ -177,14 +182,6 @@ function SaleDetailForm({ saleData }) {
               >
                 <X className="h-4 w-4" />
                 انصراف
-              </Button>
-              <Button
-                type="submit"
-                className="flex-1 gap-2"
-                disabled={isBusy}
-              >
-                <Save className="h-4 w-4" />
-                {updateMutation.isPending ? "در حال ذخیره..." : "به‌روزرسانی فروش"}
               </Button>
             </div>
 
