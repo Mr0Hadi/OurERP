@@ -204,8 +204,7 @@ function SaleDetailForm({ saleData }) {
           <AlertDialogHeader>
             <AlertDialogTitle>حذف فروش</AlertDialogTitle>
             <AlertDialogDescription>
-              آیا از حذف این فروش اطمینان دارید؟ این عملیات وضعیت فروش را به لغو
-              شده تغییر می‌دهد.
+              آیا از حذف این فروش اطمینان دارید؟ این عملیات اطلاعات فروش ثبت شده را به طور کامل حذف میکند.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

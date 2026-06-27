@@ -196,8 +196,7 @@ function PurchaseDetailForm({ purchaseData }) {
           <AlertDialogHeader>
             <AlertDialogTitle>حذف خرید</AlertDialogTitle>
             <AlertDialogDescription>
-              آیا از حذف این خرید اطمینان دارید؟ این عملیات وضعیت خرید را به لغو
-              شده تغییر می‌دهد.
+              آیا از حذف این خرید اطمینان دارید؟ این عملیات اطلاعات خرید ثبت شده را به طور کامل حذف میکند
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
