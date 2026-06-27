@@ -1,9 +1,14 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { UserPlus, X, Search } from 'lucide-react';
-import { Button } from '#/shared/components/ui/button';
-import { Input } from '#/shared/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '#/shared/components/ui/card';
+import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { UserPlus, X, Search } from "lucide-react";
+import { Button } from "#/shared/components/ui/button";
+import { Input } from "#/shared/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "#/shared/components/ui/card";
 
 /**
  * props:
@@ -23,17 +28,17 @@ export default function SaleCustomerSection({
   error,
 }) {
   const navigate = useNavigate();
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
 
   const handleAddNew = () => {
-    navigate('/customers/new', { state: { returnTo: '/sales/new' } });
+    navigate("/customers/new", { state: { returnTo: "/sales/new" } });
   };
 
   const selectedCustomer = customers.find((c) => c.id === selectedId);
   const displayName = selectedCustomer
     ? selectedCustomer.companyName ||
       `${selectedCustomer.firstName} ${selectedCustomer.lastName}`
-    : '';
+    : "";
 
   const filteredCustomers = useMemo(() => {
     if (!search.trim()) return customers;
@@ -49,10 +54,9 @@ export default function SaleCustomerSection({
 
   const handleSelect = (customer) => {
     const name =
-      customer.companyName ||
-      `${customer.firstName} ${customer.lastName}`;
+      customer.companyName || `${customer.firstName} ${customer.lastName}`;
     onSelect(customer.id, name);
-    setSearch('');
+    setSearch("");
   };
 
   return (
@@ -86,7 +90,7 @@ export default function SaleCustomerSection({
               <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
                 {selectedCustomer.companyName?.[0] ??
                   selectedCustomer.firstName?.[0] ??
-                  '؟'}
+                  "؟"}
               </div>
             )}
             <div className="flex-1 min-w-0">
@@ -106,7 +110,7 @@ export default function SaleCustomerSection({
               className="shrink-0 h-7 w-7 text-muted-foreground hover:text-destructive"
               onClick={() => {
                 onClear();
-                setSearch('');
+                setSearch("");
               }}
               aria-label="حذف انتخاب"
             >
@@ -118,18 +122,22 @@ export default function SaleCustomerSection({
             <div className="relative">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
-                placeholder={isLoading ? 'در حال بارگذاری...' : 'جست‌وجوی نام یا شرکت...'}
+                placeholder={
+                  isLoading ? "در حال بارگذاری..." : "جست‌وجوی نام یا شرکت..."
+                }
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 disabled={isLoading}
                 className={`input-rtl-placeholder pr-9 h-9 ${
-                  error ? 'border-destructive focus-visible:ring-destructive/30' : ''
+                  error
+                    ? "border-destructive focus-visible:ring-destructive/30"
+                    : ""
                 }`}
               />
             </div>
 
             {filteredCustomers.length > 0 ? (
-              <ul className="max-h-52 overflow-y-auto custom-scroll rounded-lg border border-border bg-background">
+              <ul className="max-h-52 overflow-y-auto custom-scroll rounded-lg border border-border divide-y divide-border bg-card">
                 {filteredCustomers.map((customer) => {
                   const name =
                     customer.companyName ||
@@ -139,7 +147,7 @@ export default function SaleCustomerSection({
                       <button
                         type="button"
                         onClick={() => handleSelect(customer)}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted/60 transition-colors text-right border-b border-border last:border-b-0"
+                        className="flex items-center gap-3 w-full px-3 py-2.5 text-right hover:bg-accent/50 transition-colors"
                       >
                         {customer.avatar ? (
                           <img
@@ -151,10 +159,10 @@ export default function SaleCustomerSection({
                           <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shrink-0">
                             {customer.companyName?.[0] ??
                               customer.firstName?.[0] ??
-                              '؟'}
+                              "؟"}
                           </div>
                         )}
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 text-right">
                           <p className="text-sm font-medium text-card-foreground truncate">
                             {name}
                           </p>
@@ -170,17 +178,19 @@ export default function SaleCustomerSection({
                 })}
               </ul>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                {search.trim()
-                  ? 'مشتری‌ای یافت نشد'
-                  : 'لیست مشتریان خالی است'}
-              </p>
+              !isLoading && (
+                <div className="rounded-lg border border-dashed border-border py-6">
+                  <p className="text-xs text-muted-foreground text-center">
+                    {search ? "مشتری‌ای یافت نشد" : "لیست مشتریان خالی است"}
+                  </p>
+                </div>
+              )
             )}
           </div>
         )}
 
         {error && !selectedId && (
-          <p className="text-sm text-destructive mt-1">{error}</p>
+          <p className="text-xs text-destructive">{error}</p>
         )}
       </CardContent>
     </Card>
