@@ -1,5 +1,5 @@
 // src/features/purchases/pages/PurchasesNewPage.jsx
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useNavigationStore } from "@/shared/store/navigationStore";
 import { Save, X } from "lucide-react";
@@ -7,7 +7,6 @@ import { Save, X } from "lucide-react";
 import { Button } from "#/shared/components/ui/button";
 import { useHeaderStore } from "#/shared/store/headerStore";
 import { usePurchaseFormStore } from "#/features/purchases/store/purchaseFormStore";
-import { usePurchaseForm } from "#/features/purchases/hooks/usePurchaseForm";
 import { useCreatePurchaseMutation } from "#/features/purchases/services/mutations";
 import { useSuppliersQuery } from "#/features/suppliers/services/queries";
 import { useProductsQuery } from "#/features/inventory/products/services/queries";
@@ -29,29 +28,22 @@ export default function PurchasesNewPage() {
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  const returnPath = useNavigationStore((s) => s.returnPath);
-  const previousPath = useNavigationStore((s) => s.previousPath);
   const setReturnPath = useNavigationStore((s) => s.setReturnPath);
   const setCurrentPath = useNavigationStore((s) => s.setCurrentPath);
 
-  const { setFormData, formData, resetForm, initializeForNew } =
+  const { setFormData, formData, resetForm, initializeForNew, setItems } =
     usePurchaseFormStore();
+
+  const [showErrors, setShowErrors] = useState(false);
 
   useEffect(() => {
     const fromValidReturn =
       location.state?.newSupplierId || location.state?.newProductId;
 
     const currentPath = location.pathname;
-
-    // اول currentPath رو آپدیت کن
     setCurrentPath(currentPath);
 
-    // بعد previousPath رو بخون
     const { previousPath: prevPath } = useNavigationStore.getState();
-
-    console.log(fromValidReturn);
-    console.log(currentPath);
-    console.log(prevPath);
 
     if (fromValidReturn) {
       setReturnPath(currentPath);
@@ -71,23 +63,7 @@ export default function PurchasesNewPage() {
     resetForm();
     setReturnPath(currentPath);
     initializeForNew();
-  }, [location.pathname, location.state, setCurrentPath]);
-
-  const {
-    formMethods,
-    items,
-    handleItemsChange,
-    computedTotal,
-    buildPurchasePayload,
-  } = usePurchaseForm();
-
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    control,
-    formState: { errors },
-  } = formMethods;
+  }, [location.pathname, location.state, setCurrentPath, setReturnPath, resetForm, initializeForNew]);
 
   const createMutation = useCreatePurchaseMutation();
 
@@ -123,9 +99,10 @@ export default function PurchasesNewPage() {
     const product = products.find((p) => p.id === newProductId);
 
     if (product) {
+      const items = formData.items || [];
       const alreadyAdded = items.some((i) => i.productId === product.id);
       if (!alreadyAdded) {
-        handleItemsChange([
+        setItems([
           ...items,
           {
             productId: product.id,
@@ -142,12 +119,12 @@ export default function PurchasesNewPage() {
 
     navigate(location.pathname, { replace: true, state: {} });
   }, [
-    handleItemsChange,
-    items,
     location.pathname,
     location.state,
     navigate,
     products,
+    formData.items,
+    setItems,
   ]);
 
   useEffect(() => {
@@ -163,9 +140,47 @@ export default function PurchasesNewPage() {
     return () => clearHeader();
   }, [setHeader, clearHeader, navigate]);
 
-  const onSubmit = (formValues) => {
-    if (!formData.supplierId) return;
-    const payload = buildPurchasePayload(formValues);
+  const items = formData.items || [];
+
+  const computedTotal = items.reduce((sum, item) => {
+    const base = (item.qty || 0) * (item.unitPrice || 0);
+    const disc = (base * (item.discount || 0)) / 100;
+    return sum + base - disc;
+  }, 0);
+
+  const onSubmit = (e) => {
+    e.preventDefault();
+
+    if (!formData.supplierId) {
+      setShowErrors(true);
+      return;
+    }
+
+    const payload = {
+      supplierId: formData.supplierId,
+      supplierName: formData.supplierName,
+      invoiceNumber: formData.invoiceNumber,
+      invoiceDate: formData.invoiceDate,
+      dueDate: formData.dueDate || null,
+      description: formData.description || '',
+      items: items.map((item) => ({
+        productId: item.productId,
+        productName: item.productName,
+        productCode: item.productCode,
+        unit: item.unit,
+        qty: item.qty,
+        unitPrice: item.unitPrice,
+        discount: item.discount || 0,
+        lineTotal: item.qty * item.unitPrice * (1 - (item.discount || 0) / 100),
+      })),
+      paymentType: formData.paymentType || 'cash',
+      paidAmount: Number(formData.paidAmount) || 0,
+      checkNumber: formData.checkNumber || null,
+      transferRef: formData.transferRef || null,
+      status: formData.status || 'pending',
+      totalAmount: computedTotal,
+    };
+
     createMutation.mutate(payload, {
       onSuccess: () => {
         navigate("/purchases");
@@ -183,16 +198,20 @@ export default function PurchasesNewPage() {
 
   return (
     <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in zoom-in-95 duration-300">
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form onSubmit={onSubmit}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 space-y-4">
             <PurchaseItemsSection
               items={items}
               products={products}
               isLoadingProducts={productsLoading}
-              onItemsChange={handleItemsChange}
+              onItemsChange={setItems}
             />
-            <PurchaseInfoSection register={register} errors={errors} />
+            <PurchaseInfoSection
+              formData={formData}
+              onFormChange={setFormData}
+              errors={{}}
+            />
           </div>
 
           <div className="space-y-4">
@@ -200,18 +219,18 @@ export default function PurchasesNewPage() {
               suppliers={suppliers}
               isLoading={suppliersLoading}
               selectedId={formData.supplierId}
-              onSelect={(id, name) =>
-                setFormData({ supplierId: id, supplierName: name })
-              }
+              onSelect={(id, name) => {
+                setFormData({ supplierId: id, supplierName: name });
+                setShowErrors(false);
+              }}
               onClear={() => setFormData({ supplierId: "", supplierName: "" })}
-              error={!formData.supplierId && errors._supplier?.message}
+              error={showErrors && !formData.supplierId ? "انتخاب تامین‌کننده الزامی است" : null}
             />
             <PurchasePaymentSection
-              register={register}
-              errors={errors}
-              control={control}
-              setValue={setValue}
+              formData={formData}
+              onFormChange={setFormData}
               totalAmount={computedTotal}
+              errors={{}}
             />
 
             <PurchaseStatusSection
@@ -224,7 +243,7 @@ export default function PurchasesNewPage() {
               <Button
                 type="submit"
                 className="flex-1 gap-2"
-                disabled={isBusy || !formData.supplierId}
+                disabled={isBusy}
               >
                 <Save className="h-4 w-4" />
                 {isBusy ? "در حال ذخیره..." : "ذخیره خرید"}

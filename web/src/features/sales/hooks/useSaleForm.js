@@ -3,7 +3,11 @@ import { useForm } from 'react-hook-form';
 import { useSaleFormStore } from '#/features/sales/store/saleFormStore';
 
 export function useSaleForm() {
-  const { formData, setFormData, setItems, initializedForId } = useSaleFormStore();
+  const formData = useSaleFormStore((state) => state.formData);
+  const setFormData = useSaleFormStore((state) => state.setFormData);
+  const setItems = useSaleFormStore((state) => state.setItems);
+  const initializedForId = useSaleFormStore((state) => state.initializedForId);
+  
   const isFirstMount = useRef(true);
   const prevInitializedRef = useRef(initializedForId);
 
@@ -24,7 +28,10 @@ export function useSaleForm() {
 
   // وقتی resetForm صدا زده می‌شه، react-hook-form هم ریست بشه
   useEffect(() => {
-    if (prevInitializedRef.current !== null && initializedForId === null) {
+    const prev = prevInitializedRef.current;
+    prevInitializedRef.current = initializedForId;
+
+    if (prev !== null && initializedForId === null) {
       reset({
         invoiceNumber: '',
         invoiceDate: '',
@@ -36,7 +43,6 @@ export function useSaleForm() {
         transferRef: '',
       });
     }
-    prevInitializedRef.current = initializedForId;
   }, [initializedForId, reset]);
 
   // sync یک‌طرفه: form → store
@@ -45,7 +51,7 @@ export function useSaleForm() {
       isFirstMount.current = false;
       return;
     }
-    const sub = watch((values) => {
+    const subscription = watch((values) => {
       setFormData({
         invoiceNumber: values.invoiceNumber,
         invoiceDate: values.invoiceDate,
@@ -57,7 +63,7 @@ export function useSaleForm() {
         transferRef: values.transferRef,
       });
     });
-    return () => sub.unsubscribe();
+    return () => subscription.unsubscribe();
   }, [watch, setFormData]);
 
   const items = formData.items || [];
@@ -81,6 +87,7 @@ export function useSaleForm() {
     description: formValues.description,
     paymentType: formValues.paymentType,
     paidAmount: Number(formValues.paidAmount) || 0,
+    status: formData.status,
     items: items.map((item) => ({
       ...item,
       lineTotal: item.qty * item.unitPrice * (1 - (item.discount || 0) / 100),

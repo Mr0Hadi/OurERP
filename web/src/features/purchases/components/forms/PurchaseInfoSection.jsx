@@ -5,9 +5,13 @@ import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
 
 /**
- * props: register, errors
+ * props: formData, onFormChange, errors
  */
-export default function PurchaseInfoSection({ register, errors }) {
+export default function PurchaseInfoSection({ formData, onFormChange, errors }) {
+  const handleChange = (field, value) => {
+    onFormChange({ [field]: value });
+  };
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -27,13 +31,14 @@ export default function PurchaseInfoSection({ register, errors }) {
           <Input
             id="invoiceNumber"
             placeholder="مثال: INV-1023"
-            {...register("invoiceNumber", { required: "شماره فاکتور الزامی است" })}
+            value={formData.invoiceNumber || ''}
+            onChange={(e) => handleChange('invoiceNumber', e.target.value)}
             className={`input-rtl-placeholder h-9 ${
-              errors.invoiceNumber ? "border-destructive focus-visible:ring-destructive/30" : ""
+              errors?.invoiceNumber ? "border-destructive focus-visible:ring-destructive/30" : ""
             }`}
           />
-          {errors.invoiceNumber && (
-            <p className="text-xs text-destructive">{errors.invoiceNumber.message}</p>
+          {errors?.invoiceNumber && (
+            <p className="text-xs text-destructive">{errors.invoiceNumber}</p>
           )}
         </div>
 
@@ -48,13 +53,14 @@ export default function PurchaseInfoSection({ register, errors }) {
           <Input
             id="invoiceDate"
             type="date"
-            {...register("invoiceDate", { required: "تاریخ الزامی است" })}
+            value={formData.invoiceDate || ''}
+            onChange={(e) => handleChange('invoiceDate', e.target.value)}
             className={`h-9 ${
-              errors.invoiceDate ? "border-destructive focus-visible:ring-destructive/30" : ""
+              errors?.invoiceDate ? "border-destructive focus-visible:ring-destructive/30" : ""
             }`}
           />
-          {errors.invoiceDate && (
-            <p className="text-xs text-destructive">{errors.invoiceDate.message}</p>
+          {errors?.invoiceDate && (
+            <p className="text-xs text-destructive">{errors.invoiceDate}</p>
           )}
         </div>
 
@@ -69,7 +75,8 @@ export default function PurchaseInfoSection({ register, errors }) {
           <Input
             id="dueDate"
             type="date"
-            {...register("dueDate")}
+            value={formData.dueDate || ''}
+            onChange={(e) => handleChange('dueDate', e.target.value)}
             className="h-9"
           />
         </div>
@@ -86,7 +93,8 @@ export default function PurchaseInfoSection({ register, errors }) {
             id="description"
             placeholder="یادداشت یا توضیحات اضافه..."
             rows={3}
-            {...register("description")}
+            value={formData.description || ''}
+            onChange={(e) => handleChange('description', e.target.value)}
             className="input-rtl-placeholder resize-none text-sm"
           />
         </div>

@@ -1,4 +1,4 @@
-import { useWatch } from 'react-hook-form';
+// src/features/sales/components/SalePaymentSection.jsx
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
@@ -19,18 +19,21 @@ const PAYMENT_TYPES = [
 ];
 
 /**
- * props: register, errors, control, setValue, totalAmount
+ * props: formData, onFormChange, totalAmount, errors
  */
 export default function SalePaymentSection({
-  register,
-  errors,
-  control,
-  setValue,
+  formData,
+  onFormChange,
   totalAmount = 0,
+  errors,
 }) {
-  const paymentType = useWatch({ control, name: 'paymentType' });
-  const paidAmount = useWatch({ control, name: 'paidAmount' });
-  const remaining = totalAmount - (Number(paidAmount) || 0);
+  const handleChange = (field, value) => {
+    onFormChange({ [field]: value });
+  };
+
+  const paymentType = formData.paymentType || 'cash';
+  const paidAmount = Number(formData.paidAmount) || 0;
+  const remaining = totalAmount - paidAmount;
 
   return (
     <Card>
@@ -53,16 +56,18 @@ export default function SalePaymentSection({
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">مبلغ پرداختی</span>
                 <span className="font-medium text-card-foreground">
-                  {(Number(paidAmount) || 0).toLocaleString('fa-IR')} ریال
+                  {paidAmount.toLocaleString('fa-IR')} ریال
                 </span>
               </div>
               <div className="flex justify-between items-center border-t border-border pt-2">
                 <span className="text-muted-foreground">مانده بدهی</span>
-                <span className={`font-semibold ${
-                  remaining > 0 
-                    ? 'text-destructive' 
-                    : 'text-[oklch(0.50_0.16_152)]'
-                }`}>
+                <span
+                  className={`font-semibold ${
+                    remaining > 0
+                      ? 'text-destructive'
+                      : 'text-[oklch(0.50_0.16_152)]'
+                  }`}
+                >
                   {remaining.toLocaleString('fa-IR')} ریال
                 </span>
               </div>
@@ -77,7 +82,7 @@ export default function SalePaymentSection({
           </Label>
           <Select
             value={paymentType}
-            onValueChange={(val) => setValue('paymentType', val)}
+            onValueChange={(val) => handleChange('paymentType', val)}
           >
             <SelectTrigger className="h-9">
               <SelectValue />
@@ -92,10 +97,10 @@ export default function SalePaymentSection({
           </Select>
         </div>
 
-        {/* مبلغ پرداختی - فقط برای نسیه‌ی کامل نشان داده نمی‌شود */}
+        {/* مبلغ پرداختی */}
         {paymentType !== 'credit' && (
           <div className="space-y-1.5">
-            <Label 
+            <Label
               htmlFor="paidAmount"
               className="text-card-foreground text-sm font-medium"
             >
@@ -107,23 +112,24 @@ export default function SalePaymentSection({
               dir="ltr"
               min={0}
               placeholder="صفر"
-              {...register('paidAmount')}
+              value={formData.paidAmount || ''}
+              onChange={(e) => handleChange('paidAmount', e.target.value)}
               className={`h-9 input-rtl-placeholder ${
-                errors.paidAmount 
-                  ? 'border-destructive focus-visible:ring-destructive/30' 
+                errors?.paidAmount
+                  ? 'border-destructive focus-visible:ring-destructive/30'
                   : ''
               }`}
             />
-            {errors.paidAmount && (
-              <p className="text-xs text-destructive">{errors.paidAmount.message}</p>
+            {errors?.paidAmount && (
+              <p className="text-xs text-destructive">{errors.paidAmount}</p>
             )}
           </div>
         )}
 
-        {/* شماره چک - فقط برای پرداخت چکی */}
+        {/* شماره چک */}
         {paymentType === 'check' && (
           <div className="space-y-1.5">
-            <Label 
+            <Label
               htmlFor="checkNumber"
               className="text-card-foreground text-sm font-medium"
             >
@@ -132,17 +138,18 @@ export default function SalePaymentSection({
             <Input
               id="checkNumber"
               placeholder="شماره چک را وارد کنید"
-              {...register('checkNumber')}
+              value={formData.checkNumber || ''}
+              onChange={(e) => handleChange('checkNumber', e.target.value)}
               className="input-rtl-placeholder h-9"
               dir="ltr"
             />
           </div>
         )}
 
-        {/* شماره پیگیری - برای انتقال بانکی */}
+        {/* شماره پیگیری */}
         {paymentType === 'transfer' && (
           <div className="space-y-1.5">
-            <Label 
+            <Label
               htmlFor="transferRef"
               className="text-card-foreground text-sm font-medium"
             >
@@ -151,7 +158,8 @@ export default function SalePaymentSection({
             <Input
               id="transferRef"
               placeholder="شماره پیگیری انتقال"
-              {...register('transferRef')}
+              value={formData.transferRef || ''}
+              onChange={(e) => handleChange('transferRef', e.target.value)}
               className="input-rtl-placeholder h-9"
               dir="ltr"
             />

@@ -17,12 +17,10 @@ import {
 } from "#/shared/components/ui/alert-dialog";
 import { useHeaderStore } from "#/shared/store/headerStore";
 import { usePurchaseFormStore } from "#/features/purchases/store/purchaseFormStore";
-import { usePurchaseForm } from "#/features/purchases/hooks/usePurchaseForm";
 import { usePurchaseQuery } from "#/features/purchases/services/queries";
 import { useUpdatePurchaseMutation } from "#/features/purchases/services/mutations";
 import { useSuppliersQuery } from "#/features/suppliers/services/queries";
 import { useProductsQuery } from "#/features/inventory/products/services/queries";
-import { PURCHASE_STATUSES } from "#/features/purchases/services/mockData";
 import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection";
 import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
 import PurchaseInfoSection from "../components/forms/PurchaseInfoSection";
@@ -35,26 +33,18 @@ const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
 const SORTING = { id: "name", desc: false };
 
-// ============================================================
-// کامپوننت فرم
-// ============================================================
 function PurchaseDetailForm({ purchaseData }) {
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
 
-  const { setFormData, resetForm, formData, initializeFromPurchase } =
+  const { setFormData, setItems, resetForm, formData, initializeFromPurchase } =
     usePurchaseFormStore();
 
-  // مقداردهی اولیه — فقط اگر store هنوز برای این خرید init نشده باشد
-  initializeFromPurchase(purchaseData);
-
-  const {
-    formMethods,
-    items,
-    handleItemsChange,
-    computedTotal,
-    buildPurchasePayload,
-  } = usePurchaseForm(purchaseData);
+  // initializeFromPurchase باید فقط یک‌بار هنگام mount اجرا شود
+  useEffect(() => {
+    initializeFromPurchase(purchaseData);
+  }, [purchaseData.id]);
 
   const { data: suppliersData, isLoading: suppliersLoading } =
     useSuppliersQuery(ALL_FILTERS, PAGINATION, SORTING);
@@ -67,24 +57,52 @@ function PurchaseDetailForm({ purchaseData }) {
   const suppliers = suppliersData?.items || [];
   const products = productsData?.items || [];
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    control,
-    formState: { errors },
-  } = formMethods;
-
   const updateMutation = useUpdatePurchaseMutation(purchaseData.id);
   const deleteMutation = useRemovePurchaseMutation();
 
-  const onSubmit = (formValues) => {
+  const items = formData.items || [];
+
+  const computedTotal = items.reduce((sum, item) => {
+    const base = (item.qty || 0) * (item.unitPrice || 0);
+    const disc = (base * (item.discount || 0)) / 100;
+    return sum + base - disc;
+  }, 0);
+
+  const onSubmit = (e) => {
+    e.preventDefault();
+
     if (!formData.supplierId) {
-      alert("لطفاً تامین‌کننده را انتخاب کنید.");
+      setShowErrors(true);
       return;
     }
-    const payload = buildPurchasePayload(formValues);
+
+    const payload = {
+      supplierId: formData.supplierId,
+      supplierName: formData.supplierName,
+      invoiceNumber: formData.invoiceNumber,
+      invoiceDate: formData.invoiceDate,
+      dueDate: formData.dueDate || null,
+      description: formData.description || "",
+      items: items.map((item) => ({
+        ...item,
+        lineTotal:
+          item.qty * item.unitPrice * (1 - (item.discount || 0) / 100),
+      })),
+      paymentType: formData.paymentType || "cash",
+      paidAmount: Number(formData.paidAmount) || 0,
+      checkNumber: formData.checkNumber || null,
+      transferRef: formData.transferRef || null,
+      status: formData.status || "pending",
+      totalAmount: computedTotal,
+    };
+
     updateMutation.mutate(payload, {
+      onSuccess: () => navigate("/purchases"),
+    });
+  };
+
+  const handleDelete = () => {
+    deleteMutation.mutate(purchaseData.id, {
       onSuccess: () => {
         resetForm();
         navigate("/purchases");
@@ -92,36 +110,24 @@ function PurchaseDetailForm({ purchaseData }) {
     });
   };
 
-  const handleCancel = () => {
-    navigate(-1);
-  };
-
-  const handleDelete = () => {
-    deleteMutation.mutate(
-      purchaseData.id,
-      {
-        onSuccess: () => {
-          resetForm();
-          navigate("/purchases");
-        },
-      }
-    );
-  };
-
   const isBusy = updateMutation.isPending || deleteMutation.isPending;
 
   return (
     <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in zoom-in-95 duration-300">
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form onSubmit={onSubmit}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 space-y-4">
             <PurchaseItemsSection
               items={items}
               products={products}
               isLoadingProducts={productsLoading}
-              onItemsChange={handleItemsChange}
+              onItemsChange={setItems}
             />
-            <PurchaseInfoSection register={register} errors={errors} />
+            <PurchaseInfoSection
+              formData={formData}
+              onFormChange={setFormData}
+              errors={{}}
+            />
           </div>
 
           <div className="space-y-4">
@@ -129,18 +135,22 @@ function PurchaseDetailForm({ purchaseData }) {
               suppliers={suppliers}
               isLoading={suppliersLoading}
               selectedId={formData.supplierId}
-              onSelect={(id, name) =>
-                setFormData({ supplierId: id, supplierName: name })
-              }
+              onSelect={(id, name) => {
+                setFormData({ supplierId: id, supplierName: name });
+                setShowErrors(false);
+              }}
               onClear={() => setFormData({ supplierId: "", supplierName: "" })}
-              error={!formData.supplierId && errors._supplier?.message}
+              error={
+                showErrors && !formData.supplierId
+                  ? "انتخاب تامین‌کننده الزامی است"
+                  : null
+              }
             />
             <PurchasePaymentSection
-              register={register}
-              errors={errors}
-              control={control}
-              setValue={setValue}
+              formData={formData}
+              onFormChange={setFormData}
               totalAmount={computedTotal}
+              errors={{}}
             />
 
             <PurchaseStatusSection
@@ -153,18 +163,20 @@ function PurchaseDetailForm({ purchaseData }) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleCancel}
+                onClick={() => navigate(-1)}
                 disabled={isBusy}
                 className="gap-2"
               >
                 <X className="h-4 w-4" />
                 انصراف
               </Button>
-              <Button type="submit" className="flex-1 gap-2" disabled={isBusy}>
+              <Button
+                type="submit"
+                className="flex-1 gap-2"
+                disabled={isBusy}
+              >
                 <Save className="h-4 w-4" />
-                {updateMutation.isPending
-                  ? "در حال ذخیره..."
-                  : "به‌روزرسانی خرید"}
+                {updateMutation.isPending ? "در حال ذخیره..." : "به‌روزرسانی خرید"}
               </Button>
             </div>
 
@@ -209,36 +221,24 @@ function PurchaseDetailForm({ purchaseData }) {
   );
 }
 
-// ============================================================
-// صفحه‌ی اصلی
-// ============================================================
 export default function PurchaseDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
-  const resetForm = usePurchaseFormStore((s) => s.resetForm);
 
   const { data: purchase, isLoading, isError } = usePurchaseQuery(id);
 
   useEffect(() => {
     setHeader({
-      title: isLoading
-        ? "در حال بارگذاری..."
-        : purchase
-        ? `ویرایش خرید`
-        : "خطا",
+      title: isLoading ? "در حال بارگذاری..." : purchase ? "ویرایش خرید" : "خطا",
       showBack: true,
-      onBack: () => {
-        navigate(-1);
-      },
+      onBack: () => navigate(-1),
     });
     return () => clearHeader();
-  }, [navigate, setHeader, clearHeader, resetForm, purchase, isLoading]);
+  }, [navigate, setHeader, clearHeader, purchase, isLoading]);
 
-  if (isLoading) {
-    return <PurchasesDetailLoading />;
-  }
+  if (isLoading) return <PurchasesDetailLoading />;
 
   if (isError || !purchase) {
     return (

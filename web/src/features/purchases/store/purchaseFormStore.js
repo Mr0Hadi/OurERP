@@ -13,7 +13,7 @@ const EMPTY_FORM = {
   paidAmount: '',
   checkNumber: '',
   transferRef: '',
-  tatus: '',
+  status: '',
   items: [],
 };
 
@@ -37,7 +37,10 @@ export const usePurchaseFormStore = create(
         const { initializedForId } = get();
         if (initializedForId === 'new') return;
 
-        set({ initializedForId: 'new' });
+        set({ 
+          initializedForId: 'new',
+          formData: { ...EMPTY_FORM } 
+        });
       },
 
       initializeFromPurchase: (purchaseData) => {

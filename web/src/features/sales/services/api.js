@@ -128,6 +128,21 @@ export async function updateSaleStatus(id, newStatus) {
   return updateSale(id, { status: newStatus });
 }
 
+export async function removeSale(id) {
+  await delay(600);
+
+  
+  const index = allSales.findIndex((p) => p.id == id);
+  
+
+  if (index === -1) {
+    throw new Error("خرید یافت نشد");
+  }
+
+  const removed = allSales.splice(index, 1)[0];
+  return removed;
+}
+
 export async function deleteSale(id) {
   return updateSaleStatus(id, SALE_STATUSES.CANCELLED);
 }

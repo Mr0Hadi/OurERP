@@ -6,8 +6,10 @@ import {
   updateSale,
   updateSaleStatus,
   updateSalePayment,
+  removeSale
 } from './api';
 import { saleKeys } from './queryKeys';
+import { ROUTES } from '@/shared/constants/routes';
 
 export const useCreateSaleMutation = () => {
   const queryClient = useQueryClient();
@@ -95,6 +97,24 @@ export const useRecordSalePaymentMutation = () => {
         queryClient.setQueryData(saleKeys.detail(variables.id), context.previousSale);
       }
       toast.error(error?.message || 'خطا در ثبت دریافت وجه');
+    },
+  });
+};
+
+export const useRemoveSaleMutation = () => {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  return useMutation({
+    mutationFn: removeSale,
+    onSuccess: (removedSale) => {
+      queryClient.removeQueries({ queryKey: saleKeys.detail(String(removedSale.id)) });
+      queryClient.invalidateQueries({ queryKey: saleKeys.lists() });
+      toast.success("خرید با موفقیت حذف شد");
+      navigate(ROUTES.SALES);
+    },
+    onError: (error) => {
+      toast.error(error?.message || "خطا در حذف خرید");
     },
   });
 };

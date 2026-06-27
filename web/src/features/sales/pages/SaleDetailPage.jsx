@@ -1,6 +1,6 @@
 // src/features/sales/pages/SaleDetailPage.jsx
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Save, X, AlertCircle, Trash2 } from "lucide-react";
 
 import { Button } from "#/shared/components/ui/button";
@@ -13,25 +13,22 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/shared/components/ui/alert-dialog";
+} from "#/shared/components/ui/alert-dialog";
 import { useHeaderStore } from "#/shared/store/headerStore";
-import { useNavigationStore } from "@/shared/store/navigationStore";
 import { useSaleFormStore } from "#/features/sales/store/saleFormStore";
-import { useSaleForm } from "#/features/sales/hooks/useSaleForm";
 import { useSaleQuery } from "#/features/sales/services/queries";
-import {
-  useUpdateSaleMutation,
-  useUpdateSaleStatusMutation,
-} from "#/features/sales/services/mutations";
+import { useUpdateSaleMutation } from "#/features/sales/services/mutations";
 import { useCustomersQuery } from "#/features/customers/services/queries";
 import { useProductsQuery } from "#/features/inventory/products/services/queries";
 import { SALE_STATUSES } from "#/features/sales/services/mockData";
+import { useRemoveSaleMutation } from "#/features/sales/services/mutations";
 
 import SaleCustomerSection from "../components/forms/SaleCustomerSection";
 import SaleItemsSection from "../components/forms/SaleItemsSection";
 import SaleInfoSection from "../components/forms/SaleInfoSection";
 import SalePaymentSection from "../components/forms/SalePaymentSection";
 import SaleDetailLoading from "../components/forms/SaleDetailLoading";
+import SaleStatusSection from "../components/forms/SaleStatusSection";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -42,33 +39,16 @@ const SORTING = { id: "name", desc: false };
 // ============================================================
 function SaleDetailForm({ saleData }) {
   const navigate = useNavigate();
-  const location = useLocation();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
 
-  const { setFormData, resetForm, formData, initializeFromSale } =
+  const { setFormData, setItems, resetForm, formData, initializeFromSale } =
     useSaleFormStore();
 
-  const returnPath = useNavigationStore((s) => s.returnPath);
-  const setReturnPath = useNavigationStore((s) => s.setReturnPath);
-
-  // مقداردهی اولیه store — قبل از ساخت فرم
-  initializeFromSale(saleData);
-
-  const {
-    formMethods,
-    items,
-    handleItemsChange,
-    computedTotal,
-    buildSalePayload,
-  } = useSaleForm();
-
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    control,
-    formState: { errors },
-  } = formMethods;
+  // initializeFromSale باید فقط یک‌بار هنگام mount اجرا شود
+  useEffect(() => {
+    initializeFromSale(saleData);
+  }, [saleData.id]);
 
   const { data: customersData, isLoading: customersLoading } =
     useCustomersQuery(ALL_FILTERS, PAGINATION, SORTING);
@@ -82,61 +62,54 @@ function SaleDetailForm({ saleData }) {
   const products = productsData?.items || [];
 
   const updateMutation = useUpdateSaleMutation(saleData.id);
-  const deleteMutation = useUpdateSaleStatusMutation();
+  const deleteMutation = useRemoveSaleMutation();
 
-  // منطق حفظ/ریست فرم
-  useEffect(() => {
-    const fromValidReturn = location.state?.newProductId;
-    if (fromValidReturn) {
-      setReturnPath(location.pathname);
-    } else if (returnPath && returnPath !== location.pathname) {
-      resetForm();
-      setReturnPath(location.pathname);
-    }
-  }, [location.pathname, location.state, returnPath, setReturnPath, resetForm]);
+  const items = formData.items || [];
 
-  // اگر محصول جدید اضافه شد
-  useEffect(() => {
-    if (!location.state?.newProductId || !products.length) return;
+  const computedTotal = items.reduce((sum, item) => {
+    const base = (item.qty || 0) * (item.unitPrice || 0);
+    const disc = (base * (item.discount || 0)) / 100;
+    return sum + base - disc;
+  }, 0);
 
-    const newProductId = location.state.newProductId;
-    const newProduct = products.find((p) => p.id === newProductId);
+  const onSubmit = (e) => {
+    e.preventDefault();
 
-    if (newProduct) {
-      const alreadyAdded = items.some((i) => i.productId === newProduct.id);
-      if (!alreadyAdded) {
-        handleItemsChange([
-          ...items,
-          {
-            productId: newProduct.id,
-            productCode: newProduct.code,
-            productName: newProduct.name,
-            unit: newProduct.unit || "",
-            qty: 1,
-            unitPrice: newProduct.salePrice || 0,
-            discount: 0,
-          },
-        ]);
-      }
-    }
-
-    navigate(location.pathname, { replace: true, state: {} });
-  }, [
-    handleItemsChange,
-    items,
-    location.pathname,
-    location.state,
-    navigate,
-    products,
-  ]);
-
-  const onSubmit = (formValues) => {
     if (!formData.customerId) {
-      alert("لطفاً مشتری را انتخاب کنید.");
+      setShowErrors(true);
       return;
     }
-    const payload = buildSalePayload(formValues);
+
+    const payload = {
+      customerId: formData.customerId,
+      customerName: formData.customerName,
+      invoiceNumber: formData.invoiceNumber,
+      invoiceDate: formData.invoiceDate,
+      dueDate: formData.dueDate || null,
+      description: formData.description || '',
+      items: items.map((item) => ({
+        ...item,
+        lineTotal: item.qty * item.unitPrice * (1 - (item.discount || 0) / 100),
+      })),
+      paymentType: formData.paymentType || 'cash',
+      paidAmount: Number(formData.paidAmount) || 0,
+      checkNumber: formData.checkNumber || null,
+      transferRef: formData.transferRef || null,
+      status: formData.status || 'pending',
+      totalAmount: computedTotal,
+    };
+
     updateMutation.mutate(payload, {
+      onSuccess: () => navigate("/sales"),
+    });
+  };
+
+  const handleCancel = () => {
+    navigate(-1);
+  };
+
+  const handleDelete = () => {
+    deleteMutation.mutate(saleData.id, {
       onSuccess: () => {
         resetForm();
         navigate("/sales");
@@ -144,96 +117,88 @@ function SaleDetailForm({ saleData }) {
     });
   };
 
-  const handleCancel = () => {
-    navigate(-1);
-    resetForm();
-  };
-
-  const handleDelete = () => {
-    deleteMutation.mutate(
-      { id: saleData.id, status: SALE_STATUSES.CANCELLED },
-      {
-        onSuccess: () => {
-          resetForm();
-          navigate("/sales");
-        },
-      }
-    );
-  };
-
   const isBusy = updateMutation.isPending || deleteMutation.isPending;
-  const customerError = errors.customerId?.message;
 
   return (
     <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in zoom-in-95 duration-300">
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="grid grid-cols-1 lg:grid-cols-3 gap-4"
-      >
-        <div className="lg:col-span-2 space-y-4">
-          <SaleItemsSection
-            items={items}
-            onItemsChange={handleItemsChange}
-            products={products}
-            isLoadingProducts={productsLoading}
-          />
-          <SaleInfoSection register={register} errors={errors} />
-        </div>
-
-        <div className="space-y-4">
-          <SaleCustomerSection
-            customers={customers}
-            isLoading={customersLoading}
-            selectedId={formData.customerId}
-            onSelect={(id, name) =>
-              setFormData({ customerId: id, customerName: name })
-            }
-            onClear={() => setFormData({ customerId: "", customerName: "" })}
-            error={customerError}
-          />
-
-          <SalePaymentSection
-            control={control}
-            register={register}
-            errors={errors}
-            watch={formMethods.watch}
-            totalAmount={computedTotal}
-            setValue={setValue}
-          />
-
-          <div className="flex gap-2">
-            <Button
-              type="submit"
-              className="flex-1 gap-2"
-              disabled={isBusy || !formData.customerId}
-            >
-              <Save className="h-4 w-4" />
-              {updateMutation.isPending
-                ? "در حال ذخیره..."
-                : "به‌روزرسانی فروش"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="gap-2"
-              onClick={handleCancel}
-              disabled={isBusy}
-            >
-              <X className="h-4 w-4" />
-              انصراف
-            </Button>
+      <form onSubmit={onSubmit}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 space-y-4">
+            <SaleItemsSection
+              items={items}
+              products={products}
+              isLoadingProducts={productsLoading}
+              onItemsChange={setItems}
+            />
+            <SaleInfoSection
+              formData={formData}
+              onFormChange={setFormData}
+              errors={{}}
+            />
           </div>
 
-          <Button
-            type="button"
-            variant="destructive"
-            className="w-full gap-2"
-            onClick={() => setShowDeleteDialog(true)}
-            disabled={isBusy}
-          >
-            <Trash2 className="h-4 w-4" />
-            حذف فروش
-          </Button>
+          <div className="space-y-4">
+            <SaleCustomerSection
+              customers={customers}
+              isLoading={customersLoading}
+              selectedId={formData.customerId}
+              onSelect={(id, name) => {
+                setFormData({ customerId: id, customerName: name });
+                setShowErrors(false);
+              }}
+              onClear={() => setFormData({ customerId: "", customerName: "" })}
+              error={
+                showErrors && !formData.customerId
+                  ? "انتخاب مشتری الزامی است"
+                  : null
+              }
+            />
+
+            <SalePaymentSection
+              formData={formData}
+              onFormChange={setFormData}
+              totalAmount={computedTotal}
+              errors={{}}
+            />
+
+            <SaleStatusSection
+              status={formData.status}
+              selectedStatus={formData.status}
+              onStatusChange={(val) => setFormData({ status: val })}
+            />
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCancel}
+                disabled={isBusy}
+                className="gap-2"
+              >
+                <X className="h-4 w-4" />
+                انصراف
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 gap-2"
+                disabled={isBusy}
+              >
+                <Save className="h-4 w-4" />
+                {updateMutation.isPending ? "در حال ذخیره..." : "به‌روزرسانی فروش"}
+              </Button>
+            </div>
+
+            <Button
+              type="button"
+              variant="destructive"
+              className="w-full gap-2"
+              onClick={() => setShowDeleteDialog(true)}
+              disabled={isBusy}
+            >
+              <Trash2 className="h-4 w-4" />
+              حذف فروش
+            </Button>
+          </div>
         </div>
       </form>
 
@@ -273,7 +238,6 @@ export default function SaleDetailPage() {
 
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
-  const resetForm = useSaleFormStore((s) => s.resetForm);
 
   const {
     data: sale,
@@ -285,13 +249,10 @@ export default function SaleDetailPage() {
     setHeader({
       title: saleLoading ? "در حال بارگذاری..." : sale ? "ویرایش فروش" : "خطا",
       showBack: true,
-      onBack: () => {
-        resetForm();
-        navigate(-1);
-      },
+      onBack: () => navigate(-1),
     });
     return () => clearHeader();
-  }, [setHeader, clearHeader, navigate, resetForm, sale, saleLoading]);
+  }, [setHeader, clearHeader, navigate, sale, saleLoading]);
 
   if (saleLoading) return <SaleDetailLoading />;
 
@@ -301,7 +262,7 @@ export default function SaleDetailPage() {
         <AlertCircle className="h-12 w-12 text-destructive" />
         <p className="text-lg text-muted-foreground">
           {saleError
-            ? `خطا در بارگذاری اطلاعات`
+            ? "خطا در بارگذاری اطلاعات"
             : "فروشی با این شناسه یافت نشد."}
         </p>
         <Button variant="outline" onClick={() => navigate("/sales")}>
