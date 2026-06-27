@@ -41,13 +41,16 @@ function SaleDetailForm({ saleData }) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
 
-  const { setFormData, setItems, resetForm, formData, initializeFromSale } =
-    useSaleFormStore();
+  const {
+    setFormData,
+    setItems,
+    resetForm,
+    formData,
+    initializeFromSale,
+    initializedForId,
+  } = useSaleFormStore();
 
   // initializeFromSale باید فقط یک‌بار هنگام mount اجرا شود
-
-  initializeFromSale(saleData);
-
 
   const { data: customersData, isLoading: customersLoading } =
     useCustomersQuery(ALL_FILTERS, PAGINATION, SORTING);
@@ -64,6 +67,14 @@ function SaleDetailForm({ saleData }) {
   const deleteMutation = useRemoveSaleMutation();
 
   const items = formData.items || [];
+
+  useEffect(() => {
+    initializeFromSale(saleData);
+  }, [saleData.id, initializeFromSale]);
+
+  if (initializedForId !== saleData.id) {
+    return null; // یا می‌توانید <SaleDetailLoading /> برگردانید
+  }
 
   const computedTotal = items.reduce((sum, item) => {
     const base = (item.qty || 0) * (item.unitPrice || 0);
@@ -204,7 +215,8 @@ function SaleDetailForm({ saleData }) {
           <AlertDialogHeader>
             <AlertDialogTitle>حذف فروش</AlertDialogTitle>
             <AlertDialogDescription>
-              آیا از حذف این فروش اطمینان دارید؟ این عملیات اطلاعات فروش ثبت شده را به طور کامل حذف میکند.
+              آیا از حذف این فروش اطمینان دارید؟ این عملیات اطلاعات فروش ثبت شده
+              را به طور کامل حذف میکند.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -38,13 +38,14 @@ function PurchaseDetailForm({ purchaseData }) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
 
-  const { setFormData, setItems, resetForm, formData, initializeFromPurchase } =
-    usePurchaseFormStore();
-
-  // initializeFromPurchase باید فقط یک‌بار هنگام mount اجرا شود
-
-    initializeFromPurchase(purchaseData);
-
+  const {
+    setFormData,
+    setItems,
+    resetForm,
+    formData,
+    initializeFromPurchase,
+    initializedForId,
+  } = usePurchaseFormStore();
 
   const { data: suppliersData, isLoading: suppliersLoading } =
     useSuppliersQuery(ALL_FILTERS, PAGINATION, SORTING);
@@ -67,6 +68,15 @@ function PurchaseDetailForm({ purchaseData }) {
     const disc = (base * (item.discount || 0)) / 100;
     return sum + base - disc;
   }, 0);
+
+  // initializeFromPurchase باید فقط یک‌بار هنگام mount اجرا شود
+  useEffect(() => {
+    initializeFromPurchase(purchaseData);
+  }, [purchaseData.id, initializeFromPurchase]);
+
+  if (initializedForId !== purchaseData.id) {
+    return null;
+  }
 
   const onSubmit = (e) => {
     e.preventDefault();
@@ -196,7 +206,8 @@ function PurchaseDetailForm({ purchaseData }) {
           <AlertDialogHeader>
             <AlertDialogTitle>حذف خرید</AlertDialogTitle>
             <AlertDialogDescription>
-              آیا از حذف این خرید اطمینان دارید؟ این عملیات اطلاعات خرید ثبت شده را به طور کامل حذف میکند
+              آیا از حذف این خرید اطمینان دارید؟ این عملیات اطلاعات خرید ثبت شده
+              را به طور کامل حذف میکند
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
