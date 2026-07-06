@@ -20,7 +20,6 @@ import { usePurchaseFormStore } from "#/features/purchases/store/purchaseFormSto
 import { usePurchaseQuery } from "#/features/purchases/services/queries";
 import { useUpdatePurchaseMutation } from "#/features/purchases/services/mutations";
 import { useSuppliersQuery } from "#/features/suppliers/services/queries";
-import { useProductsQuery } from "#/features/warehouse/services/queries";
 import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection";
 import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
 import PurchaseInfoSection from "../components/forms/PurchaseInfoSection";
@@ -29,6 +28,7 @@ import PurchasesDetailLoading from "../components/forms/PurchasesDetailLoading";
 import PurchaseStatusSection from "../components/forms/PurchaseStatusSection";
 import { useRemovePurchaseMutation } from "../services/mutations";
 import { ROUTES } from "@/shared/constants/routes";
+import { useProductsQuery } from "@/features/warehouse/products/services/queries";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };

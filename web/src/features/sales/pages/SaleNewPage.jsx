@@ -8,7 +8,7 @@ import { useNavigationStore } from "@/shared/store/navigationStore";
 import { useSaleFormStore } from "#/features/sales/store/saleFormStore";
 import { useCreateSaleMutation } from "#/features/sales/services/mutations";
 import { useCustomersQuery } from "#/features/customers/services/queries";
-import { useProductsQuery } from "#/features/warehouse/services/queries";
+import { useProductsQuery } from "#/features/warehouse/products/services/queries";
 import SaleCustomerSection from "#/features/sales/components/forms/SaleCustomerSection";
 import SaleItemsSection from "#/features/sales/components/forms/SaleItemsSection";
 import SaleInfoSection from "#/features/sales/components/forms/SaleInfoSection";

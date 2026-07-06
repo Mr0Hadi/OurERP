@@ -19,7 +19,7 @@ import { useSaleFormStore } from "#/features/sales/store/saleFormStore";
 import { useSaleQuery } from "#/features/sales/services/queries";
 import { useUpdateSaleMutation } from "#/features/sales/services/mutations";
 import { useCustomersQuery } from "#/features/customers/services/queries";
-import { useProductsQuery } from "#/features/warehouse/services/queries";
+import { useProductsQuery } from "#/features/warehouse/products/services/queries";
 import { useRemoveSaleMutation } from "#/features/sales/services/mutations";
 
 import SaleCustomerSection from "../components/forms/SaleCustomerSection";

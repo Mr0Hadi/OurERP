@@ -9,7 +9,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "s": "node structure.js"
+    "st": "node structure.js"
   },
   "dependencies": {
     "@fontsource-variable/vazirmatn": "^5.2.8",

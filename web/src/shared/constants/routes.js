@@ -47,12 +47,14 @@ export const ROUTES = {
   WAREHOUSE_PRODUCTS_NEW: "/warehouse/products/new",
   WAREHOUSE_STOCK: "/warehouse/stock",
   WAREHOUSE_TRANSACTIONS: "/warehouse/transactions",
+  WAREHOUSE_RECEIVING: "/warehouse/receiving",
+  WAREHOUSE_RECEIVING_DETAIL: "/warehouse/receiving/:id",
 
-  // محصولات/کالاها
-  PRODUCTS: "/products",
-  PRODUCTS_LIST: "/products",
-  PRODUCTS_NEW: "/products/new",
-  PRODUCTS_DETAIL: "/products/:id",
+  // // محصولات/کالاها
+  // PRODUCTS: "/products",
+  // PRODUCTS_LIST: "/products",
+  // PRODUCTS_NEW: "/products/new",
+  // PRODUCTS_DETAIL: "/products/:id",
 
   // فاکتورها
   INVOICE: "/invoice",
