@@ -1,4 +1,4 @@
-import { AlertCircle, RefreshCw, PackageCheck } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -8,9 +8,10 @@ import {
 import { Button } from "@/shared/components/ui/button";
 import useReceivingFilterStore from "../store/receivingFilterStore";
 import { useDebouncedReceivingFilters } from "../hooks/useDebouncedReceivingFilters";
-import { useReceivingListQuery } from "../../services/queries";
-import ReceivingFilters from "../products/components/table/ReceivingFilters";
-import ReceivingTable from "../products/components/table/ReceivingTable";
+import { useReceivingPurchasesQuery } from "../services/queries";
+import { useSuppliersQuery } from "@/features/suppliers/services/queries";
+import ReceivingFilters from "../components/table/ReceivingFilters";
+import ReceivingTable from "../components/table/ReceivingTable";
 
 const ReceivingListPage = () => {
   const { pagination, sorting, setPagination, setSorting } =
@@ -18,9 +19,17 @@ const ReceivingListPage = () => {
   const debouncedFilters = useDebouncedReceivingFilters();
 
   const { data, isLoading, isFetching, isError, error, refetch } =
-    useReceivingListQuery(debouncedFilters, pagination, sorting);
+    useReceivingPurchasesQuery(debouncedFilters, pagination, sorting);
 
-  const receivingOrders = data?.items ?? [];
+  const { data: suppliersData, isLoading: isSuppliersLoading } =
+    useSuppliersQuery(
+      {},
+      { pageIndex: 0, pageSize: 200 },
+      { id: "name", desc: false }
+    );
+
+  const suppliers = suppliersData?.items ?? [];
+  const purchases = data?.items ?? [];
   const totalPages = data?.totalPages ?? 1;
   const currentPage = data?.page ? data.page - 1 : pagination.pageIndex;
 
@@ -28,14 +37,17 @@ const ReceivingListPage = () => {
     <div className="container mx-auto space-y-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <PackageCheck className="h-5 w-5" />
-            دریافت کالا از خرید
-          </CardTitle>
+          <CardTitle>دریافت کالاهای انبار</CardTitle>
+          <div className="text-sm text-muted-foreground">
+            بررسی و تأیید کالاهای خریداری شده
+          </div>
         </CardHeader>
 
         <CardContent className="space-y-3">
-          <ReceivingFilters />
+          <ReceivingFilters
+            suppliers={suppliers}
+            isSuppliersLoading={isSuppliersLoading}
+          />
 
           {isError ? (
             <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
@@ -61,7 +73,7 @@ const ReceivingListPage = () => {
                 </div>
               )}
               <ReceivingTable
-                data={receivingOrders}
+                data={purchases}
                 isLoading={isLoading}
                 totalPages={totalPages}
                 currentPage={currentPage}

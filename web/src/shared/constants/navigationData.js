@@ -104,24 +104,11 @@ export const navigationData = {
         "warehouse_edit",
         "warehouse_delete",
         "warehouse_stock",
+        "warehouse_receiving",  // اضافه کردن دسترسی دریافت کالا
       ],
       description: "مدیریت انبار و کالاها",
       color: "bg-yellow-500",
     },
-    // {
-    //   name: "واحد حسابداری",
-    //   logo: DollarSign,
-    //   plan: "تیم حسابداری",
-    //   permissions: [
-    //     "reports_financial",
-    //     "reports_profit_loss",
-    //     "transactions",
-    //     "invoice",
-    //     "reports_all",
-    //   ],
-    //   description: "مدیریت مالی و حسابداری",
-    //   color: "bg-purple-500",
-    // },
     {
       name: "ادمین کل",
       logo: Shield,
@@ -200,29 +187,6 @@ export const navigationData = {
         },
       ],
     },
-    // {
-    //   title: "محصولات",
-    //   url: ROUTES.PRODUCTS,
-    //   icon: Package,
-    //   isActive: false,
-    //   permission: "warehouse",
-    //   items: [
-    //     {
-    //       title: "لیست کالاها",
-    //       url: ROUTES.PRODUCTS_LIST,
-    //       permission: "warehouse_view",
-    //       icon: Box,
-    //       description: "مشاهده و جستجوی کالاها",
-    //     },
-    //     {
-    //       title: "تعریف کالای جدید",
-    //       url: ROUTES.PRODUCTS_NEW,
-    //       permission: "warehouse_create",
-    //       icon: PlusCircle,
-    //       description: "ثبت کالای جدید",
-    //     }
-    //   ],
-    // },
     {
       title: "انبار",
       url: ROUTES.WAREHOUSE,
@@ -244,6 +208,15 @@ export const navigationData = {
           icon: PlusCircle,
           description: "ثبت کالای جدید",
         },
+        // ========== بخش اضافه‌شده ==========
+        {
+          title: "دریافت کالا",
+          url: ROUTES.WAREHOUSE_RECEIVING,
+          permission: "warehouse_receiving",
+          icon: ClipboardList,
+          description: "مشاهده و تأیید کالاهای دریافتی",
+        },
+        // ==================================
       ],
     },
     {
@@ -348,43 +321,6 @@ export const navigationData = {
         },
       ],
     },
-    // {
-    //   title: "انبار",
-    //   url: ROUTES.WAREHOUSE,
-    //   icon: Warehouse,
-    //   isActive: false,
-    //   permission: "warehouse",
-    //   items: [
-    //     {
-    //       title: "لیست کالاها",
-    //       url: ROUTES.WAREHOUSE_PRODUCTS,
-    //       permission: "warehouse_view",
-    //       icon: Package,
-    //       description: "مشاهده کالاهای انبار",
-    //     },
-    //     {
-    //       title: "تعریف کالای جدید",
-    //       url: ROUTES.WAREHOUSE_PRODUCTS_NEW,
-    //       permission: "warehouse_create",
-    //       icon: PlusCircle,
-    //       description: "افزودن کالای جدید",
-    //     },
-    //     {
-    //       title: "موجودی انبار",
-    //       url: ROUTES.WAREHOUSE_STOCK,
-    //       permission: "warehouse_stock",
-    //       icon: BarChart3,
-    //       description: "مشاهده موجودی دقیق",
-    //     },
-    //     {
-    //       title: "تراکنش‌های انبار",
-    //       url: ROUTES.WAREHOUSE_TRANSACTIONS,
-    //       permission: "warehouse_stock",
-    //       icon: ClipboardList,
-    //       description: "مشاهده ورود و خروج کالا",
-    //     },
-    //   ],
-    // },
     {
       title: "فاکتورها",
       url: ROUTES.INVOICE,
@@ -408,36 +344,6 @@ export const navigationData = {
         },
       ],
     },
-    // {
-    //   title: "تراکنش‌ها",
-    //   url: ROUTES.TRANSACTIONS,
-    //   icon: CreditCard,
-    //   isActive: false,
-    //   permission: "transactions",
-    //   items: [
-    //     {
-    //       title: "همه تراکنش‌ها",
-    //       url: ROUTES.TRANSACTIONS_LIST,
-    //       permission: "transactions_view",
-    //       icon: List,
-    //       description: "مشاهده تمام تراکنش‌ها",
-    //     },
-    //     {
-    //       title: "خرید و فروش",
-    //       url: ROUTES.TRANSACTIONS_BUY_SELL,
-    //       permission: "transactions_view",
-    //       icon: TrendingUp,
-    //       description: "تراکنش‌های خرید و فروش",
-    //     },
-    //     {
-    //       title: "دریافت و پرداخت",
-    //       url: ROUTES.TRANSACTIONS_PAYMENTS,
-    //       permission: "transactions_view",
-    //       icon: DollarSign,
-    //       description: "دریافت و پرداخت‌ها",
-    //     },
-    //   ],
-    // },
     {
       title: "گزارشات",
       url: ROUTES.REPORTS,

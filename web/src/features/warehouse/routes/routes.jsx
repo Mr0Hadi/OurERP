@@ -1,5 +1,5 @@
 import { ROUTES } from '@/shared/constants/routes';
-import { ProductsPage, ProductNewPage, ProductDetailPage, ReceivingListPage } from "./index";
+import { ProductsPage, ProductNewPage, ProductDetailPage, ReceivingListPage, ReceivingDetailPage } from "./index";
 
 export const warehouseRoutes = [
   {
@@ -17,5 +17,9 @@ export const warehouseRoutes = [
   {
     path: ROUTES.WAREHOUSE_RECEIVING,
     element: <ReceivingListPage />,
+  },
+  {
+    path: ROUTES.WAREHOUSE_RECEIVING_DETAIL,
+    element: <ReceivingDetailPage />,
   }
 ];
