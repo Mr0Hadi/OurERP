@@ -1,6 +1,6 @@
 import { lazy } from 'react';
 
-export const PurchasesPage = lazy(() => import('../pages/PurchasesPage1'));
+export const PurchasesPage = lazy(() => import('../pages/PurchasesPage'));
 export const PurchasesNewPage = lazy(() => import('../pages/PurchasesNewPage'));
 export const PurchasesInvoicesPage = lazy(() => import('../pages/PurchasesInvoicesPage'));
 export const PurchaseInvoiceDetailPage = lazy(() => import('../pages/PurchaseInvoiceDetailPage'));

@@ -21,7 +21,7 @@ import ProductBasicInfoForm from "../components/forms/ProductBasicInfoForm";
 import ProductPricingForm from "../components/forms/ProductPricingForm";
 import ProductImageUpload from "../components/forms/ProductImageUpload";
 import ProductBarcodeDisplay from "../components/forms/ProductBarcodeDisplay";
-import ProductDetailLoading from "../components/forms/ProductDetailLoading1";
+import ProductDetailLoading from "../components/forms/ProductDetailLoading";
 import { useHeaderStore } from "#/shared/store/headerStore";
 import { ROUTES } from "@/shared/constants/routes";
 
