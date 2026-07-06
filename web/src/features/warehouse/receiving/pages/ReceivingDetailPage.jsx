@@ -1,10 +1,10 @@
 // src/features/warehouse/receiving/pages/ReceivingDetailPage.jsx
-import { useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { AlertCircle, CheckCircle, AlertTriangle, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { AlertCircle, CheckCircle, AlertTriangle, X } from "lucide-react";
 
-import { Button } from '@/shared/components/ui/button';
-import { Card, CardContent } from '@/shared/components/ui/card';
+import { Button } from "@/shared/components/ui/button";
+import { Card, CardContent } from "@/shared/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,22 +14,22 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/shared/components/ui/alert-dialog';
-import { useHeaderStore } from '@/shared/store/headerStore';
-import { usePurchaseQuery } from '@/features/purchases/services/queries';
-import { useProductsQuery } from '@/features/warehouse/products/services/queries';
-import { useConfirmReceivingMutation } from '../services/mutations';
-import { useReceivingForm } from '../hooks/useReceivingForm';
-import ReceivingItemsSection from '../components/forms/ReceivingItemsSection';
-import ReceivingSummaryCard from '../components/forms/ReceivingSummaryCard';
-import ReceivingMismatchList from '../components/forms/ReceivingMismatchList';
-import ReceivingTransporterSection from '../components/forms/ReceivingTransporterSection';
-import ReceivingDetailLoading from '../components/forms/ReceivingDetailLoading';
-import { ROUTES } from '@/shared/constants/routes';
+} from "@/shared/components/ui/alert-dialog";
+import { useHeaderStore } from "@/shared/store/headerStore";
+import { usePurchaseQuery } from "@/features/purchases/services/queries";
+import { useProductsQuery } from "@/features/warehouse/products/services/queries";
+import { useConfirmReceivingMutation } from "../services/mutations";
+import { useReceivingForm } from "../hooks/useReceivingForm";
+import ReceivingItemsSection from "../components/forms/ReceivingItemsSection";
+import ReceivingSummaryCard from "../components/forms/ReceivingSummaryCard";
+import ReceivingMismatchList from "../components/forms/ReceivingMismatchList";
+import ReceivingTransporterSection from "../components/forms/ReceivingTransporterSection";
+import ReceivingDetailLoading from "../components/forms/ReceivingDetailLoading";
+import { ROUTES } from "@/shared/constants/routes";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
-const SORTING = { id: 'name', desc: false };
+const SORTING = { id: "name", desc: false };
 
 function ReceivingDetailForm({ purchase }) {
   const navigate = useNavigate();
@@ -37,7 +37,11 @@ function ReceivingDetailForm({ purchase }) {
 
   // آیتم‌های خرید فقط productId/productName/productCode/qty/unitPrice/discount دارند؛
   // تصویر و برند کالا وجود ندارد و باید از لیست محصولات انبار گرفته شود.
-  const { data: productsData } = useProductsQuery(ALL_FILTERS, PAGINATION, SORTING);
+  const { data: productsData } = useProductsQuery(
+    ALL_FILTERS,
+    PAGINATION,
+    SORTING,
+  );
   const productMap = useMemo(() => {
     const map = new Map();
     (productsData?.items || []).forEach((p) => map.set(p.id, p));
@@ -73,14 +77,16 @@ function ReceivingDetailForm({ purchase }) {
         const product = productMap.get(item.productId);
         return {
           ...item,
-          imageUrl: product?.imageUrl || '',
-          brand: product?.brand || '',
+          imageUrl: product?.imageUrl || "",
+          brand: product?.brand || "",
         };
       }),
-    [items, productMap]
+    [items, productMap],
   );
 
-  const hasShortage = items.some((item) => (item.receivedQty || 0) < item.expectedQty);
+  const hasShortage = items.some(
+    (item) => (item.receivedQty || 0) < item.expectedQty,
+  );
   const isBusy = receivingMutation.isPending;
 
   const handleAction = (type) => {
@@ -103,7 +109,7 @@ function ReceivingDetailForm({ purchase }) {
           setShowConfirmDialog(false);
           // useConfirmReceivingMutation خودش پس از موفقیت به لیست دریافت‌ها هدایت می‌کند
         },
-      }
+      },
     );
   };
 
@@ -112,14 +118,14 @@ function ReceivingDetailForm({ purchase }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* ستون اصلی – جدول اقلام */}
         <div className="lg:col-span-2 space-y-4">
-          <ReceivingItemsSection items={displayItems} onItemChange={handleItemChange} />
-          <ReceivingMismatchList purchaseId={purchase.id} items={displayItems} />
-        </div>
-
-        {/* ستون کناری – خلاصه و دکمه‌ها */}
-        <div className="space-y-4">
-          <ReceivingSummaryCard formData={formData} onFormChange={setFormData} />
-
+          <ReceivingItemsSection
+            items={displayItems}
+            onItemChange={handleItemChange}
+          />
+          <ReceivingMismatchList
+            purchaseId={purchase.id}
+            items={displayItems}
+          />
           <ReceivingTransporterSection
             formData={formData}
             onFormChange={(patch) => {
@@ -128,49 +134,50 @@ function ReceivingDetailForm({ purchase }) {
             }}
             error={
               showTransporterError
-                ? 'برای ثبت دریافت، نام تحویل‌دهنده و حداقل یکی از کد ملی یا شماره پلاک الزامی است'
+                ? "برای ثبت دریافت، نام تحویل‌دهنده و حداقل یکی از کد ملی یا شماره پلاک الزامی است"
                 : null
             }
           />
+        </div>
 
-          <Card>
-            <CardContent className="pt-4 space-y-2">
-              <Button
-                className="w-full gap-2"
-                disabled={isBusy || items.length === 0}
-                onClick={() => handleAction('complete')}
-              >
-                <CheckCircle className="h-4 w-4" />
-                تأیید دریافت کامل
-              </Button>
+        {/* ستون کناری – خلاصه و دکمه‌ها */}
+        <div className="space-y-4">
+          <ReceivingSummaryCard
+            formData={formData}
+            onFormChange={setFormData}
+          />
 
-              <Button
-                variant="outline"
-                className="w-full gap-2 border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/40"
-                disabled={isBusy || !hasShortage}
-                onClick={() => handleAction('partial')}
-              >
-                <AlertTriangle className="h-4 w-4" />
-                ثبت تحویل ناقص
-              </Button>
+          <div className="flex gap-2">
+            <Button
+              className="flex-1 gap-2"
+              disabled={isBusy || items.length === 0}
+              onClick={() => handleAction("complete")}
+            >
+              <CheckCircle className="h-4 w-4" />
+              تأیید دریافت کامل
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate(ROUTES.WAREHOUSE_RECEIVING)}
+              disabled={isBusy}
+              className="gap-2"
+            >
+              <X className="h-4 w-4" />
+              انصراف
+            </Button>
+          </div>
 
-              {!hasShortage && (
-                <p className="text-xs text-muted-foreground text-center pt-1">
-                  همه اقلام کامل ثبت شده‌اند
-                </p>
-              )}
-
-              <Button
-                variant="ghost"
-                className="w-full gap-2"
-                disabled={isBusy}
-                onClick={() => navigate(ROUTES.WAREHOUSE_RECEIVING)}
-              >
-                <X className="h-4 w-4" />
-                انصراف
-              </Button>
-            </CardContent>
-          </Card>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full gap-2 border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/40"
+            onClick={() => handleAction("partial")}
+            disabled={isBusy || !hasShortage}
+          >
+            <AlertTriangle className="h-4 w-4" />
+            ثبت تحویل ناقص
+          </Button>
         </div>
       </div>
 
@@ -179,12 +186,12 @@ function ReceivingDetailForm({ purchase }) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {actionType === 'complete' ? 'ثبت دریافت کامل' : 'ثبت تحویل ناقص'}
+              {actionType === "complete" ? "ثبت دریافت کامل" : "ثبت تحویل ناقص"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {actionType === 'complete'
-                ? 'آیا مطمئن هستید که همه اقلام به‌طور کامل دریافت شده‌اند؟'
-                : 'با تأیید، وضعیت خرید به «تحویل ناقص» تغییر می‌کند و کمبودهای ثبت‌شده در فهرست مغایرت‌ها ذخیره می‌شود.'}
+              {actionType === "complete"
+                ? "آیا مطمئن هستید که همه اقلام به‌طور کامل دریافت شده‌اند؟"
+                : "با تأیید، وضعیت خرید به «تحویل ناقص» تغییر می‌کند و کمبودهای ثبت‌شده در فهرست مغایرت‌ها ذخیره می‌شود."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -192,9 +199,13 @@ function ReceivingDetailForm({ purchase }) {
             <AlertDialogAction
               disabled={isBusy}
               onClick={handleSubmit}
-              className={actionType === 'partial' ? 'bg-amber-600 hover:bg-amber-700' : ''}
+              className={
+                actionType === "partial"
+                  ? "bg-amber-600 hover:bg-amber-700"
+                  : ""
+              }
             >
-              {isBusy ? 'در حال ثبت...' : 'تأیید'}
+              {isBusy ? "در حال ثبت..." : "تأیید"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -213,7 +224,11 @@ export default function ReceivingDetailPage() {
 
   useEffect(() => {
     setHeader({
-      title: isLoading ? 'در حال بارگذاری...' : purchase ? 'دریافت کالا' : 'خطا',
+      title: isLoading
+        ? "در حال بارگذاری..."
+        : purchase
+          ? "دریافت کالا"
+          : "خطا",
       showBack: true,
       onBack: () => navigate(ROUTES.WAREHOUSE_RECEIVING),
     });
@@ -227,7 +242,10 @@ export default function ReceivingDetailPage() {
       <div className="flex flex-col items-center justify-center py-20 gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
         <p className="text-lg text-muted-foreground">خرید مورد نظر یافت نشد.</p>
-        <Button variant="outline" onClick={() => navigate(ROUTES.WAREHOUSE_RECEIVING)}>
+        <Button
+          variant="outline"
+          onClick={() => navigate(ROUTES.WAREHOUSE_RECEIVING)}
+        >
           بازگشت به لیست
         </Button>
       </div>
