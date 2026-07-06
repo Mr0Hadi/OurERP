@@ -1,4 +1,4 @@
-// src/features/inventory/products/components/forms/ProductBarcodeDisplay.jsx
+// src/features/warehouse/products/components/forms/ProductBarcodeDisplay.jsx
 import Barcode from "react-barcode";
 
 import {

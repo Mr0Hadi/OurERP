@@ -1,4 +1,4 @@
-// src/features/inventory/products/services/mutations.js
+// src/features/warehouse/products/services/mutations.js
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
@@ -35,7 +35,7 @@ export const useUpdateProductMutation = (id) => {
         queryKey: ["products", "list"],
       });
       toast.success("کالا با موفقیت ویرایش شد");
-      navigate(ROUTES.PRODUCTS_LIST);
+      navigate(ROUTES.WAREHOUSE_PRODUCTS);
     },
     onError: (error) => {
       toast.error(error.message || "خطا در ویرایش کالا");

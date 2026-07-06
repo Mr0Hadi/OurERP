@@ -19,7 +19,7 @@ import { useSaleFormStore } from "#/features/sales/store/saleFormStore";
 import { useSaleQuery } from "#/features/sales/services/queries";
 import { useUpdateSaleMutation } from "#/features/sales/services/mutations";
 import { useCustomersQuery } from "#/features/customers/services/queries";
-import { useProductsQuery } from "#/features/inventory/products/services/queries";
+import { useProductsQuery } from "#/features/warehouse/services/queries";
 import { useRemoveSaleMutation } from "#/features/sales/services/mutations";
 
 import SaleCustomerSection from "../components/forms/SaleCustomerSection";
@@ -28,6 +28,7 @@ import SaleInfoSection from "../components/forms/SaleInfoSection";
 import SalePaymentSection from "../components/forms/SalePaymentSection";
 import SaleDetailLoading from "../components/forms/SaleDetailLoading";
 import SaleStatusSection from "../components/forms/SaleStatusSection";
+import { ROUTES } from "@/shared/constants/routes";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -110,7 +111,7 @@ function SaleDetailForm({ saleData }) {
     };
 
     updateMutation.mutate(payload, {
-      onSuccess: () => navigate("/sales"),
+      onSuccess: () => navigate(ROUTES.SALES),
     });
   };
 
@@ -122,7 +123,7 @@ function SaleDetailForm({ saleData }) {
     deleteMutation.mutate(saleData.id, {
       onSuccess: () => {
         resetForm();
-        navigate("/sales");
+        navigate(ROUTES.SALES);
       },
     });
   };
@@ -273,7 +274,7 @@ export default function SaleDetailPage() {
             ? "خطا در بارگذاری اطلاعات"
             : "فروشی با این شناسه یافت نشد."}
         </p>
-        <Button variant="outline" onClick={() => navigate("/sales")}>
+        <Button variant="outline" onClick={() => navigate(ROUTES.SALES)}>
           بازگشت به لیست
         </Button>
       </div>

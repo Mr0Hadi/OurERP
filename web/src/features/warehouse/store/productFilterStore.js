@@ -1,4 +1,4 @@
-// features/inventory/store/productFilterStore.js
+// features/warehouse/store/productFilterStore.js
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 

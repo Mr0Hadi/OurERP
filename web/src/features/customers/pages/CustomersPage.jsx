@@ -14,6 +14,7 @@ import { Button } from "@/shared/components/ui/button";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
+import { ROUTES } from "@/shared/constants/routes";
 
 const CustomersPage = () => {
   const navigate = useNavigate();
@@ -34,7 +35,7 @@ const CustomersPage = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>مدیریت مشتریان</CardTitle>
-          <Button onClick={() => navigate("/customers/new")} className="gap-2">
+          <Button onClick={() => navigate(ROUTES.CUSTOMERS_NEW)} className="gap-2">
             <Plus className="h-4 w-4" />
             مشتری جدید
           </Button>

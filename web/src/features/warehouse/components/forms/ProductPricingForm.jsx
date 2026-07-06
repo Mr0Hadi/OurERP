@@ -1,4 +1,4 @@
-// src/features/inventory/products/components/forms/ProductPricingForm.jsx
+// src/features/warehouse/products/components/forms/ProductPricingForm.jsx
 import { Input } from "#/shared/components/ui/input";
 import { Label } from "#/shared/components/ui/label";
 import {

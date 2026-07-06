@@ -21,6 +21,7 @@ import { useCustomerForm } from "../hooks/useCustomerForm";
 import CustomerIdentityForm from "../components/forms/CustomerIdentityForm";
 import CustomerFinanceForm from "../components/forms/CustomerFinanceForm";
 import CustomerAddressForm from "../components/forms/CustomerAddressForm";
+import { ROUTES } from "@/shared/constants/routes";
 
 function CustomerDetailForm({ customerData }) {
   const navigate = useNavigate();
@@ -48,13 +49,13 @@ function CustomerDetailForm({ customerData }) {
   const onSubmit = (data) => {
     updateMutation.mutate(
       { id: customerData.id, data: buildCustomerPayload(data) },
-      { onSuccess: () => navigate("/customers") }
+      { onSuccess: () => navigate(ROUTES.CUSTOMERS) }
     );
   };
 
   const handleDelete = () => {
     deleteMutation.mutate(customerData.id, {
-      onSuccess: () => navigate("/customers"),
+      onSuccess: () => navigate(ROUTES.CUSTOMERS),
     });
   };
 
@@ -90,7 +91,7 @@ function CustomerDetailForm({ customerData }) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate("/customers")}
+                onClick={() => navigate(ROUTES.CUSTOMERS)}
                 disabled={isBusy}
                 className="flex-1 gap-2"
               >

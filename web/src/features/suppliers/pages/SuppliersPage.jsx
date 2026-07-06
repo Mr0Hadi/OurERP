@@ -12,6 +12,7 @@ import {
 import { Button } from "@/shared/components/ui/button";
 import { AlertCircle, RefreshCw, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { ROUTES } from "@/shared/constants/routes";
 
 const SuppliersPage = () => {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ const SuppliersPage = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>مدیریت تامین‌کنندگان</CardTitle>
-          <Button onClick={() => navigate("/suppliers/new")} className="gap-2">
+          <Button onClick={() => navigate(ROUTES.SUPPLIERS_NEW)} className="gap-2">
             <Plus className="h-4 w-4" />
             تامین‌کننده جدید
           </Button>

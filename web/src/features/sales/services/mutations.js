@@ -36,7 +36,7 @@ export const useUpdateSaleMutation = (id) => {
       queryClient.invalidateQueries({ queryKey: saleKeys.detail(String(id)) });
       queryClient.invalidateQueries({ queryKey: saleKeys.lists() });
       toast.success('فروش با موفقیت ویرایش شد');
-      navigate('/sales');
+      navigate(ROUTES.SALES);
     },
     onError: (error) => {
       toast.error(error?.message || 'خطا در ویرایش فروش');

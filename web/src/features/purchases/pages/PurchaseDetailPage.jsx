@@ -20,7 +20,7 @@ import { usePurchaseFormStore } from "#/features/purchases/store/purchaseFormSto
 import { usePurchaseQuery } from "#/features/purchases/services/queries";
 import { useUpdatePurchaseMutation } from "#/features/purchases/services/mutations";
 import { useSuppliersQuery } from "#/features/suppliers/services/queries";
-import { useProductsQuery } from "#/features/inventory/products/services/queries";
+import { useProductsQuery } from "#/features/warehouse/services/queries";
 import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection";
 import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
 import PurchaseInfoSection from "../components/forms/PurchaseInfoSection";
@@ -28,6 +28,7 @@ import PurchasePaymentSection from "../components/forms/PurchasePaymentSection";
 import PurchasesDetailLoading from "../components/forms/PurchasesDetailLoading";
 import PurchaseStatusSection from "../components/forms/PurchaseStatusSection";
 import { useRemovePurchaseMutation } from "../services/mutations";
+import { ROUTES } from "@/shared/constants/routes";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -106,7 +107,7 @@ function PurchaseDetailForm({ purchaseData }) {
     };
 
     updateMutation.mutate(payload, {
-      onSuccess: () => navigate("/purchases"),
+      onSuccess: () => navigate(ROUTES.PURCHASES),
     });
   };
 
@@ -114,7 +115,7 @@ function PurchaseDetailForm({ purchaseData }) {
     deleteMutation.mutate(purchaseData.id, {
       onSuccess: () => {
         resetForm();
-        navigate("/purchases");
+        navigate(ROUTES.PURCHASES);
       },
     });
   };
@@ -258,7 +259,7 @@ export default function PurchaseDetailPage() {
         <p className="text-lg text-muted-foreground">
           خرید مورد نظر یافت نشد یا خطایی رخ داده است.
         </p>
-        <Button variant="outline" onClick={() => navigate("/purchases")}>
+        <Button variant="outline" onClick={() => navigate(ROUTES.PURCHASES)}>
           بازگشت به لیست
         </Button>
       </div>

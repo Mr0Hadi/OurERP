@@ -1,4 +1,4 @@
-// features/inventory/services/queryKeys.js
+// features/warehouse/services/queryKeys.js
 export const productKeys = {
   all: ['products'],
   lists: () => [...productKeys.all, 'list'],
@@ -6,3 +6,4 @@ export const productKeys = {
   details: () => [...productKeys.all, 'detail'],
   detail: (id) => [...productKeys.details(), id],
 };
+

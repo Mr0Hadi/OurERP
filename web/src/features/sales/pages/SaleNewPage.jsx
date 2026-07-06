@@ -8,12 +8,13 @@ import { useNavigationStore } from "@/shared/store/navigationStore";
 import { useSaleFormStore } from "#/features/sales/store/saleFormStore";
 import { useCreateSaleMutation } from "#/features/sales/services/mutations";
 import { useCustomersQuery } from "#/features/customers/services/queries";
-import { useProductsQuery } from "#/features/inventory/products/services/queries";
+import { useProductsQuery } from "#/features/warehouse/services/queries";
 import SaleCustomerSection from "#/features/sales/components/forms/SaleCustomerSection";
 import SaleItemsSection from "#/features/sales/components/forms/SaleItemsSection";
 import SaleInfoSection from "#/features/sales/components/forms/SaleInfoSection";
 import SalePaymentSection from "#/features/sales/components/forms/SalePaymentSection";
 import SaleStatusSection from "../components/forms/SaleStatusSection";
+import { ROUTES } from "@/shared/constants/routes";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -50,7 +51,7 @@ export default function SaleNewPage() {
     }
 
     const isReturningFromSubPage =
-      prevPath === "/products/new" || prevPath === "/customers/new";
+      prevPath === ROUTES.WAREHOUSE_PRODUCTS_NEW || prevPath === ROUTES.CUSTOMERS_NEW;
 
     if (isReturningFromSubPage) {
       setReturnPath(currentPath);
@@ -181,7 +182,7 @@ export default function SaleNewPage() {
 
     createMutation.mutate(payload, {
       onSuccess: () => {
-        navigate("/sales");
+        navigate(ROUTES.SALES);
         resetForm();
       },
     });

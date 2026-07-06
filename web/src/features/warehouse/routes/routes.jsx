@@ -1,17 +1,17 @@
 import { ROUTES } from '@/shared/constants/routes';
 import { ProductsPage, ProductNewPage, ProductDetailPage } from "./index";
 
-export const inventoryRoutes = [
+export const warehouseRoutes = [
   {
-    path: ROUTES.PRODUCTS_LIST,
+    path: ROUTES.WAREHOUSE_PRODUCTS,
     element: <ProductsPage />,
   },
   {
-    path: ROUTES.PRODUCTS_NEW,
+    path: ROUTES.WAREHOUSE_PRODUCTS_NEW,
     element: <ProductNewPage />,
   },
   {
-    path: ROUTES.PRODUCTS_DETAIL,
+    path: ROUTES.WAREHOUSE_PRODUCTS_DETAIL,
     element: <ProductDetailPage />,
   }
 ];

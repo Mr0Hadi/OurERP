@@ -14,6 +14,7 @@ import { usePurchasesQuery } from "../services/queries";
 import { useSuppliersQuery } from "@/features/suppliers/services/queries";
 import PurchaseFilters from "../components/table/PurchaseFilters";
 import PurchaseTable from "../components/table/PurchaseTable";
+import { ROUTES } from "@/shared/constants/routes";
 
 const PurchasesPage = () => {
   const navigate = useNavigate();
@@ -42,7 +43,7 @@ const PurchasesPage = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>مدیریت خریدها</CardTitle>
-          <Button onClick={() => navigate("/purchases/new")} className="gap-2">
+          <Button onClick={() => navigate(ROUTES.PURCHASES_NEW)} className="gap-2">
             <Plus className="h-4 w-4" />
             خرید جدید
           </Button>

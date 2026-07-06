@@ -44,7 +44,7 @@ const ROUTE_TITLES = {
   [ROUTES.SALES_RETURNS_NEW]: "ثبت مرجوعی فروش",
 
   // انبار
-  [ROUTES.INVENTORY]: "مدیریت موجودی",
+  [ROUTES.WAREHOUSE]: "مدیریت موجودی",
   [ROUTES.WAREHOUSE]: "انبار",
   [ROUTES.WAREHOUSE_PRODUCTS]: "کالاهای انبار",
   [ROUTES.WAREHOUSE_PRODUCTS_NEW]: "کالای جدید",
@@ -69,7 +69,7 @@ const ROUTE_TITLES = {
   [ROUTES.REPORTS_PURCHASES]: "گزارش خرید",
   [ROUTES.REPORTS_FINANCIAL]: "گزارش مالی",
   [ROUTES.REPORTS_PROFIT_LOSS]: "سود و زیان",
-  [ROUTES.REPORTS_INVENTORY]: "گزارش موجودی",
+  [ROUTES.REPORTS_warehouse]: "گزارش موجودی",
 
   // تنظیمات
   [ROUTES.SETTINGS]: "تنظیمات",

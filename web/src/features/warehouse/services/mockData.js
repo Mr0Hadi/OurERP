@@ -1,4 +1,4 @@
-// features/inventory/services/mockData.js
+// features/warehouse/services/mockData.js
 
 export const productsMock = [
   {
@@ -197,3 +197,4 @@ const generateMoreProducts = (count) => {
 };
 
 export const allProducts = generateMoreProducts(50);
+

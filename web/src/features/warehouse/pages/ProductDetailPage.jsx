@@ -1,4 +1,4 @@
-// src/features/inventory/products/pages/ProductDetailPage.jsx
+// src/features/warehouse/products/pages/ProductDetailPage.jsx
 import { useNavigate, useParams } from "react-router-dom";
 import { Save, X, Trash2, AlertCircle } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -23,6 +23,7 @@ import ProductImageUpload from "../components/forms/ProductImageUpload";
 import ProductBarcodeDisplay from "../components/forms/ProductBarcodeDisplay";
 import ProductDetailLoading from "../components/forms/ProductDetailLoading";
 import { useHeaderStore } from "#/shared/store/headerStore";
+import { ROUTES } from "@/shared/constants/routes";
 
 function ProductDetailForm({ productData }) {
   const navigate = useNavigate();
@@ -56,7 +57,7 @@ function ProductDetailForm({ productData }) {
   const handleDelete = () => {
     deleteMutation.mutate(productData.id, {
       onSuccess: () => {
-        navigate("/products");
+        navigate(ROUTES.WAREHOUSE_PRODUCTS);
       },
     });
   };
@@ -87,7 +88,7 @@ function ProductDetailForm({ productData }) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate("/products")}
+                onClick={() => navigate(ROUTES.WAREHOUSE_PRODUCTS)}
                 disabled={isBusy}
                 className="flex-1 gap-2"
               >
@@ -172,7 +173,7 @@ export default function ProductDetailPage() {
         <p className="text-lg text-muted-foreground">
           کالا مورد نظر یافت نشد یا خطایی رخ داده است.
         </p>
-        <Button variant="outline" onClick={() => navigate("/products")}>
+        <Button variant="outline" onClick={() => navigate(ROUTES.WAREHOUSE_PRODUCTS)}>
           بازگشت به لیست
         </Button>
       </div>

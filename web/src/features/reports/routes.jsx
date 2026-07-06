@@ -4,7 +4,7 @@ import SalesReportsPage from './pages/SalesReportsPage';
 import PurchaseReportsPage from './pages/PurchaseReportsPage';
 import FinancialReportsPage from './pages/FinancialReportsPage';
 import ProfitLossReportPage from './pages/ProfitLossReportPage';
-import InventoryReportsPage from './pages/InventoryReportsPage';
+import warehouseReportsPage from './pages/warehouseReportsPage';
 
 export const reportsRoutes = [
   {
@@ -28,7 +28,7 @@ export const reportsRoutes = [
     element: <ProfitLossReportPage />,
   },
   {
-    path: ROUTES.REPORTS_INVENTORY,
-    element: <InventoryReportsPage />,
+    path: ROUTES.REPORTS_WAREHOUSE,
+    element: <warehouseReportsPage />,
   },
 ];

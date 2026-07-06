@@ -12,7 +12,7 @@ import NotFoundPage from "../layouts/NotFoundPage";
 import { authRoutes } from "../../features/auth/routes";
 import { dashboardRoutes } from "../../features/dashboard/routes";
 import { customersRoutes } from "../../features/customers/routes/routes";
-import { inventoryRoutes } from "../../features/inventory/products/routes/routes";
+import { warehouseRoutes } from "../../features/warehouse/routes/routes";
 import { invoiceRoutes } from "../../features/invoice/routes";
 import { suppliersRoutes } from "../../features/suppliers/routes/routes";
 import { reportsRoutes } from "../../features/reports/routes";
@@ -37,7 +37,7 @@ export const router = createBrowserRouter([
       ...dashboardRoutes,
       ...customersRoutes,
       ...purchasesRoutes,
-      ...inventoryRoutes,
+      ...warehouseRoutes,
       ...invoiceRoutes,
       ...salesRoutes,
       ...suppliersRoutes,

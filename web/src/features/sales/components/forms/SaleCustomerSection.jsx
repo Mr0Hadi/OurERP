@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "#/shared/components/ui/card";
+import { ROUTES } from "@/shared/constants/routes";
 
 /**
  * props:
@@ -31,7 +32,7 @@ export default function SaleCustomerSection({
   const [search, setSearch] = useState("");
 
   const handleAddNew = () => {
-    navigate("/customers/new", { state: { returnTo: "/sales/new" } });
+    navigate(ROUTES.CUSTOMERS_NEW, { state: { returnTo: ROUTES.SALES_NEW } });
   };
 
   const selectedCustomer = customers.find((c) => c.id === selectedId);

@@ -1,4 +1,4 @@
-// features/inventory/components/ProductFilters.jsx
+// features/warehouse/components/ProductFilters.jsx
 
 import { useCallback } from "react";
 import { Input } from "@/shared/components/ui/input";

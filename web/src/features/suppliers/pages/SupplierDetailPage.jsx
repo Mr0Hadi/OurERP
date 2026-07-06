@@ -24,6 +24,7 @@ import SupplierIdentityForm from "../components/forms/SupplierIdentityForm";
 import SupplierFinanceForm from "../components/forms/SupplierFinanceForm";
 import SupplierAddressForm from "../components/forms/SupplierAddressForm";
 import SupplierDetailLoading from "../components/forms/SupplierDetailLoading";
+import { ROUTES } from "@/shared/constants/routes";
 
 function SupplierDetailForm({ supplierData }) {
   const navigate = useNavigate();
@@ -51,13 +52,13 @@ function SupplierDetailForm({ supplierData }) {
   const onSubmit = (data) => {
     updateMutation.mutate(
       { id: supplierData.id, data: buildSupplierPayload(data, avatarPreview) },
-      { onSuccess: () => navigate("/suppliers") }
+      { onSuccess: () => navigate(ROUTES.SUPPLIERS) }
     );
   };
 
   const handleDelete = () => {
     deleteMutation.mutate(supplierData.id, {
-      onSuccess: () => navigate("/suppliers"),
+      onSuccess: () => navigate(ROUTES.SUPPLIERS),
     });
   };
 
@@ -97,7 +98,7 @@ function SupplierDetailForm({ supplierData }) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate("/suppliers")}
+                onClick={() => navigate(ROUTES.SUPPLIERS)}
                 disabled={isBusy}
                 className="flex-1 gap-2"
               >
@@ -183,7 +184,7 @@ export default function SupplierDetailPage() {
         <p className="text-lg text-muted-foreground">
           تامین‌کننده مورد نظر یافت نشد یا خطایی رخ داده است.
         </p>
-        <Button variant="outline" onClick={() => navigate("/suppliers")}>
+        <Button variant="outline" onClick={() => navigate(ROUTES.SUPPLIERS)}>
           بازگشت به لیست
         </Button>
       </div>

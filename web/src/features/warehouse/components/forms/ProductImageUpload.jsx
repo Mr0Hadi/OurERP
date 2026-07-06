@@ -1,4 +1,4 @@
-// src/features/inventory/products/components/forms/ProductImageUpload.jsx
+// src/features/warehouse/products/components/forms/ProductImageUpload.jsx
 import { ImagePlus, Upload, X, ZoomIn, Pencil } from "lucide-react";
 import { useState } from "react";
 

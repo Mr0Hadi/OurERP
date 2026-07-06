@@ -1,4 +1,4 @@
-// src/features/inventory/products/components/forms/CategoryManager.jsx
+// src/features/warehouse/products/components/forms/CategoryManager.jsx
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import toast from "react-hot-toast";

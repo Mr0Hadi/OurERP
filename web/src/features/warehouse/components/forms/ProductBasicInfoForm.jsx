@@ -1,4 +1,4 @@
-// src/features/inventory/products/components/forms/ProductBasicInfoForm.jsx
+// src/features/warehouse/products/components/forms/ProductBasicInfoForm.jsx
 import { Controller } from "react-hook-form";
 
 import { Input } from "#/shared/components/ui/input";

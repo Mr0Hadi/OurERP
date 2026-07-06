@@ -1,4 +1,4 @@
-// features/inventory/components/ProductTable.jsx
+// features/warehouse/components/ProductTable.jsx
 
 import { useCallback, useMemo } from "react";
 import {
@@ -127,7 +127,7 @@ const ProductTable = ({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate(`/products/${row.original.id}`)}
+            onClick={() => navigate(`/warehouse/products/${row.original.id}`)}
           >
             جزئیات بیشتر
           </Button>

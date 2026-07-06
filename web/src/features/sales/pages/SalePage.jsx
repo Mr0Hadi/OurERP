@@ -13,6 +13,7 @@ import { useSalesQuery } from "../services/queries";
 import { useCustomersQuery } from "@/features/customers/services/queries";
 import SaleFilters from "../components/SaleFilters";
 import SaleTable from "../components/SaleTable";
+import { ROUTES } from "@/shared/constants/routes";
 
 const SalePage = () => {
   const navigate = useNavigate();
@@ -40,7 +41,7 @@ const SalePage = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>مدیریت فروش‌ها</CardTitle>
-          <Button onClick={() => navigate("/sales/new")} className="gap-2">
+          <Button onClick={() => navigate(ROUTES.SALES_NEW)} className="gap-2">
             <Plus className="h-4 w-4" />
             فروش جدید
           </Button>

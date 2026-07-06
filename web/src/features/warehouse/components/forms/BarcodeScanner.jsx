@@ -1,4 +1,4 @@
-// src/features/inventory/products/components/forms/BarcodeScanner.jsx
+// src/features/warehouse/products/components/forms/BarcodeScanner.jsx
 import { useState } from "react";
 import { ScanBarcode } from "lucide-react";
 import toast from "react-hot-toast";

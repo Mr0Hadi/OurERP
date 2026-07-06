@@ -9,13 +9,14 @@ import { useHeaderStore } from "#/shared/store/headerStore";
 import { usePurchaseFormStore } from "#/features/purchases/store/purchaseFormStore";
 import { useCreatePurchaseMutation } from "#/features/purchases/services/mutations";
 import { useSuppliersQuery } from "#/features/suppliers/services/queries";
-import { useProductsQuery } from "#/features/inventory/products/services/queries";
+import { useProductsQuery } from "#/features/warehouse/services/queries";
 
 import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection";
 import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
 import PurchaseInfoSection from "../components/forms/PurchaseInfoSection";
 import PurchasePaymentSection from "../components/forms/PurchasePaymentSection";
 import PurchaseStatusSection from "../components/forms/PurchaseStatusSection";
+import { ROUTES } from "@/shared/constants/routes";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -52,7 +53,7 @@ export default function PurchasesNewPage() {
     }
 
     const isReturningFromSubPage =
-      prevPath === "/products/new" || prevPath === "/suppliers/new";
+      prevPath === ROUTES.WAREHOUSE_PRODUCTS_NEW || prevPath === ROUTES.SUPPLIERS_NEW;
 
     if (isReturningFromSubPage) {
       setReturnPath(currentPath);
@@ -183,7 +184,7 @@ export default function PurchasesNewPage() {
 
     createMutation.mutate(payload, {
       onSuccess: () => {
-        navigate("/purchases");
+        navigate(ROUTES.PURCHASES);
         resetForm();
       },
     });

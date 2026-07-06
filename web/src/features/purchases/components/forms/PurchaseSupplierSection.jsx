@@ -5,6 +5,7 @@ import { UserPlus, X, Search } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { ROUTES } from "@/shared/constants/routes";
 
 /**
  * props:
@@ -27,7 +28,7 @@ export default function PurchaseSupplierSection({
   const [search, setSearch] = useState("");
 
   const handleAddNew = () => {
-    navigate("/suppliers/new", { state: { returnTo: "/purchases/new" } });
+    navigate(ROUTES.SUPPLIERS_NEW, { state: { returnTo: ROUTES.PURCHASES_NEW } });
   };
 
   const selectedSupplier = suppliers.find((s) => s.id === selectedId);

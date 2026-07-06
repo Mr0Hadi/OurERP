@@ -1,4 +1,5 @@
 // src/features/auth/pages/LoginPage.jsx
+import { ROUTES } from "@/shared/constants/routes";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -11,7 +12,7 @@ export default function LoginPage() {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    navigate("/dashboard");
+    navigate(ROUTES.DASHBOARD);
   };
 
   return (

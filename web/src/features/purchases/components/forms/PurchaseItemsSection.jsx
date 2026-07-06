@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
+import { ROUTES } from "@/shared/constants/routes";
 
 export default function PurchaseItemsSection({
   items,
@@ -94,8 +95,8 @@ export default function PurchaseItemsSection({
           size="sm"
           variant="outline"
           onClick={() =>
-            navigate("/products/new", {
-              state: { returnTo: "/purchases/new" },
+            navigate(ROUTES.WAREHOUSE_PRODUCTS_NEW, {
+              state: { returnTo: ROUTES.PURCHASES_NEW },
             })
           }
           className="gap-1.5 text-xs"
