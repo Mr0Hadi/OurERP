@@ -63,17 +63,17 @@ export default function ReceivingTransporterSection({
   error,
 }) {
   const [plate, setPlate] = useState(() => parsePlate(formData.vehiclePlate));
+  const [prevPurchaseId, setPrevPurchaseId] = useState(formData.purchaseId);
+
+    if (formData.purchaseId !== prevPurchaseId) {
+    setPrevPurchaseId(formData.purchaseId);
+    setPlate(parsePlate(formData.vehiclePlate));
+  }
 
   const regionARef = useRef(null);
   const letterRef = useRef(null);
   const numberRef = useRef(null);
   const regionBRef = useRef(null);
-
-  // اگر مقدار بیرونی عوض شد (مثلاً بعد از ریست فرم برای خرید دیگر)، بخش‌های داخلی هم همگام شوند
-  useEffect(() => {
-    setPlate(parsePlate(formData.vehiclePlate));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.purchaseId]);
 
   const updatePlate = (patch, nextRef) => {
     const next = { ...plate, ...patch };
