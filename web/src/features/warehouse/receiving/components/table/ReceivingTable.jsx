@@ -115,7 +115,7 @@ const ReceivingTable = ({
         typeof updater === "function" ? updater(sortingState) : updater;
       onSortingChange(next[0] ?? null);
     },
-    [sortingState, onSortingChange]
+    [sortingState, onSortingChange],
   );
 
   const columns = useMemo(
@@ -171,7 +171,9 @@ const ReceivingTable = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate(`/warehouse/receiving/${row.original.id}`)}
+              onClick={() =>
+                navigate(`/warehouse/receiving/${row.original.id}`)
+              }
               className="gap-1"
             >
               <CheckCircle className="h-4 w-4" />
@@ -181,12 +183,12 @@ const ReceivingTable = ({
         ),
       },
     ],
-    [navigate]
+    [navigate],
   );
 
   const paginationState = useMemo(
     () => ({ pageIndex: currentPage, pageSize }),
-    [currentPage, pageSize]
+    [currentPage, pageSize],
   );
 
   const table = useReactTable({
@@ -245,7 +247,7 @@ const ReceivingTable = ({
                           >
                             {flexRender(
                               header.column.columnDef.header,
-                              header.getContext()
+                              header.getContext(),
                             )}
                             {isSortable && <SortIcon direction={sortDir} />}
                           </div>
@@ -268,7 +270,7 @@ const ReceivingTable = ({
                       <TableCell key={cell.id} className="text-center">
                         {flexRender(
                           cell.column.columnDef.cell,
-                          cell.getContext()
+                          cell.getContext(),
                         )}
                       </TableCell>
                     ))}

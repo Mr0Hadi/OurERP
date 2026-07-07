@@ -1,12 +1,15 @@
+// src/features/warehouse/receiving/services/queries.js
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { keepPreviousData } from "@tanstack/react-query";
+import { useEffect, useMemo } from "react";
 import { fetchReceivingPurchases, fetchReceivingPurchaseById } from "./api";
 import { receivingKeys } from "./queryKeys";
 
 export function useReceivingPurchasesQuery(filters, pagination, sorting) {
   const queryClient = useQueryClient();
 
-  const queryParams = {
+  // استفاده از useMemo برای جلوگیری از بازسازی در هر رندر
+  const queryParams = useMemo(() => ({
     page: pagination.pageIndex + 1,
     limit: pagination.pageSize,
     search: filters.globalSearch || "",
@@ -17,14 +20,17 @@ export function useReceivingPurchasesQuery(filters, pagination, sorting) {
     toDate: filters.toDate || "",
     sortBy: sorting?.id ?? "createdAt",
     sortOrder: sorting?.desc ? "desc" : "asc",
-  };
+  }), [filters, pagination, sorting]);
 
-  const nextPageParams = { ...queryParams, page: queryParams.page + 1 };
-  queryClient.prefetchQuery({
-    queryKey: receivingKeys.list(nextPageParams),
-    queryFn: () => fetchReceivingPurchases(nextPageParams),
-    staleTime: 1000 * 60 * 3,
-  });
+  // prefetch صفحه‌ی بعد داخل effect
+  useEffect(() => {
+    const nextPageParams = { ...queryParams, page: queryParams.page + 1 };
+    queryClient.prefetchQuery({
+      queryKey: receivingKeys.list(nextPageParams),
+      queryFn: () => fetchReceivingPurchases(nextPageParams),
+      staleTime: 1000 * 60 * 3,
+    });
+  }, [queryClient, queryParams]);
 
   return useQuery({
     queryKey: receivingKeys.list(queryParams),

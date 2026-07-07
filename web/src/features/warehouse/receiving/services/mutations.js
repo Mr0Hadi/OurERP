@@ -1,85 +1,83 @@
+// src/features/warehouse/receiving/services/mutations.js
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import {
   updateReceivingStatus,
   confirmReceiving,
-  PURCHASE_STATUSES,
 } from "./api";
-
 import { receivingKeys } from "./queryKeys";
-import { useNavigate } from "react-router-dom";
-import { purchaseKeys } from "@/features/purchases/services/queryKeys";
+import { purchaseKeys } from "#/features/purchases/services/queryKeys";
 
 export const useUpdateReceivingStatusMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, receivedItems }) =>
-      updateReceivingStatus(id, receivedItems),
-    onMutate: async ({ id, receivedItems }) => {
-      await queryClient.cancelQueries({ queryKey: receivingKeys.detail(id) });
-      await queryClient.cancelQueries({ queryKey: receivingKeys.lists() });
+    mutationFn: ({ purchaseId, status }) =>
+      updateReceivingStatus(purchaseId, status),
+    onMutate: async ({ purchaseId, status }) => {
+      await queryClient.cancelQueries({
+        queryKey: receivingKeys.detail(purchaseId),
+      });
 
-      const previousPurchase = queryClient.getQueryData(
-        receivingKeys.detail(id),
+      const previousDetail = queryClient.getQueryData(
+        receivingKeys.detail(purchaseId)
       );
-      const previousList = queryClient.getQueryData(receivingKeys.list({}));
 
-      if (previousPurchase) {
-        const allItemsReceived = receivedItems.every(
-          (item) => item.receivedQty >= item.orderedQty,
-        );
-        const anyItemReceived = receivedItems.some(
-          (item) => item.receivedQty > 0,
-        );
-
-        let newStatus;
-        if (allItemsReceived) {
-          newStatus = PURCHASE_STATUSES.RECEIVED;
-        } else if (anyItemReceived) {
-          newStatus = PURCHASE_STATUSES.PARTIALLY_RECEIVED;
-        } else {
-          newStatus = PURCHASE_STATUSES.SHIPPED;
-        }
-
-        queryClient.setQueryData(receivingKeys.detail(id), {
-          ...previousPurchase,
-          status: newStatus,
-          items: previousPurchase.items.map((item) => {
-            const receivedItem = receivedItems.find(
-              (ri) => ri.productId === item.productId,
-            );
-            return receivedItem
-              ? { ...item, receivedQty: receivedItem.receivedQty }
-              : item;
-          }),
+      if (previousDetail) {
+        queryClient.setQueryData(receivingKeys.detail(purchaseId), {
+          ...previousDetail,
+          status,
         });
       }
 
-      return { previousPurchase, previousList };
+      const previousLists = queryClient.getQueriesData({
+        queryKey: receivingKeys.lists(),
+      });
+
+      previousLists.forEach(([queryKey, oldData]) => {
+        if (oldData?.items) {
+          queryClient.setQueryData(queryKey, {
+            ...oldData,
+            items: oldData.items.map((item) =>
+              item.id === purchaseId ? { ...item, status } : item
+            ),
+          });
+        }
+      });
+
+      return { previousDetail, previousLists };
     },
     onSuccess: (updatedPurchase) => {
       queryClient.setQueryData(
         receivingKeys.detail(updatedPurchase.id),
-        updatedPurchase,
+        updatedPurchase
       );
+      // اینجا هم باید detail فیچر purchases رو invalidate کنیم
+      queryClient.invalidateQueries({
+        queryKey: purchaseKeys.detail(updatedPurchase.id),
+      });
       queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
-      toast.success("دریافت کالا با موفقیت ثبت شد");
+      queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
+      toast.success("وضعیت دریافت به‌روزرسانی شد");
     },
     onError: (error, variables, context) => {
-      if (context?.previousPurchase) {
+      if (context?.previousDetail) {
         queryClient.setQueryData(
-          receivingKeys.detail(variables.id),
-          context.previousPurchase,
+          receivingKeys.detail(variables.purchaseId),
+          context.previousDetail
         );
       }
-      if (context?.previousList) {
-        queryClient.setQueryData(receivingKeys.list({}), context.previousList);
+      if (context?.previousLists) {
+        context.previousLists.forEach(([queryKey, oldData]) => {
+          queryClient.setQueryData(queryKey, oldData);
+        });
       }
-      toast.error(error?.message || "خطا در ثبت دریافت کالا");
+      toast.error(error?.message || "خطا در به‌روزرسانی وضعیت");
     },
   });
 };
+
 
 export const useConfirmReceivingMutation = () => {
   const queryClient = useQueryClient();
@@ -89,12 +87,20 @@ export const useConfirmReceivingMutation = () => {
     mutationFn: ({ purchaseId, receivingData }) =>
       confirmReceiving(purchaseId, receivingData),
     onSuccess: (updatedPurchase) => {
+      // فیچر receiving — کلید اصلی که لیست ازش استفاده می‌کنه
+      queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: receivingKeys.detail(updatedPurchase.id),
+      });
+
+      // فیچر purchases — اگه جای دیگه‌ای هم همین رکورد رو نشون میده
       queryClient.invalidateQueries({
         queryKey: purchaseKeys.detail(updatedPurchase.id),
       });
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
+
       toast.success("دریافت کالا با موفقیت ثبت شد");
-      navigate("/warehouse/receiving"); // مسیر بازگشت به لیست دریافت
+      navigate("/warehouse/receiving");
     },
     onError: (error) => {
       toast.error(error?.message || "خطا در ثبت دریافت");

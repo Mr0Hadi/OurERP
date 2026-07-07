@@ -1,5 +1,4 @@
 // src/features/purchases/services/mutations.js
-
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
@@ -11,6 +10,7 @@ import {
   removePurchase,
 } from "./api";
 import { purchaseKeys } from "./queryKeys";
+import { receivingKeys } from "#/features/warehouse/receiving/services/queryKeys";
 import { ROUTES } from "@/shared/constants/routes";
 
 export const useCreatePurchaseMutation = () => {
@@ -21,6 +21,7 @@ export const useCreatePurchaseMutation = () => {
     onSuccess: () => {
       toast.success("خرید با موفقیت ثبت شد");
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
     },
     onError: (error) => {
       toast.error(error?.message || "خطا در ثبت خرید");
@@ -41,6 +42,11 @@ export const useUpdatePurchaseMutation = (id) => {
       queryClient.invalidateQueries({
         queryKey: purchaseKeys.lists(),
       });
+      // اگه این خرید تو receiving هم هست، اون‌جا هم invalidate کن
+      queryClient.invalidateQueries({
+        queryKey: receivingKeys.detail(String(id)),
+      });
+      queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       toast.success("خرید با موفقیت ویرایش شد");
       navigate(ROUTES.PURCHASES_LIST);
     },
@@ -77,6 +83,11 @@ export const useUpdatePurchaseStatusMutation = () => {
         updatedPurchase
       );
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
+      // لیست receiving رو هم invalidate کن
+      queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: receivingKeys.detail(updatedPurchase.id),
+      });
       toast.success("وضعیت خرید به‌روزرسانی شد");
     },
     onError: (error, variables, context) => {
@@ -118,6 +129,7 @@ export const useRecordPaymentMutation = () => {
         updatedPurchase
       );
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       toast.success("پرداخت با موفقیت ثبت شد");
     },
     onError: (error, variables, context) => {
@@ -139,8 +151,11 @@ export const useRemovePurchaseMutation = () => {
   return useMutation({
     mutationFn: removePurchase,
     onSuccess: (removedPurchase) => {
-      queryClient.removeQueries({ queryKey: purchaseKeys.detail(String(removedPurchase.id)) });
+      queryClient.removeQueries({
+        queryKey: purchaseKeys.detail(String(removedPurchase.id)),
+      });
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       toast.success("خرید با موفقیت حذف شد");
       navigate(ROUTES.PURCHASES_LIST);
     },

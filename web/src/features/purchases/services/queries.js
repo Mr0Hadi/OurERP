@@ -1,32 +1,39 @@
 // src/features/purchases/services/queries.js
-
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { keepPreviousData } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { fetchPurchases, fetchPurchaseById } from "./api";
 import { purchaseKeys } from "./queryKeys";
+import { useMemo } from "react";
 
 export function usePurchasesQuery(filters, pagination, sorting) {
   const queryClient = useQueryClient();
 
-  const queryParams = {
-    page: pagination.pageIndex + 1,
-    limit: pagination.pageSize,
-    search: filters.globalSearch || "",
-    supplierIds: filters.supplierIds || [],
-    status: filters.status || "",
-    paymentType: filters.paymentType || "",
-    fromDate: filters.fromDate || "",
-    toDate: filters.toDate || "",
-    sortBy: sorting?.id ?? "createdAt",
-    sortOrder: sorting?.desc ? "desc" : "asc",
-  };
+  const queryParams = useMemo(
+    () => ({
+      page: pagination.pageIndex + 1,
+      limit: pagination.pageSize,
+      search: filters.globalSearch || "",
+      supplierIds: filters.supplierIds || [],
+      status: filters.status || "",
+      paymentType: filters.paymentType || "",
+      fromDate: filters.fromDate || "",
+      toDate: filters.toDate || "",
+      sortBy: sorting?.id ?? "createdAt",
+      sortOrder: sorting?.desc ? "desc" : "asc",
+    }),
+    [filters, pagination, sorting],
+  );
 
-  const nextPageParams = { ...queryParams, page: queryParams.page + 1 };
-  queryClient.prefetchQuery({
-    queryKey: purchaseKeys.list(nextPageParams),
-    queryFn: () => fetchPurchases(nextPageParams),
-    staleTime: 1000 * 60 * 3,
-  });
+  // انتقال به effect
+  useEffect(() => {
+    const nextPageParams = { ...queryParams, page: queryParams.page + 1 };
+    queryClient.prefetchQuery({
+      queryKey: purchaseKeys.list(nextPageParams),
+      queryFn: () => fetchPurchases(nextPageParams),
+      staleTime: 1000 * 60 * 3,
+    });
+  }, [queryClient, queryParams]);
 
   return useQuery({
     queryKey: purchaseKeys.list(queryParams),
@@ -46,6 +53,7 @@ export function usePurchaseQuery(id) {
   });
 }
 
+// بقیه بدون تغییر
 export function usePurchaseStatsQuery(params = {}) {
   const queryParams = {
     ...params,
