@@ -1,89 +1,73 @@
-import { allSuppliers } from "./mockData";
+import { api } from "@/shared/lib/api";
 
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+function mapSupplier(s) {
+  const contactParts = (s.contact_name || "").split(" ");
+  return {
+    id: String(s.id),
+    companyName: s.name || "",
+    firstName: contactParts[0] || "",
+    lastName: contactParts.slice(1).join(" ") || "",
+    phone: s.phone || "",
+    email: "",
+    address: s.address || "",
+    postalCode: "",
+    notes: s.notes || "",
+    balance: 0,
+    avatar: null,
+    coordinates: null,
+  };
+}
+
+function mapSupplierForCreate(data) {
+  const result = {
+    name: data.companyName || "",
+    contact_name: `${data.firstName || ""} ${data.lastName || ""}`.trim(),
+    phone: data.phone || "",
+    address: data.address || "",
+    notes: data.notes || "",
+  };
+  Object.keys(result).forEach((k) => {
+    if (result[k] === "" || result[k] === undefined || result[k] === null) delete result[k];
+  });
+  return result;
+}
 
 export async function fetchSuppliers({
   page = 1,
   limit = 10,
   search = "",
-  minBalance = "",
-  maxBalance = "",
   sortBy = "companyName",
   sortOrder = "asc",
 } = {}) {
-  await delay(500);
-  let result = [...allSuppliers];
-
-  if (search) {
-    const q = search.toLowerCase();
-    result = result.filter(
-      (s) =>
-        s.companyName?.toLowerCase().includes(q) ||
-        `${s.firstName} ${s.lastName}`.toLowerCase().includes(q) ||
-        s.id.toString().toLowerCase().includes(q)
-    );
-  }
-
-  if (minBalance !== "" && minBalance !== undefined) {
-    result = result.filter((s) => s.balance >= Number(minBalance));
-  }
-  if (maxBalance !== "" && maxBalance !== undefined) {
-    result = result.filter((s) => s.balance <= Number(maxBalance));
-  }
-
-  result.sort((a, b) => {
-    let aVal, bVal;
-    if (sortBy === "fullName") {
-      aVal = `${a.firstName} ${a.lastName}`;
-      bVal = `${b.firstName} ${b.lastName}`;
-    } else {
-      aVal = a[sortBy];
-      bVal = b[sortBy];
-    }
-
-    if (typeof aVal === "string") {
-      return sortOrder === "asc"
-        ? aVal.localeCompare(bVal, "fa")
-        : bVal.localeCompare(aVal, "fa");
-    }
-
-    return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
+  const res = await api.get("/api/suppliers", {
+    page,
+    page_size: limit,
+    search: search || undefined,
   });
-
-  const total = result.length;
-  const totalPages = Math.ceil(total / limit);
-  const items = result.slice((page - 1) * limit, page * limit);
-
-  return { items, total, page, totalPages };
+  return {
+    items: (res.data || []).map(mapSupplier),
+    total: res.meta?.total_count ?? 0,
+    page: res.meta?.page ?? 1,
+    totalPages: res.meta?.total_pages ?? 1,
+  };
 }
 
 export async function createSupplier(supplierData) {
-  await delay(500);
-  const newId = `${String(allSuppliers.length + 1)}`;
-  const newSupplier = { id: newId, ...supplierData };
-  allSuppliers.push(newSupplier);
-  return newSupplier;
+  const res = await api.post("/api/suppliers", mapSupplierForCreate(supplierData));
+  return mapSupplier(res.data);
 }
 
 export const getSupplierById = async (id) => {
-  await delay(500);
-  const supplier = allSuppliers.find((s) => s.id == id);
-  if (!supplier) throw new Error("تامین‌کننده یافت نشد");
-  return supplier;
+  const res = await api.get(`/api/suppliers/${id}`);
+  return mapSupplier(res.data);
 };
 
 export const updateSupplier = async (id, updatedData) => {
-  await delay(800);
-  const index = allSuppliers.findIndex((s) => s.id === id);
-  if (index === -1) throw new Error("تامین‌کننده یافت نشد");
-  allSuppliers[index] = { ...allSuppliers[index], ...updatedData };
-  return allSuppliers[index];
+  const res = await api.put(`/api/suppliers/${id}`, mapSupplierForCreate(updatedData));
+  return mapSupplier(res.data);
 };
 
 export const deleteSupplier = async (id) => {
-  await delay(500);
-  const index = allSuppliers.findIndex((s) => s.id == id);
-  if (index === -1) throw new Error("تامین‌کننده یافت نشد");
-  allSuppliers.splice(index, 1);
+  await api.delete(`/api/suppliers/${id}`);
   return { success: true, id };
 };

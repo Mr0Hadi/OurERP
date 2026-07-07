@@ -17,7 +17,7 @@ import {
 import {
   PURCHASE_STATUSES,
   PURCHASE_STATUS_LABELS,
-} from "#/features/purchases/services/mockData";
+} from "../../services/constants";
 import {
   Clock,
   Truck,

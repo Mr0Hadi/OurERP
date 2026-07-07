@@ -1,130 +1,81 @@
-// src/features/warehouse/products/services/api.js
-import { allProducts } from './mockData';
+import { api } from "@/shared/lib/api";
 
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-export const fetchProducts = async (params) => {
-  await delay(500);
-
-  let filteredProducts = [...allProducts];
-
-  if (params.search) {
-    const searchTerm = params.search.toLowerCase();
-    filteredProducts = filteredProducts.filter(p =>
-      p.code.toLowerCase().includes(searchTerm) ||
-      p.name.toLowerCase().includes(searchTerm) ||
-      p.brand.toLowerCase().includes(searchTerm)
-    );
-  }
-
-  if (params.brand) {
-    filteredProducts = filteredProducts.filter(p => p.brand === params.brand);
-  }
-
-  if (params.category) {
-    filteredProducts = filteredProducts.filter(p => p.category === params.category);
-  }
-
-  if (params.minPrice) {
-    filteredProducts = filteredProducts.filter(p => p.retailPrice >= Number(params.minPrice));
-  }
-
-  if (params.maxPrice) {
-    filteredProducts = filteredProducts.filter(p => p.retailPrice <= Number(params.maxPrice));
-  }
-
-  if (params.stockStatus) {
-    switch (params.stockStatus) {
-      case 'inStock':
-        filteredProducts = filteredProducts.filter(p => p.stock > 10);
-        break;
-      case 'lowStock':
-        filteredProducts = filteredProducts.filter(p => p.stock > 0 && p.stock <= 10);
-        break;
-      case 'outOfStock':
-        filteredProducts = filteredProducts.filter(p => p.stock === 0);
-        break;
-    }
-  }
-
-  if (params.sortBy) {
-    const sortOrder = params.sortOrder === 'desc' ? -1 : 1;
-    filteredProducts.sort((a, b) => {
-      if (a[params.sortBy] < b[params.sortBy]) return -sortOrder;
-      if (a[params.sortBy] > b[params.sortBy]) return sortOrder;
-      return 0;
-    });
-  }
-
-  const page = params.page || 1;
-  const limit = params.limit || 10;
-  const startIndex = (page - 1) * limit;
-  const endIndex = startIndex + limit;
-
+function mapProduct(p) {
   return {
-    items: filteredProducts.slice(startIndex, endIndex),
-    total: filteredProducts.length,
-    page,
-    totalPages: Math.ceil(filteredProducts.length / limit),
+    id: String(p.id),
+    code: p.internal_code || "",
+    barcode: p.barcode || "",
+    name: p.name || "",
+    brand: p.brand || "",
+    category: p.category || "",
+    unit: p.unit || "piece",
+    purchasePrice: p.cost_price ?? 0,
+    retailPrice: p.sale_price_retail ?? 0,
+    wholesalePrice: p.sale_price_wholesale ?? 0,
+    tax: p.tax ?? 0,
+    stock: p.current_stock ?? p.stock ?? 0,
+    description: "",
+    imageUrl: p.image_url || "",
+    isActive: p.is_active ?? true,
+    reorderPoint: p.reorder_threshold ?? 0,
+  };
+}
+
+function mapProductForCreate(data) {
+  const result = {
+    internal_code: data.code || "",
+    name: data.name || "",
+    barcode: data.barcode || "",
+    brand: data.brand || "",
+    category: data.category || "",
+    unit: data.unit || "piece",
+    cost_price: data.purchasePrice ?? 0,
+    sale_price_retail: data.retailPrice ?? 0,
+    sale_price_wholesale: data.wholesalePrice ?? 0,
+    tax: data.tax ?? 0,
+    reorder_threshold: data.reorderPoint ?? 0,
+    image_url: data.imageUrl || "",
+  };
+  Object.keys(result).forEach((k) => {
+    if (result[k] === "" || result[k] === undefined || result[k] === null) delete result[k];
+  });
+  return result;
+}
+
+export const fetchProducts = async (params = {}) => {
+  const res = await api.get("/api/products", {
+    page: params.page || 1,
+    page_size: params.limit || 10,
+    search: params.search || undefined,
+    brand: params.brand || undefined,
+    category: params.category || undefined,
+    min_price: params.minPrice || undefined,
+    max_price: params.maxPrice || undefined,
+  });
+  return {
+    items: (res.data || []).map(mapProduct),
+    total: res.meta?.total_count ?? 0,
+    page: res.meta?.page ?? 1,
+    totalPages: res.meta?.total_pages ?? 1,
   };
 };
 
 export const fetchProductById = async (id) => {
-  await delay(300);
-  const product = allProducts.find(p => p.id === String(id));
-  if (!product) throw new Error('محصول یافت نشد');
-  return product;
+  const res = await api.get(`/api/products/${id}`);
+  return mapProduct(res.data);
 };
 
 export const createProduct = async (productData) => {
-  await delay(800);
-
-  if (Math.random() < 0.1) {
-    throw new Error("خطای سرور در ایجاد کالا");
-  }
-
-  const newId = `${String(allProducts.length + 1)}`;
-  
-  const newProduct = {
-    id: newId,
-    ...productData,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-
-  allProducts.unshift(newProduct);
-  return newProduct;
+  const res = await api.post("/api/products", mapProductForCreate(productData));
+  return mapProduct(res.data);
 };
 
 export const updateProduct = async (id, productData) => {
-  await delay(500);
-
-  const index = allProducts.findIndex((p) => p.id === String(id));
-  
-  if (index === -1) {
-    throw new Error("محصول یافت نشد");
-  }
-
-  const updatedProduct = {
-    ...allProducts[index],
-    ...productData,
-    id: allProducts[index].id,
-    updatedAt: new Date().toISOString()
-  };
-  
-  allProducts[index] = updatedProduct;
-  return updatedProduct;
+  const res = await api.put(`/api/products/${id}`, mapProductForCreate(productData));
+  return mapProduct(res.data);
 };
 
 export const deleteProduct = async (id) => {
-  await delay(500);
-
-  const index = allProducts.findIndex((p) => p.id === String(id));
-  
-  if (index === -1) {
-    throw new Error("محصول یافت نشد");
-  }
-
-  allProducts.splice(index, 1);
+  await api.delete(`/api/products/${id}`);
   return { success: true, id };
 };

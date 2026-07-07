@@ -11,7 +11,7 @@ import {
 } from "@/shared/components/ui/select";
 import { Search, X, ChevronDown } from "lucide-react";
 import useReceivingFilterStore from "../../store/receivingFilterStore";
-import { PAYMENT_TYPE_LABELS } from "../../services/mockData";
+import { PAYMENT_TYPE_LABELS } from "@/features/purchases/services/constants";
 import { RECEIVING_STATUS_LABELS } from "../../services/api";
 import { useMemo } from "react";
 import { Check } from "lucide-react";

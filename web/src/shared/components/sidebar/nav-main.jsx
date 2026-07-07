@@ -1,4 +1,4 @@
-import { ChevronRight } from "lucide-react";
+﻿import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 
 import {
@@ -63,7 +63,7 @@ export function NavMain({ items }) {
                   <CollapsibleTrigger asChild>
                     <SidebarMenuAction className="data-[state=open]:rotate-90 transition-transform duration-200">
                       <ChevronRight />
-                      <span className="sr-only">Toggle</span>
+                      <span className="sr-only">باز/بستن</span>
                     </SidebarMenuAction>
                   </CollapsibleTrigger>
 

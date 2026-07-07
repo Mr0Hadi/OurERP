@@ -1,165 +1,117 @@
-import { allSales, SALE_STATUSES } from "./mockData";
+import { api } from "@/shared/lib/api";
+import { SALE_STATUSES, SALE_STATUS_LABELS, PAYMENT_TYPES, PAYMENT_TYPE_LABELS } from "./constants";
 
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+export { SALE_STATUSES, SALE_STATUS_LABELS, PAYMENT_TYPES, PAYMENT_TYPE_LABELS };
+
+function mapSaleItem(i) {
+  return {
+    productId: String(i.product_id),
+    productCode: i.product_code || "",
+    productName: i.product_name || "",
+    qty: i.qty ?? 0,
+    unitPrice: i.unit_price ?? 0,
+    discount: i.discount ?? 0,
+    lineTotal: (i.qty ?? 0) * (i.unit_price ?? 0) * (1 - (i.discount ?? 0) / 100),
+  };
+}
+
+function mapSale(s) {
+  return {
+    id: String(s.id),
+    customerId: String(s.customer_id ?? ""),
+    customerName: s.customer_name || "",
+    invoiceNumber: s.invoice_number || "",
+    invoiceDate: s.invoice_date || "",
+    status: s.status || SALE_STATUSES.PENDING,
+    paymentType: s.payment_type || PAYMENT_TYPES.CASH,
+    paidAmount: s.paid_amount ?? 0,
+    totalAmount: s.total_amount ?? 0,
+    description: s.description || "",
+    checkNumber: s.check_number || "",
+    transferRef: s.transfer_ref || "",
+    items: (s.items || []).map(mapSaleItem),
+    createdAt: s.created_at || "",
+    updatedAt: s.updated_at || "",
+  };
+}
+
+function mapSaleItemForCreate(i) {
+  return {
+    product_id: parseInt(i.productId, 10),
+    product_code: i.productCode || "",
+    product_name: i.productName || "",
+    unit: i.unit || "piece",
+    qty: i.qty ?? 0,
+    unit_price: i.unitPrice ?? 0,
+    discount: i.discount ?? 0,
+  };
+}
+
+function mapSaleForCreate(data) {
+  const result = {
+    customer_id: parseInt(data.customerId, 10) || 0,
+    items: (data.items || []).map(mapSaleItemForCreate),
+    invoice_date: data.invoiceDate || undefined,
+    description: data.description || undefined,
+    status: data.status || SALE_STATUSES.PENDING,
+    payment_type: data.paymentType || PAYMENT_TYPES.CASH,
+    paid_amount: data.paidAmount ?? 0,
+    total_amount: data.totalAmount ?? 0,
+  };
+  if (data.checkNumber) result.check_number = data.checkNumber;
+  if (data.transferRef) result.transfer_ref = data.transferRef;
+  return result;
+}
 
 export async function createSale(saleData) {
-  await delay(800);
-
-  if (Math.random() < 0.05) {
-    throw new Error("خطا در ثبت فروش");
-  }
-
-  const newSale = {
-    id: String(Date.now()),
-    ...saleData,
-    status: SALE_STATUSES.PENDING,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-
-  allSales.unshift(newSale);
-  return newSale;
+  const res = await api.post("/api/sales", mapSaleForCreate(saleData));
+  return mapSale(res.data);
 }
 
 export async function fetchSales(params = {}) {
-  await delay(500);
-
-  const {
-    page = 1,
-    limit = 10,
-    search = "",
-    customerId = "",
-    status = "",
-    paymentType = "",
-    fromDate = "",
-    toDate = "",
-    sortBy = "createdAt",
-    sortOrder = "desc",
-  } = params;
-
-  let filtered = [...allSales];
-
-  if (search) {
-    const searchLower = search.toLowerCase();
-    filtered = filtered.filter(
-      (s) =>
-        s.invoiceNumber.toLowerCase().includes(searchLower) ||
-        s.customerName.toLowerCase().includes(searchLower) ||
-        (s.description && s.description.toLowerCase().includes(searchLower))
-    );
-  }
-
-  if (params.customerIds && params.customerIds.length > 0) {
-    filtered = filtered.filter((s) =>
-      params.customerIds.includes(s.customerId)
-    );
-  }
-
-  if (status) {
-    filtered = filtered.filter((s) => s.status === status);
-  }
-
-  if (paymentType) {
-    filtered = filtered.filter((s) => s.paymentType === paymentType);
-  }
-
-  if (fromDate) {
-    filtered = filtered.filter(
-      (s) => new Date(s.createdAt) >= new Date(fromDate)
-    );
-  }
-  if (toDate) {
-    filtered = filtered.filter(
-      (s) => new Date(s.createdAt) <= new Date(toDate)
-    );
-  }
-
-  filtered.sort((a, b) => {
-    let aVal = a[sortBy];
-    let bVal = b[sortBy];
-
-    if (sortBy === "createdAt" || sortBy === "updatedAt") {
-      aVal = new Date(aVal).getTime();
-      bVal = new Date(bVal).getTime();
-    } else if (sortBy === "totalAmount" || sortBy === "paidAmount") {
-      aVal = Number(aVal);
-      bVal = Number(bVal);
-    } else if (typeof aVal === "string") {
-      return sortOrder === "asc"
-        ? aVal.localeCompare(bVal, "fa")
-        : bVal.localeCompare(aVal, "fa");
-    }
-
-    return sortOrder === "asc" ? (aVal > bVal ? 1 : -1) : aVal < bVal ? 1 : -1;
+  const res = await api.get("/api/sales", {
+    page: params.page || 1,
+    page_size: params.limit || 10,
+    status: params.status || undefined,
+    customer_id: params.customerId || undefined,
+    payment_type: params.paymentType || undefined,
+    from_date: params.fromDate || undefined,
+    to_date: params.toDate || undefined,
   });
-
-  const total = filtered.length;
-  const totalPages = Math.ceil(total / limit);
-  const start = (page - 1) * limit;
-  const items = filtered.slice(start, start + limit);
-
-  return { items, total, page, totalPages };
+  return {
+    items: (res.data || []).map(mapSale),
+    total: res.meta?.total_count ?? 0,
+    page: res.meta?.page ?? 1,
+    totalPages: res.meta?.total_pages ?? 1,
+  };
 }
 
 export async function fetchSaleById(id) {
-  await delay(300);
-
-  const sale = allSales.find((s) => s.id === id);
-  if (!sale) throw new Error("فروش یافت نشد");
-  return sale;
+  const res = await api.get(`/api/sales/${id}`);
+  return mapSale(res.data);
 }
 
 export async function updateSale(id, updates) {
-  await delay(600);
-
-  const index = allSales.findIndex((s) => s.id === id);
-  if (index === -1) throw new Error("فروش یافت نشد");
-
-  allSales[index] = {
-    ...allSales[index],
-    ...updates,
-    updatedAt: new Date().toISOString(),
-  };
-
-  return allSales[index];
+  const res = await api.put(`/api/sales/${id}`, mapSaleForCreate(updates));
+  return mapSale(res.data);
 }
 
 export async function updateSaleStatus(id, newStatus) {
-  return updateSale(id, { status: newStatus });
+  const res = await api.post(`/api/sales/${id}/status`, { status: newStatus });
+  return mapSale(res.data);
 }
 
 export async function removeSale(id) {
-  await delay(600);
-
-  
-  const index = allSales.findIndex((p) => p.id == id);
-  
-
-  if (index === -1) {
-    throw new Error("خرید یافت نشد");
-  }
-
-  const removed = allSales.splice(index, 1)[0];
-  return removed;
+  const res = await api.delete(`/api/sales/${id}`);
+  return mapSale(res.data);
 }
 
 export async function deleteSale(id) {
-  return updateSaleStatus(id, SALE_STATUSES.CANCELLED);
+  await api.post(`/api/sales/${id}/status`, { status: SALE_STATUSES.CANCELLED });
+  return { success: true, id };
 }
 
 export async function updateSalePayment(id, paymentData) {
-  await delay(600);
-
-  const index = allSales.findIndex((s) => s.id === id);
-  if (index === -1) throw new Error("فروش یافت نشد");
-
-  const current = allSales[index];
-  allSales[index] = {
-    ...current,
-    paidAmount: current.paidAmount + (paymentData.amount || 0),
-    updatedAt: new Date().toISOString(),
-    ...paymentData,
-  };
-
-  return allSales[index];
+  const res = await api.post(`/api/sales/${id}/payment`, paymentData);
+  return mapSale(res.data);
 }

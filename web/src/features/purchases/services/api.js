@@ -1,190 +1,119 @@
-// src/features/purchases/services/api.js
+import { api } from "@/shared/lib/api";
+import { PURCHASE_STATUSES, PURCHASE_STATUS_LABELS, PAYMENT_TYPES, PAYMENT_TYPE_LABELS } from "./constants";
 
-import { allPurchases, PURCHASE_STATUSES } from "./mockData";
+export { PURCHASE_STATUSES, PURCHASE_STATUS_LABELS, PAYMENT_TYPES, PAYMENT_TYPE_LABELS };
 
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+function mapPOItem(i) {
+  return {
+    productId: String(i.product_id),
+    productCode: i.product_code || "",
+    productName: i.product_name || "",
+    qty: i.ordered_quantity ?? 0,
+    orderedQty: i.ordered_quantity ?? 0,
+    unitPrice: i.unit_price ?? 0,
+    discount: i.discount ?? 0,
+    receivedQty: i.received_quantity ?? 0,
+    lineTotal: (i.ordered_quantity ?? 0) * (i.unit_price ?? 0) * (1 - (i.discount ?? 0) / 100),
+  };
+}
+
+function mapPurchaseOrder(po) {
+  const items = (po.items || []).map(mapPOItem);
+  const totalAmount = items.reduce((sum, i) => sum + i.lineTotal, 0);
+  return {
+    id: String(po.id),
+    supplierId: String(po.supplier_id ?? ""),
+    supplierName: po.supplier_name || "",
+    invoiceNumber: po.supplier_invoice_number || "",
+    invoiceDate: po.created_at ? po.created_at.split("T")[0] : "",
+    status: po.status || PURCHASE_STATUSES.PENDING,
+    paymentType: PAYMENT_TYPES.CREDIT,
+    paidAmount: 0,
+    totalAmount: po.total_amount ?? totalAmount,
+    description: po.notes || "",
+    notes: po.notes || "",
+    items,
+    expectedDeliveryDate: po.expected_delivery_date || "",
+    createdAt: po.created_at || "",
+    updatedAt: po.updated_at || "",
+  };
+}
+
+function mapPOItemForCreate(i) {
+  return {
+    product_id: parseInt(i.productId, 10),
+    ordered_quantity: i.qty ?? i.orderedQty ?? 0,
+    unit_price: i.unitPrice ?? 0,
+  };
+}
+
+function mapPurchaseOrderForCreate(data) {
+  return {
+    supplier_id: parseInt(data.supplierId, 10) || 0,
+    items: (data.items || []).map(mapPOItemForCreate),
+    expected_delivery_date: data.expectedDeliveryDate || undefined,
+    supplier_invoice_number: data.invoiceNumber || data.supplierInvoiceNumber || undefined,
+    notes: data.description || data.notes || undefined,
+  };
+}
 
 export async function createPurchase(purchaseData) {
-  await delay(800);
-
-  if (Math.random() < 0.05) {
-    throw new Error("خطا در ثبت خرید");
-  }
-
-  const newPurchase = {
-    id: String(Date.now()),
-    ...purchaseData,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-
-  allPurchases.unshift(newPurchase);
-  return newPurchase;
+  const res = await api.post("/api/purchase-orders", mapPurchaseOrderForCreate(purchaseData));
+  return mapPurchaseOrder(res.data);
 }
 
 export async function fetchPurchases(params = {}) {
-  await delay(500);
-
-  const {
-    page = 1,
-    limit = 10,
-    search = "",
-    supplierIds = [],
-    status = "",
-    paymentType = "",
-    fromDate = "",
-    toDate = "",
-    sortBy = "createdAt",
-    sortOrder = "desc",
-  } = params;
-
-  let filtered = [...allPurchases];
-
-  if (search) {
-    const searchLower = search.toLowerCase();
-    filtered = filtered.filter(
-      (p) =>
-        p.invoiceNumber.toLowerCase().includes(searchLower) ||
-        p.supplierName.toLowerCase().includes(searchLower) ||
-        (p.description && p.description.toLowerCase().includes(searchLower))
-    );
-  }
-
-  if (Array.isArray(supplierIds) && supplierIds.length > 0) {
-    filtered = filtered.filter((p) => supplierIds.includes(p.supplierId));
-  }
-
-  if (status) {
-    filtered = filtered.filter((p) => p.status === status);
-  }
-
-  if (paymentType) {
-    filtered = filtered.filter((p) => p.paymentType === paymentType);
-  }
-
-  if (fromDate) {
-    filtered = filtered.filter(
-      (p) => new Date(p.createdAt) >= new Date(fromDate)
-    );
-  }
-  if (toDate) {
-    filtered = filtered.filter(
-      (p) => new Date(p.createdAt) <= new Date(toDate)
-    );
-  }
-
-  filtered.sort((a, b) => {
-    let aVal = a[sortBy];
-    let bVal = b[sortBy];
-
-    if (sortBy === "createdAt" || sortBy === "updatedAt") {
-      aVal = new Date(aVal).getTime();
-      bVal = new Date(bVal).getTime();
-    } else if (sortBy === "totalAmount" || sortBy === "paidAmount") {
-      aVal = Number(aVal);
-      bVal = Number(bVal);
-    } else if (typeof aVal === "string") {
-      return sortOrder === "asc"
-        ? aVal.localeCompare(bVal, "fa")
-        : bVal.localeCompare(aVal, "fa");
-    }
-
-    if (sortOrder === "asc") {
-      return aVal > bVal ? 1 : -1;
-    }
-    return aVal < bVal ? 1 : -1;
+  const res = await api.get("/api/purchase-orders", {
+    page: params.page || 1,
+    page_size: params.limit || 10,
+    status: params.status || undefined,
+    from: params.fromDate || undefined,
+    to: params.toDate || undefined,
   });
-
-  const total = filtered.length;
-  const totalPages = Math.ceil(total / limit);
-  const start = (page - 1) * limit;
-  const end = start + limit;
-  const items = filtered.slice(start, end);
-
   return {
-    items,
-    total,
-    page,
-    totalPages,
+    items: (res.data || []).map(mapPurchaseOrder),
+    total: res.meta?.total_count ?? 0,
+    page: res.meta?.page ?? 1,
+    totalPages: res.meta?.total_pages ?? 1,
   };
 }
 
 export async function fetchPurchaseById(id) {
-  await delay(300);
-
-  
-  
-  const purchase = allPurchases.find((p) => p.id === id);
-
-  
-  if (!purchase) {
-    throw new Error("خرید یافت نشد");
-  }
-
-  return purchase;
+  const res = await api.get(`/api/purchase-orders/${id}`);
+  return mapPurchaseOrder(res.data);
 }
 
 export async function updatePurchase(id, updates) {
-  await delay(600);
-
-  const index = allPurchases.findIndex((p) => p.id === id);
-
-  if (index === -1) {
-    throw new Error("خرید یافت نشد");
-  }
-
-  allPurchases[index] = {
-    ...allPurchases[index],
-    ...updates,
-    updatedAt: new Date().toISOString(),
-  };
-
-  return allPurchases[index];
+  const res = await api.put(`/api/purchase-orders/${id}`, mapPurchaseOrderForCreate(updates));
+  return mapPurchaseOrder(res.data);
 }
 
 export async function updatePurchaseStatus(id, newStatus) {
-  return updatePurchase(id, { status: newStatus });
+  let endpoint;
+  if (newStatus === PURCHASE_STATUSES.SHIPPED) {
+    endpoint = `/api/purchase-orders/${id}/mark-awaiting`;
+  } else if (newStatus === PURCHASE_STATUSES.RECEIVED) {
+    endpoint = `/api/purchase-orders/${id}/receive`;
+  } else if (newStatus === PURCHASE_STATUSES.CANCELLED) {
+    endpoint = `/api/purchase-orders/${id}/cancel`;
+  } else {
+    endpoint = `/api/purchase-orders/${id}/confirm`;
+  }
+  const res = await api.post(endpoint, { status: newStatus });
+  return mapPurchaseOrder(res.data);
 }
 
 export async function removePurchase(id) {
-  await delay(600);
-
-  
-  const index = allPurchases.findIndex((p) => p.id == id);
-  const purchase = allPurchases.find((p) => p.id === id);
-  
-
-  if (index === -1) {
-    throw new Error("خرید یافت نشد");
-  }
-
-  const removed = allPurchases.splice(index, 1)[0];
-  return removed;
+  const res = await api.delete(`/api/purchase-orders/${id}`);
+  return mapPurchaseOrder(res.data);
 }
 
 export async function deletePurchase(id) {
-  return updatePurchaseStatus(id, PURCHASE_STATUSES.CANCELLED);
+  await api.post(`/api/purchase-orders/${id}/cancel`);
+  return { success: true, id };
 }
 
 export async function updatePurchasePayment(id, paymentData) {
-  await delay(600);
-
-  const index = allPurchases.findIndex((p) => p.id === id);
-
-  if (index === -1) {
-    throw new Error("خرید یافت نشد");
-  }
-
-  const currentPurchase = allPurchases[index];
-  const newPaidAmount = currentPurchase.paidAmount + (paymentData.amount || 0);
-
-  allPurchases[index] = {
-    ...currentPurchase,
-    paidAmount: newPaidAmount,
-    updatedAt: new Date().toISOString(),
-    ...paymentData,
-  };
-
-  return allPurchases[index];
+  const res = await api.post(`/api/purchase-orders/${id}/payment`, paymentData);
+  return mapPurchaseOrder(res.data);
 }
-
