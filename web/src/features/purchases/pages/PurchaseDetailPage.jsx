@@ -53,7 +53,7 @@ function PurchaseDetailForm({ purchaseData }) {
   const { data: productsData, isLoading: productsLoading } = useProductsQuery(
     ALL_FILTERS,
     PAGINATION,
-    SORTING
+    SORTING,
   );
 
   const suppliers = suppliersData?.items || [];
@@ -102,6 +102,7 @@ function PurchaseDetailForm({ purchaseData }) {
       paidAmount: Number(formData.paidAmount) || 0,
       checkNumber: formData.checkNumber || null,
       transferRef: formData.transferRef || null,
+      mixedPayments: formData.mixedPayments || [],
       status: formData.status || "pending",
       totalAmount: computedTotal,
     };
@@ -242,8 +243,8 @@ export default function PurchaseDetailPage() {
       title: isLoading
         ? "در حال بارگذاری..."
         : purchase
-        ? "ویرایش خرید"
-        : "خطا",
+          ? "ویرایش خرید"
+          : "خطا",
       showBack: true,
       onBack: () => navigate(-1),
     });

@@ -58,7 +58,7 @@ function SaleDetailForm({ saleData }) {
   const { data: productsData, isLoading: productsLoading } = useProductsQuery(
     ALL_FILTERS,
     PAGINATION,
-    SORTING
+    SORTING,
   );
 
   const customers = customersData?.items || [];
@@ -106,6 +106,7 @@ function SaleDetailForm({ saleData }) {
       paidAmount: Number(formData.paidAmount) || 0,
       checkNumber: formData.checkNumber || null,
       transferRef: formData.transferRef || null,
+      mixedPayments: formData.mixedPayments || [],
       status: formData.status || "pending",
       totalAmount: computedTotal,
     };

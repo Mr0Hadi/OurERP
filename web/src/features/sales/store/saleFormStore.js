@@ -1,3 +1,4 @@
+// src/features/sales/store/saleFormStore.js
 import { create } from 'zustand';
 
 const EMPTY_FORM = {
@@ -11,6 +12,7 @@ const EMPTY_FORM = {
   paidAmount: '',
   checkNumber: '',
   transferRef: '',
+  mixedPayments: [], // اضافه شد
   status: '',
   items: [],
 };
@@ -62,6 +64,9 @@ export const useSaleFormStore = create((set, get) => ({
         description: sale.description || '',
         paymentType: sale.paymentType || 'cash',
         paidAmount: sale.paidAmount?.toString() || '',
+        checkNumber: sale.checkNumber || '',
+        transferRef: sale.transferRef || '',
+        mixedPayments: sale.mixedPayments || [], // اضافه شد
         status: sale.status || '',
         items: formattedItems,
       },

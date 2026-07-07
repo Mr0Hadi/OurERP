@@ -13,6 +13,7 @@ const EMPTY_FORM = {
   paidAmount: '',
   checkNumber: '',
   transferRef: '',
+  mixedPayments: [],
   status: '',
   items: [],
 };
@@ -69,6 +70,9 @@ export const usePurchaseFormStore = create(
             description: purchaseData.description || '',
             paymentType: purchaseData.paymentType || 'cash',
             paidAmount: purchaseData.paidAmount?.toString() || '',
+            checkNumber: purchaseData.checkNumber || '',
+            transferRef: purchaseData.transferRef || '',
+            mixedPayments: purchaseData.mixedPayments || [],
             status: purchaseData.status || '',
             items: formattedItems,
           },
