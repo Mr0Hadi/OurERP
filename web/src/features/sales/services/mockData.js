@@ -116,6 +116,45 @@ export const salesMock = [
     createdAt: "2026-06-09T14:15:00.000Z",
     updatedAt: "2026-06-09T14:15:00.000Z",
   },
+  {
+    id: "3",
+    customerId: "3",
+    customerName: "لیلا ابراهیمی",
+    invoiceNumber: "SALE-2026-003",
+    invoiceDate: "2026-06-15", // 15 June 2026
+    status: SALE_STATUSES.DELIVERED,
+    paymentType: PAYMENT_TYPES.MIXED,
+    paidAmount: 35000000,
+    totalAmount: 35000000,
+    description: "فروش باتری و لوازم برقی",
+    mixedPayments: [
+      { type: 'cash', amount: 15000000 },
+      { type: 'check', amount: 10000000, checkNumber: '1234567890' },
+      { type: 'transfer', amount: 10000000, transferRef: 'TRN-87654321' },
+    ],
+    items: [
+      {
+        productId: "5",
+        productCode: "BAT-005",
+        productName: "باتری ۶۰ آمپر",
+        qty: 5,
+        unitPrice: 6000000,
+        discount: 0,
+        lineTotal: 30000000,
+      },
+      {
+        productId: "4",
+        productCode: "LMP-004",
+        productName: "لامپ هدلایت H4",
+        qty: 12,
+        unitPrice: 400000,
+        discount: 4,
+        lineTotal: 4608000,
+      },
+    ],
+    createdAt: "2026-06-15T11:20:00.000Z",
+    updatedAt: "2026-06-15T11:20:00.000Z",
+  },
 ];
 
 // ── فروش‌های تولیدی با تاریخ میلادی ──────────────────────────────────────────
@@ -156,12 +195,6 @@ function generateMoreSales(count = 20) {
 
     for (let j = 0; j < itemsCount; j++) {
       // انتخاب محصول تصادفی که قبلاً استفاده نشده باشد
-      let product;
-      let attempts = 0;
-      const maxAttempts = 50; // برای جلوگیری از حلقه بی‌نهایت
-
-      // اگر تعداد محصولات موجود کمتر از تعداد آیتم‌های درخواستی باشد، ممکن است نتوانیم محصول جدید پیدا کنیم
-      // در این حالت از محصولات باقی‌مانده استفاده می‌کنیم
       const availableProducts = products.filter(
         (p) => !usedProductIds.has(p.id)
       );
@@ -172,7 +205,7 @@ function generateMoreSales(count = 20) {
 
       // انتخاب تصادفی از محصولات باقی‌مانده
       const randomIndex = Math.floor(Math.random() * availableProducts.length);
-      product = availableProducts[randomIndex];
+      const product = availableProducts[randomIndex];
       usedProductIds.add(product.id);
 
       // محاسبه تعداد و تخفیف
@@ -194,10 +227,40 @@ function generateMoreSales(count = 20) {
     }
 
     let paidAmount = 0;
+    let mixedPayments = [];
+
     if (paymentType === PAYMENT_TYPES.CREDIT) {
       paidAmount = 0;
     } else if (paymentType === PAYMENT_TYPES.MIXED) {
-      paidAmount = Math.floor(totalAmount * (0.3 + Math.random() * 0.4));
+      // تولید 2 تا 4 پرداخت ترکیبی
+      const numPayments = Math.floor(Math.random() * 3) + 2; // 2 تا 4
+      const paymentMethods = ['cash', 'check', 'transfer'];
+      let remainingAmount = totalAmount;
+
+      for (let j = 0; j < numPayments; j++) {
+        const isLast = j === numPayments - 1;
+        const amount = isLast
+          ? remainingAmount
+          : Math.floor(remainingAmount * (0.2 + Math.random() * 0.4));
+
+        const method = paymentMethods[Math.floor(Math.random() * paymentMethods.length)];
+        const payment = { type: method, amount };
+
+        if (method === 'check') {
+          payment.checkNumber = String(
+            Math.floor(Math.random() * 9000000000) + 1000000000
+          );
+        } else if (method === 'transfer') {
+          payment.transferRef = `TRN-${
+            Math.floor(Math.random() * 90000000) + 10000000
+          }`;
+        }
+
+        mixedPayments.push(payment);
+        remainingAmount -= amount;
+      }
+
+      paidAmount = totalAmount;
     } else {
       paidAmount = totalAmount;
     }
@@ -233,6 +296,12 @@ function generateMoreSales(count = 20) {
       updatedAt: saleDate.toISOString(),
     };
 
+    // اضافه کردن mixedPayments در صورت نیاز
+    if (paymentType === PAYMENT_TYPES.MIXED) {
+      sale.mixedPayments = mixedPayments;
+    }
+
+    // اضافه کردن فیلدهای مربوط به چک و انتقال بانکی
     if (paymentType === PAYMENT_TYPES.CHECK) {
       sale.checkNumber = String(
         Math.floor(Math.random() * 9000000000) + 1000000000

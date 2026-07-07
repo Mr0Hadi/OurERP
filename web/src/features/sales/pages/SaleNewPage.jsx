@@ -51,7 +51,8 @@ export default function SaleNewPage() {
     }
 
     const isReturningFromSubPage =
-      prevPath === ROUTES.WAREHOUSE_PRODUCTS_NEW || prevPath === ROUTES.CUSTOMERS_NEW;
+      prevPath === ROUTES.WAREHOUSE_PRODUCTS_NEW ||
+      prevPath === ROUTES.CUSTOMERS_NEW;
 
     if (isReturningFromSubPage) {
       setReturnPath(currentPath);
@@ -62,7 +63,14 @@ export default function SaleNewPage() {
     resetForm();
     setReturnPath(currentPath);
     initializeForNew();
-  }, [location.pathname, location.state, setCurrentPath, setReturnPath, resetForm, initializeForNew]);
+  }, [
+    location.pathname,
+    location.state,
+    setCurrentPath,
+    setReturnPath,
+    resetForm,
+    initializeForNew,
+  ]);
 
   const createMutation = useCreateSaleMutation();
 
@@ -71,7 +79,7 @@ export default function SaleNewPage() {
   const { data: productsData, isLoading: productsLoading } = useProductsQuery(
     ALL_FILTERS,
     PAGINATION,
-    SORTING
+    SORTING,
   );
 
   const customers = customersData?.items || [];
@@ -161,7 +169,7 @@ export default function SaleNewPage() {
       invoiceNumber: formData.invoiceNumber,
       invoiceDate: formData.invoiceDate,
       dueDate: formData.dueDate || null,
-      description: formData.description || '',
+      description: formData.description || "",
       items: items.map((item) => ({
         productId: item.productId,
         productName: item.productName,
@@ -172,11 +180,12 @@ export default function SaleNewPage() {
         discount: item.discount || 0,
         lineTotal: item.qty * item.unitPrice * (1 - (item.discount || 0) / 100),
       })),
-      paymentType: formData.paymentType || 'cash',
+      paymentType: formData.paymentType || "cash",
       paidAmount: Number(formData.paidAmount) || 0,
       checkNumber: formData.checkNumber || null,
       transferRef: formData.transferRef || null,
-      status: formData.status || 'pending',
+      mixedPayments: formData.mixedPayments || [],
+      status: formData.status || "pending",
       totalAmount: computedTotal,
     };
 
@@ -223,7 +232,11 @@ export default function SaleNewPage() {
                 setShowErrors(false);
               }}
               onClear={() => setFormData({ customerId: "", customerName: "" })}
-              error={showErrors && !formData.customerId ? "انتخاب مشتری الزامی است" : null}
+              error={
+                showErrors && !formData.customerId
+                  ? "انتخاب مشتری الزامی است"
+                  : null
+              }
             />
 
             <SalePaymentSection
@@ -240,11 +253,7 @@ export default function SaleNewPage() {
             />
 
             <div className="flex gap-2">
-              <Button
-                type="submit"
-                className="flex-1 gap-2"
-                disabled={isBusy}
-              >
+              <Button type="submit" className="flex-1 gap-2" disabled={isBusy}>
                 <Save className="h-4 w-4" />
                 {isBusy ? "در حال ذخیره..." : "ذخیره فروش"}
               </Button>

@@ -44,7 +44,7 @@ export const purchasesMock = [
     supplierId: "1",
     supplierName: "ایران قطعه",
     invoiceNumber: "INV-2026-001",
-    invoiceDate: "2026-03-15", // 15 March 2026
+    invoiceDate: "2026-03-15",
     status: PURCHASE_STATUSES.RECEIVED,
     paymentType: PAYMENT_TYPES.CASH,
     paidAmount: 45000000,
@@ -78,7 +78,7 @@ export const purchasesMock = [
     supplierId: "2",
     supplierName: "لنت پارس موتور",
     invoiceNumber: "INV-2026-002",
-    invoiceDate: "2026-03-20", // 20 March 2026
+    invoiceDate: "2026-03-20",
     status: PURCHASE_STATUSES.SHIPPED,
     paymentType: PAYMENT_TYPES.CREDIT,
     paidAmount: 0,
@@ -112,7 +112,7 @@ export const purchasesMock = [
     supplierId: "3",
     supplierName: "پخش بلبرینگ مرکزی",
     invoiceNumber: "INV-2026-003",
-    invoiceDate: "2026-03-25", // 25 March 2026
+    invoiceDate: "2026-03-25",
     status: PURCHASE_STATUSES.PARTIALLY_RECEIVED,
     paymentType: PAYMENT_TYPES.CHECK,
     paidAmount: 50000000,
@@ -147,7 +147,7 @@ export const purchasesMock = [
     supplierId: "1",
     supplierName: "ایران قطعه",
     invoiceNumber: "INV-2026-004",
-    invoiceDate: "2026-03-28", // 28 March 2026
+    invoiceDate: "2026-03-28",
     status: PURCHASE_STATUSES.PENDING,
     paymentType: PAYMENT_TYPES.TRANSFER,
     paidAmount: 35000000,
@@ -182,12 +182,31 @@ export const purchasesMock = [
     supplierId: "2",
     supplierName: "لنت پارس موتور",
     invoiceNumber: "INV-2026-005",
-    invoiceDate: "2026-04-01", // 1 April 2026
+    invoiceDate: "2026-04-01",
     status: PURCHASE_STATUSES.RECEIVED,
     paymentType: PAYMENT_TYPES.MIXED,
     paidAmount: 60000000,
     totalAmount: 82500000,
-    description: "خرید کلاچ و دیسک کلاچ",
+    mixedPayments: [
+      {
+        id: "mp1",
+        type: "cash",
+        amount: 30000000,
+      },
+      {
+        id: "mp2",
+        type: "check",
+        amount: 20000000,
+        checkNumber: "1234567890",
+      },
+      {
+        id: "mp3",
+        type: "transfer",
+        amount: 10000000,
+        transferRef: "TRN-55667788",
+      },
+    ],
+    description: "خرید کلاچ و دیسک کلاچ - پرداخت ترکیبی",
     items: [
       {
         productId: "10",
@@ -207,7 +226,7 @@ export const purchasesMock = [
     supplierId: "1",
     supplierName: "ایران قطعه",
     invoiceNumber: "INV-2026-006",
-    invoiceDate: "2026-04-02", // 2 April 2026
+    invoiceDate: "2026-04-02",
     status: PURCHASE_STATUSES.CANCELLED,
     paymentType: PAYMENT_TYPES.CREDIT,
     paidAmount: 0,
@@ -268,7 +287,6 @@ function generateMorePurchases(count = 20) {
 
   const purchases = [];
   const baseDate = new Date("2026-01-01");
-  const usedProductIds = new Set();
 
   for (let i = 0; i < count; i++) {
     const supplier = suppliers[Math.floor(Math.random() * suppliers.length)];
@@ -280,16 +298,14 @@ function generateMorePurchases(count = 20) {
     const itemsCount = Math.floor(Math.random() * 5) + 1;
     const items = [];
     let totalAmount = 0;
-    const usedProductIds = new Set(); // ← برای جلوگیری از تکرار productId
+    const usedProductIds = new Set();
 
     for (let j = 0; j < itemsCount; j++) {
-      // محصولات استفاده‌نشده را پیدا کن
       const availableProducts = products.filter(
         (p) => !usedProductIds.has(p.id)
       );
-      if (availableProducts.length === 0) break; // اگر محصولی باقی نمانده، حلقه را متوقف کن
+      if (availableProducts.length === 0) break;
 
-      // انتخاب تصادفی از محصولات باقی‌مانده
       const randomIndex = Math.floor(Math.random() * availableProducts.length);
       const product = availableProducts[randomIndex];
       usedProductIds.add(product.id);
@@ -313,22 +329,52 @@ function generateMorePurchases(count = 20) {
 
     // محاسبه مبلغ پرداختی
     let paidAmount = 0;
+    let mixedPayments = null;
+
     if (paymentType === PAYMENT_TYPES.CREDIT) {
       paidAmount = 0;
     } else if (paymentType === PAYMENT_TYPES.MIXED) {
-      paidAmount = Math.floor(totalAmount * (0.3 + Math.random() * 0.4));
+      // برای پرداخت ترکیبی، چند روش پرداخت ایجاد می‌کنیم
+      const numPayments = Math.floor(Math.random() * 3) + 2; // 2 تا 4 روش پرداخت
+      mixedPayments = [];
+      let remainingAmount = totalAmount;
+      
+      for (let k = 0; k < numPayments; k++) {
+        const isLast = k === numPayments - 1;
+        const paymentAmount = isLast 
+          ? remainingAmount 
+          : Math.floor(remainingAmount * (0.2 + Math.random() * 0.4));
+        
+        const paymentTypes = ['cash', 'check', 'transfer'];
+        const randomType = paymentTypes[Math.floor(Math.random() * paymentTypes.length)];
+        
+        const payment = {
+          id: `mp${k + 1}`,
+          type: randomType,
+          amount: paymentAmount,
+        };
+        
+        if (randomType === 'check') {
+          payment.checkNumber = String(Math.floor(Math.random() * 9000000000) + 1000000000);
+        } else if (randomType === 'transfer') {
+          payment.transferRef = `TRN-${Math.floor(Math.random() * 90000000) + 10000000}`;
+        }
+        
+        mixedPayments.push(payment);
+        remainingAmount -= paymentAmount;
+        paidAmount += paymentAmount;
+      }
     } else {
       paidAmount = totalAmount;
     }
 
-    // تاریخ تصادفی در 6 ماه گذشته با فرمت میلادی (YYYY-MM-DD)
+    // تاریخ تصادفی در 6 ماه گذشته با فرمت میلادی
     const daysAgo = Math.floor(Math.random() * 180);
     const purchaseDate = new Date(baseDate);
     purchaseDate.setDate(purchaseDate.getDate() + daysAgo);
     
-    // استخراج سال، ماه و روز به صورت میلادی
     const year = purchaseDate.getFullYear();
-    const month = purchaseDate.getMonth() + 1; // ماه‌ها از 0 شروع می‌شوند
+    const month = purchaseDate.getMonth() + 1;
     const day = purchaseDate.getDate();
     const invoiceDate = formatDate(year, month, day);
 
@@ -361,6 +407,8 @@ function generateMorePurchases(count = 20) {
       purchase.transferRef = `TRN-${
         Math.floor(Math.random() * 90000000) + 10000000
       }`;
+    } else if (paymentType === PAYMENT_TYPES.MIXED && mixedPayments) {
+      purchase.mixedPayments = mixedPayments;
     }
 
     purchases.push(purchase);
