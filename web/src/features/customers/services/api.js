@@ -1,116 +1,81 @@
-import { allCustomers } from "./mockData";
+import { api } from "@/shared/lib/api";
 
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+function mapCustomer(c) {
+  const nameParts = (c.full_name || "").split(" ");
+  return {
+    id: String(c.id),
+    firstName: nameParts[0] || "",
+    lastName: nameParts.slice(1).join(" ") || "",
+    phone: c.phone || "",
+    email: "",
+    address: c.address || "",
+    postalCode: "",
+    nationalId: c.national_id || "",
+    type: c.type || "",
+    customerGrade: c.customer_grade || "",
+    referralCode: c.referral_code || "",
+    creditLimit: c.credit_limit || 0,
+    notes: c.notes || "",
+    balance: 0,
+    avatar: null,
+    coordinates: null,
+  };
+}
+
+function mapCustomerForCreate(data) {
+  const result = {
+    full_name: `${data.firstName || ""} ${data.lastName || ""}`.trim(),
+    phone: data.phone || "",
+    address: data.address || "",
+    national_id: data.nationalId || "",
+    type: data.type || "",
+    customer_grade: data.customerGrade || "",
+    referral_code: data.referralCode || "",
+    credit_limit: data.creditLimit || 0,
+    notes: data.notes || "",
+  };
+  Object.keys(result).forEach((k) => {
+    if (result[k] === "" || result[k] === undefined || result[k] === null) delete result[k];
+  });
+  return result;
+}
 
 export async function fetchCustomers({
   page = 1,
   limit = 10,
   search = "",
-  minBalance = "",
-  maxBalance = "",
   sortBy = "lastName",
   sortOrder = "asc",
 } = {}) {
-  await delay(500);
-
-  let result = [...allCustomers];
-
-  // جستجو روی نام کامل و کد مشتری
-  if (search) {
-    const q = search.toLowerCase();
-    result = result.filter(
-      (c) =>
-        `${c.firstName} ${c.lastName}`.toLowerCase().includes(q) ||
-        c.id.toString().toLowerCase().includes(q)
-    );
-  }
-
-  // محدوده بدهی/طلب
-  if (minBalance !== "" && minBalance !== undefined) {
-    result = result.filter((c) => c.balance >= Number(minBalance));
-  }
-  if (maxBalance !== "" && maxBalance !== undefined) {
-    result = result.filter((c) => c.balance <= Number(maxBalance));
-  }
-
-  // مرتب‌سازی
-  result.sort((a, b) => {
-    let aVal, bVal;
-
-    if (sortBy === "fullName") {
-      aVal = `${a.firstName} ${a.lastName}`;
-      bVal = `${b.firstName} ${b.lastName}`;
-    } else {
-      aVal = a[sortBy];
-      bVal = b[sortBy];
-    }
-
-    if (typeof aVal === "string") {
-      return sortOrder === "asc"
-        ? aVal.localeCompare(bVal, "fa")
-        : bVal.localeCompare(aVal, "fa");
-    }
-
-    return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
+  const res = await api.get("/api/customers", {
+    page,
+    page_size: limit,
+    search: search || undefined,
   });
-
-  const total = result.length;
-  const totalPages = Math.ceil(total / limit);
-  const items = result.slice((page - 1) * limit, page * limit);
-
-  return { items, total, page, totalPages };
+  return {
+    items: (res.data || []).map(mapCustomer),
+    total: res.meta?.total_count ?? 0,
+    page: res.meta?.page ?? 1,
+    totalPages: res.meta?.total_pages ?? 1,
+  };
 }
 
 export async function createCustomer(customerData) {
-  await delay(500); // شبیه‌سازی تاخیر شبکه
-
-  const newId = `${String(allCustomers.length + 1)}`;
-
-  const newCustomer = {
-    id: newId,
-    ...customerData,
-  };
-
-  // اضافه کردن به داده‌های موک (در واقعیت سمت سرور انجام می‌شود)
-  allCustomers.push(newCustomer);
-
-  return newCustomer;
+  const res = await api.post("/api/customers", mapCustomerForCreate(customerData));
+  return mapCustomer(res.data);
 }
 
-// گرفتن اطلاعات یک مشتری با ID
 export const getCustomerById = async (id) => {
-  // شبیه‌سازی تاخیر شبکه
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  const customer = allCustomers.find((c) => c.id == id);
-  if (!customer) {
-    throw new Error("مشتری یافت نشد");
-  }
-  return customer;
+  const res = await api.get(`/api/customers/${id}`);
+  return mapCustomer(res.data);
 };
 
-// ویرایش اطلاعات مشتری
 export const updateCustomer = async (id, updatedData) => {
-  await new Promise((resolve) => setTimeout(resolve, 800));
-
-  const index = allCustomers.findIndex((c) => c.id === id);
-  if (index === -1) {
-    throw new Error("مشتری یافت نشد");
-  }
-
-  // به‌روزرسانی در لیست موک شده
-  allCustomers[index] = { ...allCustomers[index], ...updatedData };
-  return allCustomers[index];
+  const res = await api.put(`/api/customers/${id}`, mapCustomerForCreate(updatedData));
+  return mapCustomer(res.data);
 };
 
 export const deleteCustomer = async (id) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  const index = allCustomers.findIndex((c) => c.id == id);
-  if (index === -1) {
-    throw new Error("مشتری یافت نشد");
-  }
-
-  allCustomers.splice(index, 1);
+  await api.delete(`/api/customers/${id}`);
   return { success: true, id };
 };

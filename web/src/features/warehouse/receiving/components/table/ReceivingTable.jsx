@@ -37,7 +37,7 @@ import { useNavigate } from "react-router-dom";
 import {
   PURCHASE_STATUS_LABELS,
   PAYMENT_TYPE_LABELS,
-} from "../../services/mockData";
+} from "@/features/purchases/services/constants";
 
 // ─── ثابت‌ها ─────────────────────────────────────────────────────────────────
 

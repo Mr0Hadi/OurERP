@@ -8,7 +8,7 @@ import { Label } from '@/shared/components/ui/label';
 import { Textarea } from '@/shared/components/ui/textarea';
 import { Badge } from '@/shared/components/ui/badge';
 import { Progress } from '@/shared/components/ui/progress';
-import { PURCHASE_STATUSES, PURCHASE_STATUS_LABELS } from '@/features/purchases/services/mockData';
+import { PURCHASE_STATUSES, PURCHASE_STATUS_LABELS } from '@/features/purchases/services/constants';
 
 // هم‌راستا با STATUS_CONFIG در PurchaseStatusSection، برای یکدستی رنگ‌بندی در کل پروژه
 const STATUS_CONFIG = {
