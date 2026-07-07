@@ -1,0 +1,357 @@
+package handler
+
+import (
+	"database/sql"
+	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/user/wms-backend/internal/database"
+	"github.com/user/wms-backend/internal/model"
+)
+
+type ProductHandler struct{}
+
+func NewProductHandler() *ProductHandler {
+	return &ProductHandler{}
+}
+
+func (h *ProductHandler) List(c *gin.Context) {
+	p := parsePagination(c)
+	query := "SELECT id, internal_code, supplier_code, barcode, name, COALESCE(brand,''), COALESCE(category,''), unit, reorder_threshold, cost_price, sale_price_retail, sale_price_wholesale, COALESCE(tax,0), image_url, is_active, created_at, updated_at FROM products WHERE 1=1"
+	args := []interface{}{}
+	argIdx := 1
+
+	if barcode := c.Query("barcode"); barcode != "" {
+		query += fmt.Sprintf(" AND barcode = $%d", argIdx)
+		args = append(args, barcode)
+		argIdx++
+	}
+	if code := c.Query("code"); code != "" {
+		query += fmt.Sprintf(" AND (internal_code ILIKE $%d OR supplier_code ILIKE $%d)", argIdx, argIdx)
+		args = append(args, "%"+code+"%")
+		argIdx++
+	}
+	if search := c.Query("search"); search != "" {
+		query += fmt.Sprintf(" AND (name ILIKE $%d OR internal_code ILIKE $%d OR barcode ILIKE $%d)", argIdx, argIdx, argIdx)
+		args = append(args, "%"+search+"%")
+		argIdx++
+	}
+	if brand := c.Query("brand"); brand != "" {
+		query += fmt.Sprintf(" AND brand ILIKE $%d", argIdx)
+		args = append(args, "%"+brand+"%")
+		argIdx++
+	}
+	if category := c.Query("category"); category != "" {
+		query += fmt.Sprintf(" AND category ILIKE $%d", argIdx)
+		args = append(args, "%"+category+"%")
+		argIdx++
+	}
+	if minPrice := c.Query("min_price"); minPrice != "" {
+		query += fmt.Sprintf(" AND cost_price >= $%d", argIdx)
+		args = append(args, minPrice)
+		argIdx++
+	}
+	if maxPrice := c.Query("max_price"); maxPrice != "" {
+		query += fmt.Sprintf(" AND cost_price <= $%d", argIdx)
+		args = append(args, maxPrice)
+		argIdx++
+	}
+	if c.Query("include_inactive") != "true" {
+		query += " AND is_active = true"
+	}
+
+	var totalCount int
+	countQuery := "SELECT COUNT(*) FROM products WHERE 1=1"
+	countArgs := []interface{}{}
+	countIdx := 1
+	if search := c.Query("search"); search != "" {
+		countQuery += fmt.Sprintf(" AND (name ILIKE $%d OR internal_code ILIKE $%d OR barcode ILIKE $%d)", countIdx, countIdx, countIdx)
+		countArgs = append(countArgs, "%"+search+"%")
+		countIdx++
+	}
+	if brand := c.Query("brand"); brand != "" {
+		countQuery += fmt.Sprintf(" AND brand ILIKE $%d", countIdx)
+		countArgs = append(countArgs, "%"+brand+"%")
+		countIdx++
+	}
+	if category := c.Query("category"); category != "" {
+		countQuery += fmt.Sprintf(" AND category ILIKE $%d", countIdx)
+		countArgs = append(countArgs, "%"+category+"%")
+		countIdx++
+	}
+	if minPrice := c.Query("min_price"); minPrice != "" {
+		countQuery += fmt.Sprintf(" AND cost_price >= $%d", countIdx)
+		countArgs = append(countArgs, minPrice)
+		countIdx++
+	}
+	if maxPrice := c.Query("max_price"); maxPrice != "" {
+		countQuery += fmt.Sprintf(" AND cost_price <= $%d", countIdx)
+		countArgs = append(countArgs, maxPrice)
+		countIdx++
+	}
+	if c.Query("include_inactive") != "true" {
+		countQuery += " AND is_active = true"
+	}
+	database.DB.QueryRow(countQuery, countArgs...).Scan(&totalCount)
+
+	offset := (p.Page - 1) * p.PageSize
+	query += fmt.Sprintf(" ORDER BY id DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
+	args = append(args, p.PageSize, offset)
+
+	rows, err := database.DB.Query(query, args...)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "database error")
+		return
+	}
+	defer rows.Close()
+
+	products := []model.Product{}
+	for rows.Next() {
+		var pr model.Product
+		var brand, category sql.NullString
+		if err := rows.Scan(&pr.ID, &pr.InternalCode, &pr.SupplierCode, &pr.Barcode, &pr.Name, &brand, &category, &pr.Unit, &pr.ReorderThreshold, &pr.CostPrice, &pr.SalePriceRetail, &pr.SalePriceWholesale, &pr.Tax, &pr.ImageURL, &pr.IsActive, &pr.CreatedAt, &pr.UpdatedAt); err != nil {
+			respondError(c, http.StatusInternalServerError, "scan error")
+			return
+		}
+		pr.Brand = brand.String
+		pr.Category = category.String
+		products = append(products, pr)
+	}
+
+	resp := make([]model.ProductResponse, len(products))
+	for i, pr := range products {
+		stock := h.getCurrentStock(pr.ID)
+		resp[i] = model.ProductResponse{
+			ID:                 pr.ID,
+			InternalCode:       pr.InternalCode,
+			SupplierCode:       pr.SupplierCode,
+			Barcode:            pr.BarcodeValue(),
+			Name:               pr.Name,
+			Brand:              pr.Brand,
+			Category:           pr.Category,
+			Unit:               pr.Unit,
+			ReorderThreshold:   pr.ReorderThreshold,
+			CostPrice:          pr.CostPrice,
+			SalePriceRetail:    pr.SalePriceRetail,
+			SalePriceWholesale: pr.SalePriceWholesale,
+			Tax:                pr.Tax,
+			ImageURL:           pr.ImageURLValue(),
+			IsActive:           pr.IsActive,
+			CurrentStock:       stock,
+			CreatedAt:          pr.CreatedAt.Format(time.RFC3339),
+			UpdatedAt:          pr.UpdatedAt.Format(time.RFC3339),
+		}
+	}
+
+	respondJSONWithMeta(c, http.StatusOK, resp, paginatedMeta(p.Page, p.PageSize, totalCount))
+}
+
+func (h *ProductHandler) Get(c *gin.Context) {
+	id, err := parseIntParam(c, "id")
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "invalid id")
+		return
+	}
+	var pr model.Product
+	err = database.DB.QueryRow(
+		"SELECT id, internal_code, supplier_code, barcode, name, COALESCE(brand,''), COALESCE(category,''), unit, reorder_threshold, cost_price, sale_price_retail, sale_price_wholesale, COALESCE(tax,0), image_url, is_active, created_at, updated_at FROM products WHERE id = $1", id,
+	).Scan(&pr.ID, &pr.InternalCode, &pr.SupplierCode, &pr.Barcode, &pr.Name, &pr.Brand, &pr.Category, &pr.Unit, &pr.ReorderThreshold, &pr.CostPrice, &pr.SalePriceRetail, &pr.SalePriceWholesale, &pr.Tax, &pr.ImageURL, &pr.IsActive, &pr.CreatedAt, &pr.UpdatedAt)
+	if err == sql.ErrNoRows {
+		respondError(c, http.StatusNotFound, "product not found")
+		return
+	}
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "database error")
+		return
+	}
+	stock := h.getCurrentStock(pr.ID)
+	resp := model.ProductResponse{
+		ID:                 pr.ID,
+		InternalCode:       pr.InternalCode,
+		SupplierCode:       pr.SupplierCode,
+		Barcode:            pr.BarcodeValue(),
+		Name:               pr.Name,
+		Brand:              pr.Brand,
+		Category:           pr.Category,
+		Unit:               pr.Unit,
+		ReorderThreshold:   pr.ReorderThreshold,
+		CostPrice:          pr.CostPrice,
+		SalePriceRetail:    pr.SalePriceRetail,
+		SalePriceWholesale: pr.SalePriceWholesale,
+		Tax:                pr.Tax,
+		ImageURL:           pr.ImageURLValue(),
+		IsActive:           pr.IsActive,
+		CurrentStock:       stock,
+		CreatedAt:          pr.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:          pr.UpdatedAt.Format(time.RFC3339),
+	}
+	respondJSON(c, http.StatusOK, resp)
+}
+
+type productRequest struct {
+	InternalCode       string  `json:"internal_code"`
+	SupplierCode       string  `json:"supplier_code"`
+	Barcode            string  `json:"barcode,omitempty"`
+	Name               string  `json:"name"`
+	Brand              string  `json:"brand"`
+	Category           string  `json:"category"`
+	Unit               string  `json:"unit"`
+	ReorderThreshold   float64 `json:"reorder_threshold"`
+	CostPrice          float64 `json:"cost_price"`
+	SalePriceRetail    float64 `json:"sale_price_retail"`
+	SalePriceWholesale float64 `json:"sale_price_wholesale"`
+	Tax                float64 `json:"tax"`
+	ImageURL           string  `json:"image_url,omitempty"`
+}
+
+func (h *ProductHandler) Create(c *gin.Context) {
+	var req productRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.InternalCode == "" || req.Name == "" {
+		respondError(c, http.StatusBadRequest, "internal_code and name are required")
+		return
+	}
+	if req.Unit == "" {
+		req.Unit = "piece"
+	}
+	var pr model.Product
+	err := database.DB.QueryRow(
+		`INSERT INTO products (internal_code, supplier_code, barcode, name, brand, category, unit, reorder_threshold, cost_price, sale_price_retail, sale_price_wholesale, tax, image_url)
+		 VALUES ($1, $2, NULLIF($3,''), $4, $5, $6, $7, $8, $9, $10, $11, $12, NULLIF($13,'')) RETURNING id, created_at, updated_at`,
+		req.InternalCode, req.SupplierCode, req.Barcode, req.Name, req.Brand, req.Category, req.Unit, req.ReorderThreshold, req.CostPrice, req.SalePriceRetail, req.SalePriceWholesale, req.Tax, req.ImageURL,
+	).Scan(&pr.ID, &pr.CreatedAt, &pr.UpdatedAt)
+	if err != nil {
+		if strings.Contains(err.Error(), "unique") {
+			respondError(c, http.StatusConflict, "internal_code already exists")
+			return
+		}
+		respondError(c, http.StatusInternalServerError, "database error")
+		return
+	}
+	pr.InternalCode = req.InternalCode
+	pr.SupplierCode = req.SupplierCode
+	pr.Name = req.Name
+	pr.Brand = req.Brand
+	pr.Category = req.Category
+	pr.Unit = req.Unit
+	pr.ReorderThreshold = req.ReorderThreshold
+	pr.CostPrice = req.CostPrice
+	pr.SalePriceRetail = req.SalePriceRetail
+	pr.SalePriceWholesale = req.SalePriceWholesale
+	pr.Tax = req.Tax
+	pr.IsActive = true
+	respondJSON(c, http.StatusCreated, pr)
+}
+
+func (h *ProductHandler) Update(c *gin.Context) {
+	id, err := parseIntParam(c, "id")
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "invalid id")
+		return
+	}
+	var req productRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	result, err := database.DB.Exec(
+		`UPDATE products SET internal_code=$1, supplier_code=$2, barcode=NULLIF($3,''), name=$4, brand=$5, category=$6, unit=$7, reorder_threshold=$8, cost_price=$9, sale_price_retail=$10, sale_price_wholesale=$11, tax=$12, image_url=NULLIF($13,''), updated_at=NOW() WHERE id=$14`,
+		req.InternalCode, req.SupplierCode, req.Barcode, req.Name, req.Brand, req.Category, req.Unit, req.ReorderThreshold, req.CostPrice, req.SalePriceRetail, req.SalePriceWholesale, req.Tax, req.ImageURL, id,
+	)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "database error")
+		return
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		respondError(c, http.StatusNotFound, "product not found")
+		return
+	}
+	respondJSON(c, http.StatusOK, gin.H{"message": "updated"})
+}
+
+func (h *ProductHandler) Delete(c *gin.Context) {
+	id, err := parseIntParam(c, "id")
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "invalid id")
+		return
+	}
+	result, err := database.DB.Exec("UPDATE products SET is_active=false, updated_at=NOW() WHERE id=$1", id)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "database error")
+		return
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		respondError(c, http.StatusNotFound, "product not found")
+		return
+	}
+	respondJSON(c, http.StatusOK, gin.H{"message": "deleted"})
+}
+
+func (h *ProductHandler) BarcodeLookup(c *gin.Context) {
+	barcode := c.Param("barcode")
+	var pr model.Product
+	err := database.DB.QueryRow(
+		"SELECT id, internal_code, supplier_code, barcode, name, COALESCE(brand,''), COALESCE(category,''), unit, reorder_threshold, cost_price, sale_price_retail, sale_price_wholesale, COALESCE(tax,0), image_url, is_active, created_at, updated_at FROM products WHERE barcode = $1 AND is_active = true", barcode,
+	).Scan(&pr.ID, &pr.InternalCode, &pr.SupplierCode, &pr.Barcode, &pr.Name, &pr.Brand, &pr.Category, &pr.Unit, &pr.ReorderThreshold, &pr.CostPrice, &pr.SalePriceRetail, &pr.SalePriceWholesale, &pr.Tax, &pr.ImageURL, &pr.IsActive, &pr.CreatedAt, &pr.UpdatedAt)
+	if err == sql.ErrNoRows {
+		respondError(c, http.StatusNotFound, "product not found")
+		return
+	}
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "database error")
+		return
+	}
+	respondJSON(c, http.StatusOK, pr)
+}
+
+func (h *ProductHandler) LowStock(c *gin.Context) {
+	rows, err := database.DB.Query(`
+		SELECT p.id, p.internal_code, p.name, COALESCE(SUM(sm.quantity), 0) as current_stock, p.reorder_threshold
+		FROM products p
+		LEFT JOIN stock_movements sm ON sm.product_id = p.id
+		WHERE p.is_active = true
+		GROUP BY p.id, p.internal_code, p.name, p.reorder_threshold
+		HAVING COALESCE(SUM(sm.quantity), 0) <= p.reorder_threshold
+		ORDER BY current_stock ASC
+	`)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "database error")
+		return
+	}
+	defer rows.Close()
+
+	type LowStockItem struct {
+		ProductID        int     `json:"product_id"`
+		InternalCode     string  `json:"internal_code"`
+		Name             string  `json:"name"`
+		CurrentStock     float64 `json:"current_stock"`
+		ReorderThreshold float64 `json:"reorder_threshold"`
+	}
+
+	items := []LowStockItem{}
+	for rows.Next() {
+		var item LowStockItem
+		if err := rows.Scan(&item.ProductID, &item.InternalCode, &item.Name, &item.CurrentStock, &item.ReorderThreshold); err != nil {
+			continue
+		}
+		items = append(items, item)
+	}
+	respondJSON(c, http.StatusOK, items)
+}
+
+func (h *ProductHandler) getCurrentStock(productID int) float64 {
+	var stock sql.NullFloat64
+	database.DB.QueryRow("SELECT SUM(quantity) FROM stock_movements WHERE product_id = $1", productID).Scan(&stock)
+	if stock.Valid {
+		return stock.Float64
+	}
+	return 0
+}

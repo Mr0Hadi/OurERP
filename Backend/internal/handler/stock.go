@@ -1,0 +1,92 @@
+package handler
+
+import (
+	"database/sql"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/user/wms-backend/internal/database"
+)
+
+type StockHandler struct{}
+
+func NewStockHandler() *StockHandler {
+	return &StockHandler{}
+}
+
+func (h *StockHandler) CurrentLevels(c *gin.Context) {
+	rows, err := database.DB.Query(`
+		SELECT p.id, p.internal_code, p.name, COALESCE(SUM(sm.quantity), 0) as current_stock, p.reorder_threshold,
+			CASE WHEN COALESCE(SUM(sm.quantity), 0) <= p.reorder_threshold THEN true ELSE false END as is_low_stock
+		FROM products p
+		LEFT JOIN stock_movements sm ON sm.product_id = p.id
+		WHERE p.is_active = true
+		GROUP BY p.id, p.internal_code, p.name, p.reorder_threshold
+		ORDER BY p.internal_code
+	`)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "database error")
+		return
+	}
+	defer rows.Close()
+
+	type StockItem struct {
+		ProductID        int     `json:"product_id"`
+		InternalCode     string  `json:"internal_code"`
+		Name             string  `json:"name"`
+		CurrentStock     float64 `json:"current_stock"`
+		ReorderThreshold float64 `json:"reorder_threshold"`
+		IsLowStock       bool    `json:"is_low_stock"`
+	}
+
+	items := []StockItem{}
+	for rows.Next() {
+		var item StockItem
+		if err := rows.Scan(&item.ProductID, &item.InternalCode, &item.Name, &item.CurrentStock, &item.ReorderThreshold, &item.IsLowStock); err != nil {
+			continue
+		}
+		items = append(items, item)
+	}
+	respondJSON(c, http.StatusOK, items)
+}
+
+func (h *StockHandler) ProductHistory(c *gin.Context) {
+	productID, err := parseIntParam(c, "product_id")
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "invalid product_id")
+		return
+	}
+
+	type MovementItem struct {
+		ID           int     `json:"id"`
+		Quantity     float64 `json:"quantity"`
+		MovementType string  `json:"movement_type"`
+		ReferenceID  *int    `json:"reference_id,omitempty"`
+		ReferenceType string `json:"reference_type,omitempty"`
+		PerformedBy  int     `json:"performed_by"`
+		CreatedAt    string  `json:"created_at"`
+	}
+
+	rows, err := database.DB.Query(
+		"SELECT id, quantity, movement_type, reference_id, reference_type, performed_by, created_at FROM stock_movements WHERE product_id = $1 ORDER BY created_at DESC", productID,
+	)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "database error")
+		return
+	}
+	defer rows.Close()
+
+	items := []MovementItem{}
+	for rows.Next() {
+		var item MovementItem
+		var refID sql.NullInt64
+		var createdAt sql.NullString
+		if err := rows.Scan(&item.ID, &item.Quantity, &item.MovementType, &refID, &item.ReferenceType, &item.PerformedBy, &createdAt); err != nil {
+			continue
+		}
+		if refID.Valid { v := int(refID.Int64); item.ReferenceID = &v }
+		if createdAt.Valid { item.CreatedAt = createdAt.String }
+		items = append(items, item)
+	}
+	respondJSON(c, http.StatusOK, items)
+}
