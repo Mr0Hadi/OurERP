@@ -5,7 +5,7 @@ import { ROUTES } from "@/shared/constants/routes";
 
 import AppLayout from "../layouts/AppLayout";
 import AuthLayout from "../layouts/AuthLayout";
-// import { protectedLoader } from "./protectedLoader";
+import RequireAuth from "./RequireAuth";
 import NotFoundPage from "../layouts/NotFoundPage";
 
 // ایمپورت routes از فیچرها
@@ -30,8 +30,11 @@ export const router = createBrowserRouter([
   },
   {
     path: ROUTES.ROOT,
-    element: <AppLayout />,
-    // loader: protectedLoader,
+    element: (
+      <RequireAuth>
+        <AppLayout />
+      </RequireAuth>
+    ),
     errorElement: <NotFoundPage />,
     children: [
       ...dashboardRoutes,

@@ -1,4 +1,5 @@
 import { useAuthStore } from "@/features/auth/store/authStore";
+import { translateError } from "./errorMessages";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
@@ -37,7 +38,7 @@ async function request(endpoint, { method = "GET", body, params } = {}) {
   }
 
   if (!res.ok) {
-    throw new Error(json.error || `Request failed (${res.status})`);
+    throw new Error(translateError(json.error) || `خطای درخواست (${res.status})`);
   }
 
   return json;
