@@ -2,7 +2,9 @@ package handler
 
 import (
 	"database/sql"
+	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -73,6 +75,31 @@ func (h *AuthHandler) Login(c *gin.Context) {
 }
 
 func (h *AuthHandler) Refresh(c *gin.Context) {
+	// Check access token from Authorization header
+	authHeader := c.GetHeader("Authorization")
+	accessTokenValid := false
+	if authHeader != "" {
+		parts := strings.SplitN(authHeader, " ", 2)
+		if len(parts) == 2 && parts[0] == "Bearer" {
+			accessClaims := &middleware.Claims{}
+			_, err := jwt.ParseWithClaims(parts[1], accessClaims, func(t *jwt.Token) (interface{}, error) {
+				return []byte(h.Config.JWTSecret), nil
+			})
+			if err == nil {
+				accessTokenValid = true
+			} else if !errors.Is(err, jwt.ErrTokenExpired) {
+				respondError(c, http.StatusBadRequest, "توکن دسترسی نامعتبر است")
+				return
+			}
+		}
+	}
+
+	if accessTokenValid {
+		respondError(c, http.StatusBadRequest, "توکن دسترسی هنوز معتبر است")
+		return
+	}
+
+	// Access token is expired or missing — try refresh token
 	var req struct {
 		RefreshToken string `json:"refresh_token"`
 	}
@@ -80,20 +107,30 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
-	claims := &middleware.Claims{}
-	token, err := jwt.ParseWithClaims(req.RefreshToken, claims, func(t *jwt.Token) (interface{}, error) {
+	refreshClaims := &middleware.Claims{}
+	refreshToken, err := jwt.ParseWithClaims(req.RefreshToken, refreshClaims, func(t *jwt.Token) (interface{}, error) {
 		return []byte(h.Config.JWTSecret), nil
 	})
-	if err != nil || !token.Valid {
-		respondError(c, http.StatusUnauthorized, "توکن تازه‌سازی نامعتبر است")
+	if err != nil || !refreshToken.Valid {
+		respondError(c, http.StatusUnauthorized, "توکن تازه‌سازی منقضی شده است")
 		return
 	}
-	accessToken, err := middleware.GenerateToken(claims.UserID, claims.Role, claims.Department, h.Config.JWTSecret, h.Config.JWTAccessExpiry)
+
+	// Generate both new tokens
+	newAccessToken, err := middleware.GenerateToken(refreshClaims.UserID, refreshClaims.Role, refreshClaims.Department, h.Config.JWTSecret, h.Config.JWTAccessExpiry)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "خطا در تولید توکن")
 		return
 	}
-	respondJSON(c, http.StatusOK, gin.H{"access_token": accessToken})
+	newRefreshToken, err := middleware.GenerateToken(refreshClaims.UserID, refreshClaims.Role, refreshClaims.Department, h.Config.JWTSecret, h.Config.JWTRefreshExpiry)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "خطا در تولید توکن تازه‌سازی")
+		return
+	}
+	respondJSON(c, http.StatusOK, gin.H{
+		"access_token":  newAccessToken,
+		"refresh_token": newRefreshToken,
+	})
 }
 
 func (h *AuthHandler) Logout(c *gin.Context) {

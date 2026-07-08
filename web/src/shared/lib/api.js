@@ -8,6 +8,20 @@ const apiClient = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+let isRefreshing = false;
+let failedQueue = [];
+
+function processQueue(error) {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve();
+    }
+  });
+  failedQueue = [];
+}
+
 apiClient.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token;
   if (token) {
@@ -18,7 +32,60 @@ apiClient.interceptors.request.use((config) => {
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry
+    ) {
+      const { refreshToken, setTokens, logout } = useAuthStore.getState();
+
+      if (!refreshToken) {
+        logout();
+        window.location.href = "/auth/login";
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then(() => apiClient(originalRequest));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const { default: axiosStatic } = await import("axios");
+        const res = await axiosStatic.post(
+          `${BASE_URL}/auth/refresh`,
+          { refresh_token: refreshToken },
+          {
+            headers: {
+              Authorization: `Bearer ${useAuthStore.getState().token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        const { access_token, refresh_token } = res.data.data;
+        setTokens(access_token, refresh_token);
+
+        processQueue(null);
+
+        originalRequest.headers.Authorization = `Bearer ${access_token}`;
+        return apiClient(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError);
+        logout();
+        window.location.href = "/auth/login";
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
     if (error.response) {
       const message =
         error.response.data?.error ||
