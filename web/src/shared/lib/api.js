@@ -1,47 +1,55 @@
+import axios from "axios";
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { translateError } from "./errorMessages";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
-function getAuthHeaders() {
+const apiClient = axios.create({
+  baseURL: BASE_URL,
+  headers: { "Content-Type": "application/json" },
+});
+
+apiClient.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token;
-  if (!token) return {};
-  return { Authorization: `Bearer ${token}` };
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response) {
+      const message =
+        translateError(error.response.data?.error) ||
+        `خطای درخواست (${error.response.status})`;
+      return Promise.reject(new Error(message));
+    }
+    return Promise.reject(error);
+  }
+);
+
+function buildParams(params) {
+  const filtered = {};
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== "") {
+      filtered[key] = value;
+    }
+  }
+  return filtered;
 }
 
 async function request(endpoint, { method = "GET", body, params } = {}) {
-  const url = new URL(`${BASE_URL}${endpoint}`);
+  const config = { method, url: endpoint };
   if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== "") {
-        url.searchParams.set(key, String(value));
-      }
-    });
+    config.params = buildParams(params);
   }
-
-  const headers = {
-    "Content-Type": "application/json",
-    ...getAuthHeaders(),
-  };
-
-  const res = await fetch(url.toString(), {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-
-  let json;
-  try {
-    json = await res.json();
-  } catch {
-    throw new Error(`Request failed (${res.status})`);
+  if (body) {
+    config.data = body;
   }
-
-  if (!res.ok) {
-    throw new Error(translateError(json.error) || `خطای درخواست (${res.status})`);
-  }
-
-  return json;
+  const response = await apiClient(config);
+  return response.data;
 }
 
 export const api = {
