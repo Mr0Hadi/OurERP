@@ -65,7 +65,7 @@ func (h *ReceivingHandler) List(c *gin.Context) {
 
 	rows, err := database.DB.Query(query, args...)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	defer rows.Close()
@@ -76,7 +76,7 @@ func (h *ReceivingHandler) List(c *gin.Context) {
 		var poID sql.NullInt64
 		var supplierName, warehouseLocation, notes sql.NullString
 		if err := rows.Scan(&r.ID, &poID, &supplierName, &warehouseLocation, &r.ReceivedDate, &r.Status, &notes, &r.CreatedBy, &r.CreatedAt, &r.UpdatedAt); err != nil {
-			respondError(c, http.StatusInternalServerError, "scan error")
+			respondError(c, http.StatusInternalServerError, "خطا در خواندن اطلاعات")
 			return
 		}
 		r.SupplierName = supplierName.String
@@ -100,7 +100,7 @@ func (h *ReceivingHandler) List(c *gin.Context) {
 func (h *ReceivingHandler) Get(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	var r model.Receiving
@@ -113,11 +113,11 @@ func (h *ReceivingHandler) Get(c *gin.Context) {
 	r.WarehouseLocation = warehouseLocation.String
 	r.Notes = notes.String
 	if err == sql.ErrNoRows {
-		respondError(c, http.StatusNotFound, "receiving not found")
+		respondError(c, http.StatusNotFound, "رسید انبار یافت نشد")
 		return
 	}
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	if poID.Valid {
@@ -132,7 +132,7 @@ func (h *ReceivingHandler) Get(c *gin.Context) {
 func (h *ReceivingHandler) Create(c *gin.Context) {
 	var r model.Receiving
 	if err := c.ShouldBindJSON(&r); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 	userID := getUserID(c)
@@ -143,7 +143,7 @@ func (h *ReceivingHandler) Create(c *gin.Context) {
 
 	tx, err := database.DB.Begin()
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "transaction error")
+		respondError(c, http.StatusInternalServerError, "خطا در انجام تراکنش")
 		return
 	}
 	defer tx.Rollback()
@@ -159,7 +159,7 @@ func (h *ReceivingHandler) Create(c *gin.Context) {
 		poID, r.SupplierName, r.WarehouseLocation, r.ReceivedDate, r.Status, r.Notes, userID,
 	).Scan(&r.ID, &r.CreatedAt, &r.UpdatedAt)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 
@@ -169,13 +169,13 @@ func (h *ReceivingHandler) Create(c *gin.Context) {
 			r.ID, item.ProductID, item.ProductCode, item.ProductName, item.ExpectedQty, item.ReceivedQty, item.Condition, item.Notes,
 		)
 		if err != nil {
-			respondError(c, http.StatusInternalServerError, "failed to insert item")
+			respondError(c, http.StatusInternalServerError, "خطا در ثبت آیتم")
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		respondError(c, http.StatusInternalServerError, "commit error")
+		respondError(c, http.StatusInternalServerError, "خطا در ثبت تغییرات")
 		return
 	}
 
@@ -185,19 +185,19 @@ func (h *ReceivingHandler) Create(c *gin.Context) {
 func (h *ReceivingHandler) Update(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 
 	var r model.Receiving
 	if err := c.ShouldBindJSON(&r); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 
 	tx, err := database.DB.Begin()
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "transaction error")
+		respondError(c, http.StatusInternalServerError, "خطا در انجام تراکنش")
 		return
 	}
 	defer tx.Rollback()
@@ -212,7 +212,7 @@ func (h *ReceivingHandler) Update(c *gin.Context) {
 		poID, r.SupplierName, r.WarehouseLocation, r.ReceivedDate, r.Status, r.Notes, id,
 	)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 
@@ -223,17 +223,17 @@ func (h *ReceivingHandler) Update(c *gin.Context) {
 			id, item.ProductID, item.ProductCode, item.ProductName, item.ExpectedQty, item.ReceivedQty, item.Condition, item.Notes,
 		)
 		if err != nil {
-			respondError(c, http.StatusInternalServerError, "failed to insert item")
+			respondError(c, http.StatusInternalServerError, "خطا در ثبت آیتم")
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		respondError(c, http.StatusInternalServerError, "commit error")
+		respondError(c, http.StatusInternalServerError, "خطا در ثبت تغییرات")
 		return
 	}
 
-	respondJSON(c, http.StatusOK, gin.H{"message": "updated"})
+	respondJSON(c, http.StatusOK, gin.H{"message": "به‌روزرسانی شد"})
 }
 
 func (h *ReceivingHandler) getItems(receivingID int) ([]model.ReceivingItem, error) {

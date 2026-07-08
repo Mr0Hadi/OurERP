@@ -25,7 +25,7 @@ func (h *StockHandler) CurrentLevels(c *gin.Context) {
 		ORDER BY p.internal_code
 	`)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	defer rows.Close()
@@ -53,7 +53,7 @@ func (h *StockHandler) CurrentLevels(c *gin.Context) {
 func (h *StockHandler) ProductHistory(c *gin.Context) {
 	productID, err := parseIntParam(c, "product_id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid product_id")
+		respondError(c, http.StatusBadRequest, "شناسه کالا نامعتبر است")
 		return
 	}
 
@@ -71,7 +71,7 @@ func (h *StockHandler) ProductHistory(c *gin.Context) {
 		"SELECT id, quantity, movement_type, reference_id, reference_type, performed_by, created_at FROM stock_movements WHERE product_id = $1 ORDER BY created_at DESC", productID,
 	)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	defer rows.Close()

@@ -28,7 +28,7 @@ type loginRequest struct {
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req loginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 	var userID int
@@ -38,25 +38,25 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		req.Username,
 	).Scan(&userID, &fullName, &username, &passwordHash, &role, &department)
 	if err == sql.ErrNoRows {
-		respondError(c, http.StatusUnauthorized, "invalid credentials")
+		respondError(c, http.StatusUnauthorized, "نام کاربری یا رمز عبور اشتباه است")
 		return
 	}
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(req.Password)); err != nil {
-		respondError(c, http.StatusUnauthorized, "invalid credentials")
+		respondError(c, http.StatusUnauthorized, "نام کاربری یا رمز عبور اشتباه است")
 		return
 	}
 	accessToken, err := middleware.GenerateToken(userID, role, department, h.Config.JWTSecret, h.Config.JWTAccessExpiry)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "failed to generate token")
+		respondError(c, http.StatusInternalServerError, "خطا در تولید توکن")
 		return
 	}
 	refreshToken, err := middleware.GenerateToken(userID, role, department, h.Config.JWTSecret, h.Config.JWTRefreshExpiry)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "failed to generate refresh token")
+		respondError(c, http.StatusInternalServerError, "خطا در تولید توکن تازه‌سازی")
 		return
 	}
 	respondJSON(c, http.StatusOK, gin.H{
@@ -77,7 +77,7 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 		RefreshToken string `json:"refresh_token"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 	claims := &middleware.Claims{}
@@ -85,17 +85,17 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 		return []byte(h.Config.JWTSecret), nil
 	})
 	if err != nil || !token.Valid {
-		respondError(c, http.StatusUnauthorized, "invalid refresh token")
+		respondError(c, http.StatusUnauthorized, "توکن تازه‌سازی نامعتبر است")
 		return
 	}
 	accessToken, err := middleware.GenerateToken(claims.UserID, claims.Role, claims.Department, h.Config.JWTSecret, h.Config.JWTAccessExpiry)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "failed to generate token")
+		respondError(c, http.StatusInternalServerError, "خطا در تولید توکن")
 		return
 	}
 	respondJSON(c, http.StatusOK, gin.H{"access_token": accessToken})
 }
 
 func (h *AuthHandler) Logout(c *gin.Context) {
-	respondJSON(c, http.StatusOK, gin.H{"message": "logged out successfully"})
+	respondJSON(c, http.StatusOK, gin.H{"message": "با موفقیت خارج شدید"})
 }

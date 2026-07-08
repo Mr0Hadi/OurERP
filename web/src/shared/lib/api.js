@@ -1,6 +1,5 @@
 import axios from "axios";
 import { useAuthStore } from "@/features/auth/store/authStore";
-import { translateError } from "./errorMessages";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
@@ -22,7 +21,7 @@ apiClient.interceptors.response.use(
   (error) => {
     if (error.response) {
       const message =
-        translateError(error.response.data?.error) ||
+        error.response.data?.error ||
         `خطای درخواست (${error.response.status})`;
       return Promise.reject(new Error(message));
     }

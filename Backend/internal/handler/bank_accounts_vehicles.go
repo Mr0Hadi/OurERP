@@ -18,7 +18,7 @@ func NewBankAccountHandler() *BankAccountHandler {
 func (h *BankAccountHandler) List(c *gin.Context) {
 	rows, err := database.DB.Query("SELECT id, account_name, bank_name, account_number, is_active, created_at, updated_at FROM bank_accounts WHERE is_active = true ORDER BY id")
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	defer rows.Close()
@@ -40,11 +40,11 @@ func (h *BankAccountHandler) List(c *gin.Context) {
 func (h *BankAccountHandler) Create(c *gin.Context) {
 	var a model.BankAccount
 	if err := c.ShouldBindJSON(&a); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 	if a.AccountName == "" || a.BankName == "" || a.AccountNumber == "" {
-		respondError(c, http.StatusBadRequest, "account_name, bank_name, account_number are required")
+		respondError(c, http.StatusBadRequest, "نام حساب، نام بانک و شماره حساب الزامی هستند")
 		return
 	}
 	err := database.DB.QueryRow(
@@ -52,7 +52,7 @@ func (h *BankAccountHandler) Create(c *gin.Context) {
 		a.AccountName, a.BankName, a.AccountNumber,
 	).Scan(&a.ID, &a.CreatedAt, &a.UpdatedAt)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	a.IsActive = true
@@ -62,12 +62,12 @@ func (h *BankAccountHandler) Create(c *gin.Context) {
 func (h *BankAccountHandler) Update(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	var a model.BankAccount
 	if err := c.ShouldBindJSON(&a); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 	result, err := database.DB.Exec(
@@ -75,15 +75,15 @@ func (h *BankAccountHandler) Update(c *gin.Context) {
 		a.AccountName, a.BankName, a.AccountNumber, a.IsActive, id,
 	)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
-		respondError(c, http.StatusNotFound, "bank account not found")
+		respondError(c, http.StatusNotFound, "حساب بانکی یافت نشد")
 		return
 	}
-	respondJSON(c, http.StatusOK, gin.H{"message": "updated"})
+	respondJSON(c, http.StatusOK, gin.H{"message": "به‌روزرسانی شد"})
 }
 
 type VehicleHandler struct{}
@@ -95,7 +95,7 @@ func NewVehicleHandler() *VehicleHandler {
 func (h *VehicleHandler) List(c *gin.Context) {
 	rows, err := database.DB.Query("SELECT id, code, description, created_at, updated_at FROM vehicles ORDER BY id")
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	defer rows.Close()
@@ -116,11 +116,11 @@ func (h *VehicleHandler) List(c *gin.Context) {
 func (h *VehicleHandler) Create(c *gin.Context) {
 	var v model.Vehicle
 	if err := c.ShouldBindJSON(&v); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 	if v.Code == "" {
-		respondError(c, http.StatusBadRequest, "code is required")
+		respondError(c, http.StatusBadRequest, "کد الزامی است")
 		return
 	}
 	err := database.DB.QueryRow(
@@ -128,7 +128,7 @@ func (h *VehicleHandler) Create(c *gin.Context) {
 		v.Code, v.Description,
 	).Scan(&v.ID, &v.CreatedAt, &v.UpdatedAt)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	respondJSON(c, http.StatusCreated, v)
@@ -137,12 +137,12 @@ func (h *VehicleHandler) Create(c *gin.Context) {
 func (h *VehicleHandler) Update(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	var v model.Vehicle
 	if err := c.ShouldBindJSON(&v); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 	result, err := database.DB.Exec(
@@ -150,13 +150,13 @@ func (h *VehicleHandler) Update(c *gin.Context) {
 		v.Code, v.Description, id,
 	)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
-		respondError(c, http.StatusNotFound, "vehicle not found")
+		respondError(c, http.StatusNotFound, "وسیله نقلیه یافت نشد")
 		return
 	}
-	respondJSON(c, http.StatusOK, gin.H{"message": "updated"})
+	respondJSON(c, http.StatusOK, gin.H{"message": "به‌روزرسانی شد"})
 }

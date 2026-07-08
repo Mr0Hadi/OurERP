@@ -20,12 +20,12 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing authorization header"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "هدی احراز هویت یافت نشد"})
 			return
 		}
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "هدی احراز هویت نامعتبر است"})
 			return
 		}
 		tokenStr := parts[1]
@@ -34,7 +34,7 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 			return []byte(jwtSecret), nil
 		})
 		if err != nil || !token.Valid {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired token"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "توکن نامعتبر یا منقضی شده است"})
 			return
 		}
 		c.Set("user_id", claims.UserID)
@@ -48,7 +48,7 @@ func RoleMiddleware(allowedRoles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		role, exists := c.Get("user_role")
 		if !exists {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "دسترسی غیرمجاز"})
 			return
 		}
 		roleStr := role.(string)
@@ -58,7 +58,7 @@ func RoleMiddleware(allowedRoles ...string) gin.HandlerFunc {
 				return
 			}
 		}
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "forbidden: insufficient permissions"})
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "دسترسی غیرمجاز: سطح دسترسی کافی نیست"})
 	}
 }
 

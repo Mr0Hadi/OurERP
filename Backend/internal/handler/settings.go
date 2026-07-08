@@ -36,7 +36,7 @@ func (h *SettingsHandler) GetCompany(c *gin.Context) {
 		return
 	}
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	respondJSON(c, http.StatusOK, gin.H{
@@ -58,7 +58,7 @@ func (h *SettingsHandler) UpdateCompany(c *gin.Context) {
 		Email   string `json:"email"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 
@@ -70,7 +70,7 @@ func (h *SettingsHandler) UpdateCompany(c *gin.Context) {
 			req.Name, req.TaxID, req.Address, req.Phone, req.Email,
 		)
 		if err != nil {
-			respondError(c, http.StatusInternalServerError, "database error")
+			respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 			return
 		}
 	} else {
@@ -79,11 +79,11 @@ func (h *SettingsHandler) UpdateCompany(c *gin.Context) {
 			req.Name, req.TaxID, req.Address, req.Phone, req.Email,
 		)
 		if err != nil {
-			respondError(c, http.StatusInternalServerError, "database error")
+			respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 			return
 		}
 	}
-	respondJSON(c, http.StatusOK, gin.H{"message": "company updated"})
+	respondJSON(c, http.StatusOK, gin.H{"message": "شرکت به‌روزرسانی شد"})
 }
 
 func (h *SettingsHandler) Backup(c *gin.Context) {
@@ -97,12 +97,12 @@ func (h *SettingsHandler) Backup(c *gin.Context) {
 	// Try pg_dump; if not available, return error
 	cmd := exec.Command("pg_dump", dbURL, "-f", backupPath)
 	if err := cmd.Run(); err != nil {
-		respondError(c, http.StatusInternalServerError, "backup failed: pg_dump not available or error")
+		respondError(c, http.StatusInternalServerError, "خطا در تهیه نسخه پشتیبان")
 		return
 	}
 
 	respondJSON(c, http.StatusOK, gin.H{
-		"message":  "backup created",
+		"message":  "پشتیبان ایجاد شد",
 		"file":     "/uploads/backups/" + filename,
 		"filepath": backupPath,
 	})
