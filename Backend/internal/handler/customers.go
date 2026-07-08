@@ -85,7 +85,7 @@ func (h *CustomerHandler) List(c *gin.Context) {
 
 	rows, err := database.DB.Query(query, args...)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	defer rows.Close()
@@ -96,7 +96,7 @@ func (h *CustomerHandler) List(c *gin.Context) {
 		var fullName, nationalID, phone, address, referralCode, notes, custType sql.NullString
 		var createdAt, updatedAt sql.NullTime
 		if err := rows.Scan(&cd.ID, &custType, &fullName, &nationalID, &phone, &address, &referralCode, &cd.CreditLimit, &cd.CustomerGrade, &notes, &cd.IsActive, &createdAt, &updatedAt, &cd.OutstandingBalance); err != nil {
-			respondError(c, http.StatusInternalServerError, "scan error")
+			respondError(c, http.StatusInternalServerError, "خطا در خواندن اطلاعات")
 			return
 		}
 		cd.Type = custType.String
@@ -116,7 +116,7 @@ func (h *CustomerHandler) List(c *gin.Context) {
 func (h *CustomerHandler) Get(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	var cd model.CustomerDetail
@@ -138,11 +138,11 @@ func (h *CustomerHandler) Get(c *gin.Context) {
 	cd.CreatedAt = createdAt.Time
 	cd.UpdatedAt = updatedAt.Time
 	if err == sql.ErrNoRows {
-		respondError(c, http.StatusNotFound, "customer not found")
+		respondError(c, http.StatusNotFound, "مشتری یافت نشد")
 		return
 	}
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	respondJSON(c, http.StatusOK, cd)
@@ -151,11 +151,11 @@ func (h *CustomerHandler) Get(c *gin.Context) {
 func (h *CustomerHandler) Create(c *gin.Context) {
 	var req model.Customer
 	if err := c.ShouldBindJSON(&req); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 	if req.FullName == "" || req.NationalID == "" {
-		respondError(c, http.StatusBadRequest, "full_name and national_id are required")
+		respondError(c, http.StatusBadRequest, "نام و کد ملی الزامی هستند")
 		return
 	}
 	if req.Type == "" {
@@ -171,10 +171,10 @@ func (h *CustomerHandler) Create(c *gin.Context) {
 	).Scan(&req.ID, &req.CreatedAt, &req.UpdatedAt)
 	if err != nil {
 		if strings.Contains(err.Error(), "unique") {
-			respondError(c, http.StatusConflict, "national_id already exists")
+			respondError(c, http.StatusConflict, "این کد ملی قبلاً ثبت شده است")
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	respondJSON(c, http.StatusCreated, req)
@@ -183,12 +183,12 @@ func (h *CustomerHandler) Create(c *gin.Context) {
 func (h *CustomerHandler) Update(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	var req model.Customer
 	if err := c.ShouldBindJSON(&req); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 	result, err := database.DB.Exec(
@@ -196,40 +196,40 @@ func (h *CustomerHandler) Update(c *gin.Context) {
 		req.Type, req.FullName, req.NationalID, req.Phone, req.Address, req.ReferralCode, req.CreditLimit, req.CustomerGrade, req.Notes, id,
 	)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
-		respondError(c, http.StatusNotFound, "customer not found")
+		respondError(c, http.StatusNotFound, "مشتری یافت نشد")
 		return
 	}
-	respondJSON(c, http.StatusOK, gin.H{"message": "updated"})
+	respondJSON(c, http.StatusOK, gin.H{"message": "به‌روزرسانی شد"})
 }
 
 func (h *CustomerHandler) Delete(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	result, err := database.DB.Exec("UPDATE customers SET is_active=false, updated_at=NOW() WHERE id=$1", id)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
-		respondError(c, http.StatusNotFound, "customer not found")
+		respondError(c, http.StatusNotFound, "مشتری یافت نشد")
 		return
 	}
-	respondJSON(c, http.StatusOK, gin.H{"message": "deleted"})
+	respondJSON(c, http.StatusOK, gin.H{"message": "حذف شد"})
 }
 
 func (h *CustomerHandler) GetBalance(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	var balance float64
@@ -245,7 +245,7 @@ func (h *CustomerHandler) GetBalance(c *gin.Context) {
 		), 0)`, id,
 	).Scan(&balance)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	respondJSON(c, http.StatusOK, gin.H{"customer_id": id, "balance": balance})
@@ -254,7 +254,7 @@ func (h *CustomerHandler) GetBalance(c *gin.Context) {
 func (h *CustomerHandler) GetTransactions(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 
@@ -279,7 +279,7 @@ func (h *CustomerHandler) GetTransactions(c *gin.Context) {
 		ORDER BY date DESC`, id,
 	)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	defer rows.Close()

@@ -17,7 +17,7 @@ func NewUserHandler() *UserHandler {
 func (h *UserHandler) List(c *gin.Context) {
 	rows, err := database.DB.Query("SELECT id, full_name, username, role, department, is_active, created_at, updated_at FROM users ORDER BY id")
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	defer rows.Close()
@@ -53,16 +53,16 @@ func (h *UserHandler) Create(c *gin.Context) {
 		Department string `json:"department"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 	if req.FullName == "" || req.Username == "" || req.Password == "" {
-		respondError(c, http.StatusBadRequest, "full_name, username, and password are required")
+		respondError(c, http.StatusBadRequest, "نام، نام کاربری و رمز عبور الزامی هستند")
 		return
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "failed to hash password")
+		respondError(c, http.StatusInternalServerError, "خطا در رمزنگاری رمز عبور")
 		return
 	}
 	var id int
@@ -71,16 +71,16 @@ func (h *UserHandler) Create(c *gin.Context) {
 		req.FullName, req.Username, string(hash), req.Role, req.Department,
 	).Scan(&id)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
-	respondJSON(c, http.StatusCreated, gin.H{"id": id, "message": "user created"})
+	respondJSON(c, http.StatusCreated, gin.H{"id": id, "message": "کاربر ایجاد شد"})
 }
 
 func (h *UserHandler) Update(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	var req struct {
@@ -92,14 +92,14 @@ func (h *UserHandler) Update(c *gin.Context) {
 		IsActive   *bool  `json:"is_active"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 
 	if req.Password != "" {
 		hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 		if err != nil {
-			respondError(c, http.StatusInternalServerError, "failed to hash password")
+			respondError(c, http.StatusInternalServerError, "خطا در رمزنگاری رمز عبور")
 			return
 		}
 		_, err = database.DB.Exec(
@@ -118,27 +118,27 @@ func (h *UserHandler) Update(c *gin.Context) {
 		)
 	}
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
-	respondJSON(c, http.StatusOK, gin.H{"message": "updated"})
+	respondJSON(c, http.StatusOK, gin.H{"message": "به‌روزرسانی شد"})
 }
 
 func (h *UserHandler) Delete(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	result, err := database.DB.Exec("UPDATE users SET is_active=false, updated_at=NOW() WHERE id=$1", id)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
-		respondError(c, http.StatusNotFound, "user not found")
+		respondError(c, http.StatusNotFound, "کاربر یافت نشد")
 		return
 	}
-	respondJSON(c, http.StatusOK, gin.H{"message": "deleted"})
+	respondJSON(c, http.StatusOK, gin.H{"message": "حذف شد"})
 }

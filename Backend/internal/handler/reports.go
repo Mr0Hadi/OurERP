@@ -26,7 +26,7 @@ func (h *ReportHandler) Stock(c *gin.Context) {
 		ORDER BY p.internal_code
 	`)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	defer rows.Close()
@@ -60,7 +60,7 @@ func (h *ReportHandler) LowStock(c *gin.Context) {
 		ORDER BY current_stock ASC
 	`)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	defer rows.Close()
@@ -112,7 +112,7 @@ func (h *ReportHandler) SalesSummary(c *gin.Context) {
 
 	rows, err := database.DB.Query(query, from, to)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	defer rows.Close()
@@ -148,7 +148,7 @@ func (h *ReportHandler) CustomerBalances(c *gin.Context) {
 		ORDER BY outstanding_balance DESC
 	`)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	defer rows.Close()
@@ -194,7 +194,7 @@ func (h *ReportHandler) PurchaseOrders(c *gin.Context) {
 
 	rows, err := database.DB.Query(query, args...)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	defer rows.Close()

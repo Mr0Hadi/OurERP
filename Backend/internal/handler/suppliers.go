@@ -61,7 +61,7 @@ func (h *SupplierHandler) List(c *gin.Context) {
 
 	rows, err := database.DB.Query(query, args...)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	defer rows.Close()
@@ -72,7 +72,7 @@ func (h *SupplierHandler) List(c *gin.Context) {
 		var contactName, phone, address, notes, name sql.NullString
 		var createdAt, updatedAt sql.NullTime
 		if err := rows.Scan(&s.ID, &name, &contactName, &phone, &address, &notes, &s.IsActive, &createdAt, &updatedAt); err != nil {
-			respondError(c, http.StatusInternalServerError, "scan error")
+			respondError(c, http.StatusInternalServerError, "خطا در خواندن اطلاعات")
 			return
 		}
 		s.Name = name.String
@@ -90,7 +90,7 @@ func (h *SupplierHandler) List(c *gin.Context) {
 func (h *SupplierHandler) Get(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	var s model.Supplier
@@ -107,11 +107,11 @@ func (h *SupplierHandler) Get(c *gin.Context) {
 	s.CreatedAt = createdAt.Time
 	s.UpdatedAt = updatedAt.Time
 	if err == sql.ErrNoRows {
-		respondError(c, http.StatusNotFound, "supplier not found")
+		respondError(c, http.StatusNotFound, "تامین‌کننده یافت نشد")
 		return
 	}
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	respondJSON(c, http.StatusOK, s)
@@ -120,11 +120,11 @@ func (h *SupplierHandler) Get(c *gin.Context) {
 func (h *SupplierHandler) Create(c *gin.Context) {
 	var s model.Supplier
 	if err := c.ShouldBindJSON(&s); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 	if s.Name == "" {
-		respondError(c, http.StatusBadRequest, "name is required")
+		respondError(c, http.StatusBadRequest, "نام الزامی است")
 		return
 	}
 	err := database.DB.QueryRow(
@@ -132,7 +132,7 @@ func (h *SupplierHandler) Create(c *gin.Context) {
 		s.Name, s.ContactName, s.Phone, s.Address, s.Notes,
 	).Scan(&s.ID, &s.CreatedAt, &s.UpdatedAt)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	respondJSON(c, http.StatusCreated, s)
@@ -141,12 +141,12 @@ func (h *SupplierHandler) Create(c *gin.Context) {
 func (h *SupplierHandler) Update(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	var s model.Supplier
 	if err := c.ShouldBindJSON(&s); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 	result, err := database.DB.Exec(
@@ -154,32 +154,32 @@ func (h *SupplierHandler) Update(c *gin.Context) {
 		s.Name, s.ContactName, s.Phone, s.Address, s.Notes, id,
 	)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
-		respondError(c, http.StatusNotFound, "supplier not found")
+		respondError(c, http.StatusNotFound, "تامین‌کننده یافت نشد")
 		return
 	}
-	respondJSON(c, http.StatusOK, gin.H{"message": "updated"})
+	respondJSON(c, http.StatusOK, gin.H{"message": "به‌روزرسانی شد"})
 }
 
 func (h *SupplierHandler) Delete(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	result, err := database.DB.Exec("UPDATE suppliers SET is_active=false, updated_at=NOW() WHERE id=$1", id)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
-		respondError(c, http.StatusNotFound, "supplier not found")
+		respondError(c, http.StatusNotFound, "تامین‌کننده یافت نشد")
 		return
 	}
-	respondJSON(c, http.StatusOK, gin.H{"message": "deleted"})
+	respondJSON(c, http.StatusOK, gin.H{"message": "حذف شد"})
 }

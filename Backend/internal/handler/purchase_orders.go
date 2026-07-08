@@ -49,7 +49,7 @@ func (h *PurchaseOrderHandler) List(c *gin.Context) {
 
 	rows, err := database.DB.Query(query, args...)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	defer rows.Close()
@@ -60,7 +60,7 @@ func (h *PurchaseOrderHandler) List(c *gin.Context) {
 		var edDate, recAt, supplierInvoiceNumber, notes sql.NullString
 		var recBy sql.NullInt64
 		if err := rows.Scan(&po.ID, &po.SupplierID, &po.CreatedBy, &po.Status, &edDate, &supplierInvoiceNumber, &notes, &recBy, &recAt, &po.CreatedAt, &po.UpdatedAt); err != nil {
-			respondError(c, http.StatusInternalServerError, "scan error")
+			respondError(c, http.StatusInternalServerError, "خطا در خواندن اطلاعات")
 			return
 		}
 		po.SupplierInvoiceNumber = supplierInvoiceNumber.String
@@ -89,7 +89,7 @@ func (h *PurchaseOrderHandler) List(c *gin.Context) {
 func (h *PurchaseOrderHandler) Get(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	var po model.PurchaseOrder
@@ -99,11 +99,11 @@ func (h *PurchaseOrderHandler) Get(c *gin.Context) {
 		"SELECT id, supplier_id, created_by, status, expected_delivery_date, supplier_invoice_number, notes, received_by, received_at, created_at, updated_at FROM purchase_orders WHERE id = $1", id,
 	).Scan(&po.ID, &po.SupplierID, &po.CreatedBy, &po.Status, &edDate, &supplierInvoiceNumber, &notes, &recBy, &recAt, &po.CreatedAt, &po.UpdatedAt)
 	if err == sql.ErrNoRows {
-		respondError(c, http.StatusNotFound, "purchase order not found")
+		respondError(c, http.StatusNotFound, "سفارش خرید یافت نشد")
 		return
 	}
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	po.SupplierInvoiceNumber = supplierInvoiceNumber.String
@@ -126,18 +126,18 @@ func (h *PurchaseOrderHandler) Get(c *gin.Context) {
 func (h *PurchaseOrderHandler) Create(c *gin.Context) {
 	var po model.PurchaseOrder
 	if err := c.ShouldBindJSON(&po); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 	if po.SupplierID == 0 || len(po.Items) == 0 {
-		respondError(c, http.StatusBadRequest, "supplier_id and items are required")
+		respondError(c, http.StatusBadRequest, "شناسه تامین‌کننده و آیتم‌ها الزامی هستند")
 		return
 	}
 	userID := getUserID(c)
 
 	tx, err := database.DB.Begin()
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "transaction error")
+		respondError(c, http.StatusInternalServerError, "خطا در انجام تراکنش")
 		return
 	}
 	defer tx.Rollback()
@@ -152,7 +152,7 @@ func (h *PurchaseOrderHandler) Create(c *gin.Context) {
 		po.SupplierID, userID, edDate, po.SupplierInvoiceNumber, po.Notes,
 	).Scan(&po.ID, &po.CreatedAt, &po.UpdatedAt)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 
@@ -162,13 +162,13 @@ func (h *PurchaseOrderHandler) Create(c *gin.Context) {
 			po.ID, item.ProductID, item.OrderedQuantity, item.UnitPrice,
 		)
 		if err != nil {
-			respondError(c, http.StatusInternalServerError, "failed to insert item")
+			respondError(c, http.StatusInternalServerError, "خطا در ثبت آیتم")
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		respondError(c, http.StatusInternalServerError, "commit error")
+		respondError(c, http.StatusInternalServerError, "خطا در ثبت تغییرات")
 		return
 	}
 
@@ -181,26 +181,26 @@ func (h *PurchaseOrderHandler) Create(c *gin.Context) {
 func (h *PurchaseOrderHandler) Update(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 
 	var currentStatus string
 	database.DB.QueryRow("SELECT status FROM purchase_orders WHERE id = $1", id).Scan(&currentStatus)
 	if currentStatus != "pending" {
-		respondError(c, http.StatusBadRequest, "can only update pending orders")
+		respondError(c, http.StatusBadRequest, "فقط سفارش‌های در انتظار قابل ویرایش هستند")
 		return
 	}
 
 	var po model.PurchaseOrder
 	if err := c.ShouldBindJSON(&po); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 
 	tx, err := database.DB.Begin()
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "transaction error")
+		respondError(c, http.StatusInternalServerError, "خطا در انجام تراکنش")
 		return
 	}
 	defer tx.Rollback()
@@ -214,7 +214,7 @@ func (h *PurchaseOrderHandler) Update(c *gin.Context) {
 		po.SupplierID, edDate, po.SupplierInvoiceNumber, po.Notes, id,
 	)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 
@@ -225,23 +225,23 @@ func (h *PurchaseOrderHandler) Update(c *gin.Context) {
 			id, item.ProductID, item.OrderedQuantity, item.UnitPrice,
 		)
 		if err != nil {
-			respondError(c, http.StatusInternalServerError, "failed to insert item")
+			respondError(c, http.StatusInternalServerError, "خطا در ثبت آیتم")
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		respondError(c, http.StatusInternalServerError, "commit error")
+		respondError(c, http.StatusInternalServerError, "خطا در ثبت تغییرات")
 		return
 	}
 
-	respondJSON(c, http.StatusOK, gin.H{"message": "updated"})
+	respondJSON(c, http.StatusOK, gin.H{"message": "به‌روزرسانی شد"})
 }
 
 func (h *PurchaseOrderHandler) Confirm(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	userID := getUserID(c)
@@ -251,7 +251,7 @@ func (h *PurchaseOrderHandler) Confirm(c *gin.Context) {
 func (h *PurchaseOrderHandler) MarkAwaitingDelivery(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	userID := getUserID(c)
@@ -261,7 +261,7 @@ func (h *PurchaseOrderHandler) MarkAwaitingDelivery(c *gin.Context) {
 func (h *PurchaseOrderHandler) Receive(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	userID := getUserID(c)
@@ -269,7 +269,7 @@ func (h *PurchaseOrderHandler) Receive(c *gin.Context) {
 	var currentStatus string
 	database.DB.QueryRow("SELECT status FROM purchase_orders WHERE id = $1", id).Scan(&currentStatus)
 	if currentStatus != "shipped" && currentStatus != "partially_received" {
-		respondError(c, http.StatusBadRequest, "order must be shipped or partially_received to receive")
+		respondError(c, http.StatusBadRequest, "سفارش باید ارسال‌شده یا ناقص دریافت‌شده باشد تا دریافت شود")
 		return
 	}
 
@@ -283,13 +283,13 @@ func (h *PurchaseOrderHandler) Receive(c *gin.Context) {
 		} `json:"items"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 
 	tx, err := database.DB.Begin()
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "transaction error")
+		respondError(c, http.StatusInternalServerError, "خطا در انجام تراکنش")
 		return
 	}
 	defer tx.Rollback()
@@ -304,7 +304,7 @@ func (h *PurchaseOrderHandler) Receive(c *gin.Context) {
 			rq, item.DiscrepancyNote, id, item.ProductID,
 		)
 		if err != nil {
-			respondError(c, http.StatusInternalServerError, "failed to update item")
+			respondError(c, http.StatusInternalServerError, "خطا در به‌روزرسانی آیتم")
 			return
 		}
 		_, err = tx.Exec(
@@ -312,35 +312,35 @@ func (h *PurchaseOrderHandler) Receive(c *gin.Context) {
 			item.ProductID, rq, id, userID,
 		)
 		if err != nil {
-			respondError(c, http.StatusInternalServerError, "failed to create stock movement")
+			respondError(c, http.StatusInternalServerError, "خطا در ثبت حرکت انبار")
 			return
 		}
 	}
 
 	_, err = tx.Exec("UPDATE purchase_orders SET status='received', received_by=$1, received_at=NOW(), updated_at=NOW() WHERE id=$2", userID, id)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "failed to update status")
+		respondError(c, http.StatusInternalServerError, "خطا در به‌روزرسانی وضعیت")
 		return
 	}
 
 	_, err = tx.Exec("INSERT INTO status_logs (entity_type, entity_id, from_status, to_status, changed_by) VALUES ('purchase_order', $1, $2, 'received', $3)", id, currentStatus, userID)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "failed to log status")
+		respondError(c, http.StatusInternalServerError, "خطا در ثبت تغییر وضعیت")
 		return
 	}
 
 	if err := tx.Commit(); err != nil {
-		respondError(c, http.StatusInternalServerError, "commit error")
+		respondError(c, http.StatusInternalServerError, "خطا در ثبت تغییرات")
 		return
 	}
 
-	respondJSON(c, http.StatusOK, gin.H{"message": "goods received"})
+	respondJSON(c, http.StatusOK, gin.H{"message": "کالا دریافت شد"})
 }
 
 func (h *PurchaseOrderHandler) Cancel(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	userID := getUserID(c)
@@ -350,7 +350,7 @@ func (h *PurchaseOrderHandler) Cancel(c *gin.Context) {
 func (h *PurchaseOrderHandler) UpdatePayment(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 
@@ -358,16 +358,16 @@ func (h *PurchaseOrderHandler) UpdatePayment(c *gin.Context) {
 		PaidAmount float64 `json:"paid_amount"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 
 	_, err = database.DB.Exec("UPDATE purchase_orders SET notes = notes, updated_at=NOW() WHERE id=$1", id)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
-	respondJSON(c, http.StatusOK, gin.H{"message": "payment recorded", "paid_amount": req.PaidAmount})
+	respondJSON(c, http.StatusOK, gin.H{"message": "پرداخت ثبت شد", "paid_amount": req.PaidAmount})
 }
 
 func (h *PurchaseOrderHandler) Stats(c *gin.Context) {
@@ -385,36 +385,36 @@ func (h *PurchaseOrderHandler) transitionStatus(c *gin.Context, id int, fromStat
 	var currentStatus string
 	database.DB.QueryRow("SELECT status FROM purchase_orders WHERE id = $1", id).Scan(&currentStatus)
 	if currentStatus == "" {
-		respondError(c, http.StatusNotFound, "purchase order not found")
+		respondError(c, http.StatusNotFound, "سفارش خرید یافت نشد")
 		return
 	}
 	if fromStatus != "" && currentStatus != fromStatus {
-		respondError(c, http.StatusBadRequest, fmt.Sprintf("cannot transition from %s to %s", currentStatus, toStatus))
+		respondError(c, http.StatusBadRequest, fmt.Sprintf("تغییر وضعیت از %s به %s امکان‌پذیر نیست", currentStatus, toStatus))
 		return
 	}
 
 	tx, err := database.DB.Begin()
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "transaction error")
+		respondError(c, http.StatusInternalServerError, "خطا در انجام تراکنش")
 		return
 	}
 	defer tx.Rollback()
 
 	_, err = tx.Exec("UPDATE purchase_orders SET status=$1, updated_at=NOW() WHERE id=$2", toStatus, id)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	_, err = tx.Exec("INSERT INTO status_logs (entity_type, entity_id, from_status, to_status, changed_by) VALUES ('purchase_order', $1, $2, $3, $4)", id, currentStatus, toStatus, userID)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "failed to log status")
+		respondError(c, http.StatusInternalServerError, "خطا در ثبت تغییر وضعیت")
 		return
 	}
 	if err := tx.Commit(); err != nil {
-		respondError(c, http.StatusInternalServerError, "commit error")
+		respondError(c, http.StatusInternalServerError, "خطا در ثبت تغییرات")
 		return
 	}
-	respondJSON(c, http.StatusOK, gin.H{"message": fmt.Sprintf("status changed to %s", toStatus)})
+	respondJSON(c, http.StatusOK, gin.H{"message": fmt.Sprintf("وضعیت به %s تغییر یافت", toStatus)})
 }
 
 func (h *PurchaseOrderHandler) getItems(poID int) ([]model.POItem, error) {

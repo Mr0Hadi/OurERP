@@ -68,7 +68,7 @@ func (h *SalesHandler) List(c *gin.Context) {
 
 	rows, err := database.DB.Query(query, args...)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	defer rows.Close()
@@ -78,7 +78,7 @@ func (h *SalesHandler) List(c *gin.Context) {
 		var s model.Sale
 		var dueDate, description, checkNumber, transferRef sql.NullString
 		if err := rows.Scan(&s.ID, &s.CustomerID, &s.InvoiceNumber, &s.InvoiceDate, &dueDate, &description, &s.Status, &s.PaymentType, &s.PaidAmount, &s.TotalAmount, &checkNumber, &transferRef, &s.CreatedBy, &s.CreatedAt, &s.UpdatedAt); err != nil {
-			respondError(c, http.StatusInternalServerError, "scan error")
+			respondError(c, http.StatusInternalServerError, "خطا در خواندن اطلاعات")
 			return
 		}
 		s.Description = description.String
@@ -104,7 +104,7 @@ func (h *SalesHandler) List(c *gin.Context) {
 func (h *SalesHandler) Get(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	var s model.Sale
@@ -113,11 +113,11 @@ func (h *SalesHandler) Get(c *gin.Context) {
 		"SELECT id, customer_id, invoice_number, invoice_date, due_date, description, status, payment_type, COALESCE(paid_amount,0), COALESCE(total_amount,0), check_number, transfer_ref, created_by, created_at, updated_at FROM sales WHERE id = $1", id,
 	).Scan(&s.ID, &s.CustomerID, &s.InvoiceNumber, &s.InvoiceDate, &dueDate, &description, &s.Status, &s.PaymentType, &s.PaidAmount, &s.TotalAmount, &checkNumber, &transferRef, &s.CreatedBy, &s.CreatedAt, &s.UpdatedAt)
 	if err == sql.ErrNoRows {
-		respondError(c, http.StatusNotFound, "sale not found")
+		respondError(c, http.StatusNotFound, "فروش یافت نشد")
 		return
 	}
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	s.Description = description.String
@@ -137,11 +137,11 @@ func (h *SalesHandler) Get(c *gin.Context) {
 func (h *SalesHandler) Create(c *gin.Context) {
 	var s model.Sale
 	if err := c.ShouldBindJSON(&s); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 	if s.CustomerID == 0 || len(s.Items) == 0 {
-		respondError(c, http.StatusBadRequest, "customer_id and items are required")
+		respondError(c, http.StatusBadRequest, "شناسه مشتری و آیتم‌ها الزامی هستند")
 		return
 	}
 	userID := getUserID(c)
@@ -149,19 +149,19 @@ func (h *SalesHandler) Create(c *gin.Context) {
 	var customerName string
 	database.DB.QueryRow("SELECT full_name FROM customers WHERE id = $1 AND is_active = true", s.CustomerID).Scan(&customerName)
 	if customerName == "" {
-		respondError(c, http.StatusBadRequest, "customer not found or inactive")
+		respondError(c, http.StatusBadRequest, "مشتری یافت نشد یا غیرفعال است")
 		return
 	}
 
 	saleNumber, err := h.nextSaleNumber()
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "failed to generate sale number")
+		respondError(c, http.StatusInternalServerError, "خطا در تولید شماره فروش")
 		return
 	}
 
 	tx, err := database.DB.Begin()
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "transaction error")
+		respondError(c, http.StatusInternalServerError, "خطا در انجام تراکنش")
 		return
 	}
 	defer tx.Rollback()
@@ -184,7 +184,7 @@ func (h *SalesHandler) Create(c *gin.Context) {
 		s.CustomerID, saleNumber, s.InvoiceDate, dueDate, s.Description, s.Status, s.PaymentType, s.PaidAmount, s.TotalAmount, s.CheckNumber, s.TransferRef, userID,
 	).Scan(&s.ID, &s.CreatedAt, &s.UpdatedAt)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 
@@ -195,13 +195,13 @@ func (h *SalesHandler) Create(c *gin.Context) {
 			s.ID, item.ProductID, item.ProductCode, item.ProductName, item.Unit, item.Qty, item.UnitPrice, item.Discount, lineTotal,
 		)
 		if err != nil {
-			respondError(c, http.StatusInternalServerError, "failed to insert item")
+			respondError(c, http.StatusInternalServerError, "خطا در ثبت آیتم")
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		respondError(c, http.StatusInternalServerError, "commit error")
+		respondError(c, http.StatusInternalServerError, "خطا در ثبت تغییرات")
 		return
 	}
 
@@ -216,19 +216,19 @@ func (h *SalesHandler) Create(c *gin.Context) {
 func (h *SalesHandler) Update(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 
 	var s model.Sale
 	if err := c.ShouldBindJSON(&s); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 
 	tx, err := database.DB.Begin()
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "transaction error")
+		respondError(c, http.StatusInternalServerError, "خطا در انجام تراکنش")
 		return
 	}
 	defer tx.Rollback()
@@ -243,7 +243,7 @@ func (h *SalesHandler) Update(c *gin.Context) {
 		s.CustomerID, s.InvoiceDate, dueDate, s.Description, s.PaymentType, s.PaidAmount, s.TotalAmount, s.CheckNumber, s.TransferRef, id,
 	)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 
@@ -255,23 +255,23 @@ func (h *SalesHandler) Update(c *gin.Context) {
 			id, item.ProductID, item.ProductCode, item.ProductName, item.Unit, item.Qty, item.UnitPrice, item.Discount, lineTotal,
 		)
 		if err != nil {
-			respondError(c, http.StatusInternalServerError, "failed to insert item")
+			respondError(c, http.StatusInternalServerError, "خطا در ثبت آیتم")
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		respondError(c, http.StatusInternalServerError, "commit error")
+		respondError(c, http.StatusInternalServerError, "خطا در ثبت تغییرات")
 		return
 	}
 
-	respondJSON(c, http.StatusOK, gin.H{"message": "updated"})
+	respondJSON(c, http.StatusOK, gin.H{"message": "به‌روزرسانی شد"})
 }
 
 func (h *SalesHandler) UpdateStatus(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	userID := getUserID(c)
@@ -280,50 +280,50 @@ func (h *SalesHandler) UpdateStatus(c *gin.Context) {
 		Status string `json:"status"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 	if req.Status == "" {
-		respondError(c, http.StatusBadRequest, "status is required")
+		respondError(c, http.StatusBadRequest, "وضعیت الزامی است")
 		return
 	}
 
 	var currentStatus string
 	database.DB.QueryRow("SELECT status FROM sales WHERE id = $1", id).Scan(&currentStatus)
 	if currentStatus == "" {
-		respondError(c, http.StatusNotFound, "sale not found")
+		respondError(c, http.StatusNotFound, "فروش یافت نشد")
 		return
 	}
 
 	tx, err := database.DB.Begin()
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "transaction error")
+		respondError(c, http.StatusInternalServerError, "خطا در انجام تراکنش")
 		return
 	}
 	defer tx.Rollback()
 
 	_, err = tx.Exec("UPDATE sales SET status=$1, updated_at=NOW() WHERE id=$2", req.Status, id)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	_, err = tx.Exec("INSERT INTO status_logs (entity_type, entity_id, from_status, to_status, changed_by) VALUES ('sale', $1, $2, $3, $4)", id, currentStatus, req.Status, userID)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "failed to log status")
+		respondError(c, http.StatusInternalServerError, "خطا در ثبت تغییر وضعیت")
 		return
 	}
 
 	if err := tx.Commit(); err != nil {
-		respondError(c, http.StatusInternalServerError, "commit error")
+		respondError(c, http.StatusInternalServerError, "خطا در ثبت تغییرات")
 		return
 	}
-	respondJSON(c, http.StatusOK, gin.H{"message": "status updated"})
+	respondJSON(c, http.StatusOK, gin.H{"message": "وضعیت به‌روزرسانی شد"})
 }
 
 func (h *SalesHandler) UpdatePayment(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 
@@ -331,35 +331,35 @@ func (h *SalesHandler) UpdatePayment(c *gin.Context) {
 		PaidAmount float64 `json:"paid_amount"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 
 	_, err = database.DB.Exec("UPDATE sales SET paid_amount=$1, updated_at=NOW() WHERE id=$2", req.PaidAmount, id)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
-	respondJSON(c, http.StatusOK, gin.H{"message": "payment updated"})
+	respondJSON(c, http.StatusOK, gin.H{"message": "پرداخت به‌روزرسانی شد"})
 }
 
 func (h *SalesHandler) Delete(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	result, err := database.DB.Exec("DELETE FROM sales WHERE id=$1", id)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
-		respondError(c, http.StatusNotFound, "sale not found")
+		respondError(c, http.StatusNotFound, "فروش یافت نشد")
 		return
 	}
-	respondJSON(c, http.StatusOK, gin.H{"message": "deleted"})
+	respondJSON(c, http.StatusOK, gin.H{"message": "حذف شد"})
 }
 
 func (h *SalesHandler) Stats(c *gin.Context) {

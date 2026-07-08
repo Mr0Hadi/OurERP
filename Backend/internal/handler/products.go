@@ -103,7 +103,7 @@ func (h *ProductHandler) List(c *gin.Context) {
 
 	rows, err := database.DB.Query(query, args...)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	defer rows.Close()
@@ -113,7 +113,7 @@ func (h *ProductHandler) List(c *gin.Context) {
 		var pr model.Product
 		var brand, category sql.NullString
 		if err := rows.Scan(&pr.ID, &pr.InternalCode, &pr.SupplierCode, &pr.Barcode, &pr.Name, &brand, &category, &pr.Unit, &pr.ReorderThreshold, &pr.CostPrice, &pr.SalePriceRetail, &pr.SalePriceWholesale, &pr.Tax, &pr.ImageURL, &pr.IsActive, &pr.CreatedAt, &pr.UpdatedAt); err != nil {
-			respondError(c, http.StatusInternalServerError, "scan error")
+			respondError(c, http.StatusInternalServerError, "خطا در خواندن اطلاعات")
 			return
 		}
 		pr.Brand = brand.String
@@ -152,7 +152,7 @@ func (h *ProductHandler) List(c *gin.Context) {
 func (h *ProductHandler) Get(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	var pr model.Product
@@ -160,11 +160,11 @@ func (h *ProductHandler) Get(c *gin.Context) {
 		"SELECT id, internal_code, supplier_code, barcode, name, COALESCE(brand,''), COALESCE(category,''), unit, reorder_threshold, cost_price, sale_price_retail, sale_price_wholesale, COALESCE(tax,0), image_url, is_active, created_at, updated_at FROM products WHERE id = $1", id,
 	).Scan(&pr.ID, &pr.InternalCode, &pr.SupplierCode, &pr.Barcode, &pr.Name, &pr.Brand, &pr.Category, &pr.Unit, &pr.ReorderThreshold, &pr.CostPrice, &pr.SalePriceRetail, &pr.SalePriceWholesale, &pr.Tax, &pr.ImageURL, &pr.IsActive, &pr.CreatedAt, &pr.UpdatedAt)
 	if err == sql.ErrNoRows {
-		respondError(c, http.StatusNotFound, "product not found")
+		respondError(c, http.StatusNotFound, "کالا یافت نشد")
 		return
 	}
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	stock := h.getCurrentStock(pr.ID)
@@ -210,11 +210,11 @@ type productRequest struct {
 func (h *ProductHandler) Create(c *gin.Context) {
 	var req productRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 	if req.InternalCode == "" || req.Name == "" {
-		respondError(c, http.StatusBadRequest, "internal_code and name are required")
+		respondError(c, http.StatusBadRequest, "کد داخلی و نام الزامی هستند")
 		return
 	}
 	if req.Unit == "" {
@@ -228,10 +228,10 @@ func (h *ProductHandler) Create(c *gin.Context) {
 	).Scan(&pr.ID, &pr.CreatedAt, &pr.UpdatedAt)
 	if err != nil {
 		if strings.Contains(err.Error(), "unique") {
-			respondError(c, http.StatusConflict, "internal_code already exists")
+			respondError(c, http.StatusConflict, "این کد داخلی قبلاً ثبت شده است")
 			return
 		}
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	pr.InternalCode = req.InternalCode
@@ -252,12 +252,12 @@ func (h *ProductHandler) Create(c *gin.Context) {
 func (h *ProductHandler) Update(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	var req productRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 	result, err := database.DB.Exec(
@@ -265,34 +265,34 @@ func (h *ProductHandler) Update(c *gin.Context) {
 		req.InternalCode, req.SupplierCode, req.Barcode, req.Name, req.Brand, req.Category, req.Unit, req.ReorderThreshold, req.CostPrice, req.SalePriceRetail, req.SalePriceWholesale, req.Tax, req.ImageURL, id,
 	)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
-		respondError(c, http.StatusNotFound, "product not found")
+		respondError(c, http.StatusNotFound, "کالا یافت نشد")
 		return
 	}
-	respondJSON(c, http.StatusOK, gin.H{"message": "updated"})
+	respondJSON(c, http.StatusOK, gin.H{"message": "به‌روزرسانی شد"})
 }
 
 func (h *ProductHandler) Delete(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	result, err := database.DB.Exec("UPDATE products SET is_active=false, updated_at=NOW() WHERE id=$1", id)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
-		respondError(c, http.StatusNotFound, "product not found")
+		respondError(c, http.StatusNotFound, "کالا یافت نشد")
 		return
 	}
-	respondJSON(c, http.StatusOK, gin.H{"message": "deleted"})
+	respondJSON(c, http.StatusOK, gin.H{"message": "حذف شد"})
 }
 
 func (h *ProductHandler) BarcodeLookup(c *gin.Context) {
@@ -302,11 +302,11 @@ func (h *ProductHandler) BarcodeLookup(c *gin.Context) {
 		"SELECT id, internal_code, supplier_code, barcode, name, COALESCE(brand,''), COALESCE(category,''), unit, reorder_threshold, cost_price, sale_price_retail, sale_price_wholesale, COALESCE(tax,0), image_url, is_active, created_at, updated_at FROM products WHERE barcode = $1 AND is_active = true", barcode,
 	).Scan(&pr.ID, &pr.InternalCode, &pr.SupplierCode, &pr.Barcode, &pr.Name, &pr.Brand, &pr.Category, &pr.Unit, &pr.ReorderThreshold, &pr.CostPrice, &pr.SalePriceRetail, &pr.SalePriceWholesale, &pr.Tax, &pr.ImageURL, &pr.IsActive, &pr.CreatedAt, &pr.UpdatedAt)
 	if err == sql.ErrNoRows {
-		respondError(c, http.StatusNotFound, "product not found")
+		respondError(c, http.StatusNotFound, "کالا یافت نشد")
 		return
 	}
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	respondJSON(c, http.StatusOK, pr)
@@ -323,7 +323,7 @@ func (h *ProductHandler) LowStock(c *gin.Context) {
 		ORDER BY current_stock ASC
 	`)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	defer rows.Close()

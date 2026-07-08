@@ -65,7 +65,7 @@ func (h *InvoiceHandler) List(c *gin.Context) {
 
 	rows, err := database.DB.Query(query, args...)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	defer rows.Close()
@@ -76,7 +76,7 @@ func (h *InvoiceHandler) List(c *gin.Context) {
 		var dispBy, vehID, packID sql.NullInt64
 		var dispAt, proformaNumber, notes sql.NullString
 		if err := rows.Scan(&inv.ID, &inv.InvoiceNumber, &proformaNumber, &inv.CustomerID, &inv.Channel, &inv.CreatedBy, &inv.Status, &notes, &dispBy, &dispAt, &vehID, &packID, &inv.CreatedAt, &inv.UpdatedAt); err != nil {
-			respondError(c, http.StatusInternalServerError, "scan error")
+			respondError(c, http.StatusInternalServerError, "خطا در خواندن اطلاعات")
 			return
 		}
 		inv.ProformaNumber = proformaNumber.String
@@ -99,7 +99,7 @@ func (h *InvoiceHandler) List(c *gin.Context) {
 func (h *InvoiceHandler) Get(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	var inv model.Invoice
@@ -111,11 +111,11 @@ func (h *InvoiceHandler) Get(c *gin.Context) {
 	inv.ProformaNumber = proformaNumber.String
 	inv.Notes = notes.String
 	if err == sql.ErrNoRows {
-		respondError(c, http.StatusNotFound, "invoice not found")
+		respondError(c, http.StatusNotFound, "فاکتور یافت نشد")
 		return
 	}
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	if dispBy.Valid { v := int(dispBy.Int64); inv.DispatchedBy = &v }
@@ -130,11 +130,11 @@ func (h *InvoiceHandler) Get(c *gin.Context) {
 func (h *InvoiceHandler) Create(c *gin.Context) {
 	var inv model.Invoice
 	if err := c.ShouldBindJSON(&inv); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 	if inv.CustomerID == 0 || len(inv.Items) == 0 {
-		respondError(c, http.StatusBadRequest, "customer_id and items are required")
+		respondError(c, http.StatusBadRequest, "شناسه مشتری و آیتم‌ها الزامی هستند")
 		return
 	}
 	userID := getUserID(c)
@@ -142,7 +142,7 @@ func (h *InvoiceHandler) Create(c *gin.Context) {
 	var customerType string
 	database.DB.QueryRow("SELECT type FROM customers WHERE id = $1 AND is_active = true", inv.CustomerID).Scan(&customerType)
 	if customerType == "" {
-		respondError(c, http.StatusBadRequest, "customer not found or inactive")
+		respondError(c, http.StatusBadRequest, "مشتری یافت نشد یا غیرفعال است")
 		return
 	}
 
@@ -160,13 +160,13 @@ func (h *InvoiceHandler) Create(c *gin.Context) {
 
 	invoiceNumber, err := h.nextInvoiceNumber()
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "failed to generate invoice number")
+		respondError(c, http.StatusInternalServerError, "خطا در تولید شماره فاکتور")
 		return
 	}
 
 	tx, err := database.DB.Begin()
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "transaction error")
+		respondError(c, http.StatusInternalServerError, "خطا در انجام تراکنش")
 		return
 	}
 	defer tx.Rollback()
@@ -177,7 +177,7 @@ func (h *InvoiceHandler) Create(c *gin.Context) {
 		invoiceNumber, inv.ProformaNumber, inv.CustomerID, channel, userID, inv.Notes,
 	).Scan(&inv.ID, &inv.CreatedAt, &inv.UpdatedAt)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 
@@ -187,13 +187,13 @@ func (h *InvoiceHandler) Create(c *gin.Context) {
 			inv.ID, item.ProductID, item.Quantity, item.UnitPrice, item.DiscountAmount, item.PriceOverrideReason, item.PriceOverriddenBy,
 		)
 		if err != nil {
-			respondError(c, http.StatusInternalServerError, "failed to insert item")
+			respondError(c, http.StatusInternalServerError, "خطا در ثبت آیتم")
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		respondError(c, http.StatusInternalServerError, "commit error")
+		respondError(c, http.StatusInternalServerError, "خطا در ثبت تغییرات")
 		return
 	}
 
@@ -209,26 +209,26 @@ func (h *InvoiceHandler) Create(c *gin.Context) {
 func (h *InvoiceHandler) Update(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 
 	var currentStatus string
 	database.DB.QueryRow("SELECT status FROM invoices WHERE id = $1", id).Scan(&currentStatus)
 	if currentStatus != "proforma" {
-		respondError(c, http.StatusBadRequest, "can only update proforma invoices")
+		respondError(c, http.StatusBadRequest, "فقط فاکتورهای پیش‌فاکتور قابل ویرایش هستند")
 		return
 	}
 
 	var inv model.Invoice
 	if err := c.ShouldBindJSON(&inv); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 
 	tx, err := database.DB.Begin()
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "transaction error")
+		respondError(c, http.StatusInternalServerError, "خطا در انجام تراکنش")
 		return
 	}
 	defer tx.Rollback()
@@ -238,7 +238,7 @@ func (h *InvoiceHandler) Update(c *gin.Context) {
 		inv.CustomerID, inv.Channel, inv.Notes, id,
 	)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 
@@ -249,23 +249,23 @@ func (h *InvoiceHandler) Update(c *gin.Context) {
 			id, item.ProductID, item.Quantity, item.UnitPrice, item.DiscountAmount, item.PriceOverrideReason, item.PriceOverriddenBy,
 		)
 		if err != nil {
-			respondError(c, http.StatusInternalServerError, "failed to insert item")
+			respondError(c, http.StatusInternalServerError, "خطا در ثبت آیتم")
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		respondError(c, http.StatusInternalServerError, "commit error")
+		respondError(c, http.StatusInternalServerError, "خطا در ثبت تغییرات")
 		return
 	}
 
-	respondJSON(c, http.StatusOK, gin.H{"message": "updated"})
+	respondJSON(c, http.StatusOK, gin.H{"message": "به‌روزرسانی شد"})
 }
 
 func (h *InvoiceHandler) Confirm(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	userID := getUserID(c)
@@ -274,11 +274,11 @@ func (h *InvoiceHandler) Confirm(c *gin.Context) {
 	var customerID int
 	database.DB.QueryRow("SELECT status, customer_id FROM invoices WHERE id = $1", id).Scan(&currentStatus, &customerID)
 	if currentStatus == "" {
-		respondError(c, http.StatusNotFound, "invoice not found")
+		respondError(c, http.StatusNotFound, "فاکتور یافت نشد")
 		return
 	}
 	if currentStatus != "proforma" {
-		respondError(c, http.StatusBadRequest, "only proforma invoices can be confirmed")
+		respondError(c, http.StatusBadRequest, "فقط فاکتورهای پیش‌فاکتور قابل تایید هستند")
 		return
 	}
 
@@ -293,7 +293,7 @@ func (h *InvoiceHandler) Confirm(c *gin.Context) {
 	).Scan(&outstanding)
 
 	if creditLimit > 0 && outstanding >= creditLimit {
-		respondError(c, http.StatusBadRequest, fmt.Sprintf("credit limit exceeded: balance %.2f, limit %.2f", outstanding, creditLimit))
+		respondError(c, http.StatusBadRequest, fmt.Sprintf("سقف اعتبار فراتر رفته است (مانده: %.2f، سقف: %.2f)", outstanding, creditLimit))
 		return
 	}
 
@@ -303,7 +303,7 @@ func (h *InvoiceHandler) Confirm(c *gin.Context) {
 func (h *InvoiceHandler) Dispatch(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	userID := getUserID(c)
@@ -311,7 +311,7 @@ func (h *InvoiceHandler) Dispatch(c *gin.Context) {
 	var currentStatus string
 	database.DB.QueryRow("SELECT status FROM invoices WHERE id = $1", id).Scan(&currentStatus)
 	if currentStatus != "confirmed" {
-		respondError(c, http.StatusBadRequest, "only confirmed invoices can be dispatched")
+		respondError(c, http.StatusBadRequest, "فقط فاکتورهای تایید‌شده قابل ارسال هستند")
 		return
 	}
 
@@ -320,13 +320,13 @@ func (h *InvoiceHandler) Dispatch(c *gin.Context) {
 		PackerID  int `json:"packer_id"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 
 	rows, err := database.DB.Query("SELECT product_id, quantity FROM invoice_items WHERE invoice_id = $1", id)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	defer rows.Close()
@@ -363,13 +363,13 @@ func (h *InvoiceHandler) Dispatch(c *gin.Context) {
 				})
 			}
 		}
-		c.JSON(http.StatusBadRequest, gin.H{"error": "insufficient stock", "items": errItems})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "موجودی کافی نیست", "items": errItems})
 		return
 	}
 
 	tx, err := database.DB.Begin()
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "transaction error")
+		respondError(c, http.StatusInternalServerError, "خطا در انجام تراکنش")
 		return
 	}
 	defer tx.Rollback()
@@ -380,7 +380,7 @@ func (h *InvoiceHandler) Dispatch(c *gin.Context) {
 			sc.ProductID, -sc.Quantity, id, userID,
 		)
 		if err != nil {
-			respondError(c, http.StatusInternalServerError, "failed to create stock movement")
+			respondError(c, http.StatusInternalServerError, "خطا در ثبت حرکت انبار")
 			return
 		}
 	}
@@ -390,28 +390,28 @@ func (h *InvoiceHandler) Dispatch(c *gin.Context) {
 		userID, req.VehicleID, req.PackerID, id,
 	)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 
 	_, err = tx.Exec("INSERT INTO status_logs (entity_type, entity_id, from_status, to_status, changed_by) VALUES ('invoice', $1, $2, 'dispatched', $3)", id, currentStatus, userID)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "failed to log status")
+		respondError(c, http.StatusInternalServerError, "خطا در ثبت تغییر وضعیت")
 		return
 	}
 
 	if err := tx.Commit(); err != nil {
-		respondError(c, http.StatusInternalServerError, "commit error")
+		respondError(c, http.StatusInternalServerError, "خطا در ثبت تغییرات")
 		return
 	}
 
-	respondJSON(c, http.StatusOK, gin.H{"message": "invoice dispatched"})
+	respondJSON(c, http.StatusOK, gin.H{"message": "فاکتور ارسال شد"})
 }
 
 func (h *InvoiceHandler) Deliver(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	userID := getUserID(c)
@@ -421,7 +421,7 @@ func (h *InvoiceHandler) Deliver(c *gin.Context) {
 func (h *InvoiceHandler) Cancel(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	userID := getUserID(c)
@@ -429,17 +429,17 @@ func (h *InvoiceHandler) Cancel(c *gin.Context) {
 	var currentStatus string
 	database.DB.QueryRow("SELECT status FROM invoices WHERE id = $1", id).Scan(&currentStatus)
 	if currentStatus == "" {
-		respondError(c, http.StatusNotFound, "invoice not found")
+		respondError(c, http.StatusNotFound, "فاکتور یافت نشد")
 		return
 	}
 	if currentStatus == "delivered" {
-		respondError(c, http.StatusBadRequest, "cannot cancel delivered invoice")
+		respondError(c, http.StatusBadRequest, "فاکتور تحویل‌شده قابل لغو نیست")
 		return
 	}
 
 	tx, err := database.DB.Begin()
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "transaction error")
+		respondError(c, http.StatusInternalServerError, "خطا در انجام تراکنش")
 		return
 	}
 	defer tx.Rollback()
@@ -447,7 +447,7 @@ func (h *InvoiceHandler) Cancel(c *gin.Context) {
 	if currentStatus == "dispatched" {
 		rows, err := tx.Query("SELECT product_id, quantity FROM invoice_items WHERE invoice_id = $1", id)
 		if err != nil {
-			respondError(c, http.StatusInternalServerError, "database error")
+			respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 			return
 		}
 		defer rows.Close()
@@ -460,7 +460,7 @@ func (h *InvoiceHandler) Cancel(c *gin.Context) {
 				pid, qty, id, userID,
 			)
 			if err != nil {
-				respondError(c, http.StatusInternalServerError, "failed to create stock movement")
+				respondError(c, http.StatusInternalServerError, "خطا در ثبت حرکت انبار")
 				return
 			}
 		}
@@ -468,26 +468,26 @@ func (h *InvoiceHandler) Cancel(c *gin.Context) {
 
 	_, err = tx.Exec("UPDATE invoices SET status='cancelled', updated_at=NOW() WHERE id=$1", id)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	_, err = tx.Exec("INSERT INTO status_logs (entity_type, entity_id, from_status, to_status, changed_by) VALUES ('invoice', $1, $2, 'cancelled', $3)", id, currentStatus, userID)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "failed to log status")
+		respondError(c, http.StatusInternalServerError, "خطا در ثبت تغییر وضعیت")
 		return
 	}
 	if err := tx.Commit(); err != nil {
-		respondError(c, http.StatusInternalServerError, "commit error")
+		respondError(c, http.StatusInternalServerError, "خطا در ثبت تغییرات")
 		return
 	}
 
-	respondJSON(c, http.StatusOK, gin.H{"message": "invoice cancelled"})
+	respondJSON(c, http.StatusOK, gin.H{"message": "فاکتور لغو شد"})
 }
 
 func (h *InvoiceHandler) Return(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	userID := getUserID(c)
@@ -500,13 +500,13 @@ func (h *InvoiceHandler) Return(c *gin.Context) {
 		} `json:"items"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 
 	tx, err := database.DB.Begin()
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "transaction error")
+		respondError(c, http.StatusInternalServerError, "خطا در انجام تراکنش")
 		return
 	}
 	defer tx.Rollback()
@@ -517,7 +517,7 @@ func (h *InvoiceHandler) Return(c *gin.Context) {
 			id, item.ProductID, item.Quantity, item.Reason, userID,
 		)
 		if err != nil {
-			respondError(c, http.StatusInternalServerError, "failed to create return")
+			respondError(c, http.StatusInternalServerError, "خطا در ثبت مرجوعی")
 			return
 		}
 		_, err = tx.Exec(
@@ -525,53 +525,53 @@ func (h *InvoiceHandler) Return(c *gin.Context) {
 			item.ProductID, item.Quantity, id, userID,
 		)
 		if err != nil {
-			respondError(c, http.StatusInternalServerError, "failed to create stock movement")
+			respondError(c, http.StatusInternalServerError, "خطا در ثبت حرکت انبار")
 			return
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		respondError(c, http.StatusInternalServerError, "commit error")
+		respondError(c, http.StatusInternalServerError, "خطا در ثبت تغییرات")
 		return
 	}
 
-	respondJSON(c, http.StatusOK, gin.H{"message": "return registered"})
+	respondJSON(c, http.StatusOK, gin.H{"message": "مرجوعی ثبت شد"})
 }
 
 func (h *InvoiceHandler) transitionInvoiceStatus(c *gin.Context, id int, fromStatus, toStatus string, userID int) {
 	var currentStatus string
 	database.DB.QueryRow("SELECT status FROM invoices WHERE id = $1", id).Scan(&currentStatus)
 	if currentStatus == "" {
-		respondError(c, http.StatusNotFound, "invoice not found")
+		respondError(c, http.StatusNotFound, "فاکتور یافت نشد")
 		return
 	}
 	if currentStatus != fromStatus {
-		respondError(c, http.StatusBadRequest, fmt.Sprintf("cannot transition from %s to %s", currentStatus, toStatus))
+		respondError(c, http.StatusBadRequest, fmt.Sprintf("تغییر وضعیت از %s به %s امکان‌پذیر نیست", currentStatus, toStatus))
 		return
 	}
 
 	tx, err := database.DB.Begin()
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "transaction error")
+		respondError(c, http.StatusInternalServerError, "خطا در انجام تراکنش")
 		return
 	}
 	defer tx.Rollback()
 
 	_, err = tx.Exec("UPDATE invoices SET status=$1, updated_at=NOW() WHERE id=$2", toStatus, id)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	_, err = tx.Exec("INSERT INTO status_logs (entity_type, entity_id, from_status, to_status, changed_by) VALUES ('invoice', $1, $2, $3, $4)", id, fromStatus, toStatus, userID)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "failed to log status")
+		respondError(c, http.StatusInternalServerError, "خطا در ثبت تغییر وضعیت")
 		return
 	}
 	if err := tx.Commit(); err != nil {
-		respondError(c, http.StatusInternalServerError, "commit error")
+		respondError(c, http.StatusInternalServerError, "خطا در ثبت تغییرات")
 		return
 	}
-	respondJSON(c, http.StatusOK, gin.H{"message": fmt.Sprintf("status changed to %s", toStatus)})
+	respondJSON(c, http.StatusOK, gin.H{"message": fmt.Sprintf("وضعیت به %s تغییر یافت", toStatus)})
 }
 
 func (h *InvoiceHandler) getItems(invoiceID int) ([]model.InvoiceItem, error) {

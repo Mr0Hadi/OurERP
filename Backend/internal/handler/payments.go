@@ -29,7 +29,7 @@ func (h *PaymentHandler) ListCustomerPayments(c *gin.Context) {
 
 	rows, err := database.DB.Query(query, args...)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	defer rows.Close()
@@ -40,7 +40,7 @@ func (h *PaymentHandler) ListCustomerPayments(c *gin.Context) {
 		var baID, chkID, invID sql.NullInt64
 		var notes, paymentDate sql.NullString
 		if err := rows.Scan(&p.ID, &p.CustomerID, &p.Amount, &p.PaymentMethod, &baID, &chkID, &invID, &p.RecordedBy, &paymentDate, &notes, &p.CreatedAt); err != nil {
-			respondError(c, http.StatusInternalServerError, "scan error")
+			respondError(c, http.StatusInternalServerError, "خطا در خواندن اطلاعات")
 			return
 		}
 		p.PaymentDate = paymentDate.String
@@ -56,11 +56,11 @@ func (h *PaymentHandler) ListCustomerPayments(c *gin.Context) {
 func (h *PaymentHandler) CreateCustomerPayment(c *gin.Context) {
 	var req model.CustomerPayment
 	if err := c.ShouldBindJSON(&req); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 	if req.CustomerID == 0 || req.Amount <= 0 {
-		respondError(c, http.StatusBadRequest, "customer_id and amount are required")
+		respondError(c, http.StatusBadRequest, "شناسه مشتری و مبلغ الزامی هستند")
 		return
 	}
 	userID := getUserID(c)
@@ -72,7 +72,7 @@ func (h *PaymentHandler) CreateCustomerPayment(c *gin.Context) {
 			"", "", req.Amount, nil, "",
 		).Scan(&checkID)
 		if err != nil {
-			respondError(c, http.StatusInternalServerError, "failed to create check record")
+			respondError(c, http.StatusInternalServerError, "خطا در ثبت چک")
 			return
 		}
 		req.CheckID = &checkID
@@ -89,7 +89,7 @@ func (h *PaymentHandler) CreateCustomerPayment(c *gin.Context) {
 		req.CustomerID, req.Amount, req.PaymentMethod, req.BankAccountID, req.CheckID, req.ReferenceInvoiceID, userID, paymentDate, req.Notes,
 	).Scan(&req.ID, &req.CreatedAt)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	req.RecordedBy = userID
@@ -100,7 +100,7 @@ func (h *PaymentHandler) CreateCustomerPayment(c *gin.Context) {
 func (h *PaymentHandler) GetCustomerPayment(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	var p model.CustomerPayment
@@ -112,11 +112,11 @@ func (h *PaymentHandler) GetCustomerPayment(c *gin.Context) {
 	p.PaymentDate = paymentDate.String
 	p.Notes = notes.String
 	if err == sql.ErrNoRows {
-		respondError(c, http.StatusNotFound, "payment not found")
+		respondError(c, http.StatusNotFound, "پرداخت یافت نشد")
 		return
 	}
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	if baID.Valid { v := int(baID.Int64); p.BankAccountID = &v }
@@ -138,7 +138,7 @@ func (h *PaymentHandler) ListSupplierPayments(c *gin.Context) {
 
 	rows, err := database.DB.Query(query, args...)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	defer rows.Close()
@@ -149,7 +149,7 @@ func (h *PaymentHandler) ListSupplierPayments(c *gin.Context) {
 		var poID, chkID sql.NullInt64
 		var paymentDate sql.NullString
 		if err := rows.Scan(&p.ID, &p.SupplierID, &poID, &p.Amount, &p.PaymentMethod, &chkID, &p.RecordedBy, &paymentDate, &p.CreatedAt); err != nil {
-			respondError(c, http.StatusInternalServerError, "scan error")
+			respondError(c, http.StatusInternalServerError, "خطا در خواندن اطلاعات")
 			return
 		}
 		if poID.Valid { v := int(poID.Int64); p.PurchaseOrderID = &v }
@@ -163,11 +163,11 @@ func (h *PaymentHandler) ListSupplierPayments(c *gin.Context) {
 func (h *PaymentHandler) CreateSupplierPayment(c *gin.Context) {
 	var req model.SupplierPayment
 	if err := c.ShouldBindJSON(&req); err != nil {
-		respondError(c, http.StatusBadRequest, "invalid request body")
+		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 	if req.SupplierID == 0 || req.Amount <= 0 {
-		respondError(c, http.StatusBadRequest, "supplier_id and amount are required")
+		respondError(c, http.StatusBadRequest, "شناسه تامین‌کننده و مبلغ الزامی هستند")
 		return
 	}
 	userID := getUserID(c)
@@ -183,7 +183,7 @@ func (h *PaymentHandler) CreateSupplierPayment(c *gin.Context) {
 		req.SupplierID, req.PurchaseOrderID, req.Amount, req.PaymentMethod, req.CheckID, userID, paymentDate,
 	).Scan(&req.ID, &req.CreatedAt)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	req.RecordedBy = userID
@@ -194,7 +194,7 @@ func (h *PaymentHandler) CreateSupplierPayment(c *gin.Context) {
 func (h *PaymentHandler) GetSupplierPayment(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "invalid id")
+		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
 	var p model.SupplierPayment
@@ -205,11 +205,11 @@ func (h *PaymentHandler) GetSupplierPayment(c *gin.Context) {
 	).Scan(&p.ID, &p.SupplierID, &poID, &p.Amount, &p.PaymentMethod, &chkID, &p.RecordedBy, &paymentDate, &p.CreatedAt)
 	p.PaymentDate = paymentDate.String
 	if err == sql.ErrNoRows {
-		respondError(c, http.StatusNotFound, "payment not found")
+		respondError(c, http.StatusNotFound, "پرداخت یافت نشد")
 		return
 	}
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "database error")
+		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
 	if poID.Valid { v := int(poID.Int64); p.PurchaseOrderID = &v }

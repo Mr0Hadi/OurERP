@@ -23,7 +23,7 @@ func NewFileHandler(cfg *config.Config) *FileHandler {
 func (h *FileHandler) Upload(c *gin.Context) {
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "file is required")
+		respondError(c, http.StatusBadRequest, "انتخاب فایل الزامی است")
 		return
 	}
 	defer file.Close()
@@ -34,13 +34,13 @@ func (h *FileHandler) Upload(c *gin.Context) {
 
 	out, err := os.Create(filePath)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "failed to save file")
+		respondError(c, http.StatusInternalServerError, "خطا در ذخیره فایل")
 		return
 	}
 	defer out.Close()
 
 	if _, err := io.Copy(out, file); err != nil {
-		respondError(c, http.StatusInternalServerError, "failed to write file")
+		respondError(c, http.StatusInternalServerError, "خطا در نوشتن فایل")
 		return
 	}
 
