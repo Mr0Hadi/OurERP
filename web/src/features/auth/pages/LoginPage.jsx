@@ -25,8 +25,8 @@ export default function LoginPage() {
 
     try {
       const res = await api.post("/auth/login", { username, password });
-      const { access_token, user } = res.data;
-      login(user, access_token);
+      const { access_token, refresh_token, user } = res.data;
+      login(user, access_token, refresh_token);
       const from = location.state?.from?.pathname || ROUTES.DASHBOARD;
       navigate(from, { replace: true });
     } catch (err) {
