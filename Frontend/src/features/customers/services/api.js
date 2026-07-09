@@ -1,4 +1,4 @@
-import { api } from "@/shared/lib/api";
+import { api } from "@/shared/services/api/api";
 
 function mapCustomer(c) {
   const nameParts = (c.full_name || "").split(" ");

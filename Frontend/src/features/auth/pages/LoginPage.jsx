@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ROUTES } from "@/shared/constants/routes";
 import { useAuthStore } from "../store/authStore";
-import { api } from "@/shared/lib/api";
+import { api } from "@/shared/services/api/api";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";

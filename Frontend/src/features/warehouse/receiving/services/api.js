@@ -1,4 +1,4 @@
-import { api } from "@/shared/lib/api";
+import { api } from "@/shared/services/api/api";
 import { PURCHASE_STATUSES, PURCHASE_STATUS_LABELS, PAYMENT_TYPES, PAYMENT_TYPE_LABELS } from "@/features/purchases/services/constants";
 
 export { PURCHASE_STATUSES, PURCHASE_STATUS_LABELS, PAYMENT_TYPES, PAYMENT_TYPE_LABELS };

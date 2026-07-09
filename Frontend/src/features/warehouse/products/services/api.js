@@ -1,4 +1,4 @@
-import { api } from "@/shared/lib/api";
+import { api } from "@/shared/services/api/api";
 
 function mapProduct(p) {
   return {
