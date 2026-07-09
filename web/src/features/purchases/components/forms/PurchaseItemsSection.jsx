@@ -1,6 +1,6 @@
 // src/features/purchases/components/PurchaseItemsSection.jsx
 import { useState, useMemo } from "react";
-import { Plus, Trash2, Search, PackagePlus } from "lucide-react";
+import { Plus, Trash2, Search, PackagePlus, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -242,83 +242,105 @@ export default function PurchaseItemsSection({
                     </th>
                     <th className="w-8 px-2 py-2.5" />
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {items.map((item) => (
-                    <tr
-                      key={item.productId}
-                      className="hover:bg-accent/30 transition-colors"
-                    >
-                      <td className="px-3 py-2">
-                        <p className="font-medium text-card-foreground text-sm truncate">
-                          {item.productName}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                          {item.productCode}
-                        </p>
-                      </td>
-                      <td className="px-2 py-2">
-                        <Input
-                          type="number"
-                          min={1}
-                          value={item.qty}
-                          onChange={(e) =>
-                            handleFieldChange(
-                              item.productId,
-                              "qty",
-                              e.target.value,
-                            )
-                          }
-                          className="h-7 text-center text-xs w-full"
-                        />
-                      </td>
-                      <td className="px-2 py-2">
-                        <Input
-                          type="number"
-                          min={0}
-                          value={item.unitPrice}
-                          onChange={(e) =>
-                            handleFieldChange(
-                              item.productId,
-                              "unitPrice",
-                              e.target.value,
-                            )
-                          }
-                          className="h-7 text-center text-xs w-full"
-                        />
-                      </td>
-                      <td className="px-2 py-2">
-                        <Input
-                          type="number"
-                          min={0}
-                          max={100}
-                          value={item.discount}
-                          onChange={(e) =>
-                            handleFieldChange(
-                              item.productId,
-                              "discount",
-                              e.target.value,
-                            )
-                          }
-                          className="h-7 text-center text-xs w-full"
-                        />
-                      </td>
-                      <td className="px-2 py-2 text-center text-xs font-medium text-card-foreground">
-                        {lineTotal(item).toLocaleString("fa-IR")}
-                      </td>
-                      <td className="px-2 py-2 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveItem(item.productId)}
-                          className="text-muted-foreground hover:text-destructive transition-colors p-0.5 rounded"
-                          aria-label="حذف کالا"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
+                 </thead>
+                 <tbody className="divide-y divide-border">
+                   <tr className="bg-amber-50/50 dark:bg-amber-950/30 border-b-2 border-amber-200 dark:border-amber-800/50">
+                     <td colSpan={6} className="px-3 py-3">
+                       <div className="flex items-start gap-2">
+                         <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5" />
+                         <div className="text-sm">
+                           <strong>توجه:</strong> مقادیر موجودی در اینجا به صورت خودکار از طریق برگه‌های حرکت انبار (Stock Movements) مدیریت می‌شوند و قابل ویرایش نیستند.
+                           هنگام ثبت دریافت کالا، مقادیر موجودی به صورت خودکار به‌روزرسانی می‌شوند.
+                           از این پس، مقادیر موجودی تنها در بخش <strong>دریافت کالا</strong> قابل تنظیم هستند.
+                         </div>
+                       </div>
+                     </td>
+                   </tr>
+                   {items.map((item) => (
+                     <tr
+                       key={item.productId}
+                       className="hover:bg-accent/30 transition-colors"
+                     >
+                       <td className="px-3 py-2">
+                         <p className="font-medium text-card-foreground text-sm truncate">
+                           {item.productName}
+                         </p>
+                         <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                           {item.productCode}
+                         </p>
+                       </td>
+                       <td className="px-2 py-2">
+                         <div className="relative">
+                           <Input
+                             type="number"
+                             min={1}
+                             value={item.qty}
+                             onChange={(e) =>
+                               handleFieldChange(
+                                 item.productId,
+                                 "qty",
+                                 e.target.value,
+                               )
+                             }
+                             className="h-7 text-center text-xs w-full bg-amber-50/50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700 cursor-not-allowed pr-8"
+                             readOnly
+                             title="این مقدار به صورت خودکار از طریق ثبت‌های حرکت انبار مدیریت می‌شود"
+                           />
+                           <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                             <span className="text-xs text-amber-600 dark:text-amber-400">📦</span>
+                           </div>
+                         </div>
+                         <p className="text-[10px] text-amber-600 dark:text-amber-400 text-center mt-1">
+                           (غیرقابل ویرایش)
+                         </p>
+                       </td>
+                       <td className="px-2 py-2">
+                         <Input
+                           type="number"
+                           min={0}
+                           value={item.unitPrice}
+                           onChange={(e) =>
+                             handleFieldChange(
+                               item.productId,
+                               "unitPrice",
+                               e.target.value,
+                             )
+                           }
+                           className="h-7 text-center text-xs w-full"
+                         />
+                       </td>
+                       <td className="px-2 py-2">
+                         <Input
+                           type="number"
+                           min={0}
+                           max={100}
+                           value={item.discount}
+                           onChange={(e) =>
+                             handleFieldChange(
+                               item.productId,
+                               "discount",
+                               e.target.value,
+                             )
+                           }
+                           className="h-7 text-center text-xs w-full"
+                         />
+                       </td>
+                       <td className="px-2 py-2 text-center text-xs font-medium text-card-foreground">
+                         {lineTotal(item).toLocaleString("fa-IR")}
+                       </td>
+                       <td className="px-2 py-2 text-center">
+                         <button
+                           type="button"
+                           onClick={() => handleRemoveItem(item.productId)}
+                           className="text-muted-foreground hover:text-destructive transition-colors p-0.5 rounded"
+                           aria-label="حذف کالا"
+                         >
+                           <Trash2 className="w-3.5 h-3.5" />
+                         </button>
+                       </td>
+                     </tr>
+                   ))}
+                 </tbody>
                 <tfoot className="bg-muted border-t border-border">
                   <tr>
                     <td

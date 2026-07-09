@@ -17,7 +17,7 @@ function mapProduct(p) {
     description: "",
     imageUrl: p.image_url || "",
     isActive: p.is_active ?? true,
-    reorderPoint: p.reorder_threshold ?? 0,
+    reorderThreshold: p.reorder_threshold ?? 0,
   };
 }
 
@@ -33,12 +33,9 @@ function mapProductForCreate(data) {
     sale_price_retail: data.retailPrice ?? 0,
     sale_price_wholesale: data.wholesalePrice ?? 0,
     tax: data.tax ?? 0,
-    reorder_threshold: data.reorderPoint ?? 0,
+    reorder_threshold: data.reorderThreshold ?? 0,
     image_url: data.imageUrl || "",
   };
-  Object.keys(result).forEach((k) => {
-    if (result[k] === "" || result[k] === undefined || result[k] === null) delete result[k];
-  });
   return result;
 }
 

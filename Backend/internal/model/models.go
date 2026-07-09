@@ -73,31 +73,41 @@ type ProductResponse struct {
 }
 
 type Supplier struct {
-	ID          int       `json:"id"`
-	Name        string    `json:"name"`
-	ContactName string    `json:"contact_name"`
-	Phone       string    `json:"phone"`
-	Address     string    `json:"address"`
-	Notes       string    `json:"notes"`
-	IsActive    bool      `json:"is_active"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          int        `json:"id"`
+	Name        string     `json:"name"`
+	ContactName string     `json:"contact_name"`
+	Phone       string     `json:"phone"`
+	Address     string     `json:"address"`
+	PostalCode  string     `json:"postal_code"`
+	Latitude    *float64   `json:"latitude"`
+	Longitude   *float64   `json:"longitude"`
+	BalanceType string     `json:"balance_type"`
+	Balance     float64    `json:"balance"`
+	Notes       string     `json:"notes"`
+	IsActive    bool       `json:"is_active"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
 type Customer struct {
-	ID           int       `json:"id"`
-	Type         string    `json:"type"`
-	FullName     string    `json:"full_name"`
-	NationalID   string    `json:"national_id"`
-	Phone        string    `json:"phone"`
-	Address      string    `json:"address"`
-	ReferralCode string    `json:"referral_code,omitempty"`
-	CreditLimit  float64   `json:"credit_limit"`
-	CustomerGrade int      `json:"customer_grade"`
-	Notes        string    `json:"notes"`
-	IsActive     bool      `json:"is_active"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID            int       `json:"id"`
+	Type          string    `json:"type"`
+	FullName      string    `json:"full_name"`
+	NationalID    string    `json:"national_id"`
+	Phone         string    `json:"phone"`
+	Address       string    `json:"address"`
+	PostalCode    string    `json:"postal_code"`
+	Latitude      *float64  `json:"latitude"`
+	Longitude     *float64  `json:"longitude"`
+	ReferralCode  string    `json:"referral_code,omitempty"`
+	CreditLimit   float64   `json:"credit_limit"`
+	CustomerGrade int       `json:"customer_grade"`
+	BalanceType   string    `json:"balance_type"`
+	OpeningBalance float64  `json:"opening_balance"`
+	Notes         string    `json:"notes"`
+	IsActive      bool      `json:"is_active"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 type CustomerDetail struct {

@@ -4,6 +4,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
+import { Textarea } from "@/shared/components/ui/textarea";
 
 export default function CustomerFinanceForm({ register, errors, balanceType, setValue }) {
   const showAmount = balanceType !== "none";
@@ -18,13 +19,13 @@ export default function CustomerFinanceForm({ register, errors, balanceType, set
           وضعیت مالی
         </CardTitle>
       </CardHeader>
-      <CardContent className="px-6 py-5">
+      <CardContent className="px-6 py-5 space-y-4">
         <div className={`grid gap-4 ${showAmount ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
 
           {/* نوع حساب */}
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">نوع حساب</Label>
-            <Select value={balanceType} onValueChange={(val) => setValue("balanceType", val)}>
+            <Select value={balanceType || "none"} onValueChange={(val) => setValue("balanceType", val)}>
               <SelectTrigger className="h-10 rounded-lg transition-all">
                 <SelectValue placeholder="انتخاب کنید" />
               </SelectTrigger>
@@ -54,31 +55,66 @@ export default function CustomerFinanceForm({ register, errors, balanceType, set
           {/* مبلغ */}
           {showAmount && (
             <div className="space-y-1.5 animate-in fade-in-50 slide-in-from-top-3 duration-300">
-              <Label htmlFor="balanceAmount" className="text-sm font-medium">
+              <Label htmlFor="openingBalance" className="text-sm font-medium">
                 مبلغ (تومان) <span className="text-destructive">*</span>
               </Label>
               <div className="relative">
                 <Input
-                  id="balanceAmount"
+                  id="openingBalance"
                   type="number"
                   min="0"
                   placeholder="۰"
                   dir="ltr"
                   className="h-10 pl-16 pr-3 rounded-lg transition-all text-base font-semibold input-rtl-placeholder"
-                  {...register("balanceAmount", { required: "وارد کردن مبلغ الزامی است" })}
+                  {...register("openingBalance", { required: showAmount ? "وارد کردن مبلغ الزامی است" : false })}
                 />
                 <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-sm font-medium text-muted-foreground">
                   تومان
                 </div>
               </div>
-              {errors.balanceAmount && (
+              {errors.openingBalance && (
                 <span className="text-xs text-destructive block mt-1 font-medium">
-                  {errors.balanceAmount.message}
+                  {errors.openingBalance.message}
                 </span>
               )}
             </div>
           )}
 
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="creditLimit" className="text-sm font-medium">سقف اعتبار (تومان)</Label>
+          <div className="relative">
+            <Input
+              id="creditLimit"
+              type="number"
+              min="0"
+              placeholder="۰"
+              dir="ltr"
+              className="h-10 pl-16 pr-3 rounded-lg transition-all input-rtl-placeholder"
+              {...register("creditLimit", {
+                min: { value: 0, message: "مقدار نمی‌تواند منفی باشد" },
+              })}
+            />
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-sm font-medium text-muted-foreground">
+              تومان
+            </div>
+          </div>
+          {errors.creditLimit && (
+            <span className="text-xs text-destructive block mt-1 font-medium">
+              {errors.creditLimit.message}
+            </span>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="notes" className="text-sm font-medium">یادداشت‌ها</Label>
+          <Textarea
+            id="notes"
+            placeholder="یادداشت‌ها..."
+            className="min-h-[80px] rounded-lg transition-all resize-none"
+            {...register("notes")}
+          />
         </div>
       </CardContent>
     </Card>

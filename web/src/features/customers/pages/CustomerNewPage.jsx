@@ -64,6 +64,8 @@ export default function CustomerNewPage() {
               avatarPreview={avatarPreview}
               onAvatarChange={handleAvatarChange}
               onRemoveAvatar={handleRemoveAvatar}
+              watch={formMethods.watch}
+              setValue={setValue}
             />
 
             <CustomerFinanceForm
@@ -76,7 +78,7 @@ export default function CustomerNewPage() {
 
           {/* ستون چپ - آدرس و دکمه‌ها */}
           <div className="lg:col-span-1 space-y-4">
-            <CustomerAddressForm register={register} />
+            <CustomerAddressForm register={register} errors={errors} />
 
             {/* دکمه‌های عملیات */}
             <div className="flex gap-2">

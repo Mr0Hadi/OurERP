@@ -9,6 +9,13 @@ import {
   CardTitle,
 } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import { useState } from "react";
 
 export default function CustomerIdentityForm({
@@ -17,8 +24,12 @@ export default function CustomerIdentityForm({
   avatarPreview,
   onAvatarChange,
   onRemoveAvatar,
+  watch,
+  setValue,
 }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const customerType = watch ? watch("type") : "retail";
+  const customerGrade = watch ? watch("customerGrade") : "1";
 
   return (
     <Card className="overflow-hidden shadow-md rounded-2xl pt-0 gap-0">
@@ -185,17 +196,103 @@ export default function CustomerIdentityForm({
               </div>
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="phone" className="text-sm font-medium">
+                  شماره تماس
+                </Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="۰۹۱۲۳۴۵۶۷۸۹"
+                  dir="ltr"
+                  className="h-10 rounded-lg transition-all input-rtl-placeholder"
+                  {...register("phone", {
+                    pattern: {
+                      value: /^[0-9]+$/,
+                      message: "شماره تماس فقط باید شامل اعداد باشد",
+                    },
+                  })}
+                />
+                {errors.phone && (
+                  <span className="text-xs text-destructive block mt-1 font-medium">
+                    {errors.phone.message}
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="nationalId" className="text-sm font-medium">
+                  کد ملی <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="nationalId"
+                  placeholder="کد ملی"
+                  dir="ltr"
+                  className="h-10 rounded-lg transition-all input-rtl-placeholder"
+                  {...register("nationalId", {
+                    required: "وارد کردن کد ملی الزامی است",
+                    pattern: {
+                      value: /^\d{10}$/,
+                      message: "کد ملی باید ۱۰ رقم باشد",
+                    },
+                  })}
+                />
+                {errors.nationalId && (
+                  <span className="text-xs text-destructive block mt-1 font-medium">
+                    {errors.nationalId.message}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">نوع مشتری</Label>
+                <Select
+                  value={customerType || "retail"}
+                  onValueChange={(val) => setValue && setValue("type", val)}
+                >
+                  <SelectTrigger className="h-10 rounded-lg transition-all">
+                    <SelectValue placeholder="انتخاب کنید" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="retail" className="rounded-lg">جزئی فروش</SelectItem>
+                    <SelectItem value="wholesale" className="rounded-lg">عمده فروش</SelectItem>
+                    <SelectItem value="mechanic" className="rounded-lg">مکانیک</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">درجه مشتری</Label>
+                <Select
+                  value={customerGrade || "1"}
+                  onValueChange={(val) => setValue && setValue("customerGrade", val)}
+                >
+                  <SelectTrigger className="h-10 rounded-lg transition-all">
+                    <SelectValue placeholder="انتخاب کنید" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="1" className="rounded-lg">۱</SelectItem>
+                    <SelectItem value="2" className="rounded-lg">۲</SelectItem>
+                    <SelectItem value="3" className="rounded-lg">۳</SelectItem>
+                    <SelectItem value="4" className="rounded-lg">۴</SelectItem>
+                    <SelectItem value="5" className="rounded-lg">۵</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="space-y-1.5">
-              <Label htmlFor="phone" className="text-sm font-medium">
-                شماره تماس
+              <Label htmlFor="referralCode" className="text-sm font-medium">
+                کد معرف
               </Label>
               <Input
-                id="phone"
-                type="tel"
-                placeholder="۰۹۱۲۳۴۵۶۷۸۹"
-                dir="ltr"
-                className="h-10 rounded-lg transition-all input-rtl-placeholder"
-                {...register("phone")}
+                id="referralCode"
+                placeholder="کد معرف"
+                className="h-10 rounded-lg transition-all"
+                {...register("referralCode")}
               />
             </div>
           </div>

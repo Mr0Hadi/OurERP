@@ -75,6 +75,8 @@ function CustomerDetailForm({ customerData }) {
               avatarPreview={avatarPreview}
               onAvatarChange={handleAvatarChange}
               onRemoveAvatar={handleRemoveAvatar}
+              watch={formMethods.watch}
+              setValue={setValue}
             />
             <CustomerFinanceForm
               register={register}
@@ -85,7 +87,7 @@ function CustomerDetailForm({ customerData }) {
           </div>
 
           <div className="lg:col-span-1 space-y-4">
-            <CustomerAddressForm register={register} />
+            <CustomerAddressForm register={register} errors={errors} />
 
             <div className="flex gap-2">
               <Button

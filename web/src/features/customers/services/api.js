@@ -9,35 +9,40 @@ function mapCustomer(c) {
     phone: c.phone || "",
     email: "",
     address: c.address || "",
-    postalCode: "",
+    postalCode: c.postal_code || "",
     nationalId: c.national_id || "",
-    type: c.type || "",
-    customerGrade: c.customer_grade || "",
+    type: c.type || "retail",
+    customerGrade: (c.customer_grade ?? 1).toString(),
     referralCode: c.referral_code || "",
     creditLimit: c.credit_limit || 0,
+    balanceType: c.balance_type || "none",
+    openingBalance: c.opening_balance || 0,
     notes: c.notes || "",
-    balance: 0,
+    balance: c.outstanding_balance || 0,
     avatar: null,
-    coordinates: null,
+    coordinates: c.latitude != null && c.longitude != null
+      ? { lat: c.latitude, lng: c.longitude }
+      : null,
   };
 }
 
 function mapCustomerForCreate(data) {
-  const result = {
+  return {
     full_name: `${data.firstName || ""} ${data.lastName || ""}`.trim(),
     phone: data.phone || "",
     address: data.address || "",
+    postal_code: data.postalCode || "",
+    latitude: data.coordinates?.lat ?? null,
+    longitude: data.coordinates?.lng ?? null,
     national_id: data.nationalId || "",
-    type: data.type || "",
-    customer_grade: data.customerGrade || "",
+    type: data.type || "retail",
+    customer_grade: parseInt(data.customerGrade) || 1,
     referral_code: data.referralCode || "",
-    credit_limit: data.creditLimit || 0,
+    credit_limit: parseFloat(data.creditLimit) || 0,
+    balance_type: data.balanceType || "none",
+    opening_balance: parseFloat(data.openingBalance) || 0,
     notes: data.notes || "",
   };
-  Object.keys(result).forEach((k) => {
-    if (result[k] === "" || result[k] === undefined || result[k] === null) delete result[k];
-  });
-  return result;
 }
 
 export async function fetchCustomers({

@@ -30,6 +30,8 @@ func RunMigrations() error {
 		createReceivingsTable,
 		createReceivingItemsTable,
 		createCompanySettingsTable,
+		addCustomerAddressFields,
+		addSupplierAddressAndBalanceFields,
 	}
 
 	for _, m := range migrations {
@@ -348,3 +350,21 @@ CREATE TABLE IF NOT EXISTS company_settings (
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );`
+
+const addCustomerAddressFields = `
+DO $$ BEGIN
+    ALTER TABLE customers ADD COLUMN IF NOT EXISTS postal_code VARCHAR(20) DEFAULT '';
+    ALTER TABLE customers ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,7);
+    ALTER TABLE customers ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,7);
+    ALTER TABLE customers ADD COLUMN IF NOT EXISTS balance_type VARCHAR(20) DEFAULT 'none';
+    ALTER TABLE customers ADD COLUMN IF NOT EXISTS opening_balance NUMERIC(12,2) DEFAULT 0;
+END $$;`
+
+const addSupplierAddressAndBalanceFields = `
+DO $$ BEGIN
+    ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS postal_code VARCHAR(20) DEFAULT '';
+    ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,7);
+    ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,7);
+    ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS balance_type VARCHAR(20) DEFAULT 'none';
+    ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS balance NUMERIC(12,2) DEFAULT 0;
+END $$;`
