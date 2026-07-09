@@ -71,10 +71,10 @@ function SaleDetailForm({ saleData }) {
 
   useEffect(() => {
     initializeFromSale(saleData);
-  }, [saleData.id, initializeFromSale]);
+  }, [saleData.id, saleData.updatedAt, initializeFromSale]);
 
-  if (initializedForId !== saleData.id) {
-    return null; // یا می‌توانید <SaleDetailLoading /> برگردانید
+  if (initializedForId !== `${saleData.id}:${saleData.updatedAt}`) {
+    return null;
   }
 
   const computedTotal = items.reduce((sum, item) => {

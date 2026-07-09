@@ -12,6 +12,7 @@ import {
 import { purchaseKeys } from "./queryKeys";
 import { receivingKeys } from "#/features/warehouse/receiving/services/queryKeys";
 import { ROUTES } from "@/shared/constants/routes";
+import { usePurchaseFormStore } from "../store/purchaseFormStore";
 
 export const useCreatePurchaseMutation = () => {
   const queryClient = useQueryClient();
@@ -49,6 +50,7 @@ export const useUpdatePurchaseMutation = (id) => {
       queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       toast.success("خرید با موفقیت ویرایش شد");
       navigate(ROUTES.PURCHASES_LIST);
+      usePurchaseFormStore.getState().resetForm();
     },
     onError: (error) => {
       toast.error(error?.message || "خطا در ویرایش خرید");

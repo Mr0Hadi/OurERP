@@ -10,6 +10,7 @@ import {
 } from './api';
 import { saleKeys } from './queryKeys';
 import { ROUTES } from '@/shared/constants/routes';
+import { useSaleFormStore } from '../store/saleFormStore';
 
 export const useCreateSaleMutation = () => {
   const queryClient = useQueryClient();
@@ -37,6 +38,7 @@ export const useUpdateSaleMutation = (id) => {
       queryClient.invalidateQueries({ queryKey: saleKeys.lists() });
       toast.success('فروش با موفقیت ویرایش شد');
       navigate(ROUTES.SALES);
+      useSaleFormStore.getState().resetForm();
     },
     onError: (error) => {
       toast.error(error?.message || 'خطا در ویرایش فروش');

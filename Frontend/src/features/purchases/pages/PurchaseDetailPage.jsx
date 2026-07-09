@@ -73,9 +73,9 @@ function PurchaseDetailForm({ purchaseData }) {
   // initializeFromPurchase باید فقط یک‌بار هنگام mount اجرا شود
   useEffect(() => {
     initializeFromPurchase(purchaseData);
-  }, [purchaseData.id, initializeFromPurchase]);
+  }, [purchaseData.id, purchaseData.updatedAt, initializeFromPurchase]);
 
-  if (initializedForId !== purchaseData.id) {
+  if (initializedForId !== `${purchaseData.id}:${purchaseData.updatedAt}`) {
     return null;
   }
 
