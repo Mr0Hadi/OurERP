@@ -161,18 +161,6 @@
 │   │       └── utils.go
 │   │
 │   └── database
-│       ├── migrations
-│       │   ├── 000001_create_users_table.up.sql
-│       │   ├── 000001_create_users_table.down.sql
-│       │   ├── 000002_create_customers_table.up.sql
-│       │   ├── 000002_create_customers_table.down.sql
-│       │   └── ...
-│       └── seeds
-│           └── seed.go
-│
-├── pkg                                # کدهایی که ممکنه بیرون از پروژه هم استفاده بشن
-│   └── logger
-│       └── logger.go
 │
 ├── .env
 ├── .env.example
