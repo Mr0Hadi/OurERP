@@ -1,0 +1,40 @@
+export const allSuppliers = [
+  {
+    id: "1",
+    companyName: "ایران قطعه",
+    firstName: "رضا",
+    lastName: "تقوی",
+    phone: "02112345678",
+    address: "تهران، خیابان امیرکبیر، پلاک ۱۲",
+    postalCode: "1234567890",
+    balance: -5000000,
+    avatar: null,
+    coordinates: { lat: 35.6892, lng: 51.389 },
+  },
+  {
+    id: "2",
+    companyName: "لنت پارس موتور",
+    firstName: "محمد",
+    lastName: "راد",
+
+    phone: "09121234567",
+    address: "کرج، منطقه صنعتی، سوله ۵",
+    postalCode: "8134567890",
+    balance: 1500000,
+    avatar: null,
+    coordinates: { lat: 35.8327, lng: 50.9915 },
+  },
+  {
+    id: "3",
+    companyName: "پخش بلبرینگ مرکزی",
+
+    firstName: "حسن",
+    lastName: "کریمی",
+    phone: "02198765432",
+    address: "تهران، میدان توپخانه",
+    postalCode: "6514567890",
+    balance: 0,
+    avatar: null,
+    coordinates: { lat: 35.685, lng: 51.423 },
+  },
+];
