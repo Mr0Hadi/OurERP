@@ -33,7 +33,7 @@ export function useSuppliersQuery(filters, pagination, sorting) {
 
 export const useSupplierQuery = (id) => {
   return useQuery({
-    queryKey: supplierKeys.detail(id),
+    queryKey: supplierKeys.detail(Number(id)),
     queryFn: () => getSupplierById(id),
     enabled: !!id,
   });

@@ -48,11 +48,11 @@ export default function ProductPricingForm({ register, stock = 0 }) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="vat">مالیات بر ارزش افزوده (درصد %)</Label>
+          <Label htmlFor="tax">مالیات بر ارزش افزوده (درصد %)</Label>
           <Input
             type="number"
-            id="vat"
-            {...register("vat")}
+            id="tax"
+            {...register("tax")}
             min="0"
             max="100"
             placeholder="مثال: 9"
@@ -70,21 +70,21 @@ export default function ProductPricingForm({ register, stock = 0 }) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="sellPrice1">قیمت فروش اول (تومان)</Label>
+          <Label htmlFor="retailPrice">قیمت فروش اول (تومان)</Label>
           <Input
             type="number"
-            id="sellPrice1"
-            {...register("sellPrice1")}
+            id="retailPrice"
+            {...register("retailPrice")}
             min="0"
           />
         </div>
 
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="sellPrice2">قیمت فروش دوم (همکار/عمده)</Label>
+          <Label htmlFor="wholesalePrice">قیمت فروش دوم (همکار/عمده)</Label>
           <Input
             type="number"
-            id="sellPrice2"
-            {...register("sellPrice2")}
+            id="wholesalePrice"
+            {...register("wholesalePrice")}
             min="0"
           />
         </div>

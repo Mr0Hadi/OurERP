@@ -21,9 +21,9 @@ function buildDefaultValues(data) {
       unit: "",
       reorderThreshold: 0,
       purchasePrice: 0,
-      sellPrice1: 0,
-      sellPrice2: 0,
-      vat: 0,
+      retailPrice: 0,
+      wholesalePrice: 0,
+      tax: 0,
     };
   }
   return {
@@ -35,9 +35,9 @@ function buildDefaultValues(data) {
     unit: data.unit || "",
     reorderThreshold: data.reorderThreshold ?? 0,
     purchasePrice: data.purchasePrice || 0,
-    sellPrice1: data.retailPrice ?? data.sellPrice1 ?? 0,
-    sellPrice2: data.wholesalePrice ?? data.sellPrice2 ?? 0,
-    vat: data.tax ?? data.vat ?? 0,
+    retailPrice: data.retailPrice ?? 0,
+    wholesalePrice: data.wholesalePrice ?? 0,
+    tax: data.tax ?? 0,
   };
 }
 
@@ -106,9 +106,9 @@ export function useProductForm(initialData = null) {
       unit: formData.unit,
       reorderThreshold: Number(formData.reorderThreshold) || 0,
       purchasePrice: Number(formData.purchasePrice) || 0,
-      retailPrice: Number(formData.sellPrice1) || 0,
-      wholesalePrice: Number(formData.sellPrice2) || 0,
-      tax: Number(formData.vat) || 0,
+      retailPrice: Number(formData.retailPrice) || 0,
+      wholesalePrice: Number(formData.wholesalePrice) || 0,
+      tax: Number(formData.tax) || 0,
     };
 
     if (imageRemoved) {

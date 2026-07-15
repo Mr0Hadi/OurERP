@@ -92,7 +92,7 @@ function PurchaseDetailForm({ purchaseData }) {
       supplierName: formData.supplierName,
       invoiceNumber: formData.invoiceNumber,
       invoiceDate: formData.invoiceDate,
-      dueDate: formData.dueDate || null,
+      expectedDeliveryDate: formData.expectedDeliveryDate || null,
       description: formData.description || "",
       items: items.map((item) => ({
         ...item,
@@ -100,9 +100,6 @@ function PurchaseDetailForm({ purchaseData }) {
       })),
       paymentType: formData.paymentType || "cash",
       paidAmount: Number(formData.paidAmount) || 0,
-      checkNumber: formData.checkNumber || null,
-      transferRef: formData.transferRef || null,
-      mixedPayments: formData.mixedPayments || [],
       status: formData.status || "pending",
       totalAmount: computedTotal,
     };

@@ -37,7 +37,7 @@ export function useSalesQuery(filters, pagination, sorting) {
 
 export function useSaleQuery(id) {
   return useQuery({
-    queryKey: saleKeys.detail(id),
+    queryKey: saleKeys.detail(Number(id)),
     queryFn: () => fetchSaleById(id),
     enabled: !!id,
     staleTime: 1000 * 60 * 5,

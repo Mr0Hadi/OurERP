@@ -60,7 +60,7 @@ apiClient.interceptors.response.use(
         const { default: axiosStatic } = await import("axios");
         const res = await axiosStatic.post(
           `${BASE_URL}/auth/refresh`,
-          { refresh_token: refreshToken },
+          { refreshToken: refreshToken },
           {
             headers: {
               Authorization: `Bearer ${useAuthStore.getState().token}`,
@@ -69,12 +69,12 @@ apiClient.interceptors.response.use(
           }
         );
 
-        const { access_token, refresh_token } = res.data.data;
-        setTokens(access_token, refresh_token);
+        const { accessToken, refreshToken: newRefreshToken } = res.data.data;
+        setTokens(accessToken, newRefreshToken);
 
         processQueue(null);
 
-        originalRequest.headers.Authorization = `Bearer ${access_token}`;
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError);

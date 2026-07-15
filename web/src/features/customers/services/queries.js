@@ -34,7 +34,7 @@ export function useCustomersQuery(filters, pagination, sorting) {
 
 export const useCustomerQuery = (id) => {
   return useQuery({
-    queryKey: customerKeys.detail(id),
+    queryKey: customerKeys.detail(Number(id)),
     queryFn: () => getCustomerById(id),
     enabled: !!id,
   });

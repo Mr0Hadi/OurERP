@@ -16,37 +16,6 @@ export const RECEIVING_STATUS_LABELS = Object.fromEntries(
   )
 );
 
-function mapPOItem(i) {
-  return {
-    productId: String(i.product_id),
-    productCode: i.product_code || "",
-    productName: i.product_name || "",
-    orderedQty: i.ordered_quantity ?? 0,
-    qty: i.ordered_quantity ?? 0,
-    unitPrice: i.unit_price ?? 0,
-    receivedQty: i.received_quantity ?? 0,
-    discount: i.discount ?? 0,
-  };
-}
-
-function mapPurchaseOrder(po) {
-  return {
-    id: String(po.id),
-    supplierId: String(po.supplier_id ?? ""),
-    supplierName: po.supplier_name || "",
-    invoiceNumber: po.supplier_invoice_number || "",
-    invoiceDate: po.created_at ? po.created_at.split("T")[0] : "",
-    status: po.status || PURCHASE_STATUSES.PENDING,
-    paymentType: PAYMENT_TYPES.CREDIT,
-    paidAmount: 0,
-    totalAmount: po.total_amount ?? 0,
-    description: po.notes || "",
-    items: (po.items || []).map(mapPOItem),
-    createdAt: po.created_at || "",
-    updatedAt: po.updated_at || "",
-  };
-}
-
 export async function fetchReceivingPurchases(params = {}) {
   const { page = 1, limit = 10, search = "", status = "", fromDate = "", toDate = "" } = params;
 
@@ -60,31 +29,31 @@ export async function fetchReceivingPurchases(params = {}) {
     to: toDate || undefined,
   });
 
-  let items = (res.data || []).map(mapPurchaseOrder);
+  let items = (res.data || []).filter((p) =>
+    RECEIVING_ELIGIBLE_STATUSES.includes(p.status)
+  );
 
   if (search) {
     const q = search.toLowerCase();
     items = items.filter(
       (p) =>
-        p.invoiceNumber.toLowerCase().includes(q) ||
-        p.supplierName.toLowerCase().includes(q) ||
-        (p.description && p.description.toLowerCase().includes(q))
+        (p.invoiceNumber || "").toLowerCase().includes(q) ||
+        (p.supplierName || "").toLowerCase().includes(q) ||
+        (p.description || "").toLowerCase().includes(q)
     );
   }
 
-  items = items.filter((p) => RECEIVING_ELIGIBLE_STATUSES.includes(p.status));
-
   return {
     items,
-    total: res.meta?.total_count ?? 0,
+    total: res.meta?.totalCount ?? 0,
     page: res.meta?.page ?? 1,
-    totalPages: res.meta?.total_pages ?? 1,
+    totalPages: res.meta?.totalPages ?? 1,
   };
 }
 
 export async function fetchReceivingPurchaseById(id) {
   const res = await api.get(`/api/purchase-orders/${id}`);
-  return mapPurchaseOrder(res.data);
+  return res.data;
 }
 
 export async function updateReceivingStatus(id, receivedItems) {
@@ -110,23 +79,24 @@ export async function updateReceivingStatus(id, receivedItems) {
     ...po,
     status: newStatus,
     items: (po.items || []).map((item) => {
-      const receivedItem = receivedItems.find((ri) => ri.productId === String(item.product_id));
-      return receivedItem ? { ...item, received_quantity: receivedItem.receivedQty } : item;
+      const receivedItem = receivedItems.find((ri) => ri.productId === String(item.productId));
+      return receivedItem ? { ...item, receivedQty: receivedItem.receivedQty } : item;
     }),
   };
 
-  return mapPurchaseOrder(updated);
+  return updated;
 }
 
 export async function confirmReceiving(purchaseId, receivingData) {
   const res = await api.post(`/api/purchase-orders/${purchaseId}/receive`, {
     items: (receivingData.receivedItems || []).map((item) => ({
-      product_id: parseInt(item.productId, 10),
-      ordered_quantity: item.orderedQty ?? item.qty ?? 0,
-      unit_price: item.unitPrice ?? 0,
-      received_quantity: item.receivedQty ?? 0,
-      discrepancy_note: "",
+      productId: parseInt(item.productId, 10),
+      qty: item.orderedQty ?? item.qty ?? 0,
+      orderedQty: item.orderedQty ?? item.qty ?? 0,
+      unitPrice: item.unitPrice ?? 0,
+      receivedQty: item.receivedQty ?? 0,
+      discrepancyNote: "",
     })),
   });
-  return mapPurchaseOrder({ ...res.data, id: purchaseId });
+  return res.data;
 }

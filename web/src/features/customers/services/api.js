@@ -1,50 +1,5 @@
 import { api } from "@/shared/lib/api";
 
-function mapCustomer(c) {
-  const nameParts = (c.full_name || "").split(" ");
-  return {
-    id: String(c.id),
-    firstName: nameParts[0] || "",
-    lastName: nameParts.slice(1).join(" ") || "",
-    phone: c.phone || "",
-    email: "",
-    address: c.address || "",
-    postalCode: c.postal_code || "",
-    nationalId: c.national_id || "",
-    type: c.type || "retail",
-    customerGrade: (c.customer_grade ?? 1).toString(),
-    referralCode: c.referral_code || "",
-    creditLimit: c.credit_limit || 0,
-    balanceType: c.balance_type || "none",
-    openingBalance: c.opening_balance || 0,
-    notes: c.notes || "",
-    balance: c.outstanding_balance || 0,
-    avatar: null,
-    coordinates: c.latitude != null && c.longitude != null
-      ? { lat: c.latitude, lng: c.longitude }
-      : null,
-  };
-}
-
-function mapCustomerForCreate(data) {
-  return {
-    full_name: `${data.firstName || ""} ${data.lastName || ""}`.trim(),
-    phone: data.phone || "",
-    address: data.address || "",
-    postal_code: data.postalCode || "",
-    latitude: data.coordinates?.lat ?? null,
-    longitude: data.coordinates?.lng ?? null,
-    national_id: data.nationalId || "",
-    type: data.type || "retail",
-    customer_grade: parseInt(data.customerGrade) || 1,
-    referral_code: data.referralCode || "",
-    credit_limit: parseFloat(data.creditLimit) || 0,
-    balance_type: data.balanceType || "none",
-    opening_balance: parseFloat(data.openingBalance) || 0,
-    notes: data.notes || "",
-  };
-}
-
 export async function fetchCustomers({
   page = 1,
   limit = 10,
@@ -58,26 +13,58 @@ export async function fetchCustomers({
     search: search || undefined,
   });
   return {
-    items: (res.data || []).map(mapCustomer),
-    total: res.meta?.total_count ?? 0,
+    items: res.data || [],
+    total: res.meta?.totalCount ?? 0,
     page: res.meta?.page ?? 1,
-    totalPages: res.meta?.total_pages ?? 1,
+    totalPages: res.meta?.totalPages ?? 1,
   };
 }
 
 export async function createCustomer(customerData) {
-  const res = await api.post("/api/customers", mapCustomerForCreate(customerData));
-  return mapCustomer(res.data);
+  const res = await api.post("/api/customers", {
+    firstName: customerData.firstName || "",
+    lastName: customerData.lastName || "",
+    phone: customerData.phone || "",
+    email: customerData.email || "",
+    address: customerData.address || "",
+    postalCode: customerData.postalCode || "",
+    nationalId: customerData.nationalId || "",
+    type: customerData.type || "retail",
+    customerGrade: parseInt(customerData.customerGrade) || 1,
+    referralCode: customerData.referralCode || "",
+    creditLimit: parseFloat(customerData.creditLimit) || 0,
+    balanceType: customerData.balanceType || "none",
+    openingBalance: parseFloat(customerData.openingBalance) || 0,
+    notes: customerData.notes || "",
+    coordinates: customerData.coordinates || null,
+  });
+  return res.data;
 }
 
 export const getCustomerById = async (id) => {
   const res = await api.get(`/api/customers/${id}`);
-  return mapCustomer(res.data);
+  return res.data;
 };
 
 export const updateCustomer = async (id, updatedData) => {
-  const res = await api.put(`/api/customers/${id}`, mapCustomerForCreate(updatedData));
-  return mapCustomer(res.data);
+  const res = await api.put(`/api/customers/${id}`, {
+    firstName: updatedData.firstName || "",
+    lastName: updatedData.lastName || "",
+    phone: updatedData.phone || "",
+    email: updatedData.email || "",
+    address: updatedData.address || "",
+    postalCode: updatedData.postalCode || "",
+    nationalId: updatedData.nationalId || "",
+    type: updatedData.type || "retail",
+    customerGrade: parseInt(updatedData.customerGrade) || 1,
+    referralCode: updatedData.referralCode || "",
+    creditLimit: parseFloat(updatedData.creditLimit) || 0,
+    balanceType: updatedData.balanceType || "none",
+    openingBalance: parseFloat(updatedData.openingBalance) || 0,
+    notes: updatedData.notes || "",
+    coordinates: updatedData.coordinates || null,
+  });
+  return res.data;
 };
 
 export const deleteCustomer = async (id) => {

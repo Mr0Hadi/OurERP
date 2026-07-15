@@ -37,7 +37,7 @@ export default function CustomerNewPage() {
   const {
     register,
     handleSubmit,
-    setValue,
+    control,
     formState: { errors },
   } = formMethods;
 
@@ -61,18 +61,17 @@ export default function CustomerNewPage() {
             <CustomerIdentityForm
               register={register}
               errors={errors}
+              control={control}
               avatarPreview={avatarPreview}
               onAvatarChange={handleAvatarChange}
               onRemoveAvatar={handleRemoveAvatar}
-              watch={formMethods.watch}
-              setValue={setValue}
             />
 
             <CustomerFinanceForm
               register={register}
               errors={errors}
+              control={control}
               balanceType={balanceType}
-              setValue={setValue}
             />
           </div>
 

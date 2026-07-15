@@ -43,7 +43,7 @@ export function useReceivingPurchasesQuery(filters, pagination, sorting) {
 
 export function useReceivingPurchaseQuery(id) {
   return useQuery({
-    queryKey: receivingKeys.detail(id),
+    queryKey: receivingKeys.detail(Number(id)),
     queryFn: () => fetchReceivingPurchaseById(id),
     enabled: !!id,
     staleTime: 1000 * 60 * 5,

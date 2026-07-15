@@ -159,21 +159,14 @@ export default function PurchasesNewPage() {
 
     // محاسبه مبلغ پرداختی بسته به نوع پرداخت
     let finalPaidAmount;
-    let paymentDetails = {};
 
     if (formData.paymentType === 'credit') {
       finalPaidAmount = 0;
     } else if (formData.paymentType === 'mixed') {
       const mixedPayments = formData.mixedPayments || [];
       finalPaidAmount = mixedPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-      paymentDetails.mixedPayments = mixedPayments;
     } else {
       finalPaidAmount = Number(formData.paidAmount) || 0;
-      if (formData.paymentType === 'check') {
-        paymentDetails.checkNumber = formData.checkNumber || null;
-      } else if (formData.paymentType === 'transfer') {
-        paymentDetails.transferRef = formData.transferRef || null;
-      }
     }
 
     const payload = {
@@ -181,7 +174,7 @@ export default function PurchasesNewPage() {
       supplierName: formData.supplierName,
       invoiceNumber: formData.invoiceNumber,
       invoiceDate: formData.invoiceDate,
-      dueDate: formData.dueDate || null,
+      expectedDeliveryDate: formData.expectedDeliveryDate || null,
       description: formData.description || '',
       items: items.map((item) => ({
         productId: item.productId,
@@ -195,7 +188,6 @@ export default function PurchasesNewPage() {
       })),
       paymentType: formData.paymentType || 'cash',
       paidAmount: finalPaidAmount,
-      ...paymentDetails,
       status: formData.status || 'pending',
       totalAmount: computedTotal,
     };

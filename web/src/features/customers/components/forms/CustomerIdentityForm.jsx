@@ -16,20 +16,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
+import { Controller } from "react-hook-form";
 import { useState } from "react";
 
 export default function CustomerIdentityForm({
   register,
   errors,
+  control,
   avatarPreview,
   onAvatarChange,
   onRemoveAvatar,
-  watch,
-  setValue,
 }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const customerType = watch ? watch("type") : "retail";
-  const customerGrade = watch ? watch("customerGrade") : "1";
 
   return (
     <Card className="overflow-hidden shadow-md rounded-2xl pt-0 gap-0">
@@ -249,38 +247,44 @@ export default function CustomerIdentityForm({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium">نوع مشتری</Label>
-                <Select
-                  value={customerType || "retail"}
-                  onValueChange={(val) => setValue && setValue("type", val)}
-                >
-                  <SelectTrigger className="h-10 rounded-lg transition-all">
-                    <SelectValue placeholder="انتخاب کنید" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="retail" className="rounded-lg">جزئی فروش</SelectItem>
-                    <SelectItem value="wholesale" className="rounded-lg">عمده فروش</SelectItem>
-                    <SelectItem value="mechanic" className="rounded-lg">مکانیک</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="type"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value || "retail"} onValueChange={field.onChange}>
+                      <SelectTrigger className="h-10 rounded-lg transition-all">
+                        <SelectValue placeholder="انتخاب کنید" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="retail" className="rounded-lg">جزئی فروش</SelectItem>
+                        <SelectItem value="wholesale" className="rounded-lg">عمده فروش</SelectItem>
+                        <SelectItem value="mechanic" className="rounded-lg">مکانیک</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
 
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium">درجه مشتری</Label>
-                <Select
-                  value={customerGrade || "1"}
-                  onValueChange={(val) => setValue && setValue("customerGrade", val)}
-                >
-                  <SelectTrigger className="h-10 rounded-lg transition-all">
-                    <SelectValue placeholder="انتخاب کنید" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="1" className="rounded-lg">۱</SelectItem>
-                    <SelectItem value="2" className="rounded-lg">۲</SelectItem>
-                    <SelectItem value="3" className="rounded-lg">۳</SelectItem>
-                    <SelectItem value="4" className="rounded-lg">۴</SelectItem>
-                    <SelectItem value="5" className="rounded-lg">۵</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="customerGrade"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value || "1"} onValueChange={field.onChange}>
+                      <SelectTrigger className="h-10 rounded-lg transition-all">
+                        <SelectValue placeholder="انتخاب کنید" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="1" className="rounded-lg">۱</SelectItem>
+                        <SelectItem value="2" className="rounded-lg">۲</SelectItem>
+                        <SelectItem value="3" className="rounded-lg">۳</SelectItem>
+                        <SelectItem value="4" className="rounded-lg">۴</SelectItem>
+                        <SelectItem value="5" className="rounded-lg">۵</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
             </div>
 

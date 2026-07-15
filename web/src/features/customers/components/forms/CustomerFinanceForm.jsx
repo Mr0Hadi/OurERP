@@ -5,8 +5,9 @@ import { Label } from "@/shared/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Textarea } from "@/shared/components/ui/textarea";
+import { Controller } from "react-hook-form";
 
-export default function CustomerFinanceForm({ register, errors, balanceType, setValue }) {
+export default function CustomerFinanceForm({ register, errors, control, balanceType }) {
   const showAmount = balanceType !== "none";
 
   return (
@@ -25,31 +26,37 @@ export default function CustomerFinanceForm({ register, errors, balanceType, set
           {/* نوع حساب */}
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">نوع حساب</Label>
-            <Select value={balanceType || "none"} onValueChange={(val) => setValue("balanceType", val)}>
-              <SelectTrigger className="h-10 rounded-lg transition-all">
-                <SelectValue placeholder="انتخاب کنید" />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl">
-                <SelectItem value="none" className="rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-muted-foreground/50" />
-                    بی‌حساب (صفر)
-                  </div>
-                </SelectItem>
-                <SelectItem value="creditor" className="rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-500" />
-                    طلبکار
-                  </div>
-                </SelectItem>
-                <SelectItem value="debtor" className="rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <TrendingDown className="h-4 w-4 text-red-600 dark:text-red-500" />
-                    بدهکار
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <Controller
+              name="balanceType"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value || "none"} onValueChange={field.onChange}>
+                  <SelectTrigger className="h-10 rounded-lg transition-all">
+                    <SelectValue placeholder="انتخاب کنید" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="none" className="rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-muted-foreground/50" />
+                        بی‌حساب (صفر)
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="creditor" className="rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-500" />
+                        طلبکار
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="debtor" className="rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <TrendingDown className="h-4 w-4 text-red-600 dark:text-red-500" />
+                        بدهکار
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
 
           {/* مبلغ */}
