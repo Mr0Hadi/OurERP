@@ -1,8 +1,7 @@
 {
   "_meta": {
     "description": "Complete knowledge base for the OurERP WMS project. Written for AI agents to gain full understanding of the codebase.",
-    "lastUpdated": "2026-07-09",
-    "version": "1.1.1",
+    "lastUpdated": "2026-07-09",    "version": "1.4.3",
     "agent_instructions": {
       "purpose": "This file is the single source of truth for the project's current state. It is maintained by agents as they work.",
       "rule": "MANDATORY: At the end of every task, before responding to the user, update this file to reflect the final state of the project. This includes: updating 'lastUpdated', incrementing 'version', adding a changelog entry under 'changelog', and correcting any sections that are now outdated.",
@@ -251,7 +250,7 @@
   "api": {
     "base_url": "http://localhost:8080",
     "response_format": {
-      "success": {"data": "...", "meta": {"page": 1, "page_size": 20, "total_count": 100, "total_pages": 5}},
+      "success": {"data": "...", "meta": {"page": 1, "pageSize": 20, "totalCount": 100, "totalPages": 5}},
       "error": {"error": "error message in Persian"}
     },
     "pagination": "Query params: page (default 1), page_size (default 20, max 100)",
@@ -387,26 +386,27 @@
     "handler_structure": "Each handler is a struct (e.g., CustomerHandler) with methods (List, Get, Create, Update, Delete). Instantiated via New*Handler() functions.",
     "sql_queries": "Raw SQL strings with positional parameters ($1, $2, ...). No ORM. Queries built dynamically with string concatenation for filters.",
     "error_handling": "respondError(c, httpStatus, 'Persian error message'). Common errors: 400 (bad request), 401 (unauthorized), 403 (forbidden), 404 (not found), 409 (conflict/duplicate), 500 (database error).",
-    "response_format": "respondJSON(c, status, data) wraps in {data: ...}. respondJSONWithMeta adds {data: ..., meta: {page, page_size, total_count, total_pages}}.",
+    "response_format": "respondJSON(c, status, data) wraps in {data: ...}. respondJSONWithMeta adds {data: ..., meta: {page, pageSize, totalCount, totalPages}}.",
     "soft_deletes": "is_active=false instead of hard DELETE. Queries filter by is_active=true by default.",
     "null_handling": "sql.NullString, sql.NullFloat64, sql.NullTime used for nullable columns. NULLIF($N,'') used in INSERT/UPDATE to convert empty strings to NULL.",
     "pagination": "parsePagination(c) extracts page and page_size query params. Default: page=1, page_size=20, max=100.",
     "validation": "Simple if-checks in handler methods before DB operations. Regex validation for national_id (10 digits), postal_code (5-10 digits), latitude (-90 to 90), longitude (-180 to 180). balance_type checked against whitelist [none, creditor, debtor].",
     "seeding": "Default admin user (admin/admin123) created on startup if users table is empty. bcrypt hashed.",
-    "naming_convention": "Go: camelCase for variables, PascalCase for exported. DB: snake_case. JSON: snake_case."
+    "naming_convention": "Go: camelCase for variables, PascalCase for exported. DB: snake_case. JSON: camelCase (all API responses and requests now use camelCase to match frontend)."
   },
 
   "frontend_patterns": {
     "feature_module_structure": "Each feature follows: components/, hooks/, pages/, routes/, services/, store/. This is the standard pattern.",
     "routing": "Each feature exports route objects from routes/routes.jsx or routes/index.js. Central router in src/app/routes/routers.jsx combines all feature routes. Protected routes wrapped in RequireAuth.",
-    "api_layer": "services/api.js contains: mapX (backend->frontend), mapXForCreate (frontend->backend), fetchX, createX, getXById, updateX, deleteX. services/queries.js has React Query hooks. services/mutations.js has mutation hooks.",
-    "form_pattern": "hooks/useXForm.js uses react-hook-form. buildDefaultValues(data) creates form defaults. buildXPayload(data, avatar, existingAvatar) creates API payload. Form components receive register, errors, watch, setValue as props.",
+    "api_layer": "services/api.js contains: fetchX, createX, getXById, updateX, deleteX. Data shapes match backend camelCase response directly (no mapper functions). services/queries.js has React Query hooks. services/mutations.js has mutation hooks.",
+    "form_pattern": "hooks/useXForm.js uses react-hook-form. buildDefaultValues(data) creates form defaults matching backend camelCase fields directly. buildXPayload(data, avatar, existingAvatar) creates API payload. Form components receive register, errors, watch, setValue as props. Form field names match backend JSON tags exactly (no remapping).",
     "state_management": "Zustand for client-side state (auth, filters, header, navigation, theme). React Query for server state (fetching, caching, mutations).",
     "api_client": "src/shared/lib/api.js - Axios instance with request/response interceptors. Auto-refreshes expired tokens. Persian error messages extracted from response.",
     "ui_components": "shadcn/ui components in src/shared/components/ui/. 26 components: alert-dialog, alert, avatar, badge, button, card, collapsible, command, dialog, direction, dropdown-menu, input-group, input, label, popover, progress, scroll-area, select, separator, sheet, sidebar, skeleton, table, tabs, textarea, tooltip.",
     "styling": "Tailwind CSS 4 with @tailwindcss/vite plugin. Dark mode support via ThemeProvider. Persian font (Vazirmatn). Rounded UI (rounded-2xl, rounded-lg). RTL support via dir attribute.",
     "component_style": "Functional components with hooks. JSX (no TypeScript). Feature-based file organization. Form components are controlled via props from parent.",
     "naming_convention": "Files: PascalCase for components (CustomerForm.jsx), camelCase for hooks/utils (useCustomerForm.js). Components export default. Named exports for hooks.",
+    "query_key_types": "CRITICAL: All detail query keys must use Number(id) since backend returns numeric IDs. useParams() returns strings. Mutations receive numeric IDs from API. Always wrap route ids in Number() for query keys to ensure cache invalidation works.",
     "path_alias": "@ -> src/ (configured in vite.config.js and package.json imports)"
   },
 
@@ -574,6 +574,119 @@
   },
 
   "changelog": [
+    {
+      "date": "2026-07-09",
+      "version": "1.4.3",
+      "changes": "Fixed stale data bug after updating entities. Root cause: React Query detail queries used string id from useParams() but mutations invalidated with numeric id from API response. React Query does deep equality on keys, so '123' !== 123, meaning detail queries were never actually invalidated. Fixed by normalizing all detail queries and mutations to use Number(id) consistently across all 6 features (suppliers, customers, products, purchases, sales, receiving). Also fixed all optimistic update mutations (status, payment) to use Number() for detail keys.",
+      "files_changed": [
+        "web/src/features/suppliers/services/queries.js",
+        "web/src/features/customers/services/queries.js",
+        "web/src/features/warehouse/products/services/queries.js",
+        "web/src/features/purchases/services/queries.js",
+        "web/src/features/sales/services/queries.js",
+        "web/src/features/warehouse/receiving/services/queries.js",
+        "web/src/features/warehouse/products/services/mutations.js",
+        "web/src/features/purchases/services/mutations.js",
+        "web/src/features/sales/services/mutations.js",
+        "web/src/features/warehouse/receiving/services/mutations.js"
+      ]
+    },
+    {
+      "date": "2026-07-09",
+      "version": "1.4.2",
+      "changes": "Fixed critical auth logout bug caused by camelCase migration. LoginPage.jsx read access_token/refresh_token from login response but backend now returns accessToken/refreshToken, causing null tokens to be stored. Token refresh interceptor in api.js sent refresh_token (snake_case) in request body and read access_token/refresh_token from response — both mismatched the new camelCase backend. Result: login stored null tokens, every API call got 401, interceptor failed to refresh, logout triggered. Fixed all three locations: LoginPage.jsx (login response), api.js (refresh request body + response destructuring + retry header).",
+      "files_changed": [
+        "web/src/shared/lib/api.js",
+        "web/src/features/auth/pages/LoginPage.jsx"
+      ]
+    },
+    {
+      "date": "2026-07-09",
+      "version": "1.4.1",
+      "changes": "Fixed remaining frontend-backend data shape mismatches. Product form fields renamed: sellPrice1→retailPrice, sellPrice2→wholesalePrice, vat→tax (useProductForm.js, ProductPricingForm.jsx). Purchase dueDate→expectedDeliveryDate across store, hooks, forms, pages, and api.js (was silently losing delivery dates). Removed phantom fields from submit payloads: checkNumber/transferRef/mixedPayments from PurchaseDetailPage/PurchasesNewPage (not in PurchaseOrder model), dueDate/mixedPayments from SaleDetailPage/SaleNewPage (not in Sale model). Fixed SaleNewPage salePrice→retailPrice reference. Go build verified.",
+      "files_changed": [
+        "web/src/features/warehouse/products/hooks/useProductForm.js",
+        "web/src/features/warehouse/products/components/forms/ProductPricingForm.jsx",
+        "web/src/features/purchases/store/purchaseFormStore.js",
+        "web/src/features/purchases/hooks/usePurchaseForm.js",
+        "web/src/features/purchases/components/forms/PurchaseInfoSection.jsx",
+        "web/src/features/purchases/pages/PurchaseDetailPage.jsx",
+        "web/src/features/purchases/pages/PurchasesNewPage.jsx",
+        "web/src/features/purchases/services/api.js",
+        "web/src/features/sales/pages/SaleDetailPage.jsx",
+        "web/src/features/sales/pages/SaleNewPage.jsx"
+      ]
+    },
+    {
+      "date": "2026-07-09",
+      "version": "1.4.0",
+      "changes": "Removed adaptor/mapper layer between backend and frontend. All backend API responses and requests now use camelCase JSON tags (matching frontend conventions). Backend struct JSON tags updated across all handlers (customers, suppliers, products, sales, purchase_orders, invoices, users, auth, settings, payments, reports, stock). Structural transformations kept in Go handlers: full_name split into firstName/lastName, lat/lng nested into coordinates, outstanding_balance computed as balance, supplierCode scanned into throwaway var. Frontend api.js files rewritten to remove all mapper functions (mapCustomer, mapSupplier, mapProduct, mapSale, mapPurchaseOrder etc.) and send/receive data directly with camelCase keys. paginatedMeta now returns camelCase keys (page, pageSize, totalCount, totalPages). Go build verified to compile.",
+      "files_changed": [
+        "Backend/internal/model/models.go",
+        "Backend/internal/handler/customers.go",
+        "Backend/internal/handler/suppliers.go",
+        "Backend/internal/handler/products.go",
+        "Backend/internal/handler/sales.go",
+        "Backend/internal/handler/purchase_orders.go",
+        "Backend/internal/handler/invoices.go",
+        "Backend/internal/handler/users.go",
+        "Backend/internal/handler/auth.go",
+        "Backend/internal/handler/settings.go",
+        "Backend/internal/handler/payments.go",
+        "Backend/internal/handler/helpers.go",
+        "Backend/internal/handler/reports.go",
+        "Backend/internal/handler/stock.go",
+        "web/src/features/customers/services/api.js",
+        "web/src/features/suppliers/services/api.js",
+        "web/src/features/warehouse/products/services/api.js",
+        "web/src/features/sales/services/api.js",
+        "web/src/features/purchases/services/api.js",
+        "web/src/features/warehouse/receiving/services/api.js"
+      ]
+    },
+    {
+      "date": "2026-07-09",
+      "version": "1.3.1",
+      "changes": "Fixed purchase order items returning null on Get/List endpoints. Root cause: getItems() scanned nullable discrepancy_note TEXT column directly into Go string, which fails on NULL values (items created without discrepancy_note have NULL in DB). Added COALESCE() in the SQL query for product_code, product_name, and discrepancy_note. Added error logging for getItems() calls in Get and List handlers (was previously silently discarded with _).",
+      "files_changed": [
+        "Backend/internal/handler/purchase_orders.go"
+      ]
+    },
+    {
+      "date": "2026-07-09",
+      "version": "1.3.0",
+      "changes": "Added paid_amount, total_amount columns to purchase_orders table and product_code, product_name, discount, line_total columns to purchase_order_items table via migration. Updated PurchaseOrder and POItem models with corresponding fields. Updated Create/Update/GetByID/List/UpdatePayment handlers to populate and return these fields, including denormalized product info (code, name) in items and computed total_amount on the PO. getItems now queries the new columns. Build compiles.",
+      "files_changed": [
+        "Backend/internal/database/migrations.go",
+        "Backend/internal/model/models.go",
+        "Backend/internal/handler/purchase_orders.go"
+      ]
+    },
+    {
+      "date": "2026-07-09",
+    "version": "1.3.0",
+      "changes": "Fixed CHECK constraint on purchase_orders.status column. The error was: 'new row for relation "purchase_orders" violates check constraint "purchase_orders_status_check"' because the existing table was created with an older constraint that didn't include 'pending'. Added fixPurchaseOrderStatusCheck migration that drops and recreates the CHECK constraint with all valid statuses (pending, shipped, partially_received, received, cancelled).",
+      "files_changed": [
+        "Backend/internal/database/migrations.go"
+      ]
+    },
+    {
+      "date": "2026-07-09",
+    "version": "1.2.2",
+      "changes": "Fixed purchase order DB error: changed `edDate` from bare `interface{}` string to `*time.Time` using time.Parse for proper DATE column handling, added `log.Printf` error logging in Create and Update handlers for all DB operations (PO insert, items insert, commit) to surface actual PostgreSQL errors. Backend now logs the real SQL error to stdout.",
+      "files_changed": [
+        "Backend/internal/handler/purchase_orders.go"
+      ]
+    },
+    {
+      "date": "2026-07-09",
+      "version": "1.2.0",
+      "changes": "Fixed purchase order creation: removed readOnly from qty field in desktop table view (was incorrectly blocking user from setting order quantities), removed the misleading amber warning row about stock movements being managed elsewhere (the PO qty is the ordered amount, not the stock level), fixed mapPurchaseOrderForCreate to map `dueDate` field to `expected_delivery_date`, added Number() safeguard in mapPOItemForCreate to prevent NaN values reaching the backend.",
+      "files_changed": [
+        "web/src/features/purchases/components/forms/PurchaseItemsSection.jsx",
+        "web/src/features/purchases/services/api.js"
+      ]
+    },
     {
       "date": "2026-07-09",
       "version": "1.1.1",
