@@ -24,13 +24,13 @@ func (h *UserHandler) List(c *gin.Context) {
 
 	type UserResponse struct {
 		ID         int    `json:"id"`
-		FullName   string `json:"full_name"`
+		FullName   string `json:"fullName"`
 		Username   string `json:"username"`
 		Role       string `json:"role"`
 		Department string `json:"department"`
-		IsActive   bool   `json:"is_active"`
-		CreatedAt  string `json:"created_at"`
-		UpdatedAt  string `json:"updated_at"`
+		IsActive   bool   `json:"isActive"`
+		CreatedAt  string `json:"createdAt"`
+		UpdatedAt  string `json:"updatedAt"`
 	}
 
 	users := []UserResponse{}
@@ -46,7 +46,7 @@ func (h *UserHandler) List(c *gin.Context) {
 
 func (h *UserHandler) Create(c *gin.Context) {
 	var req struct {
-		FullName   string `json:"full_name"`
+		FullName   string `json:"fullName"`
 		Username   string `json:"username"`
 		Password   string `json:"password"`
 		Role       string `json:"role"`
@@ -84,12 +84,12 @@ func (h *UserHandler) Update(c *gin.Context) {
 		return
 	}
 	var req struct {
-		FullName   string `json:"full_name"`
+		FullName   string `json:"fullName"`
 		Username   string `json:"username"`
 		Password   string `json:"password,omitempty"`
 		Role       string `json:"role"`
 		Department string `json:"department"`
-		IsActive   *bool  `json:"is_active"`
+		IsActive   *bool  `json:"isActive"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")

@@ -62,11 +62,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 	respondJSON(c, http.StatusOK, gin.H{
-		"access_token":  accessToken,
-		"refresh_token": refreshToken,
+		"accessToken":  accessToken,
+		"refreshToken": refreshToken,
 		"user": gin.H{
 			"id":         userID,
-			"full_name":  fullName,
+			"fullName":   fullName,
 			"username":   username,
 			"role":       role,
 			"department": department,
@@ -101,7 +101,7 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 
 	// Access token is expired or missing — try refresh token
 	var req struct {
-		RefreshToken string `json:"refresh_token"`
+		RefreshToken string `json:"refreshToken"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
@@ -128,8 +128,8 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 		return
 	}
 	respondJSON(c, http.StatusOK, gin.H{
-		"access_token":  newAccessToken,
-		"refresh_token": newRefreshToken,
+		"accessToken":  newAccessToken,
+		"refreshToken": newRefreshToken,
 	})
 }
 

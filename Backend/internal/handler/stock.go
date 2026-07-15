@@ -31,12 +31,12 @@ func (h *StockHandler) CurrentLevels(c *gin.Context) {
 	defer rows.Close()
 
 	type StockItem struct {
-		ProductID        int     `json:"product_id"`
-		InternalCode     string  `json:"internal_code"`
+		ProductID        int     `json:"productId"`
+		InternalCode     string  `json:"internalCode"`
 		Name             string  `json:"name"`
-		CurrentStock     float64 `json:"current_stock"`
-		ReorderThreshold float64 `json:"reorder_threshold"`
-		IsLowStock       bool    `json:"is_low_stock"`
+		CurrentStock     float64 `json:"currentStock"`
+		ReorderThreshold float64 `json:"reorderThreshold"`
+		IsLowStock       bool    `json:"isLowStock"`
 	}
 
 	items := []StockItem{}
@@ -58,13 +58,13 @@ func (h *StockHandler) ProductHistory(c *gin.Context) {
 	}
 
 	type MovementItem struct {
-		ID           int     `json:"id"`
-		Quantity     float64 `json:"quantity"`
-		MovementType string  `json:"movement_type"`
-		ReferenceID  *int    `json:"reference_id,omitempty"`
-		ReferenceType string `json:"reference_type,omitempty"`
-		PerformedBy  int     `json:"performed_by"`
-		CreatedAt    string  `json:"created_at"`
+		ID            int     `json:"id"`
+		Quantity      float64 `json:"quantity"`
+		MovementType  string  `json:"movementType"`
+		ReferenceID   *int    `json:"referenceId,omitempty"`
+		ReferenceType string  `json:"referenceType,omitempty"`
+		PerformedBy   int     `json:"performedBy"`
+		CreatedAt     string  `json:"createdAt"`
 	}
 
 	rows, err := database.DB.Query(

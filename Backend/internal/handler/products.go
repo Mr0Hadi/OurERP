@@ -111,42 +111,33 @@ func (h *ProductHandler) List(c *gin.Context) {
 	products := []model.Product{}
 	for rows.Next() {
 		var pr model.Product
-		var brand, category sql.NullString
-		if err := rows.Scan(&pr.ID, &pr.InternalCode, &pr.SupplierCode, &pr.Barcode, &pr.Name, &brand, &category, &pr.Unit, &pr.ReorderThreshold, &pr.CostPrice, &pr.SalePriceRetail, &pr.SalePriceWholesale, &pr.Tax, &pr.ImageURL, &pr.IsActive, &pr.CreatedAt, &pr.UpdatedAt); err != nil {
+		var brand, category, barcode, imageURL sql.NullString
+		var internalCode, supplierCode string
+		var createdAt, updatedAt sql.NullTime
+		if err := rows.Scan(&pr.ID, &internalCode, &supplierCode, &barcode, &pr.Name, &brand, &category, &pr.Unit, &pr.ReorderThreshold, &pr.PurchasePrice, &pr.RetailPrice, &pr.WholesalePrice, &pr.Tax, &imageURL, &pr.IsActive, &createdAt, &updatedAt); err != nil {
 			respondError(c, http.StatusInternalServerError, "خطا در خواندن اطلاعات")
 			return
 		}
+		pr.Code = internalCode
+		pr.Barcode = barcode.String
 		pr.Brand = brand.String
 		pr.Category = category.String
+		pr.ImageURL = imageURL.String
+		pr.Description = ""
+		if createdAt.Valid {
+			pr.CreatedAt = createdAt.Time.Format(time.RFC3339)
+		}
+		if updatedAt.Valid {
+			pr.UpdatedAt = updatedAt.Time.Format(time.RFC3339)
+		}
 		products = append(products, pr)
 	}
 
-	resp := make([]model.ProductResponse, len(products))
-	for i, pr := range products {
-		stock := h.getCurrentStock(pr.ID)
-		resp[i] = model.ProductResponse{
-			ID:                 pr.ID,
-			InternalCode:       pr.InternalCode,
-			SupplierCode:       pr.SupplierCode,
-			Barcode:            pr.BarcodeValue(),
-			Name:               pr.Name,
-			Brand:              pr.Brand,
-			Category:           pr.Category,
-			Unit:               pr.Unit,
-			ReorderThreshold:   pr.ReorderThreshold,
-			CostPrice:          pr.CostPrice,
-			SalePriceRetail:    pr.SalePriceRetail,
-			SalePriceWholesale: pr.SalePriceWholesale,
-			Tax:                pr.Tax,
-			ImageURL:           pr.ImageURLValue(),
-			IsActive:           pr.IsActive,
-			CurrentStock:       stock,
-			CreatedAt:          pr.CreatedAt.Format(time.RFC3339),
-			UpdatedAt:          pr.UpdatedAt.Format(time.RFC3339),
-		}
+	for i := range products {
+		products[i].Stock = h.getCurrentStock(products[i].ID)
 	}
 
-	respondJSONWithMeta(c, http.StatusOK, resp, paginatedMeta(p.Page, p.PageSize, totalCount))
+	respondJSONWithMeta(c, http.StatusOK, products, paginatedMeta(p.Page, p.PageSize, totalCount))
 }
 
 func (h *ProductHandler) Get(c *gin.Context) {
@@ -156,9 +147,12 @@ func (h *ProductHandler) Get(c *gin.Context) {
 		return
 	}
 	var pr model.Product
+	var barcode, imageURL sql.NullString
+	var supplierCode string
+	var createdAt, updatedAt sql.NullTime
 	err = database.DB.QueryRow(
 		"SELECT id, internal_code, supplier_code, barcode, name, COALESCE(brand,''), COALESCE(category,''), unit, reorder_threshold, cost_price, sale_price_retail, sale_price_wholesale, COALESCE(tax,0), image_url, is_active, created_at, updated_at FROM products WHERE id = $1", id,
-	).Scan(&pr.ID, &pr.InternalCode, &pr.SupplierCode, &pr.Barcode, &pr.Name, &pr.Brand, &pr.Category, &pr.Unit, &pr.ReorderThreshold, &pr.CostPrice, &pr.SalePriceRetail, &pr.SalePriceWholesale, &pr.Tax, &pr.ImageURL, &pr.IsActive, &pr.CreatedAt, &pr.UpdatedAt)
+	).Scan(&pr.ID, &pr.Code, &supplierCode, &barcode, &pr.Name, &pr.Brand, &pr.Category, &pr.Unit, &pr.ReorderThreshold, &pr.PurchasePrice, &pr.RetailPrice, &pr.WholesalePrice, &pr.Tax, &imageURL, &pr.IsActive, &createdAt, &updatedAt)
 	if err == sql.ErrNoRows {
 		respondError(c, http.StatusNotFound, "کالا یافت نشد")
 		return
@@ -167,53 +161,26 @@ func (h *ProductHandler) Get(c *gin.Context) {
 		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
-	stock := h.getCurrentStock(pr.ID)
-	resp := model.ProductResponse{
-		ID:                 pr.ID,
-		InternalCode:       pr.InternalCode,
-		SupplierCode:       pr.SupplierCode,
-		Barcode:            pr.BarcodeValue(),
-		Name:               pr.Name,
-		Brand:              pr.Brand,
-		Category:           pr.Category,
-		Unit:               pr.Unit,
-		ReorderThreshold:   pr.ReorderThreshold,
-		CostPrice:          pr.CostPrice,
-		SalePriceRetail:    pr.SalePriceRetail,
-		SalePriceWholesale: pr.SalePriceWholesale,
-		Tax:                pr.Tax,
-		ImageURL:           pr.ImageURLValue(),
-		IsActive:           pr.IsActive,
-		CurrentStock:       stock,
-		CreatedAt:          pr.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:          pr.UpdatedAt.Format(time.RFC3339),
+	pr.Barcode = barcode.String
+	pr.ImageURL = imageURL.String
+	pr.Description = ""
+	pr.Stock = h.getCurrentStock(pr.ID)
+	if createdAt.Valid {
+		pr.CreatedAt = createdAt.Time.Format(time.RFC3339)
 	}
-	respondJSON(c, http.StatusOK, resp)
-}
-
-type productRequest struct {
-	InternalCode       string  `json:"internal_code"`
-	SupplierCode       string  `json:"supplier_code"`
-	Barcode            string  `json:"barcode,omitempty"`
-	Name               string  `json:"name"`
-	Brand              string  `json:"brand"`
-	Category           string  `json:"category"`
-	Unit               string  `json:"unit"`
-	ReorderThreshold   float64 `json:"reorder_threshold"`
-	CostPrice          float64 `json:"cost_price"`
-	SalePriceRetail    float64 `json:"sale_price_retail"`
-	SalePriceWholesale float64 `json:"sale_price_wholesale"`
-	Tax                float64 `json:"tax"`
-	ImageURL           string  `json:"image_url,omitempty"`
+	if updatedAt.Valid {
+		pr.UpdatedAt = updatedAt.Time.Format(time.RFC3339)
+	}
+	respondJSON(c, http.StatusOK, pr)
 }
 
 func (h *ProductHandler) Create(c *gin.Context) {
-	var req productRequest
+	var req model.Product
 	if err := c.ShouldBindJSON(&req); err != nil {
 		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
-	if req.InternalCode == "" || req.Name == "" {
+	if req.Code == "" || req.Name == "" {
 		respondError(c, http.StatusBadRequest, "کد داخلی و نام الزامی هستند")
 		return
 	}
@@ -221,11 +188,12 @@ func (h *ProductHandler) Create(c *gin.Context) {
 		req.Unit = "piece"
 	}
 	var pr model.Product
+	var createdAt, updatedAt sql.NullTime
 	err := database.DB.QueryRow(
 		`INSERT INTO products (internal_code, supplier_code, barcode, name, brand, category, unit, reorder_threshold, cost_price, sale_price_retail, sale_price_wholesale, tax, image_url)
 		 VALUES ($1, $2, NULLIF($3,''), $4, $5, $6, $7, $8, $9, $10, $11, $12, NULLIF($13,'')) RETURNING id, created_at, updated_at`,
-		req.InternalCode, req.SupplierCode, req.Barcode, req.Name, req.Brand, req.Category, req.Unit, req.ReorderThreshold, req.CostPrice, req.SalePriceRetail, req.SalePriceWholesale, req.Tax, req.ImageURL,
-	).Scan(&pr.ID, &pr.CreatedAt, &pr.UpdatedAt)
+		req.Code, "", req.Barcode, req.Name, req.Brand, req.Category, req.Unit, req.ReorderThreshold, req.PurchasePrice, req.RetailPrice, req.WholesalePrice, req.Tax, req.ImageURL,
+	).Scan(&pr.ID, &createdAt, &updatedAt)
 	if err != nil {
 		if strings.Contains(err.Error(), "unique") {
 			respondError(c, http.StatusConflict, "این کد داخلی قبلاً ثبت شده است")
@@ -234,18 +202,27 @@ func (h *ProductHandler) Create(c *gin.Context) {
 		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
-	pr.InternalCode = req.InternalCode
-	pr.SupplierCode = req.SupplierCode
+	pr.Code = req.Code
+	pr.Barcode = req.Barcode
 	pr.Name = req.Name
 	pr.Brand = req.Brand
 	pr.Category = req.Category
 	pr.Unit = req.Unit
 	pr.ReorderThreshold = req.ReorderThreshold
-	pr.CostPrice = req.CostPrice
-	pr.SalePriceRetail = req.SalePriceRetail
-	pr.SalePriceWholesale = req.SalePriceWholesale
+	pr.PurchasePrice = req.PurchasePrice
+	pr.RetailPrice = req.RetailPrice
+	pr.WholesalePrice = req.WholesalePrice
 	pr.Tax = req.Tax
+	pr.ImageURL = req.ImageURL
+	pr.Description = ""
 	pr.IsActive = true
+	pr.Stock = 0
+	if createdAt.Valid {
+		pr.CreatedAt = createdAt.Time.Format(time.RFC3339)
+	}
+	if updatedAt.Valid {
+		pr.UpdatedAt = updatedAt.Time.Format(time.RFC3339)
+	}
 	respondJSON(c, http.StatusCreated, pr)
 }
 
@@ -255,14 +232,14 @@ func (h *ProductHandler) Update(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
-	var req productRequest
+	var req model.Product
 	if err := c.ShouldBindJSON(&req); err != nil {
 		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 	result, err := database.DB.Exec(
 		`UPDATE products SET internal_code=$1, supplier_code=$2, barcode=NULLIF($3,''), name=$4, brand=$5, category=$6, unit=$7, reorder_threshold=$8, cost_price=$9, sale_price_retail=$10, sale_price_wholesale=$11, tax=$12, image_url=NULLIF($13,''), updated_at=NOW() WHERE id=$14`,
-		req.InternalCode, req.SupplierCode, req.Barcode, req.Name, req.Brand, req.Category, req.Unit, req.ReorderThreshold, req.CostPrice, req.SalePriceRetail, req.SalePriceWholesale, req.Tax, req.ImageURL, id,
+		req.Code, "", req.Barcode, req.Name, req.Brand, req.Category, req.Unit, req.ReorderThreshold, req.PurchasePrice, req.RetailPrice, req.WholesalePrice, req.Tax, req.ImageURL, id,
 	)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
@@ -298,9 +275,12 @@ func (h *ProductHandler) Delete(c *gin.Context) {
 func (h *ProductHandler) BarcodeLookup(c *gin.Context) {
 	barcode := c.Param("barcode")
 	var pr model.Product
+	var barcodeVal, imageURL sql.NullString
+	var supplierCode string
+	var createdAt, updatedAt sql.NullTime
 	err := database.DB.QueryRow(
 		"SELECT id, internal_code, supplier_code, barcode, name, COALESCE(brand,''), COALESCE(category,''), unit, reorder_threshold, cost_price, sale_price_retail, sale_price_wholesale, COALESCE(tax,0), image_url, is_active, created_at, updated_at FROM products WHERE barcode = $1 AND is_active = true", barcode,
-	).Scan(&pr.ID, &pr.InternalCode, &pr.SupplierCode, &pr.Barcode, &pr.Name, &pr.Brand, &pr.Category, &pr.Unit, &pr.ReorderThreshold, &pr.CostPrice, &pr.SalePriceRetail, &pr.SalePriceWholesale, &pr.Tax, &pr.ImageURL, &pr.IsActive, &pr.CreatedAt, &pr.UpdatedAt)
+	).Scan(&pr.ID, &pr.Code, &supplierCode, &barcodeVal, &pr.Name, &pr.Brand, &pr.Category, &pr.Unit, &pr.ReorderThreshold, &pr.PurchasePrice, &pr.RetailPrice, &pr.WholesalePrice, &pr.Tax, &imageURL, &pr.IsActive, &createdAt, &updatedAt)
 	if err == sql.ErrNoRows {
 		respondError(c, http.StatusNotFound, "کالا یافت نشد")
 		return
@@ -308,6 +288,16 @@ func (h *ProductHandler) BarcodeLookup(c *gin.Context) {
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
+	}
+	pr.Barcode = barcodeVal.String
+	pr.ImageURL = imageURL.String
+	pr.Description = ""
+	pr.Stock = h.getCurrentStock(pr.ID)
+	if createdAt.Valid {
+		pr.CreatedAt = createdAt.Time.Format(time.RFC3339)
+	}
+	if updatedAt.Valid {
+		pr.UpdatedAt = updatedAt.Time.Format(time.RFC3339)
 	}
 	respondJSON(c, http.StatusOK, pr)
 }
@@ -329,11 +319,11 @@ func (h *ProductHandler) LowStock(c *gin.Context) {
 	defer rows.Close()
 
 	type LowStockItem struct {
-		ProductID        int     `json:"product_id"`
-		InternalCode     string  `json:"internal_code"`
+		ProductID        int     `json:"productId"`
+		InternalCode     string  `json:"internalCode"`
 		Name             string  `json:"name"`
-		CurrentStock     float64 `json:"current_stock"`
-		ReorderThreshold float64 `json:"reorder_threshold"`
+		CurrentStock     float64 `json:"currentStock"`
+		ReorderThreshold float64 `json:"reorderThreshold"`
 	}
 
 	items := []LowStockItem{}
