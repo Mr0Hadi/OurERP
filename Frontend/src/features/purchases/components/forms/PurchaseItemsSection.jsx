@@ -111,7 +111,7 @@ export default function PurchaseItemsSection({
         )}
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className={readOnly ? "px-0 py-0" : "space-y-4"}>
         {/* پنل جست‌وجو و فیلتر */}
         {!readOnly && (
         <div className="space-y-3">
@@ -235,27 +235,27 @@ export default function PurchaseItemsSection({
                 <thead className="bg-muted text-muted-foreground text-xs">
                   <tr>
                     <th className="text-right px-3 py-2.5 font-medium">کالا</th>
-                    <th className="text-center px-2 py-2.5 font-medium w-20">
+                    <th className="text-center px-2 py-2.5 font-medium">
                       تعداد
                     </th>
-                    <th className="text-center px-2 py-2.5 font-medium w-28">
+                    <th className="text-center px-2 py-2.5 font-medium">
                       قیمت واحد
                     </th>
-                    <th className="text-center px-2 py-2.5 font-medium w-20">
+                    <th className="text-center px-2 py-2.5 font-medium">
                       تخفیف %
                     </th>
-                    <th className="text-center px-2 py-2.5 font-medium w-28">
+                    <th className="text-center px-2 py-2.5 font-medium">
                       جمع
                     </th>
                     {showReceivedQty && (
-                      <th className="text-center px-2 py-2.5 font-medium w-20">
+                      <th className="text-center px-2 py-2.5 font-medium">
                         تعداد دریافتی
                       </th>
                     )}
                     {!readOnly && <th className="w-8 px-2 py-2.5" />}
                   </tr>
                  </thead>
-                 <tbody className="divide-y divide-border">
+                 <tbody className="w-ful divide-y divide-border">
                     {items.map((item) => (
                       <tr
                         key={item.productId}
