@@ -63,12 +63,21 @@ function PurchaseDetailForm({ purchaseData }) {
   const deleteMutation = useRemovePurchaseMutation();
 
   const items = formData.items || [];
+  const isReceiving = formData.status === "partially_received" || formData.status === "shipped";
 
   const computedTotal = items.reduce((sum, item) => {
     const base = (item.qty || 0) * (item.unitPrice || 0);
     const disc = (base * (item.discount || 0)) / 100;
     return sum + base - disc;
   }, 0);
+
+  const handleReceivedQtyChange = (productId, value) => {
+    setItems(
+      items.map((i) =>
+        i.productId === productId ? { ...i, receivedQty: value } : i,
+      ),
+    );
+  };
 
   // initializeFromPurchase باید فقط یک‌بار هنگام mount اجرا شود
   useEffect(() => {
@@ -92,17 +101,15 @@ function PurchaseDetailForm({ purchaseData }) {
       supplierName: formData.supplierName,
       invoiceNumber: formData.invoiceNumber,
       invoiceDate: formData.invoiceDate,
-      dueDate: formData.dueDate || null,
+      expectedDeliveryDate: formData.expectedDeliveryDate || null,
       description: formData.description || "",
       items: items.map((item) => ({
         ...item,
         lineTotal: item.qty * item.unitPrice * (1 - (item.discount || 0) / 100),
+        receivedQty: item.receivedQty != null ? Number(item.receivedQty) : null,
       })),
       paymentType: formData.paymentType || "cash",
       paidAmount: Number(formData.paidAmount) || 0,
-      checkNumber: formData.checkNumber || null,
-      transferRef: formData.transferRef || null,
-      mixedPayments: formData.mixedPayments || [],
       status: formData.status || "pending",
       totalAmount: computedTotal,
     };
@@ -133,6 +140,9 @@ function PurchaseDetailForm({ purchaseData }) {
               products={products}
               isLoadingProducts={productsLoading}
               onItemsChange={setItems}
+              readOnly
+              showReceivedQty={isReceiving}
+              onReceivedQtyChange={handleReceivedQtyChange}
             />
             <PurchaseInfoSection
               formData={formData}

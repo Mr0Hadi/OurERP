@@ -1,45 +1,5 @@
 import { api } from "@/shared/services/api/api";
 
-function mapCustomer(c) {
-  const nameParts = (c.full_name || "").split(" ");
-  return {
-    id: String(c.id),
-    firstName: nameParts[0] || "",
-    lastName: nameParts.slice(1).join(" ") || "",
-    phone: c.phone || "",
-    email: "",
-    address: c.address || "",
-    postalCode: "",
-    nationalId: c.national_id || "",
-    type: c.type || "",
-    customerGrade: c.customer_grade || "",
-    referralCode: c.referral_code || "",
-    creditLimit: c.credit_limit || 0,
-    notes: c.notes || "",
-    balance: 0,
-    avatar: null,
-    coordinates: null,
-  };
-}
-
-function mapCustomerForCreate(data) {
-  const result = {
-    full_name: `${data.firstName || ""} ${data.lastName || ""}`.trim(),
-    phone: data.phone || "",
-    address: data.address || "",
-    national_id: data.nationalId || "",
-    type: data.type || "",
-    customer_grade: data.customerGrade || "",
-    referral_code: data.referralCode || "",
-    credit_limit: data.creditLimit || 0,
-    notes: data.notes || "",
-  };
-  Object.keys(result).forEach((k) => {
-    if (result[k] === "" || result[k] === undefined || result[k] === null) delete result[k];
-  });
-  return result;
-}
-
 export async function fetchCustomers({
   page = 1,
   limit = 10,
@@ -53,26 +13,58 @@ export async function fetchCustomers({
     search: search || undefined,
   });
   return {
-    items: (res.data || []).map(mapCustomer),
-    total: res.meta?.total_count ?? 0,
+    items: res.data || [],
+    total: res.meta?.totalCount ?? 0,
     page: res.meta?.page ?? 1,
-    totalPages: res.meta?.total_pages ?? 1,
+    totalPages: res.meta?.totalPages ?? 1,
   };
 }
 
 export async function createCustomer(customerData) {
-  const res = await api.post("/api/customers", mapCustomerForCreate(customerData));
-  return mapCustomer(res.data);
+  const res = await api.post("/api/customers", {
+    firstName: customerData.firstName || "",
+    lastName: customerData.lastName || "",
+    phone: customerData.phone || "",
+    email: customerData.email || "",
+    address: customerData.address || "",
+    postalCode: customerData.postalCode || "",
+    nationalId: customerData.nationalId || "",
+    type: customerData.type || "retail",
+    customerGrade: parseInt(customerData.customerGrade) || 1,
+    referralCode: customerData.referralCode || "",
+    creditLimit: parseFloat(customerData.creditLimit) || 0,
+    balanceType: customerData.balanceType || "none",
+    openingBalance: parseFloat(customerData.openingBalance) || 0,
+    notes: customerData.notes || "",
+    coordinates: customerData.coordinates || null,
+  });
+  return res.data;
 }
 
 export const getCustomerById = async (id) => {
   const res = await api.get(`/api/customers/${id}`);
-  return mapCustomer(res.data);
+  return res.data;
 };
 
 export const updateCustomer = async (id, updatedData) => {
-  const res = await api.put(`/api/customers/${id}`, mapCustomerForCreate(updatedData));
-  return mapCustomer(res.data);
+  const res = await api.put(`/api/customers/${id}`, {
+    firstName: updatedData.firstName || "",
+    lastName: updatedData.lastName || "",
+    phone: updatedData.phone || "",
+    email: updatedData.email || "",
+    address: updatedData.address || "",
+    postalCode: updatedData.postalCode || "",
+    nationalId: updatedData.nationalId || "",
+    type: updatedData.type || "retail",
+    customerGrade: parseInt(updatedData.customerGrade) || 1,
+    referralCode: updatedData.referralCode || "",
+    creditLimit: parseFloat(updatedData.creditLimit) || 0,
+    balanceType: updatedData.balanceType || "none",
+    openingBalance: parseFloat(updatedData.openingBalance) || 0,
+    notes: updatedData.notes || "",
+    coordinates: updatedData.coordinates || null,
+  });
+  return res.data;
 };
 
 export const deleteCustomer = async (id) => {

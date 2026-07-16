@@ -1,47 +1,5 @@
 import { api } from "@/shared/services/api/api";
 
-function mapProduct(p) {
-  return {
-    id: String(p.id),
-    code: p.internal_code || "",
-    barcode: p.barcode || "",
-    name: p.name || "",
-    brand: p.brand || "",
-    category: p.category || "",
-    unit: p.unit || "piece",
-    purchasePrice: p.cost_price ?? 0,
-    retailPrice: p.sale_price_retail ?? 0,
-    wholesalePrice: p.sale_price_wholesale ?? 0,
-    tax: p.tax ?? 0,
-    stock: p.current_stock ?? p.stock ?? 0,
-    description: "",
-    imageUrl: p.image_url || "",
-    isActive: p.is_active ?? true,
-    reorderPoint: p.reorder_threshold ?? 0,
-  };
-}
-
-function mapProductForCreate(data) {
-  const result = {
-    internal_code: data.code || "",
-    name: data.name || "",
-    barcode: data.barcode || "",
-    brand: data.brand || "",
-    category: data.category || "",
-    unit: data.unit || "piece",
-    cost_price: data.purchasePrice ?? 0,
-    sale_price_retail: data.retailPrice ?? 0,
-    sale_price_wholesale: data.wholesalePrice ?? 0,
-    tax: data.tax ?? 0,
-    reorder_threshold: data.reorderPoint ?? 0,
-    image_url: data.imageUrl || "",
-  };
-  Object.keys(result).forEach((k) => {
-    if (result[k] === "" || result[k] === undefined || result[k] === null) delete result[k];
-  });
-  return result;
-}
-
 export const fetchProducts = async (params = {}) => {
   const res = await api.get("/api/products", {
     page: params.page || 1,
@@ -53,26 +11,52 @@ export const fetchProducts = async (params = {}) => {
     max_price: params.maxPrice || undefined,
   });
   return {
-    items: (res.data || []).map(mapProduct),
-    total: res.meta?.total_count ?? 0,
+    items: res.data || [],
+    total: res.meta?.totalCount ?? 0,
     page: res.meta?.page ?? 1,
-    totalPages: res.meta?.total_pages ?? 1,
+    totalPages: res.meta?.totalPages ?? 1,
   };
 };
 
 export const fetchProductById = async (id) => {
   const res = await api.get(`/api/products/${id}`);
-  return mapProduct(res.data);
+  return res.data;
 };
 
 export const createProduct = async (productData) => {
-  const res = await api.post("/api/products", mapProductForCreate(productData));
-  return mapProduct(res.data);
+  const res = await api.post("/api/products", {
+    code: productData.code || "",
+    name: productData.name || "",
+    barcode: productData.barcode || "",
+    brand: productData.brand || "",
+    category: productData.category || "",
+    unit: productData.unit || "piece",
+    purchasePrice: productData.purchasePrice ?? 0,
+    retailPrice: productData.retailPrice ?? 0,
+    wholesalePrice: productData.wholesalePrice ?? 0,
+    tax: productData.tax ?? 0,
+    reorderThreshold: productData.reorderThreshold ?? 0,
+    imageUrl: productData.imageUrl || "",
+  });
+  return res.data;
 };
 
 export const updateProduct = async (id, productData) => {
-  const res = await api.put(`/api/products/${id}`, mapProductForCreate(productData));
-  return mapProduct(res.data);
+  const res = await api.put(`/api/products/${id}`, {
+    code: productData.code || "",
+    name: productData.name || "",
+    barcode: productData.barcode || "",
+    brand: productData.brand || "",
+    category: productData.category || "",
+    unit: productData.unit || "piece",
+    purchasePrice: productData.purchasePrice ?? 0,
+    retailPrice: productData.retailPrice ?? 0,
+    wholesalePrice: productData.wholesalePrice ?? 0,
+    tax: productData.tax ?? 0,
+    reorderThreshold: productData.reorderThreshold ?? 0,
+    imageUrl: productData.imageUrl || "",
+  });
+  return res.data;
 };
 
 export const deleteProduct = async (id) => {

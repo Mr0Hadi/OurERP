@@ -38,14 +38,14 @@ export const useUpdatePurchaseMutation = (id) => {
     mutationFn: (purchaseData) => updatePurchase(id, purchaseData),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: purchaseKeys.detail(String(id)),
+        queryKey: purchaseKeys.detail(Number(id)),
       });
       queryClient.invalidateQueries({
         queryKey: purchaseKeys.lists(),
       });
       // اگه این خرید تو receiving هم هست، اون‌جا هم invalidate کن
       queryClient.invalidateQueries({
-        queryKey: receivingKeys.detail(String(id)),
+        queryKey: receivingKeys.detail(Number(id)),
       });
       queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       toast.success("خرید با موفقیت ویرایش شد");
@@ -64,14 +64,14 @@ export const useUpdatePurchaseStatusMutation = () => {
   return useMutation({
     mutationFn: ({ id, status }) => updatePurchaseStatus(id, status),
     onMutate: async ({ id, status }) => {
-      await queryClient.cancelQueries({ queryKey: purchaseKeys.detail(id) });
+      await queryClient.cancelQueries({ queryKey: purchaseKeys.detail(Number(id)) });
 
       const previousPurchase = queryClient.getQueryData(
-        purchaseKeys.detail(id)
+        purchaseKeys.detail(Number(id))
       );
 
       if (previousPurchase) {
-        queryClient.setQueryData(purchaseKeys.detail(id), {
+        queryClient.setQueryData(purchaseKeys.detail(Number(id)), {
           ...previousPurchase,
           status,
         });
@@ -81,21 +81,21 @@ export const useUpdatePurchaseStatusMutation = () => {
     },
     onSuccess: (updatedPurchase) => {
       queryClient.setQueryData(
-        purchaseKeys.detail(updatedPurchase.id),
+        purchaseKeys.detail(Number(updatedPurchase.id)),
         updatedPurchase
       );
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
       // لیست receiving رو هم invalidate کن
       queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       queryClient.invalidateQueries({
-        queryKey: receivingKeys.detail(updatedPurchase.id),
+        queryKey: receivingKeys.detail(Number(updatedPurchase.id)),
       });
       toast.success("وضعیت خرید به‌روزرسانی شد");
     },
     onError: (error, variables, context) => {
       if (context?.previousPurchase) {
         queryClient.setQueryData(
-          purchaseKeys.detail(variables.id),
+          purchaseKeys.detail(Number(variables.id)),
           context.previousPurchase
         );
       }
@@ -110,14 +110,14 @@ export const useRecordPaymentMutation = () => {
   return useMutation({
     mutationFn: ({ id, paymentData }) => updatePurchasePayment(id, paymentData),
     onMutate: async ({ id, paymentData }) => {
-      await queryClient.cancelQueries({ queryKey: purchaseKeys.detail(id) });
+      await queryClient.cancelQueries({ queryKey: purchaseKeys.detail(Number(id)) });
 
       const previousPurchase = queryClient.getQueryData(
-        purchaseKeys.detail(id)
+        purchaseKeys.detail(Number(id))
       );
 
       if (previousPurchase) {
-        queryClient.setQueryData(purchaseKeys.detail(id), {
+        queryClient.setQueryData(purchaseKeys.detail(Number(id)), {
           ...previousPurchase,
           paidAmount: previousPurchase.paidAmount + paymentData.amount,
         });
@@ -127,7 +127,7 @@ export const useRecordPaymentMutation = () => {
     },
     onSuccess: (updatedPurchase) => {
       queryClient.setQueryData(
-        purchaseKeys.detail(updatedPurchase.id),
+        purchaseKeys.detail(Number(updatedPurchase.id)),
         updatedPurchase
       );
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
@@ -137,7 +137,7 @@ export const useRecordPaymentMutation = () => {
     onError: (error, variables, context) => {
       if (context?.previousPurchase) {
         queryClient.setQueryData(
-          purchaseKeys.detail(variables.id),
+          purchaseKeys.detail(Number(variables.id)),
           context.previousPurchase
         );
       }
@@ -154,7 +154,7 @@ export const useRemovePurchaseMutation = () => {
     mutationFn: removePurchase,
     onSuccess: (removedPurchase) => {
       queryClient.removeQueries({
-        queryKey: purchaseKeys.detail(String(removedPurchase.id)),
+        queryKey: purchaseKeys.detail(Number(removedPurchase.id)),
       });
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
       queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });

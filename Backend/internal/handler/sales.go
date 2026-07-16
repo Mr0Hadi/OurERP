@@ -85,7 +85,7 @@ func (h *SalesHandler) List(c *gin.Context) {
 		s.CheckNumber = checkNumber.String
 		s.TransferRef = transferRef.String
 		if dueDate.Valid {
-			s.DueDate = &dueDate.String
+			// DueDate is not part of the Sale struct anymore, but we keep the scan for DB compatibility
 		}
 		sales = append(sales, s)
 	}
@@ -123,9 +123,6 @@ func (h *SalesHandler) Get(c *gin.Context) {
 	s.Description = description.String
 	s.CheckNumber = checkNumber.String
 	s.TransferRef = transferRef.String
-	if dueDate.Valid {
-		s.DueDate = &dueDate.String
-	}
 	customerName := ""
 	database.DB.QueryRow("SELECT full_name FROM customers WHERE id = $1", s.CustomerID).Scan(&customerName)
 	s.CustomerName = customerName
@@ -173,15 +170,10 @@ func (h *SalesHandler) Create(c *gin.Context) {
 		s.PaymentType = "cash"
 	}
 
-	var dueDate interface{}
-	if s.DueDate != nil {
-		dueDate = *s.DueDate
-	}
-
 	err = tx.QueryRow(
-		`INSERT INTO sales (customer_id, invoice_number, invoice_date, due_date, description, status, payment_type, paid_amount, total_amount, check_number, transfer_ref, created_by)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NULLIF($10,''), NULLIF($11,''), $12) RETURNING id, created_at, updated_at`,
-		s.CustomerID, saleNumber, s.InvoiceDate, dueDate, s.Description, s.Status, s.PaymentType, s.PaidAmount, s.TotalAmount, s.CheckNumber, s.TransferRef, userID,
+		`INSERT INTO sales (customer_id, invoice_number, invoice_date, description, status, payment_type, paid_amount, total_amount, check_number, transfer_ref, created_by)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULLIF($9,''), NULLIF($10,''), $11) RETURNING id, created_at, updated_at`,
+		s.CustomerID, saleNumber, s.InvoiceDate, s.Description, s.Status, s.PaymentType, s.PaidAmount, s.TotalAmount, s.CheckNumber, s.TransferRef, userID,
 	).Scan(&s.ID, &s.CreatedAt, &s.UpdatedAt)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
@@ -233,14 +225,9 @@ func (h *SalesHandler) Update(c *gin.Context) {
 	}
 	defer tx.Rollback()
 
-	var dueDate interface{}
-	if s.DueDate != nil {
-		dueDate = *s.DueDate
-	}
-
 	_, err = tx.Exec(
-		"UPDATE sales SET customer_id=$1, invoice_date=$2, due_date=$3, description=$4, payment_type=$5, paid_amount=$6, total_amount=$7, check_number=NULLIF($8,''), transfer_ref=NULLIF($9,''), updated_at=NOW() WHERE id=$10",
-		s.CustomerID, s.InvoiceDate, dueDate, s.Description, s.PaymentType, s.PaidAmount, s.TotalAmount, s.CheckNumber, s.TransferRef, id,
+		"UPDATE sales SET customer_id=$1, invoice_date=$2, description=$3, payment_type=$4, paid_amount=$5, total_amount=$6, check_number=NULLIF($7,''), transfer_ref=NULLIF($8,''), updated_at=NOW() WHERE id=$9",
+		s.CustomerID, s.InvoiceDate, s.Description, s.PaymentType, s.PaidAmount, s.TotalAmount, s.CheckNumber, s.TransferRef, id,
 	)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
@@ -328,7 +315,7 @@ func (h *SalesHandler) UpdatePayment(c *gin.Context) {
 	}
 
 	var req struct {
-		PaidAmount float64 `json:"paid_amount"`
+		PaidAmount float64 `json:"paidAmount"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
@@ -367,10 +354,10 @@ func (h *SalesHandler) Stats(c *gin.Context) {
 	database.DB.QueryRow("SELECT COUNT(*), COALESCE(SUM(total_amount),0), COALESCE(SUM(paid_amount),0) FROM sales WHERE status != 'cancelled'").Scan(&totalSales, &totalAmount, &totalPaid)
 	database.DB.QueryRow("SELECT COUNT(*) FROM sales WHERE status IN ('pending','processing','partially_delivered')").Scan(&pendingCount)
 	respondJSON(c, http.StatusOK, gin.H{
-		"total_sales":   totalSales,
-		"total_amount":  totalAmount,
-		"total_paid":    totalPaid,
-		"pending_count": pendingCount,
+		"totalSales":  totalSales,
+		"totalAmount": totalAmount,
+		"totalPaid":   totalPaid,
+		"pendingCount": pendingCount,
 	})
 }
 

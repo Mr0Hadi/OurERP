@@ -12,20 +12,16 @@ function buildDefaultValues(data) {
       lat: "",
       lng: "",
       postalCode: "",
+      nationalId: "",
+      type: "retail",
+      customerGrade: "1",
+      referralCode: "",
+      creditLimit: "",
       balanceType: "none",
-      balanceAmount: "",
+      openingBalance: "",
+      notes: "",
       avatar: null,
     };
-  }
-
-  let balanceType = "none",
-    balanceAmount = "";
-  if (data.balance < 0) {
-    balanceType = "debtor";
-    balanceAmount = Math.abs(data.balance).toString();
-  } else if (data.balance > 0) {
-    balanceType = "creditor";
-    balanceAmount = Math.abs(data.balance).toString();
   }
 
   return {
@@ -36,26 +32,33 @@ function buildDefaultValues(data) {
     lat: data.coordinates?.lat?.toString() || "",
     lng: data.coordinates?.lng?.toString() || "",
     postalCode: data.postalCode || "",
-    balanceType,
-    balanceAmount,
+    nationalId: data.nationalId || "",
+    type: data.type || "retail",
+    customerGrade: (data.customerGrade ?? 1).toString(),
+    referralCode: data.referralCode || "",
+    creditLimit: data.creditLimit?.toString() || "",
+    balanceType: data.balanceType || "none",
+    openingBalance: data.openingBalance?.toString() || "",
+    notes: data.notes || "",
     avatar: null,
   };
 }
 
 export function buildCustomerPayload(data, avatarPreview, existingAvatar) {
-  const amount = Number(data.balanceAmount) || 0;
-  let balance = 0;
-  if (data.balanceType === "debtor") balance = -Math.abs(amount);
-  else if (data.balanceType === "creditor") balance = Math.abs(amount);
-
   return {
     firstName: data.firstName,
     lastName: data.lastName,
     phone: data.phone || null,
     address: data.address || null,
     postalCode: data.postalCode || null,
-    balance,
-    
+    nationalId: data.nationalId || null,
+    type: data.type || "retail",
+    customerGrade: parseInt(data.customerGrade) || 1,
+    referralCode: data.referralCode || null,
+    creditLimit: parseFloat(data.creditLimit) || 0,
+    balanceType: data.balanceType || "none",
+    openingBalance: parseFloat(data.openingBalance) || 0,
+    notes: data.notes || null,
     avatar: avatarPreview ?? existingAvatar ?? null,
     coordinates: {
       lat: data.lat ? parseFloat(data.lat) : null,
@@ -77,7 +80,6 @@ export function useCustomerForm(initialData = null) {
   const { watch } = formMethods;
   const balanceType = watch("balanceType");
 
-  // وقتی فایل انتخاب می‌شود، پیش‌نمایش می‌سازیم
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;

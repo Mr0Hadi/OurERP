@@ -50,6 +50,7 @@ export const usePurchaseFormStore = create((set, get) => ({
       qty: item.qty,
       unitPrice: item.unitPrice,
       discount: item.discount || 0,
+      receivedQty: item.receivedQty ?? null,
     }));
 
     set({

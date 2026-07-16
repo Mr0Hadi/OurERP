@@ -34,7 +34,7 @@ export const useUpdateSaleMutation = (id) => {
   return useMutation({
     mutationFn: (saleData) => updateSale(id, saleData),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: saleKeys.detail(String(id)) });
+      queryClient.invalidateQueries({ queryKey: saleKeys.detail(Number(id)) });
       queryClient.invalidateQueries({ queryKey: saleKeys.lists() });
       toast.success('فروش با موفقیت ویرایش شد');
       navigate(ROUTES.SALES);
@@ -52,21 +52,21 @@ export const useUpdateSaleStatusMutation = () => {
   return useMutation({
     mutationFn: ({ id, status }) => updateSaleStatus(id, status),
     onMutate: async ({ id, status }) => {
-      await queryClient.cancelQueries({ queryKey: saleKeys.detail(id) });
-      const previousSale = queryClient.getQueryData(saleKeys.detail(id));
+      await queryClient.cancelQueries({ queryKey: saleKeys.detail(Number(id)) });
+      const previousSale = queryClient.getQueryData(saleKeys.detail(Number(id)));
       if (previousSale) {
-        queryClient.setQueryData(saleKeys.detail(id), { ...previousSale, status });
+        queryClient.setQueryData(saleKeys.detail(Number(id)), { ...previousSale, status });
       }
       return { previousSale };
     },
     onSuccess: (updatedSale) => {
-      queryClient.setQueryData(saleKeys.detail(updatedSale.id), updatedSale);
+      queryClient.setQueryData(saleKeys.detail(Number(updatedSale.id)), updatedSale);
       queryClient.invalidateQueries({ queryKey: saleKeys.lists() });
       toast.success('وضعیت فروش به‌روزرسانی شد');
     },
     onError: (error, variables, context) => {
       if (context?.previousSale) {
-        queryClient.setQueryData(saleKeys.detail(variables.id), context.previousSale);
+        queryClient.setQueryData(saleKeys.detail(Number(variables.id)), context.previousSale);
       }
       toast.error(error?.message || 'خطا در به‌روزرسانی وضعیت');
     },
@@ -79,10 +79,10 @@ export const useRecordSalePaymentMutation = () => {
   return useMutation({
     mutationFn: ({ id, paymentData }) => updateSalePayment(id, paymentData),
     onMutate: async ({ id, paymentData }) => {
-      await queryClient.cancelQueries({ queryKey: saleKeys.detail(id) });
-      const previousSale = queryClient.getQueryData(saleKeys.detail(id));
+      await queryClient.cancelQueries({ queryKey: saleKeys.detail(Number(id)) });
+      const previousSale = queryClient.getQueryData(saleKeys.detail(Number(id)));
       if (previousSale) {
-        queryClient.setQueryData(saleKeys.detail(id), {
+        queryClient.setQueryData(saleKeys.detail(Number(id)), {
           ...previousSale,
           paidAmount: previousSale.paidAmount + paymentData.amount,
         });
@@ -90,13 +90,13 @@ export const useRecordSalePaymentMutation = () => {
       return { previousSale };
     },
     onSuccess: (updatedSale) => {
-      queryClient.setQueryData(saleKeys.detail(updatedSale.id), updatedSale);
+      queryClient.setQueryData(saleKeys.detail(Number(updatedSale.id)), updatedSale);
       queryClient.invalidateQueries({ queryKey: saleKeys.lists() });
       toast.success('دریافت وجه با موفقیت ثبت شد');
     },
     onError: (error, variables, context) => {
       if (context?.previousSale) {
-        queryClient.setQueryData(saleKeys.detail(variables.id), context.previousSale);
+        queryClient.setQueryData(saleKeys.detail(Number(variables.id)), context.previousSale);
       }
       toast.error(error?.message || 'خطا در ثبت دریافت وجه');
     },
@@ -110,7 +110,7 @@ export const useRemoveSaleMutation = () => {
   return useMutation({
     mutationFn: removeSale,
     onSuccess: (removedSale) => {
-      queryClient.removeQueries({ queryKey: saleKeys.detail(String(removedSale.id)) });
+      queryClient.removeQueries({ queryKey: saleKeys.detail(Number(removedSale.id)) });
       queryClient.invalidateQueries({ queryKey: saleKeys.lists() });
       toast.success("خرید با موفقیت حذف شد");
       navigate(ROUTES.SALES);

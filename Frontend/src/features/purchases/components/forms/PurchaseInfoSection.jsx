@@ -67,16 +67,16 @@ export default function PurchaseInfoSection({ formData, onFormChange, errors }) 
         {/* تاریخ سررسید */}
         <div className="space-y-1.5">
           <Label
-            htmlFor="dueDate"
+            htmlFor="expectedDeliveryDate"
             className="text-sm font-medium text-card-foreground"
           >
             تاریخ سررسید
           </Label>
           <Input
-            id="dueDate"
+            id="expectedDeliveryDate"
             type="date"
-            value={formData.dueDate || ''}
-            onChange={(e) => handleChange('dueDate', e.target.value)}
+            value={formData.expectedDeliveryDate || ''}
+            onChange={(e) => handleChange('expectedDeliveryDate', e.target.value)}
             className="h-9"
           />
         </div>

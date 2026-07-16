@@ -17,15 +17,15 @@ export const useUpdateReceivingStatusMutation = () => {
       updateReceivingStatus(purchaseId, status),
     onMutate: async ({ purchaseId, status }) => {
       await queryClient.cancelQueries({
-        queryKey: receivingKeys.detail(purchaseId),
+        queryKey: receivingKeys.detail(Number(purchaseId)),
       });
 
       const previousDetail = queryClient.getQueryData(
-        receivingKeys.detail(purchaseId)
+        receivingKeys.detail(Number(purchaseId))
       );
 
       if (previousDetail) {
-        queryClient.setQueryData(receivingKeys.detail(purchaseId), {
+        queryClient.setQueryData(receivingKeys.detail(Number(purchaseId)), {
           ...previousDetail,
           status,
         });
@@ -50,12 +50,12 @@ export const useUpdateReceivingStatusMutation = () => {
     },
     onSuccess: (updatedPurchase) => {
       queryClient.setQueryData(
-        receivingKeys.detail(updatedPurchase.id),
+        receivingKeys.detail(Number(updatedPurchase.id)),
         updatedPurchase
       );
       // اینجا هم باید detail فیچر purchases رو invalidate کنیم
       queryClient.invalidateQueries({
-        queryKey: purchaseKeys.detail(updatedPurchase.id),
+        queryKey: purchaseKeys.detail(Number(updatedPurchase.id)),
       });
       queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
@@ -64,7 +64,7 @@ export const useUpdateReceivingStatusMutation = () => {
     onError: (error, variables, context) => {
       if (context?.previousDetail) {
         queryClient.setQueryData(
-          receivingKeys.detail(variables.purchaseId),
+          receivingKeys.detail(Number(variables.purchaseId)),
           context.previousDetail
         );
       }
@@ -90,12 +90,12 @@ export const useConfirmReceivingMutation = () => {
       // فیچر receiving — کلید اصلی که لیست ازش استفاده می‌کنه
       queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       queryClient.invalidateQueries({
-        queryKey: receivingKeys.detail(updatedPurchase.id),
+        queryKey: receivingKeys.detail(Number(updatedPurchase.id)),
       });
 
       // فیچر purchases — اگه جای دیگه‌ای هم همین رکورد رو نشون میده
       queryClient.invalidateQueries({
-        queryKey: purchaseKeys.detail(updatedPurchase.id),
+        queryKey: purchaseKeys.detail(Number(updatedPurchase.id)),
       });
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
 

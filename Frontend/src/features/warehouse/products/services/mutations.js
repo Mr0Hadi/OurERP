@@ -29,7 +29,7 @@ export const useUpdateProductMutation = (id) => {
     mutationFn: (productData) => updateProduct(id, productData),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["products", "detail", String(id)],
+        queryKey: ["products", "detail", Number(id)],
       });
       queryClient.invalidateQueries({
         queryKey: ["products", "list"],

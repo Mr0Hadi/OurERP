@@ -76,7 +76,7 @@ export default function SupplierNewPage() {
 
           {/* ستون چپ - آدرس و دکمه‌ها */}
           <div className="lg:col-span-1 space-y-4">
-            <SupplierAddressForm register={register} />
+            <SupplierAddressForm register={register} errors={errors} />
 
             {/* دکمه‌های عملیات */}
             <div className="flex gap-2">

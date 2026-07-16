@@ -46,7 +46,7 @@ export function usePurchasesQuery(filters, pagination, sorting) {
 
 export function usePurchaseQuery(id) {
   return useQuery({
-    queryKey: purchaseKeys.detail(id),
+    queryKey: purchaseKeys.detail(Number(id)),
     queryFn: () => fetchPurchaseById(id),
     enabled: !!id,
     staleTime: 1000 * 60 * 5,

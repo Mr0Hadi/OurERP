@@ -38,7 +38,7 @@ export function useProductsQuery(filters, pagination, sorting) {
 
 export function useProductQuery(id) {
   return useQuery({
-    queryKey: productKeys.detail(id),
+    queryKey: productKeys.detail(Number(id)),
     queryFn: () => fetchProductById(id),
     enabled: !!id,
     staleTime: 1000 * 60 * 5,

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -17,11 +18,28 @@ func NewCustomerHandler() *CustomerHandler {
 	return &CustomerHandler{}
 }
 
+func splitName(fullName string) (string, string) {
+	parts := strings.SplitN(fullName, " ", 2)
+	first := parts[0]
+	last := ""
+	if len(parts) > 1 {
+		last = parts[1]
+	}
+	return first, last
+}
+
+func buildCoordinates(lat, lng *float64) *model.Coordinates {
+	if lat != nil && lng != nil {
+		return &model.Coordinates{Lat: lat, Lng: lng}
+	}
+	return nil
+}
+
 func (h *CustomerHandler) List(c *gin.Context) {
 	p := parsePagination(c)
-	query := `SELECT c.id, c.type, c.full_name, c.national_id, c.phone, c.address, c.referral_code, c.credit_limit, c.customer_grade, c.notes, c.is_active, c.created_at, c.updated_at,
+	query := `SELECT c.id, c.type, c.full_name, c.national_id, c.phone, c.address, c.postal_code, c.latitude, c.longitude, c.referral_code, c.credit_limit, c.customer_grade, c.balance_type, c.opening_balance, c.notes, c.is_active, c.created_at, c.updated_at,
 		COALESCE((SELECT SUM(total) FROM (SELECT COALESCE(SUM(ii.quantity * ii.unit_price - ii.discount_amount), 0) as total FROM invoices i JOIN invoice_items ii ON ii.invoice_id = i.id WHERE i.customer_id = c.id AND i.status IN ('confirmed','dispatched','delivered')) sub), 0) -
-		COALESCE((SELECT SUM(amount) FROM customer_payments WHERE customer_id = c.id), 0) as outstanding_balance
+		COALESCE((SELECT SUM(amount) FROM customer_payments WHERE customer_id = c.id), 0) + c.opening_balance as outstanding_balance
 		FROM customers c WHERE 1=1`
 	args := []interface{}{}
 	argIdx := 1
@@ -90,24 +108,39 @@ func (h *CustomerHandler) List(c *gin.Context) {
 	}
 	defer rows.Close()
 
-	customers := []model.CustomerDetail{}
+	customers := []model.Customer{}
 	for rows.Next() {
-		var cd model.CustomerDetail
-		var fullName, nationalID, phone, address, referralCode, notes, custType sql.NullString
+		var cd model.Customer
+		var fullName, nationalID, phone, address, postalCode, referralCode, notes, custType, balanceType sql.NullString
+		var latitude, longitude sql.NullFloat64
+		var customerGrade int
 		var createdAt, updatedAt sql.NullTime
-		if err := rows.Scan(&cd.ID, &custType, &fullName, &nationalID, &phone, &address, &referralCode, &cd.CreditLimit, &cd.CustomerGrade, &notes, &cd.IsActive, &createdAt, &updatedAt, &cd.OutstandingBalance); err != nil {
+		if err := rows.Scan(&cd.ID, &custType, &fullName, &nationalID, &phone, &address, &postalCode, &latitude, &longitude, &referralCode, &cd.CreditLimit, &customerGrade, &balanceType, &cd.OpeningBalance, &notes, &cd.IsActive, &createdAt, &updatedAt, &cd.Balance); err != nil {
 			respondError(c, http.StatusInternalServerError, "خطا در خواندن اطلاعات")
 			return
 		}
 		cd.Type = custType.String
-		cd.FullName = fullName.String
+		cd.FirstName, cd.LastName = splitName(fullName.String)
 		cd.NationalID = nationalID.String
 		cd.Phone = phone.String
 		cd.Address = address.String
+		cd.PostalCode = postalCode.String
+		cd.Coordinates = buildCoordinates(
+			func() *float64 { if latitude.Valid { return &latitude.Float64 }; return nil }(),
+			func() *float64 { if longitude.Valid { return &longitude.Float64 }; return nil }(),
+		)
 		cd.ReferralCode = referralCode.String
+		cd.BalanceType = balanceType.String
 		cd.Notes = notes.String
-		cd.CreatedAt = createdAt.Time
-		cd.UpdatedAt = updatedAt.Time
+		cd.CustomerGrade = customerGrade
+		cd.Email = ""
+		cd.Avatar = nil
+		if createdAt.Valid {
+			cd.CreatedAt = createdAt.Time
+		}
+		if updatedAt.Valid {
+			cd.UpdatedAt = updatedAt.Time
+		}
 		customers = append(customers, cd)
 	}
 	respondJSONWithMeta(c, http.StatusOK, customers, paginatedMeta(p.Page, p.PageSize, totalCount))
@@ -119,24 +152,39 @@ func (h *CustomerHandler) Get(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
 		return
 	}
-	var cd model.CustomerDetail
-	var fullName, nationalID, phone, address, referralCode, notes, custType sql.NullString
+	var cd model.Customer
+	var fullName, nationalID, phone, address, postalCode, referralCode, notes, custType, balanceType sql.NullString
+	var latitude, longitude sql.NullFloat64
+	var customerGrade int
 	var createdAt, updatedAt sql.NullTime
 	err = database.DB.QueryRow(`
-		SELECT c.id, c.type, c.full_name, c.national_id, c.phone, c.address, c.referral_code, c.credit_limit, c.customer_grade, c.notes, c.is_active, c.created_at, c.updated_at,
+		SELECT c.id, c.type, c.full_name, c.national_id, c.phone, c.address, c.postal_code, c.latitude, c.longitude, c.referral_code, c.credit_limit, c.customer_grade, c.balance_type, c.opening_balance, c.notes, c.is_active, c.created_at, c.updated_at,
 		COALESCE((SELECT SUM(total) FROM (SELECT COALESCE(SUM(ii.quantity * ii.unit_price - ii.discount_amount), 0) as total FROM invoices i JOIN invoice_items ii ON ii.invoice_id = i.id WHERE i.customer_id = c.id AND i.status IN ('confirmed','dispatched','delivered')) sub), 0) -
-		COALESCE((SELECT SUM(amount) FROM customer_payments WHERE customer_id = c.id), 0) as outstanding_balance
+		COALESCE((SELECT SUM(amount) FROM customer_payments WHERE customer_id = c.id), 0) + c.opening_balance as outstanding_balance
 		FROM customers c WHERE c.id = $1`, id,
-	).Scan(&cd.ID, &custType, &fullName, &nationalID, &phone, &address, &referralCode, &cd.CreditLimit, &cd.CustomerGrade, &notes, &cd.IsActive, &createdAt, &updatedAt, &cd.OutstandingBalance)
+	).Scan(&cd.ID, &custType, &fullName, &nationalID, &phone, &address, &postalCode, &latitude, &longitude, &referralCode, &cd.CreditLimit, &customerGrade, &balanceType, &cd.OpeningBalance, &notes, &cd.IsActive, &createdAt, &updatedAt, &cd.Balance)
 	cd.Type = custType.String
-	cd.FullName = fullName.String
+	cd.FirstName, cd.LastName = splitName(fullName.String)
 	cd.NationalID = nationalID.String
 	cd.Phone = phone.String
 	cd.Address = address.String
+	cd.PostalCode = postalCode.String
+	cd.Coordinates = buildCoordinates(
+		func() *float64 { if latitude.Valid { return &latitude.Float64 }; return nil }(),
+		func() *float64 { if longitude.Valid { return &longitude.Float64 }; return nil }(),
+	)
 	cd.ReferralCode = referralCode.String
+	cd.BalanceType = balanceType.String
 	cd.Notes = notes.String
-	cd.CreatedAt = createdAt.Time
-	cd.UpdatedAt = updatedAt.Time
+	cd.CustomerGrade = customerGrade
+	cd.Email = ""
+	cd.Avatar = nil
+	if createdAt.Valid {
+		cd.CreatedAt = createdAt.Time
+	}
+	if updatedAt.Valid {
+		cd.UpdatedAt = updatedAt.Time
+	}
 	if err == sql.ErrNoRows {
 		respondError(c, http.StatusNotFound, "مشتری یافت نشد")
 		return
@@ -154,7 +202,8 @@ func (h *CustomerHandler) Create(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
-	if req.FullName == "" || req.NationalID == "" {
+	fullName := strings.TrimSpace(req.FirstName + " " + req.LastName)
+	if fullName == "" || req.NationalID == "" {
 		respondError(c, http.StatusBadRequest, "نام و کد ملی الزامی هستند")
 		return
 	}
@@ -164,10 +213,46 @@ func (h *CustomerHandler) Create(c *gin.Context) {
 	if req.CustomerGrade < 1 {
 		req.CustomerGrade = 1
 	}
+	if req.BalanceType == "" {
+		req.BalanceType = "none"
+	}
+	if req.BalanceType != "none" && req.BalanceType != "creditor" && req.BalanceType != "debtor" {
+		respondError(c, http.StatusBadRequest, "نوع حساب نامعتبر است")
+		return
+	}
+	if req.NationalID != "" {
+		if matched, _ := regexp.MatchString(`^\d{10}$`, req.NationalID); !matched {
+			respondError(c, http.StatusBadRequest, "کد ملی باید ۱۰ رقم باشد")
+			return
+		}
+	}
+	if req.PostalCode != "" {
+		if matched, _ := regexp.MatchString(`^\d{5,10}$`, req.PostalCode); !matched {
+			respondError(c, http.StatusBadRequest, "کد پستی نامعتبر است")
+			return
+		}
+	}
+	var lat, lng *float64
+	if req.Coordinates != nil {
+		lat = req.Coordinates.Lat
+		lng = req.Coordinates.Lng
+	}
+	if lat != nil {
+		if *lat < -90 || *lat > 90 {
+			respondError(c, http.StatusBadRequest, "عرض جغرافیایی باید بین -90 و 90 باشد")
+			return
+		}
+	}
+	if lng != nil {
+		if *lng < -180 || *lng > 180 {
+			respondError(c, http.StatusBadRequest, "طول جغرافیایی باید بین -180 و 180 باشد")
+			return
+		}
+	}
 	err := database.DB.QueryRow(
-		`INSERT INTO customers (type, full_name, national_id, phone, address, referral_code, credit_limit, customer_grade, notes)
-		 VALUES ($1, $2, $3, $4, $5, NULLIF($6,''), $7, $8, NULLIF($9,'')) RETURNING id, created_at, updated_at`,
-		req.Type, req.FullName, req.NationalID, req.Phone, req.Address, req.ReferralCode, req.CreditLimit, req.CustomerGrade, req.Notes,
+		`INSERT INTO customers (type, full_name, national_id, phone, address, postal_code, latitude, longitude, referral_code, credit_limit, customer_grade, balance_type, opening_balance, notes)
+		 VALUES ($1, $2, $3, $4, $5, NULLIF($6,''), $7, $8, NULLIF($9,''), $10, $11, $12, $13, NULLIF($14,'')) RETURNING id, created_at, updated_at`,
+		req.Type, fullName, req.NationalID, req.Phone, req.Address, req.PostalCode, lat, lng, req.ReferralCode, req.CreditLimit, req.CustomerGrade, req.BalanceType, req.OpeningBalance, req.Notes,
 	).Scan(&req.ID, &req.CreatedAt, &req.UpdatedAt)
 	if err != nil {
 		if strings.Contains(err.Error(), "unique") {
@@ -177,6 +262,8 @@ func (h *CustomerHandler) Create(c *gin.Context) {
 		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
+	req.Email = ""
+	req.Avatar = nil
 	respondJSON(c, http.StatusCreated, req)
 }
 
@@ -191,9 +278,43 @@ func (h *CustomerHandler) Update(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
+	fullName := strings.TrimSpace(req.FirstName + " " + req.LastName)
+	if req.BalanceType != "none" && req.BalanceType != "creditor" && req.BalanceType != "debtor" {
+		respondError(c, http.StatusBadRequest, "نوع حساب نامعتبر است")
+		return
+	}
+	if req.NationalID != "" {
+		if matched, _ := regexp.MatchString(`^\d{10}$`, req.NationalID); !matched {
+			respondError(c, http.StatusBadRequest, "کد ملی باید ۱۰ رقم باشد")
+			return
+		}
+	}
+	if req.PostalCode != "" {
+		if matched, _ := regexp.MatchString(`^\d{5,10}$`, req.PostalCode); !matched {
+			respondError(c, http.StatusBadRequest, "کد پستی نامعتبر است")
+			return
+		}
+	}
+	var lat, lng *float64
+	if req.Coordinates != nil {
+		lat = req.Coordinates.Lat
+		lng = req.Coordinates.Lng
+	}
+	if lat != nil {
+		if *lat < -90 || *lat > 90 {
+			respondError(c, http.StatusBadRequest, "عرض جغرافیایی باید بین -90 و 90 باشد")
+			return
+		}
+	}
+	if lng != nil {
+		if *lng < -180 || *lng > 180 {
+			respondError(c, http.StatusBadRequest, "طول جغرافیایی باید بین -180 و 180 باشد")
+			return
+		}
+	}
 	result, err := database.DB.Exec(
-		`UPDATE customers SET type=$1, full_name=$2, national_id=$3, phone=$4, address=$5, referral_code=NULLIF($6,''), credit_limit=$7, customer_grade=$8, notes=NULLIF($9,''), updated_at=NOW() WHERE id=$10`,
-		req.Type, req.FullName, req.NationalID, req.Phone, req.Address, req.ReferralCode, req.CreditLimit, req.CustomerGrade, req.Notes, id,
+		`UPDATE customers SET type=$1, full_name=$2, national_id=$3, phone=$4, address=$5, postal_code=NULLIF($6,''), latitude=$7, longitude=$8, referral_code=NULLIF($9,''), credit_limit=$10, customer_grade=$11, balance_type=$12, opening_balance=$13, notes=NULLIF($14,''), updated_at=NOW() WHERE id=$15`,
+		req.Type, fullName, req.NationalID, req.Phone, req.Address, req.PostalCode, lat, lng, req.ReferralCode, req.CreditLimit, req.CustomerGrade, req.BalanceType, req.OpeningBalance, req.Notes, id,
 	)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
@@ -248,7 +369,7 @@ func (h *CustomerHandler) GetBalance(c *gin.Context) {
 		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return
 	}
-	respondJSON(c, http.StatusOK, gin.H{"customer_id": id, "balance": balance})
+	respondJSON(c, http.StatusOK, gin.H{"customerId": id, "balance": balance})
 }
 
 func (h *CustomerHandler) GetTransactions(c *gin.Context) {

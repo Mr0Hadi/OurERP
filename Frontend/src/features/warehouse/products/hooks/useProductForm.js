@@ -19,11 +19,11 @@ function buildDefaultValues(data) {
       category: "",
       brand: "",
       unit: "",
-      initialStock: 0,
+      reorderThreshold: 0,
       purchasePrice: 0,
-      sellPrice1: 0,
-      sellPrice2: 0,
-      vat: 0,
+      retailPrice: 0,
+      wholesalePrice: 0,
+      tax: 0,
     };
   }
   return {
@@ -33,11 +33,11 @@ function buildDefaultValues(data) {
     category: data.category || "",
     brand: data.brand || "",
     unit: data.unit || "",
-    initialStock: data.stock ?? data.initialStock ?? 0,
+    reorderThreshold: data.reorderThreshold ?? 0,
     purchasePrice: data.purchasePrice || 0,
-    sellPrice1: data.retailPrice ?? data.sellPrice1 ?? 0,
-    sellPrice2: data.wholesalePrice ?? data.sellPrice2 ?? 0,
-    vat: data.tax ?? data.vat ?? 0,
+    retailPrice: data.retailPrice ?? 0,
+    wholesalePrice: data.wholesalePrice ?? 0,
+    tax: data.tax ?? 0,
   };
 }
 
@@ -104,11 +104,11 @@ export function useProductForm(initialData = null) {
       category: formData.category,
       brand: formData.brand,
       unit: formData.unit,
-      stock: Number(formData.initialStock) || 0,
+      reorderThreshold: Number(formData.reorderThreshold) || 0,
       purchasePrice: Number(formData.purchasePrice) || 0,
-      retailPrice: Number(formData.sellPrice1) || 0,
-      wholesalePrice: Number(formData.sellPrice2) || 0,
-      tax: Number(formData.vat) || 0,
+      retailPrice: Number(formData.retailPrice) || 0,
+      wholesalePrice: Number(formData.wholesalePrice) || 0,
+      tax: Number(formData.tax) || 0,
     };
 
     if (imageRemoved) {

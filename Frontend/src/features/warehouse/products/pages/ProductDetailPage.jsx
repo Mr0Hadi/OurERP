@@ -75,7 +75,7 @@ function ProductDetailForm({ productData }) {
               errors={errors}
               categories={categories}
             />
-            <ProductPricingForm register={register} />
+            <ProductPricingForm register={register} stock={productData.stock} />
           </div>
           <div className="flex flex-col gap-4 md:gap-3">
             <ProductImageUpload

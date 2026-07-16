@@ -37,7 +37,7 @@ export default function CustomerNewPage() {
   const {
     register,
     handleSubmit,
-    setValue,
+    control,
     formState: { errors },
   } = formMethods;
 
@@ -61,6 +61,7 @@ export default function CustomerNewPage() {
             <CustomerIdentityForm
               register={register}
               errors={errors}
+              control={control}
               avatarPreview={avatarPreview}
               onAvatarChange={handleAvatarChange}
               onRemoveAvatar={handleRemoveAvatar}
@@ -69,14 +70,14 @@ export default function CustomerNewPage() {
             <CustomerFinanceForm
               register={register}
               errors={errors}
+              control={control}
               balanceType={balanceType}
-              setValue={setValue}
             />
           </div>
 
           {/* ستون چپ - آدرس و دکمه‌ها */}
           <div className="lg:col-span-1 space-y-4">
-            <CustomerAddressForm register={register} />
+            <CustomerAddressForm register={register} errors={errors} />
 
             {/* دکمه‌های عملیات */}
             <div className="flex gap-2">

@@ -4,6 +4,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
+import { Textarea } from "@/shared/components/ui/textarea";
 
 export default function SupplierFinanceForm({ register, errors, balanceType, setValue }) {
   const showAmount = balanceType !== "none";
@@ -18,7 +19,7 @@ export default function SupplierFinanceForm({ register, errors, balanceType, set
           وضعیت مالی
         </CardTitle>
       </CardHeader>
-      <CardContent className="px-6 py-5">
+      <CardContent className="px-6 py-5 space-y-4">
         <div className={`grid gap-4 ${showAmount ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
 
           {/* نوع حساب */}
@@ -79,6 +80,16 @@ export default function SupplierFinanceForm({ register, errors, balanceType, set
             </div>
           )}
 
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="notes" className="text-sm font-medium">یادداشت‌ها</Label>
+          <Textarea
+            id="notes"
+            placeholder="یادداشت‌ها..."
+            className="min-h-[80px] rounded-lg transition-all resize-none"
+            {...register("notes")}
+          />
         </div>
       </CardContent>
     </Card>

@@ -11,7 +11,7 @@ export function usePurchaseForm() {
     defaultValues: {
       invoiceNumber: formData.invoiceNumber || '',
       invoiceDate: formData.invoiceDate || '',
-      dueDate: formData.dueDate || '',
+      expectedDeliveryDate: formData.expectedDeliveryDate || '',
       description: formData.description || '',
       paymentType: formData.paymentType || 'cash',
       paidAmount: formData.paidAmount || '',
@@ -35,7 +35,7 @@ export function usePurchaseForm() {
       reset({
         invoiceNumber: '',
         invoiceDate: '',
-        dueDate: '',
+        expectedDeliveryDate: '',
         description: '',
         paymentType: 'cash',
         paidAmount: '',
@@ -54,7 +54,7 @@ export function usePurchaseForm() {
       setFormData({
         invoiceNumber: values.invoiceNumber,
         invoiceDate: values.invoiceDate,
-        dueDate: values.dueDate,
+        expectedDeliveryDate: values.expectedDeliveryDate,
         description: values.description,
         paymentType: values.paymentType,
         paidAmount: values.paidAmount,

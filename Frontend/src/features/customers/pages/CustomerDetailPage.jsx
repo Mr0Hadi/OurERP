@@ -42,7 +42,7 @@ function CustomerDetailForm({ customerData }) {
   const {
     register,
     handleSubmit,
-    setValue,
+    control,
     formState: { errors },
   } = formMethods;
 
@@ -72,6 +72,7 @@ function CustomerDetailForm({ customerData }) {
             <CustomerIdentityForm
               register={register}
               errors={errors}
+              control={control}
               avatarPreview={avatarPreview}
               onAvatarChange={handleAvatarChange}
               onRemoveAvatar={handleRemoveAvatar}
@@ -79,13 +80,13 @@ function CustomerDetailForm({ customerData }) {
             <CustomerFinanceForm
               register={register}
               errors={errors}
+              control={control}
               balanceType={balanceType}
-              setValue={setValue}
             />
           </div>
 
           <div className="lg:col-span-1 space-y-4">
-            <CustomerAddressForm register={register} />
+            <CustomerAddressForm register={register} errors={errors} />
 
             <div className="flex gap-2">
               <Button

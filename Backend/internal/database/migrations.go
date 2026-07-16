@@ -30,6 +30,12 @@ func RunMigrations() error {
 		createReceivingsTable,
 		createReceivingItemsTable,
 		createCompanySettingsTable,
+		addCustomerAddressFields,
+		addSupplierAddressAndBalanceFields,
+		fixPurchaseOrderStatusCheck,
+		addPurchaseOrderAmountFields,
+		addPurchaseOrderItemFields,
+		addPurchaseOrderPaymentTypeField,
 	}
 
 	for _, m := range migrations {
@@ -348,3 +354,44 @@ CREATE TABLE IF NOT EXISTS company_settings (
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );`
+
+const addCustomerAddressFields = `
+DO $$ BEGIN
+    ALTER TABLE customers ADD COLUMN IF NOT EXISTS postal_code VARCHAR(20) DEFAULT '';
+    ALTER TABLE customers ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,7);
+    ALTER TABLE customers ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,7);
+    ALTER TABLE customers ADD COLUMN IF NOT EXISTS balance_type VARCHAR(20) DEFAULT 'none';
+    ALTER TABLE customers ADD COLUMN IF NOT EXISTS opening_balance NUMERIC(12,2) DEFAULT 0;
+END $$;`
+
+const addSupplierAddressAndBalanceFields = `
+DO $$ BEGIN
+    ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS postal_code VARCHAR(20) DEFAULT '';
+    ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,7);
+    ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,7);
+    ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS balance_type VARCHAR(20) DEFAULT 'none';
+    ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS balance NUMERIC(12,2) DEFAULT 0;
+END $$;`
+
+const fixPurchaseOrderStatusCheck = `
+ALTER TABLE purchase_orders DROP CONSTRAINT IF EXISTS purchase_orders_status_check;
+ALTER TABLE purchase_orders ADD CONSTRAINT purchase_orders_status_check CHECK (status IN ('pending','shipped','partially_received','received','cancelled'));`
+
+const addPurchaseOrderAmountFields = `
+DO $$ BEGIN
+    ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS paid_amount NUMERIC(12,2) DEFAULT 0;
+    ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS total_amount NUMERIC(12,2) DEFAULT 0;
+END $$;`
+
+const addPurchaseOrderItemFields = `
+DO $$ BEGIN
+    ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS product_code VARCHAR(100) DEFAULT '';
+    ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS product_name VARCHAR(255) DEFAULT '';
+    ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS discount NUMERIC(12,2) DEFAULT 0;
+    ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS line_total NUMERIC(12,2) DEFAULT 0;
+END $$;`
+
+const addPurchaseOrderPaymentTypeField = `
+DO $$ BEGIN
+    ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS payment_type VARCHAR(50) DEFAULT 'cash';
+END $$;`
