@@ -1,0 +1,173 @@
+## ساختار پیشنهادی
+
+📁 erp-backend
+├── cmd
+│   └── api
+│       └── main.go                    # نقطه ورود، wiring همه چیز
+│
+├── internal
+│   ├── config
+│   │   ├── config.go                  # لود env/config
+│   │   └── database.go                # اتصال postgres (gorm/pgx)
+│   │
+│   ├── server
+│   │   ├── server.go                  # ساخت gin engine
+│   │   ├── router.go                  # ثبت روت‌های کلی
+│   │   └── middleware
+│   │       ├── auth.go                # JWT auth middleware
+│   │       ├── permission.go          # RBAC middleware
+│   │       ├── cors.go
+│   │       ├── logger.go
+│   │       ├── recovery.go
+│   │       └── error_handler.go
+│   │
+│   ├── modules                        # هر فیچر = یک ماژول (مثل features فرانت)
+│   │   ├── auth
+│   │   │   ├── handler.go             # http handlers
+│   │   │   ├── service.go             # business logic
+│   │   │   ├── repository.go          # db queries
+│   │   │   ├── model.go               # struct های db
+│   │   │   ├── dto.go                 # request/response structs
+│   │   │   └── routes.go              # روت‌های این ماژول
+│   │   │
+│   │   ├── user                       # مدیریت کاربران + نقش‌ها (settings/UserManagement)
+│   │   │   ├── handler.go
+│   │   │   ├── service.go
+│   │   │   ├── repository.go
+│   │   │   ├── model.go
+│   │   │   ├── dto.go
+│   │   │   └── routes.go
+│   │   │
+│   │   ├── role                       # RolePermissions
+│   │   │   ├── handler.go
+│   │   │   ├── service.go
+│   │   │   ├── repository.go
+│   │   │   ├── model.go
+│   │   │   ├── dto.go
+│   │   │   └── routes.go
+│   │   │
+│   │   ├── customer
+│   │   │   ├── handler.go
+│   │   │   ├── service.go
+│   │   │   ├── repository.go
+│   │   │   ├── model.go
+│   │   │   ├── dto.go
+│   │   │   └── routes.go
+│   │   │
+│   │   ├── supplier
+│   │   │   ├── handler.go
+│   │   │   ├── service.go
+│   │   │   ├── repository.go
+│   │   │   ├── model.go
+│   │   │   ├── dto.go
+│   │   │   └── routes.go
+│   │   │
+│   │   ├── product                    # warehouse/products
+│   │   │   ├── handler.go
+│   │   │   ├── service.go
+│   │   │   ├── repository.go
+│   │   │   ├── model.go
+│   │   │   ├── dto.go
+│   │   │   ├── category.go            # CategoryManager
+│   │   │   ├── barcode.go             # تولید/اسکن بارکد
+│   │   │   └── routes.go
+│   │   │
+│   │   ├── inventory                  # موجودی انبار (stock levels, warehouses)
+│   │   │   ├── handler.go
+│   │   │   ├── service.go
+│   │   │   ├── repository.go
+│   │   │   ├── model.go
+│   │   │   ├── dto.go
+│   │   │   └── routes.go
+│   │   │
+│   │   ├── receiving                  # رسید انبار (warehouse/receiving)
+│   │   │   ├── handler.go
+│   │   │   ├── service.go
+│   │   │   ├── repository.go
+│   │   │   ├── model.go
+│   │   │   ├── dto.go
+│   │   │   └── routes.go
+│   │   │
+│   │   ├── purchase                   # خرید + purchase returns
+│   │   │   ├── handler.go
+│   │   │   ├── service.go
+│   │   │   ├── repository.go
+│   │   │   ├── model.go
+│   │   │   ├── dto.go
+│   │   │   ├── purchase_return.go
+│   │   │   └── routes.go
+│   │   │
+│   │   ├── sale                       # فروش + sales orders/proforma/returns
+│   │   │   ├── handler.go
+│   │   │   ├── service.go
+│   │   │   ├── repository.go
+│   │   │   ├── model.go
+│   │   │   ├── dto.go
+│   │   │   ├── sale_return.go
+│   │   │   └── routes.go
+│   │   │
+│   │   ├── invoice
+│   │   │   ├── handler.go
+│   │   │   ├── service.go
+│   │   │   ├── repository.go
+│   │   │   ├── model.go
+│   │   │   ├── dto.go
+│   │   │   └── routes.go
+│   │   │
+│   │   ├── transaction                # payments/receipts (buySell)
+│   │   │   ├── handler.go
+│   │   │   ├── service.go
+│   │   │   ├── repository.go
+│   │   │   ├── model.go
+│   │   │   ├── dto.go
+│   │   │   └── routes.go
+│   │   │
+│   │   ├── report
+│   │   │   ├── handler.go
+│   │   │   ├── service.go             # queries تجمیعی برای گزارش‌ها
+│   │   │   ├── repository.go
+│   │   │   ├── dto.go
+│   │   │   └── routes.go
+│   │   │
+│   │   ├── dashboard
+│   │   │   ├── handler.go
+│   │   │   ├── service.go
+│   │   │   ├── repository.go
+│   │   │   ├── dto.go
+│   │   │   └── routes.go
+│   │   │
+│   │   └── settings                   # company profile, general, tax, invoice settings
+│   │       ├── handler.go
+│   │       ├── service.go
+│   │       ├── repository.go
+│   │       ├── model.go
+│   │       ├── dto.go
+│   │       └── routes.go
+│   │
+│   ├── pkg                            # کدهای مشترک بین ماژول‌ها
+│   │   ├── response
+│   │   │   └── response.go            # فرمت استاندارد پاسخ‌ها
+│   │   ├── validator
+│   │   │   └── validator.go
+│   │   ├── jwt
+│   │   │   └── jwt.go
+│   │   ├── hash
+│   │   │   └── password.go
+│   │   ├── pagination
+│   │   │   └── pagination.go
+│   │   ├── errors
+│   │   │   └── errors.go              # خطاهای دامنه‌ای سفارشی
+│   │   └── utils
+│   │       └── utils.go
+│   │
+│   └── database
+│
+├── .env
+├── .env.example
+├── .gitignore
+├── go.mod
+├── go.sum
+├── Makefile
+├── Dockerfile
+├── docker-compose.yml
+└── README.md

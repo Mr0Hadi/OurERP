@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Backend/wms-server.exe
 # Build and Release Folders
 bin-debug/
@@ -106,10 +107,13 @@ next-env.d.ts
 /build
 /tmp
 
+=======
+>>>>>>> main
 # Logs
 logs
 *.log
 npm-debug.log*
+<<<<<<< HEAD
 pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -124,3 +128,28 @@ lerna-debug.log*
 # temp directory
 .temp
 .tmp
+=======
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Tree Structure Project
+structure.txt
+>>>>>>> main
