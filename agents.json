@@ -1,7 +1,7 @@
 {
   "_meta": {
     "description": "Complete knowledge base for the OurERP WMS project. Written for AI agents to gain full understanding of the codebase.",
-    "lastUpdated": "2026-07-09",    "version": "1.4.3",
+    "lastUpdated": "2026-07-16",    "version": "1.4.5",
     "agent_instructions": {
       "purpose": "This file is the single source of truth for the project's current state. It is maintained by agents as they work.",
       "rule": "MANDATORY: At the end of every task, before responding to the user, update this file to reflect the final state of the project. This includes: updating 'lastUpdated', incrementing 'version', adding a changelog entry under 'changelog', and correcting any sections that are now outdated.",
@@ -187,7 +187,7 @@
         "columns": ["id SERIAL PK", "check_number VARCHAR(100)", "bank_name VARCHAR(255)", "amount NUMERIC(12,2)", "due_date DATE", "image_url TEXT", "status VARCHAR(50) DEFAULT 'issued' CHECK(issued,cleared,bounced)", "created_at TIMESTAMP", "updated_at TIMESTAMP"]
       },
       "purchase_orders": {
-        "columns": ["id SERIAL PK", "supplier_id INTEGER FK->suppliers", "created_by INTEGER FK->users", "status VARCHAR(50) DEFAULT 'pending' CHECK(pending,shipped,partially_received,received,cancelled)", "expected_delivery_date DATE", "supplier_invoice_number VARCHAR(100)", "notes TEXT", "received_by INTEGER FK->users", "received_at TIMESTAMP", "created_at TIMESTAMP", "updated_at TIMESTAMP"]
+        "columns": ["id SERIAL PK", "supplier_id INTEGER FK->suppliers", "created_by INTEGER FK->users", "status VARCHAR(50) DEFAULT 'pending' CHECK(pending,shipped,partially_received,received,cancelled)", "expected_delivery_date DATE", "supplier_invoice_number VARCHAR(100)", "notes TEXT", "payment_type VARCHAR(50) DEFAULT 'cash' CHECK(cash,credit,check,transfer,mixed)", "paid_amount NUMERIC(12,2) DEFAULT 0", "total_amount NUMERIC(12,2) DEFAULT 0", "received_by INTEGER FK->users", "received_at TIMESTAMP", "created_at TIMESTAMP", "updated_at TIMESTAMP"]
       },
       "purchase_order_items": {
         "columns": ["id SERIAL PK", "purchase_order_id INTEGER FK->purchase_orders ON DELETE CASCADE", "product_id INTEGER FK->products", "ordered_quantity NUMERIC(12,2)", "unit_price NUMERIC(12,2) DEFAULT 0", "received_quantity NUMERIC(12,2)", "discrepancy_note TEXT"]
@@ -574,6 +574,28 @@
   },
 
   "changelog": [
+    {
+      "date": "2026-07-16",
+      "version": "1.4.5",
+      "changes": "Made purchase order items read-only on the detail page and added received quantity inputs. PurchaseItemsSection now accepts readOnly (hides search/add panel, disables qty/price/discount inputs, hides delete buttons) and showReceivedQty (shows a 'receivedQty' column per item). PurchaseDetailPage passes readOnly=true and showReceivedQty when status is 'shipped' or 'partially_received'. purchaseFormStore now tracks receivedQty per item, loaded from purchase data. Backend Update handler saves received_quantity on purchase_order_items when provided in the payload. Frontend api.js sends receivedQty in items array.",
+      "files_changed": [
+        "Frontend/src/features/purchases/components/forms/PurchaseItemsSection.jsx",
+        "Frontend/src/features/purchases/pages/PurchaseDetailPage.jsx",
+        "Frontend/src/features/purchases/store/purchaseFormStore.js",
+        "Frontend/src/features/purchases/services/api.js",
+        "Backend/internal/handler/purchase_orders.go"
+      ]
+    },
+    {
+      "date": "2026-07-16",
+      "version": "1.4.4",
+      "changes": "Fixed paymentType, paidAmount, and status not being saved on purchase order updates. Root cause: purchase_orders table had no payment_type column (backend hardcoded 'credit' in all responses), frontend updatePurchase() did not send paymentType/paidAmount in PUT request, and backend Update() handler only saved supplier_id/invoice/notes/delivery_date — not payment fields or status. Also removed the 'only pending orders can be edited' restriction so payment info can be updated at any stage. Added migration for payment_type column, updated all backend handlers (List/Get/Create/Update/UpdatePayment) to read/write paymentType from DB, and updated frontend api.js to include paymentType/paidAmount/status in create and update requests.",
+      "files_changed": [
+        "Backend/internal/database/migrations.go",
+        "Backend/internal/handler/purchase_orders.go",
+        "Frontend/src/features/purchases/services/api.js"
+      ]
+    },
     {
       "date": "2026-07-09",
       "version": "1.4.3",

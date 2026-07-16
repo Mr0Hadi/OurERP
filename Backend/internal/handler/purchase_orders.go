@@ -20,7 +20,7 @@ func NewPurchaseOrderHandler() *PurchaseOrderHandler {
 
 func (h *PurchaseOrderHandler) List(c *gin.Context) {
 	p := parsePagination(c)
-	query := "SELECT po.id, po.supplier_id, COALESCE(s.name,''), po.created_by, po.status, po.expected_delivery_date, po.supplier_invoice_number, po.notes, COALESCE(paid_amount,0), COALESCE(total_amount,0), po.created_at, po.updated_at FROM purchase_orders po LEFT JOIN suppliers s ON s.id = po.supplier_id WHERE 1=1"
+	query := "SELECT po.id, po.supplier_id, COALESCE(s.name,''), po.created_by, po.status, po.expected_delivery_date, po.supplier_invoice_number, po.notes, COALESCE(paid_amount,0), COALESCE(total_amount,0), COALESCE(payment_type,'cash'), po.created_at, po.updated_at FROM purchase_orders po LEFT JOIN suppliers s ON s.id = po.supplier_id WHERE 1=1"
 	args := []interface{}{}
 	argIdx := 1
 
@@ -76,7 +76,7 @@ func (h *PurchaseOrderHandler) List(c *gin.Context) {
 	for rows.Next() {
 		var po model.PurchaseOrder
 		var edDate sql.NullString
-		if err := rows.Scan(&po.ID, &po.SupplierID, &po.SupplierName, &po.CreatedBy, &po.Status, &edDate, &po.InvoiceNumber, &po.Notes, &po.PaidAmount, &po.TotalAmount, &po.CreatedAt, &po.UpdatedAt); err != nil {
+		if err := rows.Scan(&po.ID, &po.SupplierID, &po.SupplierName, &po.CreatedBy, &po.Status, &edDate, &po.InvoiceNumber, &po.Notes, &po.PaidAmount, &po.TotalAmount, &po.PaymentType, &po.CreatedAt, &po.UpdatedAt); err != nil {
 			respondError(c, http.StatusInternalServerError, "خطا در خواندن اطلاعات")
 			return
 		}
@@ -85,7 +85,6 @@ func (h *PurchaseOrderHandler) List(c *gin.Context) {
 		}
 		po.Description = po.Notes
 		po.InvoiceDate = po.CreatedAt.Format("2006-01-02")
-		po.PaymentType = "credit"
 		orders = append(orders, po)
 	}
 
@@ -109,8 +108,8 @@ func (h *PurchaseOrderHandler) Get(c *gin.Context) {
 	var po model.PurchaseOrder
 	var edDate sql.NullString
 	err = database.DB.QueryRow(
-		"SELECT po.id, po.supplier_id, COALESCE(s.name,''), po.created_by, po.status, po.expected_delivery_date, po.supplier_invoice_number, po.notes, COALESCE(paid_amount,0), COALESCE(total_amount,0), po.created_at, po.updated_at FROM purchase_orders po LEFT JOIN suppliers s ON s.id = po.supplier_id WHERE po.id = $1", id,
-	).Scan(&po.ID, &po.SupplierID, &po.SupplierName, &po.CreatedBy, &po.Status, &edDate, &po.InvoiceNumber, &po.Notes, &po.PaidAmount, &po.TotalAmount, &po.CreatedAt, &po.UpdatedAt)
+		"SELECT po.id, po.supplier_id, COALESCE(s.name,''), po.created_by, po.status, po.expected_delivery_date, po.supplier_invoice_number, po.notes, COALESCE(paid_amount,0), COALESCE(total_amount,0), COALESCE(payment_type,'cash'), po.created_at, po.updated_at FROM purchase_orders po LEFT JOIN suppliers s ON s.id = po.supplier_id WHERE po.id = $1", id,
+	).Scan(&po.ID, &po.SupplierID, &po.SupplierName, &po.CreatedBy, &po.Status, &edDate, &po.InvoiceNumber, &po.Notes, &po.PaidAmount, &po.TotalAmount, &po.PaymentType, &po.CreatedAt, &po.UpdatedAt)
 	if err == sql.ErrNoRows {
 		respondError(c, http.StatusNotFound, "سفارش خرید یافت نشد")
 		return
@@ -124,7 +123,6 @@ func (h *PurchaseOrderHandler) Get(c *gin.Context) {
 	}
 	po.Description = po.Notes
 	po.InvoiceDate = po.CreatedAt.Format("2006-01-02")
-	po.PaymentType = "credit"
 	items, err := h.getItems(po.ID)
 	if err != nil {
 		log.Printf("ERROR fetching items for PO %d: %v", po.ID, err)
@@ -160,9 +158,9 @@ func (h *PurchaseOrderHandler) Create(c *gin.Context) {
 		}
 	}
 	err = tx.QueryRow(
-		`INSERT INTO purchase_orders (supplier_id, created_by, status, expected_delivery_date, supplier_invoice_number, notes)
-		 VALUES ($1, $2, 'pending', $3, $4, $5) RETURNING id, created_at, updated_at`,
-		po.SupplierID, userID, edDate, po.InvoiceNumber, po.Notes,
+		`INSERT INTO purchase_orders (supplier_id, created_by, status, expected_delivery_date, supplier_invoice_number, notes, payment_type, paid_amount)
+		 VALUES ($1, $2, 'pending', $3, $4, $5, $6, $7) RETURNING id, created_at, updated_at`,
+		po.SupplierID, userID, edDate, po.InvoiceNumber, po.Notes, po.PaymentType, po.PaidAmount,
 	).Scan(&po.ID, &po.CreatedAt, &po.UpdatedAt)
 	if err != nil {
 		log.Printf("ERROR creating purchase order: %v", err)
@@ -217,7 +215,6 @@ func (h *PurchaseOrderHandler) Create(c *gin.Context) {
 	po.TotalAmount = totalAmount
 	po.Items = responseItems
 	po.InvoiceDate = po.CreatedAt.Format("2006-01-02")
-	po.PaymentType = "credit"
 	po.Description = po.Notes
 	respondJSON(c, http.StatusCreated, po)
 }
@@ -226,13 +223,6 @@ func (h *PurchaseOrderHandler) Update(c *gin.Context) {
 	id, err := parseIntParam(c, "id")
 	if err != nil {
 		respondError(c, http.StatusBadRequest, "شناسه نامعتبر است")
-		return
-	}
-
-	var currentStatus string
-	database.DB.QueryRow("SELECT status FROM purchase_orders WHERE id = $1", id).Scan(&currentStatus)
-	if currentStatus != "pending" {
-		respondError(c, http.StatusBadRequest, "فقط سفارش‌های در انتظار قابل ویرایش هستند")
 		return
 	}
 
@@ -256,14 +246,34 @@ func (h *PurchaseOrderHandler) Update(c *gin.Context) {
 			edDate = &parsed
 		}
 	}
-	_, err = tx.Exec(
-		`UPDATE purchase_orders SET supplier_id=$1, expected_delivery_date=$2, supplier_invoice_number=$3, notes=$4, updated_at=NOW() WHERE id=$5`,
-		po.SupplierID, edDate, po.InvoiceNumber, po.Notes, id,
-	)
-	if err != nil {
-		log.Printf("ERROR updating purchase order %d: %v", id, err)
-		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
-		return
+
+	var currentStatus string
+	database.DB.QueryRow("SELECT status FROM purchase_orders WHERE id = $1", id).Scan(&currentStatus)
+
+	if po.Status != "" && po.Status != currentStatus {
+		_, err = tx.Exec(
+			`UPDATE purchase_orders SET supplier_id=$1, expected_delivery_date=$2, supplier_invoice_number=$3, notes=$4, payment_type=$5, paid_amount=$6, status=$7, updated_at=NOW() WHERE id=$8`,
+			po.SupplierID, edDate, po.InvoiceNumber, po.Notes, po.PaymentType, po.PaidAmount, po.Status, id,
+		)
+		if err != nil {
+			log.Printf("ERROR updating purchase order %d: %v", id, err)
+			respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
+			return
+		}
+		_, err = tx.Exec("INSERT INTO status_logs (entity_type, entity_id, from_status, to_status, changed_by) VALUES ('purchase_order', $1, $2, $3, $4)", id, currentStatus, po.Status, getUserID(c))
+		if err != nil {
+			log.Printf("ERROR logging status change for PO %d: %v", id, err)
+		}
+	} else {
+		_, err = tx.Exec(
+			`UPDATE purchase_orders SET supplier_id=$1, expected_delivery_date=$2, supplier_invoice_number=$3, notes=$4, payment_type=$5, paid_amount=$6, updated_at=NOW() WHERE id=$7`,
+			po.SupplierID, edDate, po.InvoiceNumber, po.Notes, po.PaymentType, po.PaidAmount, id,
+		)
+		if err != nil {
+			log.Printf("ERROR updating purchase order %d: %v", id, err)
+			respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
+			return
+		}
 	}
 
 	tx.Exec("DELETE FROM purchase_order_items WHERE purchase_order_id = $1", id)
@@ -274,9 +284,13 @@ func (h *PurchaseOrderHandler) Update(c *gin.Context) {
 		database.DB.QueryRow("SELECT COALESCE(internal_code,''), COALESCE(name,'') FROM products WHERE id = $1", item.ProductID).Scan(&productCode, &productName)
 		lineTotal := item.Qty*item.UnitPrice - item.Discount
 		totalAmount += lineTotal
+		var receivedQty interface{}
+		if item.ReceivedQty != nil {
+			receivedQty = *item.ReceivedQty
+		}
 		_, err := tx.Exec(
-			"INSERT INTO purchase_order_items (purchase_order_id, product_id, product_code, product_name, ordered_quantity, unit_price, discount, line_total) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-			id, item.ProductID, productCode, productName, item.Qty, item.UnitPrice, item.Discount, lineTotal,
+			"INSERT INTO purchase_order_items (purchase_order_id, product_id, product_code, product_name, ordered_quantity, unit_price, discount, line_total, received_quantity) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+			id, item.ProductID, productCode, productName, item.Qty, item.UnitPrice, item.Discount, lineTotal, receivedQty,
 		)
 		if err != nil {
 			log.Printf("ERROR inserting item for PO %d (product_id=%d): %v", id, item.ProductID, err)
@@ -292,6 +306,7 @@ func (h *PurchaseOrderHandler) Update(c *gin.Context) {
 			OrderedQty:      item.Qty,
 			UnitPrice:       item.UnitPrice,
 			Discount:        item.Discount,
+			ReceivedQty:     item.ReceivedQty,
 			LineTotal:       lineTotal,
 		}
 	}
@@ -311,11 +326,12 @@ func (h *PurchaseOrderHandler) Update(c *gin.Context) {
 
 	database.DB.QueryRow("SELECT COALESCE(s.name,'') FROM suppliers s WHERE s.id = $1", po.SupplierID).Scan(&po.SupplierName)
 	po.ID = id
-	po.Status = "pending"
+	if po.Status == "" {
+		po.Status = "pending"
+	}
 	po.TotalAmount = totalAmount
 	po.Items = responseItems
 	po.InvoiceDate = po.CreatedAt.Format("2006-01-02")
-	po.PaymentType = "credit"
 	po.Description = po.Notes
 	respondJSON(c, http.StatusOK, po)
 }
@@ -438,14 +454,19 @@ func (h *PurchaseOrderHandler) UpdatePayment(c *gin.Context) {
 	}
 
 	var req struct {
-		PaidAmount float64 `json:"paidAmount"`
+		PaidAmount  float64 `json:"paidAmount"`
+		PaymentType string  `json:"paymentType"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
 	}
 
-	_, err = database.DB.Exec("UPDATE purchase_orders SET paid_amount=$1, updated_at=NOW() WHERE id=$2", req.PaidAmount, id)
+	if req.PaymentType != "" {
+		_, err = database.DB.Exec("UPDATE purchase_orders SET paid_amount=$1, payment_type=$2, updated_at=NOW() WHERE id=$3", req.PaidAmount, req.PaymentType, id)
+	} else {
+		_, err = database.DB.Exec("UPDATE purchase_orders SET paid_amount=$1, updated_at=NOW() WHERE id=$2", req.PaidAmount, id)
+	}
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
 		return

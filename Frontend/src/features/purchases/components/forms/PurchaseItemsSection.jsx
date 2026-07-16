@@ -23,6 +23,9 @@ export default function PurchaseItemsSection({
   items,
   onItemsChange,
   products = [],
+  readOnly = false,
+  showReceivedQty = false,
+  onReceivedQtyChange,
 }) {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
@@ -90,24 +93,27 @@ export default function PurchaseItemsSection({
         <CardTitle className="text-base font-semibold text-card-foreground">
           اقلام خرید
         </CardTitle>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() =>
-            navigate(ROUTES.WAREHOUSE_PRODUCTS_NEW, {
-              state: { returnTo: ROUTES.PURCHASES_NEW },
-            })
-          }
-          className="gap-1.5 text-xs"
-        >
-          <PackagePlus className="w-3.5 h-3.5" />
-          افزودن کالای جدید
-        </Button>
+        {!readOnly && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              navigate(ROUTES.WAREHOUSE_PRODUCTS_NEW, {
+                state: { returnTo: ROUTES.PURCHASES_NEW },
+              })
+            }
+            className="gap-1.5 text-xs"
+          >
+            <PackagePlus className="w-3.5 h-3.5" />
+            افزودن کالای جدید
+          </Button>
+        )}
       </CardHeader>
 
       <CardContent className="space-y-4">
         {/* پنل جست‌وجو و فیلتر */}
+        {!readOnly && (
         <div className="space-y-3">
           {/* سطر جست‌وجو + فیلتر دسته‌بندی */}
           <div className="flex flex-col sm:flex-row gap-2">
@@ -218,6 +224,7 @@ export default function PurchaseItemsSection({
             )}
           </div>
         </div>
+        )}
 
         {/* آیتم‌های انتخاب‌شده */}
         {items.length > 0 && (
@@ -240,7 +247,12 @@ export default function PurchaseItemsSection({
                     <th className="text-center px-2 py-2.5 font-medium w-28">
                       جمع
                     </th>
-                    <th className="w-8 px-2 py-2.5" />
+                    {showReceivedQty && (
+                      <th className="text-center px-2 py-2.5 font-medium w-20">
+                        تعداد دریافتی
+                      </th>
+                    )}
+                    {!readOnly && <th className="w-8 px-2 py-2.5" />}
                   </tr>
                  </thead>
                  <tbody className="divide-y divide-border">
@@ -262,6 +274,7 @@ export default function PurchaseItemsSection({
                             type="number"
                             min={1}
                             value={item.qty}
+                            disabled={readOnly}
                             onChange={(e) =>
                               handleFieldChange(
                                 item.productId,
@@ -277,6 +290,7 @@ export default function PurchaseItemsSection({
                            type="number"
                            min={0}
                            value={item.unitPrice}
+                           disabled={readOnly}
                            onChange={(e) =>
                              handleFieldChange(
                                item.productId,
@@ -287,12 +301,13 @@ export default function PurchaseItemsSection({
                            className="h-7 text-center text-xs w-full"
                          />
                        </td>
-                       <td className="px-2 py-2">
+                        <td className="px-2 py-2">
                          <Input
                            type="number"
                            min={0}
                            max={100}
                            value={item.discount}
+                           disabled={readOnly}
                            onChange={(e) =>
                              handleFieldChange(
                                item.productId,
@@ -303,26 +318,46 @@ export default function PurchaseItemsSection({
                            className="h-7 text-center text-xs w-full"
                          />
                        </td>
-                       <td className="px-2 py-2 text-center text-xs font-medium text-card-foreground">
+                        <td className="px-2 py-2 text-center text-xs font-medium text-card-foreground">
                          {lineTotal(item).toLocaleString("fa-IR")}
                        </td>
-                       <td className="px-2 py-2 text-center">
-                         <button
-                           type="button"
-                           onClick={() => handleRemoveItem(item.productId)}
-                           className="text-muted-foreground hover:text-destructive transition-colors p-0.5 rounded"
-                           aria-label="حذف کالا"
-                         >
-                           <Trash2 className="w-3.5 h-3.5" />
-                         </button>
-                       </td>
-                     </tr>
-                   ))}
-                 </tbody>
+                        {showReceivedQty && (
+                          <td className="px-2 py-2">
+                            <Input
+                              type="number"
+                              min={0}
+                              max={item.qty}
+                              value={item.receivedQty ?? ""}
+                              placeholder={String(item.qty)}
+                              onChange={(e) =>
+                                onReceivedQtyChange?.(
+                                  item.productId,
+                                  e.target.value === "" ? "" : Number(e.target.value),
+                                )
+                              }
+                              className="h-7 text-center text-xs w-full"
+                            />
+                          </td>
+                        )}
+                        {!readOnly && (
+                          <td className="px-2 py-2 text-center">
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveItem(item.productId)}
+                              className="text-muted-foreground hover:text-destructive transition-colors p-0.5 rounded"
+                              aria-label="حذف کالا"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
                 <tfoot className="bg-muted border-t border-border">
                   <tr>
                     <td
-                      colSpan={4}
+                      colSpan={showReceivedQty ? 5 : 4}
                       className="px-3 py-2.5 text-sm font-medium text-muted-foreground text-right"
                     >
                       جمع کل اقلام:
@@ -330,7 +365,8 @@ export default function PurchaseItemsSection({
                     <td className="px-2 py-2.5 text-center text-sm font-bold text-card-foreground">
                       {grandTotal.toLocaleString("fa-IR")}
                     </td>
-                    <td />
+                    {showReceivedQty && <td />}
+                    {!readOnly && <td />}
                   </tr>
                 </tfoot>
               </table>
@@ -352,14 +388,16 @@ export default function PurchaseItemsSection({
                         {item.productCode}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveItem(item.productId)}
-                      className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded shrink-0"
-                      aria-label="حذف کالا"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {!readOnly && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveItem(item.productId)}
+                        className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded shrink-0"
+                        aria-label="حذف کالا"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-3 gap-2">
@@ -371,6 +409,7 @@ export default function PurchaseItemsSection({
                         type="number"
                         min={1}
                         value={item.qty}
+                        disabled={readOnly}
                         onChange={(e) =>
                           handleFieldChange(
                             item.productId,
@@ -389,6 +428,7 @@ export default function PurchaseItemsSection({
                         type="number"
                         min={0}
                         value={item.unitPrice}
+                        disabled={readOnly}
                         onChange={(e) =>
                           handleFieldChange(
                             item.productId,
@@ -408,6 +448,7 @@ export default function PurchaseItemsSection({
                         min={0}
                         max={100}
                         value={item.discount}
+                        disabled={readOnly}
                         onChange={(e) =>
                           handleFieldChange(
                             item.productId,
@@ -419,6 +460,28 @@ export default function PurchaseItemsSection({
                       />
                     </div>
                   </div>
+
+                  {showReceivedQty && (
+                    <div className="space-y-1">
+                      <label className="text-[11px] text-muted-foreground">
+                        تعداد دریافتی
+                      </label>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={item.qty}
+                        value={item.receivedQty ?? ""}
+                        placeholder={`حداکثر ${item.qty}`}
+                        onChange={(e) =>
+                          onReceivedQtyChange?.(
+                            item.productId,
+                            e.target.value === "" ? "" : Number(e.target.value),
+                          )
+                        }
+                        className="h-8 text-center text-xs w-full"
+                      />
+                    </div>
+                  )}
 
                   <div className="flex items-center justify-between pt-2 border-t border-border">
                     <span className="text-xs text-muted-foreground">جمع</span>

@@ -35,6 +35,7 @@ func RunMigrations() error {
 		fixPurchaseOrderStatusCheck,
 		addPurchaseOrderAmountFields,
 		addPurchaseOrderItemFields,
+		addPurchaseOrderPaymentTypeField,
 	}
 
 	for _, m := range migrations {
@@ -388,4 +389,9 @@ DO $$ BEGIN
     ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS product_name VARCHAR(255) DEFAULT '';
     ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS discount NUMERIC(12,2) DEFAULT 0;
     ALTER TABLE purchase_order_items ADD COLUMN IF NOT EXISTS line_total NUMERIC(12,2) DEFAULT 0;
+END $$;`
+
+const addPurchaseOrderPaymentTypeField = `
+DO $$ BEGIN
+    ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS payment_type VARCHAR(50) DEFAULT 'cash';
 END $$;`

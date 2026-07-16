@@ -15,6 +15,8 @@ export async function createPurchase(purchaseData) {
     expectedDeliveryDate: purchaseData.expectedDeliveryDate || undefined,
     invoiceNumber: purchaseData.invoiceNumber || purchaseData.supplierInvoiceNumber || undefined,
     notes: purchaseData.description || purchaseData.notes || undefined,
+    paymentType: purchaseData.paymentType || "cash",
+    paidAmount: Number(purchaseData.paidAmount) || 0,
   });
   return res.data;
 }
@@ -48,10 +50,14 @@ export async function updatePurchase(id, updates) {
       qty: Number(i.qty ?? i.orderedQty ?? 0) || 0,
       unitPrice: Number(i.unitPrice ?? 0) || 0,
       discount: Number(i.discount ?? 0) || 0,
+      receivedQty: i.receivedQty != null ? Number(i.receivedQty) : null,
     })),
     expectedDeliveryDate: updates.expectedDeliveryDate || undefined,
     invoiceNumber: updates.invoiceNumber || updates.supplierInvoiceNumber || undefined,
     notes: updates.description || updates.notes || undefined,
+    paymentType: updates.paymentType || "cash",
+    paidAmount: Number(updates.paidAmount) || 0,
+    status: updates.status || "pending",
   });
   return res.data;
 }
