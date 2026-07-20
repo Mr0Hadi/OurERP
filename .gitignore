@@ -25,3 +25,10 @@ dist-ssr
 
 # Tree Structure Project
 structure.txt
+/Backend-Net/.vs
+/Backend-Net/Application/obj
+/Backend-Net/Common/obj
+/Backend-Net/Domain/obj
+/Backend-Net/Infrastructure/obj
+/Backend-Net/WMS/bin/Debug/net10.0
+/Backend-Net/WMS/obj

@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/Src/">
+    <Project Path="Application/Application.csproj" Id="f9a8d560-206d-4c94-b623-e0900e129540" />
+    <Project Path="Common/Common.csproj" Id="5e0a7686-8707-4947-9c75-8e695ed69a89" />
+    <Project Path="Domain/Domain.csproj" Id="a07214ce-3c9d-454d-985c-3e4bc7469f5d" />
+    <Project Path="Infrastructure/Infrastructure.csproj" Id="a6d3ec4e-6571-4454-8068-3f5c082a8c88" />
+    <Project Path="WMS/WMS.csproj" />
+  </Folder>
+</Solution>
