@@ -188,6 +188,7 @@ export default function PurchasesNewPage() {
       })),
       paymentType: formData.paymentType || 'cash',
       paidAmount: finalPaidAmount,
+      mixedPayments: formData.paymentType === 'mixed' ? (formData.mixedPayments || []) : null,
       status: formData.status || 'pending',
       totalAmount: computedTotal,
     };

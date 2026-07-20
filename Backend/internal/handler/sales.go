@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/user/wms-backend/internal/database"
@@ -85,7 +86,7 @@ func (h *SalesHandler) List(c *gin.Context) {
 		s.CheckNumber = checkNumber.String
 		s.TransferRef = transferRef.String
 		if dueDate.Valid {
-			// DueDate is not part of the Sale struct anymore, but we keep the scan for DB compatibility
+			s.DueDate = &dueDate.String
 		}
 		sales = append(sales, s)
 	}
@@ -123,6 +124,9 @@ func (h *SalesHandler) Get(c *gin.Context) {
 	s.Description = description.String
 	s.CheckNumber = checkNumber.String
 	s.TransferRef = transferRef.String
+	if dueDate.Valid {
+		s.DueDate = &dueDate.String
+	}
 	customerName := ""
 	database.DB.QueryRow("SELECT full_name FROM customers WHERE id = $1", s.CustomerID).Scan(&customerName)
 	s.CustomerName = customerName
@@ -170,10 +174,18 @@ func (h *SalesHandler) Create(c *gin.Context) {
 		s.PaymentType = "cash"
 	}
 
+	var dueDate *time.Time
+	if s.DueDate != nil && *s.DueDate != "" {
+		parsed, err := time.Parse("2006-01-02", *s.DueDate)
+		if err == nil {
+			dueDate = &parsed
+		}
+	}
+
 	err = tx.QueryRow(
-		`INSERT INTO sales (customer_id, invoice_number, invoice_date, description, status, payment_type, paid_amount, total_amount, check_number, transfer_ref, created_by)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULLIF($9,''), NULLIF($10,''), $11) RETURNING id, created_at, updated_at`,
-		s.CustomerID, saleNumber, s.InvoiceDate, s.Description, s.Status, s.PaymentType, s.PaidAmount, s.TotalAmount, s.CheckNumber, s.TransferRef, userID,
+		`INSERT INTO sales (customer_id, invoice_number, invoice_date, due_date, description, status, payment_type, paid_amount, total_amount, check_number, transfer_ref, created_by)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NULLIF($10,''), NULLIF($11,''), $12) RETURNING id, created_at, updated_at`,
+		s.CustomerID, saleNumber, s.InvoiceDate, dueDate, s.Description, s.Status, s.PaymentType, s.PaidAmount, s.TotalAmount, s.CheckNumber, s.TransferRef, userID,
 	).Scan(&s.ID, &s.CreatedAt, &s.UpdatedAt)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")
@@ -225,9 +237,17 @@ func (h *SalesHandler) Update(c *gin.Context) {
 	}
 	defer tx.Rollback()
 
+	var dueDate *time.Time
+	if s.DueDate != nil && *s.DueDate != "" {
+		parsed, err := time.Parse("2006-01-02", *s.DueDate)
+		if err == nil {
+			dueDate = &parsed
+		}
+	}
+
 	_, err = tx.Exec(
-		"UPDATE sales SET customer_id=$1, invoice_date=$2, description=$3, payment_type=$4, paid_amount=$5, total_amount=$6, check_number=NULLIF($7,''), transfer_ref=NULLIF($8,''), updated_at=NOW() WHERE id=$9",
-		s.CustomerID, s.InvoiceDate, s.Description, s.PaymentType, s.PaidAmount, s.TotalAmount, s.CheckNumber, s.TransferRef, id,
+		"UPDATE sales SET customer_id=$1, invoice_date=$2, due_date=$3, description=$4, payment_type=$5, paid_amount=$6, total_amount=$7, check_number=NULLIF($8,''), transfer_ref=NULLIF($9,''), status=$10, updated_at=NOW() WHERE id=$11",
+		s.CustomerID, s.InvoiceDate, dueDate, s.Description, s.PaymentType, s.PaidAmount, s.TotalAmount, s.CheckNumber, s.TransferRef, s.Status, id,
 	)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "خطای پایگاه داده")

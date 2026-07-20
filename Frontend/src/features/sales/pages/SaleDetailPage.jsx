@@ -96,6 +96,7 @@ function SaleDetailForm({ saleData }) {
       customerName: formData.customerName,
       invoiceNumber: formData.invoiceNumber,
       invoiceDate: formData.invoiceDate,
+      dueDate: formData.dueDate || null,
       description: formData.description || "",
       items: items.map((item) => ({
         ...item,

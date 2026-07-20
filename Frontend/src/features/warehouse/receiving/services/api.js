@@ -6,6 +6,7 @@ export { PURCHASE_STATUSES, PURCHASE_STATUS_LABELS, PAYMENT_TYPES, PAYMENT_TYPE_
 const RECEIVING_ELIGIBLE_STATUSES = [
   PURCHASE_STATUSES.SHIPPED,
   PURCHASE_STATUSES.PARTIALLY_RECEIVED,
+  PURCHASE_STATUSES.RECEIVED,
 ];
 
 export const RECEIVING_ELIGIBLE_STATUSES_LIST = RECEIVING_ELIGIBLE_STATUSES;
@@ -89,6 +90,7 @@ export async function updateReceivingStatus(id, receivedItems) {
 
 export async function confirmReceiving(purchaseId, receivingData) {
   const res = await api.post(`/api/purchase-orders/${purchaseId}/receive`, {
+    status: receivingData.status || "received",
     items: (receivingData.receivedItems || []).map((item) => ({
       productId: parseInt(item.productId, 10),
       qty: item.orderedQty ?? item.qty ?? 0,

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -20,14 +21,19 @@ func NewPurchaseOrderHandler() *PurchaseOrderHandler {
 
 func (h *PurchaseOrderHandler) List(c *gin.Context) {
 	p := parsePagination(c)
-	query := "SELECT po.id, po.supplier_id, COALESCE(s.name,''), po.created_by, po.status, po.expected_delivery_date, po.supplier_invoice_number, po.notes, COALESCE(paid_amount,0), COALESCE(total_amount,0), COALESCE(payment_type,'cash'), po.created_at, po.updated_at FROM purchase_orders po LEFT JOIN suppliers s ON s.id = po.supplier_id WHERE 1=1"
+	query := "SELECT po.id, po.supplier_id, COALESCE(s.name,''), po.created_by, po.status, po.expected_delivery_date, po.supplier_invoice_number, po.notes, COALESCE(paid_amount,0), COALESCE(total_amount,0), COALESCE(payment_type,'cash'), po.mixed_payments, po.created_at, po.updated_at FROM purchase_orders po LEFT JOIN suppliers s ON s.id = po.supplier_id WHERE 1=1"
 	args := []interface{}{}
 	argIdx := 1
 
 	if status := c.Query("status"); status != "" {
-		query += fmt.Sprintf(" AND po.status = $%d", argIdx)
-		args = append(args, status)
-		argIdx++
+		statuses := strings.Split(status, ",")
+		placeholders := make([]string, len(statuses))
+		for i, s := range statuses {
+			placeholders[i] = fmt.Sprintf("$%d", argIdx)
+			args = append(args, strings.TrimSpace(s))
+			argIdx++
+		}
+		query += fmt.Sprintf(" AND po.status IN (%s)", strings.Join(placeholders, ","))
 	}
 	if from := c.Query("from"); from != "" {
 		query += fmt.Sprintf(" AND po.created_at >= $%d", argIdx)
@@ -45,9 +51,14 @@ func (h *PurchaseOrderHandler) List(c *gin.Context) {
 	countArgs := []interface{}{}
 	countIdx := 1
 	if status := c.Query("status"); status != "" {
-		countQuery += fmt.Sprintf(" AND po.status = $%d", countIdx)
-		countArgs = append(countArgs, status)
-		countIdx++
+		statuses := strings.Split(status, ",")
+		placeholders := make([]string, len(statuses))
+		for i, s := range statuses {
+			placeholders[i] = fmt.Sprintf("$%d", countIdx)
+			countArgs = append(countArgs, strings.TrimSpace(s))
+			countIdx++
+		}
+		countQuery += fmt.Sprintf(" AND po.status IN (%s)", strings.Join(placeholders, ","))
 	}
 	if from := c.Query("from"); from != "" {
 		countQuery += fmt.Sprintf(" AND po.created_at >= $%d", countIdx)
@@ -76,7 +87,7 @@ func (h *PurchaseOrderHandler) List(c *gin.Context) {
 	for rows.Next() {
 		var po model.PurchaseOrder
 		var edDate sql.NullString
-		if err := rows.Scan(&po.ID, &po.SupplierID, &po.SupplierName, &po.CreatedBy, &po.Status, &edDate, &po.InvoiceNumber, &po.Notes, &po.PaidAmount, &po.TotalAmount, &po.PaymentType, &po.CreatedAt, &po.UpdatedAt); err != nil {
+		if err := rows.Scan(&po.ID, &po.SupplierID, &po.SupplierName, &po.CreatedBy, &po.Status, &edDate, &po.InvoiceNumber, &po.Notes, &po.PaidAmount, &po.TotalAmount, &po.PaymentType, &po.MixedPayments, &po.CreatedAt, &po.UpdatedAt); err != nil {
 			respondError(c, http.StatusInternalServerError, "خطا در خواندن اطلاعات")
 			return
 		}
@@ -108,8 +119,8 @@ func (h *PurchaseOrderHandler) Get(c *gin.Context) {
 	var po model.PurchaseOrder
 	var edDate sql.NullString
 	err = database.DB.QueryRow(
-		"SELECT po.id, po.supplier_id, COALESCE(s.name,''), po.created_by, po.status, po.expected_delivery_date, po.supplier_invoice_number, po.notes, COALESCE(paid_amount,0), COALESCE(total_amount,0), COALESCE(payment_type,'cash'), po.created_at, po.updated_at FROM purchase_orders po LEFT JOIN suppliers s ON s.id = po.supplier_id WHERE po.id = $1", id,
-	).Scan(&po.ID, &po.SupplierID, &po.SupplierName, &po.CreatedBy, &po.Status, &edDate, &po.InvoiceNumber, &po.Notes, &po.PaidAmount, &po.TotalAmount, &po.PaymentType, &po.CreatedAt, &po.UpdatedAt)
+		"SELECT po.id, po.supplier_id, COALESCE(s.name,''), po.created_by, po.status, po.expected_delivery_date, po.supplier_invoice_number, po.notes, COALESCE(paid_amount,0), COALESCE(total_amount,0), COALESCE(payment_type,'cash'), po.mixed_payments, po.created_at, po.updated_at FROM purchase_orders po LEFT JOIN suppliers s ON s.id = po.supplier_id WHERE po.id = $1", id,
+	).Scan(&po.ID, &po.SupplierID, &po.SupplierName, &po.CreatedBy, &po.Status, &edDate, &po.InvoiceNumber, &po.Notes, &po.PaidAmount, &po.TotalAmount, &po.PaymentType, &po.MixedPayments, &po.CreatedAt, &po.UpdatedAt)
 	if err == sql.ErrNoRows {
 		respondError(c, http.StatusNotFound, "سفارش خرید یافت نشد")
 		return
@@ -158,9 +169,9 @@ func (h *PurchaseOrderHandler) Create(c *gin.Context) {
 		}
 	}
 	err = tx.QueryRow(
-		`INSERT INTO purchase_orders (supplier_id, created_by, status, expected_delivery_date, supplier_invoice_number, notes, payment_type, paid_amount)
-		 VALUES ($1, $2, 'pending', $3, $4, $5, $6, $7) RETURNING id, created_at, updated_at`,
-		po.SupplierID, userID, edDate, po.InvoiceNumber, po.Notes, po.PaymentType, po.PaidAmount,
+		`INSERT INTO purchase_orders (supplier_id, created_by, status, expected_delivery_date, supplier_invoice_number, notes, payment_type, paid_amount, mixed_payments)
+		 VALUES ($1, $2, 'pending', $3, $4, $5, $6, $7, $8) RETURNING id, created_at, updated_at`,
+		po.SupplierID, userID, edDate, po.InvoiceNumber, po.Notes, po.PaymentType, po.PaidAmount, po.MixedPayments,
 	).Scan(&po.ID, &po.CreatedAt, &po.UpdatedAt)
 	if err != nil {
 		log.Printf("ERROR creating purchase order: %v", err)
@@ -252,8 +263,8 @@ func (h *PurchaseOrderHandler) Update(c *gin.Context) {
 
 	if po.Status != "" && po.Status != currentStatus {
 		_, err = tx.Exec(
-			`UPDATE purchase_orders SET supplier_id=$1, expected_delivery_date=$2, supplier_invoice_number=$3, notes=$4, payment_type=$5, paid_amount=$6, status=$7, updated_at=NOW() WHERE id=$8`,
-			po.SupplierID, edDate, po.InvoiceNumber, po.Notes, po.PaymentType, po.PaidAmount, po.Status, id,
+			`UPDATE purchase_orders SET supplier_id=$1, expected_delivery_date=$2, supplier_invoice_number=$3, notes=$4, payment_type=$5, paid_amount=$6, status=$7, mixed_payments=$8, updated_at=NOW() WHERE id=$9`,
+			po.SupplierID, edDate, po.InvoiceNumber, po.Notes, po.PaymentType, po.PaidAmount, po.Status, po.MixedPayments, id,
 		)
 		if err != nil {
 			log.Printf("ERROR updating purchase order %d: %v", id, err)
@@ -266,8 +277,8 @@ func (h *PurchaseOrderHandler) Update(c *gin.Context) {
 		}
 	} else {
 		_, err = tx.Exec(
-			`UPDATE purchase_orders SET supplier_id=$1, expected_delivery_date=$2, supplier_invoice_number=$3, notes=$4, payment_type=$5, paid_amount=$6, updated_at=NOW() WHERE id=$7`,
-			po.SupplierID, edDate, po.InvoiceNumber, po.Notes, po.PaymentType, po.PaidAmount, id,
+			`UPDATE purchase_orders SET supplier_id=$1, expected_delivery_date=$2, supplier_invoice_number=$3, notes=$4, payment_type=$5, paid_amount=$6, mixed_payments=$7, updated_at=NOW() WHERE id=$8`,
+			po.SupplierID, edDate, po.InvoiceNumber, po.Notes, po.PaymentType, po.PaidAmount, po.MixedPayments, id,
 		)
 		if err != nil {
 			log.Printf("ERROR updating purchase order %d: %v", id, err)
@@ -372,7 +383,8 @@ func (h *PurchaseOrderHandler) Receive(c *gin.Context) {
 	}
 
 	var req struct {
-		Items []struct {
+		Status string `json:"status"`
+		Items  []struct {
 			ProductID       int     `json:"productId"`
 			Qty             float64 `json:"qty"`
 			OrderedQty      float64 `json:"orderedQty"`
@@ -384,6 +396,11 @@ func (h *PurchaseOrderHandler) Receive(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
 		return
+	}
+
+	newStatus := "received"
+	if req.Status == "partially_received" {
+		newStatus = "partially_received"
 	}
 
 	tx, err := database.DB.Begin()
@@ -416,13 +433,13 @@ func (h *PurchaseOrderHandler) Receive(c *gin.Context) {
 		}
 	}
 
-	_, err = tx.Exec("UPDATE purchase_orders SET status='received', received_by=$1, received_at=NOW(), updated_at=NOW() WHERE id=$2", userID, id)
+	_, err = tx.Exec("UPDATE purchase_orders SET status=$1, received_by=$2, received_at=NOW(), updated_at=NOW() WHERE id=$3", newStatus, userID, id)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "خطا در به‌روزرسانی وضعیت")
 		return
 	}
 
-	_, err = tx.Exec("INSERT INTO status_logs (entity_type, entity_id, from_status, to_status, changed_by) VALUES ('purchase_order', $1, $2, 'received', $3)", id, currentStatus, userID)
+	_, err = tx.Exec("INSERT INTO status_logs (entity_type, entity_id, from_status, to_status, changed_by) VALUES ('purchase_order', $1, $2, $3, $4)", id, currentStatus, newStatus, userID)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "خطا در ثبت تغییر وضعیت")
 		return

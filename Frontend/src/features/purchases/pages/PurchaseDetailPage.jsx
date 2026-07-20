@@ -109,7 +109,10 @@ function PurchaseDetailForm({ purchaseData }) {
         receivedQty: item.receivedQty != null ? Number(item.receivedQty) : null,
       })),
       paymentType: formData.paymentType || "cash",
-      paidAmount: Number(formData.paidAmount) || 0,
+      paidAmount: formData.paymentType === 'mixed'
+        ? (formData.mixedPayments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
+        : Number(formData.paidAmount) || 0,
+      mixedPayments: formData.paymentType === 'mixed' ? (formData.mixedPayments || []) : null,
       status: formData.status || "pending",
       totalAmount: computedTotal,
     };

@@ -1,7 +1,7 @@
 {
   "_meta": {
     "description": "Complete knowledge base for the OurERP WMS project. Written for AI agents to gain full understanding of the codebase.",
-    "lastUpdated": "2026-07-16",    "version": "1.4.5",
+    "lastUpdated": "2026-07-17",    "version": "1.5.2",
     "agent_instructions": {
       "purpose": "This file is the single source of truth for the project's current state. It is maintained by agents as they work.",
       "rule": "MANDATORY: At the end of every task, before responding to the user, update this file to reflect the final state of the project. This includes: updating 'lastUpdated', incrementing 'version', adding a changelog entry under 'changelog', and correcting any sections that are now outdated.",
@@ -187,7 +187,7 @@
         "columns": ["id SERIAL PK", "check_number VARCHAR(100)", "bank_name VARCHAR(255)", "amount NUMERIC(12,2)", "due_date DATE", "image_url TEXT", "status VARCHAR(50) DEFAULT 'issued' CHECK(issued,cleared,bounced)", "created_at TIMESTAMP", "updated_at TIMESTAMP"]
       },
       "purchase_orders": {
-        "columns": ["id SERIAL PK", "supplier_id INTEGER FK->suppliers", "created_by INTEGER FK->users", "status VARCHAR(50) DEFAULT 'pending' CHECK(pending,shipped,partially_received,received,cancelled)", "expected_delivery_date DATE", "supplier_invoice_number VARCHAR(100)", "notes TEXT", "payment_type VARCHAR(50) DEFAULT 'cash' CHECK(cash,credit,check,transfer,mixed)", "paid_amount NUMERIC(12,2) DEFAULT 0", "total_amount NUMERIC(12,2) DEFAULT 0", "received_by INTEGER FK->users", "received_at TIMESTAMP", "created_at TIMESTAMP", "updated_at TIMESTAMP"]
+        "columns": ["id SERIAL PK", "supplier_id INTEGER FK->suppliers", "created_by INTEGER FK->users", "status VARCHAR(50) DEFAULT 'pending' CHECK(pending,shipped,partially_received,received,cancelled)", "expected_delivery_date DATE", "supplier_invoice_number VARCHAR(100)", "notes TEXT", "payment_type VARCHAR(50) DEFAULT 'cash' CHECK(cash,credit,check,transfer,mixed)", "paid_amount NUMERIC(12,2) DEFAULT 0", "total_amount NUMERIC(12,2) DEFAULT 0", "mixed_payments JSONB", "received_by INTEGER FK->users", "received_at TIMESTAMP", "created_at TIMESTAMP", "updated_at TIMESTAMP"]
       },
       "purchase_order_items": {
         "columns": ["id SERIAL PK", "purchase_order_id INTEGER FK->purchase_orders ON DELETE CASCADE", "product_id INTEGER FK->products", "ordered_quantity NUMERIC(12,2)", "unit_price NUMERIC(12,2) DEFAULT 0", "received_quantity NUMERIC(12,2)", "discrepancy_note TEXT"]
@@ -457,6 +457,7 @@
     "national_id_uniqueness": "customers.national_id has a UNIQUE constraint. Creating a duplicate returns 409 Conflict with Persian message.",
     "invoice_lifecycle": "proforma -> confirmed -> dispatched -> delivered. Can be cancelled from any state. Returns possible after delivery.",
     "purchase_order_lifecycle": "pending -> shipped -> partially_received -> received. Can be cancelled.",
+    "sale_lifecycle": "pending -> processing -> partially_delivered -> delivered. Can be cancelled.",
     "purchase_order_supplier_validation": "Backend validates supplier_id != 0 before creating PO. Frontend sends 0 when no supplier selected. Error message: 'شناسه تامین‌کننده و آیتم‌ها الزامی هستند'.",
     "payment_methods": "cash, transfer, check (for both customer and supplier payments)",
     "user_roles": "admin, sales, warehouse, accounting, procurement",
@@ -515,7 +516,10 @@
       "src/features/warehouse/products/services/api.js",
       "src/features/warehouse/products/hooks/useProductForm.js",
       "src/features/purchases/services/api.js",
-      "src/features/purchases/hooks/usePurchaseForm.js"
+      "src/features/purchases/hooks/usePurchaseForm.js",
+      "src/features/sales/pages/SaleDetailPage.jsx",
+      "src/features/sales/services/api.js",
+      "src/features/warehouse/receiving/services/mutations.js"
     ],
     "frontend_ui_components": [
       "src/shared/components/ui/alert-dialog.jsx",
@@ -574,6 +578,41 @@
   },
 
   "changelog": [
+    {
+      "date": "2026-07-17",
+      "version": "1.5.2",
+      "changes": "Fixed mixed (hybrid) payment type not saving individual payment methods and amounts on purchase orders. Root cause: the frontend maintained an array of mixedPayments (each with type/amount/checkNumber/transferRef) but only sent the scalar paidAmount to the backend — all individual payment details were lost. Added mixed_payments JSONB column to purchase_orders table via migration. Added MixedPayments *[]byte field to Go PurchaseOrder model. Updated Create/Update/Get/List handlers to read/write mixed_payments. Updated frontend api.js createPurchase/updatePurchase to send mixedPayments array. Fixed PurchaseDetailPage onSubmit to compute paidAmount from mixedPayments (sum of individual amounts) when paymentType is 'mixed' — was previously using stale formData.paidAmount. Fixed PurchasesNewPage to also send mixedPayments in payload. Updated purchaseFormStore to properly initialize mixedPayments from backend data with client-side IDs.",
+      "files_changed": [
+        "Backend/internal/database/migrations.go",
+        "Backend/internal/model/models.go",
+        "Backend/internal/handler/purchase_orders.go",
+        "Frontend/src/features/purchases/services/api.js",
+        "Frontend/src/features/purchases/pages/PurchaseDetailPage.jsx",
+        "Frontend/src/features/purchases/pages/PurchasesNewPage.jsx",
+        "Frontend/src/features/purchases/store/purchaseFormStore.js"
+      ]
+    },
+    {
+      "date": "2026-07-17",
+      "version": "1.5.1",
+      "changes": "Fixed two cross-feature consistency issues. (1) Sales detail page: status and dueDate were not being saved. Backend Update() SQL omitted status and due_date columns — added both. Backend Sale struct had no DueDate field — added *string DueDate with JSON tag 'dueDate'. Backend List/Get scanned due_date but discarded it — now returns it. Frontend createSale/updateSale/SaleDetailPage onSubmit did not send dueDate — added it. (2) Receiving status not reflecting in purchase history: confirmReceivingMutation and updateReceivingStatusMutation used updatedPurchase.id from the API response, but backend Receive() only returns {message} causing undefined id and NaN cache keys. Fixed both mutations to use variables.purchaseId (the mutation input) instead of response data for query invalidation.",
+      "files_changed": [
+        "Backend/internal/model/models.go",
+        "Backend/internal/handler/sales.go",
+        "Frontend/src/features/sales/services/api.js",
+        "Frontend/src/features/sales/pages/SaleDetailPage.jsx",
+        "Frontend/src/features/warehouse/receiving/services/mutations.js"
+      ]
+    },
+    {
+      "date": "2026-07-17",
+      "version": "1.5.0",
+      "changes": "Fixed warehouse receiving list not showing completed (received) purchase orders, and receiving completion not properly connecting to purchase order status. Three bugs fixed: (1) Frontend RECEIVING_ELIGIBLE_STATUSES only included 'shipped' and 'partially_received' — added 'received' so completed POs appear in the receiving list. (2) Backend List handler used `po.status = $N` which couldn't match comma-separated status values sent by frontend (e.g. 'shipped,partially_received') — changed to `IN` clause that splits on commas. (3) Backend Receive() handler hardcoded status='received' ignoring partial receipts — now accepts 'status' field from the frontend request and uses 'partially_received' when not all items are received. Frontend confirmReceiving now sends the computed status alongside items.",
+      "files_changed": [
+        "Backend/internal/handler/purchase_orders.go",
+        "Frontend/src/features/warehouse/receiving/services/api.js"
+      ]
+    },
     {
       "date": "2026-07-16",
       "version": "1.4.5",

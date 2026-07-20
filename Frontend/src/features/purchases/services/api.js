@@ -17,6 +17,7 @@ export async function createPurchase(purchaseData) {
     notes: purchaseData.description || purchaseData.notes || undefined,
     paymentType: purchaseData.paymentType || "cash",
     paidAmount: Number(purchaseData.paidAmount) || 0,
+    mixedPayments: purchaseData.mixedPayments || null,
   });
   return res.data;
 }
@@ -57,6 +58,7 @@ export async function updatePurchase(id, updates) {
     notes: updates.description || updates.notes || undefined,
     paymentType: updates.paymentType || "cash",
     paidAmount: Number(updates.paidAmount) || 0,
+    mixedPayments: updates.mixedPayments || null,
     status: updates.status || "pending",
   });
   return res.data;

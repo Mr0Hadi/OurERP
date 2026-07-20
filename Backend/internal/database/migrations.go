@@ -36,6 +36,7 @@ func RunMigrations() error {
 		addPurchaseOrderAmountFields,
 		addPurchaseOrderItemFields,
 		addPurchaseOrderPaymentTypeField,
+		addPurchaseOrderMixedPaymentsField,
 	}
 
 	for _, m := range migrations {
@@ -394,4 +395,9 @@ END $$;`
 const addPurchaseOrderPaymentTypeField = `
 DO $$ BEGIN
     ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS payment_type VARCHAR(50) DEFAULT 'cash';
+END $$;`
+
+const addPurchaseOrderMixedPaymentsField = `
+DO $$ BEGIN
+    ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS mixed_payments JSONB;
 END $$;`

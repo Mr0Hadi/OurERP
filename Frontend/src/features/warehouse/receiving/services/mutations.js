@@ -48,14 +48,10 @@ export const useUpdateReceivingStatusMutation = () => {
 
       return { previousDetail, previousLists };
     },
-    onSuccess: (updatedPurchase) => {
-      queryClient.setQueryData(
-        receivingKeys.detail(Number(updatedPurchase.id)),
-        updatedPurchase
-      );
-      // اینجا هم باید detail فیچر purchases رو invalidate کنیم
+    onSuccess: (_data, variables) => {
+      const purchaseId = variables.purchaseId;
       queryClient.invalidateQueries({
-        queryKey: purchaseKeys.detail(Number(updatedPurchase.id)),
+        queryKey: purchaseKeys.detail(Number(purchaseId)),
       });
       queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
@@ -86,16 +82,17 @@ export const useConfirmReceivingMutation = () => {
   return useMutation({
     mutationFn: ({ purchaseId, receivingData }) =>
       confirmReceiving(purchaseId, receivingData),
-    onSuccess: (updatedPurchase) => {
-      // فیچر receiving — کلید اصلی که لیست ازش استفاده می‌کنه
+    onSuccess: (_data, variables) => {
+      const purchaseId = variables.purchaseId;
+      // فیچر receiving
       queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       queryClient.invalidateQueries({
-        queryKey: receivingKeys.detail(Number(updatedPurchase.id)),
+        queryKey: receivingKeys.detail(Number(purchaseId)),
       });
 
-      // فیچر purchases — اگه جای دیگه‌ای هم همین رکورد رو نشون میده
+      // فیچر purchases
       queryClient.invalidateQueries({
-        queryKey: purchaseKeys.detail(Number(updatedPurchase.id)),
+        queryKey: purchaseKeys.detail(Number(purchaseId)),
       });
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
 

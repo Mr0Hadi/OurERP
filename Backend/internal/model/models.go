@@ -11,35 +11,81 @@ type Coordinates struct {
 
 type User struct {
 	ID           int       `json:"id"`
-	FullName     string    `json:"fullName"`
+	FirstName    string    `json:"fullName"`
+	LastName     string    `json:"lastName"`
 	Username     string    `json:"username"`
 	PasswordHash string    `json:"-"`
-	Role         string    `json:"role"`
-	Department   string    `json:"department"`
+	PersonelCode string
+	DepartmentId 
+	Department 
+    // Nullable because not everyone belongs to a team
+    TeamId nullable
+    Team nullable
 	IsActive     bool      `json:"isActive"`
 	CreatedAt    time.Time `json:"createdAt"`
 	UpdatedAt    time.Time `json:"updatedAt"`
 }
 
+public class Department
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; }
+
+    public Guid HeadId { get; set; }
+    public User Head { get; set; }
+
+    public ICollection<Team> Teams { get; set; } = [];
+    public ICollection<User> Users { get; set; } = [];
+}
+
+public class Team
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; }
+
+    public Guid DepartmentId { get; set; }
+    public Department Department { get; set; }
+
+    public Guid HeadId { get; set; }
+    public User Head { get; set; }
+
+    public ICollection<User> Members { get; set; } = [];
+}
+
+public class UserDto
+{
+    public Guid Id { get; set; }
+    public string FullName { get; set; }
+
+    public Guid DepartmentId { get; set; }
+    public string DepartmentName { get; set; }
+
+    public Guid? TeamId { get; set; }
+    public string? TeamName { get; set; }
+
+    public bool IsDepartmentHead { get; set; }
+    public bool IsTeamHead { get; set; }
+}
+
 type Product struct {
-	ID               int       `json:"id"`
-	Code             string    `json:"code"`
-	Barcode          string    `json:"barcode"`
-	Name             string    `json:"name"`
-	Brand            string    `json:"brand"`
-	Category         string    `json:"category"`
-	Unit             string    `json:"unit"`
-	PurchasePrice    float64   `json:"purchasePrice"`
-	RetailPrice      float64   `json:"retailPrice"`
-	WholesalePrice   float64   `json:"wholesalePrice"`
-	Tax              float64   `json:"tax"`
-	Stock            float64   `json:"stock"`
-	Description      string    `json:"description"`
-	ImageURL         string    `json:"imageUrl"`
-	IsActive         bool      `json:"isActive"`
-	ReorderThreshold float64   `json:"reorderThreshold"`
-	CreatedAt        string    `json:"createdAt"`
-	UpdatedAt        string    `json:"updatedAt"`
+	ID               int     `json:"id"`
+	Code             string  `json:"code"`
+	Barcode          string  `json:"barcode"`
+	Name             string  `json:"name"`
+	Brand            string  `json:"brand"`
+	Category         string  `json:"category"`
+	Unit             string  `json:"unit"`
+	PurchasePrice    float64 `json:"purchasePrice"`
+	RetailPrice      float64 `json:"retailPrice"`
+	WholesalePrice   float64 `json:"wholesalePrice"`
+	Tax              float64 `json:"tax"`
+	Stock            float64 `json:"stock"`
+	Description      string  `json:"description"`
+	ImageURL         string  `json:"imageUrl"`
+	IsActive         bool    `json:"isActive"`
+	ReorderThreshold float64 `json:"reorderThreshold"`
+	CreatedAt        string  `json:"createdAt"`
+	UpdatedAt        string  `json:"updatedAt"`
 }
 
 type Supplier struct {
@@ -93,7 +139,7 @@ type Vehicle struct {
 	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
-type BankAccount struct {
+type BankAccount struct { //deleted for mvp
 	ID            int       `json:"id"`
 	AccountName   string    `json:"accountName"`
 	BankName      string    `json:"bankName"`
@@ -103,7 +149,7 @@ type BankAccount struct {
 	UpdatedAt     time.Time `json:"updatedAt"`
 }
 
-type Check struct {
+type Check struct { //stayed
 	ID          int       `json:"id"`
 	CheckNumber string    `json:"checkNumber"`
 	BankName    string    `json:"bankName"`
@@ -116,22 +162,23 @@ type Check struct {
 }
 
 type PurchaseOrder struct {
-	ID                 int        `json:"id"`
-	SupplierID         int        `json:"supplierId"`
-	SupplierName       string     `json:"supplierName"`
-	CreatedBy          int        `json:"createdBy"`
-	Status             string     `json:"status"`
-	ExpectedDeliveryDate *string  `json:"expectedDeliveryDate,omitempty"`
-	InvoiceNumber      string     `json:"invoiceNumber"`
-	InvoiceDate        string     `json:"invoiceDate"`
-	Notes              string     `json:"notes"`
-	Description        string     `json:"description"`
-	PaidAmount         float64    `json:"paidAmount"`
-	TotalAmount        float64    `json:"totalAmount"`
-	PaymentType        string     `json:"paymentType"`
-	CreatedAt          time.Time  `json:"createdAt"`
-	UpdatedAt          time.Time  `json:"updatedAt"`
-	Items              []POItem   `json:"items"`
+	ID                   int     `json:"id"`
+	SupplierID           int     `json:"supplierId"`
+	SupplierName         string  `json:"supplierName"`
+	CreatedBy            int     `json:"createdBy"`
+	Status               string  `json:"status"`
+	ExpectedDeliveryDate *string `json:"expectedDeliveryDate,omitempty"`
+	InvoiceNumber        string  `json:"invoiceNumber"`
+	InvoiceDate          string  `json:"invoiceDate"`
+	//Notes              string     `json:"notes"`
+	Description string  `json:"description"`
+	PaidAmount  float64 `json:"paidAmount"`
+	TotalAmount float64 `json:"totalAmount"`
+	//PaymentType        string     `json:"paymentType"`
+	Payments  *[]byte   `json:"mixedPayments,omitempty"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+	Items     []POItem  `json:"items"`
 }
 
 type POItem struct {
@@ -150,21 +197,21 @@ type POItem struct {
 }
 
 type Invoice struct {
-	ID              int           `json:"id"`
-	InvoiceNumber   string        `json:"invoiceNumber"`
-	ProformaNumber  string        `json:"proformaNumber,omitempty"`
-	CustomerID      int           `json:"customerId"`
-	Channel         string        `json:"channel"`
-	CreatedBy       int           `json:"createdBy"`
-	Status          string        `json:"status"`
-	Notes           string        `json:"notes"`
-	DispatchedBy    *int          `json:"dispatchedBy,omitempty"`
-	DispatchedAt    *string       `json:"dispatchedAt,omitempty"`
-	VehicleID       *int          `json:"vehicleId,omitempty"`
-	PackerID        *int          `json:"packerId,omitempty"`
-	CreatedAt       time.Time     `json:"createdAt"`
-	UpdatedAt       time.Time     `json:"updatedAt"`
-	Items           []InvoiceItem `json:"items,omitempty"`
+	ID             int           `json:"id"`
+	InvoiceNumber  string        `json:"invoiceNumber"`
+	ProformaNumber string        `json:"proformaNumber,omitempty"`
+	CustomerID     int           `json:"customerId"`
+	Channel        string        `json:"channel"`
+	CreatedBy      int           `json:"createdBy"`
+	Status         string        `json:"status"`
+	Notes          string        `json:"notes"`
+	DispatchedBy   *int          `json:"dispatchedBy,omitempty"`
+	DispatchedAt   *string       `json:"dispatchedAt,omitempty"`
+	VehicleID      *int          `json:"vehicleId,omitempty"`
+	PackerID       *int          `json:"packerId,omitempty"`
+	CreatedAt      time.Time     `json:"createdAt"`
+	UpdatedAt      time.Time     `json:"updatedAt"`
+	Items          []InvoiceItem `json:"items,omitempty"`
 }
 
 type InvoiceItem struct {
@@ -190,17 +237,17 @@ type StockMovement struct {
 }
 
 type CustomerPayment struct {
-	ID                int       `json:"id"`
-	CustomerID        int       `json:"customerId"`
-	Amount            float64   `json:"amount"`
-	PaymentMethod     string    `json:"paymentMethod"`
-	BankAccountID     *int      `json:"bankAccountId,omitempty"`
-	CheckID           *int      `json:"checkId,omitempty"`
-	ReferenceInvoiceID *int     `json:"referenceInvoiceId,omitempty"`
-	RecordedBy        int       `json:"recordedBy"`
-	PaymentDate       string    `json:"paymentDate"`
-	Notes             string    `json:"notes"`
-	CreatedAt         time.Time `json:"createdAt"`
+	ID                 int       `json:"id"`
+	CustomerID         int       `json:"customerId"`
+	Amount             float64   `json:"amount"`
+	PaymentMethod      string    `json:"paymentMethod"`
+	BankAccountID      *int      `json:"bankAccountId,omitempty"`
+	CheckID            *int      `json:"checkId,omitempty"`
+	ReferenceInvoiceID *int      `json:"referenceInvoiceId,omitempty"`
+	RecordedBy         int       `json:"recordedBy"`
+	PaymentDate        string    `json:"paymentDate"`
+	Notes              string    `json:"notes"`
+	CreatedAt          time.Time `json:"createdAt"`
 }
 
 type SupplierPayment struct {
@@ -270,6 +317,7 @@ type Sale struct {
 	CustomerName  string     `json:"customerName"`
 	InvoiceNumber string     `json:"invoiceNumber"`
 	InvoiceDate   string     `json:"invoiceDate"`
+	DueDate       *string    `json:"dueDate,omitempty"`
 	Status        string     `json:"status"`
 	PaymentType   string     `json:"paymentType"`
 	PaidAmount    float64    `json:"paidAmount"`
@@ -297,27 +345,27 @@ type SaleItem struct {
 }
 
 type Receiving struct {
-	ID                int            `json:"id"`
-	PurchaseOrderID   *int           `json:"purchaseId,omitempty"`
-	SupplierName      string         `json:"supplierName"`
-	WarehouseLocation string         `json:"warehouseLocation"`
-	ReceivedDate      string         `json:"receivedDate"`
-	Status            string         `json:"status"`
-	Notes             string         `json:"notes,omitempty"`
-	CreatedBy         int            `json:"createdBy"`
-	CreatedAt         time.Time      `json:"createdAt"`
-	UpdatedAt         time.Time      `json:"updatedAt"`
+	ID                int             `json:"id"`
+	PurchaseOrderID   *int            `json:"purchaseId,omitempty"`
+	SupplierName      string          `json:"supplierName"`
+	WarehouseLocation string          `json:"warehouseLocation"`
+	ReceivedDate      string          `json:"receivedDate"`
+	Status            string          `json:"status"`
+	Notes             string          `json:"notes,omitempty"`
+	CreatedBy         int             `json:"createdBy"`
+	CreatedAt         time.Time       `json:"createdAt"`
+	UpdatedAt         time.Time       `json:"updatedAt"`
 	Items             []ReceivingItem `json:"items,omitempty"`
 }
 
 type ReceivingItem struct {
-	ID            int     `json:"id"`
-	ReceivingID   int     `json:"receivingId"`
-	ProductID     int     `json:"productId"`
-	ProductCode   string  `json:"productCode"`
-	ProductName   string  `json:"productName"`
-	ExpectedQty   float64 `json:"expectedQty"`
-	ReceivedQty   float64 `json:"receivedQty"`
-	Condition     string  `json:"condition,omitempty"`
-	Notes         string  `json:"notes,omitempty"`
+	ID          int     `json:"id"`
+	ReceivingID int     `json:"receivingId"`
+	ProductID   int     `json:"productId"`
+	ProductCode string  `json:"productCode"`
+	ProductName string  `json:"productName"`
+	ExpectedQty float64 `json:"expectedQty"`
+	ReceivedQty float64 `json:"receivedQty"`
+	Condition   string  `json:"condition,omitempty"`
+	Notes       string  `json:"notes,omitempty"`
 }
