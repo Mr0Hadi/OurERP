@@ -32,3 +32,7 @@ structure.txt
 /Backend-Net/Infrastructure/obj
 /Backend-Net/WMS/bin/Debug/net10.0
 /Backend-Net/WMS/obj
+/Backend-Net/Application/bin/Debug/net10.0
+/Backend-Net/Common/bin/Debug/net10.0
+/Backend-Net/Domain/bin/Debug/net10.0
+/Backend-Net/Infrastructure/bin/Debug/net10.0

@@ -1,4 +1,6 @@
-﻿using WMS.Services;
+﻿using Application.Common.Contracts.Environment;
+using Application.Common.Contracts.UserContextService;
+using WMS.Services;
 
 namespace WMS.Ioc
 {
