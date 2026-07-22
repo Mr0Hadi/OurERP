@@ -1,4 +1,4 @@
-// src/features/warehouse/products/services/api.js
+// src/features/warehouse/products/services/api-mockData.js
 import { allProducts } from './mockData';
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));

@@ -1,3 +1,4 @@
+// src\features\sales\services\api-mockData.js
 import { allSales, SALE_STATUSES } from "./mockData";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));

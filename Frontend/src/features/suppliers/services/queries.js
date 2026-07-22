@@ -1,3 +1,4 @@
+// Frontend\src\features\suppliers\services\queries.js
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supplierKeys } from "./queryKeys";
 import { fetchSuppliers, getSupplierById } from "./api-mockData";

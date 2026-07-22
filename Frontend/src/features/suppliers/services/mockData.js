@@ -1,3 +1,4 @@
+// src\features\suppliers\services\mockData.js
 export const allSuppliers = [
   {
     id: 1,

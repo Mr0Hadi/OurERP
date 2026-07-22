@@ -1,3 +1,4 @@
+// src\features\customers\services\queries.js
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { customerKeys } from "./queryKeys";
 import { fetchCustomers, getCustomerById } from "./api-mockData";
