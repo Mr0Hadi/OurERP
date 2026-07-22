@@ -4,12 +4,17 @@ import { useNavigate } from "react-router-dom";
 import { UserPlus, X, Search } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/ui/card";
 import { ROUTES } from "@/shared/constants/routes";
 
 /**
  * props:
- *  suppliers     - آرایه { id, companyName, firstName, lastName, avatar }
+ *  suppliers     - آرایه { id, companyName, firstName, lastName, image }
  *  isLoading     - وضعیت لود لیست تامین‌کنندگان
  *  selectedId    - مقدار فعلی
  *  onSelect      - (id, name) => void
@@ -28,7 +33,9 @@ export default function PurchaseSupplierSection({
   const [search, setSearch] = useState("");
 
   const handleAddNew = () => {
-    navigate(ROUTES.SUPPLIERS_NEW, { state: { returnTo: ROUTES.PURCHASES_NEW } });
+    navigate(ROUTES.SUPPLIERS_NEW, {
+      state: { returnTo: ROUTES.PURCHASES_NEW },
+    });
   };
 
   const selectedSupplier = suppliers.find((s) => s.id === selectedId);
@@ -46,14 +53,13 @@ export default function PurchaseSupplierSection({
         s.companyName?.toLowerCase().includes(q) ||
         s.firstName?.toLowerCase().includes(q) ||
         s.lastName?.toLowerCase().includes(q) ||
-        `${s.firstName} ${s.lastName}`.toLowerCase().includes(q)
+        `${s.firstName} ${s.lastName}`.toLowerCase().includes(q),
     );
   }, [suppliers, search]);
 
   const handleSelect = (supplier) => {
     const name =
-      supplier.companyName ||
-      `${supplier.firstName} ${supplier.lastName}`;
+      supplier.companyName || `${supplier.firstName} ${supplier.lastName}`;
     onSelect(supplier.id, name);
     setSearch("");
   };
@@ -81,15 +87,17 @@ export default function PurchaseSupplierSection({
         {/* تامین‌کننده انتخاب‌شده */}
         {selectedSupplier ? (
           <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 px-3 py-2.5">
-            {selectedSupplier.avatar ? (
+            {selectedSupplier.image ? (
               <img
-                src={selectedSupplier.avatar}
+                src={selectedSupplier.image}
                 alt={displayName}
                 className="h-9 w-9 rounded-full object-cover border border-border shrink-0"
               />
             ) : (
               <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
-                {(selectedSupplier.companyName?.[0] ?? selectedSupplier.firstName?.[0] ?? "؟")}
+                {selectedSupplier.companyName?.[0] ??
+                  selectedSupplier.firstName?.[0] ??
+                  "؟"}
               </div>
             )}
             <div className="flex-1 min-w-0">
@@ -122,12 +130,16 @@ export default function PurchaseSupplierSection({
             <div className="relative">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
-                placeholder={isLoading ? "در حال بارگذاری..." : "جست‌وجوی نام یا شرکت..."}
+                placeholder={
+                  isLoading ? "در حال بارگذاری..." : "جست‌وجوی نام یا شرکت..."
+                }
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 disabled={isLoading}
                 className={`input-rtl-placeholder pr-9 h-9 ${
-                  error ? "border-destructive focus-visible:ring-destructive/30" : ""
+                  error
+                    ? "border-destructive focus-visible:ring-destructive/30"
+                    : ""
                 }`}
               />
             </div>
@@ -136,8 +148,7 @@ export default function PurchaseSupplierSection({
             {filteredSuppliers.length > 0 ? (
               <ul className="max-h-52 overflow-y-auto custom-scroll rounded-lg border border-border divide-y divide-border bg-card">
                 {filteredSuppliers.map((s) => {
-                  const name =
-                    s.companyName || `${s.firstName} ${s.lastName}`;
+                  const name = s.companyName || `${s.firstName} ${s.lastName}`;
                   return (
                     <li key={s.id}>
                       <button
@@ -145,15 +156,15 @@ export default function PurchaseSupplierSection({
                         onClick={() => handleSelect(s)}
                         className="flex items-center gap-3 w-full px-3 py-2.5 text-right hover:bg-accent/50 transition-colors"
                       >
-                        {s.avatar ? (
+                        {s.image ? (
                           <img
-                            src={s.avatar}
+                            src={s.image}
                             alt={name}
                             className="h-8 w-8 rounded-full object-cover border border-border shrink-0"
                           />
                         ) : (
                           <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shrink-0">
-                            {(s.companyName?.[0] ?? s.firstName?.[0] ?? "؟")}
+                            {s.companyName?.[0] ?? s.firstName?.[0] ?? "؟"}
                           </div>
                         )}
                         <div className="flex-1 min-w-0 text-right">
@@ -175,7 +186,9 @@ export default function PurchaseSupplierSection({
               !isLoading && (
                 <div className="rounded-lg border border-dashed border-border py-6">
                   <p className="text-xs text-muted-foreground text-center">
-                    {search ? "تامین‌کننده‌ای یافت نشد" : "لیست تامین‌کنندگان خالی است"}
+                    {search
+                      ? "تامین‌کننده‌ای یافت نشد"
+                      : "لیست تامین‌کنندگان خالی است"}
                   </p>
                 </div>
               )

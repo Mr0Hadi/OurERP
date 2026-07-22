@@ -50,7 +50,6 @@ export const usePurchaseFormStore = create((set, get) => ({
       qty: item.qty,
       unitPrice: item.unitPrice,
       discount: item.discount || 0,
-      receivedQty: item.receivedQty ?? null,
     }));
 
     set({
@@ -76,4 +75,3 @@ export const usePurchaseFormStore = create((set, get) => ({
 
   resetForm: () => set({ formData: { ...EMPTY_FORM }, initializedForId: null }),
 }));
-    

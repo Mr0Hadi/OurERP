@@ -1,6 +1,6 @@
 // src/features/customers/services/mutations.js
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createCustomer, updateCustomer, deleteCustomer } from "./api";
+import { createCustomer, updateCustomer, deleteCustomer } from "./api-mockData";
 import { customerKeys } from "./queryKeys";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";

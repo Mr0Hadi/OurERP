@@ -1,16 +1,14 @@
-import { redirect } from "react-router";
-import { useAuthStore } from "../../features/auth/store/authStore";
+import { redirect } from "react-router-dom";
+import { useAuthStore } from "@/features/auth/store/authStore";
+import { ROUTES } from "@/shared/constants/routes";
 
-// نکته: اینجا نمی‌تونیم hook استفاده کنیم، پس getState می‌گیریم.
 export function protectedLoader({ request }) {
   const { isAuthenticated } = useAuthStore.getState();
 
   if (!isAuthenticated) {
     const url = new URL(request.url);
-    const from = url.pathname + url.search;
-    throw redirect("/auth/login", {
-      state: { from: { pathname: from } },
-    });
+    const params = new URLSearchParams({ from: url.pathname + url.search });
+    return redirect(`${ROUTES.LOGIN}?${params.toString()}`);
   }
 
   return null;

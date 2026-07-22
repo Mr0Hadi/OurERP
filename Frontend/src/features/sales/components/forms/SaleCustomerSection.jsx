@@ -13,7 +13,7 @@ import { ROUTES } from "@/shared/constants/routes";
 
 /**
  * props:
- *  customers   - آرایه { id, companyName, firstName, lastName, avatar }
+ *  customers   - آرایه { id, companyName, firstName, lastName, image }
  *  isLoading   - وضعیت لود لیست مشتریان
  *  selectedId  - مقدار فعلی
  *  onSelect    - (id, name) => void
@@ -81,9 +81,9 @@ export default function SaleCustomerSection({
       <CardContent className="space-y-3">
         {selectedCustomer ? (
           <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 px-3 py-2.5">
-            {selectedCustomer.avatar ? (
+            {selectedCustomer.image ? (
               <img
-                src={selectedCustomer.avatar}
+                src={selectedCustomer.image}
                 alt={displayName}
                 className="h-9 w-9 rounded-full object-cover border border-border shrink-0"
               />
@@ -150,9 +150,9 @@ export default function SaleCustomerSection({
                         onClick={() => handleSelect(customer)}
                         className="flex items-center gap-3 w-full px-3 py-2.5 text-right hover:bg-accent/50 transition-colors"
                       >
-                        {customer.avatar ? (
+                        {customer.image ? (
                           <img
-                            src={customer.avatar}
+                            src={customer.image}
                             alt={name}
                             className="h-8 w-8 rounded-full object-cover border border-border shrink-0"
                           />

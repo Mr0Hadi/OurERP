@@ -1,79 +1,115 @@
-// src/features/suppliers/services/suppliersApi.js
+// src/features/suppliers/services/api-mockData.js
+import { allSuppliers } from "./mockData";
 
-import { api } from "@/shared/services/api/axios";
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// ==========================================
-// مسیر پایه‌ی این ریسورس
-// ==========================================
-const BASE_URL = "/suppliers";
+export async function fetchSuppliers({
+  page = 1,
+  limit = 10,
+  search = "",
+  minBalance = "",
+  maxBalance = "",
+  balanceType = "",
+  sortBy = "companyName",
+  sortOrder = "asc",
+} = {}) {
+  await delay(500);
+  let result = [...allSuppliers];
 
-// ==========================================
-// دریافت لیست تامین‌کنندگان (صفحه‌بندی + جستجو + مرتب‌سازی)
-// ==========================================
-// انتظار از بک‌اند (Go):
-//   GET /suppliers?page=&limit=&search=&minBalance=&maxBalance=&sortBy=&sortOrder=
-//   Response: { items: [...], total: number, page: number, totalPages: number }
-//
-// آرگومان دوم (signal) برای پشتیبانی از cancel کردن ریکوئست‌های قبلی
-// است (مثلاً وقتی React Query یا هر لایه‌ی دیگر با AbortController
-// درخواست جستجوی قبلی رو لغو می‌کنه).
-export async function fetchSuppliers(
-  {
-    page = 1,
-    limit = 10,
-    search = "",
-    minBalance = "",
-    maxBalance = "",
-    sortBy = "companyName",
-    sortOrder = "asc",
-  } = {},
-  { signal } = {}
-) {
-  return api.get(
-    BASE_URL,
-    { page, limit, search, minBalance, maxBalance, sortBy, sortOrder },
-    { signal }
-  );
+  if (search) {
+    const q = search.toLowerCase();
+    result = result.filter(
+      (s) =>
+        s.companyName?.toLowerCase().includes(q) ||
+        `${s.firstName} ${s.lastName}`.toLowerCase().includes(q) ||
+        s.id.toString().toLowerCase().includes(q),
+    );
+  }
+
+  if (balanceType) {
+    result = result.filter((s) => s.balanceType === balanceType);
+  }
+
+  if (minBalance !== "" && minBalance !== undefined) {
+    result = result.filter((s) => s.balance >= Number(minBalance));
+  }
+  if (maxBalance !== "" && maxBalance !== undefined) {
+    result = result.filter((s) => s.balance <= Number(maxBalance));
+  }
+
+  result.sort((a, b) => {
+    let aVal, bVal;
+    if (sortBy === "fullName") {
+      aVal = `${a.firstName} ${a.lastName}`;
+      bVal = `${b.firstName} ${b.lastName}`;
+    } else {
+      aVal = a[sortBy];
+      bVal = b[sortBy];
+    }
+
+    if (typeof aVal === "string") {
+      return sortOrder === "asc"
+        ? aVal.localeCompare(bVal, "fa")
+        : bVal.localeCompare(aVal, "fa");
+    }
+
+    return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
+  });
+
+  const total = result.length;
+  const totalPages = Math.ceil(total / limit);
+  const items = result.slice((page - 1) * limit, page * limit);
+
+  return { items, total, page, totalPages };
 }
 
-// ==========================================
-// ساخت تامین‌کننده جدید
-// ==========================================
-// انتظار از بک‌اند:
-//   POST /suppliers   body: supplierData
-//   Response: تامین‌کننده‌ی ساخته‌شده با id تولیدشده توسط سرور
 export async function createSupplier(supplierData) {
-  return api.post(BASE_URL, supplierData);
+  await delay(500);
+
+  const newId = allSuppliers.length
+    ? Math.max(...allSuppliers.map((s) => Number(s.id))) + 1
+    : 1;
+
+  const now = new Date().toISOString();
+
+  const newSupplier = {
+    id: newId,
+    Description: "",
+    balanceType: "none",
+    balance: 0,
+    image: null,
+    ...supplierData,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  allSuppliers.push(newSupplier);
+  return newSupplier;
 }
 
-// ==========================================
-// دریافت یک تامین‌کننده بر اساس id
-// ==========================================
-// انتظار از بک‌اند:
-//   GET /suppliers/:id
-//   Response: آبجکت تامین‌کننده
-//   اگر پیدا نشد → status 404 با body مثل { message: "تامین‌کننده یافت نشد" }
-//   (نیازی به throw دستی نیست؛ interceptor خودش این را نرمالایز می‌کند)
-export async function getSupplierById(id, { signal } = {}) {
-  return api.get(`${BASE_URL}/${id}`, undefined, { signal });
-}
+export const getSupplierById = async (id) => {
+  await delay(500);
+  const supplier = allSuppliers.find((s) => s.id == id);
+  if (!supplier) throw new Error("تامین‌کننده یافت نشد");
+  return supplier;
+};
 
-// ==========================================
-// ویرایش تامین‌کننده
-// ==========================================
-// انتظار از بک‌اند:
-//   PUT /suppliers/:id   body: updatedData
-//   Response: آبجکت به‌روزشده‌ی تامین‌کننده
-export async function updateSupplier(id, updatedData) {
-  return api.put(`${BASE_URL}/${id}`, updatedData);
-}
+export const updateSupplier = async (id, updatedData) => {
+  await delay(800);
+  const index = allSuppliers.findIndex((s) => s.id == id);
+  if (index === -1) throw new Error("تامین‌کننده یافت نشد");
+  allSuppliers[index] = {
+    ...allSuppliers[index],
+    ...updatedData,
+    updatedAt: new Date().toISOString(),
+  };
+  return allSuppliers[index];
+};
 
-// ==========================================
-// حذف تامین‌کننده
-// ==========================================
-// انتظار از بک‌اند:
-//   DELETE /suppliers/:id
-//   Response: { success: true, id } یا حتی 204 بدون بدنه
-export async function deleteSupplier(id) {
-  return api.delete(`${BASE_URL}/${id}`);
-}
+export const deleteSupplier = async (id) => {
+  await delay(500);
+  const index = allSuppliers.findIndex((s) => s.id == id);
+  if (index === -1) throw new Error("تامین‌کننده یافت نشد");
+  allSuppliers.splice(index, 1);
+  return { success: true, id };
+};

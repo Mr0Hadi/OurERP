@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { customerKeys } from "./queryKeys";
-import { fetchCustomers, getCustomerById } from "./api";
+import { fetchCustomers, getCustomerById } from "./api-mockData";
 import { keepPreviousData } from "@tanstack/react-query";
 
 export function useCustomersQuery(filters, pagination, sorting) {
@@ -12,11 +12,11 @@ export function useCustomersQuery(filters, pagination, sorting) {
     search: filters.search || "",
     minBalance: filters.minBalance ?? "",
     maxBalance: filters.maxBalance ?? "",
+    balanceType: filters.balanceType && filters.balanceType !== "all" ? filters.balanceType : "",
     sortBy: sorting?.id ?? "lastName",
     sortOrder: sorting?.desc ? "desc" : "asc",
   };
 
-  // prefetch صفحه بعدی
   const nextParams = { ...queryParams, page: queryParams.page + 1 };
   queryClient.prefetchQuery({
     queryKey: customerKeys.list(nextParams),
@@ -34,7 +34,7 @@ export function useCustomersQuery(filters, pagination, sorting) {
 
 export const useCustomerQuery = (id) => {
   return useQuery({
-    queryKey: customerKeys.detail(Number(id)),
+    queryKey: customerKeys.detail(id),
     queryFn: () => getCustomerById(id),
     enabled: !!id,
   });

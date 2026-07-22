@@ -36,13 +36,17 @@ export const fetchProducts = async (params) => {
   if (params.stockStatus) {
     switch (params.stockStatus) {
       case 'inStock':
-        filteredProducts = filteredProducts.filter(p => p.stock > 10);
+        filteredProducts = filteredProducts.filter(
+          (p) => p.stock > (p.lowStockThreshold ?? 10)
+        );
         break;
       case 'lowStock':
-        filteredProducts = filteredProducts.filter(p => p.stock > 0 && p.stock <= 10);
+        filteredProducts = filteredProducts.filter(
+          (p) => p.stock > 0 && p.stock <= (p.lowStockThreshold ?? 10)
+        );
         break;
       case 'outOfStock':
-        filteredProducts = filteredProducts.filter(p => p.stock === 0);
+        filteredProducts = filteredProducts.filter((p) => p.stock === 0);
         break;
     }
   }
@@ -71,7 +75,7 @@ export const fetchProducts = async (params) => {
 
 export const fetchProductById = async (id) => {
   await delay(300);
-  const product = allProducts.find(p => p.id === String(id));
+  const product = allProducts.find((p) => Number(p.id) === Number(id));
   if (!product) throw new Error('محصول یافت نشد');
   return product;
 };
@@ -83,8 +87,10 @@ export const createProduct = async (productData) => {
     throw new Error("خطای سرور در ایجاد کالا");
   }
 
-  const newId = `${String(allProducts.length + 1)}`;
-  
+  const newId = allProducts.length
+    ? Math.max(...allProducts.map((p) => Number(p.id) || 0)) + 1
+    : 1;
+
   const newProduct = {
     id: newId,
     ...productData,
@@ -99,8 +105,8 @@ export const createProduct = async (productData) => {
 export const updateProduct = async (id, productData) => {
   await delay(500);
 
-  const index = allProducts.findIndex((p) => p.id === String(id));
-  
+  const index = allProducts.findIndex((p) => Number(p.id) === Number(id));
+
   if (index === -1) {
     throw new Error("محصول یافت نشد");
   }
@@ -111,7 +117,7 @@ export const updateProduct = async (id, productData) => {
     id: allProducts[index].id,
     updatedAt: new Date().toISOString()
   };
-  
+
   allProducts[index] = updatedProduct;
   return updatedProduct;
 };
@@ -119,8 +125,8 @@ export const updateProduct = async (id, productData) => {
 export const deleteProduct = async (id) => {
   await delay(500);
 
-  const index = allProducts.findIndex((p) => p.id === String(id));
-  
+  const index = allProducts.findIndex((p) => Number(p.id) === Number(id));
+
   if (index === -1) {
     throw new Error("محصول یافت نشد");
   }

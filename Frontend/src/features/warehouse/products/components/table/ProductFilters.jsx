@@ -47,8 +47,8 @@ const CATEGORIES = [
 ];
 
 const STOCK_OPTIONS = [
-  { value: "inStock", label: "موجود (بیش از ۱۰)" },
-  { value: "lowStock", label: "کمتر از ۱۰" },
+  { value: "inStock", label: "موجود" },
+  { value: "lowStock", label: "کم‌موجود" },
   { value: "outOfStock", label: "ناموجود" },
 ];
 

@@ -96,6 +96,7 @@ function SaleDetailForm({ saleData }) {
       customerName: formData.customerName,
       invoiceNumber: formData.invoiceNumber,
       invoiceDate: formData.invoiceDate,
+      dueDate: formData.dueDate || null,
       description: formData.description || "",
       items: items.map((item) => ({
         ...item,
@@ -105,6 +106,7 @@ function SaleDetailForm({ saleData }) {
       paidAmount: Number(formData.paidAmount) || 0,
       checkNumber: formData.checkNumber || null,
       transferRef: formData.transferRef || null,
+      mixedPayments: formData.mixedPayments || [],
       status: formData.status || "pending",
       totalAmount: computedTotal,
     };

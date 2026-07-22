@@ -1,4 +1,4 @@
-// مسیرهای اصلی برنامه
+// \src\shared\constants\routes.js
 export const ROUTES = {
   // روت
   ROOT: "/",
@@ -98,7 +98,4 @@ export const ROUTES = {
   // احراز هویت
   AUTH: "/auth",
   LOGIN: "/auth/login",
-  REGISTER: "/auth/register",
-  FORGOT_PASSWORD: "/auth/forgot-password",
-  RESET_PASSWORD: "/auth/reset-password",
 };

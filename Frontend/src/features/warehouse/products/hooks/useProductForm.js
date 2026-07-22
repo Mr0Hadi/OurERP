@@ -19,11 +19,12 @@ function buildDefaultValues(data) {
       category: "",
       brand: "",
       unit: "",
-      reorderThreshold: 0,
+      initialStock: 0,
+      lowStockThreshold: 10,
       purchasePrice: 0,
-      retailPrice: 0,
-      wholesalePrice: 0,
-      tax: 0,
+      sellPrice1: 0,
+      sellPrice2: 0,
+      vat: 0,
     };
   }
   return {
@@ -33,17 +34,18 @@ function buildDefaultValues(data) {
     category: data.category || "",
     brand: data.brand || "",
     unit: data.unit || "",
-    reorderThreshold: data.reorderThreshold ?? 0,
+    initialStock: data.stock ?? data.initialStock ?? 0,
+    lowStockThreshold: data.lowStockThreshold ?? 10,
     purchasePrice: data.purchasePrice || 0,
-    retailPrice: data.retailPrice ?? 0,
-    wholesalePrice: data.wholesalePrice ?? 0,
-    tax: data.tax ?? 0,
+    sellPrice1: data.retailPrice ?? data.sellPrice1 ?? 0,
+    sellPrice2: data.wholesalePrice ?? data.sellPrice2 ?? 0,
+    vat: data.tax ?? data.vat ?? 0,
   };
 }
 
 export function useProductForm(initialData = null) {
   const [imagePreview, setImagePreview] = useState(
-    initialData?.imageUrl || null
+    initialData?.image || null
   );
   const [imageFile, setImageFile] = useState(null);
   const [imageRemoved, setImageRemoved] = useState(false);
@@ -104,21 +106,22 @@ export function useProductForm(initialData = null) {
       category: formData.category,
       brand: formData.brand,
       unit: formData.unit,
-      reorderThreshold: Number(formData.reorderThreshold) || 0,
+      stock: Number(formData.initialStock) || 0,
+      lowStockThreshold: Number(formData.lowStockThreshold) || 0,
       purchasePrice: Number(formData.purchasePrice) || 0,
-      retailPrice: Number(formData.retailPrice) || 0,
-      wholesalePrice: Number(formData.wholesalePrice) || 0,
-      tax: Number(formData.tax) || 0,
+      retailPrice: Number(formData.sellPrice1) || 0,
+      wholesalePrice: Number(formData.sellPrice2) || 0,
+      tax: Number(formData.vat) || 0,
     };
 
     if (imageRemoved) {
-      payload.imageUrl = "";
+      payload.image = "";
     } else if (imageFile) {
-      payload.imageUrl = imagePreview;
-    } else if (initialData?.imageUrl) {
-      payload.imageUrl = initialData.imageUrl;
+      payload.image = imagePreview;
+    } else if (initialData?.image) {
+      payload.image = initialData.image;
     } else {
-      payload.imageUrl = "";
+      payload.image = "";
     }
 
     return payload;

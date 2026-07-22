@@ -1,31 +1,18 @@
 // src/features/customers/components/forms/CustomerIdentityForm.jsx
-import { User, Upload, X, ZoomIn } from "lucide-react";
+import { User, Upload, X, ZoomIn, Tag } from "lucide-react";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/shared/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
-import { Controller } from "react-hook-form";
+import { Textarea } from "@/shared/components/ui/textarea";
 import { useState } from "react";
 
 export default function CustomerIdentityForm({
   register,
   errors,
-  control,
-  avatarPreview,
-  onAvatarChange,
-  onRemoveAvatar,
+  imagePreview,
+  onImageChange,
+  onRemoveImage,
 }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
@@ -42,115 +29,107 @@ export default function CustomerIdentityForm({
 
       <CardContent className="px-6 py-5">
         <div className="flex flex-col sm:flex-row gap-6 items-start">
-          
-          {/* بخش آواتار */}
-<div className="flex flex-col items-center gap-3 shrink-0 w-full sm:w-auto">
 
-  {/* آواتار */}
-  <div className="relative group">
-    <div
-      className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-2xl border-2 border-dashed border-border transition-all flex items-center justify-center overflow-hidden bg-muted/30 shadow-inner cursor-pointer"
-      onClick={() =>
-        avatarPreview
-          ? setLightboxOpen(true)
-          : document.getElementById("avatar").click()
-      }
-    >
-      {avatarPreview ? (
-        <>
-          <img
-            src={avatarPreview}
-            alt="عکس مشتری"
-            className="w-full h-full object-cover"
-          />
-          {/* overlay زوم */}
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex flex-col items-center justify-center gap-1">
-            <ZoomIn className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-            <span className="text-[10px] sm:text-xs text-white font-medium">
-              بزرگ‌نمایی
-            </span>
+          {/* بخش تصویر */}
+          <div className="flex flex-col items-center gap-3 shrink-0 w-full sm:w-auto">
+            <div className="relative group">
+              <div
+                className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-2xl border-2 border-dashed border-border transition-all flex items-center justify-center overflow-hidden bg-muted/30 shadow-inner cursor-pointer"
+                onClick={() =>
+                  imagePreview
+                    ? setLightboxOpen(true)
+                    : document.getElementById("image").click()
+                }
+              >
+                {imagePreview ? (
+                  <>
+                    <img
+                      src={imagePreview}
+                      alt="عکس مشتری"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex flex-col items-center justify-center gap-1">
+                      <ZoomIn className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                      <span className="text-[10px] sm:text-xs text-white font-medium">
+                        بزرگ‌نمایی
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex flex-col items-center gap-1.5 text-muted-foreground px-2">
+                      <User className="h-8 w-8 sm:h-10 sm:w-10 stroke-[1.5]" />
+                      <span className="text-[10px] sm:text-xs font-medium text-center leading-tight">
+                        بدون تصویر
+                      </span>
+                    </div>
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex flex-col items-center justify-center gap-1">
+                      <Upload className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                      <span className="text-[10px] sm:text-xs text-white font-medium">
+                        آپلود
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center gap-2 w-full">
+              <Label
+                htmlFor="image"
+                className="cursor-pointer inline-flex items-center justify-center gap-1.5 h-8 sm:h-9 px-3 sm:px-4 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 transition-all text-xs sm:text-sm font-medium shadow-sm hover:shadow-md select-none"
+              >
+                <Upload className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                {imagePreview ? "تغییر عکس" : "بارگذاری عکس"}
+              </Label>
+
+              <Input
+                id="image"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                {...register("image")}
+                onChange={onImageChange}
+              />
+
+              {imagePreview && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-8 sm:h-9 w-8 sm:w-9 p-0 rounded-lg border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 active:scale-95 transition-all"
+                  onClick={onRemoveImage}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
+
+            {lightboxOpen && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+                onClick={() => setLightboxOpen(false)}
+              >
+                <div
+                  className="relative max-w-sm sm:max-w-md md:max-w-lg w-full"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <img
+                    src={imagePreview}
+                    alt="عکس مشتری"
+                    className="w-full h-auto rounded-2xl shadow-2xl"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="absolute -top-3 -right-3 h-8 w-8 p-0 rounded-full bg-white text-black hover:bg-white/90 shadow-md"
+                    onClick={() => setLightboxOpen(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
-        </>
-      ) : (
-        <>
-          <div className="flex flex-col items-center gap-1.5 text-muted-foreground px-2">
-            <User className="h-8 w-8 sm:h-10 sm:w-10 stroke-[1.5]" />
-            <span className="text-[10px] sm:text-xs font-medium text-center leading-tight">
-              بدون تصویر
-            </span>
-          </div>
-          {/* overlay آپلود */}
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex flex-col items-center justify-center gap-1">
-            <Upload className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-            <span className="text-[10px] sm:text-xs text-white font-medium">
-              آپلود
-            </span>
-          </div>
-        </>
-      )}
-    </div>
-  </div>
-
-  {/* دکمه‌ها */}
-  <div className="flex items-center justify-center gap-2 w-full">
-    <Label
-      htmlFor="avatar"
-      className="cursor-pointer inline-flex items-center justify-center gap-1.5 h-8 sm:h-9 px-3 sm:px-4 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 transition-all text-xs sm:text-sm font-medium shadow-sm hover:shadow-md select-none"
-    >
-      <Upload className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-      {avatarPreview ? "تغییر عکس" : "بارگذاری عکس"}
-    </Label>
-
-    <Input
-      id="avatar"
-      type="file"
-      accept="image/*"
-      className="hidden"
-      {...register("avatar")}
-      onChange={onAvatarChange}
-    />
-
-    {avatarPreview && (
-      <Button
-        type="button"
-        variant="outline"
-        className="h-8 sm:h-9 w-8 sm:w-9 p-0 rounded-lg border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 active:scale-95 transition-all"
-        onClick={onRemoveAvatar}
-      >
-        <X className="h-3.5 w-3.5" />
-      </Button>
-    )}
-  </div>
-
-  {/* Lightbox */}
-  {lightboxOpen && (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
-      onClick={() => setLightboxOpen(false)}
-    >
-      <div
-        className="relative max-w-sm sm:max-w-md md:max-w-lg w-full"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <img
-          src={avatarPreview}
-          alt="عکس مشتری"
-          className="w-full h-auto rounded-2xl shadow-2xl"
-        />
-        <Button
-          type="button"
-          variant="ghost"
-          className="absolute -top-3 -right-3 h-8 w-8 p-0 rounded-full bg-white text-black hover:bg-white/90 shadow-md"
-          onClick={() => setLightboxOpen(false)}
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  )}
-
-</div>
-
 
           {/* فیلدهای فرم */}
           <div className="flex-1 w-full space-y-4">
@@ -163,9 +142,7 @@ export default function CustomerIdentityForm({
                   id="firstName"
                   placeholder="نام"
                   className="h-10 rounded-lg transition-all"
-                  {...register("firstName", {
-                    required: "وارد کردن نام الزامی است",
-                  })}
+                  {...register("firstName", { required: "وارد کردن نام الزامی است" })}
                 />
                 {errors.firstName && (
                   <span className="text-xs text-destructive block mt-1 font-medium">
@@ -182,9 +159,7 @@ export default function CustomerIdentityForm({
                   id="lastName"
                   placeholder="نام خانوادگی"
                   className="h-10 rounded-lg transition-all"
-                  {...register("lastName", {
-                    required: "وارد کردن نام خانوادگی الزامی است",
-                  })}
+                  {...register("lastName", { required: "وارد کردن نام خانوادگی الزامی است" })}
                 />
                 {errors.lastName && (
                   <span className="text-xs text-destructive block mt-1 font-medium">
@@ -205,98 +180,36 @@ export default function CustomerIdentityForm({
                   placeholder="۰۹۱۲۳۴۵۶۷۸۹"
                   dir="ltr"
                   className="h-10 rounded-lg transition-all input-rtl-placeholder"
-                  {...register("phone", {
-                    pattern: {
-                      value: /^[0-9]+$/,
-                      message: "شماره تماس فقط باید شامل اعداد باشد",
-                    },
-                  })}
+                  {...register("phone")}
                 />
-                {errors.phone && (
-                  <span className="text-xs text-destructive block mt-1 font-medium">
-                    {errors.phone.message}
-                  </span>
-                )}
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="nationalId" className="text-sm font-medium">
-                  کد ملی <span className="text-destructive">*</span>
+                <Label htmlFor="referralCode" className="text-sm font-medium">
+                  کد معرف
                 </Label>
-                <Input
-                  id="nationalId"
-                  placeholder="کد ملی"
-                  dir="ltr"
-                  className="h-10 rounded-lg transition-all input-rtl-placeholder"
-                  {...register("nationalId", {
-                    required: "وارد کردن کد ملی الزامی است",
-                    pattern: {
-                      value: /^\d{10}$/,
-                      message: "کد ملی باید ۱۰ رقم باشد",
-                    },
-                  })}
-                />
-                {errors.nationalId && (
-                  <span className="text-xs text-destructive block mt-1 font-medium">
-                    {errors.nationalId.message}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium">نوع مشتری</Label>
-                <Controller
-                  name="type"
-                  control={control}
-                  render={({ field }) => (
-                    <Select value={field.value || "retail"} onValueChange={field.onChange}>
-                      <SelectTrigger className="h-10 rounded-lg transition-all">
-                        <SelectValue placeholder="انتخاب کنید" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl">
-                        <SelectItem value="retail" className="rounded-lg">جزئی فروش</SelectItem>
-                        <SelectItem value="wholesale" className="rounded-lg">عمده فروش</SelectItem>
-                        <SelectItem value="mechanic" className="rounded-lg">مکانیک</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium">درجه مشتری</Label>
-                <Controller
-                  name="customerGrade"
-                  control={control}
-                  render={({ field }) => (
-                    <Select value={field.value || "1"} onValueChange={field.onChange}>
-                      <SelectTrigger className="h-10 rounded-lg transition-all">
-                        <SelectValue placeholder="انتخاب کنید" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl">
-                        <SelectItem value="1" className="rounded-lg">۱</SelectItem>
-                        <SelectItem value="2" className="rounded-lg">۲</SelectItem>
-                        <SelectItem value="3" className="rounded-lg">۳</SelectItem>
-                        <SelectItem value="4" className="rounded-lg">۴</SelectItem>
-                        <SelectItem value="5" className="rounded-lg">۵</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
+                <div className="relative">
+                  <Tag className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="referralCode"
+                    dir="ltr"
+                    placeholder="REF001"
+                    className="h-10 pr-10 rounded-lg transition-all input-rtl-placeholder"
+                    {...register("referralCode")}
+                  />
+                </div>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="referralCode" className="text-sm font-medium">
-                کد معرف
+              <Label htmlFor="Description" className="text-sm font-medium">
+                توضیحات
               </Label>
-              <Input
-                id="referralCode"
-                placeholder="کد معرف"
-                className="h-10 rounded-lg transition-all"
-                {...register("referralCode")}
+              <Textarea
+                id="Description"
+                placeholder="یادداشت یا توضیحات مربوط به مشتری..."
+                className="min-h-[70px] rounded-lg transition-all resize-none"
+                {...register("Description")}
               />
             </div>
           </div>

@@ -1,7 +1,7 @@
 // src/features/suppliers/services/mutations.js
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { createSupplier, updateSupplier, deleteSupplier } from "./api";
+import { createSupplier, updateSupplier, deleteSupplier } from "./api-mockData";
 import { supplierKeys } from "./queryKeys";
 
 export function useCreateSupplierMutation() {

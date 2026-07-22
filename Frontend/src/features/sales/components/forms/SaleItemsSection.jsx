@@ -151,9 +151,9 @@ export default function SaleItemsSection({
                   className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 rounded-md border border-border bg-card px-3 py-2 hover:bg-accent/50 transition-colors"
                 >
                   {/* تصویر */}
-                  {product.imageUrl ? (
+                  {product.image ? (
                     <img
-                      src={product.imageUrl}
+                      src={product.image}
                       alt={product.name}
                       className="w-10 h-10 rounded-md object-cover shrink-0 border border-border"
                     />
@@ -185,7 +185,7 @@ export default function SaleItemsSection({
                         className={`text-xs font-medium ${
                           product.stock === 0
                             ? "text-destructive"
-                            : product.stock <= 10
+                            : product.stock <= (product.lowStockThreshold ?? 10)
                               ? "text-[oklch(0.65_0.18_80)]"
                               : "text-[oklch(0.50_0.16_152)]"
                         }`}

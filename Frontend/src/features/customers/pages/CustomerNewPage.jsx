@@ -28,9 +28,9 @@ export default function CustomerNewPage() {
   const {
     formMethods,
     balanceType,
-    avatarPreview,
-    handleAvatarChange,
-    handleRemoveAvatar,
+    imagePreview,
+    handleImageChange,
+    handleRemoveImage,
     buildCustomerPayload,
   } = useCustomerForm();
 
@@ -40,6 +40,7 @@ export default function CustomerNewPage() {
     control,
     formState: { errors },
   } = formMethods;
+
 
   const onSubmit = (data) => {
     createMutation.mutate(buildCustomerPayload(data), {
@@ -61,23 +62,22 @@ export default function CustomerNewPage() {
             <CustomerIdentityForm
               register={register}
               errors={errors}
-              control={control}
-              avatarPreview={avatarPreview}
-              onAvatarChange={handleAvatarChange}
-              onRemoveAvatar={handleRemoveAvatar}
+              imagePreview={imagePreview}
+              onImageChange={handleImageChange}
+              onRemoveImage={handleRemoveImage}
             />
 
             <CustomerFinanceForm
               register={register}
               errors={errors}
-              control={control}
               balanceType={balanceType}
+              control={control}
             />
           </div>
 
           {/* ستون چپ - آدرس و دکمه‌ها */}
           <div className="lg:col-span-1 space-y-4">
-            <CustomerAddressForm register={register} errors={errors} />
+            <CustomerAddressForm register={register} />
 
             {/* دکمه‌های عملیات */}
             <div className="flex gap-2">

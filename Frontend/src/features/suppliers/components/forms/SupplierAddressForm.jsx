@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Button } from "@/shared/components/ui/button";
 import { Textarea } from "@/shared/components/ui/textarea";
 
-export default function SupplierAddressForm({ register, errors }) {
+export default function SupplierAddressForm({ register }) {
   return (
     <Card className="shadow-md rounded-2xl overflow-hidden pt-0 gap-0">
       <CardHeader className="border-b bg-muted/30 py-4 px-6">
@@ -37,19 +37,9 @@ export default function SupplierAddressForm({ register, errors }) {
               dir="ltr" 
               placeholder="1234567890" 
               className="h-10 pr-10 rounded-lg transition-all input-rtl-placeholder"
-              {...register("postalCode", {
-                pattern: {
-                  value: /^\d{5,10}$/,
-                  message: "کد پستی باید ۵ تا ۱۰ رقم باشد",
-                },
-              })} 
+              {...register("postalCode")} 
             />
           </div>
-          {errors?.postalCode && (
-            <span className="text-xs text-destructive block mt-1 font-medium">
-              {errors.postalCode.message}
-            </span>
-          )}
         </div>
 
         <div className="space-y-1.5">
@@ -59,30 +49,15 @@ export default function SupplierAddressForm({ register, errors }) {
               dir="ltr" 
               placeholder="Latitude" 
               className="h-10 rounded-lg transition-all input-rtl-placeholder"
-              {...register("lat", {
-                pattern: {
-                  value: /^-?\d{1,3}(\.\d+)?$/,
-                  message: "عرض جغرافیایی نامعتبر است",
-                },
-              })} 
+              {...register("lat")} 
             />
             <Input 
               dir="ltr" 
               placeholder="Longitude" 
               className="h-10 rounded-lg transition-all input-rtl-placeholder"
-              {...register("lng", {
-                pattern: {
-                  value: /^-?\d{1,3}(\.\d+)?$/,
-                  message: "طول جغرافیایی نامعتبر است",
-                },
-              })} 
+              {...register("lng")} 
             />
           </div>
-          {(errors?.lat || errors?.lng) && (
-            <span className="text-xs text-destructive block mt-1 font-medium">
-              {errors?.lat?.message || errors?.lng?.message}
-            </span>
-          )}
           <Button
             type="button"
             variant="outline"

@@ -25,19 +25,19 @@ export default function SupplierNewPage() {
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader]);
 
-  const {
+const {
     formMethods,
     balanceType,
-    avatarPreview,
-    handleAvatarChange,
-    handleRemoveAvatar,
+    imagePreview,
+    handleImageChange,
+    handleRemoveImage,
     buildSupplierPayload,
   } = useSupplierForm();
 
   const {
     register,
     handleSubmit,
-    setValue,
+    control,
     formState: { errors },
   } = formMethods;
 
@@ -58,25 +58,25 @@ export default function SupplierNewPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-4">
           {/* ستون راست - اطلاعات اصلی */}
           <div className="lg:col-span-1 space-y-4">
-            <SupplierIdentityForm
+<SupplierIdentityForm
               register={register}
               errors={errors}
-              avatarPreview={avatarPreview}
-              onAvatarChange={handleAvatarChange}
-              onRemoveAvatar={handleRemoveAvatar}
+              imagePreview={imagePreview}
+              onImageChange={handleImageChange}
+              onRemoveImage={handleRemoveImage}
             />
 
             <SupplierFinanceForm
               register={register}
               errors={errors}
               balanceType={balanceType}
-              setValue={setValue}
+              control={control}
             />
           </div>
 
           {/* ستون چپ - آدرس و دکمه‌ها */}
           <div className="lg:col-span-1 space-y-4">
-            <SupplierAddressForm register={register} errors={errors} />
+            <SupplierAddressForm register={register} />
 
             {/* دکمه‌های عملیات */}
             <div className="flex gap-2">

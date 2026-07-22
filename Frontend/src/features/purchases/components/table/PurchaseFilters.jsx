@@ -15,7 +15,7 @@ import usePurchaseFilterStore from "../../store/purchaseFilterStore";
 import {
   PURCHASE_STATUS_LABELS,
   PAYMENT_TYPE_LABELS,
-} from "../../services/constants";
+} from "../../services/mockData";
 import { useMemo } from "react";
 import { Check } from "lucide-react";
 

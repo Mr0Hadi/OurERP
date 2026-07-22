@@ -5,7 +5,7 @@ import { toast } from "react-hot-toast";
 import {
   updateReceivingStatus,
   confirmReceiving,
-} from "./api";
+} from "./api-mockData";
 import { receivingKeys } from "./queryKeys";
 import { purchaseKeys } from "#/features/purchases/services/queryKeys";
 
@@ -13,19 +13,19 @@ export const useUpdateReceivingStatusMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ purchaseId, status }) =>
-      updateReceivingStatus(purchaseId, status),
+    mutationFn: ({ purchaseId, receivedItems }) =>
+      updateReceivingStatus(purchaseId, receivedItems),
     onMutate: async ({ purchaseId, status }) => {
       await queryClient.cancelQueries({
-        queryKey: receivingKeys.detail(Number(purchaseId)),
+        queryKey: receivingKeys.detail(purchaseId),
       });
 
       const previousDetail = queryClient.getQueryData(
-        receivingKeys.detail(Number(purchaseId))
+        receivingKeys.detail(purchaseId)
       );
 
       if (previousDetail) {
-        queryClient.setQueryData(receivingKeys.detail(Number(purchaseId)), {
+        queryClient.setQueryData(receivingKeys.detail(purchaseId), {
           ...previousDetail,
           status,
         });
@@ -50,12 +50,12 @@ export const useUpdateReceivingStatusMutation = () => {
     },
     onSuccess: (updatedPurchase) => {
       queryClient.setQueryData(
-        receivingKeys.detail(Number(updatedPurchase.id)),
+        receivingKeys.detail(updatedPurchase.id),
         updatedPurchase
       );
       // اینجا هم باید detail فیچر purchases رو invalidate کنیم
       queryClient.invalidateQueries({
-        queryKey: purchaseKeys.detail(Number(updatedPurchase.id)),
+        queryKey: purchaseKeys.detail(updatedPurchase.id),
       });
       queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
@@ -64,7 +64,7 @@ export const useUpdateReceivingStatusMutation = () => {
     onError: (error, variables, context) => {
       if (context?.previousDetail) {
         queryClient.setQueryData(
-          receivingKeys.detail(Number(variables.purchaseId)),
+          receivingKeys.detail(variables.purchaseId),
           context.previousDetail
         );
       }
@@ -90,12 +90,12 @@ export const useConfirmReceivingMutation = () => {
       // فیچر receiving — کلید اصلی که لیست ازش استفاده می‌کنه
       queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       queryClient.invalidateQueries({
-        queryKey: receivingKeys.detail(Number(updatedPurchase.id)),
+        queryKey: receivingKeys.detail(updatedPurchase.id),
       });
 
       // فیچر purchases — اگه جای دیگه‌ای هم همین رکورد رو نشون میده
       queryClient.invalidateQueries({
-        queryKey: purchaseKeys.detail(Number(updatedPurchase.id)),
+        queryKey: purchaseKeys.detail(updatedPurchase.id),
       });
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
 

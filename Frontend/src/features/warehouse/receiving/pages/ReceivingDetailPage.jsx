@@ -4,7 +4,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { AlertCircle, CheckCircle, AlertTriangle, X } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import { Card, CardContent } from "@/shared/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,7 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import { useHeaderStore } from "@/shared/store/headerStore";
-import { usePurchaseQuery } from "@/features/purchases/services/queries";
+import { useReceivingPurchaseQuery } from "../services/queries";
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
 import { useConfirmReceivingMutation } from "../services/mutations";
 import { useReceivingForm } from "../hooks/useReceivingForm";
@@ -77,7 +76,7 @@ function ReceivingDetailForm({ purchase }) {
         const product = productMap.get(item.productId);
         return {
           ...item,
-          imageUrl: product?.imageUrl || "",
+          image: product?.image || "",
           brand: product?.brand || "",
         };
       }),
@@ -220,7 +219,7 @@ export default function ReceivingDetailPage() {
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  const { data: purchase, isLoading, isError } = usePurchaseQuery(id);
+  const { data: purchase, isLoading, isError } = useReceivingPurchaseQuery(Number(id));
 
   useEffect(() => {
     setHeader({

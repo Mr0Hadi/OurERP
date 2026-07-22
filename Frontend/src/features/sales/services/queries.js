@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { keepPreviousData } from '@tanstack/react-query';
-import { fetchSales, fetchSaleById } from './api';
+import { fetchSales, fetchSaleById } from './api-mockData';
 import { saleKeys } from './queryKeys';
 
 export function useSalesQuery(filters, pagination, sorting) {
@@ -37,7 +37,7 @@ export function useSalesQuery(filters, pagination, sorting) {
 
 export function useSaleQuery(id) {
   return useQuery({
-    queryKey: saleKeys.detail(Number(id)),
+    queryKey: saleKeys.detail(id),
     queryFn: () => fetchSaleById(id),
     enabled: !!id,
     staleTime: 1000 * 60 * 5,

@@ -8,7 +8,7 @@ import {
   updatePurchaseStatus,
   updatePurchasePayment,
   removePurchase,
-} from "./api";
+} from "./api-mockData";
 import { purchaseKeys } from "./queryKeys";
 import { receivingKeys } from "#/features/warehouse/receiving/services/queryKeys";
 import { ROUTES } from "@/shared/constants/routes";
@@ -37,16 +37,9 @@ export const useUpdatePurchaseMutation = (id) => {
   return useMutation({
     mutationFn: (purchaseData) => updatePurchase(id, purchaseData),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: purchaseKeys.detail(Number(id)),
-      });
-      queryClient.invalidateQueries({
-        queryKey: purchaseKeys.lists(),
-      });
-      // اگه این خرید تو receiving هم هست، اون‌جا هم invalidate کن
-      queryClient.invalidateQueries({
-        queryKey: receivingKeys.detail(Number(id)),
-      });
+      queryClient.invalidateQueries({ queryKey: purchaseKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: receivingKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       toast.success("خرید با موفقیت ویرایش شد");
       navigate(ROUTES.PURCHASES_LIST);
@@ -64,14 +57,14 @@ export const useUpdatePurchaseStatusMutation = () => {
   return useMutation({
     mutationFn: ({ id, status }) => updatePurchaseStatus(id, status),
     onMutate: async ({ id, status }) => {
-      await queryClient.cancelQueries({ queryKey: purchaseKeys.detail(Number(id)) });
+      await queryClient.cancelQueries({ queryKey: purchaseKeys.detail(id) });
 
       const previousPurchase = queryClient.getQueryData(
-        purchaseKeys.detail(Number(id))
+        purchaseKeys.detail(id)
       );
 
       if (previousPurchase) {
-        queryClient.setQueryData(purchaseKeys.detail(Number(id)), {
+        queryClient.setQueryData(purchaseKeys.detail(id), {
           ...previousPurchase,
           status,
         });
@@ -81,21 +74,21 @@ export const useUpdatePurchaseStatusMutation = () => {
     },
     onSuccess: (updatedPurchase) => {
       queryClient.setQueryData(
-        purchaseKeys.detail(Number(updatedPurchase.id)),
+        purchaseKeys.detail(updatedPurchase.id),
         updatedPurchase
       );
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
       // لیست receiving رو هم invalidate کن
       queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       queryClient.invalidateQueries({
-        queryKey: receivingKeys.detail(Number(updatedPurchase.id)),
+        queryKey: receivingKeys.detail(updatedPurchase.id),
       });
       toast.success("وضعیت خرید به‌روزرسانی شد");
     },
     onError: (error, variables, context) => {
       if (context?.previousPurchase) {
         queryClient.setQueryData(
-          purchaseKeys.detail(Number(variables.id)),
+          purchaseKeys.detail(variables.id),
           context.previousPurchase
         );
       }
@@ -110,14 +103,14 @@ export const useRecordPaymentMutation = () => {
   return useMutation({
     mutationFn: ({ id, paymentData }) => updatePurchasePayment(id, paymentData),
     onMutate: async ({ id, paymentData }) => {
-      await queryClient.cancelQueries({ queryKey: purchaseKeys.detail(Number(id)) });
+      await queryClient.cancelQueries({ queryKey: purchaseKeys.detail(id) });
 
       const previousPurchase = queryClient.getQueryData(
-        purchaseKeys.detail(Number(id))
+        purchaseKeys.detail(id)
       );
 
       if (previousPurchase) {
-        queryClient.setQueryData(purchaseKeys.detail(Number(id)), {
+        queryClient.setQueryData(purchaseKeys.detail(id), {
           ...previousPurchase,
           paidAmount: previousPurchase.paidAmount + paymentData.amount,
         });
@@ -127,7 +120,7 @@ export const useRecordPaymentMutation = () => {
     },
     onSuccess: (updatedPurchase) => {
       queryClient.setQueryData(
-        purchaseKeys.detail(Number(updatedPurchase.id)),
+        purchaseKeys.detail(updatedPurchase.id),
         updatedPurchase
       );
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
@@ -137,7 +130,7 @@ export const useRecordPaymentMutation = () => {
     onError: (error, variables, context) => {
       if (context?.previousPurchase) {
         queryClient.setQueryData(
-          purchaseKeys.detail(Number(variables.id)),
+          purchaseKeys.detail(variables.id),
           context.previousPurchase
         );
       }
@@ -153,9 +146,7 @@ export const useRemovePurchaseMutation = () => {
   return useMutation({
     mutationFn: removePurchase,
     onSuccess: (removedPurchase) => {
-      queryClient.removeQueries({
-        queryKey: purchaseKeys.detail(Number(removedPurchase.id)),
-      });
+      queryClient.removeQueries({ queryKey: purchaseKeys.detail(removedPurchase.id) });
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
       queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       toast.success("خرید با موفقیت حذف شد");

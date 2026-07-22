@@ -117,7 +117,7 @@ export default function SaleNewPage() {
             productName: newProduct.name,
             unit: newProduct.unit,
             qty: 1,
-            unitPrice: newProduct.retailPrice || 0,
+            unitPrice: newProduct.salePrice || 0,
             discount: 0,
           },
         ]);
@@ -168,6 +168,7 @@ export default function SaleNewPage() {
       customerName: formData.customerName,
       invoiceNumber: formData.invoiceNumber,
       invoiceDate: formData.invoiceDate,
+      dueDate: formData.dueDate || null,
       description: formData.description || "",
       items: items.map((item) => ({
         productId: item.productId,
@@ -183,6 +184,7 @@ export default function SaleNewPage() {
       paidAmount: Number(formData.paidAmount) || 0,
       checkNumber: formData.checkNumber || null,
       transferRef: formData.transferRef || null,
+      mixedPayments: formData.mixedPayments || [],
       status: formData.status || "pending",
       totalAmount: computedTotal,
     };

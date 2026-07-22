@@ -1,34 +1,21 @@
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore } from "../store/authStore";
 
 export function usePermissions() {
-  const { user, currentTeam } = useAuthStore();
-  
-  const getUserPermissions = () => {
-    if (!currentTeam) return [];
-    if (currentTeam.permissions.includes('all')) {
-      return ['all']; // دسترسی کامل
-    }
-    return currentTeam.permissions || [];
-  };
-  
-  const hasPermission = (permission) => {
-    const permissions = getUserPermissions();
-    if (permissions.includes('all')) return true;
-    return permissions.includes(permission);
-  };
-  
-  const hasAnyPermission = (permissionList) => {
-    return permissionList.some(p => hasPermission(p));
-  };
-  
-  const hasAllPermissions = (permissionList) => {
-    return permissionList.every(p => hasPermission(p));
-  };
-  
+  const user = useAuthStore((s) => s.user);
+  const hasPermission = useAuthStore((s) => s.hasPermission);
+
+  // نقش‌های سازمانی مبتنی بر HeadID/DeputyID که در Department/Team تعریف شدن
+  const isDepartmentHead = user?.departmentRole === "head";
+  const isDepartmentDeputy = user?.departmentRole === "deputy";
+  const isTeamHead = user?.teamRole === "head";
+  const isTeamDeputy = user?.teamRole === "deputy";
+
   return {
+    user,
     hasPermission,
-    hasAnyPermission,
-    hasAllPermissions,
-    getUserPermissions
+    isDepartmentHead,
+    isDepartmentDeputy,
+    isTeamHead,
+    isTeamDeputy,
   };
 }

@@ -8,6 +8,7 @@ export async function fetchCustomers({
   search = "",
   minBalance = "",
   maxBalance = "",
+  balanceType = "",
   sortBy = "lastName",
   sortOrder = "asc",
 } = {}) {
@@ -15,17 +16,19 @@ export async function fetchCustomers({
 
   let result = [...allCustomers];
 
-  // جستجو روی نام کامل و کد مشتری
   if (search) {
     const q = search.toLowerCase();
     result = result.filter(
       (c) =>
         `${c.firstName} ${c.lastName}`.toLowerCase().includes(q) ||
-        c.id.toString().toLowerCase().includes(q)
+        c.id.toString().toLowerCase().includes(q),
     );
   }
 
-  // محدوده بدهی/طلب
+  if (balanceType) {
+    result = result.filter((c) => c.balanceType === balanceType);
+  }
+
   if (minBalance !== "" && minBalance !== undefined) {
     result = result.filter((c) => c.balance >= Number(minBalance));
   }
@@ -33,7 +36,6 @@ export async function fetchCustomers({
     result = result.filter((c) => c.balance <= Number(maxBalance));
   }
 
-  // مرتب‌سازی
   result.sort((a, b) => {
     let aVal, bVal;
 
@@ -62,24 +64,33 @@ export async function fetchCustomers({
 }
 
 export async function createCustomer(customerData) {
-  await delay(500); // شبیه‌سازی تاخیر شبکه
+  await delay(500);
 
-  const newId = `${String(allCustomers.length + 1)}`;
+  const newId = allCustomers.length
+    ? Math.max(...allCustomers.map((c) => Number(c.id))) + 1
+    : 1;
+
+  const now = new Date().toISOString();
 
   const newCustomer = {
     id: newId,
+    referralCode: "",
+    creditLimit: 0,
+    Description: "",
+    balanceType: "none",
+    balance: 0,
+    image: null,
     ...customerData,
+    createdAt: now,
+    updatedAt: now,
   };
 
-  // اضافه کردن به داده‌های موک (در واقعیت سمت سرور انجام می‌شود)
   allCustomers.push(newCustomer);
 
   return newCustomer;
 }
 
-// گرفتن اطلاعات یک مشتری با ID
 export const getCustomerById = async (id) => {
-  // شبیه‌سازی تاخیر شبکه
   await new Promise((resolve) => setTimeout(resolve, 500));
 
   const customer = allCustomers.find((c) => c.id == id);
@@ -89,17 +100,19 @@ export const getCustomerById = async (id) => {
   return customer;
 };
 
-// ویرایش اطلاعات مشتری
 export const updateCustomer = async (id, updatedData) => {
   await new Promise((resolve) => setTimeout(resolve, 800));
 
-  const index = allCustomers.findIndex((c) => c.id === id);
+  const index = allCustomers.findIndex((c) => c.id == id);
   if (index === -1) {
     throw new Error("مشتری یافت نشد");
   }
 
-  // به‌روزرسانی در لیست موک شده
-  allCustomers[index] = { ...allCustomers[index], ...updatedData };
+  allCustomers[index] = {
+    ...allCustomers[index],
+    ...updatedData,
+    updatedAt: new Date().toISOString(),
+  };
   return allCustomers[index];
 };
 

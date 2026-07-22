@@ -72,7 +72,7 @@ export function NavTools({
         <SidebarMenuItem>
           <SidebarMenuButton>
             <MoreHorizontal />
-            <span>بیشتر</span>
+            <span>More</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>

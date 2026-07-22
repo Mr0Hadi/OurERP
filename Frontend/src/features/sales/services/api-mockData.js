@@ -10,7 +10,7 @@ export async function createSale(saleData) {
   }
 
   const newSale = {
-    id: String(Date.now()),
+    id: Date.now(),
     ...saleData,
     status: SALE_STATUSES.PENDING,
     createdAt: new Date().toISOString(),
@@ -104,7 +104,7 @@ export async function fetchSales(params = {}) {
 export async function fetchSaleById(id) {
   await delay(300);
 
-  const sale = allSales.find((s) => s.id === id);
+  const sale = allSales.find((s) =>  Number(s.id) ===  Number(id));
   if (!sale) throw new Error("فروش یافت نشد");
   return sale;
 }
@@ -112,7 +112,7 @@ export async function fetchSaleById(id) {
 export async function updateSale(id, updates) {
   await delay(600);
 
-  const index = allSales.findIndex((s) => s.id === id);
+  const index = allSales.findIndex((s) => Number(s.id) ===  Number(id));
   if (index === -1) throw new Error("فروش یافت نشد");
 
   allSales[index] = {
@@ -150,13 +150,13 @@ export async function deleteSale(id) {
 export async function updateSalePayment(id, paymentData) {
   await delay(600);
 
-  const index = allSales.findIndex((s) => s.id === id);
+  const index = allSales.findIndex((s) => Number(s.id) ===  Number(id));
   if (index === -1) throw new Error("فروش یافت نشد");
 
   const current = allSales[index];
   allSales[index] = {
     ...current,
-    paidAmount: current.paidAmount + (paymentData.amount || 0),
+    paidAmount: (Number(current.paidAmount) || 0) + (paymentData.amount || 0),
     updatedAt: new Date().toISOString(),
     ...paymentData,
   };

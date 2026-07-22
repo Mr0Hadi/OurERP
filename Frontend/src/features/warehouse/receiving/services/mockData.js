@@ -1,7 +1,7 @@
-// src/features/warehouse/receiving/services/mockData
+// src/features/warehouse/receiving/services/mockData.js
 
-// از mockData خریدها استفاده می‌کنیم
 export { 
+  allPurchases,
   PURCHASE_STATUSES, 
   PURCHASE_STATUS_LABELS, 
   PAYMENT_TYPES, 

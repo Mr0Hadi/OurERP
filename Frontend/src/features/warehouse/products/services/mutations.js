@@ -2,7 +2,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { createProduct, updateProduct, deleteProduct } from "./api";
+import { createProduct, updateProduct, deleteProduct } from "./api-mockData";
 import { ROUTES } from "@/shared/constants/routes";
 import { productKeys } from "./queryKeys";
 
@@ -28,12 +28,8 @@ export const useUpdateProductMutation = (id) => {
   return useMutation({
     mutationFn: (productData) => updateProduct(id, productData),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["products", "detail", Number(id)],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["products", "list"],
-      });
+      queryClient.invalidateQueries({ queryKey: productKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: productKeys.lists() });
       toast.success("کالا با موفقیت ویرایش شد");
       navigate(ROUTES.WAREHOUSE_PRODUCTS);
     },

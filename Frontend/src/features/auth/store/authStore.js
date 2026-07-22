@@ -1,45 +1,53 @@
-// src/features/auth/store/authStore.js
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 
 export const useAuthStore = create(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
-      token: null,
+      accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
 
-      login: (user, token, refreshToken) => {
+      // بعد از رفرش موفق فقط توکن‌ها آپدیت می‌شن
+      setTokens: (accessToken, refreshToken) =>
         set({
-          user,
-          token,
-          refreshToken,
-          isAuthenticated: true,
-        });
-      },
+          accessToken,
+          refreshToken: refreshToken ?? get().refreshToken,
+          isAuthenticated: !!accessToken,
+        }),
 
-      setTokens: (token, refreshToken) => {
-        set({ token, refreshToken });
-      },
+      // بعد از لاگین موفق، هم توکن‌ها و هم اطلاعات کاربر ست میشه
+      loginSuccess: ({ user, accessToken, refreshToken }) =>
+        set({ user, accessToken, refreshToken, isAuthenticated: true }),
 
-      logout: () => {
+      setUser: (user) => set({ user }),
+
+      logout: () =>
         set({
           user: null,
-          token: null,
+          accessToken: null,
           refreshToken: null,
           isAuthenticated: false,
-        });
-      },
+        }),
 
-      updateUser: (userData) => {
-        set((state) => ({
-          user: { ...state.user, ...userData },
-        }));
+      // بررسی دسترسی بر اساس permissions برگشتی از بک‌اند
+      hasPermission: (permission) => {
+        const { user } = get();
+        if (!user) return false;
+        if (user.isSuperAdmin) return true;
+        return user.permissions?.includes(permission) ?? false;
       },
     }),
     {
-      name: 'auth-storage',
+      name: "auth-storage",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        user: state.user,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+        isAuthenticated: state.isAuthenticated,
+      }),
     }
   )
 );

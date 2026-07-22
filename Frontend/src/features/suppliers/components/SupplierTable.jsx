@@ -36,22 +36,20 @@ import { Badge } from "@/shared/components/ui/badge";
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 50];
 
-const BalanceBadge = ({ balance }) => {
-  const value = Number(balance);
-  const isDebt = value > 0; // تامین کننده به ما بدهکار است
-  const absValue = Math.abs(value).toLocaleString("fa-IR");
+const BalanceBadge = ({ balance, balanceType }) => {
+  const amount = Math.abs(Number(balance) || 0).toLocaleString("fa-IR");
 
-  if (isDebt) {
+  if (balanceType === "debit") {
     return (
       <Badge className="bg-emerald-100/80 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100/90 dark:hover:bg-emerald-950/70 font-light text-lg px-3 py-4 rounded-full transition-colors">
-        بدهکار به ما {absValue} تومان
+        بدهکار به ما {amount} تومان
       </Badge>
     );
   }
-  if (value < 0) {
+  if (balanceType === "credit") {
     return (
       <Badge className="bg-red-100/80 text-red-700 dark:bg-red-950/60 dark:text-red-300 border-red-200 dark:border-red-800/50 hover:bg-red-100/90 dark:hover:bg-red-950/70 font-light text-lg px-3 py-4 rounded-full transition-colors">
-        بستانکار {absValue} تومان
+        بستانکار {amount} تومان
       </Badge>
     );
   }
@@ -97,7 +95,7 @@ const SupplierTable = ({
         typeof updater === "function" ? updater(sortingState) : updater;
       onSortingChange(next[0] ?? null);
     },
-    [sortingState, onSortingChange]
+    [sortingState, onSortingChange],
   );
 
   const columns = useMemo(
@@ -128,8 +126,13 @@ const SupplierTable = ({
       },
       {
         accessorKey: "balance",
-        header: "تراز مالی",
-        cell: (info) => <BalanceBadge balance={info.getValue()} />,
+        header: "وضعیت مالی",
+        cell: (info) => (
+          <BalanceBadge
+            balance={info.getValue()}
+            balanceType={info.row.original.balanceType}
+          />
+        ),
       },
       {
         id: "actions",
@@ -146,12 +149,12 @@ const SupplierTable = ({
         ),
       },
     ],
-    [navigate]
+    [navigate],
   );
 
   const paginationState = useMemo(
     () => ({ pageIndex: currentPage, pageSize }),
-    [currentPage, pageSize]
+    [currentPage, pageSize],
   );
 
   const table = useReactTable({
@@ -201,7 +204,7 @@ const SupplierTable = ({
                           >
                             {flexRender(
                               header.column.columnDef.header,
-                              header.getContext()
+                              header.getContext(),
                             )}
                             {isSortable && <SortIcon direction={sortDir} />}
                           </div>
@@ -223,7 +226,7 @@ const SupplierTable = ({
                       <TableCell key={cell.id} className="text-center">
                         {flexRender(
                           cell.column.columnDef.cell,
-                          cell.getContext()
+                          cell.getContext(),
                         )}
                       </TableCell>
                     ))}

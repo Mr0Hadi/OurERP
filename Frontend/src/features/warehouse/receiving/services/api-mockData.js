@@ -1,7 +1,6 @@
-// src/features/warehouse/receiving/services/api
+// src/features/warehouse/receiving/services/api-mockData
 
-import { allPurchases, PURCHASE_STATUSES, PURCHASE_STATUS_LABELS } from "@/features/purchases/services/mockData";
-
+import { allPurchases, PURCHASE_STATUSES, PURCHASE_STATUS_LABELS } from "./mockData";
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // این صفحه فقط برای خریدهایی معنا دارد که چیزی برای «دریافت در انبار» دارند:
@@ -196,11 +195,3 @@ export async function confirmReceiving(purchaseId, receivingData) {
 
   return allPurchases[index];
 }
-
-// از mockData خریدها استفاده می‌کنیم
-export { 
-  PURCHASE_STATUSES, 
-  PURCHASE_STATUS_LABELS, 
-  PAYMENT_TYPES, 
-  PAYMENT_TYPE_LABELS 
-} from "@/features/purchases/services/mockData";

@@ -90,9 +90,9 @@ function QuantityStepper({ item, onItemChange, size = 'md' }) {
 }
 
 function ProductThumb({ item }) {
-  return item.imageUrl ? (
+  return item.image ? (
     <img
-      src={item.imageUrl}
+      src={item.image}
       alt={item.productName}
       className="w-10 h-10 rounded-md object-cover shrink-0 border border-border"
     />

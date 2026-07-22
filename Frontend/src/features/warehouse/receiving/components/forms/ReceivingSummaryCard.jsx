@@ -8,7 +8,7 @@ import { Label } from '@/shared/components/ui/label';
 import { Textarea } from '@/shared/components/ui/textarea';
 import { Badge } from '@/shared/components/ui/badge';
 import { Progress } from '@/shared/components/ui/progress';
-import { PURCHASE_STATUSES, PURCHASE_STATUS_LABELS } from '@/features/purchases/services/constants';
+import { PURCHASE_STATUSES, PURCHASE_STATUS_LABELS } from '@/features/purchases/services/mockData';
 
 // هم‌راستا با STATUS_CONFIG در PurchaseStatusSection، برای یکدستی رنگ‌بندی در کل پروژه
 const STATUS_CONFIG = {
@@ -25,14 +25,14 @@ export default function ReceivingSummaryCard({ formData, onFormChange }) {
     onFormChange({ [field]: value });
   };
 
-  const items = formData.items || [];
-
+  
   const stats = useMemo(() => {
+    const items = formData.items || [];
     const expected = items.reduce((sum, i) => sum + (i.expectedQty || 0), 0);
     const received = items.reduce((sum, i) => sum + (i.receivedQty || 0), 0);
     const percent = expected > 0 ? Math.round((received / expected) * 100) : 0;
     return { expected, received, percent };
-  }, [items]);
+  }, [formData.items]);
 
   const config = STATUS_CONFIG[formData.status] ?? DEFAULT_STATUS_CONFIG;
   const StatusIcon = config.icon;

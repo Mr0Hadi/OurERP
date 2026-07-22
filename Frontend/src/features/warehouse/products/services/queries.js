@@ -1,7 +1,7 @@
 // src/features/warehouse/products/services/queries.js
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { keepPreviousData } from "@tanstack/react-query";
-import { fetchProducts, fetchProductById } from "./api";
+import { fetchProducts, fetchProductById } from "./api-mockData";
 import { productKeys } from "./queryKeys";
 
 export function useProductsQuery(filters, pagination, sorting) {
@@ -38,7 +38,7 @@ export function useProductsQuery(filters, pagination, sorting) {
 
 export function useProductQuery(id) {
   return useQuery({
-    queryKey: productKeys.detail(Number(id)),
+    queryKey: productKeys.detail(id),
     queryFn: () => fetchProductById(id),
     enabled: !!id,
     staleTime: 1000 * 60 * 5,

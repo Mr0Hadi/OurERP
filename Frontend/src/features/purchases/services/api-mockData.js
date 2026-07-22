@@ -1,4 +1,4 @@
-// src/features/purchases/services/api.js
+// src/features/purchases/services/api-mockData.js
 
 import { allPurchases, PURCHASE_STATUSES } from "./mockData";
 
@@ -11,8 +11,12 @@ export async function createPurchase(purchaseData) {
     throw new Error("خطا در ثبت خرید");
   }
 
+  const newId = allPurchases.length
+    ? Math.max(...allPurchases.map((p) => Number(p.id) || 0)) + 1
+    : 1;
+
   const newPurchase = {
-    id: String(Date.now()),
+    id: newId,
     ...purchaseData,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -63,14 +67,10 @@ export async function fetchPurchases(params = {}) {
   }
 
   if (fromDate) {
-    filtered = filtered.filter(
-      (p) => new Date(p.createdAt) >= new Date(fromDate)
-    );
+    filtered = filtered.filter((p) => new Date(p.createdAt) >= new Date(fromDate));
   }
   if (toDate) {
-    filtered = filtered.filter(
-      (p) => new Date(p.createdAt) <= new Date(toDate)
-    );
+    filtered = filtered.filter((p) => new Date(p.createdAt) <= new Date(toDate));
   }
 
   filtered.sort((a, b) => {
@@ -101,22 +101,14 @@ export async function fetchPurchases(params = {}) {
   const end = start + limit;
   const items = filtered.slice(start, end);
 
-  return {
-    items,
-    total,
-    page,
-    totalPages,
-  };
+  return { items, total, page, totalPages };
 }
 
 export async function fetchPurchaseById(id) {
   await delay(300);
 
-  
-  
-  const purchase = allPurchases.find((p) => p.id === id);
+  const purchase = allPurchases.find((p) => Number(p.id) === Number(id));
 
-  
   if (!purchase) {
     throw new Error("خرید یافت نشد");
   }
@@ -127,7 +119,7 @@ export async function fetchPurchaseById(id) {
 export async function updatePurchase(id, updates) {
   await delay(600);
 
-  const index = allPurchases.findIndex((p) => p.id === id);
+  const index = allPurchases.findIndex((p) => Number(p.id) === Number(id));
 
   if (index === -1) {
     throw new Error("خرید یافت نشد");
@@ -149,10 +141,7 @@ export async function updatePurchaseStatus(id, newStatus) {
 export async function removePurchase(id) {
   await delay(600);
 
-  
-  const index = allPurchases.findIndex((p) => p.id == id);
-  const purchase = allPurchases.find((p) => p.id === id);
-  
+  const index = allPurchases.findIndex((p) => Number(p.id) === Number(id));
 
   if (index === -1) {
     throw new Error("خرید یافت نشد");
@@ -169,7 +158,7 @@ export async function deletePurchase(id) {
 export async function updatePurchasePayment(id, paymentData) {
   await delay(600);
 
-  const index = allPurchases.findIndex((p) => p.id === id);
+  const index = allPurchases.findIndex((p) => Number(p.id) === Number(id));
 
   if (index === -1) {
     throw new Error("خرید یافت نشد");
@@ -187,4 +176,3 @@ export async function updatePurchasePayment(id, paymentData) {
 
   return allPurchases[index];
 }
-

@@ -33,25 +33,25 @@ function SupplierDetailForm({ supplierData }) {
   const updateMutation = useUpdateSupplierMutation();
   const deleteMutation = useDeleteSupplierMutation();
 
-  const {
+const {
     formMethods,
     balanceType,
-    avatarPreview,
-    handleAvatarChange,
-    handleRemoveAvatar,
+    imagePreview,
+    handleImageChange,
+    handleRemoveImage,
     buildSupplierPayload,
   } = useSupplierForm(supplierData);
 
   const {
     register,
     handleSubmit,
-    setValue,
+    control,
     formState: { errors },
   } = formMethods;
 
   const onSubmit = (data) => {
     updateMutation.mutate(
-      { id: supplierData.id, data: buildSupplierPayload(data, avatarPreview) },
+      { id: supplierData.id, data: buildSupplierPayload(data) },
       { onSuccess: () => navigate(ROUTES.SUPPLIERS) }
     );
   };
@@ -79,20 +79,20 @@ function SupplierDetailForm({ supplierData }) {
             <SupplierIdentityForm
               register={register}
               errors={errors}
-              avatarPreview={avatarPreview}
-              onAvatarChange={handleAvatarChange}
-              onRemoveAvatar={handleRemoveAvatar}
+              imagePreview={imagePreview}
+              onImageChange={handleImageChange}
+              onRemoveImage={handleRemoveImage}
             />
             <SupplierFinanceForm
               register={register}
               errors={errors}
               balanceType={balanceType}
-              setValue={setValue}
+              control={control}
             />
           </div>
 
           <div className="lg:col-span-1 space-y-4">
-            <SupplierAddressForm register={register} errors={errors} />
+            <SupplierAddressForm register={register} />
 
             <div className="flex gap-2">
               <Button

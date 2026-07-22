@@ -14,12 +14,18 @@ export function useReceivingForm(purchaseData) {
   } = store;
   const isFirstMount = useRef(true);
 
-  useEffect(() => {
-    if (purchaseData?.id && (isFirstMount.current || initializedForId !== purchaseData.id)) {
-      initializeFromPurchase(purchaseData);
-      isFirstMount.current = false;
-    }
-  }, [purchaseData?.id, initializeFromPurchase, initializedForId]);
+useEffect(() => {
+  if (purchaseData?.id && (isFirstMount.current || initializedForId !== purchaseData.id)) {
+    initializeFromPurchase(purchaseData);
+    isFirstMount.current = false;
+  } else if (
+    purchaseData?.status &&
+    initializedForId === purchaseData.id &&
+    formData.status !== purchaseData.status
+  ) {
+    setFormData({ status: purchaseData.status });
+  }
+}, [purchaseData?.id, purchaseData?.status, initializeFromPurchase, initializedForId, formData.status, setFormData]);
 
   const handleItemChange = (productId, field, value) => {
     const newItems = formData.items.map((item) =>

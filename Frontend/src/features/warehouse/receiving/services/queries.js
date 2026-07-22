@@ -2,7 +2,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { keepPreviousData } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
-import { fetchReceivingPurchases, fetchReceivingPurchaseById } from "./api";
+import { fetchReceivingPurchases, fetchReceivingPurchaseById } from "./api-mockData";
 import { receivingKeys } from "./queryKeys";
 
 export function useReceivingPurchasesQuery(filters, pagination, sorting) {
@@ -43,7 +43,7 @@ export function useReceivingPurchasesQuery(filters, pagination, sorting) {
 
 export function useReceivingPurchaseQuery(id) {
   return useQuery({
-    queryKey: receivingKeys.detail(Number(id)),
+    queryKey: receivingKeys.detail(id),
     queryFn: () => fetchReceivingPurchaseById(id),
     enabled: !!id,
     staleTime: 1000 * 60 * 5,
