@@ -1,0 +1,20 @@
+﻿using Domain.Enums;
+
+namespace Domain.Entities
+{
+    public class Purchase
+    {
+        public int Id { get; set; }
+        public string InvoiceNumber { get; set; }
+        public DateTime InvoiceDate { get; set; }
+        public PurchaceStatusEnum Status { get; set; }
+        public UInt64 PaidAmount { get; set; }
+        public UInt64 TotalAmount { get; set; }
+        public string Description { get; set; }
+        public List<Product> Items { get; set; }
+        public Supplier Supplier { get; set; }
+        public int SupplierId { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
+    }
+}

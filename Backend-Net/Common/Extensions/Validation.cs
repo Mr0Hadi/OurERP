@@ -102,5 +102,15 @@ namespace Common.Extensions
             return Regex.IsMatch(input, pattern);
 
         }
+
+        public static bool IsValidPostalCode(this string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return false;
+
+            string pattern = @"\b(?!(\d)\1{3})[13-9]{4}[1346-9][013-9]{5}\b";
+
+            return Regex.IsMatch(input, pattern);
+        }
     }
 }
