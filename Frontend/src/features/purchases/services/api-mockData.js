@@ -50,12 +50,14 @@ export async function fetchPurchases(params = {}) {
       (p) =>
         p.invoiceNumber.toLowerCase().includes(searchLower) ||
         p.supplierName.toLowerCase().includes(searchLower) ||
-        (p.description && p.description.toLowerCase().includes(searchLower))
+        (p.description && p.description.toLowerCase().includes(searchLower)),
     );
   }
 
   if (Array.isArray(supplierIds) && supplierIds.length > 0) {
-    filtered = filtered.filter((p) => supplierIds.includes(p.supplierId));
+    filtered = filtered.filter((p) =>
+      supplierIds.map(String).includes(String(p.supplierId)),
+    );
   }
 
   if (status) {
@@ -67,10 +69,15 @@ export async function fetchPurchases(params = {}) {
   }
 
   if (fromDate) {
-    filtered = filtered.filter((p) => new Date(p.createdAt) >= new Date(fromDate));
+    filtered = filtered.filter(
+      (p) =>
+        p.invoiceDate && p.invoiceDate.slice(0, 10) >= fromDate.slice(0, 10),
+    );
   }
   if (toDate) {
-    filtered = filtered.filter((p) => new Date(p.createdAt) <= new Date(toDate));
+    filtered = filtered.filter(
+      (p) => p.invoiceDate && p.invoiceDate.slice(0, 10) <= toDate.slice(0, 10),
+    );
   }
 
   filtered.sort((a, b) => {

@@ -1,13 +1,23 @@
 // src/features/purchases/components/PurchaseInfoSection.jsx
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
+import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
 
 /**
  * props: formData, onFormChange, errors
  */
-export default function PurchaseInfoSection({ formData, onFormChange, errors }) {
+export default function PurchaseInfoSection({
+  formData,
+  onFormChange,
+  errors,
+}) {
   const handleChange = (field, value) => {
     onFormChange({ [field]: value });
   };
@@ -31,10 +41,12 @@ export default function PurchaseInfoSection({ formData, onFormChange, errors }) 
           <Input
             id="invoiceNumber"
             placeholder="مثال: INV-1023"
-            value={formData.invoiceNumber || ''}
-            onChange={(e) => handleChange('invoiceNumber', e.target.value)}
+            value={formData.invoiceNumber || ""}
+            onChange={(e) => handleChange("invoiceNumber", e.target.value)}
             className={`input-rtl-placeholder h-9 ${
-              errors?.invoiceNumber ? "border-destructive focus-visible:ring-destructive/30" : ""
+              errors?.invoiceNumber
+                ? "border-destructive focus-visible:ring-destructive/30"
+                : ""
             }`}
           />
           {errors?.invoiceNumber && (
@@ -50,14 +62,12 @@ export default function PurchaseInfoSection({ formData, onFormChange, errors }) 
           >
             تاریخ فاکتور
           </Label>
-          <Input
+          <PersianDatePicker
             id="invoiceDate"
-            type="date"
-            value={formData.invoiceDate || ''}
-            onChange={(e) => handleChange('invoiceDate', e.target.value)}
-            className={`h-9 ${
-              errors?.invoiceDate ? "border-destructive focus-visible:ring-destructive/30" : ""
-            }`}
+            value={formData.invoiceDate}
+            onChange={(isoDate) => handleChange("invoiceDate", isoDate)}
+            placeholder="مثال: ۱۴۰۵/۰۵/۰۲"
+            error={!!errors?.invoiceDate}
           />
           {errors?.invoiceDate && (
             <p className="text-xs text-destructive">{errors.invoiceDate}</p>
@@ -72,12 +82,11 @@ export default function PurchaseInfoSection({ formData, onFormChange, errors }) 
           >
             تاریخ سررسید
           </Label>
-          <Input
+          <PersianDatePicker
             id="dueDate"
-            type="date"
-            value={formData.dueDate || ''}
-            onChange={(e) => handleChange('dueDate', e.target.value)}
-            className="h-9"
+            value={formData.dueDate}
+            onChange={(isoDate) => handleChange("dueDate", isoDate)}
+            placeholder="مثال: ۱۴۰۵/۰۵/۰۲"
           />
         </div>
 
@@ -93,8 +102,8 @@ export default function PurchaseInfoSection({ formData, onFormChange, errors }) 
             id="description"
             placeholder="یادداشت یا توضیحات اضافه..."
             rows={3}
-            value={formData.description || ''}
-            onChange={(e) => handleChange('description', e.target.value)}
+            value={formData.description || ""}
+            onChange={(e) => handleChange("description", e.target.value)}
             className="input-rtl-placeholder resize-none text-sm"
           />
         </div>

@@ -1,0 +1,119 @@
+/* persian-date-picker.css
+   استایل تقویم react-multi-date-picker را با design tokens برنامه هماهنگ می‌کند
+   (متغیرهای CSS تعریف‌شده در index.css) — به‌صورت خودکار با لایت/دارک و
+   تم‌های سفارشی (accessible / rose / forest) هماهنگ می‌شود. */
+
+.rmdp-app-calendar.rmdp-wrapper {
+  font-family: var(--font-sans);
+  direction: rtl;
+  z-index: 60;
+}
+
+.rmdp-app-calendar {
+  /* متغیرهای رسمی تم‌سازی خود کتابخانه */
+  --rmdp-primary-color: var(--primary);
+  --rmdp-secondary-color: var(--accent);
+  --rmdp-shadow-color: var(--border);
+  --rmdp-today-color: var(--accent-foreground);
+}
+
+.rmdp-app-calendar .rmdp-shadow {
+  box-shadow:
+    0 10px 30px -8px oklch(0 0 0 / 0.18),
+    0 2px 8px -2px oklch(0 0 0 / 0.10);
+}
+
+.rmdp-app-calendar .rmdp-calendar {
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.65rem;
+}
+
+.rmdp-app-calendar .rmdp-header {
+  padding: 0 0.25rem 0.5rem;
+}
+
+.rmdp-app-calendar .rmdp-header-values {
+  color: var(--popover-foreground);
+  font-weight: 600;
+  font-size: 0.875rem;
+  background: transparent;
+}
+
+.rmdp-app-calendar .rmdp-arrow-container {
+  border-radius: var(--radius-md);
+  background: transparent;
+  box-shadow: none;
+}
+.rmdp-app-calendar .rmdp-arrow-container:hover {
+  background: var(--accent);
+  box-shadow: none;
+}
+.rmdp-app-calendar .rmdp-arrow-container:hover .rmdp-arrow {
+  border-color: var(--accent-foreground);
+}
+.rmdp-app-calendar .rmdp-arrow {
+  border-color: var(--muted-foreground);
+}
+
+.rmdp-app-calendar .rmdp-week-day {
+  color: var(--muted-foreground);
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.rmdp-app-calendar .rmdp-day span {
+  border-radius: var(--radius-md);
+  color: var(--popover-foreground);
+  font-size: 0.8rem;
+}
+
+.rmdp-app-calendar .rmdp-day.rmdp-today span {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  box-shadow: none;
+}
+
+.rmdp-app-calendar .rmdp-day.rmdp-selected span:not(.highlight) {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: none;
+}
+
+.rmdp-app-calendar .rmdp-day:not(.rmdp-disabled):not(.rmdp-day-hidden) span:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.rmdp-app-calendar .rmdp-day.rmdp-disabled span {
+  color: var(--muted-foreground);
+  opacity: 0.4;
+}
+
+.rmdp-app-calendar .rmdp-day.rmdp-deactive span {
+  color: var(--muted-foreground);
+  opacity: 0.45;
+}
+
+.rmdp-app-calendar .rmdp-month-picker,
+.rmdp-app-calendar .rmdp-year-picker {
+  background: var(--popover);
+}
+
+.rmdp-app-calendar .rmdp-ym {
+  color: var(--popover-foreground);
+  border-radius: var(--radius-md);
+}
+.rmdp-app-calendar .rmdp-ym:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.rmdp-app-calendar .rmdp-panel-body li {
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  border-radius: var(--radius-sm) !important;
+}
+

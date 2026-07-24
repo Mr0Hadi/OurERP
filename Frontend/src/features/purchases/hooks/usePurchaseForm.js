@@ -1,7 +1,7 @@
 // src/features/purchases/hooks/usePurchaseForm.js
-import { useEffect, useRef } from 'react';
-import { useForm } from 'react-hook-form';
-import { usePurchaseFormStore } from '#/features/purchases/store/purchaseFormStore';
+import { useEffect, useRef } from "react";
+import { useForm } from "react-hook-form";
+import { usePurchaseFormStore } from "#/features/purchases/store/purchaseFormStore";
 
 export function usePurchaseForm() {
   const { formData, setFormData, setItems } = usePurchaseFormStore();
@@ -9,14 +9,14 @@ export function usePurchaseForm() {
 
   const formMethods = useForm({
     defaultValues: {
-      invoiceNumber: formData.invoiceNumber || '',
-      invoiceDate: formData.invoiceDate || '',
-      dueDate: formData.dueDate || '',
-      description: formData.description || '',
-      paymentType: formData.paymentType || 'cash',
-      paidAmount: formData.paidAmount || '',
-      checkNumber: formData.checkNumber || '',
-      transferRef: formData.transferRef || '',
+      invoiceNumber: formData.invoiceNumber || "",
+      invoiceDate: formData.invoiceDate || "",
+      dueDate: formData.dueDate || "",
+      description: formData.description || "",
+      paymentType: formData.paymentType || "cash",
+      paidAmount: formData.paidAmount || "",
+      checkNumber: formData.checkNumber || "",
+      transferRef: formData.transferRef || "",
     },
   });
 
@@ -33,14 +33,14 @@ export function usePurchaseForm() {
     // اگر از یه مقداری به null رفت، یعنی resetForm صدا زده شده
     if (prev !== null && initializedForId === null) {
       reset({
-        invoiceNumber: '',
-        invoiceDate: '',
-        dueDate: '',
-        description: '',
-        paymentType: 'cash',
-        paidAmount: '',
-        checkNumber: '',
-        transferRef: '',
+        invoiceNumber: "",
+        invoiceDate: "",
+        dueDate: "",
+        description: "",
+        paymentType: "cash",
+        paidAmount: "",
+        checkNumber: "",
+        transferRef: "",
       });
     }
   }, [initializedForId, reset]);
@@ -81,7 +81,8 @@ export function usePurchaseForm() {
     supplierId: formData.supplierId,
     supplierName: formData.supplierName,
     invoiceNumber: formValues.invoiceNumber,
-    invoiceDate: formValues.invoiceDate,
+    invoiceDate: formValues.invoiceDate, 
+    dueDate: formValues.dueDate || null, 
     description: formValues.description,
     paymentType: formValues.paymentType,
     paidAmount: Number(formValues.paidAmount) || 0,

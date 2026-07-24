@@ -38,6 +38,7 @@ import {
   PURCHASE_STATUS_LABELS,
   PAYMENT_TYPE_LABELS,
 } from "../../services/mockData";
+import { gregorianToPersian } from "@/shared/utils/dateUtils";
 
 // ─── ثابت‌ها ─────────────────────────────────────────────────────────────────
 
@@ -92,8 +93,8 @@ const PaymentProgress = ({ paid, total }) => {
             percent === 100
               ? "bg-green-500"
               : percent > 0
-              ? "bg-amber-400"
-              : "bg-red-400"
+                ? "bg-amber-400"
+                : "bg-red-400"
           }`}
           style={{ width: `${percent}%` }}
         />
@@ -141,7 +142,7 @@ const PurchaseTable = ({
         typeof updater === "function" ? updater(sortingState) : updater;
       onSortingChange(next[0] ?? null);
     },
-    [sortingState, onSortingChange]
+    [sortingState, onSortingChange],
   );
 
   const columns = useMemo(
@@ -164,7 +165,9 @@ const PurchaseTable = ({
         accessorKey: "invoiceDate",
         header: "تاریخ فاکتور",
         cell: (info) => (
-          <span className="tabular-nums text-sm">{info.getValue()}</span>
+          <span className="tabular-nums text-sm">
+            {gregorianToPersian(info.getValue())}
+          </span>
         ),
       },
       {
@@ -204,12 +207,12 @@ const PurchaseTable = ({
         ),
       },
     ],
-    [navigate]
+    [navigate],
   );
 
   const paginationState = useMemo(
     () => ({ pageIndex: currentPage, pageSize }),
-    [currentPage, pageSize]
+    [currentPage, pageSize],
   );
 
   const table = useReactTable({
@@ -268,7 +271,7 @@ const PurchaseTable = ({
                           >
                             {flexRender(
                               header.column.columnDef.header,
-                              header.getContext()
+                              header.getContext(),
                             )}
                             {isSortable && <SortIcon direction={sortDir} />}
                           </div>
@@ -291,7 +294,7 @@ const PurchaseTable = ({
                       <TableCell key={cell.id} className="text-center">
                         {flexRender(
                           cell.column.columnDef.cell,
-                          cell.getContext()
+                          cell.getContext(),
                         )}
                       </TableCell>
                     ))}

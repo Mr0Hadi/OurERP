@@ -17,6 +17,7 @@ import {
 } from "../services/mockData";
 import { useMemo } from "react";
 import { Check } from "lucide-react";
+import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
 
 // ─── ثابت‌ها ─────────────────────────────────────────────────────────────────
 
@@ -304,12 +305,7 @@ const DateInput = ({ label, value, onChange }) => (
     <Label className="whitespace-nowrap font-medium text-foreground text-sm">
       {label}
     </Label>
-    <Input
-      type="date"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="flex-1"
-    />
+    <PersianDatePicker value={value} onChange={onChange} className="flex-1" />
   </div>
 );
 

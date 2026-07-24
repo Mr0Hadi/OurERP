@@ -33,10 +33,8 @@ import {
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Badge } from "@/shared/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import {
-  SALE_STATUS_LABELS,
-  PAYMENT_TYPE_LABELS,
-} from "../services/mockData";
+import { SALE_STATUS_LABELS, PAYMENT_TYPE_LABELS } from "../services/mockData";
+import { gregorianToPersian } from "@/shared/utils/dateUtils";
 
 // ─── ثابت‌ها ─────────────────────────────────────────────────────────────────
 
@@ -47,14 +45,11 @@ const PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 50];
 const STATUS_STYLES = {
   pending:
     "bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-100",
-  processing:
-    "bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-100",
+  processing: "bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-100",
   shipped:
     "bg-indigo-100 text-indigo-800 border-indigo-300 hover:bg-indigo-100",
-  delivered:
-    "bg-green-100 text-green-800 border-green-300 hover:bg-green-100",
-  cancelled:
-    "bg-red-100 text-red-800 border-red-300 hover:bg-red-100",
+  delivered: "bg-green-100 text-green-800 border-green-300 hover:bg-green-100",
+  cancelled: "bg-red-100 text-red-800 border-red-300 hover:bg-red-100",
   returned:
     "bg-orange-100 text-orange-800 border-orange-300 hover:bg-orange-100",
 };
@@ -96,8 +91,8 @@ const PaymentProgress = ({ paid, total }) => {
             percent === 100
               ? "bg-green-500"
               : percent > 0
-              ? "bg-amber-400"
-              : "bg-red-400"
+                ? "bg-amber-400"
+                : "bg-red-400"
           }`}
           style={{ width: `${percent}%` }}
         />
@@ -145,7 +140,7 @@ const SaleTable = ({
         typeof updater === "function" ? updater(sortingState) : updater;
       onSortingChange(next[0] ?? null);
     },
-    [sortingState, onSortingChange]
+    [sortingState, onSortingChange],
   );
 
   const columns = useMemo(
@@ -168,7 +163,9 @@ const SaleTable = ({
         accessorKey: "invoiceDate",
         header: "تاریخ فاکتور",
         cell: (info) => (
-          <span className="tabular-nums text-sm">{info.getValue()}</span>
+          <span className="tabular-nums text-sm">
+            {gregorianToPersian(info.getValue())}
+          </span>
         ),
       },
       {
@@ -208,12 +205,12 @@ const SaleTable = ({
         ),
       },
     ],
-    [navigate]
+    [navigate],
   );
 
   const paginationState = useMemo(
     () => ({ pageIndex: currentPage, pageSize }),
-    [currentPage, pageSize]
+    [currentPage, pageSize],
   );
 
   const table = useReactTable({
@@ -272,7 +269,7 @@ const SaleTable = ({
                           >
                             {flexRender(
                               header.column.columnDef.header,
-                              header.getContext()
+                              header.getContext(),
                             )}
                             {isSortable && <SortIcon direction={sortDir} />}
                           </div>
@@ -295,7 +292,7 @@ const SaleTable = ({
                       <TableCell key={cell.id} className="text-center">
                         {flexRender(
                           cell.column.columnDef.cell,
-                          cell.getContext()
+                          cell.getContext(),
                         )}
                       </TableCell>
                     ))}

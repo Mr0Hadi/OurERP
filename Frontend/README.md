@@ -67,7 +67,7 @@ OurERP/
 | **Routing** | React Router v7 |
 | **HTTP Client** | Axios |
 | **Notifications** | react-hot-toast |
-| **Barcode/QR** | react-barcode, react-qr-reader |
+| **Barcode/QR** | react-barcode, react-qr-scanner |
 | **Font** | Vazirmatn (Persian) |
 | **Package Manager** | pnpm |
 | **Linter** | ESLint 10 |
