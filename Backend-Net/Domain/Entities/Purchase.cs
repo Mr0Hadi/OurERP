@@ -11,7 +11,7 @@ namespace Domain.Entities
         public UInt64 PaidAmount { get; set; }
         public UInt64 TotalAmount { get; set; }
         public string Description { get; set; }
-        public List<Product> Items { get; set; }
+        public List<PurchaseItem> Items { get; set; }
         public Supplier Supplier { get; set; }
         public int SupplierId { get; set; }
         public DateTime CreatedAt { get; set; }

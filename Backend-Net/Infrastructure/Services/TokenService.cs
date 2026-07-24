@@ -34,9 +34,9 @@ namespace Infrastructure.Services
             {
                 claimsList.Add(new Claim("Admin", "Admin"));
             }
-            else if (userInfo.RoleId == (int)UserRolesEnum.Manager)
+            else if (userInfo.RoleId == (int)UserRolesEnum.User)
             {
-                claimsList.Add(new Claim("Manager", "Manager"));
+                claimsList.Add(new Claim("User", "User"));
 			}
 
             var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JwtSettings:SigningKey"]));

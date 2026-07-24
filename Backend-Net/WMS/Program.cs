@@ -9,6 +9,7 @@ using System.Text;
 using WMS.Ioc;
 using WMS.Middlewares;
 using Serilog;
+using Infrastructure.Ioc;
 
 namespace WMS
 {
@@ -52,7 +53,7 @@ namespace WMS
 
             builder.Services.AddEndPointServiceRegistration();
             builder.Services.AddApplicationServices();
-            //builder.Services.AddInfrastructureServices(builder.Configuration.GetConnectionString("DBConnection"));
+            builder.Services.AddInfrastructureServices(builder.Configuration.GetConnectionString("SqlServer"));
 
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             //builder.Services.AddOpenApi();
@@ -87,7 +88,7 @@ namespace WMS
             builder.Services.AddAuthorization(options =>
             {
                 options.AddPolicy("Admin", options => { options.RequireClaim("Admin"); });
-                options.AddPolicy("Manager", options => { options.RequireClaim("Manager"); });
+                options.AddPolicy("User", options => { options.RequireClaim("User"); });
 
                 //foreach (var permission in Enum.GetValues<PermissionsEnum>())
                 //    options.AddPolicy(permission.ToString(), p =>
@@ -128,7 +129,6 @@ namespace WMS
                     options.AddPreferredSecuritySchemes("Bearer");
                 });
             }
-
 
             app.UseCors("AllowAll");
 
