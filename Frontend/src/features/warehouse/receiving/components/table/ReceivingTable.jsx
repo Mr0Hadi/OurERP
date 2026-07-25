@@ -38,6 +38,7 @@ import {
   PURCHASE_STATUS_LABELS,
   PAYMENT_TYPE_LABELS,
 } from "../../services/mockData";
+import { gregorianToPersian } from "@/shared/utils/dateUtils";
 
 // ─── ثابت‌ها ─────────────────────────────────────────────────────────────────
 
@@ -138,7 +139,9 @@ const ReceivingTable = ({
         accessorKey: "invoiceDate",
         header: "تاریخ فاکتور",
         cell: (info) => (
-          <span className="tabular-nums text-sm">{info.getValue()}</span>
+          <span className="tabular-nums text-sm">
+            {gregorianToPersian(info.getValue())}
+          </span>
         ),
       },
       {

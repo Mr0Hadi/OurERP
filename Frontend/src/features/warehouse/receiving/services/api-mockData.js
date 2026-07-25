@@ -1,6 +1,10 @@
 // src/features/warehouse/receiving/services/api-mockData
 
-import { allPurchases, PURCHASE_STATUSES, PURCHASE_STATUS_LABELS } from "./mockData";
+import {
+  allPurchases,
+  PURCHASE_STATUSES,
+  PURCHASE_STATUS_LABELS,
+} from "./mockData";
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // این صفحه فقط برای خریدهایی معنا دارد که چیزی برای «دریافت در انبار» دارند:
@@ -15,8 +19,8 @@ export const RECEIVING_ELIGIBLE_STATUSES = [
 
 export const RECEIVING_STATUS_LABELS = Object.fromEntries(
   Object.entries(PURCHASE_STATUS_LABELS).filter(([key]) =>
-    RECEIVING_ELIGIBLE_STATUSES.includes(key)
-  )
+    RECEIVING_ELIGIBLE_STATUSES.includes(key),
+  ),
 );
 
 export async function fetchReceivingPurchases(params = {}) {
@@ -37,7 +41,7 @@ export async function fetchReceivingPurchases(params = {}) {
 
   // پایه: فقط خریدهایی که واقعاً منتظر دریافت یا دارای کسری هستند
   let filtered = allPurchases.filter((p) =>
-    RECEIVING_ELIGIBLE_STATUSES.includes(p.status)
+    RECEIVING_ELIGIBLE_STATUSES.includes(p.status),
   );
 
   // فیلتر بر اساس جستجو
@@ -47,7 +51,7 @@ export async function fetchReceivingPurchases(params = {}) {
       (p) =>
         p.invoiceNumber.toLowerCase().includes(searchLower) ||
         p.supplierName.toLowerCase().includes(searchLower) ||
-        (p.description && p.description.toLowerCase().includes(searchLower))
+        (p.description && p.description.toLowerCase().includes(searchLower)),
     );
   }
 
@@ -67,14 +71,16 @@ export async function fetchReceivingPurchases(params = {}) {
   }
 
   // فیلتر بر اساس تاریخ فاکتور (invoiceDate)
+  // جایگزین این بلوک شود:
   if (fromDate) {
     filtered = filtered.filter(
-      (p) => new Date(p.invoiceDate) >= new Date(fromDate)
+      (p) =>
+        p.invoiceDate && p.invoiceDate.slice(0, 10) >= fromDate.slice(0, 10),
     );
   }
   if (toDate) {
     filtered = filtered.filter(
-      (p) => new Date(p.invoiceDate) <= new Date(toDate)
+      (p) => p.invoiceDate && p.invoiceDate.slice(0, 10) <= toDate.slice(0, 10),
     );
   }
 
@@ -83,7 +89,11 @@ export async function fetchReceivingPurchases(params = {}) {
     let aVal = a[sortBy];
     let bVal = b[sortBy];
 
-    if (sortBy === "createdAt" || sortBy === "updatedAt" || sortBy === "invoiceDate") {
+    if (
+      sortBy === "createdAt" ||
+      sortBy === "updatedAt" ||
+      sortBy === "invoiceDate"
+    ) {
       aVal = new Date(aVal).getTime();
       bVal = new Date(bVal).getTime();
     } else if (sortBy === "totalAmount" || sortBy === "paidAmount") {
@@ -138,15 +148,11 @@ export async function updateReceivingStatus(id, receivedItems) {
 
   // محاسبه وضعیت جدید
   const originalPurchase = allPurchases[index];
-  const allItemsReceived = receivedItems.every(item => 
-    item.receivedQty >= item.orderedQty
+  const allItemsReceived = receivedItems.every(
+    (item) => item.receivedQty >= item.orderedQty,
   );
-  const anyItemReceived = receivedItems.some(item => 
-    item.receivedQty > 0
-  );
-  const noItemReceived = receivedItems.every(item => 
-    item.receivedQty === 0
-  );
+  const anyItemReceived = receivedItems.some((item) => item.receivedQty > 0);
+  const noItemReceived = receivedItems.every((item) => item.receivedQty === 0);
 
   let newStatus;
   if (noItemReceived) {
@@ -163,9 +169,13 @@ export async function updateReceivingStatus(id, receivedItems) {
   allPurchases[index] = {
     ...originalPurchase,
     status: newStatus,
-    items: originalPurchase.items.map(item => {
-      const receivedItem = receivedItems.find(ri => ri.productId === item.productId);
-      return receivedItem ? { ...item, receivedQty: receivedItem.receivedQty } : item;
+    items: originalPurchase.items.map((item) => {
+      const receivedItem = receivedItems.find(
+        (ri) => ri.productId === item.productId,
+      );
+      return receivedItem
+        ? { ...item, receivedQty: receivedItem.receivedQty }
+        : item;
     }),
     updatedAt: new Date().toISOString(),
   };
@@ -177,7 +187,7 @@ export async function confirmReceiving(purchaseId, receivingData) {
   await delay(500);
 
   const index = allPurchases.findIndex((p) => p.id === purchaseId);
-  if (index === -1) throw new Error('خرید یافت نشد');
+  if (index === -1) throw new Error("خرید یافت نشد");
 
   // در mockData پاسخی از سرور شبیه‌سازی می‌کنیم
   allPurchases[index] = {
@@ -187,9 +197,9 @@ export async function confirmReceiving(purchaseId, receivingData) {
     receivingNote: receivingData.receivingNote,
     receivedDate: receivingData.receivedDate,
     // اطلاعات تحویل‌دهنده/وسیله نقلیه برای پیگیری و رهگیری بعدی ثبت می‌شود
-    transporterName: receivingData.transporterName || '',
-    transporterNationalId: receivingData.transporterNationalId || '',
-    vehiclePlate: receivingData.vehiclePlate || '',
+    transporterName: receivingData.transporterName || "",
+    transporterNationalId: receivingData.transporterNationalId || "",
+    vehiclePlate: receivingData.vehiclePlate || "",
     updatedAt: new Date().toISOString(),
   };
 
