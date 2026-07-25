@@ -30,6 +30,83 @@ const defaultIcon = L.icon({
 
 const DEFAULT_CENTER = [35.6892, 51.389]; // مرکز پیش‌فرض: تهران
 const NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search";
+const NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse";
+
+const POSTAL_CODE_REGEX = /^[\d۰-۹]{4,10}(-[\d۰-۹]{3,6})?$/;
+const ADMIN_PREFIX_REGEX = /^(شهرستان|بخش مرکزی|شهر|بخش|دهستان|روستای|استان)\s+/;
+const CENTRAL_DISTRICT_REGEX = /^بخش مرکزی/;
+const COUNTY_REGEX = /^شهرستان\s+/;
+
+// حذف پیشوندهای رایج اداری برای مقایسه‌ی نام‌ها (مثلاً «شهر تهران» → «تهران»)
+function extractCoreName(part) {
+  return part.replace(ADMIN_PREFIX_REGEX, "").trim();
+}
+
+/**
+ * سرویس Nominatim آدرس کامل را به‌صورت رشته‌ای «از جزئی به کلی» و جدا‌شده با کاما
+ * برمی‌گرداند؛ این رشته معمولاً شامل سطوح اداریِ تکراری هم هست، مثلاً:
+ *
+ *   «..., شهر سیرجان, بخش مرکزی شهرستان سیرجان, شهرستان سیرجان, استان کرمان, ...»
+ *
+ * که در آن «شهرستان سیرجان» و «بخش مرکزی شهرستان سیرجان» چیزی به «شهر سیرجان»
+ * اضافه نمی‌کنند. این تابع:
+ *   ۱. کد پستی و نام کشور را از متن آدرس جدا و حذف می‌کند (کد پستی در متن آدرس
+ *      نمایش داده نمی‌شود و در فیلد جداگانه‌ای هم ست نمی‌شود).
+ *   ۲. سطح «بخش مرکزی ...» را همیشه حذف می‌کند (تقریباً هیچ‌وقت اطلاعات مفیدی
+ *      نسبت به نام شهر اضافه نمی‌کند).
+ *   ۳. سطح «شهرستان X» را فقط وقتی حذف می‌کند که نام X با یکی دیگر از اجزای آدرس
+ *      (مثلاً «شهر X») یکی باشد؛ یعنی واقعاً تکراری باشد.
+ *   ۴. ترتیب را از «جزئی به کلی» به «کلی به جزئی» (متداول در آدرس‌نویسی فارسی)
+ *      برمی‌گرداند.
+ */
+function formatAddressFromNominatim(displayName) {
+  if (!displayName) return "";
+
+  const parts = displayName
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  if (parts.length === 0) return displayName;
+
+  const remaining = [...parts];
+
+  // آخرین توکن معمولاً نام کشور است
+  const country = remaining.length > 0 ? remaining.pop() : "";
+
+  // اگر آخرین توکن باقی‌مانده شبیه کدپستی بود، حذفش کن (کدپستی در آدرس نمایش داده نمی‌شود)
+  if (remaining.length > 0 && POSTAL_CODE_REGEX.test(remaining[remaining.length - 1])) {
+    remaining.pop();
+  }
+
+  const coreNames = remaining.map(extractCoreName);
+
+  const filtered = remaining.filter((part, index) => {
+    // «بخش مرکزی ...» همیشه حذف می‌شود
+    if (CENTRAL_DISTRICT_REGEX.test(part)) return false;
+
+    // «شهرستان X» فقط وقتی حذف می‌شود که در جای دیگری از آدرس همان X تکرار شده باشد
+    if (COUNTY_REGEX.test(part)) {
+      const core = coreNames[index];
+      const isDuplicate = coreNames.some(
+        (otherCore, otherIndex) => otherIndex !== index && otherCore === core,
+      );
+      if (isDuplicate) return false;
+    }
+
+    return true;
+  });
+
+  // ترتیب Nominatim از جزئی به کلی است؛ برای خوانایی فارسی برعکسش می‌کنیم (کلی به جزئی)
+  const hierarchy = [...filtered].reverse();
+
+  let text = hierarchy.join("، ");
+  if (country) {
+    text = text ? `${text}، ${country}` : country;
+  }
+
+  return text || displayName;
+}
 
 function LocationMarker({ position, onChange }) {
   useMapEvents({
@@ -62,16 +139,20 @@ function FlyToHandler({ target }) {
  *   ۲. جستجوی نام مکان/آدرس (از طریق سرویس Nominatim - OpenStreetMap)
  *   ۳. استفاده از موقعیت فعلی کاربر (GPS مرورگر)
  *
- * با تایید، مختصات نهایی از طریق onSelect(lat, lng) برگردانده می‌شود.
+ * در هر سه حالت، آدرس متنیِ خلاصه و خوانا (بدون سطوح اداری تکراری و بدون کدپستی)
+ * به‌صورت خودکار پیدا می‌شود.
+ *
+ * با تایید، نتیجه از طریق onSelect(lat, lng, address) برگردانده می‌شود.
  *
  * <LocationPickerMap
  *   open={mapOpen}
  *   onOpenChange={setMapOpen}
  *   initialLat={watch("lat")}
  *   initialLng={watch("lng")}
- *   onSelect={(lat, lng) => {
+ *   onSelect={(lat, lng, address) => {
  *     setValue("lat", lat.toFixed(6));
  *     setValue("lng", lng.toFixed(6));
+ *     if (address) setValue("address", address);
  *   }}
  * />
  */
@@ -93,6 +174,11 @@ export default function LocationPickerMap({
   const [position, setPosition] = useState(initialPosition);
   const [flyTarget, setFlyTarget] = useState(null);
 
+  // --- آدرس متنی محل انتخاب‌شده (از طریق Reverse Geocoding) ---
+  const [resolvedAddress, setResolvedAddress] = useState("");
+  const [isResolvingAddress, setIsResolvingAddress] = useState(false);
+  const reverseAbortRef = useRef(null);
+
   // --- جستجوی مکان ---
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -113,6 +199,30 @@ export default function LocationPickerMap({
     setLocateError("");
     setPosition(next);
     setFlyTarget(null);
+    setResolvedAddress("");
+  };
+
+  // پیدا کردن آدرس متنی از روی مختصات (برای کلیک روی نقشه و GPS)
+  const reverseGeocode = async (lat, lng) => {
+    reverseAbortRef.current?.abort();
+    const controller = new AbortController();
+    reverseAbortRef.current = controller;
+
+    setIsResolvingAddress(true);
+    try {
+      const url = `${NOMINATIM_REVERSE_URL}?format=json&lat=${lat}&lon=${lng}&accept-language=fa&zoom=18`;
+      const res = await fetch(url, { signal: controller.signal });
+      if (!res.ok) throw new Error("خطا در دریافت آدرس");
+
+      const data = await res.json();
+      setResolvedAddress(formatAddressFromNominatim(data?.display_name));
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        setResolvedAddress("");
+      }
+    } finally {
+      setIsResolvingAddress(false);
+    }
   };
 
   const runSearch = async () => {
@@ -163,6 +273,7 @@ export default function LocationPickerMap({
     setFlyTarget({ position: next, zoom: 16, key: Date.now() });
     setShowResults(false);
     setSearchQuery(result.display_name);
+    setResolvedAddress(formatAddressFromNominatim(result.display_name));
   };
 
   const handleClearSearch = () => {
@@ -187,6 +298,7 @@ export default function LocationPickerMap({
         setPosition(next);
         setFlyTarget({ position: next, zoom: 16, key: Date.now() });
         setIsLocating(false);
+        reverseGeocode(next[0], next[1]);
       },
       (err) => {
         setIsLocating(false);
@@ -200,9 +312,15 @@ export default function LocationPickerMap({
     );
   };
 
+  // کلیک مستقیم روی نقشه → پیدا کردن آدرس همان نقطه
+  const handleMapPositionChange = (next) => {
+    setPosition(next);
+    reverseGeocode(next[0], next[1]);
+  };
+
   const handleConfirm = () => {
     if (position) {
-      onSelect(position[0], position[1]);
+      onSelect(position[0], position[1], resolvedAddress);
     }
     onOpenChange(false);
   };
@@ -309,19 +427,36 @@ export default function LocationPickerMap({
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              <LocationMarker position={position} onChange={setPosition} />
+              <LocationMarker position={position} onChange={handleMapPositionChange} />
               <FlyToHandler target={flyTarget} />
             </MapContainer>
           )}
         </div>
 
-        <DialogFooter className="px-6 py-4 border-t flex-row items-center justify-between sm:justify-between">
-          <span className="text-sm text-muted-foreground">
-            {position
-              ? `${position[0].toFixed(6)}, ${position[1].toFixed(6)}`
-              : "روی نقشه کلیک کنید یا از جستجو/موقعیت من استفاده کنید"}
-          </span>
-          <div className="flex gap-2">
+        <DialogFooter className="px-6 py-4 border-t flex-col items-stretch gap-3 sm:items-stretch">
+          <div className="flex items-start gap-2 text-sm">
+            <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+            <div className="flex-1 min-w-0">
+              {isResolvingAddress ? (
+                <span className="text-muted-foreground flex items-center gap-1.5">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  در حال یافتن آدرس...
+                </span>
+              ) : resolvedAddress ? (
+                <span className="text-foreground">{resolvedAddress}</span>
+              ) : position ? (
+                <span className="text-muted-foreground">
+                  {`${position[0].toFixed(6)}, ${position[1].toFixed(6)}`}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">
+                  روی نقشه کلیک کنید یا از جستجو/موقعیت من استفاده کنید
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               انصراف
             </Button>
