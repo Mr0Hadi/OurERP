@@ -1,4 +1,4 @@
-// src\features\suppliers\services\mockData.js
+// src/features/suppliers/services/mockData.js
 export const allSuppliers = [
   {
     id: 1,
@@ -12,7 +12,8 @@ export const allSuppliers = [
     balanceType: "debit",
     Description: "",
     image: null,
-    coordinates: { lat: 35.6892, lng: 51.389 },
+    lat: 35.6892,
+    lng: 51.389,
     createdAt: "2024-03-05T16:00:00Z",
     updatedAt: "2024-06-25T10:10:00Z",
   },
@@ -28,7 +29,8 @@ export const allSuppliers = [
     balanceType: "credit",
     Description: "",
     image: null,
-    coordinates: { lat: 35.8327, lng: 50.9915 },
+    lat: 35.8327,
+    lng: 50.9915,
     createdAt: "2024-03-05T16:00:00Z",
     updatedAt: "2024-06-25T10:10:00Z",
   },
@@ -44,7 +46,8 @@ export const allSuppliers = [
     balanceType: "debit",
     Description: "",
     image: null,
-    coordinates: { lat: 35.685, lng: 51.423 },
+    lat: 35.685,
+    lng: 51.423,
     createdAt: "2024-03-05T16:00:00Z",
     updatedAt: "2024-06-25T10:10:00Z",
   },

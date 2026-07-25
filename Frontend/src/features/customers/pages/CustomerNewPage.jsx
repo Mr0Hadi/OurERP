@@ -38,6 +38,8 @@ export default function CustomerNewPage() {
     register,
     handleSubmit,
     control,
+    watch,
+    setValue,
     formState: { errors },
   } = formMethods;
 
@@ -77,7 +79,7 @@ export default function CustomerNewPage() {
 
           {/* ستون چپ - آدرس و دکمه‌ها */}
           <div className="lg:col-span-1 space-y-4">
-            <CustomerAddressForm register={register} />
+            <CustomerAddressForm register={register} watch={watch} setValue={setValue} />
 
             {/* دکمه‌های عملیات */}
             <div className="flex gap-2">

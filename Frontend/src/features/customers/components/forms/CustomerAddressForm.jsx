@@ -1,12 +1,26 @@
 // src/features/customers/components/forms/CustomerAddressForm.jsx
+import { useState } from "react";
 import { MapPin, Map, Mail } from "lucide-react";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Textarea } from "@/shared/components/ui/textarea";
+import LocationPickerMap from "@/shared/components/map/LocationPickerMap";
 
-export default function CustomerAddressForm({ register }) {
+export default function CustomerAddressForm({ register, watch, setValue }) {
+  const [mapOpen, setMapOpen] = useState(false);
+
+  // مقادیر فعلی lat/lng برای نمایش در دیالوگ و پیش‌مقداردهی مارکر
+  const lat = watch ? watch("lat") : "";
+  const lng = watch ? watch("lng") : "";
+
+  const handleLocationSelect = (selectedLat, selectedLng) => {
+    // تنظیم دو فیلد جدای lat و lng در فرم (به‌صورت رشته، هم‌راستا با ورودی‌های دستی)
+    setValue("lat", selectedLat.toFixed(6), { shouldDirty: true });
+    setValue("lng", selectedLng.toFixed(6), { shouldDirty: true });
+  };
+
   return (
     <Card className="shadow-md rounded-2xl overflow-hidden pt-0 gap-0">
       <CardHeader className="border-b bg-muted/30 py-4 px-6">
@@ -62,13 +76,21 @@ export default function CustomerAddressForm({ register }) {
             type="button"
             variant="outline"
             className="w-full h-9 mt-2 rounded-lg transition-all font-medium text-sm"
-            onClick={() => window.open("https://maps.google.com", "_blank")}
+            onClick={() => setMapOpen(true)}
           >
             <Map className="ml-2 h-4 w-4 text-primary" />
             باز کردن نقشه برای انتخاب مختصات
           </Button>
         </div>
       </CardContent>
+
+      <LocationPickerMap
+        open={mapOpen}
+        onOpenChange={setMapOpen}
+        initialLat={lat}
+        initialLng={lng}
+        onSelect={handleLocationSelect}
+      />
     </Card>
   );
 }

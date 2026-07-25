@@ -46,6 +46,8 @@ const {
     register,
     handleSubmit,
     control,
+    watch,
+    setValue,
     formState: { errors },
   } = formMethods;
 
@@ -92,7 +94,7 @@ const {
           </div>
 
           <div className="lg:col-span-1 space-y-4">
-            <SupplierAddressForm register={register} />
+            <SupplierAddressForm register={register} watch={watch} setValue={setValue} />
 
             <div className="flex gap-2">
               <Button

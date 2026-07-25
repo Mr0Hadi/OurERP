@@ -26,8 +26,8 @@ function buildDefaultValues(data) {
     lastName: data.lastName || "",
     phone: data.phone || "",
     address: data.address || "",
-    lat: data.coordinates?.lat?.toString() || "",
-    lng: data.coordinates?.lng?.toString() || "",
+    lat: data.lat !== null && data.lat !== undefined ? data.lat.toString() : "",
+    lng: data.lng !== null && data.lng !== undefined ? data.lng.toString() : "",
     postalCode: data.postalCode || "",
     Description: data.Description || "",
     balanceType: data.balanceType || "none",
@@ -55,10 +55,9 @@ export function buildSupplierPayload(data, imagePreview, existingImage) {
     balance,
     balanceType,
     image: imagePreview ?? existingImage ?? null,
-    coordinates: {
-      lat: data.lat ? parseFloat(data.lat) : null,
-      lng: data.lng ? parseFloat(data.lng) : null,
-    },
+    // مختصات به‌صورت دو فیلد جدا و عددی ذخیره می‌شوند (نه یک آبجکت تودرتو)
+    lat: data.lat !== "" && data.lat !== null && data.lat !== undefined ? parseFloat(data.lat) : null,
+    lng: data.lng !== "" && data.lng !== null && data.lng !== undefined ? parseFloat(data.lng) : null,
   };
 }
 
