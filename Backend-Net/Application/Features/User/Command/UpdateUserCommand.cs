@@ -10,21 +10,22 @@ using MediatR;
 
 namespace Application.Features.User.Command
 {
-    public class CreateUserCommand : IRequest<ResponseDto>
+    public class UpdateUserCommand : IRequest<ResponseDto>
     {
-        public string FisrtName { get; set; }
+        public int Id { get; set; }
+        public string FirstName { get; set; }
         public string LastName { get; set; }
         public string Username { get; set; }
-        public string Password { get; set; }
         public int RoleId { get; set; }
+        public bool IsActive { get; set; }
     }
 
-    public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
+    public class UpdateUserCommandValidator : AbstractValidator<UpdateUserCommand>
     {
-        public CreateUserCommandValidator()
+        public UpdateUserCommandValidator()
         {
 
-            RuleFor(x => x.FisrtName)
+            RuleFor(x => x.FirstName)
                 .Must(Validation.IsNotNullOrEmpty).WithMessage(Validation.RequiredMessage("نام"))
                 .Must(Validation.IsPersianText).WithMessage("نام فقط باید حروف فارسی باشد");
 
@@ -36,20 +37,16 @@ namespace Application.Features.User.Command
                 .Must(Validation.IsNotNullOrEmpty).WithMessage(Validation.RequiredMessage("نام کاربری"))
                 .Must(Validation.IsEnglishText).WithMessage("نام کاربری وارد شده معتبر نیست");
 
-            RuleFor(x => x.Password)
-                 .Must(Validation.IsNotNullOrEmpty).WithMessage(Validation.RequiredMessage("رمز عبور"))
-                 .Must(Validation.IsValidPassword).WithMessage("رمز عبور باید حداقل 8 کاراکتر باشد و شامل حرف انگلیسی، عدد و یک کاراکتر خاص باشد");
-
         }
     }
 
-    public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, ResponseDto>
+    public class UpdateUserCommandHandler : IRequestHandler<UpdateUserCommand, ResponseDto>
     {
         private readonly IUserRepository _userRepository;
         private readonly IRoleRepository _roleService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
-        public CreateUserCommandHandler(IUserRepository userRepository, IRoleRepository roleService, IUnitOfWork unitOfWork, IMapper mapper)
+        public UpdateUserCommandHandler(IUserRepository userRepository, IRoleRepository roleService, IUnitOfWork unitOfWork, IMapper mapper)
         {
             _userRepository = userRepository;
             _roleService = roleService;
@@ -57,15 +54,15 @@ namespace Application.Features.User.Command
             _mapper = mapper;
         }
 
-        public async Task<ResponseDto> Handle(CreateUserCommand request, CancellationToken cancellationToken)
+        public async Task<ResponseDto> Handle(UpdateUserCommand request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
 
-            var user = await _userRepository.GetByUsernameAsync(request.Username);
+            var user = await _userRepository.GetByIdAsync(request.Id);
 
-            if (user != null)
+            if (user == null)
             {
-                throw new ValidationCustomException("کاربر با این شماره موبایل قبلا ثبت شده است");
+                throw new ValidationCustomException("کاربر با این اطلاعات یافت نشد");
             }
 
             var role = await _roleService.GetByIdAsync(request.RoleId);
@@ -75,14 +72,25 @@ namespace Application.Features.User.Command
                 throw new NotFoundCustomException("نقش انتخاب شده یافت نشد");
             }
 
-            var newUser = _mapper.Map<Domain.Entities.User>(request);
+            var userByUsername = await _userRepository.GetByUsernameAsync(request.Username);
 
-            await _userRepository.AddAsync(newUser);
+            if (userByUsername != null && userByUsername.Id != user.Id)
+            {
+                throw new ValidationCustomException("کاربر با این شماره موبایل قبلا ثبت شده است");
+            }
+
+            user.Username = request.Username;
+            user.FirstName = request.FirstName;
+            user.LastName = request.LastName;
+            user.IsActive = request.IsActive;
+            user.RoleId = request.RoleId;
+
+            _userRepository.Update(user);
 
             await _unitOfWork.SaveChangesAsync();
 
-            res.Message = "کاربر جدید با موفقیت ثبت شد";
-            res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
+            res.Message = "اطلاعات کاربر با موفقیت بروزرسانی شد";
+            res.ResponseMessageType = ResponseMessageTypeEnum.Warning.ToString();
             return res;
         }
     }

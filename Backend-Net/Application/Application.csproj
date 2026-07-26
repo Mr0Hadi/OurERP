@@ -11,6 +11,7 @@
     <PackageReference Include="FluentValidation" Version="12.1.1" />
     <PackageReference Include="MediatR" Version="14.2.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.10" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.10" />
   </ItemGroup>
 
@@ -20,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Features\User\Query\" />
+    <Folder Include="Features\Supplier\" />
   </ItemGroup>
 
 </Project>

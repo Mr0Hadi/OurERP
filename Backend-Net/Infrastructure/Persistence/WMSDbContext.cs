@@ -21,6 +21,7 @@ namespace Infrastructure.Persistence
         public DbSet<Product> Products => Set<Product>();
         public DbSet<Department> Departments => Set<Department>();
         public DbSet<Customer> Customers => Set<Customer>();
+        public DbSet<Role> Roles => Set<Role>();
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
@@ -78,6 +79,11 @@ namespace Infrastructure.Persistence
                 .HasOne(x => x.ProductCategory)
                 .WithMany(x => x.Products)
                 .HasForeignKey(u => u.ProductCategoryId);
+
+            modelBuilder.Entity<User>()
+                .HasOne(u => u.Role)
+                .WithMany(r => r.Users)
+                .HasForeignKey(u => u.RoleId);
         }
     }
 }

@@ -11,11 +11,11 @@ namespace Application.Common.Contracts.Context
         DbSet<Supplier> Suppliers { get; }
         DbSet <Sale> Sales { get; }
         DbSet<Purchase> Purchases { get; }
-        DbSet <ProductProductCategory> ProductProductCategory { get; }
         DbSet<ProductCategory> ProductCategories { get; }
         DbSet <Product> Products { get; }
         DbSet<Department> Departments { get; }
         DbSet<Customer> Customers { get; }
+        DbSet<Role> Roles { get; }
 
         DbSet<T> Set<T>() where T : class;
 

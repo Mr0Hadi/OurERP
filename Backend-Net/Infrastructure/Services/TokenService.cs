@@ -26,8 +26,9 @@ namespace Infrastructure.Services
             var claimsList = new List<Claim>
             {
                 new Claim("Id", userInfo.Id.ToString()),
-                new Claim("FullName", userInfo.FullName),
-                new Claim("Mobile", userInfo.Mobile.ToString()),
+                new Claim("FirstName", userInfo.FirstName),
+                new Claim("LastName", userInfo.LastName),
+                new Claim("Username", userInfo.Username),
             };
 
             if (userInfo.RoleId == (int)UserRolesEnum.Admin)
@@ -103,8 +104,8 @@ namespace Infrastructure.Services
                     var idClaim = principal.Claims.FirstOrDefault(c => c.Type == "Id");
                     string id = idClaim?.Value;
 
-                    var mobileClaim = principal.Claims.FirstOrDefault(c => c.Type == "Mobile");
-                    string mobile = mobileClaim?.Value;
+                    var usernameClaim = principal.Claims.FirstOrDefault(c => c.Type == "Username");
+                    string username = usernameClaim?.Value;
 
                     bool isExpired = jwtToken.ValidTo < DateTime.UtcNow;
 
@@ -112,7 +113,7 @@ namespace Infrastructure.Services
                     {
                         Id = id,
                         IsExpired = isExpired,
-                        Mobile = mobile
+                        Username = username
                     };
                 }
 
