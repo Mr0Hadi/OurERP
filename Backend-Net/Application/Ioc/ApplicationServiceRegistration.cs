@@ -1,5 +1,6 @@
 ﻿using Application.Common.Behaviors;
 using Application.Common.Mapping;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,10 +13,10 @@ namespace Application.Ioc
 
             services.AddMediatR(cfg =>
             {
-                //cfg.RegisterServicesFromAssembly(typeof(OldSendSmsCommand).Assembly);
+                cfg.RegisterServicesFromAssembly(typeof(ApplicationServiceRegistration).Assembly);
             });
 
-            //services.AddValidatorsFromAssembly(typeof(OldSendSmsCommandValidator).Assembly);
+            services.AddValidatorsFromAssembly(typeof(ApplicationServiceRegistration).Assembly);
 
             services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 

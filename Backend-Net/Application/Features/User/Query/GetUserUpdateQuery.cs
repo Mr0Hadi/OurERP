@@ -1,9 +1,9 @@
-﻿using Application.Common.Contracts.Repository;
+﻿using Application.Common.Contracts.Repositories;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.User.Dtos;
 using AutoMapper;
-using CommonUtilities.Exceptions;
+using Common.Exceptions;
 using FluentValidation;
 using MediatR;
 

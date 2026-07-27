@@ -28,6 +28,8 @@ namespace Infrastructure.Ioc
             services.AddScoped<IWMSDbContext>(provider => provider.GetRequiredService<WMSDbContext>());
 
             //repositories
+            services.AddScoped<ISupplierRepository, SupplierRepository>();
+            services.AddScoped<ICustomerRepository, CustomerRepository>();
 
 			//UnitOfWork
 			services.AddScoped<IUnitOfWork, UnitOfWork.UnitOfWork>();

@@ -1,11 +1,11 @@
-﻿using Application.Common.Contracts.Repository;
+﻿using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.UserContextService;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.User.Dtos;
 using AutoMapper;
-using CommonUtilities.Exceptions;
-using CommonUtilities.Extensions;
+using Common.Exceptions;
+using Common.Extensions;
 using MediatR;
 
 namespace Application.Features.User.Queries

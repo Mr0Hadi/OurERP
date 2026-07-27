@@ -1,8 +1,8 @@
-﻿using Domain.Enums;
+using Domain.Enums;
 
-namespace Domain.Entities
+namespace Application.Features.Customer.Dtos
 {
-    public class Customer
+    public class CustomerDto
     {
         public int Id { get; set; }
         public string FirstName { get; set; }
@@ -16,9 +16,7 @@ namespace Domain.Entities
         public UInt64? Balance { get; set; }
         public BalanceTypeEnum BalanceType { get; set; }
         public string? ImageUrl { get; set; }
-        public decimal? longitude { get; set; }
-        public decimal? latitude { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
+        public decimal? Longitude { get; set; }
+        public decimal? Latitude { get; set; }
     }
 }

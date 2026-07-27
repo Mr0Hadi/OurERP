@@ -2,7 +2,8 @@
 {
     public enum BalanceTypeEnum
     {
-        Debit,
-        Credit
+        Creditor,
+        Debtor,
+        Balanced
     }
 }
