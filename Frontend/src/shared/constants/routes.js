@@ -25,6 +25,7 @@ export const ROUTES = {
   PURCHASES_NEW: "/purchases/new",
   PURCHASES_INVOICES: "/purchases/invoices",
   PURCHASES_INVOICE_DETAIL: "/purchases/invoices/:id",
+  PURCHASES_RETURNS_DETAIL: "/purchases/returns/:id",
   PURCHASES_RETURNS_NEW: "/purchases/returns/new",
   PURCHASES_RETURNS_LIST: "/purchases/returns",
 

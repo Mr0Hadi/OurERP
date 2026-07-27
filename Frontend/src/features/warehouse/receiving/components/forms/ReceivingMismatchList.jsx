@@ -62,7 +62,7 @@ export default function ReceivingMismatchList({ purchaseId, items }) {
           size="sm"
           className="w-full gap-2 mt-2"
           onClick={() =>
-            navigate(ROUTES.PURCHASE_RETURNS_NEW, {
+            navigate(ROUTES.PURCHASES_RETURNS_NEW, {
               state: { purchaseId, items: shortItems },
             })
           }

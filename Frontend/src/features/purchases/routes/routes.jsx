@@ -8,6 +8,7 @@ import {
   PurchaseInvoiceDetailPage,
   PurchaseReturnNewPage,
   PurchaseReturnsListPage,
+  PurchaseReturnDetailPage,
 } from "./index";
 
 export const purchasesRoutes = [
@@ -38,5 +39,9 @@ export const purchasesRoutes = [
   {
     path: ROUTES.PURCHASES_RETURNS_LIST,
     element: <PurchaseReturnsListPage />,
+  },
+  {
+    path: ROUTES.PURCHASES_RETURNS_DETAIL,
+    element: <PurchaseReturnDetailPage />,
   },
 ];
