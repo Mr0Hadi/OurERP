@@ -3,11 +3,13 @@ using Application.Features.Supplier.Queries;
 using Application.Common.Dtos;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace WMS.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class SupplierController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -18,18 +20,26 @@ namespace WMS.Controllers
 
         [HttpGet("GetSupplierList")]
         public async Task<ActionResult<ResponseDto>> GetSupplierList([FromQuery] GetSupplierList request)
-            => await _mediator.Send(request);
+        { 
+            return await _mediator.Send(request); 
+        }
 
         [HttpGet("GetSupplierDetail")]
         public async Task<ActionResult<ResponseDto>> GetSupplierDetail([FromQuery] GetSupplierDetail request)
-            => await _mediator.Send(request);
+        {
+            return await _mediator.Send(request);
+        }
 
         [HttpPost("CreateSupplier")]
         public async Task<ActionResult<ResponseDto>> CreateSupplier([FromBody] CreateSupplierCommand request)
-            => await _mediator.Send(request);
+        {
+            return await _mediator.Send(request);
+        }
 
         [HttpPut("UpdateSupplier")]
         public async Task<ActionResult<ResponseDto>> UpdateSupplier([FromBody] UpdateSupplierCommand request)
-            => await _mediator.Send(request);
+        {
+            return await _mediator.Send(request);
+        }
     }
 }

@@ -19,8 +19,6 @@ namespace Application.Features.Account.Command
     {
         public string Username { get; set; }
         public string Password { get; set; }
-        public string CaptchaKeyHash { get; set; }
-        public string CaptchaCode { get; set; }
     }
 
 
@@ -35,13 +33,6 @@ namespace Application.Features.Account.Command
 
             RuleFor(x => x.Password)
                 .Must(Validation.IsNotNullOrEmpty).WithMessage(Validation.RequiredMessage("رمز عبور"));
-
-
-            RuleFor(x => x.CaptchaCode)
-                .Must(Validation.IsNotNullOrEmpty).WithMessage(Validation.RequiredMessage("کد امنیتی"));
-
-            RuleFor(x => x.CaptchaKeyHash)
-                .Must(Validation.IsNotNullOrEmpty).WithMessage(Validation.RequiredMessage("هش کد امنیتی"));
         }
     }
 
@@ -68,14 +59,6 @@ namespace Application.Features.Account.Command
         public async Task<ResponseDto> Handle(LoginUserCommand request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
-
-            if (_environmentService.IsDevelopment() == false)
-            {
-                if (request.CaptchaCode.ToLower().ToHashSHA256() != request.CaptchaKeyHash)
-                {
-                    throw new ValidationCustomException("کد امنیتی وارد شده صحیح نمی باشد");
-                }
-            }
 
             var user = await _userRepository.GetByUsernameAsync(request.Username);
 

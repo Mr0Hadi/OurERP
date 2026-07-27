@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Captcha;
+//using Application.Common.Contracts.Captcha;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Token;
@@ -8,7 +8,6 @@ using Infrastructure.Repositories;
 using Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using SixLaborsCaptcha.Mvc.Core;
 
 namespace Infrastructure.Ioc
 {
@@ -30,15 +29,17 @@ namespace Infrastructure.Ioc
             //repositories
             services.AddScoped<ISupplierRepository, SupplierRepository>();
             services.AddScoped<ICustomerRepository, CustomerRepository>();
+            services.AddScoped<IRoleRepository, RoleRepository>();
+            services.AddScoped<IUserRepository, UserRepository>();
 
 			//UnitOfWork
 			services.AddScoped<IUnitOfWork, UnitOfWork.UnitOfWork>();
 
-            services.AddScoped<ICaptchaService, CaptchaService>();
+            //services.AddScoped<ICaptchaService, CaptchaService>();
 
             services.AddScoped<ITokenService, TokenService>();
 
-            services.AddSixLabCaptcha(x => x.DrawLines = 4);
+            //services.AddSixLabCaptcha(x => x.DrawLines = 4);
 
             return services;
         }

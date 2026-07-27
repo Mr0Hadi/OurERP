@@ -3,7 +3,7 @@ using Application.Ioc;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi;
+using Microsoft.AspNetCore.OpenApi;
 using Scalar.AspNetCore;
 using System.Text;
 using WMS.Ioc;
@@ -28,24 +28,24 @@ namespace WMS
             {
                 options.AddDocumentTransformer(async (document, context, cancellationToken) =>
                 {
-                    document.Components ??= new OpenApiComponents();
-                    document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
-                    document.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
+                    document.Components ??= new Microsoft.OpenApi.OpenApiComponents();
+                    document.Components.SecuritySchemes ??= new Dictionary<string, Microsoft.OpenApi.IOpenApiSecurityScheme>();
+                    document.Components.SecuritySchemes["Bearer"] = new Microsoft.OpenApi.OpenApiSecurityScheme
                     {
-                        Type = SecuritySchemeType.Http,
+                        Type = Microsoft.OpenApi.SecuritySchemeType.Http,
                         Name = "Authorization",
                         Scheme = "Bearer",
                         BearerFormat = "JWT",
-                        In = ParameterLocation.Header,
+                        In = Microsoft.OpenApi.ParameterLocation.Header,
                         Description = "Please insert JWT token into field"
                     };
 
                     foreach (var operation in document.Paths.Values.SelectMany(p => p.Operations))
                     {
-                        operation.Value.Security ??= new List<OpenApiSecurityRequirement>();
-                        operation.Value.Security.Add(new OpenApiSecurityRequirement
+                        operation.Value.Security ??= new List<Microsoft.OpenApi.OpenApiSecurityRequirement>();
+                        operation.Value.Security.Add(new Microsoft.OpenApi.OpenApiSecurityRequirement
                         {
-                            [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+                            [new Microsoft.OpenApi.OpenApiSecuritySchemeReference("Bearer", document)] = []
                         });
                     }
                 });
