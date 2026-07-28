@@ -183,3 +183,69 @@ export async function updatePurchasePayment(id, paymentData) {
 
   return allPurchases[index];
 }
+
+/**
+ * وقتی یک قلم کسری از طریق مرجوعی «تسویه» می‌شود — بازگشت وجه، پذیرش
+ * زیان یا اعتبار خرید بعدی — دیگر نباید در گزارش‌های کسری ظاهر شود.
+ * این تابع settledQty را تجمعی افزایش می‌دهد، در صورت رفع کامل کسری
+ * گزارش باز آن قلم (lastIssueType/Note/Date) را می‌بندد، و در صورت
+ * وجود مبلغ بازگشتی، از جمع کل خرید کم می‌کند.
+ *
+ * نوع «جایگزینی» (replacement) از این تابع رد نمی‌شود؛ چون تکمیل
+ * واقعی‌اش باید از مسیر دریافت انبار (receivedQty) اتفاق بیفتد.
+ */
+export async function settlePurchaseItems(
+  purchaseId,
+  settledItems,
+  { refundAmount = 0 } = {},
+) {
+  await delay(400);
+
+  const index = allPurchases.findIndex(
+    (p) => Number(p.id) === Number(purchaseId),
+  );
+  if (index === -1) {
+    throw new Error("خرید یافت نشد");
+  }
+
+  const purchase = allPurchases[index];
+
+  const updatedItems = purchase.items.map((item) => {
+    const settle = settledItems.find((s) => s.productId === item.productId);
+    if (!settle) return item;
+
+    const newSettledQty = (item.settledQty || 0) + (settle.qty || 0);
+    const openShortage =
+      item.qty - (item.receivedQty || 0) - newSettledQty;
+
+    return {
+      ...item,
+      settledQty: newSettledQty,
+      ...(openShortage <= 0
+        ? { lastIssueType: null, lastIssueNote: null, lastIssueDate: null }
+        : {}),
+    };
+  });
+
+  const fullyClosed = updatedItems.every(
+    (item) => (item.receivedQty || 0) + (item.settledQty || 0) >= item.qty,
+  );
+  const anyReceived = updatedItems.some((item) => (item.receivedQty || 0) > 0);
+
+  let newStatus = purchase.status;
+  if (fullyClosed) {
+    newStatus = PURCHASE_STATUSES.RECEIVED;
+  } else if (anyReceived) {
+    newStatus = PURCHASE_STATUSES.PARTIALLY_RECEIVED;
+  }
+
+  allPurchases[index] = {
+    ...purchase,
+    items: updatedItems,
+    totalAmount: Math.max(0, purchase.totalAmount - refundAmount),
+    status: newStatus,
+    updatedAt: new Date().toISOString(),
+  };
+
+  return allPurchases[index];
+}

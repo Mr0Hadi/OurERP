@@ -1,7 +1,7 @@
 // src/features/purchases/pages/PurchaseReturnDetailPage.jsx
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { AlertCircle, Trash2 } from "lucide-react";
+import { AlertCircle, Trash2, ClipboardList } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -24,10 +24,8 @@ import {
 } from "../services/returns/mutations";
 import PurchaseReturnResolutionSection from "../components/forms/PurchaseReturnResolutionSection";
 import PurchaseReturnDetailLoading from "../components/forms/PurchaseReturnDetailLoading";
-import {
-  PURCHASE_RETURN_REASON_LABELS,
-  PURCHASE_RETURN_STATUSES,
-} from "../services/returns/mockData";
+import { PURCHASE_RETURN_REASON_LABELS } from "../services/returns/mockData";
+import { canDeletePurchaseReturn } from "../domain/purchaseReturnRules";
 import { gregorianToPersian } from "@/shared/utils/dateUtils";
 import { ROUTES } from "@/shared/constants/routes";
 
@@ -41,7 +39,7 @@ function PurchaseReturnDetailForm({ purchaseReturn }) {
 
   const handleUpdateStatus = (payload) => statusMutation.mutate(payload);
   const handleDelete = () => deleteMutation.mutate(purchaseReturn.id);
-  const canDelete = purchaseReturn.status === PURCHASE_RETURN_STATUSES.PENDING;
+  const canDelete = canDeletePurchaseReturn(purchaseReturn);
 
   return (
     <div className="container max-w-6xl mx-auto px-4 space-y-4 animate-in fade-in zoom-in-95 duration-300">
@@ -64,7 +62,7 @@ function PurchaseReturnDetailForm({ purchaseReturn }) {
                 <p className="font-medium text-card-foreground">{purchaseReturn.purchaseInvoiceNumber}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">دلیل اصلی</p>
+                <p className="text-xs text-muted-foreground">دلیل غالب</p>
                 <p className="font-medium text-card-foreground">
                   {PURCHASE_RETURN_REASON_LABELS[purchaseReturn.reason] ?? purchaseReturn.reason}
                 </p>
@@ -80,7 +78,13 @@ function PurchaseReturnDetailForm({ purchaseReturn }) {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-semibold text-card-foreground">اقلام مرجوعی</CardTitle>
+              <CardTitle className="text-base font-semibold text-card-foreground flex items-center gap-2">
+                <ClipboardList className="h-4 w-4 text-muted-foreground" />
+                اقلام مرجوعی
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                این اطلاعات (تعداد، نوع مشکل و یادداشت) از گزارش انبار در لحظه‌ی ثبت این مرجوعی گرفته شده است.
+              </p>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -90,7 +94,7 @@ function PurchaseReturnDetailForm({ purchaseReturn }) {
                       <th className="text-right px-3 py-2.5 font-medium">کالا</th>
                       <th className="text-center px-2 py-2.5 font-medium">تعداد</th>
                       <th className="text-center px-2 py-2.5 font-medium">قیمت واحد</th>
-                      <th className="text-center px-2 py-2.5 font-medium">دلیل</th>
+                      <th className="text-center px-2 py-2.5 font-medium">نوع مشکل</th>
                       <th className="text-center px-2 py-2.5 font-medium">جمع</th>
                     </tr>
                   </thead>
@@ -145,7 +149,7 @@ function PurchaseReturnDetailForm({ purchaseReturn }) {
             بازگشت به لیست مرجوعی‌ها
           </Button>
 
-          {canDelete && (
+          {canDelete ? (
             <Button
               type="button"
               variant="destructive"
@@ -156,6 +160,11 @@ function PurchaseReturnDetailForm({ purchaseReturn }) {
               <Trash2 className="h-4 w-4" />
               حذف مرجوعی
             </Button>
+          ) : (
+            <p className="text-xs text-muted-foreground text-center px-2">
+              این مرجوعی وارد مرحله‌ی هماهنگی با تامین‌کننده شده و دیگر قابل حذف نیست؛
+              در صورت نیاز می‌توانید آن را «لغو» کنید.
+            </p>
           )}
         </div>
       </div>
@@ -166,6 +175,7 @@ function PurchaseReturnDetailForm({ purchaseReturn }) {
             <AlertDialogTitle>حذف مرجوعی</AlertDialogTitle>
             <AlertDialogDescription>
               آیا از حذف این مرجوعی اطمینان دارید؟ این عملیات قابل بازگشت نیست.
+              پس از حذف، این کسری دوباره در تب «گزارش‌های کسری قابل پیگیری» ظاهر می‌شود.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

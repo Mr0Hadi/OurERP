@@ -55,3 +55,11 @@ export async function removePurchase(id) {
 export async function deletePurchase(id) {
   return updatePurchaseStatus(id, PURCHASE_STATUSES.CANCELLED);
 }
+
+export async function settlePurchaseItems(purchaseId, settledItems, options = {}) {
+  const { data } = await axiosInstance.post(`/purchases/${purchaseId}/settle`, {
+    settledItems,
+    ...options,
+  });
+  return data;
+}

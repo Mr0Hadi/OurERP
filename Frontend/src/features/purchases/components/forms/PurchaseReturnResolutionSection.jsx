@@ -82,7 +82,6 @@ export default function PurchaseReturnResolutionSection({
   const StatusIcon = config.icon;
   const isFinal = [
     PURCHASE_RETURN_STATUSES.RESOLVED,
-    PURCHASE_RETURN_STATUSES.REJECTED,
     PURCHASE_RETURN_STATUSES.CANCELLED,
   ].includes(status);
 
@@ -229,6 +228,36 @@ export default function PurchaseReturnResolutionSection({
             </>
           )}
 
+          {status === PURCHASE_RETURN_STATUSES.REJECTED && (
+            <>
+              <Button
+                type="button"
+                className="w-full gap-2"
+                disabled={isBusy}
+                onClick={() => commit({ status: PURCHASE_RETURN_STATUSES.COORDINATING })}
+              >
+                <MessageCircle className="h-4 w-4" />
+                بازگشایی و تلاش مجدد هماهنگی
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2 text-muted-foreground"
+                disabled={isBusy}
+                onClick={() =>
+                  commit({
+                    status: PURCHASE_RETURN_STATUSES.RESOLVED,
+                    resolutionType: RESOLUTION_TYPES.WRITE_OFF,
+                    refundAmount: 0,
+                  })
+                }
+              >
+                <Ban className="h-4 w-4" />
+                پذیرش زیان و بستن نهایی
+              </Button>
+            </>
+          )}
+
           {status === PURCHASE_RETURN_STATUSES.AWAITING_REFUND && (
             <Button
               type="button"
@@ -256,6 +285,25 @@ export default function PurchaseReturnResolutionSection({
                 پس از رسیدن محموله جایگزین، تحویل آن توسط انباردار از صفحه «دریافت کالا» بررسی می‌شود.
               </p>
             </>
+          )}
+
+          {isFinal && status === PURCHASE_RETURN_STATUSES.RESOLVED && (
+            <div className="text-sm space-y-1 border-t border-border pt-3">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">نحوه تسویه</span>
+                <span className="font-medium text-card-foreground">
+                  {RESOLUTION_TYPE_LABELS[formData.resolutionType] ?? "-"}
+                </span>
+              </div>
+              {formData.resolutionType === RESOLUTION_TYPES.REFUND && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">مبلغ بازگشتی</span>
+                  <span className="font-medium text-card-foreground">
+                    {(formData.refundAmount || 0).toLocaleString("fa-IR")} ریال
+                  </span>
+                </div>
+              )}
+            </div>
           )}
 
           {isFinal && (

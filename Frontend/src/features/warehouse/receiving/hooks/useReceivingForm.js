@@ -14,18 +14,18 @@ export function useReceivingForm(purchaseData) {
   } = store;
   const isFirstMount = useRef(true);
 
-useEffect(() => {
-  if (purchaseData?.id && (isFirstMount.current || initializedForId !== purchaseData.id)) {
-    initializeFromPurchase(purchaseData);
-    isFirstMount.current = false;
-  } else if (
-    purchaseData?.status &&
-    initializedForId === purchaseData.id &&
-    formData.status !== purchaseData.status
-  ) {
-    setFormData({ status: purchaseData.status });
-  }
-}, [purchaseData?.id, purchaseData?.status, initializeFromPurchase, initializedForId, formData.status, setFormData]);
+  useEffect(() => {
+    if (purchaseData?.id && (isFirstMount.current || initializedForId !== purchaseData.id)) {
+      initializeFromPurchase(purchaseData);
+      isFirstMount.current = false;
+    } else if (
+      purchaseData?.status &&
+      initializedForId === purchaseData.id &&
+      formData.status !== purchaseData.status
+    ) {
+      setFormData({ status: purchaseData.status });
+    }
+  }, [purchaseData?.id, purchaseData?.status, initializeFromPurchase, initializedForId, formData.status, setFormData]);
 
   const handleItemChange = (productId, field, value) => {
     const newItems = formData.items.map((item) =>
@@ -36,9 +36,6 @@ useEffect(() => {
 
   const isAllComplete = formData.items.every(
     (item) => item.receivedQty >= item.expectedQty
-  );
-  const isPartially = formData.items.some(
-    (item) => item.receivedQty > 0 && item.receivedQty < item.expectedQty
   );
 
   // برای ثبت هر دو نوع دریافت، مشخص کردن هویت تحویل‌دهنده الزامی است:
@@ -53,13 +50,12 @@ useEffect(() => {
     );
     const anyReceived = formData.items.some((item) => item.receivedQty > 0);
 
-    let status = formData.status; // existing status
+    let status = formData.status;
     if (allComplete) {
       status = 'received';
     } else if (anyReceived) {
       status = 'partially_received';
     }
-    // if nothing received, maybe keep status as shipped? but we can let user decide
 
     return {
       id: formData.purchaseId,
@@ -70,6 +66,10 @@ useEffect(() => {
         productName: item.productName,
         expectedQty: item.expectedQty,
         receivedQty: item.receivedQty,
+        // نوع مشکل فقط برای قلم‌های دارای کسری معنا دارد؛ برای قلم‌های
+        // کامل هم می‌فرستیم ولی سمت سرور فقط وقتی کسری واقعی وجود
+        // داشته باشد از آن استفاده می‌کند.
+        issueType: item.issueType || 'shortage',
         note: item.note || '',
       })),
       receivingNote: formData.receivingNote,
@@ -85,7 +85,6 @@ useEffect(() => {
     setFormData,
     handleItemChange,
     isAllComplete,
-    isPartially,
     isTransporterValid,
     buildPayload,
     resetForm,

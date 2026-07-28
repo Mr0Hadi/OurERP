@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AlertCircle, CheckCircle, AlertTriangle, X } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -34,8 +35,6 @@ function ReceivingDetailForm({ purchase }) {
   const navigate = useNavigate();
   const receivingMutation = useConfirmReceivingMutation();
 
-  // آیتم‌های خرید فقط productId/productName/productCode/qty/unitPrice/discount دارند؛
-  // تصویر و برند کالا وجود ندارد و باید از لیست محصولات انبار گرفته شود.
   const { data: productsData } = useProductsQuery(
     ALL_FILTERS,
     PAGINATION,
@@ -52,14 +51,12 @@ function ReceivingDetailForm({ purchase }) {
     setFormData,
     handleItemChange,
     isAllComplete,
-    isPartially,
     isTransporterValid,
     buildPayload,
     resetForm,
   } = useReceivingForm(purchase);
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [actionType, setActionType] = useState(null); // 'complete' | 'partial'
   const [showTransporterError, setShowTransporterError] = useState(false);
 
   useEffect(() => {
@@ -69,7 +66,6 @@ function ReceivingDetailForm({ purchase }) {
 
   const items = formData.items || [];
 
-  // فقط برای نمایش: تصویر و برند از روی productId به هر ردیف اضافه می‌شود
   const displayItems = useMemo(
     () =>
       items.map((item) => {
@@ -83,30 +79,37 @@ function ReceivingDetailForm({ purchase }) {
     [items, productMap],
   );
 
-  const hasShortage = items.some(
-    (item) => (item.receivedQty || 0) < item.expectedQty,
-  );
   const isBusy = receivingMutation.isPending;
 
-  const handleAction = (type) => {
+  // یک اکشن واحد: ثبت دریافت. وضعیت «کامل» یا «ناقص» به‌طور خودکار
+  // از روی تعداد‌های واردشده تعیین می‌شود، نه از روی انتخاب کاربر.
+  const handleConfirmClick = () => {
     if (!isTransporterValid) {
       setShowTransporterError(true);
       return;
     }
     setShowTransporterError(false);
-    setActionType(type);
     setShowConfirmDialog(true);
   };
 
+  // انباردار فقط دریافت و کسری را ثبت می‌کند و به لیست دریافت‌ها برمی‌گردد.
+  // ثبت مرجوعی به تامین‌کننده کاملاً کار واحد خرید است و از اینجا شروع نمی‌شود.
   const handleSubmit = () => {
     const payload = buildPayload();
+    const hasShortage = displayItems.some(
+      (item) => (item.receivedQty || 0) < item.expectedQty,
+    );
+
     receivingMutation.mutate(
       { purchaseId: payload.id, receivingData: payload },
       {
         onSuccess: () => {
-          resetForm();
           setShowConfirmDialog(false);
-          // useConfirmReceivingMutation خودش پس از موفقیت به لیست دریافت‌ها هدایت می‌کند
+          resetForm();
+          if (hasShortage) {
+            toast.success("گزارش کسری این دریافت برای واحد خرید ارسال شد");
+          }
+          navigate(ROUTES.WAREHOUSE_RECEIVING);
         },
       },
     );
@@ -121,10 +124,7 @@ function ReceivingDetailForm({ purchase }) {
             items={displayItems}
             onItemChange={handleItemChange}
           />
-          <ReceivingMismatchList
-            purchaseId={purchase.id}
-            items={displayItems}
-          />
+          <ReceivingMismatchList items={displayItems} />
           <ReceivingTransporterSection
             formData={formData}
             onFormChange={(patch) => {
@@ -148,12 +148,20 @@ function ReceivingDetailForm({ purchase }) {
 
           <div className="flex gap-2">
             <Button
-              className="flex-1 gap-2"
+              className={`flex-1 gap-2 ${
+                !isAllComplete && items.length > 0
+                  ? "bg-amber-600 hover:bg-amber-700 text-white"
+                  : ""
+              }`}
               disabled={isBusy || items.length === 0}
-              onClick={() => handleAction("complete")}
+              onClick={handleConfirmClick}
             >
-              <CheckCircle className="h-4 w-4" />
-              تأیید دریافت کامل
+              {isAllComplete ? (
+                <CheckCircle className="h-4 w-4" />
+              ) : (
+                <AlertTriangle className="h-4 w-4" />
+              )}
+              {isAllComplete ? "تأیید دریافت کامل" : "ثبت دریافت (با کسری)"}
             </Button>
             <Button
               type="button"
@@ -167,30 +175,26 @@ function ReceivingDetailForm({ purchase }) {
             </Button>
           </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full gap-2 border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/40"
-            onClick={() => handleAction("partial")}
-            disabled={isBusy || !hasShortage}
-          >
-            <AlertTriangle className="h-4 w-4" />
-            ثبت تحویل ناقص
-          </Button>
+          {items.every((i) => !(i.receivedQty > 0)) && (
+            <p className="text-xs text-muted-foreground text-center px-2">
+              این خرید هنوز هیچ دریافتی ندارد. اگر اساساً نباید دریافت شود،
+              از صفحه‌ی جزئیات خرید می‌توانید آن را لغو کنید.
+            </p>
+          )}
         </div>
       </div>
 
-      {/* دیالوگ تأیید نهایی */}
+      {/* دیالوگ تأیید نهایی ثبت دریافت — تنها دیالوگ باقی‌مانده در این صفحه */}
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {actionType === "complete" ? "ثبت دریافت کامل" : "ثبت تحویل ناقص"}
+              {isAllComplete ? "ثبت دریافت کامل" : "ثبت دریافت با کسری"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {actionType === "complete"
+              {isAllComplete
                 ? "آیا مطمئن هستید که همه اقلام به‌طور کامل دریافت شده‌اند؟"
-                : "با تأیید، وضعیت خرید به «تحویل ناقص» تغییر می‌کند و کمبودهای ثبت‌شده در فهرست مغایرت‌ها ذخیره می‌شود."}
+                : "با تأیید، وضعیت خرید به «تحویل ناقص» تغییر می‌کند و گزارش کسری (نوع مشکل و یادداشت هر قلم) برای واحد خرید ارسال می‌شود تا با تامین‌کننده هماهنگ کند."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -198,11 +202,7 @@ function ReceivingDetailForm({ purchase }) {
             <AlertDialogAction
               disabled={isBusy}
               onClick={handleSubmit}
-              className={
-                actionType === "partial"
-                  ? "bg-amber-600 hover:bg-amber-700"
-                  : ""
-              }
+              className={!isAllComplete ? "bg-amber-600 hover:bg-amber-700" : ""}
             >
               {isBusy ? "در حال ثبت..." : "تأیید"}
             </AlertDialogAction>

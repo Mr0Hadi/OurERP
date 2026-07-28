@@ -4,8 +4,8 @@ import { useEffect, useMemo } from "react";
 import {
   fetchPurchaseReturns,
   fetchPurchaseReturnById,
-  fetchReturnablePurchases,
-  fetchReturnablePurchaseById,
+  fetchShortageReports,
+  fetchShortageReportByPurchaseId,
 } from "./api-mockData";
 import { purchaseReturnKeys } from "./queryKeys";
 
@@ -54,19 +54,19 @@ export function usePurchaseReturnQuery(id) {
   });
 }
 
-export function useReturnablePurchasesQuery(params = {}) {
+export function useShortageReportsQuery(params = {}) {
   return useQuery({
-    queryKey: [...purchaseReturnKeys.returnable(), params],
-    queryFn: () => fetchReturnablePurchases(params),
+    queryKey: [...purchaseReturnKeys.reports(), params],
+    queryFn: () => fetchShortageReports(params),
     staleTime: 1000 * 60 * 2,
   });
 }
 
-export function useReturnablePurchaseQuery(id) {
+export function useShortageReportByPurchaseIdQuery(purchaseId) {
   return useQuery({
-    queryKey: purchaseReturnKeys.returnableDetail(id),
-    queryFn: () => fetchReturnablePurchaseById(id),
-    enabled: !!id,
+    queryKey: purchaseReturnKeys.reportDetail(purchaseId),
+    queryFn: () => fetchShortageReportByPurchaseId(purchaseId),
+    enabled: !!purchaseId,
     staleTime: 1000 * 60 * 2,
   });
 }

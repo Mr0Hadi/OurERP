@@ -78,7 +78,6 @@ export const useUpdatePurchaseStatusMutation = () => {
         updatedPurchase
       );
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
-      // لیست receiving رو هم invalidate کن
       queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       queryClient.invalidateQueries({
         queryKey: receivingKeys.detail(updatedPurchase.id),

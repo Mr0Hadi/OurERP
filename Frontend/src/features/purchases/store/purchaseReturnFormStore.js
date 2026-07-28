@@ -16,6 +16,13 @@ const EMPTY_RETURN = {
   supplierResponseNote: "",
 };
 
+function mostFrequent(values) {
+  if (!values.length) return "shortage";
+  const counts = new Map();
+  values.forEach((v) => counts.set(v, (counts.get(v) || 0) + 1));
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+}
+
 export const usePurchaseReturnFormStore = create((set, get) => ({
   formData: { ...EMPTY_RETURN },
   initializedForId: null,
@@ -25,59 +32,38 @@ export const usePurchaseReturnFormStore = create((set, get) => ({
   setItems: (items) =>
     set((state) => ({ formData: { ...state.formData, items } })),
 
-  // مقداردهی اولیه‌ی فرم ثبت مرجوعی جدید بر اساس یک خرید مشخص
-  initializeForPurchase: (purchase, prefillProductQty = {}) => {
-    const { initializedForId } = get();
-    const version = `purchase:${purchase.id}`;
-    if (initializedForId === version) return;
+  /**
+   * فرم ثبت مرجوعی را دقیقاً از روی گزارش کسریِ ثبت‌شده توسط انباردار
+   * پر می‌کند. هر قلم به‌طور پیش‌فرض با کل کسری باز و همان نوع مشکلی
+   * که انبار گزارش داده، از پیش انتخاب شده است.
+   */
+  initializeForReport: (report) => {
+    const version = `report:${report.purchaseId}`;
+    if (get().initializedForId === version) return;
 
-    const items = purchase.items
-      .filter(
-        (item) =>
-          item.maxReturnableQty > 0 || prefillProductQty[item.productId],
-      )
-      .map((item) => {
-        const prefillQty = prefillProductQty[item.productId] || 0;
-        const qty = Math.max(0, Math.min(prefillQty, item.maxReturnableQty));
-        return {
-          productId: item.productId,
-          productCode: item.productCode,
-          productName: item.productName,
-          unit: item.unit,
-          orderedQty: item.orderedQty,
-          alreadyReturnedQty: item.alreadyReturnedQty,
-          maxReturnableQty: item.maxReturnableQty,
-          unitPrice: item.unitPrice,
-          qty,
-          reason: "shortage",
-          note: "",
-        };
-      });
+    const items = report.items.map((item) => ({
+      productId: item.productId,
+      productCode: item.productCode,
+      productName: item.productName,
+      unit: item.unit,
+      unitPrice: item.unitPrice,
+      orderedQty: item.orderedQty,
+      maxReturnableQty: item.openShortageQty,
+      qty: item.openShortageQty,
+      reason: item.issueType,
+      note: item.issueNote || "",
+    }));
 
     set({
       initializedForId: version,
       formData: {
         ...EMPTY_RETURN,
-        purchaseId: purchase.id,
-        purchaseInvoiceNumber: purchase.invoiceNumber,
-        supplierId: purchase.supplierId,
-        supplierName: purchase.supplierName,
+        purchaseId: report.purchaseId,
+        purchaseInvoiceNumber: report.invoiceNumber,
+        supplierId: report.supplierId,
+        supplierName: report.supplierName,
+        reason: mostFrequent(report.items.map((i) => i.issueType)),
         items,
-      },
-    });
-  },
-
-  initializeFromReturn: (returnData) => {
-    const { initializedForId } = get();
-    const version = `edit:${returnData.id}:${returnData.updatedAt}`;
-    if (initializedForId === version) return;
-
-    set({
-      initializedForId: version,
-      formData: {
-        ...EMPTY_RETURN,
-        ...returnData,
-        refundAmount: returnData.refundAmount?.toString() || "",
       },
     });
   },

@@ -7,11 +7,6 @@ import {
 } from "./mockData";
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// این صفحه فقط برای خریدهایی معنا دارد که چیزی برای «دریافت در انبار» دارند:
-// - shipped: تامین‌کننده ارسال کرده ولی هنوز چیزی ثبت نشده
-// - partially_received: قبلاً بخشی دریافت شده و هنوز کسری باقی مانده
-// خریدهای pending هنوز ارسال نشده‌اند، received قبلاً بسته شده،
-// و cancelled اصلاً به انبار نمی‌رسد؛ بنابراین از لیست دریافت حذف می‌شوند.
 export const RECEIVING_ELIGIBLE_STATUSES = [
   PURCHASE_STATUSES.SHIPPED,
   PURCHASE_STATUSES.PARTIALLY_RECEIVED,
@@ -39,12 +34,10 @@ export async function fetchReceivingPurchases(params = {}) {
     sortOrder = "desc",
   } = params;
 
-  // پایه: فقط خریدهایی که واقعاً منتظر دریافت یا دارای کسری هستند
   let filtered = allPurchases.filter((p) =>
     RECEIVING_ELIGIBLE_STATUSES.includes(p.status),
   );
 
-  // فیلتر بر اساس جستجو
   if (search) {
     const searchLower = search.toLowerCase();
     filtered = filtered.filter(
@@ -55,23 +48,18 @@ export async function fetchReceivingPurchases(params = {}) {
     );
   }
 
-  // فیلتر بر اساس تأمین‌کننده
   if (Array.isArray(supplierIds) && supplierIds.length > 0) {
     filtered = filtered.filter((p) => supplierIds.includes(p.supplierId));
   }
 
-  // فیلتر بر اساس وضعیت (فقط بین دو وضعیت مجاز بالا معنا دارد)
   if (status) {
     filtered = filtered.filter((p) => p.status === status);
   }
 
-  // فیلتر بر اساس نوع پرداخت
   if (paymentType) {
     filtered = filtered.filter((p) => p.paymentType === paymentType);
   }
 
-  // فیلتر بر اساس تاریخ فاکتور (invoiceDate)
-  // جایگزین این بلوک شود:
   if (fromDate) {
     filtered = filtered.filter(
       (p) =>
@@ -84,7 +72,6 @@ export async function fetchReceivingPurchases(params = {}) {
     );
   }
 
-  // مرتب‌سازی
   filtered.sort((a, b) => {
     let aVal = a[sortBy];
     let bVal = b[sortBy];
@@ -146,7 +133,6 @@ export async function updateReceivingStatus(id, receivedItems) {
     throw new Error("خرید یافت نشد");
   }
 
-  // محاسبه وضعیت جدید
   const originalPurchase = allPurchases[index];
   const allItemsReceived = receivedItems.every(
     (item) => item.receivedQty >= item.orderedQty,
@@ -165,7 +151,6 @@ export async function updateReceivingStatus(id, receivedItems) {
     newStatus = originalPurchase.status;
   }
 
-  // به‌روزرسانی خرید
   allPurchases[index] = {
     ...originalPurchase,
     status: newStatus,
@@ -183,20 +168,65 @@ export async function updateReceivingStatus(id, receivedItems) {
   return allPurchases[index];
 }
 
+/**
+ * ثبت نهایی یک «دور دریافت» در انبار.
+ *
+ * دو نکته‌ی مهم:
+ * ۱. مقدار دریافتی هر قلم تجمعی است (item.receivedQty += این‌دور) تا
+ *    دورهای بعدی دریافت (مثلاً بعد از ارسال جایگزین توسط تامین‌کننده)
+ *    فقط باقیمانده‌ی واقعی را «مورد انتظار» بدانند.
+ * ۲. اگر قلمی در این دور همچنان کسری داشته باشد، «نوع مشکل» و
+ *    «یادداشت» انباردار روی خودِ آیتم خرید به‌عنوان lastIssueType/
+ *    lastIssueNote/lastIssueDate ذخیره می‌شود. این دقیقاً همان
+ *    اطلاعاتی است که بعداً در «گزارش‌های کسری» به واحد خرید نمایش
+ *    داده می‌شود. اگر قلمی در این دور کامل شود، این فیلدها پاک می‌شوند.
+ */
 export async function confirmReceiving(purchaseId, receivingData) {
   await delay(500);
 
   const index = allPurchases.findIndex((p) => p.id === purchaseId);
   if (index === -1) throw new Error("خرید یافت نشد");
 
-  // در mockData پاسخی از سرور شبیه‌سازی می‌کنیم
+  const purchase = allPurchases[index];
+
+  const updatedItems = purchase.items.map((item) => {
+    const receivedItem = receivingData.receivedItems.find(
+      (ri) => ri.productId === item.productId,
+    );
+    if (!receivedItem) return item;
+
+    const prevReceived = item.receivedQty || 0;
+    const newReceivedQty = prevReceived + (receivedItem.receivedQty || 0);
+    const shortageThisRound =
+      (receivedItem.expectedQty || 0) - (receivedItem.receivedQty || 0);
+
+    if (shortageThisRound > 0) {
+      return {
+        ...item,
+        receivedQty: newReceivedQty,
+        lastIssueType: receivedItem.issueType || "shortage",
+        lastIssueNote: receivedItem.note || "",
+        lastIssueDate:
+          receivingData.receivedDate || new Date().toISOString().slice(0, 10),
+      };
+    }
+
+    return {
+      ...item,
+      receivedQty: newReceivedQty,
+      lastIssueType: null,
+      lastIssueNote: null,
+      lastIssueDate: null,
+    };
+  });
+
   allPurchases[index] = {
-    ...allPurchases[index],
+    ...purchase,
+    items: updatedItems,
     status: receivingData.status,
     receivedItems: receivingData.receivedItems,
     receivingNote: receivingData.receivingNote,
     receivedDate: receivingData.receivedDate,
-    // اطلاعات تحویل‌دهنده/وسیله نقلیه برای پیگیری و رهگیری بعدی ثبت می‌شود
     transporterName: receivingData.transporterName || "",
     transporterNationalId: receivingData.transporterNationalId || "",
     vehiclePlate: receivingData.vehiclePlate || "",

@@ -1,53 +1,39 @@
 // src/features/purchases/pages/PurchaseReturnNewPage.jsx
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { Save, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { Save, X, AlertCircle } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { usePurchaseReturnFormStore } from "../store/purchaseReturnFormStore";
 import { usePurchaseReturnForm } from "../hooks/usePurchaseReturnForm";
-import {
-  useReturnablePurchasesQuery,
-  useReturnablePurchaseQuery,
-} from "../services/returns/queries";
+import { useShortageReportByPurchaseIdQuery } from "../services/returns/queries";
 import { useCreatePurchaseReturnMutation } from "../services/returns/mutations";
 
-import PurchaseReturnPurchaseSection from "../components/forms/PurchaseReturnPurchaseSection";
+import PurchaseReturnWarehouseReportSection from "../components/forms/PurchaseReturnWarehouseReportSection";
 import PurchaseReturnItemsSection from "../components/forms/PurchaseReturnItemsSection";
 import PurchaseReturnInfoSection from "../components/forms/PurchaseReturnInfoSection";
+import PurchaseReturnDetailLoading from "../components/forms/PurchaseReturnDetailLoading";
+import { ROUTES } from "@/shared/constants/routes";
 
 export default function PurchaseReturnNewPage() {
   const navigate = useNavigate();
-  const location = useLocation();
+  const { purchaseId } = useParams();
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  const { formData, resetForm, initializeForPurchase } = usePurchaseReturnFormStore();
+  const { formData, resetForm, initializeForReport } = usePurchaseReturnFormStore();
   const { setFormData, items, handleItemChange, computedTotal, buildPayload } =
     usePurchaseReturnForm();
 
   const [showErrors, setShowErrors] = useState(false);
-  // اگر از لیست کسری‌های دریافت آمده باشیم، purchaseId از location.state می‌آید
-  const [selectedPurchaseId, setSelectedPurchaseId] = useState(
-    location.state?.purchaseId || null,
-  );
 
-  // نگاشت productId -> مقدار کسری، برای پیش‌پرکردن خودکار مقدار مرجوعی
-  const prefillMap = useMemo(() => {
-    const stateItems = location.state?.items || [];
-    const map = {};
-    stateItems.forEach((it) => {
-      const shortage = (it.expectedQty || 0) - (it.receivedQty || 0);
-      if (shortage > 0) map[it.productId] = shortage;
-    });
-    return map;
-  }, [location.state]);
-
-  const { data: returnablePurchases = [], isLoading: purchasesLoading } =
-    useReturnablePurchasesQuery();
-  const { data: selectedPurchaseDetail, isLoading: detailLoading } =
-    useReturnablePurchaseQuery(selectedPurchaseId);
+  const {
+    data: report,
+    isLoading,
+    isError,
+    error,
+  } = useShortageReportByPurchaseIdQuery(purchaseId);
 
   useEffect(() => {
     resetForm();
@@ -56,18 +42,18 @@ export default function PurchaseReturnNewPage() {
   }, []);
 
   useEffect(() => {
-    if (selectedPurchaseDetail) {
-      initializeForPurchase(selectedPurchaseDetail, prefillMap);
+    if (report) {
+      initializeForReport(report);
     }
-  }, [selectedPurchaseDetail, prefillMap, initializeForPurchase]);
+  }, [report, initializeForReport]);
 
   useEffect(() => {
     setHeader({
-      title: "ثبت مرجوعی خرید",
+      title: "ثبت مرجوعی به تامین‌کننده",
       showBack: true,
       onBack: () => {
         resetForm();
-        navigate(-1);
+        navigate(ROUTES.PURCHASES_RETURNS_LIST);
       },
     });
     return () => clearHeader();
@@ -79,23 +65,33 @@ export default function PurchaseReturnNewPage() {
 
   const onSubmit = (e) => {
     e.preventDefault();
-
-    if (!formData.purchaseId) {
-      setShowErrors(true);
-      return;
-    }
     if (selectedCount === 0) {
       setShowErrors(true);
       return;
     }
-
     createMutation.mutate(buildPayload());
   };
 
   const handleCancel = () => {
     resetForm();
-    navigate(-1);
+    navigate(ROUTES.PURCHASES_RETURNS_LIST);
   };
+
+  if (isLoading) return <PurchaseReturnDetailLoading />;
+
+  if (isError || !report) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <p className="text-lg text-muted-foreground">
+          {error?.message || "این خرید دیگر کسری قابل پیگیری ندارد."}
+        </p>
+        <Button variant="outline" onClick={() => navigate(ROUTES.PURCHASES_RETURNS_LIST)}>
+          بازگشت به گزارش‌های کسری
+        </Button>
+      </div>
+    );
+  }
 
   const isBusy = createMutation.isPending;
 
@@ -104,29 +100,11 @@ export default function PurchaseReturnNewPage() {
       <form onSubmit={onSubmit}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 space-y-4">
-            <PurchaseReturnPurchaseSection
-              purchases={returnablePurchases}
-              isLoading={purchasesLoading || detailLoading}
-              selectedPurchase={
-                formData.purchaseId
-                  ? {
-                      invoiceNumber: formData.purchaseInvoiceNumber,
-                      supplierName: formData.supplierName,
-                      invoiceDate: selectedPurchaseDetail?.invoiceDate,
-                    }
-                  : null
-              }
-              onSelect={(id) => setSelectedPurchaseId(id)}
-              onClear={() => {
-                setSelectedPurchaseId(null);
-                resetForm();
-              }}
-              error={showErrors && !formData.purchaseId ? "انتخاب خرید الزامی است" : null}
-            />
+            <PurchaseReturnWarehouseReportSection report={report} />
 
             <PurchaseReturnItemsSection items={items} onItemChange={handleItemChange} />
 
-            {showErrors && formData.purchaseId && selectedCount === 0 && (
+            {showErrors && selectedCount === 0 && (
               <p className="text-xs text-destructive px-1">
                 حداقل باید یک کالا با تعداد بیشتر از صفر برای مرجوعی انتخاب شود
               </p>
@@ -146,7 +124,7 @@ export default function PurchaseReturnNewPage() {
             <div className="flex gap-2">
               <Button type="submit" className="flex-1 gap-2" disabled={isBusy}>
                 <Save className="h-4 w-4" />
-                {isBusy ? "در حال ثبت..." : "ثبت مرجوعی"}
+                {isBusy ? "در حال ثبت..." : "ثبت مرجوعی و شروع هماهنگی"}
               </Button>
               <Button type="button" variant="outline" className="gap-2" onClick={handleCancel} disabled={isBusy}>
                 <X className="h-4 w-4" />

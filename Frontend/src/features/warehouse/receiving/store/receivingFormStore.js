@@ -8,12 +8,9 @@ const EMPTY_RECEIVING = {
   invoiceNumber: '',
   invoiceDate: '',
   status: '',
-  items: [],           // هر آیتم: productId, productName, productCode, expectedQty, receivedQty, note
-                       // توجه: آیتم‌های خرید تصویر/برند را ذخیره نمی‌کنند؛ این دو در صفحه‌ی
-                       // دریافت با استفاده از productId از لیست محصولات enrich می‌شوند.
+  items: [],           // هر آیتم: productId, productName, productCode, expectedQty, receivedQty, issueType, note
   receivingNote: '',
   receivedDate: new Date().toISOString().slice(0, 10),
-  // اطلاعات تحویل‌دهنده / وسیله نقلیه
   transporterName: '',
   transporterNationalId: '',
   vehiclePlate: '',
@@ -37,14 +34,27 @@ const useReceivingFormStore = create(
         const { initializedForId } = get();
         if (initializedForId === purchaseData.id) return;
 
-        const receivingItems = (purchaseData.items || []).map((item) => ({
-          productId: item.productId,
-          productName: item.productName,
-          productCode: item.productCode,
-          expectedQty: item.qty,
-          receivedQty: item.qty,          // پیش‌فرض: کامل تحویل گرفته شده
-          note: '',
-        }));
+        // فقط باقیمانده‌ی هر قلم — سفارش منهای آنچه قبلاً دریافت شده
+        // (receivedQty) و منهای آنچه از طریق مرجوعی به‌طور کامل تسویه
+        // شده (settledQty) — به‌عنوان «مورد انتظار» این دور نمایش داده می‌شود.
+        const receivingItems = (purchaseData.items || [])
+          .map((item) => {
+            const receivedSoFar = item.receivedQty || 0;
+            const settledSoFar = item.settledQty || 0;
+            const remaining = Math.max(0, item.qty - receivedSoFar - settledSoFar);
+            return {
+              productId: item.productId,
+              productName: item.productName,
+              productCode: item.productCode,
+              expectedQty: remaining,
+              receivedQty: remaining, // پیش‌فرض: باقیمانده کامل دریافت شده
+              // اگر این قلم پیش‌تر هم مشکلی گزارش شده بود، همان نوع مشکل
+              // به‌عنوان پیش‌فرض این دور هم انتخاب می‌شود
+              issueType: item.lastIssueType || 'shortage',
+              note: '',
+            };
+          })
+          .filter((item) => item.expectedQty > 0);
 
         set({
           initializedForId: purchaseData.id,

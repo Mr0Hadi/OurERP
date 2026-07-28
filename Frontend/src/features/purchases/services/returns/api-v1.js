@@ -1,12 +1,12 @@
 // src/features/purchases/services/returns/api-v1.js
 import axiosInstance from "@/shared/services/api/axios";
 
-export async function fetchReturnablePurchases(params = {}) {
-  const { data } = await axiosInstance.get("/purchases/returnable", { params });
+export async function fetchShortageReports(params = {}) {
+  const { data } = await axiosInstance.get("/purchases/shortage-reports", { params });
   return data;
 }
-export async function fetchReturnablePurchaseById(id) {
-  const { data } = await axiosInstance.get(`/purchases/returnable/${id}`);
+export async function fetchShortageReportByPurchaseId(purchaseId) {
+  const { data } = await axiosInstance.get(`/purchases/shortage-reports/${purchaseId}`);
   return data;
 }
 export async function fetchPurchaseReturns(params = {}) {

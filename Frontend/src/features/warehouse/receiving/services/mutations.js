@@ -1,6 +1,5 @@
 // src/features/warehouse/receiving/services/mutations.js
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import {
   updateReceivingStatus,
@@ -53,7 +52,6 @@ export const useUpdateReceivingStatusMutation = () => {
         receivingKeys.detail(updatedPurchase.id),
         updatedPurchase
       );
-      // اینجا هم باید detail فیچر purchases رو invalidate کنیم
       queryClient.invalidateQueries({
         queryKey: purchaseKeys.detail(updatedPurchase.id),
       });
@@ -78,29 +76,28 @@ export const useUpdateReceivingStatusMutation = () => {
   });
 };
 
-
+// توجه: این هوک دیگر navigate انجام نمی‌دهد. چون تصمیم مقصد ناوبری
+// (بازگشت مستقیم به لیست دریافت‌ها یا پیشنهاد ثبت مرجوعی) به وجود
+// یا عدم وجود کسری در همین دریافت بستگی دارد، این تصمیم داخل خودِ
+// صفحه‌ی ReceivingDetailPage گرفته می‌شود، نه در این هوک عمومی.
 export const useConfirmReceivingMutation = () => {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
 
   return useMutation({
     mutationFn: ({ purchaseId, receivingData }) =>
       confirmReceiving(purchaseId, receivingData),
     onSuccess: (updatedPurchase) => {
-      // فیچر receiving — کلید اصلی که لیست ازش استفاده می‌کنه
       queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       queryClient.invalidateQueries({
         queryKey: receivingKeys.detail(updatedPurchase.id),
       });
 
-      // فیچر purchases — اگه جای دیگه‌ای هم همین رکورد رو نشون میده
       queryClient.invalidateQueries({
         queryKey: purchaseKeys.detail(updatedPurchase.id),
       });
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
 
       toast.success("دریافت کالا با موفقیت ثبت شد");
-      navigate("/warehouse/receiving");
     },
     onError: (error) => {
       toast.error(error?.message || "خطا در ثبت دریافت");

@@ -1,14 +1,16 @@
 // src/features/purchases/services/returns/api-mockData.js
 import {
   allPurchaseReturns,
-  RETURN_ELIGIBLE_PURCHASE_STATUSES,
   PURCHASE_RETURN_STATUSES,
+  RESOLUTION_TYPES,
 } from "./mockData";
 import { allPurchases } from "@/features/purchases/services/mockData";
+import { settlePurchaseItems } from "@/features/purchases/services/api-mockData";
+import { PURCHASE_ISSUE_TYPES } from "@/shared/constants/purchaseIssueTypes";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// مرجوعی‌های لغوشده/ردشده دیگر «مصرف‌کننده‌ی سهمیه‌ی قابل مرجوع» محسوب نمی‌شوند
+// مرجوعی‌های لغوشده/ردشده دیگر «مصرف‌کننده‌ی سهمیه‌ی کسری» محسوب نمی‌شوند
 const ACTIVE_RETURN_STATUSES = new Set([
   PURCHASE_RETURN_STATUSES.PENDING,
   PURCHASE_RETURN_STATUSES.COORDINATING,
@@ -34,72 +36,105 @@ function getReturnedQtyMap(purchaseId, excludeReturnId = null) {
   return map;
 }
 
-export async function fetchReturnablePurchases(params = {}) {
-  await delay(400);
-  const { search = "", supplierIds = [] } = params;
-
-  let filtered = allPurchases.filter((p) =>
-    RETURN_ELIGIBLE_PURCHASE_STATUSES.includes(p.status),
-  );
-
-  if (search) {
-    const s = search.toLowerCase();
-    filtered = filtered.filter(
-      (p) =>
-        p.invoiceNumber.toLowerCase().includes(s) ||
-        p.supplierName.toLowerCase().includes(s),
-    );
-  }
-  if (Array.isArray(supplierIds) && supplierIds.length) {
-    filtered = filtered.filter((p) => supplierIds.includes(p.supplierId));
-  }
-
-  return filtered
-    .slice()
-    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
-    .map((p) => ({
-      id: p.id,
-      invoiceNumber: p.invoiceNumber,
-      supplierId: p.supplierId,
-      supplierName: p.supplierName,
-      invoiceDate: p.invoiceDate,
-      status: p.status,
-      totalAmount: p.totalAmount,
-      itemsCount: p.items.length,
-    }));
-}
-
-export async function fetchReturnablePurchaseById(id) {
-  await delay(300);
-  const purchase = allPurchases.find((p) => Number(p.id) === Number(id));
-  if (!purchase) throw new Error("خرید یافت نشد");
-
+/**
+ * ساخت «گزارش کسری» یک خرید مستقیماً از روی داده‌های واقعیِ ثبت‌شده
+ * توسط انباردار (item.lastIssueType / lastIssueNote / lastIssueDate) —
+ * نه از یک فرم جداگانه. همین تابع منبع واحد حقیقت هم برای تب
+ * «گزارش‌های کسری» و هم برای فرم ثبت مرجوعی است.
+ */
+function buildShortageReport(purchase) {
   const returnedMap = getReturnedQtyMap(purchase.id);
 
-  const items = purchase.items.map((item) => {
-    const alreadyReturned = returnedMap.get(item.productId) || 0;
-    const maxReturnableQty = Math.max(0, item.qty - alreadyReturned);
-    return {
-      productId: item.productId,
-      productCode: item.productCode,
-      productName: item.productName,
-      unit: item.unit,
-      orderedQty: item.qty,
-      unitPrice: item.unitPrice,
-      alreadyReturnedQty: alreadyReturned,
-      maxReturnableQty,
-    };
-  });
+  const items = purchase.items
+    .map((item) => {
+      const returned = returnedMap.get(item.productId) || 0;
+      const settled = item.settledQty || 0;
+      const received = item.receivedQty || 0;
+      const openShortageQty = Math.max(
+        0,
+        item.qty - received - settled - returned,
+      );
+      if (openShortageQty <= 0) return null;
+
+      return {
+        productId: item.productId,
+        productCode: item.productCode,
+        productName: item.productName,
+        unit: item.unit,
+        unitPrice: item.unitPrice,
+        orderedQty: item.qty,
+        receivedQty: received,
+        openShortageQty,
+        issueType: item.lastIssueType || PURCHASE_ISSUE_TYPES.SHORTAGE,
+        issueNote: item.lastIssueNote || "",
+        reportedDate:
+          item.lastIssueDate || purchase.receivedDate || purchase.updatedAt,
+      };
+    })
+    .filter(Boolean);
+
+  const lastReportDate = items.reduce(
+    (latest, i) => (!latest || i.reportedDate > latest ? i.reportedDate : latest),
+    null,
+  );
 
   return {
-    id: purchase.id,
+    purchaseId: purchase.id,
     invoiceNumber: purchase.invoiceNumber,
     invoiceDate: purchase.invoiceDate,
     supplierId: purchase.supplierId,
     supplierName: purchase.supplierName,
-    status: purchase.status,
+    receivedDate: purchase.receivedDate || "",
+    receivingNote: purchase.receivingNote || "",
+    transporterName: purchase.transporterName || "",
     items,
+    totalOpenShortageQty: items.reduce((s, i) => s + i.openShortageQty, 0),
+    lastReportDate,
   };
+}
+
+/**
+ * لیست همه‌ی خریدهایی که هنوز کسری بازِ گزارش‌شده توسط انبار دارند
+ * و مرجوعی فعالی به‌طور کامل آن را پوشش نداده است.
+ */
+export async function fetchShortageReports(params = {}) {
+  await delay(400);
+  const { search = "" } = params;
+
+  let reports = allPurchases
+    .map((purchase) => buildShortageReport(purchase))
+    .filter((r) => r.items.length > 0);
+
+  if (search) {
+    const s = search.toLowerCase();
+    reports = reports.filter(
+      (r) =>
+        r.invoiceNumber.toLowerCase().includes(s) ||
+        r.supplierName.toLowerCase().includes(s),
+    );
+  }
+
+  return reports.sort(
+    (a, b) => new Date(b.lastReportDate || 0) - new Date(a.lastReportDate || 0),
+  );
+}
+
+/**
+ * گزارش کسری یک خریدِ مشخص — دقیقاً همان اطلاعاتی که برای پیش‌پرکردن
+ * فرم ثبت مرجوعی استفاده می‌شود.
+ */
+export async function fetchShortageReportByPurchaseId(purchaseId) {
+  await delay(300);
+  const purchase = allPurchases.find(
+    (p) => Number(p.id) === Number(purchaseId),
+  );
+  if (!purchase) throw new Error("خرید یافت نشد");
+
+  const report = buildShortageReport(purchase);
+  if (report.items.length === 0) {
+    throw new Error("این خرید دیگر کسری قابل پیگیری ندارد");
+  }
+  return report;
 }
 
 export async function fetchPurchaseReturns(params = {}) {
@@ -190,7 +225,7 @@ export async function createPurchaseReturn(payload) {
     id: newId,
     returnNumber,
     status: PURCHASE_RETURN_STATUSES.PENDING,
-    resolutionType: "none",
+    resolutionType: RESOLUTION_TYPES.NONE,
     refundAmount: 0,
     supplierResponseNote: "",
     ...payload,
@@ -207,11 +242,30 @@ export async function updatePurchaseReturn(id, updates) {
   await delay(500);
   const index = allPurchaseReturns.findIndex((r) => Number(r.id) === Number(id));
   if (index === -1) throw new Error("مرجوعی یافت نشد");
-  allPurchaseReturns[index] = {
-    ...allPurchaseReturns[index],
-    ...updates,
-    updatedAt: new Date().toISOString(),
-  };
+
+  const current = allPurchaseReturns[index];
+  const next = { ...current, ...updates, updatedAt: new Date().toISOString() };
+  allPurchaseReturns[index] = next;
+
+  const justSettled =
+    next.status === PURCHASE_RETURN_STATUSES.RESOLVED &&
+    [RESOLUTION_TYPES.REFUND, RESOLUTION_TYPES.WRITE_OFF, RESOLUTION_TYPES.CREDIT].includes(
+      next.resolutionType,
+    ) &&
+    current.status !== PURCHASE_RETURN_STATUSES.RESOLVED;
+
+  if (justSettled) {
+    const refundAmount =
+      next.resolutionType === RESOLUTION_TYPES.REFUND
+        ? Number(next.refundAmount) || 0
+        : 0;
+    await settlePurchaseItems(
+      next.purchaseId,
+      next.items.map((i) => ({ productId: i.productId, qty: i.qty })),
+      { refundAmount },
+    );
+  }
+
   return allPurchaseReturns[index];
 }
 

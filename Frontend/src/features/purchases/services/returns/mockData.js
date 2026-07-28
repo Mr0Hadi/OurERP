@@ -1,24 +1,20 @@
 // src/features/purchases/services/returns/mockData.js
-import { allPurchases } from "@/features/purchases/services/mockData";
+import { allPurchases, PURCHASE_STATUSES } from "@/features/purchases/services/mockData";
+import {
+  PURCHASE_ISSUE_TYPES,
+  PURCHASE_ISSUE_TYPE_LABELS,
+} from "@/shared/constants/purchaseIssueTypes";
 
+// دلایل مرجوعی = همان نوع‌های مشکلی که انبار گزارش می‌دهد + یک مورد
+// اضافه («ارسال اضافه») که مختص مرجوعی داوطلبانه (نه ناشی از کسری) است.
 export const PURCHASE_RETURN_REASONS = {
-  SHORTAGE: "shortage",
-  DEFECTIVE: "defective",
-  WRONG_ITEM: "wrong_item",
-  EXPIRED: "expired",
-  DAMAGED: "damaged",
+  ...PURCHASE_ISSUE_TYPES,
   EXCESS: "excess",
-  OTHER: "other",
 };
 
 export const PURCHASE_RETURN_REASON_LABELS = {
-  [PURCHASE_RETURN_REASONS.SHORTAGE]: "کسری ارسال",
-  [PURCHASE_RETURN_REASONS.DEFECTIVE]: "معیوب / خراب",
-  [PURCHASE_RETURN_REASONS.WRONG_ITEM]: "ارسال کالای اشتباه",
-  [PURCHASE_RETURN_REASONS.EXPIRED]: "تاریخ گذشته",
-  [PURCHASE_RETURN_REASONS.DAMAGED]: "آسیب‌دیده در حمل",
+  ...PURCHASE_ISSUE_TYPE_LABELS,
   [PURCHASE_RETURN_REASONS.EXCESS]: "ارسال اضافه (مرجوع داوطلبانه)",
-  [PURCHASE_RETURN_REASONS.OTHER]: "سایر موارد",
 };
 
 export const PURCHASE_RETURN_STATUSES = {
@@ -46,6 +42,7 @@ export const RESOLUTION_TYPES = {
   REFUND: "refund",
   REPLACEMENT: "replacement",
   CREDIT: "credit",
+  WRITE_OFF: "write_off",
 };
 
 export const RESOLUTION_TYPE_LABELS = {
@@ -53,12 +50,13 @@ export const RESOLUTION_TYPE_LABELS = {
   [RESOLUTION_TYPES.REFUND]: "بازگشت وجه نقدی",
   [RESOLUTION_TYPES.REPLACEMENT]: "ارسال کالای جایگزین",
   [RESOLUTION_TYPES.CREDIT]: "اعتبار در خرید بعدی",
+  [RESOLUTION_TYPES.WRITE_OFF]: "پذیرش زیان (بدون بازگشت وجه)",
 };
 
-// فقط خریدهایی که واقعاً کالایی از آن‌ها به انبار رسیده، قابلیت ثبت مرجوعی دارند
-export const RETURN_ELIGIBLE_PURCHASE_STATUSES = [
-  "partially_received",
-  "received",
+// فقط برای تولید داده‌ی نمونه (mock seed) استفاده می‌شود
+const SEED_ELIGIBLE_STATUSES = [
+  PURCHASE_STATUSES.PARTIALLY_RECEIVED,
+  PURCHASE_STATUSES.RECEIVED,
 ];
 
 function randomInt(min, max) {
@@ -72,8 +70,8 @@ function formatDate(d) {
 }
 
 const REASONS_LIST = Object.values(PURCHASE_RETURN_REASONS);
-const eligiblePurchases = allPurchases.filter((p) =>
-  RETURN_ELIGIBLE_PURCHASE_STATUSES.includes(p.status),
+const seedEligiblePurchases = allPurchases.filter((p) =>
+  SEED_ELIGIBLE_STATUSES.includes(p.status),
 );
 
 function buildReturnFromPurchase(purchase, index) {
@@ -113,6 +111,7 @@ function buildReturnFromPurchase(purchase, index) {
       RESOLUTION_TYPES.REFUND,
       RESOLUTION_TYPES.REPLACEMENT,
       RESOLUTION_TYPES.CREDIT,
+      RESOLUTION_TYPES.WRITE_OFF,
     ]);
     if (resolutionType === RESOLUTION_TYPES.REFUND) refundAmount = totalAmount;
   }
@@ -141,7 +140,7 @@ function buildReturnFromPurchase(purchase, index) {
   };
 }
 
-export const purchaseReturnsMock = eligiblePurchases
+export const purchaseReturnsMock = seedEligiblePurchases
   .slice(0, 12)
   .map((purchase, idx) => buildReturnFromPurchase(purchase, idx));
 

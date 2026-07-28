@@ -7,6 +7,16 @@ import { Button } from '@/shared/components/ui/button';
 import { Badge } from '@/shared/components/ui/badge';
 import { Textarea } from '@/shared/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/components/ui/select';
+import { PURCHASE_ISSUE_TYPE_LABELS } from '@/shared/constants/purchaseIssueTypes';
+
+const ISSUE_TYPE_OPTIONS = Object.entries(PURCHASE_ISSUE_TYPE_LABELS);
 
 // وضعیت هر ردیف بر اساس مقایسه‌ی «مقدار انتظار» و «مقدار دریافتی» محاسبه می‌شود
 function getRowStatus(expectedQty, receivedQty) {
@@ -103,6 +113,27 @@ function ProductThumb({ item }) {
   );
 }
 
+// انتخاب نوع مشکل؛ فقط برای ردیف‌های ناقص/نرسیده معنا دارد
+function IssueTypeSelect({ item, onItemChange, className = '' }) {
+  return (
+    <Select
+      value={item.issueType || 'shortage'}
+      onValueChange={(v) => onItemChange(item.productId, 'issueType', v)}
+    >
+      <SelectTrigger className={`h-8 text-xs ${className}`}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {ISSUE_TYPE_OPTIONS.map(([value, label]) => (
+          <SelectItem key={value} value={value}>
+            {label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 export default function ReceivingItemsSection({ items, onItemChange }) {
   const [search, setSearch] = useState('');
 
@@ -183,6 +214,7 @@ export default function ReceivingItemsSection({ items, onItemChange }) {
               const status = getRowStatus(item.expectedQty, received);
               const config = ROW_STATUS_CONFIG[status];
               const StatusIcon = config.icon;
+              const hasIssue = status !== 'complete';
 
               return (
                 <div
@@ -218,13 +250,23 @@ export default function ReceivingItemsSection({ items, onItemChange }) {
                     <QuantityStepper item={item} onItemChange={onItemChange} size="sm" />
                   </div>
 
-                  <Textarea
-                    placeholder={shortage > 0 ? `کمبود ${shortage.toLocaleString('fa-IR')} عدد` : 'بدون مغایرت'}
-                    value={item.note || ''}
-                    onChange={(e) => onItemChange(item.productId, 'note', e.target.value)}
-                    rows={1}
-                    className="resize-none text-sm h-8"
-                  />
+                  {hasIssue && (
+                    <div className="space-y-2">
+                      <div className="space-y-1">
+                        <label className="text-[11px] text-muted-foreground">
+                          نوع مشکل (کسری {shortage.toLocaleString('fa-IR')} عدد)
+                        </label>
+                        <IssueTypeSelect item={item} onItemChange={onItemChange} className="w-full" />
+                      </div>
+                      <Textarea
+                        placeholder="یادداشت برای واحد خرید..."
+                        value={item.note || ''}
+                        onChange={(e) => onItemChange(item.productId, 'note', e.target.value)}
+                        rows={1}
+                        className="resize-none text-sm h-8"
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -249,14 +291,15 @@ export default function ReceivingItemsSection({ items, onItemChange }) {
         {/* ─── نمای جدولی: از sm به بالا ──────────────────────────────── */}
         {filteredItems.length > 0 && (
           <div className="hidden sm:block border border-border rounded-lg overflow-x-auto">
-            <table className="w-full text-sm min-w-[640px]">
+            <table className="w-full text-sm min-w-[760px]">
               <thead className="bg-muted text-muted-foreground text-xs">
                 <tr>
                   <th className="text-right px-3 py-2.5 font-medium">کالا</th>
                   <th className="text-center px-2 py-2.5 font-medium w-20">مورد انتظار</th>
                   <th className="text-center px-2 py-2.5 font-medium w-32">دریافتی</th>
+                  <th className="text-center px-2 py-2.5 font-medium w-32">نوع مشکل</th>
                   <th className="text-center px-2 py-2.5 font-medium w-24">وضعیت</th>
-                  <th className="text-right px-2 py-2.5 font-medium w-40">توضیح مغایرت</th>
+                  <th className="text-right px-2 py-2.5 font-medium w-40">یادداشت برای خرید</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -266,6 +309,7 @@ export default function ReceivingItemsSection({ items, onItemChange }) {
                   const status = getRowStatus(item.expectedQty, received);
                   const config = ROW_STATUS_CONFIG[status];
                   const StatusIcon = config.icon;
+                  const hasIssue = status !== 'complete';
 
                   return (
                     <tr
@@ -298,6 +342,19 @@ export default function ReceivingItemsSection({ items, onItemChange }) {
 
                       <td className="px-2 py-2">
                         <QuantityStepper item={item} onItemChange={onItemChange} />
+                        {hasIssue && (
+                          <p className="text-[10px] text-muted-foreground text-center mt-0.5">
+                            کسری {shortage.toLocaleString('fa-IR')} عدد
+                          </p>
+                        )}
+                      </td>
+
+                      <td className="px-2 py-2">
+                        {hasIssue ? (
+                          <IssueTypeSelect item={item} onItemChange={onItemChange} className="w-full" />
+                        ) : (
+                          <span className="block text-center text-xs text-muted-foreground">—</span>
+                        )}
                       </td>
 
                       <td className="px-2 py-2">
@@ -310,13 +367,17 @@ export default function ReceivingItemsSection({ items, onItemChange }) {
                       </td>
 
                       <td className="px-2 py-2">
-                        <Textarea
-                          placeholder={shortage > 0 ? `کمبود ${shortage.toLocaleString('fa-IR')} عدد` : 'بدون مغایرت'}
-                          value={item.note || ''}
-                          onChange={(e) => onItemChange(item.productId, 'note', e.target.value)}
-                          rows={1}
-                          className="resize-none text-sm h-8"
-                        />
+                        {hasIssue ? (
+                          <Textarea
+                            placeholder="یادداشت برای واحد خرید..."
+                            value={item.note || ''}
+                            onChange={(e) => onItemChange(item.productId, 'note', e.target.value)}
+                            rows={1}
+                            className="resize-none text-sm h-8"
+                          />
+                        ) : (
+                          <span className="block text-center text-xs text-muted-foreground">—</span>
+                        )}
                       </td>
                     </tr>
                   );
@@ -334,7 +395,7 @@ export default function ReceivingItemsSection({ items, onItemChange }) {
                   <td className="px-2 py-2.5 text-center text-sm font-bold text-card-foreground tabular-nums">
                     {totals.received.toLocaleString('fa-IR')}
                   </td>
-                  <td colSpan={2} className="px-2 py-2.5 text-center text-xs text-muted-foreground">
+                  <td colSpan={3} className="px-2 py-2.5 text-center text-xs text-muted-foreground">
                     {shortageTotal > 0
                       ? `مجموع کمبود: ${shortageTotal.toLocaleString('fa-IR')} عدد`
                       : 'بدون کمبود'}

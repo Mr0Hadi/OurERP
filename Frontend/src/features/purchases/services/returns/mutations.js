@@ -19,13 +19,15 @@ export const useCreatePurchaseReturnMutation = () => {
 
   return useMutation({
     mutationFn: createPurchaseReturn,
-    onSuccess: () => {
+    onSuccess: (created) => {
       toast.success("مرجوعی با موفقیت ثبت شد");
       queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.returnable() });
+      queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.reports() });
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
       usePurchaseReturnFormStore.getState().resetForm();
-      navigate(ROUTES.PURCHASES_RETURNS_LIST);
+      // مستقیم به صفحه‌ی همین مرجوعی برو تا هماهنگی با تامین‌کننده
+      // بلافاصله از همان‌جا قابل شروع باشد
+      navigate(`/purchases/returns/${created.id}`);
     },
     onError: (error) => {
       toast.error(error?.message || "خطا در ثبت مرجوعی");
@@ -65,7 +67,10 @@ export const useUpdatePurchaseReturnStatusMutation = (id) => {
     onSuccess: (updated) => {
       queryClient.setQueryData(purchaseReturnKeys.detail(updated.id), updated);
       queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.returnable() });
+      // لغو یا رد شدن مرجوعی ممکن است دوباره کسری باز کند، پس گزارش‌ها هم رفرش شوند
+      queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.reports() });
+      queryClient.invalidateQueries({ queryKey: purchaseKeys.detail(updated.purchaseId) });
+      queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
       toast.success("وضعیت مرجوعی به‌روزرسانی شد");
     },
     onError: (error, variables, context) => {
@@ -85,7 +90,7 @@ export const useRemovePurchaseReturnMutation = () => {
     onSuccess: (removed) => {
       queryClient.removeQueries({ queryKey: purchaseReturnKeys.detail(removed.id) });
       queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.returnable() });
+      queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.reports() });
       toast.success("مرجوعی حذف شد");
       navigate(ROUTES.PURCHASES_RETURNS_LIST);
     },

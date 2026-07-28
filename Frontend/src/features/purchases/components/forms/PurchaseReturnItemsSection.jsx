@@ -38,7 +38,7 @@ export default function PurchaseReturnItemsSection({ items, onItemChange }) {
         </CardHeader>
         <CardContent>
           <p className="text-center text-sm text-muted-foreground py-6 border border-dashed border-border rounded-lg">
-            ابتدا یک خرید انتخاب کنید
+            گزارشی برای این خرید یافت نشد
           </p>
         </CardContent>
       </Card>
@@ -51,6 +51,9 @@ export default function PurchaseReturnItemsSection({ items, onItemChange }) {
         <CardTitle className="text-base font-semibold text-card-foreground">
           اقلام مرجوعی
         </CardTitle>
+        <p className="text-xs text-muted-foreground">
+          به‌طور پیش‌فرض کل کسری گزارش‌شده انتخاب شده؛ در صورت نیاز تعداد یا دلیل هر قلم را ویرایش کنید.
+        </p>
       </CardHeader>
       <CardContent className="space-y-3">
         {/* نسخه دسکتاپ: جدول */}
@@ -59,11 +62,10 @@ export default function PurchaseReturnItemsSection({ items, onItemChange }) {
             <thead className="bg-muted text-muted-foreground text-xs">
               <tr>
                 <th className="text-right px-3 py-2.5 font-medium">کالا</th>
-                <th className="text-center px-2 py-2.5 font-medium w-20">سفارش‌شده</th>
-                <th className="text-center px-2 py-2.5 font-medium w-24">مرجوعی</th>
-                <th className="text-center px-2 py-2.5 font-medium w-32">دلیل</th>
-                <th className="text-right px-2 py-2.5 font-medium w-40">توضیح</th>
-                <th className="text-center px-2 py-2.5 font-medium w-24">جمع</th>
+                <th className="text-center px-2 py-2.5 font-medium w-24">تعداد مرجوعی</th>
+                <th className="text-center px-2 py-2.5 font-medium w-36">نوع مشکل</th>
+                <th className="text-right px-2 py-2.5 font-medium w-48">توضیح</th>
+                <th className="text-center px-2 py-2.5 font-medium w-28">جمع</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -73,18 +75,7 @@ export default function PurchaseReturnItemsSection({ items, onItemChange }) {
                     <p className="font-medium text-card-foreground text-sm truncate">
                       {item.productName}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {item.productCode}
-                      {item.alreadyReturnedQty > 0 && (
-                        <span className="text-amber-600 dark:text-amber-400">
-                          {" "}
-                          | قبلاً مرجوع شده: {item.alreadyReturnedQty.toLocaleString("fa-IR")}
-                        </span>
-                      )}
-                    </p>
-                  </td>
-                  <td className="px-2 py-2 text-center tabular-nums">
-                    {item.orderedQty.toLocaleString("fa-IR")}
+                    <p className="text-xs text-muted-foreground mt-0.5">{item.productCode}</p>
                   </td>
                   <td className="px-2 py-2">
                     <Input
@@ -96,7 +87,7 @@ export default function PurchaseReturnItemsSection({ items, onItemChange }) {
                       className="h-8 text-center text-xs w-full"
                     />
                     <p className="text-[10px] text-muted-foreground text-center mt-0.5">
-                      حداکثر {item.maxReturnableQty.toLocaleString("fa-IR")}
+                      کسری گزارش‌شده: {item.maxReturnableQty.toLocaleString("fa-IR")}
                     </p>
                   </td>
                   <td className="px-2 py-2">
@@ -135,7 +126,7 @@ export default function PurchaseReturnItemsSection({ items, onItemChange }) {
             </tbody>
             <tfoot className="bg-muted border-t border-border">
               <tr>
-                <td colSpan={4} className="px-3 py-2.5 text-sm font-medium text-muted-foreground text-right">
+                <td colSpan={3} className="px-3 py-2.5 text-sm font-medium text-muted-foreground text-right">
                   جمع کل مرجوعی:
                 </td>
                 <td className="px-2 py-2.5 text-center text-sm font-bold text-card-foreground">
@@ -162,21 +153,13 @@ export default function PurchaseReturnItemsSection({ items, onItemChange }) {
                 <p className="font-medium text-card-foreground text-sm truncate">
                   {item.productName}
                 </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {item.productCode} — سفارش‌شده: {item.orderedQty.toLocaleString("fa-IR")}
-                  {item.alreadyReturnedQty > 0 && (
-                    <span className="text-amber-600 dark:text-amber-400">
-                      {" "}
-                      | قبلاً مرجوع: {item.alreadyReturnedQty.toLocaleString("fa-IR")}
-                    </span>
-                  )}
-                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">{item.productCode}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
                   <label className="text-[11px] text-muted-foreground">
-                    تعداد مرجوعی (حداکثر {item.maxReturnableQty.toLocaleString("fa-IR")})
+                    تعداد (کسری: {item.maxReturnableQty.toLocaleString("fa-IR")})
                   </label>
                   <Input
                     type="number"
@@ -188,7 +171,7 @@ export default function PurchaseReturnItemsSection({ items, onItemChange }) {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] text-muted-foreground">دلیل</label>
+                  <label className="text-[11px] text-muted-foreground">نوع مشکل</label>
                   <Select
                     value={item.reason}
                     onValueChange={(v) => onItemChange(item.productId, "reason", v)}
