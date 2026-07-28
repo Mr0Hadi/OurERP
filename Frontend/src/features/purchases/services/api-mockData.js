@@ -188,10 +188,8 @@ export async function updatePurchasePayment(id, paymentData) {
  * وقتی یک قلم کسری از طریق مرجوعی «تسویه» می‌شود — بازگشت وجه، پذیرش
  * زیان یا اعتبار خرید بعدی — دیگر نباید در گزارش‌های کسری ظاهر شود.
  * این تابع settledQty را تجمعی افزایش می‌دهد، در صورت رفع کامل کسری
- * گزارش باز آن قلم (lastIssueType/Note/Date) را می‌بندد، و در صورت
- * وجود مبلغ بازگشتی، از جمع کل خرید کم می‌کند.
- *
- * نوع «جایگزینی» (replacement) از این تابع رد نمی‌شود؛ چون تکمیل
+ * گزارش باز آن قلم را می‌بندد، و در صورت وجود مبلغ بازگشتی، از جمع کل
+ * خرید کم می‌کند. نوع «جایگزینی» از این تابع رد نمی‌شود؛ چون تکمیل
  * واقعی‌اش باید از مسیر دریافت انبار (receivedQty) اتفاق بیفتد.
  */
 export async function settlePurchaseItems(
@@ -244,6 +242,39 @@ export async function settlePurchaseItems(
     items: updatedItems,
     totalAmount: Math.max(0, purchase.totalAmount - refundAmount),
     status: newStatus,
+    updatedAt: new Date().toISOString(),
+  };
+
+  return allPurchases[index];
+}
+
+/**
+ * وقتی واحد خرید با تامین‌کننده هماهنگ می‌کند که کالای جایگزین/کسری
+ * دوباره ارسال شود (مرجوعی وارد وضعیت «در انتظار ارسال جایگزین»
+ * می‌شود)، خرید باید دوباره در لیست دریافتِ انباردار ظاهر شود تا وقتی
+ * محموله‌ی جدید رسید، بررسی و دریافت شود. این تابع دقیقاً همین کار را
+ * انجام می‌دهد: وضعیت خرید را به «ارسال شده» برمی‌گرداند.
+ */
+export async function reopenPurchaseForShipment(purchaseId) {
+  await delay(300);
+
+  const index = allPurchases.findIndex(
+    (p) => Number(p.id) === Number(purchaseId),
+  );
+  if (index === -1) {
+    throw new Error("خرید یافت نشد");
+  }
+
+  const purchase = allPurchases[index];
+
+  // اگر خرید لغو شده، دیگر نباید بازگشایی شود
+  if (purchase.status === PURCHASE_STATUSES.CANCELLED) {
+    return purchase;
+  }
+
+  allPurchases[index] = {
+    ...purchase,
+    status: PURCHASE_STATUSES.SHIPPED,
     updatedAt: new Date().toISOString(),
   };
 

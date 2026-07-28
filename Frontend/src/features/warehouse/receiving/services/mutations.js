@@ -7,6 +7,7 @@ import {
 } from "./api-mockData";
 import { receivingKeys } from "./queryKeys";
 import { purchaseKeys } from "#/features/purchases/services/queryKeys";
+import { purchaseReturnKeys } from "#/features/purchases/services/returns/queryKeys";
 
 export const useUpdateReceivingStatusMutation = () => {
   const queryClient = useQueryClient();
@@ -76,10 +77,9 @@ export const useUpdateReceivingStatusMutation = () => {
   });
 };
 
-// توجه: این هوک دیگر navigate انجام نمی‌دهد. چون تصمیم مقصد ناوبری
-// (بازگشت مستقیم به لیست دریافت‌ها یا پیشنهاد ثبت مرجوعی) به وجود
-// یا عدم وجود کسری در همین دریافت بستگی دارد، این تصمیم داخل خودِ
-// صفحه‌ی ReceivingDetailPage گرفته می‌شود، نه در این هوک عمومی.
+// این هوک navigate انجام نمی‌دهد؛ انباردار همیشه پس از ثبت دریافت به
+// همان لیست دریافت‌ها برمی‌گردد (چه دریافت کامل بوده چه با کسری) —
+// ثبت مرجوعی به تامین‌کننده کاملاً بر عهده‌ی واحد خرید است.
 export const useConfirmReceivingMutation = () => {
   const queryClient = useQueryClient();
 
@@ -96,6 +96,11 @@ export const useConfirmReceivingMutation = () => {
         queryKey: purchaseKeys.detail(updatedPurchase.id),
       });
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
+
+      // اگر این دریافت باعث بسته‌شدن خودکار یک مرجوعی «در انتظار
+      // ارسال جایگزین» شده باشد، لیست مرجوعی‌ها هم باید رفرش شود
+      queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.reports() });
 
       toast.success("دریافت کالا با موفقیت ثبت شد");
     },

@@ -5,7 +5,10 @@ import {
   RESOLUTION_TYPES,
 } from "./mockData";
 import { allPurchases } from "@/features/purchases/services/mockData";
-import { settlePurchaseItems } from "@/features/purchases/services/api-mockData";
+import {
+  settlePurchaseItems,
+  reopenPurchaseForShipment,
+} from "@/features/purchases/services/api-mockData";
 import { PURCHASE_ISSUE_TYPES } from "@/shared/constants/purchaseIssueTypes";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -39,8 +42,8 @@ function getReturnedQtyMap(purchaseId, excludeReturnId = null) {
 /**
  * ساخت «گزارش کسری» یک خرید مستقیماً از روی داده‌های واقعیِ ثبت‌شده
  * توسط انباردار (item.lastIssueType / lastIssueNote / lastIssueDate) —
- * نه از یک فرم جداگانه. همین تابع منبع واحد حقیقت هم برای تب
- * «گزارش‌های کسری» و هم برای فرم ثبت مرجوعی است.
+ * نه از یک فرم جداگانه. این تابع منبع واحد حقیقت هم برای ردیف‌های
+ * «قابل پیگیری» در لیست مرجوعی‌ها و هم برای فرم ثبت مرجوعی است.
  */
 function buildShortageReport(purchase) {
   const returnedMap = getReturnedQtyMap(purchase.id);
@@ -93,30 +96,59 @@ function buildShortageReport(purchase) {
   };
 }
 
+function mostFrequentReason(values) {
+  if (!values.length) return PURCHASE_ISSUE_TYPES.OTHER;
+  const counts = new Map();
+  values.forEach((v) => counts.set(v, (counts.get(v) || 0) + 1));
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+}
+
 /**
- * لیست همه‌ی خریدهایی که هنوز کسری بازِ گزارش‌شده توسط انبار دارند
- * و مرجوعی فعالی به‌طور کامل آن را پوشش نداده است.
+ * یک گزارش کسری را به شکل یک ردیف «مجازی» شبیه به مرجوعی درمی‌آورد تا
+ * بتوان آن را در همان جدول مرجوعی‌ها، کنار مرجوعی‌های واقعی، نمایش داد.
+ * این ردیف‌ها در دیتابیس ذخیره نمی‌شوند و هر بار از روی وضعیت لحظه‌ای
+ * خرید محاسبه می‌شوند.
  */
-export async function fetchShortageReports(params = {}) {
-  await delay(400);
-  const { search = "" } = params;
+function toVirtualReturnEntry(report) {
+  if (!report || report.items.length === 0) return null;
 
-  let reports = allPurchases
-    .map((purchase) => buildShortageReport(purchase))
-    .filter((r) => r.items.length > 0);
+  const items = report.items.map((i) => ({
+    productId: i.productId,
+    productCode: i.productCode,
+    productName: i.productName,
+    unit: i.unit,
+    qty: i.openShortageQty,
+    unitPrice: i.unitPrice,
+    lineTotal: i.openShortageQty * i.unitPrice,
+    reason: i.issueType,
+    note: i.issueNote,
+  }));
 
-  if (search) {
-    const s = search.toLowerCase();
-    reports = reports.filter(
-      (r) =>
-        r.invoiceNumber.toLowerCase().includes(s) ||
-        r.supplierName.toLowerCase().includes(s),
-    );
-  }
+  return {
+    id: `report-${report.purchaseId}`,
+    isVirtual: true,
+    returnNumber: null,
+    purchaseId: report.purchaseId,
+    purchaseInvoiceNumber: report.invoiceNumber,
+    supplierId: report.supplierId,
+    supplierName: report.supplierName,
+    returnDate: report.lastReportDate,
+    reason: mostFrequentReason(items.map((i) => i.reason)),
+    status: PURCHASE_RETURN_STATUSES.TRACKABLE,
+    resolutionType: RESOLUTION_TYPES.NONE,
+    items,
+    totalAmount: items.reduce((s, i) => s + i.lineTotal, 0),
+    refundAmount: 0,
+    description: "",
+    createdAt: report.lastReportDate || new Date().toISOString(),
+    updatedAt: report.lastReportDate || new Date().toISOString(),
+  };
+}
 
-  return reports.sort(
-    (a, b) => new Date(b.lastReportDate || 0) - new Date(a.lastReportDate || 0),
-  );
+function getAllTrackableEntries() {
+  return allPurchases
+    .map((purchase) => toVirtualReturnEntry(buildShortageReport(purchase)))
+    .filter(Boolean);
 }
 
 /**
@@ -137,6 +169,12 @@ export async function fetchShortageReportByPurchaseId(purchaseId) {
   return report;
 }
 
+/**
+ * لیست ترکیبیِ مرجوعی‌های واقعی + ردیف‌های «قابل پیگیری» (کسری‌های
+ * گزارش‌شده توسط انبار که هنوز مرجوعی رسمی ندارند). هر دو دسته با هم
+ * فیلتر، جست‌وجو، مرتب‌سازی و صفحه‌بندی می‌شوند تا کاربر یک تجربه‌ی
+ * واحد داشته باشد.
+ */
 export async function fetchPurchaseReturns(params = {}) {
   await delay(500);
   const {
@@ -152,56 +190,60 @@ export async function fetchPurchaseReturns(params = {}) {
     sortOrder = "desc",
   } = params;
 
-  let filtered = [...allPurchaseReturns];
+  let combined = [...allPurchaseReturns, ...getAllTrackableEntries()];
 
   if (search) {
     const s = search.toLowerCase();
-    filtered = filtered.filter(
+    combined = combined.filter(
       (r) =>
-        r.returnNumber.toLowerCase().includes(s) ||
+        (r.returnNumber && r.returnNumber.toLowerCase().includes(s)) ||
         r.purchaseInvoiceNumber.toLowerCase().includes(s) ||
         r.supplierName.toLowerCase().includes(s),
     );
   }
   if (Array.isArray(supplierIds) && supplierIds.length) {
-    filtered = filtered.filter((r) =>
+    combined = combined.filter((r) =>
       supplierIds.map(String).includes(String(r.supplierId)),
     );
   }
-  if (status) filtered = filtered.filter((r) => r.status === status);
-  if (reason) filtered = filtered.filter((r) => r.reason === reason);
+  if (status) combined = combined.filter((r) => r.status === status);
+  if (reason) combined = combined.filter((r) => r.reason === reason);
   if (fromDate) {
-    filtered = filtered.filter(
+    combined = combined.filter(
       (r) => r.returnDate && r.returnDate.slice(0, 10) >= fromDate.slice(0, 10),
     );
   }
   if (toDate) {
-    filtered = filtered.filter(
+    combined = combined.filter(
       (r) => r.returnDate && r.returnDate.slice(0, 10) <= toDate.slice(0, 10),
     );
   }
 
-  filtered.sort((a, b) => {
+  combined.sort((a, b) => {
     let aVal = a[sortBy];
     let bVal = b[sortBy];
+
     if (["createdAt", "updatedAt", "returnDate"].includes(sortBy)) {
-      aVal = new Date(aVal).getTime();
-      bVal = new Date(bVal).getTime();
+      aVal = aVal ? new Date(aVal).getTime() : 0;
+      bVal = bVal ? new Date(bVal).getTime() : 0;
     } else if (sortBy === "totalAmount") {
-      aVal = Number(aVal);
-      bVal = Number(bVal);
-    } else if (typeof aVal === "string") {
+      aVal = Number(aVal) || 0;
+      bVal = Number(bVal) || 0;
+    } else if (typeof aVal === "string" || typeof bVal === "string") {
+      aVal = aVal || "";
+      bVal = bVal || "";
       return sortOrder === "asc"
         ? aVal.localeCompare(bVal, "fa")
         : bVal.localeCompare(aVal, "fa");
     }
+
     return sortOrder === "asc" ? (aVal > bVal ? 1 : -1) : aVal < bVal ? 1 : -1;
   });
 
-  const total = filtered.length;
+  const total = combined.length;
   const totalPages = Math.ceil(total / limit) || 1;
   const start = (page - 1) * limit;
-  const items = filtered.slice(start, start + limit);
+  const items = combined.slice(start, start + limit);
 
   return { items, total, page, totalPages };
 }
@@ -238,6 +280,14 @@ export async function createPurchaseReturn(payload) {
   return newReturn;
 }
 
+/**
+ * به‌روزرسانی مرجوعی + اعمال اثرات جانبی روی خرید مبدا:
+ * - گذار به «تسویه‌شده» با بازگشت‌وجه/پذیرش‌زیان/اعتبار → قلم‌های
+ *   مربوطه در خرید به‌طور دائم بسته می‌شوند (settlePurchaseItems).
+ * - گذار به «در انتظار ارسال جایگزین» → خرید دوباره به وضعیت «ارسال
+ *   شده» برمی‌گردد تا در لیست دریافتِ انباردار ظاهر شود
+ *   (reopenPurchaseForShipment).
+ */
 export async function updatePurchaseReturn(id, updates) {
   await delay(500);
   const index = allPurchaseReturns.findIndex((r) => Number(r.id) === Number(id));
@@ -266,6 +316,14 @@ export async function updatePurchaseReturn(id, updates) {
     );
   }
 
+  const justScheduledReplacement =
+    next.status === PURCHASE_RETURN_STATUSES.AWAITING_REPLACEMENT &&
+    current.status !== PURCHASE_RETURN_STATUSES.AWAITING_REPLACEMENT;
+
+  if (justScheduledReplacement) {
+    await reopenPurchaseForShipment(next.purchaseId);
+  }
+
   return allPurchaseReturns[index];
 }
 
@@ -279,4 +337,39 @@ export async function removePurchaseReturn(id) {
   if (index === -1) throw new Error("مرجوعی یافت نشد");
   const removed = allPurchaseReturns.splice(index, 1)[0];
   return removed;
+}
+
+/**
+ * پس از هر دور دریافت در انبار فراخوانی می‌شود. اگر مرجوعی‌ای با
+ * وضعیت «در انتظار ارسال جایگزین» برای این خرید وجود داشته باشد و
+ * تمام اقلام آن با این دریافت به‌طور کامل پوشش داده شده باشند
+ * (کسری بازی نمانده باشد)، آن مرجوعی به‌طور خودکار به «تسویه‌شده»
+ * تغییر می‌کند — بدون هیچ اقدام دستی از سمت واحد خرید.
+ */
+export function autoResolveReplacementReturns(purchaseId, updatedPurchaseItems) {
+  const itemMap = new Map(updatedPurchaseItems.map((i) => [i.productId, i]));
+
+  allPurchaseReturns.forEach((ret, idx) => {
+    if (ret.purchaseId !== purchaseId) return;
+    if (ret.status !== PURCHASE_RETURN_STATUSES.AWAITING_REPLACEMENT) return;
+
+    const allDelivered = ret.items.every((retItem) => {
+      const purchaseItem = itemMap.get(retItem.productId);
+      if (!purchaseItem) return false;
+      const openShortage =
+        purchaseItem.qty -
+        (purchaseItem.receivedQty || 0) -
+        (purchaseItem.settledQty || 0);
+      return openShortage <= 0;
+    });
+
+    if (allDelivered) {
+      allPurchaseReturns[idx] = {
+        ...ret,
+        status: PURCHASE_RETURN_STATUSES.RESOLVED,
+        resolutionType: RESOLUTION_TYPES.REPLACEMENT,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+  });
 }

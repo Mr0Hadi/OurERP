@@ -18,6 +18,12 @@ export const PURCHASE_RETURN_REASON_LABELS = {
 };
 
 export const PURCHASE_RETURN_STATUSES = {
+  // «قابل پیگیری» یک وضعیت واقعی نیست که در دیتابیس ذخیره شود؛ فقط
+  // برای نمایش کسری‌هایی است که انبار گزارش داده ولی هنوز هیچ مرجوعی
+  // رسمی برایشان ثبت نشده. این ردیف‌ها به‌صورت «مجازی» در لیست
+  // مرجوعی‌ها نمایش داده می‌شوند تا واحد خرید بتواند مستقیماً از همان‌جا
+  // اقدام کند.
+  TRACKABLE: "trackable",
   PENDING: "pending",
   COORDINATING: "coordinating",
   AWAITING_REFUND: "awaiting_refund",
@@ -28,6 +34,7 @@ export const PURCHASE_RETURN_STATUSES = {
 };
 
 export const PURCHASE_RETURN_STATUS_LABELS = {
+  [PURCHASE_RETURN_STATUSES.TRACKABLE]: "قابل پیگیری",
   [PURCHASE_RETURN_STATUSES.PENDING]: "در انتظار بررسی",
   [PURCHASE_RETURN_STATUSES.COORDINATING]: "در حال هماهنگی با تامین‌کننده",
   [PURCHASE_RETURN_STATUSES.AWAITING_REFUND]: "در انتظار بازگشت وجه",
@@ -98,7 +105,11 @@ function buildReturnFromPurchase(purchase, index) {
   });
 
   const totalAmount = items.reduce((sum, i) => sum + i.lineTotal, 0);
-  const status = pickRandom(Object.values(PURCHASE_RETURN_STATUSES));
+  // وضعیت‌های واقعی (نه «قابل پیگیری» که خودش تولید می‌شود)
+  const realStatuses = Object.values(PURCHASE_RETURN_STATUSES).filter(
+    (s) => s !== PURCHASE_RETURN_STATUSES.TRACKABLE,
+  );
+  const status = pickRandom(realStatuses);
 
   let resolutionType = RESOLUTION_TYPES.NONE;
   let refundAmount = 0;
@@ -141,7 +152,7 @@ function buildReturnFromPurchase(purchase, index) {
 }
 
 export const purchaseReturnsMock = seedEligiblePurchases
-  .slice(0, 12)
+  .slice(0, 8)
   .map((purchase, idx) => buildReturnFromPurchase(purchase, idx));
 
 export const allPurchaseReturns = [...purchaseReturnsMock];

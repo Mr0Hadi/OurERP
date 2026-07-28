@@ -5,12 +5,19 @@ import {
   PURCHASE_STATUSES,
   PURCHASE_STATUS_LABELS,
 } from "./mockData";
+import { autoResolveReplacementReturns } from "@/features/purchases/services/returns/api-mockData";
+
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export const RECEIVING_ELIGIBLE_STATUSES = [
-  PURCHASE_STATUSES.SHIPPED,
-  PURCHASE_STATUSES.PARTIALLY_RECEIVED,
-];
+// این صفحه از این پس فقط برای خریدهایی معنا دارد که «ارسال شده» ولی
+// هنوز هیچ دریافتی برایشان ثبت نشده است (shipped). به‌محض این‌که
+// انباردار یک دور دریافت با کسری ثبت کند (partially_received)، خرید
+// از این لیست خارج می‌شود؛ چون دیگر کاری برای انباردار باقی نمانده و
+// نوبت واحد خرید است که با تامین‌کننده هماهنگ کند. تنها زمانی که واحد
+// خرید هماهنگ کرد تامین‌کننده کالای جایگزین ارسال می‌کند، وضعیت خرید
+// به‌طور خودکار به «ارسال شده» برمی‌گردد و دوباره اینجا ظاهر می‌شود
+// (به تابع reopenPurchaseForShipment در ماژول مرجوعی مراجعه کنید).
+export const RECEIVING_ELIGIBLE_STATUSES = [PURCHASE_STATUSES.SHIPPED];
 
 export const RECEIVING_STATUS_LABELS = Object.fromEntries(
   Object.entries(PURCHASE_STATUS_LABELS).filter(([key]) =>
@@ -171,15 +178,17 @@ export async function updateReceivingStatus(id, receivedItems) {
 /**
  * ثبت نهایی یک «دور دریافت» در انبار.
  *
- * دو نکته‌ی مهم:
- * ۱. مقدار دریافتی هر قلم تجمعی است (item.receivedQty += این‌دور) تا
- *    دورهای بعدی دریافت (مثلاً بعد از ارسال جایگزین توسط تامین‌کننده)
- *    فقط باقیمانده‌ی واقعی را «مورد انتظار» بدانند.
- * ۲. اگر قلمی در این دور همچنان کسری داشته باشد، «نوع مشکل» و
- *    «یادداشت» انباردار روی خودِ آیتم خرید به‌عنوان lastIssueType/
- *    lastIssueNote/lastIssueDate ذخیره می‌شود. این دقیقاً همان
- *    اطلاعاتی است که بعداً در «گزارش‌های کسری» به واحد خرید نمایش
- *    داده می‌شود. اگر قلمی در این دور کامل شود، این فیلدها پاک می‌شوند.
+ * سه نکته‌ی مهم:
+ * ۱. مقدار دریافتی هر قلم تجمعی است تا دورهای بعدی دریافت فقط
+ *    باقیمانده‌ی واقعی را «مورد انتظار» بدانند.
+ * ۲. اگر قلمی در این دور همچنان کسری داشته باشد، نوع مشکل و یادداشت
+ *    انباردار روی خودِ آیتم خرید ذخیره می‌شود تا واحد خرید بعداً دقیقاً
+ *    همان را ببیند.
+ * ۳. پس از به‌روزرسانی آیتم‌ها، بررسی می‌شود که آیا مرجوعی‌ای با وضعیت
+ *    «در انتظار ارسال جایگزین» برای این خرید وجود دارد که با همین
+ *    دریافت به‌طور کامل پوشش داده شده باشد؛ اگر بله، آن مرجوعی به‌طور
+ *    خودکار به وضعیت «تسویه‌شده» تغییر می‌کند — بدون نیاز به اقدام
+ *    دستی واحد خرید.
  */
 export async function confirmReceiving(purchaseId, receivingData) {
   await delay(500);
@@ -232,6 +241,10 @@ export async function confirmReceiving(purchaseId, receivingData) {
     vehiclePlate: receivingData.vehiclePlate || "",
     updatedAt: new Date().toISOString(),
   };
+
+  // بررسی و بستن خودکار مرجوعی‌های «در انتظار ارسال جایگزین» که با
+  // همین دریافت به‌طور کامل پوشش داده شده‌اند
+  autoResolveReplacementReturns(purchaseId, updatedItems);
 
   return allPurchases[index];
 }

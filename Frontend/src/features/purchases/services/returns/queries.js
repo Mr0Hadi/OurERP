@@ -4,7 +4,6 @@ import { useEffect, useMemo } from "react";
 import {
   fetchPurchaseReturns,
   fetchPurchaseReturnById,
-  fetchShortageReports,
   fetchShortageReportByPurchaseId,
 } from "./api-mockData";
 import { purchaseReturnKeys } from "./queryKeys";
@@ -51,14 +50,6 @@ export function usePurchaseReturnQuery(id) {
     queryFn: () => fetchPurchaseReturnById(id),
     enabled: !!id,
     staleTime: 1000 * 60 * 5,
-  });
-}
-
-export function useShortageReportsQuery(params = {}) {
-  return useQuery({
-    queryKey: [...purchaseReturnKeys.reports(), params],
-    queryFn: () => fetchShortageReports(params),
-    staleTime: 1000 * 60 * 2,
   });
 }
 

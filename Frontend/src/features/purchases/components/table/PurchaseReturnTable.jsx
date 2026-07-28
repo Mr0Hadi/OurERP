@@ -30,6 +30,8 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Undo2,
+  Search,
 } from "lucide-react";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Badge } from "@/shared/components/ui/badge";
@@ -43,6 +45,7 @@ import { gregorianToPersian } from "@/shared/utils/dateUtils";
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 50];
 
 const STATUS_STYLES = {
+  trackable: "bg-amber-50 text-amber-700 border-amber-300 border-dashed hover:bg-amber-50",
   pending: "bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-100",
   coordinating: "bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-100",
   awaiting_refund: "bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-100",
@@ -53,7 +56,7 @@ const STATUS_STYLES = {
 };
 
 const StatusBadge = ({ status }) => (
-  <Badge className={STATUS_STYLES[status] ?? "bg-gray-100 text-gray-800"}>
+  <Badge variant="outline" className={STATUS_STYLES[status] ?? "bg-gray-100 text-gray-800"}>
     {PURCHASE_RETURN_STATUS_LABELS[status] ?? status}
   </Badge>
 );
@@ -97,9 +100,14 @@ const PurchaseReturnTable = ({
       {
         accessorKey: "returnNumber",
         header: "شماره مرجوعی",
-        cell: (info) => (
-          <span className="font-mono text-xs text-muted-foreground">{info.getValue()}</span>
-        ),
+        cell: (info) => {
+          const value = info.getValue();
+          return value ? (
+            <span className="font-mono text-xs text-muted-foreground">{value}</span>
+          ) : (
+            <span className="text-xs text-muted-foreground italic">ثبت‌نشده</span>
+          );
+        },
       },
       {
         accessorKey: "purchaseInvoiceNumber",
@@ -116,10 +124,15 @@ const PurchaseReturnTable = ({
       },
       {
         accessorKey: "returnDate",
-        header: "تاریخ مرجوعی",
-        cell: (info) => (
-          <span className="tabular-nums text-sm">{gregorianToPersian(info.getValue())}</span>
-        ),
+        header: "تاریخ",
+        cell: (info) => {
+          const value = info.getValue();
+          return value ? (
+            <span className="tabular-nums text-sm">{gregorianToPersian(value)}</span>
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
+          );
+        },
       },
       {
         accessorKey: "reason",
@@ -146,17 +159,33 @@ const PurchaseReturnTable = ({
       },
       {
         id: "actions",
-        header: "جزئیات",
+        header: "اقدام",
         enableSorting: false,
-        cell: ({ row }) => (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate(`/purchases/returns/${row.original.id}`)}
-          >
-            جزئیات
-          </Button>
-        ),
+        cell: ({ row }) => {
+          const r = row.original;
+          if (r.isVirtual) {
+            return (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => navigate(`/purchases/returns/new/${r.purchaseId}`)}
+              >
+                <Undo2 className="h-3.5 w-3.5" />
+                بررسی و ثبت مرجوعی
+              </Button>
+            );
+          }
+          return (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/purchases/returns/${r.id}`)}
+            >
+              جزئیات
+            </Button>
+          );
+        },
       },
     ],
     [navigate],
@@ -181,6 +210,15 @@ const PurchaseReturnTable = ({
 
   const rows = table.getRowModel().rows;
   const isLastPage = currentPage + 1 >= totalPages;
+
+  if (rows.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 py-16 text-center border border-dashed border-border rounded-lg">
+        <Search className="h-8 w-8 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">موردی یافت نشد.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -217,28 +255,26 @@ const PurchaseReturnTable = ({
               ))}
             </TableHeader>
             <TableBody>
-              {rows.length ? (
-                rows.map((row) => (
-                  <TableRow key={row.id} className="hover:bg-muted/50 transition-colors">
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="text-center">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-                    مرجوعی یافت نشد.
-                  </TableCell>
+              {rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  className={`hover:bg-muted/50 transition-colors ${
+                    row.original.isVirtual ? "bg-amber-50/30 dark:bg-amber-950/10" : ""
+                  }`}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id} className="text-center">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
                 </TableRow>
-              )}
+              ))}
             </TableBody>
           </Table>
         </div>
       </div>
 
+      {/* Pagination */}
       <div className="flex flex-col gap-2 sm:flex-row items-center justify-between px-2">
         <div className="flex items-center gap-2">
           <p className="text-sm font-light whitespace-nowrap">ردیف در صفحه</p>

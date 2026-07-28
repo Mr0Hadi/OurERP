@@ -10,6 +10,7 @@ import {
 } from "./api-mockData";
 import { purchaseReturnKeys } from "./queryKeys";
 import { purchaseKeys } from "@/features/purchases/services/queryKeys";
+import { receivingKeys } from "@/features/warehouse/receiving/services/queryKeys";
 import { ROUTES } from "@/shared/constants/routes";
 import { usePurchaseReturnFormStore } from "../../store/purchaseReturnFormStore";
 
@@ -67,10 +68,12 @@ export const useUpdatePurchaseReturnStatusMutation = (id) => {
     onSuccess: (updated) => {
       queryClient.setQueryData(purchaseReturnKeys.detail(updated.id), updated);
       queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.lists() });
-      // لغو یا رد شدن مرجوعی ممکن است دوباره کسری باز کند، پس گزارش‌ها هم رفرش شوند
       queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.reports() });
       queryClient.invalidateQueries({ queryKey: purchaseKeys.detail(updated.purchaseId) });
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
+      // این تغییر وضعیت ممکن است باعث بازگشایی خرید برای دریافت مجدد
+      // شده باشد (در انتظار ارسال جایگزین)؛ لیست دریافت انباردار هم رفرش شود
+      queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       toast.success("وضعیت مرجوعی به‌روزرسانی شد");
     },
     onError: (error, variables, context) => {
