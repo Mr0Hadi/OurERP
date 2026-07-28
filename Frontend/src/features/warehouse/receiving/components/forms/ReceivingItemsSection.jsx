@@ -290,7 +290,7 @@ export default function ReceivingItemsSection({ items, onItemChange }) {
 
         {/* ─── نمای جدولی: از sm به بالا ──────────────────────────────── */}
         {filteredItems.length > 0 && (
-          <div className="hidden sm:block border border-border rounded-lg overflow-x-auto">
+          <div className="hidden sm:block border border-border rounded-lg overflow-x-auto custom-scroll">
             <table className="w-full text-sm min-w-[760px]">
               <thead className="bg-muted text-muted-foreground text-xs">
                 <tr>
@@ -299,7 +299,7 @@ export default function ReceivingItemsSection({ items, onItemChange }) {
                   <th className="text-center px-2 py-2.5 font-medium w-32">دریافتی</th>
                   <th className="text-center px-2 py-2.5 font-medium w-32">نوع مشکل</th>
                   <th className="text-center px-2 py-2.5 font-medium w-24">وضعیت</th>
-                  <th className="text-right px-2 py-2.5 font-medium w-40">یادداشت برای خرید</th>
+                   <th className="text-center px-2 py-2.5 font-medium w-44">یادداشت برای خرید</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">

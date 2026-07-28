@@ -1,6 +1,11 @@
 // src/features/purchases/components/forms/PurchaseReturnItemsSection.jsx
 import { useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
 import { Textarea } from "@/shared/components/ui/textarea";
 import {
@@ -52,30 +57,44 @@ export default function PurchaseReturnItemsSection({ items, onItemChange }) {
           اقلام مرجوعی
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          به‌طور پیش‌فرض کل کسری گزارش‌شده انتخاب شده؛ در صورت نیاز تعداد یا دلیل هر قلم را ویرایش کنید.
+          به‌طور پیش‌فرض کل کسری گزارش‌شده انتخاب شده؛ در صورت نیاز تعداد یا
+          دلیل هر قلم را ویرایش کنید.
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
         {/* نسخه دسکتاپ: جدول */}
-        <div className="hidden md:block border border-border rounded-lg overflow-hidden">
-          <table className="w-full text-sm table-fixed">
+        <div className="hidden md:block border border-border rounded-lg overflow-x-auto custom-scroll">
+          <table className="w-full text-sm table-fixed min-w-[686px]">
             <thead className="bg-muted text-muted-foreground text-xs">
               <tr>
                 <th className="text-right px-3 py-2.5 font-medium">کالا</th>
-                <th className="text-center px-2 py-2.5 font-medium w-24">تعداد مرجوعی</th>
-                <th className="text-center px-2 py-2.5 font-medium w-36">نوع مشکل</th>
-                <th className="text-right px-2 py-2.5 font-medium w-48">توضیح</th>
-                <th className="text-center px-2 py-2.5 font-medium w-28">جمع</th>
+                <th className="text-center px-2 py-2.5 font-medium w-24">
+                  تعداد مرجوعی
+                </th>
+                <th className="text-center px-2 py-2.5 font-medium w-36">
+                  نوع مشکل
+                </th>
+                <th className="text-right px-2 py-2.5 font-medium w-48">
+                  توضیح
+                </th>
+                <th className="text-center px-2 py-2.5 font-medium w-28">
+                  جمع
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {items.map((item) => (
-                <tr key={item.productId} className={item.qty > 0 ? "bg-primary/[0.03]" : ""}>
+                <tr
+                  key={item.productId}
+                  className={item.qty > 0 ? "bg-primary/[0.03]" : ""}
+                >
                   <td className="px-3 py-2">
                     <p className="font-medium text-card-foreground text-sm truncate">
                       {item.productName}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{item.productCode}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {item.productCode}
+                    </p>
                   </td>
                   <td className="px-2 py-2">
                     <Input
@@ -83,17 +102,22 @@ export default function PurchaseReturnItemsSection({ items, onItemChange }) {
                       min={0}
                       max={item.maxReturnableQty}
                       value={item.qty}
-                      onChange={(e) => onItemChange(item.productId, "qty", e.target.value)}
+                      onChange={(e) =>
+                        onItemChange(item.productId, "qty", e.target.value)
+                      }
                       className="h-8 text-center text-xs w-full"
                     />
                     <p className="text-[10px] text-muted-foreground text-center mt-0.5">
-                      کسری گزارش‌شده: {item.maxReturnableQty.toLocaleString("fa-IR")}
+                      کسری گزارش‌شده:{" "}
+                      {item.maxReturnableQty.toLocaleString("fa-IR")}
                     </p>
                   </td>
                   <td className="px-2 py-2">
                     <Select
                       value={item.reason}
-                      onValueChange={(v) => onItemChange(item.productId, "reason", v)}
+                      onValueChange={(v) =>
+                        onItemChange(item.productId, "reason", v)
+                      }
                       disabled={item.qty === 0}
                     >
                       <SelectTrigger className="h-8 text-xs">
@@ -112,7 +136,9 @@ export default function PurchaseReturnItemsSection({ items, onItemChange }) {
                     <Textarea
                       placeholder="توضیح اختیاری..."
                       value={item.note || ""}
-                      onChange={(e) => onItemChange(item.productId, "note", e.target.value)}
+                      onChange={(e) =>
+                        onItemChange(item.productId, "note", e.target.value)
+                      }
                       rows={1}
                       disabled={item.qty === 0}
                       className="resize-none text-xs h-8"
@@ -126,7 +152,10 @@ export default function PurchaseReturnItemsSection({ items, onItemChange }) {
             </tbody>
             <tfoot className="bg-muted border-t border-border">
               <tr>
-                <td colSpan={3} className="px-3 py-2.5 text-sm font-medium text-muted-foreground text-right">
+                <td
+                  colSpan={3}
+                  className="px-3 py-2.5 text-sm font-medium text-muted-foreground text-right"
+                >
                   جمع کل مرجوعی:
                 </td>
                 <td className="px-2 py-2.5 text-center text-sm font-bold text-card-foreground">
@@ -153,28 +182,37 @@ export default function PurchaseReturnItemsSection({ items, onItemChange }) {
                 <p className="font-medium text-card-foreground text-sm truncate">
                   {item.productName}
                 </p>
-                <p className="text-xs text-muted-foreground mt-0.5">{item.productCode}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {item.productCode}
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
                   <label className="text-[11px] text-muted-foreground">
-                    تعداد (کسری: {item.maxReturnableQty.toLocaleString("fa-IR")})
+                    تعداد (کسری: {item.maxReturnableQty.toLocaleString("fa-IR")}
+                    )
                   </label>
                   <Input
                     type="number"
                     min={0}
                     max={item.maxReturnableQty}
                     value={item.qty}
-                    onChange={(e) => onItemChange(item.productId, "qty", e.target.value)}
+                    onChange={(e) =>
+                      onItemChange(item.productId, "qty", e.target.value)
+                    }
                     className="h-8 text-center text-xs w-full"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] text-muted-foreground">نوع مشکل</label>
+                  <label className="text-[11px] text-muted-foreground">
+                    نوع مشکل
+                  </label>
                   <Select
                     value={item.reason}
-                    onValueChange={(v) => onItemChange(item.productId, "reason", v)}
+                    onValueChange={(v) =>
+                      onItemChange(item.productId, "reason", v)
+                    }
                     disabled={item.qty === 0}
                   >
                     <SelectTrigger className="h-8 text-xs">
@@ -194,7 +232,9 @@ export default function PurchaseReturnItemsSection({ items, onItemChange }) {
               <Textarea
                 placeholder="توضیح اختیاری..."
                 value={item.note || ""}
-                onChange={(e) => onItemChange(item.productId, "note", e.target.value)}
+                onChange={(e) =>
+                  onItemChange(item.productId, "note", e.target.value)
+                }
                 rows={1}
                 disabled={item.qty === 0}
                 className="resize-none text-xs h-8"

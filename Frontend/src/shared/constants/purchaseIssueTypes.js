@@ -16,7 +16,7 @@ export const PURCHASE_ISSUE_TYPES = {
 };
 
 export const PURCHASE_ISSUE_TYPE_LABELS = {
-  [PURCHASE_ISSUE_TYPES.SHORTAGE]: "کسری تحویل (نرسیده)",
+  [PURCHASE_ISSUE_TYPES.SHORTAGE]: "کسری تحویل",
   [PURCHASE_ISSUE_TYPES.DEFECTIVE]: "معیوب / خراب",
   [PURCHASE_ISSUE_TYPES.DAMAGED]: "آسیب‌دیده در حمل",
   [PURCHASE_ISSUE_TYPES.WRONG_ITEM]: "ارسال کالای اشتباه",
