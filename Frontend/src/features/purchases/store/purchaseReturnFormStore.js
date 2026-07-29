@@ -34,24 +34,26 @@ export const usePurchaseReturnFormStore = create((set, get) => ({
 
   /**
    * فرم ثبت مرجوعی را دقیقاً از روی گزارش کسریِ ثبت‌شده توسط انباردار
-   * پر می‌کند. هر قلم به‌طور پیش‌فرض با کل کسری باز و همان نوع مشکلی
-   * که انبار گزارش داده، از پیش انتخاب شده است.
+   * پر می‌کند. هر ردیف گزارش (که می‌تواند بیش از یک ردیف برای یک
+   * محصول باشد — مثلاً هم کسری هم معیوب) یک خط مستقل در فرم می‌شود
+   * که با issueId شناسایی می‌شود.
    */
   initializeForReport: (report) => {
     const version = `report:${report.purchaseId}`;
     if (get().initializedForId === version) return;
 
-    const items = report.items.map((item) => ({
-      productId: item.productId,
-      productCode: item.productCode,
-      productName: item.productName,
-      unit: item.unit,
-      unitPrice: item.unitPrice,
-      orderedQty: item.orderedQty,
-      maxReturnableQty: item.openShortageQty,
-      qty: item.openShortageQty,
-      reason: item.issueType,
-      note: item.issueNote || "",
+    const items = report.items.map((entry) => ({
+      issueId: entry.issueId,
+      productId: entry.productId,
+      productCode: entry.productCode,
+      productName: entry.productName,
+      unit: entry.unit,
+      unitPrice: entry.unitPrice,
+      orderedQty: entry.orderedQty,
+      maxReturnableQty: entry.openShortageQty,
+      qty: entry.openShortageQty,
+      reason: entry.issueType,
+      note: entry.issueNote || "",
     }));
 
     set({

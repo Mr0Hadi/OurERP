@@ -9,10 +9,9 @@ import {
   PURCHASE_ISSUE_TYPE_STYLES,
 } from '@/shared/constants/purchaseIssueTypes';
 
-// این کامپوننت فقط یک پیش‌نمایش زنده از کسری‌های این دریافت است، پیش از
-// ثبت نهایی. هیچ اکشنی (مثل ثبت مرجوعی) از اینجا انجام نمی‌شود — ثبت
-// مرجوعی به تامین‌کننده کاملاً بر عهده‌ی واحد خرید است، نه انباردار.
-// پس از ثبت دریافت، این گزارش به‌طور خودکار در دسترس واحد خرید قرار می‌گیرد.
+// پیش‌نمایش زنده‌ی کسری‌های این دریافت پیش از ثبت نهایی؛ چون هر قلم
+// می‌تواند بین چند نوع مشکل تقسیم شده باشد، همه‌ی ردیف‌های تفکیک‌شده
+// را نشان می‌دهیم. هیچ اکشنی (مثل ثبت مرجوعی) از اینجا انجام نمی‌شود.
 export default function ReceivingMismatchList({ items }) {
   const shortItems = useMemo(
     () => items.filter((item) => (item.receivedQty || 0) < item.expectedQty),
@@ -34,40 +33,59 @@ export default function ReceivingMismatchList({ items }) {
           پیش‌نمایش گزارش کسری این دریافت
         </CardTitle>
         <span className="text-xs text-muted-foreground">
-          {totalShortage.toLocaleString('fa-IR')} قلم کسری
+          {totalShortage.toLocaleString('fa-IR')} عدد کسری
         </span>
       </CardHeader>
 
-      <CardContent className="space-y-2">
-        <ul className="divide-y divide-border text-sm">
-          {shortItems.map((item) => {
-            const shortage = item.expectedQty - (item.receivedQty || 0);
-            const style =
-              PURCHASE_ISSUE_TYPE_STYLES[item.issueType] ??
-              PURCHASE_ISSUE_TYPE_STYLES.other;
-            return (
-              <li key={item.productId} className="flex items-center justify-between gap-2 py-1.5">
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-card-foreground truncate">{item.productName}</p>
-                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                    <Badge variant="outline" className={`text-[10px] ${style}`}>
-                      {PURCHASE_ISSUE_TYPE_LABELS[item.issueType] ?? item.issueType}
-                    </Badge>
-                    {item.note && (
-                      <span className="text-xs text-muted-foreground truncate">{item.note}</span>
-                    )}
-                  </div>
-                </div>
-                <span className="shrink-0 text-xs font-medium text-amber-700 dark:text-amber-400 tabular-nums">
+      <CardContent className="space-y-3">
+        {shortItems.map((item) => {
+          const shortage = item.expectedQty - (item.receivedQty || 0);
+          const issues = item.issues || [];
+
+          return (
+            <div key={item.productId} className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <p className="font-medium text-card-foreground text-sm">{item.productName}</p>
+                <span className="text-xs font-medium text-amber-700 dark:text-amber-400 tabular-nums">
                   کسری {shortage.toLocaleString('fa-IR')} عدد
                 </span>
-              </li>
-            );
-          })}
-        </ul>
+              </div>
+
+              {issues.length === 0 ? (
+                <p className="text-xs text-destructive">هنوز نوع مشکل تعیین نشده</p>
+              ) : (
+                <ul className="space-y-1">
+                  {issues.map((issue) => {
+                    const style =
+                      PURCHASE_ISSUE_TYPE_STYLES[issue.issueType] ??
+                      PURCHASE_ISSUE_TYPE_STYLES.other;
+                    return (
+                      <li
+                        key={issue.id}
+                        className="flex items-center justify-between gap-2 text-xs bg-muted/40 rounded-md px-2 py-1"
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Badge variant="outline" className={`text-[10px] shrink-0 ${style}`}>
+                            {PURCHASE_ISSUE_TYPE_LABELS[issue.issueType] ?? issue.issueType}
+                          </Badge>
+                          {issue.note && (
+                            <span className="text-muted-foreground truncate">{issue.note}</span>
+                          )}
+                        </div>
+                        <span className="shrink-0 tabular-nums font-medium text-card-foreground">
+                          {(Number(issue.qty) || 0).toLocaleString('fa-IR')} عدد
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          );
+        })}
 
         <p className="text-xs text-muted-foreground pt-2 border-t border-border/60">
-          پس از ثبت دریافت، این گزارش دقیقاً همین‌طور برای واحد خرید قابل مشاهده است.
+          پس از ثبت دریافت، این گزارش دقیقاً همین‌طور، به تفکیک نوع مشکل، برای واحد خرید قابل مشاهده است.
         </p>
       </CardContent>
     </Card>

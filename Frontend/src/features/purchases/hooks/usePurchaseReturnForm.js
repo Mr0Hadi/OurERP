@@ -7,10 +7,12 @@ export function usePurchaseReturnForm() {
 
   const items = formData.items || [];
 
-  const handleItemChange = (productId, field, value) => {
+  // شناسه‌ی یکتای هر ردیف اکنون issueId است (نه productId)، چون یک
+  // محصول می‌تواند چند ردیف مستقل (چند نوع مشکل) داشته باشد.
+  const handleItemChange = (issueId, field, value) => {
     setItems(
       items.map((item) => {
-        if (item.productId !== productId) return item;
+        if (item.issueId !== issueId) return item;
         if (field === "qty") {
           const num = Number(value);
           const clamped =
@@ -39,6 +41,7 @@ export function usePurchaseReturnForm() {
     reason: formData.reason,
     description: formData.description || "",
     items: selectedItems.map((item) => ({
+      issueId: item.issueId,
       productId: item.productId,
       productCode: item.productCode,
       productName: item.productName,

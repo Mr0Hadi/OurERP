@@ -185,12 +185,11 @@ export async function updatePurchasePayment(id, paymentData) {
 }
 
 /**
- * وقتی یک قلم کسری از طریق مرجوعی «تسویه» می‌شود — بازگشت وجه، پذیرش
- * زیان یا اعتبار خرید بعدی — دیگر نباید در گزارش‌های کسری ظاهر شود.
- * این تابع settledQty را تجمعی افزایش می‌دهد، در صورت رفع کامل کسری
- * گزارش باز آن قلم را می‌بندد، و در صورت وجود مبلغ بازگشتی، از جمع کل
- * خرید کم می‌کند. نوع «جایگزینی» از این تابع رد نمی‌شود؛ چون تکمیل
- * واقعی‌اش باید از مسیر دریافت انبار (receivedQty) اتفاق بیفتد.
+ * وقتی یک مرجوعی با «بازگشت وجه»، «پذیرش زیان» یا «اعتبار خرید بعدی»
+ * تسویه می‌شود، این تابع به‌ازای هر قلم مقدار settledQty (تجمعی) را
+ * افزایش می‌دهد — یعنی این مقدار دیگر «مورد انتظار» دریافت در انبار
+ * نیست (چون دائماً بسته شده، فارغ از این‌که فیزیکاً برسد یا نه). در
+ * صورت وجود مبلغ بازگشتی، از جمع کل خرید هم کم می‌شود.
  */
 export async function settlePurchaseItems(
   purchaseId,
@@ -211,17 +210,9 @@ export async function settlePurchaseItems(
   const updatedItems = purchase.items.map((item) => {
     const settle = settledItems.find((s) => s.productId === item.productId);
     if (!settle) return item;
-
-    const newSettledQty = (item.settledQty || 0) + (settle.qty || 0);
-    const openShortage =
-      item.qty - (item.receivedQty || 0) - newSettledQty;
-
     return {
       ...item,
-      settledQty: newSettledQty,
-      ...(openShortage <= 0
-        ? { lastIssueType: null, lastIssueNote: null, lastIssueDate: null }
-        : {}),
+      settledQty: (item.settledQty || 0) + (settle.qty || 0),
     };
   });
 
@@ -249,11 +240,8 @@ export async function settlePurchaseItems(
 }
 
 /**
- * وقتی واحد خرید با تامین‌کننده هماهنگ می‌کند که کالای جایگزین/کسری
- * دوباره ارسال شود (مرجوعی وارد وضعیت «در انتظار ارسال جایگزین»
- * می‌شود)، خرید باید دوباره در لیست دریافتِ انباردار ظاهر شود تا وقتی
- * محموله‌ی جدید رسید، بررسی و دریافت شود. این تابع دقیقاً همین کار را
- * انجام می‌دهد: وضعیت خرید را به «ارسال شده» برمی‌گرداند.
+ * وقتی واحد خرید هماهنگ می‌کند که کالای جایگزین/کسری دوباره ارسال
+ * شود، خرید باید دوباره در لیست دریافتِ انباردار ظاهر شود.
  */
 export async function reopenPurchaseForShipment(purchaseId) {
   await delay(300);
@@ -267,7 +255,6 @@ export async function reopenPurchaseForShipment(purchaseId) {
 
   const purchase = allPurchases[index];
 
-  // اگر خرید لغو شده، دیگر نباید بازگشایی شود
   if (purchase.status === PURCHASE_STATUSES.CANCELLED) {
     return purchase;
   }

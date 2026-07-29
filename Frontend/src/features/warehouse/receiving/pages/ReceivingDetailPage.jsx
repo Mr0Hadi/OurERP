@@ -50,7 +50,11 @@ function ReceivingDetailForm({ purchase }) {
     formData,
     setFormData,
     handleItemChange,
+    handleAddIssue,
+    handleUpdateIssue,
+    handleRemoveIssue,
     isAllComplete,
+    isAllIssuesAllocated,
     isTransporterValid,
     buildPayload,
     resetForm,
@@ -81,19 +85,21 @@ function ReceivingDetailForm({ purchase }) {
 
   const isBusy = receivingMutation.isPending;
 
-  // یک اکشن واحد: ثبت دریافت. وضعیت «کامل» یا «ناقص» به‌طور خودکار
-  // از روی تعداد‌های واردشده تعیین می‌شود، نه از روی انتخاب کاربر.
   const handleConfirmClick = () => {
     if (!isTransporterValid) {
       setShowTransporterError(true);
+      return;
+    }
+    if (!isAllIssuesAllocated) {
+      toast.error(
+        "برای هر قلمِ ناقص، نوع مشکل و تعدادش را کامل مشخص کنید (مجموع باید دقیقاً برابر کسری آن قلم باشد)",
+      );
       return;
     }
     setShowTransporterError(false);
     setShowConfirmDialog(true);
   };
 
-  // انباردار فقط دریافت و کسری را ثبت می‌کند و به لیست دریافت‌ها برمی‌گردد.
-  // ثبت مرجوعی به تامین‌کننده کاملاً کار واحد خرید است و از اینجا شروع نمی‌شود.
   const handleSubmit = () => {
     const payload = buildPayload();
     const hasShortage = displayItems.some(
@@ -118,11 +124,13 @@ function ReceivingDetailForm({ purchase }) {
   return (
     <div className="container max-w-6xl mx-auto px-4 space-y-4 animate-in fade-in zoom-in-95 duration-300">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* ستون اصلی – جدول اقلام */}
         <div className="lg:col-span-2 space-y-4">
           <ReceivingItemsSection
             items={displayItems}
             onItemChange={handleItemChange}
+            onAddIssue={handleAddIssue}
+            onUpdateIssue={handleUpdateIssue}
+            onRemoveIssue={handleRemoveIssue}
           />
           <ReceivingMismatchList items={displayItems} />
           <ReceivingTransporterSection
@@ -139,7 +147,6 @@ function ReceivingDetailForm({ purchase }) {
           />
         </div>
 
-        {/* ستون کناری – خلاصه و دکمه‌ها */}
         <div className="space-y-4">
           <ReceivingSummaryCard
             formData={formData}
@@ -175,6 +182,12 @@ function ReceivingDetailForm({ purchase }) {
             </Button>
           </div>
 
+          {!isAllIssuesAllocated && items.some((i) => i.receivedQty < i.expectedQty) && (
+            <p className="text-xs text-destructive text-center px-2">
+              برای همه‌ی قلم‌های ناقص، نوع مشکل و تعداد آن را کامل مشخص کنید.
+            </p>
+          )}
+
           {items.every((i) => !(i.receivedQty > 0)) && (
             <p className="text-xs text-muted-foreground text-center px-2">
               این خرید هنوز هیچ دریافتی ندارد. اگر اساساً نباید دریافت شود،
@@ -184,7 +197,6 @@ function ReceivingDetailForm({ purchase }) {
         </div>
       </div>
 
-      {/* دیالوگ تأیید نهایی ثبت دریافت — تنها دیالوگ باقی‌مانده در این صفحه */}
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -194,7 +206,7 @@ function ReceivingDetailForm({ purchase }) {
             <AlertDialogDescription>
               {isAllComplete
                 ? "آیا مطمئن هستید که همه اقلام به‌طور کامل دریافت شده‌اند؟"
-                : "با تأیید، وضعیت خرید به «تحویل ناقص» تغییر می‌کند و گزارش کسری (نوع مشکل و یادداشت هر قلم) برای واحد خرید ارسال می‌شود تا با تامین‌کننده هماهنگ کند."}
+                : "با تأیید، وضعیت خرید به «تحویل ناقص» تغییر می‌کند و گزارش کسری (به تفکیک نوع مشکل هر قلم) برای واحد خرید ارسال می‌شود تا با تامین‌کننده هماهنگ کند."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

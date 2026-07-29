@@ -1,11 +1,10 @@
 // src/features/warehouse/receiving/components/forms/ReceivingItemsSection.jsx
 import { useMemo, useState } from 'react';
-import { Search, Minus, Plus, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
+import { Search, Minus, Plus, CheckCircle2, AlertTriangle, XCircle, X } from 'lucide-react';
 
 import { Input } from '@/shared/components/ui/input';
 import { Button } from '@/shared/components/ui/button';
 import { Badge } from '@/shared/components/ui/badge';
-import { Textarea } from '@/shared/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import {
   Select,
@@ -18,7 +17,6 @@ import { PURCHASE_ISSUE_TYPE_LABELS } from '@/shared/constants/purchaseIssueType
 
 const ISSUE_TYPE_OPTIONS = Object.entries(PURCHASE_ISSUE_TYPE_LABELS);
 
-// وضعیت هر ردیف بر اساس مقایسه‌ی «مقدار انتظار» و «مقدار دریافتی» محاسبه می‌شود
 function getRowStatus(expectedQty, receivedQty) {
   const qty = receivedQty || 0;
   if (qty <= 0) return 'missing';
@@ -53,7 +51,6 @@ const clampQty = (value, expectedQty) => {
   return Math.min(num, expectedQty);
 };
 
-// دکمه‌های +/- و اینپوت تعداد؛ هم در جدول دسکتاپ استفاده می‌شود هم در کارت موبایل
 function QuantityStepper({ item, onItemChange, size = 'md' }) {
   const received = item.receivedQty || 0;
   const dims = size === 'sm' ? 'h-7 w-7' : 'h-8 w-8';
@@ -113,28 +110,103 @@ function ProductThumb({ item }) {
   );
 }
 
-// انتخاب نوع مشکل؛ فقط برای ردیف‌های ناقص/نرسیده معنا دارد
-function IssueTypeSelect({ item, onItemChange, className = '' }) {
+// ─── ویرایشگر تفکیک مشکل یک قلم ────────────────────────────────────────────
+// اجازه می‌دهد کسریِ یک قلم بین چند نوع مشکل مختلف (کسری/معیوب/آسیب‌دیده/...)
+// تقسیم شود؛ هر ردیف نوع + تعداد + یادداشت مستقل دارد.
+function IssueBreakdownEditor({ item, shortage, onAddIssue, onUpdateIssue, onRemoveIssue }) {
+  const issues = item.issues || [];
+  const allocated = issues.reduce((s, i) => s + (Number(i.qty) || 0), 0);
+  const remaining = shortage - allocated;
+  const isBalanced = remaining === 0 && issues.length > 0;
+
   return (
-    <Select
-      value={item.issueType || 'shortage'}
-      onValueChange={(v) => onItemChange(item.productId, 'issueType', v)}
-    >
-      <SelectTrigger className={`h-8 text-xs ${className}`}>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {ISSUE_TYPE_OPTIONS.map(([value, label]) => (
-          <SelectItem key={value} value={value}>
-            {label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <div className="space-y-2 rounded-lg border border-dashed border-amber-300 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/10 p-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-medium text-card-foreground">
+          تفکیک نوع مشکل ({shortage.toLocaleString('fa-IR')} عدد کسری)
+        </span>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs gap-1"
+          onClick={() => onAddIssue(item.productId)}
+          disabled={remaining <= 0}
+        >
+          <Plus className="h-3 w-3" />
+          افزودن نوع مشکل
+        </Button>
+      </div>
+
+      {issues.length === 0 && (
+        <p className="text-xs text-muted-foreground">
+          هنوز نوع مشکلی ثبت نشده؛ روی «افزودن نوع مشکل» بزنید.
+        </p>
+      )}
+
+      {issues.map((issue) => (
+        <div
+          key={issue.id}
+          className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 bg-card rounded-md border border-border p-1.5"
+        >
+          <Select
+            value={issue.issueType}
+            onValueChange={(v) => onUpdateIssue(item.productId, issue.id, 'issueType', v)}
+          >
+            <SelectTrigger className="h-8 text-xs sm:w-36 shrink-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ISSUE_TYPE_OPTIONS.map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Input
+            type="number"
+            min={0}
+            value={issue.qty}
+            onChange={(e) => onUpdateIssue(item.productId, issue.id, 'qty', e.target.value)}
+            className="h-8 text-center text-xs sm:w-16 shrink-0"
+          />
+
+          <Input
+            placeholder="یادداشت (اختیاری)..."
+            value={issue.note || ''}
+            onChange={(e) => onUpdateIssue(item.productId, issue.id, 'note', e.target.value)}
+            className="h-8 text-xs flex-1"
+          />
+
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+            onClick={() => onRemoveIssue(item.productId, issue.id)}
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ))}
+
+      <p className={`text-[11px] ${isBalanced ? 'text-[oklch(0.50_0.16_152)]' : 'text-destructive'}`}>
+        تخصیص‌یافته: {allocated.toLocaleString('fa-IR')} از {shortage.toLocaleString('fa-IR')}
+        {!isBalanced && ' — باید دقیقاً برابر با کسری این قلم باشد'}
+      </p>
+    </div>
   );
 }
 
-export default function ReceivingItemsSection({ items, onItemChange }) {
+export default function ReceivingItemsSection({
+  items,
+  onItemChange,
+  onAddIssue,
+  onUpdateIssue,
+  onRemoveIssue,
+}) {
   const [search, setSearch] = useState('');
 
   const filteredItems = useMemo(() => {
@@ -205,16 +277,15 @@ export default function ReceivingItemsSection({ items, onItemChange }) {
           </p>
         )}
 
-        {/* ─── نمای کارتی: موبایل و تبلت کوچک ─────────────────────────── */}
+        {/* ─── نمای کارتی: موبایل ─────────────────────────────────────── */}
         {filteredItems.length > 0 && (
           <div className="space-y-2 sm:hidden">
             {filteredItems.map((item) => {
               const received = item.receivedQty || 0;
-              const shortage = item.expectedQty - received;
+              const shortage = Math.max(0, item.expectedQty - received);
               const status = getRowStatus(item.expectedQty, received);
               const config = ROW_STATUS_CONFIG[status];
               const StatusIcon = config.icon;
-              const hasIssue = status !== 'complete';
 
               return (
                 <div
@@ -250,28 +321,19 @@ export default function ReceivingItemsSection({ items, onItemChange }) {
                     <QuantityStepper item={item} onItemChange={onItemChange} size="sm" />
                   </div>
 
-                  {hasIssue && (
-                    <div className="space-y-2">
-                      <div className="space-y-1">
-                        <label className="text-[11px] text-muted-foreground">
-                          نوع مشکل (کسری {shortage.toLocaleString('fa-IR')} عدد)
-                        </label>
-                        <IssueTypeSelect item={item} onItemChange={onItemChange} className="w-full" />
-                      </div>
-                      <Textarea
-                        placeholder="یادداشت برای واحد خرید..."
-                        value={item.note || ''}
-                        onChange={(e) => onItemChange(item.productId, 'note', e.target.value)}
-                        rows={1}
-                        className="resize-none text-sm h-8"
-                      />
-                    </div>
+                  {shortage > 0 && (
+                    <IssueBreakdownEditor
+                      item={item}
+                      shortage={shortage}
+                      onAddIssue={onAddIssue}
+                      onUpdateIssue={onUpdateIssue}
+                      onRemoveIssue={onRemoveIssue}
+                    />
                   )}
                 </div>
               );
             })}
 
-            {/* جمع کل برای نمای موبایل */}
             <div className="rounded-lg bg-muted px-3 py-2.5 flex items-center justify-between text-xs">
               <span className="text-muted-foreground">
                 جمع کل:{' '}
@@ -290,96 +352,82 @@ export default function ReceivingItemsSection({ items, onItemChange }) {
 
         {/* ─── نمای جدولی: از sm به بالا ──────────────────────────────── */}
         {filteredItems.length > 0 && (
-          <div className="hidden sm:block border border-border rounded-lg overflow-x-auto custom-scroll">
-            <table className="w-full text-sm min-w-[760px]">
+          <div className="hidden sm:block border border-border rounded-lg overflow-x-auto">
+            <table className="w-full text-sm min-w-[640px]">
               <thead className="bg-muted text-muted-foreground text-xs">
                 <tr>
                   <th className="text-right px-3 py-2.5 font-medium">کالا</th>
                   <th className="text-center px-2 py-2.5 font-medium w-20">مورد انتظار</th>
                   <th className="text-center px-2 py-2.5 font-medium w-32">دریافتی</th>
-                  <th className="text-center px-2 py-2.5 font-medium w-32">نوع مشکل</th>
                   <th className="text-center px-2 py-2.5 font-medium w-24">وضعیت</th>
-                   <th className="text-center px-2 py-2.5 font-medium w-44">یادداشت برای خرید</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {filteredItems.map((item) => {
                   const received = item.receivedQty || 0;
-                  const shortage = item.expectedQty - received;
+                  const shortage = Math.max(0, item.expectedQty - received);
                   const status = getRowStatus(item.expectedQty, received);
                   const config = ROW_STATUS_CONFIG[status];
                   const StatusIcon = config.icon;
-                  const hasIssue = status !== 'complete';
 
                   return (
-                    <tr
-                      key={item.productId}
-                      className={`hover:bg-accent/30 transition-colors ${config.rowClass}`}
-                    >
-                      <td className="px-3 py-2">
-                        <div className="flex items-center gap-2.5">
-                          <ProductThumb item={item} />
-                          <div className="min-w-0">
-                            <div className="font-medium text-card-foreground text-sm truncate">
-                              {item.productName}
-                            </div>
-                            <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground mt-0.5">
-                              <span>{item.productCode}</span>
-                              {item.brand && (
-                                <>
-                                  <span className="text-border">|</span>
-                                  <span>برند: {item.brand}</span>
-                                </>
-                              )}
+                    <>
+                      <tr
+                        key={item.productId}
+                        className={`hover:bg-accent/30 transition-colors ${config.rowClass}`}
+                      >
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-2.5">
+                            <ProductThumb item={item} />
+                            <div className="min-w-0">
+                              <div className="font-medium text-card-foreground text-sm truncate">
+                                {item.productName}
+                              </div>
+                              <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground mt-0.5">
+                                <span>{item.productCode}</span>
+                                {item.brand && (
+                                  <>
+                                    <span className="text-border">|</span>
+                                    <span>برند: {item.brand}</span>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      <td className="px-2 py-2 text-center tabular-nums">
-                        {item.expectedQty.toLocaleString('fa-IR')}
-                      </td>
+                        <td className="px-2 py-2 text-center tabular-nums">
+                          {item.expectedQty.toLocaleString('fa-IR')}
+                        </td>
 
-                      <td className="px-2 py-2">
-                        <QuantityStepper item={item} onItemChange={onItemChange} />
-                        {hasIssue && (
-                          <p className="text-[10px] text-muted-foreground text-center mt-0.5">
-                            کسری {shortage.toLocaleString('fa-IR')} عدد
-                          </p>
-                        )}
-                      </td>
+                        <td className="px-2 py-2">
+                          <QuantityStepper item={item} onItemChange={onItemChange} />
+                        </td>
 
-                      <td className="px-2 py-2">
-                        {hasIssue ? (
-                          <IssueTypeSelect item={item} onItemChange={onItemChange} className="w-full" />
-                        ) : (
-                          <span className="block text-center text-xs text-muted-foreground">—</span>
-                        )}
-                      </td>
+                        <td className="px-2 py-2">
+                          <div className="flex justify-center">
+                            <Badge variant="outline" className={`gap-1 text-xs ${config.badgeClass}`}>
+                              <StatusIcon className="h-3 w-3" />
+                              {config.label}
+                            </Badge>
+                          </div>
+                        </td>
+                      </tr>
 
-                      <td className="px-2 py-2">
-                        <div className="flex justify-center">
-                          <Badge variant="outline" className={`gap-1 text-xs ${config.badgeClass}`}>
-                            <StatusIcon className="h-3 w-3" />
-                            {config.label}
-                          </Badge>
-                        </div>
-                      </td>
-
-                      <td className="px-2 py-2">
-                        {hasIssue ? (
-                          <Textarea
-                            placeholder="یادداشت برای واحد خرید..."
-                            value={item.note || ''}
-                            onChange={(e) => onItemChange(item.productId, 'note', e.target.value)}
-                            rows={1}
-                            className="resize-none text-sm h-8"
-                          />
-                        ) : (
-                          <span className="block text-center text-xs text-muted-foreground">—</span>
-                        )}
-                      </td>
-                    </tr>
+                      {shortage > 0 && (
+                        <tr key={`${item.productId}-issues`} className={config.rowClass}>
+                          <td colSpan={4} className="px-3 pb-3 pt-0">
+                            <IssueBreakdownEditor
+                              item={item}
+                              shortage={shortage}
+                              onAddIssue={onAddIssue}
+                              onUpdateIssue={onUpdateIssue}
+                              onRemoveIssue={onRemoveIssue}
+                            />
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   );
                 })}
               </tbody>
@@ -395,7 +443,7 @@ export default function ReceivingItemsSection({ items, onItemChange }) {
                   <td className="px-2 py-2.5 text-center text-sm font-bold text-card-foreground tabular-nums">
                     {totals.received.toLocaleString('fa-IR')}
                   </td>
-                  <td colSpan={3} className="px-2 py-2.5 text-center text-xs text-muted-foreground">
+                  <td className="px-2 py-2.5 text-center text-xs text-muted-foreground">
                     {shortageTotal > 0
                       ? `مجموع کمبود: ${shortageTotal.toLocaleString('fa-IR')} عدد`
                       : 'بدون کمبود'}

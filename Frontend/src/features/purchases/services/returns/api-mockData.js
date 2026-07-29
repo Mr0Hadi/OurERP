@@ -22,62 +22,109 @@ const ACTIVE_RETURN_STATUSES = new Set([
   PURCHASE_RETURN_STATUSES.RESOLVED,
 ]);
 
-function getReturnedQtyMap(purchaseId, excludeReturnId = null) {
-  const map = new Map();
-  allPurchaseReturns
-    .filter(
-      (r) =>
-        r.purchaseId === purchaseId &&
-        r.id !== excludeReturnId &&
-        ACTIVE_RETURN_STATUSES.has(r.status),
-    )
-    .forEach((r) => {
-      r.items.forEach((item) => {
-        map.set(item.productId, (map.get(item.productId) || 0) + item.qty);
-      });
+// وضعیت‌هایی که هنوز به نتیجه‌ی نهایی نرسیده‌اند (برای محاسبه‌ی
+// «چقدر دیگر از این محصول در انتظار تصمیم‌گیری/ارسال است»)
+const NOT_YET_FINAL_RETURN_STATUSES = new Set([
+  PURCHASE_RETURN_STATUSES.PENDING,
+  PURCHASE_RETURN_STATUSES.COORDINATING,
+  PURCHASE_RETURN_STATUSES.AWAITING_REFUND,
+  PURCHASE_RETURN_STATUSES.AWAITING_REPLACEMENT,
+]);
+
+function getPurchase(purchaseId) {
+  return allPurchases.find((p) => Number(p.id) === Number(purchaseId));
+}
+
+/** مجموع تعداد رزرو شده روی یک ردیف مشکل مشخص (issueId)، توسط مرجوعی‌های فعال */
+function getReservedQtyForIssue(issueId, excludeReturnId = null) {
+  let sum = 0;
+  allPurchaseReturns.forEach((r) => {
+    if (excludeReturnId && r.id === excludeReturnId) return;
+    if (!ACTIVE_RETURN_STATUSES.has(r.status)) return;
+    r.items.forEach((item) => {
+      if (item.issueId === issueId) sum += item.qty;
     });
-  return map;
+  });
+  return sum;
+}
+
+/** مجموع تعداد رزرو شده روی یک محصول مشخص از یک خرید، توسط مرجوعی‌های
+ * فعالی که هنوز به نتیجه‌ی نهایی نرسیده‌اند (برای تشخیص «آیا مرجوعیِ
+ * در انتظار ارسال جایگزین دیگر تکمیل شده یا نه») */
+function getReservedQtyByPendingReturns(purchaseId, productId, excludeReturnId = null) {
+  let sum = 0;
+  allPurchaseReturns.forEach((r) => {
+    if (r.purchaseId !== purchaseId) return;
+    if (excludeReturnId && r.id === excludeReturnId) return;
+    if (!NOT_YET_FINAL_RETURN_STATUSES.has(r.status)) return;
+    r.items.forEach((item) => {
+      if (item.productId === productId) sum += item.qty;
+    });
+  });
+  return sum;
+}
+
+/**
+ * برای یک قلم خرید، ردیف‌های تاریخچه‌ی مشکل (item.issues) را به
+ * «مقدار باز» تبدیل می‌کند. برای جلوگیری از دوبار شمردن (مثلاً وقتی
+ * محموله‌ی جدید بخشی از کسریِ قدیمی را پوشش داده)، سقف کل بین همه‌ی
+ * ردیف‌ها برابر با «باقیمانده‌ی واقعی این قلم» (qty - دریافتی - تسویه‌شده)
+ * است؛ جدیدترین گزارش‌ها اولویت دارند (چون دقیق‌ترین تصویر فعلی‌اند).
+ */
+function distributeOpenQtyAcrossIssues(item) {
+  let budget = Math.max(
+    0,
+    item.qty - (item.receivedQty || 0) - (item.settledQty || 0),
+  );
+  if (budget <= 0) return [];
+
+  const sorted = [...(item.issues || [])].sort(
+    (a, b) => new Date(b.date) - new Date(a.date),
+  );
+
+  const result = [];
+  for (const entry of sorted) {
+    if (budget <= 0) break;
+    const claimAdjusted = Math.max(0, entry.qty - getReservedQtyForIssue(entry.id));
+    const open = Math.min(claimAdjusted, budget);
+    if (open > 0) {
+      result.push({ ...entry, openQty: open });
+      budget -= open;
+    }
+  }
+  return result;
 }
 
 /**
  * ساخت «گزارش کسری» یک خرید مستقیماً از روی داده‌های واقعیِ ثبت‌شده
- * توسط انباردار (item.lastIssueType / lastIssueNote / lastIssueDate) —
- * نه از یک فرم جداگانه. این تابع منبع واحد حقیقت هم برای ردیف‌های
- * «قابل پیگیری» در لیست مرجوعی‌ها و هم برای فرم ثبت مرجوعی است.
+ * توسط انباردار. هر نوع مشکل هر قلم به‌صورت یک ردیف مجزا برمی‌گردد —
+ * یعنی یک کالا می‌تواند هم‌زمان چند ردیف (مثلاً کسری + معیوب) داشته باشد.
  */
 function buildShortageReport(purchase) {
-  const returnedMap = getReturnedQtyMap(purchase.id);
+  const lines = [];
 
-  const items = purchase.items
-    .map((item) => {
-      const returned = returnedMap.get(item.productId) || 0;
-      const settled = item.settledQty || 0;
-      const received = item.receivedQty || 0;
-      const openShortageQty = Math.max(
-        0,
-        item.qty - received - settled - returned,
-      );
-      if (openShortageQty <= 0) return null;
-
-      return {
+  purchase.items.forEach((item) => {
+    const distributed = distributeOpenQtyAcrossIssues(item);
+    distributed.forEach((entry) => {
+      lines.push({
+        issueId: entry.id,
         productId: item.productId,
         productCode: item.productCode,
         productName: item.productName,
         unit: item.unit,
         unitPrice: item.unitPrice,
         orderedQty: item.qty,
-        receivedQty: received,
-        openShortageQty,
-        issueType: item.lastIssueType || PURCHASE_ISSUE_TYPES.SHORTAGE,
-        issueNote: item.lastIssueNote || "",
-        reportedDate:
-          item.lastIssueDate || purchase.receivedDate || purchase.updatedAt,
-      };
-    })
-    .filter(Boolean);
+        receivedQty: item.receivedQty || 0,
+        openShortageQty: entry.openQty,
+        issueType: entry.type,
+        issueNote: entry.note,
+        reportedDate: entry.date,
+      });
+    });
+  });
 
-  const lastReportDate = items.reduce(
-    (latest, i) => (!latest || i.reportedDate > latest ? i.reportedDate : latest),
+  const lastReportDate = lines.reduce(
+    (latest, l) => (!latest || l.reportedDate > latest ? l.reportedDate : latest),
     null,
   );
 
@@ -90,8 +137,8 @@ function buildShortageReport(purchase) {
     receivedDate: purchase.receivedDate || "",
     receivingNote: purchase.receivingNote || "",
     transporterName: purchase.transporterName || "",
-    items,
-    totalOpenShortageQty: items.reduce((s, i) => s + i.openShortageQty, 0),
+    items: lines,
+    totalOpenShortageQty: lines.reduce((s, l) => s + l.openShortageQty, 0),
     lastReportDate,
   };
 }
@@ -104,15 +151,16 @@ function mostFrequentReason(values) {
 }
 
 /**
- * یک گزارش کسری را به شکل یک ردیف «مجازی» شبیه به مرجوعی درمی‌آورد تا
- * بتوان آن را در همان جدول مرجوعی‌ها، کنار مرجوعی‌های واقعی، نمایش داد.
- * این ردیف‌ها در دیتابیس ذخیره نمی‌شوند و هر بار از روی وضعیت لحظه‌ای
- * خرید محاسبه می‌شوند.
+ * تبدیل گزارش کسریِ یک خرید به یک ردیف «مجازی» شبیه به مرجوعی، برای
+ * نمایش در همان لیست مرجوعی‌ها با وضعیت «قابل پیگیری». یک ردیف در
+ * سطح هر خرید (نه هر نوع مشکل) تا فهرست شلوغ نشود؛ جزئیات تفکیک‌شده
+ * (چند نوع مشکل) داخل صفحه‌ی ثبت مرجوعی دیده می‌شود.
  */
 function toVirtualReturnEntry(report) {
   if (!report || report.items.length === 0) return null;
 
   const items = report.items.map((i) => ({
+    issueId: i.issueId,
     productId: i.productId,
     productCode: i.productCode,
     productName: i.productName,
@@ -151,15 +199,9 @@ function getAllTrackableEntries() {
     .filter(Boolean);
 }
 
-/**
- * گزارش کسری یک خریدِ مشخص — دقیقاً همان اطلاعاتی که برای پیش‌پرکردن
- * فرم ثبت مرجوعی استفاده می‌شود.
- */
 export async function fetchShortageReportByPurchaseId(purchaseId) {
   await delay(300);
-  const purchase = allPurchases.find(
-    (p) => Number(p.id) === Number(purchaseId),
-  );
+  const purchase = getPurchase(purchaseId);
   if (!purchase) throw new Error("خرید یافت نشد");
 
   const report = buildShortageReport(purchase);
@@ -169,12 +211,6 @@ export async function fetchShortageReportByPurchaseId(purchaseId) {
   return report;
 }
 
-/**
- * لیست ترکیبیِ مرجوعی‌های واقعی + ردیف‌های «قابل پیگیری» (کسری‌های
- * گزارش‌شده توسط انبار که هنوز مرجوعی رسمی ندارند). هر دو دسته با هم
- * فیلتر، جست‌وجو، مرتب‌سازی و صفحه‌بندی می‌شوند تا کاربر یک تجربه‌ی
- * واحد داشته باشد.
- */
 export async function fetchPurchaseReturns(params = {}) {
   await delay(500);
   const {
@@ -283,10 +319,9 @@ export async function createPurchaseReturn(payload) {
 /**
  * به‌روزرسانی مرجوعی + اعمال اثرات جانبی روی خرید مبدا:
  * - گذار به «تسویه‌شده» با بازگشت‌وجه/پذیرش‌زیان/اعتبار → قلم‌های
- *   مربوطه در خرید به‌طور دائم بسته می‌شوند (settlePurchaseItems).
+ *   مربوطه در خرید به‌طور دائم بسته می‌شوند.
  * - گذار به «در انتظار ارسال جایگزین» → خرید دوباره به وضعیت «ارسال
- *   شده» برمی‌گردد تا در لیست دریافتِ انباردار ظاهر شود
- *   (reopenPurchaseForShipment).
+ *   شده» برمی‌گردد تا در لیست دریافتِ انباردار ظاهر شود.
  */
 export async function updatePurchaseReturn(id, updates) {
   await delay(500);
@@ -340,32 +375,49 @@ export async function removePurchaseReturn(id) {
 }
 
 /**
- * پس از هر دور دریافت در انبار فراخوانی می‌شود. اگر مرجوعی‌ای با
- * وضعیت «در انتظار ارسال جایگزین» برای این خرید وجود داشته باشد و
- * تمام اقلام آن با این دریافت به‌طور کامل پوشش داده شده باشند
- * (کسری بازی نمانده باشد)، آن مرجوعی به‌طور خودکار به «تسویه‌شده»
- * تغییر می‌کند — بدون هیچ اقدام دستی از سمت واحد خرید.
+ * پس از هر دور دریافت در انبار فراخوانی می‌شود. برای هر مرجوعیِ «در
+ * انتظار ارسال جایگزین» این خرید (به ترتیب قدیمی‌ترین اول)، بررسی
+ * می‌کند که آیا با احتساب دریافتی‌های تازه، دیگر چیزی از آن محصول
+ * کم نیست (به‌جز سهم خودِ همین مرجوعی) — اگر بله، یعنی جایگزین رسیده
+ * و مرجوعی به‌طور خودکار «تسویه‌شده» علامت می‌خورد.
  */
-export function autoResolveReplacementReturns(purchaseId, updatedPurchaseItems) {
-  const itemMap = new Map(updatedPurchaseItems.map((i) => [i.productId, i]));
+export function autoResolveReplacementReturns(purchaseId) {
+  const purchase = getPurchase(purchaseId);
+  if (!purchase) return;
 
-  allPurchaseReturns.forEach((ret, idx) => {
-    if (ret.purchaseId !== purchaseId) return;
-    if (ret.status !== PURCHASE_RETURN_STATUSES.AWAITING_REPLACEMENT) return;
+  const candidates = allPurchaseReturns
+    .filter(
+      (r) =>
+        r.purchaseId === purchaseId &&
+        r.status === PURCHASE_RETURN_STATUSES.AWAITING_REPLACEMENT,
+    )
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
-    const allDelivered = ret.items.every((retItem) => {
-      const purchaseItem = itemMap.get(retItem.productId);
-      if (!purchaseItem) return false;
-      const openShortage =
+  candidates.forEach((ret) => {
+    const idx = allPurchaseReturns.findIndex((r) => r.id === ret.id);
+    if (idx === -1) return;
+
+    const stillNeeded = ret.items.some((retItem) => {
+      const purchaseItem = purchase.items.find(
+        (pi) => pi.productId === retItem.productId,
+      );
+      if (!purchaseItem) return true;
+      const reservedByOthers = getReservedQtyByPendingReturns(
+        purchaseId,
+        retItem.productId,
+        ret.id,
+      );
+      const remaining =
         purchaseItem.qty -
         (purchaseItem.receivedQty || 0) -
-        (purchaseItem.settledQty || 0);
-      return openShortage <= 0;
+        (purchaseItem.settledQty || 0) -
+        reservedByOthers;
+      return remaining > 0;
     });
 
-    if (allDelivered) {
+    if (!stillNeeded) {
       allPurchaseReturns[idx] = {
-        ...ret,
+        ...allPurchaseReturns[idx],
         status: PURCHASE_RETURN_STATUSES.RESOLVED,
         resolutionType: RESOLUTION_TYPES.REPLACEMENT,
         updatedAt: new Date().toISOString(),

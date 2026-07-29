@@ -1,5 +1,4 @@
 // src/features/warehouse/receiving/services/api-mockData
-
 import {
   allPurchases,
   PURCHASE_STATUSES,
@@ -9,14 +8,9 @@ import { autoResolveReplacementReturns } from "@/features/purchases/services/ret
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// این صفحه از این پس فقط برای خریدهایی معنا دارد که «ارسال شده» ولی
-// هنوز هیچ دریافتی برایشان ثبت نشده است (shipped). به‌محض این‌که
-// انباردار یک دور دریافت با کسری ثبت کند (partially_received)، خرید
-// از این لیست خارج می‌شود؛ چون دیگر کاری برای انباردار باقی نمانده و
-// نوبت واحد خرید است که با تامین‌کننده هماهنگ کند. تنها زمانی که واحد
-// خرید هماهنگ کرد تامین‌کننده کالای جایگزین ارسال می‌کند، وضعیت خرید
-// به‌طور خودکار به «ارسال شده» برمی‌گردد و دوباره اینجا ظاهر می‌شود
-// (به تابع reopenPurchaseForShipment در ماژول مرجوعی مراجعه کنید).
+const generateId = () =>
+  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+
 export const RECEIVING_ELIGIBLE_STATUSES = [PURCHASE_STATUSES.SHIPPED];
 
 export const RECEIVING_STATUS_LABELS = Object.fromEntries(
@@ -111,12 +105,7 @@ export async function fetchReceivingPurchases(params = {}) {
   const end = start + limit;
   const items = filtered.slice(start, end);
 
-  return {
-    items,
-    total,
-    page,
-    totalPages,
-  };
+  return { items, total, page, totalPages };
 }
 
 export async function fetchReceivingPurchaseById(id) {
@@ -178,17 +167,14 @@ export async function updateReceivingStatus(id, receivedItems) {
 /**
  * ثبت نهایی یک «دور دریافت» در انبار.
  *
- * سه نکته‌ی مهم:
- * ۱. مقدار دریافتی هر قلم تجمعی است تا دورهای بعدی دریافت فقط
- *    باقیمانده‌ی واقعی را «مورد انتظار» بدانند.
- * ۲. اگر قلمی در این دور همچنان کسری داشته باشد، نوع مشکل و یادداشت
- *    انباردار روی خودِ آیتم خرید ذخیره می‌شود تا واحد خرید بعداً دقیقاً
- *    همان را ببیند.
- * ۳. پس از به‌روزرسانی آیتم‌ها، بررسی می‌شود که آیا مرجوعی‌ای با وضعیت
- *    «در انتظار ارسال جایگزین» برای این خرید وجود دارد که با همین
- *    دریافت به‌طور کامل پوشش داده شده باشد؛ اگر بله، آن مرجوعی به‌طور
- *    خودکار به وضعیت «تسویه‌شده» تغییر می‌کند — بدون نیاز به اقدام
- *    دستی واحد خرید.
+ * - مقدار دریافتی هر قلم تجمعی است (item.receivedQty += این‌دور).
+ * - اگر قلمی در این دور کسری داشته باشد، ردیف‌های تفکیک‌شده‌ی نوع
+ *   مشکل (که ممکن است شامل چند نوع مختلف مثل کسری + معیوب باشد) با
+ *   شناسه‌ی یکتا به آرایه‌ی item.issues اضافه می‌شوند (تاریخچه‌ی کامل
+ *   حفظ می‌شود، نه فقط آخرین وضعیت).
+ * - در پایان، بررسی می‌شود که آیا این دریافت باعث تکمیل مرجوعی‌های
+ *   «در انتظار ارسال جایگزین» شده یا نه (اتوماتیک، بدون نیاز به
+ *   اقدام دستی واحد خرید).
  */
 export async function confirmReceiving(purchaseId, receivingData) {
   await delay(500);
@@ -197,6 +183,8 @@ export async function confirmReceiving(purchaseId, receivingData) {
   if (index === -1) throw new Error("خرید یافت نشد");
 
   const purchase = allPurchases[index];
+  const receivedDate =
+    receivingData.receivedDate || new Date().toISOString().slice(0, 10);
 
   const updatedItems = purchase.items.map((item) => {
     const receivedItem = receivingData.receivedItems.find(
@@ -209,23 +197,30 @@ export async function confirmReceiving(purchaseId, receivingData) {
     const shortageThisRound =
       (receivedItem.expectedQty || 0) - (receivedItem.receivedQty || 0);
 
+    let newIssues = item.issues || [];
     if (shortageThisRound > 0) {
-      return {
-        ...item,
-        receivedQty: newReceivedQty,
-        lastIssueType: receivedItem.issueType || "shortage",
-        lastIssueNote: receivedItem.note || "",
-        lastIssueDate:
-          receivingData.receivedDate || new Date().toISOString().slice(0, 10),
-      };
+      const breakdown =
+        receivedItem.issues && receivedItem.issues.length > 0
+          ? receivedItem.issues
+          : [{ type: "shortage", qty: shortageThisRound, note: "" }];
+
+      const appended = breakdown
+        .filter((b) => (Number(b.qty) || 0) > 0)
+        .map((b) => ({
+          id: generateId(),
+          type: b.type || "shortage",
+          qty: Number(b.qty) || 0,
+          note: b.note || "",
+          date: receivedDate,
+        }));
+
+      newIssues = [...newIssues, ...appended];
     }
 
     return {
       ...item,
       receivedQty: newReceivedQty,
-      lastIssueType: null,
-      lastIssueNote: null,
-      lastIssueDate: null,
+      issues: newIssues,
     };
   });
 
@@ -235,16 +230,14 @@ export async function confirmReceiving(purchaseId, receivingData) {
     status: receivingData.status,
     receivedItems: receivingData.receivedItems,
     receivingNote: receivingData.receivingNote,
-    receivedDate: receivingData.receivedDate,
+    receivedDate,
     transporterName: receivingData.transporterName || "",
     transporterNationalId: receivingData.transporterNationalId || "",
     vehiclePlate: receivingData.vehiclePlate || "",
     updatedAt: new Date().toISOString(),
   };
 
-  // بررسی و بستن خودکار مرجوعی‌های «در انتظار ارسال جایگزین» که با
-  // همین دریافت به‌طور کامل پوشش داده شده‌اند
-  autoResolveReplacementReturns(purchaseId, updatedItems);
+  autoResolveReplacementReturns(purchaseId);
 
   return allPurchases[index];
 }

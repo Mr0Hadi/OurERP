@@ -8,9 +8,10 @@ import {
 } from "@/shared/constants/purchaseIssueTypes";
 import { gregorianToPersian } from "@/shared/utils/dateUtils";
 
-// نمایش دقیق و بدون واسطه‌ی گزارشی که انباردار هنگام دریافت ثبت کرده:
-// چه تعداد کالا، به چه صورت مشکل داشته و چه یادداشتی گذاشته شده.
-// این بخش کاملاً فقط‌خواندنی است — منبع تصمیم‌گیری واحد خرید.
+// نمایش دقیق و بدون واسطه‌ی گزارشی که انباردار هنگام دریافت ثبت کرده.
+// چون یک محصول ممکن است چند نوع مشکل مستقل داشته باشد (مثلاً هم کسری
+// هم معیوب)، همان محصول می‌تواند چند بار با نوع/تعداد/یادداشت متفاوت
+// در این جدول تکرار شود — این ردیف‌ها با issueId از هم متمایزند.
 export default function PurchaseReturnWarehouseReportSection({ report }) {
   if (!report) return null;
 
@@ -55,7 +56,7 @@ export default function PurchaseReturnWarehouseReportSection({ report }) {
                   PURCHASE_ISSUE_TYPE_STYLES[item.issueType] ??
                   PURCHASE_ISSUE_TYPE_STYLES.other;
                 return (
-                  <tr key={item.productId}>
+                  <tr key={item.issueId}>
                     <td className="px-3 py-2">
                       <p className="font-medium text-card-foreground text-sm">
                         {item.productName}
@@ -112,7 +113,7 @@ export default function PurchaseReturnWarehouseReportSection({ report }) {
               PURCHASE_ISSUE_TYPE_STYLES.other;
             return (
               <div
-                key={item.productId}
+                key={item.issueId}
                 className="border border-border rounded-lg p-3 space-y-2 bg-card"
               >
                 <div className="flex items-start justify-between gap-2">

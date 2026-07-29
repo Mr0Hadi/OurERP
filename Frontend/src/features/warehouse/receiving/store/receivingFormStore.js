@@ -8,7 +8,7 @@ const EMPTY_RECEIVING = {
   invoiceNumber: '',
   invoiceDate: '',
   status: '',
-  items: [],           // هر آیتم: productId, productName, productCode, expectedQty, receivedQty, issueType, note
+  items: [],
   receivingNote: '',
   receivedDate: new Date().toISOString().slice(0, 10),
   transporterName: '',
@@ -35,8 +35,12 @@ const useReceivingFormStore = create(
         if (initializedForId === purchaseData.id) return;
 
         // فقط باقیمانده‌ی هر قلم — سفارش منهای آنچه قبلاً دریافت شده
-        // (receivedQty) و منهای آنچه از طریق مرجوعی به‌طور کامل تسویه
-        // شده (settledQty) — به‌عنوان «مورد انتظار» این دور نمایش داده می‌شود.
+        // (receivedQty) و منهای آنچه از طریق مرجوعی به‌طور دائم تسویه
+        // شده (settledQty: بازگشت وجه/پذیرش زیان/اعتبار) — به‌عنوان
+        // «مورد انتظار» این دور نمایش داده می‌شود.
+        // توجه: هر قلم می‌تواند این دور، بین چند نوع مشکل مختلف
+        // (کسری، معیوب، آسیب‌دیده و ...) تقسیم شود؛ آرایه‌ی issues
+        // برای ثبت همین تفکیک در این دور استفاده می‌شود.
         const receivingItems = (purchaseData.items || [])
           .map((item) => {
             const receivedSoFar = item.receivedQty || 0;
@@ -48,10 +52,7 @@ const useReceivingFormStore = create(
               productCode: item.productCode,
               expectedQty: remaining,
               receivedQty: remaining, // پیش‌فرض: باقیمانده کامل دریافت شده
-              // اگر این قلم پیش‌تر هم مشکلی گزارش شده بود، همان نوع مشکل
-              // به‌عنوان پیش‌فرض این دور هم انتخاب می‌شود
-              issueType: item.lastIssueType || 'shortage',
-              note: '',
+              issues: [], // ردیف‌های تفکیک مشکل این دور؛ فقط وقتی receivedQty < expectedQty معنا دارد
             };
           })
           .filter((item) => item.expectedQty > 0);

@@ -26,8 +26,6 @@ export const useCreatePurchaseReturnMutation = () => {
       queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.reports() });
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
       usePurchaseReturnFormStore.getState().resetForm();
-      // مستقیم به صفحه‌ی همین مرجوعی برو تا هماهنگی با تامین‌کننده
-      // بلافاصله از همان‌جا قابل شروع باشد
       navigate(`/purchases/returns/${created.id}`);
     },
     onError: (error) => {
@@ -71,8 +69,6 @@ export const useUpdatePurchaseReturnStatusMutation = (id) => {
       queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.reports() });
       queryClient.invalidateQueries({ queryKey: purchaseKeys.detail(updated.purchaseId) });
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
-      // این تغییر وضعیت ممکن است باعث بازگشایی خرید برای دریافت مجدد
-      // شده باشد (در انتظار ارسال جایگزین)؛ لیست دریافت انباردار هم رفرش شود
       queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       toast.success("وضعیت مرجوعی به‌روزرسانی شد");
     },
