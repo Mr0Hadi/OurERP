@@ -2,13 +2,13 @@
 using Application.Common.Contracts.UserContextService;
 using Application.Common.Dtos;
 using Application.Common.Enums;
-using Application.Features.User.Dtos;
+using Application.Features.User.Dto;
 using AutoMapper;
 using Common.Exceptions;
 using Common.Extensions;
 using MediatR;
 
-namespace Application.Features.User.Queries
+namespace Application.Features.User.Query
 {
     public class GetUserInfoQuery : IRequest<ResponseDto>
     {

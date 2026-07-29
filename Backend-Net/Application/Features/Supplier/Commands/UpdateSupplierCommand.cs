@@ -82,6 +82,7 @@ namespace Application.Features.Supplier.Commands
             supplier.longitude = request.Longitude;
             supplier.latitude = request.Latitude;
             supplier.Description = request.Description;
+            supplier.UpdatedAt = DateTime.Now;
 
             _supplierRepository.Update(supplier);
             await _unitOfWork.SaveChangesAsync();

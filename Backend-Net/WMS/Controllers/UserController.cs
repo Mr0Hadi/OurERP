@@ -1,9 +1,9 @@
 using Application.Features.User.Command;
-using Application.Features.User.Queries;
 using Application.Common.Dtos;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Application.Features.User.Query;
 
 namespace WMS.Controllers
 {

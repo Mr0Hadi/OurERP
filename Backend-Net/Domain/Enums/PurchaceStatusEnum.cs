@@ -1,6 +1,6 @@
 ﻿namespace Domain.Enums
 {
-    public enum PurchaceStatusEnum
+    public enum PurchaseStatusEnum
     {
         PENDING,
         SHIPPED,

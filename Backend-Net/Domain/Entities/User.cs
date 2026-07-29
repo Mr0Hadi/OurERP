@@ -12,7 +12,7 @@ namespace Domain.Entities
         public string PersonelCode { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
-        public DateTime LastModifiedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
         public int DepartmentId { get; set; }
         public Department Department { get; set; }
         public int TeamId { get; set; }

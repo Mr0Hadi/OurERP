@@ -1,6 +1,6 @@
 ﻿using Application.Common.Dtos;
 
-namespace Application.Features.User.Dtos
+namespace Application.Features.User.Dto
 {
 	public class UserUpdateDto
 	{

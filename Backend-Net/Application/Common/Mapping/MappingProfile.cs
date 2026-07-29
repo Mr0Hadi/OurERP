@@ -1,11 +1,11 @@
 using Application.Common.Dtos;
 using Application.Features.Customer.Commands;
 using Application.Features.Customer.Dtos;
+using Application.Features.Product.Commands;
 using Application.Features.Supplier.Commands;
 using Application.Features.Supplier.Dtos;
 using Application.Features.User.Command;
 using Application.Features.User.Dto;
-using Application.Features.User.Dtos;
 using AutoMapper;
 using Common.Extensions;
 using Domain.Entities;
@@ -16,6 +16,8 @@ namespace Application.Common.Mapping
 	{
 		public MappingProfile()
 		{
+			CreateMap<CreateProductCommand, Product>();
+
 			CreateMap<CreateSupplierCommand, Supplier>()
 				.ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.Now));
 

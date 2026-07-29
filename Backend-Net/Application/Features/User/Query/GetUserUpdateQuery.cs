@@ -1,13 +1,13 @@
 ﻿using Application.Common.Contracts.Repositories;
 using Application.Common.Dtos;
 using Application.Common.Enums;
-using Application.Features.User.Dtos;
+using Application.Features.User.Dto;
 using AutoMapper;
 using Common.Exceptions;
 using FluentValidation;
 using MediatR;
 
-namespace Application.Features.User.Queries
+namespace Application.Features.User.Query
 {
 	public class GetUserUpdateQuery : IRequest<ResponseDto>
 	{

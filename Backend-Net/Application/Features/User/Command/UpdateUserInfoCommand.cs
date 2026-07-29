@@ -54,6 +54,7 @@ namespace Application.Features.User.Command
 
             user.FirstName = request.FirstName;
             user.LastName = request.LastName;
+            user.UpdatedAt = DateTime.Now;
 
             _userRepository.Update(user);
 
