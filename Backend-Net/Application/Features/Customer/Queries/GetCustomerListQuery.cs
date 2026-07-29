@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.Customer.Queries
 {
-    public class GetCustomerList : IRequest<ResponseDto>
+    public class GetCustomerListQuery : IRequest<ResponseDto>
     {
         public int Page { get; set; } = 1;
         public int Take { get; set; } = 10;
@@ -18,14 +18,14 @@ namespace Application.Features.Customer.Queries
         public UInt64? MaxBalance { get; set; }
     }
 
-    public class GetCustomerListHandler : IRequestHandler<GetCustomerList, ResponseDto>
+    public class GetCustomerListQueryHandler : IRequestHandler<GetCustomerListQuery, ResponseDto>
     {
         private readonly IWMSDbContext _context;
-        public GetCustomerListHandler(IWMSDbContext context)
+        public GetCustomerListQueryHandler(IWMSDbContext context)
         {
             _context = context;
         }
-        public async Task<ResponseDto> Handle(GetCustomerList request, CancellationToken cancellationToken)
+        public async Task<ResponseDto> Handle(GetCustomerListQuery request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
 

@@ -1,8 +1,9 @@
-﻿using Domain.Enums;
+﻿using Domain.Entities;
+using Domain.Enums;
 
-namespace Domain.Entities
+namespace Application.Features.Product.Dtos
 {
-    public class Product
+    public class ProductDto
     {
         public int Id { get; set; }
         public string Name { get; set; }
@@ -17,9 +18,6 @@ namespace Domain.Entities
         public int Stock { get; set; }
         public int LowStockThreshold { get; set; }
         public string? ImageUrl { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
         public int ProductCategoryId { get; set; }
-        public ProductCategory ProductCategory { get; set; }
     }
 }

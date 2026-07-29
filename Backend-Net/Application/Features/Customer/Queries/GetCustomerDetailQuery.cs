@@ -8,21 +8,21 @@ using MediatR;
 
 namespace Application.Features.Customer.Queries
 {
-    public class GetCustomerDetail : IRequest<ResponseDto>
+    public class GetCustomerDetailQuery : IRequest<ResponseDto>
     {
         public int Id { get; set; }
     }
 
-    public class GetCustomerDetailHandler : IRequestHandler<GetCustomerDetail, ResponseDto>
+    public class GetCustomerDetailQueryHandler : IRequestHandler<GetCustomerDetailQuery, ResponseDto>
     {
         private readonly ICustomerRepository _customerRepository;
         private readonly IMapper _mapper;
-        public GetCustomerDetailHandler(ICustomerRepository customerRepository, IMapper mapper)
+        public GetCustomerDetailQueryHandler(ICustomerRepository customerRepository, IMapper mapper)
         {
             _customerRepository = customerRepository;
             _mapper = mapper;
         }
-        public async Task<ResponseDto> Handle(GetCustomerDetail request, CancellationToken cancellationToken)
+        public async Task<ResponseDto> Handle(GetCustomerDetailQuery request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
             var customer = await _customerRepository.GetByIdAsync(request.Id) ?? throw new NotFoundCustomException("مشتری با اطلاعات مورد نظر یافت نشد.");

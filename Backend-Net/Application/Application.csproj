@@ -22,10 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Features\Product\Dtos\" />
-    <Folder Include="Features\Product\Queries\" />
     <Folder Include="Features\Supplier\Dtos\" />
-    <Folder Include="Features\Supplier\Queries\" />
   </ItemGroup>
 
 </Project>

@@ -19,13 +19,13 @@ namespace WMS.Controllers
         }
 
         [HttpGet("GetSupplierList")]
-        public async Task<ActionResult<ResponseDto>> GetSupplierList([FromQuery] GetSupplierList request)
+        public async Task<ActionResult<ResponseDto>> GetSupplierList([FromQuery] GetSupplierListQuery request)
         { 
             return await _mediator.Send(request); 
         }
 
         [HttpGet("GetSupplierDetail")]
-        public async Task<ActionResult<ResponseDto>> GetSupplierDetail([FromQuery] GetSupplierDetail request)
+        public async Task<ActionResult<ResponseDto>> GetSupplierDetail([FromQuery] GetSupplierDetailQuery request)
         {
             return await _mediator.Send(request);
         }

@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.Supplier.Queries
 {
-    public class GetSupplierList : IRequest<ResponseDto>
+    public class GetSupplierListQuery : IRequest<ResponseDto>
     {
         public int Page { get; set; } = 1;
         public int Take { get; set; } = 10;
@@ -17,14 +17,14 @@ namespace Application.Features.Supplier.Queries
         public string? CompanyNameOrContactName { get; set; }
     }
 
-    public class GetSupplierListHandler : IRequestHandler<GetSupplierList, ResponseDto>
+    public class GetSupplierListQueryHandler : IRequestHandler<GetSupplierListQuery, ResponseDto>
     {
         private readonly IWMSDbContext _context;
-        public GetSupplierListHandler(IWMSDbContext context)
+        public GetSupplierListQueryHandler(IWMSDbContext context)
         {
             _context = context;
         }
-        public async Task<ResponseDto> Handle(GetSupplierList request, CancellationToken cancellationToken)
+        public async Task<ResponseDto> Handle(GetSupplierListQuery request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
 
