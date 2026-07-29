@@ -48,8 +48,6 @@ const STATUS_STYLES = {
   trackable: "bg-amber-50 text-amber-700 border-amber-300 border-dashed hover:bg-amber-50",
   pending: "bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-100",
   coordinating: "bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-100",
-  awaiting_refund: "bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-100",
-  awaiting_replacement: "bg-orange-100 text-orange-800 border-orange-300 hover:bg-orange-100",
   resolved: "bg-green-100 text-green-800 border-green-300 hover:bg-green-100",
   rejected: "bg-red-100 text-red-800 border-red-300 hover:bg-red-100",
   cancelled: "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-100",
@@ -172,7 +170,7 @@ const PurchaseReturnTable = ({
                 onClick={() => navigate(`/purchases/returns/new/${r.purchaseId}`)}
               >
                 <Undo2 className="h-3.5 w-3.5" />
-                بررسی و ثبت مرجوعی
+                بررسی
               </Button>
             );
           }
@@ -274,7 +272,6 @@ const PurchaseReturnTable = ({
         </div>
       </div>
 
-      {/* Pagination */}
       <div className="flex flex-col gap-2 sm:flex-row items-center justify-between px-2">
         <div className="flex items-center gap-2">
           <p className="text-sm font-light whitespace-nowrap">ردیف در صفحه</p>

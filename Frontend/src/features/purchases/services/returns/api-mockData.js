@@ -3,6 +3,7 @@ import {
   allPurchaseReturns,
   PURCHASE_RETURN_STATUSES,
   RESOLUTION_TYPES,
+  RESOLUTION_LINE_STATUSES,
 } from "./mockData";
 import { allPurchases } from "@/features/purchases/services/mockData";
 import {
@@ -12,30 +13,27 @@ import {
 import { PURCHASE_ISSUE_TYPES } from "@/shared/constants/purchaseIssueTypes";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const generateId = () =>
+  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
-// مرجوعی‌های لغوشده/ردشده دیگر «مصرف‌کننده‌ی سهمیه‌ی کسری» محسوب نمی‌شوند
+// یک مرجوعی «فعال» محسوب می‌شود اگر سهمیه‌ی کسری‌ای که رزرو کرده هنوز
+// نباید دوباره در گزارش‌های «قابل پیگیری» ظاهر شود — چه هنوز در حال
+// هماهنگی باشد، چه کاملاً تسویه شده باشد (چون در هر دو حالت آن کسری
+// «مدیریت شده» تلقی می‌شود). فقط رد‌شده/لغوشده سهمیه را آزاد می‌کنند.
 const ACTIVE_RETURN_STATUSES = new Set([
   PURCHASE_RETURN_STATUSES.PENDING,
   PURCHASE_RETURN_STATUSES.COORDINATING,
-  PURCHASE_RETURN_STATUSES.AWAITING_REFUND,
-  PURCHASE_RETURN_STATUSES.AWAITING_REPLACEMENT,
   PURCHASE_RETURN_STATUSES.RESOLVED,
-]);
-
-// وضعیت‌هایی که هنوز به نتیجه‌ی نهایی نرسیده‌اند (برای محاسبه‌ی
-// «چقدر دیگر از این محصول در انتظار تصمیم‌گیری/ارسال است»)
-const NOT_YET_FINAL_RETURN_STATUSES = new Set([
-  PURCHASE_RETURN_STATUSES.PENDING,
-  PURCHASE_RETURN_STATUSES.COORDINATING,
-  PURCHASE_RETURN_STATUSES.AWAITING_REFUND,
-  PURCHASE_RETURN_STATUSES.AWAITING_REPLACEMENT,
 ]);
 
 function getPurchase(purchaseId) {
   return allPurchases.find((p) => Number(p.id) === Number(purchaseId));
 }
 
-/** مجموع تعداد رزرو شده روی یک ردیف مشکل مشخص (issueId)، توسط مرجوعی‌های فعال */
+function getReturnIndex(returnId) {
+  return allPurchaseReturns.findIndex((r) => Number(r.id) === Number(returnId));
+}
+
 function getReservedQtyForIssue(issueId, excludeReturnId = null) {
   let sum = 0;
   allPurchaseReturns.forEach((r) => {
@@ -48,28 +46,29 @@ function getReservedQtyForIssue(issueId, excludeReturnId = null) {
   return sum;
 }
 
-/** مجموع تعداد رزرو شده روی یک محصول مشخص از یک خرید، توسط مرجوعی‌های
- * فعالی که هنوز به نتیجه‌ی نهایی نرسیده‌اند (برای تشخیص «آیا مرجوعیِ
- * در انتظار ارسال جایگزین دیگر تکمیل شده یا نه») */
-function getReservedQtyByPendingReturns(purchaseId, productId, excludeReturnId = null) {
-  let sum = 0;
-  allPurchaseReturns.forEach((r) => {
-    if (r.purchaseId !== purchaseId) return;
-    if (excludeReturnId && r.id === excludeReturnId) return;
-    if (!NOT_YET_FINAL_RETURN_STATUSES.has(r.status)) return;
-    r.items.forEach((item) => {
-      if (item.productId === productId) sum += item.qty;
-    });
-  });
-  return sum;
+/**
+ * وضعیت کلی مرجوعی را از روی خطوط تصمیمِ اقلامش محاسبه می‌کند. رد/لغو
+ * جداگانه و صریح مدیریت می‌شوند و از این تابع عبور نمی‌کنند.
+ */
+function computeReturnStatus(items) {
+  const totalQty = items.reduce((s, i) => s + i.qty, 0);
+  const allLines = items.flatMap((i) => i.resolutions || []);
+  const allocatedQty = allLines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
+
+  if (allocatedQty === 0) return PURCHASE_RETURN_STATUSES.PENDING;
+
+  const allFinal =
+    allLines.length > 0 &&
+    allLines.every((l) => l.status === RESOLUTION_LINE_STATUSES.RESOLVED);
+
+  if (allocatedQty >= totalQty && allFinal) return PURCHASE_RETURN_STATUSES.RESOLVED;
+  return PURCHASE_RETURN_STATUSES.COORDINATING;
 }
 
 /**
- * برای یک قلم خرید، ردیف‌های تاریخچه‌ی مشکل (item.issues) را به
- * «مقدار باز» تبدیل می‌کند. برای جلوگیری از دوبار شمردن (مثلاً وقتی
- * محموله‌ی جدید بخشی از کسریِ قدیمی را پوشش داده)، سقف کل بین همه‌ی
- * ردیف‌ها برابر با «باقیمانده‌ی واقعی این قلم» (qty - دریافتی - تسویه‌شده)
- * است؛ جدیدترین گزارش‌ها اولویت دارند (چون دقیق‌ترین تصویر فعلی‌اند).
+ * برای یک قلم خرید، ردیف‌های تاریخچه‌ی مشکل (item.issues) را به «مقدار
+ * باز» تبدیل می‌کند؛ یعنی چقدر از هر گزارش هنوز مصرف‌نشده (نه دریافت،
+ * نه تسویه، نه رزرو توسط مرجوعی فعال دیگری) باقی مانده است.
  */
 function distributeOpenQtyAcrossIssues(item) {
   let budget = Math.max(
@@ -95,11 +94,6 @@ function distributeOpenQtyAcrossIssues(item) {
   return result;
 }
 
-/**
- * ساخت «گزارش کسری» یک خرید مستقیماً از روی داده‌های واقعیِ ثبت‌شده
- * توسط انباردار. هر نوع مشکل هر قلم به‌صورت یک ردیف مجزا برمی‌گردد —
- * یعنی یک کالا می‌تواند هم‌زمان چند ردیف (مثلاً کسری + معیوب) داشته باشد.
- */
 function buildShortageReport(purchase) {
   const lines = [];
 
@@ -150,12 +144,6 @@ function mostFrequentReason(values) {
   return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
 }
 
-/**
- * تبدیل گزارش کسریِ یک خرید به یک ردیف «مجازی» شبیه به مرجوعی، برای
- * نمایش در همان لیست مرجوعی‌ها با وضعیت «قابل پیگیری». یک ردیف در
- * سطح هر خرید (نه هر نوع مشکل) تا فهرست شلوغ نشود؛ جزئیات تفکیک‌شده
- * (چند نوع مشکل) داخل صفحه‌ی ثبت مرجوعی دیده می‌شود.
- */
 function toVirtualReturnEntry(report) {
   if (!report || report.items.length === 0) return null;
 
@@ -170,6 +158,7 @@ function toVirtualReturnEntry(report) {
     lineTotal: i.openShortageQty * i.unitPrice,
     reason: i.issueType,
     note: i.issueNote,
+    resolutions: [],
   }));
 
   return {
@@ -183,10 +172,8 @@ function toVirtualReturnEntry(report) {
     returnDate: report.lastReportDate,
     reason: mostFrequentReason(items.map((i) => i.reason)),
     status: PURCHASE_RETURN_STATUSES.TRACKABLE,
-    resolutionType: RESOLUTION_TYPES.NONE,
     items,
     totalAmount: items.reduce((s, i) => s + i.lineTotal, 0),
-    refundAmount: 0,
     description: "",
     createdAt: report.lastReportDate || new Date().toISOString(),
     updatedAt: report.lastReportDate || new Date().toISOString(),
@@ -297,16 +284,17 @@ export async function createPurchaseReturn(payload) {
     ? Math.max(...allPurchaseReturns.map((r) => Number(r.id) || 0)) + 1
     : 1;
   const returnNumber = `RET-2026-${String(newId).padStart(3, "0")}`;
-  const totalAmount = payload.items.reduce((sum, i) => sum + i.lineTotal, 0);
+
+  const items = payload.items.map((i) => ({ ...i, resolutions: [] }));
+  const totalAmount = items.reduce((sum, i) => sum + i.lineTotal, 0);
 
   const newReturn = {
     id: newId,
     returnNumber,
     status: PURCHASE_RETURN_STATUSES.PENDING,
-    resolutionType: RESOLUTION_TYPES.NONE,
-    refundAmount: 0,
     supplierResponseNote: "",
     ...payload,
+    items,
     totalAmount,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -317,111 +305,262 @@ export async function createPurchaseReturn(payload) {
 }
 
 /**
- * به‌روزرسانی مرجوعی + اعمال اثرات جانبی روی خرید مبدا:
- * - گذار به «تسویه‌شده» با بازگشت‌وجه/پذیرش‌زیان/اعتبار → قلم‌های
- *   مربوطه در خرید به‌طور دائم بسته می‌شوند.
- * - گذار به «در انتظار ارسال جایگزین» → خرید دوباره به وضعیت «ارسال
- *   شده» برمی‌گردد تا در لیست دریافتِ انباردار ظاهر شود.
+ * ثبت یک «خط تصمیم» برای بخشی از یک قلم مرجوعی. یک قلم می‌تواند چندین
+ * بار فراخوانی این تابع را ببیند تا کل مقدارش بین انواع مختلف
+ * (بازگشت وجه/جایگزینی/اعتبار/زیان) تقسیم شود.
+ *
+ * - برای refund/write_off/credit: بلافاصله نهایی می‌شود و روی خرید
+ *   مبدا اثر می‌گذارد (settlePurchaseItems).
+ * - برای replacement: در وضعیت «در انتظار» می‌ماند و فقط دریافت واقعی
+ *   در انبار (از طریق autoResolveReplacementReturns) می‌تواند آن را
+ *   نهایی کند؛ اینجا فقط خرید دوباره برای ارسال باز می‌شود.
  */
-export async function updatePurchaseReturn(id, updates) {
+export async function addItemResolution(returnId, issueId, resolution) {
   await delay(500);
-  const index = allPurchaseReturns.findIndex((r) => Number(r.id) === Number(id));
-  if (index === -1) throw new Error("مرجوعی یافت نشد");
+  const idx = getReturnIndex(returnId);
+  if (idx === -1) throw new Error("مرجوعی یافت نشد");
 
-  const current = allPurchaseReturns[index];
-  const next = { ...current, ...updates, updatedAt: new Date().toISOString() };
-  allPurchaseReturns[index] = next;
+  const ret = allPurchaseReturns[idx];
+  if (
+    [
+      PURCHASE_RETURN_STATUSES.REJECTED,
+      PURCHASE_RETURN_STATUSES.CANCELLED,
+      PURCHASE_RETURN_STATUSES.RESOLVED,
+    ].includes(ret.status)
+  ) {
+    throw new Error("این مرجوعی دیگر قابل ویرایش نیست");
+  }
 
-  const justSettled =
-    next.status === PURCHASE_RETURN_STATUSES.RESOLVED &&
-    [RESOLUTION_TYPES.REFUND, RESOLUTION_TYPES.WRITE_OFF, RESOLUTION_TYPES.CREDIT].includes(
-      next.resolutionType,
-    ) &&
-    current.status !== PURCHASE_RETURN_STATUSES.RESOLVED;
+  const item = ret.items.find((i) => i.issueId === issueId);
+  if (!item) throw new Error("قلم یافت نشد");
 
-  if (justSettled) {
-    const refundAmount =
-      next.resolutionType === RESOLUTION_TYPES.REFUND
-        ? Number(next.refundAmount) || 0
-        : 0;
+  const allocated = (item.resolutions || []).reduce(
+    (s, r) => s + (Number(r.qty) || 0),
+    0,
+  );
+  const remaining = item.qty - allocated;
+  const qty = Math.min(Number(resolution.qty) || 0, remaining);
+  if (qty <= 0) throw new Error("تعداد وارد شده نامعتبر است");
+
+  const isReplacement = resolution.type === RESOLUTION_TYPES.REPLACEMENT;
+  const refundAmount =
+    resolution.type === RESOLUTION_TYPES.REFUND
+      ? Number(resolution.refundAmount) || qty * item.unitPrice
+      : 0;
+
+  const newLine = {
+    id: generateId(),
+    type: resolution.type,
+    qty,
+    refundAmount,
+    note: resolution.note || "",
+    status: isReplacement
+      ? RESOLUTION_LINE_STATUSES.AWAITING
+      : RESOLUTION_LINE_STATUSES.RESOLVED,
+    createdAt: new Date().toISOString(),
+    resolvedAt: isReplacement ? null : new Date().toISOString(),
+  };
+
+  const newItems = ret.items.map((i) =>
+    i.issueId === issueId
+      ? { ...i, resolutions: [...(i.resolutions || []), newLine] }
+      : i,
+  );
+
+  allPurchaseReturns[idx] = {
+    ...ret,
+    items: newItems,
+    status: computeReturnStatus(newItems),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isReplacement) {
+    await reopenPurchaseForShipment(ret.purchaseId);
+  } else {
     await settlePurchaseItems(
-      next.purchaseId,
-      next.items.map((i) => ({ productId: i.productId, qty: i.qty })),
+      ret.purchaseId,
+      [{ productId: item.productId, qty }],
       { refundAmount },
     );
   }
 
-  const justScheduledReplacement =
-    next.status === PURCHASE_RETURN_STATUSES.AWAITING_REPLACEMENT &&
-    current.status !== PURCHASE_RETURN_STATUSES.AWAITING_REPLACEMENT;
-
-  if (justScheduledReplacement) {
-    await reopenPurchaseForShipment(next.purchaseId);
-  }
-
-  return allPurchaseReturns[index];
+  return allPurchaseReturns[idx];
 }
 
-export async function updatePurchaseReturnStatus(id, statusData) {
-  return updatePurchaseReturn(id, statusData);
+/**
+ * حذف یک خط تصمیم — فقط وقتی مجاز است که هنوز «در انتظار» باشد (یعنی
+ * فقط برای replacement که هنوز از انبار تأیید نشده)؛ خطوط نهایی‌شده
+ * (پول/زیان/اعتبار) چون قبلاً روی خرید اثر گذاشته‌اند، غیرقابل‌بازگشت‌اند.
+ */
+export async function removeItemResolution(returnId, issueId, resolutionId) {
+  await delay(400);
+  const idx = getReturnIndex(returnId);
+  if (idx === -1) throw new Error("مرجوعی یافت نشد");
+
+  const ret = allPurchaseReturns[idx];
+  const item = ret.items.find((i) => i.issueId === issueId);
+  if (!item) throw new Error("قلم یافت نشد");
+
+  const line = (item.resolutions || []).find((r) => r.id === resolutionId);
+  if (!line) throw new Error("مورد یافت نشد");
+  if (line.status !== RESOLUTION_LINE_STATUSES.AWAITING) {
+    throw new Error("این تصمیم قطعی شده و دیگر قابل لغو نیست");
+  }
+
+  const newItems = ret.items.map((i) =>
+    i.issueId === issueId
+      ? {
+          ...i,
+          resolutions: (i.resolutions || []).filter((r) => r.id !== resolutionId),
+        }
+      : i,
+  );
+
+  allPurchaseReturns[idx] = {
+    ...ret,
+    items: newItems,
+    status: computeReturnStatus(newItems),
+    updatedAt: new Date().toISOString(),
+  };
+
+  return allPurchaseReturns[idx];
+}
+
+/** فقط وقتی هنوز هیچ تصمیمی برای هیچ قلمی ثبت نشده مجاز است */
+export async function rejectPurchaseReturn(id) {
+  await delay(300);
+  const idx = getReturnIndex(id);
+  if (idx === -1) throw new Error("مرجوعی یافت نشد");
+  const ret = allPurchaseReturns[idx];
+  if (ret.status !== PURCHASE_RETURN_STATUSES.PENDING) {
+    throw new Error("فقط مرجوعی‌های بدون تصمیم ثبت‌شده قابل رد کردن‌اند");
+  }
+  allPurchaseReturns[idx] = {
+    ...ret,
+    status: PURCHASE_RETURN_STATUSES.REJECTED,
+    updatedAt: new Date().toISOString(),
+  };
+  return allPurchaseReturns[idx];
+}
+
+/** فقط وقتی هنوز هیچ تصمیمی برای هیچ قلمی ثبت نشده مجاز است */
+export async function cancelPurchaseReturn(id) {
+  await delay(300);
+  const idx = getReturnIndex(id);
+  if (idx === -1) throw new Error("مرجوعی یافت نشد");
+  const ret = allPurchaseReturns[idx];
+  if (ret.status !== PURCHASE_RETURN_STATUSES.PENDING) {
+    throw new Error("فقط مرجوعی‌های بدون تصمیم ثبت‌شده قابل لغو کردن‌اند");
+  }
+  allPurchaseReturns[idx] = {
+    ...ret,
+    status: PURCHASE_RETURN_STATUSES.CANCELLED,
+    updatedAt: new Date().toISOString(),
+  };
+  return allPurchaseReturns[idx];
+}
+
+/** بازگشایی یک مرجوعیِ رد‌شده برای تلاش دوباره؛ وضعیت از روی خطوط فعلی محاسبه می‌شود */
+export async function reopenPurchaseReturn(id) {
+  await delay(300);
+  const idx = getReturnIndex(id);
+  if (idx === -1) throw new Error("مرجوعی یافت نشد");
+  const ret = allPurchaseReturns[idx];
+  if (ret.status !== PURCHASE_RETURN_STATUSES.REJECTED) return ret;
+  allPurchaseReturns[idx] = {
+    ...ret,
+    status: computeReturnStatus(ret.items),
+    updatedAt: new Date().toISOString(),
+  };
+  return allPurchaseReturns[idx];
 }
 
 export async function removePurchaseReturn(id) {
   await delay(500);
-  const index = allPurchaseReturns.findIndex((r) => Number(r.id) === Number(id));
-  if (index === -1) throw new Error("مرجوعی یافت نشد");
-  const removed = allPurchaseReturns.splice(index, 1)[0];
+  const idx = getReturnIndex(id);
+  if (idx === -1) throw new Error("مرجوعی یافت نشد");
+  const removed = allPurchaseReturns.splice(idx, 1)[0];
   return removed;
 }
 
 /**
- * پس از هر دور دریافت در انبار فراخوانی می‌شود. برای هر مرجوعیِ «در
- * انتظار ارسال جایگزین» این خرید (به ترتیب قدیمی‌ترین اول)، بررسی
- * می‌کند که آیا با احتساب دریافتی‌های تازه، دیگر چیزی از آن محصول
- * کم نیست (به‌جز سهم خودِ همین مرجوعی) — اگر بله، یعنی جایگزین رسیده
- * و مرجوعی به‌طور خودکار «تسویه‌شده» علامت می‌خورد.
+ * پس از هر دور دریافت در انبار فراخوانی می‌شود. برای هر محصولی که
+ * خطوط تصمیمِ «جایگزینی در انتظار» دارد، بررسی می‌کند چقدر از مقدار
+ * تازه‌رسیده به کدام خط تعلق می‌گیرد (قدیمی‌ترین خط اول تسویه می‌شود)
+ * و در صورت پوشش کامل، آن خط را «نهایی» می‌کند — کاملاً خودکار، بدون
+ * هیچ اقدام دستی از سمت واحد خرید.
  */
 export function autoResolveReplacementReturns(purchaseId) {
   const purchase = getPurchase(purchaseId);
   if (!purchase) return;
 
-  const candidates = allPurchaseReturns
-    .filter(
-      (r) =>
-        r.purchaseId === purchaseId &&
-        r.status === PURCHASE_RETURN_STATUSES.AWAITING_REPLACEMENT,
+  const awaitingLines = [];
+  allPurchaseReturns.forEach((ret) => {
+    if (ret.purchaseId !== purchaseId) return;
+    if (
+      [
+        PURCHASE_RETURN_STATUSES.REJECTED,
+        PURCHASE_RETURN_STATUSES.CANCELLED,
+      ].includes(ret.status)
     )
-    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-
-  candidates.forEach((ret) => {
-    const idx = allPurchaseReturns.findIndex((r) => r.id === ret.id);
-    if (idx === -1) return;
-
-    const stillNeeded = ret.items.some((retItem) => {
-      const purchaseItem = purchase.items.find(
-        (pi) => pi.productId === retItem.productId,
-      );
-      if (!purchaseItem) return true;
-      const reservedByOthers = getReservedQtyByPendingReturns(
-        purchaseId,
-        retItem.productId,
-        ret.id,
-      );
-      const remaining =
-        purchaseItem.qty -
-        (purchaseItem.receivedQty || 0) -
-        (purchaseItem.settledQty || 0) -
-        reservedByOthers;
-      return remaining > 0;
+      return;
+    ret.items.forEach((item) => {
+      (item.resolutions || []).forEach((res) => {
+        if (
+          res.type === RESOLUTION_TYPES.REPLACEMENT &&
+          res.status === RESOLUTION_LINE_STATUSES.AWAITING
+        ) {
+          awaitingLines.push({ productId: item.productId, res });
+        }
+      });
     });
+  });
 
-    if (!stillNeeded) {
-      allPurchaseReturns[idx] = {
-        ...allPurchaseReturns[idx],
-        status: PURCHASE_RETURN_STATUSES.RESOLVED,
-        resolutionType: RESOLUTION_TYPES.REPLACEMENT,
-        updatedAt: new Date().toISOString(),
-      };
+  const productIds = [...new Set(awaitingLines.map((l) => l.productId))];
+
+  productIds.forEach((productId) => {
+    const purchaseItem = purchase.items.find((pi) => pi.productId === productId);
+    if (!purchaseItem) return;
+
+    const linesForProduct = awaitingLines
+      .filter((l) => l.productId === productId)
+      .map((l) => l.res)
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+    const totalAwaitingQty = linesForProduct.reduce(
+      (s, l) => s + (Number(l.qty) || 0),
+      0,
+    );
+    const stillNeeded = Math.max(
+      0,
+      purchaseItem.qty - (purchaseItem.receivedQty || 0) - (purchaseItem.settledQty || 0),
+    );
+    let coveredBudget = Math.max(0, totalAwaitingQty - stillNeeded);
+
+    for (const line of linesForProduct) {
+      if (coveredBudget >= line.qty) {
+        line.status = RESOLUTION_LINE_STATUSES.RESOLVED;
+        line.resolvedAt = new Date().toISOString();
+        coveredBudget -= line.qty;
+      } else {
+        break;
+      }
     }
+  });
+
+  allPurchaseReturns.forEach((ret, idx) => {
+    if (ret.purchaseId !== purchaseId) return;
+    if (
+      [
+        PURCHASE_RETURN_STATUSES.REJECTED,
+        PURCHASE_RETURN_STATUSES.CANCELLED,
+      ].includes(ret.status)
+    )
+      return;
+    allPurchaseReturns[idx] = {
+      ...ret,
+      status: computeReturnStatus(ret.items),
+      updatedAt: new Date().toISOString(),
+    };
   });
 }
