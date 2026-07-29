@@ -1,12 +1,10 @@
 // src/features/purchases/services/returns/mockData.js
-import { allPurchases, PURCHASE_STATUSES } from "@/features/purchases/services/mockData";
+import { allPurchases } from "@/features/purchases/services/mockData";
 import {
   PURCHASE_ISSUE_TYPES,
   PURCHASE_ISSUE_TYPE_LABELS,
 } from "@/shared/constants/purchaseIssueTypes";
 
-// دلایل مرجوعی = همان نوع‌های مشکلی که انبار گزارش می‌دهد + یک مورد
-// اضافه («ارسال اضافه») که مختص مرجوعی داوطلبانه (نه ناشی از کسری) است.
 export const PURCHASE_RETURN_REASONS = {
   ...PURCHASE_ISSUE_TYPES,
   EXCESS: "excess",
@@ -14,20 +12,21 @@ export const PURCHASE_RETURN_REASONS = {
 
 export const PURCHASE_RETURN_REASON_LABELS = {
   ...PURCHASE_ISSUE_TYPE_LABELS,
-  [PURCHASE_RETURN_REASONS.EXCESS]: "ارسال اضافه",
+  [PURCHASE_RETURN_REASONS.EXCESS]: "ارسال اضافه (مرجوع داوطلبانه)",
 };
 
+// وضعیت کلی مرجوعی از روی خطوط تصمیمِ اقلامش محاسبه می‌شود، نه دستی
+// انتخاب می‌شود (به‌جز رد/لغو که اکشن‌های صریح‌اند):
+// pending      → هنوز هیچ تصمیمی برای هیچ قلمی ثبت نشده
+// coordinating → برخی/همه‌ی تصمیم‌ها ثبت شده ولی حداقل یکی هنوز نهایی نشده
+//                (مثلاً یک خط «جایگزینی» منتظر تأیید انبار است)
+// resolved     → کل مقدار هر قلم تخصیص یافته و همه‌ی خطوط نهایی شده‌اند
+// rejected     → تامین‌کننده در همان ابتدا کلاً رد کرده
+// cancelled    → واحد خرید در همان ابتدا لغو کرده
 export const PURCHASE_RETURN_STATUSES = {
-  // «قابل پیگیری» یک وضعیت واقعی نیست که در دیتابیس ذخیره شود؛ فقط
-  // برای نمایش کسری‌هایی است که انبار گزارش داده ولی هنوز هیچ مرجوعی
-  // رسمی برایشان ثبت نشده. این ردیف‌ها به‌صورت «مجازی» در لیست
-  // مرجوعی‌ها نمایش داده می‌شوند تا واحد خرید بتواند مستقیماً از همان‌جا
-  // اقدام کند.
   TRACKABLE: "trackable",
   PENDING: "pending",
   COORDINATING: "coordinating",
-  AWAITING_REFUND: "awaiting_refund",
-  AWAITING_REPLACEMENT: "awaiting_replacement",
   RESOLVED: "resolved",
   REJECTED: "rejected",
   CANCELLED: "cancelled",
@@ -37,15 +36,13 @@ export const PURCHASE_RETURN_STATUS_LABELS = {
   [PURCHASE_RETURN_STATUSES.TRACKABLE]: "قابل پیگیری",
   [PURCHASE_RETURN_STATUSES.PENDING]: "در انتظار بررسی",
   [PURCHASE_RETURN_STATUSES.COORDINATING]: "در حال هماهنگی با تامین‌کننده",
-  [PURCHASE_RETURN_STATUSES.AWAITING_REFUND]: "در انتظار بازگشت وجه",
-  [PURCHASE_RETURN_STATUSES.AWAITING_REPLACEMENT]: "در انتظار ارسال جایگزین",
   [PURCHASE_RETURN_STATUSES.RESOLVED]: "تسویه شده",
   [PURCHASE_RETURN_STATUSES.REJECTED]: "رد شده توسط تامین‌کننده",
   [PURCHASE_RETURN_STATUSES.CANCELLED]: "لغو شده",
 };
 
+// نوع تصمیمی که برای بخشی از یک قلم گرفته می‌شود
 export const RESOLUTION_TYPES = {
-  NONE: "none",
   REFUND: "refund",
   REPLACEMENT: "replacement",
   CREDIT: "credit",
@@ -53,18 +50,18 @@ export const RESOLUTION_TYPES = {
 };
 
 export const RESOLUTION_TYPE_LABELS = {
-  [RESOLUTION_TYPES.NONE]: "تعیین نشده",
   [RESOLUTION_TYPES.REFUND]: "بازگشت وجه نقدی",
   [RESOLUTION_TYPES.REPLACEMENT]: "ارسال کالای جایگزین",
   [RESOLUTION_TYPES.CREDIT]: "اعتبار در خرید بعدی",
   [RESOLUTION_TYPES.WRITE_OFF]: "پذیرش زیان (بدون بازگشت وجه)",
 };
 
-// فقط برای تولید داده‌ی نمونه (mock seed) استفاده می‌شود
-const SEED_ELIGIBLE_STATUSES = [
-  PURCHASE_STATUSES.PARTIALLY_RECEIVED,
-  PURCHASE_STATUSES.RECEIVED,
-];
+// وضعیت هر خط تصمیم. فقط برای replacement واقعاً «در انتظار» می‌ماند؛
+// بقیه‌ی انواع (پولی/زیان/اعتبار) همان لحظه‌ی ثبت، نهایی محسوب می‌شوند.
+export const RESOLUTION_LINE_STATUSES = {
+  AWAITING: "awaiting",
+  RESOLVED: "resolved",
+};
 
 function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -75,11 +72,108 @@ function pickRandom(arr) {
 function formatDate(d) {
   return d.toISOString().slice(0, 10);
 }
+const generateId = () =>
+  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
+const SEED_ELIGIBLE_STATUSES = ["partially_received", "received"];
 const REASONS_LIST = Object.values(PURCHASE_RETURN_REASONS);
 const seedEligiblePurchases = allPurchases.filter((p) =>
   SEED_ELIGIBLE_STATUSES.includes(p.status),
 );
+
+// وضعیت‌های واقعی (قابل seed) — trackable خودش به‌صورت مجازی تولید می‌شود
+const SEED_STATUSES = [
+  PURCHASE_RETURN_STATUSES.PENDING,
+  PURCHASE_RETURN_STATUSES.COORDINATING,
+  PURCHASE_RETURN_STATUSES.RESOLVED,
+  PURCHASE_RETURN_STATUSES.REJECTED,
+  PURCHASE_RETURN_STATUSES.CANCELLED,
+];
+
+function buildSeedResolutions(qty, unitPrice, seedStatus) {
+  // فقط برای coordinating/resolved چند خط تصمیم نمونه می‌سازیم تا
+  // نمونه‌ی واقع‌بینانه‌ای از «تسویه‌ی ترکیبی» در دیتای اولیه دیده شود
+  if (seedStatus === PURCHASE_RETURN_STATUSES.RESOLVED) {
+    // کل مقدار را بین ۱ یا ۲ خط، فقط با انواع فوری (بدون replacement)
+    // تقسیم می‌کنیم تا نیازی به دریافت انبار برای «نهایی‌شدن» seed نباشد
+    if (qty === 1 || Math.random() < 0.5) {
+      return [
+        {
+          id: generateId(),
+          type: pickRandom([
+            RESOLUTION_TYPES.REFUND,
+            RESOLUTION_TYPES.WRITE_OFF,
+            RESOLUTION_TYPES.CREDIT,
+          ]),
+          qty,
+          refundAmount: qty * unitPrice,
+          note: "",
+          status: RESOLUTION_LINE_STATUSES.RESOLVED,
+          createdAt: new Date().toISOString(),
+          resolvedAt: new Date().toISOString(),
+        },
+      ];
+    }
+    const firstQty = Math.max(1, Math.floor(qty / 2));
+    const secondQty = qty - firstQty;
+    return [
+      {
+        id: generateId(),
+        type: RESOLUTION_TYPES.REFUND,
+        qty: firstQty,
+        refundAmount: firstQty * unitPrice,
+        note: "",
+        status: RESOLUTION_LINE_STATUSES.RESOLVED,
+        createdAt: new Date().toISOString(),
+        resolvedAt: new Date().toISOString(),
+      },
+      {
+        id: generateId(),
+        type: RESOLUTION_TYPES.WRITE_OFF,
+        qty: secondQty,
+        refundAmount: 0,
+        note: "",
+        status: RESOLUTION_LINE_STATUSES.RESOLVED,
+        createdAt: new Date().toISOString(),
+        resolvedAt: new Date().toISOString(),
+      },
+    ];
+  }
+
+  if (seedStatus === PURCHASE_RETURN_STATUSES.COORDINATING) {
+    // بخشی تسویه‌شده، بخشی همچنان در انتظار جایگزینی از تامین‌کننده
+    const settledQty = Math.max(0, Math.floor(qty / 2));
+    const awaitingQty = qty - settledQty;
+    const lines = [];
+    if (settledQty > 0) {
+      lines.push({
+        id: generateId(),
+        type: RESOLUTION_TYPES.REFUND,
+        qty: settledQty,
+        refundAmount: settledQty * unitPrice,
+        note: "",
+        status: RESOLUTION_LINE_STATUSES.RESOLVED,
+        createdAt: new Date().toISOString(),
+        resolvedAt: new Date().toISOString(),
+      });
+    }
+    if (awaitingQty > 0) {
+      lines.push({
+        id: generateId(),
+        type: RESOLUTION_TYPES.REPLACEMENT,
+        qty: awaitingQty,
+        refundAmount: 0,
+        note: "",
+        status: RESOLUTION_LINE_STATUSES.AWAITING,
+        createdAt: new Date().toISOString(),
+        resolvedAt: null,
+      });
+    }
+    return lines;
+  }
+
+  return [];
+}
 
 function buildReturnFromPurchase(purchase, index) {
   const itemsCount = Math.min(purchase.items.length, randomInt(1, 2));
@@ -88,10 +182,12 @@ function buildReturnFromPurchase(purchase, index) {
     .slice(0, itemsCount);
 
   const reason = pickRandom(REASONS_LIST);
+  const status = pickRandom(SEED_STATUSES);
 
   const items = pickedItems.map((item) => {
     const qty = Math.max(1, Math.min(item.qty, randomInt(1, 4)));
     return {
+      issueId: generateId(),
       productId: item.productId,
       productCode: item.productCode,
       productName: item.productName,
@@ -101,32 +197,11 @@ function buildReturnFromPurchase(purchase, index) {
       lineTotal: qty * item.unitPrice,
       reason,
       note: "",
+      resolutions: buildSeedResolutions(qty, item.unitPrice, status),
     };
   });
 
   const totalAmount = items.reduce((sum, i) => sum + i.lineTotal, 0);
-  // وضعیت‌های واقعی (نه «قابل پیگیری» که خودش تولید می‌شود)
-  const realStatuses = Object.values(PURCHASE_RETURN_STATUSES).filter(
-    (s) => s !== PURCHASE_RETURN_STATUSES.TRACKABLE,
-  );
-  const status = pickRandom(realStatuses);
-
-  let resolutionType = RESOLUTION_TYPES.NONE;
-  let refundAmount = 0;
-  if (status === PURCHASE_RETURN_STATUSES.AWAITING_REFUND) {
-    resolutionType = RESOLUTION_TYPES.REFUND;
-  } else if (status === PURCHASE_RETURN_STATUSES.AWAITING_REPLACEMENT) {
-    resolutionType = RESOLUTION_TYPES.REPLACEMENT;
-  } else if (status === PURCHASE_RETURN_STATUSES.RESOLVED) {
-    resolutionType = pickRandom([
-      RESOLUTION_TYPES.REFUND,
-      RESOLUTION_TYPES.REPLACEMENT,
-      RESOLUTION_TYPES.CREDIT,
-      RESOLUTION_TYPES.WRITE_OFF,
-    ]);
-    if (resolutionType === RESOLUTION_TYPES.REFUND) refundAmount = totalAmount;
-  }
-
   const createdDate = new Date(purchase.createdAt);
   createdDate.setDate(createdDate.getDate() + randomInt(1, 10));
 
@@ -140,10 +215,8 @@ function buildReturnFromPurchase(purchase, index) {
     returnDate: formatDate(createdDate),
     reason,
     status,
-    resolutionType,
     items,
     totalAmount,
-    refundAmount,
     description: "",
     supplierResponseNote: "",
     createdAt: createdDate.toISOString(),
