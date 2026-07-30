@@ -17,11 +17,12 @@ namespace Application.Features.Purchase.Commands
         public int SupplierId { get; set; }
         public UInt64 TotalPrice { get; set; }
         public UInt64 PaidPrice { get; set; }
+        public PaymentTypeEnum PaymentType { get; set; }
+        public PurchaseStatusEnum Status { get; set; }
+        public List<PaymentDetail> PaymentDetails { get; set; }
         public string InvoiceNumber { get; set; }
         public DateTime InvoiceDate { get; set; }
         public string? Description { get; set; }
-        public PaymentTypeEnum PaymentType { get; set; }
-        public List<PaymentDetail> PaymentDetails { get; set; }
     }
 
     public class CreatePurchaseValidator : AbstractValidator<CreatePurchaseCommand>
@@ -30,6 +31,7 @@ namespace Application.Features.Purchase.Commands
         {
             RuleFor(x => x.ProductItemList).NotEmpty().WithMessage(Validation.RequiredMessage("لیست محصولات"));
             RuleFor(x => x.SupplierId).NotEmpty().WithMessage(Validation.RequiredMessage("فروشنده"));
+            RuleFor(x => x.Status).NotEmpty().WithMessage(Validation.RequiredMessage("وضعیت"));
             RuleFor(x => x.TotalPrice).Must(p => p > 0).WithMessage("مبلغ کل باید از صفر بیشتر باشد.");
             RuleFor(x => x.PaidPrice).Must(p => p >= 0).WithMessage("مبلغ پرداختی باید بیشتر یا مساوی صفر باشد.");
             RuleFor(x => x.InvoiceNumber).NotEmpty().WithMessage(Validation.RequiredMessage("شماره فاکتور"));
