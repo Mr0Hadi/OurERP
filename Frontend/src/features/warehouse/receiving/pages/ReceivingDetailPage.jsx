@@ -2,9 +2,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AlertCircle, CheckCircle, AlertTriangle, X } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 import { Button } from "@/shared/components/ui/button";
-import { Card, CardContent } from "@/shared/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import { useHeaderStore } from "@/shared/store/headerStore";
-import { usePurchaseQuery } from "@/features/purchases/services/queries";
+import { useReceivingPurchaseQuery } from "../services/queries";
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
 import { useConfirmReceivingMutation } from "../services/mutations";
 import { useReceivingForm } from "../hooks/useReceivingForm";
@@ -35,8 +35,6 @@ function ReceivingDetailForm({ purchase }) {
   const navigate = useNavigate();
   const receivingMutation = useConfirmReceivingMutation();
 
-  // آیتم‌های خرید فقط productId/productName/productCode/qty/unitPrice/discount دارند؛
-  // تصویر و برند کالا وجود ندارد و باید از لیست محصولات انبار گرفته شود.
   const { data: productsData } = useProductsQuery(
     ALL_FILTERS,
     PAGINATION,
@@ -52,15 +50,17 @@ function ReceivingDetailForm({ purchase }) {
     formData,
     setFormData,
     handleItemChange,
+    handleAddIssue,
+    handleUpdateIssue,
+    handleRemoveIssue,
     isAllComplete,
-    isPartially,
+    isAllIssuesAllocated,
     isTransporterValid,
     buildPayload,
     resetForm,
   } = useReceivingForm(purchase);
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [actionType, setActionType] = useState(null); // 'complete' | 'partial'
   const [showTransporterError, setShowTransporterError] = useState(false);
 
   useEffect(() => {
@@ -70,44 +70,52 @@ function ReceivingDetailForm({ purchase }) {
 
   const items = formData.items || [];
 
-  // فقط برای نمایش: تصویر و برند از روی productId به هر ردیف اضافه می‌شود
   const displayItems = useMemo(
     () =>
       items.map((item) => {
         const product = productMap.get(item.productId);
         return {
           ...item,
-          imageUrl: product?.imageUrl || "",
+          image: product?.image || "",
           brand: product?.brand || "",
         };
       }),
     [items, productMap],
   );
 
-  const hasShortage = items.some(
-    (item) => (item.receivedQty || 0) < item.expectedQty,
-  );
   const isBusy = receivingMutation.isPending;
 
-  const handleAction = (type) => {
+  const handleConfirmClick = () => {
     if (!isTransporterValid) {
       setShowTransporterError(true);
       return;
     }
+    if (!isAllIssuesAllocated) {
+      toast.error(
+        "برای هر قلمِ ناقص، نوع مشکل و تعدادش را کامل مشخص کنید (مجموع باید دقیقاً برابر کسری آن قلم باشد)",
+      );
+      return;
+    }
     setShowTransporterError(false);
-    setActionType(type);
     setShowConfirmDialog(true);
   };
 
   const handleSubmit = () => {
     const payload = buildPayload();
+    const hasShortage = displayItems.some(
+      (item) => (item.receivedQty || 0) < item.expectedQty,
+    );
+
     receivingMutation.mutate(
       { purchaseId: payload.id, receivingData: payload },
       {
         onSuccess: () => {
-          resetForm();
           setShowConfirmDialog(false);
-          // useConfirmReceivingMutation خودش پس از موفقیت به لیست دریافت‌ها هدایت می‌کند
+          resetForm();
+          if (hasShortage) {
+            toast.success("گزارش کسری این دریافت برای واحد خرید ارسال شد");
+          }
+          navigate(ROUTES.WAREHOUSE_RECEIVING);
         },
       },
     );
@@ -116,16 +124,15 @@ function ReceivingDetailForm({ purchase }) {
   return (
     <div className="container max-w-6xl mx-auto px-4 space-y-4 animate-in fade-in zoom-in-95 duration-300">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* ستون اصلی – جدول اقلام */}
         <div className="lg:col-span-2 space-y-4">
           <ReceivingItemsSection
             items={displayItems}
             onItemChange={handleItemChange}
+            onAddIssue={handleAddIssue}
+            onUpdateIssue={handleUpdateIssue}
+            onRemoveIssue={handleRemoveIssue}
           />
-          <ReceivingMismatchList
-            purchaseId={purchase.id}
-            items={displayItems}
-          />
+          <ReceivingMismatchList items={displayItems} />
           <ReceivingTransporterSection
             formData={formData}
             onFormChange={(patch) => {
@@ -140,7 +147,6 @@ function ReceivingDetailForm({ purchase }) {
           />
         </div>
 
-        {/* ستون کناری – خلاصه و دکمه‌ها */}
         <div className="space-y-4">
           <ReceivingSummaryCard
             formData={formData}
@@ -149,12 +155,20 @@ function ReceivingDetailForm({ purchase }) {
 
           <div className="flex gap-2">
             <Button
-              className="flex-1 gap-2"
+              className={`flex-1 gap-2 ${
+                !isAllComplete && items.length > 0
+                  ? "bg-amber-600 hover:bg-amber-700 text-white"
+                  : ""
+              }`}
               disabled={isBusy || items.length === 0}
-              onClick={() => handleAction("complete")}
+              onClick={handleConfirmClick}
             >
-              <CheckCircle className="h-4 w-4" />
-              تأیید دریافت کامل
+              {isAllComplete ? (
+                <CheckCircle className="h-4 w-4" />
+              ) : (
+                <AlertTriangle className="h-4 w-4" />
+              )}
+              {isAllComplete ? "تأیید دریافت کامل" : "ثبت دریافت (با کسری)"}
             </Button>
             <Button
               type="button"
@@ -168,30 +182,31 @@ function ReceivingDetailForm({ purchase }) {
             </Button>
           </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full gap-2 border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/40"
-            onClick={() => handleAction("partial")}
-            disabled={isBusy || !hasShortage}
-          >
-            <AlertTriangle className="h-4 w-4" />
-            ثبت تحویل ناقص
-          </Button>
+          {!isAllIssuesAllocated && items.some((i) => i.receivedQty < i.expectedQty) && (
+            <p className="text-xs text-destructive text-center px-2">
+              برای همه‌ی قلم‌های ناقص، نوع مشکل و تعداد آن را کامل مشخص کنید.
+            </p>
+          )}
+
+          {items.every((i) => !(i.receivedQty > 0)) && (
+            <p className="text-xs text-muted-foreground text-center px-2">
+              این خرید هنوز هیچ دریافتی ندارد. اگر اساساً نباید دریافت شود،
+              از صفحه‌ی جزئیات خرید می‌توانید آن را لغو کنید.
+            </p>
+          )}
         </div>
       </div>
 
-      {/* دیالوگ تأیید نهایی */}
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {actionType === "complete" ? "ثبت دریافت کامل" : "ثبت تحویل ناقص"}
+              {isAllComplete ? "ثبت دریافت کامل" : "ثبت دریافت با کسری"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {actionType === "complete"
+              {isAllComplete
                 ? "آیا مطمئن هستید که همه اقلام به‌طور کامل دریافت شده‌اند؟"
-                : "با تأیید، وضعیت خرید به «تحویل ناقص» تغییر می‌کند و کمبودهای ثبت‌شده در فهرست مغایرت‌ها ذخیره می‌شود."}
+                : "با تأیید، وضعیت خرید به «تحویل ناقص» تغییر می‌کند و گزارش کسری (به تفکیک نوع مشکل هر قلم) برای واحد خرید ارسال می‌شود تا با تامین‌کننده هماهنگ کند."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -199,11 +214,7 @@ function ReceivingDetailForm({ purchase }) {
             <AlertDialogAction
               disabled={isBusy}
               onClick={handleSubmit}
-              className={
-                actionType === "partial"
-                  ? "bg-amber-600 hover:bg-amber-700"
-                  : ""
-              }
+              className={!isAllComplete ? "bg-amber-600 hover:bg-amber-700" : ""}
             >
               {isBusy ? "در حال ثبت..." : "تأیید"}
             </AlertDialogAction>
@@ -220,7 +231,7 @@ export default function ReceivingDetailPage() {
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  const { data: purchase, isLoading, isError } = usePurchaseQuery(id);
+  const { data: purchase, isLoading, isError } = useReceivingPurchaseQuery(Number(id));
 
   useEffect(() => {
     setHeader({

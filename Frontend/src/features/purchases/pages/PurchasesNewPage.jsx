@@ -53,7 +53,8 @@ export default function PurchasesNewPage() {
     }
 
     const isReturningFromSubPage =
-      prevPath === ROUTES.WAREHOUSE_PRODUCTS_NEW || prevPath === ROUTES.SUPPLIERS_NEW;
+      prevPath === ROUTES.WAREHOUSE_PRODUCTS_NEW ||
+      prevPath === ROUTES.SUPPLIERS_NEW;
 
     if (isReturningFromSubPage) {
       setReturnPath(currentPath);
@@ -64,7 +65,14 @@ export default function PurchasesNewPage() {
     resetForm();
     setReturnPath(currentPath);
     initializeForNew();
-  }, [location.pathname, location.state, setCurrentPath, setReturnPath, resetForm, initializeForNew]);
+  }, [
+    location.pathname,
+    location.state,
+    setCurrentPath,
+    setReturnPath,
+    resetForm,
+    initializeForNew,
+  ]);
 
   const createMutation = useCreatePurchaseMutation();
 
@@ -74,7 +82,7 @@ export default function PurchasesNewPage() {
   const { data: productsData, isLoading: productsLoading } = useProductsQuery(
     ALL_FILTERS,
     PAGINATION,
-    SORTING
+    SORTING,
   );
 
   const suppliers = suppliersData?.items || [];
@@ -161,17 +169,20 @@ export default function PurchasesNewPage() {
     let finalPaidAmount;
     let paymentDetails = {};
 
-    if (formData.paymentType === 'credit') {
+    if (formData.paymentType === "credit") {
       finalPaidAmount = 0;
-    } else if (formData.paymentType === 'mixed') {
+    } else if (formData.paymentType === "mixed") {
       const mixedPayments = formData.mixedPayments || [];
-      finalPaidAmount = mixedPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+      finalPaidAmount = mixedPayments.reduce(
+        (sum, p) => sum + (Number(p.amount) || 0),
+        0,
+      );
       paymentDetails.mixedPayments = mixedPayments;
     } else {
       finalPaidAmount = Number(formData.paidAmount) || 0;
-      if (formData.paymentType === 'check') {
+      if (formData.paymentType === "check") {
         paymentDetails.checkNumber = formData.checkNumber || null;
-      } else if (formData.paymentType === 'transfer') {
+      } else if (formData.paymentType === "transfer") {
         paymentDetails.transferRef = formData.transferRef || null;
       }
     }
@@ -182,7 +193,7 @@ export default function PurchasesNewPage() {
       invoiceNumber: formData.invoiceNumber,
       invoiceDate: formData.invoiceDate,
       dueDate: formData.dueDate || null,
-      description: formData.description || '',
+      description: formData.description || "",
       items: items.map((item) => ({
         productId: item.productId,
         productName: item.productName,
@@ -193,10 +204,10 @@ export default function PurchasesNewPage() {
         discount: item.discount || 0,
         lineTotal: item.qty * item.unitPrice * (1 - (item.discount || 0) / 100),
       })),
-      paymentType: formData.paymentType || 'cash',
+      paymentType: formData.paymentType || "cash",
       paidAmount: finalPaidAmount,
       ...paymentDetails,
-      status: formData.status || 'pending',
+      status: formData.status || "pending",
       totalAmount: computedTotal,
     };
 
@@ -243,7 +254,11 @@ export default function PurchasesNewPage() {
                 setShowErrors(false);
               }}
               onClear={() => setFormData({ supplierId: "", supplierName: "" })}
-              error={showErrors && !formData.supplierId ? "انتخاب تامین‌کننده الزامی است" : null}
+              error={
+                showErrors && !formData.supplierId
+                  ? "انتخاب تامین‌کننده الزامی است"
+                  : null
+              }
             />
             <PurchasePaymentSection
               formData={formData}
@@ -259,11 +274,7 @@ export default function PurchasesNewPage() {
             />
 
             <div className="flex gap-2">
-              <Button
-                type="submit"
-                className="flex-1 gap-2"
-                disabled={isBusy}
-              >
+              <Button type="submit" className="flex-1 gap-2" disabled={isBusy}>
                 <Save className="h-4 w-4" />
                 {isBusy ? "در حال ذخیره..." : "ذخیره خرید"}
               </Button>

@@ -32,28 +32,29 @@ export const PAYMENT_TYPE_LABELS = {
   [PAYMENT_TYPES.MIXED]: "ترکیبی",
 };
 
-// ── helper ──────────────────────────────────────────────────────────────────
-// تابع کمکی برای فرمت‌دهی تاریخ میلادی به فرمت استاندارد YYYY-MM-DD
+// ─── توابع کمکی ────────────────────────────────────────────────────────────
+
 function formatDate(year, month, day) {
-  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-// ── مشتریان برای فروش ──────────────────────────────────────────────────────
-// این لیست باید با allCustomers هماهنگ باشه
-const SALE_CUSTOMERS = [
-  { id: "1", name: "علی محمدی" },
-  { id: "2", name: "فاطمه احمدی" },
-  { id: "3", name: "لیلا ابراهیمی" },
-];
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
-// ── فروش‌های ثابت با تاریخ میلادی ────────────────────────────────────────────
+function pickRandom(array) {
+  return array[randomInt(0, array.length - 1)];
+}
+
+// ─── داده‌های نمونه فروش (همه IDها عددی) ────────────────────────────────────
+
 export const salesMock = [
   {
-    id: "1",
-    customerId: "1",
+    id: 1,
+    customerId: 1,
     customerName: "علی محمدی",
     invoiceNumber: "SALE-2026-001",
-    invoiceDate: "2026-06-04", // 4 June 2026
+    invoiceDate: "2026-06-04",
     status: SALE_STATUSES.DELIVERED,
     paymentType: PAYMENT_TYPES.CASH,
     paidAmount: 45000000,
@@ -61,18 +62,20 @@ export const salesMock = [
     description: "فروش لوازم یدکی موتور",
     items: [
       {
-        productId: "1",
+        productId: 1,
         productCode: "BRK-001",
         productName: "لنت ترمز جلو",
+        unit: "دست",
         qty: 10,
         unitPrice: 2000000,
         discount: 0,
         lineTotal: 20000000,
       },
       {
-        productId: "2",
+        productId: 2,
         productCode: "FLT-002",
         productName: "فیلتر روغن",
+        unit: "عدد",
         qty: 50,
         unitPrice: 500000,
         discount: 0,
@@ -83,30 +86,32 @@ export const salesMock = [
     updatedAt: "2026-06-04T10:30:00.000Z",
   },
   {
-    id: "2",
-    customerId: "2",
+    id: 2,
+    customerId: 2,
     customerName: "فاطمه احمدی",
     invoiceNumber: "SALE-2026-002",
-    invoiceDate: "2026-06-09", // 9 June 2026
+    invoiceDate: "2026-06-09",
     status: SALE_STATUSES.PROCESSING,
     paymentType: PAYMENT_TYPES.CREDIT,
     paidAmount: 0,
-    totalAmount: 28500000,
+    totalAmount: 28550000,
     description: "فروش لنت و دیسک ترمز",
     items: [
       {
-        productId: "1",
+        productId: 1,
         productCode: "BRK-001",
         productName: "لنت ترمز جلو",
+        unit: "دست",
         qty: 10,
         unitPrice: 1900000,
         discount: 5,
         lineTotal: 18050000,
       },
       {
-        productId: "3",
+        productId: 3,
         productCode: "SHK-003",
         productName: "کمک فنر جلو",
+        unit: "عدد",
         qty: 3,
         unitPrice: 3500000,
         discount: 0,
@@ -117,35 +122,37 @@ export const salesMock = [
     updatedAt: "2026-06-09T14:15:00.000Z",
   },
   {
-    id: "3",
-    customerId: "3",
+    id: 3,
+    customerId: 3,
     customerName: "لیلا ابراهیمی",
     invoiceNumber: "SALE-2026-003",
-    invoiceDate: "2026-06-15", // 15 June 2026
+    invoiceDate: "2026-06-15",
     status: SALE_STATUSES.DELIVERED,
     paymentType: PAYMENT_TYPES.MIXED,
-    paidAmount: 35000000,
-    totalAmount: 35000000,
-    description: "فروش باتری و لوازم برقی",
+    paidAmount: 34608000,
+    totalAmount: 34608000,
     mixedPayments: [
-      { type: 'cash', amount: 15000000 },
-      { type: 'check', amount: 10000000, checkNumber: '1234567890' },
-      { type: 'transfer', amount: 10000000, transferRef: 'TRN-87654321' },
+      { id: 1, type: "cash", amount: 15000000 },
+      { id: 2, type: "check", amount: 10000000, checkNumber: "1234567890" },
+      { id: 3, type: "transfer", amount: 9608000, transferRef: "TRN-87654321" },
     ],
+    description: "فروش باتری و لوازم برقی",
     items: [
       {
-        productId: "5",
+        productId: 5,
         productCode: "BAT-005",
         productName: "باتری ۶۰ آمپر",
+        unit: "عدد",
         qty: 5,
         unitPrice: 6000000,
         discount: 0,
         lineTotal: 30000000,
       },
       {
-        productId: "4",
+        productId: 4,
         productCode: "LMP-004",
         productName: "لامپ هدلایت H4",
+        unit: "عدد",
         qty: 12,
         unitPrice: 400000,
         discount: 4,
@@ -157,159 +164,154 @@ export const salesMock = [
   },
 ];
 
-// ── فروش‌های تولیدی با تاریخ میلادی ──────────────────────────────────────────
-function generateMoreSales(count = 20) {
-  const products = [
-    { id: "1", code: "BRK-001", name: "لنت ترمز جلو", price: 2000000 },
-    { id: "2", code: "FLT-002", name: "فیلتر روغن", price: 500000 },
-    { id: "3", code: "SHK-003", name: "کمک فنر جلو", price: 3500000 },
-    { id: "4", code: "LMP-004", name: "لامپ هدلایت H4", price: 400000 },
-    { id: "5", code: "BAT-005", name: "باتری ۶۰ آمپر", price: 6000000 },
-  ];
+// ─── تولید فروش‌های بیشتر (همه IDها عددی) ────────────────────────────────────
 
-  const statuses = Object.values(SALE_STATUSES);
-  const paymentTypes = Object.values(PAYMENT_TYPES);
-  const descriptions = [
-    "فروش قطعات موتور",
-    "فروش لوازم سیستم ترمز",
-    "فروش لوازم سیستم تعلیق",
-    "فروش لوازم برقی",
-    "فروش فیلترها",
-    "",
-  ];
+const MOCK_CUSTOMERS = [
+  { id: 1, name: "علی محمدی" },
+  { id: 2, name: "فاطمه احمدی" },
+  { id: 3, name: "لیلا ابراهیمی" },
+];
 
-  const sales = [];
-  const baseDate = new Date("2026-01-01");
+const MOCK_PRODUCTS = [
+  { id: 1, code: "BRK-001", name: "لنت ترمز جلو", price: 2000000, unit: "دست" },
+  { id: 2, code: "FLT-002", name: "فیلتر روغن", price: 500000, unit: "عدد" },
+  { id: 3, code: "SHK-003", name: "کمک فنر جلو", price: 3500000, unit: "عدد" },
+  { id: 4, code: "LMP-004", name: "لامپ هدلایت H4", price: 400000, unit: "عدد" },
+  { id: 5, code: "BAT-005", name: "باتری ۶۰ آمپر", price: 6000000, unit: "عدد" },
+];
 
-  for (let i = 0; i < count; i++) {
-    const customer =
-      SALE_CUSTOMERS[Math.floor(Math.random() * SALE_CUSTOMERS.length)];
-    const status = statuses[Math.floor(Math.random() * statuses.length)];
-    const paymentType =
-      paymentTypes[Math.floor(Math.random() * paymentTypes.length)];
+const MOCK_DESCRIPTIONS = [
+  "فروش قطعات موتور",
+  "فروش لوازم سیستم ترمز",
+  "فروش لوازم سیستم تعلیق",
+  "فروش لوازم برقی",
+  "فروش فیلترها",
+  "فروش عمده قطعات",
+  "",
+];
 
-    const itemsCount = Math.floor(Math.random() * 4) + 1;
-    const items = [];
-    const usedProductIds = new Set();
-    let totalAmount = 0;
+const SINGLE_PAYMENT_TYPES = ["cash", "check", "transfer"];
 
-    for (let j = 0; j < itemsCount; j++) {
-      // انتخاب محصول تصادفی که قبلاً استفاده نشده باشد
-      const availableProducts = products.filter(
-        (p) => !usedProductIds.has(p.id)
-      );
-      if (availableProducts.length === 0) {
-        // اگر همه محصولات استفاده شده‌اند، از حلقه خارج می‌شویم
-        break;
-      }
+function buildRandomItems() {
+  const itemsCount = randomInt(1, 4);
+  const usedProductIds = new Set();
+  const items = [];
+  let totalAmount = 0;
 
-      // انتخاب تصادفی از محصولات باقی‌مانده
-      const randomIndex = Math.floor(Math.random() * availableProducts.length);
-      const product = availableProducts[randomIndex];
-      usedProductIds.add(product.id);
+  for (let j = 0; j < itemsCount; j++) {
+    const availableProducts = MOCK_PRODUCTS.filter((p) => !usedProductIds.has(p.id));
+    if (availableProducts.length === 0) break;
 
-      // محاسبه تعداد و تخفیف
-      const qty = Math.floor(Math.random() * 20) + 1;
-      const discount = Math.random() < 0.3 ? Math.floor(Math.random() * 15) : 0;
-      const lineTotal = qty * product.price * (1 - discount / 100);
+    const product = pickRandom(availableProducts);
+    usedProductIds.add(product.id);
 
-      // افزودن آیتم
-      items.push({
-        productId: product.id,
-        productCode: product.code,
-        productName: product.name,
-        qty,
-        unitPrice: product.price,
-        discount,
-        lineTotal,
-      });
-      totalAmount += lineTotal;
+    const qty = randomInt(1, 20);
+    const discount = Math.random() < 0.3 ? randomInt(1, 15) : 0;
+    const lineTotal = qty * product.price * (1 - discount / 100);
+
+    items.push({
+      productId: product.id,
+      productCode: product.code,
+      productName: product.name,
+      unit: product.unit,
+      qty,
+      unitPrice: product.price,
+      discount,
+      lineTotal,
+    });
+
+    totalAmount += lineTotal;
+  }
+
+  return { items, totalAmount };
+}
+
+function buildMixedPayments(totalAmount) {
+  const numPayments = randomInt(2, 4);
+  const mixedPayments = [];
+  let remainingAmount = totalAmount;
+  let paidAmount = 0;
+
+  for (let k = 0; k < numPayments; k++) {
+    const isLast = k === numPayments - 1;
+    const paymentAmount = isLast
+      ? remainingAmount
+      : Math.floor(remainingAmount * (0.2 + Math.random() * 0.4));
+
+    const type = pickRandom(SINGLE_PAYMENT_TYPES);
+    const payment = { id: k + 1, type, amount: paymentAmount };
+
+    if (type === "check") {
+      payment.checkNumber = String(randomInt(1000000000, 9999999999));
+    } else if (type === "transfer") {
+      payment.transferRef = `TRN-${randomInt(10000000, 99999999)}`;
     }
 
+    mixedPayments.push(payment);
+    remainingAmount -= paymentAmount;
+    paidAmount += paymentAmount;
+  }
+
+  return { mixedPayments, paidAmount };
+}
+
+function generateMoreSales(count = 20) {
+  const baseDate = new Date("2026-01-01");
+  const sales = [];
+
+  for (let i = 0; i < count; i++) {
+    const customer = pickRandom(MOCK_CUSTOMERS);
+    const status = pickRandom(Object.values(SALE_STATUSES));
+    const paymentType = pickRandom(Object.values(PAYMENT_TYPES));
+
+    const { items, totalAmount } = buildRandomItems();
+
     let paidAmount = 0;
-    let mixedPayments = [];
+    let mixedPayments = null;
 
     if (paymentType === PAYMENT_TYPES.CREDIT) {
       paidAmount = 0;
     } else if (paymentType === PAYMENT_TYPES.MIXED) {
-      // تولید 2 تا 4 پرداخت ترکیبی
-      const numPayments = Math.floor(Math.random() * 3) + 2; // 2 تا 4
-      const paymentMethods = ['cash', 'check', 'transfer'];
-      let remainingAmount = totalAmount;
-
-      for (let j = 0; j < numPayments; j++) {
-        const isLast = j === numPayments - 1;
-        const amount = isLast
-          ? remainingAmount
-          : Math.floor(remainingAmount * (0.2 + Math.random() * 0.4));
-
-        const method = paymentMethods[Math.floor(Math.random() * paymentMethods.length)];
-        const payment = { type: method, amount };
-
-        if (method === 'check') {
-          payment.checkNumber = String(
-            Math.floor(Math.random() * 9000000000) + 1000000000
-          );
-        } else if (method === 'transfer') {
-          payment.transferRef = `TRN-${
-            Math.floor(Math.random() * 90000000) + 10000000
-          }`;
-        }
-
-        mixedPayments.push(payment);
-        remainingAmount -= amount;
-      }
-
-      paidAmount = totalAmount;
+      const result = buildMixedPayments(totalAmount);
+      mixedPayments = result.mixedPayments;
+      paidAmount = result.paidAmount;
     } else {
       paidAmount = totalAmount;
     }
 
-    // تاریخ تصادفی در 6 ماه گذشته با فرمت میلادی (YYYY-MM-DD)
-    const daysAgo = Math.floor(Math.random() * 180);
+    const daysAgo = randomInt(0, 179);
     const saleDate = new Date(baseDate);
     saleDate.setDate(saleDate.getDate() + daysAgo);
-    
-    // استخراج سال، ماه و روز به صورت میلادی
-    const year = saleDate.getFullYear();
-    const month = saleDate.getMonth() + 1; // ماه‌ها از 0 شروع می‌شوند
-    const day = saleDate.getDate();
-    const invoiceDate = formatDate(year, month, day);
+    const invoiceDate = formatDate(
+      saleDate.getFullYear(),
+      saleDate.getMonth() + 1,
+      saleDate.getDate()
+    );
+
+    const newId = salesMock.length + i + 1;
 
     const sale = {
-      id: String(salesMock.length + i + 1),
+      id: newId,
       customerId: customer.id,
       customerName: customer.name,
-      invoiceNumber: `SALE-2026-${String(salesMock.length + i + 1).padStart(
-        3,
-        "0"
-      )}`,
+      invoiceNumber: `SALE-2026-${String(newId).padStart(3, "0")}`,
       invoiceDate,
       status,
       paymentType,
       paidAmount,
       totalAmount,
-      description:
-        descriptions[Math.floor(Math.random() * descriptions.length)],
+      description: pickRandom(MOCK_DESCRIPTIONS),
       items,
       createdAt: saleDate.toISOString(),
       updatedAt: saleDate.toISOString(),
     };
 
-    // اضافه کردن mixedPayments در صورت نیاز
-    if (paymentType === PAYMENT_TYPES.MIXED) {
-      sale.mixedPayments = mixedPayments;
-    }
-
-    // اضافه کردن فیلدهای مربوط به چک و انتقال بانکی
     if (paymentType === PAYMENT_TYPES.CHECK) {
-      sale.checkNumber = String(
-        Math.floor(Math.random() * 9000000000) + 1000000000
-      );
+      sale.checkNumber = String(randomInt(1000000000, 9999999999));
     } else if (paymentType === PAYMENT_TYPES.TRANSFER) {
-      sale.transferRef = `TRN-${
-        Math.floor(Math.random() * 90000000) + 10000000
-      }`;
+      sale.transferRef = `TRN-${randomInt(10000000, 99999999)}`;
+    } else if (paymentType === PAYMENT_TYPES.MIXED && mixedPayments) {
+      sale.mixedPayments = mixedPayments;
     }
 
     sales.push(sale);
@@ -318,4 +320,5 @@ function generateMoreSales(count = 20) {
   return sales;
 }
 
+// آرایه نهایی فروش‌ها
 export const allSales = [...salesMock, ...generateMoreSales(20)];

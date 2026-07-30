@@ -1,20 +1,20 @@
 // src/features/warehouse/receiving/services/mutations.js
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import {
   updateReceivingStatus,
   confirmReceiving,
-} from "./api";
+} from "./api-mockData";
 import { receivingKeys } from "./queryKeys";
 import { purchaseKeys } from "#/features/purchases/services/queryKeys";
+import { purchaseReturnKeys } from "#/features/purchases/services/returns/queryKeys";
 
 export const useUpdateReceivingStatusMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ purchaseId, status }) =>
-      updateReceivingStatus(purchaseId, status),
+    mutationFn: ({ purchaseId, receivedItems }) =>
+      updateReceivingStatus(purchaseId, receivedItems),
     onMutate: async ({ purchaseId, status }) => {
       await queryClient.cancelQueries({
         queryKey: receivingKeys.detail(purchaseId),
@@ -53,7 +53,6 @@ export const useUpdateReceivingStatusMutation = () => {
         receivingKeys.detail(updatedPurchase.id),
         updatedPurchase
       );
-      // اینجا هم باید detail فیچر purchases رو invalidate کنیم
       queryClient.invalidateQueries({
         queryKey: purchaseKeys.detail(updatedPurchase.id),
       });
@@ -78,29 +77,32 @@ export const useUpdateReceivingStatusMutation = () => {
   });
 };
 
-
+// این هوک navigate انجام نمی‌دهد؛ انباردار همیشه پس از ثبت دریافت به
+// همان لیست دریافت‌ها برمی‌گردد (چه دریافت کامل بوده چه با کسری) —
+// ثبت مرجوعی به تامین‌کننده کاملاً بر عهده‌ی واحد خرید است.
 export const useConfirmReceivingMutation = () => {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
 
   return useMutation({
     mutationFn: ({ purchaseId, receivingData }) =>
       confirmReceiving(purchaseId, receivingData),
     onSuccess: (updatedPurchase) => {
-      // فیچر receiving — کلید اصلی که لیست ازش استفاده می‌کنه
       queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       queryClient.invalidateQueries({
         queryKey: receivingKeys.detail(updatedPurchase.id),
       });
 
-      // فیچر purchases — اگه جای دیگه‌ای هم همین رکورد رو نشون میده
       queryClient.invalidateQueries({
         queryKey: purchaseKeys.detail(updatedPurchase.id),
       });
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
 
+      // اگر این دریافت باعث بسته‌شدن خودکار یک مرجوعی «در انتظار
+      // ارسال جایگزین» شده باشد، لیست مرجوعی‌ها هم باید رفرش شود
+      queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.reports() });
+
       toast.success("دریافت کالا با موفقیت ثبت شد");
-      navigate("/warehouse/receiving");
     },
     onError: (error) => {
       toast.error(error?.message || "خطا در ثبت دریافت");

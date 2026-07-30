@@ -3,7 +3,10 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Save, X, Trash2 } from "lucide-react";
 import { useCustomerQuery } from "../services/queries";
-import { useUpdateCustomerMutation, useDeleteCustomerMutation } from "../services/mutations";
+import {
+  useUpdateCustomerMutation,
+  useDeleteCustomerMutation,
+} from "../services/mutations";
 import { useHeaderStore } from "#/shared/store/headerStore";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -33,15 +36,17 @@ function CustomerDetailForm({ customerData }) {
   const {
     formMethods,
     balanceType,
-    avatarPreview,
-    handleAvatarChange,
-    handleRemoveAvatar,
+    imagePreview,
+    handleImageChange,
+    handleRemoveImage,
     buildCustomerPayload,
   } = useCustomerForm(customerData);
 
   const {
     register,
     handleSubmit,
+    control,
+    watch,
     setValue,
     formState: { errors },
   } = formMethods;
@@ -49,7 +54,7 @@ function CustomerDetailForm({ customerData }) {
   const onSubmit = (data) => {
     updateMutation.mutate(
       { id: customerData.id, data: buildCustomerPayload(data) },
-      { onSuccess: () => navigate(ROUTES.CUSTOMERS) }
+      { onSuccess: () => navigate(ROUTES.CUSTOMERS) },
     );
   };
 
@@ -72,20 +77,20 @@ function CustomerDetailForm({ customerData }) {
             <CustomerIdentityForm
               register={register}
               errors={errors}
-              avatarPreview={avatarPreview}
-              onAvatarChange={handleAvatarChange}
-              onRemoveAvatar={handleRemoveAvatar}
+              imagePreview={imagePreview}
+              onImageChange={handleImageChange}
+              onRemoveImage={handleRemoveImage}
             />
             <CustomerFinanceForm
               register={register}
               errors={errors}
               balanceType={balanceType}
-              setValue={setValue}
+              control={control}
             />
           </div>
 
           <div className="lg:col-span-1 space-y-4">
-            <CustomerAddressForm register={register} />
+            <CustomerAddressForm register={register} watch={watch} setValue={setValue} />
 
             <div className="flex gap-2">
               <Button
@@ -123,7 +128,8 @@ function CustomerDetailForm({ customerData }) {
           <AlertDialogHeader>
             <AlertDialogTitle>حذف مشتری</AlertDialogTitle>
             <AlertDialogDescription>
-              آیا از حذف {customerData.firstName} {customerData.lastName} اطمینان دارید؟ این عملیات غیرقابل بازگشت است.
+              آیا از حذف {customerData.firstName} {customerData.lastName}{" "}
+              اطمینان دارید؟ این عملیات غیرقابل بازگشت است.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -157,8 +163,8 @@ export default function CustomerDetailPage() {
       title: isLoading
         ? "در حال بارگذاری..."
         : customer
-        ? `ویرایش مشتری: ${customer.firstName} ${customer.lastName}`
-        : "خطا",
+          ? `ویرایش مشتری: ${customer.firstName} ${customer.lastName}`
+          : "خطا",
       showBack: true,
       onBack: () => navigate(-1),
     });

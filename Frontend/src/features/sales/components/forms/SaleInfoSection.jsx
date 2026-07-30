@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
+import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
 
 /**
  * props: formData, onFormChange, errors
@@ -36,34 +37,33 @@ export default function SaleInfoSection({ formData, onFormChange, errors }) {
           )}
         </div>
 
+        {/* تاریخ فاکتور */}
         <div className="space-y-1.5">
           <Label htmlFor="invoiceDate" className="text-sm font-medium text-card-foreground">
             تاریخ فاکتور
           </Label>
-          <Input
+          <PersianDatePicker
             id="invoiceDate"
-            type="date"
-            value={formData.invoiceDate || ""}
-            onChange={(e) => handleChange("invoiceDate", e.target.value)}
-            className={`h-9 ${
-              errors?.invoiceDate ? "border-destructive focus-visible:ring-destructive/30" : ""
-            }`}
+            value={formData.invoiceDate}
+            onChange={(isoDate) => handleChange("invoiceDate", isoDate)}
+            placeholder="مثال: ۱۴۰۵/۰۵/۰۲"
+            error={!!errors?.invoiceDate}
           />
           {errors?.invoiceDate && (
             <p className="text-xs text-destructive">{errors.invoiceDate}</p>
           )}
         </div>
 
+        {/* تاریخ سررسید */}
         <div className="space-y-1.5">
           <Label htmlFor="dueDate" className="text-sm font-medium text-card-foreground">
             تاریخ سررسید
           </Label>
-          <Input
+          <PersianDatePicker
             id="dueDate"
-            type="date"
-            value={formData.dueDate || ""}
-            onChange={(e) => handleChange("dueDate", e.target.value)}
-            className="h-9"
+            value={formData.dueDate}
+            onChange={(isoDate) => handleChange("dueDate", isoDate)}
+            placeholder="مثال: ۱۴۰۵/۰۵/۰۲"
           />
         </div>
 

@@ -3,5 +3,5 @@ export const customerKeys = {
   lists: () => [...customerKeys.all, "list"],
   list: (filters) => [...customerKeys.lists(), { ...filters }],
   details: () => [...customerKeys.all, "detail"],
-  detail: (id) => [...customerKeys.details(), id],
+  detail: (id) => [...customerKeys.details(), String(id)],
 };

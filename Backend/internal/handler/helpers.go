@@ -40,10 +40,10 @@ func parsePagination(c *gin.Context) model.PaginationParams {
 
 func paginatedMeta(page, pageSize, totalCount int) map[string]int {
 	return map[string]int{
-		"page":        page,
-		"page_size":   pageSize,
-		"total_count": totalCount,
-		"total_pages": int(math.Ceil(float64(totalCount) / float64(pageSize))),
+		"page":       page,
+		"pageSize":   pageSize,
+		"totalCount": totalCount,
+		"totalPages": int(math.Ceil(float64(totalCount) / float64(pageSize))),
 	}
 }
 

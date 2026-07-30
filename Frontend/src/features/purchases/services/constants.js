@@ -1,3 +1,5 @@
+// src/features/purchases/services/constants.js
+
 export const PURCHASE_STATUSES = {
   PENDING: "pending",
   SHIPPED: "shipped",

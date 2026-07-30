@@ -8,7 +8,7 @@ import {
   updatePurchaseStatus,
   updatePurchasePayment,
   removePurchase,
-} from "./api";
+} from "./api-mockData";
 import { purchaseKeys } from "./queryKeys";
 import { receivingKeys } from "#/features/warehouse/receiving/services/queryKeys";
 import { ROUTES } from "@/shared/constants/routes";
@@ -37,16 +37,9 @@ export const useUpdatePurchaseMutation = (id) => {
   return useMutation({
     mutationFn: (purchaseData) => updatePurchase(id, purchaseData),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: purchaseKeys.detail(String(id)),
-      });
-      queryClient.invalidateQueries({
-        queryKey: purchaseKeys.lists(),
-      });
-      // اگه این خرید تو receiving هم هست، اون‌جا هم invalidate کن
-      queryClient.invalidateQueries({
-        queryKey: receivingKeys.detail(String(id)),
-      });
+      queryClient.invalidateQueries({ queryKey: purchaseKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: receivingKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       toast.success("خرید با موفقیت ویرایش شد");
       navigate(ROUTES.PURCHASES_LIST);
@@ -85,7 +78,6 @@ export const useUpdatePurchaseStatusMutation = () => {
         updatedPurchase
       );
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
-      // لیست receiving رو هم invalidate کن
       queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       queryClient.invalidateQueries({
         queryKey: receivingKeys.detail(updatedPurchase.id),
@@ -153,9 +145,7 @@ export const useRemovePurchaseMutation = () => {
   return useMutation({
     mutationFn: removePurchase,
     onSuccess: (removedPurchase) => {
-      queryClient.removeQueries({
-        queryKey: purchaseKeys.detail(String(removedPurchase.id)),
-      });
+      queryClient.removeQueries({ queryKey: purchaseKeys.detail(removedPurchase.id) });
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
       queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       toast.success("خرید با موفقیت حذف شد");

@@ -1,0 +1,739 @@
+{
+  "_meta": {
+    "description": "Complete knowledge base for the OurERP WMS project. Written for AI agents to gain full understanding of the codebase.",
+    "lastUpdated": "2026-07-16",    "version": "1.4.5",
+    "agent_instructions": {
+      "purpose": "This file is the single source of truth for the project's current state. It is maintained by agents as they work.",
+      "rule": "MANDATORY: At the end of every task, before responding to the user, update this file to reflect the final state of the project. This includes: updating 'lastUpdated', incrementing 'version', adding a changelog entry under 'changelog', and correcting any sections that are now outdated.",
+      "how_to_update": [
+        "1. Bump 'version' (patch for bug fixes, minor for features, major for architecture changes)",
+        "2. Set 'lastUpdated' to today's date (YYYY-MM-DD)",
+        "3. Add a new entry at the top of 'changelog' with what was changed and why",
+        "4. Update any sections that are now stale (e.g. known_issues, database schema, api endpoints, frontend patterns)",
+        "5. Update 'frontend_key_files' or 'backend_key_files' if new important files were created",
+        "6. Verify your changes are accurate before finalizing"
+      ]
+    }
+  },
+
+  "project": {
+    "name": "OurERP",
+    "type": "WMS (Warehouse Management System) / ERP",
+    "language_fa": "سیستم مدیریت انبار و برنامه ریزی منابع سازمان",
+    "root": "E:\\Programming\\Go\\WMS\\OurERP",
+    "repositories": {
+      "backend": "E:\\Programming\\Go\\WMS\\OurERP\\Backend",
+      "frontend": "E:\\Programming\\Go\\WMS\\OurERP\\web"
+    },
+    "is_git_repo": true
+  },
+
+  "architecture": {
+    "pattern": "Monorepo with separate Backend (Go) and Frontend (React SPA)",
+    "backend": {
+      "language": "Go 1.23",
+      "framework": "Gin (github.com/gin-gonic/gin v1.10.0)",
+      "database": "PostgreSQL (via github.com/lib/pq)",
+      "orm": "None - raw SQL queries throughout",
+      "auth": "JWT (github.com/golang-jwt/jwt/v5) with Bearer tokens, access + refresh token pattern",
+      "api_style": "RESTful JSON API",
+      "architecture_pattern": "Flat handler-based (no separate service/repository layers). Handlers execute SQL directly via database.DB.",
+      "entry_point": "Backend/cmd/server/main.go",
+      "module_name": "github.com/user/wms-backend"
+    },
+    "frontend": {
+      "language": "JavaScript (JSX) - no TypeScript",
+      "framework": "React 19.2.6",
+      "build_tool": "Vite 8.0.12",
+      "routing": "react-router-dom 7.15.0 (createBrowserRouter)",
+      "state_management": {
+        "server_state": "@tanstack/react-query 5.100.10",
+        "client_state": "Zustand 5.0.13"
+      },
+      "forms": "react-hook-form 7.75.0",
+      "styling": "Tailwind CSS 4.3.0 with @tailwindcss/vite plugin",
+      "ui_library": "shadcn/ui (radix-ui primitives, class-variance-authority, tailwind-merge, clsx)",
+      "icons": "lucide-react",
+      "http_client": "axios 1.16.1",
+      "compiler": "React Compiler (babel-plugin-react-compiler via @rolldown/plugin-babel)",
+      "font": "@fontsource-variable/vazirmatn (Persian/Arabic font)",
+      "toast": "react-hot-toast",
+      "table": "@tanstack/react-table 8.21.3",
+      "barcode": "react-barcode, react-qr-reader"
+    }
+  },
+
+  "directory_structure": {
+    "backend": {
+      "cmd/server/main.go": "Application entry point. Loads config, connects DB, runs migrations, seeds admin user, starts Gin server.",
+      "cmd/server/docs/": "OpenAPI/Swagger documentation",
+      "internal/config/config.go": "Environment-based config (SERVER_ADDR, DATABASE_URL, JWT_SECRET, JWT_ACCESS_EXPIRY, JWT_REFRESH_EXPIRY, UPLOAD_DIR)",
+      "internal/database/db.go": "PostgreSQL connection management (database.DB global variable)",
+      "internal/database/migrations.go": "All DDL migrations as const strings, run sequentially on startup",
+      "internal/handler/": "HTTP handlers (controllers). 16 files, one per domain. Each handler is a struct with methods.",
+      "internal/handler/helpers.go": "Shared utilities: respondJSON, respondError, parsePagination, paginatedMeta, parseIntParam, getUserID, getUserRole",
+      "internal/middleware/middleware.go": "JWT AuthMiddleware, RoleMiddleware, GenerateToken",
+      "internal/model/models.go": "All Go structs (data models) used across the app",
+      "internal/router/router.go": "All route definitions, CORS config, middleware chain, static file serving",
+      "seed/mock_data.sql": "Seed data (currently commented out)",
+      "uploads/": "File upload storage directory",
+      "wms-server.exe": "Compiled binary"
+    },
+    "frontend": {
+      "src/app/layouts/": "AppLayout (authenticated), AuthLayout (login/register), PrintLayout, NotFoundPage",
+      "src/app/providers/": "AppProviders (wraps QueryProvider + ThemeProvider + ToastProvider)",
+      "src/app/routes/": "routers.jsx (createBrowserRouter), RequireAuth, protectedLoader",
+      "src/features/": "Feature modules (11 features)",
+      "src/shared/components/ui/": "26 shadcn/ui components",
+      "src/shared/constants/routes.js": "All route path constants",
+      "src/shared/lib/api.js": "Axios API client with interceptors (auth, refresh token, error handling)",
+      "src/shared/store/": "headerStore.js, navigationStore.js, themeStore.js"
+    }
+  },
+
+  "features": {
+    "auth": {
+      "path": "src/features/auth/",
+      "contents": ["hooks/", "pages/", "routes.jsx", "store/authStore.js"],
+      "description": "Login, register, forgot/reset password. Zustand store with persist middleware (localStorage key: 'auth-storage'). JWT access+refresh token pattern.",
+      "default_credentials": {"username": "admin", "password": "admin123"}
+    },
+    "customers": {
+      "path": "src/features/customers/",
+      "contents": ["components/forms/", "hooks/", "pages/", "routes/", "services/", "store/"],
+      "description": "Customer CRUD. Forms: CustomerIdentityForm (name, lastName, phone, nationalId, type, customerGrade, referralCode, avatar), CustomerFinanceForm (balanceType, openingBalance, creditLimit, notes), CustomerAddressForm (address, postalCode, lat, lng).",
+      "form_hooks": "useCustomerForm.js - builds default values, buildCustomerPayload for API",
+      "api_mapping": "Frontend uses camelCase (firstName, lastName, nationalId). Backend uses snake_case (full_name, national_id). api.js mapCustomer/mapCustomerForCreate handle the translation.",
+      "validations": "nationalId: 10 digits required. postalCode: 5-10 digits. lat/lng: decimal. phone: digits only. creditLimit: min 0. balanceType: whitelist [none, creditor, debtor]."
+    },
+    "suppliers": {
+      "path": "src/features/suppliers/",
+      "contents": ["components/forms/", "hooks/", "pages/", "routes/", "services/", "store/"],
+      "description": "Supplier CRUD. Forms: SupplierIdentityForm (firstName, lastName, companyName, phone, avatar), SupplierFinanceForm (balanceType, balanceAmount, notes), SupplierAddressForm (address, postalCode, lat, lng).",
+      "form_hooks": "useSupplierForm.js - builds default values, buildSupplierPayload for API",
+      "validations": "postalCode: 5-10 digits. lat/lng: decimal. phone: digits only. balanceType: whitelist [none, creditor, debtor]."
+    },
+    "warehouse": {
+      "path": "src/features/warehouse/",
+      "contents": ["products/", "receiving/", "routes/"],
+      "description": "Product management (CRUD, barcode, stock levels), Receiving (inbound goods from purchase orders)"
+    },
+    "sales": {
+      "path": "src/features/sales/",
+      "contents": ["components/", "hooks/", "pages/", "routes/", "services/", "store/"],
+      "description": "Sales order management. Creates invoices for customers."
+    },
+    "purchases": {
+      "path": "src/features/purchases/",
+      "contents": ["components/", "hooks/", "pages/", "routes/", "services/", "store/"],
+      "description": "Purchase order management. Creates POs to suppliers with items, status tracking."
+    },
+    "invoice": {
+      "path": "src/features/invoice/",
+      "contents": ["pages/", "routes.jsx", "services/"],
+      "description": "Invoice viewing and management (legacy/separate from sales invoices)"
+    },
+    "reports": {
+      "path": "src/features/reports/",
+      "contents": ["pages/", "routes.jsx"],
+      "description": "Reports: sales summary, customer balances, purchase orders, financial, profit/loss, warehouse/stock"
+    },
+    "transactions": {
+      "path": "src/features/transactions/",
+      "contents": ["pages/", "routes.jsx"],
+      "description": "Transaction history views (buy-sell, payments, returns)"
+    },
+    "settings": {
+      "path": "src/features/settings/",
+      "contents": ["pages/", "routes.jsx"],
+      "description": "Company settings, invoice settings, tax, user management, roles, notifications, backup"
+    },
+    "dashboard": {
+      "path": "src/features/dashboard/",
+      "contents": ["pages/", "routes.jsx"],
+      "description": "Dashboard overview page"
+    }
+  },
+
+  "database": {
+    "engine": "PostgreSQL",
+    "connection": "DATABASE_URL env var, default: postgres://postgres:123@localhost:5432/wms?sslmode=disable",
+    "global_var": "database.DB (*sql.DB)",
+    "migrations_run_on": "Every startup (CREATE TABLE IF NOT EXISTS, ALTER TABLE ADD COLUMN IF NOT EXISTS)",
+    "tables": {
+      "users": {
+        "columns": ["id SERIAL PK", "full_name VARCHAR(255)", "username VARCHAR(100) UNIQUE", "password_hash VARCHAR(255)", "role VARCHAR(50) CHECK(admin,sales,warehouse,accounting,procurement)", "department VARCHAR(50) CHECK(sales,warehouse,accounting,procurement,legal)", "is_active BOOLEAN DEFAULT true", "created_at TIMESTAMP", "updated_at TIMESTAMP"],
+        "notes": "Default admin seeded on first run: admin/admin123"
+      },
+      "products": {
+        "columns": ["id SERIAL PK", "internal_code VARCHAR(100) UNIQUE", "supplier_code VARCHAR(100)", "barcode VARCHAR(100) UNIQUE (partial)", "name VARCHAR(255)", "brand VARCHAR(255) DEFAULT ''", "category VARCHAR(255) DEFAULT ''", "unit VARCHAR(50) DEFAULT 'piece'", "reorder_threshold NUMERIC(12,2)", "cost_price NUMERIC(12,2)", "sale_price_retail NUMERIC(12,2)", "sale_price_wholesale NUMERIC(12,2)", "tax NUMERIC(5,2) DEFAULT 0", "image_url TEXT", "is_active BOOLEAN", "created_at TIMESTAMP", "updated_at TIMESTAMP"]
+      },
+      "suppliers": {
+        "columns": ["id SERIAL PK", "name VARCHAR(255)", "contact_name VARCHAR(255)", "phone VARCHAR(100)", "address TEXT", "postal_code VARCHAR(20) DEFAULT ''", "latitude NUMERIC(10,7)", "longitude NUMERIC(10,7)", "balance_type VARCHAR(20) DEFAULT 'none'", "balance NUMERIC(12,2) DEFAULT 0", "notes TEXT", "is_active BOOLEAN", "created_at TIMESTAMP", "updated_at TIMESTAMP"],
+        "balance_type_values": ["none", "creditor", "debtor"]
+      },
+      "customers": {
+        "columns": ["id SERIAL PK", "type VARCHAR(50) CHECK(retail,wholesale,mechanic)", "full_name VARCHAR(255)", "national_id VARCHAR(20) UNIQUE", "phone VARCHAR(100)", "address TEXT", "postal_code VARCHAR(20) DEFAULT ''", "latitude NUMERIC(10,7)", "longitude NUMERIC(10,7)", "referral_code VARCHAR(100)", "credit_limit NUMERIC(12,2) DEFAULT 0", "customer_grade INTEGER DEFAULT 1 CHECK(1-5)", "balance_type VARCHAR(20) DEFAULT 'none'", "opening_balance NUMERIC(12,2) DEFAULT 0", "notes TEXT", "is_active BOOLEAN", "created_at TIMESTAMP", "updated_at TIMESTAMP"],
+        "notes": "national_id is UNIQUE and required (NOT NULL). Type must be retail/wholesale/mechanic. Customer balance is computed: SUM(invoices) - SUM(payments) + opening_balance.",
+        "balance_type_values": ["none", "creditor", "debtor"]
+      },
+      "vehicles": {
+        "columns": ["id SERIAL PK", "code VARCHAR(100) UNIQUE", "description TEXT", "created_at TIMESTAMP", "updated_at TIMESTAMP"]
+      },
+      "bank_accounts": {
+        "columns": ["id SERIAL PK", "account_name VARCHAR(255)", "bank_name VARCHAR(255)", "account_number VARCHAR(100)", "is_active BOOLEAN", "created_at TIMESTAMP", "updated_at TIMESTAMP"]
+      },
+      "checks": {
+        "columns": ["id SERIAL PK", "check_number VARCHAR(100)", "bank_name VARCHAR(255)", "amount NUMERIC(12,2)", "due_date DATE", "image_url TEXT", "status VARCHAR(50) DEFAULT 'issued' CHECK(issued,cleared,bounced)", "created_at TIMESTAMP", "updated_at TIMESTAMP"]
+      },
+      "purchase_orders": {
+        "columns": ["id SERIAL PK", "supplier_id INTEGER FK->suppliers", "created_by INTEGER FK->users", "status VARCHAR(50) DEFAULT 'pending' CHECK(pending,shipped,partially_received,received,cancelled)", "expected_delivery_date DATE", "supplier_invoice_number VARCHAR(100)", "notes TEXT", "payment_type VARCHAR(50) DEFAULT 'cash' CHECK(cash,credit,check,transfer,mixed)", "paid_amount NUMERIC(12,2) DEFAULT 0", "total_amount NUMERIC(12,2) DEFAULT 0", "received_by INTEGER FK->users", "received_at TIMESTAMP", "created_at TIMESTAMP", "updated_at TIMESTAMP"]
+      },
+      "purchase_order_items": {
+        "columns": ["id SERIAL PK", "purchase_order_id INTEGER FK->purchase_orders ON DELETE CASCADE", "product_id INTEGER FK->products", "ordered_quantity NUMERIC(12,2)", "unit_price NUMERIC(12,2) DEFAULT 0", "received_quantity NUMERIC(12,2)", "discrepancy_note TEXT"]
+      },
+      "invoices": {
+        "columns": ["id SERIAL PK", "invoice_number VARCHAR(50) UNIQUE", "proforma_number VARCHAR(50)", "customer_id INTEGER FK->customers", "channel VARCHAR(50) CHECK(wholesale,retail,mechanic)", "created_by INTEGER FK->users", "status VARCHAR(50) DEFAULT 'proforma' CHECK(proforma,confirmed,dispatched,delivered,cancelled)", "notes TEXT", "dispatched_by INTEGER FK->users", "dispatched_at TIMESTAMP", "vehicle_id INTEGER FK->vehicles", "packer_id INTEGER FK->users", "created_at TIMESTAMP", "updated_at TIMESTAMP"]
+      },
+      "invoice_items": {
+        "columns": ["id SERIAL PK", "invoice_id INTEGER FK->invoices ON DELETE CASCADE", "product_id INTEGER FK->products", "quantity NUMERIC(12,2)", "unit_price NUMERIC(12,2)", "discount_amount NUMERIC(12,2) DEFAULT 0", "price_override_reason TEXT", "price_overridden_by INTEGER FK->users"]
+      },
+      "stock_movements": {
+        "columns": ["id SERIAL PK", "product_id INTEGER FK->products", "quantity NUMERIC(12,2)", "movement_type VARCHAR(50) CHECK(purchase_in,sale_out,return_in,return_out,adjustment)", "reference_id INTEGER", "reference_type VARCHAR(50)", "performed_by INTEGER FK->users", "created_at TIMESTAMP"]
+      },
+      "customer_payments": {
+        "columns": ["id SERIAL PK", "customer_id INTEGER FK->customers", "amount NUMERIC(12,2)", "payment_method VARCHAR(50) CHECK(cash,transfer,check)", "bank_account_id INTEGER FK->bank_accounts", "check_id INTEGER FK->checks", "reference_invoice_id INTEGER FK->invoices", "recorded_by INTEGER FK->users", "payment_date DATE", "notes TEXT", "created_at TIMESTAMP"]
+      },
+      "supplier_payments": {
+        "columns": ["id SERIAL PK", "supplier_id INTEGER FK->suppliers", "purchase_order_id INTEGER FK->purchase_orders", "amount NUMERIC(12,2)", "payment_method VARCHAR(50) CHECK(cash,transfer,check)", "check_id INTEGER FK->checks", "recorded_by INTEGER FK->users", "payment_date DATE", "created_at TIMESTAMP"]
+      },
+      "returns": {
+        "columns": ["id SERIAL PK", "invoice_id INTEGER FK->invoices", "product_id INTEGER FK->products", "quantity NUMERIC(12,2)", "reason TEXT", "created_by INTEGER FK->users", "created_at TIMESTAMP"]
+      },
+      "status_logs": {
+        "columns": ["id SERIAL PK", "entity_type VARCHAR(100)", "entity_id INTEGER", "from_status VARCHAR(50)", "to_status VARCHAR(50)", "changed_by INTEGER FK->users", "changed_at TIMESTAMP"]
+      },
+      "sales": {
+        "columns": ["id SERIAL PK", "customer_id INTEGER FK->customers", "invoice_number VARCHAR(50) UNIQUE", "invoice_date DATE DEFAULT CURRENT_DATE", "due_date DATE", "description TEXT", "status VARCHAR(50) DEFAULT 'pending' CHECK(pending,processing,partially_delivered,delivered,cancelled)", "payment_type VARCHAR(50) DEFAULT 'cash' CHECK(cash,credit,check,transfer,mixed)", "paid_amount NUMERIC(12,2) DEFAULT 0", "total_amount NUMERIC(12,2) DEFAULT 0", "check_number VARCHAR(100)", "transfer_ref VARCHAR(100)", "created_by INTEGER FK->users", "created_at TIMESTAMP", "updated_at TIMESTAMP"]
+      },
+      "sale_items": {
+        "columns": ["id SERIAL PK", "sale_id INTEGER FK->sales ON DELETE CASCADE", "product_id INTEGER FK->products", "product_code VARCHAR(100)", "product_name VARCHAR(255)", "unit VARCHAR(50) DEFAULT 'piece'", "qty NUMERIC(12,2)", "unit_price NUMERIC(12,2)", "discount NUMERIC(12,2) DEFAULT 0", "line_total NUMERIC(12,2)"]
+      },
+      "receivings": {
+        "columns": ["id SERIAL PK", "purchase_order_id INTEGER FK->purchase_orders", "supplier_name VARCHAR(255)", "warehouse_location VARCHAR(255)", "received_date DATE DEFAULT CURRENT_DATE", "status VARCHAR(50) DEFAULT 'pending' CHECK(pending,partial,completed,cancelled)", "notes TEXT", "created_by INTEGER FK->users", "created_at TIMESTAMP", "updated_at TIMESTAMP"]
+      },
+      "receiving_items": {
+        "columns": ["id SERIAL PK", "receiving_id INTEGER FK->receivings ON DELETE CASCADE", "product_id INTEGER FK->products", "product_code VARCHAR(100)", "product_name VARCHAR(255)", "expected_qty NUMERIC(12,2) DEFAULT 0", "received_qty NUMERIC(12,2) DEFAULT 0", "condition VARCHAR(100)", "notes TEXT"]
+      },
+      "company_settings": {
+        "columns": ["id INTEGER PK DEFAULT 1", "name VARCHAR(255)", "tax_id VARCHAR(100)", "address TEXT", "phone VARCHAR(100)", "email VARCHAR(255)", "created_at TIMESTAMP", "updated_at TIMESTAMP"],
+        "notes": "Singleton table (id=1)"
+      }
+    },
+    "indexes": [
+      "idx_products_barcode ON products(barcode)",
+      "idx_products_internal_code ON products(internal_code)",
+      "idx_products_supplier_code ON products(supplier_code)",
+      "idx_products_barcode_unique ON products(barcode) WHERE barcode IS NOT NULL (UNIQUE)",
+      "idx_stock_movements_product ON stock_movements(product_id)",
+      "idx_stock_movements_reference ON stock_movements(reference_id, reference_type)",
+      "idx_invoices_customer ON invoices(customer_id)",
+      "idx_invoices_status ON invoices(status)",
+      "idx_purchase_orders_supplier ON purchase_orders(supplier_id)",
+      "idx_purchase_orders_status ON purchase_orders(status)",
+      "idx_customer_payments_customer ON customer_payments(customer_id)",
+      "idx_supplier_payments_supplier ON supplier_payments(supplier_id)",
+      "idx_status_logs_entity ON status_logs(entity_type, entity_id)"
+    ]
+  },
+
+  "api": {
+    "base_url": "http://localhost:8080",
+    "response_format": {
+      "success": {"data": "...", "meta": {"page": 1, "pageSize": 20, "totalCount": 100, "totalPages": 5}},
+      "error": {"error": "error message in Persian"}
+    },
+    "pagination": "Query params: page (default 1), page_size (default 20, max 100)",
+    "authentication": "Bearer token in Authorization header. JWT access token (15min) + refresh token (72h).",
+    "cors": "AllowAllOrigins: true",
+    "endpoints": {
+      "auth": {
+        "POST /auth/login": "Login with username/password. Returns access_token + refresh_token.",
+        "POST /auth/refresh": "Refresh access token using refresh_token.",
+        "POST /auth/logout": "Logout."
+      },
+      "products": {
+        "GET /api/products": "List products (paginated, searchable)",
+        "POST /api/products": "Create product",
+        "GET /api/products/low-stock": "Low stock products",
+        "GET /api/products/barcode/:barcode": "Lookup by barcode",
+        "GET /api/products/:id": "Get single product",
+        "PUT /api/products/:id": "Update product",
+        "DELETE /api/products/:id": "Soft delete product"
+      },
+      "suppliers": {
+        "GET /api/suppliers": "List suppliers (paginated, searchable)",
+        "POST /api/suppliers": "Create supplier",
+        "GET /api/suppliers/:id": "Get supplier",
+        "PUT /api/suppliers/:id": "Update supplier",
+        "DELETE /api/suppliers/:id": "Soft delete supplier"
+      },
+      "customers": {
+        "GET /api/customers": "List customers (paginated, filterable by name/search/type/grade)",
+        "POST /api/customers": "Create customer (requires full_name + national_id)",
+        "GET /api/customers/:id": "Get customer with outstanding_balance",
+        "PUT /api/customers/:id": "Update customer",
+        "DELETE /api/customers/:id": "Soft delete customer",
+        "GET /api/customers/:id/balance": "Get customer balance",
+        "GET /api/customers/:id/transactions": "Get customer transaction history"
+      },
+      "sales": {
+        "GET /api/sales": "List sales",
+        "POST /api/sales": "Create sale",
+        "GET /api/sales/stats": "Sales statistics",
+        "GET /api/sales/:id": "Get sale",
+        "PUT /api/sales/:id": "Update sale",
+        "DELETE /api/sales/:id": "Delete sale",
+        "POST /api/sales/:id/status": "Update sale status",
+        "POST /api/sales/:id/payment": "Update sale payment"
+      },
+      "receivings": {
+        "GET /api/receivings": "List receivings",
+        "POST /api/receivings": "Create receiving",
+        "GET /api/receivings/:id": "Get receiving",
+        "PUT /api/receivings/:id": "Update receiving"
+      },
+      "purchase_orders": {
+        "GET /api/purchase-orders": "List POs",
+        "POST /api/purchase-orders": "Create PO",
+        "GET /api/purchase-orders/:id": "Get PO with items",
+        "PUT /api/purchase-orders/:id": "Update PO",
+        "POST /api/purchase-orders/:id/confirm": "Confirm PO",
+        "POST /api/purchase-orders/:id/mark-awaiting": "Mark awaiting delivery",
+        "POST /api/purchase-orders/:id/receive": "Receive PO",
+        "POST /api/purchase-orders/:id/cancel": "Cancel PO",
+        "POST /api/purchase-orders/:id/payment": "Update PO payment",
+        "GET /api/purchase-orders/stats": "PO statistics"
+      },
+      "invoices": {
+        "GET /api/invoices": "List invoices",
+        "POST /api/invoices": "Create invoice",
+        "GET /api/invoices/:id": "Get invoice",
+        "PUT /api/invoices/:id": "Update invoice",
+        "POST /api/invoices/:id/confirm": "Confirm invoice",
+        "POST /api/invoices/:id/dispatch": "Dispatch invoice",
+        "POST /api/invoices/:id/deliver": "Deliver invoice",
+        "POST /api/invoices/:id/cancel": "Cancel invoice",
+        "POST /api/invoices/:id/return": "Return from invoice"
+      },
+      "payments": {
+        "GET /api/payments/customer": "List customer payments",
+        "POST /api/payments/customer": "Create customer payment",
+        "GET /api/payments/customer/:id": "Get customer payment",
+        "GET /api/payments/supplier": "List supplier payments",
+        "POST /api/payments/supplier": "Create supplier payment",
+        "GET /api/payments/supplier/:id": "Get supplier payment"
+      },
+      "bank_accounts": {
+        "GET /api/bank-accounts": "List",
+        "POST /api/bank-accounts": "Create",
+        "PUT /api/bank-accounts/:id": "Update"
+      },
+      "vehicles": {
+        "GET /api/vehicles": "List",
+        "POST /api/vehicles": "Create",
+        "PUT /api/vehicles/:id": "Update"
+      },
+      "stock": {
+        "GET /api/stock": "Current stock levels",
+        "GET /api/stock/:product_id": "Product stock history"
+      },
+      "reports": {
+        "GET /api/reports/stock": "Stock report",
+        "GET /api/reports/low-stock": "Low stock report",
+        "GET /api/reports/sales-summary": "Sales summary",
+        "GET /api/reports/customer-balances": "Customer balances",
+        "GET /api/reports/purchase-orders": "Purchase orders report",
+        "GET /api/reports/financial": "Financial report",
+        "GET /api/reports/profit-loss": "Profit & Loss report",
+        "GET /api/reports/warehouse": "Warehouse report"
+      },
+      "users": {
+        "GET /api/users": "List users (admin only)",
+        "POST /api/users": "Create user (admin only)",
+        "PUT /api/users/:id": "Update user (admin only)",
+        "DELETE /api/users/:id": "Delete user (admin only)"
+      },
+      "settings": {
+        "GET /api/settings/company": "Get company settings",
+        "PUT /api/settings/company": "Update company settings (admin only)",
+        "POST /api/settings/backup": "Backup database (admin only)"
+      },
+      "files": {
+        "POST /api/files/upload": "Upload file"
+      },
+      "static": {
+        "GET /uploads/*": "Static file serving for uploaded files"
+      },
+      "docs": {
+        "GET /docs": "API reference (Scalar UI)",
+        "GET /docs/openapi.json": "OpenAPI spec"
+      }
+    }
+  },
+
+  "backend_patterns": {
+    "handler_structure": "Each handler is a struct (e.g., CustomerHandler) with methods (List, Get, Create, Update, Delete). Instantiated via New*Handler() functions.",
+    "sql_queries": "Raw SQL strings with positional parameters ($1, $2, ...). No ORM. Queries built dynamically with string concatenation for filters.",
+    "error_handling": "respondError(c, httpStatus, 'Persian error message'). Common errors: 400 (bad request), 401 (unauthorized), 403 (forbidden), 404 (not found), 409 (conflict/duplicate), 500 (database error).",
+    "response_format": "respondJSON(c, status, data) wraps in {data: ...}. respondJSONWithMeta adds {data: ..., meta: {page, pageSize, totalCount, totalPages}}.",
+    "soft_deletes": "is_active=false instead of hard DELETE. Queries filter by is_active=true by default.",
+    "null_handling": "sql.NullString, sql.NullFloat64, sql.NullTime used for nullable columns. NULLIF($N,'') used in INSERT/UPDATE to convert empty strings to NULL.",
+    "pagination": "parsePagination(c) extracts page and page_size query params. Default: page=1, page_size=20, max=100.",
+    "validation": "Simple if-checks in handler methods before DB operations. Regex validation for national_id (10 digits), postal_code (5-10 digits), latitude (-90 to 90), longitude (-180 to 180). balance_type checked against whitelist [none, creditor, debtor].",
+    "seeding": "Default admin user (admin/admin123) created on startup if users table is empty. bcrypt hashed.",
+    "naming_convention": "Go: camelCase for variables, PascalCase for exported. DB: snake_case. JSON: camelCase (all API responses and requests now use camelCase to match frontend)."
+  },
+
+  "frontend_patterns": {
+    "feature_module_structure": "Each feature follows: components/, hooks/, pages/, routes/, services/, store/. This is the standard pattern.",
+    "routing": "Each feature exports route objects from routes/routes.jsx or routes/index.js. Central router in src/app/routes/routers.jsx combines all feature routes. Protected routes wrapped in RequireAuth.",
+    "api_layer": "services/api.js contains: fetchX, createX, getXById, updateX, deleteX. Data shapes match backend camelCase response directly (no mapper functions). services/queries.js has React Query hooks. services/mutations.js has mutation hooks.",
+    "form_pattern": "hooks/useXForm.js uses react-hook-form. buildDefaultValues(data) creates form defaults matching backend camelCase fields directly. buildXPayload(data, avatar, existingAvatar) creates API payload. Form components receive register, errors, watch, setValue as props. Form field names match backend JSON tags exactly (no remapping).",
+    "state_management": "Zustand for client-side state (auth, filters, header, navigation, theme). React Query for server state (fetching, caching, mutations).",
+    "api_client": "src/shared/lib/api.js - Axios instance with request/response interceptors. Auto-refreshes expired tokens. Persian error messages extracted from response.",
+    "ui_components": "shadcn/ui components in src/shared/components/ui/. 26 components: alert-dialog, alert, avatar, badge, button, card, collapsible, command, dialog, direction, dropdown-menu, input-group, input, label, popover, progress, scroll-area, select, separator, sheet, sidebar, skeleton, table, tabs, textarea, tooltip.",
+    "styling": "Tailwind CSS 4 with @tailwindcss/vite plugin. Dark mode support via ThemeProvider. Persian font (Vazirmatn). Rounded UI (rounded-2xl, rounded-lg). RTL support via dir attribute.",
+    "component_style": "Functional components with hooks. JSX (no TypeScript). Feature-based file organization. Form components are controlled via props from parent.",
+    "naming_convention": "Files: PascalCase for components (CustomerForm.jsx), camelCase for hooks/utils (useCustomerForm.js). Components export default. Named exports for hooks.",
+    "query_key_types": "CRITICAL: All detail query keys must use Number(id) since backend returns numeric IDs. useParams() returns strings. Mutations receive numeric IDs from API. Always wrap route ids in Number() for query keys to ensure cache invalidation works.",
+    "path_alias": "@ -> src/ (configured in vite.config.js and package.json imports)"
+  },
+
+  "ui_design_system": {
+    "theme": "Dark mode default. Supports light/dark via ThemeProvider (storage key: 'vite-ui-theme').",
+    "font": "Vazirmatn (Persian variable font)",
+    "layout": "Responsive grid. Main content: max-w-7xl mx-auto. Forms: 2-column grid on lg (lg:grid-cols-2).",
+    "cards": "shadow-md rounded-2xl overflow-hidden pt-0 gap-0. CardHeader with border-b bg-muted/30. CardContent with px-6 py-5.",
+    "inputs": "h-10 rounded-lg. RTL placeholder support via 'input-rtl-placeholder' class. dir='ltr' for numeric/phone fields.",
+    "buttons": "gap-2 for icon+text. flex-1 for full-width. Destructive variant for delete actions.",
+    "spacing": "space-y-4 for vertical spacing. gap-4 for grid gaps. px-4 sm:px-6 lg:px-8 for responsive padding.",
+    "persian_ui": "All labels and error messages in Persian (Farsi). RTL layout. Numbers displayed LTR where appropriate (phone, postal code, coordinates).",
+    "animations": "animate-in fade-in-50 slide-in-from-top-3 for conditional field appearance."
+  },
+
+  "environment_variables": {
+    "backend": {
+      "SERVER_ADDR": "Server address (default: :8080)",
+      "DATABASE_URL": "PostgreSQL connection string (default: postgres://postgres:123@localhost:5432/wms?sslmode=disable)",
+      "JWT_SECRET": "JWT signing secret (default: dev-secret-change-in-production)",
+      "JWT_ACCESS_EXPIRY": "Access token expiry (default: 15m)",
+      "JWT_REFRESH_EXPIRY": "Refresh token expiry (default: 72h)",
+      "UPLOAD_DIR": "File upload directory (default: ./uploads)"
+    },
+    "frontend": {
+      "VITE_API_BASE_URL": "Backend API URL (default: http://localhost:8080)"
+    }
+  },
+
+  "build_and_run": {
+    "backend": {
+      "build": "cd Backend && go build -o wms-server.exe ./cmd/server",
+      "run": "./wms-server.exe",
+      "requirements": "Go 1.23+, PostgreSQL running on localhost:5432"
+    },
+    "frontend": {
+      "dev": "cd web && npm run dev",
+      "build": "cd web && npm run build",
+      "lint": "cd web && npm run lint",
+      "preview": "cd web && npm run preview"
+    }
+  },
+
+  "known_issues_and_patterns": {
+    "customer_balance_computation": "Customer outstanding_balance is computed as: SUM(invoice_items) - SUM(customer_payments) + opening_balance. It is NOT stored in a column (except opening_balance). The balance_type field controls the opening balance direction.",
+    "supplier_balance": "Supplier balance IS stored directly in the balance column (not computed). balance_type + balance together define the opening balance.",
+    "soft_deletes": "Both customers and suppliers use is_active=false for deletion. List queries filter is_active=true by default. Pass include_inactive=true to see all.",
+    "national_id_uniqueness": "customers.national_id has a UNIQUE constraint. Creating a duplicate returns 409 Conflict with Persian message.",
+    "invoice_lifecycle": "proforma -> confirmed -> dispatched -> delivered. Can be cancelled from any state. Returns possible after delivery.",
+    "purchase_order_lifecycle": "pending -> shipped -> partially_received -> received. Can be cancelled.",
+    "purchase_order_supplier_validation": "Backend validates supplier_id != 0 before creating PO. Frontend sends 0 when no supplier selected. Error message: 'شناسه تامین‌کننده و آیتم‌ها الزامی هستند'.",
+    "payment_methods": "cash, transfer, check (for both customer and supplier payments)",
+    "user_roles": "admin, sales, warehouse, accounting, procurement",
+    "user_departments": "sales, warehouse, accounting, procurement, legal"
+  },
+
+  "cross_cutting_concerns": {
+    "error_messages": "All user-facing error messages are in Persian (Farsi). Backend returns Persian error strings. Frontend displays them directly.",
+    "file_uploads": "Avatar/image uploads via POST /api/files/upload. Stored in uploads/ directory. Served via GET /uploads/*.",
+    "cors": "Backend allows all origins (AllowAllOrigins: true) for development.",
+    "no_tests": "No test files found in either backend or frontend. No test framework configured.",
+    "no_typescript": "Frontend is pure JavaScript with JSX. No TypeScript.",
+    "no_docker": "No Dockerfile or docker-compose found.",
+    "no_ci_cd": "No CI/CD configuration found."
+  },
+
+  "file_reference": {
+    "backend_handler_files": [
+      "internal/handler/auth.go",
+      "internal/handler/bank_accounts_vehicles.go",
+      "internal/handler/customers.go",
+      "internal/handler/files.go",
+      "internal/handler/helpers.go",
+      "internal/handler/invoices.go",
+      "internal/handler/payments.go",
+      "internal/handler/products.go",
+      "internal/handler/purchase_orders.go",
+      "internal/handler/receiving.go",
+      "internal/handler/reports.go",
+      "internal/handler/sales.go",
+      "internal/handler/settings.go",
+      "internal/handler/stock.go",
+      "internal/handler/suppliers.go",
+      "internal/handler/users.go"
+    ],
+    "backend_key_files": [
+      "cmd/server/main.go",
+      "internal/config/config.go",
+      "internal/database/db.go",
+      "internal/database/migrations.go",
+      "internal/middleware/middleware.go",
+      "internal/model/models.go",
+      "internal/router/router.go"
+    ],
+    "frontend_key_files": [
+      "src/app/routes/routers.jsx",
+      "src/app/providers/AppProviders.jsx",
+      "src/app/layouts/AppLayout.jsx",
+      "src/shared/lib/api.js",
+      "src/shared/constants/routes.js",
+      "src/features/auth/store/authStore.js",
+      "src/features/customers/hooks/useCustomerForm.js",
+      "src/features/customers/services/api.js",
+      "src/features/suppliers/hooks/useSupplierForm.js",
+      "src/features/suppliers/services/api.js",
+      "src/features/warehouse/products/services/api.js",
+      "src/features/warehouse/products/hooks/useProductForm.js",
+      "src/features/purchases/services/api.js",
+      "src/features/purchases/hooks/usePurchaseForm.js"
+    ],
+    "frontend_ui_components": [
+      "src/shared/components/ui/alert-dialog.jsx",
+      "src/shared/components/ui/alert.jsx",
+      "src/shared/components/ui/avatar.jsx",
+      "src/shared/components/ui/badge.jsx",
+      "src/shared/components/ui/button.jsx",
+      "src/shared/components/ui/card.jsx",
+      "src/shared/components/ui/collapsible.jsx",
+      "src/shared/components/ui/command.jsx",
+      "src/shared/components/ui/dialog.jsx",
+      "src/shared/components/ui/direction.jsx",
+      "src/shared/components/ui/dropdown-menu.jsx",
+      "src/shared/components/ui/input-group.jsx",
+      "src/shared/components/ui/input.jsx",
+      "src/shared/components/ui/label.jsx",
+      "src/shared/components/ui/popover.jsx",
+      "src/shared/components/ui/progress.jsx",
+      "src/shared/components/ui/scroll-area.jsx",
+      "src/shared/components/ui/select.jsx",
+      "src/shared/components/ui/separator.jsx",
+      "src/shared/components/ui/sheet.jsx",
+      "src/shared/components/ui/sidebar.jsx",
+      "src/shared/components/ui/skeleton.jsx",
+      "src/shared/components/ui/table.jsx",
+      "src/shared/components/ui/tabs.jsx",
+      "src/shared/components/ui/textarea.jsx",
+      "src/shared/components/ui/tooltip.jsx"
+    ],
+    "frontend_shared_stores": [
+      "src/shared/store/headerStore.js",
+      "src/shared/store/navigationStore.js",
+      "src/shared/store/themeStore.js"
+    ]
+  },
+
+  "business_domain": {
+    "description": "This is a Warehouse Management System / ERP for an Iranian business. It manages the full lifecycle of purchasing goods from suppliers, storing in warehouse, and selling to customers.",
+    "core_entities": {
+      "products": "Items tracked in warehouse. Have internal_code, supplier_code, barcode, brand, category, unit, cost/retail/wholesale prices, tax.",
+      "suppliers": "Companies that provide products. Have name, contact, address, postal code, coordinates, balance.",
+      "customers": "People/companies that buy products. Have type (retail/wholesale/mechanic), national_id (unique), grade (1-5), credit_limit, opening_balance.",
+      "purchase_orders": "Orders placed to suppliers. Have status workflow, items with quantities and prices.",
+      "invoices": "Sales documents for customers. Have channel (wholesale/retail/mechanic), status workflow, items.",
+      "sales": "Separate sales tracking with payment types (cash/credit/check/transfer/mixed).",
+      "receivings": "Inbound goods from purchase orders. Track what was received vs ordered.",
+      "payments": "Money flowing in (customer_payments) and out (supplier_payments). Methods: cash, transfer, check.",
+      "stock_movements": "Inventory changes. Types: purchase_in, sale_out, return_in, return_out, adjustment."
+    },
+    "key_workflows": {
+      "purchasing": "Create purchase order -> Confirm -> Mark awaiting delivery -> Receive goods -> Stock updated via stock_movements (purchase_in)",
+      "selling": "Create invoice (proforma) -> Confirm -> Dispatch -> Deliver -> Stock updated via stock_movements (sale_out)",
+      "returns": "Return items from invoice -> Stock updated via stock_movements (return_in) or (return_out)",
+      "payments": "Record customer/supplier payments. Link to invoices/POs. Affects outstanding balance."
+    }
+  },
+
+  "changelog": [
+    {
+      "date": "2026-07-16",
+      "version": "1.4.5",
+      "changes": "Made purchase order items read-only on the detail page and added received quantity inputs. PurchaseItemsSection now accepts readOnly (hides search/add panel, disables qty/price/discount inputs, hides delete buttons) and showReceivedQty (shows a 'receivedQty' column per item). PurchaseDetailPage passes readOnly=true and showReceivedQty when status is 'shipped' or 'partially_received'. purchaseFormStore now tracks receivedQty per item, loaded from purchase data. Backend Update handler saves received_quantity on purchase_order_items when provided in the payload. Frontend api.js sends receivedQty in items array.",
+      "files_changed": [
+        "Frontend/src/features/purchases/components/forms/PurchaseItemsSection.jsx",
+        "Frontend/src/features/purchases/pages/PurchaseDetailPage.jsx",
+        "Frontend/src/features/purchases/store/purchaseFormStore.js",
+        "Frontend/src/features/purchases/services/api.js",
+        "Backend/internal/handler/purchase_orders.go"
+      ]
+    },
+    {
+      "date": "2026-07-16",
+      "version": "1.4.4",
+      "changes": "Fixed paymentType, paidAmount, and status not being saved on purchase order updates. Root cause: purchase_orders table had no payment_type column (backend hardcoded 'credit' in all responses), frontend updatePurchase() did not send paymentType/paidAmount in PUT request, and backend Update() handler only saved supplier_id/invoice/notes/delivery_date — not payment fields or status. Also removed the 'only pending orders can be edited' restriction so payment info can be updated at any stage. Added migration for payment_type column, updated all backend handlers (List/Get/Create/Update/UpdatePayment) to read/write paymentType from DB, and updated frontend api.js to include paymentType/paidAmount/status in create and update requests.",
+      "files_changed": [
+        "Backend/internal/database/migrations.go",
+        "Backend/internal/handler/purchase_orders.go",
+        "Frontend/src/features/purchases/services/api.js"
+      ]
+    },
+    {
+      "date": "2026-07-09",
+      "version": "1.4.3",
+      "changes": "Fixed stale data bug after updating entities. Root cause: React Query detail queries used string id from useParams() but mutations invalidated with numeric id from API response. React Query does deep equality on keys, so '123' !== 123, meaning detail queries were never actually invalidated. Fixed by normalizing all detail queries and mutations to use Number(id) consistently across all 6 features (suppliers, customers, products, purchases, sales, receiving). Also fixed all optimistic update mutations (status, payment) to use Number() for detail keys.",
+      "files_changed": [
+        "web/src/features/suppliers/services/queries.js",
+        "web/src/features/customers/services/queries.js",
+        "web/src/features/warehouse/products/services/queries.js",
+        "web/src/features/purchases/services/queries.js",
+        "web/src/features/sales/services/queries.js",
+        "web/src/features/warehouse/receiving/services/queries.js",
+        "web/src/features/warehouse/products/services/mutations.js",
+        "web/src/features/purchases/services/mutations.js",
+        "web/src/features/sales/services/mutations.js",
+        "web/src/features/warehouse/receiving/services/mutations.js"
+      ]
+    },
+    {
+      "date": "2026-07-09",
+      "version": "1.4.2",
+      "changes": "Fixed critical auth logout bug caused by camelCase migration. LoginPage.jsx read access_token/refresh_token from login response but backend now returns accessToken/refreshToken, causing null tokens to be stored. Token refresh interceptor in api.js sent refresh_token (snake_case) in request body and read access_token/refresh_token from response — both mismatched the new camelCase backend. Result: login stored null tokens, every API call got 401, interceptor failed to refresh, logout triggered. Fixed all three locations: LoginPage.jsx (login response), api.js (refresh request body + response destructuring + retry header).",
+      "files_changed": [
+        "web/src/shared/lib/api.js",
+        "web/src/features/auth/pages/LoginPage.jsx"
+      ]
+    },
+    {
+      "date": "2026-07-09",
+      "version": "1.4.1",
+      "changes": "Fixed remaining frontend-backend data shape mismatches. Product form fields renamed: sellPrice1→retailPrice, sellPrice2→wholesalePrice, vat→tax (useProductForm.js, ProductPricingForm.jsx). Purchase dueDate→expectedDeliveryDate across store, hooks, forms, pages, and api.js (was silently losing delivery dates). Removed phantom fields from submit payloads: checkNumber/transferRef/mixedPayments from PurchaseDetailPage/PurchasesNewPage (not in PurchaseOrder model), dueDate/mixedPayments from SaleDetailPage/SaleNewPage (not in Sale model). Fixed SaleNewPage salePrice→retailPrice reference. Go build verified.",
+      "files_changed": [
+        "web/src/features/warehouse/products/hooks/useProductForm.js",
+        "web/src/features/warehouse/products/components/forms/ProductPricingForm.jsx",
+        "web/src/features/purchases/store/purchaseFormStore.js",
+        "web/src/features/purchases/hooks/usePurchaseForm.js",
+        "web/src/features/purchases/components/forms/PurchaseInfoSection.jsx",
+        "web/src/features/purchases/pages/PurchaseDetailPage.jsx",
+        "web/src/features/purchases/pages/PurchasesNewPage.jsx",
+        "web/src/features/purchases/services/api.js",
+        "web/src/features/sales/pages/SaleDetailPage.jsx",
+        "web/src/features/sales/pages/SaleNewPage.jsx"
+      ]
+    },
+    {
+      "date": "2026-07-09",
+      "version": "1.4.0",
+      "changes": "Removed adaptor/mapper layer between backend and frontend. All backend API responses and requests now use camelCase JSON tags (matching frontend conventions). Backend struct JSON tags updated across all handlers (customers, suppliers, products, sales, purchase_orders, invoices, users, auth, settings, payments, reports, stock). Structural transformations kept in Go handlers: full_name split into firstName/lastName, lat/lng nested into coordinates, outstanding_balance computed as balance, supplierCode scanned into throwaway var. Frontend api.js files rewritten to remove all mapper functions (mapCustomer, mapSupplier, mapProduct, mapSale, mapPurchaseOrder etc.) and send/receive data directly with camelCase keys. paginatedMeta now returns camelCase keys (page, pageSize, totalCount, totalPages). Go build verified to compile.",
+      "files_changed": [
+        "Backend/internal/model/models.go",
+        "Backend/internal/handler/customers.go",
+        "Backend/internal/handler/suppliers.go",
+        "Backend/internal/handler/products.go",
+        "Backend/internal/handler/sales.go",
+        "Backend/internal/handler/purchase_orders.go",
+        "Backend/internal/handler/invoices.go",
+        "Backend/internal/handler/users.go",
+        "Backend/internal/handler/auth.go",
+        "Backend/internal/handler/settings.go",
+        "Backend/internal/handler/payments.go",
+        "Backend/internal/handler/helpers.go",
+        "Backend/internal/handler/reports.go",
+        "Backend/internal/handler/stock.go",
+        "web/src/features/customers/services/api.js",
+        "web/src/features/suppliers/services/api.js",
+        "web/src/features/warehouse/products/services/api.js",
+        "web/src/features/sales/services/api.js",
+        "web/src/features/purchases/services/api.js",
+        "web/src/features/warehouse/receiving/services/api.js"
+      ]
+    },
+    {
+      "date": "2026-07-09",
+      "version": "1.3.1",
+      "changes": "Fixed purchase order items returning null on Get/List endpoints. Root cause: getItems() scanned nullable discrepancy_note TEXT column directly into Go string, which fails on NULL values (items created without discrepancy_note have NULL in DB). Added COALESCE() in the SQL query for product_code, product_name, and discrepancy_note. Added error logging for getItems() calls in Get and List handlers (was previously silently discarded with _).",
+      "files_changed": [
+        "Backend/internal/handler/purchase_orders.go"
+      ]
+    },
+    {
+      "date": "2026-07-09",
+      "version": "1.3.0",
+      "changes": "Added paid_amount, total_amount columns to purchase_orders table and product_code, product_name, discount, line_total columns to purchase_order_items table via migration. Updated PurchaseOrder and POItem models with corresponding fields. Updated Create/Update/GetByID/List/UpdatePayment handlers to populate and return these fields, including denormalized product info (code, name) in items and computed total_amount on the PO. getItems now queries the new columns. Build compiles.",
+      "files_changed": [
+        "Backend/internal/database/migrations.go",
+        "Backend/internal/model/models.go",
+        "Backend/internal/handler/purchase_orders.go"
+      ]
+    },
+    {
+      "date": "2026-07-09",
+    "version": "1.3.0",
+      "changes": "Fixed CHECK constraint on purchase_orders.status column. The error was: 'new row for relation "purchase_orders" violates check constraint "purchase_orders_status_check"' because the existing table was created with an older constraint that didn't include 'pending'. Added fixPurchaseOrderStatusCheck migration that drops and recreates the CHECK constraint with all valid statuses (pending, shipped, partially_received, received, cancelled).",
+      "files_changed": [
+        "Backend/internal/database/migrations.go"
+      ]
+    },
+    {
+      "date": "2026-07-09",
+    "version": "1.2.2",
+      "changes": "Fixed purchase order DB error: changed `edDate` from bare `interface{}` string to `*time.Time` using time.Parse for proper DATE column handling, added `log.Printf` error logging in Create and Update handlers for all DB operations (PO insert, items insert, commit) to surface actual PostgreSQL errors. Backend now logs the real SQL error to stdout.",
+      "files_changed": [
+        "Backend/internal/handler/purchase_orders.go"
+      ]
+    },
+    {
+      "date": "2026-07-09",
+      "version": "1.2.0",
+      "changes": "Fixed purchase order creation: removed readOnly from qty field in desktop table view (was incorrectly blocking user from setting order quantities), removed the misleading amber warning row about stock movements being managed elsewhere (the PO qty is the ordered amount, not the stock level), fixed mapPurchaseOrderForCreate to map `dueDate` field to `expected_delivery_date`, added Number() safeguard in mapPOItemForCreate to prevent NaN values reaching the backend.",
+      "files_changed": [
+        "web/src/features/purchases/components/forms/PurchaseItemsSection.jsx",
+        "web/src/features/purchases/services/api.js"
+      ]
+    },
+    {
+      "date": "2026-07-09",
+      "version": "1.1.1",
+      "changes": "Fixed blank page/NotFoundPage crash on product detail page. Root cause: ProductPricingForm destructured `watch` from props and called `watch(\"vat\")`, but neither ProductDetailPage nor ProductNewPage passed `watch` (only `register`). Also: added non-editable stock display input with Persian note explaining stock is only changeable via buy/sell, fixed reorderThreshold field not being sent in update/create payload (missing from buildProductPayload), fixed inconsistent field naming (reorderPoint vs reorderThreshold) across api.js and useProductForm.js.",
+      "files_changed": [
+        "web/src/features/warehouse/products/components/forms/ProductPricingForm.jsx",
+        "web/src/features/warehouse/products/pages/ProductDetailPage.jsx",
+        "web/src/features/warehouse/products/pages/ProductNewPage.jsx",
+        "web/src/features/warehouse/products/services/api.js",
+        "web/src/features/warehouse/products/hooks/useProductForm.js"
+      ]
+    },
+    {
+      "date": "2026-07-08",
+      "version": "1.1.0",
+      "changes": "Fixed product unit field not saving by removing cleanup loop in mapProductForCreate that was deleting empty-string fields (unit, image_url). Purchase order supplier_id validation confirmed working (backend returns proper error for supplier_id=0). Added self-update instructions to agents.json.",
+      "files_changed": [
+        "web/src/features/warehouse/products/services/api.js"
+      ]
+    },
+    {
+      "date": "2026-07-08",
+      "version": "1.0.0",
+      "changes": "Initial agents.json created with full project knowledge base. Documented architecture, database schema, API endpoints, frontend patterns, and business domain.",
+      "files_changed": []
+    }
+  ]
+}

@@ -248,13 +248,6 @@ export const navigationData = {
           description: "مشاهده فاکتورهای خرید",
         },
         {
-          title: "ثبت مرجوعی به تامین‌کننده",
-          url: ROUTES.PURCHASES_RETURNS_NEW,
-          permission: "purchases_returns",
-          icon: RotateCcw,
-          description: "ثبت مرجوعی کالا به تامین کننده",
-        },
-        {
           title: "لیست مرجوعی‌ها",
           url: ROUTES.PURCHASES_RETURNS_LIST,
           permission: "purchases_returns",

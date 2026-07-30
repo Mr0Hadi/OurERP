@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Environment files
+.env
+.env.local
+.env.*.local
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -36,3 +41,4 @@ structure.txt
 /Backend-Net/Common/bin/Debug/net10.0
 /Backend-Net/Domain/bin/Debug/net10.0
 /Backend-Net/Infrastructure/bin/Debug/net10.0
+.\Backend\wms-server.exe

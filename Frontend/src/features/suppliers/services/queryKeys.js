@@ -3,5 +3,5 @@ export const supplierKeys = {
   lists: () => [...supplierKeys.all, "list"],
   list: (filters) => [...supplierKeys.lists(), { ...filters }],
   details: () => [...supplierKeys.all, "detail"],
-  detail: (id) => [...supplierKeys.details(), id],
+  detail: (id) => [...supplierKeys.details(), String(id)],
 };

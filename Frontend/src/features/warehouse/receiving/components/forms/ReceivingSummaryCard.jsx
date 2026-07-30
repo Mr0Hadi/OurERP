@@ -3,14 +3,14 @@ import { useMemo } from 'react';
 import { Truck, PackageCheck, PackageOpen, Clock, XCircle, Activity } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
-import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { Textarea } from '@/shared/components/ui/textarea';
 import { Badge } from '@/shared/components/ui/badge';
 import { Progress } from '@/shared/components/ui/progress';
-import { PURCHASE_STATUSES, PURCHASE_STATUS_LABELS } from '@/features/purchases/services/constants';
+import PersianDatePicker from '@/shared/components/ui/persian-date-picker';
+import { PURCHASE_STATUSES, PURCHASE_STATUS_LABELS } from '@/features/purchases/services/mockData';
+import { gregorianToPersian } from '@/shared/utils/dateUtils';
 
-// هم‌راستا با STATUS_CONFIG در PurchaseStatusSection، برای یکدستی رنگ‌بندی در کل پروژه
 const STATUS_CONFIG = {
   [PURCHASE_STATUSES.PENDING]: { icon: Clock, textColor: 'text-amber-600 dark:text-amber-400' },
   [PURCHASE_STATUSES.SHIPPED]: { icon: Truck, textColor: 'text-blue-600 dark:text-blue-400' },
@@ -25,14 +25,13 @@ export default function ReceivingSummaryCard({ formData, onFormChange }) {
     onFormChange({ [field]: value });
   };
 
-  const items = formData.items || [];
-
   const stats = useMemo(() => {
+    const items = formData.items || [];
     const expected = items.reduce((sum, i) => sum + (i.expectedQty || 0), 0);
     const received = items.reduce((sum, i) => sum + (i.receivedQty || 0), 0);
     const percent = expected > 0 ? Math.round((received / expected) * 100) : 0;
     return { expected, received, percent };
-  }, [items]);
+  }, [formData.items]);
 
   const config = STATUS_CONFIG[formData.status] ?? DEFAULT_STATUS_CONFIG;
   const StatusIcon = config.icon;
@@ -75,17 +74,16 @@ export default function ReceivingSummaryCard({ formData, onFormChange }) {
           </div>
           <div>
             <Label className="text-xs text-muted-foreground">تاریخ فاکتور</Label>
-            <p className="font-medium">{formData.invoiceDate}</p>
+            <p className="font-medium">{gregorianToPersian(formData.invoiceDate)}</p>
           </div>
         </div>
 
         <div className="space-y-2 border-t border-border pt-3">
           <Label className="text-sm font-medium">تاریخ دریافت</Label>
-          <Input
-            type="date"
-            value={formData.receivedDate || ''}
-            onChange={(e) => handleChange('receivedDate', e.target.value)}
-            className="h-8"
+          <PersianDatePicker
+            value={formData.receivedDate}
+            onChange={(isoDate) => handleChange('receivedDate', isoDate)}
+            placeholder="مثال: ۱۴۰۵/۰۵/۰۲"
           />
         </div>
 

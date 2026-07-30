@@ -7,3 +7,4 @@ export const PurchaseInvoiceDetailPage = lazy(() => import('../pages/PurchaseInv
 export const PurchaseDetailPage = lazy(() => import('../pages/PurchaseDetailPage'));
 export const PurchaseReturnNewPage = lazy(() => import('../pages/PurchaseReturnNewPage'));
 export const PurchaseReturnsListPage = lazy(() => import('../pages/PurchaseReturnsListPage'));
+export const PurchaseReturnDetailPage = lazy(() => import('../pages/PurchaseReturnDetailPage'));

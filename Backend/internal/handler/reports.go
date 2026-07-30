@@ -32,12 +32,12 @@ func (h *ReportHandler) Stock(c *gin.Context) {
 	defer rows.Close()
 
 	type ReportItem struct {
-		ProductID        int     `json:"product_id"`
-		InternalCode     string  `json:"internal_code"`
+		ProductID        int     `json:"productId"`
+		InternalCode     string  `json:"internalCode"`
 		Name             string  `json:"name"`
-		CurrentStock     float64 `json:"current_stock"`
-		ReorderThreshold float64 `json:"reorder_threshold"`
-		IsLowStock       bool    `json:"is_low_stock"`
+		CurrentStock     float64 `json:"currentStock"`
+		ReorderThreshold float64 `json:"reorderThreshold"`
+		IsLowStock       bool    `json:"isLowStock"`
 	}
 
 	items := []ReportItem{}
@@ -66,11 +66,11 @@ func (h *ReportHandler) LowStock(c *gin.Context) {
 	defer rows.Close()
 
 	type ReportItem struct {
-		ProductID        int     `json:"product_id"`
-		InternalCode     string  `json:"internal_code"`
+		ProductID        int     `json:"productId"`
+		InternalCode     string  `json:"internalCode"`
 		Name             string  `json:"name"`
-		CurrentStock     float64 `json:"current_stock"`
-		ReorderThreshold float64 `json:"reorder_threshold"`
+		CurrentStock     float64 `json:"currentStock"`
+		ReorderThreshold float64 `json:"reorderThreshold"`
 	}
 
 	items := []ReportItem{}
@@ -119,8 +119,8 @@ func (h *ReportHandler) SalesSummary(c *gin.Context) {
 
 	type SummaryItem struct {
 		Period       string  `json:"period"`
-		TotalAmount  float64 `json:"total_amount"`
-		InvoiceCount int     `json:"invoice_count"`
+		TotalAmount  float64 `json:"totalAmount"`
+		InvoiceCount int     `json:"invoiceCount"`
 	}
 
 	items := []SummaryItem{}
@@ -154,11 +154,11 @@ func (h *ReportHandler) CustomerBalances(c *gin.Context) {
 	defer rows.Close()
 
 	type BalanceItem struct {
-		CustomerID        int     `json:"customer_id"`
-		FullName          string  `json:"full_name"`
-		NationalID        string  `json:"national_id"`
-		Type              string  `json:"type"`
-		OutstandingBalance float64 `json:"outstanding_balance"`
+		CustomerID         int     `json:"customerId"`
+		FullName           string  `json:"fullName"`
+		NationalID         string  `json:"nationalId"`
+		Type               string  `json:"type"`
+		OutstandingBalance float64 `json:"outstandingBalance"`
 	}
 
 	items := []BalanceItem{}
@@ -200,12 +200,12 @@ func (h *ReportHandler) PurchaseOrders(c *gin.Context) {
 	defer rows.Close()
 
 	type POReportItem struct {
-		ID     int    `json:"id"`
-		Status string `json:"status"`
-		SupplierID int `json:"supplier_id"`
-		CreatedBy  int `json:"created_by"`
-		CreatedAt  string `json:"created_at"`
-		ItemCount  int `json:"item_count"`
+		ID         int    `json:"id"`
+		Status     string `json:"status"`
+		SupplierID int    `json:"supplierId"`
+		CreatedBy  int    `json:"createdBy"`
+		CreatedAt  string `json:"createdAt"`
+		ItemCount  int    `json:"itemCount"`
 	}
 
 	items := []POReportItem{}
@@ -233,11 +233,11 @@ func (h *ReportHandler) Financial(c *gin.Context) {
 
 	totalReceivable = totalRevenue - totalPaid
 	respondJSON(c, http.StatusOK, gin.H{
-		"total_revenue":   totalRevenue,
-		"total_paid":      totalPaid,
-		"total_receivable": totalReceivable,
-		"total_payable":   totalPayable,
-		"net_position":    totalRevenue - totalPaid - totalPayable,
+		"totalRevenue":   totalRevenue,
+		"totalPaid":      totalPaid,
+		"totalReceivable": totalReceivable,
+		"totalPayable":   totalPayable,
+		"netPosition":    totalRevenue - totalPaid - totalPayable,
 	})
 }
 
@@ -267,13 +267,13 @@ func (h *ReportHandler) ProfitLoss(c *gin.Context) {
 
 	grossProfit := totalRevenue - totalCOGS
 	respondJSON(c, http.StatusOK, gin.H{
-		"period_from":   from,
-		"period_to":     to,
-		"total_revenue": totalRevenue,
-		"total_cogs":    totalCOGS,
-		"gross_profit":  grossProfit,
-		"total_paid":    totalPaid,
-		"total_payable": totalPayable,
-		"net_profit":    grossProfit - totalPayable + totalPaid,
+		"periodFrom":   from,
+		"periodTo":     to,
+		"totalRevenue": totalRevenue,
+		"totalCogs":    totalCOGS,
+		"grossProfit":  grossProfit,
+		"totalPaid":    totalPaid,
+		"totalPayable": totalPayable,
+		"netProfit":    grossProfit - totalPayable + totalPaid,
 	})
 }

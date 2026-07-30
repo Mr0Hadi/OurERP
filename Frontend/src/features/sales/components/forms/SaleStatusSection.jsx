@@ -17,7 +17,7 @@ import {
 import {
   SALE_STATUSES,
   SALE_STATUS_LABELS,
-} from "../../services/constants";
+} from "#/features/sales/services/mockData";
 import {
   Clock,
   Loader2,

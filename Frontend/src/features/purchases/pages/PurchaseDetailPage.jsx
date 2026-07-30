@@ -1,8 +1,7 @@
 // src/features/purchases/pages/PurchaseDetailPage.jsx
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Save, X, AlertCircle, Trash2 } from "lucide-react";
+import { Save, X, AlertCircle, Trash2, Ban } from "lucide-react";
 
 import { Button } from "#/shared/components/ui/button";
 import {
@@ -18,7 +17,10 @@ import {
 import { useHeaderStore } from "#/shared/store/headerStore";
 import { usePurchaseFormStore } from "#/features/purchases/store/purchaseFormStore";
 import { usePurchaseQuery } from "#/features/purchases/services/queries";
-import { useUpdatePurchaseMutation } from "#/features/purchases/services/mutations";
+import {
+  useUpdatePurchaseMutation,
+  useUpdatePurchaseStatusMutation,
+} from "#/features/purchases/services/mutations";
 import { useSuppliersQuery } from "#/features/suppliers/services/queries";
 import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection";
 import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
@@ -29,6 +31,12 @@ import PurchaseStatusSection from "../components/forms/PurchaseStatusSection";
 import { useRemovePurchaseMutation } from "../services/mutations";
 import { ROUTES } from "@/shared/constants/routes";
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
+import {
+  canDeletePurchase,
+  canCancelPurchase,
+  getPurchaseLockReason,
+} from "#/features/purchases/domain/purchaseRules";
+import { PURCHASE_STATUSES } from "#/features/purchases/services/constants";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -37,6 +45,7 @@ const SORTING = { id: "name", desc: false };
 function PurchaseDetailForm({ purchaseData }) {
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
 
   const {
@@ -61,6 +70,7 @@ function PurchaseDetailForm({ purchaseData }) {
 
   const updateMutation = useUpdatePurchaseMutation(purchaseData.id);
   const deleteMutation = useRemovePurchaseMutation();
+  const statusMutation = useUpdatePurchaseStatusMutation();
 
   const items = formData.items || [];
 
@@ -121,7 +131,24 @@ function PurchaseDetailForm({ purchaseData }) {
     });
   };
 
-  const isBusy = updateMutation.isPending || deleteMutation.isPending;
+  const handleCancel = () => {
+    statusMutation.mutate(
+      { id: purchaseData.id, status: PURCHASE_STATUSES.CANCELLED },
+      {
+        onSuccess: () => {
+          resetForm();
+          navigate(ROUTES.PURCHASES);
+        },
+      },
+    );
+  };
+
+  const deletable = canDeletePurchase(purchaseData);
+  const cancellable = !deletable && canCancelPurchase(purchaseData);
+  const lockReason = getPurchaseLockReason(purchaseData);
+
+  const isBusy =
+    updateMutation.isPending || deleteMutation.isPending || statusMutation.isPending;
 
   return (
     <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in zoom-in-95 duration-300">
@@ -189,20 +216,42 @@ function PurchaseDetailForm({ purchaseData }) {
               </Button>
             </div>
 
-            <Button
-              type="button"
-              variant="destructive"
-              className="w-full gap-2"
-              onClick={() => setShowDeleteDialog(true)}
-              disabled={isBusy}
-            >
-              <Trash2 className="h-4 w-4" />
-              حذف خرید
-            </Button>
+            {deletable && (
+              <Button
+                type="button"
+                variant="destructive"
+                className="w-full gap-2"
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={isBusy}
+              >
+                <Trash2 className="h-4 w-4" />
+                حذف خرید
+              </Button>
+            )}
+
+            {cancellable && (
+              <Button
+                type="button"
+                variant="destructive"
+                className="w-full gap-2"
+                onClick={() => setShowCancelDialog(true)}
+                disabled={isBusy}
+              >
+                <Ban className="h-4 w-4" />
+                لغو خرید
+              </Button>
+            )}
+
+            {lockReason && (
+              <p className="text-xs text-muted-foreground text-center px-2">
+                {lockReason}
+              </p>
+            )}
           </div>
         </div>
       </form>
 
+      {/* دیالوگ حذف کامل */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -222,6 +271,31 @@ function PurchaseDetailForm({ purchaseData }) {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleteMutation.isPending ? "در حال حذف..." : "حذف"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* دیالوگ لغو */}
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>لغو خرید</AlertDialogTitle>
+            <AlertDialogDescription>
+              این خرید ارسال شده ولی هنوز چیزی از آن در انبار دریافت نشده است.
+              با لغو، وضعیت آن به «لغو شده» تغییر می‌کند و سابقه‌ی آن حفظ می‌شود.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={statusMutation.isPending}>
+              انصراف
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancel}
+              disabled={statusMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {statusMutation.isPending ? "در حال لغو..." : "لغو خرید"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

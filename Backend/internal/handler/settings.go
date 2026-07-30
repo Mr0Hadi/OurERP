@@ -28,7 +28,7 @@ func (h *SettingsHandler) GetCompany(c *gin.Context) {
 		respondJSON(c, http.StatusOK, gin.H{
 			"id":      1,
 			"name":    "",
-			"tax_id":  "",
+			"taxId":   "",
 			"address": "",
 			"phone":   "",
 			"email":   "",
@@ -42,7 +42,7 @@ func (h *SettingsHandler) GetCompany(c *gin.Context) {
 	respondJSON(c, http.StatusOK, gin.H{
 		"id":      1,
 		"name":    name,
-		"tax_id":  taxID,
+		"taxId":   taxID,
 		"address": address,
 		"phone":   phone,
 		"email":   email,
@@ -52,7 +52,7 @@ func (h *SettingsHandler) GetCompany(c *gin.Context) {
 func (h *SettingsHandler) UpdateCompany(c *gin.Context) {
 	var req struct {
 		Name    string `json:"name"`
-		TaxID   string `json:"tax_id"`
+		TaxID   string `json:"taxId"`
 		Address string `json:"address"`
 		Phone   string `json:"phone"`
 		Email   string `json:"email"`

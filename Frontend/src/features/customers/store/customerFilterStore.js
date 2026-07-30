@@ -5,22 +5,23 @@ export const useCustomerFilterStore = create((set) => ({
   globalSearch: "",
   minDebtCredit: "",
   maxDebtCredit: "",
+  balanceType: "all", // "all" | "debit" | "credit" | "none"
   pagination: { pageIndex: 0, pageSize: 10 },
   sorting: null,
 
   setQuickFilter: (type) => {
     switch (type) {
       case "debtors":
-        set({ minDebtCredit: "1", maxDebtCredit: "999999999" });
+        set({ balanceType: "debit", minDebtCredit: "", maxDebtCredit: "" });
         break;
       case "creditors":
-        set({ minDebtCredit: "-999999999", maxDebtCredit: "-1" });
+        set({ balanceType: "credit", minDebtCredit: "", maxDebtCredit: "" });
         break;
       case "zero":
-        set({ minDebtCredit: "0", maxDebtCredit: "0" });
+        set({ balanceType: "none", minDebtCredit: "", maxDebtCredit: "" });
         break;
       default: // all
-        set({ minDebtCredit: "", maxDebtCredit: "" });
+        set({ balanceType: "all", minDebtCredit: "", maxDebtCredit: "" });
     }
   },
   setGlobalSearch: (value) => set({ globalSearch: value }),
@@ -33,6 +34,6 @@ export const useCustomerFilterStore = create((set) => ({
       globalSearch: "",
       minDebtCredit: "",
       maxDebtCredit: "",
-      // pagination و sorting را می‌توانید اختیاری ریست کنید
+      balanceType: "all",
     }),
 }));

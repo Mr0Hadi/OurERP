@@ -20,6 +20,7 @@ function buildDefaultValues(data) {
       brand: "",
       unit: "",
       initialStock: 0,
+      lowStockThreshold: 10,
       purchasePrice: 0,
       sellPrice1: 0,
       sellPrice2: 0,
@@ -34,6 +35,7 @@ function buildDefaultValues(data) {
     brand: data.brand || "",
     unit: data.unit || "",
     initialStock: data.stock ?? data.initialStock ?? 0,
+    lowStockThreshold: data.lowStockThreshold ?? 10,
     purchasePrice: data.purchasePrice || 0,
     sellPrice1: data.retailPrice ?? data.sellPrice1 ?? 0,
     sellPrice2: data.wholesalePrice ?? data.sellPrice2 ?? 0,
@@ -43,7 +45,7 @@ function buildDefaultValues(data) {
 
 export function useProductForm(initialData = null) {
   const [imagePreview, setImagePreview] = useState(
-    initialData?.imageUrl || null
+    initialData?.image || null
   );
   const [imageFile, setImageFile] = useState(null);
   const [imageRemoved, setImageRemoved] = useState(false);
@@ -105,6 +107,7 @@ export function useProductForm(initialData = null) {
       brand: formData.brand,
       unit: formData.unit,
       stock: Number(formData.initialStock) || 0,
+      lowStockThreshold: Number(formData.lowStockThreshold) || 0,
       purchasePrice: Number(formData.purchasePrice) || 0,
       retailPrice: Number(formData.sellPrice1) || 0,
       wholesalePrice: Number(formData.sellPrice2) || 0,
@@ -112,13 +115,13 @@ export function useProductForm(initialData = null) {
     };
 
     if (imageRemoved) {
-      payload.imageUrl = "";
+      payload.image = "";
     } else if (imageFile) {
-      payload.imageUrl = imagePreview;
-    } else if (initialData?.imageUrl) {
-      payload.imageUrl = initialData.imageUrl;
+      payload.image = imagePreview;
+    } else if (initialData?.image) {
+      payload.image = initialData.image;
     } else {
-      payload.imageUrl = "";
+      payload.image = "";
     }
 
     return payload;

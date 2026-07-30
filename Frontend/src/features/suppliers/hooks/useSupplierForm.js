@@ -13,20 +13,11 @@ function buildDefaultValues(data) {
       lat: "",
       lng: "",
       postalCode: "",
+      Description: "",
       balanceType: "none",
       balanceAmount: "",
-      avatar: null,
+      image: null,
     };
-  }
-
-  let balanceType = "none",
-    balanceAmount = "";
-  if (data.balance < 0) {
-    balanceType = "debtor";
-    balanceAmount = Math.abs(data.balance).toString();
-  } else if (data.balance > 0) {
-    balanceType = "creditor";
-    balanceAmount = Math.abs(data.balance).toString();
   }
 
   return {
@@ -35,20 +26,23 @@ function buildDefaultValues(data) {
     lastName: data.lastName || "",
     phone: data.phone || "",
     address: data.address || "",
-    lat: data.coordinates?.lat?.toString() || "",
-    lng: data.coordinates?.lng?.toString() || "",
+    lat: data.lat !== null && data.lat !== undefined ? data.lat.toString() : "",
+    lng: data.lng !== null && data.lng !== undefined ? data.lng.toString() : "",
     postalCode: data.postalCode || "",
-    balanceType,
-    balanceAmount,
-    avatar: null,
+    Description: data.Description || "",
+    balanceType: data.balanceType || "none",
+    balanceAmount:
+      data.balanceType && data.balanceType !== "none"
+        ? Math.abs(data.balance || 0).toString()
+        : "",
+    image: null,
   };
 }
 
-export function buildSupplierPayload(data, avatarPreview, existingAvatar) {
+export function buildSupplierPayload(data, imagePreview, existingImage) {
   const amount = Number(data.balanceAmount) || 0;
-  let balance = 0;
-  if (data.balanceType === "debtor") balance = -Math.abs(amount);
-  else if (data.balanceType === "creditor") balance = Math.abs(amount);
+  const balanceType = data.balanceType || "none";
+  const balance = balanceType === "none" ? 0 : Math.abs(amount);
 
   return {
     companyName: data.companyName,
@@ -57,20 +51,19 @@ export function buildSupplierPayload(data, avatarPreview, existingAvatar) {
     phone: data.phone || null,
     address: data.address || null,
     postalCode: data.postalCode || null,
+    Description: data.Description || "",
     balance,
-    avatar: avatarPreview ?? existingAvatar ?? null,
-    coordinates: {
-      lat: data.lat ? parseFloat(data.lat) : null,
-      lng: data.lng ? parseFloat(data.lng) : null,
-    },
+    balanceType,
+    image: imagePreview ?? existingImage ?? null,
+    // مختصات به‌صورت دو فیلد جدا و عددی ذخیره می‌شوند (نه یک آبجکت تودرتو)
+    lat: data.lat !== "" && data.lat !== null && data.lat !== undefined ? parseFloat(data.lat) : null,
+    lng: data.lng !== "" && data.lng !== null && data.lng !== undefined ? parseFloat(data.lng) : null,
   };
 }
 
 export function useSupplierForm(initialData = null) {
-  const [avatarPreview, setAvatarPreview] = useState(
-    initialData?.avatar || null
-  );
-  const [avatarRemoved, setAvatarRemoved] = useState(false);
+  const [imagePreview, setImagePreview] = useState(initialData?.image || null);
+  const [imageRemoved, setImageRemoved] = useState(false);
 
   const formMethods = useForm({
     defaultValues: buildDefaultValues(initialData),
@@ -79,31 +72,31 @@ export function useSupplierForm(initialData = null) {
   const { watch } = formMethods;
   const balanceType = watch("balanceType");
 
-  const handleAvatarChange = (e) => {
+  const handleImageChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setAvatarRemoved(false);
+    setImageRemoved(false);
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      setAvatarPreview(reader.result);
+      setImagePreview(reader.result);
     };
     reader.readAsDataURL(file);
   };
 
-  const handleRemoveAvatar = () => {
-    setAvatarPreview(null);
-    setAvatarRemoved(true);
-    formMethods.setValue("avatar", null);
+  const handleRemoveImage = () => {
+    setImagePreview(null);
+    setImageRemoved(true);
+    formMethods.setValue("image", null);
   };
 
   return {
     formMethods,
     balanceType,
-    avatarPreview,
-    handleAvatarChange,
-    handleRemoveAvatar,
+    imagePreview,
+    handleImageChange,
+    handleRemoveImage,
     buildSupplierPayload: (data) =>
-      buildSupplierPayload(data, avatarPreview, avatarRemoved ? null : initialData?.avatar),
+      buildSupplierPayload(data, imagePreview, imageRemoved ? null : initialData?.image),
   };
 }

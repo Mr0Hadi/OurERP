@@ -32,16 +32,26 @@ export const PAYMENT_TYPE_LABELS = {
   [PAYMENT_TYPES.MIXED]: "ترکیبی",
 };
 
-// تابع کمکی برای تبدیل تاریخ میلادی به فرمت ISO
+// ─── توابع کمکی ────────────────────────────────────────────────────────────
+
 function formatDate(year, month, day) {
-  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-// داده‌های نمونه خرید با تاریخ میلادی
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function pickRandom(array) {
+  return array[randomInt(0, array.length - 1)];
+}
+
+// ─── داده‌های نمونه خرید (همه IDها عددی) ────────────────────────────────────
+
 export const purchasesMock = [
   {
-    id: "1",
-    supplierId: "1",
+    id: 1,
+    supplierId: 1,
     supplierName: "ایران قطعه",
     invoiceNumber: "INV-2026-001",
     invoiceDate: "2026-03-15",
@@ -52,18 +62,20 @@ export const purchasesMock = [
     description: "خرید لوازم یدکی موتور",
     items: [
       {
-        productId: "1",
+        productId: 1,
         productCode: "BRK-001",
         productName: "لنت ترمز جلو",
+        unit: "دست",
         qty: 20,
         unitPrice: 1500000,
         discount: 0,
         lineTotal: 30000000,
       },
       {
-        productId: "2",
+        productId: 2,
         productCode: "FLT-002",
         productName: "فیلتر روغن",
+        unit: "عدد",
         qty: 50,
         unitPrice: 300000,
         discount: 0,
@@ -74,8 +86,8 @@ export const purchasesMock = [
     updatedAt: "2026-06-04T10:30:00.000Z",
   },
   {
-    id: "2",
-    supplierId: "2",
+    id: 2,
+    supplierId: 2,
     supplierName: "لنت پارس موتور",
     invoiceNumber: "INV-2026-002",
     invoiceDate: "2026-03-20",
@@ -86,18 +98,20 @@ export const purchasesMock = [
     description: "خرید لنت و دیسک ترمز",
     items: [
       {
-        productId: "1",
+        productId: 1,
         productCode: "BRK-001",
         productName: "لنت ترمز جلو",
+        unit: "دست",
         qty: 15,
         unitPrice: 1500000,
         discount: 5,
         lineTotal: 21375000,
       },
       {
-        productId: "3",
+        productId: 3,
         productCode: "SHK-003",
         productName: "کمک فنر جلو",
+        unit: "عدد",
         qty: 4,
         unitPrice: 1800000,
         discount: 0,
@@ -108,8 +122,8 @@ export const purchasesMock = [
     updatedAt: "2026-06-09T14:15:00.000Z",
   },
   {
-    id: "3",
-    supplierId: "3",
+    id: 3,
+    supplierId: 3,
     supplierName: "پخش بلبرینگ مرکزی",
     invoiceNumber: "INV-2026-003",
     invoiceDate: "2026-03-25",
@@ -121,18 +135,20 @@ export const purchasesMock = [
     description: "خرید یاتاقان و بلبرینگ",
     items: [
       {
-        productId: "6",
+        productId: 6,
         productCode: "BRG-006",
         productName: "کاسه چرخ عقب",
+        unit: "عدد",
         qty: 30,
         unitPrice: 800000,
         discount: 10,
         lineTotal: 21600000,
       },
       {
-        productId: "9",
+        productId: 9,
         productCode: "ENG-009",
         productName: "یاتاقان شاتون",
+        unit: "عدد",
         qty: 20,
         unitPrice: 1420000,
         discount: 0,
@@ -143,8 +159,8 @@ export const purchasesMock = [
     updatedAt: "2026-06-14T09:45:00.000Z",
   },
   {
-    id: "4",
-    supplierId: "1",
+    id: 4,
+    supplierId: 1,
     supplierName: "ایران قطعه",
     invoiceNumber: "INV-2026-004",
     invoiceDate: "2026-03-28",
@@ -156,18 +172,20 @@ export const purchasesMock = [
     description: "خرید فیلترها و روغن موتور",
     items: [
       {
-        productId: "2",
+        productId: 2,
         productCode: "FLT-002",
         productName: "فیلتر روغن",
+        unit: "عدد",
         qty: 60,
         unitPrice: 300000,
         discount: 0,
         lineTotal: 18000000,
       },
       {
-        productId: "7",
+        productId: 7,
         productCode: "FLT-007",
         productName: "فیلتر هوای موتور",
+        unit: "عدد",
         qty: 40,
         unitPrice: 425000,
         discount: 0,
@@ -178,8 +196,8 @@ export const purchasesMock = [
     updatedAt: "2026-06-17T11:20:00.000Z",
   },
   {
-    id: "5",
-    supplierId: "2",
+    id: 5,
+    supplierId: 2,
     supplierName: "لنت پارس موتور",
     invoiceNumber: "INV-2026-005",
     invoiceDate: "2026-04-01",
@@ -188,30 +206,17 @@ export const purchasesMock = [
     paidAmount: 60000000,
     totalAmount: 82500000,
     mixedPayments: [
-      {
-        id: "mp1",
-        type: "cash",
-        amount: 30000000,
-      },
-      {
-        id: "mp2",
-        type: "check",
-        amount: 20000000,
-        checkNumber: "1234567890",
-      },
-      {
-        id: "mp3",
-        type: "transfer",
-        amount: 10000000,
-        transferRef: "TRN-55667788",
-      },
+      { id: 1, type: "cash", amount: 30000000 },
+      { id: 2, type: "check", amount: 20000000, checkNumber: "1234567890" },
+      { id: 3, type: "transfer", amount: 10000000, transferRef: "TRN-55667788" },
     ],
     description: "خرید کلاچ و دیسک کلاچ - پرداخت ترکیبی",
     items: [
       {
-        productId: "10",
+        productId: 10,
         productCode: "CLT-010",
         productName: "کلاچ کامل",
+        unit: "دست",
         qty: 15,
         unitPrice: 5500000,
         discount: 0,
@@ -222,8 +227,8 @@ export const purchasesMock = [
     updatedAt: "2026-06-20T16:00:00.000Z",
   },
   {
-    id: "6",
-    supplierId: "1",
+    id: 6,
+    supplierId: 1,
     supplierName: "ایران قطعه",
     invoiceNumber: "INV-2026-006",
     invoiceDate: "2026-04-02",
@@ -234,9 +239,10 @@ export const purchasesMock = [
     description: "خرید لامپ - لغو شده به دلیل عدم موجودی",
     items: [
       {
-        productId: "4",
+        productId: 4,
         productCode: "LMP-004",
         productName: "لامپ هدلایت H4",
+        unit: "عدد",
         qty: 100,
         unitPrice: 240000,
         discount: 0,
@@ -248,165 +254,160 @@ export const purchasesMock = [
   },
 ];
 
-// تابع تولید خریدهای بیشتر با تاریخ میلادی
-function generateMorePurchases(count = 20) {
-  const suppliers = [
-    { id: "1", name: "ایران قطعه" },
-    { id: "2", name: "لنت پارس موتور" },
-    { id: "3", name: "پخش بلبرینگ مرکزی" },
-  ];
+// ─── تولید خریدهای بیشتر (همه IDها عددی) ────────────────────────────────────
 
-  const products = [
-    { id: "1", code: "BRK-001", name: "لنت ترمز جلو", price: 1500000 },
-    { id: "2", code: "FLT-002", name: "فیلتر روغن", price: 300000 },
-    { id: "3", code: "SHK-003", name: "کمک فنر جلو", price: 1800000 },
-    { id: "4", code: "LMP-004", name: "لامپ هدلایت H4", price: 240000 },
-    { id: "5", code: "BAT-005", name: "باتری ۶۰ آمپر", price: 4500000 },
-    { id: "6", code: "BRG-006", name: "کاسه چرخ عقب", price: 800000 },
-    { id: "7", code: "FLT-007", name: "فیلتر هوای موتور", price: 425000 },
-    { id: "8", code: "SHK-008", name: "کمک فنر عقب", price: 1850000 },
-    { id: "9", code: "ENG-009", name: "یاتاقان شاتون", price: 1420000 },
-    { id: "10", code: "CLT-010", name: "کلاچ کامل", price: 5500000 },
-  ];
+const MOCK_SUPPLIERS = [
+  { id: 1, name: "ایران قطعه" },
+  { id: 2, name: "لنت پارس موتور" },
+  { id: 3, name: "پخش بلبرینگ مرکزی" },
+];
 
-  const statuses = Object.values(PURCHASE_STATUSES);
-  const paymentTypes = Object.values(PAYMENT_TYPES);
+const MOCK_PRODUCTS = [
+  { id: 1, code: "BRK-001", name: "لنت ترمز جلو", price: 1500000, unit: "دست" },
+  { id: 2, code: "FLT-002", name: "فیلتر روغن", price: 300000, unit: "عدد" },
+  { id: 3, code: "SHK-003", name: "کمک فنر جلو", price: 1800000, unit: "عدد" },
+  { id: 4, code: "LMP-004", name: "لامپ هدلایت H4", price: 240000, unit: "عدد" },
+  { id: 5, code: "BAT-005", name: "باتری ۶۰ آمپر", price: 4500000, unit: "عدد" },
+  { id: 6, code: "BRG-006", name: "کاسه چرخ عقب", price: 800000, unit: "عدد" },
+  { id: 7, code: "FLT-007", name: "فیلتر هوای موتور", price: 425000, unit: "عدد" },
+  { id: 8, code: "SHK-008", name: "کمک فنر عقب", price: 1850000, unit: "عدد" },
+  { id: 9, code: "ENG-009", name: "یاتاقان شاتون", price: 1420000, unit: "عدد" },
+  { id: 10, code: "CLT-010", name: "کلاچ کامل", price: 5500000, unit: "دست" },
+];
 
-  const descriptions = [
-    "خرید قطعات موتور",
-    "خرید لوازم سیستم ترمز",
-    "خرید لوازم سیستم تعلیق",
-    "خرید لوازم برقی",
-    "خرید فیلترها",
-    "خرید یاتاقان و بلبرینگ",
-    "خرید لوازم گیربکس",
-    "سفارش عمده قطعات",
-    "خرید اورژانسی",
-    "",
-  ];
+const MOCK_DESCRIPTIONS = [
+  "خرید قطعات موتور",
+  "خرید لوازم سیستم ترمز",
+  "خرید لوازم سیستم تعلیق",
+  "خرید لوازم برقی",
+  "خرید فیلترها",
+  "خرید یاتاقان و بلبرینگ",
+  "خرید لوازم گیربکس",
+  "سفارش عمده قطعات",
+  "خرید اورژانسی",
+  "",
+];
 
-  const purchases = [];
-  const baseDate = new Date("2026-01-01");
+const SINGLE_PAYMENT_TYPES = ["cash", "check", "transfer"];
 
-  for (let i = 0; i < count; i++) {
-    const supplier = suppliers[Math.floor(Math.random() * suppliers.length)];
-    const status = statuses[Math.floor(Math.random() * statuses.length)];
-    const paymentType =
-      paymentTypes[Math.floor(Math.random() * paymentTypes.length)];
+function buildRandomItems() {
+  const itemsCount = randomInt(1, 5);
+  const usedProductIds = new Set();
+  const items = [];
+  let totalAmount = 0;
 
-    // تعداد آیتم‌های تصادفی (1 تا 5)
-    const itemsCount = Math.floor(Math.random() * 5) + 1;
-    const items = [];
-    let totalAmount = 0;
-    const usedProductIds = new Set();
+  for (let j = 0; j < itemsCount; j++) {
+    const availableProducts = MOCK_PRODUCTS.filter((p) => !usedProductIds.has(p.id));
+    if (availableProducts.length === 0) break;
 
-    for (let j = 0; j < itemsCount; j++) {
-      const availableProducts = products.filter(
-        (p) => !usedProductIds.has(p.id)
-      );
-      if (availableProducts.length === 0) break;
+    const product = pickRandom(availableProducts);
+    usedProductIds.add(product.id);
 
-      const randomIndex = Math.floor(Math.random() * availableProducts.length);
-      const product = availableProducts[randomIndex];
-      usedProductIds.add(product.id);
+    const qty = randomInt(5, 34);
+    const discount = Math.random() < 0.3 ? randomInt(1, 15) : 0;
+    const lineTotal = qty * product.price * (1 - discount / 100);
 
-      const qty = Math.floor(Math.random() * 30) + 5;
-      const discount = Math.random() < 0.3 ? Math.floor(Math.random() * 15) : 0;
-      const lineTotal = qty * product.price * (1 - discount / 100);
+    items.push({
+      productId: product.id,
+      productCode: product.code,
+      productName: product.name,
+      unit: product.unit,
+      qty,
+      unitPrice: product.price,
+      discount,
+      lineTotal,
+    });
 
-      items.push({
-        productId: product.id,
-        productCode: product.code,
-        productName: product.name,
-        qty,
-        unitPrice: product.price,
-        discount,
-        lineTotal,
-      });
+    totalAmount += lineTotal;
+  }
 
-      totalAmount += lineTotal;
+  return { items, totalAmount };
+}
+
+function buildMixedPayments(totalAmount) {
+  const numPayments = randomInt(2, 4);
+  const mixedPayments = [];
+  let remainingAmount = totalAmount;
+  let paidAmount = 0;
+
+  for (let k = 0; k < numPayments; k++) {
+    const isLast = k === numPayments - 1;
+    const paymentAmount = isLast
+      ? remainingAmount
+      : Math.floor(remainingAmount * (0.2 + Math.random() * 0.4));
+
+    const type = pickRandom(SINGLE_PAYMENT_TYPES);
+    const payment = { id: k + 1, type, amount: paymentAmount };
+
+    if (type === "check") {
+      payment.checkNumber = String(randomInt(1000000000, 9999999999));
+    } else if (type === "transfer") {
+      payment.transferRef = `TRN-${randomInt(10000000, 99999999)}`;
     }
 
-    // محاسبه مبلغ پرداختی
+    mixedPayments.push(payment);
+    remainingAmount -= paymentAmount;
+    paidAmount += paymentAmount;
+  }
+
+  return { mixedPayments, paidAmount };
+}
+
+function generateMorePurchases(count = 20) {
+  const baseDate = new Date("2026-01-01");
+  const purchases = [];
+
+  for (let i = 0; i < count; i++) {
+    const supplier = pickRandom(MOCK_SUPPLIERS);
+    const status = pickRandom(Object.values(PURCHASE_STATUSES));
+    const paymentType = pickRandom(Object.values(PAYMENT_TYPES));
+
+    const { items, totalAmount } = buildRandomItems();
+
     let paidAmount = 0;
     let mixedPayments = null;
 
     if (paymentType === PAYMENT_TYPES.CREDIT) {
       paidAmount = 0;
     } else if (paymentType === PAYMENT_TYPES.MIXED) {
-      // برای پرداخت ترکیبی، چند روش پرداخت ایجاد می‌کنیم
-      const numPayments = Math.floor(Math.random() * 3) + 2; // 2 تا 4 روش پرداخت
-      mixedPayments = [];
-      let remainingAmount = totalAmount;
-      
-      for (let k = 0; k < numPayments; k++) {
-        const isLast = k === numPayments - 1;
-        const paymentAmount = isLast 
-          ? remainingAmount 
-          : Math.floor(remainingAmount * (0.2 + Math.random() * 0.4));
-        
-        const paymentTypes = ['cash', 'check', 'transfer'];
-        const randomType = paymentTypes[Math.floor(Math.random() * paymentTypes.length)];
-        
-        const payment = {
-          id: `mp${k + 1}`,
-          type: randomType,
-          amount: paymentAmount,
-        };
-        
-        if (randomType === 'check') {
-          payment.checkNumber = String(Math.floor(Math.random() * 9000000000) + 1000000000);
-        } else if (randomType === 'transfer') {
-          payment.transferRef = `TRN-${Math.floor(Math.random() * 90000000) + 10000000}`;
-        }
-        
-        mixedPayments.push(payment);
-        remainingAmount -= paymentAmount;
-        paidAmount += paymentAmount;
-      }
+      const result = buildMixedPayments(totalAmount);
+      mixedPayments = result.mixedPayments;
+      paidAmount = result.paidAmount;
     } else {
       paidAmount = totalAmount;
     }
 
-    // تاریخ تصادفی در 6 ماه گذشته با فرمت میلادی
-    const daysAgo = Math.floor(Math.random() * 180);
+    const daysAgo = randomInt(0, 179);
     const purchaseDate = new Date(baseDate);
     purchaseDate.setDate(purchaseDate.getDate() + daysAgo);
-    
-    const year = purchaseDate.getFullYear();
-    const month = purchaseDate.getMonth() + 1;
-    const day = purchaseDate.getDate();
-    const invoiceDate = formatDate(year, month, day);
+    const invoiceDate = formatDate(
+      purchaseDate.getFullYear(),
+      purchaseDate.getMonth() + 1,
+      purchaseDate.getDate()
+    );
+
+    const newId = purchasesMock.length + i + 1;
 
     const purchase = {
-      id: String(purchasesMock.length + i + 1),
+      id: newId,
       supplierId: supplier.id,
       supplierName: supplier.name,
-      invoiceNumber: `INV-2026-${String(purchasesMock.length + i + 1).padStart(
-        3,
-        "0"
-      )}`,
+      invoiceNumber: `INV-2026-${String(newId).padStart(3, "0")}`,
       invoiceDate,
       status,
       paymentType,
       paidAmount,
       totalAmount,
-      description:
-        descriptions[Math.floor(Math.random() * descriptions.length)],
+      description: pickRandom(MOCK_DESCRIPTIONS),
       items,
       createdAt: purchaseDate.toISOString(),
       updatedAt: purchaseDate.toISOString(),
     };
 
-    // فیلدهای اضافی بسته به نوع پرداخت
     if (paymentType === PAYMENT_TYPES.CHECK) {
-      purchase.checkNumber = String(
-        Math.floor(Math.random() * 9000000000) + 1000000000
-      );
+      purchase.checkNumber = String(randomInt(1000000000, 9999999999));
     } else if (paymentType === PAYMENT_TYPES.TRANSFER) {
-      purchase.transferRef = `TRN-${
-        Math.floor(Math.random() * 90000000) + 10000000
-      }`;
+      purchase.transferRef = `TRN-${randomInt(10000000, 99999999)}`;
     } else if (paymentType === PAYMENT_TYPES.MIXED && mixedPayments) {
       purchase.mixedPayments = mixedPayments;
     }

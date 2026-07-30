@@ -1,4 +1,4 @@
-// src/features/purchases/services/api.js
+// src/features/purchases/services/api-mockData.js
 
 import { allPurchases, PURCHASE_STATUSES } from "./mockData";
 
@@ -11,8 +11,12 @@ export async function createPurchase(purchaseData) {
     throw new Error("خطا در ثبت خرید");
   }
 
+  const newId = allPurchases.length
+    ? Math.max(...allPurchases.map((p) => Number(p.id) || 0)) + 1
+    : 1;
+
   const newPurchase = {
-    id: String(Date.now()),
+    id: newId,
     ...purchaseData,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -46,12 +50,14 @@ export async function fetchPurchases(params = {}) {
       (p) =>
         p.invoiceNumber.toLowerCase().includes(searchLower) ||
         p.supplierName.toLowerCase().includes(searchLower) ||
-        (p.description && p.description.toLowerCase().includes(searchLower))
+        (p.description && p.description.toLowerCase().includes(searchLower)),
     );
   }
 
   if (Array.isArray(supplierIds) && supplierIds.length > 0) {
-    filtered = filtered.filter((p) => supplierIds.includes(p.supplierId));
+    filtered = filtered.filter((p) =>
+      supplierIds.map(String).includes(String(p.supplierId)),
+    );
   }
 
   if (status) {
@@ -64,12 +70,13 @@ export async function fetchPurchases(params = {}) {
 
   if (fromDate) {
     filtered = filtered.filter(
-      (p) => new Date(p.createdAt) >= new Date(fromDate)
+      (p) =>
+        p.invoiceDate && p.invoiceDate.slice(0, 10) >= fromDate.slice(0, 10),
     );
   }
   if (toDate) {
     filtered = filtered.filter(
-      (p) => new Date(p.createdAt) <= new Date(toDate)
+      (p) => p.invoiceDate && p.invoiceDate.slice(0, 10) <= toDate.slice(0, 10),
     );
   }
 
@@ -101,22 +108,14 @@ export async function fetchPurchases(params = {}) {
   const end = start + limit;
   const items = filtered.slice(start, end);
 
-  return {
-    items,
-    total,
-    page,
-    totalPages,
-  };
+  return { items, total, page, totalPages };
 }
 
 export async function fetchPurchaseById(id) {
   await delay(300);
 
-  
-  
-  const purchase = allPurchases.find((p) => p.id === id);
+  const purchase = allPurchases.find((p) => Number(p.id) === Number(id));
 
-  
   if (!purchase) {
     throw new Error("خرید یافت نشد");
   }
@@ -127,7 +126,7 @@ export async function fetchPurchaseById(id) {
 export async function updatePurchase(id, updates) {
   await delay(600);
 
-  const index = allPurchases.findIndex((p) => p.id === id);
+  const index = allPurchases.findIndex((p) => Number(p.id) === Number(id));
 
   if (index === -1) {
     throw new Error("خرید یافت نشد");
@@ -149,10 +148,7 @@ export async function updatePurchaseStatus(id, newStatus) {
 export async function removePurchase(id) {
   await delay(600);
 
-  
-  const index = allPurchases.findIndex((p) => p.id == id);
-  const purchase = allPurchases.find((p) => p.id === id);
-  
+  const index = allPurchases.findIndex((p) => Number(p.id) === Number(id));
 
   if (index === -1) {
     throw new Error("خرید یافت نشد");
@@ -169,7 +165,7 @@ export async function deletePurchase(id) {
 export async function updatePurchasePayment(id, paymentData) {
   await delay(600);
 
-  const index = allPurchases.findIndex((p) => p.id === id);
+  const index = allPurchases.findIndex((p) => Number(p.id) === Number(id));
 
   if (index === -1) {
     throw new Error("خرید یافت نشد");
@@ -188,3 +184,86 @@ export async function updatePurchasePayment(id, paymentData) {
   return allPurchases[index];
 }
 
+/**
+ * وقتی یک مرجوعی با «بازگشت وجه»، «پذیرش زیان» یا «اعتبار خرید بعدی»
+ * تسویه می‌شود، این تابع به‌ازای هر قلم مقدار settledQty (تجمعی) را
+ * افزایش می‌دهد — یعنی این مقدار دیگر «مورد انتظار» دریافت در انبار
+ * نیست (چون دائماً بسته شده، فارغ از این‌که فیزیکاً برسد یا نه). در
+ * صورت وجود مبلغ بازگشتی، از جمع کل خرید هم کم می‌شود.
+ */
+export async function settlePurchaseItems(
+  purchaseId,
+  settledItems,
+  { refundAmount = 0 } = {},
+) {
+  await delay(400);
+
+  const index = allPurchases.findIndex(
+    (p) => Number(p.id) === Number(purchaseId),
+  );
+  if (index === -1) {
+    throw new Error("خرید یافت نشد");
+  }
+
+  const purchase = allPurchases[index];
+
+  const updatedItems = purchase.items.map((item) => {
+    const settle = settledItems.find((s) => s.productId === item.productId);
+    if (!settle) return item;
+    return {
+      ...item,
+      settledQty: (item.settledQty || 0) + (settle.qty || 0),
+    };
+  });
+
+  const fullyClosed = updatedItems.every(
+    (item) => (item.receivedQty || 0) + (item.settledQty || 0) >= item.qty,
+  );
+  const anyReceived = updatedItems.some((item) => (item.receivedQty || 0) > 0);
+
+  let newStatus = purchase.status;
+  if (fullyClosed) {
+    newStatus = PURCHASE_STATUSES.RECEIVED;
+  } else if (anyReceived) {
+    newStatus = PURCHASE_STATUSES.PARTIALLY_RECEIVED;
+  }
+
+  allPurchases[index] = {
+    ...purchase,
+    items: updatedItems,
+    totalAmount: Math.max(0, purchase.totalAmount - refundAmount),
+    status: newStatus,
+    updatedAt: new Date().toISOString(),
+  };
+
+  return allPurchases[index];
+}
+
+/**
+ * وقتی واحد خرید هماهنگ می‌کند که کالای جایگزین/کسری دوباره ارسال
+ * شود، خرید باید دوباره در لیست دریافتِ انباردار ظاهر شود.
+ */
+export async function reopenPurchaseForShipment(purchaseId) {
+  await delay(300);
+
+  const index = allPurchases.findIndex(
+    (p) => Number(p.id) === Number(purchaseId),
+  );
+  if (index === -1) {
+    throw new Error("خرید یافت نشد");
+  }
+
+  const purchase = allPurchases[index];
+
+  if (purchase.status === PURCHASE_STATUSES.CANCELLED) {
+    return purchase;
+  }
+
+  allPurchases[index] = {
+    ...purchase,
+    status: PURCHASE_STATUSES.SHIPPED,
+    updatedAt: new Date().toISOString(),
+  };
+
+  return allPurchases[index];
+}

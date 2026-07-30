@@ -1,6 +1,8 @@
+// src\features\sales\services\queries.js
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { keepPreviousData } from '@tanstack/react-query';
-import { fetchSales, fetchSaleById } from './api';
+import { fetchSales, fetchSaleById } from './api-mockData';
 import { saleKeys } from './queryKeys';
 
 export function useSalesQuery(filters, pagination, sorting) {

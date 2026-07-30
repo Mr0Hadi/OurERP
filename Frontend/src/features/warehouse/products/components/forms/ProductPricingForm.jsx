@@ -19,7 +19,6 @@ export default function ProductPricingForm({ register }) {
           <Label htmlFor="initialStock">موجودی اولیه</Label>
           <Input
             type="number"
-            
             id="initialStock"
             {...register("initialStock")}
             min="0"
@@ -27,10 +26,20 @@ export default function ProductPricingForm({ register }) {
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="lowStockThreshold">آستانه هشدار کمبود موجودی</Label>
+          <Input
+            type="number"
+            id="lowStockThreshold"
+            {...register("lowStockThreshold")}
+            min="0"
+            placeholder="مثال: 10"
+          />
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="vat">مالیات بر ارزش افزوده (درصد %)</Label>
           <Input
             type="number"
-            
             id="vat"
             {...register("vat")}
             min="0"
@@ -43,7 +52,6 @@ export default function ProductPricingForm({ register }) {
           <Label htmlFor="purchasePrice">قیمت خرید (تومان)</Label>
           <Input
             type="number"
-            
             id="purchasePrice"
             {...register("purchasePrice")}
             min="0"
@@ -54,18 +62,16 @@ export default function ProductPricingForm({ register }) {
           <Label htmlFor="sellPrice1">قیمت فروش اول (تومان)</Label>
           <Input
             type="number"
-            
             id="sellPrice1"
             {...register("sellPrice1")}
             min="0"
           />
         </div>
 
-        <div className="space-y-2 md:col-span-2">
+        <div className="space-y-2">
           <Label htmlFor="sellPrice2">قیمت فروش دوم (همکار/عمده)</Label>
           <Input
             type="number"
-            
             id="sellPrice2"
             {...register("sellPrice2")}
             min="0"

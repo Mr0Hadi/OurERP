@@ -316,8 +316,8 @@ func (h *InvoiceHandler) Dispatch(c *gin.Context) {
 	}
 
 	var req struct {
-		VehicleID int `json:"vehicle_id"`
-		PackerID  int `json:"packer_id"`
+		VehicleID int `json:"vehicleId"`
+		PackerID  int `json:"packerId"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		respondError(c, http.StatusBadRequest, "درخواست نامعتبر است")
@@ -494,7 +494,7 @@ func (h *InvoiceHandler) Return(c *gin.Context) {
 
 	var req struct {
 		Items []struct {
-			ProductID int     `json:"product_id"`
+			ProductID int     `json:"productId"`
 			Quantity  float64 `json:"quantity"`
 			Reason    string  `json:"reason"`
 		} `json:"items"`

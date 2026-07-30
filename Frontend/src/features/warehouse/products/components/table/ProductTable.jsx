@@ -38,9 +38,9 @@ import { useNavigate } from "react-router-dom";
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 50];
 
-const StockBadge = ({ stock }) => {
+const StockBadge = ({ stock, threshold = 10 }) => {
   if (stock <= 0) return <Badge variant="destructive">{stock} عدد</Badge>;
-  if (stock < 10)
+  if (stock <= threshold)
     return (
       <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-100">
         {stock} عدد
@@ -114,10 +114,15 @@ const ProductTable = ({
           </span>
         ),
       },
-      {
+{
         accessorKey: "stock",
         header: "موجودی",
-        cell: (info) => <StockBadge stock={info.getValue()} />,
+        cell: (info) => (
+          <StockBadge
+            stock={info.getValue()}
+            threshold={info.row.original.lowStockThreshold}
+          />
+        ),
       },
       {
         id: "actions",

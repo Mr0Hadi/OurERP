@@ -2,7 +2,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { keepPreviousData } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
-import { fetchReceivingPurchases, fetchReceivingPurchaseById } from "./api";
+import { fetchReceivingPurchases, fetchReceivingPurchaseById } from "./api-mockData";
 import { receivingKeys } from "./queryKeys";
 
 export function useReceivingPurchasesQuery(filters, pagination, sorting) {

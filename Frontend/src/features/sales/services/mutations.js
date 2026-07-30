@@ -1,3 +1,5 @@
+// src\features\sales\services\mutations.js
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -7,7 +9,7 @@ import {
   updateSaleStatus,
   updateSalePayment,
   removeSale
-} from './api';
+} from './api-mockData';
 import { saleKeys } from './queryKeys';
 import { ROUTES } from '@/shared/constants/routes';
 import { useSaleFormStore } from '../store/saleFormStore';
@@ -34,7 +36,7 @@ export const useUpdateSaleMutation = (id) => {
   return useMutation({
     mutationFn: (saleData) => updateSale(id, saleData),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: saleKeys.detail(String(id)) });
+      queryClient.invalidateQueries({ queryKey: saleKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: saleKeys.lists() });
       toast.success('فروش با موفقیت ویرایش شد');
       navigate(ROUTES.SALES);
@@ -110,7 +112,7 @@ export const useRemoveSaleMutation = () => {
   return useMutation({
     mutationFn: removeSale,
     onSuccess: (removedSale) => {
-      queryClient.removeQueries({ queryKey: saleKeys.detail(String(removedSale.id)) });
+      queryClient.removeQueries({ queryKey: saleKeys.detail(removedSale.id) });
       queryClient.invalidateQueries({ queryKey: saleKeys.lists() });
       toast.success("خرید با موفقیت حذف شد");
       navigate(ROUTES.SALES);

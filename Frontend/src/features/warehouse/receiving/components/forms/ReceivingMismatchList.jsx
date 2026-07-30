@@ -1,17 +1,18 @@
 // src/features/warehouse/receiving/components/forms/ReceivingMismatchList.jsx
 import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { PackageX, Undo2 } from 'lucide-react';
+import { PackageX } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
-import { Button } from '@/shared/components/ui/button';
-import { ROUTES } from '@/shared/constants/routes';
+import { Badge } from '@/shared/components/ui/badge';
+import {
+  PURCHASE_ISSUE_TYPE_LABELS,
+  PURCHASE_ISSUE_TYPE_STYLES,
+} from '@/shared/constants/purchaseIssueTypes';
 
-// این کامپوننت فقط اقلامی را نشان می‌دهد که کسری دارند، تا مسئول انبار پیش از تأیید
-// نهایی یک نمای سریع از مغایرت‌ها داشته باشد و در صورت نیاز مستقیماً به ثبت مرجوعی برود.
-export default function ReceivingMismatchList({ purchaseId, items }) {
-  const navigate = useNavigate();
-
+// پیش‌نمایش زنده‌ی کسری‌های این دریافت پیش از ثبت نهایی؛ چون هر قلم
+// می‌تواند بین چند نوع مشکل تقسیم شده باشد، همه‌ی ردیف‌های تفکیک‌شده
+// را نشان می‌دهیم. هیچ اکشنی (مثل ثبت مرجوعی) از اینجا انجام نمی‌شود.
+export default function ReceivingMismatchList({ items }) {
   const shortItems = useMemo(
     () => items.filter((item) => (item.receivedQty || 0) < item.expectedQty),
     [items]
@@ -29,47 +30,63 @@ export default function ReceivingMismatchList({ purchaseId, items }) {
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
           <PackageX className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-          کسری‌های این سفارش
+          پیش‌نمایش گزارش کسری این دریافت
         </CardTitle>
         <span className="text-xs text-muted-foreground">
-          {totalShortage.toLocaleString('fa-IR')} قلم کسری
+          {totalShortage.toLocaleString('fa-IR')} عدد کسری
         </span>
       </CardHeader>
 
-      <CardContent className="space-y-2">
-        <ul className="divide-y divide-border text-sm">
-          {shortItems.map((item) => {
-            const shortage = item.expectedQty - (item.receivedQty || 0);
-            return (
-              <li key={item.productId} className="flex items-center justify-between py-1.5">
-                <div className="min-w-0">
-                  <p className="font-medium text-card-foreground truncate">{item.productName}</p>
-                  {item.note && (
-                    <p className="text-xs text-muted-foreground truncate">{item.note}</p>
-                  )}
-                </div>
-                <span className="shrink-0 text-xs font-medium text-amber-700 dark:text-amber-400 tabular-nums">
+      <CardContent className="space-y-3">
+        {shortItems.map((item) => {
+          const shortage = item.expectedQty - (item.receivedQty || 0);
+          const issues = item.issues || [];
+
+          return (
+            <div key={item.productId} className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <p className="font-medium text-card-foreground text-sm">{item.productName}</p>
+                <span className="text-xs font-medium text-amber-700 dark:text-amber-400 tabular-nums">
                   کسری {shortage.toLocaleString('fa-IR')} عدد
                 </span>
-              </li>
-            );
-          })}
-        </ul>
+              </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="w-full gap-2 mt-2"
-          onClick={() =>
-            navigate(ROUTES.PURCHASE_RETURNS_NEW, {
-              state: { purchaseId, items: shortItems },
-            })
-          }
-        >
-          <Undo2 className="h-3.5 w-3.5" />
-          ثبت مرجوعی برای کسری‌ها
-        </Button>
+              {issues.length === 0 ? (
+                <p className="text-xs text-destructive">هنوز نوع مشکل تعیین نشده</p>
+              ) : (
+                <ul className="space-y-1">
+                  {issues.map((issue) => {
+                    const style =
+                      PURCHASE_ISSUE_TYPE_STYLES[issue.issueType] ??
+                      PURCHASE_ISSUE_TYPE_STYLES.other;
+                    return (
+                      <li
+                        key={issue.id}
+                        className="flex items-center justify-between gap-2 text-xs bg-muted/40 rounded-md px-2 py-1"
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Badge variant="outline" className={`text-[10px] shrink-0 ${style}`}>
+                            {PURCHASE_ISSUE_TYPE_LABELS[issue.issueType] ?? issue.issueType}
+                          </Badge>
+                          {issue.note && (
+                            <span className="text-muted-foreground truncate">{issue.note}</span>
+                          )}
+                        </div>
+                        <span className="shrink-0 tabular-nums font-medium text-card-foreground">
+                          {(Number(issue.qty) || 0).toLocaleString('fa-IR')} عدد
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          );
+        })}
+
+        <p className="text-xs text-muted-foreground pt-2 border-t border-border/60">
+          پس از ثبت دریافت، این گزارش دقیقاً همین‌طور، به تفکیک نوع مشکل، برای واحد خرید قابل مشاهده است.
+        </p>
       </CardContent>
     </Card>
   );

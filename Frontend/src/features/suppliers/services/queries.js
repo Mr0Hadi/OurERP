@@ -1,6 +1,7 @@
+// Frontend\src\features\suppliers\services\queries.js
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supplierKeys } from "./queryKeys";
-import { fetchSuppliers, getSupplierById } from "./api";
+import { fetchSuppliers, getSupplierById } from "./api-mockData";
 import { keepPreviousData } from "@tanstack/react-query";
 
 export function useSuppliersQuery(filters, pagination, sorting) {
@@ -12,6 +13,7 @@ export function useSuppliersQuery(filters, pagination, sorting) {
     search: filters.search || "",
     minBalance: filters.minBalance ?? "",
     maxBalance: filters.maxBalance ?? "",
+    balanceType: filters.balanceType && filters.balanceType !== "all" ? filters.balanceType : "",
     sortBy: sorting?.id ?? "companyName",
     sortOrder: sorting?.desc ? "desc" : "asc",
   };

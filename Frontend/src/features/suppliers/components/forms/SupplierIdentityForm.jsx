@@ -9,14 +9,15 @@ import {
   CardTitle,
 } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
+import { Textarea } from "@/shared/components/ui/textarea";
 import { useState } from "react";
 
 export default function SupplierIdentityForm({
   register,
   errors,
-  avatarPreview,
-  onAvatarChange,
-  onRemoveAvatar,
+  imagePreview,
+  onImageChange,
+  onRemoveImage,
 }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
@@ -33,21 +34,21 @@ export default function SupplierIdentityForm({
 
       <CardContent className="px-6 py-5">
         <div className="flex flex-col sm:flex-row gap-6 items-start">
-          {/* بخش آواتار */}
+          {/* بخش تصویر */}
           <div className="flex flex-col items-center gap-3 shrink-0 w-full sm:w-auto">
             <div className="relative group">
               <div
                 className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-2xl border-2 border-dashed border-border transition-all flex items-center justify-center overflow-hidden bg-muted/30 shadow-inner cursor-pointer"
                 onClick={() =>
-                  avatarPreview
+                  imagePreview
                     ? setLightboxOpen(true)
-                    : document.getElementById("avatar").click()
+                    : document.getElementById("image").click()
                 }
               >
-                {avatarPreview ? (
+                {imagePreview ? (
                   <>
                     <img
-                      src={avatarPreview}
+                      src={imagePreview}
                       alt="تصویر تامین کننده"
                       className="w-full h-full object-cover"
                     />
@@ -79,28 +80,28 @@ export default function SupplierIdentityForm({
 
             <div className="flex items-center justify-center gap-2 w-full">
               <Label
-                htmlFor="avatar"
+                htmlFor="image"
                 className="cursor-pointer inline-flex items-center justify-center gap-1.5 h-8 sm:h-9 px-3 sm:px-4 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 transition-all text-xs sm:text-sm font-medium shadow-sm hover:shadow-md select-none"
               >
                 <Upload className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                {avatarPreview ? "تغییر تصویر" : "بارگذاری تصویر"}
+                {imagePreview ? "تغییر تصویر" : "بارگذاری تصویر"}
               </Label>
 
               <Input
-                id="avatar"
+                id="image"
                 type="file"
                 accept="image/*"
                 className="hidden"
-                {...register("avatar")}
-                onChange={onAvatarChange}
+                {...register("image")}
+                onChange={onImageChange}
               />
 
-              {avatarPreview && (
+              {imagePreview && (
                 <Button
                   type="button"
                   variant="outline"
                   className="h-8 sm:h-9 w-8 sm:w-9 p-0 rounded-lg border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 active:scale-95 transition-all"
-                  onClick={onRemoveAvatar}
+                  onClick={onRemoveImage}
                 >
                   <X className="h-3.5 w-3.5" />
                 </Button>
@@ -117,7 +118,7 @@ export default function SupplierIdentityForm({
                   onClick={(e) => e.stopPropagation()}
                 >
                   <img
-                    src={avatarPreview}
+                    src={imagePreview}
                     alt="تصویر تامین کننده"
                     className="w-full h-auto rounded-2xl shadow-2xl"
                   />
@@ -151,7 +152,7 @@ export default function SupplierIdentityForm({
 
               <div className="space-y-1.5">
                 <Label htmlFor="lastName" className="text-sm font-medium">
-                  نام خانوادگی 
+                  نام خانوادگی
                 </Label>
                 <Input
                   id="lastName"
@@ -188,6 +189,18 @@ export default function SupplierIdentityForm({
                   {...register("phone")}
                 />
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="Description" className="text-sm font-medium">
+                توضیحات
+              </Label>
+              <Textarea
+                id="Description"
+                placeholder="یادداشت یا توضیحات مربوط به تامین‌کننده..."
+                className="min-h-[70px] rounded-lg transition-all resize-none"
+                {...register("Description")}
+              />
             </div>
           </div>
         </div>

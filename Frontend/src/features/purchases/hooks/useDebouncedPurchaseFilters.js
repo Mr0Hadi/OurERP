@@ -18,9 +18,9 @@ export function useDebouncedPurchaseFilters() {
     const timer = setTimeout(() => {
       setDebouncedText({ globalSearch });
     }, DEBOUNCE_MS);
-
     return () => clearTimeout(timer);
   }, [globalSearch]);
+
 
   return {
     ...debouncedText,
