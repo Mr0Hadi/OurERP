@@ -127,6 +127,7 @@ namespace WMS
                 app.MapScalarApiReference(options =>
                 {
                     options.AddPreferredSecuritySchemes("Bearer");
+                    options.WithTheme(ScalarTheme.Mars);
                 });
             }
 

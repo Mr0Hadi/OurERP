@@ -18,9 +18,9 @@ namespace Application.Features.Product.Commands
         public string BarCode { get; set; }
         public string Brand { get; set; }
         public ProductUnitEnum Unit { get; set; }
-        public int PurchasePrice { get; set; }
-        public int RetailPrice { get; set; }
-        public int WholeSalePrice { get; set; }
+        public UInt64 PurchasePrice { get; set; }
+        public UInt64 RetailPrice { get; set; }
+        public UInt64 WholeSalePrice { get; set; }
         public int Tax { get; set; }
         public int Stock { get; set; }
         public int LowStockThreshold { get; set; }
@@ -39,9 +39,9 @@ namespace Application.Features.Product.Commands
             RuleFor(x => x.Code).NotEmpty().WithMessage(Validation.RequiredMessage("کد محصول"));
             RuleFor(x => x.BarCode).NotEmpty().WithMessage(Validation.RequiredMessage("بارکد محصول"));
             RuleFor(x => x.Brand).NotEmpty().WithMessage(Validation.RequiredMessage("برند محصول"));
-            RuleFor(x => x.PurchasePrice).GreaterThan(0).WithMessage("قیمت خرید باید بزرگتر از صفر باشد.");
-            RuleFor(x => x.RetailPrice).GreaterThan(0).WithMessage("قیمت فروش باید بزرگتر از صفر باشد.");
-            RuleFor(x => x.WholeSalePrice).GreaterThan(0).WithMessage("قیمت عمده فروشی باید بزرگتر از صفر باشد.");
+            RuleFor(x => x.PurchasePrice).Must(p => p > 0).WithMessage("قیمت خرید باید بزرگتر از صفر باشد.");
+            RuleFor(x => x.RetailPrice).Must(r => r > 0).WithMessage("قیمت فروش باید بزرگتر از صفر باشد.");
+            RuleFor(x => x.WholeSalePrice).Must(w => w > 0).WithMessage("قیمت عمده فروشی باید بزرگتر از صفر باشد.");
             RuleFor(x => x.Tax).GreaterThanOrEqualTo(0).WithMessage("مالیات نمی‌تواند منفی باشد.");
             RuleFor(x => x.Stock).GreaterThanOrEqualTo(0).WithMessage("موجودی نمی‌تواند منفی باشد.");
             RuleFor(x => x.LowStockThreshold).GreaterThanOrEqualTo(0).WithMessage("حداقل موجودی نمی‌تواند منفی باشد.");

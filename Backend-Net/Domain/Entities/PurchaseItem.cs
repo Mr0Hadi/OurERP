@@ -12,7 +12,6 @@ namespace Domain.Entities
         public int Quantity { get; set; }
         public UInt64 UnitPrice { get; set; }
         public int Discount { get; set; }
-        public UInt64 TotalCost { get; set; }
         public Product Product { get; set; }
     }
 }

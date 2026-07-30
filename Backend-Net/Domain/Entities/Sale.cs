@@ -11,7 +11,7 @@ namespace Domain.Entities
         public PaymentTypeEnum PaymentType { get; set; }
         public UInt64 PaidAmount { get; set; }
         public UInt64 TotalAmount { get; set; }
-        public string Description { get; set; }
+        public string? Description { get; set; }
         public List<Product> Item { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }

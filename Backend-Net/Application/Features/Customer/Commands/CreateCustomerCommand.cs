@@ -19,7 +19,7 @@ namespace Application.Features.Customer.Commands
         public string Address { get; set; }
         public string PostalCode { get; set; }
         public string? RefferalCode { get; set; }
-        public UInt64 CreditLimit { get; set; }
+        public UInt64? CreditLimit { get; set; }
         public string? Description { get; set; }
         public UInt64? Balance { get; set; }
         public BalanceTypeEnum BalanceType { get; set; }

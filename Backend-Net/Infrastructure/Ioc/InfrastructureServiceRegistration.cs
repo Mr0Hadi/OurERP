@@ -31,6 +31,7 @@ namespace Infrastructure.Ioc
             services.AddScoped<ICustomerRepository, CustomerRepository>();
             services.AddScoped<IRoleRepository, RoleRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IProductRepository, ProductRepository>();
 
 			//UnitOfWork
 			services.AddScoped<IUnitOfWork, UnitOfWork.UnitOfWork>();
