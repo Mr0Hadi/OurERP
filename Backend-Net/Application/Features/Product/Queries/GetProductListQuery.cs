@@ -44,7 +44,7 @@ namespace Application.Features.Product.Queries
                 query = query.Where(p => p.Code.Contains(request.Code));
             }
 
-            if (string.IsNullOrEmpty(request.Brand))
+            if (!string.IsNullOrEmpty(request.Brand))
             {
                 query = query.Where(p => p.Brand.Contains(request.Brand));
             }
@@ -80,9 +80,10 @@ namespace Application.Features.Product.Queries
                 Brand = x.Brand,
                 Code = x.Code,
                 Name = x.Name,
+                CategoryName = x.ProductCategory.Name,
                 Stock = x.Stock,
                 RetailPrice = x.RetailPrice,
-                ProductCategoryId = x.ProductCategoryId
+                WholeSalePrice = x.WholeSalePrice
             }).ToPaged(request.Page, request.Take, out int pageCount, out int totalCount).ToListAsync();
 
             res.Data = new

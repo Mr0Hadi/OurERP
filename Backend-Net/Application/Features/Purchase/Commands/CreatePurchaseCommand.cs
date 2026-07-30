@@ -1,0 +1,67 @@
+﻿using Application.Common.Contracts.Repositories;
+using Application.Common.Contracts.UnitOfWork;
+using Application.Common.Dtos;
+using Application.Common.Enums;
+using AutoMapper;
+using Common.Extensions;
+using Domain.Entities;
+using Domain.Enums;
+using FluentValidation;
+using MediatR;
+
+namespace Application.Features.Purchase.Commands
+{
+    public class CreatePurchaseCommand : IRequest<ResponseDto>
+    {
+        public List<PurchaseItem> ProductItemList { get; set; }
+        public int SupplierId { get; set; }
+        public UInt64 TotalPrice { get; set; }
+        public UInt64 PaidPrice { get; set; }
+        public string InvoiceNumber { get; set; }
+        public DateTime InvoiceDate { get; set; }
+        public string? Description { get; set; }
+        public PaymentTypeEnum PaymentType { get; set; }
+        public List<PaymentDetail> PaymentDetails { get; set; }
+    }
+
+    public class CreatePurchaseValidator : AbstractValidator<CreatePurchaseCommand>
+    {
+        public CreatePurchaseValidator()
+        {
+            RuleFor(x => x.ProductItemList).NotEmpty().WithMessage(Validation.RequiredMessage("لیست محصولات"));
+            RuleFor(x => x.SupplierId).NotEmpty().WithMessage(Validation.RequiredMessage("فروشنده"));
+            RuleFor(x => x.TotalPrice).Must(p => p > 0).WithMessage("مبلغ کل باید از صفر بیشتر باشد.");
+            RuleFor(x => x.PaidPrice).Must(p => p >= 0).WithMessage("مبلغ پرداختی باید بیشتر یا مساوی صفر باشد.");
+            RuleFor(x => x.InvoiceNumber).NotEmpty().WithMessage(Validation.RequiredMessage("شماره فاکتور"));
+            RuleFor(x => x.InvoiceDate).NotEmpty().WithMessage(Validation.RequiredMessage("تاریخ فاکتور"));
+            RuleFor(x => x.PaymentDetails).NotEmpty().When(x => x.PaymentType != PaymentTypeEnum.CASH)
+                .WithMessage("اطلاعات پرداخت باید به طول کامل پر شود.");
+        }
+    }
+
+    public class CreatePurchaseCommandHandler : IRequestHandler<CreatePurchaseCommand, ResponseDto>
+    {
+        private readonly IPurchaseRepository _purchaseRepository;
+        private readonly IMapper _mapper;
+        private readonly IUnitOfWork _unitOfWork;
+
+        public CreatePurchaseCommandHandler(IPurchaseRepository purchaseRepository, IMapper mapper)
+        {
+            _purchaseRepository = purchaseRepository;
+            _mapper = mapper;
+        }
+
+        public async Task<ResponseDto> Handle(CreatePurchaseCommand request, CancellationToken cancellationToken)
+        {
+            var res = new ResponseDto();
+
+            var purchase = _mapper.Map<Domain.Entities.Purchase>(request);
+            await _purchaseRepository.AddAsync(purchase);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            res.Message = "خرید با موفقیت ثبت شد.";
+            res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
+            return res;
+        }
+    }
+}

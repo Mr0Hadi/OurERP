@@ -3,6 +3,9 @@ using Application.Features.Customer.Commands;
 using Application.Features.Customer.Dtos;
 using Application.Features.Product.Commands;
 using Application.Features.Product.Dtos;
+using Application.Features.ProductCategory.Commands;
+using Application.Features.ProductCategory.Dtos;
+using Application.Features.Purchase.Commands;
 using Application.Features.Supplier.Commands;
 using Application.Features.Supplier.Dtos;
 using Application.Features.User.Command;
@@ -17,11 +20,17 @@ namespace Application.Common.Mapping
 	{
 		public MappingProfile()
 		{
+			CreateMap<Purchase, CreatePurchaseCommand>();
+
 			CreateMap<CreateProductCommand, Product>();
 
 			CreateMap<Product, ProductDto>();
 
-            CreateMap<CreateSupplierCommand, Supplier>()
+			CreateMap<CreateProductCategoryCommand, ProductCategory>();
+
+			CreateMap<ProductCategory, ProductCategoryDto>();
+
+			CreateMap<CreateSupplierCommand, Supplier>()
 				.ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.Now));
 
 			CreateMap<Supplier, SupplierDto>();

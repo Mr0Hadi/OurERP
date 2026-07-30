@@ -22,6 +22,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Features\ProductCategory\Commands\" />
+    <Folder Include="Features\ProductCategory\Dtos\" />
+    <Folder Include="Features\ProductCategory\Queries\" />
+    <Folder Include="Features\Purchase\Dtos\" />
+    <Folder Include="Features\Purchase\Queries\" />
     <Folder Include="Features\Supplier\Dtos\" />
   </ItemGroup>
 

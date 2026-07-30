@@ -32,9 +32,11 @@ namespace Infrastructure.Ioc
             services.AddScoped<IRoleRepository, RoleRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IProductRepository, ProductRepository>();
+            services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
+            services.AddScoped<IPurchaseRepository, PurchaseRepository>();
 
-			//UnitOfWork
-			services.AddScoped<IUnitOfWork, UnitOfWork.UnitOfWork>();
+            //UnitOfWork
+            services.AddScoped<IUnitOfWork, UnitOfWork.UnitOfWork>();
 
             //services.AddScoped<ICaptchaService, CaptchaService>();
 
