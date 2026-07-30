@@ -50,6 +50,7 @@ export function usePurchaseQuery(id) {
     queryFn: () => fetchPurchaseById(id),
     enabled: !!id,
     staleTime: 1000 * 60 * 5,
+    refetchOnMount: "always",
   });
 }
 

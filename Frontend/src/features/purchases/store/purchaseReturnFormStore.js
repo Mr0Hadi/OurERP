@@ -34,12 +34,15 @@ export const usePurchaseReturnFormStore = create((set, get) => ({
 
   /**
    * فرم ثبت مرجوعی را دقیقاً از روی گزارش کسریِ ثبت‌شده توسط انباردار
-   * پر می‌کند. هر ردیف گزارش (که می‌تواند بیش از یک ردیف برای یک
-   * محصول باشد — مثلاً هم کسری هم معیوب) یک خط مستقل در فرم می‌شود
-   * که با issueId شناسایی می‌شود.
+   * پر می‌کند. کلید نسخه شامل purchaseUpdatedAt است، نه فقط
+   * purchaseId — چون در دور دوم (یا بیشتر) مرجوعی‌کردن همان خرید،
+   * purchaseId عوض نمی‌شود ولی updatedAt چرا؛ بدون این، اگر یک
+   * اسنپ‌شات قدیمی زودتر از دیتای تازه رندر شود، فرم دیگر با دیتای
+   * تازه بازسازی نمی‌شد (همان چیزی که باعث می‌شد در اولین بازدید،
+   * اطلاعات نادرست نمایش داده شود).
    */
   initializeForReport: (report) => {
-    const version = `report:${report.purchaseId}`;
+    const version = `report:${report.purchaseId}:${report.purchaseUpdatedAt}`;
     if (get().initializedForId === version) return;
 
     const items = report.items.map((entry) => ({

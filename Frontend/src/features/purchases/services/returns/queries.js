@@ -41,6 +41,10 @@ export function usePurchaseReturnsQuery(filters, pagination, sorting) {
     placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 3,
     gcTime: 1000 * 60 * 10,
+    // این دیتا به شدت وابسته به وقایع دو ماژول دیگر (دریافت/تسویه)
+    // است؛ برای جلوگیری از نمایش ردیف‌های دور قبلی با اطلاعات قدیمی،
+    // هر بار صفحه‌ی لیست دوباره mount می‌شود حتماً یک‌بار تازه واکشی شود
+    refetchOnMount: "always",
   });
 }
 
@@ -50,6 +54,7 @@ export function usePurchaseReturnQuery(id) {
     queryFn: () => fetchPurchaseReturnById(id),
     enabled: !!id,
     staleTime: 1000 * 60 * 5,
+    refetchOnMount: "always",
   });
 }
 
@@ -59,5 +64,6 @@ export function useShortageReportByPurchaseIdQuery(purchaseId) {
     queryFn: () => fetchShortageReportByPurchaseId(purchaseId),
     enabled: !!purchaseId,
     staleTime: 1000 * 60 * 2,
+    refetchOnMount: "always",
   });
 }

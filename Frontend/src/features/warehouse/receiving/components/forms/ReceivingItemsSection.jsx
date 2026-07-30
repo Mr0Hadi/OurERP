@@ -111,19 +111,21 @@ function ProductThumb({ item }) {
 }
 
 // ─── ویرایشگر تفکیک مشکل یک قلم ────────────────────────────────────────────
-// اجازه می‌دهد کسریِ یک قلم بین چند نوع مشکل مختلف (کسری/معیوب/آسیب‌دیده/...)
-// تقسیم شود؛ هر ردیف نوع + تعداد + یادداشت مستقل دارد.
+// انباردار مجبور نیست کل کسری را اینجا توضیح دهد. فقط بخشی که واقعاً
+// «مشکل» است (معیوب، اشتباه، آسیب‌دیده و...) را با نوع و تعداد مشخص
+// ثبت می‌کند. باقیمانده به‌طور خودکار «در انتظار محموله بعدی» تلقی
+// می‌شود — نیازی به هیچ اقدامی نیست و خرید همچنان در لیست دریافت
+// می‌ماند تا وقتی بقیه‌اش (مثلاً با کامیون بعدی) برسد.
 function IssueBreakdownEditor({ item, shortage, onAddIssue, onUpdateIssue, onRemoveIssue }) {
   const issues = item.issues || [];
   const allocated = issues.reduce((s, i) => s + (Number(i.qty) || 0), 0);
   const remaining = shortage - allocated;
-  const isBalanced = remaining === 0 && issues.length > 0;
 
   return (
     <div className="space-y-2 rounded-lg border border-dashed border-amber-300 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/10 p-2.5">
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-card-foreground">
-          تفکیک نوع مشکل ({shortage.toLocaleString('fa-IR')} عدد کسری)
+          گزارش مشکل ({shortage.toLocaleString('fa-IR')} عدد کسری)
         </span>
         <Button
           type="button"
@@ -140,7 +142,9 @@ function IssueBreakdownEditor({ item, shortage, onAddIssue, onUpdateIssue, onRem
 
       {issues.length === 0 && (
         <p className="text-xs text-muted-foreground">
-          هنوز نوع مشکلی ثبت نشده؛ روی «افزودن نوع مشکل» بزنید.
+          اگر بخشی از این کسری واقعاً مشکل دارد (نه فقط دیرکرد ارسال)، با «افزودن نوع مشکل»
+          ثبتش کنید. در غیر این صورت نیازی به کاری نیست — این خرید همچنان در لیست دریافت
+          می‌ماند تا محموله‌ی بعدی برسد.
         </p>
       )}
 
@@ -192,10 +196,14 @@ function IssueBreakdownEditor({ item, shortage, onAddIssue, onUpdateIssue, onRem
         </div>
       ))}
 
-      <p className={`text-[11px] ${isBalanced ? 'text-[oklch(0.50_0.16_152)]' : 'text-destructive'}`}>
-        تخصیص‌یافته: {allocated.toLocaleString('fa-IR')} از {shortage.toLocaleString('fa-IR')}
-        {!isBalanced && ' — باید دقیقاً برابر با کسری این قلم باشد'}
-      </p>
+      {issues.length > 0 && (
+        <p className="text-[11px] text-muted-foreground">
+          گزارش‌شده به‌عنوان مشکل: {allocated.toLocaleString('fa-IR')} از {shortage.toLocaleString('fa-IR')}
+          {remaining > 0 && (
+            <> — {remaining.toLocaleString('fa-IR')} عدد باقی‌مانده در انتظار محموله بعدی می‌ماند</>
+          )}
+        </p>
+      )}
     </div>
   );
 }

@@ -30,7 +30,7 @@ export default function PurchaseReturnWarehouseReportSection({ report }) {
           {report.transporterName && (
             <span className="flex items-center gap-1">
               <Truck className="h-3 w-3" />
-              تحویل‌گیرنده: {report.transporterName}
+              تحویل‌دهنده: {report.transporterName}
             </span>
           )}
         </div>

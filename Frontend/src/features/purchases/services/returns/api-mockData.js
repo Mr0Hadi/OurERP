@@ -9,6 +9,7 @@ import { allPurchases } from "@/features/purchases/services/mockData";
 import {
   settlePurchaseItems,
   reopenPurchaseForShipment,
+  recomputePurchaseStatus,
 } from "@/features/purchases/services/api-mockData";
 import { PURCHASE_ISSUE_TYPES } from "@/shared/constants/purchaseIssueTypes";
 
@@ -16,20 +17,21 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
-// یک مرجوعی «فعال» محسوب می‌شود اگر سهمیه‌ی کسری‌ای که رزرو کرده هنوز
-// نباید دوباره در گزارش‌های «قابل پیگیری» ظاهر شود — چه هنوز در حال
-// هماهنگی باشد، چه کاملاً تسویه شده باشد (چون در هر دو حالت آن کسری
-// «مدیریت شده» تلقی می‌شود). فقط رد‌شده/لغوشده سهمیه را آزاد می‌کنند.
+// وضعیت‌هایی که یک مرجوعی هنوز روی «سهمیه‌ی کسری» یا محاسبات باز
+// اثر می‌گذارند — رد/لغو باعث آزادشدن دوباره‌ی سهمیه می‌شوند
 const ACTIVE_RETURN_STATUSES = new Set([
   PURCHASE_RETURN_STATUSES.PENDING,
   PURCHASE_RETURN_STATUSES.COORDINATING,
   PURCHASE_RETURN_STATUSES.RESOLVED,
 ]);
+const TERMINAL_RETURN_STATUSES = new Set([
+  PURCHASE_RETURN_STATUSES.REJECTED,
+  PURCHASE_RETURN_STATUSES.CANCELLED,
+]);
 
 function getPurchase(purchaseId) {
   return allPurchases.find((p) => Number(p.id) === Number(purchaseId));
 }
-
 function getReturnIndex(returnId) {
   return allPurchaseReturns.findIndex((r) => Number(r.id) === Number(returnId));
 }
@@ -46,10 +48,6 @@ function getReservedQtyForIssue(issueId, excludeReturnId = null) {
   return sum;
 }
 
-/**
- * وضعیت کلی مرجوعی را از روی خطوط تصمیمِ اقلامش محاسبه می‌کند. رد/لغو
- * جداگانه و صریح مدیریت می‌شوند و از این تابع عبور نمی‌کنند.
- */
 function computeReturnStatus(items) {
   const totalQty = items.reduce((s, i) => s + i.qty, 0);
   const allLines = items.flatMap((i) => i.resolutions || []);
@@ -66,10 +64,76 @@ function computeReturnStatus(items) {
 }
 
 /**
- * برای یک قلم خرید، ردیف‌های تاریخچه‌ی مشکل (item.issues) را به «مقدار
- * باز» تبدیل می‌کند؛ یعنی چقدر از هر گزارش هنوز مصرف‌نشده (نه دریافت،
- * نه تسویه، نه رزرو توسط مرجوعی فعال دیگری) باقی مانده است.
+ * چقدر از یک ردیف «مشکل گزارش‌شده» هنوز واقعاً «باز و تصمیم‌گیری‌نشده»
+ * است — یعنی نه هیچ مرجوعی‌ای برایش ساخته شده، و اگر ساخته شده، هنوز
+ * هیچ تصمیمی (بازگشت وجه/جایگزینی/زیان/اعتبار) برای آن ثبت نشده.
+ * این دقیقاً همان مقداری است که تا وقتی واحد خرید تصمیم نگیرد، نباید
+ * دوباره به‌عنوان «قابل دریافت» به انباردار نشان داده شود.
  */
+function getOpenIssueQtyForItem(item, purchaseId) {
+  let total = 0;
+
+  (item.issues || []).forEach((issue) => {
+    const reservedFull = getReservedQtyForIssue(issue.id);
+    // بخشی از این مشکل که هیچ مرجوعی‌ای هنوز آن را claim نکرده
+    total += Math.max(0, issue.qty - reservedFull);
+
+    // بخشی از این مشکل که مرجوعی برایش ساخته شده ولی هنوز هیچ
+    // تصمیمی (resolution) برایش ثبت نشده — یعنی «در صف تصمیم‌گیری»
+    allPurchaseReturns.forEach((ret) => {
+      if (ret.purchaseId !== purchaseId) return;
+      if (TERMINAL_RETURN_STATUSES.has(ret.status)) return;
+      ret.items.forEach((retItem) => {
+        if (retItem.issueId !== issue.id) return;
+        const decided = (retItem.resolutions || []).reduce(
+          (s, r) => s + (Number(r.qty) || 0),
+          0,
+        );
+        total += Math.max(0, retItem.qty - decided);
+      });
+    });
+  });
+
+  return total;
+}
+
+/**
+ * چقدر از یک قلم خرید *الان* واقعاً «قابل دریافت» است — یعنی چیزی که
+ * انباردار می‌تواند در دور بعدی دریافت، بدون نیاز به دخالت واحد خرید،
+ * ثبت کند. این شامل هم «باقیمانده‌ی معمولی سفارش که هنوز هیچ مشکلی
+ * برایش گزارش نشده» (مثلاً محموله‌ی بعدی همان کامیون) و هم «مقداری
+ * که تصمیم گرفته شده جایگزین ارسال شود» می‌شود — و به‌طور خودکار
+ * مقداری که هنوز به‌عنوان «مشکل بازِ تصمیم‌گیری‌نشده» مانده را کنار
+ * می‌گذارد.
+ */
+export function computeItemReceivableQty(item, purchaseId) {
+  const budget = Math.max(
+    0,
+    item.qty - (item.receivedQty || 0) - (item.settledQty || 0),
+  );
+  const openIssueQty = getOpenIssueQtyForItem(item, purchaseId);
+  return Math.max(0, budget - openIssueQty);
+}
+
+export function computeHasAnyReceivableQty(purchase) {
+  return purchase.items.some(
+    (item) => computeItemReceivableQty(item, purchase.id) > 0,
+  );
+}
+
+/**
+ * تنها نقطه‌ای که وضعیت کلی خرید را — با دیدن کامل تمام آیتم‌ها و
+ * تمام مرجوعی‌های فعال آن، نه فقط رویداد فعلی — نهایی می‌کند. باید
+ * بعد از هر اکشنی که ممکن است روی نیاز به دریافت مجدد اثر بگذارد صدا
+ * زده شود (ثبت تصمیم، حذف تصمیم، دریافت انبار).
+ */
+async function syncPurchaseStatusForReturns(purchaseId) {
+  const purchase = getPurchase(purchaseId);
+  if (!purchase) return;
+  const hasReceivableQty = computeHasAnyReceivableQty(purchase);
+  await recomputePurchaseStatus(purchaseId, { hasReceivableQty });
+}
+
 function distributeOpenQtyAcrossIssues(item) {
   let budget = Math.max(
     0,
@@ -124,6 +188,10 @@ function buildShortageReport(purchase) {
 
   return {
     purchaseId: purchase.id,
+    // این فیلد برای شناسایی «آیا داده‌ی این گزارش هنوز تازه است؟» در
+    // فرم ثبت مرجوعی استفاده می‌شود؛ هر تغییری روی خرید (دور جدید
+    // دریافت، مشکل جدید، تصمیم جدید) این مقدار را عوض می‌کند.
+    purchaseUpdatedAt: purchase.updatedAt,
     invoiceNumber: purchase.invoiceNumber,
     invoiceDate: purchase.invoiceDate,
     supplierId: purchase.supplierId,
@@ -186,6 +254,26 @@ function getAllTrackableEntries() {
     .filter(Boolean);
 }
 
+function withRoundInfo(list) {
+  const sorted = [...list].sort(
+    (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
+  );
+  const totalsByPurchase = new Map();
+  sorted.forEach((r) => {
+    totalsByPurchase.set(r.purchaseId, (totalsByPurchase.get(r.purchaseId) || 0) + 1);
+  });
+  const counters = new Map();
+  return sorted.map((r) => {
+    const count = (counters.get(r.purchaseId) || 0) + 1;
+    counters.set(r.purchaseId, count);
+    return {
+      ...r,
+      roundNumber: count,
+      totalRoundsForPurchase: totalsByPurchase.get(r.purchaseId),
+    };
+  });
+}
+
 export async function fetchShortageReportByPurchaseId(purchaseId) {
   await delay(300);
   const purchase = getPurchase(purchaseId);
@@ -213,7 +301,7 @@ export async function fetchPurchaseReturns(params = {}) {
     sortOrder = "desc",
   } = params;
 
-  let combined = [...allPurchaseReturns, ...getAllTrackableEntries()];
+  let combined = withRoundInfo([...allPurchaseReturns, ...getAllTrackableEntries()]);
 
   if (search) {
     const s = search.toLowerCase();
@@ -245,7 +333,6 @@ export async function fetchPurchaseReturns(params = {}) {
   combined.sort((a, b) => {
     let aVal = a[sortBy];
     let bVal = b[sortBy];
-
     if (["createdAt", "updatedAt", "returnDate"].includes(sortBy)) {
       aVal = aVal ? new Date(aVal).getTime() : 0;
       bVal = bVal ? new Date(bVal).getTime() : 0;
@@ -259,7 +346,6 @@ export async function fetchPurchaseReturns(params = {}) {
         ? aVal.localeCompare(bVal, "fa")
         : bVal.localeCompare(aVal, "fa");
     }
-
     return sortOrder === "asc" ? (aVal > bVal ? 1 : -1) : aVal < bVal ? 1 : -1;
   });
 
@@ -306,14 +392,11 @@ export async function createPurchaseReturn(payload) {
 
 /**
  * ثبت یک «خط تصمیم» برای بخشی از یک قلم مرجوعی. یک قلم می‌تواند چندین
- * بار فراخوانی این تابع را ببیند تا کل مقدارش بین انواع مختلف
- * (بازگشت وجه/جایگزینی/اعتبار/زیان) تقسیم شود.
- *
- * - برای refund/write_off/credit: بلافاصله نهایی می‌شود و روی خرید
- *   مبدا اثر می‌گذارد (settlePurchaseItems).
- * - برای replacement: در وضعیت «در انتظار» می‌ماند و فقط دریافت واقعی
- *   در انبار (از طریق autoResolveReplacementReturns) می‌تواند آن را
- *   نهایی کند؛ اینجا فقط خرید دوباره برای ارسال باز می‌شود.
+ * بار فراخوانی این تابع را ببیند تا کل مقدارش بین انواع مختلف تصمیم
+ * تقسیم شود. در پایانِ *هر* فراخوانی — فارغ از نوع تصمیم — وضعیت خرید
+ * با دیدن کل تصویر دوباره محاسبه می‌شود؛ همین رفتار باعث می‌شود ترتیب
+ * یا ترکیب تصمیم‌ها (اول جایگزینی سپس بازگشت وجه، یا برعکس) هرگز
+ * نتیجه‌ی همدیگر را خراب نکنند.
  */
 export async function addItemResolution(returnId, issueId, resolution) {
   await delay(500);
@@ -384,14 +467,11 @@ export async function addItemResolution(returnId, issueId, resolution) {
     );
   }
 
+  await syncPurchaseStatusForReturns(ret.purchaseId);
+
   return allPurchaseReturns[idx];
 }
 
-/**
- * حذف یک خط تصمیم — فقط وقتی مجاز است که هنوز «در انتظار» باشد (یعنی
- * فقط برای replacement که هنوز از انبار تأیید نشده)؛ خطوط نهایی‌شده
- * (پول/زیان/اعتبار) چون قبلاً روی خرید اثر گذاشته‌اند، غیرقابل‌بازگشت‌اند.
- */
 export async function removeItemResolution(returnId, issueId, resolutionId) {
   await delay(400);
   const idx = getReturnIndex(returnId);
@@ -423,10 +503,11 @@ export async function removeItemResolution(returnId, issueId, resolutionId) {
     updatedAt: new Date().toISOString(),
   };
 
+  await syncPurchaseStatusForReturns(ret.purchaseId);
+
   return allPurchaseReturns[idx];
 }
 
-/** فقط وقتی هنوز هیچ تصمیمی برای هیچ قلمی ثبت نشده مجاز است */
 export async function rejectPurchaseReturn(id) {
   await delay(300);
   const idx = getReturnIndex(id);
@@ -440,10 +521,10 @@ export async function rejectPurchaseReturn(id) {
     status: PURCHASE_RETURN_STATUSES.REJECTED,
     updatedAt: new Date().toISOString(),
   };
+  await syncPurchaseStatusForReturns(ret.purchaseId);
   return allPurchaseReturns[idx];
 }
 
-/** فقط وقتی هنوز هیچ تصمیمی برای هیچ قلمی ثبت نشده مجاز است */
 export async function cancelPurchaseReturn(id) {
   await delay(300);
   const idx = getReturnIndex(id);
@@ -457,10 +538,10 @@ export async function cancelPurchaseReturn(id) {
     status: PURCHASE_RETURN_STATUSES.CANCELLED,
     updatedAt: new Date().toISOString(),
   };
+  await syncPurchaseStatusForReturns(ret.purchaseId);
   return allPurchaseReturns[idx];
 }
 
-/** بازگشایی یک مرجوعیِ رد‌شده برای تلاش دوباره؛ وضعیت از روی خطوط فعلی محاسبه می‌شود */
 export async function reopenPurchaseReturn(id) {
   await delay(300);
   const idx = getReturnIndex(id);
@@ -472,6 +553,7 @@ export async function reopenPurchaseReturn(id) {
     status: computeReturnStatus(ret.items),
     updatedAt: new Date().toISOString(),
   };
+  await syncPurchaseStatusForReturns(ret.purchaseId);
   return allPurchaseReturns[idx];
 }
 
@@ -480,30 +562,29 @@ export async function removePurchaseReturn(id) {
   const idx = getReturnIndex(id);
   if (idx === -1) throw new Error("مرجوعی یافت نشد");
   const removed = allPurchaseReturns.splice(idx, 1)[0];
+  await syncPurchaseStatusForReturns(removed.purchaseId);
   return removed;
 }
 
 /**
  * پس از هر دور دریافت در انبار فراخوانی می‌شود. برای هر محصولی که
- * خطوط تصمیمِ «جایگزینی در انتظار» دارد، بررسی می‌کند چقدر از مقدار
- * تازه‌رسیده به کدام خط تعلق می‌گیرد (قدیمی‌ترین خط اول تسویه می‌شود)
- * و در صورت پوشش کامل، آن خط را «نهایی» می‌کند — کاملاً خودکار، بدون
- * هیچ اقدام دستی از سمت واحد خرید.
+ * خطوط تصمیمِ «جایگزینی در انتظار» دارد — از هر تعداد مرجوعی/دوره/
+ * محموله‌ی مختلف که باشد — بررسی می‌کند چقدر از مقدار تازه‌رسیده به
+ * کدام خط تعلق می‌گیرد (قدیمی‌ترین خط اول، مثل صف FIFO؛ این دقیقاً
+ * پاسخ به سناریوی «کسریِ محموله‌ی اول همراه محموله‌ی دوم می‌رسد» است)
+ * و در صورت پوشش کامل، آن خط را «نهایی» می‌کند.
+ *
+ * در پایان، وضعیت خرید — برای تمام مرجوعی‌های این خرید، نه فقط
+ * همینی که همین الان بسته شد — با تابع مرکزی بازمحاسبه می‌شود.
  */
-export function autoResolveReplacementReturns(purchaseId) {
+export async function autoResolveReplacementReturns(purchaseId) {
   const purchase = getPurchase(purchaseId);
   if (!purchase) return;
 
   const awaitingLines = [];
   allPurchaseReturns.forEach((ret) => {
     if (ret.purchaseId !== purchaseId) return;
-    if (
-      [
-        PURCHASE_RETURN_STATUSES.REJECTED,
-        PURCHASE_RETURN_STATUSES.CANCELLED,
-      ].includes(ret.status)
-    )
-      return;
+    if (TERMINAL_RETURN_STATUSES.has(ret.status)) return;
     ret.items.forEach((item) => {
       (item.resolutions || []).forEach((res) => {
         if (
@@ -550,17 +631,13 @@ export function autoResolveReplacementReturns(purchaseId) {
 
   allPurchaseReturns.forEach((ret, idx) => {
     if (ret.purchaseId !== purchaseId) return;
-    if (
-      [
-        PURCHASE_RETURN_STATUSES.REJECTED,
-        PURCHASE_RETURN_STATUSES.CANCELLED,
-      ].includes(ret.status)
-    )
-      return;
+    if (TERMINAL_RETURN_STATUSES.has(ret.status)) return;
     allPurchaseReturns[idx] = {
       ...ret,
       status: computeReturnStatus(ret.items),
       updatedAt: new Date().toISOString(),
     };
   });
+
+  await syncPurchaseStatusForReturns(purchaseId);
 }
