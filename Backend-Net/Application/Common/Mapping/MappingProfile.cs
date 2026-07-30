@@ -6,6 +6,7 @@ using Application.Features.Product.Dtos;
 using Application.Features.ProductCategory.Commands;
 using Application.Features.ProductCategory.Dtos;
 using Application.Features.Purchase.Commands;
+using Application.Features.Sale.Commands;
 using Application.Features.Supplier.Commands;
 using Application.Features.Supplier.Dtos;
 using Application.Features.User.Command;

@@ -26,7 +26,7 @@ namespace Application.Features.Purchase.Queries
 
             var purchase = await _context.Purchases
                 .Include(x => x.Supplier)
-                .Include(x => x.Items).ThenInclude(x => x.Product)
+                .Include(x => x.Items)
                 .Include(x => x.PaymentDetails)
                 .FirstOrDefaultAsync(x => x.Id == request.Id) ?? throw new NotFoundCustomException("خرید مورد نظر یافت نشد.");
 
@@ -42,22 +42,8 @@ namespace Application.Features.Purchase.Queries
                 Description = purchase.Description,
                 SupplierId = purchase.SupplierId,
                 SupplierName = purchase.Supplier.CompanyName,
-                Items = purchase.Items.Select(x => new PurchaseItemDto
-                {
-                    Id = x.Id,
-                    ProductId = x.ProductId,
-                    ProductName = x.Product.Name,
-                    Quantity = x.Quantity,
-                    UnitPrice = x.UnitPrice,
-                    Discount = x.Discount
-                }).ToList(),
-                PaymentDetails = purchase.PaymentDetails.Select(x => new PurchasePaymentDetailDto
-                {
-                    Type = x.Type,
-                    Amount = x.Amount,
-                    CheckNumber = x.checkNumber,
-                    TransferRef = x.transferRef
-                }).ToList()
+                Items = purchase.Items,
+                PaymentDetails = purchase.PaymentDetails
             };
 
             res.Message = "اطلاعات خرید با موفقیت ارسال شد.";
