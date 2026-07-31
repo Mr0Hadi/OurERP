@@ -21,7 +21,9 @@ namespace Application.Common.Mapping
 	{
 		public MappingProfile()
 		{
-			CreateMap<Purchase, CreatePurchaseCommand>();
+			CreateMap<CreateSaleCommand, Sale>();
+
+            CreateMap<Purchase, CreatePurchaseCommand>();
 
 			CreateMap<CreateProductCommand, Product>();
 

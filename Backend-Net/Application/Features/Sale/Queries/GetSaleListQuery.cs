@@ -88,7 +88,7 @@ namespace Application.Features.Sale.Queries
                     Total = totalCount
                 }
             };
-            res.Message = "لیست فروش‌ها با موفقیت ارسال شد.";
+            res.Message = "لیست فروش‌ sها با موفقیت ارسال شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;
         }

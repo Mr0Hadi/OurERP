@@ -1,10 +1,10 @@
 using Application.Common.Contracts.Context;
-using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Common.Exceptions;
 using Common.Extensions;
+using Domain.Entities;
 using Domain.Enums;
 using FluentValidation;
 using MediatR;
@@ -19,6 +19,7 @@ namespace Application.Features.Sale.Commands
         public DateTime InvoiceDate { get; set; }
         public SalesStatusEnum Status { get; set; }
         public PaymentTypeEnum PaymentType { get; set; }
+        public List<PaymentDetail> PaymentDetails { get; set; }
         public UInt64 TotalAmount { get; set; }
         public UInt64 PaidAmount { get; set; }
         public string? Description { get; set; }
@@ -32,22 +33,22 @@ namespace Application.Features.Sale.Commands
         {
             RuleFor(x => x.InvoiceNumber).NotEmpty().WithMessage(Validation.RequiredMessage("شماره فاکتور"));
             RuleFor(x => x.InvoiceDate).NotEmpty().WithMessage(Validation.RequiredMessage("تاریخ فاکتور"));
-            RuleFor(x => x.CustomerId).GreaterThan(0).WithMessage(Validation.RequiredMessage("مشتری"));
+            RuleFor(x => x.CustomerId).NotEmpty().WithMessage(Validation.RequiredMessage("مشتری"));
             RuleFor(x => x.TotalAmount).Must(p => p > 0).WithMessage("مبلغ کل باید از صفر بیشتر باشد.");
             RuleFor(x => x.PaidAmount).Must(p => p >= 0).WithMessage("مبلغ پرداختی باید بیشتر یا مساوی صفر باشد.");
             RuleFor(x => x.ProductIds).NotEmpty().WithMessage(Validation.RequiredMessage("محصولات"));
+            RuleFor(x => x.PaymentDetails).NotEmpty().When(x => x.PaymentType != PaymentTypeEnum.CASH)
+                .WithMessage("اطلاعات پرداخت باید به طول کامل پر شود.");
         }
     }
 
     public class UpdateSaleCommandHandler : IRequestHandler<UpdateSaleCommand, ResponseDto>
     {
-        private readonly ISaleRepository _saleRepository;
         private readonly IWMSDbContext _context;
         private readonly IUnitOfWork _unitOfWork;
 
-        public UpdateSaleCommandHandler(ISaleRepository saleRepository, IWMSDbContext context, IUnitOfWork unitOfWork)
+        public UpdateSaleCommandHandler(IWMSDbContext context, IUnitOfWork unitOfWork)
         {
-            _saleRepository = saleRepository;
             _context = context;
             _unitOfWork = unitOfWork;
         }
@@ -56,11 +57,7 @@ namespace Application.Features.Sale.Commands
         {
             var res = new ResponseDto();
 
-            var sale = await _saleRepository.GetByIdAsync(request.Id) ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
-
-            var products = await _context.Products
-                .Where(x => request.ProductIds.Contains(x.Id))
-                .ToListAsync();
+            var sale = await _context.Sales.Where(x => x.Id == request.Id).FirstOrDefaultAsync() ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
 
             sale.InvoiceNumber = request.InvoiceNumber;
             sale.InvoiceDate = request.InvoiceDate;
@@ -70,10 +67,10 @@ namespace Application.Features.Sale.Commands
             sale.PaidAmount = request.PaidAmount;
             sale.Description = request.Description;
             sale.CustomerId = request.CustomerId;
-            sale.Item = products;
+            sale.Item = await _context.Products.Where(x => request.ProductIds.Contains(x.Id)).ToListAsync();
             sale.UpdatedAt = DateTime.Now;
 
-            _saleRepository.Update(sale);
+            _context.Sales.Update(sale);
             await _unitOfWork.SaveChangesAsync();
 
             res.Message = "فروش با موفقیت بروزرسانی شد.";
