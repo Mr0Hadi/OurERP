@@ -4,8 +4,6 @@
     {
         PENDING,
         SHIPPED,
-        PARTIALLY_RECEIVED,
-        RECEIVED,
         CANCELLED,
     }
 }

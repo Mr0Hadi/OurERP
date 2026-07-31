@@ -67,7 +67,7 @@ namespace Application.Features.Sale.Commands
             sale.PaidAmount = request.PaidAmount;
             sale.Description = request.Description;
             sale.CustomerId = request.CustomerId;
-            sale.Items = request.Items,
+            sale.Items = request.Items;
             sale.UpdatedAt = DateTime.Now;
 
             _context.Sales.Update(sale);

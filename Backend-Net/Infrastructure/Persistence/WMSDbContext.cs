@@ -22,6 +22,8 @@ namespace Infrastructure.Persistence
         public DbSet<Department> Departments => Set<Department>();
         public DbSet<Customer> Customers => Set<Customer>();
         public DbSet<Role> Roles => Set<Role>();
+        public DbSet<PurchaseItem> PurchaseItems { get; set; }
+        public DbSet<SaleItem> SaleItems { get; set; }
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
@@ -66,14 +68,14 @@ namespace Infrastructure.Persistence
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Sale>()
-                .HasMany(s => s.Item)
-                .WithMany()
-                .UsingEntity("SaleProduct");
+                .HasMany(x => x.Items)
+                .WithOne(y => y.Sale)
+                .HasForeignKey(x => x.SaleId);
 
             modelBuilder.Entity<Purchase>()
-                .HasMany(p => p.Items)
-                .WithMany()
-                .UsingEntity("PurchaseProduct");
+                .HasMany(x => x.Items)
+                .WithOne(x => x.Purchase)
+                .HasForeignKey(xx => xx.PurchaseId);
 
             modelBuilder.Entity<Product>()
                 .HasOne(x => x.ProductCategory)
