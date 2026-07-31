@@ -24,7 +24,7 @@ namespace Application.Features.Sale.Commands
         public UInt64 PaidAmount { get; set; }
         public string? Description { get; set; }
         public int CustomerId { get; set; }
-        public List<int> ProductIds { get; set; }
+        public List<SaleItem> Items { get; set; }
     }
 
     public class UpdateSaleCommandValidator : AbstractValidator<UpdateSaleCommand>
@@ -36,7 +36,7 @@ namespace Application.Features.Sale.Commands
             RuleFor(x => x.CustomerId).NotEmpty().WithMessage(Validation.RequiredMessage("مشتری"));
             RuleFor(x => x.TotalAmount).Must(p => p > 0).WithMessage("مبلغ کل باید از صفر بیشتر باشد.");
             RuleFor(x => x.PaidAmount).Must(p => p >= 0).WithMessage("مبلغ پرداختی باید بیشتر یا مساوی صفر باشد.");
-            RuleFor(x => x.ProductIds).NotEmpty().WithMessage(Validation.RequiredMessage("محصولات"));
+            RuleFor(x => x.Items).NotEmpty().WithMessage(Validation.RequiredMessage("محصولات"));
             RuleFor(x => x.PaymentDetails).NotEmpty().When(x => x.PaymentType != PaymentTypeEnum.CASH)
                 .WithMessage("اطلاعات پرداخت باید به طول کامل پر شود.");
         }
@@ -67,7 +67,7 @@ namespace Application.Features.Sale.Commands
             sale.PaidAmount = request.PaidAmount;
             sale.Description = request.Description;
             sale.CustomerId = request.CustomerId;
-            sale.Item = await _context.Products.Where(x => request.ProductIds.Contains(x.Id)).ToListAsync();
+            sale.Items = request.Items,
             sale.UpdatedAt = DateTime.Now;
 
             _context.Sales.Update(sale);
