@@ -1,5 +1,15 @@
-import { ROUTES } from '@/shared/constants/routes';
-import { ProductsPage, ProductNewPage, ProductDetailPage, ReceivingListPage, ReceivingDetailPage } from "./index";
+import { ROUTES } from "@/shared/constants/routes";
+import {
+  ProductsPage,
+  ProductNewPage,
+  ProductDetailPage,
+  ReceivingListPage,
+  ReceivingDetailPage,
+  ShippingListPage,
+  ShippingDetailPage,
+  ReceivingReturnDetailPage,
+  ShippingReplacementDetailPage,
+} from "./index";
 
 export const warehouseRoutes = [
   {
@@ -21,5 +31,21 @@ export const warehouseRoutes = [
   {
     path: ROUTES.WAREHOUSE_RECEIVING_DETAIL,
     element: <ReceivingDetailPage />,
-  }
+  },
+  {
+    path: ROUTES.WAREHOUSE_SHIPPING,
+    element: <ShippingListPage />,
+  },
+  {
+    path: ROUTES.WAREHOUSE_SHIPPING_DETAIL,
+    element: <ShippingDetailPage />,
+  },
+  {
+    path: ROUTES.WAREHOUSE_RECEIVING_RETURN_DETAIL,
+    element: <ReceivingReturnDetailPage />,
+  },
+  {
+    path: ROUTES.WAREHOUSE_SHIPPING_REPLACEMENT_DETAIL,
+    element: <ShippingReplacementDetailPage />,
+  },
 ];

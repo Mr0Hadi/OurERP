@@ -30,7 +30,7 @@ export function NavTools({
 
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-      <SidebarGroupLabel>ابزارها</SidebarGroupLabel>
+      {/* <SidebarGroupLabel>ابزارها</SidebarGroupLabel> */}
       <SidebarMenu>
         {tools.map((item) => (
           <SidebarMenuItem key={item.name}>
@@ -70,10 +70,10 @@ export function NavTools({
           </SidebarMenuItem>
         ))}
         <SidebarMenuItem>
-          <SidebarMenuButton>
+          {/* <SidebarMenuButton>
             <MoreHorizontal />
             <span>More</span>
-          </SidebarMenuButton>
+          </SidebarMenuButton> */}
         </SidebarMenuItem>
       </SidebarMenu>
     </SidebarGroup>

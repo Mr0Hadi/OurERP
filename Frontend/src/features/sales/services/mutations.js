@@ -1,4 +1,4 @@
-// src\features\sales\services\mutations.js
+// src/features/sales/services/mutations.js
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -13,15 +13,16 @@ import {
 import { saleKeys } from './queryKeys';
 import { ROUTES } from '@/shared/constants/routes';
 import { useSaleFormStore } from '../store/saleFormStore';
+import { invalidateSalesEcosystem } from './sharedInvalidation';
 
 export const useCreateSaleMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: createSale,
-    onSuccess: () => {
+    onSuccess: (created) => {
       toast.success('فروش با موفقیت ثبت شد');
-      queryClient.invalidateQueries({ queryKey: saleKeys.lists() });
+      invalidateSalesEcosystem(queryClient, created.id);
     },
     onError: (error) => {
       toast.error(error?.message || 'خطا در ثبت فروش');
@@ -36,8 +37,7 @@ export const useUpdateSaleMutation = (id) => {
   return useMutation({
     mutationFn: (saleData) => updateSale(id, saleData),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: saleKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: saleKeys.lists() });
+      invalidateSalesEcosystem(queryClient, id);
       toast.success('فروش با موفقیت ویرایش شد');
       navigate(ROUTES.SALES);
       useSaleFormStore.getState().resetForm();
@@ -63,7 +63,9 @@ export const useUpdateSaleStatusMutation = () => {
     },
     onSuccess: (updatedSale) => {
       queryClient.setQueryData(saleKeys.detail(updatedSale.id), updatedSale);
-      queryClient.invalidateQueries({ queryKey: saleKeys.lists() });
+      // تغییر دستی وضعیت فروش می‌تواند واجدشرایط‌بودنِ آن برای «ارسال
+      // انبار» یا «مرجوعی فروش» را هم تغییر دهد.
+      invalidateSalesEcosystem(queryClient, updatedSale.id);
       toast.success('وضعیت فروش به‌روزرسانی شد');
     },
     onError: (error, variables, context) => {
@@ -113,7 +115,7 @@ export const useRemoveSaleMutation = () => {
     mutationFn: removeSale,
     onSuccess: (removedSale) => {
       queryClient.removeQueries({ queryKey: saleKeys.detail(removedSale.id) });
-      queryClient.invalidateQueries({ queryKey: saleKeys.lists() });
+      invalidateSalesEcosystem(queryClient, removedSale.id);
       toast.success("خرید با موفقیت حذف شد");
       navigate(ROUTES.SALES);
     },

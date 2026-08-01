@@ -5,8 +5,11 @@ import {
   updateReceivingStatus,
   confirmReceiving,
 } from "./api-mockData";
-import { receivingKeys } from "./queryKeys";
+import { confirmReturnInspection } from "./returnsIntakeApi";
+import { receivingKeys, incomingQueueKeys } from "./queryKeys";
 import { invalidatePurchaseEcosystem } from "#/features/purchases/services/sharedInvalidation";
+import { invalidateSalesEcosystem } from "@/features/sales/services/sharedInvalidation";
+import { salesReturnKeys } from "@/features/sales/services/returns/queryKeys";
 
 export const useUpdateReceivingStatusMutation = () => {
   const queryClient = useQueryClient();
@@ -49,6 +52,7 @@ export const useUpdateReceivingStatusMutation = () => {
     },
     onSuccess: (updatedPurchase) => {
       invalidatePurchaseEcosystem(queryClient, updatedPurchase.id);
+      queryClient.invalidateQueries({ queryKey: incomingQueueKeys.lists() });
       toast.success("وضعیت دریافت به‌روزرسانی شد");
     },
     onError: (error, variables, context) => {
@@ -78,12 +82,32 @@ export const useConfirmReceivingMutation = () => {
       // چون این دور دریافت ممکن است هم‌زمان چند مرجوعیِ «در انتظار
       // ارسال جایگزین» را ببندد و هم وضعیت خودِ خرید را تغییر دهد،
       // از تابع مرکزیِ invalidation استفاده می‌کنیم تا هیچ کش
-      // فراموش نشود.
+      // فراموش نشود؛ صف یکپارچه‌ی دریافت انبار هم چون این خرید دیگر
+      // در آن دیده نمی‌شود، باید invalidate شود.
       invalidatePurchaseEcosystem(queryClient, updatedPurchase.id);
+      queryClient.invalidateQueries({ queryKey: incomingQueueKeys.lists() });
       toast.success("دریافت کالا با موفقیت ثبت شد");
     },
     onError: (error) => {
       toast.error(error?.message || "خطا در ثبت دریافت");
+    },
+  });
+};
+
+export const useConfirmReturnInspectionMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ returnId, inspectionData }) =>
+      confirmReturnInspection(returnId, inspectionData),
+    onSuccess: (updatedReturn) => {
+      queryClient.setQueryData(salesReturnKeys.detail(updatedReturn.id), updatedReturn);
+      invalidateSalesEcosystem(queryClient, updatedReturn.saleId);
+      queryClient.invalidateQueries({ queryKey: incomingQueueKeys.lists() });
+      toast.success("نتیجه‌ی بررسی و دریافت مرجوعی با موفقیت ثبت شد");
+    },
+    onError: (error) => {
+      toast.error(error?.message || "خطا در ثبت بررسی مرجوعی");
     },
   });
 };

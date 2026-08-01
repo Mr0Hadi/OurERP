@@ -39,6 +39,7 @@ export const ROUTES = {
   SALES_PROFORMA: "/sales/proforma-invoice",
   SALES_RETURNS_NEW: "/sales/returns/new",
   SALES_RETURNS_LIST: "/sales/returns",
+  SALES_RETURNS_DETAIL: "/sales/returns/:id",
 
   // انبار
   INVENTORY: "/inventory",
@@ -50,6 +51,11 @@ export const ROUTES = {
   WAREHOUSE_TRANSACTIONS: "/warehouse/transactions",
   WAREHOUSE_RECEIVING: "/warehouse/receiving",
   WAREHOUSE_RECEIVING_DETAIL: "/warehouse/receiving/:id",
+  WAREHOUSE_SHIPPING: "/warehouse/shipping",
+  WAREHOUSE_SHIPPING_DETAIL: "/warehouse/shipping/:id",
+  WAREHOUSE_RECEIVING_RETURN_DETAIL: "/warehouse/receiving/returns/:id",
+  WAREHOUSE_SHIPPING_REPLACEMENT_DETAIL:
+    "/warehouse/shipping/replacement/:returnId",
 
   // // محصولات/کالاها
   // PRODUCTS: "/products",

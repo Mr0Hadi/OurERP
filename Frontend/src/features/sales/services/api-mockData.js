@@ -1,4 +1,4 @@
-// src\features\sales\services\api-mockData.js
+// src/features/sales/services/api-mockData.js
 import { allSales, SALE_STATUSES } from "./mockData";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -13,7 +13,9 @@ export async function createSale(saleData) {
   const newSale = {
     id: Date.now(),
     ...saleData,
-    status: SALE_STATUSES.PENDING,
+    // «در انتظار» و «در حال پردازش» یکی شده‌اند؛ هر فروش تازه با همین
+    // یک وضعیت شروع می‌شود تا در لیست «ارسال کالا»ی انبار دیده شود.
+    status: SALE_STATUSES.PROCESSING,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
