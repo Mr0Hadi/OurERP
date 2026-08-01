@@ -63,8 +63,8 @@ function ResolutionLineRow({ resolution, onRemove, isBusy }) {
   const shippedQty = resolution.shippedQty || 0;
 
   return (
-    <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-card px-2.5 py-2">
-      <div className="flex items-center gap-2 min-w-0">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-md border border-border bg-card px-2.5 py-2">
+      <div className="flex flex-wrap items-center gap-2 min-w-0">
         <Badge variant="outline" className={`gap-1 text-[11px] shrink-0 ${config.className}`}>
           <Icon className="h-3 w-3" />
           {RESOLUTION_TYPE_LABELS[resolution.type]}
@@ -77,10 +77,10 @@ function ResolutionLineRow({ resolution, onRemove, isBusy }) {
             ({resolution.refundAmount.toLocaleString("fa-IR")} ریال)
           </span>
         )}
-        {resolution.note && <span className="text-xs text-muted-foreground truncate">{resolution.note}</span>}
+        {resolution.note && <span className="text-xs text-muted-foreground truncate max-w-full">{resolution.note}</span>}
       </div>
 
-      <div className="flex items-center gap-1.5 shrink-0">
+      <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
         {isAwaiting ? (
           isReplacement ? (
             <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400">
@@ -138,9 +138,9 @@ function AddResolutionForm({ item, remaining, onAdd, isBusy }) {
 
   return (
     <div className="rounded-lg border border-dashed border-primary/30 bg-primary/[0.03] p-2.5 space-y-2">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5">
         <Select value={type} onValueChange={setType}>
-          <SelectTrigger className="h-8 text-xs col-span-2 sm:col-span-1">
+          <SelectTrigger className="h-8 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -162,16 +162,16 @@ function AddResolutionForm({ item, remaining, onAdd, isBusy }) {
             type="number" dir="ltr" min={0} value={refundAmount}
             onChange={(e) => setRefundAmount(e.target.value)}
             placeholder={(Number(qty) * item.unitPrice || 0).toLocaleString("fa-IR")}
-            className="h-8 text-xs col-span-2 sm:col-span-1"
+            className="h-8 text-xs"
           />
         ) : (
-          <div className="hidden sm:block" />
+          <div className="hidden lg:block" />
         )}
 
         <Input
           value={note} onChange={(e) => setNote(e.target.value)}
           placeholder="یادداشت (اختیاری)..."
-          className="h-8 text-xs col-span-2 sm:col-span-1"
+          className="h-8 text-xs"
         />
       </div>
       <Button type="button" size="sm" className="w-full gap-1.5 h-8 text-xs" onClick={handleSubmit} disabled={isBusy || !qty || Number(qty) <= 0}>
@@ -231,7 +231,7 @@ function ItemResolutionCard({ item, onAddResolution, onRemoveResolution, isBusy,
 
   return (
     <div className="border border-border rounded-lg p-3 space-y-2.5">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="min-w-0">
           <p className="font-medium text-card-foreground text-sm truncate">{item.productName}</p>
           <p className="text-xs text-muted-foreground">{item.productCode}</p>
@@ -323,7 +323,7 @@ export default function SalesReturnResolutionSection({
 
         {totalVerifiedQty > 0 && (
           <div className="space-y-1.5 border-t border-border pt-3">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-muted-foreground gap-1">
               <span>پیشرفت تسویه‌ی بخش رسیده</span>
               <span className="tabular-nums font-medium text-card-foreground">
                 {resolvedQty.toLocaleString("fa-IR")} / {totalVerifiedQty.toLocaleString("fa-IR")} عدد نهایی شده
@@ -383,7 +383,7 @@ export default function SalesReturnResolutionSection({
         )}
 
         {canRejectOrCancel && (
-          <div className="flex gap-2 border-t border-border pt-3">
+          <div className="flex flex-col sm:flex-row gap-2 border-t border-border pt-3">
             <Button type="button" variant="outline" className="flex-1 gap-2 border-destructive/30 text-destructive hover:bg-destructive/10" disabled={isBusy} onClick={onReject}>
               <XCircle className="h-4 w-4" />
               رد ادعای مشتری
