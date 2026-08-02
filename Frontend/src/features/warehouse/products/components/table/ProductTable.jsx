@@ -107,7 +107,7 @@ const ProductTable = ({
       { accessorKey: "category", header: "دسته‌بندی" },
       {
         accessorKey: "retailPrice",
-        header: "قیمت (تومان)",
+        header: "قیمت (ریال)",
         cell: (info) => (
           <span className="tabular-nums">
             {Number(info.getValue()).toLocaleString("fa-IR")}

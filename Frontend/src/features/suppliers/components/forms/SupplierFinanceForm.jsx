@@ -62,7 +62,7 @@ export default function SupplierFinanceForm({ register, errors, balanceType, con
           {showAmount && (
             <div className="space-y-1.5 animate-in fade-in-50 slide-in-from-top-3 duration-300">
               <Label htmlFor="balanceAmount" className="text-sm font-medium">
-                مبلغ (تومان) <span className="text-destructive">*</span>
+                مبلغ (ریال) <span className="text-destructive">*</span>
               </Label>
               <div className="relative">
                 <Input
@@ -75,7 +75,7 @@ export default function SupplierFinanceForm({ register, errors, balanceType, con
                   {...register("balanceAmount", { required: "وارد کردن مبلغ الزامی است" })}
                 />
                 <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-sm font-medium text-muted-foreground">
-                  تومان
+                  ریال
                 </div>
               </div>
               {errors.balanceAmount && (

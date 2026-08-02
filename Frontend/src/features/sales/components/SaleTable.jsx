@@ -43,15 +43,13 @@ const PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 50];
 // ─── Badge ها ─────────────────────────────────────────────────────────────────
 
 const STATUS_STYLES = {
-  pending:
-    "bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-100",
   processing: "bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-100",
+  partially_delivered:
+    "bg-orange-100 text-orange-800 border-orange-300 hover:bg-orange-100",
   shipped:
     "bg-indigo-100 text-indigo-800 border-indigo-300 hover:bg-indigo-100",
   delivered: "bg-green-100 text-green-800 border-green-300 hover:bg-green-100",
   cancelled: "bg-red-100 text-red-800 border-red-300 hover:bg-red-100",
-  returned:
-    "bg-orange-100 text-orange-800 border-orange-300 hover:bg-orange-100",
 };
 
 const StatusBadge = ({ status }) => (
@@ -182,7 +180,7 @@ const SaleTable = ({
       },
       {
         accessorKey: "totalAmount",
-        header: "مبلغ پرداخت (تومان)",
+        header: "مبلغ پرداخت (ریال)",
         cell: ({ row }) => (
           <PaymentProgress
             paid={row.original.paidAmount}

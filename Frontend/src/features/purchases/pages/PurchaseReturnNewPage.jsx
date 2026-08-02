@@ -23,8 +23,16 @@ export default function PurchaseReturnNewPage() {
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   const { formData, resetForm, initializeForReport } = usePurchaseReturnFormStore();
-  const { setFormData, items, handleItemChange, computedTotal, buildPayload } =
-    usePurchaseReturnForm();
+  const {
+    setFormData,
+    items,
+    selectedItems,
+    handleAddClaim,
+    handleUpdateClaim,
+    handleRemoveClaim,
+    computedTotal,
+    buildPayload,
+  } = usePurchaseReturnForm();
 
   const [showErrors, setShowErrors] = useState(false);
 
@@ -61,7 +69,7 @@ export default function PurchaseReturnNewPage() {
   }, [setHeader, clearHeader, navigate]);
 
   const createMutation = useCreatePurchaseReturnMutation();
-  const selectedCount = items.filter((i) => i.qty > 0).length;
+  const selectedCount = selectedItems.length;
 
   const onSubmit = (e) => {
     e.preventDefault();
@@ -102,11 +110,16 @@ export default function PurchaseReturnNewPage() {
           <div className="lg:col-span-2 space-y-4">
             <PurchaseReturnWarehouseReportSection report={report} />
 
-            <PurchaseReturnItemsSection items={items} onItemChange={handleItemChange} />
+            <PurchaseReturnItemsSection
+              items={items}
+              onAddClaim={handleAddClaim}
+              onUpdateClaim={handleUpdateClaim}
+              onRemoveClaim={handleRemoveClaim}
+            />
 
             {showErrors && selectedCount === 0 && (
               <p className="text-xs text-destructive px-1">
-                حداقل باید یک کالا با تعداد بیشتر از صفر برای مرجوعی انتخاب شود
+                حداقل باید برای یک کالا، حداقل یک دلیل با تعداد بیشتر از صفر ثبت شود
               </p>
             )}
           </div>

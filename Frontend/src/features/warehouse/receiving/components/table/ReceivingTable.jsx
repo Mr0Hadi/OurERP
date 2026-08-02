@@ -30,54 +30,45 @@ import {
   ArrowUp,
   ArrowDown,
   CheckCircle,
+  ClipboardCheck,
+  Truck,
+  Undo2,
 } from "lucide-react";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Badge } from "@/shared/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import {
-  PURCHASE_STATUS_LABELS,
-  PAYMENT_TYPE_LABELS,
-} from "../../services/mockData";
 import { gregorianToPersian } from "@/shared/utils/dateUtils";
-
-// ─── ثابت‌ها ─────────────────────────────────────────────────────────────────
+import { ROUTES } from "@/shared/constants/routes";
+import {
+  INCOMING_TYPES,
+  INCOMING_TYPE_LABELS,
+} from "../../services/incomingQueueApi";
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 50];
 
-// ─── Badge ها ─────────────────────────────────────────────────────────────────
-
-const STATUS_STYLES = {
-  pending:
-    "bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-100",
-  shipped: "bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-100",
-  partially_received:
-    "bg-orange-100 text-orange-800 border-orange-300 hover:bg-orange-100",
-  received: "bg-green-100 text-green-800 border-green-300 hover:bg-green-100",
-  cancelled: "bg-red-100 text-red-800 border-red-300 hover:bg-red-100",
-};
-
-const StatusBadge = ({ status }) => (
-  <Badge className={STATUS_STYLES[status] ?? "bg-gray-100 text-gray-800"}>
-    {PURCHASE_STATUS_LABELS[status] ?? status}
-  </Badge>
-);
-
-const PAYMENT_STYLES = {
-  cash: "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-100",
-  credit: "bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-100",
-  check: "bg-sky-100 text-sky-800 border-sky-300 hover:bg-sky-100",
-  transfer:
+const TYPE_STYLES = {
+  [INCOMING_TYPES.PURCHASE]:
+    "bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-100",
+  [INCOMING_TYPES.SALES_RETURN]:
     "bg-indigo-100 text-indigo-800 border-indigo-300 hover:bg-indigo-100",
-  mixed: "bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-100",
 };
 
-const PaymentBadge = ({ type }) => (
-  <Badge className={PAYMENT_STYLES[type] ?? "bg-gray-100 text-gray-800"}>
-    {PAYMENT_TYPE_LABELS[type] ?? type}
-  </Badge>
-);
+const TYPE_ICON = {
+  [INCOMING_TYPES.PURCHASE]: Truck,
+  [INCOMING_TYPES.SALES_RETURN]: Undo2,
+};
 
-// ─── آیکون مرتب‌سازی ─────────────────────────────────────────────────────────
+const TypeBadge = ({ type }) => {
+  const Icon = TYPE_ICON[type] ?? Truck;
+  return (
+    <Badge
+      className={`gap-1 ${TYPE_STYLES[type] ?? "bg-gray-100 text-gray-800"}`}
+    >
+      <Icon className="h-3 w-3" />
+      {INCOMING_TYPE_LABELS[type] ?? type}
+    </Badge>
+  );
+};
 
 const SortIcon = ({ direction }) => {
   if (direction === "asc") return <ArrowUp className="h-4 w-4" />;
@@ -85,16 +76,12 @@ const SortIcon = ({ direction }) => {
   return <ArrowUpDown className="h-4 w-4 opacity-40" />;
 };
 
-// ─── اسکلتون لودینگ ──────────────────────────────────────────────────────────
-
 const LoadingSkeleton = () => (
   <div className="space-y-3">
     <Skeleton className="h-10 w-full" />
     <Skeleton className="h-96 w-full" />
   </div>
 );
-
-// ─── کامپوننت اصلی ────────────────────────────────────────────────────────────
 
 const ReceivingTable = ({
   data,
@@ -122,8 +109,8 @@ const ReceivingTable = ({
   const columns = useMemo(
     () => [
       {
-        accessorKey: "invoiceNumber",
-        header: "شماره فاکتور",
+        accessorKey: "refNumber",
+        header: "شماره",
         cell: (info) => (
           <span className="font-mono text-xs text-muted-foreground">
             {info.getValue()}
@@ -131,13 +118,13 @@ const ReceivingTable = ({
         ),
       },
       {
-        accessorKey: "supplierName",
-        header: "تامین‌کننده",
+        accessorKey: "counterpartyName",
+        header: "طرف حساب",
         cell: (info) => <span className="font-light">{info.getValue()}</span>,
       },
       {
-        accessorKey: "invoiceDate",
-        header: "تاریخ فاکتور",
+        accessorKey: "date",
+        header: "تاریخ",
         cell: (info) => (
           <span className="tabular-nums text-sm">
             {gregorianToPersian(info.getValue())}
@@ -145,20 +132,23 @@ const ReceivingTable = ({
         ),
       },
       {
-        accessorKey: "status",
-        header: "وضعیت",
+        accessorKey: "type",
+        header: "نوع",
         enableSorting: false,
-        cell: (info) => <StatusBadge status={info.getValue()} />,
+        cell: (info) => <TypeBadge type={info.getValue()} />,
       },
       {
-        accessorKey: "paymentType",
-        header: "نوع پرداخت",
-        enableSorting: false,
-        cell: (info) => <PaymentBadge type={info.getValue()} />,
+        accessorKey: "itemsCount",
+        header: "تعداد اقلام",
+        cell: (info) => (
+          <span className="tabular-nums text-sm">
+            {info.getValue().toLocaleString("fa-IR")}
+          </span>
+        ),
       },
       {
-        accessorKey: "totalAmount",
-        header: "مبلغ کل (تومان)",
+        accessorKey: "amount",
+        header: "مبلغ (ریال)",
         cell: (info) => (
           <span className="tabular-nums text-sm">
             {info.getValue().toLocaleString("fa-IR")}
@@ -169,21 +159,32 @@ const ReceivingTable = ({
         id: "actions",
         header: "عملیات",
         enableSorting: false,
-        cell: ({ row }) => (
-          <div className="flex justify-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                navigate(`/warehouse/receiving/${row.original.id}`)
-              }
-              className="gap-1"
-            >
-              <CheckCircle className="h-4 w-4" />
-              بررسی و دریافت
-            </Button>
-          </div>
-        ),
+        cell: ({ row }) => {
+          const isReturn = row.original.type === INCOMING_TYPES.SALES_RETURN;
+          const path = isReturn
+            ? ROUTES.WAREHOUSE_RECEIVING_RETURN_DETAIL.replace(
+                ":id",
+                row.original.id,
+              )
+            : ROUTES.WAREHOUSE_RECEIVING_DETAIL.replace(":id", row.original.id);
+          return (
+            <div className="flex justify-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(path)}
+                className="gap-1"
+              >
+                {isReturn ? (
+                  <ClipboardCheck className="h-4 w-4" />
+                ) : (
+                  <CheckCircle className="h-4 w-4" />
+                )}
+                {isReturn ? "بررسی و دریافت" : "بررسی و دریافت"}
+              </Button>
+            </div>
+          );
+        },
       },
     ],
     [navigate],
@@ -223,7 +224,6 @@ const ReceivingTable = ({
                   {headerGroup.headers.map((header) => {
                     const isSortable = header.column.getCanSort();
                     const sortDir = header.column.getIsSorted();
-
                     return (
                       <TableHead key={header.id} className="text-center">
                         {header.isPlaceholder ? null : (
@@ -240,13 +240,6 @@ const ReceivingTable = ({
                             }
                             role={isSortable ? "button" : undefined}
                             tabIndex={isSortable ? 0 : undefined}
-                            onKeyDown={
-                              isSortable
-                                ? (e) =>
-                                    e.key === "Enter" &&
-                                    header.column.getToggleSortingHandler()(e)
-                                : undefined
-                            }
                           >
                             {flexRender(
                               header.column.columnDef.header,
@@ -266,7 +259,7 @@ const ReceivingTable = ({
               {rows.length ? (
                 rows.map((row) => (
                   <TableRow
-                    key={row.id}
+                    key={`${row.original.type}-${row.original.id}`}
                     className="hover:bg-muted/50 transition-colors"
                   >
                     {row.getVisibleCells().map((cell) => (
@@ -285,7 +278,7 @@ const ReceivingTable = ({
                     colSpan={columns.length}
                     className="h-24 text-center text-muted-foreground"
                   >
-                    خرید برای دریافت یافت نشد.
+                    چیزی برای دریافت یافت نشد.
                   </TableCell>
                 </TableRow>
               )}
@@ -294,7 +287,6 @@ const ReceivingTable = ({
         </div>
       </div>
 
-      {/* Pagination */}
       <div className="flex flex-col gap-2 sm:flex-row items-center justify-between px-2">
         <div className="flex items-center gap-2">
           <p className="text-sm font-light whitespace-nowrap">ردیف در صفحه</p>

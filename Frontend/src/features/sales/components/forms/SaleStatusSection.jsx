@@ -19,19 +19,15 @@ import {
   SALE_STATUS_LABELS,
 } from "#/features/sales/services/mockData";
 import {
-  Clock,
   Loader2,
   PackageOpen,
+  Truck,
   PackageCheck,
   XCircle,
   Activity,
 } from "lucide-react";
 
 const STATUS_CONFIG = {
-  [SALE_STATUSES.PENDING]: {
-    icon: Clock,
-    textColor: "text-amber-600 dark:text-amber-400",
-  },
   [SALE_STATUSES.PROCESSING]: {
     icon: Loader2,
     textColor: "text-blue-600 dark:text-blue-400",
@@ -39,6 +35,10 @@ const STATUS_CONFIG = {
   [SALE_STATUSES.PARTIALLY_DELIVERED]: {
     icon: PackageOpen,
     textColor: "text-orange-600 dark:text-orange-400",
+  },
+  [SALE_STATUSES.SHIPPED]: {
+    icon: Truck,
+    textColor: "text-indigo-600 dark:text-indigo-400",
   },
   [SALE_STATUSES.DELIVERED]: {
     icon: PackageCheck,
@@ -91,6 +91,12 @@ export default function SaleStatusSection({ selectedStatus, onStatusChange }) {
               })}
             </SelectContent>
           </Select>
+          <p className="text-xs text-muted-foreground">
+            وضعیت «ارسال ناقص»، «ارسال شده» و بخشی از «تحویل کامل» معمولاً
+            به‌صورت خودکار از صفحه‌ی «ارسال کالا»ی انبار به‌روزرسانی
+            می‌شوند؛ تغییر دستی آن‌ها از اینجا هم ممکن است ولی توصیه
+            نمی‌شود.
+          </p>
         </div>
       </CardContent>
     </Card>

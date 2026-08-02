@@ -1,5 +1,5 @@
 // src/features/warehouse/receiving/hooks/useReceivingForm.js
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import useReceivingFormStore from '../store/receivingFormStore';
 
 const generateId = () =>
@@ -15,28 +15,20 @@ export function useReceivingForm(purchaseData) {
     initializedForId,
     resetForm,
   } = store;
-  const isFirstMount = useRef(true);
+
+  const purchaseVersion =
+    purchaseData?.id != null ? `${purchaseData.id}:${purchaseData.updatedAt}` : null;
 
   useEffect(() => {
-    if (purchaseData?.id && (isFirstMount.current || initializedForId !== purchaseData.id)) {
+    if (purchaseVersion && initializedForId !== purchaseVersion) {
       initializeFromPurchase(purchaseData);
-      isFirstMount.current = false;
-    } else if (
-      purchaseData?.status &&
-      initializedForId === purchaseData.id &&
-      formData.status !== purchaseData.status
-    ) {
-      setFormData({ status: purchaseData.status });
     }
-  }, [purchaseData?.id, purchaseData?.status, initializeFromPurchase, initializedForId, formData.status, setFormData]);
+  }, [purchaseVersion, purchaseData, initializeFromPurchase, initializedForId]);
 
   const shortageOf = (item) => Math.max(0, item.expectedQty - (item.receivedQty || 0));
   const allocatedOf = (item) =>
     (item.issues || []).reduce((sum, i) => sum + (Number(i.qty) || 0), 0);
 
-  // تغییر تعداد دریافتی یک قلم. اگر با این تغییر، کسری کمتر از مجموع
-  // تخصیص‌یافته‌ی فعلی شود، ردیف‌های مشکل از انتها (آخرین ردیف اضافه‌شده)
-  // به‌ترتیب کوچک/حذف می‌شوند تا مجموع دوباره با کسری جدید همخوان شود.
   const handleItemChange = (productId, field, value) => {
     const newItems = formData.items.map((item) => {
       if (item.productId !== productId) return item;
@@ -62,6 +54,9 @@ export function useReceivingForm(purchaseData) {
     setReceivingItems(newItems);
   };
 
+  // انباردار مجبور نیست کل کسری را به‌عنوان مشکل ثبت کند؛ فقط بخشی
+  // که واقعاً مشکل دارد (نه صرفاً دیرکرد ارسال) را اضافه می‌کند —
+  // بقیه به‌طور خودکار «در انتظار محموله بعدی» تلقی می‌شود.
   const handleAddIssue = (productId) => {
     const newItems = formData.items.map((item) => {
       if (item.productId !== productId) return item;
@@ -117,58 +112,30 @@ export function useReceivingForm(purchaseData) {
     (item) => item.receivedQty >= item.expectedQty
   );
 
-  // هر قلم دارای کسری، باید دقیقاً به همان اندازه‌ی کسری، بین یک یا چند
-  // نوع مشکل تخصیص داده شده باشد (نه کمتر، نه بیشتر) تا بتوان دریافت را ثبت کرد.
-  const isAllIssuesAllocated = formData.items.every((item) => {
-    const shortage = shortageOf(item);
-    if (shortage <= 0) return true;
-    const issues = item.issues || [];
-    if (issues.length === 0) return false;
-    const allocated = allocatedOf(item);
-    return allocated === shortage && issues.every((i) => (Number(i.qty) || 0) > 0);
-  });
-
   const isTransporterValid =
     !!formData.transporterName?.trim() &&
     (!!formData.transporterNationalId?.trim() || !!formData.vehiclePlate?.trim());
 
-  const buildPayload = () => {
-    const allComplete = formData.items.every(
-      (item) => item.receivedQty >= item.expectedQty
-    );
-    const anyReceived = formData.items.some((item) => item.receivedQty > 0);
-
-    let status = formData.status;
-    if (allComplete) {
-      status = 'received';
-    } else if (anyReceived) {
-      status = 'partially_received';
-    }
-
-    return {
-      id: formData.purchaseId,
-      status,
-      receivedItems: formData.items.map((item) => ({
-        productId: item.productId,
-        productCode: item.productCode,
-        productName: item.productName,
-        expectedQty: item.expectedQty,
-        receivedQty: item.receivedQty,
-        // تفکیک انواع مشکل این دور برای همین قلم؛ اگر قلم کامل دریافت
-        // شده باشد، آرایه خالی است.
-        issues: (item.issues || []).map((i) => ({
-          type: i.issueType,
-          qty: Number(i.qty) || 0,
-          note: i.note || '',
-        })),
+  const buildPayload = () => ({
+    id: formData.purchaseId,
+    receivedItems: formData.items.map((item) => ({
+      productId: item.productId,
+      productCode: item.productCode,
+      productName: item.productName,
+      expectedQty: item.expectedQty,
+      receivedQty: item.receivedQty,
+      issues: (item.issues || []).map((i) => ({
+        type: i.issueType,
+        qty: Number(i.qty) || 0,
+        note: i.note || '',
       })),
-      receivingNote: formData.receivingNote,
-      receivedDate: formData.receivedDate,
-      transporterName: formData.transporterName,
-      transporterNationalId: formData.transporterNationalId,
-      vehiclePlate: formData.vehiclePlate,
-    };
-  };
+    })),
+    receivingNote: formData.receivingNote,
+    receivedDate: formData.receivedDate,
+    transporterName: formData.transporterName,
+    transporterNationalId: formData.transporterNationalId,
+    vehiclePlate: formData.vehiclePlate,
+  });
 
   return {
     formData,
@@ -178,7 +145,6 @@ export function useReceivingForm(purchaseData) {
     handleUpdateIssue,
     handleRemoveIssue,
     isAllComplete,
-    isAllIssuesAllocated,
     isTransporterValid,
     buildPayload,
     resetForm,

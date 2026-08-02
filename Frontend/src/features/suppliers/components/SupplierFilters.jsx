@@ -44,7 +44,7 @@ const SupplierFilters = () => {
         <div className="flex flex-col gap-2">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <Label className="whitespace-nowrap font-light text-foreground">
-              حداقل تراز (تومان)
+              حداقل تراز (ریال)
             </Label>
             <Input
               type="number"
@@ -59,7 +59,7 @@ const SupplierFilters = () => {
         <div className="flex flex-col gap-2">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <Label className="whitespace-nowrap font-light text-foreground">
-              حداکثر تراز (تومان)
+              حداکثر تراز (ریال)
             </Label>
             <Input
               type="number"

@@ -185,11 +185,16 @@ export async function updatePurchasePayment(id, paymentData) {
 }
 
 /**
- * وقتی یک مرجوعی با «بازگشت وجه»، «پذیرش زیان» یا «اعتبار خرید بعدی»
- * تسویه می‌شود، این تابع به‌ازای هر قلم مقدار settledQty (تجمعی) را
- * افزایش می‌دهد — یعنی این مقدار دیگر «مورد انتظار» دریافت در انبار
- * نیست (چون دائماً بسته شده، فارغ از این‌که فیزیکاً برسد یا نه). در
- * صورت وجود مبلغ بازگشتی، از جمع کل خرید هم کم می‌شود.
+ * وقتی یک قلم با «بازگشت وجه»، «پذیرش زیان» یا «اعتبار خرید بعدی»
+ * تسویه می‌شود، این تابع settledQty (تجمعی) را افزایش می‌دهد و در
+ * صورت وجود مبلغ بازگشتی، از جمع کل خرید کم می‌کند.
+ *
+ * توجه: این تابع دیگر وضعیت کلی خرید (status) را تغییر نمی‌دهد؛ چون
+ * این فقط یک عملیات جزئی روی بخشی از یک قلم است و ممکن است هم‌زمان
+ * بخش دیگری از همان خرید (یا حتی همان قلم) در حال هماهنگی برای ارسال
+ * جایگزین باشد. تصمیم نهایی درباره‌ی وضعیت خرید همیشه توسط
+ * recomputePurchaseStatus و با دیدن کل تصویر گرفته می‌شود؛ این تابع
+ * را همیشه بلافاصله بعد از این تابع فراخوانی کنید.
  */
 export async function settlePurchaseItems(
   purchaseId,
@@ -216,23 +221,10 @@ export async function settlePurchaseItems(
     };
   });
 
-  const fullyClosed = updatedItems.every(
-    (item) => (item.receivedQty || 0) + (item.settledQty || 0) >= item.qty,
-  );
-  const anyReceived = updatedItems.some((item) => (item.receivedQty || 0) > 0);
-
-  let newStatus = purchase.status;
-  if (fullyClosed) {
-    newStatus = PURCHASE_STATUSES.RECEIVED;
-  } else if (anyReceived) {
-    newStatus = PURCHASE_STATUSES.PARTIALLY_RECEIVED;
-  }
-
   allPurchases[index] = {
     ...purchase,
     items: updatedItems,
     totalAmount: Math.max(0, purchase.totalAmount - refundAmount),
-    status: newStatus,
     updatedAt: new Date().toISOString(),
   };
 
@@ -241,7 +233,10 @@ export async function settlePurchaseItems(
 
 /**
  * وقتی واحد خرید هماهنگ می‌کند که کالای جایگزین/کسری دوباره ارسال
- * شود، خرید باید دوباره در لیست دریافتِ انباردار ظاهر شود.
+ * شود، خرید باید دوباره در لیست دریافتِ انباردار ظاهر شود. status را
+ * به‌عنوان یک بازخورد فوری روی SHIPPED می‌گذارد، اما مقدار نهایی و
+ * قطعی همیشه توسط recomputePurchaseStatus (که بلافاصله بعد از این
+ * تابع فراخوانی می‌شود) تعیین می‌شود.
  */
 export async function reopenPurchaseForShipment(purchaseId) {
   await delay(300);
@@ -262,6 +257,82 @@ export async function reopenPurchaseForShipment(purchaseId) {
   allPurchases[index] = {
     ...purchase,
     status: PURCHASE_STATUSES.SHIPPED,
+    updatedAt: new Date().toISOString(),
+  };
+
+  return allPurchases[index];
+}
+
+/**
+ * تنها و آخرین مرجع تصمیم‌گیری درباره‌ی وضعیت کلی یک خرید.
+ *
+ * این تابع باید بعد از هر تغییری که می‌تواند روی «آیا این خرید هنوز
+ * چیزی برای دریافت در انبار دارد؟» اثر بگذارد فراخوانی شود — چه یک
+ * دور دریافت واقعی، چه یک تسویه‌ی مالی، چه هماهنگی ارسال مجدد. چون
+ * همیشه بر اساس *کل تصویر فعلی* (نه فقط آخرین اکشن) تصمیم می‌گیرد،
+ * دیگر هیچ اکشنی نمی‌تواند نتیجه‌ی اکشن قبلی را نادیده بگیرد — حتی
+ * وقتی چند نوع تصمیم مختلف (بازگشت وجه + جایگزینی) روی بخش‌های مختلف
+ * یک خرید مخلوط شده باشند، یا چند دور کسری/مرجوعی پشت‌سرهم رخ داده
+ * باشند.
+ *
+ * hasReceivableQty باید توسط فراخوان (معمولاً ماژول مرجوعی، با دیدن
+ * هم آیتم‌های خرید و هم مرجوعی‌های فعال) محاسبه و پاس داده شود.
+ */
+export async function recomputePurchaseStatus(
+  purchaseId,
+  { hasReceivableQty = false } = {},
+) {
+  await delay(200);
+
+  const index = allPurchases.findIndex(
+    (p) => Number(p.id) === Number(purchaseId),
+  );
+  if (index === -1) {
+    throw new Error("خرید یافت نشد");
+  }
+
+  const purchase = allPurchases[index];
+
+  // وضعیت‌های نهاییِ غیرقابل‌بازگشت هیچ‌وقت توسط این تابع بازنویسی
+  // نمی‌شوند
+  if (purchase.status === PURCHASE_STATUSES.CANCELLED) {
+    return purchase;
+  }
+
+  const fullyClosed = purchase.items.every(
+    (item) => (item.receivedQty || 0) + (item.settledQty || 0) >= item.qty,
+  );
+  const anyReceived = purchase.items.some((item) => (item.receivedQty || 0) > 0);
+
+  let newStatus;
+  if (fullyClosed) {
+    // همه‌ی اقلام یا فیزیکاً رسیده‌اند یا برای همیشه تسویه شده‌اند
+    newStatus = PURCHASE_STATUSES.RECEIVED;
+  } else if (hasReceivableQty) {
+    // هنوز حداقل یک قلم چیزی «واقعاً قابل دریافت» دارد — چه به دلیل
+    // این‌که هیچ مشکلی برایش گزارش نشده (در انتظار محموله‌ی بعدی)،
+    // چه به دلیل این‌که یک تصمیم «ارسال جایگزین» برایش گرفته شده —
+    // باید برای انباردار قابل مشاهده بماند
+    newStatus = PURCHASE_STATUSES.SHIPPED;
+  } else if (anyReceived) {
+    // کسری باقی مانده ولی فعلاً هیچ‌چیز «قابل دریافت»ی نیست — یعنی
+    // باقیمانده کاملاً حاصل مشکلات گزارش‌شده و هنوز تصمیم‌گیری‌نشده
+    // است؛ باید از لیست دریافت خارج شود و منتظر تصمیم واحد خرید بماند
+    newStatus = PURCHASE_STATUSES.PARTIALLY_RECEIVED;
+  } else {
+    newStatus =
+      purchase.status === PURCHASE_STATUSES.PENDING
+        ? PURCHASE_STATUSES.PENDING
+        : PURCHASE_STATUSES.SHIPPED;
+  }
+
+  if (newStatus === purchase.status) {
+    return purchase;
+  }
+
+  allPurchases[index] = {
+    ...purchase,
+    status: newStatus,
     updatedAt: new Date().toISOString(),
   };
 

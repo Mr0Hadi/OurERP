@@ -1,7 +1,9 @@
 // src/features/warehouse/receiving/store/receivingFormStore.js
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 
+// این استور در localStorage ذخیره نمی‌شود؛ فرم دریافت داده‌ای موقتی
+// و لحظه‌ای است و باید همیشه از روی آخرین داده‌ی تازه‌ی سرور بازسازی
+// شود.
 const EMPTY_RECEIVING = {
   purchaseId: '',
   supplierName: '',
@@ -16,75 +18,71 @@ const EMPTY_RECEIVING = {
   vehiclePlate: '',
 };
 
-const useReceivingFormStore = create(
-  persist(
-    (set, get) => ({
-      formData: { ...EMPTY_RECEIVING },
-      initializedForId: null,
+const useReceivingFormStore = create((set, get) => ({
+  formData: { ...EMPTY_RECEIVING },
+  // کلید نسخه شامل updatedAt خرید است، نه فقط id — چون وقتی همان
+  // خرید دوباره برای دور دومِ دریافت باز می‌شود، id عوض نمی‌شود ولی
+  // updatedAt چرا؛ بدون این، اگر یک اسنپ‌شات قدیمی زودتر از دیتای
+  // تازه رندر شود، فرم با دیتای قدیمی می‌ماند.
+  initializedForId: null,
 
-      setFormData: (data) =>
-        set((state) => ({
-          formData: { ...state.formData, ...data },
-        })),
-      setReceivingItems: (items) =>
-        set((state) => ({
-          formData: { ...state.formData, items },
-        })),
-      initializeFromPurchase: (purchaseData) => {
-        const { initializedForId } = get();
-        if (initializedForId === purchaseData.id) return;
+  setFormData: (data) =>
+    set((state) => ({
+      formData: { ...state.formData, ...data },
+    })),
+  setReceivingItems: (items) =>
+    set((state) => ({
+      formData: { ...state.formData, items },
+    })),
+  initializeFromPurchase: (purchaseData) => {
+    const { initializedForId } = get();
+    const version = `${purchaseData.id}:${purchaseData.updatedAt}`;
+    if (initializedForId === version) return;
 
-        // فقط باقیمانده‌ی هر قلم — سفارش منهای آنچه قبلاً دریافت شده
-        // (receivedQty) و منهای آنچه از طریق مرجوعی به‌طور دائم تسویه
-        // شده (settledQty: بازگشت وجه/پذیرش زیان/اعتبار) — به‌عنوان
-        // «مورد انتظار» این دور نمایش داده می‌شود.
-        // توجه: هر قلم می‌تواند این دور، بین چند نوع مشکل مختلف
-        // (کسری، معیوب، آسیب‌دیده و ...) تقسیم شود؛ آرایه‌ی issues
-        // برای ثبت همین تفکیک در این دور استفاده می‌شود.
-        const receivingItems = (purchaseData.items || [])
-          .map((item) => {
-            const receivedSoFar = item.receivedQty || 0;
-            const settledSoFar = item.settledQty || 0;
-            const remaining = Math.max(0, item.qty - receivedSoFar - settledSoFar);
-            return {
-              productId: item.productId,
-              productName: item.productName,
-              productCode: item.productCode,
-              expectedQty: remaining,
-              receivedQty: remaining, // پیش‌فرض: باقیمانده کامل دریافت شده
-              issues: [], // ردیف‌های تفکیک مشکل این دور؛ فقط وقتی receivedQty < expectedQty معنا دارد
-            };
-          })
-          .filter((item) => item.expectedQty > 0);
+    const receivingItems = (purchaseData.items || [])
+      .map((item) => {
+        // receivableQty از سرور می‌آید و دقیق‌ترین محاسبه‌ی «الان چقدر
+        // واقعاً قابل دریافت است» را دارد (با در نظر گرفتن مشکلات
+        // گزارش‌شده‌ی حل‌نشده و مرجوعی‌های فعال). فرمول ساده‌ی
+        // qty−received−settled فقط به‌عنوان fallback ایمنی نگه داشته
+        // شده.
+        const remaining =
+          item.receivableQty != null
+            ? item.receivableQty
+            : Math.max(
+                0,
+                item.qty - (item.receivedQty || 0) - (item.settledQty || 0),
+              );
+        return {
+          productId: item.productId,
+          productName: item.productName,
+          productCode: item.productCode,
+          expectedQty: remaining,
+          receivedQty: remaining,
+          issues: [],
+        };
+      })
+      .filter((item) => item.expectedQty > 0);
 
-        set({
-          initializedForId: purchaseData.id,
-          formData: {
-            purchaseId: purchaseData.id,
-            supplierName: purchaseData.supplierName || '',
-            invoiceNumber: purchaseData.invoiceNumber || '',
-            invoiceDate: purchaseData.invoiceDate || '',
-            status: purchaseData.status || '',
-            items: receivingItems,
-            receivingNote: '',
-            receivedDate: new Date().toISOString().slice(0, 10),
-            transporterName: '',
-            transporterNationalId: '',
-            vehiclePlate: '',
-          },
-        });
+    set({
+      initializedForId: version,
+      formData: {
+        purchaseId: purchaseData.id,
+        supplierName: purchaseData.supplierName || '',
+        invoiceNumber: purchaseData.invoiceNumber || '',
+        invoiceDate: purchaseData.invoiceDate || '',
+        status: purchaseData.status || '',
+        items: receivingItems,
+        receivingNote: '',
+        receivedDate: new Date().toISOString().slice(0, 10),
+        transporterName: '',
+        transporterNationalId: '',
+        vehiclePlate: '',
       },
-      resetForm: () =>
-        set({ formData: { ...EMPTY_RECEIVING }, initializedForId: null }),
-    }),
-    {
-      name: 'receiving-form-storage',
-      partialize: (state) => ({
-        formData: state.formData,
-        initializedForId: state.initializedForId,
-      }),
-    }
-  )
-);
+    });
+  },
+  resetForm: () =>
+    set({ formData: { ...EMPTY_RECEIVING }, initializedForId: null }),
+}));
 
 export default useReceivingFormStore;

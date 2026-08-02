@@ -1,13 +1,9 @@
 // src/features/purchases/components/forms/PurchaseReturnItemsSection.jsx
 import { useMemo } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/shared/components/ui/card";
+import { Plus, Trash2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
-import { Textarea } from "@/shared/components/ui/textarea";
+import { Button } from "@/shared/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -19,16 +15,104 @@ import { PURCHASE_RETURN_REASON_LABELS } from "../../services/returns/mockData";
 
 const REASON_OPTIONS = Object.entries(PURCHASE_RETURN_REASON_LABELS);
 
-// توجه: از این پس هر ردیف با issueId شناسایی می‌شود (نه productId)،
-// چون یک محصول می‌تواند هم‌زمان چند ردیف مستقل (مثلاً هم کسری هم
-// معیوب) داشته باشد که هر کدام باید جدا قابل ویرایش/تصمیم‌گیری باشند.
-export default function PurchaseReturnItemsSection({ items, onItemChange }) {
+function ClaimRow({ item, claim, onUpdate, onRemove }) {
+  return (
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 bg-card rounded-md border border-border p-1.5">
+      <Select value={claim.reason} onValueChange={(v) => onUpdate(item.lineId, claim.id, "reason", v)}>
+        <SelectTrigger className="h-8 text-xs sm:w-40 shrink-0">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {REASON_OPTIONS.map(([value, label]) => (
+            <SelectItem key={value} value={value}>
+              {label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Input
+        type="number"
+        min={0}
+        value={claim.qty}
+        onChange={(e) => onUpdate(item.lineId, claim.id, "qty", e.target.value)}
+        className="h-8 text-center text-xs sm:w-16 shrink-0"
+      />
+
+      <Input
+        placeholder="توضیح اختیاری..."
+        value={claim.note || ""}
+        onChange={(e) => onUpdate(item.lineId, claim.id, "note", e.target.value)}
+        className="h-8 text-xs flex-1"
+      />
+
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+        onClick={() => onRemove(item.lineId, claim.id)}
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  );
+}
+
+function ProductClaimsCard({ item, onAddClaim, onUpdateClaim, onRemoveClaim }) {
+  const claims = item.claims || [];
+  const allocated = claims.reduce((s, c) => s + (Number(c.qty) || 0), 0);
+  const remaining = Math.max(0, item.maxReturnableQty - allocated);
+
+  return (
+    <div className={`border border-border rounded-lg p-3 space-y-2.5 ${allocated > 0 ? "bg-primary/[0.03]" : ""}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="font-medium text-card-foreground text-sm truncate">{item.productName}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{item.productCode}</p>
+        </div>
+        <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+          {allocated.toLocaleString("fa-IR")} از {item.maxReturnableQty.toLocaleString("fa-IR")} ثبت‌شده
+        </span>
+      </div>
+
+      {claims.length > 0 && (
+        <div className="space-y-1.5">
+          {claims.map((claim) => (
+            <ClaimRow key={claim.id} item={item} claim={claim} onUpdate={onUpdateClaim} onRemove={onRemoveClaim} />
+          ))}
+        </div>
+      )}
+
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="w-full h-8 text-xs gap-1.5"
+        onClick={() => onAddClaim(item.lineId)}
+        disabled={remaining <= 0}
+      >
+        <Plus className="h-3.5 w-3.5" />
+        افزودن دلیل برای بخشی دیگر از این کالا
+      </Button>
+
+      {claims.length === 0 && (
+        <p className="text-xs text-muted-foreground">
+          اگر چیزی از این کالا را مرجوع نمی‌کنید، نیازی به کاری نیست.
+        </p>
+      )}
+    </div>
+  );
+}
+
+export default function PurchaseReturnItemsSection({ items, onAddClaim, onUpdateClaim, onRemoveClaim }) {
   const totals = useMemo(
     () =>
       items.reduce(
         (acc, item) => {
-          acc.qty += item.qty || 0;
-          acc.amount += (item.qty || 0) * item.unitPrice;
+          const claimed = (item.claims || []).reduce((s, c) => s + (Number(c.qty) || 0), 0);
+          acc.qty += claimed;
+          acc.amount += claimed * item.unitPrice;
           return acc;
         },
         { qty: 0, amount: 0 },
@@ -40,9 +124,7 @@ export default function PurchaseReturnItemsSection({ items, onItemChange }) {
     return (
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base font-semibold text-card-foreground">
-            اقلام مرجوعی
-          </CardTitle>
+          <CardTitle className="text-base font-semibold text-card-foreground">اقلام مرجوعی</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-center text-sm text-muted-foreground py-6 border border-dashed border-border rounded-lg">
@@ -56,214 +138,28 @@ export default function PurchaseReturnItemsSection({ items, onItemChange }) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold text-card-foreground">
-          اقلام مرجوعی
-        </CardTitle>
+        <CardTitle className="text-base font-semibold text-card-foreground">اقلام مرجوعی</CardTitle>
         <p className="text-xs text-muted-foreground">
-          اگر یک کالا هم‌زمان چند نوع مشکل داشته (مثلاً هم کسری هم معیوب)، هر
-          کدام به‌صورت یک ردیف جداگانه آمده تا بتوانید برای هرکدام تصمیم متفاوتی
-          بگیرید.
+          برای هر کالا می‌توانید تعداد را بین چند دلیل مختلف تقسیم کنید — مثلاً بخشی کسری و بخشی دیگر معیوب
+          باشد. سقف هر کالا بر اساس کل کسریِ باز و هنوز تصمیم‌گیری‌نشده‌ی همان کالاست.
         </p>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {/* نسخه دسکتاپ: جدول */}
-        <div className="hidden md:block border border-border rounded-lg overflow-hidden">
-          <table className="w-full text-sm table-fixed">
-            <thead className="bg-muted text-muted-foreground text-xs">
-              <tr>
-                <th className="text-right px-3 py-2.5 font-medium w-[30%]">
-                  کالا
-                </th>
-                <th className="text-center px-2 py-2.5 font-medium w-[15%]">
-                  تعداد مرجوعی
-                </th>
-                <th className="text-center px-2 py-2.5 font-medium w-[20%]">
-                  نوع مشکل
-                </th>
-                <th className="text-right px-2 py-2.5 font-medium w-[25%]">
-                  توضیح
-                </th>
-                <th className="text-center px-2 py-2.5 font-medium w-[10%]">
-                  جمع
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {items.map((item) => (
-                <tr
-                  key={item.issueId}
-                  className={item.qty > 0 ? "bg-primary/[0.03]" : ""}
-                >
-                  <td className="px-3 py-2">
-                    <p className="font-medium text-card-foreground text-sm truncate">
-                      {item.productName}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {item.productCode}
-                    </p>
-                  </td>
-                  <td className="px-2 py-2">
-                    <Input
-                      type="number"
-                      min={0}
-                      max={item.maxReturnableQty}
-                      value={item.qty}
-                      onChange={(e) =>
-                        onItemChange(item.issueId, "qty", e.target.value)
-                      }
-                      className="h-8 text-center text-xs w-full"
-                    />
-                    <p className="text-[10px] text-muted-foreground text-center mt-0.5">
-                      کسری گزارش‌شده:{" "}
-                      {item.maxReturnableQty.toLocaleString("fa-IR")}
-                    </p>
-                  </td>
-                  <td className="px-2 py-2">
-                    <Select
-                      value={item.reason}
-                      onValueChange={(v) =>
-                        onItemChange(item.issueId, "reason", v)
-                      }
-                      disabled={item.qty === 0}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {REASON_OPTIONS.map(([value, label]) => (
-                          <SelectItem key={value} value={value}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </td>
-                  <td className="px-2 py-2">
-                    <Textarea
-                      placeholder="توضیح اختیاری..."
-                      value={item.note || ""}
-                      onChange={(e) =>
-                        onItemChange(item.issueId, "note", e.target.value)
-                      }
-                      rows={1}
-                      disabled={item.qty === 0}
-                      className="resize-none text-xs h-8"
-                    />
-                  </td>
-                  <td className="px-2 py-2 text-center text-xs font-medium text-card-foreground truncate">
-                    {(item.qty * item.unitPrice).toLocaleString("fa-IR")}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot className="bg-muted border-t border-border">
-              <tr>
-                <td
-                  colSpan={2}
-                  className="px-3 py-2.5 text-sm font-medium text-muted-foreground text-right"
-                >
-                  جمع کل مرجوعی:
-                </td>
-                <td className="px-2 py-2.5 text-center text-sm font-bold text-card-foreground">
-                  {totals.qty.toLocaleString("fa-IR")} عدد
-                </td>
-                <td />
-                <td className="px-2 py-2.5 text-center text-sm font-bold text-card-foreground">
-                  {totals.amount.toLocaleString("fa-IR")}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+      <CardContent className="space-y-2">
+        {items.map((item) => (
+          <ProductClaimsCard
+            key={item.lineId}
+            item={item}
+            onAddClaim={onAddClaim}
+            onUpdateClaim={onUpdateClaim}
+            onRemoveClaim={onRemoveClaim}
+          />
+        ))}
 
-        {/* نسخه موبایل: کارت */}
-        <div className="md:hidden space-y-2">
-          {items.map((item) => (
-            <div
-              key={item.issueId}
-              className={`border border-border rounded-lg p-3 space-y-2.5 ${
-                item.qty > 0 ? "bg-primary/[0.03]" : "bg-card"
-              }`}
-            >
-              <div>
-                <p className="font-medium text-card-foreground text-sm truncate">
-                  {item.productName}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {item.productCode}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <label className="text-[11px] text-muted-foreground">
-                    تعداد (کسری: {item.maxReturnableQty.toLocaleString("fa-IR")}
-                    )
-                  </label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={item.maxReturnableQty}
-                    value={item.qty}
-                    onChange={(e) =>
-                      onItemChange(item.issueId, "qty", e.target.value)
-                    }
-                    className="h-8 text-center text-xs w-full"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] text-muted-foreground">
-                    نوع مشکل
-                  </label>
-                  <Select
-                    value={item.reason}
-                    onValueChange={(v) =>
-                      onItemChange(item.issueId, "reason", v)
-                    }
-                    disabled={item.qty === 0}
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {REASON_OPTIONS.map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <Textarea
-                placeholder="توضیح اختیاری..."
-                value={item.note || ""}
-                onChange={(e) =>
-                  onItemChange(item.issueId, "note", e.target.value)
-                }
-                rows={1}
-                disabled={item.qty === 0}
-                className="resize-none text-xs h-8"
-              />
-
-              <div className="flex items-center justify-between pt-2 border-t border-border/60">
-                <span className="text-xs text-muted-foreground">جمع</span>
-                <span className="text-sm font-bold text-card-foreground">
-                  {(item.qty * item.unitPrice).toLocaleString("fa-IR")}
-                </span>
-              </div>
-            </div>
-          ))}
-
-          <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2.5 border border-border">
-            <span className="text-sm font-medium text-muted-foreground">
-              جمع کل ({totals.qty.toLocaleString("fa-IR")} عدد):
-            </span>
-            <span className="text-sm font-bold text-card-foreground">
-              {totals.amount.toLocaleString("fa-IR")}
-            </span>
-          </div>
+        <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2.5 border border-border mt-2">
+          <span className="text-sm font-medium text-muted-foreground">
+            جمع کل ({totals.qty.toLocaleString("fa-IR")} عدد):
+          </span>
+          <span className="text-sm font-bold text-card-foreground">{totals.amount.toLocaleString("fa-IR")}</span>
         </div>
       </CardContent>
     </Card>

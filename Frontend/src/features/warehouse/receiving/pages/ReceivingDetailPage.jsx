@@ -54,7 +54,6 @@ function ReceivingDetailForm({ purchase }) {
     handleUpdateIssue,
     handleRemoveIssue,
     isAllComplete,
-    isAllIssuesAllocated,
     isTransporterValid,
     buildPayload,
     resetForm,
@@ -85,15 +84,12 @@ function ReceivingDetailForm({ purchase }) {
 
   const isBusy = receivingMutation.isPending;
 
+  // انباردار فقط دریافت و (در صورت وجود) نوع مشکل واقعی را ثبت
+  // می‌کند. دیگر لازم نیست کل کسری را توضیح دهد — هر بخشی که گزارش
+  // نشود خودکار «در انتظار محموله بعدی» تلقی می‌شود.
   const handleConfirmClick = () => {
     if (!isTransporterValid) {
       setShowTransporterError(true);
-      return;
-    }
-    if (!isAllIssuesAllocated) {
-      toast.error(
-        "برای هر قلمِ ناقص، نوع مشکل و تعدادش را کامل مشخص کنید (مجموع باید دقیقاً برابر کسری آن قلم باشد)",
-      );
       return;
     }
     setShowTransporterError(false);
@@ -113,7 +109,9 @@ function ReceivingDetailForm({ purchase }) {
           setShowConfirmDialog(false);
           resetForm();
           if (hasShortage) {
-            toast.success("گزارش کسری این دریافت برای واحد خرید ارسال شد");
+            toast.success(
+              "دریافت ثبت شد. اگر مشکلی گزارش شده، برای واحد خرید ارسال شد؛ باقیمانده منتظر محموله بعدی می‌ماند.",
+            );
           }
           navigate(ROUTES.WAREHOUSE_RECEIVING);
         },
@@ -182,12 +180,6 @@ function ReceivingDetailForm({ purchase }) {
             </Button>
           </div>
 
-          {!isAllIssuesAllocated && items.some((i) => i.receivedQty < i.expectedQty) && (
-            <p className="text-xs text-destructive text-center px-2">
-              برای همه‌ی قلم‌های ناقص، نوع مشکل و تعداد آن را کامل مشخص کنید.
-            </p>
-          )}
-
           {items.every((i) => !(i.receivedQty > 0)) && (
             <p className="text-xs text-muted-foreground text-center px-2">
               این خرید هنوز هیچ دریافتی ندارد. اگر اساساً نباید دریافت شود،
@@ -206,7 +198,7 @@ function ReceivingDetailForm({ purchase }) {
             <AlertDialogDescription>
               {isAllComplete
                 ? "آیا مطمئن هستید که همه اقلام به‌طور کامل دریافت شده‌اند؟"
-                : "با تأیید، وضعیت خرید به «تحویل ناقص» تغییر می‌کند و گزارش کسری (به تفکیک نوع مشکل هر قلم) برای واحد خرید ارسال می‌شود تا با تامین‌کننده هماهنگ کند."}
+                : "بخشی که به‌عنوان مشکل گزارش کرده‌اید برای واحد خرید ارسال می‌شود. بخشی که گزارش نکرده‌اید در انتظار محموله بعدی می‌ماند و این خرید همچنان در لیست دریافت باقی می‌ماند."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

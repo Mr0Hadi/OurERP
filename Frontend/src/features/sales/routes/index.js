@@ -8,3 +8,4 @@ export const SalesInvoiceNewPage = lazy(() => import('../pages/SalesInvoiceNewPa
 export const SalesProformaPage = lazy(() => import('../pages/SalesProformaPage'));
 export const SalesReturnsListPage = lazy(() => import('../pages/SalesReturnsListPage'));
 export const SalesReturnNewPage = lazy(() => import('../pages/SalesReturnNewPage'));
+export const SalesReturnDetailPage = lazy(() => import('../pages/SalesReturnDetailPage'));

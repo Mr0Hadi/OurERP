@@ -4,10 +4,12 @@ import {
   PURCHASE_STATUSES,
   PURCHASE_STATUS_LABELS,
 } from "./mockData";
-import { autoResolveReplacementReturns } from "@/features/purchases/services/returns/api-mockData";
+import {
+  autoResolveReplacementReturns,
+  computeItemReceivableQty,
+} from "@/features/purchases/services/returns/api-mockData";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
 const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
@@ -108,6 +110,12 @@ export async function fetchReceivingPurchases(params = {}) {
   return { items, total, page, totalPages };
 }
 
+/**
+ * علاوه بر برگرداندن خودِ خرید، هر قلم را با receivableQty (محاسبه‌ی
+ * دقیق و تازه‌ی «الان واقعاً چقدر قابل دریافت است»، با در نظر گرفتن
+ * مشکلات گزارش‌شده‌ی حل‌نشده و مرجوعی‌های فعال) enrich می‌کند. فرم
+ * دریافت باید فقط از همین مقدار استفاده کند، نه محاسبه‌ی محلیِ ساده.
+ */
 export async function fetchReceivingPurchaseById(id) {
   await delay(300);
 
@@ -117,7 +125,13 @@ export async function fetchReceivingPurchaseById(id) {
     throw new Error("خرید یافت نشد");
   }
 
-  return purchase;
+  return {
+    ...purchase,
+    items: purchase.items.map((item) => ({
+      ...item,
+      receivableQty: computeItemReceivableQty(item, purchase.id),
+    })),
+  };
 }
 
 export async function updateReceivingStatus(id, receivedItems) {
@@ -167,14 +181,16 @@ export async function updateReceivingStatus(id, receivedItems) {
 /**
  * ثبت نهایی یک «دور دریافت» در انبار.
  *
- * - مقدار دریافتی هر قلم تجمعی است (item.receivedQty += این‌دور).
- * - اگر قلمی در این دور کسری داشته باشد، ردیف‌های تفکیک‌شده‌ی نوع
- *   مشکل (که ممکن است شامل چند نوع مختلف مثل کسری + معیوب باشد) با
- *   شناسه‌ی یکتا به آرایه‌ی item.issues اضافه می‌شوند (تاریخچه‌ی کامل
- *   حفظ می‌شود، نه فقط آخرین وضعیت).
- * - در پایان، بررسی می‌شود که آیا این دریافت باعث تکمیل مرجوعی‌های
- *   «در انتظار ارسال جایگزین» شده یا نه (اتوماتیک، بدون نیاز به
- *   اقدام دستی واحد خرید).
+ * ۱. مقدار دریافتی هر قلم تجمعی است — همین به‌طور طبیعی از دریافت‌های
+ *    چندمرحله‌ای/چند-ماشینه پشتیبانی می‌کند.
+ * ۲. اگر قلمی در این دور همچنان کسری داشته باشد، انباردار می‌تواند
+ *    فقط بخشی از آن را به‌عنوان «مشکل واقعی» (نه صرفاً دیرکرد ارسال)
+ *    گزارش کند؛ باقیمانده‌ی گزارش‌نشده به‌طور خودکار «در انتظار
+ *    محموله بعدی» تلقی می‌شود و هیچ اثری روی وضعیت خرید نمی‌گذارد
+ *    (خرید همچنان SHIPPED و در لیست دریافت می‌ماند).
+ * ۳. وضعیت نهاییِ خرید هرگز اینجا حدس زده نمی‌شود؛ کاملاً به
+ *    autoResolveReplacementReturns سپرده می‌شود که با دیدن تصویر
+ *    کامل (این خرید + تمام مرجوعی‌های فعالش) آن را قطعی می‌کند.
  */
 export async function confirmReceiving(purchaseId, receivingData) {
   await delay(500);
@@ -194,40 +210,36 @@ export async function confirmReceiving(purchaseId, receivingData) {
 
     const prevReceived = item.receivedQty || 0;
     const newReceivedQty = prevReceived + (receivedItem.receivedQty || 0);
-    const shortageThisRound =
-      (receivedItem.expectedQty || 0) - (receivedItem.receivedQty || 0);
 
-    let newIssues = item.issues || [];
-    if (shortageThisRound > 0) {
-      const breakdown =
-        receivedItem.issues && receivedItem.issues.length > 0
-          ? receivedItem.issues
-          : [{ type: "shortage", qty: shortageThisRound, note: "" }];
-
-      const appended = breakdown
-        .filter((b) => (Number(b.qty) || 0) > 0)
-        .map((b) => ({
-          id: generateId(),
-          type: b.type || "shortage",
-          qty: Number(b.qty) || 0,
-          note: b.note || "",
-          date: receivedDate,
-        }));
-
-      newIssues = [...newIssues, ...appended];
-    }
+    // فقط مقداری که انباردار صراحتاً به‌عنوان «مشکل» علامت زده به
+    // تاریخچه‌ی issues اضافه می‌شود؛ باقیِ کسری (اگر انباردار چیزی
+    // برایش گزارش نکرده) هیچ اثری در داده نمی‌گذارد و صرفاً به این
+    // معناست که هنوز نرسیده — دور بعدی دوباره جزو «قابل دریافت»
+    // محاسبه خواهد شد.
+    const reportedIssues = (receivedItem.issues || []).filter(
+      (b) => (Number(b.qty) || 0) > 0,
+    );
+    const appended = reportedIssues.map((b) => ({
+      id: generateId(),
+      type: b.type || "shortage",
+      qty: Number(b.qty) || 0,
+      note: b.note || "",
+      date: receivedDate,
+    }));
 
     return {
       ...item,
       receivedQty: newReceivedQty,
-      issues: newIssues,
+      issues: appended.length > 0 ? [...(item.issues || []), ...appended] : item.issues,
     };
   });
 
   allPurchases[index] = {
     ...purchase,
     items: updatedItems,
-    status: receivingData.status,
+    // status اینجا عمداً دست‌نخورده باقی می‌ماند (هنوز shipped)؛ چند
+    // خط پایین‌تر با autoResolveReplacementReturns به‌طور قطعی تعیین
+    // می‌شود.
     receivedItems: receivingData.receivedItems,
     receivingNote: receivingData.receivingNote,
     receivedDate,
@@ -237,7 +249,8 @@ export async function confirmReceiving(purchaseId, receivingData) {
     updatedAt: new Date().toISOString(),
   };
 
-  autoResolveReplacementReturns(purchaseId);
+  await autoResolveReplacementReturns(purchaseId);
 
-  return allPurchases[index];
+  const finalIndex = allPurchases.findIndex((p) => p.id === purchaseId);
+  return allPurchases[finalIndex];
 }

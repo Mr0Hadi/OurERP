@@ -1,7 +1,7 @@
 // src/features/sales/pages/SaleDetailPage.jsx
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Save, X, AlertCircle, Trash2 } from "lucide-react";
+import { Save, X, AlertCircle, Trash2, Undo2 } from "lucide-react";
 
 import { Button } from "#/shared/components/ui/button";
 import {
@@ -107,7 +107,7 @@ function SaleDetailForm({ saleData }) {
       checkNumber: formData.checkNumber || null,
       transferRef: formData.transferRef || null,
       mixedPayments: formData.mixedPayments || [],
-      status: formData.status || "pending",
+      status: formData.status || "processing",
       totalAmount: computedTotal,
     };
 
@@ -197,6 +197,19 @@ function SaleDetailForm({ saleData }) {
                 انصراف
               </Button>
             </div>
+
+            {["shipped", "partially_delivered", "delivered"].includes(saleData.status) && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2"
+                onClick={() => navigate(`${ROUTES.SALES_RETURNS_NEW}?saleId=${saleData.id}`)}
+                disabled={isBusy}
+              >
+                <Undo2 className="h-4 w-4" />
+                ثبت مرجوعی از این فروش
+              </Button>
+            )}
 
             <Button
               type="button"

@@ -1,17 +1,22 @@
 // src/features/sales/services/mockData.js
 
+// «در انتظار» و «در حال پردازش» با هم یکی شدند (هر دو یعنی: سفارش ثبت
+// شده ولی هنوز چیزی از انبار ارسال نشده). «ارسال‌شده» جدید یعنی همه‌ی
+// اقلام توسط انبار ارسال شده‌اند؛ «تحویل کامل/ناقص» می‌تواند بعداً و
+// جدا از فرایند انبار (مثلاً توسط واحد فروش) به‌عنوان تأیید نهاییِ
+// دریافت کالا توسط مشتری ثبت شود.
 export const SALE_STATUSES = {
-  PENDING: "pending",
   PROCESSING: "processing",
   PARTIALLY_DELIVERED: "partially_delivered",
+  SHIPPED: "shipped",
   DELIVERED: "delivered",
   CANCELLED: "cancelled",
 };
 
 export const SALE_STATUS_LABELS = {
-  [SALE_STATUSES.PENDING]: "در انتظار",
   [SALE_STATUSES.PROCESSING]: "در حال پردازش",
-  [SALE_STATUSES.PARTIALLY_DELIVERED]: "تحویل ناقص",
+  [SALE_STATUSES.PARTIALLY_DELIVERED]: "ارسال ناقص",
+  [SALE_STATUSES.SHIPPED]: "ارسال شده",
   [SALE_STATUSES.DELIVERED]: "تحویل کامل",
   [SALE_STATUSES.CANCELLED]: "لغو شده",
 };
@@ -44,6 +49,24 @@ function randomInt(min, max) {
 
 function pickRandom(array) {
   return array[randomInt(0, array.length - 1)];
+}
+
+/**
+ * برای وضعیت‌هایی که یعنی «چیزی ارسال شده» (ارسال ناقص/ارسال‌شده/تحویل
+ * کامل)، به هر قلم یک shippedQty واقع‌بینانه می‌دهد تا فیچرهای «ارسال
+ * انبار» و «مرجوعی فروش» روی داده‌ی سازگار کار کنند.
+ */
+function applyShippedQty(items, status) {
+  return items.map((item) => {
+    if (status === SALE_STATUSES.SHIPPED || status === SALE_STATUSES.DELIVERED) {
+      return { ...item, shippedQty: item.qty };
+    }
+    if (status === SALE_STATUSES.PARTIALLY_DELIVERED) {
+      const shippedQty = Math.max(1, Math.min(item.qty - 1, randomInt(1, item.qty)));
+      return { ...item, shippedQty };
+    }
+    return { ...item, shippedQty: 0 };
+  });
 }
 
 // ─── داده‌های نمونه فروش (همه IDها عددی) ────────────────────────────────────
@@ -163,6 +186,9 @@ export const salesMock = [
     updatedAt: "2026-06-15T11:20:00.000Z",
   },
 ];
+salesMock.forEach((sale) => {
+  sale.items = applyShippedQty(sale.items, sale.status);
+});
 
 // ─── تولید فروش‌های بیشتر (همه IDها عددی) ────────────────────────────────────
 
@@ -264,7 +290,8 @@ function generateMoreSales(count = 20) {
     const status = pickRandom(Object.values(SALE_STATUSES));
     const paymentType = pickRandom(Object.values(PAYMENT_TYPES));
 
-    const { items, totalAmount } = buildRandomItems();
+    const { items: rawItems, totalAmount } = buildRandomItems();
+    const items = applyShippedQty(rawItems, status);
 
     let paidAmount = 0;
     let mixedPayments = null;

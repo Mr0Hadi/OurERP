@@ -3,52 +3,25 @@ import { devtools } from 'zustand/middleware';
 
 const useReceivingFilterStore = create(
   devtools((set) => ({
-    // فیلترهای جستجو
     globalSearch: '',
-    supplierIds: [],
-    status: '',
-    paymentType: '',
+    type: '',
+    counterpartyIds: [], // آرایه‌ای از کلیدهای ترکیبی: "customer:5" / "supplier:3"
     fromDate: '',
     toDate: '',
+    pagination: { pageIndex: 0, pageSize: 10 },
+    sorting: { id: 'createdAt', desc: true },
 
-    // صفحه‌بندی
-    pagination: {
-      pageIndex: 0,
-      pageSize: 10,
-    },
-
-    // مرتب‌سازی
-    sorting: {
-      id: 'createdAt',
-      desc: true,
-    },
-
-    // اکشن‌ها
-    setGlobalSearch: (value) =>
-      set({ globalSearch: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-    setSupplierIds: (value) =>
-      set({ supplierIds: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-    setStatus: (value) =>
-      set({ status: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-    setPaymentType: (value) =>
-      set({ paymentType: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-    setFromDate: (value) =>
-      set({ fromDate: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-    setToDate: (value) =>
-      set({ toDate: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-
+    setGlobalSearch: (value) => set({ globalSearch: value, pagination: { pageIndex: 0, pageSize: 10 } }),
+    setType: (value) => set({ type: value, pagination: { pageIndex: 0, pageSize: 10 } }),
+    setCounterpartyIds: (value) => set({ counterpartyIds: value, pagination: { pageIndex: 0, pageSize: 10 } }),
+    setFromDate: (value) => set({ fromDate: value, pagination: { pageIndex: 0, pageSize: 10 } }),
+    setToDate: (value) => set({ toDate: value, pagination: { pageIndex: 0, pageSize: 10 } }),
     setPagination: (newPagination) => set({ pagination: newPagination }),
-    setSorting: (newSorting) =>
-      set({ sorting: newSorting, pagination: { pageIndex: 0, pageSize: 10 } }),
+    setSorting: (newSorting) => set({ sorting: newSorting, pagination: { pageIndex: 0, pageSize: 10 } }),
 
     resetFilters: () =>
       set({
-        globalSearch: '',
-        supplierIds: [],
-        status: '',
-        paymentType: '',
-        fromDate: '',
-        toDate: '',
+        globalSearch: '', type: '', counterpartyIds: [], fromDate: '', toDate: '',
         pagination: { pageIndex: 0, pageSize: 10 },
         sorting: { id: 'createdAt', desc: true },
       }),

@@ -46,7 +46,7 @@ const CustomerFilters = () => {
         <div className="flex flex-col gap-2">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <Label className="whitespace-nowrap font-light text-foreground">
-              حداقل بدهی/طلب (تومان)
+              حداقل بدهی/طلب (ریال)
             </Label>
             <Input
               type="number"
@@ -61,7 +61,7 @@ const CustomerFilters = () => {
         <div className="flex flex-col gap-2">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <Label className="whitespace-nowrap font-light text-foreground">
-              حداکثر بدهی/طلب (تومان)
+              حداکثر بدهی/طلب (ریال)
             </Label>
             <Input
               type="number"

@@ -45,7 +45,8 @@ import { gregorianToPersian } from "@/shared/utils/dateUtils";
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 50];
 
 const STATUS_STYLES = {
-  trackable: "bg-amber-50 text-amber-700 border-amber-300 border-dashed hover:bg-amber-50",
+  trackable:
+    "bg-amber-50 text-amber-700 border-amber-300 border-dashed hover:bg-amber-50",
   pending: "bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-100",
   coordinating: "bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-100",
   resolved: "bg-green-100 text-green-800 border-green-300 hover:bg-green-100",
@@ -54,7 +55,10 @@ const STATUS_STYLES = {
 };
 
 const StatusBadge = ({ status }) => (
-  <Badge variant="outline" className={STATUS_STYLES[status] ?? "bg-gray-100 text-gray-800"}>
+  <Badge
+    variant="outline"
+    className={STATUS_STYLES[status] ?? "bg-gray-100 text-gray-800"}
+  >
     {PURCHASE_RETURN_STATUS_LABELS[status] ?? status}
   </Badge>
 );
@@ -87,7 +91,8 @@ const PurchaseReturnTable = ({
 
   const handleSortingChange = useCallback(
     (updater) => {
-      const next = typeof updater === "function" ? updater(sortingState) : updater;
+      const next =
+        typeof updater === "function" ? updater(sortingState) : updater;
       onSortingChange(next[0] ?? null);
     },
     [sortingState, onSortingChange],
@@ -101,9 +106,13 @@ const PurchaseReturnTable = ({
         cell: (info) => {
           const value = info.getValue();
           return value ? (
-            <span className="font-mono text-xs text-muted-foreground">{value}</span>
+            <span className="font-mono text-xs text-muted-foreground">
+              {value}
+            </span>
           ) : (
-            <span className="text-xs text-muted-foreground italic">ثبت‌نشده</span>
+            <span className="text-xs text-muted-foreground italic">
+              ثبت‌نشده
+            </span>
           );
         },
       },
@@ -111,9 +120,25 @@ const PurchaseReturnTable = ({
         accessorKey: "purchaseInvoiceNumber",
         header: "فاکتور خرید",
         enableSorting: false,
-        cell: (info) => (
-          <span className="font-mono text-xs text-muted-foreground">{info.getValue()}</span>
-        ),
+        cell: ({ row }) => {
+          const r = row.original;
+          return (
+            <div>
+              <span className="font-mono text-xs text-muted-foreground block">
+                {r.purchaseInvoiceNumber}
+              </span>
+              {/* وقتی یک خرید بیش از یک دور کسری/مرجوعی داشته باشد، این
+                  نشان کمک می‌کند کاربر بفهمد این ردیف مربوط به کدام
+                  دوره است و بقیه‌ی ردیف‌های هم‌خانواده‌اش کجا هستند. */}
+              {r.totalRoundsForPurchase > 1 && (
+                <span className="text-[10px] text-muted-foreground/80 block mt-0.5">
+                  دور {r.roundNumber.toLocaleString("fa-IR")} از{" "}
+                  {r.totalRoundsForPurchase.toLocaleString("fa-IR")}
+                </span>
+              )}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "supplierName",
@@ -126,7 +151,9 @@ const PurchaseReturnTable = ({
         cell: (info) => {
           const value = info.getValue();
           return value ? (
-            <span className="tabular-nums text-sm">{gregorianToPersian(value)}</span>
+            <span className="tabular-nums text-sm">
+              {gregorianToPersian(value)}
+            </span>
           ) : (
             <span className="text-xs text-muted-foreground">—</span>
           );
@@ -152,7 +179,9 @@ const PurchaseReturnTable = ({
         accessorKey: "totalAmount",
         header: "مبلغ (ریال)",
         cell: (info) => (
-          <span className="tabular-nums text-sm">{info.getValue().toLocaleString("fa-IR")}</span>
+          <span className="tabular-nums text-sm">
+            {info.getValue().toLocaleString("fa-IR")}
+          </span>
         ),
       },
       {
@@ -167,7 +196,9 @@ const PurchaseReturnTable = ({
                 variant="outline"
                 size="sm"
                 className="gap-1.5"
-                onClick={() => navigate(`/purchases/returns/new/${r.purchaseId}`)}
+                onClick={() =>
+                  navigate(`/purchases/returns/new/${r.purchaseId}`)
+                }
               >
                 <Undo2 className="h-3.5 w-3.5" />
                 بررسی
@@ -189,7 +220,10 @@ const PurchaseReturnTable = ({
     [navigate],
   );
 
-  const paginationState = useMemo(() => ({ pageIndex: currentPage, pageSize }), [currentPage, pageSize]);
+  const paginationState = useMemo(
+    () => ({ pageIndex: currentPage, pageSize }),
+    [currentPage, pageSize],
+  );
 
   const table = useReactTable({
     data,
@@ -238,11 +272,18 @@ const PurchaseReturnTable = ({
                                 ? "flex items-center justify-center gap-1 cursor-pointer select-none hover:text-foreground transition-colors"
                                 : "flex items-center justify-center gap-1"
                             }
-                            onClick={isSortable ? header.column.getToggleSortingHandler() : undefined}
+                            onClick={
+                              isSortable
+                                ? header.column.getToggleSortingHandler()
+                                : undefined
+                            }
                             role={isSortable ? "button" : undefined}
                             tabIndex={isSortable ? 0 : undefined}
                           >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )}
                             {isSortable && <SortIcon direction={sortDir} />}
                           </div>
                         )}
@@ -257,12 +298,17 @@ const PurchaseReturnTable = ({
                 <TableRow
                   key={row.id}
                   className={`hover:bg-muted/50 transition-colors ${
-                    row.original.isVirtual ? "bg-amber-50/30 dark:bg-amber-950/10" : ""
+                    row.original.isVirtual
+                      ? "bg-amber-50/30 dark:bg-amber-950/10"
+                      : ""
                   }`}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="text-center">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -277,7 +323,9 @@ const PurchaseReturnTable = ({
           <p className="text-sm font-light whitespace-nowrap">ردیف در صفحه</p>
           <Select
             value={pageSize.toString()}
-            onValueChange={(value) => onPaginationChange({ pageIndex: 0, pageSize: Number(value) })}
+            onValueChange={(value) =>
+              onPaginationChange({ pageIndex: 0, pageSize: Number(value) })
+            }
           >
             <SelectTrigger className="h-8 w-[70px]">
               <SelectValue />
@@ -293,19 +341,50 @@ const PurchaseReturnTable = ({
         </div>
 
         <div className="flex items-center gap-1">
-          <Button variant="outline" size="sm" onClick={() => onPaginationChange({ pageIndex: 0, pageSize })} disabled={currentPage === 0} aria-label="اولین صفحه">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPaginationChange({ pageIndex: 0, pageSize })}
+            disabled={currentPage === 0}
+            aria-label="اولین صفحه"
+          >
             <ChevronsRight className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={() => onPaginationChange({ pageIndex: currentPage - 1, pageSize })} disabled={currentPage === 0} aria-label="صفحه قبل">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              onPaginationChange({ pageIndex: currentPage - 1, pageSize })
+            }
+            disabled={currentPage === 0}
+            aria-label="صفحه قبل"
+          >
             <ChevronRight className="h-4 w-4" />
           </Button>
           <span className="text-sm px-2 whitespace-nowrap">
-            صفحه {(currentPage + 1).toLocaleString("fa-IR")} از {totalPages.toLocaleString("fa-IR")}
+            صفحه {(currentPage + 1).toLocaleString("fa-IR")} از{" "}
+            {totalPages.toLocaleString("fa-IR")}
           </span>
-          <Button variant="outline" size="sm" onClick={() => onPaginationChange({ pageIndex: currentPage + 1, pageSize })} disabled={isLastPage} aria-label="صفحه بعد">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              onPaginationChange({ pageIndex: currentPage + 1, pageSize })
+            }
+            disabled={isLastPage}
+            aria-label="صفحه بعد"
+          >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={() => onPaginationChange({ pageIndex: totalPages - 1, pageSize })} disabled={isLastPage} aria-label="آخرین صفحه">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              onPaginationChange({ pageIndex: totalPages - 1, pageSize })
+            }
+            disabled={isLastPage}
+            aria-label="آخرین صفحه"
+          >
             <ChevronsLeft className="h-4 w-4" />
           </Button>
         </div>
