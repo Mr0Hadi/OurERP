@@ -1,7 +1,23 @@
 // src/features/sales/services/api-mockData.js
 import { allSales, SALE_STATUSES } from "./mockData";
+import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * موجودی کالاهای یک فروش را به‌طور کامل برمی‌گرداند — دقیقاً معکوسِ
+ * کاهشی که در createSale انجام شده (بر اساس qty، نه shippedQty؛ چون
+ * کاهش اولیه هم بدون توجه به وضعیت ارسال انجام شده بود).
+ * این تابع فقط هنگام «لغو» فروش صدا زده می‌شود، نه هنگام حذف رکورد.
+ */
+function restoreSaleStock(sale) {
+  adjustProductsStock(
+    (sale.items || []).map((item) => ({
+      productId: item.productId,
+      delta: item.qty || 0,
+    })),
+  );
+}
 
 export async function createSale(saleData) {
   await delay(800);
@@ -21,6 +37,17 @@ export async function createSale(saleData) {
   };
 
   allSales.unshift(newSale);
+
+  // به‌محض ثبت فروش، موجودی کالا به‌اندازه‌ی مقدار فروخته‌شده کم
+  // می‌شود؛ فارغ از اینکه هنوز از انبار ارسال شده باشد یا نه — چون از
+  // همین لحظه این مقدار برای فروش‌های دیگر رزرو محسوب می‌شود.
+  adjustProductsStock(
+    (newSale.items || []).map((item) => ({
+      productId: item.productId,
+      delta: -(item.qty || 0),
+    })),
+  );
+
   return newSale;
 }
 
@@ -113,17 +140,34 @@ export async function fetchSaleById(id) {
   return sale;
 }
 
+/**
+ * علاوه بر آپدیت معمولی فروش، اگر این آپدیت وضعیت را به «لغو شده»
+ * تغییر دهد (و قبلاً لغو نشده بوده)، موجودی کالاهای این فروش به‌طور
+ * کامل به انبار برمی‌گردد. این نگهبان (چک وضعیت قبلی) از برگشت
+ * دوباره‌ی موجودی در فراخوانی‌های بعدی جلوگیری می‌کند. حذف کامل رکورد
+ * (removeSale) دیگر تأثیری روی موجودی ندارد؛ فقط همین مسیر لغو است
+ * که موجودی را برمی‌گرداند.
+ */
 export async function updateSale(id, updates) {
   await delay(600);
 
   const index = allSales.findIndex((s) => Number(s.id) === Number(id));
   if (index === -1) throw new Error("فروش یافت نشد");
 
+  const current = allSales[index];
+  const isCancellingNow =
+    updates.status === SALE_STATUSES.CANCELLED &&
+    current.status !== SALE_STATUSES.CANCELLED;
+
   allSales[index] = {
-    ...allSales[index],
+    ...current,
     ...updates,
     updatedAt: new Date().toISOString(),
   };
+
+  if (isCancellingNow) {
+    restoreSaleStock(allSales[index]);
+  }
 
   return allSales[index];
 }
@@ -132,6 +176,11 @@ export async function updateSaleStatus(id, newStatus) {
   return updateSale(id, { status: newStatus });
 }
 
+/**
+ * حذف کامل رکورد فروش. این عملیات دیگر موجودی را تغییر نمی‌دهد —
+ * برگرداندن موجودی فقط با «لغو» فروش (updateSale/updateSaleStatus با
+ * status=cancelled) انجام می‌شود، نه با حذف رکورد.
+ */
 export async function removeSale(id) {
   await delay(600);
 

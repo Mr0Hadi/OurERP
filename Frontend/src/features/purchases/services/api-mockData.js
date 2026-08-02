@@ -1,8 +1,36 @@
 // src/features/purchases/services/api-mockData.js
 
 import { allPurchases, PURCHASE_STATUSES } from "./mockData";
+import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * چقدر از یک قلم خرید تا این لحظه واقعاً وارد موجودیِ قابل‌فروش انبار
+ * شده — یعنی مجموع دریافتی‌ها منهای بخشی که به‌عنوان «مشکل» (معیوب،
+ * ارسال اشتباه، کسری و...) گزارش شده. این همان مقداری است که
+ * confirmReceiving در ماژول دریافت انبار، دور به دور، به موجودی اضافه
+ * کرده؛ پس برای برگرداندنِ درستِ موجودی هنگام «لغو» خرید لازم است.
+ */
+function computeHealthyReceivedQty(item) {
+  const receivedQty = item.receivedQty || 0;
+  const problematicQty = (item.issues || []).reduce(
+    (sum, issue) => sum + (Number(issue.qty) || 0),
+    0,
+  );
+  return Math.max(0, receivedQty - problematicQty);
+}
+
+function restorePurchaseStock(purchase) {
+  adjustProductsStock(
+    (purchase.items || [])
+      .map((item) => ({
+        productId: item.productId,
+        delta: computeHealthyReceivedQty(item),
+      }))
+      .filter((entry) => entry.delta > 0),
+  );
+}
 
 export async function createPurchase(purchaseData) {
   await delay(800);
@@ -123,6 +151,14 @@ export async function fetchPurchaseById(id) {
   return purchase;
 }
 
+/**
+ * علاوه بر آپدیت معمولی خرید، اگر این آپدیت وضعیت را به «لغو شده»
+ * تغییر دهد (و قبلاً لغو نشده بوده)، هر مقداری که تا این لحظه سالم
+ * وارد موجودی شده بود از انبار کم می‌شود — چون خرید دیگر معتبر
+ * نیست. چک وضعیت قبلی از کسر دوباره در فراخوانی‌های بعدی جلوگیری
+ * می‌کند. حذف کامل رکورد (removePurchase) دیگر تأثیری روی موجودی
+ * ندارد؛ فقط همین مسیر لغو است که موجودی را کم می‌کند.
+ */
 export async function updatePurchase(id, updates) {
   await delay(600);
 
@@ -132,11 +168,20 @@ export async function updatePurchase(id, updates) {
     throw new Error("خرید یافت نشد");
   }
 
+  const current = allPurchases[index];
+  const isCancellingNow =
+    updates.status === PURCHASE_STATUSES.CANCELLED &&
+    current.status !== PURCHASE_STATUSES.CANCELLED;
+
   allPurchases[index] = {
-    ...allPurchases[index],
+    ...current,
     ...updates,
     updatedAt: new Date().toISOString(),
   };
+
+  if (isCancellingNow) {
+    restorePurchaseStock(allPurchases[index]);
+  }
 
   return allPurchases[index];
 }
@@ -145,6 +190,12 @@ export async function updatePurchaseStatus(id, newStatus) {
   return updatePurchase(id, { status: newStatus });
 }
 
+/**
+ * حذف کامل رکورد خرید. این عملیات دیگر موجودی را تغییر نمی‌دهد —
+ * کم‌کردنِ بخش سالمِ دریافت‌شده از موجودی فقط با «لغو» خرید
+ * (updatePurchase/updatePurchaseStatus با status=cancelled) انجام
+ * می‌شود، نه با حذف رکورد.
+ */
 export async function removePurchase(id) {
   await delay(600);
 
@@ -189,12 +240,15 @@ export async function updatePurchasePayment(id, paymentData) {
  * تسویه می‌شود، این تابع settledQty (تجمعی) را افزایش می‌دهد و در
  * صورت وجود مبلغ بازگشتی، از جمع کل خرید کم می‌کند.
  *
- * توجه: این تابع دیگر وضعیت کلی خرید (status) را تغییر نمی‌دهد؛ چون
- * این فقط یک عملیات جزئی روی بخشی از یک قلم است و ممکن است هم‌زمان
- * بخش دیگری از همان خرید (یا حتی همان قلم) در حال هماهنگی برای ارسال
- * جایگزین باشد. تصمیم نهایی درباره‌ی وضعیت خرید همیشه توسط
- * recomputePurchaseStatus و با دیدن کل تصویر گرفته می‌شود؛ این تابع
- * را همیشه بلافاصله بعد از این تابع فراخوانی کنید.
+ * توجه: این تابع عمداً موجودی انبار را دست نمی‌زند — چون مقداری که
+ * تسویه می‌شود همان مقداری‌ست که در confirmReceiving به‌عنوان «مشکل»
+ * گزارش شده و از همان ابتدا هرگز وارد موجودیِ قابل‌فروش نشده بود؛ پس
+ * چیزی برای کم‌کردن از موجودی وجود ندارد.
+ *
+ * همچنین وضعیت کلی خرید (status) را تغییر نمی‌دهد؛ تصمیم نهایی درباره‌ی
+ * وضعیت خرید همیشه توسط recomputePurchaseStatus و با دیدن کل تصویر
+ * گرفته می‌شود؛ این تابع را همیشه بلافاصله بعد از این تابع فراخوانی
+ * کنید.
  */
 export async function settlePurchaseItems(
   purchaseId,

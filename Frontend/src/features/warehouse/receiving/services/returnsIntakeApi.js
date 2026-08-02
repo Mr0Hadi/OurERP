@@ -7,6 +7,7 @@ import {
   RETURN_ISSUE_TYPE_STYLES,
 } from "@/features/sales/services/returns/mockData";
 import { computeReturnStatus, getSalesReturnIndex } from "@/features/sales/services/returns/api-mockData";
+import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
 
 export { RETURN_ISSUE_TYPES, RETURN_ISSUE_TYPE_LABELS, RETURN_ISSUE_TYPE_STYLES };
 
@@ -19,6 +20,12 @@ const generateId = () => `${Date.now().toString(36)}-${Math.random().toString(36
  * دوم برسد، هر دو روی هم جمع می‌شوند. تا وقتی که همه‌ی اقلام کامل
  * نرسیده باشند، مرجوعی همچنان در صف «بررسی و دریافت» باقی می‌ماند و
  * این تابع دوباره قابل صدا زدن است.
+ *
+ * موجودی انبار فقط به‌اندازه‌ی بخش «سالم» از تعداد دریافتی همین دور
+ * افزایش می‌یابد — یعنی verifiedQtyThisRound منهای مجموع مشکلاتی که
+ * برای همین دور گزارش شده (issues). کالایی که معیوب/آسیب‌دیده/اشتباه
+ * گزارش شده، فرض بر این است که قابل فروش دوباره نیست و به موجودی
+ * قابل‌فروش برنمی‌گردد.
  */
 export async function confirmReturnInspection(returnId, inspectionData) {
   await delay(500);
@@ -32,6 +39,7 @@ export async function confirmReturnInspection(returnId, inspectionData) {
   }
 
   const receivedDate = inspectionData.receivedDate || new Date().toISOString().slice(0, 10);
+  const stockIncreases = [];
 
   const updatedItems = salesReturn.items.map((item) => {
     const inspected = inspectionData.inspectedItems.find((i) => i.lineId === item.lineId);
@@ -51,6 +59,15 @@ export async function confirmReturnInspection(returnId, inspectionData) {
       date: receivedDate,
     }));
 
+    // بخش سالمِ همین دور: هرچه از تعداد دریافت‌شده‌ی همین دور که
+    // مشکل‌دار گزارش نشده، سالم و قابل بازگشت به موجودیِ قابل‌فروش
+    // انبار است.
+    const issuesQtyThisRound = reportedIssues.reduce((s, i) => s + (Number(i.qty) || 0), 0);
+    const healthyQtyThisRound = Math.max(0, thisRoundQty - issuesQtyThisRound);
+    if (healthyQtyThisRound > 0) {
+      stockIncreases.push({ productId: item.productId, delta: healthyQtyThisRound });
+    }
+
     return {
       ...item,
       verifiedQty: newVerifiedQty,
@@ -69,6 +86,8 @@ export async function confirmReturnInspection(returnId, inspectionData) {
     vehiclePlate: inspectionData.vehiclePlate || "",
     updatedAt: new Date().toISOString(),
   };
+
+  adjustProductsStock(stockIncreases);
 
   return allSalesReturns[index];
 }

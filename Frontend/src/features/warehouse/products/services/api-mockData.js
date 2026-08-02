@@ -3,6 +3,27 @@ import { allProducts } from './mockData';
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * تغییر موجودی یک یا چند کالا به‌صورت دلتا (مثبت = افزایش، منفی =
+ * کاهش). این تنها نقطه‌ای است که مستقیماً stock کالا را تغییر می‌دهد؛
+ * ماژول‌های دیگر (فروش، دریافت خرید، دریافت مرجوعی) باید فقط از این
+ * تابع استفاده کنند تا منطق موجودی در یک‌جا متمرکز بماند.
+ *
+ * items: [{ productId, delta }]
+ */
+export function adjustProductsStock(items = []) {
+  items.forEach(({ productId, delta }) => {
+    if (!delta) return;
+    const index = allProducts.findIndex((p) => Number(p.id) === Number(productId));
+    if (index === -1) return;
+    allProducts[index] = {
+      ...allProducts[index],
+      stock: Math.max(0, (allProducts[index].stock || 0) + delta),
+      updatedAt: new Date().toISOString(),
+    };
+  });
+}
+
 export const fetchProducts = async (params) => {
   await delay(500);
 

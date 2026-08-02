@@ -6,6 +6,7 @@ import {
   RESOLUTION_LINE_STATUSES,
 } from "./mockData";
 import { allSales } from "@/features/sales/services/mockData";
+import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const generateId = () =>
@@ -312,6 +313,11 @@ export async function removeItemResolution(returnId, lineId, resolutionId) {
 /**
  * ثبت ارسال (کامل یا بخشی) چند خط تصمیمِ «ارسال کالای جایگزین» به‌طور
  * هم‌زمان برای یک مرجوعی. هر قلم مستقل تجمعی حساب می‌شود.
+ *
+ * چون این عملیات یعنی یک کالای فیزیکی تازه از انبار خارج و به مشتری
+ * تحویل داده می‌شود، موجودی هر محصول به‌اندازه‌ی مقداری که *در همین
+ * دور* ارسال می‌شود (thisRoundQty) کم می‌شود — نه مقدار تجمعی کل خط
+ * تصمیم، تا در ارسال چندمرحله‌ای موجودی دوبار کم نشود.
  */
 export async function confirmReplacementShipmentBatch(returnId, shipmentData) {
   await delay(500);
@@ -325,6 +331,8 @@ export async function confirmReplacementShipmentBatch(returnId, shipmentData) {
   if (linesToShip.length === 0) {
     throw new Error("هیچ کالایی برای ثبت ارسال انتخاب نشده است");
   }
+
+  const stockDecreases = [];
 
   const newItems = ret.items.map((item) => {
     const shipEntry = linesToShip.find((l) => l.lineId === item.lineId);
@@ -342,6 +350,8 @@ export async function confirmReplacementShipmentBatch(returnId, shipmentData) {
 
       const newShippedQty = prevShipped + thisRoundQty;
       const isFullyShipped = newShippedQty >= r.qty;
+
+      stockDecreases.push({ productId: item.productId, delta: -thisRoundQty });
 
       return {
         ...r,
@@ -372,6 +382,9 @@ export async function confirmReplacementShipmentBatch(returnId, shipmentData) {
     status: computeReturnStatus(newItems),
     updatedAt: new Date().toISOString(),
   };
+
+  adjustProductsStock(stockDecreases);
+
   return allSalesReturns[idx];
 }
 
