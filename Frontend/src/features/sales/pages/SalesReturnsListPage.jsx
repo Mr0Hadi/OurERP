@@ -53,9 +53,6 @@ export default function SalesReturnsListPage() {
             <Undo2 className="h-5 w-5 text-muted-foreground" />
             <div>
               <CardTitle>مرجوعی از فروش</CardTitle>
-              <p className="text-xs text-muted-foreground mt-1">
-                درخواست‌های برگشت کالا از مشتریان، به‌همراه نتیجه بررسی انبار و تصمیم نهایی.
-              </p>
             </div>
           </div>
           <Button className="gap-2" onClick={() => navigate(ROUTES.SALES_RETURNS_NEW)}>

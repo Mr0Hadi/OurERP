@@ -184,7 +184,7 @@ const PurchaseTable = ({
       },
       {
         accessorKey: "totalAmount",
-        header: "مبلغ پرداخت (تومان)",
+        header: "مبلغ پرداخت (ریال)",
         cell: ({ row }) => (
           <PaymentProgress
             paid={row.original.paidAmount}

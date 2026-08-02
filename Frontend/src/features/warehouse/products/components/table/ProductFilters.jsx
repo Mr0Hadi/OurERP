@@ -209,14 +209,14 @@ const ProductFilters = () => {
       {/* ردیف دوم: محدوده قیمت + دکمه ریست */}
       <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-5 gap-5 pt-3 border-t border-border">
         <PriceInput
-          label="حداقل قیمت (تومان)"
+          label="حداقل قیمت (ریال)"
           value={minPrice}
           onChange={handleMinPrice}
           placeholder="از"
         />
 
         <PriceInput
-          label="حداکثر قیمت (تومان)"
+          label="حداکثر قیمت (ریال)"
           value={maxPrice}
           onChange={handleMaxPrice}
           placeholder="تا"

@@ -32,7 +32,7 @@ const ReceivingListPage = () => {
   return (
     <div className="container mx-auto space-y-6">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex sm:flex-row flex-col sm:items-center justify-between">
           <CardTitle>دریافت کالاهای انبار</CardTitle>
           <div className="text-sm text-muted-foreground">بررسی و تأیید کالاهای خریداری‌شده و مرجوعی‌های فروش</div>
         </CardHeader>

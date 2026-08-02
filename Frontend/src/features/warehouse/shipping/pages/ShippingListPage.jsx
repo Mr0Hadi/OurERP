@@ -29,7 +29,7 @@ const ShippingListPage = () => {
   return (
     <div className="container mx-auto space-y-6">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex sm:flex-row flex-col sm:items-center justify-between">
           <CardTitle>ارسال کالاهای انبار</CardTitle>
           <div className="text-sm text-muted-foreground">
             آماده‌سازی و ارسال سفارش‌های مشتریان و کالاهای جایگزین مرجوعی

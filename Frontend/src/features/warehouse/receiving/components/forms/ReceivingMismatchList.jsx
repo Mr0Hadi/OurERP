@@ -51,9 +51,7 @@ export default function ReceivingMismatchList({ items }) {
                 </span>
               </div>
 
-              {issues.length === 0 ? (
-                <p className="text-xs text-destructive">هنوز نوع مشکل تعیین نشده</p>
-              ) : (
+              {issues.length !== 0 && (
                 <ul className="space-y-1">
                   {issues.map((issue) => {
                     const style =

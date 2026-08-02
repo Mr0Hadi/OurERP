@@ -49,7 +49,7 @@ export default function ProductPricingForm({ register }) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="purchasePrice">قیمت خرید (تومان)</Label>
+          <Label htmlFor="purchasePrice">قیمت خرید (ریال)</Label>
           <Input
             type="number"
             id="purchasePrice"
@@ -59,7 +59,7 @@ export default function ProductPricingForm({ register }) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="sellPrice1">قیمت فروش اول (تومان)</Label>
+          <Label htmlFor="sellPrice1">قیمت فروش اول (ریال)</Label>
           <Input
             type="number"
             id="sellPrice1"
