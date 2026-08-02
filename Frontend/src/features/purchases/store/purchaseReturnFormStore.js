@@ -23,6 +23,9 @@ function mostFrequent(values) {
   return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
 }
 
+const generateId = () =>
+  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+
 export const usePurchaseReturnFormStore = create((set, get) => ({
   formData: { ...EMPTY_RETURN },
   initializedForId: null,
@@ -33,31 +36,52 @@ export const usePurchaseReturnFormStore = create((set, get) => ({
     set((state) => ({ formData: { ...state.formData, items } })),
 
   /**
-   * فرم ثبت مرجوعی را دقیقاً از روی گزارش کسریِ ثبت‌شده توسط انباردار
-   * پر می‌کند. کلید نسخه شامل purchaseUpdatedAt است، نه فقط
-   * purchaseId — چون در دور دوم (یا بیشتر) مرجوعی‌کردن همان خرید،
-   * purchaseId عوض نمی‌شود ولی updatedAt چرا؛ بدون این، اگر یک
-   * اسنپ‌شات قدیمی زودتر از دیتای تازه رندر شود، فرم دیگر با دیتای
-   * تازه بازسازی نمی‌شد (همان چیزی که باعث می‌شد در اولین بازدید،
-   * اطلاعات نادرست نمایش داده شود).
+   * فرم ثبت مرجوعی را از روی گزارش کسریِ انبار پر می‌کند — اما برخلاف
+   * قبل، ردیف‌ها را بر اساس productId گروه‌بندی می‌کند نه issueId. هر
+   * کارت محصول یک «سقف قابل مرجوع» (مجموع همه‌ی مشکلات باز آن کالا)
+   * دارد و می‌تواند بین چند «ادعا/claim» با دلیل و تعداد مستقل تقسیم
+   * شود — دقیقاً مثل مدل مرجوعی فروش. sourceIssues برای هر محصول نگه
+   * داشته می‌شود تا هنگام ساخت payload بتوانیم تعداد هر ادعا را به
+   * مشکل(های) اصلی گزارش‌شده‌ی انبار وصل کنیم.
    */
   initializeForReport: (report) => {
     const version = `report:${report.purchaseId}:${report.purchaseUpdatedAt}`;
     if (get().initializedForId === version) return;
 
-    const items = report.items.map((entry) => ({
-      issueId: entry.issueId,
-      productId: entry.productId,
-      productCode: entry.productCode,
-      productName: entry.productName,
-      unit: entry.unit,
-      unitPrice: entry.unitPrice,
-      orderedQty: entry.orderedQty,
-      maxReturnableQty: entry.openShortageQty,
-      qty: entry.openShortageQty,
-      reason: entry.issueType,
-      note: entry.issueNote || "",
-    }));
+    const productMap = new Map();
+    report.items.forEach((entry) => {
+      const key = entry.productId;
+      if (!productMap.has(key)) {
+        productMap.set(key, {
+          lineId: key,
+          productId: entry.productId,
+          productCode: entry.productCode,
+          productName: entry.productName,
+          unit: entry.unit,
+          unitPrice: entry.unitPrice,
+          maxReturnableQty: 0,
+          sourceIssues: [],
+          claims: [],
+        });
+      }
+      const line = productMap.get(key);
+      line.maxReturnableQty += entry.openShortageQty;
+      line.sourceIssues.push({
+        issueId: entry.issueId,
+        qty: entry.openShortageQty,
+        reason: entry.issueType,
+        note: entry.issueNote || "",
+      });
+      // پیش‌فرض: به‌ازای هر مشکل گزارش‌شده توسط انبار، یک ادعا با همان
+      // دلیل و تعداد کامل ساخته می‌شود؛ کاربر آزاد است این ادعاها را
+      // ویرایش، حذف یا دوباره بین دلایل مختلف تقسیم کند.
+      line.claims.push({
+        id: generateId(),
+        reason: entry.issueType,
+        qty: entry.openShortageQty,
+        note: entry.issueNote || "",
+      });
+    });
 
     set({
       initializedForId: version,
@@ -68,7 +92,7 @@ export const usePurchaseReturnFormStore = create((set, get) => ({
         supplierId: report.supplierId,
         supplierName: report.supplierName,
         reason: mostFrequent(report.items.map((i) => i.issueType)),
-        items,
+        items: [...productMap.values()],
       },
     });
   },

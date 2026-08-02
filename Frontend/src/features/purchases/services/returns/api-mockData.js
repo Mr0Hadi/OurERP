@@ -36,13 +36,20 @@ function getReturnIndex(returnId) {
   return allPurchaseReturns.findIndex((r) => Number(r.id) === Number(returnId));
 }
 
+/**
+ * هر ردیف مرجوعی که از تقسیم یک کالا بین چند دلیل ساخته شده، یک
+ * issueId تازه دارد ولی پیوند خودش با مشکل واقعیِ گزارش‌شده‌ی انبار را
+ * در sourceIssueId نگه می‌دارد. برای ردیف‌های قدیمی (که این فیلد را
+ * ندارند) issueId خودش همان مشکل اصلی است.
+ */
 function getReservedQtyForIssue(issueId, excludeReturnId = null) {
   let sum = 0;
   allPurchaseReturns.forEach((r) => {
     if (excludeReturnId && r.id === excludeReturnId) return;
     if (!ACTIVE_RETURN_STATUSES.has(r.status)) return;
     r.items.forEach((item) => {
-      if (item.issueId === issueId) sum += item.qty;
+      const linkedIssueId = item.sourceIssueId ?? item.issueId;
+      if (linkedIssueId === issueId) sum += item.qty;
     });
   });
   return sum;
@@ -84,7 +91,8 @@ function getOpenIssueQtyForItem(item, purchaseId) {
       if (ret.purchaseId !== purchaseId) return;
       if (TERMINAL_RETURN_STATUSES.has(ret.status)) return;
       ret.items.forEach((retItem) => {
-        if (retItem.issueId !== issue.id) return;
+        const linkedIssueId = retItem.sourceIssueId ?? retItem.issueId;
+        if (linkedIssueId !== issue.id) return;
         const decided = (retItem.resolutions || []).reduce(
           (s, r) => s + (Number(r.qty) || 0),
           0,
