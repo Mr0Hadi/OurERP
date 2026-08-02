@@ -42,3 +42,6 @@ structure.txt
 /Backend-Net/Domain/bin/Debug/net10.0
 /Backend-Net/Infrastructure/bin/Debug/net10.0
 .\Backend\wms-server.exe
+/.vs/OurERP.slnx/FileContentIndex
+*.sqlite
+/.vs
