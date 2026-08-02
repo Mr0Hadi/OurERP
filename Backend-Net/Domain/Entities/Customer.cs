@@ -18,6 +18,7 @@ namespace Domain.Entities
         public string? ImageUrl { get; set; }
         public decimal? longitude { get; set; }
         public decimal? latitude { get; set; }
+        public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }

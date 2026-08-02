@@ -17,6 +17,7 @@ namespace Domain.Entities
         public List<PurchaseItem> Items { get; set; }
         public Supplier Supplier { get; set; }
         public int SupplierId { get; set; }
+        public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }

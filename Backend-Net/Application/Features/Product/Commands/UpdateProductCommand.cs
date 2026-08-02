@@ -25,8 +25,6 @@ namespace Application.Features.Product.Commands
         public int Stock { get; set; }
         public int LowStockThreshold { get; set; }
         public string? ImageUrl { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
         public int ProductCategoryId { get; set; }
 
     }

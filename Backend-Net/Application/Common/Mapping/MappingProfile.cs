@@ -21,25 +21,34 @@ namespace Application.Common.Mapping
 	{
 		public MappingProfile()
 		{
-			CreateMap<CreateSaleCommand, Sale>();
+			CreateMap<CreateSaleCommand, Sale>()
+				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
             CreateMap<Purchase, CreatePurchaseCommand>();
 
-			CreateMap<CreateProductCommand, Product>();
+			CreateMap<CreatePurchaseCommand, Purchase>()
+				.ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.Now))
+				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
+
+			CreateMap<CreateProductCommand, Product>()
+				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
 			CreateMap<Product, ProductDto>();
 
-			CreateMap<CreateProductCategoryCommand, ProductCategory>();
+			CreateMap<CreateProductCategoryCommand, ProductCategory>()
+				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
 			CreateMap<ProductCategory, ProductCategoryDto>();
 
 			CreateMap<CreateSupplierCommand, Supplier>()
-				.ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.Now));
+				.ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.Now))
+				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
 			CreateMap<Supplier, SupplierDto>();
 
 			CreateMap<CreateCustomerCommand, Customer>()
-				.ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.Now));
+				.ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.Now))
+				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
 			CreateMap<Customer, CustomerDto>();
 

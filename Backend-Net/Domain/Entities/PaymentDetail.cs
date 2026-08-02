@@ -9,6 +9,7 @@ namespace Domain.Entities
         public Purchase Purchase { get; set; }
         public PaymentTypeEnum Type { get; set; }
         public decimal Amount { get; set; }
+        public bool IsActive { get; set; }
         public string? checkNumber { get; set; }
         public string? transferRef { get; set; }
     }

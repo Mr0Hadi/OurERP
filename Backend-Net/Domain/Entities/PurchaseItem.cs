@@ -9,6 +9,7 @@ namespace Domain.Entities
         public int Quantity { get; set; }
         public UInt64 UnitPrice { get; set; }
         public int Discount { get; set; }
+        public bool IsActive { get; set; }
         public Product Product { get; set; }
         public int PurchaseId { get; set; }
         public Purchase Purchase { get; set; }

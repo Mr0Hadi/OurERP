@@ -41,5 +41,11 @@ namespace WMS.Controllers
         {
             return await _mediator.Send(request);
         }
+
+        [HttpDelete("DeleteCustomer")]
+        public async Task<ActionResult<ResponseDto>> DeleteCustomer([FromQuery] DeleteCustomerCommand request)
+        {
+            return await _mediator.Send(request);
+        }
     }
 }

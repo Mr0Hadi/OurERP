@@ -14,6 +14,7 @@ namespace Domain.Entities
         public UInt64 TotalAmount { get; set; }
         public string? Description { get; set; }
         public List<SaleItem> Items { get; set; }
+        public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public Customer Customer { get; set; }
