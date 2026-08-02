@@ -19,7 +19,6 @@ const BARCODE_FORMATS = [
 
 const hints = new Map();
 hints.set(DecodeHintType.POSSIBLE_FORMATS, BARCODE_FORMATS);
-hints.set(DecodeHintType.TRY_HARDER, true);
 
 export default function CameraScanner({ onDetected }) {
   const [devices, setDevices] = useState([]);
@@ -36,9 +35,11 @@ export default function CameraScanner({ onDetected }) {
         if (!list.length) return;
         setDevices(list);
         const backCameraIndex = list.findIndex((d) =>
-          /back|rear|environment/i.test(d.label)
+          /back|rear|environment/i.test(d.label),
         );
-        setDeviceIndex(backCameraIndex !== -1 ? backCameraIndex : list.length - 1);
+        setDeviceIndex(
+          backCameraIndex !== -1 ? backCameraIndex : list.length - 1,
+        );
       })
       .catch(() => {});
   }, []);
@@ -50,8 +51,20 @@ export default function CameraScanner({ onDetected }) {
     const reader = new BrowserMultiFormatReader(hints);
     const deviceId = devices[deviceIndex]?.deviceId;
 
+    const constraints = {
+      video: {
+        ...(deviceId
+          ? { deviceId: { exact: deviceId } }
+          : { facingMode: { ideal: "environment" } }),
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        // فوکوس پیوسته: مهم‌ترین تنظیم برای خوندن سریع‌تر بارکد از نزدیک
+        advanced: [{ focusMode: "continuous" }],
+      },
+    };
+
     reader
-      .decodeFromVideoDevice(deviceId, videoRef.current, (result, error) => {
+      .decodeFromConstraints(constraints, videoRef.current, (result, error) => {
         if (result) {
           onDetected(result.getText());
           toast.success("بارکد با موفقیت اسکن شد");
@@ -110,17 +123,38 @@ export default function CameraScanner({ onDetected }) {
 
   return (
     <div className="relative w-full aspect-video bg-black rounded-md overflow-hidden">
-      <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
+      <video
+        ref={videoRef}
+        className="w-full h-full object-cover"
+        muted
+        playsInline
+      />
 
       <div className="absolute inset-x-0 bottom-2 flex justify-center gap-2">
         {devices.length > 1 && (
-          <Button type="button" variant="secondary" size="icon" onClick={toggleCamera} title="تعویض دوربین">
+          <Button
+            type="button"
+            variant="secondary"
+            size="icon"
+            onClick={toggleCamera}
+            title="تعویض دوربین"
+          >
             <SwitchCamera className="w-4 h-4" />
           </Button>
         )}
         {torchSupported && (
-          <Button type="button" variant="secondary" size="icon" onClick={toggleTorch} title="فلاش">
-            {torchOn ? <ZapOff className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
+          <Button
+            type="button"
+            variant="secondary"
+            size="icon"
+            onClick={toggleTorch}
+            title="فلاش"
+          >
+            {torchOn ? (
+              <ZapOff className="w-4 h-4" />
+            ) : (
+              <Zap className="w-4 h-4" />
+            )}
           </Button>
         )}
       </div>
