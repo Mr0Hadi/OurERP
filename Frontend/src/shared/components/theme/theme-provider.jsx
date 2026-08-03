@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react"
+import { syncThemeColor } from "@/shared/lib/syncThemeColor"
 
 const initialState = {
   theme: "system",
@@ -38,10 +39,12 @@ export function ThemeProvider({
         ? "dark"
         : "light"
       root.classList.add(systemTheme)
+      syncThemeColor()
       return
     }
 
     root.classList.add(theme)
+    syncThemeColor()
   }, [theme])
 
   const value = {
