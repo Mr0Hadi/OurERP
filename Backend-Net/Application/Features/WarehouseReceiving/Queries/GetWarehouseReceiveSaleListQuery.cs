@@ -8,44 +8,45 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.WarehouseReceiving.Queries
 {
-    public class GetWarehouseReceivePurchaseListQuery : IRequest<ResponseDto>
+    public class GetWarehouseReceiveSaleListQuery : IRequest<ResponseDto>
     {
         public int Page { get; set; } = 1;
         public int Take { get; set; } = 10;
         public string? Search { get; set; }
-        public int? SupplierId { get; set; }
+        public int? CustomerId { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
     }
 
-    public class GetWarehouseReceivePurchaseListQueryHandler : IRequestHandler<GetWarehouseReceivePurchaseListQuery, ResponseDto>
+    public class GetWarehouseReceiveSaleListQueryHandler : IRequestHandler<GetWarehouseReceiveSaleListQuery, ResponseDto>
     {
         private readonly IWMSDbContext _context;
 
-        public GetWarehouseReceivePurchaseListQueryHandler(IWMSDbContext context)
+        public GetWarehouseReceiveSaleListQueryHandler(IWMSDbContext context)
         {
             _context = context;
         }
 
-        public async Task<ResponseDto> Handle(GetWarehouseReceivePurchaseListQuery request, CancellationToken cancellationToken)
+        public async Task<ResponseDto> Handle(GetWarehouseReceiveSaleListQuery request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
 
-            var query = _context.Purchases
-                .Include(x => x.Supplier)
-                .Where(x => x.IsActive && x.Status == Domain.Enums.PurchaseStatusEnum.SHIPPED)
+            var query = _context.Sales
+                .Include(x => x.Customer)
+                .Where(x => x.IsActive && x.Status == Domain.Enums.SalesStatusEnum.CANCELLED)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(request.Search))
             {
                 var search = request.Search.Trim();
                 query = query.Where(x => x.InvoiceNumber.Contains(search) ||
-                                         x.Supplier.CompanyName.Contains(search));
+                                         x.Customer.FirstName.Contains(search) ||
+                                         x.Customer.LastName.Contains(search));
             }
 
-            if (request.SupplierId.HasValue)
+            if (request.CustomerId.HasValue)
             {
-                query = query.Where(x => x.SupplierId == request.SupplierId.Value);
+                query = query.Where(x => x.CustomerId == request.CustomerId.Value);
             }
 
             if (request.FromDate.HasValue)
@@ -60,13 +61,13 @@ namespace Application.Features.WarehouseReceiving.Queries
 
             var data = await query
                 .OrderByDescending(x => x.InvoiceDate)
-                .Select(p => new ReceivePurchaseListDto
+                .Select(p => new ReceiveSaleReturnListDto
                 {
                     Id = p.Id,
                     InvoiceNumber = p.InvoiceNumber,
                     InvoiceDate = p.InvoiceDate,
-                    SupplierId = p.SupplierId,
-                    SupplierName = p.Supplier.CompanyName
+                    CustomerId = p.CustomerId,
+                    CustomerName = p.Customer.FirstName + " " + p.Customer.LastName,
                 }).ToPaged(request.Page, request.Take, out int pageCount, out int totalCount).ToListAsync(cancellationToken);
 
             res.Data = new
