@@ -4,10 +4,8 @@ namespace Domain.Enums
     {
         PENDING,
         SHIPPED,
-        RECEIVING,
-        DISCREPANCY_REPORTED,
-        RETURN_IN_PROGRESS,
+        RETURNED,
+        RECEIVED,
         CANCELLED,
-        COMPLETED,
     }
 }

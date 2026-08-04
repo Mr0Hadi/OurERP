@@ -4,6 +4,7 @@ using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(WMSDbContext))]
-    partial class WMSDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260802220706_purchase-return-model")]
+    partial class purchasereturnmodel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -85,7 +88,7 @@ namespace Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Customers", (string)null);
+                    b.ToTable("Customers");
                 });
 
             modelBuilder.Entity("Domain.Entities.Department", b =>
@@ -110,7 +113,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("HeadId");
 
-                    b.ToTable("Departments", (string)null);
+                    b.ToTable("Departments");
                 });
 
             modelBuilder.Entity("Domain.Entities.PaymentDetail", b =>
@@ -149,7 +152,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("SaleId");
 
-                    b.ToTable("PaymentDetail", (string)null);
+                    b.ToTable("PaymentDetail");
                 });
 
             modelBuilder.Entity("Domain.Entities.Product", b =>
@@ -216,7 +219,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("ProductCategoryId");
 
-                    b.ToTable("Products", (string)null);
+                    b.ToTable("Products");
                 });
 
             modelBuilder.Entity("Domain.Entities.ProductCategory", b =>
@@ -236,7 +239,7 @@ namespace Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductCategories", (string)null);
+                    b.ToTable("ProductCategories");
                 });
 
             modelBuilder.Entity("Domain.Entities.Purchase", b =>
@@ -288,7 +291,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("SupplierId");
 
-                    b.ToTable("Purchases", (string)null);
+                    b.ToTable("Purchases");
                 });
 
             modelBuilder.Entity("Domain.Entities.PurchaseItem", b =>
@@ -326,7 +329,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("PurchaseId");
 
-                    b.ToTable("PurchaseItems", (string)null);
+                    b.ToTable("PurchaseItems");
                 });
 
             modelBuilder.Entity("Domain.Entities.PurchaseReturn", b =>
@@ -366,7 +369,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("PurchaseId");
 
-                    b.ToTable("PurchaseReturns", (string)null);
+                    b.ToTable("PurchaseReturns");
                 });
 
             modelBuilder.Entity("Domain.Entities.PurchaseReturnDecision", b =>
@@ -402,7 +405,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("PurchaseReturnItemId");
 
-                    b.ToTable("PurchaseReturnDecision", (string)null);
+                    b.ToTable("PurchaseReturnDecision");
                 });
 
             modelBuilder.Entity("Domain.Entities.PurchaseReturnItem", b =>
@@ -440,7 +443,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("PurchaseReturnId");
 
-                    b.ToTable("PurchaseReturnItem", (string)null);
+                    b.ToTable("PurchaseReturnItem");
                 });
 
             modelBuilder.Entity("Domain.Entities.Role", b =>
@@ -460,7 +463,7 @@ namespace Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Roles", (string)null);
+                    b.ToTable("Roles");
                 });
 
             modelBuilder.Entity("Domain.Entities.Sale", b =>
@@ -509,7 +512,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("CustomerId");
 
-                    b.ToTable("Sales", (string)null);
+                    b.ToTable("Sales");
                 });
 
             modelBuilder.Entity("Domain.Entities.SaleItem", b =>
@@ -544,7 +547,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("SaleId");
 
-                    b.ToTable("SaleItems", (string)null);
+                    b.ToTable("SaleItems");
                 });
 
             modelBuilder.Entity("Domain.Entities.Supplier", b =>
@@ -608,7 +611,7 @@ namespace Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Suppliers", (string)null);
+                    b.ToTable("Suppliers");
                 });
 
             modelBuilder.Entity("Domain.Entities.Team", b =>
@@ -638,7 +641,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("HeadId");
 
-                    b.ToTable("Teams", (string)null);
+                    b.ToTable("Teams");
                 });
 
             modelBuilder.Entity("Domain.Entities.User", b =>
@@ -701,7 +704,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("TeamId");
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("Domain.Entities.Department", b =>

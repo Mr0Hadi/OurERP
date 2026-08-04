@@ -25,6 +25,11 @@ namespace Common.Extensions
             return stringBuilder.ToString();
         }
 
+        public static string GenerateReturnNumber(int seq)
+        {
+            return $"RET-{DateTime.Now.Year}-{seq:D4}";
+        }
+
         public static string GenerateRandomNumber(int digits)
         {
             Random random = new Random();

@@ -47,10 +47,11 @@ namespace Application.Features.Purchase.Commands
         private readonly IMapper _mapper;
         private readonly IUnitOfWork _unitOfWork;
 
-        public CreatePurchaseCommandHandler(IPurchaseRepository purchaseRepository, IMapper mapper)
+        public CreatePurchaseCommandHandler(IPurchaseRepository purchaseRepository, IMapper mapper, IUnitOfWork unitOfWork)
         {
             _purchaseRepository = purchaseRepository;
             _mapper = mapper;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<ResponseDto> Handle(CreatePurchaseCommand request, CancellationToken cancellationToken)

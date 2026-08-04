@@ -1,5 +1,4 @@
 using Application.Common.Dtos;
-using Application.Features.Purchase.Queries;
 using Application.Features.PurchaseReceiving.Commands;
 using Application.Features.PurchaseReceiving.Queries;
 using MediatR;
@@ -19,38 +18,20 @@ namespace WMS.Controllers
             _mediator = mediator;
         }
 
-        [HttpGet("GetReceiveList")]
-        public async Task<ActionResult<ResponseDto>> GetReceiveList([FromQuery] GetReceivePurchaseListQuery request)
+        [HttpGet("GetReceivePurchaseList")]
+        public async Task<ActionResult<ResponseDto>> GetReceivePurchaseList([FromQuery] GetReceivePurchaseListQuery request)
         {
             return await _mediator.Send(request);
         }
 
-        [HttpGet("GetDetail")]
-        public async Task<ActionResult<ResponseDto>> GetDetail([FromQuery] GetPurchaseReceiptDetailQuery request)
+        [HttpGet("GetReceivePurchaseDetail")]
+        public async Task<ActionResult<ResponseDto>> GetReceivePurchaseDetail([FromQuery] GetReceivePurchaseDetailQuery request)
         {
             return await _mediator.Send(request);
         }
 
-        [HttpPost("CreateReceipt")]
-        public async Task<ActionResult<ResponseDto>> CreateReceipt([FromBody] CreatePurchaseReceiptCommand request)
-        {
-            return await _mediator.Send(request);
-        }
-
-        [HttpPost("RegisterDiscrepancies")]
-        public async Task<ActionResult<ResponseDto>> RegisterDiscrepancies([FromBody] RegisterDiscrepanciesCommand request)
-        {
-            return await _mediator.Send(request);
-        }
-
-        [HttpPost("DecideDiscrepancies")]
-        public async Task<ActionResult<ResponseDto>> DecideDiscrepancies([FromBody] DecideDiscrepanciesCommand request)
-        {
-            return await _mediator.Send(request);
-        }
-
-        [HttpDelete("RemoveDiscrepancy")]
-        public async Task<ActionResult<ResponseDto>> RemoveDiscrepancy([FromBody] RemoveReceiptDiscrepancyCommand request)
+        [HttpPost("ConfirmReceiving")]
+        public async Task<ActionResult<ResponseDto>> ConfirmReceiving([FromBody] ConfirmReceivingCommand request)
         {
             return await _mediator.Send(request);
         }

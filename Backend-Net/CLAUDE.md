@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 Guidance for coding agents working in the WMS (Warehouse Management System) .NET backend.
-This project was scaffolded from the smshub2 reference project (`/home/alisinai/RiderProjects/smshub2`) and follows its conventions closely, with the entity naming made project-specific.
+This project was scaffolded from the smshub2 reference project (`E:\Programming\smshub2`) and follows its conventions closely, with the entity naming made project-specific.
 
 ## 1. Project overview
 

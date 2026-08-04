@@ -30,6 +30,7 @@ namespace Application.Features.Purchase.Commands
             var purchase = await _purchaseRepository.GetByIdAsync(request.Id) ?? throw new NotFoundCustomException("خرید مورد نظر یافت نشد.");
 
             purchase.IsActive = false;
+            purchase.UpdatedAt = DateTime.UtcNow;
 
             _purchaseRepository.Update(purchase);
             await _unitOfWork.SaveChangesAsync();
