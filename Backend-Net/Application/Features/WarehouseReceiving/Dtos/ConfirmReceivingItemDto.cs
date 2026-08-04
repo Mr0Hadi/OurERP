@@ -1,6 +1,6 @@
 using Domain.Enums;
 
-namespace Application.Features.PurchaseReceiving.Dtos
+namespace Application.Features.WarehouseReceiving.Dtos
 {
     public class ReceivingIssueDto
     {

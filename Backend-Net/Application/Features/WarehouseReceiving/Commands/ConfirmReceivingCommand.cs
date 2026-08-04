@@ -3,15 +3,15 @@ using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
-using Application.Features.PurchaseReceiving.Dtos;
 using Application.Features.PurchaseReturn;
+using Application.Features.WarehouseReceiving.Dtos;
 using Common.Exceptions;
 using Common.Extensions;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace Application.Features.PurchaseReceiving.Commands
+namespace Application.Features.WarehouseReceiving.Commands
 {
     public class ConfirmReceivingCommand : IRequest<ResponseDto>
     {
@@ -25,7 +25,7 @@ namespace Application.Features.PurchaseReceiving.Commands
     {
         public ConfirmReceivingCommandValidator()
         {
-            RuleFor(x => x.PurchaseId).GreaterThan(0).WithMessage(Validation.RequiredMessage("خرید"));
+            RuleFor(x => x.PurchaseId).NotEmpty().WithMessage(Validation.RequiredMessage("خرید"));
             RuleFor(x => x.ReceivedItems).NotNull().WithMessage("اقلام دریافت شده را وارد کنید.");
             RuleForEach(x => x.ReceivedItems).ChildRules(item =>
             {

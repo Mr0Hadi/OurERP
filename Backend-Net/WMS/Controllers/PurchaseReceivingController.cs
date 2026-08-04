@@ -1,6 +1,6 @@
 using Application.Common.Dtos;
-using Application.Features.PurchaseReceiving.Commands;
-using Application.Features.PurchaseReceiving.Queries;
+using Application.Features.WarehouseReceiving.Commands;
+using Application.Features.WarehouseReceiving.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,13 +19,13 @@ namespace WMS.Controllers
         }
 
         [HttpGet("GetReceivePurchaseList")]
-        public async Task<ActionResult<ResponseDto>> GetReceivePurchaseList([FromQuery] GetReceivePurchaseListQuery request)
+        public async Task<ActionResult<ResponseDto>> GetReceivePurchaseList([FromQuery] GetWarehouseReceivePurchaseListQuery request)
         {
             return await _mediator.Send(request);
         }
 
         [HttpGet("GetReceivePurchaseDetail")]
-        public async Task<ActionResult<ResponseDto>> GetReceivePurchaseDetail([FromQuery] GetReceivePurchaseDetailQuery request)
+        public async Task<ActionResult<ResponseDto>> GetReceivePurchaseDetail([FromQuery] GetWarehouseReceiveDetailQuery request)
         {
             return await _mediator.Send(request);
         }
