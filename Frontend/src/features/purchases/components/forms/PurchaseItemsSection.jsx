@@ -139,7 +139,7 @@ export default function PurchaseItemsSection({
           </div>
 
           {/* لیست محصولات */}
-          <div className="max-h-64 overflow-y-auto custom-scroll border border-border rounded-lg p-2 space-y-1 bg-muted/30">
+          <div className="lg:max-h-64 max-h-100 overflow-y-auto custom-scroll border border-border rounded-lg p-2 space-y-1 bg-muted/30">
             {filteredProducts.length === 0 ? (
               <p className="text-center text-sm text-muted-foreground py-6">
                 کالایی یافت نشد
