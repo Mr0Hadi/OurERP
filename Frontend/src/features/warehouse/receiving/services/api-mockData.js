@@ -8,6 +8,7 @@ import {
   autoResolveReplacementReturns,
   computeItemReceivableQty,
 } from "@/features/purchases/services/returns/api-mockData";
+import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const generateId = () =>
@@ -191,6 +192,11 @@ export async function updateReceivingStatus(id, receivedItems) {
  * ۳. وضعیت نهاییِ خرید هرگز اینجا حدس زده نمی‌شود؛ کاملاً به
  *    autoResolveReplacementReturns سپرده می‌شود که با دیدن تصویر
  *    کامل (این خرید + تمام مرجوعی‌های فعالش) آن را قطعی می‌کند.
+ * ۴. موجودی انبار فقط به‌اندازه‌ی بخش «سالمِ» همین دور افزایش
+ *    می‌یابد — یعنی receivedQty این دور منهای مجموع مشکلاتی که برای
+ *    همین دور گزارش شده (issues). کالای معیوب/آسیب‌دیده/ارسال‌اشتباه
+ *    وارد موجودیِ قابل‌فروش نمی‌شود؛ دقیقاً مثل رفتار «بررسی و دریافت
+ *    مرجوعی فروش».
  */
 export async function confirmReceiving(purchaseId, receivingData) {
   await delay(500);
@@ -202,6 +208,8 @@ export async function confirmReceiving(purchaseId, receivingData) {
   const receivedDate =
     receivingData.receivedDate || new Date().toISOString().slice(0, 10);
 
+  const stockIncreases = [];
+
   const updatedItems = purchase.items.map((item) => {
     const receivedItem = receivingData.receivedItems.find(
       (ri) => ri.productId === item.productId,
@@ -209,7 +217,8 @@ export async function confirmReceiving(purchaseId, receivingData) {
     if (!receivedItem) return item;
 
     const prevReceived = item.receivedQty || 0;
-    const newReceivedQty = prevReceived + (receivedItem.receivedQty || 0);
+    const thisRoundQty = receivedItem.receivedQty || 0;
+    const newReceivedQty = prevReceived + thisRoundQty;
 
     // فقط مقداری که انباردار صراحتاً به‌عنوان «مشکل» علامت زده به
     // تاریخچه‌ی issues اضافه می‌شود؛ باقیِ کسری (اگر انباردار چیزی
@@ -226,6 +235,17 @@ export async function confirmReceiving(purchaseId, receivingData) {
       note: b.note || "",
       date: receivedDate,
     }));
+
+    // بخش سالمِ همین دور: هرچه از تعدادِ رسیده‌ی همین دور که مشکل‌دار
+    // گزارش نشده، سالم است و به موجودیِ قابل‌فروش انبار اضافه می‌شود.
+    const issuesQtyThisRound = reportedIssues.reduce(
+      (s, b) => s + (Number(b.qty) || 0),
+      0,
+    );
+    const healthyQtyThisRound = Math.max(0, thisRoundQty - issuesQtyThisRound);
+    if (healthyQtyThisRound > 0) {
+      stockIncreases.push({ productId: item.productId, delta: healthyQtyThisRound });
+    }
 
     return {
       ...item,
@@ -248,6 +268,8 @@ export async function confirmReceiving(purchaseId, receivingData) {
     vehiclePlate: receivingData.vehiclePlate || "",
     updatedAt: new Date().toISOString(),
   };
+
+  adjustProductsStock(stockIncreases);
 
   await autoResolveReplacementReturns(purchaseId);
 
