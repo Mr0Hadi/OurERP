@@ -33,7 +33,7 @@ namespace Application.Features.WarehouseReceiving.Queries
 
             var query = _context.Sales
                 .Include(x => x.Customer)
-                .Where(x => x.IsActive && x.Status == Domain.Enums.SalesStatusEnum.CANCELLED)
+                .Where(x => x.IsActive && x.Status == Domain.Enums.SalesStatusEnum.RETURNED)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(request.Search))

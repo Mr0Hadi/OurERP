@@ -6,6 +6,7 @@
         PROCESSING,
         PARTIALLY_DELIVERED,
         DELIVERED,
+        RETURNED,
         CANCELLED,
     }
 }
