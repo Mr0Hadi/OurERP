@@ -25,6 +25,8 @@ namespace Infrastructure.Persistence
         public DbSet<PurchaseItem> PurchaseItems { get; set; }
         public DbSet<SaleItem> SaleItems { get; set; }
         public DbSet<PurchaseReturn> PurchaseReturns => Set<PurchaseReturn>();
+        public DbSet<PurchaseReturnItem> PurchaseReturnItems => Set<PurchaseReturnItem>();
+        public DbSet<PurchaseReturnDecision> PurchaseReturnDecisions => Set<PurchaseReturnDecision>();
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
@@ -98,7 +100,7 @@ namespace Infrastructure.Persistence
                 .HasOne(x => x.PurchaseReturn)
                 .WithMany(x => x.Items)
                 .HasForeignKey(x => x.PurchaseReturnId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<PurchaseReturnItem>()
                 .HasOne(x => x.PurchaseItem)
@@ -106,11 +108,17 @@ namespace Infrastructure.Persistence
                 .HasForeignKey(x => x.PurchaseItemId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<PurchaseReturnItem>()
+                .HasOne(x => x.Product)
+                .WithMany()
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             modelBuilder.Entity<PurchaseReturnDecision>()
                 .HasOne(x => x.PurchaseReturnItem)
                 .WithMany(x => x.Decisions)
                 .HasForeignKey(x => x.PurchaseReturnItemId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

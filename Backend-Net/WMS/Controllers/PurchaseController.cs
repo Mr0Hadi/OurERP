@@ -1,5 +1,6 @@
 using Application.Features.Purchase.Commands;
 using Application.Features.Purchase.Queries;
+using Application.Features.PurchaseReturn.Commands;
 using Application.Common.Dtos;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -44,6 +45,12 @@ namespace WMS.Controllers
 
         [HttpDelete("DeletePurchase")]
         public async Task<ActionResult<ResponseDto>> DeletePurchase([FromQuery] DeletePurchaseCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HttpPost("ReceivePurchase")]
+        public async Task<ActionResult<ResponseDto>> ReceivePurchase([FromBody] ReceivePurchaseCommand request)
         {
             return await _mediator.Send(request);
         }

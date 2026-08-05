@@ -4,8 +4,9 @@ namespace Domain.Enums
     {
         PENDING,
         SHIPPED,
-        RETURNED,
+        PARTIALLY_RECEIVED,
         RECEIVED,
+        RETURNED,
         CANCELLED,
     }
 }

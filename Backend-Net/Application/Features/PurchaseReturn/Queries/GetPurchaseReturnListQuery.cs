@@ -16,6 +16,7 @@ namespace Application.Features.PurchaseReturn.Queries
         public string? Search { get; set; }
         public int? SupplierId { get; set; }
         public PurchaseReturnStatusEnum? Status { get; set; }
+        public PurchaseIssueTypeEnum? Reason { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
     }
@@ -35,9 +36,8 @@ namespace Application.Features.PurchaseReturn.Queries
 
             var query = _context.PurchaseReturns
                 .Include(x => x.Purchase)
-                .ThenInclude(x => x.Supplier)
+                    .ThenInclude(x => x.Supplier)
                 .Include(x => x.Items)
-                .Where(x => x.IsActive)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(request.Search))
@@ -68,22 +68,27 @@ namespace Application.Features.PurchaseReturn.Queries
                 query = query.Where(x => x.ReturnDate <= request.ToDate.Value);
             }
 
+            if (request.Reason.HasValue)
+            {
+                query = query.Where(x => x.Items.Any(i => i.IssueType == request.Reason.Value));
+            }
+
             var data = await query
-                .OrderByDescending(x => x.ReturnDate)
+                .OrderByDescending(x => x.CreatedAt)
                 .Select(x => new PurchaseReturnListDto
                 {
                     Id = x.Id,
                     ReturnNumber = x.ReturnNumber,
+                    ReturnDate = x.ReturnDate,
                     PurchaseId = x.PurchaseId,
                     PurchaseInvoiceNumber = x.Purchase.InvoiceNumber,
                     SupplierId = x.Purchase.SupplierId,
                     SupplierName = x.Purchase.Supplier.CompanyName,
-                    ReturnDate = x.ReturnDate,
+                    CreatedAt = x.CreatedAt,
                     Status = x.Status,
                     DominantIssueType = x.Items.OrderByDescending(i => i.Quantity).Select(i => i.IssueType).FirstOrDefault(),
                     TotalQuantity = x.Items.Sum(i => i.Quantity),
                     TotalAmount = (UInt64)x.Items.Sum(i => (long)i.Quantity * (long)i.UnitPrice),
-                    Description = x.Description,
                 })
                 .ToPaged(request.Page, request.Take, out int pageCount, out int totalCount)
                 .ToListAsync(cancellationToken);

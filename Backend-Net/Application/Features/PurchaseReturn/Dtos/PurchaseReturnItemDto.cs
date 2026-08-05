@@ -11,10 +11,14 @@ namespace Application.Features.PurchaseReturn.Dtos
         public string ProductCode { get; set; }
         public string ProductName { get; set; }
         public string Unit { get; set; }
-        public int Quantity { get; set; }
         public UInt64 UnitPrice { get; set; }
         public PurchaseIssueTypeEnum IssueType { get; set; }
+        public int Quantity { get; set; }
+        public UInt64 LineTotal { get; set; }
+        public int AllocatedQuantity { get; set; }
+        public int RemainingQuantity { get; set; }
         public string? Note { get; set; }
-        public List<PurchaseReturnDecisionDto> Decisions { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public List<PurchaseReturnDecisionDto> Decisions { get; set; } = new();
     }
 }

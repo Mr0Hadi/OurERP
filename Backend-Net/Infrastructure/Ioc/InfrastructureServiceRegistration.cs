@@ -1,5 +1,6 @@
 //using Application.Common.Contracts.Captcha;
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Token;
 using Application.Common.Contracts.UnitOfWork;
@@ -42,6 +43,8 @@ namespace Infrastructure.Ioc
             //services.AddScoped<ICaptchaService, CaptchaService>();
 
             services.AddScoped<ITokenService, TokenService>();
+
+            services.AddScoped<IPurchaseReturnCalculationService, PurchaseReturnCalculationService>();
 
             //services.AddSixLabCaptcha(x => x.DrawLines = 4);
 

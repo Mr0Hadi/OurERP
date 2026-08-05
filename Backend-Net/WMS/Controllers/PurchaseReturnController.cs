@@ -30,38 +30,44 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
-        [HttpPost("AddReturnDecision")]
-        public async Task<ActionResult<ResponseDto>> AddReturnDecision([FromBody] AddReturnDecisionCommand request)
+        [HttpGet("GetPurchaseReceivingInfo")]
+        public async Task<ActionResult<ResponseDto>> GetPurchaseReceivingInfo([FromQuery] GetPurchaseReceivingInfoQuery request)
         {
             return await _mediator.Send(request);
         }
 
-        [HttpDelete("RemoveReturnDecision")]
-        public async Task<ActionResult<ResponseDto>> RemoveReturnDecision([FromQuery] RemoveReturnDecisionCommand request)
+        [HttpPost("AddPurchaseReturnDecision")]
+        public async Task<ActionResult<ResponseDto>> AddPurchaseReturnDecision([FromBody] AddPurchaseReturnDecisionCommand request)
         {
             return await _mediator.Send(request);
         }
 
-        [HttpPost("RejectReturn")]
-        public async Task<ActionResult<ResponseDto>> RejectReturn([FromQuery] RejectReturnCommand request)
+        [HttpDelete("RemovePurchaseReturnDecision")]
+        public async Task<ActionResult<ResponseDto>> RemovePurchaseReturnDecision([FromQuery] RemovePurchaseReturnDecisionCommand request)
         {
             return await _mediator.Send(request);
         }
 
-        [HttpPost("CancelReturn")]
-        public async Task<ActionResult<ResponseDto>> CancelReturn([FromQuery] CancelReturnCommand request)
+        [HttpPost("CancelPurchaseReturn")]
+        public async Task<ActionResult<ResponseDto>> CancelPurchaseReturn([FromBody] CancelPurchaseReturnCommand request)
         {
             return await _mediator.Send(request);
         }
 
-        [HttpPost("ReopenReturn")]
-        public async Task<ActionResult<ResponseDto>> ReopenReturn([FromQuery] ReopenReturnCommand request)
+        [HttpPost("RejectPurchaseReturn")]
+        public async Task<ActionResult<ResponseDto>> RejectPurchaseReturn([FromBody] RejectPurchaseReturnCommand request)
         {
             return await _mediator.Send(request);
         }
 
-        [HttpDelete("DeleteReturn")]
-        public async Task<ActionResult<ResponseDto>> DeleteReturn([FromQuery] DeleteReturnCommand request)
+        [HttpPost("ReopenPurchaseReturn")]
+        public async Task<ActionResult<ResponseDto>> ReopenPurchaseReturn([FromBody] ReopenPurchaseReturnCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HttpDelete("DeletePurchaseReturn")]
+        public async Task<ActionResult<ResponseDto>> DeletePurchaseReturn([FromQuery] DeletePurchaseReturnCommand request)
         {
             return await _mediator.Send(request);
         }
