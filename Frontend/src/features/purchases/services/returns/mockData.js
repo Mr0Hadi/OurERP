@@ -12,7 +12,7 @@ export const PURCHASE_RETURN_REASONS = {
 
 export const PURCHASE_RETURN_REASON_LABELS = {
   ...PURCHASE_ISSUE_TYPE_LABELS,
-  [PURCHASE_RETURN_REASONS.EXCESS]: "ارسال اضافه (مرجوع داوطلبانه)",
+  [PURCHASE_RETURN_REASONS.EXCESS]: "ارسال اضافه",
 };
 
 // وضعیت کلی مرجوعی از روی خطوط تصمیمِ اقلامش محاسبه می‌شود، نه دستی
