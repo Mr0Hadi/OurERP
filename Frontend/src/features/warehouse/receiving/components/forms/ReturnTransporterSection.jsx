@@ -1,4 +1,4 @@
-// src/features/warehouse/receiving/components/forms/ReceivingReturnTransporterSection.jsx
+// src/features/warehouse/receiving/components/forms/ReturnTransporterSection.jsx
 import { useRef, useState } from "react";
 import { User, IdCard, Undo2 } from "lucide-react";
 
@@ -40,7 +40,7 @@ const onlyDigits = (value, maxLen) => value.replace(/\D/g, "").slice(0, maxLen);
  * مشتری، یا حضوری خودِ مشتری برگردد) و یک نشان «نوع دریافت: مرجوعی
  * فروش» تا برای انباردار همیشه روشن باشد این دریافت از چه نوعی است.
  */
-export default function ReceivingReturnTransporterSection({
+export default function ReturnTransporterSection({
   formData,
   onFormChange,
   error,

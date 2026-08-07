@@ -15,9 +15,9 @@ import { useConfirmReturnInspectionMutation } from "../services/mutations";
 import { useReturnInspectionForm } from "../hooks/useReturnInspectionForm";
 
 import ReceivingReturnItemsSection from "../components/forms/ReceivingReturnItemsSection";
-import ReceivingReturnSummaryCard from "../components/forms/ReceivingReturnSummaryCard";
-import ReceivingReturnTransporterSection from "../components/forms/ReceivingReturnTransporterSection";
-import ReceivingReturnDetailLoading from "../components/forms/ReceivingReturnDetailLoading";
+import ReturnSummaryCard from "../components/forms/ReturnSummaryCard";
+import ReturnTransporterSection from "../components/forms/ReturnTransporterSection";
+import ReturnDetailLoading from "../components/forms/ReturnDetailLoading";
 import { ROUTES } from "@/shared/constants/routes";
 import { SALES_RETURN_STATUSES } from "@/features/sales/returns/services/mockData";
 
@@ -84,7 +84,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
             onUpdateIssue={handleUpdateIssue}
             onRemoveIssue={handleRemoveIssue}
           />
-          <ReceivingReturnTransporterSection
+          <ReturnTransporterSection
             formData={formData}
             onFormChange={(patch) => { setFormData(patch); if (showTransporterError) setShowTransporterError(false); }}
             error={showTransporterError ? "برای ثبت دریافت، نام تحویل‌دهنده و حداقل یکی از کد ملی یا شماره پلاک الزامی است" : null}
@@ -92,7 +92,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
         </div>
 
         <div className="space-y-4">
-          <ReceivingReturnSummaryCard salesReturn={salesReturn} formData={formData} onFormChange={setFormData} />
+          <ReturnSummaryCard salesReturn={salesReturn} formData={formData} onFormChange={setFormData} />
 
           <div className="flex gap-2">
             <Button
@@ -154,7 +154,7 @@ export default function ReceivingReturnDetailPage() {
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader, salesReturn, isLoading]);
 
-  if (isLoading) return <ReceivingReturnDetailLoading />;
+  if (isLoading) return <ReturnDetailLoading />;
 
   if (isError || !salesReturn) {
     return (

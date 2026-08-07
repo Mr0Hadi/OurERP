@@ -1,8 +1,8 @@
-// src/features/warehouse/receiving/components/forms/ReceivingReturnDetailLoading.jsx
+// src/features/warehouse/receiving/components/forms/ReturnDetailLoading.jsx
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/shared/components/ui/card";
 
-export default function ReceivingReturnDetailLoading() {
+export default function ReturnDetailLoading() {
   return (
     <div className="container max-w-6xl mx-auto px-4 space-y-4">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

@@ -8,7 +8,7 @@ import {
   ShippingListPage,
   ShippingDetailPage,
   ReceivingReturnDetailPage,
-  ShippingReplacementDetailPage,
+  ReplacementDetailPage,
 } from "./index";
 
 export const warehouseRoutes = [
@@ -46,6 +46,6 @@ export const warehouseRoutes = [
   },
   {
     path: ROUTES.WAREHOUSE_SHIPPING_REPLACEMENT_DETAIL,
-    element: <ShippingReplacementDetailPage />,
+    element: <ReplacementDetailPage />,
   },
 ];

@@ -1,4 +1,4 @@
-// src/features/warehouse/receiving/components/forms/ReceivingReturnSummaryCard.jsx
+// src/features/warehouse/receiving/components/forms/ReturnSummaryCard.jsx
 import { useMemo } from "react";
 import { Clock, MessageCircle, Undo2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
@@ -17,7 +17,7 @@ const STATUS_CONFIG = {
 };
 const DEFAULT_STATUS_CONFIG = { icon: Clock, textColor: "text-card-foreground" };
 
-export default function ReceivingReturnSummaryCard({ salesReturn, formData, onFormChange }) {
+export default function ReturnSummaryCard({ salesReturn, formData, onFormChange }) {
   const handleChange = (field, value) => onFormChange({ [field]: value });
 
   // پیشرفت کلی: قبلاً چقدر (در دورهای پیشین) + این دور، نسبت به کل ادعاشده

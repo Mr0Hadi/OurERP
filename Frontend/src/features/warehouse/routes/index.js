@@ -8,4 +8,4 @@ export const ReceivingDetailPage = lazy(() => import('../receiving/pages/Receivi
 export const ShippingListPage = lazy(() => import('../shipping/pages/ShippingListPage'));
 export const ShippingDetailPage = lazy(() => import('../shipping/pages/ShippingDetailPage'));
 export const ReceivingReturnDetailPage = lazy(() => import('../receiving/pages/ReceivingReturnDetailPage'));
-export const ShippingReplacementDetailPage = lazy(() => import('../shipping/pages/ShippingReplacementDetailPage'));
+export const ReplacementDetailPage = lazy(() => import('../shipping/pages/ReplacementDetailPage'));

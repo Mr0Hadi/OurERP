@@ -1,4 +1,4 @@
-// src/features/warehouse/shipping/pages/ShippingReplacementDetailPage.jsx
+// src/features/warehouse/shipping/pages/ReplacementDetailPage.jsx
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AlertCircle, CheckCircle, AlertTriangle, X } from "lucide-react";
@@ -163,7 +163,7 @@ function ShippingReplacementForm({ salesReturn }) {
   );
 }
 
-export default function ShippingReplacementDetailPage() {
+export default function ReplacementDetailPage() {
   const { returnId } = useParams();
   const navigate = useNavigate();
   const setHeader = useHeaderStore((s) => s.setHeader);
