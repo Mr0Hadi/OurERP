@@ -9,8 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui/select';
-import { Button } from '@/shared/components/ui/button';
-import { Plus, Trash2 } from 'lucide-react';
+import PaymentSummary from './PaymentSummary';
+import MixedPaymentList from './MixedPaymentList';
 
 const PAYMENT_TYPES = [
   { value: 'cash', label: 'نقدی' },
@@ -18,12 +18,6 @@ const PAYMENT_TYPES = [
   { value: 'check', label: 'چک' },
   { value: 'transfer', label: 'انتقال بانکی' },
   { value: 'mixed', label: 'ترکیبی' },
-];
-
-const SINGLE_PAYMENT_TYPES = [
-  { value: 'cash', label: 'نقدی' },
-  { value: 'check', label: 'چک' },
-  { value: 'transfer', label: 'انتقال بانکی' },
 ];
 
 /**
@@ -44,13 +38,11 @@ export default function PurchasePaymentSection({
 
   // محاسبه مجموع پرداخت‌های ترکیبی
   const totalMixedPaid = mixedPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-  
+
   // مبلغ پرداختی کل
-  const paidAmount = paymentType === 'mixed' 
-    ? totalMixedPaid 
+  const paidAmount = paymentType === 'mixed'
+    ? totalMixedPaid
     : (Number(formData.paidAmount) || 0);
-  
-  const remaining = totalAmount - paidAmount;
 
   // اضافه کردن پرداخت جدید به لیست ترکیبی
   const handleAddMixedPayment = () => {
@@ -61,24 +53,24 @@ export default function PurchasePaymentSection({
       checkNumber: '',
       transferRef: '',
     };
-    onFormChange({ 
-      mixedPayments: [...mixedPayments, newPayment] 
+    onFormChange({
+      mixedPayments: [...mixedPayments, newPayment],
     });
   };
 
   // حذف یک پرداخت از لیست ترکیبی
   const handleRemoveMixedPayment = (id) => {
-    onFormChange({ 
-      mixedPayments: mixedPayments.filter(p => p.id !== id) 
+    onFormChange({
+      mixedPayments: mixedPayments.filter(p => p.id !== id),
     });
   };
 
   // تغییر یک فیلد در پرداخت ترکیبی
   const handleMixedPaymentChange = (id, field, value) => {
     onFormChange({
-      mixedPayments: mixedPayments.map(p => 
-        p.id === id ? { ...p, [field]: value } : p
-      )
+      mixedPayments: mixedPayments.map(p =>
+        p.id === id ? { ...p, [field]: value } : p,
+      ),
     });
   };
 
@@ -90,35 +82,11 @@ export default function PurchasePaymentSection({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* خلاصه مبالغ */}
-        <div className="rounded-lg bg-muted/50 border border-border p-3 space-y-2 text-sm">
-          <div className="flex justify-between items-center">
-            <span className="text-muted-foreground">جمع کل فاکتور</span>
-            <span className="font-medium text-card-foreground">
-              {totalAmount.toLocaleString('fa-IR')} ریال
-            </span>
-          </div>
-          {paymentType !== 'credit' && (
-            <>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">مبلغ پرداختی</span>
-                <span className="font-medium text-card-foreground">
-                  {paidAmount.toLocaleString('fa-IR')} ریال
-                </span>
-              </div>
-              <div className="flex justify-between items-center border-t border-border pt-2">
-                <span className="text-muted-foreground">مانده بدهی</span>
-                <span className={`font-semibold ${
-                  remaining > 0 
-                    ? 'text-destructive' 
-                    : 'text-[oklch(0.50_0.16_152)]'
-                }`}>
-                  {remaining.toLocaleString('fa-IR')} ریال
-                </span>
-              </div>
-            </>
-          )}
-        </div>
+        <PaymentSummary
+          totalAmount={totalAmount}
+          paidAmount={paidAmount}
+          isCredit={paymentType === 'credit'}
+        />
 
         {/* نوع پرداخت */}
         <div className="space-y-1.5">
@@ -150,127 +118,13 @@ export default function PurchasePaymentSection({
 
         {/* حالت ترکیبی */}
         {paymentType === 'mixed' && (
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <Label className="text-card-foreground text-sm font-medium">
-                روش‌های پرداخت
-              </Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleAddMixedPayment}
-                className="gap-1 h-8"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                افزودن روش پرداخت
-              </Button>
-            </div>
-
-            {mixedPayments.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground text-sm border border-dashed rounded-lg">
-                هیچ روش پرداختی اضافه نشده است
-              </div>
-            )}
-
-            {mixedPayments.map((payment, index) => (
-              <div 
-                key={payment.id} 
-                className="border border-border rounded-lg p-3 space-y-3 bg-card"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-card-foreground">
-                    پرداخت {index + 1}
-                  </span>
-                  {mixedPayments.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveMixedPayment(payment.id)}
-                      className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-
-                {/* نوع روش پرداخت */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">
-                    روش پرداخت
-                  </Label>
-                  <Select
-                    value={payment.type}
-                    onValueChange={(val) => handleMixedPaymentChange(payment.id, 'type', val)}
-                  >
-                    <SelectTrigger className="h-9">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SINGLE_PAYMENT_TYPES.map((t) => (
-                        <SelectItem key={t.value} value={t.value}>
-                          {t.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* مبلغ */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">
-                    مبلغ (ریال)
-                  </Label>
-                  <Input
-                    type="number"
-                    dir="ltr"
-                    min={0}
-                    placeholder="صفر"
-                    value={payment.amount || ''}
-                    onChange={(e) => handleMixedPaymentChange(payment.id, 'amount', e.target.value)}
-                    className="h-9 input-rtl-placeholder"
-                  />
-                </div>
-
-                {/* شماره چک */}
-                {payment.type === 'check' && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">
-                      شماره چک
-                    </Label>
-                    <Input
-                      placeholder="شماره چک"
-                      value={payment.checkNumber || ''}
-                      onChange={(e) => handleMixedPaymentChange(payment.id, 'checkNumber', e.target.value)}
-                      className="input-rtl-placeholder h-9"
-                      dir="ltr"
-                    />
-                  </div>
-                )}
-
-                {/* شماره پیگیری */}
-                {payment.type === 'transfer' && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">
-                      شماره پیگیری
-                    </Label>
-                    <Input
-                      placeholder="شماره پیگیری"
-                      value={payment.transferRef || ''}
-                      onChange={(e) => handleMixedPaymentChange(payment.id, 'transferRef', e.target.value)}
-                      className="input-rtl-placeholder h-9"
-                      dir="ltr"
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {errors?.mixedPayments && (
-              <p className="text-xs text-destructive">{errors.mixedPayments}</p>
-            )}
-          </div>
+          <MixedPaymentList
+            mixedPayments={mixedPayments}
+            onAdd={handleAddMixedPayment}
+            onRemove={handleRemoveMixedPayment}
+            onChange={handleMixedPaymentChange}
+            errors={errors}
+          />
         )}
 
         {/* حالت‌های تک‌روشی (غیر از ترکیبی و نسیه) */}
@@ -278,7 +132,7 @@ export default function PurchasePaymentSection({
           <>
             {/* مبلغ پرداختی */}
             <div className="space-y-1.5">
-              <Label 
+              <Label
                 htmlFor="paidAmount"
                 className="text-card-foreground text-sm font-medium"
               >
@@ -293,8 +147,8 @@ export default function PurchasePaymentSection({
                 value={formData.paidAmount || ''}
                 onChange={(e) => handleChange('paidAmount', e.target.value)}
                 className={`h-9 input-rtl-placeholder ${
-                  errors?.paidAmount 
-                    ? 'border-destructive focus-visible:ring-destructive/30' 
+                  errors?.paidAmount
+                    ? 'border-destructive focus-visible:ring-destructive/30'
                     : ''
                 }`}
               />
@@ -306,7 +160,7 @@ export default function PurchasePaymentSection({
             {/* شماره چک */}
             {paymentType === 'check' && (
               <div className="space-y-1.5">
-                <Label 
+                <Label
                   htmlFor="checkNumber"
                   className="text-card-foreground text-sm font-medium"
                 >
@@ -326,7 +180,7 @@ export default function PurchasePaymentSection({
             {/* شماره پیگیری */}
             {paymentType === 'transfer' && (
               <div className="space-y-1.5">
-                <Label 
+                <Label
                   htmlFor="transferRef"
                   className="text-card-foreground text-sm font-medium"
                 >

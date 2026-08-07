@@ -27,11 +27,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
 } from "lucide-react";
-import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Badge } from "@/shared/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import {
@@ -39,28 +35,14 @@ import {
   PAYMENT_TYPE_LABELS,
 } from "../../services/mockData";
 import { gregorianToPersian } from "@/shared/utils/dateUtils";
+import SortIcon from "./SortIcon";
+import LoadingSkeleton from "./LoadingSkeleton";
+import PurchaseStatusBadge from "./PurchaseStatusBadge";
+import PaymentProgress from "./PaymentProgress";
 
 // ─── ثابت‌ها ─────────────────────────────────────────────────────────────────
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 50];
-
-// ─── Badge ها ─────────────────────────────────────────────────────────────────
-
-const STATUS_STYLES = {
-  pending:
-    "bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-100",
-  shipped: "bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-100",
-  partially_received:
-    "bg-orange-100 text-orange-800 border-orange-300 hover:bg-orange-100",
-  received: "bg-green-100 text-green-800 border-green-300 hover:bg-green-100",
-  cancelled: "bg-red-100 text-red-800 border-red-300 hover:bg-red-100",
-};
-
-const StatusBadge = ({ status }) => (
-  <Badge className={STATUS_STYLES[status] ?? "bg-gray-100 text-gray-800"}>
-    {PURCHASE_STATUS_LABELS[status] ?? status}
-  </Badge>
-);
 
 const PAYMENT_STYLES = {
   cash: "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-100",
@@ -75,49 +57,6 @@ const PaymentBadge = ({ type }) => (
   <Badge className={PAYMENT_STYLES[type] ?? "bg-gray-100 text-gray-800"}>
     {PAYMENT_TYPE_LABELS[type] ?? type}
   </Badge>
-);
-
-// ─── ستون مبلغ پرداختی با نشانگر بصری ───────────────────────────────────────
-
-const PaymentProgress = ({ paid, total }) => {
-  const percent =
-    total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
-  return (
-    <div className="flex flex-col gap-1 items-end min-w-[100px]">
-      <span className="tabular-nums text-xs">
-        {paid.toLocaleString("fa-IR")} / {total.toLocaleString("fa-IR")}
-      </span>
-      <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all ${
-            percent === 100
-              ? "bg-green-500"
-              : percent > 0
-                ? "bg-amber-400"
-                : "bg-red-400"
-          }`}
-          style={{ width: `${percent}%` }}
-        />
-      </div>
-    </div>
-  );
-};
-
-// ─── آیکون مرتب‌سازی ─────────────────────────────────────────────────────────
-
-const SortIcon = ({ direction }) => {
-  if (direction === "asc") return <ArrowUp className="h-4 w-4" />;
-  if (direction === "desc") return <ArrowDown className="h-4 w-4" />;
-  return <ArrowUpDown className="h-4 w-4 opacity-40" />;
-};
-
-// ─── اسکلتون لودینگ ──────────────────────────────────────────────────────────
-
-const LoadingSkeleton = () => (
-  <div className="space-y-3">
-    <Skeleton className="h-10 w-full" />
-    <Skeleton className="h-96 w-full" />
-  </div>
 );
 
 // ─── کامپوننت اصلی ────────────────────────────────────────────────────────────
@@ -174,7 +113,12 @@ const PurchaseTable = ({
         accessorKey: "status",
         header: "وضعیت",
         enableSorting: false,
-        cell: (info) => <StatusBadge status={info.getValue()} />,
+        cell: (info) => (
+          <PurchaseStatusBadge
+            status={info.getValue()}
+            labels={PURCHASE_STATUS_LABELS}
+          />
+        ),
       },
       {
         accessorKey: "paymentType",
