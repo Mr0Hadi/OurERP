@@ -10,7 +10,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import { useHeaderStore } from "@/shared/store/headerStore";
-import { useSalesReturnQuery } from "@/features/sales/services/returns/queries";
+import { useSalesReturnQuery } from "@/features/sales/returns/services/queries";
 import { useConfirmReturnInspectionMutation } from "../services/mutations";
 import { useReturnInspectionForm } from "../hooks/useReturnInspectionForm";
 
@@ -19,7 +19,7 @@ import ReceivingReturnSummaryCard from "../components/forms/ReceivingReturnSumma
 import ReceivingReturnTransporterSection from "../components/forms/ReceivingReturnTransporterSection";
 import ReceivingReturnDetailLoading from "../components/forms/ReceivingReturnDetailLoading";
 import { ROUTES } from "@/shared/constants/routes";
-import { SALES_RETURN_STATUSES } from "@/features/sales/services/returns/mockData";
+import { SALES_RETURN_STATUSES } from "@/features/sales/returns/services/mockData";
 
 function ReceivingReturnDetailForm({ salesReturn }) {
   const navigate = useNavigate();

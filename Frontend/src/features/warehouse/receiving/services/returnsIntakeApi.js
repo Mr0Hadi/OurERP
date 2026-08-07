@@ -5,8 +5,8 @@ import {
   RETURN_ISSUE_TYPES,
   RETURN_ISSUE_TYPE_LABELS,
   RETURN_ISSUE_TYPE_STYLES,
-} from "@/features/sales/services/returns/mockData";
-import { computeReturnStatus, getSalesReturnIndex } from "@/features/sales/services/returns/api-mockData";
+} from "@/features/sales/returns/services/mockData";
+import { computeReturnStatus, getSalesReturnIndex } from "@/features/sales/returns/services/api-mockData";
 import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
 
 export { RETURN_ISSUE_TYPES, RETURN_ISSUE_TYPE_LABELS, RETURN_ISSUE_TYPE_STYLES };

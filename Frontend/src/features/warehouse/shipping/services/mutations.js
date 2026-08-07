@@ -2,9 +2,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import { confirmShipment } from "./api-mockData";
-import { confirmReplacementShipmentBatch } from "@/features/sales/services/returns/api-mockData";
-import { salesReturnKeys } from "@/features/sales/services/returns/queryKeys";
-import { invalidateSalesEcosystem } from "@/features/sales/services/sharedInvalidation";
+import { confirmReplacementShipmentBatch } from "@/features/sales/returns/services/api-mockData";
+import { salesReturnKeys } from "@/features/sales/returns/services/queryKeys";
+import { invalidateSalesEcosystem } from "@/features/sales/orders/services/sharedInvalidation";
 import { outgoingQueueKeys } from "./queryKeys";
 
 export const useConfirmShipmentMutation = () => {

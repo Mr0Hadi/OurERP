@@ -2,7 +2,7 @@
 import { allPurchases, PURCHASE_STATUSES, PURCHASE_STATUS_LABELS } from "./mockData";
 import {
   allSalesReturns, SALES_RETURN_STATUSES, SALES_RETURN_STATUS_LABELS,
-} from "@/features/sales/services/returns/mockData";
+} from "@/features/sales/returns/services/mockData";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 

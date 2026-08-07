@@ -9,7 +9,7 @@ import { Progress } from "@/shared/components/ui/progress";
 import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
 import {
   SALES_RETURN_STATUSES, SALES_RETURN_STATUS_LABELS, SALES_RETURN_REASON_LABELS,
-} from "@/features/sales/services/returns/mockData";
+} from "@/features/sales/returns/services/mockData";
 
 const STATUS_CONFIG = {
   [SALES_RETURN_STATUSES.PENDING_INSPECTION]: { icon: Clock, textColor: "text-amber-600 dark:text-amber-400" },

@@ -7,7 +7,7 @@ import {
 import {
   autoResolveReplacementReturns,
   computeItemReceivableQty,
-} from "@/features/purchases/services/returns/api-mockData";
+} from "@/features/purchases/returns/services/api-mockData";
 import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));

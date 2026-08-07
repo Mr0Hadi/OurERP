@@ -10,7 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/shared/components/ui/select";
 import { RETURN_ISSUE_TYPE_LABELS } from "../../services/returnsIntakeApi";
-import { SALES_RETURN_REASON_LABELS } from "@/features/sales/services/returns/mockData";
+import { SALES_RETURN_REASON_LABELS } from "@/features/sales/returns/services/mockData";
 
 const ISSUE_TYPE_OPTIONS = Object.entries(RETURN_ISSUE_TYPE_LABELS);
 

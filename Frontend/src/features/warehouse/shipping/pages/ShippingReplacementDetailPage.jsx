@@ -13,7 +13,7 @@ import {
 } from "@/shared/components/ui/alert-dialog";
 import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
 import { useHeaderStore } from "@/shared/store/headerStore";
-import { useSalesReturnQuery } from "@/features/sales/services/returns/queries";
+import { useSalesReturnQuery } from "@/features/sales/returns/services/queries";
 import ShippingItemsSection from "../components/forms/ShippingItemsSection";
 import ShippingTransporterSection from "../components/forms/ShippingTransporterSection";
 import ShippingDetailLoading from "../components/forms/ShippingDetailLoading";

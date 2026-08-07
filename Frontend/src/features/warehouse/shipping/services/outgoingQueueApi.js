@@ -1,10 +1,10 @@
 // src/features/warehouse/shipping/services/outgoingQueueApi.js
-import { allSales, SALE_STATUS_LABELS } from "@/features/sales/services/mockData";
+import { allSales, SALE_STATUS_LABELS } from "@/features/sales/orders/services/mockData";
 import {
   allSalesReturns,
   RESOLUTION_TYPES,
   RESOLUTION_LINE_STATUSES,
-} from "@/features/sales/services/returns/mockData";
+} from "@/features/sales/returns/services/mockData";
 import { SHIPPING_ELIGIBLE_STATUSES } from "./constants";
 import { computeItemShippableQty } from "./api-mockData";
 
