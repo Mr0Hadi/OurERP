@@ -1,4 +1,3 @@
-// src/features/sales/pages/SalesReturnNewPage.jsx
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Save, X, AlertCircle } from "lucide-react";

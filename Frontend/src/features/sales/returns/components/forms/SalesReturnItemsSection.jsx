@@ -1,4 +1,3 @@
-// src/features/sales/components/forms/SalesReturnItemsSection.jsx
 import { useMemo } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";

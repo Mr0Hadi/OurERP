@@ -1,7 +1,5 @@
-import { useState, useEffect } from "react";
+import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import useSalesReturnFilterStore from "../store/salesReturnFilterStore";
-
-const DEBOUNCE_MS = 400;
 
 export function useDebouncedSalesReturnFilters() {
   const globalSearch = useSalesReturnFilterStore((s) => s.globalSearch);
@@ -11,12 +9,12 @@ export function useDebouncedSalesReturnFilters() {
   const fromDate = useSalesReturnFilterStore((s) => s.fromDate);
   const toDate = useSalesReturnFilterStore((s) => s.toDate);
 
-  const [debouncedText, setDebouncedText] = useState({ globalSearch });
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedText({ globalSearch }), DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [globalSearch]);
-
-  return { ...debouncedText, customerIds, status, reason, fromDate, toDate };
+  return {
+    globalSearch: useDebouncedValue(globalSearch),
+    customerIds,
+    status,
+    reason,
+    fromDate,
+    toDate,
+  };
 }

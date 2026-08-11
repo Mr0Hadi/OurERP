@@ -1,4 +1,3 @@
-// src/features/sales/components/forms/SalesReturnSaleSection.jsx
 import { useState, useMemo } from "react";
 import { Search, X, FileText, User, Calendar } from "lucide-react";
 

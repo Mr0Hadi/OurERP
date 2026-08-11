@@ -1,4 +1,3 @@
-// src/features/sales/domain/salesReturnRules.js
 import { SALES_RETURN_STATUSES } from "../services/mockData";
 
 function hasAnyPhysicalInspection(salesReturn) {

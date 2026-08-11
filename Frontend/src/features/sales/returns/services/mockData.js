@@ -1,4 +1,3 @@
-// src/features/sales/services/returns/mockData.js
 import { allSales } from "@/features/sales/orders/services/mockData";
 
 // ─── دلیلی که مشتری هنگام ثبت درخواست مرجوعی اعلام می‌کند ──────────────────

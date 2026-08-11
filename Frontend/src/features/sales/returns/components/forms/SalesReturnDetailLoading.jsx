@@ -1,4 +1,3 @@
-// src/features/sales/components/forms/SalesReturnDetailLoading.jsx
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/shared/components/ui/card";
 

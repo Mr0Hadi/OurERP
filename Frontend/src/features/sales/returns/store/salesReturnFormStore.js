@@ -1,4 +1,3 @@
-// src/features/sales/store/salesReturnFormStore.js
 import { create } from "zustand";
 
 const EMPTY_RETURN = {

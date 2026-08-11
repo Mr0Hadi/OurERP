@@ -1,4 +1,3 @@
-// src/features/sales/pages/SalesReturnsListPage.jsx
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertCircle, RefreshCw, Undo2, Plus } from "lucide-react";

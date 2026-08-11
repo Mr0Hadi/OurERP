@@ -1,4 +1,3 @@
-// src/features/sales/pages/SalesReturnDetailPage.jsx
 import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
