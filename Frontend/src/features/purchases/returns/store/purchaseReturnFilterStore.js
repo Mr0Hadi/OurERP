@@ -1,44 +1,16 @@
-import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+import { createFilterStore } from "@/shared/store/createFilterStore";
 
-const usePurchaseReturnFilterStore = create(
-  devtools((set) => ({
-    globalSearch: '',
+// supplierIds تا لایه‌ی API پشتیبانی می‌شود ولی هنوز کنترلی در نوار فیلترها
+// برای آن وجود ندارد؛ عمداً نگه داشته شده تا آن مسیر قطع نشود.
+const usePurchaseReturnFilterStore = createFilterStore({
+  filters: {
+    globalSearch: "",
     supplierIds: [],
-    status: '',
-    reason: '',
-    fromDate: '',
-    toDate: '',
-    pagination: { pageIndex: 0, pageSize: 10 },
-    sorting: { id: 'createdAt', desc: true },
-
-    setGlobalSearch: (value) =>
-      set({ globalSearch: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-    setSupplierIds: (value) =>
-      set({ supplierIds: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-    setStatus: (value) =>
-      set({ status: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-    setReason: (value) =>
-      set({ reason: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-    setFromDate: (value) =>
-      set({ fromDate: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-    setToDate: (value) =>
-      set({ toDate: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-    setPagination: (newPagination) => set({ pagination: newPagination }),
-    setSorting: (newSorting) =>
-      set({ sorting: newSorting, pagination: { pageIndex: 0, pageSize: 10 } }),
-    resetFilters: () =>
-      set({
-        globalSearch: '',
-        supplierIds: [],
-        status: '',
-        reason: '',
-        fromDate: '',
-        toDate: '',
-        pagination: { pageIndex: 0, pageSize: 10 },
-        sorting: { id: 'createdAt', desc: true },
-      }),
-  })),
-);
+    status: "",
+    reason: "",
+    fromDate: "",
+    toDate: "",
+  },
+});
 
 export default usePurchaseReturnFilterStore;

@@ -1,4 +1,3 @@
-// src/features/purchases/pages/PurchaseReturnNewPage.jsx
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Save, X, AlertCircle } from "lucide-react";

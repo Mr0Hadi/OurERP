@@ -1,4 +1,3 @@
-// src/features/purchases/components/forms/PurchaseReturnPurchaseSection.jsx
 import { useMemo, useState } from "react";
 import { Search, X, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";

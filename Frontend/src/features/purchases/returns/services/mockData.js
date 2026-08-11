@@ -1,4 +1,3 @@
-// src/features/purchases/services/returns/mockData.js
 import { allPurchases } from "@/features/purchases/orders/services/mockData";
 import {
   PURCHASE_ISSUE_TYPES,

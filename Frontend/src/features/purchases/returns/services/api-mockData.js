@@ -1,4 +1,3 @@
-// src/features/purchases/services/returns/api-mockData.js
 import {
   allPurchaseReturns,
   PURCHASE_RETURN_STATUSES,

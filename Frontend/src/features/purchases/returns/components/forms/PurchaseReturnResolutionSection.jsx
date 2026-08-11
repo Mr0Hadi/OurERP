@@ -1,4 +1,3 @@
-// src/features/purchases/components/forms/PurchaseReturnResolutionSection.jsx
 import {
   Clock,
   MessageCircle,

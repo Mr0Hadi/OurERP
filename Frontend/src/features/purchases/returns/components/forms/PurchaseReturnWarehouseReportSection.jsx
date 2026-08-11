@@ -1,4 +1,3 @@
-// src/features/purchases/components/forms/PurchaseReturnWarehouseReportSection.jsx
 import { ClipboardList, Truck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";

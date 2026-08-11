@@ -1,4 +1,3 @@
-// src/features/purchases/services/returns/api-v1.js
 import axiosInstance from "@/shared/services/api/axios";
 
 export async function fetchShortageReports(params = {}) {

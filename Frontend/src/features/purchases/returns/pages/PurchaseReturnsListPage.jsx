@@ -1,4 +1,3 @@
-// src/features/purchases/pages/PurchaseReturnsListPage.jsx
 import { useEffect } from "react";
 import { AlertCircle, RefreshCw, Undo2 } from "lucide-react";
 import {

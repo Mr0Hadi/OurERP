@@ -1,4 +1,3 @@
-// src/features/purchases/components/forms/PurchaseReturnInfoSection.jsx
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";

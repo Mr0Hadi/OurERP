@@ -1,4 +1,3 @@
-// src/features/purchases/domain/purchaseReturnRules.js
 import { PURCHASE_RETURN_STATUSES } from "../services/mockData";
 
 // حذف کامل فقط تا وقتی هیچ تصمیمی برای هیچ قلمی ثبت نشده مجاز است
