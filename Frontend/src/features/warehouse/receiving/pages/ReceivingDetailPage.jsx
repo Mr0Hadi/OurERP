@@ -1,4 +1,3 @@
-// src/features/warehouse/receiving/pages/ReceivingDetailPage.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AlertCircle, CheckCircle, AlertTriangle, X } from "lucide-react";

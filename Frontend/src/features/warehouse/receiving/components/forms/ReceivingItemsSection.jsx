@@ -1,212 +1,17 @@
-// src/features/warehouse/receiving/components/forms/ReceivingItemsSection.jsx
-import { useMemo, useState } from 'react';
-import { Search, Minus, Plus, CheckCircle2, AlertTriangle, XCircle, X } from 'lucide-react';
+import { useMemo, useState } from "react";
+import { Search } from "lucide-react";
 
-import { Input } from '@/shared/components/ui/input';
-import { Button } from '@/shared/components/ui/button';
-import { Badge } from '@/shared/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Input } from "@/shared/components/ui/input";
+import { Badge } from "@/shared/components/ui/badge";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/components/ui/select';
-import { PURCHASE_ISSUE_TYPE_LABELS } from '@/shared/constants/purchaseIssueTypes';
-
-const ISSUE_TYPE_OPTIONS = Object.entries(PURCHASE_ISSUE_TYPE_LABELS);
-
-function getRowStatus(expectedQty, receivedQty) {
-  const qty = receivedQty || 0;
-  if (qty <= 0) return 'missing';
-  if (qty < expectedQty) return 'partial';
-  return 'complete';
-}
-
-const ROW_STATUS_CONFIG = {
-  complete: {
-    label: 'کامل',
-    icon: CheckCircle2,
-    badgeClass: 'bg-green-50 text-[oklch(0.50_0.16_152)] border-green-200 dark:bg-green-950/40 dark:border-green-800',
-    rowClass: '',
-  },
-  partial: {
-    label: 'ناقص',
-    icon: AlertTriangle,
-    badgeClass: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400',
-    rowClass: 'bg-amber-50/40 dark:bg-amber-950/10',
-  },
-  missing: {
-    label: 'نرسیده',
-    icon: XCircle,
-    badgeClass: 'bg-destructive/5 text-destructive border-destructive/20',
-    rowClass: 'bg-destructive/[0.03]',
-  },
-};
-
-const clampQty = (value, expectedQty) => {
-  const num = Number(value);
-  if (Number.isNaN(num) || num < 0) return 0;
-  return Math.min(num, expectedQty);
-};
-
-function QuantityStepper({ item, onItemChange, size = 'md' }) {
-  const received = item.receivedQty || 0;
-  const dims = size === 'sm' ? 'h-7 w-7' : 'h-8 w-8';
-  const inputWidth = size === 'sm' ? 'w-12' : 'w-14';
-
-  const handleStep = (delta) => {
-    onItemChange(item.productId, 'receivedQty', clampQty(received + delta, item.expectedQty));
-  };
-
-  return (
-    <div className="flex items-center justify-center gap-1">
-      <Button
-        type="button"
-        size="icon"
-        variant="outline"
-        className={`${dims} shrink-0`}
-        disabled={received <= 0}
-        onClick={() => handleStep(-1)}
-      >
-        <Minus className="h-3.5 w-3.5" />
-      </Button>
-      <Input
-        type="number"
-        min={0}
-        max={item.expectedQty}
-        value={received}
-        onChange={(e) =>
-          onItemChange(item.productId, 'receivedQty', clampQty(e.target.value, item.expectedQty))
-        }
-        className={`${dims.split(' ')[0]} ${inputWidth} text-center text-sm px-1`}
-      />
-      <Button
-        type="button"
-        size="icon"
-        variant="outline"
-        className={`${dims} shrink-0`}
-        disabled={received >= item.expectedQty}
-        onClick={() => handleStep(1)}
-      >
-        <Plus className="h-3.5 w-3.5" />
-      </Button>
-    </div>
-  );
-}
-
-function ProductThumb({ item }) {
-  return item.image ? (
-    <img
-      src={item.image}
-      alt={item.productName}
-      className="w-10 h-10 rounded-md object-cover shrink-0 border border-border"
-    />
-  ) : (
-    <div className="w-10 h-10 rounded-md bg-muted border border-border flex items-center justify-center shrink-0">
-      <span className="text-[10px] text-muted-foreground">تصویر</span>
-    </div>
-  );
-}
-
-// ─── ویرایشگر تفکیک مشکل یک قلم ────────────────────────────────────────────
-// انباردار مجبور نیست کل کسری را اینجا توضیح دهد. فقط بخشی که واقعاً
-// «مشکل» است (معیوب، اشتباه، آسیب‌دیده و...) را با نوع و تعداد مشخص
-// ثبت می‌کند. باقیمانده به‌طور خودکار «در انتظار محموله بعدی» تلقی
-// می‌شود — نیازی به هیچ اقدامی نیست و خرید همچنان در لیست دریافت
-// می‌ماند تا وقتی بقیه‌اش (مثلاً با کامیون بعدی) برسد.
-function IssueBreakdownEditor({ item, shortage, onAddIssue, onUpdateIssue, onRemoveIssue }) {
-  const issues = item.issues || [];
-  const allocated = issues.reduce((s, i) => s + (Number(i.qty) || 0), 0);
-  const remaining = shortage - allocated;
-
-  return (
-    <div className="space-y-2 rounded-lg border border-dashed border-amber-300 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/10 p-2.5">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-medium text-card-foreground">
-          گزارش مشکل ({shortage.toLocaleString('fa-IR')} عدد کسری)
-        </span>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="h-7 text-xs gap-1"
-          onClick={() => onAddIssue(item.productId)}
-          disabled={remaining <= 0}
-        >
-          <Plus className="h-3 w-3" />
-          افزودن نوع مشکل
-        </Button>
-      </div>
-
-      {issues.length === 0 && (
-        <p className="text-xs text-muted-foreground">
-          اگر بخشی از این کسری واقعاً مشکل دارد (نه فقط دیرکرد ارسال)، با «افزودن نوع مشکل»
-          ثبتش کنید. در غیر این صورت نیازی به کاری نیست — این خرید همچنان در لیست دریافت
-          می‌ماند تا محموله‌ی بعدی برسد.
-        </p>
-      )}
-
-      {issues.map((issue) => (
-        <div
-          key={issue.id}
-          className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 bg-card rounded-md border border-border p-1.5"
-        >
-          <Select
-            value={issue.issueType}
-            onValueChange={(v) => onUpdateIssue(item.productId, issue.id, 'issueType', v)}
-          >
-            <SelectTrigger className="h-8 text-xs sm:w-36 shrink-0">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {ISSUE_TYPE_OPTIONS.map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Input
-            type="number"
-            min={0}
-            value={issue.qty}
-            onChange={(e) => onUpdateIssue(item.productId, issue.id, 'qty', e.target.value)}
-            className="h-8 text-center text-xs sm:w-16 shrink-0"
-          />
-
-          <Input
-            placeholder="یادداشت (اختیاری)..."
-            value={issue.note || ''}
-            onChange={(e) => onUpdateIssue(item.productId, issue.id, 'note', e.target.value)}
-            className="h-8 text-xs flex-1"
-          />
-
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-            onClick={() => onRemoveIssue(item.productId, issue.id)}
-          >
-            <X className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      ))}
-
-      {issues.length > 0 && (
-        <p className="text-[11px] text-muted-foreground">
-          گزارش‌شده به‌عنوان مشکل: {allocated.toLocaleString('fa-IR')} از {shortage.toLocaleString('fa-IR')}
-          {remaining > 0 && (
-            <> — {remaining.toLocaleString('fa-IR')} عدد باقی‌مانده در انتظار محموله بعدی می‌ماند</>
-          )}
-        </p>
-      )}
-    </div>
-  );
-}
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/ui/card";
+import { getRowStatus, ROW_STATUS_CONFIG } from "./receivingRowStatus";
+import ReceivingItemRow from "./ReceivingItemRow";
+import ReceivingItemCard from "./ReceivingItemCard";
 
 export default function ReceivingItemsSection({
   items,
@@ -215,7 +20,7 @@ export default function ReceivingItemsSection({
   onUpdateIssue,
   onRemoveIssue,
 }) {
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
 
   const filteredItems = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -223,7 +28,7 @@ export default function ReceivingItemsSection({
     return items.filter(
       (item) =>
         item.productName?.toLowerCase().includes(term) ||
-        item.productCode?.toLowerCase().includes(term)
+        item.productCode?.toLowerCase().includes(term),
     );
   }, [items, search]);
 
@@ -237,25 +42,45 @@ export default function ReceivingItemsSection({
         acc[status] += 1;
         return acc;
       },
-      { expected: 0, received: 0, complete: 0, partial: 0, missing: 0 }
+      { expected: 0, received: 0, complete: 0, partial: 0, missing: 0 },
     );
   }, [items]);
 
   const shortageTotal = totals.expected - totals.received;
+  const shortageLabel =
+    shortageTotal > 0
+      ? `کمبود: ${shortageTotal.toLocaleString("fa-IR")} عدد`
+      : "بدون کمبود";
+
+  const rowHandlers = {
+    onItemChange,
+    onAddIssue,
+    onUpdateIssue,
+    onRemoveIssue,
+  };
 
   return (
     <Card>
       <CardHeader className="flex flex-col items-start gap-2 pb-2 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle className="text-base font-semibold">اقلام دریافت</CardTitle>
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          <Badge variant="outline" className={ROW_STATUS_CONFIG.complete.badgeClass}>
-            کامل: {totals.complete.toLocaleString('fa-IR')}
+          <Badge
+            variant="outline"
+            className={ROW_STATUS_CONFIG.complete.badgeClass}
+          >
+            کامل: {totals.complete.toLocaleString("fa-IR")}
           </Badge>
-          <Badge variant="outline" className={ROW_STATUS_CONFIG.partial.badgeClass}>
-            ناقص: {totals.partial.toLocaleString('fa-IR')}
+          <Badge
+            variant="outline"
+            className={ROW_STATUS_CONFIG.partial.badgeClass}
+          >
+            ناقص: {totals.partial.toLocaleString("fa-IR")}
           </Badge>
-          <Badge variant="outline" className={ROW_STATUS_CONFIG.missing.badgeClass}>
-            نرسیده: {totals.missing.toLocaleString('fa-IR')}
+          <Badge
+            variant="outline"
+            className={ROW_STATUS_CONFIG.missing.badgeClass}
+          >
+            نرسیده: {totals.missing.toLocaleString("fa-IR")}
           </Badge>
         </div>
       </CardHeader>
@@ -288,72 +113,23 @@ export default function ReceivingItemsSection({
         {/* ─── نمای کارتی: موبایل ─────────────────────────────────────── */}
         {filteredItems.length > 0 && (
           <div className="space-y-2 sm:hidden">
-            {filteredItems.map((item) => {
-              const received = item.receivedQty || 0;
-              const shortage = Math.max(0, item.expectedQty - received);
-              const status = getRowStatus(item.expectedQty, received);
-              const config = ROW_STATUS_CONFIG[status];
-              const StatusIcon = config.icon;
-
-              return (
-                <div
-                  key={item.productId}
-                  className={`rounded-lg border border-border p-3 space-y-2.5 ${config.rowClass}`}
-                >
-                  <div className="flex items-start gap-2.5">
-                    <ProductThumb item={item} />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-card-foreground text-sm truncate">
-                        {item.productName}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground mt-0.5">
-                        <span>{item.productCode}</span>
-                        {item.brand && (
-                          <>
-                            <span className="text-border">|</span>
-                            <span>برند: {item.brand}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <Badge variant="outline" className={`gap-1 text-xs shrink-0 ${config.badgeClass}`}>
-                      <StatusIcon className="h-3 w-3" />
-                      {config.label}
-                    </Badge>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/60">
-                    <span className="text-xs text-muted-foreground">
-                      مورد انتظار: <span className="tabular-nums font-medium text-card-foreground">{item.expectedQty.toLocaleString('fa-IR')}</span>
-                    </span>
-                    <QuantityStepper item={item} onItemChange={onItemChange} size="sm" />
-                  </div>
-
-                  {shortage > 0 && (
-                    <IssueBreakdownEditor
-                      item={item}
-                      shortage={shortage}
-                      onAddIssue={onAddIssue}
-                      onUpdateIssue={onUpdateIssue}
-                      onRemoveIssue={onRemoveIssue}
-                    />
-                  )}
-                </div>
-              );
-            })}
+            {filteredItems.map((item) => (
+              <ReceivingItemCard
+                key={item.productId}
+                item={item}
+                {...rowHandlers}
+              />
+            ))}
 
             <div className="rounded-lg bg-muted px-3 py-2.5 flex items-center justify-between text-xs">
               <span className="text-muted-foreground">
-                جمع کل:{' '}
+                جمع کل:{" "}
                 <span className="font-bold text-card-foreground tabular-nums">
-                  {totals.received.toLocaleString('fa-IR')} / {totals.expected.toLocaleString('fa-IR')}
+                  {totals.received.toLocaleString("fa-IR")} /{" "}
+                  {totals.expected.toLocaleString("fa-IR")}
                 </span>
               </span>
-              <span className="text-muted-foreground">
-                {shortageTotal > 0
-                  ? `کمبود: ${shortageTotal.toLocaleString('fa-IR')} عدد`
-                  : 'بدون کمبود'}
-              </span>
+              <span className="text-muted-foreground">{shortageLabel}</span>
             </div>
           </div>
         )}
@@ -365,79 +141,25 @@ export default function ReceivingItemsSection({
               <thead className="bg-muted text-muted-foreground text-xs">
                 <tr>
                   <th className="text-right px-3 py-2.5 font-medium">کالا</th>
-                  <th className="text-center px-2 py-2.5 font-medium w-20">مورد انتظار</th>
-                  <th className="text-center px-2 py-2.5 font-medium w-32">دریافتی</th>
-                  <th className="text-center px-2 py-2.5 font-medium w-24">وضعیت</th>
+                  <th className="text-center px-2 py-2.5 font-medium w-20">
+                    مورد انتظار
+                  </th>
+                  <th className="text-center px-2 py-2.5 font-medium w-32">
+                    دریافتی
+                  </th>
+                  <th className="text-center px-2 py-2.5 font-medium w-24">
+                    وضعیت
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filteredItems.map((item) => {
-                  const received = item.receivedQty || 0;
-                  const shortage = Math.max(0, item.expectedQty - received);
-                  const status = getRowStatus(item.expectedQty, received);
-                  const config = ROW_STATUS_CONFIG[status];
-                  const StatusIcon = config.icon;
-
-                  return (
-                    <>
-                      <tr
-                        key={item.productId}
-                        className={`hover:bg-accent/30 transition-colors ${config.rowClass}`}
-                      >
-                        <td className="px-3 py-2">
-                          <div className="flex items-center gap-2.5">
-                            <ProductThumb item={item} />
-                            <div className="min-w-0">
-                              <div className="font-medium text-card-foreground text-sm truncate">
-                                {item.productName}
-                              </div>
-                              <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground mt-0.5">
-                                <span>{item.productCode}</span>
-                                {item.brand && (
-                                  <>
-                                    <span className="text-border">|</span>
-                                    <span>برند: {item.brand}</span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td className="px-2 py-2 text-center tabular-nums">
-                          {item.expectedQty.toLocaleString('fa-IR')}
-                        </td>
-
-                        <td className="px-2 py-2">
-                          <QuantityStepper item={item} onItemChange={onItemChange} />
-                        </td>
-
-                        <td className="px-2 py-2">
-                          <div className="flex justify-center">
-                            <Badge variant="outline" className={`gap-1 text-xs ${config.badgeClass}`}>
-                              <StatusIcon className="h-3 w-3" />
-                              {config.label}
-                            </Badge>
-                          </div>
-                        </td>
-                      </tr>
-
-                      {shortage > 0 && (
-                        <tr key={`${item.productId}-issues`} className={config.rowClass}>
-                          <td colSpan={4} className="px-3 pb-3 pt-0">
-                            <IssueBreakdownEditor
-                              item={item}
-                              shortage={shortage}
-                              onAddIssue={onAddIssue}
-                              onUpdateIssue={onUpdateIssue}
-                              onRemoveIssue={onRemoveIssue}
-                            />
-                          </td>
-                        </tr>
-                      )}
-                    </>
-                  );
-                })}
+                {filteredItems.map((item) => (
+                  <ReceivingItemRow
+                    key={item.productId}
+                    item={item}
+                    {...rowHandlers}
+                  />
+                ))}
               </tbody>
 
               <tfoot className="bg-muted border-t border-border">
@@ -446,15 +168,15 @@ export default function ReceivingItemsSection({
                     جمع کل:
                   </td>
                   <td className="px-2 py-2.5 text-center text-sm font-bold text-card-foreground tabular-nums">
-                    {totals.expected.toLocaleString('fa-IR')}
+                    {totals.expected.toLocaleString("fa-IR")}
                   </td>
                   <td className="px-2 py-2.5 text-center text-sm font-bold text-card-foreground tabular-nums">
-                    {totals.received.toLocaleString('fa-IR')}
+                    {totals.received.toLocaleString("fa-IR")}
                   </td>
                   <td className="px-2 py-2.5 text-center text-xs text-muted-foreground">
                     {shortageTotal > 0
-                      ? `مجموع کمبود: ${shortageTotal.toLocaleString('fa-IR')} عدد`
-                      : 'بدون کمبود'}
+                      ? `مجموع کمبود: ${shortageTotal.toLocaleString("fa-IR")} عدد`
+                      : "بدون کمبود"}
                   </td>
                 </tr>
               </tfoot>

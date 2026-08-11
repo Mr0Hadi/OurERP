@@ -1,4 +1,3 @@
-// src/features/warehouse/receiving/services/api-mockData
 import {
   allPurchases,
   PURCHASE_STATUSES,

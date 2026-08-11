@@ -1,4 +1,3 @@
-// src/features/warehouse/receiving/store/receivingFormStore.js
 import { create } from 'zustand';
 
 // این استور در localStorage ذخیره نمی‌شود؛ فرم دریافت داده‌ای موقتی

@@ -1,4 +1,3 @@
-// src/features/warehouse/receiving/hooks/useReceivingForm.js
 import { useEffect } from 'react';
 import useReceivingFormStore from '../store/receivingFormStore';
 

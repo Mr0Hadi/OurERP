@@ -1,4 +1,3 @@
-// src/features/warehouse/receiving/components/forms/ReceivingMismatchList.jsx
 import { useMemo } from 'react';
 import { PackageX } from 'lucide-react';
 

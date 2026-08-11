@@ -1,4 +1,3 @@
-// src/features/warehouse/receiving/components/forms/ReturnSummaryCard.jsx
 import { useMemo } from "react";
 import { Clock, MessageCircle, Undo2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";

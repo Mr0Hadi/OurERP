@@ -1,4 +1,3 @@
-// src/features/warehouse/receiving/services/api-v1.js
 import axiosInstance from "@/shared/services/api/axios";
 
 export { RECEIVING_ELIGIBLE_STATUSES, RECEIVING_STATUS_LABELS } from "./constants";

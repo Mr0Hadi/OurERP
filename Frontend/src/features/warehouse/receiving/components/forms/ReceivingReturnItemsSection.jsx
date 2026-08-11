@@ -1,4 +1,3 @@
-// src/features/warehouse/receiving/components/forms/ReceivingReturnItemsSection.jsx
 import { useMemo, useState } from "react";
 import { Search, Minus, Plus, CheckCircle2, AlertTriangle, XCircle, X } from "lucide-react";
 

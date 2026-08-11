@@ -1,4 +1,3 @@
-// src/features/warehouse/receiving/services/incomingQueueApi.js
 import { allPurchases, PURCHASE_STATUSES, PURCHASE_STATUS_LABELS } from "./mockData";
 import {
   allSalesReturns, SALES_RETURN_STATUSES, SALES_RETURN_STATUS_LABELS,

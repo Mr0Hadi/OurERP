@@ -1,4 +1,3 @@
-// src/features/warehouse/receiving/components/forms/ReceivingSummaryCard.jsx
 import { useMemo } from 'react';
 import { Truck, PackageCheck, PackageOpen, Clock, XCircle, Activity } from 'lucide-react';
 

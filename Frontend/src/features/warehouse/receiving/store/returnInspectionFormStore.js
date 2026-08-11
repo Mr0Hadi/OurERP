@@ -1,4 +1,3 @@
-// src/features/warehouse/receiving/store/returnInspectionFormStore.js
 import { create } from "zustand";
 
 const EMPTY_INSPECTION = {

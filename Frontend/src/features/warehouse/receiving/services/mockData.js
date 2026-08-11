@@ -1,4 +1,3 @@
-// src/features/warehouse/receiving/services/mockData.js
 
 export { 
   allPurchases,

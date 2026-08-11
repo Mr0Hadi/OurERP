@@ -1,4 +1,3 @@
-// src/features/warehouse/receiving/hooks/useReturnInspectionForm.js
 import { useEffect } from "react";
 import useReturnInspectionFormStore from "../store/returnInspectionFormStore";
 

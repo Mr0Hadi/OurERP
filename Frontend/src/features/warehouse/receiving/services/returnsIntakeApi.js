@@ -1,4 +1,3 @@
-// src/features/warehouse/receiving/services/returnsIntakeApi.js
 import {
   allSalesReturns,
   SALES_RETURN_STATUSES,

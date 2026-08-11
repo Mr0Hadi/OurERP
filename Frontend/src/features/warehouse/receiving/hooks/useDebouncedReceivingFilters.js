@@ -1,7 +1,5 @@
-import { useState, useEffect } from 'react';
-import useReceivingFilterStore from '../store/receivingFilterStore';
-
-const DEBOUNCE_MS = 400;
+import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
+import useReceivingFilterStore from "../store/receivingFilterStore";
 
 export function useDebouncedReceivingFilters() {
   const globalSearch = useReceivingFilterStore((s) => s.globalSearch);
@@ -10,12 +8,11 @@ export function useDebouncedReceivingFilters() {
   const fromDate = useReceivingFilterStore((s) => s.fromDate);
   const toDate = useReceivingFilterStore((s) => s.toDate);
 
-  const [debouncedText, setDebouncedText] = useState({ globalSearch });
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedText({ globalSearch }), DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [globalSearch]);
-
-  return { ...debouncedText, type, counterpartyIds, fromDate, toDate };
+  return {
+    globalSearch: useDebouncedValue(globalSearch),
+    type,
+    counterpartyIds,
+    fromDate,
+    toDate,
+  };
 }
