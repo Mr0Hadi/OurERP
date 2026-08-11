@@ -30,7 +30,7 @@ export default function SaleItemsSection({
         productCode: product.code,
         unit: product.unit,
         qty: 1,
-        unitPrice: product.purchasePrice ?? 0,
+        unitPrice: product.retailPrice ?? 0,
         discount: 0,
       },
     ]);
@@ -69,7 +69,7 @@ export default function SaleItemsSection({
           variant="outline"
           onClick={() =>
             navigate(ROUTES.WAREHOUSE_PRODUCTS_NEW, {
-              state: { returnTo: ROUTES.PURCHASES_NEW },
+              state: { returnTo: ROUTES.SALES_NEW },
             })
           }
           className="gap-1.5 text-xs"
