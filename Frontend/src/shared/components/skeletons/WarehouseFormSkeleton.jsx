@@ -1,14 +1,24 @@
-// src/features/warehouse/receiving/components/forms/ReceivingDetailLoading.jsx
-import { Skeleton } from '@/shared/components/ui/skeleton';
-import { Card, CardContent, CardHeader } from '@/shared/components/ui/card';
+import { Skeleton } from "@/shared/components/ui/skeleton";
+import { Card, CardContent, CardHeader } from "@/shared/components/ui/card";
 
-export default function ReceivingDetailLoading() {
+/**
+ * اسکلتون فرم‌های انبار (دریافت و ارسال).
+ *
+ * itemActionSlot     - ردیف اقلام یک ستون اقدام اضافه دارد (گزارش مشکل در دریافت)
+ * summaryRows        - تعداد ردیف‌های بلوک خلاصه در ستون کناری
+ * hasSecondaryAction - دکمه‌ی تمام‌عرض دوم زیر دکمه‌های اصلی
+ */
+export default function WarehouseFormSkeleton({
+  itemActionSlot = true,
+  summaryRows = 3,
+  hasSecondaryAction = true,
+}) {
   return (
     <div className="container max-w-6xl mx-auto px-4 space-y-4">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* ستون اصلی */}
         <div className="lg:col-span-2 space-y-4">
-          {/* ReceivingItemsSection */}
+          {/* بخش اقلام */}
           <Card>
             <CardHeader className="flex flex-col items-start gap-2 pb-2 sm:flex-row sm:items-center sm:justify-between">
               <Skeleton className="h-5 w-24" />
@@ -32,7 +42,7 @@ export default function ReceivingDetailLoading() {
                       <Skeleton className="h-4 w-10 mr-auto" />
                       <Skeleton className="h-8 w-28" />
                       <Skeleton className="h-5 w-16 rounded-full" />
-                      <Skeleton className="h-8 w-32" />
+                      {itemActionSlot && <Skeleton className="h-8 w-32" />}
                     </div>
                   ))}
                 </div>
@@ -41,7 +51,10 @@ export default function ReceivingDetailLoading() {
               {/* کارت‌های موبایل */}
               <div className="space-y-2 sm:hidden">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="rounded-lg border border-border p-3 space-y-2.5">
+                  <div
+                    key={i}
+                    className="rounded-lg border border-border p-3 space-y-2.5"
+                  >
                     <div className="flex items-start gap-2.5">
                       <Skeleton className="h-10 w-10 rounded-md shrink-0" />
                       <div className="flex-1 space-y-1.5">
@@ -54,14 +67,14 @@ export default function ReceivingDetailLoading() {
                       <Skeleton className="h-3 w-20" />
                       <Skeleton className="h-7 w-28" />
                     </div>
-                    <Skeleton className="h-8 w-full" />
+                    {itemActionSlot && <Skeleton className="h-8 w-full" />}
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
 
-          {/* ReceivingTransporterSection */}
+          {/* بخش حمل‌کننده */}
           <Card>
             <CardHeader className="pb-2">
               <Skeleton className="h-5 w-32" />
@@ -88,7 +101,6 @@ export default function ReceivingDetailLoading() {
 
         {/* ستون کناری */}
         <div className="space-y-4">
-          {/* ReceivingSummaryCard */}
           <Card>
             <CardHeader className="pb-2">
               <Skeleton className="h-5 w-28" />
@@ -108,18 +120,12 @@ export default function ReceivingDetailLoading() {
               </div>
 
               <div className="space-y-3 border-t border-border pt-3">
-                <div className="space-y-1">
-                  <Skeleton className="h-3 w-16" />
-                  <Skeleton className="h-4 w-32" />
-                </div>
-                <div className="space-y-1">
-                  <Skeleton className="h-3 w-20" />
-                  <Skeleton className="h-4 w-28" />
-                </div>
-                <div className="space-y-1">
-                  <Skeleton className="h-3 w-20" />
-                  <Skeleton className="h-4 w-24" />
-                </div>
+                {Array.from({ length: summaryRows }).map((_, i) => (
+                  <div key={i} className="space-y-1">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                ))}
               </div>
 
               <div className="space-y-2 border-t border-border pt-3">
@@ -139,7 +145,7 @@ export default function ReceivingDetailLoading() {
             <Skeleton className="h-10 flex-1" />
             <Skeleton className="h-10 w-24" />
           </div>
-          <Skeleton className="h-10 w-full" />
+          {hasSecondaryAction && <Skeleton className="h-10 w-full" />}
         </div>
       </div>
     </div>

@@ -35,10 +35,10 @@ import {
   PAYMENT_TYPE_LABELS,
 } from "../../services/mockData";
 import { gregorianToPersian } from "@/shared/utils/dateUtils";
-import SortIcon from "./SortIcon";
-import LoadingSkeleton from "./LoadingSkeleton";
+import SortIcon from "@/shared/components/table/SortIcon";
+import TableLoadingSkeleton from "@/shared/components/table/TableLoadingSkeleton";
+import PaymentProgress from "@/shared/components/table/PaymentProgress";
 import PurchaseStatusBadge from "./PurchaseStatusBadge";
-import PaymentProgress from "./PaymentProgress";
 
 // ─── ثابت‌ها ─────────────────────────────────────────────────────────────────
 
@@ -172,7 +172,7 @@ const PurchaseTable = ({
     pageCount: totalPages,
   });
 
-  if (isLoading) return <LoadingSkeleton />;
+  if (isLoading) return <TableLoadingSkeleton />;
 
   const rows = table.getRowModel().rows;
   const isLastPage = currentPage + 1 >= totalPages;

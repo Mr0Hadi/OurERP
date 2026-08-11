@@ -1,6 +1,6 @@
 import { Skeleton } from "@/shared/components/ui/skeleton";
 
-export default function LoadingSkeleton() {
+export default function TableLoadingSkeleton() {
   return (
     <div className="space-y-3">
       <Skeleton className="h-10 w-full" />

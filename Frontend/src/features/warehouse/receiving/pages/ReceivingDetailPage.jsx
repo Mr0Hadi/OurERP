@@ -24,7 +24,7 @@ import ReceivingItemsSection from "../components/forms/ReceivingItemsSection";
 import ReceivingSummaryCard from "../components/forms/ReceivingSummaryCard";
 import ReceivingMismatchList from "../components/forms/ReceivingMismatchList";
 import ReceivingTransporterSection from "../components/forms/ReceivingTransporterSection";
-import ReceivingDetailLoading from "../components/forms/ReceivingDetailLoading";
+import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
 import { ROUTES } from "@/shared/constants/routes";
 
 const ALL_FILTERS = {};
@@ -238,7 +238,7 @@ export default function ReceivingDetailPage() {
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader, purchase, isLoading]);
 
-  if (isLoading) return <ReceivingDetailLoading />;
+  if (isLoading) return <WarehouseFormSkeleton />;
 
   if (isError || !purchase) {
     return (

@@ -6,7 +6,7 @@ import { AlertCircle } from "lucide-react";
 import { Button } from "#/shared/components/ui/button";
 import { useHeaderStore } from "#/shared/store/headerStore";
 import { usePurchaseQuery } from "#/features/purchases/orders/services/queries";
-import PurchaseDetailLoading from "../components/forms/PurchaseDetailLoading";
+import OrderFormSkeleton from "@/shared/components/skeletons/OrderFormSkeleton";
 import PurchaseDetailForm from "./PurchaseDetailForm";
 import { ROUTES } from "@/shared/constants/routes";
 
@@ -31,7 +31,7 @@ export default function PurchaseDetailPage() {
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader, purchase, isLoading]);
 
-  if (isLoading) return <PurchaseDetailLoading />;
+  if (isLoading) return <OrderFormSkeleton />;
 
   if (isError || !purchase) {
     return (

@@ -1,6 +1,8 @@
-// src/features/purchases/components/PurchasesDetailLoading.jsx
-
-export default function PurchasesDetailLoading() {
+/**
+ * اسکلتون فرم سفارش (خرید و فروش) — دو ستون: اقلام و اطلاعات فاکتور،
+ * کنارش طرف حساب و پرداخت.
+ */
+export default function OrderFormSkeleton() {
   return (
     <div className="container m-auto bg-background">
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-pulse">
