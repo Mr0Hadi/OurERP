@@ -1,4 +1,3 @@
-// src/features/warehouse/shipping/store/shippingFormStore.js
 import { create } from 'zustand';
 
 // این استور در localStorage ذخیره نمی‌شود؛ فرم ارسال داده‌ای موقتی

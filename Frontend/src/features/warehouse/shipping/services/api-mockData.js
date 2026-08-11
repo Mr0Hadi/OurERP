@@ -1,4 +1,3 @@
-// src/features/warehouse/shipping/services/api-mockData.js
 import { allSales, SALE_STATUSES, SALE_STATUS_LABELS } from "./mockData";
 import { SHIPPING_ELIGIBLE_STATUSES } from "./constants";
 

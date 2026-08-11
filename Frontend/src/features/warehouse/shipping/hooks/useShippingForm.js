@@ -1,4 +1,3 @@
-// src/features/warehouse/shipping/hooks/useShippingForm.js
 import { useEffect } from 'react';
 import useShippingFormStore from '../store/shippingFormStore';
 

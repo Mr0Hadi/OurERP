@@ -1,4 +1,3 @@
-// src/features/warehouse/shipping/pages/ShippingDetailPage.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AlertCircle, CheckCircle, AlertTriangle, X } from "lucide-react";
@@ -23,7 +22,7 @@ import { useShippingForm } from "../hooks/useShippingForm";
 import ShippingItemsSection from "../components/forms/ShippingItemsSection";
 import ShippingSummaryCard from "../components/forms/ShippingSummaryCard";
 import ShippingTransporterSection from "../components/forms/ShippingTransporterSection";
-import ShippingDetailLoading from "../components/forms/ShippingDetailLoading";
+import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
 import { ROUTES } from "@/shared/constants/routes";
 
 const ALL_FILTERS = {};
@@ -201,7 +200,14 @@ export default function ShippingDetailPage() {
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader, sale, isLoading]);
 
-  if (isLoading) return <ShippingDetailLoading />;
+  if (isLoading)
+    return (
+      <WarehouseFormSkeleton
+        itemActionSlot={false}
+        summaryRows={2}
+        hasSecondaryAction={false}
+      />
+    );
 
   if (isError || !sale) {
     return (

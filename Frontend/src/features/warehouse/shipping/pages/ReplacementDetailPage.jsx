@@ -1,4 +1,3 @@
-// src/features/warehouse/shipping/pages/ReplacementDetailPage.jsx
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AlertCircle, CheckCircle, AlertTriangle, X } from "lucide-react";
@@ -16,7 +15,7 @@ import { useHeaderStore } from "@/shared/store/headerStore";
 import { useSalesReturnQuery } from "@/features/sales/returns/services/queries";
 import ShippingItemsSection from "../components/forms/ShippingItemsSection";
 import ShippingTransporterSection from "../components/forms/ShippingTransporterSection";
-import ShippingDetailLoading from "../components/forms/ShippingDetailLoading";
+import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
 import { useReplacementShipmentForm } from "../hooks/useReplacementShipmentForm";
 import { useConfirmReplacementShipmentBatchMutation } from "../services/mutations";
 import { ROUTES } from "@/shared/constants/routes";
@@ -180,7 +179,14 @@ export default function ReplacementDetailPage() {
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader, isLoading]);
 
-  if (isLoading) return <ShippingDetailLoading />;
+  if (isLoading)
+    return (
+      <WarehouseFormSkeleton
+        itemActionSlot={false}
+        summaryRows={2}
+        hasSecondaryAction={false}
+      />
+    );
 
   if (isError || !salesReturn) {
     return (

@@ -1,4 +1,3 @@
-// src/features/warehouse/shipping/services/outgoingQueueApi.js
 import { allSales, SALE_STATUS_LABELS } from "@/features/sales/orders/services/mockData";
 import {
   allSalesReturns,

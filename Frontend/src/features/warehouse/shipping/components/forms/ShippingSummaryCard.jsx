@@ -1,4 +1,3 @@
-// src/features/warehouse/shipping/components/forms/ShippingSummaryCard.jsx
 import { useMemo } from 'react';
 import { Loader2, PackageOpen, PackageCheck, Activity } from 'lucide-react';
 

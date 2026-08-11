@@ -1,4 +1,3 @@
-// src/features/warehouse/shipping/services/queries.js
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { fetchShippingSaleById } from "./api-mockData";

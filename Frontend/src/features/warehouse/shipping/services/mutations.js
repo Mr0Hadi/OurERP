@@ -1,4 +1,3 @@
-// src/features/warehouse/shipping/services/mutations.js
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import { confirmShipment } from "./api-mockData";

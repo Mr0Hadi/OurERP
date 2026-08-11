@@ -1,4 +1,3 @@
-// src/features/warehouse/shipping/services/constants.js
 import { SALE_STATUSES } from "@/features/sales/orders/services/mockData";
 
 export { SALE_STATUSES };
