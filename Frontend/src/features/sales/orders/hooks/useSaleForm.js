@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
-import { useSaleFormStore } from '#/features/sales/orders/store/saleFormStore';
+import { useSaleFormStore } from '@/features/sales/orders/store/saleFormStore';
 
 export function useSaleForm() {
   const formData = useSaleFormStore((state) => state.formData);

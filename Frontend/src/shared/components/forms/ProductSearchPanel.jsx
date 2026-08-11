@@ -10,12 +10,12 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 
-export default function ProductSearchPanel({
-  products,
-  isAdded,
-  onAdd,
-  unitPriceField,
-}) {
+/**
+ * جست‌وجو و انتخاب کالا برای افزودن به اقلام.
+ * قیمت اولیه‌ی هر قلم را خودِ فراخوان در onAdd تعیین می‌کند،
+ * چون در خرید و فروش از دو فیلد قیمت متفاوت خوانده می‌شود.
+ */
+export default function ProductSearchPanel({ products, isAdded, onAdd }) {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
 
@@ -131,7 +131,7 @@ export default function ProductSearchPanel({
                 size="sm"
                 variant={isAdded(product.id) ? "secondary" : "default"}
                 disabled={isAdded(product.id)}
-                onClick={() => onAdd(product, unitPriceField)}
+                onClick={() => onAdd(product)}
                 className="shrink-0 text-xs h-7 px-2 min-w-[3rem] w-full sm:w-auto"
               >
                 {isAdded(product.id) ? (

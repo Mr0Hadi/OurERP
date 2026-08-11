@@ -1,4 +1,3 @@
-// src/features/sales/components/SaleInfoSection.jsx
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";

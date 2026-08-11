@@ -1,4 +1,3 @@
-// src/features/sales/components/forms/SaleStatusSection.jsx
 
 import {
   Card,
@@ -17,7 +16,7 @@ import {
 import {
   SALE_STATUSES,
   SALE_STATUS_LABELS,
-} from "#/features/sales/orders/services/mockData";
+} from "@/features/sales/orders/services/mockData";
 import {
   Loader2,
   PackageOpen,

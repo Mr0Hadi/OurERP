@@ -8,9 +8,9 @@ import {
   CardContent,
 } from "@/shared/components/ui/card";
 import { ROUTES } from "@/shared/constants/routes";
-import ProductSearchPanel from "./ProductSearchPanel";
-import SelectedItemsTable from "./SelectedItemsTable";
-import SelectedItemsCards from "./SelectedItemsCards";
+import ProductSearchPanel from "@/shared/components/forms/ProductSearchPanel";
+import SelectedItemsTable from "@/shared/components/forms/SelectedItemsTable";
+import SelectedItemsCards from "@/shared/components/forms/SelectedItemsCards";
 
 export default function PurchaseItemsSection({
   items,
@@ -84,7 +84,6 @@ export default function PurchaseItemsSection({
           products={products}
           isAdded={isAdded}
           onAdd={handleAddProduct}
-          unitPriceField="purchasePrice"
         />
 
         {/* آیتم‌های انتخاب‌شده */}

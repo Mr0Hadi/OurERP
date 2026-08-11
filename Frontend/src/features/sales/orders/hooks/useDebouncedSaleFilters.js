@@ -1,30 +1,16 @@
-import { useState, useEffect } from 'react';
-import useSaleFilterStore from '#/features/sales/orders/store/saleFilterStore';
+import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
+import useSaleFilterStore from "../store/saleFilterStore";
 
-const DEBOUNCE_MS = 400;
-
-export default function useDebouncedSaleFilters() {
-  const {
-    globalSearch,
-    customerIds,
-    status,
-    paymentType,
-    fromDate,
-    toDate,
-  } = useSaleFilterStore();
-
-  const [debouncedText, setDebouncedText] = useState(globalSearch);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedText(globalSearch);
-    }, DEBOUNCE_MS);
-
-    return () => clearTimeout(timer);
-  }, [globalSearch]);
+export function useDebouncedSaleFilters() {
+  const globalSearch = useSaleFilterStore((s) => s.globalSearch);
+  const customerIds = useSaleFilterStore((s) => s.customerIds);
+  const status = useSaleFilterStore((s) => s.status);
+  const paymentType = useSaleFilterStore((s) => s.paymentType);
+  const fromDate = useSaleFilterStore((s) => s.fromDate);
+  const toDate = useSaleFilterStore((s) => s.toDate);
 
   return {
-    globalSearch: debouncedText,
+    globalSearch: useDebouncedValue(globalSearch),
     customerIds,
     status,
     paymentType,

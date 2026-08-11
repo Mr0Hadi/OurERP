@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui/select';
-import PaymentSummary from './PaymentSummary';
+import PaymentSummary from '@/shared/components/forms/PaymentSummary';
 import MixedPaymentList from './MixedPaymentList';
 
 const PAYMENT_TYPES = [

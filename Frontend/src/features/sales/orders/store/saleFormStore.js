@@ -1,4 +1,3 @@
-// src/features/sales/store/saleFormStore.js
 import { create } from "zustand";
 
 const EMPTY_FORM = {

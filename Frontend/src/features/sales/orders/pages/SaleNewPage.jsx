@@ -1,18 +1,17 @@
-// src/features/sales/pages/SaleNewPage.jsx
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Save, X } from "lucide-react";
-import { Button } from "#/shared/components/ui/button";
-import { useHeaderStore } from "#/shared/store/headerStore";
+import { Button } from "@/shared/components/ui/button";
+import { useHeaderStore } from "@/shared/store/headerStore";
 import { useNavigationStore } from "@/shared/store/navigationStore";
-import { useSaleFormStore } from "#/features/sales/orders/store/saleFormStore";
-import { useCreateSaleMutation } from "#/features/sales/orders/services/mutations";
-import { useCustomersQuery } from "#/features/customers/services/queries";
-import { useProductsQuery } from "#/features/warehouse/products/services/queries";
-import SaleCustomerSection from "#/features/sales/orders/components/forms/SaleCustomerSection";
-import SaleItemsSection from "#/features/sales/orders/components/forms/SaleItemsSection";
-import SaleInfoSection from "#/features/sales/orders/components/forms/SaleInfoSection";
-import SalePaymentSection from "#/features/sales/orders/components/forms/SalePaymentSection";
+import { useSaleFormStore } from "@/features/sales/orders/store/saleFormStore";
+import { useCreateSaleMutation } from "@/features/sales/orders/services/mutations";
+import { useCustomersQuery } from "@/features/customers/services/queries";
+import { useProductsQuery } from "@/features/warehouse/products/services/queries";
+import SaleCustomerSection from "@/features/sales/orders/components/forms/SaleCustomerSection";
+import SaleItemsSection from "@/features/sales/orders/components/forms/SaleItemsSection";
+import SaleInfoSection from "@/features/sales/orders/components/forms/SaleInfoSection";
+import SalePaymentSection from "@/features/sales/orders/components/forms/SalePaymentSection";
 import SaleStatusSection from "../components/forms/SaleStatusSection";
 import { ROUTES } from "@/shared/constants/routes";
 

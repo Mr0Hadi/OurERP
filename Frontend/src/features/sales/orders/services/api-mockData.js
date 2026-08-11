@@ -1,4 +1,3 @@
-// src/features/sales/services/api-mockData.js
 import { allSales, SALE_STATUSES } from "./mockData";
 import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
 

@@ -1,58 +1,14 @@
-import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+import { createFilterStore } from "@/shared/store/createFilterStore";
 
-const useSaleFilterStore = create(
-  devtools((set) => ({
-    // فیلترهای جستجو
-    globalSearch: '',
+const useSaleFilterStore = createFilterStore({
+  filters: {
+    globalSearch: "",
     customerIds: [],
-    status: '',
-    paymentType: '',
-    fromDate: '',
-    toDate: '',
-
-    // صفحه‌بندی
-    pagination: {
-      pageIndex: 0,
-      pageSize: 10,
-    },
-
-    // مرتب‌سازی
-    sorting: {
-      id: 'createdAt',
-      desc: true,
-    },
-
-    // اکشن‌ها
-    setGlobalSearch: (value) =>
-      set({ globalSearch: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-    setCustomerIds: (value) =>
-      set({ customerIds: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-    setStatus: (value) =>
-      set({ status: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-    setPaymentType: (value) =>
-      set({ paymentType: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-    setFromDate: (value) =>
-      set({ fromDate: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-    setToDate: (value) =>
-      set({ toDate: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-
-    setPagination: (newPagination) => set({ pagination: newPagination }),
-    setSorting: (newSorting) =>
-      set({ sorting: newSorting, pagination: { pageIndex: 0, pageSize: 10 } }),
-
-    resetFilters: () =>
-      set({
-        globalSearch: '',
-        customerIds: [],
-        status: '',
-        paymentType: '',
-        fromDate: '',
-        toDate: '',
-        pagination: { pageIndex: 0, pageSize: 10 },
-        sorting: { id: 'createdAt', desc: true },
-      }),
-  }))
-);
+    status: "",
+    paymentType: "",
+    fromDate: "",
+    toDate: "",
+  },
+});
 
 export default useSaleFilterStore;
