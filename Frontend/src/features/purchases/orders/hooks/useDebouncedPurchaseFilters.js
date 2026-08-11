@@ -1,8 +1,5 @@
-// src/features/purchases/hooks/useDebouncedPurchaseFilters.js
-import { useState, useEffect } from 'react';
-import usePurchaseFilterStore from '../store/purchaseFilterStore';
-
-const DEBOUNCE_MS = 400;
+import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
+import usePurchaseFilterStore from "../store/purchaseFilterStore";
 
 export function useDebouncedPurchaseFilters() {
   const globalSearch = usePurchaseFilterStore((s) => s.globalSearch);
@@ -12,18 +9,8 @@ export function useDebouncedPurchaseFilters() {
   const fromDate = usePurchaseFilterStore((s) => s.fromDate);
   const toDate = usePurchaseFilterStore((s) => s.toDate);
 
-  const [debouncedText, setDebouncedText] = useState({ globalSearch });
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedText({ globalSearch });
-    }, DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [globalSearch]);
-
-
   return {
-    ...debouncedText,
+    globalSearch: useDebouncedValue(globalSearch),
     supplierIds,
     status,
     paymentType,

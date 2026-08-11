@@ -1,11 +1,10 @@
-// src/features/purchases/pages/PurchaseDetailPage.jsx
 import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AlertCircle } from "lucide-react";
 
-import { Button } from "#/shared/components/ui/button";
-import { useHeaderStore } from "#/shared/store/headerStore";
-import { usePurchaseQuery } from "#/features/purchases/orders/services/queries";
+import { Button } from "@/shared/components/ui/button";
+import { useHeaderStore } from "@/shared/store/headerStore";
+import { usePurchaseQuery } from "@/features/purchases/orders/services/queries";
 import OrderFormSkeleton from "@/shared/components/skeletons/OrderFormSkeleton";
 import PurchaseDetailForm from "./PurchaseDetailForm";
 import { ROUTES } from "@/shared/constants/routes";

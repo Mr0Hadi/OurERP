@@ -1,4 +1,3 @@
-// src/features/purchases/components/PurchaseStatusSection.jsx
 
 import {
   Card,
@@ -17,7 +16,7 @@ import {
 import {
   PURCHASE_STATUSES,
   PURCHASE_STATUS_LABELS,
-} from "#/features/purchases/orders/services/mockData";
+} from "@/features/purchases/orders/services/mockData";
 import {
   Clock,
   Truck,

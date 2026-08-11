@@ -1,4 +1,3 @@
-// src/features/purchases/domain/purchaseRules.js
 import { PURCHASE_STATUSES } from "../services/constants";
 
 /**

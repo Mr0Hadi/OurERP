@@ -1,4 +1,3 @@
-// src/features/purchases/services/queries.js
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { keepPreviousData } from "@tanstack/react-query";
 import { useEffect } from "react";

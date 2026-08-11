@@ -1,4 +1,3 @@
-// src/features/purchases/components/PurchaseItemsSection.jsx
 import { PackagePlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/shared/components/ui/button";

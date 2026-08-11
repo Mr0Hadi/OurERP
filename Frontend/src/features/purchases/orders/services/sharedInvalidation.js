@@ -1,4 +1,3 @@
-// src/features/purchases/services/sharedInvalidation.js
 import { purchaseKeys } from "./queryKeys";
 import { receivingKeys } from "@/features/warehouse/receiving/services/queryKeys";
 import { purchaseReturnKeys } from "../../returns/services/queryKeys";

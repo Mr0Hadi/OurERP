@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Save, X, Trash2, Ban } from "lucide-react";
 
-import { Button } from "#/shared/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,14 +12,14 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "#/shared/components/ui/alert-dialog";
-import { usePurchaseFormStore } from "#/features/purchases/orders/store/purchaseFormStore";
+} from "@/shared/components/ui/alert-dialog";
+import { usePurchaseFormStore } from "@/features/purchases/orders/store/purchaseFormStore";
 import {
   useUpdatePurchaseMutation,
   useUpdatePurchaseStatusMutation,
   useRemovePurchaseMutation,
-} from "#/features/purchases/orders/services/mutations";
-import { useSuppliersQuery } from "#/features/suppliers/services/queries";
+} from "@/features/purchases/orders/services/mutations";
+import { useSuppliersQuery } from "@/features/suppliers/services/queries";
 import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection";
 import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
 import PurchaseInfoSection from "../components/forms/PurchaseInfoSection";
@@ -31,8 +31,8 @@ import {
   canDeletePurchase,
   canCancelPurchase,
   getPurchaseLockReason,
-} from "#/features/purchases/orders/domain/purchaseRules";
-import { PURCHASE_STATUSES } from "#/features/purchases/orders/services/constants";
+} from "@/features/purchases/orders/domain/purchaseRules";
+import { PURCHASE_STATUSES } from "@/features/purchases/orders/services/constants";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };

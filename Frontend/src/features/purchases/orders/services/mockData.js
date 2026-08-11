@@ -1,4 +1,3 @@
-// src/features/purchases/services/mockData.js
 
 export const PURCHASE_STATUSES = {
   PENDING: "pending",

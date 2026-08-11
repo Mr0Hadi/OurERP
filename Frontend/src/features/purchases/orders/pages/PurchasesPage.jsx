@@ -1,4 +1,3 @@
-// src/features/purchases/pages/PurchasesPage.jsx
 import { useNavigate } from "react-router-dom";
 import { Plus, AlertCircle, RefreshCw } from "lucide-react";
 import {

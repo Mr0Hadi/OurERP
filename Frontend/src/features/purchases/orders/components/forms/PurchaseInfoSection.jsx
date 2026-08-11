@@ -1,4 +1,3 @@
-// src/features/purchases/components/PurchaseInfoSection.jsx
 import {
   Card,
   CardContent,

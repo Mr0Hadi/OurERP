@@ -1,14 +1,13 @@
-// src/features/purchases/pages/PurchasesNewPage.jsx
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useNavigationStore } from "@/shared/store/navigationStore";
 import { Save, X } from "lucide-react";
 
-import { Button } from "#/shared/components/ui/button";
-import { useHeaderStore } from "#/shared/store/headerStore";
-import { usePurchaseFormStore } from "#/features/purchases/orders/store/purchaseFormStore";
-import { useCreatePurchaseMutation } from "#/features/purchases/orders/services/mutations";
-import { useSuppliersQuery } from "#/features/suppliers/services/queries";
+import { Button } from "@/shared/components/ui/button";
+import { useHeaderStore } from "@/shared/store/headerStore";
+import { usePurchaseFormStore } from "@/features/purchases/orders/store/purchaseFormStore";
+import { useCreatePurchaseMutation } from "@/features/purchases/orders/services/mutations";
+import { useSuppliersQuery } from "@/features/suppliers/services/queries";
 
 import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection";
 import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";

@@ -1,4 +1,3 @@
-// src/features/purchases/services/api-v1.js
 import axiosInstance from "@/shared/services/api/axios";
 import { PURCHASE_STATUSES } from "./constants";
 

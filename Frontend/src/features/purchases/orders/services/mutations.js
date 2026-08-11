@@ -1,4 +1,3 @@
-// src/features/purchases/services/mutations.js
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
@@ -10,7 +9,7 @@ import {
   removePurchase,
 } from "./api-mockData";
 import { purchaseKeys } from "./queryKeys";
-import { receivingKeys } from "#/features/warehouse/receiving/services/queryKeys";
+import { receivingKeys } from "@/features/warehouse/receiving/services/queryKeys";
 import { ROUTES } from "@/shared/constants/routes";
 import { usePurchaseFormStore } from "../store/purchaseFormStore";
 
