@@ -15,7 +15,8 @@ const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
  *
  * filters        - آبجکت { fieldName: defaultValue }
  * defaultSorting - مرتب‌سازی اولیه و مقدار بازگشت در resetFilters
- * defaultPageSize- اندازه‌ی صفحه‌ی اولیه
+ * defaultPageSize- اندازه‌ی صفحه‌ی اولیه (فقط مقدار شروع؛ بعد از آن
+ *                  انتخاب کاربر حفظ می‌شود)
  */
 export function createFilterStore({
   filters,
@@ -24,9 +25,10 @@ export function createFilterStore({
 }) {
   const filterKeys = Object.keys(filters);
 
-  // NOTE: رفتار فعلی، اندازه‌ی صفحه را هم به مقدار پیش‌فرض برمی‌گرداند
-  // (نه فقط شماره‌ی صفحه را). این عیناً همان رفتار استورهای قبلی است.
-  const resetPagination = () => ({ pageIndex: 0, pageSize: defaultPageSize });
+  // تغییر فیلتر یا مرتب‌سازی، کاربر را به صفحه‌ی اول برمی‌گرداند ولی
+  // «تعداد ردیف در صفحه» را دست نمی‌زند؛ آن یک انتخاب صریح کاربر است،
+  // نه بخشی از فیلتر.
+  const toFirstPage = (state) => ({ ...state.pagination, pageIndex: 0 });
 
   return create(
     devtools((set) => {
@@ -34,7 +36,7 @@ export function createFilterStore({
 
       for (const key of filterKeys) {
         actions[`set${capitalize(key)}`] = (value) =>
-          set({ [key]: value, pagination: resetPagination() });
+          set((state) => ({ [key]: value, pagination: toFirstPage(state) }));
       }
 
       return {
@@ -46,14 +48,17 @@ export function createFilterStore({
 
         setPagination: (newPagination) => set({ pagination: newPagination }),
         setSorting: (newSorting) =>
-          set({ sorting: newSorting, pagination: resetPagination() }),
+          set((state) => ({
+            sorting: newSorting,
+            pagination: toFirstPage(state),
+          })),
 
         resetFilters: () =>
-          set({
+          set((state) => ({
             ...filters,
-            pagination: resetPagination(),
+            pagination: toFirstPage(state),
             sorting: defaultSorting,
-          }),
+          })),
       };
     }),
   );
