@@ -6,4 +6,7 @@
     <Project Path="Infrastructure/Infrastructure.csproj" Id="a6d3ec4e-6571-4454-8068-3f5c082a8c88" />
     <Project Path="WMS/WMS.csproj" />
   </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="Tests/WMS.Tests/WMS.Tests.csproj" />
+  </Folder>
 </Solution>

@@ -30,6 +30,11 @@ namespace Common.Extensions
             return $"RET-{DateTime.Now.Year}-{seq:D4}";
         }
 
+        public static string GenerateSaleReturnNumber(int seq)
+        {
+            return $"SRET-{DateTime.Now.Year}-{seq:D4}";
+        }
+
         public static string GenerateRandomNumber(int digits)
         {
             Random random = new Random();

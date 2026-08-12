@@ -1,0 +1,101 @@
+using Application.Common.Contracts.Context;
+using Application.Common.Contracts.PurchaseReturn;
+using Application.Common.Contracts.Repositories;
+using Application.Common.Contracts.SaleReturn;
+using Application.Common.Contracts.UnitOfWork;
+using Infrastructure.Persistence;
+using Infrastructure.Repositories;
+using Infrastructure.Services;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+
+namespace WMS.Tests.Support
+{
+    /// <summary>
+    /// A real relational database for handler tests: SQLite in-memory, schema built from the
+    /// actual <see cref="WMSDbContext"/> model. Relational (unlike the EF in-memory provider), so
+    /// FK constraints, cascade deletes and LINQ translation failures all surface here rather than
+    /// only in production against SQL Server.
+    ///
+    /// The connection is held open for the lifetime of the instance - closing it drops the DB.
+    /// </summary>
+    public sealed class TestDatabase : IDisposable
+    {
+        private readonly SqliteConnection _connection;
+        private readonly DbContextOptions<WMSDbContext> _options;
+
+        public TestDatabase()
+        {
+            _connection = new SqliteConnection("DataSource=:memory:");
+            _connection.Open();
+
+            _options = new DbContextOptionsBuilder<WMSDbContext>()
+                .UseSqlite(_connection)
+                .EnableSensitiveDataLogging()
+                .Options;
+
+            using var context = new WMSDbContext(_options);
+            context.Database.EnsureCreated();
+        }
+
+        /// <summary>
+        /// A brand-new context over the same database. Use for assertions so reads come off the
+        /// database rather than the change tracker of the context the handler just wrote through.
+        /// </summary>
+        public WMSDbContext NewContext() => new(_options);
+
+        /// <summary>
+        /// One scope's worth of the real infrastructure wiring: a context, the real repositories,
+        /// the real UnitOfWork and the real calculation services, all sharing a single context -
+        /// which is exactly how they are registered (Scoped) in production.
+        /// </summary>
+        public TestScope NewScope() => new(NewContext());
+
+        public void Dispose()
+        {
+            _connection.Dispose();
+        }
+    }
+
+    public sealed class TestScope : IDisposable
+    {
+        public TestScope(WMSDbContext context)
+        {
+            Context = context;
+            // Fully qualified: the `using Application.Common.Contracts.UnitOfWork` above makes the
+            // bare name `UnitOfWork` resolve to that namespace rather than the type.
+            UnitOfWork = new Infrastructure.UnitOfWork.UnitOfWork(context);
+            SaleReturnRepository = new SaleReturnRepository(context);
+            PurchaseReturnRepository = new PurchaseReturnRepository(context);
+            PurchaseRepository = new PurchaseRepository(context);
+            ProductRepository = new ProductRepository(context);
+            CustomerRepository = new CustomerRepository(context);
+            SupplierRepository = new SupplierRepository(context);
+            UserRepository = new UserRepository(context);
+            ProductCategoryRepository = new ProductCategoryRepository(context);
+            RoleRepository = new RoleRepository(context);
+            SaleReturnCalculation = new SaleReturnCalculationService();
+            PurchaseReturnCalculation = new PurchaseReturnCalculationService();
+        }
+
+        public WMSDbContext Context { get; }
+        public IWMSDbContext Db => Context;
+        public IUnitOfWork UnitOfWork { get; }
+        public ISaleReturnRepository SaleReturnRepository { get; }
+        public IPurchaseReturnRepository PurchaseReturnRepository { get; }
+        public IPurchaseRepository PurchaseRepository { get; }
+        public IProductRepository ProductRepository { get; }
+        public ICustomerRepository CustomerRepository { get; }
+        public ISupplierRepository SupplierRepository { get; }
+        public IUserRepository UserRepository { get; }
+        public IProductCategoryRepository ProductCategoryRepository { get; }
+        public IRoleRepository RoleRepository { get; }
+        public ISaleReturnCalculationService SaleReturnCalculation { get; }
+        public IPurchaseReturnCalculationService PurchaseReturnCalculation { get; }
+
+        public void Dispose()
+        {
+            Context.Dispose();
+        }
+    }
+}

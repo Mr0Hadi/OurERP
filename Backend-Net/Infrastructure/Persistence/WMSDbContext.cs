@@ -27,6 +27,10 @@ namespace Infrastructure.Persistence
         public DbSet<PurchaseReturn> PurchaseReturns => Set<PurchaseReturn>();
         public DbSet<PurchaseReturnItem> PurchaseReturnItems => Set<PurchaseReturnItem>();
         public DbSet<PurchaseReturnDecision> PurchaseReturnDecisions => Set<PurchaseReturnDecision>();
+        public DbSet<SaleReturn> SaleReturns => Set<SaleReturn>();
+        public DbSet<SaleReturnClaim> SaleReturnClaims => Set<SaleReturnClaim>();
+        public DbSet<SaleReturnItem> SaleReturnItems => Set<SaleReturnItem>();
+        public DbSet<SaleReturnDecision> SaleReturnDecisions => Set<SaleReturnDecision>();
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
@@ -118,6 +122,42 @@ namespace Infrastructure.Persistence
                 .HasOne(x => x.PurchaseReturnItem)
                 .WithMany(x => x.Decisions)
                 .HasForeignKey(x => x.PurchaseReturnItemId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SaleReturn>()
+                .HasOne(x => x.Sale)
+                .WithMany()
+                .HasForeignKey(x => x.SaleId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<SaleReturnClaim>()
+                .HasOne(x => x.SaleReturn)
+                .WithMany(x => x.Claims)
+                .HasForeignKey(x => x.SaleReturnId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SaleReturnClaim>()
+                .HasOne(x => x.SaleItem)
+                .WithMany()
+                .HasForeignKey(x => x.SaleItemId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<SaleReturnClaim>()
+                .HasOne(x => x.Product)
+                .WithMany()
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<SaleReturnItem>()
+                .HasOne(x => x.SaleReturnClaim)
+                .WithMany(x => x.InspectionItems)
+                .HasForeignKey(x => x.SaleReturnClaimId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SaleReturnDecision>()
+                .HasOne(x => x.SaleReturnItem)
+                .WithMany(x => x.Decisions)
+                .HasForeignKey(x => x.SaleReturnItemId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }

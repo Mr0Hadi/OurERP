@@ -1,0 +1,7 @@
+{
+  "Application, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "E:\\Programming\\WMS\\OurERP\\Backend-Net\\Application",
+  "Common, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "E:\\Programming\\WMS\\OurERP\\Backend-Net\\Common",
+  "Domain, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "E:\\Programming\\WMS\\OurERP\\Backend-Net\\Domain",
+  "Infrastructure, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "E:\\Programming\\WMS\\OurERP\\Backend-Net\\Infrastructure",
+  "WMS, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null": "E:\\Programming\\WMS\\OurERP\\Backend-Net\\WMS"
+}

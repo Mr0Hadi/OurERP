@@ -534,6 +534,12 @@ namespace Infrastructure.Migrations
                     b.Property<int>("SaleId")
                         .HasColumnType("int");
 
+                    b.Property<int>("SettledQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ShippedQuantity")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("UnitPrice")
                         .HasColumnType("decimal(20,0)");
 
@@ -544,6 +550,158 @@ namespace Infrastructure.Migrations
                     b.HasIndex("SaleId");
 
                     b.ToTable("SaleItems");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SaleReturn", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("RequestDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReturnNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SaleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SaleId");
+
+                    b.ToTable("SaleReturns");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SaleReturnClaim", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClaimedQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Reason")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SaleItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SaleReturnId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(20,0)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("SaleItemId");
+
+                    b.HasIndex("SaleReturnId");
+
+                    b.ToTable("SaleReturnClaims");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SaleReturnDecision", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DecisionType")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("RefundAmount")
+                        .HasColumnType("decimal(20,0)");
+
+                    b.Property<int>("ReplacementShippedQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("SaleReturnItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SaleReturnItemId");
+
+                    b.ToTable("SaleReturnDecisions");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SaleReturnItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("IssueType")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SaleReturnClaimId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SaleReturnClaimId");
+
+                    b.ToTable("SaleReturnItems");
                 });
 
             modelBuilder.Entity("Domain.Entities.Supplier", b =>
@@ -848,6 +1006,66 @@ namespace Infrastructure.Migrations
                     b.Navigation("Sale");
                 });
 
+            modelBuilder.Entity("Domain.Entities.SaleReturn", b =>
+                {
+                    b.HasOne("Domain.Entities.Sale", "Sale")
+                        .WithMany()
+                        .HasForeignKey("SaleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Sale");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SaleReturnClaim", b =>
+                {
+                    b.HasOne("Domain.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.SaleItem", "SaleItem")
+                        .WithMany()
+                        .HasForeignKey("SaleItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.SaleReturn", "SaleReturn")
+                        .WithMany("Claims")
+                        .HasForeignKey("SaleReturnId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("SaleItem");
+
+                    b.Navigation("SaleReturn");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SaleReturnDecision", b =>
+                {
+                    b.HasOne("Domain.Entities.SaleReturnItem", "SaleReturnItem")
+                        .WithMany("Decisions")
+                        .HasForeignKey("SaleReturnItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SaleReturnItem");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SaleReturnItem", b =>
+                {
+                    b.HasOne("Domain.Entities.SaleReturnClaim", "SaleReturnClaim")
+                        .WithMany("InspectionItems")
+                        .HasForeignKey("SaleReturnClaimId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SaleReturnClaim");
+                });
+
             modelBuilder.Entity("Domain.Entities.Team", b =>
                 {
                     b.HasOne("Domain.Entities.Department", "Department")
@@ -932,6 +1150,21 @@ namespace Infrastructure.Migrations
                     b.Navigation("Items");
 
                     b.Navigation("PaymentDetails");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SaleReturn", b =>
+                {
+                    b.Navigation("Claims");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SaleReturnClaim", b =>
+                {
+                    b.Navigation("InspectionItems");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SaleReturnItem", b =>
+                {
+                    b.Navigation("Decisions");
                 });
 
             modelBuilder.Entity("Domain.Entities.Team", b =>

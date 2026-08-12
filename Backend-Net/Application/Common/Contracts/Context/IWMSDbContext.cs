@@ -19,6 +19,10 @@ namespace Application.Common.Contracts.Context
         DbSet<Domain.Entities.PurchaseReturn> PurchaseReturns { get; }
         DbSet<PurchaseReturnItem> PurchaseReturnItems { get; }
         DbSet<PurchaseReturnDecision> PurchaseReturnDecisions { get; }
+        DbSet<Domain.Entities.SaleReturn> SaleReturns { get; }
+        DbSet<SaleReturnClaim> SaleReturnClaims { get; }
+        DbSet<SaleReturnItem> SaleReturnItems { get; }
+        DbSet<SaleReturnDecision> SaleReturnDecisions { get; }
 
         DbSet<T> Set<T>() where T : class;
 

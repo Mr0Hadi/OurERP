@@ -8,5 +8,7 @@
         DELIVERED,
         RETURNED,
         CANCELLED,
+        // Appended (not inserted) so existing persisted integer values keep their meaning.
+        SHIPPED,
     }
 }

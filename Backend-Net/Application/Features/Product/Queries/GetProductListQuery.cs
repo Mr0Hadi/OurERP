@@ -74,7 +74,7 @@ namespace Application.Features.Product.Queries
                 query = query.Where(p => p.RetailPrice <= request.ToPrice);
             }
 
-            var data = query.Select(x => new ProductListDto
+            var data = await query.Select(x => new ProductListDto
             {
                 Id = x.Id,
                 Brand = x.Brand,

@@ -6,7 +6,9 @@ using Application.Features.Product.Dtos;
 using Application.Features.ProductCategory.Commands;
 using Application.Features.ProductCategory.Dtos;
 using Application.Features.Purchase.Commands;
+using Application.Features.Purchase.Dtos;
 using Application.Features.Sale.Commands;
+using Application.Features.Sale.Dtos;
 using Application.Features.Supplier.Commands;
 using Application.Features.Supplier.Dtos;
 using Application.Features.User.Command;
@@ -21,12 +23,31 @@ namespace Application.Common.Mapping
 	{
 		public MappingProfile()
 		{
+			CreateMap<PaymentDetailDto, PaymentDetail>()
+				.ForMember(dest => dest.checkNumber, opt => opt.MapFrom(src => src.CheckNumber))
+				.ForMember(dest => dest.transferRef, opt => opt.MapFrom(src => src.TransferRef));
+
+			CreateMap<PaymentDetail, PaymentDetailDto>()
+				.ForMember(dest => dest.CheckNumber, opt => opt.MapFrom(src => src.checkNumber))
+				.ForMember(dest => dest.TransferRef, opt => opt.MapFrom(src => src.transferRef));
+
+			CreateMap<CreateSaleItemDto, SaleItem>();
+			CreateMap<UpdateSaleItemDto, SaleItem>();
+			CreateMap<CreatePurchaseItemDto, PurchaseItem>();
+			CreateMap<PurchaseItem, CreatePurchaseItemDto>();
+
 			CreateMap<CreateSaleCommand, Sale>()
+				.ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.ProductIds))
+				.ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.Now))
 				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
-            CreateMap<Purchase, CreatePurchaseCommand>();
+            CreateMap<Purchase, CreatePurchaseCommand>()
+				.ForMember(dest => dest.ProductItemList, opt => opt.MapFrom(src => src.Items));
 
 			CreateMap<CreatePurchaseCommand, Purchase>()
+				.ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.ProductItemList))
+				.ForMember(dest => dest.TotalAmount, opt => opt.MapFrom(src => src.TotalPrice))
+				.ForMember(dest => dest.PaidAmount, opt => opt.MapFrom(src => src.PaidPrice))
 				.ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.Now))
 				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
@@ -70,6 +91,7 @@ namespace Application.Common.Mapping
 			//.ForMember(dest => dest.Permissions, opt => opt.MapFrom(src => src.Permissions));
 
 			CreateMap<CreateUserCommand, User>()
+					 .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.FisrtName))
 					 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.Now))
 					 .ForMember(dest => dest.PasswordHash, source => source.MapFrom(e => e.Password.ToHashSHA256()))
 					 .ForMember(dest => dest.IsActive, source => source.MapFrom(e => true));

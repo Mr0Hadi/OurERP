@@ -99,19 +99,26 @@ Backend-Net/
 ├── Domain/
 │   ├── Entities/        # Customer, Product, ProductCategory, Purchase, PurchaseItem,
 │   │                    # PurchaseReturn, PurchaseReturnItem, PurchaseReturnDecision,
-│   │                    # Sale, SaleItem, Supplier, User, Role, Department, Team, PaymentDetail
+│   │                    # Sale, SaleItem (now ShippedQuantity/SettledQuantity), Supplier,
+│   │                    # User, Role, Department, Team, PaymentDetail,
+│   │                    # SaleReturn, SaleReturnClaim, SaleReturnItem, SaleReturnDecision
 │   └── Enums/           # BalanceTypeEnum, PaymentTypeEnum, ProductUnitEnum,
-│                        # PurchaceStatusEnum (typo kept), SalesStatusEnum, UserRolesEnum,
+│                        # PurchaceStatusEnum (typo kept), SalesStatusEnum (now incl. SHIPPED,
+│                        # appended at the end to avoid renumbering), UserRolesEnum,
 │                        # PurchaseIssueTypeEnum, PurchaseReturnDecisionTypeEnum,
 │                        # PurchaseReturnDecisionStatusEnum (AWAITING|RESOLVED),
 │                        # PurchaseReturnStatusEnum (PENDING|COORDINATING|RESOLVED|REJECTED|CANCELLED),
-│                        # PurchaseStatusEnum (…|PARTIALLY_RECEIVED|RECEIVED|…)
+│                        # PurchaseStatusEnum (…|PARTIALLY_RECEIVED|RECEIVED|…),
+│                        # SalesReturnReasonEnum, SalesReturnIssueTypeEnum (nullable on the
+│                        # entity; null = inspected healthy), SaleReturnStatusEnum
+│                        # (PENDING_INSPECTION|COORDINATING|RESOLVED|REJECTED|CANCELLED),
+│                        # SaleReturnDecisionTypeEnum, SaleReturnDecisionStatusEnum
 ├── Application/
 │   ├── Common/
 │   │   ├── Behaviors/   # ValidationBehavior
 │   │   ├── Contracts/   # Repositories/, Context/ (IWMSDbContext), UnitOfWork/, Token/,
 │   │   │                # UserContextService/, Environment/, PurchaseReturn/ (IPurchaseReturnCalculationService),
-│   │   │                # (Captcha/ present, unused)
+│   │   │                # SaleReturn/ (ISaleReturnCalculationService), (Captcha/ present, unused)
 │   │   ├── Dtos/        # ResponseDto (+ Success/Warning/Danger factories), ResponsePageDto, ...
 │   │   ├── Enums/       # ResponseMessageTypeEnum
 │   │   └── Mapping/     # MappingProfile
@@ -124,7 +131,12 @@ Backend-Net/
 │   │   ├── PurchaseReturn/ # Commands/ (ReceivePurchase, Add/RemovePurchaseReturnDecision,
 │   │   │                   # Cancel/Reject/Reopen/DeletePurchaseReturn), Queries/, Dtos/
 │   │   │                   # (shared status/quantity math lives in IPurchaseReturnCalculationService, above)
-│   │   ├── Sale/
+│   │   ├── Sale/         # Commands/ now incl. ShipSaleCommand (multi-round shipping, prerequisite
+│   │   │                 # for SaleReturn), Queries/, Dtos/
+│   │   ├── SaleReturn/   # Commands/ (CreateSaleReturn, ConfirmReturnInspection,
+│   │   │                 # Add/RemoveSaleReturnDecision, ConfirmReplacementShipment,
+│   │   │                 # Cancel/Reject/Reopen/DeleteSaleReturn), Queries/, Dtos/
+│   │   │                 # (shared status/quantity math lives in ISaleReturnCalculationService, above)
 │   │   ├── Supplier/
 │   │   └── User/        # Command/, Query/, Dto/ (singular — legacy)
 │   └── Ioc/             # ApplicationServiceRegistration (AddApplicationServices)
@@ -133,7 +145,8 @@ Backend-Net/
 │   ├── Repositories/    # GenericRepository<T> + per-entity repositories
 │   ├── UnitOfWork/      # UnitOfWork
 │   ├── Ioc/             # InfrastructureServiceRegistration (AddInfrastructureServices)
-│   ├── Services/        # TokenService, CaptchaService, PurchaseReturnCalculationService
+│   ├── Services/        # TokenService, CaptchaService, PurchaseReturnCalculationService,
+│   │                    # SaleReturnCalculationService
 │   └── Migrations/      # EF Core migrations + model snapshot
 ├── Common/
 │   ├── Exceptions/      # BaseCustomException + concrete custom exceptions
@@ -172,8 +185,24 @@ Backend-Net/
 - Shipped as migration `20260805211146_purchase-return-lifecycle` (built on top of the last real committed migration, `20260802220706_purchase-return-model`; the intermediate uncommitted `20260805194243_add-purchase-return` migration from the abandoned first rebuild was discarded rather than layered on top). **Not yet applied to any database** — run `dotnet ef database update --project Infrastructure --startup-project WMS` before testing against a real DB.
 - The `WarehouseReceiving` feature (old purchase-side) remains deleted from the first rebuild; only `GetWarehouseReceiveSaleListQuery` survives, still unwired.
 
+**Sale shipping & sale returns (2026-08-10).** Built from a business-scenario spec (`docs/return-scenarios-guide.fa.md` section 2, `docs/sale-return-guide.fa.md`) mirroring the `PurchaseReturn` architecture, since no sale-side equivalent existed at all before this. Full detail in `docs/sale-return-guide.fa.md`; summary:
+
+- **`ShipSaleCommand`** (`POST api/Sale/ShipSale`) is a new prerequisite feature — multi-round shipping to the customer, mirroring `ReceivePurchaseCommand`'s shape but for the outbound side: stock goes *down*, not up, and there's no "issues" concept at ship time (problems are only ever reported later by the customer, through `SaleReturn`). Adds `SaleItem.ShippedQuantity`/`SaleItem.SettledQuantity` (mirrors `PurchaseItem`'s fields). Sets `Sale.Status` to `PARTIALLY_DELIVERED` or the newly added `SalesStatusEnum.SHIPPED` (appended at the enum's end, not inserted, so existing persisted `Sale.Status` integers keep their meaning). `DELIVERED` stays manual-only, as in the frontend.
+- **`SaleReturn` is a 4-level model** (`SaleReturn` → `SaleReturnClaim` → `SaleReturnItem` → `SaleReturnDecision`), one level deeper than `PurchaseReturn`, because sale returns have two independent axes that `PurchaseReturn` doesn't: the customer's claimed reason (`SalesReturnReasonEnum`, captured at claim time) and the warehouse's physically-observed issue (`SalesReturnIssueTypeEnum?`, captured at inspection time, nullable = inspected healthy). `SaleReturnClaim` is the claim line (customer's reason + claimed quantity, the budget inspection is checked against); `SaleReturnItem` is the per-observed-issue-type inspected quantity (mirrors `PurchaseReturnItem`'s role exactly, one level deeper).
+- **Created at claim time, not physical-return time.** `CreateSaleReturnCommand` makes a new `SaleReturn` at `PENDING_INSPECTION` immediately when the claim is filed — the opposite of `PurchaseReturn`, which is only ever created after physical receiving. Only `Sale.Status` in `{SHIPPED, PARTIALLY_DELIVERED, DELIVERED}` is claimable.
+- **Several concurrent active returns per sale are allowed** (unlike `PurchaseReturn`'s at-most-one guarantee) — every `CreateSaleReturnCommand` call makes a brand-new `SaleReturn`, never reuses an existing one. `ISaleReturnCalculationService.GetOpenClaimQuantity`/`GetClaimableQuantity` sum reserved quantity across a `List<SaleReturn>` of active returns (`ISaleReturnRepository.GetActiveBySaleIdAsync`), not a single nullable, to arbitrate between them.
+- **`ConfirmReturnInspectionCommand`** (`POST api/SaleReturn/ConfirmReturnInspection`) is the warehouse-side counterpart of `ReceivePurchaseCommand`: multi-round, validated against `SaleReturnClaim.UninspectedQuantity` per claim. Only the healthy (`IssueType == null`) verified quantity is added back to `Product.Stock`, at inspection time — mirrors `PurchaseReturn`'s rule that only clean quantity ever touches stock, and matches the spec's explicit statement that defective/damaged/wrong-item quantity never returns to sellable stock.
+- **`SaleReturnStatusEnum`** (`PENDING_INSPECTION|COORDINATING|RESOLVED|REJECTED|CANCELLED`) transitions differently from `PurchaseReturnStatusEnum`: `PENDING_INSPECTION` → `COORDINATING` requires *full* inspection completion (`UninspectedQuantity == 0` for every claim), not the first decision — see `ISaleReturnCalculationService.RecomputeReturnStatus`. Cancel/Reject/Delete are only legal pre-inspection (`ISaleReturnCalculationService.IsPreInspection`: `Status == PENDING_INSPECTION && InspectedQuantity == 0`, one definition shared by the three commands and the detail query's `CanCancel`/`CanReject`/`CanDelete` flags), stricter than Purchase's "pre-decision" rule, because a sale return can sit in `PENDING_INSPECTION` for a while with zero inspection done.
+- **Decisions** (`SaleReturnDecisionTypeEnum`: `REFUND|REPLACEMENT|STORE_CREDIT|NO_COMPENSATION`) mirror Purchase's `AddPurchaseReturnDecisionCommand`/`RemovePurchaseReturnDecisionCommand` almost exactly, via `AddSaleReturnDecisionCommand`/`RemoveSaleReturnDecisionCommand`. `ISaleReturnCalculationService.IsValidDecision` only excludes one combination: `REPLACEMENT` against a healthy (`IssueType == null`) inspected line — nothing to replace. `STORE_CREDIT` is label-only (bumps `SettledQuantity`, no ledger entity), same as `PurchaseReturn`'s `CREDIT`.
+- **Replacement shipping is explicit, not inferred.** Unlike `PurchaseReturn`'s `ResolveAwaitingReplacements` heuristic (which has to *guess* whether an incoming purchase shipment is a promised replacement), the sale side ships *out*, so `ConfirmReplacementShipmentCommand` (`POST api/SaleReturn/ConfirmReplacementShipment`) targets a specific `SaleReturnDecisionId` directly — no guessing needed. Multi-round-safe via `SaleReturnDecision.ReplacementShippedQuantity`; decrements `Product.Stock`.
+- **`Sale.Status` is auto-recomputed by return activity, unlike the frontend** (a deliberate deviation, not a gap — see `docs/sale-return-guide.fa.md` for the reasoning): `ISaleReturnCalculationService.RecomputeSaleStatus` only ever overrides `Sale.Status` to `RETURNED`, once every unit ever shipped has been financially settled through a return decision; otherwise `Sale.Status` is left as whatever shipping/manual-delivery set it to. It is called from **`AddSaleReturnDecisionCommand` only** — that is the single command that moves `SaleItem.SettledQuantity`, which is the only input the function reads. Inspection, replacement shipment, cancel/reject/delete/reopen and `AWAITING`-decision removal all leave settled quantity alone, so calling it there was a guaranteed no-op that only forced an extra `Sale → Items` Include.
+- **Namespace shadowing gotcha applies again** (same as `PurchaseReturn`, see below): anything in `Application.Features.SaleReturn.*` or `Application.Common.Contracts.SaleReturn.*` must fully qualify `Domain.Entities.SaleReturn`.
+- **Include spines and quantity roll-ups are each defined once** (cleanup pass, 2026-08-11). `Application/Features/SaleReturn/SaleReturnQueryExtensions.cs` holds `WhereActive()` (the `PENDING_INSPECTION|COORDINATING` definition, shared with `SaleReturnRepository.GetActiveBySaleIdAsync`), `WithReturnGraph()` (`Claims → Product` + `Claims → InspectionItems → Decisions`) and `WithSaleItems()`. **Any handler that recomputes a status must load `WithReturnGraph()`** — `RecomputeReturnStatus` and the roll-ups sum over the loaded graph, so a missing `ThenInclude` doesn't throw, it silently computes a status from empty collections and persists it. The per-level quantity math lives on the entities as `[NotMapped]` roll-ups (`SaleReturn.ClaimedQuantity/InspectedQuantity/DecidedQuantity`, `SaleReturnClaim.InspectedQuantity/UninspectedQuantity/DecidedQuantity`, `SaleReturnItem.DecidedQuantity/UndecidedQuantity`, `SaleReturnDecision.UnshippedReplacementQuantity`); they are **in-memory only and untranslatable to SQL**, so `GetSaleReturnListQuery`'s server-side projection deliberately still spells its sums out. The decision commands load from `SaleReturns` down (filtering on `Claims.Any(c => c.InspectionItems.Any(...))`) rather than from the decision/item up, so there is one Include spine per handler instead of a reversed second one.
+- Shipped as migration `20260809214004_sale-return-and-shipping`, **applied to the local `WMS` database** (verified 2026-08-11 against `__EFMigrationsHistory`). Still **not exercised through a running API**.
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - `CreatePurchaseCommandHandler` declares `_unitOfWork` but its constructor never assigns it → `NullReferenceException` at runtime (`Application/Features/Purchase/Commands/CreatePurchaseCommand.cs:46-62`).
+- **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
 - `PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK (see `WMSDbContextModelSnapshot.cs:119-124`). Needs reconciliation.
 - `IWMSDbContext` does not expose `DbSet<PurchaseItem>`/`DbSet<SaleItem>` (the concrete `WMSDbContext` does), and the two concrete DbSet properties use `{ get; set; }` while the rest use `=> Set<T>()`.
 - List DTOs/queries do not yet surface or filter on `IsActive`; soft-deleted rows are only hidden if a query explicitly filters. Consider adding `IsActive` filters to list queries. (Note: `PurchaseReturn` has no `IsActive` — its lifecycle is `Status` alone, with per-decision `ResolvedAt`; purchase-return queries intentionally do not filter `IsActive`.)
@@ -185,8 +214,17 @@ Backend-Net/
 **Purchase-return specific gaps / decisions** (multi-round rebuild, see "Current state" above for the full design):
 - **No stock-movement ledger exists**: `Product.Stock` is a plain `int`; `ReceivePurchaseCommand` mutates it directly (`Product.Stock += ReceivedQuantity`). The original Go spec assumed a ledger that does not exist here — still true.
 - **The frontend's REST-ish routes (`/purchase-returns/:id`, `/purchases/shortage-reports`) are not mirrored** — this project's action-name convention was kept (`POST api/Purchase/ReceivePurchase`, `GET api/PurchaseReturn/GetPurchaseReceivingInfo`, etc.). Whoever wires the frontend off its mock onto this API needs a thin adapter, not a route rename.
-- **Migration not applied**: `20260805211146_purchase-return-lifecycle` has been generated but `dotnet ef database update` has not been run against any database in this session.
-- **Untested against real data**: the multi-round receiving math (budget validation, replacement auto-fulfillment) has been reviewed for logical consistency and the solution builds clean, but has not been exercised through the running API or against a live DB yet.
+- ~~Migration not applied~~: `20260805211146_purchase-return-lifecycle` **is applied** to the local `WMS` database (verified 2026-08-11).
+- **Untested against real data**: the multi-round receiving math (budget validation, replacement auto-fulfillment) has been reviewed for logical consistency and the solution builds clean, but has not been exercised through the running API yet.
+
+**Sale-shipping/sale-return specific gaps / decisions** (see "Current state" above for the full design):
+- **No stock-movement ledger**, same as Purchase: `Product.Stock` is mutated directly by `ShipSaleCommand`, `ConfirmReturnInspectionCommand`, and `ConfirmReplacementShipmentCommand`.
+- **No `CustomerCredit`/ledger entity**: `STORE_CREDIT` decisions are a label only, exactly like `PurchaseReturn`'s `CREDIT` — deliberate scope decision, not an oversight (a real ledger would be its own feature).
+- ~~Migration not applied~~: `20260809214004_sale-return-and-shipping` **is applied** to the local `WMS` database (verified 2026-08-11).
+- ~~Untested against real data~~: **exercised end-to-end through the running API on 2026-08-11** against the local `WMS` database — 124 assertions, all passing. Two scripted walkthroughs (kept only as scratch, not committed): (1) multi-round `ShipSale` → `CreateSaleReturn` → two-round `ConfirmReturnInspection` → REFUND/REPLACEMENT/STORE_CREDIT decisions → partial then final `ConfirmReplacementShipment` → all four read queries; (2) the lifecycle commands — concurrent-return claim-budget arbitration, reject → reopen → cancel, delete + cascade, the post-inspection guards, and `AWAITING`-only decision removal. Verified along the way: only healthy inspected quantity is restocked, `REPLACEMENT` decisions leave `SettledQuantity` alone, and every over-budget/invalid-transition path returns 400.
+  - Test scaffolding note: sales had to be seeded with SQL because **`POST api/Sale/CreateSale` is currently uncallable** — `CreateSaleCommand.ProductIds` is typed `List<SaleItem>`, and that entity's non-nullable `Product`/`Sale` navigations make ASP.NET model validation reject every payload (400 "فرمت داده ورودی صحیح نمی باشد."). Pre-existing, unrelated to the return features; `CreatePurchaseCommand` likely shares it. See the "Known gaps" list above.
+- **Seed data available**: `scripts/seed-mock-data.sql` loads the frontend's mock fixtures (products, customers, suppliers, purchases, sales, and a coherent set of both kinds of return) into a migrated DB. It refuses to run against non-empty tables unless `@ResetExisting = 1`. Validated end-to-end against a throwaway migrated database.
+- **`SalesStatusEnum.RETURNED` is now reachable** (unlike its still-dead `PurchaseStatusEnum.RETURNED` counterpart) — `RecomputeSaleStatus` sets it once every shipped unit of a sale is settled through return decisions.
 
 ## 7. Conventions to avoid
 

@@ -2,6 +2,8 @@ using Application.Common.Contracts.Context;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Features.Sale.Dtos;
+using AutoMapper;
 using Common.Exceptions;
 using Common.Extensions;
 using Domain.Entities;
@@ -19,12 +21,12 @@ namespace Application.Features.Sale.Commands
         public DateTime InvoiceDate { get; set; }
         public SalesStatusEnum Status { get; set; }
         public PaymentTypeEnum PaymentType { get; set; }
-        public List<PaymentDetail> PaymentDetails { get; set; }
+        public List<PaymentDetailDto> PaymentDetails { get; set; }
         public UInt64 TotalAmount { get; set; }
         public UInt64 PaidAmount { get; set; }
         public string? Description { get; set; }
         public int CustomerId { get; set; }
-        public List<SaleItem> Items { get; set; }
+        public List<UpdateSaleItemDto> Items { get; set; }
     }
 
     public class UpdateSaleCommandValidator : AbstractValidator<UpdateSaleCommand>
@@ -37,6 +39,12 @@ namespace Application.Features.Sale.Commands
             RuleFor(x => x.TotalAmount).Must(p => p > 0).WithMessage("مبلغ کل باید از صفر بیشتر باشد.");
             RuleFor(x => x.PaidAmount).Must(p => p >= 0).WithMessage("مبلغ پرداختی باید بیشتر یا مساوی صفر باشد.");
             RuleFor(x => x.Items).NotEmpty().WithMessage(Validation.RequiredMessage("محصولات"));
+            RuleForEach(x => x.Items).ChildRules(item =>
+            {
+                item.RuleFor(i => i.ProductId).GreaterThan(0).WithMessage(Validation.RequiredMessage("محصول"));
+                item.RuleFor(i => i.Quantity).GreaterThan(0).WithMessage("تعداد هر محصول باید از صفر بیشتر باشد.");
+                item.RuleFor(i => i.Discount).GreaterThanOrEqualTo(0).WithMessage("تخفیف باید بیشتر یا مساوی صفر باشد.");
+            });
             RuleFor(x => x.PaymentDetails).NotEmpty().When(x => x.PaymentType != PaymentTypeEnum.CASH)
                 .WithMessage("اطلاعات پرداخت باید به طول کامل پر شود.");
         }
@@ -46,18 +54,24 @@ namespace Application.Features.Sale.Commands
     {
         private readonly IWMSDbContext _context;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
-        public UpdateSaleCommandHandler(IWMSDbContext context, IUnitOfWork unitOfWork)
+        public UpdateSaleCommandHandler(IWMSDbContext context, IUnitOfWork unitOfWork, IMapper mapper)
         {
             _context = context;
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
 
         public async Task<ResponseDto> Handle(UpdateSaleCommand request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
 
-            var sale = await _context.Sales.Where(x => x.Id == request.Id).FirstOrDefaultAsync() ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
+            var sale = await _context.Sales.Include(x => x.Items).Where(x => x.Id == request.Id).FirstOrDefaultAsync() ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
+
+            var hasUnknownItems = request.Items.Where(x => x.Id != 0).Select(x => x.Id).Except(sale.Items.Select(x => x.Id)).Any();
+            if (hasUnknownItems)
+                throw new NotFoundCustomException("ردیف کالای مورد نظر در این فروش یافت نشد.");
 
             sale.InvoiceNumber = request.InvoiceNumber;
             sale.InvoiceDate = request.InvoiceDate;
@@ -67,8 +81,25 @@ namespace Application.Features.Sale.Commands
             sale.PaidAmount = request.PaidAmount;
             sale.Description = request.Description;
             sale.CustomerId = request.CustomerId;
-            sale.Items = request.Items;
             sale.UpdatedAt = DateTime.Now;
+
+            foreach (var existing in sale.Items.ToList())
+            {
+                var incoming = request.Items.FirstOrDefault(x => x.Id == existing.Id);
+                if (incoming == null)
+                {
+                    sale.Items.Remove(existing);
+                    continue;
+                }
+
+                existing.ProductId = incoming.ProductId;
+                existing.Quantity = incoming.Quantity;
+                existing.UnitPrice = incoming.UnitPrice;
+                existing.Discount = incoming.Discount;
+            }
+
+            foreach (var incoming in request.Items.Where(x => x.Id == 0))
+                sale.Items.Add(_mapper.Map<Domain.Entities.SaleItem>(incoming));
 
             _context.Sales.Update(sale);
             await _unitOfWork.SaveChangesAsync();

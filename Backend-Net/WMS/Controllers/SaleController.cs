@@ -47,5 +47,11 @@ namespace WMS.Controllers
         {
             return await _mediator.Send(request);
         }
+
+        [HttpPost("ShipSale")]
+        public async Task<ActionResult<ResponseDto>> ShipSale([FromBody] ShipSaleCommand request)
+        {
+            return await _mediator.Send(request);
+        }
     }
 }

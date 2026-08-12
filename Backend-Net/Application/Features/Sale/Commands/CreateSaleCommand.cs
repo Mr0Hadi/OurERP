@@ -3,6 +3,7 @@ using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Features.Sale.Dtos;
 using AutoMapper;
 using Common.Extensions;
 using Domain.Entities;
@@ -19,12 +20,12 @@ namespace Application.Features.Sale.Commands
         public DateTime InvoiceDate { get; set; }
         public SalesStatusEnum Status { get; set; }
         public PaymentTypeEnum PaymentType { get; set; }
-        public List<PaymentDetail> PaymentDetails { get; set; }
+        public List<PaymentDetailDto> PaymentDetails { get; set; }
         public UInt64 TotalAmount { get; set; }
         public UInt64 PaidAmount { get; set; }
         public string? Description { get; set; }
         public int CustomerId { get; set; }
-        public List<SaleItem> ProductIds { get; set; }
+        public List<CreateSaleItemDto> ProductIds { get; set; }
     }
 
     public class CreateSaleCommandValidator : AbstractValidator<CreateSaleCommand>
@@ -37,6 +38,12 @@ namespace Application.Features.Sale.Commands
             RuleFor(x => x.TotalAmount).Must(p => p > 0).WithMessage("مبلغ کل باید از صفر بیشتر باشد.");
             RuleFor(x => x.PaidAmount).Must(p => p >= 0).WithMessage("مبلغ پرداختی باید بیشتر یا مساوی صفر باشد.");
             RuleFor(x => x.ProductIds).NotEmpty().WithMessage(Validation.RequiredMessage("محصولات"));
+            RuleForEach(x => x.ProductIds).ChildRules(item =>
+            {
+                item.RuleFor(i => i.ProductId).GreaterThan(0).WithMessage(Validation.RequiredMessage("محصول"));
+                item.RuleFor(i => i.Quantity).GreaterThan(0).WithMessage("تعداد هر محصول باید از صفر بیشتر باشد.");
+                item.RuleFor(i => i.Discount).GreaterThanOrEqualTo(0).WithMessage("تخفیف باید بیشتر یا مساوی صفر باشد.");
+            });
             RuleFor(x => x.PaymentDetails).NotEmpty().When(x => x.PaymentType != PaymentTypeEnum.CASH)
                 .WithMessage("اطلاعات پرداخت باید به طول کامل پر شود.");
         }

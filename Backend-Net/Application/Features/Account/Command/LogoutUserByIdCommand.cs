@@ -1,4 +1,5 @@
 ﻿using Application.Common.Contracts.Repositories;
+using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Common.Exceptions;
@@ -28,10 +29,12 @@ namespace Application.Features.Account.Command
 	{
 		private readonly IMemoryCache _memoryCache;
 		private readonly IUserRepository _userRepository;
-		public LogoutUserByIdCommandHandler(IMemoryCache memoryCache, IUserRepository userRepository)
+		private readonly IUnitOfWork _unitOfWork;
+		public LogoutUserByIdCommandHandler(IMemoryCache memoryCache, IUserRepository userRepository, IUnitOfWork unitOfWork)
 		{
 			_memoryCache = memoryCache;
 			_userRepository = userRepository;
+			_unitOfWork = unitOfWork;
 		}
 		public async Task<ResponseDto> Handle(LogoutUserByIdCommand request, CancellationToken cancellationToken)
 		{
@@ -45,6 +48,9 @@ namespace Application.Features.Account.Command
 
 			user.RefreshToken = null;
 			user.ExpireRefreshToken = null;
+
+			_userRepository.Update(user);
+			await _unitOfWork.SaveChangesAsync(cancellationToken);
 
 			res.Message = "کاربر با موفقیت خارج شد.";
 			res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();

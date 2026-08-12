@@ -2,6 +2,7 @@
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Repositories;
+using Application.Common.Contracts.SaleReturn;
 using Application.Common.Contracts.Token;
 using Application.Common.Contracts.UnitOfWork;
 using Infrastructure.Persistence;
@@ -36,6 +37,7 @@ namespace Infrastructure.Ioc
             services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
             services.AddScoped<IPurchaseRepository, PurchaseRepository>();
             services.AddScoped<IPurchaseReturnRepository, PurchaseReturnRepository>();
+            services.AddScoped<ISaleReturnRepository, SaleReturnRepository>();
 
             //UnitOfWork
             services.AddScoped<IUnitOfWork, UnitOfWork.UnitOfWork>();
@@ -45,6 +47,8 @@ namespace Infrastructure.Ioc
             services.AddScoped<ITokenService, TokenService>();
 
             services.AddScoped<IPurchaseReturnCalculationService, PurchaseReturnCalculationService>();
+
+            services.AddScoped<ISaleReturnCalculationService, SaleReturnCalculationService>();
 
             //services.AddSixLabCaptcha(x => x.DrawLines = 4);
 

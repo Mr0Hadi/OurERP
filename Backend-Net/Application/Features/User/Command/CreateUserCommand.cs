@@ -16,6 +16,7 @@ namespace Application.Features.User.Command
         public string LastName { get; set; }
         public string Username { get; set; }
         public string Password { get; set; }
+        public string PersonelCode { get; set; }
         public int RoleId { get; set; }
     }
 
@@ -39,6 +40,9 @@ namespace Application.Features.User.Command
             RuleFor(x => x.Password)
                  .Must(Validation.IsNotNullOrEmpty).WithMessage(Validation.RequiredMessage("رمز عبور"))
                  .Must(Validation.IsValidPassword).WithMessage("رمز عبور باید حداقل 8 کاراکتر باشد و شامل حرف انگلیسی، عدد و یک کاراکتر خاص باشد");
+
+            RuleFor(x => x.PersonelCode)
+                .Must(Validation.IsNotNullOrEmpty).WithMessage(Validation.RequiredMessage("کد پرسنلی"));
 
         }
     }
