@@ -17,7 +17,7 @@ const EMPTY_RECEIVING = {
   vehiclePlate: '',
 };
 
-const useReceivingFormStore = create((set, get) => ({
+export const useReceivingFormStore = create((set, get) => ({
   formData: { ...EMPTY_RECEIVING },
   // کلید نسخه شامل updatedAt خرید است، نه فقط id — چون وقتی همان
   // خرید دوباره برای دور دومِ دریافت باز می‌شود، id عوض نمی‌شود ولی
@@ -83,5 +83,3 @@ const useReceivingFormStore = create((set, get) => ({
   resetForm: () =>
     set({ formData: { ...EMPTY_RECEIVING }, initializedForId: null }),
 }));
-
-export default useReceivingFormStore;

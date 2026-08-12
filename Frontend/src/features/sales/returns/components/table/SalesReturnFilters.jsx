@@ -5,7 +5,7 @@ import FilterDateInput from "@/shared/components/filters/FilterDateInput";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import EntityMultiSelect from "@/shared/components/filters/EntityMultiSelect";
 import { toFilterOptions } from "@/shared/components/filters/filterUtils";
-import useSalesReturnFilterStore from "../../store/salesReturnFilterStore";
+import { useSalesReturnFilterStore } from "../../store/salesReturnFilterStore";
 import {
   SALES_RETURN_STATUS_LABELS,
   SALES_RETURN_REASON_LABELS,

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import useProductFilterStore from "../store/productFilterStore";
+import { useProductFilterStore } from "../store/productFilterStore";
 
 const DEBOUNCE_MS = 400;
 

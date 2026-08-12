@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import useShippingFormStore from '../store/shippingFormStore';
+import { useShippingFormStore } from '../store/shippingFormStore';
 
 export function useShippingForm(saleData) {
   const store = useShippingFormStore();

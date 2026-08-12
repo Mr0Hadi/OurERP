@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import useReceivingFormStore from '../store/receivingFormStore';
+import { useReceivingFormStore } from '../store/receivingFormStore';
 
 const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;

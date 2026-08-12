@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
-import usePurchaseFilterStore from "../store/purchaseFilterStore";
+import { usePurchaseFilterStore } from "../store/purchaseFilterStore";
 import { useDebouncedPurchaseFilters } from "../hooks/useDebouncedPurchaseFilters";
 import { usePurchasesQuery } from "../services/queries";
 import { useSuppliersQuery } from "@/features/suppliers/services/queries";

@@ -8,7 +8,7 @@ import {
 } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { useHeaderStore } from "@/shared/store/headerStore";
-import usePurchaseReturnFilterStore from "../store/purchaseReturnFilterStore";
+import { usePurchaseReturnFilterStore } from "../store/purchaseReturnFilterStore";
 import { useDebouncedPurchaseReturnFilters } from "../hooks/useDebouncedPurchaseReturnFilters";
 import { usePurchaseReturnsQuery } from "../services/queries";
 import PurchaseReturnFilters from "../components/table/PurchaseReturnFilters";

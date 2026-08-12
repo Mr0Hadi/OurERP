@@ -1,5 +1,5 @@
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
-import useReceivingFilterStore from "../store/receivingFilterStore";
+import { useReceivingFilterStore } from "../store/receivingFilterStore";
 
 export function useDebouncedReceivingFilters() {
   const globalSearch = useReceivingFilterStore((s) => s.globalSearch);

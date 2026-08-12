@@ -1,6 +1,6 @@
 import { createFilterStore } from "@/shared/store/createFilterStore";
 
-const useShippingFilterStore = createFilterStore({
+export const useShippingFilterStore = createFilterStore({
   filters: {
     globalSearch: "",
     customerIds: [],
@@ -10,5 +10,3 @@ const useShippingFilterStore = createFilterStore({
     toDate: "",
   },
 });
-
-export default useShippingFilterStore;

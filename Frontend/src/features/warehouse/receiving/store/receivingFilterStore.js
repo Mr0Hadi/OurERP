@@ -1,6 +1,6 @@
 import { createFilterStore } from "@/shared/store/createFilterStore";
 
-const useReceivingFilterStore = createFilterStore({
+export const useReceivingFilterStore = createFilterStore({
   filters: {
     globalSearch: "",
     type: "",
@@ -10,5 +10,3 @@ const useReceivingFilterStore = createFilterStore({
     toDate: "",
   },
 });
-
-export default useReceivingFilterStore;

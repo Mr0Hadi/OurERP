@@ -4,7 +4,7 @@ import FilterSelect from "@/shared/components/filters/FilterSelect";
 import FilterDateInput from "@/shared/components/filters/FilterDateInput";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import { toFilterOptions } from "@/shared/components/filters/filterUtils";
-import usePurchaseReturnFilterStore from "../../store/purchaseReturnFilterStore";
+import { usePurchaseReturnFilterStore } from "../../store/purchaseReturnFilterStore";
 import {
   PURCHASE_RETURN_STATUS_LABELS,
   PURCHASE_RETURN_REASON_LABELS,

@@ -5,7 +5,7 @@ import FilterDateInput from "@/shared/components/filters/FilterDateInput";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import EntityMultiSelect from "@/shared/components/filters/EntityMultiSelect";
 import { toFilterOptions } from "@/shared/components/filters/filterUtils";
-import useReceivingFilterStore from "../../store/receivingFilterStore";
+import { useReceivingFilterStore } from "../../store/receivingFilterStore";
 import { INCOMING_TYPE_LABELS } from "../../services/incomingQueueApi";
 
 const TYPE_OPTIONS = toFilterOptions(INCOMING_TYPE_LABELS);

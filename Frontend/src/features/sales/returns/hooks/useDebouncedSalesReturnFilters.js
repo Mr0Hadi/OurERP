@@ -1,5 +1,5 @@
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
-import useSalesReturnFilterStore from "../store/salesReturnFilterStore";
+import { useSalesReturnFilterStore } from "../store/salesReturnFilterStore";
 
 export function useDebouncedSalesReturnFilters() {
   const globalSearch = useSalesReturnFilterStore((s) => s.globalSearch);

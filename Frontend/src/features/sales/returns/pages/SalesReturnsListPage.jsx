@@ -9,7 +9,7 @@ import {
 } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { useHeaderStore } from "@/shared/store/headerStore";
-import useSalesReturnFilterStore from "../store/salesReturnFilterStore";
+import { useSalesReturnFilterStore } from "../store/salesReturnFilterStore";
 import { useDebouncedSalesReturnFilters } from "../hooks/useDebouncedSalesReturnFilters";
 import { useSalesReturnsQuery } from "../services/queries";
 import { useCustomersQuery } from "@/features/customers/services/queries";

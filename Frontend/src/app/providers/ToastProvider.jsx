@@ -1,4 +1,3 @@
-// src/providers/ToastProvider.jsx
 import { Toaster } from "react-hot-toast";
 
 export function ToastProvider() {

@@ -5,7 +5,7 @@ import FilterDateInput from "@/shared/components/filters/FilterDateInput";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import EntityMultiSelect from "@/shared/components/filters/EntityMultiSelect";
 import { toFilterOptions } from "@/shared/components/filters/filterUtils";
-import useSaleFilterStore from "../../store/saleFilterStore";
+import { useSaleFilterStore } from "../../store/saleFilterStore";
 import {
   SALE_STATUS_LABELS,
   PAYMENT_TYPE_LABELS,

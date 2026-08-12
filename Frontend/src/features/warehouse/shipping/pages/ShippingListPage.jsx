@@ -1,7 +1,7 @@
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
-import useShippingFilterStore from "../store/shippingFilterStore";
+import { useShippingFilterStore } from "../store/shippingFilterStore";
 import { useDebouncedShippingFilters } from "../hooks/useDebouncedShippingFilters";
 import { useOutgoingQueueQuery } from "../services/queries";
 import { useCustomersQuery } from "@/features/customers/services/queries";

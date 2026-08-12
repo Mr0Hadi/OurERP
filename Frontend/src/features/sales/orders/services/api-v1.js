@@ -1,6 +1,5 @@
 // src\features\sales\services\api-v1.js
 
-// src/features/sales/services/api-v1.js
 import axiosInstance from "@/shared/services/api/axios";
 
 export async function fetchSales(params = {}) {

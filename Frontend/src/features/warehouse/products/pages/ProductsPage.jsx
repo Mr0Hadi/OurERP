@@ -1,5 +1,5 @@
 import { useProductsQuery } from "../services/queries";
-import useProductFilterStore from "../store/productFilterStore";
+import { useProductFilterStore } from "../store/productFilterStore";
 import { useDebouncedFilters } from "../hooks/useDebouncedFilters";
 import ProductTable from "../components/table/ProductTable";
 import ProductFilters from "../components/table/ProductFilters";

@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import useProductFilterStore from "../../store/productFilterStore";
+import { useProductFilterStore } from "../../store/productFilterStore";
 
 // ─── ثابت‌ها (خارج از کامپوننت تا در هر رندر بازسازی نشوند) ─────────────────
 

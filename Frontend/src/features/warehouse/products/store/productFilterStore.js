@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
-const useProductFilterStore = create(
+export const useProductFilterStore = create(
   devtools((set) => ({
     // فیلترهای جستجو
     globalSearch: '',
@@ -47,5 +47,3 @@ const useProductFilterStore = create(
       }),
   }))
 );
-
-export default useProductFilterStore;
