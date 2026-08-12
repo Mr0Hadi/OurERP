@@ -10,7 +10,7 @@ import { useCustomersQuery } from "@/features/customers/services/queries";
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
 import SaleCustomerSection from "@/features/sales/orders/components/forms/SaleCustomerSection";
 import SaleItemsSection from "@/features/sales/orders/components/forms/SaleItemsSection";
-import SaleInfoSection from "@/features/sales/orders/components/forms/SaleInfoSection";
+import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
 import SalePaymentSection from "@/features/sales/orders/components/forms/SalePaymentSection";
 import SaleStatusSection from "../components/forms/SaleStatusSection";
 import { ROUTES } from "@/shared/constants/routes";
@@ -214,7 +214,7 @@ export default function SaleNewPage() {
               products={products}
               isLoadingProducts={productsLoading}
             />
-            <SaleInfoSection
+            <OrderInfoSection
               formData={formData}
               onFormChange={setFormData}
               errors={{}}

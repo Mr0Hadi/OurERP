@@ -11,7 +11,7 @@ import { useSuppliersQuery } from "@/features/suppliers/services/queries";
 
 import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection";
 import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
-import PurchaseInfoSection from "../components/forms/PurchaseInfoSection";
+import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
 import PurchasePaymentSection from "../components/forms/PurchasePaymentSection";
 import PurchaseStatusSection from "../components/forms/PurchaseStatusSection";
 import { ROUTES } from "@/shared/constants/routes";
@@ -236,7 +236,7 @@ export default function PurchasesNewPage() {
               isLoadingProducts={productsLoading}
               onItemsChange={setItems}
             />
-            <PurchaseInfoSection
+            <OrderInfoSection
               formData={formData}
               onFormChange={setFormData}
               errors={{}}

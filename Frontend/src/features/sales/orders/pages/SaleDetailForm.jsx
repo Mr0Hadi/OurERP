@@ -24,7 +24,7 @@ import { ROUTES } from "@/shared/constants/routes";
 
 import SaleCustomerSection from "../components/forms/SaleCustomerSection";
 import SaleItemsSection from "../components/forms/SaleItemsSection";
-import SaleInfoSection from "../components/forms/SaleInfoSection";
+import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
 import SalePaymentSection from "../components/forms/SalePaymentSection";
 import SaleStatusSection from "../components/forms/SaleStatusSection";
 
@@ -135,7 +135,7 @@ export default function SaleDetailForm({ saleData }) {
               isLoadingProducts={productsLoading}
               onItemsChange={setItems}
             />
-            <SaleInfoSection
+            <OrderInfoSection
               formData={formData}
               onFormChange={setFormData}
               errors={{}}
