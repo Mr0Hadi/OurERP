@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
-import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -9,13 +9,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import {
-  RESOLUTION_TYPES,
-  RESOLUTION_TYPE_LABELS,
-} from "../../services/mockData";
 
-export default function AddResolutionForm({ item, remaining, onAdd, isBusy }) {
-  const [type, setType] = useState(RESOLUTION_TYPES.REFUND);
+/**
+ * ثبت یک تصمیم برای بخشی از یک قلم مرجوعی.
+ *
+ * typeLabels - دیکشنری نوع‌های تصمیم همان ماژول
+ * refundType - مقدار نوعی که فیلد «مبلغ بازگشتی» را نشان می‌دهد
+ *              (خرید و فروش هر دو "refund" هستند ولی از بیرون داده
+ *              می‌شود تا شمارش‌گرِ هر ماژول مرجع بماند)
+ */
+export default function AddResolutionForm({
+  item,
+  remaining,
+  onAdd,
+  isBusy,
+  typeLabels,
+  refundType,
+}) {
+  const typeOptions = useMemo(() => Object.entries(typeLabels), [typeLabels]);
+
+  const [type, setType] = useState(refundType);
   const [qty, setQty] = useState(remaining);
   const [refundAmount, setRefundAmount] = useState("");
   const [note, setNote] = useState("");
@@ -31,7 +44,7 @@ export default function AddResolutionForm({ item, remaining, onAdd, isBusy }) {
       type,
       qty: numQty,
       refundAmount:
-        type === RESOLUTION_TYPES.REFUND
+        type === refundType
           ? Number(refundAmount) || numQty * item.unitPrice
           : 0,
       note,
@@ -48,7 +61,7 @@ export default function AddResolutionForm({ item, remaining, onAdd, isBusy }) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(RESOLUTION_TYPE_LABELS).map(([value, label]) => (
+            {typeOptions.map(([value, label]) => (
               <SelectItem key={value} value={value}>
                 {label}
               </SelectItem>
@@ -66,14 +79,16 @@ export default function AddResolutionForm({ item, remaining, onAdd, isBusy }) {
           className="h-8 text-xs text-center"
         />
 
-        {type === RESOLUTION_TYPES.REFUND ? (
+        {type === refundType ? (
           <Input
             type="number"
             dir="ltr"
             min={0}
             value={refundAmount}
             onChange={(e) => setRefundAmount(e.target.value)}
-            placeholder={(Number(qty) * item.unitPrice || 0).toLocaleString("fa-IR")}
+            placeholder={(Number(qty) * item.unitPrice || 0).toLocaleString(
+              "fa-IR",
+            )}
             className="h-8 text-xs"
           />
         ) : (

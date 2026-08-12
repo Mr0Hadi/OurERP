@@ -1,6 +1,10 @@
 import { CheckCircle2 } from "lucide-react";
 import ResolutionLineRow from "./ResolutionLineRow";
-import AddResolutionForm from "./AddResolutionForm";
+import AddResolutionForm from "@/shared/components/forms/AddResolutionForm";
+import {
+  RESOLUTION_TYPES,
+  RESOLUTION_TYPE_LABELS,
+} from "../../services/mockData";
 
 export default function ItemResolutionCard({
   item,
@@ -49,6 +53,8 @@ export default function ItemResolutionCard({
           item={item}
           remaining={remaining}
           isBusy={isBusy}
+          typeLabels={RESOLUTION_TYPE_LABELS}
+          refundType={RESOLUTION_TYPES.REFUND}
           onAdd={(resolution) => onAddResolution(item.issueId, resolution)}
         />
       )}
