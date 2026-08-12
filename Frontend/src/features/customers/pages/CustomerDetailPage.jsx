@@ -7,7 +7,7 @@ import {
   useUpdateCustomerMutation,
   useDeleteCustomerMutation,
 } from "../services/mutations";
-import { useHeaderStore } from "#/shared/store/headerStore";
+import { useHeaderStore } from "@/shared/store/headerStore";
 import { Button } from "@/shared/components/ui/button";
 import {
   AlertDialog,

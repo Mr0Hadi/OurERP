@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Save, X, Trash2, AlertCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { Button } from "#/shared/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,7 +13,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "#/shared/components/ui/alert-dialog";
+} from "@/shared/components/ui/alert-dialog";
 import { useProductQuery } from "../services/queries";
 import { useUpdateProductMutation, useDeleteProductMutation } from "../services/mutations";
 import { useProductForm } from "../hooks/useProductForm";
@@ -22,7 +22,7 @@ import ProductPricingForm from "../components/forms/ProductPricingForm";
 import ProductImageUpload from "../components/forms/ProductImageUpload";
 import ProductBarcodeDisplay from "../components/forms/ProductBarcodeDisplay";
 import ProductDetailLoading from "../components/forms/ProductDetailLoading";
-import { useHeaderStore } from "#/shared/store/headerStore";
+import { useHeaderStore } from "@/shared/store/headerStore";
 import { ROUTES } from "@/shared/constants/routes";
 
 function ProductDetailForm({ productData }) {

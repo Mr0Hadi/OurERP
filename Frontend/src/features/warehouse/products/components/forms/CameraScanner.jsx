@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import { BarcodeFormat, DecodeHintType } from "@zxing/library";
 
-import { Button } from "#/shared/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 
 const BARCODE_FORMATS = [
   BarcodeFormat.EAN_13,

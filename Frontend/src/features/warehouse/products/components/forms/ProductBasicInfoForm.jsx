@@ -1,21 +1,21 @@
 // src/features/warehouse/products/components/forms/ProductBasicInfoForm.jsx
 import { Controller } from "react-hook-form";
 
-import { Input } from "#/shared/components/ui/input";
-import { Label } from "#/shared/components/ui/label";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "#/shared/components/ui/card";
+} from "@/shared/components/ui/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "#/shared/components/ui/select";
+} from "@/shared/components/ui/select";
 
 import BarcodeScanner from "./BarcodeScanner";
 import CategoryManager from "./CategoryManager";

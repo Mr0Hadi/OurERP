@@ -3,9 +3,9 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import toast from "react-hot-toast";
 
-import { Button } from "#/shared/components/ui/button";
-import { Input } from "#/shared/components/ui/input";
-import { Label } from "#/shared/components/ui/label";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -13,14 +13,14 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-} from "#/shared/components/ui/dialog";
+} from "@/shared/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "#/shared/components/ui/select";
+} from "@/shared/components/ui/select";
 
 export default function CategoryManager({ value, onChange, categories, onAddCategory }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);

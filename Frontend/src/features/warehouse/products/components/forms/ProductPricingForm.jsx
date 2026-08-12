@@ -1,12 +1,12 @@
 // src/features/warehouse/products/components/forms/ProductPricingForm.jsx
-import { Input } from "#/shared/components/ui/input";
-import { Label } from "#/shared/components/ui/label";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "#/shared/components/ui/card";
+} from "@/shared/components/ui/card";
 
 export default function ProductPricingForm({ register }) {
   return (
