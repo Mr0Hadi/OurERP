@@ -33,3 +33,22 @@ skills-lock.json
 # Tree Structure Project
 structure.txt
 .\Backend\wms-server.exe
+/.vs
+/Backend-Net/.vs
+/Backend-Net/Application/bin/Debug/net10.0
+/Backend-Net/Application/obj/Debug/net10.0
+/Backend-Net/Application/obj/Release/net10.0
+/Backend-Net/Application/obj
+/Backend-Net/Common/bin/Debug/net10.0
+/Backend-Net/Common/obj/Debug/net10.0
+/Backend-Net/Common/obj/Release/net10.0
+/Backend-Net/Common/obj
+/Backend-Net/Domain/bin/Debug/net10.0
+/Backend-Net/Domain/obj
+/Backend-Net/Infrastructure/bin/Debug/net10.0
+/Backend-Net/Infrastructure/obj
+/Backend-Net/Tests/WMS.Tests/bin/Debug/net10.0
+/Backend-Net/Tests/WMS.Tests/obj
+/Backend-Net/WMS/bin/Debug/net10.0
+/Backend-Net/WMS/obj/Debug/net10.0
+/Backend-Net/WMS/obj
