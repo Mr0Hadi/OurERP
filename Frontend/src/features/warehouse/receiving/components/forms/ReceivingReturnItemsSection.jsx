@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, Minus, Plus, CheckCircle2, AlertTriangle, XCircle, X } from "lucide-react";
+import { Search, Minus, Plus, X } from "lucide-react";
 
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
@@ -10,21 +10,16 @@ import {
 } from "@/shared/components/ui/select";
 import { RETURN_ISSUE_TYPE_LABELS } from "../../services/returnsIntakeApi";
 import { SALES_RETURN_REASON_LABELS } from "@/features/sales/returns/services/mockData";
+import { createRowStatus } from "@/shared/utils/createRowStatus";
 
 const ISSUE_TYPE_OPTIONS = Object.entries(RETURN_ISSUE_TYPE_LABELS);
 
-function getRowStatus(remainingQty, verifiedQtyThisRound) {
-  const qty = verifiedQtyThisRound || 0;
-  if (qty <= 0) return "missing";
-  if (qty < remainingQty) return "partial";
-  return "complete";
-}
-
-const ROW_STATUS_CONFIG = {
-  complete: { label: "این دور کامل رسید", icon: CheckCircle2, badgeClass: "bg-green-50 text-[oklch(0.50_0.16_152)] border-green-200 dark:bg-green-950/40 dark:border-green-800", rowClass: "" },
-  partial: { label: "این دور ناقص رسید", icon: AlertTriangle, badgeClass: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400", rowClass: "bg-amber-50/40 dark:bg-amber-950/10" },
-  missing: { label: "این دور نرسید", icon: XCircle, badgeClass: "bg-destructive/5 text-destructive border-destructive/20", rowClass: "bg-destructive/[0.03]" },
-};
+const { getRowStatus, ROW_STATUS_CONFIG } = createRowStatus({
+  completeLabel: "این دور کامل رسید",
+  partialLabel: "این دور ناقص رسید",
+  emptyKey: "missing",
+  emptyLabel: "این دور نرسید",
+});
 
 const clampQty = (value, max) => {
   const num = Number(value);
