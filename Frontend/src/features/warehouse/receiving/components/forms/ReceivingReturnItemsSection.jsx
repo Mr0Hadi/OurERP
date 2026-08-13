@@ -11,6 +11,7 @@ import {
 import { RETURN_ISSUE_TYPE_LABELS } from "../../services/returnsIntakeApi";
 import { SALES_RETURN_REASON_LABELS } from "@/features/sales/returns/services/mockData";
 import { createRowStatus } from "@/shared/utils/createRowStatus";
+import { clampQty } from "@/shared/utils/qtyUtils";
 
 const ISSUE_TYPE_OPTIONS = Object.entries(RETURN_ISSUE_TYPE_LABELS);
 
@@ -20,12 +21,6 @@ const { getRowStatus, ROW_STATUS_CONFIG } = createRowStatus({
   emptyKey: "missing",
   emptyLabel: "این دور نرسید",
 });
-
-const clampQty = (value, max) => {
-  const num = Number(value);
-  if (Number.isNaN(num) || num < 0) return 0;
-  return Math.min(num, max);
-};
 
 function QuantityStepper({ item, onItemChange, size = "sm" }) {
   const verified = item.verifiedQtyThisRound || 0;
