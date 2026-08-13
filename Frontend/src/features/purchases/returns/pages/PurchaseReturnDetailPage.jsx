@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { AlertCircle, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -29,6 +29,7 @@ import ReportedItemsTable from "../components/forms/ReportedItemsTable";
 import ReturnInfoSidebar from "../components/forms/ReturnInfoSidebar";
 import { canDeletePurchaseReturn } from "../domain/purchaseReturnRules";
 import { ROUTES } from "@/shared/constants/routes";
+import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 
 function PurchaseReturnDetailForm({ purchaseReturn }) {
   const navigate = useNavigate();
@@ -170,18 +171,10 @@ export default function PurchaseReturnDetailPage() {
 
   if (isError || !purchaseReturn) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-lg text-muted-foreground">
-          مرجوعی مورد نظر یافت نشد.
-        </p>
-        <Button
-          variant="outline"
-          onClick={() => navigate(ROUTES.PURCHASES_RETURNS_LIST)}
-        >
-          بازگشت به لیست
-        </Button>
-      </div>
+      <DetailErrorState
+        message="مرجوعی مورد نظر یافت نشد."
+        onBack={() => navigate(ROUTES.PURCHASES_RETURNS_LIST)}
+      />
     );
   }
 

@@ -1,12 +1,6 @@
 import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import {
-  AlertCircle,
-  FileText,
-  Trash2,
-  Warehouse,
-  ArrowLeft,
-} from "lucide-react";
+import { FileText, Trash2, Warehouse, ArrowLeft } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
@@ -48,6 +42,7 @@ import SalesReturnDetailLoading from "../components/forms/SalesReturnDetailLoadi
 import SalesReturnResolutionSection from "../components/forms/SalesReturnResolutionSection";
 import { ROUTES } from "@/shared/constants/routes";
 import { gregorianToPersian } from "@/shared/utils/dateUtils";
+import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 
 function PendingInspectionNotice({ salesReturn }) {
   const navigate = useNavigate();
@@ -261,18 +256,10 @@ export default function SalesReturnDetailPage() {
 
   if (isError || !salesReturn) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-lg text-muted-foreground">
-          مرجوعی مورد نظر یافت نشد.
-        </p>
-        <Button
-          variant="outline"
-          onClick={() => navigate(ROUTES.SALES_RETURNS_LIST)}
-        >
-          بازگشت به لیست
-        </Button>
-      </div>
+      <DetailErrorState
+        message="مرجوعی مورد نظر یافت نشد."
+        onBack={() => navigate(ROUTES.SALES_RETURNS_LIST)}
+      />
     );
   }
 

@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Plus, AlertCircle, RefreshCw } from "lucide-react";
+import { Plus } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -14,6 +14,8 @@ import { useCustomersQuery } from "@/features/customers/services/queries";
 import SaleFilters from "../components/table/SaleFilters";
 import SaleTable from "../components/table/SaleTable";
 import { ROUTES } from "@/shared/constants/routes";
+import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
+import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
 
 const SalePage = () => {
   const navigate = useNavigate();
@@ -54,28 +56,9 @@ const SalePage = () => {
           />
 
           {isError ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-              <AlertCircle className="h-10 w-10 text-destructive" />
-              <p className="text-sm text-muted-foreground">
-                {error?.message ?? "خطایی رخ داده است"}
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => refetch()}
-                className="gap-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                تلاش مجدد
-              </Button>
-            </div>
+            <QueryErrorState error={error} onRetry={() => refetch()} />
           ) : (
-            <div className="relative">
-              {isFetching && !isLoading && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-card/60 backdrop-blur-[2px]">
-                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-primary" />
-                </div>
-              )}
+            <FetchingOverlay active={isFetching && !isLoading}>
               <SaleTable
                 data={sales}
                 isLoading={isLoading}
@@ -86,7 +69,7 @@ const SalePage = () => {
                 sorting={sorting}
                 onSortingChange={setSorting}
               />
-            </div>
+            </FetchingOverlay>
           )}
         </CardContent>
       </Card>

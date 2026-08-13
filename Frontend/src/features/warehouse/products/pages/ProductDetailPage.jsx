@@ -1,6 +1,6 @@
 // src/features/warehouse/products/pages/ProductDetailPage.jsx
 import { useNavigate, useParams } from "react-router-dom";
-import { Save, X, Trash2, AlertCircle } from "lucide-react";
+import { Save, X, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/shared/components/ui/button";
@@ -24,6 +24,7 @@ import ProductBarcodeDisplay from "../components/forms/ProductBarcodeDisplay";
 import ProductDetailLoading from "../components/forms/ProductDetailLoading";
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { ROUTES } from "@/shared/constants/routes";
+import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 
 function ProductDetailForm({ productData }) {
   const navigate = useNavigate();
@@ -168,15 +169,10 @@ export default function ProductDetailPage() {
 
   if (isError || !productData) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-lg text-muted-foreground">
-          کالا مورد نظر یافت نشد یا خطایی رخ داده است.
-        </p>
-        <Button variant="outline" onClick={() => navigate(ROUTES.WAREHOUSE_PRODUCTS)}>
-          بازگشت به لیست
-        </Button>
-      </div>
+      <DetailErrorState
+        message="کالا مورد نظر یافت نشد یا خطایی رخ داده است."
+        onBack={() => navigate(ROUTES.WAREHOUSE_PRODUCTS)}
+      />
     );
   }
 

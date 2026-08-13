@@ -1,13 +1,12 @@
 import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { AlertCircle } from "lucide-react";
 
-import { Button } from "@/shared/components/ui/button";
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { useSaleQuery } from "@/features/sales/orders/services/queries";
 import OrderFormSkeleton from "@/shared/components/skeletons/OrderFormSkeleton";
 import { ROUTES } from "@/shared/constants/routes";
 import SaleDetailForm from "./SaleDetailForm";
+import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 
 export default function SaleDetailPage() {
   const { id } = useParams();
@@ -35,17 +34,12 @@ export default function SaleDetailPage() {
 
   if (saleError || !sale) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-lg text-muted-foreground">
-          {saleError
-            ? "خطا در بارگذاری اطلاعات"
-            : "فروشی با این شناسه یافت نشد."}
-        </p>
-        <Button variant="outline" onClick={() => navigate(ROUTES.SALES)}>
-          بازگشت به لیست
-        </Button>
-      </div>
+      <DetailErrorState
+        message={
+          saleError ? "خطا در بارگذاری اطلاعات" : "فروشی با این شناسه یافت نشد."
+        }
+        onBack={() => navigate(ROUTES.SALES)}
+      />
     );
   }
 
