@@ -16,8 +16,10 @@ export function useProductsQuery(filters, pagination, sorting) {
     minPrice: filters.minPrice,
     maxPrice: filters.maxPrice,
     stockStatus: filters.stockStatus,
-    sortBy: sorting?.id ?? "name",
-    sortOrder: sorting?.desc ? "desc" : "asc",
+    // وقتی کاربر مرتب‌سازی ستون را کامل برمی‌دارد، به همان پیش‌فرض
+    // «تازه‌ترین اول» برمی‌گردیم، نه به مرتب‌سازی بر اساس نام.
+    sortBy: sorting?.id ?? "createdAt",
+    sortOrder: sorting ? (sorting.desc ? "desc" : "asc") : "desc",
   };
 
   const nextPageParams = { ...queryParams, page: queryParams.page + 1 };

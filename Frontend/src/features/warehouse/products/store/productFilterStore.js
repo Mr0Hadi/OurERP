@@ -18,10 +18,13 @@ export const useProductFilterStore = create(
       pageSize: 10,
     },
 
-    // مرتب‌سازی
+    // مرتب‌سازی — پیش‌فرض «تازه‌ترین اول»، همان قراردادی که
+    // createFilterStore در shared برای بقیه‌ی لیست‌ها دارد. با مرتب‌سازی
+    // پیش‌فرض بر اساس نام، کالای تازه‌ساخته‌شده وسط لیست گم می‌شد و کاربر
+    // در صفحه‌ی اول پیدایش نمی‌کرد.
     sorting: {
-      id: 'name', // فیلد پیش‌فرض
-      desc: false,
+      id: 'createdAt',
+      desc: true,
     },
 
     // اکشن‌ها
@@ -43,7 +46,7 @@ export const useProductFilterStore = create(
         maxPrice: '',
         stockStatus: '',
         pagination: { pageIndex: 0, pageSize: 10 },
-        sorting: { id: 'name', desc: false },
+        sorting: { id: 'createdAt', desc: true },
       }),
   }))
 );

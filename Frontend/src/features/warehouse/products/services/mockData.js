@@ -57,6 +57,8 @@ export const productsMock = [
     tax: 9,
     stock: 120,
     image: '',
+    createdAt: "2024-01-11T08:00:00Z",
+    updatedAt: "2024-06-16T12:00:00Z",
   },
   {
     id: 3,
@@ -72,6 +74,8 @@ export const productsMock = [
     tax: 9,
     stock: 8,
     image: '',
+    createdAt: "2024-01-12T08:00:00Z",
+    updatedAt: "2024-06-17T12:00:00Z",
   },
 ];
 
