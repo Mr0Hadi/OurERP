@@ -14,7 +14,7 @@ import {
 
 const CameraScanner = lazy(() => import("./CameraScanner"));
 
-export default function BarcodeScanner({ value, onChange, ...inputProps }) {
+export default function BarcodeScanner({ value, onChange, action, ...inputProps }) {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   return (
@@ -64,6 +64,8 @@ export default function BarcodeScanner({ value, onChange, ...inputProps }) {
           </p>
         </DialogContent>
       </Dialog>
+
+      {action}
     </div>
   );
 }

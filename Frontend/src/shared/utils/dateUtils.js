@@ -19,6 +19,15 @@ export function persianToGregorian(persianDateStr) {
   }
 }
 
+/**
+ * تاریخ جلالی امروز به‌صورت فشرده و بدون جداکننده، برای ساختن شناسه‌هایی
+ * مثل کد کالا و بارکد. "YYYYMMDD" → "14050523" و "YYMMDD" → "050523".
+ */
+export function todayPersianCompact(format = "YYYYMMDD") {
+  const d = new DateObject({ calendar: persian });
+  return d.format(format);
+}
+
 /** "2024-08-02" (ISO) → "1403/05/12" | خالی → "" */
 export function gregorianToPersian(gregorianDateStr) {
   if (!gregorianDateStr) return "";

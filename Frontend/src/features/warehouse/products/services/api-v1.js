@@ -33,6 +33,16 @@ export const updateProduct = async (id, productData) => {
   return data;
 };
 
+export const generateProductCode = async (params) => {
+  const { data } = await axiosInstance.post("/products/generate-code", params);
+  return data;
+};
+
+export const generateProductBarcode = async (params) => {
+  const { data } = await axiosInstance.post("/products/generate-barcode", params);
+  return data;
+};
+
 export const deleteProduct = async (id) => {
   await axiosInstance.delete(`/products/${id}`);
   return { success: true, id };

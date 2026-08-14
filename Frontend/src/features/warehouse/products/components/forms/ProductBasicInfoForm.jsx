@@ -1,5 +1,5 @@
 // src/features/warehouse/products/components/forms/ProductBasicInfoForm.jsx
-import { Controller } from "react-hook-form";
+import { Controller, useWatch } from "react-hook-form";
 
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -17,16 +17,48 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 
+import {
+  useGenerateProductCodeMutation,
+  useGenerateProductBarcodeMutation,
+} from "../../services/mutations";
 import BarcodeScanner from "./BarcodeScanner";
 import CategoryManager from "./CategoryManager";
+import GenerateFieldButton from "./GenerateFieldButton";
 
 export default function ProductBasicInfoForm({
   register,
   control,
+  setValue,
   errors,
   categories,
   onAddCategory,
 }) {
+  // کد کالا و بارکد هر دو از دسته‌بندی انتخاب‌شده ساخته می‌شوند، ولی
+  // هرکدام درخواست جداگانه‌ی خودش را می‌زند.
+  const category = useWatch({ control, name: "category" });
+  const generateCode = useGenerateProductCodeMutation();
+  const generateBarcode = useGenerateProductBarcodeMutation();
+
+  const handleGenerateCode = () => {
+    generateCode.mutate(
+      { category },
+      {
+        onSuccess: ({ code }) =>
+          setValue("code", code, { shouldDirty: true }),
+      }
+    );
+  };
+
+  const handleGenerateBarcode = () => {
+    generateBarcode.mutate(
+      { category },
+      {
+        onSuccess: ({ barcode }) =>
+          setValue("barcode", barcode, { shouldDirty: true }),
+      }
+    );
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -49,7 +81,19 @@ export default function ProductBasicInfoForm({
 
         <div className="space-y-2">
           <Label htmlFor="code">کد کالا</Label>
-          <Input id="code" placeholder="مثال: PRD-102" {...register("code")} />
+          <div className="flex gap-2">
+            <Input
+              id="code"
+              className="flex-1"
+              placeholder="مثال: PRD-102"
+              {...register("code")}
+            />
+            <GenerateFieldButton
+              onClick={handleGenerateCode}
+              isPending={generateCode.isPending}
+              title="تولید خودکار کد کالا"
+            />
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -58,7 +102,17 @@ export default function ProductBasicInfoForm({
             name="barcode"
             control={control}
             render={({ field }) => (
-              <BarcodeScanner value={field.value} onChange={field.onChange} />
+              <BarcodeScanner
+                value={field.value}
+                onChange={field.onChange}
+                action={
+                  <GenerateFieldButton
+                    onClick={handleGenerateBarcode}
+                    isPending={generateBarcode.isPending}
+                    title="تولید خودکار بارکد"
+                  />
+                }
+              />
             )}
           />
         </div>

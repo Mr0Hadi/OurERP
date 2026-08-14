@@ -4,6 +4,30 @@ Findings worth acting on later. Add new items at the top of "Open".
 
 ## Open
 
+### Reconcile the two disconnected product category lists
+
+Found while adding auto-generated product code / barcode (Aug 2026).
+Deliberately left out of scope — reconciling them is its own task.
+
+There are two hardcoded category lists that do not overlap at all:
+
+- `Frontend/src/features/warehouse/products/hooks/useProductForm.js` —
+  `DEFAULT_CATEGORIES`: روغن موتور، فیلتر، لنت ترمز، برق و روشنایی، تسمه.
+  These are what the product form offers in its dropdown.
+- `Frontend/src/features/warehouse/products/services/mockData.js` — the
+  `categories` array used to seed products: موتور، سیستم ترمز، سیستم تعلیق،
+  برق و روشنایی، بدنه، گیربکس، سیستم خنک کننده.
+
+Only برق و روشنایی is common to both, so existing products mostly carry
+categories the form cannot select, and category filtering is split across
+two vocabularies. Categories are also not entities — each one's `id` is
+its own Persian name, and `CategoryManager` creates new ones the same way,
+so they have no stable identifier.
+
+`CATEGORY_CODES` in `mockData.js` (added for the code/barcode generator)
+currently spans the union of both lists as a stand-in for real category
+ids; it should collapse into whatever single source of truth this becomes.
+
 ### Migrate customers / suppliers / products to the shared table + filter primitives
 
 Found during the purchases/sales/warehouse refactor (Aug 2026). Deliberately

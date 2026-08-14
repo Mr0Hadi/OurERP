@@ -44,6 +44,7 @@ export default function ProductNewPage() {
     register,
     handleSubmit,
     control,
+    setValue,
     formState: { errors, isSubmitting },
   } = formMethods;
 
@@ -69,6 +70,7 @@ export default function ProductNewPage() {
             <ProductBasicInfoForm
               register={register}
               control={control}
+              setValue={setValue}
               errors={errors}
               categories={categories}
               onAddCategory={handleAddCategory}
