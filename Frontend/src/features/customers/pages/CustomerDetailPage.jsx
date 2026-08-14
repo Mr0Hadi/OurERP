@@ -25,6 +25,7 @@ import CustomerIdentityForm from "../components/forms/CustomerIdentityForm";
 import CustomerFinanceForm from "../components/forms/CustomerFinanceForm";
 import CustomerAddressForm from "../components/forms/CustomerAddressForm";
 import { ROUTES } from "@/shared/constants/routes";
+import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 
 function CustomerDetailForm({ customerData }) {
   const navigate = useNavigate();
@@ -171,13 +172,16 @@ export default function CustomerDetailPage() {
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader, customer, isLoading]);
 
-  if (isLoading || !customer) return <CustomerDetailLoading />;
-  if (isError)
+  if (isLoading) return <CustomerDetailLoading />;
+
+  if (isError || !customer) {
     return (
-      <div className="text-center py-20 text-destructive">
-        مشکلی در دریافت اطلاعات مشتری به وجود آمد.
-      </div>
+      <DetailErrorState
+        message="مشتری مورد نظر یافت نشد یا خطایی رخ داده است."
+        onBack={() => navigate(ROUTES.CUSTOMERS)}
+      />
     );
+  }
 
   return <CustomerDetailForm key={customer.id} customerData={customer} />;
 }
