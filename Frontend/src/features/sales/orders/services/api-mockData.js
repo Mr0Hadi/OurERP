@@ -1,5 +1,9 @@
 import { allSales, SALE_STATUSES } from "./mockData";
 import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
+import {
+  allocateUnitsForSale,
+  releaseUnitsForSale,
+} from "@/features/warehouse/units/services/api-mockData";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -46,6 +50,12 @@ export async function createSale(saleData) {
       delta: -(item.qty || 0),
     })),
   );
+
+  // واحدهای برچسب‌خورده هم به همین فروش تخصیص می‌یابند (قدیمی‌ترین
+  // اول). اگر کالایی هنوز واحد برچسب‌خورده نداشته باشد، چیزی تخصیص
+  // نمی‌یابد و فقط موجودی عددی کم می‌شود — دفتر واحدها اختیاری است و
+  // جریان فروش را مسدود نمی‌کند.
+  allocateUnitsForSale(newSale.id, newSale.items || []);
 
   return newSale;
 }
@@ -166,6 +176,7 @@ export async function updateSale(id, updates) {
 
   if (isCancellingNow) {
     restoreSaleStock(allSales[index]);
+    releaseUnitsForSale(allSales[index].id);
   }
 
   return allSales[index];

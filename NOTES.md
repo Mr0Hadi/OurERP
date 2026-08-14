@@ -4,6 +4,24 @@ Findings worth acting on later. Add new items at the top of "Open".
 
 ## Open
 
+### Follow-ups from unit-level barcodes (Aug 2026)
+
+Two items deliberately left out of the unit-barcode task to keep it scoped:
+
+- **«تولید برچسب» shortcut on the receiving screen.** After confirming a
+  receiving round, the warehouse worker knows exactly how many healthy units
+  just arrived; offering a «تولید برچسب» action there, pre-filled with that
+  quantity, saves them re-finding the product on
+  `/warehouse/unit-labels`. The standalone screen already covers the
+  requirement, so this is convenience, not a gap. The unit's `source` field
+  is already shaped for it (`{ type: "purchase", refId, refNumber }`).
+- **Move `ProductBarcodeDisplay` onto the shared barcode component.**
+  `Frontend/src/features/warehouse/products/components/forms/ProductBarcodeDisplay.jsx`
+  still wraps `react-barcode` directly, while everything new goes through
+  `shared/components/print/BarcodeGraphic.jsx`. Consolidating is the right
+  end state but touches an already-shipped feature, so it wants its own
+  change with its own verification.
+
 ### Reconcile the two disconnected product category lists
 
 Found while adding auto-generated product code / barcode (Aug 2026).

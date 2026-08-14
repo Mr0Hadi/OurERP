@@ -216,6 +216,13 @@ export const navigationData = {
           description: "مشاهده و تأیید کالاهای دریافتی",
         },
         {
+          title: "برچسب کالاها",
+          url: ROUTES.WAREHOUSE_UNIT_LABELS,
+          permission: "warehouse_receiving",
+          icon: Barcode,
+          description: "ساخت و چاپ بارکد تک‌تک اقلام فیزیکی",
+        },
+        {
           title: "ارسال کالا",
           url: ROUTES.WAREHOUSE_SHIPPING,
           permission: "warehouse_shipping",

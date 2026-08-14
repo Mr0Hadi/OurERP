@@ -1,0 +1,42 @@
+/* src/shared/components/print/print.css */
+
+/**
+ * فقط محتوای [data-print-root] چاپ می‌شود و بقیه‌ی برنامه (سایدبار،
+ * دیالوگ، توست) از چاپ کنار می‌رود.
+ *
+ * از visibility استفاده می‌کنیم نه display: چون ریشه‌ی چاپ داخل پورتال
+ * دیالوگ رندر می‌شود و با display:none روی والدها، خودش هم ناپدید
+ * می‌شد. visibility ارث‌بری‌شده را می‌شود در فرزند دوباره روشن کرد.
+ */
+@media print {
+  body.printing * {
+    visibility: hidden;
+  }
+
+  body.printing [data-print-root],
+  body.printing [data-print-root] * {
+    visibility: visible;
+  }
+
+  body.printing [data-print-root] {
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0;
+    width: 100%;
+    max-height: none;
+    overflow: visible;
+    background: #fff;
+    color: #000;
+  }
+
+  /* در چاپ، کادر پیش‌نمایش نباید اسکرول یا سایه داشته باشد. */
+  body.printing [data-print-scroll] {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .print-label {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

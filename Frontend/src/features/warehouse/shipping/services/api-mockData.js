@@ -1,5 +1,6 @@
 import { allSales, SALE_STATUSES, SALE_STATUS_LABELS } from "./mockData";
 import { SHIPPING_ELIGIBLE_STATUSES } from "./constants";
+import { markUnitsShipped } from "@/features/warehouse/units/services/api-mockData";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const generateId = () =>
@@ -191,6 +192,16 @@ export async function confirmShipment(saleId, shipmentData) {
     ],
     updatedAt: new Date().toISOString(),
   };
+
+  // واحدهای همین فروش، به‌اندازه‌ی مقدارِ ارسال‌شده‌ی این دور، از
+  // «فروخته‌شده» به «ارسال‌شده» می‌روند.
+  markUnitsShipped(
+    saleId,
+    (shipmentData.shippedItems || []).map((item) => ({
+      productId: item.productId,
+      qty: item.shippedQty || 0,
+    })),
+  );
 
   return allSales[index];
 }
