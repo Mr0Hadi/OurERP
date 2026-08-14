@@ -34,6 +34,7 @@ export default function ProductNewPage() {
     imagePreview,
     barcodeValue,
     categories,
+    handleAddCategory,
     handleImageChange,
     handleImageRemove,
     buildProductPayload,
@@ -70,6 +71,7 @@ export default function ProductNewPage() {
               control={control}
               errors={errors}
               categories={categories}
+              onAddCategory={handleAddCategory}
             />
             <ProductPricingForm register={register} />
           </div>

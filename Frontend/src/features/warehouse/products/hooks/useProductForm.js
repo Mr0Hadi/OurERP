@@ -50,7 +50,7 @@ export function useProductForm(initialData = null) {
   const [imageFile, setImageFile] = useState(null);
   const [imageRemoved, setImageRemoved] = useState(false);
   const [barcodeValue, setBarcodeValue] = useState(initialData?.barcode || "");
-  const [categories] = useState(() => {
+  const [categories, setCategories] = useState(() => {
     if (
       initialData?.category &&
       !DEFAULT_CATEGORIES.some((c) => c.id === initialData.category)
@@ -81,6 +81,12 @@ export function useProductForm(initialData = null) {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
+
+  const handleAddCategory = (category) => {
+    setCategories((prev) =>
+      prev.some((c) => c.id === category.id) ? prev : [...prev, category]
+    );
+  };
 
   const handleImageChange = (file) => {
     if (file) {
@@ -134,6 +140,7 @@ export function useProductForm(initialData = null) {
     imageRemoved,
     barcodeValue,
     categories,
+    handleAddCategory,
     handleImageChange,
     handleImageRemove,
     buildProductPayload,

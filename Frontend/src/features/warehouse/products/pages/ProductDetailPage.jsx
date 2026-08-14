@@ -38,6 +38,7 @@ function ProductDetailForm({ productData }) {
     imagePreview,
     barcodeValue,
     categories,
+    handleAddCategory,
     handleImageChange,
     handleImageRemove,
     buildProductPayload,
@@ -75,6 +76,7 @@ function ProductDetailForm({ productData }) {
               control={control}
               errors={errors}
               categories={categories}
+              onAddCategory={handleAddCategory}
             />
             <ProductPricingForm register={register} />
           </div>
