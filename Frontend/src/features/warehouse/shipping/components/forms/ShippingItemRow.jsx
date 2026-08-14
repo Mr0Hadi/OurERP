@@ -32,9 +32,9 @@ export default function ShippingItemRow({ item, onItemChange }) {
 
       <td className="px-2 py-2">
         <QuantityStepper
-          item={item}
-          field="shippedQty"
-          onItemChange={onItemChange}
+          value={item.shippedQty}
+          max={item.expectedQty}
+          onChange={(next) => onItemChange(item.productId, "shippedQty", next)}
         />
       </td>
 

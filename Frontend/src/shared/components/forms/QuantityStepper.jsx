@@ -4,28 +4,22 @@ import { Input } from "@/shared/components/ui/input";
 import { clampQty } from "@/shared/utils/qtyUtils";
 
 /**
- * شمارنده‌ی تعداد با سقف item.expectedQty.
+ * شمارنده‌ی تعداد با سقف مشخص.
  *
- * field - نام فیلدی که مقدار در آن نگهداری می‌شود
- *         (مثلاً receivedQty در دریافت و shippedQty در ارسال)
+ * کنترل‌شده و بی‌خبر از شکل داده: هر ماژول خودش تصمیم می‌گیرد مقدار از
+ * کدام فیلد خوانده شود و با چه شناسه‌ای برگردد — در دریافت خرید
+ * (productId/expectedQty)، در دریافت مرجوعی (lineId/remainingQty).
+ *
+ * value    - مقدار فعلی
+ * max      - سقف مجاز
+ * onChange - (nextValue) => void
  */
-export default function QuantityStepper({
-  item,
-  field,
-  onItemChange,
-  size = "md",
-}) {
-  const current = item[field] || 0;
+export default function QuantityStepper({ value, max, onChange, size = "md" }) {
+  const current = value || 0;
   const dims = size === "sm" ? "h-7 w-7" : "h-8 w-8";
   const inputWidth = size === "sm" ? "w-12" : "w-14";
 
-  const handleStep = (delta) => {
-    onItemChange(
-      item.productId,
-      field,
-      clampQty(current + delta, item.expectedQty),
-    );
-  };
+  const handleStep = (delta) => onChange(clampQty(current + delta, max));
 
   return (
     <div className="flex items-center justify-center gap-1">
@@ -42,15 +36,9 @@ export default function QuantityStepper({
       <Input
         type="number"
         min={0}
-        max={item.expectedQty}
+        max={max}
         value={current}
-        onChange={(e) =>
-          onItemChange(
-            item.productId,
-            field,
-            clampQty(e.target.value, item.expectedQty),
-          )
-        }
+        onChange={(e) => onChange(clampQty(e.target.value, max))}
         className={`${dims.split(" ")[0]} ${inputWidth} text-center text-sm px-1`}
       />
       <Button
@@ -58,7 +46,7 @@ export default function QuantityStepper({
         size="icon"
         variant="outline"
         className={`${dims} shrink-0`}
-        disabled={current >= item.expectedQty}
+        disabled={current >= max}
         onClick={() => handleStep(1)}
       >
         <Plus className="h-3.5 w-3.5" />

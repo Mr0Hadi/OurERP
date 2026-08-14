@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, Minus, Plus, X } from "lucide-react";
+import { Search, Plus, X } from "lucide-react";
 
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
@@ -11,7 +11,7 @@ import {
 import { RETURN_ISSUE_TYPE_LABELS } from "../../services/returnsIntakeApi";
 import { SALES_RETURN_REASON_LABELS } from "@/features/sales/returns/services/mockData";
 import { createRowStatus } from "@/shared/utils/createRowStatus";
-import { clampQty } from "@/shared/utils/qtyUtils";
+import QuantityStepper from "@/shared/components/forms/QuantityStepper";
 
 const ISSUE_TYPE_OPTIONS = Object.entries(RETURN_ISSUE_TYPE_LABELS);
 
@@ -21,30 +21,6 @@ const { getRowStatus, ROW_STATUS_CONFIG } = createRowStatus({
   emptyKey: "missing",
   emptyLabel: "این دور نرسید",
 });
-
-function QuantityStepper({ item, onItemChange, size = "sm" }) {
-  const verified = item.verifiedQtyThisRound || 0;
-  const dims = size === "sm" ? "h-7 w-7" : "h-8 w-8";
-  const inputWidth = size === "sm" ? "w-12" : "w-14";
-
-  const handleStep = (delta) => onItemChange(item.lineId, "verifiedQtyThisRound", clampQty(verified + delta, item.remainingQty));
-
-  return (
-    <div className="flex items-center justify-center gap-1">
-      <Button type="button" size="icon" variant="outline" className={`${dims} shrink-0`} disabled={verified <= 0} onClick={() => handleStep(-1)}>
-        <Minus className="h-3.5 w-3.5" />
-      </Button>
-      <Input
-        type="number" min={0} max={item.remainingQty} value={verified}
-        onChange={(e) => onItemChange(item.lineId, "verifiedQtyThisRound", clampQty(e.target.value, item.remainingQty))}
-        className={`${dims.split(" ")[0]} ${inputWidth} text-center text-sm px-1`}
-      />
-      <Button type="button" size="icon" variant="outline" className={`${dims} shrink-0`} disabled={verified >= item.remainingQty} onClick={() => handleStep(1)}>
-        <Plus className="h-3.5 w-3.5" />
-      </Button>
-    </div>
-  );
-}
 
 function IssueBreakdownEditor({ item, onAddIssue, onUpdateIssue, onRemoveIssue }) {
   const issues = item.issues || [];
@@ -195,7 +171,14 @@ export default function ReceivingReturnItemsSection({ items, onItemChange, onAdd
                 </span>
                 <div>
                   <p className="text-[10px] text-muted-foreground text-center mb-1">مقدار رسیده در این دور</p>
-                  <QuantityStepper item={item} onItemChange={onItemChange} size="sm" />
+                  <QuantityStepper
+                    value={item.verifiedQtyThisRound}
+                    max={item.remainingQty}
+                    onChange={(next) =>
+                      onItemChange(item.lineId, "verifiedQtyThisRound", next)
+                    }
+                    size="sm"
+                  />
                 </div>
               </div>
 

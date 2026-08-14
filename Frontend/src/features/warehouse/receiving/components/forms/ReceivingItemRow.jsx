@@ -51,9 +51,11 @@ export default function ReceivingItemRow({
 
         <td className="px-2 py-2">
           <QuantityStepper
-            item={item}
-            field="receivedQty"
-            onItemChange={onItemChange}
+            value={item.receivedQty}
+            max={item.expectedQty}
+            onChange={(next) =>
+              onItemChange(item.productId, "receivedQty", next)
+            }
           />
         </td>
 

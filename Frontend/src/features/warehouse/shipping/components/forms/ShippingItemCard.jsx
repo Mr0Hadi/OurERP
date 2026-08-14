@@ -46,9 +46,9 @@ export default function ShippingItemCard({ item, onItemChange }) {
           </span>
         </span>
         <QuantityStepper
-          item={item}
-          field="shippedQty"
-          onItemChange={onItemChange}
+          value={item.shippedQty}
+          max={item.expectedQty}
+          onChange={(next) => onItemChange(item.productId, "shippedQty", next)}
           size="sm"
         />
       </div>
