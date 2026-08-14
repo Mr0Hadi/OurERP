@@ -28,7 +28,7 @@ namespace WMS.Tests.Integration
         {
             var (scenario, saleReturnId, claimId) = await SeedClaim(scope, shippedQuantity, claimedQuantity);
 
-            var inspectHandler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var inspectHandler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
             await inspectHandler.Handle(new ConfirmReturnInspectionCommand
             {
                 SaleReturnId = saleReturnId,
@@ -186,16 +186,18 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (scenario, _, saleReturnItemId) = await SeedInspectedHealthy(scope, shippedQuantity: 10, claimedQuantity: 5);
 
-            // Give the product some stock to ship the replacement from.
+            // Give the product some stock to ship the replacement from, with matching ProductUnit
+            // rows so the Stock/ProductUnit invariant holds and ConsumeAsync has units to take.
             var product = scope.Context.Products.Single(x => x.Id == scenario.Product.Id);
             product.Stock = 20;
             scope.Context.SaveChanges();
+            Seed.MintUnits(scope.Context, product, 20);
 
             var addHandler = new AddSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
             await addHandler.Handle(new AddSaleReturnDecisionCommand { SaleReturnItemId = saleReturnItemId, DecisionType = SaleReturnDecisionTypeEnum.REPLACEMENT, Quantity = 5 }, CancellationToken.None);
             var decisionId = scope.Context.SaleReturnDecisions.Single().Id;
 
-            var shipHandler = new ConfirmReplacementShipmentCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var shipHandler = new ConfirmReplacementShipmentCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
             await shipHandler.Handle(new ConfirmReplacementShipmentCommand { SaleReturnDecisionId = decisionId, ShippedQuantity = 3 }, CancellationToken.None);
 
             using (var mid = db.NewContext())
@@ -223,12 +225,13 @@ namespace WMS.Tests.Integration
             var product = scope.Context.Products.Single(x => x.Id == scenario.Product.Id);
             product.Stock = 20;
             scope.Context.SaveChanges();
+            Seed.MintUnits(scope.Context, product, 20);
 
             var addHandler = new AddSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
             await addHandler.Handle(new AddSaleReturnDecisionCommand { SaleReturnItemId = saleReturnItemId, DecisionType = SaleReturnDecisionTypeEnum.REPLACEMENT, Quantity = 5 }, CancellationToken.None);
             var decisionId = scope.Context.SaleReturnDecisions.Single().Id;
 
-            var shipHandler = new ConfirmReplacementShipmentCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var shipHandler = new ConfirmReplacementShipmentCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => shipHandler.Handle(new ConfirmReplacementShipmentCommand { SaleReturnDecisionId = decisionId, ShippedQuantity = 6 }, CancellationToken.None));
         }
@@ -247,7 +250,7 @@ namespace WMS.Tests.Integration
             await addHandler.Handle(new AddSaleReturnDecisionCommand { SaleReturnItemId = saleReturnItemId, DecisionType = SaleReturnDecisionTypeEnum.REPLACEMENT, Quantity = 5 }, CancellationToken.None);
             var decisionId = scope.Context.SaleReturnDecisions.Single().Id;
 
-            var shipHandler = new ConfirmReplacementShipmentCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var shipHandler = new ConfirmReplacementShipmentCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => shipHandler.Handle(new ConfirmReplacementShipmentCommand { SaleReturnDecisionId = decisionId, ShippedQuantity = 5 }, CancellationToken.None));
         }
@@ -261,6 +264,7 @@ namespace WMS.Tests.Integration
             var product = scope.Context.Products.Single(x => x.Id == scenario.Product.Id);
             product.Stock = 20;
             scope.Context.SaveChanges();
+            Seed.MintUnits(scope.Context, product, 20);
 
             var addHandler = new AddSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
             await addHandler.Handle(new AddSaleReturnDecisionCommand { SaleReturnItemId = saleReturnItemId, DecisionType = SaleReturnDecisionTypeEnum.REPLACEMENT, Quantity = 5 }, CancellationToken.None);

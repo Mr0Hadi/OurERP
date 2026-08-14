@@ -88,7 +88,7 @@ namespace WMS.Tests.Integration
             var (scenario, saleReturnId) = await SeedClaim(scope, shippedQuantity: 10, claimedQuantity: 5);
             var claimId = scope.Context.SaleReturnClaims.Single().Id;
 
-            var handler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var handler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
             await handler.Handle(new ConfirmReturnInspectionCommand
             {
                 SaleReturnId = saleReturnId,
@@ -118,7 +118,7 @@ namespace WMS.Tests.Integration
             var (scenario, saleReturnId) = await SeedClaim(scope, shippedQuantity: 10, claimedQuantity: 5);
             var claimId = scope.Context.SaleReturnClaims.Single().Id;
 
-            var handler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var handler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
             await handler.Handle(new ConfirmReturnInspectionCommand
             {
                 SaleReturnId = saleReturnId,
@@ -146,7 +146,7 @@ namespace WMS.Tests.Integration
             var (_, saleReturnId) = await SeedClaim(scope, shippedQuantity: 10, claimedQuantity: 5);
             var claimId = scope.Context.SaleReturnClaims.Single().Id;
 
-            var handler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var handler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(new ConfirmReturnInspectionCommand
             {
@@ -170,7 +170,7 @@ namespace WMS.Tests.Integration
             var (scenario, saleReturnId) = await SeedClaim(scope, shippedQuantity: 5, claimedQuantity: 5);
             var claimId = scope.Context.SaleReturnClaims.Single().Id;
 
-            var inspectHandler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var inspectHandler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
             await inspectHandler.Handle(new ConfirmReturnInspectionCommand
             {
                 SaleReturnId = saleReturnId,
@@ -212,7 +212,7 @@ namespace WMS.Tests.Integration
             var (_, saleReturnId) = await SeedClaim(scope, shippedQuantity: 5, claimedQuantity: 5);
             var claimId = scope.Context.SaleReturnClaims.Single().Id;
 
-            var inspectHandler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var inspectHandler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
             await inspectHandler.Handle(new ConfirmReturnInspectionCommand
             {
                 SaleReturnId = saleReturnId,

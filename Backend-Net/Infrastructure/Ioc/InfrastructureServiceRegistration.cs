@@ -1,5 +1,9 @@
 //using Application.Common.Contracts.Captcha;
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Barcode;
+using Application.Common.Contracts.Documents;
+using Application.Common.Contracts.ProductCode;
+using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.SaleReturn;
@@ -49,6 +53,12 @@ namespace Infrastructure.Ioc
             services.AddScoped<IPurchaseReturnCalculationService, PurchaseReturnCalculationService>();
 
             services.AddScoped<ISaleReturnCalculationService, SaleReturnCalculationService>();
+
+            services.AddScoped<IProductCodeService, ProductCodeService>();
+            services.AddScoped<IProductUnitService, ProductUnitService>();
+
+            services.AddSingleton<IBarcodeRenderer, ZXingBarcodeRenderer>();
+            services.AddSingleton<IPdfDocumentService, QuestPdfDocumentService>();
 
             //services.AddSixLabCaptcha(x => x.DrawLines = 4);
 

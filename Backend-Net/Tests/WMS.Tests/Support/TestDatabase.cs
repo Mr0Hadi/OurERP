@@ -1,4 +1,8 @@
+using Application.Common.Contracts.Barcode;
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Documents;
+using Application.Common.Contracts.ProductCode;
+using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.SaleReturn;
@@ -21,6 +25,14 @@ namespace WMS.Tests.Support
     /// </summary>
     public sealed class TestDatabase : IDisposable
     {
+        // QuestPDF.Settings is process-global and xUnit gives no ordering guarantee across test
+        // classes, so setting it only in PdfAndBarcodeSmokeTests' static ctor isn't enough for
+        // other test classes (InvoicePdfTests) that use TestScope.PdfDocumentService first.
+        static TestDatabase()
+        {
+            QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+        }
+
         private readonly SqliteConnection _connection;
         private readonly DbContextOptions<WMSDbContext> _options;
 
@@ -76,6 +88,10 @@ namespace WMS.Tests.Support
             RoleRepository = new RoleRepository(context);
             SaleReturnCalculation = new SaleReturnCalculationService();
             PurchaseReturnCalculation = new PurchaseReturnCalculationService();
+            ProductCodeService = new ProductCodeService();
+            ProductUnitService = new ProductUnitService(context, ProductCodeService);
+            BarcodeRenderer = new ZXingBarcodeRenderer();
+            PdfDocumentService = new QuestPdfDocumentService(BarcodeRenderer);
         }
 
         public WMSDbContext Context { get; }
@@ -92,6 +108,10 @@ namespace WMS.Tests.Support
         public IRoleRepository RoleRepository { get; }
         public ISaleReturnCalculationService SaleReturnCalculation { get; }
         public IPurchaseReturnCalculationService PurchaseReturnCalculation { get; }
+        public IProductCodeService ProductCodeService { get; }
+        public IProductUnitService ProductUnitService { get; }
+        public IBarcodeRenderer BarcodeRenderer { get; }
+        public IPdfDocumentService PdfDocumentService { get; }
 
         public void Dispose()
         {

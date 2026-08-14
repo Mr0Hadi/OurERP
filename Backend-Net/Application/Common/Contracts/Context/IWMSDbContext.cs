@@ -23,6 +23,7 @@ namespace Application.Common.Contracts.Context
         DbSet<SaleReturnClaim> SaleReturnClaims { get; }
         DbSet<SaleReturnItem> SaleReturnItems { get; }
         DbSet<SaleReturnDecision> SaleReturnDecisions { get; }
+        DbSet<Domain.Entities.ProductUnit> ProductUnits { get; }
 
         DbSet<T> Set<T>() where T : class;
 

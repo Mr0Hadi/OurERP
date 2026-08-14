@@ -1,4 +1,5 @@
-﻿using Application.Common.Contracts.Repositories;
+﻿using Application.Common.Contracts.ProductUnit;
+using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -12,10 +13,10 @@ namespace Application.Features.Product.Commands
 {
     public class UpdateProductCommand : IRequest<ResponseDto>
     {
+        // Code/BarCode are immutable after creation (they end up printed on physical labels) -
+        // see docs/product-code-barcode-invoice-design.fa.md 1.11.
         public int Id { get; set; }
         public string Name { get; set; }
-        public string Code { get; set; }
-        public string BarCode { get; set; }
         public string Brand { get; set; }
         public ProductUnitEnum Unit { get; set; }
         public UInt64 PurchasePrice { get; set; }
@@ -34,8 +35,6 @@ namespace Application.Features.Product.Commands
         public UpdateProductCommandValidator()
         {
             RuleFor(x => x.Name).NotEmpty().WithMessage(Validation.RequiredMessage("نام محصول"));
-            RuleFor(x => x.Code).NotEmpty().WithMessage(Validation.RequiredMessage("کد محصول"));
-            RuleFor(x => x.BarCode).NotEmpty().WithMessage(Validation.RequiredMessage("بارکد محصول"));
             RuleFor(x => x.Brand).NotEmpty().WithMessage(Validation.RequiredMessage("برند محصول"));
             RuleFor(x => x.PurchasePrice).Must(p => p > 0).WithMessage("قیمت خرید باید بزرگتر از صفر باشد.");
             RuleFor(x => x.RetailPrice).Must(r => r > 0).WithMessage("قیمت فروش باید بزرگتر از صفر باشد.");
@@ -50,33 +49,38 @@ namespace Application.Features.Product.Commands
     public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand, ResponseDto>
     {
         private readonly IProductRepository _productRepository;
+        private readonly IProductUnitService _productUnitService;
         private readonly IUnitOfWork _unitOfWork;
-        public UpdateProductCommandHandler(IProductRepository productRepository, IUnitOfWork unitOfWork)
+        public UpdateProductCommandHandler(IProductRepository productRepository, IProductUnitService productUnitService, IUnitOfWork unitOfWork)
         {
             _productRepository = productRepository;
+            _productUnitService = productUnitService;
             _unitOfWork = unitOfWork;
         }
         public async Task<ResponseDto> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
             var product = await _productRepository.GetByIdAsync(request.Id) ?? throw new ValidationCustomException("محصول مورد نظر یافت نشد.");
-            
+
             product.Name = request.Name;
-            product.Code = request.Code;
-            product.BarCode = request.BarCode;
             product.Brand = request.Brand;
             product.Unit = request.Unit;
             product.PurchasePrice = request.PurchasePrice;
             product.RetailPrice = request.RetailPrice;
             product.WholeSalePrice = request.WholeSalePrice;
             product.Tax = request.Tax;
-            product.Stock = request.Stock;
             product.LowStockThreshold = request.LowStockThreshold;
             product.ImageUrl = request.ImageUrl;
             product.UpdatedAt = DateTime.Now;
 
+            // Stock is reconciled against ProductUnit rows rather than overwritten blind -
+            // see docs/product-code-barcode-invoice-design.fa.md 1.6, option B.
+            if (request.Stock != product.Stock)
+                await _productUnitService.ReconcileStockAsync(product, request.Stock, cancellationToken);
+            product.Stock = request.Stock;
+
             _productRepository.Update(product);
-            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             res.Message = "محصول با موفقیت آپدیت شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();

@@ -1,4 +1,5 @@
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
@@ -37,12 +38,14 @@ namespace Application.Features.SaleReturn.Commands
     {
         private readonly IWMSDbContext _context;
         private readonly ISaleReturnCalculationService _saleReturnCalculationService;
+        private readonly IProductUnitService _productUnitService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public ConfirmReplacementShipmentCommandHandler(IWMSDbContext context, ISaleReturnCalculationService saleReturnCalculationService, IUnitOfWork unitOfWork)
+        public ConfirmReplacementShipmentCommandHandler(IWMSDbContext context, ISaleReturnCalculationService saleReturnCalculationService, IProductUnitService productUnitService, IUnitOfWork unitOfWork)
         {
             _context = context;
             _saleReturnCalculationService = saleReturnCalculationService;
+            _productUnitService = productUnitService;
             _unitOfWork = unitOfWork;
         }
 
@@ -75,6 +78,7 @@ namespace Application.Features.SaleReturn.Commands
 
             decision.ReplacementShippedQuantity += request.ShippedQuantity;
             product.Stock -= request.ShippedQuantity;
+            await _productUnitService.ConsumeAsync(product, request.ShippedQuantity, claim.SaleItemId, null, cancellationToken);
 
             if (decision.ReplacementShippedQuantity >= decision.Quantity)
             {

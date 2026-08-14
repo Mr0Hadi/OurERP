@@ -14,7 +14,7 @@ namespace WMS.Tests.Integration
         {
             var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: ordered, stock: 0);
 
-            var receiveHandler = new ReceivePurchaseCommandHandler(scope.Db, scope.PurchaseReturnRepository, scope.PurchaseReturnCalculation, scope.UnitOfWork);
+            var receiveHandler = new ReceivePurchaseCommandHandler(scope.Db, scope.PurchaseReturnRepository, scope.PurchaseReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
             await receiveHandler.Handle(new ReceivePurchaseCommand
             {
                 PurchaseId = scenario.Purchase.Id,
@@ -90,7 +90,7 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
             var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 5, stock: 0);
-            var receiveHandler = new ReceivePurchaseCommandHandler(scope.Db, scope.PurchaseReturnRepository, scope.PurchaseReturnCalculation, scope.UnitOfWork);
+            var receiveHandler = new ReceivePurchaseCommandHandler(scope.Db, scope.PurchaseReturnRepository, scope.PurchaseReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
             await receiveHandler.Handle(new ReceivePurchaseCommand
             {
                 PurchaseId = scenario.Purchase.Id,

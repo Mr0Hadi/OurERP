@@ -1,4 +1,5 @@
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
@@ -59,12 +60,14 @@ namespace Application.Features.SaleReturn.Commands
     {
         private readonly IWMSDbContext _context;
         private readonly ISaleReturnCalculationService _saleReturnCalculationService;
+        private readonly IProductUnitService _productUnitService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public ConfirmReturnInspectionCommandHandler(IWMSDbContext context, ISaleReturnCalculationService saleReturnCalculationService, IUnitOfWork unitOfWork)
+        public ConfirmReturnInspectionCommandHandler(IWMSDbContext context, ISaleReturnCalculationService saleReturnCalculationService, IProductUnitService productUnitService, IUnitOfWork unitOfWork)
         {
             _context = context;
             _saleReturnCalculationService = saleReturnCalculationService;
+            _productUnitService = productUnitService;
             _unitOfWork = unitOfWork;
         }
 
@@ -97,6 +100,8 @@ namespace Application.Features.SaleReturn.Commands
             foreach (var claimReq in request.Claims)
             {
                 var claim = claimsById[claimReq.SaleReturnClaimId];
+                var healthyQty = 0;
+                var scrapQty = 0;
 
                 foreach (var group in claimReq.Results.GroupBy(r => r.IssueType))
                 {
@@ -122,8 +127,20 @@ namespace Application.Features.SaleReturn.Commands
                     }
 
                     if (group.Key == null)
+                    {
                         claim.Product!.Stock += qty;
+                        healthyQty += qty;
+                    }
+                    else
+                    {
+                        // Defective/damaged/wrong-item units never return to sellable stock -
+                        // their ProductUnit rows are scrapped, not put back IN_STOCK.
+                        scrapQty += qty;
+                    }
                 }
+
+                if (healthyQty > 0 || scrapQty > 0)
+                    await _productUnitService.RestoreAsync(claim.SaleItemId, healthyQty, scrapQty, cancellationToken);
             }
 
             // Sale.Status is deliberately not recomputed here: inspection moves nothing into

@@ -1,4 +1,5 @@
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.UnitOfWork;
@@ -63,13 +64,15 @@ namespace Application.Features.PurchaseReturn.Commands
         private readonly IWMSDbContext _context;
         private readonly IPurchaseReturnRepository _purchaseReturnRepository;
         private readonly IPurchaseReturnCalculationService _purchaseReturnCalculationService;
+        private readonly IProductUnitService _productUnitService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public ReceivePurchaseCommandHandler(IWMSDbContext context, IPurchaseReturnRepository purchaseReturnRepository, IPurchaseReturnCalculationService purchaseReturnCalculationService, IUnitOfWork unitOfWork)
+        public ReceivePurchaseCommandHandler(IWMSDbContext context, IPurchaseReturnRepository purchaseReturnRepository, IPurchaseReturnCalculationService purchaseReturnCalculationService, IProductUnitService productUnitService, IUnitOfWork unitOfWork)
         {
             _context = context;
             _purchaseReturnRepository = purchaseReturnRepository;
             _purchaseReturnCalculationService = purchaseReturnCalculationService;
+            _productUnitService = productUnitService;
             _unitOfWork = unitOfWork;
         }
 
@@ -114,6 +117,7 @@ namespace Application.Features.PurchaseReturn.Commands
                 {
                     purchaseItem.ReceivedQuantity += reqItem.ReceivedQuantity;
                     purchaseItem.Product.Stock += reqItem.ReceivedQuantity;
+                    await _productUnitService.MintAsync(purchaseItem.Product, reqItem.ReceivedQuantity, purchaseItem.Id, cancellationToken);
                 }
 
                 var issues = (reqItem.Issues ?? new()).Where(i => i.Quantity > 0).ToList();

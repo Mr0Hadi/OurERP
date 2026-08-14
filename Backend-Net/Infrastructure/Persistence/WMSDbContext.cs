@@ -31,6 +31,7 @@ namespace Infrastructure.Persistence
         public DbSet<SaleReturnClaim> SaleReturnClaims => Set<SaleReturnClaim>();
         public DbSet<SaleReturnItem> SaleReturnItems => Set<SaleReturnItem>();
         public DbSet<SaleReturnDecision> SaleReturnDecisions => Set<SaleReturnDecision>();
+        public DbSet<ProductUnit> ProductUnits => Set<ProductUnit>();
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
@@ -88,6 +89,14 @@ namespace Infrastructure.Persistence
                 .HasOne(x => x.ProductCategory)
                 .WithMany(x => x.Products)
                 .HasForeignKey(u => u.ProductCategoryId);
+
+            // Deliberately a separate migration from the ProductUnits table (see
+            // docs/product-code-barcode-invoice-design.fa.md 4.3): applying this unique index in
+            // the same migration as the ProductUnits table would fail on a DB with pre-existing
+            // duplicate/empty Product.Code values. Run EnsureProductCodesCommand between the two.
+            modelBuilder.Entity<Product>()
+                .HasIndex(x => x.Code)
+                .IsUnique();
 
             modelBuilder.Entity<User>()
                 .HasOne(u => u.Role)
@@ -159,6 +168,31 @@ namespace Infrastructure.Persistence
                 .WithMany(x => x.Decisions)
                 .HasForeignKey(x => x.SaleReturnItemId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ProductUnit>()
+                .HasOne(x => x.Product)
+                .WithMany()
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ProductUnit>()
+                .HasIndex(x => x.BarcodePayload)
+                .IsUnique();
+
+            modelBuilder.Entity<ProductUnit>()
+                .HasIndex(x => new { x.ProductId, x.SerialNumber })
+                .IsUnique();
+
+            modelBuilder.Entity<ProductUnit>()
+                .HasIndex(x => x.SaleItemId);
+
+            modelBuilder.Entity<ProductUnit>()
+                .HasIndex(x => x.PurchaseItemId);
+
+            // Unique index on Product.Code is added in a later migration
+            // (see 20260813xxxxxx_product-code-unique-index) after EnsureProductCodes
+            // has had a chance to backfill/de-duplicate existing rows - adding it here
+            // would fail the migration against a DB with pre-existing blank/duplicate codes.
         }
     }
 }
