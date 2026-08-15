@@ -30,6 +30,7 @@ import {
   useProductUnitFilterStore,
   usePrintPreferenceStore,
 } from "../store/unitFilterStore";
+import { usePrintLogStore } from "../store/printLogStore";
 import PendingLabelsTable from "../components/PendingLabelsTable";
 import UnitsTable from "../components/UnitsTable";
 import UnitFilters from "../components/UnitFilters";
@@ -40,6 +41,7 @@ import UnitDetailSheet from "../components/UnitDetailSheet";
 import UnitViewSwitcher from "../components/UnitViewSwitcher";
 import UnitBulkBar from "../components/UnitBulkBar";
 import UnitStatusDialog from "../components/UnitStatusDialog";
+import PrintLogAlert from "../components/PrintLogAlert";
 
 const TABS = { PENDING: "pending", UNITS: "units" };
 
@@ -52,6 +54,7 @@ export default function UnitLabelsPage() {
   const [scanMiss, setScanMiss] = useState(null);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [statusTargets, setStatusTargets] = useState([]);
+  const [retryingBatchId, setRetryingBatchId] = useState(null);
 
   // پارامترهای ورودی فقط یک‌بار، موقع باز شدن صفحه، خوانده می‌شوند.
   const [entryParams] = useState(() => ({
@@ -68,6 +71,7 @@ export default function UnitLabelsPage() {
   const pendingStore = usePendingLabelFilterStore();
   const unitsStore = useProductUnitFilterStore();
   const { sheetPresetKey, setSheetPresetKey } = usePrintPreferenceStore();
+  const unrecorded = usePrintLogStore((state) => state.unrecorded);
 
   const pendingSearch = useDebouncedValue(pendingStore.globalSearch, 400);
   const unitsSearch = useDebouncedValue(unitsStore.globalSearch, 400);
@@ -161,9 +165,16 @@ export default function UnitLabelsPage() {
 
   // «چاپ شد» یعنی برچسب واقعاً از پرینتر بیرون آمده؛ همان لحظه روی
   // واحدها ثبت می‌شود. چاپ مجدد رکورد تازه نمی‌سازد.
+  // کاغذ چاپ شده است؛ ثبتِ نشدنش را خودِ mutation در صف «ثبت‌نشده‌ها»
+  // نگه می‌دارد تا انباردار برای جنسی که برچسب دارد دوباره برچسب نزند.
   const handlePrinted = () => {
-    markPrinted.mutate(printItems.map((unit) => unit.id));
+    markPrinted.mutate(printItems);
     setIsPrintOpen(false);
+  };
+
+  const handleRetryPrintLog = (batch) => {
+    setRetryingBatchId(batch.id);
+    markPrinted.mutate(batch.units);
   };
 
   const unitRows = unitsQuery.data?.items ?? [];
@@ -206,6 +217,12 @@ export default function UnitLabelsPage() {
         scanMiss={scanMiss}
         isSearching={resolveCode.isPending}
         onGoToProduct={handleGoToProduct}
+      />
+
+      <PrintLogAlert
+        batches={unrecorded}
+        onRetry={handleRetryPrintLog}
+        retryingId={markPrinted.isPending ? retryingBatchId : null}
       />
 
       <UnitLabelsSummary

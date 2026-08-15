@@ -45,11 +45,21 @@ still wraps `react-barcode` directly while everything new goes through
 `shared/components/print/BarcodeGraphic.jsx`. Right end state, but it
 touches an already-shipped feature so it wants its own verification.
 
-**5. Print-logging failure is silent to the operator.** `markUnitsPrinted`
-runs after `window.print()`. If it fails, the labels are physically on
-paper but the units still read «چاپ‌نشده» — only an error toast says
-otherwise. Worth a retry or a "these labels printed but weren't recorded"
-reconciliation path once there is a real backend that can actually fail.
+**5. Print-logging recovery is client-side only.** *(the silent-failure part
+is fixed — see `usePrintLogStore` / `PrintLogAlert`.)* A failed
+`markUnitsPrinted` now retries three times and, if it still fails, stays on
+screen as a persistent, re-attemptable warning listing the affected unit
+codes. What is still missing is durability: the queue lives in memory, so a
+refresh loses it. That is deliberate while the data layer is mock — the
+whole store resets on reload anyway, and persisting unit ids that no longer
+exist would only produce retries that quietly do nothing. **With a real
+backend this reconciliation belongs server-side**, not in a client store.
+
+Note for whoever touches this next: do **not** reach for react-query's
+`retry` option on this mutation. With `retry: 2` set, a failing mutation
+neither retried nor reached `onError` — the error vanished completely,
+which is the exact failure mode this alert exists to prevent. The retry
+loop is therefore explicit in `mutations.js` (`withRetry`).
 
 **6. Manual print verification.** `node scripts/build-label-print-check.js`
 regenerates `Frontend/label-print-check.html` (gitignored), a self-contained
