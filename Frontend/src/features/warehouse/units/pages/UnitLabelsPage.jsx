@@ -23,6 +23,7 @@ import {
   useGenerateProductUnitsMutation,
   useMarkUnitsPrintedMutation,
   useFindUnitByCodeMutation,
+  useUpdateUnitsStatusMutation,
 } from "../services/mutations";
 import {
   usePendingLabelFilterStore,
@@ -37,6 +38,8 @@ import UnitLabelsSummary from "../components/UnitLabelsSummary";
 import UnitScanBar from "../components/UnitScanBar";
 import UnitDetailSheet from "../components/UnitDetailSheet";
 import UnitViewSwitcher from "../components/UnitViewSwitcher";
+import UnitBulkBar from "../components/UnitBulkBar";
+import UnitStatusDialog from "../components/UnitStatusDialog";
 
 const TABS = { PENDING: "pending", UNITS: "units" };
 
@@ -47,6 +50,8 @@ export default function UnitLabelsPage() {
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [activeUnit, setActiveUnit] = useState(null);
   const [notFoundCode, setNotFoundCode] = useState("");
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [statusTargets, setStatusTargets] = useState([]);
 
   // پارامترهای ورودی فقط یک‌بار، موقع باز شدن صفحه، خوانده می‌شوند.
   const [entryParams] = useState(() => ({
@@ -69,6 +74,7 @@ export default function UnitLabelsPage() {
 
   const generateUnits = useGenerateProductUnitsMutation();
   const markPrinted = useMarkUnitsPrintedMutation();
+  const updateStatus = useUpdateUnitsStatusMutation();
 
   const summaryQuery = useUnitLabelSummaryQuery();
   const findUnit = useFindUnitByCodeMutation();
@@ -148,6 +154,39 @@ export default function UnitLabelsPage() {
   const handlePrinted = () => {
     markPrinted.mutate(printItems.map((unit) => unit.id));
     setIsPrintOpen(false);
+  };
+
+  const unitRows = unitsQuery.data?.items ?? [];
+  const selectedUnits = unitRows.filter((unit) => selectedIds.has(unit.id));
+
+  const toggleSelect = (id) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const toggleSelectAll = (rows, shouldSelect) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      rows.forEach((row) =>
+        shouldSelect ? next.add(row.id) : next.delete(row.id),
+      );
+      return next;
+    });
+
+  const handleStatusSubmit = ({ status, note }) => {
+    updateStatus.mutate(
+      { unitIds: statusTargets.map((unit) => unit.id), status, note },
+      {
+        onSuccess: () => {
+          setStatusTargets([]);
+          setActiveUnit(null);
+          setSelectedIds(new Set());
+        },
+      },
+    );
   };
 
   return (
@@ -235,6 +274,13 @@ export default function UnitLabelsPage() {
                 onReset={unitsStore.resetFilters}
               />
 
+              <UnitBulkBar
+                count={selectedUnits.length}
+                onPrint={() => openPrintDialog(selectedUnits)}
+                onChangeStatus={() => setStatusTargets(selectedUnits)}
+                onClear={() => setSelectedIds(new Set())}
+              />
+
               {unitsQuery.isError ? (
                 <QueryErrorState
                   error={unitsQuery.error}
@@ -245,7 +291,7 @@ export default function UnitLabelsPage() {
                   active={unitsQuery.isFetching && !unitsQuery.isLoading}
                 >
                   <UnitsTable
-                    data={unitsQuery.data?.items ?? []}
+                    data={unitRows}
                     isLoading={unitsQuery.isLoading}
                     totalPages={unitsQuery.data?.totalPages ?? 1}
                     currentPage={
@@ -258,6 +304,9 @@ export default function UnitLabelsPage() {
                     sorting={unitsStore.sorting}
                     onSortingChange={unitsStore.setSorting}
                     onOpenUnit={setActiveUnit}
+                    selectedIds={selectedIds}
+                    onToggleSelect={toggleSelect}
+                    onToggleSelectAll={toggleSelectAll}
                   />
                 </FetchingOverlay>
               )}
@@ -271,6 +320,16 @@ export default function UnitLabelsPage() {
         open={!!activeUnit}
         onOpenChange={(open) => !open && setActiveUnit(null)}
         onReprint={handleReprint}
+        onChangeStatus={(unit) => setStatusTargets([unit])}
+      />
+
+      <UnitStatusDialog
+        key={statusTargets.map((unit) => unit.id).join(",")}
+        open={statusTargets.length > 0}
+        onOpenChange={(open) => !open && setStatusTargets([])}
+        units={statusTargets}
+        onSubmit={handleStatusSubmit}
+        isPending={updateStatus.isPending}
       />
 
       <PrintPreviewOverlay

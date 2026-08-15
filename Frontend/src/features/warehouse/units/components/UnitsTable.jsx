@@ -7,6 +7,7 @@ import { Button } from "@/shared/components/ui/button";
 import { gregorianToPersian } from "@/shared/utils/dateUtils";
 
 import UnitStatusBadge from "./UnitStatusBadge";
+import UnitSelectCheckbox from "./UnitSelectCheckbox";
 
 const getRowKey = (row) => row.original.id;
 
@@ -20,9 +21,33 @@ export default function UnitsTable({
   sorting,
   onSortingChange,
   onOpenUnit,
+  selectedIds,
+  onToggleSelect,
+  onToggleSelectAll,
 }) {
+  const allOnPageSelected =
+    data.length > 0 && data.every((unit) => selectedIds.has(unit.id));
+
   const columns = useMemo(
     () => [
+      {
+        id: "select",
+        enableSorting: false,
+        header: () => (
+          <UnitSelectCheckbox
+            checked={allOnPageSelected}
+            onChange={() => onToggleSelectAll(data, !allOnPageSelected)}
+            label="انتخاب همه‌ی این صفحه"
+          />
+        ),
+        cell: (info) => (
+          <UnitSelectCheckbox
+            checked={selectedIds.has(info.row.original.id)}
+            onChange={() => onToggleSelect(info.row.original.id)}
+            label={`انتخاب ${info.row.original.unitCode}`}
+          />
+        ),
+      },
       {
         accessorKey: "unitCode",
         header: "کد واحد",
@@ -96,7 +121,14 @@ export default function UnitsTable({
         ),
       },
     ],
-    [onOpenUnit],
+    [
+      onOpenUnit,
+      selectedIds,
+      onToggleSelect,
+      onToggleSelectAll,
+      data,
+      allOnPageSelected,
+    ],
   );
 
   return (
@@ -111,6 +143,9 @@ export default function UnitsTable({
       sorting={sorting}
       onSortingChange={onSortingChange}
       getRowKey={getRowKey}
+      rowClassName={(row) =>
+        selectedIds.has(row.original.id) ? "bg-primary/5" : ""
+      }
       emptyMessage="واحدی با این فیلترها پیدا نشد."
     />
   );

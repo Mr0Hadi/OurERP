@@ -1,5 +1,5 @@
 // src/features/warehouse/units/components/UnitDetailSheet.jsx
-import { Printer } from "lucide-react";
+import { Printer, Wrench } from "lucide-react";
 
 import {
   Sheet,
@@ -33,7 +33,13 @@ function Row({ label, children }) {
  * کلیک روی ردیف جدول. چاپ مجدد همین‌جاست تا انباردار برای برچسبِ
  * افتاده مجبور نباشد واحد تازه بسازد.
  */
-export default function UnitDetailSheet({ unit, open, onOpenChange, onReprint }) {
+export default function UnitDetailSheet({
+  unit,
+  open,
+  onOpenChange,
+  onReprint,
+  onChangeStatus,
+}) {
   if (!unit) return null;
 
   const isReprint = (unit.printCount || 0) > 0;
@@ -95,10 +101,17 @@ export default function UnitDetailSheet({ unit, open, onOpenChange, onReprint })
                 <span className="font-mono text-xs">{unit.saleId}</span>
               </Row>
             ) : null}
+            {unit.statusNote ? (
+              <Row label="توضیح وضعیت">
+                <span className="text-xs text-muted-foreground">
+                  {unit.statusNote}
+                </span>
+              </Row>
+            ) : null}
           </div>
         </div>
 
-        <SheetFooter>
+        <SheetFooter className="gap-2">
           <Button
             type="button"
             size="lg"
@@ -107,6 +120,16 @@ export default function UnitDetailSheet({ unit, open, onOpenChange, onReprint })
           >
             <Printer className="h-4 w-4" />
             {isReprint ? "چاپ مجدد برچسب" : "چاپ برچسب"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="w-full gap-2"
+            onClick={() => onChangeStatus(unit)}
+          >
+            <Wrench className="h-4 w-4" />
+            ثبت وضعیت (آسیب‌دیده / مفقود)
           </Button>
         </SheetFooter>
       </SheetContent>

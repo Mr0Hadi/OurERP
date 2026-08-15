@@ -1,5 +1,13 @@
 // src/features/warehouse/units/components/UnitStatusBadge.jsx
-import { Package, ShoppingCart, Truck, Undo2, Trash2 } from "lucide-react";
+import {
+  Package,
+  ShoppingCart,
+  Truck,
+  Undo2,
+  Trash2,
+  AlertTriangle,
+  HelpCircle,
+} from "lucide-react";
 
 import { UNIT_STATUSES, UNIT_STATUS_LABELS } from "../services/mockData";
 
@@ -27,6 +35,15 @@ const STATUS_CONFIG = {
   [UNIT_STATUSES.RETURNED]: {
     icon: Undo2,
     className: "bg-muted text-muted-foreground border-border",
+  },
+  [UNIT_STATUSES.DAMAGED]: {
+    icon: AlertTriangle,
+    className:
+      "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-300",
+  },
+  [UNIT_STATUSES.LOST]: {
+    icon: HelpCircle,
+    className: "bg-destructive/5 text-destructive border-destructive/20",
   },
   [UNIT_STATUSES.SCRAPPED]: {
     icon: Trash2,

@@ -1,10 +1,12 @@
 // src/features/warehouse/units/services/api-mockData.js
 import { allProducts } from "@/features/warehouse/products/services/mockData";
+import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
 import { todayPersianCompact } from "@/shared/utils/dateUtils";
 import {
   allProductUnits,
   UNIT_STATUSES,
   UNIT_SOURCE_TYPES,
+  isCountedInStock,
 } from "./mockData";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -257,6 +259,54 @@ export const markUnitsPrinted = async (unitIds = []) => {
       updatedAt: now,
     };
   });
+
+  return { success: true, count: ids.size };
+};
+
+/**
+ * اصلاح دستی وضعیت — کالای آسیب‌دیده، مفقود یا اسقاط‌شده.
+ *
+ * موجودی عددی هم همراهش اصلاح می‌شود: واحدی که از «در انبار» خارج
+ * می‌شود یعنی آن جنس دیگر فیزیکاً نیست، پس product.stock هم باید یکی
+ * کم شود. اگر این کار نشود دو دفتر از هم واگرا می‌شوند و صفحه‌ی
+ * «نیازمند برچسب» برای جنسی که وجود ندارد برچسب طلب می‌کند. برگشت به
+ * «در انبار» (اصلاح اشتباه) همان یکی را برمی‌گرداند.
+ *
+ * انتقال‌های فروش/ارسال اینجا دست‌کاری نمی‌شوند؛ آن‌ها را جریان فروش
+ * مدیریت می‌کند و موجودی‌شان قبلاً همان‌جا کم شده است.
+ */
+export const updateUnitsStatus = async ({ unitIds = [], status, note = "" }) => {
+  await delay(400);
+
+  if (!status) throw new Error("وضعیت جدید مشخص نشده است");
+
+  const ids = new Set(unitIds);
+  const now = new Date().toISOString();
+  const stockChanges = [];
+
+  allProductUnits.forEach((unit, index) => {
+    if (!ids.has(unit.id)) return;
+    if (unit.status === status) return;
+
+    const wasCounted = isCountedInStock(unit.status);
+    const willCount = isCountedInStock(status);
+
+    if (wasCounted && !willCount) {
+      stockChanges.push({ productId: unit.productId, delta: -1 });
+    } else if (!wasCounted && willCount) {
+      stockChanges.push({ productId: unit.productId, delta: 1 });
+    }
+
+    allProductUnits[index] = {
+      ...unit,
+      status,
+      statusNote: note,
+      statusChangedAt: now,
+      updatedAt: now,
+    };
+  });
+
+  adjustProductsStock(stockChanges);
 
   return { success: true, count: ids.size };
 };

@@ -6,8 +6,31 @@ import {
   generateProductUnits,
   markUnitsPrinted,
   fetchUnitByCode,
+  updateUnitsStatus,
 } from "./api-mockData";
+import { productKeys } from "@/features/warehouse/products/services/queryKeys";
 import { productUnitKeys, pendingLabelKeys } from "./queryKeys";
+
+/**
+ * اصلاح دستی وضعیت. چون موجودی کالا را هم تغییر می‌دهد، کش کالاها هم
+ * باید باطل شود، نه فقط کش واحدها.
+ */
+export const useUpdateUnitsStatusMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: updateUnitsStatus,
+    onSuccess: (_result, variables) => {
+      toast.success(`وضعیت ${variables.unitIds.length} واحد ثبت شد`);
+      queryClient.invalidateQueries({ queryKey: productUnitKeys.all });
+      queryClient.invalidateQueries({ queryKey: pendingLabelKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: productKeys.lists() });
+    },
+    onError: (error) => {
+      toast.error(error?.message || "خطا در ثبت وضعیت");
+    },
+  });
+};
 
 /**
  * یافتن واحد با کد اسکن‌شده.

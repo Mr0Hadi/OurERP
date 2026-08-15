@@ -30,6 +30,15 @@ export const generateProductUnits = async (payload) => {
   return data;
 };
 
+export const updateUnitsStatus = async ({ unitIds, status, note }) => {
+  const { data } = await axiosInstance.patch("/product-units/status", {
+    unitIds,
+    status,
+    note,
+  });
+  return data;
+};
+
 export const markUnitsPrinted = async (unitIds) => {
   const { data } = await axiosInstance.post("/product-units/print", { unitIds });
   return data;
