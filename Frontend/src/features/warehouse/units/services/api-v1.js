@@ -13,9 +13,9 @@ export const fetchProductUnits = async (params) => {
   return data;
 };
 
-export const fetchUnitByCode = async (code) => {
+export const resolveScannedCode = async (code) => {
   const { data } = await axiosInstance.get(
-    `/product-units/by-code/${encodeURIComponent(code)}`,
+    `/product-units/resolve/${encodeURIComponent(code)}`,
   );
   return data;
 };

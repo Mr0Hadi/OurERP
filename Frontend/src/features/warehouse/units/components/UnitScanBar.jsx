@@ -26,7 +26,12 @@ const CameraScanner = lazy(
  * چون ورودی‌اش هر چیز غیرعددی را حذف می‌کند و کدهای واحد (U-...) را
  * خراب می‌کند؛ فقط از خودِ CameraScanner استفاده می‌کنیم.
  */
-export default function UnitScanBar({ onScan, notFoundCode, isSearching }) {
+export default function UnitScanBar({
+  onScan,
+  scanMiss,
+  isSearching,
+  onGoToProduct,
+}) {
   const [value, setValue] = useState("");
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const inputRef = useRef(null);
@@ -93,10 +98,27 @@ export default function UnitScanBar({ onScan, notFoundCode, isSearching }) {
         </Button>
       </form>
 
-      {notFoundCode ? (
+      {scanMiss?.type === "product" ? (
+        <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-amber-50 p-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+          <span>
+            این بارکدِ خودِ کالای «{scanMiss.product.name}» است، نه یک واحد.
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="ms-auto"
+            onClick={() => onGoToProduct(scanMiss.product)}
+          >
+            ساخت برچسب برای این کالا
+          </Button>
+        </div>
+      ) : null}
+
+      {scanMiss?.type === "none" ? (
         <p className="mt-2 text-sm text-destructive">
-          واحدی با کد «<span className="font-mono">{notFoundCode}</span>» پیدا
-          نشد.
+          هیچ واحد یا کالایی با کد «
+          <span className="font-mono">{scanMiss.code}</span>» پیدا نشد.
         </p>
       ) : null}
 

@@ -13,6 +13,9 @@ dist-ssr
 *.local
 dev-dist
 
+# خروجی تولیدشده‌ی scripts/build-label-print-check.js
+label-print-check.html
+
 # Editor directories and files
 .claude/
 .vscode/*

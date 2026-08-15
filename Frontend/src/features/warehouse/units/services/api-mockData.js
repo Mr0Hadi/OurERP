@@ -154,20 +154,30 @@ export const fetchProductUnits = async (params = {}) => {
 };
 
 /**
- * جست‌وجوی دقیق بر اساس کد واحد — مسیر «اسکن کن و برو».
+ * تشخیص اینکه کد اسکن‌شده چیست — مسیر «اسکن کن و برو».
  *
- * فیلترِ فهرست برای مرور است؛ این یکی برای وقتی است که انباردار کد را
- * اسکن می‌کند و باید یک‌راست روی همان رکورد بنشیند.
+ * انباردار جلوی پرینتر به‌سادگی بارکد خودِ کالا را به‌جای بارکد واحد
+ * اسکن می‌کند (هر دو روی جنس چسبیده‌اند). در آن حالت پیام «پیدا نشد»
+ * گمراه‌کننده است؛ باید بگوییم این بارکدِ کالاست و راه درست را نشان
+ * بدهیم.
  */
-export const fetchUnitByCode = async (code) => {
+export const resolveScannedCode = async (code) => {
   await delay(200);
 
   const needle = String(code ?? "").trim().toUpperCase();
-  if (!needle) return null;
+  if (!needle) return { type: "empty" };
 
-  return (
-    allProductUnits.find((u) => u.unitCode.toUpperCase() === needle) ?? null
+  const unit = allProductUnits.find((u) => u.unitCode.toUpperCase() === needle);
+  if (unit) return { type: "unit", unit };
+
+  const product = allProducts.find(
+    (p) =>
+      String(p.barcode ?? "").toUpperCase() === needle ||
+      String(p.code ?? "").toUpperCase() === needle,
   );
+  if (product) return { type: "product", product };
+
+  return { type: "none" };
 };
 
 /** آمار بالای صفحه: چه چیزی همین حالا کار دارد. */

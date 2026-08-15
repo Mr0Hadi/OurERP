@@ -4,23 +4,59 @@ Findings worth acting on later. Add new items at the top of "Open".
 
 ## Open
 
-### Follow-ups from unit-level barcodes (Aug 2026)
+### Unit-level barcodes — consolidated follow-ups (Aug 2026)
 
-Two items deliberately left out of the unit-barcode task to keep it scoped:
+Everything still open from the unit-barcode effort, in rough priority order.
+The feature itself is complete and verified; these are deliberate omissions,
+not defects.
 
-- **«تولید برچسب» shortcut on the receiving screen.** After confirming a
-  receiving round, the warehouse worker knows exactly how many healthy units
-  just arrived; offering a «تولید برچسب» action there, pre-filled with that
-  quantity, saves them re-finding the product on
-  `/warehouse/unit-labels`. The standalone screen already covers the
-  requirement, so this is convenience, not a gap. The unit's `source` field
-  is already shaped for it (`{ type: "purchase", refId, refNumber }`).
-- **Move `ProductBarcodeDisplay` onto the shared barcode component.**
-  `Frontend/src/features/warehouse/products/components/forms/ProductBarcodeDisplay.jsx`
-  still wraps `react-barcode` directly, while everything new goes through
-  `shared/components/print/BarcodeGraphic.jsx`. Consolidating is the right
-  end state but touches an already-shipped feature, so it wants its own
-  change with its own verification.
+**1. Audit trail: who did it, not just that it happened.** Units record
+`firstPrintedAt` / `lastPrintedAt` / `printCount` / `statusChangedAt`, but
+never *which user*. Every WMS reference treats operator attribution as
+table stakes for label printing and manual stock corrections. The plumbing
+exists — `features/auth/store/authStore.js` and `useCurrentUser()` — but is
+dormant: `protectedLoader` is commented out in `app/routes/routers.jsx`, no
+user is ever set, and the sidebar user is a hardcoded constant in
+`navigationData.js`. So attribution would record `null` today. **Do this
+when auth is actually wired up**, not before. Two sizes: stamping
+`printedBy` / `statusChangedBy` on the unit (small, ~30 lines), or a proper
+append-only event log per unit (created / printed / reprinted / allocated /
+shipped / status-corrected), which is what Odoo-style traceability reports
+are built on (bigger, own task).
+
+**2. Export of units and pending-labels.** No CSV/Excel export exists
+anywhere in this app — `shared/services/excel/` is an empty reserved
+directory, so there is no convention to match yet. Whoever builds the first
+export should establish it there, and units is a reasonable first consumer
+(unit list with status, plus a printed-vs-pending summary).
+
+**3. «تولید برچسب» shortcut on the receiving screen.** After confirming a
+receiving round the worker knows exactly how many healthy units arrived;
+offering the action there, pre-filled, saves re-finding the product. The
+page is already URL-addressable for exactly this —
+`/warehouse/unit-labels?product=<id>&qty=<n>` generates and opens the print
+overlay — and the unit `source` field is shaped for it
+(`{ type: "purchase", refId, refNumber }`), so no rework of the labels page
+is needed.
+
+**4. Move `ProductBarcodeDisplay` onto the shared barcode component.**
+`features/warehouse/products/components/forms/ProductBarcodeDisplay.jsx`
+still wraps `react-barcode` directly while everything new goes through
+`shared/components/print/BarcodeGraphic.jsx`. Right end state, but it
+touches an already-shipped feature so it wants its own verification.
+
+**5. Print-logging failure is silent to the operator.** `markUnitsPrinted`
+runs after `window.print()`. If it fails, the labels are physically on
+paper but the units still read «چاپ‌نشده» — only an error toast says
+otherwise. Worth a retry or a "these labels printed but weren't recorded"
+reconciliation path once there is a real backend that can actually fail.
+
+**6. Manual print verification.** `node scripts/build-label-print-check.js`
+regenerates `Frontend/label-print-check.html` (gitignored), a self-contained
+page that reproduces the sheet geometry, print CSS and JsBarcode settings
+for print-preview checks without the dev server. It is a *reproduction* of
+the app's output, not the app's own DOM — if `sheetPresets.js` or
+`BarcodeGraphic.jsx` change, re-run the script and re-check.
 
 ### Reconcile the two disconnected product category lists
 

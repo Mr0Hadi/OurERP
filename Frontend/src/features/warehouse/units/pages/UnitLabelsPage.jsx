@@ -22,7 +22,7 @@ import {
 import {
   useGenerateProductUnitsMutation,
   useMarkUnitsPrintedMutation,
-  useFindUnitByCodeMutation,
+  useResolveScannedCodeMutation,
   useUpdateUnitsStatusMutation,
 } from "../services/mutations";
 import {
@@ -49,7 +49,7 @@ export default function UnitLabelsPage() {
   const [printItems, setPrintItems] = useState([]);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [activeUnit, setActiveUnit] = useState(null);
-  const [notFoundCode, setNotFoundCode] = useState("");
+  const [scanMiss, setScanMiss] = useState(null);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [statusTargets, setStatusTargets] = useState([]);
 
@@ -77,7 +77,7 @@ export default function UnitLabelsPage() {
   const updateStatus = useUpdateUnitsStatusMutation();
 
   const summaryQuery = useUnitLabelSummaryQuery();
-  const findUnit = useFindUnitByCodeMutation();
+  const resolveCode = useResolveScannedCodeMutation();
 
   const pendingQuery = usePendingLabelProductsQuery(
     { globalSearch: pendingSearch, onlyPending: true },
@@ -101,13 +101,21 @@ export default function UnitLabelsPage() {
   };
 
   const handleScan = (code) => {
-    setNotFoundCode("");
-    findUnit.mutate(code, {
-      onSuccess: (unit) => {
-        if (unit) setActiveUnit(unit);
-        else setNotFoundCode(code);
+    setScanMiss(null);
+    resolveCode.mutate(code, {
+      onSuccess: (result) => {
+        if (result.type === "unit") setActiveUnit(result.unit);
+        else if (result.type === "product") setScanMiss(result);
+        else setScanMiss({ type: "none", code });
       },
     });
+  };
+
+  // از «این بارکد کالاست» یک‌راست به ساخت برچسبِ همان کالا.
+  const handleGoToProduct = (product) => {
+    setScanMiss(null);
+    setTab(TABS.PENDING);
+    pendingStore.setGlobalSearch(product.code || product.name);
   };
 
   /**
@@ -119,9 +127,11 @@ export default function UnitLabelsPage() {
     const { unit, product, qty } = entryParams;
 
     if (unit) {
-      findUnit.mutate(unit, {
-        onSuccess: (found) =>
-          found ? setActiveUnit(found) : setNotFoundCode(unit),
+      resolveCode.mutate(unit, {
+        onSuccess: (result) =>
+          result.type === "unit"
+            ? setActiveUnit(result.unit)
+            : setScanMiss({ type: "none", code: unit }),
       });
     } else if (product && qty > 0) {
       generateUnits.mutate(
@@ -193,8 +203,9 @@ export default function UnitLabelsPage() {
     <div className="container mx-auto space-y-4">
       <UnitScanBar
         onScan={handleScan}
-        notFoundCode={notFoundCode}
-        isSearching={findUnit.isPending}
+        scanMiss={scanMiss}
+        isSearching={resolveCode.isPending}
+        onGoToProduct={handleGoToProduct}
       />
 
       <UnitLabelsSummary

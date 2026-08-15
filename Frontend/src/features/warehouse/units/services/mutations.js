@@ -5,7 +5,7 @@ import { toast } from "react-hot-toast";
 import {
   generateProductUnits,
   markUnitsPrinted,
-  fetchUnitByCode,
+  resolveScannedCode,
   updateUnitsStatus,
 } from "./api-mockData";
 import { productKeys } from "@/features/warehouse/products/services/queryKeys";
@@ -33,17 +33,17 @@ export const useUpdateUnitsStatusMutation = () => {
 };
 
 /**
- * یافتن واحد با کد اسکن‌شده.
+ * تشخیص کد اسکن‌شده (واحد، کالا، یا هیچ‌کدام).
  *
  * عمداً mutation است نه query: اسکن یک «کار» است که کاربر انجام می‌دهد،
  * نه حالتی که از فیلترها مشتق شود — و نتیجه در onSuccess مصرف می‌شود،
  * بدون useEffectِ واکنشی.
  */
-export const useFindUnitByCodeMutation = () =>
+export const useResolveScannedCodeMutation = () =>
   useMutation({
-    mutationFn: fetchUnitByCode,
+    mutationFn: resolveScannedCode,
     onError: (error) => {
-      toast.error(error?.message || "خطا در جست‌وجوی واحد");
+      toast.error(error?.message || "خطا در جست‌وجوی کد");
     },
   });
 
