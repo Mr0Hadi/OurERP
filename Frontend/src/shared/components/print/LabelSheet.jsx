@@ -1,12 +1,21 @@
 // src/shared/components/print/LabelSheet.jsx
-import { SHEET_PRESETS, DEFAULT_SHEET_PRESET } from "./sheetPresets";
+import {
+  getSheetPreset,
+  paginateItems,
+  DEFAULT_SHEET_PRESET,
+} from "./sheetPresets";
 
 /**
- * چیدمان شبکه‌ای برچسب‌ها روی صفحه، بر حسب میلی‌متر.
+ * برچسب‌ها را روی صفحه‌های مشخص می‌چیند.
  *
- * از محتوای برچسب بی‌خبر است: هر ماژولی renderItem خودش را می‌دهد.
- * همین باعث می‌شود بعداً برای چاپ فاکتور هم قابل استفاده باشد بدون
- * اینکه چیزی از انبار اینجا نشت کند.
+ * صفحه‌بندی صریح است و به شکستِ خودکارِ مرورگر سپرده نمی‌شود: مرورگرها
+ * grid را در چاپ به‌درستی بین صفحه‌ها تکه نمی‌کنند و ردیف‌های مرزی
+ * حذف یا نصفه می‌شوند. با ساختِ یک بلوکِ هم‌اندازه‌ی صفحه به‌ازای هر
+ * صفحه، هم خروجی قطعی می‌شود و هم شمارنده‌ی «چند صفحه» دقیقاً همان
+ * چیزی است که چاپ می‌شود.
+ *
+ * از محتوای برچسب بی‌خبر است: هر ماژول renderItem خودش را می‌دهد، پس
+ * برای چاپ فاکتور هم قابل استفاده است.
  */
 export default function LabelSheet({
   items,
@@ -14,35 +23,41 @@ export default function LabelSheet({
   presetKey = DEFAULT_SHEET_PRESET,
   getItemKey = (item, index) => item.id ?? index,
 }) {
-  const preset = SHEET_PRESETS[presetKey] ?? SHEET_PRESETS[DEFAULT_SHEET_PRESET];
+  const preset = getSheetPreset(presetKey);
+  const pages = paginateItems(items, preset);
 
   return (
-    <div
-      data-print-root
-      className="bg-white text-black mx-auto"
-      style={{ padding: `${preset.pageMarginMm}mm` }}
-    >
-      <div
-        className="grid"
-        style={{
-          gridTemplateColumns: `repeat(${preset.columns}, ${preset.labelWidthMm}mm)`,
-          gap: `${preset.gapMm}mm`,
-          justifyContent: "center",
-        }}
-      >
-        {items.map((item, index) => (
+    <div data-print-root className="flex flex-col items-center gap-4">
+      {pages.map((pageItems, pageIndex) => (
+        <div
+          key={pageIndex}
+          className="print-page bg-white text-black shadow-sm"
+          style={{
+            width: `${preset.pageWidthMm}mm`,
+            height: `${preset.pageHeightMm}mm`,
+            padding: `${preset.pageMarginMm}mm`,
+          }}
+        >
           <div
-            key={getItemKey(item, index)}
-            className="print-label border border-dashed border-neutral-300 flex flex-col items-center justify-center overflow-hidden"
+            className="grid content-start"
             style={{
-              width: `${preset.labelWidthMm}mm`,
-              height: `${preset.labelHeightMm}mm`,
+              gridTemplateColumns: `repeat(${preset.columns}, ${preset.labelWidthMm}mm)`,
+              gridAutoRows: `${preset.labelHeightMm}mm`,
+              gap: `${preset.gapMm}mm`,
+              justifyContent: "center",
             }}
           >
-            {renderItem(item)}
+            {pageItems.map((item, index) => (
+              <div
+                key={getItemKey(item, pageIndex * preset.perPage + index)}
+                className="print-label flex flex-col items-center justify-center overflow-hidden"
+              >
+                {renderItem(item)}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
     </div>
   );
 }

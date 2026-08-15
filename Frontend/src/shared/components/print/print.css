@@ -1,38 +1,78 @@
 /* src/shared/components/print/print.css */
 
 /**
- * فقط محتوای [data-print-root] چاپ می‌شود و بقیه‌ی برنامه (سایدبار،
- * دیالوگ، توست) از چاپ کنار می‌رود.
+ * چرا این‌طور نوشته شده:
  *
- * از visibility استفاده می‌کنیم نه display: چون ریشه‌ی چاپ داخل پورتال
- * دیالوگ رندر می‌شود و با display:none روی والدها، خودش هم ناپدید
- * می‌شد. visibility ارث‌بری‌شده را می‌شود در فرزند دوباره روشن کرد.
+ * پیش‌نمایش چاپ داخل Dialog رندر می‌شد و در چاپ فقط صفحه‌ی اول بیرون
+ * می‌آمد. سه دلیلِ مستقل داشت و هر کدام به‌تنهایی کافی بود:
+ *   ۱. ریشه‌ی چاپ position:absolute بود؛ جعبه‌ی absolute بین صفحه‌ها
+ *      تکه نمی‌شود.
+ *   ۲. DialogContent والدش position:fixed با transform بود؛ هر دو مانع
+ *      صفحه‌بندی می‌شوند.
+ *   ۳. Radix هنگام باز بودن دیالوگ روی body مقدار overflow:hidden
+ *      می‌گذارد که محتوای بیرون‌زده را می‌برد.
+ *
+ * حالا صفحه‌ی چاپ در یک پورتالِ مستقیماً زیر body و در جریان عادی
+ * (static) رندر می‌شود و بقیه‌ی برنامه در چاپ display:none می‌گیرد.
  */
+
+.print-portal__sheet {
+  /* روی صفحه‌نمایش، ورق‌ها را وسط و قابل اسکرول نگه می‌دارد. */
+  overflow: auto;
+}
+
 @media print {
-  body.printing * {
-    visibility: hidden;
+  body.printing {
+    overflow: visible !important;
+    background: #fff !important;
   }
 
-  body.printing [data-print-root],
-  body.printing [data-print-root] * {
-    visibility: visible;
+  /* فقط پورتال چاپ می‌ماند؛ خودِ برنامه کنار می‌رود. */
+  body.printing > *:not(.print-portal) {
+    display: none !important;
+  }
+
+  body.printing .print-portal {
+    position: static !important;
+    inset: auto !important;
+    background: none !important;
+    padding: 0 !important;
+  }
+
+  /* نوار ابزار پیش‌نمایش نباید چاپ شود. */
+  body.printing .print-portal__chrome {
+    display: none !important;
+  }
+
+  body.printing .print-portal__sheet {
+    position: static !important;
+    overflow: visible !important;
+    max-height: none !important;
+    padding: 0 !important;
+    background: none !important;
+    display: block !important;
+  }
+
+  /* مقیاسِ پیش‌نمایشِ روی صفحه نباید وارد چاپ شود. */
+  body.printing .print-portal__sheet > div {
+    transform: none !important;
   }
 
   body.printing [data-print-root] {
-    position: absolute;
-    inset-inline-start: 0;
-    top: 0;
-    width: 100%;
-    max-height: none;
-    overflow: visible;
-    background: #fff;
-    color: #000;
+    display: block !important;
+    gap: 0 !important;
   }
 
-  /* در چاپ، کادر پیش‌نمایش نباید اسکرول یا سایه داشته باشد. */
-  body.printing [data-print-scroll] {
-    max-height: none !important;
-    overflow: visible !important;
+  .print-page {
+    break-after: page;
+    page-break-after: always;
+    box-shadow: none !important;
+    margin: 0 !important;
+  }
+
+  .print-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
   }
 
   .print-label {

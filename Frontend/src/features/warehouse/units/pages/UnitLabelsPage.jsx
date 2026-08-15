@@ -10,7 +10,7 @@ import {
 import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
 import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
-import PrintPreviewDialog from "@/shared/components/print/PrintPreviewDialog";
+import PrintPreviewOverlay from "@/shared/components/print/PrintPreviewOverlay";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 
 import {
@@ -181,7 +181,7 @@ export default function UnitLabelsPage() {
         </CardContent>
       </Card>
 
-      <PrintPreviewDialog
+      <PrintPreviewOverlay
         open={isPrintOpen}
         onOpenChange={setIsPrintOpen}
         title="چاپ برچسب واحدها"
