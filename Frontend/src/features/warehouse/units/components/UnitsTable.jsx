@@ -1,6 +1,6 @@
 // src/features/warehouse/units/components/UnitsTable.jsx
 import { useMemo } from "react";
-import { Printer } from "lucide-react";
+import { ChevronLeft, RotateCw } from "lucide-react";
 
 import DataTable from "@/shared/components/table/DataTable";
 import { Button } from "@/shared/components/ui/button";
@@ -19,7 +19,7 @@ export default function UnitsTable({
   onPaginationChange,
   sorting,
   onSortingChange,
-  onReprint,
+  onOpenUnit,
 }) {
   const columns = useMemo(
     () => [
@@ -48,34 +48,33 @@ export default function UnitsTable({
         cell: (info) => <UnitStatusBadge status={info.getValue()} />,
       },
       {
-        accessorKey: "printedAt",
+        accessorKey: "firstPrintedAt",
         header: "چاپ",
         cell: (info) => {
-          const printedAt = info.getValue();
-          if (!printedAt) {
+          const firstPrintedAt = info.getValue();
+          const { printCount } = info.row.original;
+
+          if (!firstPrintedAt) {
             return (
               <span className="text-xs text-muted-foreground">چاپ‌نشده</span>
             );
           }
+
           return (
-            <span className="text-xs tabular-nums">
-              {gregorianToPersian(printedAt.slice(0, 10))}
-              {info.row.original.printCount > 1
-                ? ` (${info.row.original.printCount}×)`
-                : ""}
+            <span className="flex items-center gap-1.5 text-xs tabular-nums">
+              {gregorianToPersian(firstPrintedAt.slice(0, 10))}
+              {printCount > 1 ? (
+                <span
+                  className="inline-flex items-center gap-0.5 rounded-md border border-border bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                  title={`${printCount} بار چاپ شده`}
+                >
+                  <RotateCw className="h-2.5 w-2.5" />
+                  {printCount}×
+                </span>
+              ) : null}
             </span>
           );
         },
-      },
-      {
-        id: "source",
-        header: "منشأ",
-        enableSorting: false,
-        cell: (info) => (
-          <span className="font-mono text-[11px] text-muted-foreground">
-            {info.row.original.source?.refNumber || "—"}
-          </span>
-        ),
       },
       {
         id: "actions",
@@ -85,19 +84,19 @@ export default function UnitsTable({
           <div className="flex justify-end">
             <Button
               type="button"
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              onClick={() => onReprint(info.row.original)}
+              variant="ghost"
+              size="lg"
+              className="gap-1 px-2"
+              onClick={() => onOpenUnit(info.row.original)}
             >
-              <Printer className="w-3.5 h-3.5" />
-              چاپ
+              جزئیات
+              <ChevronLeft className="h-4 w-4" />
             </Button>
           </div>
         ),
       },
     ],
-    [onReprint],
+    [onOpenUnit],
   );
 
   return (
@@ -112,7 +111,7 @@ export default function UnitsTable({
       sorting={sorting}
       onSortingChange={onSortingChange}
       getRowKey={getRowKey}
-      emptyMessage="هنوز واحدی ساخته نشده است."
+      emptyMessage="واحدی با این فیلترها پیدا نشد."
     />
   );
 }

@@ -13,6 +13,18 @@ export const fetchProductUnits = async (params) => {
   return data;
 };
 
+export const fetchUnitByCode = async (code) => {
+  const { data } = await axiosInstance.get(
+    `/product-units/by-code/${encodeURIComponent(code)}`,
+  );
+  return data;
+};
+
+export const fetchUnitLabelSummary = async () => {
+  const { data } = await axiosInstance.get("/product-units/summary");
+  return data;
+};
+
 export const generateProductUnits = async (payload) => {
   const { data } = await axiosInstance.post("/product-units/generate", payload);
   return data;

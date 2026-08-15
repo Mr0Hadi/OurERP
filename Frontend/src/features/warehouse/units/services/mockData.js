@@ -47,7 +47,11 @@ const seedUnit = (seq, overrides) => ({
   productCode: "BRK-1001",
   productName: "لنت ترمز جلو",
   status: UNIT_STATUSES.IN_STOCK,
-  printedAt: "2026-08-11T09:00:00Z",
+  // تاریخ چاپ اول هرگز عوض نمی‌شود؛ چاپ مجدد فقط lastPrintedAt و
+  // printCount را جلو می‌برد. برچسبِ افتاده یا خراب باید دوباره چاپ
+  // شود بدون اینکه سابقه‌ی چاپ اولش گم شود.
+  firstPrintedAt: "2026-08-11T09:00:00Z",
+  lastPrintedAt: "2026-08-11T09:00:00Z",
   printCount: 1,
   source: { type: UNIT_SOURCE_TYPES.PURCHASE, refId: 1, refNumber: "PUR-2026-001" },
   saleId: null,
@@ -64,8 +68,8 @@ export const allProductUnits = [
   seedUnit(1),
   seedUnit(2),
   seedUnit(3),
-  seedUnit(4, { printedAt: null, printCount: 0 }),
-  seedUnit(5, { printedAt: null, printCount: 0 }),
+  seedUnit(4, { firstPrintedAt: null, lastPrintedAt: null, printCount: 0 }),
+  seedUnit(5, { firstPrintedAt: null, lastPrintedAt: null, printCount: 0 }),
   seedUnit(6, { status: UNIT_STATUSES.SOLD, saleId: 1 }),
   seedUnit(7, { status: UNIT_STATUSES.SOLD, saleId: 1 }),
   seedUnit(8, { status: UNIT_STATUSES.SHIPPED, saleId: 1 }),

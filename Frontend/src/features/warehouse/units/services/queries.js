@@ -1,8 +1,20 @@
 // src/features/warehouse/units/services/queries.js
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
-import { fetchProductUnits, fetchPendingLabelProducts } from "./api-mockData";
+import {
+  fetchProductUnits,
+  fetchPendingLabelProducts,
+  fetchUnitLabelSummary,
+} from "./api-mockData";
 import { productUnitKeys, pendingLabelKeys } from "./queryKeys";
+
+export function useUnitLabelSummaryQuery() {
+  return useQuery({
+    queryKey: productUnitKeys.summary(),
+    queryFn: fetchUnitLabelSummary,
+    staleTime: 1000 * 30,
+  });
+}
 
 export function usePendingLabelProductsQuery(filters, pagination, sorting) {
   const queryParams = {

@@ -52,7 +52,12 @@ const sortRows = (rows, sortBy, sortOrder) => {
     let aVal = a[sortBy];
     let bVal = b[sortBy];
 
-    if (sortBy === "createdAt" || sortBy === "updatedAt" || sortBy === "printedAt") {
+    if (
+      sortBy === "createdAt" ||
+      sortBy === "updatedAt" ||
+      sortBy === "firstPrintedAt" ||
+      sortBy === "lastPrintedAt"
+    ) {
       aVal = aVal ? new Date(aVal).getTime() : 0;
       bVal = bVal ? new Date(bVal).getTime() : 0;
     } else if (typeof aVal === "string") {
@@ -140,10 +145,54 @@ export const fetchProductUnits = async (params = {}) => {
 
   if (productId) rows = rows.filter((u) => Number(u.productId) === Number(productId));
   if (status) rows = rows.filter((u) => u.status === status);
-  if (printState === "printed") rows = rows.filter((u) => !!u.printedAt);
-  if (printState === "unprinted") rows = rows.filter((u) => !u.printedAt);
+  if (printState === "printed") rows = rows.filter((u) => !!u.firstPrintedAt);
+  if (printState === "unprinted") rows = rows.filter((u) => !u.firstPrintedAt);
 
   return paginate(sortRows(rows, sortBy, sortOrder), page, limit);
+};
+
+/**
+ * جست‌وجوی دقیق بر اساس کد واحد — مسیر «اسکن کن و برو».
+ *
+ * فیلترِ فهرست برای مرور است؛ این یکی برای وقتی است که انباردار کد را
+ * اسکن می‌کند و باید یک‌راست روی همان رکورد بنشیند.
+ */
+export const fetchUnitByCode = async (code) => {
+  await delay(200);
+
+  const needle = String(code ?? "").trim().toUpperCase();
+  if (!needle) return null;
+
+  return (
+    allProductUnits.find((u) => u.unitCode.toUpperCase() === needle) ?? null
+  );
+};
+
+/** آمار بالای صفحه: چه چیزی همین حالا کار دارد. */
+export const fetchUnitLabelSummary = async () => {
+  await delay(250);
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  let productsNeedingLabels = 0;
+  let missingLabels = 0;
+
+  allProducts.forEach((product) => {
+    const missing = Math.max(
+      0,
+      (product.stock || 0) - countInStockUnits(product.id),
+    );
+    if (missing > 0) {
+      productsNeedingLabels += 1;
+      missingLabels += missing;
+    }
+  });
+
+  const printedToday = allProductUnits.filter(
+    (u) => u.lastPrintedAt && u.lastPrintedAt.slice(0, 10) === today,
+  ).length;
+
+  return { productsNeedingLabels, missingLabels, printedToday };
 };
 
 /**
@@ -171,7 +220,8 @@ export const generateProductUnits = async ({ productId, quantity, source }) => {
       productCode: product.code,
       productName: product.name,
       status: UNIT_STATUSES.IN_STOCK,
-      printedAt: null,
+      firstPrintedAt: null,
+      lastPrintedAt: null,
       printCount: 0,
       source: source ?? { type: UNIT_SOURCE_TYPES.MANUAL, refId: null, refNumber: "" },
       saleId: null,
@@ -186,6 +236,11 @@ export const generateProductUnits = async ({ productId, quantity, source }) => {
   return created;
 };
 
+/**
+ * ثبت چاپ. چاپ مجدد رکورد تازه نمی‌سازد و کد را عوض نمی‌کند — همان
+ * واحد با همان unitCode دوباره چاپ می‌شود؛ فقط شمارنده و تاریخ آخرین
+ * چاپ جلو می‌رود و تاریخ چاپ اول دست‌نخورده می‌ماند.
+ */
 export const markUnitsPrinted = async (unitIds = []) => {
   await delay(300);
 
@@ -196,7 +251,8 @@ export const markUnitsPrinted = async (unitIds = []) => {
     if (!ids.has(unit.id)) return;
     allProductUnits[index] = {
       ...unit,
-      printedAt: now,
+      firstPrintedAt: unit.firstPrintedAt ?? now,
+      lastPrintedAt: now,
       printCount: (unit.printCount || 0) + 1,
       updatedAt: now,
     };

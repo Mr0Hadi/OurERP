@@ -1,6 +1,6 @@
 // src/features/warehouse/units/components/PendingLabelsTable.jsx
 import { useMemo, useState } from "react";
-import { Tags } from "lucide-react";
+import { Printer } from "lucide-react";
 
 import DataTable from "@/shared/components/table/DataTable";
 import ProductThumb from "@/shared/components/forms/ProductThumb";
@@ -12,8 +12,7 @@ import { getRowStatus, ROW_STATUS_CONFIG } from "./labelRowStatus";
 const getRowKey = (row) => row.original.productId;
 
 /**
- * سقف تعداد برچسبِ قابل ساخت در یک نوبت. کمبود واقعی معمولاً کوچک
- * است؛ این فقط جلوی خطای تایپی («۱۰۰۰ به‌جای ۱۰») را می‌گیرد.
+ * سقف تعداد برچسبِ قابل ساخت در یک نوبت — جلوی خطای تایپی را می‌گیرد.
  */
 const MAX_BATCH = 200;
 
@@ -42,8 +41,10 @@ export default function PendingLabelsTable({
         cell: (info) => {
           const row = info.row.original;
           return (
-            <div className="flex items-center gap-2">
-              <ProductThumb item={{ image: row.image, productName: row.productName }} />
+            <div className="flex items-center gap-3">
+              <ProductThumb
+                item={{ image: row.image, productName: row.productName }}
+              />
               <div className="flex flex-col">
                 <span className="font-light">{row.productName}</span>
                 <span className="font-mono text-[11px] text-muted-foreground">
@@ -57,69 +58,55 @@ export default function PendingLabelsTable({
       {
         accessorKey: "stock",
         header: "موجودی",
-        cell: (info) => (
-          <span className="tabular-nums">{info.getValue()}</span>
-        ),
+        cell: (info) => <span className="tabular-nums">{info.getValue()}</span>,
       },
       {
         accessorKey: "labeledCount",
         header: "برچسب‌خورده",
-        cell: (info) => (
-          <span className="tabular-nums">{info.getValue()}</span>
-        ),
+        cell: (info) => <span className="tabular-nums">{info.getValue()}</span>,
       },
       {
         accessorKey: "missingCount",
         header: "بدون برچسب",
-        cell: (info) => (
-          <span className="tabular-nums font-medium">{info.getValue()}</span>
-        ),
-      },
-      {
-        id: "status",
-        header: "وضعیت",
-        enableSorting: false,
         cell: (info) => {
           const row = info.row.original;
-          const status = getRowStatus(row.stock, row.labeledCount);
-          const config = ROW_STATUS_CONFIG[status];
-          const Icon = config.icon;
+          const config = ROW_STATUS_CONFIG[getRowStatus(row.stock, row.labeledCount)];
           return (
             <span
-              className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs whitespace-nowrap ${config.badgeClass}`}
+              className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-sm font-medium tabular-nums ${config.badgeClass}`}
             >
-              <Icon className="w-3 h-3" />
-              {config.label}
+              {info.getValue()}
             </span>
           );
         },
       },
       {
         id: "actions",
-        header: "ساخت برچسب",
+        header: "ساخت و چاپ برچسب",
         enableSorting: false,
         cell: (info) => {
           const row = info.row.original;
           const qty = quantityFor(row);
+          const isBusy = pendingProductId === row.productId;
+
           return (
             <div className="flex items-center justify-end gap-2">
               <QuantityStepper
                 value={qty}
                 max={MAX_BATCH}
-                size="sm"
                 onChange={(next) =>
                   setQuantities((prev) => ({ ...prev, [row.productId]: next }))
                 }
               />
               <Button
                 type="button"
-                size="sm"
-                className="gap-1.5 shrink-0"
-                disabled={qty <= 0 || pendingProductId === row.productId}
+                size="lg"
+                className="shrink-0 gap-2 min-w-[9.5rem]"
+                disabled={qty <= 0 || isBusy}
                 onClick={() => onGenerate(row, qty)}
               >
-                <Tags className="w-3.5 h-3.5" />
-                {pendingProductId === row.productId ? "..." : "تولید و چاپ"}
+                <Printer className="h-4 w-4" />
+                {isBusy ? "در حال ساخت…" : `چاپ ${qty} برچسب`}
               </Button>
             </div>
           );
@@ -129,6 +116,12 @@ export default function PendingLabelsTable({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [quantities, onGenerate, pendingProductId],
   );
+
+  // ردیف‌هایی که کار دارند باید از یک متر آن‌طرف‌تر پیدا باشند.
+  const rowClassName = (row) =>
+    ROW_STATUS_CONFIG[
+      getRowStatus(row.original.stock, row.original.labeledCount)
+    ].rowClass;
 
   return (
     <DataTable
@@ -142,6 +135,7 @@ export default function PendingLabelsTable({
       sorting={sorting}
       onSortingChange={onSortingChange}
       getRowKey={getRowKey}
+      rowClassName={rowClassName}
       emptyMessage="همه‌ی کالاها به‌اندازه‌ی موجودی‌شان برچسب دارند."
     />
   );
