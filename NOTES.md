@@ -4,6 +4,77 @@ Findings worth acting on later. Add new items at the top of "Open".
 
 ## Open
 
+### Purchase surplus (excess / unregistered items) — follow-ups (Aug 2026)
+
+Left open after the surplus feature (`feat/purchase-surplus-handling`).
+The feature itself is complete and verified end to end — receiving
+capture, claim, all three resolutions, and dispatch to the supplier.
+These are deliberate omissions and things the work exposed, not defects.
+
+**1. The purchase detail page ignores `totalAmount`.** It recomputes
+totals from line items, so a stored `totalAmount` that has been adjusted
+never shows there — the purchases *list* shows one number and the detail
+page another. This predates surplus (`settlePurchaseItems` has always
+subtracted refunds from `totalAmount`), but surplus made it visible in
+the other direction too: after a keep-and-settle, `PurchaseDetailForm`
+showed ۲۸٬۵۷۵٬۰۰۰ while the list showed ۳۰٬۵۰۰٬۰۰۰ for the same
+purchase. Whoever fixes this has to decide which is the source of truth:
+either the detail page reads `totalAmount`, or `totalAmount` is derived
+and the adjustments become explicit adjustment lines on the purchase.
+The second is more work but is what an invoice with credit/debit notes
+actually looks like.
+
+**2. `invalidateSalesEcosystem` still does not invalidate products.**
+The purchase side was fixed as part of this work
+(`invalidatePurchaseEcosystem` now includes `productKeys.all`, since
+both receiving and keep-decisions move stock). The sales side moves
+stock too — replacement shipments in `confirmReplacementShipmentBatch`
+and return inspection in `confirmReturnInspection` — and still leaves
+the products cache stale. Same one-line fix, deliberately not made here
+because nothing on this branch touches sales.
+
+**3. `refundAmount` on a resolution line carries two directions.** On a
+`refund` it is money coming back to us; on `keep_and_settle` it is money
+we owe the supplier. The field was not renamed because
+`AddResolutionForm` is shared with sales returns and the rename would
+ripple across a module this branch has no business touching. The
+sidebar reports the two separately so they are never summed. If the two
+return modules are ever unified, rename it to `amount` there.
+
+**4. Quick-created products are minimal.** The product-link dialog can
+create a product from an unregistered surplus item, but only fills
+name, category, unit, purchase price, and auto-generated code/barcode;
+brand, sale prices, tax, low-stock threshold and image are left empty
+and must be completed from the products page. That is a deliberate
+trade — the person resolving a purchase return should not be forced
+through the full product form — but there is no reminder anywhere that
+the record is incomplete. A "needs completion" flag on products, or a
+filter for them, would close the loop.
+
+**5. Unregistered items do not dedupe.** Two receiving rounds that each
+log "کارتن فیلتر بدون برچسب" produce two independent surplus rows and
+two independent claims, even after both are linked to the same product.
+This follows from keeping each warehouse row its own claim (the note and
+date of a round are part of what the row means), and it is the accepted
+cost of not forcing product creation at the dock. If it becomes a
+nuisance, the place to fix it is the claim form — offer to merge rows
+that were linked to the same product, not the capture step.
+
+**6. Kept surplus does not generate unit labels.** A keep decision
+raises `stock` directly, the same way receiving does, so kept goods have
+no unit records and no barcodes until someone visits
+`/warehouse/unit-labels`. Consistent with how receiving behaves today
+(see item 3 of the unit-barcode notes below), and it should be solved
+in the same pass rather than separately.
+
+**7. No cross-check between received and excess quantities.** The
+receiving form takes "received against the order" and "excess beyond the
+order" as two independent numbers; nothing verifies their sum against a
+physical count, because the form never asks for one. A worker who means
+"25 arrived, 20 ordered" has to type 20 and 5 themselves. If receiving
+ever gains a total-count field, that check becomes possible and worth
+adding.
+
 ### Unit-level barcodes — consolidated follow-ups (Aug 2026)
 
 Everything still open from the unit-barcode effort, in rough priority order.
