@@ -285,6 +285,39 @@ export async function settlePurchaseItems(
 }
 
 /**
+ * تغییر جمع کل خرید بدون دست‌زدن به هیچ قلمی.
+ *
+ * settlePurchaseItems برای کسری است: مقداری از سفارش تسویه می‌شود و
+ * مبلغش از جمع کل *کم* می‌شود. مازاد قرینه‌ی آن است و هیچ قلمی برای
+ * تسویه ندارد — کالایی بیرون از سفارش رسیده و اگر تصمیم بگیریم نگهش
+ * داریم و پولش را بدهیم، فقط جمع کل *زیاد* می‌شود. بالابردن settledQty
+ * در این حالت، محاسبه‌ی «چقدر هنوز قابل دریافت است» را خراب می‌کرد.
+ *
+ * delta مثبت = بدهی ما به تامین‌کننده بیشتر می‌شود.
+ */
+export async function adjustPurchaseTotal(purchaseId, delta) {
+  await delay(300);
+
+  const index = allPurchases.findIndex(
+    (p) => Number(p.id) === Number(purchaseId),
+  );
+  if (index === -1) {
+    throw new Error("خرید یافت نشد");
+  }
+
+  if (!delta) return allPurchases[index];
+
+  const purchase = allPurchases[index];
+  allPurchases[index] = {
+    ...purchase,
+    totalAmount: Math.max(0, (purchase.totalAmount || 0) + delta),
+    updatedAt: new Date().toISOString(),
+  };
+
+  return allPurchases[index];
+}
+
+/**
  * وقتی واحد خرید هماهنگ می‌کند که کالای جایگزین/کسری دوباره ارسال
  * شود، خرید باید دوباره در لیست دریافتِ انباردار ظاهر شود. status را
  * به‌عنوان یک بازخورد فوری روی SHIPPED می‌گذارد، اما مقدار نهایی و

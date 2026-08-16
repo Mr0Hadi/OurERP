@@ -1,6 +1,7 @@
 import { purchaseKeys } from "./queryKeys";
 import { receivingKeys } from "@/features/warehouse/receiving/services/queryKeys";
 import { purchaseReturnKeys } from "../../returns/services/queryKeys";
+import { productKeys } from "@/features/warehouse/products/services/queryKeys";
 
 /**
  * چون خرید، دریافت انبار و مرجوعی سه ماژول به‌هم‌گره‌خورده‌اند (یک
@@ -23,4 +24,9 @@ export function invalidatePurchaseEcosystem(queryClient, purchaseId) {
   queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.lists() });
   queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.reports() });
   queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.details() });
+  // هر دو سرِ این اکوسیستم موجودی را تکان می‌دهند — دریافت انبار
+  // (بخش سالم هر دور) و تصمیمِ «نگهداری» روی کالای مازاد — پس کش
+  // کالاها هم باید تازه شود، وگرنه صفحه‌ی کالاها موجودی قدیمی نشان
+  // می‌دهد تا وقتی کاربر دستی refresh کند.
+  queryClient.invalidateQueries({ queryKey: productKeys.all });
 }

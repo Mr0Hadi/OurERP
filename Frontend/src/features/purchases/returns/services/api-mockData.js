@@ -9,9 +9,19 @@ import {
   settlePurchaseItems,
   reopenPurchaseForShipment,
   recomputePurchaseStatus,
+  adjustPurchaseTotal,
 } from "@/features/purchases/orders/services/api-mockData";
+import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
 import { PURCHASE_ISSUE_TYPES } from "@/shared/constants/purchaseIssueTypes";
-import { CLAIM_KINDS, affectsOrderedQty } from "../domain/purchaseReturnRules";
+import {
+  CLAIM_KINDS,
+  affectsOrderedQty,
+  isAmountBearingResolution,
+  isKeepResolution,
+  isWarehousePendingResolution,
+  requiresProductLink,
+  resolutionTypesForClaim,
+} from "../domain/purchaseReturnRules";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const generateId = () =>
@@ -489,6 +499,23 @@ export async function createPurchaseReturn(payload) {
  * با دیدن کل تصویر دوباره محاسبه می‌شود؛ همین رفتار باعث می‌شود ترتیب
  * یا ترکیب تصمیم‌ها (اول جایگزینی سپس بازگشت وجه، یا برعکس) هرگز
  * نتیجه‌ی همدیگر را خراب نکنند.
+ *
+ * اثر هر نوع تصمیم:
+ *
+ *  کسری
+ *   • replacement        → خرید دوباره برای دریافت باز می‌شود، خط در
+ *                          انتظار می‌ماند تا کالا برسد
+ *   • refund/credit/     → settledQty بالا می‌رود (این مقدار دیگر هرگز
+ *     write_off             نمی‌رسد) و مبلغ بازگشتی از جمع کل کم می‌شود
+ *
+ *  مازاد — هیچ‌کدام settlePurchaseItems را صدا نمی‌زنند، چون هیچ قلمی
+ *  از سفارش برای تسویه وجود ندارد
+ *   • return_to_supplier → خط در انتظار می‌ماند تا انبار واقعاً کالا را
+ *                          بفرستد؛ نه پولی جابه‌جا می‌شود نه موجودی
+ *   • keep_and_settle    → کالا مال ما می‌شود (موجودی + qty) و جمع کل
+ *                          خرید به‌اندازه‌ی مبلغ توافق‌شده *زیاد* می‌شود
+ *   • supplier_write_off → کالا مال ما می‌شود (موجودی + qty) بدون هیچ
+ *                          پرداختی
  */
 export async function addItemResolution(returnId, issueId, resolution) {
   await delay(500);
@@ -517,28 +544,62 @@ export async function addItemResolution(returnId, issueId, resolution) {
   const qty = Math.min(Number(resolution.qty) || 0, remaining);
   if (qty <= 0) throw new Error("تعداد وارد شده نامعتبر است");
 
-  const isReplacement = resolution.type === RESOLUTION_TYPES.REPLACEMENT;
-  const refundAmount =
-    resolution.type === RESOLUTION_TYPES.REFUND
-      ? Number(resolution.refundAmount) || qty * item.unitPrice
-      : 0;
+  // نگهبانِ خانواده: یک ادعای کسری هرگز نباید تصمیم مازاد بگیرد و
+  // برعکس. UI این را محدود می‌کند ولی اثر این دو خانواده روی پول و
+  // موجودی معکوس هم است، پس اینجا هم صریح بررسی می‌شود.
+  if (!resolutionTypesForClaim(item).includes(resolution.type)) {
+    throw new Error("این نوع تصمیم برای این قلم مجاز نیست");
+  }
+
+  // کالای ثبت‌نشده تا وقتی عودت داده می‌شود به رکورد کالا نیاز ندارد،
+  // ولی لحظه‌ای که تصمیم به نگهداری گرفته شود باید جایی برای نشستنِ
+  // افزایش موجودی وجود داشته باشد.
+  if (requiresProductLink(item, resolution.type) && !resolution.linkedProductId) {
+    throw new Error(
+      "برای نگهداری کالای ثبت‌نشده، اول باید آن را به یک کالای واقعی وصل کنید",
+    );
+  }
+
+  const isPending = isWarehousePendingResolution(resolution.type);
+  // refundAmount برای بازگشت وجه یعنی پولی که *می‌گیریم* و برای
+  // نگهداری‌وتسویه یعنی پولی که *می‌دهیم*؛ یک فیلد، دو جهت. جهتش را
+  // نوع تصمیم تعیین می‌کند، نه علامت عدد.
+  const amount = isAmountBearingResolution(resolution.type)
+    ? Number(resolution.refundAmount) || qty * item.unitPrice
+    : 0;
 
   const newLine = {
     id: generateId(),
     type: resolution.type,
     qty,
-    refundAmount,
+    refundAmount: amount,
     note: resolution.note || "",
-    status: isReplacement
+    status: isPending
       ? RESOLUTION_LINE_STATUSES.AWAITING
       : RESOLUTION_LINE_STATUSES.RESOLVED,
     createdAt: new Date().toISOString(),
-    resolvedAt: isReplacement ? null : new Date().toISOString(),
+    resolvedAt: isPending ? null : new Date().toISOString(),
   };
+
+  // اتصال کالای ثبت‌نشده روی خودِ قلم می‌نشیند نه روی خط تصمیم، چون
+  // از این به بعد برای *همه‌ی* تصمیم‌های این قلم معتبر است. نام
+  // ثبت‌شده‌ی انباردار دست‌نخورده می‌ماند (همان چیزی است که دیده) و
+  // نام کالای واقعی کنارش اضافه می‌شود.
+  const linkPatch = resolution.linkedProductId
+    ? {
+        productId: resolution.linkedProductId,
+        productCode: resolution.linkedProductCode ?? item.productCode,
+        linkedProductName: resolution.linkedProductName ?? null,
+      }
+    : null;
 
   const newItems = ret.items.map((i) =>
     i.issueId === issueId
-      ? { ...i, resolutions: [...(i.resolutions || []), newLine] }
+      ? {
+          ...i,
+          ...(linkPatch || {}),
+          resolutions: [...(i.resolutions || []), newLine],
+        }
       : i,
   );
 
@@ -549,13 +610,25 @@ export async function addItemResolution(returnId, issueId, resolution) {
     updatedAt: new Date().toISOString(),
   };
 
-  if (isReplacement) {
+  const effectiveProductId = linkPatch?.productId ?? item.productId;
+
+  if (resolution.type === RESOLUTION_TYPES.REPLACEMENT) {
     await reopenPurchaseForShipment(ret.purchaseId);
+  } else if (resolution.type === RESOLUTION_TYPES.RETURN_TO_SUPPLIER) {
+    // هیچ اثری تا لحظه‌ی ارسال واقعی از انبار؛ آن‌جا موجودی (اگر
+    // کالا قبلاً وارد موجودی شده باشد) کم و خط نهایی می‌شود.
+  } else if (isKeepResolution(resolution.type)) {
+    if (resolution.type === RESOLUTION_TYPES.KEEP_AND_SETTLE) {
+      await adjustPurchaseTotal(ret.purchaseId, amount);
+    }
+    if (effectiveProductId != null) {
+      adjustProductsStock([{ productId: effectiveProductId, delta: qty }]);
+    }
   } else {
     await settlePurchaseItems(
       ret.purchaseId,
       [{ productId: item.productId, qty }],
-      { refundAmount },
+      { refundAmount: amount },
     );
   }
 
@@ -577,6 +650,11 @@ export async function removeItemResolution(returnId, issueId, resolutionId) {
   if (!line) throw new Error("مورد یافت نشد");
   if (line.status !== RESOLUTION_LINE_STATUSES.AWAITING) {
     throw new Error("این تصمیم قطعی شده و دیگر قابل لغو نیست");
+  }
+  // یک خط «عودت به تامین‌کننده» تا وقتی انبار چیزی نفرستاده قابل لغو
+  // است؛ بعد از اولین محموله دیگر نه — کالا از انبار خارج شده.
+  if ((Number(line.shippedQty) || 0) > 0) {
+    throw new Error("بخشی از این کالا قبلاً به تامین‌کننده ارسال شده و قابل لغو نیست");
   }
 
   const newItems = ret.items.map((i) =>
