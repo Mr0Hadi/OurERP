@@ -191,11 +191,13 @@ export async function updateReceivingStatus(id, receivedItems) {
  * ۳. وضعیت نهاییِ خرید هرگز اینجا حدس زده نمی‌شود؛ کاملاً به
  *    autoResolveReplacementReturns سپرده می‌شود که با دیدن تصویر
  *    کامل (این خرید + تمام مرجوعی‌های فعالش) آن را قطعی می‌کند.
- * ۴. موجودی انبار فقط به‌اندازه‌ی بخش «سالمِ» همین دور افزایش
- *    می‌یابد — یعنی receivedQty این دور منهای مجموع مشکلاتی که برای
- *    همین دور گزارش شده (issues). کالای معیوب/آسیب‌دیده/ارسال‌اشتباه
- *    وارد موجودیِ قابل‌فروش نمی‌شود؛ دقیقاً مثل رفتار «بررسی و دریافت
- *    مرجوعی فروش».
+ * ۴. موجودی انبار دقیقاً به‌اندازه‌ی receivedQty همین دور افزایش
+ *    می‌یابد. برخلاف «بررسی و دریافت مرجوعی فروش» — که در آن issues
+ *    زیرمجموعه‌ی خودِ مقدار بررسی‌شده است و باید کم شود — اینجا سقف
+ *    هر issue برابر کسری (expectedQty − receivedQty) است، یعنی issues
+ *    همیشه *بیرون* از receivedQty قرار دارد: کالای معیوب/آسیب‌دیده/
+ *    ارسال‌اشتباه اساساً در تعداد دریافتی شمرده نمی‌شود. پس کم‌کردن
+ *    دوباره‌ی آن، مقدار سالمِ رسیده را کمتر از واقع ثبت می‌کرد.
  */
 export async function confirmReceiving(purchaseId, receivingData) {
   await delay(500);
@@ -235,15 +237,12 @@ export async function confirmReceiving(purchaseId, receivingData) {
       date: receivedDate,
     }));
 
-    // بخش سالمِ همین دور: هرچه از تعدادِ رسیده‌ی همین دور که مشکل‌دار
-    // گزارش نشده، سالم است و به موجودیِ قابل‌فروش انبار اضافه می‌شود.
-    const issuesQtyThisRound = reportedIssues.reduce(
-      (s, b) => s + (Number(b.qty) || 0),
-      0,
-    );
-    const healthyQtyThisRound = Math.max(0, thisRoundQty - issuesQtyThisRound);
-    if (healthyQtyThisRound > 0) {
-      stockIncreases.push({ productId: item.productId, delta: healthyQtyThisRound });
+    // هرچه انباردار در این دور «دریافت‌شده» شمرده، سالم و قابل‌فروش
+    // است و مستقیماً به موجودی اضافه می‌شود. مشکلات گزارش‌شده ادعایی
+    // روی سفارش‌اند (چیزی که نرسید یا سالم تحویل داده نشد)، نه بخشی
+    // از همین تعداد — بنابراین از آن کم نمی‌شوند.
+    if (thisRoundQty > 0) {
+      stockIncreases.push({ productId: item.productId, delta: thisRoundQty });
     }
 
     return {
