@@ -22,6 +22,7 @@ import { useReceivingForm } from "../hooks/useReceivingForm";
 import ReceivingItemsSection from "../components/forms/ReceivingItemsSection";
 import ReceivingSummaryCard from "../components/forms/ReceivingSummaryCard";
 import ReceivingMismatchList from "../components/forms/ReceivingMismatchList";
+import UnknownItemsSection from "../components/forms/UnknownItemsSection";
 import ReceivingTransporterSection from "../components/forms/ReceivingTransporterSection";
 import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
 import { ROUTES } from "@/shared/constants/routes";
@@ -53,6 +54,12 @@ function ReceivingDetailForm({ purchase }) {
     handleAddIssue,
     handleUpdateIssue,
     handleRemoveIssue,
+    handleExcessChange,
+    unknownItems,
+    handleAddUnknownItem,
+    handleUpdateUnknownItem,
+    handleRemoveUnknownItem,
+    incompleteUnknownCount,
     isAllComplete,
     isTransporterValid,
     buildPayload,
@@ -61,6 +68,7 @@ function ReceivingDetailForm({ purchase }) {
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showTransporterError, setShowTransporterError] = useState(false);
+  const [showUnknownError, setShowUnknownError] = useState(false);
 
   useEffect(() => {
     return () => resetForm();
@@ -88,6 +96,13 @@ function ReceivingDetailForm({ purchase }) {
   // می‌کند. دیگر لازم نیست کل کسری را توضیح دهد — هر بخشی که گزارش
   // نشود خودکار «در انتظار محموله بعدی» تلقی می‌شود.
   const handleConfirmClick = () => {
+    // ردیف نیمه‌پرشده‌ی «کالای ثبت‌نشده» بی‌صدا حذف نمی‌شود؛ انباردار
+    // باید تکلیفش را روشن کند وگرنه چیزی که نوشته از دست می‌رود.
+    if (incompleteUnknownCount > 0) {
+      setShowUnknownError(true);
+      return;
+    }
+    setShowUnknownError(false);
     if (!isTransporterValid) {
       setShowTransporterError(true);
       return;
@@ -101,6 +116,9 @@ function ReceivingDetailForm({ purchase }) {
     const hasShortage = displayItems.some(
       (item) => (item.receivedQty || 0) < item.expectedQty,
     );
+    const surplusQty =
+      payload.receivedItems.reduce((sum, i) => sum + (i.excessQty || 0), 0) +
+      payload.unknownItems.reduce((sum, i) => sum + (i.qty || 0), 0);
 
     receivingMutation.mutate(
       { purchaseId: payload.id, receivingData: payload },
@@ -108,7 +126,11 @@ function ReceivingDetailForm({ purchase }) {
         onSuccess: () => {
           setShowConfirmDialog(false);
           resetForm();
-          if (hasShortage) {
+          if (surplusQty > 0) {
+            toast.success(
+              `دریافت ثبت شد. ${surplusQty.toLocaleString("fa-IR")} عدد کالای مازاد برای تصمیم‌گیری به واحد خرید رفت و تا آن زمان وارد موجودی نمی‌شود.`,
+            );
+          } else if (hasShortage) {
             toast.success(
               "دریافت ثبت شد. اگر مشکلی گزارش شده، برای واحد خرید ارسال شد؛ باقیمانده منتظر محموله بعدی می‌ماند.",
             );
@@ -118,6 +140,12 @@ function ReceivingDetailForm({ purchase }) {
       },
     );
   };
+
+  const hasSurplusEntry =
+    items.some((item) => (Number(item.excessQty) || 0) > 0) ||
+    unknownItems.some(
+      (row) => row.productName?.trim() && (Number(row.qty) || 0) > 0,
+    );
 
   return (
     <div className="container max-w-6xl mx-auto px-4 space-y-4 animate-in fade-in zoom-in-95 duration-300">
@@ -129,8 +157,26 @@ function ReceivingDetailForm({ purchase }) {
             onAddIssue={handleAddIssue}
             onUpdateIssue={handleUpdateIssue}
             onRemoveIssue={handleRemoveIssue}
+            onExcessChange={handleExcessChange}
           />
-          <ReceivingMismatchList items={displayItems} />
+          <UnknownItemsSection
+            items={unknownItems}
+            incompleteCount={incompleteUnknownCount}
+            showErrors={showUnknownError}
+            onAdd={handleAddUnknownItem}
+            onUpdate={(rowId, field, value) => {
+              handleUpdateUnknownItem(rowId, field, value);
+              if (showUnknownError) setShowUnknownError(false);
+            }}
+            onRemove={(rowId) => {
+              handleRemoveUnknownItem(rowId);
+              if (showUnknownError) setShowUnknownError(false);
+            }}
+          />
+          <ReceivingMismatchList
+            items={displayItems}
+            unknownItems={unknownItems}
+          />
           <ReceivingTransporterSection
             formData={formData}
             onFormChange={(patch) => {
@@ -199,6 +245,14 @@ function ReceivingDetailForm({ purchase }) {
               {isAllComplete
                 ? "آیا مطمئن هستید که همه اقلام به‌طور کامل دریافت شده‌اند؟"
                 : "بخشی که به‌عنوان مشکل گزارش کرده‌اید برای واحد خرید ارسال می‌شود. بخشی که گزارش نکرده‌اید در انتظار محموله بعدی می‌ماند و این خرید همچنان در لیست دریافت باقی می‌ماند."}
+              {hasSurplusEntry && (
+                <>
+                  {" "}
+                  کالای اضافه و ثبت‌نشده هم به‌عنوان مازاد ثبت می‌شود؛ تا وقتی
+                  واحد خرید تصمیم نگیرد (عودت، نگهداری با پرداخت، یا نگهداری
+                  بدون پرداخت) وارد موجودی قابل‌فروش نمی‌شود.
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

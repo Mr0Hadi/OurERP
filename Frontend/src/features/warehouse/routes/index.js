@@ -10,3 +10,4 @@ export const ShippingListPage = lazy(() => import('../shipping/pages/ShippingLis
 export const ShippingDetailPage = lazy(() => import('../shipping/pages/ShippingDetailPage'));
 export const ReceivingReturnDetailPage = lazy(() => import('../receiving/pages/ReceivingReturnDetailPage'));
 export const ReplacementDetailPage = lazy(() => import('../shipping/pages/ReplacementDetailPage'));
+export const SupplierReturnDetailPage = lazy(() => import('../shipping/pages/SupplierReturnDetailPage'));

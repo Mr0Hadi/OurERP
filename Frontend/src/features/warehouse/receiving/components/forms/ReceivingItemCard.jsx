@@ -3,6 +3,7 @@ import ProductThumb from "@/shared/components/forms/ProductThumb";
 import QuantityStepper from "@/shared/components/forms/QuantityStepper";
 import { getRowStatus, ROW_STATUS_CONFIG } from "./receivingRowStatus";
 import IssueBreakdownEditor from "./IssueBreakdownEditor";
+import ExcessEntryStrip from "./ExcessEntryStrip";
 
 /** نمای موبایل یک قلم دریافت. */
 export default function ReceivingItemCard({
@@ -11,6 +12,7 @@ export default function ReceivingItemCard({
   onAddIssue,
   onUpdateIssue,
   onRemoveIssue,
+  onExcessChange,
 }) {
   const received = item.receivedQty || 0;
   const shortage = Math.max(0, item.expectedQty - received);
@@ -71,6 +73,8 @@ export default function ReceivingItemCard({
           onRemoveIssue={onRemoveIssue}
         />
       )}
+
+      <ExcessEntryStrip item={item} onExcessChange={onExcessChange} />
     </div>
   );
 }

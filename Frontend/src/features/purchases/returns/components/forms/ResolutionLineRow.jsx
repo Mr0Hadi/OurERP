@@ -1,4 +1,13 @@
-import { Trash2, Wallet, PackageCheck, Undo2, Ban } from "lucide-react";
+import {
+  Trash2,
+  Wallet,
+  PackageCheck,
+  Undo2,
+  Ban,
+  PackageMinus,
+  HandCoins,
+  Gift,
+} from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -6,6 +15,7 @@ import {
   RESOLUTION_LINE_STATUSES,
   RESOLUTION_TYPES,
 } from "../../services/mockData";
+import { isAmountBearingResolution } from "../../domain/purchaseReturnRules";
 
 const RESOLUTION_TYPE_CONFIG = {
   [RESOLUTION_TYPES.REFUND]: {
@@ -27,6 +37,21 @@ const RESOLUTION_TYPE_CONFIG = {
     icon: Ban,
     className: "bg-muted text-muted-foreground border-border",
   },
+  [RESOLUTION_TYPES.RETURN_TO_SUPPLIER]: {
+    icon: PackageMinus,
+    className:
+      "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-400",
+  },
+  [RESOLUTION_TYPES.KEEP_AND_SETTLE]: {
+    icon: HandCoins,
+    className:
+      "bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/40 dark:border-teal-800 dark:text-teal-400",
+  },
+  [RESOLUTION_TYPES.SUPPLIER_WRITE_OFF]: {
+    icon: Gift,
+    className:
+      "bg-lime-50 text-lime-700 border-lime-200 dark:bg-lime-950/40 dark:border-lime-800 dark:text-lime-400",
+  },
 };
 
 export default function ResolutionLineRow({ resolution, onRemove, isBusy }) {
@@ -44,9 +69,9 @@ export default function ResolutionLineRow({ resolution, onRemove, isBusy }) {
         <span className="text-xs font-medium text-card-foreground tabular-nums shrink-0">
           {resolution.qty.toLocaleString("fa-IR")} عدد
         </span>
-        {resolution.type === RESOLUTION_TYPES.REFUND && (
+        {isAmountBearingResolution(resolution.type) && (
           <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-            ({resolution.refundAmount.toLocaleString("fa-IR")} ریال)
+            ({(resolution.refundAmount || 0).toLocaleString("fa-IR")} ریال)
           </span>
         )}
         {resolution.note && <span className="text-xs text-muted-foreground truncate max-w-full">{resolution.note}</span>}

@@ -46,11 +46,25 @@ export default function ReturnInfoSidebar({ purchaseReturn }) {
     const writeOffAmount = resolvedLines
       .filter((l) => l.type === RESOLUTION_TYPES.WRITE_OFF)
       .reduce((s, l) => s + Number(l.qty || 0), 0);
+    // پولِ مازاد در جهت مخالف حرکت می‌کند — بابت کالایی که نگه داشته‌ایم
+    // به تامین‌کننده بدهکار می‌شویم. عمداً با بازگشت وجه جمع نمی‌شود.
+    const payableAmount = resolvedLines
+      .filter((l) => l.type === RESOLUTION_TYPES.KEEP_AND_SETTLE)
+      .reduce((s, l) => s + (Number(l.refundAmount) || 0), 0);
+    const freeKeptQty = resolvedLines
+      .filter((l) => l.type === RESOLUTION_TYPES.SUPPLIER_WRITE_OFF)
+      .reduce((s, l) => s + Number(l.qty || 0), 0);
+    const returningQty = allLines
+      .filter((l) => l.type === RESOLUTION_TYPES.RETURN_TO_SUPPLIER)
+      .reduce((s, l) => s + Math.max(0, Number(l.qty || 0) - Number(l.shippedQty || 0)), 0);
     const allocatedQty = allLines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
     const totalQty = purchaseReturn.items.reduce((s, i) => s + i.qty, 0);
     return {
       refundedAmount,
       writeOffAmount,
+      payableAmount,
+      freeKeptQty,
+      returningQty,
       pendingQty: Math.max(0, totalQty - allocatedQty),
     };
   }, [purchaseReturn]);
@@ -150,6 +164,36 @@ export default function ReturnInfoSidebar({ purchaseReturn }) {
                 </span>
                 <span className="font-medium text-muted-foreground">
                   {totals.writeOffAmount.toLocaleString("fa-IR")} عدد
+                </span>
+              </div>
+            )}
+            {totals.payableAmount > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">
+                  قابل پرداخت بابت مازاد
+                </span>
+                <span className="font-medium text-teal-700 dark:text-teal-400">
+                  {totals.payableAmount.toLocaleString("fa-IR")} ریال
+                </span>
+              </div>
+            )}
+            {totals.freeKeptQty > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">
+                  نگهداری بدون پرداخت
+                </span>
+                <span className="font-medium text-lime-700 dark:text-lime-400">
+                  {totals.freeKeptQty.toLocaleString("fa-IR")} عدد
+                </span>
+              </div>
+            )}
+            {totals.returningQty > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">
+                  در انتظار عودت به تامین‌کننده
+                </span>
+                <span className="font-medium text-rose-700 dark:text-rose-400">
+                  {totals.returningQty.toLocaleString("fa-IR")} عدد
                 </span>
               </div>
             )}

@@ -4,6 +4,6 @@ export const purchaseReturnKeys = {
   list: (filters) => [...purchaseReturnKeys.lists(), { ...filters }],
   details: () => [...purchaseReturnKeys.all, 'detail'],
   detail: (id) => [...purchaseReturnKeys.details(), String(id)],
-  reports: () => [...purchaseReturnKeys.all, 'shortage-reports'],
+  reports: () => [...purchaseReturnKeys.all, 'mismatch-reports'],
   reportDetail: (purchaseId) => [...purchaseReturnKeys.reports(), String(purchaseId)],
 };

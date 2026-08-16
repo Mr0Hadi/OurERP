@@ -3,8 +3,11 @@ import { createFilterStore } from "@/shared/store/createFilterStore";
 export const useShippingFilterStore = createFilterStore({
   filters: {
     globalSearch: "",
-    customerIds: [],
-    // '' = همه، 'sale' = فقط ارسال فروش، 'return_replacement' = فقط ارسال جایگزین
+    // کلید ترکیبی (customer:12 / supplier:3) چون صف ارسال هم به مشتری
+    // می‌رود و هم به تامین‌کننده — همان قراردادی که صف دریافت دارد.
+    counterpartyIds: [],
+    // '' = همه، 'sale' = ارسال فروش، 'return_replacement' = کالای
+    // جایگزین، 'return_to_supplier' = عودت مازاد به تامین‌کننده
     type: "",
     fromDate: "",
     toDate: "",

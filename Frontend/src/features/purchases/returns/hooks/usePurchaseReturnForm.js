@@ -1,74 +1,108 @@
 import { usePurchaseReturnFormStore } from "../store/purchaseReturnFormStore";
+import { CLAIM_KINDS } from "../domain/purchaseReturnRules";
 
 const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
 export function usePurchaseReturnForm() {
-  const { formData, setFormData, setItems, resetForm, initializedForId } =
-    usePurchaseReturnFormStore();
+  const {
+    formData,
+    setFormData,
+    setItems,
+    setSurplusItems,
+    resetForm,
+    initializedForId,
+  } = usePurchaseReturnFormStore();
 
   const items = formData.items || [];
+  const surplusItems = formData.surplusItems || [];
 
   const claimedQtyOf = (item) =>
     (item.claims || []).reduce((s, c) => s + (Number(c.qty) || 0), 0);
 
-  // افزودن یک ردیف جدید دلیل برای این کالا؛ پیش‌فرض تعداد، باقیمانده‌ی
-  // سهمیه‌ی قابل مرجوع‌شدن است تا کاربر فقط کم کند، نه از صفر بسازد.
-  const handleAddClaim = (lineId) => {
-    setItems(
-      items.map((item) => {
-        if (item.lineId !== lineId) return item;
-        const allocated = claimedQtyOf(item);
-        const remaining = Math.max(0, item.maxReturnableQty - allocated);
-        if (remaining <= 0) return item;
-        return {
-          ...item,
-          claims: [
-            ...(item.claims || []),
-            { id: generateId(), reason: "shortage", qty: remaining, note: "" },
-          ],
-        };
-      }),
-    );
-  };
+  /**
+   * منطق تقسیم تعداد بین چند ادعا برای هر دو فهرست (کسری و مازاد)
+   * یکسان است؛ فقط فهرست، تابع نوشتنش و دلیل پیش‌فرضِ ادعای تازه فرق
+   * می‌کند. پس یک‌بار نوشته می‌شود و دوبار bind.
+   */
+  const makeClaimHandlers = (list, setList, defaultReasonOf) => ({
+    // افزودن یک ردیف جدید دلیل برای این کالا؛ پیش‌فرض تعداد، باقیمانده‌ی
+    // سهمیه‌ی قابل ادعا است تا کاربر فقط کم کند، نه از صفر بسازد.
+    add: (lineId) => {
+      setList(
+        list.map((item) => {
+          if (item.lineId !== lineId) return item;
+          const allocated = claimedQtyOf(item);
+          const remaining = Math.max(0, item.maxReturnableQty - allocated);
+          if (remaining <= 0) return item;
+          return {
+            ...item,
+            claims: [
+              ...(item.claims || []),
+              {
+                id: generateId(),
+                reason: defaultReasonOf(item),
+                qty: remaining,
+                note: "",
+              },
+            ],
+          };
+        }),
+      );
+    },
 
-  const handleUpdateClaim = (lineId, claimId, field, value) => {
-    setItems(
-      items.map((item) => {
-        if (item.lineId !== lineId) return item;
-        const newClaims = (item.claims || []).map((claim) => {
-          if (claim.id !== claimId) return claim;
-          if (field === "qty") {
-            const otherAllocated = (item.claims || [])
-              .filter((c) => c.id !== claimId)
-              .reduce((s, c) => s + (Number(c.qty) || 0), 0);
-            const maxAllowed = Math.max(0, item.maxReturnableQty - otherAllocated);
-            const num = Number(value);
-            const clamped = Number.isNaN(num) || num < 0 ? 0 : Math.min(num, maxAllowed);
-            return { ...claim, qty: clamped };
-          }
-          return { ...claim, [field]: value };
-        });
-        return { ...item, claims: newClaims };
-      }),
-    );
-  };
+    update: (lineId, claimId, field, value) => {
+      setList(
+        list.map((item) => {
+          if (item.lineId !== lineId) return item;
+          const newClaims = (item.claims || []).map((claim) => {
+            if (claim.id !== claimId) return claim;
+            if (field === "qty") {
+              const otherAllocated = (item.claims || [])
+                .filter((c) => c.id !== claimId)
+                .reduce((s, c) => s + (Number(c.qty) || 0), 0);
+              const maxAllowed = Math.max(0, item.maxReturnableQty - otherAllocated);
+              const num = Number(value);
+              const clamped =
+                Number.isNaN(num) || num < 0 ? 0 : Math.min(num, maxAllowed);
+              return { ...claim, qty: clamped };
+            }
+            return { ...claim, [field]: value };
+          });
+          return { ...item, claims: newClaims };
+        }),
+      );
+    },
 
-  const handleRemoveClaim = (lineId, claimId) => {
-    setItems(
-      items.map((item) =>
-        item.lineId === lineId
-          ? { ...item, claims: (item.claims || []).filter((c) => c.id !== claimId) }
-          : item,
-      ),
-    );
-  };
+    remove: (lineId, claimId) => {
+      setList(
+        list.map((item) =>
+          item.lineId === lineId
+            ? { ...item, claims: (item.claims || []).filter((c) => c.id !== claimId) }
+            : item,
+        ),
+      );
+    },
+  });
 
-  const selectedItems = items
-    .map((item) => ({ ...item, claimedQty: claimedQtyOf(item) }))
-    .filter((item) => item.claimedQty > 0 && (item.claims || []).length > 0);
+  const shortageHandlers = makeClaimHandlers(items, setItems, () => "shortage");
+  // دلیلِ پیش‌فرض یک ادعای مازاد، همان نوع مازادی است که انبار ثبت
+  // کرده (اضافه یا ثبت‌نشده) — نه چیزی از واژگان کسری.
+  const surplusHandlers = makeClaimHandlers(
+    surplusItems,
+    setSurplusItems,
+    (item) => item.surplusKind,
+  );
 
-  const computedTotal = selectedItems.reduce(
+  const withClaimedQty = (list) =>
+    list
+      .map((item) => ({ ...item, claimedQty: claimedQtyOf(item) }))
+      .filter((item) => item.claimedQty > 0 && (item.claims || []).length > 0);
+
+  const selectedItems = withClaimedQty(items);
+  const selectedSurplusItems = withClaimedQty(surplusItems);
+
+  const computedTotal = [...selectedItems, ...selectedSurplusItems].reduce(
     (sum, item) => sum + item.claimedQty * item.unitPrice,
     0,
   );
@@ -97,6 +131,7 @@ export function usePurchaseReturnForm() {
         outputs.push({
           issueId: generateId(),
           sourceIssueId: issue.issueId,
+          claimKind: CLAIM_KINDS.SHORTAGE,
           productId: item.productId,
           productCode: item.productCode,
           productName: item.productName,
@@ -115,6 +150,32 @@ export function usePurchaseReturnForm() {
     return outputs;
   };
 
+  /**
+   * مازاد به تخصیص FIFO نیاز ندارد: هر کارت دقیقاً روی یک ردیف مازادِ
+   * انبار نشسته، پس هر ادعا مستقیماً یک ردیف مرجوعی می‌شود.
+   */
+  const expandSurplusClaims = (item) =>
+    (item.claims || [])
+      .filter((claim) => (Number(claim.qty) || 0) > 0)
+      .map((claim) => {
+        const qty = Number(claim.qty) || 0;
+        return {
+          issueId: generateId(),
+          sourceSurplusId: item.sourceSurplusId,
+          claimKind: CLAIM_KINDS.SURPLUS,
+          surplusKind: item.surplusKind,
+          productId: item.productId ?? null,
+          productCode: item.productCode,
+          productName: item.productName,
+          unit: item.unit,
+          qty,
+          unitPrice: item.unitPrice,
+          lineTotal: qty * item.unitPrice,
+          reason: claim.reason,
+          note: claim.note || "",
+        };
+      });
+
   const buildPayload = () => ({
     purchaseId: formData.purchaseId,
     purchaseInvoiceNumber: formData.purchaseInvoiceNumber,
@@ -123,17 +184,25 @@ export function usePurchaseReturnForm() {
     returnDate: formData.returnDate,
     reason: formData.reason,
     description: formData.description || "",
-    items: selectedItems.flatMap((item) => distributeItemAcrossSourceIssues(item)),
+    items: [
+      ...selectedItems.flatMap((item) => distributeItemAcrossSourceIssues(item)),
+      ...selectedSurplusItems.flatMap((item) => expandSurplusClaims(item)),
+    ],
   });
 
   return {
     formData,
     setFormData,
     items,
+    surplusItems,
     selectedItems,
-    handleAddClaim,
-    handleUpdateClaim,
-    handleRemoveClaim,
+    selectedSurplusItems,
+    handleAddClaim: shortageHandlers.add,
+    handleUpdateClaim: shortageHandlers.update,
+    handleRemoveClaim: shortageHandlers.remove,
+    handleAddSurplusClaim: surplusHandlers.add,
+    handleUpdateSurplusClaim: surplusHandlers.update,
+    handleRemoveSurplusClaim: surplusHandlers.remove,
     computedTotal,
     buildPayload,
     resetForm,

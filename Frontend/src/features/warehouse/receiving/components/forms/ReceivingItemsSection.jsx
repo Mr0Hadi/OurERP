@@ -19,6 +19,7 @@ export default function ReceivingItemsSection({
   onAddIssue,
   onUpdateIssue,
   onRemoveIssue,
+  onExcessChange,
 }) {
   const [search, setSearch] = useState("");
 
@@ -39,10 +40,11 @@ export default function ReceivingItemsSection({
         const status = getRowStatus(item.expectedQty, received);
         acc.expected += item.expectedQty;
         acc.received += received;
+        acc.excess += Number(item.excessQty) || 0;
         acc[status] += 1;
         return acc;
       },
-      { expected: 0, received: 0, complete: 0, partial: 0, missing: 0 },
+      { expected: 0, received: 0, excess: 0, complete: 0, partial: 0, missing: 0 },
     );
   }, [items]);
 
@@ -57,6 +59,7 @@ export default function ReceivingItemsSection({
     onAddIssue,
     onUpdateIssue,
     onRemoveIssue,
+    onExcessChange,
   };
 
   return (
@@ -82,6 +85,14 @@ export default function ReceivingItemsSection({
           >
             نرسیده: {totals.missing.toLocaleString("fa-IR")}
           </Badge>
+          {totals.excess > 0 && (
+            <Badge
+              variant="outline"
+              className="bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/40 dark:border-sky-800 dark:text-sky-400"
+            >
+              اضافه: {totals.excess.toLocaleString("fa-IR")}
+            </Badge>
+          )}
         </div>
       </CardHeader>
 

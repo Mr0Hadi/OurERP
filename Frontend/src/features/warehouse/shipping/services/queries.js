@@ -13,7 +13,7 @@ export function useOutgoingQueueQuery(filters, pagination, sorting) {
       limit: pagination.pageSize,
       search: filters.globalSearch || "",
       type: filters.type || "",
-      customerIds: filters.customerIds || [],
+      counterpartyIds: filters.counterpartyIds || [],
       fromDate: filters.fromDate || "",
       toDate: filters.toDate || "",
       sortBy: sorting?.id ?? "createdAt",

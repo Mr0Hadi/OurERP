@@ -8,8 +8,31 @@ import { ROUTES } from "@/shared/constants/routes";
 import { OUTGOING_TYPES } from "../../services/outgoingQueueApi";
 import ShippingTypeBadge from "./ShippingTypeBadge";
 
-// صف ارسال از دو منبع پر می‌شود، پس شناسه‌ی خودِ ردیف کلید است نه اندیس.
+// صف ارسال از چند منبع پر می‌شود، پس شناسه‌ی خودِ ردیف کلید است نه اندیس.
 const getRowKey = (row) => row.original.id;
+
+// مقصد و برچسب هر نوع محموله در یک جا، تا افزودن نوع بعدی یک ردیف
+// باشد نه یک شرط تودرتوی دیگر.
+const ACTION_BY_TYPE = {
+  [OUTGOING_TYPES.SALE]: {
+    label: "آماده‌سازی و ارسال",
+    buildPath: ({ saleId }) =>
+      ROUTES.WAREHOUSE_SHIPPING_DETAIL.replace(":id", saleId),
+  },
+  [OUTGOING_TYPES.RETURN_REPLACEMENT]: {
+    label: "ارسال کالای جایگزین",
+    buildPath: ({ returnId }) =>
+      ROUTES.WAREHOUSE_SHIPPING_REPLACEMENT_DETAIL.replace(":returnId", returnId),
+  },
+  [OUTGOING_TYPES.RETURN_TO_SUPPLIER]: {
+    label: "آماده‌سازی عودت",
+    buildPath: ({ returnId }) =>
+      ROUTES.WAREHOUSE_SHIPPING_SUPPLIER_RETURN_DETAIL.replace(
+        ":returnId",
+        returnId,
+      ),
+  },
+};
 
 const ShippingTable = ({
   data,
@@ -36,7 +59,7 @@ const ShippingTable = ({
       },
       {
         accessorKey: "counterpartyName",
-        header: "مشتری",
+        header: "مشتری / تامین‌کننده",
         cell: (info) => <span className="font-light">{info.getValue()}</span>,
       },
       {
@@ -77,17 +100,9 @@ const ShippingTable = ({
         header: "عملیات",
         enableSorting: false,
         cell: ({ row }) => {
-          const isReplacement =
-            row.original.type === OUTGOING_TYPES.RETURN_REPLACEMENT;
-          const path = isReplacement
-            ? ROUTES.WAREHOUSE_SHIPPING_REPLACEMENT_DETAIL.replace(
-                ":returnId",
-                row.original.returnId,
-              )
-            : ROUTES.WAREHOUSE_SHIPPING_DETAIL.replace(
-                ":id",
-                row.original.saleId,
-              );
+          const { type, returnId, saleId } = row.original;
+          const action = ACTION_BY_TYPE[type] ?? ACTION_BY_TYPE[OUTGOING_TYPES.SALE];
+          const path = action.buildPath({ returnId, saleId });
           return (
             <Button
               variant="outline"
@@ -96,7 +111,7 @@ const ShippingTable = ({
               className="gap-1"
             >
               <Truck className="h-4 w-4" />
-              {isReplacement ? "ارسال کالای جایگزین" : "آماده‌سازی و ارسال"}
+              {action.label}
             </Button>
           );
         },

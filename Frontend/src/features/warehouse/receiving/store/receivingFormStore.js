@@ -10,6 +10,10 @@ const EMPTY_RECEIVING = {
   invoiceDate: '',
   status: '',
   items: [],
+  // کالاهایی که اصلاً در سیستم ما تعریف نشده‌اند و به هیچ قلم سفارش
+  // وصل نمی‌شوند؛ انباردار فقط شرح و تعداد را می‌نویسد و اتصال به یک
+  // کالای واقعی تا لحظه‌ی تصمیمِ «نگهداری» به تعویق می‌افتد.
+  unknownItems: [],
   receivingNote: '',
   receivedDate: new Date().toISOString().slice(0, 10),
   transporterName: '',
@@ -32,6 +36,10 @@ export const useReceivingFormStore = create((set, get) => ({
   setReceivingItems: (items) =>
     set((state) => ({
       formData: { ...state.formData, items },
+    })),
+  setUnknownItems: (unknownItems) =>
+    set((state) => ({
+      formData: { ...state.formData, unknownItems },
     })),
   initializeFromPurchase: (purchaseData) => {
     const { initializedForId } = get();
@@ -59,6 +67,12 @@ export const useReceivingFormStore = create((set, get) => ({
           expectedQty: remaining,
           receivedQty: remaining,
           issues: [],
+          // مازادِ همین قلم: تعدادی که *بیشتر* از سفارش رسیده. عمداً
+          // بیرون از receivedQty نگه داشته می‌شود تا معنای «چقدر از
+          // سفارش تحویل شد» و تمام محاسباتی که به آن وابسته‌اند دست
+          // نخورد.
+          excessQty: 0,
+          excessNote: '',
         };
       })
       .filter((item) => item.expectedQty > 0);
@@ -72,6 +86,7 @@ export const useReceivingFormStore = create((set, get) => ({
         invoiceDate: purchaseData.invoiceDate || '',
         status: purchaseData.status || '',
         items: receivingItems,
+        unknownItems: [],
         receivingNote: '',
         receivedDate: new Date().toISOString().slice(0, 10),
         transporterName: '',

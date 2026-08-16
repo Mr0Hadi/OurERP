@@ -57,6 +57,8 @@ export const ROUTES = {
   WAREHOUSE_RECEIVING_RETURN_DETAIL: "/warehouse/receiving/returns/:id",
   WAREHOUSE_SHIPPING_REPLACEMENT_DETAIL:
     "/warehouse/shipping/replacement/:returnId",
+  WAREHOUSE_SHIPPING_SUPPLIER_RETURN_DETAIL:
+    "/warehouse/shipping/supplier-return/:returnId",
 
   // // محصولات/کالاها
   // PRODUCTS: "/products",

@@ -9,8 +9,19 @@ import {
   settlePurchaseItems,
   reopenPurchaseForShipment,
   recomputePurchaseStatus,
+  adjustPurchaseTotal,
 } from "@/features/purchases/orders/services/api-mockData";
+import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
 import { PURCHASE_ISSUE_TYPES } from "@/shared/constants/purchaseIssueTypes";
+import {
+  CLAIM_KINDS,
+  affectsOrderedQty,
+  isAmountBearingResolution,
+  isKeepResolution,
+  isWarehousePendingResolution,
+  requiresProductLink,
+  resolutionTypesForClaim,
+} from "../domain/purchaseReturnRules";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const generateId = () =>
@@ -47,8 +58,29 @@ function getReservedQtyForIssue(issueId, excludeReturnId = null) {
     if (excludeReturnId && r.id === excludeReturnId) return;
     if (!ACTIVE_RETURN_STATUSES.has(r.status)) return;
     r.items.forEach((item) => {
+      // ادعاهای مازاد اصلاً روی هیچ مشکل گزارش‌شده‌ای ننشسته‌اند؛ اگر
+      // اینجا شمرده شوند سهمیه‌ی کسری را بی‌دلیل مصرف می‌کنند.
+      if (!affectsOrderedQty(item)) return;
       const linkedIssueId = item.sourceIssueId ?? item.issueId;
       if (linkedIssueId === issueId) sum += item.qty;
+    });
+  });
+  return sum;
+}
+
+/**
+ * قرینه‌ی getReservedQtyForIssue برای مازاد: چه مقدار از یک ردیف
+ * مازادِ انبار را مرجوعی‌های فعال قبلاً برداشته‌اند. برخلاف کسری،
+ * اینجا هیچ سقف دومی از سمت سفارش وجود ندارد — تنها سقف، خودِ تعدادی
+ * است که انباردار شمرده.
+ */
+function getReservedQtyForSurplus(surplusId, excludeReturnId = null) {
+  let sum = 0;
+  allPurchaseReturns.forEach((r) => {
+    if (excludeReturnId && r.id === excludeReturnId) return;
+    if (!ACTIVE_RETURN_STATUSES.has(r.status)) return;
+    r.items.forEach((item) => {
+      if (item.sourceSurplusId === surplusId) sum += item.qty;
     });
   });
   return sum;
@@ -90,6 +122,9 @@ function getOpenIssueQtyForItem(item, purchaseId) {
       if (ret.purchaseId !== purchaseId) return;
       if (TERMINAL_RETURN_STATUSES.has(ret.status)) return;
       ret.items.forEach((retItem) => {
+        // مازاد بیرون از سقف سفارش است و هیچ‌وقت نباید روی «چقدر هنوز
+        // قابل دریافت است» اثر بگذارد
+        if (!affectsOrderedQty(retItem)) return;
         const linkedIssueId = retItem.sourceIssueId ?? retItem.issueId;
         if (linkedIssueId !== issue.id) return;
         const decided = (retItem.resolutions || []).reduce(
@@ -165,7 +200,39 @@ function distributeOpenQtyAcrossIssues(item) {
   return result;
 }
 
-function buildShortageReport(purchase) {
+/**
+ * ردیف‌های مازادِ هنوز ادعانشده. هر ردیف مستقل می‌ماند و با ردیف‌های
+ * دیگرِ همان کالا ادغام نمی‌شود: یادداشت انباردار و تاریخ هر دور
+ * دریافت بخشی از معنای همان ردیف است، و کالای ثبت‌نشده اصلاً کلیدی
+ * برای گروه‌شدن ندارد.
+ */
+function buildOpenSurplusLines(purchase) {
+  return (purchase.surplusItems || [])
+    .map((entry) => {
+      const openQty = Math.max(0, entry.qty - getReservedQtyForSurplus(entry.id));
+      if (openQty <= 0) return null;
+      return {
+        surplusId: entry.id,
+        surplusKind: entry.kind,
+        productId: entry.productId ?? null,
+        productCode: entry.productCode ?? null,
+        productName: entry.productName,
+        unit: entry.unit,
+        unitPrice: entry.unitPrice || 0,
+        openSurplusQty: openQty,
+        note: entry.note || "",
+        reportedDate: entry.date,
+      };
+    })
+    .filter(Boolean);
+}
+
+/**
+ * گزارش مغایرت یک خرید: هرچه انبار دریافت کرده و با سفارش نمی‌خواند.
+ * دو محور کاملاً مستقل دارد و یک کالا می‌تواند هم‌زمان در هر دو باشد —
+ * items (کسری روی سفارش) و surplusItems (مازادِ بیرون از سفارش).
+ */
+function buildMismatchReport(purchase) {
   const lines = [];
 
   purchase.items.forEach((item) => {
@@ -188,13 +255,17 @@ function buildShortageReport(purchase) {
     });
   });
 
-  const lastReportDate = lines.reduce(
+  const surplusLines = buildOpenSurplusLines(purchase);
+
+  const lastReportDate = [...lines, ...surplusLines].reduce(
     (latest, l) => (!latest || l.reportedDate > latest ? l.reportedDate : latest),
     null,
   );
 
   return {
     purchaseId: purchase.id,
+    surplusItems: surplusLines,
+    totalOpenSurplusQty: surplusLines.reduce((s, l) => s + l.openSurplusQty, 0),
     // این فیلد برای شناسایی «آیا داده‌ی این گزارش هنوز تازه است؟» در
     // فرم ثبت مرجوعی استفاده می‌شود؛ هر تغییری روی خرید (دور جدید
     // دریافت، مشکل جدید، تصمیم جدید) این مقدار را عوض می‌کند.
@@ -220,10 +291,12 @@ function mostFrequentReason(values) {
 }
 
 function toVirtualReturnEntry(report) {
-  if (!report || report.items.length === 0) return null;
+  if (!report) return null;
+  if (report.items.length === 0 && report.surplusItems.length === 0) return null;
 
-  const items = report.items.map((i) => ({
+  const shortageItems = report.items.map((i) => ({
     issueId: i.issueId,
+    claimKind: CLAIM_KINDS.SHORTAGE,
     productId: i.productId,
     productCode: i.productCode,
     productName: i.productName,
@@ -235,6 +308,28 @@ function toVirtualReturnEntry(report) {
     note: i.issueNote,
     resolutions: [],
   }));
+
+  // یک خرید ممکن است *فقط* مازاد داشته باشد (همه‌چیز کامل رسید ولی
+  // چند کارتن اضافه هم آمد)؛ چنین خریدی هم باید در لیست پیگیری دیده
+  // شود، وگرنه مازاد بی‌صدا گم می‌شود.
+  const surplusItems = report.surplusItems.map((s) => ({
+    issueId: s.surplusId,
+    claimKind: CLAIM_KINDS.SURPLUS,
+    surplusKind: s.surplusKind,
+    sourceSurplusId: s.surplusId,
+    productId: s.productId,
+    productCode: s.productCode,
+    productName: s.productName,
+    unit: s.unit,
+    qty: s.openSurplusQty,
+    unitPrice: s.unitPrice,
+    lineTotal: s.openSurplusQty * s.unitPrice,
+    reason: s.surplusKind,
+    note: s.note,
+    resolutions: [],
+  }));
+
+  const items = [...shortageItems, ...surplusItems];
 
   return {
     id: `report-${report.purchaseId}`,
@@ -257,7 +352,7 @@ function toVirtualReturnEntry(report) {
 
 function getAllTrackableEntries() {
   return allPurchases
-    .map((purchase) => toVirtualReturnEntry(buildShortageReport(purchase)))
+    .map((purchase) => toVirtualReturnEntry(buildMismatchReport(purchase)))
     .filter(Boolean);
 }
 
@@ -281,14 +376,14 @@ function withRoundInfo(list) {
   });
 }
 
-export async function fetchShortageReportByPurchaseId(purchaseId) {
+export async function fetchMismatchReportByPurchaseId(purchaseId) {
   await delay(300);
   const purchase = getPurchase(purchaseId);
   if (!purchase) throw new Error("خرید یافت نشد");
 
-  const report = buildShortageReport(purchase);
-  if (report.items.length === 0) {
-    throw new Error("این خرید دیگر کسری قابل پیگیری ندارد");
+  const report = buildMismatchReport(purchase);
+  if (report.items.length === 0 && report.surplusItems.length === 0) {
+    throw new Error("این خرید دیگر مغایرت قابل پیگیری ندارد");
   }
   return report;
 }
@@ -404,6 +499,23 @@ export async function createPurchaseReturn(payload) {
  * با دیدن کل تصویر دوباره محاسبه می‌شود؛ همین رفتار باعث می‌شود ترتیب
  * یا ترکیب تصمیم‌ها (اول جایگزینی سپس بازگشت وجه، یا برعکس) هرگز
  * نتیجه‌ی همدیگر را خراب نکنند.
+ *
+ * اثر هر نوع تصمیم:
+ *
+ *  کسری
+ *   • replacement        → خرید دوباره برای دریافت باز می‌شود، خط در
+ *                          انتظار می‌ماند تا کالا برسد
+ *   • refund/credit/     → settledQty بالا می‌رود (این مقدار دیگر هرگز
+ *     write_off             نمی‌رسد) و مبلغ بازگشتی از جمع کل کم می‌شود
+ *
+ *  مازاد — هیچ‌کدام settlePurchaseItems را صدا نمی‌زنند، چون هیچ قلمی
+ *  از سفارش برای تسویه وجود ندارد
+ *   • return_to_supplier → خط در انتظار می‌ماند تا انبار واقعاً کالا را
+ *                          بفرستد؛ نه پولی جابه‌جا می‌شود نه موجودی
+ *   • keep_and_settle    → کالا مال ما می‌شود (موجودی + qty) و جمع کل
+ *                          خرید به‌اندازه‌ی مبلغ توافق‌شده *زیاد* می‌شود
+ *   • supplier_write_off → کالا مال ما می‌شود (موجودی + qty) بدون هیچ
+ *                          پرداختی
  */
 export async function addItemResolution(returnId, issueId, resolution) {
   await delay(500);
@@ -432,28 +544,62 @@ export async function addItemResolution(returnId, issueId, resolution) {
   const qty = Math.min(Number(resolution.qty) || 0, remaining);
   if (qty <= 0) throw new Error("تعداد وارد شده نامعتبر است");
 
-  const isReplacement = resolution.type === RESOLUTION_TYPES.REPLACEMENT;
-  const refundAmount =
-    resolution.type === RESOLUTION_TYPES.REFUND
-      ? Number(resolution.refundAmount) || qty * item.unitPrice
-      : 0;
+  // نگهبانِ خانواده: یک ادعای کسری هرگز نباید تصمیم مازاد بگیرد و
+  // برعکس. UI این را محدود می‌کند ولی اثر این دو خانواده روی پول و
+  // موجودی معکوس هم است، پس اینجا هم صریح بررسی می‌شود.
+  if (!resolutionTypesForClaim(item).includes(resolution.type)) {
+    throw new Error("این نوع تصمیم برای این قلم مجاز نیست");
+  }
+
+  // کالای ثبت‌نشده تا وقتی عودت داده می‌شود به رکورد کالا نیاز ندارد،
+  // ولی لحظه‌ای که تصمیم به نگهداری گرفته شود باید جایی برای نشستنِ
+  // افزایش موجودی وجود داشته باشد.
+  if (requiresProductLink(item, resolution.type) && !resolution.linkedProductId) {
+    throw new Error(
+      "برای نگهداری کالای ثبت‌نشده، اول باید آن را به یک کالای واقعی وصل کنید",
+    );
+  }
+
+  const isPending = isWarehousePendingResolution(resolution.type);
+  // refundAmount برای بازگشت وجه یعنی پولی که *می‌گیریم* و برای
+  // نگهداری‌وتسویه یعنی پولی که *می‌دهیم*؛ یک فیلد، دو جهت. جهتش را
+  // نوع تصمیم تعیین می‌کند، نه علامت عدد.
+  const amount = isAmountBearingResolution(resolution.type)
+    ? Number(resolution.refundAmount) || qty * item.unitPrice
+    : 0;
 
   const newLine = {
     id: generateId(),
     type: resolution.type,
     qty,
-    refundAmount,
+    refundAmount: amount,
     note: resolution.note || "",
-    status: isReplacement
+    status: isPending
       ? RESOLUTION_LINE_STATUSES.AWAITING
       : RESOLUTION_LINE_STATUSES.RESOLVED,
     createdAt: new Date().toISOString(),
-    resolvedAt: isReplacement ? null : new Date().toISOString(),
+    resolvedAt: isPending ? null : new Date().toISOString(),
   };
+
+  // اتصال کالای ثبت‌نشده روی خودِ قلم می‌نشیند نه روی خط تصمیم، چون
+  // از این به بعد برای *همه‌ی* تصمیم‌های این قلم معتبر است. نام
+  // ثبت‌شده‌ی انباردار دست‌نخورده می‌ماند (همان چیزی است که دیده) و
+  // نام کالای واقعی کنارش اضافه می‌شود.
+  const linkPatch = resolution.linkedProductId
+    ? {
+        productId: resolution.linkedProductId,
+        productCode: resolution.linkedProductCode ?? item.productCode,
+        linkedProductName: resolution.linkedProductName ?? null,
+      }
+    : null;
 
   const newItems = ret.items.map((i) =>
     i.issueId === issueId
-      ? { ...i, resolutions: [...(i.resolutions || []), newLine] }
+      ? {
+          ...i,
+          ...(linkPatch || {}),
+          resolutions: [...(i.resolutions || []), newLine],
+        }
       : i,
   );
 
@@ -464,13 +610,25 @@ export async function addItemResolution(returnId, issueId, resolution) {
     updatedAt: new Date().toISOString(),
   };
 
-  if (isReplacement) {
+  const effectiveProductId = linkPatch?.productId ?? item.productId;
+
+  if (resolution.type === RESOLUTION_TYPES.REPLACEMENT) {
     await reopenPurchaseForShipment(ret.purchaseId);
+  } else if (resolution.type === RESOLUTION_TYPES.RETURN_TO_SUPPLIER) {
+    // هیچ اثری تا لحظه‌ی ارسال واقعی از انبار؛ آن‌جا موجودی (اگر
+    // کالا قبلاً وارد موجودی شده باشد) کم و خط نهایی می‌شود.
+  } else if (isKeepResolution(resolution.type)) {
+    if (resolution.type === RESOLUTION_TYPES.KEEP_AND_SETTLE) {
+      await adjustPurchaseTotal(ret.purchaseId, amount);
+    }
+    if (effectiveProductId != null) {
+      adjustProductsStock([{ productId: effectiveProductId, delta: qty }]);
+    }
   } else {
     await settlePurchaseItems(
       ret.purchaseId,
       [{ productId: item.productId, qty }],
-      { refundAmount },
+      { refundAmount: amount },
     );
   }
 
@@ -493,6 +651,11 @@ export async function removeItemResolution(returnId, issueId, resolutionId) {
   if (line.status !== RESOLUTION_LINE_STATUSES.AWAITING) {
     throw new Error("این تصمیم قطعی شده و دیگر قابل لغو نیست");
   }
+  // یک خط «عودت به تامین‌کننده» تا وقتی انبار چیزی نفرستاده قابل لغو
+  // است؛ بعد از اولین محموله دیگر نه — کالا از انبار خارج شده.
+  if ((Number(line.shippedQty) || 0) > 0) {
+    throw new Error("بخشی از این کالا قبلاً به تامین‌کننده ارسال شده و قابل لغو نیست");
+  }
 
   const newItems = ret.items.map((i) =>
     i.issueId === issueId
@@ -502,6 +665,93 @@ export async function removeItemResolution(returnId, issueId, resolutionId) {
         }
       : i,
   );
+
+  allPurchaseReturns[idx] = {
+    ...ret,
+    items: newItems,
+    status: computeReturnStatus(newItems),
+    updatedAt: new Date().toISOString(),
+  };
+
+  await syncPurchaseStatusForReturns(ret.purchaseId);
+
+  return allPurchaseReturns[idx];
+}
+
+/**
+ * ثبت یک دور خروج فیزیکی کالای مازاد از انبار به سمت تامین‌کننده.
+ * قرینه‌ی confirmReplacementShipmentBatch در مرجوعی فروش، با همان
+ * قرارداد تجمعی: هر خط تصمیم shippedQty خودش را دارد و فقط وقتی به
+ * qty کامل رسید «نهایی» می‌شود؛ تا آن موقع همان مرجوعی دوباره در صف
+ * ارسال انبار ظاهر می‌شود.
+ *
+ * برخلاف ارسال کالای جایگزین، اینجا موجودی *دست نمی‌خورد* و این عمدی
+ * است: تعدادی که تصمیمِ «عودت» خورده هیچ‌وقت وارد موجودی قابل‌فروش
+ * نشده. مازاد در confirmReceiving وارد موجودی نمی‌شود و فقط تصمیم
+ * «نگهداری» آن را اضافه می‌کند؛ و چون هر خط تصمیم روی بخش جدایی از
+ * تعداد نشسته (۲ عدد نگهداری + ۳ عدد عودت، نه ۵ عدد که هر دو شود)،
+ * بخشِ عودتی هرگز در موجودی نبوده. کم‌کردنش یعنی دوبار خارج‌کردن
+ * کالایی که یک‌بار هم وارد نشده بود.
+ */
+export async function confirmSupplierReturnShipmentBatch(returnId, shipmentData) {
+  await delay(500);
+  const idx = getReturnIndex(returnId);
+  if (idx === -1) throw new Error("مرجوعی یافت نشد");
+
+  const ret = allPurchaseReturns[idx];
+  const shippedDate =
+    shipmentData.shippedDate || new Date().toISOString().slice(0, 10);
+  const linesToShip = shipmentData.items || [];
+
+  if (linesToShip.length === 0) {
+    throw new Error("هیچ کالایی برای ثبت ارسال انتخاب نشده است");
+  }
+
+  const newItems = ret.items.map((item) => {
+    const entriesForItem = linesToShip.filter((l) => l.issueId === item.issueId);
+    if (entriesForItem.length === 0) return item;
+
+    const newResolutions = (item.resolutions || []).map((r) => {
+      const entry = entriesForItem.find((l) => l.resolutionId === r.id);
+      if (!entry) return r;
+      if (r.type !== RESOLUTION_TYPES.RETURN_TO_SUPPLIER) return r;
+      if (r.status === RESOLUTION_LINE_STATUSES.RESOLVED) return r;
+
+      const prevShipped = r.shippedQty || 0;
+      const remaining = r.qty - prevShipped;
+      const thisRoundQty = Math.max(
+        0,
+        Math.min(Number(entry.shippedQtyThisRound) || 0, remaining),
+      );
+      if (thisRoundQty <= 0) return r;
+
+      const newShippedQty = prevShipped + thisRoundQty;
+      const isFullyShipped = newShippedQty >= r.qty;
+
+      return {
+        ...r,
+        shippedQty: newShippedQty,
+        status: isFullyShipped
+          ? RESOLUTION_LINE_STATUSES.RESOLVED
+          : RESOLUTION_LINE_STATUSES.AWAITING,
+        resolvedAt: isFullyShipped ? new Date().toISOString() : null,
+        shipmentHistory: [
+          ...(r.shipmentHistory || []),
+          {
+            id: generateId(),
+            date: shippedDate,
+            qty: thisRoundQty,
+            driverName: shipmentData.driverName || "",
+            driverNationalId: shipmentData.driverNationalId || "",
+            vehiclePlate: shipmentData.vehiclePlate || "",
+            note: shipmentData.shippingNote || "",
+          },
+        ],
+      };
+    });
+
+    return { ...item, resolutions: newResolutions };
+  });
 
   allPurchaseReturns[idx] = {
     ...ret,

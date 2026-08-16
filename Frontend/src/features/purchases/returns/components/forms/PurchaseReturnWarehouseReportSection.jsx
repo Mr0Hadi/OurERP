@@ -1,9 +1,11 @@
-import { ClipboardList, Truck } from "lucide-react";
+import { ClipboardList, Truck, PackagePlus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import {
   PURCHASE_ISSUE_TYPE_LABELS,
   PURCHASE_ISSUE_TYPE_STYLES,
+  SURPLUS_KIND_LABELS,
+  SURPLUS_KIND_STYLES,
 } from "@/shared/constants/purchaseIssueTypes";
 import { gregorianToPersian } from "@/shared/utils/dateUtils";
 
@@ -13,6 +15,9 @@ import { gregorianToPersian } from "@/shared/utils/dateUtils";
 // در این جدول تکرار شود — این ردیف‌ها با issueId از هم متمایزند.
 export default function PurchaseReturnWarehouseReportSection({ report }) {
   if (!report) return null;
+
+  const shortageLines = report.items || [];
+  const surplusLines = report.surplusItems || [];
 
   return (
     <Card className="border-amber-200 dark:border-amber-800">
@@ -37,7 +42,9 @@ export default function PurchaseReturnWarehouseReportSection({ report }) {
 
       <CardContent className="space-y-3">
         {/* نسخه دسکتاپ: جدول */}
-        <div className="hidden md:block border border-border rounded-lg overflow-hidden bg-card">
+        <div
+          className={`${shortageLines.length === 0 ? "hidden" : "hidden md:block"} border border-border rounded-lg overflow-hidden bg-card`}
+        >
           <table className="w-full text-sm">
             <thead className="bg-muted text-muted-foreground text-xs">
               <tr>
@@ -105,7 +112,7 @@ export default function PurchaseReturnWarehouseReportSection({ report }) {
         </div>
 
         {/* نسخه موبایل: کارت */}
-        <div className="md:hidden space-y-2">
+        <div className={shortageLines.length === 0 ? "hidden" : "md:hidden space-y-2"}>
           {report.items.map((item) => {
             const style =
               PURCHASE_ISSUE_TYPE_STYLES[item.issueType] ??
@@ -149,6 +156,50 @@ export default function PurchaseReturnWarehouseReportSection({ report }) {
             </span>
           </div>
         </div>
+
+        {/* مازاد: بیرون از سقف سفارش، پس ستون‌های «سفارش‌شده / دریافت‌شده
+            / کسری باز» برایش بی‌معنا است و فهرست خودش را دارد. */}
+        {surplusLines.length > 0 && (
+          <div className="space-y-2 border-t border-border/60 pt-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-card-foreground flex items-center gap-1.5">
+                <PackagePlus className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                مازاد گزارش‌شده
+              </p>
+              <span className="text-sm font-bold text-sky-700 dark:text-sky-400 tabular-nums">
+                {report.totalOpenSurplusQty.toLocaleString("fa-IR")} عدد
+              </span>
+            </div>
+
+            {surplusLines.map((line) => (
+              <div
+                key={line.surplusId}
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border border-border rounded-lg px-3 py-2 bg-card"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <Badge
+                    variant="outline"
+                    className={`text-[11px] shrink-0 ${SURPLUS_KIND_STYLES[line.surplusKind]}`}
+                  >
+                    {SURPLUS_KIND_LABELS[line.surplusKind] ?? line.surplusKind}
+                  </Badge>
+                  <div className="min-w-0">
+                    <p className="font-medium text-card-foreground text-sm truncate">
+                      {line.productName}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {line.productCode || "بدون کد کالا"}
+                      {line.note && ` — ${line.note}`}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-sm font-bold text-sky-700 dark:text-sky-400 tabular-nums shrink-0 self-end sm:self-auto">
+                  {line.openSurplusQty.toLocaleString("fa-IR")} {line.unit}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {report.receivingNote && (
           <p className="text-xs text-muted-foreground border-t border-border/60 pt-2">
