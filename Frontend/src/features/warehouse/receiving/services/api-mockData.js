@@ -8,6 +8,7 @@ import {
   computeItemReceivableQty,
 } from "@/features/purchases/returns/services/api-mockData";
 import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
+import { SURPLUS_KINDS } from "@/shared/constants/purchaseIssueTypes";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const generateId = () =>
@@ -198,6 +199,20 @@ export async function updateReceivingStatus(id, receivedItems) {
  *    همیشه *بیرون* از receivedQty قرار دارد: کالای معیوب/آسیب‌دیده/
  *    ارسال‌اشتباه اساساً در تعداد دریافتی شمرده نمی‌شود. پس کم‌کردن
  *    دوباره‌ی آن، مقدار سالمِ رسیده را کمتر از واقع ثبت می‌کرد.
+ * ۵. «مازاد» — کالای اضافه‌ی یک قلم شناخته‌شده و کالای کاملاً
+ *    ثبت‌نشده — در purchase.surplusItems می‌نشیند، *نه* در
+ *    items[].issues و نه در receivedQty. دلیلش در SURPLUS_KINDS
+ *    توضیح داده شده: مازاد بیرون از سقف سفارش است و نباید در هیچ
+ *    محاسبه‌ای که به qty/receivedQty/settledQty وابسته است شرکت کند.
+ *    آرایه روی خودِ خرید است نه روی قلم، چون کالای ثبت‌نشده اصلاً
+ *    قلمی برای نشستن ندارد.
+ * ۶. مازاد وارد موجودی قابل‌فروش نمی‌شود. کالا فیزیکاً در انبار هست
+ *    ولی هنوز مال ما نیست؛ فقط با تصمیم «نگهداری» واحد خرید به
+ *    موجودی اضافه می‌شود.
+ * ۷. یک قلم می‌تواند هم‌زمان کسری و مازاد داشته باشد (سفارش ۲۰،
+ *    رسیده ۲۵ که ۱۰تایش خراب است: ۱۵ سالم تحویل‌شده یعنی ۵ کسری،
+ *    به‌علاوه ۵ عدد بیشتر از سفارش). چون این دو در دو ساختار جدا
+ *    می‌نشینند، هیچ‌کدام سقف دیگری را مصرف نمی‌کند.
  */
 export async function confirmReceiving(purchaseId, receivingData) {
   await delay(500);
@@ -210,6 +225,7 @@ export async function confirmReceiving(purchaseId, receivingData) {
     receivingData.receivedDate || new Date().toISOString().slice(0, 10);
 
   const stockIncreases = [];
+  const newSurplusItems = [];
 
   const updatedItems = purchase.items.map((item) => {
     const receivedItem = receivingData.receivedItems.find(
@@ -245,6 +261,25 @@ export async function confirmReceiving(purchaseId, receivingData) {
       stockIncreases.push({ productId: item.productId, delta: thisRoundQty });
     }
 
+    // مازادِ همین قلم: قیمت واحد از خودِ قلم سفارش برداشته می‌شود، پس
+    // فرم لازم نیست آن را حمل کند — اگر بعداً تصمیم «نگهداری و تسویه»
+    // گرفته شود، مبلغی که باید پرداخت شود از همین‌جا می‌آید.
+    const excessQty = Number(receivedItem.excessQty) || 0;
+    if (excessQty > 0) {
+      newSurplusItems.push({
+        id: generateId(),
+        kind: SURPLUS_KINDS.EXCESS,
+        productId: item.productId,
+        productCode: item.productCode,
+        productName: item.productName,
+        unit: item.unit,
+        qty: excessQty,
+        unitPrice: item.unitPrice || 0,
+        note: receivedItem.excessNote || "",
+        date: receivedDate,
+      });
+    }
+
     return {
       ...item,
       receivedQty: newReceivedQty,
@@ -252,9 +287,36 @@ export async function confirmReceiving(purchaseId, receivingData) {
     };
   });
 
+  // کالای ثبت‌نشده به هیچ قلمی وصل نیست: نه productId دارد نه
+  // productCode، و قیمتش صفر است چون هیچ‌کس هنوز قیمتی برایش توافق
+  // نکرده. اتصال به یک کالای واقعی تا لحظه‌ی تصمیمِ «نگهداری» به
+  // تعویق می‌افتد.
+  (receivingData.unknownItems || []).forEach((row) => {
+    const qty = Number(row.qty) || 0;
+    if (qty <= 0 || !row.productName?.trim()) return;
+    newSurplusItems.push({
+      id: generateId(),
+      kind: SURPLUS_KINDS.UNKNOWN,
+      productId: null,
+      productCode: null,
+      productName: row.productName.trim(),
+      unit: row.unit || "عدد",
+      qty,
+      unitPrice: 0,
+      note: row.note || "",
+      date: receivedDate,
+    });
+  });
+
   allPurchases[index] = {
     ...purchase,
     items: updatedItems,
+    // مازاد تجمعی است، مثل issues: هر دور دریافت فقط به آن اضافه
+    // می‌کند و هیچ‌وقت بازنویسی‌اش نمی‌کند.
+    surplusItems:
+      newSurplusItems.length > 0
+        ? [...(purchase.surplusItems || []), ...newSurplusItems]
+        : purchase.surplusItems,
     // status اینجا عمداً دست‌نخورده باقی می‌ماند (هنوز shipped)؛ چند
     // خط پایین‌تر با autoResolveReplacementReturns به‌طور قطعی تعیین
     // می‌شود.

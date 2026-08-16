@@ -4,10 +4,13 @@ import ProductThumb from "@/shared/components/forms/ProductThumb";
 import QuantityStepper from "@/shared/components/forms/QuantityStepper";
 import { getRowStatus, ROW_STATUS_CONFIG } from "./receivingRowStatus";
 import IssueBreakdownEditor from "./IssueBreakdownEditor";
+import ExcessEntryStrip from "./ExcessEntryStrip";
 
 /**
- * نمای جدولی یک قلم دریافت. وقتی کسری وجود دارد، یک ردیف دوم برای
- * تفکیک مشکل زیر همان قلم باز می‌شود.
+ * نمای جدولی یک قلم دریافت. زیر هر قلم یک ردیف دوم باز می‌شود که دو
+ * محور مستقل را نگه می‌دارد: کسری (فقط وقتی کمتر از سفارش رسیده) و
+ * مازاد (همیشه در دسترس، چون از روی تعدادها قابل استنتاج نیست).
+ * یک قلم می‌تواند هم‌زمان هر دو را داشته باشد.
  */
 export default function ReceivingItemRow({
   item,
@@ -15,6 +18,7 @@ export default function ReceivingItemRow({
   onAddIssue,
   onUpdateIssue,
   onRemoveIssue,
+  onExcessChange,
 }) {
   const received = item.receivedQty || 0;
   const shortage = Math.max(0, item.expectedQty - received);
@@ -72,19 +76,22 @@ export default function ReceivingItemRow({
         </td>
       </tr>
 
-      {shortage > 0 && (
-        <tr className={config.rowClass}>
-          <td colSpan={4} className="px-3 pb-3 pt-0">
-            <IssueBreakdownEditor
-              item={item}
-              shortage={shortage}
-              onAddIssue={onAddIssue}
-              onUpdateIssue={onUpdateIssue}
-              onRemoveIssue={onRemoveIssue}
-            />
-          </td>
-        </tr>
-      )}
+      <tr className={config.rowClass}>
+        <td colSpan={4} className="px-3 pb-3 pt-0">
+          <div className="space-y-2">
+            {shortage > 0 && (
+              <IssueBreakdownEditor
+                item={item}
+                shortage={shortage}
+                onAddIssue={onAddIssue}
+                onUpdateIssue={onUpdateIssue}
+                onRemoveIssue={onRemoveIssue}
+              />
+            )}
+            <ExcessEntryStrip item={item} onExcessChange={onExcessChange} />
+          </div>
+        </td>
+      </tr>
     </Fragment>
   );
 }
