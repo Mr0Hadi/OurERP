@@ -36,3 +36,34 @@ export const PURCHASE_ISSUE_TYPE_STYLES = {
   [PURCHASE_ISSUE_TYPES.OTHER]:
     "bg-slate-100 text-slate-800 border-slate-300",
 };
+
+/**
+ * «مازاد»: کالایی که فیزیکاً در انبار ما هست ولی سفارش آن را توجیه
+ * نمی‌کند — یا بیشتر از سفارش رسیده (excess) یا اصلاً در سیستم ما
+ * تعریف نشده (unknown).
+ *
+ * این یک محورِ *جدا* از PURCHASE_ISSUE_TYPES است و هرگز نباید با آن
+ * یکی شود. مشکلات (issues) روی سفارش ادعا می‌سازند و از «مقدار
+ * قابل دریافت» کم می‌شوند؛ مازاد اساساً بیرون از سقف سفارش است و
+ * نباید هیچ اثری روی آن محاسبه بگذارد. اگر مازاد داخل issues ثبت
+ * شود، هم مقدار قابل دریافتِ انباردار را اشتباه کم می‌کند و هم در
+ * گزارش کسری — که سقفش خودِ مقدار سفارش است — بی‌صدا حذف می‌شود.
+ *
+ * برای مازادِ unknown، productId وجود ندارد: انباردار فقط شرح و
+ * تعداد ثبت می‌کند و اتصال به کالای واقعی تا لحظه‌ی تصمیمِ
+ * «نگهداری» به تعویق می‌افتد.
+ */
+export const SURPLUS_KINDS = {
+  EXCESS: "excess",
+  UNKNOWN: "unknown",
+};
+
+export const SURPLUS_KIND_LABELS = {
+  [SURPLUS_KINDS.EXCESS]: "ارسال اضافه",
+  [SURPLUS_KINDS.UNKNOWN]: "کالای ثبت‌نشده",
+};
+
+export const SURPLUS_KIND_STYLES = {
+  [SURPLUS_KINDS.EXCESS]: "bg-sky-100 text-sky-800 border-sky-300",
+  [SURPLUS_KINDS.UNKNOWN]: "bg-violet-100 text-violet-800 border-violet-300",
+};

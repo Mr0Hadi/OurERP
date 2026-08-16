@@ -2,9 +2,9 @@ import { CheckCircle2 } from "lucide-react";
 import ResolutionLineRow from "./ResolutionLineRow";
 import AddResolutionForm from "@/shared/components/forms/AddResolutionForm";
 import {
-  RESOLUTION_TYPES,
-  RESOLUTION_TYPE_LABELS,
-} from "../../services/mockData";
+  amountResolutionTypeForClaim,
+  resolutionLabelsForClaim,
+} from "../../domain/purchaseReturnRules";
 
 export default function ItemResolutionCard({
   item,
@@ -48,13 +48,16 @@ export default function ItemResolutionCard({
         </div>
       )}
 
+      {/* گزینه‌های تصمیم به نوع ادعای همین قلم بستگی دارد: یک قلم
+          کسری هرگز «عودت کالا» پیشنهاد نمی‌گیرد و یک قلم مازاد هرگز
+          «ارسال کالای جایگزین». */}
       {!readOnly && remaining > 0 && (
         <AddResolutionForm
           item={item}
           remaining={remaining}
           isBusy={isBusy}
-          typeLabels={RESOLUTION_TYPE_LABELS}
-          refundType={RESOLUTION_TYPES.REFUND}
+          typeLabels={resolutionLabelsForClaim(item)}
+          refundType={amountResolutionTypeForClaim(item)}
           onAdd={(resolution) => onAddResolution(item.issueId, resolution)}
         />
       )}

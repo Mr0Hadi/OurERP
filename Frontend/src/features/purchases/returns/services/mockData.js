@@ -2,16 +2,30 @@ import { allPurchases } from "@/features/purchases/orders/services/mockData";
 import {
   PURCHASE_ISSUE_TYPES,
   PURCHASE_ISSUE_TYPE_LABELS,
+  SURPLUS_KINDS,
+  SURPLUS_KIND_LABELS,
 } from "@/shared/constants/purchaseIssueTypes";
 
+// دلیل هر ادعا به دو خانواده تقسیم می‌شود، متناظر با دو نوع ادعا
+// (claimKind): کسری روی سفارش، و مازادِ بیرون از سفارش. برای یک ادعای
+// مازاد، دلیل همان «نوع مازاد» است — یعنی یک واژگان، نه دوتا.
+export const SHORTAGE_RETURN_REASONS = { ...PURCHASE_ISSUE_TYPES };
+export const SURPLUS_RETURN_REASONS = { ...SURPLUS_KINDS };
+
+export const SHORTAGE_RETURN_REASON_LABELS = { ...PURCHASE_ISSUE_TYPE_LABELS };
+export const SURPLUS_RETURN_REASON_LABELS = { ...SURPLUS_KIND_LABELS };
+
+// نقشه‌ی کامل، فقط برای *نمایش* (جدول، فیلتر، بج‌ها) — هر جا که قرار
+// است کاربر یک دلیل را *انتخاب* کند باید از زیرمجموعه‌ی متناسب با
+// claimKind استفاده شود، نه از این نقشه.
 export const PURCHASE_RETURN_REASONS = {
-  ...PURCHASE_ISSUE_TYPES,
-  EXCESS: "excess",
+  ...SHORTAGE_RETURN_REASONS,
+  ...SURPLUS_RETURN_REASONS,
 };
 
 export const PURCHASE_RETURN_REASON_LABELS = {
-  ...PURCHASE_ISSUE_TYPE_LABELS,
-  [PURCHASE_RETURN_REASONS.EXCESS]: "ارسال اضافه",
+  ...SHORTAGE_RETURN_REASON_LABELS,
+  ...SURPLUS_RETURN_REASON_LABELS,
 };
 
 // وضعیت کلی مرجوعی از روی خطوط تصمیمِ اقلامش محاسبه می‌شود، نه دستی
@@ -40,12 +54,33 @@ export const PURCHASE_RETURN_STATUS_LABELS = {
   [PURCHASE_RETURN_STATUSES.CANCELLED]: "لغو شده",
 };
 
-// نوع تصمیمی که برای بخشی از یک قلم گرفته می‌شود
+/**
+ * نوع تصمیمی که برای بخشی از یک قلم گرفته می‌شود.
+ *
+ * دو خانواده‌ی کاملاً مجزا که هرگز با هم مخلوط نمی‌شوند — کدام‌یک به
+ * کاربر پیشنهاد شود را claimKind همان قلم تعیین می‌کند (نگاه کنید به
+ * domain/purchaseReturnRules.js):
+ *
+ * • کسری  — کالایی که نرسید یا سالم تحویل داده نشد. پول برمی‌گردد یا
+ *           کالا دوباره فرستاده می‌شود یا زیانش را خودمان می‌پذیریم.
+ * • مازاد — کالایی که فیزیکاً پیش ماست ولی سفارش توجیهش نمی‌کند. یا
+ *           پسش می‌فرستیم، یا نگه می‌داریم و پولش را می‌دهیم، یا نگه
+ *           می‌داریم و تامین‌کننده هزینه‌اش را می‌پذیرد.
+ *
+ * توجه: WRITE_OFF یعنی *ما* زیان را می‌پذیریم (کسری‌ای که هیچ‌وقت جبران
+ * نمی‌شود) و SUPPLIER_WRITE_OFF قرینه‌ی آن است — *تامین‌کننده* هزینه‌ی
+ * کالایی را که ما نگه می‌داریم می‌پذیرد.
+ */
 export const RESOLUTION_TYPES = {
+  // کسری
   REFUND: "refund",
   REPLACEMENT: "replacement",
   CREDIT: "credit",
   WRITE_OFF: "write_off",
+  // مازاد
+  RETURN_TO_SUPPLIER: "return_to_supplier",
+  KEEP_AND_SETTLE: "keep_and_settle",
+  SUPPLIER_WRITE_OFF: "supplier_write_off",
 };
 
 export const RESOLUTION_TYPE_LABELS = {
@@ -53,10 +88,43 @@ export const RESOLUTION_TYPE_LABELS = {
   [RESOLUTION_TYPES.REPLACEMENT]: "ارسال کالای جایگزین",
   [RESOLUTION_TYPES.CREDIT]: "اعتبار در خرید بعدی",
   [RESOLUTION_TYPES.WRITE_OFF]: "پذیرش زیان (بدون بازگشت وجه)",
+  [RESOLUTION_TYPES.RETURN_TO_SUPPLIER]: "عودت کالا به تامین‌کننده",
+  [RESOLUTION_TYPES.KEEP_AND_SETTLE]: "نگهداری کالا و تسویه مالی",
+  [RESOLUTION_TYPES.SUPPLIER_WRITE_OFF]:
+    "نگهداری بدون پرداخت (به عهده تامین‌کننده)",
 };
 
-// وضعیت هر خط تصمیم. فقط برای replacement واقعاً «در انتظار» می‌ماند؛
-// بقیه‌ی انواع (پولی/زیان/اعتبار) همان لحظه‌ی ثبت، نهایی محسوب می‌شوند.
+export const SHORTAGE_RESOLUTION_TYPES = [
+  RESOLUTION_TYPES.REFUND,
+  RESOLUTION_TYPES.REPLACEMENT,
+  RESOLUTION_TYPES.CREDIT,
+  RESOLUTION_TYPES.WRITE_OFF,
+];
+
+export const SURPLUS_RESOLUTION_TYPES = [
+  RESOLUTION_TYPES.RETURN_TO_SUPPLIER,
+  RESOLUTION_TYPES.KEEP_AND_SETTLE,
+  RESOLUTION_TYPES.SUPPLIER_WRITE_OFF,
+];
+
+// انواعی که مبلغ همراه دارند و در فرم ثبت تصمیم، فیلد مبلغ را نشان
+// می‌دهند. REFUND پولی است که از تامین‌کننده پس می‌گیریم و
+// KEEP_AND_SETTLE پولی که بابت کالای مازادِ نگه‌داشته‌شده می‌پردازیم؛
+// جهت‌شان مخالف است ولی هر دو یک مبلغ دارند.
+export const AMOUNT_BEARING_RESOLUTION_TYPES = [
+  RESOLUTION_TYPES.REFUND,
+  RESOLUTION_TYPES.KEEP_AND_SETTLE,
+];
+
+// انواعی که تا وقتی انبار کاری فیزیکی انجام ندهد «در انتظار» می‌مانند:
+// REPLACEMENT منتظر *رسیدن* کالای جایگزین است و RETURN_TO_SUPPLIER
+// منتظر *خارج‌شدن* کالای مازاد از انبار. بقیه‌ی انواع (پولی/زیان/
+// اعتبار) همان لحظه‌ی ثبت، نهایی محسوب می‌شوند.
+export const WAREHOUSE_PENDING_RESOLUTION_TYPES = [
+  RESOLUTION_TYPES.REPLACEMENT,
+  RESOLUTION_TYPES.RETURN_TO_SUPPLIER,
+];
+
 export const RESOLUTION_LINE_STATUSES = {
   AWAITING: "awaiting",
   RESOLVED: "resolved",
@@ -75,7 +143,10 @@ const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
 const SEED_ELIGIBLE_STATUSES = ["partially_received", "received"];
-const REASONS_LIST = Object.values(PURCHASE_RETURN_REASONS);
+// این seedها همگی از روی کسریِ خرید ساخته می‌شوند، پس دلیلشان هم فقط
+// می‌تواند از خانواده‌ی کسری باشد؛ یک ردیفِ کسری با دلیل «ارسال اضافه»
+// داده‌ی بی‌معنایی است.
+const REASONS_LIST = Object.values(SHORTAGE_RETURN_REASONS);
 const seedEligiblePurchases = allPurchases.filter((p) =>
   SEED_ELIGIBLE_STATUSES.includes(p.status),
 );
