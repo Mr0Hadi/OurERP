@@ -4,10 +4,14 @@ import { useShippingFilterStore } from "../store/shippingFilterStore";
 import { useDebouncedShippingFilters } from "../hooks/useDebouncedShippingFilters";
 import { useOutgoingQueueQuery } from "../services/queries";
 import { useCustomersQuery } from "@/features/customers/services/queries";
+import { useSuppliersQuery } from "@/features/suppliers/services/queries";
 import ShippingFilters from "../components/table/ShippingFilters";
 import ShippingTable from "../components/table/ShippingTable";
 import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
 import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
+
+const getPartyName = (p) =>
+  p.name || p.companyName || [p.firstName, p.lastName].filter(Boolean).join(" ") || "بدون نام";
 
 const ShippingListPage = () => {
   const { pagination, sorting, setPagination, setSorting } = useShippingFilterStore();
@@ -21,8 +25,27 @@ const ShippingListPage = () => {
     { pageIndex: 0, pageSize: 200 },
     { id: "name", desc: false },
   );
+  // تامین‌کننده‌ها از وقتی لازم شدند که عودت مازاد هم در همین صف
+  // دیده می‌شود — طرفِ آن محموله‌ها مشتری نیست.
+  const { data: suppliersData, isLoading: isSuppliersLoading } = useSuppliersQuery(
+    {},
+    { pageIndex: 0, pageSize: 200 },
+    { id: "name", desc: false },
+  );
 
-  const customers = customersData?.items ?? [];
+  const parties = [
+    ...(customersData?.items ?? []).map((c) => ({
+      key: `customer:${c.id}`,
+      name: getPartyName(c),
+      type: "customer",
+    })),
+    ...(suppliersData?.items ?? []).map((s) => ({
+      key: `supplier:${s.id}`,
+      name: getPartyName(s),
+      type: "supplier",
+    })),
+  ];
+
   const rows = data?.items ?? [];
   const totalPages = data?.totalPages ?? 1;
   const currentPage = data?.page ? data.page - 1 : pagination.pageIndex;
@@ -33,12 +56,16 @@ const ShippingListPage = () => {
         <CardHeader className="flex sm:flex-row flex-col sm:items-center justify-between">
           <CardTitle>ارسال کالاهای انبار</CardTitle>
           <div className="text-sm text-muted-foreground">
-            آماده‌سازی و ارسال سفارش‌های مشتریان و کالاهای جایگزین مرجوعی
+            آماده‌سازی سفارش‌های مشتریان، کالاهای جایگزین مرجوعی و عودت مازاد به
+            تامین‌کننده
           </div>
         </CardHeader>
 
         <CardContent className="space-y-3">
-          <ShippingFilters customers={customers} isCustomersLoading={isCustomersLoading} />
+          <ShippingFilters
+            parties={parties}
+            isPartiesLoading={isCustomersLoading || isSuppliersLoading}
+          />
 
           {isError ? (
             <QueryErrorState error={error} onRetry={() => refetch()} />

@@ -1,4 +1,4 @@
-import { Truck, Undo2 } from "lucide-react";
+import { Truck, Undo2, PackageMinus } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
 import {
   OUTGOING_TYPES,
@@ -10,11 +10,14 @@ const TYPE_STYLES = {
     "bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-100",
   [OUTGOING_TYPES.RETURN_REPLACEMENT]:
     "bg-indigo-100 text-indigo-800 border-indigo-300 hover:bg-indigo-100",
+  [OUTGOING_TYPES.RETURN_TO_SUPPLIER]:
+    "bg-rose-100 text-rose-800 border-rose-300 hover:bg-rose-100",
 };
 
 const TYPE_ICON = {
   [OUTGOING_TYPES.SALE]: Truck,
   [OUTGOING_TYPES.RETURN_REPLACEMENT]: Undo2,
+  [OUTGOING_TYPES.RETURN_TO_SUPPLIER]: PackageMinus,
 };
 
 export default function ShippingTypeBadge({ type }) {

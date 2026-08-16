@@ -678,6 +678,93 @@ export async function removeItemResolution(returnId, issueId, resolutionId) {
   return allPurchaseReturns[idx];
 }
 
+/**
+ * ثبت یک دور خروج فیزیکی کالای مازاد از انبار به سمت تامین‌کننده.
+ * قرینه‌ی confirmReplacementShipmentBatch در مرجوعی فروش، با همان
+ * قرارداد تجمعی: هر خط تصمیم shippedQty خودش را دارد و فقط وقتی به
+ * qty کامل رسید «نهایی» می‌شود؛ تا آن موقع همان مرجوعی دوباره در صف
+ * ارسال انبار ظاهر می‌شود.
+ *
+ * برخلاف ارسال کالای جایگزین، اینجا موجودی *دست نمی‌خورد* و این عمدی
+ * است: تعدادی که تصمیمِ «عودت» خورده هیچ‌وقت وارد موجودی قابل‌فروش
+ * نشده. مازاد در confirmReceiving وارد موجودی نمی‌شود و فقط تصمیم
+ * «نگهداری» آن را اضافه می‌کند؛ و چون هر خط تصمیم روی بخش جدایی از
+ * تعداد نشسته (۲ عدد نگهداری + ۳ عدد عودت، نه ۵ عدد که هر دو شود)،
+ * بخشِ عودتی هرگز در موجودی نبوده. کم‌کردنش یعنی دوبار خارج‌کردن
+ * کالایی که یک‌بار هم وارد نشده بود.
+ */
+export async function confirmSupplierReturnShipmentBatch(returnId, shipmentData) {
+  await delay(500);
+  const idx = getReturnIndex(returnId);
+  if (idx === -1) throw new Error("مرجوعی یافت نشد");
+
+  const ret = allPurchaseReturns[idx];
+  const shippedDate =
+    shipmentData.shippedDate || new Date().toISOString().slice(0, 10);
+  const linesToShip = shipmentData.items || [];
+
+  if (linesToShip.length === 0) {
+    throw new Error("هیچ کالایی برای ثبت ارسال انتخاب نشده است");
+  }
+
+  const newItems = ret.items.map((item) => {
+    const entriesForItem = linesToShip.filter((l) => l.issueId === item.issueId);
+    if (entriesForItem.length === 0) return item;
+
+    const newResolutions = (item.resolutions || []).map((r) => {
+      const entry = entriesForItem.find((l) => l.resolutionId === r.id);
+      if (!entry) return r;
+      if (r.type !== RESOLUTION_TYPES.RETURN_TO_SUPPLIER) return r;
+      if (r.status === RESOLUTION_LINE_STATUSES.RESOLVED) return r;
+
+      const prevShipped = r.shippedQty || 0;
+      const remaining = r.qty - prevShipped;
+      const thisRoundQty = Math.max(
+        0,
+        Math.min(Number(entry.shippedQtyThisRound) || 0, remaining),
+      );
+      if (thisRoundQty <= 0) return r;
+
+      const newShippedQty = prevShipped + thisRoundQty;
+      const isFullyShipped = newShippedQty >= r.qty;
+
+      return {
+        ...r,
+        shippedQty: newShippedQty,
+        status: isFullyShipped
+          ? RESOLUTION_LINE_STATUSES.RESOLVED
+          : RESOLUTION_LINE_STATUSES.AWAITING,
+        resolvedAt: isFullyShipped ? new Date().toISOString() : null,
+        shipmentHistory: [
+          ...(r.shipmentHistory || []),
+          {
+            id: generateId(),
+            date: shippedDate,
+            qty: thisRoundQty,
+            driverName: shipmentData.driverName || "",
+            driverNationalId: shipmentData.driverNationalId || "",
+            vehiclePlate: shipmentData.vehiclePlate || "",
+            note: shipmentData.shippingNote || "",
+          },
+        ],
+      };
+    });
+
+    return { ...item, resolutions: newResolutions };
+  });
+
+  allPurchaseReturns[idx] = {
+    ...ret,
+    items: newItems,
+    status: computeReturnStatus(newItems),
+    updatedAt: new Date().toISOString(),
+  };
+
+  await syncPurchaseStatusForReturns(ret.purchaseId);
+
+  return allPurchaseReturns[idx];
+}
+
 export async function rejectPurchaseReturn(id) {
   await delay(300);
   const idx = getReturnIndex(id);

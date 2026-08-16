@@ -10,15 +10,33 @@ import { OUTGOING_TYPE_LABELS } from "../../services/outgoingQueueApi";
 
 const TYPE_OPTIONS = toFilterOptions(OUTGOING_TYPE_LABELS);
 
-const ShippingFilters = ({ customers = [], isCustomersLoading = false }) => {
+// از وقتی عودت مازاد به این صف اضافه شد، طرفِ یک محموله می‌تواند مشتری
+// یا تامین‌کننده باشد؛ پس هر گزینه کلید ترکیبی دارد و نوعش هم نشان
+// داده می‌شود — همان قراردادی که صف دریافت از اول داشت.
+const getPartyKey = (party) => party.key;
+const getPartyLabel = (party) => party.name;
+
+const renderPartyType = (party) => (
+  <span className="text-[10px] text-muted-foreground">
+    {party.type === "customer" ? "مشتری" : "تامین‌کننده"}
+  </span>
+);
+
+const renderPartyTypeChip = (party) => (
+  <span className="text-[10px] opacity-70">
+    ({party.type === "customer" ? "مشتری" : "تامین‌کننده"})
+  </span>
+);
+
+const ShippingFilters = ({ parties = [], isPartiesLoading = false }) => {
   const {
     globalSearch,
-    customerIds,
+    counterpartyIds,
     type,
     fromDate,
     toDate,
     setGlobalSearch,
-    setCustomerIds,
+    setCounterpartyIds,
     setType,
     setFromDate,
     setToDate,
@@ -53,26 +71,31 @@ const ShippingFilters = ({ customers = [], isCustomersLoading = false }) => {
       }
     >
       <FilterSearchInput
-        placeholder="شماره فاکتور/مرجوعی..."
+        placeholder="نام مشتری/تامین‌کننده، شماره فاکتور/مرجوعی..."
         value={globalSearch}
         onChange={handleGlobalSearch}
       />
 
       <EntityMultiSelect
-        label="مشتری"
-        placeholder="انتخاب مشتری..."
-        emptyText="مشتری‌ای یافت نشد"
-        items={customers}
-        value={customerIds}
-        onSelect={setCustomerIds}
-        isLoading={isCustomersLoading}
+        label="مشتری / تامین‌کننده"
+        placeholder="انتخاب طرف حساب..."
+        emptyText="موردی یافت نشد"
+        items={parties}
+        value={counterpartyIds}
+        onSelect={setCounterpartyIds}
+        isLoading={isPartiesLoading}
+        getKey={getPartyKey}
+        getLabel={getPartyLabel}
+        renderMeta={renderPartyType}
+        renderChipMeta={renderPartyTypeChip}
+        showSelectAll={false}
       />
 
       <FilterSelect
         label="نوع"
         value={type}
         onChange={setType}
-        allLabel="همه (فروش و جایگزین)"
+        allLabel="همه (فروش، جایگزین و عودت)"
         options={TYPE_OPTIONS}
       />
     </FilterPanel>
