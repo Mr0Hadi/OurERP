@@ -3,7 +3,7 @@ import { useEffect, useMemo } from "react";
 import {
   fetchPurchaseReturns,
   fetchPurchaseReturnById,
-  fetchShortageReportByPurchaseId,
+  fetchMismatchReportByPurchaseId,
 } from "./api-mockData";
 import { purchaseReturnKeys } from "./queryKeys";
 
@@ -57,10 +57,10 @@ export function usePurchaseReturnQuery(id) {
   });
 }
 
-export function useShortageReportByPurchaseIdQuery(purchaseId) {
+export function useMismatchReportByPurchaseIdQuery(purchaseId) {
   return useQuery({
     queryKey: purchaseReturnKeys.reportDetail(purchaseId),
-    queryFn: () => fetchShortageReportByPurchaseId(purchaseId),
+    queryFn: () => fetchMismatchReportByPurchaseId(purchaseId),
     enabled: !!purchaseId,
     staleTime: 1000 * 60 * 2,
     refetchOnMount: "always",

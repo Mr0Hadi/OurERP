@@ -2,8 +2,10 @@ import { allPurchases } from "@/features/purchases/orders/services/mockData";
 import {
   PURCHASE_ISSUE_TYPES,
   PURCHASE_ISSUE_TYPE_LABELS,
+  PURCHASE_ISSUE_TYPE_STYLES,
   SURPLUS_KINDS,
   SURPLUS_KIND_LABELS,
+  SURPLUS_KIND_STYLES,
 } from "@/shared/constants/purchaseIssueTypes";
 
 // دلیل هر ادعا به دو خانواده تقسیم می‌شود، متناظر با دو نوع ادعا
@@ -26,6 +28,11 @@ export const PURCHASE_RETURN_REASONS = {
 export const PURCHASE_RETURN_REASON_LABELS = {
   ...SHORTAGE_RETURN_REASON_LABELS,
   ...SURPLUS_RETURN_REASON_LABELS,
+};
+
+export const PURCHASE_RETURN_REASON_STYLES = {
+  ...PURCHASE_ISSUE_TYPE_STYLES,
+  ...SURPLUS_KIND_STYLES,
 };
 
 // وضعیت کلی مرجوعی از روی خطوط تصمیمِ اقلامش محاسبه می‌شود، نه دستی

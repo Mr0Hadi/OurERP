@@ -6,11 +6,12 @@ import { Button } from "@/shared/components/ui/button";
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { usePurchaseReturnFormStore } from "../store/purchaseReturnFormStore";
 import { usePurchaseReturnForm } from "../hooks/usePurchaseReturnForm";
-import { useShortageReportByPurchaseIdQuery } from "../services/queries";
+import { useMismatchReportByPurchaseIdQuery } from "../services/queries";
 import { useCreatePurchaseReturnMutation } from "../services/mutations";
 
 import PurchaseReturnWarehouseReportSection from "../components/forms/PurchaseReturnWarehouseReportSection";
 import PurchaseReturnItemsSection from "../components/forms/PurchaseReturnItemsSection";
+import PurchaseReturnSurplusSection from "../components/forms/PurchaseReturnSurplusSection";
 import PurchaseReturnInfoSection from "../components/forms/PurchaseReturnInfoSection";
 import PurchaseReturnDetailLoading from "../components/forms/PurchaseReturnDetailLoading";
 import { ROUTES } from "@/shared/constants/routes";
@@ -25,10 +26,15 @@ export default function PurchaseReturnNewPage() {
   const {
     setFormData,
     items,
+    surplusItems,
     selectedItems,
+    selectedSurplusItems,
     handleAddClaim,
     handleUpdateClaim,
     handleRemoveClaim,
+    handleAddSurplusClaim,
+    handleUpdateSurplusClaim,
+    handleRemoveSurplusClaim,
     computedTotal,
     buildPayload,
   } = usePurchaseReturnForm();
@@ -40,7 +46,7 @@ export default function PurchaseReturnNewPage() {
     isLoading,
     isError,
     error,
-  } = useShortageReportByPurchaseIdQuery(purchaseId);
+  } = useMismatchReportByPurchaseIdQuery(purchaseId);
 
   useEffect(() => {
     resetForm();
@@ -68,7 +74,7 @@ export default function PurchaseReturnNewPage() {
   }, [setHeader, clearHeader, navigate]);
 
   const createMutation = useCreatePurchaseReturnMutation();
-  const selectedCount = selectedItems.length;
+  const selectedCount = selectedItems.length + selectedSurplusItems.length;
 
   const onSubmit = (e) => {
     e.preventDefault();
@@ -91,10 +97,10 @@ export default function PurchaseReturnNewPage() {
       <div className="flex flex-col items-center justify-center py-20 gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
         <p className="text-lg text-muted-foreground">
-          {error?.message || "این خرید دیگر کسری قابل پیگیری ندارد."}
+          {error?.message || "این خرید دیگر مغایرت قابل پیگیری ندارد."}
         </p>
         <Button variant="outline" onClick={() => navigate(ROUTES.PURCHASES_RETURNS_LIST)}>
-          بازگشت به گزارش‌های کسری
+          بازگشت به گزارش‌های مغایرت
         </Button>
       </div>
     );
@@ -114,6 +120,13 @@ export default function PurchaseReturnNewPage() {
               onAddClaim={handleAddClaim}
               onUpdateClaim={handleUpdateClaim}
               onRemoveClaim={handleRemoveClaim}
+            />
+
+            <PurchaseReturnSurplusSection
+              items={surplusItems}
+              onAddClaim={handleAddSurplusClaim}
+              onUpdateClaim={handleUpdateSurplusClaim}
+              onRemoveClaim={handleRemoveSurplusClaim}
             />
 
             {showErrors && selectedCount === 0 && (

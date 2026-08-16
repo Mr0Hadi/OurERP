@@ -1,11 +1,14 @@
 import axiosInstance from "@/shared/services/api/axios";
 
-export async function fetchShortageReports(params = {}) {
-  const { data } = await axiosInstance.get("/purchases/shortage-reports", { params });
+// گزارش مغایرت هر خرید دو محور دارد: items (کسری روی سفارش) و
+// surplusItems (مازادِ بیرون از سفارش، شامل کالای ثبت‌نشده‌ی بدون
+// productId).
+export async function fetchMismatchReports(params = {}) {
+  const { data } = await axiosInstance.get("/purchases/mismatch-reports", { params });
   return data;
 }
-export async function fetchShortageReportByPurchaseId(purchaseId) {
-  const { data } = await axiosInstance.get(`/purchases/shortage-reports/${purchaseId}`);
+export async function fetchMismatchReportByPurchaseId(purchaseId) {
+  const { data } = await axiosInstance.get(`/purchases/mismatch-reports/${purchaseId}`);
   return data;
 }
 export async function fetchPurchaseReturns(params = {}) {

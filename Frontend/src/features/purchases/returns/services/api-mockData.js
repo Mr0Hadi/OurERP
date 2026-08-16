@@ -11,6 +11,7 @@ import {
   recomputePurchaseStatus,
 } from "@/features/purchases/orders/services/api-mockData";
 import { PURCHASE_ISSUE_TYPES } from "@/shared/constants/purchaseIssueTypes";
+import { CLAIM_KINDS, affectsOrderedQty } from "../domain/purchaseReturnRules";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const generateId = () =>
@@ -47,8 +48,29 @@ function getReservedQtyForIssue(issueId, excludeReturnId = null) {
     if (excludeReturnId && r.id === excludeReturnId) return;
     if (!ACTIVE_RETURN_STATUSES.has(r.status)) return;
     r.items.forEach((item) => {
+      // ادعاهای مازاد اصلاً روی هیچ مشکل گزارش‌شده‌ای ننشسته‌اند؛ اگر
+      // اینجا شمرده شوند سهمیه‌ی کسری را بی‌دلیل مصرف می‌کنند.
+      if (!affectsOrderedQty(item)) return;
       const linkedIssueId = item.sourceIssueId ?? item.issueId;
       if (linkedIssueId === issueId) sum += item.qty;
+    });
+  });
+  return sum;
+}
+
+/**
+ * قرینه‌ی getReservedQtyForIssue برای مازاد: چه مقدار از یک ردیف
+ * مازادِ انبار را مرجوعی‌های فعال قبلاً برداشته‌اند. برخلاف کسری،
+ * اینجا هیچ سقف دومی از سمت سفارش وجود ندارد — تنها سقف، خودِ تعدادی
+ * است که انباردار شمرده.
+ */
+function getReservedQtyForSurplus(surplusId, excludeReturnId = null) {
+  let sum = 0;
+  allPurchaseReturns.forEach((r) => {
+    if (excludeReturnId && r.id === excludeReturnId) return;
+    if (!ACTIVE_RETURN_STATUSES.has(r.status)) return;
+    r.items.forEach((item) => {
+      if (item.sourceSurplusId === surplusId) sum += item.qty;
     });
   });
   return sum;
@@ -90,6 +112,9 @@ function getOpenIssueQtyForItem(item, purchaseId) {
       if (ret.purchaseId !== purchaseId) return;
       if (TERMINAL_RETURN_STATUSES.has(ret.status)) return;
       ret.items.forEach((retItem) => {
+        // مازاد بیرون از سقف سفارش است و هیچ‌وقت نباید روی «چقدر هنوز
+        // قابل دریافت است» اثر بگذارد
+        if (!affectsOrderedQty(retItem)) return;
         const linkedIssueId = retItem.sourceIssueId ?? retItem.issueId;
         if (linkedIssueId !== issue.id) return;
         const decided = (retItem.resolutions || []).reduce(
@@ -165,7 +190,39 @@ function distributeOpenQtyAcrossIssues(item) {
   return result;
 }
 
-function buildShortageReport(purchase) {
+/**
+ * ردیف‌های مازادِ هنوز ادعانشده. هر ردیف مستقل می‌ماند و با ردیف‌های
+ * دیگرِ همان کالا ادغام نمی‌شود: یادداشت انباردار و تاریخ هر دور
+ * دریافت بخشی از معنای همان ردیف است، و کالای ثبت‌نشده اصلاً کلیدی
+ * برای گروه‌شدن ندارد.
+ */
+function buildOpenSurplusLines(purchase) {
+  return (purchase.surplusItems || [])
+    .map((entry) => {
+      const openQty = Math.max(0, entry.qty - getReservedQtyForSurplus(entry.id));
+      if (openQty <= 0) return null;
+      return {
+        surplusId: entry.id,
+        surplusKind: entry.kind,
+        productId: entry.productId ?? null,
+        productCode: entry.productCode ?? null,
+        productName: entry.productName,
+        unit: entry.unit,
+        unitPrice: entry.unitPrice || 0,
+        openSurplusQty: openQty,
+        note: entry.note || "",
+        reportedDate: entry.date,
+      };
+    })
+    .filter(Boolean);
+}
+
+/**
+ * گزارش مغایرت یک خرید: هرچه انبار دریافت کرده و با سفارش نمی‌خواند.
+ * دو محور کاملاً مستقل دارد و یک کالا می‌تواند هم‌زمان در هر دو باشد —
+ * items (کسری روی سفارش) و surplusItems (مازادِ بیرون از سفارش).
+ */
+function buildMismatchReport(purchase) {
   const lines = [];
 
   purchase.items.forEach((item) => {
@@ -188,13 +245,17 @@ function buildShortageReport(purchase) {
     });
   });
 
-  const lastReportDate = lines.reduce(
+  const surplusLines = buildOpenSurplusLines(purchase);
+
+  const lastReportDate = [...lines, ...surplusLines].reduce(
     (latest, l) => (!latest || l.reportedDate > latest ? l.reportedDate : latest),
     null,
   );
 
   return {
     purchaseId: purchase.id,
+    surplusItems: surplusLines,
+    totalOpenSurplusQty: surplusLines.reduce((s, l) => s + l.openSurplusQty, 0),
     // این فیلد برای شناسایی «آیا داده‌ی این گزارش هنوز تازه است؟» در
     // فرم ثبت مرجوعی استفاده می‌شود؛ هر تغییری روی خرید (دور جدید
     // دریافت، مشکل جدید، تصمیم جدید) این مقدار را عوض می‌کند.
@@ -220,10 +281,12 @@ function mostFrequentReason(values) {
 }
 
 function toVirtualReturnEntry(report) {
-  if (!report || report.items.length === 0) return null;
+  if (!report) return null;
+  if (report.items.length === 0 && report.surplusItems.length === 0) return null;
 
-  const items = report.items.map((i) => ({
+  const shortageItems = report.items.map((i) => ({
     issueId: i.issueId,
+    claimKind: CLAIM_KINDS.SHORTAGE,
     productId: i.productId,
     productCode: i.productCode,
     productName: i.productName,
@@ -235,6 +298,28 @@ function toVirtualReturnEntry(report) {
     note: i.issueNote,
     resolutions: [],
   }));
+
+  // یک خرید ممکن است *فقط* مازاد داشته باشد (همه‌چیز کامل رسید ولی
+  // چند کارتن اضافه هم آمد)؛ چنین خریدی هم باید در لیست پیگیری دیده
+  // شود، وگرنه مازاد بی‌صدا گم می‌شود.
+  const surplusItems = report.surplusItems.map((s) => ({
+    issueId: s.surplusId,
+    claimKind: CLAIM_KINDS.SURPLUS,
+    surplusKind: s.surplusKind,
+    sourceSurplusId: s.surplusId,
+    productId: s.productId,
+    productCode: s.productCode,
+    productName: s.productName,
+    unit: s.unit,
+    qty: s.openSurplusQty,
+    unitPrice: s.unitPrice,
+    lineTotal: s.openSurplusQty * s.unitPrice,
+    reason: s.surplusKind,
+    note: s.note,
+    resolutions: [],
+  }));
+
+  const items = [...shortageItems, ...surplusItems];
 
   return {
     id: `report-${report.purchaseId}`,
@@ -257,7 +342,7 @@ function toVirtualReturnEntry(report) {
 
 function getAllTrackableEntries() {
   return allPurchases
-    .map((purchase) => toVirtualReturnEntry(buildShortageReport(purchase)))
+    .map((purchase) => toVirtualReturnEntry(buildMismatchReport(purchase)))
     .filter(Boolean);
 }
 
@@ -281,14 +366,14 @@ function withRoundInfo(list) {
   });
 }
 
-export async function fetchShortageReportByPurchaseId(purchaseId) {
+export async function fetchMismatchReportByPurchaseId(purchaseId) {
   await delay(300);
   const purchase = getPurchase(purchaseId);
   if (!purchase) throw new Error("خرید یافت نشد");
 
-  const report = buildShortageReport(purchase);
-  if (report.items.length === 0) {
-    throw new Error("این خرید دیگر کسری قابل پیگیری ندارد");
+  const report = buildMismatchReport(purchase);
+  if (report.items.length === 0 && report.surplusItems.length === 0) {
+    throw new Error("این خرید دیگر مغایرت قابل پیگیری ندارد");
   }
   return report;
 }

@@ -7,6 +7,10 @@ export default function PurchaseReturnItemsSection({
   onUpdateClaim,
   onRemoveClaim,
 }) {
+  // یک گزارش می‌تواند *فقط* مازاد داشته باشد؛ در آن حالت نمایش یک
+  // کارت خالیِ «اقلام مرجوعی» فقط گیج‌کننده است.
+  if (items.length === 0) return null;
+
   return (
     <ReturnClaimsSection
       items={items}

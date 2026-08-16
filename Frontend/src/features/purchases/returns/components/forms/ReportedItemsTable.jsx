@@ -1,7 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { ClipboardList } from "lucide-react";
-import { PURCHASE_RETURN_REASON_LABELS } from "../../services/mockData";
+import {
+  PURCHASE_RETURN_REASON_LABELS,
+  PURCHASE_RETURN_REASON_STYLES,
+} from "../../services/mockData";
 
 export default function ReportedItemsTable({ purchaseReturn }) {
   return (
@@ -33,7 +36,7 @@ export default function ReportedItemsTable({ purchaseReturn }) {
                   قیمت واحد
                 </th>
                 <th className="w-[22%] text-center px-2 py-2.5 font-medium">
-                  نوع مشکل گزارش‌شده
+                  نوع گزارش‌شده
                 </th>
                 <th className="w-[16%] text-center px-2 py-2.5 font-medium">
                   جمع
@@ -68,7 +71,7 @@ export default function ReportedItemsTable({ purchaseReturn }) {
                   <td className="px-2 py-2 text-center">
                     <Badge
                       variant="outline"
-                      className="text-[11px] whitespace-normal w-full h-full"
+                      className={`text-[11px] whitespace-normal w-full h-full ${PURCHASE_RETURN_REASON_STYLES[item.reason] ?? ""}`}
                     >
                       {PURCHASE_RETURN_REASON_LABELS[item.reason] ??
                         item.reason}
@@ -112,7 +115,10 @@ export default function ReportedItemsTable({ purchaseReturn }) {
                     {item.productCode}
                   </p>
                 </div>
-                <Badge variant="outline" className="text-[11px] shrink-0">
+                <Badge
+                  variant="outline"
+                  className={`text-[11px] shrink-0 ${PURCHASE_RETURN_REASON_STYLES[item.reason] ?? ""}`}
+                >
                   {PURCHASE_RETURN_REASON_LABELS[item.reason] ??
                     item.reason}
                 </Badge>

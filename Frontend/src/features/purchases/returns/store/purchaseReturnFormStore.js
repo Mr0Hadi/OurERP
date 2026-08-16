@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { SURPLUS_KIND_LABELS } from "@/shared/constants/purchaseIssueTypes";
 
 const EMPTY_RETURN = {
   purchaseId: "",
@@ -9,6 +10,10 @@ const EMPTY_RETURN = {
   reason: "shortage",
   description: "",
   items: [],
+  // ادعاهای مازاد در فهرست جداگانه‌ای می‌نشینند، نه کنار کسری‌ها:
+  // سقف، دلایل و تصمیم‌های مجازشان فرق دارد و یک کالا می‌تواند
+  // هم‌زمان در هر دو فهرست باشد.
+  surplusItems: [],
   status: "pending",
   resolutionType: "none",
   refundAmount: "",
@@ -33,6 +38,8 @@ export const usePurchaseReturnFormStore = create((set, get) => ({
     set((state) => ({ formData: { ...state.formData, ...data } })),
   setItems: (items) =>
     set((state) => ({ formData: { ...state.formData, items } })),
+  setSurplusItems: (surplusItems) =>
+    set((state) => ({ formData: { ...state.formData, surplusItems } })),
 
   /**
    * فرم ثبت مرجوعی را از روی گزارش کسریِ انبار پر می‌کند — اما برخلاف
@@ -82,6 +89,31 @@ export const usePurchaseReturnFormStore = create((set, get) => ({
       });
     });
 
+    // هر ردیف مازاد یک کارت مستقل است و با ردیف‌های دیگرِ همان کالا
+    // ادغام نمی‌شود — یادداشت و تاریخ هر دور دریافت بخشی از معنای
+    // همان ردیف است، و کالای ثبت‌نشده اصلاً کلیدی برای گروه‌شدن ندارد.
+    const surplusLines = (report.surplusItems || []).map((entry) => ({
+      lineId: entry.surplusId,
+      sourceSurplusId: entry.surplusId,
+      surplusKind: entry.surplusKind,
+      productId: entry.productId,
+      // کالای ثبت‌نشده کد ندارد؛ به‌جای یک خط خالی، نوع مازاد را
+      // در همان جای کد نشان می‌دهیم.
+      productCode: entry.productCode || SURPLUS_KIND_LABELS[entry.surplusKind],
+      productName: entry.productName,
+      unit: entry.unit,
+      unitPrice: entry.unitPrice,
+      maxReturnableQty: entry.openSurplusQty,
+      claims: [
+        {
+          id: generateId(),
+          reason: entry.surplusKind,
+          qty: entry.openSurplusQty,
+          note: entry.note || "",
+        },
+      ],
+    }));
+
     set({
       initializedForId: version,
       formData: {
@@ -90,8 +122,12 @@ export const usePurchaseReturnFormStore = create((set, get) => ({
         purchaseInvoiceNumber: report.invoiceNumber,
         supplierId: report.supplierId,
         supplierName: report.supplierName,
-        reason: mostFrequent(report.items.map((i) => i.issueType)),
+        reason: mostFrequent([
+          ...report.items.map((i) => i.issueType),
+          ...(report.surplusItems || []).map((s) => s.surplusKind),
+        ]),
         items: [...productMap.values()],
+        surplusItems: surplusLines,
       },
     });
   },
