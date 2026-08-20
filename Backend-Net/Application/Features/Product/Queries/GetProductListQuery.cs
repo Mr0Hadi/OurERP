@@ -1,4 +1,5 @@
 ﻿using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.Product.Dtos;
@@ -25,9 +26,11 @@ namespace Application.Features.Product.Queries
     public class GetProductListQueryHandler : IRequestHandler<GetProductListQuery, ResponseDto>
     {
         private readonly IWMSDbContext _context;
-        public GetProductListQueryHandler(IWMSDbContext context)
+        private readonly IObjectStorageService _objectStorageService;
+        public GetProductListQueryHandler(IWMSDbContext context, IObjectStorageService objectStorageService)
         {
             _context = context;
+            _objectStorageService = objectStorageService;
         }
         public async Task<ResponseDto> Handle(GetProductListQuery request, CancellationToken cancellationToken)
         {
@@ -74,7 +77,7 @@ namespace Application.Features.Product.Queries
                 query = query.Where(p => p.RetailPrice <= request.ToPrice);
             }
 
-            var data = await query.Select(x => new ProductListDto
+            var paged = await query.Select(x => new ProductListDto
             {
                 Id = x.Id,
                 Brand = x.Brand,
@@ -83,18 +86,24 @@ namespace Application.Features.Product.Queries
                 CategoryName = x.ProductCategory.Name,
                 Stock = x.Stock,
                 RetailPrice = x.RetailPrice,
-                WholeSalePrice = x.WholeSalePrice
-            }).ToPaged(request.Page, request.Take, out int pageCount, out int totalCount).ToListAsync();
+                WholeSalePrice = x.WholeSalePrice,
+                ImageKey = x.ImageUrl
+            }).ToPagedAsync(request.Page, request.Take, cancellationToken);
+
+            // Signing happens after materialization - GetPresignedUrl is a local method call and
+            // could not be translated into the SQL projection above.
+            foreach (var item in paged.Items)
+                item.ImageUrl = _objectStorageService.GetPresignedUrl(item.ImageKey);
 
             res.Data = new
             {
-                ProductList = data,
+                ProductList = paged.Items,
                 Page = new ResponsePageDto
                 {
                     Page = request.Page,
-                    PageCount = pageCount,
+                    PageCount = paged.PageCount,
                     Take = request.Take,
-                    Total = totalCount
+                    Total = paged.TotalCount
                 }
             };
             res.Message = "اطلاعات محصول با موفقیت ارسال شد.";

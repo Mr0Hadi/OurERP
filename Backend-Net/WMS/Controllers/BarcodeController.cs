@@ -33,5 +33,12 @@ namespace WMS.Controllers
             var file = await _mediator.Send(request);
             return File(file.Content, file.ContentType, file.FileName);
         }
+
+        [HttpGet("GetPurchaseReceivingLabelsPdf")]
+        public async Task<IActionResult> GetPurchaseReceivingLabelsPdf([FromQuery] GetPurchaseReceivingLabelsPdfQuery request)
+        {
+            var file = await _mediator.Send(request);
+            return File(file.Content, file.ContentType, file.FileName);
+        }
     }
 }

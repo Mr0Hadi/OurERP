@@ -15,7 +15,7 @@ namespace WMS.Tests.Unit
 {
     public class CreateCustomerCommandValidatorTests
     {
-        private readonly CreateCustomerCommandValidation _sut = new();
+        private readonly CreateCustomerCommandValidator _sut = new();
 
         private static CreateCustomerCommand Valid() => new()
         {
@@ -171,7 +171,7 @@ namespace WMS.Tests.Unit
 
     public class CreateSupplierCommandValidatorTests
     {
-        private readonly CreateSupplierCommandValidation _sut = new();
+        private readonly CreateSupplierCommandValidator _sut = new();
 
         private static CreateSupplierCommand Valid() => new()
         {

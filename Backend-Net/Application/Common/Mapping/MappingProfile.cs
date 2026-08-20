@@ -54,7 +54,13 @@ namespace Application.Common.Mapping
 			CreateMap<CreateProductCommand, Product>()
 				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
-			CreateMap<Product, ProductDto>();
+			// The entity's ImageUrl column holds the bucket object key (signed URLs expire, so
+			// one can't be persisted). The DTO splits that into ImageKey (the stable value) and
+			// ImageUrl, which each query handler then fills with a freshly signed URL -
+			// AutoMapper can't sign it here because signing needs IObjectStorageService.
+			CreateMap<Product, ProductDto>()
+				.ForMember(dest => dest.ImageKey, opt => opt.MapFrom(src => src.ImageUrl))
+				.ForMember(dest => dest.ImageUrl, opt => opt.Ignore());
 
 			CreateMap<CreateProductCategoryCommand, ProductCategory>()
 				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
@@ -65,13 +71,17 @@ namespace Application.Common.Mapping
 				.ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.Now))
 				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
-			CreateMap<Supplier, SupplierDto>();
+			CreateMap<Supplier, SupplierDto>()
+				.ForMember(dest => dest.ImageKey, opt => opt.MapFrom(src => src.ImageUrl))
+				.ForMember(dest => dest.ImageUrl, opt => opt.Ignore());
 
 			CreateMap<CreateCustomerCommand, Customer>()
 				.ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.Now))
 				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
-			CreateMap<Customer, CustomerDto>();
+			CreateMap<Customer, CustomerDto>()
+				.ForMember(dest => dest.ImageKey, opt => opt.MapFrom(src => src.ImageUrl))
+				.ForMember(dest => dest.ImageUrl, opt => opt.Ignore());
 
 			CreateMap<User, TokenUserInfoDto>()
 				.ForMember(dest => dest.RoleName, opt => opt.MapFrom(src => src.Role.Name));

@@ -59,7 +59,7 @@ namespace Application.Features.WarehouseReceiving.Queries
                 query = query.Where(x => x.InvoiceDate <= request.ToDate.Value);
             }
 
-            var data = await query
+            var paged = await query
                 .OrderByDescending(x => x.InvoiceDate)
                 .Select(p => new ReceiveSaleReturnListDto
                 {
@@ -68,17 +68,17 @@ namespace Application.Features.WarehouseReceiving.Queries
                     InvoiceDate = p.InvoiceDate,
                     CustomerId = p.CustomerId,
                     CustomerName = p.Customer.FirstName + " " + p.Customer.LastName,
-                }).ToPaged(request.Page, request.Take, out int pageCount, out int totalCount).ToListAsync(cancellationToken);
+                }).ToPagedAsync(request.Page, request.Take, cancellationToken);
 
             res.Data = new
             {
-                ReceiveList = data,
+                ReceiveList = paged.Items,
                 Page = new ResponsePageDto
                 {
                     Page = request.Page,
-                    PageCount = pageCount,
+                    PageCount = paged.PageCount,
                     Take = request.Take,
-                    Total = totalCount
+                    Total = paged.TotalCount
                 }
             };
 

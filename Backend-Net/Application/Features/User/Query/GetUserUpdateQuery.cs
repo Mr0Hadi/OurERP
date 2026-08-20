@@ -28,7 +28,7 @@ namespace Application.Features.User.Query
 		{
 			var res = new ResponseDto();
 
-			var user = await _userRepository.GetByIdAsync(request.Id) ?? throw new NotFoundCustomException("کاربر با این اطلاعات یافت نشد.");
+			var user = await _userRepository.GetByIdAsync(request.Id, cancellationToken) ?? throw new NotFoundCustomException("کاربر با این اطلاعات یافت نشد.");
 
 			res.Data = _mapper.Map<UserUpdateDto>(user);
 

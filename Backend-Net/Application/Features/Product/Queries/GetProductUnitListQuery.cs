@@ -45,7 +45,7 @@ namespace Application.Features.Product.Queries
             if (request.ToSerial.HasValue)
                 query = query.Where(x => x.SerialNumber <= request.ToSerial);
 
-            var data = await query
+            var paged = await query
                 .OrderBy(x => x.ProductId)
                 .ThenBy(x => x.SerialNumber)
                 .Select(x => new ProductUnitDto
@@ -61,18 +61,17 @@ namespace Application.Features.Product.Queries
                     CreatedAt = x.CreatedAt,
                     SoldAt = x.SoldAt,
                 })
-                .ToPaged(request.Page, request.Take, out int pageCount, out int totalCount)
-                .ToListAsync(cancellationToken);
+                .ToPagedAsync(request.Page, request.Take, cancellationToken);
 
             res.Data = new
             {
-                ProductUnitList = data,
+                ProductUnitList = paged.Items,
                 Page = new ResponsePageDto
                 {
                     Page = request.Page,
-                    PageCount = pageCount,
+                    PageCount = paged.PageCount,
                     Take = request.Take,
-                    Total = totalCount
+                    Total = paged.TotalCount
                 }
             };
             res.Message = "لیست دانه‌های محصول با موفقیت ارسال شد.";

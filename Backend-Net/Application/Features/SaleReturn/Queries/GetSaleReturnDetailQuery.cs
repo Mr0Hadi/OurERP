@@ -19,11 +19,13 @@ namespace Application.Features.SaleReturn.Queries
     public class GetSaleReturnDetailQueryHandler : IRequestHandler<GetSaleReturnDetailQuery, ResponseDto>
     {
         private readonly IWMSDbContext _context;
+        private readonly ISaleReturnQueryService _saleReturnQueryService;
         private readonly ISaleReturnCalculationService _saleReturnCalculationService;
 
-        public GetSaleReturnDetailQueryHandler(IWMSDbContext context, ISaleReturnCalculationService saleReturnCalculationService)
+        public GetSaleReturnDetailQueryHandler(IWMSDbContext context, ISaleReturnQueryService saleReturnQueryService, ISaleReturnCalculationService saleReturnCalculationService)
         {
             _context = context;
+            _saleReturnQueryService = saleReturnQueryService;
             _saleReturnCalculationService = saleReturnCalculationService;
         }
 
@@ -31,8 +33,7 @@ namespace Application.Features.SaleReturn.Queries
         {
             var res = new ResponseDto();
 
-            var saleReturn = await _context.SaleReturns
-                .WithReturnGraph()
+            var saleReturn = await _saleReturnQueryService.WithReturnGraph(_context.SaleReturns)
                 .Include(x => x.Sale!)
                     .ThenInclude(x => x.Customer)
                 .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");

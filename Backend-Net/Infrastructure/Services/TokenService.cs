@@ -20,7 +20,9 @@ namespace Infrastructure.Services
 			_configuration = configuration;
 		}
 
-		public async Task<TokenDto> SetToken(TokenUserInfoDto userInfo)
+		// Not `async`: signing a JWT is CPU work with no IO in it, so there is nothing to await.
+		// Marking it async would allocate a state machine and complete synchronously anyway.
+		public Task<TokenDto> SetTokenAsync(TokenUserInfoDto userInfo)
         {
 
             var claimsList = new List<Claim>
@@ -66,7 +68,7 @@ namespace Infrastructure.Services
 
             var refreshToken = GenerateRefreshToken();
 
-            return new TokenDto { AccessToken = accessToken, RefreshToken = refreshToken };
+            return Task.FromResult(new TokenDto { AccessToken = accessToken, RefreshToken = refreshToken });
 
         }
 

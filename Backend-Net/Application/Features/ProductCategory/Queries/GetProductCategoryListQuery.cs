@@ -32,22 +32,22 @@ namespace Application.Features.ProductCategory.Queries
                 query = query.Where(x => x.Name.Contains(request.Name));
             }
 
-            var data = await query.Select(x => new ProductCategoryListDto
+            var paged = await query.Select(x => new ProductCategoryListDto
             {
                 Id = x.Id,
                 Name = x.Name,
                 ProductCount = x.Products.Count
-            }).ToPaged(request.Page, request.Take, out int pageCount, out int totalCount).ToListAsync();
+            }).ToPagedAsync(request.Page, request.Take, cancellationToken);
 
             res.Data = new
             {
-                ProductCategoryList = data,
+                ProductCategoryList = paged.Items,
                 Page = new ResponsePageDto
                 {
                     Page = request.Page,
-                    PageCount = pageCount,
+                    PageCount = paged.PageCount,
                     Take = request.Take,
-                    Total = totalCount
+                    Total = paged.TotalCount
                 }
             };
             res.Message = "لیست دسته‌بندی محصولات با موفقیت ارسال شد.";

@@ -27,7 +27,7 @@ namespace Application.Features.Customer.Commands
         {
             var res = new ResponseDto();
 
-            var customer = await _customerRepository.GetByIdAsync(request.Id) ?? throw new NotFoundCustomException("مشتری با اطلاعات مورد نظر یافت نشد.");
+            var customer = await _customerRepository.GetByIdAsync(request.Id, cancellationToken) ?? throw new NotFoundCustomException("مشتری با اطلاعات مورد نظر یافت نشد.");
 
             customer.IsActive = false;
 

@@ -17,7 +17,7 @@ namespace Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.10")
+                .HasAnnotation("ProductVersion", "10.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -385,6 +385,42 @@ namespace Infrastructure.Migrations
                     b.HasIndex("PurchaseId");
 
                     b.ToTable("PurchaseItems");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PurchaseReceivingImage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FileName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ObjectKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("PurchaseId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PurchaseReturnId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PurchaseId");
+
+                    b.HasIndex("PurchaseReturnId");
+
+                    b.ToTable("PurchaseReceivingImages");
                 });
 
             modelBuilder.Entity("Domain.Entities.PurchaseReturn", b =>
@@ -999,6 +1035,24 @@ namespace Infrastructure.Migrations
                     b.Navigation("Purchase");
                 });
 
+            modelBuilder.Entity("Domain.Entities.PurchaseReceivingImage", b =>
+                {
+                    b.HasOne("Domain.Entities.Purchase", "Purchase")
+                        .WithMany()
+                        .HasForeignKey("PurchaseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.PurchaseReturn", "PurchaseReturn")
+                        .WithMany("ReceivingImages")
+                        .HasForeignKey("PurchaseReturnId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Purchase");
+
+                    b.Navigation("PurchaseReturn");
+                });
+
             modelBuilder.Entity("Domain.Entities.PurchaseReturn", b =>
                 {
                     b.HasOne("Domain.Entities.Purchase", "Purchase")
@@ -1205,6 +1259,8 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("Domain.Entities.PurchaseReturn", b =>
                 {
                     b.Navigation("Items");
+
+                    b.Navigation("ReceivingImages");
                 });
 
             modelBuilder.Entity("Domain.Entities.PurchaseReturnItem", b =>

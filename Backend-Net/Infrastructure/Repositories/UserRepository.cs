@@ -13,19 +13,19 @@ namespace Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<User?> GetByUsernameAsync(string username)
+        public async Task<User?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default)
         {
-            return await _context.Users.Include(x => x.Role).SingleOrDefaultAsync(u => u.Username == username);
+            return await _context.Users.Include(x => x.Role).SingleOrDefaultAsync(u => u.Username == username, cancellationToken);
         }
 
-        public override async Task<User?> GetByIdAsync(object id)
+        public override async Task<User?> GetByIdAsync(object id, CancellationToken cancellationToken = default)
         {
-            return await _context.Users.Include(x => x.Role).SingleOrDefaultAsync(u => u.Id == Convert.ToInt32(id));
+            return await _context.Users.Include(x => x.Role).SingleOrDefaultAsync(u => u.Id == Convert.ToInt32(id), cancellationToken);
         }
 
-        public async Task<bool> IsExistAsync(int userId)
+        public async Task<bool> IsExistAsync(int userId, CancellationToken cancellationToken = default)
         {
-            return await _context.Users.AnyAsync(u => u.Id == userId);
+            return await _context.Users.AnyAsync(u => u.Id == userId, cancellationToken);
         }
     }
 }

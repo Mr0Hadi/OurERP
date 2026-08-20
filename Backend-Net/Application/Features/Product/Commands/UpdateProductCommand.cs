@@ -1,5 +1,6 @@
 ﻿using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.Repositories;
+using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -25,6 +26,11 @@ namespace Application.Features.Product.Commands
         public int Tax { get; set; }
         public int Stock { get; set; }
         public int LowStockThreshold { get; set; }
+
+        /// <summary>
+        /// The ObjectKey returned by POST api/File/UploadImage (folder=PRODUCTS), or the ImageKey
+        /// read off the detail response to keep the existing image. Send null to clear it.
+        /// </summary>
         public string? ImageUrl { get; set; }
         public int ProductCategoryId { get; set; }
 
@@ -50,17 +56,19 @@ namespace Application.Features.Product.Commands
     {
         private readonly IProductRepository _productRepository;
         private readonly IProductUnitService _productUnitService;
+        private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
-        public UpdateProductCommandHandler(IProductRepository productRepository, IProductUnitService productUnitService, IUnitOfWork unitOfWork)
+        public UpdateProductCommandHandler(IProductRepository productRepository, IProductUnitService productUnitService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
         {
             _productRepository = productRepository;
             _productUnitService = productUnitService;
+            _objectStorageService = objectStorageService;
             _unitOfWork = unitOfWork;
         }
         public async Task<ResponseDto> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
-            var product = await _productRepository.GetByIdAsync(request.Id) ?? throw new ValidationCustomException("محصول مورد نظر یافت نشد.");
+            var product = await _productRepository.GetByIdAsync(request.Id, cancellationToken) ?? throw new ValidationCustomException("محصول مورد نظر یافت نشد.");
 
             product.Name = request.Name;
             product.Brand = request.Brand;
@@ -70,7 +78,9 @@ namespace Application.Features.Product.Commands
             product.WholeSalePrice = request.WholeSalePrice;
             product.Tax = request.Tax;
             product.LowStockThreshold = request.LowStockThreshold;
-            product.ImageUrl = request.ImageUrl;
+            // The column stores the bucket object key, so a signed URL echoed back by the frontend
+            // is stripped down rather than persisted verbatim.
+            product.ImageUrl = _objectStorageService.NormalizeKey(request.ImageUrl);
             product.UpdatedAt = DateTime.Now;
 
             // Stock is reconciled against ProductUnit rows rather than overwritten blind -

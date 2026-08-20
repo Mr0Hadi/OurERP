@@ -57,7 +57,7 @@ namespace Application.Features.Purchase.Queries
                 query = query.Where(x => x.InvoiceDate <= request.ToDate.Value);
             }
 
-            var data = await query.Select(x => new PurchaseListDto
+            var paged = await query.Select(x => new PurchaseListDto
             {
                 Id = x.Id,
                 InvoiceNumber = x.InvoiceNumber,
@@ -68,17 +68,17 @@ namespace Application.Features.Purchase.Queries
                 TotalAmount = x.TotalAmount,
                 PaidAmount = x.PaidAmount,
                 PaymentType = x.PaymentType,
-            }).ToPaged(request.Page, request.Take, out int pageCount, out int totalCount).ToListAsync();
+            }).ToPagedAsync(request.Page, request.Take, cancellationToken);
 
             res.Data = new
             {
-                PurchaseList = data,
+                PurchaseList = paged.Items,
                 Page = new ResponsePageDto
                 {
                     Page = request.Page,
-                    PageCount = pageCount,
+                    PageCount = paged.PageCount,
                     Take = request.Take,
-                    Total = totalCount
+                    Total = paged.TotalCount
                 }
             };
             res.Message = "لیست خریدها با موفقیت ارسال شد.";

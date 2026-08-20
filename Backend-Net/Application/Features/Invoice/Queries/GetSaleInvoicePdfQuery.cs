@@ -1,5 +1,6 @@
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Documents;
+using Application.Common.Contracts.Invoice;
 using Application.Common.Dtos;
 using Common.Exceptions;
 using Common.Extensions;
@@ -18,12 +19,14 @@ namespace Application.Features.Invoice.Queries
     {
         private readonly IWMSDbContext _context;
         private readonly IPdfDocumentService _pdfDocumentService;
+        private readonly IInvoiceLineCalculationService _invoiceLineCalculationService;
         private readonly IConfiguration _configuration;
 
-        public GetSaleInvoicePdfQueryHandler(IWMSDbContext context, IPdfDocumentService pdfDocumentService, IConfiguration configuration)
+        public GetSaleInvoicePdfQueryHandler(IWMSDbContext context, IPdfDocumentService pdfDocumentService, IInvoiceLineCalculationService invoiceLineCalculationService, IConfiguration configuration)
         {
             _context = context;
             _pdfDocumentService = pdfDocumentService;
+            _invoiceLineCalculationService = invoiceLineCalculationService;
             _configuration = configuration;
         }
 
@@ -36,7 +39,7 @@ namespace Application.Features.Invoice.Queries
                 .FirstOrDefaultAsync(x => x.Id == request.SaleId, cancellationToken)
                     ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
 
-            var lines = sale.Items.Select((item, index) => InvoiceLineCalculator.Build(
+            var lines = sale.Items.Select((item, index) => _invoiceLineCalculationService.BuildLine(
                 index + 1,
                 item.Product.Code,
                 item.Product.Name,

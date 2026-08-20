@@ -53,7 +53,7 @@ namespace Application.Features.Account.Command
 		{
 			var res = new ResponseDto();
 
-			var user = await _userRepository.GetByUsernameAsync(request.Username);
+			var user = await _userRepository.GetByUsernameAsync(request.Username, cancellationToken);
 
 			if (user == null)
 			{

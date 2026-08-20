@@ -14,5 +14,12 @@ namespace Domain.Entities
         public DateTime UpdatedAt { get; set; }
         public Purchase? Purchase { get; set; }
         public List<PurchaseReturnItem> Items { get; set; } = new();
+
+        /// <summary>
+        /// Receiving-session photos captured on the rounds that opened or extended this return.
+        /// They belong to the Purchase (see PurchaseReceivingImage) and merely point here, so
+        /// deleting the return leaves them intact with a null link.
+        /// </summary>
+        public List<PurchaseReceivingImage> ReceivingImages { get; set; } = new();
     }
 }

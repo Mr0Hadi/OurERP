@@ -37,13 +37,15 @@ namespace Application.Features.SaleReturn.Commands
     public class ConfirmReplacementShipmentCommandHandler : IRequestHandler<ConfirmReplacementShipmentCommand, ResponseDto>
     {
         private readonly IWMSDbContext _context;
+        private readonly ISaleReturnQueryService _saleReturnQueryService;
         private readonly ISaleReturnCalculationService _saleReturnCalculationService;
         private readonly IProductUnitService _productUnitService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public ConfirmReplacementShipmentCommandHandler(IWMSDbContext context, ISaleReturnCalculationService saleReturnCalculationService, IProductUnitService productUnitService, IUnitOfWork unitOfWork)
+        public ConfirmReplacementShipmentCommandHandler(IWMSDbContext context, ISaleReturnQueryService saleReturnQueryService, ISaleReturnCalculationService saleReturnCalculationService, IProductUnitService productUnitService, IUnitOfWork unitOfWork)
         {
             _context = context;
+            _saleReturnQueryService = saleReturnQueryService;
             _saleReturnCalculationService = saleReturnCalculationService;
             _productUnitService = productUnitService;
             _unitOfWork = unitOfWork;
@@ -53,8 +55,7 @@ namespace Application.Features.SaleReturn.Commands
         {
             var res = new ResponseDto();
 
-            var saleReturn = await _context.SaleReturns
-                .WithReturnGraph()
+            var saleReturn = await _saleReturnQueryService.WithReturnGraph(_context.SaleReturns)
                 .FirstOrDefaultAsync(x => x.Claims.Any(c => c.InspectionItems.Any(i => i.Decisions.Any(d => d.Id == request.SaleReturnDecisionId))), cancellationToken)
                     ?? throw new NotFoundCustomException("تصمیم مورد نظر یافت نشد.");
 

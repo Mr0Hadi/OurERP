@@ -1,4 +1,5 @@
 using Application.Common.Contracts.Repositories;
+using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -23,14 +24,19 @@ namespace Application.Features.Customer.Commands
         public string? Description { get; set; }
         public UInt64? Balance { get; set; }
         public BalanceTypeEnum BalanceType { get; set; }
+
+        /// <summary>
+        /// The ObjectKey returned by POST api/File/UploadImage (folder=CUSTOMERS). A full signed
+        /// URL is also accepted and normalized back down to the key - see IObjectStorageService.
+        /// </summary>
         public string? ImageUrl { get; set; }
         public decimal? Longitude { get; set; }
         public decimal? Latitude { get; set; }
     }
 
-    public class CreateCustomerCommandValidation : AbstractValidator<CreateCustomerCommand>
+    public class CreateCustomerCommandValidator : AbstractValidator<CreateCustomerCommand>
     {
-        public CreateCustomerCommandValidation()
+        public CreateCustomerCommandValidator()
         {
             RuleFor(x => x.FirstName)
                 .NotEmpty()
@@ -56,11 +62,13 @@ namespace Application.Features.Customer.Commands
     {
         private readonly ICustomerRepository _customerRepository;
         private readonly IMapper _mapper;
+        private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
-        public CreateCustomerCommandHandler(ICustomerRepository customerRepository, IMapper mapper, IUnitOfWork unitOfWork)
+        public CreateCustomerCommandHandler(ICustomerRepository customerRepository, IMapper mapper, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
         {
             _customerRepository = customerRepository;
             _mapper = mapper;
+            _objectStorageService = objectStorageService;
             _unitOfWork = unitOfWork;
         }
         public async Task<ResponseDto> Handle(CreateCustomerCommand request, CancellationToken cancellationToken)
@@ -69,7 +77,10 @@ namespace Application.Features.Customer.Commands
 
             var newCustomer = _mapper.Map<Domain.Entities.Customer>(request);
 
-            await _customerRepository.AddAsync(newCustomer);
+            // The column stores the bucket object key, never a URL - signed URLs expire.
+            newCustomer.ImageUrl = _objectStorageService.NormalizeKey(request.ImageUrl);
+
+            await _customerRepository.AddAsync(newCustomer, cancellationToken);
             await _unitOfWork.SaveChangesAsync();
 
             res.Message = "مشتری جدید با موفقیت ایجاد شد.";

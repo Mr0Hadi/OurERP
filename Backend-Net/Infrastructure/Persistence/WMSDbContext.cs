@@ -32,20 +32,11 @@ namespace Infrastructure.Persistence
         public DbSet<SaleReturnItem> SaleReturnItems => Set<SaleReturnItem>();
         public DbSet<SaleReturnDecision> SaleReturnDecisions => Set<SaleReturnDecision>();
         public DbSet<ProductUnit> ProductUnits => Set<ProductUnit>();
+        public DbSet<PurchaseReceivingImage> PurchaseReceivingImages => Set<PurchaseReceivingImage>();
 
-        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        public async Task<int> ExecuteSqlRawAsync(string sql, CancellationToken cancellationToken = default)
         {
-            return base.SaveChangesAsync(cancellationToken);
-        }
-
-        public override int SaveChanges()
-        {
-            return base.SaveChanges();
-        }
-
-        public async Task<int> ExecuteSqlRawAsync(string sql)
-        {
-            return await this.Database.ExecuteSqlRawAsync(sql);
+            return await this.Database.ExecuteSqlRawAsync(sql, cancellationToken);
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -188,6 +179,23 @@ namespace Infrastructure.Persistence
 
             modelBuilder.Entity<ProductUnit>()
                 .HasIndex(x => x.PurchaseItemId);
+
+            modelBuilder.Entity<PurchaseReceivingImage>()
+                .HasOne(x => x.Purchase)
+                .WithMany()
+                .HasForeignKey(x => x.PurchaseId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // SetNull, not Cascade: DeletePurchaseReturnCommand hard-deletes a PENDING return, but
+            // the photos document a receiving event that still happened and stay on the purchase.
+            modelBuilder.Entity<PurchaseReceivingImage>()
+                .HasOne(x => x.PurchaseReturn)
+                .WithMany(x => x.ReceivingImages)
+                .HasForeignKey(x => x.PurchaseReturnId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<PurchaseReceivingImage>()
+                .HasIndex(x => x.PurchaseId);
 
             // Unique index on Product.Code is added in a later migration
             // (see 20260813xxxxxx_product-code-unique-index) after EnsureProductCodes

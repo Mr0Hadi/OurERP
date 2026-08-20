@@ -1,7 +1,7 @@
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.SaleReturn;
 using Application.Common.Contracts.Documents;
 using Application.Common.Dtos;
-using Application.Features.SaleReturn;
 using Common.Exceptions;
 using Domain.Enums;
 using MediatR;
@@ -25,20 +25,21 @@ namespace Application.Features.Invoice.Queries
     public class GetSaleReturnCreditNotePdfQueryHandler : IRequestHandler<GetSaleReturnCreditNotePdfQuery, FileResponseDto>
     {
         private readonly IWMSDbContext _context;
+        private readonly ISaleReturnQueryService _saleReturnQueryService;
         private readonly IPdfDocumentService _pdfDocumentService;
         private readonly IConfiguration _configuration;
 
-        public GetSaleReturnCreditNotePdfQueryHandler(IWMSDbContext context, IPdfDocumentService pdfDocumentService, IConfiguration configuration)
+        public GetSaleReturnCreditNotePdfQueryHandler(IWMSDbContext context, ISaleReturnQueryService saleReturnQueryService, IPdfDocumentService pdfDocumentService, IConfiguration configuration)
         {
             _context = context;
+            _saleReturnQueryService = saleReturnQueryService;
             _pdfDocumentService = pdfDocumentService;
             _configuration = configuration;
         }
 
         public async Task<FileResponseDto> Handle(GetSaleReturnCreditNotePdfQuery request, CancellationToken cancellationToken)
         {
-            var saleReturn = await _context.SaleReturns
-                .WithReturnGraph()
+            var saleReturn = await _saleReturnQueryService.WithReturnGraph(_context.SaleReturns)
                 .Include(x => x.Sale!)
                     .ThenInclude(x => x.Customer)
                 .FirstOrDefaultAsync(x => x.Id == request.SaleReturnId, cancellationToken)

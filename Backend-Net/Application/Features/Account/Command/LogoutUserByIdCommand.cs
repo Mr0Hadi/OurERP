@@ -40,7 +40,7 @@ namespace Application.Features.Account.Command
 		{
 			var res = new ResponseDto();
 
-			var user = await _userRepository.GetByIdAsync(request.UserId);
+			var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
 			if (user == null) throw new NotFoundCustomException("کاربر با این شناسه یافت نشد.");
 
 			var cacheKey = $"UserTokens:{request.UserId}";

@@ -1,4 +1,5 @@
 ﻿using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.Supplier.Dtos;
@@ -20,9 +21,11 @@ namespace Application.Features.Supplier.Queries
     public class GetSupplierListQueryHandler : IRequestHandler<GetSupplierListQuery, ResponseDto>
     {
         private readonly IWMSDbContext _context;
-        public GetSupplierListQueryHandler(IWMSDbContext context)
+        private readonly IObjectStorageService _objectStorageService;
+        public GetSupplierListQueryHandler(IWMSDbContext context, IObjectStorageService objectStorageService)
         {
             _context = context;
+            _objectStorageService = objectStorageService;
         }
         public async Task<ResponseDto> Handle(GetSupplierListQuery request, CancellationToken cancellationToken)
         {
@@ -49,24 +52,30 @@ namespace Application.Features.Supplier.Queries
                 query = query.Where(x => x.Balance <= request.ToBalance.Value);
             }
 
-            var data = await query.Select(x => new SupplierListDto
+            var paged = await query.Select(x => new SupplierListDto
             {
                 Id = x.Id,
                 CompanyName = x.CompanyName,
                 FullName = x.FirstName + " " + x.LastName,
                 BalanceType = x.BalanceType,
-                Status = x.BalanceType.ToString()
-            }).ToPaged(request.Page, request.Take, out int pageCount, out int totalCount).ToListAsync();
+                Status = x.BalanceType.ToString(),
+                ImageKey = x.ImageUrl
+            }).ToPagedAsync(request.Page, request.Take, cancellationToken);
+
+            // Signing happens after materialization - GetPresignedUrl is a local method call and
+            // could not be translated into the SQL projection above.
+            foreach (var item in paged.Items)
+                item.ImageUrl = _objectStorageService.GetPresignedUrl(item.ImageKey);
 
             res.Data = new
             {
-                SupplierList = data,
+                SupplierList = paged.Items,
                 Page = new ResponsePageDto
                 {
                     Page = request.Page,
-                    PageCount = pageCount,
+                    PageCount = paged.PageCount,
                     Take = request.Take,
-                    Total = totalCount
+                    Total = paged.TotalCount
                 }
             };
 

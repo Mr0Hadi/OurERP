@@ -58,21 +58,21 @@ namespace Application.Features.User.Command
         {
             var res = new ResponseDto();
 
-            var user = await _userRepository.GetByIdAsync(request.Id);
+            var user = await _userRepository.GetByIdAsync(request.Id, cancellationToken);
 
             if (user == null)
             {
                 throw new ValidationCustomException("کاربر با این اطلاعات یافت نشد");
             }
 
-            var role = await _roleService.GetByIdAsync(request.RoleId);
+            var role = await _roleService.GetByIdAsync(request.RoleId, cancellationToken);
 
             if (role == null)
             {
                 throw new NotFoundCustomException("نقش انتخاب شده یافت نشد");
             }
 
-            var userByUsername = await _userRepository.GetByUsernameAsync(request.Username);
+            var userByUsername = await _userRepository.GetByUsernameAsync(request.Username, cancellationToken);
 
             if (userByUsername != null && userByUsername.Id != user.Id)
             {

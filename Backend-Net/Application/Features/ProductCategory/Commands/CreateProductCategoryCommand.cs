@@ -41,7 +41,7 @@ namespace Application.Features.ProductCategory.Commands
             var res = new ResponseDto();
 
             var productCategory = _mapper.Map<Domain.Entities.ProductCategory>(request);
-            await _productCategoryRepository.AddAsync(productCategory);
+            await _productCategoryRepository.AddAsync(productCategory, cancellationToken);
             await _unitOfWork.SaveChangesAsync();
 
             res.Message = "دسته‌بندی محصول با موفقیت ایجاد شد.";

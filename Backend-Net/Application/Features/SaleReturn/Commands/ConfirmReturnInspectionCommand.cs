@@ -59,13 +59,15 @@ namespace Application.Features.SaleReturn.Commands
     public class ConfirmReturnInspectionCommandHandler : IRequestHandler<ConfirmReturnInspectionCommand, ResponseDto>
     {
         private readonly IWMSDbContext _context;
+        private readonly ISaleReturnQueryService _saleReturnQueryService;
         private readonly ISaleReturnCalculationService _saleReturnCalculationService;
         private readonly IProductUnitService _productUnitService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public ConfirmReturnInspectionCommandHandler(IWMSDbContext context, ISaleReturnCalculationService saleReturnCalculationService, IProductUnitService productUnitService, IUnitOfWork unitOfWork)
+        public ConfirmReturnInspectionCommandHandler(IWMSDbContext context, ISaleReturnQueryService saleReturnQueryService, ISaleReturnCalculationService saleReturnCalculationService, IProductUnitService productUnitService, IUnitOfWork unitOfWork)
         {
             _context = context;
+            _saleReturnQueryService = saleReturnQueryService;
             _saleReturnCalculationService = saleReturnCalculationService;
             _productUnitService = productUnitService;
             _unitOfWork = unitOfWork;
@@ -75,8 +77,7 @@ namespace Application.Features.SaleReturn.Commands
         {
             var res = new ResponseDto();
 
-            var saleReturn = await _context.SaleReturns
-                .WithReturnGraph()
+            var saleReturn = await _saleReturnQueryService.WithReturnGraph(_context.SaleReturns)
                 .FirstOrDefaultAsync(x => x.Id == request.SaleReturnId, cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
             if (!_saleReturnCalculationService.IsMutable(saleReturn))

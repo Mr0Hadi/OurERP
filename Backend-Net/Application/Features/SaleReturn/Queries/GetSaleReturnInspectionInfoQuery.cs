@@ -1,4 +1,5 @@
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.SaleReturn;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.SaleReturn.Dtos;
@@ -21,10 +22,12 @@ namespace Application.Features.SaleReturn.Queries
     public class GetSaleReturnInspectionInfoQueryHandler : IRequestHandler<GetSaleReturnInspectionInfoQuery, ResponseDto>
     {
         private readonly IWMSDbContext _context;
+        private readonly ISaleReturnQueryService _saleReturnQueryService;
 
-        public GetSaleReturnInspectionInfoQueryHandler(IWMSDbContext context)
+        public GetSaleReturnInspectionInfoQueryHandler(IWMSDbContext context, ISaleReturnQueryService saleReturnQueryService)
         {
             _context = context;
+            _saleReturnQueryService = saleReturnQueryService;
         }
 
         public async Task<ResponseDto> Handle(GetSaleReturnInspectionInfoQuery request, CancellationToken cancellationToken)
@@ -35,10 +38,7 @@ namespace Application.Features.SaleReturn.Queries
                 .Include(x => x.Customer)
                 .FirstOrDefaultAsync(x => x.Id == request.SaleId, cancellationToken) ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
 
-            var activeReturns = await _context.SaleReturns
-                .Where(x => x.SaleId == request.SaleId)
-                .WhereActive()
-                .WithReturnGraph()
+            var activeReturns = await _saleReturnQueryService.ActiveWithReturnGraph(_context.SaleReturns.Where(x => x.SaleId == request.SaleId))
                 .ToListAsync(cancellationToken);
 
             res.Data = new SaleReturnInspectionInfoDto

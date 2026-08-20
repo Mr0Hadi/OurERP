@@ -1,4 +1,5 @@
 ﻿using Application.Common.Contracts.Repositories;
+using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -19,6 +20,11 @@ namespace Application.Features.Supplier.Commands
         public string Phone { get; set; }
         public string Address { get; set; }
         public string PostalCode { get; set; }
+
+        /// <summary>
+        /// The ObjectKey returned by POST api/File/UploadImage (folder=SUPPLIERS). A full signed
+        /// URL is also accepted and normalized back down to the key - see IObjectStorageService.
+        /// </summary>
         public string? ImageUrl { get; set; }
         public string? Description { get; set; }
         public UInt64? Balance { get; set; }
@@ -27,9 +33,9 @@ namespace Application.Features.Supplier.Commands
         public decimal? latitude { get; set; }
     }
 
-    public class CreateSupplierCommandValidation : AbstractValidator<CreateSupplierCommand>
+    public class CreateSupplierCommandValidator : AbstractValidator<CreateSupplierCommand>
     {
-        public CreateSupplierCommandValidation()
+        public CreateSupplierCommandValidator()
         {
             RuleFor(x => x.FirstName)
                 .NotEmpty()
@@ -57,11 +63,13 @@ namespace Application.Features.Supplier.Commands
     {
         private readonly ISupplierRepository _supplierRepository;
         private readonly IMapper _mapper;
+        private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
-        public CreateSupplierCommandHandler(ISupplierRepository supplierRepository, IMapper mapper, IUnitOfWork unitOfWork)
+        public CreateSupplierCommandHandler(ISupplierRepository supplierRepository, IMapper mapper, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
         {
             _supplierRepository = supplierRepository;
             _mapper = mapper;
+            _objectStorageService = objectStorageService;
             _unitOfWork = unitOfWork;
         }
         public async Task<ResponseDto> Handle(CreateSupplierCommand request, CancellationToken cancellationToken)
@@ -70,7 +78,10 @@ namespace Application.Features.Supplier.Commands
 
             var newSupplier = _mapper.Map<Domain.Entities.Supplier>(request);
 
-            await _supplierRepository.AddAsync(newSupplier);
+            // The column stores the bucket object key, never a URL - signed URLs expire.
+            newSupplier.ImageUrl = _objectStorageService.NormalizeKey(request.ImageUrl);
+
+            await _supplierRepository.AddAsync(newSupplier, cancellationToken);
             await _unitOfWork.SaveChangesAsync();
 
             res.Message = "تامین کننده جدید با موفقیت ایجاد شد.";

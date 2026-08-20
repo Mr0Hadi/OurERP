@@ -18,7 +18,7 @@ namespace WMS.Tests.Integration
             scope.Context.ProductCategories.Add(category);
             scope.Context.SaveChanges();
 
-            var handler = new CreateProductCommandHandler(scope.ProductRepository, TestMapper.Instance, scope.ProductCodeService, scope.ProductUnitService, scope.UnitOfWork);
+            var handler = new CreateProductCommandHandler(scope.ProductRepository, TestMapper.Instance, scope.ProductCodeService, scope.ProductUnitService, FakeObjectStorage.Instance, scope.UnitOfWork);
             await handler.Handle(new CreateProductCommand
             {
                 Name = "کالای تست",
@@ -47,7 +47,7 @@ namespace WMS.Tests.Integration
             scope.Context.ProductCategories.Add(category);
             scope.Context.SaveChanges();
 
-            var handler = new CreateProductCommandHandler(scope.ProductRepository, TestMapper.Instance, scope.ProductCodeService, scope.ProductUnitService, scope.UnitOfWork);
+            var handler = new CreateProductCommandHandler(scope.ProductRepository, TestMapper.Instance, scope.ProductCodeService, scope.ProductUnitService, FakeObjectStorage.Instance, scope.UnitOfWork);
             await handler.Handle(new CreateProductCommand
             {
                 Name = "کالای تست",
@@ -81,7 +81,7 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
 
-            var handler = new UpdateProductCommandHandler(scope.ProductRepository, scope.ProductUnitService, scope.UnitOfWork);
+            var handler = new UpdateProductCommandHandler(scope.ProductRepository, scope.ProductUnitService, FakeObjectStorage.Instance, scope.UnitOfWork);
 
             // UpdateProductCommandHandler throws ValidationCustomException (not NotFound) on a
             // missing row - inconsistent with every other feature's Update handler, but this is
@@ -108,7 +108,7 @@ namespace WMS.Tests.Integration
             scope.Context.Products.Add(product);
             scope.Context.SaveChanges();
 
-            var handler = new UpdateProductCommandHandler(scope.ProductRepository, scope.ProductUnitService, scope.UnitOfWork);
+            var handler = new UpdateProductCommandHandler(scope.ProductRepository, scope.ProductUnitService, FakeObjectStorage.Instance, scope.UnitOfWork);
             await handler.Handle(new UpdateProductCommand
             {
                 Id = product.Id,
@@ -138,7 +138,7 @@ namespace WMS.Tests.Integration
             scope.Context.SaveChanges();
             Seed.MintUnits(scope.Context, product, 5);
 
-            var handler = new UpdateProductCommandHandler(scope.ProductRepository, scope.ProductUnitService, scope.UnitOfWork);
+            var handler = new UpdateProductCommandHandler(scope.ProductRepository, scope.ProductUnitService, FakeObjectStorage.Instance, scope.UnitOfWork);
             await handler.Handle(new UpdateProductCommand
             {
                 Id = product.Id,
@@ -167,7 +167,7 @@ namespace WMS.Tests.Integration
             scope.Context.SaveChanges();
             Seed.MintUnits(scope.Context, product, 5);
 
-            var handler = new UpdateProductCommandHandler(scope.ProductRepository, scope.ProductUnitService, scope.UnitOfWork);
+            var handler = new UpdateProductCommandHandler(scope.ProductRepository, scope.ProductUnitService, FakeObjectStorage.Instance, scope.UnitOfWork);
             await handler.Handle(new UpdateProductCommand
             {
                 Id = product.Id,
@@ -213,7 +213,7 @@ namespace WMS.Tests.Integration
             scope.Context.Products.Add(product);
             scope.Context.SaveChanges();
 
-            var handler = new GetProductDetailQueryHandler(scope.ProductRepository, TestMapper.Instance);
+            var handler = new GetProductDetailQueryHandler(scope.ProductRepository, TestMapper.Instance, FakeObjectStorage.Instance);
             var res = await handler.Handle(new GetProductDetailQuery { Id = product.Id }, CancellationToken.None);
 
             var dto = Assert.IsType<ProductDto>(res.Data);
@@ -233,7 +233,7 @@ namespace WMS.Tests.Integration
             scope.Context.Products.AddRange(low, healthy);
             scope.Context.SaveChanges();
 
-            var handler = new GetProductListQueryHandler(scope.Db);
+            var handler = new GetProductListQueryHandler(scope.Db, FakeObjectStorage.Instance);
             var res = await handler.Handle(new GetProductListQuery { IsLowOnStock = true }, CancellationToken.None);
 
             var data = res.Data!;

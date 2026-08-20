@@ -23,7 +23,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 3, shippedQuantity: 3, stock: 0);
 
-            var handler = new GetSaleInvoicePdfQueryHandler(scope.Db, scope.PdfDocumentService, EmptyConfig());
+            var handler = new GetSaleInvoicePdfQueryHandler(scope.Db, scope.PdfDocumentService, scope.InvoiceLineCalculation, EmptyConfig());
             var file = await handler.Handle(new GetSaleInvoicePdfQuery { SaleId = scenario.Sale.Id }, CancellationToken.None);
 
             Assert.NotEmpty(file.Content);
@@ -38,7 +38,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 3, stock: 0);
 
-            var handler = new GetPurchaseInvoicePdfQueryHandler(scope.Db, scope.PdfDocumentService, EmptyConfig());
+            var handler = new GetPurchaseInvoicePdfQueryHandler(scope.Db, scope.PdfDocumentService, scope.InvoiceLineCalculation, EmptyConfig());
             var file = await handler.Handle(new GetPurchaseInvoicePdfQuery { PurchaseId = scenario.Purchase.Id }, CancellationToken.None);
 
             Assert.NotEmpty(file.Content);
@@ -61,7 +61,7 @@ namespace WMS.Tests.Integration
             var saleReturnId = (int)createRes.Data!.GetType().GetProperty("ReturnId")!.GetValue(createRes.Data)!;
             var claimId = scope.Context.SaleReturnClaims.Single().Id;
 
-            var inspectHandler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
+            var inspectHandler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
             await inspectHandler.Handle(new ConfirmReturnInspectionCommand
             {
                 SaleReturnId = saleReturnId,
@@ -76,7 +76,7 @@ namespace WMS.Tests.Integration
             }, CancellationToken.None);
             var saleReturnItemId = scope.Context.SaleReturnItems.Single().Id;
 
-            var decisionHandler = new AddSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var decisionHandler = new AddSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
             await decisionHandler.Handle(new AddSaleReturnDecisionCommand
             {
                 SaleReturnItemId = saleReturnItemId,
@@ -84,7 +84,7 @@ namespace WMS.Tests.Integration
                 Quantity = 5,
             }, CancellationToken.None);
 
-            var pdfHandler = new GetSaleReturnCreditNotePdfQueryHandler(scope.Db, scope.PdfDocumentService, EmptyConfig());
+            var pdfHandler = new GetSaleReturnCreditNotePdfQueryHandler(scope.Db, scope.SaleReturnQueryService, scope.PdfDocumentService, EmptyConfig());
             var file = await pdfHandler.Handle(new GetSaleReturnCreditNotePdfQuery { SaleReturnId = saleReturnId }, CancellationToken.None);
 
             Assert.NotEmpty(file.Content);
