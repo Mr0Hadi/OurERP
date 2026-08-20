@@ -3,14 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { Save, X } from "lucide-react";
 import { useEffect } from "react";
 
-import { Button } from "#/shared/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import { useCreateProductMutation } from "../services/mutations";
 import { useProductForm } from "../hooks/useProductForm";
 import ProductBasicInfoForm from "../components/forms/ProductBasicInfoForm";
 import ProductPricingForm from "../components/forms/ProductPricingForm";
 import ProductImageUpload from "../components/forms/ProductImageUpload";
 import ProductBarcodeDisplay from "../components/forms/ProductBarcodeDisplay";
-import { useHeaderStore } from "#/shared/store/headerStore";
+import { useHeaderStore } from "@/shared/store/headerStore";
 
 export default function ProductNewPage() {
   const navigate = useNavigate();
@@ -34,6 +34,7 @@ export default function ProductNewPage() {
     imagePreview,
     barcodeValue,
     categories,
+    handleAddCategory,
     handleImageChange,
     handleImageRemove,
     buildProductPayload,
@@ -43,6 +44,7 @@ export default function ProductNewPage() {
     register,
     handleSubmit,
     control,
+    setValue,
     formState: { errors, isSubmitting },
   } = formMethods;
 
@@ -68,8 +70,10 @@ export default function ProductNewPage() {
             <ProductBasicInfoForm
               register={register}
               control={control}
+              setValue={setValue}
               errors={errors}
               categories={categories}
+              onAddCategory={handleAddCategory}
             />
             <ProductPricingForm register={register} />
           </div>

@@ -222,6 +222,13 @@ export const navigationData = {
           icon: ClipboardList,
           description: "مشاهده و تأیید کالاهای ارسالی",
         },
+        {
+          title: "برچسب کالاها",
+          url: ROUTES.WAREHOUSE_UNIT_LABELS,
+          permission: "warehouse_receiving",
+          icon: Barcode,
+          description: "ساخت و چاپ بارکد تک‌تک اقلام فیزیکی",
+        },
       ],
     },
     {

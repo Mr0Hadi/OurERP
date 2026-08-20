@@ -1,5 +1,4 @@
-// src/features/warehouse/receiving/services/constants.js
-import { PURCHASE_STATUSES } from "@/features/purchases/services/constants";
+import { PURCHASE_STATUSES } from "@/features/purchases/orders/services/constants";
 
 export { PURCHASE_STATUSES };
 

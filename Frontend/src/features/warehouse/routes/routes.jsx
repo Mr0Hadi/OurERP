@@ -5,10 +5,12 @@ import {
   ProductDetailPage,
   ReceivingListPage,
   ReceivingDetailPage,
+  UnitLabelsPage,
   ShippingListPage,
   ShippingDetailPage,
   ReceivingReturnDetailPage,
-  ShippingReplacementDetailPage,
+  ReplacementDetailPage,
+  SupplierReturnDetailPage,
 } from "./index";
 
 export const warehouseRoutes = [
@@ -33,6 +35,10 @@ export const warehouseRoutes = [
     element: <ReceivingDetailPage />,
   },
   {
+    path: ROUTES.WAREHOUSE_UNIT_LABELS,
+    element: <UnitLabelsPage />,
+  },
+  {
     path: ROUTES.WAREHOUSE_SHIPPING,
     element: <ShippingListPage />,
   },
@@ -46,6 +52,10 @@ export const warehouseRoutes = [
   },
   {
     path: ROUTES.WAREHOUSE_SHIPPING_REPLACEMENT_DETAIL,
-    element: <ShippingReplacementDetailPage />,
+    element: <ReplacementDetailPage />,
+  },
+  {
+    path: ROUTES.WAREHOUSE_SHIPPING_SUPPLIER_RETURN_DETAIL,
+    element: <SupplierReturnDetailPage />,
   },
 ];

@@ -1,7 +1,6 @@
-// src/features/warehouse/shipping/pages/ShippingDetailPage.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { AlertCircle, CheckCircle, AlertTriangle, X } from "lucide-react";
+import { CheckCircle, AlertTriangle, X } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 import { Button } from "@/shared/components/ui/button";
@@ -23,8 +22,9 @@ import { useShippingForm } from "../hooks/useShippingForm";
 import ShippingItemsSection from "../components/forms/ShippingItemsSection";
 import ShippingSummaryCard from "../components/forms/ShippingSummaryCard";
 import ShippingTransporterSection from "../components/forms/ShippingTransporterSection";
-import ShippingDetailLoading from "../components/forms/ShippingDetailLoading";
+import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
 import { ROUTES } from "@/shared/constants/routes";
+import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -201,17 +201,21 @@ export default function ShippingDetailPage() {
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader, sale, isLoading]);
 
-  if (isLoading) return <ShippingDetailLoading />;
+  if (isLoading)
+    return (
+      <WarehouseFormSkeleton
+        itemActionSlot={false}
+        summaryRows={2}
+        hasSecondaryAction={false}
+      />
+    );
 
   if (isError || !sale) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-lg text-muted-foreground">فروش مورد نظر یافت نشد.</p>
-        <Button variant="outline" onClick={() => navigate(ROUTES.WAREHOUSE_SHIPPING)}>
-          بازگشت به لیست
-        </Button>
-      </div>
+      <DetailErrorState
+        message="فروش مورد نظر یافت نشد."
+        onBack={() => navigate(ROUTES.WAREHOUSE_SHIPPING)}
+      />
     );
   }
 

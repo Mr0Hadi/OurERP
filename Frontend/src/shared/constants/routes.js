@@ -47,6 +47,7 @@ export const ROUTES = {
   WAREHOUSE_PRODUCTS: "/warehouse/products",
   WAREHOUSE_PRODUCTS_DETAIL: "/warehouse/products/:id",
   WAREHOUSE_PRODUCTS_NEW: "/warehouse/products/new",
+  WAREHOUSE_UNIT_LABELS: "/warehouse/unit-labels",
   WAREHOUSE_STOCK: "/warehouse/stock",
   WAREHOUSE_TRANSACTIONS: "/warehouse/transactions",
   WAREHOUSE_RECEIVING: "/warehouse/receiving",
@@ -56,6 +57,8 @@ export const ROUTES = {
   WAREHOUSE_RECEIVING_RETURN_DETAIL: "/warehouse/receiving/returns/:id",
   WAREHOUSE_SHIPPING_REPLACEMENT_DETAIL:
     "/warehouse/shipping/replacement/:returnId",
+  WAREHOUSE_SHIPPING_SUPPLIER_RETURN_DETAIL:
+    "/warehouse/shipping/supplier-return/:returnId",
 
   // // محصولات/کالاها
   // PRODUCTS: "/products",

@@ -1,6 +1,5 @@
-// src/features/warehouse/receiving/hooks/useReturnInspectionForm.js
 import { useEffect } from "react";
-import useReturnInspectionFormStore from "../store/returnInspectionFormStore";
+import { useReturnInspectionFormStore } from "../store/returnInspectionFormStore";
 
 const generateId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 

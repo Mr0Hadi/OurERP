@@ -1,6 +1,5 @@
-// src/features/warehouse/receiving/components/forms/ReceivingReturnItemsSection.jsx
 import { useMemo, useState } from "react";
-import { Search, Minus, Plus, CheckCircle2, AlertTriangle, XCircle, X } from "lucide-react";
+import { Search, Plus, X } from "lucide-react";
 
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
@@ -10,52 +9,18 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/shared/components/ui/select";
 import { RETURN_ISSUE_TYPE_LABELS } from "../../services/returnsIntakeApi";
-import { SALES_RETURN_REASON_LABELS } from "@/features/sales/services/returns/mockData";
+import { SALES_RETURN_REASON_LABELS } from "@/features/sales/returns/services/mockData";
+import { createRowStatus } from "@/shared/utils/createRowStatus";
+import QuantityStepper from "@/shared/components/forms/QuantityStepper";
 
 const ISSUE_TYPE_OPTIONS = Object.entries(RETURN_ISSUE_TYPE_LABELS);
 
-function getRowStatus(remainingQty, verifiedQtyThisRound) {
-  const qty = verifiedQtyThisRound || 0;
-  if (qty <= 0) return "missing";
-  if (qty < remainingQty) return "partial";
-  return "complete";
-}
-
-const ROW_STATUS_CONFIG = {
-  complete: { label: "این دور کامل رسید", icon: CheckCircle2, badgeClass: "bg-green-50 text-[oklch(0.50_0.16_152)] border-green-200 dark:bg-green-950/40 dark:border-green-800", rowClass: "" },
-  partial: { label: "این دور ناقص رسید", icon: AlertTriangle, badgeClass: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400", rowClass: "bg-amber-50/40 dark:bg-amber-950/10" },
-  missing: { label: "این دور نرسید", icon: XCircle, badgeClass: "bg-destructive/5 text-destructive border-destructive/20", rowClass: "bg-destructive/[0.03]" },
-};
-
-const clampQty = (value, max) => {
-  const num = Number(value);
-  if (Number.isNaN(num) || num < 0) return 0;
-  return Math.min(num, max);
-};
-
-function QuantityStepper({ item, onItemChange, size = "sm" }) {
-  const verified = item.verifiedQtyThisRound || 0;
-  const dims = size === "sm" ? "h-7 w-7" : "h-8 w-8";
-  const inputWidth = size === "sm" ? "w-12" : "w-14";
-
-  const handleStep = (delta) => onItemChange(item.lineId, "verifiedQtyThisRound", clampQty(verified + delta, item.remainingQty));
-
-  return (
-    <div className="flex items-center justify-center gap-1">
-      <Button type="button" size="icon" variant="outline" className={`${dims} shrink-0`} disabled={verified <= 0} onClick={() => handleStep(-1)}>
-        <Minus className="h-3.5 w-3.5" />
-      </Button>
-      <Input
-        type="number" min={0} max={item.remainingQty} value={verified}
-        onChange={(e) => onItemChange(item.lineId, "verifiedQtyThisRound", clampQty(e.target.value, item.remainingQty))}
-        className={`${dims.split(" ")[0]} ${inputWidth} text-center text-sm px-1`}
-      />
-      <Button type="button" size="icon" variant="outline" className={`${dims} shrink-0`} disabled={verified >= item.remainingQty} onClick={() => handleStep(1)}>
-        <Plus className="h-3.5 w-3.5" />
-      </Button>
-    </div>
-  );
-}
+const { getRowStatus, ROW_STATUS_CONFIG } = createRowStatus({
+  completeLabel: "این دور کامل رسید",
+  partialLabel: "این دور ناقص رسید",
+  emptyKey: "missing",
+  emptyLabel: "این دور نرسید",
+});
 
 function IssueBreakdownEditor({ item, onAddIssue, onUpdateIssue, onRemoveIssue }) {
   const issues = item.issues || [];
@@ -206,7 +171,14 @@ export default function ReceivingReturnItemsSection({ items, onItemChange, onAdd
                 </span>
                 <div>
                   <p className="text-[10px] text-muted-foreground text-center mb-1">مقدار رسیده در این دور</p>
-                  <QuantityStepper item={item} onItemChange={onItemChange} size="sm" />
+                  <QuantityStepper
+                    value={item.verifiedQtyThisRound}
+                    max={item.remainingQty}
+                    onChange={(next) =>
+                      onItemChange(item.lineId, "verifiedQtyThisRound", next)
+                    }
+                    size="sm"
+                  />
                 </div>
               </div>
 

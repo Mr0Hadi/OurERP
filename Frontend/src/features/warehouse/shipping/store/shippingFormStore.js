@@ -1,4 +1,3 @@
-// src/features/warehouse/shipping/store/shippingFormStore.js
 import { create } from 'zustand';
 
 // این استور در localStorage ذخیره نمی‌شود؛ فرم ارسال داده‌ای موقتی
@@ -17,7 +16,7 @@ const EMPTY_SHIPPING = {
   vehiclePlate: '',
 };
 
-const useShippingFormStore = create((set, get) => ({
+export const useShippingFormStore = create((set, get) => ({
   formData: { ...EMPTY_SHIPPING },
   // کلید نسخه شامل updatedAt فروش است، نه فقط id — چون وقتی همان
   // فروش برای دور دومِ ارسال دوباره باز می‌شود، id عوض نمی‌شود ولی
@@ -73,5 +72,3 @@ const useShippingFormStore = create((set, get) => ({
   resetForm: () =>
     set({ formData: { ...EMPTY_SHIPPING }, initializedForId: null }),
 }));
-
-export default useShippingFormStore;

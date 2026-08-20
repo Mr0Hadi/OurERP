@@ -1,0 +1,40 @@
+import axiosInstance from "@/shared/services/api/axios";
+
+// گزارش مغایرت هر خرید دو محور دارد: items (کسری روی سفارش) و
+// surplusItems (مازادِ بیرون از سفارش، شامل کالای ثبت‌نشده‌ی بدون
+// productId).
+export async function fetchMismatchReports(params = {}) {
+  const { data } = await axiosInstance.get("/purchases/mismatch-reports", { params });
+  return data;
+}
+export async function fetchMismatchReportByPurchaseId(purchaseId) {
+  const { data } = await axiosInstance.get(`/purchases/mismatch-reports/${purchaseId}`);
+  return data;
+}
+export async function fetchPurchaseReturns(params = {}) {
+  const { data } = await axiosInstance.get("/purchase-returns", { params });
+  return data;
+}
+export async function fetchPurchaseReturnById(id) {
+  const { data } = await axiosInstance.get(`/purchase-returns/${id}`);
+  return data;
+}
+export async function createPurchaseReturn(payload) {
+  const { data } = await axiosInstance.post("/purchase-returns", payload);
+  return data;
+}
+export async function updatePurchaseReturn(id, updates) {
+  const { data } = await axiosInstance.put(`/purchase-returns/${id}`, updates);
+  return data;
+}
+export async function updatePurchaseReturnStatus(id, statusData) {
+  const { data } = await axiosInstance.patch(
+    `/purchase-returns/${id}/status`,
+    statusData,
+  );
+  return data;
+}
+export async function removePurchaseReturn(id) {
+  const { data } = await axiosInstance.delete(`/purchase-returns/${id}`);
+  return data;
+}

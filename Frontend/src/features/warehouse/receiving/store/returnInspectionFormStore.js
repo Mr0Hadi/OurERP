@@ -1,4 +1,3 @@
-// src/features/warehouse/receiving/store/returnInspectionFormStore.js
 import { create } from "zustand";
 
 const EMPTY_INSPECTION = {
@@ -16,7 +15,7 @@ const EMPTY_INSPECTION = {
   vehiclePlate: "",
 };
 
-const useReturnInspectionFormStore = create((set, get) => ({
+export const useReturnInspectionFormStore = create((set, get) => ({
   formData: { ...EMPTY_INSPECTION },
   initializedForId: null,
 
@@ -72,5 +71,3 @@ const useReturnInspectionFormStore = create((set, get) => ({
 
   resetForm: () => set({ formData: { ...EMPTY_INSPECTION }, initializedForId: null }),
 }));
-
-export default useReturnInspectionFormStore;

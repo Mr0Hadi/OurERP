@@ -1,4 +1,3 @@
-// src/features/warehouse/receiving/services/mockData.js
 
 export { 
   allPurchases,
@@ -6,4 +5,4 @@ export {
   PURCHASE_STATUS_LABELS, 
   PAYMENT_TYPES, 
   PAYMENT_TYPE_LABELS 
-} from "@/features/purchases/services/mockData";
+} from "@/features/purchases/orders/services/mockData";

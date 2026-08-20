@@ -1,9 +1,9 @@
 // src/features/warehouse/products/pages/ProductDetailPage.jsx
 import { useNavigate, useParams } from "react-router-dom";
-import { Save, X, Trash2, AlertCircle } from "lucide-react";
+import { Save, X, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { Button } from "#/shared/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,7 +13,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "#/shared/components/ui/alert-dialog";
+} from "@/shared/components/ui/alert-dialog";
 import { useProductQuery } from "../services/queries";
 import { useUpdateProductMutation, useDeleteProductMutation } from "../services/mutations";
 import { useProductForm } from "../hooks/useProductForm";
@@ -22,8 +22,9 @@ import ProductPricingForm from "../components/forms/ProductPricingForm";
 import ProductImageUpload from "../components/forms/ProductImageUpload";
 import ProductBarcodeDisplay from "../components/forms/ProductBarcodeDisplay";
 import ProductDetailLoading from "../components/forms/ProductDetailLoading";
-import { useHeaderStore } from "#/shared/store/headerStore";
+import { useHeaderStore } from "@/shared/store/headerStore";
 import { ROUTES } from "@/shared/constants/routes";
+import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 
 function ProductDetailForm({ productData }) {
   const navigate = useNavigate();
@@ -37,6 +38,7 @@ function ProductDetailForm({ productData }) {
     imagePreview,
     barcodeValue,
     categories,
+    handleAddCategory,
     handleImageChange,
     handleImageRemove,
     buildProductPayload,
@@ -46,6 +48,7 @@ function ProductDetailForm({ productData }) {
     register,
     handleSubmit,
     control,
+    setValue,
     formState: { errors, isSubmitting },
   } = formMethods;
 
@@ -72,8 +75,10 @@ function ProductDetailForm({ productData }) {
             <ProductBasicInfoForm
               register={register}
               control={control}
+              setValue={setValue}
               errors={errors}
               categories={categories}
+              onAddCategory={handleAddCategory}
             />
             <ProductPricingForm register={register} />
           </div>
@@ -168,15 +173,10 @@ export default function ProductDetailPage() {
 
   if (isError || !productData) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-lg text-muted-foreground">
-          کالا مورد نظر یافت نشد یا خطایی رخ داده است.
-        </p>
-        <Button variant="outline" onClick={() => navigate(ROUTES.WAREHOUSE_PRODUCTS)}>
-          بازگشت به لیست
-        </Button>
-      </div>
+      <DetailErrorState
+        message="کالا مورد نظر یافت نشد یا خطایی رخ داده است."
+        onBack={() => navigate(ROUTES.WAREHOUSE_PRODUCTS)}
+      />
     );
   }
 

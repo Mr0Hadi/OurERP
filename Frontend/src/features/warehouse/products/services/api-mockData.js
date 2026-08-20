@@ -1,7 +1,60 @@
 // src/features/warehouse/products/services/api-mockData.js
-import { allProducts } from './mockData';
+import {
+  allProducts,
+  CATEGORY_CODES,
+  UNKNOWN_CATEGORY_CODE,
+} from './mockData';
+import { todayPersianCompact } from '@/shared/utils/dateUtils';
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const categoryCodeOf = (category) =>
+  CATEGORY_CODES[String(category ?? '').trim()] ?? UNKNOWN_CATEGORY_CODE;
+
+/**
+ * شماره‌ی بعدی برای شناسه‌هایی که با prefix مشترک شروع می‌شوند؛ یعنی
+ * شمارنده به‌ازای هر (دسته‌بندی، تاریخ) جداگانه پیش می‌رود. بزرگ‌ترین
+ * شماره‌ی موجود مبنا قرار می‌گیرد تا حذف یک کالا باعث تکراری‌شدن نشود.
+ */
+const nextSequence = (values, prefix, length) => {
+  const max = values.reduce((acc, value) => {
+    const text = String(value ?? '');
+    if (!text.startsWith(prefix)) return acc;
+    const tail = text.slice(prefix.length);
+    if (!/^\d+$/.test(tail)) return acc;
+    return Math.max(acc, Number(tail));
+  }, 0);
+
+  return String(max + 1).padStart(length, '0');
+};
+
+/** کد کالا: YYYYMMDD-CC-NNN (مثال: 14050523-04-001) */
+export const generateProductCode = async ({ category } = {}) => {
+  await delay(400);
+
+  const prefix = `${todayPersianCompact('YYYYMMDD')}-${categoryCodeOf(category)}-`;
+  const sequence = nextSequence(
+    allProducts.map((p) => p.code),
+    prefix,
+    3
+  );
+
+  return { code: `${prefix}${sequence}` };
+};
+
+/** بارکد: YYMMDDCCNNNNN — سیزده رقم و فقط رقم (مثال: 0505230400001) */
+export const generateProductBarcode = async ({ category } = {}) => {
+  await delay(400);
+
+  const prefix = `${todayPersianCompact('YYMMDD')}${categoryCodeOf(category)}`;
+  const sequence = nextSequence(
+    allProducts.map((p) => p.barcode),
+    prefix,
+    5
+  );
+
+  return { barcode: `${prefix}${sequence}` };
+};
 
 /**
  * تغییر موجودی یک یا چند کالا به‌صورت دلتا (مثبت = افزایش، منفی =

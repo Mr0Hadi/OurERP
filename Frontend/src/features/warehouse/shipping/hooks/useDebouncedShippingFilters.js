@@ -1,21 +1,18 @@
-import { useState, useEffect } from 'react';
-import useShippingFilterStore from '../store/shippingFilterStore';
-
-const DEBOUNCE_MS = 400;
+import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
+import { useShippingFilterStore } from "../store/shippingFilterStore";
 
 export function useDebouncedShippingFilters() {
   const globalSearch = useShippingFilterStore((s) => s.globalSearch);
-  const customerIds = useShippingFilterStore((s) => s.customerIds);
+  const counterpartyIds = useShippingFilterStore((s) => s.counterpartyIds);
   const type = useShippingFilterStore((s) => s.type);
   const fromDate = useShippingFilterStore((s) => s.fromDate);
   const toDate = useShippingFilterStore((s) => s.toDate);
 
-  const [debouncedText, setDebouncedText] = useState({ globalSearch });
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedText({ globalSearch }), DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [globalSearch]);
-
-  return { ...debouncedText, customerIds, type, fromDate, toDate };
+  return {
+    globalSearch: useDebouncedValue(globalSearch),
+    counterpartyIds,
+    type,
+    fromDate,
+    toDate,
+  };
 }

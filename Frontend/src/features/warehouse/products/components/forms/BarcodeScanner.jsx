@@ -1,20 +1,20 @@
 import { lazy, Suspense, useState } from "react";
 import { ScanBarcode } from "lucide-react";
 
-import { Button } from "#/shared/components/ui/button";
-import { Input } from "#/shared/components/ui/input";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "#/shared/components/ui/dialog";
+} from "@/shared/components/ui/dialog";
 
 
 const CameraScanner = lazy(() => import("./CameraScanner"));
 
-export default function BarcodeScanner({ value, onChange, ...inputProps }) {
+export default function BarcodeScanner({ value, onChange, action, ...inputProps }) {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   return (
@@ -64,6 +64,8 @@ export default function BarcodeScanner({ value, onChange, ...inputProps }) {
           </p>
         </DialogContent>
       </Dialog>
+
+      {action}
     </div>
   );
 }

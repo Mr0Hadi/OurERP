@@ -1,4 +1,3 @@
-// src/features/warehouse/receiving/store/receivingFormStore.js
 import { create } from 'zustand';
 
 // این استور در localStorage ذخیره نمی‌شود؛ فرم دریافت داده‌ای موقتی
@@ -11,6 +10,10 @@ const EMPTY_RECEIVING = {
   invoiceDate: '',
   status: '',
   items: [],
+  // کالاهایی که اصلاً در سیستم ما تعریف نشده‌اند و به هیچ قلم سفارش
+  // وصل نمی‌شوند؛ انباردار فقط شرح و تعداد را می‌نویسد و اتصال به یک
+  // کالای واقعی تا لحظه‌ی تصمیمِ «نگهداری» به تعویق می‌افتد.
+  unknownItems: [],
   receivingNote: '',
   receivedDate: new Date().toISOString().slice(0, 10),
   transporterName: '',
@@ -18,7 +21,7 @@ const EMPTY_RECEIVING = {
   vehiclePlate: '',
 };
 
-const useReceivingFormStore = create((set, get) => ({
+export const useReceivingFormStore = create((set, get) => ({
   formData: { ...EMPTY_RECEIVING },
   // کلید نسخه شامل updatedAt خرید است، نه فقط id — چون وقتی همان
   // خرید دوباره برای دور دومِ دریافت باز می‌شود، id عوض نمی‌شود ولی
@@ -33,6 +36,10 @@ const useReceivingFormStore = create((set, get) => ({
   setReceivingItems: (items) =>
     set((state) => ({
       formData: { ...state.formData, items },
+    })),
+  setUnknownItems: (unknownItems) =>
+    set((state) => ({
+      formData: { ...state.formData, unknownItems },
     })),
   initializeFromPurchase: (purchaseData) => {
     const { initializedForId } = get();
@@ -60,6 +67,12 @@ const useReceivingFormStore = create((set, get) => ({
           expectedQty: remaining,
           receivedQty: remaining,
           issues: [],
+          // مازادِ همین قلم: تعدادی که *بیشتر* از سفارش رسیده. عمداً
+          // بیرون از receivedQty نگه داشته می‌شود تا معنای «چقدر از
+          // سفارش تحویل شد» و تمام محاسباتی که به آن وابسته‌اند دست
+          // نخورد.
+          excessQty: 0,
+          excessNote: '',
         };
       })
       .filter((item) => item.expectedQty > 0);
@@ -73,6 +86,7 @@ const useReceivingFormStore = create((set, get) => ({
         invoiceDate: purchaseData.invoiceDate || '',
         status: purchaseData.status || '',
         items: receivingItems,
+        unknownItems: [],
         receivingNote: '',
         receivedDate: new Date().toISOString().slice(0, 10),
         transporterName: '',
@@ -84,5 +98,3 @@ const useReceivingFormStore = create((set, get) => ({
   resetForm: () =>
     set({ formData: { ...EMPTY_RECEIVING }, initializedForId: null }),
 }));
-
-export default useReceivingFormStore;

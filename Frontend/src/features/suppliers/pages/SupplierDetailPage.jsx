@@ -1,7 +1,7 @@
 // src/features/suppliers/pages/SupplierDetailPage.jsx
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Save, AlertCircle, X, Trash2 } from "lucide-react";
+import { Save, X, Trash2 } from "lucide-react";
 import {
   useUpdateSupplierMutation,
   useDeleteSupplierMutation,
@@ -25,6 +25,7 @@ import SupplierFinanceForm from "../components/forms/SupplierFinanceForm";
 import SupplierAddressForm from "../components/forms/SupplierAddressForm";
 import SupplierDetailLoading from "../components/forms/SupplierDetailLoading";
 import { ROUTES } from "@/shared/constants/routes";
+import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 
 function SupplierDetailForm({ supplierData }) {
   const navigate = useNavigate();
@@ -181,15 +182,10 @@ export default function SupplierDetailPage() {
 
   if (isError || !supplier) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-lg text-muted-foreground">
-          تامین‌کننده مورد نظر یافت نشد یا خطایی رخ داده است.
-        </p>
-        <Button variant="outline" onClick={() => navigate(ROUTES.SUPPLIERS)}>
-          بازگشت به لیست
-        </Button>
-      </div>
+      <DetailErrorState
+        message="تامین‌کننده مورد نظر یافت نشد یا خطایی رخ داده است."
+        onBack={() => navigate(ROUTES.SUPPLIERS)}
+      />
     );
   }
 

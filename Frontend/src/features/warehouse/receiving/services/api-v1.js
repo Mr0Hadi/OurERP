@@ -1,4 +1,3 @@
-// src/features/warehouse/receiving/services/api-v1.js
 import axiosInstance from "@/shared/services/api/axios";
 
 export { RECEIVING_ELIGIBLE_STATUSES, RECEIVING_STATUS_LABELS } from "./constants";
@@ -34,6 +33,12 @@ export async function updateReceivingStatus(id, receivedItems) {
   return data;
 }
 
+/**
+ * receivingData علاوه بر receivedItems (که هر قلمش issues و excessQty
+ * دارد) یک آرایه‌ی unknownItems هم حمل می‌کند: کالاهایی که تامین‌کننده
+ * فرستاده ولی نه در این سفارش‌اند و نه در فهرست کالاها، پس فقط شرح و
+ * تعداد دارند و productId ندارند.
+ */
 export async function confirmReceiving(purchaseId, receivingData) {
   const { data } = await axiosInstance.post(
     `/purchases/${purchaseId}/receiving/confirm`,

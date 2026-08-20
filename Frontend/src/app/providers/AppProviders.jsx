@@ -1,4 +1,3 @@
-// src/providers/AppProviders.jsx
 import { QueryProvider } from './QueryProvider';
 import { ThemeProvider } from '@/shared/components/theme/theme-provider';
 import { ToastProvider } from './ToastProvider';

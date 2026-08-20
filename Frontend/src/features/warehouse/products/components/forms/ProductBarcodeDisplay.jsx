@@ -6,7 +6,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-} from "#/shared/components/ui/card";
+} from "@/shared/components/ui/card";
 
 export default function ProductBarcodeDisplay({ value }) {
   return (

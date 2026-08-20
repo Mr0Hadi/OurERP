@@ -1,6 +1,5 @@
-// src/features/warehouse/receiving/hooks/useReceivingForm.js
 import { useEffect } from 'react';
-import useReceivingFormStore from '../store/receivingFormStore';
+import { useReceivingFormStore } from '../store/receivingFormStore';
 
 const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -11,6 +10,7 @@ export function useReceivingForm(purchaseData) {
     formData,
     setFormData,
     setReceivingItems,
+    setUnknownItems,
     initializeFromPurchase,
     initializedForId,
     resetForm,
@@ -108,6 +108,64 @@ export function useReceivingForm(purchaseData) {
     setReceivingItems(newItems);
   };
 
+  // ── مازادِ یک قلم شناخته‌شده ───────────────────────────────────────
+  // برخلاف کسری، مازاد از روی تعدادها قابل استنتاج نیست (چون سقف
+  // دریافتی همان سفارش است)؛ انباردار باید صریحاً اعلامش کند. سقفی
+  // هم ندارد — تامین‌کننده هر تعدادی ممکن است اضافه فرستاده باشد.
+  const handleExcessChange = (productId, field, value) => {
+    const newItems = formData.items.map((item) => {
+      if (item.productId !== productId) return item;
+      if (field === 'excessQty') {
+        const num = Number(value);
+        const safe = Number.isNaN(num) || num < 0 ? 0 : Math.floor(num);
+        // با صفرشدن تعداد، یادداشتِ بی‌صاحب هم پاک می‌شود تا چیزی که
+        // ثبت نمی‌شود روی صفحه باقی نماند.
+        return { ...item, excessQty: safe, excessNote: safe > 0 ? item.excessNote : '' };
+      }
+      return { ...item, [field]: value };
+    });
+    setReceivingItems(newItems);
+  };
+
+  // ── کالای ثبت‌نشده ────────────────────────────────────────────────
+  const unknownItems = formData.unknownItems || [];
+
+  const handleAddUnknownItem = () => {
+    setUnknownItems([
+      ...unknownItems,
+      { id: generateId(), productName: '', qty: 1, unit: 'عدد', note: '' },
+    ]);
+  };
+
+  const handleUpdateUnknownItem = (rowId, field, value) => {
+    setUnknownItems(
+      unknownItems.map((row) => {
+        if (row.id !== rowId) return row;
+        if (field === 'qty') {
+          const num = Number(value);
+          const safe = Number.isNaN(num) || num < 0 ? 0 : Math.floor(num);
+          return { ...row, qty: safe };
+        }
+        return { ...row, [field]: value };
+      }),
+    );
+  };
+
+  const handleRemoveUnknownItem = (rowId) => {
+    setUnknownItems(unknownItems.filter((row) => row.id !== rowId));
+  };
+
+  const isUnknownRowComplete = (row) =>
+    !!row.productName?.trim() && (Number(row.qty) || 0) > 0;
+
+  // ردیف‌های نیمه‌پرشده بی‌صدا حذف نمی‌شوند — انباردار باید ببیند که
+  // چیزی که نوشته ثبت نخواهد شد.
+  const incompleteUnknownCount = unknownItems.filter(
+    (row) =>
+      !isUnknownRowComplete(row) &&
+      (!!row.productName?.trim() || (Number(row.qty) || 0) > 0 || !!row.note?.trim()),
+  ).length;
+
   const isAllComplete = formData.items.every(
     (item) => item.receivedQty >= item.expectedQty
   );
@@ -129,6 +187,14 @@ export function useReceivingForm(purchaseData) {
         qty: Number(i.qty) || 0,
         note: i.note || '',
       })),
+      excessQty: Number(item.excessQty) || 0,
+      excessNote: item.excessNote || '',
+    })),
+    unknownItems: unknownItems.filter(isUnknownRowComplete).map((row) => ({
+      productName: row.productName.trim(),
+      qty: Number(row.qty) || 0,
+      unit: row.unit?.trim() || 'عدد',
+      note: row.note || '',
     })),
     receivingNote: formData.receivingNote,
     receivedDate: formData.receivedDate,
@@ -144,6 +210,12 @@ export function useReceivingForm(purchaseData) {
     handleAddIssue,
     handleUpdateIssue,
     handleRemoveIssue,
+    handleExcessChange,
+    unknownItems,
+    handleAddUnknownItem,
+    handleUpdateUnknownItem,
+    handleRemoveUnknownItem,
+    incompleteUnknownCount,
     isAllComplete,
     isTransporterValid,
     buildPayload,

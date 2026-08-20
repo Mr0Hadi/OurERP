@@ -1,38 +1,15 @@
-import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+import { createFilterStore } from "@/shared/store/createFilterStore";
 
-const useShippingFilterStore = create(
-  devtools((set) => ({
-    globalSearch: '',
-    customerIds: [],
-    // '' = همه، 'sale' = فقط ارسال فروش، 'return_replacement' = فقط ارسال جایگزین
-    type: '',
-    fromDate: '',
-    toDate: '',
-
-    pagination: { pageIndex: 0, pageSize: 10 },
-    sorting: { id: 'createdAt', desc: true },
-
-    setGlobalSearch: (value) => set({ globalSearch: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-    setCustomerIds: (value) => set({ customerIds: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-    setType: (value) => set({ type: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-    setFromDate: (value) => set({ fromDate: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-    setToDate: (value) => set({ toDate: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-
-    setPagination: (newPagination) => set({ pagination: newPagination }),
-    setSorting: (newSorting) => set({ sorting: newSorting, pagination: { pageIndex: 0, pageSize: 10 } }),
-
-    resetFilters: () =>
-      set({
-        globalSearch: '',
-        customerIds: [],
-        type: '',
-        fromDate: '',
-        toDate: '',
-        pagination: { pageIndex: 0, pageSize: 10 },
-        sorting: { id: 'createdAt', desc: true },
-      }),
-  })),
-);
-
-export default useShippingFilterStore;
+export const useShippingFilterStore = createFilterStore({
+  filters: {
+    globalSearch: "",
+    // کلید ترکیبی (customer:12 / supplier:3) چون صف ارسال هم به مشتری
+    // می‌رود و هم به تامین‌کننده — همان قراردادی که صف دریافت دارد.
+    counterpartyIds: [],
+    // '' = همه، 'sale' = ارسال فروش، 'return_replacement' = کالای
+    // جایگزین، 'return_to_supplier' = عودت مازاد به تامین‌کننده
+    type: "",
+    fromDate: "",
+    toDate: "",
+  },
+});

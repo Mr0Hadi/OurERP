@@ -7,10 +7,10 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-} from "#/shared/components/ui/card";
-import { Button } from "#/shared/components/ui/button";
-import { Label } from "#/shared/components/ui/label";
-import { Input } from "#/shared/components/ui/input";
+} from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Label } from "@/shared/components/ui/label";
+import { Input } from "@/shared/components/ui/input";
 
 export default function ProductImageUpload({ preview, onImageChange, onImageRemove }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);

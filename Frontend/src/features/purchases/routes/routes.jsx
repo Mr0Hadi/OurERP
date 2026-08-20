@@ -1,4 +1,4 @@
-// src/features/purchases/routes.jsx
+// src/features/purchases/routes/routes.jsx
 import { ROUTES } from "@/shared/constants/routes";
 import {
   PurchasesPage,

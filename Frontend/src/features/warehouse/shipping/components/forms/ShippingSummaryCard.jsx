@@ -1,4 +1,3 @@
-// src/features/warehouse/shipping/components/forms/ShippingSummaryCard.jsx
 import { useMemo } from 'react';
 import { Loader2, PackageOpen, PackageCheck, Activity } from 'lucide-react';
 
@@ -8,7 +7,7 @@ import { Textarea } from '@/shared/components/ui/textarea';
 import { Badge } from '@/shared/components/ui/badge';
 import { Progress } from '@/shared/components/ui/progress';
 import PersianDatePicker from '@/shared/components/ui/persian-date-picker';
-import { SALE_STATUSES, SALE_STATUS_LABELS } from '@/features/sales/services/mockData';
+import { SALE_STATUSES, SALE_STATUS_LABELS } from '@/features/sales/orders/services/mockData';
 import { gregorianToPersian } from '@/shared/utils/dateUtils';
 
 const STATUS_CONFIG = {

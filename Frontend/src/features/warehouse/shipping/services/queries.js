@@ -1,4 +1,3 @@
-// src/features/warehouse/shipping/services/queries.js
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { fetchShippingSaleById } from "./api-mockData";
@@ -14,7 +13,7 @@ export function useOutgoingQueueQuery(filters, pagination, sorting) {
       limit: pagination.pageSize,
       search: filters.globalSearch || "",
       type: filters.type || "",
-      customerIds: filters.customerIds || [],
+      counterpartyIds: filters.counterpartyIds || [],
       fromDate: filters.fromDate || "",
       toDate: filters.toDate || "",
       sortBy: sorting?.id ?? "createdAt",

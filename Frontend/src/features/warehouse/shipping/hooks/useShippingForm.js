@@ -1,6 +1,6 @@
-// src/features/warehouse/shipping/hooks/useShippingForm.js
 import { useEffect } from 'react';
-import useShippingFormStore from '../store/shippingFormStore';
+import { useShippingFormStore } from '../store/shippingFormStore';
+import { clampQty } from "@/shared/utils/qtyUtils";
 
 export function useShippingForm(saleData) {
   const store = useShippingFormStore();
@@ -21,12 +21,6 @@ export function useShippingForm(saleData) {
       initializeFromSale(saleData);
     }
   }, [saleVersion, saleData, initializeFromSale, initializedForId]);
-
-  const clampQty = (value, expectedQty) => {
-    const num = Number(value);
-    if (Number.isNaN(num) || num < 0) return 0;
-    return Math.min(num, expectedQty);
-  };
 
   const handleItemChange = (productId, field, value) => {
     const newItems = formData.items.map((item) =>

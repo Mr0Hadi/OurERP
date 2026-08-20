@@ -1,4 +1,3 @@
-// src/features/warehouse/receiving/services/mutations.js
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import {
@@ -7,9 +6,9 @@ import {
 } from "./api-mockData";
 import { confirmReturnInspection } from "./returnsIntakeApi";
 import { receivingKeys, incomingQueueKeys } from "./queryKeys";
-import { invalidatePurchaseEcosystem } from "#/features/purchases/services/sharedInvalidation";
-import { invalidateSalesEcosystem } from "@/features/sales/services/sharedInvalidation";
-import { salesReturnKeys } from "@/features/sales/services/returns/queryKeys";
+import { invalidatePurchaseEcosystem } from "@/features/purchases/orders/services/sharedInvalidation";
+import { invalidateSalesEcosystem } from "@/features/sales/orders/services/sharedInvalidation";
+import { salesReturnKeys } from "@/features/sales/returns/services/queryKeys";
 
 export const useUpdateReceivingStatusMutation = () => {
   const queryClient = useQueryClient();
