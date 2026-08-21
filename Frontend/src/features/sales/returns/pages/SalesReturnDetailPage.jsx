@@ -23,7 +23,7 @@ import {
 } from "@/shared/components/ui/alert-dialog";
 import { useHeaderStore } from "@/shared/store/headerStore";
 
-import { useSalesReturnQuery } from "../services/queries";
+import { useSalesReturnQuery, useSaleForReturnQuery } from "../services/queries";
 import {
   useAddClaimResolutionMutation,
   useRemoveClaimResolutionMutation,
@@ -38,12 +38,21 @@ import {
 } from "../domain/returnResolutions";
 
 import SalesReturnDetailLoading from "../components/forms/SalesReturnDetailLoading";
+import SaleInvoiceCard from "../components/forms/SaleInvoiceCard";
 import SalesReturnResolutionSection from "../components/forms/SalesReturnResolutionSection";
 import { ROUTES } from "@/shared/constants/routes";
 import { gregorianToPersian } from "@/shared/utils/dateUtils";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 
 function SalesReturnDetailContent({ salesReturn }) {
+  // مرجوعیِ خودش از سقف مستثنا می‌شود تا کارت فاکتور، «ادعاشده در
+  // مرجوعی دیگر» را درست نشان دهد — نه ادعاهای همین سند را دوباره
+  // به‌عنوان «مرجوعیِ دیگر» بشمارد.
+  const { data: sale } = useSaleForReturnQuery(
+    salesReturn.saleId,
+    salesReturn.id,
+  );
+
   const addResolutionMutation = useAddClaimResolutionMutation(salesReturn.id);
   const removeResolutionMutation = useRemoveClaimResolutionMutation(
     salesReturn.id,
@@ -65,6 +74,8 @@ function SalesReturnDetailContent({ salesReturn }) {
 
   return (
     <div className="container max-w-6xl mx-auto px-4 space-y-4 animate-in fade-in zoom-in-95 duration-300">
+      {sale && <SaleInvoiceCard sale={sale} />}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
           {salesReturn.description && (

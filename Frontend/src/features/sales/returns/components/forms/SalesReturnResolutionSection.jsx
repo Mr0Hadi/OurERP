@@ -89,7 +89,7 @@ function WarehouseQueueNotice({ salesReturn }) {
             onClick={() =>
               navigate(
                 ROUTES.WAREHOUSE_SHIPPING_REPLACEMENT_DETAIL.replace(
-                  ":id",
+                  ":returnId",
                   salesReturn.id,
                 ),
               )

@@ -65,10 +65,10 @@ export function useReturnableSalesQuery(search) {
   });
 }
 
-export function useSaleForReturnQuery(saleId) {
+export function useSaleForReturnQuery(saleId, excludeReturnId = null) {
   return useQuery({
-    queryKey: salesReturnKeys.saleForReturn(saleId),
-    queryFn: () => fetchSaleForReturn(saleId),
+    queryKey: salesReturnKeys.saleForReturn(saleId, excludeReturnId),
+    queryFn: () => fetchSaleForReturn(saleId, excludeReturnId),
     enabled: !!saleId,
     staleTime: 1000 * 30,
     refetchOnMount: "always",
