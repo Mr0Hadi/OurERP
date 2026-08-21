@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { RESOLUTION_TYPES, RESOLUTION_LINE_STATUSES } from "@/features/sales/returns/services/mockData";
+import { buildGoodsLines } from "@/features/sales/returns/domain/returnResolutions";
+import { EFFECT_KINDS } from "@/features/sales/returns/domain/returnEffects";
 
 const EMPTY_TRANSPORT = {
   shippingNote: "",
@@ -10,37 +11,33 @@ const EMPTY_TRANSPORT = {
 };
 
 /**
- * تمام قلم‌هایی از این مرجوعی که تصمیم «ارسال کالای جایگزین» دارند و
- * هنوز به‌طور کامل ارسال نشده‌اند را جمع می‌کند — نه فقط یک قلم. هر
- * قلم با شناسه‌ی ترکیبی lineId+resolutionId مشخص می‌شود چون تئوریاً
- * یک قلم می‌تواند بیش از یک تصمیمِ «ارسال جایگزین» داشته باشد.
+ * اثرهای معلقِ «ارسال کالا برای مشتری» در این مرجوعی.
+ *
+ * منبعش دیگر «تصمیمِ نوع جایگزینی» نیست بلکه خودِ اثر GOODS_OUT است —
+ * پس هر تصمیمی که به هر دلیلی کالایی از انبار بیرون می‌فرستد (تعویض،
+ * جبران کسری، یا یک ترکیب سفارشی) به‌طور خودکار اینجا دیده می‌شود،
+ * بدون اینکه این فایل لازم باشد فهرستِ انواع تصمیم را بشناسد.
+ *
+ * کالای هر ردیف از خودِ اثر خوانده می‌شود نه از ادعا، چون در تعویض با
+ * کالای دیگر این دو یکی نیستند و انباردار باید کالای واقعیِ ارسالی را
+ * ببیند.
  */
 function buildPendingItems(salesReturn) {
-  const rows = [];
-  (salesReturn?.items || []).forEach((item) => {
-    (item.resolutions || []).forEach((resolution) => {
-      if (resolution.type !== RESOLUTION_TYPES.REPLACEMENT) return;
-      if (resolution.status !== RESOLUTION_LINE_STATUSES.AWAITING) return;
-      const alreadyShippedQty = resolution.shippedQty || 0;
-      const remaining = resolution.qty - alreadyShippedQty;
-      if (remaining <= 0) return;
-
-      rows.push({
-        productId: `${item.lineId}:${resolution.id}`,
-        lineId: item.lineId,
-        resolutionId: resolution.id,
-        productName: item.productName,
-        productCode: item.productCode,
-        expectedQty: remaining,
-        shippedQty: remaining,
-        note:
-          alreadyShippedQty > 0
-            ? `${alreadyShippedQty.toLocaleString("fa-IR")} از ${resolution.qty.toLocaleString("fa-IR")} قبلاً ارسال شده`
-            : "",
-      });
-    });
-  });
-  return rows;
+  if (!salesReturn) return [];
+  return buildGoodsLines(salesReturn, EFFECT_KINDS.GOODS_OUT)
+    .filter((line) => line.remainingQty > 0)
+    .map((line) => ({
+      productId: line.effectId,
+      effectId: line.effectId,
+      productName: line.productName,
+      productCode: line.productCode,
+      expectedQty: line.remainingQty,
+      shippedQty: line.remainingQty,
+      note:
+        line.doneQty > 0
+          ? `${line.doneQty.toLocaleString("fa-IR")} از ${line.qty.toLocaleString("fa-IR")} قبلاً ارسال شده`
+          : "",
+    }));
 }
 
 export function useReplacementShipmentForm(salesReturn) {
@@ -79,18 +76,14 @@ export function useReplacementShipmentForm(salesReturn) {
     (!!transportInfo.driverNationalId?.trim() || !!transportInfo.vehiclePlate?.trim());
 
   const buildPayload = () => ({
-    shippedDate: transportInfo.shippedDate,
-    shippingNote: transportInfo.shippingNote,
-    driverName: transportInfo.driverName,
-    driverNationalId: transportInfo.driverNationalId,
+    date: transportInfo.shippedDate,
+    note: transportInfo.shippingNote,
+    partyName: transportInfo.driverName,
+    partyNationalId: transportInfo.driverNationalId,
     vehiclePlate: transportInfo.vehiclePlate,
-    items: items
+    rounds: items
       .filter((item) => (item.shippedQty || 0) > 0)
-      .map((item) => ({
-        lineId: item.lineId,
-        resolutionId: item.resolutionId,
-        shippedQtyThisRound: item.shippedQty,
-      })),
+      .map((item) => ({ effectId: item.effectId, qty: item.shippedQty })),
   });
 
   const reset = () => {

@@ -4,7 +4,7 @@ import {
   updateReceivingStatus,
   confirmReceiving,
 } from "./api-mockData";
-import { confirmReturnInspection } from "./returnsIntakeApi";
+import { confirmReturnIntake } from "./returnsIntakeApi";
 import { receivingKeys, incomingQueueKeys } from "./queryKeys";
 import { invalidatePurchaseEcosystem } from "@/features/purchases/orders/services/sharedInvalidation";
 import { invalidateSalesEcosystem } from "@/features/sales/orders/services/sharedInvalidation";
@@ -93,20 +93,20 @@ export const useConfirmReceivingMutation = () => {
   });
 };
 
-export const useConfirmReturnInspectionMutation = () => {
+export const useConfirmReturnIntakeMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ returnId, inspectionData }) =>
-      confirmReturnInspection(returnId, inspectionData),
+    mutationFn: ({ returnId, intakeData }) =>
+      confirmReturnIntake(returnId, intakeData),
     onSuccess: (updatedReturn) => {
       queryClient.setQueryData(salesReturnKeys.detail(updatedReturn.id), updatedReturn);
       invalidateSalesEcosystem(queryClient, updatedReturn.saleId);
       queryClient.invalidateQueries({ queryKey: incomingQueueKeys.lists() });
-      toast.success("نتیجه‌ی بررسی و دریافت مرجوعی با موفقیت ثبت شد");
+      toast.success("دریافت کالای مرجوعی ثبت شد");
     },
     onError: (error) => {
-      toast.error(error?.message || "خطا در ثبت بررسی مرجوعی");
+      toast.error(error?.message || "خطا در ثبت دریافت مرجوعی");
     },
   });
 };

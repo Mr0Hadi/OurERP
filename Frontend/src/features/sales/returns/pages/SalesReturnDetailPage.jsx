@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { FileText, Trash2, Warehouse, ArrowLeft } from "lucide-react";
+import { FileText, Trash2, Link2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
@@ -25,18 +25,17 @@ import { useHeaderStore } from "@/shared/store/headerStore";
 
 import { useSalesReturnQuery } from "../services/queries";
 import {
-  useAddReturnItemResolutionMutation,
-  useRemoveReturnItemResolutionMutation,
+  useAddClaimResolutionMutation,
+  useRemoveClaimResolutionMutation,
   useRejectSalesReturnMutation,
   useCancelSalesReturnMutation,
   useReopenSalesReturnMutation,
   useRemoveSalesReturnMutation,
 } from "../services/mutations";
-import { canDeleteSalesReturn } from "../domain/salesReturnRules";
 import {
-  SALES_RETURN_REASON_LABELS,
-  SALES_RETURN_STATUSES,
-} from "../services/mockData";
+  canDeleteSalesReturn,
+  summarizeReturn,
+} from "../domain/returnResolutions";
 
 import SalesReturnDetailLoading from "../components/forms/SalesReturnDetailLoading";
 import SalesReturnResolutionSection from "../components/forms/SalesReturnResolutionSection";
@@ -44,47 +43,9 @@ import { ROUTES } from "@/shared/constants/routes";
 import { gregorianToPersian } from "@/shared/utils/dateUtils";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 
-function PendingInspectionNotice({ salesReturn }) {
-  const navigate = useNavigate();
-  return (
-    <Card className="border-amber-200 dark:border-amber-800">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <Warehouse className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-          در انتظار بررسی فیزیکی توسط انبار
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-sm text-muted-foreground">
-          کالای برگشتی مشتری هنوز توسط انباردار بررسی و دریافت نشده است. این کار
-          از صفحه‌ی «انبار ← دریافت کالا» انجام می‌شود؛ همان‌جا که کالاهای خرید
-          هم دریافت می‌شوند.
-        </p>
-        <Button
-          type="button"
-          className="w-full gap-2"
-          onClick={() =>
-            navigate(
-              ROUTES.WAREHOUSE_RECEIVING_RETURN_DETAIL.replace(
-                ":id",
-                salesReturn.id,
-              ),
-            )
-          }
-        >
-          <ArrowLeft className="h-4 w-4" />
-          رفتن به صفحه‌ی بررسی و دریافت انبار
-        </Button>
-      </CardContent>
-    </Card>
-  );
-}
-
 function SalesReturnDetailContent({ salesReturn }) {
-  const addResolutionMutation = useAddReturnItemResolutionMutation(
-    salesReturn.id,
-  );
-  const removeResolutionMutation = useRemoveReturnItemResolutionMutation(
+  const addResolutionMutation = useAddClaimResolutionMutation(salesReturn.id);
+  const removeResolutionMutation = useRemoveClaimResolutionMutation(
     salesReturn.id,
   );
   const rejectMutation = useRejectSalesReturnMutation(salesReturn.id);
@@ -100,17 +61,12 @@ function SalesReturnDetailContent({ salesReturn }) {
     reopenMutation.isPending ||
     removeMutation.isPending;
 
-  const isPendingInspection =
-    salesReturn.status === SALES_RETURN_STATUSES.PENDING_INSPECTION;
+  const money = summarizeReturn(salesReturn);
 
   return (
     <div className="container max-w-6xl mx-auto px-4 space-y-4 animate-in fade-in zoom-in-95 duration-300">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
-          {isPendingInspection ? (
-            <PendingInspectionNotice salesReturn={salesReturn} />
-          ) : null}
-
           {salesReturn.description && (
             <Card>
               <CardHeader className="pb-2">
@@ -129,11 +85,11 @@ function SalesReturnDetailContent({ salesReturn }) {
           <SalesReturnResolutionSection
             salesReturn={salesReturn}
             isBusy={isBusy}
-            onAddResolution={(lineId, resolution) =>
-              addResolutionMutation.mutate({ lineId, resolution })
+            onAddResolution={(claimId, draft) =>
+              addResolutionMutation.mutate({ claimId, draft })
             }
-            onRemoveResolution={(lineId, resolutionId) =>
-              removeResolutionMutation.mutate({ lineId, resolutionId })
+            onRemoveResolution={(claimId, resolutionId) =>
+              removeResolutionMutation.mutate({ claimId, resolutionId })
             }
             onReject={() => rejectMutation.mutate()}
             onCancel={() => cancelMutation.mutate()}
@@ -172,19 +128,41 @@ function SalesReturnDetailContent({ salesReturn }) {
                   {gregorianToPersian(salesReturn.returnDate)}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">دلیل اصلی</span>
-                <Badge variant="outline" className="text-xs">
-                  {SALES_RETURN_REASON_LABELS[salesReturn.reason] ??
-                    salesReturn.reason}
-                </Badge>
-              </div>
+              {salesReturn.previousReturnId && (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">مرجوعی قبلی</span>
+                  <Badge variant="outline" className="text-xs gap-1">
+                    <Link2 className="h-3 w-3" />
+                    #{salesReturn.previousReturnId}
+                  </Badge>
+                </div>
+              )}
               <div className="flex items-center justify-between pt-2 border-t border-border">
                 <span className="text-muted-foreground">جمع مبلغ ادعا</span>
                 <span className="font-bold">
                   {salesReturn.totalClaimedAmount.toLocaleString("fa-IR")} ریال
                 </span>
               </div>
+              {money.moneyOut > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">
+                    پرداختی به مشتری
+                  </span>
+                  <span className="font-medium text-destructive">
+                    {money.moneyOut.toLocaleString("fa-IR")} ریال
+                  </span>
+                </div>
+              )}
+              {money.moneyIn > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">
+                    دریافتی از مشتری
+                  </span>
+                  <span className="font-medium text-[oklch(0.50_0.16_152)]">
+                    {money.moneyIn.toLocaleString("fa-IR")} ریال
+                  </span>
+                </div>
+              )}
             </CardContent>
           </Card>
 

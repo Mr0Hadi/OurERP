@@ -1,84 +1,160 @@
-import {
-  allSalesReturns,
-  SALES_RETURN_STATUSES,
-  RESOLUTION_TYPES,
-  RESOLUTION_LINE_STATUSES,
-} from "./mockData";
+import { allSalesReturns, RETURN_ELIGIBLE_SALE_STATUSES } from "./mockData";
 import { allSales } from "@/features/sales/orders/services/mockData";
+import { adjustSaleTotal } from "@/features/sales/orders/services/api-mockData";
 import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
+
+import {
+  CLAIM_SCOPES,
+  SALES_RETURN_STATUSES,
+  isTerminalStatus,
+} from "../domain/returnVocabulary";
+import {
+  EFFECT_KINDS,
+  EFFECT_STATUSES,
+  MONEY_CHANNELS,
+  isGoodsEffect,
+} from "../domain/returnEffects";
+import {
+  buildResolution,
+  claimRemainingQty,
+  deriveReturnStatus,
+  validateComposition,
+} from "../domain/returnResolutions";
+
+/**
+ * لایه‌ی داده‌ی مرجوعی فروش + موتور اثر.
+ *
+ * «موتور اثر» یعنی تنها جایی که اثرهای مرجوعی به دنیای بیرون وصل
+ * می‌شوند: موجودی کالا و مبلغ فروش. هیچ‌جای دیگری اجازه ندارد این دو
+ * را از طرف مرجوعی تغییر دهد، تا حساب همیشه از یک مسیر بگذرد.
+ *
+ * دو قانونِ اجرای اثر:
+ *
+ *  • اثرهای پولی لحظه‌ی ثبتِ تصمیم اعمال می‌شوند (ثبتشان توسط واحد
+ *    فروش خودش همان اقدام مالی است).
+ *  • اثرهای کالایی معلق می‌مانند تا انبار واقعاً کالا را جابه‌جا کند،
+ *    و می‌توانند چند دور جزئی داشته باشند.
+ */
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
+// مرجوعی‌هایی که هنوز «زنده»اند و ادعاهایشان باید سهمیه‌ی فروش را
+// اشغال کند. رد/لغو شده‌ها سهمیه را آزاد می‌کنند.
 const ACTIVE_RETURN_STATUSES = new Set([
-  SALES_RETURN_STATUSES.PENDING_INSPECTION,
-  SALES_RETURN_STATUSES.COORDINATING,
-  SALES_RETURN_STATUSES.RESOLVED,
+  SALES_RETURN_STATUSES.OPEN,
+  SALES_RETURN_STATUSES.IN_PROGRESS,
+  SALES_RETURN_STATUSES.SETTLED,
 ]);
-
-const RETURN_ELIGIBLE_SALE_STATUSES = ["shipped", "delivered", "partially_delivered"];
 
 function getSale(saleId) {
   return allSales.find((s) => Number(s.id) === Number(saleId));
 }
+
 export function getSalesReturnIndex(returnId) {
   return allSalesReturns.findIndex((r) => Number(r.id) === Number(returnId));
 }
 
+function findReturn(returnId) {
+  const idx = getSalesReturnIndex(returnId);
+  if (idx === -1) throw new Error("مرجوعی یافت نشد");
+  return { idx, ret: allSalesReturns[idx] };
+}
+
+function allEffects(ret) {
+  return (ret.claims || []).flatMap((claim) =>
+    (claim.resolutions || []).flatMap((res) => res.effects || []),
+  );
+}
+
+/** بازنویسی رکورد با وضعیت مشتق‌شده — تنها راه نوشتن روی یک مرجوعی. */
+function commit(idx, patch) {
+  const next = {
+    ...allSalesReturns[idx],
+    ...patch,
+    updatedAt: new Date().toISOString(),
+  };
+  next.totalClaimedAmount = (next.claims || []).reduce(
+    (sum, claim) => sum + (Number(claim.qty) || 0) * (Number(claim.unitPrice) || 0),
+    0,
+  );
+  next.status = deriveReturnStatus(next);
+  allSalesReturns[idx] = next;
+  return next;
+}
+
+// ─── سهمیه‌ی قابل‌ادعا روی یک خط فروش ───────────────────────────────────────
+
 /**
- * چقدر از یک کالا، برای یک فروش مشخص، الان «رزرو» است — یعنی چیزی که
- * فعلاً دست مشتری نیست یا هنوز تکلیفش معلوم نشده، پس نباید دوباره
- * قابل مرجوع‌شدن باشد.
+ * چقدر از یک کالا در مرجوعی‌های *فعالِ دیگرِ* همین فروش ادعا شده.
  *
- * نکته‌ی کلیدی: وقتی تصمیمِ یک خط، «ارسال کالای جایگزین» است و آن
- * جایگزین (کامل یا حتی بخشی) ارسال شده، آن مقدار دیگر رزرو نیست —
- * چون یک کالای فیزیکی تازه به‌جای کالای برگشتی به مشتری تحویل شده و
- * او دوباره می‌تواند (در صورت وجود مشکل) همان را مرجوع کند. برای
- * انواع دیگر تصمیم (بازگشت وجه، اعتبار خرید، بدون جبران) این اتفاق
- * نمی‌افتد چون هیچ کالای فیزیکی جدیدی دست مشتری نمی‌رسد، پس آن مقدار
- * برای همیشه رزرو باقی می‌ماند.
+ * این عدد فقط برای *نمایش* است و دیگر سقف فرم را تعیین نمی‌کند: واحد
+ * فروش باید بتواند برای کل مقدار تحویل‌شده ادعا ثبت کند. اگر مشتری
+ * دوباره تماس بگیرد و بگوید همان کالا مشکل دیگری هم دارد، سقفِ
+ * محاسبه‌شده نباید جلویش را بگیرد — تصمیم اینکه ادعا معتبر است یا نه
+ * با واحد فروش است، نه با یک فرمول.
+ *
+ * ادعاهای خارج از فاکتور اینجا شمرده نمی‌شوند چون اصلاً روی خط فروش
+ * نمی‌نشینند.
  */
-function getReservedQtyForProduct(saleId, productId, excludeReturnId = null) {
+function activeClaimedQtyForProduct(saleId, productId, excludeReturnId = null) {
   let reserved = 0;
-  allSalesReturns.forEach((r) => {
-    if (Number(r.saleId) !== Number(saleId)) return;
-    if (excludeReturnId && r.id === excludeReturnId) return;
-    if (!ACTIVE_RETURN_STATUSES.has(r.status)) return;
 
-    r.items.forEach((item) => {
-      if (item.productId !== productId) return;
+  allSalesReturns.forEach((ret) => {
+    if (Number(ret.saleId) !== Number(saleId)) return;
+    if (excludeReturnId != null && Number(ret.id) === Number(excludeReturnId)) return;
+    if (!ACTIVE_RETURN_STATUSES.has(ret.status)) return;
 
-      reserved += item.claimedQty || 0;
+    (ret.claims || []).forEach((claim) => {
+      if (claim.scope !== CLAIM_SCOPES.ON_INVOICE) return;
+      if (claim.productId !== productId) return;
 
-      (item.resolutions || []).forEach((res) => {
-        if (res.type === RESOLUTION_TYPES.REPLACEMENT) {
-          reserved -= res.shippedQty || 0;
-        }
-      });
+      reserved += Number(claim.qty) || 0;
+
+      // کالایی که دوباره برای مشتری فرستاده شده، دیگر یک ادعای بازِ
+      // معلق نیست — یک نمونه‌ی تازه دست اوست.
+      (claim.resolutions || []).forEach((res) =>
+        (res.effects || []).forEach((effect) => {
+          if (effect.kind !== EFFECT_KINDS.GOODS_OUT) return;
+          if (effect.productId !== productId) return;
+          reserved -= Number(effect.doneQty) || 0;
+        }),
+      );
     });
   });
+
   return Math.max(0, reserved);
 }
 
-export function computeItemReturnableQty(item, saleId, excludeReturnId = null) {
-  const delivered = item.shippedQty ?? item.qty;
-  const reserved = getReservedQtyForProduct(saleId, item.productId, excludeReturnId);
-  return Math.max(0, delivered - reserved);
+/**
+ * سقف ادعا برای یک قلم = هر چه واقعاً به مشتری تحویل شده. عمداً چیزی
+ * از آن کم نمی‌شود؛ نگاه کنید به توضیح activeClaimedQtyForProduct.
+ */
+export function computeItemReturnableQty(item) {
+  return Math.max(0, item.shippedQty ?? item.qty);
 }
+
+// ─── خواندن ─────────────────────────────────────────────────────────────────
 
 export async function fetchReturnableSales(search = "") {
   await delay(350);
-  let filtered = allSales.filter((s) => RETURN_ELIGIBLE_SALE_STATUSES.includes(s.status));
+
+  let filtered = allSales.filter((s) =>
+    RETURN_ELIGIBLE_SALE_STATUSES.includes(s.status),
+  );
+
   if (search) {
-    const s = search.toLowerCase();
+    const term = search.toLowerCase();
     filtered = filtered.filter(
       (sale) =>
-        sale.invoiceNumber.toLowerCase().includes(s) ||
-        sale.customerName.toLowerCase().includes(s),
+        sale.invoiceNumber.toLowerCase().includes(term) ||
+        sale.customerName.toLowerCase().includes(term),
     );
   }
+
   filtered.sort((a, b) => new Date(b.invoiceDate) - new Date(a.invoiceDate));
+
   return filtered.slice(0, 30).map((sale) => ({
     id: sale.id,
     invoiceNumber: sale.invoiceNumber,
@@ -90,17 +166,22 @@ export async function fetchReturnableSales(search = "") {
   }));
 }
 
-export async function fetchSaleForReturn(saleId) {
+/**
+ * اطلاعات لازم برای فرم ثبت ادعا.
+ *
+ * برخلاف نسخه‌ی قبلی، اقلامی که سهمیه‌شان تمام شده هم برگردانده
+ * می‌شوند (با returnableQty صفر). دلیلش این است که یک ادعای «خارج از
+ * فاکتور» می‌تواند روی همان کالا ثبت شود حتی وقتی سهمیه‌ی روی فاکتور
+ * صفر است — دقیقاً حالت اضافه‌ارسال.
+ */
+export async function fetchSaleForReturn(saleId, excludeReturnId = null) {
   await delay(300);
+
   const sale = getSale(saleId);
   if (!sale) throw new Error("فروش یافت نشد");
   if (!RETURN_ELIGIBLE_SALE_STATUSES.includes(sale.status)) {
     throw new Error("این فروش هنوز به مشتری تحویل نشده و قابل مرجوع‌کردن نیست");
   }
-
-  const items = sale.items
-    .map((item) => ({ ...item, returnableQty: computeItemReturnableQty(item, sale.id) }))
-    .filter((item) => item.returnableQty > 0);
 
   return {
     saleId: sale.id,
@@ -109,54 +190,79 @@ export async function fetchSaleForReturn(saleId) {
     invoiceDate: sale.invoiceDate,
     customerId: sale.customerId,
     customerName: sale.customerName,
-    items,
+    items: sale.items.map((item) => ({
+      ...item,
+      deliveredQty: item.shippedQty ?? item.qty,
+      returnableQty: computeItemReturnableQty(item),
+      // فقط برای اطلاع کاربر: چقدر از این کالا در مرجوعی‌های دیگرِ
+      // همین فروش ادعا شده. سقف نیست.
+      activeClaimedQty: activeClaimedQtyForProduct(
+        sale.id,
+        item.productId,
+        excludeReturnId,
+      ),
+    })),
   };
-}
-
-function isFullyVerified(items) {
-  return items.every((i) => (i.verifiedQty || 0) >= i.claimedQty);
-}
-
-export function computeReturnStatus(items) {
-  if (!isFullyVerified(items)) return SALES_RETURN_STATUSES.PENDING_INSPECTION;
-
-  const totalVerifiedQty = items.reduce((s, i) => s + (i.verifiedQty || 0), 0);
-  const allLines = items.flatMap((i) => i.resolutions || []);
-  const allocatedQty = allLines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
-
-  if (totalVerifiedQty === 0) return SALES_RETURN_STATUSES.COORDINATING;
-
-  const allFinal =
-    allLines.length > 0 && allLines.every((l) => l.status === RESOLUTION_LINE_STATUSES.RESOLVED);
-
-  if (allocatedQty >= totalVerifiedQty && allFinal) return SALES_RETURN_STATUSES.RESOLVED;
-  return SALES_RETURN_STATUSES.COORDINATING;
 }
 
 export async function fetchSalesReturns(params = {}) {
   await delay(500);
+
   const {
-    page = 1, limit = 10, search = "", customerIds = [], status = "", reason = "",
-    fromDate = "", toDate = "", sortBy = "createdAt", sortOrder = "desc",
+    page = 1,
+    limit = 10,
+    search = "",
+    customerIds = [],
+    status = "",
+    problem = "",
+    scope = "",
+    fromDate = "",
+    toDate = "",
+    sortBy = "createdAt",
+    sortOrder = "desc",
   } = params;
 
   let filtered = [...allSalesReturns];
+
   if (search) {
-    const s = search.toLowerCase();
+    const term = search.toLowerCase();
     filtered = filtered.filter(
       (r) =>
-        (r.returnNumber && r.returnNumber.toLowerCase().includes(s)) ||
-        r.saleInvoiceNumber.toLowerCase().includes(s) ||
-        r.customerName.toLowerCase().includes(s),
+        (r.returnNumber && r.returnNumber.toLowerCase().includes(term)) ||
+        r.saleInvoiceNumber.toLowerCase().includes(term) ||
+        r.customerName.toLowerCase().includes(term),
     );
   }
   if (Array.isArray(customerIds) && customerIds.length) {
-    filtered = filtered.filter((r) => customerIds.map(String).includes(String(r.customerId)));
+    filtered = filtered.filter((r) =>
+      customerIds.map(String).includes(String(r.customerId)),
+    );
   }
   if (status) filtered = filtered.filter((r) => r.status === status);
-  if (reason) filtered = filtered.filter((r) => r.reason === reason);
-  if (fromDate) filtered = filtered.filter((r) => r.returnDate && r.returnDate.slice(0, 10) >= fromDate.slice(0, 10));
-  if (toDate) filtered = filtered.filter((r) => r.returnDate && r.returnDate.slice(0, 10) <= toDate.slice(0, 10));
+
+  // فیلترهای مشکل/دامنه روی *ادعاها* می‌نشینند نه روی سند، چون
+  // یک مرجوعی می‌تواند چند ادعا با مشکل‌ها و مقصرهای مختلف داشته باشد.
+  if (problem) {
+    filtered = filtered.filter((r) =>
+      (r.claims || []).some((c) => c.problem === problem),
+    );
+  }
+  if (scope) {
+    filtered = filtered.filter((r) =>
+      (r.claims || []).some((c) => c.scope === scope),
+    );
+  }
+
+  if (fromDate) {
+    filtered = filtered.filter(
+      (r) => r.returnDate && r.returnDate.slice(0, 10) >= fromDate.slice(0, 10),
+    );
+  }
+  if (toDate) {
+    filtered = filtered.filter(
+      (r) => r.returnDate && r.returnDate.slice(0, 10) <= toDate.slice(0, 10),
+    );
+  }
 
   filtered.sort((a, b) => {
     let aVal = a[sortBy];
@@ -170,7 +276,9 @@ export async function fetchSalesReturns(params = {}) {
     } else if (typeof aVal === "string" || typeof bVal === "string") {
       aVal = aVal || "";
       bVal = bVal || "";
-      return sortOrder === "asc" ? aVal.localeCompare(bVal, "fa") : bVal.localeCompare(aVal, "fa");
+      return sortOrder === "asc"
+        ? aVal.localeCompare(bVal, "fa")
+        : bVal.localeCompare(aVal, "fa");
     }
     return sortOrder === "asc" ? (aVal > bVal ? 1 : -1) : aVal < bVal ? 1 : -1;
   });
@@ -178,8 +286,8 @@ export async function fetchSalesReturns(params = {}) {
   const total = filtered.length;
   const totalPages = Math.ceil(total / limit) || 1;
   const start = (page - 1) * limit;
-  const items = filtered.slice(start, start + limit);
-  return { items, total, page, totalPages };
+
+  return { items: filtered.slice(start, start + limit), total, page, totalPages };
 }
 
 export async function fetchSalesReturnById(id) {
@@ -189,28 +297,38 @@ export async function fetchSalesReturnById(id) {
   return item;
 }
 
+// ─── ثبت ادعا ───────────────────────────────────────────────────────────────
+
 export async function createSalesReturn(payload) {
   await delay(700);
+
   const newId = allSalesReturns.length
     ? Math.max(...allSalesReturns.map((r) => Number(r.id) || 0)) + 1
     : 1;
-  const returnNumber = `SRET-2026-${String(newId).padStart(3, "0")}`;
 
-  const items = payload.items.map((i) => ({ ...i, verifiedQty: 0, issues: [], resolutions: [] }));
-  const totalClaimedAmount = items.reduce((sum, i) => sum + i.lineTotal, 0);
+  const claims = (payload.claims || []).map((claim) => ({
+    ...claim,
+    id: claim.id || generateId(),
+    resolutions: [],
+    createdAt: new Date().toISOString(),
+  }));
+
+  if (claims.length === 0) {
+    throw new Error("حداقل یک ادعا باید ثبت شود");
+  }
 
   const newReturn = {
-    id: newId,
-    returnNumber,
-    status: SALES_RETURN_STATUSES.PENDING_INSPECTION,
     ...payload,
-    items,
-    totalClaimedAmount,
-    receivingNote: "",
-    receivedDate: "",
-    transporterName: "",
-    transporterNationalId: "",
-    vehiclePlate: "",
+    id: newId,
+    returnNumber: `SRET-2026-${String(newId).padStart(3, "0")}`,
+    status: SALES_RETURN_STATUSES.OPEN,
+    previousReturnId: payload.previousReturnId ?? null,
+    sourceEffectId: payload.sourceEffectId ?? null,
+    claims,
+    totalClaimedAmount: claims.reduce(
+      (sum, c) => sum + (Number(c.qty) || 0) * (Number(c.unitPrice) || 0),
+      0,
+    ),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -219,212 +337,268 @@ export async function createSalesReturn(payload) {
   return newReturn;
 }
 
-function hasAnyPhysicalInspection(items) {
-  return items.some((i) => (i.verifiedQty || 0) > 0);
+// ─── اعمال اثر روی دنیای بیرون ──────────────────────────────────────────────
+
+/**
+ * جهتِ پول از دید فروش: MONEY_IN یعنی طلب ما از مشتری بیشتر می‌شود،
+ * MONEY_OUT یعنی کمتر.
+ *
+ * اعتبار خرید بعدی عمداً روی فاکتور اثر نمی‌گذارد — یک تعهد برای
+ * فروشِ *بعدی* است، نه تغییری در ارزش این فاکتور. همان رفتاری که
+ * CREDIT در مرجوعی خرید دارد.
+ */
+function saleDeltaOf(effect) {
+  if (effect.channel === MONEY_CHANNELS.STORE_CREDIT) return 0;
+  if (effect.kind === EFFECT_KINDS.MONEY_IN) return Number(effect.amount) || 0;
+  if (effect.kind === EFFECT_KINDS.MONEY_OUT) return -(Number(effect.amount) || 0);
+  return 0;
 }
 
-export async function addItemResolution(returnId, lineId, resolution) {
-  await delay(500);
-  const idx = getSalesReturnIndex(returnId);
-  if (idx === -1) throw new Error("مرجوعی یافت نشد");
+async function applyMoneyEffects(saleId, effects, { reverse = false } = {}) {
+  const delta = effects.reduce((sum, effect) => sum + saleDeltaOf(effect), 0);
+  if (!delta) return;
+  await adjustSaleTotal(saleId, reverse ? -delta : delta);
+}
 
-  const ret = allSalesReturns[idx];
-  if ([SALES_RETURN_STATUSES.REJECTED, SALES_RETURN_STATUSES.CANCELLED, SALES_RETURN_STATUSES.RESOLVED].includes(ret.status)) {
+// ─── ثبت و حذف تصمیم ────────────────────────────────────────────────────────
+
+/**
+ * ثبت یک تصمیم برای بخشی از یک ادعا.
+ *
+ * اعتبارسنجی از همان تابعی می‌آید که فرم استفاده می‌کند
+ * (validateComposition) تا پیام‌ها دو جا نوشته نشوند و رفتار UI و
+ * سرور از هم جدا نیفتد.
+ */
+export async function addClaimResolution(returnId, claimId, composition) {
+  await delay(500);
+
+  const { idx, ret } = findReturn(returnId);
+  if (isTerminalStatus(ret.status)) {
     throw new Error("این مرجوعی دیگر قابل ویرایش نیست");
   }
 
-  const item = ret.items.find((i) => i.lineId === lineId);
-  if (!item) throw new Error("قلم یافت نشد");
-  if (!item.verifiedQty || item.verifiedQty <= 0) {
-    throw new Error("هنوز چیزی از این قلم توسط انبار دریافت نشده است");
-  }
+  const claim = (ret.claims || []).find((c) => c.id === claimId);
+  if (!claim) throw new Error("ادعا یافت نشد");
 
-  const allocated = (item.resolutions || []).reduce((s, r) => s + (Number(r.qty) || 0), 0);
-  const remaining = item.verifiedQty - allocated;
-  const qty = Math.min(Number(resolution.qty) || 0, remaining);
-  if (qty <= 0) throw new Error("تعداد وارد شده نامعتبر است");
+  const errors = validateComposition(composition, claim, {
+    remainingQty: claimRemainingQty(claim),
+  });
+  if (errors.length) throw new Error(errors[0]);
 
-  const isReplacement = resolution.type === RESOLUTION_TYPES.REPLACEMENT;
-  const refundAmount =
-    resolution.type === RESOLUTION_TYPES.REFUND
-      ? Number(resolution.refundAmount) || qty * item.unitPrice
-      : 0;
+  const resolution = buildResolution(composition, claim);
 
-  const newLine = {
-    id: generateId(),
-    type: resolution.type,
-    qty,
-    refundAmount,
-    note: resolution.note || "",
-    status: isReplacement ? RESOLUTION_LINE_STATUSES.AWAITING : RESOLUTION_LINE_STATUSES.RESOLVED,
-    shippedQty: 0,
-    shipmentHistory: [],
-    createdAt: new Date().toISOString(),
-    resolvedAt: isReplacement ? null : new Date().toISOString(),
-  };
-
-  const newItems = ret.items.map((i) =>
-    i.lineId === lineId ? { ...i, resolutions: [...(i.resolutions || []), newLine] } : i,
+  // اثرهای پولی همان لحظه اعمال می‌شوند؛ اثرهای کالایی منتظر انبارند.
+  // پیش از commit انجام می‌شود تا اگر فروش پیدا نشد، مرجوعی با تصمیمی
+  // که هرگز روی فاکتور ننشسته باقی نماند.
+  await applyMoneyEffects(
+    ret.saleId,
+    resolution.effects.filter((e) => !isGoodsEffect(e.kind)),
   );
 
-  allSalesReturns[idx] = {
-    ...ret,
-    items: newItems,
-    status: computeReturnStatus(newItems),
-    updatedAt: new Date().toISOString(),
-  };
-  return allSalesReturns[idx];
-}
-
-export async function removeItemResolution(returnId, lineId, resolutionId) {
-  await delay(400);
-  const idx = getSalesReturnIndex(returnId);
-  if (idx === -1) throw new Error("مرجوعی یافت نشد");
-
-  const ret = allSalesReturns[idx];
-  const item = ret.items.find((i) => i.lineId === lineId);
-  if (!item) throw new Error("قلم یافت نشد");
-
-  const line = (item.resolutions || []).find((r) => r.id === resolutionId);
-  if (!line) throw new Error("مورد یافت نشد");
-  if (line.status !== RESOLUTION_LINE_STATUSES.AWAITING) {
-    throw new Error("این تصمیم قطعی شده و دیگر قابل لغو نیست");
-  }
-  if ((line.shippedQty || 0) > 0) {
-    throw new Error("بخشی از این کالای جایگزین قبلاً ارسال شده و دیگر قابل لغو نیست");
-  }
-
-  const newItems = ret.items.map((i) =>
-    i.lineId === lineId
-      ? { ...i, resolutions: (i.resolutions || []).filter((r) => r.id !== resolutionId) }
-      : i,
+  const claims = ret.claims.map((c) =>
+    c.id === claimId
+      ? { ...c, resolutions: [...(c.resolutions || []), resolution] }
+      : c,
   );
 
-  allSalesReturns[idx] = {
-    ...ret,
-    items: newItems,
-    status: computeReturnStatus(newItems),
-    updatedAt: new Date().toISOString(),
-  };
-  return allSalesReturns[idx];
+  return commit(idx, { claims });
 }
 
 /**
- * ثبت ارسال (کامل یا بخشی) چند خط تصمیمِ «ارسال کالای جایگزین» به‌طور
- * هم‌زمان برای یک مرجوعی. هر قلم مستقل تجمعی حساب می‌شود.
+ * حذف یک تصمیم.
  *
- * چون این عملیات یعنی یک کالای فیزیکی تازه از انبار خارج و به مشتری
- * تحویل داده می‌شود، موجودی هر محصول به‌اندازه‌ی مقداری که *در همین
- * دور* ارسال می‌شود (thisRoundQty) کم می‌شود — نه مقدار تجمعی کل خط
- * تصمیم، تا در ارسال چندمرحله‌ای موجودی دوبار کم نشود.
+ * قانون: تا وقتی هیچ کالایی فیزیکاً جابه‌جا نشده، تصمیم قابل برگشت
+ * است — و اثرهای پولی‌اش با یک تعدیل معکوس روی فاکتور خنثی می‌شوند.
+ *
+ * این با سمت خرید فرق دارد، که هر تصمیمِ پولی را برای همیشه قطعی
+ * می‌داند. دلیل تفاوت: در مدل جدید تقریباً هر تصمیمی یک اثر پولیِ
+ * فوری دارد، پس قطعی‌بودنِ بی‌قید یعنی یک اشتباه تایپی در مبلغ برای
+ * همیشه در فاکتور می‌ماند. جابه‌جایی کالا اما برگشت‌پذیر نیست و
+ * همان‌جا خط قرمز است.
  */
-export async function confirmReplacementShipmentBatch(returnId, shipmentData) {
-  await delay(500);
-  const idx = getSalesReturnIndex(returnId);
-  if (idx === -1) throw new Error("مرجوعی یافت نشد");
+export async function removeClaimResolution(returnId, claimId, resolutionId) {
+  await delay(400);
 
-  const ret = allSalesReturns[idx];
-  const shippedDate = shipmentData.shippedDate || new Date().toISOString().slice(0, 10);
-  const linesToShip = shipmentData.items || [];
+  const { idx, ret } = findReturn(returnId);
 
-  if (linesToShip.length === 0) {
-    throw new Error("هیچ کالایی برای ثبت ارسال انتخاب نشده است");
+  const claim = (ret.claims || []).find((c) => c.id === claimId);
+  if (!claim) throw new Error("ادعا یافت نشد");
+
+  const resolution = (claim.resolutions || []).find((r) => r.id === resolutionId);
+  if (!resolution) throw new Error("تصمیم یافت نشد");
+
+  const movedGoods = (resolution.effects || []).some(
+    (effect) => isGoodsEffect(effect.kind) && (Number(effect.doneQty) || 0) > 0,
+  );
+  if (movedGoods) {
+    throw new Error("بخشی از کالای این تصمیم جابه‌جا شده و دیگر قابل لغو نیست");
   }
 
-  const stockDecreases = [];
+  const moneyEffects = (resolution.effects || []).filter(
+    (effect) => !isGoodsEffect(effect.kind) && effect.status === EFFECT_STATUSES.APPLIED,
+  );
 
-  const newItems = ret.items.map((item) => {
-    const shipEntry = linesToShip.find((l) => l.lineId === item.lineId);
-    if (!shipEntry) return item;
+  await applyMoneyEffects(ret.saleId, moneyEffects, { reverse: true });
 
-    const newResolutions = (item.resolutions || []).map((r) => {
-      if (r.id !== shipEntry.resolutionId) return r;
-      if (r.type !== RESOLUTION_TYPES.REPLACEMENT) return r;
-      if (r.status === RESOLUTION_LINE_STATUSES.RESOLVED) return r;
+  const claims = ret.claims.map((c) =>
+    c.id === claimId
+      ? { ...c, resolutions: (c.resolutions || []).filter((r) => r.id !== resolutionId) }
+      : c,
+  );
 
-      const prevShipped = r.shippedQty || 0;
-      const remaining = r.qty - prevShipped;
-      const thisRoundQty = Math.max(0, Math.min(Number(shipEntry.shippedQtyThisRound) || 0, remaining));
-      if (thisRoundQty <= 0) return r;
+  return commit(idx, { claims });
+}
 
-      const newShippedQty = prevShipped + thisRoundQty;
-      const isFullyShipped = newShippedQty >= r.qty;
+// ─── اجرای اثرهای کالایی توسط انبار ─────────────────────────────────────────
 
-      stockDecreases.push({ productId: item.productId, delta: -thisRoundQty });
+/**
+ * ثبت یک «دور» جابه‌جایی فیزیکی کالا برای چند اثر به‌طور هم‌زمان.
+ *
+ * همان قرارداد تجمعیِ قبلی، ولی حالا برای هر دو جهت با یک تابع:
+ * هر اثر doneQty خودش را دارد و فقط وقتی به qty کامل رسید APPLIED
+ * می‌شود؛ تا آن موقع همان مرجوعی دوباره در صف انبار ظاهر می‌شود.
+ *
+ * rounds: [{ effectId, qty, healthyQty? }]
+ *   healthyQty فقط برای GOODS_IN معنا دارد — چقدر از کالای دریافتیِ
+ *   همین دور سالم بوده. پیش‌فرضش کل qty است؛ بقیه معیوب فرض می‌شود و
+ *   وارد موجودی قابل‌فروش نمی‌شود (ولی ادعا را می‌بندد).
+ *
+ * logistics: اطلاعات حمل که روی تاریخچه‌ی همان دور ثبت می‌شود.
+ */
+export async function executeGoodsRound(returnId, { rounds = [], ...logistics } = {}) {
+  await delay(500);
 
-      return {
-        ...r,
-        shippedQty: newShippedQty,
-        status: isFullyShipped ? RESOLUTION_LINE_STATUSES.RESOLVED : RESOLUTION_LINE_STATUSES.AWAITING,
-        resolvedAt: isFullyShipped ? new Date().toISOString() : null,
-        shipmentHistory: [
-          ...(r.shipmentHistory || []),
-          {
-            id: generateId(),
-            date: shippedDate,
-            qty: thisRoundQty,
-            driverName: shipmentData.driverName || "",
-            driverNationalId: shipmentData.driverNationalId || "",
-            vehiclePlate: shipmentData.vehiclePlate || "",
-            note: shipmentData.shippingNote || "",
-          },
-        ],
-      };
-    });
+  const { idx, ret } = findReturn(returnId);
+  if (isTerminalStatus(ret.status)) {
+    throw new Error("این مرجوعی دیگر قابل ویرایش نیست");
+  }
+  if (rounds.length === 0) {
+    throw new Error("هیچ کالایی برای ثبت انتخاب نشده است");
+  }
 
-    return { ...item, resolutions: newResolutions };
-  });
+  const date = logistics.date || new Date().toISOString().slice(0, 10);
+  const stockDeltas = [];
+  let touched = 0;
 
-  allSalesReturns[idx] = {
-    ...ret,
-    items: newItems,
-    status: computeReturnStatus(newItems),
-    updatedAt: new Date().toISOString(),
-  };
+  const claims = (ret.claims || []).map((claim) => ({
+    ...claim,
+    resolutions: (claim.resolutions || []).map((res) => ({
+      ...res,
+      effects: (res.effects || []).map((effect) => {
+        const entry = rounds.find((r) => r.effectId === effect.id);
+        if (!entry) return effect;
+        if (!isGoodsEffect(effect.kind)) return effect;
+        if (effect.status !== EFFECT_STATUSES.PENDING) return effect;
 
-  adjustProductsStock(stockDecreases);
+        const remaining = (Number(effect.qty) || 0) - (Number(effect.doneQty) || 0);
+        const qty = Math.max(0, Math.min(Number(entry.qty) || 0, remaining));
+        if (qty <= 0) return effect;
 
-  return allSalesReturns[idx];
+        const isIn = effect.kind === EFFECT_KINDS.GOODS_IN;
+        const healthyQty = isIn
+          ? Math.max(0, Math.min(Number(entry.healthyQty ?? qty) || 0, qty))
+          : qty;
+
+        touched += 1;
+        if (effect.productId != null) {
+          // GOODS_IN فقط بخش سالم را به موجودی قابل‌فروش برمی‌گرداند؛
+          // GOODS_OUT کل مقدارِ خارج‌شده را کم می‌کند.
+          const delta = isIn ? healthyQty : -qty;
+          if (delta !== 0) stockDeltas.push({ productId: effect.productId, delta });
+        }
+
+        const doneQty = (Number(effect.doneQty) || 0) + qty;
+        const isComplete = doneQty >= (Number(effect.qty) || 0);
+
+        return {
+          ...effect,
+          doneQty,
+          restockedQty: isIn
+            ? (Number(effect.restockedQty) || 0) + healthyQty
+            : effect.restockedQty,
+          status: isComplete ? EFFECT_STATUSES.APPLIED : EFFECT_STATUSES.PENDING,
+          appliedAt: isComplete ? new Date().toISOString() : null,
+          history: [
+            ...(effect.history || []),
+            {
+              id: generateId(),
+              date,
+              qty,
+              healthyQty: isIn ? healthyQty : null,
+              // مشاهده‌ی مستقل انبار: ممکن است با آنچه مشتری ادعا کرده
+              // فرق داشته باشد (مشتری گفته «معیوب»، انبار می‌بیند
+              // «آسیب در حمل»). هر دو نگه داشته می‌شوند چون هرکدام یک
+              // مقصر متفاوت را نشان می‌دهند.
+              issueProblem: isIn ? entry.issueProblem || null : null,
+              issueNote: entry.issueNote || "",
+              partyName: logistics.partyName || "",
+              partyNationalId: logistics.partyNationalId || "",
+              vehiclePlate: logistics.vehiclePlate || "",
+              note: logistics.note || "",
+            },
+          ],
+        };
+      }),
+    })),
+  }));
+
+  if (touched === 0) {
+    throw new Error("هیچ اثری برای ثبت این دور پیدا نشد");
+  }
+
+  const updated = commit(idx, { claims });
+  adjustProductsStock(stockDeltas);
+
+  return updated;
+}
+
+// ─── چرخه‌ی عمر ─────────────────────────────────────────────────────────────
+
+function assertUntouched(ret, action) {
+  const applied = allEffects(ret).some(
+    (effect) => effect.status === EFFECT_STATUSES.APPLIED,
+  );
+  if (applied) {
+    throw new Error(
+      `این مرجوعی قبلاً اثری روی موجودی یا مبلغ فروش گذاشته و دیگر قابل ${action} نیست`,
+    );
+  }
 }
 
 export async function rejectSalesReturn(id) {
   await delay(300);
-  const idx = getSalesReturnIndex(id);
-  if (idx === -1) throw new Error("مرجوعی یافت نشد");
-  const ret = allSalesReturns[idx];
-  if (ret.status !== SALES_RETURN_STATUSES.PENDING_INSPECTION || hasAnyPhysicalInspection(ret.items)) {
-    throw new Error("فقط مرجوعی‌هایی که هنوز هیچ بخشی از آن‌ها بررسی نشده، قابل رد کردن‌اند");
-  }
-  allSalesReturns[idx] = { ...ret, status: SALES_RETURN_STATUSES.REJECTED, updatedAt: new Date().toISOString() };
+  const { idx, ret } = findReturn(id);
+  assertUntouched(ret, "رد کردن");
+  allSalesReturns[idx] = {
+    ...ret,
+    status: SALES_RETURN_STATUSES.REJECTED,
+    updatedAt: new Date().toISOString(),
+  };
   return allSalesReturns[idx];
 }
 
 export async function cancelSalesReturn(id) {
   await delay(300);
-  const idx = getSalesReturnIndex(id);
-  if (idx === -1) throw new Error("مرجوعی یافت نشد");
-  const ret = allSalesReturns[idx];
-  if (ret.status !== SALES_RETURN_STATUSES.PENDING_INSPECTION || hasAnyPhysicalInspection(ret.items)) {
-    throw new Error("فقط مرجوعی‌هایی که هنوز هیچ بخشی از آن‌ها بررسی نشده، قابل لغو کردن‌اند");
-  }
-  allSalesReturns[idx] = { ...ret, status: SALES_RETURN_STATUSES.CANCELLED, updatedAt: new Date().toISOString() };
+  const { idx, ret } = findReturn(id);
+  assertUntouched(ret, "لغو کردن");
+  allSalesReturns[idx] = {
+    ...ret,
+    status: SALES_RETURN_STATUSES.CANCELLED,
+    updatedAt: new Date().toISOString(),
+  };
   return allSalesReturns[idx];
 }
 
 export async function reopenSalesReturn(id) {
   await delay(300);
-  const idx = getSalesReturnIndex(id);
-  if (idx === -1) throw new Error("مرجوعی یافت نشد");
-  const ret = allSalesReturns[idx];
-  if (ret.status !== SALES_RETURN_STATUSES.REJECTED) return ret;
-  allSalesReturns[idx] = { ...ret, status: SALES_RETURN_STATUSES.PENDING_INSPECTION, updatedAt: new Date().toISOString() };
-  return allSalesReturns[idx];
+  const { idx, ret } = findReturn(id);
+  if (!isTerminalStatus(ret.status)) return ret;
+  return commit(idx, { status: SALES_RETURN_STATUSES.OPEN });
 }
 
 export async function removeSalesReturn(id) {
   await delay(500);
-  const idx = getSalesReturnIndex(id);
-  if (idx === -1) throw new Error("مرجوعی یافت نشد");
-  const removed = allSalesReturns.splice(idx, 1)[0];
-  return removed;
+  const { idx, ret } = findReturn(id);
+  assertUntouched(ret, "حذف");
+  return allSalesReturns.splice(idx, 1)[0];
 }

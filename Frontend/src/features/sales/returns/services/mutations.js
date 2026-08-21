@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import {
   createSalesReturn,
-  addItemResolution,
-  removeItemResolution,
+  addClaimResolution,
+  removeClaimResolution,
+  executeGoodsRound,
   rejectSalesReturn,
   cancelSalesReturn,
   reopenSalesReturn,
@@ -25,7 +26,7 @@ export const useCreateSalesReturnMutation = () => {
   return useMutation({
     mutationFn: createSalesReturn,
     onSuccess: (created) => {
-      toast.success("درخواست مرجوعی ثبت شد و در انتظار بررسی انبار است");
+      toast.success("درخواست مرجوعی ثبت شد؛ حالا می‌توانید برایش تصمیم بگیرید");
       invalidateSalesEcosystem(queryClient, created.saleId);
       navigate(ROUTES.SALES_RETURNS_DETAIL.replace(":id", created.id));
     },
@@ -33,27 +34,45 @@ export const useCreateSalesReturnMutation = () => {
   });
 };
 
-export const useAddReturnItemResolutionMutation = (returnId) => {
+export const useAddClaimResolutionMutation = (returnId) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ lineId, resolution }) => addItemResolution(returnId, lineId, resolution),
+    mutationFn: ({ claimId, draft }) => addClaimResolution(returnId, claimId, draft),
     onSuccess: (updated) => {
       finalizeReturnChange(queryClient, updated);
-      toast.success("تصمیم برای این قلم ثبت شد");
+      toast.success("تصمیم ثبت شد");
     },
     onError: (error) => toast.error(error?.message || "خطا در ثبت تصمیم"),
   });
 };
 
-export const useRemoveReturnItemResolutionMutation = (returnId) => {
+export const useRemoveClaimResolutionMutation = (returnId) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ lineId, resolutionId }) => removeItemResolution(returnId, lineId, resolutionId),
+    mutationFn: ({ claimId, resolutionId }) =>
+      removeClaimResolution(returnId, claimId, resolutionId),
     onSuccess: (updated) => {
       finalizeReturnChange(queryClient, updated);
-      toast.success("تصمیم حذف شد");
+      toast.success("تصمیم حذف شد و اثر مالی‌اش برگشت خورد");
     },
     onError: (error) => toast.error(error?.message || "خطا در حذف تصمیم"),
+  });
+};
+
+/**
+ * ثبت یک دور جابه‌جایی فیزیکی کالا. هم صفحه‌ی «دریافت» انبار از آن
+ * استفاده می‌کند و هم صفحه‌ی «ارسال» — چون در مدل جدید هر دو یک
+ * عملیات‌اند با جهت مخالف.
+ */
+export const useExecuteGoodsRoundMutation = (returnId) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload) => executeGoodsRound(returnId, payload),
+    onSuccess: (updated) => {
+      finalizeReturnChange(queryClient, updated);
+      toast.success("جابه‌جایی کالا ثبت شد");
+    },
+    onError: (error) => toast.error(error?.message || "خطا در ثبت جابه‌جایی کالا"),
   });
 };
 

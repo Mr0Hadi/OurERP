@@ -4,6 +4,53 @@ Findings worth acting on later. Add new items at the top of "Open".
 
 ## Open
 
+### Invoice totals vs. return adjustments — unify purchase and sales (Aug 2026)
+
+Raised while redesigning the sales-return module around composable
+effects. Deferred deliberately: the fix belongs to purchase and sales
+*together*, and doing it on one side alone would leave the two return
+modules structurally different for no gain.
+
+**The problem.** A return moves money in two directions, but neither
+module records that movement as a first-class thing. On the purchase
+side `settlePurchaseItems` subtracts refunds from `Purchase.totalAmount`
+and `adjustPurchaseTotal` adds keep-and-settle amounts to it — the
+stored number drifts away from the sum of the line items, and
+`PurchaseDetailForm` (which recomputes from lines) disagrees with the
+purchases list (which reads `totalAmount`). That is item 1 of the
+surplus follow-ups below; this entry supersedes it with the wider
+framing. On the sales side the same field simply does not move at all:
+`refundAmount` is written onto the resolution line and never touches
+`sale.totalAmount`, `sale.paidAmount`, or any transaction record. The
+sales money effect is, today, a dead field.
+
+**Why not fix it in the sales redesign.** The redesign gives sales an
+effect ledger — every money movement is already an explicit, typed,
+directional row (`MONEY_IN` / `MONEY_OUT` with a channel). That ledger
+is most of what an adjustment-line model needs. The temptation was to
+have sales derive invoice totals from it immediately and leave purchase
+mutating `totalAmount`. Resisted, because it would mean two different
+answers to "what does this invoice total mean" in one system, and the
+eventual unification would then have to reconcile two designs instead
+of moving one. The sales effects now apply to the sale the same way
+purchase applies to the purchase (`adjustSaleTotal`, the mirror of
+`adjustPurchaseTotal`), so both sides are wrong in the *same* shape and
+one change fixes both. Confirmed in the browser: `SaleDetailForm`
+recomputes from line items and so shows the pre-return total, exactly
+like `PurchaseDetailForm` does — the same bug, now symmetrical.
+
+**What the fix looks like.** Decide that `totalAmount` on a sale or a
+purchase is the *original* invoiced amount and never mutates. Returns
+emit adjustment lines (credit/debit notes) against the document; the
+"current" total becomes `totalAmount + Σ adjustments`, computed in one
+shared helper that both the list and the detail page call. The sales
+effect ledger becomes the source of those lines directly; the purchase
+side needs the equivalent extracted out of `settlePurchaseItems` and
+`adjustPurchaseTotal`. This is also the point at which
+`PurchaseDetailForm` stops recomputing from lines and starts reading
+the shared helper, which is what made the disagreement visible in the
+first place.
+
 ### Purchase surplus (excess / unregistered items) — follow-ups (Aug 2026)
 
 Left open after the surplus feature (`feat/purchase-surplus-handling`).
@@ -22,16 +69,15 @@ purchase. Whoever fixes this has to decide which is the source of truth:
 either the detail page reads `totalAmount`, or `totalAmount` is derived
 and the adjustments become explicit adjustment lines on the purchase.
 The second is more work but is what an invoice with credit/debit notes
-actually looks like.
+actually looks like. Superseded by "Invoice totals vs. return
+adjustments" above, which frames it as one fix across both modules —
+fix it there, not here.
 
 **2. `invalidateSalesEcosystem` still does not invalidate products.**
-The purchase side was fixed as part of this work
-(`invalidatePurchaseEcosystem` now includes `productKeys.all`, since
-both receiving and keep-decisions move stock). The sales side moves
-stock too — replacement shipments in `confirmReplacementShipmentBatch`
-and return inspection in `confirmReturnInspection` — and still leaves
-the products cache stale. Same one-line fix, deliberately not made here
-because nothing on this branch touches sales.
+~~The sales side moves stock too and still leaves the products cache
+stale.~~ **Fixed** during the sales-return redesign: the helper now
+invalidates `productKeys.all`, both warehouse queues, and
+`saleForReturn`, since return effects move stock in both directions.
 
 **3. `refundAmount` on a resolution line carries two directions.** On a
 `refund` it is money coming back to us; on `keep_and_settle` it is money

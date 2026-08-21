@@ -224,3 +224,37 @@ export async function updateSalePayment(id, paymentData) {
 
   return allSales[index];
 }
+/**
+ * تغییر جمع کل فروش بدون دست‌زدن به هیچ قلمی — قرینه‌ی
+ * adjustPurchaseTotal در سمت خرید.
+ *
+ * delta مثبت = طلب ما از مشتری بیشتر می‌شود (مثلاً کالای اضافه‌ای که
+ * مشتری نگه داشته و پولش را می‌پردازد). delta منفی = بازگشت وجه به
+ * مشتری.
+ *
+ * paidAmount عمداً دست نمی‌خورد: این تابع ارزشِ *فاکتور* را تغییر
+ * می‌دهد، نه سابقه‌ی پرداخت‌ها را. ثبت خودِ پرداخت کار
+ * updateSalePayment است.
+ *
+ * توجه: این‌که اثر مالیِ مرجوعی مستقیماً totalAmount را جابه‌جا کند —
+ * به‌جای اینکه ردیف تعدیلِ صریح بسازد — یک بدهیِ آگاهانه است که با
+ * سمت خرید مشترک است و باید یک‌جا برای هر دو حل شود. نگاه کنید به
+ * NOTES.md ← «Invoice totals vs. return adjustments».
+ */
+export async function adjustSaleTotal(saleId, delta) {
+  await delay(300);
+
+  const index = allSales.findIndex((s) => Number(s.id) === Number(saleId));
+  if (index === -1) throw new Error("فروش یافت نشد");
+
+  if (!delta) return allSales[index];
+
+  const sale = allSales[index];
+  allSales[index] = {
+    ...sale,
+    totalAmount: Math.max(0, (sale.totalAmount || 0) + delta),
+    updatedAt: new Date().toISOString(),
+  };
+
+  return allSales[index];
+}

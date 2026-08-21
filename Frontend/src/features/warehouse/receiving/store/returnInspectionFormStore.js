@@ -1,13 +1,14 @@
 import { create } from "zustand";
+import { buildGoodsLines } from "@/features/sales/returns/domain/returnResolutions";
+import { EFFECT_KINDS } from "@/features/sales/returns/domain/returnEffects";
 
-const EMPTY_INSPECTION = {
+const EMPTY_INTAKE = {
   returnId: "",
   returnNumber: "",
   customerName: "",
   saleInvoiceNumber: "",
-  reason: "",
   status: "",
-  items: [],
+  lines: [],
   receivingNote: "",
   receivedDate: new Date().toISOString().slice(0, 10),
   transporterName: "",
@@ -15,59 +16,52 @@ const EMPTY_INSPECTION = {
   vehiclePlate: "",
 };
 
+/**
+ * فرم «تحویل‌گرفتن کالای مرجوعی» در انبار.
+ *
+ * هر ردیف، یک اثر GOODS_OUT/GOODS_IN معلق است — نه یک قلم فاکتور. یعنی
+ * انباردار فقط چیزهایی را می‌بیند که واحد فروش تصمیم گرفته پس گرفته
+ * شوند؛ نه کل ادعای مشتری.
+ */
 export const useReturnInspectionFormStore = create((set, get) => ({
-  formData: { ...EMPTY_INSPECTION },
+  formData: { ...EMPTY_INTAKE },
   initializedForId: null,
 
-  setFormData: (data) => set((state) => ({ formData: { ...state.formData, ...data } })),
-  setInspectionItems: (items) => set((state) => ({ formData: { ...state.formData, items } })),
+  setFormData: (data) =>
+    set((state) => ({ formData: { ...state.formData, ...data } })),
+  setLines: (lines) =>
+    set((state) => ({ formData: { ...state.formData, lines } })),
 
   initializeFromReturn: (salesReturn) => {
-    const { initializedForId } = get();
     const version = `${salesReturn.id}:${salesReturn.updatedAt}`;
-    if (initializedForId === version) return;
+    if (get().initializedForId === version) return;
 
-    const items = (salesReturn.items || [])
-      .map((item) => {
-        const alreadyVerifiedQty = item.verifiedQty || 0;
-        const remainingQty = Math.max(0, item.claimedQty - alreadyVerifiedQty);
-        return {
-          lineId: item.lineId,
-          productId: item.productId,
-          productCode: item.productCode,
-          productName: item.productName,
-          unit: item.unit,
-          claims: item.claims || [],
-          claimedQty: item.claimedQty,
-          alreadyVerifiedQty,
-          remainingQty,
-          // پیش‌فرض: فرض بر این است که کل باقیمانده همین الان رسیده؛
-          // انباردار در صورت نیاز آن را کم می‌کند.
-          verifiedQtyThisRound: remainingQty,
-          issues: [],
-        };
-      })
-      // اقلامی که قبلاً به‌طور کامل رسیده‌اند، دیگر چیزی برای این دور ندارند
-      .filter((item) => item.remainingQty > 0);
+    const lines = buildGoodsLines(salesReturn, EFFECT_KINDS.GOODS_IN)
+      .filter((line) => line.remainingQty > 0)
+      .map((line) => ({
+        ...line,
+        // پیش‌فرض: کل باقیمانده همین حالا رسیده و سالم است؛ انباردار
+        // در صورت نیاز کمش می‌کند.
+        qtyThisRound: line.remainingQty,
+        healthyQtyThisRound: line.remainingQty,
+        issueProblem: "",
+        issueNote: "",
+      }));
 
     set({
       initializedForId: version,
       formData: {
+        ...EMPTY_INTAKE,
         returnId: salesReturn.id,
         returnNumber: salesReturn.returnNumber,
         customerName: salesReturn.customerName,
         saleInvoiceNumber: salesReturn.saleInvoiceNumber,
-        reason: salesReturn.reason,
         status: salesReturn.status,
-        items,
-        receivingNote: "",
+        lines,
         receivedDate: new Date().toISOString().slice(0, 10),
-        transporterName: "",
-        transporterNationalId: "",
-        vehiclePlate: "",
       },
     });
   },
 
-  resetForm: () => set({ formData: { ...EMPTY_INSPECTION }, initializedForId: null }),
+  resetForm: () => set({ formData: { ...EMPTY_INTAKE }, initializedForId: null }),
 }));

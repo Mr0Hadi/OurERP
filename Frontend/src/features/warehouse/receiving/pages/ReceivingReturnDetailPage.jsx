@@ -10,7 +10,7 @@ import {
 } from "@/shared/components/ui/alert-dialog";
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { useSalesReturnQuery } from "@/features/sales/returns/services/queries";
-import { useConfirmReturnInspectionMutation } from "../services/mutations";
+import { useConfirmReturnIntakeMutation } from "../services/mutations";
 import { useReturnInspectionForm } from "../hooks/useReturnInspectionForm";
 
 import ReceivingReturnItemsSection from "../components/forms/ReceivingReturnItemsSection";
@@ -18,15 +18,14 @@ import ReturnSummaryCard from "../components/forms/ReturnSummaryCard";
 import ReturnTransporterSection from "../components/forms/ReturnTransporterSection";
 import ReturnDetailLoading from "../components/forms/ReturnDetailLoading";
 import { ROUTES } from "@/shared/constants/routes";
-import { SALES_RETURN_STATUSES } from "@/features/sales/returns/services/mockData";
 
 function ReceivingReturnDetailForm({ salesReturn }) {
   const navigate = useNavigate();
-  const inspectMutation = useConfirmReturnInspectionMutation();
+  const intakeMutation = useConfirmReturnIntakeMutation();
 
   const {
-    formData, setFormData, handleItemChange, handleAddIssue, handleUpdateIssue, handleRemoveIssue,
-    isAllComplete, isTransporterValid, buildPayload, resetForm,
+    formData, setFormData, lines, handleLineChange,
+    isAllComplete, isTransporterValid, hasSomethingToRecord, buildPayload, resetForm,
   } = useReturnInspectionForm(salesReturn);
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -34,10 +33,10 @@ function ReceivingReturnDetailForm({ salesReturn }) {
 
   useEffect(() => () => resetForm(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const items = formData.items || [];
-  const isBusy = inspectMutation.isPending;
+  const isBusy = intakeMutation.isPending;
 
   const handleConfirmClick = () => {
+    if (!hasSomethingToRecord) return;
     if (!isTransporterValid) { setShowTransporterError(true); return; }
     setShowTransporterError(false);
     setShowConfirmDialog(true);
@@ -47,8 +46,8 @@ function ReceivingReturnDetailForm({ salesReturn }) {
     const payload = buildPayload();
     const willStayPending = !isAllComplete;
 
-    inspectMutation.mutate(
-      { returnId: payload.returnId, inspectionData: payload },
+    intakeMutation.mutate(
+      { returnId: formData.returnId, intakeData: payload },
       {
         onSuccess: () => {
           setShowConfirmDialog(false);
@@ -62,11 +61,13 @@ function ReceivingReturnDetailForm({ salesReturn }) {
     );
   };
 
-  if (items.length === 0) {
+  if (lines.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
         <CheckCircle className="h-12 w-12 text-[oklch(0.50_0.16_152)]" />
-        <p className="text-lg text-muted-foreground">همه‌ی اقلام این مرجوعی قبلاً دریافت شده‌اند.</p>
+        <p className="text-lg text-muted-foreground">
+          برای این مرجوعی کالایی در انتظار تحویل نیست.
+        </p>
         <Button variant="outline" onClick={() => navigate(ROUTES.WAREHOUSE_RECEIVING)}>بازگشت به لیست</Button>
       </div>
     );
@@ -76,13 +77,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
     <div className="container max-w-6xl mx-auto px-4 space-y-4 animate-in fade-in zoom-in-95 duration-300">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
-          <ReceivingReturnItemsSection
-            items={items}
-            onItemChange={handleItemChange}
-            onAddIssue={handleAddIssue}
-            onUpdateIssue={handleUpdateIssue}
-            onRemoveIssue={handleRemoveIssue}
-          />
+          <ReceivingReturnItemsSection lines={lines} onLineChange={handleLineChange} />
           <ReturnTransporterSection
             formData={formData}
             onFormChange={(patch) => { setFormData(patch); if (showTransporterError) setShowTransporterError(false); }}
@@ -91,12 +86,12 @@ function ReceivingReturnDetailForm({ salesReturn }) {
         </div>
 
         <div className="space-y-4">
-          <ReturnSummaryCard salesReturn={salesReturn} formData={formData} onFormChange={setFormData} />
+          <ReturnSummaryCard formData={formData} onFormChange={setFormData} />
 
           <div className="flex gap-2">
             <Button
               className={`flex-1 gap-2 ${!isAllComplete ? "bg-amber-600 hover:bg-amber-700 text-white" : ""}`}
-              disabled={isBusy}
+              disabled={isBusy || !hasSomethingToRecord}
               onClick={handleConfirmClick}
             >
               {isAllComplete ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
@@ -161,18 +156,6 @@ export default function ReceivingReturnDetailPage() {
         <AlertCircle className="h-12 w-12 text-destructive" />
         <p className="text-lg text-muted-foreground">مرجوعی مورد نظر یافت نشد.</p>
         <Button variant="outline" onClick={() => navigate(ROUTES.WAREHOUSE_RECEIVING)}>بازگشت به لیست</Button>
-      </div>
-    );
-  }
-
-  if (salesReturn.status !== SALES_RETURN_STATUSES.PENDING_INSPECTION) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <CheckCircle className="h-12 w-12 text-[oklch(0.50_0.16_152)]" />
-        <p className="text-lg text-muted-foreground">این مرجوعی قبلاً به‌طور کامل بررسی و دریافت شده است.</p>
-        <Button variant="outline" onClick={() => navigate(ROUTES.SALES_RETURNS_DETAIL.replace(":id", salesReturn.id))}>
-          مشاهده‌ی جزئیات مرجوعی
-        </Button>
       </div>
     );
   }

@@ -1,52 +1,58 @@
 import { create } from "zustand";
+import { CLAIM_SCOPES } from "../domain/returnVocabulary";
 
-const EMPTY_RETURN = {
+const EMPTY_FORM = {
   saleId: "",
   saleInvoiceNumber: "",
   customerId: "",
   customerName: "",
   returnDate: new Date().toISOString().slice(0, 10),
-  reason: "defective", // دلیل کلی سند (برای فیلتر/گزارش)؛ جدا از دلایل تفکیکی هر کالا
   description: "",
-  items: [],
+  previousReturnId: null,
+  // هر خط فاکتور، با ادعاهای «روی فاکتور»ش
+  lines: [],
+  // ادعاهای «خارج از فاکتور» — کالایی که سفارش توجیهش نمی‌کند
+  offInvoiceClaims: [],
 };
 
 export const useSalesReturnFormStore = create((set, get) => ({
-  formData: { ...EMPTY_RETURN },
+  formData: { ...EMPTY_FORM },
   initializedForId: null,
 
-  setFormData: (data) => set((state) => ({ formData: { ...state.formData, ...data } })),
-  setItems: (items) => set((state) => ({ formData: { ...state.formData, items } })),
+  setFormData: (data) =>
+    set((state) => ({ formData: { ...state.formData, ...data } })),
+  setLines: (lines) =>
+    set((state) => ({ formData: { ...state.formData, lines } })),
+  setOffInvoiceClaims: (offInvoiceClaims) =>
+    set((state) => ({ formData: { ...state.formData, offInvoiceClaims } })),
 
   initializeForSale: (sale) => {
     const version = `sale:${sale.saleId}:${sale.saleUpdatedAt}`;
     if (get().initializedForId === version) return;
 
-    const items = sale.items.map((entry) => ({
-      lineId: `${sale.saleId}-${entry.productId}`,
-      productId: entry.productId,
-      productCode: entry.productCode,
-      productName: entry.productName,
-      unit: entry.unit,
-      unitPrice: entry.unitPrice,
-      maxReturnableQty: entry.returnableQty,
-      // هر کالا می‌تواند بین چند دلیل مختلف تقسیم شود؛ هر ردیف یک
-      // بخش از تعداد را با دلیل و توضیح خودش مشخص می‌کند.
-      claims: [],
-    }));
-
     set({
       initializedForId: version,
       formData: {
-        ...EMPTY_RETURN,
+        ...EMPTY_FORM,
         saleId: sale.saleId,
         saleInvoiceNumber: sale.invoiceNumber,
         customerId: sale.customerId,
         customerName: sale.customerName,
-        items,
+        lines: sale.items.map((item) => ({
+          lineKey: `${sale.saleId}-${item.productId}`,
+          scope: CLAIM_SCOPES.ON_INVOICE,
+          productId: item.productId,
+          productCode: item.productCode,
+          productName: item.productName,
+          unit: item.unit,
+          unitPrice: item.unitPrice,
+          deliveredQty: item.deliveredQty,
+          maxReturnableQty: item.returnableQty,
+          claims: [],
+        })),
       },
     });
   },
 
-  resetForm: () => set({ formData: { ...EMPTY_RETURN }, initializedForId: null }),
+  resetForm: () => set({ formData: { ...EMPTY_FORM }, initializedForId: null }),
 }));

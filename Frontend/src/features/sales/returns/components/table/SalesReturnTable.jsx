@@ -5,7 +5,11 @@ import { Button } from "@/shared/components/ui/button";
 import DataTable from "@/shared/components/table/DataTable";
 import { gregorianToPersian } from "@/shared/utils/dateUtils";
 import { ROUTES } from "@/shared/constants/routes";
-import { SALES_RETURN_REASON_LABELS } from "../../services/mockData";
+import {
+  RETURN_PROBLEM_LABELS,
+  RETURN_PROBLEM_STYLES,
+} from "../../domain/returnVocabulary";
+import { Badge } from "@/shared/components/ui/badge";
 import SalesReturnStatusBadge from "./SalesReturnStatusBadge";
 
 const EMPTY_STATE = (
@@ -63,14 +67,36 @@ const SalesReturnTable = ({
         ),
       },
       {
-        accessorKey: "reason",
-        header: "دلیل",
+        // یک مرجوعی می‌تواند چند ادعا با مشکل‌های متفاوت داشته باشد؛
+        // ستون همه‌شان را نشان می‌دهد، نه یک «دلیل اصلی» ساختگی.
+        id: "problems",
+        header: "مشکل‌ها",
         enableSorting: false,
-        cell: (info) => (
-          <span className="text-xs text-muted-foreground">
-            {SALES_RETURN_REASON_LABELS[info.getValue()] ?? info.getValue()}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const claims = row.original.claims || [];
+          const problems = [...new Set(claims.map((c) => c.problem))];
+          if (problems.length === 0) {
+            return <span className="text-xs text-muted-foreground">—</span>;
+          }
+          return (
+            <div className="flex flex-wrap gap-1">
+              {problems.slice(0, 2).map((problem) => (
+                <Badge
+                  key={problem}
+                  variant="outline"
+                  className={`text-[10px] ${RETURN_PROBLEM_STYLES[problem] ?? ""}`}
+                >
+                  {RETURN_PROBLEM_LABELS[problem] ?? problem}
+                </Badge>
+              ))}
+              {problems.length > 2 && (
+                <Badge variant="outline" className="text-[10px]">
+                  +{(problems.length - 2).toLocaleString("fa-IR")}
+                </Badge>
+              )}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "status",

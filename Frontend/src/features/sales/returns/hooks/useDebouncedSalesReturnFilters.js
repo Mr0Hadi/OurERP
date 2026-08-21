@@ -5,7 +5,8 @@ export function useDebouncedSalesReturnFilters() {
   const globalSearch = useSalesReturnFilterStore((s) => s.globalSearch);
   const customerIds = useSalesReturnFilterStore((s) => s.customerIds);
   const status = useSalesReturnFilterStore((s) => s.status);
-  const reason = useSalesReturnFilterStore((s) => s.reason);
+  const problem = useSalesReturnFilterStore((s) => s.problem);
+  const scope = useSalesReturnFilterStore((s) => s.scope);
   const fromDate = useSalesReturnFilterStore((s) => s.fromDate);
   const toDate = useSalesReturnFilterStore((s) => s.toDate);
 
@@ -13,7 +14,8 @@ export function useDebouncedSalesReturnFilters() {
     globalSearch: useDebouncedValue(globalSearch),
     customerIds,
     status,
-    reason,
+    problem,
+    scope,
     fromDate,
     toDate,
   };

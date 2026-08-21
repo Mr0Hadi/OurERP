@@ -1,13 +1,29 @@
 import { useEffect } from "react";
 import { useReturnInspectionFormStore } from "../store/returnInspectionFormStore";
 
-const generateId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-
+/**
+ * فرم تحویل‌گرفتن کالای مرجوعی.
+ *
+ * انباردار برای هر ردیف دو عدد می‌دهد: چقدر رسید، و چقدرش سالم بود.
+ * تفاوت این دو، کالایی است که دریافت می‌شود و ادعا را می‌بندد ولی وارد
+ * موجودی قابل‌فروش نمی‌شود.
+ *
+ * جای «نوع مشکل» هم همین‌جاست، ولی از همان واژگان ادعا (RETURN_PROBLEMS)
+ * استفاده می‌کند نه یک فهرست موازی — چون مشاهده‌ی انبار و ادعای مشتری
+ * دو *دیدگاه* از یک چیزند، نه دو چیز متفاوت.
+ */
 export function useReturnInspectionForm(salesReturn) {
-  const store = useReturnInspectionFormStore();
-  const { formData, setFormData, setInspectionItems, initializeFromReturn, initializedForId, resetForm } = store;
+  const {
+    formData,
+    setFormData,
+    setLines,
+    initializeFromReturn,
+    initializedForId,
+    resetForm,
+  } = useReturnInspectionFormStore();
 
-  const returnVersion = salesReturn?.id != null ? `${salesReturn.id}:${salesReturn.updatedAt}` : null;
+  const returnVersion =
+    salesReturn?.id != null ? `${salesReturn.id}:${salesReturn.updatedAt}` : null;
 
   useEffect(() => {
     if (returnVersion && initializedForId !== returnVersion) {
@@ -15,79 +31,73 @@ export function useReturnInspectionForm(salesReturn) {
     }
   }, [returnVersion, salesReturn, initializeFromReturn, initializedForId]);
 
-  const allocatedOf = (item) => (item.issues || []).reduce((sum, i) => sum + (Number(i.qty) || 0), 0);
+  const lines = formData.lines || [];
 
-  const handleItemChange = (lineId, field, value) => {
-    const newItems = formData.items.map((item) => {
-      if (item.lineId !== lineId) return item;
-      if (field === "verifiedQtyThisRound") {
-        const num = Number(value);
-        const clamped = Number.isNaN(num) || num < 0 ? 0 : Math.min(num, item.remainingQty);
-        let remainingBudget = clamped;
-        const trimmedIssues = [];
-        for (const issue of item.issues || []) {
-          if (remainingBudget <= 0) break;
-          const qty = Math.min(Number(issue.qty) || 0, remainingBudget);
-          if (qty > 0) { trimmedIssues.push({ ...issue, qty }); remainingBudget -= qty; }
-        }
-        return { ...item, verifiedQtyThisRound: clamped, issues: trimmedIssues };
-      }
-      return { ...item, [field]: value };
-    });
-    setInspectionItems(newItems);
-  };
+  const handleLineChange = (effectId, field, value) => {
+    setLines(
+      lines.map((line) => {
+        if (line.effectId !== effectId) return line;
 
-  const handleAddIssue = (lineId) => {
-    const newItems = formData.items.map((item) => {
-      if (item.lineId !== lineId) return item;
-      const allocated = allocatedOf(item);
-      const remaining = Math.max(0, (item.verifiedQtyThisRound || 0) - allocated);
-      if (remaining <= 0) return item;
-      return { ...item, issues: [...(item.issues || []), { id: generateId(), issueType: "defective", qty: remaining, note: "" }] };
-    });
-    setInspectionItems(newItems);
-  };
-
-  const handleUpdateIssue = (lineId, issueRowId, field, value) => {
-    const newItems = formData.items.map((item) => {
-      if (item.lineId !== lineId) return item;
-      const verifiedQtyThisRound = item.verifiedQtyThisRound || 0;
-      const newIssues = (item.issues || []).map((issue) => {
-        if (issue.id !== issueRowId) return issue;
-        if (field === "qty") {
-          const otherAllocated = (item.issues || []).filter((i) => i.id !== issueRowId).reduce((s, i) => s + (Number(i.qty) || 0), 0);
-          const maxAllowed = Math.max(0, verifiedQtyThisRound - otherAllocated);
+        if (field === "qtyThisRound") {
           const num = Number(value);
-          const clamped = Number.isNaN(num) || num < 0 ? 0 : Math.min(num, maxAllowed);
-          return { ...issue, qty: clamped };
+          const qty =
+            Number.isNaN(num) || num < 0
+              ? 0
+              : Math.min(num, line.remainingQty);
+          // بخش سالم هرگز نمی‌تواند از کل دریافتی بیشتر باشد
+          return {
+            ...line,
+            qtyThisRound: qty,
+            healthyQtyThisRound: Math.min(line.healthyQtyThisRound, qty),
+          };
         }
-        return { ...issue, [field]: value };
-      });
-      return { ...item, issues: newIssues };
-    });
-    setInspectionItems(newItems);
-  };
 
-  const handleRemoveIssue = (lineId, issueRowId) => {
-    const newItems = formData.items.map((item) =>
-      item.lineId === lineId ? { ...item, issues: (item.issues || []).filter((i) => i.id !== issueRowId) } : item,
+        if (field === "healthyQtyThisRound") {
+          const num = Number(value);
+          const healthy =
+            Number.isNaN(num) || num < 0
+              ? 0
+              : Math.min(num, line.qtyThisRound);
+          return { ...line, healthyQtyThisRound: healthy };
+        }
+
+        return { ...line, [field]: value };
+      }),
     );
-    setInspectionItems(newItems);
   };
-
-  const isAllComplete = formData.items.every((item) => (item.verifiedQtyThisRound || 0) >= item.remainingQty);
 
   const isTransporterValid =
     !!formData.transporterName?.trim() &&
     (!!formData.transporterNationalId?.trim() || !!formData.vehiclePlate?.trim());
 
+  const hasSomethingToRecord = lines.some(
+    (line) => (Number(line.qtyThisRound) || 0) > 0,
+  );
+
+  const isAllComplete = lines.every(
+    (line) => (Number(line.qtyThisRound) || 0) >= line.remainingQty,
+  );
+
+  const damagedTotal = lines.reduce(
+    (sum, line) =>
+      sum +
+      Math.max(
+        0,
+        (Number(line.qtyThisRound) || 0) - (Number(line.healthyQtyThisRound) || 0),
+      ),
+    0,
+  );
+
   const buildPayload = () => ({
-    returnId: formData.returnId,
-    inspectedItems: formData.items.map((item) => ({
-      lineId: item.lineId,
-      verifiedQtyThisRound: item.verifiedQtyThisRound || 0,
-      issues: (item.issues || []).map((i) => ({ issueType: i.issueType, qty: Number(i.qty) || 0, note: i.note || "" })),
-    })),
+    lines: lines
+      .filter((line) => (Number(line.qtyThisRound) || 0) > 0)
+      .map((line) => ({
+        effectId: line.effectId,
+        qty: Number(line.qtyThisRound) || 0,
+        healthyQty: Number(line.healthyQtyThisRound) || 0,
+        issueProblem: line.issueProblem || null,
+        issueNote: line.issueNote || "",
+      })),
     receivingNote: formData.receivingNote,
     receivedDate: formData.receivedDate,
     transporterName: formData.transporterName,
@@ -96,7 +106,16 @@ export function useReturnInspectionForm(salesReturn) {
   });
 
   return {
-    formData, setFormData, handleItemChange, handleAddIssue, handleUpdateIssue, handleRemoveIssue,
-    isAllComplete, isTransporterValid, buildPayload, resetForm, initializedForId,
+    formData,
+    setFormData,
+    lines,
+    handleLineChange,
+    isTransporterValid,
+    hasSomethingToRecord,
+    isAllComplete,
+    damagedTotal,
+    buildPayload,
+    resetForm,
+    initializedForId,
   };
 }

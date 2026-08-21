@@ -1,75 +1,177 @@
 import { useSalesReturnFormStore } from "../store/salesReturnFormStore";
+import {
+  CLAIM_SCOPES,
+  OFF_INVOICE_KINDS,
+  RETURN_PROBLEMS,
+} from "../domain/returnVocabulary";
 
 const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
+const DEFAULT_ON_INVOICE_PROBLEM = RETURN_PROBLEMS.DEFECTIVE;
+const DEFAULT_OFF_INVOICE_PROBLEM = RETURN_PROBLEMS.OVER_SHIPPED;
+
+/**
+ * فرم ثبت ادعای مرجوعی.
+ *
+ * دو دسته ادعا مدیریت می‌شود که قواعدشان فرق دارد:
+ *
+ *  • روی فاکتور  — روی یک خط فروش می‌نشیند و سقفش مقداری است که واقعاً
+ *                  به مشتری تحویل شده و هنوز ادعای فعالی رویش نیست.
+ *  • خارج از فاکتور — سقف ندارد، چون اصلاً بیرون از سفارش است: کالای
+ *                  اضافه‌ای که انبار فرستاده یا کالایی که در فاکتور
+ *                  نبوده.
+ *
+ */
 export function useSalesReturnForm() {
-  const { formData, setFormData, setItems, resetForm, initializedForId } =
+  const { formData, setFormData, setLines, setOffInvoiceClaims, resetForm } =
     useSalesReturnFormStore();
 
-  const items = formData.items || [];
+  const lines = formData.lines || [];
+  const offInvoiceClaims = formData.offInvoiceClaims || [];
 
-  const claimedQtyOf = (item) =>
-    (item.claims || []).reduce((s, c) => s + (Number(c.qty) || 0), 0);
+  const claimedQtyOf = (line) =>
+    (line.claims || []).reduce((sum, c) => sum + (Number(c.qty) || 0), 0);
 
-  // افزودن یک ردیف جدید دلیل برای این کالا؛ پیش‌فرض تعداد، باقیمانده‌ی
-  // سهمیه‌ی قابل مرجوع‌شدن است تا کاربر فقط کم کند، نه از صفر بسازد.
-  const handleAddClaim = (lineId) => {
-    setItems(
-      items.map((item) => {
-        if (item.lineId !== lineId) return item;
-        const allocated = claimedQtyOf(item);
-        const remaining = Math.max(0, item.maxReturnableQty - allocated);
-        if (remaining <= 0) return item;
+  const newClaim = (problem, qty) => ({
+    id: generateId(),
+    problem,
+    qty,
+    note: "",
+  });
+
+  // ─── ادعاهای روی فاکتور ───────────────────────────────────────────
+
+  const handleAddClaim = (lineKey) => {
+    setLines(
+      lines.map((line) => {
+        if (line.lineKey !== lineKey) return line;
+        const remaining = Math.max(
+          0,
+          line.maxReturnableQty - claimedQtyOf(line),
+        );
+        if (remaining <= 0) return line;
         return {
-          ...item,
+          ...line,
           claims: [
-            ...(item.claims || []),
-            { id: generateId(), reason: "defective", qty: remaining, note: "" },
+            ...(line.claims || []),
+            newClaim(DEFAULT_ON_INVOICE_PROBLEM, remaining),
           ],
         };
       }),
     );
   };
 
-  const handleUpdateClaim = (lineId, claimId, field, value) => {
-    setItems(
-      items.map((item) => {
-        if (item.lineId !== lineId) return item;
-        const newClaims = (item.claims || []).map((claim) => {
-          if (claim.id !== claimId) return claim;
-          if (field === "qty") {
-            const otherAllocated = (item.claims || [])
-              .filter((c) => c.id !== claimId)
-              .reduce((s, c) => s + (Number(c.qty) || 0), 0);
-            const maxAllowed = Math.max(0, item.maxReturnableQty - otherAllocated);
-            const num = Number(value);
-            const clamped = Number.isNaN(num) || num < 0 ? 0 : Math.min(num, maxAllowed);
-            return { ...claim, qty: clamped };
-          }
-          return { ...claim, [field]: value };
-        });
-        return { ...item, claims: newClaims };
+  const handleUpdateClaim = (lineKey, claimId, field, value) => {
+    setLines(
+      lines.map((line) => {
+        if (line.lineKey !== lineKey) return line;
+        return {
+          ...line,
+          claims: (line.claims || []).map((claim) => {
+            if (claim.id !== claimId) return claim;
+            if (field === "qty") {
+              const others = (line.claims || [])
+                .filter((c) => c.id !== claimId)
+                .reduce((s, c) => s + (Number(c.qty) || 0), 0);
+              const maxAllowed = Math.max(0, line.maxReturnableQty - others);
+              const num = Number(value);
+              return {
+                ...claim,
+                qty: Number.isNaN(num) || num < 0 ? 0 : Math.min(num, maxAllowed),
+              };
+            }
+            return { ...claim, [field]: value };
+          }),
+        };
       }),
     );
   };
 
-  const handleRemoveClaim = (lineId, claimId) => {
-    setItems(
-      items.map((item) =>
-        item.lineId === lineId
-          ? { ...item, claims: (item.claims || []).filter((c) => c.id !== claimId) }
-          : item,
+  const handleRemoveClaim = (lineKey, claimId) => {
+    setLines(
+      lines.map((line) =>
+        line.lineKey === lineKey
+          ? { ...line, claims: (line.claims || []).filter((c) => c.id !== claimId) }
+          : line,
       ),
     );
   };
 
-  const selectedItems = items
-    .map((item) => ({ ...item, claimedQty: claimedQtyOf(item) }))
-    .filter((item) => item.claimedQty > 0 && (item.claims || []).length > 0);
+  // ─── ادعاهای خارج از فاکتور ───────────────────────────────────────
 
-  const computedTotal = selectedItems.reduce(
-    (sum, item) => sum + item.claimedQty * item.unitPrice,
+  const handleAddOffInvoiceClaim = (product, kind = OFF_INVOICE_KINDS.EXCESS) => {
+    setOffInvoiceClaims([
+      ...offInvoiceClaims,
+      {
+        ...newClaim(DEFAULT_OFF_INVOICE_PROBLEM, 1),
+        offInvoiceKind: kind,
+        productId: product.productId,
+        productCode: product.productCode,
+        productName: product.productName,
+        unit: product.unit,
+        unitPrice: product.unitPrice,
+      },
+    ]);
+  };
+
+  const handleUpdateOffInvoiceClaim = (claimId, field, value) => {
+    setOffInvoiceClaims(
+      offInvoiceClaims.map((claim) => {
+        if (claim.id !== claimId) return claim;
+        if (field === "qty" || field === "unitPrice") {
+          const num = Number(value);
+          return { ...claim, [field]: Number.isNaN(num) || num < 0 ? 0 : num };
+        }
+        return { ...claim, [field]: value };
+      }),
+    );
+  };
+
+  const handleRemoveOffInvoiceClaim = (claimId) => {
+    setOffInvoiceClaims(offInvoiceClaims.filter((c) => c.id !== claimId));
+  };
+
+  // ─── خروجی ─────────────────────────────────────────────────────────
+
+  const onInvoiceClaims = lines.flatMap((line) =>
+    (line.claims || [])
+      .filter((claim) => (Number(claim.qty) || 0) > 0)
+      .map((claim) => ({
+        scope: CLAIM_SCOPES.ON_INVOICE,
+        offInvoiceKind: null,
+        saleLineId: String(line.productId),
+        productId: line.productId,
+        productCode: line.productCode,
+        productName: line.productName,
+        unit: line.unit,
+        unitPrice: line.unitPrice,
+        qty: Number(claim.qty) || 0,
+        problem: claim.problem,
+        note: claim.note || "",
+      })),
+  );
+
+  const preparedOffInvoiceClaims = offInvoiceClaims
+    .filter((claim) => (Number(claim.qty) || 0) > 0)
+    .map((claim) => ({
+      scope: CLAIM_SCOPES.OFF_INVOICE,
+      offInvoiceKind: claim.offInvoiceKind,
+      saleLineId: null,
+      productId: claim.productId,
+      productCode: claim.productCode,
+      productName: claim.productName,
+      unit: claim.unit,
+      unitPrice: Number(claim.unitPrice) || 0,
+      qty: Number(claim.qty) || 0,
+      problem: claim.problem,
+      note: claim.note || "",
+    }));
+
+  const allClaims = [...onInvoiceClaims, ...preparedOffInvoiceClaims];
+
+  const computedTotal = allClaims.reduce(
+    (sum, claim) => sum + claim.qty * claim.unitPrice,
     0,
   );
 
@@ -79,34 +181,26 @@ export function useSalesReturnForm() {
     customerId: formData.customerId,
     customerName: formData.customerName,
     returnDate: formData.returnDate,
-    reason: formData.reason,
     description: formData.description || "",
-    items: selectedItems.map((item) => ({
-      lineId: item.lineId,
-      productId: item.productId,
-      productCode: item.productCode,
-      productName: item.productName,
-      unit: item.unit,
-      unitPrice: item.unitPrice,
-      claimedQty: item.claimedQty,
-      lineTotal: item.claimedQty * item.unitPrice,
-      claims: (item.claims || [])
-        .filter((c) => (Number(c.qty) || 0) > 0)
-        .map((c) => ({ id: c.id, reason: c.reason, qty: Number(c.qty) || 0, note: c.note || "" })),
-    })),
+    previousReturnId: formData.previousReturnId ?? null,
+    claims: allClaims,
   });
 
   return {
     formData,
     setFormData,
-    items,
-    selectedItems,
+    lines,
+    offInvoiceClaims,
+    allClaims,
+    computedTotal,
     handleAddClaim,
     handleUpdateClaim,
     handleRemoveClaim,
-    computedTotal,
+    handleAddOffInvoiceClaim,
+    handleUpdateOffInvoiceClaim,
+    handleRemoveOffInvoiceClaim,
     buildPayload,
     resetForm,
-    initializedForId,
   };
 }
+

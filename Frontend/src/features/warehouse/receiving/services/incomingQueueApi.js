@@ -1,12 +1,28 @@
 import { allPurchases, PURCHASE_STATUSES, PURCHASE_STATUS_LABELS } from "./mockData";
+import { allSalesReturns } from "@/features/sales/returns/services/mockData";
 import {
-  allSalesReturns, SALES_RETURN_STATUSES, SALES_RETURN_STATUS_LABELS,
-} from "@/features/sales/returns/services/mockData";
+  hasPendingGoodsIn,
+  pendingGoodsEffects,
+} from "@/features/sales/returns/domain/returnResolutions";
+import { EFFECT_KINDS } from "@/features/sales/returns/domain/returnEffects";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const RECEIVING_ELIGIBLE_STATUSES = [PURCHASE_STATUSES.SHIPPED];
-export const RETURN_INTAKE_ELIGIBLE_STATUSES = [SALES_RETURN_STATUSES.PENDING_INSPECTION];
+
+/**
+ * یک مرجوعی فروش دیگر بر اساس *وضعیتش* وارد صف انبار نمی‌شود، بلکه بر
+ * اساس اینکه آیا تصمیمی گرفته شده که کالایی باید واقعاً پس گرفته شود.
+ *
+ * این تفاوت اصلی مدل جدید است: قبلاً هر مرجوعی به‌محض ثبت در صف
+ * دریافت می‌نشست و تا انبار تحویلش نمی‌گرفت هیچ تصمیمی نمی‌شد گرفت.
+ * حالا مرجوعی‌ای که تصمیمش «بازگشت وجه بدون پس‌گرفتن کالا» است اصلاً
+ * به انبار نمی‌رسد، و مرجوعی‌ای که تصمیمش پس‌گرفتن کالاست دقیقاً از
+ * لحظه‌ی گرفتن آن تصمیم اینجا ظاهر می‌شود.
+ */
+export function isReturnAwaitingIntake(salesReturn) {
+  return hasPendingGoodsIn(salesReturn);
+}
 
 export const INCOMING_TYPES = { PURCHASE: "purchase", SALES_RETURN: "sales_return" };
 export const INCOMING_TYPE_LABELS = { [INCOMING_TYPES.PURCHASE]: "خرید", [INCOMING_TYPES.SALES_RETURN]: "مرجوعی فروش" };
@@ -36,7 +52,7 @@ function returnToRow(salesReturn) {
     counterpartyType: "customer",
     counterpartyName: salesReturn.customerName,
     date: salesReturn.returnDate,
-    itemsCount: (salesReturn.items || []).length,
+    itemsCount: pendingGoodsEffects(salesReturn, EFFECT_KINDS.GOODS_IN).length,
     amount: salesReturn.totalClaimedAmount,
     createdAt: salesReturn.createdAt,
     updatedAt: salesReturn.updatedAt,
@@ -55,7 +71,7 @@ export async function fetchIncomingQueue(params = {}) {
     rows.push(...allPurchases.filter((p) => RECEIVING_ELIGIBLE_STATUSES.includes(p.status)).map(purchaseToRow));
   }
   if (!type || type === INCOMING_TYPES.SALES_RETURN) {
-    rows.push(...allSalesReturns.filter((r) => RETURN_INTAKE_ELIGIBLE_STATUSES.includes(r.status)).map(returnToRow));
+    rows.push(...allSalesReturns.filter(isReturnAwaitingIntake).map(returnToRow));
   }
 
   if (search) {

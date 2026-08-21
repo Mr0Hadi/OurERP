@@ -1,9 +1,10 @@
 import { allSales, SALE_STATUS_LABELS } from "@/features/sales/orders/services/mockData";
+import { allSalesReturns } from "@/features/sales/returns/services/mockData";
+import { pendingGoodsEffects } from "@/features/sales/returns/domain/returnResolutions";
 import {
-  allSalesReturns,
-  RESOLUTION_TYPES,
-  RESOLUTION_LINE_STATUSES,
-} from "@/features/sales/returns/services/mockData";
+  EFFECT_KINDS,
+  remainingQtyOf,
+} from "@/features/sales/returns/domain/returnEffects";
 import {
   allPurchaseReturns,
   RESOLUTION_TYPES as PURCHASE_RESOLUTION_TYPES,
@@ -61,18 +62,11 @@ function saleToRow(sale) {
 function collectReplacementRows() {
   const rows = [];
   allSalesReturns.forEach((salesReturn) => {
-    const pendingLines = [];
-    (salesReturn.items || []).forEach((item) => {
-      (item.resolutions || []).forEach((resolution) => {
-        if (
-          resolution.type === RESOLUTION_TYPES.REPLACEMENT &&
-          resolution.status === RESOLUTION_LINE_STATUSES.AWAITING
-        ) {
-          const remainingQty = resolution.qty - (resolution.shippedQty || 0);
-          if (remainingQty > 0) pendingLines.push(remainingQty);
-        }
-      });
-    });
+    // هر اثر GOODS_OUT ـِ معلق یک قلم ارسالی است — فارغ از اینکه با
+    // چه تصمیمی ساخته شده (تعویض، جبران کسری، یا یک ترکیب سفارشی).
+    const pendingLines = pendingGoodsEffects(salesReturn, EFFECT_KINDS.GOODS_OUT)
+      .map(remainingQtyOf)
+      .filter((qty) => qty > 0);
 
     if (pendingLines.length === 0) return;
 
@@ -87,7 +81,7 @@ function collectReplacementRows() {
       refNumber: salesReturn.returnNumber,
       counterpartyName: salesReturn.customerName,
       date: (salesReturn.updatedAt || salesReturn.createdAt || "").slice(0, 10),
-      statusLabel: `${pendingLines.length.toLocaleString("fa-IR")} قلم کالای جایگزین`,
+      statusLabel: `${pendingLines.length.toLocaleString("fa-IR")} قلم برای ارسال`,
       itemsCount: pendingLines.length,
       remainingQty: totalRemaining,
       amount: 0,

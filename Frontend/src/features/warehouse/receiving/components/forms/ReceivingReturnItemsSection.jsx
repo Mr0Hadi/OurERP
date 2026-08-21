@@ -1,201 +1,169 @@
-import { useMemo, useState } from "react";
-import { Search, Plus, X } from "lucide-react";
-
-import { Input } from "@/shared/components/ui/input";
-import { Button } from "@/shared/components/ui/button";
-import { Badge } from "@/shared/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/ui/card";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
+import { Badge } from "@/shared/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/shared/components/ui/select";
-import { RETURN_ISSUE_TYPE_LABELS } from "../../services/returnsIntakeApi";
-import { SALES_RETURN_REASON_LABELS } from "@/features/sales/returns/services/mockData";
-import { createRowStatus } from "@/shared/utils/createRowStatus";
-import QuantityStepper from "@/shared/components/forms/QuantityStepper";
+import {
+  RETURN_PROBLEM_LABELS,
+  RETURN_PROBLEM_STYLES,
+} from "@/features/sales/returns/domain/returnVocabulary";
 
-const ISSUE_TYPE_OPTIONS = Object.entries(RETURN_ISSUE_TYPE_LABELS);
+const PROBLEM_OPTIONS = Object.entries(RETURN_PROBLEM_LABELS);
 
-const { getRowStatus, ROW_STATUS_CONFIG } = createRowStatus({
-  completeLabel: "این دور کامل رسید",
-  partialLabel: "این دور ناقص رسید",
-  emptyKey: "missing",
-  emptyLabel: "این دور نرسید",
-});
-
-function IssueBreakdownEditor({ item, onAddIssue, onUpdateIssue, onRemoveIssue }) {
-  const issues = item.issues || [];
-  const verifiedQtyThisRound = item.verifiedQtyThisRound || 0;
-  const allocated = issues.reduce((s, i) => s + (Number(i.qty) || 0), 0);
-  const remaining = verifiedQtyThisRound - allocated;
-
-  if (verifiedQtyThisRound <= 0) return null;
+function IntakeLine({ line, onChange }) {
+  const qty = Number(line.qtyThisRound) || 0;
+  const healthy = Number(line.healthyQtyThisRound) || 0;
+  const damaged = Math.max(0, qty - healthy);
 
   return (
-    <div className="space-y-2 rounded-lg border border-dashed border-border bg-muted/30 p-2.5">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-medium text-card-foreground">
-          تفکیک مشکل تعدادِ رسیده در این دور ({verifiedQtyThisRound.toLocaleString("fa-IR")} عدد)
-        </span>
-        <Button type="button" size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => onAddIssue(item.lineId)} disabled={remaining <= 0}>
-          <Plus className="h-3 w-3" />
-          افزودن نوع مشکل
-        </Button>
+    <div className="border border-border rounded-lg p-3 space-y-2.5">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="font-medium text-card-foreground text-sm truncate">
+            {line.productName}
+          </p>
+          <p className="text-xs text-muted-foreground">{line.productCode}</p>
+        </div>
+        <div className="text-xs text-muted-foreground tabular-nums shrink-0 text-left">
+          <div>
+            باقیمانده‌ی این تصمیم:{" "}
+            <span className="font-medium text-card-foreground">
+              {line.remainingQty.toLocaleString("fa-IR")} {line.unit}
+            </span>
+          </div>
+          {line.doneQty > 0 && (
+            <div className="text-[11px] opacity-70">
+              قبلاً دریافت‌شده: {line.doneQty.toLocaleString("fa-IR")}
+            </div>
+          )}
+        </div>
       </div>
 
-      {issues.length === 0 && (
-        <p className="text-xs text-muted-foreground">
-          اگر همه‌ی این تعداد سالم است، نیازی به کاری نیست. فقط اگر بخشی مشکل دارد، با «افزودن نوع مشکل» ثبتش کنید.
-        </p>
-      )}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Badge
+          variant="outline"
+          className={`text-[10px] ${RETURN_PROBLEM_STYLES[line.problem] ?? ""}`}
+        >
+          ادعای مشتری: {RETURN_PROBLEM_LABELS[line.problem] ?? line.problem}
+        </Badge>
+      </div>
 
-      {issues.map((issue) => (
-        <div key={issue.id} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 bg-card rounded-md border border-border p-1.5">
-          <Select value={issue.issueType} onValueChange={(v) => onUpdateIssue(item.lineId, issue.id, "issueType", v)}>
-            <SelectTrigger className="h-8 text-xs sm:w-36 shrink-0"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {ISSUE_TYPE_OPTIONS.map(([value, label]) => (
-                <SelectItem key={value} value={value}>{label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input type="number" min={0} value={issue.qty} onChange={(e) => onUpdateIssue(item.lineId, issue.id, "qty", e.target.value)} className="h-8 text-center text-xs sm:w-16 shrink-0" />
-          <Input placeholder="یادداشت (اختیاری)..." value={issue.note || ""} onChange={(e) => onUpdateIssue(item.lineId, issue.id, "note", e.target.value)} className="h-8 text-xs flex-1" />
-          <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => onRemoveIssue(item.lineId, issue.id)}>
-            <X className="h-3.5 w-3.5" />
-          </Button>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label className="text-[11px] text-muted-foreground">
+            چقدر تحویل گرفتید؟
+          </Label>
+          <Input
+            type="number"
+            min={0}
+            max={line.remainingQty}
+            value={line.qtyThisRound}
+            onChange={(e) =>
+              onChange(line.effectId, "qtyThisRound", e.target.value)
+            }
+            className="h-8 text-xs text-center"
+          />
         </div>
-      ))}
+        <div className="space-y-1">
+          <Label className="text-[11px] text-muted-foreground">
+            چقدرش سالم و قابل فروش دوباره است؟
+          </Label>
+          <Input
+            type="number"
+            min={0}
+            max={qty}
+            value={line.healthyQtyThisRound}
+            onChange={(e) =>
+              onChange(line.effectId, "healthyQtyThisRound", e.target.value)
+            }
+            className="h-8 text-xs text-center"
+          />
+        </div>
+      </div>
+
+      {damaged > 0 && (
+        <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50/60 dark:border-amber-800 dark:bg-amber-950/20 p-2">
+          <p className="text-[11px] text-amber-800 dark:text-amber-300">
+            {damaged.toLocaleString("fa-IR")} عدد سالم نیست — دریافت می‌شود و
+            ادعا را می‌بندد، ولی وارد موجودی قابل‌فروش نمی‌شود.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+            <Select
+              value={line.issueProblem || ""}
+              onValueChange={(value) =>
+                onChange(line.effectId, "issueProblem", value)
+              }
+            >
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="آنچه شما دیدید..." />
+              </SelectTrigger>
+              <SelectContent>
+                {PROBLEM_OPTIONS.map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              value={line.issueNote || ""}
+              onChange={(e) =>
+                onChange(line.effectId, "issueNote", e.target.value)
+              }
+              placeholder="توضیح (اختیاری)..."
+              className="h-8 text-xs"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function ClaimsSummary({ item }) {
-  const claims = item.claims || [];
-  if (claims.length === 0) return null;
-  return (
-    <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
-      {claims.map((c) => (
-        <span key={c.id} className="text-xs text-muted-foreground">
-          {SALES_RETURN_REASON_LABELS[c.reason] ?? c.reason}: {c.qty.toLocaleString("fa-IR")}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-export default function ReceivingReturnItemsSection({ items, onItemChange, onAddIssue, onUpdateIssue, onRemoveIssue }) {
-  const [search, setSearch] = useState("");
-
-  const filteredItems = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return items;
-    return items.filter((item) => item.productName?.toLowerCase().includes(term) || item.productCode?.toLowerCase().includes(term));
-  }, [items, search]);
-
-  const totals = useMemo(() => {
-    return items.reduce(
-      (acc, item) => {
-        const verified = item.verifiedQtyThisRound || 0;
-        const status = getRowStatus(item.remainingQty, verified);
-        acc.remaining += item.remainingQty;
-        acc.verifiedThisRound += verified;
-        acc[status] += 1;
-        return acc;
-      },
-      { remaining: 0, verifiedThisRound: 0, complete: 0, partial: 0, missing: 0 },
-    );
-  }, [items]);
-
-  if (items.length === 0) {
-    return (
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base font-semibold">اقلام باقی‌مانده برای دریافت</CardTitle></CardHeader>
-        <CardContent>
-          <p className="text-center text-sm text-muted-foreground py-6">همه‌ی اقلام این مرجوعی قبلاً به‌طور کامل دریافت شده‌اند.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
+/**
+ * اقلامی که انبار باید در این مرجوعی تحویل بگیرد.
+ *
+ * فهرست از اثرهای معلقِ «پس‌گرفتن کالا» می‌آید، نه از ادعای مشتری —
+ * یعنی انباردار فقط چیزی را می‌بیند که واحد فروش واقعاً تصمیم گرفته پس
+ * گرفته شود.
+ */
+export default function ReceivingReturnItemsSection({ lines, onLineChange }) {
   return (
     <Card>
-      <CardHeader className="flex flex-col items-start gap-2 pb-2 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle className="text-base font-semibold">اقلام باقی‌مانده برای دریافت (این دور)</CardTitle>
-        <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          <Badge variant="outline" className={ROW_STATUS_CONFIG.complete.badgeClass}>کامل: {totals.complete.toLocaleString("fa-IR")}</Badge>
-          <Badge variant="outline" className={ROW_STATUS_CONFIG.partial.badgeClass}>ناقص: {totals.partial.toLocaleString("fa-IR")}</Badge>
-          <Badge variant="outline" className={ROW_STATUS_CONFIG.missing.badgeClass}>نرسیده: {totals.missing.toLocaleString("fa-IR")}</Badge>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-3">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base font-semibold text-card-foreground">
+          کالاهایی که باید تحویل گرفته شوند
+        </CardTitle>
         <p className="text-xs text-muted-foreground">
-          فقط اقلامی که هنوز به‌طور کامل نرسیده‌اند اینجا نشان داده می‌شوند. مقداری که این دور دریافت شده را وارد کنید؛
-          باقیمانده به‌طور خودکار برای دور بعدی نگه داشته می‌شود.
+          می‌توانید بخشی را همین حالا ثبت کنید و باقی را هر وقت رسید — این
+          مرجوعی تا تحویل کامل، در صف دریافت باقی می‌ماند.
         </p>
-
-        {items.length > 1 && (
-          <div className="relative">
-            <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-            <Input placeholder="جست‌وجو بر اساس نام یا کد کالا..." value={search} onChange={(e) => setSearch(e.target.value)} className="pr-8 text-sm h-9 input-rtl-placeholder" />
-          </div>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {lines.length === 0 ? (
+          <p className="text-center text-sm text-muted-foreground py-6 border border-dashed border-border rounded-lg">
+            برای این مرجوعی کالایی در انتظار تحویل نیست
+          </p>
+        ) : (
+          lines.map((line) => (
+            <IntakeLine
+              key={line.effectId}
+              line={line}
+              onChange={onLineChange}
+            />
+          ))
         )}
-
-        {filteredItems.map((item) => {
-          const verified = item.verifiedQtyThisRound || 0;
-          const status = getRowStatus(item.remainingQty, verified);
-          const config = ROW_STATUS_CONFIG[status];
-          const StatusIcon = config.icon;
-
-          return (
-            <div key={item.lineId} className={`rounded-lg border border-border p-3 space-y-2.5 ${config.rowClass}`}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-card-foreground text-sm truncate">{item.productName}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{item.productCode}</p>
-                  <ClaimsSummary item={item} />
-                  {item.alreadyVerifiedQty > 0 && (
-                    <p className="text-[11px] text-muted-foreground mt-1">
-                      قبلاً {item.alreadyVerifiedQty.toLocaleString("fa-IR")} عدد از این کالا در دور(های) قبل دریافت شده.
-                    </p>
-                  )}
-                </div>
-                <Badge variant="outline" className={`gap-1 text-xs shrink-0 ${config.badgeClass}`}>
-                  <StatusIcon className="h-3 w-3" />{config.label}
-                </Badge>
-              </div>
-
-              <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/60">
-                <span className="text-xs text-muted-foreground">
-                  باقیمانده‌ی این کالا: <span className="tabular-nums font-medium text-card-foreground">{item.remainingQty.toLocaleString("fa-IR")}</span>
-                </span>
-                <div>
-                  <p className="text-[10px] text-muted-foreground text-center mb-1">مقدار رسیده در این دور</p>
-                  <QuantityStepper
-                    value={item.verifiedQtyThisRound}
-                    max={item.remainingQty}
-                    onChange={(next) =>
-                      onItemChange(item.lineId, "verifiedQtyThisRound", next)
-                    }
-                    size="sm"
-                  />
-                </div>
-              </div>
-
-              <IssueBreakdownEditor item={item} onAddIssue={onAddIssue} onUpdateIssue={onUpdateIssue} onRemoveIssue={onRemoveIssue} />
-            </div>
-          );
-        })}
-
-        {filteredItems.length === 0 && items.length > 0 && (
-          <p className="text-center text-sm text-muted-foreground py-6">کالایی با این مشخصات یافت نشد</p>
-        )}
-
-        <div className="rounded-lg bg-muted px-3 py-2.5 flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">
-            جمع این دور: <span className="font-bold text-card-foreground tabular-nums">{totals.verifiedThisRound.toLocaleString("fa-IR")} / {totals.remaining.toLocaleString("fa-IR")}</span>
-          </span>
-        </div>
       </CardContent>
     </Card>
   );

@@ -8,24 +8,28 @@ import { toFilterOptions } from "@/shared/components/filters/filterUtils";
 import { useSalesReturnFilterStore } from "../../store/salesReturnFilterStore";
 import {
   SALES_RETURN_STATUS_LABELS,
-  SALES_RETURN_REASON_LABELS,
-} from "../../services/mockData";
+  RETURN_PROBLEM_LABELS,
+  CLAIM_SCOPE_LABELS,
+} from "../../domain/returnVocabulary";
 
 const STATUS_OPTIONS = toFilterOptions(SALES_RETURN_STATUS_LABELS);
-const REASON_OPTIONS = toFilterOptions(SALES_RETURN_REASON_LABELS);
+const PROBLEM_OPTIONS = toFilterOptions(RETURN_PROBLEM_LABELS);
+const SCOPE_OPTIONS = toFilterOptions(CLAIM_SCOPE_LABELS);
 
 const SalesReturnFilters = ({ customers = [], isCustomersLoading = false }) => {
   const {
     globalSearch,
     customerIds,
     status,
-    reason,
+    problem,
+    scope,
     fromDate,
     toDate,
     setGlobalSearch,
     setCustomerIds,
     setStatus,
-    setReason,
+    setProblem,
+    setScope,
     setFromDate,
     setToDate,
     resetFilters,
@@ -79,11 +83,19 @@ const SalesReturnFilters = ({ customers = [], isCustomersLoading = false }) => {
       />
 
       <FilterSelect
-        label="دلیل"
-        value={reason}
-        onChange={setReason}
-        allLabel="همه دلایل"
-        options={REASON_OPTIONS}
+        label="نوع مشکل"
+        value={problem}
+        onChange={setProblem}
+        allLabel="همه مشکل‌ها"
+        options={PROBLEM_OPTIONS}
+      />
+
+      <FilterSelect
+        label="دامنه"
+        value={scope}
+        onChange={setScope}
+        allLabel="همه"
+        options={SCOPE_OPTIONS}
       />
     </FilterPanel>
   );
