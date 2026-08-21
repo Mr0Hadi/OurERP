@@ -25,81 +25,43 @@ export const EFFECT_KINDS = {
   MONEY_IN: "money_in",
 };
 
-export const EFFECT_KIND_LABELS = {
-  [EFFECT_KINDS.GOODS_IN]: "پس‌گرفتن کالا از مشتری",
-  [EFFECT_KINDS.GOODS_OUT]: "ارسال کالا برای مشتری",
-  [EFFECT_KINDS.MONEY_OUT]: "پرداخت وجه به مشتری",
-  [EFFECT_KINDS.MONEY_IN]: "دریافت وجه از مشتری",
-};
-
-export const EFFECT_KIND_STYLES = {
-  [EFFECT_KINDS.GOODS_IN]:
-    "bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/40 dark:border-teal-800 dark:text-teal-400",
-  [EFFECT_KINDS.GOODS_OUT]:
-    "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:border-indigo-800 dark:text-indigo-400",
-  [EFFECT_KINDS.MONEY_OUT]:
-    "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-400",
-  [EFFECT_KINDS.MONEY_IN]:
-    "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-400",
-};
-
-export const GOODS_EFFECT_KINDS = [
+const GOODS_EFFECT_KINDS = [
   EFFECT_KINDS.GOODS_IN,
   EFFECT_KINDS.GOODS_OUT,
-];
-
-export const MONEY_EFFECT_KINDS = [
-  EFFECT_KINDS.MONEY_IN,
-  EFFECT_KINDS.MONEY_OUT,
 ];
 
 export function isGoodsEffect(kind) {
   return GOODS_EFFECT_KINDS.includes(kind);
 }
 
-export function isMoneyEffect(kind) {
-  return MONEY_EFFECT_KINDS.includes(kind);
-}
-
-// ─── کانال پول ──────────────────────────────────────────────────────────────
+// ─── روش جابه‌جایی پول ──────────────────────────────────────────────────────
 
 /**
- * پول از چه راهی جابه‌جا می‌شود. جهتِ پول را نوعِ اثر تعیین می‌کند
- * (MONEY_IN / MONEY_OUT) و کانال فقط می‌گوید *چطور* — یعنی
- * STORE_CREDIT دیگر یک «نوع تصمیم» جدا نیست، فقط یک کانالِ MONEY_OUT
- * است. همین باعث می‌شود «اعتبار خرید بعدی» به‌طور خودکار در هر ترکیبی
- * (مثلاً همراه با پس‌گرفتن کالا) در دسترس باشد.
- */
-export const MONEY_CHANNELS = {
-  CASH: "cash",
-  STORE_CREDIT: "store_credit",
-  INVOICE_ADJUSTMENT: "invoice_adjustment",
-};
-
-export const MONEY_CHANNEL_LABELS = {
-  [MONEY_CHANNELS.CASH]: "جابه‌جایی واقعی پول",
-  [MONEY_CHANNELS.STORE_CREDIT]: "اعتبار خرید بعدی",
-  [MONEY_CHANNELS.INVOICE_ADJUSTMENT]: "اصلاح مانده‌ی همین فاکتور",
-};
-
-/**
- * روشِ جابه‌جایی پول — همان واژگانی که فرم ثبت فروش برای پرداخت
- * استفاده می‌کند، تا کاربر دو زبان مختلف برای یک چیز نبیند.
+ * پول از چه راهی جابه‌جا می‌شود.
  *
- * این با «کانال» فرق دارد و مکملش است: کانال می‌گوید پول واقعاً
- * جابه‌جا می‌شود یا فقط اعتبار ثبت می‌شود؛ روش می‌گوید آن جابه‌جاییِ
- * واقعی چطور انجام شده. برای اعتبار، روش معنا ندارد و null می‌ماند.
+ * قبلاً این مفهوم بین سه چیز پخش بود — «جهت» (که CREDIT هم داخلش بود)،
+ * «کانال»، و «روش». هر سه یک سوال را از سه زاویه می‌پرسیدند و دو تا از
+ * سه مقدارِ کانال یا بی‌مصرف بودند یا تکرارِ جهت. حالا فقط دو محور
+ * مانده: *جهت* (پول به کدام سمت می‌رود — در returnResolutions) و
+ * *روش* (از چه راهی). همین یک لیست، همان واژگانی است که فرم ثبت فروش
+ * برای پرداخت استفاده می‌کند.
  */
 export const PAYMENT_METHODS = {
   CASH: "cash",
   CHECK: "check",
   TRANSFER: "transfer",
+  ON_ACCOUNT: "on_account",
+  STORE_CREDIT: "store_credit",
+  MIXED: "mixed",
 };
 
 export const PAYMENT_METHOD_LABELS = {
   [PAYMENT_METHODS.CASH]: "نقدی",
   [PAYMENT_METHODS.CHECK]: "چک",
   [PAYMENT_METHODS.TRANSFER]: "انتقال بانکی",
+  [PAYMENT_METHODS.ON_ACCOUNT]: "نسیه (روی حساب مشتری)",
+  [PAYMENT_METHODS.STORE_CREDIT]: "اعتبار خرید بعدی",
+  [PAYMENT_METHODS.MIXED]: "ترکیبی",
 };
 
 /** روش‌هایی که یک شماره‌ی پیگیری همراه دارند. */
@@ -107,6 +69,28 @@ export const REFERENCE_LABELS = {
   [PAYMENT_METHODS.CHECK]: "شماره چک",
   [PAYMENT_METHODS.TRANSFER]: "شماره پیگیری",
 };
+
+/**
+ * روش‌هایی که می‌توانند جزءِ یک پرداخت ترکیبی باشند. «نسیه» و «اعتبار»
+ * اینجا نیستند چون خودشان یعنی «الان پولی جابه‌جا نمی‌شود» — تکه‌کردنشان
+ * بی‌معناست.
+ */
+export const SPLITTABLE_PAYMENT_METHODS = [
+  PAYMENT_METHODS.CASH,
+  PAYMENT_METHODS.CHECK,
+  PAYMENT_METHODS.TRANSFER,
+];
+
+/**
+ * آیا این روش، ارزشِ همین فاکتور را تغییر می‌دهد؟
+ *
+ * «اعتبار خرید بعدی» تعهدی برای فروشِ *بعدی* است، نه اصلاحی روی این
+ * فاکتور — تنها روشی که مبلغ فاکتور را تکان نمی‌دهد. «نسیه» برعکس،
+ * همین فاکتور را جابه‌جا می‌کند و فقط زمانِ تسویه‌اش عقب می‌افتد.
+ */
+export function affectsInvoiceTotal(method) {
+  return method !== PAYMENT_METHODS.STORE_CREDIT;
+}
 
 // ─── وضعیت اجرای اثر ────────────────────────────────────────────────────────
 
@@ -126,25 +110,13 @@ export const EFFECT_STATUSES = {
   VOID: "void",
 };
 
-export const EFFECT_STATUS_LABELS = {
-  [EFFECT_STATUSES.PENDING]: "در انتظار اجرا",
-  [EFFECT_STATUSES.APPLIED]: "اجرا شده",
-  [EFFECT_STATUSES.VOID]: "لغو شده",
-};
-
 /**
- * آیا این اثر تا وقتی انبار کاری فیزیکی نکند معلق می‌ماند؟ تنها معیارِ
- * ورود یک مرجوعی به صف‌های انبار همین است — نه وضعیت کلی مرجوعی، نه
- * نوع تصمیم.
+ * اثرهای کالایی تا وقتی انبار کاری فیزیکی نکند معلق می‌مانند — تنها
+ * معیارِ ورود یک مرجوعی به صف‌های انبار همین است، نه وضعیت کلی مرجوعی.
+ * اثرهای پولی همان لحظه‌ی ثبت اعمال‌شده حساب می‌شوند.
  */
-export function requiresWarehouseAction(kind) {
-  return isGoodsEffect(kind);
-}
-
-export function initialStatusFor(kind) {
-  return requiresWarehouseAction(kind)
-    ? EFFECT_STATUSES.PENDING
-    : EFFECT_STATUSES.APPLIED;
+function initialStatusFor(kind) {
+  return isGoodsEffect(kind) ? EFFECT_STATUSES.PENDING : EFFECT_STATUSES.APPLIED;
 }
 
 // ─── ساخت اثر ───────────────────────────────────────────────────────────────
@@ -176,9 +148,9 @@ export function createEffect({
   productName = "",
   unit = "",
   amount = 0,
-  channel = MONEY_CHANNELS.CASH,
   method = null,
   reference = "",
+  parts = [],
   note = "",
 }) {
   const isGoods = isGoodsEffect(kind);
@@ -193,23 +165,16 @@ export function createEffect({
     productName: isGoods ? productName : "",
     unit: isGoods ? unit : "",
     amount: isGoods ? 0 : Number(amount) || 0,
-    channel: isGoods ? null : channel,
     method: isGoods ? null : method,
     reference: isGoods ? "" : reference || "",
+    // فقط برای روشِ ترکیبی پر می‌شود؛ مجموعِ مبالغش همان amount است.
+    parts: isGoods ? [] : parts,
     note: note || "",
     status: initialStatusFor(kind),
     history: [],
     createdAt: new Date().toISOString(),
     appliedAt: isGoods ? null : new Date().toISOString(),
   };
-}
-
-export function isEffectOpen(effect) {
-  return effect?.status === EFFECT_STATUSES.PENDING;
-}
-
-export function isEffectApplied(effect) {
-  return effect?.status === EFFECT_STATUSES.APPLIED;
 }
 
 /** مقداری از یک اثر کالایی که هنوز اجرا نشده. */

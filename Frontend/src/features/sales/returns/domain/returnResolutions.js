@@ -4,8 +4,8 @@ import { SALES_RETURN_STATUSES, isTerminalStatus } from "./returnVocabulary";
 import {
   EFFECT_KINDS,
   EFFECT_STATUSES,
-  MONEY_CHANNELS,
   PAYMENT_METHODS,
+  SPLITTABLE_PAYMENT_METHODS,
   createEffect,
   summarizeEffects,
 } from "./returnEffects";
@@ -18,9 +18,10 @@ import {
  *   ۱. کالا از مشتری پس گرفته شود؟
  *   ۲. کالایی برای مشتری ارسال شود؟ (هر کالایی، با هر تعدادی — لازم
  *      نیست همان کالای ادعا باشد)
- *   ۳. پولی جابه‌جا شود؟ (دریافت از مشتری / پرداخت به مشتری / اعتبار)
+ *   ۳. پولی جابه‌جا شود؟ (دریافت از مشتری یا پرداخت به او — با هر
+ *      روشی: نقدی، چک، بانکی، نسیه، اعتبار خرید بعدی، یا ترکیبی)
  *
- * هشت ترکیب ممکن از این سه محور، همان چیزی است که قبلاً به‌صورت یک
+ * ترکیب‌های ممکن از این سه محور، همان چیزی‌اند که قبلاً به‌صورت یک
  * فهرست ثابتِ «نوع تصمیم» نوشته می‌شد. با این مدل، فهرست حذف می‌شود:
  * کاربر مستقیم همان سه سوال را جواب می‌دهد و سیستم اثرها را می‌سازد.
  *
@@ -40,27 +41,64 @@ const { GOODS_IN, GOODS_OUT, MONEY_IN, MONEY_OUT } = EFFECT_KINDS;
 // ─── جهت پول ────────────────────────────────────────────────────────────────
 
 /**
- * سه حالتی که برای پول ممکن است. «اعتبار» جهتش مثل پرداخت است (به نفع
- * مشتری) ولی کانالش فرق دارد و روی مبلغ همین فاکتور نمی‌نشیند.
+ * پول به کدام سمت می‌رود. «اعتبار خرید بعدی» دیگر یک جهتِ سوم نیست —
+ * آن هم پرداختی به مشتری است، فقط با روشِ متفاوت (نگاه کنید به
+ * PAYMENT_METHODS در returnEffects).
  */
 export const MONEY_DIRECTIONS = {
   NONE: "none",
   RECEIVE: "receive",
   PAY: "pay",
-  CREDIT: "credit",
 };
 
 export const MONEY_DIRECTION_LABELS = {
   [MONEY_DIRECTIONS.NONE]: "بدون جابه‌جایی پول",
   [MONEY_DIRECTIONS.RECEIVE]: "دریافت پول از مشتری",
   [MONEY_DIRECTIONS.PAY]: "پرداخت پول به مشتری",
-  [MONEY_DIRECTIONS.CREDIT]: "ثبت اعتبار برای خرید بعدی",
 };
 
-export function movesRealMoney(direction) {
-  return (
-    direction === MONEY_DIRECTIONS.RECEIVE || direction === MONEY_DIRECTIONS.PAY
-  );
+/**
+ * روش‌هایی که برای هر جهت معنا دارند. «اعتبار خرید بعدی» فقط وقتی
+ * معنا دارد که ما به مشتری بدهکاریم؛ مشتری نمی‌تواند با اعتبارِ
+ * خودش به ما پول بدهد.
+ */
+export function methodsForDirection(direction) {
+  const base = [
+    PAYMENT_METHODS.CASH,
+    PAYMENT_METHODS.CHECK,
+    PAYMENT_METHODS.TRANSFER,
+    PAYMENT_METHODS.ON_ACCOUNT,
+    PAYMENT_METHODS.MIXED,
+  ];
+  return direction === MONEY_DIRECTIONS.PAY
+    ? [...base, PAYMENT_METHODS.STORE_CREDIT]
+    : base;
+}
+
+/**
+ * تکه‌های معتبرِ یک پرداخت ترکیبی (مبلغ بزرگ‌تر از صفر).
+ *
+ * شکل هر تکه همان چیزی است که MixedPaymentList مشترک تولید می‌کند —
+ * { type, amount, checkNumber?, transferRef? } — تا فرم فروش و تصمیمِ
+ * مرجوعی یک قرارداد داشته باشند.
+ */
+function validMoneyParts(money) {
+  return (money?.parts || []).filter((part) => (Number(part.amount) || 0) > 0);
+}
+
+/**
+ * مبلغِ مؤثرِ یک جابه‌جایی پول. برای روشِ ترکیبی، مجموعِ تکه‌هاست — نه
+ * فیلد amount، که در آن حالت اصلاً پر نمی‌شود.
+ */
+export function moneyAmountOf(money) {
+  if (!money) return 0;
+  if (money.method === PAYMENT_METHODS.MIXED) {
+    return validMoneyParts(money).reduce(
+      (sum, part) => sum + (Number(part.amount) || 0),
+      0,
+    );
+  }
+  return Number(money.amount) || 0;
 }
 
 // ─── ترکیب خالی ─────────────────────────────────────────────────────────────
@@ -71,18 +109,23 @@ export function emptyComposition(qty = 1) {
     takeBack: false,
     sendReplacement: false,
     replacementItems: [],
-    money: {
-      direction: MONEY_DIRECTIONS.NONE,
-      amount: "",
-      method: PAYMENT_METHODS.CASH,
-      reference: "",
-    },
+    money: emptyMoney(),
     note: "",
   };
 }
 
+export function emptyMoney() {
+  return {
+    direction: MONEY_DIRECTIONS.NONE,
+    method: PAYMENT_METHODS.CASH,
+    amount: "",
+    reference: "",
+    parts: [],
+  };
+}
+
 /** آیا این ترکیب اصلاً کاری انجام می‌دهد؟ */
-export function isEmptyComposition(composition) {
+function isEmptyComposition(composition) {
   return (
     !composition?.takeBack &&
     !composition?.sendReplacement &&
@@ -136,17 +179,16 @@ export function expandComposition(composition, claim) {
   }
 
   const money = composition.money || {};
-  const amount = Number(money.amount) || 0;
+  const amount = moneyAmountOf(money);
   if (money.direction !== MONEY_DIRECTIONS.NONE && amount > 0) {
-    const isReceive = money.direction === MONEY_DIRECTIONS.RECEIVE;
-    const isCredit = money.direction === MONEY_DIRECTIONS.CREDIT;
+    const isMixed = money.method === PAYMENT_METHODS.MIXED;
     effects.push(
       createEffect({
-        kind: isReceive ? MONEY_IN : MONEY_OUT,
+        kind: money.direction === MONEY_DIRECTIONS.RECEIVE ? MONEY_IN : MONEY_OUT,
         amount,
-        channel: isCredit ? MONEY_CHANNELS.STORE_CREDIT : MONEY_CHANNELS.CASH,
-        method: isCredit ? null : money.method,
-        reference: isCredit ? "" : money.reference,
+        method: money.method,
+        reference: isMixed ? "" : money.reference,
+        parts: isMixed ? validMoneyParts(money) : [],
         note,
       }),
     );
@@ -157,21 +199,14 @@ export function expandComposition(composition, claim) {
 
 /**
  * یک رکورد تصمیمِ کامل — همان چیزی که روی claim.resolutions می‌نشیند.
- *
- * خودِ ترکیب هم نگه داشته می‌شود، نه برای محاسبه (منبع حقیقت همیشه
- * effects است) بلکه برای اینکه بعداً بشود نشان داد کاربر دقیقاً چه
- * چیزی را تیک زده بود.
+ * منبع حقیقت effects است؛ خودِ ترکیب نگه داشته نمی‌شود چون از روی
+ * اثرها کامل قابل بازخوانی است.
  */
 export function buildResolution(composition, claim) {
   return {
     id: generateId(),
     qty: Number(composition.qty) || 0,
     note: composition.note || "",
-    composition: {
-      takeBack: Boolean(composition.takeBack),
-      sendReplacement: Boolean(composition.sendReplacement),
-      moneyDirection: composition.money?.direction ?? MONEY_DIRECTIONS.NONE,
-    },
     effects: expandComposition(composition, claim),
     createdAt: new Date().toISOString(),
   };
@@ -213,11 +248,18 @@ export function validateComposition(composition, claim, { remainingQty } = {}) {
 
   const money = composition.money || {};
   if (money.direction !== MONEY_DIRECTIONS.NONE) {
-    if (!(Number(money.amount) > 0)) {
+    if (!methodsForDirection(money.direction).includes(money.method)) {
+      errors.push("روش پرداخت برای این جهت مجاز نیست");
+    } else if (money.method === PAYMENT_METHODS.MIXED) {
+      if (validMoneyParts(money).length === 0) {
+        errors.push("برای پرداخت ترکیبی، حداقل یک ردیف با مبلغ بیشتر از صفر لازم است");
+      }
+      const badPart = validMoneyParts(money).find(
+        (part) => !SPLITTABLE_PAYMENT_METHODS.includes(part.type),
+      );
+      if (badPart) errors.push("روش یکی از ردیف‌های پرداخت ترکیبی نامعتبر است");
+    } else if (!(moneyAmountOf(money) > 0)) {
       errors.push("مبلغ باید بزرگ‌تر از صفر باشد");
-    }
-    if (movesRealMoney(money.direction) && !money.method) {
-      errors.push("روش پرداخت انتخاب نشده است");
     }
   }
 
@@ -237,11 +279,7 @@ export function claimRemainingQty(claim) {
   return Math.max(0, (Number(claim?.qty) || 0) - claimDecidedQty(claim));
 }
 
-export function isClaimFullyDecided(claim) {
-  return claimRemainingQty(claim) === 0;
-}
-
-export function allEffectsOf(salesReturn) {
+function allEffectsOf(salesReturn) {
   return (salesReturn?.claims || []).flatMap((claim) =>
     (claim.resolutions || []).flatMap((res) => res.effects || []),
   );
@@ -318,7 +356,7 @@ export function hasPendingGoodsOut(salesReturn) {
   return pendingGoodsEffects(salesReturn, GOODS_OUT).length > 0;
 }
 
-export function hasAppliedEffects(salesReturn) {
+function hasAppliedEffects(salesReturn) {
   return allEffectsOf(salesReturn).some(
     (effect) => effect.status === EFFECT_STATUSES.APPLIED,
   );
@@ -381,10 +419,4 @@ export function canCancelSalesReturn(salesReturn) {
 
 export function canRejectSalesReturn(salesReturn) {
   return isUntouched(salesReturn) && !isTerminalStatus(salesReturn.status);
-}
-
-export function canAddResolution(salesReturn) {
-  if (!salesReturn) return false;
-  if (isTerminalStatus(salesReturn.status)) return false;
-  return (salesReturn.claims || []).some((claim) => claimRemainingQty(claim) > 0);
 }

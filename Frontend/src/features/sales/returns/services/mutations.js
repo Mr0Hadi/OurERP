@@ -37,7 +37,8 @@ export const useCreateSalesReturnMutation = () => {
 export const useAddClaimResolutionMutation = (returnId) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ claimId, draft }) => addClaimResolution(returnId, claimId, draft),
+    mutationFn: ({ claimId, composition }) =>
+      addClaimResolution(returnId, claimId, composition),
     onSuccess: (updated) => {
       finalizeReturnChange(queryClient, updated);
       toast.success("تصمیم ثبت شد");

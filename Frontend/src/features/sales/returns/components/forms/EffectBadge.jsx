@@ -4,13 +4,10 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
 } from "lucide-react";
-import { Badge } from "@/shared/components/ui/badge";
 import {
   EFFECT_KINDS,
-  EFFECT_KIND_LABELS,
-  EFFECT_KIND_STYLES,
   EFFECT_STATUSES,
-  MONEY_CHANNEL_LABELS,
+  PAYMENT_METHOD_LABELS,
   isGoodsEffect,
 } from "../../domain/returnEffects";
 
@@ -21,47 +18,66 @@ const ICONS = {
   [EFFECT_KINDS.MONEY_OUT]: ArrowUpRight,
 };
 
+// برچسبِ کوتاه؛ نسخه‌ی بلند («پس‌گرفتن کالا از مشتری») روی موبایل
+// باعث می‌شد بج از عرض کارت بزند بیرون.
+const SHORT_LABELS = {
+  [EFFECT_KINDS.GOODS_IN]: "پس‌گرفتن",
+  [EFFECT_KINDS.GOODS_OUT]: "ارسال",
+  [EFFECT_KINDS.MONEY_IN]: "دریافت وجه",
+  [EFFECT_KINDS.MONEY_OUT]: "پرداخت وجه",
+};
+
+const ACCENTS = {
+  [EFFECT_KINDS.GOODS_IN]: "text-teal-700 dark:text-teal-400",
+  [EFFECT_KINDS.GOODS_OUT]: "text-indigo-700 dark:text-indigo-400",
+  [EFFECT_KINDS.MONEY_IN]: "text-emerald-700 dark:text-emerald-400",
+  [EFFECT_KINDS.MONEY_OUT]: "text-rose-700 dark:text-rose-400",
+};
+
 /**
- * یک اثر پایه به‌صورت بج.
+ * یک اثر پایه، به‌صورت یک سطرِ کوتاه.
  *
- * برای اثر کالایی، اگر کالای اثر با کالای ادعا فرق داشته باشد (تعویض
- * با کالای دیگر) نامش هم نشان داده می‌شود — وگرنه کاربر نمی‌فهمد چه
- * چیزی قرار است برود.
+ * قبلاً این یک Badge بود که برچسب و تعداد و نام کالا و روش پرداخت و
+ * وضعیت را در یک خطِ نشکستنی کنار هم می‌چید — روی موبایل تا ۳۰۰
+ * پیکسل پهن می‌شد و از کارتِ ۲۳۰ پیکسلی می‌زد بیرون. حالا یک سطر است
+ * که متنش می‌شکند و بخش‌های فرعی (نام کالا، روش، «در انتظار انبار»)
+ * زیرِ خط اول می‌روند.
  */
 export default function EffectBadge({ effect, showProductName = false }) {
   const Icon = ICONS[effect.kind];
   const isGoods = isGoodsEffect(effect.kind);
   const isPending = effect.status === EFFECT_STATUSES.PENDING;
+  const done = Number(effect.doneQty) || 0;
 
   const value = isGoods
     ? `${(Number(effect.qty) || 0).toLocaleString("fa-IR")} ${effect.unit || "عدد"}`
     : `${(Number(effect.amount) || 0).toLocaleString("fa-IR")} ریال`;
 
-  const progress =
-    isGoods && (Number(effect.doneQty) || 0) > 0
-      ? ` (${(Number(effect.doneQty) || 0).toLocaleString("fa-IR")} انجام‌شده)`
-      : "";
+  const details = [
+    showProductName && isGoods ? effect.productName : null,
+    !isGoods && effect.method ? PAYMENT_METHOD_LABELS[effect.method] : null,
+    isGoods && done > 0
+      ? `${done.toLocaleString("fa-IR")} انجام‌شده`
+      : null,
+    isPending ? "در انتظار انبار" : null,
+  ].filter(Boolean);
 
   return (
-    <Badge
-      variant="outline"
-      className={`gap-1 text-[11px] ${EFFECT_KIND_STYLES[effect.kind] ?? ""} ${
-        isPending ? "border-dashed" : ""
-      }`}
-    >
-      {Icon && <Icon className="h-3 w-3" />}
-      <span>{EFFECT_KIND_LABELS[effect.kind]}</span>
-      <span className="tabular-nums font-medium">
-        {value}
-        {progress}
-      </span>
-      {showProductName && isGoods && effect.productName && (
-        <span className="opacity-70">— {effect.productName}</span>
+    <div className="flex items-start gap-1.5 min-w-0 text-[11px] leading-5">
+      {Icon && (
+        <Icon className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${ACCENTS[effect.kind] ?? ""}`} />
       )}
-      {!isGoods && effect.channel && (
-        <span className="opacity-70">({MONEY_CHANNEL_LABELS[effect.channel]})</span>
-      )}
-      {isPending && <span className="opacity-70">· در انتظار انبار</span>}
-    </Badge>
+      <div className="min-w-0">
+        <span className={`font-medium ${ACCENTS[effect.kind] ?? ""}`}>
+          {SHORT_LABELS[effect.kind]}
+        </span>{" "}
+        <span className="tabular-nums font-medium text-card-foreground">
+          {value}
+        </span>
+        {details.length > 0 && (
+          <span className="text-muted-foreground"> · {details.join(" · ")}</span>
+        )}
+      </div>
+    </div>
   );
 }

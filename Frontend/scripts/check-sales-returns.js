@@ -18,20 +18,22 @@ register("./extensionless-resolver.js", import.meta.url);
 
 const DOMAIN = "../src/features/sales/returns/domain";
 
-const { CLAIM_SCOPES, RETURN_PROBLEMS, SALES_RETURN_STATUSES, problemFamilyOf } =
+const { CLAIM_SCOPES, RETURN_PROBLEMS, SALES_RETURN_STATUSES, RETURN_PROBLEM_LABELS } =
   await import(`${DOMAIN}/returnVocabulary.js`);
 
 const {
   EFFECT_KINDS,
   EFFECT_STATUSES,
-  MONEY_CHANNELS,
   PAYMENT_METHODS,
+  affectsInvoiceTotal,
   summarizeEffects,
   stockDeltasOf,
 } = await import(`${DOMAIN}/returnEffects.js`);
 
 const {
   MONEY_DIRECTIONS,
+  methodsForDirection,
+  moneyAmountOf,
   emptyComposition,
   buildResolution,
   expandComposition,
@@ -44,6 +46,18 @@ const {
 } = await import(`${DOMAIN}/returnResolutions.js`);
 
 let failures = 0;
+let sectionNo = 0;
+const FA_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
+const faNum = (n) =>
+  String(n)
+    .split("")
+    .map((d) => FA_DIGITS[Number(d)])
+    .join("");
+
+/** سرتیترِ یک سناریو. شماره خودکار است تا با جابه‌جایی بخش‌ها جا نیفتد. */
+const section = (title) => console.log(`
+${faNum(++sectionNo)}) ${title}`);
+
 const check = (name, cond, extra = "") => {
   if (cond) console.log(`  ok   ${name}`);
   else {
@@ -83,27 +97,24 @@ const money = (direction, amount, over = {}) => ({
   amount,
   method: PAYMENT_METHODS.CASH,
   reference: "",
+  parts: [],
   ...over,
 });
 const comp = (over = {}) => ({ ...emptyComposition(over.qty ?? 1), ...over });
 
-console.log("\n۱) واژگان");
+section("واژگان");
 check(
-  "پشیمانی مشتری در خانواده‌ی بدون‌نقص است",
-  problemFamilyOf(RETURN_PROBLEMS.CHANGED_MIND) === "no_defect",
-);
-check(
-  "اضافه‌ارسال در خانواده‌ی تعداد است",
-  problemFamilyOf(RETURN_PROBLEMS.OVER_SHIPPED) === "qty_mismatch",
+  "هر مشکل برچسب فارسی دارد",
+  Object.values(RETURN_PROBLEMS).every((p) => Boolean(RETURN_PROBLEM_LABELS[p])),
 );
 
-console.log("\n۲) ترکیب خالی هیچ اثری نمی‌سازد");
+section("ترکیب خالی هیچ اثری نمی‌سازد");
 {
   const fx = expandComposition(comp({ qty: 4 }), mkClaim());
   check("هیچ اثری تولید نشد", fx.length === 0, fx.length);
 }
 
-console.log("\n۳) فقط پس‌گرفتن کالا");
+section("فقط پس‌گرفتن کالا");
 {
   const fx = expandComposition(comp({ qty: 4, takeBack: true }), mkClaim());
   check("یک اثر GOODS_IN", kindsOf(fx).join() === EFFECT_KINDS.GOODS_IN);
@@ -111,7 +122,7 @@ console.log("\n۳) فقط پس‌گرفتن کالا");
   check("معلق است تا انبار تحویل بگیرد", fx[0].status === EFFECT_STATUSES.PENDING);
 }
 
-console.log("\n۴) پس‌گرفتن + پرداخت وجه");
+section("پس‌گرفتن + پرداخت وجه");
 {
   const fx = expandComposition(
     comp({ qty: 4, takeBack: true, money: money(MONEY_DIRECTIONS.PAY, 8_000_000) }),
@@ -124,22 +135,97 @@ console.log("\n۴) پس‌گرفتن + پرداخت وجه");
   );
   const out = fx.find((e) => e.kind === EFFECT_KINDS.MONEY_OUT);
   check("مبلغ درست", out.amount === 8_000_000);
-  check("کانالش نقدی است", out.channel === MONEY_CHANNELS.CASH);
+  check("روشش نقدی است", out.method === PAYMENT_METHODS.CASH);
   check("اثر پولی همان لحظه اعمال می‌شود", out.status === EFFECT_STATUSES.APPLIED);
 }
 
-console.log("\n۵) اعتبار خرید بعدی — کانال جدا، بدون روش پرداخت");
+section("اعتبار خرید بعدی — یک روشِ پرداخت، نه یک جهتِ جدا");
 {
   const fx = expandComposition(
-    comp({ qty: 2, money: money(MONEY_DIRECTIONS.CREDIT, 4_000_000) }),
+    comp({
+      qty: 2,
+      money: money(MONEY_DIRECTIONS.PAY, 4_000_000, {
+        method: PAYMENT_METHODS.STORE_CREDIT,
+      }),
+    }),
     mkClaim(),
   );
   check("یک اثر MONEY_OUT", kindsOf(fx).join() === EFFECT_KINDS.MONEY_OUT);
-  check("کانالش اعتبار است", fx[0].channel === MONEY_CHANNELS.STORE_CREDIT);
-  check("روش پرداخت ندارد", fx[0].method === null);
+  check("روشش اعتبار خرید بعدی است", fx[0].method === PAYMENT_METHODS.STORE_CREDIT);
+  check("روی مبلغ فاکتور اثر نمی‌گذارد", affectsInvoiceTotal(fx[0].method) === false);
+  check(
+    "فقط در جهتِ پرداخت پیشنهاد می‌شود",
+    methodsForDirection(MONEY_DIRECTIONS.PAY).includes(PAYMENT_METHODS.STORE_CREDIT) &&
+      !methodsForDirection(MONEY_DIRECTIONS.RECEIVE).includes(
+        PAYMENT_METHODS.STORE_CREDIT,
+      ),
+  );
 }
 
-console.log("\n۶) دریافت وجه از مشتری (کالای اضافه‌ای که نگه می‌دارد)");
+section("نسیه و ترکیبی");
+{
+  const onAccount = expandComposition(
+    comp({
+      qty: 2,
+      money: money(MONEY_DIRECTIONS.PAY, 3_000_000, {
+        method: PAYMENT_METHODS.ON_ACCOUNT,
+      }),
+    }),
+    mkClaim(),
+  );
+  check("نسیه یک اثر پولی می‌سازد", onAccount.length === 1);
+  check(
+    "نسیه برخلاف اعتبار، مبلغ فاکتور را جابه‌جا می‌کند",
+    affectsInvoiceTotal(onAccount[0].method) === true,
+  );
+
+  const mixedMoney = money(MONEY_DIRECTIONS.PAY, "", {
+    method: PAYMENT_METHODS.MIXED,
+    parts: [
+      { type: "cash", amount: 1_000_000 },
+      { type: "check", amount: 2_500_000, checkNumber: "۱۲۳" },
+      { type: "transfer", amount: 0 },
+    ],
+  });
+  check(
+    "مبلغ ترکیبی از جمع ردیف‌ها می‌آید",
+    moneyAmountOf(mixedMoney) === 3_500_000,
+    moneyAmountOf(mixedMoney),
+  );
+
+  const fx = expandComposition(comp({ qty: 2, money: mixedMoney }), mkClaim());
+  check("یک اثر پولی با مبلغ کل", fx.length === 1 && fx[0].amount === 3_500_000);
+  check("ردیف‌های صفر ذخیره نمی‌شوند", fx[0].parts.length === 2, fx[0].parts.length);
+  check(
+    "ترکیبی بدون هیچ ردیفِ معتبر رد می‌شود",
+    validateComposition(
+      comp({
+        qty: 2,
+        money: money(MONEY_DIRECTIONS.PAY, "", {
+          method: PAYMENT_METHODS.MIXED,
+          parts: [{ type: "cash", amount: 0 }],
+        }),
+      }),
+      mkClaim(),
+      { remainingQty: 10 },
+    ).length > 0,
+  );
+  check(
+    "اعتبار خرید بعدی در جهتِ دریافت رد می‌شود",
+    validateComposition(
+      comp({
+        qty: 1,
+        money: money(MONEY_DIRECTIONS.RECEIVE, 100, {
+          method: PAYMENT_METHODS.STORE_CREDIT,
+        }),
+      }),
+      mkClaim(),
+      { remainingQty: 10 },
+    ).length > 0,
+  );
+}
+
+section("دریافت وجه از مشتری (کالای اضافه‌ای که نگه می‌دارد)");
 {
   const off = mkClaim({ scope: CLAIM_SCOPES.OFF_INVOICE, qty: 3 });
   const fx = expandComposition(
@@ -150,7 +236,7 @@ console.log("\n۶) دریافت وجه از مشتری (کالای اضافه‌
   check("مبلغ درست", fx[0].amount === 6_000_000);
 }
 
-console.log("\n۷) تعویض با کالای دیگر + مابه‌التفاوت");
+section("تعویض با کالای دیگر + مابه‌التفاوت");
 {
   const fx = expandComposition(
     comp({
@@ -170,7 +256,7 @@ console.log("\n۷) تعویض با کالای دیگر + مابه‌التفاو
   check("مابه‌التفاوت از مشتری گرفته می‌شود", fx.some((e) => e.kind === EFFECT_KINDS.MONEY_IN));
 }
 
-console.log("\n۸) ارسال چند کالای مختلف در یک تصمیم");
+section("ارسال چند کالای مختلف در یک تصمیم");
 {
   const fx = expandComposition(
     comp({
@@ -187,7 +273,7 @@ console.log("\n۸) ارسال چند کالای مختلف در یک تصمیم"
   check("هر کدام تعداد خودش را دارد", fx[0].qty === 2 && fx[1].qty === 5);
 }
 
-console.log("\n۹) حرکت موجودی: فقط بخش سالمِ برگشتی به موجودی می‌رود");
+section("حرکت موجودی: فقط بخش سالمِ برگشتی به موجودی می‌رود");
 {
   const fx = expandComposition(comp({ qty: 5, takeBack: true }), mkClaim());
   check("تا اجرا نشود هیچ حرکت موجودی نیست", stockDeltasOf(fx).length === 0);
@@ -199,7 +285,7 @@ console.log("\n۹) حرکت موجودی: فقط بخش سالمِ برگشتی 
   check("فقط ۲ واحد سالم به موجودی اضافه می‌شود", deltas[0].delta === 2, JSON.stringify(deltas));
 }
 
-console.log("\n۱۰) اعتبارسنجی");
+section("اعتبارسنجی");
 {
   const claim = mkClaim();
   check(
@@ -231,7 +317,7 @@ console.log("\n۱۰) اعتبارسنجی");
   );
 }
 
-console.log("\n۱۱) وضعیت مرجوعی از روی داده مشتق می‌شود");
+section("وضعیت مرجوعی از روی داده مشتق می‌شود");
 {
   const claim = mkClaim({ qty: 10 });
   const ret = { status: SALES_RETURN_STATUSES.OPEN, claims: [claim] };
@@ -258,7 +344,7 @@ console.log("\n۱۱) وضعیت مرجوعی از روی داده مشتق می�
   check("باقیمانده‌ی ادعا درست است", claimRemainingQty(claim) === 6, claimRemainingQty(claim));
 }
 
-console.log("\n۱۲) نگهبان حذف و جمع‌بندی مالی");
+section("نگهبان حذف و جمع‌بندی مالی");
 {
   const claim = mkClaim({ qty: 10 });
   const ret = { status: SALES_RETURN_STATUSES.OPEN, claims: [claim] };
@@ -280,7 +366,7 @@ console.log("\n۱۲) نگهبان حذف و جمع‌بندی مالی");
   check("خالص مالی = ۲۰۰٬۰۰۰ − ۵۰۰٬۰۰۰", summary.netMoney === -300_000, summary.netMoney);
 }
 
-console.log("\n۱۳) ردیف‌های انبار از اثرهای معلق ساخته می‌شوند");
+section("ردیف‌های انبار از اثرهای معلق ساخته می‌شوند");
 {
   const claim = mkClaim({ qty: 6 });
   const ret = { status: SALES_RETURN_STATUSES.OPEN, claims: [claim] };
@@ -303,7 +389,7 @@ console.log("\n۱۳) ردیف‌های انبار از اثرهای معلق س�
   check("زمینه‌ی ادعا همراه ردیف است", inLines[0].problem === RETURN_PROBLEMS.DEFECTIVE);
 }
 
-console.log("\n۱۴) جمع‌بندی اثر: پیش‌نمایش در برابر واقعیت");
+section("جمع‌بندی اثر: پیش‌نمایش در برابر واقعیت");
 {
   const fx = expandComposition(
     comp({ qty: 3, takeBack: true, money: money(MONEY_DIRECTIONS.PAY, 900_000) }),
@@ -366,7 +452,7 @@ const returnableOf = async (productId) =>
     (i) => i.productId === productId,
   ).returnableQty;
 
-console.log("\n۱۳) اثر مالی: بازگشت وجه، مبلغ فاکتور را کم می‌کند");
+section("اثر مالی: بازگشت وجه، مبلغ فاکتور را کم می‌کند");
 {
   const item = hostSale.items[0];
   const before = saleOf(hostSale.id).totalAmount;
@@ -400,14 +486,16 @@ console.log("\n۱۳) اثر مالی: بازگشت وجه، مبلغ فاکتو�
   );
 }
 
-console.log("\n۱۴) اثر مالی: اعتبار خرید بعدی روی فاکتور اثری ندارد");
+section("اثر مالی: اعتبار خرید بعدی روی فاکتور اثری ندارد");
 {
   const item = hostSale.items[0];
   const before = saleOf(hostSale.id).totalAmount;
   const ret = await newReturn([claimFrom(item, { qty: 1 })]);
   await api.addClaimResolution(ret.id, ret.claims[0].id, {
     ...emptyComposition(1),
-    money: money(MONEY_DIRECTIONS.CREDIT, 900_000),
+    money: money(MONEY_DIRECTIONS.PAY, 900_000, {
+      method: PAYMENT_METHODS.STORE_CREDIT,
+    }),
   });
   check(
     "مبلغ فاکتور دست‌نخورده ماند",
@@ -416,7 +504,7 @@ console.log("\n۱۴) اثر مالی: اعتبار خرید بعدی روی فا
   );
 }
 
-console.log("\n۱۵) اثر مالی: کالای خارج از فاکتور که مشتری نگه می‌دارد، مبلغ را زیاد می‌کند");
+section("اثر مالی: کالای خارج از فاکتور که مشتری نگه می‌دارد، مبلغ را زیاد می‌کند");
 {
   const item = hostSale.items[0];
   const before = saleOf(hostSale.id).totalAmount;
@@ -439,7 +527,7 @@ console.log("\n۱۵) اثر مالی: کالای خارج از فاکتور که
   );
 }
 
-console.log("\n۱۶) اثر کالایی: فقط بخش سالمِ برگشتی وارد موجودی می‌شود");
+section("اثر کالایی: فقط بخش سالمِ برگشتی وارد موجودی می‌شود");
 {
   const item = hostSale.items[0];
   const stockBefore = stockOf(item.productId);
@@ -488,7 +576,7 @@ console.log("\n۱۶) اثر کالایی: فقط بخش سالمِ برگشتی 
   check("تاریخچه‌ی هر دو دور ثبت شد", e2.history.length === 2, e2.history.length);
 }
 
-console.log("\n۱۷) سقف ادعا همیشه کل مقدار تحویل‌شده است");
+section("سقف ادعا همیشه کل مقدار تحویل‌شده است");
 {
   const item = hostSale.items[0];
   const delivered = item.shippedQty ?? item.qty;
@@ -517,7 +605,7 @@ console.log("\n۱۷) سقف ادعا همیشه کل مقدار تحویل‌ش�
   );
 }
 
-console.log("\n۱۸) چرخه‌ی چندباره: مرجوعی روی مرجوعی");
+section("چرخه‌ی چندباره: مرجوعی روی مرجوعی");
 {
   const item = hostSale.items[1] ?? hostSale.items[0];
   const ret = await newReturn([claimFrom(item, { qty: 2 })]);
@@ -568,7 +656,7 @@ console.log("\n۱۸) چرخه‌ی چندباره: مرجوعی روی مرجو�
   check("مرجوعی دوم به اولی زنجیر شد", followUp.previousReturnId === ret.id);
   check("مرجوعی دوم مستقل و باز است", followUp.status === SALES_RETURN_STATUSES.OPEN);
 }
-console.log("\n۱۹) ادعای خارج از فاکتور سهمیه‌ی خط فروش را مصرف نمی‌کند");
+section("ادعای خارج از فاکتور سهمیه‌ی خط فروش را مصرف نمی‌کند");
 {
   const item = hostSale.items[0];
   const before = await returnableOf(item.productId);
@@ -583,7 +671,7 @@ console.log("\n۱۹) ادعای خارج از فاکتور سهمیه‌ی خط 
   check("سهمیه‌ی روی فاکتور دست‌نخورده ماند", after === before, `${before} → ${after}`);
 }
 
-console.log("\n۲۰) نگهبان چرخه‌ی عمر: بعد از اعمال اثر، حذف ممنوع می‌شود");
+section("نگهبان چرخه‌ی عمر: بعد از اعمال اثر، حذف ممنوع می‌شود");
 {
   const item = hostSale.items[0];
   const ret = await newReturn([claimFrom(item, { qty: 1 })]);
@@ -603,7 +691,7 @@ console.log("\n۲۰) نگهبان چرخه‌ی عمر: بعد از اعمال �
   );
 }
 
-console.log("\n۲۱) اعتبارسنجی موتور: تصمیم بیش از باقیمانده رد می‌شود");
+section("اعتبارسنجی موتور: تصمیم بیش از باقیمانده رد می‌شود");
 {
   const item = hostSale.items[0];
   const ret = await newReturn([claimFrom(item, { qty: 2 })]);

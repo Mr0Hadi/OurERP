@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import PaymentSummary from "@/shared/components/forms/PaymentSummary";
-import SaleMixedPaymentList from "./SaleMixedPaymentList";
+import MixedPaymentList from "@/shared/components/forms/MixedPaymentList";
 
 const PAYMENT_TYPES = [
   { value: "cash", label: "نقدی" },
@@ -118,8 +118,8 @@ export default function SalePaymentSection({
         </div>
 
         {paymentType === "mixed" && (
-          <SaleMixedPaymentList
-            mixedPayments={mixedPayments}
+          <MixedPaymentList
+            payments={mixedPayments}
             onAdd={addMixedPayment}
             onRemove={removeMixedPayment}
             onChange={updateMixedPayment}

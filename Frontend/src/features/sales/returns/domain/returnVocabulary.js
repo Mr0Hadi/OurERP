@@ -16,29 +16,6 @@
 // ─── محور ۱: مشکل ───────────────────────────────────────────────────────────
 
 /**
- * خانواده‌ی مشکل — همان سه محوری که صورت‌مسئله دارد (نوع کالا، تعداد،
- * خرابی) به‌علاوه‌ی حالتی که اصلاً نقصی در کار نیست (پشیمانی مشتری).
- *
- * خانواده برای فیلتر و گزارش است؛ چیزی که کاربر انتخاب می‌کند مشکلِ
- * دقیق (RETURN_PROBLEMS) است، نه خانواده.
- */
-export const PROBLEM_FAMILIES = {
-  WRONG_PRODUCT: "wrong_product",
-  QTY_MISMATCH: "qty_mismatch",
-  DAMAGED: "damaged",
-  NO_DEFECT: "no_defect",
-  OTHER: "other",
-};
-
-export const PROBLEM_FAMILY_LABELS = {
-  [PROBLEM_FAMILIES.WRONG_PRODUCT]: "نوع کالا",
-  [PROBLEM_FAMILIES.QTY_MISMATCH]: "تعداد کالا",
-  [PROBLEM_FAMILIES.DAMAGED]: "خرابی کالا",
-  [PROBLEM_FAMILIES.NO_DEFECT]: "بدون نقص کالا",
-  [PROBLEM_FAMILIES.OTHER]: "سایر",
-};
-
-/**
  * مشکلِ دقیق — همان چیزی که واحد فروش از مشتری می‌شنود.
  *
  * تفکیک «انبار اشتباه فرستاد» از «فروش اشتباه ثبت کرد» از «مشتری
@@ -83,26 +60,6 @@ export const RETURN_PROBLEM_LABELS = {
   [RETURN_PROBLEMS.OTHER]: "سایر موارد",
 };
 
-const PROBLEM_FAMILY_OF = {
-  [RETURN_PROBLEMS.WRONG_ITEM_SHIPPED]: PROBLEM_FAMILIES.WRONG_PRODUCT,
-  [RETURN_PROBLEMS.WRONG_ITEM_INVOICED]: PROBLEM_FAMILIES.WRONG_PRODUCT,
-  [RETURN_PROBLEMS.WRONG_ITEM_ORDERED]: PROBLEM_FAMILIES.WRONG_PRODUCT,
-  [RETURN_PROBLEMS.SHORT_SHIPPED]: PROBLEM_FAMILIES.QTY_MISMATCH,
-  [RETURN_PROBLEMS.OVER_SHIPPED]: PROBLEM_FAMILIES.QTY_MISMATCH,
-  [RETURN_PROBLEMS.WRONG_QTY_INVOICED]: PROBLEM_FAMILIES.QTY_MISMATCH,
-  [RETURN_PROBLEMS.WRONG_QTY_ORDERED]: PROBLEM_FAMILIES.QTY_MISMATCH,
-  [RETURN_PROBLEMS.DEFECTIVE]: PROBLEM_FAMILIES.DAMAGED,
-  [RETURN_PROBLEMS.DAMAGED_IN_TRANSIT]: PROBLEM_FAMILIES.DAMAGED,
-  [RETURN_PROBLEMS.QUALITY_ISSUE]: PROBLEM_FAMILIES.DAMAGED,
-  [RETURN_PROBLEMS.EXPIRED]: PROBLEM_FAMILIES.DAMAGED,
-  [RETURN_PROBLEMS.CHANGED_MIND]: PROBLEM_FAMILIES.NO_DEFECT,
-  [RETURN_PROBLEMS.OTHER]: PROBLEM_FAMILIES.OTHER,
-};
-
-export function problemFamilyOf(problem) {
-  return PROBLEM_FAMILY_OF[problem] ?? PROBLEM_FAMILIES.OTHER;
-}
-
 export const RETURN_PROBLEM_STYLES = {
   [RETURN_PROBLEMS.WRONG_ITEM_SHIPPED]:
     "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:border-purple-800 dark:text-purple-400",
@@ -131,7 +88,7 @@ export const RETURN_PROBLEM_STYLES = {
   [RETURN_PROBLEMS.OTHER]: "bg-muted text-muted-foreground border-border",
 };
 
-// ─── محور ۳: دامنه‌ی ادعا ───────────────────────────────────────────────────
+// ─── محور ۲: دامنه‌ی ادعا ───────────────────────────────────────────────────
 
 /**
  * ادعا یا روی یک خط فاکتور می‌نشیند (و سقفش مقداری است که واقعاً به

@@ -11,7 +11,7 @@ import {
 import {
   EFFECT_KINDS,
   EFFECT_STATUSES,
-  MONEY_CHANNELS,
+  affectsInvoiceTotal,
   isGoodsEffect,
 } from "../domain/returnEffects";
 import {
@@ -348,7 +348,7 @@ export async function createSalesReturn(payload) {
  * CREDIT در مرجوعی خرید دارد.
  */
 function saleDeltaOf(effect) {
-  if (effect.channel === MONEY_CHANNELS.STORE_CREDIT) return 0;
+  if (!affectsInvoiceTotal(effect.method)) return 0;
   if (effect.kind === EFFECT_KINDS.MONEY_IN) return Number(effect.amount) || 0;
   if (effect.kind === EFFECT_KINDS.MONEY_OUT) return -(Number(effect.amount) || 0);
   return 0;

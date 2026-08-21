@@ -151,7 +151,7 @@ export default function ResolutionComposer({ claim, remaining, onAdd, isBusy }) 
           <p className="text-[11px] text-muted-foreground">
             با ثبت این تصمیم، این اتفاق‌ها می‌افتد:
           </p>
-          <div className="flex flex-wrap gap-1">
+          <div className="space-y-0.5">
             {previewEffects.map((effect) => (
               <EffectBadge key={effect.id} effect={effect} showProductName />
             ))}

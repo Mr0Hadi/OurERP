@@ -5,12 +5,13 @@ import {
   RETURN_PROBLEMS,
   SALES_RETURN_STATUSES,
 } from "../domain/returnVocabulary";
-import { EFFECT_STATUSES } from "../domain/returnEffects";
+import { EFFECT_STATUSES, PAYMENT_METHODS } from "../domain/returnEffects";
 import {
   MONEY_DIRECTIONS,
   buildResolution,
   deriveReturnStatus,
   emptyComposition,
+  emptyMoney,
 } from "../domain/returnResolutions";
 
 /**
@@ -111,11 +112,12 @@ function buildClaim({ saleItem, qty, problem, scope, offInvoiceKind }) {
 function seedResolutions(claim, target) {
   if (target === "open") return;
 
-  const money = (direction, amount) => ({
+  const money = (direction, amount, method = PAYMENT_METHODS.CASH) => ({
     direction,
     amount,
-    method: "cash",
+    method,
     reference: "",
+    parts: [],
   });
 
   if (target === "in_progress") {
@@ -145,7 +147,7 @@ function seedResolutions(claim, target) {
               ]
             : [],
           money: withReplacement
-            ? { direction: MONEY_DIRECTIONS.NONE, amount: "", method: "cash", reference: "" }
+            ? emptyMoney()
             : money(MONEY_DIRECTIONS.PAY, half * claim.unitPrice),
         },
         claim,
@@ -156,16 +158,28 @@ function seedResolutions(claim, target) {
 
   // target === "settled" — فقط ترکیب‌های بدون اثر کالایی، تا وضعیت
   // مشتق‌شده بدون دخالت انبار به SETTLED برسد.
-  const direction =
-    claim.scope === CLAIM_SCOPES.OFF_INVOICE
-      ? MONEY_DIRECTIONS.RECEIVE
-      : pickRandom([MONEY_DIRECTIONS.PAY, MONEY_DIRECTIONS.CREDIT]);
+  // برای اینکه داده‌ی اولیه هر پنج روش را نشان بدهد، روشِ هر نمونه
+  // چرخشی انتخاب می‌شود.
+  const isOffInvoice = claim.scope === CLAIM_SCOPES.OFF_INVOICE;
+  const direction = isOffInvoice
+    ? MONEY_DIRECTIONS.RECEIVE
+    : MONEY_DIRECTIONS.PAY;
+  const method = pickRandom(
+    isOffInvoice
+      ? [PAYMENT_METHODS.CASH, PAYMENT_METHODS.TRANSFER, PAYMENT_METHODS.ON_ACCOUNT]
+      : [
+          PAYMENT_METHODS.CASH,
+          PAYMENT_METHODS.CHECK,
+          PAYMENT_METHODS.ON_ACCOUNT,
+          PAYMENT_METHODS.STORE_CREDIT,
+        ],
+  );
 
   claim.resolutions.push(
     buildResolution(
       {
         ...emptyComposition(claim.qty),
-        money: money(direction, claim.qty * claim.unitPrice),
+        money: money(direction, claim.qty * claim.unitPrice, method),
       },
       claim,
     ),
