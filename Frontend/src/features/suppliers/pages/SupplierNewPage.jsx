@@ -20,7 +20,6 @@ export default function SupplierNewPage() {
     setHeader({
       title: "اضافه کردن تامین کننده جدید",
       showBack: true,
-      onBack: () => navigate(-1),
     });
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader]);

@@ -20,7 +20,6 @@ export default function CustomerNewPage() {
     setHeader({
       title: "اضافه کردن مشتری جدید",
       showBack: true,
-      onBack: () => navigate(-1),
     });
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader]);

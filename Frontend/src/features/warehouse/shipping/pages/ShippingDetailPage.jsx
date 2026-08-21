@@ -196,7 +196,6 @@ export default function ShippingDetailPage() {
     setHeader({
       title: isLoading ? "در حال بارگذاری..." : sale ? "ارسال کالا" : "خطا",
       showBack: true,
-      onBack: () => navigate(ROUTES.WAREHOUSE_SHIPPING),
     });
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader, sale, isLoading]);

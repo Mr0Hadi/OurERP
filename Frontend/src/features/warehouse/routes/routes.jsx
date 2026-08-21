@@ -1,3 +1,4 @@
+import { Navigate } from "react-router-dom";
 import { ROUTES } from "@/shared/constants/routes";
 import {
   ProductsPage,
@@ -14,6 +15,14 @@ import {
 } from "./index";
 
 export const warehouseRoutes = [
+  // «انبار» در سایدبار به این مسیر لینک می‌دهد ولی صفحه‌ی مرورِ کلی
+  // ندارد — برخلاف مشتریان/خرید/فروش که مسیر ریشه‌شان خودش یک لیست
+  // است. تا وقتی چنین صفحه‌ای ساخته شود، به پرکاربردترین زیرصفحه
+  // هدایت می‌شود؛ قبلاً NotFound می‌داد.
+  {
+    path: ROUTES.WAREHOUSE,
+    element: <Navigate to={ROUTES.WAREHOUSE_PRODUCTS} replace />,
+  },
   {
     path: ROUTES.WAREHOUSE_PRODUCTS,
     element: <ProductsPage />,

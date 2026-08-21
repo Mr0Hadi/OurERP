@@ -15,6 +15,7 @@ import { useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 
 import { useHeaderStore } from "@/shared/store/headerStore";
+import { useGoBack } from "@/shared/hooks/useGoBack";
 import { Button } from "@/shared/components/ui/button";
 import { ArrowRight } from "lucide-react";
 
@@ -22,6 +23,9 @@ import { ArrowRight } from "lucide-react";
 
 export default function AppLayout() {
   const { title, showBack, onBack } = useHeaderStore();
+  // پیش‌فرضِ دکمه‌ی برگشت، صفحه‌ی قبلی است. صفحه‌ها فقط وقتی onBack
+  // می‌دهند که پیش از رفتن کاری داشته باشند (مثلاً پاک‌کردن فرم).
+  const goBack = useGoBack();
   
   const location = useLocation();
   const setCurrentPath = useNavigationStore((s) => s.setCurrentPath);
@@ -45,7 +49,7 @@ export default function AppLayout() {
                     type="button"
                     variant="outline"
                     size="icon"
-                    onClick={onBack}
+                    onClick={onBack ?? goBack}
                   >
                     <ArrowRight className="w-4 h-4" />
                   </Button>

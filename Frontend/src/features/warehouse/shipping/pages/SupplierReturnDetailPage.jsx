@@ -68,7 +68,6 @@ export default function SupplierReturnDetailPage() {
     setHeader({
       title: isLoading ? "در حال بارگذاری..." : "عودت کالا به تامین‌کننده",
       showBack: true,
-      onBack: () => navigate(ROUTES.WAREHOUSE_SHIPPING),
     });
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader, isLoading]);

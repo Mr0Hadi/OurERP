@@ -62,7 +62,6 @@ export default function ReplacementDetailPage() {
     setHeader({
       title: isLoading ? "در حال بارگذاری..." : "ارسال کالای جایگزین",
       showBack: true,
-      onBack: () => navigate(ROUTES.WAREHOUSE_SHIPPING),
     });
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader, isLoading]);

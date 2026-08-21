@@ -173,7 +173,6 @@ export default function SupplierDetailPage() {
           }`
         : "خطا",
       showBack: true,
-      onBack: () => navigate(-1),
     });
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader, supplier, isLoading]);

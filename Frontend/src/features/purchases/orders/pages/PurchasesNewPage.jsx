@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useGoBack } from "@/shared/hooks/useGoBack";
 import { useNavigationStore } from "@/shared/store/navigationStore";
 import { Save, X } from "lucide-react";
 
@@ -23,6 +24,7 @@ const SORTING = { id: "name", desc: false };
 
 export default function PurchasesNewPage() {
   const navigate = useNavigate();
+  const goBack = useGoBack();
   const location = useLocation();
 
   const setHeader = useHeaderStore((s) => s.setHeader);
@@ -142,11 +144,11 @@ export default function PurchasesNewPage() {
       showBack: true,
       onBack: () => {
         reset();
-        navigate(-1);
+        goBack();
       },
     });
     return () => clearHeader();
-  }, [setHeader, clearHeader, navigate]);
+  }, [setHeader, clearHeader, goBack]);
 
   const items = formData.items || [];
 

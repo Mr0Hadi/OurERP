@@ -161,7 +161,6 @@ export default function ProductDetailPage() {
         ? "جزئیات و ویرایش کالا"
         : "خطا",
       showBack: true,
-      onBack: () => navigate(-1),
     });
 
     return () => clearHeader();

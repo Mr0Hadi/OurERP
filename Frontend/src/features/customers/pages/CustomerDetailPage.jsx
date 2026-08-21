@@ -167,7 +167,6 @@ export default function CustomerDetailPage() {
           ? `ویرایش مشتری: ${customer.firstName} ${customer.lastName}`
           : "خطا",
       showBack: true,
-      onBack: () => navigate(-1),
     });
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader, customer, isLoading]);

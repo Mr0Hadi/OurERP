@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useGoBack } from "@/shared/hooks/useGoBack";
 import { Save, X, AlertCircle } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
@@ -30,6 +31,7 @@ import { ROUTES } from "@/shared/constants/routes";
  */
 export default function SalesReturnNewPage() {
   const navigate = useNavigate();
+  const goBack = useGoBack();
   const [searchParams] = useSearchParams();
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
@@ -78,12 +80,12 @@ export default function SalesReturnNewPage() {
       showBack: true,
       onBack: () => {
         resetForm();
-        navigate(ROUTES.SALES_RETURNS_LIST);
+        goBack();
       },
     });
     return () => clearHeader();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setHeader, clearHeader, navigate]);
+  }, [setHeader, clearHeader, goBack]);
 
   const createMutation = useCreateSalesReturnMutation();
   const isBusy = createMutation.isPending;

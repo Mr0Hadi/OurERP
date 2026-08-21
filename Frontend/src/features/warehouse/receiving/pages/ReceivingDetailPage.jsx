@@ -287,7 +287,6 @@ export default function ReceivingDetailPage() {
           ? "دریافت کالا"
           : "خطا",
       showBack: true,
-      onBack: () => navigate(ROUTES.WAREHOUSE_RECEIVING),
     });
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader, purchase, isLoading]);

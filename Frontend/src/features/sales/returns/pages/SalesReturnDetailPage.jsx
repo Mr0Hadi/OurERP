@@ -160,7 +160,6 @@ export default function SalesReturnDetailPage() {
           ? "جزئیات مرجوعی"
           : "خطا",
       showBack: true,
-      onBack: () => navigate(ROUTES.SALES_RETURNS_LIST),
     });
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader, salesReturn, isLoading]);

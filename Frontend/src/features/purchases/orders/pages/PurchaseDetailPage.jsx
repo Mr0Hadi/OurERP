@@ -24,7 +24,6 @@ export default function PurchaseDetailPage() {
           ? "ویرایش خرید"
           : "خطا",
       showBack: true,
-      onBack: () => navigate(-1),
     });
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader, purchase, isLoading]);

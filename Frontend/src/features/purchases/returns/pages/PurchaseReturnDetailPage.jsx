@@ -162,7 +162,6 @@ export default function PurchaseReturnDetailPage() {
           ? "جزئیات مرجوعی"
           : "خطا",
       showBack: true,
-      onBack: () => navigate(ROUTES.PURCHASES_RETURNS_LIST),
     });
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader, purchaseReturn, isLoading]);

@@ -143,7 +143,6 @@ export default function ReceivingReturnDetailPage() {
     setHeader({
       title: isLoading ? "در حال بارگذاری..." : salesReturn ? "بررسی و دریافت مرجوعی" : "خطا",
       showBack: true,
-      onBack: () => navigate(ROUTES.WAREHOUSE_RECEIVING),
     });
     return () => clearHeader();
   }, [navigate, setHeader, clearHeader, salesReturn, isLoading]);

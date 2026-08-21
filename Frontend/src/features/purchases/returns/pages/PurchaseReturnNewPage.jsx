@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useGoBack } from "@/shared/hooks/useGoBack";
 import { Save, X, AlertCircle } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
@@ -18,6 +19,7 @@ import { ROUTES } from "@/shared/constants/routes";
 
 export default function PurchaseReturnNewPage() {
   const navigate = useNavigate();
+  const goBack = useGoBack();
   const { purchaseId } = useParams();
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
@@ -66,12 +68,12 @@ export default function PurchaseReturnNewPage() {
       showBack: true,
       onBack: () => {
         resetForm();
-        navigate(ROUTES.PURCHASES_RETURNS_LIST);
+        goBack();
       },
     });
     return () => clearHeader();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setHeader, clearHeader, navigate]);
+  }, [setHeader, clearHeader, goBack]);
 
   const createMutation = useCreatePurchaseReturnMutation();
   const selectedCount = selectedItems.length + selectedSurplusItems.length;

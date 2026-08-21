@@ -25,7 +25,6 @@ export default function SaleDetailPage() {
     setHeader({
       title: saleLoading ? "در حال بارگذاری..." : sale ? "ویرایش فروش" : "خطا",
       showBack: true,
-      onBack: () => navigate(-1),
     });
     return () => clearHeader();
   }, [setHeader, clearHeader, navigate, sale, saleLoading]);

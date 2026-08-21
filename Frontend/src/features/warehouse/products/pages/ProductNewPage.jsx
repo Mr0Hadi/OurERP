@@ -23,7 +23,6 @@ export default function ProductNewPage() {
     setHeader({
       title: "افزودن کالا جدید",
       showBack: true,
-      onBack: () => navigate(-1),
     });
 
     return () => clearHeader();
