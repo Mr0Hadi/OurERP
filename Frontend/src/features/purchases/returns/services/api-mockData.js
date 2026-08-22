@@ -5,7 +5,6 @@ import { adjustProductsStock } from "@/features/warehouse/products/services/api-
 import { applyListQuery } from "@/shared/services/mockQuery";
 
 import {
-  CLAIM_SCOPES,
   PURCHASE_RETURN_STATUSES,
   hasAnythingArrived,
   isTerminalStatus,
@@ -22,6 +21,12 @@ import {
   deriveReturnStatus,
   validateComposition,
 } from "@/shared/domain/returns/resolutions";
+import {
+  claimBreakdown,
+  deliveredAdjustment,
+  relatedReturnsSummary,
+  returnsOfOrder,
+} from "@/shared/domain/returns/orderContext";
 
 /**
  * لایه‌ی داده‌ی مرجوعی خرید + موتور اثر — قرینه‌ی دقیقِ سمت فروش.
@@ -37,12 +42,6 @@ import {
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-
-const ACTIVE_RETURN_STATUSES = new Set([
-  PURCHASE_RETURN_STATUSES.OPEN,
-  PURCHASE_RETURN_STATUSES.IN_PROGRESS,
-  PURCHASE_RETURN_STATUSES.SETTLED,
-]);
 
 function getPurchase(purchaseId) {
   return allPurchases.find((p) => Number(p.id) === Number(purchaseId));
@@ -82,40 +81,6 @@ function commit(idx, patch) {
 }
 
 // ─── سهمیه‌ی قابل‌ادعا روی یک خط خرید ───────────────────────────────────────
-
-/**
- * چقدر از یک کالا در مرجوعی‌های *فعالِ دیگرِ* همین خرید ادعا شده.
- *
- * مثل سمت فروش، فقط برای *نمایش* است و سقف فرم را تعیین نمی‌کند: واحد
- * خرید باید بتواند برای کل مقدار سفارش ادعا ثبت کند.
- */
-function activeClaimedQtyForProduct(purchaseId, productId, excludeReturnId = null) {
-  let claimed = 0;
-
-  allPurchaseReturns.forEach((ret) => {
-    if (Number(ret.purchaseId) !== Number(purchaseId)) return;
-    if (excludeReturnId != null && Number(ret.id) === Number(excludeReturnId)) return;
-    if (!ACTIVE_RETURN_STATUSES.has(ret.status)) return;
-
-    (ret.claims || []).forEach((claim) => {
-      if (claim.scope !== CLAIM_SCOPES.ON_ORDER) return;
-      if (claim.productId !== productId) return;
-      claimed += Number(claim.qty) || 0;
-
-      // کالای جایگزینی که تامین‌کننده دوباره فرستاده و رسیده، ادعای
-      // بازِ معلق نیست — نمونه‌ی تازه‌ای پیش ماست.
-      (claim.resolutions || []).forEach((res) =>
-        (res.effects || []).forEach((effect) => {
-          if (effect.kind !== EFFECT_KINDS.GOODS_IN) return;
-          if (effect.productId !== productId) return;
-          claimed -= Number(effect.doneQty) || 0;
-        }),
-      );
-    });
-  });
-
-  return Math.max(0, claimed);
-}
 
 /** سقف ادعا برای یک قلم = مقدار سفارش‌شده. */
 function computeItemClaimableQty(item) {
@@ -167,6 +132,8 @@ export async function fetchPurchaseForReturn(purchaseId, excludeReturnId = null)
     throw new Error("هنوز چیزی از این خرید دریافت نشده و قابل مرجوع‌کردن نیست");
   }
 
+  const siblings = returnsOfOrder(allPurchaseReturns, "purchaseId", purchase.id);
+
   return {
     purchaseId: purchase.id,
     purchaseUpdatedAt: purchase.updatedAt,
@@ -174,16 +141,21 @@ export async function fetchPurchaseForReturn(purchaseId, excludeReturnId = null)
     invoiceDate: purchase.invoiceDate,
     supplierId: purchase.supplierId,
     supplierName: purchase.supplierName,
-    items: purchase.items.map((item) => ({
-      ...item,
-      deliveredQty: item.receivedQty ?? 0,
-      claimableQty: computeItemClaimableQty(item),
-      activeClaimedQty: activeClaimedQtyForProduct(
-        purchase.id,
-        item.productId,
-        excludeReturnId,
-      ),
-    })),
+    items: purchase.items.map((item) => {
+      const claimed = claimBreakdown(siblings, item.productId, excludeReturnId);
+      return {
+        ...item,
+        // با هر دورِ رسیدنِ کالای جایگزین به‌روز می‌شود، نه فقط با
+        // دریافتِ خودِ سفارش.
+        deliveredQty:
+          (item.receivedQty ?? 0) +
+          deliveredAdjustment(siblings, item.productId, { side: "purchase" }),
+        claimableQty: computeItemClaimableQty(item),
+        claimedHereQty: claimed.here,
+        activeClaimedQty: claimed.elsewhere,
+      };
+    }),
+    relatedReturns: relatedReturnsSummary(siblings, excludeReturnId),
   };
 }
 

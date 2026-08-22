@@ -175,17 +175,42 @@ function Row({ label, children }) {
   );
 }
 
+/**
+ * «تحویل‌شده» با تفکیکِ ادعاها.
+ *
+ * پیش از این فقط یک عدد مبهم زیرش می‌آمد («n در مرجوعی دیگر») که سهم
+ * خودِ این سند را نشان نمی‌داد، پس وقتی روی یک سفارش چند مرجوعی بود
+ * معلوم نمی‌شد کدام عدد مالِ کجاست. حالا سه چیز جداست: چقدر در همین
+ * سند ادعا شده، چقدر در بقیه، و در نتیجه چقدر هنوز آزاد است.
+ */
 function DeliveredCell({ item }) {
   const delivered = item.deliveredQty ?? item.qty;
   const isShort = delivered < item.qty;
+  const here = Number(item.claimedHereQty) || 0;
+  const elsewhere = Number(item.activeClaimedQty) || 0;
+  const free = Math.max(0, delivered - here - elsewhere);
+
   return (
     <>
       <span className={isShort ? "text-amber-600 dark:text-amber-400" : ""}>
         {fa(delivered)} {item.unit}
       </span>
-      {item.activeClaimedQty > 0 && (
-        <span className="block text-[10px] text-muted-foreground">
-          {fa(item.activeClaimedQty)} در مرجوعی دیگر
+      {(here > 0 || elsewhere > 0) && (
+        <span className="block text-[10px] leading-4 mt-0.5">
+          {here > 0 && (
+            <span className="text-primary">{fa(here)} در همین مرجوعی</span>
+          )}
+          {here > 0 && elsewhere > 0 && (
+            <span className="text-muted-foreground"> · </span>
+          )}
+          {elsewhere > 0 && (
+            <span className="text-amber-600 dark:text-amber-400">
+              {fa(elsewhere)} در مرجوعی دیگر
+            </span>
+          )}
+          <span className="block text-muted-foreground">
+            {fa(free)} بدون ادعا
+          </span>
         </span>
       )}
     </>

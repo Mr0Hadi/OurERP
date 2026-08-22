@@ -32,6 +32,7 @@ import SalesReturnDetailLoading from "../components/forms/SalesReturnDetailLoadi
 import ReturnStatusBar from "@/shared/components/returns/ReturnStatusBar";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
+import RelatedReturnsCard from "@/shared/components/returns/RelatedReturnsCard";
 import { SALES_RETURN_STATUS_LABELS } from "../domain/returnVocabulary";
 import SalesReturnResolutionSection from "../components/forms/SalesReturnResolutionSection";
 import { ROUTES } from "@/shared/constants/routes";
@@ -93,6 +94,13 @@ function SalesReturnDetailContent({ salesReturn }) {
           defaultOpen={false}
         />
       )}
+
+      <RelatedReturnsCard
+        returns={sale?.relatedReturns}
+        side={sideConfig(RETURN_SIDES.SALES)}
+        detailRoute={ROUTES.SALES_RETURNS_DETAIL}
+        title="مرجوعی‌های دیگر همین فروش"
+      />
 
       {salesReturn.description && (
         <p className="text-sm text-muted-foreground whitespace-pre-line rounded-lg border border-border bg-muted/40 p-3">

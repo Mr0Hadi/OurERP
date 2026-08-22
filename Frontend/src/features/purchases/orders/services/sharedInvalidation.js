@@ -1,5 +1,9 @@
 import { purchaseKeys } from "./queryKeys";
-import { receivingKeys } from "@/features/warehouse/receiving/services/queryKeys";
+import {
+  receivingKeys,
+  incomingQueueKeys,
+} from "@/features/warehouse/receiving/services/queryKeys";
+import { outgoingQueueKeys } from "@/features/warehouse/shipping/services/queryKeys";
 import { purchaseReturnKeys } from "../../returns/services/queryKeys";
 import { productKeys } from "@/features/warehouse/products/services/queryKeys";
 
@@ -21,8 +25,18 @@ export function invalidatePurchaseEcosystem(queryClient, purchaseId) {
   }
   queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
   queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
+  // صف‌های ورودی/خروجی انبار هم باید باطل شوند — دقیقاً به همان دلیلی
+  // که سمت فروش دارد: حضور یک مرجوعی در آن‌ها از روی اثرهای کالاییِ
+  // معلقش تعیین می‌شود، پس ثبتِ تصمیمِ «کالای جایگزین» یا «عودت به
+  // تامین‌کننده» آن را وارد یا خارج می‌کند. نبودشان یعنی صف انبار تا
+  // رفرش دستی، تصمیمِ تازه را نمی‌دید.
+  queryClient.invalidateQueries({ queryKey: incomingQueueKeys.all });
+  queryClient.invalidateQueries({ queryKey: outgoingQueueKeys.all });
   queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.lists() });
   queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.details() });
+  queryClient.invalidateQueries({
+    queryKey: purchaseReturnKeys.returnablePurchases(),
+  });
   // هر دو سرِ این اکوسیستم موجودی را تکان می‌دهند — دریافت انبار
   // (بخش سالم هر دور) و تصمیمِ «نگهداری» روی کالای مازاد — پس کش
   // کالاها هم باید تازه شود، وگرنه صفحه‌ی کالاها موجودی قدیمی نشان

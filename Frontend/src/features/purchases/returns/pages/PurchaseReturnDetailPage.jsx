@@ -32,6 +32,7 @@ import PurchaseReturnDetailLoading from "../components/forms/PurchaseReturnDetai
 import ReturnStatusBar from "@/shared/components/returns/ReturnStatusBar";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
+import RelatedReturnsCard from "@/shared/components/returns/RelatedReturnsCard";
 import { PURCHASE_RETURN_STATUS_LABELS } from "../domain/purchaseReturnVocabulary";
 import PurchaseReturnResolutionSection from "../components/forms/PurchaseReturnResolutionSection";
 import { ROUTES } from "@/shared/constants/routes";
@@ -93,6 +94,13 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
           defaultOpen={false}
         />
       )}
+
+      <RelatedReturnsCard
+        returns={sale?.relatedReturns}
+        side={sideConfig(RETURN_SIDES.PURCHASE)}
+        detailRoute={ROUTES.PURCHASES_RETURNS_DETAIL}
+        title="مرجوعی‌های دیگر همین خرید"
+      />
 
       {purchaseReturn.description && (
         <p className="text-sm text-muted-foreground whitespace-pre-line rounded-lg border border-border bg-muted/40 p-3">

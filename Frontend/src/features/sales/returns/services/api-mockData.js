@@ -5,7 +5,6 @@ import { adjustProductsStock } from "@/features/warehouse/products/services/api-
 import { applyListQuery } from "@/shared/services/mockQuery";
 
 import {
-  CLAIM_SCOPES,
   SALES_RETURN_STATUSES,
   isTerminalStatus,
 } from "../domain/returnVocabulary";
@@ -21,6 +20,12 @@ import {
   deriveReturnStatus,
   validateComposition,
 } from "@/shared/domain/returns/resolutions";
+import {
+  claimBreakdown,
+  deliveredAdjustment,
+  relatedReturnsSummary,
+  returnsOfOrder,
+} from "@/shared/domain/returns/orderContext";
 
 /**
  * لایه‌ی داده‌ی مرجوعی فروش + موتور اثر.
@@ -40,14 +45,6 @@ import {
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-
-// مرجوعی‌هایی که هنوز «زنده»اند و ادعاهایشان باید سهمیه‌ی فروش را
-// اشغال کند. رد/لغو شده‌ها سهمیه را آزاد می‌کنند.
-const ACTIVE_RETURN_STATUSES = new Set([
-  SALES_RETURN_STATUSES.OPEN,
-  SALES_RETURN_STATUSES.IN_PROGRESS,
-  SALES_RETURN_STATUSES.SETTLED,
-]);
 
 function getSale(saleId) {
   return allSales.find((s) => Number(s.id) === Number(saleId));
@@ -88,49 +85,12 @@ function commit(idx, patch) {
 // ─── سهمیه‌ی قابل‌ادعا روی یک خط فروش ───────────────────────────────────────
 
 /**
- * چقدر از یک کالا در مرجوعی‌های *فعالِ دیگرِ* همین فروش ادعا شده.
+ * سقف ادعا برای یک قلم = هر چه واقعاً به مشتری تحویل شده.
  *
- * این عدد فقط برای *نمایش* است و دیگر سقف فرم را تعیین نمی‌کند: واحد
- * فروش باید بتواند برای کل مقدار تحویل‌شده ادعا ثبت کند. اگر مشتری
- * دوباره تماس بگیرد و بگوید همان کالا مشکل دیگری هم دارد، سقفِ
- * محاسبه‌شده نباید جلویش را بگیرد — تصمیم اینکه ادعا معتبر است یا نه
- * با واحد فروش است، نه با یک فرمول.
- *
- * ادعاهای خارج از فاکتور اینجا شمرده نمی‌شوند چون اصلاً روی خط فروش
- * نمی‌نشینند.
- */
-function activeClaimedQtyForProduct(saleId, productId, excludeReturnId = null) {
-  let reserved = 0;
-
-  allSalesReturns.forEach((ret) => {
-    if (Number(ret.saleId) !== Number(saleId)) return;
-    if (excludeReturnId != null && Number(ret.id) === Number(excludeReturnId)) return;
-    if (!ACTIVE_RETURN_STATUSES.has(ret.status)) return;
-
-    (ret.claims || []).forEach((claim) => {
-      if (claim.scope !== CLAIM_SCOPES.ON_INVOICE) return;
-      if (claim.productId !== productId) return;
-
-      reserved += Number(claim.qty) || 0;
-
-      // کالایی که دوباره برای مشتری فرستاده شده، دیگر یک ادعای بازِ
-      // معلق نیست — یک نمونه‌ی تازه دست اوست.
-      (claim.resolutions || []).forEach((res) =>
-        (res.effects || []).forEach((effect) => {
-          if (effect.kind !== EFFECT_KINDS.GOODS_OUT) return;
-          if (effect.productId !== productId) return;
-          reserved -= Number(effect.doneQty) || 0;
-        }),
-      );
-    });
-  });
-
-  return Math.max(0, reserved);
-}
-
-/**
- * سقف ادعا برای یک قلم = هر چه واقعاً به مشتری تحویل شده. عمداً چیزی
- * از آن کم نمی‌شود؛ نگاه کنید به توضیح activeClaimedQtyForProduct.
+ * عمداً چیزی از آن کم نمی‌شود: واحد فروش باید بتواند برای کل مقدار
+ * تحویل‌شده ادعا ثبت کند. اگر مشتری دوباره تماس بگیرد و بگوید همان
+ * کالا مشکل دیگری هم دارد، سقفِ محاسبه‌شده نباید جلویش را بگیرد —
+ * تصمیم اینکه ادعا معتبر است یا نه با واحد فروش است، نه با یک فرمول.
  */
 function computeItemReturnableQty(item) {
   return Math.max(0, item.shippedQty ?? item.qty);
@@ -184,6 +144,8 @@ export async function fetchSaleForReturn(saleId, excludeReturnId = null) {
     throw new Error("این فروش هنوز به مشتری تحویل نشده و قابل مرجوع‌کردن نیست");
   }
 
+  const siblings = returnsOfOrder(allSalesReturns, "saleId", sale.id);
+
   return {
     saleId: sale.id,
     saleUpdatedAt: sale.updatedAt,
@@ -191,18 +153,22 @@ export async function fetchSaleForReturn(saleId, excludeReturnId = null) {
     invoiceDate: sale.invoiceDate,
     customerId: sale.customerId,
     customerName: sale.customerName,
-    items: sale.items.map((item) => ({
-      ...item,
-      deliveredQty: item.shippedQty ?? item.qty,
-      returnableQty: computeItemReturnableQty(item),
-      // فقط برای اطلاع کاربر: چقدر از این کالا در مرجوعی‌های دیگرِ
-      // همین فروش ادعا شده. سقف نیست.
-      activeClaimedQty: activeClaimedQtyForProduct(
-        sale.id,
-        item.productId,
-        excludeReturnId,
-      ),
-    })),
+    items: sale.items.map((item) => {
+      const claimed = claimBreakdown(siblings, item.productId, excludeReturnId);
+      return {
+        ...item,
+        // آنچه *الان* دست مشتری است: پس‌گرفته‌ها کم و جایگزین‌های
+        // ارسال‌شده اضافه می‌شوند.
+        deliveredQty:
+          (item.shippedQty ?? item.qty) +
+          deliveredAdjustment(siblings, item.productId, { side: "sales" }),
+        returnableQty: computeItemReturnableQty(item),
+        claimedHereQty: claimed.here,
+        // فقط برای اطلاع کاربر — سقف نیست.
+        activeClaimedQty: claimed.elsewhere,
+      };
+    }),
+    relatedReturns: relatedReturnsSummary(siblings, excludeReturnId),
   };
 }
 
