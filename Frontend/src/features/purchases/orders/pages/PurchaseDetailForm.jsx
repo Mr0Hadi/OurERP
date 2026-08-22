@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Save, X, Trash2, Ban } from "lucide-react";
+import { Save, X, Trash2, Ban, Undo2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -33,6 +33,7 @@ import {
   getPurchaseLockReason,
 } from "@/features/purchases/orders/domain/purchaseRules";
 import { PURCHASE_STATUSES } from "@/features/purchases/orders/services/constants";
+import { useMismatchReportByPurchaseIdQuery } from "@/features/purchases/returns/services/queries";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -52,6 +53,14 @@ export default function PurchaseDetailForm({ purchaseData }) {
     initializeFromPurchase,
     initializedForId,
   } = usePurchaseFormStore();
+
+  // مرجوعی خرید فقط وقتی معنا دارد که انبار هنگام دریافت، مغایرتی
+  // (کسری یا مازاد) گزارش کرده باشد — برخلاف مرجوعی فروش که همیشه
+  // می‌شود ثبتش کرد. اگر مغایرتی نباشد این کوئری خطا می‌دهد و دکمه
+  // اصلاً نشان داده نمی‌شود.
+  const { data: mismatchReport } = useMismatchReportByPurchaseIdQuery(
+    purchaseData?.id,
+  );
 
   const { data: suppliersData, isLoading: suppliersLoading } =
     useSuppliersQuery(ALL_FILTERS, PAGINATION, SORTING);
@@ -211,6 +220,26 @@ export default function PurchaseDetailForm({ purchaseData }) {
                 انصراف
               </Button>
             </div>
+
+            {mismatchReport && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2"
+                onClick={() =>
+                  navigate(
+                    ROUTES.PURCHASES_RETURNS_NEW.replace(
+                      ":purchaseId",
+                      purchaseData.id,
+                    ),
+                  )
+                }
+                disabled={isBusy}
+              >
+                <Undo2 className="h-4 w-4" />
+                ثبت مرجوعی برای این خرید
+              </Button>
+            )}
 
             {deletable && (
               <Button

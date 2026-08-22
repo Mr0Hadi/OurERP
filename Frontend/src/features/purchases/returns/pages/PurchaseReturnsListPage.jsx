@@ -12,6 +12,7 @@ import { useDebouncedPurchaseReturnFilters } from "../hooks/useDebouncedPurchase
 import { usePurchaseReturnsQuery } from "../services/queries";
 import PurchaseReturnFilters from "../components/table/PurchaseReturnFilters";
 import PurchaseReturnTable from "../components/table/PurchaseReturnTable";
+import { useSuppliersQuery } from "@/features/suppliers/services/queries";
 import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
 import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
 
@@ -25,6 +26,14 @@ export default function PurchaseReturnsListPage() {
   const { data, isLoading, isFetching, isError, error, refetch } =
     usePurchaseReturnsQuery(debouncedFilters, pagination, sorting);
 
+  const { data: suppliersData, isLoading: isSuppliersLoading } =
+    useSuppliersQuery(
+      {},
+      { pageIndex: 0, pageSize: 200 },
+      { id: "name", desc: false },
+    );
+
+  const suppliers = suppliersData?.items ?? [];
   const returns = data?.items ?? [];
   const totalPages = data?.totalPages ?? 1;
   const currentPage = data?.page ? data.page - 1 : pagination.pageIndex;
@@ -52,7 +61,10 @@ export default function PurchaseReturnsListPage() {
         </CardHeader>
 
         <CardContent className="space-y-3">
-          <PurchaseReturnFilters />
+          <PurchaseReturnFilters
+            suppliers={suppliers}
+            isSuppliersLoading={isSuppliersLoading}
+          />
 
           {isError ? (
             <QueryErrorState error={error} onRetry={() => refetch()} />
