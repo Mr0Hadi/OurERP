@@ -21,7 +21,13 @@ const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
  * تصمیم‌گیری است و فاکتور فقط مرجع است — باز بودنش نصف صفحه را
  * می‌گرفت.
  */
-export default function SaleInvoiceCard({ sale, defaultOpen = true }) {
+export default function OrderInvoiceCard({
+  order: sale,
+  defaultOpen = true,
+  qtyLabel = "تعداد فاکتور",
+  deliveredLabel = "تحویل‌شده",
+  partyName,
+}) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   const items = sale?.items || [];
@@ -44,7 +50,7 @@ export default function SaleInvoiceCard({ sale, defaultOpen = true }) {
               <span className="break-words">فاکتور {sale.invoiceNumber}</span>
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
-              {sale.customerName} · {gregorianToPersian(sale.invoiceDate)} ·{" "}
+              {partyName} · {gregorianToPersian(sale.invoiceDate)} ·{" "}
               <span className="tabular-nums">{fa(total)} ریال</span>
             </p>
           </div>
@@ -65,10 +71,10 @@ export default function SaleInvoiceCard({ sale, defaultOpen = true }) {
                 <tr className="border-b border-border text-muted-foreground">
                   <th className="py-2 px-2 text-right font-medium">کالا</th>
                   <th className="py-2 px-2 text-center font-medium">
-                    تعداد فاکتور
+                    {qtyLabel}
                   </th>
                   <th className="py-2 px-2 text-center font-medium">
-                    تحویل‌شده
+                    {deliveredLabel}
                   </th>
                   <th className="py-2 px-2 text-center font-medium">
                     قیمت واحد
@@ -108,7 +114,7 @@ export default function SaleInvoiceCard({ sale, defaultOpen = true }) {
               <tfoot>
                 <tr className="border-t border-border">
                   <td colSpan={4} className="py-2 px-2 text-right font-medium">
-                    جمع کل فاکتور
+                    جمع کل سند
                   </td>
                   <td className="py-2 px-2 text-center font-bold tabular-nums">
                     {fa(total)} ریال
@@ -134,10 +140,10 @@ export default function SaleInvoiceCard({ sale, defaultOpen = true }) {
                   </p>
                 </div>
                 <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
-                  <Row label="تعداد فاکتور">
+                  <Row label={qtyLabel}>
                     {fa(item.qty)} {item.unit}
                   </Row>
-                  <Row label="تحویل‌شده">
+                  <Row label={deliveredLabel}>
                     <DeliveredCell item={item} />
                   </Row>
                   <Row label="قیمت واحد">{fa(item.unitPrice)}</Row>
@@ -150,7 +156,7 @@ export default function SaleInvoiceCard({ sale, defaultOpen = true }) {
               </div>
             ))}
             <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2 text-xs">
-              <span className="text-muted-foreground">جمع کل فاکتور</span>
+              <span className="text-muted-foreground">جمع کل سند</span>
               <span className="font-bold tabular-nums">{fa(total)} ریال</span>
             </div>
           </div>

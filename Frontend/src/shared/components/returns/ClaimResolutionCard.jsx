@@ -3,18 +3,12 @@ import { CheckCircle2, Plus, X } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import ResolutionLineRow from "./ResolutionLineRow";
-import ResolutionComposer from "@/shared/components/returns/ResolutionComposer";
-import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
+import ResolutionComposer from "./ResolutionComposer";
 import {
   claimDecidedQty,
   claimRemainingQty,
 } from "@/shared/domain/returns/resolutions";
-import {
-  RETURN_PROBLEM_LABELS,
-  RETURN_PROBLEM_STYLES,
-  OFF_INVOICE_KIND_LABELS,
-  CLAIM_SCOPES,
-} from "../../domain/returnVocabulary";
+
 
 /**
  * تصمیم‌گیری برای یک ادعا.
@@ -30,15 +24,19 @@ export default function ClaimResolutionCard({
   onRemoveResolution,
   isBusy,
   readOnly,
+  side,
+  problemLabels,
+  problemStyles,
+  offScopeLabels,
+  offScopeValue,
 }) {
   const [isComposerOpen, setIsComposerOpen] = useState(false);
-  const side = sideConfig(RETURN_SIDES.SALES);
 
   const resolutions = claim.resolutions || [];
   const decided = claimDecidedQty(claim);
   const remaining = claimRemainingQty(claim);
   const total = Number(claim.qty) || 0;
-  const isOffInvoice = claim.scope === CLAIM_SCOPES.OFF_INVOICE;
+  const isOffScope = claim.scope === offScopeValue;
   const canDecide = !readOnly && remaining > 0;
 
   return (
@@ -60,13 +58,13 @@ export default function ClaimResolutionCard({
       <div className="flex flex-wrap items-center gap-1.5">
         <Badge
           variant="outline"
-          className={`text-[10px] ${RETURN_PROBLEM_STYLES[claim.problem] ?? ""}`}
+          className={`text-[10px] ${problemStyles[claim.problem] ?? ""}`}
         >
-          {RETURN_PROBLEM_LABELS[claim.problem] ?? claim.problem}
+          {problemLabels[claim.problem] ?? claim.problem}
         </Badge>
-        {isOffInvoice && (
+        {isOffScope && (
           <Badge variant="outline" className="text-[10px]">
-            {OFF_INVOICE_KIND_LABELS[claim.offInvoiceKind] ?? "خارج از فاکتور"}
+            {offScopeLabels[claim.offScopeKind] ?? "خارج از سند"}
           </Badge>
         )}
         {claim.note && (
@@ -83,6 +81,7 @@ export default function ClaimResolutionCard({
               key={resolution.id}
               resolution={resolution}
               isBusy={isBusy}
+              side={side}
               onRemove={
                 !readOnly && onRemoveResolution
                   ? () => onRemoveResolution(claim.id, resolution.id)

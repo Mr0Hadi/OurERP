@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import { confirmShipment } from "./api-mockData";
 import { executeGoodsRound } from "@/features/sales/returns/services/api-mockData";
-import { confirmSupplierReturnShipmentBatch } from "@/features/purchases/returns/services/api-mockData";
+import { executeGoodsRound as executeSupplierReturnRound } from "@/features/purchases/returns/services/api-mockData";
 import { salesReturnKeys } from "@/features/sales/returns/services/queryKeys";
 import { purchaseReturnKeys } from "@/features/purchases/returns/services/queryKeys";
 import { invalidateSalesEcosystem } from "@/features/sales/orders/services/sharedInvalidation";
@@ -40,7 +40,7 @@ export const useConfirmSupplierReturnShipmentBatchMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ returnId, shipmentData }) =>
-      confirmSupplierReturnShipmentBatch(returnId, shipmentData),
+      executeSupplierReturnRound(returnId, shipmentData),
     onSuccess: (updatedReturn) => {
       queryClient.setQueryData(
         purchaseReturnKeys.detail(updatedReturn.id),

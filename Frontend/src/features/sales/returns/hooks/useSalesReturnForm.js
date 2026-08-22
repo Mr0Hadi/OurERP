@@ -105,7 +105,7 @@ export function useSalesReturnForm() {
       ...offInvoiceClaims,
       {
         ...newClaim(DEFAULT_OFF_INVOICE_PROBLEM, 1),
-        offInvoiceKind: kind,
+        offScopeKind: kind,
         productId: product.productId,
         productCode: product.productCode,
         productName: product.productName,
@@ -139,7 +139,7 @@ export function useSalesReturnForm() {
       .filter((claim) => (Number(claim.qty) || 0) > 0)
       .map((claim) => ({
         scope: CLAIM_SCOPES.ON_INVOICE,
-        offInvoiceKind: null,
+        offScopeKind: null,
         saleLineId: String(line.productId),
         productId: line.productId,
         productCode: line.productCode,
@@ -156,7 +156,7 @@ export function useSalesReturnForm() {
     .filter((claim) => (Number(claim.qty) || 0) > 0)
     .map((claim) => ({
       scope: CLAIM_SCOPES.OFF_INVOICE,
-      offInvoiceKind: claim.offInvoiceKind,
+      offScopeKind: claim.offScopeKind,
       saleLineId: null,
       productId: claim.productId,
       productCode: claim.productCode,

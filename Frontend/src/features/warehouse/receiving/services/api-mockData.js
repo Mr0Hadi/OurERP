@@ -3,14 +3,23 @@ import {
   PURCHASE_STATUSES,
   PURCHASE_STATUS_LABELS,
 } from "./mockData";
-import {
-  autoResolveReplacementReturns,
-  computeItemReceivableQty,
-} from "@/features/purchases/returns/services/api-mockData";
 import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
 import { SURPLUS_KINDS } from "@/shared/constants/purchaseIssueTypes";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * چقدر از یک قلم خرید هنوز قابل دریافت است.
+ *
+ * قبلاً این محاسبه در ماژول مرجوعی خرید بود و «تسویه‌شده‌ها» را هم کم
+ * می‌کرد، چون یک تصمیمِ مرجوعی می‌توانست خط خرید را ببندد. در مدل
+ * جدید مرجوعی هیچ خطی از سفارش را تسویه نمی‌کند — اثرهایش مستقیم روی
+ * موجودی و مبلغ می‌نشینند — پس این فقط یک تفریق ساده است و جایش
+ * همین‌جاست.
+ */
+function computeItemReceivableQty(item) {
+  return Math.max(0, (Number(item.qty) || 0) - (Number(item.receivedQty) || 0));
+}
 const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
@@ -130,7 +139,7 @@ export async function fetchReceivingPurchaseById(id) {
     ...purchase,
     items: purchase.items.map((item) => ({
       ...item,
-      receivableQty: computeItemReceivableQty(item, purchase.id),
+      receivableQty: computeItemReceivableQty(item),
     })),
   };
 }
@@ -317,9 +326,6 @@ export async function confirmReceiving(purchaseId, receivingData) {
       newSurplusItems.length > 0
         ? [...(purchase.surplusItems || []), ...newSurplusItems]
         : purchase.surplusItems,
-    // status اینجا عمداً دست‌نخورده باقی می‌ماند (هنوز shipped)؛ چند
-    // خط پایین‌تر با autoResolveReplacementReturns به‌طور قطعی تعیین
-    // می‌شود.
     receivedItems: receivingData.receivedItems,
     receivingNote: receivingData.receivingNote,
     receivedDate,
@@ -331,8 +337,9 @@ export async function confirmReceiving(purchaseId, receivingData) {
 
   adjustProductsStock(stockIncreases);
 
-  await autoResolveReplacementReturns(purchaseId);
-
+  // کالای جایگزینی که تامین‌کننده می‌فرستد دیگر از اینجا حدس زده
+  // نمی‌شود؛ انباردار آن را صریح در صفحه‌ی «دریافت کالای جایگزین» ثبت
+  // می‌کند، دقیقاً مثل تحویل‌گرفتن کالای برگشتی از مشتری.
   const finalIndex = allPurchases.findIndex((p) => p.id === purchaseId);
   return allPurchases[finalIndex];
 }

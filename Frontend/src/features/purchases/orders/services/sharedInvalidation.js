@@ -16,13 +16,12 @@ export function invalidatePurchaseEcosystem(queryClient, purchaseId) {
     queryClient.invalidateQueries({ queryKey: purchaseKeys.detail(purchaseId) });
     queryClient.invalidateQueries({ queryKey: receivingKeys.detail(purchaseId) });
     queryClient.invalidateQueries({
-      queryKey: purchaseReturnKeys.reportDetail(purchaseId),
+      queryKey: purchaseReturnKeys.purchaseForReturnAll(purchaseId),
     });
   }
   queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
   queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
   queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.lists() });
-  queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.reports() });
   queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.details() });
   // هر دو سرِ این اکوسیستم موجودی را تکان می‌دهند — دریافت انبار
   // (بخش سالم هر دور) و تصمیمِ «نگهداری» روی کالای مازاد — پس کش

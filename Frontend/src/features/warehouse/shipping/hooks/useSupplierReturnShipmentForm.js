@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  RESOLUTION_TYPES,
-  RESOLUTION_LINE_STATUSES,
-} from "@/features/purchases/returns/services/mockData";
+import { buildGoodsLines } from "@/shared/domain/returns/resolutions";
+import { EFFECT_KINDS } from "@/shared/domain/returns/effects";
 
 const EMPTY_TRANSPORT = {
   shippingNote: "",
@@ -13,43 +11,33 @@ const EMPTY_TRANSPORT = {
 };
 
 /**
- * قرینه‌ی useReplacementShipmentForm برای عودت مازاد به تامین‌کننده.
+ * اثرهای معلقِ «عودت کالا به تامین‌کننده» در این مرجوعی.
  *
- * هر قلم با شناسه‌ی ترکیبی issueId+resolutionId مشخص می‌شود، چون یک
- * ادعای مازاد می‌تواند بین چند تصمیم تقسیم شده باشد و فقط بخشِ
- * «عودت» آن اینجا دیده می‌شود — بخشی که نگهداری شده اصلاً از انبار
- * خارج نمی‌شود.
+ * منبعش دیگر «تصمیمِ نوع عودت» نیست بلکه خودِ اثر GOODS_OUT است — پس
+ * هر تصمیمی که به هر دلیلی کالایی از انبار بیرون می‌فرستد به‌طور
+ * خودکار اینجا دیده می‌شود، بدون اینکه این فایل لازم باشد فهرستِ
+ * انواع تصمیم را بشناسد.
+ *
+ * کالای هر ردیف از خودِ اثر خوانده می‌شود نه از ادعا، چون در تعویض با
+ * کالای دیگر این دو یکی نیستند و انباردار باید کالای واقعیِ ارسالی را
+ * ببیند.
  */
 function buildPendingItems(purchaseReturn) {
-  const rows = [];
-  (purchaseReturn?.items || []).forEach((item) => {
-    (item.resolutions || []).forEach((resolution) => {
-      if (resolution.type !== RESOLUTION_TYPES.RETURN_TO_SUPPLIER) return;
-      if (resolution.status !== RESOLUTION_LINE_STATUSES.AWAITING) return;
-      const alreadyShippedQty = resolution.shippedQty || 0;
-      const remaining = resolution.qty - alreadyShippedQty;
-      if (remaining <= 0) return;
-
-      rows.push({
-        productId: `${item.issueId}:${resolution.id}`,
-        issueId: item.issueId,
-        resolutionId: resolution.id,
-        // نام ثبت‌شده‌ی انبار مرجع است؛ برای کالای ثبت‌نشده‌ای که بعداً
-        // به کالای واقعی وصل شده، نام کالای واقعی هم کنارش می‌آید.
-        productName: item.linkedProductName
-          ? `${item.productName} (${item.linkedProductName})`
-          : item.productName,
-        productCode: item.productCode,
-        expectedQty: remaining,
-        shippedQty: remaining,
-        note:
-          alreadyShippedQty > 0
-            ? `${alreadyShippedQty.toLocaleString("fa-IR")} از ${resolution.qty.toLocaleString("fa-IR")} قبلاً عودت داده شده`
-            : "",
-      });
-    });
-  });
-  return rows;
+  if (!purchaseReturn) return [];
+  return buildGoodsLines(purchaseReturn, EFFECT_KINDS.GOODS_OUT)
+    .filter((line) => line.remainingQty > 0)
+    .map((line) => ({
+      productId: line.effectId,
+      effectId: line.effectId,
+      productName: line.productName,
+      productCode: line.productCode,
+      expectedQty: line.remainingQty,
+      shippedQty: line.remainingQty,
+      note:
+        line.doneQty > 0
+          ? `${line.doneQty.toLocaleString("fa-IR")} از ${line.qty.toLocaleString("fa-IR")} قبلاً ارسال شده`
+          : "",
+    }));
 }
 
 export function useSupplierReturnShipmentForm(purchaseReturn) {
@@ -57,9 +45,7 @@ export function useSupplierReturnShipmentForm(purchaseReturn) {
   const [transportInfo, setTransportInfo] = useState({ ...EMPTY_TRANSPORT });
   const initializedVersionRef = useRef(null);
 
-  const version = purchaseReturn
-    ? `${purchaseReturn.id}:${purchaseReturn.updatedAt}`
-    : null;
+  const version = purchaseReturn ? `${purchaseReturn.id}:${purchaseReturn.updatedAt}` : null;
 
   useEffect(() => {
     if (version && initializedVersionRef.current !== version) {
@@ -74,39 +60,30 @@ export function useSupplierReturnShipmentForm(purchaseReturn) {
       prev.map((item) => {
         if (item.productId !== productId) return item;
         const num = Number(value);
-        const clamped =
-          Number.isNaN(num) || num < 0 ? 0 : Math.min(num, item.expectedQty);
+        const clamped = Number.isNaN(num) || num < 0 ? 0 : Math.min(num, item.expectedQty);
         return { ...item, shippedQty: clamped };
       }),
     );
   };
 
-  const setTransportField = (patch) =>
-    setTransportInfo((prev) => ({ ...prev, ...patch }));
+  const setTransportField = (patch) => setTransportInfo((prev) => ({ ...prev, ...patch }));
 
-  const isAllComplete =
-    items.length > 0 &&
-    items.every((item) => (item.shippedQty || 0) >= item.expectedQty);
+  const isAllComplete = items.length > 0 && items.every((item) => (item.shippedQty || 0) >= item.expectedQty);
   const hasAnyToShip = items.some((item) => (item.shippedQty || 0) > 0);
 
   const isTransporterValid =
     !!transportInfo.driverName?.trim() &&
-    (!!transportInfo.driverNationalId?.trim() ||
-      !!transportInfo.vehiclePlate?.trim());
+    (!!transportInfo.driverNationalId?.trim() || !!transportInfo.vehiclePlate?.trim());
 
   const buildPayload = () => ({
-    shippedDate: transportInfo.shippedDate,
-    shippingNote: transportInfo.shippingNote,
-    driverName: transportInfo.driverName,
-    driverNationalId: transportInfo.driverNationalId,
+    date: transportInfo.shippedDate,
+    note: transportInfo.shippingNote,
+    partyName: transportInfo.driverName,
+    partyNationalId: transportInfo.driverNationalId,
     vehiclePlate: transportInfo.vehiclePlate,
-    items: items
+    rounds: items
       .filter((item) => (item.shippedQty || 0) > 0)
-      .map((item) => ({
-        issueId: item.issueId,
-        resolutionId: item.resolutionId,
-        shippedQtyThisRound: item.shippedQty,
-      })),
+      .map((item) => ({ effectId: item.effectId, qty: item.shippedQty })),
   });
 
   const reset = () => {

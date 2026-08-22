@@ -33,7 +33,7 @@ import {
   getPurchaseLockReason,
 } from "@/features/purchases/orders/domain/purchaseRules";
 import { PURCHASE_STATUSES } from "@/features/purchases/orders/services/constants";
-import { useMismatchReportByPurchaseIdQuery } from "@/features/purchases/returns/services/queries";
+import { RETURN_ELIGIBLE_PURCHASE_STATUSES as RETURNABLE_PURCHASE_STATUSES } from "@/features/purchases/returns/services/mockData";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -54,13 +54,10 @@ export default function PurchaseDetailForm({ purchaseData }) {
     initializedForId,
   } = usePurchaseFormStore();
 
-  // مرجوعی خرید فقط وقتی معنا دارد که انبار هنگام دریافت، مغایرتی
-  // (کسری یا مازاد) گزارش کرده باشد — برخلاف مرجوعی فروش که همیشه
-  // می‌شود ثبتش کرد. اگر مغایرتی نباشد این کوئری خطا می‌دهد و دکمه
-  // اصلاً نشان داده نمی‌شود.
-  const { data: mismatchReport } = useMismatchReportByPurchaseIdQuery(
-    purchaseData?.id,
-  );
+  // مرجوعی خرید حالا دقیقاً مثل مرجوعی فروش است: تا وقتی چیزی از
+  // خرید رسیده باشد می‌شود ادعا ثبت کرد. پیش‌تر گزارش مغایرتِ انبار
+  // پیش‌شرط بود و بدون آن اصلاً مرجوعی وجود نداشت.
+  const canReturn = RETURNABLE_PURCHASE_STATUSES.includes(purchaseData?.status);
 
   const { data: suppliersData, isLoading: suppliersLoading } =
     useSuppliersQuery(ALL_FILTERS, PAGINATION, SORTING);
@@ -221,17 +218,14 @@ export default function PurchaseDetailForm({ purchaseData }) {
               </Button>
             </div>
 
-            {mismatchReport && (
+            {canReturn && (
               <Button
                 type="button"
                 variant="outline"
                 className="w-full gap-2"
                 onClick={() =>
                   navigate(
-                    ROUTES.PURCHASES_RETURNS_NEW.replace(
-                      ":purchaseId",
-                      purchaseData.id,
-                    ),
+                    `${ROUTES.PURCHASES_RETURNS_NEW}?purchaseId=${purchaseData.id}`,
                   )
                 }
                 disabled={isBusy}

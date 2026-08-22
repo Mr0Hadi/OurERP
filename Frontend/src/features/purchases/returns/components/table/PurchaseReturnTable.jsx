@@ -1,11 +1,15 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Undo2, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import DataTable from "@/shared/components/table/DataTable";
 import { gregorianToPersian } from "@/shared/utils/dateUtils";
 import { ROUTES } from "@/shared/constants/routes";
-import { PURCHASE_RETURN_REASON_LABELS } from "../../services/mockData";
+import {
+  PURCHASE_RETURN_PROBLEM_LABELS,
+  PURCHASE_RETURN_PROBLEM_STYLES,
+} from "../../domain/purchaseReturnVocabulary";
+import { Badge } from "@/shared/components/ui/badge";
 import PurchaseReturnStatusBadge from "./PurchaseReturnStatusBadge";
 
 const EMPTY_STATE = (
@@ -14,10 +18,6 @@ const EMPTY_STATE = (
     <p className="text-sm text-muted-foreground">موردی یافت نشد.</p>
   </div>
 );
-
-// کسری‌های «قابل پیگیری» هنوز مرجوعی واقعی نیستند و متمایز نشان داده می‌شوند.
-const rowClassName = (row) =>
-  row.original.isVirtual ? "bg-amber-50/30 dark:bg-amber-950/10" : "";
 
 const PurchaseReturnTable = ({
   data,
@@ -36,42 +36,21 @@ const PurchaseReturnTable = ({
       {
         accessorKey: "returnNumber",
         header: "شماره مرجوعی",
-        cell: (info) => {
-          const value = info.getValue();
-          return value ? (
-            <span className="font-mono text-xs text-muted-foreground">
-              {value}
-            </span>
-          ) : (
-            <span className="text-xs text-muted-foreground italic">
-              ثبت‌نشده
-            </span>
-          );
-        },
+        cell: (info) => (
+          <span className="font-mono text-xs text-muted-foreground">
+            {info.getValue()}
+          </span>
+        ),
       },
       {
         accessorKey: "purchaseInvoiceNumber",
         header: "فاکتور خرید",
         enableSorting: false,
-        cell: ({ row }) => {
-          const r = row.original;
-          return (
-            <div>
-              <span className="font-mono text-xs text-muted-foreground block">
-                {r.purchaseInvoiceNumber}
-              </span>
-              {/* وقتی یک خرید بیش از یک دور کسری/مرجوعی داشته باشد، این
-                  نشان کمک می‌کند کاربر بفهمد این ردیف مربوط به کدام
-                  دوره است و بقیه‌ی ردیف‌های هم‌خانواده‌اش کجا هستند. */}
-              {r.totalRoundsForPurchase > 1 && (
-                <span className="text-[10px] text-muted-foreground/80 block mt-0.5">
-                  دور {r.roundNumber.toLocaleString("fa-IR")} از{" "}
-                  {r.totalRoundsForPurchase.toLocaleString("fa-IR")}
-                </span>
-              )}
-            </div>
-          );
-        },
+        cell: (info) => (
+          <span className="font-mono text-xs text-muted-foreground">
+            {info.getValue()}
+          </span>
+        ),
       },
       {
         accessorKey: "supplierName",
@@ -81,26 +60,43 @@ const PurchaseReturnTable = ({
       {
         accessorKey: "returnDate",
         header: "تاریخ",
-        cell: (info) => {
-          const value = info.getValue();
-          return value ? (
-            <span className="tabular-nums text-sm">
-              {gregorianToPersian(value)}
-            </span>
-          ) : (
-            <span className="text-xs text-muted-foreground">—</span>
-          );
-        },
-      },
-      {
-        accessorKey: "reason",
-        header: "دلیل",
-        enableSorting: false,
         cell: (info) => (
-          <span className="text-xs text-muted-foreground">
-            {PURCHASE_RETURN_REASON_LABELS[info.getValue()] ?? info.getValue()}
+          <span className="tabular-nums text-sm">
+            {gregorianToPersian(info.getValue())}
           </span>
         ),
+      },
+      {
+        // یک مرجوعی می‌تواند چند ادعا با مشکل‌های متفاوت داشته باشد؛
+        // ستون همه‌شان را نشان می‌دهد، نه یک «دلیل اصلی» ساختگی.
+        id: "problems",
+        header: "مشکل‌ها",
+        enableSorting: false,
+        cell: ({ row }) => {
+          const claims = row.original.claims || [];
+          const problems = [...new Set(claims.map((c) => c.problem))];
+          if (problems.length === 0) {
+            return <span className="text-xs text-muted-foreground">—</span>;
+          }
+          return (
+            <div className="flex flex-wrap gap-1">
+              {problems.slice(0, 2).map((problem) => (
+                <Badge
+                  key={problem}
+                  variant="outline"
+                  className={`text-[10px] ${PURCHASE_RETURN_PROBLEM_STYLES[problem] ?? ""}`}
+                >
+                  {PURCHASE_RETURN_PROBLEM_LABELS[problem] ?? problem}
+                </Badge>
+              ))}
+              {problems.length > 2 && (
+                <Badge variant="outline" className="text-[10px]">
+                  +{(problems.length - 2).toLocaleString("fa-IR")}
+                </Badge>
+              )}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "status",
@@ -109,8 +105,8 @@ const PurchaseReturnTable = ({
         cell: (info) => <PurchaseReturnStatusBadge status={info.getValue()} />,
       },
       {
-        accessorKey: "totalAmount",
-        header: "مبلغ (ریال)",
+        accessorKey: "totalClaimedAmount",
+        header: "مبلغ ادعا (ریال)",
         cell: (info) => (
           <span className="tabular-nums text-sm">
             {info.getValue().toLocaleString("fa-IR")}
@@ -121,40 +117,19 @@ const PurchaseReturnTable = ({
         id: "actions",
         header: "اقدام",
         enableSorting: false,
-        cell: ({ row }) => {
-          const r = row.original;
-          if (r.isVirtual) {
-            return (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                onClick={() =>
-                  navigate(
-                    ROUTES.PURCHASES_RETURNS_NEW.replace(
-                      ":purchaseId",
-                      r.purchaseId,
-                    ),
-                  )
-                }
-              >
-                <Undo2 className="h-3.5 w-3.5" />
-                بررسی
-              </Button>
-            );
-          }
-          return (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                navigate(ROUTES.PURCHASES_RETURNS_DETAIL.replace(":id", r.id))
-              }
-            >
-              جزئیات
-            </Button>
-          );
-        },
+        cell: ({ row }) => (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              navigate(
+                ROUTES.PURCHASES_RETURNS_DETAIL.replace(":id", row.original.id),
+              )
+            }
+          >
+            جزئیات
+          </Button>
+        ),
       },
     ],
     [navigate],
@@ -172,7 +147,6 @@ const PurchaseReturnTable = ({
       sorting={sorting}
       onSortingChange={onSortingChange}
       emptyState={EMPTY_STATE}
-      rowClassName={rowClassName}
     />
   );
 };

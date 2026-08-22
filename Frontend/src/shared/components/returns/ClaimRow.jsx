@@ -8,9 +8,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import { RETURN_PROBLEM_LABELS } from "../../domain/returnVocabulary";
-
-const PROBLEM_OPTIONS = Object.entries(RETURN_PROBLEM_LABELS);
 
 /**
  * یک ردیف ادعا: چه مشکلی، چند تا، و توضیح.
@@ -19,8 +16,10 @@ export default function ClaimRow({
   claim,
   onUpdate,
   onRemove,
+  problemLabels,
   showPrice = false,
 }) {
+  const problemOptions = Object.entries(problemLabels);
   return (
     <div className="rounded-md border border-border bg-card p-1.5 space-y-1.5">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5">
@@ -32,7 +31,7 @@ export default function ClaimRow({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {PROBLEM_OPTIONS.map(([value, label]) => (
+            {problemOptions.map(([value, label]) => (
               <SelectItem key={value} value={value}>
                 {label}
               </SelectItem>

@@ -29,8 +29,10 @@ import {
 import { canDeleteReturn } from "@/shared/domain/returns/resolutions";
 
 import SalesReturnDetailLoading from "../components/forms/SalesReturnDetailLoading";
-import SalesReturnStatusBar from "../components/forms/SalesReturnStatusBar";
-import SaleInvoiceCard from "../components/forms/SaleInvoiceCard";
+import ReturnStatusBar from "@/shared/components/returns/ReturnStatusBar";
+import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
+import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
+import { SALES_RETURN_STATUS_LABELS } from "../domain/returnVocabulary";
 import SalesReturnResolutionSection from "../components/forms/SalesReturnResolutionSection";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
@@ -71,7 +73,11 @@ function SalesReturnDetailContent({ salesReturn }) {
 
   return (
     <div className="container max-w-3xl mx-auto px-4 space-y-3 animate-in fade-in zoom-in-95 duration-300">
-      <SalesReturnStatusBar salesReturn={salesReturn} />
+      <ReturnStatusBar
+        returnDoc={salesReturn}
+        statusLabels={SALES_RETURN_STATUS_LABELS}
+        side={sideConfig(RETURN_SIDES.SALES)}
+      />
 
       {salesReturn.previousReturnId && (
         <Badge variant="outline" className="text-xs gap-1">
@@ -80,7 +86,13 @@ function SalesReturnDetailContent({ salesReturn }) {
         </Badge>
       )}
 
-      {sale && <SaleInvoiceCard sale={sale} defaultOpen={false} />}
+      {sale && (
+        <OrderInvoiceCard
+          order={sale}
+          partyName={salesReturn.customerName}
+          defaultOpen={false}
+        />
+      )}
 
       {salesReturn.description && (
         <p className="text-sm text-muted-foreground whitespace-pre-line rounded-lg border border-border bg-muted/40 p-3">

@@ -11,21 +11,28 @@ import { ROUTES } from "@/shared/constants/routes";
 
 import {
   SALES_RETURN_STATUSES,
+  RETURN_PROBLEM_LABELS,
+  RETURN_PROBLEM_STYLES,
+  OFF_INVOICE_KIND_LABELS,
+  CLAIM_SCOPES,
   isTerminalStatus,
 } from "../../domain/returnVocabulary";
+import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import {
   canCancelReturn,
   canRejectReturn,
   hasPendingGoodsIn,
   hasPendingGoodsOut,
 } from "@/shared/domain/returns/resolutions";
-import ClaimResolutionCard from "./ClaimResolutionCard";
+import ClaimResolutionCard from "@/shared/components/returns/ClaimResolutionCard";
+
+const SALES_SIDE = sideConfig(RETURN_SIDES.SALES);
 
 /**
  * فهرست ادعاها و تصمیم‌هایشان.
  *
  * وضعیت و پیشرفت قبلاً اینجا بودند و همراه چند اعلان دیگر، کارت را
- * چهارلایه می‌کردند. حالا آن‌ها بالای صفحه‌اند (SalesReturnStatusBar) و
+ * چهارلایه می‌کردند. حالا آن‌ها بالای صفحه‌اند (ReturnStatusBar) و
  * این کارت فقط کارِ اصلی را دارد: ادعاها.
  */
 export default function SalesReturnResolutionSection({
@@ -85,6 +92,11 @@ export default function SalesReturnResolutionSection({
             onRemoveResolution={onRemoveResolution}
             isBusy={isBusy}
             readOnly={isClosed}
+            side={SALES_SIDE}
+            problemLabels={RETURN_PROBLEM_LABELS}
+            problemStyles={RETURN_PROBLEM_STYLES}
+            offScopeLabels={OFF_INVOICE_KIND_LABELS}
+            offScopeValue={CLAIM_SCOPES.OFF_INVOICE}
           />
         ))}
 

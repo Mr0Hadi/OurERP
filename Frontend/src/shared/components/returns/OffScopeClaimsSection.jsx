@@ -11,10 +11,6 @@ import { Badge } from "@/shared/components/ui/badge";
 import ProductSearchPanel from "@/shared/components/forms/ProductSearchPanel";
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
 import ClaimRow from "./ClaimRow";
-import {
-  OFF_INVOICE_KIND_LABELS,
-  OFF_INVOICE_KIND_STYLES,
-} from "../../domain/returnVocabulary";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -31,11 +27,16 @@ const SORTING = { id: "name", desc: false };
  * کند — و چون بیرون از سقف خط فروش‌اند، سهمیه‌ی قابل ادعای هیچ خطی را
  * مصرف نمی‌کنند و قیمتشان هم دستی وارد می‌شود.
  */
-export default function OffInvoiceClaimsSection({
+export default function OffScopeClaimsSection({
   claims,
   onAdd,
   onUpdate,
   onRemove,
+  problemLabels,
+  kindLabels = {},
+  kindStyles = {},
+  title = "کالای خارج از سند",
+  description,
 }) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const { data: productsData, isLoading } = useProductsQuery(
@@ -55,12 +56,9 @@ export default function OffInvoiceClaimsSection({
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-semibold text-card-foreground flex items-center gap-2">
           <PackagePlus className="h-4 w-4 text-muted-foreground" />
-          کالای خارج از فاکتور
+          {title}
         </CardTitle>
-        <p className="text-xs text-muted-foreground">
-          کالایی که مشتری دارد ولی فاکتور توجیهش نمی‌کند — بیشتر از مقدار
-          ارسال‌شده، یا کالایی که اصلاً در این فاکتور نبوده.
-        </p>
+        <p className="text-xs text-muted-foreground">{description}</p>
       </CardHeader>
       <CardContent className="space-y-2">
         {claims.length > 0 && (
@@ -82,14 +80,15 @@ export default function OffInvoiceClaimsSection({
                   <Badge
                     variant="outline"
                     className={`text-[10px] shrink-0 ${
-                      OFF_INVOICE_KIND_STYLES[claim.offInvoiceKind] ?? ""
+                      kindStyles[claim.offScopeKind] ?? ""
                     }`}
                   >
-                    {OFF_INVOICE_KIND_LABELS[claim.offInvoiceKind] ??
-                      claim.offInvoiceKind}
+                    {kindLabels[claim.offScopeKind] ??
+                      claim.offScopeKind}
                   </Badge>
                 </div>
                 <ClaimRow
+                  problemLabels={problemLabels}
                   claim={claim}
                   onUpdate={onUpdate}
                   onRemove={onRemove}

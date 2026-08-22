@@ -8,24 +8,28 @@ import { toFilterOptions } from "@/shared/components/filters/filterUtils";
 import { usePurchaseReturnFilterStore } from "../../store/purchaseReturnFilterStore";
 import {
   PURCHASE_RETURN_STATUS_LABELS,
-  PURCHASE_RETURN_REASON_LABELS,
-} from "../../services/mockData";
+  PURCHASE_RETURN_PROBLEM_LABELS,
+  CLAIM_SCOPE_LABELS,
+} from "../../domain/purchaseReturnVocabulary";
 
 const STATUS_OPTIONS = toFilterOptions(PURCHASE_RETURN_STATUS_LABELS);
-const REASON_OPTIONS = toFilterOptions(PURCHASE_RETURN_REASON_LABELS);
+const PROBLEM_OPTIONS = toFilterOptions(PURCHASE_RETURN_PROBLEM_LABELS);
+const SCOPE_OPTIONS = toFilterOptions(CLAIM_SCOPE_LABELS);
 
 const PurchaseReturnFilters = ({ suppliers = [], isSuppliersLoading = false }) => {
   const {
     globalSearch,
     supplierIds,
     status,
-    reason,
+    problem,
+    scope,
     fromDate,
     toDate,
     setGlobalSearch,
-    setSupplierIds,
+    setCustomerIds,
     setStatus,
-    setReason,
+    setProblem,
+    setScope,
     setFromDate,
     setToDate,
     resetFilters,
@@ -39,7 +43,6 @@ const PurchaseReturnFilters = ({ suppliers = [], isSuppliersLoading = false }) =
   return (
     <FilterPanel
       onReset={resetFilters}
-      firstRowClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
       dateRow={
         <>
           <FilterDateInput
@@ -67,7 +70,7 @@ const PurchaseReturnFilters = ({ suppliers = [], isSuppliersLoading = false }) =
         emptyText="تامین‌کننده‌ای یافت نشد"
         items={suppliers}
         value={supplierIds}
-        onSelect={setSupplierIds}
+        onSelect={setCustomerIds}
         isLoading={isSuppliersLoading}
       />
 
@@ -80,11 +83,19 @@ const PurchaseReturnFilters = ({ suppliers = [], isSuppliersLoading = false }) =
       />
 
       <FilterSelect
-        label="دلیل"
-        value={reason}
-        onChange={setReason}
-        allLabel="همه دلایل"
-        options={REASON_OPTIONS}
+        label="نوع مشکل"
+        value={problem}
+        onChange={setProblem}
+        allLabel="همه مشکل‌ها"
+        options={PROBLEM_OPTIONS}
+      />
+
+      <FilterSelect
+        label="دامنه"
+        value={scope}
+        onChange={setScope}
+        allLabel="همه"
+        options={SCOPE_OPTIONS}
       />
     </FilterPanel>
   );

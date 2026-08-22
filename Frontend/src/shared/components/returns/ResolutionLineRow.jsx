@@ -2,12 +2,12 @@ import { Trash2 } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import {
+  EFFECT_KINDS,
   EFFECT_STATUSES,
   isGoodsEffect,
   summarizeEffects,
 } from "@/shared/domain/returns/effects";
-import EffectBadge from "@/shared/components/returns/EffectBadge";
-import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
+import EffectBadge from "./EffectBadge";
 
 /**
  * یک تصمیمِ ثبت‌شده روی یک ادعا، به‌همراه اثرهایش.
@@ -16,9 +16,7 @@ import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
  * پولی مانع حذف نیستند چون با یک تعدیل معکوس برگشت می‌خورند — ولی
  * کالایی که از انبار خارج یا وارد شده برگشت‌پذیر نیست.
  */
-const SALES_SIDE = sideConfig(RETURN_SIDES.SALES);
-
-export default function ResolutionLineRow({ resolution, onRemove, isBusy }) {
+export default function ResolutionLineRow({ resolution, onRemove, isBusy, side }) {
   const effects = resolution.effects || [];
   const summary = summarizeEffects(effects, { includePending: true });
 
@@ -76,7 +74,7 @@ export default function ResolutionLineRow({ resolution, onRemove, isBusy }) {
             <EffectBadge
               key={effect.id}
               effect={effect}
-              side={SALES_SIDE}
+              side={side}
               showProductName
             />
           ))}
@@ -94,7 +92,9 @@ export default function ResolutionLineRow({ resolution, onRemove, isBusy }) {
             }
           >
             {Math.abs(summary.netMoney).toLocaleString("fa-IR")} ریال{" "}
-            {summary.netMoney > 0 ? "دریافتی از مشتری" : "پرداختی به مشتری"}
+            {summary.netMoney > 0
+              ? side.effectLabels[EFFECT_KINDS.MONEY_IN]
+              : side.effectLabels[EFFECT_KINDS.MONEY_OUT]}
           </span>
         </p>
       )}

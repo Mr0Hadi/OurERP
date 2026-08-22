@@ -1,6 +1,8 @@
 import { Badge } from "@/shared/components/ui/badge";
-import SalesReturnStatusBadge from "../table/SalesReturnStatusBadge";
-import { isTerminalStatus } from "../../domain/returnVocabulary";
+import { Badge as StatusChip } from "@/shared/components/ui/badge";
+import { isTerminalStatus } from "@/shared/domain/returns/statuses";
+import { RETURN_STATUS_STYLES } from "@/shared/domain/returns/statuses";
+import { EFFECT_KINDS } from "@/shared/domain/returns/effects";
 import {
   claimDecidedQty,
   summarizeReturn,
@@ -16,7 +18,7 @@ const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
  * کرد و هم روی موبایل، جایی که سایدبار به ته صفحه می‌افتد، خلاصه‌ی
  * مرجوعی را بالا و در دسترس نگه می‌دارد.
  */
-export default function SalesReturnStatusBar({ salesReturn }) {
+export default function ReturnStatusBar({ returnDoc: salesReturn, statusLabels, side }) {
   const claims = salesReturn.claims || [];
   const totalClaimed = claims.reduce((s, c) => s + (Number(c.qty) || 0), 0);
   const totalDecided = claims.reduce((s, c) => s + claimDecidedQty(c), 0);
@@ -32,7 +34,12 @@ export default function SalesReturnStatusBar({ salesReturn }) {
           <span className="font-mono text-sm font-medium text-card-foreground">
             {salesReturn.returnNumber}
           </span>
-          <SalesReturnStatusBadge status={salesReturn.status} />
+          <StatusChip
+            variant="outline"
+            className={RETURN_STATUS_STYLES[salesReturn.status] ?? ""}
+          >
+            {statusLabels[salesReturn.status] ?? salesReturn.status}
+          </StatusChip>
         </div>
         <span className="text-xs text-muted-foreground tabular-nums">
           ادعا: {fa(salesReturn.totalClaimedAmount)} ریال
@@ -63,7 +70,7 @@ export default function SalesReturnStatusBar({ salesReturn }) {
               variant="outline"
               className="text-[11px] bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-400"
             >
-              پرداختی به مشتری: {fa(money.moneyOut)} ریال
+              {side.effectLabels[EFFECT_KINDS.MONEY_OUT]}: {fa(money.moneyOut)} ریال
             </Badge>
           )}
           {money.moneyIn > 0 && (
@@ -71,7 +78,7 @@ export default function SalesReturnStatusBar({ salesReturn }) {
               variant="outline"
               className="text-[11px] bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-400"
             >
-              دریافتی از مشتری: {fa(money.moneyIn)} ریال
+              {side.effectLabels[EFFECT_KINDS.MONEY_IN]}: {fa(money.moneyIn)} ریال
             </Badge>
           )}
         </div>

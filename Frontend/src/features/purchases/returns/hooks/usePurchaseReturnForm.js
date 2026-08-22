@@ -1,180 +1,179 @@
 import { usePurchaseReturnFormStore } from "../store/purchaseReturnFormStore";
-import { CLAIM_KINDS } from "../domain/purchaseReturnRules";
+import {
+  CLAIM_SCOPES,
+  OFF_ORDER_KINDS,
+  PURCHASE_RETURN_PROBLEMS,
+} from "../domain/purchaseReturnVocabulary";
 
 const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
+const DEFAULT_ON_ORDER_PROBLEM = PURCHASE_RETURN_PROBLEMS.DEFECTIVE;
+const DEFAULT_OFF_ORDER_PROBLEM = PURCHASE_RETURN_PROBLEMS.OVER_DELIVERED;
+
+/**
+ * فرم ثبت ادعای مرجوعی.
+ *
+ * دو دسته ادعا مدیریت می‌شود که قواعدشان فرق دارد:
+ *
+ *  • روی سفارش  — روی یک خط خرید می‌نشیند و سقفش مقدارِ سفارش‌شده
+ *                  است.
+ *  • خارج از سفارش — سقف ندارد، چون اصلاً بیرون از سفارش است: کالای
+ *                  اضافه‌ای که تامین‌کننده فرستاده یا کالایی که در سفارش
+ *                  نبوده.
+ *
+ */
 export function usePurchaseReturnForm() {
-  const {
-    formData,
-    setFormData,
-    setItems,
-    setSurplusItems,
-    resetForm,
-    initializedForId,
-  } = usePurchaseReturnFormStore();
+  const { formData, setFormData, setLines, setOffScopeClaims, resetForm } =
+    usePurchaseReturnFormStore();
 
-  const items = formData.items || [];
-  const surplusItems = formData.surplusItems || [];
+  const lines = formData.lines || [];
+  const offScopeClaims = formData.offScopeClaims || [];
 
-  const claimedQtyOf = (item) =>
-    (item.claims || []).reduce((s, c) => s + (Number(c.qty) || 0), 0);
+  const claimedQtyOf = (line) =>
+    (line.claims || []).reduce((sum, c) => sum + (Number(c.qty) || 0), 0);
 
-  /**
-   * منطق تقسیم تعداد بین چند ادعا برای هر دو فهرست (کسری و مازاد)
-   * یکسان است؛ فقط فهرست، تابع نوشتنش و دلیل پیش‌فرضِ ادعای تازه فرق
-   * می‌کند. پس یک‌بار نوشته می‌شود و دوبار bind.
-   */
-  const makeClaimHandlers = (list, setList, defaultReasonOf) => ({
-    // افزودن یک ردیف جدید دلیل برای این کالا؛ پیش‌فرض تعداد، باقیمانده‌ی
-    // سهمیه‌ی قابل ادعا است تا کاربر فقط کم کند، نه از صفر بسازد.
-    add: (lineId) => {
-      setList(
-        list.map((item) => {
-          if (item.lineId !== lineId) return item;
-          const allocated = claimedQtyOf(item);
-          const remaining = Math.max(0, item.maxReturnableQty - allocated);
-          if (remaining <= 0) return item;
-          return {
-            ...item,
-            claims: [
-              ...(item.claims || []),
-              {
-                id: generateId(),
-                reason: defaultReasonOf(item),
-                qty: remaining,
-                note: "",
-              },
-            ],
-          };
-        }),
-      );
-    },
-
-    update: (lineId, claimId, field, value) => {
-      setList(
-        list.map((item) => {
-          if (item.lineId !== lineId) return item;
-          const newClaims = (item.claims || []).map((claim) => {
-            if (claim.id !== claimId) return claim;
-            if (field === "qty") {
-              const otherAllocated = (item.claims || [])
-                .filter((c) => c.id !== claimId)
-                .reduce((s, c) => s + (Number(c.qty) || 0), 0);
-              const maxAllowed = Math.max(0, item.maxReturnableQty - otherAllocated);
-              const num = Number(value);
-              const clamped =
-                Number.isNaN(num) || num < 0 ? 0 : Math.min(num, maxAllowed);
-              return { ...claim, qty: clamped };
-            }
-            return { ...claim, [field]: value };
-          });
-          return { ...item, claims: newClaims };
-        }),
-      );
-    },
-
-    remove: (lineId, claimId) => {
-      setList(
-        list.map((item) =>
-          item.lineId === lineId
-            ? { ...item, claims: (item.claims || []).filter((c) => c.id !== claimId) }
-            : item,
-        ),
-      );
-    },
+  const newClaim = (problem, qty) => ({
+    id: generateId(),
+    problem,
+    qty,
+    note: "",
   });
 
-  const shortageHandlers = makeClaimHandlers(items, setItems, () => "shortage");
-  // دلیلِ پیش‌فرض یک ادعای مازاد، همان نوع مازادی است که انبار ثبت
-  // کرده (اضافه یا ثبت‌نشده) — نه چیزی از واژگان کسری.
-  const surplusHandlers = makeClaimHandlers(
-    surplusItems,
-    setSurplusItems,
-    (item) => item.surplusKind,
-  );
+  // ─── ادعاهای روی فاکتور ───────────────────────────────────────────
 
-  const withClaimedQty = (list) =>
-    list
-      .map((item) => ({ ...item, claimedQty: claimedQtyOf(item) }))
-      .filter((item) => item.claimedQty > 0 && (item.claims || []).length > 0);
-
-  const selectedItems = withClaimedQty(items);
-  const selectedSurplusItems = withClaimedQty(surplusItems);
-
-  const computedTotal = [...selectedItems, ...selectedSurplusItems].reduce(
-    (sum, item) => sum + item.claimedQty * item.unitPrice,
-    0,
-  );
-
-  /**
-   * هر ادعا (claim) ممکن است از چند «مشکل گزارش‌شده‌ی اصلی» انبار
-   * (sourceIssue) تشکیل شده باشد یا یک sourceIssue بین چند ادعا با
-   * دلایل مختلف تقسیم شده باشد. با یک تخصیص FIFO ساده، تعداد هر ادعا
-   * را بین sourceIssueهای همان کالا سهم‌بندی می‌کنیم؛ هر بخش، یک ردیف
-   * مستقل با issueId تازه (برای ویرایش/تصمیم‌گیری داخل همین مرجوعی)
-   * و sourceIssueId (برای حفظ پیوند با مشکل اصلی انبار، جهت جلوگیری
-   * از مرجوع‌کردن دوباره‌ی همان کسری) می‌شود.
-   */
-  const distributeItemAcrossSourceIssues = (item) => {
-    const queue = (item.sourceIssues || []).map((s) => ({ ...s, remaining: s.qty }));
-    const outputs = [];
-
-    (item.claims || []).forEach((claim) => {
-      let need = Number(claim.qty) || 0;
-      if (need <= 0) return;
-
-      for (const issue of queue) {
-        if (need <= 0) break;
-        if (issue.remaining <= 0) continue;
-        const take = Math.min(issue.remaining, need);
-        outputs.push({
-          issueId: generateId(),
-          sourceIssueId: issue.issueId,
-          claimKind: CLAIM_KINDS.SHORTAGE,
-          productId: item.productId,
-          productCode: item.productCode,
-          productName: item.productName,
-          unit: item.unit,
-          qty: take,
-          unitPrice: item.unitPrice,
-          lineTotal: take * item.unitPrice,
-          reason: claim.reason,
-          note: claim.note || "",
-        });
-        issue.remaining -= take;
-        need -= take;
-      }
-    });
-
-    return outputs;
+  const handleAddClaim = (lineKey) => {
+    setLines(
+      lines.map((line) => {
+        if (line.lineKey !== lineKey) return line;
+        const remaining = Math.max(
+          0,
+          line.maxReturnableQty - claimedQtyOf(line),
+        );
+        if (remaining <= 0) return line;
+        return {
+          ...line,
+          claims: [
+            ...(line.claims || []),
+            newClaim(DEFAULT_ON_ORDER_PROBLEM, remaining),
+          ],
+        };
+      }),
+    );
   };
 
-  /**
-   * مازاد به تخصیص FIFO نیاز ندارد: هر کارت دقیقاً روی یک ردیف مازادِ
-   * انبار نشسته، پس هر ادعا مستقیماً یک ردیف مرجوعی می‌شود.
-   */
-  const expandSurplusClaims = (item) =>
-    (item.claims || [])
-      .filter((claim) => (Number(claim.qty) || 0) > 0)
-      .map((claim) => {
-        const qty = Number(claim.qty) || 0;
+  const handleUpdateClaim = (lineKey, claimId, field, value) => {
+    setLines(
+      lines.map((line) => {
+        if (line.lineKey !== lineKey) return line;
         return {
-          issueId: generateId(),
-          sourceSurplusId: item.sourceSurplusId,
-          claimKind: CLAIM_KINDS.SURPLUS,
-          surplusKind: item.surplusKind,
-          productId: item.productId ?? null,
-          productCode: item.productCode,
-          productName: item.productName,
-          unit: item.unit,
-          qty,
-          unitPrice: item.unitPrice,
-          lineTotal: qty * item.unitPrice,
-          reason: claim.reason,
-          note: claim.note || "",
+          ...line,
+          claims: (line.claims || []).map((claim) => {
+            if (claim.id !== claimId) return claim;
+            if (field === "qty") {
+              const others = (line.claims || [])
+                .filter((c) => c.id !== claimId)
+                .reduce((s, c) => s + (Number(c.qty) || 0), 0);
+              const maxAllowed = Math.max(0, line.maxReturnableQty - others);
+              const num = Number(value);
+              return {
+                ...claim,
+                qty: Number.isNaN(num) || num < 0 ? 0 : Math.min(num, maxAllowed),
+              };
+            }
+            return { ...claim, [field]: value };
+          }),
         };
-      });
+      }),
+    );
+  };
+
+  const handleRemoveClaim = (lineKey, claimId) => {
+    setLines(
+      lines.map((line) =>
+        line.lineKey === lineKey
+          ? { ...line, claims: (line.claims || []).filter((c) => c.id !== claimId) }
+          : line,
+      ),
+    );
+  };
+
+  // ─── ادعاهای خارج از فاکتور ───────────────────────────────────────
+
+  const handleAddOffScopeClaim = (product, kind = OFF_ORDER_KINDS.EXCESS) => {
+    setOffScopeClaims([
+      ...offScopeClaims,
+      {
+        ...newClaim(DEFAULT_OFF_ORDER_PROBLEM, 1),
+        offScopeKind: kind,
+        productId: product.productId,
+        productCode: product.productCode,
+        productName: product.productName,
+        unit: product.unit,
+        unitPrice: product.unitPrice,
+      },
+    ]);
+  };
+
+  const handleUpdateOffScopeClaim = (claimId, field, value) => {
+    setOffScopeClaims(
+      offScopeClaims.map((claim) => {
+        if (claim.id !== claimId) return claim;
+        if (field === "qty" || field === "unitPrice") {
+          const num = Number(value);
+          return { ...claim, [field]: Number.isNaN(num) || num < 0 ? 0 : num };
+        }
+        return { ...claim, [field]: value };
+      }),
+    );
+  };
+
+  const handleRemoveOffScopeClaim = (claimId) => {
+    setOffScopeClaims(offScopeClaims.filter((c) => c.id !== claimId));
+  };
+
+  // ─── خروجی ─────────────────────────────────────────────────────────
+
+  const onOrderClaims = lines.flatMap((line) =>
+    (line.claims || [])
+      .filter((claim) => (Number(claim.qty) || 0) > 0)
+      .map((claim) => ({
+        scope: CLAIM_SCOPES.ON_ORDER,
+        offScopeKind: null,
+        purchaseLineId: String(line.productId),
+        productId: line.productId,
+        productCode: line.productCode,
+        productName: line.productName,
+        unit: line.unit,
+        unitPrice: line.unitPrice,
+        qty: Number(claim.qty) || 0,
+        problem: claim.problem,
+        note: claim.note || "",
+      })),
+  );
+
+  const preparedOffScopeClaims = offScopeClaims
+    .filter((claim) => (Number(claim.qty) || 0) > 0)
+    .map((claim) => ({
+      scope: CLAIM_SCOPES.OFF_ORDER,
+      offScopeKind: claim.offScopeKind,
+      purchaseLineId: null,
+      productId: claim.productId,
+      productCode: claim.productCode,
+      productName: claim.productName,
+      unit: claim.unit,
+      unitPrice: Number(claim.unitPrice) || 0,
+      qty: Number(claim.qty) || 0,
+      problem: claim.problem,
+      note: claim.note || "",
+    }));
+
+  const allClaims = [...onOrderClaims, ...preparedOffScopeClaims];
+
+  const computedTotal = allClaims.reduce(
+    (sum, claim) => sum + claim.qty * claim.unitPrice,
+    0,
+  );
 
   const buildPayload = () => ({
     purchaseId: formData.purchaseId,
@@ -182,30 +181,26 @@ export function usePurchaseReturnForm() {
     supplierId: formData.supplierId,
     supplierName: formData.supplierName,
     returnDate: formData.returnDate,
-    reason: formData.reason,
     description: formData.description || "",
-    items: [
-      ...selectedItems.flatMap((item) => distributeItemAcrossSourceIssues(item)),
-      ...selectedSurplusItems.flatMap((item) => expandSurplusClaims(item)),
-    ],
+    previousReturnId: formData.previousReturnId ?? null,
+    claims: allClaims,
   });
 
   return {
     formData,
     setFormData,
-    items,
-    surplusItems,
-    selectedItems,
-    selectedSurplusItems,
-    handleAddClaim: shortageHandlers.add,
-    handleUpdateClaim: shortageHandlers.update,
-    handleRemoveClaim: shortageHandlers.remove,
-    handleAddSurplusClaim: surplusHandlers.add,
-    handleUpdateSurplusClaim: surplusHandlers.update,
-    handleRemoveSurplusClaim: surplusHandlers.remove,
+    lines,
+    offScopeClaims,
+    allClaims,
     computedTotal,
+    handleAddClaim,
+    handleUpdateClaim,
+    handleRemoveClaim,
+    handleAddOffScopeClaim,
+    handleUpdateOffScopeClaim,
+    handleRemoveOffScopeClaim,
     buildPayload,
     resetForm,
-    initializedForId,
   };
 }
+

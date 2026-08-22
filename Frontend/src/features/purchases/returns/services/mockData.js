@@ -1,141 +1,42 @@
 import { allPurchases } from "@/features/purchases/orders/services/mockData";
 import {
-  PURCHASE_ISSUE_TYPES,
-  PURCHASE_ISSUE_TYPE_LABELS,
-  PURCHASE_ISSUE_TYPE_STYLES,
-  SURPLUS_KINDS,
-  SURPLUS_KIND_LABELS,
-  SURPLUS_KIND_STYLES,
-} from "@/shared/constants/purchaseIssueTypes";
-
-// دلیل هر ادعا به دو خانواده تقسیم می‌شود، متناظر با دو نوع ادعا
-// (claimKind): کسری روی سفارش، و مازادِ بیرون از سفارش. برای یک ادعای
-// مازاد، دلیل همان «نوع مازاد» است — یعنی یک واژگان، نه دوتا.
-export const SHORTAGE_RETURN_REASONS = { ...PURCHASE_ISSUE_TYPES };
-export const SURPLUS_RETURN_REASONS = { ...SURPLUS_KINDS };
-
-export const SHORTAGE_RETURN_REASON_LABELS = { ...PURCHASE_ISSUE_TYPE_LABELS };
-export const SURPLUS_RETURN_REASON_LABELS = { ...SURPLUS_KIND_LABELS };
-
-// نقشه‌ی کامل، فقط برای *نمایش* (جدول، فیلتر، بج‌ها) — هر جا که قرار
-// است کاربر یک دلیل را *انتخاب* کند باید از زیرمجموعه‌ی متناسب با
-// claimKind استفاده شود، نه از این نقشه.
-export const PURCHASE_RETURN_REASONS = {
-  ...SHORTAGE_RETURN_REASONS,
-  ...SURPLUS_RETURN_REASONS,
-};
-
-export const PURCHASE_RETURN_REASON_LABELS = {
-  ...SHORTAGE_RETURN_REASON_LABELS,
-  ...SURPLUS_RETURN_REASON_LABELS,
-};
-
-export const PURCHASE_RETURN_REASON_STYLES = {
-  ...PURCHASE_ISSUE_TYPE_STYLES,
-  ...SURPLUS_KIND_STYLES,
-};
-
-// وضعیت کلی مرجوعی از روی خطوط تصمیمِ اقلامش محاسبه می‌شود، نه دستی
-// انتخاب می‌شود (به‌جز رد/لغو که اکشن‌های صریح‌اند):
-// pending      → هنوز هیچ تصمیمی برای هیچ قلمی ثبت نشده
-// coordinating → برخی/همه‌ی تصمیم‌ها ثبت شده ولی حداقل یکی هنوز نهایی نشده
-//                (مثلاً یک خط «جایگزینی» منتظر تأیید انبار است)
-// resolved     → کل مقدار هر قلم تخصیص یافته و همه‌ی خطوط نهایی شده‌اند
-// rejected     → تامین‌کننده در همان ابتدا کلاً رد کرده
-// cancelled    → واحد خرید در همان ابتدا لغو کرده
-export const PURCHASE_RETURN_STATUSES = {
-  TRACKABLE: "trackable",
-  PENDING: "pending",
-  COORDINATING: "coordinating",
-  RESOLVED: "resolved",
-  REJECTED: "rejected",
-  CANCELLED: "cancelled",
-};
-
-export const PURCHASE_RETURN_STATUS_LABELS = {
-  [PURCHASE_RETURN_STATUSES.TRACKABLE]: "قابل پیگیری",
-  [PURCHASE_RETURN_STATUSES.PENDING]: "در انتظار بررسی",
-  [PURCHASE_RETURN_STATUSES.COORDINATING]: "در حال هماهنگی با تامین‌کننده",
-  [PURCHASE_RETURN_STATUSES.RESOLVED]: "تسویه شده",
-  [PURCHASE_RETURN_STATUSES.REJECTED]: "رد شده توسط تامین‌کننده",
-  [PURCHASE_RETURN_STATUSES.CANCELLED]: "لغو شده",
-};
+  CLAIM_SCOPES,
+  OFF_ORDER_KINDS,
+  PURCHASE_RETURN_PROBLEMS,
+  PURCHASE_RETURN_STATUSES,
+} from "../domain/purchaseReturnVocabulary";
+import { EFFECT_STATUSES, PAYMENT_METHODS } from "@/shared/domain/returns/effects";
+import {
+  MONEY_DIRECTIONS,
+  buildResolution,
+  deriveReturnStatus,
+  emptyComposition,
+  emptyMoney,
+} from "@/shared/domain/returns/resolutions";
 
 /**
- * نوع تصمیمی که برای بخشی از یک قلم گرفته می‌شود.
+ * داده‌ی نمونه‌ی مرجوعی خرید — روی همان مدلی که مرجوعی فروش دارد.
  *
- * دو خانواده‌ی کاملاً مجزا که هرگز با هم مخلوط نمی‌شوند — کدام‌یک به
- * کاربر پیشنهاد شود را claimKind همان قلم تعیین می‌کند (نگاه کنید به
- * domain/purchaseReturnRules.js):
+ *   purchaseReturn
+ *     ├─ claims[]              ← ادعای واحد خرید
+ *     │    └─ resolutions[]    ← تصمیم‌ها (shared/domain/returns)
+ *     │         └─ effects[]   ← اثرهای پایه
+ *     └─ previousReturnId      ← زنجیره‌ی مرجوعی‌های پیاپیِ یک خرید
  *
- * • کسری  — کالایی که نرسید یا سالم تحویل داده نشد. پول برمی‌گردد یا
- *           کالا دوباره فرستاده می‌شود یا زیانش را خودمان می‌پذیریم.
- * • مازاد — کالایی که فیزیکاً پیش ماست ولی سفارش توجیهش نمی‌کند. یا
- *           پسش می‌فرستیم، یا نگه می‌داریم و پولش را می‌دهیم، یا نگه
- *           می‌داریم و تامین‌کننده هزینه‌اش را می‌پذیرد.
+ * تفاوت‌های ساختاری با نسخه‌ی قبلی:
  *
- * توجه: WRITE_OFF یعنی *ما* زیان را می‌پذیریم (کسری‌ای که هیچ‌وقت جبران
- * نمی‌شود) و SUPPLIER_WRITE_OFF قرینه‌ی آن است — *تامین‌کننده* هزینه‌ی
- * کالایی را که ما نگه می‌داریم می‌پذیرد.
+ * • «گزارش مغایرت انبار» دیگر پیش‌شرط نیست. قبلاً یک مرجوعی خرید فقط
+ *   وقتی وجود داشت که انبار هنگام دریافت کسری/مازاد ثبت کرده باشد، و
+ *   ردیف‌های «قابل پیگیری» به‌صورت مجازی از همان گزارش ساخته می‌شدند.
+ *   حالا واحد خرید مثل واحد فروش، مستقیم روی خودِ سفارش ادعا ثبت
+ *   می‌کند.
+ *
+ * • claimKind (کسری/مازاد) که تعیین می‌کرد چه تصمیم‌هایی مجازند حذف
+ *   شده. جایش scope نشسته که فقط سقفِ ادعا را تعیین می‌کند، نه
+ *   تصمیم‌ها را — چون هر ترکیبی از کالا و پول برای هر ادعایی ممکن است.
  */
-export const RESOLUTION_TYPES = {
-  // کسری
-  REFUND: "refund",
-  REPLACEMENT: "replacement",
-  CREDIT: "credit",
-  WRITE_OFF: "write_off",
-  // مازاد
-  RETURN_TO_SUPPLIER: "return_to_supplier",
-  KEEP_AND_SETTLE: "keep_and_settle",
-  SUPPLIER_WRITE_OFF: "supplier_write_off",
-};
 
-export const RESOLUTION_TYPE_LABELS = {
-  [RESOLUTION_TYPES.REFUND]: "بازگشت وجه نقدی",
-  [RESOLUTION_TYPES.REPLACEMENT]: "ارسال کالای جایگزین",
-  [RESOLUTION_TYPES.CREDIT]: "اعتبار در خرید بعدی",
-  [RESOLUTION_TYPES.WRITE_OFF]: "پذیرش زیان (بدون بازگشت وجه)",
-  [RESOLUTION_TYPES.RETURN_TO_SUPPLIER]: "عودت کالا به تامین‌کننده",
-  [RESOLUTION_TYPES.KEEP_AND_SETTLE]: "نگهداری کالا و تسویه مالی",
-  [RESOLUTION_TYPES.SUPPLIER_WRITE_OFF]:
-    "نگهداری بدون پرداخت (به عهده تامین‌کننده)",
-};
-
-export const SHORTAGE_RESOLUTION_TYPES = [
-  RESOLUTION_TYPES.REFUND,
-  RESOLUTION_TYPES.REPLACEMENT,
-  RESOLUTION_TYPES.CREDIT,
-  RESOLUTION_TYPES.WRITE_OFF,
-];
-
-export const SURPLUS_RESOLUTION_TYPES = [
-  RESOLUTION_TYPES.RETURN_TO_SUPPLIER,
-  RESOLUTION_TYPES.KEEP_AND_SETTLE,
-  RESOLUTION_TYPES.SUPPLIER_WRITE_OFF,
-];
-
-// انواعی که مبلغ همراه دارند و در فرم ثبت تصمیم، فیلد مبلغ را نشان
-// می‌دهند. REFUND پولی است که از تامین‌کننده پس می‌گیریم و
-// KEEP_AND_SETTLE پولی که بابت کالای مازادِ نگه‌داشته‌شده می‌پردازیم؛
-// جهت‌شان مخالف است ولی هر دو یک مبلغ دارند.
-export const AMOUNT_BEARING_RESOLUTION_TYPES = [
-  RESOLUTION_TYPES.REFUND,
-  RESOLUTION_TYPES.KEEP_AND_SETTLE,
-];
-
-// انواعی که تا وقتی انبار کاری فیزیکی انجام ندهد «در انتظار» می‌مانند:
-// REPLACEMENT منتظر *رسیدن* کالای جایگزین است و RETURN_TO_SUPPLIER
-// منتظر *خارج‌شدن* کالای مازاد از انبار. بقیه‌ی انواع (پولی/زیان/
-// اعتبار) همان لحظه‌ی ثبت، نهایی محسوب می‌شوند.
-export const WAREHOUSE_PENDING_RESOLUTION_TYPES = [
-  RESOLUTION_TYPES.REPLACEMENT,
-  RESOLUTION_TYPES.RETURN_TO_SUPPLIER,
-];
-
-export const RESOLUTION_LINE_STATUSES = {
-  AWAITING: "awaiting",
-  RESOLVED: "resolved",
-};
+// ─── کمکی‌ها ────────────────────────────────────────────────────────────────
 
 function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -149,157 +50,198 @@ function formatDate(d) {
 const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
-const SEED_ELIGIBLE_STATUSES = ["partially_received", "received"];
-// این seedها همگی از روی کسریِ خرید ساخته می‌شوند، پس دلیلشان هم فقط
-// می‌تواند از خانواده‌ی کسری باشد؛ یک ردیفِ کسری با دلیل «ارسال اضافه»
-// داده‌ی بی‌معنایی است.
-const REASONS_LIST = Object.values(SHORTAGE_RETURN_REASONS);
-const seedEligiblePurchases = allPurchases.filter((p) =>
-  SEED_ELIGIBLE_STATUSES.includes(p.status),
-);
+// مرجوعی فقط برای خریدهایی معنا دارد که چیزی از آن‌ها واقعاً رسیده
+// باشد — چه کامل چه ناقص.
+export const RETURN_ELIGIBLE_PURCHASE_STATUSES = [
+  "received",
+  "partially_received",
+];
 
-// وضعیت‌های واقعی (قابل seed) — trackable خودش به‌صورت مجازی تولید می‌شود
-const SEED_STATUSES = [
-  PURCHASE_RETURN_STATUSES.PENDING,
-  PURCHASE_RETURN_STATUSES.COORDINATING,
-  PURCHASE_RETURN_STATUSES.RESOLVED,
+const ON_ORDER_PROBLEMS = [
+  PURCHASE_RETURN_PROBLEMS.SHORTAGE,
+  PURCHASE_RETURN_PROBLEMS.DEFECTIVE,
+  PURCHASE_RETURN_PROBLEMS.DAMAGED,
+  PURCHASE_RETURN_PROBLEMS.WRONG_ITEM,
+  PURCHASE_RETURN_PROBLEMS.EXPIRED,
+  PURCHASE_RETURN_PROBLEMS.QUALITY_ISSUE,
+];
+
+// ─── ساخت ادعا ──────────────────────────────────────────────────────────────
+
+function buildClaim({ purchaseItem, qty, problem, scope, offScopeKind }) {
+  return {
+    id: generateId(),
+    scope,
+    offScopeKind: scope === CLAIM_SCOPES.OFF_ORDER ? offScopeKind : null,
+    purchaseLineId:
+      scope === CLAIM_SCOPES.ON_ORDER ? String(purchaseItem.productId) : null,
+    productId: purchaseItem.productId,
+    productCode: purchaseItem.productCode,
+    productName: purchaseItem.productName,
+    unit: purchaseItem.unit,
+    unitPrice: purchaseItem.unitPrice,
+    qty,
+    problem,
+    note: "",
+    resolutions: [],
+    createdAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * چند تصمیمِ نمونه تا داده‌ی اولیه هر سه وضعیت را نشان بدهد و هر دو
+ * صف انبار (عودت و دریافت جایگزین) پر شوند.
+ */
+function seedResolutions(claim, target) {
+  if (target === "open") return;
+
+  const money = (direction, amount, method = PAYMENT_METHODS.CASH) => ({
+    direction,
+    amount,
+    method,
+    reference: "",
+    parts: [],
+  });
+
+  if (target === "in_progress") {
+    const half = Math.max(1, Math.floor(claim.qty / 2));
+    const withReplacement = Math.random() < 0.5;
+
+    claim.resolutions.push(
+      buildResolution(
+        {
+          ...emptyComposition(half),
+          // عودت کالا به تامین‌کننده = خروج از انبار ما
+          goodsOut: { enabled: true, items: [] },
+          // نیمی از نمونه‌ها جایگزین می‌گیرند، نیم دیگر پول
+          goodsIn: withReplacement
+            ? { enabled: true, items: [] }
+            : { enabled: false, items: [] },
+          money: withReplacement
+            ? emptyMoney()
+            : money(MONEY_DIRECTIONS.RECEIVE, half * claim.unitPrice),
+        },
+        claim,
+      ),
+    );
+    return;
+  }
+
+  // target === "settled" — فقط ترکیب‌های بدون اثر کالایی، تا وضعیتِ
+  // مشتق‌شده بدون دخالت انبار به SETTLED برسد.
+  const isOffOrder = claim.scope === CLAIM_SCOPES.OFF_ORDER;
+  const direction = isOffOrder
+    ? MONEY_DIRECTIONS.PAY // کالای اضافه را نگه می‌داریم و پولش را می‌دهیم
+    : MONEY_DIRECTIONS.RECEIVE; // کسری/عیب را از تامین‌کننده پس می‌گیریم
+
+  const method = pickRandom([
+    PAYMENT_METHODS.CASH,
+    PAYMENT_METHODS.TRANSFER,
+    PAYMENT_METHODS.ON_ACCOUNT,
+  ]);
+
+  claim.resolutions.push(
+    buildResolution(
+      {
+        ...emptyComposition(claim.qty),
+        money: money(direction, claim.qty * claim.unitPrice, method),
+      },
+      claim,
+    ),
+  );
+}
+
+// ─── ساخت مرجوعی از روی یک خرید ─────────────────────────────────────────────
+
+const SEED_TARGETS = [
+  "open",
+  "in_progress",
+  "settled",
+  "settled",
   PURCHASE_RETURN_STATUSES.REJECTED,
   PURCHASE_RETURN_STATUSES.CANCELLED,
 ];
 
-function buildSeedResolutions(qty, unitPrice, seedStatus) {
-  // فقط برای coordinating/resolved چند خط تصمیم نمونه می‌سازیم تا
-  // نمونه‌ی واقع‌بینانه‌ای از «تسویه‌ی ترکیبی» در دیتای اولیه دیده شود
-  if (seedStatus === PURCHASE_RETURN_STATUSES.RESOLVED) {
-    // کل مقدار را بین ۱ یا ۲ خط، فقط با انواع فوری (بدون replacement)
-    // تقسیم می‌کنیم تا نیازی به دریافت انبار برای «نهایی‌شدن» seed نباشد
-    if (qty === 1 || Math.random() < 0.5) {
-      return [
-        {
-          id: generateId(),
-          type: pickRandom([
-            RESOLUTION_TYPES.REFUND,
-            RESOLUTION_TYPES.WRITE_OFF,
-            RESOLUTION_TYPES.CREDIT,
-          ]),
-          qty,
-          refundAmount: qty * unitPrice,
-          note: "",
-          status: RESOLUTION_LINE_STATUSES.RESOLVED,
-          createdAt: new Date().toISOString(),
-          resolvedAt: new Date().toISOString(),
-        },
-      ];
-    }
-    const firstQty = Math.max(1, Math.floor(qty / 2));
-    const secondQty = qty - firstQty;
-    return [
-      {
-        id: generateId(),
-        type: RESOLUTION_TYPES.REFUND,
-        qty: firstQty,
-        refundAmount: firstQty * unitPrice,
-        note: "",
-        status: RESOLUTION_LINE_STATUSES.RESOLVED,
-        createdAt: new Date().toISOString(),
-        resolvedAt: new Date().toISOString(),
-      },
-      {
-        id: generateId(),
-        type: RESOLUTION_TYPES.WRITE_OFF,
-        qty: secondQty,
-        refundAmount: 0,
-        note: "",
-        status: RESOLUTION_LINE_STATUSES.RESOLVED,
-        createdAt: new Date().toISOString(),
-        resolvedAt: new Date().toISOString(),
-      },
-    ];
-  }
-
-  if (seedStatus === PURCHASE_RETURN_STATUSES.COORDINATING) {
-    // بخشی تسویه‌شده، بخشی همچنان در انتظار جایگزینی از تامین‌کننده
-    const settledQty = Math.max(0, Math.floor(qty / 2));
-    const awaitingQty = qty - settledQty;
-    const lines = [];
-    if (settledQty > 0) {
-      lines.push({
-        id: generateId(),
-        type: RESOLUTION_TYPES.REFUND,
-        qty: settledQty,
-        refundAmount: settledQty * unitPrice,
-        note: "",
-        status: RESOLUTION_LINE_STATUSES.RESOLVED,
-        createdAt: new Date().toISOString(),
-        resolvedAt: new Date().toISOString(),
-      });
-    }
-    if (awaitingQty > 0) {
-      lines.push({
-        id: generateId(),
-        type: RESOLUTION_TYPES.REPLACEMENT,
-        qty: awaitingQty,
-        refundAmount: 0,
-        note: "",
-        status: RESOLUTION_LINE_STATUSES.AWAITING,
-        createdAt: new Date().toISOString(),
-        resolvedAt: null,
-      });
-    }
-    return lines;
-  }
-
-  return [];
-}
-
 function buildReturnFromPurchase(purchase, index) {
-  const itemsCount = Math.min(purchase.items.length, randomInt(1, 2));
+  const target = SEED_TARGETS[index % SEED_TARGETS.length];
+  const isExplicitlyClosed =
+    target === PURCHASE_RETURN_STATUSES.REJECTED ||
+    target === PURCHASE_RETURN_STATUSES.CANCELLED;
+
   const pickedItems = [...purchase.items]
     .sort(() => 0.5 - Math.random())
-    .slice(0, itemsCount);
+    .slice(0, Math.min(purchase.items.length, randomInt(1, 2)));
 
-  const reason = pickRandom(REASONS_LIST);
-  const status = pickRandom(SEED_STATUSES);
-
-  const items = pickedItems.map((item) => {
-    const qty = Math.max(1, Math.min(item.qty, randomInt(1, 4)));
-    return {
-      issueId: generateId(),
-      productId: item.productId,
-      productCode: item.productCode,
-      productName: item.productName,
-      unit: item.unit,
-      qty,
-      unitPrice: item.unitPrice,
-      lineTotal: qty * item.unitPrice,
-      reason,
-      note: "",
-      resolutions: buildSeedResolutions(qty, item.unitPrice, status),
-    };
+  const claims = pickedItems.map((item) => {
+    const claim = buildClaim({
+      purchaseItem: item,
+      qty: Math.max(1, Math.min(item.qty, randomInt(1, 4))),
+      problem: pickRandom(ON_ORDER_PROBLEMS),
+      scope: CLAIM_SCOPES.ON_ORDER,
+    });
+    if (!isExplicitlyClosed) seedResolutions(claim, target);
+    return claim;
   });
 
-  const totalAmount = items.reduce((sum, i) => sum + i.lineTotal, 0);
-  const createdDate = new Date(purchase.createdAt);
-  createdDate.setDate(createdDate.getDate() + randomInt(1, 10));
+  // هر چند مرجوعی، یک ادعای «خارج از سفارش» هم می‌گیرد — قرینه‌ی
+  // مازادِ نسخه‌ی قبلی، حالا فقط یک دامنه‌ی متفاوت.
+  if (index % 3 === 1) {
+    const claim = buildClaim({
+      purchaseItem: pickedItems[0],
+      qty: randomInt(1, 3),
+      problem: PURCHASE_RETURN_PROBLEMS.OVER_DELIVERED,
+      scope: CLAIM_SCOPES.OFF_ORDER,
+      offScopeKind: OFF_ORDER_KINDS.EXCESS,
+    });
+    if (!isExplicitlyClosed) seedResolutions(claim, target);
+    claims.push(claim);
+  }
 
-  return {
+  const createdDate = new Date(purchase.createdAt);
+  createdDate.setDate(createdDate.getDate() + randomInt(3, 20));
+
+  const record = {
     id: index + 1,
-    returnNumber: `RET-2026-${String(index + 1).padStart(3, "0")}`,
+    returnNumber: `PRET-2026-${String(index + 1).padStart(3, "0")}`,
     purchaseId: purchase.id,
     purchaseInvoiceNumber: purchase.invoiceNumber,
     supplierId: purchase.supplierId,
     supplierName: purchase.supplierName,
     returnDate: formatDate(createdDate),
-    reason,
-    status,
-    items,
-    totalAmount,
+    status: isExplicitlyClosed ? target : PURCHASE_RETURN_STATUSES.OPEN,
     description: "",
-    supplierResponseNote: "",
+    previousReturnId: null,
+    claims,
+    totalClaimedAmount: claims.reduce((s, c) => s + c.qty * c.unitPrice, 0),
     createdAt: createdDate.toISOString(),
     updatedAt: createdDate.toISOString(),
   };
+
+  if (target === "settled") markAllGoodsEffectsDone(record);
+
+  record.status = isExplicitlyClosed ? target : deriveReturnStatus(record);
+  return record;
 }
+
+function markAllGoodsEffectsDone(record) {
+  record.claims.forEach((claim) =>
+    (claim.resolutions || []).forEach((res) =>
+      (res.effects || []).forEach((effect) => {
+        if (effect.status !== EFFECT_STATUSES.PENDING) return;
+        effect.doneQty = effect.qty;
+        if (effect.restockedQty !== null) effect.restockedQty = effect.qty;
+        effect.status = EFFECT_STATUSES.APPLIED;
+        effect.appliedAt = new Date().toISOString();
+      }),
+    ),
+  );
+}
+
+// ─── خروجی ──────────────────────────────────────────────────────────────────
+
+const seedEligiblePurchases = allPurchases.filter((p) =>
+  RETURN_ELIGIBLE_PURCHASE_STATUSES.includes(p.status),
+);
 
 export const purchaseReturnsMock = seedEligiblePurchases
   .slice(0, 8)

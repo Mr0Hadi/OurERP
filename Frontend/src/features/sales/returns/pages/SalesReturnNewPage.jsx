@@ -11,9 +11,10 @@ import { useSaleForReturnQuery } from "../services/queries";
 import { useCreateSalesReturnMutation } from "../services/mutations";
 
 import SalesReturnSaleSection from "../components/forms/SalesReturnSaleSection";
-import SaleInvoiceCard from "../components/forms/SaleInvoiceCard";
-import SalesReturnClaimsSection from "../components/forms/SalesReturnClaimsSection";
-import OffInvoiceClaimsSection from "../components/forms/OffInvoiceClaimsSection";
+import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
+import ClaimsSection from "@/shared/components/returns/ClaimsSection";
+import OffScopeClaimsSection from "@/shared/components/returns/OffScopeClaimsSection";
+import { RETURN_PROBLEM_LABELS } from "../domain/returnVocabulary";
 import SalesReturnInfoSection from "../components/forms/SalesReturnInfoSection";
 import SalesReturnDetailLoading from "../components/forms/SalesReturnDetailLoading";
 import { ROUTES } from "@/shared/constants/routes";
@@ -141,7 +142,10 @@ export default function SalesReturnNewPage() {
         {isReady && (
           <>
             {/* ── بالا: جزئیات فروش ────────────────────────────────── */}
-            <SaleInvoiceCard sale={saleForReturn} />
+            <OrderInvoiceCard
+              order={saleForReturn}
+              partyName={saleForReturn.customerName}
+            />
 
             <div className="flex justify-end">
               <Button
@@ -156,14 +160,18 @@ export default function SalesReturnNewPage() {
             </div>
 
             {/* ── پایین: ثبت مشکلات ────────────────────────────────── */}
-            <SalesReturnClaimsSection
+            <ClaimsSection
               lines={lines}
               onAddClaim={handleAddClaim}
               onUpdateClaim={handleUpdateClaim}
               onRemoveClaim={handleRemoveClaim}
+              problemLabels={RETURN_PROBLEM_LABELS}
+              title="مشکلات اقلام فاکتور"
+              description="برای هر کالا می‌توانید چند مشکل جدا با تعداد جداگانه ثبت کنید. سقف هر کالا، همان مقداری است که به مشتری تحویل شده."
+              emptyText="این فاکتور قلمی برای ادعا ندارد"
             />
 
-            <OffInvoiceClaimsSection
+            <OffScopeClaimsSection
               claims={offInvoiceClaims}
               saleItems={saleForReturn.items}
               onAdd={handleAddOffInvoiceClaim}

@@ -10,7 +10,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import ClaimRow from "./ClaimRow";
 
-function LineCard({ line, onAddClaim, onUpdateClaim, onRemoveClaim }) {
+function LineCard({ line, onAddClaim, onUpdateClaim, onRemoveClaim, problemLabels, deliveredLabel }) {
   const claims = line.claims || [];
   const allocated = claims.reduce((s, c) => s + (Number(c.qty) || 0), 0);
   const remaining = Math.max(0, line.maxReturnableQty - allocated);
@@ -36,7 +36,7 @@ function LineCard({ line, onAddClaim, onUpdateClaim, onRemoveClaim }) {
             {line.maxReturnableQty.toLocaleString("fa-IR")} ثبت‌شده
           </div>
           <div className="text-[11px] opacity-70">
-            تحویل‌شده: {(line.deliveredQty ?? 0).toLocaleString("fa-IR")}
+            {deliveredLabel}: {(line.deliveredQty ?? 0).toLocaleString("fa-IR")}
           </div>
         </div>
       </div>
@@ -51,6 +51,7 @@ function LineCard({ line, onAddClaim, onUpdateClaim, onRemoveClaim }) {
                 onUpdateClaim(line.lineKey, claimId, field, value)
               }
               onRemove={(claimId) => onRemoveClaim(line.lineKey, claimId)}
+              problemLabels={problemLabels}
             />
           ))}
         </div>
@@ -81,11 +82,16 @@ function LineCard({ line, onAddClaim, onUpdateClaim, onRemoveClaim }) {
  * چیزی که مشتری اشتباه سفارش داده. این دو هرگز نباید در یک ردیف جمع
  * شوند، چون تصمیمی که برایشان گرفته می‌شود فرق می‌کند.
  */
-export default function SalesReturnClaimsSection({
+export default function ClaimsSection({
   lines,
   onAddClaim,
   onUpdateClaim,
   onRemoveClaim,
+  problemLabels,
+  title = "مشکلات اقلام سند",
+  description,
+  emptyText = "این سند قلمی برای ادعا ندارد",
+  deliveredLabel = "تحویل‌شده",
 }) {
   const totals = useMemo(
     () =>
@@ -108,18 +114,14 @@ export default function SalesReturnClaimsSection({
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-semibold text-card-foreground">
-          مشکلات اقلام فاکتور
+          {title}
         </CardTitle>
-        <p className="text-xs text-muted-foreground">
-          برای هر کالا می‌توانید چند مشکل جدا با تعداد جداگانه ثبت کنید — مثلاً
-          بخشی معیوب و بخشی دیگر اشتباه سفارش‌شده. سقف هر کالا، همان مقداری
-          است که به مشتری تحویل شده.
-        </p>
+        <p className="text-xs text-muted-foreground">{description}</p>
       </CardHeader>
       <CardContent className="space-y-2">
         {lines.length === 0 ? (
           <p className="text-center text-sm text-muted-foreground py-6 border border-dashed border-border rounded-lg">
-            این فاکتور قلمی برای ادعا ندارد
+            {emptyText}
           </p>
         ) : (
           lines.map((line) => (
@@ -129,6 +131,8 @@ export default function SalesReturnClaimsSection({
               onAddClaim={onAddClaim}
               onUpdateClaim={onUpdateClaim}
               onRemoveClaim={onRemoveClaim}
+              problemLabels={problemLabels}
+              deliveredLabel={deliveredLabel}
             />
           ))
         )}
@@ -136,7 +140,7 @@ export default function SalesReturnClaimsSection({
         {totals.qty > 0 && (
           <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2.5 border border-border mt-2">
             <span className="text-sm font-medium text-muted-foreground">
-              جمع ادعاهای روی فاکتور (
+              جمع ادعاهای روی سند (
               {totals.qty.toLocaleString("fa-IR")} عدد):
             </span>
             <Badge variant="outline" className="text-sm font-bold">

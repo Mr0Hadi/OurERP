@@ -81,11 +81,11 @@ const ON_INVOICE_PROBLEMS = [
 
 // ─── ساخت ادعا ──────────────────────────────────────────────────────────────
 
-function buildClaim({ saleItem, qty, problem, scope, offInvoiceKind }) {
+function buildClaim({ saleItem, qty, problem, scope, offScopeKind }) {
   return {
     id: generateId(),
     scope,
-    offInvoiceKind: scope === CLAIM_SCOPES.OFF_INVOICE ? offInvoiceKind : null,
+    offScopeKind: scope === CLAIM_SCOPES.OFF_INVOICE ? offScopeKind : null,
     saleLineId:
       scope === CLAIM_SCOPES.ON_INVOICE ? String(saleItem.productId) : null,
     productId: saleItem.productId,
@@ -231,7 +231,7 @@ function buildReturnFromSale(sale, index) {
       qty: randomInt(1, 3),
       problem: RETURN_PROBLEMS.OVER_SHIPPED,
       scope: CLAIM_SCOPES.OFF_INVOICE,
-      offInvoiceKind: OFF_INVOICE_KINDS.EXCESS,
+      offScopeKind: OFF_INVOICE_KINDS.EXCESS,
     });
     if (!isExplicitlyClosed) seedResolutions(claim, target);
     claims.push(claim);

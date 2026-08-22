@@ -51,11 +51,7 @@ export default function PurchaseReturnsListPage() {
           <div>
             <CardTitle>مرجوعی به تامین‌کننده</CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
-              کسری‌های گزارش‌شده توسط انبار با وضعیت{" "}
-              <span className="font-medium text-amber-700 dark:text-amber-400">
-                «قابل پیگیری»
-              </span>{" "}
-              کنار مرجوعی‌های در حال هماهنگی نمایش داده می‌شوند.
+              ادعاهای ثبت‌شده روی خریدها و تصمیم‌هایی که برایشان گرفته شده.
             </p>
           </div>
         </CardHeader>

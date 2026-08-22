@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import {
   createPurchaseReturn,
-  addItemResolution,
-  removeItemResolution,
+  addClaimResolution,
+  removeClaimResolution,
+  executeGoodsRound,
   rejectPurchaseReturn,
   cancelPurchaseReturn,
   reopenPurchaseReturn,
@@ -13,7 +14,6 @@ import {
 import { purchaseReturnKeys } from "./queryKeys";
 import { invalidatePurchaseEcosystem } from "../../orders/services/sharedInvalidation";
 import { ROUTES } from "@/shared/constants/routes";
-import { usePurchaseReturnFormStore } from "../store/purchaseReturnFormStore";
 
 const finalizeReturnChange = (queryClient, updated) => {
   queryClient.setQueryData(purchaseReturnKeys.detail(updated.id), updated);
@@ -23,44 +23,57 @@ const finalizeReturnChange = (queryClient, updated) => {
 export const useCreatePurchaseReturnMutation = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-
   return useMutation({
     mutationFn: createPurchaseReturn,
     onSuccess: (created) => {
-      toast.success("مرجوعی با موفقیت ثبت شد");
+      toast.success("درخواست مرجوعی ثبت شد؛ حالا می‌توانید برایش تصمیم بگیرید");
       invalidatePurchaseEcosystem(queryClient, created.purchaseId);
-      usePurchaseReturnFormStore.getState().resetForm();
-      navigate(`/purchases/returns/${created.id}`);
+      navigate(ROUTES.PURCHASES_RETURNS_DETAIL.replace(":id", created.id));
     },
-    onError: (error) => {
-      toast.error(error?.message || "خطا در ثبت مرجوعی");
-    },
+    onError: (error) => toast.error(error?.message || "خطا در ثبت مرجوعی"),
   });
 };
 
-export const useAddReturnItemResolutionMutation = (returnId) => {
+export const useAddClaimResolutionMutation = (returnId) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ issueId, resolution }) =>
-      addItemResolution(returnId, issueId, resolution),
+    mutationFn: ({ claimId, composition }) =>
+      addClaimResolution(returnId, claimId, composition),
     onSuccess: (updated) => {
       finalizeReturnChange(queryClient, updated);
-      toast.success("تصمیم برای این قلم ثبت شد");
+      toast.success("تصمیم ثبت شد");
     },
     onError: (error) => toast.error(error?.message || "خطا در ثبت تصمیم"),
   });
 };
 
-export const useRemoveReturnItemResolutionMutation = (returnId) => {
+export const useRemoveClaimResolutionMutation = (returnId) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ issueId, resolutionId }) =>
-      removeItemResolution(returnId, issueId, resolutionId),
+    mutationFn: ({ claimId, resolutionId }) =>
+      removeClaimResolution(returnId, claimId, resolutionId),
     onSuccess: (updated) => {
       finalizeReturnChange(queryClient, updated);
-      toast.success("تصمیم حذف شد");
+      toast.success("تصمیم حذف شد و اثر مالی‌اش برگشت خورد");
     },
     onError: (error) => toast.error(error?.message || "خطا در حذف تصمیم"),
+  });
+};
+
+/**
+ * ثبت یک دور جابه‌جایی فیزیکی کالا. هم صفحه‌ی «دریافت» انبار از آن
+ * استفاده می‌کند و هم صفحه‌ی «ارسال» — چون در مدل جدید هر دو یک
+ * عملیات‌اند با جهت مخالف.
+ */
+export const useExecuteGoodsRoundMutation = (returnId) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload) => executeGoodsRound(returnId, payload),
+    onSuccess: (updated) => {
+      finalizeReturnChange(queryClient, updated);
+      toast.success("جابه‌جایی کالا ثبت شد");
+    },
+    onError: (error) => toast.error(error?.message || "خطا در ثبت جابه‌جایی کالا"),
   });
 };
 
@@ -70,9 +83,9 @@ export const useRejectPurchaseReturnMutation = (returnId) => {
     mutationFn: () => rejectPurchaseReturn(returnId),
     onSuccess: (updated) => {
       finalizeReturnChange(queryClient, updated);
-      toast.success("مرجوعی به‌عنوان رد‌شده ثبت شد");
+      toast.success("درخواست به‌عنوان رد‌شده ثبت شد");
     },
-    onError: (error) => toast.error(error?.message || "خطا در ثبت رد مرجوعی"),
+    onError: (error) => toast.error(error?.message || "خطا در ثبت رد درخواست"),
   });
 };
 
@@ -94,7 +107,7 @@ export const useReopenPurchaseReturnMutation = (returnId) => {
     mutationFn: () => reopenPurchaseReturn(returnId),
     onSuccess: (updated) => {
       finalizeReturnChange(queryClient, updated);
-      toast.success("مرجوعی دوباره برای هماهنگی باز شد");
+      toast.success("مرجوعی دوباره برای بررسی باز شد");
     },
     onError: (error) => toast.error(error?.message || "خطا در بازگشایی مرجوعی"),
   });

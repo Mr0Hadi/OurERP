@@ -26,7 +26,7 @@ export const ROUTES = {
   PURCHASES_INVOICES: "/purchases/invoices",
   PURCHASES_INVOICE_DETAIL: "/purchases/invoices/:id",
   PURCHASES_RETURNS_DETAIL: "/purchases/returns/:id",
-  PURCHASES_RETURNS_NEW: "/purchases/returns/new/:purchaseId",
+  PURCHASES_RETURNS_NEW: "/purchases/returns/new",
   PURCHASES_RETURNS_LIST: "/purchases/returns",
 
   // فروش

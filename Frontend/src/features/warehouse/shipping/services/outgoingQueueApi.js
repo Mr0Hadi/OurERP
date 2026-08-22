@@ -5,11 +5,7 @@ import {
   EFFECT_KINDS,
   remainingQtyOf,
 } from "@/shared/domain/returns/effects";
-import {
-  allPurchaseReturns,
-  RESOLUTION_TYPES as PURCHASE_RESOLUTION_TYPES,
-  RESOLUTION_LINE_STATUSES as PURCHASE_RESOLUTION_LINE_STATUSES,
-} from "@/features/purchases/returns/services/mockData";
+import { allPurchaseReturns } from "@/features/purchases/returns/services/mockData";
 import { SHIPPING_ELIGIBLE_STATUSES } from "./constants";
 import { computeItemShippableQty } from "./api-mockData";
 
@@ -101,18 +97,14 @@ function collectReplacementRows() {
 function collectReturnToSupplierRows() {
   const rows = [];
   allPurchaseReturns.forEach((purchaseReturn) => {
-    const pendingLines = [];
-    (purchaseReturn.items || []).forEach((item) => {
-      (item.resolutions || []).forEach((resolution) => {
-        if (
-          resolution.type === PURCHASE_RESOLUTION_TYPES.RETURN_TO_SUPPLIER &&
-          resolution.status === PURCHASE_RESOLUTION_LINE_STATUSES.AWAITING
-        ) {
-          const remainingQty = resolution.qty - (resolution.shippedQty || 0);
-          if (remainingQty > 0) pendingLines.push(remainingQty);
-        }
-      });
-    });
+    // مثل سمت فروش، منبع همان اثرهای GOODS_OUT معلق است — نه یک نوعِ
+    // تصمیمِ خاص.
+    const pendingLines = pendingGoodsEffects(
+      purchaseReturn,
+      EFFECT_KINDS.GOODS_OUT,
+    )
+      .map(remainingQtyOf)
+      .filter((qty) => qty > 0);
 
     if (pendingLines.length === 0) return;
 
