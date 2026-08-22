@@ -14,7 +14,11 @@ import SalesReturnSaleSection from "../components/forms/SalesReturnSaleSection";
 import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
 import ClaimsSection from "@/shared/components/returns/ClaimsSection";
 import OffScopeClaimsSection from "@/shared/components/returns/OffScopeClaimsSection";
-import { RETURN_PROBLEM_LABELS } from "../domain/returnVocabulary";
+import {
+  RETURN_PROBLEM_LABELS,
+  OFF_INVOICE_KIND_LABELS,
+  OFF_INVOICE_KIND_STYLES,
+} from "../domain/returnVocabulary";
 import SalesReturnInfoSection from "../components/forms/SalesReturnInfoSection";
 import SalesReturnDetailLoading from "../components/forms/SalesReturnDetailLoading";
 import { ROUTES } from "@/shared/constants/routes";
@@ -173,10 +177,13 @@ export default function SalesReturnNewPage() {
 
             <OffScopeClaimsSection
               claims={offInvoiceClaims}
-              saleItems={saleForReturn.items}
               onAdd={handleAddOffInvoiceClaim}
               onUpdate={handleUpdateOffInvoiceClaim}
               onRemove={handleRemoveOffInvoiceClaim}
+              problemLabels={RETURN_PROBLEM_LABELS}
+              kindLabels={OFF_INVOICE_KIND_LABELS}
+              kindStyles={OFF_INVOICE_KIND_STYLES}
+              description="کالایی که در این فاکتور نیست یا بیش از مقدار آن ارسال شده. قیمتش دستی وارد می‌شود چون سقفی روی فاکتور ندارد."
             />
 
             <SalesReturnInfoSection

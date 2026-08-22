@@ -1,29 +1,27 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Search, X, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { gregorianToPersian } from "@/shared/utils/dateUtils";
+import { useReturnablePurchasesQuery } from "../../services/queries";
 
+/**
+ * انتخاب خریدِ مبدا برای ثبت مرجوعی.
+ *
+ * مثل قرینه‌اش در فروش، دیتای خودش را می‌گیرد. پیش از این منتظر یک
+ * prop به‌نام purchases بود که هیچ‌کس نمی‌فرستاد، پس همیشه خالی
+ * می‌ماند و پیغام «خریدی برای ثبت مرجوعی موجود نیست» نشان می‌داد —
+ * یعنی صفحه‌ی ثبت مرجوعی خرید عملاً غیرقابل استفاده بود.
+ */
 export default function PurchaseReturnPurchaseSection({
-  purchases = [],
-  isLoading,
   selectedPurchase,
   onSelect,
   onClear,
   error,
 }) {
   const [search, setSearch] = useState("");
-
-  const filtered = useMemo(() => {
-    if (!search.trim()) return purchases;
-    const q = search.toLowerCase();
-    return purchases.filter(
-      (p) =>
-        p.invoiceNumber.toLowerCase().includes(q) ||
-        p.supplierName.toLowerCase().includes(q),
-    );
-  }, [purchases, search]);
+  const { data: filtered = [], isLoading } = useReturnablePurchasesQuery(search);
 
   return (
     <Card>
@@ -96,7 +94,7 @@ export default function PurchaseReturnPurchaseSection({
                         </p>
                         <p className="text-xs text-muted-foreground truncate">
                           تاریخ: {gregorianToPersian(p.invoiceDate)} |{" "}
-                          {p.itemsCount.toLocaleString("fa-IR")} قلم
+                          {(p.itemsCount ?? 0).toLocaleString("fa-IR")} قلم
                         </p>
                       </div>
                     </button>

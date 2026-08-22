@@ -14,7 +14,11 @@ import PurchaseReturnPurchaseSection from "../components/forms/PurchaseReturnPur
 import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
 import ClaimsSection from "@/shared/components/returns/ClaimsSection";
 import OffScopeClaimsSection from "@/shared/components/returns/OffScopeClaimsSection";
-import { PURCHASE_RETURN_PROBLEM_LABELS } from "../domain/purchaseReturnVocabulary";
+import {
+  PURCHASE_RETURN_PROBLEM_LABELS,
+  OFF_ORDER_KIND_LABELS,
+  OFF_ORDER_KIND_STYLES,
+} from "../domain/purchaseReturnVocabulary";
 import PurchaseReturnInfoSection from "../components/forms/PurchaseReturnInfoSection";
 import PurchaseReturnDetailLoading from "../components/forms/PurchaseReturnDetailLoading";
 import { ROUTES } from "@/shared/constants/routes";
@@ -122,7 +126,10 @@ export default function PurchaseReturnNewPage() {
     <div className="container max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in zoom-in-95 duration-300">
       <form onSubmit={onSubmit} className="space-y-4">
         {!selectedPurchaseId && (
-          <PurchaseReturnPurchaseSection selectedSale={null} onSelect={handleSelectPurchase} />
+          <PurchaseReturnPurchaseSection
+            selectedPurchase={null}
+            onSelect={handleSelectPurchase}
+          />
         )}
 
         {selectedPurchaseId && isLoading && <PurchaseReturnDetailLoading />}
@@ -173,10 +180,14 @@ export default function PurchaseReturnNewPage() {
 
             <OffScopeClaimsSection
               claims={offScopeClaims}
-              purchaseItems={purchaseForReturn.items}
               onAdd={handleAddOffScopeClaim}
               onUpdate={handleUpdateOffScopeClaim}
               onRemove={handleRemoveOffScopeClaim}
+              problemLabels={PURCHASE_RETURN_PROBLEM_LABELS}
+              kindLabels={OFF_ORDER_KIND_LABELS}
+              kindStyles={OFF_ORDER_KIND_STYLES}
+              title="کالای خارج از سفارش"
+              description="کالایی که در این سفارش نیست یا بیش از مقدار آن رسیده. قیمتش دستی وارد می‌شود چون سقفی روی سفارش ندارد."
             />
 
             <PurchaseReturnInfoSection

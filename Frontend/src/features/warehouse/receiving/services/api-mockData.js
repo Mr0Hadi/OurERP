@@ -1,11 +1,20 @@
 import { allPurchases } from "./mockData";
+import { PURCHASE_STATUSES } from "@/features/purchases/orders/services/constants";
 import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
 import { applyListQuery } from "@/shared/services/mockQuery";
 
 import { allSalesReturns } from "@/features/sales/returns/services/mockData";
 import { executeGoodsRound as executeSalesReturnRound } from "@/features/sales/returns/services/api-mockData";
 import { allPurchaseReturns } from "@/features/purchases/returns/services/mockData";
-import { executeGoodsRound as executePurchaseReturnRound } from "@/features/purchases/returns/services/api-mockData";
+import {
+  executeGoodsRound as executePurchaseReturnRound,
+  createPurchaseReturn,
+} from "@/features/purchases/returns/services/api-mockData";
+import {
+  CLAIM_SCOPES,
+  OFF_ORDER_KINDS,
+  PURCHASE_RETURN_PROBLEMS,
+} from "@/features/purchases/returns/domain/purchaseReturnVocabulary";
 import {
   buildGoodsLines,
   hasPendingGoodsIn,
@@ -39,14 +48,35 @@ const generateId = () =>
 
 // ─── محاسبات داخلی ──────────────────────────────────────────────────────────
 
+function reportedIssuesQty(item) {
+  return (item.issues || []).reduce((sum, i) => sum + (Number(i.qty) || 0), 0);
+}
+
 /**
- * چقدر از یک قلم خرید هنوز قابل دریافت است.
+ * چقدر از یک قلم خرید هنوز «در راه» است.
  *
- * در مدل فعلی، مرجوعی هیچ خطی از سفارش را نمی‌بندد — اثرهایش مستقیم
- * روی موجودی و مبلغ می‌نشینند — پس این فقط یک تفریق ساده است.
+ * سه دسته‌ی جدا داریم و فقط یکی‌شان قابل دریافت است:
+ *   • رسیده           → receivedQty
+ *   • مشکل‌دار گزارش‌شده → issues (کسری، معیوب، اشتباه، ...)
+ *   • هیچ‌کدام         → هنوز نرسیده، منتظر محموله‌ی بعدی
+ *
+ * دسته‌ی دوم عمداً کم می‌شود. تا پیش از این نمی‌شد و نتیجه‌اش این بود
+ * که کالای معیوبی که انباردار گزارشش کرده بود، کنار کالایی که واقعاً
+ * هنوز نرسیده در فهرست «قابل دریافت» می‌ماند و انباردار راهی نداشت
+ * این دو را از هم تشخیص دهد.
+ *
+ * مقدارِ مشکل‌دار از مسیر خودش برمی‌گردد نه از اینجا: روی گزارش انبار
+ * یک مرجوعی باز می‌شود و اگر تصمیمش «ارسال کالای جایگزین» باشد، همان
+ * مقدار به‌عنوان خطِ مرجوعی در بخش «اقلام مرجوعی» همین صفحه ظاهر
+ * می‌شود. اگر تصمیم «بازگشت وجه» باشد، اصلاً نباید برگردد.
  */
 function computeItemReceivableQty(item) {
-  return Math.max(0, (Number(item.qty) || 0) - (Number(item.receivedQty) || 0));
+  return Math.max(
+    0,
+    (Number(item.qty) || 0) -
+      (Number(item.receivedQty) || 0) -
+      reportedIssuesQty(item),
+  );
 }
 
 /**
@@ -65,6 +95,34 @@ function pendingReturnLinesForPurchase(purchaseId) {
     });
   });
   return lines;
+}
+
+/**
+ * وضعیت خرید بعد از یک دور دریافت.
+ *
+ * تا امروز هیچ‌کس این را حساب نمی‌کرد: confirmReceiving وضعیت را دست
+ * نمی‌زد و تابعی که قرار بود این کار را بکند در بازنویسی مدلِ مرجوعی
+ * بی‌استفاده مانده و حذف شده بود. نتیجه این بود که خرید برای همیشه
+ * SHIPPED می‌ماند و هرگز از صف دریافت بیرون نمی‌رفت — حتی وقتی کامل
+ * تحویل گرفته شده بود.
+ *
+ * معیار، «آیا هنوز چیزی در راه است؟» است، نه «آیا کم داریم؟»:
+ * مقدارِ مشکل‌دار کم هست ولی در راه نیست، پس خرید را در صف نگه
+ * نمی‌دارد. اگر بعداً تصمیمِ مرجوعی «کالای جایگزین» باشد، خرید از
+ * مسیر returnLines دوباره به صف برمی‌گردد.
+ */
+function nextPurchaseStatus(purchase, items) {
+  if (purchase.status === PURCHASE_STATUSES.CANCELLED) return purchase.status;
+
+  const stillInTransit = items.some((item) => computeItemReceivableQty(item) > 0);
+  if (stillInTransit) return PURCHASE_STATUSES.SHIPPED;
+
+  const fullyReceived = items.every(
+    (item) => (item.receivedQty || 0) >= (item.qty || 0),
+  );
+  return fullyReceived
+    ? PURCHASE_STATUSES.RECEIVED
+    : PURCHASE_STATUSES.PARTIALLY_RECEIVED;
 }
 
 /**
@@ -255,6 +313,9 @@ export async function confirmReceiving(purchaseId, receivingData) {
 
   const stockIncreases = [];
   const newSurplusItems = [];
+  // ادعاهایی که از دلِ گزارش همین دور بیرون می‌آیند و در پایان به یک
+  // مرجوعیِ «در انتظار تصمیم» تبدیل می‌شوند.
+  const roundClaims = [];
 
   const rows = receivingData.receivedItems || [];
   const orderRows = rows.filter(
@@ -283,6 +344,27 @@ export async function confirmReceiving(purchaseId, receivingData) {
     if (thisRoundQty > 0) {
       stockIncreases.push({ productId: item.productId, delta: thisRoundQty });
     }
+
+    // هر مشکلی که انباردار گزارش می‌کند یک *ادعا* روی تامین‌کننده است.
+    // گزارش انبار همان «چه اتفاقی افتاد» است؛ «چه تصمیمی بگیریم» کارِ
+    // واحد خرید است و در همان مرجوعی ثبت می‌شود.
+    appended.forEach((issue) => {
+      roundClaims.push({
+        scope: CLAIM_SCOPES.ON_ORDER,
+        offScopeKind: null,
+        purchaseLineId: String(item.productId),
+        productId: item.productId,
+        productCode: item.productCode,
+        productName: item.productName,
+        unit: item.unit,
+        unitPrice: item.unitPrice || 0,
+        qty: issue.qty,
+        // مقادیر این دو enum عمداً یکی است تا گزارش انبار بدون ترجمه
+        // به ادعای خرید تبدیل شود.
+        problem: issue.type,
+        note: issue.note || "",
+      });
+    });
 
     // قیمت واحدِ مازاد از خودِ قلم سفارش برداشته می‌شود، پس فرم لازم
     // نیست حملش کند — اگر بعداً «نگهداری و تسویه» تصمیم گرفته شود،
@@ -330,9 +412,32 @@ export async function confirmReceiving(purchaseId, receivingData) {
     });
   });
 
+  // مازاد هم ادعاست، فقط بیرون از سقف سفارش: تا واحد خرید تصمیم
+  // نگیرد (عودت، نگهداری با پرداخت، یا نگهداری بدون پرداخت) این کالا
+  // بلاتکلیف در انبار می‌ماند و وارد موجودی قابل‌فروش نمی‌شود.
+  newSurplusItems.forEach((surplus) => {
+    const isExcess = surplus.kind === SURPLUS_KINDS.EXCESS;
+    roundClaims.push({
+      scope: CLAIM_SCOPES.OFF_ORDER,
+      offScopeKind: isExcess ? OFF_ORDER_KINDS.EXCESS : OFF_ORDER_KINDS.UNLISTED,
+      purchaseLineId: null,
+      productId: surplus.productId,
+      productCode: surplus.productCode,
+      productName: surplus.productName,
+      unit: surplus.unit,
+      unitPrice: surplus.unitPrice || 0,
+      qty: surplus.qty,
+      problem: isExcess
+        ? PURCHASE_RETURN_PROBLEMS.OVER_DELIVERED
+        : PURCHASE_RETURN_PROBLEMS.UNORDERED_ITEM,
+      note: surplus.note || "",
+    });
+  });
+
   allPurchases[index] = {
     ...purchase,
     items: updatedItems,
+    status: nextPurchaseStatus(purchase, updatedItems),
     // مازاد تجمعی است، مثل issues: هر دور فقط به آن اضافه می‌کند.
     surplusItems:
       newSurplusItems.length > 0
@@ -348,6 +453,18 @@ export async function confirmReceiving(purchaseId, receivingData) {
   };
 
   adjustProductsStock(stockIncreases);
+
+  if (roundClaims.length > 0) {
+    await createPurchaseReturn({
+      purchaseId: purchase.id,
+      purchaseInvoiceNumber: purchase.invoiceNumber,
+      supplierId: purchase.supplierId,
+      supplierName: purchase.supplierName,
+      returnDate: receivedDate,
+      description: `ثبت خودکار از گزارش انبار در تاریخ ${receivedDate}`,
+      claims: roundClaims,
+    });
+  }
 
   await applyReturnRows(
     returnRows,

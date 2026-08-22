@@ -1,11 +1,14 @@
 import { useEffect } from "react";
-import { Undo2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Undo2, Plus } from "lucide-react";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { ROUTES } from "@/shared/constants/routes";
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { usePurchaseReturnFilterStore } from "../store/purchaseReturnFilterStore";
 import { useDebouncedPurchaseReturnFilters } from "../hooks/useDebouncedPurchaseReturnFilters";
@@ -17,6 +20,7 @@ import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
 import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
 
 export default function PurchaseReturnsListPage() {
+  const navigate = useNavigate();
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
@@ -46,14 +50,23 @@ export default function PurchaseReturnsListPage() {
   return (
     <div className="container mx-auto space-y-6">
       <Card>
-        <CardHeader className="flex flex-row items-center gap-2">
-          <Undo2 className="h-5 w-5 text-muted-foreground" />
-          <div>
-            <CardTitle>مرجوعی به تامین‌کننده</CardTitle>
-            <p className="text-xs text-muted-foreground mt-1">
-              ادعاهای ثبت‌شده روی خریدها و تصمیم‌هایی که برایشان گرفته شده.
-            </p>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Undo2 className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <CardTitle>مرجوعی به تامین‌کننده</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                ادعاهای ثبت‌شده روی خریدها و تصمیم‌هایی که برایشان گرفته شده.
+              </p>
+            </div>
           </div>
+          <Button
+            className="gap-2"
+            onClick={() => navigate(ROUTES.PURCHASES_RETURNS_NEW)}
+          >
+            <Plus className="h-4 w-4" />
+            ثبت مرجوعی جدید
+          </Button>
         </CardHeader>
 
         <CardContent className="space-y-3">

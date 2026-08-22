@@ -16,7 +16,10 @@ export default function ClaimRow({
   claim,
   onUpdate,
   onRemove,
-  problemLabels,
+  // اگر فراخوان برچسب‌ها را نفرستد، یک dropdown خالی خیلی بهتر از
+  // پاشیدنِ کل صفحه است — که دقیقاً همان اتفاقی بود که با
+  // Object.entries(undefined) می‌افتاد.
+  problemLabels = {},
   showPrice = false,
 }) {
   const problemOptions = Object.entries(problemLabels);

@@ -148,6 +148,7 @@ export async function fetchReturnablePurchases(search = "") {
     supplierName: purchase.supplierName,
     status: purchase.status,
     totalAmount: purchase.totalAmount,
+    itemsCount: (purchase.items || []).length,
   }));
 }
 

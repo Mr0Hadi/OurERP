@@ -352,6 +352,30 @@ function buildMixedPayments(totalAmount) {
   return { mixedPayments, paidAmount };
 }
 
+/**
+ * مقدارِ دریافت‌شده را با وضعیتی که خودِ خرید ادعا می‌کند هماهنگ می‌کند.
+ *
+ * پیش از این، اقلام هیچ‌وقت receivedQty نمی‌گرفتند در حالی که وضعیتِ
+ * خرید تصادفی انتخاب می‌شد. نتیجه این بود که خریدهایی با وضعیت
+ * «دریافت شده» وجود داشتند که هیچ قلمی از آنها رسیده نبود — و چون
+ * معیارِ «قابل مرجوع‌کردن» رسیدنِ واقعیِ کالاست (نه وضعیت)، صفحه‌ی ثبت
+ * مرجوعی خرید همیشه خالی بود و عملاً غیرقابل استفاده.
+ */
+function withReceivedQty(items, status) {
+  return items.map((item) => {
+    // اگر خودِ نمونه صراحتاً مقدار داده، دست نمی‌خورد.
+    if (item.receivedQty != null) return item;
+
+    let receivedQty = 0;
+    if (status === PURCHASE_STATUSES.RECEIVED) {
+      receivedQty = item.qty;
+    } else if (status === PURCHASE_STATUSES.PARTIALLY_RECEIVED) {
+      receivedQty = randomInt(1, Math.max(1, item.qty - 1));
+    }
+    return { ...item, receivedQty };
+  });
+}
+
 function generateMorePurchases(count = 20) {
   const baseDate = new Date("2026-01-01");
   const purchases = [];
@@ -361,7 +385,8 @@ function generateMorePurchases(count = 20) {
     const status = pickRandom(Object.values(PURCHASE_STATUSES));
     const paymentType = pickRandom(Object.values(PAYMENT_TYPES));
 
-    const { items, totalAmount } = buildRandomItems();
+    const { items: rawItems, totalAmount } = buildRandomItems();
+    const items = withReceivedQty(rawItems, status);
 
     let paidAmount = 0;
     let mixedPayments = null;
@@ -418,4 +443,12 @@ function generateMorePurchases(count = 20) {
 }
 
 // آرایه نهایی خریدها
-export const allPurchases = [...purchasesMock, ...generateMorePurchases(20)];
+// نرمال‌سازی روی *همه‌ی* خریدها اعمال می‌شود، نه فقط تولیدشده‌ها:
+// نمونه‌های دستیِ بالای فایل هم وضعیت داشتند بدون اینکه اقلامشان
+// receivedQty داشته باشد.
+export const allPurchases = [...purchasesMock, ...generateMorePurchases(20)].map(
+  (purchase) => ({
+    ...purchase,
+    items: withReceivedQty(purchase.items || [], purchase.status),
+  }),
+);

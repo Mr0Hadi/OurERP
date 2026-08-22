@@ -97,6 +97,13 @@ export const OFF_ORDER_KIND_LABELS = {
   [OFF_ORDER_KINDS.UNLISTED]: "کالای خارج از سفارش",
 };
 
+export const OFF_ORDER_KIND_STYLES = {
+  [OFF_ORDER_KINDS.EXCESS]:
+    "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/40 dark:border-sky-800 dark:text-sky-400",
+  [OFF_ORDER_KINDS.UNLISTED]:
+    "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:border-violet-800 dark:text-violet-400",
+};
+
 export function isOffOrder(claim) {
   return claim?.scope === CLAIM_SCOPES.OFF_ORDER;
 }
