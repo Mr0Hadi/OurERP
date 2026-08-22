@@ -26,7 +26,7 @@ namespace Application.Features.ProductCategory.Queries
         {
             var res = new ResponseDto();
 
-            var data = await _productCategoryRepository.GetByIdAsync(request.Id) ?? throw new NotFoundCustomException("دسته‌بندی محصول مورد نظر یافت نشد.");
+            var data = await _productCategoryRepository.GetByIdAsync(request.Id, cancellationToken) ?? throw new NotFoundCustomException("دسته‌بندی محصول مورد نظر یافت نشد.");
             res.Data = _mapper.Map<ProductCategoryDto>(data);
 
             res.Message = "اطلاعات دسته‌بندی محصول با موفقیت ارسال شد.";

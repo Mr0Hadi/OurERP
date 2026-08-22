@@ -8,6 +8,7 @@ namespace Domain.Entities
         public string Name { get; set; }
         public string Code { get; set; }
         public string BarCode { get; set; }
+        public string? SupplierBarCode { get; set; }
         public string Brand { get; set; }
         public ProductUnitEnum Unit { get; set; }
         public UInt64 PurchasePrice { get; set; }

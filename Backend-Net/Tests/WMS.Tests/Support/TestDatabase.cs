@@ -1,4 +1,9 @@
+using Application.Common.Contracts.Barcode;
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Documents;
+using Application.Common.Contracts.Invoice;
+using Application.Common.Contracts.ProductCode;
+using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.SaleReturn;
@@ -21,6 +26,14 @@ namespace WMS.Tests.Support
     /// </summary>
     public sealed class TestDatabase : IDisposable
     {
+        // QuestPDF.Settings is process-global and xUnit gives no ordering guarantee across test
+        // classes, so setting it only in PdfAndBarcodeSmokeTests' static ctor isn't enough for
+        // other test classes (InvoicePdfTests) that use TestScope.PdfDocumentService first.
+        static TestDatabase()
+        {
+            QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+        }
+
         private readonly SqliteConnection _connection;
         private readonly DbContextOptions<WMSDbContext> _options;
 
@@ -65,7 +78,8 @@ namespace WMS.Tests.Support
             // Fully qualified: the `using Application.Common.Contracts.UnitOfWork` above makes the
             // bare name `UnitOfWork` resolve to that namespace rather than the type.
             UnitOfWork = new Infrastructure.UnitOfWork.UnitOfWork(context);
-            SaleReturnRepository = new SaleReturnRepository(context);
+            SaleReturnQueryService = new SaleReturnQueryService();
+            SaleReturnRepository = new SaleReturnRepository(context, SaleReturnQueryService);
             PurchaseReturnRepository = new PurchaseReturnRepository(context);
             PurchaseRepository = new PurchaseRepository(context);
             ProductRepository = new ProductRepository(context);
@@ -76,6 +90,11 @@ namespace WMS.Tests.Support
             RoleRepository = new RoleRepository(context);
             SaleReturnCalculation = new SaleReturnCalculationService();
             PurchaseReturnCalculation = new PurchaseReturnCalculationService();
+            ProductCodeService = new ProductCodeService();
+            ProductUnitService = new ProductUnitService(context, ProductCodeService);
+            BarcodeRenderer = new ZXingBarcodeRenderer();
+            PdfDocumentService = new QuestPdfDocumentService(BarcodeRenderer);
+            InvoiceLineCalculation = new InvoiceLineCalculationService();
         }
 
         public WMSDbContext Context { get; }
@@ -91,7 +110,13 @@ namespace WMS.Tests.Support
         public IProductCategoryRepository ProductCategoryRepository { get; }
         public IRoleRepository RoleRepository { get; }
         public ISaleReturnCalculationService SaleReturnCalculation { get; }
+        public ISaleReturnQueryService SaleReturnQueryService { get; }
+        public IInvoiceLineCalculationService InvoiceLineCalculation { get; }
         public IPurchaseReturnCalculationService PurchaseReturnCalculation { get; }
+        public IProductCodeService ProductCodeService { get; }
+        public IProductUnitService ProductUnitService { get; }
+        public IBarcodeRenderer BarcodeRenderer { get; }
+        public IPdfDocumentService PdfDocumentService { get; }
 
         public void Dispose()
         {

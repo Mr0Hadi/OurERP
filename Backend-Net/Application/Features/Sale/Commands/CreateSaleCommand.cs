@@ -68,7 +68,7 @@ namespace Application.Features.Sale.Commands
 
             var sale = _mapper.Map<Domain.Entities.Sale>(request);
 
-            await _context.Sales.AddAsync(sale);
+            await _context.Sales.AddAsync(sale, cancellationToken);
             await _unitOfWork.SaveChangesAsync();
 
             res.Message = "فروش با موفقیت ثبت شد.";

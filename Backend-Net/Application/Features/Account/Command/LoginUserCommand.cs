@@ -60,7 +60,7 @@ namespace Application.Features.Account.Command
         {
             var res = new ResponseDto();
 
-            var user = await _userRepository.GetByUsernameAsync(request.Username);
+            var user = await _userRepository.GetByUsernameAsync(request.Username, cancellationToken);
 
             if (user == null)
             {
@@ -79,7 +79,7 @@ namespace Application.Features.Account.Command
 
             var userInfo = _mapper.Map<TokenUserInfoDto>(user);
 
-            var data = await _tokenService.SetToken(userInfo);
+            var data = await _tokenService.SetTokenAsync(userInfo);
 
             var cacheKey = $"UserTokens:{userInfo.Id}";
             var userTokens = _memoryCache.GetOrCreate(cacheKey, entry => new HashSet<string>());

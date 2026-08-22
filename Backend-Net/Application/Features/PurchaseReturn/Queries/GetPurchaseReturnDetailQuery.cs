@@ -1,4 +1,5 @@
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.PurchaseReturn.Dtos;
@@ -18,10 +19,12 @@ namespace Application.Features.PurchaseReturn.Queries
     public class GetPurchaseReturnDetailQueryHandler : IRequestHandler<GetPurchaseReturnDetailQuery, ResponseDto>
     {
         private readonly IWMSDbContext _context;
+        private readonly IObjectStorageService _objectStorageService;
 
-        public GetPurchaseReturnDetailQueryHandler(IWMSDbContext context)
+        public GetPurchaseReturnDetailQueryHandler(IWMSDbContext context, IObjectStorageService objectStorageService)
         {
             _context = context;
+            _objectStorageService = objectStorageService;
         }
 
         public async Task<ResponseDto> Handle(GetPurchaseReturnDetailQuery request, CancellationToken cancellationToken)
@@ -35,6 +38,7 @@ namespace Application.Features.PurchaseReturn.Queries
                     .ThenInclude(x => x.Product)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Decisions)
+                .Include(x => x.ReceivingImages)
                 .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
             var totalQuantity = purchaseReturn.Items.Sum(i => i.Quantity);
@@ -66,6 +70,19 @@ namespace Application.Features.PurchaseReturn.Queries
                 CanCancel = purchaseReturn.Status == PurchaseReturnStatusEnum.PENDING,
                 CanReject = purchaseReturn.Status == PurchaseReturnStatusEnum.PENDING,
                 CanReopen = purchaseReturn.Status == PurchaseReturnStatusEnum.REJECTED,
+                ReceivingImages = purchaseReturn.ReceivingImages
+                    .OrderBy(img => img.CreatedAt)
+                    .Select(img => new PurchaseReceivingImageDto
+                    {
+                        Id = img.Id,
+                        PurchaseId = img.PurchaseId,
+                        PurchaseReturnId = img.PurchaseReturnId,
+                        ObjectKey = img.ObjectKey,
+                        Url = _objectStorageService.GetPresignedUrl(img.ObjectKey),
+                        FileName = img.FileName,
+                        Note = img.Note,
+                        CreatedAt = img.CreatedAt,
+                    }).ToList(),
                 Items = purchaseReturn.Items.Select(i => new PurchaseReturnItemDto
                 {
                     Id = i.Id,

@@ -8,5 +8,11 @@ namespace Application.Features.Customer.Dtos
         public string FullName { get; set; }
         public BalanceTypeEnum BalanceType { get; set; }
         public UInt64? Balance { get; set; }
+
+        /// <summary>Stable bucket object key; null when the customer has no image.</summary>
+        public string? ImageKey { get; set; }
+
+        /// <summary>Short-lived signed URL, filled in after the page is materialized.</summary>
+        public string? ImageUrl { get; set; }
     }
 }

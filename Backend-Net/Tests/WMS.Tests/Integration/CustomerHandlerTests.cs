@@ -15,7 +15,7 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
 
-            var handler = new CreateCustomerCommandHandler(scope.CustomerRepository, TestMapper.Instance, scope.UnitOfWork);
+            var handler = new CreateCustomerCommandHandler(scope.CustomerRepository, TestMapper.Instance, FakeObjectStorage.Instance, scope.UnitOfWork);
             await handler.Handle(new CreateCustomerCommand
             {
                 FirstName = "علی",
@@ -38,7 +38,7 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
 
-            var handler = new UpdateCustomerCommandHandler(scope.UnitOfWork, scope.CustomerRepository);
+            var handler = new UpdateCustomerCommandHandler(scope.UnitOfWork, scope.CustomerRepository, FakeObjectStorage.Instance);
 
             await Assert.ThrowsAsync<NotFoundCustomException>(() => handler.Handle(new UpdateCustomerCommand
             {
@@ -60,7 +60,7 @@ namespace WMS.Tests.Integration
             scope.Context.Customers.Add(customer);
             scope.Context.SaveChanges();
 
-            var handler = new UpdateCustomerCommandHandler(scope.UnitOfWork, scope.CustomerRepository);
+            var handler = new UpdateCustomerCommandHandler(scope.UnitOfWork, scope.CustomerRepository, FakeObjectStorage.Instance);
             await handler.Handle(new UpdateCustomerCommand
             {
                 Id = customer.Id,
@@ -114,7 +114,7 @@ namespace WMS.Tests.Integration
             scope.Context.Customers.Add(customer);
             scope.Context.SaveChanges();
 
-            var handler = new GetCustomerDetailQueryHandler(scope.CustomerRepository, TestMapper.Instance);
+            var handler = new GetCustomerDetailQueryHandler(scope.CustomerRepository, TestMapper.Instance, FakeObjectStorage.Instance);
             var res = await handler.Handle(new GetCustomerDetailQuery { Id = customer.Id }, CancellationToken.None);
 
             var dto = Assert.IsType<CustomerDto>(res.Data);
@@ -130,7 +130,7 @@ namespace WMS.Tests.Integration
             scope.Context.Customers.Add(Seed.Customer("سارا", "کریمی"));
             scope.Context.SaveChanges();
 
-            var handler = new GetCustomerListQueryHandler(scope.Db);
+            var handler = new GetCustomerListQueryHandler(scope.Db, FakeObjectStorage.Instance);
             var res = await handler.Handle(new GetCustomerListQuery { FullName = "سارا" }, CancellationToken.None);
 
             var data = res.Data!;

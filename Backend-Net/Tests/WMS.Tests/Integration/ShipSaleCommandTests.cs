@@ -15,7 +15,7 @@ namespace WMS.Tests.Integration
 
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 10, shippedQuantity: 0, stock: 100);
 
-            var handler = new ShipSaleCommandHandler(scope.Db, scope.UnitOfWork);
+            var handler = new ShipSaleCommandHandler(scope.Db, scope.ProductUnitService, scope.UnitOfWork);
             var command = new ShipSaleCommand
             {
                 SaleId = scenario.Sale.Id,
@@ -42,7 +42,7 @@ namespace WMS.Tests.Integration
 
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 10, shippedQuantity: 0, stock: 100);
 
-            var handler = new ShipSaleCommandHandler(scope.Db, scope.UnitOfWork);
+            var handler = new ShipSaleCommandHandler(scope.Db, scope.ProductUnitService, scope.UnitOfWork);
             var command = new ShipSaleCommand
             {
                 SaleId = scenario.Sale.Id,
@@ -63,7 +63,7 @@ namespace WMS.Tests.Integration
 
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 5, shippedQuantity: 0, stock: 100);
 
-            var handler = new ShipSaleCommandHandler(scope.Db, scope.UnitOfWork);
+            var handler = new ShipSaleCommandHandler(scope.Db, scope.ProductUnitService, scope.UnitOfWork);
             var command = new ShipSaleCommand
             {
                 SaleId = scenario.Sale.Id,
@@ -81,7 +81,7 @@ namespace WMS.Tests.Integration
 
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 10, shippedQuantity: 0, stock: 3);
 
-            var handler = new ShipSaleCommandHandler(scope.Db, scope.UnitOfWork);
+            var handler = new ShipSaleCommandHandler(scope.Db, scope.ProductUnitService, scope.UnitOfWork);
             var command = new ShipSaleCommand
             {
                 SaleId = scenario.Sale.Id,
@@ -101,7 +101,7 @@ namespace WMS.Tests.Integration
             scenario.Sale.Status = SalesStatusEnum.CANCELLED;
             scope.Context.SaveChanges();
 
-            var handler = new ShipSaleCommandHandler(scope.Db, scope.UnitOfWork);
+            var handler = new ShipSaleCommandHandler(scope.Db, scope.ProductUnitService, scope.UnitOfWork);
             var command = new ShipSaleCommand
             {
                 SaleId = scenario.Sale.Id,
@@ -117,7 +117,7 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
 
-            var handler = new ShipSaleCommandHandler(scope.Db, scope.UnitOfWork);
+            var handler = new ShipSaleCommandHandler(scope.Db, scope.ProductUnitService, scope.UnitOfWork);
             var command = new ShipSaleCommand { SaleId = 999, Items = new() { new ShipSaleItemDto { SaleItemId = 1, ShippedQuantity = 1 } } };
 
             await Assert.ThrowsAsync<NotFoundCustomException>(() => handler.Handle(command, CancellationToken.None));
@@ -130,7 +130,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
 
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 10, shippedQuantity: 0, stock: 100);
-            var handler = new ShipSaleCommandHandler(scope.Db, scope.UnitOfWork);
+            var handler = new ShipSaleCommandHandler(scope.Db, scope.ProductUnitService, scope.UnitOfWork);
 
             await handler.Handle(new ShipSaleCommand
             {

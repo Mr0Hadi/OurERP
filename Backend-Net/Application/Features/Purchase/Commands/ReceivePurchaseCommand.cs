@@ -1,17 +1,20 @@
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Repositories;
+using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Common.Exceptions;
 using Common.Extensions;
+using Domain.Entities;
 using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace Application.Features.PurchaseReturn.Commands
+namespace Application.Features.Purchase.Commands
 {
     public class ReceivePurchaseCommand : IRequest<ResponseDto>
     {
@@ -19,6 +22,21 @@ namespace Application.Features.PurchaseReturn.Commands
         public DateTime? ReceivedDate { get; set; }
         public string? ReceivingNote { get; set; }
         public List<ReceivePurchaseItemDto> Items { get; set; } = new();
+
+        /// <summary>
+        /// Photos of this receiving session (pallet on arrival, damaged carton, packing slip).
+        /// Upload each file to POST api/File/UploadImage with folder=RECEIVING first, then send
+        /// the returned ObjectKey values here. Session-level, not per line item.
+        /// </summary>
+        public List<ReceivePurchaseImageDto> Images { get; set; } = new();
+    }
+
+    public class ReceivePurchaseImageDto
+    {
+        /// <summary>The ObjectKey returned by api/File/UploadImage (a full URL is also accepted and normalized).</summary>
+        public string ObjectKey { get; set; } = string.Empty;
+        public string? FileName { get; set; }
+        public string? Note { get; set; }
     }
 
     public class ReceivePurchaseItemDto
@@ -55,6 +73,10 @@ namespace Application.Features.PurchaseReturn.Commands
                     issue.RuleFor(j => j.Type).IsInEnum().WithMessage("نوع مغایرت نامعتبر است.");
                 });
             });
+            RuleForEach(x => x.Images).ChildRules(image =>
+            {
+                image.RuleFor(i => i.ObjectKey).NotEmpty().WithMessage(Validation.RequiredMessage("شناسه تصویر"));
+            });
         }
     }
 
@@ -63,13 +85,17 @@ namespace Application.Features.PurchaseReturn.Commands
         private readonly IWMSDbContext _context;
         private readonly IPurchaseReturnRepository _purchaseReturnRepository;
         private readonly IPurchaseReturnCalculationService _purchaseReturnCalculationService;
+        private readonly IProductUnitService _productUnitService;
+        private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public ReceivePurchaseCommandHandler(IWMSDbContext context, IPurchaseReturnRepository purchaseReturnRepository, IPurchaseReturnCalculationService purchaseReturnCalculationService, IUnitOfWork unitOfWork)
+        public ReceivePurchaseCommandHandler(IWMSDbContext context, IPurchaseReturnRepository purchaseReturnRepository, IPurchaseReturnCalculationService purchaseReturnCalculationService, IProductUnitService productUnitService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
         {
             _context = context;
             _purchaseReturnRepository = purchaseReturnRepository;
             _purchaseReturnCalculationService = purchaseReturnCalculationService;
+            _productUnitService = productUnitService;
+            _objectStorageService = objectStorageService;
             _unitOfWork = unitOfWork;
         }
 
@@ -114,6 +140,7 @@ namespace Application.Features.PurchaseReturn.Commands
                 {
                     purchaseItem.ReceivedQuantity += reqItem.ReceivedQuantity;
                     purchaseItem.Product.Stock += reqItem.ReceivedQuantity;
+                    await _productUnitService.MintAsync(purchaseItem.Product, reqItem.ReceivedQuantity, purchaseItem.Id, cancellationToken);
                 }
 
                 var issues = (reqItem.Issues ?? new()).Where(i => i.Quantity > 0).ToList();
@@ -133,7 +160,7 @@ namespace Application.Features.PurchaseReturn.Commands
                         CreatedAt = now,
                         UpdatedAt = now,
                     };
-                    await _purchaseReturnRepository.AddAsync(activeReturn);
+                    await _purchaseReturnRepository.AddAsync(activeReturn, cancellationToken);
                 }
 
                 foreach (var group in issues.GroupBy(i => i.Type))
@@ -170,6 +197,31 @@ namespace Application.Features.PurchaseReturn.Commands
             {
                 activeReturn.ReturnDate = receivedDate;
                 activeReturn.UpdatedAt = now;
+            }
+
+            foreach (var image in request.Images ?? new())
+            {
+                // Whatever the client sent - a bare key or a (possibly expired) signed URL - only
+                // the stable object key is ever persisted.
+                var objectKey = _objectStorageService.NormalizeKey(image.ObjectKey);
+                if (string.IsNullOrWhiteSpace(objectKey))
+                    continue;
+
+                var receivingImage = new PurchaseReceivingImage
+                {
+                    PurchaseId = purchase.Id,
+                    ObjectKey = objectKey,
+                    FileName = image.FileName,
+                    Note = image.Note,
+                    CreatedAt = now,
+                };
+
+                // Adding through the navigation lets EF fill PurchaseReturnId even when the return
+                // was created a few lines above and has no Id yet.
+                if (activeReturn != null)
+                    activeReturn.ReceivingImages.Add(receivingImage);
+                else
+                    await _context.PurchaseReceivingImages.AddAsync(receivingImage, cancellationToken);
             }
 
             _purchaseReturnCalculationService.ResolveAwaitingReplacements(purchase, activeReturn, now);

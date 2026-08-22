@@ -15,7 +15,7 @@ namespace WMS.Tests.Unit
 {
     public class CreateCustomerCommandValidatorTests
     {
-        private readonly CreateCustomerCommandValidation _sut = new();
+        private readonly CreateCustomerCommandValidator _sut = new();
 
         private static CreateCustomerCommand Valid() => new()
         {
@@ -87,8 +87,6 @@ namespace WMS.Tests.Unit
         private static CreateProductCommand Valid() => new()
         {
             Name = "کالا",
-            Code = "P-1",
-            BarCode = "123456",
             Brand = "برند",
             PurchasePrice = 100,
             RetailPrice = 150,
@@ -138,13 +136,11 @@ namespace WMS.Tests.Unit
         private readonly UpdateProductCommandValidator _sut = new();
 
         [Fact]
-        public void EmptyCode_IsInvalid()
+        public void EmptyName_IsInvalid()
         {
             var command = new UpdateProductCommand
             {
-                Name = "کالا",
-                Code = "",
-                BarCode = "123",
+                Name = "",
                 Brand = "برند",
                 PurchasePrice = 10,
                 RetailPrice = 20,
@@ -175,7 +171,7 @@ namespace WMS.Tests.Unit
 
     public class CreateSupplierCommandValidatorTests
     {
-        private readonly CreateSupplierCommandValidation _sut = new();
+        private readonly CreateSupplierCommandValidator _sut = new();
 
         private static CreateSupplierCommand Valid() => new()
         {

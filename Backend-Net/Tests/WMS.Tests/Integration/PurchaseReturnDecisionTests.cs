@@ -14,7 +14,7 @@ namespace WMS.Tests.Integration
         {
             var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: ordered, stock: 0);
 
-            var receiveHandler = new ReceivePurchaseCommandHandler(scope.Db, scope.PurchaseReturnRepository, scope.PurchaseReturnCalculation, scope.UnitOfWork);
+            var receiveHandler = new ReceivePurchaseCommandHandler(scope.Db, scope.PurchaseReturnRepository, scope.PurchaseReturnCalculation, scope.ProductUnitService, FakeObjectStorage.Instance, scope.UnitOfWork);
             await receiveHandler.Handle(new ReceivePurchaseCommand
             {
                 PurchaseId = scenario.Purchase.Id,
@@ -90,7 +90,7 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
             var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 5, stock: 0);
-            var receiveHandler = new ReceivePurchaseCommandHandler(scope.Db, scope.PurchaseReturnRepository, scope.PurchaseReturnCalculation, scope.UnitOfWork);
+            var receiveHandler = new ReceivePurchaseCommandHandler(scope.Db, scope.PurchaseReturnRepository, scope.PurchaseReturnCalculation, scope.ProductUnitService, FakeObjectStorage.Instance, scope.UnitOfWork);
             await receiveHandler.Handle(new ReceivePurchaseCommand
             {
                 PurchaseId = scenario.Purchase.Id,
@@ -141,7 +141,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (scenario, _) = await SeedShortageReturn(scope, ordered: 10, shortageQty: 4);
 
-            var handler = new GetPurchaseReceivingInfoQueryHandler(scope.Db, scope.PurchaseReturnRepository, scope.PurchaseReturnCalculation);
+            var handler = new GetPurchaseReceivingInfoQueryHandler(scope.Db, scope.PurchaseReturnRepository, scope.PurchaseReturnCalculation, FakeObjectStorage.Instance);
             var res = await handler.Handle(new GetPurchaseReceivingInfoQuery { PurchaseId = scenario.Purchase.Id }, CancellationToken.None);
 
             var data = Assert.IsType<PurchaseReceivingInfoDto>(res.Data);

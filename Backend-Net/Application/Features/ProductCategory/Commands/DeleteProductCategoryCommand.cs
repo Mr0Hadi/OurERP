@@ -27,7 +27,7 @@ namespace Application.Features.ProductCategory.Commands
         {
             var res = new ResponseDto();
 
-            var productCategory = await _productCategoryRepository.GetByIdAsync(request.Id) ?? throw new NotFoundCustomException("دسته‌بندی محصول مورد نظر یافت نشد.");
+            var productCategory = await _productCategoryRepository.GetByIdAsync(request.Id, cancellationToken) ?? throw new NotFoundCustomException("دسته‌بندی محصول مورد نظر یافت نشد.");
 
             productCategory.IsActive = false;
 

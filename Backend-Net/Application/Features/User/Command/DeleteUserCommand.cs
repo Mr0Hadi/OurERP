@@ -27,7 +27,7 @@ namespace Application.Features.User.Command
         {
             var res = new ResponseDto();
 
-            var user = await _userRepository.GetByIdAsync(request.Id) ?? throw new NotFoundCustomException("کاربر با اطلاعات مورد نظر یافت نشد.");
+            var user = await _userRepository.GetByIdAsync(request.Id, cancellationToken) ?? throw new NotFoundCustomException("کاربر با اطلاعات مورد نظر یافت نشد.");
 
             user.IsActive = false;
 

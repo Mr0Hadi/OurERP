@@ -2,6 +2,7 @@ using Common.Extensions;
 using Domain.Entities;
 using Domain.Enums;
 using Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace WMS.Tests.Support
 {
@@ -168,6 +169,11 @@ namespace WMS.Tests.Support
             context.Sales.Add(sale);
             context.SaveChanges();
 
+            // Product.Stock == COUNT(ProductUnit WHERE Status=IN_STOCK) is an invariant the real
+            // handlers maintain (see docs/product-code-barcode-invoice-design.fa.md 1.6) - seed
+            // matching units so ShipSaleCommandHandler's FIFO consumption has something to consume.
+            MintUnits(context, product, stock);
+
             return new SaleScenario(sale, item, product, customer);
         }
 
@@ -183,7 +189,41 @@ namespace WMS.Tests.Support
             context.Purchases.Add(purchase);
             context.SaveChanges();
 
+            MintUnits(context, product, stock);
+
             return new PurchaseScenario(purchase, item, product, supplier);
+        }
+
+        /// <summary>
+        /// Mints <paramref name="count"/> IN_STOCK ProductUnit rows for an already-saved product,
+        /// keeping the Stock/ProductUnit invariant true in fixtures. Public so tests that manually
+        /// bump Product.Stock (rather than going through a handler) can keep it true too.
+        /// </summary>
+        public static void MintUnits(WMSDbContext context, Product product, int count)
+        {
+            if (count <= 0)
+                return;
+
+            var nextSerial = context.ProductUnits.Where(x => x.ProductId == product.Id).Select(x => (int?)x.SerialNumber).Max() ?? 0;
+            nextSerial++;
+
+            for (var i = 0; i < count; i++)
+            {
+                var serial = nextSerial + i;
+                var barcode = $"{product.Code}-{serial:D6}";
+                context.ProductUnits.Add(new ProductUnit
+                {
+                    ProductId = product.Id,
+                    SerialNumber = serial,
+                    Barcode = barcode,
+                    BarcodePayload = barcode.Replace("-", ""),
+                    Status = ProductUnitStatusEnum.IN_STOCK,
+                    CreatedAt = DateTime.Now,
+                    IsActive = true,
+                });
+            }
+
+            context.SaveChanges();
         }
     }
 

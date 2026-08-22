@@ -27,7 +27,7 @@ namespace Application.Features.Product.Commands
         {
             var res = new ResponseDto();
 
-            var product = await _productRepository.GetByIdAsync(request.Id) ?? throw new NotFoundCustomException("محصول مورد نظر یافت نشد.");
+            var product = await _productRepository.GetByIdAsync(request.Id, cancellationToken) ?? throw new NotFoundCustomException("محصول مورد نظر یافت نشد.");
 
             product.IsActive = false;
 

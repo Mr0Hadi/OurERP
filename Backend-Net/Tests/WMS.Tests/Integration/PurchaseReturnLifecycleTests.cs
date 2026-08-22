@@ -13,7 +13,7 @@ namespace WMS.Tests.Integration
         {
             var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: ordered, stock: 0);
 
-            var receiveHandler = new ReceivePurchaseCommandHandler(scope.Db, scope.PurchaseReturnRepository, scope.PurchaseReturnCalculation, scope.UnitOfWork);
+            var receiveHandler = new ReceivePurchaseCommandHandler(scope.Db, scope.PurchaseReturnRepository, scope.PurchaseReturnCalculation, scope.ProductUnitService, FakeObjectStorage.Instance, scope.UnitOfWork);
             await receiveHandler.Handle(new ReceivePurchaseCommand
             {
                 PurchaseId = scenario.Purchase.Id,
@@ -178,7 +178,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (_, returnId, _) = await SeedShortageReturn(scope, ordered: 10, shortageQty: 4);
 
-            var handler = new GetPurchaseReturnDetailQueryHandler(scope.Db);
+            var handler = new GetPurchaseReturnDetailQueryHandler(scope.Db, FakeObjectStorage.Instance);
             var res = await handler.Handle(new GetPurchaseReturnDetailQuery { Id = returnId }, CancellationToken.None);
 
             var dto = Assert.IsType<PurchaseReturnDetailDto>(res.Data);

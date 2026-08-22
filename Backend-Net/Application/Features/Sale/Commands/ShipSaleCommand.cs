@@ -1,4 +1,5 @@
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -27,6 +28,13 @@ namespace Application.Features.Sale.Commands
     {
         public int SaleItemId { get; set; }
         public int ShippedQuantity { get; set; }
+
+        /// <summary>
+        /// Optional: barcodes of the specific ProductUnit rows the seller scanned for this
+        /// line. Count must equal ShippedQuantity when given. If omitted, units are picked
+        /// FIFO by serial (see docs/product-code-barcode-invoice-design.fa.md section 1.8).
+        /// </summary>
+        public List<string>? ProductUnitBarcodes { get; set; }
     }
 
     public class ShipSaleCommandValidator : AbstractValidator<ShipSaleCommand>
@@ -48,11 +56,13 @@ namespace Application.Features.Sale.Commands
     public class ShipSaleCommandHandler : IRequestHandler<ShipSaleCommand, ResponseDto>
     {
         private readonly IWMSDbContext _context;
+        private readonly IProductUnitService _productUnitService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public ShipSaleCommandHandler(IWMSDbContext context, IUnitOfWork unitOfWork)
+        public ShipSaleCommandHandler(IWMSDbContext context, IProductUnitService productUnitService, IUnitOfWork unitOfWork)
         {
             _context = context;
+            _productUnitService = productUnitService;
             _unitOfWork = unitOfWork;
         }
 
@@ -88,6 +98,7 @@ namespace Application.Features.Sale.Commands
                 var saleItem = saleItems[reqItem.SaleItemId];
                 saleItem.ShippedQuantity += reqItem.ShippedQuantity;
                 saleItem.Product.Stock -= reqItem.ShippedQuantity;
+                await _productUnitService.ConsumeAsync(saleItem.Product, reqItem.ShippedQuantity, saleItem.Id, reqItem.ProductUnitBarcodes, cancellationToken);
             }
 
             var fullyShipped = sale.Items.All(i => i.ShippedQuantity >= i.Quantity);

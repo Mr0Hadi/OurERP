@@ -30,6 +30,24 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
+        [HttpGet("ScanBarcode")]
+        public async Task<ActionResult<ResponseDto>> ScanBarcode([FromQuery] ScanBarcodeQuery request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HttpGet("GetProductUnitList")]
+        public async Task<ActionResult<ResponseDto>> GetProductUnitList([FromQuery] GetProductUnitListQuery request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HttpPost("EnsureProductCodes")]
+        public async Task<ActionResult<ResponseDto>> EnsureProductCodes([FromBody] EnsureProductCodesCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
         [HttpPost("CreateProduct")]
         public async Task<ActionResult<ResponseDto>> CreateProduct([FromBody] CreateProductCommand request)
         {

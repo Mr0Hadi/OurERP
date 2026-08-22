@@ -1,4 +1,8 @@
 using Common.Extensions;
+using Domain.Entities;
+using Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+using WMS.Tests.Support;
 
 namespace WMS.Tests.Unit
 {
@@ -54,27 +58,65 @@ namespace WMS.Tests.Unit
 
     public class PagginationTests
     {
-        [Fact]
-        public void ToPaged_Queryable_ReturnsRequestedPageAndCounts()
+        // These run against the real SQLite-backed context rather than a list wrapped in
+        // AsQueryable(): ToPagedAsync goes through EF's async query provider, which a plain
+        // in-memory IQueryable does not implement. Testing it over EF is also the honest test -
+        // it is the COUNT + page round-trip that is being asserted.
+        private static async Task<WMSDbContext> SeedCategoriesAsync(TestDatabase db, int count)
         {
-            var source = Enumerable.Range(1, 25).AsQueryable();
+            var context = db.NewContext();
 
-            var page = source.ToPaged(2, 10, out var pageCount, out var totalCount).ToList();
+            context.ProductCategories.AddRange(Enumerable.Range(1, count)
+                .Select(i => new ProductCategory { Name = $"C{i:00}", IsActive = true }));
 
-            Assert.Equal(Enumerable.Range(11, 10), page);
-            Assert.Equal(3, pageCount);
-            Assert.Equal(25, totalCount);
+            await context.SaveChangesAsync(CancellationToken.None);
+
+            return context;
         }
 
         [Fact]
-        public void ToPaged_Queryable_LastPageReturnsRemainder()
+        public async Task ToPagedAsync_ReturnsRequestedPageAndCounts()
         {
-            var source = Enumerable.Range(1, 25).AsQueryable();
+            using var db = new TestDatabase();
+            using var context = await SeedCategoriesAsync(db, 25);
 
-            var page = source.ToPaged(3, 10, out var pageCount, out _).ToList();
+            var paged = await context.ProductCategories
+                .OrderBy(x => x.Id)
+                .Select(x => x.Name)
+                .ToPagedAsync(2, 10, CancellationToken.None);
 
-            Assert.Equal(Enumerable.Range(21, 5), page);
-            Assert.Equal(3, pageCount);
+            Assert.Equal(Enumerable.Range(11, 10).Select(i => $"C{i:00}"), paged.Items);
+            Assert.Equal(3, paged.PageCount);
+            Assert.Equal(25, paged.TotalCount);
+        }
+
+        [Fact]
+        public async Task ToPagedAsync_LastPageReturnsRemainder()
+        {
+            using var db = new TestDatabase();
+            using var context = await SeedCategoriesAsync(db, 25);
+
+            var paged = await context.ProductCategories
+                .OrderBy(x => x.Id)
+                .Select(x => x.Name)
+                .ToPagedAsync(3, 10, CancellationToken.None);
+
+            Assert.Equal(Enumerable.Range(21, 5).Select(i => $"C{i:00}"), paged.Items);
+            Assert.Equal(3, paged.PageCount);
+            Assert.Equal(25, paged.TotalCount);
+        }
+
+        [Fact]
+        public async Task ToPagedAsync_HonoursCancellation()
+        {
+            using var db = new TestDatabase();
+            using var context = await SeedCategoriesAsync(db, 5);
+
+            using var cts = new CancellationTokenSource();
+            await cts.CancelAsync();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                context.ProductCategories.ToPagedAsync(1, 10, cts.Token));
         }
 
         [Fact]

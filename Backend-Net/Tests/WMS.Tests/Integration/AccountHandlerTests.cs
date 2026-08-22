@@ -86,7 +86,7 @@ namespace WMS.Tests.Integration
             scope.Context.SaveChanges();
 
             var tokenService = Substitute.For<ITokenService>();
-            tokenService.SetToken(Arg.Any<Application.Features.User.Dto.TokenUserInfoDto>())
+            tokenService.SetTokenAsync(Arg.Any<Application.Features.User.Dto.TokenUserInfoDto>())
                 .Returns(new TokenDto { AccessToken = "access-token", RefreshToken = "refresh-token" });
 
             var handler = new LoginUserCommandHandler(
@@ -232,7 +232,7 @@ namespace WMS.Tests.Integration
 
             var tokenService = Substitute.For<ITokenService>();
             tokenService.GetTokenInfo("expired-access-token").Returns(new TokenInfoDto { Id = user.Id.ToString(), IsExpired = true, Username = user.Username });
-            tokenService.SetToken(Arg.Any<Application.Features.User.Dto.TokenUserInfoDto>())
+            tokenService.SetTokenAsync(Arg.Any<Application.Features.User.Dto.TokenUserInfoDto>())
                 .Returns(new TokenDto { AccessToken = "new-access-token", RefreshToken = "new-refresh-token" });
 
             var handler = new UserRefreshTokenCommandHandler(MakeConfiguration(), tokenService, scope.UserRepository, scope.UnitOfWork, TestMapper.Instance, new MemoryCache(new MemoryCacheOptions()));

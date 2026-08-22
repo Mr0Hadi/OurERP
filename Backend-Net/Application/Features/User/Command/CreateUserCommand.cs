@@ -65,14 +65,14 @@ namespace Application.Features.User.Command
         {
             var res = new ResponseDto();
 
-            var user = await _userRepository.GetByUsernameAsync(request.Username);
+            var user = await _userRepository.GetByUsernameAsync(request.Username, cancellationToken);
 
             if (user != null)
             {
                 throw new ValidationCustomException("کاربر با این شماره موبایل قبلا ثبت شده است");
             }
 
-            var role = await _roleService.GetByIdAsync(request.RoleId);
+            var role = await _roleService.GetByIdAsync(request.RoleId, cancellationToken);
 
             if (role == null)
             {
@@ -81,7 +81,7 @@ namespace Application.Features.User.Command
 
             var newUser = _mapper.Map<Domain.Entities.User>(request);
 
-            await _userRepository.AddAsync(newUser);
+            await _userRepository.AddAsync(newUser, cancellationToken);
 
             await _unitOfWork.SaveChangesAsync();
 

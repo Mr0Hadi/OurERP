@@ -1,4 +1,5 @@
 using Application.Common.Contracts.Repositories;
+using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -23,6 +24,11 @@ namespace Application.Features.Customer.Commands
         public string? Description { get; set; }
         public UInt64? Balance { get; set; }
         public BalanceTypeEnum BalanceType { get; set; }
+
+        /// <summary>
+        /// The ObjectKey returned by POST api/File/UploadImage (folder=CUSTOMERS), or the ImageKey
+        /// read off the detail response to keep the existing image. Send null to clear it.
+        /// </summary>
         public string? ImageUrl { get; set; }
         public decimal? Longitude { get; set; }
         public decimal? Latitude { get; set; }
@@ -55,19 +61,21 @@ namespace Application.Features.Customer.Commands
     public class UpdateCustomerCommandHandler : IRequestHandler<UpdateCustomerCommand, ResponseDto>
     {
         private readonly ICustomerRepository _customerRepository;
+        private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public UpdateCustomerCommandHandler(IUnitOfWork unitOfWork, ICustomerRepository customerRepository)
+        public UpdateCustomerCommandHandler(IUnitOfWork unitOfWork, ICustomerRepository customerRepository, IObjectStorageService objectStorageService)
         {
             _unitOfWork = unitOfWork;
             _customerRepository = customerRepository;
+            _objectStorageService = objectStorageService;
         }
 
         public async Task<ResponseDto> Handle(UpdateCustomerCommand request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
 
-            var customer = await _customerRepository.GetByIdAsync(request.Id) ?? throw new NotFoundCustomException("مشتری با اطلاعات مورد نظر یافت نشد.");
+            var customer = await _customerRepository.GetByIdAsync(request.Id, cancellationToken) ?? throw new NotFoundCustomException("مشتری با اطلاعات مورد نظر یافت نشد.");
 
             customer.FirstName = request.FirstName;
             customer.LastName = request.LastName;
@@ -78,7 +86,9 @@ namespace Application.Features.Customer.Commands
             customer.BalanceType = request.BalanceType;
             customer.CreditLimit = request.CreditLimit;
             customer.RefferalCode = request.RefferalCode;
-            customer.ImageUrl = request.ImageUrl;
+            // The column stores the bucket object key, so a signed URL echoed back by the frontend
+            // is stripped down rather than persisted verbatim.
+            customer.ImageUrl = _objectStorageService.NormalizeKey(request.ImageUrl);
             customer.longitude = request.Longitude;
             customer.latitude = request.Latitude;
             customer.Description = request.Description;

@@ -67,7 +67,7 @@ namespace Application.Features.Purchase.Commands
 
             var purchase = _mapper.Map<Domain.Entities.Purchase>(request);
 
-            await _purchaseRepository.AddAsync(purchase);
+            await _purchaseRepository.AddAsync(purchase, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             res.Message = "خرید با موفقیت ثبت شد.";

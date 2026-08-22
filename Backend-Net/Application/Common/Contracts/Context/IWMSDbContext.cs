@@ -23,6 +23,8 @@ namespace Application.Common.Contracts.Context
         DbSet<SaleReturnClaim> SaleReturnClaims { get; }
         DbSet<SaleReturnItem> SaleReturnItems { get; }
         DbSet<SaleReturnDecision> SaleReturnDecisions { get; }
+        DbSet<Domain.Entities.ProductUnit> ProductUnits { get; }
+        DbSet<PurchaseReceivingImage> PurchaseReceivingImages { get; }
 
         DbSet<T> Set<T>() where T : class;
 
@@ -32,8 +34,6 @@ namespace Application.Common.Contracts.Context
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 
-        int SaveChanges();
-
-        Task<int> ExecuteSqlRawAsync(string sql);
+        Task<int> ExecuteSqlRawAsync(string sql, CancellationToken cancellationToken = default);
     }
 }

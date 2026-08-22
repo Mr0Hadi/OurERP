@@ -24,5 +24,8 @@ namespace Application.Features.PurchaseReturn.Dtos
         public bool CanReject { get; set; }
         public bool CanReopen { get; set; }
         public List<PurchaseReturnItemDto> Items { get; set; } = new();
+
+        /// <summary>Photos captured on the receiving rounds that opened or extended this return.</summary>
+        public List<PurchaseReceivingImageDto> ReceivingImages { get; set; } = new();
     }
 }
