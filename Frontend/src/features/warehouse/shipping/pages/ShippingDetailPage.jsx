@@ -20,6 +20,10 @@ import { useProductsQuery } from "@/features/warehouse/products/services/queries
 import { useConfirmShipmentMutation } from "../services/mutations";
 import { useShippingForm } from "../hooks/useShippingForm";
 import ShippingItemsSection from "../components/forms/ShippingItemsSection";
+import {
+  SHIPPING_SOURCES,
+  SHIPPING_SOURCE_LABELS,
+} from "../services/shippingSources";
 import ShippingSummaryCard from "../components/forms/ShippingSummaryCard";
 import ShippingTransporterSection from "../components/forms/ShippingTransporterSection";
 import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
@@ -70,6 +74,13 @@ function ShippingDetailForm({ sale }) {
     [items, productMap],
   );
 
+  const orderItems = displayItems.filter(
+    (item) => (item.source ?? SHIPPING_SOURCES.ORDER) === SHIPPING_SOURCES.ORDER,
+  );
+  const returnItems = displayItems.filter(
+    (item) => item.source === SHIPPING_SOURCES.RETURN,
+  );
+
   const isBusy = shipMutation.isPending;
 
   const handleConfirmClick = () => {
@@ -100,7 +111,24 @@ function ShippingDetailForm({ sale }) {
     <div className="container max-w-6xl mx-auto px-4 space-y-4 animate-in fade-in zoom-in-95 duration-300">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
-          <ShippingItemsSection items={displayItems} onItemChange={handleItemChange} />
+          <ShippingItemsSection
+            items={orderItems}
+            title={
+              returnItems.length > 0
+                ? SHIPPING_SOURCE_LABELS[SHIPPING_SOURCES.ORDER]
+                : "اقلام ارسال"
+            }
+            onItemChange={handleItemChange}
+          />
+
+          {returnItems.length > 0 && (
+            <ShippingItemsSection
+              items={returnItems}
+              title={SHIPPING_SOURCE_LABELS[SHIPPING_SOURCES.RETURN]}
+              subtitle="کالای جایگزینی که بابت مرجوعی‌های همین فروش به مشتری بدهکاریم و با همین ماشین می‌رود."
+              onItemChange={handleItemChange}
+            />
+          )}
           <ShippingTransporterSection
             formData={formData}
             onFormChange={(patch) => {

@@ -1,5 +1,4 @@
 import { allSales, SALE_STATUS_LABELS } from "@/features/sales/orders/services/mockData";
-import { allSalesReturns } from "@/features/sales/returns/services/mockData";
 import { pendingGoodsEffects } from "@/shared/domain/returns/resolutions";
 import {
   EFFECT_KINDS,
@@ -7,18 +6,19 @@ import {
 } from "@/shared/domain/returns/effects";
 import { allPurchaseReturns } from "@/features/purchases/returns/services/mockData";
 import { SHIPPING_ELIGIBLE_STATUSES } from "./constants";
-import { computeItemShippableQty } from "./api-mockData";
+import {
+  computeItemShippableQty,
+  pendingReturnLinesForSale,
+} from "./api-mockData";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const OUTGOING_TYPES = {
   SALE: "sale",
-  RETURN_REPLACEMENT: "return_replacement",
   RETURN_TO_SUPPLIER: "return_to_supplier",
 };
 export const OUTGOING_TYPE_LABELS = {
   [OUTGOING_TYPES.SALE]: "ارسال فروش",
-  [OUTGOING_TYPES.RETURN_REPLACEMENT]: "ارسال کالای جایگزین",
   [OUTGOING_TYPES.RETURN_TO_SUPPLIER]: "عودت کالا به تامین‌کننده",
 };
 
@@ -27,8 +27,27 @@ export const OUTGOING_TYPE_LABELS = {
 // صف دریافت که از اول هر دو نوع طرف حساب را داشت.
 const partyKey = (type, id) => `${type}:${id}`;
 
+/**
+ * یک فروش تا وقتی در صف ارسال می‌ماند که یا هنوز چیزی از خودِ سفارش
+ * نرفته باشد، یا بابت مرجوعی‌های آن کالای جایگزینی به مشتری بدهکار
+ * باشیم.
+ *
+ * حالت دوم عمدی است — قرینه‌ی همان چیزی که در صف دریافت انجام شد: یک
+ * ماشین که به سمت مشتری می‌رود می‌تواند هم کالای فروش ببرد و هم کالای
+ * جایگزین. پیش‌تر این دو، دو ردیف و دو صفحه‌ی جدا بودند.
+ */
+export function isSaleAwaitingDispatch(sale) {
+  return (
+    SHIPPING_ELIGIBLE_STATUSES.includes(sale.status) ||
+    pendingReturnLinesForSale(sale.id).length > 0
+  );
+}
+
 function saleToRow(sale) {
-  const remainingQty = sale.items.reduce((s, i) => s + computeItemShippableQty(i), 0);
+  const returnLines = pendingReturnLinesForSale(sale.id);
+  const returnQty = returnLines.reduce((s, l) => s + l.remainingQty, 0);
+  const remainingQty =
+    sale.items.reduce((s, i) => s + computeItemShippableQty(i), 0) + returnQty;
   return {
     id: `sale-${sale.id}`,
     saleId: sale.id,
@@ -40,7 +59,8 @@ function saleToRow(sale) {
     counterpartyName: sale.customerName,
     date: sale.invoiceDate,
     statusLabel: SALE_STATUS_LABELS[sale.status] ?? sale.status,
-    itemsCount: sale.items.length,
+    itemsCount: sale.items.length + returnLines.length,
+    returnLinesCount: returnLines.length,
     remainingQty,
     amount: sale.totalAmount,
     createdAt: sale.createdAt,
@@ -49,47 +69,7 @@ function saleToRow(sale) {
 }
 
 /**
- * برای هر مرجوعی، تمام قلم‌هایی که تصمیم «ارسال کالای جایگزین» دارند
- * و هنوز به‌طور کامل ارسال نشده‌اند را جمع می‌کند و یک ردیف واحد
- * برمی‌گرداند — نه یک ردیف به‌ازای هر قلم. این باعث می‌شود انباردار
- * همه‌ی اقلام یک مرجوعی را در یک صفحه ببیند، دقیقاً مثل اقلام یک
- * فروش عادی.
- */
-function collectReplacementRows() {
-  const rows = [];
-  allSalesReturns.forEach((salesReturn) => {
-    // هر اثر GOODS_OUT ـِ معلق یک قلم ارسالی است — فارغ از اینکه با
-    // چه تصمیمی ساخته شده (تعویض، جبران کسری، یا یک ترکیب سفارشی).
-    const pendingLines = pendingGoodsEffects(salesReturn, EFFECT_KINDS.GOODS_OUT)
-      .map(remainingQtyOf)
-      .filter((qty) => qty > 0);
-
-    if (pendingLines.length === 0) return;
-
-    const totalRemaining = pendingLines.reduce((s, q) => s + q, 0);
-    rows.push({
-      id: `return-${salesReturn.id}`,
-      returnId: salesReturn.id,
-      counterpartyId: salesReturn.customerId,
-      counterpartyType: "customer",
-      counterpartyKey: partyKey("customer", salesReturn.customerId),
-      type: OUTGOING_TYPES.RETURN_REPLACEMENT,
-      refNumber: salesReturn.returnNumber,
-      counterpartyName: salesReturn.customerName,
-      date: (salesReturn.updatedAt || salesReturn.createdAt || "").slice(0, 10),
-      statusLabel: `${pendingLines.length.toLocaleString("fa-IR")} قلم برای ارسال`,
-      itemsCount: pendingLines.length,
-      remainingQty: totalRemaining,
-      amount: 0,
-      createdAt: salesReturn.createdAt,
-      updatedAt: salesReturn.updatedAt,
-    });
-  });
-  return rows;
-}
-
-/**
- * قرینه‌ی collectReplacementRows، اما رو به تامین‌کننده: هر مرجوعی خرید
+ * عودت مازاد به تامین‌کننده. برخلاف کالای جایگزینِ مشتری که با
  * که تصمیم «عودت کالا به تامین‌کننده» دارد و هنوز به‌طور کامل ارسال
  * نشده، یک ردیف واحد می‌شود — نه یک ردیف به‌ازای هر قلم — تا انباردار
  * کل محموله‌ی یک مرجوعی را در یک صفحه ببیند.
@@ -146,10 +126,7 @@ export async function fetchOutgoingQueue(params = {}) {
 
   let rows = [];
   if (!type || type === OUTGOING_TYPES.SALE) {
-    rows.push(...allSales.filter((s) => SHIPPING_ELIGIBLE_STATUSES.includes(s.status)).map(saleToRow));
-  }
-  if (!type || type === OUTGOING_TYPES.RETURN_REPLACEMENT) {
-    rows.push(...collectReplacementRows());
+    rows.push(...allSales.filter(isSaleAwaitingDispatch).map(saleToRow));
   }
   if (!type || type === OUTGOING_TYPES.RETURN_TO_SUPPLIER) {
     rows.push(...collectReturnToSupplierRows());

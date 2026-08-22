@@ -19,11 +19,6 @@ const ACTION_BY_TYPE = {
     buildPath: ({ saleId }) =>
       ROUTES.WAREHOUSE_SHIPPING_DETAIL.replace(":id", saleId),
   },
-  [OUTGOING_TYPES.RETURN_REPLACEMENT]: {
-    label: "ارسال کالای جایگزین",
-    buildPath: ({ returnId }) =>
-      ROUTES.WAREHOUSE_SHIPPING_REPLACEMENT_DETAIL.replace(":returnId", returnId),
-  },
   [OUTGOING_TYPES.RETURN_TO_SUPPLIER]: {
     label: "آماده‌سازی عودت",
     buildPath: ({ returnId }) =>

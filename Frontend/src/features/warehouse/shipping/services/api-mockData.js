@@ -1,6 +1,11 @@
 import { allSales, SALE_STATUSES, SALE_STATUS_LABELS } from "./mockData";
 import { SHIPPING_ELIGIBLE_STATUSES } from "./constants";
 import { markUnitsShipped } from "@/features/warehouse/units/services/api-mockData";
+import { allSalesReturns } from "@/features/sales/returns/services/mockData";
+import { executeGoodsRound as executeSalesReturnRound } from "@/features/sales/returns/services/api-mockData";
+import { buildGoodsLines } from "@/shared/domain/returns/resolutions";
+import { EFFECT_KINDS } from "@/shared/domain/returns/effects";
+import { SHIPPING_SOURCES } from "./shippingSources";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const generateId = () =>
@@ -126,7 +131,27 @@ export async function fetchShippingSaleById(id) {
       ...item,
       shippableQty: computeItemShippableQty(item),
     })),
+    // کالای جایگزینی که بابت مرجوعی‌های همین فروش به مشتری بدهکاریم.
+    // با همین حواله می‌رود چون فیزیکاً همان ماشین است.
+    returnLines: pendingReturnLinesForSale(id),
   };
+}
+
+/**
+ * خطوطِ مرجوعیِ یک فروش: اثرهای GOODS_OUTِ معلق در همه‌ی مرجوعی‌های آن.
+ *
+ * قرینه‌ی pendingReturnLinesForPurchase در سمت دریافت.
+ */
+export function pendingReturnLinesForSale(saleId) {
+  const lines = [];
+  allSalesReturns.forEach((ret) => {
+    if (Number(ret.saleId) !== Number(saleId)) return;
+    buildGoodsLines(ret, EFFECT_KINDS.GOODS_OUT).forEach((line) => {
+      if (line.remainingQty <= 0) return;
+      lines.push({ ...line, returnId: ret.id, returnNumber: ret.returnNumber });
+    });
+  });
+  return lines;
 }
 
 /**
@@ -144,10 +169,15 @@ export async function confirmShipment(saleId, shipmentData) {
   const sale = allSales[index];
   const shippedDate = shipmentData.shippedDate || new Date().toISOString().slice(0, 10);
 
+  const orderRows = (shipmentData.shippedItems || []).filter(
+    (row) => (row.source ?? SHIPPING_SOURCES.ORDER) === SHIPPING_SOURCES.ORDER,
+  );
+  const returnRows = (shipmentData.shippedItems || []).filter(
+    (row) => row.source === SHIPPING_SOURCES.RETURN,
+  );
+
   const updatedItems = sale.items.map((item) => {
-    const shippedItem = shipmentData.shippedItems.find(
-      (si) => si.productId === item.productId,
-    );
+    const shippedItem = orderRows.find((si) => si.productId === item.productId);
     if (!shippedItem) return item;
 
     const prevShipped = item.shippedQty || 0;
@@ -197,11 +227,39 @@ export async function confirmShipment(saleId, shipmentData) {
   // «فروخته‌شده» به «ارسال‌شده» می‌روند.
   markUnitsShipped(
     saleId,
-    (shipmentData.shippedItems || []).map((item) => ({
+    orderRows.map((item) => ({
       productId: item.productId,
       qty: item.shippedQty || 0,
     })),
   );
 
+  // خطوطِ مرجوعیِ همین حواله: هر کدام یک دورِ اجرای اثر روی مرجوعیِ
+  // خودش. موجودی و وضعیت مرجوعی را همان موتور اثر جابه‌جا می‌کند.
+  await applyReturnRows(returnRows, {
+    date: shippedDate,
+    partyName: shipmentData.driverName,
+    partyNationalId: shipmentData.driverNationalId,
+    vehiclePlate: shipmentData.vehiclePlate,
+    note: shipmentData.shippingNote,
+  });
+
   return allSales[index];
+}
+
+/**
+ * خطوطِ مرجوعیِ یک حواله را به موتور اثرِ مرجوعی فروش می‌سپارد،
+ * گروه‌بندی‌شده بر اساس مرجوعی تا هر مرجوعی یک بار به‌روز شود.
+ */
+async function applyReturnRows(rows, logistics) {
+  const byReturn = new Map();
+  rows.forEach((row) => {
+    const qty = Number(row.shippedQty) || 0;
+    if (qty <= 0) return;
+    if (!byReturn.has(row.returnId)) byReturn.set(row.returnId, []);
+    byReturn.get(row.returnId).push({ effectId: row.effectId, qty });
+  });
+
+  for (const [returnId, rounds] of byReturn) {
+    await executeSalesReturnRound(returnId, { rounds, ...logistics });
+  }
 }

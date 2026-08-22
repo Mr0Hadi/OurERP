@@ -34,7 +34,7 @@ export default function ShippingItemRow({ item, onItemChange }) {
         <QuantityStepper
           value={item.shippedQty}
           max={item.expectedQty}
-          onChange={(next) => onItemChange(item.productId, "shippedQty", next)}
+          onChange={(next) => onItemChange(item.lineId, "shippedQty", next)}
         />
       </td>
 

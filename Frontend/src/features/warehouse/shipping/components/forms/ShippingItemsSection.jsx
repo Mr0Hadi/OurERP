@@ -13,7 +13,12 @@ import { getRowStatus, ROW_STATUS_CONFIG } from "./shippingRowStatus";
 import ShippingItemRow from "./ShippingItemRow";
 import ShippingItemCard from "./ShippingItemCard";
 
-export default function ShippingItemsSection({ items, onItemChange }) {
+export default function ShippingItemsSection({
+  items,
+  onItemChange,
+  title = "اقلام ارسال",
+  subtitle,
+}) {
   const [search, setSearch] = useState("");
 
   const filteredItems = useMemo(() => {
@@ -49,7 +54,12 @@ export default function ShippingItemsSection({ items, onItemChange }) {
   return (
     <Card>
       <CardHeader className="flex flex-col items-start gap-2 pb-2 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle className="text-base font-semibold">اقلام ارسال</CardTitle>
+        <div>
+          <CardTitle className="text-base font-semibold">{title}</CardTitle>
+          {subtitle && (
+            <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
+          )}
+        </div>
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
           <Badge
             variant="outline"
@@ -102,7 +112,7 @@ export default function ShippingItemsSection({ items, onItemChange }) {
           <div className="space-y-2 sm:hidden">
             {filteredItems.map((item) => (
               <ShippingItemCard
-                key={item.productId}
+                key={item.lineId}
                 item={item}
                 onItemChange={onItemChange}
               />
@@ -142,7 +152,7 @@ export default function ShippingItemsSection({ items, onItemChange }) {
               <tbody className="divide-y divide-border">
                 {filteredItems.map((item) => (
                   <ShippingItemRow
-                    key={item.productId}
+                    key={item.lineId}
                     item={item}
                     onItemChange={onItemChange}
                   />
