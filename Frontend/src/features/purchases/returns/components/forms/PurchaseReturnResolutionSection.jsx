@@ -157,9 +157,9 @@ function WarehouseQueueNotice({ purchaseReturn }) {
             className="flex-1 h-8 text-xs"
             onClick={() =>
               navigate(
-                ROUTES.WAREHOUSE_RECEIVING_PURCHASE_RETURN_DETAIL.replace(
+                ROUTES.WAREHOUSE_RECEIVING_DETAIL.replace(
                   ":id",
-                  purchaseReturn.id,
+                  purchaseReturn.purchaseId,
                 ),
               )
             }

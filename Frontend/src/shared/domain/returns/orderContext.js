@@ -1,5 +1,6 @@
 import { EFFECT_KINDS } from "./effects";
 import { RETURN_STATUSES } from "./statuses";
+import { claimRemainingQty } from "./resolutions";
 
 /**
  * نمای «همه‌ی مرجوعی‌های یک سند» — مشترک بین خرید و فروش.
@@ -84,13 +85,17 @@ export function deliveredAdjustment(returns, productId, { side }) {
 }
 
 /**
- * سهمِ هر مرجوعی از یک قلم: چقدر در *این* مرجوعی ادعا شده و چقدر در
- * بقیه.
+ * سهمِ هر مرجوعی از یک قلم: چقدر در *این* مرجوعی هنوز معلق است و چقدر
+ * در بقیه.
  *
- * پیش از این فقط یک عدد نشان داده می‌شد («n در مرجوعی دیگر») که نه
- * می‌گفت کدام مرجوعی، نه چقدر از آن هنوز معلق است، و نه سهم خودِ این
- * سند را. با تفکیک، کاربر می‌فهمد چه چیزی جای دیگری رزرو شده و چقدر
- * هنوز آزاد است.
+ * عمداً qty خامِ ادعا را نمی‌شمارد، بلکه claimRemainingQty را — یعنی
+ * سهمی که هنوز تصمیمی برایش گرفته نشده. یک ادعا که تصمیمش گرفته شده
+ * دیگر یک رزروِ باز نیست: یا کالای جایگزینش رسیده و همان مقدار از
+ * مسیر deliveredAdjustment به تحویل‌شده اضافه شده، یا فقط وجه برگشته
+ * و چیزی از قلم کم نشده. اگر همچنان qty کامل شمرده می‌شد، هر ادعای
+ * حل‌شده برای همیشه در «مرجوعی دیگر» می‌ماند و عدد با هر مرجوعیِ تازه
+ * روی همان قلم فقط بالاتر می‌رفت — دقیقاً چیزی که این تابع باید از آن
+ * جلوگیری کند.
  */
 export function claimBreakdown(returns, productId, currentReturnId = null) {
   let here = 0;
@@ -103,7 +108,7 @@ export function claimBreakdown(returns, productId, currentReturnId = null) {
     (ret.claims || []).forEach((claim) => {
       if (claim.offScopeKind) return;
       if (claim.productId !== productId) return;
-      claimed += Number(claim.qty) || 0;
+      claimed += claimRemainingQty(claim);
     });
     if (claimed === 0) return;
 
