@@ -123,14 +123,6 @@ export function emptyComposition(qty = 1) {
   };
 }
 
-function isEmptyComposition(composition) {
-  return (
-    !composition?.goodsIn?.enabled &&
-    !composition?.goodsOut?.enabled &&
-    composition?.money?.direction === MONEY_DIRECTIONS.NONE
-  );
-}
-
 // ─── بسط ترکیب به اثر ───────────────────────────────────────────────────────
 
 /**
@@ -240,10 +232,6 @@ export function validateComposition(composition, claim, { remainingQty } = {}) {
     errors.push(
       `تعداد این تصمیم از باقیمانده‌ی ادعا (${remainingQty}) بیشتر است`,
     );
-  }
-
-  if (isEmptyComposition(composition)) {
-    errors.push("حداقل یکی از سه اقدام (کالا، کالا، پول) باید انتخاب شود");
   }
 
   const money = composition.money || {};

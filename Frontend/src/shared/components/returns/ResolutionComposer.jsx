@@ -57,6 +57,16 @@ export default function ResolutionComposer({
       [slot]: { ...prev[slot], ...changes },
     }));
 
+  const defaultClaimItem = (qtyForItem) => ({
+    productId: claim.productId ?? null,
+    productCode: claim.productCode ?? "",
+    productName: claim.productName ?? "",
+    unit: claim.unit ?? "",
+    qty: qtyForItem,
+    unitPrice: claim.unitPrice ?? 0,
+    discount: 0,
+  });
+
   const patchMoney = (changes) =>
     setComposition((prev) => ({
       ...prev,
@@ -110,7 +120,12 @@ export default function ResolutionComposer({
               onCheckedChange={(checked) =>
                 patchSlot(slot, {
                   enabled: checked === true,
-                  items: checked === true ? composition[slot].items : [],
+                  items:
+                    checked === true
+                      ? allowPicker && composition[slot].items.length === 0
+                        ? [defaultClaimItem(qty)]
+                        : composition[slot].items
+                      : [],
                 })
               }
               className="mt-0.5"
