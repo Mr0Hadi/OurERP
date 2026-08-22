@@ -5,8 +5,9 @@ import {
   EFFECT_STATUSES,
   isGoodsEffect,
   summarizeEffects,
-} from "../../domain/returnEffects";
-import EffectBadge from "./EffectBadge";
+} from "@/shared/domain/returns/effects";
+import EffectBadge from "@/shared/components/returns/EffectBadge";
+import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 
 /**
  * یک تصمیمِ ثبت‌شده روی یک ادعا، به‌همراه اثرهایش.
@@ -15,6 +16,8 @@ import EffectBadge from "./EffectBadge";
  * پولی مانع حذف نیستند چون با یک تعدیل معکوس برگشت می‌خورند — ولی
  * کالایی که از انبار خارج یا وارد شده برگشت‌پذیر نیست.
  */
+const SALES_SIDE = sideConfig(RETURN_SIDES.SALES);
+
 export default function ResolutionLineRow({ resolution, onRemove, isBusy }) {
   const effects = resolution.effects || [];
   const summary = summarizeEffects(effects, { includePending: true });
@@ -70,7 +73,12 @@ export default function ResolutionLineRow({ resolution, onRemove, isBusy }) {
       {effects.length > 0 && (
         <div className="space-y-0.5">
           {effects.map((effect) => (
-            <EffectBadge key={effect.id} effect={effect} showProductName />
+            <EffectBadge
+              key={effect.id}
+              effect={effect}
+              side={SALES_SIDE}
+              showProductName
+            />
           ))}
         </div>
       )}

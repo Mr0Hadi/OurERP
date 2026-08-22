@@ -3,8 +3,8 @@ import { allSalesReturns } from "@/features/sales/returns/services/mockData";
 import {
   hasPendingGoodsIn,
   pendingGoodsEffects,
-} from "@/features/sales/returns/domain/returnResolutions";
-import { EFFECT_KINDS } from "@/features/sales/returns/domain/returnEffects";
+} from "@/shared/domain/returns/resolutions";
+import { EFFECT_KINDS } from "@/shared/domain/returns/effects";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 

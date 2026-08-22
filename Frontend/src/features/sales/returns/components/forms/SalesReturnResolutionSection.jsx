@@ -14,11 +14,11 @@ import {
   isTerminalStatus,
 } from "../../domain/returnVocabulary";
 import {
-  canCancelSalesReturn,
-  canRejectSalesReturn,
+  canCancelReturn,
+  canRejectReturn,
   hasPendingGoodsIn,
   hasPendingGoodsOut,
-} from "../../domain/returnResolutions";
+} from "@/shared/domain/returns/resolutions";
 import ClaimResolutionCard from "./ClaimResolutionCard";
 
 /**
@@ -40,8 +40,8 @@ export default function SalesReturnResolutionSection({
   const status = salesReturn.status;
   const claims = salesReturn.claims || [];
   const isClosed = isTerminalStatus(status);
-  const canReject = canRejectSalesReturn(salesReturn);
-  const canCancel = canCancelSalesReturn(salesReturn);
+  const canReject = canRejectReturn(salesReturn);
+  const canCancel = canCancelReturn(salesReturn);
 
   return (
     <Card>

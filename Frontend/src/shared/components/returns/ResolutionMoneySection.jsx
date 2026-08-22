@@ -10,16 +10,14 @@ import {
 import MixedPaymentList from "@/shared/components/forms/MixedPaymentList";
 import {
   MONEY_DIRECTIONS,
-  MONEY_DIRECTION_LABELS,
   methodsForDirection,
-} from "../../domain/returnResolutions";
+} from "@/shared/domain/returns/resolutions";
 import {
   PAYMENT_METHODS,
   PAYMENT_METHOD_LABELS,
   REFERENCE_LABELS,
-} from "../../domain/returnEffects";
+} from "@/shared/domain/returns/effects";
 
-const DIRECTION_OPTIONS = Object.entries(MONEY_DIRECTION_LABELS);
 const EMPTY_PART = { type: "cash", amount: "", checkNumber: "", transferRef: "" };
 
 /**
@@ -29,15 +27,24 @@ const EMPTY_PART = { type: "cash", amount: "", checkNumber: "", transferRef: "" 
  * نسیه / ترکیبی) به‌علاوه‌ی «اعتبار خرید بعدی» که فقط در جهتِ پرداخت
  * معنا دارد. برای ترکیبی، همان کامپوننتِ مشترکِ صفحه‌ی فروش استفاده
  * می‌شود و مبلغ کل از جمع ردیف‌ها می‌آید.
+ *
+ * برچسبِ جهت‌ها از side می‌آید («... از مشتری» یا «... از تامین‌کننده»)
+ * تا همین کامپوننت هر دو سمت را بدهد.
  */
-export default function ResolutionMoneySection({ money, onChange }) {
+export default function ResolutionMoneySection({ money, onChange, side }) {
+  const directionOptions = Object.entries(side.money);
   const direction = money?.direction ?? MONEY_DIRECTIONS.NONE;
   const method = money?.method ?? PAYMENT_METHODS.CASH;
   const parts = money?.parts ?? [];
 
   if (direction === MONEY_DIRECTIONS.NONE) {
     return (
-      <DirectionSelect direction={direction} money={money} onChange={onChange} />
+      <DirectionSelect
+        direction={direction}
+        money={money}
+        onChange={onChange}
+        options={directionOptions}
+      />
     );
   }
 
@@ -54,7 +61,12 @@ export default function ResolutionMoneySection({ money, onChange }) {
 
   return (
     <div className="space-y-2">
-      <DirectionSelect direction={direction} money={money} onChange={onChange} />
+      <DirectionSelect
+        direction={direction}
+        money={money}
+        onChange={onChange}
+        options={directionOptions}
+      />
 
       <div className="space-y-2 rounded-md border border-border bg-card/60 p-2.5">
         <div className="space-y-1">
@@ -134,7 +146,7 @@ export default function ResolutionMoneySection({ money, onChange }) {
   );
 }
 
-function DirectionSelect({ direction, money, onChange }) {
+function DirectionSelect({ direction, money, onChange, options }) {
   return (
     <Select
       value={direction}
@@ -153,7 +165,7 @@ function DirectionSelect({ direction, money, onChange }) {
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        {DIRECTION_OPTIONS.map(([value, label]) => (
+        {options.map(([value, label]) => (
           <SelectItem key={value} value={value}>
             {label}
           </SelectItem>

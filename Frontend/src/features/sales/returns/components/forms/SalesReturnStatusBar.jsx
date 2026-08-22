@@ -4,7 +4,7 @@ import { isTerminalStatus } from "../../domain/returnVocabulary";
 import {
   claimDecidedQty,
   summarizeReturn,
-} from "../../domain/returnResolutions";
+} from "@/shared/domain/returns/resolutions";
 
 const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
 

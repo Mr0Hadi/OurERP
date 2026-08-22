@@ -11,7 +11,8 @@ const PAGINATION = { pageIndex: 0, pageSize: 200 };
 const SORTING = { id: "name", desc: false };
 
 /**
- * انتخاب کالاهایی که باید برای مشتری ارسال شوند.
+ * انتخاب کالاهای یک محورِ کالاییِ تصمیم — چه به سمت مشتری برود و چه
+ * از تامین‌کننده بیاید.
  *
  * عمداً همان سه کامپوننتِ صفحه‌ی ثبت فروش را استفاده می‌کند
  * (ProductSearchPanel + SelectedItemsTable + SelectedItemsCards) تا
@@ -19,10 +20,11 @@ const SORTING = { id: "name", desc: false };
  * یک انتخابگر دوم با رفتار متفاوت.
  *
  * کالاها لازم نیست ربطی به کالای ادعا داشته باشند — همین است که
- * «تعویض با کالای دیگر» و «فرستادن چند کالا به‌جای یکی» را ممکن
- * می‌کند.
+ * «تعویض با کالای دیگر» و «چند کالا به‌جای یکی» را ممکن می‌کند. اگر
+ * هیچ کالایی انتخاب نشود، دامنه خودش کالای ادعا را با تعدادِ تصمیم
+ * می‌گذارد.
  */
-export default function ReplacementItemsPicker({ items, onItemsChange }) {
+export default function GoodsItemsPicker({ items, onItemsChange }) {
   const [isPickerOpen, setIsPickerOpen] = useState(items.length === 0);
   const { data: productsData, isLoading } = useProductsQuery(
     ALL_FILTERS,

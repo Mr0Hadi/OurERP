@@ -10,26 +10,33 @@ import {
   emptyComposition,
   expandComposition,
   validateComposition,
-} from "../../domain/returnResolutions";
-import ReplacementItemsPicker from "./ReplacementItemsPicker";
+} from "@/shared/domain/returns/resolutions";
+import GoodsItemsPicker from "./GoodsItemsPicker";
 import ResolutionMoneySection from "./ResolutionMoneySection";
 import EffectBadge from "./EffectBadge";
 
 /**
- * ثبت یک تصمیم برای بخشی از یک ادعا.
+ * ثبت یک تصمیم برای بخشی از یک ادعا — مشترک بین خرید و فروش.
  *
  * سه سوال مستقل، نه یک فهرست از حالت‌های از پیش ترکیب‌شده:
  *
- *   ۱. کالا از مشتری پس گرفته شود؟
- *   ۲. کالایی برای مشتری ارسال شود؟ (هر کالایی، با هر تعدادی)
- *   ۳. پولی جابه‌جا شود؟ (دریافت / پرداخت / اعتبار)
+ *   ۱ و ۲. کالا وارد انبار شود؟ کالا از انبار خارج شود؟
+ *   ۳.     پولی جابه‌جا شود؟
  *
- * هر ترکیبی از این سه مجاز است، از «فقط پس‌گرفتن بدون جبران» تا
- * «پس‌گرفتن + ارسال دو کالای دیگر + دریافت مابه‌التفاوت». پیش از ثبت،
- * اثرهای واقعیِ همان ترکیب نشان داده می‌شوند تا کاربر ببیند دقیقاً چه
- * چیزی روی موجودی و پول خواهد نشست.
+ * ترتیب و برچسبِ دو محورِ کالایی را side تعیین می‌کند: در فروش اول
+ * «پس‌گرفتن از مشتری» می‌آید و در خرید اول «عودت به تامین‌کننده» — که
+ * زیرِ پوسته همان GOODS_IN و GOODS_OUT هستند.
+ *
+ * پیش از ثبت، اثرهای واقعیِ همان ترکیب نشان داده می‌شوند تا کاربر
+ * ببیند دقیقاً چه چیزی روی موجودی و پول خواهد نشست.
  */
-export default function ResolutionComposer({ claim, remaining, onAdd, isBusy }) {
+export default function ResolutionComposer({
+  claim,
+  remaining,
+  onAdd,
+  isBusy,
+  side,
+}) {
   const [composition, setComposition] = useState(() =>
     emptyComposition(remaining),
   );
@@ -42,8 +49,13 @@ export default function ResolutionComposer({ claim, remaining, onAdd, isBusy }) 
     setComposition((prev) => ({ ...prev, qty: remaining }));
   }
 
-  const patch = (changes) =>
-    setComposition((prev) => ({ ...prev, ...changes }));
+  const patch = (changes) => setComposition((prev) => ({ ...prev, ...changes }));
+
+  const patchSlot = (slot, changes) =>
+    setComposition((prev) => ({
+      ...prev,
+      [slot]: { ...prev[slot], ...changes },
+    }));
 
   const patchMoney = (changes) =>
     setComposition((prev) => ({
@@ -68,6 +80,10 @@ export default function ResolutionComposer({ claim, remaining, onAdd, isBusy }) 
   };
 
   const qty = Number(composition.qty) || 0;
+  const nothingChosen =
+    !composition.goodsIn.enabled &&
+    !composition.goodsOut.enabled &&
+    composition.money?.direction === MONEY_DIRECTIONS.NONE;
 
   return (
     <div className="rounded-lg border border-dashed border-primary/30 bg-primary/[0.03] p-3 space-y-3">
@@ -86,57 +102,45 @@ export default function ResolutionComposer({ claim, remaining, onAdd, isBusy }) 
         />
       </div>
 
-      {/* ۱ — پس‌گرفتن کالا */}
-      <label className="flex items-start gap-2 cursor-pointer">
-        <Checkbox
-          checked={composition.takeBack}
-          onCheckedChange={(checked) => patch({ takeBack: checked === true })}
-          className="mt-0.5"
-        />
-        <span className="text-xs text-card-foreground">
-          کالا از مشتری پس گرفته شود
-          <span className="block text-[11px] text-muted-foreground">
-            {qty.toLocaleString("fa-IR")} {claim.unit || "عدد"} از{" "}
-            {claim.productName} به انبار برمی‌گردد
-          </span>
-        </span>
-      </label>
-
-      {/* ۲ — ارسال کالا */}
-      <div className="space-y-2">
-        <label className="flex items-start gap-2 cursor-pointer">
-          <Checkbox
-            checked={composition.sendReplacement}
-            onCheckedChange={(checked) =>
-              patch({
-                sendReplacement: checked === true,
-                replacementItems: checked === true ? composition.replacementItems : [],
-              })
-            }
-            className="mt-0.5"
-          />
-          <span className="text-xs text-card-foreground">
-            کالای جایگزین برای مشتری ارسال شود
-            <span className="block text-[11px] text-muted-foreground">
-              می‌تواند همان کالا باشد یا کالای دیگری، با هر تعدادی
+      {side.goodsSlots.map(({ slot, label, hint, allowPicker }) => (
+        <div key={slot} className="space-y-2">
+          <label className="flex items-start gap-2 cursor-pointer">
+            <Checkbox
+              checked={composition[slot].enabled}
+              onCheckedChange={(checked) =>
+                patchSlot(slot, {
+                  enabled: checked === true,
+                  items: checked === true ? composition[slot].items : [],
+                })
+              }
+              className="mt-0.5"
+            />
+            <span className="text-xs text-card-foreground">
+              {label}
+              <span className="block text-[11px] text-muted-foreground">
+                {allowPicker
+                  ? hint
+                  : `${qty.toLocaleString("fa-IR")} ${claim.unit || "عدد"} از ${claim.productName} — ${hint}`}
+              </span>
             </span>
-          </span>
-        </label>
+          </label>
 
-        {composition.sendReplacement && (
-          <ReplacementItemsPicker
-            items={composition.replacementItems}
-            onItemsChange={(items) => patch({ replacementItems: items })}
-          />
-        )}
-      </div>
+          {allowPicker && composition[slot].enabled && (
+            <GoodsItemsPicker
+              items={composition[slot].items}
+              onItemsChange={(items) => patchSlot(slot, { items })}
+            />
+          )}
+        </div>
+      ))}
 
-      {/* ۳ — پول */}
       <div className="space-y-1.5">
-        <Label className="text-[11px] text-muted-foreground">
-          جابه‌جایی پول
-        </Label>
-        <ResolutionMoneySection money={composition.money} onChange={patchMoney} />
+        <Label className="text-[11px] text-muted-foreground">جابه‌جایی پول</Label>
+        <ResolutionMoneySection
+          money={composition.money}
+          onChange={patchMoney}
+          side={side}
+        />
       </div>
 
       <Input
@@ -153,18 +157,20 @@ export default function ResolutionComposer({ claim, remaining, onAdd, isBusy }) 
           </p>
           <div className="space-y-0.5">
             {previewEffects.map((effect) => (
-              <EffectBadge key={effect.id} effect={effect} showProductName />
+              <EffectBadge
+                key={effect.id}
+                effect={effect}
+                side={side}
+                showProductName
+              />
             ))}
           </div>
         </div>
       ) : (
-        composition.money?.direction === MONEY_DIRECTIONS.NONE &&
-        !composition.takeBack &&
-        !composition.sendReplacement && (
+        nothingChosen && (
           <p className="text-[11px] text-muted-foreground px-0.5">
-            هنوز هیچ اقدامی انتخاب نشده. برای رد این بخش از ادعا، «کالا پس
-            گرفته شود» را بزنید و بقیه را خالی بگذارید — یا اگر قرار نیست هیچ
-            اتفاقی بیفتد، کل مرجوعی را با دکمه‌ی «رد ادعای مشتری» ببندید.
+            هنوز هیچ اقدامی انتخاب نشده. برای بستنِ این تعداد بدون هیچ جبرانی،
+            کل مرجوعی را با دکمه‌ی «رد ادعا» ببندید.
           </p>
         )
       )}

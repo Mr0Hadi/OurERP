@@ -1,6 +1,5 @@
-// src/features/sales/returns/domain/returnResolutions.js
+// src/shared/domain/returns/resolutions.js
 
-import { SALES_RETURN_STATUSES, isTerminalStatus } from "./returnVocabulary";
 import {
   EFFECT_KINDS,
   EFFECT_STATUSES,
@@ -8,29 +7,34 @@ import {
   SPLITTABLE_PAYMENT_METHODS,
   createEffect,
   summarizeEffects,
-} from "./returnEffects";
+} from "./effects";
+import { RETURN_STATUSES, isTerminalStatus } from "./statuses";
 
 /**
- * تصمیم‌ها: ترکیب‌شان، بسطشان به اثر، اعتبارسنجی، و ماشین وضعیت.
+ * تصمیم‌ها: ترکیب‌شان، بسطشان به اثر، اعتبارسنجی، و ماشین وضعیت —
+ * مشترک بین مرجوعی فروش و مرجوعی خرید.
  *
  * یک تصمیم سه محور مستقل دارد که هرکدام می‌تواند باشد یا نباشد:
  *
- *   ۱. کالا از مشتری پس گرفته شود؟
- *   ۲. کالایی برای مشتری ارسال شود؟ (هر کالایی، با هر تعدادی — لازم
- *      نیست همان کالای ادعا باشد)
- *   ۳. پولی جابه‌جا شود؟ (دریافت از مشتری یا پرداخت به او — با هر
- *      روشی: نقدی، چک، بانکی، نسیه، اعتبار خرید بعدی، یا ترکیبی)
+ *   ۱. کالایی وارد انبار ما شود؟   (goodsIn)
+ *   ۲. کالایی از انبار ما خارج شود؟ (goodsOut)
+ *   ۳. پولی جابه‌جا شود؟           (money)
  *
- * ترکیب‌های ممکن از این سه محور، همان چیزی‌اند که قبلاً به‌صورت یک
- * فهرست ثابتِ «نوع تصمیم» نوشته می‌شد. با این مدل، فهرست حذف می‌شود:
- * کاربر مستقیم همان سه سوال را جواب می‌دهد و سیستم اثرها را می‌سازد.
+ * محورها نسبت به *ما* نام‌گذاری شده‌اند، نه نسبت به طرف حساب. برای
+ * همین یک مدل، هر دو سمت را پوشش می‌دهد و فقط برچسب‌ها فرق می‌کنند:
+ *
+ *   فروش:  goodsIn = پس‌گرفتن از مشتری   | goodsOut = ارسال برای مشتری
+ *   خرید:  goodsIn = دریافت جایگزین      | goodsOut = عودت به تامین‌کننده
+ *
+ * برچسب‌ها در sides.js. اینجا هیچ متنی درباره‌ی «مشتری» یا
+ * «تامین‌کننده» نیست.
  *
  * ساختار داده‌ای که این ماژول فرض می‌کند:
  *
- *   salesReturn
- *     └─ claims[]           ← ادعای واحد فروش (کالا + مشکل + تعداد)
- *          └─ resolutions[] ← تصمیم‌های گرفته‌شده برای بخش‌هایی از آن تعداد
- *               └─ effects[]← اثرهای پایه (returnEffects.js)
+ *   returnDoc
+ *     └─ claims[]           ← ادعا (کالا + مشکل + تعداد)
+ *          └─ resolutions[] ← تصمیم‌ها برای بخش‌هایی از آن تعداد
+ *               └─ effects[]← اثرهای پایه (effects.js)
  */
 
 const generateId = () =>
@@ -41,9 +45,8 @@ const { GOODS_IN, GOODS_OUT, MONEY_IN, MONEY_OUT } = EFFECT_KINDS;
 // ─── جهت پول ────────────────────────────────────────────────────────────────
 
 /**
- * پول به کدام سمت می‌رود. «اعتبار خرید بعدی» دیگر یک جهتِ سوم نیست —
- * آن هم پرداختی به مشتری است، فقط با روشِ متفاوت (نگاه کنید به
- * PAYMENT_METHODS در returnEffects).
+ * پول به کدام سمت می‌رود — نسبت به ما. RECEIVE یعنی پول به حساب ما
+ * می‌آید و PAY یعنی از حساب ما می‌رود.
  */
 export const MONEY_DIRECTIONS = {
   NONE: "none",
@@ -51,16 +54,10 @@ export const MONEY_DIRECTIONS = {
   PAY: "pay",
 };
 
-export const MONEY_DIRECTION_LABELS = {
-  [MONEY_DIRECTIONS.NONE]: "بدون جابه‌جایی پول",
-  [MONEY_DIRECTIONS.RECEIVE]: "دریافت پول از مشتری",
-  [MONEY_DIRECTIONS.PAY]: "پرداخت پول به مشتری",
-};
-
 /**
  * روش‌هایی که برای هر جهت معنا دارند. «اعتبار خرید بعدی» فقط وقتی
- * معنا دارد که ما به مشتری بدهکاریم؛ مشتری نمی‌تواند با اعتبارِ
- * خودش به ما پول بدهد.
+ * معنا دارد که ما بدهکاریم؛ طرف مقابل نمی‌تواند با اعتبارِ خودش به ما
+ * پول بدهد.
  */
 export function methodsForDirection(direction) {
   const base = [
@@ -79,8 +76,7 @@ export function methodsForDirection(direction) {
  * تکه‌های معتبرِ یک پرداخت ترکیبی (مبلغ بزرگ‌تر از صفر).
  *
  * شکل هر تکه همان چیزی است که MixedPaymentList مشترک تولید می‌کند —
- * { type, amount, checkNumber?, transferRef? } — تا فرم فروش و تصمیمِ
- * مرجوعی یک قرارداد داشته باشند.
+ * { type, amount, checkNumber?, transferRef? }.
  */
 function validMoneyParts(money) {
   return (money?.parts || []).filter((part) => (Number(part.amount) || 0) > 0);
@@ -103,15 +99,8 @@ export function moneyAmountOf(money) {
 
 // ─── ترکیب خالی ─────────────────────────────────────────────────────────────
 
-export function emptyComposition(qty = 1) {
-  return {
-    qty,
-    takeBack: false,
-    sendReplacement: false,
-    replacementItems: [],
-    money: emptyMoney(),
-    note: "",
-  };
+export function emptyGoodsSlot() {
+  return { enabled: false, items: [] };
 }
 
 export function emptyMoney() {
@@ -124,16 +113,47 @@ export function emptyMoney() {
   };
 }
 
-/** آیا این ترکیب اصلاً کاری انجام می‌دهد؟ */
+export function emptyComposition(qty = 1) {
+  return {
+    qty,
+    goodsIn: emptyGoodsSlot(),
+    goodsOut: emptyGoodsSlot(),
+    money: emptyMoney(),
+    note: "",
+  };
+}
+
 function isEmptyComposition(composition) {
   return (
-    !composition?.takeBack &&
-    !composition?.sendReplacement &&
+    !composition?.goodsIn?.enabled &&
+    !composition?.goodsOut?.enabled &&
     composition?.money?.direction === MONEY_DIRECTIONS.NONE
   );
 }
 
 // ─── بسط ترکیب به اثر ───────────────────────────────────────────────────────
+
+/**
+ * اقلامِ یک محورِ کالایی. اگر کاربر کالای مشخصی انتخاب نکرده باشد،
+ * پیش‌فرض همان کالای ادعا با تعدادِ تصمیم است — همان حالتِ پرتکرارِ
+ * «همین کالا، همین تعداد».
+ */
+function goodsItemsOf(slot, claim, qty) {
+  const picked = (slot?.items || []).filter(
+    (item) => (Number(item.qty) || 0) > 0,
+  );
+  if (picked.length > 0) return picked;
+  if (qty <= 0 || !claim) return [];
+  return [
+    {
+      productId: claim.productId ?? null,
+      productCode: claim.productCode ?? "",
+      productName: claim.productName ?? "",
+      unit: claim.unit ?? "",
+      qty,
+    },
+  ];
+}
 
 /**
  * ترکیب را به فهرست اثرهای پایه باز می‌کند — تنها چیزی که واقعاً ذخیره
@@ -146,28 +166,13 @@ export function expandComposition(composition, claim) {
   const qty = Number(composition.qty) || 0;
   const note = composition.note || "";
 
-  if (composition.takeBack && qty > 0) {
-    effects.push(
-      createEffect({
-        kind: GOODS_IN,
-        qty,
-        productId: claim?.productId ?? null,
-        productCode: claim?.productCode ?? "",
-        productName: claim?.productName ?? "",
-        unit: claim?.unit ?? "",
-        note,
-      }),
-    );
-  }
-
-  if (composition.sendReplacement) {
-    (composition.replacementItems || []).forEach((item) => {
-      const itemQty = Number(item.qty) || 0;
-      if (itemQty <= 0) return;
+  const pushGoods = (slot, kind) => {
+    if (!slot?.enabled) return;
+    goodsItemsOf(slot, claim, qty).forEach((item) => {
       effects.push(
         createEffect({
-          kind: GOODS_OUT,
-          qty: itemQty,
+          kind,
+          qty: Number(item.qty) || 0,
           productId: item.productId,
           productCode: item.productCode,
           productName: item.productName,
@@ -176,7 +181,10 @@ export function expandComposition(composition, claim) {
         }),
       );
     });
-  }
+  };
+
+  pushGoods(composition.goodsIn, GOODS_IN);
+  pushGoods(composition.goodsOut, GOODS_OUT);
 
   const money = composition.money || {};
   const amount = moneyAmountOf(money);
@@ -217,6 +225,9 @@ export function buildResolution(composition, claim) {
 /**
  * فهرست خطاها را برمی‌گرداند (خالی یعنی معتبر) تا فرم و لایه‌ی داده از
  * یک منبع بخوانند و پیام دو جا نوشته نشود.
+ *
+ * پیام‌ها با واژگانِ خنثی نوشته شده‌اند تا هر دو سمت بتوانند از همین
+ * تابع استفاده کنند.
  */
 export function validateComposition(composition, claim, { remainingQty } = {}) {
   const errors = [];
@@ -232,18 +243,7 @@ export function validateComposition(composition, claim, { remainingQty } = {}) {
   }
 
   if (isEmptyComposition(composition)) {
-    errors.push(
-      "حداقل یکی از سه مورد (پس‌گرفتن کالا، ارسال کالا، جابه‌جایی پول) باید انتخاب شود",
-    );
-  }
-
-  if (composition.sendReplacement) {
-    const items = (composition.replacementItems || []).filter(
-      (item) => (Number(item.qty) || 0) > 0,
-    );
-    if (items.length === 0) {
-      errors.push("برای ارسال کالا، حداقل یک کالا با تعداد بیشتر از صفر انتخاب کنید");
-    }
+    errors.push("حداقل یکی از سه اقدام (کالا، کالا، پول) باید انتخاب شود");
   }
 
   const money = composition.money || {};
@@ -252,7 +252,9 @@ export function validateComposition(composition, claim, { remainingQty } = {}) {
       errors.push("روش پرداخت برای این جهت مجاز نیست");
     } else if (money.method === PAYMENT_METHODS.MIXED) {
       if (validMoneyParts(money).length === 0) {
-        errors.push("برای پرداخت ترکیبی، حداقل یک ردیف با مبلغ بیشتر از صفر لازم است");
+        errors.push(
+          "برای پرداخت ترکیبی، حداقل یک ردیف با مبلغ بیشتر از صفر لازم است",
+        );
       }
       const badPart = validMoneyParts(money).find(
         (part) => !SPLITTABLE_PAYMENT_METHODS.includes(part.type),
@@ -279,20 +281,19 @@ export function claimRemainingQty(claim) {
   return Math.max(0, (Number(claim?.qty) || 0) - claimDecidedQty(claim));
 }
 
-function allEffectsOf(salesReturn) {
-  return (salesReturn?.claims || []).flatMap((claim) =>
+function allEffectsOf(returnDoc) {
+  return (returnDoc?.claims || []).flatMap((claim) =>
     (claim.resolutions || []).flatMap((res) => res.effects || []),
   );
 }
 
 /**
  * اثرهای معلقِ کالایی — دقیقاً همان چیزی که صف‌های انبار باید نشان
- * دهند. GOODS_IN به صف «دریافت» می‌رود و GOODS_OUT به صف «ارسال».
- * مرجوعی‌ای که هیچ اثر کالاییِ معلقی ندارد اصلاً در انبار دیده
- * نمی‌شود.
+ * دهند. GOODS_IN به صف «دریافت» می‌رود و GOODS_OUT به صف «ارسال»؛
+ * مرجوعی خرید و فروش هر دو از همین مسیر وارد صف می‌شوند.
  */
-export function pendingGoodsEffects(salesReturn, kind) {
-  return allEffectsOf(salesReturn).filter(
+export function pendingGoodsEffects(returnDoc, kind) {
+  return allEffectsOf(returnDoc).filter(
     (effect) =>
       effect.kind === kind && effect.status === EFFECT_STATUSES.PENDING,
   );
@@ -301,15 +302,11 @@ export function pendingGoodsEffects(salesReturn, kind) {
 /**
  * تخت‌کردن اثرهای کالاییِ یک مرجوعی به ردیف‌هایی که انبار می‌فهمد —
  * هر ردیف، یک اثر به‌همراه زمینه‌ی ادعایی که از آن آمده.
- *
- * هر دو صف انبار (دریافت و ارسال) از همین یک تابع می‌خوانند و فقط
- * kind را عوض می‌کنند، چون «تحویل‌گرفتن کالای برگشتی» و «ارسال کالا»
- * یک عملیات‌اند با جهت مخالف.
  */
-export function buildGoodsLines(salesReturn, kind, { onlyPending = true } = {}) {
+export function buildGoodsLines(returnDoc, kind, { onlyPending = true } = {}) {
   const lines = [];
 
-  (salesReturn?.claims || []).forEach((claim) => {
+  (returnDoc?.claims || []).forEach((claim) => {
     (claim.resolutions || []).forEach((resolution) => {
       (resolution.effects || []).forEach((effect) => {
         if (effect.kind !== kind) return;
@@ -348,22 +345,22 @@ export function buildGoodsLines(salesReturn, kind, { onlyPending = true } = {}) 
   return lines;
 }
 
-export function hasPendingGoodsIn(salesReturn) {
-  return pendingGoodsEffects(salesReturn, GOODS_IN).length > 0;
+export function hasPendingGoodsIn(returnDoc) {
+  return pendingGoodsEffects(returnDoc, GOODS_IN).length > 0;
 }
 
-export function hasPendingGoodsOut(salesReturn) {
-  return pendingGoodsEffects(salesReturn, GOODS_OUT).length > 0;
+export function hasPendingGoodsOut(returnDoc) {
+  return pendingGoodsEffects(returnDoc, GOODS_OUT).length > 0;
 }
 
-function hasAppliedEffects(salesReturn) {
-  return allEffectsOf(salesReturn).some(
+function hasAppliedEffects(returnDoc) {
+  return allEffectsOf(returnDoc).some(
     (effect) => effect.status === EFFECT_STATUSES.APPLIED,
   );
 }
 
-export function summarizeReturn(salesReturn, options) {
-  return summarizeEffects(allEffectsOf(salesReturn), options);
+export function summarizeReturn(returnDoc, options) {
+  return summarizeEffects(allEffectsOf(returnDoc), options);
 }
 
 // ─── ماشین وضعیت ────────────────────────────────────────────────────────────
@@ -371,30 +368,30 @@ export function summarizeReturn(salesReturn, options) {
 /**
  * وضعیت را از روی داده مشتق می‌کند.
  *
- * بازرسی انبار هیچ نقشی در این محاسبه ندارد: مرجوعی‌ای که تصمیمش «فقط
- * بازگشت وجه» است هیچ‌وقت پای انبار به آن باز نمی‌شود و مستقیم از OPEN
- * به SETTLED می‌رود.
+ * انبار هیچ نقشی در این محاسبه ندارد: مرجوعی‌ای که تصمیمش «فقط بازگشت
+ * وجه» است هیچ‌وقت پای انبار به آن باز نمی‌شود و مستقیم از OPEN به
+ * SETTLED می‌رود.
  *
  * REJECTED/CANCELLED مشتق نمی‌شوند — اکشن صریح‌اند و همین‌جا دست‌نخورده
  * برگردانده می‌شوند.
  */
-export function deriveReturnStatus(salesReturn) {
-  if (isTerminalStatus(salesReturn?.status)) return salesReturn.status;
+export function deriveReturnStatus(returnDoc) {
+  if (isTerminalStatus(returnDoc?.status)) return returnDoc.status;
 
-  const claims = salesReturn?.claims || [];
+  const claims = returnDoc?.claims || [];
   const totalClaimed = claims.reduce((sum, c) => sum + (Number(c.qty) || 0), 0);
   const totalDecided = claims.reduce((sum, c) => sum + claimDecidedQty(c), 0);
 
-  if (totalDecided === 0) return SALES_RETURN_STATUSES.OPEN;
+  if (totalDecided === 0) return RETURN_STATUSES.OPEN;
 
-  const hasPending = allEffectsOf(salesReturn).some(
+  const hasPending = allEffectsOf(returnDoc).some(
     (effect) => effect.status === EFFECT_STATUSES.PENDING,
   );
 
   if (totalDecided >= totalClaimed && !hasPending) {
-    return SALES_RETURN_STATUSES.SETTLED;
+    return RETURN_STATUSES.SETTLED;
   }
-  return SALES_RETURN_STATUSES.IN_PROGRESS;
+  return RETURN_STATUSES.IN_PROGRESS;
 }
 
 // ─── نگهبان‌های چرخه‌ی عمر ──────────────────────────────────────────────────
@@ -405,18 +402,13 @@ export function deriveReturnStatus(salesReturn) {
  * اثر کالاییِ معلق دارد، هیچ ردی در دنیای بیرون نگذاشته و برگرداندنش
  * بی‌ضرر است.
  */
-function isUntouched(salesReturn) {
-  return Boolean(salesReturn) && !hasAppliedEffects(salesReturn);
+export function isReturnUntouched(returnDoc) {
+  return Boolean(returnDoc) && !hasAppliedEffects(returnDoc);
 }
 
-export function canDeleteSalesReturn(salesReturn) {
-  return isUntouched(salesReturn) && !isTerminalStatus(salesReturn.status);
+export function canDeleteReturn(returnDoc) {
+  return isReturnUntouched(returnDoc) && !isTerminalStatus(returnDoc.status);
 }
 
-export function canCancelSalesReturn(salesReturn) {
-  return isUntouched(salesReturn) && !isTerminalStatus(salesReturn.status);
-}
-
-export function canRejectSalesReturn(salesReturn) {
-  return isUntouched(salesReturn) && !isTerminalStatus(salesReturn.status);
-}
+export const canCancelReturn = canDeleteReturn;
+export const canRejectReturn = canDeleteReturn;

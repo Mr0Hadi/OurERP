@@ -5,14 +5,14 @@ import {
   RETURN_PROBLEMS,
   SALES_RETURN_STATUSES,
 } from "../domain/returnVocabulary";
-import { EFFECT_STATUSES, PAYMENT_METHODS } from "../domain/returnEffects";
+import { EFFECT_STATUSES, PAYMENT_METHODS } from "@/shared/domain/returns/effects";
 import {
   MONEY_DIRECTIONS,
   buildResolution,
   deriveReturnStatus,
   emptyComposition,
   emptyMoney,
-} from "../domain/returnResolutions";
+} from "@/shared/domain/returns/resolutions";
 
 /**
  * داده‌ی نمونه‌ی مرجوعی فروش، روی مدل جدید.
@@ -132,20 +132,22 @@ function seedResolutions(claim, target) {
       buildResolution(
         {
           ...emptyComposition(half),
-          takeBack: true,
-          sendReplacement: withReplacement,
-          replacementItems: withReplacement
-            ? [
-                {
-                  productId: claim.productId,
-                  productCode: claim.productCode,
-                  productName: claim.productName,
-                  unit: claim.unit,
-                  qty: half,
-                  unitPrice: claim.unitPrice,
-                },
-              ]
-            : [],
+          goodsIn: { enabled: true, items: [] },
+          goodsOut: withReplacement
+            ? {
+                enabled: true,
+                items: [
+                  {
+                    productId: claim.productId,
+                    productCode: claim.productCode,
+                    productName: claim.productName,
+                    unit: claim.unit,
+                    qty: half,
+                    unitPrice: claim.unitPrice,
+                  },
+                ],
+              }
+            : { enabled: false, items: [] },
           money: withReplacement
             ? emptyMoney()
             : money(MONEY_DIRECTIONS.PAY, half * claim.unitPrice),

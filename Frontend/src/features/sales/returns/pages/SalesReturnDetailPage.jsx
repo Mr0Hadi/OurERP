@@ -26,7 +26,7 @@ import {
   useReopenSalesReturnMutation,
   useRemoveSalesReturnMutation,
 } from "../services/mutations";
-import { canDeleteSalesReturn } from "../domain/returnResolutions";
+import { canDeleteReturn } from "@/shared/domain/returns/resolutions";
 
 import SalesReturnDetailLoading from "../components/forms/SalesReturnDetailLoading";
 import SalesReturnStatusBar from "../components/forms/SalesReturnStatusBar";
@@ -102,7 +102,7 @@ function SalesReturnDetailContent({ salesReturn }) {
         onReopen={() => reopenMutation.mutate()}
       />
 
-      {canDeleteSalesReturn(salesReturn) && (
+      {canDeleteReturn(salesReturn) && (
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button

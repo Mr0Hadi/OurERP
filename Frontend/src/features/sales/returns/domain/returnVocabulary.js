@@ -1,5 +1,7 @@
 // src/features/sales/returns/domain/returnVocabulary.js
 
+import { RETURN_SIDES, SIDE_CONFIG } from "@/shared/domain/returns/sides";
+
 /**
  * واژگانِ پایه‌ی مرجوعی فروش.
  *
@@ -140,55 +142,14 @@ export function isOffInvoice(claim) {
 // ─── وضعیت مرجوعی ───────────────────────────────────────────────────────────
 
 /**
- * وضعیت دیگر دستی انتخاب نمی‌شود و — مهم‌تر — دیگر به بازرسی انبار
- * گره نخورده است. سیستم قبلی تا وقتی کالا فیزیکاً تحویل گرفته نمی‌شد
- * در PENDING_INSPECTION گیر می‌کرد، که یعنی «مرجوعیِ بدون پس‌گرفتن
- * کالا» اصلاً نمی‌توانست جلو برود.
- *
- * حالا وضعیت از روی *اثرها* مشتق می‌شود (returnResolutions.js):
- *   OPEN        → ادعا ثبت شده، هنوز هیچ تصمیمی نیست
- *   IN_PROGRESS → تصمیم هست ولی یا کل ادعا تصمیم نخورده یا اثری
- *                 هنوز اعمال نشده (منتظر انبار / منتظر مالی)
- *   SETTLED     → کل ادعا تصمیم خورده و همه‌ی اثرها اعمال شده‌اند
- *
- * REJECTED و CANCELLED مشتق نمی‌شوند؛ اکشن صریح‌اند و روی رکورد
- * می‌نشینند.
+ * وضعیت‌ها مشترک با مرجوعی خرید هستند و از دامنه‌ی مشترک می‌آیند؛ فقط
+ * برچسب‌هایشان سمت‌به‌سمت فرق می‌کند (sides.js).
  */
-export const SALES_RETURN_STATUSES = {
-  OPEN: "open",
-  IN_PROGRESS: "in_progress",
-  SETTLED: "settled",
-  REJECTED: "rejected",
-  CANCELLED: "cancelled",
-};
+export {
+  RETURN_STATUSES as SALES_RETURN_STATUSES,
+  RETURN_STATUS_STYLES as SALES_RETURN_STATUS_STYLES,
+  isTerminalStatus,
+} from "@/shared/domain/returns/statuses";
 
-export const SALES_RETURN_STATUS_LABELS = {
-  [SALES_RETURN_STATUSES.OPEN]: "در انتظار تصمیم",
-  [SALES_RETURN_STATUSES.IN_PROGRESS]: "در حال اجرا",
-  [SALES_RETURN_STATUSES.SETTLED]: "تسویه شده",
-  [SALES_RETURN_STATUSES.REJECTED]: "رد شده",
-  [SALES_RETURN_STATUSES.CANCELLED]: "لغو شده",
-};
-
-export const SALES_RETURN_STATUS_STYLES = {
-  [SALES_RETURN_STATUSES.OPEN]:
-    "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400",
-  [SALES_RETURN_STATUSES.IN_PROGRESS]:
-    "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-400",
-  [SALES_RETURN_STATUSES.SETTLED]:
-    "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-400",
-  [SALES_RETURN_STATUSES.REJECTED]:
-    "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:border-red-800 dark:text-red-400",
-  [SALES_RETURN_STATUSES.CANCELLED]:
-    "bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900/40 dark:border-slate-700 dark:text-slate-400",
-};
-
-/** وضعیت‌هایی که بعد از آن‌ها هیچ تصمیم تازه‌ای پذیرفته نمی‌شود. */
-export const TERMINAL_RETURN_STATUSES = [
-  SALES_RETURN_STATUSES.REJECTED,
-  SALES_RETURN_STATUSES.CANCELLED,
-];
-
-export function isTerminalStatus(status) {
-  return TERMINAL_RETURN_STATUSES.includes(status);
-}
+export const SALES_RETURN_STATUS_LABELS =
+  SIDE_CONFIG[RETURN_SIDES.SALES].statusLabels;

@@ -1,10 +1,10 @@
 import { allSales, SALE_STATUS_LABELS } from "@/features/sales/orders/services/mockData";
 import { allSalesReturns } from "@/features/sales/returns/services/mockData";
-import { pendingGoodsEffects } from "@/features/sales/returns/domain/returnResolutions";
+import { pendingGoodsEffects } from "@/shared/domain/returns/resolutions";
 import {
   EFFECT_KINDS,
   remainingQtyOf,
-} from "@/features/sales/returns/domain/returnEffects";
+} from "@/shared/domain/returns/effects";
 import {
   allPurchaseReturns,
   RESOLUTION_TYPES as PURCHASE_RESOLUTION_TYPES,

@@ -3,11 +3,12 @@ import { CheckCircle2, Plus, X } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import ResolutionLineRow from "./ResolutionLineRow";
-import ResolutionComposer from "./ResolutionComposer";
+import ResolutionComposer from "@/shared/components/returns/ResolutionComposer";
+import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import {
   claimDecidedQty,
   claimRemainingQty,
-} from "../../domain/returnResolutions";
+} from "@/shared/domain/returns/resolutions";
 import {
   RETURN_PROBLEM_LABELS,
   RETURN_PROBLEM_STYLES,
@@ -31,6 +32,7 @@ export default function ClaimResolutionCard({
   readOnly,
 }) {
   const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const side = sideConfig(RETURN_SIDES.SALES);
 
   const resolutions = claim.resolutions || [];
   const decided = claimDecidedQty(claim);
@@ -98,6 +100,7 @@ export default function ClaimResolutionCard({
               claim={claim}
               remaining={remaining}
               isBusy={isBusy}
+              side={side}
               onAdd={(composition) => {
                 onAddResolution(claim.id, composition);
                 setIsComposerOpen(false);

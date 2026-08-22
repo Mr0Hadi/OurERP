@@ -13,13 +13,13 @@ import {
   EFFECT_STATUSES,
   affectsInvoiceTotal,
   isGoodsEffect,
-} from "../domain/returnEffects";
+} from "@/shared/domain/returns/effects";
 import {
   buildResolution,
   claimRemainingQty,
   deriveReturnStatus,
   validateComposition,
-} from "../domain/returnResolutions";
+} from "@/shared/domain/returns/resolutions";
 
 /**
  * لایه‌ی داده‌ی مرجوعی فروش + موتور اثر.

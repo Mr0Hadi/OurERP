@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { buildGoodsLines } from "@/features/sales/returns/domain/returnResolutions";
-import { EFFECT_KINDS } from "@/features/sales/returns/domain/returnEffects";
+import { buildGoodsLines } from "@/shared/domain/returns/resolutions";
+import { EFFECT_KINDS } from "@/shared/domain/returns/effects";
 
 const EMPTY_INTAKE = {
   returnId: "",
