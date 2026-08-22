@@ -106,7 +106,7 @@ const DETAIL_TITLES = {
   [ROUTES.WAREHOUSE_PRODUCTS]: "جزئیات کالا",
   [ROUTES.WAREHOUSE_RECEIVING]: "دریافت خرید",
   [ROUTES.WAREHOUSE_SHIPPING]: "ارسال فروش",
-  "/warehouse/receiving/returns": "بررسی مرجوعی مشتری",
+  "/warehouse/receiving/returns": "دریافت کالای مرجوعی",
   "/warehouse/shipping/replacement": "ارسال کالای جایگزین",
   "/warehouse/shipping/supplier-return": "عودت به تامین‌کننده",
 

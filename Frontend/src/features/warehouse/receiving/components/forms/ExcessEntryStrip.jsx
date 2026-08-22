@@ -36,7 +36,7 @@ export default function ExcessEntryStrip({ item, onExcessChange }) {
   }
 
   const handleClose = () => {
-    onExcessChange(item.productId, "excessQty", 0);
+    onExcessChange(item.lineId, "excessQty", 0);
     setIsOpen(false);
   };
 
@@ -64,7 +64,7 @@ export default function ExcessEntryStrip({ item, onExcessChange }) {
           min={0}
           value={excessQty}
           onChange={(e) =>
-            onExcessChange(item.productId, "excessQty", e.target.value)
+            onExcessChange(item.lineId, "excessQty", e.target.value)
           }
           className="h-8 text-center text-xs sm:w-20 shrink-0"
         />
@@ -72,7 +72,7 @@ export default function ExcessEntryStrip({ item, onExcessChange }) {
           placeholder="یادداشت (اختیاری)..."
           value={item.excessNote || ""}
           onChange={(e) =>
-            onExcessChange(item.productId, "excessNote", e.target.value)
+            onExcessChange(item.lineId, "excessNote", e.target.value)
           }
           className="h-8 text-xs flex-1"
           disabled={excessQty <= 0}

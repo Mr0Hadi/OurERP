@@ -58,7 +58,7 @@ export default function ReceivingItemRow({
             value={item.receivedQty}
             max={item.expectedQty}
             onChange={(next) =>
-              onItemChange(item.productId, "receivedQty", next)
+              onItemChange(item.lineId, "receivedQty", next)
             }
           />
         </td>

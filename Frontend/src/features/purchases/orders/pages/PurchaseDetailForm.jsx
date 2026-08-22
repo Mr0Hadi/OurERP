@@ -33,7 +33,7 @@ import {
   getPurchaseLockReason,
 } from "@/features/purchases/orders/domain/purchaseRules";
 import { PURCHASE_STATUSES } from "@/features/purchases/orders/services/constants";
-import { RETURN_ELIGIBLE_PURCHASE_STATUSES as RETURNABLE_PURCHASE_STATUSES } from "@/features/purchases/returns/services/mockData";
+import { hasAnythingArrived } from "@/features/purchases/returns/services/api-mockData";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -55,9 +55,9 @@ export default function PurchaseDetailForm({ purchaseData }) {
   } = usePurchaseFormStore();
 
   // مرجوعی خرید حالا دقیقاً مثل مرجوعی فروش است: تا وقتی چیزی از
-  // خرید رسیده باشد می‌شود ادعا ثبت کرد. پیش‌تر گزارش مغایرتِ انبار
-  // پیش‌شرط بود و بدون آن اصلاً مرجوعی وجود نداشت.
-  const canReturn = RETURNABLE_PURCHASE_STATUSES.includes(purchaseData?.status);
+  // خرید رسیده باشد می‌شود ادعا ثبت کرد. معیار خودِ کالای رسیده است نه
+  // وضعیت خرید — نیمی که با ماشین اول آمده هم قابل ادعاست.
+  const canReturn = hasAnythingArrived(purchaseData);
 
   const { data: suppliersData, isLoading: suppliersLoading } =
     useSuppliersQuery(ALL_FILTERS, PAGINATION, SORTING);

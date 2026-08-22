@@ -1,10 +1,12 @@
 import { create } from 'zustand';
+import { RECEIVING_SOURCES } from '../services/receivingSources';
 
 // این استور در localStorage ذخیره نمی‌شود؛ فرم دریافت داده‌ای موقتی
 // و لحظه‌ای است و باید همیشه از روی آخرین داده‌ی تازه‌ی سرور بازسازی
 // شود.
 const EMPTY_RECEIVING = {
   purchaseId: '',
+  returnId: '',
   supplierName: '',
   invoiceNumber: '',
   invoiceDate: '',
@@ -20,6 +22,24 @@ const EMPTY_RECEIVING = {
   transporterNationalId: '',
   vehiclePlate: '',
 };
+
+function toReturnLine(line) {
+  return {
+    lineId: `return:${line.effectId}`,
+    source: RECEIVING_SOURCES.RETURN,
+    returnId: line.returnId,
+    returnNumber: line.returnNumber,
+    effectId: line.effectId,
+    productId: line.productId,
+    productName: line.productName,
+    productCode: line.productCode,
+    expectedQty: line.remainingQty,
+    receivedQty: line.remainingQty,
+    issues: [],
+    excessQty: 0,
+    excessNote: '',
+  };
+}
 
 export const useReceivingFormStore = create((set, get) => ({
   formData: { ...EMPTY_RECEIVING },
@@ -46,7 +66,8 @@ export const useReceivingFormStore = create((set, get) => ({
     const version = `${purchaseData.id}:${purchaseData.updatedAt}`;
     if (initializedForId === version) return;
 
-    const receivingItems = (purchaseData.items || [])
+    // خطوطِ سفارش
+    const orderLines = (purchaseData.items || [])
       .map((item) => {
         // receivableQty از سرور می‌آید و دقیق‌ترین محاسبه‌ی «الان چقدر
         // واقعاً قابل دریافت است» را دارد (با در نظر گرفتن مشکلات
@@ -61,6 +82,8 @@ export const useReceivingFormStore = create((set, get) => ({
                 item.qty - (item.receivedQty || 0) - (item.settledQty || 0),
               );
         return {
+          lineId: `order:${item.productId}`,
+          source: RECEIVING_SOURCES.ORDER,
           productId: item.productId,
           productName: item.productName,
           productCode: item.productCode,
@@ -77,6 +100,11 @@ export const useReceivingFormStore = create((set, get) => ({
       })
       .filter((item) => item.expectedQty > 0);
 
+    // خطوطِ مرجوعی: کالایی که طرف حساب بابت یک مرجوعی به ما بدهکار
+    // است و ممکن است با همین محموله بفرستد. شناسه‌شان اثر است نه
+    // کالا، چون یک کالا می‌تواند هم در سفارش باشد هم در چند مرجوعی.
+    const returnLines = (purchaseData.returnLines || []).map(toReturnLine);
+
     set({
       initializedForId: version,
       formData: {
@@ -85,7 +113,7 @@ export const useReceivingFormStore = create((set, get) => ({
         invoiceNumber: purchaseData.invoiceNumber || '',
         invoiceDate: purchaseData.invoiceDate || '',
         status: purchaseData.status || '',
-        items: receivingItems,
+        items: [...orderLines, ...returnLines],
         unknownItems: [],
         receivingNote: '',
         receivedDate: new Date().toISOString().slice(0, 10),
@@ -95,6 +123,34 @@ export const useReceivingFormStore = create((set, get) => ({
       },
     });
   },
+  /**
+   * تحویل‌گرفتن کالای برگشتی از مشتری.
+   *
+   * همان فرمِ دریافت خرید است، فقط خطِ سفارشی ندارد — مشتری چیزی به
+   * ما نفروخته. با این کار، گزارش مشکل و ثبت کالای اضافه/ثبت‌نشده که
+   * مسیر خرید داشت، اینجا هم رایگان به دست می‌آید: مشتری هم ممکن است
+   * اشتباه بفرستد.
+   */
+  initializeFromSalesReturn: (salesReturn, returnLines) => {
+    const { initializedForId } = get();
+    const version = `return:${salesReturn.id}:${salesReturn.updatedAt}`;
+    if (initializedForId === version) return;
+
+    set({
+      initializedForId: version,
+      formData: {
+        ...EMPTY_RECEIVING,
+        returnId: salesReturn.id,
+        supplierName: salesReturn.customerName || '',
+        invoiceNumber: salesReturn.returnNumber || '',
+        invoiceDate: salesReturn.returnDate || '',
+        status: salesReturn.status || '',
+        items: (returnLines || []).map(toReturnLine),
+        receivedDate: new Date().toISOString().slice(0, 10),
+      },
+    });
+  },
+
   resetForm: () =>
     set({ formData: { ...EMPTY_RECEIVING }, initializedForId: null }),
 }));

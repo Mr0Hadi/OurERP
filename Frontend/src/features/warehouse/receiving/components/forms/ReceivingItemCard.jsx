@@ -59,7 +59,7 @@ export default function ReceivingItemCard({
         <QuantityStepper
           value={item.receivedQty}
           max={item.expectedQty}
-          onChange={(next) => onItemChange(item.productId, "receivedQty", next)}
+          onChange={(next) => onItemChange(item.lineId, "receivedQty", next)}
           size="sm"
         />
       </div>

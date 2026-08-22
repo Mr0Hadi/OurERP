@@ -43,7 +43,7 @@ export default function IssueBreakdownEditor({
           size="sm"
           variant="outline"
           className="h-7 text-xs gap-1"
-          onClick={() => onAddIssue(item.productId)}
+          onClick={() => onAddIssue(item.lineId)}
           disabled={remaining <= 0}
         >
           <Plus className="h-3 w-3" />
@@ -67,7 +67,7 @@ export default function IssueBreakdownEditor({
           <Select
             value={issue.issueType}
             onValueChange={(v) =>
-              onUpdateIssue(item.productId, issue.id, "issueType", v)
+              onUpdateIssue(item.lineId, issue.id, "issueType", v)
             }
           >
             <SelectTrigger className="h-8 text-xs sm:w-36 shrink-0">
@@ -87,7 +87,7 @@ export default function IssueBreakdownEditor({
             min={0}
             value={issue.qty}
             onChange={(e) =>
-              onUpdateIssue(item.productId, issue.id, "qty", e.target.value)
+              onUpdateIssue(item.lineId, issue.id, "qty", e.target.value)
             }
             className="h-8 text-center text-xs sm:w-16 shrink-0"
           />
@@ -96,7 +96,7 @@ export default function IssueBreakdownEditor({
             placeholder="یادداشت (اختیاری)..."
             value={issue.note || ""}
             onChange={(e) =>
-              onUpdateIssue(item.productId, issue.id, "note", e.target.value)
+              onUpdateIssue(item.lineId, issue.id, "note", e.target.value)
             }
             className="h-8 text-xs flex-1"
           />
@@ -106,7 +106,7 @@ export default function IssueBreakdownEditor({
             size="icon"
             variant="ghost"
             className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-            onClick={() => onRemoveIssue(item.productId, issue.id)}
+            onClick={() => onRemoveIssue(item.lineId, issue.id)}
           >
             <X className="h-3.5 w-3.5" />
           </Button>

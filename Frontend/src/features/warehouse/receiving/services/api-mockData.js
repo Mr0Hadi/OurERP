@@ -6,6 +6,12 @@ import {
 import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
 import { SURPLUS_KINDS } from "@/shared/constants/purchaseIssueTypes";
 
+import { allPurchaseReturns } from "@/features/purchases/returns/services/mockData";
+import { executeGoodsRound as executePurchaseReturnRound } from "@/features/purchases/returns/services/api-mockData";
+import { buildGoodsLines } from "@/shared/domain/returns/resolutions";
+import { EFFECT_KINDS } from "@/shared/domain/returns/effects";
+import { RECEIVING_SOURCES } from "./receivingSources";
+
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
@@ -141,7 +147,29 @@ export async function fetchReceivingPurchaseById(id) {
       ...item,
       receivableQty: computeItemReceivableQty(item),
     })),
+    // کالای جایگزینی که تامین‌کننده بابت مرجوعی‌های همین خرید بدهکار
+    // است. با همین رسید می‌آید چون فیزیکاً همان محموله است.
+    returnLines: pendingReturnLinesForPurchase(id),
   };
+}
+
+/**
+ * خطوطِ مرجوعیِ یک خرید: اثرهای GOODS_INِ معلق در همه‌ی مرجوعی‌های آن.
+ *
+ * دلیل وجودش این است که تامین‌کننده‌ای که خرید را چند سری می‌فرستد،
+ * جایگزین‌های مرجوعیِ سری قبل را معمولاً با سریِ بعد می‌فرستد — یک
+ * ماشین، یک رسید. پیش‌تر این‌ها صفحه و ردیف جدا داشتند.
+ */
+export function pendingReturnLinesForPurchase(purchaseId) {
+  const lines = [];
+  allPurchaseReturns.forEach((ret) => {
+    if (Number(ret.purchaseId) !== Number(purchaseId)) return;
+    buildGoodsLines(ret, EFFECT_KINDS.GOODS_IN).forEach((line) => {
+      if (line.remainingQty <= 0) return;
+      lines.push({ ...line, returnId: ret.id, returnNumber: ret.returnNumber });
+    });
+  });
+  return lines;
 }
 
 export async function updateReceivingStatus(id, receivedItems) {
@@ -236,10 +264,15 @@ export async function confirmReceiving(purchaseId, receivingData) {
   const stockIncreases = [];
   const newSurplusItems = [];
 
+  const orderRows = (receivingData.receivedItems || []).filter(
+    (row) => (row.source ?? RECEIVING_SOURCES.ORDER) === RECEIVING_SOURCES.ORDER,
+  );
+  const returnRows = (receivingData.receivedItems || []).filter(
+    (row) => row.source === RECEIVING_SOURCES.RETURN,
+  );
+
   const updatedItems = purchase.items.map((item) => {
-    const receivedItem = receivingData.receivedItems.find(
-      (ri) => ri.productId === item.productId,
-    );
+    const receivedItem = orderRows.find((ri) => ri.productId === item.productId);
     if (!receivedItem) return item;
 
     const prevReceived = item.receivedQty || 0;
@@ -337,9 +370,48 @@ export async function confirmReceiving(purchaseId, receivingData) {
 
   adjustProductsStock(stockIncreases);
 
-  // کالای جایگزینی که تامین‌کننده می‌فرستد دیگر از اینجا حدس زده
-  // نمی‌شود؛ انباردار آن را صریح در صفحه‌ی «دریافت کالای جایگزین» ثبت
-  // می‌کند، دقیقاً مثل تحویل‌گرفتن کالای برگشتی از مشتری.
+  // خطوطِ مرجوعیِ همین رسید: هر کدام یک دورِ اجرای اثر روی مرجوعیِ
+  // خودش است. موجودی و وضعیت مرجوعی را همان موتور اثر جابه‌جا می‌کند،
+  // پس اینجا فقط تحویل داده می‌شود.
+  //
+  // «سالم» همان تعدادی است که مشکلی برایش گزارش نشده — دقیقاً همان
+  // قاعده‌ای که برای خطوط سفارش هم به کار می‌رود.
+  await applyReturnRows(returnRows, {
+    date: receivedDate,
+    partyName: receivingData.transporterName,
+    partyNationalId: receivingData.transporterNationalId,
+    vehiclePlate: receivingData.vehiclePlate,
+    note: receivingData.receivingNote,
+  });
+
   const finalIndex = allPurchases.findIndex((p) => p.id === purchaseId);
   return allPurchases[finalIndex];
+}
+
+/**
+ * خطوطِ مرجوعیِ یک رسید را به موتور اثرِ مرجوعی خرید می‌سپارد،
+ * گروه‌بندی‌شده بر اساس مرجوعی تا هر مرجوعی یک بار به‌روز شود.
+ */
+async function applyReturnRows(rows, logistics) {
+  const byReturn = new Map();
+  rows.forEach((row) => {
+    const qty = Number(row.receivedQty) || 0;
+    if (qty <= 0) return;
+    const issuesQty = (row.issues || []).reduce(
+      (sum, i) => sum + (Number(i.qty) || 0),
+      0,
+    );
+    const entry = {
+      effectId: row.effectId,
+      qty,
+      healthyQty: Math.max(0, qty - issuesQty),
+      issueNote: (row.issues || []).map((i) => i.note).filter(Boolean).join(" / "),
+    };
+    if (!byReturn.has(row.returnId)) byReturn.set(row.returnId, []);
+    byReturn.get(row.returnId).push(entry);
+  });
+
+  for (const [returnId, rounds] of byReturn) {
+    await executePurchaseReturnRound(returnId, { rounds, ...logistics });
+  }
 }

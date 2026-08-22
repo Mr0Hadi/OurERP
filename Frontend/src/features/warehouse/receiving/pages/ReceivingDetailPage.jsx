@@ -20,6 +20,10 @@ import { useProductsQuery } from "@/features/warehouse/products/services/queries
 import { useConfirmReceivingMutation } from "../services/mutations";
 import { useReceivingForm } from "../hooks/useReceivingForm";
 import ReceivingItemsSection from "../components/forms/ReceivingItemsSection";
+import {
+  RECEIVING_SOURCES,
+  RECEIVING_SOURCE_LABELS,
+} from "../services/receivingSources";
 import ReceivingSummaryCard from "../components/forms/ReceivingSummaryCard";
 import ReceivingMismatchList from "../components/forms/ReceivingMismatchList";
 import UnknownItemsSection from "../components/forms/UnknownItemsSection";
@@ -90,6 +94,15 @@ function ReceivingDetailForm({ purchase }) {
     [items, productMap],
   );
 
+  // خطوط به تفکیک منبع؛ بخشِ مرجوعی فقط وقتی نشان داده می‌شود که
+  // واقعاً چیزی بابت مرجوعی در راه باشد.
+  const orderItems = displayItems.filter(
+    (item) => (item.source ?? RECEIVING_SOURCES.ORDER) === RECEIVING_SOURCES.ORDER,
+  );
+  const returnItems = displayItems.filter(
+    (item) => item.source === RECEIVING_SOURCES.RETURN,
+  );
+
   const isBusy = receivingMutation.isPending;
 
   // انباردار فقط دریافت و (در صورت وجود) نوع مشکل واقعی را ثبت
@@ -152,13 +165,31 @@ function ReceivingDetailForm({ purchase }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
           <ReceivingItemsSection
-            items={displayItems}
+            items={orderItems}
+            title={
+              returnItems.length > 0
+                ? RECEIVING_SOURCE_LABELS[RECEIVING_SOURCES.ORDER]
+                : "اقلام دریافت"
+            }
             onItemChange={handleItemChange}
             onAddIssue={handleAddIssue}
             onUpdateIssue={handleUpdateIssue}
             onRemoveIssue={handleRemoveIssue}
             onExcessChange={handleExcessChange}
           />
+
+          {returnItems.length > 0 && (
+            <ReceivingItemsSection
+              items={returnItems}
+              title={RECEIVING_SOURCE_LABELS[RECEIVING_SOURCES.RETURN]}
+              subtitle="کالای جایگزینی که تامین‌کننده بابت مرجوعی‌های همین خرید بدهکار است و با همین محموله فرستاده."
+              onItemChange={handleItemChange}
+              onAddIssue={handleAddIssue}
+              onUpdateIssue={handleUpdateIssue}
+              onRemoveIssue={handleRemoveIssue}
+              onExcessChange={handleExcessChange}
+            />
+          )}
           <UnknownItemsSection
             items={unknownItems}
             incompleteCount={incompleteUnknownCount}

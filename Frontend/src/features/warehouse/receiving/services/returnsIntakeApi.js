@@ -36,14 +36,34 @@ export async function fetchReturnIntake(returnId) {
 /**
  * ثبت یک دور تحویل‌گرفتن کالای برگشتی.
  *
- * lines: [{ effectId, qty, healthyQty, issueNote }]
- *   healthyQty یعنی چقدر از کالای دریافتیِ همین دور سالم و قابل فروش
- *   دوباره بوده. باقی‌اش دریافت می‌شود و ادعا را می‌بندد، ولی وارد
- *   موجودی قابل‌فروش نمی‌شود.
+ * ورودی همان payloadی است که فرمِ دریافت خرید می‌سازد، تا هر دو مسیر
+ * یک شکل داشته باشند. «سالم» از روی مشکلاتِ گزارش‌شده حساب می‌شود —
+ * همان قاعده‌ای که برای خطوط سفارش هم به کار می‌رود — نه یک فیلد
+ * جداگانه که انباردار باید دوباره پرش کند.
  */
 export async function confirmReturnIntake(returnId, intakeData) {
+  const rounds = (intakeData.receivedItems || [])
+    .map((row) => {
+      const qty = Number(row.receivedQty) || 0;
+      if (qty <= 0) return null;
+      const issuesQty = (row.issues || []).reduce(
+        (sum, i) => sum + (Number(i.qty) || 0),
+        0,
+      );
+      return {
+        effectId: row.effectId,
+        qty,
+        healthyQty: Math.max(0, qty - issuesQty),
+        issueNote: (row.issues || [])
+          .map((i) => i.note)
+          .filter(Boolean)
+          .join(" / "),
+      };
+    })
+    .filter(Boolean);
+
   return executeGoodsRound(returnId, {
-    rounds: intakeData.lines || [],
+    rounds,
     date: intakeData.receivedDate,
     partyName: intakeData.transporterName,
     partyNationalId: intakeData.transporterNationalId,

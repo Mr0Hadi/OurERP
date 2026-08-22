@@ -1,4 +1,5 @@
-import { allPurchases, PURCHASE_STATUSES, PURCHASE_STATUS_LABELS } from "./mockData";
+import { allPurchases, PURCHASE_STATUSES } from "./mockData";
+import { pendingReturnLinesForPurchase } from "./api-mockData";
 import { allSalesReturns } from "@/features/sales/returns/services/mockData";
 import {
   hasPendingGoodsIn,
@@ -9,6 +10,23 @@ import { EFFECT_KINDS } from "@/shared/domain/returns/effects";
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const RECEIVING_ELIGIBLE_STATUSES = [PURCHASE_STATUSES.SHIPPED];
+
+/**
+ * یک خرید تا وقتی در صف دریافت می‌ماند که یا هنوز چیزی از خودِ سفارش
+ * نرسیده باشد، یا تامین‌کننده بابت مرجوعی‌های آن کالای جایگزینی
+ * بدهکار باشد.
+ *
+ * حالت دوم عمدی است: تامین‌کننده‌ای که خرید را دو سری می‌فرستد ممکن
+ * است جایگزین‌های مرجوعیِ سری اول را با ماشین دوم بفرستد. اگر خرید
+ * پس از دریافت کاملِ سفارش از صف بیرون می‌رفت، انباردار جایی برای
+ * ثبت آن محموله نداشت.
+ */
+export function isPurchaseAwaitingIntake(purchase) {
+  return (
+    RECEIVING_ELIGIBLE_STATUSES.includes(purchase.status) ||
+    pendingReturnLinesForPurchase(purchase.id).length > 0
+  );
+}
 
 /**
  * یک مرجوعی فروش دیگر بر اساس *وضعیتش* وارد صف انبار نمی‌شود، بلکه بر
@@ -36,7 +54,10 @@ function purchaseToRow(purchase) {
     counterpartyType: "supplier",
     counterpartyName: purchase.supplierName,
     date: purchase.invoiceDate,
-    itemsCount: (purchase.items || []).length,
+    itemsCount:
+      (purchase.items || []).length +
+      pendingReturnLinesForPurchase(purchase.id).length,
+    returnLinesCount: pendingReturnLinesForPurchase(purchase.id).length,
     amount: purchase.totalAmount,
     createdAt: purchase.createdAt,
     updatedAt: purchase.updatedAt,
@@ -68,7 +89,7 @@ export async function fetchIncomingQueue(params = {}) {
 
   let rows = [];
   if (!type || type === INCOMING_TYPES.PURCHASE) {
-    rows.push(...allPurchases.filter((p) => RECEIVING_ELIGIBLE_STATUSES.includes(p.status)).map(purchaseToRow));
+    rows.push(...allPurchases.filter(isPurchaseAwaitingIntake).map(purchaseToRow));
   }
   if (!type || type === INCOMING_TYPES.SALES_RETURN) {
     rows.push(...allSalesReturns.filter(isReturnAwaitingIntake).map(returnToRow));

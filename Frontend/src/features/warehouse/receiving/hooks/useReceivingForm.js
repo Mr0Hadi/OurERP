@@ -4,6 +4,11 @@ import { useReceivingFormStore } from '../store/receivingFormStore';
 const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
+/**
+ * purchaseData می‌تواند null باشد: صفحه‌ی دریافت کالای برگشتی از مشتری
+ * خودش استور را با initializeFromSalesReturn پر می‌کند و فقط
+ * هندلرهای این هوک را می‌خواهد.
+ */
 export function useReceivingForm(purchaseData) {
   const store = useReceivingFormStore();
   const {
@@ -29,9 +34,9 @@ export function useReceivingForm(purchaseData) {
   const allocatedOf = (item) =>
     (item.issues || []).reduce((sum, i) => sum + (Number(i.qty) || 0), 0);
 
-  const handleItemChange = (productId, field, value) => {
+  const handleItemChange = (lineId, field, value) => {
     const newItems = formData.items.map((item) => {
-      if (item.productId !== productId) return item;
+      if (item.lineId !== lineId) return item;
       const updated = { ...item, [field]: value };
 
       if (field === 'receivedQty') {
@@ -57,9 +62,9 @@ export function useReceivingForm(purchaseData) {
   // انباردار مجبور نیست کل کسری را به‌عنوان مشکل ثبت کند؛ فقط بخشی
   // که واقعاً مشکل دارد (نه صرفاً دیرکرد ارسال) را اضافه می‌کند —
   // بقیه به‌طور خودکار «در انتظار محموله بعدی» تلقی می‌شود.
-  const handleAddIssue = (productId) => {
+  const handleAddIssue = (lineId) => {
     const newItems = formData.items.map((item) => {
-      if (item.productId !== productId) return item;
+      if (item.lineId !== lineId) return item;
       const shortage = shortageOf(item);
       const allocated = allocatedOf(item);
       const remaining = Math.max(0, shortage - allocated);
@@ -75,9 +80,9 @@ export function useReceivingForm(purchaseData) {
     setReceivingItems(newItems);
   };
 
-  const handleUpdateIssue = (productId, issueRowId, field, value) => {
+  const handleUpdateIssue = (lineId, issueRowId, field, value) => {
     const newItems = formData.items.map((item) => {
-      if (item.productId !== productId) return item;
+      if (item.lineId !== lineId) return item;
       const shortage = shortageOf(item);
 
       const newIssues = (item.issues || []).map((issue) => {
@@ -99,9 +104,9 @@ export function useReceivingForm(purchaseData) {
     setReceivingItems(newItems);
   };
 
-  const handleRemoveIssue = (productId, issueRowId) => {
+  const handleRemoveIssue = (lineId, issueRowId) => {
     const newItems = formData.items.map((item) =>
-      item.productId === productId
+      item.lineId === lineId
         ? { ...item, issues: (item.issues || []).filter((i) => i.id !== issueRowId) }
         : item,
     );
@@ -112,9 +117,9 @@ export function useReceivingForm(purchaseData) {
   // برخلاف کسری، مازاد از روی تعدادها قابل استنتاج نیست (چون سقف
   // دریافتی همان سفارش است)؛ انباردار باید صریحاً اعلامش کند. سقفی
   // هم ندارد — تامین‌کننده هر تعدادی ممکن است اضافه فرستاده باشد.
-  const handleExcessChange = (productId, field, value) => {
+  const handleExcessChange = (lineId, field, value) => {
     const newItems = formData.items.map((item) => {
-      if (item.productId !== productId) return item;
+      if (item.lineId !== lineId) return item;
       if (field === 'excessQty') {
         const num = Number(value);
         const safe = Number.isNaN(num) || num < 0 ? 0 : Math.floor(num);
@@ -167,8 +172,15 @@ export function useReceivingForm(purchaseData) {
   ).length;
 
   const isAllComplete = formData.items.every(
-    (item) => item.receivedQty >= item.expectedQty
+    (item) => item.receivedQty >= item.expectedQty,
   );
+
+  // خطوط به تفکیک منبع، برای اینکه صفحه هرکدام را زیر عنوان خودش
+  // نشان بدهد بدون اینکه منطق فرم دو شاخه شود.
+  const linesBySource = formData.items.reduce((acc, item) => {
+    (acc[item.source] ||= []).push(item);
+    return acc;
+  }, {});
 
   const isTransporterValid =
     !!formData.transporterName?.trim() &&
@@ -177,6 +189,10 @@ export function useReceivingForm(purchaseData) {
   const buildPayload = () => ({
     id: formData.purchaseId,
     receivedItems: formData.items.map((item) => ({
+      lineId: item.lineId,
+      source: item.source,
+      returnId: item.returnId,
+      effectId: item.effectId,
       productId: item.productId,
       productCode: item.productCode,
       productName: item.productName,
@@ -217,6 +233,7 @@ export function useReceivingForm(purchaseData) {
     handleRemoveUnknownItem,
     incompleteUnknownCount,
     isAllComplete,
+    linesBySource,
     isTransporterValid,
     buildPayload,
     resetForm,

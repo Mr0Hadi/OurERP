@@ -15,6 +15,8 @@ import ReceivingItemCard from "./ReceivingItemCard";
 
 export default function ReceivingItemsSection({
   items,
+  title = "اقلام دریافت",
+  subtitle,
   onItemChange,
   onAddIssue,
   onUpdateIssue,
@@ -65,7 +67,12 @@ export default function ReceivingItemsSection({
   return (
     <Card>
       <CardHeader className="flex flex-col items-start gap-2 pb-2 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle className="text-base font-semibold">اقلام دریافت</CardTitle>
+        <div>
+          <CardTitle className="text-base font-semibold">{title}</CardTitle>
+          {subtitle && (
+            <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
+          )}
+        </div>
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
           <Badge
             variant="outline"
@@ -126,7 +133,7 @@ export default function ReceivingItemsSection({
           <div className="space-y-2 sm:hidden">
             {filteredItems.map((item) => (
               <ReceivingItemCard
-                key={item.productId}
+                key={item.lineId}
                 item={item}
                 {...rowHandlers}
               />
@@ -166,7 +173,7 @@ export default function ReceivingItemsSection({
               <tbody className="divide-y divide-border">
                 {filteredItems.map((item) => (
                   <ReceivingItemRow
-                    key={item.productId}
+                    key={item.lineId}
                     item={item}
                     {...rowHandlers}
                   />

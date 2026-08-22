@@ -1,7 +1,4 @@
-import {
-  allPurchaseReturns,
-  RETURN_ELIGIBLE_PURCHASE_STATUSES,
-} from "./mockData";
+import { allPurchaseReturns } from "./mockData";
 import { allPurchases } from "@/features/purchases/orders/services/mockData";
 import { adjustPurchaseTotal } from "@/features/purchases/orders/services/api-mockData";
 import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
@@ -118,6 +115,18 @@ function activeClaimedQtyForProduct(purchaseId, productId, excludeReturnId = nul
   return Math.max(0, claimed);
 }
 
+/**
+ * آیا چیزی از این خرید واقعاً رسیده؟
+ *
+ * معیار، *کالای رسیده* است نه وضعیت خرید. یک خرید که نیمی از آن با
+ * ماشین اول رسیده هنوز وضعیتش «ارسال‌شده» است، ولی همان نیمه ممکن
+ * است معیوب باشد و باید بشود همان‌جا مرجوعی زد — منتظر ماشین دوم
+ * ماندن یعنی ادعا را عقب انداختن.
+ */
+export function hasAnythingArrived(purchase) {
+  return (purchase.items || []).some((item) => (item.receivedQty || 0) > 0);
+}
+
 /** سقف ادعا برای یک قلم = مقدار سفارش‌شده. */
 export function computeItemClaimableQty(item) {
   return Math.max(0, Number(item.qty) || 0);
@@ -128,9 +137,7 @@ export function computeItemClaimableQty(item) {
 export async function fetchReturnablePurchases(search = "") {
   await delay(350);
 
-  let filtered = allPurchases.filter((p) =>
-    RETURN_ELIGIBLE_PURCHASE_STATUSES.includes(p.status),
-  );
+  let filtered = allPurchases.filter(hasAnythingArrived);
 
   if (search) {
     const term = search.toLowerCase();
@@ -165,7 +172,7 @@ export async function fetchPurchaseForReturn(purchaseId, excludeReturnId = null)
 
   const purchase = getPurchase(purchaseId);
   if (!purchase) throw new Error("خرید یافت نشد");
-  if (!RETURN_ELIGIBLE_PURCHASE_STATUSES.includes(purchase.status)) {
+  if (!hasAnythingArrived(purchase)) {
     throw new Error("هنوز چیزی از این خرید دریافت نشده و قابل مرجوع‌کردن نیست");
   }
 

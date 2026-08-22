@@ -9,7 +9,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 
 /**
- * کالاهایی که تامین‌کننده فرستاده ولی نه در این سفارش‌اند و نه اصلاً
+ * کالاهایی که طرف حساب فرستاده ولی نه در این سند‌اند و نه اصلاً
  * در فهرست کالاهای ما تعریف شده‌اند.
  *
  * اینجا عمداً هیچ انتخابگر کالا و هیچ «ثبت کالای جدید»ی نیست: انباردار
@@ -20,6 +20,7 @@ import { Button } from "@/shared/components/ui/button";
  * و هم کسی که باید تصمیم بگیرد.
  */
 export default function UnknownItemsSection({
+  partyLabel = "تامین‌کننده",
   items,
   incompleteCount,
   showErrors,
@@ -50,7 +51,7 @@ export default function UnknownItemsSection({
       <CardContent className="space-y-2">
         {items.length === 0 && (
           <p className="text-xs text-muted-foreground">
-            اگر تامین‌کننده کالایی فرستاده که در این فاکتور نیست و در سیستم هم
+            اگر {partyLabel} کالایی فرستاده که در این سند نیست و در سیستم هم
             تعریف نشده، همین‌جا فقط شرح و تعدادش را بنویسید. لازم نیست کالا را
             اول در فهرست کالاها ثبت کنید.
           </p>
