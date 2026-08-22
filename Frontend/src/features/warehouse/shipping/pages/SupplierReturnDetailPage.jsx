@@ -263,7 +263,7 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
 }
 
 export default function SupplierReturnDetailPage() {
-  const { returnId } = useParams();
+  const { id } = useParams();
   const navigate = useNavigate();
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
@@ -272,7 +272,7 @@ export default function SupplierReturnDetailPage() {
     data: purchaseReturn,
     isLoading,
     isError,
-  } = usePurchaseReturnQuery(returnId);
+  } = usePurchaseReturnQuery(Number(id));
 
   useEffect(() => {
     setHeader({

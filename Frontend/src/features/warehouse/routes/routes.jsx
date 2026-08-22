@@ -59,7 +59,7 @@ export const warehouseRoutes = [
     element: <ReceivingReturnDetailPage />,
   },
   {
-    path: ROUTES.WAREHOUSE_SHIPPING_SUPPLIER_RETURN_DETAIL,
+    path: ROUTES.WAREHOUSE_SHIPPING_RETURN_DETAIL,
     element: <SupplierReturnDetailPage />,
   },
 ];

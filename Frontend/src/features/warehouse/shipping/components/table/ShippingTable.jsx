@@ -22,8 +22,8 @@ const ACTION_BY_TYPE = {
   [OUTGOING_TYPES.RETURN_TO_SUPPLIER]: {
     label: "آماده‌سازی عودت",
     buildPath: ({ returnId }) =>
-      ROUTES.WAREHOUSE_SHIPPING_SUPPLIER_RETURN_DETAIL.replace(
-        ":returnId",
+      ROUTES.WAREHOUSE_SHIPPING_RETURN_DETAIL.replace(
+        ":id",
         returnId,
       ),
   },
