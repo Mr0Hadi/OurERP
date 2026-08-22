@@ -19,6 +19,8 @@ import { useSalesReturnQuery } from "@/features/sales/returns/services/queries";
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
 import { buildGoodsLines } from "@/shared/domain/returns/resolutions";
 import { EFFECT_KINDS } from "@/shared/domain/returns/effects";
+import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
+import ReturnSummaryCard from "@/shared/components/returns/ReturnSummaryCard";
 
 import { useConfirmReturnIntakeMutation } from "../services/mutations";
 import { useReceivingFormStore } from "../store/receivingFormStore";
@@ -30,6 +32,8 @@ import ReceivingMismatchList from "../components/forms/ReceivingMismatchList";
 import ReturnTransporterSection from "../components/forms/ReturnTransporterSection";
 import ReturnDetailLoading from "../components/forms/ReturnDetailLoading";
 import { ROUTES } from "@/shared/constants/routes";
+
+const SALES_SIDE = sideConfig(RETURN_SIDES.SALES);
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -224,6 +228,20 @@ function ReceivingReturnDetailForm({ salesReturn }) {
         </div>
 
         <div className="space-y-4">
+          <ReturnSummaryCard
+            side={SALES_SIDE}
+            formData={formData}
+            onFormChange={setFormData}
+            partyName={formData.supplierName}
+            title="اطلاعات دریافت مرجوعی"
+            progressLabel="پیشرفت دریافت"
+            progressField="receivedQty"
+            dateField="receivedDate"
+            dateLabel="تاریخ دریافت"
+            noteField="receivingNote"
+            noteLabel="یادداشت دریافت"
+          />
+
           <div className="flex gap-2">
             <Button
               className={`flex-1 gap-2 ${

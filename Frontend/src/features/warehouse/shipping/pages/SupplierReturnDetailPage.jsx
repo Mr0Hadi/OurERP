@@ -19,6 +19,8 @@ import { usePurchaseReturnQuery } from "@/features/purchases/returns/services/qu
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
 import { buildGoodsLines } from "@/shared/domain/returns/resolutions";
 import { EFFECT_KINDS } from "@/shared/domain/returns/effects";
+import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
+import ReturnSummaryCard from "@/shared/components/returns/ReturnSummaryCard";
 import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
 
 import { useConfirmSupplierReturnShipmentBatchMutation } from "../services/mutations";
@@ -27,6 +29,8 @@ import { useShippingForm } from "../hooks/useShippingForm";
 import ShippingItemsSection from "../components/forms/ShippingItemsSection";
 import ShippingTransporterSection from "../components/forms/ShippingTransporterSection";
 import { ROUTES } from "@/shared/constants/routes";
+
+const PURCHASE_SIDE = sideConfig(RETURN_SIDES.PURCHASE);
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -182,6 +186,20 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
         </div>
 
         <div className="space-y-4">
+          <ReturnSummaryCard
+            side={PURCHASE_SIDE}
+            formData={formData}
+            onFormChange={setFormData}
+            partyName={formData.customerName}
+            title="اطلاعات عودت"
+            progressLabel="پیشرفت عودت"
+            progressField="shippedQty"
+            dateField="shippedDate"
+            dateLabel="تاریخ عودت"
+            noteField="shippingNote"
+            noteLabel="یادداشت عودت"
+          />
+
           <div className="flex gap-2">
             <Button
               className={`flex-1 gap-2 ${
