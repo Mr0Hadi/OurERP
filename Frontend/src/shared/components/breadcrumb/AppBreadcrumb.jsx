@@ -155,7 +155,7 @@ export function AppBreadcrumb() {
   const breadcrumbs = buildBreadcrumbs(pathname);
 
   return (
-    <Breadcrumb>
+    <Breadcrumb dir='ltr'>
       <BreadcrumbList>
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
