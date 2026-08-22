@@ -26,7 +26,7 @@ const PurchaseReturnFilters = ({ suppliers = [], isSuppliersLoading = false }) =
     fromDate,
     toDate,
     setGlobalSearch,
-    setCustomerIds,
+    setSupplierIds,
     setStatus,
     setProblem,
     setScope,
@@ -70,7 +70,7 @@ const PurchaseReturnFilters = ({ suppliers = [], isSuppliersLoading = false }) =
         emptyText="تامین‌کننده‌ای یافت نشد"
         items={suppliers}
         value={supplierIds}
-        onSelect={setCustomerIds}
+        onSelect={setSupplierIds}
         isLoading={isSuppliersLoading}
       />
 
