@@ -1,4 +1,4 @@
-import React from 'react'
+import React from "react";
 import { useLocation, Link } from "react-router-dom";
 import { ROUTES } from "@/shared/constants/routes";
 import {
@@ -10,31 +10,28 @@ import {
   BreadcrumbSeparator,
 } from "@/shared/components/breadcrumb/breadcrumb";
 
-// نگاشت مسیرها به عناوین فارسی
+/**
+ * عنوان مسیرهای ثابت — کلید، خودِ مسیر است.
+ *
+ * فقط مسیرهایی که واقعاً وجود دارند. نسخه‌ی قبلی چند کلید از
+ * ROUTES می‌خواند که کامنت شده بودند (PRODUCTS_LIST و ...) و چون
+ * undefined بودند همگی روی یک کلیدِ "undefined" می‌نشستند.
+ */
 const ROUTE_TITLES = {
-  // داشبورد
-  [ROUTES.DASHBOARD]: "داشبورد",    
+  [ROUTES.DASHBOARD]: "داشبورد",
 
-  // تامین کنندگان
   [ROUTES.SUPPLIERS_LIST]: "تامین کنندگان",
   [ROUTES.SUPPLIERS_NEW]: "تامین کننده جدید",
 
-  // مشتریان
   [ROUTES.CUSTOMERS_LIST]: "مشتریان",
   [ROUTES.CUSTOMERS_NEW]: "مشتری جدید",
 
-  // محصولات
-  [ROUTES.PRODUCTS_LIST]: "محصولات",
-  [ROUTES.PRODUCTS_NEW]: "محصول جدید",
-
-  // خرید
   [ROUTES.PURCHASES]: "خرید",
   [ROUTES.PURCHASES_NEW]: "ثبت خرید جدید",
   [ROUTES.PURCHASES_INVOICES]: "فاکتورهای خرید",
   [ROUTES.PURCHASES_RETURNS_LIST]: "مرجوعی‌های خرید",
-  [ROUTES.PURCHASES_RETURNS_NEW]: "ثبت مرجوعی خرید",
+  "/purchases/returns/new": "ثبت مرجوعی خرید",
 
-  // فروش
   [ROUTES.SALES]: "فروش",
   [ROUTES.SALES_NEW]: "ثبت فروش جدید",
   [ROUTES.SALES_ORDERS]: "سفارشات فروش",
@@ -43,27 +40,24 @@ const ROUTE_TITLES = {
   [ROUTES.SALES_RETURNS_LIST]: "مرجوعی‌های فروش",
   [ROUTES.SALES_RETURNS_NEW]: "ثبت مرجوعی فروش",
 
-  // انبار
-  [ROUTES.WAREHOUSE]: "مدیریت موجودی",
   [ROUTES.WAREHOUSE]: "انبار",
   [ROUTES.WAREHOUSE_PRODUCTS]: "کالاهای انبار",
   [ROUTES.WAREHOUSE_PRODUCTS_NEW]: "کالای جدید",
+  [ROUTES.WAREHOUSE_UNIT_LABELS]: "برچسب کالاها",
+  [ROUTES.WAREHOUSE_RECEIVING]: "دریافت کالا",
+  [ROUTES.WAREHOUSE_SHIPPING]: "ارسال کالا",
   [ROUTES.WAREHOUSE_STOCK]: "موجودی انبار",
   [ROUTES.WAREHOUSE_TRANSACTIONS]: "تراکنش‌های انبار",
 
-  // فاکتورها
   [ROUTES.INVOICE]: "فاکتورها",
   [ROUTES.INVOICE_LIST]: "لیست فاکتورها",
   [ROUTES.INVOICE_NEW]: "فاکتور جدید",
 
-  // تراکنش‌ها
   [ROUTES.TRANSACTIONS]: "تراکنش‌ها",
-  [ROUTES.TRANSACTIONS_LIST]: "تراکنش‌ها",
   [ROUTES.TRANSACTIONS_BUY_SELL]: "خرید و فروش",
   [ROUTES.TRANSACTIONS_PAYMENTS]: "پرداخت‌ها",
   [ROUTES.TRANSACTIONS_RETURNS]: "مرجوعی‌ها",
 
-  // گزارشات
   [ROUTES.REPORTS]: "گزارشات",
   [ROUTES.REPORTS_SALES]: "گزارش فروش",
   [ROUTES.REPORTS_PURCHASES]: "گزارش خرید",
@@ -71,7 +65,6 @@ const ROUTE_TITLES = {
   [ROUTES.REPORTS_PROFIT_LOSS]: "سود و زیان",
   [ROUTES.REPORTS_warehouse]: "گزارش موجودی",
 
-  // تنظیمات
   [ROUTES.SETTINGS]: "تنظیمات",
   [ROUTES.SETTINGS_GENERAL]: "تنظیمات عمومی",
   [ROUTES.SETTINGS_COMPANY]: "اطلاعات شرکت",
@@ -82,121 +75,77 @@ const ROUTE_TITLES = {
   [ROUTES.SETTINGS_NOTIFICATIONS]: "اعلان‌ها",
   [ROUTES.SETTINGS_BACKUP]: "پشتیبان‌گیری",
 
-  // ابزارها
   [ROUTES.TOOLS_NUMBER_TO_WORDS]: "تبدیل عدد به حروف",
   [ROUTES.TOOLS_CALENDAR]: "تقویم",
 
-  // پشتیبانی
   [ROUTES.FEEDBACK]: "بازخورد",
-
-  // احراز هویت
   [ROUTES.AUTH]: "احراز هویت",
   [ROUTES.LOGIN]: "ورود",
-  [ROUTES.REGISTER]: "ثبت‌نام",
-  [ROUTES.FORGOT_PASSWORD]: "فراموشی رمز عبور",
-  [ROUTES.RESET_PASSWORD]: "بازنشانی رمز عبور",
 };
 
-// الگوهای مسیرهای داینامیک
-const DYNAMIC_PATTERNS = [
-  {
-    regex: /^\/suppliers\/edit\/(\d+)$/,
-    getTitle: () => "ویرایش تامین کننده",
-    parentPath: ROUTES.SUPPLIERS_LIST,
-  },
-  {
-    regex: /^\/suppliers\/(\d+)$/,
-    getTitle: () => "جزئیات تامین کننده",
-    parentPath: ROUTES.SUPPLIERS_LIST,
-  },
-  {
-    regex: /^\/customers\/edit\/(\d+)$/,
-    getTitle: () => "ویرایش مشتری",
-    parentPath: ROUTES.CUSTOMERS_LIST,
-  },
-  {
-    regex: /^\/customers\/(\d+)$/,
-    getTitle: () => "جزئیات مشتری",
-    parentPath: ROUTES.CUSTOMERS_LIST,
-  },
-  {
-    regex: /^\/products\/edit\/(\d+)$/,
-    getTitle: () => "ویرایش محصول",
-    parentPath: ROUTES.PRODUCTS_LIST,
-  },
-  {
-    regex: /^\/products\/(\d+)$/,
-    getTitle: () => "جزئیات محصول",
-    parentPath: ROUTES.PRODUCTS_LIST,
-  },
-  {
-    regex: /^\/purchases\/invoices\/(\d+)$/,
-    getTitle: () => "جزئیات فاکتور خرید",
-    parentPath: ROUTES.PURCHASES_INVOICES,
-  },
-  {
-    regex: /^\/sales\/orders\/(\d+)$/,
-    getTitle: () => "جزئیات سفارش فروش",
-    parentPath: ROUTES.SALES_ORDERS,
-  },
-  {
-    regex: /^\/invoice\/(\d+)$/,
-    getTitle: () => "جزئیات فاکتور",
-    parentPath: ROUTES.INVOICE_LIST,
-  },
-];
+/**
+ * وقتی یک بخش از مسیر «شناسه» است، عنوانش از مسیرِ والدش می‌آید.
+ *
+ * جای فهرستِ الگوهای regexی نسخه‌ی قبلی را گرفته: آن فهرست باید با هر
+ * مسیر تازه دستی به‌روز می‌شد و در عمل نشده بود — نه جزئیات فروش، نه
+ * جزئیات خرید، نه هیچ‌کدام از صفحه‌های انبار در آن نبودند و مسیرشان
+ * ناقص نمایش داده می‌شد.
+ */
+const DETAIL_TITLES = {
+  [ROUTES.SUPPLIERS_LIST]: "جزئیات تامین کننده",
+  [ROUTES.CUSTOMERS_LIST]: "جزئیات مشتری",
 
-// تطبیق مسیر داینامیک
-function matchDynamicRoute(pathname) {
-  for (const pattern of DYNAMIC_PATTERNS) {
-    const match = pathname.match(pattern.regex);
-    if (match) {
-      return {
-        title: pattern.getTitle(pathname),
-        parentPath: pattern.parentPath,
-      };
-    }
-  }
-  return null;
-}
+  [ROUTES.PURCHASES]: "جزئیات خرید",
+  [ROUTES.PURCHASES_INVOICES]: "جزئیات فاکتور خرید",
+  [ROUTES.PURCHASES_RETURNS_LIST]: "جزئیات مرجوعی خرید",
 
-// ساخت breadcrumbs از مسیر
+  [ROUTES.SALES]: "جزئیات فروش",
+  [ROUTES.SALES_ORDERS]: "جزئیات سفارش فروش",
+  [ROUTES.SALES_RETURNS_LIST]: "جزئیات مرجوعی فروش",
+
+  [ROUTES.WAREHOUSE_PRODUCTS]: "جزئیات کالا",
+  [ROUTES.WAREHOUSE_RECEIVING]: "دریافت خرید",
+  [ROUTES.WAREHOUSE_SHIPPING]: "ارسال فروش",
+  "/warehouse/receiving/returns": "بررسی مرجوعی مشتری",
+  "/warehouse/shipping/replacement": "ارسال کالای جایگزین",
+  "/warehouse/shipping/supplier-return": "عودت به تامین‌کننده",
+
+  [ROUTES.INVOICE]: "جزئیات فاکتور",
+};
+
+/**
+ * مسیرهایی که در URL هستند ولی صفحه‌ای ندارند — فقط برای گروه‌بندی‌اند
+ * (مثل «returns» در /warehouse/receiving/returns/5). لینک‌کردنشان
+ * کاربر را به ۴۰۴ می‌برد، پس اصلاً در مسیر نمایش داده نمی‌شوند.
+ */
+const isIdSegment = (segment) => /^\d+$/.test(segment);
+
 function buildBreadcrumbs(pathname) {
-  const breadcrumbs = [];
-
-  // صفحه اصلی (/) و داشبورد یکی هستند
   if (pathname === "/" || pathname === ROUTES.DASHBOARD) {
-    breadcrumbs.push({ path: "/", title: "داشبورد" });
-    return breadcrumbs;
+    return [{ path: ROUTES.DASHBOARD, title: "داشبورد" }];
   }
 
-  // بررسی مسیر داینامیک
-  const dynamicMatch = matchDynamicRoute(pathname);
+  const crumbs = [];
+  let accumulated = "";
 
-  if (dynamicMatch) {
-    // اضافه کردن والد
-    const parentTitle = ROUTE_TITLES[dynamicMatch.parentPath];
-    if (parentTitle) {
-      breadcrumbs.push({ path: dynamicMatch.parentPath, title: parentTitle });
+  for (const segment of pathname.split("/").filter(Boolean)) {
+    const parent = accumulated;
+    accumulated += `/${segment}`;
+
+    if (isIdSegment(segment)) {
+      // شناسه فقط وقتی یک پله‌ی جدا می‌شود که والدش عنوانِ «جزئیات»
+      // داشته باشد. در مسیری مثل /purchases/returns/new/۵ که والد خودش
+      // نامِ صفحه است، شناسه پله‌ی اضافه‌ای نمی‌سازد.
+      const detailTitle = DETAIL_TITLES[parent];
+      if (detailTitle) crumbs.push({ path: accumulated, title: detailTitle });
+      continue;
     }
-    // اضافه کردن صفحه فعلی
-    breadcrumbs.push({ path: pathname, title: dynamicMatch.title });
-  } else {
-    // مسیرهای استاتیک
-    const segments = pathname.split("/").filter(Boolean);
-    let accumulated = "";
 
-    for (const segment of segments) {
-      accumulated += `/${segment}`;
-      const title = ROUTE_TITLES[accumulated];
-
-      if (title) {
-        breadcrumbs.push({ path: accumulated, title });
-      }
-    }
+    const title = ROUTE_TITLES[accumulated];
+    if (title) crumbs.push({ path: accumulated, title });
   }
 
-  return breadcrumbs;
+  return crumbs;
 }
 
 export function AppBreadcrumb() {
@@ -205,45 +154,34 @@ export function AppBreadcrumb() {
 
   const breadcrumbs = buildBreadcrumbs(pathname);
 
-  // اگر breadcrumb خالی است، نمایش نده
-  if (breadcrumbs.length === 0) return null;
+  return (
+    <Breadcrumb>
+      <BreadcrumbList>
+        <BreadcrumbItem>
+          <BreadcrumbLink asChild>
+            <Link to={ROUTES.DASHBOARD}>خانه</Link>
+          </BreadcrumbLink>
+        </BreadcrumbItem>
 
-return (
-  <Breadcrumb dir='ltr'>
-    <BreadcrumbList>
-      {/* Home Item */}
-      <BreadcrumbItem>
-        <BreadcrumbLink asChild>
-          <Link to="/">خانه</Link>
-        </BreadcrumbLink>
-      </BreadcrumbItem>
-      
-      {/* Separator after Home */}
-      <BreadcrumbSeparator />
+        {breadcrumbs.map((crumb, idx) => {
+          const isLast = idx === breadcrumbs.length - 1;
 
-      {/* Map over the rest */}
-      {breadcrumbs.map((crumb, idx) => {
-        const isLast = idx === breadcrumbs.length - 1;
-
-        return (
-          // Use React.Fragment so we can return multiple siblings
-          <React.Fragment key={crumb.path}>
-            <BreadcrumbItem>
-              {isLast ? (
-                <BreadcrumbPage>{crumb.title}</BreadcrumbPage>
-              ) : (
-                <BreadcrumbLink asChild>
-                  <Link to={crumb.path}>{crumb.title}</Link>
-                </BreadcrumbLink>
-              )}
-            </BreadcrumbItem>
-
-            {/* Separator goes HERE, as a sibling to the Item, but only if it's not the last one */}
-            {!isLast && <BreadcrumbSeparator />}
-          </React.Fragment>
-        );
-      })}
-    </BreadcrumbList>
-  </Breadcrumb>
-);
+          return (
+            <React.Fragment key={crumb.path}>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                {isLast ? (
+                  <BreadcrumbPage>{crumb.title}</BreadcrumbPage>
+                ) : (
+                  <BreadcrumbLink asChild>
+                    <Link to={crumb.path}>{crumb.title}</Link>
+                  </BreadcrumbLink>
+                )}
+              </BreadcrumbItem>
+            </React.Fragment>
+          );
+        })}
+      </BreadcrumbList>
+    </Breadcrumb>
+  );
 }
