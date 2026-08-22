@@ -2,6 +2,7 @@ import { allSalesReturns, RETURN_ELIGIBLE_SALE_STATUSES } from "./mockData";
 import { allSales } from "@/features/sales/orders/services/mockData";
 import { adjustSaleTotal } from "@/features/sales/orders/services/api-mockData";
 import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
+import { applyListQuery } from "@/shared/services/mockQuery";
 
 import {
   CLAIM_SCOPES,
@@ -52,7 +53,7 @@ function getSale(saleId) {
   return allSales.find((s) => Number(s.id) === Number(saleId));
 }
 
-export function getSalesReturnIndex(returnId) {
+function getSalesReturnIndex(returnId) {
   return allSalesReturns.findIndex((r) => Number(r.id) === Number(returnId));
 }
 
@@ -131,7 +132,7 @@ function activeClaimedQtyForProduct(saleId, productId, excludeReturnId = null) {
  * سقف ادعا برای یک قلم = هر چه واقعاً به مشتری تحویل شده. عمداً چیزی
  * از آن کم نمی‌شود؛ نگاه کنید به توضیح activeClaimedQtyForProduct.
  */
-export function computeItemReturnableQty(item) {
+function computeItemReturnableQty(item) {
   return Math.max(0, item.shippedQty ?? item.qty);
 }
 
@@ -208,31 +209,10 @@ export async function fetchSaleForReturn(saleId, excludeReturnId = null) {
 export async function fetchSalesReturns(params = {}) {
   await delay(500);
 
-  const {
-    page = 1,
-    limit = 10,
-    search = "",
-    customerIds = [],
-    status = "",
-    problem = "",
-    scope = "",
-    fromDate = "",
-    toDate = "",
-    sortBy = "createdAt",
-    sortOrder = "desc",
-  } = params;
+  const { customerIds = [], status = "", problem = "", scope = "" } = params;
 
   let filtered = [...allSalesReturns];
 
-  if (search) {
-    const term = search.toLowerCase();
-    filtered = filtered.filter(
-      (r) =>
-        (r.returnNumber && r.returnNumber.toLowerCase().includes(term)) ||
-        r.saleInvoiceNumber.toLowerCase().includes(term) ||
-        r.customerName.toLowerCase().includes(term),
-    );
-  }
   if (Array.isArray(customerIds) && customerIds.length) {
     filtered = filtered.filter((r) =>
       customerIds.map(String).includes(String(r.customerId)),
@@ -253,41 +233,11 @@ export async function fetchSalesReturns(params = {}) {
     );
   }
 
-  if (fromDate) {
-    filtered = filtered.filter(
-      (r) => r.returnDate && r.returnDate.slice(0, 10) >= fromDate.slice(0, 10),
-    );
-  }
-  if (toDate) {
-    filtered = filtered.filter(
-      (r) => r.returnDate && r.returnDate.slice(0, 10) <= toDate.slice(0, 10),
-    );
-  }
-
-  filtered.sort((a, b) => {
-    let aVal = a[sortBy];
-    let bVal = b[sortBy];
-    if (["createdAt", "updatedAt", "returnDate"].includes(sortBy)) {
-      aVal = aVal ? new Date(aVal).getTime() : 0;
-      bVal = bVal ? new Date(bVal).getTime() : 0;
-    } else if (sortBy === "totalClaimedAmount") {
-      aVal = Number(aVal) || 0;
-      bVal = Number(bVal) || 0;
-    } else if (typeof aVal === "string" || typeof bVal === "string") {
-      aVal = aVal || "";
-      bVal = bVal || "";
-      return sortOrder === "asc"
-        ? aVal.localeCompare(bVal, "fa")
-        : bVal.localeCompare(aVal, "fa");
-    }
-    return sortOrder === "asc" ? (aVal > bVal ? 1 : -1) : aVal < bVal ? 1 : -1;
+  return applyListQuery(filtered, params, {
+    searchFields: ["returnNumber", "saleInvoiceNumber", "customerName"],
+    dateField: "returnDate",
+    numericFields: ["totalClaimedAmount"],
   });
-
-  const total = filtered.length;
-  const totalPages = Math.ceil(total / limit) || 1;
-  const start = (page - 1) * limit;
-
-  return { items: filtered.slice(start, start + limit), total, page, totalPages };
 }
 
 export async function fetchSalesReturnById(id) {

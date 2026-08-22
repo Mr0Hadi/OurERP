@@ -2,10 +2,12 @@ import { allPurchaseReturns } from "./mockData";
 import { allPurchases } from "@/features/purchases/orders/services/mockData";
 import { adjustPurchaseTotal } from "@/features/purchases/orders/services/api-mockData";
 import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
+import { applyListQuery } from "@/shared/services/mockQuery";
 
 import {
   CLAIM_SCOPES,
   PURCHASE_RETURN_STATUSES,
+  hasAnythingArrived,
   isTerminalStatus,
 } from "../domain/purchaseReturnVocabulary";
 import {
@@ -46,7 +48,7 @@ function getPurchase(purchaseId) {
   return allPurchases.find((p) => Number(p.id) === Number(purchaseId));
 }
 
-export function getPurchaseReturnIndex(returnId) {
+function getPurchaseReturnIndex(returnId) {
   return allPurchaseReturns.findIndex((r) => Number(r.id) === Number(returnId));
 }
 
@@ -115,20 +117,8 @@ function activeClaimedQtyForProduct(purchaseId, productId, excludeReturnId = nul
   return Math.max(0, claimed);
 }
 
-/**
- * آیا چیزی از این خرید واقعاً رسیده؟
- *
- * معیار، *کالای رسیده* است نه وضعیت خرید. یک خرید که نیمی از آن با
- * ماشین اول رسیده هنوز وضعیتش «ارسال‌شده» است، ولی همان نیمه ممکن
- * است معیوب باشد و باید بشود همان‌جا مرجوعی زد — منتظر ماشین دوم
- * ماندن یعنی ادعا را عقب انداختن.
- */
-export function hasAnythingArrived(purchase) {
-  return (purchase.items || []).some((item) => (item.receivedQty || 0) > 0);
-}
-
 /** سقف ادعا برای یک قلم = مقدار سفارش‌شده. */
-export function computeItemClaimableQty(item) {
+function computeItemClaimableQty(item) {
   return Math.max(0, Number(item.qty) || 0);
 }
 
@@ -199,31 +189,10 @@ export async function fetchPurchaseForReturn(purchaseId, excludeReturnId = null)
 export async function fetchPurchaseReturns(params = {}) {
   await delay(500);
 
-  const {
-    page = 1,
-    limit = 10,
-    search = "",
-    supplierIds = [],
-    status = "",
-    problem = "",
-    scope = "",
-    fromDate = "",
-    toDate = "",
-    sortBy = "createdAt",
-    sortOrder = "desc",
-  } = params;
+  const { supplierIds = [], status = "", problem = "", scope = "" } = params;
 
   let filtered = [...allPurchaseReturns];
 
-  if (search) {
-    const term = search.toLowerCase();
-    filtered = filtered.filter(
-      (r) =>
-        (r.returnNumber && r.returnNumber.toLowerCase().includes(term)) ||
-        r.purchaseInvoiceNumber.toLowerCase().includes(term) ||
-        r.supplierName.toLowerCase().includes(term),
-    );
-  }
   if (Array.isArray(supplierIds) && supplierIds.length) {
     filtered = filtered.filter((r) =>
       supplierIds.map(String).includes(String(r.supplierId)),
@@ -243,41 +212,11 @@ export async function fetchPurchaseReturns(params = {}) {
     );
   }
 
-  if (fromDate) {
-    filtered = filtered.filter(
-      (r) => r.returnDate && r.returnDate.slice(0, 10) >= fromDate.slice(0, 10),
-    );
-  }
-  if (toDate) {
-    filtered = filtered.filter(
-      (r) => r.returnDate && r.returnDate.slice(0, 10) <= toDate.slice(0, 10),
-    );
-  }
-
-  filtered.sort((a, b) => {
-    let aVal = a[sortBy];
-    let bVal = b[sortBy];
-    if (["createdAt", "updatedAt", "returnDate"].includes(sortBy)) {
-      aVal = aVal ? new Date(aVal).getTime() : 0;
-      bVal = bVal ? new Date(bVal).getTime() : 0;
-    } else if (sortBy === "totalClaimedAmount") {
-      aVal = Number(aVal) || 0;
-      bVal = Number(bVal) || 0;
-    } else if (typeof aVal === "string" || typeof bVal === "string") {
-      aVal = aVal || "";
-      bVal = bVal || "";
-      return sortOrder === "asc"
-        ? aVal.localeCompare(bVal, "fa")
-        : bVal.localeCompare(aVal, "fa");
-    }
-    return sortOrder === "asc" ? (aVal > bVal ? 1 : -1) : aVal < bVal ? 1 : -1;
+  return applyListQuery(filtered, params, {
+    searchFields: ["returnNumber", "purchaseInvoiceNumber", "supplierName"],
+    dateField: "returnDate",
+    numericFields: ["totalClaimedAmount"],
   });
-
-  const total = filtered.length;
-  const totalPages = Math.ceil(total / limit) || 1;
-  const start = (page - 1) * limit;
-
-  return { items: filtered.slice(start, start + limit), total, page, totalPages };
 }
 
 export async function fetchPurchaseReturnById(id) {

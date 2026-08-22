@@ -50,6 +50,3 @@ export async function removeSale(id) {
   return data;
 }
 
-export async function deleteSale(id) {
-  return updateSaleStatus(id, "cancelled");
-}

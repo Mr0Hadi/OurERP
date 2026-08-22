@@ -33,7 +33,7 @@ import {
   getPurchaseLockReason,
 } from "@/features/purchases/orders/domain/purchaseRules";
 import { PURCHASE_STATUSES } from "@/features/purchases/orders/services/constants";
-import { hasAnythingArrived } from "@/features/purchases/returns/services/api-mockData";
+import { hasAnythingArrived } from "@/features/purchases/returns/domain/purchaseReturnVocabulary";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };

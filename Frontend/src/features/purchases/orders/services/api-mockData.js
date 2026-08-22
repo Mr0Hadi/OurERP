@@ -1,6 +1,7 @@
 
 import { allPurchases, PURCHASE_STATUSES } from "./mockData";
 import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
+import { applyListQuery } from "@/shared/services/mockQuery";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -56,30 +57,9 @@ export async function createPurchase(purchaseData) {
 export async function fetchPurchases(params = {}) {
   await delay(500);
 
-  const {
-    page = 1,
-    limit = 10,
-    search = "",
-    supplierIds = [],
-    status = "",
-    paymentType = "",
-    fromDate = "",
-    toDate = "",
-    sortBy = "createdAt",
-    sortOrder = "desc",
-  } = params;
+  const { supplierIds = [], status = "", paymentType = "" } = params;
 
   let filtered = [...allPurchases];
-
-  if (search) {
-    const searchLower = search.toLowerCase();
-    filtered = filtered.filter(
-      (p) =>
-        p.invoiceNumber.toLowerCase().includes(searchLower) ||
-        p.supplierName.toLowerCase().includes(searchLower) ||
-        (p.description && p.description.toLowerCase().includes(searchLower)),
-    );
-  }
 
   if (Array.isArray(supplierIds) && supplierIds.length > 0) {
     filtered = filtered.filter((p) =>
@@ -95,47 +75,11 @@ export async function fetchPurchases(params = {}) {
     filtered = filtered.filter((p) => p.paymentType === paymentType);
   }
 
-  if (fromDate) {
-    filtered = filtered.filter(
-      (p) =>
-        p.invoiceDate && p.invoiceDate.slice(0, 10) >= fromDate.slice(0, 10),
-    );
-  }
-  if (toDate) {
-    filtered = filtered.filter(
-      (p) => p.invoiceDate && p.invoiceDate.slice(0, 10) <= toDate.slice(0, 10),
-    );
-  }
-
-  filtered.sort((a, b) => {
-    let aVal = a[sortBy];
-    let bVal = b[sortBy];
-
-    if (sortBy === "createdAt" || sortBy === "updatedAt") {
-      aVal = new Date(aVal).getTime();
-      bVal = new Date(bVal).getTime();
-    } else if (sortBy === "totalAmount" || sortBy === "paidAmount") {
-      aVal = Number(aVal);
-      bVal = Number(bVal);
-    } else if (typeof aVal === "string") {
-      return sortOrder === "asc"
-        ? aVal.localeCompare(bVal, "fa")
-        : bVal.localeCompare(aVal, "fa");
-    }
-
-    if (sortOrder === "asc") {
-      return aVal > bVal ? 1 : -1;
-    }
-    return aVal < bVal ? 1 : -1;
+  return applyListQuery(filtered, params, {
+    searchFields: ["invoiceNumber", "supplierName", "description"],
+    dateField: "invoiceDate",
+    numericFields: ["totalAmount", "paidAmount"],
   });
-
-  const total = filtered.length;
-  const totalPages = Math.ceil(total / limit);
-  const start = (page - 1) * limit;
-  const end = start + limit;
-  const items = filtered.slice(start, end);
-
-  return { items, total, page, totalPages };
 }
 
 export async function fetchPurchaseById(id) {
@@ -208,10 +152,6 @@ export async function removePurchase(id) {
   return removed;
 }
 
-export async function deletePurchase(id) {
-  return updatePurchaseStatus(id, PURCHASE_STATUSES.CANCELLED);
-}
-
 export async function updatePurchasePayment(id, paymentData) {
   await delay(600);
 
@@ -235,63 +175,13 @@ export async function updatePurchasePayment(id, paymentData) {
 }
 
 /**
- * وقتی یک قلم با «بازگشت وجه»، «پذیرش زیان» یا «اعتبار خرید بعدی»
- * تسویه می‌شود، این تابع settledQty (تجمعی) را افزایش می‌دهد و در
- * صورت وجود مبلغ بازگشتی، از جمع کل خرید کم می‌کند.
- *
- * توجه: این تابع عمداً موجودی انبار را دست نمی‌زند — چون مقداری که
- * تسویه می‌شود همان مقداری‌ست که در confirmReceiving به‌عنوان «مشکل»
- * گزارش شده و از همان ابتدا هرگز وارد موجودیِ قابل‌فروش نشده بود؛ پس
- * چیزی برای کم‌کردن از موجودی وجود ندارد.
- *
- * همچنین وضعیت کلی خرید (status) را تغییر نمی‌دهد؛ تصمیم نهایی درباره‌ی
- * وضعیت خرید همیشه توسط recomputePurchaseStatus و با دیدن کل تصویر
- * گرفته می‌شود؛ این تابع را همیشه بلافاصله بعد از این تابع فراخوانی
- * کنید.
- */
-export async function settlePurchaseItems(
-  purchaseId,
-  settledItems,
-  { refundAmount = 0 } = {},
-) {
-  await delay(400);
-
-  const index = allPurchases.findIndex(
-    (p) => Number(p.id) === Number(purchaseId),
-  );
-  if (index === -1) {
-    throw new Error("خرید یافت نشد");
-  }
-
-  const purchase = allPurchases[index];
-
-  const updatedItems = purchase.items.map((item) => {
-    const settle = settledItems.find((s) => s.productId === item.productId);
-    if (!settle) return item;
-    return {
-      ...item,
-      settledQty: (item.settledQty || 0) + (settle.qty || 0),
-    };
-  });
-
-  allPurchases[index] = {
-    ...purchase,
-    items: updatedItems,
-    totalAmount: Math.max(0, purchase.totalAmount - refundAmount),
-    updatedAt: new Date().toISOString(),
-  };
-
-  return allPurchases[index];
-}
-
-/**
  * تغییر جمع کل خرید بدون دست‌زدن به هیچ قلمی.
  *
- * settlePurchaseItems برای کسری است: مقداری از سفارش تسویه می‌شود و
- * مبلغش از جمع کل *کم* می‌شود. مازاد قرینه‌ی آن است و هیچ قلمی برای
- * تسویه ندارد — کالایی بیرون از سفارش رسیده و اگر تصمیم بگیریم نگهش
- * داریم و پولش را بدهیم، فقط جمع کل *زیاد* می‌شود. بالابردن settledQty
- * در این حالت، محاسبه‌ی «چقدر هنوز قابل دریافت است» را خراب می‌کرد.
+ * تنها راهی که ماژول مرجوعی خرید مبلغ سفارش را جابه‌جا می‌کند. عمداً
+ * به هیچ قلمی دست نمی‌زند: یک اثر پولی (بازگشت وجه از تامین‌کننده، یا
+ * پرداخت بابت کالای مازادی که نگه داشته‌ایم) فقط جمع کل را عوض می‌کند
+ * و ربطی به «چقدر از سفارش رسیده» ندارد. مخلوط‌کردن این دو، محاسبه‌ی
+ * «چقدر هنوز قابل دریافت است» را خراب می‌کرد.
  *
  * delta مثبت = بدهی ما به تامین‌کننده بیشتر می‌شود.
  */
@@ -311,114 +201,6 @@ export async function adjustPurchaseTotal(purchaseId, delta) {
   allPurchases[index] = {
     ...purchase,
     totalAmount: Math.max(0, (purchase.totalAmount || 0) + delta),
-    updatedAt: new Date().toISOString(),
-  };
-
-  return allPurchases[index];
-}
-
-/**
- * وقتی واحد خرید هماهنگ می‌کند که کالای جایگزین/کسری دوباره ارسال
- * شود، خرید باید دوباره در لیست دریافتِ انباردار ظاهر شود. status را
- * به‌عنوان یک بازخورد فوری روی SHIPPED می‌گذارد، اما مقدار نهایی و
- * قطعی همیشه توسط recomputePurchaseStatus (که بلافاصله بعد از این
- * تابع فراخوانی می‌شود) تعیین می‌شود.
- */
-export async function reopenPurchaseForShipment(purchaseId) {
-  await delay(300);
-
-  const index = allPurchases.findIndex(
-    (p) => Number(p.id) === Number(purchaseId),
-  );
-  if (index === -1) {
-    throw new Error("خرید یافت نشد");
-  }
-
-  const purchase = allPurchases[index];
-
-  if (purchase.status === PURCHASE_STATUSES.CANCELLED) {
-    return purchase;
-  }
-
-  allPurchases[index] = {
-    ...purchase,
-    status: PURCHASE_STATUSES.SHIPPED,
-    updatedAt: new Date().toISOString(),
-  };
-
-  return allPurchases[index];
-}
-
-/**
- * تنها و آخرین مرجع تصمیم‌گیری درباره‌ی وضعیت کلی یک خرید.
- *
- * این تابع باید بعد از هر تغییری که می‌تواند روی «آیا این خرید هنوز
- * چیزی برای دریافت در انبار دارد؟» اثر بگذارد فراخوانی شود — چه یک
- * دور دریافت واقعی، چه یک تسویه‌ی مالی، چه هماهنگی ارسال مجدد. چون
- * همیشه بر اساس *کل تصویر فعلی* (نه فقط آخرین اکشن) تصمیم می‌گیرد،
- * دیگر هیچ اکشنی نمی‌تواند نتیجه‌ی اکشن قبلی را نادیده بگیرد — حتی
- * وقتی چند نوع تصمیم مختلف (بازگشت وجه + جایگزینی) روی بخش‌های مختلف
- * یک خرید مخلوط شده باشند، یا چند دور کسری/مرجوعی پشت‌سرهم رخ داده
- * باشند.
- *
- * hasReceivableQty باید توسط فراخوان (معمولاً ماژول مرجوعی، با دیدن
- * هم آیتم‌های خرید و هم مرجوعی‌های فعال) محاسبه و پاس داده شود.
- */
-export async function recomputePurchaseStatus(
-  purchaseId,
-  { hasReceivableQty = false } = {},
-) {
-  await delay(200);
-
-  const index = allPurchases.findIndex(
-    (p) => Number(p.id) === Number(purchaseId),
-  );
-  if (index === -1) {
-    throw new Error("خرید یافت نشد");
-  }
-
-  const purchase = allPurchases[index];
-
-  // وضعیت‌های نهاییِ غیرقابل‌بازگشت هیچ‌وقت توسط این تابع بازنویسی
-  // نمی‌شوند
-  if (purchase.status === PURCHASE_STATUSES.CANCELLED) {
-    return purchase;
-  }
-
-  const fullyClosed = purchase.items.every(
-    (item) => (item.receivedQty || 0) + (item.settledQty || 0) >= item.qty,
-  );
-  const anyReceived = purchase.items.some((item) => (item.receivedQty || 0) > 0);
-
-  let newStatus;
-  if (fullyClosed) {
-    // همه‌ی اقلام یا فیزیکاً رسیده‌اند یا برای همیشه تسویه شده‌اند
-    newStatus = PURCHASE_STATUSES.RECEIVED;
-  } else if (hasReceivableQty) {
-    // هنوز حداقل یک قلم چیزی «واقعاً قابل دریافت» دارد — چه به دلیل
-    // این‌که هیچ مشکلی برایش گزارش نشده (در انتظار محموله‌ی بعدی)،
-    // چه به دلیل این‌که یک تصمیم «ارسال جایگزین» برایش گرفته شده —
-    // باید برای انباردار قابل مشاهده بماند
-    newStatus = PURCHASE_STATUSES.SHIPPED;
-  } else if (anyReceived) {
-    // کسری باقی مانده ولی فعلاً هیچ‌چیز «قابل دریافت»ی نیست — یعنی
-    // باقیمانده کاملاً حاصل مشکلات گزارش‌شده و هنوز تصمیم‌گیری‌نشده
-    // است؛ باید از لیست دریافت خارج شود و منتظر تصمیم واحد خرید بماند
-    newStatus = PURCHASE_STATUSES.PARTIALLY_RECEIVED;
-  } else {
-    newStatus =
-      purchase.status === PURCHASE_STATUSES.PENDING
-        ? PURCHASE_STATUSES.PENDING
-        : PURCHASE_STATUSES.SHIPPED;
-  }
-
-  if (newStatus === purchase.status) {
-    return purchase;
-  }
-
-  allPurchases[index] = {
-    ...purchase,
-    status: newStatus,
     updatedAt: new Date().toISOString(),
   };
 

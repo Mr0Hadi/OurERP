@@ -1,5 +1,6 @@
 import { allSales, SALE_STATUSES } from "./mockData";
 import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
+import { applyListQuery } from "@/shared/services/mockQuery";
 import {
   allocateUnitsForSale,
   releaseUnitsForSale,
@@ -63,35 +64,12 @@ export async function createSale(saleData) {
 export async function fetchSales(params = {}) {
   await delay(500);
 
-  const {
-    page = 1,
-    limit = 10,
-    search = "",
-    customerId = "",
-    status = "",
-    paymentType = "",
-    fromDate = "",
-    toDate = "",
-    sortBy = "createdAt",
-    sortOrder = "desc",
-  } = params;
+  const { status = "", paymentType = "", customerIds = [] } = params;
 
   let filtered = [...allSales];
 
-  if (search) {
-    const searchLower = search.toLowerCase();
-    filtered = filtered.filter(
-      (s) =>
-        s.invoiceNumber.toLowerCase().includes(searchLower) ||
-        s.customerName.toLowerCase().includes(searchLower) ||
-        (s.description && s.description.toLowerCase().includes(searchLower)),
-    );
-  }
-
-  if (params.customerIds && params.customerIds.length > 0) {
-    filtered = filtered.filter((s) =>
-      params.customerIds.includes(s.customerId),
-    );
+  if (Array.isArray(customerIds) && customerIds.length > 0) {
+    filtered = filtered.filter((s) => customerIds.includes(s.customerId));
   }
 
   if (status) {
@@ -102,43 +80,11 @@ export async function fetchSales(params = {}) {
     filtered = filtered.filter((s) => s.paymentType === paymentType);
   }
 
-  if (fromDate) {
-    filtered = filtered.filter(
-      (s) =>
-        s.invoiceDate && s.invoiceDate.slice(0, 10) >= fromDate.slice(0, 10),
-    );
-  }
-  if (toDate) {
-    filtered = filtered.filter(
-      (s) => s.invoiceDate && s.invoiceDate.slice(0, 10) <= toDate.slice(0, 10),
-    );
-  }
-
-  filtered.sort((a, b) => {
-    let aVal = a[sortBy];
-    let bVal = b[sortBy];
-
-    if (sortBy === "createdAt" || sortBy === "updatedAt") {
-      aVal = new Date(aVal).getTime();
-      bVal = new Date(bVal).getTime();
-    } else if (sortBy === "totalAmount" || sortBy === "paidAmount") {
-      aVal = Number(aVal);
-      bVal = Number(bVal);
-    } else if (typeof aVal === "string") {
-      return sortOrder === "asc"
-        ? aVal.localeCompare(bVal, "fa")
-        : bVal.localeCompare(aVal, "fa");
-    }
-
-    return sortOrder === "asc" ? (aVal > bVal ? 1 : -1) : aVal < bVal ? 1 : -1;
+  return applyListQuery(filtered, params, {
+    searchFields: ["invoiceNumber", "customerName", "description"],
+    dateField: "invoiceDate",
+    numericFields: ["totalAmount", "paidAmount"],
   });
-
-  const total = filtered.length;
-  const totalPages = Math.ceil(total / limit);
-  const start = (page - 1) * limit;
-  const items = filtered.slice(start, start + limit);
-
-  return { items, total, page, totalPages };
 }
 
 export async function fetchSaleById(id) {
@@ -202,10 +148,6 @@ export async function removeSale(id) {
 
   const removed = allSales.splice(index, 1)[0];
   return removed;
-}
-
-export async function deleteSale(id) {
-  return updateSaleStatus(id, SALE_STATUSES.CANCELLED);
 }
 
 export async function updateSalePayment(id, paymentData) {
