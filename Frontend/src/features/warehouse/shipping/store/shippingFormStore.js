@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { SHIPPING_SOURCES } from '../services/shippingSources';
+import { SHIPPING_SOURCES } from '../domain/shippingVocabulary';
 
 // این استور در localStorage ذخیره نمی‌شود؛ فرم ارسال داده‌ای موقتی
 // و لحظه‌ای است و باید همیشه از روی آخرین داده‌ی تازه‌ی سرور بازسازی شود.

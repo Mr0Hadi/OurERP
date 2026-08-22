@@ -23,7 +23,7 @@ import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import ReturnSummaryCard from "@/shared/components/returns/ReturnSummaryCard";
 import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
 
-import { useConfirmSupplierReturnShipmentBatchMutation } from "../services/mutations";
+import { useConfirmSupplierReturnShipmentMutation } from "../services/mutations";
 import { useShippingFormStore } from "../store/shippingFormStore";
 import { useShippingForm } from "../hooks/useShippingForm";
 import ShippingItemsSection from "../components/forms/ShippingItemsSection";
@@ -48,7 +48,7 @@ const SORTING = { id: "name", desc: false };
  */
 function SupplierReturnShipmentForm({ purchaseReturn }) {
   const navigate = useNavigate();
-  const confirmMutation = useConfirmSupplierReturnShipmentBatchMutation();
+  const confirmMutation = useConfirmSupplierReturnShipmentMutation();
 
   const initializeFromReturn = useShippingFormStore(
     (s) => s.initializeFromReturn,

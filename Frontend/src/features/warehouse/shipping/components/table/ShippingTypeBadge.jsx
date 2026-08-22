@@ -3,7 +3,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import {
   OUTGOING_TYPES,
   OUTGOING_TYPE_LABELS,
-} from "../../services/outgoingQueueApi";
+} from "../../domain/shippingVocabulary";
 
 const TYPE_STYLES = {
   [OUTGOING_TYPES.SALE]:

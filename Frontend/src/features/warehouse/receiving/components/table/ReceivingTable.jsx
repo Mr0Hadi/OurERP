@@ -5,7 +5,7 @@ import { Button } from "@/shared/components/ui/button";
 import DataTable from "@/shared/components/table/DataTable";
 import { gregorianToPersian } from "@/shared/utils/dateUtils";
 import { ROUTES } from "@/shared/constants/routes";
-import { INCOMING_TYPES } from "../../services/incomingQueueApi";
+import { INCOMING_TYPES } from "../../domain/receivingVocabulary";
 import ReceivingTypeBadge from "./ReceivingTypeBadge";
 
 // خرید و مرجوعی فروش شناسه‌های مستقل دارند، پس کلید ردیف باید ترکیبی باشد.

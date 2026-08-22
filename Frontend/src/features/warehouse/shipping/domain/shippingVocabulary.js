@@ -1,0 +1,53 @@
+import { SALE_STATUSES } from "@/features/sales/orders/services/mockData";
+
+/**
+ * واژگانِ ارسال انبار — قرینه‌ی receivingVocabulary.
+ *
+ * دلیل جدابودنش از services همان است: این‌ها به بکند مهاجرت نمی‌کنند و
+ * UI باید بتواند بدون وابستگی به پیاده‌سازیِ API از آن‌ها استفاده کند.
+ */
+
+// ─── منبعِ هر خطِ یک حواله ──────────────────────────────────────────────────
+
+/**
+ * یک ماشینی که از انبار بیرون می‌رود می‌تواند هم‌زمان کالای خودِ فروش
+ * را ببرد و هم کالای جایگزینی که بابت یک مرجوعی به مشتری بدهکاریم.
+ * یک ماشین، یک حواله.
+ */
+export const SHIPPING_SOURCES = {
+  ORDER: "order",
+  RETURN: "return",
+};
+
+export const SHIPPING_SOURCE_LABELS = {
+  [SHIPPING_SOURCES.ORDER]: "اقلام فروش",
+  [SHIPPING_SOURCES.RETURN]: "اقلام مرجوعی",
+};
+
+// ─── نوعِ هر ردیفِ صف ارسال ─────────────────────────────────────────────────
+
+/**
+ * صف ارسال فقط رو به مشتری نیست: عودت مازاد به سمت تامین‌کننده می‌رود.
+ * کالای جایگزینِ مشتری نوعِ خودش را ندارد چون همیشه با حواله‌ی همان
+ * فروش می‌رود.
+ */
+export const OUTGOING_TYPES = {
+  SALE: "sale",
+  RETURN_TO_SUPPLIER: "return_to_supplier",
+};
+
+export const OUTGOING_TYPE_LABELS = {
+  [OUTGOING_TYPES.SALE]: "ارسال فروش",
+  [OUTGOING_TYPES.RETURN_TO_SUPPLIER]: "عودت کالا به تامین‌کننده",
+};
+
+// ─── واجد شرایطِ صف ─────────────────────────────────────────────────────────
+
+/**
+ * فروش‌هایی که تأیید شده‌اند ولی هنوز به‌طور کامل تحویل مشتری نشده‌اند.
+ * «تحویل ناقص» هم می‌ماند چون باقیمانده با محموله‌ی بعدی می‌رود.
+ */
+export const SHIPPING_ELIGIBLE_STATUSES = [
+  SALE_STATUSES.PROCESSING,
+  SALE_STATUSES.PARTIALLY_DELIVERED,
+];

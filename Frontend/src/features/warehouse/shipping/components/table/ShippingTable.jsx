@@ -5,7 +5,7 @@ import { Button } from "@/shared/components/ui/button";
 import DataTable from "@/shared/components/table/DataTable";
 import { gregorianToPersian } from "@/shared/utils/dateUtils";
 import { ROUTES } from "@/shared/constants/routes";
-import { OUTGOING_TYPES } from "../../services/outgoingQueueApi";
+import { OUTGOING_TYPES } from "../../domain/shippingVocabulary";
 import ShippingTypeBadge from "./ShippingTypeBadge";
 
 // صف ارسال از چند منبع پر می‌شود، پس شناسه‌ی خودِ ردیف کلید است نه اندیس.

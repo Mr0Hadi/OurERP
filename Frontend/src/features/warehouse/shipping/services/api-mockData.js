@@ -1,123 +1,204 @@
 import { allSales, SALE_STATUSES, SALE_STATUS_LABELS } from "./mockData";
-import { SHIPPING_ELIGIBLE_STATUSES } from "./constants";
 import { markUnitsShipped } from "@/features/warehouse/units/services/api-mockData";
+import { applyListQuery } from "@/shared/services/mockQuery";
+
 import { allSalesReturns } from "@/features/sales/returns/services/mockData";
 import { executeGoodsRound as executeSalesReturnRound } from "@/features/sales/returns/services/api-mockData";
-import { buildGoodsLines } from "@/shared/domain/returns/resolutions";
-import { EFFECT_KINDS } from "@/shared/domain/returns/effects";
-import { SHIPPING_SOURCES } from "./shippingSources";
+import { allPurchaseReturns } from "@/features/purchases/returns/services/mockData";
+import { executeGoodsRound as executePurchaseReturnRound } from "@/features/purchases/returns/services/api-mockData";
+import { buildGoodsLines, pendingGoodsEffects } from "@/shared/domain/returns/resolutions";
+import { EFFECT_KINDS, remainingQtyOf } from "@/shared/domain/returns/effects";
+
+import {
+  OUTGOING_TYPES,
+  SHIPPING_ELIGIBLE_STATUSES,
+  SHIPPING_SOURCES,
+} from "../domain/shippingVocabulary";
+
+/**
+ * کلِ APIِ ارسال انبار — نسخه‌ی mock. قرینه‌ی سمت دریافت.
+ *
+ * پیش‌تر دو فایل بود (api-mockData / outgoingQueueApi) و بدتر از آن،
+ * mutations.js برای عودت به تامین‌کننده مستقیماً موتور اثرِ فیچرِ
+ * *مرجوعی خرید* را صدا می‌زد و payload فرم را بدون ترجمه به آن می‌داد.
+ * چون فرم `shippedItems` می‌سازد و موتور `rounds` می‌خواهد، آن مسیر
+ * همیشه با «هیچ کالایی برای ثبت انتخاب نشده است» شکست می‌خورد. حالا
+ * ترجمه اینجاست، جایی که سمت دریافت هم دارد.
+ */
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
-export { SHIPPING_ELIGIBLE_STATUSES };
+const partyKey = (type, id) => `${type}:${id}`;
 
-export const SHIPPING_STATUS_LABELS = Object.fromEntries(
-  Object.entries(SALE_STATUS_LABELS).filter(([key]) =>
-    SHIPPING_ELIGIBLE_STATUSES.includes(key),
-  ),
-);
+// ─── محاسبات داخلی ──────────────────────────────────────────────────────────
 
 /**
- * چقدر از یک قلم فروش هنوز واقعاً «قابل ارسال» است. اگر محصول قبلاً
- * (در دورهای قبلی ارسال) بخشی رسیده باشد، فقط باقیمانده را برمی‌گرداند
- * — همین باعث می‌شود ارسال چندمرحله‌ای (چند محموله/چند ماشین) به‌طور
- * طبیعی کار کند.
+ * چقدر از یک قلم فروش هنوز واقعاً قابل ارسال است — همین باعث می‌شود
+ * ارسال چندمرحله‌ای (چند محموله/چند ماشین) طبیعی کار کند.
  */
-export function computeItemShippableQty(item) {
+function computeItemShippableQty(item) {
   return Math.max(0, (item.qty || 0) - (item.shippedQty || 0));
 }
 
-export function computeHasAnyShippableQty(sale) {
-  return sale.items.some((item) => computeItemShippableQty(item) > 0);
-}
-
-export async function fetchShippingSales(params = {}) {
-  await delay(500);
-
-  const {
-    page = 1,
-    limit = 10,
-    search = "",
-    customerIds = [],
-    status = "",
-    paymentType = "",
-    fromDate = "",
-    toDate = "",
-    sortBy = "createdAt",
-    sortOrder = "desc",
-  } = params;
-
-  let filtered = allSales.filter((s) =>
-    SHIPPING_ELIGIBLE_STATUSES.includes(s.status),
-  );
-
-  if (search) {
-    const searchLower = search.toLowerCase();
-    filtered = filtered.filter(
-      (s) =>
-        s.invoiceNumber.toLowerCase().includes(searchLower) ||
-        s.customerName.toLowerCase().includes(searchLower) ||
-        (s.description && s.description.toLowerCase().includes(searchLower)),
-    );
-  }
-
-  if (Array.isArray(customerIds) && customerIds.length > 0) {
-    filtered = filtered.filter((s) => customerIds.includes(s.customerId));
-  }
-
-  if (status) {
-    filtered = filtered.filter((s) => s.status === status);
-  }
-
-  if (paymentType) {
-    filtered = filtered.filter((s) => s.paymentType === paymentType);
-  }
-
-  if (fromDate) {
-    filtered = filtered.filter(
-      (s) => s.invoiceDate && s.invoiceDate.slice(0, 10) >= fromDate.slice(0, 10),
-    );
-  }
-  if (toDate) {
-    filtered = filtered.filter(
-      (s) => s.invoiceDate && s.invoiceDate.slice(0, 10) <= toDate.slice(0, 10),
-    );
-  }
-
-  filtered.sort((a, b) => {
-    let aVal = a[sortBy];
-    let bVal = b[sortBy];
-
-    if (sortBy === "createdAt" || sortBy === "updatedAt" || sortBy === "invoiceDate") {
-      aVal = new Date(aVal).getTime();
-      bVal = new Date(bVal).getTime();
-    } else if (sortBy === "totalAmount" || sortBy === "paidAmount") {
-      aVal = Number(aVal);
-      bVal = Number(bVal);
-    } else if (typeof aVal === "string") {
-      return sortOrder === "asc"
-        ? aVal.localeCompare(bVal, "fa")
-        : bVal.localeCompare(aVal, "fa");
-    }
-
-    if (sortOrder === "asc") return aVal > bVal ? 1 : -1;
-    return aVal < bVal ? 1 : -1;
+/**
+ * کالای جایگزینی که بابت مرجوعی‌های یک فروش به مشتری بدهکاریم و
+ * می‌تواند با همان ماشینِ خودِ فروش برود.
+ */
+function pendingReturnLinesForSale(saleId) {
+  const lines = [];
+  allSalesReturns.forEach((ret) => {
+    if (Number(ret.saleId) !== Number(saleId)) return;
+    buildGoodsLines(ret, EFFECT_KINDS.GOODS_OUT).forEach((line) => {
+      if (line.remainingQty <= 0) return;
+      lines.push({ ...line, returnId: ret.id, returnNumber: ret.returnNumber });
+    });
   });
-
-  const total = filtered.length;
-  const totalPages = Math.ceil(total / limit) || 1;
-  const start = (page - 1) * limit;
-  const items = filtered.slice(start, start + limit);
-
-  return { items, total, page, totalPages };
+  return lines;
 }
 
 /**
- * علاوه بر خودِ فروش، هر قلم را با shippableQty (باقیمانده‌ی واقعیِ
- * قابل ارسال) enrich می‌کند. فرم آماده‌سازی مرسوله باید فقط از همین
- * مقدار استفاده کند.
+ * یک فروش تا وقتی در صف ارسال می‌ماند که یا هنوز چیزی از خودِ سفارش
+ * نرفته باشد، یا بابت مرجوعی‌هایش کالای جایگزینی بدهکار باشیم.
+ */
+function isSaleAwaitingDispatch(sale) {
+  return (
+    SHIPPING_ELIGIBLE_STATUSES.includes(sale.status) ||
+    pendingReturnLinesForSale(sale.id).length > 0
+  );
+}
+
+function saleToRow(sale) {
+  const returnLines = pendingReturnLinesForSale(sale.id);
+  const returnQty = returnLines.reduce((s, l) => s + l.remainingQty, 0);
+  return {
+    id: `sale-${sale.id}`,
+    saleId: sale.id,
+    counterpartyId: sale.customerId,
+    counterpartyType: "customer",
+    counterpartyKey: partyKey("customer", sale.customerId),
+    type: OUTGOING_TYPES.SALE,
+    refNumber: sale.invoiceNumber,
+    counterpartyName: sale.customerName,
+    date: sale.invoiceDate,
+    statusLabel: SALE_STATUS_LABELS[sale.status] ?? sale.status,
+    itemsCount: sale.items.length + returnLines.length,
+    returnLinesCount: returnLines.length,
+    remainingQty:
+      sale.items.reduce((s, i) => s + computeItemShippableQty(i), 0) + returnQty,
+    amount: sale.totalAmount,
+    createdAt: sale.createdAt,
+    updatedAt: sale.updatedAt,
+  };
+}
+
+/**
+ * عودت مازاد به تامین‌کننده — یک ردیف به‌ازای هر مرجوعی، نه به‌ازای هر
+ * قلم، تا انباردار کل محموله را در یک صفحه ببیند.
+ *
+ * برخلاف کالای جایگزینِ مشتری که با حواله‌ی خودِ فروش می‌رود، اینجا
+ * هیچ سندِ خروجی‌ای به سمت تامین‌کننده وجود ندارد که به آن بچسبد.
+ */
+function supplierReturnRows() {
+  const rows = [];
+  allPurchaseReturns.forEach((purchaseReturn) => {
+    const pendingQtys = pendingGoodsEffects(purchaseReturn, EFFECT_KINDS.GOODS_OUT)
+      .map(remainingQtyOf)
+      .filter((qty) => qty > 0);
+
+    if (pendingQtys.length === 0) return;
+
+    rows.push({
+      id: `supplier-return-${purchaseReturn.id}`,
+      returnId: purchaseReturn.id,
+      counterpartyId: purchaseReturn.supplierId,
+      counterpartyType: "supplier",
+      counterpartyKey: partyKey("supplier", purchaseReturn.supplierId),
+      type: OUTGOING_TYPES.RETURN_TO_SUPPLIER,
+      refNumber: purchaseReturn.returnNumber,
+      counterpartyName: purchaseReturn.supplierName,
+      date: (purchaseReturn.updatedAt || purchaseReturn.createdAt || "").slice(0, 10),
+      statusLabel: `${pendingQtys.length.toLocaleString("fa-IR")} قلم عودتی`,
+      itemsCount: pendingQtys.length,
+      remainingQty: pendingQtys.reduce((s, q) => s + q, 0),
+      amount: 0,
+      createdAt: purchaseReturn.createdAt,
+      updatedAt: purchaseReturn.updatedAt,
+    });
+  });
+  return rows;
+}
+
+/**
+ * ردیف‌های فرم را به «دورِ اجرای اثر» ترجمه می‌کند و به موتور اثرِ
+ * مرجوعی می‌سپارد، گروه‌بندی‌شده بر اساس مرجوعی.
+ *
+ * برخلاف سمت دریافت، اینجا healthyQty معنا ندارد: کالایی که *ما*
+ * می‌فرستیم سالم است؛ اگر نبود اصلاً نمی‌رفت.
+ */
+async function applyReturnRows(rows, logistics, executeRound, fallbackReturnId) {
+  const byReturn = new Map();
+
+  rows.forEach((row) => {
+    const qty = Number(row.shippedQty) || 0;
+    if (qty <= 0) return;
+    const returnId = row.returnId ?? fallbackReturnId;
+    if (!byReturn.has(returnId)) byReturn.set(returnId, []);
+    byReturn.get(returnId).push({ effectId: row.effectId, qty });
+  });
+
+  let last = null;
+  for (const [returnId, rounds] of byReturn) {
+    last = await executeRound(returnId, { rounds, ...logistics });
+  }
+  return last;
+}
+
+function logisticsOf(shipmentData, date) {
+  return {
+    date,
+    partyName: shipmentData.driverName,
+    partyNationalId: shipmentData.driverNationalId,
+    vehiclePlate: shipmentData.vehiclePlate,
+    note: shipmentData.shippingNote,
+  };
+}
+
+// ─── سطحِ عمومی ─────────────────────────────────────────────────────────────
+
+/**
+ * صف یکپارچه‌ی «چیزهایی که باید از انبار بیرون بروند»: فروش‌های در
+ * انتظار ارسال (به‌همراه کالای جایگزینِ مرجوعی‌هایشان)، و عودت‌های
+ * تامین‌کننده.
+ */
+export async function fetchOutgoingQueue(params = {}) {
+  await delay(500);
+
+  const { type = "", counterpartyIds = [] } = params;
+  let rows = [];
+
+  if (!type || type === OUTGOING_TYPES.SALE) {
+    rows.push(...allSales.filter(isSaleAwaitingDispatch).map(saleToRow));
+  }
+  if (!type || type === OUTGOING_TYPES.RETURN_TO_SUPPLIER) {
+    rows.push(...supplierReturnRows());
+  }
+
+  if (Array.isArray(counterpartyIds) && counterpartyIds.length > 0) {
+    rows = rows.filter((row) => counterpartyIds.includes(row.counterpartyKey));
+  }
+
+  return applyListQuery(rows, params, {
+    searchFields: ["refNumber", "counterpartyName"],
+    dateField: "date",
+    numericFields: ["amount", "itemsCount", "remainingQty"],
+  });
+}
+
+/**
+ * فروش به‌همراه shippableQty هر قلم و خطوط مرجوعیِ همان فروش. فرم
+ * ارسال باید فقط از همین مقادیر استفاده کند.
  */
 export async function fetchShippingSaleById(id) {
   await delay(300);
@@ -131,34 +212,22 @@ export async function fetchShippingSaleById(id) {
       ...item,
       shippableQty: computeItemShippableQty(item),
     })),
-    // کالای جایگزینی که بابت مرجوعی‌های همین فروش به مشتری بدهکاریم.
-    // با همین حواله می‌رود چون فیزیکاً همان ماشین است.
-    returnLines: pendingReturnLinesForSale(id),
+    returnLines: pendingReturnLinesForSale(sale.id),
   };
 }
 
 /**
- * خطوطِ مرجوعیِ یک فروش: اثرهای GOODS_OUTِ معلق در همه‌ی مرجوعی‌های آن.
+ * ثبت یک «دور ارسال».
  *
- * قرینه‌ی pendingReturnLinesForPurchase در سمت دریافت.
- */
-export function pendingReturnLinesForSale(saleId) {
-  const lines = [];
-  allSalesReturns.forEach((ret) => {
-    if (Number(ret.saleId) !== Number(saleId)) return;
-    buildGoodsLines(ret, EFFECT_KINDS.GOODS_OUT).forEach((line) => {
-      if (line.remainingQty <= 0) return;
-      lines.push({ ...line, returnId: ret.id, returnNumber: ret.returnNumber });
-    });
-  });
-  return lines;
-}
-
-/**
- * ثبت نهایی یک «دور آماده‌سازی/ارسال» در انبار.
+ * خطوط بر اساس source جدا می‌شوند: خطوط فروش مقدار ارسال‌شده‌ی قلم را
+ * جلو می‌برند و وضعیت فروش را تعیین می‌کنند، خطوط مرجوعی به موتور اثر
+ * می‌روند.
  *
- * ۱. مقدار ارسالی هر قلم تجمعی است — از ارسال چندمرحله‌ای پشتیبانی می‌کند.
- * ۲. وضعیت فروش از روی تصویر کامل اقلام محاسبه می‌شود، نه حدس زده می‌شود.
+ * markUnitsShipped عمداً فقط روی خطوط فروش اجرا می‌شود: کالای جایگزین
+ * در برابر تعداد خودِ فروش نیست و نباید واحدهای آن را مصرف کند.
+ *
+ * «ارسال‌شده» یعنی همه‌چیز از انبار خارج شده؛ تبدیلش به «تحویل کامل»
+ * تأییدی جداگانه است و اینجا خودکار انجام نمی‌شود.
  */
 export async function confirmShipment(saleId, shipmentData) {
   await delay(500);
@@ -167,34 +236,30 @@ export async function confirmShipment(saleId, shipmentData) {
   if (index === -1) throw new Error("فروش یافت نشد");
 
   const sale = allSales[index];
-  const shippedDate = shipmentData.shippedDate || new Date().toISOString().slice(0, 10);
+  const shippedDate =
+    shipmentData.shippedDate || new Date().toISOString().slice(0, 10);
 
-  const orderRows = (shipmentData.shippedItems || []).filter(
+  const rows = shipmentData.shippedItems || [];
+  const orderRows = rows.filter(
     (row) => (row.source ?? SHIPPING_SOURCES.ORDER) === SHIPPING_SOURCES.ORDER,
   );
-  const returnRows = (shipmentData.shippedItems || []).filter(
-    (row) => row.source === SHIPPING_SOURCES.RETURN,
-  );
+  const returnRows = rows.filter((row) => row.source === SHIPPING_SOURCES.RETURN);
 
   const updatedItems = sale.items.map((item) => {
     const shippedItem = orderRows.find((si) => si.productId === item.productId);
     if (!shippedItem) return item;
-
-    const prevShipped = item.shippedQty || 0;
-    const newShippedQty = Math.min(
-      item.qty,
-      prevShipped + (shippedItem.shippedQty || 0),
-    );
-
-    return { ...item, shippedQty: newShippedQty };
+    return {
+      ...item,
+      shippedQty: Math.min(
+        item.qty,
+        (item.shippedQty || 0) + (shippedItem.shippedQty || 0),
+      ),
+    };
   });
 
   const allShipped = updatedItems.every((i) => (i.shippedQty || 0) >= i.qty);
   const anyShipped = updatedItems.some((i) => (i.shippedQty || 0) > 0);
 
-  // «ارسال‌شده» یعنی همه‌چیز از انبار خارج شده؛ تبدیل به «تحویل کامل»
-  // یک تأیید جداگانه (مثلاً توسط واحد فروش پس از تماس با مشتری) است و
-  // اینجا خودکار انجام نمی‌شود.
   let newStatus = sale.status;
   if (allShipped) newStatus = SALE_STATUSES.SHIPPED;
   else if (anyShipped) newStatus = SALE_STATUSES.PARTIALLY_DELIVERED;
@@ -217,14 +282,12 @@ export async function confirmShipment(saleId, shipmentData) {
         driverNationalId: shipmentData.driverNationalId || "",
         vehiclePlate: shipmentData.vehiclePlate || "",
         note: shipmentData.shippingNote || "",
-        items: shipmentData.shippedItems.filter((i) => (i.shippedQty || 0) > 0),
+        items: rows.filter((i) => (i.shippedQty || 0) > 0),
       },
     ],
     updatedAt: new Date().toISOString(),
   };
 
-  // واحدهای همین فروش، به‌اندازه‌ی مقدارِ ارسال‌شده‌ی این دور، از
-  // «فروخته‌شده» به «ارسال‌شده» می‌روند.
   markUnitsShipped(
     saleId,
     orderRows.map((item) => ({
@@ -233,33 +296,33 @@ export async function confirmShipment(saleId, shipmentData) {
     })),
   );
 
-  // خطوطِ مرجوعیِ همین حواله: هر کدام یک دورِ اجرای اثر روی مرجوعیِ
-  // خودش. موجودی و وضعیت مرجوعی را همان موتور اثر جابه‌جا می‌کند.
-  await applyReturnRows(returnRows, {
-    date: shippedDate,
-    partyName: shipmentData.driverName,
-    partyNationalId: shipmentData.driverNationalId,
-    vehiclePlate: shipmentData.vehiclePlate,
-    note: shipmentData.shippingNote,
-  });
+  await applyReturnRows(
+    returnRows,
+    logisticsOf(shipmentData, shippedDate),
+    executeSalesReturnRound,
+  );
 
   return allSales[index];
 }
 
 /**
- * خطوطِ مرجوعیِ یک حواله را به موتور اثرِ مرجوعی فروش می‌سپارد،
- * گروه‌بندی‌شده بر اساس مرجوعی تا هر مرجوعی یک بار به‌روز شود.
+ * ثبت یک دور عودت کالا به تامین‌کننده.
+ *
+ * قرینه‌ی confirmReturnIntake در سمت دریافت: همان payloadی که فرمِ
+ * ارسال می‌سازد را می‌گیرد و به دورِ اثر ترجمه می‌کند. اینجا سندِ
+ * فروشی در کار نیست، پس همه‌ی ردیف‌ها مرجوعی‌اند.
  */
-async function applyReturnRows(rows, logistics) {
-  const byReturn = new Map();
-  rows.forEach((row) => {
-    const qty = Number(row.shippedQty) || 0;
-    if (qty <= 0) return;
-    if (!byReturn.has(row.returnId)) byReturn.set(row.returnId, []);
-    byReturn.get(row.returnId).push({ effectId: row.effectId, qty });
-  });
+export async function confirmSupplierReturnShipment(returnId, shipmentData) {
+  const shippedDate =
+    shipmentData.shippedDate || new Date().toISOString().slice(0, 10);
 
-  for (const [returnId, rounds] of byReturn) {
-    await executeSalesReturnRound(returnId, { rounds, ...logistics });
-  }
+  const updated = await applyReturnRows(
+    shipmentData.shippedItems || [],
+    logisticsOf(shipmentData, shippedDate),
+    executePurchaseReturnRound,
+    returnId,
+  );
+
+  if (!updated) throw new Error("هیچ کالایی برای ثبت انتخاب نشده است");
+  return updated;
 }

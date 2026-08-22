@@ -6,7 +6,7 @@ import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import EntityMultiSelect from "@/shared/components/filters/EntityMultiSelect";
 import { toFilterOptions } from "@/shared/components/filters/filterUtils";
 import { useReceivingFilterStore } from "../../store/receivingFilterStore";
-import { INCOMING_TYPE_LABELS } from "../../services/incomingQueueApi";
+import { INCOMING_TYPE_LABELS } from "../../domain/receivingVocabulary";
 
 const TYPE_OPTIONS = toFilterOptions(INCOMING_TYPE_LABELS);
 

@@ -23,7 +23,7 @@ import ReceivingItemsSection from "../components/forms/ReceivingItemsSection";
 import {
   RECEIVING_SOURCES,
   RECEIVING_SOURCE_LABELS,
-} from "../services/receivingSources";
+} from "../domain/receivingVocabulary";
 import ReceivingSummaryCard from "../components/forms/ReceivingSummaryCard";
 import ReceivingMismatchList from "../components/forms/ReceivingMismatchList";
 import UnknownItemsSection from "../components/forms/UnknownItemsSection";

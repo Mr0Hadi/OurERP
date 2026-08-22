@@ -3,7 +3,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import {
   INCOMING_TYPES,
   INCOMING_TYPE_LABELS,
-} from "../../services/incomingQueueApi";
+} from "../../domain/receivingVocabulary";
 
 const TYPE_STYLES = {
   [INCOMING_TYPES.PURCHASE]:

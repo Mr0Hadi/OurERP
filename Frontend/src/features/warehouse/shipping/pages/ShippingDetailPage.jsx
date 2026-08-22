@@ -23,7 +23,7 @@ import ShippingItemsSection from "../components/forms/ShippingItemsSection";
 import {
   SHIPPING_SOURCES,
   SHIPPING_SOURCE_LABELS,
-} from "../services/shippingSources";
+} from "../domain/shippingVocabulary";
 import ShippingSummaryCard from "../components/forms/ShippingSummaryCard";
 import ShippingTransporterSection from "../components/forms/ShippingTransporterSection";
 import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { RECEIVING_SOURCES } from '../services/receivingSources';
+import { RECEIVING_SOURCES } from '../domain/receivingVocabulary';
 
 // این استور در localStorage ذخیره نمی‌شود؛ فرم دریافت داده‌ای موقتی
 // و لحظه‌ای است و باید همیشه از روی آخرین داده‌ی تازه‌ی سرور بازسازی

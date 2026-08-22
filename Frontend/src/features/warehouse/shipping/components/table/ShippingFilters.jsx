@@ -6,7 +6,7 @@ import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import EntityMultiSelect from "@/shared/components/filters/EntityMultiSelect";
 import { toFilterOptions } from "@/shared/components/filters/filterUtils";
 import { useShippingFilterStore } from "../../store/shippingFilterStore";
-import { OUTGOING_TYPE_LABELS } from "../../services/outgoingQueueApi";
+import { OUTGOING_TYPE_LABELS } from "../../domain/shippingVocabulary";
 
 const TYPE_OPTIONS = toFilterOptions(OUTGOING_TYPE_LABELS);
 
