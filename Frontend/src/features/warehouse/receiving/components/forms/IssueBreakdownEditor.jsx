@@ -8,9 +8,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import { PURCHASE_ISSUE_TYPE_LABELS } from "@/shared/constants/purchaseIssueTypes";
+import { RECEIVING_ISSUE_TYPE_LABELS } from "../../domain/receivingVocabulary";
 
-const ISSUE_TYPE_OPTIONS = Object.entries(PURCHASE_ISSUE_TYPE_LABELS);
+const ISSUE_TYPE_OPTIONS = Object.entries(RECEIVING_ISSUE_TYPE_LABELS);
 
 /**
  * ویرایشگر تفکیک مشکل یک قلم.

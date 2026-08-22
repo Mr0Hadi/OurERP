@@ -1,7 +1,6 @@
 import { allPurchases } from "./mockData";
 import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
 import { applyListQuery } from "@/shared/services/mockQuery";
-import { SURPLUS_KINDS } from "@/shared/constants/purchaseIssueTypes";
 
 import { allSalesReturns } from "@/features/sales/returns/services/mockData";
 import { executeGoodsRound as executeSalesReturnRound } from "@/features/sales/returns/services/api-mockData";
@@ -18,6 +17,7 @@ import {
   INCOMING_TYPES,
   RECEIVING_ELIGIBLE_STATUSES,
   RECEIVING_SOURCES,
+  SURPLUS_KINDS,
 } from "../domain/receivingVocabulary";
 
 /**

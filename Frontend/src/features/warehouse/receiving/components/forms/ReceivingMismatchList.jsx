@@ -4,12 +4,12 @@ import { PackageX, PackagePlus, HelpCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Badge } from '@/shared/components/ui/badge';
 import {
-  PURCHASE_ISSUE_TYPE_LABELS,
-  PURCHASE_ISSUE_TYPE_STYLES,
+  RECEIVING_ISSUE_TYPE_LABELS,
+  RECEIVING_ISSUE_TYPE_STYLES,
   SURPLUS_KINDS,
   SURPLUS_KIND_LABELS,
   SURPLUS_KIND_STYLES,
-} from '@/shared/constants/purchaseIssueTypes';
+} from '../../domain/receivingVocabulary';
 
 // پیش‌نمایش زنده‌ی هر چیزی که در این دریافت با سفارش نمی‌خواند، پیش از
 // ثبت نهایی: کسری (به تفکیک نوع مشکل)، مازادِ کالاهای شناخته‌شده، و
@@ -90,8 +90,8 @@ export default function ReceivingMismatchList({ items, unknownItems = [] }) {
                 <ul className="space-y-1">
                   {issues.map((issue) => {
                     const style =
-                      PURCHASE_ISSUE_TYPE_STYLES[issue.issueType] ??
-                      PURCHASE_ISSUE_TYPE_STYLES.other;
+                      RECEIVING_ISSUE_TYPE_STYLES[issue.issueType] ??
+                      RECEIVING_ISSUE_TYPE_STYLES.other;
                     return (
                       <li
                         key={issue.id}
@@ -99,7 +99,7 @@ export default function ReceivingMismatchList({ items, unknownItems = [] }) {
                       >
                         <div className="flex items-center gap-1.5 min-w-0">
                           <Badge variant="outline" className={`text-[10px] shrink-0 ${style}`}>
-                            {PURCHASE_ISSUE_TYPE_LABELS[issue.issueType] ?? issue.issueType}
+                            {RECEIVING_ISSUE_TYPE_LABELS[issue.issueType] ?? issue.issueType}
                           </Badge>
                           {issue.note && (
                             <span className="text-muted-foreground truncate">{issue.note}</span>

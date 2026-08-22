@@ -48,3 +48,82 @@ export const INCOMING_TYPE_LABELS = {
  * incomingQueueApi.js، api-mockData.js) که تصادفاً هم‌مقدار بودند.
  */
 export const RECEIVING_ELIGIBLE_STATUSES = [PURCHASE_STATUSES.SHIPPED];
+
+// ─── نوعِ مشکلِ یک ردیف ──────────────────────────────────────────────────────
+
+/**
+ * نوعِ مشکل، هنگام دریافتِ *هر* محموله‌ای انتخاب می‌شود — چه ارسالِ
+ * تامین‌کننده، چه کالای برگشتیِ مشتری. قبلاً `PURCHASE_ISSUE_TYPES` نام
+ * داشت و در `shared/constants/` بود، به این گمان که فقط به خرید مربوط
+ * است؛ در عمل صفحه‌ی دریافتِ مرجوعیِ فروش هم از روز اول از همین enum
+ * استفاده می‌کرد — نامش نادرست بود، نه اینکه سمتِ فروش چیزی کم داشت.
+ * جای درستش همین‌جاست، کنار بقیه‌ی واژگانِ دریافت.
+ *
+ * سمتِ ارسال (شیپینگ) قرینه‌اش را ندارد و نباید داشته باشد: وقتی *ما*
+ * کالا را می‌فرستیم، چیزی برای «بازرسیِ ورودی» وجود ندارد که مشکلی رویش
+ * گزارش شود.
+ */
+export const RECEIVING_ISSUE_TYPES = {
+  SHORTAGE: "shortage",
+  DEFECTIVE: "defective",
+  DAMAGED: "damaged",
+  WRONG_ITEM: "wrong_item",
+  EXPIRED: "expired",
+  OTHER: "other",
+};
+
+export const RECEIVING_ISSUE_TYPE_LABELS = {
+  [RECEIVING_ISSUE_TYPES.SHORTAGE]: "کسری تحویل",
+  [RECEIVING_ISSUE_TYPES.DEFECTIVE]: "معیوب / خراب",
+  [RECEIVING_ISSUE_TYPES.DAMAGED]: "آسیب‌دیده در حمل",
+  [RECEIVING_ISSUE_TYPES.WRONG_ITEM]: "ارسال کالای اشتباه",
+  [RECEIVING_ISSUE_TYPES.EXPIRED]: "تاریخ گذشته",
+  [RECEIVING_ISSUE_TYPES.OTHER]: "سایر موارد",
+};
+
+export const RECEIVING_ISSUE_TYPE_STYLES = {
+  [RECEIVING_ISSUE_TYPES.SHORTAGE]:
+    "bg-amber-100 text-amber-800 border-amber-300",
+  [RECEIVING_ISSUE_TYPES.DEFECTIVE]: "bg-red-100 text-red-800 border-red-300",
+  [RECEIVING_ISSUE_TYPES.DAMAGED]:
+    "bg-orange-100 text-orange-800 border-orange-300",
+  [RECEIVING_ISSUE_TYPES.WRONG_ITEM]:
+    "bg-purple-100 text-purple-800 border-purple-300",
+  [RECEIVING_ISSUE_TYPES.EXPIRED]: "bg-gray-100 text-gray-800 border-gray-300",
+  [RECEIVING_ISSUE_TYPES.OTHER]:
+    "bg-slate-100 text-slate-800 border-slate-300",
+};
+
+// ─── مازاد ───────────────────────────────────────────────────────────────────
+
+/**
+ * «مازاد»: کالایی که فیزیکاً در انبار ما هست ولی چیزی که منتظرش
+ * بودیم توجیهش نمی‌کند — یا بیشتر از حد انتظار رسیده (excess) یا اصلاً
+ * در سیستم ما تعریف نشده (unknown). مثلِ issue types، مالِ هر دو نوعِ
+ * دریافت است، نه فقط خرید.
+ *
+ * این محوری *جدا* از RECEIVING_ISSUE_TYPES است و هرگز نباید با آن
+ * یکی شود. مشکلات (issues) روی سفارش/مرجوعی ادعا می‌سازند و از «مقدار
+ * قابل دریافت» کم می‌شوند؛ مازاد اساساً بیرون از آن سقف است و نباید
+ * هیچ اثری روی آن محاسبه بگذارد. اگر مازاد داخل issues ثبت شود، هم
+ * مقدار قابل دریافتِ انباردار را اشتباه کم می‌کند و هم در گزارش کسری —
+ * که سقفش خودِ مقدار انتظار است — بی‌صدا حذف می‌شود.
+ *
+ * برای مازادِ unknown، productId وجود ندارد: انباردار فقط شرح و تعداد
+ * ثبت می‌کند و اتصال به کالای واقعی تا لحظه‌ی تصمیمِ «نگهداری» به
+ * تعویق می‌افتد.
+ */
+export const SURPLUS_KINDS = {
+  EXCESS: "excess",
+  UNKNOWN: "unknown",
+};
+
+export const SURPLUS_KIND_LABELS = {
+  [SURPLUS_KINDS.EXCESS]: "ارسال اضافه",
+  [SURPLUS_KINDS.UNKNOWN]: "کالای ثبت‌نشده",
+};
+
+export const SURPLUS_KIND_STYLES = {
+  [SURPLUS_KINDS.EXCESS]: "bg-sky-100 text-sky-800 border-sky-300",
+  [SURPLUS_KINDS.UNKNOWN]: "bg-violet-100 text-violet-800 border-violet-300",
+};
