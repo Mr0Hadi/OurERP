@@ -6,6 +6,7 @@ import {
   PAYMENT_METHODS,
   SPLITTABLE_PAYMENT_METHODS,
   createEffect,
+  observationsOf,
   summarizeEffects,
 } from "./effects";
 import { RETURN_STATUSES, isTerminalStatus } from "./statuses";
@@ -235,6 +236,21 @@ export function validateComposition(composition, claim, { remainingQty } = {}) {
   }
 
   const money = composition.money || {};
+
+  // تصمیمی که هیچ‌کدام از سه محور را فعال نکرده، هیچ اثری تولید نمی‌کند
+  // ولی از باقیمانده‌ی ادعا کم می‌شود — یعنی بی‌صدا بخشی از ادعا را
+  // می‌بندد بدون اینکه کاری برای طرف حساب انجام شده باشد. برای بستنِ
+  // ادعا بدون جبران، مسیرِ صریحِ «رد ادعا» وجود دارد.
+  const nothingChosen =
+    !composition.goodsIn?.enabled &&
+    !composition.goodsOut?.enabled &&
+    money.direction === MONEY_DIRECTIONS.NONE;
+  if (nothingChosen) {
+    errors.push(
+      "این تصمیم هیچ اقدامی ندارد؛ دست‌کم یکی از جابه‌جایی کالا یا پول را انتخاب کنید",
+    );
+  }
+
   if (money.direction !== MONEY_DIRECTIONS.NONE) {
     if (!methodsForDirection(money.direction).includes(money.method)) {
       errors.push("روش پرداخت برای این جهت مجاز نیست");
@@ -307,6 +323,9 @@ export function buildGoodsLines(returnDoc, kind, { onlyPending = true } = {}) {
           effectId: effect.id,
           claimId: claim.id,
           resolutionId: resolution.id,
+          // خطِ سندی که ادعا رویش نشسته — انبار و بک‌اند با همین به
+          // قلمِ فاکتور/سفارش ارجاع می‌دهند، نه با productId.
+          orderLineId: claim.orderLineId ?? null,
           // کالای اثر است، نه کالای ادعا — وقتی کالای جایگزین با کالای
           // برگشتی فرق دارد، انبار باید کالای واقعیِ جابه‌جاشونده را
           // ببیند.
@@ -323,6 +342,8 @@ export function buildGoodsLines(returnDoc, kind, { onlyPending = true } = {}) {
           doneQty,
           remainingQty: Math.max(0, qty - doneQty),
           restockedQty: effect.restockedQty,
+          // مشاهده‌های انبار در همه‌ی دورهای این اثر، تجمیع‌شده.
+          observations: observationsOf(effect),
           status: effect.status,
           history: effect.history || [],
         });

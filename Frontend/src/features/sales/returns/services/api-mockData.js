@@ -3,6 +3,7 @@ import { allSales } from "@/features/sales/orders/services/mockData";
 import { adjustSaleTotal } from "@/features/sales/orders/services/api-mockData";
 import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
 import { applyListQuery } from "@/shared/services/mockQuery";
+import { runOnce } from "@/shared/services/mockIdempotency";
 
 import {
   SALES_RETURN_STATUSES,
@@ -13,6 +14,8 @@ import {
   EFFECT_STATUSES,
   affectsInvoiceTotal,
   isGoodsEffect,
+  normalizeObservations,
+  observedQtyOf,
 } from "@/shared/domain/returns/effects";
 import {
   buildResolution,
@@ -154,14 +157,18 @@ export async function fetchSaleForReturn(saleId, excludeReturnId = null) {
     customerId: sale.customerId,
     customerName: sale.customerName,
     items: sale.items.map((item) => {
-      const claimed = claimBreakdown(siblings, item.productId, excludeReturnId);
+      // خط با شناسه‌ی خودش شناخته می‌شود نه با کالا؛ اگر یک کالا در دو
+      // خط فاکتور باشد، سهمیه‌ی هر خط جداست.
+      const line = { orderLineId: item.id, productId: item.productId };
+      const claimed = claimBreakdown(siblings, line, excludeReturnId);
       return {
         ...item,
+        orderLineId: item.id,
         // آنچه *الان* دست مشتری است: پس‌گرفته‌ها کم و جایگزین‌های
         // ارسال‌شده اضافه می‌شوند.
         deliveredQty:
           (item.shippedQty ?? item.qty) +
-          deliveredAdjustment(siblings, item.productId, { side: "sales" }),
+          deliveredAdjustment(siblings, line, { side: "sales" }),
         returnableQty: computeItemReturnableQty(item),
         claimedHereQty: claimed.here,
         // فقط برای اطلاع کاربر — سقف نیست.
@@ -215,7 +222,11 @@ export async function fetchSalesReturnById(id) {
 
 // ─── ثبت ادعا ───────────────────────────────────────────────────────────────
 
-export async function createSalesReturn(payload) {
+export async function createSalesReturn(payload, { idempotencyKey } = {}) {
+  return runOnce(idempotencyKey, () => createSalesReturnOnce(payload));
+}
+
+async function createSalesReturnOnce(payload) {
   await delay(700);
 
   const newId = allSalesReturns.length
@@ -285,7 +296,18 @@ async function applyMoneyEffects(saleId, effects, { reverse = false } = {}) {
  * (validateComposition) تا پیام‌ها دو جا نوشته نشوند و رفتار UI و
  * سرور از هم جدا نیفتد.
  */
-export async function addClaimResolution(returnId, claimId, composition) {
+export async function addClaimResolution(
+  returnId,
+  claimId,
+  composition,
+  { idempotencyKey } = {},
+) {
+  return runOnce(idempotencyKey, () =>
+    addClaimResolutionOnce(returnId, claimId, composition),
+  );
+}
+
+async function addClaimResolutionOnce(returnId, claimId, composition) {
   await delay(500);
 
   const { idx, ret } = findReturn(returnId);
@@ -381,7 +403,11 @@ export async function removeClaimResolution(returnId, claimId, resolutionId) {
  *
  * logistics: اطلاعات حمل که روی تاریخچه‌ی همان دور ثبت می‌شود.
  */
-export async function executeGoodsRound(returnId, { rounds = [], ...logistics } = {}) {
+export async function executeGoodsRound(returnId, payload = {}, { idempotencyKey } = {}) {
+  return runOnce(idempotencyKey, () => executeGoodsRoundOnce(returnId, payload));
+}
+
+async function executeGoodsRoundOnce(returnId, { rounds = [], ...logistics } = {}) {
   await delay(500);
 
   const { idx, ret } = findReturn(returnId);
@@ -411,9 +437,13 @@ export async function executeGoodsRound(returnId, { rounds = [], ...logistics } 
         if (qty <= 0) return effect;
 
         const isIn = effect.kind === EFFECT_KINDS.GOODS_IN;
-        const healthyQty = isIn
-          ? Math.max(0, Math.min(Number(entry.healthyQty ?? qty) || 0, qty))
-          : qty;
+        // مقدارِ سالم از روی مشاهده‌ها مشتق می‌شود، نه به‌عنوان یک عددِ
+        // جدا: انباردار «چه چیزی دیدم» را ثبت می‌کند و «چقدرش سالم
+        // بود» نتیجه‌ی همان است. دو ورودیِ مستقل یعنی دو عددی که
+        // می‌توانند با هم نخوانند.
+        const observations = normalizeObservations(entry.observations);
+        const observedQty = Math.min(observedQtyOf(observations), qty);
+        const healthyQty = isIn ? Math.max(0, qty - observedQty) : qty;
 
         touched += 1;
         if (effect.productId != null) {
@@ -441,12 +471,11 @@ export async function executeGoodsRound(returnId, { rounds = [], ...logistics } 
               date,
               qty,
               healthyQty: isIn ? healthyQty : null,
-              // مشاهده‌ی مستقل انبار: ممکن است با آنچه مشتری ادعا کرده
-              // فرق داشته باشد (مشتری گفته «معیوب»، انبار می‌بیند
+              // مشاهده‌ی مستقل انبار: ممکن است با آنچه طرف حساب ادعا
+              // کرده فرق داشته باشد (مشتری گفته «معیوب»، انبار می‌بیند
               // «آسیب در حمل»). هر دو نگه داشته می‌شوند چون هرکدام یک
               // مقصر متفاوت را نشان می‌دهند.
-              issueProblem: isIn ? entry.issueProblem || null : null,
-              issueNote: entry.issueNote || "",
+              observations: isIn ? observations : [],
               partyName: logistics.partyName || "",
               partyNationalId: logistics.partyNationalId || "",
               vehiclePlate: logistics.vehiclePlate || "",

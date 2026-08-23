@@ -1,5 +1,9 @@
 
-import { allPurchases, PURCHASE_STATUSES } from "./mockData";
+import {
+  allPurchases,
+  PURCHASE_STATUSES,
+  nextPurchaseItemId,
+} from "./mockData";
 import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
 import { applyListQuery } from "@/shared/services/mockQuery";
 
@@ -19,6 +23,11 @@ function computeHealthyReceivedQty(item) {
     0,
   );
   return Math.max(0, receivedQty - problematicQty);
+}
+
+/** شناسه‌دهی به اقلامِ تازه — قرینه‌ی سمت فروش. */
+function withLineIds(items = []) {
+  return items.map((item) => ({ ...item, id: item.id ?? nextPurchaseItemId() }));
 }
 
 function restorePurchaseStock(purchase) {
@@ -46,6 +55,7 @@ export async function createPurchase(purchaseData) {
   const newPurchase = {
     id: newId,
     ...purchaseData,
+    items: withLineIds(purchaseData.items),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -119,6 +129,7 @@ export async function updatePurchase(id, updates) {
   allPurchases[index] = {
     ...current,
     ...updates,
+    ...(updates.items ? { items: withLineIds(updates.items) } : {}),
     updatedAt: new Date().toISOString(),
   };
 

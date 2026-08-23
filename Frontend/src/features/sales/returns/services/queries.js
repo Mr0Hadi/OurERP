@@ -5,7 +5,7 @@ import {
   fetchSalesReturnById,
   fetchReturnableSales,
   fetchSaleForReturn,
-} from "./api-mockData";
+} from "./api";
 import { salesReturnKeys } from "./queryKeys";
 
 export function useSalesReturnsQuery(filters, pagination, sorting) {

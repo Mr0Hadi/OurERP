@@ -346,5 +346,37 @@ function generateMoreSales(count = 20) {
   return sales;
 }
 
+// ─── شناسه‌ی خطِ فاکتور ──────────────────────────────────────────────────────
+
+/**
+ * هر قلمِ فاکتور یک شناسه‌ی یکتا می‌گیرد — معادلِ `SaleItem.Id` در بک‌اند.
+ *
+ * تا پیش از این اقلام هیچ شناسه‌ای نداشتند و هرکس می‌خواست به یک خط
+ * ارجاع بدهد (مرجوعی، انبار) از `productId` استفاده می‌کرد. این کار تا
+ * وقتی درست است که یک کالا فقط در یک خط فاکتور باشد؛ به‌محض اینکه یک
+ * کالا در دو خط با قیمت یا تخفیفِ متفاوت بیاید، دو خط از هم قابل
+ * تشخیص نیستند و ادعاهای مرجوعی روی هم می‌افتند.
+ *
+ * شمارنده سراسری است تا شناسه‌ها بین همه‌ی فاکتورها یکتا باشند، دقیقاً
+ * مثل کلید اصلیِ جدول در بک‌اند.
+ */
+let saleItemIdSeq = 0;
+
+export function nextSaleItemId() {
+  return ++saleItemIdSeq;
+}
+
+export function withSaleItemIds(sale) {
+  return {
+    ...sale,
+    items: (sale.items || []).map((item) => ({
+      ...item,
+      id: item.id ?? nextSaleItemId(),
+    })),
+  };
+}
+
 // آرایه نهایی فروش‌ها
-export const allSales = [...salesMock, ...generateMoreSales(20)];
+export const allSales = [...salesMock, ...generateMoreSales(20)].map(
+  withSaleItemIds,
+);

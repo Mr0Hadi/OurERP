@@ -10,10 +10,11 @@ import {
   cancelSalesReturn,
   reopenSalesReturn,
   removeSalesReturn,
-} from "./api-mockData";
+} from "./api";
 import { salesReturnKeys } from "./queryKeys";
 import { invalidateSalesEcosystem } from "../../orders/services/sharedInvalidation";
 import { ROUTES } from "@/shared/constants/routes";
+import { idempotencyKeyFor } from "@/shared/services/api/contract";
 
 const finalizeReturnChange = (queryClient, updated) => {
   queryClient.setQueryData(salesReturnKeys.detail(updated.id), updated);
@@ -24,7 +25,11 @@ export const useCreateSalesReturnMutation = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   return useMutation({
-    mutationFn: createSalesReturn,
+    // کلید ایدمپوتنسی برای هر «قصدِ کاربر» یکتا ساخته می‌شود: اگر
+    // درخواست به‌خاطر شبکه دوباره فرستاده شود، سرور همان مرجوعی را
+    // برمی‌گرداند نه یک مرجوعیِ تکراری.
+    mutationFn: (payload) =>
+      createSalesReturn(payload, { idempotencyKey: idempotencyKeyFor(payload) }),
     onSuccess: (created) => {
       toast.success("درخواست مرجوعی ثبت شد؛ حالا می‌توانید برایش تصمیم بگیرید");
       invalidateSalesEcosystem(queryClient, created.saleId);
@@ -37,8 +42,15 @@ export const useCreateSalesReturnMutation = () => {
 export const useAddClaimResolutionMutation = (returnId) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ claimId, composition }) =>
-      addClaimResolution(returnId, claimId, composition),
+    // ثبت تصمیم یک اثر مالیِ فوری دارد؛ بدون کلید ایدمپوتنسی، یک
+    // دوبار-کلیک یعنی دو بار جابه‌جایی پول.
+    mutationFn: (variables) =>
+      addClaimResolution(
+        returnId,
+        variables.claimId,
+        variables.composition,
+        { idempotencyKey: idempotencyKeyFor(variables) },
+      ),
     onSuccess: (updated) => {
       finalizeReturnChange(queryClient, updated);
       toast.success("تصمیم ثبت شد");
@@ -68,7 +80,12 @@ export const useRemoveClaimResolutionMutation = (returnId) => {
 export const useExecuteGoodsRoundMutation = (returnId) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload) => executeGoodsRound(returnId, payload),
+    // دورِ کالا تجمعی است (`doneQty` جمع می‌شود)، پس تکرارِ یک
+    // درخواست موجودی را دوبار جابه‌جا می‌کند.
+    mutationFn: (payload) =>
+      executeGoodsRound(returnId, payload, {
+        idempotencyKey: idempotencyKeyFor(payload),
+      }),
     onSuccess: (updated) => {
       finalizeReturnChange(queryClient, updated);
       toast.success("جابه‌جایی کالا ثبت شد");

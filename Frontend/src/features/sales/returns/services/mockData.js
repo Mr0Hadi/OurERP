@@ -86,8 +86,7 @@ function buildClaim({ saleItem, qty, problem, scope, offScopeKind }) {
     id: generateId(),
     scope,
     offScopeKind: scope === CLAIM_SCOPES.OFF_INVOICE ? offScopeKind : null,
-    saleLineId:
-      scope === CLAIM_SCOPES.ON_INVOICE ? String(saleItem.productId) : null,
+    orderLineId: scope === CLAIM_SCOPES.ON_INVOICE ? saleItem.id : null,
     productId: saleItem.productId,
     productCode: saleItem.productCode,
     productName: saleItem.productName,

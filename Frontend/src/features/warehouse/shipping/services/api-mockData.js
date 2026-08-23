@@ -1,6 +1,7 @@
 import { allSales, SALE_STATUSES, SALE_STATUS_LABELS } from "./mockData";
 import { markUnitsShipped } from "@/features/warehouse/units/services/api-mockData";
 import { applyListQuery } from "@/shared/services/mockQuery";
+import { runOnce } from "@/shared/services/mockIdempotency";
 
 import { allSalesReturns } from "@/features/sales/returns/services/mockData";
 import { executeGoodsRound as executeSalesReturnRound } from "@/features/sales/returns/services/api-mockData";
@@ -229,7 +230,15 @@ export async function fetchShippingSaleById(id) {
  * «ارسال‌شده» یعنی همه‌چیز از انبار خارج شده؛ تبدیلش به «تحویل کامل»
  * تأییدی جداگانه است و اینجا خودکار انجام نمی‌شود.
  */
-export async function confirmShipment(saleId, shipmentData) {
+export async function confirmShipment(
+  saleId,
+  shipmentData,
+  { idempotencyKey } = {},
+) {
+  return runOnce(idempotencyKey, () => confirmShipmentOnce(saleId, shipmentData));
+}
+
+async function confirmShipmentOnce(saleId, shipmentData) {
   await delay(500);
 
   const index = allSales.findIndex((s) => Number(s.id) === Number(saleId));
@@ -312,7 +321,17 @@ export async function confirmShipment(saleId, shipmentData) {
  * ارسال می‌سازد را می‌گیرد و به دورِ اثر ترجمه می‌کند. اینجا سندِ
  * فروشی در کار نیست، پس همه‌ی ردیف‌ها مرجوعی‌اند.
  */
-export async function confirmSupplierReturnShipment(returnId, shipmentData) {
+export async function confirmSupplierReturnShipment(
+  returnId,
+  shipmentData,
+  { idempotencyKey } = {},
+) {
+  return runOnce(idempotencyKey, () =>
+    confirmSupplierReturnShipmentOnce(returnId, shipmentData),
+  );
+}
+
+async function confirmSupplierReturnShipmentOnce(returnId, shipmentData) {
   const shippedDate =
     shipmentData.shippedDate || new Date().toISOString().slice(0, 10);
 

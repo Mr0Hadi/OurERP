@@ -1,18 +1,24 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 
-import { confirmReceiving, confirmReturnIntake } from "./api-mockData";
+import { confirmReceiving, confirmReturnIntake } from "./api";
 import { incomingQueueKeys } from "./queryKeys";
 import { invalidatePurchaseEcosystem } from "@/features/purchases/orders/services/sharedInvalidation";
 import { invalidateSalesEcosystem } from "@/features/sales/orders/services/sharedInvalidation";
 import { salesReturnKeys } from "@/features/sales/returns/services/queryKeys";
+import { idempotencyKeyFor } from "@/shared/services/api/contract";
 
 export const useConfirmReceivingMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ purchaseId, receivingData }) =>
-      confirmReceiving(purchaseId, receivingData),
+    // دریافت تجمعی است: هر دور به `receivedQty` و موجودی اضافه می‌کند.
+    // بدون کلید ایدمپوتنسی، یک retry شبکه‌ای همان محموله را دوبار
+    // وارد انبار می‌کند.
+    mutationFn: (variables) =>
+      confirmReceiving(variables.purchaseId, variables.receivingData, {
+        idempotencyKey: idempotencyKeyFor(variables),
+      }),
     onSuccess: (updatedPurchase) => {
       // این دور دریافت ممکن است هم‌زمان چند مرجوعیِ «در انتظار کالای
       // جایگزین» را ببندد و هم وضعیت خودِ خرید را عوض کند، پس از تابع
@@ -31,8 +37,10 @@ export const useConfirmReturnIntakeMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ returnId, intakeData }) =>
-      confirmReturnIntake(returnId, intakeData),
+    mutationFn: (variables) =>
+      confirmReturnIntake(variables.returnId, variables.intakeData, {
+        idempotencyKey: idempotencyKeyFor(variables),
+      }),
     onSuccess: (updatedReturn) => {
       queryClient.setQueryData(
         salesReturnKeys.detail(updatedReturn.id),

@@ -1,5 +1,9 @@
 import { useEffect } from 'react';
 import { useReceivingFormStore } from '../store/receivingFormStore';
+import {
+  defaultIssueTypeFor,
+  issueBudgetOf,
+} from '../domain/issueSemantics';
 
 const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -30,7 +34,6 @@ export function useReceivingForm(purchaseData) {
     }
   }, [purchaseVersion, purchaseData, initializeFromPurchase, initializedForId]);
 
-  const shortageOf = (item) => Math.max(0, item.expectedQty - (item.receivedQty || 0));
   const allocatedOf = (item) =>
     (item.issues || []).reduce((sum, i) => sum + (Number(i.qty) || 0), 0);
 
@@ -40,8 +43,7 @@ export function useReceivingForm(purchaseData) {
       const updated = { ...item, [field]: value };
 
       if (field === 'receivedQty') {
-        const newShortage = Math.max(0, updated.expectedQty - (value || 0));
-        let remainingBudget = newShortage;
+        let remainingBudget = issueBudgetOf(updated);
         const trimmedIssues = [];
         for (const issue of updated.issues || []) {
           if (remainingBudget <= 0) break;
@@ -65,15 +67,20 @@ export function useReceivingForm(purchaseData) {
   const handleAddIssue = (lineId) => {
     const newItems = formData.items.map((item) => {
       if (item.lineId !== lineId) return item;
-      const shortage = shortageOf(item);
+      const budget = issueBudgetOf(item);
       const allocated = allocatedOf(item);
-      const remaining = Math.max(0, shortage - allocated);
+      const remaining = Math.max(0, budget - allocated);
       if (remaining <= 0) return item;
       return {
         ...item,
         issues: [
           ...(item.issues || []),
-          { id: generateId(), issueType: 'shortage', qty: remaining, note: '' },
+          {
+            id: generateId(),
+            issueType: defaultIssueTypeFor(item),
+            qty: remaining,
+            note: '',
+          },
         ],
       };
     });
@@ -83,7 +90,7 @@ export function useReceivingForm(purchaseData) {
   const handleUpdateIssue = (lineId, issueRowId, field, value) => {
     const newItems = formData.items.map((item) => {
       if (item.lineId !== lineId) return item;
-      const shortage = shortageOf(item);
+      const budget = issueBudgetOf(item);
 
       const newIssues = (item.issues || []).map((issue) => {
         if (issue.id !== issueRowId) return issue;
@@ -91,7 +98,7 @@ export function useReceivingForm(purchaseData) {
           const otherAllocated = (item.issues || [])
             .filter((i) => i.id !== issueRowId)
             .reduce((s, i) => s + (Number(i.qty) || 0), 0);
-          const maxAllowed = Math.max(0, shortage - otherAllocated);
+          const maxAllowed = Math.max(0, budget - otherAllocated);
           const num = Number(value);
           const clamped = Number.isNaN(num) || num < 0 ? 0 : Math.min(num, maxAllowed);
           return { ...issue, qty: clamped };

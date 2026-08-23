@@ -32,15 +32,32 @@ export function returnsOfOrder(allReturns, orderIdKey, orderId) {
     .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 }
 
-function eachOnOrderEffect(returnDoc, productId, visit) {
+/**
+ * آیا این ادعا روی همان خطِ سند نشسته؟
+ *
+ * معیارِ اصلی `orderLineId` است (شناسه‌ی واقعیِ خط سند، معادلِ
+ * `SaleItem.Id`/`PurchaseItem.Id`). تطبیق با `productId` فقط وقتی
+ * انجام می‌شود که ادعا شناسه‌ی خط نداشته باشد — حالتی که فقط برای
+ * داده‌ی قدیمی پیش می‌آید. تکیه‌ی همیشگی بر `productId` غلط است:
+ * یک کالا می‌تواند در دو خط فاکتور با قیمت متفاوت باشد و آن دو خط
+ * سهمیه‌ی جداگانه دارند.
+ */
+function matchesLine(claim, line) {
+  if (claim.orderLineId != null && line.orderLineId != null) {
+    return String(claim.orderLineId) === String(line.orderLineId);
+  }
+  return claim.productId === line.productId;
+}
+
+function eachOnOrderEffect(returnDoc, line, visit) {
   (returnDoc.claims || []).forEach((claim) => {
     // ادعای خارج از سند روی هیچ خطی از فاکتور نمی‌نشیند، پس نباید
     // مقدارِ تحویلِ آن خط را جابه‌جا کند.
     if (claim.offScopeKind) return;
-    if (claim.productId !== productId) return;
+    if (!matchesLine(claim, line)) return;
     (claim.resolutions || []).forEach((res) =>
       (res.effects || []).forEach((effect) => {
-        if (effect.productId !== productId) return;
+        if (effect.productId !== claim.productId) return;
         visit(effect);
       }),
     );
@@ -48,6 +65,8 @@ function eachOnOrderEffect(returnDoc, productId, visit) {
 }
 
 /**
+ * `line` یک `{ orderLineId, productId }` است، نه فقط شناسه‌ی کالا.
+ *
  * چقدر به مقدارِ تحویلِ یک خط اضافه (یا از آن کم) شده، بابت کالایی که
  * *واقعاً* جابه‌جا شده — یعنی فقط doneQty، نه آنچه صرفاً تصمیم گرفته
  * شده.
@@ -63,12 +82,12 @@ function eachOnOrderEffect(returnDoc, productId, visit) {
  *  • فروش: shippedQty هرچه فرستاده‌ایم را می‌شمارد، سالم یا نه. پس
  *    پس‌گرفتن از مشتری کم می‌کند و ارسال جایگزین اضافه.
  */
-export function deliveredAdjustment(returns, productId, { side }) {
+export function deliveredAdjustment(returns, line, { side }) {
   let adjustment = 0;
 
   returns.forEach((ret) => {
     if (!isActiveReturn(ret)) return;
-    eachOnOrderEffect(ret, productId, (effect) => {
+    eachOnOrderEffect(ret, line, (effect) => {
       const done = Number(effect.doneQty) || 0;
       if (done <= 0) return;
 
@@ -97,7 +116,7 @@ export function deliveredAdjustment(returns, productId, { side }) {
  * روی همان قلم فقط بالاتر می‌رفت — دقیقاً چیزی که این تابع باید از آن
  * جلوگیری کند.
  */
-export function claimBreakdown(returns, productId, currentReturnId = null) {
+export function claimBreakdown(returns, line, currentReturnId = null) {
   let here = 0;
   let elsewhere = 0;
 
@@ -107,7 +126,7 @@ export function claimBreakdown(returns, productId, currentReturnId = null) {
     let claimed = 0;
     (ret.claims || []).forEach((claim) => {
       if (claim.offScopeKind) return;
-      if (claim.productId !== productId) return;
+      if (!matchesLine(claim, line)) return;
       claimed += claimRemainingQty(claim);
     });
     if (claimed === 0) return;

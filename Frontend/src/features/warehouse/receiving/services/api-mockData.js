@@ -2,6 +2,7 @@ import { allPurchases } from "./mockData";
 import { PURCHASE_STATUSES } from "@/features/purchases/orders/services/constants";
 import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
 import { applyListQuery } from "@/shared/services/mockQuery";
+import { runOnce } from "@/shared/services/mockIdempotency";
 
 import { allSalesReturns } from "@/features/sales/returns/services/mockData";
 import { executeGoodsRound as executeSalesReturnRound } from "@/features/sales/returns/services/api-mockData";
@@ -23,6 +24,7 @@ import {
 import { EFFECT_KINDS } from "@/shared/domain/returns/effects";
 
 import {
+  DEFAULT_RECEIVING_ISSUE_TYPE,
   INCOMING_TYPES,
   RECEIVING_ELIGIBLE_STATUSES,
   RECEIVING_SOURCES,
@@ -181,7 +183,12 @@ function salesReturnToRow(salesReturn) {
  *
  * «سالم» همان تعدادی است که مشکلی برایش گزارش نشده — همان قاعده‌ای که
  * برای خطوط سفارش هم به کار می‌رود، نه فیلدی جدا که انباردار دوباره
- * پرش کند.
+ * پرش کند. به همین دلیل اینجا فقط *مشاهده‌ها* فرستاده می‌شوند و
+ * موتور اثر خودش مقدار سالم را حساب می‌کند.
+ *
+ * ردیف‌های مشکل با نوع و تعدادِ خودشان منتقل می‌شوند، نه فشرده‌شده در
+ * یک یادداشت: انباردار می‌تواند از یک محموله بگوید «۲ تا معیوب، ۱ تا
+ * آسیب حمل» و این تفکیک تنها چیزی است که گزارشِ مقصر را ممکن می‌کند.
  */
 async function applyReturnRows(rows, logistics, executeRound, fallbackReturnId) {
   const byReturn = new Map();
@@ -189,18 +196,14 @@ async function applyReturnRows(rows, logistics, executeRound, fallbackReturnId) 
   rows.forEach((row) => {
     const qty = Number(row.receivedQty) || 0;
     if (qty <= 0) return;
-    const issuesQty = (row.issues || []).reduce(
-      (sum, i) => sum + (Number(i.qty) || 0),
-      0,
-    );
     const entry = {
       effectId: row.effectId,
       qty,
-      healthyQty: Math.max(0, qty - issuesQty),
-      issueNote: (row.issues || [])
-        .map((i) => i.note)
-        .filter(Boolean)
-        .join(" / "),
+      observations: (row.issues || []).map((issue) => ({
+        problem: issue.type,
+        qty: Number(issue.qty) || 0,
+        note: issue.note || "",
+      })),
     };
     // در رسیدِ خرید، هر خط مرجوعیِ خودش را می‌شناسد (چون یک رسید
     // می‌تواند جایگزینِ چند مرجوعی را با هم بیاورد). در صفحه‌ی
@@ -301,7 +304,17 @@ export async function fetchReceivingPurchaseById(id) {
  * ۷. خطوطِ مرجوعیِ همین رسید هر کدام یک دورِ اجرای اثر روی مرجوعیِ
  *    خودشان است؛ موجودی و وضعیت را همان موتور اثر جابه‌جا می‌کند.
  */
-export async function confirmReceiving(purchaseId, receivingData) {
+export async function confirmReceiving(
+  purchaseId,
+  receivingData,
+  { idempotencyKey } = {},
+) {
+  return runOnce(idempotencyKey, () =>
+    confirmReceivingOnce(purchaseId, receivingData),
+  );
+}
+
+async function confirmReceivingOnce(purchaseId, receivingData) {
   await delay(500);
 
   const index = allPurchases.findIndex((p) => Number(p.id) === Number(purchaseId));
@@ -335,7 +348,7 @@ export async function confirmReceiving(purchaseId, receivingData) {
       .filter((b) => (Number(b.qty) || 0) > 0)
       .map((b) => ({
         id: generateId(),
-        type: b.type || "shortage",
+        type: b.type || DEFAULT_RECEIVING_ISSUE_TYPE,
         qty: Number(b.qty) || 0,
         note: b.note || "",
         date: receivedDate,
@@ -352,7 +365,7 @@ export async function confirmReceiving(purchaseId, receivingData) {
       roundClaims.push({
         scope: CLAIM_SCOPES.ON_ORDER,
         offScopeKind: null,
-        purchaseLineId: String(item.productId),
+        orderLineId: item.id,
         productId: item.productId,
         productCode: item.productCode,
         productName: item.productName,
@@ -420,7 +433,7 @@ export async function confirmReceiving(purchaseId, receivingData) {
     roundClaims.push({
       scope: CLAIM_SCOPES.OFF_ORDER,
       offScopeKind: isExcess ? OFF_ORDER_KINDS.EXCESS : OFF_ORDER_KINDS.UNLISTED,
-      purchaseLineId: null,
+      orderLineId: null,
       productId: surplus.productId,
       productCode: surplus.productCode,
       productName: surplus.productName,
@@ -428,8 +441,8 @@ export async function confirmReceiving(purchaseId, receivingData) {
       unitPrice: surplus.unitPrice || 0,
       qty: surplus.qty,
       problem: isExcess
-        ? PURCHASE_RETURN_PROBLEMS.OVER_DELIVERED
-        : PURCHASE_RETURN_PROBLEMS.UNORDERED_ITEM,
+        ? PURCHASE_RETURN_PROBLEMS.OVER_SHIPPED
+        : PURCHASE_RETURN_PROBLEMS.UNLISTED_ITEM,
       note: surplus.note || "",
     });
   });
@@ -488,7 +501,17 @@ export async function confirmReceiving(purchaseId, receivingData) {
  * یک شکل داشته باشند و انباردار یک رفتار یاد بگیرد نه دو تا. اینجا
  * خطِ سفارشی وجود ندارد، پس همه‌ی ردیف‌ها مرجوعی‌اند.
  */
-export async function confirmReturnIntake(returnId, intakeData) {
+export async function confirmReturnIntake(
+  returnId,
+  intakeData,
+  { idempotencyKey } = {},
+) {
+  return runOnce(idempotencyKey, () =>
+    confirmReturnIntakeOnce(returnId, intakeData),
+  );
+}
+
+async function confirmReturnIntakeOnce(returnId, intakeData) {
   const updated = await applyReturnRows(
     intakeData.receivedItems || [],
     {

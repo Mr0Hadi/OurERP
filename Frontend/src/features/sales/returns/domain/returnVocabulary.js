@@ -1,6 +1,12 @@
 // src/features/sales/returns/domain/returnVocabulary.js
 
 import { RETURN_SIDES, SIDE_CONFIG } from "@/shared/domain/returns/sides";
+import {
+  SALES_CLAIM_PROBLEMS,
+  problemLabels,
+  problemStyles,
+  problemSubset,
+} from "@/shared/domain/returns/problems";
 
 /**
  * واژگانِ پایه‌ی مرجوعی فروش.
@@ -20,75 +26,24 @@ import { RETURN_SIDES, SIDE_CONFIG } from "@/shared/domain/returns/sides";
 /**
  * مشکلِ دقیق — همان چیزی که واحد فروش از مشتری می‌شنود.
  *
- * تفکیک «انبار اشتباه فرستاد» از «فروش اشتباه ثبت کرد» از «مشتری
- * اشتباه سفارش داد» عمدی است: هر سه از بیرون یک شکل دارند (کالای
- * اشتباه دست مشتری است) ولی ریشه‌شان فرق می‌کند و برای گزارش‌گیریِ
- * بعدی باید از هم قابل تشخیص باشند.
+ * مقادیر از فضای مشترکِ `shared/domain/returns/problems.js` می‌آیند؛
+ * اینجا فقط *زیرمجموعه‌ی* سمت فروش انتخاب و در جاهایی که واژه‌ی
+ * فروش با واژه‌ی خنثی فرق دارد، برچسب بازنویسی می‌شود. مقدارها هرگز
+ * اینجا ساخته نمی‌شوند تا گزارش انبار و ادعای خرید و ادعای فروش همه
+ * روی یک فضای مقدار بنشینند.
  */
-export const RETURN_PROBLEMS = {
-  // نوع کالا
-  WRONG_ITEM_SHIPPED: "wrong_item_shipped",
-  WRONG_ITEM_INVOICED: "wrong_item_invoiced",
-  WRONG_ITEM_ORDERED: "wrong_item_ordered",
-  // تعداد
-  SHORT_SHIPPED: "short_shipped",
-  OVER_SHIPPED: "over_shipped",
-  WRONG_QTY_INVOICED: "wrong_qty_invoiced",
-  WRONG_QTY_ORDERED: "wrong_qty_ordered",
-  // خرابی
-  DEFECTIVE: "defective",
-  DAMAGED_IN_TRANSIT: "damaged_in_transit",
-  QUALITY_ISSUE: "quality_issue",
-  EXPIRED: "expired",
-  // بدون نقص
-  CHANGED_MIND: "changed_mind",
-  // سایر
-  OTHER: "other",
-};
+export const RETURN_PROBLEMS = problemSubset(SALES_CLAIM_PROBLEMS);
 
-export const RETURN_PROBLEM_LABELS = {
+export const RETURN_PROBLEM_LABELS = problemLabels(SALES_CLAIM_PROBLEMS, {
   [RETURN_PROBLEMS.WRONG_ITEM_SHIPPED]: "انبار کالای اشتباه فرستاد",
-  [RETURN_PROBLEMS.WRONG_ITEM_INVOICED]: "کالا در فاکتور اشتباه ثبت شد",
   [RETURN_PROBLEMS.WRONG_ITEM_ORDERED]: "مشتری کالا را اشتباه سفارش داد",
   [RETURN_PROBLEMS.SHORT_SHIPPED]: "کمتر از فاکتور ارسال شد",
   [RETURN_PROBLEMS.OVER_SHIPPED]: "بیشتر از فاکتور ارسال شد",
-  [RETURN_PROBLEMS.WRONG_QTY_INVOICED]: "تعداد در فاکتور اشتباه ثبت شد",
   [RETURN_PROBLEMS.WRONG_QTY_ORDERED]: "مشتری تعداد را اشتباه سفارش داد",
-  [RETURN_PROBLEMS.DEFECTIVE]: "کالای معیوب / خراب",
-  [RETURN_PROBLEMS.DAMAGED_IN_TRANSIT]: "آسیب‌دیده در حمل",
-  [RETURN_PROBLEMS.QUALITY_ISSUE]: "مغایرت کیفیت / مشخصات",
-  [RETURN_PROBLEMS.EXPIRED]: "تاریخ گذشته",
   [RETURN_PROBLEMS.CHANGED_MIND]: "انصراف / پشیمانی مشتری",
-  [RETURN_PROBLEMS.OTHER]: "سایر موارد",
-};
+});
 
-export const RETURN_PROBLEM_STYLES = {
-  [RETURN_PROBLEMS.WRONG_ITEM_SHIPPED]:
-    "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:border-purple-800 dark:text-purple-400",
-  [RETURN_PROBLEMS.WRONG_ITEM_INVOICED]:
-    "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:border-purple-800 dark:text-purple-400",
-  [RETURN_PROBLEMS.WRONG_ITEM_ORDERED]:
-    "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:border-purple-800 dark:text-purple-400",
-  [RETURN_PROBLEMS.SHORT_SHIPPED]:
-    "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400",
-  [RETURN_PROBLEMS.OVER_SHIPPED]:
-    "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/40 dark:border-sky-800 dark:text-sky-400",
-  [RETURN_PROBLEMS.WRONG_QTY_INVOICED]:
-    "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400",
-  [RETURN_PROBLEMS.WRONG_QTY_ORDERED]:
-    "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400",
-  [RETURN_PROBLEMS.DEFECTIVE]:
-    "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:border-red-800 dark:text-red-400",
-  [RETURN_PROBLEMS.DAMAGED_IN_TRANSIT]:
-    "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:border-orange-800 dark:text-orange-400",
-  [RETURN_PROBLEMS.QUALITY_ISSUE]:
-    "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:border-red-800 dark:text-red-400",
-  [RETURN_PROBLEMS.EXPIRED]:
-    "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:border-orange-800 dark:text-orange-400",
-  [RETURN_PROBLEMS.CHANGED_MIND]:
-    "bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900/40 dark:border-slate-700 dark:text-slate-400",
-  [RETURN_PROBLEMS.OTHER]: "bg-muted text-muted-foreground border-border",
-};
+export const RETURN_PROBLEM_STYLES = problemStyles(SALES_CLAIM_PROBLEMS);
 
 // ─── محور ۲: دامنه‌ی ادعا ───────────────────────────────────────────────────
 

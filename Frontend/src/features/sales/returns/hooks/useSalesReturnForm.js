@@ -153,7 +153,7 @@ export function useSalesReturnForm() {
       .map((claim) => ({
         scope: CLAIM_SCOPES.ON_INVOICE,
         offScopeKind: null,
-        saleLineId: String(line.productId),
+        orderLineId: line.orderLineId,
         productId: line.productId,
         productCode: line.productCode,
         productName: line.productName,
@@ -170,7 +170,8 @@ export function useSalesReturnForm() {
     .map((claim) => ({
       scope: CLAIM_SCOPES.OFF_INVOICE,
       offScopeKind: claim.offScopeKind,
-      saleLineId: null,
+      // ادعای خارج از فاکتور روی هیچ خطی نمی‌نشیند.
+      orderLineId: null,
       productId: claim.productId,
       productCode: claim.productCode,
       productName: claim.productName,

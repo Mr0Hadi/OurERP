@@ -58,10 +58,10 @@ export const RETURN_ELIGIBLE_PURCHASE_STATUSES = [
 ];
 
 const ON_ORDER_PROBLEMS = [
-  PURCHASE_RETURN_PROBLEMS.SHORTAGE,
+  PURCHASE_RETURN_PROBLEMS.SHORT_SHIPPED,
   PURCHASE_RETURN_PROBLEMS.DEFECTIVE,
-  PURCHASE_RETURN_PROBLEMS.DAMAGED,
-  PURCHASE_RETURN_PROBLEMS.WRONG_ITEM,
+  PURCHASE_RETURN_PROBLEMS.DAMAGED_IN_TRANSIT,
+  PURCHASE_RETURN_PROBLEMS.WRONG_ITEM_SHIPPED,
   PURCHASE_RETURN_PROBLEMS.EXPIRED,
   PURCHASE_RETURN_PROBLEMS.QUALITY_ISSUE,
 ];
@@ -73,8 +73,7 @@ function buildClaim({ purchaseItem, qty, problem, scope, offScopeKind }) {
     id: generateId(),
     scope,
     offScopeKind: scope === CLAIM_SCOPES.OFF_ORDER ? offScopeKind : null,
-    purchaseLineId:
-      scope === CLAIM_SCOPES.ON_ORDER ? String(purchaseItem.productId) : null,
+    orderLineId: scope === CLAIM_SCOPES.ON_ORDER ? purchaseItem.id : null,
     productId: purchaseItem.productId,
     productCode: purchaseItem.productCode,
     productName: purchaseItem.productName,
@@ -189,7 +188,7 @@ function buildReturnFromPurchase(purchase, index) {
     const claim = buildClaim({
       purchaseItem: pickedItems[0],
       qty: randomInt(1, 3),
-      problem: PURCHASE_RETURN_PROBLEMS.OVER_DELIVERED,
+      problem: PURCHASE_RETURN_PROBLEMS.OVER_SHIPPED,
       scope: CLAIM_SCOPES.OFF_ORDER,
       offScopeKind: OFF_ORDER_KINDS.EXCESS,
     });
