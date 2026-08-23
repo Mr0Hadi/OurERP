@@ -54,6 +54,19 @@ export default function PurchasePaymentSection({
     isSingleMethod,
   );
 
+  // برای پرداخت ترکیبی، تا وقتی فقط یک ردیف هست (یعنی هنوز تقسیم
+  // نشده) همان ردیف هم با جمع کل سند همگام می‌ماند.
+  useSyncedComputedValue(
+    totalAmount,
+    (value) =>
+      onFormChange({
+        mixedPayments: mixedPayments.map((part, i) =>
+          i === 0 ? { ...part, amount: String(value) } : part,
+        ),
+      }),
+    paymentType === 'mixed' && mixedPayments.length === 1,
+  );
+
   // اضافه کردن پرداخت جدید به لیست ترکیبی
   const handleAddMixedPayment = () => {
     const newPayment = {
@@ -113,14 +126,14 @@ export default function PurchasePaymentSection({
                       {
                         id: Date.now().toString(),
                         type: 'cash',
-                        amount: '',
+                        amount: String(totalAmount),
                         checkNumber: '',
                         transferRef: '',
                       },
                     ]
                   : mixedPayments;
-              // برای روش‌های تک‌مرحله‌ای (نقدی/چک/انتقال) مبلغ پرداختی
-              // به‌صورت پیش‌فرض همان جمع کل سند است.
+              // برای روش‌های تک‌مرحله‌ای (نقدی/چک/انتقال) مبلغ پرداختی، و
+              // برای ترکیبی ردیفِ اول، به‌صورت پیش‌فرض همان جمع کل سند است.
               const isSingleMethod = val !== 'credit' && val !== 'mixed';
               onFormChange({
                 paymentType: val,

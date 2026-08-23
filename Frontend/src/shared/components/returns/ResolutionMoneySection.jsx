@@ -86,7 +86,7 @@ export default function ResolutionMoneySection({
                 reference: "",
                 parts:
                   value === PAYMENT_METHODS.MIXED && parts.length === 0
-                    ? [{ ...EMPTY_PART }]
+                    ? [{ ...EMPTY_PART, amount: String(defaultAmount ?? "") }]
                     : parts,
               })
             }

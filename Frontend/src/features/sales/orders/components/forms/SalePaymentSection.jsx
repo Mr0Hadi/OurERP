@@ -68,14 +68,28 @@ export default function SalePaymentSection({
     isSingleMethod,
   );
 
+  // برای پرداخت ترکیبی، تا وقتی فقط یک ردیف هست (یعنی هنوز تقسیم
+  // نشده) همان ردیف هم با جمع کل سند همگام می‌ماند.
+  useSyncedComputedValue(
+    totalAmount,
+    (value) =>
+      onFormChange({
+        mixedPayments: mixedPayments.map((part, i) =>
+          i === 0 ? { ...part, amount: String(value) } : part,
+        ),
+      }),
+    paymentType === "mixed" && mixedPayments.length === 1,
+  );
+
   // تغییر نوع پرداخت، فیلدهای مربوط به روش قبلی را پاک می‌کند. برای
-  // روش‌های تک‌مرحله‌ای (نقدی/چک/انتقال) مبلغ پرداختی به‌صورت پیش‌فرض
-  // همان جمع کل سند است.
+  // روش‌های تک‌مرحله‌ای (نقدی/چک/انتقال) مبلغ پرداختی، و برای ترکیبی
+  // ردیفِ اول، به‌صورت پیش‌فرض همان جمع کل سند است.
   const handlePaymentTypeChange = (val) => {
     const isSingleMethod = val !== "credit" && val !== "mixed";
     onFormChange({
       paymentType: val,
-      mixedPayments: val === "mixed" ? [{ ...EMPTY_MIXED_PAYMENT }] : [],
+      mixedPayments:
+        val === "mixed" ? [{ ...EMPTY_MIXED_PAYMENT, amount: String(totalAmount) }] : [],
       paidAmount: isSingleMethod ? String(totalAmount) : "",
       checkNumber: "",
       transferRef: "",

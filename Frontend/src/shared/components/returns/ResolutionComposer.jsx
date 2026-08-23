@@ -86,6 +86,22 @@ export default function ResolutionComposer({
       composition.money.method !== PAYMENT_METHODS.MIXED,
   );
 
+  // برای پرداخت ترکیبی، تا وقتی فقط یک ردیف هست (یعنی هنوز تقسیم
+  // نشده) همان ردیف هم با تعداد و قیمت همگام می‌ماند.
+  const moneyParts = composition.money.parts || [];
+  useSyncedComputedValue(
+    defaultMoneyAmount,
+    (value) =>
+      patchMoney({
+        parts: moneyParts.map((part, i) =>
+          i === 0 ? { ...part, amount: String(value) } : part,
+        ),
+      }),
+    composition.money.direction !== MONEY_DIRECTIONS.NONE &&
+      composition.money.method === PAYMENT_METHODS.MIXED &&
+      moneyParts.length === 1,
+  );
+
   const previewEffects = useMemo(
     () => expandComposition(composition, claim),
     [composition, claim],
