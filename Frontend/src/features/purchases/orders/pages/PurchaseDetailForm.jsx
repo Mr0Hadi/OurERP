@@ -25,6 +25,7 @@ import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
 import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
 import PurchasePaymentSection from "../components/forms/PurchasePaymentSection";
 import PurchaseStatusSection from "../components/forms/PurchaseStatusSection";
+import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import { ROUTES } from "@/shared/constants/routes";
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
 import {
@@ -191,6 +192,18 @@ export default function PurchaseDetailForm({ purchaseData }) {
               onFormChange={setFormData}
               totalAmount={computedTotal}
               errors={{}}
+            />
+
+            <InvoiceDocumentSection
+              title="فاکتور خرید"
+              invoiceNumber={formData.invoiceNumber}
+              invoiceDate={formData.invoiceDate}
+              partyLabel="تامین‌کننده"
+              partyName={formData.supplierName}
+              items={items}
+              totalAmount={computedTotal}
+              attachmentRequired
+              attachmentLabel="فاکتور دریافتی از تامین‌کننده"
             />
 
             <PurchaseStatusSection

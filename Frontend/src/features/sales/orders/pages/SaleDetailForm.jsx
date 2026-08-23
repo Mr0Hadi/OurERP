@@ -27,6 +27,7 @@ import SaleItemsSection from "../components/forms/SaleItemsSection";
 import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
 import SalePaymentSection from "../components/forms/SalePaymentSection";
 import SaleStatusSection from "../components/forms/SaleStatusSection";
+import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -164,6 +165,17 @@ export default function SaleDetailForm({ saleData }) {
               onFormChange={setFormData}
               totalAmount={computedTotal}
               errors={{}}
+            />
+
+            <InvoiceDocumentSection
+              title="فاکتور فروش"
+              invoiceNumber={formData.invoiceNumber}
+              invoiceDate={formData.invoiceDate}
+              partyLabel="مشتری"
+              partyName={formData.customerName}
+              items={items}
+              totalAmount={computedTotal}
+              attachmentLabel="فاکتور صادرشده برای مشتری"
             />
 
             <SaleStatusSection
