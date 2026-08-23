@@ -85,9 +85,8 @@ function buildClaim({ saleItem, qty, problem, scope, offScopeKind }) {
   return {
     id: generateId(),
     scope,
-    offScopeKind: scope === CLAIM_SCOPES.OFF_INVOICE ? offScopeKind : null,
-    saleLineId:
-      scope === CLAIM_SCOPES.ON_INVOICE ? String(saleItem.productId) : null,
+    offScopeKind: scope === CLAIM_SCOPES.OFF_ORDER ? offScopeKind : null,
+    orderLineId: scope === CLAIM_SCOPES.ON_ORDER ? saleItem.id : null,
     productId: saleItem.productId,
     productCode: saleItem.productCode,
     productName: saleItem.productName,
@@ -162,7 +161,7 @@ function seedResolutions(claim, target) {
   // مشتق‌شده بدون دخالت انبار به SETTLED برسد.
   // برای اینکه داده‌ی اولیه هر پنج روش را نشان بدهد، روشِ هر نمونه
   // چرخشی انتخاب می‌شود.
-  const isOffInvoice = claim.scope === CLAIM_SCOPES.OFF_INVOICE;
+  const isOffInvoice = claim.scope === CLAIM_SCOPES.OFF_ORDER;
   const direction = isOffInvoice
     ? MONEY_DIRECTIONS.RECEIVE
     : MONEY_DIRECTIONS.PAY;
@@ -216,7 +215,7 @@ function buildReturnFromSale(sale, index) {
       saleItem: item,
       qty,
       problem: pickRandom(ON_INVOICE_PROBLEMS),
-      scope: CLAIM_SCOPES.ON_INVOICE,
+      scope: CLAIM_SCOPES.ON_ORDER,
     });
     if (!isExplicitlyClosed) seedResolutions(claim, target);
     return claim;
@@ -230,7 +229,7 @@ function buildReturnFromSale(sale, index) {
       saleItem: item,
       qty: randomInt(1, 3),
       problem: RETURN_PROBLEMS.OVER_SHIPPED,
-      scope: CLAIM_SCOPES.OFF_INVOICE,
+      scope: CLAIM_SCOPES.OFF_ORDER,
       offScopeKind: OFF_INVOICE_KINDS.EXCESS,
     });
     if (!isExplicitlyClosed) seedResolutions(claim, target);

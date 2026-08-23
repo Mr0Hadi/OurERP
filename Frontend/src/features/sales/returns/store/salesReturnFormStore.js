@@ -39,8 +39,12 @@ export const useSalesReturnFormStore = create((set, get) => ({
         customerId: sale.customerId,
         customerName: sale.customerName,
         lines: sale.items.map((item) => ({
-          lineKey: `${sale.saleId}-${item.productId}`,
-          scope: CLAIM_SCOPES.ON_INVOICE,
+          // کلیدِ ردیف و شناسه‌ی خط هر دو از `item.id` می‌آیند، نه از
+          // `productId`: یک کالا می‌تواند در دو خط فاکتور با قیمت
+          // متفاوت باشد و آن دو خط سهمیه‌ی جدا دارند.
+          lineKey: `${sale.saleId}-${item.id}`,
+          orderLineId: item.id,
+          scope: CLAIM_SCOPES.ON_ORDER,
           productId: item.productId,
           productCode: item.productCode,
           productName: item.productName,

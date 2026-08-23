@@ -9,7 +9,7 @@ const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
 const DEFAULT_ON_ORDER_PROBLEM = PURCHASE_RETURN_PROBLEMS.DEFECTIVE;
-const DEFAULT_OFF_ORDER_PROBLEM = PURCHASE_RETURN_PROBLEMS.OVER_DELIVERED;
+const DEFAULT_OFF_ORDER_PROBLEM = PURCHASE_RETURN_PROBLEMS.OVER_SHIPPED;
 
 /**
  * فرم ثبت ادعای مرجوعی.
@@ -153,7 +153,7 @@ export function usePurchaseReturnForm() {
       .map((claim) => ({
         scope: CLAIM_SCOPES.ON_ORDER,
         offScopeKind: null,
-        purchaseLineId: String(line.productId),
+        orderLineId: line.orderLineId,
         productId: line.productId,
         productCode: line.productCode,
         productName: line.productName,
@@ -170,7 +170,8 @@ export function usePurchaseReturnForm() {
     .map((claim) => ({
       scope: CLAIM_SCOPES.OFF_ORDER,
       offScopeKind: claim.offScopeKind,
-      purchaseLineId: null,
+      // ادعای خارج از سفارش روی هیچ خطی نمی‌نشیند.
+      orderLineId: null,
       productId: claim.productId,
       productCode: claim.productCode,
       productName: claim.productName,

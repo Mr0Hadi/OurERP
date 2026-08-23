@@ -1,17 +1,23 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 
-import { confirmShipment, confirmSupplierReturnShipment } from "./api-mockData";
+import { confirmShipment, confirmSupplierReturnShipment } from "./api";
 import { outgoingQueueKeys } from "./queryKeys";
 import { purchaseReturnKeys } from "@/features/purchases/returns/services/queryKeys";
 import { invalidateSalesEcosystem } from "@/features/sales/orders/services/sharedInvalidation";
 import { invalidatePurchaseEcosystem } from "@/features/purchases/orders/services/sharedInvalidation";
+import { idempotencyKeyFor } from "@/shared/services/api/contract";
 
 export const useConfirmShipmentMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ saleId, shipmentData }) => confirmShipment(saleId, shipmentData),
+    // قرینه‌ی سمت دریافت: ارسال هم تجمعی است و تکرارِ درخواست موجودی
+    // را دوبار کم می‌کند.
+    mutationFn: (variables) =>
+      confirmShipment(variables.saleId, variables.shipmentData, {
+        idempotencyKey: idempotencyKeyFor(variables),
+      }),
     onSuccess: (updatedSale) => {
       // این حواله ممکن است هم‌زمان کالای جایگزینِ چند مرجوعی را هم
       // برده باشد، پس از تابع مرکزی استفاده می‌کنیم.
@@ -27,14 +33,18 @@ export const useConfirmSupplierReturnShipmentMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ returnId, shipmentData }) =>
-      confirmSupplierReturnShipment(returnId, shipmentData),
+    mutationFn: (variables) =>
+      confirmSupplierReturnShipment(variables.returnId, variables.shipmentData, {
+        idempotencyKey: idempotencyKeyFor(variables),
+      }),
     onSuccess: (updatedReturn) => {
       queryClient.setQueryData(
         purchaseReturnKeys.detail(updatedReturn.id),
         updatedReturn,
       );
-      invalidatePurchaseEcosystem(queryClient, updatedReturn.purchaseId);
+      invalidatePurchaseEcosystem(queryClient, updatedReturn.purchaseId, {
+        freshReturnId: updatedReturn.id,
+      });
       queryClient.invalidateQueries({ queryKey: outgoingQueueKeys.lists() });
       toast.success("عودت کالا به تامین‌کننده ثبت شد");
     },

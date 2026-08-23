@@ -56,10 +56,21 @@ const ReceivingTable = ({
       },
       {
         accessorKey: "itemsCount",
-        header: "تعداد اقلام",
+        header: "اقلام باز",
         cell: (info) => (
           <span className="tabular-nums text-sm">
             {info.getValue().toLocaleString("fa-IR")}
+          </span>
+        ),
+      },
+      {
+        // قرینه‌ی ستونِ صف ارسال: «چند قلم» و «چند عدد» دو سوال جدا
+        // هستند و انباردار برای برنامه‌ریزیِ محموله به هر دو نیاز دارد.
+        accessorKey: "remainingQty",
+        header: "تعداد باقی‌مانده",
+        cell: (info) => (
+          <span className="tabular-nums text-sm">
+            {(info.getValue() ?? 0).toLocaleString("fa-IR")}
           </span>
         ),
       },

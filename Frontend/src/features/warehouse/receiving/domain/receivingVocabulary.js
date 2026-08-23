@@ -1,4 +1,9 @@
 import { PURCHASE_STATUSES } from "@/features/purchases/orders/services/constants";
+import {
+  OBSERVED_PROBLEMS,
+  problemLabels,
+  problemSubset,
+} from "@/shared/domain/returns/problems";
 
 /**
  * واژگانِ دریافت انبار — نام‌گذاری، بدون هیچ محاسبه‌ای.
@@ -62,37 +67,46 @@ export const RECEIVING_ELIGIBLE_STATUSES = [PURCHASE_STATUSES.SHIPPED];
  * سمتِ ارسال (شیپینگ) قرینه‌اش را ندارد و نباید داشته باشد: وقتی *ما*
  * کالا را می‌فرستیم، چیزی برای «بازرسیِ ورودی» وجود ندارد که مشکلی رویش
  * گزارش شود.
+ *
+ * مقادیر از فضای مشترکِ `shared/domain/returns/problems.js` می‌آیند —
+ * همان فضایی که ادعای مرجوعی روی آن می‌نشیند. به همین دلیل گزارشِ
+ * انباردار بدون هیچ ترجمه‌ای به ادعا یا به «مشاهده‌ی بازرسی» تبدیل
+ * می‌شود.
  */
-export const RECEIVING_ISSUE_TYPES = {
-  SHORTAGE: "shortage",
-  DEFECTIVE: "defective",
-  DAMAGED: "damaged",
-  WRONG_ITEM: "wrong_item",
-  EXPIRED: "expired",
-  OTHER: "other",
-};
+export const RECEIVING_ISSUE_TYPES = problemSubset(OBSERVED_PROBLEMS);
 
-export const RECEIVING_ISSUE_TYPE_LABELS = {
-  [RECEIVING_ISSUE_TYPES.SHORTAGE]: "کسری تحویل",
+export const RECEIVING_ISSUE_TYPE_LABELS = problemLabels(OBSERVED_PROBLEMS, {
   [RECEIVING_ISSUE_TYPES.DEFECTIVE]: "معیوب / خراب",
-  [RECEIVING_ISSUE_TYPES.DAMAGED]: "آسیب‌دیده در حمل",
-  [RECEIVING_ISSUE_TYPES.WRONG_ITEM]: "ارسال کالای اشتباه",
-  [RECEIVING_ISSUE_TYPES.EXPIRED]: "تاریخ گذشته",
-  [RECEIVING_ISSUE_TYPES.OTHER]: "سایر موارد",
-};
+});
 
+/**
+ * استایل‌های این فهرست عمداً از نسخه‌ی مشترک جدا مانده‌اند: جدول‌های
+ * انبار پس‌زمینه‌ی پررنگ‌تری (`-100`) می‌خواهند تا روی ردیف‌های فشرده
+ * خوانا بمانند، در حالی که بج‌های صفحه‌ی مرجوعی نسخه‌ی روشن‌تر
+ * (`-50`) را استفاده می‌کنند.
+ */
 export const RECEIVING_ISSUE_TYPE_STYLES = {
-  [RECEIVING_ISSUE_TYPES.SHORTAGE]:
+  [RECEIVING_ISSUE_TYPES.SHORT_SHIPPED]:
     "bg-amber-100 text-amber-800 border-amber-300",
   [RECEIVING_ISSUE_TYPES.DEFECTIVE]: "bg-red-100 text-red-800 border-red-300",
-  [RECEIVING_ISSUE_TYPES.DAMAGED]:
+  [RECEIVING_ISSUE_TYPES.DAMAGED_IN_TRANSIT]:
     "bg-orange-100 text-orange-800 border-orange-300",
-  [RECEIVING_ISSUE_TYPES.WRONG_ITEM]:
+  [RECEIVING_ISSUE_TYPES.WRONG_ITEM_SHIPPED]:
     "bg-purple-100 text-purple-800 border-purple-300",
   [RECEIVING_ISSUE_TYPES.EXPIRED]: "bg-gray-100 text-gray-800 border-gray-300",
+  [RECEIVING_ISSUE_TYPES.QUALITY_ISSUE]:
+    "bg-red-100 text-red-800 border-red-300",
   [RECEIVING_ISSUE_TYPES.OTHER]:
     "bg-slate-100 text-slate-800 border-slate-300",
 };
+
+/**
+ * پیش‌فرضِ خطِ *سفارش* وقتی نوعِ مشکل مشخص نشده باشد.
+ *
+ * برای خطِ مرجوعی پیش‌فرضِ دیگری لازم است (کالا رسیده، پس «کسری»
+ * بی‌معناست) — `defaultIssueTypeFor` در issueSemantics.js.
+ */
+export const DEFAULT_RECEIVING_ISSUE_TYPE = RECEIVING_ISSUE_TYPES.SHORT_SHIPPED;
 
 // ─── مازاد ───────────────────────────────────────────────────────────────────
 

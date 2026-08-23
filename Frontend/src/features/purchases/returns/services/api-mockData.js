@@ -3,6 +3,7 @@ import { allPurchases } from "@/features/purchases/orders/services/mockData";
 import { adjustPurchaseTotal } from "@/features/purchases/orders/services/api-mockData";
 import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
 import { applyListQuery } from "@/shared/services/mockQuery";
+import { runOnce } from "@/shared/services/mockIdempotency";
 
 import {
   PURCHASE_RETURN_STATUSES,
@@ -14,6 +15,8 @@ import {
   EFFECT_STATUSES,
   affectsInvoiceTotal,
   isGoodsEffect,
+  normalizeObservations,
+  observedQtyOf,
 } from "@/shared/domain/returns/effects";
 import {
   buildResolution,
@@ -142,15 +145,21 @@ export async function fetchPurchaseForReturn(purchaseId, excludeReturnId = null)
     supplierId: purchase.supplierId,
     supplierName: purchase.supplierName,
     items: purchase.items.map((item) => {
-      const claimed = claimBreakdown(siblings, item.productId, excludeReturnId);
+      // قرینه‌ی سمت فروش: تطبیق با شناسه‌ی خط سفارش، نه با کالا.
+      const line = { orderLineId: item.id, productId: item.productId };
+      const claimed = claimBreakdown(siblings, line, excludeReturnId);
       return {
         ...item,
+        orderLineId: item.id,
         // با هر دورِ رسیدنِ کالای جایگزین به‌روز می‌شود، نه فقط با
         // دریافتِ خودِ سفارش.
         deliveredQty:
           (item.receivedQty ?? 0) +
-          deliveredAdjustment(siblings, item.productId, { side: "purchase" }),
-        claimableQty: computeItemClaimableQty(item),
+          deliveredAdjustment(siblings, line, { side: "purchase" }),
+        // نامِ این فیلد عمداً با سمت فروش یکی است: هر دو «سقف ادعا
+        // روی این خط» را می‌گویند و فرمِ مشترک نباید بداند کدام سمت
+        // است.
+        returnableQty: computeItemClaimableQty(item),
         claimedHereQty: claimed.here,
         activeClaimedQty: claimed.elsewhere,
       };
@@ -201,7 +210,11 @@ export async function fetchPurchaseReturnById(id) {
 
 // ─── ثبت ادعا ───────────────────────────────────────────────────────────────
 
-export async function createPurchaseReturn(payload) {
+export async function createPurchaseReturn(payload, { idempotencyKey } = {}) {
+  return runOnce(idempotencyKey, () => createPurchaseReturnOnce(payload));
+}
+
+async function createPurchaseReturnOnce(payload) {
   await delay(700);
 
   const newId = allPurchaseReturns.length
@@ -261,7 +274,18 @@ async function applyMoneyEffects(purchaseId, effects, { reverse = false } = {}) 
 
 // ─── ثبت و حذف تصمیم ────────────────────────────────────────────────────────
 
-export async function addClaimResolution(returnId, claimId, composition) {
+export async function addClaimResolution(
+  returnId,
+  claimId,
+  composition,
+  { idempotencyKey } = {},
+) {
+  return runOnce(idempotencyKey, () =>
+    addClaimResolutionOnce(returnId, claimId, composition),
+  );
+}
+
+async function addClaimResolutionOnce(returnId, claimId, composition) {
   await delay(500);
 
   const { idx, ret } = findReturn(returnId);
@@ -339,11 +363,16 @@ export async function removeClaimResolution(returnId, claimId, resolutionId) {
 /**
  * ثبت یک «دور» جابه‌جایی فیزیکی کالا — همان قرارداد تجمعیِ سمت فروش.
  *
- * rounds: [{ effectId, qty, healthyQty?, issueNote? }]
- *   healthyQty فقط برای GOODS_IN (دریافت کالای جایگزین از تامین‌کننده)
- *   معنا دارد.
+ * rounds: [{ effectId, qty, observations? }]
+ *   observations = [{ problem, qty, note }] و فقط برای GOODS_IN
+ *   (دریافت کالای جایگزین از تامین‌کننده) معنا دارد؛ وقتی *ما*
+ *   می‌فرستیم چیزی برای بازرسی وجود ندارد.
  */
-export async function executeGoodsRound(returnId, { rounds = [], ...logistics } = {}) {
+export async function executeGoodsRound(returnId, payload = {}, { idempotencyKey } = {}) {
+  return runOnce(idempotencyKey, () => executeGoodsRoundOnce(returnId, payload));
+}
+
+async function executeGoodsRoundOnce(returnId, { rounds = [], ...logistics } = {}) {
   await delay(500);
 
   const { idx, ret } = findReturn(returnId);
@@ -373,9 +402,13 @@ export async function executeGoodsRound(returnId, { rounds = [], ...logistics } 
         if (qty <= 0) return effect;
 
         const isIn = effect.kind === EFFECT_KINDS.GOODS_IN;
-        const healthyQty = isIn
-          ? Math.max(0, Math.min(Number(entry.healthyQty ?? qty) || 0, qty))
-          : qty;
+        // مقدارِ سالم از روی مشاهده‌ها مشتق می‌شود، نه به‌عنوان یک عددِ
+        // جدا: انباردار «چه چیزی دیدم» را ثبت می‌کند و «چقدرش سالم
+        // بود» نتیجه‌ی همان است. دو ورودیِ مستقل یعنی دو عددی که
+        // می‌توانند با هم نخوانند.
+        const observations = normalizeObservations(entry.observations);
+        const observedQty = Math.min(observedQtyOf(observations), qty);
+        const healthyQty = isIn ? Math.max(0, qty - observedQty) : qty;
 
         touched += 1;
         if (effect.productId != null) {
@@ -401,7 +434,11 @@ export async function executeGoodsRound(returnId, { rounds = [], ...logistics } 
               date,
               qty,
               healthyQty: isIn ? healthyQty : null,
-              issueNote: entry.issueNote || "",
+              // مشاهده‌ی مستقل انبار: ممکن است با آنچه طرف حساب ادعا
+              // کرده فرق داشته باشد (مشتری گفته «معیوب»، انبار می‌بیند
+              // «آسیب در حمل»). هر دو نگه داشته می‌شوند چون هرکدام یک
+              // مقصر متفاوت را نشان می‌دهند.
+              observations: isIn ? observations : [],
               partyName: logistics.partyName || "",
               partyNationalId: logistics.partyNationalId || "",
               vehiclePlate: logistics.vehiclePlate || "",

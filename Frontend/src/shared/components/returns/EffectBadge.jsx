@@ -9,7 +9,9 @@ import {
   EFFECT_STATUSES,
   PAYMENT_METHOD_LABELS,
   isGoodsEffect,
+  observationsOf,
 } from "@/shared/domain/returns/effects";
+import { RETURN_PROBLEM_LABELS } from "@/shared/domain/returns/problems";
 
 const ICONS = {
   [EFFECT_KINDS.GOODS_IN]: PackagePlus,
@@ -44,12 +46,24 @@ export default function EffectBadge({ effect, side, showProductName = false }) {
     ? `${(Number(effect.qty) || 0).toLocaleString("fa-IR")} ${effect.unit || "عدد"}`
     : `${(Number(effect.amount) || 0).toLocaleString("fa-IR")} ریال`;
 
+  const restocked = Number(effect.restockedQty) || 0;
+  const isIncoming = effect.kind === EFFECT_KINDS.GOODS_IN;
+
   const details = [
     showProductName && isGoods ? effect.productName : null,
     !isGoods && effect.method ? PAYMENT_METHOD_LABELS[effect.method] : null,
     isGoods && done > 0 ? `${done.toLocaleString("fa-IR")} انجام‌شده` : null,
+    // برای کالای برگشتی، «انجام شد» و «به موجودی برگشت» یکی نیستند:
+    // کالای معیوب تحویل گرفته می‌شود ولی وارد موجودی قابل‌فروش نمی‌شود.
+    isIncoming && done > 0 && restocked !== done
+      ? `${restocked.toLocaleString("fa-IR")} به موجودی`
+      : null,
     isPending ? "در انتظار انبار" : null,
   ].filter(Boolean);
+
+  // مشاهده‌ی انباردار هنگام تحویل — جدا از مشکلی که طرف حساب ادعا کرده،
+  // چون هر کدام یک مقصرِ متفاوت را نشان می‌دهد.
+  const observations = observationsOf(effect);
 
   return (
     <div className="flex items-start gap-1.5 min-w-0 text-[11px] leading-5">
@@ -67,6 +81,20 @@ export default function EffectBadge({ effect, side, showProductName = false }) {
         </span>
         {details.length > 0 && (
           <span className="text-muted-foreground"> · {details.join(" · ")}</span>
+        )}
+        {observations.length > 0 && (
+          <div className="text-muted-foreground">
+            بازرسی انبار:{" "}
+            {observations
+              .map(
+                (observation) =>
+                  `${observation.qty.toLocaleString("fa-IR")} ${
+                    RETURN_PROBLEM_LABELS[observation.problem] ??
+                    observation.problem
+                  }`,
+              )
+              .join(" · ")}
+          </div>
         )}
       </div>
     </div>

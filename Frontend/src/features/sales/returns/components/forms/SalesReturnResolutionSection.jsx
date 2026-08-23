@@ -96,7 +96,7 @@ export default function SalesReturnResolutionSection({
             problemLabels={RETURN_PROBLEM_LABELS}
             problemStyles={RETURN_PROBLEM_STYLES}
             offScopeLabels={OFF_INVOICE_KIND_LABELS}
-            offScopeValue={CLAIM_SCOPES.OFF_INVOICE}
+            offScopeValue={CLAIM_SCOPES.OFF_ORDER}
           />
         ))}
 

@@ -39,7 +39,9 @@ export const usePurchaseReturnFormStore = create((set, get) => ({
         supplierId: purchase.supplierId,
         supplierName: purchase.supplierName,
         lines: purchase.items.map((item) => ({
-          lineKey: `${purchase.purchaseId}-${item.productId}`,
+          // قرینه‌ی سمت فروش: شناسه‌ی خط سفارش، نه شناسه‌ی کالا.
+          lineKey: `${purchase.purchaseId}-${item.id}`,
+          orderLineId: item.id,
           scope: CLAIM_SCOPES.ON_ORDER,
           productId: item.productId,
           productCode: item.productCode,
@@ -47,7 +49,7 @@ export const usePurchaseReturnFormStore = create((set, get) => ({
           unit: item.unit,
           unitPrice: item.unitPrice,
           deliveredQty: item.deliveredQty,
-          maxReturnableQty: item.claimableQty,
+          maxReturnableQty: item.returnableQty,
           claims: [],
         })),
       },

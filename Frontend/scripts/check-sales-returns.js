@@ -29,6 +29,7 @@ const {
   affectsInvoiceTotal,
   summarizeEffects,
   stockDeltasOf,
+  observationsOf,
 } = await import(`${DOMAIN}/effects.js`);
 
 const {
@@ -542,9 +543,19 @@ section("اثر کالایی: فقط بخش سالمِ برگشتی وارد م�
     effect.status === EFFECT_STATUSES.PENDING && effect.kind === EFFECT_KINDS.GOODS_IN,
   );
 
-  // دور اول: ۳ عدد رسید که فقط ۱ عددش سالم بود
+  // دور اول: ۳ عدد رسید که انباردار ۲ عددش را معیوب دید — یعنی فقط
+  // ۱ عدد سالم. مقدار سالم ورودیِ جدا ندارد و از روی همین مشاهده‌ها
+  // مشتق می‌شود.
   const afterRound1 = await api.executeGoodsRound(ret.id, {
-    rounds: [{ effectId: effect.id, qty: 3, healthyQty: 1, issueNote: "۲ عدد شکسته" }],
+    rounds: [
+      {
+        effectId: effect.id,
+        qty: 3,
+        observations: [
+          { problem: RETURN_PROBLEMS.DEFECTIVE, qty: 2, note: "۲ عدد شکسته" },
+        ],
+      },
+    ],
     partyName: "پیک مشتری",
   });
   check(
@@ -574,6 +585,50 @@ section("اثر کالایی: فقط بخش سالمِ برگشتی وارد م�
   check("موجودی در مجموع ۲ واحد زیاد شد", stockOf(item.productId) === stockBefore + 2);
   check("حالا مرجوعی تسویه شد", afterRound2.status === SALES_RETURN_STATUSES.SETTLED, afterRound2.status);
   check("تاریخچه‌ی هر دو دور ثبت شد", e2.history.length === 2, e2.history.length);
+
+  const observed = observationsOf(e2);
+  check(
+    "مشاهده‌ی انبار با نوع و تعداد نگه داشته شد",
+    observed.length === 1 &&
+      observed[0].problem === RETURN_PROBLEMS.DEFECTIVE &&
+      observed[0].qty === 2,
+    JSON.stringify(observed),
+  );
+  check(
+    "مشاهده‌ی انبار ادعای مشتری را بازنویسی نمی‌کند",
+    afterRound2.claims[0].problem !== RETURN_PROBLEMS.DEFECTIVE ||
+      observed[0].problem === afterRound2.claims[0].problem,
+  );
+}
+
+section("ایدمپوتنسی: یک کلید، یک بار اعمال");
+{
+  const item = hostSale.items[0];
+  const ret = await newReturn([claimFrom(item, { qty: 2 })]);
+  const withResolution = await api.addClaimResolution(ret.id, ret.claims[0].id, {
+    ...emptyComposition(2),
+    goodsIn: { enabled: true, items: [] },
+  });
+  const effect = withResolution.claims[0].resolutions[0].effects[0];
+
+  const key = "idem-test-1";
+  const round = { rounds: [{ effectId: effect.id, qty: 1 }] };
+
+  const first = await api.executeGoodsRound(ret.id, round, { idempotencyKey: key });
+  const again = await api.executeGoodsRound(ret.id, round, { idempotencyKey: key });
+
+  const e1 = first.claims[0].resolutions[0].effects[0];
+  const e2 = again.claims[0].resolutions[0].effects[0];
+  check("دورِ تکراری با همان کلید دوباره اعمال نمی‌شود", e2.doneQty === 1, e2.doneQty);
+  check("پاسخِ تکراری همان سندِ بار اول است", e1.doneQty === e2.doneQty);
+
+  // کلید تازه = قصدِ تازه، پس واقعاً اعمال می‌شود
+  const third = await api.executeGoodsRound(ret.id, round, { idempotencyKey: "idem-test-2" });
+  check(
+    "کلید تازه یعنی عملیات تازه",
+    third.claims[0].resolutions[0].effects[0].doneQty === 2,
+    third.claims[0].resolutions[0].effects[0].doneQty,
+  );
 }
 
 section("سقف ادعا همیشه کل مقدار تحویل‌شده است");

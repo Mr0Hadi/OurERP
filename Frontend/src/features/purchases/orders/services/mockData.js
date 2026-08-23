@@ -446,9 +446,24 @@ function generateMorePurchases(count = 20) {
 // نرمال‌سازی روی *همه‌ی* خریدها اعمال می‌شود، نه فقط تولیدشده‌ها:
 // نمونه‌های دستیِ بالای فایل هم وضعیت داشتند بدون اینکه اقلامشان
 // receivedQty داشته باشد.
+/**
+ * هر قلمِ سفارش یک شناسه‌ی یکتا می‌گیرد — معادلِ `PurchaseItem.Id` در
+ * بک‌اند. قرینه‌ی `nextSaleItemId` در سمت فروش؛ دلیلش هم همان است:
+ * ارجاع به خط سفارش با `productId` وقتی یک کالا در دو خط بیاید
+ * دو خط را غیرقابل تفکیک می‌کند.
+ */
+let purchaseItemIdSeq = 0;
+
+export function nextPurchaseItemId() {
+  return ++purchaseItemIdSeq;
+}
+
 export const allPurchases = [...purchasesMock, ...generateMorePurchases(20)].map(
   (purchase) => ({
     ...purchase,
-    items: withReceivedQty(purchase.items || [], purchase.status),
+    items: withReceivedQty(purchase.items || [], purchase.status).map((item) => ({
+      ...item,
+      id: item.id ?? nextPurchaseItemId(),
+    })),
   }),
 );

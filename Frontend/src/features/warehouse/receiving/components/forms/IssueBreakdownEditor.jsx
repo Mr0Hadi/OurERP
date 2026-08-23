@@ -9,34 +9,47 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import { RECEIVING_ISSUE_TYPE_LABELS } from "../../domain/receivingVocabulary";
-
-const ISSUE_TYPE_OPTIONS = Object.entries(RECEIVING_ISSUE_TYPE_LABELS);
+import {
+  isObservationLine,
+  issueTypesFor,
+} from "../../domain/issueSemantics";
 
 /**
  * ویرایشگر تفکیک مشکل یک قلم.
  *
- * انباردار مجبور نیست کل کسری را اینجا توضیح دهد. فقط بخشی که واقعاً
- * «مشکل» است (معیوب، اشتباه، آسیب‌دیده و...) را با نوع و تعداد مشخص
- * ثبت می‌کند. باقیمانده به‌طور خودکار «در انتظار محموله بعدی» تلقی
- * می‌شود — نیازی به هیچ اقدامی نیست و خرید همچنان در لیست دریافت
- * می‌ماند تا وقتی بقیه‌اش (مثلاً با کامیون بعدی) برسد.
+ * یک کامپوننت، دو معنا — که با منبعِ خط تعیین می‌شود:
+ *
+ *  • خط سفارش: انباردار مجبور نیست کل کسری را توضیح دهد؛ فقط بخشی که
+ *    واقعاً «مشکل» است را با نوع و تعداد ثبت می‌کند و باقیمانده
+ *    خودکار «در انتظار محموله بعدی» تلقی می‌شود.
+ *
+ *  • خط مرجوعی: کالا برگشته و اینجا انباردار *مشاهده‌ی خودش* را ثبت
+ *    می‌کند — چند تا از کالای برگشتی معیوب یا آسیب‌دیده بود. باقیمانده
+ *    یعنی سالم است و به موجودی قابل‌فروش برمی‌گردد.
+ *
+ * همین مشاهده‌ها روی اثرِ مرجوعی می‌نشینند و کنارِ ادعای طرف حساب نگه
+ * داشته می‌شوند، چون هر کدام یک مقصرِ متفاوت را نشان می‌دهند.
  */
 export default function IssueBreakdownEditor({
   item,
-  shortage,
+  budget,
   onAddIssue,
   onUpdateIssue,
   onRemoveIssue,
 }) {
   const issues = item.issues || [];
   const allocated = issues.reduce((s, i) => s + (Number(i.qty) || 0), 0);
-  const remaining = shortage - allocated;
+  const remaining = budget - allocated;
+  const isObservation = isObservationLine(item);
+  const typeOptions = issueTypesFor(item);
 
   return (
     <div className="space-y-2 rounded-lg border border-dashed border-amber-300 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/10 p-2.5">
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-card-foreground">
-          گزارش مشکل ({shortage.toLocaleString("fa-IR")} عدد کسری)
+          {isObservation ? "بازرسی کالای برگشتی" : "گزارش مشکل"} (
+          {budget.toLocaleString("fa-IR")} عدد{" "}
+          {isObservation ? "دریافت‌شده" : "کسری"})
         </span>
         <Button
           type="button"
@@ -53,9 +66,9 @@ export default function IssueBreakdownEditor({
 
       {issues.length === 0 && (
         <p className="text-xs text-muted-foreground">
-          اگر بخشی از این کسری واقعاً مشکل دارد (نه فقط دیرکرد ارسال)، با «افزودن
-          نوع مشکل» ثبتش کنید. در غیر این صورت نیازی به کاری نیست — این خرید
-          همچنان در لیست دریافت می‌ماند تا محموله‌ی بعدی برسد.
+          {isObservation
+            ? "اگر بخشی از کالای برگشتی معیوب یا آسیب‌دیده است، با «افزودن نوع مشکل» ثبتش کنید. باقیمانده سالم فرض می‌شود و به موجودی قابل‌فروش برمی‌گردد."
+            : "اگر بخشی از این کسری واقعاً مشکل دارد (نه فقط دیرکرد ارسال)، با «افزودن نوع مشکل» ثبتش کنید. در غیر این صورت نیازی به کاری نیست — این خرید همچنان در لیست دریافت می‌ماند تا محموله‌ی بعدی برسد."}
         </p>
       )}
 
@@ -74,9 +87,9 @@ export default function IssueBreakdownEditor({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {ISSUE_TYPE_OPTIONS.map(([value, label]) => (
+              {typeOptions.map((value) => (
                 <SelectItem key={value} value={value}>
-                  {label}
+                  {RECEIVING_ISSUE_TYPE_LABELS[value] ?? value}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -116,12 +129,14 @@ export default function IssueBreakdownEditor({
       {issues.length > 0 && (
         <p className="text-[11px] text-muted-foreground">
           گزارش‌شده به‌عنوان مشکل: {allocated.toLocaleString("fa-IR")} از{" "}
-          {shortage.toLocaleString("fa-IR")}
+          {budget.toLocaleString("fa-IR")}
           {remaining > 0 && (
             <>
               {" "}
-              — {remaining.toLocaleString("fa-IR")} عدد باقی‌مانده در انتظار
-              محموله بعدی می‌ماند
+              — {remaining.toLocaleString("fa-IR")} عدد باقی‌مانده{" "}
+              {isObservation
+                ? "سالم در نظر گرفته می‌شود"
+                : "در انتظار محموله بعدی می‌ماند"}
             </>
           )}
         </p>

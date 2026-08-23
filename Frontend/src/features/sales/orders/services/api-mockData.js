@@ -1,4 +1,4 @@
-import { allSales, SALE_STATUSES } from "./mockData";
+import { allSales, SALE_STATUSES, nextSaleItemId } from "./mockData";
 import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
 import { applyListQuery } from "@/shared/services/mockQuery";
 import {
@@ -14,6 +14,11 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * کاهش اولیه هم بدون توجه به وضعیت ارسال انجام شده بود).
  * این تابع فقط هنگام «لغو» فروش صدا زده می‌شود، نه هنگام حذف رکورد.
  */
+/** شناسه‌دهی به اقلامِ تازه — اقلامی که از قبل شناسه دارند دست نمی‌خورند. */
+function withLineIds(items = []) {
+  return items.map((item) => ({ ...item, id: item.id ?? nextSaleItemId() }));
+}
+
 function restoreSaleStock(sale) {
   adjustProductsStock(
     (sale.items || []).map((item) => ({
@@ -33,6 +38,9 @@ export async function createSale(saleData) {
   const newSale = {
     id: Date.now(),
     ...saleData,
+    // هر قلم شناسه‌ی خودش را می‌گیرد؛ مرجوعی و انبار با همین شناسه به
+    // خط فاکتور ارجاع می‌دهند، نه با productId.
+    items: withLineIds(saleData.items),
     // «در انتظار» و «در حال پردازش» یکی شده‌اند؛ هر فروش تازه با همین
     // یک وضعیت شروع می‌شود تا در لیست «ارسال کالا»ی انبار دیده شود.
     status: SALE_STATUSES.PROCESSING,
@@ -117,6 +125,7 @@ export async function updateSale(id, updates) {
   allSales[index] = {
     ...current,
     ...updates,
+    ...(updates.items ? { items: withLineIds(updates.items) } : {}),
     updatedAt: new Date().toISOString(),
   };
 

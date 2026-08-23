@@ -151,9 +151,9 @@ export function useSalesReturnForm() {
     (line.claims || [])
       .filter((claim) => (Number(claim.qty) || 0) > 0)
       .map((claim) => ({
-        scope: CLAIM_SCOPES.ON_INVOICE,
+        scope: CLAIM_SCOPES.ON_ORDER,
         offScopeKind: null,
-        saleLineId: String(line.productId),
+        orderLineId: line.orderLineId,
         productId: line.productId,
         productCode: line.productCode,
         productName: line.productName,
@@ -168,9 +168,10 @@ export function useSalesReturnForm() {
   const preparedOffInvoiceClaims = offInvoiceClaims
     .filter((claim) => (Number(claim.qty) || 0) > 0)
     .map((claim) => ({
-      scope: CLAIM_SCOPES.OFF_INVOICE,
+      scope: CLAIM_SCOPES.OFF_ORDER,
       offScopeKind: claim.offScopeKind,
-      saleLineId: null,
+      // ادعای خارج از فاکتور روی هیچ خطی نمی‌نشیند.
+      orderLineId: null,
       productId: claim.productId,
       productCode: claim.productCode,
       productName: claim.productName,

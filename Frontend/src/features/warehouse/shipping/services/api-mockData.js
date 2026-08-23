@@ -1,6 +1,7 @@
 import { allSales, SALE_STATUSES, SALE_STATUS_LABELS } from "./mockData";
 import { markUnitsShipped } from "@/features/warehouse/units/services/api-mockData";
 import { applyListQuery } from "@/shared/services/mockQuery";
+import { runOnce } from "@/shared/services/mockIdempotency";
 
 import { allSalesReturns } from "@/features/sales/returns/services/mockData";
 import { executeGoodsRound as executeSalesReturnRound } from "@/features/sales/returns/services/api-mockData";
@@ -69,9 +70,15 @@ function isSaleAwaitingDispatch(sale) {
   );
 }
 
+/**
+ * «تعداد اقلام» یعنی چند خط هنوز کارِ انبار دارد، نه چند خط روی سند
+ * است — همان تعریفی که صف دریافت دارد. خطی که کاملاً ارسال شده دیگر
+ * در صفحه‌ی ارسال دیده نمی‌شود، پس نباید در شمارشِ صف هم بیاید.
+ */
 function saleToRow(sale) {
   const returnLines = pendingReturnLinesForSale(sale.id);
   const returnQty = returnLines.reduce((s, l) => s + l.remainingQty, 0);
+  const openItems = sale.items.filter((item) => computeItemShippableQty(item) > 0);
   return {
     id: `sale-${sale.id}`,
     saleId: sale.id,
@@ -83,10 +90,10 @@ function saleToRow(sale) {
     counterpartyName: sale.customerName,
     date: sale.invoiceDate,
     statusLabel: SALE_STATUS_LABELS[sale.status] ?? sale.status,
-    itemsCount: sale.items.length + returnLines.length,
+    itemsCount: openItems.length + returnLines.length,
     returnLinesCount: returnLines.length,
     remainingQty:
-      sale.items.reduce((s, i) => s + computeItemShippableQty(i), 0) + returnQty,
+      openItems.reduce((s, i) => s + computeItemShippableQty(i), 0) + returnQty,
     amount: sale.totalAmount,
     createdAt: sale.createdAt,
     updatedAt: sale.updatedAt,
@@ -229,7 +236,15 @@ export async function fetchShippingSaleById(id) {
  * «ارسال‌شده» یعنی همه‌چیز از انبار خارج شده؛ تبدیلش به «تحویل کامل»
  * تأییدی جداگانه است و اینجا خودکار انجام نمی‌شود.
  */
-export async function confirmShipment(saleId, shipmentData) {
+export async function confirmShipment(
+  saleId,
+  shipmentData,
+  { idempotencyKey } = {},
+) {
+  return runOnce(idempotencyKey, () => confirmShipmentOnce(saleId, shipmentData));
+}
+
+async function confirmShipmentOnce(saleId, shipmentData) {
   await delay(500);
 
   const index = allSales.findIndex((s) => Number(s.id) === Number(saleId));
@@ -312,7 +327,17 @@ export async function confirmShipment(saleId, shipmentData) {
  * ارسال می‌سازد را می‌گیرد و به دورِ اثر ترجمه می‌کند. اینجا سندِ
  * فروشی در کار نیست، پس همه‌ی ردیف‌ها مرجوعی‌اند.
  */
-export async function confirmSupplierReturnShipment(returnId, shipmentData) {
+export async function confirmSupplierReturnShipment(
+  returnId,
+  shipmentData,
+  { idempotencyKey } = {},
+) {
+  return runOnce(idempotencyKey, () =>
+    confirmSupplierReturnShipmentOnce(returnId, shipmentData),
+  );
+}
+
+async function confirmSupplierReturnShipmentOnce(returnId, shipmentData) {
   const shippedDate =
     shipmentData.shippedDate || new Date().toISOString().slice(0, 10);
 

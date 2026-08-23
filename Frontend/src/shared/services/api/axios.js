@@ -35,8 +35,52 @@ function onRefreshed(newToken) {
   refreshSubscribers = [];
 }
 
+/**
+ * پوششِ پاسخِ بک‌اند.
+ *
+ * بک‌اند همه‌چیز را داخل `ResponseDto` می‌پیچد:
+ *
+ *   { Data, Message, ResponseMessageType }
+ *
+ * باز کردنِ این پوشش در همین‌جا انجام می‌شود، نه در تک‌تکِ فایل‌های
+ * `api-v1`. دلیلش این است که پوشش یک قراردادِ *انتقالی* است نه بخشی
+ * از دامنه؛ اگر هر فایل خودش بازش کند، همان چهار خط در ده فایل تکرار
+ * می‌شود و روزی که پوشش عوض شود باید همه‌جا دست بخورد.
+ *
+ * تشخیص محافظه‌کارانه است: فقط پاسخی که واقعاً کلید `Data` دارد باز
+ * می‌شود، تا مسیرهای بدون پوشش (مثل refresh token) دست‌نخورده بمانند.
+ */
+function isEnvelope(body) {
+  return (
+    body != null &&
+    typeof body === "object" &&
+    !Array.isArray(body) &&
+    ("Data" in body || "data" in body) &&
+    ("Message" in body || "message" in body)
+  );
+}
+
+function unwrapEnvelope(body) {
+  return "Data" in body ? body.Data : body.data;
+}
+
+/** پیامِ فارسیِ خطا از پوشش بیرون کشیده می‌شود تا toastها معنادار بمانند. */
+function messageOf(error) {
+  const body = error?.response?.data;
+  if (isEnvelope(body)) return body.Message ?? body.message;
+  if (typeof body?.Message === "string") return body.Message;
+  if (typeof body?.message === "string") return body.message;
+  if (typeof body?.title === "string") return body.title;
+  return null;
+}
+
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (isEnvelope(response.data)) {
+      response.data = unwrapEnvelope(response.data);
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
     const status = error.response?.status;
@@ -84,6 +128,12 @@ axiosInstance.interceptors.response.use(
         isRefreshing = false;
       }
     }
+
+    // لایه‌های بالادستی (mutationها) فقط `error.message` را toast
+    // می‌کنند؛ بدون این، کاربر پیام عمومیِ axios را می‌بیند به‌جای
+    // پیامِ دقیقی که سرور فرستاده.
+    const serverMessage = messageOf(error);
+    if (serverMessage) error.message = serverMessage;
 
     return Promise.reject(error);
   }

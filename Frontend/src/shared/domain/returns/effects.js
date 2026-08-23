@@ -181,6 +181,74 @@ export function createEffect({
   };
 }
 
+// ─── دورِ اجرای یک اثر کالایی ───────────────────────────────────────────────
+
+/**
+ * هر بار که انبار بخشی از یک اثر کالایی را اجرا می‌کند، یک ردیف در
+ * `effect.history` می‌نشیند:
+ *
+ *   {
+ *     id, date, qty,
+ *     healthyQty,              // فقط GOODS_IN؛ = qty منهای مجموع مشاهده‌ها
+ *     observations: [          // مشاهده‌ی مستقلِ انباردار
+ *       { problem, qty, note }
+ *     ],
+ *     partyName, partyNationalId, vehiclePlate, note
+ *   }
+ *
+ * `observations` جانشینِ `issueProblem`/`issueNote`ِ قبلی است. آن دو
+ * فقط *یک* مشکل و *یک* یادداشت برای کل دور نگه می‌داشتند، در حالی که
+ * فرمِ انبار از روز اول می‌توانست چند ردیف مشکل با تعدادهای جدا ثبت
+ * کند — یعنی داده در همان مرزِ ورودی تخریب می‌شد. بدتر اینکه سمت خرید
+ * اصلاً این دو فیلد را پر نمی‌کرد.
+ *
+ * چرا مشاهده جدا از ادعا نگه داشته می‌شود: مشتری می‌گوید «معیوب بود»،
+ * انباردار می‌بیند «آسیب حمل». هر کدام یک مقصرِ متفاوت را نشان می‌دهد
+ * و برای گزارش‌گیری باید هر دو بمانند.
+ */
+export function normalizeObservations(observations = []) {
+  return observations
+    .map((observation) => ({
+      problem: observation.problem ?? null,
+      qty: Number(observation.qty) || 0,
+      note: observation.note || "",
+    }))
+    .filter((observation) => observation.problem && observation.qty > 0);
+}
+
+/** مجموع تعدادی که در یک دور «مشکل‌دار» گزارش شده. */
+export function observedQtyOf(observations = []) {
+  return normalizeObservations(observations).reduce(
+    (sum, observation) => sum + observation.qty,
+    0,
+  );
+}
+
+/**
+ * مشاهده‌های همه‌ی دورهای یک اثر، تجمیع‌شده روی نوع مشکل.
+ *
+ * همان چیزی که گزارشِ «چقدر از کالای برگشتی واقعاً معیوب بود» به آن
+ * نیاز دارد؛ بدون این، باید در `history` هر اثر جداگانه گشت.
+ */
+export function observationsOf(effect) {
+  const totals = new Map();
+
+  (effect?.history || []).forEach((round) => {
+    normalizeObservations(round.observations).forEach((observation) => {
+      const current = totals.get(observation.problem) || { qty: 0, notes: [] };
+      current.qty += observation.qty;
+      if (observation.note) current.notes.push(observation.note);
+      totals.set(observation.problem, current);
+    });
+  });
+
+  return [...totals.entries()].map(([problem, { qty, notes }]) => ({
+    problem,
+    qty,
+    note: notes.join(" / "),
+  }));
+}
+
 /** مقداری از یک اثر کالایی که هنوز اجرا نشده. */
 export function remainingQtyOf(effect) {
   if (!isGoodsEffect(effect?.kind)) return 0;

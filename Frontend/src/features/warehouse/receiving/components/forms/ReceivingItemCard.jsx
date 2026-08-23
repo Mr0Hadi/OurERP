@@ -3,6 +3,7 @@ import ProductThumb from "@/shared/components/forms/ProductThumb";
 import QuantityStepper from "@/shared/components/forms/QuantityStepper";
 import { getRowStatus, ROW_STATUS_CONFIG } from "./receivingRowStatus";
 import IssueBreakdownEditor from "./IssueBreakdownEditor";
+import { issueBudgetOf } from "../../domain/issueSemantics";
 import ExcessEntryStrip from "./ExcessEntryStrip";
 
 /** نمای موبایل یک قلم دریافت. */
@@ -15,7 +16,9 @@ export default function ReceivingItemCard({
   onExcessChange,
 }) {
   const received = item.receivedQty || 0;
-  const shortage = Math.max(0, item.expectedQty - received);
+  // سقفِ گزارشِ مشکل به منبعِ خط بستگی دارد (کسری برای خط سفارش،
+  // مقدارِ برگشتی برای خط مرجوعی) — issueBudget.js
+  const issueBudget = issueBudgetOf(item);
   const status = getRowStatus(item.expectedQty, received);
   const config = ROW_STATUS_CONFIG[status];
   const StatusIcon = config.icon;
@@ -64,10 +67,10 @@ export default function ReceivingItemCard({
         />
       </div>
 
-      {shortage > 0 && (
+      {issueBudget > 0 && (
         <IssueBreakdownEditor
           item={item}
-          shortage={shortage}
+          budget={issueBudget}
           onAddIssue={onAddIssue}
           onUpdateIssue={onUpdateIssue}
           onRemoveIssue={onRemoveIssue}
