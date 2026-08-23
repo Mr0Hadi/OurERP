@@ -13,7 +13,7 @@ import { useSuppliersQuery } from "@/features/suppliers/services/queries";
 import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection";
 import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
 import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
-import PurchasePaymentSection from "../components/forms/PurchasePaymentSection";
+import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
 import PurchaseStatusSection from "../components/forms/PurchaseStatusSection";
 import { ROUTES } from "@/shared/constants/routes";
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
@@ -261,7 +261,7 @@ export default function PurchasesNewPage() {
                   : null
               }
             />
-            <PurchasePaymentSection
+            <OrderPaymentSection
               formData={formData}
               onFormChange={setFormData}
               totalAmount={computedTotal}

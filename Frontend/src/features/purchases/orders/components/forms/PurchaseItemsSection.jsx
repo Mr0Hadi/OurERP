@@ -7,10 +7,8 @@ import {
   CardTitle,
   CardContent,
 } from "@/shared/components/ui/card";
+import ProductPicker from "@/shared/components/products/ProductPicker";
 import { ROUTES } from "@/shared/constants/routes";
-import ProductSearchPanel from "@/shared/components/forms/ProductSearchPanel";
-import SelectedItemsTable from "@/shared/components/forms/SelectedItemsTable";
-import SelectedItemsCards from "@/shared/components/forms/SelectedItemsCards";
 
 export default function PurchaseItemsSection({
   items,
@@ -18,51 +16,6 @@ export default function PurchaseItemsSection({
   products = [],
 }) {
   const navigate = useNavigate();
-
-  const handleAddProduct = (product) => {
-    const already = items.find((i) => i.productId === product.id);
-    if (already) {
-      onItemsChange(
-        items.map((i) =>
-          i.productId === product.id ? { ...i, qty: i.qty + 1 } : i,
-        ),
-      );
-      return;
-    }
-    onItemsChange([
-      ...items,
-      {
-        productId: product.id,
-        productName: product.name,
-        productCode: product.code,
-        unit: product.unit,
-        qty: 1,
-        unitPrice: product.purchasePrice ?? 0,
-        discount: 0,
-      },
-    ]);
-  };
-
-  const handleRemoveItem = (productId) => {
-    onItemsChange(items.filter((i) => i.productId !== productId));
-  };
-
-  const handleFieldChange = (productId, field, value) => {
-    onItemsChange(
-      items.map((i) =>
-        i.productId === productId
-          ? { ...i, [field]: Number(value) >= 0 ? Number(value) : 0 }
-          : i,
-      ),
-    );
-  };
-
-  const lineTotal = (item) =>
-    item.qty * item.unitPrice * (1 - (item.discount || 0) / 100);
-
-  const grandTotal = items.reduce((sum, i) => sum + lineTotal(i), 0);
-
-  const isAdded = (productId) => items.some((i) => i.productId === productId);
 
   return (
     <Card>
@@ -86,38 +39,13 @@ export default function PurchaseItemsSection({
         </Button>
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        <ProductSearchPanel
+      <CardContent>
+        <ProductPicker
+          items={items}
+          onItemsChange={onItemsChange}
           products={products}
-          isAdded={isAdded}
-          onAdd={handleAddProduct}
+          priceOf={(product) => product.purchasePrice ?? 0}
         />
-
-        {/* آیتم‌های انتخاب‌شده */}
-        {items.length > 0 && (
-          <>
-            <SelectedItemsTable
-              items={items}
-              onFieldChange={handleFieldChange}
-              onRemove={handleRemoveItem}
-              lineTotal={lineTotal}
-              grandTotal={grandTotal}
-            />
-            <SelectedItemsCards
-              items={items}
-              onFieldChange={handleFieldChange}
-              onRemove={handleRemoveItem}
-              lineTotal={lineTotal}
-              grandTotal={grandTotal}
-            />
-          </>
-        )}
-
-        {items.length === 0 && (
-          <p className="text-center text-sm text-muted-foreground py-3 border border-dashed border-border rounded-lg">
-            هنوز کالایی انتخاب نشده
-          </p>
-        )}
       </CardContent>
     </Card>
   );

@@ -25,7 +25,7 @@ import { ROUTES } from "@/shared/constants/routes";
 import SaleCustomerSection from "../components/forms/SaleCustomerSection";
 import SaleItemsSection from "../components/forms/SaleItemsSection";
 import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
-import SalePaymentSection from "../components/forms/SalePaymentSection";
+import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
 import SaleStatusSection from "../components/forms/SaleStatusSection";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 
@@ -160,7 +160,7 @@ export default function SaleDetailForm({ saleData }) {
               }
             />
 
-            <SalePaymentSection
+            <OrderPaymentSection
               formData={formData}
               onFormChange={setFormData}
               totalAmount={computedTotal}

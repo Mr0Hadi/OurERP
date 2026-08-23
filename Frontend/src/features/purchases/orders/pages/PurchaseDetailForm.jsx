@@ -23,7 +23,7 @@ import { useSuppliersQuery } from "@/features/suppliers/services/queries";
 import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection";
 import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
 import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
-import PurchasePaymentSection from "../components/forms/PurchasePaymentSection";
+import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
 import PurchaseStatusSection from "../components/forms/PurchaseStatusSection";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import { ROUTES } from "@/shared/constants/routes";
@@ -187,7 +187,7 @@ export default function PurchaseDetailForm({ purchaseData }) {
                   : null
               }
             />
-            <PurchasePaymentSection
+            <OrderPaymentSection
               formData={formData}
               onFormChange={setFormData}
               totalAmount={computedTotal}

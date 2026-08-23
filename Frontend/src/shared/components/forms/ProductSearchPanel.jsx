@@ -19,11 +19,14 @@ import BarcodeScanField from "@/shared/components/barcode/BarcodeScanField";
  *
  * اسکن بارکد همان مسیرِ افزودنِ دستی را طی می‌کند: کالای منطبق پیدا و
  * مستقیم به onAdd داده می‌شود — بدون نیاز به کلیک روی دکمه‌ی افزودن.
- * اگر همان کالا قبلاً در لیست باشد، onAdd خودش تعدادش را زیاد می‌کند
- * (هر کدام از فراخوان‌ها این را همان‌طور پیاده کرده‌اند) — این‌جا فقط
- * پیامِ درست را نشان می‌دهیم.
+ *
+ * addedQtyOf(productId) تعدادِ فعلیِ همان کالا در لیست است (صفر یعنی
+ * هنوز اضافه نشده). عمداً «تعداد» است نه یک بولین، چون دکمه‌ی افزودن
+ * بعد از اولین کلیک هم فعال می‌ماند و باید نشان دهد الان چندتاست —
+ * قبلاً غیرفعال می‌شد و راهی برای زیادکردن تعداد از روی همین لیست
+ * نبود.
  */
-export default function ProductSearchPanel({ products, isAdded, onAdd }) {
+export default function ProductSearchPanel({ products, addedQtyOf, onAdd }) {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
 
@@ -35,11 +38,11 @@ export default function ProductSearchPanel({ products, isAdded, onAdd }) {
       toast.error(`کالایی با کد «${code}» پیدا نشد`);
       return;
     }
-    const wasAlreadyAdded = isAdded(product.id);
+    const previousQty = addedQtyOf(product.id);
     onAdd(product);
     toast.success(
-      wasAlreadyAdded
-        ? `تعداد «${product.name}» یکی افزایش یافت`
+      previousQty > 0
+        ? `«${product.name}» شد ${(previousQty + 1).toLocaleString("fa-IR")} عدد`
         : `«${product.name}» اضافه شد`,
     );
   };
@@ -103,7 +106,9 @@ export default function ProductSearchPanel({ products, isAdded, onAdd }) {
             کالایی یافت نشد
           </p>
         ) : (
-          filteredProducts.map((product) => (
+          filteredProducts.map((product) => {
+            const addedQty = addedQtyOf(product.id);
+            return (
             <div
               key={product.id}
               className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 rounded-md border border-border bg-card px-3 py-2 hover:bg-accent/50 transition-colors"
@@ -153,26 +158,32 @@ export default function ProductSearchPanel({ products, isAdded, onAdd }) {
                 </div>
               </div>
 
-              {/* دکمه افزودن */}
+              {/* دکمه افزودن — بعد از افزوده‌شدن هم فعال می‌ماند تا با هر
+                  کلیک یکی به تعداد اضافه شود؛ عدد روی دکمه، تعداد فعلی است. */}
               <Button
                 type="button"
                 size="sm"
-                variant={isAdded(product.id) ? "secondary" : "default"}
-                disabled={isAdded(product.id)}
+                variant={addedQty > 0 ? "secondary" : "default"}
                 onClick={() => onAdd(product)}
-                className="shrink-0 text-xs h-7 px-2 min-w-[3rem] w-full sm:w-auto"
+                title={
+                  addedQty > 0
+                    ? `یکی دیگر اضافه کن (اکنون ${addedQty.toLocaleString("fa-IR")} عدد)`
+                    : "افزودن به اقلام"
+                }
+                className="shrink-0 text-xs h-7 px-2 min-w-[3rem] w-full sm:w-auto gap-1"
               >
-                {isAdded(product.id) ? (
-                  "افزوده شد"
+                <Plus className="w-3.5 h-3.5" />
+                {addedQty > 0 ? (
+                  <span className="tabular-nums">
+                    {addedQty.toLocaleString("fa-IR")}
+                  </span>
                 ) : (
-                  <>
-                    <span className="sm:hidden">افزودن</span>
-                    <Plus className="w-3.5 h-3.5 hidden sm:block" />
-                  </>
+                  <span className="sm:hidden">افزودن</span>
                 )}
               </Button>
             </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

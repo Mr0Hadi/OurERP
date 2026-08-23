@@ -17,6 +17,21 @@ import PaymentSummary from "@/shared/components/forms/PaymentSummary";
 import MixedPaymentList from "@/shared/components/forms/MixedPaymentList";
 import { useSyncedComputedValue } from "@/shared/hooks/useSyncedComputedValue";
 
+/**
+ * بخش پرداختِ یک سند خرید یا فروش.
+ *
+ * خرید و فروش اینجا هیچ تفاوت منطقی ندارند — هر دو یک جمع کل دارند و
+ * همان پنج روش پرداخت. قبلاً دو نسخه‌ی جداگانه بود (یکی ردیف‌های
+ * ترکیبی را با id می‌شناخت و دیگری با اندیس) و هر اصلاحی باید دو بار
+ * انجام می‌شد. حالا یکی است و ردیف‌ها با اندیس شناخته می‌شوند، همان
+ * قراردادی که MixedPaymentList مشترک دارد.
+ *
+ * مبلغ پرداختی برای روش‌های تک‌مرحله‌ای، و برای ترکیبی تا وقتی فقط یک
+ * ردیف هست، با جمع کل سند همگام می‌ماند — با هر تغییری در اقلام، نه
+ * فقط لحظه‌ی انتخاب نوع پرداخت. به‌محض افزودن ردیف دوم، همگام‌سازی
+ * متوقف می‌شود تا تقسیمِ دستیِ کاربر پاک نشود.
+ */
+
 const PAYMENT_TYPES = [
   { value: "cash", label: "نقدی" },
   { value: "credit", label: "نسیه" },
@@ -32,18 +47,15 @@ const EMPTY_MIXED_PAYMENT = {
   transferRef: "",
 };
 
-/**
- * props: formData, onFormChange, totalAmount, errors
- */
-export default function SalePaymentSection({
+const isSingleMethodType = (type) => type !== "credit" && type !== "mixed";
+
+export default function OrderPaymentSection({
   formData,
   onFormChange,
   totalAmount = 0,
   errors,
 }) {
-  const handleChange = (field, value) => {
-    onFormChange({ [field]: value });
-  };
+  const handleChange = (field, value) => onFormChange({ [field]: value });
 
   const paymentType = formData.paymentType || "cash";
   const mixedPayments = formData.mixedPayments || [];
@@ -58,18 +70,12 @@ export default function SalePaymentSection({
       ? paidAmountMixed
       : Number(formData.paidAmount) || 0;
 
-  const isSingleMethod = paymentType !== "credit" && paymentType !== "mixed";
-
-  // مبلغ پرداختی برای روش‌های تک‌مرحله‌ای همیشه با جمع کل سند همگام
-  // می‌ماند — با هر تغییری در اقلام، نه فقط لحظه‌ی انتخاب نوع پرداخت.
   useSyncedComputedValue(
     totalAmount,
     (value) => handleChange("paidAmount", String(value)),
-    isSingleMethod,
+    isSingleMethodType(paymentType),
   );
 
-  // برای پرداخت ترکیبی، تا وقتی فقط یک ردیف هست (یعنی هنوز تقسیم
-  // نشده) همان ردیف هم با جمع کل سند همگام می‌ماند.
   useSyncedComputedValue(
     totalAmount,
     (value) =>
@@ -81,16 +87,16 @@ export default function SalePaymentSection({
     paymentType === "mixed" && mixedPayments.length === 1,
   );
 
-  // تغییر نوع پرداخت، فیلدهای مربوط به روش قبلی را پاک می‌کند. برای
-  // روش‌های تک‌مرحله‌ای (نقدی/چک/انتقال) مبلغ پرداختی، و برای ترکیبی
-  // ردیفِ اول، به‌صورت پیش‌فرض همان جمع کل سند است.
-  const handlePaymentTypeChange = (val) => {
-    const isSingleMethod = val !== "credit" && val !== "mixed";
+  // تغییر نوع پرداخت، فیلدهای مربوط به روش قبلی را پاک می‌کند.
+  const handlePaymentTypeChange = (value) => {
+    const singleMethod = isSingleMethodType(value);
     onFormChange({
-      paymentType: val,
+      paymentType: value,
       mixedPayments:
-        val === "mixed" ? [{ ...EMPTY_MIXED_PAYMENT, amount: String(totalAmount) }] : [],
-      paidAmount: isSingleMethod ? String(totalAmount) : "",
+        value === "mixed"
+          ? [{ ...EMPTY_MIXED_PAYMENT, amount: String(totalAmount) }]
+          : [],
+      paidAmount: singleMethod ? String(totalAmount) : "",
       checkNumber: "",
       transferRef: "",
     });
@@ -106,11 +112,12 @@ export default function SalePaymentSection({
       mixedPayments: mixedPayments.filter((_, i) => i !== index),
     });
 
-  const updateMixedPayment = (index, field, value) => {
-    const updated = [...mixedPayments];
-    updated[index] = { ...updated[index], [field]: value };
-    onFormChange({ mixedPayments: updated });
-  };
+  const updateMixedPayment = (index, field, value) =>
+    onFormChange({
+      mixedPayments: mixedPayments.map((part, i) =>
+        i === index ? { ...part, [field]: value } : part,
+      ),
+    });
 
   return (
     <Card>
@@ -126,7 +133,6 @@ export default function SalePaymentSection({
           isCredit={paymentType === "credit"}
         />
 
-        {/* نوع پرداخت */}
         <div className="space-y-1.5">
           <Label className="text-card-foreground text-sm font-medium">
             نوع پرداخت
@@ -155,7 +161,7 @@ export default function SalePaymentSection({
         )}
 
         {/* مبلغ پرداختی (غیر از نسیه و ترکیبی) */}
-        {paymentType !== "credit" && paymentType !== "mixed" && (
+        {isSingleMethodType(paymentType) && (
           <div className="space-y-1.5">
             <Label
               htmlFor="paidAmount"
@@ -183,7 +189,6 @@ export default function SalePaymentSection({
           </div>
         )}
 
-        {/* شماره چک */}
         {paymentType === "check" && (
           <div className="space-y-1.5">
             <Label
@@ -203,7 +208,6 @@ export default function SalePaymentSection({
           </div>
         )}
 
-        {/* شماره پیگیری */}
         {paymentType === "transfer" && (
           <div className="space-y-1.5">
             <Label

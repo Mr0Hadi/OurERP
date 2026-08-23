@@ -12,7 +12,7 @@ import { useProductsQuery } from "@/features/warehouse/products/services/queries
 import SaleCustomerSection from "@/features/sales/orders/components/forms/SaleCustomerSection";
 import SaleItemsSection from "@/features/sales/orders/components/forms/SaleItemsSection";
 import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
-import SalePaymentSection from "@/features/sales/orders/components/forms/SalePaymentSection";
+import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
 import SaleStatusSection from "../components/forms/SaleStatusSection";
 import { ROUTES } from "@/shared/constants/routes";
 
@@ -240,7 +240,7 @@ export default function SaleNewPage() {
               }
             />
 
-            <SalePaymentSection
+            <OrderPaymentSection
               formData={formData}
               onFormChange={setFormData}
               totalAmount={computedTotal}
