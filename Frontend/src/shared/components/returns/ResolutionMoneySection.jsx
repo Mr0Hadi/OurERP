@@ -31,7 +31,12 @@ const EMPTY_PART = { type: "cash", amount: "", checkNumber: "", transferRef: "" 
  * برچسبِ جهت‌ها از side می‌آید («... از مشتری» یا «... از تامین‌کننده»)
  * تا همین کامپوننت هر دو سمت را بدهد.
  */
-export default function ResolutionMoneySection({ money, onChange, side }) {
+export default function ResolutionMoneySection({
+  money,
+  onChange,
+  side,
+  defaultAmount,
+}) {
   const directionOptions = Object.entries(side.money);
   const direction = money?.direction ?? MONEY_DIRECTIONS.NONE;
   const method = money?.method ?? PAYMENT_METHODS.CASH;
@@ -44,6 +49,7 @@ export default function ResolutionMoneySection({ money, onChange, side }) {
         money={money}
         onChange={onChange}
         options={directionOptions}
+        defaultAmount={defaultAmount}
       />
     );
   }
@@ -66,6 +72,7 @@ export default function ResolutionMoneySection({ money, onChange, side }) {
         money={money}
         onChange={onChange}
         options={directionOptions}
+        defaultAmount={defaultAmount}
       />
 
       <div className="space-y-2 rounded-md border border-border bg-card/60 p-2.5">
@@ -146,7 +153,7 @@ export default function ResolutionMoneySection({ money, onChange, side }) {
   );
 }
 
-function DirectionSelect({ direction, money, onChange, options }) {
+function DirectionSelect({ direction, money, onChange, options, defaultAmount }) {
   return (
     <Select
       value={direction}
@@ -158,7 +165,13 @@ function DirectionSelect({ direction, money, onChange, options }) {
         const method = allowed.includes(money?.method)
           ? money.method
           : PAYMENT_METHODS.CASH;
-        onChange({ direction: value, method });
+        // با انتخاب یک جهتِ واقعی، مبلغ پیش‌فرض همان ارزشِ این تصمیم
+        // است؛ کاربر می‌تواند دستی تغییرش دهد.
+        const amount =
+          value !== MONEY_DIRECTIONS.NONE && !(Number(money?.amount) > 0)
+            ? String(defaultAmount ?? "")
+            : money?.amount;
+        onChange({ direction: value, method, amount });
       }}
     >
       <SelectTrigger className="h-8 text-xs">

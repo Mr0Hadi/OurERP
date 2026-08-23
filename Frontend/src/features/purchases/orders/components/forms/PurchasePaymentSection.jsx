@@ -95,11 +95,27 @@ export default function PurchasePaymentSection({
           <Select
             value={paymentType}
             onValueChange={(val) => {
-              handleChange('paymentType', val);
               // اگر به ترکیبی تغییر کرد و لیست خالی بود، یک آیتم اضافه کن
-              if (val === 'mixed' && mixedPayments.length === 0) {
-                handleAddMixedPayment();
-              }
+              const nextMixedPayments =
+                val === 'mixed' && mixedPayments.length === 0
+                  ? [
+                      {
+                        id: Date.now().toString(),
+                        type: 'cash',
+                        amount: '',
+                        checkNumber: '',
+                        transferRef: '',
+                      },
+                    ]
+                  : mixedPayments;
+              // برای روش‌های تک‌مرحله‌ای (نقدی/چک/انتقال) مبلغ پرداختی
+              // به‌صورت پیش‌فرض همان جمع کل سند است.
+              const isSingleMethod = val !== 'credit' && val !== 'mixed';
+              onFormChange({
+                paymentType: val,
+                mixedPayments: nextMixedPayments,
+                paidAmount: isSingleMethod ? String(totalAmount) : '',
+              });
             }}
           >
             <SelectTrigger className="h-9">

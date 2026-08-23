@@ -57,12 +57,15 @@ export default function SalePaymentSection({
       ? paidAmountMixed
       : Number(formData.paidAmount) || 0;
 
-  // تغییر نوع پرداخت، فیلدهای مربوط به روش قبلی را پاک می‌کند.
+  // تغییر نوع پرداخت، فیلدهای مربوط به روش قبلی را پاک می‌کند. برای
+  // روش‌های تک‌مرحله‌ای (نقدی/چک/انتقال) مبلغ پرداختی به‌صورت پیش‌فرض
+  // همان جمع کل سند است.
   const handlePaymentTypeChange = (val) => {
-    handleChange("paymentType", val);
+    const isSingleMethod = val !== "credit" && val !== "mixed";
     onFormChange({
+      paymentType: val,
       mixedPayments: val === "mixed" ? [{ ...EMPTY_MIXED_PAYMENT }] : [],
-      paidAmount: "",
+      paidAmount: isSingleMethod ? String(totalAmount) : "",
       checkNumber: "",
       transferRef: "",
     });

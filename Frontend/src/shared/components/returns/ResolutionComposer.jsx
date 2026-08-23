@@ -155,6 +155,7 @@ export default function ResolutionComposer({
           money={composition.money}
           onChange={patchMoney}
           side={side}
+          defaultAmount={qty * (Number(claim.unitPrice) || 0)}
         />
       </div>
 
