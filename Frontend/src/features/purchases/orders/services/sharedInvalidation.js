@@ -6,6 +6,10 @@ import {
 import { outgoingQueueKeys } from "@/features/warehouse/shipping/services/queryKeys";
 import { purchaseReturnKeys } from "../../returns/services/queryKeys";
 import { productKeys } from "@/features/warehouse/products/services/queryKeys";
+import {
+  pendingLabelKeys,
+  productUnitKeys,
+} from "@/features/warehouse/units/services/queryKeys";
 
 /**
  * چون خرید، دریافت انبار و مرجوعی سه ماژول به‌هم‌گره‌خورده‌اند (یک
@@ -15,7 +19,11 @@ import { productKeys } from "@/features/warehouse/products/services/queryKeys";
  * قدیمی که خودش را آپدیت نمی‌کند» می‌شود)، همه از همین یک تابع مرکزی
  * استفاده می‌کنند.
  */
-export function invalidatePurchaseEcosystem(queryClient, purchaseId) {
+export function invalidatePurchaseEcosystem(
+  queryClient,
+  purchaseId,
+  { freshReturnId } = {},
+) {
   if (purchaseId != null) {
     queryClient.invalidateQueries({ queryKey: purchaseKeys.detail(purchaseId) });
     queryClient.invalidateQueries({ queryKey: receivingKeys.detail(purchaseId) });
@@ -33,7 +41,14 @@ export function invalidatePurchaseEcosystem(queryClient, purchaseId) {
   queryClient.invalidateQueries({ queryKey: incomingQueueKeys.all });
   queryClient.invalidateQueries({ queryKey: outgoingQueueKeys.all });
   queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.lists() });
-  queryClient.invalidateQueries({ queryKey: purchaseReturnKeys.details() });
+  // سندِ مرجوعی‌ای که همین الان از سرور گرفته و نشانده شده، دوباره
+  // fetch نمی‌شود — قرینه‌ی سمت فروش.
+  queryClient.invalidateQueries({
+    queryKey: purchaseReturnKeys.details(),
+    predicate: (query) =>
+      freshReturnId == null ||
+      query.queryKey[query.queryKey.length - 1] !== String(freshReturnId),
+  });
   queryClient.invalidateQueries({
     queryKey: purchaseReturnKeys.returnablePurchases(),
   });
@@ -42,4 +57,8 @@ export function invalidatePurchaseEcosystem(queryClient, purchaseId) {
   // کالاها هم باید تازه شود، وگرنه صفحه‌ی کالاها موجودی قدیمی نشان
   // می‌دهد تا وقتی کاربر دستی refresh کند.
   queryClient.invalidateQueries({ queryKey: productKeys.all });
+  // دریافتِ کالا موجودی را بالا می‌برد، و «کالاهای بدون برچسب» دقیقاً
+  // از تفاضلِ موجودی و واحدهای برچسب‌خورده ساخته می‌شود.
+  queryClient.invalidateQueries({ queryKey: productUnitKeys.all });
+  queryClient.invalidateQueries({ queryKey: pendingLabelKeys.all });
 }

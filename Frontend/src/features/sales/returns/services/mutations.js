@@ -17,8 +17,12 @@ import { ROUTES } from "@/shared/constants/routes";
 import { idempotencyKeyFor } from "@/shared/services/api/contract";
 
 const finalizeReturnChange = (queryClient, updated) => {
+  // پاسخِ هر عملیاتِ نوشتن، سندِ کاملِ به‌روزشده است؛ پس مستقیم می‌نشیند
+  // و با freshReturnId از باطل‌شدنِ دوباره‌اش جلوگیری می‌شود.
   queryClient.setQueryData(salesReturnKeys.detail(updated.id), updated);
-  invalidateSalesEcosystem(queryClient, updated.saleId);
+  invalidateSalesEcosystem(queryClient, updated.saleId, {
+    freshReturnId: updated.id,
+  });
 };
 
 export const useCreateSalesReturnMutation = () => {

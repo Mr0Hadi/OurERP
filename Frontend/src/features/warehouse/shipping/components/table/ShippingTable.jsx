@@ -74,7 +74,7 @@ const ShippingTable = ({
       },
       {
         accessorKey: "itemsCount",
-        header: "تعداد اقلام",
+        header: "اقلام باز",
         cell: (info) => (
           <span className="tabular-nums text-sm">
             {info.getValue().toLocaleString("fa-IR")}

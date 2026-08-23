@@ -46,7 +46,9 @@ export const useConfirmReturnIntakeMutation = () => {
         salesReturnKeys.detail(updatedReturn.id),
         updatedReturn,
       );
-      invalidateSalesEcosystem(queryClient, updatedReturn.saleId);
+      invalidateSalesEcosystem(queryClient, updatedReturn.saleId, {
+        freshReturnId: updatedReturn.id,
+      });
       queryClient.invalidateQueries({ queryKey: incomingQueueKeys.lists() });
       toast.success("دریافت کالای مرجوعی ثبت شد");
     },

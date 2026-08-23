@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "st": "node structure.js",
-    "check:returns": "node scripts/check-sales-returns.js"
+    "check:returns": "node scripts/check-sales-returns.js",
+    "check:queues": "node scripts/check-warehouse-queues.js"
   },
   "dependencies": {
     "@fontsource-variable/vazirmatn": "^5.2.8",

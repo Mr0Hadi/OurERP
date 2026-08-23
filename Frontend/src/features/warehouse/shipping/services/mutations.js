@@ -42,7 +42,9 @@ export const useConfirmSupplierReturnShipmentMutation = () => {
         purchaseReturnKeys.detail(updatedReturn.id),
         updatedReturn,
       );
-      invalidatePurchaseEcosystem(queryClient, updatedReturn.purchaseId);
+      invalidatePurchaseEcosystem(queryClient, updatedReturn.purchaseId, {
+        freshReturnId: updatedReturn.id,
+      });
       queryClient.invalidateQueries({ queryKey: outgoingQueueKeys.lists() });
       toast.success("عودت کالا به تامین‌کننده ثبت شد");
     },

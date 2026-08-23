@@ -70,9 +70,15 @@ function isSaleAwaitingDispatch(sale) {
   );
 }
 
+/**
+ * «تعداد اقلام» یعنی چند خط هنوز کارِ انبار دارد، نه چند خط روی سند
+ * است — همان تعریفی که صف دریافت دارد. خطی که کاملاً ارسال شده دیگر
+ * در صفحه‌ی ارسال دیده نمی‌شود، پس نباید در شمارشِ صف هم بیاید.
+ */
 function saleToRow(sale) {
   const returnLines = pendingReturnLinesForSale(sale.id);
   const returnQty = returnLines.reduce((s, l) => s + l.remainingQty, 0);
+  const openItems = sale.items.filter((item) => computeItemShippableQty(item) > 0);
   return {
     id: `sale-${sale.id}`,
     saleId: sale.id,
@@ -84,10 +90,10 @@ function saleToRow(sale) {
     counterpartyName: sale.customerName,
     date: sale.invoiceDate,
     statusLabel: SALE_STATUS_LABELS[sale.status] ?? sale.status,
-    itemsCount: sale.items.length + returnLines.length,
+    itemsCount: openItems.length + returnLines.length,
     returnLinesCount: returnLines.length,
     remainingQty:
-      sale.items.reduce((s, i) => s + computeItemShippableQty(i), 0) + returnQty,
+      openItems.reduce((s, i) => s + computeItemShippableQty(i), 0) + returnQty,
     amount: sale.totalAmount,
     createdAt: sale.createdAt,
     updatedAt: sale.updatedAt,

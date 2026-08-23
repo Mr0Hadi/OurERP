@@ -5,6 +5,10 @@ import {
 } from "@/features/warehouse/shipping/services/queryKeys";
 import { incomingQueueKeys } from "@/features/warehouse/receiving/services/queryKeys";
 import { productKeys } from "@/features/warehouse/products/services/queryKeys";
+import {
+  pendingLabelKeys,
+  productUnitKeys,
+} from "@/features/warehouse/units/services/queryKeys";
 import { salesReturnKeys } from "../../returns/services/queryKeys";
 
 /**
@@ -20,8 +24,15 @@ import { salesReturnKeys } from "../../returns/services/queryKeys";
  * صف‌های ورودی/خروجی انبار هم باید باطل شوند: حضور یک مرجوعی در آن‌ها
  * از روی اثرهای کالاییِ معلقش تعیین می‌شود، پس هر ثبت یا حذف تصمیم
  * می‌تواند آن را وارد یا خارج کند.
+ *
+ * `freshReturnId` برای وقتی است که پاسخِ همین mutation، سندِ کاملِ یک
+ * مرجوعی بوده و لایه‌ی صدازننده آن را با setQueryData نشانده. بدون آن،
+ * همان سندِ تازه بلافاصله باطل و دوباره fetch می‌شد — یعنی هر اقدام دو
+ * رفت‌وبرگشت به سرور می‌خورد و صفحه یک بار بی‌دلیل پرش می‌کرد.
+ * مرجوعی‌های *دیگرِ* همان سند همچنان باطل می‌شوند، چون سهمیه و کارت
+ * «مرجوعی‌های دیگر» آن‌ها عوض شده.
  */
-export function invalidateSalesEcosystem(queryClient, saleId) {
+export function invalidateSalesEcosystem(queryClient, saleId, { freshReturnId } = {}) {
   if (saleId != null) {
     queryClient.invalidateQueries({ queryKey: saleKeys.detail(saleId) });
     queryClient.invalidateQueries({ queryKey: shippingKeys.detail(saleId) });
@@ -32,7 +43,18 @@ export function invalidateSalesEcosystem(queryClient, saleId) {
   queryClient.invalidateQueries({ queryKey: incomingQueueKeys.all });
   queryClient.invalidateQueries({ queryKey: outgoingQueueKeys.all });
   queryClient.invalidateQueries({ queryKey: salesReturnKeys.lists() });
-  queryClient.invalidateQueries({ queryKey: salesReturnKeys.details() });
+  queryClient.invalidateQueries({
+    queryKey: salesReturnKeys.details(),
+    predicate: (query) =>
+      freshReturnId == null ||
+      query.queryKey[query.queryKey.length - 1] !== String(freshReturnId),
+  });
   queryClient.invalidateQueries({ queryKey: salesReturnKeys.returnableSales() });
   queryClient.invalidateQueries({ queryKey: productKeys.all });
+  // دفترِ واحدهای برچسب‌خورده هم از همین مسیرها تکان می‌خورد: ثبت فروش
+  // واحدها را رزرو می‌کند، ارسال آن‌ها را «ارسال‌شده» می‌کند، و لغو
+  // فروش آزادشان می‌کند. تا امروز هیچ‌کدام کشِ واحدها را باطل نمی‌کرد،
+  // پس صفحه‌ی واحدها تا رفرشِ دستی وضعیت قدیمی نشان می‌داد.
+  queryClient.invalidateQueries({ queryKey: productUnitKeys.all });
+  queryClient.invalidateQueries({ queryKey: pendingLabelKeys.all });
 }

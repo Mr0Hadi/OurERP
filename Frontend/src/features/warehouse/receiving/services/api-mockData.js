@@ -19,7 +19,6 @@ import {
 import {
   buildGoodsLines,
   hasPendingGoodsIn,
-  pendingGoodsEffects,
 } from "@/shared/domain/returns/resolutions";
 import { EFFECT_KINDS } from "@/shared/domain/returns/effects";
 
@@ -142,8 +141,25 @@ function isPurchaseAwaitingIntake(purchase) {
   );
 }
 
+/**
+ * «تعداد اقلام» در صف انبار یعنی *چند خط هنوز کارِ انبار دارد* — نه
+ * چند خط روی سند است.
+ *
+ * پیش از این، تعدادِ کلِ اقلامِ سند شمرده می‌شد. نتیجه‌اش این بود که
+ * بعد از یک دور دریافتِ ناقص، صف همچنان همان عدد اول را نشان می‌داد
+ * در حالی که صفحه‌ی جزئیات فقط خطوطِ باز را می‌آورد: انباردار در لیست
+ * ۴ قلم می‌دید و با باز کردنش ۲ قلم. همین عدد ملاکِ اولویت‌بندیِ کار
+ * است، پس باید همان چیزی باشد که پشتِ در است.
+ *
+ * خطِ «باز» دو منبع دارد و هر دو شمرده می‌شوند: باقیمانده‌ی خودِ سفارش،
+ * و کالای جایگزینی که بابت مرجوعی‌ها بدهکاریم.
+ */
 function purchaseToRow(purchase) {
   const returnLines = pendingReturnLinesForPurchase(purchase.id);
+  const openItems = (purchase.items || []).filter(
+    (item) => computeItemReceivableQty(item) > 0,
+  );
+
   return {
     id: purchase.id,
     type: INCOMING_TYPES.PURCHASE,
@@ -152,15 +168,26 @@ function purchaseToRow(purchase) {
     counterpartyType: "supplier",
     counterpartyName: purchase.supplierName,
     date: purchase.invoiceDate,
-    itemsCount: (purchase.items || []).length + returnLines.length,
+    itemsCount: openItems.length + returnLines.length,
     returnLinesCount: returnLines.length,
+    // تعدادِ واقعیِ کالایی که هنوز باید برسد — «۲ قلم» می‌تواند ۳ عدد
+    // باشد یا ۳۰۰ عدد، و انباردار برای برنامه‌ریزی به این عدد هم نیاز
+    // دارد. قرینه‌ی همان ستونی که صف ارسال از قبل داشت.
+    remainingQty:
+      openItems.reduce((sum, item) => sum + computeItemReceivableQty(item), 0) +
+      returnLines.reduce((sum, line) => sum + line.remainingQty, 0),
     amount: purchase.totalAmount,
     createdAt: purchase.createdAt,
     updatedAt: purchase.updatedAt,
   };
 }
 
+/** همان تعریفِ purchaseToRow، روی خطوطِ مرجوعی. */
 function salesReturnToRow(salesReturn) {
+  const openLines = buildGoodsLines(salesReturn, EFFECT_KINDS.GOODS_IN).filter(
+    (line) => line.remainingQty > 0,
+  );
+
   return {
     id: salesReturn.id,
     type: INCOMING_TYPES.SALES_RETURN,
@@ -169,7 +196,9 @@ function salesReturnToRow(salesReturn) {
     counterpartyType: "customer",
     counterpartyName: salesReturn.customerName,
     date: salesReturn.returnDate,
-    itemsCount: pendingGoodsEffects(salesReturn, EFFECT_KINDS.GOODS_IN).length,
+    itemsCount: openLines.length,
+    returnLinesCount: openLines.length,
+    remainingQty: openLines.reduce((sum, line) => sum + line.remainingQty, 0),
     amount: salesReturn.totalClaimedAmount,
     createdAt: salesReturn.createdAt,
     updatedAt: salesReturn.updatedAt,
@@ -252,7 +281,7 @@ export async function fetchIncomingQueue(params = {}) {
   return applyListQuery(rows, params, {
     searchFields: ["refNumber", "counterpartyName"],
     dateField: "date",
-    numericFields: ["amount", "itemsCount"],
+    numericFields: ["amount", "itemsCount", "remainingQty"],
   });
 }
 
