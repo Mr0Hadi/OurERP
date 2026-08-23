@@ -11,6 +11,8 @@ import {
   expandComposition,
   validateComposition,
 } from "@/shared/domain/returns/resolutions";
+import { PAYMENT_METHODS } from "@/shared/domain/returns/effects";
+import { useSyncedComputedValue } from "@/shared/hooks/useSyncedComputedValue";
 import GoodsItemsPicker from "./GoodsItemsPicker";
 import ResolutionMoneySection from "./ResolutionMoneySection";
 import EffectBadge from "./EffectBadge";
@@ -72,6 +74,17 @@ export default function ResolutionComposer({
       ...prev,
       money: { ...prev.money, ...changes },
     }));
+
+  // مبلغِ جابه‌جاییِ پول همیشه با تعداد و قیمتِ همین تصمیم همگام
+  // می‌ماند — با هر تغییری در تعداد، نه فقط لحظه‌ی انتخاب جهتِ پول.
+  const defaultMoneyAmount =
+    (Number(composition.qty) || 0) * (Number(claim.unitPrice) || 0);
+  useSyncedComputedValue(
+    defaultMoneyAmount,
+    (value) => patchMoney({ amount: String(value) }),
+    composition.money.direction !== MONEY_DIRECTIONS.NONE &&
+      composition.money.method !== PAYMENT_METHODS.MIXED,
+  );
 
   const previewEffects = useMemo(
     () => expandComposition(composition, claim),
@@ -155,7 +168,7 @@ export default function ResolutionComposer({
           money={composition.money}
           onChange={patchMoney}
           side={side}
-          defaultAmount={qty * (Number(claim.unitPrice) || 0)}
+          defaultAmount={defaultMoneyAmount}
         />
       </div>
 

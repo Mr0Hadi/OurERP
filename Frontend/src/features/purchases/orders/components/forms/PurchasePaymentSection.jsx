@@ -10,6 +10,7 @@ import {
 } from '@/shared/components/ui/select';
 import PaymentSummary from '@/shared/components/forms/PaymentSummary';
 import MixedPaymentList from './MixedPaymentList';
+import { useSyncedComputedValue } from '@/shared/hooks/useSyncedComputedValue';
 
 const PAYMENT_TYPES = [
   { value: 'cash', label: 'نقدی' },
@@ -42,6 +43,16 @@ export default function PurchasePaymentSection({
   const paidAmount = paymentType === 'mixed'
     ? totalMixedPaid
     : (Number(formData.paidAmount) || 0);
+
+  const isSingleMethod = paymentType !== 'credit' && paymentType !== 'mixed';
+
+  // مبلغ پرداختی برای روش‌های تک‌مرحله‌ای همیشه با جمع کل سند همگام
+  // می‌ماند — با هر تغییری در اقلام، نه فقط لحظه‌ی انتخاب نوع پرداخت.
+  useSyncedComputedValue(
+    totalAmount,
+    (value) => handleChange('paidAmount', String(value)),
+    isSingleMethod,
+  );
 
   // اضافه کردن پرداخت جدید به لیست ترکیبی
   const handleAddMixedPayment = () => {
