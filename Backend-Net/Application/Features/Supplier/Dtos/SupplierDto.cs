@@ -11,6 +11,10 @@ namespace Application.Features.Supplier.Dtos
         public string Phone { get; set; }
         public string Address { get; set; }
         public string PostalCode { get; set; }
+        /// <summary>The stable bucket object key - send this back on update to keep the image.</summary>
+        public string? ImageKey { get; set; }
+
+        /// <summary>A short-lived signed URL for &lt;img src&gt;. Expires; do not store it.</summary>
         public string? ImageUrl { get; set; }
         public string? Description { get; set; }
         public UInt64? Balance { get; set; }

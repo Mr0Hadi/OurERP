@@ -54,7 +54,7 @@ namespace Application.Features.User.Command
 
 			var userId = _userContextService.GetUserId().ToInt();
 
-			var user = await _userRepository.GetByIdAsync(userId);
+			var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
 
 			if (user == null)
 			{

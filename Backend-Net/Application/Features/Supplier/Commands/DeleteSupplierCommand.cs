@@ -27,7 +27,7 @@ namespace Application.Features.Supplier.Commands
         {
             var res = new ResponseDto();
 
-            var supplier = await _supplierRepository.GetByIdAsync(request.Id) ?? throw new NotFoundCustomException("تامین کننده با اطلاعات مورد نظر یافت نشد.");
+            var supplier = await _supplierRepository.GetByIdAsync(request.Id, cancellationToken) ?? throw new NotFoundCustomException("تامین کننده با اطلاعات مورد نظر یافت نشد.");
 
             supplier.IsActive = false;
 

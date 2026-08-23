@@ -45,7 +45,7 @@ namespace Application.Features.Account.Command
 
             var userId = Convert.ToInt32(_userContextService.GetUserId());
 
-            var user = await _userRepository.GetByIdAsync(userId);
+            var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
 
             var cacheKey = $"UserTokens:{userId}";
 

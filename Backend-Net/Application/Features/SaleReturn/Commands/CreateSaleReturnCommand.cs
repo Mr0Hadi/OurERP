@@ -129,7 +129,7 @@ namespace Application.Features.SaleReturn.Commands
                 });
             }
 
-            await _saleReturnRepository.AddAsync(saleReturn);
+            await _saleReturnRepository.AddAsync(saleReturn, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             res.Data = new { ReturnId = saleReturn.Id, ReturnNumber = saleReturn.ReturnNumber, ReturnStatus = saleReturn.Status };

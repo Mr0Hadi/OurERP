@@ -88,7 +88,7 @@ namespace WMS.Tests.Integration
             var (scenario, saleReturnId) = await SeedClaim(scope, shippedQuantity: 10, claimedQuantity: 5);
             var claimId = scope.Context.SaleReturnClaims.Single().Id;
 
-            var handler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var handler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
             await handler.Handle(new ConfirmReturnInspectionCommand
             {
                 SaleReturnId = saleReturnId,
@@ -118,7 +118,7 @@ namespace WMS.Tests.Integration
             var (scenario, saleReturnId) = await SeedClaim(scope, shippedQuantity: 10, claimedQuantity: 5);
             var claimId = scope.Context.SaleReturnClaims.Single().Id;
 
-            var handler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var handler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
             await handler.Handle(new ConfirmReturnInspectionCommand
             {
                 SaleReturnId = saleReturnId,
@@ -146,7 +146,7 @@ namespace WMS.Tests.Integration
             var (_, saleReturnId) = await SeedClaim(scope, shippedQuantity: 10, claimedQuantity: 5);
             var claimId = scope.Context.SaleReturnClaims.Single().Id;
 
-            var handler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var handler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(new ConfirmReturnInspectionCommand
             {
@@ -170,7 +170,7 @@ namespace WMS.Tests.Integration
             var (scenario, saleReturnId) = await SeedClaim(scope, shippedQuantity: 5, claimedQuantity: 5);
             var claimId = scope.Context.SaleReturnClaims.Single().Id;
 
-            var inspectHandler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var inspectHandler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
             await inspectHandler.Handle(new ConfirmReturnInspectionCommand
             {
                 SaleReturnId = saleReturnId,
@@ -186,7 +186,7 @@ namespace WMS.Tests.Integration
 
             var saleReturnItemId = scope.Context.SaleReturnItems.Single().Id;
 
-            var decisionHandler = new AddSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var decisionHandler = new AddSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
             await decisionHandler.Handle(new AddSaleReturnDecisionCommand
             {
                 SaleReturnItemId = saleReturnItemId,
@@ -212,7 +212,7 @@ namespace WMS.Tests.Integration
             var (_, saleReturnId) = await SeedClaim(scope, shippedQuantity: 5, claimedQuantity: 5);
             var claimId = scope.Context.SaleReturnClaims.Single().Id;
 
-            var inspectHandler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var inspectHandler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
             await inspectHandler.Handle(new ConfirmReturnInspectionCommand
             {
                 SaleReturnId = saleReturnId,
@@ -227,7 +227,7 @@ namespace WMS.Tests.Integration
             }, CancellationToken.None);
 
             var saleReturnItemId = scope.Context.SaleReturnItems.Single().Id;
-            var decisionHandler = new AddSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var decisionHandler = new AddSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => decisionHandler.Handle(new AddSaleReturnDecisionCommand
             {
@@ -244,7 +244,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (_, saleReturnId) = await SeedClaim(scope, shippedQuantity: 5, claimedQuantity: 3);
 
-            var handler = new GetSaleReturnDetailQueryHandler(scope.Db, scope.SaleReturnCalculation);
+            var handler = new GetSaleReturnDetailQueryHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation);
             var res = await handler.Handle(new GetSaleReturnDetailQuery { Id = saleReturnId }, CancellationToken.None);
 
             var dto = Assert.IsType<SaleReturnDetailDto>(res.Data);

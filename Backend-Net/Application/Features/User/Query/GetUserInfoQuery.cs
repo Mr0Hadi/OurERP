@@ -33,7 +33,7 @@ namespace Application.Features.User.Query
 
             var userId = _userContextService.GetUserId().ToInt();
 
-            var user = await _userRepository.GetByIdAsync(userId) ?? throw new NotFoundCustomException("کاربر با این اطلاعات یافت نشد.");
+            var user = await _userRepository.GetByIdAsync(userId, cancellationToken) ?? throw new NotFoundCustomException("کاربر با این اطلاعات یافت نشد.");
 
             res.Data = _mapper.Map<UserInfoDto>(user);
 

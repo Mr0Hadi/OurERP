@@ -73,7 +73,7 @@ namespace Application.Features.PurchaseReturn.Queries
                 query = query.Where(x => x.Items.Any(i => i.IssueType == request.Reason.Value));
             }
 
-            var data = await query
+            var paged = await query
                 .OrderByDescending(x => x.CreatedAt)
                 .Select(x => new PurchaseReturnListDto
                 {
@@ -90,18 +90,17 @@ namespace Application.Features.PurchaseReturn.Queries
                     TotalQuantity = x.Items.Sum(i => i.Quantity),
                     TotalAmount = (UInt64)x.Items.Sum(i => (long)i.Quantity * (long)i.UnitPrice),
                 })
-                .ToPaged(request.Page, request.Take, out int pageCount, out int totalCount)
-                .ToListAsync(cancellationToken);
+                .ToPagedAsync(request.Page, request.Take, cancellationToken);
 
             res.Data = new
             {
-                ReturnList = data,
+                ReturnList = paged.Items,
                 Page = new ResponsePageDto
                 {
                     Page = request.Page,
-                    PageCount = pageCount,
+                    PageCount = paged.PageCount,
                     Take = request.Take,
-                    Total = totalCount
+                    Total = paged.TotalCount
                 }
             };
             res.Message = "لیست مرجوعی‌ها با موفقیت ارسال شد.";

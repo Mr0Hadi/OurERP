@@ -36,12 +36,14 @@ namespace Application.Features.SaleReturn.Commands
     public class AddSaleReturnDecisionCommandHandler : IRequestHandler<AddSaleReturnDecisionCommand, ResponseDto>
     {
         private readonly IWMSDbContext _context;
+        private readonly ISaleReturnQueryService _saleReturnQueryService;
         private readonly ISaleReturnCalculationService _saleReturnCalculationService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public AddSaleReturnDecisionCommandHandler(IWMSDbContext context, ISaleReturnCalculationService saleReturnCalculationService, IUnitOfWork unitOfWork)
+        public AddSaleReturnDecisionCommandHandler(IWMSDbContext context, ISaleReturnQueryService saleReturnQueryService, ISaleReturnCalculationService saleReturnCalculationService, IUnitOfWork unitOfWork)
         {
             _context = context;
+            _saleReturnQueryService = saleReturnQueryService;
             _saleReturnCalculationService = saleReturnCalculationService;
             _unitOfWork = unitOfWork;
         }
@@ -52,9 +54,7 @@ namespace Application.Features.SaleReturn.Commands
 
             // Loaded from the return down (rather than from the inspected line up) so the whole
             // graph RecomputeReturnStatus needs comes from one Include spine.
-            var saleReturn = await _context.SaleReturns
-                .WithReturnGraph()
-                .WithSaleItems()
+            var saleReturn = await _saleReturnQueryService.WithReturnGraph(_context.SaleReturns, includeSaleItems: true)
                 .FirstOrDefaultAsync(x => x.Claims.Any(c => c.InspectionItems.Any(i => i.Id == request.SaleReturnItemId)), cancellationToken)
                     ?? throw new NotFoundCustomException("قلم بازرسی‌شده مورد نظر یافت نشد.");
 

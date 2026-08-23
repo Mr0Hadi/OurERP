@@ -14,7 +14,7 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
 
-            var handler = new CreateSupplierCommandHandler(scope.SupplierRepository, TestMapper.Instance, scope.UnitOfWork);
+            var handler = new CreateSupplierCommandHandler(scope.SupplierRepository, TestMapper.Instance, FakeObjectStorage.Instance, scope.UnitOfWork);
             await handler.Handle(new CreateSupplierCommand
             {
                 FirstName = "رضا",
@@ -36,7 +36,7 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
 
-            var handler = new UpdateSupplierCommandHandler(scope.UnitOfWork, scope.SupplierRepository);
+            var handler = new UpdateSupplierCommandHandler(scope.UnitOfWork, scope.SupplierRepository, FakeObjectStorage.Instance);
 
             await Assert.ThrowsAsync<NotFoundCustomException>(() => handler.Handle(new UpdateSupplierCommand
             {
@@ -75,7 +75,7 @@ namespace WMS.Tests.Integration
             scope.Context.Suppliers.Add(supplier);
             scope.Context.SaveChanges();
 
-            var handler = new GetSupplierDetailQueryHandler(scope.SupplierRepository, TestMapper.Instance);
+            var handler = new GetSupplierDetailQueryHandler(scope.SupplierRepository, TestMapper.Instance, FakeObjectStorage.Instance);
             var res = await handler.Handle(new GetSupplierDetailQuery { Id = supplier.Id }, CancellationToken.None);
 
             var dto = Assert.IsType<SupplierDto>(res.Data);
@@ -91,7 +91,7 @@ namespace WMS.Tests.Integration
             scope.Context.Suppliers.Add(Seed.Supplier("ب"));
             scope.Context.SaveChanges();
 
-            var handler = new GetSupplierListQueryHandler(scope.Db);
+            var handler = new GetSupplierListQueryHandler(scope.Db, FakeObjectStorage.Instance);
             var res = await handler.Handle(new GetSupplierListQuery { CompanyNameOrContactName = "الف" }, CancellationToken.None);
 
             var data = res.Data!;

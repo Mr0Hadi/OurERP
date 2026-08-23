@@ -64,7 +64,7 @@ namespace Application.Features.Sale.Queries
                 query = query.Where(x => x.InvoiceDate <= request.ToDate.Value);
             }
 
-            var data = await query.Select(x => new SaleListDto
+            var paged = await query.Select(x => new SaleListDto
             {
                 Id = x.Id,
                 InvoiceNumber = x.InvoiceNumber,
@@ -75,17 +75,17 @@ namespace Application.Features.Sale.Queries
                 PaymentType = x.PaymentType,
                 TotalAmount = x.TotalAmount,
                 PaidAmount = x.PaidAmount
-            }).ToPaged(request.Page, request.Take, out int pageCount, out int totalCount).ToListAsync();
+            }).ToPagedAsync(request.Page, request.Take, cancellationToken);
 
             res.Data = new
             {
-                SaleList = data,
+                SaleList = paged.Items,
                 Page = new ResponsePageDto
                 {
                     Page = request.Page,
-                    PageCount = pageCount,
+                    PageCount = paged.PageCount,
                     Take = request.Take,
-                    Total = totalCount
+                    Total = paged.TotalCount
                 }
             };
             res.Message = "لیست فروش‌ sها با موفقیت ارسال شد.";

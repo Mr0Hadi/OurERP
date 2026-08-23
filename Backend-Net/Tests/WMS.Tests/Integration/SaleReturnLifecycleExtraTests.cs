@@ -28,7 +28,7 @@ namespace WMS.Tests.Integration
         {
             var (scenario, saleReturnId, claimId) = await SeedClaim(scope, shippedQuantity, claimedQuantity);
 
-            var inspectHandler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var inspectHandler = new ConfirmReturnInspectionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
             await inspectHandler.Handle(new ConfirmReturnInspectionCommand
             {
                 SaleReturnId = saleReturnId,
@@ -53,7 +53,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (_, saleReturnId, _) = await SeedClaim(scope);
 
-            var handler = new CancelSaleReturnCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var handler = new CancelSaleReturnCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
             await handler.Handle(new CancelSaleReturnCommand { Id = saleReturnId }, CancellationToken.None);
 
             using var verify = db.NewContext();
@@ -67,7 +67,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (_, saleReturnId, _) = await SeedInspectedHealthy(scope);
 
-            var handler = new CancelSaleReturnCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var handler = new CancelSaleReturnCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(new CancelSaleReturnCommand { Id = saleReturnId }, CancellationToken.None));
         }
@@ -79,7 +79,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (_, saleReturnId, _) = await SeedClaim(scope);
 
-            var handler = new RejectSaleReturnCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var handler = new RejectSaleReturnCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
             await handler.Handle(new RejectSaleReturnCommand { Id = saleReturnId }, CancellationToken.None);
 
             using var verify = db.NewContext();
@@ -93,10 +93,10 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (_, saleReturnId, _) = await SeedClaim(scope);
 
-            var rejectHandler = new RejectSaleReturnCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var rejectHandler = new RejectSaleReturnCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
             await rejectHandler.Handle(new RejectSaleReturnCommand { Id = saleReturnId }, CancellationToken.None);
 
-            var reopenHandler = new ReopenSaleReturnCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var reopenHandler = new ReopenSaleReturnCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
             await reopenHandler.Handle(new ReopenSaleReturnCommand { Id = saleReturnId }, CancellationToken.None);
 
             using var verify = db.NewContext();
@@ -110,7 +110,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (_, saleReturnId, _) = await SeedClaim(scope);
 
-            var handler = new ReopenSaleReturnCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var handler = new ReopenSaleReturnCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(new ReopenSaleReturnCommand { Id = saleReturnId }, CancellationToken.None));
         }
@@ -122,7 +122,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (_, saleReturnId, _) = await SeedClaim(scope);
 
-            var handler = new DeleteSaleReturnCommandHandler(scope.Db, scope.SaleReturnRepository, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var handler = new DeleteSaleReturnCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnRepository, scope.SaleReturnCalculation, scope.UnitOfWork);
             await handler.Handle(new DeleteSaleReturnCommand { Id = saleReturnId }, CancellationToken.None);
 
             using var verify = db.NewContext();
@@ -137,7 +137,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (_, saleReturnId, _) = await SeedInspectedHealthy(scope);
 
-            var handler = new DeleteSaleReturnCommandHandler(scope.Db, scope.SaleReturnRepository, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var handler = new DeleteSaleReturnCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnRepository, scope.SaleReturnCalculation, scope.UnitOfWork);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(new DeleteSaleReturnCommand { Id = saleReturnId }, CancellationToken.None));
         }
@@ -149,12 +149,12 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (_, saleReturnId, saleReturnItemId) = await SeedInspectedHealthy(scope);
 
-            var addHandler = new AddSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var addHandler = new AddSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
             await addHandler.Handle(new AddSaleReturnDecisionCommand { SaleReturnItemId = saleReturnItemId, DecisionType = SaleReturnDecisionTypeEnum.REPLACEMENT, Quantity = 5 }, CancellationToken.None);
 
             var decisionId = scope.Context.SaleReturnDecisions.Single().Id;
 
-            var removeHandler = new RemoveSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var removeHandler = new RemoveSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
             await removeHandler.Handle(new RemoveSaleReturnDecisionCommand { Id = decisionId }, CancellationToken.None);
 
             using var verify = db.NewContext();
@@ -169,12 +169,12 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (_, _, saleReturnItemId) = await SeedInspectedHealthy(scope);
 
-            var addHandler = new AddSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var addHandler = new AddSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
             await addHandler.Handle(new AddSaleReturnDecisionCommand { SaleReturnItemId = saleReturnItemId, DecisionType = SaleReturnDecisionTypeEnum.REFUND, Quantity = 5 }, CancellationToken.None);
 
             var decisionId = scope.Context.SaleReturnDecisions.Single().Id;
 
-            var removeHandler = new RemoveSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var removeHandler = new RemoveSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => removeHandler.Handle(new RemoveSaleReturnDecisionCommand { Id = decisionId }, CancellationToken.None));
         }
@@ -186,16 +186,18 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (scenario, _, saleReturnItemId) = await SeedInspectedHealthy(scope, shippedQuantity: 10, claimedQuantity: 5);
 
-            // Give the product some stock to ship the replacement from.
+            // Give the product some stock to ship the replacement from, with matching ProductUnit
+            // rows so the Stock/ProductUnit invariant holds and ConsumeAsync has units to take.
             var product = scope.Context.Products.Single(x => x.Id == scenario.Product.Id);
             product.Stock = 20;
             scope.Context.SaveChanges();
+            Seed.MintUnits(scope.Context, product, 20);
 
-            var addHandler = new AddSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var addHandler = new AddSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
             await addHandler.Handle(new AddSaleReturnDecisionCommand { SaleReturnItemId = saleReturnItemId, DecisionType = SaleReturnDecisionTypeEnum.REPLACEMENT, Quantity = 5 }, CancellationToken.None);
             var decisionId = scope.Context.SaleReturnDecisions.Single().Id;
 
-            var shipHandler = new ConfirmReplacementShipmentCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var shipHandler = new ConfirmReplacementShipmentCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
             await shipHandler.Handle(new ConfirmReplacementShipmentCommand { SaleReturnDecisionId = decisionId, ShippedQuantity = 3 }, CancellationToken.None);
 
             using (var mid = db.NewContext())
@@ -223,12 +225,13 @@ namespace WMS.Tests.Integration
             var product = scope.Context.Products.Single(x => x.Id == scenario.Product.Id);
             product.Stock = 20;
             scope.Context.SaveChanges();
+            Seed.MintUnits(scope.Context, product, 20);
 
-            var addHandler = new AddSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var addHandler = new AddSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
             await addHandler.Handle(new AddSaleReturnDecisionCommand { SaleReturnItemId = saleReturnItemId, DecisionType = SaleReturnDecisionTypeEnum.REPLACEMENT, Quantity = 5 }, CancellationToken.None);
             var decisionId = scope.Context.SaleReturnDecisions.Single().Id;
 
-            var shipHandler = new ConfirmReplacementShipmentCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var shipHandler = new ConfirmReplacementShipmentCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => shipHandler.Handle(new ConfirmReplacementShipmentCommand { SaleReturnDecisionId = decisionId, ShippedQuantity = 6 }, CancellationToken.None));
         }
@@ -243,11 +246,11 @@ namespace WMS.Tests.Integration
             product.Stock = 2; // less than the 5-unit replacement
             scope.Context.SaveChanges();
 
-            var addHandler = new AddSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var addHandler = new AddSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
             await addHandler.Handle(new AddSaleReturnDecisionCommand { SaleReturnItemId = saleReturnItemId, DecisionType = SaleReturnDecisionTypeEnum.REPLACEMENT, Quantity = 5 }, CancellationToken.None);
             var decisionId = scope.Context.SaleReturnDecisions.Single().Id;
 
-            var shipHandler = new ConfirmReplacementShipmentCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var shipHandler = new ConfirmReplacementShipmentCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => shipHandler.Handle(new ConfirmReplacementShipmentCommand { SaleReturnDecisionId = decisionId, ShippedQuantity = 5 }, CancellationToken.None));
         }
@@ -261,8 +264,9 @@ namespace WMS.Tests.Integration
             var product = scope.Context.Products.Single(x => x.Id == scenario.Product.Id);
             product.Stock = 20;
             scope.Context.SaveChanges();
+            Seed.MintUnits(scope.Context, product, 20);
 
-            var addHandler = new AddSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var addHandler = new AddSaleReturnDecisionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
             await addHandler.Handle(new AddSaleReturnDecisionCommand { SaleReturnItemId = saleReturnItemId, DecisionType = SaleReturnDecisionTypeEnum.REPLACEMENT, Quantity = 5 }, CancellationToken.None);
 
             var handler = new GetReplacementShippingQueueQueryHandler(scope.Db);
@@ -281,7 +285,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (scenario, _, _) = await SeedClaim(scope, shippedQuantity: 10, claimedQuantity: 5);
 
-            var handler = new GetSaleReturnInspectionInfoQueryHandler(scope.Db);
+            var handler = new GetSaleReturnInspectionInfoQueryHandler(scope.Db, scope.SaleReturnQueryService);
             var res = await handler.Handle(new GetSaleReturnInspectionInfoQuery { SaleId = scenario.Sale.Id }, CancellationToken.None);
 
             var dto = Assert.IsType<SaleReturnInspectionInfoDto>(res.Data);

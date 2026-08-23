@@ -12,6 +12,13 @@ namespace Application.Features.PurchaseReturn.Dtos
         public string SupplierName { get; set; }
         public int? ActivePurchaseReturnId { get; set; }
         public List<PurchaseReceivingItemInfoDto> Items { get; set; } = new();
+
+        /// <summary>
+        /// Every photo taken across all receiving rounds for this purchase, oldest first -
+        /// including rounds whose return has since been deleted, and rounds that produced no
+        /// return at all.
+        /// </summary>
+        public List<PurchaseReceivingImageDto> ReceivingImages { get; set; } = new();
     }
 
     public class PurchaseReceivingItemInfoDto

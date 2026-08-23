@@ -71,6 +71,44 @@ namespace WMS.Tests.Functional
             Assert.True(list.GetArrayLength() >= 1);
         }
 
+        // appsettings.json ships the ObjectStorage section with blank credentials, so the real DI
+        // graph here builds an unconfigured IObjectStorageService. A stored image key must then
+        // degrade to a null ImageUrl rather than 500 the whole list - see
+        // LiaraObjectStorageService.IsConfigured.
+        [Fact]
+        public async Task GetCustomerList_WithStoredImageKey_AndUnconfiguredBucket_StillReturns200()
+        {
+            using var scope = _factory.Services.CreateScope();
+            var token = await LoginAsSeededAdmin(scope);
+
+            var context = scope.ServiceProvider.GetRequiredService<WMSDbContext>();
+            context.Customers.Add(new Domain.Entities.Customer
+            {
+                FirstName = "تصویر",
+                LastName = "دار",
+                PhoneNumber = "09120000000",
+                Address = "تهران",
+                PostalCode = "1234567890",
+                ImageUrl = "customers/2026/08/abc.jpg",
+                IsActive = true,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now,
+            });
+            await context.SaveChangesAsync();
+
+            var client = _factory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            var response = await client.GetAsync("/api/Customer/GetCustomerList?FullName=" + Uri.EscapeDataString("تصویر"));
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            var item = GetProperty(GetProperty(doc.RootElement, "data"), "customerList")[0];
+
+            Assert.Equal("customers/2026/08/abc.jpg", GetProperty(item, "imageKey").GetString());
+            Assert.Equal(JsonValueKind.Null, GetProperty(item, "imageUrl").ValueKind);
+        }
+
         [Fact]
         public async Task CreateSupplier_WithInvalidPhone_Returns400()
         {

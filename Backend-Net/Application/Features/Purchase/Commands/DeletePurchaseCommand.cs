@@ -27,7 +27,7 @@ namespace Application.Features.Purchase.Commands
         {
             var res = new ResponseDto();
 
-            var purchase = await _purchaseRepository.GetByIdAsync(request.Id) ?? throw new NotFoundCustomException("خرید مورد نظر یافت نشد.");
+            var purchase = await _purchaseRepository.GetByIdAsync(request.Id, cancellationToken) ?? throw new NotFoundCustomException("خرید مورد نظر یافت نشد.");
 
             purchase.IsActive = false;
             purchase.UpdatedAt = DateTime.UtcNow;

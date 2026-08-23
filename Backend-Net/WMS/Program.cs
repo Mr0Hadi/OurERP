@@ -17,6 +17,8 @@ namespace WMS
     {
         public static void Main(string[] args)
         {
+            QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
             var builder = WebApplication.CreateBuilder(args);
 
             builder.Host.UseSerilog();
@@ -53,7 +55,7 @@ namespace WMS
 
             builder.Services.AddEndPointServiceRegistration();
             builder.Services.AddApplicationServices();
-            builder.Services.AddInfrastructureServices(builder.Configuration.GetConnectionString("SqlServer"));
+            builder.Services.AddInfrastructureServices(builder.Configuration.GetConnectionString("SqlServer"), builder.Configuration);
 
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             //builder.Services.AddOpenApi();
@@ -111,17 +113,16 @@ namespace WMS
             builder.Services.Configure<ApiBehaviorOptions>(options =>
             {
                 options.InvalidModelStateResponseFactory = context =>
-                {
-                    ResponseHandler.ResponseHandler.HandleExceptionAsync(context.HttpContext, 400, "فرمت داده ورودی صحیح نمی باشد.", null).GetAwaiter().GetResult();
-
-                    return new EmptyResult();
-                };
+                    ResponseHandler.ResponseHandler.ExceptionResult(400, "فرمت داده ورودی صحیح نمی باشد.", null);
             });
 
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment() || true)
+            // OpenAPI/Scalar is deliberately served in every environment, not just Development -
+            // the generated docs are the contract the frontend is built against. Set
+            // "OpenApi:Enabled": false in appsettings to turn it off.
+            if (builder.Configuration.GetValue("OpenApi:Enabled", true))
             {
                 app.MapOpenApi();
                 app.MapScalarApiReference(options =>
