@@ -144,7 +144,7 @@ changed_mind, unlisted_item, other
 | enum | مقادیر |
 |---|---|
 | `ReturnStatus` | `open`, `in_progress`, `settled`, `rejected`, `cancelled` |
-| `ClaimScope` | `on_order`, `off_order` |
+| `ClaimScope` | `on_order`, `off_order` — در هر دو سمت همین دو مقدار؛ تفاوت فروش و خرید فقط در برچسب UI است |
 | `OffScopeKind` | `excess`, `unlisted` |
 | `EffectKind` | `goods_in`, `goods_out`, `money_in`, `money_out` |
 | `EffectStatus` | `pending`, `applied`, `void` |
@@ -270,16 +270,43 @@ canDelete = canCancel = canReject = هیچ اثری status=applied ندارد
 
 `ResponseDto { Data, Message, ResponseMessageType }` می‌ماند. فرانت آن را در interceptor باز می‌کند و `Message` را برای toast استفاده می‌کند. **کد وضعیت HTTP باید واقعی باشد** (`400` برای `ValidationCustomException`، `404` برای `NotFound`) — نه `200` با پیام خطا.
 
-### ۳.۳ enumها به‌صورت رشته
+### ۳.۳ enumها: رشته روی سیم، عدد در دیتابیس
 
-امروز هیچ `JsonStringEnumConverter` ثبت نشده، پس enumها **عدد** سریالایز می‌شوند در حالی که فرانت رشته می‌فرستد و انتظار رشته دارد.
+**تصمیم: enumها روی سیم رشته‌ای (`snake_case`) منتقل شوند.** این یک انتخاب سلیقه‌ای نیست؛ سه دلیلِ مشخص دارد:
+
+**۱. هیچ enum بک‌اند امروز مقدار صریح ندارد.** همه‌ی enumهای `Domain/Enums` ordinalِ ضمنی‌اند (تنها استثنا `UserRolesEnum.Admin = 1`). یعنی:
+
+```csharp
+public enum SalesReturnReasonEnum { DEFECTIVE, WRONG_ITEM, DAMAGED_IN_TRANSIT, ... }
+//                                     0            1              2
+```
+
+اگر روزی کسی یک عضو در وسط اضافه کند یا ترتیب را عوض کند، **همه‌ی ردیف‌های ذخیره‌شده و همه‌ی کلاینت‌ها بی‌صدا معنایشان عوض می‌شود**: عددِ `2` که «آسیب در حمل» بود می‌شود «انصراف مشتری». نه خطای کامپایل، نه تست شکسته، نه migration. enumِ `Problem` در مدل هدف ۱۴ عضو دارد که از ادغام سه فهرست ساخته شده — دقیقاً از آن نوعی که رشد می‌کند.
+
+**۲. انتخابِ سیم، ذخیره‌سازی را عوض نمی‌کند.** EF در هر دو حالت مقدار را `int` در ستون می‌نویسد. پس «عددی رفتن» هیچ سودی در حجم یا سرعت دیتابیس ندارد؛ فقط شکل JSON را عوض می‌کند.
+
+**۳. هزینه‌اش نامتقارن است.** برای بک‌اند رشته‌ای‌کردن یک خط است:
 
 ```csharp
 builder.Services.AddControllers().AddJsonOptions(o =>
     o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 ```
 
-مقادیر باید دقیقاً `snake_case` بند ۱.۲ باشند (نه `PascalCase`).
+مدل‌بایندینگِ query string هم با enumِ رشته‌ای خودکار کار می‌کند (`?status=in_progress`).
+
+در سمت فرانت اما عددی‌شدن یعنی یک مبدلِ بازگشتی روی کلِ درختِ سند، در هر خواندن و هر نوشتن: **۱۳ فیلد enum‌دار** که تا چهار سطح تودرتو هستند (`status`، `claims[].problem/scope/offScopeKind`، `effects[].kind/status/method`، `parts[].type`، `history[].observations[].problem`، و سمت درخواست `money.direction/method` و `issues[].type`). به‌علاوه ۳۴ جای دیگر که مقدار enum را مستقیم کلیدِ نقشه‌ی برچسب و استایل می‌کنند، و فیلترهایی که همین مقدار را در query string می‌گذارند.
+
+ضمناً در فاز ۲ سه فضای مقدارِ جدا (ادعای فروش، ادعای خرید، گزارش انبار) عمداً در یک فضا ادغام شدند تا جدول‌های ترجمه حذف شوند؛ عددی‌شدن همان جدول‌ها را برمی‌گرداند.
+
+**اگر با وجود این‌ها تصمیم بر عددی‌بودن شد**، دو شرط لازم است و هر دو کارِ بیشتری از converter دارند:
+
+1. **هر enum باید مقدار صریح بگیرد** و آن مقدارها هرگز عوض یا بازاستفاده نشوند:
+   ```csharp
+   public enum ReturnProblem { WrongItemShipped = 1, WrongItemInvoiced = 2, ... }
+   ```
+2. جدولِ تبدیل در فرانت در یک فایل متمرکز می‌شود: `Frontend/src/shared/domain/returns/apiEnums.js` — همان‌جا که امروز فهرستِ کاملِ فیلدهای enum‌دار نگه‌داری می‌شود. هیچ فایل دیگری دست نمی‌خورد.
+
+در هر دو حالت، فرانت در محیط توسعه مقادیرِ enum ورودی را وارسی می‌کند و مقدار ناشناخته (از جمله عددی که به‌جای رشته آمده) را با نام فیلد در کنسول گزارش می‌دهد — تا ناهماهنگی قرارداد روز اول اتصال دیده شود، نه در قالب یک بجِ خالی روی صفحه.
 
 ### ۳.۴ فهرست‌ها
 
@@ -433,7 +460,9 @@ GET /api/v1/sales-returns/{id}
 }
 ```
 
-> نام فیلد در بدنه `orderLineId` است؛ اگر ترجیح می‌دهید `saleItemId` بفرستید، فرانت هر دو را می‌پذیرد (`services/apiMapping.js`) — ولی یکی را انتخاب و ثابت نگه دارید.
+> **نام خطِ سند در کل قرارداد `orderLineId` است** — هم در درخواست، هم در پاسخ، هم در هر دو سمت خرید و فروش. اینکه ستونِ دیتابیس `SaleItemId` یا `PurchaseItemId` نام دارد جزئیاتِ ذخیره‌سازی است و به DTO سرایت نمی‌کند. دو نامِ متفاوت برای یک مفهوم یعنی یک ترجمه، و هر ترجمه یک جای اشتباه‌کردن.
+>
+> مقدارش برای `scope=on_order` همان `SaleItem.Id`/`PurchaseItem.Id` است و برای `off_order` تهی.
 
 ### ۴.۳ ثبت ادعا
 
@@ -450,7 +479,7 @@ Idempotency-Key: <uuid>
   "previousReturnId": null,
   "claims": [
     {
-      "saleItemId": 12,
+      "orderLineId": 12,
       "scope": "on_order",
       "offScopeKind": null,
       "productId": 1,
@@ -462,7 +491,7 @@ Idempotency-Key: <uuid>
       "note": ""
     },
     {
-      "saleItemId": null,
+      "orderLineId": null,
       "scope": "off_order",
       "offScopeKind": "excess",
       "productId": 4,
@@ -623,6 +652,7 @@ GET /api/v1/sales/{saleId}/for-return?excludeReturnId=9
 - `claimedHereQty` سهم مرجوعیِ جاری، `activeClaimedQty` سهم بقیه‌ی مرجوعی‌ها — فقط برای اطلاع کاربر.
 - اقلامی که سهمیه‌شان صفر شده هم باید برگردند (با `returnableQty: 0`)، چون ادعای `off_order` روی همان کالا هنوز ممکن است.
 - **نام فیلد سقف در هر دو سمت `returnableQty` است** (سمت خرید هم، نه `claimableQty`).
+- `orderLineId` هر قلم باید پر باشد؛ فرم با همین به خط سند ارجاع می‌دهد.
 
 ### ۴.۹ صف و عملیات انبار
 

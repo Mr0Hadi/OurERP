@@ -151,7 +151,7 @@ export function useSalesReturnForm() {
     (line.claims || [])
       .filter((claim) => (Number(claim.qty) || 0) > 0)
       .map((claim) => ({
-        scope: CLAIM_SCOPES.ON_INVOICE,
+        scope: CLAIM_SCOPES.ON_ORDER,
         offScopeKind: null,
         orderLineId: line.orderLineId,
         productId: line.productId,
@@ -168,7 +168,7 @@ export function useSalesReturnForm() {
   const preparedOffInvoiceClaims = offInvoiceClaims
     .filter((claim) => (Number(claim.qty) || 0) > 0)
     .map((claim) => ({
-      scope: CLAIM_SCOPES.OFF_INVOICE,
+      scope: CLAIM_SCOPES.OFF_ORDER,
       offScopeKind: claim.offScopeKind,
       // ادعای خارج از فاکتور روی هیچ خطی نمی‌نشیند.
       orderLineId: null,

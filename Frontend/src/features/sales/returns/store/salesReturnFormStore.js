@@ -44,7 +44,7 @@ export const useSalesReturnFormStore = create((set, get) => ({
           // متفاوت باشد و آن دو خط سهمیه‌ی جدا دارند.
           lineKey: `${sale.saleId}-${item.id}`,
           orderLineId: item.id,
-          scope: CLAIM_SCOPES.ON_INVOICE,
+          scope: CLAIM_SCOPES.ON_ORDER,
           productId: item.productId,
           productCode: item.productCode,
           productName: item.productName,

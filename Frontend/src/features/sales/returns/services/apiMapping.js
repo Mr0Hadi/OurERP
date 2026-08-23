@@ -1,25 +1,28 @@
 // src/features/sales/returns/services/apiMapping.js
 
 /**
- * تنها نقطه‌ی ترجمه بین نامِ فرانت و نامِ بک‌اند در مرجوعی فروش.
+ * مرزِ سندِ مرجوعی فروش با سرور.
  *
- * فرانت خطِ سند را در همه‌جا `orderLineId` صدا می‌زند — نامی خنثی که
- * هم برای فاکتور فروش کار می‌کند و هم برای سفارش خرید، و به همین دلیل
- * کامپوننت‌های مشترک (`ClaimsSection`, `buildGoodsLines`, ...) بدون
- * هیچ شرطِ سمت‌به‌سمت کار می‌کنند.
+ * خطِ سند در *کل* قرارداد یک نام دارد: `orderLineId`. نامی خنثی که هم
+ * برای فاکتور فروش کار می‌کند و هم برای سفارش خرید — و به همین دلیل
+ * کامپوننت‌ها و دامنه‌ی مشترک (`ClaimsSection`, `buildGoodsLines`,
+ * `orderContext`) بدون هیچ شرطِ سمت‌به‌سمت کار می‌کنند.
  *
- * بک‌اند اما هر سمت را با نامِ خودش می‌شناسد (`SaleItemId` /
- * `PurchaseItemId`). ترجمه عمداً *فقط* اینجاست: اگر در کامپوننت‌ها
- * پخش شود، هر تغییری در قرارداد به ده فایل سرایت می‌کند.
+ * عمداً دو نامِ متفاوت برای دو سمت نداریم: هر جفت‌نامی یعنی یک ترجمه،
+ * و هر ترجمه‌ای یعنی جایی که می‌شود اشتباه کرد. اینکه ستونِ بک‌اند
+ * `SaleItemId` یا `PurchaseItemId` نام دارد، جزئیاتِ ذخیره‌سازیِ آن
+ * سمت است و به قرارداد ربطی ندارد.
  *
- * بقیه‌ی سندِ مرجوعی (ادعا، تصمیم، اثر) بدون ترجمه رد می‌شود — قرارداد
- * همان مدلی است که فرانت دارد و بک‌اند قرار است به آن مهاجرت کند
- * (`docs/returns/phase1-analysis.fa.md`).
+ * برای همین این ماژول تقریباً خالی است و این نشانه‌ی خوبی است. فقط
+ * خواندنِ `saleItemId` را هم تحمل می‌کند تا اگر سرور موقتاً نام
+ * قدیمی را فرستاد، صفحه سفید نشود.
  */
+
+import { verifyReturnEnums } from "@/shared/domain/returns/apiEnums";
 
 export function toApiClaim(claim) {
   return {
-    saleItemId: claim.orderLineId ?? null,
+    orderLineId: claim.orderLineId ?? null,
     scope: claim.scope,
     offScopeKind: claim.offScopeKind ?? null,
     productId: claim.productId ?? null,
@@ -41,5 +44,9 @@ function fromApiClaim(claim) {
 
 export function fromApiReturn(doc) {
   if (!doc) return doc;
+  // در حالت توسعه، مقادیر enum با فضای مقدارِ فرانت سنجیده می‌شوند تا
+  // ناهماهنگیِ قرارداد همان لحظه در کنسول دیده شود، نه به‌صورت یک بجِ
+  // خالی روی صفحه.
+  if (import.meta.env?.DEV) verifyReturnEnums(doc);
   return { ...doc, claims: (doc.claims || []).map(fromApiClaim) };
 }

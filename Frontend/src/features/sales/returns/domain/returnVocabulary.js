@@ -7,6 +7,10 @@ import {
   problemStyles,
   problemSubset,
 } from "@/shared/domain/returns/problems";
+import {
+  CLAIM_SCOPES,
+  OFF_SCOPE_KINDS,
+} from "@/shared/domain/returns/scopes";
 
 /**
  * واژگانِ پایه‌ی مرجوعی فروش.
@@ -52,47 +56,29 @@ export const RETURN_PROBLEM_STYLES = problemStyles(SALES_CLAIM_PROBLEMS);
  * مشتری ارسال شده)، یا اصلاً بیرون از فاکتور است.
  *
  * قرینه‌ی «مازاد» در مرجوعی خرید. بدون این، خطای انباردار در ارسالِ
- * کالای اضافه یا کالایی که در فاکتور نیست، هیچ راه ثبتی ندارد — و
- * دقیقاً یکی از سه مقصرِ صورت‌مسئله همین است.
+ * کالای اضافه یا کالایی که در فاکتور نیست، هیچ راه ثبتی ندارد.
  *
- * برخلاف خرید، اینجا کالای «ناشناس» نداریم: هرچه دست مشتری است از
- * انبار ما بیرون رفته، پس همیشه یک productId واقعی دارد.
+ * مقدارها از دامنه‌ی مشترک می‌آیند (scopes.js) و فقط برچسب‌ها اینجا
+ * به زبان فروش نوشته شده‌اند. برخلاف خرید، اینجا کالای «ناشناس»
+ * نداریم: هرچه دست مشتری است از انبار ما بیرون رفته، پس همیشه یک
+ * productId واقعی دارد.
  */
-export const CLAIM_SCOPES = {
-  ON_INVOICE: "on_invoice",
-  OFF_INVOICE: "off_invoice",
-};
+export {
+  CLAIM_SCOPES,
+  OFF_SCOPE_KINDS as OFF_INVOICE_KINDS,
+  OFF_SCOPE_KIND_STYLES as OFF_INVOICE_KIND_STYLES,
+  isOffScope as isOffInvoice,
+} from "@/shared/domain/returns/scopes";
 
 export const CLAIM_SCOPE_LABELS = {
-  [CLAIM_SCOPES.ON_INVOICE]: "روی فاکتور",
-  [CLAIM_SCOPES.OFF_INVOICE]: "خارج از فاکتور",
-};
-
-/**
- * وقتی ادعا خارج از فاکتور است، دو حالت دارد که رفتار قیمتی‌شان فرق
- * می‌کند: EXCESS قیمت واحدِ همان خط فاکتور را دارد، UNLISTED باید
- * قیمتش از کالا خوانده یا دستی وارد شود (چون خط فاکتوری ندارد).
- */
-export const OFF_INVOICE_KINDS = {
-  EXCESS: "excess",
-  UNLISTED: "unlisted",
+  [CLAIM_SCOPES.ON_ORDER]: "روی فاکتور",
+  [CLAIM_SCOPES.OFF_ORDER]: "خارج از فاکتور",
 };
 
 export const OFF_INVOICE_KIND_LABELS = {
-  [OFF_INVOICE_KINDS.EXCESS]: "بیش از مقدار ارسال‌شده",
-  [OFF_INVOICE_KINDS.UNLISTED]: "کالای خارج از فاکتور",
+  [OFF_SCOPE_KINDS.EXCESS]: "بیش از مقدار ارسال‌شده",
+  [OFF_SCOPE_KINDS.UNLISTED]: "کالای خارج از فاکتور",
 };
-
-export const OFF_INVOICE_KIND_STYLES = {
-  [OFF_INVOICE_KINDS.EXCESS]:
-    "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/40 dark:border-sky-800 dark:text-sky-400",
-  [OFF_INVOICE_KINDS.UNLISTED]:
-    "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:border-violet-800 dark:text-violet-400",
-};
-
-export function isOffInvoice(claim) {
-  return claim?.scope === CLAIM_SCOPES.OFF_INVOICE;
-}
 
 // ─── وضعیت مرجوعی ───────────────────────────────────────────────────────────
 

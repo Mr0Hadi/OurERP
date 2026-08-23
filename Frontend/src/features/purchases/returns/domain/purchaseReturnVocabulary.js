@@ -7,6 +7,10 @@ import {
   problemStyles,
   problemSubset,
 } from "@/shared/domain/returns/problems";
+import {
+  CLAIM_SCOPES,
+  OFF_SCOPE_KINDS,
+} from "@/shared/domain/returns/scopes";
 
 /**
  * واژگانِ مخصوصِ مرجوعی خرید.
@@ -55,39 +59,27 @@ export const PURCHASE_RETURN_PROBLEM_STYLES = problemStyles(
 /**
  * ادعا یا روی یک خط سفارش می‌نشیند (سقفش مقدار سفارش‌شده)، یا بیرون
  * از سفارش است — کالایی که تامین‌کننده فرستاده ولی سفارش توجیهش
- * نمی‌کند. همان تقسیم‌بندیِ «مازاد» قبلی، با این تفاوت که دیگر
- * تصمیم‌های مجاز را محدود نمی‌کند.
+ * نمی‌کند.
+ *
+ * مقدارها از دامنه‌ی مشترک می‌آیند (scopes.js)؛ فقط برچسب‌ها به زبان
+ * خرید نوشته شده‌اند.
  */
-export const CLAIM_SCOPES = {
-  ON_ORDER: "on_order",
-  OFF_ORDER: "off_order",
-};
+export {
+  CLAIM_SCOPES,
+  OFF_SCOPE_KINDS as OFF_ORDER_KINDS,
+  OFF_SCOPE_KIND_STYLES as OFF_ORDER_KIND_STYLES,
+  isOffScope as isOffOrder,
+} from "@/shared/domain/returns/scopes";
 
 export const CLAIM_SCOPE_LABELS = {
   [CLAIM_SCOPES.ON_ORDER]: "روی سفارش",
   [CLAIM_SCOPES.OFF_ORDER]: "خارج از سفارش",
 };
 
-export const OFF_ORDER_KINDS = {
-  EXCESS: "excess",
-  UNLISTED: "unlisted",
-};
-
 export const OFF_ORDER_KIND_LABELS = {
-  [OFF_ORDER_KINDS.EXCESS]: "بیش از مقدار سفارش",
-  [OFF_ORDER_KINDS.UNLISTED]: "کالای خارج از سفارش",
+  [OFF_SCOPE_KINDS.EXCESS]: "بیش از مقدار سفارش",
+  [OFF_SCOPE_KINDS.UNLISTED]: "کالای خارج از سفارش",
 };
-
-export const OFF_ORDER_KIND_STYLES = {
-  [OFF_ORDER_KINDS.EXCESS]:
-    "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/40 dark:border-sky-800 dark:text-sky-400",
-  [OFF_ORDER_KINDS.UNLISTED]:
-    "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:border-violet-800 dark:text-violet-400",
-};
-
-export function isOffOrder(claim) {
-  return claim?.scope === CLAIM_SCOPES.OFF_ORDER;
-}
 
 // ─── وضعیت ──────────────────────────────────────────────────────────────────
 
