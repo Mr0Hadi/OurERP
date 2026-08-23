@@ -1,6 +1,8 @@
 // features/warehouse/components/ProductFilters.jsx
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
@@ -11,7 +13,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
+import BarcodeScanField from "@/shared/components/barcode/BarcodeScanField";
 import { useProductFilterStore } from "../../store/productFilterStore";
+import { fetchProductByBarcode } from "../../services/queries";
+import { ROUTES } from "@/shared/constants/routes";
 
 // ─── ثابت‌ها (خارج از کامپوننت تا در هر رندر بازسازی نشوند) ─────────────────
 
@@ -139,6 +144,8 @@ const PriceInput = ({ label, value, onChange, placeholder }) => (
  * - محدوده قیمت (حداقل / حداکثر)
  */
 const ProductFilters = () => {
+  const navigate = useNavigate();
+  const [isScanning, setIsScanning] = useState(false);
   const {
     globalSearch,
     brand,
@@ -164,8 +171,33 @@ const ProductFilters = () => {
     [minPrice, setPriceRange]
   );
 
+  // اسکن یک کالا را دقیقاً شناسایی می‌کند، پس به‌جای فیلترکردن لیست،
+  // مستقیم کاربر را به جزئیات همان کالا می‌برد — همان «انتخاب».
+  const handleScan = async (code) => {
+    setIsScanning(true);
+    try {
+      const product = await fetchProductByBarcode(code);
+      if (!product) {
+        toast.error(`کالایی با کد «${code}» پیدا نشد`);
+        return;
+      }
+      navigate(ROUTES.WAREHOUSE_PRODUCTS_DETAIL.replace(":id", product.id));
+    } catch {
+      toast.error("خطا در جست‌وجوی بارکد");
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
   return (
     <div className="p-3 bg-card border border-border rounded-xl shadow-sm space-y-3">
+      <BarcodeScanField
+        onScan={handleScan}
+        placeholder={
+          isScanning ? "در حال جست‌وجو..." : "اسکن بارکد برای رفتن به کالا..."
+        }
+      />
+
       {/* ردیف اول: جستجو، برند، دسته‌بندی، وضعیت موجودی */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* جستجوی متنی */}

@@ -87,7 +87,8 @@ export const fetchProducts = async (params) => {
     filteredProducts = filteredProducts.filter(p =>
       p.code.toLowerCase().includes(searchTerm) ||
       p.name.toLowerCase().includes(searchTerm) ||
-      p.brand.toLowerCase().includes(searchTerm)
+      p.brand.toLowerCase().includes(searchTerm) ||
+      p.barcode?.toLowerCase().includes(searchTerm)
     );
   }
 
@@ -152,6 +153,18 @@ export const fetchProductById = async (id) => {
   const product = allProducts.find((p) => Number(p.id) === Number(id));
   if (!product) throw new Error('محصول یافت نشد');
   return product;
+};
+
+/** جست‌وجوی دقیق با بارکد یا کد کالا — برای اسکن. */
+export const fetchProductByBarcode = async (code) => {
+  await delay(200);
+  const term = String(code ?? '').trim();
+  if (!term) return null;
+  return (
+    allProducts.find((p) => p.barcode === term) ||
+    allProducts.find((p) => p.code === term) ||
+    null
+  );
 };
 
 export const createProduct = async (productData) => {

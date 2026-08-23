@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Plus, Search } from "lucide-react";
+import toast from "react-hot-toast";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import {
@@ -9,15 +10,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
+import BarcodeScanField from "@/shared/components/barcode/BarcodeScanField";
 
 /**
  * جست‌وجو و انتخاب کالا برای افزودن به اقلام.
  * قیمت اولیه‌ی هر قلم را خودِ فراخوان در onAdd تعیین می‌کند،
  * چون در خرید و فروش از دو فیلد قیمت متفاوت خوانده می‌شود.
+ *
+ * اسکن بارکد همان مسیرِ افزودنِ دستی را طی می‌کند: کالای منطبق پیدا و
+ * مستقیم به onAdd داده می‌شود — بدون نیاز به کلیک روی دکمه‌ی افزودن.
  */
 export default function ProductSearchPanel({ products, isAdded, onAdd }) {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+
+  const handleScan = (code) => {
+    const product = products.find(
+      (p) => p.barcode === code || p.code === code,
+    );
+    if (!product) {
+      toast.error(`کالایی با کد «${code}» پیدا نشد`);
+      return;
+    }
+    if (isAdded(product.id)) {
+      toast(`«${product.name}» قبلاً اضافه شده است`);
+      return;
+    }
+    onAdd(product);
+    toast.success(`«${product.name}» اضافه شد`);
+  };
 
   const categories = useMemo(() => {
     const cats = [...new Set(products.map((p) => p.category).filter(Boolean))];
@@ -31,7 +52,8 @@ export default function ProductSearchPanel({ products, isAdded, onAdd }) {
         !term ||
         p.name?.toLowerCase().includes(term) ||
         p.code?.toLowerCase().includes(term) ||
-        p.brand?.toLowerCase().includes(term);
+        p.brand?.toLowerCase().includes(term) ||
+        p.barcode?.toLowerCase().includes(term);
       const matchCategory = !categoryFilter || p.category === categoryFilter;
       return matchSearch && matchCategory;
     });
@@ -39,6 +61,8 @@ export default function ProductSearchPanel({ products, isAdded, onAdd }) {
 
   return (
     <div className="space-y-3">
+      <BarcodeScanField onScan={handleScan} />
+
       {/* سطر جست‌وجو + فیلتر دسته‌بندی */}
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">

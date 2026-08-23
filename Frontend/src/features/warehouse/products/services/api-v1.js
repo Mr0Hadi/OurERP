@@ -23,6 +23,16 @@ export const fetchProductById = async (id) => {
   return data;
 };
 
+/** جست‌وجوی دقیق با بارکد یا کد کالا — برای اسکن. */
+export const fetchProductByBarcode = async (code) => {
+  const { data } = await axiosInstance.get("/products", {
+    params: { search: code, limit: 1 },
+  });
+  const product = data?.items?.[0];
+  if (!product) return null;
+  return product.barcode === code || product.code === code ? product : null;
+};
+
 export const createProduct = async (productData) => {
   const { data } = await axiosInstance.post("/products", productData);
   return data;
