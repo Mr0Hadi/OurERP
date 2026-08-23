@@ -132,8 +132,8 @@ export default function OffScopeClaimsSection({
             ) : (
               <ProductSearchPanel
                 products={products}
-                isAdded={(product) =>
-                  claims.some((c) => c.productId === product.id)
+                isAdded={(productId) =>
+                  claims.some((c) => c.productId === productId)
                 }
                 onAdd={(product) =>
                   onAdd({

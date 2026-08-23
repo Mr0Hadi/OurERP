@@ -101,6 +101,19 @@ export function usePurchaseReturnForm() {
   // ─── ادعاهای خارج از فاکتور ───────────────────────────────────────
 
   const handleAddOffScopeClaim = (product, kind = OFF_ORDER_KINDS.EXCESS) => {
+    const existing = offScopeClaims.find(
+      (c) => c.productId === product.productId,
+    );
+    if (existing) {
+      setOffScopeClaims(
+        offScopeClaims.map((c) =>
+          c.id === existing.id
+            ? { ...c, qty: (Number(c.qty) || 0) + 1 }
+            : c,
+        ),
+      );
+      return;
+    }
     setOffScopeClaims([
       ...offScopeClaims,
       {

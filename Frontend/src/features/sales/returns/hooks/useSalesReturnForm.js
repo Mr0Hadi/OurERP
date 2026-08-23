@@ -101,6 +101,19 @@ export function useSalesReturnForm() {
   // ─── ادعاهای خارج از فاکتور ───────────────────────────────────────
 
   const handleAddOffInvoiceClaim = (product, kind = OFF_INVOICE_KINDS.EXCESS) => {
+    const existing = offInvoiceClaims.find(
+      (c) => c.productId === product.productId,
+    );
+    if (existing) {
+      setOffInvoiceClaims(
+        offInvoiceClaims.map((c) =>
+          c.id === existing.id
+            ? { ...c, qty: (Number(c.qty) || 0) + 1 }
+            : c,
+        ),
+      );
+      return;
+    }
     setOffInvoiceClaims([
       ...offInvoiceClaims,
       {

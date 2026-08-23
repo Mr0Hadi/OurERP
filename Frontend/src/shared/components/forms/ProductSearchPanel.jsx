@@ -19,6 +19,9 @@ import BarcodeScanField from "@/shared/components/barcode/BarcodeScanField";
  *
  * اسکن بارکد همان مسیرِ افزودنِ دستی را طی می‌کند: کالای منطبق پیدا و
  * مستقیم به onAdd داده می‌شود — بدون نیاز به کلیک روی دکمه‌ی افزودن.
+ * اگر همان کالا قبلاً در لیست باشد، onAdd خودش تعدادش را زیاد می‌کند
+ * (هر کدام از فراخوان‌ها این را همان‌طور پیاده کرده‌اند) — این‌جا فقط
+ * پیامِ درست را نشان می‌دهیم.
  */
 export default function ProductSearchPanel({ products, isAdded, onAdd }) {
   const [search, setSearch] = useState("");
@@ -32,12 +35,13 @@ export default function ProductSearchPanel({ products, isAdded, onAdd }) {
       toast.error(`کالایی با کد «${code}» پیدا نشد`);
       return;
     }
-    if (isAdded(product.id)) {
-      toast(`«${product.name}» قبلاً اضافه شده است`);
-      return;
-    }
+    const wasAlreadyAdded = isAdded(product.id);
     onAdd(product);
-    toast.success(`«${product.name}» اضافه شد`);
+    toast.success(
+      wasAlreadyAdded
+        ? `تعداد «${product.name}» یکی افزایش یافت`
+        : `«${product.name}» اضافه شد`,
+    );
   };
 
   const categories = useMemo(() => {

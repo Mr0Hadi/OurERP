@@ -35,7 +35,16 @@ export default function GoodsItemsPicker({ items, onItemsChange }) {
   const products = useMemo(() => productsData?.items ?? [], [productsData]);
 
   const handleAdd = (product) => {
-    if (items.some((item) => item.productId === product.id)) return;
+    if (items.some((item) => item.productId === product.id)) {
+      onItemsChange(
+        items.map((item) =>
+          item.productId === product.id
+            ? { ...item, qty: item.qty + 1 }
+            : item,
+        ),
+      );
+      return;
+    }
     onItemsChange([
       ...items,
       {
@@ -112,8 +121,8 @@ export default function GoodsItemsPicker({ items, onItemsChange }) {
         ) : (
           <ProductSearchPanel
             products={products}
-            isAdded={(product) =>
-              items.some((item) => item.productId === product.id)
+            isAdded={(productId) =>
+              items.some((item) => item.productId === productId)
             }
             onAdd={handleAdd}
           />

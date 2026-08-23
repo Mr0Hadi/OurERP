@@ -21,7 +21,14 @@ export default function SaleItemsSection({
 
   const handleAddProduct = (product) => {
     const already = items.find((i) => i.productId === product.id);
-    if (already) return;
+    if (already) {
+      onItemsChange(
+        items.map((i) =>
+          i.productId === product.id ? { ...i, qty: i.qty + 1 } : i,
+        ),
+      );
+      return;
+    }
     onItemsChange([
       ...items,
       {
