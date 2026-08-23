@@ -37,6 +37,7 @@ import { PURCHASE_RETURN_STATUS_LABELS } from "../domain/purchaseReturnVocabular
 import PurchaseReturnResolutionSection from "../components/forms/PurchaseReturnResolutionSection";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
+import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 
 /**
  * جزئیات یک مرجوعی — یک ستون، به ترتیبِ کاری که کاربر انجام می‌دهد:
@@ -107,6 +108,18 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
           {purchaseReturn.description}
         </p>
       )}
+
+      <InvoiceDocumentSection
+        title="مرجوعی خرید"
+        invoiceNumber={purchaseReturn.returnNumber}
+        invoiceDate={purchaseReturn.returnDate}
+        partyLabel="تامین‌کننده"
+        partyName={purchaseReturn.supplierName}
+        items={purchaseReturn.claims}
+        totalAmount={purchaseReturn.totalClaimedAmount}
+        attachmentRequired
+        attachmentLabel="فاکتور یا رسید مرجوعی از تامین‌کننده"
+      />
 
       <PurchaseReturnResolutionSection
         purchaseReturn={purchaseReturn}

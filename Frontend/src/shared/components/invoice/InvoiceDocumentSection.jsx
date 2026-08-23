@@ -132,7 +132,7 @@ export default function InvoiceDocumentSection({
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold text-card-foreground">
-          سند فاکتور
+          سند {title}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -144,7 +144,7 @@ export default function InvoiceDocumentSection({
             onClick={handlePrint}
           >
             <Printer className="h-4 w-4" />
-            چاپ فاکتور
+            چاپ
           </Button>
           <Button
             type="button"
@@ -153,7 +153,7 @@ export default function InvoiceDocumentSection({
             onClick={handleDownload}
           >
             <Download className="h-4 w-4" />
-            دانلود فاکتور
+            دانلود
           </Button>
         </div>
 

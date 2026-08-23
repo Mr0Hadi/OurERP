@@ -37,6 +37,7 @@ import { SALES_RETURN_STATUS_LABELS } from "../domain/returnVocabulary";
 import SalesReturnResolutionSection from "../components/forms/SalesReturnResolutionSection";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
+import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 
 /**
  * جزئیات یک مرجوعی — یک ستون، به ترتیبِ کاری که کاربر انجام می‌دهد:
@@ -107,6 +108,17 @@ function SalesReturnDetailContent({ salesReturn }) {
           {salesReturn.description}
         </p>
       )}
+
+      <InvoiceDocumentSection
+        title="مرجوعی فروش"
+        invoiceNumber={salesReturn.returnNumber}
+        invoiceDate={salesReturn.returnDate}
+        partyLabel="مشتری"
+        partyName={salesReturn.customerName}
+        items={salesReturn.claims}
+        totalAmount={salesReturn.totalClaimedAmount}
+        attachmentLabel="فاکتور یا رسید مرجوعی برای مشتری"
+      />
 
       <SalesReturnResolutionSection
         salesReturn={salesReturn}
