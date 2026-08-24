@@ -49,10 +49,11 @@ const { GOODS_IN, GOODS_OUT, MONEY_IN, MONEY_OUT } = EFFECT_KINDS;
  * پول به کدام سمت می‌رود — نسبت به ما. RECEIVE یعنی پول به حساب ما
  * می‌آید و PAY یعنی از حساب ما می‌رود.
  */
+// بدون معادل در بکند — محور داخلیِ فرمِ ترکیب تصمیم است.
 export const MONEY_DIRECTIONS = {
-  NONE: "none",
-  RECEIVE: "receive",
-  PAY: "pay",
+  NONE: 0,
+  RECEIVE: 1,
+  PAY: 2,
 };
 
 /**

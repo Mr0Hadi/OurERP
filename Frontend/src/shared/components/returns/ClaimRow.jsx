@@ -26,16 +26,18 @@ export default function ClaimRow({
   return (
     <div className="rounded-md border border-border bg-card p-1.5 space-y-1.5">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5">
+        {/* problem یک enum عددی است ولی Radix همیشه رشته می‌دهد و
+            می‌گیرد — پس در همین مرز تبدیل می‌شود. */}
         <Select
-          value={claim.problem}
-          onValueChange={(v) => onUpdate(claim.id, "problem", v)}
+          value={claim.problem == null ? "" : String(claim.problem)}
+          onValueChange={(v) => onUpdate(claim.id, "problem", Number(v))}
         >
           <SelectTrigger className="h-8 text-xs sm:w-52 shrink-0">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {problemOptions.map(([value, label]) => (
-              <SelectItem key={value} value={value}>
+              <SelectItem key={value} value={String(value)}>
                 {label}
               </SelectItem>
             ))}

@@ -80,6 +80,7 @@ const SalesReturnFilters = ({ customers = [], isCustomersLoading = false }) => {
         onChange={setStatus}
         allLabel="همه وضعیت‌ها"
         options={STATUS_OPTIONS}
+        numeric
       />
 
       <FilterSelect
@@ -88,6 +89,7 @@ const SalesReturnFilters = ({ customers = [], isCustomersLoading = false }) => {
         onChange={setProblem}
         allLabel="همه مشکل‌ها"
         options={PROBLEM_OPTIONS}
+        numeric
       />
 
       <FilterSelect
@@ -96,6 +98,7 @@ const SalesReturnFilters = ({ customers = [], isCustomersLoading = false }) => {
         onChange={setScope}
         allLabel="همه"
         options={SCOPE_OPTIONS}
+        numeric
       />
     </FilterPanel>
   );

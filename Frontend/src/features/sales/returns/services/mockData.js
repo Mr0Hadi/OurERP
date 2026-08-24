@@ -109,7 +109,7 @@ function buildClaim({ saleItem, qty, problem, scope, offScopeKind }) {
  * نمی‌کشد) و هم تصمیمی که کالا را برمی‌گرداند.
  */
 function seedResolutions(claim, target) {
-  if (target === "open") return;
+  if (target === SALES_RETURN_STATUSES.OPEN) return;
 
   const money = (direction, amount, method = PAYMENT_METHODS.CASH) => ({
     direction,
@@ -119,7 +119,7 @@ function seedResolutions(claim, target) {
     parts: [],
   });
 
-  if (target === "in_progress") {
+  if (target === SALES_RETURN_STATUSES.IN_PROGRESS) {
     // ترکیبی با اثر کالاییِ معلق — همان چیزی که انبار باید ببیند.
     // نیمی از نمونه‌ها «پس‌گرفتن + بازگشت وجه» (صف دریافت) و نیم دیگر
     // «پس‌گرفتن + ارسال جایگزین» (هر دو صف) می‌گیرند، تا داده‌ی اولیه
@@ -157,7 +157,7 @@ function seedResolutions(claim, target) {
     return;
   }
 
-  // target === "settled" — فقط ترکیب‌های بدون اثر کالایی، تا وضعیت
+  // target === SALES_RETURN_STATUSES.SETTLED — فقط ترکیب‌های بدون اثر کالایی، تا وضعیت
   // مشتق‌شده بدون دخالت انبار به SETTLED برسد.
   // برای اینکه داده‌ی اولیه هر پنج روش را نشان بدهد، روشِ هر نمونه
   // چرخشی انتخاب می‌شود.
@@ -190,10 +190,10 @@ function seedResolutions(claim, target) {
 // ─── ساخت مرجوعی از روی یک فروش ─────────────────────────────────────────────
 
 const SEED_TARGETS = [
-  "open",
-  "in_progress",
-  "settled",
-  "settled",
+  SALES_RETURN_STATUSES.OPEN,
+  SALES_RETURN_STATUSES.IN_PROGRESS,
+  SALES_RETURN_STATUSES.SETTLED,
+  SALES_RETURN_STATUSES.SETTLED,
   SALES_RETURN_STATUSES.REJECTED,
   SALES_RETURN_STATUSES.CANCELLED,
 ];
@@ -259,7 +259,7 @@ function buildReturnFromSale(sale, index) {
 
   // برای هدفِ settled، اثرهای کالاییِ معلق باید «اجراشده» شوند وگرنه
   // وضعیت مشتق‌شده هرگز به SETTLED نمی‌رسد.
-  if (target === "settled") markAllGoodsEffectsDone(record);
+  if (target === SALES_RETURN_STATUSES.SETTLED) markAllGoodsEffectsDone(record);
 
   record.status = isExplicitlyClosed ? target : deriveReturnStatus(record);
   return record;

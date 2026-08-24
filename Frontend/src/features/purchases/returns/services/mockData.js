@@ -93,7 +93,7 @@ function buildClaim({ purchaseItem, qty, problem, scope, offScopeKind }) {
  * صف انبار (عودت و دریافت جایگزین) پر شوند.
  */
 function seedResolutions(claim, target) {
-  if (target === "open") return;
+  if (target === PURCHASE_RETURN_STATUSES.OPEN) return;
 
   const money = (direction, amount, method = PAYMENT_METHODS.CASH) => ({
     direction,
@@ -103,7 +103,7 @@ function seedResolutions(claim, target) {
     parts: [],
   });
 
-  if (target === "in_progress") {
+  if (target === PURCHASE_RETURN_STATUSES.IN_PROGRESS) {
     const half = Math.max(1, Math.floor(claim.qty / 2));
     const withReplacement = Math.random() < 0.5;
 
@@ -127,7 +127,7 @@ function seedResolutions(claim, target) {
     return;
   }
 
-  // target === "settled" — فقط ترکیب‌های بدون اثر کالایی، تا وضعیتِ
+  // target === PURCHASE_RETURN_STATUSES.SETTLED — فقط ترکیب‌های بدون اثر کالایی، تا وضعیتِ
   // مشتق‌شده بدون دخالت انبار به SETTLED برسد.
   const isOffOrder = claim.scope === CLAIM_SCOPES.OFF_ORDER;
   const direction = isOffOrder
@@ -154,10 +154,10 @@ function seedResolutions(claim, target) {
 // ─── ساخت مرجوعی از روی یک خرید ─────────────────────────────────────────────
 
 const SEED_TARGETS = [
-  "open",
-  "in_progress",
-  "settled",
-  "settled",
+  PURCHASE_RETURN_STATUSES.OPEN,
+  PURCHASE_RETURN_STATUSES.IN_PROGRESS,
+  PURCHASE_RETURN_STATUSES.SETTLED,
+  PURCHASE_RETURN_STATUSES.SETTLED,
   PURCHASE_RETURN_STATUSES.REJECTED,
   PURCHASE_RETURN_STATUSES.CANCELLED,
 ];
@@ -217,7 +217,7 @@ function buildReturnFromPurchase(purchase, index) {
     updatedAt: createdDate.toISOString(),
   };
 
-  if (target === "settled") markAllGoodsEffectsDone(record);
+  if (target === PURCHASE_RETURN_STATUSES.SETTLED) markAllGoodsEffectsDone(record);
 
   record.status = isExplicitlyClosed ? target : deriveReturnStatus(record);
   return record;

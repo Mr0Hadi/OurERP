@@ -119,7 +119,7 @@ section("ترکیب خالی هیچ اثری نمی‌سازد");
 section("فقط پس‌گرفتن کالا");
 {
   const fx = expandComposition(comp({ qty: 4, goodsIn: { enabled: true, items: [] } }), mkClaim());
-  check("یک اثر GOODS_IN", kindsOf(fx).join() === EFFECT_KINDS.GOODS_IN);
+  check("یک اثر GOODS_IN", kindsOf(fx).join() === String(EFFECT_KINDS.GOODS_IN));
   check("تعدادش درست است", fx[0].qty === 4);
   check("معلق است تا انبار تحویل بگیرد", fx[0].status === EFFECT_STATUSES.PENDING);
 }
@@ -152,7 +152,7 @@ section("اعتبار خرید بعدی — یک روشِ پرداخت، نه ی
     }),
     mkClaim(),
   );
-  check("یک اثر MONEY_OUT", kindsOf(fx).join() === EFFECT_KINDS.MONEY_OUT);
+  check("یک اثر MONEY_OUT", kindsOf(fx).join() === String(EFFECT_KINDS.MONEY_OUT));
   check("روشش اعتبار خرید بعدی است", fx[0].method === PAYMENT_METHODS.STORE_CREDIT);
   check("روی مبلغ فاکتور اثر نمی‌گذارد", affectsInvoiceTotal(fx[0].method) === false);
   check(
@@ -184,9 +184,9 @@ section("نسیه و ترکیبی");
   const mixedMoney = money(MONEY_DIRECTIONS.PAY, "", {
     method: PAYMENT_METHODS.MIXED,
     parts: [
-      { type: "cash", amount: 1_000_000 },
-      { type: "check", amount: 2_500_000, checkNumber: "۱۲۳" },
-      { type: "transfer", amount: 0 },
+      { type: PAYMENT_METHODS.CASH, amount: 1_000_000 },
+      { type: PAYMENT_METHODS.CHECK, amount: 2_500_000, checkNumber: "۱۲۳" },
+      { type: PAYMENT_METHODS.TRANSFER, amount: 0 },
     ],
   });
   check(
@@ -205,7 +205,7 @@ section("نسیه و ترکیبی");
         qty: 2,
         money: money(MONEY_DIRECTIONS.PAY, "", {
           method: PAYMENT_METHODS.MIXED,
-          parts: [{ type: "cash", amount: 0 }],
+          parts: [{ type: PAYMENT_METHODS.CASH, amount: 0 }],
         }),
       }),
       mkClaim(),
@@ -234,7 +234,7 @@ section("دریافت وجه از مشتری (کالای اضافه‌ای که 
     comp({ qty: 3, money: money(MONEY_DIRECTIONS.RECEIVE, 6_000_000) }),
     off,
   );
-  check("یک اثر MONEY_IN", kindsOf(fx).join() === EFFECT_KINDS.MONEY_IN);
+  check("یک اثر MONEY_IN", kindsOf(fx).join() === String(EFFECT_KINDS.MONEY_IN));
   check("مبلغ درست", fx[0].amount === 6_000_000);
 }
 

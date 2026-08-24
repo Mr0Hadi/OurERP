@@ -17,6 +17,7 @@ import PaymentSummary from "@/shared/components/forms/PaymentSummary";
 import MixedPaymentList from "@/shared/components/forms/MixedPaymentList";
 import { useSyncedComputedValue } from "@/shared/hooks/useSyncedComputedValue";
 import { PaymentTypeEnum, PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
+import { PAYMENT_METHODS } from "@/shared/domain/returns/effects";
 
 /**
  * بخش پرداختِ یک سند خرید یا فروش.
@@ -38,7 +39,7 @@ const PAYMENT_TYPE_OPTIONS = Object.entries(PAYMENT_TYPE_LABELS).map(
 );
 
 const EMPTY_MIXED_PAYMENT = {
-  type: "cash",
+  type: PAYMENT_METHODS.CASH,
   amount: "",
   checkNumber: "",
   transferRef: "",

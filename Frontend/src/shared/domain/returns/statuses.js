@@ -13,13 +13,19 @@
  *
  * REJECTED و CANCELLED مشتق نمی‌شوند؛ اکشن صریح‌اند و روی رکورد
  * می‌نشینند.
+ *
+ * مقادیر عمداً با شماره‌ی PurchaseReturnStatusEnum/SaleReturnStatusEnum
+ * بکند یکی است (بخش ۱۵ سند api-guide.fa.md) — هر دو enum بکند همین
+ * ترتیب را دارند (فقط اسم عضوِ اول فرق دارد: PENDING در خرید،
+ * PENDING_INSPECTION در فروش)، پس یک enum مشترک اینجا هم برای خرید هم
+ * فروش کافی است.
  */
 export const RETURN_STATUSES = {
-  OPEN: "open",
-  IN_PROGRESS: "in_progress",
-  SETTLED: "settled",
-  REJECTED: "rejected",
-  CANCELLED: "cancelled",
+  OPEN: 0,
+  IN_PROGRESS: 1,
+  SETTLED: 2,
+  REJECTED: 3,
+  CANCELLED: 4,
 };
 
 export const RETURN_STATUS_STYLES = {

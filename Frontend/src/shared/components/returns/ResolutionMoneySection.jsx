@@ -18,7 +18,12 @@ import {
   REFERENCE_LABELS,
 } from "@/shared/domain/returns/effects";
 
-const EMPTY_PART = { type: "cash", amount: "", checkNumber: "", transferRef: "" };
+const EMPTY_PART = {
+  type: PAYMENT_METHODS.CASH,
+  amount: "",
+  checkNumber: "",
+  transferRef: "",
+};
 
 /**
  * بخش پول یک تصمیم: به کدام سمت، از چه راهی، چقدر.
@@ -78,25 +83,27 @@ export default function ResolutionMoneySection({
       <div className="space-y-2 rounded-md border border-border bg-card/60 p-2.5">
         <div className="space-y-1">
           <Label className="text-[11px] text-muted-foreground">روش</Label>
+          {/* روش پرداخت enum عددی است؛ Radix فقط رشته می‌شناسد. */}
           <Select
-            value={method}
-            onValueChange={(value) =>
+            value={String(method)}
+            onValueChange={(raw) => {
+              const nextMethod = Number(raw);
               onChange({
-                method: value,
+                method: nextMethod,
                 reference: "",
                 parts:
-                  value === PAYMENT_METHODS.MIXED && parts.length === 0
+                  nextMethod === PAYMENT_METHODS.MIXED && parts.length === 0
                     ? [{ ...EMPTY_PART, amount: String(defaultAmount ?? "") }]
                     : parts,
-              })
-            }
+              });
+            }}
           >
             <SelectTrigger className="h-8 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {methodOptions.map((value) => (
-                <SelectItem key={value} value={value}>
+                <SelectItem key={value} value={String(value)}>
                   {PAYMENT_METHOD_LABELS[value]}
                 </SelectItem>
               ))}
@@ -156,8 +163,10 @@ export default function ResolutionMoneySection({
 function DirectionSelect({ direction, money, onChange, options, defaultAmount }) {
   return (
     <Select
-      value={direction}
-      onValueChange={(value) => {
+      value={String(direction)}
+      onValueChange={(raw) => {
+        // جهت هم enum عددی است — Radix رشته می‌دهد.
+        const value = Number(raw);
         // با عوض‌شدن جهت، روشی که برای جهت تازه مجاز نیست باید کنار
         // برود — وگرنه «اعتبار خرید بعدی» روی «دریافت از مشتری» جا
         // می‌ماند و اعتبارسنجی بی‌دلیل شکست می‌خورد.
@@ -179,7 +188,7 @@ function DirectionSelect({ direction, money, onChange, options, defaultAmount })
       </SelectTrigger>
       <SelectContent>
         {options.map(([value, label]) => (
-          <SelectItem key={value} value={value}>
+          <SelectItem key={value} value={String(value)}>
             {label}
           </SelectItem>
         ))}

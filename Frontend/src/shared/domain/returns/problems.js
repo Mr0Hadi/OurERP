@@ -21,27 +21,32 @@
  * و هم دو سمتِ مرجوعی بتوانند بدون حلقه‌ی وابستگی از آن استفاده کنند.
  */
 
+// بدون معادل یک‌به‌یک در بکند: PurchaseIssueTypeEnum (۷ عضو)،
+// SalesReturnReasonEnum (۷ عضو) و SalesReturnIssueTypeEnum (۵ عضو) هر
+// کدام enum بسته‌ی جدا هستند؛ این فهرست، فضای مقدارِ ترکیبی خودِ فرانت
+// است که هر سه را زیرمجموعه می‌کند (SALES_CLAIM_PROBLEMS/
+// PURCHASE_CLAIM_PROBLEMS/OBSERVED_PROBLEMS پایین همین فایل).
 export const RETURN_PROBLEMS = {
   // نوع کالا
-  WRONG_ITEM_SHIPPED: "wrong_item_shipped",
-  WRONG_ITEM_INVOICED: "wrong_item_invoiced",
-  WRONG_ITEM_ORDERED: "wrong_item_ordered",
+  WRONG_ITEM_SHIPPED: 0,
+  WRONG_ITEM_INVOICED: 1,
+  WRONG_ITEM_ORDERED: 2,
   // تعداد
-  SHORT_SHIPPED: "short_shipped",
-  OVER_SHIPPED: "over_shipped",
-  WRONG_QTY_INVOICED: "wrong_qty_invoiced",
-  WRONG_QTY_ORDERED: "wrong_qty_ordered",
+  SHORT_SHIPPED: 3,
+  OVER_SHIPPED: 4,
+  WRONG_QTY_INVOICED: 5,
+  WRONG_QTY_ORDERED: 6,
   // خرابی
-  DEFECTIVE: "defective",
-  DAMAGED_IN_TRANSIT: "damaged_in_transit",
-  QUALITY_ISSUE: "quality_issue",
-  EXPIRED: "expired",
+  DEFECTIVE: 7,
+  DAMAGED_IN_TRANSIT: 8,
+  QUALITY_ISSUE: 9,
+  EXPIRED: 10,
   // بدون نقص
-  CHANGED_MIND: "changed_mind",
+  CHANGED_MIND: 11,
   // خارج از سند
-  UNLISTED_ITEM: "unlisted_item",
+  UNLISTED_ITEM: 12,
   // سایر
-  OTHER: "other",
+  OTHER: 13,
 };
 
 /** برچسبِ خنثی — هر سمت می‌تواند برای واژگانِ خودش بازنویسی‌اش کند. */

@@ -37,6 +37,12 @@ const { buildGoodsLines } = await import(
   "../src/shared/domain/returns/resolutions.js"
 );
 const { EFFECT_KINDS } = await import("../src/shared/domain/returns/effects.js");
+const { PurchaseStatusEnum: PURCHASE_STATUSES } = await import(
+  "../src/shared/domain/enums/purchaseStatus.js"
+);
+const { SaleStatusEnum: SALE_STATUSES } = await import(
+  "../src/shared/domain/enums/saleStatus.js"
+);
 
 let failures = 0;
 let sectionNo = 0;
@@ -72,7 +78,7 @@ async function outgoingRow(refNumber) {
 section("صف دریافت: بعد از یک دور ناقص، عدد لیست با جزئیات می‌خواند");
 {
   const purchase = allPurchases.find(
-    (p) => p.status === "shipped" && (p.items || []).length >= 3,
+    (p) => p.status === PURCHASE_STATUSES.SHIPPED && (p.items || []).length >= 3,
   );
 
   const rowBefore = await incomingRow(purchase.invoiceNumber);
@@ -148,7 +154,8 @@ section("صف ارسال: قلمِ کاملاً ارسال‌شده از شما�
 {
   const sale = allSales.find(
     (s) =>
-      (s.status === "processing" || s.status === "partially_delivered") &&
+      (s.status === SALE_STATUSES.PROCESSING ||
+        s.status === SALE_STATUSES.PARTIALLY_DELIVERED) &&
       (s.items || []).length >= 2 &&
       s.items.some((i) => (i.qty || 0) - (i.shippedQty || 0) > 0),
   );

@@ -180,15 +180,18 @@ export async function fetchPurchaseReturns(params = {}) {
       supplierIds.map(String).includes(String(r.supplierId)),
     );
   }
-  if (status) filtered = filtered.filter((r) => r.status === status);
+  // enum عددی است و OPEN صفر — پس «انتخاب‌نشده» فقط رشته‌ی خالی است.
+  if (status !== "" && status !== undefined) {
+    filtered = filtered.filter((r) => r.status === status);
+  }
 
   // مثل سمت فروش، این دو روی *ادعاها* می‌نشینند نه روی سند.
-  if (problem) {
+  if (problem !== "" && problem !== undefined) {
     filtered = filtered.filter((r) =>
       (r.claims || []).some((c) => c.problem === problem),
     );
   }
-  if (scope) {
+  if (scope !== "" && scope !== undefined) {
     filtered = filtered.filter((r) =>
       (r.claims || []).some((c) => c.scope === scope),
     );

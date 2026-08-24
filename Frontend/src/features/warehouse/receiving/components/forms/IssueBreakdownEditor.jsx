@@ -77,10 +77,12 @@ export default function IssueBreakdownEditor({
           key={issue.id}
           className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 bg-card rounded-md border border-border p-1.5"
         >
+          {/* issueType از فضای عددیِ RETURN_PROBLEMS می‌آید؛ Radix رشته
+              می‌خواهد و رشته برمی‌گرداند. */}
           <Select
-            value={issue.issueType}
+            value={issue.issueType == null ? "" : String(issue.issueType)}
             onValueChange={(v) =>
-              onUpdateIssue(item.lineId, issue.id, "issueType", v)
+              onUpdateIssue(item.lineId, issue.id, "issueType", Number(v))
             }
           >
             <SelectTrigger className="h-8 text-xs sm:w-36 shrink-0">
@@ -88,7 +90,7 @@ export default function IssueBreakdownEditor({
             </SelectTrigger>
             <SelectContent>
               {typeOptions.map((value) => (
-                <SelectItem key={value} value={value}>
+                <SelectItem key={value} value={String(value)}>
                   {RECEIVING_ISSUE_TYPE_LABELS[value] ?? value}
                 </SelectItem>
               ))}

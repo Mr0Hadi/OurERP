@@ -9,16 +9,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
+import { PAYMENT_METHODS } from "@/shared/domain/returns/effects";
 
+// مقادیرِ عددیِ PAYMENT_METHODS (returns/effects.js) استفاده می‌شود —
+// این کامپوننت هم برای ترکیبیِ فرم فروش/خرید و هم برای پولِ تصمیمِ
+// مرجوعی مشترک است، پس باید با هرچه SPLITTABLE_PAYMENT_METHODS آنجا
+// می‌سنجد یکی باشد.
 const TYPES = [
-  { value: "cash", label: "نقدی" },
-  { value: "check", label: "چک" },
-  { value: "transfer", label: "انتقال بانکی" },
+  { value: PAYMENT_METHODS.CASH, label: "نقدی" },
+  { value: PAYMENT_METHODS.CHECK, label: "چک" },
+  { value: PAYMENT_METHODS.TRANSFER, label: "انتقال بانکی" },
 ];
 
 const REFERENCE_FIELD = {
-  check: { field: "checkNumber", label: "شماره چک" },
-  transfer: { field: "transferRef", label: "شماره پیگیری" },
+  [PAYMENT_METHODS.CHECK]: { field: "checkNumber", label: "شماره چک" },
+  [PAYMENT_METHODS.TRANSFER]: { field: "transferRef", label: "شماره پیگیری" },
 };
 
 /**
@@ -98,15 +103,15 @@ export default function MixedPaymentList({
               <div className="space-y-1">
                 <Label className={labelClass}>روش</Label>
                 <Select
-                  value={payment.type}
-                  onValueChange={(val) => onChange(idx, "type", val)}
+                  value={String(payment.type)}
+                  onValueChange={(val) => onChange(idx, "type", Number(val))}
                 >
                   <SelectTrigger className={inputHeight}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
+                      <SelectItem key={t.value} value={String(t.value)}>
                         {t.label}
                       </SelectItem>
                     ))}

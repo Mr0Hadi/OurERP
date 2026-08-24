@@ -15,6 +15,7 @@ export {
   PAYMENT_TYPE_LABELS,
 } from "@/shared/domain/enums/paymentType";
 import { PaymentTypeEnum as PAYMENT_TYPES } from "@/shared/domain/enums/paymentType";
+import { PAYMENT_METHODS } from "@/shared/domain/returns/effects";
 
 // ─── توابع کمکی ────────────────────────────────────────────────────────────
 
@@ -134,9 +135,9 @@ export const salesMock = [
     paidAmount: 34608000,
     totalAmount: 34608000,
     mixedPayments: [
-      { id: 1, type: "cash", amount: 15000000 },
-      { id: 2, type: "check", amount: 10000000, checkNumber: "1234567890" },
-      { id: 3, type: "transfer", amount: 9608000, transferRef: "TRN-87654321" },
+      { id: 1, type: PAYMENT_METHODS.CASH, amount: 15000000 },
+      { id: 2, type: PAYMENT_METHODS.CHECK, amount: 10000000, checkNumber: "1234567890" },
+      { id: 3, type: PAYMENT_METHODS.TRANSFER, amount: 9608000, transferRef: "TRN-87654321" },
     ],
     description: "فروش باتری و لوازم برقی",
     items: [
@@ -195,7 +196,11 @@ const MOCK_DESCRIPTIONS = [
   "",
 ];
 
-const SINGLE_PAYMENT_TYPES = ["cash", "check", "transfer"];
+const SINGLE_PAYMENT_TYPES = [
+  PAYMENT_METHODS.CASH,
+  PAYMENT_METHODS.CHECK,
+  PAYMENT_METHODS.TRANSFER,
+];
 
 function buildRandomItems() {
   const itemsCount = randomInt(1, 4);
@@ -246,9 +251,9 @@ function buildMixedPayments(totalAmount) {
     const type = pickRandom(SINGLE_PAYMENT_TYPES);
     const payment = { id: k + 1, type, amount: paymentAmount };
 
-    if (type === "check") {
+    if (type === PAYMENT_METHODS.CHECK) {
       payment.checkNumber = String(randomInt(1000000000, 9999999999));
-    } else if (type === "transfer") {
+    } else if (type === PAYMENT_METHODS.TRANSFER) {
       payment.transferRef = `TRN-${randomInt(10000000, 99999999)}`;
     }
 

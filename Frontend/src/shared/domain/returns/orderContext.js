@@ -53,7 +53,9 @@ function eachOnOrderEffect(returnDoc, line, visit) {
   (returnDoc.claims || []).forEach((claim) => {
     // ادعای خارج از سند روی هیچ خطی از فاکتور نمی‌نشیند، پس نباید
     // مقدارِ تحویلِ آن خط را جابه‌جا کند.
-    if (claim.offScopeKind) return;
+    // `offScopeKind` یک enum عددی است و EXCESS صفر است؛ پس بررسیِ
+    // truthiness غلط است — ادعای «مازاد» را خارج از سند نمی‌شمرد.
+    if (claim.offScopeKind != null) return;
     if (!matchesLine(claim, line)) return;
     (claim.resolutions || []).forEach((res) =>
       (res.effects || []).forEach((effect) => {
@@ -125,7 +127,7 @@ export function claimBreakdown(returns, line, currentReturnId = null) {
 
     let claimed = 0;
     (ret.claims || []).forEach((claim) => {
-      if (claim.offScopeKind) return;
+      if (claim.offScopeKind != null) return;
       if (!matchesLine(claim, line)) return;
       claimed += claimRemainingQty(claim);
     });

@@ -51,7 +51,10 @@ export default function EffectBadge({ effect, side, showProductName = false }) {
 
   const details = [
     showProductName && isGoods ? effect.productName : null,
-    !isGoods && effect.method ? PAYMENT_METHOD_LABELS[effect.method] : null,
+    // روش پرداخت enum عددی است و «نقدی» صفر — بررسیِ صریح لازم است.
+    !isGoods && effect.method != null
+      ? PAYMENT_METHOD_LABELS[effect.method]
+      : null,
     isGoods && done > 0 ? `${done.toLocaleString("fa-IR")} انجام‌شده` : null,
     // برای کالای برگشتی، «انجام شد» و «به موجودی برگشت» یکی نیستند:
     // کالای معیوب تحویل گرفته می‌شود ولی وارد موجودی قابل‌فروش نمی‌شود.

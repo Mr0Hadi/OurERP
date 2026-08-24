@@ -14,9 +14,11 @@
  * بگذارد.
  */
 
+// بدون معادل در بکند — تفکیک «روی سند» / «خارج از سند» مفهومی خودِ
+// فرانت است.
 export const CLAIM_SCOPES = {
-  ON_ORDER: "on_order",
-  OFF_ORDER: "off_order",
+  ON_ORDER: 0,
+  OFF_ORDER: 1,
 };
 
 /**
@@ -25,8 +27,8 @@ export const CLAIM_SCOPES = {
  * قیمتش از کالا خوانده یا دستی وارد شود (چون خط سندی ندارد).
  */
 export const OFF_SCOPE_KINDS = {
-  EXCESS: "excess",
-  UNLISTED: "unlisted",
+  EXCESS: 0,
+  UNLISTED: 1,
 };
 
 export const OFF_SCOPE_KIND_STYLES = {

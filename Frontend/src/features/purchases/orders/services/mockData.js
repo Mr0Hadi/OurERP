@@ -6,6 +6,7 @@ export {
   PAYMENT_TYPE_LABELS,
 } from "./constants";
 import { PURCHASE_STATUSES, PAYMENT_TYPES } from "./constants";
+import { PAYMENT_METHODS } from "@/shared/domain/returns/effects";
 
 // ─── توابع کمکی ────────────────────────────────────────────────────────────
 
@@ -181,9 +182,9 @@ export const purchasesMock = [
     paidAmount: 60000000,
     totalAmount: 82500000,
     mixedPayments: [
-      { id: 1, type: "cash", amount: 30000000 },
-      { id: 2, type: "check", amount: 20000000, checkNumber: "1234567890" },
-      { id: 3, type: "transfer", amount: 10000000, transferRef: "TRN-55667788" },
+      { id: 1, type: PAYMENT_METHODS.CASH, amount: 30000000 },
+      { id: 2, type: PAYMENT_METHODS.CHECK, amount: 20000000, checkNumber: "1234567890" },
+      { id: 3, type: PAYMENT_METHODS.TRANSFER, amount: 10000000, transferRef: "TRN-55667788" },
     ],
     description: "خرید کلاچ و دیسک کلاچ - پرداخت ترکیبی",
     items: [
@@ -265,9 +266,13 @@ const MOCK_DESCRIPTIONS = [
 
 // این‌ها نوعِ هر ردیفِ داخل mixedPayments هستند، نه خودِ paymentType سند —
 // شکلی که هنوز معادل مستندی در بکند ندارد (سند از paymentDetails حرف
-// می‌زند)، و همان رشته‌هایی می‌ماند که MixedPaymentList (کامپوننت مشترک
-// با ماژول مرجوعی) تولید می‌کند.
-const SINGLE_PAYMENT_TYPES = ["cash", "check", "transfer"];
+// می‌زند)، و همان مقادیرِ عددی‌ای می‌ماند که MixedPaymentList (کامپوننت
+// مشترک با ماژول مرجوعی) تولید می‌کند.
+const SINGLE_PAYMENT_TYPES = [
+  PAYMENT_METHODS.CASH,
+  PAYMENT_METHODS.CHECK,
+  PAYMENT_METHODS.TRANSFER,
+];
 
 function buildRandomItems() {
   const itemsCount = randomInt(1, 5);
@@ -318,9 +323,9 @@ function buildMixedPayments(totalAmount) {
     const type = pickRandom(SINGLE_PAYMENT_TYPES);
     const payment = { id: k + 1, type, amount: paymentAmount };
 
-    if (type === "check") {
+    if (type === PAYMENT_METHODS.CHECK) {
       payment.checkNumber = String(randomInt(1000000000, 9999999999));
-    } else if (type === "transfer") {
+    } else if (type === PAYMENT_METHODS.TRANSFER) {
       payment.transferRef = `TRN-${randomInt(10000000, 99999999)}`;
     }
 

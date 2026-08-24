@@ -191,16 +191,19 @@ export async function fetchSalesReturns(params = {}) {
       customerIds.map(String).includes(String(r.customerId)),
     );
   }
-  if (status) filtered = filtered.filter((r) => r.status === status);
+  // enum عددی است و OPEN صفر — پس «انتخاب‌نشده» فقط رشته‌ی خالی است.
+  if (status !== "" && status !== undefined) {
+    filtered = filtered.filter((r) => r.status === status);
+  }
 
   // فیلترهای مشکل/دامنه روی *ادعاها* می‌نشینند نه روی سند، چون
   // یک مرجوعی می‌تواند چند ادعا با مشکل‌ها و مقصرهای مختلف داشته باشد.
-  if (problem) {
+  if (problem !== "" && problem !== undefined) {
     filtered = filtered.filter((r) =>
       (r.claims || []).some((c) => c.problem === problem),
     );
   }
-  if (scope) {
+  if (scope !== "" && scope !== undefined) {
     filtered = filtered.filter((r) =>
       (r.claims || []).some((c) => c.scope === scope),
     );

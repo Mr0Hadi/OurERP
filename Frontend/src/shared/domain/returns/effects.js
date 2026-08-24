@@ -22,11 +22,12 @@
 
 // ─── انواع اثر ──────────────────────────────────────────────────────────────
 
+// بدون معادل در بکند — مدلِ ترکیبیِ خودِ فرانت است، نه یک enum بسته.
 export const EFFECT_KINDS = {
-  GOODS_IN: "goods_in",
-  GOODS_OUT: "goods_out",
-  MONEY_OUT: "money_out",
-  MONEY_IN: "money_in",
+  GOODS_IN: 0,
+  GOODS_OUT: 1,
+  MONEY_OUT: 2,
+  MONEY_IN: 3,
 };
 
 const GOODS_EFFECT_KINDS = [
@@ -50,13 +51,16 @@ export function isGoodsEffect(kind) {
  * *روش* (از چه راهی). همین یک لیست، همان واژگانی است که فرم ثبت فروش
  * برای پرداخت استفاده می‌کند.
  */
+// بدون معادل در بکند — این «روش پرداخت یک اثر مرجوعی» است، نه
+// PaymentTypeEnum سطح سند (اعضایش هم فرق دارند: ON_ACCOUNT/STORE_CREDIT
+// را PaymentTypeEnum ندارد).
 export const PAYMENT_METHODS = {
-  CASH: "cash",
-  CHECK: "check",
-  TRANSFER: "transfer",
-  ON_ACCOUNT: "on_account",
-  STORE_CREDIT: "store_credit",
-  MIXED: "mixed",
+  CASH: 0,
+  CHECK: 1,
+  TRANSFER: 2,
+  ON_ACCOUNT: 3,
+  STORE_CREDIT: 4,
+  MIXED: 5,
 };
 
 export const PAYMENT_METHOD_LABELS = {
@@ -108,10 +112,13 @@ export function affectsInvoiceTotal(method) {
  * VOID برای اثری است که پیش از اعمال لغو شده — پاک نمی‌شود تا رد
  * تصمیم‌های عوض‌شده در تاریخچه بماند.
  */
+// بدون معادل یک‌به‌یک در بکند — PurchaseReturnDecisionStatusEnum/
+// SaleReturnDecisionStatusEnum فقط دو عضو دارند (AWAITING/RESOLVED)،
+// این سه‌تا دارد (VOID معادل ندارد).
 export const EFFECT_STATUSES = {
-  PENDING: "pending",
-  APPLIED: "applied",
-  VOID: "void",
+  PENDING: 0,
+  APPLIED: 1,
+  VOID: 2,
 };
 
 /**
@@ -213,7 +220,9 @@ export function normalizeObservations(observations = []) {
       qty: Number(observation.qty) || 0,
       note: observation.note || "",
     }))
-    .filter((observation) => observation.problem && observation.qty > 0);
+    // `problem` یک enum عددی است و عضو اولش صفر — پس بررسی باید صریح
+    // باشد، وگرنه مشاهده‌ی «کالای اشتباه ارسال شد» (۰) بی‌صدا حذف می‌شود.
+    .filter((observation) => observation.problem !== null && observation.qty > 0);
 }
 
 /** مجموع تعدادی که در یک دور «مشکل‌دار» گزارش شده. */

@@ -40,11 +40,11 @@ export async function fetchSalesReturns(params = {}) {
     params: {
       ...listParams(params),
       customerIds: params.customerIds?.length ? params.customerIds : undefined,
-      status: params.status || undefined,
+      status: params.status !== "" ? params.status : undefined,
       // مشکل و دامنه روی *ادعاها* فیلتر می‌شوند نه روی سند: یک مرجوعی
       // می‌تواند چند ادعا با مشکل‌های مختلف داشته باشد.
-      problem: params.problem || undefined,
-      scope: params.scope || undefined,
+      problem: params.problem !== "" ? params.problem : undefined,
+      scope: params.scope !== "" ? params.scope : undefined,
     },
   });
   return normalizeListResponse(data, { itemsKey: "returnList" });
