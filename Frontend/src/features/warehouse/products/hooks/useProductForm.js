@@ -33,7 +33,7 @@ function buildDefaultValues(data) {
     barcode: data.barcode || "",
     category: data.category || "",
     brand: data.brand || "",
-    unit: data.unit || "",
+    unit: data.unit ?? "",
     initialStock: data.stock ?? data.initialStock ?? 0,
     lowStockThreshold: data.lowStockThreshold ?? 10,
     purchasePrice: data.purchasePrice || 0,

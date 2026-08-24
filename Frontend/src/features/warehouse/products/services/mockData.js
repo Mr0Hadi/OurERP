@@ -1,4 +1,5 @@
 // features/warehouse/products/services/mockData.js
+import { ProductUnitEnum } from "@/shared/domain/enums/productUnit";
 
 /**
  * کد دو رقمی هر دسته‌بندی، برای ساختن کد کالا و بارکد خودکار.
@@ -32,7 +33,7 @@ export const productsMock = [
     name: "لنت ترمز جلو",
     brand: "بوش",
     category: "سیستم ترمز",
-    unit: "دست",
+    unit: ProductUnitEnum.HAND,
     purchasePrice: 350000,
     retailPrice: 450000,
     wholesalePrice: 420000,
@@ -50,7 +51,7 @@ export const productsMock = [
     name: 'فیلتر روغن',
     brand: 'مان',
     category: 'موتور',
-    unit: 'عدد',
+    unit: ProductUnitEnum.NUMBER,
     purchasePrice: 90000,
     retailPrice: 120000,
     wholesalePrice: 105000,
@@ -67,7 +68,7 @@ export const productsMock = [
     name: 'کمک فنر جلو',
     brand: 'ساکس',
     category: 'سیستم تعلیق',
-    unit: 'عدد',
+    unit: ProductUnitEnum.NUMBER,
     purchasePrice: 1500000,
     retailPrice: 1850000,
     wholesalePrice: 1700000,
@@ -99,7 +100,13 @@ const generateMoreProducts = (count) => {
     "گیربکس",
     "سیستم خنک کننده",
   ];
-  const units = ["عدد", "بسته", "دست", "جفت", "کیت"];
+  const units = [
+    ProductUnitEnum.NUMBER,
+    ProductUnitEnum.PACKAGE,
+    ProductUnitEnum.HAND,
+    ProductUnitEnum.PAIR,
+    ProductUnitEnum.KIT,
+  ];
 
   const products = [...productsMock];
 

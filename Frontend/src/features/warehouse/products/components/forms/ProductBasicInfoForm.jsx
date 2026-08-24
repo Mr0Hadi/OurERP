@@ -24,6 +24,7 @@ import {
 import BarcodeScanner from "./BarcodeScanner";
 import CategoryManager from "./CategoryManager";
 import GenerateFieldButton from "./GenerateFieldButton";
+import { PRODUCT_UNIT_LABELS } from "@/shared/domain/enums/productUnit";
 
 export default function ProductBasicInfoForm({
   register,
@@ -144,19 +145,19 @@ export default function ProductBasicInfoForm({
             name="unit"
             control={control}
             render={({ field }) => (
-              <Select value={field.value ?? ""} onValueChange={field.onChange}>
+              <Select
+                value={field.value === "" || field.value == null ? "" : String(field.value)}
+                onValueChange={(value) => field.onChange(Number(value))}
+              >
                 <SelectTrigger dir="rtl">
                   <SelectValue placeholder="انتخاب واحد" />
                 </SelectTrigger>
                 <SelectContent dir="rtl">
-                  <SelectItem value="عدد">عدد</SelectItem>
-                  <SelectItem value="دست">دست</SelectItem>
-                  <SelectItem value="لیتر">لیتر</SelectItem>
-                  <SelectItem value="کیلوگرم">کیلوگرم</SelectItem>
-                  <SelectItem value="کارتن">کارتن</SelectItem>
-                  <SelectItem value="کیت">کیت</SelectItem>
-                  <SelectItem value="بسته">بسته</SelectItem>
-                  <SelectItem value="جفت">جفت</SelectItem>
+                  {Object.entries(PRODUCT_UNIT_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             )}
