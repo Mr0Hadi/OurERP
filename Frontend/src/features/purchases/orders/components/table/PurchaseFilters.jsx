@@ -87,6 +87,7 @@ const PurchaseFilters = ({ suppliers = [], isSuppliersLoading = false }) => {
         onChange={setStatus}
         allLabel="همه وضعیت‌ها"
         options={STATUS_OPTIONS}
+        numeric
       />
 
       <FilterSelect
@@ -95,6 +96,7 @@ const PurchaseFilters = ({ suppliers = [], isSuppliersLoading = false }) => {
         onChange={setPaymentType}
         allLabel="همه"
         options={PAYMENT_TYPE_OPTIONS}
+        numeric
       />
     </FilterPanel>
   );

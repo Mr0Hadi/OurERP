@@ -1,4 +1,5 @@
 import { allPurchases } from "@/features/purchases/orders/services/mockData";
+import { PURCHASE_STATUSES } from "@/features/purchases/orders/services/constants";
 import {
   CLAIM_SCOPES,
   OFF_ORDER_KINDS,
@@ -53,8 +54,8 @@ const generateId = () =>
 // مرجوعی فقط برای خریدهایی معنا دارد که چیزی از آن‌ها واقعاً رسیده
 // باشد — چه کامل چه ناقص.
 export const RETURN_ELIGIBLE_PURCHASE_STATUSES = [
-  "received",
-  "partially_received",
+  PURCHASE_STATUSES.RECEIVED,
+  PURCHASE_STATUSES.PARTIALLY_RECEIVED,
 ];
 
 const ON_ORDER_PROBLEMS = [

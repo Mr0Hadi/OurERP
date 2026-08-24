@@ -84,7 +84,7 @@ export async function fetchSales(params = {}) {
     filtered = filtered.filter((s) => s.status === status);
   }
 
-  if (paymentType) {
+  if (paymentType !== "" && paymentType !== undefined) {
     filtered = filtered.filter((s) => s.paymentType === paymentType);
   }
 

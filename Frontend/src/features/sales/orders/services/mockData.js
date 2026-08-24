@@ -20,21 +20,11 @@ export const SALE_STATUS_LABELS = {
   [SALE_STATUSES.CANCELLED]: "لغو شده",
 };
 
-export const PAYMENT_TYPES = {
-  CASH: "cash",
-  CREDIT: "credit",
-  CHECK: "check",
-  TRANSFER: "transfer",
-  MIXED: "mixed",
-};
-
-export const PAYMENT_TYPE_LABELS = {
-  [PAYMENT_TYPES.CASH]: "نقدی",
-  [PAYMENT_TYPES.CREDIT]: "نسیه",
-  [PAYMENT_TYPES.CHECK]: "چک",
-  [PAYMENT_TYPES.TRANSFER]: "انتقال بانکی",
-  [PAYMENT_TYPES.MIXED]: "ترکیبی",
-};
+export {
+  PaymentTypeEnum as PAYMENT_TYPES,
+  PAYMENT_TYPE_LABELS,
+} from "@/shared/domain/enums/paymentType";
+import { PaymentTypeEnum as PAYMENT_TYPES } from "@/shared/domain/enums/paymentType";
 
 // ─── توابع کمکی ────────────────────────────────────────────────────────────
 

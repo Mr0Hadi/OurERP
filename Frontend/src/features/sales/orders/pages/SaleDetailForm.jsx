@@ -28,6 +28,7 @@ import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
 import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
 import SaleStatusSection from "../components/forms/SaleStatusSection";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
+import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -100,7 +101,7 @@ export default function SaleDetailForm({ saleData }) {
         ...item,
         lineTotal: item.qty * item.unitPrice * (1 - (item.discount || 0) / 100),
       })),
-      paymentType: formData.paymentType || "cash",
+      paymentType: formData.paymentType ?? PaymentTypeEnum.CASH,
       paidAmount: Number(formData.paidAmount) || 0,
       checkNumber: formData.checkNumber || null,
       transferRef: formData.transferRef || null,

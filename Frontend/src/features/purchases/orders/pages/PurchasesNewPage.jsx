@@ -17,6 +17,8 @@ import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
 import PurchaseStatusSection from "../components/forms/PurchaseStatusSection";
 import { ROUTES } from "@/shared/constants/routes";
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
+import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+import { PurchaseStatusEnum } from "@/shared/domain/enums/purchaseStatus";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -170,9 +172,9 @@ export default function PurchasesNewPage() {
     let finalPaidAmount;
     let paymentDetails = {};
 
-    if (formData.paymentType === "credit") {
+    if (formData.paymentType === PaymentTypeEnum.CREDIT) {
       finalPaidAmount = 0;
-    } else if (formData.paymentType === "mixed") {
+    } else if (formData.paymentType === PaymentTypeEnum.MIXED) {
       const mixedPayments = formData.mixedPayments || [];
       finalPaidAmount = mixedPayments.reduce(
         (sum, p) => sum + (Number(p.amount) || 0),
@@ -181,9 +183,9 @@ export default function PurchasesNewPage() {
       paymentDetails.mixedPayments = mixedPayments;
     } else {
       finalPaidAmount = Number(formData.paidAmount) || 0;
-      if (formData.paymentType === "check") {
+      if (formData.paymentType === PaymentTypeEnum.CHECK) {
         paymentDetails.checkNumber = formData.checkNumber || null;
-      } else if (formData.paymentType === "transfer") {
+      } else if (formData.paymentType === PaymentTypeEnum.TRANSFER) {
         paymentDetails.transferRef = formData.transferRef || null;
       }
     }
@@ -205,10 +207,13 @@ export default function PurchasesNewPage() {
         discount: item.discount || 0,
         lineTotal: item.qty * item.unitPrice * (1 - (item.discount || 0) / 100),
       })),
-      paymentType: formData.paymentType || "cash",
+      paymentType: formData.paymentType ?? PaymentTypeEnum.CASH,
       paidAmount: finalPaidAmount,
       ...paymentDetails,
-      status: formData.status || "pending",
+      status:
+        formData.status === "" || formData.status == null
+          ? PurchaseStatusEnum.PENDING
+          : formData.status,
       totalAmount: computedTotal,
     };
 

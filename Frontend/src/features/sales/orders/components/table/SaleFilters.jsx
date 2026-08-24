@@ -95,6 +95,7 @@ const SaleFilters = ({ customers = [], isCustomersLoading = false }) => {
         onChange={setPaymentType}
         allLabel="همه"
         options={PAYMENT_TYPE_OPTIONS}
+        numeric
       />
     </FilterPanel>
   );

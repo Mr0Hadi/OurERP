@@ -1,5 +1,6 @@
 // store/purchaseFormStore.js
 import { create } from "zustand";
+import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 
 const EMPTY_FORM = {
   supplierId: "",
@@ -8,7 +9,7 @@ const EMPTY_FORM = {
   invoiceDate: "",
   dueDate: "",
   description: "",
-  paymentType: "cash",
+  paymentType: PaymentTypeEnum.CASH,
   paidAmount: "",
   checkNumber: "",
   transferRef: "",
@@ -62,12 +63,12 @@ export const usePurchaseFormStore = create((set, get) => ({
         invoiceDate: purchaseData.invoiceDate || "",
         dueDate: purchaseData.dueDate || "",
         description: purchaseData.description || "",
-        paymentType: purchaseData.paymentType || "cash",
+        paymentType: purchaseData.paymentType ?? PaymentTypeEnum.CASH,
         paidAmount: purchaseData.paidAmount?.toString() || "",
         checkNumber: purchaseData.checkNumber || "",
         transferRef: purchaseData.transferRef || "",
         mixedPayments: purchaseData.mixedPayments || [],
-        status: purchaseData.status || "",
+        status: purchaseData.status ?? "",
         items: formattedItems,
       },
     });

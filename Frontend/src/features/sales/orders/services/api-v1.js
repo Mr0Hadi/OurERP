@@ -10,7 +10,7 @@ export async function fetchSales(params = {}) {
       search: params.search || undefined,
       customerIds: params.customerIds?.length ? params.customerIds : undefined,
       status: params.status || undefined,
-      paymentType: params.paymentType || undefined,
+      paymentType: params.paymentType !== "" ? params.paymentType : undefined,
       fromDate: params.fromDate || undefined,
       toDate: params.toDate || undefined,
       sortBy: params.sortBy,

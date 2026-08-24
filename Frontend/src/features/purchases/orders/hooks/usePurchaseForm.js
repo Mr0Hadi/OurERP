@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { usePurchaseFormStore } from "../store/purchaseFormStore";
+import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 
 export function usePurchaseForm() {
   const { formData, setFormData, setItems } = usePurchaseFormStore();
@@ -12,7 +13,7 @@ export function usePurchaseForm() {
       invoiceDate: formData.invoiceDate || "",
       dueDate: formData.dueDate || "",
       description: formData.description || "",
-      paymentType: formData.paymentType || "cash",
+      paymentType: formData.paymentType ?? PaymentTypeEnum.CASH,
       paidAmount: formData.paidAmount || "",
       checkNumber: formData.checkNumber || "",
       transferRef: formData.transferRef || "",
@@ -36,7 +37,7 @@ export function usePurchaseForm() {
         invoiceDate: "",
         dueDate: "",
         description: "",
-        paymentType: "cash",
+        paymentType: PaymentTypeEnum.CASH,
         paidAmount: "",
         checkNumber: "",
         transferRef: "",

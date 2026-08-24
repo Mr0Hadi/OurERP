@@ -16,6 +16,7 @@ import {
 import PaymentSummary from "@/shared/components/forms/PaymentSummary";
 import MixedPaymentList from "@/shared/components/forms/MixedPaymentList";
 import { useSyncedComputedValue } from "@/shared/hooks/useSyncedComputedValue";
+import { PaymentTypeEnum, PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
 
 /**
  * بخش پرداختِ یک سند خرید یا فروش.
@@ -32,13 +33,9 @@ import { useSyncedComputedValue } from "@/shared/hooks/useSyncedComputedValue";
  * متوقف می‌شود تا تقسیمِ دستیِ کاربر پاک نشود.
  */
 
-const PAYMENT_TYPES = [
-  { value: "cash", label: "نقدی" },
-  { value: "credit", label: "نسیه" },
-  { value: "check", label: "چک" },
-  { value: "transfer", label: "انتقال بانکی" },
-  { value: "mixed", label: "ترکیبی" },
-];
+const PAYMENT_TYPE_OPTIONS = Object.entries(PAYMENT_TYPE_LABELS).map(
+  ([value, label]) => ({ value: Number(value), label }),
+);
 
 const EMPTY_MIXED_PAYMENT = {
   type: "cash",
@@ -47,7 +44,8 @@ const EMPTY_MIXED_PAYMENT = {
   transferRef: "",
 };
 
-const isSingleMethodType = (type) => type !== "credit" && type !== "mixed";
+const isSingleMethodType = (type) =>
+  type !== PaymentTypeEnum.CREDIT && type !== PaymentTypeEnum.MIXED;
 
 export default function OrderPaymentSection({
   formData,
@@ -57,7 +55,7 @@ export default function OrderPaymentSection({
 }) {
   const handleChange = (field, value) => onFormChange({ [field]: value });
 
-  const paymentType = formData.paymentType || "cash";
+  const paymentType = formData.paymentType ?? PaymentTypeEnum.CASH;
   const mixedPayments = formData.mixedPayments || [];
 
   const paidAmountMixed = mixedPayments.reduce(
@@ -66,7 +64,7 @@ export default function OrderPaymentSection({
   );
 
   const paidAmount =
-    paymentType === "mixed"
+    paymentType === PaymentTypeEnum.MIXED
       ? paidAmountMixed
       : Number(formData.paidAmount) || 0;
 
@@ -84,16 +82,17 @@ export default function OrderPaymentSection({
           i === 0 ? { ...part, amount: String(value) } : part,
         ),
       }),
-    paymentType === "mixed" && mixedPayments.length === 1,
+    paymentType === PaymentTypeEnum.MIXED && mixedPayments.length === 1,
   );
 
   // تغییر نوع پرداخت، فیلدهای مربوط به روش قبلی را پاک می‌کند.
-  const handlePaymentTypeChange = (value) => {
+  const handlePaymentTypeChange = (rawValue) => {
+    const value = Number(rawValue);
     const singleMethod = isSingleMethodType(value);
     onFormChange({
       paymentType: value,
       mixedPayments:
-        value === "mixed"
+        value === PaymentTypeEnum.MIXED
           ? [{ ...EMPTY_MIXED_PAYMENT, amount: String(totalAmount) }]
           : [],
       paidAmount: singleMethod ? String(totalAmount) : "",
@@ -130,20 +129,20 @@ export default function OrderPaymentSection({
         <PaymentSummary
           totalAmount={totalAmount}
           paidAmount={paidAmount}
-          isCredit={paymentType === "credit"}
+          isCredit={paymentType === PaymentTypeEnum.CREDIT}
         />
 
         <div className="space-y-1.5">
           <Label className="text-card-foreground text-sm font-medium">
             نوع پرداخت
           </Label>
-          <Select value={paymentType} onValueChange={handlePaymentTypeChange}>
+          <Select value={String(paymentType)} onValueChange={handlePaymentTypeChange}>
             <SelectTrigger className="h-9">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {PAYMENT_TYPES.map((t) => (
-                <SelectItem key={t.value} value={t.value}>
+              {PAYMENT_TYPE_OPTIONS.map((t) => (
+                <SelectItem key={t.value} value={String(t.value)}>
                   {t.label}
                 </SelectItem>
               ))}
@@ -151,7 +150,7 @@ export default function OrderPaymentSection({
           </Select>
         </div>
 
-        {paymentType === "mixed" && (
+        {paymentType === PaymentTypeEnum.MIXED && (
           <MixedPaymentList
             payments={mixedPayments}
             onAdd={addMixedPayment}
@@ -189,7 +188,7 @@ export default function OrderPaymentSection({
           </div>
         )}
 
-        {paymentType === "check" && (
+        {paymentType === PaymentTypeEnum.CHECK && (
           <div className="space-y-1.5">
             <Label
               htmlFor="checkNumber"
@@ -208,7 +207,7 @@ export default function OrderPaymentSection({
           </div>
         )}
 
-        {paymentType === "transfer" && (
+        {paymentType === PaymentTypeEnum.TRANSFER && (
           <div className="space-y-1.5">
             <Label
               htmlFor="transferRef"

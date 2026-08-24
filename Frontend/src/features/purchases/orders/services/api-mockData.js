@@ -77,11 +77,11 @@ export async function fetchPurchases(params = {}) {
     );
   }
 
-  if (status) {
+  if (status !== "" && status !== undefined) {
     filtered = filtered.filter((p) => p.status === status);
   }
 
-  if (paymentType) {
+  if (paymentType !== "" && paymentType !== undefined) {
     filtered = filtered.filter((p) => p.paymentType === paymentType);
   }
 

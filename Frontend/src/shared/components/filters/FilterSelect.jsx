@@ -14,6 +14,7 @@ export default function FilterSelect({
   onChange,
   allLabel = "همه",
   options,
+  numeric = false,
 }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-2">
@@ -21,8 +22,8 @@ export default function FilterSelect({
         {label}
       </Label>
       <Select
-        value={value || "all"}
-        onValueChange={(v) => onChange(normalizeFilterValue(v))}
+        value={value === "" || value == null ? "all" : String(value)}
+        onValueChange={(v) => onChange(normalizeFilterValue(v, { numeric }))}
       >
         <SelectTrigger className="flex-1 w-full">
           <SelectValue placeholder={allLabel} />
@@ -30,7 +31,7 @@ export default function FilterSelect({
         <SelectContent>
           <SelectItem value="all">{allLabel}</SelectItem>
           {options.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
+            <SelectItem key={opt.value} value={String(opt.value)}>
               {opt.label}
             </SelectItem>
           ))}

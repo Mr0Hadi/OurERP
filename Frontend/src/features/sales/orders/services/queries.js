@@ -14,7 +14,7 @@ export function useSalesQuery(filters, pagination, sorting) {
     search: filters.globalSearch || '',
     customerIds: filters.customerIds || [],
     status: filters.status || '',
-    paymentType: filters.paymentType || '',
+    paymentType: filters.paymentType ?? '',
     fromDate: filters.fromDate || '',
     toDate: filters.toDate || '',
     sortBy: sorting?.id ?? 'createdAt',

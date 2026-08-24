@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 
 const EMPTY_FORM = {
   customerId: "",
@@ -7,7 +8,7 @@ const EMPTY_FORM = {
   invoiceDate: "",
   dueDate: "",
   description: "",
-  paymentType: "cash",
+  paymentType: PaymentTypeEnum.CASH,
   paidAmount: "",
   checkNumber: "",
   transferRef: "",
@@ -62,7 +63,7 @@ export const useSaleFormStore = create((set, get) => ({
         invoiceDate: sale.invoiceDate || "",
         dueDate: sale.dueDate || "",
         description: sale.description || "",
-        paymentType: sale.paymentType || "cash",
+        paymentType: sale.paymentType ?? PaymentTypeEnum.CASH,
         paidAmount: sale.paidAmount?.toString() || "",
         checkNumber: sale.checkNumber || "",
         transferRef: sale.transferRef || "",

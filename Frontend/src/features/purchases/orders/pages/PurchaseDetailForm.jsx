@@ -35,6 +35,7 @@ import {
 } from "@/features/purchases/orders/domain/purchaseRules";
 import { PURCHASE_STATUSES } from "@/features/purchases/orders/services/constants";
 import { hasAnythingArrived } from "@/features/purchases/returns/domain/purchaseReturnVocabulary";
+import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -111,12 +112,15 @@ export default function PurchaseDetailForm({ purchaseData }) {
         ...item,
         lineTotal: item.qty * item.unitPrice * (1 - (item.discount || 0) / 100),
       })),
-      paymentType: formData.paymentType || "cash",
+      paymentType: formData.paymentType ?? PaymentTypeEnum.CASH,
       paidAmount: Number(formData.paidAmount) || 0,
       checkNumber: formData.checkNumber || null,
       transferRef: formData.transferRef || null,
       mixedPayments: formData.mixedPayments || [],
-      status: formData.status || "pending",
+      status:
+        formData.status === "" || formData.status == null
+          ? PURCHASE_STATUSES.PENDING
+          : formData.status,
       totalAmount: computedTotal,
     };
 
