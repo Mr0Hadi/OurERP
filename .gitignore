@@ -112,6 +112,13 @@ bld/
 [Ll]og/
 [Ll]ogs/
 
+**/obj/*
+**/Obj/*
+**/debug/*
+**/Debug/*
+**/bin/*
+**/Bin/*
+
 # Build results on 'Bin' directories
 **/[Bb]in/*
 # Uncomment if you have tasks that rely on *.refresh files to move binaries
