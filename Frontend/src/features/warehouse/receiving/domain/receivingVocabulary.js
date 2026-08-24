@@ -22,9 +22,11 @@ import {
  * تامین‌کننده‌ای که خرید را دو سری می‌فرستد ممکن است جایگزین‌های
  * مرجوعیِ سری اول را با ماشین دوم بفرستد — یک ماشین، یک رسید.
  */
+// بدون معادل مستند در بکند فعلاً — اگر روزی این تفکیک به سرور مهاجرت
+// کرد، شماره‌ها همین‌جا هماهنگ می‌شوند.
 export const RECEIVING_SOURCES = {
-  ORDER: "order",
-  RETURN: "return",
+  ORDER: 0,
+  RETURN: 1,
 };
 
 export const RECEIVING_SOURCE_LABELS = {
@@ -35,8 +37,8 @@ export const RECEIVING_SOURCE_LABELS = {
 // ─── نوعِ هر ردیفِ صف دریافت ────────────────────────────────────────────────
 
 export const INCOMING_TYPES = {
-  PURCHASE: "purchase",
-  SALES_RETURN: "sales_return",
+  PURCHASE: 0,
+  SALES_RETURN: 1,
 };
 
 export const INCOMING_TYPE_LABELS = {
@@ -128,8 +130,8 @@ export const DEFAULT_RECEIVING_ISSUE_TYPE = RECEIVING_ISSUE_TYPES.SHORT_SHIPPED;
  * تعویق می‌افتد.
  */
 export const SURPLUS_KINDS = {
-  EXCESS: "excess",
-  UNKNOWN: "unknown",
+  EXCESS: 0,
+  UNKNOWN: 1,
 };
 
 export const SURPLUS_KIND_LABELS = {

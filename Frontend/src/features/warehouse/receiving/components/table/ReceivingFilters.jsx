@@ -96,6 +96,7 @@ const ReceivingFilters = ({ parties = [], isPartiesLoading = false }) => {
         onChange={setType}
         allLabel="همه (خرید و مرجوعی)"
         options={TYPE_OPTIONS}
+        numeric
       />
     </FilterPanel>
   );

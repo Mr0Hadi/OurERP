@@ -16,9 +16,11 @@ import { RETURN_STATUSES } from "./statuses";
  * در خرید «عودت‌دادن» — پس هر سمت باید محورِ رایجش را اول ببیند.
  */
 
+// بدون معادل در بکند — فقط کلید محلی برای انتخاب بین دو دسته برچسب/
+// تنظیمات همین فایل است، هیچ‌وقت روی سیم منتقل نمی‌شود.
 export const RETURN_SIDES = {
-  SALES: "sales",
-  PURCHASE: "purchase",
+  SALES: 0,
+  PURCHASE: 1,
 };
 
 const GOODS_IN_SLOT = "goodsIn";

@@ -265,10 +265,13 @@ export async function fetchIncomingQueue(params = {}) {
   const { type = "", counterpartyIds = [] } = params;
   let rows = [];
 
-  if (!type || type === INCOMING_TYPES.PURCHASE) {
+  // INCOMING_TYPES.PURCHASE عددش صفر است؛ فیلترِ صریحِ همان مقدار
+  // نباید مثل «فیلتری انتخاب نشده» رفتار کند وگرنه ردیف‌های مرجوعیِ
+  // فروش هم قاطی می‌شوند.
+  if (type === "" || type === INCOMING_TYPES.PURCHASE) {
     rows.push(...allPurchases.filter(isPurchaseAwaitingIntake).map(purchaseToRow));
   }
-  if (!type || type === INCOMING_TYPES.SALES_RETURN) {
+  if (type === "" || type === INCOMING_TYPES.SALES_RETURN) {
     rows.push(...allSalesReturns.filter(hasPendingGoodsIn).map(salesReturnToRow));
   }
 

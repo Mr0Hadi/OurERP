@@ -16,7 +16,7 @@ export function useIncomingQueueQuery(filters, pagination, sorting) {
       page: pagination.pageIndex + 1,
       limit: pagination.pageSize,
       search: filters.globalSearch || "",
-      type: filters.type || "",
+      type: filters.type ?? "",
       // این فیلد قبلاً اینجا فراموش شده بود؛ بدون آن، انتخاب کاربر در
       // select مشتری/تامین‌کننده هرگز به درخواست واقعی نمی‌رسید.
       counterpartyIds: filters.counterpartyIds || [],
