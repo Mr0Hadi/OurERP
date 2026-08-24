@@ -54,3 +54,11 @@ structure.txt
 /Backend-Net/WMS/obj
 /Backend-Net/Tests/WMS.Tests/bin/Release/net10.0
 /.memsearch/.index-state.json
+/Backend-Net/Application/bin/Release/net10.0
+/Backend-Net/Application/bin/Release/net10.0
+/Backend-Net/Common/bin/Release/net10.0
+/Backend-Net/Domain/bin/Release/net10.0
+/Backend-Net/Infrastructure/bin/Release/net10.0
+/Backend-Net/PosIntegration/obj/Release/net10.0
+/Backend-Net/WMS/bin/Release/net10.0
+/Backend-Net/PosIntegration/bin/Release/net10.0
