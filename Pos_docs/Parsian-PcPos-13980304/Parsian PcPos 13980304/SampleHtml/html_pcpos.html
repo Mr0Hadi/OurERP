@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+	 <meta charset="UTF-8"> 
+    <head>
+        <title>Hello PCPOS</title>
+        <script src="jquery.1.10.2.min.js"></script>
+    </head>
+
+    <body>
+        <div>
+            <section id="Info">
+				<div>URLs:</div>
+				<input type="text" placeholder="URL" value="http://127.0.0.1:8080/pcpos" id="pcpos_url" />
+				<div>Pr Code:</div>
+				<input type="text" placeholder="Pr Code" value="000000" id="pr_code" />
+				<div>Amount:</div>
+				<input type="text" placeholder="Amount" value="1234" id="amount" />
+				<div>Currency:</div>
+				<input type="text" placeholder="Currency" value="364" id="currency" />
+				<div>Card Holder Reciept:</div>
+				<input type="text" placeholder="Card Holder Reciept" value="تست" id="r_cardholder" />
+				<div>Merchant Reciept:</div>
+				<input type="text" placeholder="Merchant Reciept" value="تست" id="r_merchant" />
+				<div>Card Holder Title:</div>
+				<input type="text" placeholder="Card Holder Title" value="تست" id="t_cardholder" />
+				<div>Merchant Title:</div>
+				<input type="text" placeholder="Merchant Title" value="تست" id="t_merchant" />
+				<div style="width:150px;padding:10px;border:10px solid gray;margin:0;">
+				<div>WareHoff1:</div>
+				<input type="text" placeholder="WareHoff1" value="9430324404128" id="WareHoff1" />
+				<div>WareHoff2:</div>
+				<input type="text" placeholder="WareHoff2" value="40370492" id="WareHoff2" />
+				</div>
+				<div>Service:</div>
+				<input type="text" placeholder="Service" id="service" />
+				<div>Service Group:</div>
+				<input type="text" placeholder="Service Group" id="service_group" />
+				<div>Settelment:</div>
+				<textarea cols="40" rows="5" placeholder="Settelment" id="settelment">1=500,2=500</textarea>
+				<div>Key/Value:</div>
+				<textarea cols="40" rows="5" placeholder="Key Value" value="" id="key_value" />تت=23, بب=27,کک=28</textarea>
+				<br/>
+				<button id="search">Do It</button>
+			</section>
+			<div>Result:</div>
+			<section id="result">
+				
+			</section>
+        </div>
+    </body>
+    <script>
+		
+		var doPCPOS = function(){
+
+			var req_params = new Object();
+			req_params.PR = $('#pr_code').val();
+			req_params.AM = $('#amount').val();
+			req_params.CU = $('#currency').val();
+			req_params.R1 = $('#r_cardholder').val();
+			req_params.R2 = $('#r_merchant').val();
+			req_params.T1 = $('#t_cardholder').val();
+			req_params.T2 = $('#t_merchant').val();
+			if (($('#WareHoff1').val().length > 0)  && ($('#WareHoff2').val().length > 0)){
+				req_params.SV = $('#WareHoff1').val();
+				req_params.SG = $('#WareHoff2').val();
+			}
+			
+			req_params.AD = "";
+			req_params.PD = "1";
+			req_params.ST = $('#settelment').val().split(",");
+			req_params.AV = $('#key_value').val().split(",");
+			
+			
+			$('#result').empty();
+			$.ajax({
+				type: "POST",
+				url: $('#pcpos_url').val(),				
+				data: JSON.stringify(req_params),
+				contentType: "application/json; charset=utf-8",
+				dataType: "json",
+				timeout:120*1000,
+				success: doSuccess,
+				failure: function(errMsg) {
+					alert(errMsg);
+				}
+			});
+			
+	    }
+	    
+	    var doSuccess = function(data){
+			$('#result').empty();
+			$('#result').append(JSON.stringify(data,null, "\t"));
+		}
+	    
+	    $('#search').click(doPCPOS);
+    </script>
+</html>

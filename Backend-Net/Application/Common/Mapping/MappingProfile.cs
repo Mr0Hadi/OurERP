@@ -1,6 +1,9 @@
 using Application.Common.Dtos;
 using Application.Features.Customer.Commands;
 using Application.Features.Customer.Dtos;
+using Application.Features.Department.Commands;
+using Application.Features.PosTerminal.Commands;
+using Application.Features.Team.Commands;
 using Application.Features.Product.Commands;
 using Application.Features.Product.Dtos;
 using Application.Features.ProductCategory.Commands;
@@ -74,6 +77,15 @@ namespace Application.Common.Mapping
 			CreateMap<Supplier, SupplierDto>()
 				.ForMember(dest => dest.ImageKey, opt => opt.MapFrom(src => src.ImageUrl))
 				.ForMember(dest => dest.ImageUrl, opt => opt.Ignore());
+
+			CreateMap<CreateDepartmentCommand, Domain.Entities.Department>()
+				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
+
+			CreateMap<CreateTeamCommand, Domain.Entities.Team>()
+				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
+
+			CreateMap<CreatePosTerminalCommand, Domain.Entities.PosTerminal>()
+				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
 			CreateMap<CreateCustomerCommand, Customer>()
 				.ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.Now))

@@ -1,0 +1,82 @@
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\WebPCPOS\bin\Debug\WebPCPOS.exe.config
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\WebPCPOS\bin\Debug\WebPCPOS.exe
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\WebPCPOS\bin\Debug\WebPCPOS.pdb
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\WebPCPOS\bin\Debug\Intek.PcPosLibrary.dll
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\WebPCPOS\bin\Debug\Microsoft.Owin.dll
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\WebPCPOS\bin\Debug\Microsoft.Owin.Host.HttpListener.dll
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\WebPCPOS\bin\Debug\Microsoft.Owin.Hosting.dll
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\WebPCPOS\bin\Debug\Nancy.dll
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\WebPCPOS\bin\Debug\Nancy.Owin.dll
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\WebPCPOS\bin\Debug\Owin.dll
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\WebPCPOS\bin\Debug\Intek.PcPosLibrary.pdb
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\WebPCPOS\bin\Debug\Microsoft.Owin.xml
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\WebPCPOS\bin\Debug\Microsoft.Owin.Host.HttpListener.xml
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\WebPCPOS\bin\Debug\Microsoft.Owin.Hosting.xml
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\WebPCPOS\bin\Debug\Nancy.xml
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\WebPCPOS\bin\Debug\Nancy.Owin.xml
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\WebPCPOS\obj\Debug\WebPCPOS.csprojResolveAssemblyReference.cache
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\WebPCPOS\obj\Debug\WebPCPOS.exe
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\WebPCPOS\obj\Debug\WebPCPOS.pdb
+F:\Pecco\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\WebPCPOS.exe.config
+F:\Pecco\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\obj\Debug\WebPCPOS.exe
+F:\Pecco\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\obj\Debug\WebPCPOS.pdb
+F:\Pecco\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\WebPCPOS.exe
+F:\Pecco\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\WebPCPOS.pdb
+F:\Pecco\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Intek.PcPosLibrary.dll
+F:\Pecco\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Microsoft.Owin.dll
+F:\Pecco\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Microsoft.Owin.Host.HttpListener.dll
+F:\Pecco\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Microsoft.Owin.Hosting.dll
+F:\Pecco\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Nancy.dll
+F:\Pecco\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Nancy.Owin.dll
+F:\Pecco\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Owin.dll
+F:\Pecco\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Intek.PcPosLibrary.pdb
+F:\Pecco\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Microsoft.Owin.xml
+F:\Pecco\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Microsoft.Owin.Host.HttpListener.xml
+F:\Pecco\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Microsoft.Owin.Hosting.xml
+F:\Pecco\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Nancy.xml
+F:\Pecco\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Nancy.Owin.xml
+F:\Pecco\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\obj\Debug\WebPCPOS.csprojResolveAssemblyReference.cache
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\WebPCPOS.exe.config
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\obj\Debug\WebPCPOS.exe
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\obj\Debug\WebPCPOS.pdb
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\WebPCPOS.exe
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\WebPCPOS.pdb
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Intek.PcPosLibrary.dll
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Microsoft.Owin.dll
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Microsoft.Owin.Host.HttpListener.dll
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Microsoft.Owin.Hosting.dll
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Nancy.dll
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Nancy.Owin.dll
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Owin.dll
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Intek.PcPosLibrary.pdb
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Microsoft.Owin.xml
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Microsoft.Owin.Host.HttpListener.xml
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Microsoft.Owin.Hosting.xml
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Nancy.xml
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\bin\Debug\Nancy.Owin.xml
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\WebPCPOS\obj\Debug\WebPCPOS.csprojResolveAssemblyReference.cache
+D:\PCPOS\C#\PEC-WEB-PC2POS-YB-V1.0.0-BillPaymentSerial\WebPCPOS\bin\Debug\WebPCPOS.exe.config
+D:\PCPOS\C#\PEC-WEB-PC2POS-YB-V1.0.0-BillPaymentSerial\WebPCPOS\obj\Debug\WebPCPOS.exe
+D:\PCPOS\C#\PEC-WEB-PC2POS-YB-V1.0.0-BillPaymentSerial\WebPCPOS\obj\Debug\WebPCPOS.pdb
+D:\PCPOS\PEC\WebPCPOS\bin\Debug\WebPCPOS.exe
+D:\PCPOS\PEC\WebPCPOS\bin\Debug\Intek.PcPosLibrary.dll
+D:\PCPOS\PEC\WebPCPOS\bin\Debug\Microsoft.Owin.dll
+D:\PCPOS\PEC\WebPCPOS\bin\Debug\Microsoft.Owin.Host.HttpListener.dll
+D:\PCPOS\PEC\WebPCPOS\bin\Debug\Microsoft.Owin.Hosting.dll
+D:\PCPOS\PEC\WebPCPOS\bin\Debug\Nancy.dll
+D:\PCPOS\PEC\WebPCPOS\bin\Debug\Nancy.Owin.dll
+D:\PCPOS\PEC\WebPCPOS\bin\Debug\Owin.dll
+D:\PCPOS\PEC\WebPCPOS\bin\Debug\Intek.PcPosLibrary.pdb
+D:\PCPOS\PEC\WebPCPOS\bin\Debug\Microsoft.Owin.xml
+D:\PCPOS\PEC\WebPCPOS\bin\Debug\Microsoft.Owin.Host.HttpListener.xml
+D:\PCPOS\PEC\WebPCPOS\bin\Debug\Microsoft.Owin.Hosting.xml
+D:\PCPOS\PEC\WebPCPOS\bin\Debug\Nancy.xml
+D:\PCPOS\PEC\WebPCPOS\bin\Debug\Nancy.Owin.xml
+D:\PCPOS\PEC\WebPCPOS\obj\Debug\WebPCPOS.csprojResolveAssemblyReference.cache
+D:\PCPOS\PEC\WebPCPOS\obj\Debug\WebPCPOS.exe
+D:\PCPOS\PEC\WebPCPOS\obj\Debug\WebPCPOS.pdb
+D:\PCPOS\PEC\WebPCPOS\bin\Debug\WebPCPOS.exe.config
+D:\PCPOS\PEC\WebPCPOS\bin\Debug\WebPCPOS.pdb
+C:\Users\yunes\Desktop\PCPOS-Latest-Files\PCPOS-Latest-Verson-PEC-YB-98-03-05\PEC-PCPOS-WEB-TCP-13980304\WebPCPOS\bin\Debug\WebPCPOS.exe.config
+C:\Users\yunes\Desktop\PCPOS-Latest-Files\PCPOS-Latest-Verson-PEC-YB-98-03-05\PEC-PCPOS-WEB-TCP-13980304\WebPCPOS\obj\Debug\WebPCPOS.exe
+C:\Users\yunes\Desktop\PCPOS-Latest-Files\PCPOS-Latest-Verson-PEC-YB-98-03-05\PEC-PCPOS-WEB-TCP-13980304\WebPCPOS\obj\Debug\WebPCPOS.pdb
