@@ -1,0 +1,522 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <script src="Scripts/jquery-3.6.0.min.js"></script>
+    <script src="Scripts/bootstrap-3.3.7/js/bootstrap.js"></script>
+    <link rel="stylesheet" href="Scripts/bootstrap-3.3.7/css/bootstrap.min.css">
+	<script src="Scripts/jquery-1.6.4.min.js"></script>
+	 <script src="Scripts/jquery.signalR-2.4.2.min.js"></script>
+    <script src="http://127.0.0.1:8080/signalr/hubs"></script>
+    <title>Sep WebBased PCPOS </title>
+</head>
+<body style="background-color:aliceblue">
+    <div class="col-md-12" style="background-color:deepskyblue">
+        <div>
+            <h1 align="center"><a href="http://www.sep.ir" target="_blank">Saman Electronic Payment<br /> (SEP)</a></h1>
+        </div>
+    </div>
+
+
+
+    <div class="container">
+        <ul class="nav nav-tabs" role="tablist">
+            <li role="presentation"><a href="#Bill" aria-controls="Bill" role="tab" data-toggle="tab">Bill</a></li>
+            <li role="presentation"><a href="#Purchase" aria-controls="Purchase" role="tab" data-toggle="tab">Purchase</a></li>
+            <li role="presentation" class="active"><a href="#Configuration" aria-controls="Configuration" role="tab" data-toggle="tab">Configuration</a></li>
+        </ul>
+        <div class="tab-content">
+
+            <div role="tabpanel" id="Bill" class="tab-pane fade">
+                <h3>Bill</h3>
+                <table class="table table-responsive " id="TableBill" height="200">
+                    <tr>
+                        <td class="col-md-2"><label>Bill ID</label></td>
+                        <td><input class="form-control" id="txtBillID" type="text" /></td>
+                        <td><label>Mobile(MCI) Number</label></td>
+                        <td><input class="form-control" id="txtMCINumber" placeholder="09XXXXXXXXX" type="text" /></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><label>Pay ID</label></td>
+                        <td><input class="form-control" id="txtPayID" type="text" /></td>
+                        <td><label>Bill Type</label></td>
+                        <td>
+                            <select id="SelectMCIBillType" class="form-control">
+                                <option value="1">Periodic</option>
+                                <option value="2">Full Time</option>
+                            </select>
+                        </td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>  </td>
+                        <td>
+                            <button class="btn btn-success pull-right" style="margin-left:5px;" type="button" id="btnSendBill">Pay Bill</button>
+                            <button class="btn btn-warning pull-right" type="button" id="btnSendBillRequest">Send Request</button>
+                        </td>
+                        <td></td>
+                        <td>
+                            <button class="btn btn-success pull-right " style="margin-left:5px;" type="button" id="btnSendMCIBill">Pay MCI Bill</button>
+                            <button class="btn btn-info    pull-right " style="margin-left:5px;" type="button" id="btnGetMCIInquery">Get MCI Bill</button>
+                            <button class="btn btn-warning pull-right " type="button" id="btnSendMCIBillRequest">Send Request</button>
+
+                        </td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </table>
+            </div>
+
+            <div role="tabpanel" id="Purchase" class="tab-pane fade">
+                <h3>Purchase</h3>
+                <table class="table table-responsive" style="width:65%" height="200">
+                    <tr>
+                        <td><label>Method</label></td>
+                        <td>
+                            <select id="SelectMethod" class="form-control col-xs-5">
+                                <option value="1">1 Step</option>
+                                <option value="2">2 Step</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr id="ShareAccount">
+                        <td><label>Amounts</label></td>
+                        <td>
+                            <select id="AmountList" multiple="multiple" class="form-control"></select>
+                            <br />
+                            <button class="btn btn-default pull-right" style="margin-left:5px;" type="button" id="btnRemoveAmount">Remove</button>
+                            <button class="btn btn-default pull-right" style="margin-left:5px;" type="button" id="btnAddAmount">Add</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><label>Amount</label></td>
+                        <td><input class="form-control col-md-2" id="txtAmount" type="text" /></td>
+                    </tr>
+                    <tr id="PurchaseType">
+                        <td><label>Purchase Type</label></td>
+                        <td id="PurchaseTypeItems"></td>
+                    </tr>
+                    <tr id="Method1">
+                        <td></td>
+                        <td><button class="btn btn-success pull-right" type="button" id="btnSendAmountPCStart">Send Amount</button></td>
+                    </tr>
+                    <tr id="Method2">
+                        <td></td>
+                        <td>
+                            <button class="btn btn-success pull-right" style="margin-left:5px;" type="button" id="btnSendAmountPOSStart">Send Amount</button>
+                            <button class="btn btn-info pull-right" style="margin-left:5px;" type="button" id="btnWaitPOSStart">Wait</button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div role="tabpanel" id="Configuration" class="tab-pane fade in active">
+                <h3>Configuration</h3>
+                <table class="table table-responsive" id="TableConfiguration" height="200">
+                    <tr>
+                        <td><label for="ConnectionType">Connection Type</label></td>
+                        <td>
+                            <select id="ConnectionType" class="form-control">
+                                <option value="0">Com</option>
+                                <option value="1">Network</option>
+                            </select>
+                        </td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr id="NetworkConnections">
+                        <td><label>POS IP</label></td>
+                        <td>
+                            <select id="txtIp" class="form-control">
+                                <option value="">POS 1</option>
+                                <option value=  "192.168.9.11">POS 2</option>
+                                <option value=  "192.168.9.12">POS 3</option>
+                                <option value=  "192.168.14.119">POS 4</option>
+                            </select> 
+                        </td>
+                        <td><span id="txtIp_lable" class="form-control"></span></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr id="COMConnections">
+                        <td><label for="port">Select POS Device</label></td>
+                        <td>
+                            <select id="port" class="form-control">
+                                <option value="COM4">POS 1</option>
+                                <option value="COM5">POS 2</option>
+                            </select>
+                        </td>
+                        <td><span id="port_lable" class="form-control"></span></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><label>Account Type</label> </td>
+                        <td>
+                            <select id="AccountType" class="form-control">
+                                <option value="0">Single Account</option>
+                                <option value="1">Share Account</option>
+                            </select>
+                        </td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><label>Response Language</label> </td>
+                        <td>
+                            <select id="Language" class="form-control">
+                                <option value="0">Farsi</option>
+                                <option value="1">English</option>
+                            </select>
+                        </td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><label>Terminal ID</label></td>                                                
+                        <td><input class="form-control" id="txtTerminalID"  type="text" /></td>                        
+                        <td><label>Purchase ID</label></td>
+                        <td><input class="form-control" id="txtPurchaseID" type="text" /></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><button class="btn btn-danger" type="button" id="btnResetConnection">Reset</button></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <table>
+            <tr>
+                <td><label>Additional Message</label></td>
+                <td><label>Reference Message</label> </td>
+            </tr>
+            <tr>
+                <td><textarea class="form-control" id="txtAdditional" rows="4" cols="50"></textarea></td>
+                <td><textarea class="form-control" id="txtReference" rows="4" cols="50"></textarea></td>
+            </tr>
+        </table>
+        <h3>
+            Messages
+        </h3>
+        <table>
+            <tr>
+                <td>
+                    <ul id="discussion"></ul>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <script type="text/javascript">
+        $(function () {
+            var serverMessage = '';
+            var authorization = '';
+            $.connection.hub.url = "http://127.0.0.1:8080/signalr";
+            var console = $.connection.SSP1126HUB;
+            $.connection.hub.start().done(function initialize() {
+                $('#btnSendBillRequest').click(function () {
+                    serverMessage = '';
+                    $('#discussion').empty();
+                    console.server.Initial($('#ConnectionType').val(), $('#txtIp').val(), $('#port').val(), $('#AccountType').val(), $('#Language').val(), '0');
+                    var delayInMilliseconds = 1000; //1 second
+                    setTimeout(function () {
+                        //your code to be executed after 1 second
+                        if (serverMessage == '0') {
+                            console.server.Request("1");
+                            $('#discussion').append('<li><strong dir="ltr"> please swipe card...</li>');
+                        } else {
+                            $('#discussion').append('<li><strong dir="ltr"> error in initialization </li>');
+                        }
+
+                    }, delayInMilliseconds);
+                });
+                $('#btnSendBill').click(function () {
+                    serverMessage = '';
+                    $('#discussion').empty();
+                    console.server.Initial($('#ConnectionType').val(), $('#txtIp').val(), $('#port').val(), $('#AccountType').val(), $('#Language').val(), '0');
+                    var delayInMilliseconds = 1000; //1 second
+                    setTimeout(function () {
+                        //your code to be executed after 1 second
+                        if (serverMessage == '0') {
+                            console.server.Bill($('#txtBillID').val(), $('#txtPayID').val(), $('#txtAdditional').val(), $('#txtReference').val());
+                            $('#discussion').append('<li><strong dir="ltr"> please swipe card...</li>');
+                        } else {
+                            $('#discussion').append('<li><strong dir="ltr"> error in initialization </li>');
+                        }
+
+                    }, delayInMilliseconds);
+
+                });
+                $('#btnSendMCIBillRequest').click(function () {
+                    serverMessage = '';
+                    $('#discussion').empty();
+                    console.server.Initial($('#ConnectionType').val(), $('#txtIp').val(), $('#port').val(), $('#AccountType').val(), $('#Language').val(), '0');
+                    var delayInMilliseconds = 1000; //1 second
+                    setTimeout(function () {
+                        //your code to be executed after 1 second
+                        if (serverMessage == '0') {
+                            console.server.Request("2");
+                            $('#discussion').append('<li><strong dir="ltr"> please swipe card...</li>');
+                        } else {
+                            $('#discussion').append('<li><strong dir="ltr"> error in initialization </li>');
+                        }
+
+                    }, delayInMilliseconds);
+
+                });
+                $('#btnGetMCIInquery').click(function () {
+                    serverMessage = '';
+                    $('#discussion').empty();
+                    console.server.Initial($('#ConnectionType').val(), $('#txtIp').val(), $('#port').val(), $('#AccountType').val(), $('#Language').val(), '0');
+                    var delayInMilliseconds = 1000; //1 second
+                    setTimeout(function () {
+                        //your code to be executed after 1 second
+                        if (serverMessage == '0') {
+                            console.server.MciInquery($('#txtMCINumber').val(), $('#SelectMCIBillType').val());
+                            $('#discussion').append('<li><strong dir="ltr"> please swipe card...</li>');
+                        } else {
+                            $('#discussion').append('<li><strong dir="ltr"> error in initialization </li>');
+                        }
+
+                    }, delayInMilliseconds);
+
+                });
+                $('#btnSendMCIBill').click(function () {
+                    serverMessage = '';
+                    $('#discussion').empty();
+                    console.server.Initial($('#ConnectionType').val(), $('#txtIp').val(), $('#port').val(), $('#AccountType').val(), $('#Language').val(), '0');
+                    var delayInMilliseconds = 1000; //1 second
+                    setTimeout(function () {
+                        //your code to be executed after 1 second
+                        if (serverMessage == '0') {
+                            console.server.MciBill($('#txtMCINumber').val(), $('#SelectMCIBillType').val(), $('#txtAdditional').val(), $('#txtReference').val());
+                            $('#discussion').append('<li><strong dir="ltr"> please swipe card...</li>');
+                        } else {
+                            $('#discussion').append('<li><strong dir="ltr"> error in initialization </li>');
+                        }
+
+                    }, delayInMilliseconds);
+
+                });
+                $('#btnSendAmountPCStart').click(function () {
+                    serverMessage = '';
+                    $('#discussion').empty();
+                    console.server.Initial($('#ConnectionType').val(), $('#txtIp').val(), $('#port').val(), $('#AccountType').val(), $('#Language').val(), '0');
+                    var delayInMilliseconds = 1000; //1 second
+                    setTimeout(function () {
+                        //your code to be executed after 1 second
+                        if (serverMessage == '0') {
+                            if ($("#AccountType").val() == "0")//Single Account
+                            {
+                                console.server.SendAmount1Step($('#txtAmount').val(), null, $('#txtAdditional').val(), $('#txtReference').val(), $('#txtPurchaseID').val(), $('#txtTerminalID').val());
+                            } else {//Share Account
+                                var Amounts = '';
+                                var SumAmount = 0;
+                                $("#AmountList > option").each(function () {
+                                    SumAmount = SumAmount + parseInt($(this).val());
+                                    Amounts = Amounts + $(this).val() + ",";
+                                });
+                                Amounts = Amounts.slice(0, -1);
+                                console.server.SendAmount1Step(SumAmount, Amounts, $('#txtAdditional').val(), $('#txtReference').val(), $('#txtPurchaseID').val(), $('#txtTerminalID').val());
+                            }
+                            $('#discussion').append('<li><strong dir="ltr"> please swipe card...</li>');
+                        } else {
+                            $('#discussion').append('<li><strong dir="ltr"> error in initialization </li>');
+                        }
+
+                    }, delayInMilliseconds);
+
+                });
+                $('#btnWaitPOSStart').click(function () {
+                    serverMessage = '';
+                    $('#discussion').empty();
+                    console.server.Initial($('#ConnectionType').val(), $('#txtIp').val(), $('#port').val(), $('#AccountType').val(), $('#Language').val(), '0');
+                    var delayInMilliseconds = 1000; //1 second
+                    setTimeout(function () {
+                        //your code to be executed after 1 second
+                        if (serverMessage == '0') {
+                            console.server.Request("3");
+                            $('#discussion').append('<li><strong dir="ltr"> please swipe card...</li>');
+                        } else {
+                            $('#discussion').append('<li><strong dir="ltr"> error in initialization </li>');
+                        }
+
+                    }, delayInMilliseconds);
+
+                });
+                $('#btnSendAmountPOSStart').click(function () {
+                    if ($("#AccountType").val() == "0")//Single Account
+                    {
+                        console.server.SendAmount2Step($('#txtAmount').val(), null, $('#txtAdditional').val(), $('#txtReference').val(), $('#SelectPurchase').val(), $('#txtPurchaseID').val(), $('#txtTerminalID').val());
+                    } else { //ShareAccount
+                        var Amounts = '';
+                        var SumAmount = 0;
+                        $("#AmountList > option").each(function () {
+                            SumAmount = SumAmount + parseInt($(this).val());
+                            Amounts = Amounts + $(this).val() + ",";
+                        });
+                        Amounts = Amounts.slice(0, -1);
+                        console.server.SendAmount2Step(SumAmount, Amounts, $('#txtAdditional').val(), $('#txtReference').val(), $('#SelectPurchase').val(), $('#txtPurchaseID').val(), $('#txtTerminalID').val());
+                    }
+                });
+                $('#btnResetConnection').click(function () {
+                    console.server.Reset();
+                });
+            });
+            console.client.GetSystemResponse = function (message) {
+                serverMessage = '';
+                serverMessage = message;
+            }
+            function ShowLable(id) {
+                $('#' + id + '_lable').empty().append(' Port: ' + $('#' + id).val());
+            }
+            ShowLable("port");
+            $('#port').change(function () {
+                ShowLable($(this).attr("id"));
+            });
+
+            ShowLable("txtIp");
+            $('#txtIp').change(function () {
+                ShowLable($(this).attr("id"));
+            });
+            String.prototype.replaceAt = function (index, character) {
+                return this.substr(0, index) + character + this.substr(index + character.length);
+            }
+            console.client.masker = function (CardNumber, Mask, IgnorChar) {
+
+                var MinLen = 0;
+                if (CardNumber.length <= Mask.length)
+                    MinLen = CardNumber.length;
+                else
+                    MinLen = Mask.length;
+                var result = CardNumber;
+                for (var i = 0; i < MinLen; i++) {
+
+                    if (Mask[i] != IgnorChar) {
+                        result = result.replaceAt(i, Mask[i]);
+                    }
+                }
+                return result;
+            }
+            console.client.GetCardSwiped = function (TerminalId, CardNumberHash, CardNumberMask, PurchaseTypes) {
+                $('#discussion').append('<li><strong dir="ltr"> Terminal ID: ' + TerminalId + '</strong>&nbsp;&nbsp</li>');
+                $('#discussion').append('<li><strong dir="ltr"> CardNumber(Hashed): ' + CardNumberHash + '</strong>&nbsp;&nbsp</li>');
+                $('#discussion').append('<li><strong dir="ltr"> CardNumber(Masked): ' + CardNumberMask + '</strong>&nbsp;&nbsp</li>');
+                $('#SelectPurchase').remove();
+                if (PurchaseTypes.length > 0) {
+                    $("#PurchaseType").show();
+                    var res = PurchaseTypes.split("*");
+                    $('#PurchaseTypeItems').append('<select Id="SelectPurchase" class="form-control" >');
+                    for (var i = 0; i < res.length; i += 2) {
+                        $('#SelectPurchase').append('<option value=' + res[i] + '>' + res[i + 1] + '</option>');
+                    }
+                    $('#PurchaseTypeItems').append('</SelectPurchase">');
+                }
+            };
+            console.client.GetTransactionResponse = function (TerminalId, ResponseCode, SerialId, RRN, ResponseDescription, TxnDate) {
+                $('#discussion').append('<Table id="TableResult" class="table">')
+                $('#TableResult').append('<thead> <tr  id="TableResultHeader">')
+                $('#TableResult').append('</tr> </thead>')
+                $('#TableResult').append('<tr id="TableResultContent" class="info">')
+                $('#TableResult').append('</tr>')
+                $('#discussion').append('</Table>')
+
+                $('#TableResultHeader').append('<th align="center"> Terminal ID </th>')
+                $('#TableResultHeader').append('<th align="center"> Response Code </th>')
+                $('#TableResultHeader').append('<th align="center"> Serial ID </th>')
+                $('#TableResultHeader').append('<th align="center"> RRN </th>')
+                $('#TableResultHeader').append('<th align="center"> Response Description </th>')
+                $('#TableResultHeader').append('<th align="center"> Transaction Date </th>')
+
+                $('#TableResultContent').append('<td align="center">' + TerminalId + '</td>')
+                $('#TableResultContent').append('<td align="center">' + ResponseCode + '</td>')
+                $('#TableResultContent').append('<td align="center">' + SerialId + '</td>')
+                $('#TableResultContent').append('<td align="center">' + RRN + '</td>')
+                $('#TableResultContent').append('<td align="center">' + ResponseDescription + '</td>')
+                $('#TableResultContent').append('<td align="center">' + TxnDate + '</td>')
+            }
+
+            $('#btnAddAmount').click(function () {
+                if ($('#txtAmount').val().length > 0) {
+                    $('<option value=' + $('#txtAmount').val() + '>' + $('#txtAmount').val() + '</option>').appendTo("#AmountList");
+                }
+            });
+            $("#btnRemoveAmount").click(function () {
+                $("#AmountList > option:selected").each(function () {
+                    $(this).remove();
+                });
+            });
+            $("#AccountType").click(function () {
+                if ($(this).val() == 0) {
+                    $('#ShareAccount').hide();
+                } else {
+                    $('#ShareAccount').show();
+
+                }
+            });
+            $("#SelectMethod").click(function () {
+                if ($(this).val() == 1) {
+                    $('#Method1').show();
+                    $('#Method2').hide();
+                } else if ($(this).val() == 2) {
+                    $('#Method2').show();
+                    $('#Method1').hide();
+
+                }
+            });
+            $("#ConnectionType").click(function () {
+                if ($(this).val() == 0) {
+                    $('#COMConnections').show();
+                    $('#NetworkConnections').hide();
+                } else if ($(this).val() == 1) {
+                    $('#COMConnections').hide();
+                    $('#NetworkConnections').show();
+                }
+            });
+            function LoadTextArea() {
+                $('#txtAdditional').val("<?xml version=\"1.0\" encoding=\"utf-16\"?>" + "\r\n" +
+                              "<List>" + "\r\n" +
+                              "<print>" + "\r\n" +
+                              "<item>123</item>" + "\r\n" +
+                              "<value>a</value>" + "\r\n" +
+                              "<alignment>0</alignment>" + "\r\n" +
+                              "<receiptype>0</receiptype>" + "\r\n" +
+                              "</print>" + "\r\n" +
+                              "<print>" + "\r\n" +
+                              "<item>456</item>" + "\r\n" +
+                              "<value>c</value>" + "\r\n" +
+                              "<alignment>1</alignment>" + "\r\n" +
+                              "<receipttype>1</receipttype>" + "\r\n" +
+                              "</print>" + "\r\n" +
+                               "</List>");
+            }
+            window.onload = $("#ConnectionType").click();
+            window.onload = $("#AccountType").click();
+            window.onload = $("#SelectMethod").click();
+            window.onload = $("#PurchaseType").hide();
+            window.onload = $(LoadTextArea());
+
+        });
+    </script>
+
+</body>
+</html>

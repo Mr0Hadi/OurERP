@@ -1,0 +1,79 @@
+<html>
+	<body>
+		<div id="textDiv"></div>
+		<input type="button" value="test" onclick="test()"/>
+	</body>
+</html>
+<script>
+
+function test(){
+	callOtherDomain();	
+}
+	
+function createCORSRequest(method, url){
+    var xhr = new XMLHttpRequest();
+    if ("withCredentials" in xhr){
+        xhr.open(method, url, true);
+    } else if (typeof XDomainRequest != "undefined"){
+        xhr = new XDomainRequest();
+        xhr.open(method, url);
+    } else {
+        xhr = null;
+    }
+    return xhr;
+}
+
+
+
+    
+    var invocation = new XMLHttpRequest();
+    var url = 'http://localhost:1024/bpmpospc/service';
+    var invocationHistoryText;
+    var body = '{"ServiceCode" :"1","Amount":"1000","PayerId":"108","PcID":"1234"}';
+    
+    function callOtherDomain(){
+        if(invocation)
+        {  invocation.open('POST', url, true);
+            invocation.setRequestHeader('X-PINGARUNER', 'pingpong');
+            invocation.setRequestHeader('Content-Type', 'application/json');
+            invocation.onreadystatechange = handler;
+            invocation.send(body); 
+        }
+        else
+        {
+            invocationHistoryText = "No Invocation TookPlace At All";
+            var textNode = document.createTextNode(invocationHistoryText);
+            var textDiv = document.getElementById("textDiv");
+            textDiv.appendChild(textNode);
+        }
+        
+    }
+    function handler(evtXHR)
+    {
+        if (invocation.readyState == 4)
+        {
+                if (invocation.status == 200)
+                {
+                    var response = invocation.responseText;
+                    //var invocationHistory = response.getElementsByTagName('invocationHistory').item(0).firstChild.data;
+                    invocationHistoryText = document.createTextNode(response);
+                    var textDiv = document.getElementById("textDiv");
+                    textDiv.appendChild(invocationHistoryText);
+                    
+                }
+                else
+                {
+                    alert("Invocation Errors Occured " + invocation.readyState + " and the status is " + invocation.status);
+                }
+        }
+        else
+        {
+            dump("currently the application is at" + invocation.readyState);
+        }
+    }
+    //]]>
+    
+    
+    
+
+</script>

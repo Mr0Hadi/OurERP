@@ -1,0 +1,14 @@
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\Intek.PcPosLibrary\bin\Debug\Intek.PcPosLibrary.dll
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\Intek.PcPosLibrary\bin\Debug\Intek.PcPosLibrary.pdb
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\Intek.PcPosLibrary\obj\Debug\Intek.PcPosLibrary.dll
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\Intek.PcPosLibrary\obj\Debug\Intek.PcPosLibrary.pdb
+C:\Users\yunes\Desktop\PcToPOS Web\pepco-web-pcpos-V1.0.0\Intek.PcPosLibrary\obj\Debug\PcPosLibrary.csprojResolveAssemblyReference.cache
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\Intek.PcPosLibrary\bin\Debug\Intek.PcPosLibrary.dll
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\Intek.PcPosLibrary\bin\Debug\Intek.PcPosLibrary.pdb
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\Intek.PcPosLibrary\obj\Debug\PcPosLibrary.csprojResolveAssemblyReference.cache
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\Intek.PcPosLibrary\obj\Debug\Intek.PcPosLibrary.dll
+D:\PCPOS\C#\PCPOS-Web\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\PEC-WEB-PC2POS-YB-V1.0.0\Intek.PcPosLibrary\obj\Debug\Intek.PcPosLibrary.pdb
+D:\PCPOS\PEC\Intek.PcPosLibrary\bin\Debug\Intek.PcPosLibrary.dll
+D:\PCPOS\PEC\Intek.PcPosLibrary\bin\Debug\Intek.PcPosLibrary.pdb
+D:\PCPOS\PEC\Intek.PcPosLibrary\obj\Debug\Intek.PcPosLibrary.dll
+D:\PCPOS\PEC\Intek.PcPosLibrary\obj\Debug\Intek.PcPosLibrary.pdb

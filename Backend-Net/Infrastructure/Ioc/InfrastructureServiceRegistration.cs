@@ -12,12 +12,14 @@ using Application.Common.Contracts.Token;
 using Application.Common.Contracts.UnitOfWork;
 using Amazon.Runtime;
 using Amazon.S3;
+using Application.Common.Contracts.Pos;
 using Infrastructure.Persistence;
 using Infrastructure.Repositories;
 using Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PosIntegration.Clients;
 
 namespace Infrastructure.Ioc
 {
@@ -46,6 +48,9 @@ namespace Infrastructure.Ioc
             services.AddScoped<IPurchaseRepository, PurchaseRepository>();
             services.AddScoped<IPurchaseReturnRepository, PurchaseReturnRepository>();
             services.AddScoped<ISaleReturnRepository, SaleReturnRepository>();
+            services.AddScoped<IDepartmentRepository, DepartmentRepository>();
+            services.AddScoped<ITeamRepository, TeamRepository>();
+            services.AddScoped<IPosTerminalRepository, PosTerminalRepository>();
 
             //UnitOfWork
             services.AddScoped<IUnitOfWork, UnitOfWork.UnitOfWork>();
@@ -87,6 +92,20 @@ namespace Infrastructure.Ioc
             });
 
             services.AddSingleton<IObjectStorageService, LiaraObjectStorageService>();
+
+            // POS card-reader integration - each vendor's client calls a local bridge process
+            // (Sadad's REST/WCF service, WebPCPOS.exe, or SSP1126's SignalR service) running on the
+            // till machine itself, not the physical device directly; see PosIntegration/Clients/*.
+            // Melli/Parsian speak plain HTTP so they get typed HttpClients; Samankish opens its own
+            // SignalR HubConnection per call and needs no HttpClient.
+            services.AddHttpClient<MelliPosDeviceClient>();
+            services.AddHttpClient<ParsianPosDeviceClient>();
+            services.AddScoped<IPosDeviceClient>(provider => provider.GetRequiredService<MelliPosDeviceClient>());
+            services.AddScoped<IPosDeviceClient>(provider => provider.GetRequiredService<ParsianPosDeviceClient>());
+            services.AddScoped<IPosDeviceClient, SamankishPosDeviceClient>();
+            services.AddScoped<IPosDeviceClientFactory, PosDeviceClientFactory>();
+
+            services.AddScoped<IPosPaymentGateway, PosPaymentGateway>();
 
             return services;
         }

@@ -1,0 +1,375 @@
+class SqlHelper
+    {
+        public string ConnectionString;
+        public SqlHelper(string connectionString)
+        {
+            ConnectionString = connectionString;
+        }
+        public static IDbConnection CreateConnection
+        (string connectionString)
+        {
+            IDbConnection cnn;
+            cnn = new SqlConnection
+                (connectionString);
+
+            return cnn;
+        }
+        public static IDbCommand CreateCommand
+        (string commandText,
+            IDbConnection cnn)
+        {
+            IDbCommand cmd;
+            cmd = new SqlCommand
+            (commandText,
+                (SqlConnection)cnn);
+
+            return cmd;
+        }
+        public static DbDataAdapter CreateAdapter
+            (IDbCommand cmd)
+        {
+            DbDataAdapter da;
+            da = new SqlDataAdapter
+                ((SqlCommand)cmd);
+            return da;
+        }
+        public DataTable GetDataTable(string commandText, params object[] parameterValues)
+        {
+            IDbConnection cnn = CreateConnection(ConnectionString);
+
+            string cmdString = commandText;
+
+            IDbCommand cmd = CreateCommand(cmdString, cnn);
+            cmd.CommandType = CommandType.StoredProcedure;
+            if ((parameterValues != null) && (parameterValues.Length > 0))
+            {
+
+                SqlParameter[] commandParameters = SqlHelperParameterCache.GetSpParameterSet(ConnectionString, commandText);
+
+                //assign the provided values to these parameters based on parameter order
+                AssignParameterValues(commandParameters, parameterValues);
+                foreach (SqlParameter p in commandParameters)
+                {
+                    //check for derived output value with no value assigned
+                    if ((p.Direction == ParameterDirection.InputOutput) && (p.Value == null))
+                    {
+                        p.Value = DBNull.Value;
+                    }
+
+                    cmd.Parameters.Add(p);
+                }
+
+            }
+
+            DbDataAdapter da = CreateAdapter(cmd);
+
+            DataTable dt = new DataTable();
+
+            da.Fill(dt);
+
+            return dt;
+        }
+        private static void AssignParameterValues(SqlParameter[] commandParameters, object[] parameterValues)
+        {
+            if ((commandParameters == null) || (parameterValues == null))
+            {
+                //do nothing if we get no data
+                return;
+            }
+
+            // we must have the same number of values as we pave parameters to put them in
+            if (commandParameters.Length != parameterValues.Length)
+            {
+                throw new ArgumentException("Parameter count does not match Parameter Value count.");
+            }
+
+            //iterate through the SqlParameters, assigning the values from the corresponding position in the 
+            //value array
+            for (int i = 0, j = commandParameters.Length; i < j; i++)
+            {
+                commandParameters[i].Value = parameterValues[i];
+            }
+        }
+        private SqlConnection GetConnection()
+        {
+            SqlConnection connection = new SqlConnection(this.ConnectionString);
+            if (connection.State != ConnectionState.Open)
+                connection.Open();
+            return connection;
+        }
+
+        protected DbCommand GetCommand(DbConnection connection, string commandText, CommandType commandType)
+        {
+            SqlCommand command = new SqlCommand(commandText, connection as SqlConnection);
+            command.CommandType = commandType;
+            return command;
+        }
+
+        protected SqlParameter GetParameter(string parameter, object value)
+        {
+            SqlParameter parameterObject = new SqlParameter(parameter, value != null ? value : DBNull.Value);
+            parameterObject.Direction = ParameterDirection.Input;
+            return parameterObject;
+        }
+
+        protected SqlParameter GetParameterOut(string parameter, SqlDbType type, object value = null, ParameterDirection parameterDirection = ParameterDirection.InputOutput)
+        {
+            SqlParameter parameterObject = new SqlParameter(parameter, type); ;
+
+            if (type == SqlDbType.NVarChar || type == SqlDbType.VarChar || type == SqlDbType.NText || type == SqlDbType.Text)
+            {
+                parameterObject.Size = -1;
+            }
+
+            parameterObject.Direction = parameterDirection;
+
+            if (value != null)
+            {
+                parameterObject.Value = value;
+            }
+            else
+            {
+                parameterObject.Value = DBNull.Value;
+            }
+
+            return parameterObject;
+        }
+
+        protected void ExecuteNonQuery(string commandText, params object[] parameterValues)
+        {
+            object returnValue = null;
+            IDbConnection cnn = CreateConnection(ConnectionString);
+
+            string cmdString = commandText;
+
+            IDbCommand cmd = CreateCommand(cmdString, cnn);
+            cmd.CommandType = CommandType.StoredProcedure;
+            if ((parameterValues != null) && (parameterValues.Length > 0))
+            {
+
+                SqlParameter[] commandParameters = SqlHelperParameterCache.GetSpParameterSet(ConnectionString, commandText);
+
+                //assign the provided values to these parameters based on parameter order
+                AssignParameterValues(commandParameters, parameterValues);
+                foreach (SqlParameter p in commandParameters)
+                {
+                    //check for derived output value with no value assigned
+                    if (
+                        //(p.Direction == ParameterDirection.InputOutput) && 
+                        (p.Value == null))
+                    {
+                        p.Value = DBNull.Value;
+                    }
+
+                    cmd.Parameters.Add(p);
+                }
+
+            }
+            cnn.Open();
+            cmd.ExecuteNonQuery();
+            cnn.Close();
+        }
+
+        protected object ExecuteScalar(string commandText, params object[] parameterValues)
+        {
+            object returnValue = null;
+            IDbConnection cnn = CreateConnection(ConnectionString);
+
+            string cmdString = commandText;
+
+            IDbCommand cmd = CreateCommand(cmdString, cnn);
+            cmd.CommandType = CommandType.StoredProcedure;
+            if ((parameterValues != null) && (parameterValues.Length > 0))
+            {
+
+                SqlParameter[] commandParameters = SqlHelperParameterCache.GetSpParameterSet(ConnectionString, commandText);
+
+                //assign the provided values to these parameters based on parameter order
+                AssignParameterValues(commandParameters, parameterValues);
+                foreach (SqlParameter p in commandParameters)
+                {
+                    //check for derived output value with no value assigned
+                    if ((p.Direction == ParameterDirection.InputOutput) && (p.Value == null))
+                    {
+                        p.Value = DBNull.Value;
+                    }
+                    else if ((p.Direction == ParameterDirection.Input) && (p.Value == null))
+                    {
+                        p.Value = DBNull.Value;
+                    }
+
+                    cmd.Parameters.Add(p);
+                }
+
+            }
+            cnn.Open();
+            returnValue = cmd.ExecuteScalar();
+            cnn.Close();
+            return returnValue;
+
+        }
+        protected DbDataReader GetDataReader(string procedureName, List<DbParameter> parameters, CommandType commandType = CommandType.StoredProcedure)
+        {
+            DbDataReader ds;
+
+            try
+            {
+                DbConnection connection = this.GetConnection();
+                {
+                    DbCommand cmd = this.GetCommand(connection, procedureName, commandType);
+                    if (parameters != null && parameters.Count > 0)
+                    {
+                        cmd.Parameters.AddRange(parameters.ToArray());
+                    }
+
+                    ds = cmd.ExecuteReader(CommandBehavior.CloseConnection);
+                }
+            }
+            catch (Exception ex)
+            {
+                //LogException("Failed to GetDataReader for " + procedureName, ex, parameters);
+                throw;
+            }
+
+            return ds;
+        }
+    }
+    public sealed class SqlHelperParameterCache
+    {
+        #region private methods, variables, and constructors
+
+        //Since this class provides only static methods, make the default constructor private to prevent 
+        //instances from being created with "new SqlHelperParameterCache()".
+        private SqlHelperParameterCache() { }
+
+        private static Hashtable paramCache = Hashtable.Synchronized(new Hashtable());
+
+        /// <summary>
+        /// resolve at run time the appropriate set of SqlParameters for a stored procedure
+        /// </summary>
+        /// <param name="connectionString">a valid connection string for a SqlConnection</param>
+        /// <param name="spName">the name of the stored procedure</param>
+        /// <param name="includeReturnValueParameter">whether or not to include their return value parameter</param>
+        /// <returns></returns>
+        private static SqlParameter[] DiscoverSpParameterSet(string connectionString, string spName, bool includeReturnValueParameter)
+        {
+            using (SqlConnection cn = new SqlConnection(connectionString))
+            using (SqlCommand cmd = new SqlCommand(spName, cn))
+            {
+                cn.Open();
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                SqlCommandBuilder.DeriveParameters(cmd);
+
+                if (!includeReturnValueParameter)
+                {
+                    cmd.Parameters.RemoveAt(0);
+                }
+
+                SqlParameter[] discoveredParameters = new SqlParameter[cmd.Parameters.Count]; ;
+
+                cmd.Parameters.CopyTo(discoveredParameters, 0);
+
+                return discoveredParameters;
+            }
+        }
+
+        //deep copy of cached SqlParameter array
+        private static SqlParameter[] CloneParameters(SqlParameter[] originalParameters)
+        {
+            SqlParameter[] clonedParameters = new SqlParameter[originalParameters.Length];
+
+            for (int i = 0, j = originalParameters.Length; i < j; i++)
+            {
+                clonedParameters[i] = (SqlParameter)((ICloneable)originalParameters[i]).Clone();
+            }
+
+            return clonedParameters;
+        }
+
+        #endregion private methods, variables, and constructors
+
+        #region caching functions
+
+        /// <summary>
+        /// add parameter array to the cache
+        /// </summary>
+        /// <param name="connectionString">a valid connection string for a SqlConnection</param>
+        /// <param name="commandText">the stored procedure name or T-SQL command</param>
+        /// <param name="commandParameters">an array of SqlParamters to be cached</param>
+        public static void CacheParameterSet(string connectionString, string commandText, params SqlParameter[] commandParameters)
+        {
+            string hashKey = connectionString + ":" + commandText;
+
+            paramCache[hashKey] = commandParameters;
+        }
+
+        /// <summary>
+        /// retrieve a parameter array from the cache
+        /// </summary>
+        /// <param name="connectionString">a valid connection string for a SqlConnection</param>
+        /// <param name="commandText">the stored procedure name or T-SQL command</param>
+        /// <returns>an array of SqlParamters</returns>
+        public static SqlParameter[] GetCachedParameterSet(string connectionString, string commandText)
+        {
+            string hashKey = connectionString + ":" + commandText;
+
+            SqlParameter[] cachedParameters = (SqlParameter[])paramCache[hashKey];
+
+            if (cachedParameters == null)
+            {
+                return null;
+            }
+            else
+            {
+                return CloneParameters(cachedParameters);
+            }
+        }
+
+        #endregion caching functions
+
+        #region Parameter Discovery Functions
+
+        /// <summary>
+        /// Retrieves the set of SqlParameters appropriate for the stored procedure
+        /// </summary>
+        /// <remarks>
+        /// This method will query the database for this information, and then store it in a cache for future requests.
+        /// </remarks>
+        /// <param name="connectionString">a valid connection string for a SqlConnection</param>
+        /// <param name="spName">the name of the stored procedure</param>
+        /// <returns>an array of SqlParameters</returns>
+        public static SqlParameter[] GetSpParameterSet(string connectionString, string spName)
+        {
+            return GetSpParameterSet(connectionString, spName, false);
+        }
+
+        /// <summary>
+        /// Retrieves the set of SqlParameters appropriate for the stored procedure
+        /// </summary>
+        /// <remarks>
+        /// This method will query the database for this information, and then store it in a cache for future requests.
+        /// </remarks>
+        /// <param name="connectionString">a valid connection string for a SqlConnection</param>
+        /// <param name="spName">the name of the stored procedure</param>
+        /// <param name="includeReturnValueParameter">a bool value indicating whether the return value parameter should be included in the results</param>
+        /// <returns>an array of SqlParameters</returns>
+        public static SqlParameter[] GetSpParameterSet(string connectionString, string spName, bool includeReturnValueParameter)
+        {
+            string hashKey = connectionString + ":" + spName + (includeReturnValueParameter ? ":include ReturnValue Parameter" : "");
+
+            SqlParameter[] cachedParameters;
+
+            cachedParameters = (SqlParameter[])paramCache[hashKey];
+
+            if (cachedParameters == null)
+            {
+                cachedParameters = (SqlParameter[])(paramCache[hashKey] = DiscoverSpParameterSet(connectionString, spName, includeReturnValueParameter));
+            }
+
+            return CloneParameters(cachedParameters);
+        }
+
+        #endregion Parameter Discovery Functions
+
+    }
