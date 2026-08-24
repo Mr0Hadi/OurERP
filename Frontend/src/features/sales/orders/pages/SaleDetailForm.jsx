@@ -29,6 +29,7 @@ import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
 import SaleStatusSection from "../components/forms/SaleStatusSection";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -106,7 +107,10 @@ export default function SaleDetailForm({ saleData }) {
       checkNumber: formData.checkNumber || null,
       transferRef: formData.transferRef || null,
       mixedPayments: formData.mixedPayments || [],
-      status: formData.status || "processing",
+      status:
+        formData.status === "" || formData.status == null
+          ? SaleStatusEnum.PROCESSING
+          : formData.status,
       totalAmount: computedTotal,
     };
 

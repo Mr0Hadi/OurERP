@@ -13,7 +13,7 @@ export function useSalesQuery(filters, pagination, sorting) {
     limit: pagination.pageSize,
     search: filters.globalSearch || '',
     customerIds: filters.customerIds || [],
-    status: filters.status || '',
+    status: filters.status ?? '',
     paymentType: filters.paymentType ?? '',
     fromDate: filters.fromDate || '',
     toDate: filters.toDate || '',

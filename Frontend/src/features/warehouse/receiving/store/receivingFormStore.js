@@ -112,7 +112,7 @@ export const useReceivingFormStore = create((set, get) => ({
         supplierName: purchaseData.supplierName || '',
         invoiceNumber: purchaseData.invoiceNumber || '',
         invoiceDate: purchaseData.invoiceDate || '',
-        status: purchaseData.status || '',
+        status: purchaseData.status ?? '',
         items: [...orderLines, ...returnLines],
         unknownItems: [],
         receivingNote: '',

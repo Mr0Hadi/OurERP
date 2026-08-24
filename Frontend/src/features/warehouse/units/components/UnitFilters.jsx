@@ -5,10 +5,14 @@ import FilterSelect from "@/shared/components/filters/FilterSelect";
 
 import { UNIT_STATUSES, UNIT_STATUS_LABELS } from "../services/mockData";
 
-const STATUS_OPTIONS = Object.values(UNIT_STATUSES).map((value) => ({
-  value,
-  label: UNIT_STATUS_LABELS[value],
-}));
+// RETURNED_TO_SUPPLIER برچسب ندارد چون هنوز هیچ‌جا در فرانت تولید
+// نمی‌شود (نگاه کنید unitStatus.js) — از فیلتر بیرون می‌ماند.
+const STATUS_OPTIONS = Object.values(UNIT_STATUSES)
+  .filter((value) => UNIT_STATUS_LABELS[value] != null)
+  .map((value) => ({
+    value,
+    label: UNIT_STATUS_LABELS[value],
+  }));
 
 const PRINT_STATE_OPTIONS = [
   { value: "printed", label: "چاپ‌شده" },
@@ -43,6 +47,7 @@ export default function UnitFilters({
         onChange={onStatusChange}
         options={STATUS_OPTIONS}
         allLabel="همه"
+        numeric
       />
       <FilterSelect
         label="چاپ"

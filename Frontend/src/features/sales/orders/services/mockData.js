@@ -3,23 +3,13 @@
 // شده ولی هنوز چیزی از انبار ارسال نشده). «ارسال‌شده» جدید یعنی همه‌ی
 // اقلام توسط انبار ارسال شده‌اند؛ «تحویل کامل/ناقص» می‌تواند بعداً و
 // جدا از فرایند انبار (مثلاً توسط واحد فروش) به‌عنوان تأیید نهاییِ
-// دریافت کالا توسط مشتری ثبت شود.
-export const SALE_STATUSES = {
-  PROCESSING: "processing",
-  PARTIALLY_DELIVERED: "partially_delivered",
-  SHIPPED: "shipped",
-  DELIVERED: "delivered",
-  CANCELLED: "cancelled",
-};
-
-export const SALE_STATUS_LABELS = {
-  [SALE_STATUSES.PROCESSING]: "در حال پردازش",
-  [SALE_STATUSES.PARTIALLY_DELIVERED]: "ارسال ناقص",
-  [SALE_STATUSES.SHIPPED]: "ارسال شده",
-  [SALE_STATUSES.DELIVERED]: "تحویل کامل",
-  [SALE_STATUSES.CANCELLED]: "لغو شده",
-};
-
+// دریافت کالا توسط مشتری ثبت شود. فروش تازه هنوز با PROCESSING ساخته
+// می‌شود، نه PENDING — این ادغام همان‌جا مانده، فقط عددی شده.
+export {
+  SaleStatusEnum as SALE_STATUSES,
+  SALE_STATUS_LABELS,
+} from "@/shared/domain/enums/saleStatus";
+import { SaleStatusEnum as SALE_STATUSES } from "@/shared/domain/enums/saleStatus";
 export {
   PaymentTypeEnum as PAYMENT_TYPES,
   PAYMENT_TYPE_LABELS,
@@ -270,13 +260,19 @@ function buildMixedPayments(totalAmount) {
   return { mixedPayments, paidAmount };
 }
 
+// فروش تازه هرگز با PENDING ساخته نمی‌شود (با PROCESSING یکی شده،
+// بالا توضیح داده شد)، پس نمونه‌های تولیدی هم آن را انتخاب نمی‌کنند.
+const GENERATED_SALE_STATUSES = Object.values(SALE_STATUSES).filter(
+  (status) => status !== SALE_STATUSES.PENDING,
+);
+
 function generateMoreSales(count = 20) {
   const baseDate = new Date("2026-01-01");
   const sales = [];
 
   for (let i = 0; i < count; i++) {
     const customer = pickRandom(MOCK_CUSTOMERS);
-    const status = pickRandom(Object.values(SALE_STATUSES));
+    const status = pickRandom(GENERATED_SALE_STATUSES);
     const paymentType = pickRandom(Object.values(PAYMENT_TYPES));
 
     const { items: rawItems, totalAmount } = buildRandomItems();

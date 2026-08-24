@@ -61,13 +61,16 @@ export default function UnitStatusDialog({
         <div className="space-y-4 py-2">
           <div className="space-y-2">
             <Label>وضعیت جدید</Label>
-            <Select value={status} onValueChange={setStatus}>
+            <Select
+              value={String(status)}
+              onValueChange={(value) => setStatus(Number(value))}
+            >
               <SelectTrigger dir="rtl" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent dir="rtl">
                 {MANUAL_UNIT_STATUSES.map((value) => (
-                  <SelectItem key={value} value={value}>
+                  <SelectItem key={value} value={String(value)}>
                     {UNIT_STATUS_LABELS[value]}
                   </SelectItem>
                 ))}

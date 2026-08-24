@@ -12,36 +12,12 @@
  * دفترِ موازیِ برچسب‌گذاری و ردیابی است. «چند واحد بی‌برچسب مانده» از
  * تفاضل همین دو به دست می‌آید.
  */
-export const UNIT_STATUSES = {
-  IN_STOCK: "in_stock",
-  SOLD: "sold",
-  SHIPPED: "shipped",
-  RETURNED: "returned",
-  DAMAGED: "damaged",
-  LOST: "lost",
-  SCRAPPED: "scrapped",
-};
-
-export const UNIT_STATUS_LABELS = {
-  [UNIT_STATUSES.IN_STOCK]: "در انبار",
-  [UNIT_STATUSES.SOLD]: "فروخته‌شده",
-  [UNIT_STATUSES.SHIPPED]: "ارسال‌شده",
-  [UNIT_STATUSES.RETURNED]: "مرجوعی",
-  [UNIT_STATUSES.DAMAGED]: "آسیب‌دیده",
-  [UNIT_STATUSES.LOST]: "مفقود",
-  [UNIT_STATUSES.SCRAPPED]: "اسقاط",
-};
-
-/**
- * وضعیت‌هایی که انباردار می‌تواند دستی بگذارد. فروخته‌شده و ارسال‌شده
- * عمداً اینجا نیستند: آن‌ها را جریان فروش تعیین می‌کند، نه دست کاربر.
- */
-export const MANUAL_UNIT_STATUSES = [
-  UNIT_STATUSES.DAMAGED,
-  UNIT_STATUSES.LOST,
-  UNIT_STATUSES.SCRAPPED,
-  UNIT_STATUSES.IN_STOCK,
-];
+export {
+  ProductUnitStatusEnum as UNIT_STATUSES,
+  UNIT_STATUS_LABELS,
+  MANUAL_UNIT_STATUSES,
+} from "@/shared/domain/enums/unitStatus";
+import { ProductUnitStatusEnum as UNIT_STATUSES } from "@/shared/domain/enums/unitStatus";
 
 /** واحدهایی که فیزیکاً در انبار موجودند و باید در موجودی شمرده شوند. */
 export const isCountedInStock = (status) => status === UNIT_STATUSES.IN_STOCK;

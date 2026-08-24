@@ -32,7 +32,7 @@ const STATUS_CONFIG = {
     className:
       "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-400",
   },
-  [UNIT_STATUSES.RETURNED]: {
+  [UNIT_STATUSES.RETURNED_BY_CUSTOMER]: {
     icon: Undo2,
     className: "bg-muted text-muted-foreground border-border",
   },

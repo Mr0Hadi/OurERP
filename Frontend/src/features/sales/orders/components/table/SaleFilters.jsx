@@ -87,6 +87,7 @@ const SaleFilters = ({ customers = [], isCustomersLoading = false }) => {
         onChange={setStatus}
         allLabel="همه وضعیت‌ها"
         options={STATUS_OPTIONS}
+        numeric
       />
 
       <FilterSelect

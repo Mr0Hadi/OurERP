@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
+import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
 
 const CameraScanner = lazy(
   () => import("@/features/warehouse/products/components/forms/CameraScanner"),
@@ -98,7 +99,7 @@ export default function UnitScanBar({
         </Button>
       </form>
 
-      {scanMiss?.type === "product" ? (
+      {scanMiss?.kind === BarcodeReferenceKindEnum.PRODUCT ? (
         <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-amber-50 p-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
           <span>
             این بارکدِ خودِ کالای «{scanMiss.product.name}» است، نه یک واحد.
@@ -115,7 +116,7 @@ export default function UnitScanBar({
         </div>
       ) : null}
 
-      {scanMiss?.type === "none" ? (
+      {scanMiss?.kind === BarcodeReferenceKindEnum.UNKNOWN ? (
         <p className="mt-2 text-sm text-destructive">
           هیچ واحد یا کالایی با کد «
           <span className="font-mono">{scanMiss.code}</span>» پیدا نشد.

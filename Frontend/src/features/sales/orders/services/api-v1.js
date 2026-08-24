@@ -9,7 +9,7 @@ export async function fetchSales(params = {}) {
       limit: params.limit,
       search: params.search || undefined,
       customerIds: params.customerIds?.length ? params.customerIds : undefined,
-      status: params.status || undefined,
+      status: params.status !== "" ? params.status : undefined,
       paymentType: params.paymentType !== "" ? params.paymentType : undefined,
       fromDate: params.fromDate || undefined,
       toDate: params.toDate || undefined,

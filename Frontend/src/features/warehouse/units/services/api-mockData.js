@@ -8,6 +8,7 @@ import {
   UNIT_SOURCE_TYPES,
   isCountedInStock,
 } from "./mockData";
+import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -164,20 +165,23 @@ export const fetchProductUnits = async (params = {}) => {
 export const resolveScannedCode = async (code) => {
   await delay(200);
 
+  // شکل و نامِ فیلد اینجا دقیقاً باید مثل پاسخ واقعی api/Product/ScanBarcode
+  // باشد (`kind`، نه `type`؛ عدد، نه رشته) — ورودیِ خالی هم همان
+  // UNKNOWN را می‌گیرد چون UI فرقی بینشان نمی‌گذارد.
   const needle = String(code ?? "").trim().toUpperCase();
-  if (!needle) return { type: "empty" };
+  if (!needle) return { kind: BarcodeReferenceKindEnum.UNKNOWN };
 
   const unit = allProductUnits.find((u) => u.unitCode.toUpperCase() === needle);
-  if (unit) return { type: "unit", unit };
+  if (unit) return { kind: BarcodeReferenceKindEnum.UNIT, unit };
 
   const product = allProducts.find(
     (p) =>
       String(p.barcode ?? "").toUpperCase() === needle ||
       String(p.code ?? "").toUpperCase() === needle,
   );
-  if (product) return { type: "product", product };
+  if (product) return { kind: BarcodeReferenceKindEnum.PRODUCT, product };
 
-  return { type: "none" };
+  return { kind: BarcodeReferenceKindEnum.UNKNOWN };
 };
 
 /** آمار بالای صفحه: چه چیزی همین حالا کار دارد. */

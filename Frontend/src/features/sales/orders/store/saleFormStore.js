@@ -68,7 +68,7 @@ export const useSaleFormStore = create((set, get) => ({
         checkNumber: sale.checkNumber || "",
         transferRef: sale.transferRef || "",
         mixedPayments: sale.mixedPayments || [],
-        status: sale.status || "",
+        status: sale.status ?? "",
         items: formattedItems,
       },
     });

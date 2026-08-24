@@ -69,7 +69,10 @@ export default function SaleStatusSection({ selectedStatus, onStatusChange }) {
           <Label className="text-sm font-medium text-card-foreground">
             تغییر وضعیت
           </Label>
-          <Select value={selectedStatus} onValueChange={onStatusChange}>
+          <Select
+            value={selectedStatus === "" || selectedStatus == null ? "" : String(selectedStatus)}
+            onValueChange={(value) => onStatusChange(Number(value))}
+          >
             <SelectTrigger className="h-9">
               <SelectValue placeholder="وضعیت را انتخاب کنید" />
             </SelectTrigger>

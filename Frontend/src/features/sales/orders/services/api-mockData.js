@@ -80,7 +80,7 @@ export async function fetchSales(params = {}) {
     filtered = filtered.filter((s) => customerIds.includes(s.customerId));
   }
 
-  if (status) {
+  if (status !== "" && status !== undefined) {
     filtered = filtered.filter((s) => s.status === status);
   }
 

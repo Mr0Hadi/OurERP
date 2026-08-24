@@ -38,6 +38,7 @@ import UnitLabel from "../components/UnitLabel";
 import UnitLabelsSummary from "../components/UnitLabelsSummary";
 import UnitScanBar from "../components/UnitScanBar";
 import UnitDetailSheet from "../components/UnitDetailSheet";
+import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
 import UnitViewSwitcher from "../components/UnitViewSwitcher";
 import UnitBulkBar from "../components/UnitBulkBar";
 import UnitStatusDialog from "../components/UnitStatusDialog";
@@ -108,9 +109,9 @@ export default function UnitLabelsPage() {
     setScanMiss(null);
     resolveCode.mutate(code, {
       onSuccess: (result) => {
-        if (result.type === "unit") setActiveUnit(result.unit);
-        else if (result.type === "product") setScanMiss(result);
-        else setScanMiss({ type: "none", code });
+        if (result.kind === BarcodeReferenceKindEnum.UNIT) setActiveUnit(result.unit);
+        else if (result.kind === BarcodeReferenceKindEnum.PRODUCT) setScanMiss(result);
+        else setScanMiss({ kind: BarcodeReferenceKindEnum.UNKNOWN, code });
       },
     });
   };
@@ -133,9 +134,9 @@ export default function UnitLabelsPage() {
     if (unit) {
       resolveCode.mutate(unit, {
         onSuccess: (result) =>
-          result.type === "unit"
+          result.kind === BarcodeReferenceKindEnum.UNIT
             ? setActiveUnit(result.unit)
-            : setScanMiss({ type: "none", code: unit }),
+            : setScanMiss({ kind: BarcodeReferenceKindEnum.UNKNOWN, code: unit }),
       });
     } else if (product && qty > 0) {
       generateUnits.mutate(

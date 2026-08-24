@@ -1,4 +1,4 @@
-import { allSales } from "@/features/sales/orders/services/mockData";
+import { allSales, SALE_STATUSES } from "@/features/sales/orders/services/mockData";
 import {
   CLAIM_SCOPES,
   OFF_INVOICE_KINDS,
@@ -59,9 +59,9 @@ const generateId = () =>
 // مرجوعی فقط برای فروش‌هایی معنا دارد که واقعاً چیزی از انبار برایشان
 // خارج شده باشد — چه کامل چه ناقص.
 export const RETURN_ELIGIBLE_SALE_STATUSES = [
-  "shipped",
-  "delivered",
-  "partially_delivered",
+  SALE_STATUSES.SHIPPED,
+  SALE_STATUSES.DELIVERED,
+  SALE_STATUSES.PARTIALLY_DELIVERED,
 ];
 
 // مشکل‌هایی که برای ادعای *روی فاکتور* معنا دارند. اضافه‌ارسال اینجا
