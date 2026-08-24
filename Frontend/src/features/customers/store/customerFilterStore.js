@@ -1,24 +1,25 @@
 // features/customers/store/customerFilterStore.js
 import { create } from "zustand";
+import { BalanceTypeEnum } from "@/shared/domain/enums/balanceType";
 
 export const useCustomerFilterStore = create((set) => ({
   globalSearch: "",
   minDebtCredit: "",
   maxDebtCredit: "",
-  balanceType: "all", // "all" | "debit" | "credit" | "none"
+  balanceType: "all", // "all" | BalanceTypeEnum
   pagination: { pageIndex: 0, pageSize: 10 },
   sorting: null,
 
   setQuickFilter: (type) => {
     switch (type) {
       case "debtors":
-        set({ balanceType: "debit", minDebtCredit: "", maxDebtCredit: "" });
+        set({ balanceType: BalanceTypeEnum.DEBTOR, minDebtCredit: "", maxDebtCredit: "" });
         break;
       case "creditors":
-        set({ balanceType: "credit", minDebtCredit: "", maxDebtCredit: "" });
+        set({ balanceType: BalanceTypeEnum.CREDITOR, minDebtCredit: "", maxDebtCredit: "" });
         break;
       case "zero":
-        set({ balanceType: "none", minDebtCredit: "", maxDebtCredit: "" });
+        set({ balanceType: BalanceTypeEnum.BALANCED, minDebtCredit: "", maxDebtCredit: "" });
         break;
       default: // all
         set({ balanceType: "all", minDebtCredit: "", maxDebtCredit: "" });

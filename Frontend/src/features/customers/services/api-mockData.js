@@ -1,5 +1,6 @@
 // src/features/customers/services/api-mockData.js
 import { allCustomers } from "./mockData";
+import { BalanceTypeEnum } from "@/shared/domain/enums/balanceType";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -26,7 +27,7 @@ export async function fetchCustomers({
     );
   }
 
-  if (balanceType) {
+  if (balanceType !== "" && balanceType !== undefined) {
     result = result.filter((c) => c.balanceType === balanceType);
   }
 
@@ -78,7 +79,7 @@ export async function createCustomer(customerData) {
     referralCode: "",
     creditLimit: 0,
     Description: "",
-    balanceType: "none",
+    balanceType: BalanceTypeEnum.BALANCED,
     balance: 0,
     image: null,
     ...customerData,

@@ -5,9 +5,10 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
+import { BalanceTypeEnum } from "@/shared/domain/enums/balanceType";
 
 export default function CustomerFinanceForm({ register, errors, balanceType, control }) {
-  const showAmount = balanceType !== "none";
+  const showAmount = balanceType !== BalanceTypeEnum.BALANCED;
 
   return (
     <Card className="shadow-md rounded-2xl overflow-hidden pt-0 gap-0">
@@ -28,24 +29,27 @@ export default function CustomerFinanceForm({ register, errors, balanceType, con
               name="balanceType"
               control={control}
               render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
+                <Select
+                  value={String(field.value)}
+                  onValueChange={(value) => field.onChange(Number(value))}
+                >
                   <SelectTrigger className="h-10 rounded-lg transition-all">
                     <SelectValue placeholder="انتخاب کنید" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
-                    <SelectItem value="none" className="rounded-lg">
+                    <SelectItem value={String(BalanceTypeEnum.BALANCED)} className="rounded-lg">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-muted-foreground/50" />
                         بی‌حساب (صفر)
                       </div>
                     </SelectItem>
-                    <SelectItem value="debit" className="rounded-lg">
+                    <SelectItem value={String(BalanceTypeEnum.DEBTOR)} className="rounded-lg">
                       <div className="flex items-center gap-2">
                         <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-500" />
                         بدهکار
                       </div>
                     </SelectItem>
-                    <SelectItem value="credit" className="rounded-lg">
+                    <SelectItem value={String(BalanceTypeEnum.CREDITOR)} className="rounded-lg">
                       <div className="flex items-center gap-2">
                         <TrendingDown className="h-4 w-4 text-red-600 dark:text-red-500" />
                         بستانکار (طلبکار)

@@ -13,7 +13,7 @@ export function useCustomersQuery(filters, pagination, sorting) {
     search: filters.search || "",
     minBalance: filters.minBalance ?? "",
     maxBalance: filters.maxBalance ?? "",
-    balanceType: filters.balanceType && filters.balanceType !== "all" ? filters.balanceType : "",
+    balanceType: filters.balanceType !== "all" ? filters.balanceType : "",
     sortBy: sorting?.id ?? "lastName",
     sortOrder: sorting?.desc ? "desc" : "asc",
   };

@@ -21,7 +21,7 @@ export async function fetchCustomers({
     search: search || undefined,
     minBalance: minBalance !== "" ? minBalance : undefined,
     maxBalance: maxBalance !== "" ? maxBalance : undefined,
-    balanceType: balanceType || undefined,
+    balanceType: balanceType !== "" ? balanceType : undefined,
     sortBy,
     sortOrder,
   };

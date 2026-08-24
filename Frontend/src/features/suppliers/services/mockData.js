@@ -1,4 +1,6 @@
 // src/features/suppliers/services/mockData.js
+import { BalanceTypeEnum } from "@/shared/domain/enums/balanceType";
+
 export const allSuppliers = [
   {
     id: 1,
@@ -9,7 +11,7 @@ export const allSuppliers = [
     address: "تهران، خیابان امیرکبیر، پلاک ۱۲",
     postalCode: "1234567890",
     balance: 450000,
-    balanceType: "debit",
+    balanceType: BalanceTypeEnum.DEBTOR,
     Description: "",
     image: null,
     lat: 35.6892,
@@ -26,7 +28,7 @@ export const allSuppliers = [
     address: "کرج، منطقه صنعتی، سوله ۵",
     postalCode: "8134567890",
     balance: 1100000,
-    balanceType: "credit",
+    balanceType: BalanceTypeEnum.CREDITOR,
     Description: "",
     image: null,
     lat: 35.8327,
@@ -43,7 +45,7 @@ export const allSuppliers = [
     address: "تهران، میدان توپخانه",
     postalCode: "6514567890",
     balance: 1200000,
-    balanceType: "debit",
+    balanceType: BalanceTypeEnum.DEBTOR,
     Description: "",
     image: null,
     lat: 35.685,

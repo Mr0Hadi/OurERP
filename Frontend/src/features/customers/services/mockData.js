@@ -1,4 +1,5 @@
 // src/features/customers/services/mockData.js
+import { BalanceTypeEnum } from "@/shared/domain/enums/balanceType";
 
 export const allCustomers = [
   {
@@ -12,7 +13,7 @@ export const allCustomers = [
     creditLimit: 5000000,
     Description: "مشتری وفادار",
     balance: 500000,
-    balanceType: "debit",
+    balanceType: BalanceTypeEnum.DEBTOR,
     image: null,
     lat: 35.6892,
     lng: 51.389,
@@ -30,7 +31,7 @@ export const allCustomers = [
     creditLimit: 10000000,
     Description: "",
     balance: 1200000,
-    balanceType: "debit",
+    balanceType: BalanceTypeEnum.DEBTOR,
     image: null,
     lat: 32.6539,
     lng: 51.666,
@@ -48,7 +49,7 @@ export const allCustomers = [
     creditLimit: 2000000,
     Description: "نیاز به پیگیری",
     balance: 1100000,
-    balanceType: "credit",
+    balanceType: BalanceTypeEnum.CREDITOR,
     image: null,
     lat: 34.799,
     lng: 48.515,

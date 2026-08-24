@@ -1,5 +1,6 @@
 // src/features/suppliers/services/api-mockData.js
 import { allSuppliers } from "./mockData";
+import { BalanceTypeEnum } from "@/shared/domain/enums/balanceType";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -26,7 +27,7 @@ export async function fetchSuppliers({
     );
   }
 
-  if (balanceType) {
+  if (balanceType !== "" && balanceType !== undefined) {
     result = result.filter((s) => s.balanceType === balanceType);
   }
 
@@ -75,7 +76,7 @@ export async function createSupplier(supplierData) {
   const newSupplier = {
     id: newId,
     Description: "",
-    balanceType: "none",
+    balanceType: BalanceTypeEnum.BALANCED,
     balance: 0,
     image: null,
     ...supplierData,

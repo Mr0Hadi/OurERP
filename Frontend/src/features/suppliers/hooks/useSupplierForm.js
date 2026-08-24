@@ -1,6 +1,7 @@
 // src/features/suppliers/hooks/useSupplierForm.js
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { BalanceTypeEnum } from "@/shared/domain/enums/balanceType";
 
 function buildDefaultValues(data) {
   if (!data) {
@@ -14,7 +15,7 @@ function buildDefaultValues(data) {
       lng: "",
       postalCode: "",
       Description: "",
-      balanceType: "none",
+      balanceType: BalanceTypeEnum.BALANCED,
       balanceAmount: "",
       image: null,
     };
@@ -30,9 +31,9 @@ function buildDefaultValues(data) {
     lng: data.lng !== null && data.lng !== undefined ? data.lng.toString() : "",
     postalCode: data.postalCode || "",
     Description: data.Description || "",
-    balanceType: data.balanceType || "none",
+    balanceType: data.balanceType ?? BalanceTypeEnum.BALANCED,
     balanceAmount:
-      data.balanceType && data.balanceType !== "none"
+      data.balanceType !== undefined && data.balanceType !== BalanceTypeEnum.BALANCED
         ? Math.abs(data.balance || 0).toString()
         : "",
     image: null,
@@ -41,8 +42,8 @@ function buildDefaultValues(data) {
 
 export function buildSupplierPayload(data, imagePreview, existingImage) {
   const amount = Number(data.balanceAmount) || 0;
-  const balanceType = data.balanceType || "none";
-  const balance = balanceType === "none" ? 0 : Math.abs(amount);
+  const balanceType = data.balanceType ?? BalanceTypeEnum.BALANCED;
+  const balance = balanceType === BalanceTypeEnum.BALANCED ? 0 : Math.abs(amount);
 
   return {
     companyName: data.companyName,
