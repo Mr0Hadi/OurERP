@@ -10,18 +10,9 @@ import { accountStatusToIsActive } from "@/shared/domain/enums/accountStatus";
  * پوششِ `ResponseDto` را axios باز می‌کند، پس اینجا `data` همان محتوای
  * `Data` است.
  *
- * ⚠️ دو شکافِ شناخته‌شده (سند `docs/org-structure-contract.fa.md`):
- *
- * ۱. بکند **هنوز `GetUserList` ندارد**. فهرست کارمندان تنها چیزی است که
- *    بدون آن کار نمی‌کند؛ امضای زیر دقیقاً با قرارداد بقیه‌ی لیست‌های
- *    همین بکند نوشته شده (`page`, `take`, و فیلترهای اختیاری).
- *
- * ۲. `CreateUser` و `UpdateUser` **`departmentId`/`teamId` نمی‌گیرند**،
- *    در حالی که `User.DepartmentId` و `User.TeamId` در دیتابیس
- *    غیرقابل‌null هستند. یعنی هر کاربری که از این مسیر ساخته شود واحد و
- *    تیمش صفر می‌ماند. فیلدها اینجا در payload گذاشته شده‌اند چون بدون
- *    آن‌ها رکورد اصلاً معتبر نیست — ولی تا اضافه‌شدنشان در Command،
- *    سرور نادیده‌شان می‌گیرد.
+ * ⚠️ بکند **هنوز `GetUserList` ندارد**. فهرست کارمندان تنها چیزی است که
+ * بدون آن کار نمی‌کند؛ امضای زیر دقیقاً با قرارداد بقیه‌ی لیست‌های همین
+ * بکند نوشته شده (`page`, `take`, و فیلترهای اختیاری).
  */
 
 export async function fetchEmployees(params = {}) {
@@ -31,8 +22,6 @@ export async function fetchEmployees(params = {}) {
       take: params.limit,
       fullName: params.search || undefined,
       roleId: params.roleId !== "" ? params.roleId : undefined,
-      departmentId: params.departmentId !== "" ? params.departmentId : undefined,
-      teamId: params.teamId !== "" ? params.teamId : undefined,
       isActive: accountStatusToIsActive(params.status),
     },
   });

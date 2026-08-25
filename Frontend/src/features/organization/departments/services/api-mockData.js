@@ -5,28 +5,16 @@ import { allTeams } from "../../teams/services/mockData";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/**
- * `teamCount` و `userCount` مشتق‌اند — سرور هم آن‌ها را می‌شمارد و در
- * `DepartmentListDto` می‌گذارد، نه اینکه ستون جدا داشته باشد.
- */
-const withCounts = (department, employees) => {
+/** `teamCount` مشتق است — سرور هم آن را در `DepartmentListDto` می‌شمارد. */
+const withTeamCount = (department) => {
   const teams = allTeams.filter((team) => team.departmentId === department.id);
-  return {
-    ...department,
-    teamCount: teams.length,
-    userCount: employees.filter((e) => e.departmentId === department.id).length,
-  };
+  return { ...department, teamCount: teams.length };
 };
 
 export async function fetchDepartments(params = {}) {
   await delay(300);
 
-  // ایمپورت تنبل تا وابستگیِ حلقوی بین کارمند و واحد ساخته نشود:
-  // کارمند برای نمایش نام واحد به این ماژول نگاه می‌کند و این ماژول
-  // برای شمارش اعضا به کارمند.
-  const { allEmployees } = await import("@/features/employees/services/mockData");
-
-  const rows = allDepartments.map((d) => withCounts(d, allEmployees));
+  const rows = allDepartments.map(withTeamCount);
 
   return applyListQuery(rows, params, { searchFields: ["name", "headName"] });
 }
@@ -37,8 +25,7 @@ export async function fetchDepartmentById(id) {
   const department = allDepartments.find((item) => item.id == id);
   if (!department) throw new Error("واحد مورد نظر یافت نشد");
 
-  const { allEmployees } = await import("@/features/employees/services/mockData");
-  return withCounts(department, allEmployees);
+  return withTeamCount(department);
 }
 
 export async function createDepartment(payload) {
@@ -53,10 +40,7 @@ export async function createDepartment(payload) {
     name: payload.name,
     headId: payload.headId ?? null,
     headName: payload.headName ?? null,
-    deputyId: payload.deputyId ?? null,
-    deputyName: payload.deputyName ?? null,
-    memberPermissionIds: payload.memberPermissionIds ?? [],
-    managerPermissionIds: payload.managerPermissionIds ?? [],
+    userCount: 0,
     isActive: true,
   };
 
@@ -75,23 +59,11 @@ export async function updateDepartment(payload) {
   );
   if (duplicate) throw new Error("واحدی با این نام قبلا ثبت شده است");
 
-  // `deputyId` عمداً در payload نیست (بکند ستونش را ندارد). پس مقدارِ
-  // فعلی باید *حفظ* شود، نه null شود — وگرنه هر بار که کاربر فقط مدیر
-  // را عوض می‌کند، معاون بی‌صدا پاک می‌شود.
   allDepartments[index] = {
     ...allDepartments[index],
     name: payload.name,
     headId: payload.headId ?? null,
     headName: payload.headName ?? null,
-    ...("deputyId" in payload
-      ? { deputyId: payload.deputyId, deputyName: payload.deputyName ?? null }
-      : {}),
-    ...("memberPermissionIds" in payload
-      ? { memberPermissionIds: payload.memberPermissionIds }
-      : {}),
-    ...("managerPermissionIds" in payload
-      ? { managerPermissionIds: payload.managerPermissionIds }
-      : {}),
   };
 
   return allDepartments[index];

@@ -31,7 +31,6 @@ import {
 } from "../../hooks/useEmployeeOptions";
 import DepartmentIdentityForm from "../components/forms/DepartmentIdentityForm";
 import OrgLeadershipForm from "../../components/OrgLeadershipForm";
-import PermissionAssignmentForm from "../../components/PermissionAssignmentForm";
 
 function DepartmentDetailForm({ department }) {
   const navigate = useNavigate();
@@ -128,10 +127,6 @@ function DepartmentDetailForm({ department }) {
                 نیست.
               </p>
             )}
-          </div>
-
-          <div className="lg:col-span-2">
-            <PermissionAssignmentForm control={control} />
           </div>
         </div>
       </form>

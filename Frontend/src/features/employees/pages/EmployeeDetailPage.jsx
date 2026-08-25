@@ -28,8 +28,6 @@ import { useEmployeeQuery } from "../services/queries";
 import { useEmployeeForm } from "../hooks/useEmployeeForm";
 import EmployeeIdentityForm from "../components/forms/EmployeeIdentityForm";
 import EmployeeAccessForm from "../components/forms/EmployeeAccessForm";
-import EmployeeOrgForm from "../components/forms/EmployeeOrgForm";
-import EmployeeEffectivePermissions from "../components/forms/EmployeeEffectivePermissions";
 import EmployeeDetailLoading from "../components/forms/EmployeeDetailLoading";
 
 const fullNameOf = (employee) =>
@@ -46,7 +44,7 @@ function EmployeeDetailForm({ employee }) {
   const deactivateMutation = useDeactivateEmployeeMutation();
   const logoutMutation = useLogoutEmployeeMutation();
 
-  const { formMethods, buildPayload, departmentId } = useEmployeeForm(employee);
+  const { formMethods, buildPayload } = useEmployeeForm(employee);
   const {
     register,
     control,
@@ -99,14 +97,6 @@ function EmployeeDetailForm({ employee }) {
               isEditing
               personelCode={employee.personelCode}
             />
-
-            <EmployeeOrgForm
-              control={control}
-              errors={errors}
-              departmentId={departmentId}
-            />
-
-            <EmployeeEffectivePermissions employee={employee} />
           </div>
 
           {/* ستون چپ - نقش، دسترسی و عملیات ادمین */}

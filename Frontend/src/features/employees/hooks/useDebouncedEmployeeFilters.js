@@ -10,14 +10,10 @@ export function useDebouncedEmployeeFilters() {
   const globalSearch = useEmployeeFilterStore((s) => s.globalSearch);
   const roleId = useEmployeeFilterStore((s) => s.roleId);
   const status = useEmployeeFilterStore((s) => s.status);
-  const departmentId = useEmployeeFilterStore((s) => s.departmentId);
-  const teamId = useEmployeeFilterStore((s) => s.teamId);
 
   return {
     globalSearch: useDebouncedValue(globalSearch),
     roleId,
     status,
-    departmentId,
-    teamId,
   };
 }

@@ -18,11 +18,9 @@ function buildDefaultValues(team) {
     name: team?.name ?? "",
     departmentId: team?.departmentId ?? null,
     headId: team?.headId ?? null,
-    deputyId: team?.deputyId ?? null,
   };
 }
 
-/** مثل واحد، `deputyId` تا آماده‌شدن بکند ارسال نمی‌شود. */
 export function buildTeamPayload(data, id, headName) {
   return {
     ...(id != null ? { id: Number(id) } : {}),

@@ -4,12 +4,9 @@ import { normalizeListResponse } from "@/shared/services/api/contract";
 
 /**
  * نگاشت روی `api/Department` — این کنترلر در بکند **وجود دارد** و CRUD
- * کاملش پیاده شده.
- *
- * ⚠️ تنها چیزی که ندارد `DeputyId` است. تا اضافه‌شدنش، `deputyId` در
- * payload ارسال **نمی‌شود** (سند `docs/org-structure-contract.fa.md`);
- * فرستادنش فقط یک فیلد ناشناخته بود که سرور بی‌صدا دور می‌ریخت و این
- * بدترین حالت است — کاربر فکر می‌کند ذخیره شده.
+ * کاملش پیاده شده. فقط همان فیلدهایی که سرور می‌پذیرد ارسال می‌شود
+ * (`name`, `headId`)؛ چیزهایی مثل معاون یا دسترسی که هنوز در بکند
+ * وجود ندارند، اینجا هم نیستند.
  */
 export async function fetchDepartments(params = {}) {
   const { data } = await axiosInstance.get("/Department/GetDepartmentList", {

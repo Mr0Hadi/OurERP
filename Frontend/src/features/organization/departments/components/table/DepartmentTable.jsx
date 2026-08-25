@@ -45,17 +45,6 @@ export default function DepartmentTable({
           ),
       },
       {
-        accessorKey: "deputyName",
-        header: "معاون واحد",
-        enableSorting: false,
-        cell: (info) =>
-          info.getValue() ? (
-            <span className="text-sm">{info.getValue()}</span>
-          ) : (
-            <span className="text-sm text-muted-foreground">تعیین نشده</span>
-          ),
-      },
-      {
         accessorKey: "teamCount",
         header: "تعداد تیم",
         cell: (info) => <CountCell value={info.getValue()} suffix="تیم" />,

@@ -2,16 +2,14 @@
 import { createFilterStore } from "@/shared/store/createFilterStore";
 
 /**
- * همه‌ی فیلترهای enum عددی‌اند (`UserRoleEnum`, `AccountStatusEnum`,
- * `DepartmentEnum`) و رشته‌ی خالی یعنی «فیلتر نشده» — همان قراردادی که
- * `normalizeFilterValue` در `FilterSelect` رعایت می‌کند.
+ * `roleId` و `status` هر دو enum عددی‌اند (`UserRoleEnum`,
+ * `AccountStatusEnum`) و رشته‌ی خالی یعنی «فیلتر نشده» — همان قراردادی
+ * که `normalizeFilterValue` در `FilterSelect` رعایت می‌کند.
  */
 export const useEmployeeFilterStore = createFilterStore({
   filters: {
     globalSearch: "",
     roleId: "",
     status: "",
-    departmentId: "",
-    teamId: "",
   },
 });

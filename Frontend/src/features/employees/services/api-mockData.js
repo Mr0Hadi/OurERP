@@ -5,10 +5,7 @@ import {
   AccountStatusEnum,
   isActiveToAccountStatus,
 } from "@/shared/domain/enums/accountStatus";
-import { DEPARTMENT_LABELS } from "@/shared/domain/enums/department";
 import { allEmployees } from "./mockData";
-import { allDepartments } from "@/features/organization/departments/services/mockData";
-import { allTeams } from "@/features/organization/teams/services/mockData";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -18,30 +15,16 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  */
 const SEARCH_FIELDS = ["fullName", "username", "personelCode"];
 
-const departmentNameOf = (departmentId) =>
-  allDepartments.find((d) => d.id === departmentId)?.name ??
-  DEPARTMENT_LABELS[departmentId] ??
-  null;
-
-const teamNameOf = (teamId) =>
-  allTeams.find((t) => t.id === teamId)?.name ?? null;
-
-/**
- * سرور نامِ واحد و تیم را از join درمی‌آورد؛ mock هم باید همان شکل را
- * بدهد وگرنه جدول در حالت واقعی ستون‌های خالی نشان می‌دهد.
- */
 const withDerivedFields = (employee) => ({
   ...employee,
   fullName: `${employee.firstName} ${employee.lastName}`.trim(),
-  departmentName: departmentNameOf(employee.departmentId),
-  teamName: teamNameOf(employee.teamId),
   status: isActiveToAccountStatus(employee.isActive),
 });
 
 export async function fetchEmployees(params = {}) {
   await delay(400);
 
-  const { roleId = "", status = "", departmentId = "", teamId = "" } = params;
+  const { roleId = "", status = "" } = params;
 
   let rows = allEmployees.map(withDerivedFields);
 
@@ -54,16 +37,6 @@ export async function fetchEmployees(params = {}) {
   if (status !== "" && status != null) {
     const wantActive = Number(status) === AccountStatusEnum.ACTIVE;
     rows = rows.filter((employee) => employee.isActive === wantActive);
-  }
-
-  if (departmentId !== "" && departmentId != null) {
-    rows = rows.filter(
-      (employee) => employee.departmentId === Number(departmentId),
-    );
-  }
-
-  if (teamId !== "" && teamId != null) {
-    rows = rows.filter((employee) => employee.teamId === Number(teamId));
   }
 
   return applyListQuery(rows, params, {
@@ -116,8 +89,6 @@ export async function createEmployee(payload) {
     personelCode: nextPersonelCode(),
     roleId: payload.roleId,
     roleName: USER_ROLE_LABELS[payload.roleId] ?? "",
-    departmentId: payload.departmentId ?? null,
-    teamId: payload.teamId ?? null,
     isActive: true,
     createdAt: new Date().toISOString(),
   };
@@ -144,8 +115,6 @@ export async function updateEmployee(payload) {
     username: payload.username,
     roleId: payload.roleId,
     roleName: USER_ROLE_LABELS[payload.roleId] ?? "",
-    departmentId: payload.departmentId ?? null,
-    teamId: payload.teamId ?? null,
     isActive: payload.isActive,
   };
 

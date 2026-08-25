@@ -49,17 +49,6 @@ export default function TeamTable({
           ),
       },
       {
-        accessorKey: "deputyName",
-        header: "معاون تیم",
-        enableSorting: false,
-        cell: (info) =>
-          info.getValue() ? (
-            <span className="text-sm">{info.getValue()}</span>
-          ) : (
-            <span className="text-sm text-muted-foreground">تعیین نشده</span>
-          ),
-      },
-      {
         accessorKey: "userCount",
         header: "تعداد اعضا",
         cell: (info) => (

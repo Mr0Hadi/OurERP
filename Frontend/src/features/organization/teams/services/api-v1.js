@@ -5,8 +5,6 @@ import { normalizeListResponse } from "@/shared/services/api/contract";
 /**
  * نگاشت روی `api/Team` — این کنترلر هم در بکند وجود دارد و CRUD کامل
  * دارد، با فیلتر `name` و `departmentId` روی فهرست.
- *
- * ⚠️ مثل واحد، `DeputyId` ندارد و ارسال نمی‌شود.
  */
 export async function fetchTeams(params = {}) {
   const { data } = await axiosInstance.get("/Team/GetTeamList", {

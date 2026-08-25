@@ -12,7 +12,6 @@ import { useEmployeeForm } from "../hooks/useEmployeeForm";
 import EmployeeIdentityForm from "../components/forms/EmployeeIdentityForm";
 import EmployeeAccessForm from "../components/forms/EmployeeAccessForm";
 import EmployeeCredentialsForm from "../components/forms/EmployeeCredentialsForm";
-import EmployeeOrgForm from "../components/forms/EmployeeOrgForm";
 
 export default function EmployeeNewPage() {
   const navigate = useNavigate();
@@ -25,7 +24,7 @@ export default function EmployeeNewPage() {
     return () => clearHeader();
   }, [setHeader, clearHeader]);
 
-  const { formMethods, buildPayload, departmentId } = useEmployeeForm();
+  const { formMethods, buildPayload } = useEmployeeForm();
   const {
     register,
     control,
@@ -65,12 +64,6 @@ export default function EmployeeNewPage() {
 
           {/* ستون چپ - نقش و دکمه‌ها */}
           <div className="lg:col-span-1 space-y-4">
-            <EmployeeOrgForm
-              control={control}
-              errors={errors}
-              departmentId={departmentId}
-            />
-
             <EmployeeAccessForm control={control} isEditing={false} />
 
             <div className="flex gap-2">

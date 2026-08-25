@@ -11,8 +11,6 @@ export function useEmployeesQuery(filters, pagination, sorting) {
     search: filters.globalSearch || "",
     roleId: filters.roleId ?? "",
     status: filters.status ?? "",
-    departmentId: filters.departmentId ?? "",
-    teamId: filters.teamId ?? "",
     sortBy: sorting?.id ?? "createdAt",
     sortOrder: sorting ? (sorting.desc ? "desc" : "asc") : "desc",
   };

@@ -11,19 +11,17 @@ const departmentNameOf = (departmentId) =>
   DEPARTMENT_LABELS[departmentId] ??
   "—";
 
-const withDerivedFields = (team, employees) => ({
+const withDerivedFields = (team) => ({
   ...team,
   departmentName: departmentNameOf(team.departmentId),
-  userCount: employees.filter((e) => e.teamId === team.id).length,
 });
 
 export async function fetchTeams(params = {}) {
   await delay(300);
 
   const { departmentId = "" } = params;
-  const { allEmployees } = await import("@/features/employees/services/mockData");
 
-  let rows = allTeams.map((team) => withDerivedFields(team, allEmployees));
+  let rows = allTeams.map(withDerivedFields);
 
   if (departmentId !== "" && departmentId != null) {
     rows = rows.filter((team) => team.departmentId === Number(departmentId));
@@ -40,8 +38,7 @@ export async function fetchTeamById(id) {
   const team = allTeams.find((item) => item.id == id);
   if (!team) throw new Error("تیم مورد نظر یافت نشد");
 
-  const { allEmployees } = await import("@/features/employees/services/mockData");
-  return withDerivedFields(team, allEmployees);
+  return withDerivedFields(team);
 }
 
 export async function createTeam(payload) {
@@ -59,8 +56,6 @@ export async function createTeam(payload) {
     departmentId: payload.departmentId,
     headId: payload.headId ?? null,
     headName: payload.headName ?? null,
-    deputyId: payload.deputyId ?? null,
-    deputyName: payload.deputyName ?? null,
     userCount: 0,
     isActive: true,
   };
@@ -83,16 +78,12 @@ export async function updateTeam(payload) {
   );
   if (duplicate) throw new Error("تیمی با این نام در این واحد قبلا ثبت شده است");
 
-  // مثل واحد: `deputyId` در payload نیست، پس مقدار فعلی حفظ می‌شود.
   allTeams[index] = {
     ...allTeams[index],
     name: payload.name,
     departmentId: payload.departmentId,
     headId: payload.headId ?? null,
     headName: payload.headName ?? null,
-    ...("deputyId" in payload
-      ? { deputyId: payload.deputyId, deputyName: payload.deputyName ?? null }
-      : {}),
   };
 
   return allTeams[index];
@@ -103,14 +94,6 @@ export async function deleteTeam(id) {
 
   const team = allTeams.find((item) => item.id == id);
   if (!team) throw new Error("تیم مورد نظر یافت نشد");
-
-  const { allEmployees } = await import("@/features/employees/services/mockData");
-  const members = allEmployees.filter((e) => e.teamId == id && e.isActive);
-  if (members.length > 0) {
-    throw new Error(
-      `این تیم ${members.length} عضو فعال دارد؛ اول آن‌ها را به تیم دیگری منتقل کنید.`,
-    );
-  }
 
   team.isActive = false;
   return { success: true, id };
