@@ -15,6 +15,7 @@ import {
 } from "../../hooks/useEmployeeOptions";
 import DepartmentIdentityForm from "../components/forms/DepartmentIdentityForm";
 import OrgLeadershipForm from "../../components/OrgLeadershipForm";
+import PermissionAssignmentForm from "../../components/PermissionAssignmentForm";
 
 export default function DepartmentNewPage() {
   const navigate = useNavigate();
@@ -78,6 +79,10 @@ export default function DepartmentNewPage() {
                 {isBusy ? "در حال ثبت..." : "ثبت واحد"}
               </Button>
             </div>
+          </div>
+
+          <div className="lg:col-span-2">
+            <PermissionAssignmentForm control={control} />
           </div>
         </div>
       </form>

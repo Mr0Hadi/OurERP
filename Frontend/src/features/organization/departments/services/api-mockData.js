@@ -55,6 +55,8 @@ export async function createDepartment(payload) {
     headName: payload.headName ?? null,
     deputyId: payload.deputyId ?? null,
     deputyName: payload.deputyName ?? null,
+    memberPermissionIds: payload.memberPermissionIds ?? [],
+    managerPermissionIds: payload.managerPermissionIds ?? [],
     isActive: true,
   };
 
@@ -83,6 +85,12 @@ export async function updateDepartment(payload) {
     headName: payload.headName ?? null,
     ...("deputyId" in payload
       ? { deputyId: payload.deputyId, deputyName: payload.deputyName ?? null }
+      : {}),
+    ...("memberPermissionIds" in payload
+      ? { memberPermissionIds: payload.memberPermissionIds }
+      : {}),
+    ...("managerPermissionIds" in payload
+      ? { managerPermissionIds: payload.managerPermissionIds }
       : {}),
   };
 

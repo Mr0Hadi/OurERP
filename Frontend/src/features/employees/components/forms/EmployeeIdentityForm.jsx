@@ -4,20 +4,19 @@ import { UserCog } from "lucide-react";
 import FormSectionCard from "@/shared/components/forms/FormSectionCard";
 import FormField from "@/shared/components/forms/FormField";
 import { Input } from "@/shared/components/ui/input";
-import {
-  persianNameRules,
-  usernameRules,
-  requiredMessage,
-} from "@/shared/utils/validationRules";
+import { persianNameRules, usernameRules } from "@/shared/utils/validationRules";
 
 /**
  * هویت و حسابِ کاربریِ کارمند.
  *
- * `personelCode` در حالت ویرایش فقط-خواندنی است: دستور `UpdateUser` این
- * فیلد را نمی‌پذیرد (سند، بخش ۳)، پس فرمی که اجازه‌ی تایپش را بدهد به
- * کاربر دروغ می‌گوید — تغییر را می‌پذیرد و بی‌صدا دور می‌ریزد.
+ * `personelCode` هیچ‌وقت ورودیِ کاربر نیست — نه در ثبت و نه در ویرایش.
+ * سرور خودش کد پرسنلی می‌سازد (سند `docs/org-structure-contract.fa.md`)
+ * چون این کد باید یکتا و پیوسته باشد؛ اگر کاربر تایپش می‌کرد، تصادم و
+ * شماره‌های ناموزون («۱۰۰۱» بعد از «۹۹۹۹») غیرقابل‌اجتناب بود. در حالت
+ * ویرایش فقط *نمایش* داده می‌شود، چون در آن لحظه سرور از قبل تعیینش
+ * کرده.
  */
-export default function EmployeeIdentityForm({ register, errors, isEditing }) {
+export default function EmployeeIdentityForm({ register, errors, isEditing, personelCode }) {
   return (
     <FormSectionCard icon={UserCog} title="اطلاعات هویتی و حساب کاربری">
       <div className="space-y-4">
@@ -51,7 +50,7 @@ export default function EmployeeIdentityForm({ register, errors, isEditing }) {
           </FormField>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className={isEditing ? "grid grid-cols-1 sm:grid-cols-2 gap-4" : ""}>
           <FormField
             label="نام کاربری"
             htmlFor="username"
@@ -68,27 +67,21 @@ export default function EmployeeIdentityForm({ register, errors, isEditing }) {
             />
           </FormField>
 
-          <FormField
-            label="کد پرسنلی"
-            htmlFor="personelCode"
-            required={!isEditing}
-            error={errors.personelCode}
-            hint={isEditing ? "کد پرسنلی پس از ثبت قابل تغییر نیست" : undefined}
-          >
-            <Input
-              id="personelCode"
-              dir="ltr"
-              placeholder="1001"
-              readOnly={isEditing}
-              className={`h-10 rounded-lg transition-all font-mono ${
-                isEditing ? "bg-muted/50 text-muted-foreground" : ""
-              }`}
-              {...register(
-                "personelCode",
-                isEditing ? {} : { required: requiredMessage("کد پرسنلی") },
-              )}
-            />
-          </FormField>
+          {isEditing && (
+            <FormField
+              label="کد پرسنلی"
+              htmlFor="personelCode"
+              hint="این کد را سیستم هنگام ثبت کارمند می‌سازد و قابل تغییر نیست."
+            >
+              <Input
+                id="personelCode"
+                dir="ltr"
+                readOnly
+                value={personelCode || ""}
+                className="h-10 rounded-lg transition-all font-mono bg-muted/50 text-muted-foreground"
+              />
+            </FormField>
+          )}
         </div>
       </div>
     </FormSectionCard>

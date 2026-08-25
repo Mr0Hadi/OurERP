@@ -81,6 +81,22 @@ export async function fetchEmployeeById(id) {
   return withDerivedFields(employee);
 }
 
+/**
+ * کد پرسنلیِ خودکار — عددی پیوسته بعد از بزرگ‌ترین کدِ موجود.
+ *
+ * ورودیِ کاربر نیست چون باید یکتا و بدون تصادم بماند؛ تولیدش اینجاست تا
+ * رفتار mock با چیزی که از سرور انتظار می‌رود یکی باشد (سرور خودش این
+ * را می‌سازد، طبق تصمیم محصول).
+ */
+function nextPersonelCode() {
+  const max = allEmployees.reduce((acc, item) => {
+    const value = Number(item.personelCode);
+    return Number.isFinite(value) && value > acc ? value : acc;
+  }, 1000);
+
+  return String(max + 1);
+}
+
 export async function createEmployee(payload) {
   await delay(500);
 
@@ -97,7 +113,7 @@ export async function createEmployee(payload) {
     firstName: payload.fisrtName ?? payload.firstName,
     lastName: payload.lastName,
     username: payload.username,
-    personelCode: payload.personelCode,
+    personelCode: nextPersonelCode(),
     roleId: payload.roleId,
     roleName: USER_ROLE_LABELS[payload.roleId] ?? "",
     departmentId: payload.departmentId ?? null,

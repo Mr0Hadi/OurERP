@@ -13,6 +13,8 @@ function buildDefaultValues(department) {
     name: department?.name ?? "",
     headId: department?.headId ?? null,
     deputyId: department?.deputyId ?? null,
+    memberPermissionIds: department?.memberPermissionIds ?? [],
+    managerPermissionIds: department?.managerPermissionIds ?? [],
   };
 }
 
@@ -20,6 +22,11 @@ function buildDefaultValues(department) {
  * `deputyId` عمداً در payload نیست — بکند ستونش را ندارد و فرستادنِ فیلدِ
  * ناشناخته یعنی سرور بی‌صدا دورش می‌ریزد. وقتی ستون اضافه شد، فقط همین
  * یک خط باز می‌شود (و `OrgLeadershipForm` از حالت disabled درمی‌آید).
+ *
+ * `memberPermissionIds`/`managerPermissionIds` وضعیتشان فرق دارد: بکند
+ * اصلاً هیچ مفهومِ Permission ای ندارد (نه فقط یک ستونِ کم، یک جدولِ کامل
+ * کم است)، پس این دو فقط برای مسیرِ mock معنا دارند و در `api-v1.js`
+ * ارسال نمی‌شوند.
  */
 export function buildDepartmentPayload(data, id, headName) {
   return {
@@ -27,6 +34,8 @@ export function buildDepartmentPayload(data, id, headName) {
     name: data.name.trim(),
     headId: data.headId ?? null,
     headName,
+    memberPermissionIds: data.memberPermissionIds ?? [],
+    managerPermissionIds: data.managerPermissionIds ?? [],
   };
 }
 

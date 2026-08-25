@@ -29,6 +29,7 @@ import { useEmployeeForm } from "../hooks/useEmployeeForm";
 import EmployeeIdentityForm from "../components/forms/EmployeeIdentityForm";
 import EmployeeAccessForm from "../components/forms/EmployeeAccessForm";
 import EmployeeOrgForm from "../components/forms/EmployeeOrgForm";
+import EmployeeEffectivePermissions from "../components/forms/EmployeeEffectivePermissions";
 import EmployeeDetailLoading from "../components/forms/EmployeeDetailLoading";
 
 const fullNameOf = (employee) =>
@@ -96,6 +97,7 @@ function EmployeeDetailForm({ employee }) {
               register={register}
               errors={errors}
               isEditing
+              personelCode={employee.personelCode}
             />
 
             <EmployeeOrgForm
@@ -103,6 +105,8 @@ function EmployeeDetailForm({ employee }) {
               errors={errors}
               departmentId={departmentId}
             />
+
+            <EmployeeEffectivePermissions employee={employee} />
           </div>
 
           {/* ستون چپ - نقش، دسترسی و عملیات ادمین */}

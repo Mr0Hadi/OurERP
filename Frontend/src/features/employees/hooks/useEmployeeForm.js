@@ -5,13 +5,14 @@ import { UserRoleEnum } from "@/shared/domain/enums/userRole";
 
 /**
  * فرمِ کارمند در دو حالت «ثبت» و «ویرایش» یک شکل دارد ولی دو payload
- * متفاوت می‌سازد، چون سرور دو قرارداد متفاوت دارد (سند، بخش ۳):
+ * متفاوت می‌سازد، چون سرور دو قرارداد متفاوت دارد:
  *
- *   ثبت    → کد پرسنلی و رمز عبور می‌گیرد، `isActive` نمی‌گیرد (همیشه فعال)
- *   ویرایش → `isActive` می‌گیرد، ولی کد پرسنلی و رمز عبور را *نمی‌پذیرد*
+ *   ثبت    → رمز عبور می‌گیرد، `isActive` نمی‌گیرد (همیشه فعال)
+ *   ویرایش → `isActive` می‌گیرد، ولی رمز عبور را *نمی‌پذیرد*
  *
- * برای همین در حالت ویرایش، آن دو فیلد فقط-خواندنی نمایش داده می‌شوند نه
- * حذف؛ کاربر باید ببیند کد پرسنلی چیست، فقط نتواند عوضش کند.
+ * `personelCode` در هیچ‌کدام ورودیِ فرم نیست — سرور خودش می‌سازدش تا
+ * یکتا و پیوسته بماند؛ در حالت ویرایش فقط برای *نمایش* از خودِ
+ * `employee` خوانده می‌شود، نه از فرم.
  */
 function buildDefaultValues(employee) {
   if (!employee) {
@@ -19,7 +20,6 @@ function buildDefaultValues(employee) {
       firstName: "",
       lastName: "",
       username: "",
-      personelCode: "",
       password: "",
       rePassword: "",
       roleId: UserRoleEnum.USER,
@@ -33,7 +33,6 @@ function buildDefaultValues(employee) {
     firstName: employee.firstName || "",
     lastName: employee.lastName || "",
     username: employee.username || "",
-    personelCode: employee.personelCode || "",
     password: "",
     rePassword: "",
     roleId: employee.roleId ?? UserRoleEnum.USER,
@@ -56,7 +55,6 @@ export function buildCreatePayload(data) {
     lastName: data.lastName.trim(),
     username: data.username.trim(),
     password: data.password,
-    personelCode: data.personelCode.trim(),
     roleId: Number(data.roleId),
     ...orgFields(data),
   };
