@@ -213,6 +213,30 @@ export const navigationData = {
       ],
     },
     {
+      title: "ساختار سازمانی",
+      url: ROUTES.ORGANIZATION,
+      icon: Building2,
+      isActive: false,
+      // فقط ادمین — همراه با «کارمندان».
+      permission: "organization",
+      items: [
+        {
+          title: "واحدهای سازمانی",
+          url: ROUTES.ORG_DEPARTMENTS,
+          permission: "organization_view",
+          icon: Building2,
+          description: "تعریف واحدها و تعیین مدیر هر واحد",
+        },
+        {
+          title: "تیم‌ها",
+          url: ROUTES.ORG_TEAMS,
+          permission: "organization_view",
+          icon: Users,
+          description: "تعریف تیم‌های هر واحد و تعیین مدیر تیم",
+        },
+      ],
+    },
+    {
       title: "انبار",
       url: ROUTES.WAREHOUSE,
       icon: Warehouse,

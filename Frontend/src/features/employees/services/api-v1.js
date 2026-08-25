@@ -1,6 +1,7 @@
 // src/features/employees/services/api-v1.js
 import axiosInstance from "@/shared/services/api/axios";
 import { normalizeListResponse } from "@/shared/services/api/contract";
+import { accountStatusToIsActive } from "@/shared/domain/enums/accountStatus";
 
 /**
  * لایه‌ی سرورِ فیچر کارمندان — نگاشت مستقیم روی `api/User` و
@@ -9,17 +10,19 @@ import { normalizeListResponse } from "@/shared/services/api/contract";
  * پوششِ `ResponseDto` را axios باز می‌کند، پس اینجا `data` همان محتوای
  * `Data` است.
  *
- * ⚠️ یک شکافِ شناخته‌شده: بکند **هنوز `GetUserList` ندارد** (سند، بخش ۳ و
- * ۱۶). فهرست کارمندان تنها چیزی است که بدون آن کار نمی‌کند؛ امضای زیر
- * دقیقاً با قرارداد بقیه‌ی لیست‌های همین بکند نوشته شده (`page`, `take`,
- * و فیلترهای اختیاری) تا روزی که endpoint اضافه شد، فقط سوییچِ
- * `api-mockData` → `api-v1` در `queries.js` لازم باشد.
+ * ⚠️ دو شکافِ شناخته‌شده (سند `docs/org-structure-contract.fa.md`):
+ *
+ * ۱. بکند **هنوز `GetUserList` ندارد**. فهرست کارمندان تنها چیزی است که
+ *    بدون آن کار نمی‌کند؛ امضای زیر دقیقاً با قرارداد بقیه‌ی لیست‌های
+ *    همین بکند نوشته شده (`page`, `take`, و فیلترهای اختیاری).
+ *
+ * ۲. `CreateUser` و `UpdateUser` **`departmentId`/`teamId` نمی‌گیرند**،
+ *    در حالی که `User.DepartmentId` و `User.TeamId` در دیتابیس
+ *    غیرقابل‌null هستند. یعنی هر کاربری که از این مسیر ساخته شود واحد و
+ *    تیمش صفر می‌ماند. فیلدها اینجا در payload گذاشته شده‌اند چون بدون
+ *    آن‌ها رکورد اصلاً معتبر نیست — ولی تا اضافه‌شدنشان در Command،
+ *    سرور نادیده‌شان می‌گیرد.
  */
-
-const parseBoolFilter = (value) => {
-  if (value === "" || value == null) return undefined;
-  return String(value) === "1";
-};
 
 export async function fetchEmployees(params = {}) {
   const { data } = await axiosInstance.get("/User/GetUserList", {
@@ -28,7 +31,9 @@ export async function fetchEmployees(params = {}) {
       take: params.limit,
       fullName: params.search || undefined,
       roleId: params.roleId !== "" ? params.roleId : undefined,
-      isActive: parseBoolFilter(params.isActive),
+      departmentId: params.departmentId !== "" ? params.departmentId : undefined,
+      teamId: params.teamId !== "" ? params.teamId : undefined,
+      isActive: accountStatusToIsActive(params.status),
     },
   });
 

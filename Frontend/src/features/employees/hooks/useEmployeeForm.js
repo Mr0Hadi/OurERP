@@ -1,4 +1,5 @@
 // src/features/employees/hooks/useEmployeeForm.js
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { UserRoleEnum } from "@/shared/domain/enums/userRole";
 
@@ -22,6 +23,8 @@ function buildDefaultValues(employee) {
       password: "",
       rePassword: "",
       roleId: UserRoleEnum.USER,
+      departmentId: null,
+      teamId: null,
       isActive: true,
     };
   }
@@ -34,9 +37,16 @@ function buildDefaultValues(employee) {
     password: "",
     rePassword: "",
     roleId: employee.roleId ?? UserRoleEnum.USER,
+    departmentId: employee.departmentId ?? null,
+    teamId: employee.teamId ?? null,
     isActive: employee.isActive ?? true,
   };
 }
+
+const orgFields = (data) => ({
+  departmentId: data.departmentId != null ? Number(data.departmentId) : null,
+  teamId: data.teamId != null ? Number(data.teamId) : null,
+});
 
 /** payload دستور `CreateUser`. */
 export function buildCreatePayload(data) {
@@ -48,6 +58,7 @@ export function buildCreatePayload(data) {
     password: data.password,
     personelCode: data.personelCode.trim(),
     roleId: Number(data.roleId),
+    ...orgFields(data),
   };
 }
 
@@ -60,6 +71,7 @@ export function buildUpdatePayload(data, id) {
     username: data.username.trim(),
     roleId: Number(data.roleId),
     isActive: Boolean(data.isActive),
+    ...orgFields(data),
   };
 }
 
@@ -70,9 +82,24 @@ export function useEmployeeForm(initialData = null) {
     defaultValues: buildDefaultValues(initialData),
   });
 
+  const { watch, setValue, getValues } = formMethods;
+  const departmentId = watch("departmentId");
+
+  // تیم به واحد وابسته است: با عوض‌شدن واحد، تیمِ قبلی دیگر معتبر نیست و
+  // باید پاک شود — وگرنه کاربر «واحد انبار + تیم فروش» ذخیره می‌کند.
+  // مقدارِ اولیه استثناست: آن ترکیب از سرور آمده و درست است.
+  useEffect(() => {
+    const currentTeamId = getValues("teamId");
+    if (currentTeamId == null) return;
+    if (departmentId === (initialData?.departmentId ?? null)) return;
+
+    setValue("teamId", null);
+  }, [departmentId, setValue, getValues, initialData]);
+
   return {
     formMethods,
     isEditing,
+    departmentId,
     buildPayload: (data) =>
       isEditing
         ? buildUpdatePayload(data, initialData.id)

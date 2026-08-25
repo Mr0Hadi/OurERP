@@ -28,6 +28,7 @@ import { useEmployeeQuery } from "../services/queries";
 import { useEmployeeForm } from "../hooks/useEmployeeForm";
 import EmployeeIdentityForm from "../components/forms/EmployeeIdentityForm";
 import EmployeeAccessForm from "../components/forms/EmployeeAccessForm";
+import EmployeeOrgForm from "../components/forms/EmployeeOrgForm";
 import EmployeeDetailLoading from "../components/forms/EmployeeDetailLoading";
 
 const fullNameOf = (employee) =>
@@ -44,7 +45,7 @@ function EmployeeDetailForm({ employee }) {
   const deactivateMutation = useDeactivateEmployeeMutation();
   const logoutMutation = useLogoutEmployeeMutation();
 
-  const { formMethods, buildPayload } = useEmployeeForm(employee);
+  const { formMethods, buildPayload, departmentId } = useEmployeeForm(employee);
   const {
     register,
     control,
@@ -95,6 +96,12 @@ function EmployeeDetailForm({ employee }) {
               register={register}
               errors={errors}
               isEditing
+            />
+
+            <EmployeeOrgForm
+              control={control}
+              errors={errors}
+              departmentId={departmentId}
             />
           </div>
 

@@ -25,6 +25,15 @@ export const ROUTES = {
   EMPLOYEES_NEW: "/employees/new",
   EMPLOYEES_DETAIL: "/employees/:id",
 
+  // ساختار سازمانی — واحدها و تیم‌ها
+  ORGANIZATION: "/organization",
+  ORG_DEPARTMENTS: "/organization/departments",
+  ORG_DEPARTMENTS_NEW: "/organization/departments/new",
+  ORG_DEPARTMENTS_DETAIL: "/organization/departments/:id",
+  ORG_TEAMS: "/organization/teams",
+  ORG_TEAMS_NEW: "/organization/teams/new",
+  ORG_TEAMS_DETAIL: "/organization/teams/:id",
+
   // خرید
   PURCHASES: "/purchases",
   PURCHASES_DETAIL: "/purchases/:id",

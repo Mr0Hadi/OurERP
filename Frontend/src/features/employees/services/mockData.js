@@ -1,5 +1,6 @@
 // src/features/employees/services/mockData.js
 import { UserRoleEnum, USER_ROLE_LABELS } from "@/shared/domain/enums/userRole";
+import { DepartmentEnum } from "@/shared/domain/enums/department";
 
 /**
  * کارمندان = کاربرانی که با سیستم کار می‌کنند (موجودیت `User` در بکند).
@@ -9,6 +10,8 @@ import { UserRoleEnum, USER_ROLE_LABELS } from "@/shared/domain/enums/userRole";
 export const allEmployees = [
   {
     id: 1,
+    departmentId: DepartmentEnum.MANAGEMENT,
+    teamId: null,
     firstName: "علی",
     lastName: "رضایی",
     username: "ali_rezaei",
@@ -20,6 +23,8 @@ export const allEmployees = [
   },
   {
     id: 2,
+    departmentId: DepartmentEnum.SALES,
+    teamId: 1,
     firstName: "سارا",
     lastName: "محمدی",
     username: "sara_mohammadi",
@@ -31,6 +36,8 @@ export const allEmployees = [
   },
   {
     id: 3,
+    departmentId: DepartmentEnum.WAREHOUSE,
+    teamId: 4,
     firstName: "مهدی",
     lastName: "کریمی",
     username: "mehdi_karimi",
@@ -42,6 +49,8 @@ export const allEmployees = [
   },
   {
     id: 4,
+    departmentId: DepartmentEnum.SALES,
+    teamId: 2,
     firstName: "نرگس",
     lastName: "شریفی",
     username: "narges_sharifi",
@@ -53,6 +62,8 @@ export const allEmployees = [
   },
   {
     id: 5,
+    departmentId: DepartmentEnum.SUPPLY,
+    teamId: 3,
     firstName: "حسین",
     lastName: "نوری",
     username: "hossein_nouri",
@@ -64,6 +75,8 @@ export const allEmployees = [
   },
   {
     id: 6,
+    departmentId: DepartmentEnum.ACCOUNTING,
+    teamId: 5,
     firstName: "زهرا",
     lastName: "احمدی",
     username: "zahra_ahmadi",
@@ -75,6 +88,8 @@ export const allEmployees = [
   },
   {
     id: 7,
+    departmentId: DepartmentEnum.SUPPLY,
+    teamId: 3,
     firstName: "رضا",
     lastName: "تقوی",
     username: "reza_taghavi",
@@ -86,6 +101,8 @@ export const allEmployees = [
   },
   {
     id: 8,
+    departmentId: DepartmentEnum.SALES,
+    teamId: 2,
     firstName: "فاطمه",
     lastName: "موسوی",
     username: "fatemeh_mousavi",

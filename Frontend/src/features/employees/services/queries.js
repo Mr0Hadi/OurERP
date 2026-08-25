@@ -10,7 +10,9 @@ export function useEmployeesQuery(filters, pagination, sorting) {
     limit: pagination.pageSize,
     search: filters.globalSearch || "",
     roleId: filters.roleId ?? "",
-    isActive: filters.isActive ?? "",
+    status: filters.status ?? "",
+    departmentId: filters.departmentId ?? "",
+    teamId: filters.teamId ?? "",
     sortBy: sorting?.id ?? "createdAt",
     sortOrder: sorting ? (sorting.desc ? "desc" : "asc") : "desc",
   };
