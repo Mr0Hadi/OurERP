@@ -188,6 +188,31 @@ export const navigationData = {
       ],
     },
     {
+      title: "کارمندان",
+      url: ROUTES.EMPLOYEES,
+      icon: UserCog,
+      isActive: false,
+      // فقط ادمین — وقتی لایه‌ی سطح دسترسی آماده شد، این permission باید
+      // تنها به نقش «مدیر سیستم» داده شود.
+      permission: "employees",
+      items: [
+        {
+          title: "لیست کارمندان",
+          url: ROUTES.EMPLOYEES_LIST,
+          permission: "employees_view",
+          icon: List,
+          description: "مشاهده و جستجوی کاربران سیستم",
+        },
+        {
+          title: "افزودن کارمند جدید",
+          url: ROUTES.EMPLOYEES_NEW,
+          permission: "employees_create",
+          icon: PlusCircle,
+          description: "ثبت کارمند و ساخت حساب کاربری",
+        },
+      ],
+    },
+    {
       title: "انبار",
       url: ROUTES.WAREHOUSE,
       icon: Warehouse,

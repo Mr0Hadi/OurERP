@@ -19,6 +19,12 @@ export const ROUTES = {
   CUSTOMERS_NEW: "/customers/new",
   CUSTOMERS_DETAIL: "/customers/:id",
 
+  // کارمندان (کاربران سیستم — نه مشتری و نه تامین‌کننده)
+  EMPLOYEES: "/employees",
+  EMPLOYEES_LIST: "/employees",
+  EMPLOYEES_NEW: "/employees/new",
+  EMPLOYEES_DETAIL: "/employees/:id",
+
   // خرید
   PURCHASES: "/purchases",
   PURCHASES_DETAIL: "/purchases/:id",
