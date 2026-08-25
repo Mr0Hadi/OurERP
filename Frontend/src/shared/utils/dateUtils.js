@@ -28,11 +28,19 @@ export function todayPersianCompact(format = "YYYYMMDD") {
   return d.format(format);
 }
 
-/** "2024-08-02" (ISO) → "1403/05/12" | خالی → "" */
+/**
+ * "2024-08-02" (ISO) → "1403/05/12" | خالی → ""
+ *
+ * ورودی می‌تواند timestamp کامل هم باشد ("2024-08-02T10:15:00Z") — همان
+ * چیزی که سرور و داده‌های mock واقعاً می‌فرستند. بخش ساعت بریده می‌شود،
+ * وگرنه `DateObject` با فرمتِ "YYYY-MM-DD" آن را نمی‌فهمد و ستون تاریخ
+ * بی‌صدا خالی می‌ماند.
+ */
 export function gregorianToPersian(gregorianDateStr) {
   if (!gregorianDateStr) return "";
   try {
-    const d = new DateObject({ date: gregorianDateStr, calendar: gregorian, format: "YYYY-MM-DD" });
+    const dateOnly = String(gregorianDateStr).slice(0, 10);
+    const d = new DateObject({ date: dateOnly, calendar: gregorian, format: "YYYY-MM-DD" });
     d.convert(persian);
     d.setLocale(persian_fa);
     return d.format("YYYY/MM/DD");

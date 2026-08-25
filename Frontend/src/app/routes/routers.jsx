@@ -20,6 +20,8 @@ import { settingsRoutes } from "../../features/settings/routes";
 import { transactionsRoutes } from "../../features/transactions/routes";
 import { purchasesRoutes } from "@/features/purchases/routes/routes";
 import { salesRoutes } from "@/features/sales/routes/routes";
+import { employeesRoutes } from "@/features/employees/routes/routes";
+import { organizationRoutes } from "@/features/organization/routes/routes";
 
 
 export const router = createBrowserRouter([
@@ -36,6 +38,8 @@ export const router = createBrowserRouter([
     children: [
       ...dashboardRoutes,
       ...customersRoutes,
+      ...employeesRoutes,
+      ...organizationRoutes,
       ...purchasesRoutes,
       ...warehouseRoutes,
       ...invoiceRoutes,

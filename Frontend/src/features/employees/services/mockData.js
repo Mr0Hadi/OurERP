@@ -1,0 +1,98 @@
+// src/features/employees/services/mockData.js
+import { UserRoleEnum, USER_ROLE_LABELS } from "@/shared/domain/enums/userRole";
+
+/**
+ * کارمندان = کاربرانی که با سیستم کار می‌کنند (موجودیت `User` در بکند).
+ * عمداً هیچ ربطی به مشتری و تامین‌کننده ندارند: آن دو *طرفِ حساب*اند و
+ * تراز مالی دارند، این‌ها *حسابِ کاربری* دارند و نقش و رمز عبور.
+ */
+export const allEmployees = [
+  {
+    id: 1,
+    firstName: "علی",
+    lastName: "رضایی",
+    username: "ali_rezaei",
+    personelCode: "1001",
+    roleId: UserRoleEnum.ADMIN,
+    roleName: USER_ROLE_LABELS[UserRoleEnum.ADMIN],
+    isActive: true,
+    createdAt: "2025-01-12T08:30:00Z",
+  },
+  {
+    id: 2,
+    firstName: "سارا",
+    lastName: "محمدی",
+    username: "sara_mohammadi",
+    personelCode: "1002",
+    roleId: UserRoleEnum.USER,
+    roleName: USER_ROLE_LABELS[UserRoleEnum.USER],
+    isActive: true,
+    createdAt: "2025-02-03T10:15:00Z",
+  },
+  {
+    id: 3,
+    firstName: "مهدی",
+    lastName: "کریمی",
+    username: "mehdi_karimi",
+    personelCode: "1003",
+    roleId: UserRoleEnum.USER,
+    roleName: USER_ROLE_LABELS[UserRoleEnum.USER],
+    isActive: true,
+    createdAt: "2025-02-20T12:00:00Z",
+  },
+  {
+    id: 4,
+    firstName: "نرگس",
+    lastName: "شریفی",
+    username: "narges_sharifi",
+    personelCode: "1004",
+    roleId: UserRoleEnum.USER,
+    roleName: USER_ROLE_LABELS[UserRoleEnum.USER],
+    isActive: false,
+    createdAt: "2025-03-08T09:45:00Z",
+  },
+  {
+    id: 5,
+    firstName: "حسین",
+    lastName: "نوری",
+    username: "hossein_nouri",
+    personelCode: "1005",
+    roleId: UserRoleEnum.ADMIN,
+    roleName: USER_ROLE_LABELS[UserRoleEnum.ADMIN],
+    isActive: true,
+    createdAt: "2025-04-01T14:20:00Z",
+  },
+  {
+    id: 6,
+    firstName: "زهرا",
+    lastName: "احمدی",
+    username: "zahra_ahmadi",
+    personelCode: "1006",
+    roleId: UserRoleEnum.USER,
+    roleName: USER_ROLE_LABELS[UserRoleEnum.USER],
+    isActive: true,
+    createdAt: "2025-05-19T07:10:00Z",
+  },
+  {
+    id: 7,
+    firstName: "رضا",
+    lastName: "تقوی",
+    username: "reza_taghavi",
+    personelCode: "1007",
+    roleId: UserRoleEnum.USER,
+    roleName: USER_ROLE_LABELS[UserRoleEnum.USER],
+    isActive: false,
+    createdAt: "2025-06-02T16:00:00Z",
+  },
+  {
+    id: 8,
+    firstName: "فاطمه",
+    lastName: "موسوی",
+    username: "fatemeh_mousavi",
+    personelCode: "1008",
+    roleId: UserRoleEnum.USER,
+    roleName: USER_ROLE_LABELS[UserRoleEnum.USER],
+    isActive: true,
+    createdAt: "2025-07-11T11:35:00Z",
+  },
+];
