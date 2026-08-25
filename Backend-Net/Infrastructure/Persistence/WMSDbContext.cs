@@ -33,6 +33,7 @@ namespace Infrastructure.Persistence
         public DbSet<SaleReturnDecision> SaleReturnDecisions => Set<SaleReturnDecision>();
         public DbSet<ProductUnit> ProductUnits => Set<ProductUnit>();
         public DbSet<PurchaseReceivingImage> PurchaseReceivingImages => Set<PurchaseReceivingImage>();
+        public DbSet<PosTerminal> PosTerminals => Set<PosTerminal>();
 
         public async Task<int> ExecuteSqlRawAsync(string sql, CancellationToken cancellationToken = default)
         {
@@ -196,6 +197,10 @@ namespace Infrastructure.Persistence
 
             modelBuilder.Entity<PurchaseReceivingImage>()
                 .HasIndex(x => x.PurchaseId);
+
+            modelBuilder.Entity<PosTerminal>()
+                .HasIndex(x => x.Name)
+                .IsUnique();
 
             // Unique index on Product.Code is added in a later migration
             // (see 20260813xxxxxx_product-code-unique-index) after EnsureProductCodes

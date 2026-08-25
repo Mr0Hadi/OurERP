@@ -25,6 +25,7 @@ namespace Application.Common.Contracts.Context
         DbSet<SaleReturnDecision> SaleReturnDecisions { get; }
         DbSet<Domain.Entities.ProductUnit> ProductUnits { get; }
         DbSet<PurchaseReceivingImage> PurchaseReceivingImages { get; }
+        DbSet<PosTerminal> PosTerminals { get; }
 
         DbSet<T> Set<T>() where T : class;
 
