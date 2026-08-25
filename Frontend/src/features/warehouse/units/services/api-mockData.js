@@ -9,6 +9,7 @@ import {
   isCountedInStock,
 } from "./mockData";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
+import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -96,7 +97,7 @@ export const fetchPendingLabelProducts = async (params = {}) => {
       productCode: product.code,
       productName: product.name,
       category: product.category,
-      unit: product.unit,
+      unit: unitLabelOf(product.unit),
       image: product.image,
       stock,
       labeledCount,

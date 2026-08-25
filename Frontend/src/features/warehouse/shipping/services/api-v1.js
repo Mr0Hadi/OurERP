@@ -16,7 +16,7 @@ export async function fetchOutgoingQueue(params = {}) {
   const { data } = await axiosInstance.get("/warehouse/shipping/queue", {
     params: {
       ...listParams(params),
-      type: params.type || undefined,
+      type: params.type !== "" ? params.type : undefined,
       counterpartyIds: params.counterpartyIds?.length
         ? params.counterpartyIds
         : undefined,

@@ -283,7 +283,8 @@ function generateMoreSales(count = 20) {
     const { items: rawItems, totalAmount } = buildRandomItems();
     const items = applyShippedQty(rawItems, status);
 
-    let paidAmount = 0;
+    // بدون مقدار اولیه: هر سه شاخه‌ی زیر خودشان مقدار می‌دهند.
+    let paidAmount;
     let mixedPayments = null;
 
     if (paymentType === PAYMENT_TYPES.CREDIT) {

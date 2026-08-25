@@ -109,7 +109,7 @@ export const useShippingFormStore = create((set, get) => ({
         customerName: header.partyName || '',
         invoiceNumber: returnDoc.returnNumber || '',
         invoiceDate: returnDoc.returnDate || '',
-        status: returnDoc.status || '',
+        status: returnDoc.status ?? '',
         items: (returnLines || []).map(toReturnLine),
         shippedDate: new Date().toISOString().slice(0, 10),
       },

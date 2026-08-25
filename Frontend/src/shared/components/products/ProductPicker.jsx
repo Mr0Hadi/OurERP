@@ -4,6 +4,7 @@ import { Button } from "@/shared/components/ui/button";
 import ProductSearchPanel from "@/shared/components/forms/ProductSearchPanel";
 import SelectedItemsTable from "@/shared/components/forms/SelectedItemsTable";
 import SelectedItemsCards from "@/shared/components/forms/SelectedItemsCards";
+import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 
 /**
  * انتخاب کالا + فهرست اقلام انتخاب‌شده — یک‌جا و مشترک.
@@ -64,7 +65,7 @@ export default function ProductPicker({
         productId: product.id,
         productName: product.name,
         productCode: product.code,
-        unit: product.unit,
+        unit: unitLabelOf(product.unit),
         qty: 1,
         unitPrice: priceOf(product),
         discount: 0,

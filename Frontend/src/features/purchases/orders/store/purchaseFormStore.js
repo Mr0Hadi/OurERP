@@ -1,6 +1,7 @@
 // store/purchaseFormStore.js
 import { create } from "zustand";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 
 const EMPTY_FORM = {
   supplierId: "",
@@ -47,7 +48,7 @@ export const usePurchaseFormStore = create((set, get) => ({
       productId: item.productId,
       productName: item.productName,
       productCode: item.productCode,
-      unit: item.unit || "",
+      unit: unitLabelOf(item.unit),
       qty: item.qty,
       unitPrice: item.unitPrice,
       discount: item.discount || 0,

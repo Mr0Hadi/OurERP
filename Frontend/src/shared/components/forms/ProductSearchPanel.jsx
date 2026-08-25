@@ -3,6 +3,7 @@ import { Plus, Search } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
+import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 import {
   Select,
   SelectContent,
@@ -153,7 +154,7 @@ export default function ProductSearchPanel({ products, addedQtyOf, onAdd }) {
                           : "text-[oklch(0.50_0.16_152)]"
                     }`}
                   >
-                    موجودی: {product.stock} {product.unit}
+                    موجودی: {product.stock} {unitLabelOf(product.unit)}
                   </span>
                 </div>
               </div>

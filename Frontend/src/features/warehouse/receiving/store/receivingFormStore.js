@@ -144,7 +144,7 @@ export const useReceivingFormStore = create((set, get) => ({
         supplierName: salesReturn.customerName || '',
         invoiceNumber: salesReturn.returnNumber || '',
         invoiceDate: salesReturn.returnDate || '',
-        status: salesReturn.status || '',
+        status: salesReturn.status ?? '',
         items: (returnLines || []).map(toReturnLine),
         receivedDate: new Date().toISOString().slice(0, 10),
       },

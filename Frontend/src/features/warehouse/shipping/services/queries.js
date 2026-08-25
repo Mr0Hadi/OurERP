@@ -11,7 +11,7 @@ export function useOutgoingQueueQuery(filters, pagination, sorting) {
       page: pagination.pageIndex + 1,
       limit: pagination.pageSize,
       search: filters.globalSearch || "",
-      type: filters.type || "",
+      type: filters.type ?? "",
       counterpartyIds: filters.counterpartyIds || [],
       fromDate: filters.fromDate || "",
       toDate: filters.toDate || "",

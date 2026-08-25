@@ -97,6 +97,7 @@ const ShippingFilters = ({ parties = [], isPartiesLoading = false }) => {
         onChange={setType}
         allLabel="همه (فروش، جایگزین و عودت)"
         options={TYPE_OPTIONS}
+        numeric
       />
     </FilterPanel>
   );

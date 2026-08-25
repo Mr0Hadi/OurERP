@@ -11,6 +11,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import ProductSearchPanel from "@/shared/components/forms/ProductSearchPanel";
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
 import ClaimRow from "./ClaimRow";
+import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -142,7 +143,7 @@ export default function OffScopeClaimsSection({
                     productId: product.id,
                     productCode: product.code,
                     productName: product.name,
-                    unit: product.unit,
+                    unit: unitLabelOf(product.unit),
                     unitPrice: product.retailPrice ?? product.purchasePrice ?? 0,
                   })
                 }

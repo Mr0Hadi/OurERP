@@ -14,9 +14,11 @@ import { SALE_STATUSES } from "@/features/sales/orders/services/mockData";
  * را ببرد و هم کالای جایگزینی که بابت یک مرجوعی به مشتری بدهکاریم.
  * یک ماشین، یک حواله.
  */
+// بدون معادل مستند در بکند فعلاً — قرینه‌ی RECEIVING_SOURCES و با همان
+// شماره‌گذاری، تا اگر روزی به سرور مهاجرت کرد دو سمت واگرا نشوند.
 export const SHIPPING_SOURCES = {
-  ORDER: "order",
-  RETURN: "return",
+  ORDER: 0,
+  RETURN: 1,
 };
 
 export const SHIPPING_SOURCE_LABELS = {
@@ -32,8 +34,8 @@ export const SHIPPING_SOURCE_LABELS = {
  * فروش می‌رود.
  */
 export const OUTGOING_TYPES = {
-  SALE: "sale",
-  RETURN_TO_SUPPLIER: "return_to_supplier",
+  SALE: 0,
+  RETURN_TO_SUPPLIER: 1,
 };
 
 export const OUTGOING_TYPE_LABELS = {

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 
 const EMPTY_FORM = {
   customerId: "",
@@ -47,7 +48,7 @@ export const useSaleFormStore = create((set, get) => ({
       productId: item.productId || "",
       productCode: item.productCode || "",
       productName: item.productName || "",
-      unit: item.unit || "",
+      unit: unitLabelOf(item.unit),
       qty: item.qty || 1,
       unitPrice: item.unitPrice || 0,
       discount: item.discount || 0,

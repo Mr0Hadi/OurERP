@@ -19,6 +19,7 @@ import { ROUTES } from "@/shared/constants/routes";
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { PurchaseStatusEnum } from "@/shared/domain/enums/purchaseStatus";
+import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -120,7 +121,7 @@ export default function PurchasesNewPage() {
             productId: product.id,
             productName: product.name,
             productCode: product.code,
-            unit: product.unit,
+            unit: unitLabelOf(product.unit),
             qty: 1,
             unitPrice: product.purchasePrice ?? 0,
             discount: 0,

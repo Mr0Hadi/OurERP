@@ -380,7 +380,9 @@ async function confirmReceivingOnce(purchaseId, receivingData) {
       .filter((b) => (Number(b.qty) || 0) > 0)
       .map((b) => ({
         id: generateId(),
-        type: b.type || DEFAULT_RECEIVING_ISSUE_TYPE,
+        // نوعِ مشکل enum عددی است و عضو صفر دارد؛ `||` مقدارِ صفر را با
+        // پیش‌فرض جایگزین می‌کرد.
+        type: b.type ?? DEFAULT_RECEIVING_ISSUE_TYPE,
         qty: Number(b.qty) || 0,
         note: b.note || "",
         date: receivedDate,

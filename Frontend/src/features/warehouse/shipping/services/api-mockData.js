@@ -185,10 +185,12 @@ export async function fetchOutgoingQueue(params = {}) {
   const { type = "", counterpartyIds = [] } = params;
   let rows = [];
 
-  if (!type || type === OUTGOING_TYPES.SALE) {
+  // OUTGOING_TYPES.SALE عددش صفر است؛ فیلترِ صریحِ همان مقدار نباید مثل
+  // «فیلتری انتخاب نشده» رفتار کند وگرنه ردیف‌های عودت هم قاطی می‌شوند.
+  if (type === "" || type === OUTGOING_TYPES.SALE) {
     rows.push(...allSales.filter(isSaleAwaitingDispatch).map(saleToRow));
   }
-  if (!type || type === OUTGOING_TYPES.RETURN_TO_SUPPLIER) {
+  if (type === "" || type === OUTGOING_TYPES.RETURN_TO_SUPPLIER) {
     rows.push(...supplierReturnRows());
   }
 

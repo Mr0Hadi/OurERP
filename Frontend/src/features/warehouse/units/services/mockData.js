@@ -22,10 +22,11 @@ import { ProductUnitStatusEnum as UNIT_STATUSES } from "@/shared/domain/enums/un
 /** واحدهایی که فیزیکاً در انبار موجودند و باید در موجودی شمرده شوند. */
 export const isCountedInStock = (status) => status === UNIT_STATUSES.IN_STOCK;
 
+// بدون معادل مستند در بکند فعلاً — «این واحد از کجا آمد».
 export const UNIT_SOURCE_TYPES = {
-  PURCHASE: "purchase",
-  SALES_RETURN: "sales_return",
-  MANUAL: "manual",
+  PURCHASE: 0,
+  SALES_RETURN: 1,
+  MANUAL: 2,
 };
 
 export const UNIT_SOURCE_TYPE_LABELS = {
