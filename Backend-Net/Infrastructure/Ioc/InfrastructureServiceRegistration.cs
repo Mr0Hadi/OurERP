@@ -41,7 +41,6 @@ namespace Infrastructure.Ioc
             //repositories
             services.AddScoped<ISupplierRepository, SupplierRepository>();
             services.AddScoped<ICustomerRepository, CustomerRepository>();
-            services.AddScoped<IRoleRepository, RoleRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IProductRepository, ProductRepository>();
             services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
@@ -58,6 +57,7 @@ namespace Infrastructure.Ioc
             services.AddScoped<ITokenService, TokenService>();
 
             services.AddScoped<IPurchaseReturnCalculationService, PurchaseReturnCalculationService>();
+            services.AddScoped<IPurchaseReturnQueryService, PurchaseReturnQueryService>();
 
             services.AddScoped<ISaleReturnCalculationService, SaleReturnCalculationService>();
             services.AddScoped<ISaleReturnQueryService, SaleReturnQueryService>();
@@ -68,7 +68,15 @@ namespace Infrastructure.Ioc
             services.AddScoped<IProductUnitService, ProductUnitService>();
 
             services.AddSingleton<IBarcodeRenderer, ZXingBarcodeRenderer>();
-            services.AddSingleton<IPdfDocumentService, QuestPdfDocumentService>();
+
+            // QuestPdfDocumentService now only renders barcode label sheets; the invoice/credit-note
+            // document is the official Excel template converted via LibreOffice headless (see
+            // ExcelInvoiceDocumentService's doc comment for why DocToolkit was rejected in favor of
+            // this). Registered concretely (not as IPdfDocumentService) since ExcelInvoiceDocumentService
+            // injects it directly to reuse RenderBarcodeLabels.
+            services.AddSingleton<QuestPdfDocumentService>();
+            services.Configure<LibreOfficeOptions>(configuration.GetSection(LibreOfficeOptions.SectionName));
+            services.AddSingleton<IPdfDocumentService, ExcelInvoiceDocumentService>();
 
             // فضای ذخیره‌سازی ابری (Liara Object Storage - سازگار با S3)
             services.Configure<ObjectStorageOptions>(configuration.GetSection(ObjectStorageOptions.SectionName));

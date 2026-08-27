@@ -11,6 +11,11 @@ namespace Domain.Entities
         public string Phone { get; set; }
         public string Address { get; set; }
         public string PostalCode { get; set; }
+        public string? EconomicCode { get; set; }
+        public string? NationalId { get; set; }
+        public string? RegistrationNumber { get; set; }
+        public string? Province { get; set; }
+        public string? City { get; set; }
         public UInt64? Balance { get; set; }
         public BalanceTypeEnum? BalanceType { get; set; }
         public string? Description { get; set; }

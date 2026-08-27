@@ -24,6 +24,14 @@
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.0" />
     <PackageReference Include="QuestPDF" Version="2026.7.3" />
     <PackageReference Include="ZXing.Net" Version="0.16.11" />
+    <!-- Fills the official invoice Excel template (cell-by-cell, including worksheet cloning for
+         multi-page invoices). Pure managed, MIT licensed. PDF conversion itself is NOT done via
+         ClosedXML - that path was evaluated (Ank.DocToolkit) and rejected because it silently
+         drops formatting it can't represent and doesn't document RTL/merged-cell fidelity, both
+         of which this heavily-merged, all-RTL government invoice template depends on. PDF
+         conversion instead shells out to LibreOffice headless (ExcelInvoiceDocumentService),
+         which uses the same layout engine a human opening the file would see. -->
+    <PackageReference Include="ClosedXML" Version="0.105.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -36,6 +44,9 @@
          installed (notably any Linux host), so the TTFs ship inside the assembly. OFL licensed. -->
     <EmbeddedResource Include="Assets\Fonts\Vazirmatn-Regular.ttf" />
     <EmbeddedResource Include="Assets\Fonts\Vazirmatn-Bold.ttf" />
+    <!-- The official government-style sales-invoice form (سفید) that ExcelInvoiceDocumentService
+         fills per document and converts to PDF via LibreOffice headless. -->
+    <EmbeddedResource Include="Assets\Templates\OfficialInvoiceTemplate.xlsx" />
   </ItemGroup>
 
 </Project>

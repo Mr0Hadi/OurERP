@@ -30,14 +30,8 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
-        [HttpGet("GetSaleReturnInspectionInfo")]
-        public async Task<ActionResult<ResponseDto>> GetSaleReturnInspectionInfo([FromQuery] GetSaleReturnInspectionInfoQuery request)
-        {
-            return await _mediator.Send(request);
-        }
-
-        [HttpGet("GetReplacementShippingQueue")]
-        public async Task<ActionResult<ResponseDto>> GetReplacementShippingQueue([FromQuery] GetReplacementShippingQueueQuery request)
+        [HttpGet("GetSaleReturnPendingEffects")]
+        public async Task<ActionResult<ResponseDto>> GetSaleReturnPendingEffects([FromQuery] GetSaleReturnPendingEffectsQuery request)
         {
             return await _mediator.Send(request);
         }
@@ -48,26 +42,20 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
-        [HttpPost("ConfirmReturnInspection")]
-        public async Task<ActionResult<ResponseDto>> ConfirmReturnInspection([FromBody] ConfirmReturnInspectionCommand request)
+        [HttpPost("AddClaimResolution")]
+        public async Task<ActionResult<ResponseDto>> AddClaimResolution([FromBody] AddClaimResolutionCommand request)
         {
             return await _mediator.Send(request);
         }
 
-        [HttpPost("AddSaleReturnDecision")]
-        public async Task<ActionResult<ResponseDto>> AddSaleReturnDecision([FromBody] AddSaleReturnDecisionCommand request)
+        [HttpDelete("RemoveClaimResolution")]
+        public async Task<ActionResult<ResponseDto>> RemoveClaimResolution([FromQuery] RemoveClaimResolutionCommand request)
         {
             return await _mediator.Send(request);
         }
 
-        [HttpDelete("RemoveSaleReturnDecision")]
-        public async Task<ActionResult<ResponseDto>> RemoveSaleReturnDecision([FromQuery] RemoveSaleReturnDecisionCommand request)
-        {
-            return await _mediator.Send(request);
-        }
-
-        [HttpPost("ConfirmReplacementShipment")]
-        public async Task<ActionResult<ResponseDto>> ConfirmReplacementShipment([FromBody] ConfirmReplacementShipmentCommand request)
+        [HttpPost("ExecuteGoodsRound")]
+        public async Task<ActionResult<ResponseDto>> ExecuteGoodsRound([FromBody] ExecuteGoodsRoundCommand request)
         {
             return await _mediator.Send(request);
         }

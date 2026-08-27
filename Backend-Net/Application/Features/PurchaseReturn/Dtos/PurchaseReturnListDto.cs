@@ -12,8 +12,8 @@ namespace Application.Features.PurchaseReturn.Dtos
         public int SupplierId { get; set; }
         public string SupplierName { get; set; }
         public DateTime CreatedAt { get; set; }
-        public PurchaseReturnStatusEnum Status { get; set; }
-        public PurchaseIssueTypeEnum DominantIssueType { get; set; }
+        public ReturnStatusEnum Status { get; set; }
+        public ReturnProblemEnum DominantProblem { get; set; }
         public int TotalQuantity { get; set; }
         public UInt64 TotalAmount { get; set; }
     }

@@ -15,8 +15,8 @@ namespace Application.Features.SaleReturn.Queries
         public int Take { get; set; } = 10;
         public string? Search { get; set; }
         public int? CustomerId { get; set; }
-        public Domain.Enums.SaleReturnStatusEnum? Status { get; set; }
-        public SalesReturnReasonEnum? Reason { get; set; }
+        public ReturnStatusEnum? Status { get; set; }
+        public ReturnProblemEnum? Problem { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
     }
@@ -68,9 +68,9 @@ namespace Application.Features.SaleReturn.Queries
                 query = query.Where(x => x.RequestDate <= request.ToDate.Value);
             }
 
-            if (request.Reason.HasValue)
+            if (request.Problem.HasValue)
             {
-                query = query.Where(x => x.Claims.Any(c => c.Reason == request.Reason.Value));
+                query = query.Where(x => x.Claims.Any(c => c.Problem == request.Problem.Value));
             }
 
             var paged = await query
@@ -86,9 +86,9 @@ namespace Application.Features.SaleReturn.Queries
                     CustomerName = x.Sale!.Customer.FirstName + " " + x.Sale!.Customer.LastName,
                     CreatedAt = x.CreatedAt,
                     Status = x.Status,
-                    DominantReason = x.Claims.OrderByDescending(c => c.ClaimedQuantity).Select(c => c.Reason).FirstOrDefault(),
-                    TotalQuantity = x.Claims.Sum(c => c.ClaimedQuantity),
-                    TotalAmount = (UInt64)x.Claims.Sum(c => (long)c.ClaimedQuantity * (long)c.UnitPrice),
+                    DominantProblem = x.Claims.OrderByDescending(c => c.Quantity).Select(c => c.Problem).FirstOrDefault(),
+                    TotalQuantity = x.Claims.Sum(c => c.Quantity),
+                    TotalAmount = (UInt64)x.Claims.Sum(c => (long)c.Quantity * (long)c.UnitPrice),
                 })
                 .ToPagedAsync(request.Page, request.Take, cancellationToken);
 

@@ -1,7 +1,6 @@
 ﻿using Application.Common.Contracts.Token;
 using Application.Common.Dtos;
 using Application.Features.User.Dto;
-using Domain.Enums;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -32,15 +31,6 @@ namespace Infrastructure.Services
                 new Claim("LastName", userInfo.LastName),
                 new Claim("Username", userInfo.Username),
             };
-
-            if (userInfo.RoleId == (int)UserRolesEnum.Admin)
-            {
-                claimsList.Add(new Claim("Admin", "Admin"));
-            }
-            else if (userInfo.RoleId == (int)UserRolesEnum.User)
-            {
-                claimsList.Add(new Claim("User", "User"));
-			}
 
             var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JwtSettings:SigningKey"]));
             var signingCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);

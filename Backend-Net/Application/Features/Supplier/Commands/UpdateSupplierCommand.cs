@@ -20,6 +20,11 @@ namespace Application.Features.Supplier.Commands
         public string Phone { get; set; }
         public string Address { get; set; }
         public string PostalCode { get; set; }
+        public string? EconomicCode { get; set; }
+        public string? NationalId { get; set; }
+        public string? RegistrationNumber { get; set; }
+        public string? Province { get; set; }
+        public string? City { get; set; }
 
         /// <summary>
         /// The ObjectKey returned by POST api/File/UploadImage (folder=SUPPLIERS), or the ImageKey
@@ -83,6 +88,11 @@ namespace Application.Features.Supplier.Commands
             supplier.CompanyName = request.CompanyName;
             supplier.Address = request.Address;
             supplier.Phone = request.Phone;
+            supplier.EconomicCode = request.EconomicCode;
+            supplier.NationalId = request.NationalId;
+            supplier.RegistrationNumber = request.RegistrationNumber;
+            supplier.Province = request.Province;
+            supplier.City = request.City;
             supplier.Balance = request.Balance;
             supplier.PostalCode = request.PostalCode;
             supplier.BalanceType = request.BalanceType;

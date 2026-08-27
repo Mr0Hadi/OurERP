@@ -21,16 +21,22 @@ namespace Infrastructure.Persistence
         public DbSet<Product> Products => Set<Product>();
         public DbSet<Department> Departments => Set<Department>();
         public DbSet<Customer> Customers => Set<Customer>();
-        public DbSet<Role> Roles => Set<Role>();
         public DbSet<PurchaseItem> PurchaseItems { get; set; }
         public DbSet<SaleItem> SaleItems { get; set; }
         public DbSet<PurchaseReturn> PurchaseReturns => Set<PurchaseReturn>();
-        public DbSet<PurchaseReturnItem> PurchaseReturnItems => Set<PurchaseReturnItem>();
-        public DbSet<PurchaseReturnDecision> PurchaseReturnDecisions => Set<PurchaseReturnDecision>();
+        public DbSet<PurchaseReturnClaim> PurchaseReturnClaims => Set<PurchaseReturnClaim>();
+        public DbSet<PurchaseReturnResolution> PurchaseReturnResolutions => Set<PurchaseReturnResolution>();
+        public DbSet<PurchaseReturnEffect> PurchaseReturnEffects => Set<PurchaseReturnEffect>();
+        public DbSet<PurchaseReturnEffectRound> PurchaseReturnEffectRounds => Set<PurchaseReturnEffectRound>();
+        public DbSet<PurchaseReturnEffectObservation> PurchaseReturnEffectObservations => Set<PurchaseReturnEffectObservation>();
+        public DbSet<PurchaseReturnEffectMoneyPart> PurchaseReturnEffectMoneyParts => Set<PurchaseReturnEffectMoneyPart>();
         public DbSet<SaleReturn> SaleReturns => Set<SaleReturn>();
         public DbSet<SaleReturnClaim> SaleReturnClaims => Set<SaleReturnClaim>();
-        public DbSet<SaleReturnItem> SaleReturnItems => Set<SaleReturnItem>();
-        public DbSet<SaleReturnDecision> SaleReturnDecisions => Set<SaleReturnDecision>();
+        public DbSet<SaleReturnResolution> SaleReturnResolutions => Set<SaleReturnResolution>();
+        public DbSet<SaleReturnEffect> SaleReturnEffects => Set<SaleReturnEffect>();
+        public DbSet<SaleReturnEffectRound> SaleReturnEffectRounds => Set<SaleReturnEffectRound>();
+        public DbSet<SaleReturnEffectObservation> SaleReturnEffectObservations => Set<SaleReturnEffectObservation>();
+        public DbSet<SaleReturnEffectMoneyPart> SaleReturnEffectMoneyParts => Set<SaleReturnEffectMoneyPart>();
         public DbSet<ProductUnit> ProductUnits => Set<ProductUnit>();
         public DbSet<PurchaseReceivingImage> PurchaseReceivingImages => Set<PurchaseReceivingImage>();
         public DbSet<PosTerminal> PosTerminals => Set<PosTerminal>();
@@ -51,6 +57,12 @@ namespace Infrastructure.Persistence
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Department>()
+                .HasOne(d => d.Deputy)
+                .WithMany()
+                .HasForeignKey(d => d.DeputyId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Department>()
                 .HasMany(d => d.Users)
                 .WithOne(u => u.Department)
                 .HasForeignKey(u => u.DepartmentId);
@@ -59,6 +71,12 @@ namespace Infrastructure.Persistence
                 .HasOne(t => t.Head)
                 .WithMany()
                 .HasForeignKey(t => t.HeadId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Team>()
+                .HasOne(t => t.Deputy)
+                .WithMany()
+                .HasForeignKey(t => t.DeputyId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Team>()
@@ -90,45 +108,82 @@ namespace Infrastructure.Persistence
                 .HasIndex(x => x.Code)
                 .IsUnique();
 
-            modelBuilder.Entity<User>()
-                .HasOne(u => u.Role)
-                .WithMany(r => r.Users)
-                .HasForeignKey(u => u.RoleId);
-
             modelBuilder.Entity<PurchaseReturn>()
                 .HasOne(x => x.Purchase)
                 .WithMany()
                 .HasForeignKey(x => x.PurchaseId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<PurchaseReturnItem>()
+            modelBuilder.Entity<PurchaseReturn>()
+                .HasOne(x => x.PreviousReturn)
+                .WithMany()
+                .HasForeignKey(x => x.PreviousReturnId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<PurchaseReturnClaim>()
                 .HasOne(x => x.PurchaseReturn)
-                .WithMany(x => x.Items)
+                .WithMany(x => x.Claims)
                 .HasForeignKey(x => x.PurchaseReturnId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<PurchaseReturnItem>()
+            modelBuilder.Entity<PurchaseReturnClaim>()
                 .HasOne(x => x.PurchaseItem)
                 .WithMany()
                 .HasForeignKey(x => x.PurchaseItemId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<PurchaseReturnItem>()
+            modelBuilder.Entity<PurchaseReturnClaim>()
                 .HasOne(x => x.Product)
                 .WithMany()
                 .HasForeignKey(x => x.ProductId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<PurchaseReturnDecision>()
-                .HasOne(x => x.PurchaseReturnItem)
-                .WithMany(x => x.Decisions)
-                .HasForeignKey(x => x.PurchaseReturnItemId)
+            modelBuilder.Entity<PurchaseReturnResolution>()
+                .HasOne(x => x.PurchaseReturnClaim)
+                .WithMany(x => x.Resolutions)
+                .HasForeignKey(x => x.PurchaseReturnClaimId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PurchaseReturnEffect>()
+                .HasOne(x => x.PurchaseReturnResolution)
+                .WithMany(x => x.Effects)
+                .HasForeignKey(x => x.PurchaseReturnResolutionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PurchaseReturnEffect>()
+                .HasOne(x => x.Product)
+                .WithMany()
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<PurchaseReturnEffectRound>()
+                .HasOne(x => x.PurchaseReturnEffect)
+                .WithMany(x => x.History)
+                .HasForeignKey(x => x.PurchaseReturnEffectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PurchaseReturnEffectObservation>()
+                .HasOne(x => x.PurchaseReturnEffectRound)
+                .WithMany(x => x.Observations)
+                .HasForeignKey(x => x.PurchaseReturnEffectRoundId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PurchaseReturnEffectMoneyPart>()
+                .HasOne(x => x.PurchaseReturnEffect)
+                .WithMany(x => x.MoneyParts)
+                .HasForeignKey(x => x.PurchaseReturnEffectId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<SaleReturn>()
                 .HasOne(x => x.Sale)
                 .WithMany()
                 .HasForeignKey(x => x.SaleId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<SaleReturn>()
+                .HasOne(x => x.PreviousReturn)
+                .WithMany()
+                .HasForeignKey(x => x.PreviousReturnId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<SaleReturnClaim>()
@@ -149,16 +204,40 @@ namespace Infrastructure.Persistence
                 .HasForeignKey(x => x.ProductId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<SaleReturnItem>()
+            modelBuilder.Entity<SaleReturnResolution>()
                 .HasOne(x => x.SaleReturnClaim)
-                .WithMany(x => x.InspectionItems)
+                .WithMany(x => x.Resolutions)
                 .HasForeignKey(x => x.SaleReturnClaimId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<SaleReturnDecision>()
-                .HasOne(x => x.SaleReturnItem)
-                .WithMany(x => x.Decisions)
-                .HasForeignKey(x => x.SaleReturnItemId)
+            modelBuilder.Entity<SaleReturnEffect>()
+                .HasOne(x => x.SaleReturnResolution)
+                .WithMany(x => x.Effects)
+                .HasForeignKey(x => x.SaleReturnResolutionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SaleReturnEffect>()
+                .HasOne(x => x.Product)
+                .WithMany()
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<SaleReturnEffectRound>()
+                .HasOne(x => x.SaleReturnEffect)
+                .WithMany(x => x.History)
+                .HasForeignKey(x => x.SaleReturnEffectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SaleReturnEffectObservation>()
+                .HasOne(x => x.SaleReturnEffectRound)
+                .WithMany(x => x.Observations)
+                .HasForeignKey(x => x.SaleReturnEffectRoundId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SaleReturnEffectMoneyPart>()
+                .HasOne(x => x.SaleReturnEffect)
+                .WithMany(x => x.MoneyParts)
+                .HasForeignKey(x => x.SaleReturnEffectId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<ProductUnit>()

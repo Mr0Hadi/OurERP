@@ -13,6 +13,7 @@ using Infrastructure.Repositories;
 using Infrastructure.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace WMS.Tests.Support
 {
@@ -80,20 +81,25 @@ namespace WMS.Tests.Support
             UnitOfWork = new Infrastructure.UnitOfWork.UnitOfWork(context);
             SaleReturnQueryService = new SaleReturnQueryService();
             SaleReturnRepository = new SaleReturnRepository(context, SaleReturnQueryService);
-            PurchaseReturnRepository = new PurchaseReturnRepository(context);
+            PurchaseReturnQueryService = new PurchaseReturnQueryService();
+            PurchaseReturnRepository = new PurchaseReturnRepository(context, PurchaseReturnQueryService);
             PurchaseRepository = new PurchaseRepository(context);
             ProductRepository = new ProductRepository(context);
             CustomerRepository = new CustomerRepository(context);
             SupplierRepository = new SupplierRepository(context);
             UserRepository = new UserRepository(context);
             ProductCategoryRepository = new ProductCategoryRepository(context);
-            RoleRepository = new RoleRepository(context);
+            DepartmentRepository = new DepartmentRepository(context);
+            TeamRepository = new TeamRepository(context);
             SaleReturnCalculation = new SaleReturnCalculationService();
             PurchaseReturnCalculation = new PurchaseReturnCalculationService();
             ProductCodeService = new ProductCodeService();
             ProductUnitService = new ProductUnitService(context, ProductCodeService);
             BarcodeRenderer = new ZXingBarcodeRenderer();
-            PdfDocumentService = new QuestPdfDocumentService(BarcodeRenderer);
+            QuestPdfDocumentService = new QuestPdfDocumentService(BarcodeRenderer);
+            // Invoice rendering shells out to LibreOffice - not exercised by tests that don't call
+            // RenderInvoiceAsync (soffice is not guaranteed to be installed on the test runner).
+            PdfDocumentService = new ExcelInvoiceDocumentService(QuestPdfDocumentService, Options.Create(new LibreOfficeOptions()));
             InvoiceLineCalculation = new InvoiceLineCalculationService();
         }
 
@@ -108,14 +114,17 @@ namespace WMS.Tests.Support
         public ISupplierRepository SupplierRepository { get; }
         public IUserRepository UserRepository { get; }
         public IProductCategoryRepository ProductCategoryRepository { get; }
-        public IRoleRepository RoleRepository { get; }
+        public IDepartmentRepository DepartmentRepository { get; }
+        public ITeamRepository TeamRepository { get; }
         public ISaleReturnCalculationService SaleReturnCalculation { get; }
         public ISaleReturnQueryService SaleReturnQueryService { get; }
         public IInvoiceLineCalculationService InvoiceLineCalculation { get; }
         public IPurchaseReturnCalculationService PurchaseReturnCalculation { get; }
+        public IPurchaseReturnQueryService PurchaseReturnQueryService { get; }
         public IProductCodeService ProductCodeService { get; }
         public IProductUnitService ProductUnitService { get; }
         public IBarcodeRenderer BarcodeRenderer { get; }
+        public QuestPdfDocumentService QuestPdfDocumentService { get; }
         public IPdfDocumentService PdfDocumentService { get; }
 
         public void Dispose()

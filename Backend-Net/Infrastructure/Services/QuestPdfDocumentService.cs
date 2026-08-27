@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Reflection;
 using Application.Common.Contracts.Barcode;
 using Application.Common.Contracts.Documents;
@@ -9,7 +8,12 @@ using QuestPDF.Infrastructure;
 
 namespace Infrastructure.Services
 {
-    public class QuestPdfDocumentService : IPdfDocumentService
+    /// <summary>
+    /// Barcode/QR label-sheet rendering only - invoice rendering moved to the Excel-template +
+    /// LibreOffice pipeline in ExcelInvoiceDocumentService, which holds this class to reuse it for
+    /// RenderBarcodeLabels. No longer implements IPdfDocumentService directly for that reason.
+    /// </summary>
+    public class QuestPdfDocumentService
     {
         private const string FontFamily = "Vazirmatn";
         private static readonly object FontLock = new();
@@ -44,173 +48,6 @@ namespace Infrastructure.Services
                 _fontsRegistered = true;
             }
         }
-
-        public byte[] RenderInvoice(InvoiceDocumentModel model)
-        {
-            return Document.Create(container =>
-            {
-                container.Page(page =>
-                {
-                    page.Size(PageSizes.A4);
-                    page.Margin(12, Unit.Millimetre);
-                    page.ContentFromRightToLeft();
-                    page.DefaultTextStyle(x => x.FontFamily(FontFamily).FontSize(9));
-
-                    page.Header().Element(e => ComposeInvoiceHeader(e, model));
-                    page.Content().PaddingVertical(6).Element(e => ComposeInvoiceBody(e, model));
-                    page.Footer().AlignCenter().Text(t =>
-                    {
-                        t.DefaultTextStyle(s => s.FontSize(7).FontColor(Colors.Grey.Darken1));
-                        t.Span("صفحه ");
-                        t.CurrentPageNumber();
-                        t.Span(" از ");
-                        t.TotalPages();
-                    });
-                });
-            }).GeneratePdf();
-        }
-
-        private void ComposeInvoiceHeader(IContainer container, InvoiceDocumentModel model)
-        {
-            container.Row(row =>
-            {
-                row.RelativeItem().Column(col =>
-                {
-                    col.Item().Text(model.Title).FontSize(15).Bold();
-                    col.Item().PaddingTop(3).Text($"شماره: {model.DocumentNumber}".ToPersianDigits());
-                    col.Item().Text($"تاریخ: {PersianDate.ToDisplayString(model.DocumentDate)}".ToPersianDigits());
-                    if (!string.IsNullOrWhiteSpace(model.StatusText))
-                        col.Item().Text($"وضعیت: {model.StatusText}");
-                });
-
-                row.ConstantItem(28, Unit.Millimetre).AlignLeft().Element(e =>
-                {
-                    var qr = _barcodeRenderer.RenderQrSvg(model.DocumentNumber, 26m);
-                    e.Width(26, Unit.Millimetre).Height(26, Unit.Millimetre).Svg(qr);
-                });
-            });
-        }
-
-        private static void ComposeInvoiceBody(IContainer container, InvoiceDocumentModel model)
-        {
-            container.Column(col =>
-            {
-                col.Item().PaddingBottom(6).Row(row =>
-                {
-                    row.RelativeItem().Border(0.5f).BorderColor(Colors.Grey.Medium).Padding(5).Column(c =>
-                    {
-                        c.Item().Text("فروشنده").Bold();
-                        c.Item().Text(model.Company.Name);
-                        if (!string.IsNullOrWhiteSpace(model.Company.NationalId))
-                            c.Item().Text($"شناسه ملی: {model.Company.NationalId}".ToPersianDigits());
-                        if (!string.IsNullOrWhiteSpace(model.Company.EconomicCode))
-                            c.Item().Text($"کد اقتصادی: {model.Company.EconomicCode}".ToPersianDigits());
-                        if (!string.IsNullOrWhiteSpace(model.Company.PhoneNumber))
-                            c.Item().Text($"تلفن: {model.Company.PhoneNumber}".ToPersianDigits());
-                        if (!string.IsNullOrWhiteSpace(model.Company.Address))
-                            c.Item().Text($"نشانی: {model.Company.Address}");
-                    });
-
-                    row.ConstantItem(5);
-
-                    row.RelativeItem().Border(0.5f).BorderColor(Colors.Grey.Medium).Padding(5).Column(c =>
-                    {
-                        c.Item().Text(model.CounterpartyLabel).Bold();
-                        c.Item().Text(model.Counterparty.Name);
-                        if (!string.IsNullOrWhiteSpace(model.Counterparty.PhoneNumber))
-                            c.Item().Text($"تلفن: {model.Counterparty.PhoneNumber}".ToPersianDigits());
-                        if (!string.IsNullOrWhiteSpace(model.Counterparty.PostalCode))
-                            c.Item().Text($"کد پستی: {model.Counterparty.PostalCode}".ToPersianDigits());
-                        if (!string.IsNullOrWhiteSpace(model.Counterparty.Address))
-                            c.Item().Text($"نشانی: {model.Counterparty.Address}");
-                    });
-                });
-
-                col.Item().Table(table =>
-                {
-                    table.ColumnsDefinition(c =>
-                    {
-                        c.ConstantColumn(24);  // row number
-                        c.RelativeColumn(2.2f); // product code
-                        c.RelativeColumn(3.4f); // name
-                        c.RelativeColumn(1);    // qty
-                        c.RelativeColumn(1.8f); // unit price
-                        c.RelativeColumn(1.5f); // discount
-                        c.RelativeColumn(1.5f); // tax
-                        c.RelativeColumn(2);    // total
-                    });
-
-                    table.Header(header =>
-                    {
-                        foreach (var text in new[] { "ردیف", "کد کالا", "شرح کالا", "تعداد", "مبلغ واحد", "تخفیف", "مالیات", "جمع" })
-                        {
-                            header.Cell().Background(Colors.Grey.Lighten3).Border(0.5f).BorderColor(Colors.Grey.Medium)
-                                .Padding(3).AlignCenter().Text(text).Bold().FontSize(8);
-                        }
-                    });
-
-                    foreach (var line in model.Lines)
-                    {
-                        BodyCell(table, line.RowNumber.ToString());
-                        BodyCell(table, line.ProductCode);
-                        BodyCell(table, line.ProductName, alignRight: true);
-                        BodyCell(table, line.Quantity.ToString());
-                        BodyCell(table, Money(line.UnitPrice));
-                        BodyCell(table, Money(line.DiscountAmount));
-                        BodyCell(table, Money(line.TaxAmount));
-                        BodyCell(table, Money(line.LineTotal));
-                    }
-                });
-
-                col.Item().PaddingTop(6).AlignLeft().Width(75, Unit.Millimetre).Column(c =>
-                {
-                    TotalRow(c, "جمع کل", model.SubTotal, model.Company.Currency);
-                    TotalRow(c, "تخفیف", model.TotalDiscount, model.Company.Currency);
-                    TotalRow(c, "مالیات", model.TotalTax, model.Company.Currency);
-                    TotalRow(c, "قابل پرداخت", model.GrandTotal, model.Company.Currency, bold: true);
-                    TotalRow(c, "پرداخت‌شده", model.PaidAmount, model.Company.Currency);
-                    c.Item().PaddingTop(1).Row(r =>
-                    {
-                        r.RelativeItem().Text("مانده").Bold();
-                        r.RelativeItem().AlignLeft().Text($"{model.Balance:N0} {model.Company.Currency}".ToPersianDigits()).Bold();
-                    });
-                });
-
-                col.Item().PaddingTop(6).Text($"مبلغ به حروف: {NumberToPersianWords.ToWordsWithCurrency(model.GrandTotal, model.Company.Currency)}");
-
-                if (!string.IsNullOrWhiteSpace(model.Description))
-                    col.Item().PaddingTop(3).Text($"توضیحات: {model.Description}");
-
-                col.Item().PaddingTop(16).Row(r =>
-                {
-                    r.RelativeItem().AlignCenter().Text("مهر و امضای فروشنده");
-                    r.RelativeItem().AlignCenter().Text("امضای خریدار");
-                });
-            });
-        }
-
-        private static void BodyCell(TableDescriptor table, string text, bool alignRight = false)
-        {
-            var cell = table.Cell().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Padding(3);
-            var aligned = alignRight ? cell.AlignRight() : cell.AlignCenter();
-            aligned.Text(text.ToPersianDigits()).FontSize(8);
-        }
-
-        private static void TotalRow(ColumnDescriptor col, string label, ulong value, string currency, bool bold = false)
-        {
-            col.Item().Row(r =>
-            {
-                var labelText = r.RelativeItem().Text(label);
-                var valueText = r.RelativeItem().AlignLeft().Text($"{value:N0} {currency}".ToPersianDigits());
-                if (bold)
-                {
-                    labelText.Bold();
-                    valueText.Bold();
-                }
-            });
-        }
-
-        private static string Money(ulong value) => value.ToString("N0", CultureInfo.InvariantCulture).ToPersianDigits();
 
         public byte[] RenderBarcodeLabels(BarcodeLabelSheetModel model)
         {

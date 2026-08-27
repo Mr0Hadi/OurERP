@@ -12,6 +12,8 @@ namespace Application.Common.Contracts.Documents
         public string? Address { get; set; }
         public string? PhoneNumber { get; set; }
         public string? PostalCode { get; set; }
+        public string? Province { get; set; }
+        public string? City { get; set; }
         public string Currency { get; set; } = "ریال";
     }
 
@@ -21,6 +23,11 @@ namespace Application.Common.Contracts.Documents
         public string? PhoneNumber { get; set; }
         public string? Address { get; set; }
         public string? PostalCode { get; set; }
+        public string? EconomicCode { get; set; }
+        public string? NationalId { get; set; }
+        public string? RegistrationNumber { get; set; }
+        public string? Province { get; set; }
+        public string? City { get; set; }
     }
 
     public class InvoiceLineModel
@@ -99,8 +106,13 @@ namespace Application.Common.Contracts.Documents
 
     public interface IPdfDocumentService
     {
-        /// <summary>Renders an invoice-shaped document (sale, purchase, or credit note - they share one layout).</summary>
-        byte[] RenderInvoice(InvoiceDocumentModel model);
+        /// <summary>
+        /// Renders an invoice-shaped document (sale, purchase, or credit note - they share one
+        /// official Excel template, converted to PDF via LibreOffice headless - see
+        /// ExcelInvoiceDocumentService). Async because, unlike RenderBarcodeLabels, it touches the
+        /// filesystem (temp files) and shells out to an external process.
+        /// </summary>
+        Task<byte[]> RenderInvoiceAsync(InvoiceDocumentModel model, CancellationToken cancellationToken = default);
 
         byte[] RenderBarcodeLabels(BarcodeLabelSheetModel model);
     }

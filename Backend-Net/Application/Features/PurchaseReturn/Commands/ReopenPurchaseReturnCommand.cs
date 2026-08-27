@@ -28,12 +28,14 @@ namespace Application.Features.PurchaseReturn.Commands
     public class ReopenPurchaseReturnCommandHandler : IRequestHandler<ReopenPurchaseReturnCommand, ResponseDto>
     {
         private readonly IWMSDbContext _context;
+        private readonly IPurchaseReturnQueryService _purchaseReturnQueryService;
         private readonly IPurchaseReturnCalculationService _purchaseReturnCalculationService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public ReopenPurchaseReturnCommandHandler(IWMSDbContext context, IPurchaseReturnCalculationService purchaseReturnCalculationService, IUnitOfWork unitOfWork)
+        public ReopenPurchaseReturnCommandHandler(IWMSDbContext context, IPurchaseReturnQueryService purchaseReturnQueryService, IPurchaseReturnCalculationService purchaseReturnCalculationService, IUnitOfWork unitOfWork)
         {
             _context = context;
+            _purchaseReturnQueryService = purchaseReturnQueryService;
             _purchaseReturnCalculationService = purchaseReturnCalculationService;
             _unitOfWork = unitOfWork;
         }
@@ -42,22 +44,24 @@ namespace Application.Features.PurchaseReturn.Commands
         {
             var res = new ResponseDto();
 
-            var purchaseReturn = await _context.PurchaseReturns
-                .Include(x => x.Items)
-                    .ThenInclude(x => x.Decisions)
+            var purchaseReturn = await _purchaseReturnQueryService
+                .WithReturnGraph(_context.PurchaseReturns.Where(x => x.Id == request.Id))
                 .Include(x => x.Purchase)
                     .ThenInclude(x => x.Items)
-                .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
+                .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
-            if (purchaseReturn.Status != PurchaseReturnStatusEnum.REJECTED)
+            if (purchaseReturn.Status != ReturnStatusEnum.REJECTED)
                 throw new ValidationCustomException("فقط مرجوعی‌های ردشده قابل بازگشایی هستند.");
 
             var now = DateTime.Now;
-            purchaseReturn.Status = _purchaseReturnCalculationService.RecomputeReturnStatus(purchaseReturn);
+            // A REJECTED return can only have gotten there while untouched (see Reject's guard), so
+            // reopening it always lands back at OPEN - no need to run it through RecomputeReturnStatus,
+            // whose terminal-status short-circuit would just hand REJECTED straight back anyway.
+            purchaseReturn.Status = ReturnStatusEnum.OPEN;
             purchaseReturn.UpdatedAt = now;
 
             var purchase = purchaseReturn.Purchase!;
-            purchase.Status = _purchaseReturnCalculationService.RecomputePurchaseStatus(purchase, purchaseReturn);
+            purchase.Status = _purchaseReturnCalculationService.RecomputePurchaseStatus(purchase);
             purchase.UpdatedAt = now;
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);

@@ -27,17 +27,6 @@ namespace WMS.Logging
                     restrictedToMinimumLevel: LogEventLevel.Error,
                     outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"
                 )
-                //.WriteTo.OpenTelemetry(options =>
-                //{
-                //    //options.Endpoint = "http://localhost:4318";
-                //    options.Endpoint = configuration["Grafana:Logs"];
-                //    options.Protocol = OtlpProtocol.HttpProtobuf;
-                //    options.ResourceAttributes = new Dictionary<string, object>
-                //    {
-                //        ["service.name"] = "SMSHUB.API",
-                //        ["service.namespace"] = "SMSHUB"
-                //    };
-                //})
                 .CreateLogger();
         }
     }

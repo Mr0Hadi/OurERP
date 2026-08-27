@@ -15,12 +15,12 @@ namespace Infrastructure.Repositories
 
         public async Task<User?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default)
         {
-            return await _context.Users.Include(x => x.Role).SingleOrDefaultAsync(u => u.Username == username, cancellationToken);
+            return await _context.Users.SingleOrDefaultAsync(u => u.Username == username, cancellationToken);
         }
 
         public override async Task<User?> GetByIdAsync(object id, CancellationToken cancellationToken = default)
         {
-            return await _context.Users.Include(x => x.Role).SingleOrDefaultAsync(u => u.Id == Convert.ToInt32(id), cancellationToken);
+            return await _context.Users.SingleOrDefaultAsync(u => u.Id == Convert.ToInt32(id), cancellationToken);
         }
 
         public async Task<bool> IsExistAsync(int userId, CancellationToken cancellationToken = default)

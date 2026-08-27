@@ -3,6 +3,7 @@ using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
+using Application.Common.Dtos.Returns;
 using Application.Common.Enums;
 using Common.Exceptions;
 using Common.Extensions;
@@ -14,38 +15,34 @@ using Microsoft.EntityFrameworkCore;
 namespace Application.Features.SaleReturn.Commands
 {
     // A customer claim, recorded immediately (before anything is physically inspected) - unlike
-    // PurchaseReturn, which is only ever created after physical receiving. Every call creates a
-    // brand-new SaleReturn: several can be active on the same sale at once (see
-    // ISaleReturnCalculationService.GetOpenClaimQuantity).
+    // PurchaseReturn's old model, but matching PurchaseReturn now too: both sides create a return
+    // explicitly, and both allow several returns to be active on the same document at once (see
+    // I*ReturnCalculationService.GetOpenClaimQuantity).
     public class CreateSaleReturnCommand : IRequest<ResponseDto>
     {
         public int SaleId { get; set; }
-        public DateTime? RequestDate { get; set; }
+        public DateTime? ReturnDate { get; set; }
         public string? Description { get; set; }
-        public List<CreateSaleReturnClaimDto> Claims { get; set; } = new();
-    }
-
-    public class CreateSaleReturnClaimDto
-    {
-        public int SaleItemId { get; set; }
-        public SalesReturnReasonEnum Reason { get; set; }
-        public int ClaimedQuantity { get; set; }
-        public string? Note { get; set; }
+        public int? PreviousReturnId { get; set; }
+        public List<CreateReturnClaimDto> Claims { get; set; } = new();
     }
 
     public class CreateSaleReturnCommandValidator : AbstractValidator<CreateSaleReturnCommand>
     {
         public CreateSaleReturnCommandValidator()
         {
-            RuleFor(x => x.SaleId).NotNull().WithMessage(Validation.RequiredMessage("فروش"));
+            RuleFor(x => x.SaleId).GreaterThan(0).WithMessage(Validation.RequiredMessage("فروش"));
             RuleFor(x => x.Claims).NotEmpty().WithMessage(Validation.RequiredMessage("لیست ادعاها"));
-            RuleFor(x => x.Claims).Must(claims => claims.Select(c => (c.SaleItemId, c.Reason)).Distinct().Count() == claims.Count)
-                .WithMessage("هر ترکیب آیتم فروش و دلیل فقط یک‌بار می‌تواند در یک درخواست ظاهر شود.");
             RuleForEach(x => x.Claims).ChildRules(claim =>
             {
-                claim.RuleFor(c => c.SaleItemId).NotNull().WithMessage(Validation.RequiredMessage("آیتم فروش"));
-                claim.RuleFor(c => c.Reason).IsInEnum().WithMessage("دلیل ادعا نامعتبر است.");
-                claim.RuleFor(c => c.ClaimedQuantity).GreaterThan(0).WithMessage("مقدار ادعاشده باید از صفر بیشتر باشد.");
+                claim.RuleFor(c => c.Scope).IsInEnum().WithMessage("دامنه ادعا نامعتبر است.");
+                claim.RuleFor(c => c.Problem).IsInEnum().WithMessage("علت ادعا نامعتبر است.");
+                claim.RuleFor(c => c.ProductId).GreaterThan(0).WithMessage(Validation.RequiredMessage("کالا"));
+                claim.RuleFor(c => c.Quantity).GreaterThan(0).WithMessage("مقدار ادعاشده باید از صفر بیشتر باشد.");
+                claim.RuleFor(c => c.OrderLineId).NotNull().WithMessage(Validation.RequiredMessage("آیتم فروش"))
+                    .When(c => c.Scope == ReturnClaimScopeEnum.ON_ORDER);
+                claim.RuleFor(c => c.OffScopeKind).NotNull().WithMessage("نوع ادعای خارج از سند مشخص نشده است.")
+                    .When(c => c.Scope == ReturnClaimScopeEnum.OFF_ORDER);
             });
         }
     }
@@ -87,9 +84,12 @@ namespace Application.Features.SaleReturn.Commands
             var activeReturns = await _saleReturnRepository.GetActiveBySaleIdAsync(request.SaleId, cancellationToken);
             var saleItems = sale.Items.ToDictionary(x => x.Id);
 
-            var requestedPerItem = request.Claims.GroupBy(c => c.SaleItemId).ToDictionary(g => g.Key, g => g.Sum(c => c.ClaimedQuantity));
+            var onOrderRequestedPerItem = request.Claims
+                .Where(c => c.Scope == ReturnClaimScopeEnum.ON_ORDER)
+                .GroupBy(c => c.OrderLineId!.Value)
+                .ToDictionary(g => g.Key, g => g.Sum(c => c.Quantity));
 
-            foreach (var (saleItemId, requestedQty) in requestedPerItem)
+            foreach (var (saleItemId, requestedQty) in onOrderRequestedPerItem)
             {
                 if (!saleItems.TryGetValue(saleItemId, out var saleItem))
                     throw new NotFoundCustomException("آیتم فروش مورد نظر یافت نشد.");
@@ -100,30 +100,32 @@ namespace Application.Features.SaleReturn.Commands
             }
 
             var now = DateTime.Now;
-            var requestDate = request.RequestDate ?? now;
+            var returnDate = request.ReturnDate ?? now;
             var returnCount = await _context.SaleReturns.CountAsync(cancellationToken);
 
             var saleReturn = new Domain.Entities.SaleReturn
             {
                 ReturnNumber = Generator.GenerateSaleReturnNumber(returnCount + 1),
                 SaleId = request.SaleId,
-                RequestDate = requestDate,
-                Status = SaleReturnStatusEnum.PENDING_INSPECTION,
+                RequestDate = returnDate,
+                Status = ReturnStatusEnum.OPEN,
                 Description = request.Description,
+                PreviousReturnId = request.PreviousReturnId,
                 CreatedAt = now,
                 UpdatedAt = now,
             };
 
             foreach (var claimReq in request.Claims)
             {
-                var saleItem = saleItems[claimReq.SaleItemId];
                 saleReturn.Claims.Add(new Domain.Entities.SaleReturnClaim
                 {
-                    SaleItemId = claimReq.SaleItemId,
-                    ProductId = saleItem.ProductId,
-                    UnitPrice = saleItem.UnitPrice,
-                    Reason = claimReq.Reason,
-                    ClaimedQuantity = claimReq.ClaimedQuantity,
+                    Scope = claimReq.Scope,
+                    OffScopeKind = claimReq.Scope == ReturnClaimScopeEnum.OFF_ORDER ? claimReq.OffScopeKind : null,
+                    SaleItemId = claimReq.Scope == ReturnClaimScopeEnum.ON_ORDER ? claimReq.OrderLineId : null,
+                    ProductId = claimReq.ProductId,
+                    UnitPrice = claimReq.UnitPrice,
+                    Quantity = claimReq.Quantity,
+                    Problem = claimReq.Problem,
                     Note = claimReq.Note,
                     CreatedAt = now,
                 });

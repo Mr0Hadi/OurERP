@@ -27,7 +27,6 @@ namespace WMS.Tests.Unit
                 Username = "u",
                 Password = "Test@1234",
                 PersonelCode = "1001",
-                RoleId = 1,
             };
 
             var user = TestMapper.Instance.Map<User>(command);

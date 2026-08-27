@@ -15,6 +15,7 @@ namespace Application.Features.Team.Commands
         public string Name { get; set; }
         public int DepartmentId { get; set; }
         public int? HeadId { get; set; }
+        public int? DeputyId { get; set; }
     }
 
     public class CreateTeamCommandValidator : AbstractValidator<CreateTeamCommand>
@@ -25,6 +26,12 @@ namespace Application.Features.Team.Commands
             RuleFor(x => x.DepartmentId).GreaterThan(0).WithMessage(Validation.RequiredMessage("شناسه دپارتمان"));
             RuleFor(x => x.HeadId).GreaterThan(0).When(x => x.HeadId.HasValue)
                 .WithMessage(Validation.RequiredMessage("شناسه سرپرست"));
+            RuleFor(x => x.DeputyId).GreaterThan(0).When(x => x.DeputyId.HasValue)
+                .WithMessage(Validation.RequiredMessage("شناسه معاون"));
+            RuleFor(x => x)
+                .Must(x => !x.HeadId.HasValue || !x.DeputyId.HasValue || x.HeadId != x.DeputyId)
+                .WithMessage("معاون نمی‌تواند همان مدیر باشد")
+                .OverridePropertyName(nameof(CreateTeamCommand.DeputyId));
         }
     }
 

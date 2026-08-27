@@ -1,3 +1,4 @@
+using Application.Common.Dtos.Returns;
 using Domain.Entities;
 using Domain.Enums;
 using Infrastructure.Services;
@@ -18,154 +19,185 @@ namespace WMS.Tests.Unit
         };
 
         [Theory]
-        [InlineData(PurchaseReturnStatusEnum.REJECTED, true)]
-        [InlineData(PurchaseReturnStatusEnum.CANCELLED, true)]
-        [InlineData(PurchaseReturnStatusEnum.PENDING, false)]
-        [InlineData(PurchaseReturnStatusEnum.COORDINATING, false)]
-        [InlineData(PurchaseReturnStatusEnum.RESOLVED, false)]
-        public void IsTerminal_OnlyRejectedAndCancelledAreTerminal(PurchaseReturnStatusEnum status, bool expected)
+        [InlineData(ReturnStatusEnum.REJECTED, true)]
+        [InlineData(ReturnStatusEnum.CANCELLED, true)]
+        [InlineData(ReturnStatusEnum.OPEN, false)]
+        [InlineData(ReturnStatusEnum.IN_PROGRESS, false)]
+        [InlineData(ReturnStatusEnum.SETTLED, false)]
+        public void IsTerminal_OnlyRejectedAndCancelledAreTerminal(ReturnStatusEnum status, bool expected)
         {
             Assert.Equal(expected, _sut.IsTerminal(status));
         }
 
-        [Theory]
-        [InlineData(PurchaseIssueTypeEnum.SHORTAGE, PurchaseReturnDecisionTypeEnum.REFUND, true)]
-        [InlineData(PurchaseIssueTypeEnum.SHORTAGE, PurchaseReturnDecisionTypeEnum.REPLACEMENT, true)]
-        [InlineData(PurchaseIssueTypeEnum.SHORTAGE, PurchaseReturnDecisionTypeEnum.CREDIT, true)]
-        [InlineData(PurchaseIssueTypeEnum.SHORTAGE, PurchaseReturnDecisionTypeEnum.WRITE_OFF, false)]
-        [InlineData(PurchaseIssueTypeEnum.EXCESS, PurchaseReturnDecisionTypeEnum.REFUND, true)]
-        [InlineData(PurchaseIssueTypeEnum.EXCESS, PurchaseReturnDecisionTypeEnum.CREDIT, true)]
-        [InlineData(PurchaseIssueTypeEnum.EXCESS, PurchaseReturnDecisionTypeEnum.REPLACEMENT, false)]
-        [InlineData(PurchaseIssueTypeEnum.EXCESS, PurchaseReturnDecisionTypeEnum.WRITE_OFF, false)]
-        [InlineData(PurchaseIssueTypeEnum.DAMAGED, PurchaseReturnDecisionTypeEnum.WRITE_OFF, true)]
-        [InlineData(PurchaseIssueTypeEnum.DEFECTIVE, PurchaseReturnDecisionTypeEnum.REPLACEMENT, true)]
-        [InlineData(PurchaseIssueTypeEnum.EXPIRED, PurchaseReturnDecisionTypeEnum.CREDIT, true)]
-        [InlineData(PurchaseIssueTypeEnum.OTHER, PurchaseReturnDecisionTypeEnum.REFUND, true)]
-        public void IsValidDecision_FollowsTheDecisionMatrix(PurchaseIssueTypeEnum issue, PurchaseReturnDecisionTypeEnum decision, bool expected)
+        [Fact]
+        public void IsUntouched_NoEffects_IsTrue()
         {
-            Assert.Equal(expected, _sut.IsValidDecision(issue, decision));
+            var purchaseReturn = new PurchaseReturn { Claims = { new PurchaseReturnClaim { Quantity = 5 } } };
+
+            Assert.True(_sut.IsUntouched(purchaseReturn));
         }
 
         [Fact]
-        public void RecomputeReturnStatus_NoDecisions_IsPending()
+        public void IsUntouched_HasAppliedEffect_IsFalse()
         {
             var purchaseReturn = new PurchaseReturn
             {
-                Items = new() { new PurchaseReturnItem { Quantity = 5, Decisions = { } } },
-            };
-
-            Assert.Equal(PurchaseReturnStatusEnum.PENDING, _sut.RecomputeReturnStatus(purchaseReturn));
-        }
-
-        [Fact]
-        public void RecomputeReturnStatus_PartiallyDecided_IsCoordinating()
-        {
-            var purchaseReturn = new PurchaseReturn
-            {
-                Items =
+                Claims =
                 {
-                    new PurchaseReturnItem
+                    new PurchaseReturnClaim
                     {
                         Quantity = 5,
-                        Decisions = { new PurchaseReturnDecision { Quantity = 2, Status = PurchaseReturnDecisionStatusEnum.RESOLVED } },
+                        Resolutions = { new PurchaseReturnResolution { Quantity = 5, Effects = { new PurchaseReturnEffect { Status = ReturnEffectStatusEnum.APPLIED } } } },
                     },
                 },
             };
 
-            Assert.Equal(PurchaseReturnStatusEnum.COORDINATING, _sut.RecomputeReturnStatus(purchaseReturn));
+            Assert.False(_sut.IsUntouched(purchaseReturn));
         }
 
         [Fact]
-        public void RecomputeReturnStatus_FullyDecidedButAwaitingReplacement_IsCoordinating()
+        public void RecomputeReturnStatus_NoResolutions_IsOpen()
         {
             var purchaseReturn = new PurchaseReturn
             {
-                Items =
+                Claims = { new PurchaseReturnClaim { Quantity = 5 } },
+            };
+
+            Assert.Equal(ReturnStatusEnum.OPEN, _sut.RecomputeReturnStatus(purchaseReturn));
+        }
+
+        [Fact]
+        public void RecomputeReturnStatus_PartiallyDecided_IsInProgress()
+        {
+            var purchaseReturn = new PurchaseReturn
+            {
+                Claims =
                 {
-                    new PurchaseReturnItem
+                    new PurchaseReturnClaim
                     {
                         Quantity = 5,
-                        Decisions = { new PurchaseReturnDecision { Quantity = 5, Status = PurchaseReturnDecisionStatusEnum.AWAITING } },
+                        Resolutions = { new PurchaseReturnResolution { Quantity = 2, Effects = { new PurchaseReturnEffect { Status = ReturnEffectStatusEnum.APPLIED } } } },
                     },
                 },
             };
 
-            Assert.Equal(PurchaseReturnStatusEnum.COORDINATING, _sut.RecomputeReturnStatus(purchaseReturn));
+            Assert.Equal(ReturnStatusEnum.IN_PROGRESS, _sut.RecomputeReturnStatus(purchaseReturn));
         }
 
         [Fact]
-        public void RecomputeReturnStatus_FullyDecidedAndResolved_IsResolved()
+        public void RecomputeReturnStatus_FullyDecidedButEffectStillPending_IsInProgress()
         {
             var purchaseReturn = new PurchaseReturn
             {
-                Items =
+                Claims =
                 {
-                    new PurchaseReturnItem
+                    new PurchaseReturnClaim
                     {
                         Quantity = 5,
-                        Decisions = { new PurchaseReturnDecision { Quantity = 5, Status = PurchaseReturnDecisionStatusEnum.RESOLVED } },
+                        Resolutions = { new PurchaseReturnResolution { Quantity = 5, Effects = { new PurchaseReturnEffect { Status = ReturnEffectStatusEnum.PENDING } } } },
                     },
                 },
             };
 
-            Assert.Equal(PurchaseReturnStatusEnum.RESOLVED, _sut.RecomputeReturnStatus(purchaseReturn));
+            Assert.Equal(ReturnStatusEnum.IN_PROGRESS, _sut.RecomputeReturnStatus(purchaseReturn));
         }
 
         [Fact]
-        public void GetOpenIssueQuantity_NullActiveReturn_IsZero()
+        public void RecomputeReturnStatus_FullyDecidedAndApplied_IsSettled()
         {
-            Assert.Equal(0, _sut.GetOpenIssueQuantity(1, null));
+            var purchaseReturn = new PurchaseReturn
+            {
+                Claims =
+                {
+                    new PurchaseReturnClaim
+                    {
+                        Quantity = 5,
+                        Resolutions = { new PurchaseReturnResolution { Quantity = 5, Effects = { new PurchaseReturnEffect { Status = ReturnEffectStatusEnum.APPLIED } } } },
+                    },
+                },
+            };
+
+            Assert.Equal(ReturnStatusEnum.SETTLED, _sut.RecomputeReturnStatus(purchaseReturn));
         }
 
         [Fact]
-        public void GetOpenIssueQuantity_SubtractsDecidedFromReported()
+        public void RecomputeReturnStatus_MoneyOnlyResolution_GoesStraightToSettled()
+        {
+            // Money effects apply immediately - a return whose only decision is a refund settles
+            // without ever touching a goods round.
+            var purchaseReturn = new PurchaseReturn
+            {
+                Claims =
+                {
+                    new PurchaseReturnClaim
+                    {
+                        Quantity = 3,
+                        Resolutions = { new PurchaseReturnResolution { Quantity = 3, Effects = { new PurchaseReturnEffect { Kind = ReturnEffectKindEnum.MONEY_OUT, Status = ReturnEffectStatusEnum.APPLIED } } } },
+                    },
+                },
+            };
+
+            Assert.Equal(ReturnStatusEnum.SETTLED, _sut.RecomputeReturnStatus(purchaseReturn));
+        }
+
+        [Fact]
+        public void GetOpenClaimQuantity_NoActiveReturns_IsZero()
+        {
+            Assert.Equal(0, _sut.GetOpenClaimQuantity(1, new()));
+        }
+
+        [Fact]
+        public void GetOpenClaimQuantity_SubtractsDecidedFromClaimed()
         {
             var activeReturn = new PurchaseReturn
             {
-                Items =
-                {
-                    new PurchaseReturnItem
-                    {
-                        PurchaseItemId = 1,
-                        Quantity = 10,
-                        Decisions = { new PurchaseReturnDecision { Quantity = 4 } },
-                    },
-                },
+                Claims = { new PurchaseReturnClaim { PurchaseItemId = 1, Quantity = 10, Resolutions = { new PurchaseReturnResolution { Quantity = 4 } } } },
             };
 
-            Assert.Equal(6, _sut.GetOpenIssueQuantity(1, activeReturn));
+            Assert.Equal(6, _sut.GetOpenClaimQuantity(1, new() { activeReturn }));
         }
 
         [Fact]
-        public void GetReceivableQuantity_NoIssues_IsOrderedMinusReceivedMinusSettled()
+        public void GetOpenClaimQuantity_OffScopeClaimsNeverCount()
         {
-            var item = MakeItem(ordered: 10, received: 3, settled: 2);
-
-            Assert.Equal(5, _sut.GetReceivableQuantity(item, null));
-        }
-
-        [Fact]
-        public void GetReceivableQuantity_SubtractsOpenIssueQuantity()
-        {
-            var item = MakeItem(ordered: 10, received: 0, settled: 0);
             var activeReturn = new PurchaseReturn
             {
-                Items = new() { new PurchaseReturnItem { PurchaseItemId = item.Id, Quantity = 4 } },
+                Claims = { new PurchaseReturnClaim { PurchaseItemId = null, OffScopeKind = ReturnOffScopeKindEnum.EXCESS, Quantity = 10 } },
             };
 
-            Assert.Equal(6, _sut.GetReceivableQuantity(item, activeReturn));
+            Assert.Equal(0, _sut.GetOpenClaimQuantity(1, new() { activeReturn }));
         }
 
         [Fact]
-        public void GetReceivableQuantity_NeverGoesNegative()
+        public void GetClaimableQuantity_NoActiveReturns_IsReceivedMinusSettled()
         {
-            var item = MakeItem(ordered: 5, received: 5, settled: 0);
+            var item = MakeItem(ordered: 10, received: 8, settled: 2);
+
+            Assert.Equal(6, _sut.GetClaimableQuantity(item, new()));
+        }
+
+        [Fact]
+        public void GetClaimableQuantity_SubtractsOpenClaimQuantity()
+        {
+            var item = MakeItem(ordered: 10, received: 10, settled: 0);
             var activeReturn = new PurchaseReturn
             {
-                Items = new() { new PurchaseReturnItem { PurchaseItemId = item.Id, Quantity = 3 } },
+                Claims = { new PurchaseReturnClaim { PurchaseItemId = item.Id, Quantity = 4 } },
             };
 
-            Assert.Equal(0, _sut.GetReceivableQuantity(item, activeReturn));
+            Assert.Equal(6, _sut.GetClaimableQuantity(item, new() { activeReturn }));
+        }
+
+        [Fact]
+        public void GetClaimableQuantity_NeverGoesNegative()
+        {
+            var item = MakeItem(ordered: 5, received: 3, settled: 0);
+            var activeReturn = new PurchaseReturn
+            {
+                Claims = { new PurchaseReturnClaim { PurchaseItemId = item.Id, Quantity = 5 } },
+            };
+
+            Assert.Equal(0, _sut.GetClaimableQuantity(item, new() { activeReturn }));
         }
 
         [Fact]
@@ -173,15 +205,15 @@ namespace WMS.Tests.Unit
         {
             var purchase = new Purchase { Status = PurchaseStatusEnum.CANCELLED, Items = new() { MakeItem(10, 10) } };
 
-            Assert.Equal(PurchaseStatusEnum.CANCELLED, _sut.RecomputePurchaseStatus(purchase, null));
+            Assert.Equal(PurchaseStatusEnum.CANCELLED, _sut.RecomputePurchaseStatus(purchase));
         }
 
         [Fact]
-        public void RecomputePurchaseStatus_FullyAccountedNoOpenIssues_IsReceived()
+        public void RecomputePurchaseStatus_FullyReceived_IsReceived()
         {
             var purchase = new Purchase { Status = PurchaseStatusEnum.SHIPPED, Items = new() { MakeItem(10, received: 10) } };
 
-            Assert.Equal(PurchaseStatusEnum.RECEIVED, _sut.RecomputePurchaseStatus(purchase, null));
+            Assert.Equal(PurchaseStatusEnum.RECEIVED, _sut.RecomputePurchaseStatus(purchase));
         }
 
         [Fact]
@@ -189,7 +221,7 @@ namespace WMS.Tests.Unit
         {
             var purchase = new Purchase { Status = PurchaseStatusEnum.SHIPPED, Items = new() { MakeItem(10, received: 4) } };
 
-            Assert.Equal(PurchaseStatusEnum.PARTIALLY_RECEIVED, _sut.RecomputePurchaseStatus(purchase, null));
+            Assert.Equal(PurchaseStatusEnum.PARTIALLY_RECEIVED, _sut.RecomputePurchaseStatus(purchase));
         }
 
         [Fact]
@@ -197,132 +229,92 @@ namespace WMS.Tests.Unit
         {
             var purchase = new Purchase { Status = PurchaseStatusEnum.SHIPPED, Items = new() { MakeItem(10) } };
 
-            Assert.Equal(PurchaseStatusEnum.SHIPPED, _sut.RecomputePurchaseStatus(purchase, null));
+            Assert.Equal(PurchaseStatusEnum.SHIPPED, _sut.RecomputePurchaseStatus(purchase));
         }
 
         [Fact]
-        public void RecomputePurchaseStatus_FullyReceivedButOpenIssueRemains_IsNotReceived()
+        public void RecomputePurchaseStatus_FullyReceivedWithOpenReturnClaim_StillReceived()
         {
+            // Receiving progress and return activity are independent - an open claim against
+            // already-received goods does not block RECEIVED.
             var item = MakeItem(10, received: 10);
             var purchase = new Purchase { Status = PurchaseStatusEnum.SHIPPED, Items = new() { item } };
-            var activeReturn = new PurchaseReturn
-            {
-                Items = new() { new PurchaseReturnItem { PurchaseItemId = item.Id, Quantity = 2 } },
-            };
 
-            Assert.Equal(PurchaseStatusEnum.PARTIALLY_RECEIVED, _sut.RecomputePurchaseStatus(purchase, activeReturn));
+            Assert.Equal(PurchaseStatusEnum.RECEIVED, _sut.RecomputePurchaseStatus(purchase));
         }
 
         [Fact]
-        public void ResolveAwaitingReplacements_NullActiveReturn_NoOp()
+        public void ExpandComposition_GoodsInOnly_ProducesOnePendingEffect()
         {
-            var purchase = new Purchase { Items = new() { MakeItem(10) } };
+            var composition = new EffectCompositionDto { Quantity = 3, GoodsIn = new GoodsEffectDto { Quantity = 3 } };
 
-            _sut.ResolveAwaitingReplacements(purchase, null, DateTime.Now);
+            var effects = _sut.ExpandComposition(composition, DateTime.Now);
+
+            var effect = Assert.Single(effects);
+            Assert.Equal(ReturnEffectKindEnum.GOODS_IN, effect.Kind);
+            Assert.Equal(3, effect.Quantity);
+            Assert.Equal(ReturnEffectStatusEnum.PENDING, effect.Status);
         }
 
         [Fact]
-        public void ResolveAwaitingReplacements_SurplusResolvesOldestAwaitingLineFifo()
+        public void ExpandComposition_MoneyOnly_ProducesOneAppliedEffect()
         {
-            var item = MakeItem(ordered: 10, received: 10, settled: 0);
-            var purchase = new Purchase { Items = new() { item } };
-
-            var oldDecision = new PurchaseReturnDecision
+            var composition = new EffectCompositionDto
             {
-                DecisionType = PurchaseReturnDecisionTypeEnum.REPLACEMENT,
-                Quantity = 3,
-                Status = PurchaseReturnDecisionStatusEnum.AWAITING,
-                CreatedAt = DateTime.Now.AddMinutes(-10),
-            };
-            var newDecision = new PurchaseReturnDecision
-            {
-                DecisionType = PurchaseReturnDecisionTypeEnum.REPLACEMENT,
-                Quantity = 5,
-                Status = PurchaseReturnDecisionStatusEnum.AWAITING,
-                CreatedAt = DateTime.Now,
+                Quantity = 2,
+                Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.MONEY_OUT, Method = ReturnPaymentMethodEnum.CASH, Amount = 200 },
             };
 
-            var activeReturn = new PurchaseReturn
+            var effects = _sut.ExpandComposition(composition, DateTime.Now);
+
+            var effect = Assert.Single(effects);
+            Assert.Equal(ReturnEffectKindEnum.MONEY_OUT, effect.Kind);
+            Assert.Equal(200UL, effect.Amount);
+            Assert.Equal(ReturnEffectStatusEnum.APPLIED, effect.Status);
+            Assert.NotNull(effect.AppliedAt);
+        }
+
+        [Fact]
+        public void ExpandComposition_MixedMoney_CarriesParts()
+        {
+            var composition = new EffectCompositionDto
             {
-                Items =
+                Quantity = 1,
+                Money = new MoneyEffectDto
                 {
-                    new PurchaseReturnItem
+                    Kind = ReturnEffectKindEnum.MONEY_OUT,
+                    Method = ReturnPaymentMethodEnum.MIXED,
+                    Amount = 300,
+                    Parts = new()
                     {
-                        PurchaseItemId = item.Id,
-                        Quantity = 8,
-                        Decisions = { oldDecision, newDecision },
+                        new MoneyPartDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 100 },
+                        new MoneyPartDto { Method = ReturnPaymentMethodEnum.TRANSFER, Amount = 200 },
                     },
                 },
             };
 
-            // Received 10 with nothing still normally owed (ordered 10, received 10) -> the whole
-            // received batch beyond "still owed" (0) is surplus, i.e. all 10 could be replacement
-            // stock, but only 8 quantity is actually AWAITING replacement, so both lines resolve.
-            _sut.ResolveAwaitingReplacements(purchase, activeReturn, DateTime.Now);
+            var effects = _sut.ExpandComposition(composition, DateTime.Now);
 
-            Assert.Equal(PurchaseReturnDecisionStatusEnum.RESOLVED, oldDecision.Status);
-            Assert.Equal(PurchaseReturnDecisionStatusEnum.RESOLVED, newDecision.Status);
+            var effect = Assert.Single(effects);
+            Assert.Equal(2, effect.MoneyParts.Count);
+            Assert.Equal(300UL, (ulong)effect.MoneyParts.Sum(p => (long)p.Amount));
         }
 
         [Fact]
-        public void ResolveAwaitingReplacements_InsufficientSurplus_LeavesLinesAwaiting()
+        public void ExpandComposition_GoodsAndMoneyTogether_ProducesBothEffects()
         {
-            // Ordered 10, received only 6: 4 still normally owed, so none of what arrived can be
-            // surplus/replacement yet.
-            var item = MakeItem(ordered: 10, received: 6, settled: 0);
-            var purchase = new Purchase { Items = new() { item } };
-
-            var decision = new PurchaseReturnDecision
+            var composition = new EffectCompositionDto
             {
-                DecisionType = PurchaseReturnDecisionTypeEnum.REPLACEMENT,
                 Quantity = 2,
-                Status = PurchaseReturnDecisionStatusEnum.AWAITING,
-                CreatedAt = DateTime.Now,
+                GoodsOut = new GoodsEffectDto { Quantity = 2 },
+                Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.MONEY_IN, Method = ReturnPaymentMethodEnum.CASH, Amount = 50 },
             };
 
-            var activeReturn = new PurchaseReturn
-            {
-                Items = new() { new PurchaseReturnItem { PurchaseItemId = item.Id, Quantity = 2, Decisions = { decision } } },
-            };
+            var effects = _sut.ExpandComposition(composition, DateTime.Now);
 
-            _sut.ResolveAwaitingReplacements(purchase, activeReturn, DateTime.Now);
-
-            Assert.Equal(PurchaseReturnDecisionStatusEnum.AWAITING, decision.Status);
-        }
-
-        [Fact]
-        public void ResolveAwaitingReplacements_NoSurplus_LeavesAllLinesAwaiting()
-        {
-            // Ordered 10, received 2: still owed = 8, which is >= the 7 units of AWAITING
-            // replacement quantity, so nothing can be inferred as replacement stock yet.
-            var item = MakeItem(ordered: 10, received: 2, settled: 0);
-            var purchase = new Purchase { Items = new() { item } };
-
-            var small = new PurchaseReturnDecision
-            {
-                DecisionType = PurchaseReturnDecisionTypeEnum.REPLACEMENT,
-                Quantity = 2,
-                Status = PurchaseReturnDecisionStatusEnum.AWAITING,
-                CreatedAt = DateTime.Now.AddMinutes(-5),
-            };
-            var big = new PurchaseReturnDecision
-            {
-                DecisionType = PurchaseReturnDecisionTypeEnum.REPLACEMENT,
-                Quantity = 5,
-                Status = PurchaseReturnDecisionStatusEnum.AWAITING,
-                CreatedAt = DateTime.Now,
-            };
-
-            var activeReturn = new PurchaseReturn
-            {
-                Items = new() { new PurchaseReturnItem { PurchaseItemId = item.Id, Quantity = 7, Decisions = { small, big } } },
-            };
-
-            // totalAwaiting = 7, stillNeeded = 10 - 2 - 0 = 8, surplus = max(0, 7-8) = 0
-            _sut.ResolveAwaitingReplacements(purchase, activeReturn, DateTime.Now);
-
-            Assert.Equal(PurchaseReturnDecisionStatusEnum.AWAITING, small.Status);
-            Assert.Equal(PurchaseReturnDecisionStatusEnum.AWAITING, big.Status);
+            Assert.Equal(2, effects.Count);
+            Assert.Contains(effects, e => e.Kind == ReturnEffectKindEnum.GOODS_OUT);
+            Assert.Contains(effects, e => e.Kind == ReturnEffectKindEnum.MONEY_IN);
         }
     }
 }

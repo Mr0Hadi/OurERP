@@ -1,3 +1,4 @@
+using Application.Common.Dtos.Returns;
 using Domain.Entities;
 using Domain.Enums;
 using Infrastructure.Services;
@@ -9,105 +10,26 @@ namespace WMS.Tests.Unit
         private readonly SaleReturnCalculationService _sut = new();
 
         [Theory]
-        [InlineData(SaleReturnStatusEnum.REJECTED, true)]
-        [InlineData(SaleReturnStatusEnum.CANCELLED, true)]
-        [InlineData(SaleReturnStatusEnum.PENDING_INSPECTION, false)]
-        [InlineData(SaleReturnStatusEnum.COORDINATING, false)]
-        [InlineData(SaleReturnStatusEnum.RESOLVED, false)]
-        public void IsTerminal_OnlyRejectedAndCancelledAreTerminal(SaleReturnStatusEnum status, bool expected)
+        [InlineData(ReturnStatusEnum.REJECTED, true)]
+        [InlineData(ReturnStatusEnum.CANCELLED, true)]
+        [InlineData(ReturnStatusEnum.OPEN, false)]
+        [InlineData(ReturnStatusEnum.IN_PROGRESS, false)]
+        [InlineData(ReturnStatusEnum.SETTLED, false)]
+        public void IsTerminal_OnlyRejectedAndCancelledAreTerminal(ReturnStatusEnum status, bool expected)
         {
             Assert.Equal(expected, _sut.IsTerminal(status));
         }
 
-        [Theory]
-        [InlineData(SaleReturnStatusEnum.PENDING_INSPECTION, true)]
-        [InlineData(SaleReturnStatusEnum.COORDINATING, true)]
-        [InlineData(SaleReturnStatusEnum.RESOLVED, false)]
-        [InlineData(SaleReturnStatusEnum.REJECTED, false)]
-        [InlineData(SaleReturnStatusEnum.CANCELLED, false)]
-        public void IsMutable_ExcludesResolvedAndTerminalStatuses(SaleReturnStatusEnum status, bool expected)
+        [Fact]
+        public void IsUntouched_NoEffects_IsTrue()
         {
-            var saleReturn = new SaleReturn { Status = status };
+            var saleReturn = new SaleReturn { Claims = { new SaleReturnClaim { Quantity = 5 } } };
 
-            Assert.Equal(expected, _sut.IsMutable(saleReturn));
+            Assert.True(_sut.IsUntouched(saleReturn));
         }
 
         [Fact]
-        public void IsPreInspection_TrueOnlyWhenPendingAndNothingInspectedYet()
-        {
-            var pendingNoInspection = new SaleReturn
-            {
-                Status = SaleReturnStatusEnum.PENDING_INSPECTION,
-                Claims = { new SaleReturnClaim { ClaimedQuantity = 5 } },
-            };
-
-            Assert.True(_sut.IsPreInspection(pendingNoInspection));
-        }
-
-        [Fact]
-        public void IsPreInspection_FalseOnceAnyInspectionRecorded()
-        {
-            var partiallyInspected = new SaleReturn
-            {
-                Status = SaleReturnStatusEnum.PENDING_INSPECTION,
-                Claims =
-                {
-                    new SaleReturnClaim
-                    {
-                        ClaimedQuantity = 5,
-                        InspectionItems = new() { new SaleReturnItem { Quantity = 2 } },
-                    },
-                },
-            };
-
-            Assert.False(_sut.IsPreInspection(partiallyInspected));
-        }
-
-        [Fact]
-        public void IsValidDecision_HealthyIssueRejectsReplacement()
-        {
-            Assert.False(_sut.IsValidDecision(null, SaleReturnDecisionTypeEnum.REPLACEMENT));
-        }
-
-        [Theory]
-        [InlineData(SaleReturnDecisionTypeEnum.REFUND)]
-        [InlineData(SaleReturnDecisionTypeEnum.STORE_CREDIT)]
-        [InlineData(SaleReturnDecisionTypeEnum.NO_COMPENSATION)]
-        public void IsValidDecision_HealthyIssueAllowsEverythingExceptReplacement(SaleReturnDecisionTypeEnum decision)
-        {
-            Assert.True(_sut.IsValidDecision(null, decision));
-        }
-
-        [Fact]
-        public void IsValidDecision_ActualIssueAllowsReplacement()
-        {
-            Assert.True(_sut.IsValidDecision(SalesReturnIssueTypeEnum.DEFECTIVE, SaleReturnDecisionTypeEnum.REPLACEMENT));
-        }
-
-        [Fact]
-        public void RecomputeReturnStatus_NotFullyInspected_StaysPendingInspection()
-        {
-            var saleReturn = new SaleReturn
-            {
-                Claims = { new SaleReturnClaim { ClaimedQuantity = 5, InspectionItems = new() { new SaleReturnItem { Quantity = 2 } } } },
-            };
-
-            Assert.Equal(SaleReturnStatusEnum.PENDING_INSPECTION, _sut.RecomputeReturnStatus(saleReturn));
-        }
-
-        [Fact]
-        public void RecomputeReturnStatus_FullyInspectedNoDecisions_IsCoordinating()
-        {
-            var saleReturn = new SaleReturn
-            {
-                Claims = { new SaleReturnClaim { ClaimedQuantity = 5, InspectionItems = new() { new SaleReturnItem { Quantity = 5 } } } },
-            };
-
-            Assert.Equal(SaleReturnStatusEnum.COORDINATING, _sut.RecomputeReturnStatus(saleReturn));
-        }
-
-        [Fact]
-        public void RecomputeReturnStatus_FullyInspectedAndFullyResolved_IsResolved()
+        public void IsUntouched_HasAppliedEffect_IsFalse()
         {
             var saleReturn = new SaleReturn
             {
@@ -115,24 +37,25 @@ namespace WMS.Tests.Unit
                 {
                     new SaleReturnClaim
                     {
-                        ClaimedQuantity = 5,
-                        InspectionItems =
-                        {
-                            new SaleReturnItem
-                            {
-                                Quantity = 5,
-                                Decisions = { new SaleReturnDecision { Quantity = 5, Status = SaleReturnDecisionStatusEnum.RESOLVED } },
-                            },
-                        },
+                        Quantity = 5,
+                        Resolutions = { new SaleReturnResolution { Quantity = 5, Effects = { new SaleReturnEffect { Status = ReturnEffectStatusEnum.APPLIED } } } },
                     },
                 },
             };
 
-            Assert.Equal(SaleReturnStatusEnum.RESOLVED, _sut.RecomputeReturnStatus(saleReturn));
+            Assert.False(_sut.IsUntouched(saleReturn));
         }
 
         [Fact]
-        public void RecomputeReturnStatus_FullyInspectedButAwaitingReplacement_IsCoordinating()
+        public void RecomputeReturnStatus_NoResolutions_IsOpen()
+        {
+            var saleReturn = new SaleReturn { Claims = { new SaleReturnClaim { Quantity = 5 } } };
+
+            Assert.Equal(ReturnStatusEnum.OPEN, _sut.RecomputeReturnStatus(saleReturn));
+        }
+
+        [Fact]
+        public void RecomputeReturnStatus_PartiallyDecided_IsInProgress()
         {
             var saleReturn = new SaleReturn
             {
@@ -140,20 +63,67 @@ namespace WMS.Tests.Unit
                 {
                     new SaleReturnClaim
                     {
-                        ClaimedQuantity = 5,
-                        InspectionItems =
-                        {
-                            new SaleReturnItem
-                            {
-                                Quantity = 5,
-                                Decisions = { new SaleReturnDecision { Quantity = 5, Status = SaleReturnDecisionStatusEnum.AWAITING } },
-                            },
-                        },
+                        Quantity = 5,
+                        Resolutions = { new SaleReturnResolution { Quantity = 2, Effects = { new SaleReturnEffect { Status = ReturnEffectStatusEnum.APPLIED } } } },
                     },
                 },
             };
 
-            Assert.Equal(SaleReturnStatusEnum.COORDINATING, _sut.RecomputeReturnStatus(saleReturn));
+            Assert.Equal(ReturnStatusEnum.IN_PROGRESS, _sut.RecomputeReturnStatus(saleReturn));
+        }
+
+        [Fact]
+        public void RecomputeReturnStatus_FullyDecidedButEffectStillPending_IsInProgress()
+        {
+            var saleReturn = new SaleReturn
+            {
+                Claims =
+                {
+                    new SaleReturnClaim
+                    {
+                        Quantity = 5,
+                        Resolutions = { new SaleReturnResolution { Quantity = 5, Effects = { new SaleReturnEffect { Status = ReturnEffectStatusEnum.PENDING } } } },
+                    },
+                },
+            };
+
+            Assert.Equal(ReturnStatusEnum.IN_PROGRESS, _sut.RecomputeReturnStatus(saleReturn));
+        }
+
+        [Fact]
+        public void RecomputeReturnStatus_FullyDecidedAndApplied_IsSettled()
+        {
+            var saleReturn = new SaleReturn
+            {
+                Claims =
+                {
+                    new SaleReturnClaim
+                    {
+                        Quantity = 5,
+                        Resolutions = { new SaleReturnResolution { Quantity = 5, Effects = { new SaleReturnEffect { Status = ReturnEffectStatusEnum.APPLIED } } } },
+                    },
+                },
+            };
+
+            Assert.Equal(ReturnStatusEnum.SETTLED, _sut.RecomputeReturnStatus(saleReturn));
+        }
+
+        [Fact]
+        public void RecomputeReturnStatus_MoneyOnlyResolution_GoesStraightToSettled()
+        {
+            var saleReturn = new SaleReturn
+            {
+                Claims =
+                {
+                    new SaleReturnClaim
+                    {
+                        Quantity = 3,
+                        Resolutions = { new SaleReturnResolution { Quantity = 3, Effects = { new SaleReturnEffect { Kind = ReturnEffectKindEnum.MONEY_OUT, Status = ReturnEffectStatusEnum.APPLIED } } } },
+                    },
+                },
+            };
+
+            Assert.Equal(ReturnStatusEnum.SETTLED, _sut.RecomputeReturnStatus(saleReturn));
         }
 
         [Fact]
@@ -163,38 +133,27 @@ namespace WMS.Tests.Unit
         }
 
         [Fact]
-        public void GetOpenClaimQuantity_StaysOpenUntilDecidedRegardlessOfInspection()
-        {
-            var activeReturns = new List<SaleReturn>
-            {
-                new()
-                {
-                    Claims =
-                    {
-                        new SaleReturnClaim
-                        {
-                            SaleItemId = 1,
-                            ClaimedQuantity = 10,
-                            InspectionItems = new() { new SaleReturnItem { Quantity = 10 } }, // inspected but not decided
-                        },
-                    },
-                },
-            };
-
-            Assert.Equal(10, _sut.GetOpenClaimQuantity(1, activeReturns));
-        }
-
-        [Fact]
         public void GetOpenClaimQuantity_SumsAcrossMultipleActiveReturns()
         {
             var activeReturns = new List<SaleReturn>
             {
-                new() { Claims = { new SaleReturnClaim { SaleItemId = 1, ClaimedQuantity = 3 } } },
-                new() { Claims = { new SaleReturnClaim { SaleItemId = 1, ClaimedQuantity = 4 } } },
-                new() { Claims = { new SaleReturnClaim { SaleItemId = 2, ClaimedQuantity = 100 } } },
+                new() { Claims = { new SaleReturnClaim { SaleItemId = 1, Quantity = 3 } } },
+                new() { Claims = { new SaleReturnClaim { SaleItemId = 1, Quantity = 4 } } },
+                new() { Claims = { new SaleReturnClaim { SaleItemId = 2, Quantity = 100 } } },
             };
 
             Assert.Equal(7, _sut.GetOpenClaimQuantity(1, activeReturns));
+        }
+
+        [Fact]
+        public void GetOpenClaimQuantity_OffScopeClaimsNeverCount()
+        {
+            var activeReturns = new List<SaleReturn>
+            {
+                new() { Claims = { new SaleReturnClaim { SaleItemId = null, OffScopeKind = ReturnOffScopeKindEnum.EXCESS, Quantity = 10 } } },
+            };
+
+            Assert.Equal(0, _sut.GetOpenClaimQuantity(1, activeReturns));
         }
 
         [Fact]
@@ -203,7 +162,7 @@ namespace WMS.Tests.Unit
             var item = new SaleItem { Id = 1, ShippedQuantity = 10, SettledQuantity = 2 };
             var activeReturns = new List<SaleReturn>
             {
-                new() { Claims = { new SaleReturnClaim { SaleItemId = 1, ClaimedQuantity = 3 } } },
+                new() { Claims = { new SaleReturnClaim { SaleItemId = 1, Quantity = 3 } } },
             };
 
             Assert.Equal(5, _sut.GetClaimableQuantity(item, activeReturns));
@@ -215,7 +174,7 @@ namespace WMS.Tests.Unit
             var item = new SaleItem { Id = 1, ShippedQuantity = 5, SettledQuantity = 5 };
             var activeReturns = new List<SaleReturn>
             {
-                new() { Claims = { new SaleReturnClaim { SaleItemId = 1, ClaimedQuantity = 3 } } },
+                new() { Claims = { new SaleReturnClaim { SaleItemId = 1, Quantity = 3 } } },
             };
 
             Assert.Equal(0, _sut.GetClaimableQuantity(item, activeReturns));
@@ -263,6 +222,54 @@ namespace WMS.Tests.Unit
             };
 
             Assert.Equal(SalesStatusEnum.PENDING, _sut.RecomputeSaleStatus(sale));
+        }
+
+        [Fact]
+        public void ExpandComposition_GoodsInOnly_ProducesOnePendingEffect()
+        {
+            var composition = new EffectCompositionDto { Quantity = 3, GoodsIn = new GoodsEffectDto { Quantity = 3 } };
+
+            var effects = _sut.ExpandComposition(composition, DateTime.Now);
+
+            var effect = Assert.Single(effects);
+            Assert.Equal(ReturnEffectKindEnum.GOODS_IN, effect.Kind);
+            Assert.Equal(3, effect.Quantity);
+            Assert.Equal(ReturnEffectStatusEnum.PENDING, effect.Status);
+        }
+
+        [Fact]
+        public void ExpandComposition_MoneyOnly_ProducesOneAppliedEffect()
+        {
+            var composition = new EffectCompositionDto
+            {
+                Quantity = 2,
+                Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.MONEY_OUT, Method = ReturnPaymentMethodEnum.STORE_CREDIT, Amount = 200 },
+            };
+
+            var effects = _sut.ExpandComposition(composition, DateTime.Now);
+
+            var effect = Assert.Single(effects);
+            Assert.Equal(ReturnEffectKindEnum.MONEY_OUT, effect.Kind);
+            Assert.Equal(200UL, effect.Amount);
+            Assert.Equal(ReturnEffectStatusEnum.APPLIED, effect.Status);
+            Assert.NotNull(effect.AppliedAt);
+        }
+
+        [Fact]
+        public void ExpandComposition_GoodsAndMoneyTogether_ProducesBothEffects()
+        {
+            var composition = new EffectCompositionDto
+            {
+                Quantity = 2,
+                GoodsOut = new GoodsEffectDto { Quantity = 2 },
+                Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.MONEY_IN, Method = ReturnPaymentMethodEnum.CASH, Amount = 50 },
+            };
+
+            var effects = _sut.ExpandComposition(composition, DateTime.Now);
+
+            Assert.Equal(2, effects.Count);
+            Assert.Contains(effects, e => e.Kind == ReturnEffectKindEnum.GOODS_OUT);
+            Assert.Contains(effects, e => e.Kind == ReturnEffectKindEnum.MONEY_IN);
         }
     }
 }

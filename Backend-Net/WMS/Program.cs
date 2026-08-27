@@ -87,15 +87,9 @@ namespace WMS
             });
 
 
-            builder.Services.AddAuthorization(options =>
-            {
-                options.AddPolicy("Admin", options => { options.RequireClaim("Admin"); });
-                options.AddPolicy("User", options => { options.RequireClaim("User"); });
-
-                //foreach (var permission in Enum.GetValues<PermissionsEnum>())
-                //    options.AddPolicy(permission.ToString(), p =>
-                //        p.RequireAssertion(ctx => ctx.User.HasClaim("Admin", "Admin") || ctx.User.HasClaim(permission.ToString(), permission.ToString())));
-            });
+            // Authorization policies are not yet department-based (see CLAUDE.md); role-based
+            // claims/policies were removed since Department/Team now carry organizational structure.
+            builder.Services.AddAuthorization();
 
             var allowedOrigins = builder.Configuration.GetSection("CorsSettings:AllowedOrigins").Get<string[]>();
 

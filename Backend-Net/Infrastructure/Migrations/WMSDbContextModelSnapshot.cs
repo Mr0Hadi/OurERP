@@ -40,6 +40,9 @@ namespace Infrastructure.Migrations
                     b.Property<int>("BalanceType")
                         .HasColumnType("int");
 
+                    b.Property<string>("City")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -47,6 +50,9 @@ namespace Infrastructure.Migrations
                         .HasColumnType("decimal(20,0)");
 
                     b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("EconomicCode")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("FirstName")
@@ -63,6 +69,9 @@ namespace Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("NationalId")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("PhoneNumber")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -71,7 +80,13 @@ namespace Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Province")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("RefferalCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RegistrationNumber")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -96,6 +111,9 @@ namespace Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("DeputyId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("HeadId")
                         .HasColumnType("int");
 
@@ -107,6 +125,8 @@ namespace Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DeputyId");
 
                     b.HasIndex("HeadId");
 
@@ -479,6 +499,9 @@ namespace Infrastructure.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("PreviousReturnId")
+                        .HasColumnType("int");
+
                     b.Property<int>("PurchaseId")
                         .HasColumnType("int");
 
@@ -497,12 +520,14 @@ namespace Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("PreviousReturnId");
+
                     b.HasIndex("PurchaseId");
 
                     b.ToTable("PurchaseReturns");
                 });
 
-            modelBuilder.Entity("Domain.Entities.PurchaseReturnDecision", b =>
+            modelBuilder.Entity("Domain.Entities.PurchaseReturnClaim", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -513,61 +538,28 @@ namespace Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("DecisionType")
-                        .HasColumnType("int");
-
                     b.Property<string>("Note")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("PurchaseReturnItemId")
+                    b.Property<int?>("OffScopeKind")
                         .HasColumnType("int");
 
-                    b.Property<int>("Quantity")
+                    b.Property<int>("Problem")
                         .HasColumnType("int");
-
-                    b.Property<decimal?>("RefundAmount")
-                        .HasColumnType("decimal(20,0)");
-
-                    b.Property<DateTime?>("ResolvedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PurchaseReturnItemId");
-
-                    b.ToTable("PurchaseReturnDecisions");
-                });
-
-            modelBuilder.Entity("Domain.Entities.PurchaseReturnItem", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("IssueType")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Note")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
 
-                    b.Property<int>("PurchaseItemId")
+                    b.Property<int?>("PurchaseItemId")
                         .HasColumnType("int");
 
                     b.Property<int>("PurchaseReturnId")
                         .HasColumnType("int");
 
                     b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Scope")
                         .HasColumnType("int");
 
                     b.Property<decimal>("UnitPrice")
@@ -581,10 +573,10 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("PurchaseReturnId");
 
-                    b.ToTable("PurchaseReturnItems");
+                    b.ToTable("PurchaseReturnClaims");
                 });
 
-            modelBuilder.Entity("Domain.Entities.Role", b =>
+            modelBuilder.Entity("Domain.Entities.PurchaseReturnEffect", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -592,16 +584,178 @@ namespace Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                    b.Property<decimal?>("Amount")
+                        .HasColumnType("decimal(20,0)");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
+                    b.Property<DateTime?>("AppliedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DoneQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Method")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PurchaseReturnResolutionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reference")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("RestockedQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("PurchaseReturnResolutionId");
+
+                    b.ToTable("PurchaseReturnEffects");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PurchaseReturnEffectMoneyPart", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(20,0)");
+
+                    b.Property<string>("CheckNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Method")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PurchaseReturnEffectId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TransferRef")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Roles");
+                    b.HasIndex("PurchaseReturnEffectId");
+
+                    b.ToTable("PurchaseReturnEffectMoneyParts");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PurchaseReturnEffectObservation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Problem")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PurchaseReturnEffectRoundId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PurchaseReturnEffectRoundId");
+
+                    b.ToTable("PurchaseReturnEffectObservations");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PurchaseReturnEffectRound", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("HealthyQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PartyName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PartyNationalId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("PurchaseReturnEffectId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("VehiclePlate")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PurchaseReturnEffectId");
+
+                    b.ToTable("PurchaseReturnEffectRounds");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PurchaseReturnResolution", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("PurchaseReturnClaimId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PurchaseReturnClaimId");
+
+                    b.ToTable("PurchaseReturnResolutions");
                 });
 
             modelBuilder.Entity("Domain.Entities.Sale", b =>
@@ -705,6 +859,9 @@ namespace Infrastructure.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("PreviousReturnId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("RequestDate")
                         .HasColumnType("datetime2");
 
@@ -715,6 +872,9 @@ namespace Infrastructure.Migrations
                     b.Property<int>("SaleId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("SourceEffectId")
+                        .HasColumnType("int");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -722,6 +882,8 @@ namespace Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("PreviousReturnId");
 
                     b.HasIndex("SaleId");
 
@@ -736,25 +898,31 @@ namespace Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("ClaimedQuantity")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Note")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("OffScopeKind")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Problem")
+                        .HasColumnType("int");
+
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
 
-                    b.Property<int>("Reason")
+                    b.Property<int>("Quantity")
                         .HasColumnType("int");
 
-                    b.Property<int>("SaleItemId")
+                    b.Property<int?>("SaleItemId")
                         .HasColumnType("int");
 
                     b.Property<int>("SaleReturnId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Scope")
                         .HasColumnType("int");
 
                     b.Property<decimal>("UnitPrice")
@@ -771,7 +939,7 @@ namespace Infrastructure.Migrations
                     b.ToTable("SaleReturnClaims");
                 });
 
-            modelBuilder.Entity("Domain.Entities.SaleReturnDecision", b =>
+            modelBuilder.Entity("Domain.Entities.SaleReturnEffect", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -779,28 +947,40 @@ namespace Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<decimal?>("Amount")
+                        .HasColumnType("decimal(20,0)");
+
+                    b.Property<DateTime?>("AppliedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("DecisionType")
+                    b.Property<int>("DoneQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Method")
                         .HasColumnType("int");
 
                     b.Property<string>("Note")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("ProductId")
+                        .HasColumnType("int");
+
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
 
-                    b.Property<decimal?>("RefundAmount")
-                        .HasColumnType("decimal(20,0)");
+                    b.Property<string>("Reference")
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("ReplacementShippedQuantity")
+                    b.Property<int?>("RestockedQuantity")
                         .HasColumnType("int");
 
-                    b.Property<DateTime?>("ResolvedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("SaleReturnItemId")
+                    b.Property<int>("SaleReturnResolutionId")
                         .HasColumnType("int");
 
                     b.Property<int>("Status")
@@ -808,12 +988,71 @@ namespace Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SaleReturnItemId");
+                    b.HasIndex("ProductId");
 
-                    b.ToTable("SaleReturnDecisions");
+                    b.HasIndex("SaleReturnResolutionId");
+
+                    b.ToTable("SaleReturnEffects");
                 });
 
-            modelBuilder.Entity("Domain.Entities.SaleReturnItem", b =>
+            modelBuilder.Entity("Domain.Entities.SaleReturnEffectMoneyPart", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(20,0)");
+
+                    b.Property<string>("CheckNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Method")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SaleReturnEffectId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TransferRef")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SaleReturnEffectId");
+
+                    b.ToTable("SaleReturnEffectMoneyParts");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SaleReturnEffectObservation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Problem")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SaleReturnEffectRoundId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SaleReturnEffectRoundId");
+
+                    b.ToTable("SaleReturnEffectObservations");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SaleReturnEffectRound", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -824,8 +1063,47 @@ namespace Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("IssueType")
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("HealthyQuantity")
                         .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PartyName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PartyNationalId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SaleReturnEffectId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("VehiclePlate")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SaleReturnEffectId");
+
+                    b.ToTable("SaleReturnEffectRounds");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SaleReturnResolution", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Note")
                         .HasColumnType("nvarchar(max)");
@@ -840,7 +1118,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("SaleReturnClaimId");
 
-                    b.ToTable("SaleReturnItems");
+                    b.ToTable("SaleReturnResolutions");
                 });
 
             modelBuilder.Entity("Domain.Entities.Supplier", b =>
@@ -861,6 +1139,9 @@ namespace Infrastructure.Migrations
                     b.Property<int?>("BalanceType")
                         .HasColumnType("int");
 
+                    b.Property<string>("City")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("CompanyName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -869,6 +1150,9 @@ namespace Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("EconomicCode")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("FirstName")
@@ -885,12 +1169,21 @@ namespace Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("NationalId")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Phone")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PostalCode")
                         .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Province")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RegistrationNumber")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -918,6 +1211,9 @@ namespace Infrastructure.Migrations
                     b.Property<int>("DepartmentId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("DeputyId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("HeadId")
                         .HasColumnType("int");
 
@@ -931,6 +1227,8 @@ namespace Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DepartmentId");
+
+                    b.HasIndex("DeputyId");
 
                     b.HasIndex("HeadId");
 
@@ -976,10 +1274,7 @@ namespace Infrastructure.Migrations
                     b.Property<string>("RefreshToken")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("RoleId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("TeamId")
+                    b.Property<int?>("TeamId")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -993,8 +1288,6 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("DepartmentId");
 
-                    b.HasIndex("RoleId");
-
                     b.HasIndex("TeamId");
 
                     b.ToTable("Users");
@@ -1002,10 +1295,17 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.Department", b =>
                 {
+                    b.HasOne("Domain.Entities.User", "Deputy")
+                        .WithMany()
+                        .HasForeignKey("DeputyId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Domain.Entities.User", "Head")
                         .WithMany()
                         .HasForeignKey("HeadId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Deputy");
 
                     b.Navigation("Head");
                 });
@@ -1097,27 +1397,23 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.PurchaseReturn", b =>
                 {
+                    b.HasOne("Domain.Entities.PurchaseReturn", "PreviousReturn")
+                        .WithMany()
+                        .HasForeignKey("PreviousReturnId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Domain.Entities.Purchase", "Purchase")
                         .WithMany()
                         .HasForeignKey("PurchaseId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("PreviousReturn");
+
                     b.Navigation("Purchase");
                 });
 
-            modelBuilder.Entity("Domain.Entities.PurchaseReturnDecision", b =>
-                {
-                    b.HasOne("Domain.Entities.PurchaseReturnItem", "PurchaseReturnItem")
-                        .WithMany("Decisions")
-                        .HasForeignKey("PurchaseReturnItemId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("PurchaseReturnItem");
-                });
-
-            modelBuilder.Entity("Domain.Entities.PurchaseReturnItem", b =>
+            modelBuilder.Entity("Domain.Entities.PurchaseReturnClaim", b =>
                 {
                     b.HasOne("Domain.Entities.Product", "Product")
                         .WithMany()
@@ -1128,11 +1424,10 @@ namespace Infrastructure.Migrations
                     b.HasOne("Domain.Entities.PurchaseItem", "PurchaseItem")
                         .WithMany()
                         .HasForeignKey("PurchaseItemId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Domain.Entities.PurchaseReturn", "PurchaseReturn")
-                        .WithMany("Items")
+                        .WithMany("Claims")
                         .HasForeignKey("PurchaseReturnId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1142,6 +1437,68 @@ namespace Infrastructure.Migrations
                     b.Navigation("PurchaseItem");
 
                     b.Navigation("PurchaseReturn");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PurchaseReturnEffect", b =>
+                {
+                    b.HasOne("Domain.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Domain.Entities.PurchaseReturnResolution", "PurchaseReturnResolution")
+                        .WithMany("Effects")
+                        .HasForeignKey("PurchaseReturnResolutionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("PurchaseReturnResolution");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PurchaseReturnEffectMoneyPart", b =>
+                {
+                    b.HasOne("Domain.Entities.PurchaseReturnEffect", "PurchaseReturnEffect")
+                        .WithMany("MoneyParts")
+                        .HasForeignKey("PurchaseReturnEffectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PurchaseReturnEffect");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PurchaseReturnEffectObservation", b =>
+                {
+                    b.HasOne("Domain.Entities.PurchaseReturnEffectRound", "PurchaseReturnEffectRound")
+                        .WithMany("Observations")
+                        .HasForeignKey("PurchaseReturnEffectRoundId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PurchaseReturnEffectRound");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PurchaseReturnEffectRound", b =>
+                {
+                    b.HasOne("Domain.Entities.PurchaseReturnEffect", "PurchaseReturnEffect")
+                        .WithMany("History")
+                        .HasForeignKey("PurchaseReturnEffectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PurchaseReturnEffect");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PurchaseReturnResolution", b =>
+                {
+                    b.HasOne("Domain.Entities.PurchaseReturnClaim", "PurchaseReturnClaim")
+                        .WithMany("Resolutions")
+                        .HasForeignKey("PurchaseReturnClaimId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PurchaseReturnClaim");
                 });
 
             modelBuilder.Entity("Domain.Entities.Sale", b =>
@@ -1176,11 +1533,18 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.SaleReturn", b =>
                 {
+                    b.HasOne("Domain.Entities.SaleReturn", "PreviousReturn")
+                        .WithMany()
+                        .HasForeignKey("PreviousReturnId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Domain.Entities.Sale", "Sale")
                         .WithMany()
                         .HasForeignKey("SaleId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("PreviousReturn");
 
                     b.Navigation("Sale");
                 });
@@ -1196,8 +1560,7 @@ namespace Infrastructure.Migrations
                     b.HasOne("Domain.Entities.SaleItem", "SaleItem")
                         .WithMany()
                         .HasForeignKey("SaleItemId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Domain.Entities.SaleReturn", "SaleReturn")
                         .WithMany("Claims")
@@ -1212,21 +1575,61 @@ namespace Infrastructure.Migrations
                     b.Navigation("SaleReturn");
                 });
 
-            modelBuilder.Entity("Domain.Entities.SaleReturnDecision", b =>
+            modelBuilder.Entity("Domain.Entities.SaleReturnEffect", b =>
                 {
-                    b.HasOne("Domain.Entities.SaleReturnItem", "SaleReturnItem")
-                        .WithMany("Decisions")
-                        .HasForeignKey("SaleReturnItemId")
+                    b.HasOne("Domain.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Domain.Entities.SaleReturnResolution", "SaleReturnResolution")
+                        .WithMany("Effects")
+                        .HasForeignKey("SaleReturnResolutionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("SaleReturnItem");
+                    b.Navigation("Product");
+
+                    b.Navigation("SaleReturnResolution");
                 });
 
-            modelBuilder.Entity("Domain.Entities.SaleReturnItem", b =>
+            modelBuilder.Entity("Domain.Entities.SaleReturnEffectMoneyPart", b =>
+                {
+                    b.HasOne("Domain.Entities.SaleReturnEffect", "SaleReturnEffect")
+                        .WithMany("MoneyParts")
+                        .HasForeignKey("SaleReturnEffectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SaleReturnEffect");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SaleReturnEffectObservation", b =>
+                {
+                    b.HasOne("Domain.Entities.SaleReturnEffectRound", "SaleReturnEffectRound")
+                        .WithMany("Observations")
+                        .HasForeignKey("SaleReturnEffectRoundId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SaleReturnEffectRound");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SaleReturnEffectRound", b =>
+                {
+                    b.HasOne("Domain.Entities.SaleReturnEffect", "SaleReturnEffect")
+                        .WithMany("History")
+                        .HasForeignKey("SaleReturnEffectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SaleReturnEffect");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SaleReturnResolution", b =>
                 {
                     b.HasOne("Domain.Entities.SaleReturnClaim", "SaleReturnClaim")
-                        .WithMany("InspectionItems")
+                        .WithMany("Resolutions")
                         .HasForeignKey("SaleReturnClaimId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1242,12 +1645,19 @@ namespace Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Domain.Entities.User", "Deputy")
+                        .WithMany()
+                        .HasForeignKey("DeputyId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Domain.Entities.User", "Head")
                         .WithMany()
                         .HasForeignKey("HeadId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Department");
+
+                    b.Navigation("Deputy");
 
                     b.Navigation("Head");
                 });
@@ -1260,21 +1670,12 @@ namespace Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Domain.Entities.Role", "Role")
-                        .WithMany("Users")
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Domain.Entities.Team", "Team")
                         .WithMany("Users")
                         .HasForeignKey("TeamId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Department");
-
-                    b.Navigation("Role");
 
                     b.Navigation("Team");
                 });
@@ -1300,19 +1701,31 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.PurchaseReturn", b =>
                 {
-                    b.Navigation("Items");
+                    b.Navigation("Claims");
 
                     b.Navigation("ReceivingImages");
                 });
 
-            modelBuilder.Entity("Domain.Entities.PurchaseReturnItem", b =>
+            modelBuilder.Entity("Domain.Entities.PurchaseReturnClaim", b =>
                 {
-                    b.Navigation("Decisions");
+                    b.Navigation("Resolutions");
                 });
 
-            modelBuilder.Entity("Domain.Entities.Role", b =>
+            modelBuilder.Entity("Domain.Entities.PurchaseReturnEffect", b =>
                 {
-                    b.Navigation("Users");
+                    b.Navigation("History");
+
+                    b.Navigation("MoneyParts");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PurchaseReturnEffectRound", b =>
+                {
+                    b.Navigation("Observations");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PurchaseReturnResolution", b =>
+                {
+                    b.Navigation("Effects");
                 });
 
             modelBuilder.Entity("Domain.Entities.Sale", b =>
@@ -1329,12 +1742,24 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.SaleReturnClaim", b =>
                 {
-                    b.Navigation("InspectionItems");
+                    b.Navigation("Resolutions");
                 });
 
-            modelBuilder.Entity("Domain.Entities.SaleReturnItem", b =>
+            modelBuilder.Entity("Domain.Entities.SaleReturnEffect", b =>
                 {
-                    b.Navigation("Decisions");
+                    b.Navigation("History");
+
+                    b.Navigation("MoneyParts");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SaleReturnEffectRound", b =>
+                {
+                    b.Navigation("Observations");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SaleReturnResolution", b =>
+                {
+                    b.Navigation("Effects");
                 });
 
             modelBuilder.Entity("Domain.Entities.Team", b =>

@@ -108,13 +108,13 @@ Backend-Net/
 │   ├── Entities/        # Customer, Product, ProductCategory, Purchase, PurchaseItem,
 │   │                    # PurchaseReturn, PurchaseReturnItem, PurchaseReturnDecision,
 │   │                    # Sale, SaleItem (now ShippedQuantity/SettledQuantity), Supplier,
-│   │                    # User, Role, Department, Team, PaymentDetail,
+│   │                    # User, Department, Team, PaymentDetail,
 │   │                    # SaleReturn, SaleReturnClaim, SaleReturnItem, SaleReturnDecision,
 │   │                    # ProductUnit, PurchaseReceivingImage (receiving-session photos,
 │   │                    # keyed on Purchase with a nullable SetNull link to PurchaseReturn)
 │   └── Enums/           # BalanceTypeEnum, PaymentTypeEnum, ProductUnitEnum,
 │                        # PurchaceStatusEnum (typo kept), SalesStatusEnum (now incl. SHIPPED,
-│                        # appended at the end to avoid renumbering), UserRolesEnum,
+│                        # appended at the end to avoid renumbering),
 │                        # PurchaseIssueTypeEnum, PurchaseReturnDecisionTypeEnum,
 │                        # PurchaseReturnDecisionStatusEnum (AWAITING|RESOLVED),
 │                        # PurchaseReturnStatusEnum (PENDING|COORDINATING|RESOLVED|REJECTED|CANCELLED),
@@ -236,7 +236,7 @@ Backend-Net/
 - Validator class naming is inconsistent: `CreateCustomerCommandValidation`/`CreateSupplierCommandValidation` vs the standard `...CommandValidator` suffix.
 - `Customer.longitude/latitude` and `Supplier.longitude/latitude` are lowercase in entities while commands use `Longitude/Latitude` — AutoMapper needs config for these.
 - Serilog file sinks (`WMS/Logging/SerilogConfiguration.cs`) are never invoked; `Program.cs` only calls `builder.Host.UseSerilog()`, so request/error file logging is not actually wired.
-- `Role`, `Department`, `Team`, `PurchaseItem`, `SaleItem`, `PaymentDetail` have no feature folders (no CRUD yet).
+- `PurchaseItem`, `SaleItem`, `PaymentDetail` have no feature folders (no CRUD yet). Role-based authorization was removed (2026-08-26): `User.RoleId`/`Role` are gone, along with the `Admin`/`User` JWT claims and authorization policies. Authorization is not yet re-implemented; it is planned to be based on `User.DepartmentId` (Team is not a factor in access control).
 
 **Product code / barcode / invoice PDF (implemented, 2026-08-14).** Full design in `docs/product-code-barcode-invoice-design.fa.md`, written from a Telegram planning chat between the two devs; implemented per that design's step order (section 4.4).
 - **`Product.Code`** (`DateSegment-ProductId`, `IProductCodeService.BuildProductCode`) is generated after the first `SaveChanges` gives the row an `Id` — `CreateProductCommandHandler` writes a `Guid` placeholder into `Code`/`BarCode` on the first save (both are `NOT NULL`), then overwrites them with the real code and does a second `SaveChanges`. `Code`/`BarCode` are no longer request-bindable on `CreateProductCommand`/`UpdateProductCommand` (removed from both, immutable after creation).

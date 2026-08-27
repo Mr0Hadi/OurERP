@@ -10,14 +10,9 @@ namespace Application.Features.PurchaseReturn.Dtos
         public PurchaseStatusEnum Status { get; set; }
         public int SupplierId { get; set; }
         public string SupplierName { get; set; }
-        public int? ActivePurchaseReturnId { get; set; }
         public List<PurchaseReceivingItemInfoDto> Items { get; set; } = new();
 
-        /// <summary>
-        /// Every photo taken across all receiving rounds for this purchase, oldest first -
-        /// including rounds whose return has since been deleted, and rounds that produced no
-        /// return at all.
-        /// </summary>
+        /// <summary>Every photo taken across all receiving rounds for this purchase, oldest first.</summary>
         public List<PurchaseReceivingImageDto> ReceivingImages { get; set; } = new();
     }
 
@@ -31,18 +26,6 @@ namespace Application.Features.PurchaseReturn.Dtos
         public UInt64 UnitPrice { get; set; }
         public int OrderedQuantity { get; set; }
         public int ReceivedQuantity { get; set; }
-        public int SettledQuantity { get; set; }
-        public int OpenIssueQuantity { get; set; }
-        public int ReceivableQuantity { get; set; }
-        public List<PurchaseReceivingOpenIssueDto> OpenIssues { get; set; } = new();
-    }
-
-    public class PurchaseReceivingOpenIssueDto
-    {
-        public int PurchaseReturnItemId { get; set; }
-        public PurchaseIssueTypeEnum Type { get; set; }
-        public int Quantity { get; set; }
-        public int DecidedQuantity { get; set; }
-        public string? Note { get; set; }
+        public int StillOwedQuantity { get; set; }
     }
 }

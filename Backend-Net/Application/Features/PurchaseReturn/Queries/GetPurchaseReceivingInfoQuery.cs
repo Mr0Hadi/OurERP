@@ -1,6 +1,4 @@
 using Application.Common.Contracts.Context;
-using Application.Common.Contracts.PurchaseReturn;
-using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -12,10 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.PurchaseReturn.Queries
 {
-    /// <summary>
-    /// Backs the warehouse receiving screen: for a purchase, how much of each item is still
-    /// expected, and what's already been reported as a problem but not yet decided on.
-    /// </summary>
+    /// <summary>Backs the warehouse receiving screen: for a purchase, how much of each item is still expected.</summary>
     public class GetPurchaseReceivingInfoQuery : IRequest<ResponseDto>
     {
         public int PurchaseId { get; set; }
@@ -24,15 +19,11 @@ namespace Application.Features.PurchaseReturn.Queries
     public class GetPurchaseReceivingInfoQueryHandler : IRequestHandler<GetPurchaseReceivingInfoQuery, ResponseDto>
     {
         private readonly IWMSDbContext _context;
-        private readonly IPurchaseReturnRepository _purchaseReturnRepository;
-        private readonly IPurchaseReturnCalculationService _purchaseReturnCalculationService;
         private readonly IObjectStorageService _objectStorageService;
 
-        public GetPurchaseReceivingInfoQueryHandler(IWMSDbContext context, IPurchaseReturnRepository purchaseReturnRepository, IPurchaseReturnCalculationService purchaseReturnCalculationService, IObjectStorageService objectStorageService)
+        public GetPurchaseReceivingInfoQueryHandler(IWMSDbContext context, IObjectStorageService objectStorageService)
         {
             _context = context;
-            _purchaseReturnRepository = purchaseReturnRepository;
-            _purchaseReturnCalculationService = purchaseReturnCalculationService;
             _objectStorageService = objectStorageService;
         }
 
@@ -46,10 +37,6 @@ namespace Application.Features.PurchaseReturn.Queries
                     .ThenInclude(x => x.Product)
                 .FirstOrDefaultAsync(x => x.Id == request.PurchaseId, cancellationToken) ?? throw new NotFoundCustomException("خرید مورد نظر یافت نشد.");
 
-            var activeReturn = await _purchaseReturnRepository.GetActiveByPurchaseIdAsync(request.PurchaseId, cancellationToken);
-
-            // Keyed on the purchase, not on the active return: photos from earlier rounds survive
-            // a return being resolved or deleted (see PurchaseReceivingImage).
             var receivingImages = await _context.PurchaseReceivingImages
                 .Where(x => x.PurchaseId == request.PurchaseId)
                 .OrderBy(x => x.CreatedAt)
@@ -63,7 +50,6 @@ namespace Application.Features.PurchaseReturn.Queries
                 Status = purchase.Status,
                 SupplierId = purchase.SupplierId,
                 SupplierName = purchase.Supplier.CompanyName,
-                ActivePurchaseReturnId = activeReturn?.Id,
                 ReceivingImages = receivingImages.Select(img => new PurchaseReceivingImageDto
                 {
                     Id = img.Id,
@@ -85,19 +71,7 @@ namespace Application.Features.PurchaseReturn.Queries
                     UnitPrice = item.UnitPrice,
                     OrderedQuantity = item.Quantity,
                     ReceivedQuantity = item.ReceivedQuantity,
-                    SettledQuantity = item.SettledQuantity,
-                    OpenIssueQuantity = _purchaseReturnCalculationService.GetOpenIssueQuantity(item.Id, activeReturn),
-                    ReceivableQuantity = _purchaseReturnCalculationService.GetReceivableQuantity(item, activeReturn),
-                    OpenIssues = (activeReturn?.Items ?? new())
-                        .Where(x => x.PurchaseItemId == item.Id)
-                        .Select(x => new PurchaseReceivingOpenIssueDto
-                        {
-                            PurchaseReturnItemId = x.Id,
-                            Type = x.IssueType,
-                            Quantity = x.Quantity,
-                            DecidedQuantity = x.Decisions.Sum(d => d.Quantity),
-                            Note = x.Note,
-                        }).ToList(),
+                    StillOwedQuantity = Math.Max(0, item.Quantity - item.ReceivedQuantity),
                 }).ToList(),
             };
 

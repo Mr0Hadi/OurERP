@@ -20,6 +20,11 @@ namespace Application.Features.Supplier.Commands
         public string Phone { get; set; }
         public string Address { get; set; }
         public string PostalCode { get; set; }
+        public string? EconomicCode { get; set; }
+        public string? NationalId { get; set; }
+        public string? RegistrationNumber { get; set; }
+        public string? Province { get; set; }
+        public string? City { get; set; }
 
         /// <summary>
         /// The ObjectKey returned by POST api/File/UploadImage (folder=SUPPLIERS). A full signed

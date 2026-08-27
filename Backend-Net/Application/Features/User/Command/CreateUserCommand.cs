@@ -1,4 +1,4 @@
-﻿using Application.Common.Contracts.Repositories;
+using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -17,7 +17,8 @@ namespace Application.Features.User.Command
         public string Username { get; set; }
         public string Password { get; set; }
         public string PersonelCode { get; set; }
-        public int RoleId { get; set; }
+        public int DepartmentId { get; set; }
+        public int? TeamId { get; set; }
     }
 
     public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
@@ -44,19 +45,28 @@ namespace Application.Features.User.Command
             RuleFor(x => x.PersonelCode)
                 .Must(Validation.IsNotNullOrEmpty).WithMessage(Validation.RequiredMessage("کد پرسنلی"));
 
+            RuleFor(x => x.DepartmentId)
+                .GreaterThan(0).WithMessage(Validation.RequiredMessage("شناسه واحد"));
+
+            RuleFor(x => x.TeamId)
+                .GreaterThan(0).WithMessage(Validation.RequiredMessage("شناسه تیم"))
+                .When(x => x.TeamId.HasValue);
+
         }
     }
 
     public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, ResponseDto>
     {
         private readonly IUserRepository _userRepository;
-        private readonly IRoleRepository _roleService;
+        private readonly IDepartmentRepository _departmentRepository;
+        private readonly ITeamRepository _teamRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
-        public CreateUserCommandHandler(IUserRepository userRepository, IRoleRepository roleService, IUnitOfWork unitOfWork, IMapper mapper)
+        public CreateUserCommandHandler(IUserRepository userRepository, IDepartmentRepository departmentRepository, ITeamRepository teamRepository, IUnitOfWork unitOfWork, IMapper mapper)
         {
             _userRepository = userRepository;
-            _roleService = roleService;
+            _departmentRepository = departmentRepository;
+            _teamRepository = teamRepository;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
         }
@@ -72,11 +82,26 @@ namespace Application.Features.User.Command
                 throw new ValidationCustomException("کاربر با این شماره موبایل قبلا ثبت شده است");
             }
 
-            var role = await _roleService.GetByIdAsync(request.RoleId, cancellationToken);
+            var department = await _departmentRepository.GetByIdAsync(request.DepartmentId, cancellationToken);
 
-            if (role == null)
+            if (department == null)
             {
-                throw new NotFoundCustomException("نقش انتخاب شده یافت نشد");
+                throw new NotFoundCustomException("واحد انتخاب شده یافت نشد");
+            }
+
+            if (request.TeamId.HasValue)
+            {
+                var team = await _teamRepository.GetByIdAsync(request.TeamId.Value, cancellationToken);
+
+                if (team == null)
+                {
+                    throw new NotFoundCustomException("تیم انتخاب شده یافت نشد");
+                }
+
+                if (team.DepartmentId != request.DepartmentId)
+                {
+                    throw new ValidationCustomException("تیم انتخاب شده متعلق به این واحد نیست");
+                }
             }
 
             var newUser = _mapper.Map<Domain.Entities.User>(request);

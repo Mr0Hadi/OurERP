@@ -1,8 +1,7 @@
-﻿using Application.Common.Contracts.Repositories;
+using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
-using AutoMapper;
 using Common.Exceptions;
 using Common.Extensions;
 using FluentValidation;
@@ -16,7 +15,8 @@ namespace Application.Features.User.Command
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string Username { get; set; }
-        public int RoleId { get; set; }
+        public int DepartmentId { get; set; }
+        public int? TeamId { get; set; }
         public bool IsActive { get; set; }
     }
 
@@ -37,21 +37,28 @@ namespace Application.Features.User.Command
                 .Must(Validation.IsNotNullOrEmpty).WithMessage(Validation.RequiredMessage("نام کاربری"))
                 .Must(Validation.IsEnglishText).WithMessage("نام کاربری وارد شده معتبر نیست");
 
+            RuleFor(x => x.DepartmentId)
+                .GreaterThan(0).WithMessage(Validation.RequiredMessage("شناسه واحد"));
+
+            RuleFor(x => x.TeamId)
+                .GreaterThan(0).WithMessage(Validation.RequiredMessage("شناسه تیم"))
+                .When(x => x.TeamId.HasValue);
+
         }
     }
 
     public class UpdateUserCommandHandler : IRequestHandler<UpdateUserCommand, ResponseDto>
     {
         private readonly IUserRepository _userRepository;
-        private readonly IRoleRepository _roleService;
+        private readonly IDepartmentRepository _departmentRepository;
+        private readonly ITeamRepository _teamRepository;
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IMapper _mapper;
-        public UpdateUserCommandHandler(IUserRepository userRepository, IRoleRepository roleService, IUnitOfWork unitOfWork, IMapper mapper)
+        public UpdateUserCommandHandler(IUserRepository userRepository, IDepartmentRepository departmentRepository, ITeamRepository teamRepository, IUnitOfWork unitOfWork)
         {
             _userRepository = userRepository;
-            _roleService = roleService;
+            _departmentRepository = departmentRepository;
+            _teamRepository = teamRepository;
             _unitOfWork = unitOfWork;
-            _mapper = mapper;
         }
 
         public async Task<ResponseDto> Handle(UpdateUserCommand request, CancellationToken cancellationToken)
@@ -65,13 +72,6 @@ namespace Application.Features.User.Command
                 throw new ValidationCustomException("کاربر با این اطلاعات یافت نشد");
             }
 
-            var role = await _roleService.GetByIdAsync(request.RoleId, cancellationToken);
-
-            if (role == null)
-            {
-                throw new NotFoundCustomException("نقش انتخاب شده یافت نشد");
-            }
-
             var userByUsername = await _userRepository.GetByUsernameAsync(request.Username, cancellationToken);
 
             if (userByUsername != null && userByUsername.Id != user.Id)
@@ -79,11 +79,35 @@ namespace Application.Features.User.Command
                 throw new ValidationCustomException("کاربر با این شماره موبایل قبلا ثبت شده است");
             }
 
+            var department = await _departmentRepository.GetByIdAsync(request.DepartmentId, cancellationToken);
+
+            if (department == null)
+            {
+                throw new NotFoundCustomException("واحد انتخاب شده یافت نشد");
+            }
+
+            if (request.TeamId.HasValue)
+            {
+                var team = await _teamRepository.GetByIdAsync(request.TeamId.Value, cancellationToken);
+
+                if (team == null)
+                {
+                    throw new NotFoundCustomException("تیم انتخاب شده یافت نشد");
+                }
+
+                if (team.DepartmentId != request.DepartmentId)
+                {
+                    throw new ValidationCustomException("تیم انتخاب شده متعلق به این واحد نیست");
+                }
+            }
+
             user.Username = request.Username;
             user.FirstName = request.FirstName;
             user.LastName = request.LastName;
             user.IsActive = request.IsActive;
-            user.RoleId = request.RoleId;
+            user.DepartmentId = request.DepartmentId;
+            user.TeamId = request.TeamId;
+            user.UpdatedAt = DateTime.Now;
 
             _userRepository.Update(user);
 

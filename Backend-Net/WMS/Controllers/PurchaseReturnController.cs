@@ -36,14 +36,32 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
-        [HttpPost("AddPurchaseReturnDecision")]
-        public async Task<ActionResult<ResponseDto>> AddPurchaseReturnDecision([FromBody] AddPurchaseReturnDecisionCommand request)
+        [HttpGet("GetPurchaseReturnPendingEffects")]
+        public async Task<ActionResult<ResponseDto>> GetPurchaseReturnPendingEffects([FromQuery] GetPurchaseReturnPendingEffectsQuery request)
         {
             return await _mediator.Send(request);
         }
 
-        [HttpDelete("RemovePurchaseReturnDecision")]
-        public async Task<ActionResult<ResponseDto>> RemovePurchaseReturnDecision([FromQuery] RemovePurchaseReturnDecisionCommand request)
+        [HttpPost("CreatePurchaseReturn")]
+        public async Task<ActionResult<ResponseDto>> CreatePurchaseReturn([FromBody] CreatePurchaseReturnCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HttpPost("AddClaimResolution")]
+        public async Task<ActionResult<ResponseDto>> AddClaimResolution([FromBody] AddClaimResolutionCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HttpDelete("RemoveClaimResolution")]
+        public async Task<ActionResult<ResponseDto>> RemoveClaimResolution([FromQuery] RemoveClaimResolutionCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HttpPost("ExecuteGoodsRound")]
+        public async Task<ActionResult<ResponseDto>> ExecuteGoodsRound([FromBody] ExecuteGoodsRoundCommand request)
         {
             return await _mediator.Send(request);
         }

@@ -15,10 +15,8 @@ namespace Domain.Entities
         public DateTime UpdatedAt { get; set; }
         public int DepartmentId { get; set; }
         public Department Department { get; set; }
-        public int TeamId { get; set; }
-        public Team Team { get; set; }
-        public int RoleId { get; set; }
-        public Role Role { get; set; }
+        public int? TeamId { get; set; }
+        public Team? Team { get; set; }
         public string? RefreshToken { get; set; }
         public DateTime? ExpireRefreshToken { get; set; }
     }

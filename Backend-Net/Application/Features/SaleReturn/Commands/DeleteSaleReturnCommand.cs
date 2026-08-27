@@ -6,7 +6,6 @@ using Application.Common.Dtos;
 using Application.Common.Enums;
 using Common.Exceptions;
 using Common.Extensions;
-using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -50,8 +49,8 @@ namespace Application.Features.SaleReturn.Commands
             var saleReturn = await _saleReturnQueryService.WithReturnGraph(_context.SaleReturns)
                 .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
-            if (!_saleReturnCalculationService.IsPreInspection(saleReturn))
-                throw new ValidationCustomException("فقط مرجوعی‌هایی که هنوز هیچ بازرسی‌ای رویشان انجام نشده قابل حذف هستند.");
+            if (_saleReturnCalculationService.IsTerminal(saleReturn.Status) || !_saleReturnCalculationService.IsUntouched(saleReturn))
+                throw new ValidationCustomException("فقط مرجوعی‌های دست‌نخورده قابل حذف هستند.");
 
             _saleReturnRepository.Remove(saleReturn);
 
