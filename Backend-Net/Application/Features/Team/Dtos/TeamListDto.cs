@@ -6,6 +6,7 @@ namespace Application.Features.Team.Dtos
         public string Name { get; set; }
         public string? DepartmentName { get; set; }
         public string? HeadName { get; set; }
+        public string? DeputyName { get; set; }
         public int UserCount { get; set; }
     }
 }

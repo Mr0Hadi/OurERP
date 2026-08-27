@@ -219,7 +219,8 @@ namespace WMS.Tests.Unit
             Username = "tester1",
             Password = "Test@1234",
             PersonelCode = "1001",
-            RoleId = 1,
+            DepartmentId = 1,
+            TeamId = 1,
         };
 
         [Fact]
@@ -272,7 +273,7 @@ namespace WMS.Tests.Unit
         [Fact]
         public void EmptyUsername_IsInvalid()
         {
-            var command = new UpdateUserCommand { FirstName = "کاربر", LastName = "تست", Username = "", RoleId = 1 };
+            var command = new UpdateUserCommand { FirstName = "کاربر", LastName = "تست", Username = "" };
 
             Assert.False(_sut.Validate(command).IsValid);
         }

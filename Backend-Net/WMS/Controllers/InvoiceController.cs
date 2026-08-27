@@ -25,6 +25,13 @@ namespace WMS.Controllers
             return File(file.Content, file.ContentType, file.FileName);
         }
 
+        [HttpGet("GetPurchaseInvoicePdf")]
+        public async Task<IActionResult> GetPurchaseInvoicePdf([FromQuery] GetPurchaseInvoicePdfQuery request)
+        {
+            var file = await _mediator.Send(request);
+            return File(file.Content, file.ContentType, file.FileName);
+        }
+
         [HttpGet("GetSaleReturnCreditNotePdf")]
         public async Task<IActionResult> GetSaleReturnCreditNotePdf([FromQuery] GetSaleReturnCreditNotePdfQuery request)
         {

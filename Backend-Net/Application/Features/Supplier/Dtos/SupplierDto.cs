@@ -11,6 +11,11 @@ namespace Application.Features.Supplier.Dtos
         public string Phone { get; set; }
         public string Address { get; set; }
         public string PostalCode { get; set; }
+        public string? EconomicCode { get; set; }
+        public string? NationalId { get; set; }
+        public string? RegistrationNumber { get; set; }
+        public string? Province { get; set; }
+        public string? City { get; set; }
         /// <summary>The stable bucket object key - send this back on update to keep the image.</summary>
         public string? ImageKey { get; set; }
 

@@ -1,6 +1,5 @@
 ﻿using Application.Common.Contracts.UserContextService;
 using Common.Extensions;
-using Domain.Enums;
 
 namespace WMS.Services
 {
@@ -24,11 +23,6 @@ namespace WMS.Services
         public string? GetUserId()
         {
             return _httpContextAccessor.HttpContext.User.GetUserCliam("Id");
-        }
-        
-        public bool IsAdmin()
-        {
-            return _httpContextAccessor.HttpContext.User.HasClaim(x => x.Type == UserRolesEnum.Admin.ToString());
         }
     }
 }

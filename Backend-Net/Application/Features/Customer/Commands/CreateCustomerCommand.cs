@@ -21,6 +21,11 @@ namespace Application.Features.Customer.Commands
         public string PostalCode { get; set; }
         public string? RefferalCode { get; set; }
         public UInt64? CreditLimit { get; set; }
+        public string? EconomicCode { get; set; }
+        public string? NationalId { get; set; }
+        public string? RegistrationNumber { get; set; }
+        public string? Province { get; set; }
+        public string? City { get; set; }
         public string? Description { get; set; }
         public UInt64? Balance { get; set; }
         public BalanceTypeEnum BalanceType { get; set; }

@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Environment;
+﻿using Application.Common.Contracts.Environment;
 using Application.Common.Contracts.Token;
 using Application.Common.Contracts.UserContextService;
 using Application.Common.Dtos;
@@ -39,10 +39,9 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var role = Seed.Role();
             var department = Seed.Department();
             var team = Seed.Team(department);
-            var user = Seed.User(role, department, team, password: "Correct@1234");
+            var user = Seed.User(department, team, password: "Correct@1234");
             scope.Context.Users.Add(user);
             scope.Context.SaveChanges();
 
@@ -58,10 +57,9 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var role = Seed.Role();
             var department = Seed.Department();
             var team = Seed.Team(department);
-            var user = Seed.User(role, department, team, password: "Correct@1234");
+            var user = Seed.User(department, team, password: "Correct@1234");
             user.IsActive = false;
             scope.Context.Users.Add(user);
             scope.Context.SaveChanges();
@@ -78,10 +76,9 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var role = Seed.Role();
             var department = Seed.Department();
             var team = Seed.Team(department);
-            var user = Seed.User(role, department, team, password: "Correct@1234");
+            var user = Seed.User(department, team, password: "Correct@1234");
             scope.Context.Users.Add(user);
             scope.Context.SaveChanges();
 
@@ -118,10 +115,9 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var role = Seed.Role();
             var department = Seed.Department();
             var team = Seed.Team(department);
-            var user = Seed.User(role, department, team);
+            var user = Seed.User(department, team);
             user.RefreshToken = "some-refresh-token";
             user.ExpireRefreshToken = DateTime.Now.AddMinutes(30);
             scope.Context.Users.Add(user);
@@ -152,10 +148,9 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var role = Seed.Role();
             var department = Seed.Department();
             var team = Seed.Team(department);
-            var user = Seed.User(role, department, team, password: "Old@1234");
+            var user = Seed.User(department, team, password: "Old@1234");
             scope.Context.Users.Add(user);
             scope.Context.SaveChanges();
 
@@ -199,10 +194,9 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var role = Seed.Role();
             var department = Seed.Department();
             var team = Seed.Team(department);
-            var user = Seed.User(role, department, team);
+            var user = Seed.User(department, team);
             user.RefreshToken = "the-real-refresh-token";
             user.ExpireRefreshToken = DateTime.Now.AddMinutes(30);
             scope.Context.Users.Add(user);
@@ -221,10 +215,9 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var role = Seed.Role();
             var department = Seed.Department();
             var team = Seed.Team(department);
-            var user = Seed.User(role, department, team);
+            var user = Seed.User(department, team);
             user.RefreshToken = "the-real-refresh-token";
             user.ExpireRefreshToken = DateTime.Now.AddMinutes(30);
             scope.Context.Users.Add(user);

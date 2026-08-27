@@ -95,11 +95,9 @@ namespace Application.Common.Mapping
 				.ForMember(dest => dest.ImageKey, opt => opt.MapFrom(src => src.ImageUrl))
 				.ForMember(dest => dest.ImageUrl, opt => opt.Ignore());
 
-			CreateMap<User, TokenUserInfoDto>()
-				.ForMember(dest => dest.RoleName, opt => opt.MapFrom(src => src.Role.Name));
+			CreateMap<User, TokenUserInfoDto>();
 
-			CreateMap<User, UserInfoDto>()
-				.ForMember(dest => dest.RoleName, opt => opt.MapFrom(src => src.Role.Name));
+			CreateMap<User, UserInfoDto>();
 			//.ForMember(dest => dest.Permissions, opt => opt.MapFrom(src => src.Permissions.Select(x => new UserPermissionDto
 			//{
 			//	Id = x.Id,
@@ -108,8 +106,7 @@ namespace Application.Common.Mapping
 			//	PermissionGroupId = x.PermissionGroupId
 			//}).ToList()));
 
-			CreateMap<User, UserUpdateDto>()
-				.ForMember(dest => dest.RoleName, opt => opt.MapFrom(src => src.Role.Name));
+			CreateMap<User, UserUpdateDto>();
 			//.ForMember(dest => dest.Permissions, opt => opt.MapFrom(src => src.Permissions));
 
 			CreateMap<CreateUserCommand, User>()

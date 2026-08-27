@@ -14,6 +14,7 @@ namespace Application.Features.Department.Commands
     {
         public string Name { get; set; }
         public int? HeadId { get; set; }
+        public int? DeputyId { get; set; }
     }
 
     public class CreateDepartmentCommandValidator : AbstractValidator<CreateDepartmentCommand>
@@ -23,6 +24,12 @@ namespace Application.Features.Department.Commands
             RuleFor(x => x.Name).NotEmpty().WithMessage(Validation.RequiredMessage("نام دپارتمان"));
             RuleFor(x => x.HeadId).GreaterThan(0).When(x => x.HeadId.HasValue)
                 .WithMessage(Validation.RequiredMessage("شناسه سرپرست"));
+            RuleFor(x => x.DeputyId).GreaterThan(0).When(x => x.DeputyId.HasValue)
+                .WithMessage(Validation.RequiredMessage("شناسه معاون"));
+            RuleFor(x => x)
+                .Must(x => !x.HeadId.HasValue || !x.DeputyId.HasValue || x.HeadId != x.DeputyId)
+                .WithMessage("معاون نمی‌تواند همان مدیر باشد")
+                .OverridePropertyName(nameof(CreateDepartmentCommand.DeputyId));
         }
     }
 

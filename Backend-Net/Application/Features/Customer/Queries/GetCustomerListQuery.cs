@@ -4,6 +4,7 @@ using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.Customer.Dtos;
 using Common.Extensions;
+using Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,6 +18,7 @@ namespace Application.Features.Customer.Queries
         public string? FullName { get; set; }
         public UInt64? MinBalance { get; set; }
         public UInt64? MaxBalance { get; set; }
+        public BalanceTypeEnum? BalanceType { get; set; }
     }
 
     public class GetCustomerListQueryHandler : IRequestHandler<GetCustomerListQuery, ResponseDto>
@@ -55,6 +57,11 @@ namespace Application.Features.Customer.Queries
             if (request.MaxBalance.HasValue)
             {
                 query = query.Where(x => x.Balance <= request.MaxBalance.Value);
+            }
+
+            if (request.BalanceType.HasValue)
+            {
+                query = query.Where(x => x.BalanceType == request.BalanceType.Value);
             }
 
             var paged = await query.Select(x => new CustomerListDto

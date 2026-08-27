@@ -21,7 +21,6 @@ namespace Infrastructure.Persistence
         public DbSet<Product> Products => Set<Product>();
         public DbSet<Department> Departments => Set<Department>();
         public DbSet<Customer> Customers => Set<Customer>();
-        public DbSet<Role> Roles => Set<Role>();
         public DbSet<PurchaseItem> PurchaseItems { get; set; }
         public DbSet<SaleItem> SaleItems { get; set; }
         public DbSet<PurchaseReturn> PurchaseReturns => Set<PurchaseReturn>();
@@ -51,6 +50,12 @@ namespace Infrastructure.Persistence
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Department>()
+                .HasOne(d => d.Deputy)
+                .WithMany()
+                .HasForeignKey(d => d.DeputyId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Department>()
                 .HasMany(d => d.Users)
                 .WithOne(u => u.Department)
                 .HasForeignKey(u => u.DepartmentId);
@@ -59,6 +64,12 @@ namespace Infrastructure.Persistence
                 .HasOne(t => t.Head)
                 .WithMany()
                 .HasForeignKey(t => t.HeadId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Team>()
+                .HasOne(t => t.Deputy)
+                .WithMany()
+                .HasForeignKey(t => t.DeputyId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Team>()
@@ -89,11 +100,6 @@ namespace Infrastructure.Persistence
             modelBuilder.Entity<Product>()
                 .HasIndex(x => x.Code)
                 .IsUnique();
-
-            modelBuilder.Entity<User>()
-                .HasOne(u => u.Role)
-                .WithMany(r => r.Users)
-                .HasForeignKey(u => u.RoleId);
 
             modelBuilder.Entity<PurchaseReturn>()
                 .HasOne(x => x.Purchase)

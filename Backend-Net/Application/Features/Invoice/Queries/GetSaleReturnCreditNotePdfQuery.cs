@@ -92,6 +92,11 @@ namespace Application.Features.Invoice.Queries
                     PhoneNumber = customer.PhoneNumber,
                     Address = customer.Address,
                     PostalCode = customer.PostalCode,
+                    EconomicCode = customer.EconomicCode,
+                    NationalId = customer.NationalId,
+                    RegistrationNumber = customer.RegistrationNumber,
+                    Province = customer.Province,
+                    City = customer.City,
                 },
                 Lines = lines,
                 SubTotal = grandTotal,
@@ -102,7 +107,7 @@ namespace Application.Features.Invoice.Queries
                 Balance = -(long)grandTotal,
             };
 
-            var bytes = _pdfDocumentService.RenderInvoice(model);
+            var bytes = await _pdfDocumentService.RenderInvoiceAsync(model, cancellationToken);
 
             return new FileResponseDto
             {

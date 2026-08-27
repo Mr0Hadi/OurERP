@@ -63,6 +63,11 @@ namespace Application.Features.Invoice.Queries
                     PhoneNumber = purchase.Supplier.Phone,
                     Address = purchase.Supplier.Address,
                     PostalCode = purchase.Supplier.PostalCode,
+                    EconomicCode = purchase.Supplier.EconomicCode,
+                    NationalId = purchase.Supplier.NationalId,
+                    RegistrationNumber = purchase.Supplier.RegistrationNumber,
+                    Province = purchase.Supplier.Province,
+                    City = purchase.Supplier.City,
                 },
                 Lines = lines,
                 SubTotal = lines.Aggregate(0UL, (sum, l) => sum + (ulong)l.Quantity * l.UnitPrice),
@@ -73,7 +78,7 @@ namespace Application.Features.Invoice.Queries
             };
             model.Balance = (long)model.GrandTotal - (long)model.PaidAmount;
 
-            var bytes = _pdfDocumentService.RenderInvoice(model);
+            var bytes = await _pdfDocumentService.RenderInvoiceAsync(model, cancellationToken);
 
             return new FileResponseDto
             {

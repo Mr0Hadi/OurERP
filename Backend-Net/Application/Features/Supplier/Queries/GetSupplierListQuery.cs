@@ -4,6 +4,7 @@ using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.Supplier.Dtos;
 using Common.Extensions;
+using Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,6 +17,7 @@ namespace Application.Features.Supplier.Queries
         public UInt64? FromBalance { get; set; }
         public UInt64? ToBalance { get; set; }
         public string? CompanyNameOrContactName { get; set; }
+        public BalanceTypeEnum? BalanceType { get; set; }
     }
 
     public class GetSupplierListQueryHandler : IRequestHandler<GetSupplierListQuery, ResponseDto>
@@ -50,6 +52,11 @@ namespace Application.Features.Supplier.Queries
             if (request.ToBalance.HasValue)
             {
                 query = query.Where(x => x.Balance <= request.ToBalance.Value);
+            }
+
+            if (request.BalanceType.HasValue)
+            {
+                query = query.Where(x => x.BalanceType == request.BalanceType.Value);
             }
 
             var paged = await query.Select(x => new SupplierListDto

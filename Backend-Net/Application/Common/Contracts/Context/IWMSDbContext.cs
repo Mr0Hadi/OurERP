@@ -15,7 +15,6 @@ namespace Application.Common.Contracts.Context
         DbSet <Product> Products { get; }
         DbSet<Department> Departments { get; }
         DbSet<Customer> Customers { get; }
-        DbSet<Role> Roles { get; }
         DbSet<Domain.Entities.PurchaseReturn> PurchaseReturns { get; }
         DbSet<PurchaseReturnItem> PurchaseReturnItems { get; }
         DbSet<PurchaseReturnDecision> PurchaseReturnDecisions { get; }

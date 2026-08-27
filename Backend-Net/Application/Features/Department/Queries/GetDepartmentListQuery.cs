@@ -37,6 +37,7 @@ namespace Application.Features.Department.Queries
                 Id = x.Id,
                 Name = x.Name,
                 HeadName = x.Head != null ? x.Head.FirstName + " " + x.Head.LastName : null,
+                DeputyName = x.Deputy != null ? x.Deputy.FirstName + " " + x.Deputy.LastName : null,
                 TeamCount = x.Teams.Count,
                 UserCount = x.Users.Count
             }).ToPagedAsync(request.Page, request.Take, cancellationToken);

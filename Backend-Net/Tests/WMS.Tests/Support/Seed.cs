@@ -118,13 +118,6 @@ namespace WMS.Tests.Support
                 SettledQuantity = settledQuantity,
             };
 
-        public static Role Role(UserRolesEnum role = UserRolesEnum.Admin) => new()
-        {
-            Id = (int)role,
-            Name = role.ToString(),
-            IsActive = true,
-        };
-
         public static Department Department(string name = "انبار") => new()
         {
             Name = name,
@@ -138,7 +131,7 @@ namespace WMS.Tests.Support
             Department = department,
         };
 
-        public static User User(Role role, Department department, Team team, string username = "tester", string password = "Test@1234")
+        public static User User(Department department, Team? team, string username = "tester", string password = "Test@1234")
             => new()
             {
                 FirstName = "کاربر",
@@ -149,7 +142,6 @@ namespace WMS.Tests.Support
                 IsActive = true,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now,
-                Role = role,
                 Department = department,
                 Team = team,
             };

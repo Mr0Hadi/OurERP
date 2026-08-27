@@ -37,30 +37,10 @@ namespace WMS.Tests.Unit
             Assert.StartsWith("<svg", svg);
         }
 
-        [Fact]
-        public void RenderInvoice_ProducesNonEmptyPdf()
-        {
-            var service = new QuestPdfDocumentService(new ZXingBarcodeRenderer());
-            var model = new InvoiceDocumentModel
-            {
-                Title = "فاکتور فروش",
-                DocumentNumber = "S-2026-0001",
-                DocumentDate = DateTime.Now,
-                Company = new CompanyInfo { Name = "شرکت تست" },
-                Counterparty = new PartyInfo { Name = "مشتری تست" },
-                Lines = new()
-                {
-                    new InvoiceLineModel { RowNumber = 1, ProductCode = "14050512-000001", ProductName = "کالای تست", Quantity = 2, UnitPrice = 1000, LineTotal = 2000 },
-                },
-                SubTotal = 2000,
-                GrandTotal = 2000,
-            };
-
-            var bytes = service.RenderInvoice(model);
-
-            Assert.NotEmpty(bytes);
-            Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(bytes, 0, 4));
-        }
+        // Invoice rendering (InvoiceDocumentModel -> PDF) moved to ExcelInvoiceDocumentService,
+        // which fills the official Excel template and shells out to LibreOffice headless - see
+        // Tests/WMS.Tests/Integration/InvoicePdfTests.cs, which exercises it end-to-end (and
+        // requires `soffice` on the test runner).
 
         [Fact]
         public void RenderBarcodeLabels_SheetMode_ProducesNonEmptyPdf()

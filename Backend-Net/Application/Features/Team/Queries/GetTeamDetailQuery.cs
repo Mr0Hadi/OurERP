@@ -33,7 +33,9 @@ namespace Application.Features.Team.Queries
                     DepartmentId = x.DepartmentId,
                     DepartmentName = x.Department.Name,
                     HeadId = x.HeadId,
-                    HeadName = x.Head != null ? x.Head.FirstName + " " + x.Head.LastName : null
+                    HeadName = x.Head != null ? x.Head.FirstName + " " + x.Head.LastName : null,
+                    DeputyId = x.DeputyId,
+                    DeputyName = x.Deputy != null ? x.Deputy.FirstName + " " + x.Deputy.LastName : null
                 })
                 .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("تیم مورد نظر یافت نشد.");
 

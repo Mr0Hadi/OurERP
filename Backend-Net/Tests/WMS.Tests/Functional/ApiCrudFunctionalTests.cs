@@ -181,14 +181,9 @@ namespace WMS.Tests.Functional
 
         private static void SeedAdminUser(WMSDbContext context, string username)
         {
-            var role = Seed.Role(Domain.Enums.UserRolesEnum.Admin);
-            var existingRole = context.Roles.FirstOrDefault(r => r.Id == role.Id);
-            if (existingRole != null)
-                role = existingRole;
-
             var department = Seed.Department($"dept-{++_userSeq}");
             var team = Seed.Team(department, $"team-{_userSeq}");
-            var user = Seed.User(role, department, team, username: username, password: "Test@1234");
+            var user = Seed.User(department, team, username: username, password: "Test@1234");
 
             context.Users.Add(user);
             context.SaveChanges();

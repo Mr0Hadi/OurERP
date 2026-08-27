@@ -30,6 +30,12 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
+        [HttpGet("GetUserList")]
+        public async Task<ActionResult<ResponseDto>> GetUserList([FromQuery] GetUserListQuery request)
+        {
+            return await _mediator.Send(request);
+        }
+
         [HttpPost("CreateUser")]
         public async Task<ActionResult<ResponseDto>> CreateUser([FromBody] CreateUserCommand request)
         {
@@ -44,6 +50,12 @@ namespace WMS.Controllers
 
         [HttpPut("ChangePassword")]
         public async Task<ActionResult<ResponseDto>> ChangePassword([FromBody] ChangePasswordCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HttpPut("ChangeUserTeam")]
+        public async Task<ActionResult<ResponseDto>> ChangeUserTeam([FromBody] ChangeUserTeamCommand request)
         {
             return await _mediator.Send(request);
         }

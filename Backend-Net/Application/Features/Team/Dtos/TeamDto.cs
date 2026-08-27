@@ -8,5 +8,7 @@ namespace Application.Features.Team.Dtos
         public string? DepartmentName { get; set; }
         public int? HeadId { get; set; }
         public string? HeadName { get; set; }
+        public int? DeputyId { get; set; }
+        public string? DeputyName { get; set; }
     }
 }

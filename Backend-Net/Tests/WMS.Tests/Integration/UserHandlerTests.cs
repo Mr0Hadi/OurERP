@@ -12,12 +12,12 @@ namespace WMS.Tests.Integration
     public class UserHandlerTests
     {
         [Fact]
-        public async Task CreateUser_UnknownRole_ThrowsNotFound()
+        public async Task CreateUser_UnknownDepartment_ThrowsNotFound()
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
 
-            var handler = new CreateUserCommandHandler(scope.UserRepository, scope.RoleRepository, scope.UnitOfWork, TestMapper.Instance);
+            var handler = new CreateUserCommandHandler(scope.UserRepository, scope.DepartmentRepository, scope.TeamRepository, scope.UnitOfWork, TestMapper.Instance);
 
             await Assert.ThrowsAsync<NotFoundCustomException>(() => handler.Handle(new CreateUserCommand
             {
@@ -26,7 +26,56 @@ namespace WMS.Tests.Integration
                 Username = "newuser",
                 Password = "Test@1234",
                 PersonelCode = "1001",
-                RoleId = 999,
+                DepartmentId = 999,
+            }, CancellationToken.None));
+        }
+
+        [Fact]
+        public async Task CreateUser_UnknownTeam_ThrowsNotFound()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var department = Seed.Department();
+            scope.Context.Departments.Add(department);
+            scope.Context.SaveChanges();
+
+            var handler = new CreateUserCommandHandler(scope.UserRepository, scope.DepartmentRepository, scope.TeamRepository, scope.UnitOfWork, TestMapper.Instance);
+
+            await Assert.ThrowsAsync<NotFoundCustomException>(() => handler.Handle(new CreateUserCommand
+            {
+                FisrtName = "کاربر",
+                LastName = "تست",
+                Username = "newuser",
+                Password = "Test@1234",
+                PersonelCode = "1001",
+                DepartmentId = department.Id,
+                TeamId = 999,
+            }, CancellationToken.None));
+        }
+
+        [Fact]
+        public async Task CreateUser_TeamBelongsToDifferentDepartment_ThrowsValidation()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var department = Seed.Department();
+            var otherDepartment = Seed.Department("واحد دیگر");
+            var team = Seed.Team(otherDepartment);
+            scope.Context.Departments.AddRange(department, otherDepartment);
+            scope.Context.Teams.Add(team);
+            scope.Context.SaveChanges();
+
+            var handler = new CreateUserCommandHandler(scope.UserRepository, scope.DepartmentRepository, scope.TeamRepository, scope.UnitOfWork, TestMapper.Instance);
+
+            await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(new CreateUserCommand
+            {
+                FisrtName = "کاربر",
+                LastName = "تست",
+                Username = "newuser",
+                Password = "Test@1234",
+                PersonelCode = "1001",
+                DepartmentId = department.Id,
+                TeamId = team.Id,
             }, CancellationToken.None));
         }
 
@@ -35,14 +84,13 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var role = Seed.Role();
             var department = Seed.Department();
             var team = Seed.Team(department);
-            var existing = Seed.User(role, department, team, username: "taken");
+            var existing = Seed.User(department, team, username: "taken");
             scope.Context.Users.Add(existing);
             scope.Context.SaveChanges();
 
-            var handler = new CreateUserCommandHandler(scope.UserRepository, scope.RoleRepository, scope.UnitOfWork, TestMapper.Instance);
+            var handler = new CreateUserCommandHandler(scope.UserRepository, scope.DepartmentRepository, scope.TeamRepository, scope.UnitOfWork, TestMapper.Instance);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(new CreateUserCommand
             {
@@ -51,37 +99,66 @@ namespace WMS.Tests.Integration
                 Username = "taken",
                 Password = "Test@1234",
                 PersonelCode = "1002",
-                RoleId = role.Id,
+                DepartmentId = department.Id,
+                TeamId = team.Id,
             }, CancellationToken.None));
         }
 
         [Fact]
-        public async Task CreateUser_StillThrows_BecauseCommandNeverCollectsDepartmentOrTeam()
+        public async Task CreateUser_ValidDepartmentAndTeam_Succeeds()
         {
-            // FisrtName->FirstName mapping and PersonelCode are both fixed and covered by
-            // CreateUser_MissingPersonelCode_FailsValidation / MappingProfileTests. This handler
-            // still can't succeed end-to-end though: User.DepartmentId/TeamId are required
-            // (non-nullable, no default) FKs that CreateUserCommand has no properties for, so they
-            // map to 0 and SaveChanges fails on the FK constraint. Same class of gap as
-            // PersonelCode was, left undecided here since it's the same "what should the API
-            // contract collect" product question, out of scope for this pass.
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var role = Seed.Role();
-            scope.Context.Roles.Add(role);
+            var department = Seed.Department();
+            var team = Seed.Team(department);
+            scope.Context.Departments.Add(department);
+            scope.Context.Teams.Add(team);
             scope.Context.SaveChanges();
 
-            var handler = new CreateUserCommandHandler(scope.UserRepository, scope.RoleRepository, scope.UnitOfWork, TestMapper.Instance);
+            var handler = new CreateUserCommandHandler(scope.UserRepository, scope.DepartmentRepository, scope.TeamRepository, scope.UnitOfWork, TestMapper.Instance);
 
-            await Assert.ThrowsAsync<Microsoft.EntityFrameworkCore.DbUpdateException>(() => handler.Handle(new CreateUserCommand
+            await handler.Handle(new CreateUserCommand
             {
                 FisrtName = "کاربر",
                 LastName = "تست",
                 Username = "brandnew",
                 Password = "Test@1234",
                 PersonelCode = "1003",
-                RoleId = role.Id,
-            }, CancellationToken.None));
+                DepartmentId = department.Id,
+                TeamId = team.Id,
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            var created = verify.Users.Single(x => x.Username == "brandnew");
+            Assert.Equal(team.Id, created.TeamId);
+            Assert.Equal(department.Id, created.DepartmentId);
+        }
+
+        [Fact]
+        public async Task CreateUser_DepartmentOnlyNoTeam_Succeeds()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var department = Seed.Department();
+            scope.Context.Departments.Add(department);
+            scope.Context.SaveChanges();
+
+            var handler = new CreateUserCommandHandler(scope.UserRepository, scope.DepartmentRepository, scope.TeamRepository, scope.UnitOfWork, TestMapper.Instance);
+
+            await handler.Handle(new CreateUserCommand
+            {
+                FisrtName = "کاربر",
+                LastName = "تست",
+                Username = "departmenthead",
+                Password = "Test@1234",
+                PersonelCode = "1004",
+                DepartmentId = department.Id,
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            var created = verify.Users.Single(x => x.Username == "departmenthead");
+            Assert.Null(created.TeamId);
+            Assert.Equal(department.Id, created.DepartmentId);
         }
 
         [Fact]
@@ -96,7 +173,6 @@ namespace WMS.Tests.Integration
                 Username = "brandnew",
                 Password = "Test@1234",
                 PersonelCode = "",
-                RoleId = 1,
             });
 
             Assert.False(result.IsValid);
@@ -107,15 +183,14 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var role = Seed.Role();
             var department = Seed.Department();
             var team = Seed.Team(department);
-            var user1 = Seed.User(role, department, team, username: "user1");
-            var user2 = Seed.User(role, department, team, username: "user2");
+            var user1 = Seed.User(department, team, username: "user1");
+            var user2 = Seed.User(department, team, username: "user2");
             scope.Context.Users.AddRange(user1, user2);
             scope.Context.SaveChanges();
 
-            var handler = new UpdateUserCommandHandler(scope.UserRepository, scope.RoleRepository, scope.UnitOfWork, TestMapper.Instance);
+            var handler = new UpdateUserCommandHandler(scope.UserRepository, scope.DepartmentRepository, scope.TeamRepository, scope.UnitOfWork);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(new UpdateUserCommand
             {
@@ -123,7 +198,8 @@ namespace WMS.Tests.Integration
                 FirstName = "کاربر",
                 LastName = "تست",
                 Username = "user1", // already taken by user1
-                RoleId = role.Id,
+                DepartmentId = department.Id,
+                TeamId = team.Id,
                 IsActive = true,
             }, CancellationToken.None));
         }
@@ -133,21 +209,21 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var role = Seed.Role();
             var department = Seed.Department();
             var team = Seed.Team(department);
-            var user = Seed.User(role, department, team, username: "same");
+            var user = Seed.User(department, team, username: "same");
             scope.Context.Users.Add(user);
             scope.Context.SaveChanges();
 
-            var handler = new UpdateUserCommandHandler(scope.UserRepository, scope.RoleRepository, scope.UnitOfWork, TestMapper.Instance);
+            var handler = new UpdateUserCommandHandler(scope.UserRepository, scope.DepartmentRepository, scope.TeamRepository, scope.UnitOfWork);
             await handler.Handle(new UpdateUserCommand
             {
                 Id = user.Id,
                 FirstName = "جدید",
                 LastName = "تست",
                 Username = "same",
-                RoleId = role.Id,
+                DepartmentId = department.Id,
+                TeamId = team.Id,
                 IsActive = false,
             }, CancellationToken.None);
 
@@ -162,10 +238,9 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var role = Seed.Role();
             var department = Seed.Department();
             var team = Seed.Team(department);
-            var user = Seed.User(role, department, team);
+            var user = Seed.User(department, team);
             scope.Context.Users.Add(user);
             scope.Context.SaveChanges();
 
@@ -181,10 +256,9 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var role = Seed.Role();
             var department = Seed.Department();
             var team = Seed.Team(department);
-            var user = Seed.User(role, department, team, password: "Correct@1234");
+            var user = Seed.User(department, team, password: "Correct@1234");
             scope.Context.Users.Add(user);
             scope.Context.SaveChanges();
 
@@ -206,10 +280,9 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var role = Seed.Role();
             var department = Seed.Department();
             var team = Seed.Team(department);
-            var user = Seed.User(role, department, team, password: "Correct@1234");
+            var user = Seed.User(department, team, password: "Correct@1234");
             scope.Context.Users.Add(user);
             scope.Context.SaveChanges();
 
@@ -233,10 +306,9 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var role = Seed.Role();
             var department = Seed.Department();
             var team = Seed.Team(department);
-            var user = Seed.User(role, department, team);
+            var user = Seed.User(department, team);
             scope.Context.Users.Add(user);
             scope.Context.SaveChanges();
 
@@ -256,10 +328,9 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var role = Seed.Role();
             var department = Seed.Department();
             var team = Seed.Team(department);
-            var user = Seed.User(role, department, team);
+            var user = Seed.User(department, team);
             scope.Context.Users.Add(user);
             scope.Context.SaveChanges();
 
@@ -282,6 +353,90 @@ namespace WMS.Tests.Integration
             var handler = new GetUserUpdateQueryHandler(scope.UserRepository, TestMapper.Instance);
 
             await Assert.ThrowsAsync<NotFoundCustomException>(() => handler.Handle(new GetUserUpdateQuery { Id = 999 }, CancellationToken.None));
+        }
+
+        [Fact]
+        public async Task ChangeUserTeam_MakesUserHead_SetsTeamHeadAndDepartment()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var department = Seed.Department();
+            var oldTeam = Seed.Team(department, "تیم قدیم");
+            var newTeam = Seed.Team(department, "تیم جدید");
+            var user = Seed.User(department, oldTeam);
+            scope.Context.Teams.AddRange(oldTeam, newTeam);
+            scope.Context.Users.Add(user);
+            scope.Context.SaveChanges();
+
+            var handler = new ChangeUserTeamCommandHandler(scope.UserRepository, scope.DepartmentRepository, scope.TeamRepository, scope.UnitOfWork);
+            await handler.Handle(new ChangeUserTeamCommand
+            {
+                UserId = user.Id,
+                DepartmentId = department.Id,
+                TeamId = newTeam.Id,
+                IsHead = true,
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            var updatedUser = verify.Users.Single(x => x.Id == user.Id);
+            var updatedNewTeam = verify.Teams.Single(x => x.Id == newTeam.Id);
+            Assert.Equal(newTeam.Id, updatedUser.TeamId);
+            Assert.Equal(department.Id, updatedUser.DepartmentId);
+            Assert.Equal(user.Id, updatedNewTeam.HeadId);
+        }
+
+        [Fact]
+        public async Task ChangeUserTeam_MovingAwayFromHeadTeam_ClearsPreviousTeamHead()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var department = Seed.Department();
+            var oldTeam = Seed.Team(department, "تیم قدیم");
+            var newTeam = Seed.Team(department, "تیم جدید");
+            var user = Seed.User(department, oldTeam);
+            scope.Context.Teams.AddRange(oldTeam, newTeam);
+            scope.Context.Users.Add(user);
+            scope.Context.SaveChanges();
+
+            oldTeam.HeadId = user.Id;
+            scope.Context.SaveChanges();
+
+            var handler = new ChangeUserTeamCommandHandler(scope.UserRepository, scope.DepartmentRepository, scope.TeamRepository, scope.UnitOfWork);
+            await handler.Handle(new ChangeUserTeamCommand
+            {
+                UserId = user.Id,
+                DepartmentId = department.Id,
+                TeamId = newTeam.Id,
+                IsHead = false,
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            var updatedOldTeam = verify.Teams.Single(x => x.Id == oldTeam.Id);
+            var updatedNewTeam = verify.Teams.Single(x => x.Id == newTeam.Id);
+            Assert.Null(updatedOldTeam.HeadId);
+            Assert.NotEqual(user.Id, updatedNewTeam.HeadId);
+        }
+
+        [Fact]
+        public async Task ChangeUserTeam_UnknownTeam_ThrowsNotFound()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var department = Seed.Department();
+            var team = Seed.Team(department);
+            var user = Seed.User(department, team);
+            scope.Context.Users.Add(user);
+            scope.Context.SaveChanges();
+
+            var handler = new ChangeUserTeamCommandHandler(scope.UserRepository, scope.DepartmentRepository, scope.TeamRepository, scope.UnitOfWork);
+
+            await Assert.ThrowsAsync<NotFoundCustomException>(() => handler.Handle(new ChangeUserTeamCommand
+            {
+                UserId = user.Id,
+                DepartmentId = department.Id,
+                TeamId = 999,
+                IsHead = false,
+            }, CancellationToken.None));
         }
     }
 }
