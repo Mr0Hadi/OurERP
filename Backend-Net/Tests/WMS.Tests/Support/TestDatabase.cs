@@ -81,7 +81,8 @@ namespace WMS.Tests.Support
             UnitOfWork = new Infrastructure.UnitOfWork.UnitOfWork(context);
             SaleReturnQueryService = new SaleReturnQueryService();
             SaleReturnRepository = new SaleReturnRepository(context, SaleReturnQueryService);
-            PurchaseReturnRepository = new PurchaseReturnRepository(context);
+            PurchaseReturnQueryService = new PurchaseReturnQueryService();
+            PurchaseReturnRepository = new PurchaseReturnRepository(context, PurchaseReturnQueryService);
             PurchaseRepository = new PurchaseRepository(context);
             ProductRepository = new ProductRepository(context);
             CustomerRepository = new CustomerRepository(context);
@@ -119,6 +120,7 @@ namespace WMS.Tests.Support
         public ISaleReturnQueryService SaleReturnQueryService { get; }
         public IInvoiceLineCalculationService InvoiceLineCalculation { get; }
         public IPurchaseReturnCalculationService PurchaseReturnCalculation { get; }
+        public IPurchaseReturnQueryService PurchaseReturnQueryService { get; }
         public IProductCodeService ProductCodeService { get; }
         public IProductUnitService ProductUnitService { get; }
         public IBarcodeRenderer BarcodeRenderer { get; }

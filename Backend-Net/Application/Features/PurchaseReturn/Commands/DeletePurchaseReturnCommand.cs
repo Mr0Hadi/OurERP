@@ -6,7 +6,6 @@ using Application.Common.Dtos;
 using Application.Common.Enums;
 using Common.Exceptions;
 using Common.Extensions;
-using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -29,13 +28,15 @@ namespace Application.Features.PurchaseReturn.Commands
     public class DeletePurchaseReturnCommandHandler : IRequestHandler<DeletePurchaseReturnCommand, ResponseDto>
     {
         private readonly IWMSDbContext _context;
+        private readonly IPurchaseReturnQueryService _purchaseReturnQueryService;
         private readonly IPurchaseReturnRepository _purchaseReturnRepository;
         private readonly IPurchaseReturnCalculationService _purchaseReturnCalculationService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public DeletePurchaseReturnCommandHandler(IWMSDbContext context, IPurchaseReturnRepository purchaseReturnRepository, IPurchaseReturnCalculationService purchaseReturnCalculationService, IUnitOfWork unitOfWork)
+        public DeletePurchaseReturnCommandHandler(IWMSDbContext context, IPurchaseReturnQueryService purchaseReturnQueryService, IPurchaseReturnRepository purchaseReturnRepository, IPurchaseReturnCalculationService purchaseReturnCalculationService, IUnitOfWork unitOfWork)
         {
             _context = context;
+            _purchaseReturnQueryService = purchaseReturnQueryService;
             _purchaseReturnRepository = purchaseReturnRepository;
             _purchaseReturnCalculationService = purchaseReturnCalculationService;
             _unitOfWork = unitOfWork;
@@ -45,19 +46,20 @@ namespace Application.Features.PurchaseReturn.Commands
         {
             var res = new ResponseDto();
 
-            var purchaseReturn = await _context.PurchaseReturns
+            var purchaseReturn = await _purchaseReturnQueryService
+                .WithReturnGraph(_context.PurchaseReturns.Where(x => x.Id == request.Id))
                 .Include(x => x.Purchase)
                     .ThenInclude(x => x.Items)
-                .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
+                .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
-            if (purchaseReturn.Status != PurchaseReturnStatusEnum.PENDING)
-                throw new ValidationCustomException("فقط مرجوعی‌های بدون تصمیم ثبت‌شده قابل حذف هستند.");
+            if (_purchaseReturnCalculationService.IsTerminal(purchaseReturn.Status) || !_purchaseReturnCalculationService.IsUntouched(purchaseReturn))
+                throw new ValidationCustomException("فقط مرجوعی‌های دست‌نخورده قابل حذف هستند.");
 
             var purchase = purchaseReturn.Purchase!;
 
             _purchaseReturnRepository.Remove(purchaseReturn);
 
-            purchase.Status = _purchaseReturnCalculationService.RecomputePurchaseStatus(purchase, null);
+            purchase.Status = _purchaseReturnCalculationService.RecomputePurchaseStatus(purchase);
             purchase.UpdatedAt = DateTime.Now;
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);

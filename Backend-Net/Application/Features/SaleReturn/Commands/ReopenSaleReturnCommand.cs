@@ -29,14 +29,12 @@ namespace Application.Features.SaleReturn.Commands
     {
         private readonly IWMSDbContext _context;
         private readonly ISaleReturnQueryService _saleReturnQueryService;
-        private readonly ISaleReturnCalculationService _saleReturnCalculationService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public ReopenSaleReturnCommandHandler(IWMSDbContext context, ISaleReturnQueryService saleReturnQueryService, ISaleReturnCalculationService saleReturnCalculationService, IUnitOfWork unitOfWork)
+        public ReopenSaleReturnCommandHandler(IWMSDbContext context, ISaleReturnQueryService saleReturnQueryService, IUnitOfWork unitOfWork)
         {
             _context = context;
             _saleReturnQueryService = saleReturnQueryService;
-            _saleReturnCalculationService = saleReturnCalculationService;
             _unitOfWork = unitOfWork;
         }
 
@@ -47,15 +45,18 @@ namespace Application.Features.SaleReturn.Commands
             var saleReturn = await _saleReturnQueryService.WithReturnGraph(_context.SaleReturns)
                 .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
-            if (saleReturn.Status != SaleReturnStatusEnum.REJECTED)
+            if (saleReturn.Status != ReturnStatusEnum.REJECTED)
                 throw new ValidationCustomException("فقط مرجوعی‌های ردشده قابل بازگشایی هستند.");
 
-            saleReturn.Status = _saleReturnCalculationService.RecomputeReturnStatus(saleReturn);
+            // A REJECTED return can only have gotten there while untouched (see Reject's guard), so
+            // reopening it always lands back at OPEN - RecomputeReturnStatus's terminal-status
+            // short-circuit would just hand REJECTED straight back if called on it here instead.
+            saleReturn.Status = ReturnStatusEnum.OPEN;
             saleReturn.UpdatedAt = DateTime.Now;
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            res.Message = "مرجوعی دوباره برای بازرسی باز شد.";
+            res.Message = "مرجوعی دوباره برای هماهنگی باز شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;
         }

@@ -15,8 +15,8 @@ namespace Application.Features.PurchaseReturn.Queries
         public int Take { get; set; } = 10;
         public string? Search { get; set; }
         public int? SupplierId { get; set; }
-        public PurchaseReturnStatusEnum? Status { get; set; }
-        public PurchaseIssueTypeEnum? Reason { get; set; }
+        public ReturnStatusEnum? Status { get; set; }
+        public ReturnProblemEnum? Problem { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
     }
@@ -37,7 +37,7 @@ namespace Application.Features.PurchaseReturn.Queries
             var query = _context.PurchaseReturns
                 .Include(x => x.Purchase)
                     .ThenInclude(x => x.Supplier)
-                .Include(x => x.Items)
+                .Include(x => x.Claims)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(request.Search))
@@ -68,9 +68,9 @@ namespace Application.Features.PurchaseReturn.Queries
                 query = query.Where(x => x.ReturnDate <= request.ToDate.Value);
             }
 
-            if (request.Reason.HasValue)
+            if (request.Problem.HasValue)
             {
-                query = query.Where(x => x.Items.Any(i => i.IssueType == request.Reason.Value));
+                query = query.Where(x => x.Claims.Any(c => c.Problem == request.Problem.Value));
             }
 
             var paged = await query
@@ -86,9 +86,9 @@ namespace Application.Features.PurchaseReturn.Queries
                     SupplierName = x.Purchase.Supplier.CompanyName,
                     CreatedAt = x.CreatedAt,
                     Status = x.Status,
-                    DominantIssueType = x.Items.OrderByDescending(i => i.Quantity).Select(i => i.IssueType).FirstOrDefault(),
-                    TotalQuantity = x.Items.Sum(i => i.Quantity),
-                    TotalAmount = (UInt64)x.Items.Sum(i => (long)i.Quantity * (long)i.UnitPrice),
+                    DominantProblem = x.Claims.OrderByDescending(c => c.Quantity).Select(c => c.Problem).FirstOrDefault(),
+                    TotalQuantity = x.Claims.Sum(c => c.Quantity),
+                    TotalAmount = (UInt64)x.Claims.Sum(c => (long)c.Quantity * (long)c.UnitPrice),
                 })
                 .ToPagedAsync(request.Page, request.Take, cancellationToken);
 

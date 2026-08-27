@@ -5,7 +5,6 @@ using Application.Common.Enums;
 using Application.Features.SaleReturn.Dtos;
 using Common.Exceptions;
 using Common.Extensions;
-using Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -38,15 +37,8 @@ namespace Application.Features.SaleReturn.Queries
                     .ThenInclude(x => x.Customer)
                 .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
-            // Cancel, reject and delete all share one rule; the DTO keeps three flags because the
-            // frontend renders three buttons.
-            var isPreInspection = _saleReturnCalculationService.IsPreInspection(saleReturn);
-            var totalAmount = (UInt64)saleReturn.Claims.Sum(c => (long)c.ClaimedQuantity * (long)c.UnitPrice);
-            var finalizedRefundAmount = (UInt64)saleReturn.Claims
-                .SelectMany(c => c.InspectionItems)
-                .SelectMany(i => i.Decisions)
-                .Where(d => d.DecisionType == SaleReturnDecisionTypeEnum.REFUND && d.Status == SaleReturnDecisionStatusEnum.RESOLVED)
-                .Sum(d => (long)(d.RefundAmount ?? 0));
+            var untouched = _saleReturnCalculationService.IsUntouched(saleReturn);
+            var totalAmount = (UInt64)saleReturn.Claims.Sum(c => (long)c.Quantity * (long)c.UnitPrice);
 
             res.Data = new SaleReturnDetailDto
             {
@@ -58,57 +50,85 @@ namespace Application.Features.SaleReturn.Queries
                 CustomerId = saleReturn.Sale!.CustomerId,
                 CustomerName = saleReturn.Sale!.Customer.FirstName + " " + saleReturn.Sale!.Customer.LastName,
                 Description = saleReturn.Description,
+                PreviousReturnId = saleReturn.PreviousReturnId,
                 CreatedAt = saleReturn.CreatedAt,
                 UpdatedAt = saleReturn.UpdatedAt,
                 Status = saleReturn.Status,
                 TotalAmount = totalAmount,
-                FinalizedRefundAmount = finalizedRefundAmount,
                 TotalQuantity = saleReturn.ClaimedQuantity,
-                InspectedQuantity = saleReturn.InspectedQuantity,
-                AllocatedQuantity = saleReturn.DecidedQuantity,
-                CanDelete = isPreInspection,
-                CanCancel = isPreInspection,
-                CanReject = isPreInspection,
-                CanReopen = saleReturn.Status == SaleReturnStatusEnum.REJECTED,
+                DecidedQuantity = saleReturn.DecidedQuantity,
+                CanDelete = !_saleReturnCalculationService.IsTerminal(saleReturn.Status) && untouched,
+                CanCancel = !_saleReturnCalculationService.IsTerminal(saleReturn.Status) && untouched,
+                CanReject = !_saleReturnCalculationService.IsTerminal(saleReturn.Status) && untouched,
+                CanReopen = saleReturn.Status == Domain.Enums.ReturnStatusEnum.REJECTED,
                 Claims = saleReturn.Claims.Select(c => new SaleReturnClaimDto
                 {
                     Id = c.Id,
                     SaleReturnId = c.SaleReturnId,
+                    Scope = c.Scope,
+                    OffScopeKind = c.OffScopeKind,
                     SaleItemId = c.SaleItemId,
                     ProductId = c.ProductId,
                     ProductCode = c.Product!.Code,
                     ProductName = c.Product.Name,
                     Unit = c.Product.Unit.GetDescription(),
                     UnitPrice = c.UnitPrice,
-                    Reason = c.Reason,
-                    ClaimedQuantity = c.ClaimedQuantity,
-                    InspectedQuantity = c.InspectedQuantity,
-                    UninspectedQuantity = c.UninspectedQuantity,
-                    LineTotal = (UInt64)c.ClaimedQuantity * c.UnitPrice,
+                    Quantity = c.Quantity,
+                    Problem = c.Problem,
                     Note = c.Note,
                     CreatedAt = c.CreatedAt,
-                    InspectionItems = c.InspectionItems.Select(i => new SaleReturnItemDto
+                    DecidedQuantity = c.DecidedQuantity,
+                    RemainingQuantity = c.RemainingQuantity,
+                    Resolutions = c.Resolutions.Select(r => new SaleReturnResolutionDto
                     {
-                        Id = i.Id,
-                        SaleReturnClaimId = i.SaleReturnClaimId,
-                        IssueType = i.IssueType,
-                        Quantity = i.Quantity,
-                        AllocatedQuantity = i.DecidedQuantity,
-                        RemainingQuantity = i.UndecidedQuantity,
-                        Note = i.Note,
-                        CreatedAt = i.CreatedAt,
-                        Decisions = i.Decisions.Select(d => new SaleReturnDecisionDto
+                        Id = r.Id,
+                        SaleReturnClaimId = r.SaleReturnClaimId,
+                        Quantity = r.Quantity,
+                        Note = r.Note,
+                        CreatedAt = r.CreatedAt,
+                        Effects = r.Effects.Select(e => new SaleReturnEffectDto
                         {
-                            Id = d.Id,
-                            SaleReturnItemId = d.SaleReturnItemId,
-                            DecisionType = d.DecisionType,
-                            Quantity = d.Quantity,
-                            RefundAmount = d.RefundAmount,
-                            Status = d.Status,
-                            ReplacementShippedQuantity = d.ReplacementShippedQuantity,
-                            Note = d.Note,
-                            CreatedAt = d.CreatedAt,
-                            ResolvedAt = d.ResolvedAt,
+                            Id = e.Id,
+                            SaleReturnResolutionId = e.SaleReturnResolutionId,
+                            Kind = e.Kind,
+                            Quantity = e.Quantity,
+                            DoneQuantity = e.DoneQuantity,
+                            RestockedQuantity = e.RestockedQuantity,
+                            ProductId = e.ProductId,
+                            Amount = e.Amount,
+                            Method = e.Method,
+                            Reference = e.Reference,
+                            Note = e.Note,
+                            Status = e.Status,
+                            CreatedAt = e.CreatedAt,
+                            AppliedAt = e.AppliedAt,
+                            MoneyParts = e.MoneyParts.Select(p => new SaleReturnEffectMoneyPartDto
+                            {
+                                Id = p.Id,
+                                Method = p.Method,
+                                Amount = p.Amount,
+                                CheckNumber = p.CheckNumber,
+                                TransferRef = p.TransferRef,
+                            }).ToList(),
+                            History = e.History.Select(h => new SaleReturnEffectRoundDto
+                            {
+                                Id = h.Id,
+                                Date = h.Date,
+                                Quantity = h.Quantity,
+                                HealthyQuantity = h.HealthyQuantity,
+                                PartyName = h.PartyName,
+                                PartyNationalId = h.PartyNationalId,
+                                VehiclePlate = h.VehiclePlate,
+                                Note = h.Note,
+                                CreatedAt = h.CreatedAt,
+                                Observations = h.Observations.Select(o => new SaleReturnEffectObservationDto
+                                {
+                                    Id = o.Id,
+                                    Problem = o.Problem,
+                                    Quantity = o.Quantity,
+                                    Note = o.Note,
+                                }).ToList(),
+                            }).ToList(),
                         }).ToList(),
                     }).ToList(),
                 }).ToList(),

@@ -1,11 +1,11 @@
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.PurchaseReturn.Dtos;
 using Common.Exceptions;
 using Common.Extensions;
-using Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,11 +19,15 @@ namespace Application.Features.PurchaseReturn.Queries
     public class GetPurchaseReturnDetailQueryHandler : IRequestHandler<GetPurchaseReturnDetailQuery, ResponseDto>
     {
         private readonly IWMSDbContext _context;
+        private readonly IPurchaseReturnQueryService _purchaseReturnQueryService;
+        private readonly IPurchaseReturnCalculationService _purchaseReturnCalculationService;
         private readonly IObjectStorageService _objectStorageService;
 
-        public GetPurchaseReturnDetailQueryHandler(IWMSDbContext context, IObjectStorageService objectStorageService)
+        public GetPurchaseReturnDetailQueryHandler(IWMSDbContext context, IPurchaseReturnQueryService purchaseReturnQueryService, IPurchaseReturnCalculationService purchaseReturnCalculationService, IObjectStorageService objectStorageService)
         {
             _context = context;
+            _purchaseReturnQueryService = purchaseReturnQueryService;
+            _purchaseReturnCalculationService = purchaseReturnCalculationService;
             _objectStorageService = objectStorageService;
         }
 
@@ -31,23 +35,15 @@ namespace Application.Features.PurchaseReturn.Queries
         {
             var res = new ResponseDto();
 
-            var purchaseReturn = await _context.PurchaseReturns
+            var purchaseReturn = await _purchaseReturnQueryService
+                .WithReturnGraph(_context.PurchaseReturns.Where(x => x.Id == request.Id))
                 .Include(x => x.Purchase)
                     .ThenInclude(x => x.Supplier)
-                .Include(x => x.Items)
-                    .ThenInclude(x => x.Product)
-                .Include(x => x.Items)
-                    .ThenInclude(x => x.Decisions)
                 .Include(x => x.ReceivingImages)
-                .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
+                .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
-            var totalQuantity = purchaseReturn.Items.Sum(i => i.Quantity);
-            var allocatedQuantity = purchaseReturn.Items.Sum(i => i.Decisions.Sum(d => d.Quantity));
-            var totalAmount = (UInt64)purchaseReturn.Items.Sum(i => (long)i.Quantity * (long)i.UnitPrice);
-            var finalizedRefundAmount = (UInt64)purchaseReturn.Items
-                .SelectMany(i => i.Decisions)
-                .Where(d => d.DecisionType == PurchaseReturnDecisionTypeEnum.REFUND && d.Status == PurchaseReturnDecisionStatusEnum.RESOLVED)
-                .Sum(d => (long)(d.RefundAmount ?? 0));
+            var untouched = _purchaseReturnCalculationService.IsUntouched(purchaseReturn);
+            var totalAmount = (UInt64)purchaseReturn.Claims.Sum(c => (long)c.Quantity * (long)c.UnitPrice);
 
             res.Data = new PurchaseReturnDetailDto
             {
@@ -55,21 +51,21 @@ namespace Application.Features.PurchaseReturn.Queries
                 ReturnNumber = purchaseReturn.ReturnNumber,
                 ReturnDate = purchaseReturn.ReturnDate,
                 PurchaseId = purchaseReturn.PurchaseId,
-                PurchaseInvoiceNumber = purchaseReturn.Purchase.InvoiceNumber,
+                PurchaseInvoiceNumber = purchaseReturn.Purchase!.InvoiceNumber,
                 SupplierId = purchaseReturn.Purchase.SupplierId,
                 SupplierName = purchaseReturn.Purchase.Supplier.CompanyName,
                 Description = purchaseReturn.Description,
+                PreviousReturnId = purchaseReturn.PreviousReturnId,
                 CreatedAt = purchaseReturn.CreatedAt,
                 UpdatedAt = purchaseReturn.UpdatedAt,
                 Status = purchaseReturn.Status,
                 TotalAmount = totalAmount,
-                FinalizedRefundAmount = finalizedRefundAmount,
-                TotalQuantity = totalQuantity,
-                AllocatedQuantity = allocatedQuantity,
-                CanDelete = purchaseReturn.Status == PurchaseReturnStatusEnum.PENDING,
-                CanCancel = purchaseReturn.Status == PurchaseReturnStatusEnum.PENDING,
-                CanReject = purchaseReturn.Status == PurchaseReturnStatusEnum.PENDING,
-                CanReopen = purchaseReturn.Status == PurchaseReturnStatusEnum.REJECTED,
+                TotalQuantity = purchaseReturn.ClaimedQuantity,
+                DecidedQuantity = purchaseReturn.DecidedQuantity,
+                CanDelete = !_purchaseReturnCalculationService.IsTerminal(purchaseReturn.Status) && untouched,
+                CanCancel = !_purchaseReturnCalculationService.IsTerminal(purchaseReturn.Status) && untouched,
+                CanReject = !_purchaseReturnCalculationService.IsTerminal(purchaseReturn.Status) && untouched,
+                CanReopen = purchaseReturn.Status == Domain.Enums.ReturnStatusEnum.REJECTED,
                 ReceivingImages = purchaseReturn.ReceivingImages
                     .OrderBy(img => img.CreatedAt)
                     .Select(img => new PurchaseReceivingImageDto
@@ -83,34 +79,75 @@ namespace Application.Features.PurchaseReturn.Queries
                         Note = img.Note,
                         CreatedAt = img.CreatedAt,
                     }).ToList(),
-                Items = purchaseReturn.Items.Select(i => new PurchaseReturnItemDto
+                Claims = purchaseReturn.Claims.Select(c => new PurchaseReturnClaimDto
                 {
-                    Id = i.Id,
-                    PurchaseReturnId = i.PurchaseReturnId,
-                    PurchaseItemId = i.PurchaseItemId,
-                    ProductId = i.ProductId,
-                    ProductCode = i.Product!.Code,
-                    ProductName = i.Product.Name,
-                    Unit = i.Product.Unit.GetDescription(),
-                    UnitPrice = i.UnitPrice,
-                    IssueType = i.IssueType,
-                    Quantity = i.Quantity,
-                    LineTotal = (UInt64)i.Quantity * i.UnitPrice,
-                    AllocatedQuantity = i.Decisions.Sum(d => d.Quantity),
-                    RemainingQuantity = i.Quantity - i.Decisions.Sum(d => d.Quantity),
-                    Note = i.Note,
-                    CreatedAt = i.CreatedAt,
-                    Decisions = i.Decisions.Select(d => new PurchaseReturnDecisionDto
+                    Id = c.Id,
+                    PurchaseReturnId = c.PurchaseReturnId,
+                    Scope = c.Scope,
+                    OffScopeKind = c.OffScopeKind,
+                    PurchaseItemId = c.PurchaseItemId,
+                    ProductId = c.ProductId,
+                    ProductCode = c.Product!.Code,
+                    ProductName = c.Product.Name,
+                    Unit = c.Product.Unit.GetDescription(),
+                    UnitPrice = c.UnitPrice,
+                    Quantity = c.Quantity,
+                    Problem = c.Problem,
+                    Note = c.Note,
+                    CreatedAt = c.CreatedAt,
+                    DecidedQuantity = c.DecidedQuantity,
+                    RemainingQuantity = c.RemainingQuantity,
+                    Resolutions = c.Resolutions.Select(r => new PurchaseReturnResolutionDto
                     {
-                        Id = d.Id,
-                        PurchaseReturnItemId = d.PurchaseReturnItemId,
-                        DecisionType = d.DecisionType,
-                        Quantity = d.Quantity,
-                        RefundAmount = d.RefundAmount,
-                        Status = d.Status,
-                        Note = d.Note,
-                        CreatedAt = d.CreatedAt,
-                        ResolvedAt = d.ResolvedAt,
+                        Id = r.Id,
+                        PurchaseReturnClaimId = r.PurchaseReturnClaimId,
+                        Quantity = r.Quantity,
+                        Note = r.Note,
+                        CreatedAt = r.CreatedAt,
+                        Effects = r.Effects.Select(e => new PurchaseReturnEffectDto
+                        {
+                            Id = e.Id,
+                            PurchaseReturnResolutionId = e.PurchaseReturnResolutionId,
+                            Kind = e.Kind,
+                            Quantity = e.Quantity,
+                            DoneQuantity = e.DoneQuantity,
+                            RestockedQuantity = e.RestockedQuantity,
+                            ProductId = e.ProductId,
+                            Amount = e.Amount,
+                            Method = e.Method,
+                            Reference = e.Reference,
+                            Note = e.Note,
+                            Status = e.Status,
+                            CreatedAt = e.CreatedAt,
+                            AppliedAt = e.AppliedAt,
+                            MoneyParts = e.MoneyParts.Select(p => new PurchaseReturnEffectMoneyPartDto
+                            {
+                                Id = p.Id,
+                                Method = p.Method,
+                                Amount = p.Amount,
+                                CheckNumber = p.CheckNumber,
+                                TransferRef = p.TransferRef,
+                            }).ToList(),
+                            History = e.History.Select(h => new PurchaseReturnEffectRoundDto
+                            {
+                                Id = h.Id,
+                                Date = h.Date,
+                                Quantity = h.Quantity,
+                                HealthyQuantity = h.HealthyQuantity,
+                                PartyName = h.PartyName,
+                                PartyNationalId = h.PartyNationalId,
+                                VehiclePlate = h.VehiclePlate,
+                                Note = h.Note,
+                                CreatedAt = h.CreatedAt,
+                                Observations = h.Observations.Select(o => new PurchaseReturnEffectObservationDto
+                                {
+                                    Id = o.Id,
+                                    Problem = o.Problem,
+                                    Quantity = o.Quantity,
+                                    Note = o.Note,
+                                }).ToList(),
+                            }).ToList(),
+                        }).ToList(),
                     }).ToList(),
                 }).ToList(),
             };

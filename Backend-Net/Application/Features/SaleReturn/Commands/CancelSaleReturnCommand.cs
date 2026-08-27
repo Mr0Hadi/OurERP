@@ -47,10 +47,10 @@ namespace Application.Features.SaleReturn.Commands
             var saleReturn = await _saleReturnQueryService.WithReturnGraph(_context.SaleReturns)
                 .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
-            if (!_saleReturnCalculationService.IsPreInspection(saleReturn))
-                throw new ValidationCustomException("فقط مرجوعی‌هایی که هنوز هیچ بازرسی‌ای رویشان انجام نشده قابل لغو کردن هستند.");
+            if (_saleReturnCalculationService.IsTerminal(saleReturn.Status) || !_saleReturnCalculationService.IsUntouched(saleReturn))
+                throw new ValidationCustomException("فقط مرجوعی‌های دست‌نخورده قابل لغو کردن هستند.");
 
-            saleReturn.Status = SaleReturnStatusEnum.CANCELLED;
+            saleReturn.Status = ReturnStatusEnum.CANCELLED;
             saleReturn.UpdatedAt = DateTime.Now;
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);

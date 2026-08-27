@@ -12,14 +12,13 @@ namespace Application.Features.SaleReturn.Dtos
         public int CustomerId { get; set; }
         public string CustomerName { get; set; }
         public string? Description { get; set; }
+        public int? PreviousReturnId { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
-        public SaleReturnStatusEnum Status { get; set; }
+        public ReturnStatusEnum Status { get; set; }
         public UInt64 TotalAmount { get; set; }
-        public UInt64 FinalizedRefundAmount { get; set; }
         public int TotalQuantity { get; set; }
-        public int InspectedQuantity { get; set; }
-        public int AllocatedQuantity { get; set; }
+        public int DecidedQuantity { get; set; }
         public bool CanDelete { get; set; }
         public bool CanCancel { get; set; }
         public bool CanReject { get; set; }

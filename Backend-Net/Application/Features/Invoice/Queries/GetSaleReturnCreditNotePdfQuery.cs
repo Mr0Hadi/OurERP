@@ -11,11 +11,12 @@ using Microsoft.Extensions.Configuration;
 namespace Application.Features.Invoice.Queries
 {
     /// <summary>
-    /// A credit note only ever covers the money-settled decisions on a return - REFUND (paid back)
-    /// and STORE_CREDIT (owed as credit). REPLACEMENT settles in goods, not money, so it has no
-    /// place on this document; NO_COMPENSATION lines simply never reach this handler because there
-    /// is nothing owed. One printed line per decision, not per product, so the paper trail matches
-    /// the individual AddSaleReturnDecisionCommand calls it was built from.
+    /// A credit note only ever covers a return's MONEY_OUT effects (money owed back to the
+    /// customer - a refund or store credit, regardless of payment Method). GOODS_IN/GOODS_OUT
+    /// settle in goods, not money, so they have no place on this document; MONEY_IN (the customer
+    /// paying us, e.g. an upcharge on a replacement) is the opposite direction and also excluded.
+    /// One printed line per effect, not per product, so the paper trail matches the individual
+    /// AddClaimResolutionCommand calls it was built from.
     /// </summary>
     public class GetSaleReturnCreditNotePdfQuery : IRequest<FileResponseDto>
     {
@@ -48,26 +49,24 @@ namespace Application.Features.Invoice.Queries
             var sale = saleReturn.Sale!;
             var customer = sale.Customer;
 
-            var settledDecisions = saleReturn.Claims
-                .SelectMany(claim => claim.InspectionItems.Select(item => (claim, item)))
-                .SelectMany(x => x.item.Decisions
-                    .Where(d => d.DecisionType == SaleReturnDecisionTypeEnum.REFUND || d.DecisionType == SaleReturnDecisionTypeEnum.STORE_CREDIT)
-                    .Select(d => (x.claim, decision: d)))
+            var settledEffects = saleReturn.Claims
+                .SelectMany(claim => claim.Resolutions.SelectMany(r => r.Effects.Select(e => (claim, effect: e))))
+                .Where(x => x.effect.Kind == ReturnEffectKindEnum.MONEY_OUT)
                 .ToList();
 
-            if (settledDecisions.Count == 0)
-                throw new ValidationCustomException("این مرجوعی هیچ تصمیم مالی‌شده‌ای (استرداد یا اعتبار فروشگاهی) ندارد.");
+            if (settledEffects.Count == 0)
+                throw new ValidationCustomException("این مرجوعی هیچ اثر مالی (استرداد یا اعتبار فروشگاهی) ندارد.");
 
-            var lines = settledDecisions.Select((x, index) =>
+            var lines = settledEffects.Select((x, index) =>
             {
-                var amount = x.decision.RefundAmount ?? (ulong)x.decision.Quantity * x.claim.UnitPrice;
+                var amount = x.effect.Amount ?? 0;
+                var methodLabel = x.effect.Method == ReturnPaymentMethodEnum.STORE_CREDIT ? " (اعتبار فروشگاهی)" : " (استرداد وجه)";
                 return new InvoiceLineModel
                 {
                     RowNumber = index + 1,
                     ProductCode = x.claim.Product?.Code ?? string.Empty,
-                    ProductName = (x.claim.Product?.Name ?? string.Empty) +
-                        (x.decision.DecisionType == SaleReturnDecisionTypeEnum.STORE_CREDIT ? " (اعتبار فروشگاهی)" : " (استرداد وجه)"),
-                    Quantity = x.decision.Quantity,
+                    ProductName = (x.claim.Product?.Name ?? string.Empty) + methodLabel,
+                    Quantity = x.claim.Quantity,
                     UnitPrice = x.claim.UnitPrice,
                     DiscountAmount = 0,
                     TaxAmount = 0,

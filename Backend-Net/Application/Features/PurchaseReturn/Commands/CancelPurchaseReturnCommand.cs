@@ -28,12 +28,14 @@ namespace Application.Features.PurchaseReturn.Commands
     public class CancelPurchaseReturnCommandHandler : IRequestHandler<CancelPurchaseReturnCommand, ResponseDto>
     {
         private readonly IWMSDbContext _context;
+        private readonly IPurchaseReturnQueryService _purchaseReturnQueryService;
         private readonly IPurchaseReturnCalculationService _purchaseReturnCalculationService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public CancelPurchaseReturnCommandHandler(IWMSDbContext context, IPurchaseReturnCalculationService purchaseReturnCalculationService, IUnitOfWork unitOfWork)
+        public CancelPurchaseReturnCommandHandler(IWMSDbContext context, IPurchaseReturnQueryService purchaseReturnQueryService, IPurchaseReturnCalculationService purchaseReturnCalculationService, IUnitOfWork unitOfWork)
         {
             _context = context;
+            _purchaseReturnQueryService = purchaseReturnQueryService;
             _purchaseReturnCalculationService = purchaseReturnCalculationService;
             _unitOfWork = unitOfWork;
         }
@@ -42,20 +44,21 @@ namespace Application.Features.PurchaseReturn.Commands
         {
             var res = new ResponseDto();
 
-            var purchaseReturn = await _context.PurchaseReturns
+            var purchaseReturn = await _purchaseReturnQueryService
+                .WithReturnGraph(_context.PurchaseReturns.Where(x => x.Id == request.Id))
                 .Include(x => x.Purchase)
                     .ThenInclude(x => x.Items)
-                .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
+                .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
-            if (purchaseReturn.Status != PurchaseReturnStatusEnum.PENDING)
-                throw new ValidationCustomException("فقط مرجوعی‌های بدون تصمیم ثبت‌شده قابل لغو کردن هستند.");
+            if (_purchaseReturnCalculationService.IsTerminal(purchaseReturn.Status) || !_purchaseReturnCalculationService.IsUntouched(purchaseReturn))
+                throw new ValidationCustomException("فقط مرجوعی‌های دست‌نخورده قابل لغو کردن هستند.");
 
             var now = DateTime.Now;
-            purchaseReturn.Status = PurchaseReturnStatusEnum.CANCELLED;
+            purchaseReturn.Status = ReturnStatusEnum.CANCELLED;
             purchaseReturn.UpdatedAt = now;
 
             var purchase = purchaseReturn.Purchase!;
-            purchase.Status = _purchaseReturnCalculationService.RecomputePurchaseStatus(purchase, null);
+            purchase.Status = _purchaseReturnCalculationService.RecomputePurchaseStatus(purchase);
             purchase.UpdatedAt = now;
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);

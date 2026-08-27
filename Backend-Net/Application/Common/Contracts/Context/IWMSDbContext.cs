@@ -16,12 +16,19 @@ namespace Application.Common.Contracts.Context
         DbSet<Department> Departments { get; }
         DbSet<Customer> Customers { get; }
         DbSet<Domain.Entities.PurchaseReturn> PurchaseReturns { get; }
-        DbSet<PurchaseReturnItem> PurchaseReturnItems { get; }
-        DbSet<PurchaseReturnDecision> PurchaseReturnDecisions { get; }
+        DbSet<PurchaseReturnClaim> PurchaseReturnClaims { get; }
+        DbSet<PurchaseReturnResolution> PurchaseReturnResolutions { get; }
+        DbSet<PurchaseReturnEffect> PurchaseReturnEffects { get; }
+        DbSet<PurchaseReturnEffectRound> PurchaseReturnEffectRounds { get; }
+        DbSet<PurchaseReturnEffectObservation> PurchaseReturnEffectObservations { get; }
+        DbSet<PurchaseReturnEffectMoneyPart> PurchaseReturnEffectMoneyParts { get; }
         DbSet<Domain.Entities.SaleReturn> SaleReturns { get; }
         DbSet<SaleReturnClaim> SaleReturnClaims { get; }
-        DbSet<SaleReturnItem> SaleReturnItems { get; }
-        DbSet<SaleReturnDecision> SaleReturnDecisions { get; }
+        DbSet<SaleReturnResolution> SaleReturnResolutions { get; }
+        DbSet<SaleReturnEffect> SaleReturnEffects { get; }
+        DbSet<SaleReturnEffectRound> SaleReturnEffectRounds { get; }
+        DbSet<SaleReturnEffectObservation> SaleReturnEffectObservations { get; }
+        DbSet<SaleReturnEffectMoneyPart> SaleReturnEffectMoneyParts { get; }
         DbSet<Domain.Entities.ProductUnit> ProductUnits { get; }
         DbSet<PurchaseReceivingImage> PurchaseReceivingImages { get; }
         DbSet<PosTerminal> PosTerminals { get; }

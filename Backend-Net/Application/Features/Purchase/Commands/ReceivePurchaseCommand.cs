@@ -1,7 +1,6 @@
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.PurchaseReturn;
-using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
@@ -16,6 +15,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.Purchase.Commands
 {
+    // Reports received quantity/stock only - problems with received goods are reported separately
+    // and explicitly via CreatePurchaseReturnCommand (mirrors how sale returns already worked; the
+    // old "report an issue inline while receiving, auto-creates a PurchaseReturn" path is gone).
     public class ReceivePurchaseCommand : IRequest<ResponseDto>
     {
         public int PurchaseId { get; set; }
@@ -43,14 +45,6 @@ namespace Application.Features.Purchase.Commands
     {
         public int PurchaseItemId { get; set; }
         public int ReceivedQuantity { get; set; }
-        public List<ReceivePurchaseIssueDto> Issues { get; set; } = new();
-    }
-
-    public class ReceivePurchaseIssueDto
-    {
-        public PurchaseIssueTypeEnum Type { get; set; }
-        public int Quantity { get; set; }
-        public string? Note { get; set; }
     }
 
     public class ReceivePurchaseCommandValidator : AbstractValidator<ReceivePurchaseCommand>
@@ -64,14 +58,7 @@ namespace Application.Features.Purchase.Commands
             RuleForEach(x => x.Items).ChildRules(item =>
             {
                 item.RuleFor(i => i.PurchaseItemId).NotNull().WithMessage(Validation.RequiredMessage("آیتم خرید"));
-                item.RuleFor(i => i.ReceivedQuantity).GreaterThanOrEqualTo(0).WithMessage("مقدار دریافتی نمی‌تواند منفی باشد.");
-                item.RuleFor(i => i).Must(i => i.ReceivedQuantity > 0 || (i.Issues != null && i.Issues.Any(x => x.Quantity > 0)))
-                    .WithMessage("برای هر قلم باید مقدار دریافتی یا حداقل یک مغایرت وارد شود.");
-                item.RuleForEach(i => i.Issues).ChildRules(issue =>
-                {
-                    issue.RuleFor(j => j.Quantity).GreaterThan(0).WithMessage("مقدار مغایرت باید از صفر بیشتر باشد.");
-                    issue.RuleFor(j => j.Type).IsInEnum().WithMessage("نوع مغایرت نامعتبر است.");
-                });
+                item.RuleFor(i => i.ReceivedQuantity).GreaterThan(0).WithMessage("مقدار دریافتی باید از صفر بیشتر باشد.");
             });
             RuleForEach(x => x.Images).ChildRules(image =>
             {
@@ -83,16 +70,14 @@ namespace Application.Features.Purchase.Commands
     public class ReceivePurchaseCommandHandler : IRequestHandler<ReceivePurchaseCommand, ResponseDto>
     {
         private readonly IWMSDbContext _context;
-        private readonly IPurchaseReturnRepository _purchaseReturnRepository;
         private readonly IPurchaseReturnCalculationService _purchaseReturnCalculationService;
         private readonly IProductUnitService _productUnitService;
         private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public ReceivePurchaseCommandHandler(IWMSDbContext context, IPurchaseReturnRepository purchaseReturnRepository, IPurchaseReturnCalculationService purchaseReturnCalculationService, IProductUnitService productUnitService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
+        public ReceivePurchaseCommandHandler(IWMSDbContext context, IPurchaseReturnCalculationService purchaseReturnCalculationService, IProductUnitService productUnitService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
         {
             _context = context;
-            _purchaseReturnRepository = purchaseReturnRepository;
             _purchaseReturnCalculationService = purchaseReturnCalculationService;
             _productUnitService = productUnitService;
             _objectStorageService = objectStorageService;
@@ -111,8 +96,6 @@ namespace Application.Features.Purchase.Commands
             if (purchase.Status == PurchaseStatusEnum.CANCELLED)
                 throw new ValidationCustomException("خرید لغو شده قابل دریافت نیست.");
 
-            var activeReturn = await _purchaseReturnRepository.GetActiveByPurchaseIdAsync(request.PurchaseId, cancellationToken);
-
             var purchaseItems = purchase.Items.ToDictionary(x => x.Id);
 
             foreach (var reqItem in request.Items)
@@ -120,83 +103,20 @@ namespace Application.Features.Purchase.Commands
                 if (!purchaseItems.TryGetValue(reqItem.PurchaseItemId, out var purchaseItem))
                     throw new NotFoundCustomException("آیتم خرید مورد نظر یافت نشد.");
 
-                var nonExcessQty = (reqItem.Issues ?? new()).Where(i => i.Type != PurchaseIssueTypeEnum.EXCESS).Sum(i => i.Quantity);
-                var requestedNonExcess = reqItem.ReceivedQuantity + nonExcessQty;
-                var receivable = _purchaseReturnCalculationService.GetReceivableQuantity(purchaseItem, activeReturn);
-
-                if (requestedNonExcess > receivable)
+                var stillOwed = purchaseItem.Quantity - purchaseItem.ReceivedQuantity;
+                if (reqItem.ReceivedQuantity > stillOwed)
                     throw new ValidationCustomException($"مقدار وارد شده برای «{purchaseItem.Product.Name}» از باقیمانده قابل دریافت این قلم بیشتر است.");
             }
 
-            var receivedDate = request.ReceivedDate ?? DateTime.Now;
             var now = DateTime.Now;
-            var anyIssueAdded = false;
 
             foreach (var reqItem in request.Items)
             {
                 var purchaseItem = purchaseItems[reqItem.PurchaseItemId];
 
-                if (reqItem.ReceivedQuantity > 0)
-                {
-                    purchaseItem.ReceivedQuantity += reqItem.ReceivedQuantity;
-                    purchaseItem.Product.Stock += reqItem.ReceivedQuantity;
-                    await _productUnitService.MintAsync(purchaseItem.Product, reqItem.ReceivedQuantity, purchaseItem.Id, cancellationToken);
-                }
-
-                var issues = (reqItem.Issues ?? new()).Where(i => i.Quantity > 0).ToList();
-                if (issues.Count == 0)
-                    continue;
-
-                if (activeReturn == null)
-                {
-                    var returnCount = await _context.PurchaseReturns.CountAsync(cancellationToken);
-                    activeReturn = new Domain.Entities.PurchaseReturn
-                    {
-                        ReturnNumber = Generator.GenerateReturnNumber(returnCount + 1),
-                        PurchaseId = request.PurchaseId,
-                        ReturnDate = receivedDate,
-                        Status = PurchaseReturnStatusEnum.PENDING,
-                        Description = request.ReceivingNote,
-                        CreatedAt = now,
-                        UpdatedAt = now,
-                    };
-                    await _purchaseReturnRepository.AddAsync(activeReturn, cancellationToken);
-                }
-
-                foreach (var group in issues.GroupBy(i => i.Type))
-                {
-                    var qty = group.Sum(i => i.Quantity);
-                    var note = string.Join("؛ ", group.Select(i => i.Note).Where(n => !string.IsNullOrWhiteSpace(n)));
-
-                    var existing = activeReturn.Items.FirstOrDefault(x => x.PurchaseItemId == purchaseItem.Id && x.IssueType == group.Key);
-                    if (existing != null)
-                    {
-                        existing.Quantity += qty;
-                        if (!string.IsNullOrEmpty(note))
-                            existing.Note = string.IsNullOrEmpty(existing.Note) ? note : existing.Note + "؛ " + note;
-                    }
-                    else
-                    {
-                        activeReturn.Items.Add(new Domain.Entities.PurchaseReturnItem
-                        {
-                            PurchaseItemId = purchaseItem.Id,
-                            ProductId = purchaseItem.ProductId,
-                            UnitPrice = purchaseItem.UnitPrice,
-                            IssueType = group.Key,
-                            Quantity = qty,
-                            Note = string.IsNullOrEmpty(note) ? null : note,
-                            CreatedAt = now,
-                        });
-                    }
-
-                    anyIssueAdded = true;
-                }
-            }
-
-            if (anyIssueAdded && activeReturn != null)
-            {
-                activeReturn.ReturnDate = receivedDate;
-                activeReturn.UpdatedAt = now;
+                purchaseItem.ReceivedQuantity += reqItem.ReceivedQuantity;
+                purchaseItem.Product.Stock += reqItem.ReceivedQuantity;
+                await _productUnitService.MintAsync(purchaseItem.Product, reqItem.ReceivedQuantity, purchaseItem.Id, cancellationToken);
             }
 
             foreach (var image in request.Images ?? new())
@@ -207,32 +127,17 @@ namespace Application.Features.Purchase.Commands
                 if (string.IsNullOrWhiteSpace(objectKey))
                     continue;
 
-                var receivingImage = new PurchaseReceivingImage
+                await _context.PurchaseReceivingImages.AddAsync(new PurchaseReceivingImage
                 {
                     PurchaseId = purchase.Id,
                     ObjectKey = objectKey,
                     FileName = image.FileName,
                     Note = image.Note,
                     CreatedAt = now,
-                };
-
-                // Adding through the navigation lets EF fill PurchaseReturnId even when the return
-                // was created a few lines above and has no Id yet.
-                if (activeReturn != null)
-                    activeReturn.ReceivingImages.Add(receivingImage);
-                else
-                    await _context.PurchaseReceivingImages.AddAsync(receivingImage, cancellationToken);
+                }, cancellationToken);
             }
 
-            _purchaseReturnCalculationService.ResolveAwaitingReplacements(purchase, activeReturn, now);
-
-            if (activeReturn != null)
-            {
-                activeReturn.Status = _purchaseReturnCalculationService.RecomputeReturnStatus(activeReturn);
-                activeReturn.UpdatedAt = now;
-            }
-
-            purchase.Status = _purchaseReturnCalculationService.RecomputePurchaseStatus(purchase, activeReturn);
+            purchase.Status = _purchaseReturnCalculationService.RecomputePurchaseStatus(purchase);
             purchase.UpdatedAt = now;
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -241,8 +146,6 @@ namespace Application.Features.Purchase.Commands
             {
                 PurchaseId = purchase.Id,
                 PurchaseStatus = purchase.Status,
-                ReturnId = activeReturn?.Id,
-                ReturnStatus = activeReturn?.Status,
             };
             res.Message = "دریافت با موفقیت ثبت شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();

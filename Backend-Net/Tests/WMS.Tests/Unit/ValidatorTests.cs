@@ -1,3 +1,4 @@
+using Application.Common.Dtos.Returns;
 using Application.Features.Account.Command;
 using Application.Features.Purchase.Commands;
 using Application.Features.PurchaseReturn.Commands;
@@ -73,35 +74,15 @@ namespace WMS.Tests.Unit
         }
 
         [Fact]
-        public void ItemWithNeitherReceivedQuantityNorIssues_IsInvalid()
+        public void ZeroReceivedQuantity_IsInvalid()
         {
             var command = new ReceivePurchaseCommand
             {
                 PurchaseId = 1,
-                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = 1, ReceivedQuantity = 0, Issues = new() } },
+                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = 1, ReceivedQuantity = 0 } },
             };
 
             Assert.False(_sut.Validate(command).IsValid);
-        }
-
-        [Fact]
-        public void ItemWithOnlyIssues_IsValid()
-        {
-            var command = new ReceivePurchaseCommand
-            {
-                PurchaseId = 1,
-                Items = new()
-                {
-                    new ReceivePurchaseItemDto
-                    {
-                        PurchaseItemId = 1,
-                        ReceivedQuantity = 0,
-                        Issues = new() { new ReceivePurchaseIssueDto { Type = PurchaseIssueTypeEnum.SHORTAGE, Quantity = 2 } },
-                    },
-                },
-            };
-
-            Assert.True(_sut.Validate(command).IsValid);
         }
 
         [Fact]
@@ -133,14 +114,18 @@ namespace WMS.Tests.Unit
         }
     }
 
-    public class AddPurchaseReturnDecisionCommandValidatorTests
+    public class AddClaimResolutionCommandValidatorTests_Purchase
     {
-        private readonly AddPurchaseReturnDecisionCommandValidator _sut = new();
+        private readonly Application.Features.PurchaseReturn.Commands.AddClaimResolutionCommandValidator _sut = new();
 
         [Fact]
-        public void ZeroPurchaseReturnItemId_IsInvalid()
+        public void ZeroClaimId_IsInvalid()
         {
-            var command = new AddPurchaseReturnDecisionCommand { PurchaseReturnItemId = 0, Quantity = 1, DecisionType = PurchaseReturnDecisionTypeEnum.REFUND };
+            var command = new Application.Features.PurchaseReturn.Commands.AddClaimResolutionCommand
+            {
+                ClaimId = 0,
+                Composition = new EffectCompositionDto { Quantity = 1, Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.MONEY_OUT, Method = ReturnPaymentMethodEnum.CASH, Amount = 100 } },
+            };
 
             Assert.False(_sut.Validate(command).IsValid);
         }
@@ -148,34 +133,50 @@ namespace WMS.Tests.Unit
         [Fact]
         public void ZeroQuantity_IsInvalid()
         {
-            var command = new AddPurchaseReturnDecisionCommand { PurchaseReturnItemId = 1, Quantity = 0, DecisionType = PurchaseReturnDecisionTypeEnum.REFUND };
-
-            Assert.False(_sut.Validate(command).IsValid);
-        }
-
-        [Fact]
-        public void ZeroRefundAmount_IsInvalid()
-        {
-            var command = new AddPurchaseReturnDecisionCommand
+            var command = new Application.Features.PurchaseReturn.Commands.AddClaimResolutionCommand
             {
-                PurchaseReturnItemId = 1,
-                Quantity = 1,
-                DecisionType = PurchaseReturnDecisionTypeEnum.REFUND,
-                RefundAmount = 0,
+                ClaimId = 1,
+                Composition = new EffectCompositionDto { Quantity = 0, Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.MONEY_OUT, Method = ReturnPaymentMethodEnum.CASH, Amount = 100 } },
             };
 
             Assert.False(_sut.Validate(command).IsValid);
         }
 
         [Fact]
-        public void NullRefundAmount_IsValid()
+        public void NoEffects_IsInvalid()
         {
-            var command = new AddPurchaseReturnDecisionCommand
+            var command = new Application.Features.PurchaseReturn.Commands.AddClaimResolutionCommand
             {
-                PurchaseReturnItemId = 1,
-                Quantity = 1,
-                DecisionType = PurchaseReturnDecisionTypeEnum.REFUND,
-                RefundAmount = null,
+                ClaimId = 1,
+                Composition = new EffectCompositionDto { Quantity = 1 },
+            };
+
+            Assert.False(_sut.Validate(command).IsValid);
+        }
+
+        [Fact]
+        public void MixedMoneyWithNoParts_IsInvalid()
+        {
+            var command = new Application.Features.PurchaseReturn.Commands.AddClaimResolutionCommand
+            {
+                ClaimId = 1,
+                Composition = new EffectCompositionDto
+                {
+                    Quantity = 1,
+                    Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.MONEY_OUT, Method = ReturnPaymentMethodEnum.MIXED, Amount = 100, Parts = new() },
+                },
+            };
+
+            Assert.False(_sut.Validate(command).IsValid);
+        }
+
+        [Fact]
+        public void WellFormedGoodsOnlyRequest_IsValid()
+        {
+            var command = new Application.Features.PurchaseReturn.Commands.AddClaimResolutionCommand
+            {
+                ClaimId = 1,
+                Composition = new EffectCompositionDto { Quantity = 2, GoodsOut = new GoodsEffectDto { Quantity = 2 } },
             };
 
             Assert.True(_sut.Validate(command).IsValid);
@@ -193,15 +194,14 @@ namespace WMS.Tests.Unit
         }
 
         [Fact]
-        public void DuplicateSaleItemAndReasonCombo_IsInvalid()
+        public void OnOrderClaimWithoutOrderLineId_IsInvalid()
         {
             var command = new CreateSaleReturnCommand
             {
                 SaleId = 1,
                 Claims = new()
                 {
-                    new CreateSaleReturnClaimDto { SaleItemId = 1, Reason = SalesReturnReasonEnum.DEFECTIVE, ClaimedQuantity = 1 },
-                    new CreateSaleReturnClaimDto { SaleItemId = 1, Reason = SalesReturnReasonEnum.DEFECTIVE, ClaimedQuantity = 2 },
+                    new CreateReturnClaimDto { Scope = ReturnClaimScopeEnum.ON_ORDER, OrderLineId = null, ProductId = 1, Quantity = 1, Problem = ReturnProblemEnum.DEFECTIVE },
                 },
             };
 
@@ -209,15 +209,29 @@ namespace WMS.Tests.Unit
         }
 
         [Fact]
-        public void SameSaleItemDifferentReason_IsValid()
+        public void OffOrderClaimWithoutOffScopeKind_IsInvalid()
         {
             var command = new CreateSaleReturnCommand
             {
                 SaleId = 1,
                 Claims = new()
                 {
-                    new CreateSaleReturnClaimDto { SaleItemId = 1, Reason = SalesReturnReasonEnum.DEFECTIVE, ClaimedQuantity = 1 },
-                    new CreateSaleReturnClaimDto { SaleItemId = 1, Reason = SalesReturnReasonEnum.WRONG_ITEM, ClaimedQuantity = 2 },
+                    new CreateReturnClaimDto { Scope = ReturnClaimScopeEnum.OFF_ORDER, OffScopeKind = null, ProductId = 1, Quantity = 1, Problem = ReturnProblemEnum.OTHER },
+                },
+            };
+
+            Assert.False(_sut.Validate(command).IsValid);
+        }
+
+        [Fact]
+        public void WellFormedOnOrderClaim_IsValid()
+        {
+            var command = new CreateSaleReturnCommand
+            {
+                SaleId = 1,
+                Claims = new()
+                {
+                    new CreateReturnClaimDto { Scope = ReturnClaimScopeEnum.ON_ORDER, OrderLineId = 1, ProductId = 1, Quantity = 1, Problem = ReturnProblemEnum.DEFECTIVE },
                 },
             };
 
@@ -225,40 +239,41 @@ namespace WMS.Tests.Unit
         }
 
         [Fact]
-        public void ZeroClaimedQuantity_IsInvalid()
+        public void ZeroQuantity_IsInvalid()
         {
             var command = new CreateSaleReturnCommand
             {
                 SaleId = 1,
-                Claims = new() { new CreateSaleReturnClaimDto { SaleItemId = 1, Reason = SalesReturnReasonEnum.DEFECTIVE, ClaimedQuantity = 0 } },
+                Claims = new() { new CreateReturnClaimDto { Scope = ReturnClaimScopeEnum.ON_ORDER, OrderLineId = 1, ProductId = 1, Quantity = 0, Problem = ReturnProblemEnum.DEFECTIVE } },
             };
 
             Assert.False(_sut.Validate(command).IsValid);
         }
     }
 
-    public class AddSaleReturnDecisionCommandValidatorTests
+    public class AddClaimResolutionCommandValidatorTests_Sale
     {
-        private readonly AddSaleReturnDecisionCommandValidator _sut = new();
+        private readonly Application.Features.SaleReturn.Commands.AddClaimResolutionCommandValidator _sut = new();
 
         [Fact]
-        public void ZeroSaleReturnItemId_IsInvalid()
+        public void ZeroClaimId_IsInvalid()
         {
-            var command = new AddSaleReturnDecisionCommand { SaleReturnItemId = 0, Quantity = 1, DecisionType = SaleReturnDecisionTypeEnum.REFUND };
+            var command = new Application.Features.SaleReturn.Commands.AddClaimResolutionCommand
+            {
+                ClaimId = 0,
+                Composition = new EffectCompositionDto { Quantity = 1, Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.MONEY_OUT, Method = ReturnPaymentMethodEnum.STORE_CREDIT, Amount = 100 } },
+            };
 
             Assert.False(_sut.Validate(command).IsValid);
         }
 
         [Fact]
-        public void NegativeRefundAmount_IsInvalid()
+        public void InvalidMoneyKind_IsInvalid()
         {
-            // UInt64 cannot go negative, but zero is the explicit disallowed sentinel value.
-            var command = new AddSaleReturnDecisionCommand
+            var command = new Application.Features.SaleReturn.Commands.AddClaimResolutionCommand
             {
-                SaleReturnItemId = 1,
-                Quantity = 1,
-                DecisionType = SaleReturnDecisionTypeEnum.REFUND,
-                RefundAmount = 0,
+                ClaimId = 1,
+                Composition = new EffectCompositionDto { Quantity = 1, Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.GOODS_IN, Method = ReturnPaymentMethodEnum.CASH, Amount = 100 } },
             };
 
             Assert.False(_sut.Validate(command).IsValid);
@@ -267,11 +282,10 @@ namespace WMS.Tests.Unit
         [Fact]
         public void WellFormedRequest_IsValid()
         {
-            var command = new AddSaleReturnDecisionCommand
+            var command = new Application.Features.SaleReturn.Commands.AddClaimResolutionCommand
             {
-                SaleReturnItemId = 1,
-                Quantity = 2,
-                DecisionType = SaleReturnDecisionTypeEnum.STORE_CREDIT,
+                ClaimId = 1,
+                Composition = new EffectCompositionDto { Quantity = 2, Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.MONEY_OUT, Method = ReturnPaymentMethodEnum.STORE_CREDIT, Amount = 200 } },
             };
 
             Assert.True(_sut.Validate(command).IsValid);
