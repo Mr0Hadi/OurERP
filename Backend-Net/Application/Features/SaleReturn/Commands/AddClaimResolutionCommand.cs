@@ -1,4 +1,5 @@
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
@@ -46,13 +47,15 @@ namespace Application.Features.SaleReturn.Commands
         private readonly IWMSDbContext _context;
         private readonly ISaleReturnQueryService _saleReturnQueryService;
         private readonly ISaleReturnCalculationService _saleReturnCalculationService;
+        private readonly IInventoryCostingService _inventoryCostingService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public AddClaimResolutionCommandHandler(IWMSDbContext context, ISaleReturnQueryService saleReturnQueryService, ISaleReturnCalculationService saleReturnCalculationService, IUnitOfWork unitOfWork)
+        public AddClaimResolutionCommandHandler(IWMSDbContext context, ISaleReturnQueryService saleReturnQueryService, ISaleReturnCalculationService saleReturnCalculationService, IInventoryCostingService inventoryCostingService, IUnitOfWork unitOfWork)
         {
             _context = context;
             _saleReturnQueryService = saleReturnQueryService;
             _saleReturnCalculationService = saleReturnCalculationService;
+            _inventoryCostingService = inventoryCostingService;
             _unitOfWork = unitOfWork;
         }
 
@@ -94,6 +97,12 @@ namespace Application.Features.SaleReturn.Commands
             };
 
             claim.Resolutions.Add(resolution);
+
+            foreach (var moneyOut in resolution.Effects.Where(e => e.Kind == ReturnEffectKindEnum.MONEY_OUT && e.Amount.HasValue))
+            {
+                if (claim.Product != null)
+                    await _inventoryCostingService.RecordSaleReturnRefundAsync(claim.Product, moneyOut.Amount!.Value, claim.Id, now, cancellationToken);
+            }
 
             // A resolution with no pending goods effect (money-only, or nothing at all) settles the
             // claimed quantity immediately; one with a pending goods effect settles it later, once

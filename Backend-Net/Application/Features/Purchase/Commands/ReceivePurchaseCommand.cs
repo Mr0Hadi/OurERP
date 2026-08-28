@@ -1,4 +1,5 @@
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Storage;
@@ -72,14 +73,16 @@ namespace Application.Features.Purchase.Commands
         private readonly IWMSDbContext _context;
         private readonly IPurchaseReturnCalculationService _purchaseReturnCalculationService;
         private readonly IProductUnitService _productUnitService;
+        private readonly IInventoryCostingService _inventoryCostingService;
         private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public ReceivePurchaseCommandHandler(IWMSDbContext context, IPurchaseReturnCalculationService purchaseReturnCalculationService, IProductUnitService productUnitService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
+        public ReceivePurchaseCommandHandler(IWMSDbContext context, IPurchaseReturnCalculationService purchaseReturnCalculationService, IProductUnitService productUnitService, IInventoryCostingService inventoryCostingService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
         {
             _context = context;
             _purchaseReturnCalculationService = purchaseReturnCalculationService;
             _productUnitService = productUnitService;
+            _inventoryCostingService = inventoryCostingService;
             _objectStorageService = objectStorageService;
             _unitOfWork = unitOfWork;
         }
@@ -117,6 +120,7 @@ namespace Application.Features.Purchase.Commands
                 purchaseItem.ReceivedQuantity += reqItem.ReceivedQuantity;
                 purchaseItem.Product.Stock += reqItem.ReceivedQuantity;
                 await _productUnitService.MintAsync(purchaseItem.Product, reqItem.ReceivedQuantity, purchaseItem.Id, cancellationToken);
+                await _inventoryCostingService.RecordPurchaseReceiptAsync(purchaseItem.Product, reqItem.ReceivedQuantity, purchaseItem.UnitPrice, purchaseItem.Discount, purchaseItem.Id, now, cancellationToken);
             }
 
             foreach (var image in request.Images ?? new())

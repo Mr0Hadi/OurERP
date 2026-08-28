@@ -2,6 +2,7 @@ using Application.Common.Contracts.Barcode;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Documents;
 using Application.Common.Contracts.Invoice;
+using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductCode;
 using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.PurchaseReturn;
@@ -95,6 +96,7 @@ namespace WMS.Tests.Support
             PurchaseReturnCalculation = new PurchaseReturnCalculationService();
             ProductCodeService = new ProductCodeService();
             ProductUnitService = new ProductUnitService(context, ProductCodeService);
+            InventoryCostingService = new InventoryCostingService(context);
             BarcodeRenderer = new ZXingBarcodeRenderer();
             QuestPdfDocumentService = new QuestPdfDocumentService(BarcodeRenderer);
             // Invoice rendering shells out to LibreOffice - not exercised by tests that don't call
@@ -123,6 +125,7 @@ namespace WMS.Tests.Support
         public IPurchaseReturnQueryService PurchaseReturnQueryService { get; }
         public IProductCodeService ProductCodeService { get; }
         public IProductUnitService ProductUnitService { get; }
+        public IInventoryCostingService InventoryCostingService { get; }
         public IBarcodeRenderer BarcodeRenderer { get; }
         public QuestPdfDocumentService QuestPdfDocumentService { get; }
         public IPdfDocumentService PdfDocumentService { get; }

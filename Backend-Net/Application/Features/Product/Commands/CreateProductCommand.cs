@@ -1,4 +1,5 @@
-﻿using Application.Common.Contracts.ProductCode;
+﻿using Application.Common.Contracts.InventoryCosting;
+using Application.Common.Contracts.ProductCode;
 using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Storage;
@@ -59,15 +60,17 @@ namespace Application.Features.Product.Commands
         private readonly IMapper _mapper;
         private readonly IProductCodeService _productCodeService;
         private readonly IProductUnitService _productUnitService;
+        private readonly IInventoryCostingService _inventoryCostingService;
         private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public CreateProductCommandHandler(IProductRepository productRepository, IMapper mapper, IProductCodeService productCodeService, IProductUnitService productUnitService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
+        public CreateProductCommandHandler(IProductRepository productRepository, IMapper mapper, IProductCodeService productCodeService, IProductUnitService productUnitService, IInventoryCostingService inventoryCostingService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
         {
             _productRepository = productRepository;
             _mapper = mapper;
             _productCodeService = productCodeService;
             _productUnitService = productUnitService;
+            _inventoryCostingService = inventoryCostingService;
             _objectStorageService = objectStorageService;
             _unitOfWork = unitOfWork;
         }
@@ -99,7 +102,10 @@ namespace Application.Features.Product.Commands
             product.BarCode = _productCodeService.ToPayload(product.Code);
 
             if (product.Stock > 0)
+            {
                 await _productUnitService.MintAsync(product, product.Stock, null, cancellationToken);
+                await _inventoryCostingService.RecordOpeningBalanceAsync(product, product.Stock, product.PurchasePrice, product.CreatedAt, cancellationToken);
+            }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
