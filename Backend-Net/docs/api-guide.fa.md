@@ -25,6 +25,7 @@
 15. [پیوست: مقادیر عددی Enum ها](#15-پیوست-مقادیر-عددی-enum-ها)
 16. [نکات و محدودیت‌های شناخته‌شده](#16-نکات-و-محدودیت‌های-شناخته‌شده)
 17. [بارگذاری تصاویر (File)](#17-بارگذاری-تصاویر-file)
+18. [گزارش‌ها و سود خالص (Report)](#18-گزارش‌ها-و-سود-خالص-report)
 
 ---
 
@@ -613,6 +614,12 @@ Authorization: Bearer {accessToken}
 
 **کاربرد:** این یک API نگهداری/مهاجرت داده است، **نه برای استفاده‌ی روزمره در فرانت**. Body ندارد. فقط یک بار توسط تیم بک‌اند بعد از migration های خاص صدا زده می‌شود تا کدهای محصول قدیمی و شمارش دانه‌ها هماهنگ شوند. اگر نیازی به آن نبود، در فرانت لینکی برایش نگذارید.
 
+### `POST api/Product/EnsureInventoryCostLedger`
+
+**کاربرد:** مانند `EnsureProductCodes`، این هم یک API نگهداری/مهاجرت است و **نباید در فرانت لینکی برایش گذاشت**. Body ندارد. فقط یک بار، بعد از اعمال migration مربوط به «دفتر هزینه موجودی» (بخش ۱۸)، توسط تیم بک‌اند صدا زده می‌شود تا برای محصولاتی که از قبل موجودی داشتند (بدون سابقه‌ی خرید ثبت‌شده در دفتر)، یک رکورد «موجودی اولیه» با قیمت فعلی `purchasePrice` همان محصول ساخته شود. بدون این مرحله، گزارش سود خالص (بخش ۱۸) برای آن محصولات مقدار درستی نخواهد داشت.
+
+**data خروجی:** `{ "productsBackfilled": 12 }`
+
 ---
 
 ## 8. بارکد و برچسب (Barcode)
@@ -747,7 +754,9 @@ Authorization: Bearer {accessToken}
 
 ### `POST api/Purchase/ReceivePurchase`
 
-ثبت **دریافت فیزیکی** کالا از یک خرید در انبار — می‌توان چند بار (چند مرحله) برای یک خرید صدا زد (مثلاً وقتی محموله در چند نوبت می‌رسد).
+ثبت **دریافت فیزیکی** کالای سالم از یک خرید در انبار — می‌توان چند بار (چند مرحله) برای یک خرید صدا زد (مثلاً وقتی محموله در چند نوبت می‌رسد). هر مقداری که اینجا ثبت شود به موجودی محصول اضافه می‌شود.
+
+> **تغییر مهم نسبت به نسخه‌های قدیمی‌تر این سند:** این API دیگر آرایه‌ی `issues[]` ندارد و هیچ مرجوعی‌ای به‌صورت خودکار نمی‌سازد. گزارش مغایرت (کسری، آسیب‌دیده، کالای اشتباه و ...) کاملاً جدا و صراحتاً با `POST api/PurchaseReturn/CreatePurchaseReturn` انجام می‌شود (بخش ۱۰).
 
 **Body:**
 ```json
@@ -756,39 +765,42 @@ Authorization: Bearer {accessToken}
   "receivedDate": "2026-08-05T10:00:00",
   "receivingNote": "محموله اول",
   "items": [
-    {
-      "purchaseItemId": 1000,
-      "receivedQuantity": 15,
-      "issues": [
-        { "type": 0, "quantity": 2, "note": "کسری در محموله" }
-      ]
-    }
-  ]
+    { "purchaseItemId": 1000, "receivedQuantity": 15 }
+  ],
+  "images": []
 }
 ```
 - `purchaseItemId` باید از `items[].id` در `GetPurchaseDetail` یا `GetPurchaseReceivingInfo` گرفته شود.
-- `receivedQuantity`: تعداد سالمی که وارد انبار می‌شود (به موجودی محصول اضافه می‌شود).
-- `issues[]`: مغایرت‌های گزارش‌شده در همین قلم (کسری، آسیب‌دیده، اشتباه، منقضی، اضافی، سایر — بخش ۱۵). هر قلم باید حداقل `receivedQuantity` یا یک مغایرت داشته باشد.
-- اگر مقدار وارد شده (دریافتی + مغایرت‌های غیر «اضافی») از باقیمانده‌ی قابل‌دریافت آن قلم بیشتر باشد، خطای ۴۰۰ می‌دهد؛ **باید همیشه قبل از این فراخوانی از `GetPurchaseReceivingInfo` مقدار باقیمانده را بگیرید و در UI محدودیت بگذارید.**
-- مغایرت‌های گزارش‌شده به‌صورت خودکار یک «مرجوعی خرید» (`PurchaseReturn`) می‌سازند یا به مرجوعی باز موجود همان خرید اضافه می‌شوند — نیازی به فراخوانی جدا برای ساخت مرجوعی نیست.
+- `receivedQuantity`: تعداد سالمی که وارد انبار می‌شود. اگر از باقیمانده‌ی قابل‌دریافت آن قلم (`orderedQuantity - receivedQuantity`، از `GetPurchaseReceivingInfo`) بیشتر باشد، خطای ۴۰۰ می‌دهد؛ **همیشه قبل از این فراخوانی از `GetPurchaseReceivingInfo` مقدار باقیمانده را بگیرید و در UI محدودیت بگذارید.**
+- `images[]` (اختیاری): عکس‌های همان نوبت دریافت (پالت، کارتن آسیب‌دیده، بارنامه) — جزئیات کامل در بخش ۱۷.
 
 **data خروجی:**
 ```json
-{ "purchaseId": 100, "purchaseStatus": 2, "returnId": 55, "returnStatus": 0 }
+{ "purchaseId": 100, "purchaseStatus": 2 }
 ```
-`returnId`/`returnStatus` فقط اگر در این فراخوانی مغایرتی ثبت شده باشد یا مرجوعی باز از قبل وجود داشته باشد مقدار دارند، وگرنه `null`.
 
 ---
 
 ## 10. مرجوعی خرید (PurchaseReturn)
 
-کنترلر: `api/PurchaseReturn`. این بخش مربوط به مغایرت‌هایی است که هنگام `ReceivePurchase` گزارش شده و باید برای‌شان تصمیم (بازپرداخت، جایگزینی، اعتبار یا ابطال) گرفته شود.
+کنترلر: `api/PurchaseReturn`. این بخش با نسخه‌های قدیمی‌تر این سند **کاملاً فرق دارد** — مدل داده از پایه با ساختار جدید **Claim → Resolution → Effect** بازسازی شده (۲۰۲۶/۰۸/۲۷-۲۸). قدیم: `ReceivePurchase` خودش مغایرت را حین دریافت می‌گرفت و «تصمیم» بسته‌ای از یک نوع ثابت بود. جدید:
 
-نکته‌ی کلی مهم: به ازای هر خرید، **حداکثر یک مرجوعی «باز» (وضعیت `PENDING` یا `COORDINATING`)** در آن واحد وجود دارد — همه‌ی مغایرت‌های جدید همان خرید به همین مرجوعی باز اضافه می‌شوند، مگر اینکه قبلی رد/لغو/تکمیل شده باشد.
+```
+PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از دریافت ساخته می‌شود)
+  └─ PurchaseReturnClaim (یک ادعای مغایرت روی یک قلم خرید یا خارج از سند)
+       └─ PurchaseReturnResolution (یک تصمیم روی بخشی از مقدار ادعا)
+            └─ PurchaseReturnEffect (۱ تا ۳ اثر پایه‌ای که آن تصمیم را می‌سازند: GOODS_IN / GOODS_OUT / MONEY_IN / MONEY_OUT)
+```
+
+نکات کلیدی این مدل:
+- **دیگر «نوع تصمیم» بسته (بازپرداخت/جایگزینی/اعتبار/ابطال) وجود ندارد.** هر تصمیم (`Resolution`) از **ترکیبی از حداکثر سه اثر مستقل** ساخته می‌شود: کالا به داخل (`GOODS_IN` — روی مرجوعی خرید یعنی «تامین‌کننده جایگزین می‌فرستد»)، کالا به بیرون (`GOODS_OUT` — یعنی «ما کالای معیوب را برمی‌گردانیم»)، و/یا وجه (`MONEY_IN`/`MONEY_OUT`، جهت نسبت به شرکت ما). مثلاً «بازپرداخت کامل» یعنی فقط یک اثر `MONEY_IN` (تامین‌کننده به ما پول برمی‌گرداند)؛ «جایگزینی» یعنی یک اثر `GOODS_IN`.
+- اثرهای کالایی (`GOODS_IN`/`GOODS_OUT`) با وضعیت `PENDING` ساخته می‌شوند و تا وقتی صراحتاً با `ExecuteGoodsRound` اجرا نشوند، به موجودی دست نمی‌زنند. اثرهای مالی (`MONEY_IN`/`MONEY_OUT`) بلافاصله هنگام ثبت تصمیم `APPLIED` می‌شوند (چیزی برای اجرای بعدی ندارند).
+- به ازای هر خرید می‌تواند **چند مرجوعی همزمان باز** وجود داشته باشد (برخلاف نسخه‌ی خیلی قدیمی این سند) — هر بار `CreatePurchaseReturn` یک رکورد کاملاً جدید می‌سازد.
+- `ReceivePurchase` (بخش ۹) دیگر هیچ ارتباطی با ساخت مرجوعی ندارد؛ مرجوعی همیشه صراحتاً با `CreatePurchaseReturn` ساخته می‌شود.
 
 ### `GET api/PurchaseReturn/GetPurchaseReturnList`
 
-**Query:** `page`, `take`, `search` (شماره مرجوعی/فاکتور/نام تامین‌کننده), `supplierId`, `status` (enum), `reason` (نوع مغایرت غالب), `fromDate`, `toDate`.
+**Query:** `page`, `take`, `search` (شماره مرجوعی/فاکتور/نام تامین‌کننده), `supplierId`, `status` (enum `ReturnStatusEnum`, بخش ۱۵), `problem` (enum `ReturnProblemEnum` — فیلتر روی غالب‌ترین علت ادعا), `fromDate`, `toDate`.
 
 **data.returnList[]:**
 ```json
@@ -802,7 +814,7 @@ Authorization: Bearer {accessToken}
   "supplierName": "شرکت آلفا",
   "createdAt": "2026-08-05T10:00:00",
   "status": 0,
-  "dominantIssueType": 0,
+  "dominantProblem": 8,
   "totalQuantity": 2,
   "totalAmount": 40000000
 }
@@ -810,7 +822,7 @@ Authorization: Bearer {accessToken}
 
 ### `GET api/PurchaseReturn/GetPurchaseReturnDetail?id=55`
 
-**کاربرد:** صفحه‌ی جزئیات مرجوعی، جایی که تک‌تک اقلام مغایرت‌دار و تصمیم‌های ثبت‌شده برای هرکدام دیده می‌شود، و از همین‌جا دکمه‌های «ثبت تصمیم»، «لغو»، «رد»، «بازگشایی»، «حذف» فعال/غیرفعال می‌شوند.
+**کاربرد:** صفحه‌ی جزئیات مرجوعی، جایی که تک‌تک ادعاها و تصمیم‌ها/اثرهای هرکدام دیده می‌شود، و از همین‌جا دکمه‌های «ثبت تصمیم»، «لغو»، «رد»، «بازگشایی»، «حذف» فعال/غیرفعال می‌شوند.
 
 **data:**
 ```json
@@ -823,46 +835,103 @@ Authorization: Bearer {accessToken}
   "supplierId": 1,
   "supplierName": "شرکت آلفا",
   "description": "محموله اول",
+  "previousReturnId": null,
   "createdAt": "2026-08-05T10:00:00",
   "updatedAt": "2026-08-05T10:00:00",
   "status": 0,
   "totalAmount": 40000000,
-  "finalizedRefundAmount": 0,
   "totalQuantity": 2,
-  "allocatedQuantity": 0,
+  "decidedQuantity": 0,
   "canDelete": true,
   "canCancel": true,
   "canReject": true,
   "canReopen": false,
-  "items": [
+  "receivingImages": [],
+  "claims": [
     {
       "id": 700,
       "purchaseReturnId": 55,
+      "scope": 0,
+      "offScopeKind": null,
       "purchaseItemId": 1000,
       "productId": 10,
       "productCode": "20260814-000010",
       "productName": "یخچال دو درب",
       "unit": "عدد",
       "unitPrice": 20000000,
-      "issueType": 0,
       "quantity": 2,
-      "lineTotal": 40000000,
-      "allocatedQuantity": 0,
-      "remainingQuantity": 2,
+      "problem": 3,
       "note": "کسری در محموله",
       "createdAt": "2026-08-05T10:00:00",
-      "decisions": []
+      "decidedQuantity": 0,
+      "remainingQuantity": 2,
+      "resolutions": []
     }
   ]
 }
 ```
-فیلدهای `canDelete`/`canCancel`/`canReject`/`canReopen` مستقیماً می‌گویند کدام دکمه‌ها باید فعال باشند — دیگر لازم نیست فرانت خودش قانون فعال/غیرفعال‌بودن دکمه را حساب کند.
+- فیلدهای `canDelete`/`canCancel`/`canReject`/`canReopen` مستقیماً می‌گویند کدام دکمه‌ها باید فعال باشند.
+- `scope`: `0 = ON_ORDER` (ادعا روی یک قلم خرید مشخص، `purchaseItemId` مقدار دارد) یا `1 = OFF_ORDER` (خارج از سند خرید — مثلاً کالای اضافی یا فهرست‌نشده؛ `purchaseItemId` این‌جا `null` است و `offScopeKind` مشخص می‌کند کدام حالت است، بخش ۱۵).
+- برای ثبت تصمیم روی یک ادعا، از `id` همان ادعا در آرایه‌ی `claims` (اینجا `700`) به‌عنوان `claimId` در `AddClaimResolution` استفاده می‌شود.
+- هر آیتم `resolutions[]` (وقتی تصمیمی ثبت شده باشد) این شکل را دارد:
+```json
+{
+  "id": 950,
+  "purchaseReturnClaimId": 700,
+  "quantity": 2,
+  "note": "بازپرداخت کامل کسری",
+  "createdAt": "2026-08-05T11:00:00",
+  "effects": [
+    {
+      "id": 1200,
+      "purchaseReturnResolutionId": 950,
+      "kind": 3,
+      "quantity": 0,
+      "doneQuantity": 0,
+      "restockedQuantity": null,
+      "productId": null,
+      "amount": 40000000,
+      "method": 0,
+      "reference": null,
+      "note": null,
+      "status": 1,
+      "createdAt": "2026-08-05T11:00:00",
+      "appliedAt": "2026-08-05T11:00:00",
+      "moneyParts": [],
+      "history": []
+    }
+  ]
+}
+```
+یک تصمیم می‌تواند تا سه اثر همزمان داشته باشد (مثلاً هم `GOODS_IN` هم `MONEY_IN` برای «بخشی جایگزین، بخشی بازپرداخت»)؛ `effects[]` هرکدام را جدا نشان می‌دهد. `kind` مقادیر `ReturnEffectKindEnum` (بخش ۱۵) است. اثرهای کالایی (`kind = 0` یا `1`) فیلدهای `quantity`/`doneQuantity`/`restockedQuantity`/`productId` را پر می‌کنند و `amount`/`method` را `null` می‌گذارند؛ اثرهای مالی (`kind = 2` یا `3`) برعکس.
 
-برای ثبت تصمیم روی یک قلم، از `id` همان قلم در آرایه‌ی `items` (اینجا `700`) به‌عنوان `purchaseReturnItemId` استفاده می‌شود، نه `purchaseItemId`.
+### `GET api/PurchaseReturn/GetPurchaseReturnPendingEffects`
+
+**Query:** `purchaseId` (اختیاری — اگر خالی باشد، همه‌ی اثرهای در انتظار کل سیستم برمی‌گردد).
+
+**کاربرد:** جایگزین قدیمی‌ترِ «صف اثرهای در انتظار» (هم برای جایگزینی رسیده از تامین‌کننده، هم کالای معیوبی که باید برایش پس فرستاده شود) — همه‌ی اثرهای کالایی با وضعیت `PENDING` را در کل مرجوعی‌های فعال (یک خرید یا کل سیستم) یک‌جا نشان می‌دهد. قبل از باز کردن فرم `ExecuteGoodsRound` این را صدا بزنید.
+
+**data.pendingEffects[]:**
+```json
+{
+  "effectId": 1200,
+  "purchaseReturnId": 55,
+  "returnNumber": "PR-000055",
+  "claimId": 700,
+  "kind": 0,
+  "productId": 10,
+  "productCode": "20260814-000010",
+  "productName": "یخچال دو درب",
+  "unit": "عدد",
+  "quantity": 2,
+  "doneQuantity": 0,
+  "remainingQuantity": 2
+}
+```
 
 ### `GET api/PurchaseReturn/GetPurchaseReceivingInfo?purchaseId=100`
 
-**کاربرد:** endpoint اصلی صفحه‌ی «دریافت خرید در انبار». قبل از باز کردن فرم `ReceivePurchase`، همیشه این API را صدا بزنید تا بدانید هر قلم چقدر باقیمانده برای دریافت دارد و چه مغایرت‌های حل‌نشده‌ای از قبل ثبت شده.
+**کاربرد:** endpoint اصلی صفحه‌ی «دریافت خرید در انبار». قبل از باز کردن فرم `ReceivePurchase`، همیشه این API را صدا بزنید تا بدانید هر قلم چقدر باقیمانده برای دریافت دارد.
 
 **data:**
 ```json
@@ -873,7 +942,7 @@ Authorization: Bearer {accessToken}
   "status": 1,
   "supplierId": 1,
   "supplierName": "شرکت آلفا",
-  "activePurchaseReturnId": 55,
+  "receivingImages": [],
   "items": [
     {
       "purchaseItemId": 1000,
@@ -884,49 +953,104 @@ Authorization: Bearer {accessToken}
       "unitPrice": 20000000,
       "orderedQuantity": 20,
       "receivedQuantity": 15,
-      "settledQuantity": 0,
-      "openIssueQuantity": 2,
-      "receivableQuantity": 3,
-      "openIssues": [
-        { "purchaseReturnItemId": 700, "type": 0, "quantity": 2, "decidedQuantity": 0, "note": "کسری در محموله" }
+      "stillOwedQuantity": 5
+    }
+  ]
+}
+```
+`stillOwedQuantity` یعنی چه مقدار دیگر از این قلم می‌تواند دریافت شود — این را برای محدود کردن ورودی فرم `ReceivePurchase` استفاده کنید. توجه: این endpoint دیگر چیزی درباره‌ی مغایرت‌ها یا مرجوعی فعال نمی‌گوید (آن مسئولیت کاملاً به `GetPurchaseReturnPendingEffects`/`GetPurchaseReturnList` منتقل شده)؛ `receivingImages` هم اینجا و هم زیر `GetPurchaseReturnDetail` (فقط عکس‌های همان مرجوعی) برمی‌گردد، هرکدام با `url` امضاشده (بخش ۱۷).
+
+### `POST api/PurchaseReturn/CreatePurchaseReturn`
+
+ثبت صریح یک درخواست مرجوعی خرید (مغایرت را گزارش می‌کند)، کاملاً مستقل از فراخوانی `ReceivePurchase`.
+
+**Body:**
+```json
+{
+  "purchaseId": 100,
+  "returnDate": "2026-08-05T10:00:00",
+  "description": "محموله اول",
+  "previousReturnId": null,
+  "claims": [
+    {
+      "scope": 0,
+      "offScopeKind": null,
+      "orderLineId": 1000,
+      "productId": 10,
+      "unitPrice": 20000000,
+      "quantity": 2,
+      "problem": 3,
+      "note": "کسری در محموله"
+    }
+  ]
+}
+```
+- `scope`: `0 = ON_ORDER` (باید `orderLineId` را برابر `purchaseItemId` بگذارید) یا `1 = OFF_ORDER` (باید `offScopeKind` را بگذارید و `orderLineId` را نفرستید/`null` بگذارید — بخش ۱۵).
+- برای `scope = ON_ORDER`، مجموع `quantity` همه‌ی ادعاهای فعال قبلی + این درخواست روی همان قلم خرید نمی‌تواند از مقدار قابل‌مرجوع آن قلم بیشتر شود (سرور این را با در نظر گرفتن همه‌ی مرجوعی‌های فعال آن خرید چک می‌کند).
+- `problem`: enum یکپارچه‌ی `ReturnProblemEnum` (بخش ۱۵) — همان مقادیری که برای علت مرجوعی فروش هم استفاده می‌شود.
+
+**data خروجی:** `{ "returnId": 55, "returnNumber": "PR-000055", "returnStatus": 0 }`
+
+### `POST api/PurchaseReturn/AddClaimResolution`
+
+ثبت یک تصمیم روی بخشی (یا کل) مقدار باقیمانده‌ی یک ادعا، به‌صورت ترکیبی از اثرهای کالا/وجه.
+
+**Body:**
+```json
+{
+  "claimId": 700,
+  "composition": {
+    "quantity": 2,
+    "note": "بازپرداخت کامل کسری",
+    "goodsIn": null,
+    "goodsOut": null,
+    "money": { "kind": 3, "method": 0, "amount": 40000000, "reference": null, "parts": null }
+  }
+}
+```
+- `composition.quantity`: چه مقدار از باقیمانده‌ی ادعا (`remainingQuantity` در `GetPurchaseReturnDetail`) با این تصمیم پوشش داده می‌شود.
+- حداقل یکی از `goodsIn`/`goodsOut`/`money` باید مقدار داشته باشد؛ هر سه هم می‌توانند همزمان پر شوند (مثلاً هم بخشی جایگزین بیاید هم باقی‌مانده بازپرداخت شود).
+- `goodsIn`/`goodsOut`: `{ "quantity": 2, "productId": null }` — `productId` اختیاری است و پیش‌فرض همان محصول ادعا را می‌گیرد (فقط برای جایگزینی با محصول متفاوت لازم است). مجموع مقدار کالا در `goodsIn`+`goodsOut` نمی‌تواند از `composition.quantity` بیشتر شود.
+- `money.kind`: باید `2` (`MONEY_OUT` — پول از شرکت ما خارج می‌شود) یا `3` (`MONEY_IN` — تامین‌کننده به ما پول برمی‌گرداند، معادل «بازپرداخت»؛ رایج‌ترین حالت در مرجوعی خرید) باشد.
+- `money.method`: `ReturnPaymentMethodEnum` (بخش ۱۵). اگر `MIXED` (۵) بود، `parts[]` الزامی می‌شود (هرکدام `{ method, amount, checkNumber?, transferRef? }`) و باید مجموعشان با `amount` برابر باشد.
+- **قید مهم:** تنها ترکیب نامعتبر، اثر `GOODS_OUT` روی ادعای مغایرت «اضافی» (`EXCESS`, بخش ۱۵) نیست — برخلاف مدل قدیمی، دیگر جدولی از «مغایرت → تصمیم مجاز» به‌صورت سخت‌کدشده در سرور نیست؛ اگر ترکیب فیزیکی/منطقی نامعتبر باشد (مثلاً مجموع کالا بیشتر از مقدار تصمیم)، سرور ۴۰۰ می‌دهد.
+
+**data خروجی:** `{ "resolutionId": 950, "returnStatus": 1 }`
+
+### `DELETE api/PurchaseReturn/RemoveClaimResolution?id=950`
+
+حذف یک تصمیم — **فقط تا وقتی هیچ‌کدام از اثرهای کالایی‌اش `doneQuantity > 0` نشده باشند** (یعنی هنوز هیچ `ExecuteGoodsRound` روی آن اجرا نشده). اگر بخشی از کالا جابه‌جا شده باشد، دیگر قابل حذف نیست.
+
+### `POST api/PurchaseReturn/ExecuteGoodsRound`
+
+ثبت یک نوبت فیزیکی جابه‌جایی کالا (تحویل جایگزین از تامین‌کننده، یا فرستادن کالای معیوب به او) برای یک یا چند اثر کالایی از یک مرجوعی — چندمرحله‌ای است (می‌توان بخشی از یک اثر را الان و بقیه را بعداً اجرا کرد).
+
+**Body:**
+```json
+{
+  "purchaseReturnId": 55,
+  "date": "2026-08-10T09:00:00",
+  "partyName": "راننده تامین‌کننده",
+  "partyNationalId": null,
+  "vehiclePlate": null,
+  "note": null,
+  "rounds": [
+    {
+      "effectId": 1200,
+      "quantity": 2,
+      "observations": [
+        { "problem": 8, "quantity": 1, "note": "یکی از جایگزین‌ها هم آسیب‌دیده بود" }
       ]
     }
   ]
 }
 ```
-`receivableQuantity` یعنی چه مقدار دیگر از این قلم می‌تواند به‌عنوان دریافتی سالم یا مغایرت جدید (غیر از «اضافی») ثبت شود — این را برای محدود کردن ورودی فرم `ReceivePurchase` استفاده کنید.
+- `effectId`: از `GetPurchaseReturnPendingEffects` یا `GetPurchaseReturnDetail` (زیر `resolutions[].effects[].id`)، باید یک اثر کالایی (`GOODS_IN`/`GOODS_OUT`) با وضعیت `PENDING` باشد.
+- `quantity`: نباید از باقیمانده‌ی همان اثر (`remainingQuantity`/`quantity - doneQuantity`) بیشتر باشد.
+- `observations[]`: **فقط برای `GOODS_IN`** معنی دارد — یعنی وقتی جایگزین از تامین‌کننده می‌رسد، بخشی از همان محموله هم ممکن است مشکل داشته باشد؛ مجموع `quantity` در `observations` از `quantity` همان نوبت کم می‌شود تا مقدار «سالم» به‌دست آید (فقط مقدار سالم به موجودی اضافه می‌شود).
+- `partyName`/`partyNationalId`/`vehiclePlate`/`note`: اطلاعات تحویل‌گیرنده/تحویل‌دهنده، برای مستندسازی هر نوبت (اختیاری).
 
-### `POST api/PurchaseReturn/AddPurchaseReturnDecision`
-
-ثبت یک تصمیم (بازپرداخت/جایگزینی/اعتبار/ابطال) برای یک قلم مرجوعی مشخص.
-
-**Body:**
-```json
-{
-  "purchaseReturnItemId": 700,
-  "decisionType": 0,
-  "quantity": 2,
-  "refundAmount": 40000000,
-  "note": "بازپرداخت کامل کسری"
-}
-```
-- `purchaseReturnItemId`: همان `id` قلم در `GetPurchaseReturnDetail` یا `openIssues[].purchaseReturnItemId` در `GetPurchaseReceivingInfo`.
-- `refundAmount`: اختیاری؛ فقط برای `decisionType = REFUND` معنی دارد. اگر نفرستید، سرور خودش از `تعداد × قیمت‌واحد` حساب می‌کند.
-- مجموع `quantity` تصمیم‌های ثبت‌شده روی یک قلم نمی‌تواند از `quantity` خود قلم بیشتر شود.
-
-**قید مهم برای UI — انواع تصمیم مجاز به ازای نوع مغایرت** (اگر ترکیب نامعتبر فرستاده شود، سرور ۴۰۰ می‌دهد، پس بهتر است دکمه‌های نامعتبر اصلاً در UI نشان داده نشوند):
-
-| نوع مغایرت (`issueType`) | تصمیم‌های مجاز |
-|---|---|
-| کسری (`SHORTAGE`) / کالای اشتباه (`WRONG_ITEM`) | بازپرداخت، جایگزینی، اعتبار |
-| اضافی (`EXCESS`) | بازپرداخت، اعتبار (جایگزینی معنی ندارد) |
-| آسیب‌دیده / معیوب / منقضی / سایر | بازپرداخت، جایگزینی، اعتبار، ابطال |
-
-**data خروجی:** `{ "returnId": 55, "returnStatus": 1 }`
-
-### `DELETE api/PurchaseReturn/RemovePurchaseReturnDecision?id=900`
-
-حذف یک تصمیم — **فقط وقتی که آن تصمیم هنوز `AWAITING` است** (یعنی از نوع «جایگزینی» و کالای جایگزین هنوز نرسیده). تصمیم‌های قطعی‌شده (بازپرداخت/اعتبار/ابطال، یا جایگزینی‌ای که تحویل شده) دیگر قابل حذف نیستند.
+**data خروجی:** `{ "returnStatus": 1 }`
 
 ### `POST api/PurchaseReturn/CancelPurchaseReturn`
 
@@ -938,11 +1062,11 @@ Authorization: Bearer {accessToken}
 
 ### `POST api/PurchaseReturn/ReopenPurchaseReturn`
 
-**Body:** `{ "id": 55 }` — فقط برای مرجوعی‌های رد‌شده (`canReopen: true`)؛ آن را دوباره به حالت باز/در جریان برمی‌گرداند.
+**Body:** `{ "id": 55 }` — فقط برای مرجوعی‌های رد‌شده (`canReopen: true`)؛ آن را دوباره به وضعیت `OPEN` برمی‌گرداند.
 
 ### `DELETE api/PurchaseReturn/DeletePurchaseReturn?id=55`
 
-حذف کامل (نه نرم) — فقط وقتی هنوز هیچ تصمیمی ثبت نشده باشد.
+حذف کامل (نه نرم) — فقط وقتی هنوز کاملاً دست‌نخورده باشد (`canDelete: true`؛ همان شرط `canCancel`/`canReject`).
 
 ---
 
@@ -1078,22 +1202,26 @@ Authorization: Bearer {accessToken}
 
 ## 12. مرجوعی فروش (SaleReturn)
 
-کنترلر: `api/SaleReturn`. این بخش، برخلاف مرجوعی خرید، از یک مدل **۴ سطحی** استفاده می‌کند:
+کنترلر: `api/SaleReturn`. مانند مرجوعی خرید (بخش ۱۰)، این بخش هم با نسخه‌های قدیمی‌تر این سند **کاملاً فرق دارد** و از همان مدل جدید **Claim → Resolution → Effect** استفاده می‌کند:
 
 ```
 SaleReturn (یک درخواست مرجوعی مشتری)
-  └─ SaleReturnClaim (یک قلم ادعاشده توسط مشتری، با یک دلیل ادعا)
-       └─ SaleReturnItem (نتیجه‌ی بازرسی فیزیکی انبار روی آن ادعا — ممکن است چند نتیجه با مشکلات متفاوت داشته باشد)
-            └─ SaleReturnDecision (تصمیم نهایی روی هر نتیجه‌ی بازرسی)
+  └─ SaleReturnClaim (یک ادعای مشتری روی یک قلم فروش یا خارج از سند، با یک علت — ReturnProblemEnum)
+       └─ SaleReturnResolution (یک تصمیم روی بخشی از مقدار ادعا)
+            └─ SaleReturnEffect (۱ تا ۳ اثر پایه‌ای: GOODS_IN / GOODS_OUT / MONEY_IN / MONEY_OUT)
 ```
 
-نکته‌ی مهم برای UI: **«دلیل ادعای مشتری» (`Reason`) با «مشکل مشاهده‌شده توسط انباردار» (`IssueType`) دو مفهوم کاملاً جدا هستند.** مشتری وقتی درخواست مرجوعی می‌دهد فقط `Reason` را انتخاب می‌کند؛ `IssueType` فقط بعداً توسط انباردار هنگام بازرسی فیزیکی ثبت می‌شود (و می‌تواند `null` باشد یعنی کالا سالم بوده).
-
-برخلاف مرجوعی خرید، برای یک فروش می‌تواند **چند مرجوعی فعال به‌طور همزمان** وجود داشته باشد (هر بار `CreateSaleReturn` یک رکورد کاملاً جدید می‌سازد).
+مفهوم‌شناسی این مدل دقیقاً مثل مرجوعی خرید است (بخش ۱۰ را حتماً قبل از این بخش بخوانید)، با این تفاوت‌ها:
+- روی مرجوعی فروش، `GOODS_IN` یعنی «مشتری کالا را به ما برمی‌گرداند» و `GOODS_OUT` یعنی «ما کالای جایگزین برای مشتری می‌فرستیم» (جهت برعکسِ مرجوعی خرید).
+- `money.kind = MONEY_OUT` روی مرجوعی فروش یعنی «ما به مشتری پول/اعتبار برمی‌گردانیم» (بازپرداخت یا اعتبار فروشگاهی) — رایج‌ترین حالت اینجا، برخلاف مرجوعی خرید که رایج‌ترین حالتش `MONEY_IN` بود.
+- علت ادعا (`problem` روی `SaleReturnClaim`) از همان enum یکپارچه‌ی `ReturnProblemEnum` مرجوعی خرید استفاده می‌کند (بخش ۱۵) — دیگر enum جدای «دلیل مشتری» در برابر «مشکل مشاهده‌شده‌ی انباردار» وجود ندارد؛ مشاهدات فیزیکی هر نوبت (`ExecuteGoodsRound`'s `observations[]`) هم از همین enum استفاده می‌کنند.
+- برخلاف مرجوعی خرید، برای یک فروش می‌تواند **چند مرجوعی فعال به‌طور همزمان** وجود داشته باشد (هر بار `CreateSaleReturn` یک رکورد کاملاً جدید می‌سازد) — این رفتار عوض نشده.
 
 ### `GET api/SaleReturn/GetSaleReturnList`
 
-**Query:** `page`, `take`, `search`, `customerId`, `status` (enum), `reason` (enum دلیل ادعا), `fromDate`, `toDate`.
+**Query:** `page`, `take`, `search`, `saleId`, `customerId`, `status` (enum `ReturnStatusEnum`, بخش ۱۵), `problem` (enum `ReturnProblemEnum`), `fromDate`, `toDate`.
+
+`saleId` برای دیدن **همه‌ی مرجوعی‌های ثبت‌شده روی یک فروش خاص** است — مثلاً در صفحه‌ی جزئیات فروش، یک تب/بخش «مرجوعی‌ها» که با `GET api/SaleReturn/GetSaleReturnList?saleId={id}` پر می‌شود.
 
 **data.returnList[]:**
 ```json
@@ -1107,7 +1235,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
   "customerName": "علی رضایی",
   "createdAt": "2026-08-12T00:00:00",
   "status": 0,
-  "dominantReason": 0,
+  "dominantProblem": 7,
   "totalQuantity": 1,
   "totalAmount": 25000000
 }
@@ -1126,14 +1254,13 @@ SaleReturn (یک درخواست مرجوعی مشتری)
   "customerId": 1,
   "customerName": "علی رضایی",
   "description": null,
+  "previousReturnId": null,
   "createdAt": "2026-08-12T00:00:00",
   "updatedAt": "2026-08-12T00:00:00",
   "status": 0,
   "totalAmount": 25000000,
-  "finalizedRefundAmount": 0,
   "totalQuantity": 1,
-  "inspectedQuantity": 0,
-  "allocatedQuantity": 0,
+  "decidedQuantity": 0,
   "canDelete": true,
   "canCancel": true,
   "canReject": true,
@@ -1142,87 +1269,56 @@ SaleReturn (یک درخواست مرجوعی مشتری)
     {
       "id": 400,
       "saleReturnId": 80,
+      "scope": 0,
+      "offScopeKind": null,
       "saleItemId": 3000,
       "productId": 10,
       "productCode": "20260814-000010",
       "productName": "یخچال دو درب",
       "unit": "عدد",
       "unitPrice": 25000000,
-      "reason": 0,
-      "claimedQuantity": 1,
-      "inspectedQuantity": 0,
-      "uninspectedQuantity": 1,
-      "lineTotal": 25000000,
-      "note": null,
+      "quantity": 1,
+      "problem": 7,
+      "note": "محصول کار نمی‌کند",
       "createdAt": "2026-08-12T00:00:00",
-      "inspectionItems": []
+      "decidedQuantity": 0,
+      "remainingQuantity": 1,
+      "resolutions": []
     }
   ]
 }
 ```
-مانند مرجوعی خرید، `canDelete`/`canCancel`/`canReject`/`canReopen` مستقیماً وضعیت دکمه‌ها را می‌گویند.
+- `canDelete`/`canCancel`/`canReject`/`canReopen` مستقیماً وضعیت دکمه‌ها را می‌گویند — همان قانون مرجوعی خرید: فقط تا وقتی مرجوعی «دست‌نخورده» است (هیچ اثری اجرا/اعمال نشده) این‌ها `true` هستند (`canReopen` برعکس، فقط برای وضعیت `REJECTED`).
+- `scope`/`offScopeKind` دقیقاً مثل مرجوعی خرید (بخش ۱۰): `0 = ON_ORDER` (`saleItemId` مقدار دارد) یا `1 = OFF_ORDER`.
+- شکل `resolutions[].effects[]` دقیقاً مثل مرجوعی خرید است (بخش ۱۰) — همان فیلدها، فقط `kind` برعکس تفسیر می‌شود (بالا توضیح داده شد).
 
-### `GET api/SaleReturn/GetSaleReturnInspectionInfo?saleId=200`
+### `GET api/SaleReturn/GetSaleReturnPendingEffects`
 
-**کاربرد:** endpoint اصلی «صفحه‌ی بازرسی انبار». همه‌ی ادعاهای بازنشده/نیمه‌بازرسی‌شده‌ی مرجوعی‌های فعال یک فروش را یک‌جا نشان می‌دهد — قبل از باز کردن فرم `ConfirmReturnInspection` این را صدا بزنید.
+**Query:** `saleId` (اختیاری — اگر خالی باشد، همه‌ی اثرهای در انتظار کل سیستم برمی‌گردد).
 
-**data:**
+**کاربرد:** جایگزین قدیمی‌ترِ «صفحه‌ی بازرسی انبار» + «صف ارسال جایگزین» با هم — همه‌ی اثرهای کالایی `PENDING` (چه کالایی که هنوز از مشتری برنگشته و باید بازرسی شود، چه جایگزینی که هنوز برای مشتری ارسال نشده) را یک‌جا نشان می‌دهد. قبل از باز کردن فرم `ExecuteGoodsRound` این را صدا بزنید.
+
+**data.pendingEffects[]:**
 ```json
 {
-  "saleId": 200,
-  "invoiceNumber": "SL-2001",
-  "customerId": 1,
-  "customerName": "علی رضایی",
-  "claims": [
-    {
-      "saleReturnId": 80,
-      "returnNumber": "SR-000080",
-      "saleReturnClaimId": 400,
-      "saleItemId": 3000,
-      "productId": 10,
-      "productCode": "20260814-000010",
-      "productName": "یخچال دو درب",
-      "unit": "عدد",
-      "reason": 0,
-      "claimedQuantity": 1,
-      "inspectedQuantity": 0,
-      "uninspectedQuantity": 1,
-      "existingResults": []
-    }
-  ]
-}
-```
-
-### `GET api/SaleReturn/GetReplacementShippingQueue`
-
-**Query:** `saleId` (اختیاری — اگر خالی باشد، صف کل سیستم برمی‌گردد).
-
-**کاربرد:** صفحه‌ی «صف ارسال کالای جایگزین» — همه‌ی تصمیم‌های نوع «جایگزینی» که هنوز کالایشان ارسال نشده، در کل سیستم یا برای یک فروش خاص.
-
-**data[]:**
-```json
-{
-  "saleReturnDecisionId": 950,
+  "effectId": 1200,
   "saleReturnId": 80,
   "returnNumber": "SR-000080",
-  "saleId": 200,
-  "saleInvoiceNumber": "SL-2001",
-  "customerId": 1,
-  "customerName": "علی رضایی",
+  "claimId": 400,
+  "kind": 0,
   "productId": 10,
   "productCode": "20260814-000010",
   "productName": "یخچال دو درب",
   "unit": "عدد",
   "quantity": 1,
-  "shippedQuantity": 0,
-  "remainingQuantity": 1,
-  "createdAt": "2026-08-13T00:00:00"
+  "doneQuantity": 0,
+  "remainingQuantity": 1
 }
 ```
 
 ### `POST api/SaleReturn/CreateSaleReturn`
 
-ثبت درخواست مرجوعی مشتری (قبل از بازرسی فیزیکی).
+ثبت درخواست مرجوعی مشتری (قبل از هرگونه بازرسی فیزیکی).
 
 **Body:**
 ```json
@@ -1230,81 +1326,84 @@ SaleReturn (یک درخواست مرجوعی مشتری)
   "saleId": 200,
   "requestDate": "2026-08-12T00:00:00",
   "description": null,
+  "previousReturnId": null,
   "claims": [
-    { "saleItemId": 3000, "reason": 0, "claimedQuantity": 1, "note": "محصول کار نمی‌کند" }
+    {
+      "scope": 0,
+      "offScopeKind": null,
+      "orderLineId": 3000,
+      "productId": 10,
+      "unitPrice": 25000000,
+      "quantity": 1,
+      "problem": 7,
+      "note": "محصول کار نمی‌کند"
+    }
   ]
 }
 ```
-- فروش باید در وضعیت «ارسال‌شده»، «تحویل‌جزئی» یا «تحویل‌شده» باشد.
-- `claimedQuantity` مجموع همه‌ی مرجوعی‌های فعال قبلی همان قلم فروش را هم در نظر می‌گیرد (یعنی سرور جمع همه‌ی ادعاهای باز روی این قلم را چک می‌کند تا از باقیمانده‌ی همان قلم بیشتر نشود).
+- فروش باید در وضعیت «ارسال‌شده کامل»، «تحویل‌جزئی» یا «تحویل‌شده» باشد.
+- `scope`/`offScopeKind`/`orderLineId` دقیقاً مثل `CreatePurchaseReturn` (بخش ۱۰): برای `scope = ON_ORDER`، `orderLineId` همان `saleItemId` است.
+- مقدار ادعاشده مجموع همه‌ی مرجوعی‌های فعال قبلی همان قلم فروش را هم در نظر می‌گیرد (سرور جمع همه‌ی ادعاهای باز روی این قلم را چک می‌کند تا از باقیمانده‌ی همان قلم بیشتر نشود).
 
 **data خروجی:** `{ "returnId": 80, "returnNumber": "SR-000080", "returnStatus": 0 }`
 
-### `POST api/SaleReturn/ConfirmReturnInspection`
+### `POST api/SaleReturn/AddClaimResolution`
 
-ثبت نتیجه‌ی بازرسی فیزیکی انبار روی یک یا چند ادعا — چندمرحله‌ای (می‌توان بخشی از یک ادعا را الان و بقیه را بعداً بازرسی کرد).
+ثبت یک تصمیم روی بخشی (یا کل) مقدار باقیمانده‌ی یک ادعا، به‌صورت ترکیبی از اثرهای کالا/وجه — بدنه و قوانین دقیقاً مثل `AddClaimResolution` مرجوعی خرید (بخش ۱۰)، فقط `claimId` اینجا به `SaleReturnClaim` اشاره می‌کند.
+
+**Body:**
+```json
+{
+  "claimId": 400,
+  "composition": {
+    "quantity": 1,
+    "note": "بازپرداخت کامل",
+    "goodsIn": { "quantity": 1, "productId": null },
+    "goodsOut": null,
+    "money": null
+  }
+}
+```
+این مثال یعنی «مشتری کالا را برمی‌گرداند» (`goodsIn`، بعداً با `ExecuteGoodsRound` بازرسی و به موجودی اضافه می‌شود). برای بازپرداخت نقدی بلافاصله، به‌جای `goodsIn`، یک `money: { "kind": 2, "method": 0, "amount": 25000000 }` بفرستید (`kind = 2` یعنی `MONEY_OUT` — پول از ما به مشتری). **قید مهم:** تنها ترکیب نامعتبر، اثر `GOODS_OUT` (جایگزین) روی ادعایی است که پس از بازرسی «سالم» تشخیص داده شده — چیزی برای جایگزینی وجود ندارد.
+
+**data خروجی:** `{ "resolutionId": 950, "returnStatus": 1 }`
+
+### `DELETE api/SaleReturn/RemoveClaimResolution?id=950`
+
+حذف یک تصمیم — فقط تا وقتی هیچ‌کدام از اثرهای کالایی‌اش `doneQuantity > 0` نشده باشند (همان قانون مرجوعی خرید).
+
+### `POST api/SaleReturn/ExecuteGoodsRound`
+
+ثبت یک نوبت فیزیکی جابه‌جایی کالا (مشتری کالا را پس می‌آورد، یا ما جایگزین را برایش می‌فرستیم) — بدنه و قوانین دقیقاً مثل مرجوعی خرید (بخش ۱۰)، فقط فیلد شناسه‌ی مرجوعی اینجا `saleReturnId` است.
 
 **Body:**
 ```json
 {
   "saleReturnId": 80,
-  "claims": [
+  "date": "2026-08-13T09:00:00",
+  "partyName": null,
+  "partyNationalId": null,
+  "vehiclePlate": null,
+  "note": null,
+  "rounds": [
     {
-      "saleReturnClaimId": 400,
-      "results": [
-        { "issueType": null, "quantity": 0, "note": null },
-        { "issueType": 0, "quantity": 1, "note": "صفحه‌نمایش شکسته" }
+      "effectId": 1200,
+      "quantity": 1,
+      "observations": [
+        { "problem": 7, "quantity": 1, "note": "صفحه‌نمایش شکسته" }
       ]
     }
   ]
 }
 ```
-- `issueType: null` یعنی همان مقدار سالم بوده و مستقیماً به موجودی فروشگاه برمی‌گردد.
-- `issueType` غیر null یعنی مشکلی مشاهده شده (بخش ۱۵) و آن مقدار هرگز به موجودی قابل‌فروش برنمی‌گردد.
-- مجموع `quantity` نتایج یک ادعا نباید از `uninspectedQuantity` همان ادعا (که در `GetSaleReturnInspectionInfo` یا `GetSaleReturnDetail` گرفته‌اید) بیشتر شود.
+- روی `GOODS_IN` (کالا از مشتری برمی‌گردد): `observations[]` مشخص می‌کند چه بخشی از همان نوبت واقعاً مشکل داشته؛ فقط مقدار «سالم» (`quantity` نوبت منهای مجموع `observations`) به موجودی قابل‌فروش برمی‌گردد. اگر `observations` خالی باشد، یعنی کل نوبت سالم بوده.
+- روی `GOODS_OUT` (ما جایگزین می‌فرستیم): `observations[]` معنی ندارد (نادیده گرفته می‌شود) — کل `quantity` از موجودی کم و برای مشتری ارسال می‌شود.
 
-**data خروجی:** `{ "returnId": 80, "returnStatus": 1 }`
-
-### `POST api/SaleReturn/AddSaleReturnDecision`
-
-ثبت تصمیم نهایی (بازپرداخت/جایگزینی/اعتبار فروشگاهی/بدون جبران) روی یک نتیجه‌ی بازرسی‌شده.
-
-**Body:**
-```json
-{
-  "saleReturnItemId": 600,
-  "decisionType": 0,
-  "quantity": 1,
-  "refundAmount": 25000000,
-  "note": "بازپرداخت کامل"
-}
-```
-- `saleReturnItemId`: از `claims[].inspectionItems[].id` در `GetSaleReturnDetail`.
-- تنها ترکیب نامعتبر: تصمیم «جایگزینی» روی نتیجه‌ی بازرسی سالم (`issueType = null`) — چیزی برای جایگزینی وجود ندارد چون کالا سالم بوده.
-- `refundAmount` اختیاری؛ فقط برای `REFUND` معنی دارد و در صورت نبود، خودکار حساب می‌شود.
-
-**data خروجی:** `{ "returnId": 80, "returnStatus": 2 }`
-
-### `DELETE api/SaleReturn/RemoveSaleReturnDecision?id=950`
-
-فقط برای تصمیم‌های `AWAITING` (یعنی جایگزینی که هنوز ارسال نشده) قابل حذف است.
-
-### `POST api/SaleReturn/ConfirmReplacementShipment`
-
-ثبت ارسال (کامل یا جزئی) کالای جایگزین برای یک تصمیم مشخص از نوع «جایگزینی».
-
-**Body:**
-```json
-{ "saleReturnDecisionId": 950, "shippedQuantity": 1, "note": null }
-```
-- `shippedQuantity` نباید از باقیمانده‌ی همان تصمیم یا از موجودی فعلی محصول بیشتر باشد.
-- چندمرحله‌ای است (می‌توان بخشی امروز و بقیه بعداً ارسال کرد).
-
-**data خروجی:** `{ "returnId": 80, "decisionStatus": 1 }`
+**data خروجی:** `{ "returnStatus": 1 }`
 
 ### `POST api/SaleReturn/CancelSaleReturn`
 
-**Body:** `{ "id": 80 }` — فقط اگر هنوز هیچ بازرسی‌ای روی آن انجام نشده (`canCancel: true`).
+**Body:** `{ "id": 80 }` — فقط اگر مرجوعی هنوز کاملاً دست‌نخورده باشد (`canCancel: true`).
 
 ### `POST api/SaleReturn/RejectSaleReturn`
 
@@ -1312,11 +1411,11 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 ### `POST api/SaleReturn/ReopenSaleReturn`
 
-**Body:** `{ "id": 80 }` — فقط برای مرجوعی‌های رد‌شده.
+**Body:** `{ "id": 80 }` — فقط برای مرجوعی‌های رد‌شده (`canReopen: true`).
 
 ### `DELETE api/SaleReturn/DeleteSaleReturn?id=80`
 
-حذف کامل — فقط پیش از هرگونه بازرسی.
+حذف کامل — فقط پیش از هرگونه اثر اجراشده (`canDelete: true`).
 
 ---
 
@@ -1334,7 +1433,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 ### `GET api/Invoice/GetSaleReturnCreditNotePdf?saleReturnId=80`
 
-برگه‌ی اعتباری مرجوعی — **فقط تصمیم‌های مالی (بازپرداخت یا اعتبار فروشگاهی)** را نشان می‌دهد؛ اگر مرجوعی هیچ تصمیم مالی‌شده‌ای نداشته باشد (مثلاً فقط تصمیم «جایگزینی» یا «بدون جبران» دارد)، این API خطای ۴۰۰ می‌دهد. یعنی دکمه‌ی «چاپ برگه اعتباری» را فقط وقتی نشان دهید که حداقل یک تصمیم `REFUND`/`STORE_CREDIT` روی مرجوعی ثبت شده باشد.
+برگه‌ی اعتباری مرجوعی — **فقط اثرهای مالی از نوع `MONEY_OUT`** (پول یا اعتبار فروشگاهی که به مشتری برگردانده شده، بخش ۱۲) را نشان می‌دهد؛ یک ردیف چاپی به ازای هر اثر، نه هر محصول. اگر مرجوعی هیچ اثر `MONEY_OUT` ثبت‌شده‌ای نداشته باشد (مثلاً فقط `GOODS_IN`/`GOODS_OUT` دارد)، این API خطای ۴۰۰ می‌دهد. یعنی دکمه‌ی «چاپ برگه اعتباری» را فقط وقتی نشان دهید که حداقل یک تصمیم شامل اثر `MONEY_OUT` روی مرجوعی ثبت شده باشد.
 
 ---
 
@@ -1358,23 +1457,23 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 1. `POST api/Purchase/CreatePurchase` → سند خرید ثبت می‌شود (کالا هنوز در انبار نیست).
 2. وقتی محموله می‌رسد: `GET api/PurchaseReturn/GetPurchaseReceivingInfo?purchaseId={id}` → دیدن باقیمانده‌ی قابل‌دریافت هر قلم.
-3. `POST api/Purchase/ReceivePurchase` → ثبت مقدار سالم دریافتی + مغایرت‌های احتمالی هر قلم (ممکن است چند بار برای محموله‌های مختلف تکرار شود).
-4. اگر مغایرتی ثبت شده بود، یک مرجوعی خرید ساخته/به‌روزرسانی شده. آن را با `GET api/PurchaseReturn/GetPurchaseReturnDetail?id={returnId}` باز کنید.
-5. برای هر قلم مغایرت‌دار، `POST api/PurchaseReturn/AddPurchaseReturnDecision` → تصمیم بگیرید (بازپرداخت/جایگزینی/اعتبار/ابطال).
-6. اگر تصمیم «جایگزینی» بود، سرور خودش هنگام دریافت‌های بعدی همان خرید (مرحله ۳) تشخیص می‌دهد که مقدار اضافی همان کالای جایگزین است و تصمیم را خودکار می‌بندد — نیاز به فراخوانی جدا نیست (برخلاف فروش که در ادامه می‌بینیم).
-7. وقتی همه‌ی مقادیر مغایرت تصمیم‌گیری و نهایی شدند، مرجوعی به‌صورت خودکار `RESOLVED` می‌شود.
+3. `POST api/Purchase/ReceivePurchase` → ثبت مقدار سالم دریافتی هر قلم (ممکن است چند بار برای محموله‌های مختلف تکرار شود). این مرحله دیگر مغایرت نمی‌گیرد.
+4. اگر بخشی از محموله مشکل داشت (کسری، آسیب‌دیده، کالای اشتباه و ...)، جدا و صراحتاً `POST api/PurchaseReturn/CreatePurchaseReturn` → ثبت درخواست مرجوعی با یک یا چند ادعا (`claims[]`).
+5. `GET api/PurchaseReturn/GetPurchaseReturnDetail?id={returnId}` → گرفتن `id` هر ادعا (`claims[].id`).
+6. برای هر ادعا، `POST api/PurchaseReturn/AddClaimResolution` → تصمیم بگیرید، به‌صورت ترکیبی از اثر کالا (جایگزینی) و/یا اثر وجه (بازپرداخت).
+7. اگر تصمیم شامل اثر کالایی (`GOODS_IN`/`GOODS_OUT`) بود، آن اثر با وضعیت `PENDING` می‌ماند تا وقتی فیزیکاً اتفاق بیفتد: `GET api/PurchaseReturn/GetPurchaseReturnPendingEffects?purchaseId={id}` → دیدن اثرهای در انتظار، سپس `POST api/PurchaseReturn/ExecuteGoodsRound` → ثبت نوبت فیزیکی (ممکن است چندمرحله‌ای باشد). اثرهای مالی نیازی به این مرحله ندارند (همان لحظه‌ی ثبت تصمیم `APPLIED` می‌شوند).
+8. وقتی همه‌ی ادعاها تصمیم‌گیری و همه‌ی اثرهای کالایی‌شان اجرا شدند، مرجوعی به‌صورت خودکار `SETTLED` می‌شود.
 
 ### گردش‌کار کامل فروش تا مرجوعی مشتری
 
 1. `POST api/Sale/CreateSale` → سند فروش ثبت می‌شود.
 2. `GET api/Sale/GetSaleDetail?id={id}` → گرفتن `items[].id` هر قلم.
 3. `POST api/Sale/ShipSale` → ارسال فیزیکی کالا (ممکن است چندمرحله‌ای).
-4. اگر مشتری بعداً مشکلی گزارش داد: `POST api/SaleReturn/CreateSaleReturn` → ثبت درخواست مرجوعی (قبل از هر بازرسی فیزیکی).
-5. وقتی کالا برگشت به انبار: `GET api/SaleReturn/GetSaleReturnInspectionInfo?saleId={id}` → دیدن ادعاهای در انتظار بازرسی، سپس `POST api/SaleReturn/ConfirmReturnInspection` → ثبت نتیجه‌ی فیزیکی (سالم یا نوع مشکل).
-6. `GET api/SaleReturn/GetSaleReturnDetail?id={returnId}` → گرفتن `saleReturnItemId` هر نتیجه‌ی بازرسی.
-7. `POST api/SaleReturn/AddSaleReturnDecision` → تصمیم نهایی (بازپرداخت/جایگزینی/اعتبار/بدون جبران) روی هر نتیجه.
-8. اگر تصمیم «جایگزینی» بود، **برخلاف خرید**، اینجا باید صراحتاً `POST api/SaleReturn/ConfirmReplacementShipment` صدا زده شود تا کالای جایگزین از انبار خارج و برای مشتری ارسال شود (سرور اینجا چیزی را حدس نمی‌زند، چون خودِ انباردار باید صراحتاً بگوید فرستاد یا نه).
-9. اگر تصمیم بازپرداخت یا اعتبار فروشگاهی بود، می‌توانید `GET api/Invoice/GetSaleReturnCreditNotePdf?saleReturnId={id}` را برای چاپ برگه‌ی اعتباری صدا بزنید.
+4. اگر مشتری بعداً مشکلی گزارش داد: `POST api/SaleReturn/CreateSaleReturn` → ثبت درخواست مرجوعی با یک یا چند ادعا (قبل از هر بازرسی فیزیکی).
+5. `GET api/SaleReturn/GetSaleReturnDetail?id={returnId}` → گرفتن `id` هر ادعا (`claims[].id`).
+6. برای هر ادعا، `POST api/SaleReturn/AddClaimResolution` → تصمیم بگیرید: کالا از مشتری برگردد (`goodsIn`)، جایگزین برایش برود (`goodsOut`)، پول/اعتبار برگردانده شود (`money`)، یا ترکیبی از این‌ها.
+7. اگر تصمیم شامل اثر کالایی بود، آن اثر `PENDING` می‌ماند تا فیزیکاً اتفاق بیفتد: `GET api/SaleReturn/GetSaleReturnPendingEffects?saleId={id}` → دیدن اثرهای در انتظار (چه کالای برگشتی که باید بازرسی شود، چه جایگزینی که باید ارسال شود)، سپس `POST api/SaleReturn/ExecuteGoodsRound` → ثبت نوبت فیزیکی، با مشخص‌کردن `observations[]` روی برگشتی‌ها اگر بخشی از محموله معیوب بود (فقط مقدار سالم به موجودی برمی‌گردد).
+8. اگر تصمیم شامل اثر `MONEY_OUT` بود، می‌توانید `GET api/Invoice/GetSaleReturnCreditNotePdf?saleReturnId={id}` را برای چاپ برگه‌ی اعتباری صدا بزنید (نیازی به منتظر ماندن برای اجرای اثرهای کالایی نیست، چون اثر مالی همان لحظه‌ی ثبت `APPLIED` شده).
 
 ### گردش‌کار اسکن بارکد در انبار
 
@@ -1452,83 +1551,83 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 5 | لغو‌شده (CANCELLED) |
 | 6 | ارسال‌شده کامل (SHIPPED) |
 
-### `PurchaseIssueTypeEnum` (نوع مغایرت در دریافت خرید)
-| مقدار | معنی |
-|---|---|
-| 0 | کسری (SHORTAGE) |
-| 1 | معیوب (DEFECTIVE) |
-| 2 | آسیب‌دیده (DAMAGED) |
-| 3 | کالای اشتباه (WRONG_ITEM) |
-| 4 | منقضی (EXPIRED) |
-| 5 | اضافی (EXCESS) |
-| 6 | سایر (OTHER) |
+### enum های مشترک مرجوعی خرید/فروش (`PurchaseReturn`/`SaleReturn`, بخش‌های ۱۰ و ۱۲)
 
-### `PurchaseReturnStatusEnum` (وضعیت مرجوعی خرید)
+مدل مرجوعی خرید و فروش هر دو از یک ساختار «Claim → Resolution → Effect» و یک مجموعه‌ی enum یکپارچه استفاده می‌کنند (جایگزین کامل مدل قدیمی‌تر با `PurchaseIssueTypeEnum`/`SalesReturnReasonEnum`/`SalesReturnIssueTypeEnum` و انواع تصمیم بسته‌ی جداگانه که در نسخه‌های قبلی این سند بود).
+
+#### `ReturnClaimScopeEnum` (دامنه‌ی ادعا)
 | مقدار | معنی |
 |---|---|
-| 0 | در انتظار تصمیم (PENDING) |
-| 1 | در حال هماهنگی (COORDINATING) |
-| 2 | نهایی‌شده (RESOLVED) |
+| 0 | روی یک قلم سند (ON_ORDER) — `purchaseItemId`/`saleItemId` مقدار دارد |
+| 1 | خارج از سند (OFF_ORDER) — بدون قلم مشخص؛ `offScopeKind` تعیین می‌کند کدام حالت |
+
+#### `ReturnOffScopeKindEnum` (فقط وقتی `scope = OFF_ORDER`)
+| مقدار | معنی |
+|---|---|
+| 0 | اضافی (EXCESS) — با قیمت‌واحد قلم سفارش قیمت‌گذاری می‌شود |
+| 1 | فهرست‌نشده (UNLISTED) — هیچ ارجاعی به قلم سند ندارد |
+
+#### `ReturnProblemEnum` (علت ادعا/مشاهده — هم برای مرجوعی خرید و هم فروش، هم برای علت ادعای اولیه و هم مشاهده‌ی فیزیکی هر نوبت اجرا)
+| مقدار | معنی |
+|---|---|
+| 0 | کالای اشتباه ارسالی (WRONG_ITEM_SHIPPED) |
+| 1 | کالای اشتباه در فاکتور (WRONG_ITEM_INVOICED) |
+| 2 | کالای اشتباه در سفارش (WRONG_ITEM_ORDERED) |
+| 3 | کسری ارسال (SHORT_SHIPPED) |
+| 4 | اضافه ارسال (OVER_SHIPPED) |
+| 5 | مغایرت تعداد در فاکتور (WRONG_QTY_INVOICED) |
+| 6 | مغایرت تعداد در سفارش (WRONG_QTY_ORDERED) |
+| 7 | معیوب (DEFECTIVE) |
+| 8 | آسیب‌دیده در حمل (DAMAGED_IN_TRANSIT) |
+| 9 | مشکل کیفیت (QUALITY_ISSUE) |
+| 10 | منقضی (EXPIRED) |
+| 11 | انصراف مشتری (CHANGED_MIND) |
+| 12 | کالای فهرست‌نشده (UNLISTED_ITEM) |
+| 13 | سایر (OTHER) |
+
+#### `ReturnStatusEnum` (وضعیت کلی یک مرجوعی — خرید یا فروش)
+| مقدار | معنی |
+|---|---|
+| 0 | باز (OPEN) — هنوز هیچ اثری اعمال نشده |
+| 1 | در جریان (IN_PROGRESS) — حداقل یک اثر اعمال شده اما همه تمام نشده |
+| 2 | نهایی‌شده (SETTLED) |
 | 3 | رد‌شده (REJECTED) |
 | 4 | لغو‌شده (CANCELLED) |
 
-### `PurchaseReturnDecisionTypeEnum` (نوع تصمیم مرجوعی خرید)
-| مقدار | معنی |
-|---|---|
-| 0 | بازپرداخت (REFUND) |
-| 1 | جایگزینی (REPLACEMENT) |
-| 2 | اعتبار (CREDIT) |
-| 3 | ابطال/بدون جبران (WRITE_OFF) |
+#### `ReturnEffectKindEnum` (نوع یک اثر پایه‌ای درون یک تصمیم)
+| مقدار | معنی روی مرجوعی خرید | معنی روی مرجوعی فروش |
+|---|---|---|
+| 0 | کالا وارد می‌شود (GOODS_IN) — تامین‌کننده جایگزین می‌فرستد | کالا وارد می‌شود (GOODS_IN) — مشتری کالا را برمی‌گرداند |
+| 1 | کالا خارج می‌شود (GOODS_OUT) — ما کالای معیوب را برمی‌گردانیم | کالا خارج می‌شود (GOODS_OUT) — ما جایگزین برای مشتری می‌فرستیم |
+| 2 | وجه خارج می‌شود از ما (MONEY_OUT) | وجه خارج می‌شود از ما (MONEY_OUT) — بازپرداخت/اعتبار به مشتری |
+| 3 | وجه وارد می‌شود به ما (MONEY_IN) — بازپرداخت از تامین‌کننده | وجه وارد می‌شود به ما (MONEY_IN) |
 
-### `PurchaseReturnDecisionStatusEnum` (وضعیت یک تصمیم مرجوعی خرید)
+#### `ReturnEffectStatusEnum` (وضعیت اجرای یک اثر)
 | مقدار | معنی |
 |---|---|
-| 0 | در انتظار (AWAITING) — فقط برای جایگزینی که هنوز نرسیده |
-| 1 | نهایی (RESOLVED) |
+| 0 | در انتظار (PENDING) — فقط اثرهای کالایی، تا اجرا با `ExecuteGoodsRound` |
+| 1 | اعمال‌شده (APPLIED) — اثرهای مالی همیشه بلافاصله این‌جا هستند |
+| 2 | باطل (VOID) — فعلاً هیچ‌جا تولید نمی‌شود |
 
-### `SalesReturnReasonEnum` (دلیل ادعای مشتری هنگام درخواست مرجوعی)
+#### `ReturnPaymentMethodEnum` (روش پرداخت یک اثر مالی)
 | مقدار | معنی |
 |---|---|
-| 0 | معیوب (DEFECTIVE) |
-| 1 | کالای اشتباه (WRONG_ITEM) |
-| 2 | آسیب در حمل (DAMAGED_IN_TRANSIT) |
-| 3 | انصراف مشتری (CHANGED_MIND) |
-| 4 | مشکل کیفیت (QUALITY_ISSUE) |
-| 5 | سفارش اضافی (EXCESS_ORDER) |
-| 6 | سایر (OTHER) |
+| 0 | نقدی (CASH) |
+| 1 | چک (CHECK) |
+| 2 | انتقال بانکی (TRANSFER) |
+| 3 | نسیه/در حساب (ON_ACCOUNT) |
+| 4 | اعتبار فروشگاهی (STORE_CREDIT) |
+| 5 | ترکیبی (MIXED) — نیازمند `parts[]` |
 
-### `SalesReturnIssueTypeEnum` (مشکل مشاهده‌شده توسط انباردار هنگام بازرسی — nullable)
+### `ReportPeriodTypeEnum` (بازه‌ی زمانی گزارش، بخش ۱۸)
 | مقدار | معنی |
 |---|---|
-| `null` | سالم بود (به موجودی برمی‌گردد) |
-| 0 | معیوب (DEFECTIVE) |
-| 1 | کالای اشتباه (WRONG_ITEM) |
-| 2 | آسیب در حمل (DAMAGED_IN_TRANSIT) |
-| 3 | مشکل کیفیت (QUALITY_ISSUE) |
-| 4 | سایر (OTHER) |
-
-### `SaleReturnStatusEnum` (وضعیت مرجوعی فروش)
-| مقدار | معنی |
-|---|---|
-| 0 | در انتظار بازرسی (PENDING_INSPECTION) |
-| 1 | در حال هماهنگی (COORDINATING) |
-| 2 | نهایی‌شده (RESOLVED) |
-| 3 | رد‌شده (REJECTED) |
-| 4 | لغو‌شده (CANCELLED) |
-
-### `SaleReturnDecisionTypeEnum` (نوع تصمیم مرجوعی فروش)
-| مقدار | معنی |
-|---|---|
-| 0 | بازپرداخت (REFUND) |
-| 1 | جایگزینی (REPLACEMENT) |
-| 2 | اعتبار فروشگاهی (STORE_CREDIT) |
-| 3 | بدون جبران (NO_COMPENSATION) |
-
-### `SaleReturnDecisionStatusEnum` (وضعیت یک تصمیم مرجوعی فروش)
-| مقدار | معنی |
-|---|---|
-| 0 | در انتظار ارسال (AWAITING) — فقط برای جایگزینی |
-| 1 | نهایی (RESOLVED) |
+| 0 | روزانه (Daily) |
+| 1 | هفتگی (Weekly) — شنبه شروع هفته |
+| 2 | ماهانه (Monthly) — بر اساس تقویم شمسی |
+| 3 | فصلی (Quarterly) — بر اساس تقویم شمسی |
+| 4 | شش‌ماهه (SemiAnnual) — بر اساس تقویم شمسی |
+| 5 | سالانه (Annual) — بر اساس تقویم شمسی |
 
 ### `UserRolesEnum`
 | مقدار | معنی |
@@ -1547,9 +1646,10 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 - **لیست نقش‌ها (Role) وجود ندارد:** فرم‌های `CreateUser`/`UpdateUser` به `roleId` نیاز دارند اما هیچ endpoint ای برای گرفتن لیست نقش‌های موجود در دیتابیس ارائه نشده. تا اضافه شدن چنین API، مقادیر معتبر `roleId` را باید مستقیماً از تیم بک‌اند بگیرید یا موقتاً هاردکد کنید.
 - **ارسال کد OTP غیرفعال است:** فرآیند بازیابی رمز عبور (`ForgetPassword`) در حال حاضر کد تایید نمی‌خواهد؛ endpoint ارسال OTP در کد کامنت شده و در هیچ کنترلری expose نشده.
 - **`UpdatePurchase` اقلام را ویرایش نمی‌کند** ولی **`UpdateSale` اقلام را ویرایش می‌کند** (بخش‌های ۹ و ۱۱) — این عدم‌تقارن عمدی است، به آن دقت کنید تا در فرم‌های ویرایش دو صفحه‌ی متفاوت طراحی کنید.
-- **جایگزینی در مرجوعی خرید خودکار، در مرجوعی فروش دستی است:** وقتی کالای جایگزین از تامین‌کننده می‌رسد، سرور خودش تشخیص می‌دهد (نیازی به فراخوانی جدا نیست)؛ اما وقتی باید کالای جایگزین برای مشتری ارسال شود، باید صراحتاً `ConfirmReplacementShipment` صدا زده شود.
+- **مدل مرجوعی خرید/فروش یکسان و صریح است:** هیچ‌کدام دیگر چیزی را حدس نمی‌زنند — هر جابه‌جایی فیزیکی کالا (چه جایگزین از تامین‌کننده، چه جایگزین به مشتری، چه برگشت کالای معیوب) با یک فراخوانی صریح `POST api/{PurchaseReturn|SaleReturn}/ExecuteGoodsRound` ثبت می‌شود (بخش‌های ۱۰ و ۱۲).
 - **Enum ها همیشه عدد هستند** به‌جز `SupplierListDto.status` که رشته است — این تنها استثنا در کل سیستم است.
-- **`EnsureProductCodes` یک ابزار نگهداری/مهاجرت است**، نه بخشی از گردش‌کار عادی محصول — در UI روزمره لینکی برایش نگذارید.
+- **`EnsureProductCodes` و `EnsureInventoryCostLedger` ابزارهای نگهداری/مهاجرت هستند**، نه بخشی از گردش‌کار عادی محصول — در UI روزمره لینکی برایشان نگذارید.
+- **سود خالص (`netProfit` در بخش ۱۸) بر اساس میانگین موزون هزینه محاسبه می‌شود، نه `Product.PurchasePrice`.** یعنی اگر یک محصول در دو خرید مختلف با قیمت‌های متفاوت خریداری شده باشد، هزینه‌ی هر فروش بر اساس میانگین موزونِ قیمت‌های خرید **تا همان لحظه‌ی فروش** حساب می‌شود؛ فیلد `purchasePrice` روی خود محصول فقط برای موجودی اولیه (بدون سابقه‌ی خرید ثبت‌شده) استفاده می‌شود.
 - **`GetBarcodeSvg`، `GetProductLabelsPdf` و هر سه API زیر `Invoice`** خروجی JSON استاندارد ندارند و باید به‌صورت فایل (blob) گرفته شوند.
 
 ---
@@ -1632,3 +1732,67 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 - اگر مرجوعی ساخته/تکمیل شده باشد، به آن هم لینک می‌شوند و در `GetPurchaseReturnDetail` زیر `receivingImages` دیده می‌شوند.
 - اگر بعداً آن مرجوعی حذف شود، **تصاویر باقی می‌مانند** (لینک مرجوعی‌شان `null` می‌شود) — چون رسید کالا واقعاً اتفاق افتاده است.
 - همه‌ی تصاویر یک خرید (همه‌ی نوبت‌ها) در `GetPurchaseReceivingInfo` زیر `receivingImages` برمی‌گردند، هرکدام با `url` امضاشده.
+
+---
+
+## 18. گزارش‌ها و سود خالص (Report)
+
+کنترلر: `api/Report`. برخلاف بقیه‌ی API های لیست، این دو endpoint صفحه‌بندی (`page`/`take`) ندارند — به‌جای آن، خروجی را در بازه‌های زمانی («سطر»های گزارش) گروه‌بندی می‌کنند و کل بازه را یک‌جا برمی‌گردانند.
+
+### مفهوم کلی
+
+- به‌جای شش endpoint جدا برای روزانه/هفتگی/ماهانه/فصلی/شش‌ماهه/سالانه، **یک** endpoint برای فروش و **یک** endpoint برای خرید وجود دارد که نوع بازه را با پارامتر `periodType` می‌گیرند.
+- بازه‌بندی ماهانه/فصلی/شش‌ماهه/سالانه **بر اساس تقویم شمسی** انجام می‌شود (مثلاً «ماه» یعنی فروردین تا اسفند، نه میلادی) — چون این تقویمی است که در بقیه‌ی سیستم (مثلاً کد محصول) هم استفاده شده. هفتگی از **شنبه** شروع می‌شود. `PeriodStart`/`PeriodEnd` در پاسخ همچنان `DateTime` میلادی استاندارد هستند (فقط مرز بازه‌ها بر اساس تقویم شمسی محاسبه شده‌اند)؛ اگر لازم بود تاریخ شمسی نمایش داده شود، خودتان آن‌ها را در فرانت تبدیل کنید.
+- اگر `fromDate`/`toDate` نفرستید، پیش‌فرض **۱۲ ماه اخیر** در نظر گرفته می‌شود.
+- `salesCount`/`totalInvoiceAmount` (در گزارش فروش) و `purchasesCount`/`totalInvoiceAmount` (در گزارش خرید) بر اساس **تاریخ فاکتور** (`invoiceDate`) گروه‌بندی می‌شوند. اما `revenue`/`costOfGoodsSold`/`netProfit` (فروش) و `totalReceivedValue` (خرید) بر اساس زمانی که کالا واقعاً **ارسال/دریافت فیزیکی** شده گروه‌بندی می‌شوند (همان لحظه‌ای که `ShipSale`/`ReceivePurchase` صدا زده شده) — چون هزینه‌ی واقعی کالا فقط در همان لحظه مشخص می‌شود. یعنی اگر فاکتور یک ماه و ارسالش ماه بعد باشد، این دو گروه از اعداد در دو سطر مختلف گزارش ظاهر می‌شوند؛ این یک تفاوت عمدی است، نه باگ.
+- سود خالص فقط سمت فروش معنی دارد؛ گزارش خرید فیلد سود ندارد.
+
+### `GET api/Report/GetSaleReport`
+
+**Query:**
+- `periodType` (اختیاری، پیش‌فرض ۲ = ماهانه — enum `ReportPeriodTypeEnum`، بخش ۱۵)
+- `fromDate`, `toDate` (اختیاری، پیش‌فرض ۱۲ ماه اخیر)
+
+**کاربرد:** نمودار/جدول فروش و سود خالص در داشبورد یا صفحه‌ی گزارش‌گیری.
+
+**data:**
+```json
+{
+  "periods": [
+    {
+      "periodStart": "2026-06-22T00:00:00",
+      "periodEnd": "2026-07-22T00:00:00",
+      "salesCount": 14,
+      "totalInvoiceAmount": 620000000,
+      "revenue": 540000000,
+      "costOfGoodsSold": 410000000,
+      "netProfit": 130000000
+    }
+  ]
+}
+```
+- `revenue`: مجموع مبلغ خالص فروش‌های ارسال‌شده در این بازه (پس از کسر تخفیف قلمی) + مبلغ بازپرداخت‌های ثبت‌شده روی مرجوعی‌ها به‌صورت منفی.
+- `costOfGoodsSold`: بهای تمام‌شده‌ی کالای فروخته‌شده در همین بازه، محاسبه‌شده با میانگین موزون هزینه در لحظه‌ی ارسال (نه قیمت خرید فعلی محصول).
+- `netProfit`: `revenue - costOfGoodsSold` (شامل اثر کالای جایگزین رایگان و بازپرداخت‌های مرجوعی هم می‌شود).
+
+### `GET api/Report/GetPurchaseReport`
+
+**Query:** همان `periodType`, `fromDate`, `toDate` بالا.
+
+**کاربرد:** نمودار/جدول خرید در داشبورد یا صفحه‌ی گزارش‌گیری.
+
+**data:**
+```json
+{
+  "periods": [
+    {
+      "periodStart": "2026-06-22T00:00:00",
+      "periodEnd": "2026-07-22T00:00:00",
+      "purchasesCount": 6,
+      "totalInvoiceAmount": 700000000,
+      "totalReceivedValue": 650000000
+    }
+  ]
+}
+```
+`totalReceivedValue`: ارزش واقعیِ کالای وارد‌شده به انبار در همین بازه (قیمت خرید هر قلم پس از تخفیف، ضرب در تعداد دریافتی) — ممکن است با `totalInvoiceAmount` یکی نباشد چون یکی بر اساس تاریخ فاکتور و دیگری بر اساس تاریخ دریافت فیزیکی است.

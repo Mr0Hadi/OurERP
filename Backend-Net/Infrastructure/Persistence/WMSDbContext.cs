@@ -40,6 +40,7 @@ namespace Infrastructure.Persistence
         public DbSet<ProductUnit> ProductUnits => Set<ProductUnit>();
         public DbSet<PurchaseReceivingImage> PurchaseReceivingImages => Set<PurchaseReceivingImage>();
         public DbSet<PosTerminal> PosTerminals => Set<PosTerminal>();
+        public DbSet<InventoryCostLedgerEntry> InventoryCostLedgerEntries => Set<InventoryCostLedgerEntry>();
 
         public async Task<int> ExecuteSqlRawAsync(string sql, CancellationToken cancellationToken = default)
         {
@@ -285,6 +286,41 @@ namespace Infrastructure.Persistence
             // (see 20260813xxxxxx_product-code-unique-index) after EnsureProductCodes
             // has had a chance to backfill/de-duplicate existing rows - adding it here
             // would fail the migration against a DB with pre-existing blank/duplicate codes.
+
+            // Money elsewhere in this project is UInt64/decimal(20,0), but a weighted average
+            // needs fractional precision to avoid compounding rounding drift across many
+            // chronological entries - a deliberate deviation for this one table.
+            modelBuilder.Entity<InventoryCostLedgerEntry>()
+                .Property(x => x.UnitCost)
+                .HasPrecision(18, 4);
+
+            modelBuilder.Entity<InventoryCostLedgerEntry>()
+                .Property(x => x.InventoryValueDelta)
+                .HasPrecision(18, 4);
+
+            modelBuilder.Entity<InventoryCostLedgerEntry>()
+                .Property(x => x.RunningInventoryValue)
+                .HasPrecision(18, 4);
+
+            modelBuilder.Entity<InventoryCostLedgerEntry>()
+                .Property(x => x.RunningAverageCost)
+                .HasPrecision(18, 4);
+
+            modelBuilder.Entity<InventoryCostLedgerEntry>()
+                .Property(x => x.RevenueDelta)
+                .HasPrecision(18, 4);
+
+            modelBuilder.Entity<InventoryCostLedgerEntry>()
+                .HasOne(x => x.Product)
+                .WithMany()
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<InventoryCostLedgerEntry>()
+                .HasIndex(x => new { x.ProductId, x.Id });
+
+            modelBuilder.Entity<InventoryCostLedgerEntry>()
+                .HasIndex(x => new { x.ReferenceType, x.ReferenceId });
         }
     }
 }

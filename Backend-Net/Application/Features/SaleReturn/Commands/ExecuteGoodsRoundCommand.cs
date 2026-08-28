@@ -1,4 +1,5 @@
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Contracts.UnitOfWork;
@@ -64,14 +65,16 @@ namespace Application.Features.SaleReturn.Commands
         private readonly ISaleReturnQueryService _saleReturnQueryService;
         private readonly ISaleReturnCalculationService _saleReturnCalculationService;
         private readonly IProductUnitService _productUnitService;
+        private readonly IInventoryCostingService _inventoryCostingService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public ExecuteGoodsRoundCommandHandler(IWMSDbContext context, ISaleReturnQueryService saleReturnQueryService, ISaleReturnCalculationService saleReturnCalculationService, IProductUnitService productUnitService, IUnitOfWork unitOfWork)
+        public ExecuteGoodsRoundCommandHandler(IWMSDbContext context, ISaleReturnQueryService saleReturnQueryService, ISaleReturnCalculationService saleReturnCalculationService, IProductUnitService productUnitService, IInventoryCostingService inventoryCostingService, IUnitOfWork unitOfWork)
         {
             _context = context;
             _saleReturnQueryService = saleReturnQueryService;
             _saleReturnCalculationService = saleReturnCalculationService;
             _productUnitService = productUnitService;
+            _inventoryCostingService = inventoryCostingService;
             _unitOfWork = unitOfWork;
         }
 
@@ -145,6 +148,9 @@ namespace Application.Features.SaleReturn.Commands
 
                     if (claim.SaleItemId.HasValue)
                         await _productUnitService.RestoreAsync(claim.SaleItemId.Value, restocked, scrapped, cancellationToken);
+
+                    if (restocked > 0)
+                        await _inventoryCostingService.RecordSaleReturnRestockAsync(product, restocked, claim.SaleItemId, now, cancellationToken);
                 }
                 else // GOODS_OUT: a replacement physically shipped out to the customer.
                 {
@@ -155,6 +161,8 @@ namespace Application.Features.SaleReturn.Commands
 
                     if (claim.SaleItemId.HasValue)
                         await _productUnitService.ConsumeAsync(product, line.Quantity, claim.SaleItemId.Value, null, cancellationToken);
+
+                    await _inventoryCostingService.RecordReplacementShippedToCustomerAsync(product, line.Quantity, claim.SaleItemId, now, cancellationToken);
                 }
 
                 if (effect.DoneQuantity >= effect.Quantity)

@@ -32,6 +32,7 @@ namespace Application.Common.Contracts.Context
         DbSet<Domain.Entities.ProductUnit> ProductUnits { get; }
         DbSet<PurchaseReceivingImage> PurchaseReceivingImages { get; }
         DbSet<PosTerminal> PosTerminals { get; }
+        DbSet<InventoryCostLedgerEntry> InventoryCostLedgerEntries { get; }
 
         DbSet<T> Set<T>() where T : class;
 

@@ -9,7 +9,7 @@ namespace WMS.Tests.Integration
     public class ReceivePurchaseCommandTests
     {
         private static ReceivePurchaseCommandHandler MakeHandler(TestScope scope) =>
-            new(scope.Db, scope.PurchaseReturnCalculation, scope.ProductUnitService, FakeObjectStorage.Instance, scope.UnitOfWork);
+            new(scope.Db, scope.PurchaseReturnCalculation, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork);
 
         [Fact]
         public async Task Handle_ReceivingGoodQuantity_IncreasesStockAndReceivedQuantity()

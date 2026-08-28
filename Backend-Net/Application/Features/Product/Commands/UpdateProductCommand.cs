@@ -1,4 +1,5 @@
-﻿using Application.Common.Contracts.ProductUnit;
+﻿using Application.Common.Contracts.InventoryCosting;
+using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
@@ -56,12 +57,14 @@ namespace Application.Features.Product.Commands
     {
         private readonly IProductRepository _productRepository;
         private readonly IProductUnitService _productUnitService;
+        private readonly IInventoryCostingService _inventoryCostingService;
         private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
-        public UpdateProductCommandHandler(IProductRepository productRepository, IProductUnitService productUnitService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
+        public UpdateProductCommandHandler(IProductRepository productRepository, IProductUnitService productUnitService, IInventoryCostingService inventoryCostingService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
         {
             _productRepository = productRepository;
             _productUnitService = productUnitService;
+            _inventoryCostingService = inventoryCostingService;
             _objectStorageService = objectStorageService;
             _unitOfWork = unitOfWork;
         }
@@ -86,7 +89,15 @@ namespace Application.Features.Product.Commands
             // Stock is reconciled against ProductUnit rows rather than overwritten blind -
             // see docs/product-code-barcode-invoice-design.fa.md 1.6, option B.
             if (request.Stock != product.Stock)
+            {
+                var diff = request.Stock - product.Stock;
                 await _productUnitService.ReconcileStockAsync(product, request.Stock, cancellationToken);
+
+                if (diff > 0)
+                    await _inventoryCostingService.RecordManualAdjustmentInAsync(product, diff, request.PurchasePrice, product.UpdatedAt, cancellationToken);
+                else
+                    await _inventoryCostingService.RecordManualAdjustmentOutAsync(product, -diff, product.UpdatedAt, cancellationToken);
+            }
             product.Stock = request.Stock;
 
             _productRepository.Update(product);

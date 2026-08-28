@@ -18,7 +18,7 @@ namespace WMS.Tests.Integration
             scope.Context.ProductCategories.Add(category);
             scope.Context.SaveChanges();
 
-            var handler = new CreateProductCommandHandler(scope.ProductRepository, TestMapper.Instance, scope.ProductCodeService, scope.ProductUnitService, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var handler = new CreateProductCommandHandler(scope.ProductRepository, TestMapper.Instance, scope.ProductCodeService, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork);
             await handler.Handle(new CreateProductCommand
             {
                 Name = "کالای تست",
@@ -47,7 +47,7 @@ namespace WMS.Tests.Integration
             scope.Context.ProductCategories.Add(category);
             scope.Context.SaveChanges();
 
-            var handler = new CreateProductCommandHandler(scope.ProductRepository, TestMapper.Instance, scope.ProductCodeService, scope.ProductUnitService, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var handler = new CreateProductCommandHandler(scope.ProductRepository, TestMapper.Instance, scope.ProductCodeService, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork);
             await handler.Handle(new CreateProductCommand
             {
                 Name = "کالای تست",
@@ -81,7 +81,7 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
 
-            var handler = new UpdateProductCommandHandler(scope.ProductRepository, scope.ProductUnitService, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var handler = new UpdateProductCommandHandler(scope.ProductRepository, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork);
 
             // UpdateProductCommandHandler throws ValidationCustomException (not NotFound) on a
             // missing row - inconsistent with every other feature's Update handler, but this is
@@ -108,7 +108,7 @@ namespace WMS.Tests.Integration
             scope.Context.Products.Add(product);
             scope.Context.SaveChanges();
 
-            var handler = new UpdateProductCommandHandler(scope.ProductRepository, scope.ProductUnitService, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var handler = new UpdateProductCommandHandler(scope.ProductRepository, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork);
             await handler.Handle(new UpdateProductCommand
             {
                 Id = product.Id,
@@ -138,7 +138,7 @@ namespace WMS.Tests.Integration
             scope.Context.SaveChanges();
             Seed.MintUnits(scope.Context, product, 5);
 
-            var handler = new UpdateProductCommandHandler(scope.ProductRepository, scope.ProductUnitService, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var handler = new UpdateProductCommandHandler(scope.ProductRepository, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork);
             await handler.Handle(new UpdateProductCommand
             {
                 Id = product.Id,
@@ -167,7 +167,7 @@ namespace WMS.Tests.Integration
             scope.Context.SaveChanges();
             Seed.MintUnits(scope.Context, product, 5);
 
-            var handler = new UpdateProductCommandHandler(scope.ProductRepository, scope.ProductUnitService, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var handler = new UpdateProductCommandHandler(scope.ProductRepository, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork);
             await handler.Handle(new UpdateProductCommand
             {
                 Id = product.Id,

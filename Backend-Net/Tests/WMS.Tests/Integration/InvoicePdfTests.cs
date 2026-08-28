@@ -72,7 +72,7 @@ namespace WMS.Tests.Integration
             var saleReturnId = (int)createRes.Data!.GetType().GetProperty("ReturnId")!.GetValue(createRes.Data)!;
             var claimId = scope.Context.SaleReturnClaims.Single().Id;
 
-            var decisionHandler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var decisionHandler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.InventoryCostingService, scope.UnitOfWork);
             await decisionHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,

@@ -137,7 +137,7 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
 
-            var createHandler = new CreateProductCommandHandler(scope.ProductRepository, TestMapper.Instance, scope.ProductCodeService, scope.ProductUnitService, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var createHandler = new CreateProductCommandHandler(scope.ProductRepository, TestMapper.Instance, scope.ProductCodeService, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork);
             await createHandler.Handle(NewProduct(scope.Context, "products/original.png"), CancellationToken.None);
 
             using (var check = db.NewContext())
@@ -151,7 +151,7 @@ namespace WMS.Tests.Integration
             Assert.StartsWith(FakeObjectStorage.Host, detail.ImageUrl);
 
             // Echo the signed URL back, exactly as a naive frontend would.
-            var updateHandler = new UpdateProductCommandHandler(scope.ProductRepository, scope.ProductUnitService, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var updateHandler = new UpdateProductCommandHandler(scope.ProductRepository, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork);
             await updateHandler.Handle(new UpdateProductCommand
             {
                 Id = productId,
@@ -247,7 +247,7 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
 
-            var createHandler = new CreateProductCommandHandler(scope.ProductRepository, TestMapper.Instance, scope.ProductCodeService, scope.ProductUnitService, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var createHandler = new CreateProductCommandHandler(scope.ProductRepository, TestMapper.Instance, scope.ProductCodeService, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork);
             await createHandler.Handle(NewProduct(scope.Context, null), CancellationToken.None);
 
             var productId = scope.Context.Products.Single().Id;

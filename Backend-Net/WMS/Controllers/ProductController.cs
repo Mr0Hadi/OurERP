@@ -48,6 +48,12 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
+        [HttpPost("EnsureInventoryCostLedger")]
+        public async Task<ActionResult<ResponseDto>> EnsureInventoryCostLedger([FromBody] EnsureInventoryCostLedgerCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
         [HttpPost("CreateProduct")]
         public async Task<ActionResult<ResponseDto>> CreateProduct([FromBody] CreateProductCommand request)
         {

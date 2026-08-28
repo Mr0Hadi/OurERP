@@ -16,7 +16,7 @@ namespace WMS.Tests.Integration
         {
             var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: ordered, stock: 0);
 
-            var receiveHandler = new ReceivePurchaseCommandHandler(scope.Db, scope.PurchaseReturnCalculation, scope.ProductUnitService, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var receiveHandler = new ReceivePurchaseCommandHandler(scope.Db, scope.PurchaseReturnCalculation, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork);
             await receiveHandler.Handle(new ReceivePurchaseCommand
             {
                 PurchaseId = scenario.Purchase.Id,
@@ -52,7 +52,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 10, stock: 0);
 
-            var receiveHandler = new ReceivePurchaseCommandHandler(scope.Db, scope.PurchaseReturnCalculation, scope.ProductUnitService, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var receiveHandler = new ReceivePurchaseCommandHandler(scope.Db, scope.PurchaseReturnCalculation, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork);
             await receiveHandler.Handle(new ReceivePurchaseCommand
             {
                 PurchaseId = scenario.Purchase.Id,
@@ -86,7 +86,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 5, stock: 0);
 
-            var receiveHandler = new ReceivePurchaseCommandHandler(scope.Db, scope.PurchaseReturnCalculation, scope.ProductUnitService, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var receiveHandler = new ReceivePurchaseCommandHandler(scope.Db, scope.PurchaseReturnCalculation, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork);
             await receiveHandler.Handle(new ReceivePurchaseCommand
             {
                 PurchaseId = scenario.Purchase.Id,
@@ -201,7 +201,7 @@ namespace WMS.Tests.Integration
             var stockBefore = scope.Context.Products.Single(x => x.Id == scenario.Product.Id).Stock;
             var purchaseReturnId = scope.Context.PurchaseReturns.Single().Id;
 
-            var roundHandler = new ExecuteGoodsRoundCommandHandler(scope.Db, scope.PurchaseReturnQueryService, scope.PurchaseReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
+            var roundHandler = new ExecuteGoodsRoundCommandHandler(scope.Db, scope.PurchaseReturnQueryService, scope.PurchaseReturnCalculation, scope.ProductUnitService, scope.InventoryCostingService, scope.UnitOfWork);
             await roundHandler.Handle(new ExecuteGoodsRoundCommand
             {
                 PurchaseReturnId = purchaseReturnId,
@@ -238,7 +238,7 @@ namespace WMS.Tests.Integration
             var effectId = scope.Context.PurchaseReturnEffects.Single().Id;
             var purchaseReturnId = scope.Context.PurchaseReturns.Single().Id;
 
-            var roundHandler = new ExecuteGoodsRoundCommandHandler(scope.Db, scope.PurchaseReturnQueryService, scope.PurchaseReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
+            var roundHandler = new ExecuteGoodsRoundCommandHandler(scope.Db, scope.PurchaseReturnQueryService, scope.PurchaseReturnCalculation, scope.ProductUnitService, scope.InventoryCostingService, scope.UnitOfWork);
             await roundHandler.Handle(new ExecuteGoodsRoundCommand
             {
                 PurchaseReturnId = purchaseReturnId,
@@ -293,7 +293,7 @@ namespace WMS.Tests.Integration
             var resolutionId = scope.Context.PurchaseReturnResolutions.Single().Id;
             var purchaseReturnId = scope.Context.PurchaseReturns.Single().Id;
 
-            var roundHandler = new ExecuteGoodsRoundCommandHandler(scope.Db, scope.PurchaseReturnQueryService, scope.PurchaseReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
+            var roundHandler = new ExecuteGoodsRoundCommandHandler(scope.Db, scope.PurchaseReturnQueryService, scope.PurchaseReturnCalculation, scope.ProductUnitService, scope.InventoryCostingService, scope.UnitOfWork);
             await roundHandler.Handle(new ExecuteGoodsRoundCommand
             {
                 PurchaseReturnId = purchaseReturnId,

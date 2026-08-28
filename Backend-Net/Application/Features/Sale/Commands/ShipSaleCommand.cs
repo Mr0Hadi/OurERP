@@ -1,4 +1,5 @@
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
@@ -57,12 +58,14 @@ namespace Application.Features.Sale.Commands
     {
         private readonly IWMSDbContext _context;
         private readonly IProductUnitService _productUnitService;
+        private readonly IInventoryCostingService _inventoryCostingService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public ShipSaleCommandHandler(IWMSDbContext context, IProductUnitService productUnitService, IUnitOfWork unitOfWork)
+        public ShipSaleCommandHandler(IWMSDbContext context, IProductUnitService productUnitService, IInventoryCostingService inventoryCostingService, IUnitOfWork unitOfWork)
         {
             _context = context;
             _productUnitService = productUnitService;
+            _inventoryCostingService = inventoryCostingService;
             _unitOfWork = unitOfWork;
         }
 
@@ -93,12 +96,15 @@ namespace Application.Features.Sale.Commands
                     throw new ValidationCustomException($"موجودی «{saleItem.Product.Name}» برای ارسال این مقدار کافی نیست.");
             }
 
+            var now = DateTime.Now;
+
             foreach (var reqItem in request.Items)
             {
                 var saleItem = saleItems[reqItem.SaleItemId];
                 saleItem.ShippedQuantity += reqItem.ShippedQuantity;
                 saleItem.Product.Stock -= reqItem.ShippedQuantity;
                 await _productUnitService.ConsumeAsync(saleItem.Product, reqItem.ShippedQuantity, saleItem.Id, reqItem.ProductUnitBarcodes, cancellationToken);
+                await _inventoryCostingService.RecordSaleShipmentAsync(saleItem.Product, reqItem.ShippedQuantity, saleItem.UnitPrice, saleItem.Discount, saleItem.Id, now, cancellationToken);
             }
 
             var fullyShipped = sale.Items.All(i => i.ShippedQuantity >= i.Quantity);
