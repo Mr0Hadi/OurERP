@@ -11,7 +11,7 @@ namespace Infrastructure.Services
 
         public string BuildProductCode(int productId, DateTime createdAt)
         {
-            return $"{PersianDate.ToCompactString(createdAt)}-{productId:D6}";
+            return $"{PersianDate.ToCompactString(createdAt)}-{productId:D10}";
         }
 
         public string ToPayload(string humanReadableCode)
@@ -21,7 +21,7 @@ namespace Infrastructure.Services
 
         public string BuildUnitBarcode(string productCode, int serialNumber)
         {
-            return $"{productCode}-{serialNumber:D6}";
+            return $"{productCode}-{serialNumber:D10}";
         }
 
         public BarcodeReference Parse(string scannedInput)
@@ -30,20 +30,20 @@ namespace Infrastructure.Services
 
             switch (digits.Length)
             {
-                case 14:
+                case 18:
                     return new BarcodeReference
                     {
                         Kind = BarcodeReferenceKindEnum.PRODUCT,
                         NormalizedPayload = digits,
-                        ProductId = int.Parse(digits.Substring(8, 6))
+                        ProductId = int.Parse(digits.Substring(8, 10))
                     };
-                case 20:
+                case 28:
                     return new BarcodeReference
                     {
                         Kind = BarcodeReferenceKindEnum.UNIT,
                         NormalizedPayload = digits,
-                        ProductId = int.Parse(digits.Substring(8, 6)),
-                        SerialNumber = int.Parse(digits.Substring(14, 6))
+                        ProductId = int.Parse(digits.Substring(8, 10)),
+                        SerialNumber = int.Parse(digits.Substring(18, 10))
                     };
                 default:
                     return new BarcodeReference

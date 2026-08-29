@@ -12,10 +12,14 @@ using Microsoft.EntityFrameworkCore;
 namespace Application.Features.Product.Commands
 {
     /// <summary>
-    /// Admin/migration command. Two jobs, both idempotent:
+    /// Admin/migration command. Three jobs, all idempotent:
     /// 1. Give every product whose Code doesn't match the generated pattern a proper one (rows
     ///    created before this feature, or left with a placeholder by a failed second save).
-    /// 2. Reconcile ProductUnit rows against Product.Stock so the invariant holds everywhere.
+    /// 2. Rebuild every ProductUnit's Barcode/BarcodePayload from its product's (possibly
+    ///    just-fixed) Code plus its own serial. Unit barcodes are derived values, so a product
+    ///    whose Code changes - or a change to the segment widths themselves - leaves its existing
+    ///    units holding a stale payload that Parse no longer recognizes and label PDFs still print.
+    /// 3. Reconcile ProductUnit rows against Product.Stock so the invariant holds everywhere.
     /// Run this after applying the ProductUnit migration and before adding the unique index on
     /// Product.Code - see docs/product-code-barcode-invoice-design.fa.md 4.3.
     /// </summary>
@@ -25,7 +29,7 @@ namespace Application.Features.Product.Commands
 
     public class EnsureProductCodesCommandHandler : IRequestHandler<EnsureProductCodesCommand, ResponseDto>
     {
-        private static readonly Regex GeneratedCodePattern = new(@"^\d{8}-\d{6}$", RegexOptions.Compiled);
+        private static readonly Regex GeneratedCodePattern = new(@"^\d{8}-\d{10}$", RegexOptions.Compiled);
 
         private readonly IWMSDbContext _context;
         private readonly IProductCodeService _productCodeService;
@@ -52,7 +56,15 @@ namespace Application.Features.Product.Commands
                 .Select(g => new { ProductId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.ProductId, x => x.Count, cancellationToken);
 
+            // Loaded in full (not just aggregated) because every unit's barcode is derived from
+            // its product's Code and has to be re-derived whenever that Code - or the code format
+            // itself - changes. This is a one-shot admin command, so a single full scan is fine.
+            var unitsByProduct = (await _context.ProductUnits.ToListAsync(cancellationToken))
+                .GroupBy(x => x.ProductId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
             var codesFixed = 0;
+            var barcodesFixed = 0;
             var unitsMinted = 0;
             var unitsScrapped = 0;
 
@@ -63,6 +75,21 @@ namespace Application.Features.Product.Commands
                     product.Code = _productCodeService.BuildProductCode(product.Id, product.CreatedAt);
                     product.BarCode = _productCodeService.ToPayload(product.Code);
                     codesFixed++;
+                }
+
+                if (unitsByProduct.TryGetValue(product.Id, out var units))
+                {
+                    foreach (var unit in units)
+                    {
+                        var barcode = _productCodeService.BuildUnitBarcode(product.Code, unit.SerialNumber);
+
+                        if (unit.Barcode == barcode)
+                            continue;
+
+                        unit.Barcode = barcode;
+                        unit.BarcodePayload = _productCodeService.ToPayload(barcode);
+                        barcodesFixed++;
+                    }
                 }
 
                 var inStock = unitCounts.TryGetValue(product.Id, out var count) ? count : 0;
@@ -83,6 +110,7 @@ namespace Application.Features.Product.Commands
             {
                 ProductsScanned = products.Count,
                 CodesFixed = codesFixed,
+                UnitBarcodesFixed = barcodesFixed,
                 UnitsMinted = unitsMinted,
                 UnitsScrapped = unitsScrapped,
             };

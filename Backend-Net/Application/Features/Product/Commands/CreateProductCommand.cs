@@ -34,7 +34,7 @@ namespace Application.Features.Product.Commands
         /// The ObjectKey returned by POST api/File/UploadImage (folder=PRODUCTS). A full signed
         /// URL is also accepted and normalized back down to the key - see IObjectStorageService.
         /// </summary>
-        public string? ImageUrl { get; set; }
+        public string? ImageObjectKey { get; set; }
         public int ProductCategoryId { get; set; }
     }
 
@@ -51,6 +51,7 @@ namespace Application.Features.Product.Commands
             RuleFor(x => x.Stock).GreaterThanOrEqualTo(0).WithMessage("موجودی نمی‌تواند منفی باشد.");
             RuleFor(x => x.LowStockThreshold).GreaterThanOrEqualTo(0).WithMessage("حداقل موجودی نمی‌تواند منفی باشد.");
             RuleFor(x => x.ProductCategoryId).GreaterThan(0).WithMessage(Validation.RequiredMessage("شناسه دسته‌بندی محصول"));
+            RuleFor(x => x.Unit).IsInEnum().WithMessage("واحد محصول نامعتبر است.");
         }
     }
 
@@ -84,7 +85,7 @@ namespace Application.Features.Product.Commands
             product.UpdatedAt = DateTime.Now;
 
             // The column stores the bucket object key, never a URL - signed URLs expire.
-            product.ImageUrl = _objectStorageService.NormalizeKey(request.ImageUrl);
+            product.ImageUrl = _objectStorageService.NormalizeKey(request.ImageObjectKey);
 
             // Code/BarCode are NOT NULL and only computable once the row has an Id, so the first
             // save needs a placeholder. A Guid rather than "" so a concurrent create can't collide

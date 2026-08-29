@@ -78,7 +78,24 @@ namespace Infrastructure.Ioc
             // injects it directly to reuse RenderBarcodeLabels.
             services.AddSingleton<QuestPdfDocumentService>();
             services.Configure<LibreOfficeOptions>(configuration.GetSection(LibreOfficeOptions.SectionName));
-            services.AddSingleton<IPdfDocumentService, ExcelInvoiceDocumentService>();
+
+            // Two interchangeable invoice renderers, selected per environment by configuration
+            // (InvoiceRenderer:Engine) rather than at compile time: the Excel+LibreOffice one is
+            // faithful to the official template but needs `soffice` on the host, the QuestPDF one
+            // runs entirely in-process. Both are registered concretely and the interface resolves
+            // through a factory, so the query handlers keep injecting plain IPdfDocumentService and
+            // never learn which engine is active. LibreOffice stays the default.
+            services.Configure<InvoiceRendererOptions>(configuration.GetSection(InvoiceRendererOptions.SectionName));
+            services.AddSingleton<ExcelInvoiceDocumentService>();
+            services.AddSingleton<QuestPdfInvoiceDocumentService>();
+            services.AddSingleton<IPdfDocumentService>(provider =>
+            {
+                var options = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<InvoiceRendererOptions>>().Value;
+
+                return options.UsesQuestPdf
+                    ? provider.GetRequiredService<QuestPdfInvoiceDocumentService>()
+                    : provider.GetRequiredService<ExcelInvoiceDocumentService>();
+            });
 
             // فضای ذخیره‌سازی ابری (Liara Object Storage - سازگار با S3)
             services.Configure<ObjectStorageOptions>(configuration.GetSection(ObjectStorageOptions.SectionName));

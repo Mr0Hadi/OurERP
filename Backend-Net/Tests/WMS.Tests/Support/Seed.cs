@@ -202,7 +202,7 @@ namespace WMS.Tests.Support
             for (var i = 0; i < count; i++)
             {
                 var serial = nextSerial + i;
-                var barcode = $"{product.Code}-{serial:D6}";
+                var barcode = $"{product.Code}-{serial:D10}";
                 context.ProductUnits.Add(new ProductUnit
                 {
                     ProductId = product.Id,

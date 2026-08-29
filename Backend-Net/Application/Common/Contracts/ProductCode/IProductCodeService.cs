@@ -18,20 +18,20 @@ namespace Application.Common.Contracts.ProductCode
     /// </summary>
     public interface IProductCodeService
     {
-        /// <summary>"14050512-000123" - date segment (8 digits) + zero-padded product id (6 digits).</summary>
+        /// <summary>"14050512-0000000123" - date segment (8 digits) + zero-padded product id (10 digits).</summary>
         string BuildProductCode(int productId, DateTime createdAt);
 
-        /// <summary>"14050512000123" - BuildProductCode with the separators stripped.</summary>
+        /// <summary>"140505120000000123" - BuildProductCode with the separators stripped.</summary>
         string ToPayload(string humanReadableCode);
 
-        /// <summary>"14050512-000123-000002" - product code + zero-padded serial (6 digits).</summary>
+        /// <summary>"14050512-0000000123-0000000002" - product code + zero-padded serial (10 digits).</summary>
         string BuildUnitBarcode(string productCode, int serialNumber);
 
         /// <summary>
         /// Normalizes raw scanner/keyboard input (strips every non-digit) and classifies it
-        /// as a product-level code (14 digits) or a unit-level barcode (20 digits) by length.
+        /// as a product-level code (18 digits) or a unit-level barcode (28 digits) by length.
         /// The trailing scan-and-ignore-the-tail rule from the design lives here: a 20-digit
-        /// payload's first 14 digits are always a valid product-code payload too.
+        /// payload's first 18 digits are always a valid product-code payload too.
         /// </summary>
         BarcodeReference Parse(string scannedInput);
     }
