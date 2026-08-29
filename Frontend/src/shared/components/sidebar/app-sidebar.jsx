@@ -2,7 +2,7 @@ import { NavMain } from "@/shared/components/sidebar/nav-main";
 import { NavTools } from "@/shared/components/sidebar/nav-tools";
 import { NavSecondary } from "@/shared/components/sidebar/nav-secondary";
 import { NavUser } from "@/shared/components/sidebar/nav-user";
-import { TeamSwitcher } from "@/shared/components/sidebar/team-switcher";
+import { NavWorkspace } from "@/shared/components/sidebar/nav-workspace";
 import {
   Sidebar,
   SidebarContent,
@@ -18,7 +18,7 @@ export function AppSidebar({ ...props }) {
   return (
     <Sidebar variant="inset" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <NavWorkspace />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
@@ -26,7 +26,7 @@ export function AppSidebar({ ...props }) {
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser />
       </SidebarFooter>
     </Sidebar>
   );

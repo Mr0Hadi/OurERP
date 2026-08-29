@@ -1,13 +1,29 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
+/**
+ * استورِ احراز هویت — فقط چیزهایی که *فقط* اینجا می‌توانند باشند:
+ * توکن‌ها و انتخابِ کاربر.
+ *
+ * ⚠️ هویتِ کاربر (نام، واحد، تیم، مجوزها) عمداً اینجا **نیست**. پاسخِ
+ * `POST api/Account/Login` فقط `TokenDto` است و هیچ اطلاعاتی از کاربر
+ * ندارد؛ آن اطلاعات از `GET api/User/GetUserInfo` می‌آید و جایش
+ * React Query است (`useSessionQuery`). نگه‌داشتنِ کپی‌اش در localStorage
+ * یعنی بعد از هر `UpdateUser`/`ChangeUserTeam` یک نسخه‌ی کهنه بماند که
+ * هیچ‌چیز باطلش نمی‌کند.
+ */
 export const useAuthStore = create(
   persist(
     (set, get) => ({
-      user: null,
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
+
+      /**
+       * عضویتِ سازمانیِ *انتخاب‌شده* — فقط یک شناسه، نه خودِ رکورد.
+       * خودِ فهرستِ عضویت‌ها از سرور می‌آید و هر بار تازه خوانده می‌شود.
+       */
+      activeMembershipId: null,
 
       // بعد از رفرش موفق فقط توکن‌ها آپدیت می‌شن
       setTokens: (accessToken, refreshToken) =>
@@ -17,36 +33,34 @@ export const useAuthStore = create(
           isAuthenticated: !!accessToken,
         }),
 
-      // بعد از لاگین موفق، هم توکن‌ها و هم اطلاعات کاربر ست میشه
-      loginSuccess: ({ user, accessToken, refreshToken }) =>
-        set({ user, accessToken, refreshToken, isAuthenticated: true }),
+      loginSuccess: ({ accessToken, refreshToken }) =>
+        set({
+          accessToken,
+          refreshToken,
+          isAuthenticated: true,
+          // انتخابِ کاربرِ قبلی به کاربرِ جدید به ارث نمی‌رسد.
+          activeMembershipId: null,
+        }),
 
-      setUser: (user) => set({ user }),
+      setActiveMembership: (membershipId) =>
+        set({ activeMembershipId: membershipId }),
 
       logout: () =>
         set({
-          user: null,
           accessToken: null,
           refreshToken: null,
           isAuthenticated: false,
+          activeMembershipId: null,
         }),
-
-      // بررسی دسترسی بر اساس permissions برگشتی از بک‌اند
-      hasPermission: (permission) => {
-        const { user } = get();
-        if (!user) return false;
-        if (user.isSuperAdmin) return true;
-        return user.permissions?.includes(permission) ?? false;
-      },
     }),
     {
       name: "auth-storage",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        user: state.user,
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
+        activeMembershipId: state.activeMembershipId,
       }),
     }
   )

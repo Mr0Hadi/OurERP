@@ -54,70 +54,13 @@ import {
 } from "lucide-react";
 
 export const navigationData = {
-  user: {
-    name: "هادی",
-    email: "hadi@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
-  teams: [
-    {
-      name: "ادمین کل",
-      logo: Shield,
-      plan: "مدیریت سیستم",
-      permissions: ["all"],
-      description: "دسترسی کامل به تمام بخش‌ها",
-      color: "bg-red-500",
-    },
-    {
-      name: "واحد فروش",
-      logo: Store,
-      plan: "تیم فروش",
-      permissions: [
-        "sales",
-        "customers",
-        "reports_sales",
-        "sales_create",
-        "sales_view",
-        "sales_edit",
-        "sales_delete",
-      ],
-      description: "مدیریت فروش و مشتریان",
-      color: "bg-blue-500",
-    },
-    {
-      name: "واحد خرید",
-      logo: ShoppingCart,
-      plan: "تیم خرید",
-      permissions: [
-        "purchases",
-        "suppliers",
-        "reports_purchases",
-        "purchases_create",
-        "purchases_view",
-        "purchases_edit",
-        "purchases_delete",
-      ],
-      description: "مدیریت خرید و تامین کنندگان",
-      color: "bg-green-500",
-    },
-    {
-      name: "واحد انبارداری",
-      logo: Warehouse,
-      plan: "تیم انبار",
-      permissions: [
-        "warehouse",
-        "warehouse",
-        "warehouse_view",
-        "warehouse_create",
-        "warehouse_edit",
-        "warehouse_delete",
-        "warehouse_stock",
-        "warehouse_receiving", // اضافه کردن دسترسی دریافت کالا
-      ],
-      description: "مدیریت انبار و کالاها",
-      color: "bg-yellow-500",
-    },
-  ],
+  // `user` و `teams` اینجا نیستند: هویتِ کاربر و واحد/تیمِ او صفتِ خودِ
+  // اوست در بکند (`User.DepartmentId`/`TeamId`) و سایدبار آن را از
+  // `useSessionQuery` می‌گیرد، نه از این فایل. این فایل فقط *ساختارِ
+  // منو* را نگه می‌دارد که واقعاً ثابت و ساکن است.
+  // (`User.DepartmentId`/`User.TeamId`) و سایدبار آن را از
+  // `useSessionQuery` می‌گیرد، نه از یک فهرستِ ثابت. فهرستِ قبلی
+  // مجوزها را هم کنارِ نامِ واحد نگه می‌داشت که هیچ‌وقت اعمال نمی‌شد.
   navMain: [
     {
       title: "داشبورد",
@@ -610,8 +553,6 @@ export const getFilteredNavigation = (userPermissions) => {
   };
 
   return {
-    user: navigationData.user,
-    teams: navigationData.teams,
     navMain: filterByPermission([...navigationData.navMain]),
     navSecondary: filterByPermission([...navigationData.navSecondary]),
     tools: filterByPermission([...navigationData.tools]),

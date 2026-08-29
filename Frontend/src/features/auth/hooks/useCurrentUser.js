@@ -1,22 +1,16 @@
-import { useAuthStore } from "../store/authStore";
+import { useSessionQuery } from "../services/queries";
 
+/**
+ * کاربرِ واردشده.
+ *
+ * منبعش `useSessionQuery` است نه `authStore`: پاسخِ `Account/Login` فقط
+ * توکن برمی‌گرداند، پس `store.user` بعد از ورودِ واقعی خالی می‌ماند.
+ *
+ * تا وقتی نشست نیامده `null` می‌دهد — همان قراردادِ قبلی، تا مصرف‌کننده‌ها
+ * (`EmployeeDetailPage`) بدونِ تغییر کار کنند.
+ */
 export function useCurrentUser() {
-  const user = useAuthStore((s) => s.user);
+  const { data: session } = useSessionQuery();
 
-  if (!user) return null;
-
-  const fullName =
-    `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.username;
-
-  return {
-    id: user.id,
-    name: fullName,
-    username: user.username,
-    email: user.email || `${user.username}@pasargad-motorpart.com`,
-    avatar: user.avatar || "",
-    permissions: user.permissions || [],
-    isSuperAdmin: user.isSuperAdmin || user.permissions?.includes("all"),
-    departmentRole: user.departmentRole,
-    teamRole: user.teamRole,
-  };
+  return session ?? null;
 }

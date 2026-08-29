@@ -3,7 +3,7 @@ import axios from "axios";
 import { useAuthStore } from "@/features/auth/store/authStore";
 
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5083/api",
   timeout: 15000,
   headers: {
     "Content-Type": "application/json",
@@ -86,10 +86,11 @@ axiosInstance.interceptors.response.use(
     const status = error.response?.status;
 
     // اگر خود ریکوئست refresh بود، دیگه دوباره تلاش نکن
-    const isRefreshCall = originalRequest?.url?.includes("/auth/refresh");
+    const isRefreshCall = originalRequest?.url?.includes("/Account/RefreshToken");
 
     if (status === 401 && !originalRequest._retry && !isRefreshCall) {
-      const { refreshToken, setTokens, logout } = useAuthStore.getState();
+      const { accessToken, refreshToken, setTokens, logout } =
+        useAuthStore.getState();
 
       if (!refreshToken) {
         logout();
@@ -110,10 +111,11 @@ axiosInstance.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const { data } = await axios.post(
-          `${axiosInstance.defaults.baseURL}/auth/refresh`,
-          { refreshToken }
+        const { data: envelope } = await axios.post(
+          `${axiosInstance.defaults.baseURL}/Account/RefreshToken`,
+          { accessToken, refreshToken }
         );
+        const data = isEnvelope(envelope) ? unwrapEnvelope(envelope) : envelope;
 
         setTokens(data.accessToken, data.refreshToken);
         onRefreshed(data.accessToken);

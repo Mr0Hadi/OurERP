@@ -33,7 +33,7 @@ export const router = createBrowserRouter([
   {
     path: ROUTES.ROOT,
     element: <AppLayout />,
-    // loader: protectedLoader, // برای اجرای صفحه لاگین این خط را فعال کنید.
+    loader: protectedLoader, // برای اجرای صفحه لاگین این خط را فعال کنید.
     errorElement: <NotFoundPage />,
     children: [
       ...dashboardRoutes,

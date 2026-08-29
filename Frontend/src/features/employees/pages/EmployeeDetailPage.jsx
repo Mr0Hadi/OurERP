@@ -100,6 +100,16 @@ function EmployeeDetailForm({ employee }) {
   const isSelf =
     currentUser != null && String(currentUser.id) === String(employee.id);
 
+  /**
+   * جایگاهِ سازمانی و وضعیتِ حساب فقط وقتی قابلِ ویرایش‌اند که این صفحه
+   * *حسابِ شخصِ دیگری* را نشان بدهد.
+   *
+   * توجه به `currentUser == null`: تا وقتی نشست نیامده (یا خطا داده)
+   * فرم **قفل** می‌ماند، نه باز. گاردی که در نبودِ داده باز شود گارد
+   * نیست — و هزینه‌اش فقط چند صد میلی‌ثانیه تأخیر برای ادمین است.
+   */
+  const canEditOrg = currentUser != null && !isSelf;
+
   const onSubmit = (data) => {
     updateMutation.mutate(buildPayload(data), {
       onSuccess: () => {
@@ -151,6 +161,7 @@ function EmployeeDetailForm({ employee }) {
               control={control}
               errors={errors}
               setValue={setValue}
+              readOnly={!canEditOrg}
               onCreateDepartment={() =>
                 leaveForCreate(ROUTES.ORG_DEPARTMENTS_NEW)
               }
@@ -161,7 +172,11 @@ function EmployeeDetailForm({ employee }) {
               }
             />
 
-            <EmployeeAccessForm control={control} isEditing />
+            <EmployeeAccessForm
+              control={control}
+              isEditing
+              readOnly={!canEditOrg}
+            />
 
             <div className="flex gap-2">
               <Button
@@ -270,20 +285,30 @@ export default function EmployeeDetailPage() {
   const navigate = useNavigate();
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
+  const currentUser = useCurrentUser();
 
   const { data: employee, isLoading, isError } = useEmployeeQuery(id);
+
+  // همان مسیر، دو معنا: از سایدبار «حساب کاربری من» است و از فهرست
+  // کارمندان «ویرایش کارمند». عنوان باید همان را بگوید که کاربر انتظار
+  // دارد، وگرنه از منوی خودش سر درمی‌آورد روی صفحه‌ای به‌نامِ «ویرایش».
+  const isSelf =
+    currentUser != null && employee != null &&
+    String(currentUser.id) === String(employee.id);
 
   useEffect(() => {
     setHeader({
       title: isLoading
         ? "در حال بارگذاری..."
         : employee
-          ? `ویرایش کارمند: ${fullNameOf(employee)}`
+          ? isSelf
+            ? "حساب کاربری من"
+            : `ویرایش کارمند: ${fullNameOf(employee)}`
           : "خطا",
       showBack: true,
     });
     return () => clearHeader();
-  }, [setHeader, clearHeader, employee, isLoading]);
+  }, [setHeader, clearHeader, employee, isLoading, isSelf]);
 
   if (isLoading) return <EmployeeDetailLoading />;
 

@@ -50,3 +50,62 @@ export function orgHeadRoleOf(employeeId, { departmentHeadId, teamHeadId } = {})
 
 export const orgHeadRoleLabelOf = (...args) =>
   ORG_HEAD_ROLE_LABELS[orgHeadRoleOf(...args)];
+
+/**
+ * `OrgPositionEnum` — جایگاهِ کاربر **در یک دامنه‌ی مشخص**: یک واحد، یا
+ * یک تیم.
+ *
+ * `orgHeadRoleOf` بالا برای صفحه‌هایی است که واحد و تیم را با هم
+ * می‌سنجند و یک برچسبِ واحد می‌خواهند. اینجا برعکس است: هر دامنه
+ * جدا سنجیده می‌شود، چون یک نفر می‌تواند هم‌زمان معاونِ واحد و سرپرستِ
+ * تیمش باشد و ادغامِ این دو در یک برچسب، یکی را پنهان می‌کند.
+ *
+ * مثل `AccountStatusEnum`، در بکند این یک enum نیست بلکه از مقایسه‌ی
+ * `Department.HeadId`/`DeputyId` با شناسه‌ی کاربر مشتق می‌شود. عددی‌بودن
+ * اینجا دو فایده دارد: هم‌شکل با بقیه‌ی enumهای دامنه، و ترتیب‌پذیر —
+ * `HEAD > DEPUTY > MEMBER` یعنی «حداقل معاون» یک مقایسه‌ی ساده است.
+ */
+export const OrgPositionEnum = Object.freeze({
+  MEMBER: 0,
+  DEPUTY: 1,
+  HEAD: 2,
+});
+
+export const ORG_POSITION_LABELS = Object.freeze({
+  [OrgPositionEnum.MEMBER]: "عضو",
+  [OrgPositionEnum.DEPUTY]: "معاون",
+  [OrgPositionEnum.HEAD]: "سرپرست",
+});
+
+/**
+ * سرپرستی یک صفتِ *مشتق* است: کاربری سرپرست است که شناسه‌اش در
+ * `HeadId` آن ردیف نشسته باشد. پس ورودی خودِ ردیفِ واحد/تیم است، نه
+ * فیلدی روی کاربر.
+ *
+ * وقتی ردیف نداریم (کاربرِ بدون تیم) `MEMBER` برمی‌گردد نه `null`:
+ * `MEMBER` مقدارِ صفر است و اگر جایش `null` بنشیند، هر مقایسه‌ی
+ * `>= DEPUTY` روی کاربرِ بدون تیم بی‌سروصدا درست از آب درمی‌آید.
+ *
+ * مقایسه با `==` عمدی است: شناسه گاهی از سرور عدد و از فرم رشته
+ * می‌آید و `===` این دو را نابرابر می‌بیند.
+ */
+export function orgPositionIn(record, userId) {
+  if (!record || userId == null) return OrgPositionEnum.MEMBER;
+  if (record.headId != null && record.headId == userId) {
+    return OrgPositionEnum.HEAD;
+  }
+  if (record.deputyId != null && record.deputyId == userId) {
+    return OrgPositionEnum.DEPUTY;
+  }
+  return OrgPositionEnum.MEMBER;
+}
+
+/**
+ * برچسبِ نمایشی. `MEMBER` عمداً `null` می‌دهد: «عضو» بودن حالتِ پیش‌فرضِ
+ * همه است و نوشتنش کنارِ نامِ تیم فقط نویز است — جایی که واقعاً لازم
+ * باشد، `ORG_POSITION_LABELS` مستقیم در دسترس است.
+ */
+export const orgPositionLabelOf = (position) =>
+  position === OrgPositionEnum.MEMBER || position == null
+    ? null
+    : ORG_POSITION_LABELS[position];

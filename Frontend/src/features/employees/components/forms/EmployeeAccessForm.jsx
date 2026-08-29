@@ -19,7 +19,18 @@ import { Label } from "@/shared/components/ui/label";
  * `isActive` فقط در حالت ویرایش نمایش داده می‌شود چون دستور `CreateUser`
  * آن را نمی‌گیرد — کارمند تازه‌ثبت‌شده همیشه فعال است.
  */
-export default function EmployeeAccessForm({ control, isEditing }) {
+/**
+ * @param readOnly کاربر روی حسابِ *خودش*. دکمه‌ی «غیرفعال‌کردن دسترسی»
+ *        از قبل برای خود کاربر قفل بود، ولی همین چک‌باکس یک راهِ دومِ
+ *        باز به همان کار بود: برداشتنِ تیک و «ذخیره تغییرات»،
+ *        `UpdateUser` را با `isActive: false` می‌فرستاد و کاربر خودش را
+ *        بیرونِ سیستم قفل می‌کرد.
+ */
+export default function EmployeeAccessForm({
+  control,
+  isEditing,
+  readOnly = false,
+}) {
   if (!isEditing) return null;
 
   return (
@@ -33,6 +44,7 @@ export default function EmployeeAccessForm({ control, isEditing }) {
               <Checkbox
                 id="isActive"
                 checked={Boolean(field.value)}
+                disabled={readOnly}
                 onCheckedChange={(checked) => field.onChange(checked === true)}
                 className="mt-0.5"
               />

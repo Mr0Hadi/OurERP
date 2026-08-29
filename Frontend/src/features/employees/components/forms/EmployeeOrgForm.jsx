@@ -37,14 +37,35 @@ const CreateButton = ({ onClick, disabled = false, children }) => (
   </Button>
 );
 
+/** مقدارِ فقط‌خواندنی — هم‌ارتفاع و هم‌ظاهرِ یک فیلدِ غیرفعال. */
+const ReadOnlyField = ({ label, value }) => (
+  <div className="space-y-2">
+    <span className="text-sm font-medium">{label}</span>
+    <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm text-muted-foreground">
+      {value ?? "—"}
+    </div>
+  </div>
+);
+
 export default function EmployeeOrgForm({
   control,
   errors,
   setValue,
   onCreateDepartment,
   onCreateTeam,
+  /**
+   * جایگاهِ سازمانی را فقط ادمین عوض می‌کند، نه خودِ کاربر.
+   *
+   * این یک ظرافتِ ظاهری نیست: واحد قرار است مبنای سطحِ دسترسی باشد
+   * (`User.DepartmentId`)، پس اگر کاربر بتواند واحدِ خودش را عوض کند،
+   * دسترسیِ خودش را هم عوض کرده — و هیچ اعتبارسنجی‌ای در `UpdateUser`
+   * جلویش را نمی‌گیرد. دکمه‌های «ایجاد واحد/تیم» هم به همین دلیل
+   * پنهان می‌شوند: ساختنِ واحد کارِ مدیریتِ سازمان است.
+   */
+  readOnly = false,
 }) {
   const departmentId = useWatch({ control, name: "departmentId" });
+  const teamId = useWatch({ control, name: "teamId" });
 
   const { departments, isLoading: departmentsLoading, isFallback } =
     useDepartmentOptionsQuery();
@@ -64,13 +85,45 @@ export default function EmployeeOrgForm({
 
   // فقط *تغییرِ* واحد تیم را پاک می‌کند، نه اولین مقداردهی — وگرنه در
   // حالت ویرایش (و در بازگشت از صفحه‌ی «تیم جدید») تیمِ درست پاک می‌شد.
+  // در حالت فقط‌خواندنی اصلاً اجرا نمی‌شود: آنجا واحد عوض نمی‌شود و این
+  // افکت فقط می‌توانست تیمِ درست را بی‌دلیل خالی کند.
   const previousDepartment = useRef(departmentId);
   useEffect(() => {
+    if (readOnly) return;
     if (previousDepartment.current !== departmentId) {
       previousDepartment.current = departmentId;
       setValue("teamId", null);
     }
-  }, [departmentId, setValue]);
+  }, [departmentId, setValue, readOnly]);
+
+  if (readOnly) {
+    // نامِ واحد و تیم از همان فهرست‌هایی خوانده می‌شود که انتخابگرها
+    // استفاده می‌کنند، نه از یک prop تازه — پس در mock و سرور یکسان است.
+    const departmentLabel = departmentOptions.find(
+      (option) => option.value == departmentId,
+    )?.label;
+    const teamLabel = teamOptions.find((option) => option.value == teamId)
+      ?.label;
+
+    return (
+      <FormSectionCard icon={Network} title="جایگاه سازمانی">
+        <div className="flex flex-row space-x-5">
+          <ReadOnlyField
+            label="واحد سازمانی"
+            value={departmentsLoading ? "..." : departmentLabel}
+          />
+          <ReadOnlyField
+            label="تیم"
+            value={teamsLoading ? "..." : (teamLabel ?? "بدون تیم")}
+          />
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          واحد و تیم شما توسط مدیر سیستم تعیین می‌شود و از این صفحه قابل
+          تغییر نیست.
+        </p>
+      </FormSectionCard>
+    );
+  }
 
   return (
     <FormSectionCard icon={Network} title="جایگاه سازمانی">
