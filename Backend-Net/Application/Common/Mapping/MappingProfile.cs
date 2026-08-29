@@ -26,13 +26,9 @@ namespace Application.Common.Mapping
 	{
 		public MappingProfile()
 		{
-			CreateMap<PaymentDetailDto, PaymentDetail>()
-				.ForMember(dest => dest.checkNumber, opt => opt.MapFrom(src => src.CheckNumber))
-				.ForMember(dest => dest.transferRef, opt => opt.MapFrom(src => src.TransferRef));
+			CreateMap<PaymentDetailDto, PaymentDetail>();
 
-			CreateMap<PaymentDetail, PaymentDetailDto>()
-				.ForMember(dest => dest.CheckNumber, opt => opt.MapFrom(src => src.checkNumber))
-				.ForMember(dest => dest.TransferRef, opt => opt.MapFrom(src => src.transferRef));
+			CreateMap<PaymentDetail, PaymentDetailDto>();
 
 			CreateMap<CreateSaleItemDto, SaleItem>();
 			CreateMap<UpdateSaleItemDto, SaleItem>();

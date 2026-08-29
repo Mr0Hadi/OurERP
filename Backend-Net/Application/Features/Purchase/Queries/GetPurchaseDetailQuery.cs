@@ -24,27 +24,42 @@ namespace Application.Features.Purchase.Queries
         {
             var res = new ResponseDto();
 
-            var purchase = await _context.Purchases
-                .Include(x => x.Supplier)
-                .Include(x => x.Items)
-                .Include(x => x.PaymentDetails)
-                .FirstOrDefaultAsync(x => x.Id == request.Id) ?? throw new NotFoundCustomException("خرید مورد نظر یافت نشد.");
-
-            res.Data = new PurchaseDto
-            {
-                Id = purchase.Id,
-                InvoiceNumber = purchase.InvoiceNumber,
-                InvoiceDate = purchase.InvoiceDate,
-                Status = purchase.Status,
-                PaymentType = purchase.PaymentType,
-                TotalAmount = purchase.TotalAmount,
-                PaidAmount = purchase.PaidAmount,
-                Description = purchase.Description,
-                SupplierId = purchase.SupplierId,
-                SupplierName = purchase.Supplier.CompanyName,
-                Items = purchase.Items,
-                PaymentDetails = purchase.PaymentDetails
-            };
+            res.Data = await _context.Purchases.AsNoTracking()
+                .Where(x => x.Id == request.Id)
+                .Select(x => new PurchaseDto
+                {
+                    Id = x.Id,
+                    InvoiceNumber = x.InvoiceNumber,
+                    InvoiceDate = x.InvoiceDate,
+                    Status = x.Status,
+                    PaymentType = x.PaymentType,
+                    TotalAmount = x.TotalAmount,
+                    PaidAmount = x.PaidAmount,
+                    Description = x.Description,
+                    SupplierId = x.SupplierId,
+                    SupplierName = x.Supplier.CompanyName,
+                    Items = x.Items.Select(i => new PurchaseItemDto
+                    {
+                        Id = i.Id,
+                        ProductId = i.ProductId,
+                        ProductName = i.Product.Name,
+                        ProductCode = i.Product.Code,
+                        Quantity = i.Quantity,
+                        UnitPrice = i.UnitPrice,
+                        Discount = i.Discount,
+                        ReceivedQuantity = i.ReceivedQuantity,
+                        SettledQuantity = i.SettledQuantity
+                    }).ToList(),
+                    PaymentDetails = x.PaymentDetails.Select(p => new PaymentDetailDto
+                    {
+                        Id = p.Id,
+                        Type = p.Type,
+                        Amount = p.Amount,
+                        CheckNumber = p.CheckNumber,
+                        TransferRef = p.TransferRef
+                    }).ToList()
+                })
+                .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("خرید مورد نظر یافت نشد.");
 
             res.Message = "اطلاعات خرید با موفقیت ارسال شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();

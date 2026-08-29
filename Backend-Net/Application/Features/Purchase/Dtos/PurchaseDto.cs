@@ -1,4 +1,4 @@
-using Domain.Entities;
+using Application.Common.Dtos;
 using Domain.Enums;
 
 namespace Application.Features.Purchase.Dtos
@@ -15,7 +15,7 @@ namespace Application.Features.Purchase.Dtos
         public string? Description { get; set; }
         public int SupplierId { get; set; }
         public string SupplierName { get; set; }
-        public List<PurchaseItem> Items { get; set; }
-        public List<PaymentDetail> PaymentDetails { get; set; }
+        public List<PurchaseItemDto> Items { get; set; }
+        public List<PaymentDetailDto> PaymentDetails { get; set; }
     }
 }

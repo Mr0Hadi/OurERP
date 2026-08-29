@@ -33,7 +33,7 @@ namespace Application.Features.Supplier.Queries
         {
             var res = new ResponseDto();
 
-            var query = _context.Suppliers.AsQueryable();
+            var query = _context.Suppliers.Where(x => x.IsActive).AsQueryable();
 
             if (!string.IsNullOrEmpty(request.CompanyNameOrContactName))
             {
