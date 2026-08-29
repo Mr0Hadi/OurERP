@@ -25,7 +25,6 @@ namespace WMS.Tests.Integration
                 LastName = "تست",
                 Username = "newuser",
                 Password = "Test@1234",
-                PersonelCode = "1001",
                 DepartmentId = 999,
             }, CancellationToken.None));
         }
@@ -47,7 +46,6 @@ namespace WMS.Tests.Integration
                 LastName = "تست",
                 Username = "newuser",
                 Password = "Test@1234",
-                PersonelCode = "1001",
                 DepartmentId = department.Id,
                 TeamId = 999,
             }, CancellationToken.None));
@@ -73,7 +71,6 @@ namespace WMS.Tests.Integration
                 LastName = "تست",
                 Username = "newuser",
                 Password = "Test@1234",
-                PersonelCode = "1001",
                 DepartmentId = department.Id,
                 TeamId = team.Id,
             }, CancellationToken.None));
@@ -98,7 +95,6 @@ namespace WMS.Tests.Integration
                 LastName = "تست",
                 Username = "taken",
                 Password = "Test@1234",
-                PersonelCode = "1002",
                 DepartmentId = department.Id,
                 TeamId = team.Id,
             }, CancellationToken.None));
@@ -123,7 +119,6 @@ namespace WMS.Tests.Integration
                 LastName = "تست",
                 Username = "brandnew",
                 Password = "Test@1234",
-                PersonelCode = "1003",
                 DepartmentId = department.Id,
                 TeamId = team.Id,
             }, CancellationToken.None);
@@ -151,7 +146,6 @@ namespace WMS.Tests.Integration
                 LastName = "تست",
                 Username = "departmenthead",
                 Password = "Test@1234",
-                PersonelCode = "1004",
                 DepartmentId = department.Id,
             }, CancellationToken.None);
 
@@ -172,7 +166,6 @@ namespace WMS.Tests.Integration
                 LastName = "تست",
                 Username = "brandnew",
                 Password = "Test@1234",
-                PersonelCode = "",
             });
 
             Assert.False(result.IsValid);

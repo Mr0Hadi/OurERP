@@ -26,13 +26,11 @@ namespace WMS.Tests.Unit
                 LastName = "تست",
                 Username = "u",
                 Password = "Test@1234",
-                PersonelCode = "1001",
             };
 
             var user = TestMapper.Instance.Map<User>(command);
 
             Assert.Equal("کاربر", user.FirstName);
-            Assert.Equal("1001", user.PersonelCode);
             Assert.True(user.IsActive);
             Assert.NotEqual("Test@1234", user.PasswordHash);
         }

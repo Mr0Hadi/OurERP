@@ -13,7 +13,6 @@ namespace Application.Features.Team.Commands
     {
         public int Id { get; set; }
         public string Name { get; set; }
-        public int DepartmentId { get; set; }
         public int? HeadId { get; set; }
         public int? DeputyId { get; set; }
     }
@@ -53,7 +52,6 @@ namespace Application.Features.Team.Commands
             var team = await _teamRepository.GetByIdAsync(request.Id, cancellationToken) ?? throw new NotFoundCustomException("تیم مورد نظر یافت نشد.");
 
             team.Name = request.Name;
-            team.DepartmentId = request.DepartmentId;
             team.HeadId = request.HeadId;
             team.DeputyId = request.DeputyId;
 

@@ -4,22 +4,22 @@
   <PropertyGroup>
     <TimeStampOfAssociatedLegacyPublishXmlFile />
     <EncryptedPassword>AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAAfhNR30vRkkWAoOzFP+68NgAAAAACAAAAAAAQZgAAAAEAACAAAACnPTqSsmSs0rjxmE4kLx/k1uQUcyQhs8okrt4lUQsW3gAAAAAOgAAAAAIAACAAAAAsq8463BDmr0PWYBB3JoF76mbCc7E74lNxOjggNIWiNyAAAACJTL47vQ7A5co26tjlPR5w6BrUDX2Ie+WQ8vCqIW7QM0AAAAAGJyr/Lav7CRMwqSKoaXQQue8CvteaTdeYevPYK73soYAC+KxTCA59pW6bBiWJ2P4oDTxPnDPRi24JMcAoXb7f</EncryptedPassword>
-    <_PublishTargetUrl>ftp://185.252.31.53/Backend</_PublishTargetUrl>
-    <History>True|2026-08-28T07:30:24.9041438Z||;False|2026-08-28T03:13:29.7563806+03:30||;False|2026-08-28T02:34:37.6969494+03:30||;True|2026-08-25T01:32:23.7812895+03:30||;False|2026-08-25T01:07:04.1364300+03:30||;False|2026-08-25T01:04:55.1926766+03:30||;False|2026-08-25T01:02:31.3941744+03:30||;False|2026-08-25T01:00:49.0378715+03:30||;False|2026-08-25T00:42:58.9649064+03:30||;False|2026-08-25T00:24:52.2288392+03:30||;</History>
+    <_PublishTargetUrl>ftp://185.252.30.43/Backend</_PublishTargetUrl>
+    <History>True|2026-08-28T21:40:26.7914828Z||;True|2026-08-28T11:00:24.9041438+03:30||;False|2026-08-28T03:13:29.7563806+03:30||;False|2026-08-28T02:34:37.6969494+03:30||;True|2026-08-25T01:32:23.7812895+03:30||;False|2026-08-25T01:07:04.1364300+03:30||;False|2026-08-25T01:04:55.1926766+03:30||;False|2026-08-25T01:02:31.3941744+03:30||;False|2026-08-25T01:00:49.0378715+03:30||;False|2026-08-25T00:42:58.9649064+03:30||;False|2026-08-25T00:24:52.2288392+03:30||;</History>
     <LastFailureDetails />
   </PropertyGroup>
   <ItemGroup>
     <File Include="Application.dll">
-      <publishTime>08/28/2026 02:40:28</publishTime>
+      <publishTime>08/29/2026 01:03:25</publishTime>
     </File>
     <File Include="Application.pdb">
-      <publishTime>08/28/2026 02:40:28</publishTime>
+      <publishTime>08/29/2026 01:03:24</publishTime>
     </File>
     <File Include="appsettings.Development.json">
       <publishTime>08/13/2026 14:56:34</publishTime>
     </File>
     <File Include="appsettings.json">
-      <publishTime>08/26/2026 23:28:42</publishTime>
+      <publishTime>08/28/2026 19:12:46</publishTime>
     </File>
     <File Include="appsettings.production.json">
       <publishTime>08/28/2026 11:00:02</publishTime>
@@ -61,10 +61,10 @@
       <publishTime>07/24/2026 19:00:04</publishTime>
     </File>
     <File Include="Common.dll">
-      <publishTime>08/28/2026 02:40:21</publishTime>
+      <publishTime>08/29/2026 01:03:17</publishTime>
     </File>
     <File Include="Common.pdb">
-      <publishTime>08/28/2026 02:40:21</publishTime>
+      <publishTime>08/29/2026 01:03:17</publishTime>
     </File>
     <File Include="coreclr.dll">
       <publishTime>07/24/2026 18:59:12</publishTime>
@@ -85,10 +85,10 @@
       <publishTime>10/15/2024 22:48:56</publishTime>
     </File>
     <File Include="Domain.dll">
-      <publishTime>08/28/2026 02:40:21</publishTime>
+      <publishTime>08/29/2026 01:03:14</publishTime>
     </File>
     <File Include="Domain.pdb">
-      <publishTime>08/28/2026 02:40:21</publishTime>
+      <publishTime>08/29/2026 01:03:14</publishTime>
     </File>
     <File Include="dotnet-tools.json">
       <publishTime>08/25/2026 21:37:40</publishTime>
@@ -115,10 +115,10 @@
       <publishTime>07/24/2026 19:16:00</publishTime>
     </File>
     <File Include="Infrastructure.dll">
-      <publishTime>08/28/2026 02:40:33</publishTime>
+      <publishTime>08/29/2026 01:03:36</publishTime>
     </File>
     <File Include="Infrastructure.pdb">
-      <publishTime>08/28/2026 02:40:33</publishTime>
+      <publishTime>08/29/2026 01:03:36</publishTime>
     </File>
     <File Include="it/Microsoft.Data.SqlClient.resources.dll">
       <publishTime>06/25/2026 02:06:26</publishTime>
@@ -721,10 +721,10 @@
       <publishTime>06/25/2026 02:07:48</publishTime>
     </File>
     <File Include="PosIntegration.dll">
-      <publishTime>08/28/2026 02:40:21</publishTime>
+      <publishTime>08/29/2026 01:03:14</publishTime>
     </File>
     <File Include="PosIntegration.pdb">
-      <publishTime>08/28/2026 02:40:21</publishTime>
+      <publishTime>08/29/2026 01:03:14</publishTime>
     </File>
     <File Include="pt-BR/Microsoft.Data.SqlClient.resources.dll">
       <publishTime>06/25/2026 02:07:48</publishTime>
@@ -1381,25 +1381,25 @@
       <publishTime>06/25/2026 02:07:34</publishTime>
     </File>
     <File Include="web.config">
-      <publishTime>08/28/2026 11:00:01</publishTime>
+      <publishTime>08/29/2026 01:05:08</publishTime>
     </File>
     <File Include="WindowsBase.dll">
       <publishTime>07/24/2026 19:20:58</publishTime>
     </File>
     <File Include="WMS.deps.json">
-      <publishTime>08/28/2026 11:00:01</publishTime>
+      <publishTime>08/29/2026 01:05:07</publishTime>
     </File>
     <File Include="WMS.dll">
-      <publishTime>08/28/2026 10:59:59</publishTime>
+      <publishTime>08/29/2026 01:05:05</publishTime>
     </File>
     <File Include="WMS.exe">
-      <publishTime>08/28/2026 10:59:59</publishTime>
+      <publishTime>08/29/2026 01:05:05</publishTime>
     </File>
     <File Include="WMS.pdb">
-      <publishTime>08/28/2026 10:59:59</publishTime>
+      <publishTime>08/29/2026 01:05:05</publishTime>
     </File>
     <File Include="WMS.runtimeconfig.json">
-      <publishTime>08/28/2026 02:48:59</publishTime>
+      <publishTime>08/29/2026 01:05:07</publishTime>
     </File>
     <File Include="WMS.staticwebassets.endpoints.json">
       <publishTime>08/25/2026 00:09:10</publishTime>
@@ -1415,13 +1415,8 @@
     </File>
   </ItemGroup>
   <ItemGroup>
-    <DestinationConnectionStrings Include="SqlServer">
-      <Value>Server=172.16.150.1%3bDatabase=pasarg17_WMS%3bUser Id=pasarg17_wms%3bPassword=!4lf4V%249hYFE5p%3bTrusted_Connection=True%3bTrustServerCertificate=True</Value>
-    </DestinationConnectionStrings>
-  </ItemGroup>
-  <ItemGroup>
     <EFMigrations Include="Infrastructure.Persistence.WMSDbContext">
-      <Value>Server=172.16.150.1%3bDatabase=pasarg17_WMS%3bUser Id=pasarg17_wms%3bPassword=!4lf4V%249hYFE5p%3bTrusted_Connection=True%3bTrustServerCertificate=True</Value>
+      <Value>Server=185.252.30.43,2022%3bDatabase=pasarg17_WMS%3bUser Id=pasarg17_wms%3bPassword=!4lf4V%249hYFE5p%3bTrusted_Connection=True%3bTrustServerCertificate=True</Value>
     </EFMigrations>
   </ItemGroup>
 </Project>

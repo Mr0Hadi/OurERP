@@ -34,8 +34,8 @@ namespace Application.Features.Supplier.Commands
         public string? Description { get; set; }
         public UInt64? Balance { get; set; }
         public BalanceTypeEnum BalanceType { get; set; }
-        public decimal? longitude { get; set; }
-        public decimal? latitude { get; set; }
+        public decimal? Longitude { get; set; }
+        public decimal? Latitude { get; set; }
     }
 
     public class CreateSupplierCommandValidator : AbstractValidator<CreateSupplierCommand>

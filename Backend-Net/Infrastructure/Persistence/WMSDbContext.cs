@@ -68,6 +68,14 @@ namespace Infrastructure.Persistence
                 .WithOne(u => u.Department)
                 .HasForeignKey(u => u.DepartmentId);
 
+            modelBuilder.HasSequence<int>("UserPersonelCode")
+                .StartsAt(1000)
+                .IncrementsBy(1);
+            modelBuilder.Entity<User>()
+                .Property(x => x.PersonelCode)
+            .   HasDefaultValueSql("NEXT VALUE FOR UserPersonelCode");
+        
+
             modelBuilder.Entity<Team>()
                 .HasOne(t => t.Head)
                 .WithMany()
