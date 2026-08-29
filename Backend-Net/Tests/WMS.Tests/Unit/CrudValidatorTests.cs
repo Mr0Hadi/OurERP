@@ -218,7 +218,6 @@ namespace WMS.Tests.Unit
             LastName = "تست",
             Username = "tester1",
             Password = "Test@1234",
-            PersonelCode = "1001",
             DepartmentId = 1,
             TeamId = 1,
         };
@@ -229,14 +228,14 @@ namespace WMS.Tests.Unit
             Assert.True(_sut.Validate(Valid()).IsValid);
         }
 
-        [Fact]
-        public void EmptyPersonelCode_IsInvalid()
-        {
-            var command = Valid();
-            command.PersonelCode = "";
+        //[Fact]
+        //public void EmptyPersonelCode_IsInvalid()
+        //{
+        //    var command = Valid();
+        //    command.PersonelCode = "";
 
-            Assert.False(_sut.Validate(command).IsValid);
-        }
+        //    Assert.False(_sut.Validate(command).IsValid);
+        //}
 
         [Fact]
         public void PersianUsername_IsInvalid()

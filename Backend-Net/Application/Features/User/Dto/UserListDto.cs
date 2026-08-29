@@ -6,7 +6,7 @@ namespace Application.Features.User.Dto
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string Username { get; set; }
-        public string PersonelCode { get; set; }
+        public int PersonelCode { get; set; }
         public int DepartmentId { get; set; }
         public string DepartmentName { get; set; }
         public int? TeamId { get; set; }

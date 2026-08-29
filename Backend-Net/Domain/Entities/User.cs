@@ -9,7 +9,7 @@ namespace Domain.Entities
         public string LastName { get; set; }
         public string Username { get; set; }
         public string PasswordHash { get; set; }
-        public string PersonelCode { get; set; }
+        public int PersonelCode { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }

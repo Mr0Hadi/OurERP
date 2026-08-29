@@ -20,7 +20,11 @@ namespace Infrastructure.Repositories
 
         public override async Task<User?> GetByIdAsync(object id, CancellationToken cancellationToken = default)
         {
-            return await _context.Users.SingleOrDefaultAsync(u => u.Id == Convert.ToInt32(id), cancellationToken);
+            return await _context.Users
+                .Where(u => u.Id == Convert.ToInt32(id))
+                .Include(x => x.Department.Name)
+                .Include(x => x.Team.Name)
+                .FirstOrDefaultAsync(cancellationToken);
         }
 
         public async Task<bool> IsExistAsync(int userId, CancellationToken cancellationToken = default)

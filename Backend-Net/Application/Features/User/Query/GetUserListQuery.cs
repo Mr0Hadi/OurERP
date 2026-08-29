@@ -35,9 +35,7 @@ namespace Application.Features.User.Query
             {
                 query = query.Where(x =>
                     x.FirstName.Contains(request.FullName) ||
-                    x.LastName.Contains(request.FullName) ||
-                    x.Username.Contains(request.FullName) ||
-                    x.PersonelCode.Contains(request.FullName));
+                    x.LastName.Contains(request.FullName));
             }
 
             if (request.DepartmentId.HasValue)

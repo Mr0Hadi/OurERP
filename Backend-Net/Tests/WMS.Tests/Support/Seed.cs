@@ -138,7 +138,7 @@ namespace WMS.Tests.Support
                 LastName = "تست",
                 Username = username,
                 PasswordHash = password.ToHashSHA256(),
-                PersonelCode = "1001",
+                PersonelCode = 1001,
                 IsActive = true,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now,

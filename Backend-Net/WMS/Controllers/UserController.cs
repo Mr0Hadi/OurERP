@@ -48,6 +48,12 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
+        [HttpPut("UpdateUserInfo")]
+        public async Task<ActionResult<ResponseDto>> UpdateUserInfo([FromBody] UpdateUserInfoCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
         [HttpPut("ChangePassword")]
         public async Task<ActionResult<ResponseDto>> ChangePassword([FromBody] ChangePasswordCommand request)
         {
