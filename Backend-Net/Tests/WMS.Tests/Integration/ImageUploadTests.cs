@@ -164,7 +164,7 @@ namespace WMS.Tests.Integration
                 Tax = 9,
                 Stock = 0,
                 LowStockThreshold = 1,
-                ImageUrl = detail.ImageUrl,
+                ImageObjectKey = detail.ImageUrl,
                 ProductCategoryId = scope.Context.ProductCategories.Single().Id,
             }, CancellationToken.None);
 
@@ -279,7 +279,7 @@ namespace WMS.Tests.Integration
                 Tax = 9,
                 Stock = 0,
                 LowStockThreshold = 1,
-                ImageUrl = imageUrl,
+                ImageObjectKey = imageUrl,
                 ProductCategoryId = category.Id,
             };
         }

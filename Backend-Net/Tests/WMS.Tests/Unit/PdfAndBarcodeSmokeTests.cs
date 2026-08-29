@@ -42,6 +42,39 @@ namespace WMS.Tests.Unit
         // Tests/WMS.Tests/Integration/InvoicePdfTests.cs, which exercises it end-to-end (and
         // requires `soffice` on the test runner).
 
+        // The QuestPDF invoice renderer (the process-free alternative engine, selected via
+        // InvoiceRenderer:Engine) can be smoke-tested here instead - unlike the LibreOffice path it
+        // needs nothing installed on the runner.
+        [Fact]
+        public async Task RenderInvoiceAsync_QuestPdfEngine_ProducesNonEmptyPdf()
+        {
+            var service = new QuestPdfInvoiceDocumentService(new QuestPdfDocumentService(new ZXingBarcodeRenderer()));
+            var model = new InvoiceDocumentModel
+            {
+                Title = "صورتحساب فروش کالا و خدمات",
+                DocumentNumber = "S-2026-0001",
+                DocumentDate = new DateTime(2026, 8, 30),
+                Company = new CompanyInfo { Name = "شرکت تست", City = "تهران", Currency = "ریال" },
+                CounterpartyLabel = "خریدار",
+                Counterparty = new PartyInfo { Name = "مشتری تست", City = "اصفهان" },
+                Lines = new()
+                {
+                    new InvoiceLineModel { RowNumber = 1, ProductCode = "14050512-000123", ProductName = "کالای تست", Quantity = 2, UnitPrice = 150000, LineTotal = 300000 },
+                    new InvoiceLineModel { RowNumber = 2, ProductCode = "14050512-000124", ProductName = "کالای دوم", Quantity = 1, UnitPrice = 90000, DiscountAmount = 5000, TaxAmount = 7650, LineTotal = 92650 },
+                },
+                SubTotal = 390000,
+                TotalDiscount = 5000,
+                TotalTax = 7650,
+                GrandTotal = 392650,
+                Description = "توضیحات تست",
+            };
+
+            var bytes = await service.RenderInvoiceAsync(model);
+
+            Assert.NotEmpty(bytes);
+            Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(bytes, 0, 4));
+        }
+
         [Fact]
         public void RenderBarcodeLabels_SheetMode_ProducesNonEmptyPdf()
         {

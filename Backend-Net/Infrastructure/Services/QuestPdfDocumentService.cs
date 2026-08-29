@@ -12,10 +12,16 @@ namespace Infrastructure.Services
     /// Barcode/QR label-sheet rendering only - invoice rendering moved to the Excel-template +
     /// LibreOffice pipeline in ExcelInvoiceDocumentService, which holds this class to reuse it for
     /// RenderBarcodeLabels. No longer implements IPdfDocumentService directly for that reason.
+    /// QuestPdfInvoiceDocumentService (the process-free alternative invoice renderer) holds it for
+    /// the same reason, and shares this class's Persian font registration.
     /// </summary>
     public class QuestPdfDocumentService
     {
-        private const string FontFamily = "Vazirmatn";
+        /// <summary>
+        /// Persian font family embedded in this assembly - the only one guaranteed present on a
+        /// server with no fonts installed. Shared with QuestPdfInvoiceDocumentService.
+        /// </summary>
+        public const string FontFamily = "Vazirmatn";
         private static readonly object FontLock = new();
         private static bool _fontsRegistered;
 
@@ -27,7 +33,12 @@ namespace Infrastructure.Services
             EnsureFontsRegistered();
         }
 
-        private static void EnsureFontsRegistered()
+        /// <summary>
+        /// Registers the embedded Vazirmatn .ttf resources with QuestPDF exactly once per process.
+        /// Public and static so the sibling invoice renderer can call it without duplicating the
+        /// resource scan - QuestPDF's FontManager is a global, so one registration serves both.
+        /// </summary>
+        public static void EnsureFontsRegistered()
         {
             if (_fontsRegistered)
                 return;

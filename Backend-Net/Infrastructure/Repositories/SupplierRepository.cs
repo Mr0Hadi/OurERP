@@ -13,9 +13,9 @@ namespace Infrastructure.Repositories
             _context = context;
         }
 
-        public override Task<Supplier?> GetByIdAsync(object id, CancellationToken cancellationToken = default)
+        public override async Task<Supplier?> GetByIdAsync(object id, CancellationToken cancellationToken = default)
         {
-            return _context.Suppliers.Where(x => x.Id == Convert.ToInt32(id) && x.IsActive).FirstOrDefaultAsync();
+            return await _context.Suppliers.Where(x => x.Id == Convert.ToInt32(id) && x.IsActive).FirstOrDefaultAsync();
         }
     }
 }

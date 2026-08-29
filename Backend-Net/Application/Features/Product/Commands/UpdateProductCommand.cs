@@ -32,9 +32,8 @@ namespace Application.Features.Product.Commands
         /// The ObjectKey returned by POST api/File/UploadImage (folder=PRODUCTS), or the ImageKey
         /// read off the detail response to keep the existing image. Send null to clear it.
         /// </summary>
-        public string? ImageUrl { get; set; }
+        public string? ImageObjectKey { get; set; }
         public int ProductCategoryId { get; set; }
-
     }
 
     public class UpdateProductCommandValidator : AbstractValidator<UpdateProductCommand>
@@ -50,6 +49,7 @@ namespace Application.Features.Product.Commands
             RuleFor(x => x.Stock).GreaterThanOrEqualTo(0).WithMessage("موجودی نمی‌تواند منفی باشد.");
             RuleFor(x => x.LowStockThreshold).GreaterThanOrEqualTo(0).WithMessage("حداقل موجودی نمی‌تواند منفی باشد.");
             RuleFor(x => x.ProductCategoryId).GreaterThan(0).WithMessage(Validation.RequiredMessage("شناسه دسته‌بندی محصول"));
+            RuleFor(x => x.Unit).IsInEnum().WithMessage("واحد محصول نامعتبر است.");
         }
     }
 
@@ -83,7 +83,7 @@ namespace Application.Features.Product.Commands
             product.LowStockThreshold = request.LowStockThreshold;
             // The column stores the bucket object key, so a signed URL echoed back by the frontend
             // is stripped down rather than persisted verbatim.
-            product.ImageUrl = _objectStorageService.NormalizeKey(request.ImageUrl);
+            product.ImageUrl = _objectStorageService.NormalizeKey(request.ImageObjectKey);
             product.UpdatedAt = DateTime.Now;
 
             // Stock is reconciled against ProductUnit rows rather than overwritten blind -

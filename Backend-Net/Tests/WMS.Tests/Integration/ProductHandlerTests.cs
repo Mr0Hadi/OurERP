@@ -62,17 +62,17 @@ namespace WMS.Tests.Integration
             using var verify = db.NewContext();
             var product = Assert.Single(verify.Products);
 
-            // Code is Date(8)-ProductId(6); BarCode is the same digits with the dash stripped.
-            Assert.Matches(@"^\d{8}-\d{6}$", product.Code);
+            // Code is Date(8)-ProductId(10); BarCode is the same digits with the dash stripped.
+            Assert.Matches(@"^\d{8}-\d{10}$", product.Code);
             Assert.Equal(product.Code.Replace("-", ""), product.BarCode);
-            Assert.Equal(14, product.BarCode.Length);
+            Assert.Equal(18, product.BarCode.Length);
 
             var units = verify.ProductUnits.Where(x => x.ProductId == product.Id).OrderBy(x => x.SerialNumber).ToList();
             Assert.Equal(3, units.Count);
             Assert.All(units, u => Assert.Equal(ProductUnitStatusEnum.IN_STOCK, u.Status));
             Assert.Equal(new[] { 1, 2, 3 }, units.Select(u => u.SerialNumber).ToArray());
-            Assert.Equal($"{product.Code}-000002", units[1].Barcode);
-            Assert.Equal(20, units[1].BarcodePayload.Length);
+            Assert.Equal($"{product.Code}-0000000002", units[1].Barcode);
+            Assert.Equal(28, units[1].BarcodePayload.Length);
         }
 
         [Fact]
