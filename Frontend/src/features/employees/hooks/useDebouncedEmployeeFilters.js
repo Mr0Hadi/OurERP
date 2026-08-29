@@ -8,12 +8,14 @@ import { useEmployeeFilterStore } from "../store/employeeFilterStore";
  */
 export function useDebouncedEmployeeFilters() {
   const globalSearch = useEmployeeFilterStore((s) => s.globalSearch);
-  const roleId = useEmployeeFilterStore((s) => s.roleId);
+  const departmentId = useEmployeeFilterStore((s) => s.departmentId);
+  const teamId = useEmployeeFilterStore((s) => s.teamId);
   const status = useEmployeeFilterStore((s) => s.status);
 
   return {
     globalSearch: useDebouncedValue(globalSearch),
-    roleId,
+    departmentId,
+    teamId,
     status,
   };
 }

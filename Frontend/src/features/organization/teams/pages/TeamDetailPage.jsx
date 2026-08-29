@@ -17,49 +17,73 @@ import {
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
+import { useFormDraft } from "@/shared/hooks/useFormDraft";
 import OrgDetailLoading from "../../components/OrgDetailLoading";
 
 import { useUpdateTeamMutation, useDeleteTeamMutation } from "../services/mutations";
 import { useTeamQuery } from "../services/queries";
+import { useTeamMembersQuery } from "@/features/employees/services/queries";
 import { useTeamForm } from "../hooks/useTeamForm";
-import {
-  useEmployeeOptions,
-  labelOfOption,
-} from "../../hooks/useEmployeeOptions";
 import TeamIdentityForm from "../components/forms/TeamIdentityForm";
+import TeamMembersCard from "../components/TeamMembersCard";
 import OrgLeadershipForm from "../../components/OrgLeadershipForm";
 
 function TeamDetailForm({ team }) {
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const { options } = useEmployeeOptions();
+
+  const selfPath = `/organization/teams/${team.id}`;
 
   const updateMutation = useUpdateTeamMutation();
   const deleteMutation = useDeleteTeamMutation();
 
-  const { formMethods, buildPayload } = useTeamForm(team);
+  const { draft, saveDraft, clearDraft } = useFormDraft(`team:${team.id}`);
+
+  /**
+   * تعداد اعضا از خودِ فهرست اعضا شمرده می‌شود، نه از `team.userCount`:
+   * `GetTeamDetail` در سرور `UserCount` ندارد (فقط `GetTeamList` دارد).
+   * همان query ای است که کارت اعضا می‌زند، پس درخواستِ اضافه‌ای نمی‌رود.
+   */
+  const { members, memberCount } = useTeamMembersQuery(team.id);
+
+  const { formMethods, buildPayload } = useTeamForm(team, draft);
   const {
     register,
     control,
+    getValues,
     handleSubmit,
     formState: { errors },
   } = formMethods;
 
+  /** رفتن به جزئیات یک عضو، بدون از دست دادنِ تغییراتِ نیمه‌کاره‌ی فرم. */
+  const leaveWithDraft = (target, state) => {
+    saveDraft(getValues());
+    navigate(target, { state: { returnTo: selfPath, ...state } });
+  };
+
   const onSubmit = (data) => {
-    updateMutation.mutate(
-      buildPayload(data, labelOfOption(options, data.headId)),
-      { onSuccess: () => navigate(ROUTES.ORG_TEAMS) },
-    );
+    updateMutation.mutate(buildPayload(data), {
+      onSuccess: () => {
+        clearDraft();
+        navigate(ROUTES.ORG_TEAMS);
+      },
+    });
   };
 
   const handleDelete = () => {
     deleteMutation.mutate(team.id, {
-      onSuccess: () => navigate(ROUTES.ORG_TEAMS),
+      onSuccess: () => {
+        clearDraft();
+        navigate(ROUTES.ORG_TEAMS);
+      },
     });
   };
 
   const isBusy = updateMutation.isPending || deleteMutation.isPending;
-  const hasMembers = Number(team.userCount ?? 0) > 0;
+
+  // سرور دقیقاً همین را چک می‌کند: تیمی که کارمندِ *فعال* دارد حذف
+  // نمی‌شود. عضوِ غیرفعال مانع حذف نیست.
+  const hasActiveMembers = members.some((member) => member.isActive);
 
   return (
     <div className="m-auto bg-background">
@@ -79,20 +103,34 @@ function TeamDetailForm({ team }) {
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">تعداد اعضا</span>
                 <span className="font-medium">
-                  {Number(team.userCount ?? 0).toLocaleString("fa-IR")} نفر
+                  {memberCount.toLocaleString("fa-IR")} نفر
                 </span>
               </div>
             </div>
+
+            <TeamMembersCard
+              team={team}
+              onOpenEmployee={(employeeId) =>
+                leaveWithDraft(`/employees/${employeeId}`)
+              }
+            />
           </div>
 
           <div className="lg:col-span-1 space-y-4">
-            <OrgLeadershipForm control={control} scopeLabel="تیم" />
+            <OrgLeadershipForm
+              control={control}
+              errors={errors}
+              scopeLabel="تیم"
+            />
 
             <div className="flex gap-2">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate(ROUTES.ORG_TEAMS)}
+                onClick={() => {
+                  clearDraft();
+                  navigate(ROUTES.ORG_TEAMS);
+                }}
                 disabled={isBusy}
                 className="flex-1 gap-2"
               >
@@ -110,16 +148,15 @@ function TeamDetailForm({ team }) {
               variant="destructive"
               className="w-full gap-2"
               onClick={() => setShowDeleteDialog(true)}
-              disabled={isBusy || hasMembers}
+              disabled={isBusy || hasActiveMembers}
             >
               <Trash2 className="h-4 w-4" />
               حذف تیم
             </Button>
 
-            {hasMembers && (
+            {hasActiveMembers && (
               <p className="text-xs text-muted-foreground text-center">
-                این تیم عضو فعال دارد و تا وقتی اعضایش منتقل نشوند قابل حذف
-                نیست.
+                این تیم عضو فعال دارد؛ اول اعضایش را از فهرست بالا خارج کنید.
               </p>
             )}
           </div>

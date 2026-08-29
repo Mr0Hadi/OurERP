@@ -1,6 +1,6 @@
 // src/features/employees/hooks/useEmployeeForm.js
 import { useForm } from "react-hook-form";
-import { UserRoleEnum } from "@/shared/domain/enums/userRole";
+import { requiredMessage } from "@/shared/utils/validationRules";
 
 /**
  * فرمِ کارمند در دو حالت «ثبت» و «ویرایش» یک شکل دارد ولی دو payload
@@ -9,10 +9,22 @@ import { UserRoleEnum } from "@/shared/domain/enums/userRole";
  *   ثبت    → رمز عبور می‌گیرد، `isActive` نمی‌گیرد (همیشه فعال)
  *   ویرایش → `isActive` می‌گیرد، ولی رمز عبور را *نمی‌پذیرد*
  *
- * `personelCode` در هیچ‌کدام ورودیِ فرم نیست — سرور خودش می‌سازدش تا
- * یکتا و پیوسته بماند؛ در حالت ویرایش فقط برای *نمایش* از خودِ
- * `employee` خوانده می‌شود، نه از فرم.
+ * دو چیز عمداً در این فرم **نیستند**:
+ *
+ *   `roleId`       — کارمند نقش ندارد؛ سرپرستی روی `Department.HeadId` و
+ *                    `Team.HeadId` ذخیره می‌شود و در صفحه‌ی همان واحد یا
+ *                    تیم تعیین می‌شود.
+ *   `personelCode` — سرور باید بسازدش تا یکتا و پیوسته بماند؛ در حالت
+ *                    ویرایش فقط برای *نمایش* از خودِ `employee` خوانده
+ *                    می‌شود، نه از فرم.
  */
+
+/** واحد اجباری است — هم در UI و هم در اعتبارسنجیِ خودِ سرور. */
+export const departmentRules = {
+  validate: (value) =>
+    (value != null && value !== "") || requiredMessage("واحد سازمانی"),
+};
+
 function buildDefaultValues(employee) {
   if (!employee) {
     return {
@@ -21,7 +33,8 @@ function buildDefaultValues(employee) {
       username: "",
       password: "",
       rePassword: "",
-      roleId: UserRoleEnum.USER,
+      departmentId: null,
+      teamId: null,
       isActive: true,
     };
   }
@@ -32,10 +45,14 @@ function buildDefaultValues(employee) {
     username: employee.username || "",
     password: "",
     rePassword: "",
-    roleId: employee.roleId ?? UserRoleEnum.USER,
+    departmentId: employee.departmentId ?? null,
+    teamId: employee.teamId ?? null,
     isActive: employee.isActive ?? true,
   };
 }
+
+/** شناسه‌ی عددی یا null — Select برای «بدون تیم» null می‌دهد. */
+const toId = (value) => (value === "" || value == null ? null : Number(value));
 
 /** payload دستور `CreateUser`. */
 export function buildCreatePayload(data) {
@@ -45,7 +62,8 @@ export function buildCreatePayload(data) {
     lastName: data.lastName.trim(),
     username: data.username.trim(),
     password: data.password,
-    roleId: Number(data.roleId),
+    departmentId: toId(data.departmentId),
+    teamId: toId(data.teamId),
   };
 }
 
@@ -56,16 +74,25 @@ export function buildUpdatePayload(data, id) {
     firstName: data.firstName.trim(),
     lastName: data.lastName.trim(),
     username: data.username.trim(),
-    roleId: Number(data.roleId),
+    departmentId: toId(data.departmentId),
+    teamId: toId(data.teamId),
     isActive: Boolean(data.isActive),
   };
 }
 
-export function useEmployeeForm(initialData = null) {
+/**
+ * @param initialData رکوردِ کارمند در حالت ویرایش (یا null در حالت ثبت)
+ * @param draftValues پیش‌نویسِ بازگشتی از صفحه‌ی «واحد/تیم جدید»؛ روی
+ *        مقادیر پیش‌فرض می‌نشیند و حالتِ فرم (ثبت/ویرایش) را عوض نمی‌کند
+ */
+export function useEmployeeForm(initialData = null, draftValues = null) {
   const isEditing = Boolean(initialData);
 
   const formMethods = useForm({
-    defaultValues: buildDefaultValues(initialData),
+    defaultValues: {
+      ...buildDefaultValues(initialData),
+      ...(draftValues ?? {}),
+    },
   });
 
   return {

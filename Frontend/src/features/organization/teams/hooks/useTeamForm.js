@@ -18,30 +18,47 @@ function buildDefaultValues(team) {
     name: team?.name ?? "",
     departmentId: team?.departmentId ?? null,
     headId: team?.headId ?? null,
+    deputyId: team?.deputyId ?? null,
   };
 }
 
-export function buildTeamPayload(data, id, headName) {
+/**
+ * `headName` در payload نیست: نام مدیر از خودِ رکوردِ کارمند خوانده
+ * می‌شود (هم در mock و هم در سرور)، و فرستادنش یعنی یک کپیِ کهنه که با
+ * تغییر نام کارمند اشتباه می‌شود.
+ *
+ * `deputyId` اما همیشه می‌رود — `UpdateTeamCommand` بی‌قید
+ * `team.DeputyId = request.DeputyId` می‌گذارد و نفرستادنش معاون را پاک
+ * می‌کند.
+ */
+export function buildTeamPayload(data, id) {
   return {
     ...(id != null ? { id: Number(id) } : {}),
     name: data.name.trim(),
     departmentId: Number(data.departmentId),
     headId: data.headId ?? null,
-    headName,
+    deputyId: data.deputyId ?? null,
   };
 }
 
-export function useTeamForm(initialData = null) {
+/**
+ * @param initialData رکوردِ تیم در حالت ویرایش (یا null در حالت ثبت)
+ * @param draftValues پیش‌نویسِ بازگشتی از صفحه‌ی «واحد جدید»
+ */
+export function useTeamForm(initialData = null, draftValues = null) {
   const isEditing = Boolean(initialData);
 
   const formMethods = useForm({
-    defaultValues: buildDefaultValues(initialData),
+    defaultValues: {
+      ...buildDefaultValues(initialData),
+      ...(draftValues ?? {}),
+    },
   });
 
   return {
     formMethods,
     isEditing,
-    buildPayload: (data, headName) =>
-      buildTeamPayload(data, isEditing ? initialData.id : null, headName),
+    buildPayload: (data) =>
+      buildTeamPayload(data, isEditing ? initialData.id : null),
   };
 }

@@ -12,10 +12,14 @@ const BY_NAME = { id: "fullName", desc: false };
  * فقط کارمندان *فعال* برگردانده می‌شوند: انتخاب کسی که دسترسی‌اش قطع
  * شده به‌عنوان مدیر یک واحد، یعنی آن واحد عملاً بی‌مدیر است ولی در UI
  * مدیر دارد.
+ *
+ * `departmentId` اختیاری است و فهرست را به کارمندانِ همان واحد محدود
+ * می‌کند — برای صفحه‌هایی که انتخابِ مدیر باید از میان اعضای خودِ واحد
+ * باشد.
  */
-export function useEmployeeOptions() {
+export function useEmployeeOptions(departmentId = "") {
   const { data, isLoading, isError } = useEmployeesQuery(
-    { globalSearch: "", roleId: "", status: "" },
+    { globalSearch: "", departmentId },
     ALL_EMPLOYEES_PAGE,
     BY_NAME,
   );
@@ -34,10 +38,4 @@ export function useEmployeeOptions() {
   );
 
   return { options, isLoading, isError };
-}
-
-/** نامِ نمایشیِ یک شناسه در فهرست options — برای پر کردن `headName`. */
-export function labelOfOption(options, value) {
-  if (value == null) return null;
-  return options.find((option) => option.value === value)?.label ?? null;
 }

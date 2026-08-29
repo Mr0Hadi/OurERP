@@ -12,29 +12,45 @@ function buildDefaultValues(department) {
   return {
     name: department?.name ?? "",
     headId: department?.headId ?? null,
+    deputyId: department?.deputyId ?? null,
   };
 }
 
-export function buildDepartmentPayload(data, id, headName) {
+/**
+ * `headName` در payload نیست — نام مدیر مشتقِ `headId` است و فرستادنش
+ * فقط یک کپیِ کهنه‌شدنی می‌ساخت.
+ *
+ * `deputyId` برعکس، **باید** همیشه برود: هندلرِ سرور بی‌قید
+ * `department.DeputyId = request.DeputyId` می‌گذارد، پس نفرستادنش یعنی
+ * پاک‌شدنِ معاونِ ثبت‌شده در هر ذخیره.
+ */
+export function buildDepartmentPayload(data, id) {
   return {
     ...(id != null ? { id: Number(id) } : {}),
     name: data.name.trim(),
     headId: data.headId ?? null,
-    headName,
+    deputyId: data.deputyId ?? null,
   };
 }
 
-export function useDepartmentForm(initialData = null) {
+/**
+ * @param initialData رکوردِ واحد در حالت ویرایش (یا null در حالت ثبت)
+ * @param draftValues پیش‌نویسِ بازگشتی از صفحه‌ی «تیم جدید»
+ */
+export function useDepartmentForm(initialData = null, draftValues = null) {
   const isEditing = Boolean(initialData);
 
   const formMethods = useForm({
-    defaultValues: buildDefaultValues(initialData),
+    defaultValues: {
+      ...buildDefaultValues(initialData),
+      ...(draftValues ?? {}),
+    },
   });
 
   return {
     formMethods,
     isEditing,
-    buildPayload: (data, headName) =>
-      buildDepartmentPayload(data, isEditing ? initialData.id : null, headName),
+    buildPayload: (data) =>
+      buildDepartmentPayload(data, isEditing ? initialData.id : null),
   };
 }

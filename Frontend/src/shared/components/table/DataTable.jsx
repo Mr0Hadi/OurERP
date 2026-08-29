@@ -26,6 +26,8 @@ import DataTablePagination from "./DataTablePagination";
  *  totalPages, currentPage, pageSize, onPaginationChange
  *  sorting                - آبجکت { id, desc } یا null (تک‌ستونی)
  *  onSortingChange        - (nextSortingOrNull) => void
+ *  sortable               - false برای endpoint هایی که مرتب‌سازی ندارند؛
+ *                           سرتیترها دکمه‌ی مرده نشان نمی‌دهند
  *  emptyMessage           - متن ردیف خالی داخل جدول
  *  emptyState             - جایگزین کامل جدول وقتی ردیفی نیست (اختیاری)
  *  rowClassName           - (row) => string برای رنگ‌آمیزی شرطی ردیف
@@ -41,6 +43,7 @@ export default function DataTable({
   onPaginationChange,
   sorting,
   onSortingChange,
+  sortable = true,
   emptyMessage = "موردی یافت نشد.",
   emptyState,
   rowClassName,
@@ -66,6 +69,9 @@ export default function DataTable({
     data,
     columns,
     state: { sorting: sortingState, pagination: paginationState },
+    // مرتب‌سازی سرور-ساید است؛ اگر endpoint آن را نگیرد، سرتیترِ قابل‌کلیک
+    // فقط به کاربر دروغ می‌گوید (کلیک می‌کند و هیچ‌چیز عوض نمی‌شود).
+    enableSorting: sortable,
     onSortingChange: handleSortingChange,
     onPaginationChange,
     getCoreRowModel: getCoreRowModel(),

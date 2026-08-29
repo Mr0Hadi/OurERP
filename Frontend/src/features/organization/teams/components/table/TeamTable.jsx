@@ -49,6 +49,16 @@ export default function TeamTable({
           ),
       },
       {
+        accessorKey: "deputyName",
+        header: "معاون",
+        cell: (info) =>
+          info.getValue() ? (
+            <span className="text-sm">{info.getValue()}</span>
+          ) : (
+            <span className="text-sm text-muted-foreground">تعیین نشده</span>
+          ),
+      },
+      {
         accessorKey: "userCount",
         header: "تعداد اعضا",
         cell: (info) => (
@@ -88,6 +98,8 @@ export default function TeamTable({
       onPaginationChange={onPaginationChange}
       sorting={sorting}
       onSortingChange={onSortingChange}
+      // `GetUserList`/`GetDepartmentList`/`GetTeamList` هیچ‌کدام sortBy نمی‌گیرند.
+      sortable={false}
       rowClassName={rowClassName}
       emptyMessage="تیمی یافت نشد."
     />

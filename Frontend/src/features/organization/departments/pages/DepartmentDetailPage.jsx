@@ -17,6 +17,7 @@ import {
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
+import { useFormDraft } from "@/shared/hooks/useFormDraft";
 import OrgDetailLoading from "../../components/OrgDetailLoading";
 
 import {
@@ -24,45 +25,83 @@ import {
   useDeleteDepartmentMutation,
 } from "../services/mutations";
 import { useDepartmentQuery } from "../services/queries";
+import { useTeamOptionsQuery } from "../../teams/services/queries";
+import { useDepartmentUserCountQuery } from "@/features/employees/services/queries";
 import { useDepartmentForm } from "../hooks/useDepartmentForm";
-import {
-  useEmployeeOptions,
-  labelOfOption,
-} from "../../hooks/useEmployeeOptions";
 import DepartmentIdentityForm from "../components/forms/DepartmentIdentityForm";
+import DepartmentTeamsCard from "../components/DepartmentTeamsCard";
 import OrgLeadershipForm from "../../components/OrgLeadershipForm";
 
 function DepartmentDetailForm({ department }) {
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const { options } = useEmployeeOptions();
+
+  const selfPath = `/organization/departments/${department.id}`;
 
   const updateMutation = useUpdateDepartmentMutation();
   const deleteMutation = useDeleteDepartmentMutation();
 
-  const { formMethods, buildPayload } = useDepartmentForm(department);
+  /**
+   * شمارنده‌ها از خودِ داده شمرده می‌شوند، نه از رکوردِ واحد:
+   * `GetDepartmentDetail` در سرور `TeamCount`/`UserCount` ندارد (فقط
+   * `GetDepartmentList` دارد) و تکیه‌کردن به آن‌ها یعنی این صفحه همیشه
+   * «۰ تیم / ۰ نفر» نشان بدهد و دکمه‌ی حذف هیچ‌وقت قفل نشود.
+   *
+   * هر دو query همان‌هایی هستند که کارت تیم‌ها و کارت اعضا هم می‌زنند،
+   * پس react-query یکی‌شان می‌کند و درخواستِ اضافه‌ای نمی‌رود.
+   */
+  const { teams } = useTeamOptionsQuery(department.id);
+  const { count: userCount } = useDepartmentUserCountQuery(department.id);
+
+  // رفتن به «تیم جدید» یا جزئیات یک تیم نباید تغییراتِ نیمه‌کاره‌ی همین
+  // فرم را از بین ببرد — همان الگوی «ثبت خرید جدید».
+  const { draft, saveDraft, clearDraft } = useFormDraft(
+    `department:${department.id}`,
+  );
+
+  const { formMethods, buildPayload } = useDepartmentForm(department, draft);
   const {
     register,
     control,
+    getValues,
     handleSubmit,
     formState: { errors },
   } = formMethods;
 
+  const leaveWithDraft = (target, state) => {
+    saveDraft(getValues());
+    navigate(target, { state: { returnTo: selfPath, ...state } });
+  };
+
   const onSubmit = (data) => {
-    updateMutation.mutate(
-      buildPayload(data, labelOfOption(options, data.headId)),
-      { onSuccess: () => navigate(ROUTES.ORG_DEPARTMENTS) },
-    );
+    updateMutation.mutate(buildPayload(data), {
+      onSuccess: () => {
+        clearDraft();
+        navigate(ROUTES.ORG_DEPARTMENTS);
+      },
+    });
   };
 
   const handleDelete = () => {
     deleteMutation.mutate(department.id, {
-      onSuccess: () => navigate(ROUTES.ORG_DEPARTMENTS),
+      onSuccess: () => {
+        clearDraft();
+        navigate(ROUTES.ORG_DEPARTMENTS);
+      },
     });
   };
 
   const isBusy = updateMutation.isPending || deleteMutation.isPending;
-  const hasTeams = Number(department.teamCount ?? 0) > 0;
+  const teamCount = teams.length;
+
+  // سرور علاوه بر تیمِ فعال، کارمندِ فعال را هم بلاک می‌کند؛ UI باید همان
+  // دو شرط را نشان بدهد وگرنه کاربر دکمه‌ی فعال می‌بیند و ۴۰۰ می‌گیرد.
+  const blockingReason =
+    teamCount > 0
+      ? "این واحد تیم فعال دارد؛ اول تیم‌هایش را جابه‌جا یا حذف کنید."
+      : userCount > 0
+        ? "این واحد کارمند فعال دارد؛ اول کارمندها را به واحد دیگری منتقل کنید."
+        : null;
 
   return (
     <div className="m-auto bg-background">
@@ -78,26 +117,46 @@ function DepartmentDetailForm({ department }) {
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">تعداد تیم‌ها</span>
                 <span className="font-medium">
-                  {Number(department.teamCount ?? 0).toLocaleString("fa-IR")} تیم
+                  {teamCount.toLocaleString("fa-IR")} تیم
                 </span>
               </div>
               <div className="mt-2 flex items-center justify-between">
                 <span className="text-muted-foreground">تعداد کارمندان</span>
                 <span className="font-medium">
-                  {Number(department.userCount ?? 0).toLocaleString("fa-IR")} نفر
+                  {userCount.toLocaleString("fa-IR")} نفر
                 </span>
               </div>
             </div>
+
+            <DepartmentTeamsCard
+              departmentId={department.id}
+              departmentName={department.name}
+              onOpenTeam={(teamId) =>
+                leaveWithDraft(`/organization/teams/${teamId}`)
+              }
+              onCreateTeam={() =>
+                leaveWithDraft(ROUTES.ORG_TEAMS_NEW, {
+                  departmentId: department.id,
+                })
+              }
+            />
           </div>
 
           <div className="lg:col-span-1 space-y-4">
-            <OrgLeadershipForm control={control} scopeLabel="واحد" />
+            <OrgLeadershipForm
+              control={control}
+              errors={errors}
+              scopeLabel="واحد"
+            />
 
             <div className="flex gap-2">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate(ROUTES.ORG_DEPARTMENTS)}
+                onClick={() => {
+                  clearDraft();
+                  navigate(ROUTES.ORG_DEPARTMENTS);
+                }}
                 disabled={isBusy}
                 className="flex-1 gap-2"
               >
@@ -115,16 +174,15 @@ function DepartmentDetailForm({ department }) {
               variant="destructive"
               className="w-full gap-2"
               onClick={() => setShowDeleteDialog(true)}
-              disabled={isBusy || hasTeams}
+              disabled={isBusy || blockingReason != null}
             >
               <Trash2 className="h-4 w-4" />
               حذف واحد
             </Button>
 
-            {hasTeams && (
+            {blockingReason && (
               <p className="text-xs text-muted-foreground text-center">
-                این واحد تیم دارد و تا وقتی تیم‌هایش جابه‌جا نشوند قابل حذف
-                نیست.
+                {blockingReason}
               </p>
             )}
           </div>

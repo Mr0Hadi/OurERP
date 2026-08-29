@@ -6,13 +6,10 @@ import { Save, X } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { ROUTES } from "@/shared/constants/routes";
+import { useReturnTo } from "@/shared/hooks/useReturnTo";
 
 import { useCreateDepartmentMutation } from "../services/mutations";
 import { useDepartmentForm } from "../hooks/useDepartmentForm";
-import {
-  useEmployeeOptions,
-  labelOfOption,
-} from "../../hooks/useEmployeeOptions";
 import DepartmentIdentityForm from "../components/forms/DepartmentIdentityForm";
 import OrgLeadershipForm from "../../components/OrgLeadershipForm";
 
@@ -21,7 +18,10 @@ export default function DepartmentNewPage() {
   const createMutation = useCreateDepartmentMutation();
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
-  const { options } = useEmployeeOptions();
+
+  // اگر از فرم کارمند (یا هر فرم دیگری) به اینجا آمده باشیم، بعد از ثبت
+  // باید به همان‌جا برگردیم و شناسه‌ی واحدِ تازه‌ساخته را با خودمان ببریم.
+  const { hasReturnTo, goBack } = useReturnTo(ROUTES.ORG_DEPARTMENTS);
 
   useEffect(() => {
     setHeader({ title: "ثبت واحد جدید", showBack: true });
@@ -37,12 +37,17 @@ export default function DepartmentNewPage() {
   } = formMethods;
 
   const onSubmit = (data) => {
-    // نام مدیر از options برداشته می‌شود چون فهرست فقط شناسه دارد و جدول
-    // برای نمایش به نام نیاز دارد؛ سرور خودش این را از join درمی‌آورد.
-    const headName = labelOfOption(options, data.headId);
-
-    createMutation.mutate(buildPayload(data, headName), {
-      onSuccess: () => navigate(ROUTES.ORG_DEPARTMENTS),
+    createMutation.mutate(buildPayload(data), {
+      onSuccess: (created) => {
+        if (hasReturnTo) {
+          goBack({
+            createdDepartmentId: created?.id ?? null,
+            createdDepartmentName: created?.name ?? data.name,
+          });
+        } else {
+          navigate(ROUTES.ORG_DEPARTMENTS);
+        }
+      },
     });
   };
 
@@ -60,13 +65,17 @@ export default function DepartmentNewPage() {
           </div>
 
           <div className="lg:col-span-1 space-y-4">
-            <OrgLeadershipForm control={control} scopeLabel="واحد" />
+            <OrgLeadershipForm
+              control={control}
+              errors={errors}
+              scopeLabel="واحد"
+            />
 
             <div className="flex gap-2">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate(-1)}
+                onClick={() => goBack()}
                 disabled={isBusy}
                 className="flex-1 gap-2"
               >
@@ -78,6 +87,13 @@ export default function DepartmentNewPage() {
                 {isBusy ? "در حال ثبت..." : "ثبت واحد"}
               </Button>
             </div>
+
+            {hasReturnTo && (
+              <p className="text-xs text-muted-foreground text-center">
+                بعد از ثبت، به فرمِ قبلی برمی‌گردید و اطلاعاتی که وارد کرده‌اید
+                سر جایش می‌ماند.
+              </p>
+            )}
           </div>
         </div>
       </form>

@@ -5,9 +5,9 @@ import { ChevronLeft } from "lucide-react";
 
 import DataTable from "@/shared/components/table/DataTable";
 import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
 import { gregorianToPersian } from "@/shared/utils/dateUtils";
 
-import EmployeeRoleBadge from "./EmployeeRoleBadge";
 import EmployeeStatusBadge from "./EmployeeStatusBadge";
 
 /** کارمند غیرفعال کم‌رنگ می‌شود تا در فهرست از فعال‌ها تفکیک شود. */
@@ -53,14 +53,23 @@ export default function EmployeeTable({
         ),
       },
       {
-        accessorKey: "roleId",
-        header: "نقش",
+        accessorKey: "departmentName",
+        header: "واحد",
         cell: (info) => (
-          <EmployeeRoleBadge
-            roleId={info.getValue()}
-            roleName={info.row.original.roleName}
-          />
+          <Badge variant="outline" className="font-normal">
+            {info.getValue() ?? "—"}
+          </Badge>
         ),
+      },
+      {
+        accessorKey: "teamName",
+        header: "تیم",
+        cell: (info) =>
+          info.getValue() ? (
+            <span className="text-sm">{info.getValue()}</span>
+          ) : (
+            <span className="text-sm text-muted-foreground">بدون تیم</span>
+          ),
       },
       {
         accessorKey: "isActive",
@@ -107,6 +116,8 @@ export default function EmployeeTable({
       onPaginationChange={onPaginationChange}
       sorting={sorting}
       onSortingChange={onSortingChange}
+      // `GetUserList`/`GetDepartmentList`/`GetTeamList` هیچ‌کدام sortBy نمی‌گیرند.
+      sortable={false}
       rowClassName={rowClassName}
       emptyMessage="کارمندی یافت نشد."
     />

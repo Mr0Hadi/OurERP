@@ -2,19 +2,44 @@
 import { applyListQuery } from "@/shared/services/mockQuery";
 import { allDepartments } from "./mockData";
 import { allTeams } from "../../teams/services/mockData";
+import { allEmployees } from "@/features/employees/services/mockData";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** `teamCount` مشتق است — سرور هم آن را در `DepartmentListDto` می‌شمارد. */
-const withTeamCount = (department) => {
-  const teams = allTeams.filter((team) => team.departmentId === department.id);
-  return { ...department, teamCount: teams.length };
+const fullNameOf = (employee) =>
+  `${employee.firstName ?? ""} ${employee.lastName ?? ""}`.trim() ||
+  employee.username;
+
+const employeeNameOf = (id) => {
+  if (id == null) return null;
+  const employee = allEmployees.find((item) => item.id == id);
+  return employee ? fullNameOf(employee) : null;
 };
+
+/**
+ * `headName`, `deputyName`, `teamCount` و `userCount` همه مشتق‌اند —
+ * سرور هم آن‌ها را در `DepartmentListDto` با join می‌سازد.
+ *
+ * توجه: شمارنده‌ها فقط در DTOیِ *فهرستِ* سرور هستند؛ `DepartmentDto`
+ * (جزئیات) آن‌ها را ندارد. صفحه‌ی جزئیات برای همین خودش می‌شمارد و به
+ * این فیلدها تکیه نمی‌کند.
+ */
+const withDerivedFields = (department) => ({
+  ...department,
+  headName: employeeNameOf(department.headId),
+  deputyName: employeeNameOf(department.deputyId),
+  teamCount: allTeams.filter(
+    (team) => team.departmentId === department.id && team.isActive !== false,
+  ).length,
+  userCount: allEmployees.filter(
+    (employee) => employee.departmentId === department.id,
+  ).length,
+});
 
 export async function fetchDepartments(params = {}) {
   await delay(300);
 
-  const rows = allDepartments.map(withTeamCount);
+  const rows = allDepartments.map(withDerivedFields);
 
   return applyListQuery(rows, params, { searchFields: ["name", "headName"] });
 }
@@ -25,7 +50,7 @@ export async function fetchDepartmentById(id) {
   const department = allDepartments.find((item) => item.id == id);
   if (!department) throw new Error("واحد مورد نظر یافت نشد");
 
-  return withTeamCount(department);
+  return withDerivedFields(department);
 }
 
 export async function createDepartment(payload) {
@@ -39,13 +64,12 @@ export async function createDepartment(payload) {
     id: Math.max(0, ...allDepartments.map((item) => Number(item.id))) + 1,
     name: payload.name,
     headId: payload.headId ?? null,
-    headName: payload.headName ?? null,
-    userCount: 0,
+    deputyId: payload.deputyId ?? null,
     isActive: true,
   };
 
   allDepartments.push(created);
-  return created;
+  return withDerivedFields(created);
 }
 
 export async function updateDepartment(payload) {
@@ -59,14 +83,22 @@ export async function updateDepartment(payload) {
   );
   if (duplicate) throw new Error("واحدی با این نام قبلا ثبت شده است");
 
+  if (
+    payload.headId != null &&
+    payload.deputyId != null &&
+    payload.headId === payload.deputyId
+  ) {
+    throw new Error("معاون نمی‌تواند همان مدیر باشد");
+  }
+
   allDepartments[index] = {
     ...allDepartments[index],
     name: payload.name,
     headId: payload.headId ?? null,
-    headName: payload.headName ?? null,
+    deputyId: payload.deputyId ?? null,
   };
 
-  return allDepartments[index];
+  return withDerivedFields(allDepartments[index]);
 }
 
 export async function deleteDepartment(id) {
@@ -75,15 +107,19 @@ export async function deleteDepartment(id) {
   const department = allDepartments.find((item) => item.id == id);
   if (!department) throw new Error("واحد مورد نظر یافت نشد");
 
-  // واحدی که هنوز تیم فعال دارد نباید حذف شود؛ تیم‌هایش بی‌صاحب می‌مانند
-  // و `Team.DepartmentId` در بکند غیرقابل‌null است.
-  const activeTeams = allTeams.filter(
+  // همان دو قاعده‌ی `DeleteDepartmentCommand` در سرور، با همان پیام‌ها.
+  const hasActiveTeams = allTeams.some(
     (team) => team.departmentId == id && team.isActive,
   );
-  if (activeTeams.length > 0) {
-    throw new Error(
-      `این واحد ${activeTeams.length} تیم فعال دارد؛ اول تیم‌ها را جابه‌جا یا حذف کنید.`,
-    );
+  if (hasActiveTeams) {
+    throw new Error("این واحد دارای تیم فعال است و قابل حذف نیست.");
+  }
+
+  const hasActiveUsers = allEmployees.some(
+    (employee) => employee.departmentId == id && employee.isActive,
+  );
+  if (hasActiveUsers) {
+    throw new Error("این واحد دارای کارمند فعال است و قابل حذف نیست.");
   }
 
   department.isActive = false;

@@ -2,22 +2,23 @@
 import { DepartmentEnum } from "@/shared/domain/enums/department";
 
 /**
- * تیم‌ها. هر تیم زیرمجموعه‌ی دقیقاً یک واحد است و یک مدیر دارد
- * (`HeadId` — تنها فیلد رهبری که بکند واقعاً پشتیبانی می‌کند).
+ * تیم‌ها. هر تیم زیرمجموعه‌ی دقیقاً یک واحد است و یک مدیر و یک معاون
+ * دارد (`HeadId`, `DeputyId` — هر دو در بکند وجود دارند).
  *
- * `userCount` یک مقدار ثابتِ نمایشی است، نه مشتق از فهرست کارمندان:
- * بکند این عدد را خودش با join حساب می‌کند (`TeamListDto.UserCount`)،
- * و فرانت هنوز راهی برای گرفتن فهرستِ واقعیِ کارمندانِ هر تیم ندارد
- * (`GetUserList` وجود ندارد).
+ * `userCount` اینجا نگه‌داری نمی‌شود: حالا که کارمندها `teamId` دارند،
+ * تعداد اعضا از روی خودِ فهرست کارمندان شمرده می‌شود (در `api-mockData`)
+ * — همان کاری که بکند با join انجام می‌دهد. نگه‌داشتنِ یک عددِ ثابت یعنی
+ * بعد از افزودن عضو، شمارنده دروغ بگوید.
+ *
+ * `headName` و `deputyName` هم مشتق‌اند و از فهرست کارمندان می‌آیند.
  */
 export const allTeams = [
   {
     id: 1,
     name: "تیم ۱ فروش",
     departmentId: DepartmentEnum.SALES,
-    headId: 2,
-    headName: "سارا محمدی",
-    userCount: 3,
+    headId: 9,
+    deputyId: 4,
     isActive: true,
   },
   {
@@ -25,35 +26,31 @@ export const allTeams = [
     name: "تیم ۲ فروش",
     departmentId: DepartmentEnum.SALES,
     headId: 8,
-    headName: "فاطمه موسوی",
-    userCount: 2,
+    deputyId: null,
     isActive: true,
   },
   {
     id: 3,
     name: "تیم خرید داخلی",
     departmentId: DepartmentEnum.SUPPLY,
-    headId: 5,
-    headName: "حسین نوری",
-    userCount: 2,
+    headId: 10,
+    deputyId: 7,
     isActive: true,
   },
   {
     id: 4,
     name: "تیم انبار مرکزی",
     departmentId: DepartmentEnum.WAREHOUSE,
-    headId: 3,
-    headName: "مهدی کریمی",
-    userCount: 4,
+    headId: 11,
+    deputyId: null,
     isActive: true,
   },
   {
     id: 5,
     name: "تیم دفترداری",
     departmentId: DepartmentEnum.ACCOUNTING,
-    headId: 6,
-    headName: "زهرا احمدی",
-    userCount: 1,
+    headId: null,
+    deputyId: null,
     isActive: true,
   },
   {
@@ -61,8 +58,7 @@ export const allTeams = [
     name: "تیم پشتیبانی فنی",
     departmentId: DepartmentEnum.IT,
     headId: null,
-    headName: null,
-    userCount: 1,
+    deputyId: null,
     isActive: false,
   },
 ];

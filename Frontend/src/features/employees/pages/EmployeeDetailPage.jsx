@@ -1,6 +1,6 @@
 // src/features/employees/pages/EmployeeDetailPage.jsx
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { Save, X, Ban, LogOut } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
@@ -17,6 +17,7 @@ import {
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
+import { useFormDraft } from "@/shared/hooks/useFormDraft";
 import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
 
 import {
@@ -28,14 +29,39 @@ import { useEmployeeQuery } from "../services/queries";
 import { useEmployeeForm } from "../hooks/useEmployeeForm";
 import EmployeeIdentityForm from "../components/forms/EmployeeIdentityForm";
 import EmployeeAccessForm from "../components/forms/EmployeeAccessForm";
+import EmployeeOrgForm from "../components/forms/EmployeeOrgForm";
 import EmployeeDetailLoading from "../components/forms/EmployeeDetailLoading";
 
 const fullNameOf = (employee) =>
   `${employee.firstName ?? ""} ${employee.lastName ?? ""}`.trim() ||
   employee.username;
 
+/**
+ * پیش‌نویسِ برگشتی از صفحه‌ی «واحد/تیم جدید» را روی مقادیرِ فرم می‌نشاند.
+ *
+ * همان منطقِ صفحه‌ی ثبت است، فقط اینجا پیش‌نویس *ممکن است* وجود نداشته
+ * باشد (کاربر مستقیم وارد صفحه شده) و در آن حالت مقادیر از خودِ رکورد
+ * می‌آیند.
+ */
+function mergeDraft(draft, state) {
+  if (!draft) return null;
+
+  const merged = { ...draft };
+  if (state?.createdDepartmentId != null) {
+    merged.departmentId = state.createdDepartmentId;
+  }
+  if (state?.createdTeamId != null) {
+    merged.teamId = state.createdTeamId;
+    if (state.createdTeamDepartmentId != null) {
+      merged.departmentId = state.createdTeamDepartmentId;
+    }
+  }
+  return merged;
+}
+
 function EmployeeDetailForm({ employee }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const currentUser = useCurrentUser();
   const [showDeactivateDialog, setShowDeactivateDialog] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
@@ -44,13 +70,30 @@ function EmployeeDetailForm({ employee }) {
   const deactivateMutation = useDeactivateEmployeeMutation();
   const logoutMutation = useLogoutEmployeeMutation();
 
-  const { formMethods, buildPayload } = useEmployeeForm(employee);
+  const { draft, saveDraft, clearDraft } = useFormDraft(
+    `employee:${employee.id}`,
+  );
+
+  const { formMethods, buildPayload } = useEmployeeForm(
+    employee,
+    mergeDraft(draft, location.state),
+  );
   const {
     register,
     control,
+    setValue,
+    getValues,
     handleSubmit,
     formState: { errors },
   } = formMethods;
+
+  /** از فرمِ ویرایش هم می‌شود واحد یا تیم تازه ساخت، بدون از دست دادن تغییرات. */
+  const leaveForCreate = (target, state) => {
+    saveDraft(getValues());
+    navigate(target, {
+      state: { returnTo: `/employees/${employee.id}`, ...state },
+    });
+  };
 
   // ادمین نباید بتواند حساب خودش را از کار بیندازد؛ نتیجه‌اش قفل‌شدن بیرونِ
   // سیستم است و برای بازکردنش به یک ادمین دیگر نیاز پیدا می‌کند.
@@ -59,7 +102,10 @@ function EmployeeDetailForm({ employee }) {
 
   const onSubmit = (data) => {
     updateMutation.mutate(buildPayload(data), {
-      onSuccess: () => navigate(ROUTES.EMPLOYEES),
+      onSuccess: () => {
+        clearDraft();
+        navigate(ROUTES.EMPLOYEES);
+      },
     });
   };
 
@@ -99,8 +145,22 @@ function EmployeeDetailForm({ employee }) {
             />
           </div>
 
-          {/* ستون چپ - نقش، دسترسی و عملیات ادمین */}
+          {/* ستون چپ - جایگاه سازمانی، دسترسی و عملیات ادمین */}
           <div className="lg:col-span-1 space-y-4">
+            <EmployeeOrgForm
+              control={control}
+              errors={errors}
+              setValue={setValue}
+              onCreateDepartment={() =>
+                leaveForCreate(ROUTES.ORG_DEPARTMENTS_NEW)
+              }
+              onCreateTeam={() =>
+                leaveForCreate(ROUTES.ORG_TEAMS_NEW, {
+                  departmentId: getValues("departmentId"),
+                })
+              }
+            />
+
             <EmployeeAccessForm control={control} isEditing />
 
             <div className="flex gap-2">

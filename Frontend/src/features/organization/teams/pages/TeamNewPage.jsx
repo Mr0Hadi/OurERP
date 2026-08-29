@@ -1,34 +1,43 @@
 // src/features/organization/teams/pages/TeamNewPage.jsx
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Save, X } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { ROUTES } from "@/shared/constants/routes";
+import { useReturnTo } from "@/shared/hooks/useReturnTo";
 
 import { useCreateTeamMutation } from "../services/mutations";
 import { useTeamForm } from "../hooks/useTeamForm";
-import {
-  useEmployeeOptions,
-  labelOfOption,
-} from "../../hooks/useEmployeeOptions";
 import TeamIdentityForm from "../components/forms/TeamIdentityForm";
 import OrgLeadershipForm from "../../components/OrgLeadershipForm";
 
 export default function TeamNewPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const createMutation = useCreateTeamMutation();
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
-  const { options } = useEmployeeOptions();
+
+  const { hasReturnTo, goBack } = useReturnTo(ROUTES.ORG_TEAMS);
+
+  // صفحه‌ی مبدأ می‌تواند واحد را از پیش تعیین کند: از «جزئیات واحد» که
+  // بیاییم، تیمِ جدید بدیهتاً زیر همان واحد ساخته می‌شود و انتخابِ دوباره‌ی
+  // آن فقط یک فرصت برای اشتباه است.
+  const presetDepartmentId = location.state?.departmentId ?? null;
 
   useEffect(() => {
     setHeader({ title: "ثبت تیم جدید", showBack: true });
     return () => clearHeader();
   }, [setHeader, clearHeader]);
 
-  const { formMethods, buildPayload } = useTeamForm();
+  const { formMethods, buildPayload } = useTeamForm(
+    null,
+    presetDepartmentId != null
+      ? { departmentId: Number(presetDepartmentId) }
+      : null,
+  );
   const {
     register,
     control,
@@ -37,10 +46,19 @@ export default function TeamNewPage() {
   } = formMethods;
 
   const onSubmit = (data) => {
-    createMutation.mutate(
-      buildPayload(data, labelOfOption(options, data.headId)),
-      { onSuccess: () => navigate(ROUTES.ORG_TEAMS) },
-    );
+    createMutation.mutate(buildPayload(data), {
+      onSuccess: (created) => {
+        if (hasReturnTo) {
+          goBack({
+            createdTeamId: created?.id ?? null,
+            createdTeamName: created?.name ?? data.name,
+            createdTeamDepartmentId: Number(data.departmentId),
+          });
+        } else {
+          navigate(ROUTES.ORG_TEAMS);
+        }
+      },
+    });
   };
 
   const isBusy = createMutation.isPending;
@@ -61,13 +79,17 @@ export default function TeamNewPage() {
           </div>
 
           <div className="lg:col-span-1 space-y-4">
-            <OrgLeadershipForm control={control} scopeLabel="تیم" />
+            <OrgLeadershipForm
+              control={control}
+              errors={errors}
+              scopeLabel="تیم"
+            />
 
             <div className="flex gap-2">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate(-1)}
+                onClick={() => goBack()}
                 disabled={isBusy}
                 className="flex-1 gap-2"
               >
@@ -79,6 +101,13 @@ export default function TeamNewPage() {
                 {isBusy ? "در حال ثبت..." : "ثبت تیم"}
               </Button>
             </div>
+
+            {hasReturnTo && (
+              <p className="text-xs text-muted-foreground text-center">
+                بعد از ثبت، به فرمِ قبلی برمی‌گردید و اطلاعاتی که وارد کرده‌اید
+                سر جایش می‌ماند.
+              </p>
+            )}
           </div>
         </div>
       </form>

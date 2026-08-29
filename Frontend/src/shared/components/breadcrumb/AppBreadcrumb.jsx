@@ -26,6 +26,15 @@ const ROUTE_TITLES = {
   [ROUTES.CUSTOMERS_LIST]: "مشتریان",
   [ROUTES.CUSTOMERS_NEW]: "مشتری جدید",
 
+  [ROUTES.EMPLOYEES_LIST]: "کارمندان",
+  [ROUTES.EMPLOYEES_NEW]: "کارمند جدید",
+
+  [ROUTES.ORGANIZATION]: "ساختار سازمانی",
+  [ROUTES.ORG_DEPARTMENTS]: "واحدهای سازمانی",
+  [ROUTES.ORG_DEPARTMENTS_NEW]: "واحد جدید",
+  [ROUTES.ORG_TEAMS]: "تیم‌ها",
+  [ROUTES.ORG_TEAMS_NEW]: "تیم جدید",
+
   [ROUTES.PURCHASES]: "خرید",
   [ROUTES.PURCHASES_NEW]: "ثبت خرید جدید",
   [ROUTES.PURCHASES_INVOICES]: "فاکتورهای خرید",
@@ -95,6 +104,10 @@ const DETAIL_TITLES = {
   [ROUTES.SUPPLIERS_LIST]: "جزئیات تامین کننده",
   [ROUTES.CUSTOMERS_LIST]: "جزئیات مشتری",
 
+  [ROUTES.EMPLOYEES_LIST]: "جزئیات کارمند",
+  [ROUTES.ORG_DEPARTMENTS]: "جزئیات واحد",
+  [ROUTES.ORG_TEAMS]: "جزئیات تیم",
+
   [ROUTES.PURCHASES]: "جزئیات خرید",
   [ROUTES.PURCHASES_INVOICES]: "جزئیات فاکتور خرید",
   [ROUTES.PURCHASES_RETURNS_LIST]: "جزئیات مرجوعی خرید",
@@ -113,10 +126,12 @@ const DETAIL_TITLES = {
 };
 
 /**
- * مسیرهایی که در URL هستند ولی صفحه‌ای ندارند — فقط برای گروه‌بندی‌اند
- * (مثل «returns» در /warehouse/receiving/returns/5). لینک‌کردنشان
- * کاربر را به ۴۰۴ می‌برد، پس اصلاً در مسیر نمایش داده نمی‌شوند.
+ * مسیرهایی که عنوان دارند ولی *صفحه* ندارند — فقط یک سرشاخه‌ی گروه‌بندی
+ * در URL اند. عنوانشان نمایش داده می‌شود تا مسیر ناقص به نظر نرسد، ولی
+ * لینک نمی‌شوند چون کلیک روی‌شان کاربر را به ۴۰۴ می‌برد.
  */
+const NON_LINKABLE = new Set([ROUTES.ORGANIZATION]);
+
 const isIdSegment = (segment) => /^\d+$/.test(segment);
 
 function buildBreadcrumbs(pathname) {
@@ -171,6 +186,8 @@ export function AppBreadcrumb() {
               <BreadcrumbItem>
                 {isLast ? (
                   <BreadcrumbPage>{crumb.title}</BreadcrumbPage>
+                ) : NON_LINKABLE.has(crumb.path) ? (
+                  <span className="text-muted-foreground">{crumb.title}</span>
                 ) : (
                   <BreadcrumbLink asChild>
                     <Link to={crumb.path}>{crumb.title}</Link>

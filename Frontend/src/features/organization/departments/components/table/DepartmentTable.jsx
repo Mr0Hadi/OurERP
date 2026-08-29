@@ -45,6 +45,16 @@ export default function DepartmentTable({
           ),
       },
       {
+        accessorKey: "deputyName",
+        header: "معاون",
+        cell: (info) =>
+          info.getValue() ? (
+            <span className="text-sm">{info.getValue()}</span>
+          ) : (
+            <span className="text-sm text-muted-foreground">تعیین نشده</span>
+          ),
+      },
+      {
         accessorKey: "teamCount",
         header: "تعداد تیم",
         cell: (info) => <CountCell value={info.getValue()} suffix="تیم" />,
@@ -85,6 +95,8 @@ export default function DepartmentTable({
       onPaginationChange={onPaginationChange}
       sorting={sorting}
       onSortingChange={onSortingChange}
+      // `GetUserList`/`GetDepartmentList`/`GetTeamList` هیچ‌کدام sortBy نمی‌گیرند.
+      sortable={false}
       rowClassName={rowClassName}
       emptyMessage="واحدی یافت نشد."
     />

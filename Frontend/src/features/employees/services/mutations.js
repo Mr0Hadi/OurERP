@@ -5,10 +5,13 @@ import toast from "react-hot-toast";
 import {
   createEmployee,
   updateEmployee,
+  assignEmployeeMembership,
   deactivateEmployee,
   logoutEmployee,
 } from "./api-mockData";
 import { employeeKeys } from "./queryKeys";
+import { teamKeys } from "@/features/organization/teams/services/queryKeys";
+import { departmentKeys } from "@/features/organization/departments/services/queryKeys";
 
 export function useCreateEmployeeMutation() {
   const queryClient = useQueryClient();
@@ -18,6 +21,9 @@ export function useCreateEmployeeMutation() {
     onSuccess: () => {
       toast.success("کارمند جدید با موفقیت ثبت شد.");
       queryClient.invalidateQueries({ queryKey: employeeKeys.lists() });
+      // شمارنده‌ی اعضای واحد و تیم عوض شده است.
+      queryClient.invalidateQueries({ queryKey: teamKeys.all });
+      queryClient.invalidateQueries({ queryKey: departmentKeys.all });
     },
     onError: (error) => {
       toast.error(error?.message || "خطا در ثبت کارمند");
@@ -38,9 +44,36 @@ export function useUpdateEmployeeMutation() {
       queryClient.invalidateQueries({
         queryKey: employeeKeys.detail(variables.id),
       });
+      queryClient.invalidateQueries({ queryKey: teamKeys.all });
+      queryClient.invalidateQueries({ queryKey: departmentKeys.all });
     },
     onError: (error) => {
       toast.error(error?.message || "خطا در ویرایش کارمند");
+    },
+  });
+}
+
+/**
+ * افزودن، حذف و «هد کردن»ِ عضو در صفحه‌ی جزئیات تیم — روی
+ * `ChangeUserTeam` سرور.
+ *
+ * پیام موفقیت را خودِ صفحه تعیین می‌کند (`successMessage` در متغیرها)،
+ * چون همین یک دستور هر سه کار را انجام می‌دهد و پیامِ خنثای «ویرایش شد»
+ * به کاربر نمی‌گوید کدام اتفاق افتاد.
+ */
+export function useAssignEmployeeMembershipMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: assignEmployeeMembership,
+    onSuccess: (_, variables) => {
+      toast.success(variables.successMessage || "عضویت کارمند به‌روزرسانی شد.");
+      queryClient.invalidateQueries({ queryKey: employeeKeys.all });
+      queryClient.invalidateQueries({ queryKey: teamKeys.all });
+      queryClient.invalidateQueries({ queryKey: departmentKeys.all });
+    },
+    onError: (error) => {
+      toast.error(error?.message || "خطا در تغییر عضویت کارمند");
     },
   });
 }
@@ -59,6 +92,8 @@ export function useDeactivateEmployeeMutation() {
       toast.success("دسترسی کارمند غیرفعال شد.");
       queryClient.invalidateQueries({ queryKey: employeeKeys.lists() });
       queryClient.invalidateQueries({ queryKey: employeeKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: teamKeys.all });
+      queryClient.invalidateQueries({ queryKey: departmentKeys.all });
     },
     onError: (error) => {
       toast.error(error?.message || "خطا در غیرفعال‌کردن کارمند");

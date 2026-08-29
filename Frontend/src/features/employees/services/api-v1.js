@@ -5,15 +5,27 @@ import { accountStatusToIsActive } from "@/shared/domain/enums/accountStatus";
 
 /**
  * لایه‌ی سرورِ فیچر کارمندان — نگاشت مستقیم روی `api/User` و
- * `api/Account/LogoutUserById` (بخش‌های ۲ و ۳ سند api-guide.fa.md).
+ * `api/Account/LogoutUserById`.
  *
  * پوششِ `ResponseDto` را axios باز می‌کند، پس اینجا `data` همان محتوای
  * `Data` است.
  *
- * ⚠️ بکند **هنوز `GetUserList` ندارد**. فهرست کارمندان تنها چیزی است که
- * بدون آن کار نمی‌کند؛ امضای زیر دقیقاً با قرارداد بقیه‌ی لیست‌های همین
- * بکند نوشته شده (`page`, `take`, و فیلترهای اختیاری).
+ * قرارداد سه نکته‌ی مهم دارد که شکلِ کلِ فیچر را تعیین می‌کند:
+ *
+ *   ۱. کارمند **نقش ندارد**. `UserController` هیچ‌جا `roleId` نمی‌گیرد و
+ *      نمی‌دهد؛ سرپرستی روی خودِ واحد و تیم ذخیره می‌شود.
+ *   ۲. واحد اجباری و تیم اختیاری است، و سرور خودش چک می‌کند که تیم
+ *      متعلق به همان واحد باشد.
+ *   ۳. `PersonelCode` را **سرور** باید بسازد. `CreateUserCommand` فعلاً
+ *      آن را از کلاینت می‌گیرد و اجباری اعتبارسنجی می‌کند؛ تا وقتی این
+ *      در بکند اصلاح نشود، ثبت کارمند از این مسیر ۴۰۰ می‌گیرد. عمداً
+ *      اینجا مقداری ساخته نمی‌شود — کد پرسنلی باید یکتا و پیوسته بماند و
+ *      کلاینت نمی‌تواند این را تضمین کند.
  */
+
+/** فیلترِ خالی نباید روی سیم برود — سرور آن را «مقدارِ صفر» می‌فهمد. */
+const filterValue = (value) =>
+  value === "" || value == null ? undefined : value;
 
 export async function fetchEmployees(params = {}) {
   const { data } = await axiosInstance.get("/User/GetUserList", {
@@ -21,7 +33,8 @@ export async function fetchEmployees(params = {}) {
       page: params.page,
       take: params.limit,
       fullName: params.search || undefined,
-      roleId: params.roleId !== "" ? params.roleId : undefined,
+      departmentId: filterValue(params.departmentId),
+      teamId: filterValue(params.teamId),
       isActive: accountStatusToIsActive(params.status),
     },
   });
@@ -42,14 +55,56 @@ export async function fetchEmployeeById(id) {
 }
 
 export async function createEmployee(payload) {
-  // `fisrtName` غلط املایی است ولی همان چیزی است که سرور می‌پذیرد
-  // (سند، بخش ۳). اصلاحش اینجا یعنی نام خالی ذخیره شود.
-  const { data } = await axiosInstance.post("/User/CreateUser", payload);
+  // `fisrtName` غلط املایی است ولی همان چیزی است که سرور می‌پذیرد.
+  // اصلاحش اینجا یعنی نام خالی ذخیره شود.
+  const { data } = await axiosInstance.post("/User/CreateUser", {
+    fisrtName: payload.fisrtName,
+    lastName: payload.lastName,
+    username: payload.username,
+    password: payload.password,
+    departmentId: payload.departmentId,
+    teamId: payload.teamId ?? null,
+  });
   return data;
 }
 
 export async function updateEmployee(payload) {
-  const { data } = await axiosInstance.put("/User/UpdateUser", payload);
+  const { data } = await axiosInstance.put("/User/UpdateUser", {
+    id: payload.id,
+    firstName: payload.firstName,
+    lastName: payload.lastName,
+    username: payload.username,
+    departmentId: payload.departmentId,
+    teamId: payload.teamId ?? null,
+    isActive: payload.isActive,
+  });
+  return data;
+}
+
+/**
+ * جابه‌جاییِ عضویتِ سازمانی — دستور اختصاصیِ خودِ سرور
+ * (`ChangeUserTeamCommand`)، نه `UpdateUser`.
+ *
+ * دو کارِ اضافه انجام می‌دهد که `UpdateUser` نمی‌کند و دستی هم نمی‌شود
+ * انجامشان داد: اگر کاربر مدیرِ تیمِ *قبلی* بوده، آن سرپرستی را باز
+ * می‌کند؛ و با `isHead` همان کاربر را مدیرِ تیمِ جدید می‌کند.
+ *
+ * `departmentId` اجباری است (سرور `> 0` می‌خواهد)، حتی وقتی فقط داریم
+ * کاربر را از تیم خارج می‌کنیم — در آن حالت واحدِ فعلیِ خودش فرستاده
+ * می‌شود.
+ */
+export async function assignEmployeeMembership({
+  userId,
+  departmentId,
+  teamId,
+  isHead = false,
+}) {
+  const { data } = await axiosInstance.put("/User/ChangeUserTeam", {
+    userId: Number(userId),
+    departmentId: Number(departmentId),
+    teamId: teamId ?? null,
+    isHead: Boolean(isHead),
+  });
   return data;
 }
 
