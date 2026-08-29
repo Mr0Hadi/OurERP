@@ -66,8 +66,7 @@ export default function LoginPage() {
       },
       onError: (error) => {
         const message =
-          error?.response?.data?.message ||
-          "نام کاربری یا رمز عبور اشتباه است";
+          error?.response?.data?.message || "نام کاربری یا رمز عبور اشتباه است";
         toast.error(message);
       },
     });
@@ -110,10 +109,16 @@ export default function LoginPage() {
         {/* لوگو و نام برند */}
         <div className="relative z-10 flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/20">
-            <Gauge className="h-6 w-6" strokeWidth={2.2} />
+            <img
+              src="/logo-transparent.png"
+              alt="OurERP"
+              className="h-6 w-6 object-contain"
+            />
           </div>
           <div>
-            <p className="text-lg font-bold leading-tight">پاسارگارد موتور پارت</p>
+            <p className="text-lg font-bold leading-tight">
+              پاسارگارد موتور پارت
+            </p>
             <p className="text-xs text-primary-foreground/70">
               سامانه جامع مدیریت انبار و فروش
             </p>
@@ -129,8 +134,8 @@ export default function LoginPage() {
               لوازم یدکی خودرو
             </h1>
             <p className="max-w-md text-sm leading-7 text-primary-foreground/75">
-              از انبارداری تا فاکتور فروش، همه‌چیز در یک پلتفرم — سریع،
-              دقیق و قابل اعتماد برای تیم پاسارگارد موتور پارت.
+              از انبارداری تا فاکتور فروش، همه‌چیز در یک پلتفرم — سریع، دقیق و
+              قابل اعتماد برای تیم پاسارگارد موتور پارت.
             </p>
           </div>
 
@@ -173,7 +178,11 @@ export default function LoginPage() {
           {/* هدر برند - فقط موبایل */}
           <div className="mb-8 flex flex-col items-center gap-2 lg:hidden">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25">
-              <Gauge className="h-6 w-6" strokeWidth={2.2} />
+              <img
+                src="/logo-transparent.png"
+                alt="OurERP"
+                className="h-7 w-7 object-contain"
+              />
             </div>
             <p className="text-base font-bold">پاسارگارد موتور پارت</p>
           </div>
@@ -293,8 +302,8 @@ export default function LoginPage() {
           </div>
 
           <p className="mt-6 text-center text-xs text-muted-foreground">
-            © {new Date().getFullYear()} پاسارگارد موتور پارت — تمامی حقوق
-            محفوظ است
+            © {new Date().getFullYear()} پاسارگارد موتور پارت — تمامی حقوق محفوظ
+            است
           </p>
         </div>
       </div>
