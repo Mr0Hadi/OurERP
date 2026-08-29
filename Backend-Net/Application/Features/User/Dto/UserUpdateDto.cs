@@ -11,6 +11,5 @@ namespace Application.Features.User.Dto
 		public int? TeamId { get; set; }
 		public int DepartmentId { get; set; }
 		public bool IsActive { get; set; }
-		public List<UserPermissionDto> Permissions { get; set; }
 	}
 }

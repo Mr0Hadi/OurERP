@@ -22,8 +22,8 @@ namespace Infrastructure.Repositories
         {
             return await _context.Users
                 .Where(u => u.Id == Convert.ToInt32(id))
-                .Include(x => x.Department.Name)
-                .Include(x => x.Team.Name)
+                .Include(x => x.Department)
+                .Include(x => x.Team)
                 .FirstOrDefaultAsync(cancellationToken);
         }
 

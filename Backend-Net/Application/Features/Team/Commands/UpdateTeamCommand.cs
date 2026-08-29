@@ -22,7 +22,6 @@ namespace Application.Features.Team.Commands
         public UpdateTeamCommandValidator()
         {
             RuleFor(x => x.Name).NotEmpty().WithMessage(Validation.RequiredMessage("نام تیم"));
-            RuleFor(x => x.DepartmentId).GreaterThan(0).WithMessage(Validation.RequiredMessage("شناسه دپارتمان"));
             RuleFor(x => x.HeadId).GreaterThan(0).When(x => x.HeadId.HasValue)
                 .WithMessage(Validation.RequiredMessage("شناسه سرپرست"));
             RuleFor(x => x.DeputyId).GreaterThan(0).When(x => x.DeputyId.HasValue)
