@@ -97,26 +97,17 @@ namespace Application.Common.Mapping
 
 			CreateMap<User, TokenUserInfoDto>();
 
-			CreateMap<User, UserInfoDto>();
-			//.ForMember(dest => dest.Permissions, opt => opt.MapFrom(src => src.Permissions.Select(x => new UserPermissionDto
-			//{
-			//	Id = x.Id,
-			//	Title = x.Title,
-			//	FaTitle = x.FaTitle,
-			//	PermissionGroupId = x.PermissionGroupId
-			//}).ToList()));
+			CreateMap<User, UserInfoDto>()
+				.ForMember(dest => dest.DepartmentName, opt => opt.MapFrom(src => src.Department.Name))
+                .ForMember(dest => dest.TeamName, opt => opt.MapFrom(src => src.Team.Name));
 
 			CreateMap<User, UserUpdateDto>();
-			//.ForMember(dest => dest.Permissions, opt => opt.MapFrom(src => src.Permissions));
 
 			CreateMap<CreateUserCommand, User>()
 					 .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.FisrtName))
 					 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.Now))
 					 .ForMember(dest => dest.PasswordHash, source => source.MapFrom(e => e.Password.ToHashSHA256()))
 					 .ForMember(dest => dest.IsActive, source => source.MapFrom(e => true));
-
-			//CreateMap<UserPermissionDto, tblPermission>();
-			//CreateMap<tblPermission, UserPermissionDto>();
 		}
 	}
 }
