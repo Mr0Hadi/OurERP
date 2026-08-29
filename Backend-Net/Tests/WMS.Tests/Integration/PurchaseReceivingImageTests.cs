@@ -13,7 +13,7 @@ namespace WMS.Tests.Integration
     public class PurchaseReceivingImageTests
     {
         private static ReceivePurchaseCommandHandler MakeReceiveHandler(TestScope scope) =>
-            new(scope.Db, scope.PurchaseReturnCalculation, scope.ProductUnitService, FakeObjectStorage.Instance, scope.UnitOfWork);
+            new(scope.Db, scope.PurchaseReturnCalculation, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork);
 
         [Fact]
         public async Task ReceivePurchase_RoundWithPhotos_StoresImagesWithNoReturnLink()

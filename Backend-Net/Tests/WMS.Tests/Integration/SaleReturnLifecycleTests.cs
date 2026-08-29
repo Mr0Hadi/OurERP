@@ -98,7 +98,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (scenario, claimId) = await SeedShippedWithClaim(scope, ordered: 5, shipped: 5, claimQty: 5);
 
-            var handler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var handler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.InventoryCostingService, scope.UnitOfWork);
             await handler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
@@ -126,7 +126,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (scenario, claimId) = await SeedShippedWithClaim(scope);
 
-            var addHandler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var addHandler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.InventoryCostingService, scope.UnitOfWork);
             await addHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
@@ -137,7 +137,7 @@ namespace WMS.Tests.Integration
             var saleReturnId = scope.Context.SaleReturns.Single().Id;
             var stockBefore = scope.Context.Products.Single(x => x.Id == scenario.Product.Id).Stock;
 
-            var roundHandler = new ExecuteGoodsRoundCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
+            var roundHandler = new ExecuteGoodsRoundCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.ProductUnitService, scope.InventoryCostingService, scope.UnitOfWork);
             await roundHandler.Handle(new ExecuteGoodsRoundCommand
             {
                 SaleReturnId = saleReturnId,
@@ -160,7 +160,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (scenario, claimId) = await SeedShippedWithClaim(scope);
 
-            var addHandler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var addHandler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.InventoryCostingService, scope.UnitOfWork);
             await addHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
@@ -171,7 +171,7 @@ namespace WMS.Tests.Integration
             var saleReturnId = scope.Context.SaleReturns.Single().Id;
             var stockBefore = scope.Context.Products.Single(x => x.Id == scenario.Product.Id).Stock;
 
-            var roundHandler = new ExecuteGoodsRoundCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
+            var roundHandler = new ExecuteGoodsRoundCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.ProductUnitService, scope.InventoryCostingService, scope.UnitOfWork);
             await roundHandler.Handle(new ExecuteGoodsRoundCommand
             {
                 SaleReturnId = saleReturnId,
@@ -206,7 +206,7 @@ namespace WMS.Tests.Integration
             product.Stock += 5;
             Seed.MintUnits(scope.Context, product, 5);
 
-            var addHandler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var addHandler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.InventoryCostingService, scope.UnitOfWork);
             await addHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
@@ -217,7 +217,7 @@ namespace WMS.Tests.Integration
             var saleReturnId = scope.Context.SaleReturns.Single().Id;
             var stockBefore = scope.Context.Products.Single(x => x.Id == scenario.Product.Id).Stock;
 
-            var roundHandler = new ExecuteGoodsRoundCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
+            var roundHandler = new ExecuteGoodsRoundCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.ProductUnitService, scope.InventoryCostingService, scope.UnitOfWork);
             await roundHandler.Handle(new ExecuteGoodsRoundCommand
             {
                 SaleReturnId = saleReturnId,
@@ -235,7 +235,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (_, claimId) = await SeedShippedWithClaim(scope);
 
-            var addHandler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var addHandler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.InventoryCostingService, scope.UnitOfWork);
             await addHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
@@ -246,7 +246,7 @@ namespace WMS.Tests.Integration
             var resolutionId = scope.Context.SaleReturnResolutions.Single().Id;
             var saleReturnId = scope.Context.SaleReturns.Single().Id;
 
-            var roundHandler = new ExecuteGoodsRoundCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.ProductUnitService, scope.UnitOfWork);
+            var roundHandler = new ExecuteGoodsRoundCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.ProductUnitService, scope.InventoryCostingService, scope.UnitOfWork);
             await roundHandler.Handle(new ExecuteGoodsRoundCommand
             {
                 SaleReturnId = saleReturnId,
@@ -265,7 +265,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (scenario, claimId) = await SeedShippedWithClaim(scope);
 
-            var addHandler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var addHandler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.InventoryCostingService, scope.UnitOfWork);
             await addHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
@@ -303,7 +303,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (_, claimId) = await SeedShippedWithClaim(scope);
 
-            var addHandler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var addHandler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.InventoryCostingService, scope.UnitOfWork);
             await addHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
@@ -394,7 +394,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (scenario, claimId) = await SeedShippedWithClaim(scope);
 
-            var addHandler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var addHandler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.InventoryCostingService, scope.UnitOfWork);
             await addHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,

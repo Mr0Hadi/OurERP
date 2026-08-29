@@ -1,4 +1,5 @@
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.UnitOfWork;
@@ -64,14 +65,16 @@ namespace Application.Features.PurchaseReturn.Commands
         private readonly IPurchaseReturnQueryService _purchaseReturnQueryService;
         private readonly IPurchaseReturnCalculationService _purchaseReturnCalculationService;
         private readonly IProductUnitService _productUnitService;
+        private readonly IInventoryCostingService _inventoryCostingService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public ExecuteGoodsRoundCommandHandler(IWMSDbContext context, IPurchaseReturnQueryService purchaseReturnQueryService, IPurchaseReturnCalculationService purchaseReturnCalculationService, IProductUnitService productUnitService, IUnitOfWork unitOfWork)
+        public ExecuteGoodsRoundCommandHandler(IWMSDbContext context, IPurchaseReturnQueryService purchaseReturnQueryService, IPurchaseReturnCalculationService purchaseReturnCalculationService, IProductUnitService productUnitService, IInventoryCostingService inventoryCostingService, IUnitOfWork unitOfWork)
         {
             _context = context;
             _purchaseReturnQueryService = purchaseReturnQueryService;
             _purchaseReturnCalculationService = purchaseReturnCalculationService;
             _productUnitService = productUnitService;
+            _inventoryCostingService = inventoryCostingService;
             _unitOfWork = unitOfWork;
         }
 
@@ -145,6 +148,9 @@ namespace Application.Features.PurchaseReturn.Commands
                     // The supplier physically sending a replacement is a return-side event, not a
                     // normal receiving round - it never touches PurchaseItem.ReceivedQuantity.
                     await _productUnitService.MintAsync(product, restocked, claim.PurchaseItemId, cancellationToken);
+
+                    if (restocked > 0)
+                        await _inventoryCostingService.RecordPurchaseReturnReplacementReceivedAsync(product, restocked, claim.PurchaseItemId, now, cancellationToken);
                 }
                 else // GOODS_OUT: goods physically leaving us back to the supplier.
                 {
@@ -152,6 +158,7 @@ namespace Application.Features.PurchaseReturn.Commands
                         throw new ValidationCustomException($"موجودی «{product.Name}» برای این عودت کافی نیست.");
 
                     product.Stock -= line.Quantity;
+                    await _inventoryCostingService.RecordPurchaseReturnShippedToSupplierAsync(product, line.Quantity, now, cancellationToken);
 
                     // No existing IProductUnitService method fits "goods leaving to a supplier"
                     // (ConsumeAsync marks units SOLD, which is the wrong status here) - flip the

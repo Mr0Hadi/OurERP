@@ -14,6 +14,7 @@ namespace Application.Features.SaleReturn.Queries
         public int Page { get; set; } = 1;
         public int Take { get; set; } = 10;
         public string? Search { get; set; }
+        public int? SaleId { get; set; }
         public int? CustomerId { get; set; }
         public ReturnStatusEnum? Status { get; set; }
         public ReturnProblemEnum? Problem { get; set; }
@@ -46,6 +47,11 @@ namespace Application.Features.SaleReturn.Queries
                 query = query.Where(x => x.ReturnNumber.Contains(search) ||
                                          x.Sale!.InvoiceNumber.Contains(search) ||
                                          (x.Sale!.Customer.FirstName + " " + x.Sale!.Customer.LastName).Contains(search));
+            }
+
+            if (request.SaleId.HasValue)
+            {
+                query = query.Where(x => x.SaleId == request.SaleId.Value);
             }
 
             if (request.CustomerId.HasValue)
