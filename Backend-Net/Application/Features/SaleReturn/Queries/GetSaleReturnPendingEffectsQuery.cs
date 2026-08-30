@@ -34,7 +34,7 @@ namespace Application.Features.SaleReturn.Queries
         {
             var res = new ResponseDto();
 
-            var query = _context.SaleReturns.AsQueryable();
+            var query = _saleReturnQueryService.WhereNotDeleted(_context.SaleReturns).AsQueryable();
 
             if (request.SaleId.HasValue)
                 query = query.Where(x => x.SaleId == request.SaleId.Value);

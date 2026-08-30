@@ -42,7 +42,7 @@ namespace Application.Features.SaleReturn.Commands
         {
             var res = new ResponseDto();
 
-            var saleReturn = await _saleReturnQueryService.WithReturnGraph(_context.SaleReturns)
+            var saleReturn = await _saleReturnQueryService.WithReturnGraph(_saleReturnQueryService.WhereNotDeleted(_context.SaleReturns))
                 .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
             if (saleReturn.Status != ReturnStatusEnum.REJECTED)

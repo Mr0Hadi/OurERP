@@ -40,7 +40,7 @@ namespace Application.Features.Invoice.Queries
 
         public async Task<FileResponseDto> Handle(GetSaleReturnCreditNotePdfQuery request, CancellationToken cancellationToken)
         {
-            var saleReturn = await _saleReturnQueryService.WithReturnGraph(_context.SaleReturns)
+            var saleReturn = await _saleReturnQueryService.WithReturnGraph(_saleReturnQueryService.WhereNotDeleted(_context.SaleReturns))
                 .Include(x => x.Sale!)
                     .ThenInclude(x => x.Customer)
                 .FirstOrDefaultAsync(x => x.Id == request.SaleReturnId, cancellationToken)

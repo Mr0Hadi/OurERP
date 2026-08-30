@@ -83,7 +83,7 @@ namespace Application.Features.SaleReturn.Commands
             var res = new ResponseDto();
 
             var saleReturn = await _saleReturnQueryService
-                .WithReturnGraph(_context.SaleReturns.Where(x => x.Id == request.SaleReturnId), includeSaleItems: true)
+                .WithReturnGraph(_saleReturnQueryService.WhereNotDeleted(_context.SaleReturns).Where(x => x.Id == request.SaleReturnId), includeSaleItems: true)
                 .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
             if (_saleReturnCalculationService.IsTerminal(saleReturn.Status))

@@ -5,6 +5,7 @@ using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Features.PurchaseReturn.Dtos;
 using Common.Exceptions;
 using Common.Extensions;
 using Domain.Enums;
@@ -26,22 +27,6 @@ namespace Application.Features.PurchaseReturn.Commands
         public string? PartyName { get; set; }
         public string? PartyNationalId { get; set; }
         public string? VehiclePlate { get; set; }
-        public string? Note { get; set; }
-    }
-
-    public class GoodsRoundLineDto
-    {
-        public int EffectId { get; set; }
-        public int Quantity { get; set; }
-
-        /// <summary>GOODS_IN only: which portion of Quantity had a problem on arrival, and what problem.</summary>
-        public List<GoodsRoundObservationDto> Observations { get; set; } = new();
-    }
-
-    public class GoodsRoundObservationDto
-    {
-        public ReturnProblemEnum Problem { get; set; }
-        public int Quantity { get; set; }
         public string? Note { get; set; }
     }
 
@@ -83,7 +68,7 @@ namespace Application.Features.PurchaseReturn.Commands
             var res = new ResponseDto();
 
             var purchaseReturn = await _purchaseReturnQueryService
-                .WithReturnGraph(_context.PurchaseReturns.Where(x => x.Id == request.PurchaseReturnId), includePurchaseItems: true)
+                .WithReturnGraph(_purchaseReturnQueryService.WhereNotDeleted(_context.PurchaseReturns).Where(x => x.Id == request.PurchaseReturnId), includePurchaseItems: true)
                 .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
             if (_purchaseReturnCalculationService.IsTerminal(purchaseReturn.Status))

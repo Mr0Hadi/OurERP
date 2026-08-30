@@ -35,6 +35,7 @@ namespace Application.Features.PurchaseReturn.Queries
             var res = new ResponseDto();
 
             var query = _context.PurchaseReturns
+                .Where(x => x.IsActive)
                 .Include(x => x.Purchase)
                     .ThenInclude(x => x.Supplier)
                 .Include(x => x.Claims)

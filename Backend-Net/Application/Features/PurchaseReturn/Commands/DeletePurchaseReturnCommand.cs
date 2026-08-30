@@ -47,7 +47,7 @@ namespace Application.Features.PurchaseReturn.Commands
             var res = new ResponseDto();
 
             var purchaseReturn = await _purchaseReturnQueryService
-                .WithReturnGraph(_context.PurchaseReturns.Where(x => x.Id == request.Id))
+                .WithReturnGraph(_purchaseReturnQueryService.WhereNotDeleted(_context.PurchaseReturns).Where(x => x.Id == request.Id))
                 .Include(x => x.Purchase)
                     .ThenInclude(x => x.Items)
                 .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
@@ -57,7 +57,10 @@ namespace Application.Features.PurchaseReturn.Commands
 
             var purchase = purchaseReturn.Purchase!;
 
-            _purchaseReturnRepository.Remove(purchaseReturn);
+            // Soft delete: the row and its whole claim graph stay, every read filters IsActive out.
+            purchaseReturn.IsActive = false;
+            purchaseReturn.UpdatedAt = DateTime.Now;
+            _purchaseReturnRepository.Update(purchaseReturn);
 
             purchase.Status = _purchaseReturnCalculationService.RecomputePurchaseStatus(purchase);
             purchase.UpdatedAt = DateTime.Now;

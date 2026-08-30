@@ -6,9 +6,14 @@ namespace Infrastructure.Services
 {
     public class PurchaseReturnQueryService : IPurchaseReturnQueryService
     {
+        public IQueryable<Domain.Entities.PurchaseReturn> WhereNotDeleted(IQueryable<Domain.Entities.PurchaseReturn> query)
+        {
+            return query.Where(x => x.IsActive);
+        }
+
         public IQueryable<Domain.Entities.PurchaseReturn> WhereActive(IQueryable<Domain.Entities.PurchaseReturn> query)
         {
-            return query.Where(x => x.Status == ReturnStatusEnum.OPEN || x.Status == ReturnStatusEnum.IN_PROGRESS);
+            return WhereNotDeleted(query).Where(x => x.Status == ReturnStatusEnum.OPEN || x.Status == ReturnStatusEnum.IN_PROGRESS);
         }
 
         public IQueryable<Domain.Entities.PurchaseReturn> WithReturnGraph(IQueryable<Domain.Entities.PurchaseReturn> query, bool includePurchaseItems = false)

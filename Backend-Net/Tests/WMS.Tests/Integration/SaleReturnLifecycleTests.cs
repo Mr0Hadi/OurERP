@@ -1,4 +1,4 @@
-using Application.Common.Dtos.Returns;
+﻿using Application.Common.Dtos.Returns;
 using Application.Features.SaleReturn.Commands;
 using Application.Features.SaleReturn.Dtos;
 using Application.Features.SaleReturn.Queries;
@@ -339,7 +339,7 @@ namespace WMS.Tests.Integration
         }
 
         [Fact]
-        public async Task DeleteSaleReturn_Untouched_HardDeletesWithCascade()
+        public async Task DeleteSaleReturn_Untouched_SoftDeletesAndHidesFromReads()
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
@@ -350,8 +350,12 @@ namespace WMS.Tests.Integration
             await handler.Handle(new DeleteSaleReturnCommand { Id = returnId }, CancellationToken.None);
 
             using var verify = db.NewContext();
-            Assert.Empty(verify.SaleReturns);
-            Assert.Empty(verify.SaleReturnClaims);
+            Assert.False(verify.SaleReturns.Single().IsActive);
+            Assert.NotEmpty(verify.SaleReturnClaims);
+
+            using var readScope = db.NewScope();
+            var detailHandler = new GetSaleReturnDetailQueryHandler(readScope.Db, readScope.SaleReturnQueryService, readScope.SaleReturnCalculation);
+            await Assert.ThrowsAsync<NotFoundCustomException>(() => detailHandler.Handle(new GetSaleReturnDetailQuery { Id = returnId }, CancellationToken.None));
         }
 
         [Fact]

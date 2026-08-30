@@ -6,9 +6,14 @@ namespace Infrastructure.Services
 {
     public class SaleReturnQueryService : ISaleReturnQueryService
     {
+        public IQueryable<Domain.Entities.SaleReturn> WhereNotDeleted(IQueryable<Domain.Entities.SaleReturn> query)
+        {
+            return query.Where(x => x.IsActive);
+        }
+
         public IQueryable<Domain.Entities.SaleReturn> WhereActive(IQueryable<Domain.Entities.SaleReturn> query)
         {
-            return query.Where(x => x.Status == ReturnStatusEnum.OPEN || x.Status == ReturnStatusEnum.IN_PROGRESS);
+            return WhereNotDeleted(query).Where(x => x.Status == ReturnStatusEnum.OPEN || x.Status == ReturnStatusEnum.IN_PROGRESS);
         }
 
         public IQueryable<Domain.Entities.SaleReturn> WithReturnGraph(IQueryable<Domain.Entities.SaleReturn> query, bool includeSaleItems = false)

@@ -101,6 +101,7 @@ namespace Application.Features.SaleReturn.Commands
 
             var now = DateTime.Now;
             var returnDate = request.ReturnDate ?? now;
+            // Deliberately counts soft-deleted returns too, so a deleted return never frees up its number.
             var returnCount = await _context.SaleReturns.CountAsync(cancellationToken);
 
             var saleReturn = new Domain.Entities.SaleReturn
@@ -111,6 +112,7 @@ namespace Application.Features.SaleReturn.Commands
                 Status = ReturnStatusEnum.OPEN,
                 Description = request.Description,
                 PreviousReturnId = request.PreviousReturnId,
+                IsActive = true,
                 CreatedAt = now,
                 UpdatedAt = now,
             };

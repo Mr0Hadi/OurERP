@@ -1,4 +1,4 @@
-using Application.Common.Dtos.Returns;
+﻿using Application.Common.Dtos.Returns;
 using Application.Features.Purchase.Commands;
 using Application.Features.Purchase.Dtos;
 using Application.Features.PurchaseReturn.Commands;
@@ -363,7 +363,7 @@ namespace WMS.Tests.Integration
         }
 
         [Fact]
-        public async Task DeletePurchaseReturn_Untouched_HardDeletesWithCascade()
+        public async Task DeletePurchaseReturn_Untouched_SoftDeletesAndHidesFromReads()
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
@@ -374,8 +374,12 @@ namespace WMS.Tests.Integration
             await handler.Handle(new DeletePurchaseReturnCommand { Id = returnId }, CancellationToken.None);
 
             using var verify = db.NewContext();
-            Assert.Empty(verify.PurchaseReturns);
-            Assert.Empty(verify.PurchaseReturnClaims);
+            Assert.False(verify.PurchaseReturns.Single().IsActive);
+            Assert.NotEmpty(verify.PurchaseReturnClaims);
+
+            using var readScope = db.NewScope();
+            var detailHandler = new GetPurchaseReturnDetailQueryHandler(readScope.Db, readScope.PurchaseReturnQueryService, readScope.PurchaseReturnCalculation, FakeObjectStorage.Instance);
+            await Assert.ThrowsAsync<NotFoundCustomException>(() => detailHandler.Handle(new GetPurchaseReturnDetailQuery { Id = returnId }, CancellationToken.None));
         }
 
         [Fact]

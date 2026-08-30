@@ -15,7 +15,13 @@ namespace Application.Common.Contracts.PurchaseReturn
     /// </summary>
     public interface IPurchaseReturnQueryService
     {
-        /// <summary>Returns still reserving quantity against their purchase items.</summary>
+        /// <summary>
+        /// Drops soft-deleted returns (IsActive = false). Delete is a soft delete, and there is no
+        /// global query filter in this project, so every read of PurchaseReturns must compose this.
+        /// </summary>
+        IQueryable<Domain.Entities.PurchaseReturn> WhereNotDeleted(IQueryable<Domain.Entities.PurchaseReturn> query);
+
+        /// <summary>Returns still reserving quantity against their purchase items. Excludes soft-deleted rows.</summary>
         IQueryable<Domain.Entities.PurchaseReturn> WhereActive(IQueryable<Domain.Entities.PurchaseReturn> query);
 
         /// <summary>
