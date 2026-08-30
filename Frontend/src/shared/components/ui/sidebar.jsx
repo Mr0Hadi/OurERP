@@ -282,7 +282,11 @@ function SidebarInset({
     <main
       data-slot="sidebar-inset"
       className={cn(
-        "relative flex w-full flex-1 flex-col bg-background md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ms-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ms-2",
+        // min-w-0 لازم است: این یک آیتمِ فلکس با `w-full` است و
+        // `min-width:auto` نمی‌گذارد زیرِ آن عرض کوچک شود. بدونش، باز
+        // کردنِ سایدبار به‌جای تنگ‌کردنِ محتوا، کلِ صفحه را به اندازه‌ی
+        // عرضِ سایدبار افقی اسکرول می‌کند.
+        "relative flex w-full min-w-0 flex-1 flex-col bg-background md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ms-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ms-2",
         className
       )}
       {...props} />
