@@ -76,9 +76,9 @@ export async function createCustomer(customerData) {
 
   const newCustomer = {
     id: newId,
-    referralCode: "",
+    refferalCode: "",
     creditLimit: 0,
-    Description: "",
+    description: "",
     balanceType: BalanceTypeEnum.BALANCED,
     balance: 0,
     image: null,

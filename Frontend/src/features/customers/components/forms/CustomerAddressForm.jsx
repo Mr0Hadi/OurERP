@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Button } from "@/shared/components/ui/button";
 import { Textarea } from "@/shared/components/ui/textarea";
 import LocationPickerMap from "@/shared/components/map/LocationPickerMap";
+import { requiredMessage } from "@/shared/utils/validationRules";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,19 +19,26 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 
-export default function CustomerAddressForm({ register, watch, setValue }) {
+export default function CustomerAddressForm({
+  register,
+  errors,
+  watch,
+  setValue,
+}) {
   const [mapOpen, setMapOpen] = useState(false);
   // آدرس جدیدی که از نقشه آمده ولی هنوز به‌خاطر تعارض با متن دستی کاربر، تایید نشده
   const [pendingAddress, setPendingAddress] = useState(null);
 
-  // مقادیر فعلی lat/lng برای نمایش در دیالوگ و پیش‌مقداردهی مارکر
-  const lat = watch ? watch("lat") : "";
-  const lng = watch ? watch("lng") : "";
+  // نامِ فیلدها عمداً `latitude`/`longitude` است، همان چیزی که
+  // `CreateCustomerCommand` می‌خواند؛ با `lat`/`lng` مختصات بی‌صدا دور
+  // ریخته می‌شد.
+  const lat = watch ? watch("latitude") : "";
+  const lng = watch ? watch("longitude") : "";
 
   const handleLocationSelect = (selectedLat, selectedLng, address) => {
     // مختصات همیشه بلافاصله ست می‌شوند؛ این بخش با متن آدرس تداخلی ندارد
-    setValue("lat", selectedLat.toFixed(6), { shouldDirty: true });
-    setValue("lng", selectedLng.toFixed(6), { shouldDirty: true });
+    setValue("latitude", selectedLat.toFixed(6), { shouldDirty: true });
+    setValue("longitude", selectedLng.toFixed(6), { shouldDirty: true });
 
     if (!address) return;
 
@@ -65,17 +73,48 @@ export default function CustomerAddressForm({ register, watch, setValue }) {
       </CardHeader>
       <CardContent className="px-6 py-5 space-y-4">
         <div className="space-y-1.5">
-          <Label htmlFor="address" className="text-sm font-medium">آدرس کامل</Label>
+          <Label htmlFor="address" className="text-sm font-medium">
+            آدرس کامل <span className="text-destructive">*</span>
+          </Label>
           <Textarea 
             id="address" 
             placeholder="خیابان، کوچه، پلاک، واحد..." 
             className="min-h-[90px] rounded-lg transition-all resize-none"
-            {...register("address")} 
+            {...register("address", { required: requiredMessage("آدرس") })} 
           />
+          {errors?.address && (
+            <span className="text-xs text-destructive block font-medium">
+              {errors.address.message}
+            </span>
+          )}
+        </div>
+
+        {/* استان و شهر — ستونشان در سرور هست و فرم اصلاً نداشتشان. */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="province" className="text-sm font-medium">استان</Label>
+            <Input
+              id="province"
+              placeholder="تهران"
+              className="h-10 rounded-lg transition-all"
+              {...register("province")}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="city" className="text-sm font-medium">شهر</Label>
+            <Input
+              id="city"
+              placeholder="تهران"
+              className="h-10 rounded-lg transition-all"
+              {...register("city")}
+            />
+          </div>
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="postalCode" className="text-sm font-medium">کد پستی</Label>
+          <Label htmlFor="postalCode" className="text-sm font-medium">
+            کد پستی <span className="text-destructive">*</span>
+          </Label>
           <div className="relative">
             <Mail className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
@@ -83,9 +122,16 @@ export default function CustomerAddressForm({ register, watch, setValue }) {
               dir="ltr" 
               placeholder="1234567890" 
               className="h-10 pr-10 rounded-lg transition-all input-rtl-placeholder"
-              {...register("postalCode")} 
+              {...register("postalCode", {
+                required: requiredMessage("کد پستی"),
+              })} 
             />
           </div>
+          {errors?.postalCode && (
+            <span className="text-xs text-destructive block font-medium">
+              {errors.postalCode.message}
+            </span>
+          )}
         </div>
 
         <div className="space-y-1.5">
@@ -95,13 +141,13 @@ export default function CustomerAddressForm({ register, watch, setValue }) {
               dir="ltr" 
               placeholder="Latitude" 
               className="h-10 rounded-lg transition-all input-rtl-placeholder"
-              {...register("lat")} 
+              {...register("latitude")} 
             />
             <Input 
               dir="ltr" 
               placeholder="Longitude" 
               className="h-10 rounded-lg transition-all input-rtl-placeholder"
-              {...register("lng")} 
+              {...register("longitude")} 
             />
           </div>
           <Button

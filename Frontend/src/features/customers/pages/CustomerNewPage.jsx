@@ -86,7 +86,12 @@ export default function CustomerNewPage() {
 
           {/* ستون چپ - آدرس و دکمه‌ها */}
           <div className="lg:col-span-1 space-y-4">
-            <CustomerAddressForm register={register} watch={watch} setValue={setValue} />
+            <CustomerAddressForm
+              register={register}
+              errors={errors}
+              watch={watch}
+              setValue={setValue}
+            />
 
             {/* دکمه‌های عملیات */}
             <div className="flex gap-2">

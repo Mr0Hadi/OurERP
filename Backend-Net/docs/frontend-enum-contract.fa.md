@@ -219,7 +219,15 @@ returnDoc → claims[] → resolutions[] → effects[]
 
 فرانت در صفحه‌ی لیست مشتریان و تامین‌کنندگان فیلتر «نوع حساب» (بدهکار / بستانکار / تسویه‌شده) دارد و پارامتر `balanceType` را می‌فرستد. ولی در [`api-guide.fa.md`](./api-guide.fa.md) پارامترهای query این دو endpoint فقط `page`, `take`, `id`, `fullName`, `minBalance`, `maxBalance` ذکر شده.
 
-**لطفاً روشن کنید:** آیا `GetCustomerList` / `GetSupplierList` این فیلتر را پشتیبانی می‌کنند؟ اگر نه، لطفاً اضافه شود (نوع پارامتر: `BalanceTypeEnum` عددی، اختیاری).
+> **پاسخ (از روی کد، ۱۴۰۵/۰۶/۰۸):** بله، **هر دو** پشتیبانی می‌کنند —
+> `GetCustomerListQuery.BalanceType` و `GetSupplierListQuery.BalanceType`، هر دو
+> `BalanceTypeEnum?`. فقط در `api-guide.fa.md` مستند نشده بود. کاری لازم نیست جز
+> اضافه‌کردنش به سند.
+>
+> ولی **نامِ بقیه‌ی پارامترها بین این دو یکی نیست** و سند هیچ‌کدام را کامل
+> نمی‌گوید: مشتری `fullName`/`minBalance`/`maxBalance` می‌گیرد و تامین‌کننده
+> `companyNameOrContactName`/`fromBalance`/`toBalance`. فرانت هر دو را درست
+> می‌فرستد؛ یکدست‌کردنشان (یا دست‌کم مستندکردنشان) از باگِ بعدی جلوگیری می‌کند.
 
 ### ۵.۳ `SupplierListDto.status` — استثنای رشته‌ای
 
@@ -234,7 +242,7 @@ returnDoc → claims[] → resolutions[] → effects[]
 - [ ] **`EFFECT_STATUSES`**: افزودن معادل `VOID` به `*DecisionStatusEnum` (بخش ۳.۴)
 - [ ] بررسی افزودن اعضای گمشده‌ی `RETURN_PROBLEMS` (`WRONG_ITEM_INVOICED`, `WRONG_ITEM_ORDERED`, `WRONG_QTY_INVOICED`, `WRONG_QTY_ORDERED`, `UNLISTED_ITEM`) — بخش ۳.۴
 - [ ] بررسی نیاز به `CLAIM_SCOPES` / `OFF_SCOPE_KINDS` برای محاسبه‌ی درست سهمیه‌ی خط (بخش ۳.۴)
-- [ ] پاسخ درباره‌ی فیلتر `balanceType` (بخش ۵.۲)
+- [x] ~~پاسخ درباره‌ی فیلتر `balanceType`~~ — هر دو کنترلر دارندش؛ فقط مستند نشده بود (بخش ۵.۲)
 - [ ] پاسخ درباره‌ی تفکیک `SalesStatusEnum.PENDING` از `PROCESSING` (بخش ۱)
 
 ## نقشه‌ی فایل‌های فرانت

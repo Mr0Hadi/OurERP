@@ -100,7 +100,12 @@ function CustomerDetailForm({ customerData }) {
           </div>
 
           <div className="lg:col-span-1 space-y-4">
-            <CustomerAddressForm register={register} watch={watch} setValue={setValue} />
+            <CustomerAddressForm
+              register={register}
+              errors={errors}
+              watch={watch}
+              setValue={setValue}
+            />
 
             <div className="flex gap-2">
               <Button

@@ -15,8 +15,8 @@ const STATUS_OPTIONS = toFilterOptions(SALE_STATUS_LABELS);
 const PAYMENT_TYPE_OPTIONS = toFilterOptions(PAYMENT_TYPE_LABELS);
 
 const renderCustomerPhone = (customer) =>
-  customer.phone ? (
-    <span className="text-xs text-muted-foreground">{customer.phone}</span>
+  customer.phoneNumber ? (
+    <span className="text-xs text-muted-foreground">{customer.phoneNumber}</span>
   ) : null;
 
 /**

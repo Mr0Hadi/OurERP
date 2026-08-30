@@ -4,35 +4,69 @@ import { BalanceTypeEnum } from "@/shared/domain/enums/balanceType";
 import { ImageFolderEnum } from "@/shared/domain/enums/imageFolder";
 import { useImageUpload } from "@/shared/hooks/useImageUpload";
 
+/**
+ * فرمِ مشتری — فیلدهایش دقیقاً همان فیلدهای
+ * `CreateCustomerCommand`/`UpdateCustomerCommand` هستند.
+ *
+ * چهار ناهماهنگی که اینجا رفع شد (هر چهار مورد *ساکت* بودند:
+ * `System.Text.Json` فیلدِ ناشناس را بی‌صدا دور می‌ریزد، پس فرم سبز
+ * می‌شد و مقدار هرگز ذخیره نمی‌شد):
+ *
+ * ۱. `phone` → سرور `PhoneNumber` می‌خواند. **شماره تماس مشتری اصلاً
+ *    ذخیره نمی‌شد** — و این تنها راه تماس با مشتری است.
+ * ۲. `lat`/`lng` → سرور `Latitude`/`Longitude` می‌خواند.
+ * ۳. `referralCode` → ستون در بکند `RefferalCode` است (با غلط املایی).
+ * ۴. پنج فیلدِ سرور اصلاً در فرم نبودند: کد اقتصادی، شناسه ملی، شماره
+ *    ثبت، استان و شهر.
+ *
+ * همان کاری که یک دور قبل برای تامین‌کننده انجام شد؛ مشتری دو فیلدِ
+ * ساکتِ بیشتر داشت.
+ */
+
 function buildDefaultValues(data) {
   if (!data) {
     return {
       firstName: "",
       lastName: "",
-      phone: "",
+      phoneNumber: "",
       address: "",
-      lat: "",
-      lng: "",
       postalCode: "",
+      province: "",
+      city: "",
+      economicCode: "",
+      nationalId: "",
+      registrationNumber: "",
+      latitude: "",
+      longitude: "",
       referralCode: "",
       creditLimit: "",
-      Description: "",
+      description: "",
       balanceType: BalanceTypeEnum.BALANCED,
       balanceAmount: "",
     };
   }
 
+  const asText = (value) =>
+    value !== null && value !== undefined ? String(value) : "";
+
   return {
     firstName: data.firstName || "",
     lastName: data.lastName || "",
-    phone: data.phone || "",
+    phoneNumber: data.phoneNumber || "",
     address: data.address || "",
-    lat: data.lat !== null && data.lat !== undefined ? data.lat.toString() : "",
-    lng: data.lng !== null && data.lng !== undefined ? data.lng.toString() : "",
     postalCode: data.postalCode || "",
-    referralCode: data.referralCode || "",
-    creditLimit: data.creditLimit?.toString() || "",
-    Description: data.Description || "",
+    province: data.province || "",
+    city: data.city || "",
+    economicCode: data.economicCode || "",
+    nationalId: data.nationalId || "",
+    registrationNumber: data.registrationNumber || "",
+    latitude: asText(data.latitude),
+    longitude: asText(data.longitude),
+    // نامِ فیلدِ فرم املای درست را دارد؛ نگاشت به املای بکند فقط در
+    // مرزِ payload انجام می‌شود (پایین‌تر).
+    referralCode: data.refferalCode || "",
+    creditLimit: asText(data.creditLimit),
+    description: data.description || "",
     balanceType: data.balanceType ?? BalanceTypeEnum.BALANCED,
     balanceAmount:
       data.balanceType !== undefined && data.balanceType !== BalanceTypeEnum.BALANCED
@@ -41,10 +75,21 @@ function buildDefaultValues(data) {
   };
 }
 
+const numberOrNull = (value) =>
+  value !== "" && value !== null && value !== undefined
+    ? parseFloat(value)
+    : null;
+
+/** فیلدهای اختیاری خالی به‌جای `""` مقدار `null` می‌گیرند — ستون‌ها nullable اند. */
+const textOrNull = (value) => {
+  const text = String(value ?? "").trim();
+  return text === "" ? null : text;
+};
+
 /**
- * `imageKey` همان ObjectKey است که از `api/File/UploadImage` گرفته شده و
- * طبق بخش ۱۷ سند باید در فیلد `imageUrl` بنشیند — نه یک URL و نه base64.
- * `null` یعنی «تصویر را پاک کن».
+ * `imageKey` همان ObjectKey برگشته از `api/File/UploadImage` است و در
+ * فیلد `imageUrl` می‌نشیند (نامِ فیلد در خودِ Command همین است؛ سرور
+ * هنگام ذخیره آن را به کلید نرمال می‌کند). `null` یعنی «تصویر را پاک کن».
  */
 export function buildCustomerPayload(data, imageKey) {
   const amount = Number(data.balanceAmount) || 0;
@@ -52,20 +97,26 @@ export function buildCustomerPayload(data, imageKey) {
   const balance = balanceType === BalanceTypeEnum.BALANCED ? 0 : Math.abs(amount);
 
   return {
-    firstName: data.firstName,
-    lastName: data.lastName,
-    phone: data.phone || null,
-    address: data.address || null,
-    postalCode: data.postalCode || null,
-    referralCode: data.referralCode || "",
+    firstName: data.firstName?.trim(),
+    lastName: data.lastName?.trim(),
+    phoneNumber: data.phoneNumber?.trim(),
+    address: data.address?.trim(),
+    postalCode: data.postalCode?.trim(),
+    province: textOrNull(data.province),
+    city: textOrNull(data.city),
+    economicCode: textOrNull(data.economicCode),
+    nationalId: textOrNull(data.nationalId),
+    registrationNumber: textOrNull(data.registrationNumber),
+    // غلطِ املاییِ عمدی: ستونِ بکند `RefferalCode` است. اگر روزی آنجا
+    // اصلاح شد، فقط همین یک خط عوض می‌شود.
+    refferalCode: textOrNull(data.referralCode),
     creditLimit: data.creditLimit ? Number(data.creditLimit) : 0,
-    Description: data.Description || "",
+    description: textOrNull(data.description),
     balance,
     balanceType,
     imageUrl: imageKey ?? null,
-    // مختصات به‌صورت دو فیلد جدا و عددی ذخیره می‌شوند (نه یک آبجکت تودرتو)
-    lat: data.lat !== "" && data.lat !== null && data.lat !== undefined ? parseFloat(data.lat) : null,
-    lng: data.lng !== "" && data.lng !== null && data.lng !== undefined ? parseFloat(data.lng) : null,
+    latitude: numberOrNull(data.latitude),
+    longitude: numberOrNull(data.longitude),
   };
 }
 

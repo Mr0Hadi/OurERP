@@ -5,7 +5,28 @@ import { Label } from "@/shared/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Textarea } from "@/shared/components/ui/textarea";
 import ImageUploadField from "@/shared/components/files/ImageUploadField";
+import {
+  mobileRules,
+  persianNameRules,
+} from "@/shared/utils/validationRules";
 
+/** پیام خطای زیرِ فیلد — همان متنی که سرور هم برمی‌گرداند. */
+function FieldError({ error }) {
+  if (!error) return null;
+  return (
+    <span className="text-xs text-destructive block mt-1 font-medium">
+      {error.message}
+    </span>
+  );
+}
+
+const Required = () => <span className="text-destructive">*</span>;
+
+/**
+ * قوانین فیلدها عیناً از `CreateCustomerCommandValidator` گرفته شده‌اند:
+ * نام و نام خانوادگی فقط فارسی، و شماره تماس **اجباری و فقط موبایل**
+ * (`^09\d{9}$`) — قبلاً اختیاری بود و اصلاً هم ذخیره نمی‌شد.
+ */
 export default function CustomerIdentityForm({ register, errors, imageUpload }) {
   return (
     <Card className="overflow-hidden shadow-md rounded-2xl pt-0 gap-0">
@@ -43,13 +64,9 @@ export default function CustomerIdentityForm({ register, errors, imageUpload }) 
                   id="firstName"
                   placeholder="نام"
                   className="h-10 rounded-lg transition-all"
-                  {...register("firstName", { required: "وارد کردن نام الزامی است" })}
+                  {...register("firstName", persianNameRules("نام"))}
                 />
-                {errors.firstName && (
-                  <span className="text-xs text-destructive block mt-1 font-medium">
-                    {errors.firstName.message}
-                  </span>
-                )}
+                <FieldError error={errors.firstName} />
               </div>
 
               <div className="space-y-1.5">
@@ -60,29 +77,26 @@ export default function CustomerIdentityForm({ register, errors, imageUpload }) 
                   id="lastName"
                   placeholder="نام خانوادگی"
                   className="h-10 rounded-lg transition-all"
-                  {...register("lastName", { required: "وارد کردن نام خانوادگی الزامی است" })}
+                  {...register("lastName", persianNameRules("نام خانوادگی"))}
                 />
-                {errors.lastName && (
-                  <span className="text-xs text-destructive block mt-1 font-medium">
-                    {errors.lastName.message}
-                  </span>
-                )}
+                <FieldError error={errors.lastName} />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="phone" className="text-sm font-medium">
-                  شماره تماس
+                <Label htmlFor="phoneNumber" className="text-sm font-medium">
+                  شماره تماس (موبایل) <Required />
                 </Label>
                 <Input
-                  id="phone"
+                  id="phoneNumber"
                   type="tel"
-                  placeholder="۰۹۱۲۳۴۵۶۷۸۹"
+                  placeholder="09123456789"
                   dir="ltr"
                   className="h-10 rounded-lg transition-all input-rtl-placeholder"
-                  {...register("phone")}
+                  {...register("phoneNumber", mobileRules())}
                 />
+                <FieldError error={errors.phoneNumber} />
               </div>
 
               <div className="space-y-1.5">
@@ -102,15 +116,61 @@ export default function CustomerIdentityForm({ register, errors, imageUpload }) 
               </div>
             </div>
 
+            {/* سه شناسه‌ی حقوقی — اختیاری، ولی سرور از روز اول ستونشان
+                را داشته و فرم اصلاً نمایششان نمی‌داد. */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="economicCode" className="text-sm font-medium">
+                  کد اقتصادی
+                </Label>
+                <Input
+                  id="economicCode"
+                  dir="ltr"
+                  placeholder="14001234567"
+                  className="h-10 rounded-lg transition-all input-rtl-placeholder"
+                  {...register("economicCode")}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="nationalId" className="text-sm font-medium">
+                  شناسه ملی
+                </Label>
+                <Input
+                  id="nationalId"
+                  dir="ltr"
+                  placeholder="10101234567"
+                  className="h-10 rounded-lg transition-all input-rtl-placeholder"
+                  {...register("nationalId")}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="registrationNumber"
+                  className="text-sm font-medium"
+                >
+                  شماره ثبت
+                </Label>
+                <Input
+                  id="registrationNumber"
+                  dir="ltr"
+                  placeholder="123456"
+                  className="h-10 rounded-lg transition-all input-rtl-placeholder"
+                  {...register("registrationNumber")}
+                />
+              </div>
+            </div>
+
             <div className="space-y-1.5">
-              <Label htmlFor="Description" className="text-sm font-medium">
+              <Label htmlFor="description" className="text-sm font-medium">
                 توضیحات
               </Label>
               <Textarea
-                id="Description"
+                id="description"
                 placeholder="یادداشت یا توضیحات مربوط به مشتری..."
                 className="min-h-[70px] rounded-lg transition-all resize-none"
-                {...register("Description")}
+                {...register("description")}
               />
             </div>
           </div>
