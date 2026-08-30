@@ -27,8 +27,8 @@ export async function fetchSuppliers({
       page,
       take: limit,
       companyNameOrContactName: search || undefined,
-      fromBalance: minBalance !== "" ? minBalance : undefined,
-      toBalance: maxBalance !== "" ? maxBalance : undefined,
+      minBalance: minBalance !== "" ? minBalance : undefined,
+      maxBalance: maxBalance !== "" ? maxBalance : undefined,
       balanceType: balanceType !== "" ? balanceType : undefined,
     },
   });
