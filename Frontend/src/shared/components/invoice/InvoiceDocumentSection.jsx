@@ -1,20 +1,45 @@
-import { useState } from "react";
-import { Printer, Download, Upload, FileText, X } from "lucide-react";
+import { Printer, Download, Info } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Label } from "@/shared/components/ui/label";
+import ImageUploadList from "@/shared/components/files/ImageUploadList";
+import { ImageFolderEnum } from "@/shared/domain/enums/imageFolder";
+import { useImageUploadList } from "@/shared/hooks/useImageUploadList";
 
 /**
- * سند فاکتور یک سفارش — چاپ/دانلود یک نسخه‌ی خیلی ساده از فاکتور و
- * پیوست‌کردن فاکتور واقعی (مثلاً فاکتوری که تامین‌کننده داده).
+ * سند فاکتور یک سفارش — چاپ/دانلود یک نسخه‌ی ساده از فاکتور، و ضمیمه‌کردن
+ * فاکتور واقعی (مثلاً برگه‌ای که تامین‌کننده داده).
  *
- * ساخت رسمیِ فاکتور بعداً روی بک‌اند انجام می‌شود؛ اینجا فقط همان
- * ضرورت‌های فرانت است: یک پیش‌نمایشِ قابل چاپ از روی داده‌ی فعلیِ فرم،
- * و یک فایل‌آپلودِ ساده. فایل فقط در حافظه‌ی همین صفحه نگه داشته
- * می‌شود — اتصال به سرور نیاز به یک اندپوینت آپلود دارد که هنوز وجود
- * ندارد.
+ * ساخت رسمیِ فاکتور روی بک‌اند انجام می‌شود؛ اینجا فقط پیش‌نمایشِ قابل
+ * چاپ از روی داده‌ی فعلیِ فرم است.
+ *
+ * ضمیمه دیگر «فقط در حافظه‌ی همین صفحه» نیست: از همان مسیرِ مشترکِ
+ * آپلود (`useImageUploadList` → `api/File/UploadImage`) رد می‌شود و
+ * `objectKey` می‌گیرد.
  */
+
+/**
+ * ⚠️ **ضمیمه‌ی فاکتور هنوز سمت سرور جایی برای ذخیره‌شدن ندارد.**
+ *
+ * آپلود کار می‌کند (کلید گرفته می‌شود)، ولی `CreateSaleCommand`،
+ * `CreatePurchaseCommand` و دو دستور مرجوعی هیچ فیلدی برای ضمیمه ندارند
+ * و `System.Text.Json` فیلدِ ناشناس را بی‌صدا دور می‌ریزد — یعنی کاربر
+ * «ضمیمه‌ی ذخیره‌شده»‌ای می‌بیند که وجود ندارد. تا آن روز این خاموش است.
+ *
+ * فهرست کارهای بک‌اند:
+ * `Backend-Net/docs/invoice-attachment-requirements.fa.md`
+ */
+const INVOICE_ATTACHMENTS_ENABLED = false;
+
+/**
+ * پوشه‌ی باکت. `RECEIVING` استفاده می‌شود چون پوشه فقط یک پیشوندِ
+ * مرتب‌سازی است و بک‌اند خودش هم نوشته که مرزِ امنیتی نیست — پس فاکتور
+ * ارزشِ افزودنِ یک عضو تازه به enum را ندارد. اگر روزی پوشه‌ی مخصوص
+ * ساخته شد، فقط همین یک خط عوض می‌شود.
+ */
+const INVOICE_ATTACHMENT_FOLDER = ImageFolderEnum.RECEIVING;
+
 function buildInvoiceHtml({
   title,
   invoiceNumber,
@@ -79,8 +104,15 @@ export default function InvoiceDocumentSection({
   totalAmount,
   attachmentRequired = false,
   attachmentLabel = "فایل فاکتور",
+  attachments,
 }) {
-  const [attachment, setAttachment] = useState(null);
+  // اگر صفحه‌ای خودش ضمیمه‌ها را نگه می‌دارد (برای گذاشتن در payload)،
+  // همان را می‌دهد؛ وگرنه کامپوننت state خودش را می‌سازد.
+  const ownList = useImageUploadList({
+    folder: INVOICE_ATTACHMENT_FOLDER,
+    maxCount: 5,
+  });
+  const list = attachments ?? ownList;
 
   const invoiceProps = {
     title,
@@ -113,19 +145,6 @@ export default function InvoiceDocumentSection({
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    if (attachment?.url) URL.revokeObjectURL(attachment.url);
-    setAttachment({ file, url: URL.createObjectURL(file) });
-  };
-
-  const handleRemoveAttachment = () => {
-    if (attachment?.url) URL.revokeObjectURL(attachment.url);
-    setAttachment(null);
   };
 
   return (
@@ -169,38 +188,18 @@ export default function InvoiceDocumentSection({
             )}
           </div>
 
-          {attachment ? (
-            <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-muted/40 p-2 text-xs">
-              <a
-                href={attachment.url}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1.5 text-card-foreground hover:underline truncate"
-              >
-                <FileText className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{attachment.file.name}</span>
-              </a>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 shrink-0"
-                onClick={handleRemoveAttachment}
-              >
-                <X className="h-3.5 w-3.5" />
-              </Button>
-            </div>
+          {INVOICE_ATTACHMENTS_ENABLED ? (
+            <ImageUploadList
+              list={list}
+              title="فایل‌ها"
+              withNotes={false}
+              emptyLabel="فایل فاکتور را اینجا اضافه کنید."
+            />
           ) : (
-            <label className="flex items-center justify-center gap-2 rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground cursor-pointer hover:bg-muted/40">
-              <Upload className="h-3.5 w-3.5" />
-              انتخاب فایل فاکتور (تصویر یا PDF)
-              <input
-                type="file"
-                accept="application/pdf,image/*"
-                className="hidden"
-                onChange={handleFileChange}
-              />
-            </label>
+            <p className="flex items-start gap-2 rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground leading-relaxed">
+              <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              ضمیمه‌کردن فاکتور تا آماده‌شدن سرویس آن روی سرور غیرفعال است.
+            </p>
           )}
         </div>
       </CardContent>
