@@ -106,7 +106,7 @@ export default function SupplierIdentityForm({ register, errors, imageUpload }) 
 
               <div className="space-y-1.5">
                 <Label htmlFor="phone" className="text-sm font-medium">
-                  شماره تماس (موبایل) <Required />
+                  شماره تماس <Required />
                 </Label>
                 <Input
                   id="phone"

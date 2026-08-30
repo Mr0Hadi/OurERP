@@ -86,7 +86,7 @@ export default function CustomerIdentityForm({ register, errors, imageUpload }) 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="phoneNumber" className="text-sm font-medium">
-                  شماره تماس (موبایل) <Required />
+                  شماره تماس <Required />
                 </Label>
                 <Input
                   id="phoneNumber"
