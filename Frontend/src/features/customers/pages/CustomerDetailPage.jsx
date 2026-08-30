@@ -37,9 +37,7 @@ function CustomerDetailForm({ customerData }) {
   const {
     formMethods,
     balanceType,
-    imagePreview,
-    handleImageChange,
-    handleRemoveImage,
+    imageUpload,
     buildCustomerPayload,
   } = useCustomerForm(customerData);
 
@@ -55,8 +53,20 @@ function CustomerDetailForm({ customerData }) {
   const onSubmit = (data) => {
     updateMutation.mutate(
       { id: customerData.id, data: buildCustomerPayload(data) },
-      { onSuccess: () => navigate(ROUTES.CUSTOMERS) },
+      {
+        onSuccess: () => {
+          // سرور تصویرِ قبلی را خودکار پاک نمی‌کند (بخش ۱۷ سند)؛ حالا که
+          // ویرایش ثبت شده، پاک‌کردنش امن است.
+          imageUpload.commit();
+          navigate(ROUTES.CUSTOMERS);
+        },
+      },
     );
+  };
+
+  const handleCancel = () => {
+    imageUpload.discard();
+    navigate(ROUTES.CUSTOMERS);
   };
 
   const handleDelete = () => {
@@ -65,7 +75,8 @@ function CustomerDetailForm({ customerData }) {
     });
   };
 
-  const isBusy = updateMutation.isPending || deleteMutation.isPending;
+  const isBusy =
+    updateMutation.isPending || deleteMutation.isPending || imageUpload.isUploading;
 
   return (
     <div className="m-auto bg-background">
@@ -78,9 +89,7 @@ function CustomerDetailForm({ customerData }) {
             <CustomerIdentityForm
               register={register}
               errors={errors}
-              imagePreview={imagePreview}
-              onImageChange={handleImageChange}
-              onRemoveImage={handleRemoveImage}
+              imageUpload={imageUpload}
             />
             <CustomerFinanceForm
               register={register}
@@ -97,7 +106,7 @@ function CustomerDetailForm({ customerData }) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate(ROUTES.CUSTOMERS)}
+                onClick={handleCancel}
                 disabled={isBusy}
                 className="flex-1 gap-2"
               >

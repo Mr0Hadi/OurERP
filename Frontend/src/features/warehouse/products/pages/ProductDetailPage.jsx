@@ -35,12 +35,10 @@ function ProductDetailForm({ productData }) {
 
   const {
     formMethods,
-    imagePreview,
+    imageUpload,
     barcodeValue,
     categories,
     handleAddCategory,
-    handleImageChange,
-    handleImageRemove,
     buildProductPayload,
   } = useProductForm(productData);
 
@@ -54,7 +52,14 @@ function ProductDetailForm({ productData }) {
 
   const onSubmit = (data) => {
     const payload = buildProductPayload(data);
-    updateMutation.mutate(payload);
+    // سرور تصویرِ قبلی را خودکار پاک نمی‌کند (بخش ۱۷ سند)؛ بعد از ثبتِ
+    // موفقِ ویرایش، پاک‌کردنش امن است.
+    updateMutation.mutate(payload, { onSuccess: () => imageUpload.commit() });
+  };
+
+  const handleCancel = () => {
+    imageUpload.discard();
+    navigate(ROUTES.WAREHOUSE_PRODUCTS);
   };
 
   const handleDelete = () => {
@@ -65,7 +70,11 @@ function ProductDetailForm({ productData }) {
     });
   };
 
-  const isBusy = isSubmitting || updateMutation.isPending || deleteMutation.isPending;
+  const isBusy =
+    isSubmitting ||
+    updateMutation.isPending ||
+    deleteMutation.isPending ||
+    imageUpload.isUploading;
 
   return (
     <div className="container mx-auto animate-in fade-in zoom-in-95 duration-300">
@@ -83,17 +92,13 @@ function ProductDetailForm({ productData }) {
             <ProductPricingForm register={register} />
           </div>
           <div className="flex flex-col gap-4 md:gap-3">
-            <ProductImageUpload
-              preview={imagePreview}
-              onImageChange={handleImageChange}
-              onImageRemove={handleImageRemove}
-            />
+            <ProductImageUpload imageUpload={imageUpload} />
             <ProductBarcodeDisplay value={barcodeValue} />
             <div className="flex gap-2">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate(ROUTES.WAREHOUSE_PRODUCTS)}
+                onClick={handleCancel}
                 disabled={isBusy}
                 className="flex-1 gap-2"
               >

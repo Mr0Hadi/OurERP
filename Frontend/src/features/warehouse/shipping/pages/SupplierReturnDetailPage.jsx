@@ -97,7 +97,10 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
         const product = productMap.get(item.productId);
         return {
           ...item,
-          image: product?.image || "",
+          // کلیدِ پایدار هم کنارِ URLِ امضاشده می‌آید تا اگر صفحه دیر باز
+          // بماند، بندانگشتی بتواند خودش امضا را تازه کند.
+          imageKey: product?.imageKey ?? null,
+          imageUrl: product?.imageUrl ?? product?.image ?? null,
           brand: product?.brand || "",
         };
       }),

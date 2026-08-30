@@ -27,9 +27,7 @@ export default function CustomerNewPage() {
   const {
     formMethods,
     balanceType,
-    imagePreview,
-    handleImageChange,
-    handleRemoveImage,
+    imageUpload,
     buildCustomerPayload,
   } = useCustomerForm();
 
@@ -45,11 +43,23 @@ export default function CustomerNewPage() {
 
   const onSubmit = (data) => {
     createMutation.mutate(buildCustomerPayload(data), {
-      onSuccess: () => navigate(-1),
+      onSuccess: () => {
+        // از این لحظه کلیدِ تصویر مالِ یک مشتریِ واقعی است؛ آپلودهای
+        // میانی (اگر کاربر چندبار تصویر عوض کرده) دیگر یتیم‌اند.
+        imageUpload.commit();
+        navigate(-1);
+      },
     });
   };
 
-  const isBusy = createMutation.isPending;
+  const handleCancel = () => {
+    // تصویری که آپلود شد ولی هیچ مشتری‌ای برایش ساخته نشد، فقط زباله است.
+    imageUpload.discard();
+    navigate(-1);
+  };
+
+  // تا وقتی آپلود تمام نشده کلیدی وجود ندارد که در payload برود.
+  const isBusy = createMutation.isPending || imageUpload.isUploading;
 
   return (
     <div className="m-auto bg-background">
@@ -63,9 +73,7 @@ export default function CustomerNewPage() {
             <CustomerIdentityForm
               register={register}
               errors={errors}
-              imagePreview={imagePreview}
-              onImageChange={handleImageChange}
-              onRemoveImage={handleRemoveImage}
+              imageUpload={imageUpload}
             />
 
             <CustomerFinanceForm
@@ -85,7 +93,7 @@ export default function CustomerNewPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate(-1)}
+                onClick={handleCancel}
                 disabled={isBusy}
                 className="flex-1 gap-2"
               >

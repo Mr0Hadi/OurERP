@@ -69,7 +69,11 @@ function ShippingDetailForm({ sale }) {
     () =>
       items.map((item) => {
         const product = productMap.get(item.productId);
-        return { ...item, image: product?.image || "" };
+        return {
+          ...item,
+          imageKey: product?.imageKey ?? null,
+          imageUrl: product?.imageUrl ?? product?.image ?? null,
+        };
       }),
     [items, productMap],
   );

@@ -27,9 +27,7 @@ export default function SupplierNewPage() {
 const {
     formMethods,
     balanceType,
-    imagePreview,
-    handleImageChange,
-    handleRemoveImage,
+    imageUpload,
     buildSupplierPayload,
   } = useSupplierForm();
 
@@ -44,11 +42,21 @@ const {
 
   const onSubmit = (data) => {
     createMutation.mutate(buildSupplierPayload(data), {
-      onSuccess: () => navigate(-1),
+      onSuccess: () => {
+        // کلیدِ تصویر حالا مالِ یک تامین‌کننده‌ی واقعی است؛ آپلودهای
+        // میانی یتیم‌اند و پاک می‌شوند.
+        imageUpload.commit();
+        navigate(-1);
+      },
     });
   };
 
-  const isBusy = createMutation.isPending;
+  const handleCancel = () => {
+    imageUpload.discard();
+    navigate(-1);
+  };
+
+  const isBusy = createMutation.isPending || imageUpload.isUploading;
 
   return (
     <div className="m-auto bg-background">
@@ -61,10 +69,7 @@ const {
           <div className="lg:col-span-1 space-y-4">
 <SupplierIdentityForm
               register={register}
-              errors={errors}
-              imagePreview={imagePreview}
-              onImageChange={handleImageChange}
-              onRemoveImage={handleRemoveImage}
+              imageUpload={imageUpload}
             />
 
             <SupplierFinanceForm
@@ -84,7 +89,7 @@ const {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate(-1)}
+                onClick={handleCancel}
                 disabled={isBusy}
                 className="flex-1 gap-2"
               >

@@ -2,6 +2,9 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 
+import { ImageFolderEnum } from "@/shared/domain/enums/imageFolder";
+import { useImageUpload } from "@/shared/hooks/useImageUpload";
+
 const DEFAULT_CATEGORIES = [
   { id: "روغن موتور", name: "روغن موتور" },
   { id: "فیلتر", name: "فیلتر" },
@@ -44,11 +47,14 @@ function buildDefaultValues(data) {
 }
 
 export function useProductForm(initialData = null) {
-  const [imagePreview, setImagePreview] = useState(
-    initialData?.image || null
-  );
-  const [imageFile, setImageFile] = useState(null);
-  const [imageRemoved, setImageRemoved] = useState(false);
+  // تصویر دیگر داخل فرم نگه داشته نمی‌شود: فایل بلافاصله آپلود می‌شود و
+  // فقط `objectKey` آن در payload می‌رود (بخش ۱۷ سند).
+  const imageUpload = useImageUpload({
+    folder: ImageFolderEnum.PRODUCTS,
+    initialKey: initialData?.imageKey ?? null,
+    initialUrl: initialData?.imageUrl ?? null,
+  });
+
   const [barcodeValue, setBarcodeValue] = useState(initialData?.barcode || "");
   const [categories, setCategories] = useState(() => {
     if (
@@ -88,22 +94,6 @@ export function useProductForm(initialData = null) {
     );
   };
 
-  const handleImageChange = (file) => {
-    if (file) {
-      setImageFile(file);
-      setImageRemoved(false);
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleImageRemove = () => {
-    setImagePreview(null);
-    setImageFile(null);
-    setImageRemoved(true);
-  };
-
   const buildProductPayload = (formData) => {
     const payload = {
       name: formData.name,
@@ -120,29 +110,18 @@ export function useProductForm(initialData = null) {
       tax: Number(formData.vat) || 0,
     };
 
-    if (imageRemoved) {
-      payload.image = "";
-    } else if (imageFile) {
-      payload.image = imagePreview;
-    } else if (initialData?.image) {
-      payload.image = initialData.image;
-    } else {
-      payload.image = "";
-    }
+    // `null` یعنی «تصویر را پاک کن» — همان قراردادِ سند برای `imageUrl`.
+    payload.imageUrl = imageUpload.imageKeyPayload;
 
     return payload;
   };
 
   return {
     formMethods,
-    imagePreview,
-    imageFile,
-    imageRemoved,
+    imageUpload,
     barcodeValue,
     categories,
     handleAddCategory,
-    handleImageChange,
-    handleImageRemove,
     buildProductPayload,
   };
 }

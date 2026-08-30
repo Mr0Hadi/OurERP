@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { unitLabelOf } from "@/shared/domain/enums/productUnit";
+import SignedImage from "@/shared/components/files/SignedImage";
 import {
   Select,
   SelectContent,
@@ -114,20 +115,18 @@ export default function ProductSearchPanel({ products, addedQtyOf, onAdd }) {
               key={product.id}
               className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 rounded-md border border-border bg-card px-3 py-2 hover:bg-accent/50 transition-colors"
             >
-              {/* تصویر */}
-              {product.image ? (
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-10 h-10 rounded-md object-cover shrink-0 border border-border"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-md bg-muted border border-border flex items-center justify-center shrink-0">
-                  <span className="text-xs text-muted-foreground">
-                    تصویر
-                  </span>
-                </div>
-              )}
+              {/* تصویر — امضای منقضی‌شده خودش تازه می‌شود */}
+              <SignedImage
+                imageKey={product.imageKey}
+                imageUrl={product.imageUrl ?? product.image}
+                alt={product.name}
+                className="w-10 h-10 rounded-md object-cover shrink-0 border border-border"
+                fallback={
+                  <div className="w-10 h-10 rounded-md bg-muted border border-border flex items-center justify-center shrink-0">
+                    <span className="text-xs text-muted-foreground">تصویر</span>
+                  </div>
+                }
+              />
 
               {/* اطلاعات */}
               <div className="flex-1 min-w-0 w-full sm:w-auto">

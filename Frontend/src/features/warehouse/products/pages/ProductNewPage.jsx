@@ -30,12 +30,10 @@ export default function ProductNewPage() {
 
   const {
     formMethods,
-    imagePreview,
+    imageUpload,
     barcodeValue,
     categories,
     handleAddCategory,
-    handleImageChange,
-    handleImageRemove,
     buildProductPayload,
   } = useProductForm();
 
@@ -50,16 +48,21 @@ export default function ProductNewPage() {
   const onSubmit = async (data) => {
     createMutation.mutate(buildProductPayload(data), {
       onSuccess: () => {
+        // کلید حالا مالِ یک کالای واقعی است؛ آپلودهای میانی یتیم‌اند.
+        imageUpload.commit();
         navigate(-1);
       },
     });
   };
 
   const handleCancel = () => {
+    // تصویری که آپلود شد ولی کالایی برایش ثبت نشد، فقط زباله است.
+    imageUpload.discard();
     navigate(-1);
   };
 
-  const isBusy = isSubmitting || createMutation.isPending;
+  // تا پایانِ آپلود، کلیدی برای گذاشتن در payload وجود ندارد.
+  const isBusy = isSubmitting || createMutation.isPending || imageUpload.isUploading;
 
   return (
     <div className="container mx-auto animate-in fade-in zoom-in-95 duration-300">
@@ -77,11 +80,7 @@ export default function ProductNewPage() {
             <ProductPricingForm register={register} />
           </div>
           <div className="flex flex-col gap-4 md:gap-3">
-            <ProductImageUpload
-              preview={imagePreview}
-              onImageChange={handleImageChange}
-              onImageRemove={handleImageRemove}
-            />
+            <ProductImageUpload imageUpload={imageUpload} />
             <ProductBarcodeDisplay value={barcodeValue} />
             <div className="flex gap-2">
               <Button

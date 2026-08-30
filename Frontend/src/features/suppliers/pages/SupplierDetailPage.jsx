@@ -37,9 +37,7 @@ function SupplierDetailForm({ supplierData }) {
 const {
     formMethods,
     balanceType,
-    imagePreview,
-    handleImageChange,
-    handleRemoveImage,
+    imageUpload,
     buildSupplierPayload,
   } = useSupplierForm(supplierData);
 
@@ -55,8 +53,19 @@ const {
   const onSubmit = (data) => {
     updateMutation.mutate(
       { id: supplierData.id, data: buildSupplierPayload(data) },
-      { onSuccess: () => navigate(ROUTES.SUPPLIERS) }
+      {
+        onSuccess: () => {
+          // تصویرِ قبلی را سرور پاک نمی‌کند؛ حالا که ویرایش ثبت شده امن است.
+          imageUpload.commit();
+          navigate(ROUTES.SUPPLIERS);
+        },
+      }
     );
+  };
+
+  const handleCancel = () => {
+    imageUpload.discard();
+    navigate(ROUTES.SUPPLIERS);
   };
 
   const handleDelete = () => {
@@ -65,7 +74,8 @@ const {
     });
   };
 
-  const isBusy = updateMutation.isPending || deleteMutation.isPending;
+  const isBusy =
+    updateMutation.isPending || deleteMutation.isPending || imageUpload.isUploading;
 
   const supplierDisplayName =
     supplierData.companyName ||
@@ -81,10 +91,7 @@ const {
           <div className="lg:col-span-1 space-y-4">
             <SupplierIdentityForm
               register={register}
-              errors={errors}
-              imagePreview={imagePreview}
-              onImageChange={handleImageChange}
-              onRemoveImage={handleRemoveImage}
+              imageUpload={imageUpload}
             />
             <SupplierFinanceForm
               register={register}
@@ -101,7 +108,7 @@ const {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate(ROUTES.SUPPLIERS)}
+                onClick={handleCancel}
                 disabled={isBusy}
                 className="flex-1 gap-2"
               >

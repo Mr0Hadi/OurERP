@@ -43,7 +43,11 @@ export default function PendingLabelsTable({
           return (
             <div className="flex items-center gap-3">
               <ProductThumb
-                item={{ image: row.image, productName: row.productName }}
+                item={{
+                  imageKey: row.imageKey,
+                  imageUrl: row.imageUrl ?? row.image,
+                  productName: row.productName,
+                }}
               />
               <div className="flex flex-col">
                 <span className="font-light">{row.productName}</span>

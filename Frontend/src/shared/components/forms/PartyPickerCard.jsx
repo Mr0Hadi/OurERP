@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
+import SignedImage from "@/shared/components/files/SignedImage";
 
 /** نام نمایشی طرف حساب در کارت انتخاب: نام شرکت، وگرنه نام و نام خانوادگی. */
 const displayNameOf = (party) =>
@@ -16,7 +17,7 @@ const displayNameOf = (party) =>
 /**
  * کارت انتخاب طرف حساب (تامین‌کننده در خرید، مشتری در فروش).
  *
- * parties           - لیست { id, companyName, firstName, lastName, image }
+ * parties           - لیست { id, companyName, firstName, lastName, imageKey, imageUrl }
  * isLoading         - در حال دریافت لیست
  * selectedId        - شناسه‌ی انتخاب‌شده
  * onSelect          - (id, name) => void
@@ -82,19 +83,19 @@ export default function PartyPickerCard({
       <CardContent className="space-y-3">
         {selectedParty ? (
           <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 px-3 py-2.5">
-            {selectedParty.image ? (
-              <img
-                src={selectedParty.image}
-                alt={displayName}
-                className="h-9 w-9 rounded-full object-cover border border-border shrink-0"
-              />
-            ) : (
-              <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
-                {selectedParty.companyName?.[0] ??
-                  selectedParty.firstName?.[0] ??
-                  "؟"}
-              </div>
-            )}
+            <SignedImage
+              imageKey={selectedParty.imageKey}
+              imageUrl={selectedParty.imageUrl ?? selectedParty.image}
+              alt={displayName}
+              className="h-9 w-9 rounded-full object-cover border border-border shrink-0"
+              fallback={
+                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                  {selectedParty.companyName?.[0] ??
+                    selectedParty.firstName?.[0] ??
+                    "؟"}
+                </div>
+              }
+            />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-card-foreground truncate">
                 {displayName}
@@ -148,19 +149,19 @@ export default function PartyPickerCard({
                         onClick={() => handleSelect(party)}
                         className="flex items-center gap-3 w-full px-3 py-2.5 text-right hover:bg-accent/50 transition-colors"
                       >
-                        {party.image ? (
-                          <img
-                            src={party.image}
-                            alt={name}
-                            className="h-8 w-8 rounded-full object-cover border border-border shrink-0"
-                          />
-                        ) : (
-                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shrink-0">
-                            {party.companyName?.[0] ??
-                              party.firstName?.[0] ??
-                              "؟"}
-                          </div>
-                        )}
+                        <SignedImage
+                          imageKey={party.imageKey}
+                          imageUrl={party.imageUrl ?? party.image}
+                          alt={name}
+                          className="h-8 w-8 rounded-full object-cover border border-border shrink-0"
+                          fallback={
+                            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shrink-0">
+                              {party.companyName?.[0] ??
+                                party.firstName?.[0] ??
+                                "؟"}
+                            </div>
+                          }
+                        />
                         <div className="flex-1 min-w-0 text-right">
                           <p className="text-sm font-medium text-card-foreground truncate">
                             {name}
