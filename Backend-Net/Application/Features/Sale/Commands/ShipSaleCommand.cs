@@ -7,6 +7,7 @@ using Application.Common.Enums;
 using Application.Features.Sale.Dtos;
 using Common.Exceptions;
 using Common.Extensions;
+using Domain.Entities;
 using Domain.Enums;
 using FluentValidation;
 using MediatR;
@@ -23,6 +24,9 @@ namespace Application.Features.Sale.Commands
         public int SaleId { get; set; }
         public DateTime? ShippedDate { get; set; }
         public string? ShippingNote { get; set; }
+        public string? DriverFullName { get; set; }
+        public string? DriverNationalCode { get; set; }
+        public string? VehiclePlate { get; set; }
         public List<ShipSaleItemDto> Items { get; set; } = new();
     }
 
@@ -93,6 +97,28 @@ namespace Application.Features.Sale.Commands
                 saleItem.Product.Stock -= reqItem.ShippedQuantity;
                 await _productUnitService.ConsumeAsync(saleItem.Product, reqItem.ShippedQuantity, saleItem.Id, reqItem.ProductUnitBarcodes, cancellationToken);
                 await _inventoryCostingService.RecordSaleShipmentAsync(saleItem.Product, reqItem.ShippedQuantity, saleItem.UnitPrice, saleItem.Discount, saleItem.Id, now, cancellationToken);
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.DriverFullName) || !string.IsNullOrWhiteSpace(request.DriverNationalCode) || !string.IsNullOrWhiteSpace(request.VehiclePlate))
+            {
+                await _context.SaleDrivers.AddAsync(new SaleDriver
+                {
+                    SaleId = sale.Id,
+                    DriverFullName = request.DriverFullName,
+                    DriverNationalCode = request.DriverNationalCode,
+                    VehiclePlate = request.VehiclePlate,
+                    CreatedAt = now,
+                }, cancellationToken);
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.ShippingNote))
+            {
+                await _context.SaleShippingNotes.AddAsync(new SaleShippingNote
+                {
+                    SaleId = sale.Id,
+                    Note = request.ShippingNote,
+                    CreatedAt = now,
+                }, cancellationToken);
             }
 
             var fullyShipped = sale.Items.All(i => i.ShippedQuantity >= i.Quantity);

@@ -702,9 +702,17 @@ Authorization: Bearer {accessToken}
       "purchaseId": 100
     }
   ],
-  "paymentDetails": [ /* در صورت پرداخت غیرنقدی */ ]
+  "paymentDetails": [ /* در صورت پرداخت غیرنقدی */ ],
+  "drivers": [
+    { "id": 1, "driverFullName": "علی محمدی", "driverNationalCode": "0012345678", "vehiclePlate": "12ط34567", "createdAt": "2026-08-05T10:00:00" }
+  ],
+  "receivingNotes": [
+    { "id": 1, "note": "محموله اول", "createdAt": "2026-08-05T10:00:00" }
+  ]
 }
 ```
+`drivers[]`/`receivingNotes[]`: تاریخچه‌ی راننده/وسیله‌نقلیه و یادداشت هر نوبت دریافت (از `ReceivePurchase`، زیر همین بخش) — هر بار که `ReceivePurchase` با این فیلدها صدا زده شود، یک ردیف تازه اضافه می‌شود، نه بازنویسی قبلی؛ هر دو اختیاری‌اند و اگر فرستاده نشوند ردیفی هم ساخته نمی‌شود.
+
 `items[].receivedQuantity` و `items[].settledQuantity` تجمعی هستند (در طول چند بار دریافت افزایش پیدا می‌کنند) — برای دانستن دقیق «چه مقدار از این قلم باقی مانده تا دریافت شود»، به‌جای محاسبه‌ی دستی از این عدد، از `GetPurchaseReceivingInfo` (بخش ۱۰) استفاده کنید که این محاسبه را برای شما انجام داده.
 
 ### `POST api/Purchase/CreatePurchase`
@@ -764,6 +772,9 @@ Authorization: Bearer {accessToken}
   "purchaseId": 100,
   "receivedDate": "2026-08-05T10:00:00",
   "receivingNote": "محموله اول",
+  "driverFullName": "علی محمدی",
+  "driverNationalCode": "0012345678",
+  "vehiclePlate": "12ط34567",
   "items": [
     { "purchaseItemId": 1000, "receivedQuantity": 15 }
   ],
@@ -771,6 +782,7 @@ Authorization: Bearer {accessToken}
 }
 ```
 - `purchaseItemId` باید از `items[].id` در `GetPurchaseDetail` یا `GetPurchaseReceivingInfo` گرفته شود.
+- `driverFullName`/`driverNationalCode`/`vehiclePlate`/`receivingNote` همگی اختیاری‌اند و هرکدام مستقل از بقیه ذخیره می‌شوند (یعنی می‌توانید فقط یکی را بفرستید) — هر نوبت `ReceivePurchase` که این فیلدها را داشته باشد یک ردیف تاریخچه‌ی تازه می‌سازد (`drivers[]`/`receivingNotes[]` در `GetPurchaseDetail`، بالا)، نه بازنویسی نوبت قبلی.
 - `receivedQuantity`: تعداد سالمی که وارد انبار می‌شود. اگر از باقیمانده‌ی قابل‌دریافت آن قلم (`orderedQuantity - receivedQuantity`، از `GetPurchaseReceivingInfo`) بیشتر باشد، خطای ۴۰۰ می‌دهد؛ **همیشه قبل از این فراخوانی از `GetPurchaseReceivingInfo` مقدار باقیمانده را بگیرید و در UI محدودیت بگذارید.**
 - `images[]` (اختیاری): عکس‌های همان نوبت دریافت (پالت، کارتن آسیب‌دیده، بارنامه) — جزئیات کامل در بخش ۱۷.
 
@@ -1122,9 +1134,16 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
       "settledQuantity": 0,
       "saleId": 200
     }
+  ],
+  "drivers": [
+    { "id": 1, "driverFullName": "رضا احمدی", "driverNationalCode": "0098765432", "vehiclePlate": "34ب12345", "createdAt": "2026-08-11T09:00:00" }
+  ],
+  "shippingNotes": [
+    { "id": 1, "note": "ارسال اول", "createdAt": "2026-08-11T09:00:00" }
   ]
 }
 ```
+`drivers[]`/`shippingNotes[]`: مثل `drivers[]`/`receivingNotes[]` در `GetPurchaseDetail` (بخش ۹) اما برای سمت ارسال — تاریخچه‌ی هر نوبت `ShipSale` که این فیلدها را فرستاده باشد.
 
 ### `POST api/Sale/CreateSale`
 
@@ -1187,12 +1206,16 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "saleId": 200,
   "shippedDate": "2026-08-11T09:00:00",
   "shippingNote": "ارسال اول",
+  "driverFullName": "رضا احمدی",
+  "driverNationalCode": "0098765432",
+  "vehiclePlate": "34ب12345",
   "items": [
     { "saleItemId": 3000, "shippedQuantity": 2, "productUnitBarcodes": null }
   ]
 }
 ```
 - `saleItemId`: از `items[].id` در `GetSaleDetail`.
+- `driverFullName`/`driverNationalCode`/`vehiclePlate`/`shippingNote` همگی اختیاری‌اند، هرکدام مستقل ذخیره می‌شوند، و مثل `ReceivePurchase` هر نوبت یک ردیف تاریخچه‌ی تازه می‌سازد (`drivers[]`/`shippingNotes[]` در `GetSaleDetail`، بالا).
 - `shippedQuantity`: نباید از باقیمانده‌ی قابل‌ارسال آن قلم (`quantity - shippedQuantity` فعلی) یا از موجودی فعلی محصول بیشتر باشد.
 - `productUnitBarcodes` (اختیاری): اگر انباردار بارکد دانه‌های خاصی را اسکن کرده، لیست آن بارکدها را بفرستید (باید دقیقاً به تعداد `shippedQuantity` باشد). اگر نفرستید، سرور خودش قدیمی‌ترین دانه‌های موجود را انتخاب می‌کند (FIFO).
 

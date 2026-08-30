@@ -57,6 +57,20 @@ namespace Application.Features.Purchase.Queries
                         Amount = p.Amount,
                         CheckNumber = p.CheckNumber,
                         TransferRef = p.TransferRef
+                    }).ToList(),
+                    Drivers = x.Drivers.Select(d => new PurchaseDriverDto
+                    {
+                        Id = d.Id,
+                        DriverFullName = d.DriverFullName,
+                        DriverNationalCode = d.DriverNationalCode,
+                        VehiclePlate = d.VehiclePlate,
+                        CreatedAt = d.CreatedAt
+                    }).ToList(),
+                    ReceivingNotes = x.ReceivingNotes.Select(n => new PurchaseReceivingNoteDto
+                    {
+                        Id = n.Id,
+                        Note = n.Note,
+                        CreatedAt = n.CreatedAt
                     }).ToList()
                 })
                 .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("خرید مورد نظر یافت نشد.");

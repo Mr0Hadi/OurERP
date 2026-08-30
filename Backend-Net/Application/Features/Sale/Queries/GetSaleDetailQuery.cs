@@ -27,6 +27,8 @@ namespace Application.Features.Sale.Queries
             var sale = await _context.Sales
                 .Include(x => x.Customer)
                 .Include(x => x.Items)
+                .Include(x => x.Drivers)
+                .Include(x => x.ShippingNotes)
                 .FirstOrDefaultAsync(x => x.Id == request.Id) ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
 
             res.Data = new SaleDto
@@ -44,7 +46,21 @@ namespace Application.Features.Sale.Queries
                 CustomerName = sale.Customer.FirstName + " " + sale.Customer.LastName,
                 CreatedAt = sale.CreatedAt,
                 UpdatedAt = sale.UpdatedAt,
-                Items = sale.Items
+                Items = sale.Items,
+                Drivers = sale.Drivers.Select(d => new SaleDriverDto
+                {
+                    Id = d.Id,
+                    DriverFullName = d.DriverFullName,
+                    DriverNationalCode = d.DriverNationalCode,
+                    VehiclePlate = d.VehiclePlate,
+                    CreatedAt = d.CreatedAt
+                }).ToList(),
+                ShippingNotes = sale.ShippingNotes.Select(n => new SaleShippingNoteDto
+                {
+                    Id = n.Id,
+                    Note = n.Note,
+                    CreatedAt = n.CreatedAt
+                }).ToList()
             };
 
             res.Message = "اطلاعات فروش با موفقیت ارسال شد.";

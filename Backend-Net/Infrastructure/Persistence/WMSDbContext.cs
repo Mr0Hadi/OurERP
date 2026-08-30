@@ -1,4 +1,4 @@
-﻿using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Context;
 using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -39,6 +39,10 @@ namespace Infrastructure.Persistence
         public DbSet<SaleReturnEffectMoneyPart> SaleReturnEffectMoneyParts => Set<SaleReturnEffectMoneyPart>();
         public DbSet<ProductUnit> ProductUnits => Set<ProductUnit>();
         public DbSet<PurchaseReceivingImage> PurchaseReceivingImages => Set<PurchaseReceivingImage>();
+        public DbSet<PurchaseDriver> PurchaseDrivers => Set<PurchaseDriver>();
+        public DbSet<PurchaseReceivingNote> PurchaseReceivingNotes => Set<PurchaseReceivingNote>();
+        public DbSet<SaleDriver> SaleDrivers => Set<SaleDriver>();
+        public DbSet<SaleShippingNote> SaleShippingNotes => Set<SaleShippingNote>();
         public DbSet<PosTerminal> PosTerminals => Set<PosTerminal>();
         public DbSet<InventoryCostLedgerEntry> InventoryCostLedgerEntries => Set<InventoryCostLedgerEntry>();
 
@@ -285,6 +289,42 @@ namespace Infrastructure.Persistence
 
             modelBuilder.Entity<PurchaseReceivingImage>()
                 .HasIndex(x => x.PurchaseId);
+
+            modelBuilder.Entity<PurchaseDriver>()
+                .HasOne(x => x.Purchase)
+                .WithMany(x => x.Drivers)
+                .HasForeignKey(x => x.PurchaseId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PurchaseDriver>()
+                .HasIndex(x => x.PurchaseId);
+
+            modelBuilder.Entity<PurchaseReceivingNote>()
+                .HasOne(x => x.Purchase)
+                .WithMany(x => x.ReceivingNotes)
+                .HasForeignKey(x => x.PurchaseId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PurchaseReceivingNote>()
+                .HasIndex(x => x.PurchaseId);
+
+            modelBuilder.Entity<SaleDriver>()
+                .HasOne(x => x.Sale)
+                .WithMany(x => x.Drivers)
+                .HasForeignKey(x => x.SaleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SaleDriver>()
+                .HasIndex(x => x.SaleId);
+
+            modelBuilder.Entity<SaleShippingNote>()
+                .HasOne(x => x.Sale)
+                .WithMany(x => x.ShippingNotes)
+                .HasForeignKey(x => x.SaleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SaleShippingNote>()
+                .HasIndex(x => x.SaleId);
 
             modelBuilder.Entity<PosTerminal>()
                 .HasIndex(x => x.Name)

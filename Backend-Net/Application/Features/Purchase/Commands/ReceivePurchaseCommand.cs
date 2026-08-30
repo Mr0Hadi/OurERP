@@ -25,6 +25,9 @@ namespace Application.Features.Purchase.Commands
         public int PurchaseId { get; set; }
         public DateTime? ReceivedDate { get; set; }
         public string? ReceivingNote { get; set; }
+        public string? DriverNationalCode { get; set; }
+        public string? DriverFullName { get; set; }
+        public string? VehiclePlate { get; set; }
         public List<ReceivePurchaseItemDto> Items { get; set; } = new();
         public List<ReceivePurchaseImageDto> Images { get; set; } = new();
     }
@@ -118,6 +121,28 @@ namespace Application.Features.Purchase.Commands
                     ObjectKey = objectKey,
                     FileName = image.FileName,
                     Note = image.Note,
+                    CreatedAt = now,
+                }, cancellationToken);
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.DriverFullName) || !string.IsNullOrWhiteSpace(request.DriverNationalCode) || !string.IsNullOrWhiteSpace(request.VehiclePlate))
+            {
+                await _context.PurchaseDrivers.AddAsync(new PurchaseDriver
+                {
+                    PurchaseId = purchase.Id,
+                    DriverFullName = request.DriverFullName,
+                    DriverNationalCode = request.DriverNationalCode,
+                    VehiclePlate = request.VehiclePlate,
+                    CreatedAt = now,
+                }, cancellationToken);
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.ReceivingNote))
+            {
+                await _context.PurchaseReceivingNotes.AddAsync(new PurchaseReceivingNote
+                {
+                    PurchaseId = purchase.Id,
+                    Note = request.ReceivingNote,
                     CreatedAt = now,
                 }, cancellationToken);
             }

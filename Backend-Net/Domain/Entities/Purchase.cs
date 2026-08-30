@@ -1,4 +1,4 @@
-﻿using Domain.Enums;
+using Domain.Enums;
 
 namespace Domain.Entities
 {
@@ -20,5 +20,8 @@ namespace Domain.Entities
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+
+        public List<PurchaseDriver> Drivers { get; set; } = new();
+        public List<PurchaseReceivingNote> ReceivingNotes { get; set; } = new();
     }
 }
