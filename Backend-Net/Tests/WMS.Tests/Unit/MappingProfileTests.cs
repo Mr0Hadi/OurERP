@@ -41,8 +41,8 @@ namespace WMS.Tests.Unit
             var command = new CreatePurchaseCommand
             {
                 SupplierId = 1,
-                TotalPrice = 5000,
-                PaidPrice = 1000,
+                TotalAmount = 5000,
+                PaidAmount = 1000,
                 PaymentType = PaymentTypeEnum.CASH,
                 Status = PurchaseStatusEnum.SHIPPED,
                 PaymentDetails = new(),

@@ -12,6 +12,10 @@ namespace Domain.Entities
         public ReturnStatusEnum Status { get; set; }
         public string? Description { get; set; }
 
+        /// <summary>Soft-delete flag. A deleted return keeps its row (and its whole claim graph) and is
+        /// filtered out of every read - see IPurchaseReturnQueryService.WhereNotDeleted.</summary>
+        public bool IsActive { get; set; } = true;
+
         /// <summary>Chains successive returns filed on the same purchase - pass-through, matches frontend.</summary>
         public int? PreviousReturnId { get; set; }
 

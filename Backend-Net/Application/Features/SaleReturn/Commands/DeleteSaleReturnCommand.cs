@@ -46,13 +46,16 @@ namespace Application.Features.SaleReturn.Commands
         {
             var res = new ResponseDto();
 
-            var saleReturn = await _saleReturnQueryService.WithReturnGraph(_context.SaleReturns)
+            var saleReturn = await _saleReturnQueryService.WithReturnGraph(_saleReturnQueryService.WhereNotDeleted(_context.SaleReturns))
                 .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
             if (_saleReturnCalculationService.IsTerminal(saleReturn.Status) || !_saleReturnCalculationService.IsUntouched(saleReturn))
                 throw new ValidationCustomException("فقط مرجوعی‌های دست‌نخورده قابل حذف هستند.");
 
-            _saleReturnRepository.Remove(saleReturn);
+            // Soft delete: the row and its whole claim graph stay, every read filters IsActive out.
+            saleReturn.IsActive = false;
+            saleReturn.UpdatedAt = DateTime.Now;
+            _saleReturnRepository.Update(saleReturn);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 

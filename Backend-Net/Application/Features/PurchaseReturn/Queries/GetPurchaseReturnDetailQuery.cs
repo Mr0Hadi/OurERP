@@ -36,7 +36,7 @@ namespace Application.Features.PurchaseReturn.Queries
             var res = new ResponseDto();
 
             var purchaseReturn = await _purchaseReturnQueryService
-                .WithReturnGraph(_context.PurchaseReturns.Where(x => x.Id == request.Id))
+                .WithReturnGraph(_purchaseReturnQueryService.WhereNotDeleted(_context.PurchaseReturns).Where(x => x.Id == request.Id))
                 .Include(x => x.Purchase)
                     .ThenInclude(x => x.Supplier)
                 .Include(x => x.ReceivingImages)

@@ -36,6 +36,7 @@ namespace Application.Features.SaleReturn.Queries
             var res = new ResponseDto();
 
             var query = _context.SaleReturns
+                .Where(x => x.IsActive)
                 .Include(x => x.Sale!)
                     .ThenInclude(x => x.Customer)
                 .Include(x => x.Claims)

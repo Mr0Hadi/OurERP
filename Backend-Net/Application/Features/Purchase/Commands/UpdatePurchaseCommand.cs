@@ -4,7 +4,6 @@ using Application.Common.Dtos;
 using Application.Common.Enums;
 using Common.Exceptions;
 using Common.Extensions;
-using Domain.Entities;
 using Domain.Enums;
 using FluentValidation;
 using MediatR;

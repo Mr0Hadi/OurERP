@@ -6,11 +6,9 @@ using Application.Common.Enums;
 using Application.Features.Sale.Dtos;
 using AutoMapper;
 using Common.Extensions;
-using Domain.Entities;
 using Domain.Enums;
 using FluentValidation;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.Sale.Commands
 {

@@ -6,6 +6,7 @@ using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Features.Purchase.Dtos;
 using Common.Exceptions;
 using Common.Extensions;
 using Domain.Entities;
@@ -24,28 +25,11 @@ namespace Application.Features.Purchase.Commands
         public int PurchaseId { get; set; }
         public DateTime? ReceivedDate { get; set; }
         public string? ReceivingNote { get; set; }
+        public string? DriverNationalCode { get; set; }
+        public string? DriverFullName { get; set; }
+        public string? VehiclePlate { get; set; }
         public List<ReceivePurchaseItemDto> Items { get; set; } = new();
-
-        /// <summary>
-        /// Photos of this receiving session (pallet on arrival, damaged carton, packing slip).
-        /// Upload each file to POST api/File/UploadImage with folder=RECEIVING first, then send
-        /// the returned ObjectKey values here. Session-level, not per line item.
-        /// </summary>
         public List<ReceivePurchaseImageDto> Images { get; set; } = new();
-    }
-
-    public class ReceivePurchaseImageDto
-    {
-        /// <summary>The ObjectKey returned by api/File/UploadImage (a full URL is also accepted and normalized).</summary>
-        public string ObjectKey { get; set; } = string.Empty;
-        public string? FileName { get; set; }
-        public string? Note { get; set; }
-    }
-
-    public class ReceivePurchaseItemDto
-    {
-        public int PurchaseItemId { get; set; }
-        public int ReceivedQuantity { get; set; }
     }
 
     public class ReceivePurchaseCommandValidator : AbstractValidator<ReceivePurchaseCommand>
@@ -137,6 +121,28 @@ namespace Application.Features.Purchase.Commands
                     ObjectKey = objectKey,
                     FileName = image.FileName,
                     Note = image.Note,
+                    CreatedAt = now,
+                }, cancellationToken);
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.DriverFullName) || !string.IsNullOrWhiteSpace(request.DriverNationalCode) || !string.IsNullOrWhiteSpace(request.VehiclePlate))
+            {
+                await _context.PurchaseDrivers.AddAsync(new PurchaseDriver
+                {
+                    PurchaseId = purchase.Id,
+                    DriverFullName = request.DriverFullName,
+                    DriverNationalCode = request.DriverNationalCode,
+                    VehiclePlate = request.VehiclePlate,
+                    CreatedAt = now,
+                }, cancellationToken);
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.ReceivingNote))
+            {
+                await _context.PurchaseReceivingNotes.AddAsync(new PurchaseReceivingNote
+                {
+                    PurchaseId = purchase.Id,
+                    Note = request.ReceivingNote,
                     CreatedAt = now,
                 }, cancellationToken);
             }

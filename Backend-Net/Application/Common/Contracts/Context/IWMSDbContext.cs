@@ -1,4 +1,4 @@
-﻿using Domain.Entities;
+using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
@@ -31,6 +31,10 @@ namespace Application.Common.Contracts.Context
         DbSet<SaleReturnEffectMoneyPart> SaleReturnEffectMoneyParts { get; }
         DbSet<Domain.Entities.ProductUnit> ProductUnits { get; }
         DbSet<PurchaseReceivingImage> PurchaseReceivingImages { get; }
+        DbSet<PurchaseDriver> PurchaseDrivers { get; }
+        DbSet<PurchaseReceivingNote> PurchaseReceivingNotes { get; }
+        DbSet<SaleDriver> SaleDrivers { get; }
+        DbSet<SaleShippingNote> SaleShippingNotes { get; }
         DbSet<PosTerminal> PosTerminals { get; }
         DbSet<InventoryCostLedgerEntry> InventoryCostLedgerEntries { get; }
 

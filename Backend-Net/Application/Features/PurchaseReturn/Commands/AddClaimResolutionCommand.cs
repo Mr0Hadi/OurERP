@@ -61,7 +61,7 @@ namespace Application.Features.PurchaseReturn.Commands
             var res = new ResponseDto();
 
             var purchaseReturn = await _purchaseReturnQueryService
-                .WithReturnGraph(_context.PurchaseReturns.Where(x => x.Claims.Any(c => c.Id == request.ClaimId)), includePurchaseItems: true)
+                .WithReturnGraph(_purchaseReturnQueryService.WhereNotDeleted(_context.PurchaseReturns).Where(x => x.Claims.Any(c => c.Id == request.ClaimId)), includePurchaseItems: true)
                 .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
             if (_purchaseReturnCalculationService.IsTerminal(purchaseReturn.Status) || purchaseReturn.Status == ReturnStatusEnum.SETTLED)

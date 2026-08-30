@@ -4,6 +4,7 @@ using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(WMSDbContext))]
-    partial class WMSDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260830194321_return-soft-delete")]
+    partial class returnsoftdelete
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -475,39 +478,6 @@ namespace Infrastructure.Migrations
                     b.ToTable("Purchases");
                 });
 
-            modelBuilder.Entity("Domain.Entities.PurchaseDriver", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DriverFullName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("DriverNationalCode")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("PurchaseId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("VehiclePlate")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PurchaseId");
-
-                    b.ToTable("PurchaseDrivers");
-                });
-
             modelBuilder.Entity("Domain.Entities.PurchaseItem", b =>
                 {
                     b.Property<int>("Id")
@@ -580,31 +550,6 @@ namespace Infrastructure.Migrations
                     b.HasIndex("PurchaseReturnId");
 
                     b.ToTable("PurchaseReceivingImages");
-                });
-
-            modelBuilder.Entity("Domain.Entities.PurchaseReceivingNote", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Note")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("PurchaseId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PurchaseId");
-
-                    b.ToTable("PurchaseReceivingNotes");
                 });
 
             modelBuilder.Entity("Domain.Entities.PurchaseReturn", b =>
@@ -932,39 +877,6 @@ namespace Infrastructure.Migrations
                     b.ToTable("Sales");
                 });
 
-            modelBuilder.Entity("Domain.Entities.SaleDriver", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DriverFullName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("DriverNationalCode")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("SaleId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("VehiclePlate")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SaleId");
-
-                    b.ToTable("SaleDrivers");
-                });
-
             modelBuilder.Entity("Domain.Entities.SaleItem", b =>
                 {
                     b.Property<int>("Id")
@@ -1282,31 +1194,6 @@ namespace Infrastructure.Migrations
                     b.ToTable("SaleReturnResolutions");
                 });
 
-            modelBuilder.Entity("Domain.Entities.SaleShippingNote", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Note")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("SaleId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SaleId");
-
-                    b.ToTable("SaleShippingNotes");
-                });
-
             modelBuilder.Entity("Domain.Entities.Supplier", b =>
                 {
                     b.Property<int>("Id")
@@ -1556,17 +1443,6 @@ namespace Infrastructure.Migrations
                     b.Navigation("Supplier");
                 });
 
-            modelBuilder.Entity("Domain.Entities.PurchaseDriver", b =>
-                {
-                    b.HasOne("Domain.Entities.Purchase", "Purchase")
-                        .WithMany("Drivers")
-                        .HasForeignKey("PurchaseId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Purchase");
-                });
-
             modelBuilder.Entity("Domain.Entities.PurchaseItem", b =>
                 {
                     b.HasOne("Domain.Entities.Product", "Product")
@@ -1602,17 +1478,6 @@ namespace Infrastructure.Migrations
                     b.Navigation("Purchase");
 
                     b.Navigation("PurchaseReturn");
-                });
-
-            modelBuilder.Entity("Domain.Entities.PurchaseReceivingNote", b =>
-                {
-                    b.HasOne("Domain.Entities.Purchase", "Purchase")
-                        .WithMany("ReceivingNotes")
-                        .HasForeignKey("PurchaseId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Purchase");
                 });
 
             modelBuilder.Entity("Domain.Entities.PurchaseReturn", b =>
@@ -1730,17 +1595,6 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Customer");
-                });
-
-            modelBuilder.Entity("Domain.Entities.SaleDriver", b =>
-                {
-                    b.HasOne("Domain.Entities.Sale", "Sale")
-                        .WithMany("Drivers")
-                        .HasForeignKey("SaleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Sale");
                 });
 
             modelBuilder.Entity("Domain.Entities.SaleItem", b =>
@@ -1868,17 +1722,6 @@ namespace Infrastructure.Migrations
                     b.Navigation("SaleReturnClaim");
                 });
 
-            modelBuilder.Entity("Domain.Entities.SaleShippingNote", b =>
-                {
-                    b.HasOne("Domain.Entities.Sale", "Sale")
-                        .WithMany("ShippingNotes")
-                        .HasForeignKey("SaleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Sale");
-                });
-
             modelBuilder.Entity("Domain.Entities.Team", b =>
                 {
                     b.HasOne("Domain.Entities.Department", "Department")
@@ -1936,13 +1779,9 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.Purchase", b =>
                 {
-                    b.Navigation("Drivers");
-
                     b.Navigation("Items");
 
                     b.Navigation("PaymentDetails");
-
-                    b.Navigation("ReceivingNotes");
                 });
 
             modelBuilder.Entity("Domain.Entities.PurchaseReturn", b =>
@@ -1976,13 +1815,9 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.Sale", b =>
                 {
-                    b.Navigation("Drivers");
-
                     b.Navigation("Items");
 
                     b.Navigation("PaymentDetails");
-
-                    b.Navigation("ShippingNotes");
                 });
 
             modelBuilder.Entity("Domain.Entities.SaleReturn", b =>

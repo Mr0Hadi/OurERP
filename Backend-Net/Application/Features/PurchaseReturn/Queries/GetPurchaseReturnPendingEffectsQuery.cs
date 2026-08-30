@@ -33,7 +33,7 @@ namespace Application.Features.PurchaseReturn.Queries
         {
             var res = new ResponseDto();
 
-            var query = _context.PurchaseReturns.AsQueryable();
+            var query = _purchaseReturnQueryService.WhereNotDeleted(_context.PurchaseReturns).AsQueryable();
 
             if (request.PurchaseId.HasValue)
                 query = query.Where(x => x.PurchaseId == request.PurchaseId.Value);

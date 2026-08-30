@@ -15,7 +15,13 @@ namespace Application.Common.Contracts.SaleReturn
     public interface ISaleReturnQueryService
     {
         /// <summary>
-        /// Returns still reserving quantity against their sale items. A sale can have several at
+        /// Drops soft-deleted returns (IsActive = false). Delete is a soft delete, and there is no
+        /// global query filter in this project, so every read of SaleReturns must compose this.
+        /// </summary>
+        IQueryable<Domain.Entities.SaleReturn> WhereNotDeleted(IQueryable<Domain.Entities.SaleReturn> query);
+
+        /// <summary>
+        /// Returns still reserving quantity against their sale items. Excludes soft-deleted rows. A sale can have several at
         /// once, which is what <see cref="ISaleReturnCalculationService.GetOpenClaimQuantity"/>
         /// arbitrates between. Shared with <c>ISaleReturnRepository.GetActiveBySaleIdAsync</c> so
         /// there is one definition of "active".

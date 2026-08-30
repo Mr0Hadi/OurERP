@@ -45,7 +45,7 @@ namespace Application.Features.PurchaseReturn.Commands
             var res = new ResponseDto();
 
             var purchaseReturn = await _purchaseReturnQueryService
-                .WithReturnGraph(_context.PurchaseReturns.Where(x => x.Id == request.Id))
+                .WithReturnGraph(_purchaseReturnQueryService.WhereNotDeleted(_context.PurchaseReturns).Where(x => x.Id == request.Id))
                 .Include(x => x.Purchase)
                     .ThenInclude(x => x.Items)
                 .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");

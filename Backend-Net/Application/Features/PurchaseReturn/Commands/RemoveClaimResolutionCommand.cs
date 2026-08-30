@@ -47,7 +47,7 @@ namespace Application.Features.PurchaseReturn.Commands
             var res = new ResponseDto();
 
             var purchaseReturn = await _purchaseReturnQueryService
-                .WithReturnGraph(_context.PurchaseReturns.Where(x => x.Claims.Any(c => c.Resolutions.Any(r => r.Id == request.Id))), includePurchaseItems: true)
+                .WithReturnGraph(_purchaseReturnQueryService.WhereNotDeleted(_context.PurchaseReturns).Where(x => x.Claims.Any(c => c.Resolutions.Any(r => r.Id == request.Id))), includePurchaseItems: true)
                 .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
             // No SETTLED gate here (unlike Add/lifecycle commands): a money-only resolution can
