@@ -14,8 +14,8 @@ namespace Application.Features.Supplier.Queries
     {
         public int Page { get; set; } = 1;
         public int Take { get; set; } = 10;
-        public UInt64? FromBalance { get; set; }
-        public UInt64? ToBalance { get; set; }
+        public UInt64? MinBalance { get; set; }
+        public UInt64? MaxBalance { get; set; }
         public string? CompanyNameOrContactName { get; set; }
         public BalanceTypeEnum? BalanceType { get; set; }
     }
@@ -44,14 +44,14 @@ namespace Application.Features.Supplier.Queries
                     || x.LastName.Contains(request.CompanyNameOrContactName));
             }
 
-            if (request.FromBalance.HasValue)
+            if (request.MinBalance.HasValue)
             {
-                query = query.Where(x => x.Balance >= request.FromBalance.Value);
+                query = query.Where(x => x.Balance >= request.MinBalance.Value);
             }
 
-            if (request.ToBalance.HasValue)
+            if (request.MaxBalance.HasValue)
             {
-                query = query.Where(x => x.Balance <= request.ToBalance.Value);
+                query = query.Where(x => x.Balance <= request.MaxBalance.Value);
             }
 
             if (request.BalanceType.HasValue)
