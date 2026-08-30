@@ -4,6 +4,7 @@ using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Features.Sale.Dtos;
 using Common.Exceptions;
 using Common.Extensions;
 using Domain.Enums;
@@ -23,19 +24,6 @@ namespace Application.Features.Sale.Commands
         public DateTime? ShippedDate { get; set; }
         public string? ShippingNote { get; set; }
         public List<ShipSaleItemDto> Items { get; set; } = new();
-    }
-
-    public class ShipSaleItemDto
-    {
-        public int SaleItemId { get; set; }
-        public int ShippedQuantity { get; set; }
-
-        /// <summary>
-        /// Optional: barcodes of the specific ProductUnit rows the seller scanned for this
-        /// line. Count must equal ShippedQuantity when given. If omitted, units are picked
-        /// FIFO by serial (see docs/product-code-barcode-invoice-design.fa.md section 1.8).
-        /// </summary>
-        public List<string>? ProductUnitBarcodes { get; set; }
     }
 
     public class ShipSaleCommandValidator : AbstractValidator<ShipSaleCommand>

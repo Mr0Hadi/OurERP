@@ -5,7 +5,6 @@ using Application.Common.Enums;
 using Application.Features.Purchase.Dtos;
 using AutoMapper;
 using Common.Extensions;
-using Domain.Entities;
 using Domain.Enums;
 using FluentValidation;
 using MediatR;
@@ -16,8 +15,8 @@ namespace Application.Features.Purchase.Commands
     {
         public List<CreatePurchaseItemDto> ProductItemList { get; set; }
         public int SupplierId { get; set; }
-        public UInt64 TotalPrice { get; set; }
-        public UInt64 PaidPrice { get; set; }
+        public UInt64 TotalAmount { get; set; }
+        public UInt64 PaidAmount { get; set; }
         public PaymentTypeEnum PaymentType { get; set; }
         public PurchaseStatusEnum Status { get; set; }
         public List<PaymentDetailDto> PaymentDetails { get; set; }
@@ -39,8 +38,8 @@ namespace Application.Features.Purchase.Commands
             });
             RuleFor(x => x.SupplierId).NotEmpty().WithMessage(Validation.RequiredMessage("فروشنده"));
             RuleFor(x => x.Status).IsInEnum().WithMessage("وضعیت نامعتبر است.");
-            RuleFor(x => x.TotalPrice).Must(p => p > 0).WithMessage("مبلغ کل باید از صفر بیشتر باشد.");
-            RuleFor(x => x.PaidPrice).Must(p => p >= 0).WithMessage("مبلغ پرداختی باید بیشتر یا مساوی صفر باشد.");
+            RuleFor(x => x.TotalAmount).Must(p => p > 0).WithMessage("مبلغ کل باید از صفر بیشتر باشد.");
+            RuleFor(x => x.PaidAmount).Must(p => p >= 0).WithMessage("مبلغ پرداختی باید بیشتر یا مساوی صفر باشد.");
             RuleFor(x => x.InvoiceNumber).NotEmpty().WithMessage(Validation.RequiredMessage("شماره فاکتور"));
             RuleFor(x => x.InvoiceDate).NotEmpty().WithMessage(Validation.RequiredMessage("تاریخ فاکتور"));
             RuleFor(x => x.PaymentDetails).NotEmpty().When(x => x.PaymentType != PaymentTypeEnum.CASH)

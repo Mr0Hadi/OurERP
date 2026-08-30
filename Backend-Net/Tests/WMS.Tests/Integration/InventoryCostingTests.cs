@@ -5,6 +5,8 @@ using Application.Common.Dtos.Returns;
 using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using WMS.Tests.Support;
+using Application.Features.Purchase.Dtos;
+using Application.Features.Sale.Dtos;
 
 namespace WMS.Tests.Integration
 {

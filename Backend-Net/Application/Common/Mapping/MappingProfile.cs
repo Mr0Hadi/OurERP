@@ -45,8 +45,8 @@ namespace Application.Common.Mapping
 
 			CreateMap<CreatePurchaseCommand, Purchase>()
 				.ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.ProductItemList))
-				.ForMember(dest => dest.TotalAmount, opt => opt.MapFrom(src => src.TotalPrice))
-				.ForMember(dest => dest.PaidAmount, opt => opt.MapFrom(src => src.PaidPrice))
+				.ForMember(dest => dest.TotalAmount, opt => opt.MapFrom(src => src.TotalAmount))
+				.ForMember(dest => dest.PaidAmount, opt => opt.MapFrom(src => src.PaidAmount))
 				.ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.Now))
 				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 

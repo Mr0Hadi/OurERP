@@ -373,8 +373,8 @@ namespace WMS.Tests.Unit
         {
             ProductItemList = new() { new CreatePurchaseItemDto { ProductId = 1, Quantity = 2, UnitPrice = 100, Discount = 0 } },
             SupplierId = 1,
-            TotalPrice = 200,
-            PaidPrice = 0,
+            TotalAmount = 200,
+            PaidAmount = 0,
             PaymentType = PaymentTypeEnum.CASH,
             Status = PurchaseStatusEnum.PENDING,
             PaymentDetails = new(),
@@ -433,7 +433,7 @@ namespace WMS.Tests.Unit
         public void ZeroTotalPrice_IsInvalid()
         {
             var command = Valid();
-            command.TotalPrice = 0;
+            command.TotalAmount = 0;
 
             Assert.False(_sut.Validate(command).IsValid);
         }

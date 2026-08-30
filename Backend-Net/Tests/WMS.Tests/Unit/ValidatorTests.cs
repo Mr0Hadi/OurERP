@@ -1,8 +1,9 @@
 using Application.Common.Dtos.Returns;
 using Application.Features.Account.Command;
 using Application.Features.Purchase.Commands;
-using Application.Features.PurchaseReturn.Commands;
+using Application.Features.Purchase.Dtos;
 using Application.Features.Sale.Commands;
+using Application.Features.Sale.Dtos;
 using Application.Features.SaleReturn.Commands;
 using Domain.Enums;
 
