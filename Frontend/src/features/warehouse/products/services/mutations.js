@@ -6,8 +6,6 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
-  generateProductCode,
-  generateProductBarcode,
 } from "./api-mockData";
 import { ROUTES } from "@/shared/constants/routes";
 import { productKeys } from "./queryKeys";
@@ -44,28 +42,6 @@ export const useUpdateProductMutation = (id) => {
     },
   });
 };
-
-/**
- * تولید خودکار کد کالا. چیزی در کش تغییر نمی‌کند، پس نیازی به
- * invalidate نیست؛ مقدار برگشتی روی همان فیلد فرم می‌نشیند و
- * کاربر می‌تواند بعد از آن دستی ویرایشش کند.
- */
-export const useGenerateProductCodeMutation = () =>
-  useMutation({
-    mutationFn: generateProductCode,
-    onError: (error) => {
-      toast.error(error?.message || "خطا در تولید کد کالا");
-    },
-  });
-
-/** تولید خودکار بارکد — مستقل از کد کالا. */
-export const useGenerateProductBarcodeMutation = () =>
-  useMutation({
-    mutationFn: generateProductBarcode,
-    onError: (error) => {
-      toast.error(error?.message || "خطا در تولید بارکد");
-    },
-  });
 
 export const useDeleteProductMutation = () => {
   const queryClient = useQueryClient();

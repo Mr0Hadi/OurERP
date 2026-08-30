@@ -90,6 +90,7 @@ const {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-4">
           <div className="lg:col-span-1 space-y-4">
             <SupplierIdentityForm
+              errors={errors}
               register={register}
               imageUpload={imageUpload}
             />
@@ -102,7 +103,12 @@ const {
           </div>
 
           <div className="lg:col-span-1 space-y-4">
-            <SupplierAddressForm register={register} watch={watch} setValue={setValue} />
+            <SupplierAddressForm
+              register={register}
+              errors={errors}
+              watch={watch}
+              setValue={setValue}
+            />
 
             <div className="flex gap-2">
               <Button

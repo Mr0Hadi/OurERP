@@ -1,60 +1,13 @@
 // src/features/warehouse/products/services/api-mockData.js
+import { allProducts } from './mockData';
 import {
-  allProducts,
-  CATEGORY_CODES,
-  UNKNOWN_CATEGORY_CODE,
-} from './mockData';
-import { todayPersianCompact } from '@/shared/utils/dateUtils';
+  buildProductCode,
+  parseBarcode,
+  toPayload,
+} from '@/shared/services/barcode/productCode';
+import { BarcodeReferenceKindEnum } from '@/shared/domain/enums/barcodeReferenceKind';
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-const categoryCodeOf = (category) =>
-  CATEGORY_CODES[String(category ?? '').trim()] ?? UNKNOWN_CATEGORY_CODE;
-
-/**
- * شماره‌ی بعدی برای شناسه‌هایی که با prefix مشترک شروع می‌شوند؛ یعنی
- * شمارنده به‌ازای هر (دسته‌بندی، تاریخ) جداگانه پیش می‌رود. بزرگ‌ترین
- * شماره‌ی موجود مبنا قرار می‌گیرد تا حذف یک کالا باعث تکراری‌شدن نشود.
- */
-const nextSequence = (values, prefix, length) => {
-  const max = values.reduce((acc, value) => {
-    const text = String(value ?? '');
-    if (!text.startsWith(prefix)) return acc;
-    const tail = text.slice(prefix.length);
-    if (!/^\d+$/.test(tail)) return acc;
-    return Math.max(acc, Number(tail));
-  }, 0);
-
-  return String(max + 1).padStart(length, '0');
-};
-
-/** کد کالا: YYYYMMDD-CC-NNN (مثال: 14050523-04-001) */
-export const generateProductCode = async ({ category } = {}) => {
-  await delay(400);
-
-  const prefix = `${todayPersianCompact('YYYYMMDD')}-${categoryCodeOf(category)}-`;
-  const sequence = nextSequence(
-    allProducts.map((p) => p.code),
-    prefix,
-    3
-  );
-
-  return { code: `${prefix}${sequence}` };
-};
-
-/** بارکد: YYMMDDCCNNNNN — سیزده رقم و فقط رقم (مثال: 0505230400001) */
-export const generateProductBarcode = async ({ category } = {}) => {
-  await delay(400);
-
-  const prefix = `${todayPersianCompact('YYMMDD')}${categoryCodeOf(category)}`;
-  const sequence = nextSequence(
-    allProducts.map((p) => p.barcode),
-    prefix,
-    5
-  );
-
-  return { barcode: `${prefix}${sequence}` };
-};
 
 /**
  * تغییر موجودی یک یا چند کالا به‌صورت دلتا (مثبت = افزایش، منفی =
@@ -96,8 +49,10 @@ export const fetchProducts = async (params) => {
     filteredProducts = filteredProducts.filter(p => p.brand === params.brand);
   }
 
-  if (params.category) {
-    filteredProducts = filteredProducts.filter(p => p.category === params.category);
+  if (params.productCategoryId) {
+    filteredProducts = filteredProducts.filter(
+      (p) => Number(p.productCategoryId) === Number(params.productCategoryId),
+    );
   }
 
   if (params.minPrice) {
@@ -155,15 +110,22 @@ export const fetchProductById = async (id) => {
   return product;
 };
 
-/** جست‌وجوی دقیق با بارکد یا کد کالا — برای اسکن. */
+/**
+ * جست‌وجوی دقیق با بارکد یا کد کالا — برای اسکن.
+ *
+ * تطبیق روی *payload* انجام می‌شود نه رشته‌ی خام: اسکنر گاهی کدِ خوانا
+ * (با خط‌تیره) می‌دهد و گاهی فقط رقم‌ها را، و مقایسه‌ی رشته‌ای یکی از
+ * این دو را همیشه ناموفق می‌کند. بارکدِ یک *دانه* هم پذیرفته می‌شود و
+ * به کالای همان دانه می‌رسد — چون کدِ کالا داخلِ بارکدِ دانه است.
+ */
 export const fetchProductByBarcode = async (code) => {
   await delay(200);
-  const term = String(code ?? '').trim();
-  if (!term) return null;
+
+  const reference = parseBarcode(code);
+  if (reference.kind === BarcodeReferenceKindEnum.UNKNOWN) return null;
+
   return (
-    allProducts.find((p) => p.barcode === term) ||
-    allProducts.find((p) => p.code === term) ||
-    null
+    allProducts.find((p) => Number(p.id) === reference.productId) ?? null
   );
 };
 
@@ -178,11 +140,19 @@ export const createProduct = async (productData) => {
     ? Math.max(...allProducts.map((p) => Number(p.id) || 0)) + 1
     : 1;
 
+  const createdAt = new Date().toISOString();
+
+  // کد و بارکد از پیلود نمی‌آیند: بکند آن‌ها را *بعد* از گرفتنِ `Id`
+  // خودش می‌سازد (`CreateProductCommandHandler`)، دقیقاً به همین شکل.
+  const code = buildProductCode(newId, createdAt);
+
   const newProduct = {
-    id: newId,
     ...productData,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    id: newId,
+    code,
+    barcode: toPayload(code),
+    createdAt,
+    updatedAt: createdAt,
   };
 
   allProducts.unshift(newProduct);
@@ -198,10 +168,15 @@ export const updateProduct = async (id, productData) => {
     throw new Error("محصول یافت نشد");
   }
 
+  // کد و بارکد بعد از ساختِ کالا ثابت می‌مانند (روی برچسب چاپ شده‌اند)،
+  // پس حتی اگر در پیلود بیایند نادیده گرفته می‌شوند — همان کاری که
+  // `UpdateProductCommand` می‌کند، چون اصلاً این دو فیلد را ندارد.
   const updatedProduct = {
     ...allProducts[index],
     ...productData,
     id: allProducts[index].id,
+    code: allProducts[index].code,
+    barcode: allProducts[index].barcode,
     updatedAt: new Date().toISOString()
   };
 

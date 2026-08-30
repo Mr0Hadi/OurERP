@@ -1,38 +1,46 @@
 // features/warehouse/products/services/mockData.js
 import { ProductUnitEnum } from "@/shared/domain/enums/productUnit";
+import {
+  buildProductCode,
+  toPayload,
+} from "@/shared/services/barcode/productCode";
+import {
+  allProductCategories,
+  categoryNameOf,
+} from "@/features/warehouse/categories/services/mockData";
 
 /**
- * کد دو رقمی هر دسته‌بندی، برای ساختن کد کالا و بارکد خودکار.
- * تا زمانی که دسته‌بندی‌ها موجودیت مستقلی با شناسه‌ی خودشان نشده‌اند،
- * این نگاشت جای شناسه‌ی دسته‌بندی در بک‌اند واقعی را می‌گیرد.
- * شامل هر دو فهرست دسته‌بندی موجود است (DEFAULT_CATEGORIES در
- * useProductForm و دسته‌بندی‌های همین فایل).
+ * کد و بارکدِ کالا **ساختِ سرور** هستند، نه چیزی که کاربر وارد کند یا
+ * mock از دسته‌بندی بسازد: بکند در `CreateProductCommand` بلافاصله بعد
+ * از گرفتنِ `Id` مقدارشان را می‌گذارد و بعد از آن هرگز عوض نمی‌شوند
+ * (چون روی برچسب چاپ شده‌اند).
+ *
+ *   code    = تاریخِ جلالیِ ساخت + شناسه‌ی کالا →  `14050608-0000000010`
+ *   barCode = همان کد بدونِ خط‌تیره            →  `140506080000000010`
+ *
+ * پس اینجا هم همان قانون اجرا می‌شود، نه یک الگوی دسته‌بندی‌محورِ
+ * جداگانه؛ وگرنه بارکدی که در mock چاپ می‌شود با چیزی که سرور
+ * می‌شناسد یکی نیست.
  */
-export const CATEGORY_CODES = {
-  "روغن موتور": "01",
-  "فیلتر": "02",
-  "لنت ترمز": "03",
-  "برق و روشنایی": "04",
-  "تسمه": "05",
-  "موتور": "06",
-  "سیستم ترمز": "07",
-  "سیستم تعلیق": "08",
-  "بدنه": "09",
-  "گیربکس": "10",
-  "سیستم خنک کننده": "11",
+const withGeneratedCode = (product) => {
+  const code = buildProductCode(product.id, product.createdAt);
+  return {
+    ...product,
+    code,
+    barcode: toPayload(code),
+    // بکند در فهرست `categoryName` می‌دهد و در جزئیات `productCategoryId`؛
+    // mock هم هر دو را دارد تا هیچ صفحه‌ای نامِ دسته را از روی شناسه
+    // دستی حساب نکند.
+    categoryName: categoryNameOf(product.productCategoryId),
+  };
 };
-
-/** وقتی دسته‌بندی انتخاب نشده یا در نگاشت بالا نیست. */
-export const UNKNOWN_CATEGORY_CODE = "00";
 
 export const productsMock = [
   {
     id: 1,
-    code: "BRK-1001",
-    barcode: "6260000000001",
     name: "لنت ترمز جلو",
     brand: "بوش",
-    category: "سیستم ترمز",
+    productCategoryId: 7,
     unit: ProductUnitEnum.HAND,
     purchasePrice: 350000,
     retailPrice: 450000,
@@ -46,11 +54,9 @@ export const productsMock = [
   },
   {
     id: 2,
-    code: 'FLT-2022',
-    barcode: '6260000000002',
     name: 'فیلتر روغن',
     brand: 'مان',
-    category: 'موتور',
+    productCategoryId: 6,
     unit: ProductUnitEnum.NUMBER,
     purchasePrice: 90000,
     retailPrice: 120000,
@@ -63,11 +69,9 @@ export const productsMock = [
   },
   {
     id: 3,
-    code: 'SHK-305',
-    barcode: '6260000000003',
     name: 'کمک فنر جلو',
     brand: 'ساکس',
-    category: 'سیستم تعلیق',
+    productCategoryId: 8,
     unit: ProductUnitEnum.NUMBER,
     purchasePrice: 1500000,
     retailPrice: 1850000,
@@ -91,15 +95,6 @@ const generateMoreProducts = (count) => {
     "دنسو",
     "میتسوبیشی",
   ];
-  const categories = [
-    "موتور",
-    "سیستم ترمز",
-    "سیستم تعلیق",
-    "برق و روشنایی",
-    "بدنه",
-    "گیربکس",
-    "سیستم خنک کننده",
-  ];
   const units = [
     ProductUnitEnum.NUMBER,
     ProductUnitEnum.PACKAGE,
@@ -117,11 +112,9 @@ const generateMoreProducts = (count) => {
 
     products.push({
       id: i,
-      code: `MOCK-${i}`,
-      barcode: `6260000000${String(i).padStart(3, "0")}`,
       name: `قطعه نمونه ${i}`,
       brand: brands[i % brands.length],
-      category: categories[i % categories.length],
+      productCategoryId: allProductCategories[i % allProductCategories.length].id,
       unit: units[i % units.length],
       purchasePrice: purchasePrice,
       retailPrice: retailPrice,
@@ -134,7 +127,7 @@ const generateMoreProducts = (count) => {
       updatedAt: new Date(2024, 0, 1 + i).toISOString(),
     });
   }
-  return products;
+  return products.map(withGeneratedCode);
 };
 
 export const allProducts = generateMoreProducts(50);

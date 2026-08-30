@@ -13,6 +13,8 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import BarcodeScanField from "@/shared/components/barcode/BarcodeScanField";
+import { parseBarcode } from "@/shared/services/barcode/productCode";
+import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
 
 /**
  * جست‌وجو و انتخاب کالا برای افزودن به اقلام.
@@ -33,9 +35,13 @@ export default function ProductSearchPanel({ products, addedQtyOf, onAdd }) {
   const [categoryFilter, setCategoryFilter] = useState("");
 
   const handleScan = (code) => {
-    const product = products.find(
-      (p) => p.barcode === code || p.code === code,
-    );
+    // تطبیق روی payload، نه رشته‌ی خام: اسکنر ممکن است کدِ خوانا بدهد یا
+    // فقط رقم‌ها، و بارکدِ یک دانه هم باید به کالای خودش برسد.
+    const reference = parseBarcode(code);
+    const product =
+      reference.kind === BarcodeReferenceKindEnum.UNKNOWN
+        ? null
+        : products.find((p) => Number(p.id) === reference.productId);
     if (!product) {
       toast.error(`کالایی با کد «${code}» پیدا نشد`);
       return;
@@ -50,7 +56,7 @@ export default function ProductSearchPanel({ products, addedQtyOf, onAdd }) {
   };
 
   const categories = useMemo(() => {
-    const cats = [...new Set(products.map((p) => p.category).filter(Boolean))];
+    const cats = [...new Set(products.map((p) => p.categoryName).filter(Boolean))];
     return cats.sort();
   }, [products]);
 
@@ -63,7 +69,7 @@ export default function ProductSearchPanel({ products, addedQtyOf, onAdd }) {
         p.code?.toLowerCase().includes(term) ||
         p.brand?.toLowerCase().includes(term) ||
         p.barcode?.toLowerCase().includes(term);
-      const matchCategory = !categoryFilter || p.category === categoryFilter;
+      const matchCategory = !categoryFilter || p.categoryName === categoryFilter;
       return matchSearch && matchCategory;
     });
   }, [products, search, categoryFilter]);
@@ -139,9 +145,9 @@ export default function ProductSearchPanel({ products, addedQtyOf, onAdd }) {
                       برند: {product.brand}
                     </span>
                   )}
-                  {product.category && (
+                  {product.categoryName && (
                     <span className="text-xs text-muted-foreground">
-                      دسته: {product.category}
+                      دسته: {product.categoryName}
                     </span>
                   )}
                   <span

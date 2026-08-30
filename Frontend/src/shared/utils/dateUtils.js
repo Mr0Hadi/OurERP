@@ -20,12 +20,25 @@ export function persianToGregorian(persianDateStr) {
 }
 
 /**
- * تاریخ جلالی امروز به‌صورت فشرده و بدون جداکننده، برای ساختن شناسه‌هایی
- * مثل کد کالا و بارکد. "YYYYMMDD" → "14050523" و "YYMMDD" → "050523".
+ * تاریخ جلالیِ یک لحظه‌ی مشخص، فشرده و بدون جداکننده — قرینه‌ی دقیقِ
+ * `PersianDate.ToCompactString` در بکند، که بخشِ تاریخِ کدِ کالا از آن
+ * ساخته می‌شود. "YYYYMMDD" → "14050523" و "YYMMDD" → "050523".
+ *
+ * ورودی هرچیزی است که `new Date()` می‌فهمد (ISO سرور، Date، timestamp)؛
+ * ورودیِ نامعتبر رشته‌ی خالی می‌دهد تا کدِ نصفه‌نیمه ساخته نشود.
  */
+export function persianCompact(date = new Date(), format = "YYYYMMDD") {
+  const source = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(source.getTime())) return "";
+
+  return new DateObject({ date: source, calendar: gregorian })
+    .convert(persian)
+    .format(format);
+}
+
+/** همان `persianCompact` برای «همین حالا». */
 export function todayPersianCompact(format = "YYYYMMDD") {
-  const d = new DateObject({ calendar: persian });
-  return d.format(format);
+  return persianCompact(new Date(), format);
 }
 
 /**

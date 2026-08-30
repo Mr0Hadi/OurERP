@@ -10,8 +10,31 @@ import {
 } from "@/shared/components/ui/card";
 import { Textarea } from "@/shared/components/ui/textarea";
 import ImageUploadField from "@/shared/components/files/ImageUploadField";
+import {
+  mobileRules,
+  persianNameRules,
+  requiredMessage,
+} from "@/shared/utils/validationRules";
 
-export default function SupplierIdentityForm({ register, imageUpload }) {
+/** پیام خطای زیرِ فیلد — همان متنی که سرور هم برمی‌گرداند. */
+function FieldError({ error }) {
+  if (!error) return null;
+  return (
+    <span className="text-xs text-destructive block font-medium">
+      {error.message}
+    </span>
+  );
+}
+
+const Required = () => <span className="text-destructive">*</span>;
+
+/**
+ * فیلدهای اجباری و قوانینشان عیناً از `CreateSupplierCommandValidator`
+ * گرفته شده‌اند: نام و نام خانوادگی فقط فارسی، شماره تماس فقط موبایل
+ * (`^09\d{9}$`)، و نام شرکت اجباری. بدون این‌ها کاربر کلِ فرم را پر
+ * می‌کرد و تازه از سرور خطا می‌گرفت.
+ */
+export default function SupplierIdentityForm({ register, errors, imageUpload }) {
   return (
     <Card className="overflow-hidden shadow-md rounded-2xl pt-0 gap-0">
       <CardHeader className="border-b bg-muted/30 py-4 px-6">
@@ -40,66 +63,118 @@ export default function SupplierIdentityForm({ register, imageUpload }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="firstName" className="text-sm font-medium">
-                  نام مسئول
+                  نام مسئول <Required />
                 </Label>
                 <Input
                   id="firstName"
                   placeholder="نام"
                   className="h-10 rounded-lg transition-all"
-                  {...register("firstName")}
+                  {...register("firstName", persianNameRules("نام"))}
                 />
+                <FieldError error={errors?.firstName} />
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="lastName" className="text-sm font-medium">
-                  نام خانوادگی
+                  نام خانوادگی <Required />
                 </Label>
                 <Input
                   id="lastName"
                   placeholder="نام خانوادگی"
                   className="h-10 rounded-lg transition-all"
-                  {...register("lastName")}
+                  {...register("lastName", persianNameRules("نام خانوادگی"))}
                 />
+                <FieldError error={errors?.lastName} />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="companyName" className="text-sm font-medium">
-                  نام شرکت
+                  نام شرکت <Required />
                 </Label>
                 <Input
                   id="companyName"
                   placeholder="نام شرکت"
                   className="h-10 rounded-lg transition-all"
-                  {...register("companyName")}
+                  {...register("companyName", {
+                    required: requiredMessage("نام شرکت"),
+                  })}
                 />
+                <FieldError error={errors?.companyName} />
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="phone" className="text-sm font-medium">
-                  شماره تماس
+                  شماره تماس (موبایل) <Required />
                 </Label>
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="۰۹۱۲۳۴۵۶۷۸۹"
+                  placeholder="09123456789"
                   dir="ltr"
                   className="h-10 rounded-lg transition-all input-rtl-placeholder"
-                  {...register("phone")}
+                  {...register("phone", mobileRules())}
+                />
+                <FieldError error={errors?.phone} />
+              </div>
+            </div>
+
+            {/* سه شناسه‌ی حقوقی — همگی اختیاری‌اند، ولی سرور از روز اول
+                ستونشان را داشته و فرم اصلاً نمایششان نمی‌داد. */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="economicCode" className="text-sm font-medium">
+                  کد اقتصادی
+                </Label>
+                <Input
+                  id="economicCode"
+                  dir="ltr"
+                  placeholder="14001234567"
+                  className="h-10 rounded-lg transition-all input-rtl-placeholder"
+                  {...register("economicCode")}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="nationalId" className="text-sm font-medium">
+                  شناسه ملی
+                </Label>
+                <Input
+                  id="nationalId"
+                  dir="ltr"
+                  placeholder="10101234567"
+                  className="h-10 rounded-lg transition-all input-rtl-placeholder"
+                  {...register("nationalId")}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="registrationNumber"
+                  className="text-sm font-medium"
+                >
+                  شماره ثبت
+                </Label>
+                <Input
+                  id="registrationNumber"
+                  dir="ltr"
+                  placeholder="123456"
+                  className="h-10 rounded-lg transition-all input-rtl-placeholder"
+                  {...register("registrationNumber")}
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="Description" className="text-sm font-medium">
+              <Label htmlFor="description" className="text-sm font-medium">
                 توضیحات
               </Label>
               <Textarea
-                id="Description"
+                id="description"
                 placeholder="یادداشت یا توضیحات مربوط به تامین‌کننده..."
                 className="min-h-[70px] rounded-lg transition-all resize-none"
-                {...register("Description")}
+                {...register("description")}
               />
             </div>
           </div>

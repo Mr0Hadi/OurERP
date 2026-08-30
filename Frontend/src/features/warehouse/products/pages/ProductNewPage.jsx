@@ -32,8 +32,6 @@ export default function ProductNewPage() {
     formMethods,
     imageUpload,
     barcodeValue,
-    categories,
-    handleAddCategory,
     buildProductPayload,
   } = useProductForm();
 
@@ -41,7 +39,6 @@ export default function ProductNewPage() {
     register,
     handleSubmit,
     control,
-    setValue,
     formState: { errors, isSubmitting },
   } = formMethods;
 
@@ -72,10 +69,7 @@ export default function ProductNewPage() {
             <ProductBasicInfoForm
               register={register}
               control={control}
-              setValue={setValue}
               errors={errors}
-              categories={categories}
-              onAddCategory={handleAddCategory}
             />
             <ProductPricingForm register={register} />
           </div>

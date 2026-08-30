@@ -44,15 +44,27 @@ export default function UnitsTable({
           <UnitSelectCheckbox
             checked={selectedIds.has(info.row.original.id)}
             onChange={() => onToggleSelect(info.row.original.id)}
-            label={`انتخاب ${info.row.original.unitCode}`}
+            label={`انتخاب ${info.row.original.barcode}`}
           />
         ),
       },
       {
-        accessorKey: "unitCode",
-        header: "کد واحد",
+        accessorKey: "barcode",
+        header: "بارکد واحد",
+        // شکلِ خوانا (با خط‌تیره) نمایش داده می‌شود، نه payload — همان
+        // چیزی که زیرِ میله‌ها روی برچسب چاپ شده، تا انباردار بتواند
+        // ردیفِ جدول را با برچسبِ توی دستش تطبیق بدهد.
         cell: (info) => (
           <span className="font-mono text-xs">{info.getValue()}</span>
+        ),
+      },
+      {
+        accessorKey: "serialNumber",
+        header: "سریال",
+        cell: (info) => (
+          <span className="tabular-nums text-xs text-muted-foreground">
+            {info.getValue()}
+          </span>
         ),
       },
       {
@@ -73,33 +85,13 @@ export default function UnitsTable({
         cell: (info) => <UnitStatusBadge status={info.getValue()} />,
       },
       {
-        accessorKey: "firstPrintedAt",
-        header: "چاپ",
-        cell: (info) => {
-          const firstPrintedAt = info.getValue();
-          const { printCount } = info.row.original;
-
-          if (!firstPrintedAt) {
-            return (
-              <span className="text-xs text-muted-foreground">چاپ‌نشده</span>
-            );
-          }
-
-          return (
-            <span className="flex items-center gap-1.5 text-xs tabular-nums">
-              {gregorianToPersian(firstPrintedAt.slice(0, 10))}
-              {printCount > 1 ? (
-                <span
-                  className="inline-flex items-center gap-0.5 rounded-md border border-border bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
-                  title={`${printCount} بار چاپ شده`}
-                >
-                  <RotateCw className="h-2.5 w-2.5" />
-                  {printCount}×
-                </span>
-              ) : null}
-            </span>
-          );
-        },
+        accessorKey: "createdAt",
+        header: "تاریخ ساخت",
+        cell: (info) => (
+          <span className="text-xs tabular-nums">
+            {info.getValue() ? gregorianToPersian(info.getValue().slice(0, 10)) : "—"}
+          </span>
+        ),
       },
       {
         id: "actions",

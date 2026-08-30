@@ -8,7 +8,7 @@ export function useDebouncedFilters() {
   const minPrice = useProductFilterStore((s) => s.minPrice);
   const maxPrice = useProductFilterStore((s) => s.maxPrice);
   const brand = useProductFilterStore((s) => s.brand);
-  const category = useProductFilterStore((s) => s.category);
+  const productCategoryId = useProductFilterStore((s) => s.productCategoryId);
   const stockStatus = useProductFilterStore((s) => s.stockStatus);
 
   const [debouncedText, setDebouncedText] = useState({
@@ -28,7 +28,7 @@ export function useDebouncedFilters() {
   return {
     ...debouncedText,
     brand,
-    category,
+    productCategoryId,
     stockStatus,
   };
 }

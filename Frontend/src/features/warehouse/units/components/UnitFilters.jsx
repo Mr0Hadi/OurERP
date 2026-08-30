@@ -5,39 +5,28 @@ import FilterSelect from "@/shared/components/filters/FilterSelect";
 
 import { UNIT_STATUSES, UNIT_STATUS_LABELS } from "../services/mockData";
 
-// RETURNED_TO_SUPPLIER برچسب ندارد چون هنوز هیچ‌جا در فرانت تولید
-// نمی‌شود (نگاه کنید unitStatus.js) — از فیلتر بیرون می‌ماند.
-const STATUS_OPTIONS = Object.values(UNIT_STATUSES)
-  .filter((value) => UNIT_STATUS_LABELS[value] != null)
-  .map((value) => ({
-    value,
-    label: UNIT_STATUS_LABELS[value],
-  }));
-
-const PRINT_STATE_OPTIONS = [
-  { value: "printed", label: "چاپ‌شده" },
-  { value: "unprinted", label: "چاپ‌نشده" },
-];
+const STATUS_OPTIONS = Object.values(UNIT_STATUSES).map((value) => ({
+  value,
+  label: UNIT_STATUS_LABELS[value],
+}));
 
 export default function UnitFilters({
   globalSearch,
   status,
-  printState,
   onSearchChange,
   onStatusChange,
-  onPrintStateChange,
   onReset,
 }) {
   return (
     <FilterPanel
       onReset={onReset}
-      firstRowClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+      firstRowClassName="grid grid-cols-1 sm:grid-cols-2 gap-4"
       dateRowClassName="flex justify-end pt-3 border-t border-border"
       resetWrapperClassName="flex items-end"
       resetButtonClassName="px-4"
     >
       <FilterSearchInput
-        placeholder="کد واحد یا نام کالا..."
+        placeholder="بارکد واحد یا نام کالا..."
         value={globalSearch}
         onChange={(e) => onSearchChange(e.target.value)}
       />
@@ -48,13 +37,6 @@ export default function UnitFilters({
         options={STATUS_OPTIONS}
         allLabel="همه"
         numeric
-      />
-      <FilterSelect
-        label="چاپ"
-        value={printState}
-        onChange={onPrintStateChange}
-        options={PRINT_STATE_OPTIONS}
-        allLabel="همه"
       />
     </FilterPanel>
   );

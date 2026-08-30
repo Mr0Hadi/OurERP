@@ -21,37 +21,61 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
+import { useProductCategoriesQuery } from "@/features/warehouse/categories/services/queries";
+import { useCreateProductCategoryMutation } from "@/features/warehouse/categories/services/mutations";
 
-export default function CategoryManager({ value, onChange, categories, onAddCategory }) {
+/**
+ * انتخاب دسته‌بندی کالا — با `productCategoryId` کار می‌کند، نه با نام.
+ *
+ * قبلاً فهرست دسته‌بندی‌ها در خودِ فرم هاردکد بود و «افزودن دسته‌بندی»
+ * فقط یک آیتمِ محلی می‌ساخت که با رفرش صفحه از بین می‌رفت و هیچ‌وقت به
+ * سرور نمی‌رسید. حالا فهرست از `api/ProductCategory` می‌آید و افزودن،
+ * واقعاً `CreateProductCategory` را صدا می‌زند — چون
+ * `CreateProductCommand` روی `ProductCategoryId > 0` اعتبارسنجی می‌کند
+ * و نامِ آزاد را نمی‌پذیرد.
+ */
+export default function CategoryManager({ value, onChange }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
 
+  const categoriesQuery = useProductCategoriesQuery();
+  const createCategory = useCreateProductCategoryMutation();
+
+  const categories = categoriesQuery.data ?? [];
+
   const handleAdd = () => {
-    if (!newCategoryName.trim()) {
+    const name = newCategoryName.trim();
+    if (!name) {
       toast.error("نام دسته‌بندی نمی‌تواند خالی باشد");
       return;
     }
 
-    const newCategory = {
-      id: newCategoryName.trim(),
-      name: newCategoryName.trim(),
-    };
-
-    onAddCategory(newCategory);
-    setNewCategoryName("");
-    setIsDialogOpen(false);
-    toast.success("دسته‌بندی جدید اضافه شد");
+    createCategory.mutate(
+      { name },
+      {
+        onSuccess: (category) => {
+          // دسته‌بندیِ تازه بلافاصله انتخاب می‌شود؛ کاربر برای همین ساختش.
+          if (category?.id) onChange(String(category.id));
+          setNewCategoryName("");
+          setIsDialogOpen(false);
+        },
+      },
+    );
   };
 
   return (
     <div className="flex items-center gap-2">
-      <Select value={value ?? ""} onValueChange={onChange}>
+      <Select value={value ? String(value) : ""} onValueChange={onChange}>
         <SelectTrigger className="flex-1" dir="rtl">
-          <SelectValue placeholder="انتخاب کنید" />
+          <SelectValue
+            placeholder={
+              categoriesQuery.isLoading ? "در حال بارگذاری..." : "انتخاب کنید"
+            }
+          />
         </SelectTrigger>
         <SelectContent dir="rtl">
           {categories.map((cat) => (
-            <SelectItem key={cat.id} value={cat.id}>
+            <SelectItem key={cat.id} value={String(cat.id)}>
               {cat.name}
             </SelectItem>
           ))}
@@ -68,18 +92,25 @@ export default function CategoryManager({ value, onChange, categories, onAddCate
           <DialogHeader>
             <DialogTitle>افزودن دسته‌بندی جدید</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <Label>نام دسته‌بندی</Label>
+
+          <div className="space-y-2 py-2">
+            <Label htmlFor="newCategoryName">نام دسته‌بندی</Label>
             <Input
+              id="newCategoryName"
               value={newCategoryName}
               onChange={(e) => setNewCategoryName(e.target.value)}
-              placeholder="مثال: روغن موتور"
-              className="mt-2"
+              placeholder="مثال: سیستم تعلیق"
+              autoFocus
             />
           </div>
+
           <DialogFooter>
-            <Button type="button" onClick={handleAdd}>
-              ذخیره
+            <Button
+              type="button"
+              onClick={handleAdd}
+              disabled={createCategory.isPending}
+            >
+              {createCategory.isPending ? "در حال ثبت..." : "افزودن"}
             </Button>
           </DialogFooter>
         </DialogContent>

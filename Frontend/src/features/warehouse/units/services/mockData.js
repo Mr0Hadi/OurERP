@@ -8,64 +8,70 @@
  * (product.barcode) فرق دارد: آن یکی برای همه‌ی نمونه‌های یک کالا
  * مشترک است.
  *
- * موجودی عددی (product.stock) همچنان مرجع تعداد است؛ این جدول یک
- * دفترِ موازیِ برچسب‌گذاری و ردیابی است. «چند واحد بی‌برچسب مانده» از
- * تفاضل همین دو به دست می‌آید.
+ * سرور تعدادِ دانه‌های `IN_STOCK` را همیشه با `product.stock` هم‌تراز
+ * نگه می‌دارد (`ProductUnitService.ReconcileStockAsync`)، پس این جدول
+ * دفترِ موازی نیست — همان موجودی است، دانه‌به‌دانه.
  */
+import { allProducts } from "@/features/warehouse/products/services/mockData";
+import {
+  buildUnitBarcode,
+  toPayload,
+} from "@/shared/services/barcode/productCode";
+
 export {
   ProductUnitStatusEnum as UNIT_STATUSES,
   UNIT_STATUS_LABELS,
-  MANUAL_UNIT_STATUSES,
 } from "@/shared/domain/enums/unitStatus";
 import { ProductUnitStatusEnum as UNIT_STATUSES } from "@/shared/domain/enums/unitStatus";
 
 /** واحدهایی که فیزیکاً در انبار موجودند و باید در موجودی شمرده شوند. */
 export const isCountedInStock = (status) => status === UNIT_STATUSES.IN_STOCK;
 
-// بدون معادل مستند در بکند فعلاً — «این واحد از کجا آمد».
-export const UNIT_SOURCE_TYPES = {
-  PURCHASE: 0,
-  SALES_RETURN: 1,
-  MANUAL: 2,
-};
-
-export const UNIT_SOURCE_TYPE_LABELS = {
-  [UNIT_SOURCE_TYPES.PURCHASE]: "خرید",
-  [UNIT_SOURCE_TYPES.SALES_RETURN]: "مرجوعی فروش",
-  [UNIT_SOURCE_TYPES.MANUAL]: "ثبت دستی",
-};
-
-const seedUnit = (seq, overrides) => ({
-  id: `u-${String(seq).padStart(5, "0")}`,
-  unitCode: `U-050520-0001-${String(seq).padStart(5, "0")}`,
-  productId: 1,
-  productCode: "BRK-1001",
-  productName: "لنت ترمز جلو",
-  status: UNIT_STATUSES.IN_STOCK,
-  // تاریخ چاپ اول هرگز عوض نمی‌شود؛ چاپ مجدد فقط lastPrintedAt و
-  // printCount را جلو می‌برد. برچسبِ افتاده یا خراب باید دوباره چاپ
-  // شود بدون اینکه سابقه‌ی چاپ اولش گم شود.
-  firstPrintedAt: "2026-08-11T09:00:00Z",
-  lastPrintedAt: "2026-08-11T09:00:00Z",
-  printCount: 1,
-  source: { type: UNIT_SOURCE_TYPES.PURCHASE, refId: 1, refNumber: "PUR-2026-001" },
-  saleId: null,
-  createdAt: "2026-08-11T08:30:00Z",
-  updatedAt: "2026-08-11T09:00:00Z",
-  ...overrides,
-});
+const seedProduct = allProducts.find((product) => Number(product.id) === 1);
 
 /**
- * چند واحد نمونه برای کالای ۱، تا صفحه از همان اول هر سه حالت
- * «برچسب‌خورده / بی‌برچسب / خارج‌شده از انبار» را نشان بدهد.
+ * شماره‌ی سریال per-product است و از ۱ شروع می‌شود — نه یک شمارنده‌ی
+ * سراسری. بارکد هم از روی *کدِ همان کالا* ساخته می‌شود، دقیقاً مثل
+ * `ProductUnitService.MintAsync`؛ به همین دلیل کدِ کالا اینجا هاردکد
+ * نشده و از خودِ mockِ کالاها خوانده می‌شود.
+ */
+const seedUnit = (serialNumber, overrides) => {
+  const barcode = buildUnitBarcode(seedProduct.code, serialNumber);
+
+  return {
+    id: serialNumber,
+    productId: seedProduct.id,
+    serialNumber,
+    // خوانا برای نمایش، payload برای میله‌ها و برای مقایسه هنگام اسکن.
+    barcode,
+    barcodePayload: toPayload(barcode),
+    productCode: seedProduct.code,
+    productName: seedProduct.name,
+    status: UNIT_STATUSES.IN_STOCK,
+    // بکند دانه را به *خطِ* فروش وصل می‌کند (`SaleItemId`)؛ mock هنوز فقط
+    // شناسه‌ی خودِ فروش را در دست دارد، پس هر دو نگه داشته می‌شوند و UI
+    // هرکدام که پر باشد را نشان می‌دهد.
+    saleItemId: null,
+    saleId: null,
+    purchaseItemId: 1,
+    createdAt: "2026-08-11T08:30:00Z",
+    soldAt: null,
+    updatedAt: "2026-08-11T09:00:00Z",
+    ...overrides,
+  };
+};
+
+/**
+ * چند دانه‌ی نمونه برای کالای ۱، تا صفحه از همان اول هر سه وضعیتی را
+ * که سرور واقعاً تولید می‌کند نشان بدهد: در انبار، فروخته‌شده، اسقاط.
  */
 export const allProductUnits = [
   seedUnit(1),
   seedUnit(2),
   seedUnit(3),
-  seedUnit(4, { firstPrintedAt: null, lastPrintedAt: null, printCount: 0 }),
-  seedUnit(5, { firstPrintedAt: null, lastPrintedAt: null, printCount: 0 }),
+  seedUnit(4),
+  seedUnit(5),
   seedUnit(6, { status: UNIT_STATUSES.SOLD, saleId: 1 }),
   seedUnit(7, { status: UNIT_STATUSES.SOLD, saleId: 1 }),
-  seedUnit(8, { status: UNIT_STATUSES.SHIPPED, saleId: 1 }),
+  seedUnit(8, { status: UNIT_STATUSES.SCRAPPED }),
 ];

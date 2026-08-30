@@ -104,7 +104,7 @@ const ProductTable = ({
         ),
       },
       { accessorKey: "brand", header: "برند" },
-      { accessorKey: "category", header: "دسته‌بندی" },
+      { accessorKey: "categoryName", header: "دسته‌بندی" },
       {
         accessorKey: "retailPrice",
         header: "قیمت (ریال)",

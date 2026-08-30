@@ -7,7 +7,7 @@ export const useProductFilterStore = create(
     // فیلترهای جستجو
     globalSearch: '',
     brand: '',
-    category: '',
+    productCategoryId: '',
     minPrice: '',
     maxPrice: '',
     stockStatus: '', // 'inStock', 'lowStock', 'outOfStock'
@@ -30,7 +30,7 @@ export const useProductFilterStore = create(
     // اکشن‌ها
     setGlobalSearch: (value) => set({ globalSearch: value, pagination: { pageIndex: 0, pageSize: 10 } }),
     setBrand: (value) => set({ brand: value, pagination: { pageIndex: 0, pageSize: 10 } }),
-    setCategory: (value) => set({ category: value, pagination: { pageIndex: 0, pageSize: 10 } }),
+    setProductCategoryId: (value) => set({ productCategoryId: value, pagination: { pageIndex: 0, pageSize: 10 } }),
     setPriceRange: (min, max) => set({ minPrice: min, maxPrice: max, pagination: { pageIndex: 0, pageSize: 10 } }),
     setStockStatus: (value) => set({ stockStatus: value, pagination: { pageIndex: 0, pageSize: 10 } }),
 
@@ -41,7 +41,7 @@ export const useProductFilterStore = create(
       set({
         globalSearch: '',
         brand: '',
-        category: '',
+        productCategoryId: '',
         minPrice: '',
         maxPrice: '',
         stockStatus: '',

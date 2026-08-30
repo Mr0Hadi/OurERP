@@ -7,9 +7,9 @@ import { gregorianToPersian } from "@/shared/utils/dateUtils";
  * چیدمان صفحه و مکانیزم چاپ سراسری است، ولی «روی برچسب کالا چه
  * نوشته شود» تصمیم انبار است.
  *
- * سطر پایین (کد کالا، شماره‌ی سند منشأ، تاریخ) برای وقتی است که کسی
- * برچسب را با چشم می‌خواند: بدون اسکنر هم باید بشود فهمید این قلم چه
- * کالایی است و با کدام خرید وارد انبار شده.
+ * سطر پایین (کد کالا و تاریخ) برای وقتی است که کسی برچسب را با چشم
+ * می‌خواند: بدون اسکنر هم باید بشود فهمید این قلم چه کالایی است و کی
+ * وارد انبار شده.
  */
 export default function UnitLabel({ unit }) {
   const receivedAt = unit.createdAt
@@ -22,13 +22,16 @@ export default function UnitLabel({ unit }) {
         {unit.productName}
       </div>
 
-      <BarcodeGraphic value={unit.unitCode} preset="label" />
+      {/* میله‌ها payload می‌گیرند و متنِ زیرشان شکلِ خط‌تیره‌دار — همان
+          تفکیکی که رندرِ PDF سرور دارد. */}
+      <BarcodeGraphic
+        value={unit.barcodePayload}
+        text={unit.barcode}
+        preset="label"
+      />
 
       <div className="flex w-full items-center justify-between gap-1 px-0.5 text-[7px] leading-tight text-neutral-700">
         <span className="truncate font-mono">{unit.productCode}</span>
-        {unit.source?.refNumber ? (
-          <span className="truncate font-mono">{unit.source.refNumber}</span>
-        ) : null}
         <span className="shrink-0 tabular-nums">{receivedAt}</span>
       </div>
     </div>

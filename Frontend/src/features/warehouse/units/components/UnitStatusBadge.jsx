@@ -1,20 +1,12 @@
 // src/features/warehouse/units/components/UnitStatusBadge.jsx
-import {
-  Package,
-  ShoppingCart,
-  Truck,
-  Undo2,
-  Trash2,
-  AlertTriangle,
-  HelpCircle,
-} from "lucide-react";
+import { Package, ShoppingCart, Undo2, Trash2 } from "lucide-react";
 
 import { UNIT_STATUSES, UNIT_STATUS_LABELS } from "../services/mockData";
 
 /**
  * وضعیت چرخه‌ی عمر واحد. عمداً از createRowStatus استفاده نمی‌کند —
  * آن ابزار برای مقایسه‌ی «انتظار در برابر واقعیت» است، ولی اینجا یک
- * enum پنج‌حالته داریم نه مقایسه‌ی عددی.
+ * enum چهارحالته داریم نه مقایسه‌ی عددی.
  */
 const STATUS_CONFIG = {
   [UNIT_STATUSES.IN_STOCK]: {
@@ -27,23 +19,9 @@ const STATUS_CONFIG = {
     className:
       "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400",
   },
-  [UNIT_STATUSES.SHIPPED]: {
-    icon: Truck,
-    className:
-      "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-400",
-  },
-  [UNIT_STATUSES.RETURNED_BY_CUSTOMER]: {
+  [UNIT_STATUSES.RETURNED_TO_SUPPLIER]: {
     icon: Undo2,
     className: "bg-muted text-muted-foreground border-border",
-  },
-  [UNIT_STATUSES.DAMAGED]: {
-    icon: AlertTriangle,
-    className:
-      "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-300",
-  },
-  [UNIT_STATUSES.LOST]: {
-    icon: HelpCircle,
-    className: "bg-destructive/5 text-destructive border-destructive/20",
   },
   [UNIT_STATUSES.SCRAPPED]: {
     icon: Trash2,

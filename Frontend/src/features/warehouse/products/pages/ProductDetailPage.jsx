@@ -37,8 +37,6 @@ function ProductDetailForm({ productData }) {
     formMethods,
     imageUpload,
     barcodeValue,
-    categories,
-    handleAddCategory,
     buildProductPayload,
   } = useProductForm(productData);
 
@@ -46,7 +44,6 @@ function ProductDetailForm({ productData }) {
     register,
     handleSubmit,
     control,
-    setValue,
     formState: { errors, isSubmitting },
   } = formMethods;
 
@@ -84,10 +81,7 @@ function ProductDetailForm({ productData }) {
             <ProductBasicInfoForm
               register={register}
               control={control}
-              setValue={setValue}
               errors={errors}
-              categories={categories}
-              onAddCategory={handleAddCategory}
             />
             <ProductPricingForm register={register} />
           </div>

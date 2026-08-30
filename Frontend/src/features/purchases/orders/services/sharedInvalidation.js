@@ -6,10 +6,7 @@ import {
 import { outgoingQueueKeys } from "@/features/warehouse/shipping/services/queryKeys";
 import { purchaseReturnKeys } from "../../returns/services/queryKeys";
 import { productKeys } from "@/features/warehouse/products/services/queryKeys";
-import {
-  pendingLabelKeys,
-  productUnitKeys,
-} from "@/features/warehouse/units/services/queryKeys";
+import { productUnitKeys } from "@/features/warehouse/units/services/queryKeys";
 
 /**
  * چون خرید، دریافت انبار و مرجوعی سه ماژول به‌هم‌گره‌خورده‌اند (یک
@@ -60,5 +57,4 @@ export function invalidatePurchaseEcosystem(
   // دریافتِ کالا موجودی را بالا می‌برد، و «کالاهای بدون برچسب» دقیقاً
   // از تفاضلِ موجودی و واحدهای برچسب‌خورده ساخته می‌شود.
   queryClient.invalidateQueries({ queryKey: productUnitKeys.all });
-  queryClient.invalidateQueries({ queryKey: pendingLabelKeys.all });
 }

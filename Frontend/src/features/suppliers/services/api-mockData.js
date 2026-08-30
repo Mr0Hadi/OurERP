@@ -75,7 +75,7 @@ export async function createSupplier(supplierData) {
 
   const newSupplier = {
     id: newId,
-    Description: "",
+    description: "",
     balanceType: BalanceTypeEnum.BALANCED,
     balance: 0,
     image: null,

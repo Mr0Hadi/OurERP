@@ -12,7 +12,7 @@ export function useProductsQuery(filters, pagination, sorting) {
     limit: pagination.pageSize,
     search: filters.globalSearch || "",
     brand: filters.brand || "",
-    category: filters.category || "",
+    productCategoryId: filters.productCategoryId || "",
     minPrice: filters.minPrice,
     maxPrice: filters.maxPrice,
     stockStatus: filters.stockStatus,

@@ -1,5 +1,5 @@
 // src/features/warehouse/units/components/UnitBulkBar.jsx
-import { Printer, Wrench, X } from "lucide-react";
+import { Printer, X } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 
@@ -7,12 +7,7 @@ import { Button } from "@/shared/components/ui/button";
  * نوار کارهای دسته‌ای؛ فقط وقتی چیزی انتخاب شده باشد دیده می‌شود تا
  * در حالت عادی جای صفحه را نگیرد.
  */
-export default function UnitBulkBar({
-  count,
-  onPrint,
-  onChangeStatus,
-  onClear,
-}) {
+export default function UnitBulkBar({ count, onPrint, onClear }) {
   if (!count) return null;
 
   return (
@@ -22,16 +17,6 @@ export default function UnitBulkBar({
       </span>
 
       <div className="ms-auto flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          className="gap-2"
-          onClick={onChangeStatus}
-        >
-          <Wrench className="h-4 w-4" />
-          ثبت وضعیت
-        </Button>
         <Button type="button" size="lg" className="gap-2" onClick={onPrint}>
           <Printer className="h-4 w-4" />
           چاپ {count} برچسب

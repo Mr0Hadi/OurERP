@@ -5,10 +5,7 @@ import {
 } from "@/features/warehouse/shipping/services/queryKeys";
 import { incomingQueueKeys } from "@/features/warehouse/receiving/services/queryKeys";
 import { productKeys } from "@/features/warehouse/products/services/queryKeys";
-import {
-  pendingLabelKeys,
-  productUnitKeys,
-} from "@/features/warehouse/units/services/queryKeys";
+import { productUnitKeys } from "@/features/warehouse/units/services/queryKeys";
 import { salesReturnKeys } from "../../returns/services/queryKeys";
 
 /**
@@ -51,10 +48,7 @@ export function invalidateSalesEcosystem(queryClient, saleId, { freshReturnId } 
   });
   queryClient.invalidateQueries({ queryKey: salesReturnKeys.returnableSales() });
   queryClient.invalidateQueries({ queryKey: productKeys.all });
-  // دفترِ واحدهای برچسب‌خورده هم از همین مسیرها تکان می‌خورد: ثبت فروش
-  // واحدها را رزرو می‌کند، ارسال آن‌ها را «ارسال‌شده» می‌کند، و لغو
-  // فروش آزادشان می‌کند. تا امروز هیچ‌کدام کشِ واحدها را باطل نمی‌کرد،
-  // پس صفحه‌ی واحدها تا رفرشِ دستی وضعیت قدیمی نشان می‌داد.
+  // دفترِ دانه‌های کالا هم از همین مسیرها تکان می‌خورد: ثبت فروش دانه‌ها
+  // را مصرف (SOLD) می‌کند و لغو فروش آزادشان می‌کند.
   queryClient.invalidateQueries({ queryKey: productUnitKeys.all });
-  queryClient.invalidateQueries({ queryKey: pendingLabelKeys.all });
 }

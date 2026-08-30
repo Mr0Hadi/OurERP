@@ -69,6 +69,7 @@ const {
           <div className="lg:col-span-1 space-y-4">
 <SupplierIdentityForm
               register={register}
+              errors={errors}
               imageUpload={imageUpload}
             />
 
@@ -82,7 +83,12 @@ const {
 
           {/* ستون چپ - آدرس و دکمه‌ها */}
           <div className="lg:col-span-1 space-y-4">
-            <SupplierAddressForm register={register} watch={watch} setValue={setValue} />
+            <SupplierAddressForm
+              register={register}
+              errors={errors}
+              watch={watch}
+              setValue={setValue}
+            />
 
             {/* دکمه‌های عملیات */}
             <div className="flex gap-2">

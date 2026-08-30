@@ -1,6 +1,5 @@
 // src/features/warehouse/products/components/forms/ProductBarcodeDisplay.jsx
-import Barcode from "react-barcode";
-
+import BarcodeGraphic from "@/shared/components/print/BarcodeGraphic";
 import {
   Card,
   CardContent,
@@ -8,6 +7,12 @@ import {
   CardTitle,
 } from "@/shared/components/ui/card";
 
+/**
+ * پیش‌نمایشِ بارکدِ سطحِ کالا (`Product.BarCode`).
+ *
+ * این همان بارکدی است که سرور ساخته؛ کاربر چیزی وارد نمی‌کند، پس تا
+ * وقتی کالا ثبت نشده اینجا خالی است.
+ */
 export default function ProductBarcodeDisplay({ value }) {
   return (
     <Card className="md:w-full">
@@ -19,17 +24,11 @@ export default function ProductBarcodeDisplay({ value }) {
       <CardContent className="flex flex-col items-center justify-center gap-4">
         <div className="md:w-full mx-auto border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center overflow-hidden p-4">
           {value ? (
-            <Barcode
-              value={value}
-              width={1.5}
-              height={60}
-              fontSize={14}
-              margin={5}
-            />
+            <BarcodeGraphic value={value} preset="display" />
           ) : (
             <div className="flex flex-col items-center text-muted-foreground">
               <span className="text-xs md:text-sm text-center">
-                بارکد را در فیلد بالا وارد کنید
+                بارکد بعد از ثبت کالا توسط سرور ساخته می‌شود
               </span>
             </div>
           )}

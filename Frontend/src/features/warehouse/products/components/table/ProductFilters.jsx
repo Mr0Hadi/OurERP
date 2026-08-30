@@ -17,6 +17,7 @@ import BarcodeScanField from "@/shared/components/barcode/BarcodeScanField";
 import { useProductFilterStore } from "../../store/productFilterStore";
 import { fetchProductByBarcode } from "../../services/queries";
 import { ROUTES } from "@/shared/constants/routes";
+import { useProductCategoriesQuery } from "@/features/warehouse/categories/services/queries";
 
 // ─── ثابت‌ها (خارج از کامپوننت تا در هر رندر بازسازی نشوند) ─────────────────
 
@@ -38,17 +39,6 @@ const BRANDS = [
   "میتسوبیشی",
   "برمبو",
   "هالا",
-];
-
-const CATEGORIES = [
-  "موتور",
-  "سیستم ترمز",
-  "سیستم تعلیق",
-  "بدنه",
-  "گیربکس",
-  "سیستم خنک کننده",
-  "برق و روشنایی",
-  "برق و الکترونیک",
 ];
 
 const STOCK_OPTIONS = [
@@ -145,17 +135,22 @@ const PriceInput = ({ label, value, onChange, placeholder }) => (
  */
 const ProductFilters = () => {
   const navigate = useNavigate();
+  const categoriesQuery = useProductCategoriesQuery();
+  const categoryOptions = (categoriesQuery.data ?? []).map((category) => ({
+    value: category.id,
+    label: category.name,
+  }));
   const [isScanning, setIsScanning] = useState(false);
   const {
     globalSearch,
     brand,
-    category,
+    productCategoryId,
     minPrice,
     maxPrice,
     stockStatus,
     setGlobalSearch,
     setBrand,
-    setCategory,
+    setProductCategoryId,
     setPriceRange,
     setStockStatus,
     resetFilters,
@@ -223,10 +218,11 @@ const ProductFilters = () => {
 
         <FilterSelect
           label="دسته‌بندی"
-          value={category}
-          onChange={setCategory}
+          value={productCategoryId}
+          onChange={setProductCategoryId}
           allLabel="همه دسته‌ها"
-          options={CATEGORIES}
+          options={categoryOptions}
+          numeric
         />
 
         <FilterSelect

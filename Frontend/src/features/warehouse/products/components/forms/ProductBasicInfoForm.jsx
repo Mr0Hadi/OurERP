@@ -17,48 +17,41 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 
-import {
-  useGenerateProductCodeMutation,
-  useGenerateProductBarcodeMutation,
-} from "../../services/mutations";
-import BarcodeScanner from "./BarcodeScanner";
 import CategoryManager from "./CategoryManager";
-import GenerateFieldButton from "./GenerateFieldButton";
+import { formatPayload } from "@/shared/services/barcode/productCode";
 import { PRODUCT_UNIT_LABELS } from "@/shared/domain/enums/productUnit";
 
-export default function ProductBasicInfoForm({
-  register,
-  control,
-  setValue,
-  errors,
-  categories,
-  onAddCategory,
-}) {
-  // کد کالا و بارکد هر دو از دسته‌بندی انتخاب‌شده ساخته می‌شوند، ولی
-  // هرکدام درخواست جداگانه‌ی خودش را می‌زند.
-  const category = useWatch({ control, name: "category" });
-  const generateCode = useGenerateProductCodeMutation();
-  const generateBarcode = useGenerateProductBarcodeMutation();
+/**
+ * کد کالا و بارکد **ورودیِ کاربر نیستند**.
+ *
+ * بکند هر دو را خودش موقعِ ساختِ کالا تولید می‌کند و بعد از آن ثابت
+ * نگه می‌دارد؛ `CreateProductCommand`/`UpdateProductCommand` اصلاً این
+ * دو فیلد را ندارند، پس هرچه فرم بفرستد بی‌صدا دور ریخته می‌شود. به
+ * همین دلیل اینجا فقط *نمایش* داده می‌شوند: در فرمِ کالای جدید هنوز
+ * وجود ندارند و بعد از ذخیره پیدا می‌شوند.
+ */
+function ReadOnlyCodeField({ id, label, value, emptyHint }) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        value={value || ""}
+        readOnly
+        disabled={!value}
+        placeholder={emptyHint}
+        className="font-mono text-start"
+      />
+      <span className="text-[11px] text-muted-foreground">
+        این مقدار را سرور هنگام ثبت کالا می‌سازد و قابل ویرایش نیست.
+      </span>
+    </div>
+  );
+}
 
-  const handleGenerateCode = () => {
-    generateCode.mutate(
-      { category },
-      {
-        onSuccess: ({ code }) =>
-          setValue("code", code, { shouldDirty: true }),
-      }
-    );
-  };
-
-  const handleGenerateBarcode = () => {
-    generateBarcode.mutate(
-      { category },
-      {
-        onSuccess: ({ barcode }) =>
-          setValue("barcode", barcode, { shouldDirty: true }),
-      }
-    );
-  };
+export default function ProductBasicInfoForm({ register, control, errors }) {
+  const code = useWatch({ control, name: "code" });
+  const barcode = useWatch({ control, name: "barcode" });
 
   return (
     <Card>
@@ -80,70 +73,62 @@ export default function ProductBasicInfoForm({
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="code">کد کالا</Label>
-          <div className="flex gap-2">
-            <Input
-              id="code"
-              className="flex-1"
-              placeholder="مثال: PRD-102"
-              {...register("code")}
-            />
-            <GenerateFieldButton
-              onClick={handleGenerateCode}
-              isPending={generateCode.isPending}
-              title="تولید خودکار کد کالا"
-            />
-          </div>
-        </div>
+        <ReadOnlyCodeField
+          id="code"
+          label="کد کالا"
+          value={code}
+          emptyHint="پس از ثبت کالا ساخته می‌شود"
+        />
+
+        <ReadOnlyCodeField
+          id="barcode"
+          label="بارکد"
+          value={formatPayload(barcode)}
+          emptyHint="پس از ثبت کالا ساخته می‌شود"
+        />
 
         <div className="space-y-2">
-          <Label htmlFor="barcode">بارکد</Label>
+          <Label htmlFor="productCategoryId">
+            دسته‌بندی <span className="text-destructive">*</span>
+          </Label>
           <Controller
-            name="barcode"
+            name="productCategoryId"
             control={control}
+            rules={{ required: "انتخاب دسته‌بندی الزامی است" }}
             render={({ field }) => (
-              <BarcodeScanner
-                value={field.value}
-                onChange={field.onChange}
-                action={
-                  <GenerateFieldButton
-                    onClick={handleGenerateBarcode}
-                    isPending={generateBarcode.isPending}
-                    title="تولید خودکار بارکد"
-                  />
-                }
-              />
+              <CategoryManager value={field.value} onChange={field.onChange} />
             )}
           />
+          {errors.productCategoryId && (
+            <span className="text-xs text-red-500">
+              {errors.productCategoryId.message}
+            </span>
+          )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="category">دسته‌بندی</Label>
-          <Controller
-            name="category"
-            control={control}
-            render={({ field }) => (
-              <CategoryManager
-                value={field.value}
-                onChange={field.onChange}
-                categories={categories}
-                onAddCategory={onAddCategory}
-              />
-            )}
+          <Label htmlFor="brand">
+            برند <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="brand"
+            placeholder="مثال: ایساکو"
+            {...register("brand", { required: "وارد کردن برند الزامی است" })}
+            className={errors.brand ? "border-red-500" : ""}
           />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="brand">برند</Label>
-          <Input id="brand" placeholder="مثال: ایساکو" {...register("brand")} />
+          {errors.brand && (
+            <span className="text-xs text-red-500">{errors.brand.message}</span>
+          )}
         </div>
 
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="unit">واحد شمارش</Label>
+          <Label htmlFor="unit">
+            واحد شمارش <span className="text-destructive">*</span>
+          </Label>
           <Controller
             name="unit"
             control={control}
+            rules={{ required: "انتخاب واحد شمارش الزامی است" }}
             render={({ field }) => (
               <Select
                 value={field.value === "" || field.value == null ? "" : String(field.value)}
@@ -162,6 +147,9 @@ export default function ProductBasicInfoForm({
               </Select>
             )}
           />
+          {errors.unit && (
+            <span className="text-xs text-red-500">{errors.unit.message}</span>
+          )}
         </div>
       </CardContent>
     </Card>

@@ -1,5 +1,4 @@
 import { allSales, SALE_STATUSES, SALE_STATUS_LABELS } from "./mockData";
-import { markUnitsShipped } from "@/features/warehouse/units/services/api-mockData";
 import { applyListQuery } from "@/shared/services/mockQuery";
 import { runOnce } from "@/shared/services/mockIdempotency";
 
@@ -232,8 +231,8 @@ export async function fetchShippingSaleById(id) {
  * جلو می‌برند و وضعیت فروش را تعیین می‌کنند، خطوط مرجوعی به موتور اثر
  * می‌روند.
  *
- * markUnitsShipped عمداً فقط روی خطوط فروش اجرا می‌شود: کالای جایگزین
- * در برابر تعداد خودِ فروش نیست و نباید واحدهای آن را مصرف کند.
+ * دانه‌های کالا اینجا دست نمی‌خورند: بکند وضعیتِ جدایی برای «ارسال‌شده»
+ * ندارد و دانه‌ها همان موقعِ ثبتِ فروش مصرف (SOLD) شده‌اند.
  *
  * «ارسال‌شده» یعنی همه‌چیز از انبار خارج شده؛ تبدیلش به «تحویل کامل»
  * تأییدی جداگانه است و اینجا خودکار انجام نمی‌شود.
@@ -304,14 +303,6 @@ async function confirmShipmentOnce(saleId, shipmentData) {
     ],
     updatedAt: new Date().toISOString(),
   };
-
-  markUnitsShipped(
-    saleId,
-    orderRows.map((item) => ({
-      productId: item.productId,
-      qty: item.shippedQty || 0,
-    })),
-  );
 
   await applyReturnRows(
     returnRows,
