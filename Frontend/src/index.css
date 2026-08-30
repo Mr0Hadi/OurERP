@@ -1,6 +1,10 @@
   @import "tailwindcss";
   @import "tw-animate-css";
   @import "shadcn/tailwind.css";
+  /* `scrollbar-hide` — نوارِ کنترلِ داشبورد روی موبایل افقی اسکرول
+     می‌شود و اسکرول‌بارِ دسکتاپ زیرِ تب‌ها زشت است. بسته از قبل در
+     package.json بود ولی هیچ‌وقت register نشده بود. */
+  @import "tailwind-scrollbar-hide/v4";
 
   @import "@fontsource-variable/vazirmatn";
 
