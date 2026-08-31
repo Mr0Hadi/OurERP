@@ -188,7 +188,7 @@ export default function OrderPaymentSection({
             ) : (
               formData.paidAmount !== "" && formData.paidAmount != null && Number(formData.paidAmount) !== 0 && (
                 <p className="text-xs text-muted-foreground">
-                  {numberToPersianWords(formData.paidAmount, { rialToToman: true })}
+                  {numberToPersianWords(Number(formData.paidAmount) / 10, { suffix: "تومان" })}
                 </p>
               )
             )}

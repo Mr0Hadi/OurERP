@@ -15,7 +15,7 @@ function PriceWords({ value }) {
   if (value === "" || value == null || Number(value) === 0) return null;
   return (
     <p className="text-xs text-muted-foreground">
-      {numberToPersianWords(value, { rialToToman: true })}
+      {numberToPersianWords(Number(value) / 10, { suffix: "تومان" })}
     </p>
   );
 }

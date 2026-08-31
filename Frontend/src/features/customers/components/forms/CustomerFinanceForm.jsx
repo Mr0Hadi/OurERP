@@ -14,11 +14,11 @@ export default function CustomerFinanceForm({ errors, balanceType, control }) {
   const creditLimit = useWatch({ control, name: "creditLimit" });
   const balanceAmountWords =
     balanceAmount !== "" && balanceAmount != null
-      ? numberToPersianWords(balanceAmount, { rialToToman: true })
+      ? numberToPersianWords(Number(balanceAmount) / 10, { suffix: "تومان" })
       : "";
   const creditLimitWords =
     creditLimit !== "" && creditLimit != null
-      ? numberToPersianWords(creditLimit, { rialToToman: true })
+      ? numberToPersianWords(Number(creditLimit) / 10, { suffix: "تومان" })
       : "";
 
   return (

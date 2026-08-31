@@ -13,7 +13,7 @@ export default function SupplierFinanceForm({ errors, balanceType, control }) {
   const balanceAmount = useWatch({ control, name: "balanceAmount" });
   const balanceAmountWords =
     balanceAmount !== "" && balanceAmount != null
-      ? numberToPersianWords(balanceAmount, { rialToToman: true })
+      ? numberToPersianWords(Number(balanceAmount) / 10, { suffix: "تومان" })
       : "";
 
   return (
