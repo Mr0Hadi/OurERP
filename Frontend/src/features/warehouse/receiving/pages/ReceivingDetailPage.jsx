@@ -29,10 +29,6 @@ import ReceivingMismatchList from "../components/forms/ReceivingMismatchList";
 import UnknownItemsSection from "../components/forms/UnknownItemsSection";
 import ReceivingTransporterSection from "../components/forms/ReceivingTransporterSection";
 import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
-import ImageUploadList from "@/shared/components/files/ImageUploadList";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
-import { ImageFolderEnum } from "@/shared/domain/enums/imageFolder";
-import { useImageUploadList } from "@/shared/hooks/useImageUploadList";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 
@@ -69,22 +65,11 @@ function ReceivingDetailForm({ purchase }) {
     handleRemoveUnknownItem,
     incompleteUnknownCount,
     isAllComplete,
-    isTransporterValid,
     buildPayload,
     resetForm,
   } = useReceivingForm(purchase);
 
-  /**
-   * تصاویرِ این نوبتِ رسید (پالت هنگام رسیدن، کارتن آسیب‌دیده، بارنامه).
-   * طبق بخش ۱۷ سند مالِ *کل نوبت* هستند نه یک قلم، و حتی اگر هیچ مغایرتی
-   * نباشد هم ذخیره می‌شوند — پس ربطی به بخشِ مرجوعی ندارند.
-   */
-  const receivingImages = useImageUploadList({
-    folder: ImageFolderEnum.RECEIVING,
-  });
-
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [showTransporterError, setShowTransporterError] = useState(false);
   const [showUnknownError, setShowUnknownError] = useState(false);
 
   useEffect(() => {
@@ -119,7 +104,7 @@ function ReceivingDetailForm({ purchase }) {
     (item) => item.source === RECEIVING_SOURCES.RETURN,
   );
 
-  const isBusy = receivingMutation.isPending || receivingImages.isUploading;
+  const isBusy = receivingMutation.isPending;
 
   // انباردار فقط دریافت و (در صورت وجود) نوع مشکل واقعی را ثبت
   // می‌کند. دیگر لازم نیست کل کسری را توضیح دهد — هر بخشی که گزارش
@@ -132,18 +117,11 @@ function ReceivingDetailForm({ purchase }) {
       return;
     }
     setShowUnknownError(false);
-    if (!isTransporterValid) {
-      setShowTransporterError(true);
-      return;
-    }
-    setShowTransporterError(false);
     setShowConfirmDialog(true);
   };
 
   const handleSubmit = () => {
-    // تصاویر جدا از فرم ساخته می‌شوند چون جدا هم آپلود شده‌اند؛ اینجا فقط
-    // کلیدهایشان به بدنه‌ی `ReceivePurchase` اضافه می‌شود.
-    const payload = { ...buildPayload(), images: receivingImages.imagesPayload };
+    const payload = buildPayload();
     const hasShortage = displayItems.some(
       (item) => (item.receivedQty || 0) < item.expectedQty,
     );
@@ -156,8 +134,6 @@ function ReceivingDetailForm({ purchase }) {
       {
         onSuccess: () => {
           setShowConfirmDialog(false);
-          // رسید ثبت شد؛ تصویری که در این نشست آپلود و بعد حذف شده یتیم است.
-          receivingImages.commit();
           resetForm();
           if (surplusQty > 0) {
             toast.success(
@@ -230,15 +206,7 @@ function ReceivingDetailForm({ purchase }) {
           />
           <ReceivingTransporterSection
             formData={formData}
-            onFormChange={(patch) => {
-              setFormData(patch);
-              if (showTransporterError) setShowTransporterError(false);
-            }}
-            error={
-              showTransporterError
-                ? "برای ثبت دریافت، نام تحویل‌دهنده و حداقل یکی از کد ملی یا شماره پلاک الزامی است"
-                : null
-            }
+            onFormChange={setFormData}
           />
         </div>
 
@@ -247,21 +215,6 @@ function ReceivingDetailForm({ purchase }) {
             formData={formData}
             onFormChange={setFormData}
           />
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">تصاویر رسید</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ImageUploadList
-                list={receivingImages}
-                title="تصاویر این نوبت"
-                emptyLabel="عکس پالت، کارتن آسیب‌دیده یا بارنامه را اینجا اضافه کنید."
-                notePlaceholder="مثلاً: کارتن آسیب‌دیده"
-                disabled={receivingMutation.isPending}
-              />
-            </CardContent>
-          </Card>
 
           <div className="flex gap-2">
             <Button

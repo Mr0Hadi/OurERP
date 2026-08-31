@@ -189,10 +189,6 @@ export function useReceivingForm(purchaseData) {
     return acc;
   }, {});
 
-  const isTransporterValid =
-    !!formData.transporterName?.trim() &&
-    (!!formData.transporterNationalId?.trim() || !!formData.vehiclePlate?.trim());
-
   const buildPayload = () => ({
     id: formData.purchaseId,
     receivedItems: formData.items.map((item) => ({
@@ -222,7 +218,7 @@ export function useReceivingForm(purchaseData) {
     receivingNote: formData.receivingNote,
     receivedDate: formData.receivedDate,
     transporterName: formData.transporterName,
-    transporterNationalId: formData.transporterNationalId,
+    transporterPhone: formData.transporterPhone,
     vehiclePlate: formData.vehiclePlate,
   });
 
@@ -241,7 +237,6 @@ export function useReceivingForm(purchaseData) {
     incompleteUnknownCount,
     isAllComplete,
     linesBySource,
-    isTransporterValid,
     buildPayload,
     resetForm,
     initializedForId,

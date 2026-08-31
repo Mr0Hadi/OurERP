@@ -73,7 +73,6 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
     setFormData,
     handleItemChange,
     isAllComplete,
-    isDriverValid,
     buildPayload,
     resetForm,
   } = useShippingForm(null);
@@ -108,7 +107,6 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
   );
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [showDriverError, setShowDriverError] = useState(false);
 
   useEffect(() => () => resetForm(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -119,11 +117,6 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
 
   const handleConfirmClick = () => {
     if (!hasSomethingToSend) return;
-    if (!isDriverValid) {
-      setShowDriverError(true);
-      return;
-    }
-    setShowDriverError(false);
     setShowConfirmDialog(true);
   };
 
@@ -176,15 +169,7 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
 
           <ShippingTransporterSection
             formData={formData}
-            onFormChange={(patch) => {
-              setFormData(patch);
-              if (showDriverError) setShowDriverError(false);
-            }}
-            error={
-              showDriverError
-                ? "برای ثبت عودت، نام راننده و حداقل یکی از کد ملی یا شماره پلاک الزامی است"
-                : null
-            }
+            onFormChange={setFormData}
           />
         </div>
 

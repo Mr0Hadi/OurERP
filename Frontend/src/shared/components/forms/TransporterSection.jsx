@@ -1,4 +1,4 @@
-import { User, IdCard } from "lucide-react";
+import { User, Phone } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -7,8 +7,29 @@ import {
 } from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import { onlyDigits } from "@/shared/utils/inputUtils";
-import LicensePlateInput from "./LicensePlateInput";
+import { MobileNumberInput } from "@/shared/components/ui/mobile-number-input";
+import {
+  DEFAULT_PLATE_VALUE,
+  PlateInput,
+} from "@/shared/components/ui/plate-input";
+
+const PLATE_STRING_SEPARATOR = "|";
+
+/** پلاک به‌صورت رشته ذخیره می‌شود (برای فرم و ارسال به سرور)، اما
+ * PlateInput مقدارش را به‌صورت آبجکت می‌خواهد. این دو تابع بین آن دو
+ * تبدیل می‌کنند؛ برخلاف فرمت قبلی (چهار خانه‌ی همیشه کامل)، اینجا
+ * مقادیر نصفه‌کاره هم حفظ می‌شوند تا تایپ کاربر گم نشود. */
+function plateValueToString({ twoDigit, letter, threeDigit, serial }) {
+  if (!twoDigit && !threeDigit && !serial) return "";
+  return [twoDigit, letter, threeDigit, serial].join(PLATE_STRING_SEPARATOR);
+}
+
+function plateStringToValue(value) {
+  if (!value) return DEFAULT_PLATE_VALUE;
+  const [twoDigit = "", letter = "", threeDigit = "", serial = ""] =
+    value.split(PLATE_STRING_SEPARATOR);
+  return { twoDigit, letter, threeDigit, serial };
+}
 
 /**
  * کارت اطلاعات فرد تحویل‌دهنده/تحویل‌گیرنده به‌همراه پلاک خودرو.
@@ -24,14 +45,13 @@ export default function TransporterSection({
   namePlaceholder,
   name,
   onNameChange,
-  nationalIdLabel = "کد ملی",
-  nationalId,
-  onNationalIdChange,
+  phoneLabel = "شماره تلفن",
+  phone,
+  onPhoneChange,
   plateLabel = "شماره پلاک وسیله نقلیه (اختیاری)",
   plate,
   onPlateChange,
   plateHint,
-  resetKey,
   error,
 }) {
   return (
@@ -65,17 +85,13 @@ export default function TransporterSection({
 
           <div className="space-y-1.5">
             <Label className="text-sm font-medium flex items-center gap-1.5">
-              <IdCard className="h-3.5 w-3.5 text-muted-foreground" />
-              {nationalIdLabel}
+              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+              {phoneLabel}
             </Label>
-            <Input
-              placeholder="۱۰ رقم"
-              inputMode="numeric"
-              value={nationalId || ""}
-              onChange={(e) =>
-                onNationalIdChange(onlyDigits(e.target.value, 10))
-              }
-              className="h-9 text-sm tabular-nums tracking-widest"
+            <MobileNumberInput
+              value={phone || ""}
+              onValueChange={onPhoneChange}
+              className="h-9 text-sm"
             />
           </div>
         </div>
@@ -83,10 +99,9 @@ export default function TransporterSection({
         {/* پلاک */}
         <div className="space-y-1.5">
           <Label className="text-sm font-medium">{plateLabel}</Label>
-          <LicensePlateInput
-            value={plate}
-            onChange={onPlateChange}
-            resetKey={resetKey}
+          <PlateInput
+            value={plateStringToValue(plate)}
+            onValueChange={(next) => onPlateChange(plateValueToString(next))}
           />
           {plateHint && (
             <p className="text-xs text-muted-foreground">{plateHint}</p>

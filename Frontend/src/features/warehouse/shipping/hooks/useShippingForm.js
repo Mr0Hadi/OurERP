@@ -39,10 +39,6 @@ export function useShippingForm(saleData) {
     (item) => (item.shippedQty || 0) >= item.expectedQty,
   );
 
-  const isDriverValid =
-    !!formData.driverName?.trim() &&
-    (!!formData.driverNationalId?.trim() || !!formData.vehiclePlate?.trim());
-
   const buildPayload = () => ({
     id: formData.saleId,
     shippedItems: formData.items.map((item) => ({
@@ -59,7 +55,7 @@ export function useShippingForm(saleData) {
     shippingNote: formData.shippingNote,
     shippedDate: formData.shippedDate,
     driverName: formData.driverName,
-    driverNationalId: formData.driverNationalId,
+    driverPhone: formData.driverPhone,
     vehiclePlate: formData.vehiclePlate,
   });
 
@@ -68,7 +64,6 @@ export function useShippingForm(saleData) {
     setFormData,
     handleItemChange,
     isAllComplete,
-    isDriverValid,
     buildPayload,
     resetForm,
     initializedForId,

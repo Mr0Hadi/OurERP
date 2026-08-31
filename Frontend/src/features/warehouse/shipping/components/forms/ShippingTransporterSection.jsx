@@ -12,12 +12,11 @@ export default function ShippingTransporterSection({
       namePlaceholder="مثلاً: علی رضایی"
       name={formData.driverName}
       onNameChange={(v) => onFormChange({ driverName: v })}
-      nationalId={formData.driverNationalId}
-      onNationalIdChange={(v) => onFormChange({ driverNationalId: v })}
+      phone={formData.driverPhone}
+      onPhoneChange={(v) => onFormChange({ driverPhone: v })}
       plate={formData.vehiclePlate}
       onPlateChange={(v) => onFormChange({ vehiclePlate: v })}
       plateHint="اگر کالا با پیک یا حضوری تحویل داده می‌شود و پلاکی در کار نیست، این بخش را خالی بگذارید."
-      resetKey={formData.saleId}
       error={error}
     />
   );

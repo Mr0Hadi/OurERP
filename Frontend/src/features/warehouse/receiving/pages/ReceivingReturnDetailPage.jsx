@@ -84,7 +84,6 @@ function ReceivingReturnDetailForm({ salesReturn }) {
     handleRemoveUnknownItem,
     incompleteUnknownCount,
     isAllComplete,
-    isTransporterValid,
     buildPayload,
     resetForm,
   } = useReceivingForm(null);
@@ -119,7 +118,6 @@ function ReceivingReturnDetailForm({ salesReturn }) {
   );
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [showTransporterError, setShowTransporterError] = useState(false);
   const [showUnknownError, setShowUnknownError] = useState(false);
 
   useEffect(() => () => resetForm(), []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -136,11 +134,6 @@ function ReceivingReturnDetailForm({ salesReturn }) {
       setShowUnknownError(true);
       return;
     }
-    if (!isTransporterValid) {
-      setShowTransporterError(true);
-      return;
-    }
-    setShowTransporterError(false);
     setShowConfirmDialog(true);
   };
 
@@ -218,15 +211,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
 
           <ReturnTransporterSection
             formData={formData}
-            onFormChange={(patch) => {
-              setFormData(patch);
-              if (showTransporterError) setShowTransporterError(false);
-            }}
-            error={
-              showTransporterError
-                ? "برای ثبت دریافت، نام تحویل‌دهنده و حداقل یکی از کد ملی یا شماره پلاک الزامی است"
-                : null
-            }
+            onFormChange={setFormData}
           />
         </div>
 

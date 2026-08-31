@@ -494,7 +494,7 @@ async function confirmReceivingOnce(purchaseId, receivingData) {
     receivingNote: receivingData.receivingNote,
     receivedDate,
     transporterName: receivingData.transporterName || "",
-    transporterNationalId: receivingData.transporterNationalId || "",
+    transporterPhone: receivingData.transporterPhone || "",
     vehiclePlate: receivingData.vehiclePlate || "",
     updatedAt: new Date().toISOString(),
   };
@@ -518,7 +518,7 @@ async function confirmReceivingOnce(purchaseId, receivingData) {
     {
       date: receivedDate,
       partyName: receivingData.transporterName,
-      partyNationalId: receivingData.transporterNationalId,
+      partyNationalId: receivingData.transporterPhone,
       vehiclePlate: receivingData.vehiclePlate,
       note: receivingData.receivingNote,
     },
@@ -551,7 +551,7 @@ async function confirmReturnIntakeOnce(returnId, intakeData) {
     {
       date: intakeData.receivedDate,
       partyName: intakeData.transporterName,
-      partyNationalId: intakeData.transporterNationalId,
+      partyNationalId: intakeData.transporterPhone,
       vehiclePlate: intakeData.vehiclePlate,
       note: intakeData.receivingNote,
     },

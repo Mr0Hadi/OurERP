@@ -266,19 +266,18 @@ export function PlateInput({
               "aria-invalid:bg-destructive/10 aria-invalid:text-destructive"
             )}>
             <SelectValue className="text-base">
-              {(letter) => {
-                if (letter === DISABLED_PLATE_LETTER) {
-                  return <AccessibilityIcon className="size-4! text-info" />;
-                }
-                return (PLATE_LETTERS.find((item) => item.value === letter)?.label ?? letter);
-              }}
+              {value.letter === DISABLED_PLATE_LETTER ? (
+                <AccessibilityIcon className="size-4! text-info" />
+              ) : (
+                PLATE_LETTERS.find((item) => item.value === value.letter)?.label ?? value.letter
+              )}
             </SelectValue>
           </SelectTrigger>
           {/* Fixed narrow width; min-w-0 beats the content part's built-in
-              min-w-40, which would otherwise force a wide popup. finalFocus
-              keeps Base UI from restoring focus to the trigger on close —
-              the three-digit segment is the next stop instead. */}
-          <SelectContent className="w-[66px] min-w-0" finalFocus={threeDigitRef}>
+              min-w-40, which would otherwise force a wide popup. The
+              three-digit segment is focused explicitly in onValueChange
+              above, once the letter is picked. */}
+          <SelectContent className="w-[66px] min-w-0">
             {PLATE_LETTERS.map((item) => (
               <SelectItem
                 key={item.value}

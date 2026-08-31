@@ -165,7 +165,7 @@ function logisticsOf(shipmentData, date) {
   return {
     date,
     partyName: shipmentData.driverName,
-    partyNationalId: shipmentData.driverNationalId,
+    partyNationalId: shipmentData.driverPhone,
     vehiclePlate: shipmentData.vehiclePlate,
     note: shipmentData.shippingNote,
   };
@@ -287,7 +287,7 @@ async function confirmShipmentOnce(saleId, shipmentData) {
     shippingNote: shipmentData.shippingNote || "",
     shippedDate,
     driverName: shipmentData.driverName || "",
-    driverNationalId: shipmentData.driverNationalId || "",
+    driverPhone: shipmentData.driverPhone || "",
     vehiclePlate: shipmentData.vehiclePlate || "",
     shipmentHistory: [
       ...(sale.shipmentHistory || []),
@@ -295,7 +295,7 @@ async function confirmShipmentOnce(saleId, shipmentData) {
         id: generateId(),
         date: shippedDate,
         driverName: shipmentData.driverName || "",
-        driverNationalId: shipmentData.driverNationalId || "",
+        driverPhone: shipmentData.driverPhone || "",
         vehiclePlate: shipmentData.vehiclePlate || "",
         note: shipmentData.shippingNote || "",
         items: rows.filter((i) => (i.shippedQty || 0) > 0),

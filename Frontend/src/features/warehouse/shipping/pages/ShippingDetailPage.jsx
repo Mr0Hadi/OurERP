@@ -50,13 +50,11 @@ function ShippingDetailForm({ sale }) {
     setFormData,
     handleItemChange,
     isAllComplete,
-    isDriverValid,
     buildPayload,
     resetForm,
   } = useShippingForm(sale);
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [showDriverError, setShowDriverError] = useState(false);
 
   useEffect(() => {
     return () => resetForm();
@@ -88,11 +86,6 @@ function ShippingDetailForm({ sale }) {
   const isBusy = shipMutation.isPending;
 
   const handleConfirmClick = () => {
-    if (!isDriverValid) {
-      setShowDriverError(true);
-      return;
-    }
-    setShowDriverError(false);
     setShowConfirmDialog(true);
   };
 
@@ -135,15 +128,7 @@ function ShippingDetailForm({ sale }) {
           )}
           <ShippingTransporterSection
             formData={formData}
-            onFormChange={(patch) => {
-              setFormData(patch);
-              if (showDriverError) setShowDriverError(false);
-            }}
-            error={
-              showDriverError
-                ? "برای ثبت ارسال، نام راننده و حداقل یکی از کد ملی یا شماره پلاک الزامی است"
-                : null
-            }
+            onFormChange={setFormData}
           />
         </div>
 

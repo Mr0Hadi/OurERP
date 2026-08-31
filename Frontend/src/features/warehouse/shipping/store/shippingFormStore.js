@@ -14,7 +14,7 @@ const EMPTY_SHIPPING = {
   shippingNote: '',
   shippedDate: new Date().toISOString().slice(0, 10),
   driverName: '',
-  driverNationalId: '',
+  driverPhone: '',
   vehiclePlate: '',
 };
 
@@ -87,7 +87,7 @@ export const useShippingFormStore = create((set, get) => ({
         shippingNote: '',
         shippedDate: new Date().toISOString().slice(0, 10),
         driverName: '',
-        driverNationalId: '',
+        driverPhone: '',
         vehiclePlate: '',
       },
     });

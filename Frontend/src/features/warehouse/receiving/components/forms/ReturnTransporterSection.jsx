@@ -29,12 +29,11 @@ export default function ReturnTransporterSection({
       namePlaceholder="مثلاً: علی رضایی (پیک) یا خودِ مشتری"
       name={formData.transporterName}
       onNameChange={(v) => onFormChange({ transporterName: v })}
-      nationalId={formData.transporterNationalId}
-      onNationalIdChange={(v) => onFormChange({ transporterNationalId: v })}
+      phone={formData.transporterPhone}
+      onPhoneChange={(v) => onFormChange({ transporterPhone: v })}
       plate={formData.vehiclePlate}
       onPlateChange={(v) => onFormChange({ vehiclePlate: v })}
       plateHint="اگر کالا حضوری یا بدون خودرو تحویل داده شده، این بخش را خالی بگذارید."
-      resetKey={formData.returnId}
       error={error}
     />
   );

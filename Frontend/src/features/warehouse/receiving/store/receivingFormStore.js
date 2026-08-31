@@ -19,7 +19,7 @@ const EMPTY_RECEIVING = {
   receivingNote: '',
   receivedDate: new Date().toISOString().slice(0, 10),
   transporterName: '',
-  transporterNationalId: '',
+  transporterPhone: '',
   vehiclePlate: '',
 };
 
@@ -118,7 +118,7 @@ export const useReceivingFormStore = create((set, get) => ({
         receivingNote: '',
         receivedDate: new Date().toISOString().slice(0, 10),
         transporterName: '',
-        transporterNationalId: '',
+        transporterPhone: '',
         vehiclePlate: '',
       },
     });
