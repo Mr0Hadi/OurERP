@@ -14,6 +14,7 @@
     "check:queues": "node scripts/check-warehouse-queues.js"
   },
   "dependencies": {
+    "@base-ui/react": "^1.7.0",
     "@fontsource-variable/vazirmatn": "^5.2.8",
     "@tailwindcss/vite": "^4.3.0",
     "@tanstack/react-query": "^5.100.10",
