@@ -33,7 +33,10 @@ import {
   canCancelPurchase,
   getPurchaseLockReason,
 } from "@/features/purchases/orders/domain/purchaseRules";
-import { PURCHASE_STATUSES } from "@/features/purchases/orders/services/constants";
+import {
+  PURCHASE_STATUSES,
+  isPurchaseProforma,
+} from "@/features/purchases/orders/services/constants";
 import { hasAnythingArrived } from "@/features/purchases/returns/domain/purchaseReturnVocabulary";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 
@@ -75,6 +78,9 @@ export default function PurchaseDetailForm({ purchaseData }) {
   const updateMutation = useUpdatePurchaseMutation(purchaseData.id);
   const deleteMutation = useRemovePurchaseMutation();
   const statusMutation = useUpdatePurchaseStatusMutation();
+  // وضعیتِ *ذخیره‌شده* — نه انتخابِ در حال ویرایش؛ عنوان کارت سند باید
+  // به خودِ خریدِ روی سرور واکنش نشان بدهد.
+  const isProforma = isPurchaseProforma(purchaseData.status);
 
   const items = formData.items || [];
 
@@ -117,9 +123,11 @@ export default function PurchaseDetailForm({ purchaseData }) {
       checkNumber: formData.checkNumber || null,
       transferRef: formData.transferRef || null,
       mixedPayments: formData.mixedPayments || [],
+      // خریدی که هنوز وضعیت ندارد در مرحله‌ی پیش‌فاکتور است؛ ذخیره‌ی
+      // ساده‌ی فرم نباید آن را جلو ببرد.
       status:
         formData.status === "" || formData.status == null
-          ? PURCHASE_STATUSES.PENDING
+          ? PURCHASE_STATUSES.PROFORMA
           : formData.status,
       totalAmount: computedTotal,
     };
@@ -198,16 +206,23 @@ export default function PurchaseDetailForm({ purchaseData }) {
               errors={{}}
             />
 
+            {/* در مرحله‌ی پیش‌فاکتور، فاکتور رسمی هنوز نرسیده؛ چیزی
+                که ضمیمه می‌شود پیش‌فاکتورِ تامین‌کننده است. با تغییر
+                وضعیت، شماره‌ی فاکتور و خودِ فاکتور وارد/ضمیمه می‌شوند. */}
             <InvoiceDocumentSection
-              title="فاکتور خرید"
+              title={isProforma ? "پیش‌فاکتور خرید" : "فاکتور خرید"}
               invoiceNumber={formData.invoiceNumber}
               invoiceDate={formData.invoiceDate}
               partyLabel="تامین‌کننده"
               partyName={formData.supplierName}
               items={items}
               totalAmount={computedTotal}
-              attachmentRequired
-              attachmentLabel="فاکتور دریافتی از تامین‌کننده"
+              attachmentRequired={!isProforma}
+              attachmentLabel={
+                isProforma
+                  ? "پیش‌فاکتور دریافتی از تامین‌کننده"
+                  : "فاکتور دریافتی از تامین‌کننده"
+              }
             />
 
             <PurchaseStatusSection

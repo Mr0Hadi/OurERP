@@ -2,6 +2,12 @@
 
 import axiosInstance from "@/shared/services/api/axios";
 
+export {
+  SaleStatusEnum as SALE_STATUSES,
+  SALE_STATUS_LABELS,
+  isSaleProforma,
+} from "@/shared/domain/enums/saleStatus";
+
 export async function fetchSales(params = {}) {
   const { data } = await axiosInstance.get("/sales", {
     params: {
@@ -39,6 +45,7 @@ export async function updateSaleStatus(id, status) {
   const { data } = await axiosInstance.patch(`/sales/${id}/status`, { status });
   return data;
 }
+
 
 export async function updateSalePayment(id, paymentData) {
   const { data } = await axiosInstance.post(`/sales/${id}/payments`, paymentData);

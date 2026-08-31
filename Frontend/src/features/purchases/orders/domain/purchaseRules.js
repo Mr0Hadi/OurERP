@@ -3,10 +3,16 @@ import { PURCHASE_STATUSES } from "../services/constants";
 /**
  * حذف کامل خرید فقط زمانی مجاز است که هنوز هیچ اتفاق واقعی‌ای
  * (ارسال توسط تامین‌کننده، دریافت در انبار) برای آن رخ نداده باشد.
+ *
+ * «پیش‌فاکتور» هم اینجاست: سندی که هنوز فاکتور رسمی‌اش نرسیده، از
+ * «در انتظار ارسال» هم عقب‌تر است.
  */
 export function canDeletePurchase(purchase) {
   if (!purchase) return false;
-  return purchase.status === PURCHASE_STATUSES.PENDING;
+  return (
+    purchase.status === PURCHASE_STATUSES.PROFORMA ||
+    purchase.status === PURCHASE_STATUSES.PENDING
+  );
 }
 
 /**

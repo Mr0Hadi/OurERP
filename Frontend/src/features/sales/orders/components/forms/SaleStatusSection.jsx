@@ -24,9 +24,14 @@ import {
   PackageCheck,
   XCircle,
   Activity,
+  FileText,
 } from "lucide-react";
 
 const STATUS_CONFIG = {
+  [SALE_STATUSES.PROFORMA]: {
+    icon: FileText,
+    textColor: "text-slate-600 dark:text-slate-300",
+  },
   [SALE_STATUSES.PROCESSING]: {
     icon: Loader2,
     textColor: "text-blue-600 dark:text-blue-400",
@@ -94,6 +99,7 @@ export default function SaleStatusSection({ selectedStatus, onStatusChange }) {
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
+            با خروج از «پیش‌فاکتور»، بکند فاکتور رسمی و شماره‌اش را می‌سازد.
             وضعیت «ارسال ناقص»، «ارسال شده» و بخشی از «تحویل کامل» معمولاً
             به‌صورت خودکار از صفحه‌ی «ارسال کالا»ی انبار به‌روزرسانی
             می‌شوند؛ تغییر دستی آن‌ها از اینجا هم ممکن است ولی توصیه

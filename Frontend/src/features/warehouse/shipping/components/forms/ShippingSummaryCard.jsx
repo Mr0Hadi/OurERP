@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Loader2, PackageOpen, PackageCheck, Activity } from 'lucide-react';
+import { Loader2, PackageOpen, PackageCheck, Activity, FileText } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Label } from '@/shared/components/ui/label';
@@ -11,6 +11,10 @@ import { SALE_STATUSES, SALE_STATUS_LABELS } from '@/features/sales/orders/servi
 import { gregorianToPersian } from '@/shared/utils/dateUtils';
 
 const STATUS_CONFIG = {
+  [SALE_STATUSES.PROFORMA]: {
+    icon: FileText,
+    textColor: 'text-slate-600 dark:text-slate-300',
+  },
   [SALE_STATUSES.PROCESSING]: { icon: Loader2, textColor: 'text-blue-600 dark:text-blue-400' },
   [SALE_STATUSES.PARTIALLY_DELIVERED]: {
     icon: PackageOpen,

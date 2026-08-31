@@ -56,6 +56,11 @@ export async function createPurchase(purchaseData) {
     id: newId,
     ...purchaseData,
     items: withLineIds(purchaseData.items),
+    // خرید تازه در مرحله‌ی «پیش‌فاکتور» است: تامین‌کننده هنوز فاکتور
+    // رسمی نفرستاده، پس شماره‌ی فاکتور خالی می‌ماند. کاربر آن را وقتی
+    // فاکتور رسید، همراه با تغییر وضعیت، خودش وارد می‌کند.
+    status: PURCHASE_STATUSES.PROFORMA,
+    invoiceNumber: "",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -143,6 +148,7 @@ export async function updatePurchase(id, updates) {
 export async function updatePurchaseStatus(id, newStatus) {
   return updatePurchase(id, { status: newStatus });
 }
+
 
 /**
  * حذف کامل رکورد خرید. این عملیات دیگر موجودی را تغییر نمی‌دهد —

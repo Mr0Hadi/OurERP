@@ -24,9 +24,16 @@ import {
   PackageOpen,
   XCircle,
   Activity,
+  FileText,
 } from "lucide-react";
 
 const STATUS_CONFIG = {
+  [PURCHASE_STATUSES.PROFORMA]: {
+    icon: FileText,
+    textColor: "text-slate-600 dark:text-slate-300",
+    bgColor: "bg-slate-50 dark:bg-slate-900/40",
+    borderColor: "border-slate-200 dark:border-slate-700",
+  },
   [PURCHASE_STATUSES.PENDING]: {
     icon: Clock,
     textColor: "text-amber-600 dark:text-amber-400",
@@ -71,10 +78,6 @@ export default function PurchaseStatusSection({
   selectedStatus,
   onStatusChange,
 }) {
-  
-
-  
-
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -115,6 +118,11 @@ export default function PurchaseStatusSection({
               })}
             </SelectContent>
           </Select>
+          <p className="text-xs text-muted-foreground">
+            وقتی تامین‌کننده فاکتور رسمی را فرستاد، شماره‌ی فاکتور را در
+            «اطلاعات فاکتور» وارد و خودِ فاکتور را ضمیمه کنید، بعد وضعیت
+            را به «در انتظار ارسال» ببرید.
+          </p>
         </div>
       </CardContent>
     </Card>

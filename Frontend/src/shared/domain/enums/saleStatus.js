@@ -3,31 +3,38 @@
 /**
  * `SalesStatusEnum` — وضعیت سند فروش (بخش ۱۵ سند api-guide.fa.md).
  * مقادیر باید دقیقاً با اعداد بکند یکی بمانند؛ روی سیم همیشه عدد است.
+ *
+ * اعداد به ترتیبِ خودِ چرخه‌ی کار شماره‌گذاری شده‌اند:
+ * پیش‌فاکتور → آماده‌سازی انبار → ارسال ناقص → ارسال شده → تحویل کامل،
+ * و «لغو شده» در انتها. به همین دلیل ترتیبِ کلیدهای عددی همان ترتیبِ
+ * نمایش است و جایی لازم نیست دستی مرتب شود.
+ *
+ * ⚠️ این شماره‌گذاری با ترتیبِ قبلیِ بکند یکی نیست و باید همان‌جا هم
+ * به‌روز شود.
  */
 export const SaleStatusEnum = Object.freeze({
-  PENDING: 0,
+  PROFORMA: 0,
   PROCESSING: 1,
   PARTIALLY_DELIVERED: 2,
-  DELIVERED: 3,
-  RETURNED: 4,
+  SHIPPED: 3,
+  DELIVERED: 4,
   CANCELLED: 5,
-  SHIPPED: 6,
+});
+
+export const SALE_STATUS_LABELS = Object.freeze({
+  [SaleStatusEnum.PROFORMA]: "پیش‌فاکتور",
+  [SaleStatusEnum.PROCESSING]: "آماده‌سازی انبار",
+  [SaleStatusEnum.PARTIALLY_DELIVERED]: "ارسال ناقص",
+  [SaleStatusEnum.SHIPPED]: "ارسال شده",
+  [SaleStatusEnum.DELIVERED]: "تحویل کامل",
+  [SaleStatusEnum.CANCELLED]: "لغو شده",
 });
 
 /**
- * برچسبِ نمایشی. عمداً `PENDING` را ندارد — فرانت از قبل این وضعیت را
- * با `PROCESSING` یکی فرض کرده («سفارش ثبت شده ولی هنوز چیزی از انبار
- * ارسال نشده») و فروش تازه هنوز فقط با `PROCESSING` ساخته می‌شود؛
- * `PENDING` هیچ‌وقت توسط فرانت تولید نمی‌شود، پس در فیلتر/Select هم
- * نباید به‌عنوان یک گزینه‌ی جدا کنار `PROCESSING` (با همین برچسب)
- * ظاهر شود. `RETURNED` را دارد چون طبق مستندِ بکند این وضعیت الان
- * واقعاً برمی‌گردد.
+ * هنوز پیش‌فاکتور است: فروش ثبت شده ولی مشتری تأییدش نکرده، پس هنوز
+ * شماره‌ی فاکتور رسمی ندارد. با تغییر وضعیت به «آماده‌سازی انبار»،
+ * بکند فاکتور و شماره‌اش را می‌سازد.
  */
-export const SALE_STATUS_LABELS = Object.freeze({
-  [SaleStatusEnum.PROCESSING]: "در حال پردازش",
-  [SaleStatusEnum.PARTIALLY_DELIVERED]: "ارسال ناقص",
-  [SaleStatusEnum.DELIVERED]: "تحویل کامل",
-  [SaleStatusEnum.RETURNED]: "مرجوع شده",
-  [SaleStatusEnum.CANCELLED]: "لغو شده",
-  [SaleStatusEnum.SHIPPED]: "ارسال شده",
-});
+export function isSaleProforma(status) {
+  return Number(status) === SaleStatusEnum.PROFORMA;
+}

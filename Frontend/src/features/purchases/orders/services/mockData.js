@@ -2,10 +2,15 @@
 export {
   PURCHASE_STATUSES,
   PURCHASE_STATUS_LABELS,
+  isPurchaseProforma,
   PAYMENT_TYPES,
   PAYMENT_TYPE_LABELS,
 } from "./constants";
-import { PURCHASE_STATUSES, PAYMENT_TYPES } from "./constants";
+import {
+  PURCHASE_STATUSES,
+  isPurchaseProforma,
+  PAYMENT_TYPES,
+} from "./constants";
 import { PAYMENT_METHODS } from "@/shared/domain/returns/effects";
 
 // ─── توابع کمکی ────────────────────────────────────────────────────────────
@@ -402,7 +407,11 @@ function generateMorePurchases(count = 20) {
       id: newId,
       supplierId: supplier.id,
       supplierName: supplier.name,
-      invoiceNumber: `INV-2026-${String(newId).padStart(3, "0")}`,
+      // شماره‌ی فاکتور را تامین‌کننده می‌دهد؛ خریدی که هنوز پیش‌فاکتور
+      // است آن را ندارد.
+      invoiceNumber: isPurchaseProforma(status)
+        ? ""
+        : `INV-2026-${String(newId).padStart(3, "0")}`,
       invoiceDate,
       status,
       paymentType,

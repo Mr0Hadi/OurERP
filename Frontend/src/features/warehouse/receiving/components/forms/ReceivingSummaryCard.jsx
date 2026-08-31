@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Truck, PackageCheck, PackageOpen, Clock, XCircle, Activity } from 'lucide-react';
+import { Truck, PackageCheck, PackageOpen, Clock, XCircle, Activity, FileText } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Label } from '@/shared/components/ui/label';
@@ -11,6 +11,7 @@ import { PURCHASE_STATUSES, PURCHASE_STATUS_LABELS } from '@/features/purchases/
 import { gregorianToPersian } from '@/shared/utils/dateUtils';
 
 const STATUS_CONFIG = {
+  [PURCHASE_STATUSES.PROFORMA]: { icon: FileText, textColor: 'text-slate-600 dark:text-slate-300' },
   [PURCHASE_STATUSES.PENDING]: { icon: Clock, textColor: 'text-amber-600 dark:text-amber-400' },
   [PURCHASE_STATUSES.SHIPPED]: { icon: Truck, textColor: 'text-blue-600 dark:text-blue-400' },
   [PURCHASE_STATUSES.PARTIALLY_RECEIVED]: { icon: PackageOpen, textColor: 'text-orange-600 dark:text-orange-400' },

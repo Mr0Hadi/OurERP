@@ -1,4 +1,10 @@
-import { allSales, SALE_STATUSES, nextSaleItemId } from "./mockData";
+import {
+  allSales,
+  SALE_STATUSES,
+  nextSaleItemId,
+  nextSaleInvoiceNumber,
+} from "./mockData";
+import { isSaleProforma } from "@/shared/domain/enums/saleStatus";
 import { adjustProductsStock } from "@/features/warehouse/products/services/api-mockData";
 import { applyListQuery } from "@/shared/services/mockQuery";
 import {
@@ -41,9 +47,10 @@ export async function createSale(saleData) {
     // هر قلم شناسه‌ی خودش را می‌گیرد؛ مرجوعی و انبار با همین شناسه به
     // خط فاکتور ارجاع می‌دهند، نه با productId.
     items: withLineIds(saleData.items),
-    // «در انتظار» و «در حال پردازش» یکی شده‌اند؛ هر فروش تازه با همین
-    // یک وضعیت شروع می‌شود تا در لیست «ارسال کالا»ی انبار دیده شود.
-    status: SALE_STATUSES.PROCESSING,
+    // فروش تازه فقط یک پیش‌فاکتور است؛ شماره‌ی فاکتور رسمی را بکند
+    // موقعی می‌سازد که وضعیت از «پیش‌فاکتور» بیرون بیاید.
+    status: SALE_STATUSES.PROFORMA,
+    invoiceNumber: "",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -118,14 +125,25 @@ export async function updateSale(id, updates) {
   if (index === -1) throw new Error("فروش یافت نشد");
 
   const current = allSales[index];
+  const nextStatus =
+    updates.status === undefined ? current.status : updates.status;
+
   const isCancellingNow =
-    updates.status === SALE_STATUSES.CANCELLED &&
+    nextStatus === SALE_STATUSES.CANCELLED &&
     current.status !== SALE_STATUSES.CANCELLED;
+
+  // خروج از «پیش‌فاکتور» = تأیید مشتری. اینجا بکند فاکتور رسمی و
+  // شماره‌اش را می‌سازد؛ ماک هم همان کار را می‌کند.
+  const isLeavingProforma =
+    isSaleProforma(current.status) && !isSaleProforma(nextStatus);
 
   allSales[index] = {
     ...current,
     ...updates,
     ...(updates.items ? { items: withLineIds(updates.items) } : {}),
+    ...(isLeavingProforma && !current.invoiceNumber
+      ? { invoiceNumber: nextSaleInvoiceNumber() }
+      : {}),
     updatedAt: new Date().toISOString(),
   };
 
@@ -140,6 +158,7 @@ export async function updateSale(id, updates) {
 export async function updateSaleStatus(id, newStatus) {
   return updateSale(id, { status: newStatus });
 }
+
 
 /**
  * حذف کامل رکورد فروش. این عملیات دیگر موجودی را تغییر نمی‌دهد —

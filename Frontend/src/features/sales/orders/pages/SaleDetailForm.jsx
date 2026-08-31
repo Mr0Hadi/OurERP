@@ -29,14 +29,22 @@ import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
 import SaleStatusSection from "../components/forms/SaleStatusSection";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
-import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
+import {
+  SaleStatusEnum,
+  isSaleProforma,
+} from "@/shared/domain/enums/saleStatus";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
 const SORTING = { id: "name", desc: false };
 
-// وضعیت‌هایی که ثبت مرجوعی از روی آن‌ها ممکن است.
-const RETURNABLE_STATUSES = ["shipped", "partially_delivered", "delivered"];
+// وضعیت‌هایی که ثبت مرجوعی از روی آن‌ها ممکن است — یعنی چیزی از انبار
+// بیرون رفته باشد. عددی‌اند چون `status` روی سیم همیشه عدد است.
+const RETURNABLE_STATUSES = [
+  SaleStatusEnum.SHIPPED,
+  SaleStatusEnum.PARTIALLY_DELIVERED,
+  SaleStatusEnum.DELIVERED,
+];
 
 export default function SaleDetailForm({ saleData }) {
   const navigate = useNavigate();
@@ -107,9 +115,11 @@ export default function SaleDetailForm({ saleData }) {
       checkNumber: formData.checkNumber || null,
       transferRef: formData.transferRef || null,
       mixedPayments: formData.mixedPayments || [],
+      // سندی که هنوز شماره‌ی فاکتور رسمی ندارد در مرحله‌ی پیش‌فاکتور
+      // است؛ ذخیره‌ی ساده‌ی فرم نباید آن را جلو ببرد.
       status:
         formData.status === "" || formData.status == null
-          ? SaleStatusEnum.PROCESSING
+          ? SaleStatusEnum.PROFORMA
           : formData.status,
       totalAmount: computedTotal,
     };
@@ -127,6 +137,10 @@ export default function SaleDetailForm({ saleData }) {
       },
     });
   };
+
+  // وضعیتِ *ذخیره‌شده* — نه انتخابِ در حال ویرایش؛ عنوان کارت سند باید
+  // به فروشِ روی سرور واکنش نشان بدهد، نه به مقدارِ موقتِ فرم.
+  const isProforma = isSaleProforma(saleData.status);
 
   const isBusy = updateMutation.isPending || deleteMutation.isPending;
 
@@ -172,15 +186,22 @@ export default function SaleDetailForm({ saleData }) {
               errors={{}}
             />
 
+            {/* تا وقتی فروش پیش‌فاکتور است، سندِ چاپی و ضمیمه هم
+                پیش‌فاکتورند؛ فاکتور رسمی و شماره‌اش را بکند با تغییر
+                وضعیت به «آماده‌سازی انبار» می‌سازد. */}
             <InvoiceDocumentSection
-              title="فاکتور فروش"
+              title={isProforma ? "پیش‌فاکتور فروش" : "فاکتور فروش"}
               invoiceNumber={formData.invoiceNumber}
               invoiceDate={formData.invoiceDate}
               partyLabel="مشتری"
               partyName={formData.customerName}
               items={items}
               totalAmount={computedTotal}
-              attachmentLabel="فاکتور صادرشده برای مشتری"
+              attachmentLabel={
+                isProforma
+                  ? "پیش‌فاکتور ارسال‌شده برای مشتری"
+                  : "فاکتور صادرشده برای مشتری"
+              }
             />
 
             <SaleStatusSection

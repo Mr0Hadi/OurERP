@@ -213,7 +213,7 @@ export default function PurchasesNewPage() {
       ...paymentDetails,
       status:
         formData.status === "" || formData.status == null
-          ? PurchaseStatusEnum.PENDING
+          ? PurchaseStatusEnum.PROFORMA
           : formData.status,
       totalAmount: computedTotal,
     };

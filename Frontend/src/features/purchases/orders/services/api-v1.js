@@ -1,7 +1,12 @@
 import axiosInstance from "@/shared/services/api/axios";
-import { PURCHASE_STATUSES } from "./constants";
 
-export { PURCHASE_STATUSES, PURCHASE_STATUS_LABELS, PAYMENT_TYPES, PAYMENT_TYPE_LABELS } from "./constants";
+export {
+  PURCHASE_STATUSES,
+  PURCHASE_STATUS_LABELS,
+  isPurchaseProforma,
+  PAYMENT_TYPES,
+  PAYMENT_TYPE_LABELS,
+} from "./constants";
 
 export async function fetchPurchases(params = {}) {
   const { data } = await axiosInstance.get("/purchases", {
@@ -40,6 +45,7 @@ export async function updatePurchaseStatus(id, status) {
   const { data } = await axiosInstance.patch(`/purchases/${id}/status`, { status });
   return data;
 }
+
 
 export async function updatePurchasePayment(id, paymentData) {
   const { data } = await axiosInstance.post(`/purchases/${id}/payments`, paymentData);

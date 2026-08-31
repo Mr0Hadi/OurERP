@@ -190,7 +190,7 @@ export default function SaleNewPage() {
       mixedPayments: formData.mixedPayments || [],
       status:
         formData.status === "" || formData.status == null
-          ? SaleStatusEnum.PROCESSING
+          ? SaleStatusEnum.PROFORMA
           : formData.status,
       totalAmount: computedTotal,
     };

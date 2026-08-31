@@ -1,15 +1,20 @@
 
-// «در انتظار» و «در حال پردازش» با هم یکی شدند (هر دو یعنی: سفارش ثبت
-// شده ولی هنوز چیزی از انبار ارسال نشده). «ارسال‌شده» جدید یعنی همه‌ی
-// اقلام توسط انبار ارسال شده‌اند؛ «تحویل کامل/ناقص» می‌تواند بعداً و
-// جدا از فرایند انبار (مثلاً توسط واحد فروش) به‌عنوان تأیید نهاییِ
-// دریافت کالا توسط مشتری ثبت شود. فروش تازه هنوز با PROCESSING ساخته
-// می‌شود، نه PENDING — این ادغام همان‌جا مانده، فقط عددی شده.
+// فروش تازه با «پیش‌فاکتور» (PROFORMA) شروع می‌شود: هنوز فروشِ واقعی
+// نیست، فقط برگه‌ای است که برای مشتری فرستاده می‌شود. با تأیید مشتری
+// به «آماده‌سازی انبار» (PROCESSING) می‌رود و همان‌جا شماره‌ی فاکتور
+// رسمی می‌گیرد و وارد صفِ «ارسال کالا»ی انبار می‌شود. «ارسال‌شده» یعنی
+// همه‌ی اقلام توسط انبار ارسال شده‌اند؛ «تحویل کامل/ناقص» می‌تواند
+// بعداً و جدا از فرایند انبار (مثلاً توسط واحد فروش) به‌عنوان تأیید
+// نهاییِ دریافت کالا توسط مشتری ثبت شود.
 export {
   SaleStatusEnum as SALE_STATUSES,
   SALE_STATUS_LABELS,
+  isSaleProforma,
 } from "@/shared/domain/enums/saleStatus";
-import { SaleStatusEnum as SALE_STATUSES } from "@/shared/domain/enums/saleStatus";
+import {
+  SaleStatusEnum as SALE_STATUSES,
+  isSaleProforma,
+} from "@/shared/domain/enums/saleStatus";
 export {
   PaymentTypeEnum as PAYMENT_TYPES,
   PAYMENT_TYPE_LABELS,
@@ -265,11 +270,9 @@ function buildMixedPayments(totalAmount) {
   return { mixedPayments, paidAmount };
 }
 
-// فروش تازه هرگز با PENDING ساخته نمی‌شود (با PROCESSING یکی شده،
-// بالا توضیح داده شد)، پس نمونه‌های تولیدی هم آن را انتخاب نمی‌کنند.
-const GENERATED_SALE_STATUSES = Object.values(SALE_STATUSES).filter(
-  (status) => status !== SALE_STATUSES.PENDING,
-);
+// همه‌ی وضعیت‌های چرخه به‌علاوه‌ی «لغو شده» — از جمله «پیش‌فاکتور»، تا
+// در لیست فروش نمونه‌ای از سندِ هنوز تأییدنشده هم دیده شود.
+const GENERATED_SALE_STATUSES = Object.values(SALE_STATUSES);
 
 function generateMoreSales(count = 20) {
   const baseDate = new Date("2026-01-01");
@@ -312,7 +315,11 @@ function generateMoreSales(count = 20) {
       id: newId,
       customerId: customer.id,
       customerName: customer.name,
-      invoiceNumber: `SALE-2026-${String(newId).padStart(3, "0")}`,
+      // فروشی که هنوز پیش‌فاکتور است شماره‌ی فاکتور ندارد؛ بکند آن را
+      // با خروج از این وضعیت می‌سازد.
+      invoiceNumber: isSaleProforma(status)
+        ? ""
+        : `SALE-2026-${String(newId).padStart(3, "0")}`,
       invoiceDate,
       status,
       paymentType,
@@ -372,3 +379,18 @@ export function withSaleItemIds(sale) {
 export const allSales = [...salesMock, ...generateMoreSales(20)].map(
   withSaleItemIds,
 );
+
+
+// ─── شماره‌ی فاکتور فروش ─────────────────────────────────────────────────────
+
+/**
+ * شماره‌ی فاکتور را بکند می‌سازد — آن هم دقیقاً وقتی فروش از
+ * «پیش‌فاکتور» بیرون می‌آید. این فقط تقلیدِ همان روی داده‌ی ماک است.
+ */
+export function nextSaleInvoiceNumber() {
+  const max = allSales.reduce((acc, sale) => {
+    const match = String(sale.invoiceNumber || "").match(/(\d+)$/);
+    return match ? Math.max(acc, Number(match[1])) : acc;
+  }, 0);
+  return `SALE-${new Date().getFullYear()}-${String(max + 1).padStart(3, "0")}`;
+}
