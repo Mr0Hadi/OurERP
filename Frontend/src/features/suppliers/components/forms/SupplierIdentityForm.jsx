@@ -1,4 +1,5 @@
 // src/features/suppliers/components/forms/SupplierIdentityForm.jsx
+import { Controller } from "react-hook-form";
 import { User } from "lucide-react";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -9,6 +10,8 @@ import {
   CardTitle,
 } from "@/shared/components/ui/card";
 import { Textarea } from "@/shared/components/ui/textarea";
+import { MobileNumberInput } from "@/shared/components/ui/mobile-number-input";
+import { NationalIdInput } from "@/shared/components/ui/national-id-input";
 import ImageUploadField from "@/shared/components/files/ImageUploadField";
 import {
   mobileRules,
@@ -34,7 +37,7 @@ const Required = () => <span className="text-destructive">*</span>;
  * (`^09\d{9}$`)، و نام شرکت اجباری. بدون این‌ها کاربر کلِ فرم را پر
  * می‌کرد و تازه از سرور خطا می‌گرفت.
  */
-export default function SupplierIdentityForm({ register, errors, imageUpload }) {
+export default function SupplierIdentityForm({ register, control, errors, imageUpload }) {
   return (
     <Card className="overflow-hidden shadow-md rounded-2xl pt-0 gap-0">
       <CardHeader className="border-b bg-muted/30 py-4 px-6">
@@ -108,13 +111,17 @@ export default function SupplierIdentityForm({ register, errors, imageUpload }) 
                 <Label htmlFor="phone" className="text-sm font-medium">
                   شماره تماس <Required />
                 </Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="09123456789"
-                  dir="ltr"
-                  className="h-10 rounded-lg transition-all input-rtl-placeholder"
-                  {...register("phone", mobileRules())}
+                <Controller
+                  name="phone"
+                  control={control}
+                  rules={mobileRules()}
+                  render={({ field }) => (
+                    <MobileNumberInput
+                      id="phone"
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    />
+                  )}
                 />
                 <FieldError error={errors?.phone} />
               </div>
@@ -140,12 +147,16 @@ export default function SupplierIdentityForm({ register, errors, imageUpload }) 
                 <Label htmlFor="nationalId" className="text-sm font-medium">
                   شناسه ملی
                 </Label>
-                <Input
-                  id="nationalId"
-                  dir="ltr"
-                  placeholder="10101234567"
-                  className="h-10 rounded-lg transition-all input-rtl-placeholder"
-                  {...register("nationalId")}
+                <Controller
+                  name="nationalId"
+                  control={control}
+                  render={({ field }) => (
+                    <NationalIdInput
+                      id="nationalId"
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    />
+                  )}
                 />
               </div>
 

@@ -93,7 +93,7 @@ function ComboboxInputGroup({
       ref={ref}
       data-slot="combobox-input-group"
       className={cn(
-        "relative flex h-8 w-full items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 has-[input:disabled]:pointer-events-none has-[input:disabled]:opacity-50",
+        "relative flex h-8 w-full items-center gap-1.5 rounded-lg border border-input bg-transparent px-2.5 transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 has-[input:disabled]:pointer-events-none has-[input:disabled]:bg-input/50 has-[input:disabled]:opacity-50 dark:bg-input/30 dark:has-[input:disabled]:bg-input/80",
         className
       )}
       {...props} />

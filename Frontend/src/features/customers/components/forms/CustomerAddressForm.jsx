@@ -1,5 +1,6 @@
 // src/features/customers/components/forms/CustomerAddressForm.jsx
 import { useState } from "react";
+import { useWatch } from "react-hook-form";
 import { MapPin, Map, Mail } from "lucide-react";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -7,6 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Button } from "@/shared/components/ui/button";
 import { Textarea } from "@/shared/components/ui/textarea";
 import LocationPickerMap from "@/shared/components/map/LocationPickerMap";
+import {
+  CitySelector,
+  CitySelectorProvince,
+  CitySelectorCity,
+} from "@/shared/components/ui/city-selector";
+import { persianProvinces } from "@/shared/lib/persian-provinces";
 import { requiredMessage } from "@/shared/utils/validationRules";
 import {
   AlertDialog,
@@ -21,6 +28,7 @@ import {
 
 export default function CustomerAddressForm({
   register,
+  control,
   errors,
   watch,
   setValue,
@@ -34,6 +42,21 @@ export default function CustomerAddressForm({
   // ریخته می‌شد.
   const lat = watch ? watch("latitude") : "";
   const lng = watch ? watch("longitude") : "";
+
+  // برخلاف lat/lng بالا، این دو باید با انتخاب از CitySelector فوراً
+  // رندر شوند؛ `watch()` غیرِهوکی اینجا subscribe نمی‌کند، پس از
+  // `useWatch` استفاده شده تا واقعاً reactive باشد.
+  const provinceName = useWatch({ control, name: "province" }) ?? "";
+  const cityName = useWatch({ control, name: "city" }) ?? "";
+  const selectedProvince =
+    persianProvinces.find((province) => province.name === provinceName) ?? null;
+  const selectedCity =
+    selectedProvince?.cities.find((city) => city.name === cityName) ?? null;
+
+  const handleCityChange = (next) => {
+    setValue("province", next.province?.name ?? "", { shouldDirty: true });
+    setValue("city", next.city?.name ?? "", { shouldDirty: true });
+  };
 
   const handleLocationSelect = (selectedLat, selectedLng, address) => {
     // مختصات همیشه بلافاصله ست می‌شوند؛ این بخش با متن آدرس تداخلی ندارد
@@ -90,25 +113,16 @@ export default function CustomerAddressForm({
         </div>
 
         {/* استان و شهر — ستونشان در سرور هست و فرم اصلاً نداشتشان. */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="province" className="text-sm font-medium">استان</Label>
-            <Input
-              id="province"
-              placeholder="تهران"
-              className="h-10 rounded-lg transition-all"
-              {...register("province")}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="city" className="text-sm font-medium">شهر</Label>
-            <Input
-              id="city"
-              placeholder="تهران"
-              className="h-10 rounded-lg transition-all"
-              {...register("city")}
-            />
-          </div>
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium">استان و شهر</Label>
+          <CitySelector
+            value={{ province: selectedProvince, city: selectedCity }}
+            onValueChange={handleCityChange}
+            className="grid grid-cols-2 gap-3"
+          >
+            <CitySelectorProvince className="w-full sm:w-full" />
+            <CitySelectorCity className="w-full sm:w-full" />
+          </CitySelector>
         </div>
 
         <div className="space-y-1.5">

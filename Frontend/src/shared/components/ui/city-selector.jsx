@@ -156,7 +156,7 @@ function CitySelectorProvince({
       value={value.province}
       onValueChange={(province) => setValue({ province, city: null })}
       disabled={disabled}>
-      <ComboboxInputGroup className={cn("w-full sm:w-64", className)} {...props}>
+      <ComboboxInputGroup className={cn("h-10 w-full sm:w-64", className)} {...props}>
         <ComboboxInput placeholder={placeholder ?? strings.province} />
         <ComboboxIcon />
       </ComboboxInputGroup>
@@ -193,7 +193,7 @@ function CitySelectorCity({
       // city list is windowed via ComboboxVirtualList instead of mounting
       // every item's DOM node.
       virtualized>
-      <ComboboxInputGroup className={cn("w-full sm:w-64", className)} {...props}>
+      <ComboboxInputGroup className={cn("h-10 w-full sm:w-64", className)} {...props}>
         <ComboboxInput
           placeholder={
             value.province

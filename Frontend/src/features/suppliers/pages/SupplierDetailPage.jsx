@@ -92,6 +92,7 @@ const {
             <SupplierIdentityForm
               errors={errors}
               register={register}
+              control={control}
               imageUpload={imageUpload}
             />
             <SupplierFinanceForm
@@ -105,6 +106,7 @@ const {
           <div className="lg:col-span-1 space-y-4">
             <SupplierAddressForm
               register={register}
+              control={control}
               errors={errors}
               watch={watch}
               setValue={setValue}

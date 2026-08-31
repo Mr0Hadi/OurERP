@@ -88,6 +88,7 @@ function CustomerDetailForm({ customerData }) {
           <div className="lg:col-span-1 space-y-4">
             <CustomerIdentityForm
               register={register}
+              control={control}
               errors={errors}
               imageUpload={imageUpload}
             />
@@ -102,6 +103,7 @@ function CustomerDetailForm({ customerData }) {
           <div className="lg:col-span-1 space-y-4">
             <CustomerAddressForm
               register={register}
+              control={control}
               errors={errors}
               watch={watch}
               setValue={setValue}

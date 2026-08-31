@@ -69,6 +69,7 @@ const {
           <div className="lg:col-span-1 space-y-4">
 <SupplierIdentityForm
               register={register}
+              control={control}
               errors={errors}
               imageUpload={imageUpload}
             />
@@ -85,6 +86,7 @@ const {
           <div className="lg:col-span-1 space-y-4">
             <SupplierAddressForm
               register={register}
+              control={control}
               errors={errors}
               watch={watch}
               setValue={setValue}

@@ -1,9 +1,12 @@
 // src/features/customers/components/forms/CustomerIdentityForm.jsx
+import { Controller } from "react-hook-form";
 import { User, Tag } from "lucide-react";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Textarea } from "@/shared/components/ui/textarea";
+import { MobileNumberInput } from "@/shared/components/ui/mobile-number-input";
+import { NationalIdInput } from "@/shared/components/ui/national-id-input";
 import ImageUploadField from "@/shared/components/files/ImageUploadField";
 import {
   mobileRules,
@@ -27,7 +30,7 @@ const Required = () => <span className="text-destructive">*</span>;
  * نام و نام خانوادگی فقط فارسی، و شماره تماس **اجباری و فقط موبایل**
  * (`^09\d{9}$`) — قبلاً اختیاری بود و اصلاً هم ذخیره نمی‌شد.
  */
-export default function CustomerIdentityForm({ register, errors, imageUpload }) {
+export default function CustomerIdentityForm({ register, control, errors, imageUpload }) {
   return (
     <Card className="overflow-hidden shadow-md rounded-2xl pt-0 gap-0">
       <CardHeader className="border-b bg-muted/30 py-4 px-6">
@@ -88,13 +91,17 @@ export default function CustomerIdentityForm({ register, errors, imageUpload }) 
                 <Label htmlFor="phoneNumber" className="text-sm font-medium">
                   شماره تماس <Required />
                 </Label>
-                <Input
-                  id="phoneNumber"
-                  type="tel"
-                  placeholder="09123456789"
-                  dir="ltr"
-                  className="h-10 rounded-lg transition-all input-rtl-placeholder"
-                  {...register("phoneNumber", mobileRules())}
+                <Controller
+                  name="phoneNumber"
+                  control={control}
+                  rules={mobileRules()}
+                  render={({ field }) => (
+                    <MobileNumberInput
+                      id="phoneNumber"
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    />
+                  )}
                 />
                 <FieldError error={errors.phoneNumber} />
               </div>
@@ -136,12 +143,16 @@ export default function CustomerIdentityForm({ register, errors, imageUpload }) 
                 <Label htmlFor="nationalId" className="text-sm font-medium">
                   شناسه ملی
                 </Label>
-                <Input
-                  id="nationalId"
-                  dir="ltr"
-                  placeholder="10101234567"
-                  className="h-10 rounded-lg transition-all input-rtl-placeholder"
-                  {...register("nationalId")}
+                <Controller
+                  name="nationalId"
+                  control={control}
+                  render={({ field }) => (
+                    <NationalIdInput
+                      id="nationalId"
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    />
+                  )}
                 />
               </div>
 
