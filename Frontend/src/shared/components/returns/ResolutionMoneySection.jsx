@@ -1,5 +1,6 @@
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
+import { PriceInput } from "@/shared/components/ui/price-input";
 import {
   Select,
   SelectContent,
@@ -128,14 +129,12 @@ export default function ResolutionMoneySection({
               <Label className="text-[11px] text-muted-foreground">
                 مبلغ (ریال)
               </Label>
-              <Input
-                type="number"
-                dir="ltr"
+              <PriceInput
                 min={0}
-                value={money.amount ?? ""}
-                onChange={(e) => onChange({ amount: e.target.value })}
+                value={money.amount === "" || money.amount == null ? null : Number(money.amount)}
+                onValueChange={(next) => onChange({ amount: next ?? "" })}
                 placeholder="مبلغ را وارد کنید"
-                className="h-8 text-xs input-rtl-placeholder"
+                className="h-8 text-xs"
               />
             </div>
 

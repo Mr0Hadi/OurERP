@@ -13,11 +13,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
+import { PriceInput } from "@/shared/components/ui/price-input";
 import PaymentSummary from "@/shared/components/forms/PaymentSummary";
 import MixedPaymentList from "@/shared/components/forms/MixedPaymentList";
 import { useSyncedComputedValue } from "@/shared/hooks/useSyncedComputedValue";
 import { PaymentTypeEnum, PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
 import { PAYMENT_METHODS } from "@/shared/domain/returns/effects";
+import { numberToPersianWords } from "@/shared/lib/number-to-persian-words";
 
 /**
  * بخش پرداختِ یک سند خرید یا فروش.
@@ -169,22 +171,26 @@ export default function OrderPaymentSection({
             >
               مبلغ پرداختی (ریال)
             </Label>
-            <Input
+            <PriceInput
               id="paidAmount"
-              type="number"
-              dir="ltr"
               min={0}
               placeholder="صفر"
-              value={formData.paidAmount || ""}
-              onChange={(e) => handleChange("paidAmount", e.target.value)}
-              className={`h-9 input-rtl-placeholder ${
+              value={formData.paidAmount === "" || formData.paidAmount == null ? null : Number(formData.paidAmount)}
+              onValueChange={(next) => handleChange("paidAmount", next ?? "")}
+              className={`h-9 ${
                 errors?.paidAmount
                   ? "border-destructive focus-visible:ring-destructive/30"
                   : ""
               }`}
             />
-            {errors?.paidAmount && (
+            {errors?.paidAmount ? (
               <p className="text-xs text-destructive">{errors.paidAmount}</p>
+            ) : (
+              formData.paidAmount !== "" && formData.paidAmount != null && Number(formData.paidAmount) !== 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {numberToPersianWords(formData.paidAmount, { rialToToman: true })}
+                </p>
+              )
             )}
           </div>
         )}

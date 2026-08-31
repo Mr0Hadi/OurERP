@@ -2,6 +2,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
+import { PriceInput } from "@/shared/components/ui/price-input";
 import {
   Select,
   SelectContent,
@@ -121,14 +122,12 @@ export default function MixedPaymentList({
 
               <div className="space-y-1">
                 <Label className={labelClass}>مبلغ (ریال)</Label>
-                <Input
-                  type="number"
-                  dir="ltr"
+                <PriceInput
                   min={0}
                   placeholder="مبلغ"
-                  value={payment.amount || ""}
-                  onChange={(e) => onChange(idx, "amount", e.target.value)}
-                  className={`${inputHeight} input-rtl-placeholder`}
+                  value={payment.amount === "" || payment.amount == null ? null : Number(payment.amount)}
+                  onValueChange={(next) => onChange(idx, "amount", next ?? "")}
+                  className={inputHeight}
                 />
               </div>
             </div>

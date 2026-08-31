@@ -71,7 +71,7 @@ export default function ProductNewPage() {
               control={control}
               errors={errors}
             />
-            <ProductPricingForm register={register} />
+            <ProductPricingForm register={register} control={control} />
           </div>
           <div className="flex flex-col gap-4 md:gap-3">
             <ProductImageUpload imageUpload={imageUpload} />

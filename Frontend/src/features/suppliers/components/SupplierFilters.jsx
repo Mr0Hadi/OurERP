@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
+import { PriceInput } from "@/shared/components/ui/price-input";
 import { useSupplierFilterStore } from "../store/supplierFilterStore";
 
 const SupplierFilters = () => {
@@ -16,11 +17,11 @@ const SupplierFilters = () => {
   } = useSupplierFilterStore();
 
   const handleMinDebt = useCallback(
-    (e) => setDebtCreditRange(e.target.value, maxDebtCredit),
+    (next) => setDebtCreditRange(next ?? "", maxDebtCredit),
     [maxDebtCredit, setDebtCreditRange]
   );
   const handleMaxDebt = useCallback(
-    (e) => setDebtCreditRange(minDebtCredit, e.target.value),
+    (next) => setDebtCreditRange(minDebtCredit, next ?? ""),
     [minDebtCredit, setDebtCreditRange]
   );
 
@@ -46,11 +47,10 @@ const SupplierFilters = () => {
             <Label className="whitespace-nowrap font-light text-foreground">
               حداقل تراز (ریال)
             </Label>
-            <Input
-              type="number"
+            <PriceInput
               placeholder="از"
-              value={minDebtCredit}
-              onChange={handleMinDebt}
+              value={minDebtCredit === "" ? null : Number(minDebtCredit)}
+              onValueChange={handleMinDebt}
               className="flex-1"
             />
           </div>
@@ -61,11 +61,10 @@ const SupplierFilters = () => {
             <Label className="whitespace-nowrap font-light text-foreground">
               حداکثر تراز (ریال)
             </Label>
-            <Input
-              type="number"
+            <PriceInput
               placeholder="تا"
-              value={maxDebtCredit}
-              onChange={handleMaxDebt}
+              value={maxDebtCredit === "" ? null : Number(maxDebtCredit)}
+              onValueChange={handleMaxDebt}
               className="flex-1"
             />
           </div>

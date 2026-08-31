@@ -1,5 +1,6 @@
 import { Trash2 } from "lucide-react";
 import { Input } from "@/shared/components/ui/input";
+import { PriceInput } from "@/shared/components/ui/price-input";
 
 export default function SelectedItemsCards({
   items,
@@ -53,12 +54,11 @@ export default function SelectedItemsCards({
               <label className="text-[11px] text-muted-foreground">
                 قیمت واحد
               </label>
-              <Input
-                type="number"
+              <PriceInput
                 min={0}
-                value={item.unitPrice}
-                onChange={(e) =>
-                  onFieldChange(item.productId, "unitPrice", e.target.value)
+                value={item.unitPrice === "" || item.unitPrice == null ? null : Number(item.unitPrice)}
+                onValueChange={(next) =>
+                  onFieldChange(item.productId, "unitPrice", next ?? "")
                 }
                 className="h-8 text-center text-xs w-full"
               />

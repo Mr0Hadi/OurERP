@@ -1,14 +1,25 @@
 // src/features/customers/components/forms/CustomerFinanceForm.jsx
 import { Wallet, TrendingUp, TrendingDown, ShieldCheck } from "lucide-react";
-import { Controller } from "react-hook-form";
-import { Input } from "@/shared/components/ui/input";
+import { Controller, useWatch } from "react-hook-form";
 import { Label } from "@/shared/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
+import { PriceInput } from "@/shared/components/ui/price-input";
 import { BalanceTypeEnum } from "@/shared/domain/enums/balanceType";
+import { numberToPersianWords } from "@/shared/lib/number-to-persian-words";
 
-export default function CustomerFinanceForm({ register, errors, balanceType, control }) {
+export default function CustomerFinanceForm({ errors, balanceType, control }) {
   const showAmount = balanceType !== BalanceTypeEnum.BALANCED;
+  const balanceAmount = useWatch({ control, name: "balanceAmount" });
+  const creditLimit = useWatch({ control, name: "creditLimit" });
+  const balanceAmountWords =
+    balanceAmount !== "" && balanceAmount != null
+      ? numberToPersianWords(balanceAmount, { rialToToman: true })
+      : "";
+  const creditLimitWords =
+    creditLimit !== "" && creditLimit != null
+      ? numberToPersianWords(creditLimit, { rialToToman: true })
+      : "";
 
   return (
     <Card className="shadow-md rounded-2xl overflow-hidden pt-0 gap-0">
@@ -66,24 +77,33 @@ export default function CustomerFinanceForm({ register, errors, balanceType, con
               <Label htmlFor="balanceAmount" className="text-sm font-medium">
                 مبلغ (ریال) <span className="text-destructive">*</span>
               </Label>
-              <div className="relative">
-                <Input
-                  id="balanceAmount"
-                  type="number"
-                  min="0"
-                  placeholder="۰"
-                  dir="ltr"
-                  className="h-10 pl-16 pr-3 rounded-lg transition-all text-base font-semibold input-rtl-placeholder"
-                  {...register("balanceAmount", { required: "وارد کردن مبلغ الزامی است" })}
-                />
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-sm font-medium text-muted-foreground">
-                  ریال
-                </div>
-              </div>
-              {errors.balanceAmount && (
+              <Controller
+                name="balanceAmount"
+                control={control}
+                rules={{ required: "وارد کردن مبلغ الزامی است" }}
+                render={({ field }) => (
+                  <div className="relative">
+                    <PriceInput
+                      id="balanceAmount"
+                      min={0}
+                      value={field.value === "" || field.value == null ? null : Number(field.value)}
+                      onValueChange={(next) => field.onChange(next ?? "")}
+                      className="h-10 pl-16 pr-3 rounded-lg transition-all text-base font-semibold"
+                    />
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-sm font-medium text-muted-foreground">
+                      ریال
+                    </div>
+                  </div>
+                )}
+              />
+              {errors.balanceAmount ? (
                 <span className="text-xs text-destructive block mt-1 font-medium">
                   {errors.balanceAmount.message}
                 </span>
+              ) : (
+                balanceAmountWords && (
+                  <p className="text-xs text-muted-foreground">{balanceAmountWords}</p>
+                )
               )}
             </div>
           )}
@@ -93,18 +113,25 @@ export default function CustomerFinanceForm({ register, errors, balanceType, con
           <Label htmlFor="creditLimit" className="text-sm font-medium">
             سقف اعتبار (ریال)
           </Label>
-          <div className="relative">
-            <ShieldCheck className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="creditLimit"
-              type="number"
-              min="0"
-              placeholder="۰"
-              dir="ltr"
-              className="h-10 pr-10 rounded-lg transition-all input-rtl-placeholder"
-              {...register("creditLimit")}
-            />
-          </div>
+          <Controller
+            name="creditLimit"
+            control={control}
+            render={({ field }) => (
+              <div className="relative">
+                <ShieldCheck className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <PriceInput
+                  id="creditLimit"
+                  min={0}
+                  value={field.value === "" || field.value == null ? null : Number(field.value)}
+                  onValueChange={(next) => field.onChange(next ?? "")}
+                  className="h-10 pr-10 rounded-lg transition-all"
+                />
+              </div>
+            )}
+          />
+          {creditLimitWords && (
+            <p className="text-xs text-muted-foreground">{creditLimitWords}</p>
+          )}
         </div>
       </CardContent>
     </Card>

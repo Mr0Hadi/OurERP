@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
+import { PriceInput } from "@/shared/components/ui/price-input";
 import {
   Select,
   SelectContent,
@@ -96,25 +97,22 @@ const FilterSelect = ({
 );
 
 /**
- * یک ردیف Label + Input عددی برای فیلتر قیمت.
+ * یک ردیف Label + PriceInput برای فیلتر قیمت.
  *
  * @param {string}   label     - متن برچسب
- * @param {string}   value     - مقدار جاری
- * @param {Function} onChange  - callback: (e: ChangeEvent) => void
+ * @param {number|null} value  - مقدار جاری
+ * @param {Function} onChange  - callback: (next: number|null) => void
  * @param {string}   placeholder
  */
-
-const PriceInput = ({ label, value, onChange, placeholder }) => (
+const PriceRangeInput = ({ label, value, onChange, placeholder }) => (
   <div className="flex flex-col sm:flex-row sm:items-center gap-3 lg:col-span-2">
     <Label className="whitespace-nowrap font-medium text-foreground">
       {label}
     </Label>
-    <Input
-      type="number"
-      
+    <PriceInput
       placeholder={placeholder}
       value={value}
-      onChange={onChange}
+      onValueChange={onChange}
       className="flex-1"
     />
   </div>
@@ -158,11 +156,11 @@ const ProductFilters = () => {
 
   // جلوگیری از ساخت closure جدید در هر رندر هنگام تغییر قیمت
   const handleMinPrice = useCallback(
-    (e) => setPriceRange(e.target.value, maxPrice),
+    (next) => setPriceRange(next ?? "", maxPrice),
     [maxPrice, setPriceRange]
   );
   const handleMaxPrice = useCallback(
-    (e) => setPriceRange(minPrice, e.target.value),
+    (next) => setPriceRange(minPrice, next ?? ""),
     [minPrice, setPriceRange]
   );
 
@@ -236,16 +234,16 @@ const ProductFilters = () => {
 
       {/* ردیف دوم: محدوده قیمت + دکمه ریست */}
       <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-5 gap-5 pt-3 border-t border-border">
-        <PriceInput
+        <PriceRangeInput
           label="حداقل قیمت (ریال)"
-          value={minPrice}
+          value={minPrice === "" ? null : Number(minPrice)}
           onChange={handleMinPrice}
           placeholder="از"
         />
 
-        <PriceInput
+        <PriceRangeInput
           label="حداکثر قیمت (ریال)"
-          value={maxPrice}
+          value={maxPrice === "" ? null : Number(maxPrice)}
           onChange={handleMaxPrice}
           placeholder="تا"
         />

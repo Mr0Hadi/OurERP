@@ -1,14 +1,20 @@
 // src/features/suppliers/components/forms/SupplierFinanceForm.jsx
 import { Wallet, TrendingUp, TrendingDown } from "lucide-react";
-import { Controller } from "react-hook-form";
-import { Input } from "@/shared/components/ui/input";
+import { Controller, useWatch } from "react-hook-form";
 import { Label } from "@/shared/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
+import { PriceInput } from "@/shared/components/ui/price-input";
 import { BalanceTypeEnum } from "@/shared/domain/enums/balanceType";
+import { numberToPersianWords } from "@/shared/lib/number-to-persian-words";
 
-export default function SupplierFinanceForm({ register, errors, balanceType, control }) {
+export default function SupplierFinanceForm({ errors, balanceType, control }) {
   const showAmount = balanceType !== BalanceTypeEnum.BALANCED;
+  const balanceAmount = useWatch({ control, name: "balanceAmount" });
+  const balanceAmountWords =
+    balanceAmount !== "" && balanceAmount != null
+      ? numberToPersianWords(balanceAmount, { rialToToman: true })
+      : "";
 
   return (
     <Card className="shadow-md rounded-2xl overflow-hidden pt-0 gap-0">
@@ -68,24 +74,33 @@ export default function SupplierFinanceForm({ register, errors, balanceType, con
               <Label htmlFor="balanceAmount" className="text-sm font-medium">
                 مبلغ (ریال) <span className="text-destructive">*</span>
               </Label>
-              <div className="relative">
-                <Input
-                  id="balanceAmount"
-                  type="number"
-                  min="0"
-                  placeholder="۰"
-                  dir="ltr"
-                  className="h-10 pl-16 pr-3 rounded-lg transition-all text-base font-semibold input-rtl-placeholder"
-                  {...register("balanceAmount", { required: "وارد کردن مبلغ الزامی است" })}
-                />
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-sm font-medium text-muted-foreground">
-                  ریال
-                </div>
-              </div>
-              {errors.balanceAmount && (
+              <Controller
+                name="balanceAmount"
+                control={control}
+                rules={{ required: "وارد کردن مبلغ الزامی است" }}
+                render={({ field }) => (
+                  <div className="relative">
+                    <PriceInput
+                      id="balanceAmount"
+                      min={0}
+                      value={field.value === "" || field.value == null ? null : Number(field.value)}
+                      onValueChange={(next) => field.onChange(next ?? "")}
+                      className="h-10 pl-16 pr-3 rounded-lg transition-all text-base font-semibold"
+                    />
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-sm font-medium text-muted-foreground">
+                      ریال
+                    </div>
+                  </div>
+                )}
+              />
+              {errors.balanceAmount ? (
                 <span className="text-xs text-destructive block mt-1 font-medium">
                   {errors.balanceAmount.message}
                 </span>
+              ) : (
+                balanceAmountWords && (
+                  <p className="text-xs text-muted-foreground">{balanceAmountWords}</p>
+                )
               )}
             </div>
           )}
