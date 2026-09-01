@@ -146,6 +146,16 @@ namespace WMS.Tests.Support
                 Team = team,
             };
 
+        /// <summary>Persists a standalone user (with its own department) for tests that only need
+        /// a valid Users.Id to satisfy Sale.SalesUserId/Purchase.PurchasingUserId's FK.</summary>
+        public static User PersistedUser(WMSDbContext context, string username = "tester")
+        {
+            var user = User(Department(), null, username);
+            context.Users.Add(user);
+            context.SaveChanges();
+            return user;
+        }
+
         /// <summary>
         /// A shipped sale: one product with <paramref name="stock"/> units on hand and one sale
         /// line already shipped in full. The starting point for most sale-return tests.
