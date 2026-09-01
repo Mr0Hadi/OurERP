@@ -295,7 +295,14 @@ frontend's proforma commit (`92544f6`) plus `docs/invoice-attachment-requirement
   `20260830210607_add-purchase-sale-drivers-and-notes`) — only creates the
   `DocumentAttachments` table + `(DocumentKind, DocumentId)` index; no Purchase/Sale schema
   change was needed since `PROFORMA` is just a new integer on an already-`int` `Status`
-  column. **Not yet applied to any database.**
+  column. **Applied to the local `WMS` database (2026-09-02)** — this migration had been
+  sitting pending since it shipped, which meant any `CreatePurchase`/`UpdatePurchase`/
+  `CreateSale`/`UpdateSale` call with a non-empty `attachments` array threw a SQL error
+  (`Invalid object name 'DocumentAttachments'`) even though the handler code was correct;
+  that pending migration was reported as "receiving purchase doesn't store files/pictures
+  properly" — `ReceivePurchaseCommand`'s own photo storage (`PurchaseReceivingImages`, a
+  different, already-applied table/migration) was never actually broken and is covered by
+  passing tests (`PurchaseReceivingImageTests`).
 - **Tests**: new cases in `Tests/WMS.Tests/Integration/PurchaseCrudTests.cs` (create as
   `PROFORMA`, leaving `PROFORMA` without/with an invoice number, attachment persistence) and
   `SaleCrudTests.cs` (partial-payment stays `PROFORMA`, full-payment auto-finalizes on both
