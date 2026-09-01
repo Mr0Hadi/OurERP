@@ -5,6 +5,22 @@
 > دقیقاً چه چیزی در بک‌اند کم است.
 >
 > تاریخ تهیه: ۱۴۰۵/۰۶/۰۸ (۲۰۲۶-۰۸-۳۰)
+>
+> **به‌روزرسانی ۱۴۰۵/۰۶/۱۰ (۲۰۲۶-۰۹-۰۱):** بخش ۲.۱–۲.۳ برای **خرید و فروش**
+> پیاده شد — گزینه‌ی (الف) همین سند انتخاب شد: جدولِ مشترکِ
+> `DocumentAttachments` + `DocumentKindEnum` (`PURCHASE=1, SALE=2,
+> PURCHASE_RETURN=3, SALE_RETURN=4` — دو مقدار آخر رزرو شده‌اند، هنوز به هیچ
+> دستوری وصل نیستند). شکلِ JSON دقیقاً همان بخش ۳ همین سند است.
+> `CreatePurchaseCommand`/`UpdatePurchaseCommand`/`CreateSaleCommand`/
+> `UpdateSaleCommand` فیلد `attachments` گرفتند؛ `PurchaseDto`/`SaleDto`
+> فیلد `attachments` را در خواندن برمی‌گردانند (رفتار `Update`: جایگزینیِ
+> کامل، طبق بخش ۲.۲). بخش ۲.۴ با گزینه‌ی ساده (۱) انجام شد: `.pdf`/
+> `application/pdf` به `AllowedImageExtensions`/`AllowedImageContentTypes`
+> در `appsettings.json` اضافه شد؛ اندپوینت جدا ساخته نشد. بخش ۲.۵ دست نخورد
+> (سرور چیزی از باکت پاک نمی‌کند). migration: `add-proforma-and-document-attachments`.
+> **مرجوعی خرید/فروش (`CreatePurchaseReturnCommand`/`CreateSaleReturnCommand`)
+> هنوز وصل نیست** — خارج از محدوده‌ی این دور کار بود؛ چون جدول و enum عمومی
+> ساخته شده، وصل‌کردنشان همان الگوی بالا را در یک خط تکرار می‌کند.
 
 ## ۱. مسئله در یک جمله
 

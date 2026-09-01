@@ -59,8 +59,7 @@ namespace Infrastructure.Services
 
         // Deliberately decoupled from return activity: whether a purchase's receiving is complete is
         // a question about ReceivedQuantity vs ordered Quantity alone. A still-open return claim
-        // against already-received goods does not block RECEIVED - the two concerns are independent
-        // (mirrors PurchaseStatusEnum.RETURNED staying unreachable, per CLAUDE.md's documented gap).
+        // against already-received goods does not block RECEIVED - the two concerns are independent.
         public PurchaseStatusEnum RecomputePurchaseStatus(Purchase purchase)
         {
             if (purchase.Status == PurchaseStatusEnum.CANCELLED)

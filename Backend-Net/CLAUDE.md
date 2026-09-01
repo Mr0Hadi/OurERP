@@ -239,8 +239,90 @@ Backend-Net/
 - **Migration not yet generated or applied** — no `dotnet` available in the environment that made this change; run `dotnet ef migrations add add-purchase-sale-drivers-and-notes --project Infrastructure --startup-project WMS` then `dotnet ef database update --project Infrastructure --startup-project WMS`, and a `dotnet build` first since none of this has been compiled yet either.
 - Unrelated to `PurchaseReturn`/`SaleReturn`'s own `PartyName`/`PartyNationalId`/`VehiclePlate`/`Note` on `ExecuteGoodsRound` (§9/§10 of the API guide, per-effect-round on the return side) — same shape, different feature, no code shared.
 
+**Purchase/Sale pre-invoice (proforma) + invoice attachments (2026-09-01).** Built from the
+frontend's proforma commit (`92544f6`) plus `docs/invoice-attachment-requirements.fa.md`.
+
+- **`PurchaseStatusEnum`/`SalesStatusEnum` were renumbered (2026-09-02) to put `PROFORMA = 0`
+  first**, matching the frontend's own renumbering exactly instead of asking the frontend to
+  adopt append-only backend numbers (the 2026-09-01 decision documented in
+  `docs/frontend-enum-contract.fa.md` — see that file's newer update note for the reversal).
+  This breaks §7's "never renumber a persisted enum" rule on purpose: there is no real
+  persisted data yet (mock data only), so no adapter/translation layer was written — the
+  integers were just changed directly. `PurchaseStatusEnum` is now `PROFORMA=0, PENDING=1,
+  SHIPPED=2, PARTIALLY_RECEIVED=3, RECEIVED=4, CANCELLED=5` (the old `RETURNED` member was
+  dropped — it was permanently unreachable dead code, per the older documented gap, and the
+  frontend never had it either). `SalesStatusEnum` is now `PROFORMA=0, PROCESSING=1,
+  PARTIALLY_DELIVERED=2, SHIPPED=3, DELIVERED=4, CANCELLED=5, PENDING=6, RETURNED=7` — the
+  first six match the frontend's `SaleStatusEnum` exactly; `PENDING`/`RETURNED` have no
+  frontend counterpart yet (both are genuinely still needed backend-side — `RETURNED` is set
+  by `SaleReturnCalculationService.RecomputeSaleStatus`, `PENDING` is a real pre-shipping
+  status used throughout the test suite) so they're appended after the shared members instead
+  of interleaved, keeping every value the frontend does know about aligned on the wire.
+  Update `scripts/seed-mock-data.sql` if you add more raw `Status` integers by hand — its
+  Purchase/Sale insert blocks were updated to the new numbering in the same change.
+- **Purchase**: a purchase in `PROFORMA` has no `InvoiceNumber`/`InvoiceDate` requirement
+  (`CreatePurchaseCommandValidator`/`UpdatePurchaseCommandValidator` relax both `.When(x =>
+  x.Status != PurchaseStatusEnum.PROFORMA)`). Leaving `PROFORMA` requires a non-empty
+  `InvoiceNumber` — enforced in `UpdatePurchaseCommandHandler` (throws
+  `ValidationCustomException` otherwise) since `Update` is the only path that changes an
+  existing purchase's status. An attachment is recommended but **not** enforced (explicit
+  scope decision — see the plan this shipped from).
+- **Sale**: identical validator relaxation, but the exit rule is fully automatic and
+  payment-driven, not manual. `CreateSaleCommandHandler`/`UpdateSaleCommandHandler` check
+  `PaidAmount >= TotalAmount` while `Status == PROFORMA`: if true, the handler itself
+  generates the official invoice number (`Generator.GenerateInvoiceNumber`, same
+  `INV-{year}-{seq:D4}` shape as `GenerateReturnNumber`/`GenerateSaleReturnNumber`), sets
+  `InvoiceDate = DateTime.Now`, and forces `Status = PROCESSING`. `UpdateSaleCommandHandler`
+  additionally **rejects** an attempt to move a `PROFORMA` sale to any other status without
+  full payment (`ValidationCustomException`) — staff cannot manually push a sale out of
+  proforma before the customer has paid.
+- **`DocumentAttachment`** (`Domain/Entities/DocumentAttachment.cs`) is a new *shared* table —
+  option (a) from `docs/invoice-attachment-requirements.fa.md` — keyed loosely by
+  `(DocumentKind, DocumentId)` instead of a real FK, so one table backs every document kind.
+  `DocumentKindEnum` has all four values (`PURCHASE=1, SALE=2, PURCHASE_RETURN=3,
+  SALE_RETURN=4`) but **only `PURCHASE`/`SALE` are wired** into
+  `CreatePurchaseCommand`/`UpdatePurchaseCommand`/`CreateSaleCommand`/`UpdateSaleCommand` and
+  `PurchaseDto.Attachments`/`SaleDto.Attachments` — `PurchaseReturn`/`SaleReturn` attachments
+  are still open (out of this task's scope, not forgotten).
+- **`Update` replaces attachments wholesale**, not additively — `UpdatePurchaseCommandHandler`/
+  `UpdateSaleCommandHandler` delete every existing `DocumentAttachment` row for that
+  `(DocumentKind, DocumentId)` and re-insert the request's list, matching the requirements
+  doc's §2.2 contract (the frontend always sends the final list).
+- **PDF support**: `.pdf`/`application/pdf` added to `AllowedImageExtensions`/
+  `AllowedImageContentTypes` in `appsettings.json` (requirements doc §2.4 option 1 — no new
+  upload endpoint).
+- Shipped as migration `add-proforma-and-document-attachments` (chained onto
+  `20260830210607_add-purchase-sale-drivers-and-notes`) — only creates the
+  `DocumentAttachments` table + `(DocumentKind, DocumentId)` index; no Purchase/Sale schema
+  change was needed since `PROFORMA` is just a new integer on an already-`int` `Status`
+  column. **Not yet applied to any database.**
+- **Tests**: new cases in `Tests/WMS.Tests/Integration/PurchaseCrudTests.cs` (create as
+  `PROFORMA`, leaving `PROFORMA` without/with an invoice number, attachment persistence) and
+  `SaleCrudTests.cs` (partial-payment stays `PROFORMA`, full-payment auto-finalizes on both
+  Create and Update, manual exit without full payment rejected), plus a
+  `Generator.GenerateInvoiceNumber` unit test. All pass (`dotnet test`).
+- **`Tests/WMS.Tests` switched from SQLite to real SQL Server (2026-09-01).** `TestDatabase`
+  (`Tests/WMS.Tests/Support/TestDatabase.cs`) and `WmsApiFactory`
+  (`Tests/WMS.Tests/Functional/WmsApiFactory.cs`) previously ran against SQLite in-memory,
+  which cannot create the `HasSequence<int>("UserPersonelCode")` sequence the
+  `personelcode-int` migration added (2026-08-29) — every integration/functional test failed
+  with `SQLite does not support sequences`, regardless of what it was testing, since schema
+  creation itself failed. Both fixtures now point at the same SQL Server instance as
+  production (`Server=.`, per `WMS/appsettings.json`), each test creating its own
+  `WMS_Test_{guid}` database via `EnsureCreated()` and dropping it via `EnsureDeleted()` on
+  dispose. The `Microsoft.EntityFrameworkCore.Sqlite`/`SQLitePCLRaw.lib.e_sqlite3` package refs
+  were removed from `Tests/WMS.Tests/WMS.Tests.csproj` as unused. Requires a reachable local
+  SQL Server to run the suite at all now (there wasn't one implicitly required before). Result:
+  335/336 tests pass. The one still-failing test
+  (`ApiCrudFunctionalTests.GetCustomerList_WithStoredImageKey_AndUnconfiguredBucket_StillReturns200`)
+  expects an unconfigured object-storage bucket to yield a null `imageUrl`, but
+  `appsettings.json`'s `ObjectStorage:AccessKey`/`SecretKey` placeholders are the literal string
+  `"***"` rather than blank — `LiaraObjectStorageService.IsConfigured` treats any non-blank
+  string as configured, so it signs a garbage URL instead of returning null. Pre-existing,
+  unrelated to this feature, only surfaced now that the DB layer actually works; not fixed
+  here.
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
-- `CreatePurchaseCommandHandler` declares `_unitOfWork` but its constructor never assigns it → `NullReferenceException` at runtime (`Application/Features/Purchase/Commands/CreatePurchaseCommand.cs:46-62`).
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
 - `PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK (see `WMSDbContextModelSnapshot.cs:119-124`). Needs reconciliation.
 - `IWMSDbContext` does not expose `DbSet<PurchaseItem>`/`DbSet<SaleItem>` (the concrete `WMSDbContext` does), and the two concrete DbSet properties use `{ get; set; }` while the rest use `=> Set<T>()`.

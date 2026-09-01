@@ -1562,6 +1562,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 3 | دریافت‌شده کامل (RECEIVED) |
 | 4 | مرجوع‌شده (RETURNED) — در عمل هنوز به این وضعیت نمی‌رسد |
 | 5 | لغو‌شده (CANCELLED) |
+| 6 | پیش‌فاکتور (PROFORMA) — فاکتور رسمیِ تامین‌کننده هنوز نرسیده؛ `InvoiceNumber`/`InvoiceDate` الزامی نیستند. خروج از این وضعیت (از `UpdatePurchase`) به یک `InvoiceNumber` غیرخالی نیاز دارد |
 
 ### `SalesStatusEnum` (وضعیت سند فروش)
 | مقدار | معنی |
@@ -1573,6 +1574,24 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 4 | مرجوع‌شده (RETURNED) |
 | 5 | لغو‌شده (CANCELLED) |
 | 6 | ارسال‌شده کامل (SHIPPED) |
+| 7 | پیش‌فاکتور (PROFORMA) — مشتری هنوز کامل پرداخت نکرده؛ فاکتور رسمی و شماره‌اش وجود ندارد. خروج از این وضعیت **دستی نیست**: به محض این‌که `paidAmount` در `CreateSale`/`UpdateSale` به `totalAmount` برسد، بکند خودش شماره فاکتور می‌سازد و وضعیت را به `PROCESSING` می‌برد؛ تلاش برای تغییر دستیِ وضعیت بدون پرداخت کامل رد می‌شود |
+
+### فیلد `attachments` روی خرید و فروش (پیوست فاکتور)
+
+`CreatePurchaseCommand`/`UpdatePurchaseCommand`/`CreateSaleCommand`/`UpdateSaleCommand` یک فیلد `attachments` می‌گیرند و `PurchaseDto`/`SaleDto` (فقط جزئیات) همان را در خواندن برمی‌گردانند — همان قرارداد JSON که `docs/invoice-attachment-requirements.fa.md` بخش ۳ نوشته بود:
+
+نوشتن:
+```json
+{ "attachments": [ { "objectKey": "receiving/2026/08/3f1c....jpg", "fileName": "invoice.jpg", "note": "برگه‌ی اول" } ] }
+```
+`objectKey` الزامی است؛ `fileName`/`note` اختیاری‌اند. **`Update` آرایه را کامل جایگزین می‌کند**، نه اضافه — لیست نهایی همیشه باید کامل فرستاده شود.
+
+خواندن:
+```json
+{ "attachments": [ { "id": 12, "objectKey": "receiving/2026/08/3f1c....jpg", "url": "https://...", "fileName": "invoice.jpg", "note": "برگه‌ی اول", "createdAt": "2026-09-01T10:12:00Z" } ] }
+```
+
+فایل می‌تواند تصویر یا PDF باشد (`POST api/File/UploadImage` حالا `.pdf`/`application/pdf` را هم می‌پذیرد).
 
 ### enum های مشترک مرجوعی خرید/فروش (`PurchaseReturn`/`SaleReturn`, بخش‌های ۱۰ و ۱۲)
 

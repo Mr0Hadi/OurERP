@@ -1,3 +1,4 @@
+using Application.Common.Dtos;
 using Domain.Entities;
 using Domain.Enums;
 
@@ -21,6 +22,7 @@ namespace Application.Features.Sale.Dtos
         public DateTime UpdatedAt { get; set; }
         public List<SaleDriverDto> Drivers { get; set; } = new();
         public List<SaleShippingNoteDto> ShippingNotes { get; set; } = new();
+        public List<DocumentAttachmentDto> Attachments { get; set; } = new();
     }
 
     public class SaleDriverDto

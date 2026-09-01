@@ -41,6 +41,7 @@ namespace Infrastructure.Persistence
         public DbSet<PurchaseReceivingImage> PurchaseReceivingImages => Set<PurchaseReceivingImage>();
         public DbSet<PurchaseDriver> PurchaseDrivers => Set<PurchaseDriver>();
         public DbSet<PurchaseReceivingNote> PurchaseReceivingNotes => Set<PurchaseReceivingNote>();
+        public DbSet<DocumentAttachment> DocumentAttachments => Set<DocumentAttachment>();
         public DbSet<SaleDriver> SaleDrivers => Set<SaleDriver>();
         public DbSet<SaleShippingNote> SaleShippingNotes => Set<SaleShippingNote>();
         public DbSet<PosTerminal> PosTerminals => Set<PosTerminal>();
@@ -369,6 +370,9 @@ namespace Infrastructure.Persistence
 
             modelBuilder.Entity<InventoryCostLedgerEntry>()
                 .HasIndex(x => new { x.ReferenceType, x.ReferenceId });
+
+            modelBuilder.Entity<DocumentAttachment>()
+                .HasIndex(x => new { x.DocumentKind, x.DocumentId });
         }
     }
 }

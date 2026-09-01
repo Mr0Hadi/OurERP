@@ -30,8 +30,35 @@
 | `PaymentTypeEnum` | `0` CASH · `1` CREDIT · `2` CHECK · `3` TRANSFER · `4` MIXED | `shared/domain/enums/paymentType.js` |
 | `ProductUnitEnum` | `0` Hand · `1` Number · `2` Box · `3` Liter · `4` Kg · `5` Kit · `6` Package · `7` Pair | `shared/domain/enums/productUnit.js` |
 | `BarcodeReferenceKindEnum` | `1` PRODUCT · `2` UNIT · `3` UNKNOWN | `shared/domain/enums/barcodeReferenceKind.js` |
-| `PurchaseStatusEnum` | `0` PENDING · `1` SHIPPED · `2` PARTIALLY_RECEIVED · `3` RECEIVED · `4` RETURNED · `5` CANCELLED | `shared/domain/enums/purchaseStatus.js` |
-| `SalesStatusEnum` | `0` PENDING · `1` PROCESSING · `2` PARTIALLY_DELIVERED · `3` DELIVERED · `4` RETURNED · `5` CANCELLED · `6` SHIPPED | `shared/domain/enums/saleStatus.js` |
+| `PurchaseStatusEnum` | `0` PROFORMA · `1` PENDING · `2` SHIPPED · `3` PARTIALLY_RECEIVED · `4` RECEIVED · `5` CANCELLED | `shared/domain/enums/purchaseStatus.js` |
+| `SalesStatusEnum` | `0` PROFORMA · `1` PROCESSING · `2` PARTIALLY_DELIVERED · `3` SHIPPED · `4` DELIVERED · `5` CANCELLED · `6` PENDING (بکند-فقط) · `7` RETURNED (بکند-فقط) | `shared/domain/enums/saleStatus.js` |
+
+> **به‌روزرسانی ۱۴۰۵/۰۶/۱۱ (۲۰۲۶-۰۹-۰۲) — بکند هم بازشماره‌گذاری کرد؛ یادداشت قبلی منتفی شد.**
+> یادداشت ۲۰۲۶-۰۹-۰۱ زیر (که می‌گفت بکند append-only می‌ماند و فرانت باید
+> `6`/`7` را بپذیرد) کنار گذاشته شد. چون هنوز داده‌ی واقعی/پایدار روی این
+> enum ها ذخیره نشده (فقط داده‌ی mock)، بکند مستقیماً بازشماره‌گذاری شد تا
+> عیناً با شماره‌های فرانت یکی باشد — بدون هیچ لایه‌ی نگاشت/adapter. جدول
+> بخش ۱ بالا همین شماره‌های نهایی را نشان می‌دهد؛ اعضای مشترک هر دو طرف
+> (`PROFORMA` تا `CANCELLED`) اکنون کاملاً همسان‌اند.
+>
+> `PurchaseStatusEnum.RETURNED` (که قبلاً مقدار `4` بود) به‌کل از بکند حذف
+> شد — کد مرده و هرگز ست نمی‌شد (گپ مستندشده‌ی قبلی)، و فرانت هم هرگز آن
+> را نداشت.
+>
+> `SalesStatusEnum.PENDING` و `SalesStatusEnum.RETURNED` واقعاً لازم‌اند
+> (اولی وضعیت پیش از ارسال، دومی را `RecomputeSaleStatus` واقعاً برمی‌گرداند)
+> پس حذف نشدند؛ چون فرانت جایی برایشان ندارد، بعد از شش عضو مشترک
+> append شدند (`6`/`7`) تا هیچ‌کدام از مقادیر شناخته‌شده‌ی فرانت جابه‌جا
+> نشود. روی سیم مشکلی نیست — فرانت اگر این دو را دریافت کند فقط لیبل
+> نمایش نمی‌دهد (طبق یادداشت زیر درباره‌ی `PENDING`).
+>
+> منطق کسب‌وکار پیاده‌شده: برای خرید، خروج از `PROFORMA` فقط به شماره‌ی
+> فاکتورِ تامین‌کننده نیاز دارد (ضمیمه اختیاری). برای فروش، خروج از
+> `PROFORMA` کاملاً خودکار و بر اساس پرداختِ کامل است — `paidAmount >= totalAmount`
+> در `CreateSale`/`UpdateSale` باعث می‌شود بکند خودش شماره فاکتور بسازد و
+> وضعیت را به `PROCESSING` ببرد؛ تلاش برای خروج دستی بدون پرداخت کامل با
+> خطای اعتبارسنجی رد می‌شود. جزئیات کامل: `CLAUDE.md` بخش «Purchase/Sale
+> pre-invoice (proforma)».
 
 > **یک نکته درباره‌ی `SalesStatusEnum.PENDING`:** فرانت این عضو را می‌شناسد و اگر سرور بفرستد درست نمایش می‌دهد، ولی خودش هرگز تولیدش نمی‌کند — فروش تازه همیشه با `PROCESSING` ساخته می‌شود. در UI هم `PENDING` و `PROCESSING` یک برچسب واحد («در حال پردازش») دارند. اگر بکند روی این دو تفکیک معنادار قائل است، بگویید تا در فرانت جدا شوند.
 

@@ -19,6 +19,7 @@ namespace Application.Features.Purchase.Dtos
         public List<PaymentDetailDto> PaymentDetails { get; set; }
         public List<PurchaseDriverDto> Drivers { get; set; } = new();
         public List<PurchaseReceivingNoteDto> ReceivingNotes { get; set; } = new();
+        public List<DocumentAttachmentDto> Attachments { get; set; } = new();
     }
 
     public class PurchaseDriverDto

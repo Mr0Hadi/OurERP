@@ -33,6 +33,7 @@ namespace Application.Common.Contracts.Context
         DbSet<PurchaseReceivingImage> PurchaseReceivingImages { get; }
         DbSet<PurchaseDriver> PurchaseDrivers { get; }
         DbSet<PurchaseReceivingNote> PurchaseReceivingNotes { get; }
+        DbSet<DocumentAttachment> DocumentAttachments { get; }
         DbSet<SaleDriver> SaleDrivers { get; }
         DbSet<SaleShippingNote> SaleShippingNotes { get; }
         DbSet<PosTerminal> PosTerminals { get; }

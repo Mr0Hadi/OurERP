@@ -35,6 +35,11 @@ namespace Common.Extensions
             return $"SRET-{DateTime.Now.Year}-{seq:D4}";
         }
 
+        public static string GenerateInvoiceNumber(int seq)
+        {
+            return $"INV-{DateTime.Now.Year}-{seq:D4}";
+        }
+
         public static string GenerateRandomNumber(int digits)
         {
             Random random = new Random();
