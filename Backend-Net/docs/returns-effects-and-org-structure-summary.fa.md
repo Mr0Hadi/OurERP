@@ -62,9 +62,19 @@ dotnet ef database update --project Infrastructure --startup-project WMS
 
 پارامتر اختیاری `BalanceType` (از نوع `BalanceTypeEnum`) به `GetCustomerList` و `GetSupplierList` اضافه شد — فرانت از قبل این فیلتر را در UI داشت ولی بکند پشتیبانی نمی‌کرد.
 
-### ۸. `ProductUnitStatusEnum` — چهار عضو جدید
+### ۸. `ProductUnitStatusEnum` — چهار عضو جدید (❌ **حذف شدند، ۲۰۲۶-۰۹-۰۱** — این بخش دیگر معتبر نیست، فقط برای تاریخچه نگه داشته شده)
 
-`SHIPPED = 5`، `DAMAGED = 6`، `LOST = 7`، `RETURNED_BY_CUSTOMER = 8` اضافه شدند (دقیقاً با همان اعداد پیشنهادی فرانت). `RETURNED_BY_CUSTOMER` در فاز ب واقعاً به کار گرفته شد؛ بقیه فعلاً فقط تعریف شده‌اند و منتظر یک فیچر جداگانه («ثبت وضعیت دستی» انباردار) هستند که هنوز طراحی نشده.
+`SHIPPED = 5`، `DAMAGED = 6`، `LOST = 7`، `RETURNED_BY_CUSTOMER = 8` اضافه شدند (دقیقاً با همان اعداد پیشنهادی فرانت). ~~`RETURNED_BY_CUSTOMER` در فاز ب واقعاً به کار گرفته شد؛~~ بقیه فعلاً فقط تعریف شده‌اند و منتظر یک فیچر جداگانه («ثبت وضعیت دستی» انباردار) هستند که هنوز طراحی نشده.
+
+> **⚠️ اصلاح (۱۴۰۵/۰۶/۱۱ — ۲۰۲۶-۰۹-۰۱):** جمله‌ی بالا درباره‌ی `RETURNED_BY_CUSTOMER` **نادرست**
+> بود — گرپ کامل روی `Application`/`Domain`/`Infrastructure` هیچ ارجاعی به آن پیدا نکرد. آنچه
+> واقعاً در فاز ب استفاده شد `RETURNED_TO_SUPPLIER` بود (عضو قدیمی، مقدار `3`، برای سمت خرید —
+> همان که در تصمیم‌های معماری زیر توضیح داده شده)، نه `RETURNED_BY_CUSTOMER` جدید. چون هیچ‌کدام
+> از این ۴ عضو جدید هیچ‌وقت واقعاً تولید نمی‌شد (نه در کد، نه در seed script) و فرانت هم همان
+> هفته از درخواستشان برگشت (بخش ۲ سند `frontend-enum-contract.fa.md`)، هر ۴ عضو حذف شدند.
+> `ProductUnitStatusEnum` الان دوباره دقیقاً همان ۴ عضو اصلی است: `IN_STOCK`, `SOLD`,
+> `RETURNED_TO_SUPPLIER`, `SCRAPPED`. جزئیات کامل: `CLAUDE.md` بخش «Frontend-enum-contract
+> cleanup pass».
 
 ---
 

@@ -1,4 +1,4 @@
-﻿using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -65,14 +65,26 @@ namespace Application.Features.Supplier.Queries
                 CompanyName = x.CompanyName,
                 FullName = x.FirstName + " " + x.LastName,
                 BalanceType = x.BalanceType,
-                Status = x.BalanceType.ToString(),
                 ImageKey = x.ImageUrl
             }).ToPagedAsync(request.Page, request.Take, cancellationToken);
 
-            // Signing happens after materialization - GetPresignedUrl is a local method call and
-            // could not be translated into the SQL projection above.
+            // Signing and Status both happen after materialization - GetPresignedUrl and
+            // GetDescription are local calls (reflection over a DescriptionAttribute) and could
+            // not be translated into the SQL projection above. Status now goes through the
+            // project's shared Common.Extensions.EnumExtensions.GetDescription() (2026-09-01,
+            // see docs/frontend-enum-contract.fa.md section 5.3) instead of a raw ToString() -
+            // it used to leak the English enum member name ("Creditor"); now it returns the same
+            // localized Persian text BalanceTypeEnum's [Description] attributes already drive
+            // everywhere else (e.g. Product.Unit.GetDescription() on the return queries). This
+            // is still the one string-typed enum field in the API - the value just changed from
+            // an English literal to the same display text used elsewhere in the app - so no
+            // upstream consumer should be relying on the old "Creditor"/"Debtor"/"Balanced"
+            // literal values.
             foreach (var item in paged.Items)
+            {
                 item.ImageUrl = _objectStorageService.GetPresignedUrl(item.ImageKey);
+                item.Status = item.BalanceType.HasValue ? item.BalanceType.Value.GetDescription() : null;
+            }
 
             res.Data = new
             {

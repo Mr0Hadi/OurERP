@@ -217,11 +217,11 @@ namespace WMS.Tests.Unit
         {
             var sale = new Sale
             {
-                Status = SalesStatusEnum.PENDING,
+                Status = SalesStatusEnum.PROCESSING,
                 Items = new() { new SaleItem { ShippedQuantity = 0, SettledQuantity = 0 } },
             };
 
-            Assert.Equal(SalesStatusEnum.PENDING, _sut.RecomputeSaleStatus(sale));
+            Assert.Equal(SalesStatusEnum.PROCESSING, _sut.RecomputeSaleStatus(sale));
         }
 
         [Fact]
