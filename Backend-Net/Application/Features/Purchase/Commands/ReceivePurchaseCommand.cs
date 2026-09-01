@@ -25,7 +25,7 @@ namespace Application.Features.Purchase.Commands
         public int PurchaseId { get; set; }
         public DateTime? ReceivedDate { get; set; }
         public string? ReceivingNote { get; set; }
-        public string? DriverNationalCode { get; set; }
+        public string? DriverPhoneNumber { get; set; }
         public string? DriverFullName { get; set; }
         public string? VehiclePlate { get; set; }
         public List<ReceivePurchaseItemDto> Items { get; set; } = new();
@@ -49,6 +49,9 @@ namespace Application.Features.Purchase.Commands
             {
                 image.RuleFor(i => i.ObjectKey).NotEmpty().WithMessage(Validation.RequiredMessage("شناسه تصویر"));
             });
+            RuleFor(x => x.DriverPhoneNumber).Must(Validation.IsMobileNumber)
+                .When(x => !string.IsNullOrWhiteSpace(x.DriverPhoneNumber))
+                .WithMessage("شماره تماس راننده وارد شده صحیح نمی باشد.");
         }
     }
 
@@ -125,13 +128,13 @@ namespace Application.Features.Purchase.Commands
                 }, cancellationToken);
             }
 
-            if (!string.IsNullOrWhiteSpace(request.DriverFullName) || !string.IsNullOrWhiteSpace(request.DriverNationalCode) || !string.IsNullOrWhiteSpace(request.VehiclePlate))
+            if (!string.IsNullOrWhiteSpace(request.DriverFullName) || !string.IsNullOrWhiteSpace(request.DriverPhoneNumber) || !string.IsNullOrWhiteSpace(request.VehiclePlate))
             {
                 await _context.PurchaseDrivers.AddAsync(new PurchaseDriver
                 {
                     PurchaseId = purchase.Id,
                     DriverFullName = request.DriverFullName,
-                    DriverNationalCode = request.DriverNationalCode,
+                    DriverPhoneNumber = request.DriverPhoneNumber,
                     VehiclePlate = request.VehiclePlate,
                     CreatedAt = now,
                 }, cancellationToken);

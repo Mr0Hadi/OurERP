@@ -10,7 +10,7 @@ namespace Domain.Entities
         public int Id { get; set; }
         public int SaleId { get; set; }
         public string DriverFullName { get; set; }
-        public string DriverNationalCode { get; set; }
+        public string DriverPhoneNumber { get; set; }
         public string VehiclePlate { get; set; }
         public DateTime CreatedAt { get; set; }
 
