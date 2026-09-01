@@ -44,7 +44,7 @@ namespace WMS.Tests.Integration
             Assert.Equal(100_000m, afterFirstReceipt.RunningAverageCost);
 
             var sale1Item = Seed.SaleItem(product, quantity: 5, unitPrice: 150_000);
-            var sale1 = Seed.Sale(customer, SalesStatusEnum.PENDING, sale1Item);
+            var sale1 = Seed.Sale(customer, SalesStatusEnum.PROCESSING, sale1Item);
             scope.Context.Sales.Add(sale1);
             await scope.Context.SaveChangesAsync();
 
@@ -83,7 +83,7 @@ namespace WMS.Tests.Integration
             AssertClose(166_666.6667m, afterSecondReceipt.RunningAverageCost);
 
             var sale2Item = Seed.SaleItem(product, quantity: 5, unitPrice: 250_000);
-            var sale2 = Seed.Sale(customer, SalesStatusEnum.PENDING, sale2Item);
+            var sale2 = Seed.Sale(customer, SalesStatusEnum.PROCESSING, sale2Item);
             scope.Context.Sales.Add(sale2);
             await scope.Context.SaveChangesAsync();
 

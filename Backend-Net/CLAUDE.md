@@ -252,14 +252,27 @@ frontend's proforma commit (`92544f6`) plus `docs/invoice-attachment-requirement
   SHIPPED=2, PARTIALLY_RECEIVED=3, RECEIVED=4, CANCELLED=5` (the old `RETURNED` member was
   dropped — it was permanently unreachable dead code, per the older documented gap, and the
   frontend never had it either). `SalesStatusEnum` is now `PROFORMA=0, PROCESSING=1,
-  PARTIALLY_DELIVERED=2, SHIPPED=3, DELIVERED=4, CANCELLED=5, PENDING=6, RETURNED=7` — the
-  first six match the frontend's `SaleStatusEnum` exactly; `PENDING`/`RETURNED` have no
-  frontend counterpart yet (both are genuinely still needed backend-side — `RETURNED` is set
-  by `SaleReturnCalculationService.RecomputeSaleStatus`, `PENDING` is a real pre-shipping
-  status used throughout the test suite) so they're appended after the shared members instead
-  of interleaved, keeping every value the frontend does know about aligned on the wire.
+  PARTIALLY_DELIVERED=2, SHIPPED=3, DELIVERED=4, CANCELLED=5, RETURNED=6` — the first six
+  match the frontend's `SaleStatusEnum` exactly; `RETURNED` has no frontend counterpart yet
+  (it's genuinely still needed backend-side — it's set by
+  `SaleReturnCalculationService.RecomputeSaleStatus`) so it's appended after the shared members
+  instead of interleaved, keeping every value the frontend does know about aligned on the wire.
   Update `scripts/seed-mock-data.sql` if you add more raw `Status` integers by hand — its
   Purchase/Sale insert blocks were updated to the new numbering in the same change.
+  **✅ SOLVED (2026-09-01) — `SalesStatusEnum.PENDING` removed.** The original append-only
+  numbering above briefly had both `PENDING=6` and `RETURNED=7`, reasoning that `PENDING` was
+  "a real pre-shipping status used throughout the test suite" and therefore needed to stay.
+  That reasoning didn't hold up: nothing in production code ever sets it (only test seeds did,
+  as an arbitrary stand-in for "not shipped yet"), and the frontend already displays it under
+  the *exact same label* as `PROCESSING` if it ever received it — so backend/frontend were
+  already in agreement that the distinction carries no meaning today. Per
+  `docs/frontend-enum-contract.fa.md` section 1's open question, `PENDING` was deleted from
+  `SalesStatusEnum` and every test seed that used it now uses `PROCESSING` instead (semantics
+  unchanged — a sale that hasn't shipped yet). `RETURNED` shifted from `7` to `6`; safe because
+  the frontend has no expectation for either number and, per the renumbering note just above,
+  there is still no real persisted `Sale` data for this enum. If a genuinely distinct
+  pre-shipping status is ever needed again, it should be reintroduced together with a frontend
+  change, not appended silently.
 - **Purchase**: a purchase in `PROFORMA` has no `InvoiceNumber`/`InvoiceDate` requirement
   (`CreatePurchaseCommandValidator`/`UpdatePurchaseCommandValidator` relax both `.When(x =>
   x.Status != PurchaseStatusEnum.PROFORMA)`). Leaving `PROFORMA` requires a non-empty
@@ -328,6 +341,65 @@ frontend's proforma commit (`92544f6`) plus `docs/invoice-attachment-requirement
   string as configured, so it signs a garbage URL instead of returning null. Pre-existing,
   unrelated to this feature, only surfaced now that the DB layer actually works; not fixed
   here.
+
+**Frontend-enum-contract cleanup pass (2026-09-01).** Follow-up audit of
+`docs/frontend-enum-contract.fa.md` against the actual code — most of its checklist turned out to
+already be done (silently, back on 2026-08-28 in the returns-effects rebuild) and the doc just
+hadn't been checked off; a few genuinely new fixes went in alongside it. Full detail and rationale
+in `docs/frontend-enum-contract.fa.md` itself (now carries ✅ SOLVED markers throughout) and
+`docs/returns-effects-and-org-structure-summary.fa.md` (one factual correction). Summary:
+
+- **✅ SOLVED — the return-domain "composite effects vs. closed enum" architecture decision
+  (contract doc §3).** Already fully implemented on 2026-08-28: `PurchaseReturn`/`SaleReturn` →
+  `…Claim` → `…Resolution` → `…Effect`, matching the frontend's `returnDoc → claims[] →
+  resolutions[] → effects[]` exactly. No `DecisionType` enum exists anywhere in the codebase
+  anymore. The contract doc's checklist just hadn't been updated to reflect it.
+- **✅ SOLVED — `ReturnEffectStatusEnum.VOID`, the full 14-member `ReturnProblemEnum`, and
+  `ReturnClaimScopeEnum`/`ReturnOffScopeKindEnum`** (contract doc §3.4) all already exist and
+  match the frontend's numbers exactly — same 2026-08-28 rebuild, same stale-checklist situation.
+- **`ProductUnitStatusEnum` — 4 unused members deleted.** The contract doc's §2 claimed both
+  sides already agreed on just 4 members (`IN_STOCK`/`SOLD`/`RETURNED_TO_SUPPLIER`/`SCRAPPED`),
+  but the backend enum actually still had `SHIPPED=5`/`DAMAGED=6`/`LOST=7`/
+  `RETURNED_BY_CUSTOMER=8` sitting in it, unused — added 2026-08-28 for a "manual status entry"
+  warehouse feature that was never designed, per a frontend request the frontend itself walked
+  back the same week. Checked both application code (`ProductUnitService` — the only thing that
+  mints/consumes/restores/reconciles units — never wrote any of the 4) and every SQL seed script
+  (none set them either) before deleting; no live-database check was possible from this session
+  (no `dotnet`/`sqlcmd` in this environment — see below). Now back to exactly the 4 members the
+  frontend has.
+- **`SalesStatusEnum.PENDING` removed, `PROCESSING` used instead — see the dated note in the
+  "Purchase/Sale pre-invoice" entry above** for the full reasoning (contract doc §1's open
+  question). `RETURNED` shifted from `7` to `6`.
+- **`SupplierListDto.Status` — now `BalanceType.GetDescription()`, not `.ToString()`.** This was
+  the one documented string-typed enum exception in the whole API (contract doc §5.3); it used to
+  leak the raw English enum member name (`"Creditor"`). Switched to the project's existing
+  `Common.Extensions.EnumExtensions.GetDescription()` helper (reads `[Description]`, same one
+  `Product.Unit.GetDescription()` already uses on the return queries), so it now returns the same
+  Persian text `BalanceTypeEnum`'s `[Description]` attributes already produce everywhere else
+  (`"طلبکار"`/`"بدهکار"`/`"تسویه شده"`). Still the one string-typed enum field in the API — the
+  *value* changed, the exception itself didn't — `GetSupplierListQuery` now computes it after
+  `ToPagedAsync` materializes the page, same reason `ImageUrl` signing already happens there
+  (`GetDescription`/`GetPresignedUrl` are local calls, not SQL-translatable). **This changes what
+  the field returns on the wire** (English literal → Persian text) — flag it to whoever owns the
+  frontend's supplier list if anything there reads `status` instead of the numeric `balanceType`
+  field that sits right next to it.
+- **`docs/api-guide.fa.md` §15 `PurchaseStatusEnum`/`SalesStatusEnum` tables were still showing
+  the *pre-renumbering* integers** (`PENDING=0, SHIPPED=1, …, PROFORMA=6/7` at the end) — stale
+  since the 2026-09-02 renumbering above never touched this doc. Rewritten to the current
+  `PROFORMA=0`-first numbering (and to drop `PENDING` from the sale table per this change). Also
+  added the undocumented `balanceType` query param to both `GetCustomerList`/`GetSupplierList` in
+  §4/§5 (contract doc §5.2 — the param already worked, it just wasn't written down), and noted the
+  differing param names between the two list endpoints (`fullName`/`minBalance`/`maxBalance` vs.
+  `companyNameOrContactName`/`fromBalance`/`toBalance`) so it stops looking like an inconsistency
+  nobody noticed.
+- **`docs/returns-effects-and-org-structure-summary.fa.md` had one factual error**, corrected in
+  place: it claimed `RETURNED_BY_CUSTOMER` "was actually put to use in phase B" — it wasn't; grep
+  across `Application`/`Domain`/`Infrastructure` turns up zero references, and it's now deleted
+  along with the other 3 unused members (see above).
+- **✅ Verified (2026-09-02) with `dotnet build`/`dotnet test` against local SQL Server.** Build:
+  0 errors. Tests: 335/336 pass — the one failure is the pre-existing, already-documented
+  `GetCustomerList_WithStoredImageKey_AndUnconfiguredBucket_StillReturns200` gap (see the
+  pre-invoice section above), unrelated to this pass.
 
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.

@@ -332,7 +332,7 @@ INSERT INTO PaymentDetail (Id, PurchaseId, PurchaseId1, SaleId, Type, Amount, ch
 /* ---------------------------------------------------------------------------
    7. Sales — the 3 deterministic rows of sales/services/mockData.js
    Status is SalesStatusEnum: PROFORMA=0, PROCESSING=1, PARTIALLY_DELIVERED=2,
-   SHIPPED=3, DELIVERED=4, CANCELLED=5, PENDING=6, RETURNED=7.
+   SHIPPED=3, DELIVERED=4, CANCELLED=5, RETURNED=6. (PENDING removed 2026-09-01 - see docs/frontend-enum-contract.fa.md.)
    --------------------------------------------------------------------------- */
 SET IDENTITY_INSERT Sales ON;
 INSERT INTO Sales
