@@ -1,4 +1,5 @@
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -26,14 +27,18 @@ namespace Application.Features.Sale.Commands
         public string? Description { get; set; }
         public int CustomerId { get; set; }
         public List<UpdateSaleItemDto> Items { get; set; }
+        public List<DocumentAttachmentInputDto> Attachments { get; set; } = new();
     }
 
     public class UpdateSaleCommandValidator : AbstractValidator<UpdateSaleCommand>
     {
         public UpdateSaleCommandValidator()
         {
-            RuleFor(x => x.InvoiceNumber).NotEmpty().WithMessage(Validation.RequiredMessage("شماره فاکتور"));
-            RuleFor(x => x.InvoiceDate).NotEmpty().WithMessage(Validation.RequiredMessage("تاریخ فاکتور"));
+            // تا وقتی مشتری پول را کامل نپرداخته، فروش پیش‌فاکتور است و شماره‌ی رسمی ندارد.
+            RuleFor(x => x.InvoiceNumber).NotEmpty().When(x => x.Status != SalesStatusEnum.PROFORMA)
+                .WithMessage(Validation.RequiredMessage("شماره فاکتور"));
+            RuleFor(x => x.InvoiceDate).NotEmpty().When(x => x.Status != SalesStatusEnum.PROFORMA)
+                .WithMessage(Validation.RequiredMessage("تاریخ فاکتور"));
             RuleFor(x => x.CustomerId).NotEmpty().WithMessage(Validation.RequiredMessage("مشتری"));
             RuleFor(x => x.TotalAmount).Must(p => p > 0).WithMessage("مبلغ کل باید از صفر بیشتر باشد.");
             RuleFor(x => x.PaidAmount).Must(p => p >= 0).WithMessage("مبلغ پرداختی باید بیشتر یا مساوی صفر باشد.");
@@ -46,18 +51,24 @@ namespace Application.Features.Sale.Commands
             });
             RuleFor(x => x.PaymentDetails).NotEmpty().When(x => x.PaymentType != PaymentTypeEnum.CASH)
                 .WithMessage("اطلاعات پرداخت باید به طول کامل پر شود.");
+            RuleForEach(x => x.Attachments).ChildRules(a =>
+            {
+                a.RuleFor(i => i.ObjectKey).NotEmpty().WithMessage(Validation.RequiredMessage("کلید فایل ضمیمه"));
+            });
         }
     }
 
     public class UpdateSaleCommandHandler : IRequestHandler<UpdateSaleCommand, ResponseDto>
     {
         private readonly IWMSDbContext _context;
+        private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
-        public UpdateSaleCommandHandler(IWMSDbContext context, IUnitOfWork unitOfWork, IMapper mapper)
+        public UpdateSaleCommandHandler(IWMSDbContext context, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, IMapper mapper)
         {
             _context = context;
+            _objectStorageService = objectStorageService;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
         }
@@ -66,13 +77,33 @@ namespace Application.Features.Sale.Commands
         {
             var res = new ResponseDto();
 
-            var sale = await _context.Sales.Include(x => x.Items).Where(x => x.Id == request.Id).FirstOrDefaultAsync() ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
+            var sale = await _context.Sales.Include(x => x.Items).Where(x => x.Id == request.Id).FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
 
             var hasUnknownItems = request.Items.Where(x => x.Id != 0).Select(x => x.Id).Except(sale.Items.Select(x => x.Id)).Any();
             if (hasUnknownItems)
                 throw new NotFoundCustomException("ردیف کالای مورد نظر در این فروش یافت نشد.");
 
-            sale.InvoiceNumber = request.InvoiceNumber;
+            // خروج از «پیش‌فاکتور» فقط با پرداخت کامل ممکن است؛ فاکتور رسمی هم خودکار ساخته می‌شود.
+            if (sale.Status == SalesStatusEnum.PROFORMA)
+            {
+                var fullyPaid = request.PaidAmount >= request.TotalAmount;
+                if (!fullyPaid && request.Status != SalesStatusEnum.PROFORMA)
+                    throw new ValidationCustomException("تا پرداخت کامل نشود، فروش از حالت پیش‌فاکتور خارج نمی‌شود.");
+
+                if (fullyPaid)
+                {
+                    if (string.IsNullOrWhiteSpace(request.InvoiceNumber))
+                    {
+                        var seq = await _context.Sales.CountAsync(cancellationToken) + 1;
+                        request.InvoiceNumber = Generator.GenerateInvoiceNumber(seq);
+                        request.InvoiceDate = DateTime.Now;
+                    }
+                    if (request.Status == SalesStatusEnum.PROFORMA)
+                        request.Status = SalesStatusEnum.PROCESSING;
+                }
+            }
+
+            sale.InvoiceNumber = request.InvoiceNumber ?? string.Empty;
             sale.InvoiceDate = request.InvoiceDate;
             sale.Status = request.Status;
             sale.PaymentType = request.PaymentType;
@@ -101,7 +132,27 @@ namespace Application.Features.Sale.Commands
                 sale.Items.Add(_mapper.Map<Domain.Entities.SaleItem>(incoming));
 
             _context.Sales.Update(sale);
-            await _unitOfWork.SaveChangesAsync();
+
+            // ضمیمه‌ها به‌طور کامل جایگزین می‌شوند، نه اضافه - فرانت همیشه فهرست نهایی را می‌فرستد.
+            var existingAttachments = await _context.DocumentAttachments
+                .Where(a => a.DocumentKind == DocumentKindEnum.SALE && a.DocumentId == sale.Id)
+                .ToListAsync(cancellationToken);
+            _context.DocumentAttachments.RemoveRange(existingAttachments);
+
+            foreach (var attachment in request.Attachments)
+            {
+                await _context.DocumentAttachments.AddAsync(new Domain.Entities.DocumentAttachment
+                {
+                    DocumentKind = DocumentKindEnum.SALE,
+                    DocumentId = sale.Id,
+                    ObjectKey = _objectStorageService.NormalizeKey(attachment.ObjectKey) ?? attachment.ObjectKey,
+                    FileName = attachment.FileName,
+                    Note = attachment.Note,
+                    CreatedAt = DateTime.Now,
+                }, cancellationToken);
+            }
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             res.Message = "فروش با موفقیت بروزرسانی شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();

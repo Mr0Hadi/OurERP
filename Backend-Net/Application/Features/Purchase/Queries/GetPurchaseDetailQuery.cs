@@ -1,8 +1,10 @@
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.Purchase.Dtos;
 using Common.Exceptions;
+using Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,9 +18,11 @@ namespace Application.Features.Purchase.Queries
     public class GetPurchaseDetailQueryHandler : IRequestHandler<GetPurchaseDetailQuery, ResponseDto>
     {
         private readonly IWMSDbContext _context;
-        public GetPurchaseDetailQueryHandler(IWMSDbContext context)
+        private readonly IObjectStorageService _objectStorageService;
+        public GetPurchaseDetailQueryHandler(IWMSDbContext context, IObjectStorageService objectStorageService)
         {
             _context = context;
+            _objectStorageService = objectStorageService;
         }
         public async Task<ResponseDto> Handle(GetPurchaseDetailQuery request, CancellationToken cancellationToken)
         {
@@ -74,6 +78,21 @@ namespace Application.Features.Purchase.Queries
                     }).ToList()
                 })
                 .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("خرید مورد نظر یافت نشد.");
+
+            var purchaseDto = (PurchaseDto)res.Data;
+            purchaseDto.Attachments = await _context.DocumentAttachments.AsNoTracking()
+                .Where(a => a.DocumentKind == DocumentKindEnum.PURCHASE && a.DocumentId == request.Id)
+                .Select(a => new DocumentAttachmentDto
+                {
+                    Id = a.Id,
+                    ObjectKey = a.ObjectKey,
+                    FileName = a.FileName,
+                    Note = a.Note,
+                    CreatedAt = a.CreatedAt
+                })
+                .ToListAsync(cancellationToken);
+            foreach (var attachment in purchaseDto.Attachments)
+                attachment.Url = _objectStorageService.GetPresignedUrl(attachment.ObjectKey);
 
             res.Message = "اطلاعات خرید با موفقیت ارسال شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();

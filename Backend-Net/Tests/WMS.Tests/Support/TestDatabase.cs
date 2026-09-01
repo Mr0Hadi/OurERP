@@ -12,19 +12,19 @@ using Application.Common.Contracts.UnitOfWork;
 using Infrastructure.Persistence;
 using Infrastructure.Repositories;
 using Infrastructure.Services;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace WMS.Tests.Support
 {
     /// <summary>
-    /// A real relational database for handler tests: SQLite in-memory, schema built from the
-    /// actual <see cref="WMSDbContext"/> model. Relational (unlike the EF in-memory provider), so
-    /// FK constraints, cascade deletes and LINQ translation failures all surface here rather than
-    /// only in production against SQL Server.
+    /// A real relational database for handler tests: a throwaway SQL Server database (same server
+    /// as production, "Server=." per WMS/appsettings.json), schema built from the actual
+    /// <see cref="WMSDbContext"/> model. Real SQL Server rather than SQLite/EF's in-memory provider
+    /// so FK constraints, cascade deletes, sequences (e.g. User.PersonelCode) and LINQ translation
+    /// failures all surface here exactly as they would in production.
     ///
-    /// The connection is held open for the lifetime of the instance - closing it drops the DB.
+    /// Each instance creates its own uniquely-named database and drops it on Dispose.
     /// </summary>
     public sealed class TestDatabase : IDisposable
     {
@@ -36,16 +36,15 @@ namespace WMS.Tests.Support
             QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
         }
 
-        private readonly SqliteConnection _connection;
         private readonly DbContextOptions<WMSDbContext> _options;
 
         public TestDatabase()
         {
-            _connection = new SqliteConnection("DataSource=:memory:");
-            _connection.Open();
+            var databaseName = $"WMS_Test_{Guid.NewGuid():N}";
+            var connectionString = $"Server=.;Database={databaseName};Trusted_Connection=True;TrustServerCertificate=True";
 
             _options = new DbContextOptionsBuilder<WMSDbContext>()
-                .UseSqlite(_connection)
+                .UseSqlServer(connectionString)
                 .EnableSensitiveDataLogging()
                 .Options;
 
@@ -68,7 +67,8 @@ namespace WMS.Tests.Support
 
         public void Dispose()
         {
-            _connection.Dispose();
+            using var context = new WMSDbContext(_options);
+            context.Database.EnsureDeleted();
         }
     }
 

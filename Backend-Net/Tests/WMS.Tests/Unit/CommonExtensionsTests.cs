@@ -42,6 +42,14 @@ namespace WMS.Tests.Unit
             Assert.Equal($"SRET-{DateTime.Now.Year}-0042", number);
         }
 
+        [Fact]
+        public void GenerateInvoiceNumber_IncludesCurrentYearAndPadsSequence()
+        {
+            var number = Generator.GenerateInvoiceNumber(7);
+
+            Assert.Equal($"INV-{DateTime.Now.Year}-0007", number);
+        }
+
         [Theory]
         [InlineData(1)]
         [InlineData(5)]

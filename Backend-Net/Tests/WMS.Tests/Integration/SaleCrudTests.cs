@@ -18,7 +18,7 @@ namespace WMS.Tests.Integration
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0);
             var customer = scenario.Customer;
 
-            var handler = new CreateSaleCommandHandler(scope.Db, scope.UnitOfWork, TestMapper.Instance);
+            var handler = new CreateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
             await handler.Handle(new CreateSaleCommand
             {
                 InvoiceNumber = "SALE-NEW",
@@ -51,7 +51,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 5, shippedQuantity: 0, stock: 0);
 
-            var handler = new UpdateSaleCommandHandler(scope.Db, scope.UnitOfWork, TestMapper.Instance);
+            var handler = new UpdateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
 
             await Assert.ThrowsAsync<NotFoundCustomException>(() => handler.Handle(new UpdateSaleCommand
             {
@@ -75,7 +75,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 5, shippedQuantity: 0, stock: 0);
 
-            var handler = new UpdateSaleCommandHandler(scope.Db, scope.UnitOfWork, TestMapper.Instance);
+            var handler = new UpdateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
             await handler.Handle(new UpdateSaleCommand
             {
                 Id = scenario.Sale.Id,
@@ -108,7 +108,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 5, shippedQuantity: 0, stock: 0);
 
-            var handler = new UpdateSaleCommandHandler(scope.Db, scope.UnitOfWork, TestMapper.Instance);
+            var handler = new UpdateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
             await handler.Handle(new UpdateSaleCommand
             {
                 Id = scenario.Sale.Id,
@@ -149,7 +149,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 3, shippedQuantity: 0, stock: 0);
 
-            var handler = new GetSaleDetailQueryHandler(scope.Db);
+            var handler = new GetSaleDetailQueryHandler(scope.Db, FakeObjectStorage.Instance);
             var res = await handler.Handle(new GetSaleDetailQuery { Id = scenario.Sale.Id }, CancellationToken.None);
 
             var dto = Assert.IsType<SaleDto>(res.Data);
@@ -173,6 +173,120 @@ namespace WMS.Tests.Integration
 
             Assert.Single(matchingList.Cast<object>());
             Assert.Empty(missingList.Cast<object>());
+        }
+
+        [Fact]
+        public async Task CreateSale_ProformaWithPartialPayment_StaysProformaWithoutInvoiceNumber()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0);
+
+            var handler = new CreateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
+            await handler.Handle(new CreateSaleCommand
+            {
+                CustomerId = scenario.Customer.Id,
+                TotalAmount = 5000,
+                PaidAmount = 1000,
+                PaymentType = PaymentTypeEnum.CASH,
+                Status = SalesStatusEnum.PROFORMA,
+                PaymentDetails = new(),
+                ProductIds = new()
+                {
+                    new CreateSaleItemDto { ProductId = scenario.Product.Id, Quantity = 1, UnitPrice = 5000, Discount = 0 },
+                },
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            var sale = verify.Sales.Single(x => x.CustomerId == scenario.Customer.Id && x.TotalAmount == 5000);
+            Assert.Equal(SalesStatusEnum.PROFORMA, sale.Status);
+            Assert.True(string.IsNullOrEmpty(sale.InvoiceNumber));
+        }
+
+        [Fact]
+        public async Task CreateSale_ProformaWithFullPayment_AutoFinalizesWithGeneratedInvoiceNumber()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0);
+
+            var handler = new CreateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
+            await handler.Handle(new CreateSaleCommand
+            {
+                CustomerId = scenario.Customer.Id,
+                TotalAmount = 5000,
+                PaidAmount = 5000,
+                PaymentType = PaymentTypeEnum.CASH,
+                Status = SalesStatusEnum.PROFORMA,
+                PaymentDetails = new(),
+                ProductIds = new()
+                {
+                    new CreateSaleItemDto { ProductId = scenario.Product.Id, Quantity = 1, UnitPrice = 5000, Discount = 0 },
+                },
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            var sale = verify.Sales.Single(x => x.CustomerId == scenario.Customer.Id && x.TotalAmount == 5000);
+            Assert.Equal(SalesStatusEnum.PROCESSING, sale.Status);
+            Assert.False(string.IsNullOrEmpty(sale.InvoiceNumber));
+        }
+
+        [Fact]
+        public async Task UpdateSale_ProformaWithoutFullPayment_ManualStatusChange_ThrowsValidation()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 5, shippedQuantity: 0, stock: 0);
+            scenario.Sale.Status = SalesStatusEnum.PROFORMA;
+            scenario.Sale.InvoiceNumber = "";
+            scope.Context.SaveChanges();
+
+            var handler = new UpdateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
+
+            await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(new UpdateSaleCommand
+            {
+                Id = scenario.Sale.Id,
+                InvoiceNumber = "",
+                InvoiceDate = DateTime.Now,
+                Status = SalesStatusEnum.PROCESSING,
+                PaymentType = PaymentTypeEnum.CASH,
+                PaymentDetails = new(),
+                CustomerId = scenario.Customer.Id,
+                TotalAmount = 5000,
+                PaidAmount = 1000,
+                Items = new() { new UpdateSaleItemDto { Id = scenario.Item.Id, ProductId = scenario.Product.Id, Quantity = 5, UnitPrice = 1000, Discount = 0 } },
+            }, CancellationToken.None));
+        }
+
+        [Fact]
+        public async Task UpdateSale_ProformaReachingFullPayment_AutoFinalizes()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 5, shippedQuantity: 0, stock: 0);
+            scenario.Sale.Status = SalesStatusEnum.PROFORMA;
+            scenario.Sale.InvoiceNumber = "";
+            scope.Context.SaveChanges();
+
+            var handler = new UpdateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
+            await handler.Handle(new UpdateSaleCommand
+            {
+                Id = scenario.Sale.Id,
+                InvoiceNumber = "",
+                InvoiceDate = DateTime.Now,
+                Status = SalesStatusEnum.PROFORMA,
+                PaymentType = PaymentTypeEnum.CASH,
+                PaymentDetails = new(),
+                CustomerId = scenario.Customer.Id,
+                TotalAmount = 5000,
+                PaidAmount = 5000,
+                Items = new() { new UpdateSaleItemDto { Id = scenario.Item.Id, ProductId = scenario.Product.Id, Quantity = 5, UnitPrice = 1000, Discount = 0 } },
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            var sale = verify.Sales.Single(x => x.Id == scenario.Sale.Id);
+            Assert.Equal(SalesStatusEnum.PROCESSING, sale.Status);
+            Assert.False(string.IsNullOrEmpty(sale.InvoiceNumber));
         }
     }
 }

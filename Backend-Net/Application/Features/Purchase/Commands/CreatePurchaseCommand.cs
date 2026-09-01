@@ -1,4 +1,6 @@
-﻿using Application.Common.Contracts.Repositories;
+﻿using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Repositories;
+using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -23,6 +25,7 @@ namespace Application.Features.Purchase.Commands
         public string InvoiceNumber { get; set; }
         public DateTime InvoiceDate { get; set; }
         public string? Description { get; set; }
+        public List<DocumentAttachmentInputDto> Attachments { get; set; } = new();
     }
 
     public class CreatePurchaseValidator : AbstractValidator<CreatePurchaseCommand>
@@ -40,22 +43,38 @@ namespace Application.Features.Purchase.Commands
             RuleFor(x => x.Status).IsInEnum().WithMessage("وضعیت نامعتبر است.");
             RuleFor(x => x.TotalAmount).Must(p => p > 0).WithMessage("مبلغ کل باید از صفر بیشتر باشد.");
             RuleFor(x => x.PaidAmount).Must(p => p >= 0).WithMessage("مبلغ پرداختی باید بیشتر یا مساوی صفر باشد.");
-            RuleFor(x => x.InvoiceNumber).NotEmpty().WithMessage(Validation.RequiredMessage("شماره فاکتور"));
-            RuleFor(x => x.InvoiceDate).NotEmpty().WithMessage(Validation.RequiredMessage("تاریخ فاکتور"));
+            // در مرحله‌ی پیش‌فاکتور، فاکتور رسمیِ تامین‌کننده هنوز نرسیده؛ شماره و تاریخش نباید الزامی باشد.
+            RuleFor(x => x.InvoiceNumber).NotEmpty().When(x => x.Status != PurchaseStatusEnum.PROFORMA)
+                .WithMessage(Validation.RequiredMessage("شماره فاکتور"));
+            RuleFor(x => x.InvoiceDate).NotEmpty().When(x => x.Status != PurchaseStatusEnum.PROFORMA)
+                .WithMessage(Validation.RequiredMessage("تاریخ فاکتور"));
             RuleFor(x => x.PaymentDetails).NotEmpty().When(x => x.PaymentType != PaymentTypeEnum.CASH)
                 .WithMessage("اطلاعات پرداخت باید به طول کامل پر شود.");
+            RuleForEach(x => x.Attachments).ChildRules(a =>
+            {
+                a.RuleFor(i => i.ObjectKey).NotEmpty().WithMessage(Validation.RequiredMessage("کلید فایل ضمیمه"));
+            });
         }
     }
 
     public class CreatePurchaseCommandHandler : IRequestHandler<CreatePurchaseCommand, ResponseDto>
     {
         private readonly IPurchaseRepository _purchaseRepository;
+        private readonly IWMSDbContext _context;
+        private readonly IObjectStorageService _objectStorageService;
         private readonly IMapper _mapper;
         private readonly IUnitOfWork _unitOfWork;
 
-        public CreatePurchaseCommandHandler(IPurchaseRepository purchaseRepository, IMapper mapper, IUnitOfWork unitOfWork)
+        public CreatePurchaseCommandHandler(
+            IPurchaseRepository purchaseRepository,
+            IWMSDbContext context,
+            IObjectStorageService objectStorageService,
+            IMapper mapper,
+            IUnitOfWork unitOfWork)
         {
             _purchaseRepository = purchaseRepository;
+            _context = context;
+            _objectStorageService = objectStorageService;
             _mapper = mapper;
             _unitOfWork = unitOfWork;
         }
@@ -65,9 +84,27 @@ namespace Application.Features.Purchase.Commands
             var res = new ResponseDto();
 
             var purchase = _mapper.Map<Domain.Entities.Purchase>(request);
+            // شماره فاکتور در مرحله‌ی پیش‌فاکتور می‌تواند خالی باشد، ولی ستون NOT NULL است.
+            purchase.InvoiceNumber ??= string.Empty;
 
             await _purchaseRepository.AddAsync(purchase, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            foreach (var attachment in request.Attachments)
+            {
+                await _context.DocumentAttachments.AddAsync(new Domain.Entities.DocumentAttachment
+                {
+                    DocumentKind = DocumentKindEnum.PURCHASE,
+                    DocumentId = purchase.Id,
+                    ObjectKey = _objectStorageService.NormalizeKey(attachment.ObjectKey) ?? attachment.ObjectKey,
+                    FileName = attachment.FileName,
+                    Note = attachment.Note,
+                    CreatedAt = DateTime.Now,
+                }, cancellationToken);
+            }
+
+            if (request.Attachments.Count > 0)
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             res.Message = "خرید با موفقیت ثبت شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();

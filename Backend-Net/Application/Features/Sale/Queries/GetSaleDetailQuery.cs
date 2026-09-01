@@ -1,8 +1,10 @@
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.Sale.Dtos;
 using Common.Exceptions;
+using Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,9 +18,11 @@ namespace Application.Features.Sale.Queries
     public class GetSaleDetailQueryHandler : IRequestHandler<GetSaleDetailQuery, ResponseDto>
     {
         private readonly IWMSDbContext _context;
-        public GetSaleDetailQueryHandler(IWMSDbContext context)
+        private readonly IObjectStorageService _objectStorageService;
+        public GetSaleDetailQueryHandler(IWMSDbContext context, IObjectStorageService objectStorageService)
         {
             _context = context;
+            _objectStorageService = objectStorageService;
         }
         public async Task<ResponseDto> Handle(GetSaleDetailQuery request, CancellationToken cancellationToken)
         {
@@ -62,6 +66,21 @@ namespace Application.Features.Sale.Queries
                     CreatedAt = n.CreatedAt
                 }).ToList()
             };
+
+            var attachments = await _context.DocumentAttachments.AsNoTracking()
+                .Where(a => a.DocumentKind == DocumentKindEnum.SALE && a.DocumentId == request.Id)
+                .Select(a => new DocumentAttachmentDto
+                {
+                    Id = a.Id,
+                    ObjectKey = a.ObjectKey,
+                    FileName = a.FileName,
+                    Note = a.Note,
+                    CreatedAt = a.CreatedAt
+                })
+                .ToListAsync(cancellationToken);
+            foreach (var attachment in attachments)
+                attachment.Url = _objectStorageService.GetPresignedUrl(attachment.ObjectKey);
+            ((SaleDto)res.Data).Attachments = attachments;
 
             res.Message = "اطلاعات فروش با موفقیت ارسال شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
