@@ -25,7 +25,7 @@ namespace Application.Features.Sale.Commands
         public DateTime? ShippedDate { get; set; }
         public string? ShippingNote { get; set; }
         public string? DriverFullName { get; set; }
-        public string? DriverNationalCode { get; set; }
+        public string? DriverPhoneNumber { get; set; }
         public string? VehiclePlate { get; set; }
         public List<ShipSaleItemDto> Items { get; set; } = new();
     }
@@ -43,6 +43,9 @@ namespace Application.Features.Sale.Commands
                 item.RuleFor(i => i.SaleItemId).NotNull().WithMessage(Validation.RequiredMessage("آیتم فروش"));
                 item.RuleFor(i => i.ShippedQuantity).GreaterThan(0).WithMessage("مقدار ارسالی باید از صفر بیشتر باشد.");
             });
+            RuleFor(x => x.DriverPhoneNumber).Must(Validation.IsMobileNumber)
+                .When(x => !string.IsNullOrWhiteSpace(x.DriverPhoneNumber))
+                .WithMessage("شماره تماس راننده وارد شده صحیح نمی باشد.");
         }
     }
 
@@ -99,13 +102,13 @@ namespace Application.Features.Sale.Commands
                 await _inventoryCostingService.RecordSaleShipmentAsync(saleItem.Product, reqItem.ShippedQuantity, saleItem.UnitPrice, saleItem.Discount, saleItem.Id, now, cancellationToken);
             }
 
-            if (!string.IsNullOrWhiteSpace(request.DriverFullName) || !string.IsNullOrWhiteSpace(request.DriverNationalCode) || !string.IsNullOrWhiteSpace(request.VehiclePlate))
+            if (!string.IsNullOrWhiteSpace(request.DriverFullName) || !string.IsNullOrWhiteSpace(request.DriverPhoneNumber) || !string.IsNullOrWhiteSpace(request.VehiclePlate))
             {
                 await _context.SaleDrivers.AddAsync(new SaleDriver
                 {
                     SaleId = sale.Id,
                     DriverFullName = request.DriverFullName,
-                    DriverNationalCode = request.DriverNationalCode,
+                    DriverPhoneNumber = request.DriverPhoneNumber,
                     VehiclePlate = request.VehiclePlate,
                     CreatedAt = now,
                 }, cancellationToken);

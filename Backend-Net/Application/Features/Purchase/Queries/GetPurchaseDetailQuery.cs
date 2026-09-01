@@ -66,7 +66,7 @@ namespace Application.Features.Purchase.Queries
                     {
                         Id = d.Id,
                         DriverFullName = d.DriverFullName,
-                        DriverNationalCode = d.DriverNationalCode,
+                        DriverPhoneNumber = d.DriverPhoneNumber,
                         VehiclePlate = d.VehiclePlate,
                         CreatedAt = d.CreatedAt
                     }).ToList(),

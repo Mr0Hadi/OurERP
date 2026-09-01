@@ -716,7 +716,7 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
   ],
   "paymentDetails": [ /* در صورت پرداخت غیرنقدی */ ],
   "drivers": [
-    { "id": 1, "driverFullName": "علی محمدی", "driverNationalCode": "0012345678", "vehiclePlate": "12ط34567", "createdAt": "2026-08-05T10:00:00" }
+    { "id": 1, "driverFullName": "علی محمدی", "driverPhoneNumber": "09121234567", "vehiclePlate": "12ط34567", "createdAt": "2026-08-05T10:00:00" }
   ],
   "receivingNotes": [
     { "id": 1, "note": "محموله اول", "createdAt": "2026-08-05T10:00:00" }
@@ -785,7 +785,7 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
   "receivedDate": "2026-08-05T10:00:00",
   "receivingNote": "محموله اول",
   "driverFullName": "علی محمدی",
-  "driverNationalCode": "0012345678",
+  "driverPhoneNumber": "09121234567",
   "vehiclePlate": "12ط34567",
   "items": [
     { "purchaseItemId": 1000, "receivedQuantity": 15 }
@@ -794,7 +794,8 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
 }
 ```
 - `purchaseItemId` باید از `items[].id` در `GetPurchaseDetail` یا `GetPurchaseReceivingInfo` گرفته شود.
-- `driverFullName`/`driverNationalCode`/`vehiclePlate`/`receivingNote` همگی اختیاری‌اند و هرکدام مستقل از بقیه ذخیره می‌شوند (یعنی می‌توانید فقط یکی را بفرستید) — هر نوبت `ReceivePurchase` که این فیلدها را داشته باشد یک ردیف تاریخچه‌ی تازه می‌سازد (`drivers[]`/`receivingNotes[]` در `GetPurchaseDetail`، بالا)، نه بازنویسی نوبت قبلی.
+- `driverPhoneNumber` باید فرمت موبایل ایران را داشته باشد (همان قاعده‌ی `IsMobileNumber`).
+- `driverFullName`/`driverPhoneNumber`/`vehiclePlate`/`receivingNote` همگی اختیاری‌اند و هرکدام مستقل از بقیه ذخیره می‌شوند (یعنی می‌توانید فقط یکی را بفرستید) — هر نوبت `ReceivePurchase` که این فیلدها را داشته باشد یک ردیف تاریخچه‌ی تازه می‌سازد (`drivers[]`/`receivingNotes[]` در `GetPurchaseDetail`، بالا)، نه بازنویسی نوبت قبلی.
 - `receivedQuantity`: تعداد سالمی که وارد انبار می‌شود. اگر از باقیمانده‌ی قابل‌دریافت آن قلم (`orderedQuantity - receivedQuantity`، از `GetPurchaseReceivingInfo`) بیشتر باشد، خطای ۴۰۰ می‌دهد؛ **همیشه قبل از این فراخوانی از `GetPurchaseReceivingInfo` مقدار باقیمانده را بگیرید و در UI محدودیت بگذارید.**
 - `images[]` (اختیاری): عکس‌های همان نوبت دریافت (پالت، کارتن آسیب‌دیده، بارنامه) — جزئیات کامل در بخش ۱۷.
 
@@ -1148,7 +1149,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
     }
   ],
   "drivers": [
-    { "id": 1, "driverFullName": "رضا احمدی", "driverNationalCode": "0098765432", "vehiclePlate": "34ب12345", "createdAt": "2026-08-11T09:00:00" }
+    { "id": 1, "driverFullName": "رضا احمدی", "driverPhoneNumber": "09129876543", "vehiclePlate": "34ب12345", "createdAt": "2026-08-11T09:00:00" }
   ],
   "shippingNotes": [
     { "id": 1, "note": "ارسال اول", "createdAt": "2026-08-11T09:00:00" }
@@ -1219,7 +1220,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "shippedDate": "2026-08-11T09:00:00",
   "shippingNote": "ارسال اول",
   "driverFullName": "رضا احمدی",
-  "driverNationalCode": "0098765432",
+  "driverPhoneNumber": "09129876543",
   "vehiclePlate": "34ب12345",
   "items": [
     { "saleItemId": 3000, "shippedQuantity": 2, "productUnitBarcodes": null }
@@ -1227,7 +1228,8 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 }
 ```
 - `saleItemId`: از `items[].id` در `GetSaleDetail`.
-- `driverFullName`/`driverNationalCode`/`vehiclePlate`/`shippingNote` همگی اختیاری‌اند، هرکدام مستقل ذخیره می‌شوند، و مثل `ReceivePurchase` هر نوبت یک ردیف تاریخچه‌ی تازه می‌سازد (`drivers[]`/`shippingNotes[]` در `GetSaleDetail`، بالا).
+- `driverPhoneNumber` باید فرمت موبایل ایران را داشته باشد (همان قاعده‌ی `IsMobileNumber`).
+- `driverFullName`/`driverPhoneNumber`/`vehiclePlate`/`shippingNote` همگی اختیاری‌اند، هرکدام مستقل ذخیره می‌شوند، و مثل `ReceivePurchase` هر نوبت یک ردیف تاریخچه‌ی تازه می‌سازد (`drivers[]`/`shippingNotes[]` در `GetSaleDetail`، بالا).
 - `shippedQuantity`: نباید از باقیمانده‌ی قابل‌ارسال آن قلم (`quantity - shippedQuantity` فعلی) یا از موجودی فعلی محصول بیشتر باشد.
 - `productUnitBarcodes` (اختیاری): اگر انباردار بارکد دانه‌های خاصی را اسکن کرده، لیست آن بارکدها را بفرستید (باید دقیقاً به تعداد `shippedQuantity` باشد). اگر نفرستید، سرور خودش قدیمی‌ترین دانه‌های موجود را انتخاب می‌کند (FIFO).
 
