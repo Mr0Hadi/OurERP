@@ -131,3 +131,78 @@ export const resolveScannedCode = async (code) => {
     unit: normalizeProductUnit(data?.unit, product),
   };
 };
+
+// ─── چاپِ برچسب — `api/Barcode` ─────────────────────────────────────────────
+
+/**
+ * `api/Barcode` پوششِ `ResponseDto` ندارد و مستقیماً فایل (SVG/PDF)
+ * برمی‌گرداند — همان قراردادِ `shared/services/invoice/api-v1.js`:
+ * `responseType: "blob"` و بازکردنِ پیامِ فارسیِ خطا از دلِ بلاب، چون
+ * اینترسپتورِ axios با این responseType نمی‌تواند آن را خودش باز کند.
+ *
+ * صفحه‌ی «برچسب کالاها» فعلاً برچسب‌ها را کاملاً سمتِ مرورگر (Canvas)
+ * می‌سازد و به این دو تابع نیازی ندارد — رندرِ محلی سریع‌تر است و آفلاین
+ * هم کار می‌کند. این دو برای وقتی‌اند که یک مسیر «دانلود PDF رسمی»
+ * (چیدمانِ دقیقِ برگه‌ی چاپِ سرور، نه پیش‌نمایشِ مرورگر) لازم شود.
+ */
+
+async function unwrapBlobError(error) {
+  const body = error?.response?.data;
+  if (!(body instanceof Blob)) throw error;
+
+  try {
+    const parsed = JSON.parse(await body.text());
+    const message = parsed?.Message ?? parsed?.message ?? parsed?.title;
+    if (message) error.message = message;
+  } catch {
+    // بدنه‌ی غیر JSON (مثلاً صفحه‌ی خطای پروکسی) — پیامِ خودِ axios می‌ماند.
+  }
+
+  throw error;
+}
+
+async function fetchFile(url, params) {
+  try {
+    const { data } = await axiosInstance.get(url, {
+      params,
+      responseType: "blob",
+      timeout: 60000,
+    });
+    return data;
+  } catch (error) {
+    return unwrapBlobError(error);
+  }
+}
+
+/**
+ * `GET api/Barcode/GetBarcodeSvg` — رندرِ برداریِ یک کدِ از قبل شناخته‌شده
+ * (کدِ کالا یا بارکدِ یک دانه، معمولاً از `ScanBarcode`/`GetProductUnitList`).
+ * @returns Blob با `image/svg+xml`
+ */
+export const getBarcodeSvg = (code, options = {}) =>
+  fetchFile("/Barcode/GetBarcodeSvg", {
+    code,
+    moduleWidthMm: options.moduleWidthMm,
+    barHeightMm: options.barHeightMm,
+    showHumanReadable: options.showHumanReadable,
+  });
+
+/**
+ * `GET api/Barcode/GetProductLabelsPdf` — برگه‌ی چاپِ سرور، یک برچسب به
+ * ازای هر دانه‌ی `IN_STOCK` (یا بازه‌ی سریالِ داده‌شده) از یک کالا.
+ * @returns Blob با `application/pdf`
+ */
+export const getProductLabelsPdf = (productId, options = {}) =>
+  fetchFile("/Barcode/GetProductLabelsPdf", {
+    productId,
+    status: options.status,
+    fromSerial: options.fromSerial,
+    toSerial: options.toSerial,
+    mode: options.mode,
+    columns: options.columns,
+    rows: options.rows,
+    labelWidthMm: options.labelWidthMm,
+    labelHeightMm: options.labelHeightMm,
+    showProductName: options.showProductName,
+    showPrice: options.showPrice,
+  });

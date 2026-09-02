@@ -102,7 +102,6 @@ function toApiPurchasePayload(purchaseData) {
     paymentType: purchaseData.paymentType,
     totalAmount: purchaseData.totalAmount,
     paidAmount: purchaseData.paidAmount,
-    paymentDetails: toApiPaymentDetails(purchaseData),
     attachments: toApiAttachments(purchaseData.attachments),
   };
 }
@@ -134,6 +133,7 @@ export async function fetchPurchaseById(id) {
 export async function createPurchase(purchaseData) {
   const { data } = await axiosInstance.post("/Purchase/CreatePurchase", {
     ...toApiPurchasePayload(purchaseData),
+    paymentDetails: toApiPaymentDetails(purchaseData),
     productItemList: toApiItems(purchaseData.items),
   });
   return data;
@@ -143,6 +143,12 @@ export async function createPurchase(purchaseData) {
  * «اقلام» در بدنه نادیده گرفته می‌شود — `UpdatePurchase` فقط فیلدهای سطح
  * سند را می‌پذیرد. `attachments` اما جدی است و **جایگزین** می‌شود: هرچه
  * در آرایه نباشد از سرور پاک می‌شود، پس همیشه فهرستِ نهایی فرستاده شود.
+ *
+ * `paymentDetails` عمداً فرستاده نمی‌شود: برخلافِ `CreatePurchaseCommand`،
+ * `UpdatePurchaseCommand` اصلاً چنین فیلدی ندارد — فرستادنش فقط بی‌صدا
+ * نادیده گرفته می‌شد (extra JSON property). یعنی جزئیاتِ پرداخت
+ * (`checkNumber`/`transferRef`) بعد از ثبتِ اولیه از راهِ این endpoint
+ * قابلِ ویرایش نیستند؛ فقط خودِ `paidAmount` است.
  */
 export async function updatePurchase(id, updates) {
   const { data } = await axiosInstance.put("/Purchase/UpdatePurchase", {
