@@ -1,39 +1,45 @@
 import axiosInstance from "@/shared/services/api/axios";
-import {
-  idempotent,
-  listParams,
-  normalizeListResponse,
-} from "@/shared/services/api/contract";
+import { idempotent, normalizeListResponse } from "@/shared/services/api/contract";
 
 /**
- * نسخه‌ی واقعیِ APIِ ارسال انبار — دقیقاً همان چهار تابعِ api-mockData.
+ * نسخه‌ی هماهنگ‌شده با بکندِ واقعی برای ارسال انبار (بخش ۷ گزارشِ
+ * شکافِ خرید/فروش). قرینه‌ی دقیقِ `warehouse/receiving/services/api-v1.js`
+ * — همان سه هشدارِ آن‌جا اینجا هم برقرار است:
  *
- * shipping تا امروز اصلاً api-v1 نداشت، در حالی که بقیه‌ی ماژول‌ها
- * داشتند؛ یعنی درزِ تعویض این سمت اصلاً وجود نداشت.
+ *  ۱. کنترلر جداگانه‌ای برای انبار نیست؛ «ارسال» همان
+ *     `POST api/Sale/ShipSale` روی کنترلرِ فروش است.
+ *  ۲. endpointِ «صف ارسال» وجود ندارد.
+ *  ۳. بکند دیگر مغایرتِ حینِ ارسال قبول نمی‌کند — چیزی مشابهِ
+ *     `issues[]` برای فروش هم در `ShipSale` نیست.
  */
 
+/** ⚠️ معادلِ واقعی ندارد. جایگزینِ تقریبی: فروش‌هایی که هنوز کامل ارسال نشده‌اند. */
 export async function fetchOutgoingQueue(params = {}) {
-  const { data } = await axiosInstance.get("/warehouse/shipping/queue", {
+  const { data } = await axiosInstance.get("/Sale/GetSaleList", {
     params: {
-      ...listParams(params),
-      type: params.type !== "" ? params.type : undefined,
-      counterpartyIds: params.counterpartyIds?.length
-        ? params.counterpartyIds
-        : undefined,
+      page: params.page,
+      take: params.limit,
+      status: 1, // SalesStatusEnum.PROCESSING — نگاه کنید به گزارشِ شکاف برای شماره‌ی درستِ enum.
     },
   });
-  return normalizeListResponse(data, { itemsKey: "outgoingList" });
+  return normalizeListResponse(data, { itemsKey: "saleList" });
 }
 
-/** فروش به‌همراه shippableQty هر قلم و returnLines معلقِ همان فروش. */
+/** فروش به‌همراه `items[].shippedQuantity`ِ هر قلم برای محاسبه‌ی باقیمانده‌ی قابل‌ارسال. */
 export async function fetchShippingSaleById(id) {
-  const { data } = await axiosInstance.get(`/sales/${id}/shipping`);
+  const { data } = await axiosInstance.get("/Sale/GetSaleDetail", {
+    params: { id },
+  });
   return data;
 }
 
 /**
- * ردیف‌هایی که source آن‌ها return است سهمِ مرجوعی‌اند و سرور باید
- * آن‌ها را روی اثرهای همان مرجوعی اعمال کند، نه روی تعداد خودِ فروش.
+ * ⚠️ شکلِ بدنه با بکند فرق دارد: بکند `{saleId, shippedDate?,
+ * shippingNote?, driverFullName?, driverNationalCode?, vehiclePlate?,
+ * items:[{saleItemId, shippedQuantity, productUnitBarcodes?}]}`
+ * می‌خواهد — بدون `source`؛ سهمِ مرجوعیِ خرید (عودتِ جایگزین به
+ * تامین‌کننده) بخشی از این درخواست نیست، باید جدا با
+ * `confirmSupplierReturnShipment` ثبت شود.
  */
 export async function confirmShipment(
   saleId,
@@ -41,22 +47,41 @@ export async function confirmShipment(
   { idempotencyKey } = {},
 ) {
   const { data } = await axiosInstance.post(
-    `/sales/${saleId}/shipping/confirm`,
-    shipmentData,
+    "/Sale/ShipSale",
+    {
+      saleId,
+      shippedDate: shipmentData.shippedDate,
+      shippingNote: shipmentData.shippingNote,
+      driverFullName: shipmentData.driverFullName,
+      driverNationalCode: shipmentData.driverNationalCode,
+      vehiclePlate: shipmentData.vehiclePlate,
+      items: (shipmentData.shippedItems || []).map((row) => ({
+        saleItemId: row.saleItemId,
+        shippedQuantity: row.shippedQuantity,
+        productUnitBarcodes: row.productUnitBarcodes || null,
+      })),
+    },
+    // ⚠️ بکند این هدر را نمی‌خواند (گزارشِ شکاف، بخش ۶)؛ retry شبکه
+    // همین حالا می‌تواند یک ارسال را دوبار از موجودی کم کند.
     idempotent(idempotencyKey),
   );
   return data;
 }
 
-/** عودت کالا به تامین‌کننده؛ همان شکلِ payload ارسال فروش. */
+/**
+ * ⚠️ مسیر واقعی برای مرجوعی خرید است، نه انبارِ فروش — دقیقاً چیزی
+ * است که این تابع از قبل هم صدا می‌زد، فقط با اسمِ REST قدیمی. عودتِ
+ * کالا به تامین‌کننده در مدلِ Claim→Resolution→Effect یعنی اجرای یک
+ * اثرِ `GOODS_OUT`، پس همان `ExecuteGoodsRound`ِ مرجوعیِ خرید است.
+ */
 export async function confirmSupplierReturnShipment(
   returnId,
   shipmentData,
   { idempotencyKey } = {},
 ) {
   const { data } = await axiosInstance.post(
-    `/purchase-returns/${returnId}/dispatch`,
-    shipmentData,
+    "/PurchaseReturn/ExecuteGoodsRound",
+    { purchaseReturnId: returnId, ...shipmentData },
     idempotent(idempotencyKey),
   );
   return data;

@@ -1,7 +1,10 @@
 // src/features/warehouse/units/components/UnitStatusBadge.jsx
 import { Package, ShoppingCart, Undo2, Trash2 } from "lucide-react";
 
-import { UNIT_STATUSES, UNIT_STATUS_LABELS } from "../services/mockData";
+import {
+  ProductUnitStatusEnum as UNIT_STATUSES,
+  UNIT_STATUS_LABELS,
+} from "@/shared/domain/enums/unitStatus";
 
 /**
  * وضعیت چرخه‌ی عمر واحد. عمداً از createRowStatus استفاده نمی‌کند —

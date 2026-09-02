@@ -1,7 +1,7 @@
 // src/shared/services/files/api-v1.js
 
 import axiosInstance from "@/shared/services/api/axios";
-import { validateImageFile } from "./fileConstraints";
+import { validateDocumentFile } from "./fileConstraints";
 import { objectKeyOf } from "./objectKey";
 
 /**
@@ -50,8 +50,10 @@ function normalizeUploadedFile(data) {
  * @returns { objectKey, url, fileName, contentType, size }
  */
 export async function uploadImage({ file, folder, onProgress, signal } = {}) {
-  // چکِ محلی قبل از شبکه؛ پیام‌ها هم‌متنِ سرورند.
-  const validationError = validateImageFile(file);
+  // چکِ محلی قبل از شبکه؛ پیام‌ها هم‌متنِ سرورند. فهرستِ مجاز همان
+  // فهرستِ سرور است (تصویر + PDF)؛ باریک‌ترکردنش برای یک فیلدِ خاص کارِ
+  // `useFileUploadList` است، نه این لایه.
+  const validationError = validateDocumentFile(file);
   if (validationError) throw new Error(validationError);
 
   const formData = new FormData();

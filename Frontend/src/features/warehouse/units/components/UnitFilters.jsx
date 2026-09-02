@@ -3,7 +3,10 @@ import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
 
-import { UNIT_STATUSES, UNIT_STATUS_LABELS } from "../services/mockData";
+import {
+  ProductUnitStatusEnum as UNIT_STATUSES,
+  UNIT_STATUS_LABELS,
+} from "@/shared/domain/enums/unitStatus";
 
 const STATUS_OPTIONS = Object.values(UNIT_STATUSES).map((value) => ({
   value,

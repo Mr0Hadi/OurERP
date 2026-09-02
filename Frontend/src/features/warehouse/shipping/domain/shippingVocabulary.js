@@ -1,4 +1,4 @@
-import { SALE_STATUSES } from "@/features/sales/orders/services/mockData";
+import { SaleStatusEnum as SALE_STATUSES } from "@/shared/domain/enums/saleStatus";
 
 /**
  * واژگانِ ارسال انبار — قرینه‌ی receivingVocabulary.

@@ -1,5 +1,8 @@
 import { Badge } from "@/shared/components/ui/badge";
-import { SALE_STATUS_LABELS, SALE_STATUSES } from "../../services/mockData";
+import {
+  SaleStatusEnum as SALE_STATUSES,
+  SALE_STATUS_LABELS,
+} from "@/shared/domain/enums/saleStatus";
 
 const STATUS_STYLES = {
   [SALE_STATUSES.PROFORMA]:

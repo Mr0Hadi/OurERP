@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { Save, X, Trash2, Undo2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
@@ -28,6 +29,7 @@ import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
 import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
 import SaleStatusSection from "../components/forms/SaleStatusSection";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
+import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import {
   SaleStatusEnum,
@@ -71,6 +73,13 @@ export default function SaleDetailForm({ saleData }) {
   const customers = customersData?.items || [];
   const products = productsData?.items || [];
 
+  /**
+   * ضمیمه‌های همین فروش. `UpdateSale` آرایه را *جایگزین* می‌کند نه اضافه
+   * (بند ۲.۲ سندِ ضمیمه)، پس همیشه فهرستِ نهایی فرستاده می‌شود؛
+   * `commit()` بعد از ذخیره‌ی موفق، کلیدهای بی‌صاحب را از باکت پاک می‌کند.
+   */
+  const attachments = useInvoiceAttachments(saleData.attachments || []);
+
   const updateMutation = useUpdateSaleMutation(saleData.id);
   const deleteMutation = useRemoveSaleMutation();
 
@@ -80,6 +89,14 @@ export default function SaleDetailForm({ saleData }) {
   useEffect(() => {
     initializeFromSale(saleData);
   }, [saleData.id, saleData.updatedAt, initializeFromSale]);
+
+  // ضمیمه‌ها هم با همان کلیدِ فرم تازه می‌شوند — وگرنه بعد از ذخیره،
+  // لیست روی نسخه‌ی قبلیِ سرور می‌ماند.
+  const attachmentsReset = attachments.reset;
+  useEffect(() => {
+    attachmentsReset(saleData.attachments || []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saleData.id, saleData.updatedAt, attachmentsReset]);
 
   if (initializedForId !== `${saleData.id}:${saleData.updatedAt}`) {
     return null;
@@ -91,11 +108,47 @@ export default function SaleDetailForm({ saleData }) {
     return sum + base - disc;
   }, 0);
 
+  // وضعیتِ *ذخیره‌شده* — نه انتخابِ در حال ویرایش؛ عنوان کارت سند باید
+  // به فروشِ روی سرور واکنش نشان بدهد، نه به مقدارِ موقتِ فرم.
+  const isProforma = isSaleProforma(saleData.status);
+
+  const selectedStatus =
+    formData.status === "" || formData.status == null
+      ? SaleStatusEnum.PROFORMA
+      : Number(formData.status);
+
+  /**
+   * قاعده‌ی بکند برای فروش (`CreateSaleCommandHandler`/
+   * `UpdateSaleCommandHandler`): خروج از پیش‌فاکتور *دستی نیست*. اگر
+   * `paidAmount >= totalAmount` باشد، خودِ سرور شماره‌ی فاکتور را
+   * می‌سازد، تاریخ می‌زند و وضعیت را به «آماده‌سازی انبار» می‌برد؛ و
+   * تلاش برای بردنِ دستیِ یک پیش‌فاکتورِ پرداخت‌نشده به وضعیتی دیگر با
+   * خطای اعتبارسنجی رد می‌شود. پس همین‌جا هم جلویش گرفته می‌شود تا
+   * کاربر به‌جای خطای سرور، دلیل را کنارِ فیلد ببیند.
+   */
+  const paidAmount = Number(formData.paidAmount) || 0;
+  const isFullyPaid = computedTotal > 0 && paidAmount >= computedTotal;
+  const proformaLocked = isProforma && !isFullyPaid;
+
   const onSubmit = (e) => {
     e.preventDefault();
 
     if (!formData.customerId) {
       setShowErrors(true);
+      return;
+    }
+
+    // آپلودِ نیمه‌کاره کلید ندارد و در payload نمی‌آید؛ ذخیره در این
+    // لحظه یعنی ضمیمه‌ی گم‌شده.
+    if (attachments.isUploading) {
+      toast.error("تا پایان بارگذاری ضمیمه‌ها صبر کنید.");
+      return;
+    }
+
+    if (proformaLocked && selectedStatus !== SaleStatusEnum.PROFORMA) {
+      toast.error(
+        "تا تسویه‌ی کاملِ مشتری، فروش از «پیش‌فاکتور» خارج نمی‌شود؛ با ثبتِ پرداختِ کامل، فاکتور رسمی خودکار صادر می‌شود.",
+      );
       return;
     }
 
@@ -117,15 +170,16 @@ export default function SaleDetailForm({ saleData }) {
       mixedPayments: formData.mixedPayments || [],
       // سندی که هنوز شماره‌ی فاکتور رسمی ندارد در مرحله‌ی پیش‌فاکتور
       // است؛ ذخیره‌ی ساده‌ی فرم نباید آن را جلو ببرد.
-      status:
-        formData.status === "" || formData.status == null
-          ? SaleStatusEnum.PROFORMA
-          : formData.status,
+      status: selectedStatus,
       totalAmount: computedTotal,
+      attachments: attachments.filesPayload,
     };
 
     updateMutation.mutate(payload, {
-      onSuccess: () => navigate(ROUTES.SALES),
+      onSuccess: () => {
+        attachments.commit();
+        navigate(ROUTES.SALES);
+      },
     });
   };
 
@@ -138,11 +192,8 @@ export default function SaleDetailForm({ saleData }) {
     });
   };
 
-  // وضعیتِ *ذخیره‌شده* — نه انتخابِ در حال ویرایش؛ عنوان کارت سند باید
-  // به فروشِ روی سرور واکنش نشان بدهد، نه به مقدارِ موقتِ فرم.
-  const isProforma = isSaleProforma(saleData.status);
-
-  const isBusy = updateMutation.isPending || deleteMutation.isPending;
+  const isBusy =
+    updateMutation.isPending || deleteMutation.isPending || attachments.isUploading;
 
   return (
     <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in zoom-in-95 duration-300">
@@ -197,6 +248,9 @@ export default function SaleDetailForm({ saleData }) {
               partyName={formData.customerName}
               items={items}
               totalAmount={computedTotal}
+              attachments={attachments}
+              documentKind="sale"
+              documentId={saleData.id}
               attachmentLabel={
                 isProforma
                   ? "پیش‌فاکتور ارسال‌شده برای مشتری"
@@ -208,6 +262,7 @@ export default function SaleDetailForm({ saleData }) {
               status={formData.status}
               selectedStatus={formData.status}
               onStatusChange={(val) => setFormData({ status: val })}
+              proformaLocked={proformaLocked}
             />
 
             <div className="flex gap-2">
@@ -220,7 +275,10 @@ export default function SaleDetailForm({ saleData }) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate(-1)}
+                onClick={() => {
+                  attachments.discard();
+                  navigate(-1);
+                }}
                 disabled={isBusy}
                 className="gap-2"
               >

@@ -14,9 +14,9 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import {
-  PURCHASE_STATUSES,
+  PurchaseStatusEnum as PURCHASE_STATUSES,
   PURCHASE_STATUS_LABELS,
-} from "@/features/purchases/orders/services/mockData";
+} from "@/shared/domain/enums/purchaseStatus";
 import {
   Clock,
   Truck,

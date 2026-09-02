@@ -117,6 +117,8 @@ function SalesReturnDetailContent({ salesReturn }) {
         partyName={salesReturn.customerName}
         items={salesReturn.claims}
         totalAmount={salesReturn.totalClaimedAmount}
+        documentKind="saleReturn"
+        documentId={salesReturn.id}
         attachmentLabel="فاکتور یا رسید مرجوعی برای مشتری"
       />
 

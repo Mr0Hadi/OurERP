@@ -6,7 +6,7 @@ import PaymentProgress from "@/shared/components/table/PaymentProgress";
 import PaymentTypeBadge from "@/shared/components/table/PaymentTypeBadge";
 import { gregorianToPersian } from "@/shared/utils/dateUtils";
 import { ROUTES } from "@/shared/constants/routes";
-import { PAYMENT_TYPE_LABELS } from "../../services/mockData";
+import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
 import SaleStatusBadge from "./SaleStatusBadge";
 
 const SaleTable = ({

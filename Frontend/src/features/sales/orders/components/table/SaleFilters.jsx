@@ -6,10 +6,8 @@ import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import EntityMultiSelect from "@/shared/components/filters/EntityMultiSelect";
 import { toFilterOptions } from "@/shared/components/filters/filterUtils";
 import { useSaleFilterStore } from "../../store/saleFilterStore";
-import {
-  SALE_STATUS_LABELS,
-  PAYMENT_TYPE_LABELS,
-} from "../../services/mockData";
+import { SALE_STATUS_LABELS } from "@/shared/domain/enums/saleStatus";
+import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
 
 const STATUS_OPTIONS = toFilterOptions(SALE_STATUS_LABELS);
 const PAYMENT_TYPE_OPTIONS = toFilterOptions(PAYMENT_TYPE_LABELS);

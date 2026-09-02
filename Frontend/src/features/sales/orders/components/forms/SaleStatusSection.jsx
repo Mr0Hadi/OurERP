@@ -14,9 +14,9 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import {
-  SALE_STATUSES,
+  SaleStatusEnum as SALE_STATUSES,
   SALE_STATUS_LABELS,
-} from "@/features/sales/orders/services/mockData";
+} from "@/shared/domain/enums/saleStatus";
 import {
   Loader2,
   PackageOpen,
@@ -59,7 +59,17 @@ const DEFAULT_CONFIG = {
   textColor: "text-card-foreground",
 };
 
-export default function SaleStatusSection({ selectedStatus, onStatusChange }) {
+/**
+ * @param proformaLocked فروش پیش‌فاکتور است و مشتری هنوز کامل نپرداخته.
+ *   بکند خروجِ دستی از پیش‌فاکتور را در این حالت رد می‌کند
+ *   (`UpdateSaleCommandHandler`)، پس بقیه‌ی وضعیت‌ها اینجا غیرفعال‌اند تا
+ *   کاربر به‌جای خطای سرور، دلیل را همین‌جا ببیند.
+ */
+export default function SaleStatusSection({
+  selectedStatus,
+  onStatusChange,
+  proformaLocked = false,
+}) {
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -85,8 +95,10 @@ export default function SaleStatusSection({ selectedStatus, onStatusChange }) {
               {Object.entries(SALE_STATUS_LABELS).map(([key, label]) => {
                 const itemConfig = STATUS_CONFIG[key] ?? DEFAULT_CONFIG;
                 const ItemIcon = itemConfig.icon;
+                const disabled =
+                  proformaLocked && Number(key) !== SALE_STATUSES.PROFORMA;
                 return (
-                  <SelectItem key={key} value={key}>
+                  <SelectItem key={key} value={key} disabled={disabled}>
                     <span
                       className={`flex items-center gap-2 ${itemConfig.textColor}`}
                     >
@@ -99,7 +111,11 @@ export default function SaleStatusSection({ selectedStatus, onStatusChange }) {
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            با خروج از «پیش‌فاکتور»، بکند فاکتور رسمی و شماره‌اش را می‌سازد.
+            {proformaLocked
+              ? "این فروش پیش‌فاکتور است: با ثبتِ پرداختِ کامل، سرور خودش شماره‌ی فاکتور را می‌سازد و وضعیت را به «آماده‌سازی انبار» می‌برد. تا آن زمان تغییر دستیِ وضعیت ممکن نیست."
+              : "خروج از «پیش‌فاکتور» با تسویه‌ی کاملِ مشتری و به‌صورت خودکار انجام می‌شود؛ فاکتور رسمی و شماره‌اش را هم همان‌جا سرور می‌سازد."}
+          </p>
+          <p className="text-xs text-muted-foreground">
             وضعیت «ارسال ناقص»، «ارسال شده» و بخشی از «تحویل کامل» معمولاً
             به‌صورت خودکار از صفحه‌ی «ارسال کالا»ی انبار به‌روزرسانی
             می‌شوند؛ تغییر دستی آن‌ها از اینجا هم ممکن است ولی توصیه

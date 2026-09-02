@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { Save, X, Trash2, Ban, Undo2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
@@ -26,6 +27,7 @@ import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
 import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
 import PurchaseStatusSection from "../components/forms/PurchaseStatusSection";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
+import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
 import { ROUTES } from "@/shared/constants/routes";
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
 import {
@@ -75,6 +77,13 @@ export default function PurchaseDetailForm({ purchaseData }) {
   const suppliers = suppliersData?.items || [];
   const products = productsData?.items || [];
 
+  /**
+   * ضمیمه‌های همین سند. `UpdatePurchase` آرایه را *جایگزین* می‌کند نه
+   * اضافه (بند ۲.۲ سندِ ضمیمه)، پس همیشه فهرستِ نهایی فرستاده می‌شود؛
+   * `commit()` بعد از ذخیره‌ی موفق، کلیدهای بی‌صاحب را از باکت پاک می‌کند.
+   */
+  const attachments = useInvoiceAttachments(purchaseData.attachments || []);
+
   const updateMutation = useUpdatePurchaseMutation(purchaseData.id);
   const deleteMutation = useRemovePurchaseMutation();
   const statusMutation = useUpdatePurchaseStatusMutation();
@@ -83,6 +92,23 @@ export default function PurchaseDetailForm({ purchaseData }) {
   const isProforma = isPurchaseProforma(purchaseData.status);
 
   const items = formData.items || [];
+
+  /**
+   * انتخابِ فعلیِ وضعیت (نه وضعیتِ ذخیره‌شده) — قاعده‌های خروج از
+   * پیش‌فاکتور روی همین سنجیده می‌شوند.
+   */
+  const selectedStatus =
+    formData.status === "" || formData.status == null
+      ? PURCHASE_STATUSES.PROFORMA
+      : Number(formData.status);
+
+  const leavingProforma =
+    isProforma && selectedStatus !== PURCHASE_STATUSES.PROFORMA;
+
+  const invoiceNumberError =
+    showErrors && leavingProforma && !String(formData.invoiceNumber || "").trim()
+      ? "برای خروج از پیش‌فاکتور، شماره فاکتور تامین‌کننده الزامی است"
+      : null;
 
   const computedTotal = items.reduce((sum, item) => {
     const base = (item.qty || 0) * (item.unitPrice || 0);
@@ -95,6 +121,14 @@ export default function PurchaseDetailForm({ purchaseData }) {
     initializeFromPurchase(purchaseData);
   }, [purchaseData.id, purchaseData.updatedAt, initializeFromPurchase]);
 
+  // ضمیمه‌ها هم با همان کلیدِ فرم تازه می‌شوند — وگرنه بعد از ذخیره،
+  // لیست روی نسخه‌ی قبلیِ سرور می‌ماند.
+  const attachmentsReset = attachments.reset;
+  useEffect(() => {
+    attachmentsReset(purchaseData.attachments || []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [purchaseData.id, purchaseData.updatedAt, attachmentsReset]);
+
   if (initializedForId !== `${purchaseData.id}:${purchaseData.updatedAt}`) {
     return null;
   }
@@ -104,6 +138,21 @@ export default function PurchaseDetailForm({ purchaseData }) {
 
     if (!formData.supplierId) {
       setShowErrors(true);
+      return;
+    }
+
+    // آپلودِ نیمه‌کاره کلید ندارد و در payload نمی‌آید؛ ذخیره در این
+    // لحظه یعنی ضمیمه‌ی گم‌شده.
+    if (attachments.isUploading) {
+      toast.error("تا پایان بارگذاری ضمیمه‌ها صبر کنید.");
+      return;
+    }
+
+    // قاعده‌ی بکند (`UpdatePurchaseCommandHandler`): خروج از پیش‌فاکتور
+    // یعنی فاکتور رسمیِ تامین‌کننده رسیده، پس شماره‌اش باید ثبت شده باشد.
+    if (leavingProforma && !String(formData.invoiceNumber || "").trim()) {
+      setShowErrors(true);
+      toast.error("برای خروج از پیش‌فاکتور، شماره فاکتور تامین‌کننده را وارد کنید.");
       return;
     }
 
@@ -125,15 +174,16 @@ export default function PurchaseDetailForm({ purchaseData }) {
       mixedPayments: formData.mixedPayments || [],
       // خریدی که هنوز وضعیت ندارد در مرحله‌ی پیش‌فاکتور است؛ ذخیره‌ی
       // ساده‌ی فرم نباید آن را جلو ببرد.
-      status:
-        formData.status === "" || formData.status == null
-          ? PURCHASE_STATUSES.PROFORMA
-          : formData.status,
+      status: selectedStatus,
       totalAmount: computedTotal,
+      attachments: attachments.filesPayload,
     };
 
     updateMutation.mutate(payload, {
-      onSuccess: () => navigate(ROUTES.PURCHASES),
+      onSuccess: () => {
+        attachments.commit();
+        navigate(ROUTES.PURCHASES);
+      },
     });
   };
 
@@ -163,7 +213,10 @@ export default function PurchaseDetailForm({ purchaseData }) {
   const lockReason = getPurchaseLockReason(purchaseData);
 
   const isBusy =
-    updateMutation.isPending || deleteMutation.isPending || statusMutation.isPending;
+    updateMutation.isPending ||
+    deleteMutation.isPending ||
+    statusMutation.isPending ||
+    attachments.isUploading;
 
   return (
     <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in zoom-in-95 duration-300">
@@ -179,7 +232,7 @@ export default function PurchaseDetailForm({ purchaseData }) {
             <OrderInfoSection
               formData={formData}
               onFormChange={setFormData}
-              errors={{}}
+              errors={{ invoiceNumber: invoiceNumberError }}
             />
           </div>
 
@@ -217,6 +270,9 @@ export default function PurchaseDetailForm({ purchaseData }) {
               partyName={formData.supplierName}
               items={items}
               totalAmount={computedTotal}
+              attachments={attachments}
+              documentKind="purchase"
+              documentId={purchaseData.id}
               attachmentRequired={!isProforma}
               attachmentLabel={
                 isProforma
@@ -241,7 +297,10 @@ export default function PurchaseDetailForm({ purchaseData }) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate(-1)}
+                onClick={() => {
+                  attachments.discard();
+                  navigate(-1);
+                }}
                 disabled={isBusy}
                 className="gap-2"
               >

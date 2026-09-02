@@ -6,10 +6,8 @@ import PaymentProgress from "@/shared/components/table/PaymentProgress";
 import PaymentTypeBadge from "@/shared/components/table/PaymentTypeBadge";
 import { gregorianToPersian } from "@/shared/utils/dateUtils";
 import { ROUTES } from "@/shared/constants/routes";
-import {
-  PURCHASE_STATUS_LABELS,
-  PAYMENT_TYPE_LABELS,
-} from "../../services/mockData";
+import { PURCHASE_STATUS_LABELS } from "@/shared/domain/enums/purchaseStatus";
+import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
 import PurchaseStatusBadge from "./PurchaseStatusBadge";
 
 const PurchaseTable = ({

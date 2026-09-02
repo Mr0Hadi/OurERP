@@ -1,56 +1,59 @@
 import axiosInstance from "@/shared/services/api/axios";
-import {
-  idempotent,
-  listParams,
-  normalizeListResponse,
-} from "@/shared/services/api/contract";
+import { idempotent, normalizeListResponse } from "@/shared/services/api/contract";
 
 /**
- * نسخه‌ی واقعیِ APIِ دریافت انبار.
+ * نسخه‌ی هماهنگ‌شده با بکندِ واقعی برای دریافت انبار (بخش ۷ گزارشِ
+ * شکافِ خرید/فروش). ⚠️ برخلاف بقیه‌ی ماژول‌ها، اینجا هماهنگ‌سازی صرفاً
+ * اسمی نیست — چند تغییرِ رفتاری واقعی هم هست:
  *
- * سطحش دقیقاً همان چهار تابعِ api-mockData است — نه بیشتر، نه کمتر.
- * مهاجرت یعنی عوض‌کردن `./api-mockData` به `./api-v1` در queries.js و
- * mutations.js؛ هیچ کامپوننت و هوکی دست نمی‌خورد.
+ *  ۱. **کنترلر جداگانه‌ای برای انبار وجود ندارد.** «دریافت» همان
+ *     `POST api/Purchase/ReceivePurchase` روی کنترلرِ خرید است.
  *
- * توابعِ کمکیِ داخلیِ mock (محاسبه‌ی باقیمانده، ساختن ردیف‌های صف،
- * ترجمه‌ی ردیف به دورِ اثر) اینجا معادلی ندارند و نباید داشته باشند:
- * آن‌ها کارِ سرورند.
+ *  ۲. **endpointِ «صف دریافت» اصلاً وجود ندارد.** نزدیک‌ترین معادل،
+ *     فیلترکردنِ `GET api/Purchase/GetPurchaseList?status=SHIPPED` است
+ *     (خریدهایی که تامین‌کننده فرستاده ولی هنوز کامل نرسیده)؛ سهمِ
+ *     «کالای برگشتیِ مشتری که باید تحویل گرفته شود» (مرجوعیِ فروش) در
+ *     همین صف قابلِ ادغام نیست چون بکند چنین لیستِ ترکیبی‌ای ندارد.
+ *
+ *  ۳. **بکند دیگر `issues[]` قبول نمی‌کند.** طبق سندِ خودِ بکند، این
+ *     یک تغییرِ عمدیِ نسخه‌ی جدید است: `ReceivePurchase` فقط مقدارِ
+ *     سالمِ دریافتی را می‌گیرد؛ مغایرت (کسری/آسیب/اشتباه) باید کاملاً
+ *     جدا با `POST api/PurchaseReturn/CreatePurchaseReturn` ثبت شود.
+ *     یعنی این فایل به‌تنهایی کافی نیست — صفحه‌ی دریافت باید به دو
+ *     مرحله تقسیم شود؛ آن بازطراحی اینجا انجام نشده.
  */
 
+/**
+ * ⚠️ معادلِ واقعی ندارد. جایگزینِ تقریبی: خریدهای «ارسال‌شده».
+ * سهمِ کالای برگشتیِ مشتری (RECEIVING_SOURCES.RETURN) در این نتیجه
+ * نیست — بکند چیزی برای آن ندارد.
+ */
 export async function fetchIncomingQueue(params = {}) {
-  const { data } = await axiosInstance.get("/warehouse/receiving/queue", {
+  const { data } = await axiosInstance.get("/Purchase/GetPurchaseList", {
     params: {
-      ...listParams(params),
-      type: params.type !== "" ? params.type : undefined,
-      counterpartyIds: params.counterpartyIds?.length
-        ? params.counterpartyIds
-        : undefined,
+      page: params.page,
+      take: params.limit,
+      status: 1, // PurchaseStatusEnum.SHIPPED — نگاه کنید به گزارشِ شکاف برای شماره‌ی درستِ enum.
     },
   });
-  return normalizeListResponse(data, { itemsKey: "incomingList" });
+  return normalizeListResponse(data, { itemsKey: "purchaseList" });
 }
 
-/** خرید به‌همراه receivableQty هر قلم و returnLines معلقِ همان خرید. */
+/** خرید به‌همراه مقدارِ باقیمانده‌ی قابل‌دریافتِ هر قلم. */
 export async function fetchReceivingPurchaseById(id) {
-  const { data } = await axiosInstance.get(`/purchases/${id}/receiving`);
+  const { data } = await axiosInstance.get("/PurchaseReturn/GetPurchaseReceivingInfo", {
+    params: { purchaseId: id },
+  });
   return data;
 }
 
 /**
- * receivingData علاوه بر receivedItems (که هر ردیفش source و issues و
- * excessQty دارد) یک آرایه‌ی unknownItems هم حمل می‌کند: کالاهایی که
- * نه در این سفارش‌اند و نه در فهرست کالاها، پس فقط شرح و تعداد دارند.
- *
- * `issues` دو معنای متفاوت دارد که با `source` تعیین می‌شود:
- *
- *  • source = order  → بخشی از سفارش که سالم نرسیده؛ سرور از آن یک
- *    *ادعا* روی تامین‌کننده می‌سازد.
- *  • source = return → مشاهده‌ی انباردار روی کالای برگشتی؛ سرور آن را
- *    به‌عنوان `observations` روی اثرِ همان مرجوعی ثبت می‌کند و مقدار
- *    سالم را از آن مشتق می‌کند.
- *
- * دریافت تجمعی است، پس کلید ایدمپوتنسی اجباری است: تکرارِ یک درخواست
- * نباید موجودی را دوبار بالا ببرد.
+ * ⚠️ شکلِ بدنه با بکند فرق دارد و باید بازنویسی شود، نه فقط مسیر:
+ * بکند `{purchaseId, receivedDate?, receivingNote?, driverFullName?,
+ * driverNationalCode?, vehiclePlate?, items:[{purchaseItemId,
+ * receivedQuantity}], images:[]}` می‌خواهد — بدون `issues`/`source`/
+ * `unknownItems`/`excessQty`. مغایرت باید جدا با `createPurchaseReturn`
+ * (فیچرِ مرجوعی خرید) ثبت شود، نه در همین درخواست.
  */
 export async function confirmReceiving(
   purchaseId,
@@ -58,23 +61,35 @@ export async function confirmReceiving(
   { idempotencyKey } = {},
 ) {
   const { data } = await axiosInstance.post(
-    `/purchases/${purchaseId}/receiving/confirm`,
-    receivingData,
+    "/Purchase/ReceivePurchase",
+    {
+      purchaseId,
+      receivedDate: receivingData.receivedDate,
+      receivingNote: receivingData.receivingNote,
+      driverFullName: receivingData.driverFullName,
+      driverNationalCode: receivingData.driverNationalCode,
+      vehiclePlate: receivingData.vehiclePlate,
+      items: (receivingData.receivedItems || []).map((row) => ({
+        purchaseItemId: row.purchaseItemId,
+        receivedQuantity: row.receivedQuantity,
+      })),
+      images: receivingData.images || [],
+    },
+    // ⚠️ بکند این هدر را نمی‌خواند (گزارشِ شکاف، بخش ۶)؛ retry شبکه
+    // همین حالا می‌تواند یک دریافت را دوبار به موجودی اضافه کند.
     idempotent(idempotencyKey),
   );
   return data;
 }
 
-/** تحویل‌گرفتن کالای برگشتی از مشتری؛ همان شکلِ payload دریافت خرید. */
-export async function confirmReturnIntake(
-  returnId,
-  intakeData,
-  { idempotencyKey } = {},
-) {
-  const { data } = await axiosInstance.post(
-    `/sales-returns/${returnId}/intake`,
-    intakeData,
-    idempotent(idempotencyKey),
+/**
+ * ⚠️ معادلِ واقعی ندارد. تحویل‌گرفتنِ کالای برگشتی از مشتری، سمتِ
+ * بکند اصلاً بخشی از `ReceivePurchase`/کنترلرِ مرجوعیِ فروش نیست —
+ * چیزی به‌اسمِ «intake» در بکند تعریف نشده. تا وقتی بکند این را
+ * اضافه نکند، این تابع جایی برای صدازدن ندارد.
+ */
+export async function confirmReturnIntake() {
+  throw new Error(
+    "بکند فعلاً endpointِ تحویل‌گرفتنِ کالای برگشتی از مشتری ندارد — به گزارشِ شکافِ خرید/فروش مراجعه کنید.",
   );
-  return data;
 }

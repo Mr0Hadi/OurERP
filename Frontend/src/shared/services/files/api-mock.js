@@ -1,7 +1,7 @@
 // src/shared/services/files/api-mock.js
 
 import { ImageFolderEnum } from "@/shared/domain/enums/imageFolder";
-import { validateImageFile } from "./fileConstraints";
+import { validateDocumentFile } from "./fileConstraints";
 
 /**
  * قرینه‌ی mockِ `api/File` — دقیقاً همان امضاها و همان شکلِ خروجیِ
@@ -49,8 +49,10 @@ function buildObjectKey(fileName, folder) {
 export { objectKeyOf } from "./objectKey";
 
 export async function uploadImage({ file, folder, onProgress, signal } = {}) {
-  // همان اعتبارسنجی و همان پیام‌ها، تا رفتارِ mock و سرور یکی باشد.
-  const validationError = validateImageFile(file);
+  // همان اعتبارسنجیِ سرور و همان پیام‌ها، تا رفتارِ mock و سرور یکی باشد
+  // — یعنی PDF هم مجاز است (بکند از ۲۰۲۶-۰۹-۰۱). محدودکردن به تصویر،
+  // سیاستِ *میدانِ فرم* است و جایش در `useFileUploadList` است نه اینجا.
+  const validationError = validateDocumentFile(file);
   if (validationError) throw new Error(validationError);
 
   // پیشرفتِ ساختگی: بدون آن، نوار پیشرفت هرگز در حالت mock دیده نمی‌شود

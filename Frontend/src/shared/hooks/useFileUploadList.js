@@ -1,14 +1,20 @@
-// src/shared/hooks/useImageUploadList.js
+// src/shared/hooks/useFileUploadList.js
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
 import { deleteImages, objectKeyOf, uploadImage } from "@/shared/services/files/client";
-import { validateImageFile } from "@/shared/services/files/fileConstraints";
+import {
+  DOCUMENT_ACCEPT,
+  IMAGE_ACCEPT,
+  validateDocumentFile,
+  validateImageFile,
+} from "@/shared/services/files/fileConstraints";
 import { useSeedImageUrl } from "@/shared/services/files/queries";
 
 /**
- * چندتصویرِ یک *سند*، نه یک موجودیت — تصاویر رسید کالا در
- * `ReceivePurchase` (بخش ۱۷ سند) و بعداً ضمائم فاکتور.
+ * چند فایلِ یک *سند*، نه یک موجودیت — ضمیمه‌ی فاکتور/پیش‌فاکتور
+ * (`attachments` در خرید/فروش) و تصاویر رسید کالا در `ReceivePurchase`
+ * (بخش ۱۷ سند).
  *
  * چرا جدا از `useImageUpload` و نه یک هوکِ عمومی با `multiple`: قراردادِ
  * سرور اینجا واقعاً فرق دارد. آن‌جا یک *کلید* در `imageUrl` می‌نشیند و
@@ -17,12 +23,12 @@ import { useSeedImageUrl } from "@/shared/services/files/queries";
  * دارد («کارتن آسیب‌دیده») و چیزی جایگزین چیزی نمی‌شود. یک هوکِ دوکاره
  * می‌شد یک مشت `if (multiple)`.
  *
- * هر تصویر چرخه‌ی مستقلِ خودش را دارد: یکی می‌تواند شکست بخورد و دوباره
+ * هر فایل چرخه‌ی مستقلِ خودش را دارد: یکی می‌تواند شکست بخورد و دوباره
  * تلاش شود بی‌آنکه بقیه دست بخورند.
  */
 
 let nextLocalId = 0;
-const localId = () => `img-${++nextLocalId}`;
+const localId = () => `file-${++nextLocalId}`;
 
 /** شکلِ سرور → شکلِ داخلیِ لیست. */
 function itemFromServer(entry) {
@@ -41,13 +47,24 @@ function itemFromServer(entry) {
   };
 }
 
-export function useImageUploadList({
+/**
+ * @param allowDocuments  «سند» به‌جای «تصویر»: PDF هم پذیرفته می‌شود
+ *   (ضمیمه‌ی فاکتور/پیش‌فاکتور). پیش‌فرض خاموش است تا جایی که واقعاً
+ *   عکس می‌خواهد — عکسِ نوبتِ دریافت — PDF نگیرد.
+ */
+export function useFileUploadList({
   folder,
   initialItems = [],
   maxCount = 10,
   deleteOrphans = true,
   notifyError = true,
+  allowDocuments = false,
 } = {}) {
+  const validateFile = allowDocuments ? validateDocumentFile : validateImageFile;
+  const accept = allowDocuments ? DOCUMENT_ACCEPT : IMAGE_ACCEPT;
+  // پیام‌ها با همان چیزی حرف بزنند که کاربر می‌بیند: «فایل» وقتی PDF هم
+  // مجاز است، «تصویر» وقتی فقط عکس.
+  const noun = allowDocuments ? "فایل" : "تصویر";
   const seedImageUrl = useSeedImageUrl();
 
   const [items, setItems] = useState(() => initialItems.map(itemFromServer));
@@ -123,12 +140,12 @@ export function useImageUploadList({
           fileName: uploaded.fileName || file.name,
         });
       } catch (uploadError) {
-        const message = uploadError?.message || "خطا در بارگذاری تصویر.";
+        const message = uploadError?.message || `خطا در بارگذاری ${noun}.`;
         patchItem(id, { status: "error", progress: 0, error: message });
         if (notifyError) toast.error(message);
       }
     },
-    [folder, notifyError, patchItem, seedImageUrl]
+    [folder, notifyError, noun, patchItem, seedImageUrl]
   );
 
   /** ورودی: `FileList`، آرایه‌ای از `File`، یا رویدادِ input. */
@@ -144,16 +161,16 @@ export function useImageUploadList({
 
       const room = maxCount - itemsRef.current.length;
       if (room <= 0) {
-        if (notifyError) toast.error(`حداکثر ${maxCount} تصویر می‌توانید اضافه کنید.`);
+        if (notifyError) toast.error(`حداکثر ${maxCount} ${noun} می‌توانید اضافه کنید.`);
         return;
       }
       if (files.length > room && notifyError) {
-        toast.error(`فقط ${room} تصویر دیگر می‌توانید اضافه کنید.`);
+        toast.error(`فقط ${room} ${noun} دیگر می‌توانید اضافه کنید.`);
       }
 
       const accepted = [];
       for (const file of files.slice(0, room)) {
-        const validationError = validateImageFile(file);
+        const validationError = validateFile(file);
         if (validationError) {
           if (notifyError) toast.error(`${file.name}: ${validationError}`);
           continue;
@@ -181,7 +198,7 @@ export function useImageUploadList({
       updateItems((current) => [...current, ...accepted]);
       accepted.forEach((item) => startUpload(item.id, item.file));
     },
-    [maxCount, notifyError, startUpload, updateItems]
+    [maxCount, notifyError, noun, startUpload, updateItems, validateFile]
   );
 
   const removeItem = useCallback(
@@ -246,6 +263,24 @@ export function useImageUploadList({
 
   const isUploading = items.some((item) => item.status === "uploading");
 
+  /**
+   * فقط قلم‌هایی که کلید گرفته‌اند؛ قلمِ نیمه‌آپلود یا شکست‌خورده هرگز به
+   * سرور نمی‌رود. شکلش هم برای `images` در `ReceivePurchase` درست است و
+   * هم برای `attachments` در خرید/فروش — هر دو `{objectKey, fileName,
+   * note}` می‌خواهند (بخش ۱۷ سند و بند ۳ سندِ ضمیمه‌ی فاکتور).
+   */
+  const payload = useMemo(
+    () =>
+      items
+        .filter((item) => item.objectKey)
+        .map((item) => ({
+          objectKey: item.objectKey,
+          fileName: item.fileName || undefined,
+          note: item.note?.trim() || undefined,
+        })),
+    [items]
+  );
+
   return useMemo(
     () => ({
       items,
@@ -253,17 +288,14 @@ export function useImageUploadList({
       hasErrors: items.some((item) => item.status === "error"),
       isFull: items.length >= maxCount,
       maxCount,
+      /** مقدارِ `accept` ورودیِ فایل — هم‌راستا با همان اعتبارسنجی بالا. */
+      accept,
       /**
-       * آرایه‌ی `images` برای `ReceivePurchase` — فقط قلم‌هایی که کلید
-       * گرفته‌اند. قلمِ نیمه‌آپلود یا شکست‌خورده هرگز به سرور نمی‌رود.
+       * همان آرایه‌ای که در بدنه‌ی دستور می‌رود: `attachments` در
+       * `CreatePurchase`/`UpdatePurchase`/`CreateSale`/`UpdateSale`، و
+       * `images` در `ReceivePurchase`.
        */
-      imagesPayload: items
-        .filter((item) => item.objectKey)
-        .map((item) => ({
-          objectKey: item.objectKey,
-          fileName: item.fileName || undefined,
-          note: item.note?.trim() || undefined,
-        })),
+      filesPayload: payload,
       addFiles,
       removeItem,
       setNote,
@@ -272,8 +304,21 @@ export function useImageUploadList({
       commit,
       discard,
     }),
-    [addFiles, commit, discard, isUploading, items, maxCount, removeItem, reset, retry, setNote]
+    [
+      accept,
+      addFiles,
+      commit,
+      discard,
+      isUploading,
+      items,
+      maxCount,
+      payload,
+      removeItem,
+      reset,
+      retry,
+      setNote,
+    ]
   );
 }
 
-export default useImageUploadList;
+export default useFileUploadList;

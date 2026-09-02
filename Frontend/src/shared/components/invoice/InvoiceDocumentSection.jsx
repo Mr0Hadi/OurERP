@@ -1,44 +1,41 @@
+import { useState } from "react";
 import { Printer, Download, Info } from "lucide-react";
+import toast from "react-hot-toast";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Label } from "@/shared/components/ui/label";
-import ImageUploadList from "@/shared/components/files/ImageUploadList";
-import { ImageFolderEnum } from "@/shared/domain/enums/imageFolder";
-import { useImageUploadList } from "@/shared/hooks/useImageUploadList";
+import { Spinner } from "@/shared/components/ui/spinner";
+import FileUploadList from "@/shared/components/files/FileUploadList";
+import {
+  SERVER_INVOICE_PDF_ENABLED,
+  getPurchaseInvoicePdf,
+  getSaleInvoicePdf,
+  getSaleReturnCreditNotePdf,
+  saveBlobAs,
+} from "@/shared/services/invoice/api-v1";
 
 /**
- * سند فاکتور یک سفارش — چاپ/دانلود یک نسخه‌ی ساده از فاکتور، و ضمیمه‌کردن
- * فاکتور واقعی (مثلاً برگه‌ای که تامین‌کننده داده).
+ * سند فاکتور/پیش‌فاکتورِ یک سفارش: چاپ و دانلود، و ضمیمه‌کردنِ برگه‌ی
+ * واقعی (مثلاً فاکتوری که تامین‌کننده داده).
  *
- * ساخت رسمیِ فاکتور روی بک‌اند انجام می‌شود؛ اینجا فقط پیش‌نمایشِ قابل
- * چاپ از روی داده‌ی فعلیِ فرم است.
+ * - **چاپ** همیشه یک پیش‌نمایشِ HTML از روی داده‌ی *همین فرم* است، تا
+ *   قبل از ذخیره هم کار کند.
+ * - **دانلود** اگر سند روی سرور باشد (`documentKind` + `documentId`)
+ *   فاکتورِ رسمیِ PDF را از `api/Invoice` می‌گیرد (بخش ۱۳ سند)، وگرنه
+ *   همان پیش‌نمایشِ HTML را ذخیره می‌کند.
+ * - **ضمیمه** از مسیرِ مشترکِ آپلود (`useInvoiceAttachments` →
+ *   `api/File/UploadImage`) رد می‌شود و `objectKey` می‌گیرد؛ همان کلید
+ *   بعداً در `attachments`ِ دستور Create/Update می‌نشیند.
  *
- * ضمیمه دیگر «فقط در حافظه‌ی همین صفحه» نیست: از همان مسیرِ مشترکِ
- * آپلود (`useImageUploadList` → `api/File/UploadImage`) رد می‌شود و
- * `objectKey` می‌گیرد.
+ * ضمیمه را *صفحه* نگه می‌دارد نه این کامپوننت، چون فقط صفحه‌ای که دستور
+ * را می‌فرستد می‌تواند آن را در بدنه بگذارد و بعد از ذخیره‌ی موفق
+ * `commit()` بزند. پس صفحه‌ای که `attachments` بدهد آپلودر می‌بیند و
+ * صفحه‌ای که ندهد توضیح — امروز یعنی دو صفحه‌ی مرجوعی، چون
+ * `CreatePurchaseReturnCommand`/`CreateSaleReturnCommand` هنوز فیلدِ
+ * ضمیمه ندارند. آپلودرِ بی‌مقصد بدترین حالت است: کاربر پیام موفقیت
+ * می‌گیرد و هیچ ضمیمه‌ای ذخیره نشده.
  */
-
-/**
- * ⚠️ **ضمیمه‌ی فاکتور هنوز سمت سرور جایی برای ذخیره‌شدن ندارد.**
- *
- * آپلود کار می‌کند (کلید گرفته می‌شود)، ولی `CreateSaleCommand`،
- * `CreatePurchaseCommand` و دو دستور مرجوعی هیچ فیلدی برای ضمیمه ندارند
- * و `System.Text.Json` فیلدِ ناشناس را بی‌صدا دور می‌ریزد — یعنی کاربر
- * «ضمیمه‌ی ذخیره‌شده»‌ای می‌بیند که وجود ندارد. تا آن روز این خاموش است.
- *
- * فهرست کارهای بک‌اند:
- * `Backend-Net/docs/invoice-attachment-requirements.fa.md`
- */
-const INVOICE_ATTACHMENTS_ENABLED = false;
-
-/**
- * پوشه‌ی باکت. `RECEIVING` استفاده می‌شود چون پوشه فقط یک پیشوندِ
- * مرتب‌سازی است و بک‌اند خودش هم نوشته که مرزِ امنیتی نیست — پس فاکتور
- * ارزشِ افزودنِ یک عضو تازه به enum را ندارد. اگر روزی پوشه‌ی مخصوص
- * ساخته شد، فقط همین یک خط عوض می‌شود.
- */
-const INVOICE_ATTACHMENT_FOLDER = ImageFolderEnum.RECEIVING;
 
 function buildInvoiceHtml({
   title,
@@ -94,6 +91,15 @@ function buildInvoiceHtml({
 </html>`;
 }
 
+/**
+ * @param attachments  خروجی `useInvoiceAttachments` از سمتِ صفحه — نبودنش
+ *   یعنی این نوع سند هنوز روی سرور جای ضمیمه ندارد.
+ * @param documentKind `"purchase"` / `"sale"` / `"saleReturn"` — برای
+ *   دانلودِ سندِ رسمیِ PDF از `api/Invoice` (برای مرجوعی فروش، «برگه‌ی
+ *   بستانکاری»). نبودنش یعنی فقط پیش‌نمایشِ HTML. مرجوعی خرید سندِ
+ *   رسمیِ PDF ندارد.
+ * @param documentId   شناسه‌ی همان سندِ ذخیره‌شده.
+ */
 export default function InvoiceDocumentSection({
   title,
   invoiceNumber,
@@ -105,14 +111,24 @@ export default function InvoiceDocumentSection({
   attachmentRequired = false,
   attachmentLabel = "فایل فاکتور",
   attachments,
+  documentKind,
+  documentId,
 }) {
-  // اگر صفحه‌ای خودش ضمیمه‌ها را نگه می‌دارد (برای گذاشتن در payload)،
-  // همان را می‌دهد؛ وگرنه کامپوننت state خودش را می‌سازد.
-  const ownList = useImageUploadList({
-    folder: INVOICE_ATTACHMENT_FOLDER,
-    maxCount: 5,
-  });
-  const list = attachments ?? ownList;
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  /**
+   * فاکتورِ رسمی را سرور می‌سازد (بخش ۱۳ سند). تا وقتی فیچرهای
+   * خرید/فروش روی داده‌ی mock اند، شناسه‌ها شناسه‌ی سرور نیستند و این
+   * مسیر خاموش می‌ماند — دکمه همان پیش‌نمایشِ HTML را می‌دهد.
+   */
+  const serverPdf =
+    SERVER_INVOICE_PDF_ENABLED && documentId
+      ? {
+          purchase: getPurchaseInvoicePdf,
+          sale: getSaleInvoicePdf,
+          saleReturn: getSaleReturnCreditNotePdf,
+        }[documentKind]
+      : null;
 
   const invoiceProps = {
     title,
@@ -133,18 +149,31 @@ export default function InvoiceDocumentSection({
     win.print();
   };
 
-  const handleDownload = () => {
-    const blob = new Blob([buildInvoiceHtml(invoiceProps)], {
-      type: "text/html;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${invoiceNumber || "invoice"}.html`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+  const downloadHtmlPreview = () => {
+    saveBlobAs(
+      new Blob([buildInvoiceHtml(invoiceProps)], { type: "text/html;charset=utf-8" }),
+      `${invoiceNumber || "invoice"}.html`,
+    );
+  };
+
+  const handleDownload = async () => {
+    if (!serverPdf) {
+      downloadHtmlPreview();
+      return;
+    }
+
+    setIsDownloading(true);
+    try {
+      const blob = await serverPdf(documentId);
+      saveBlobAs(blob, `${invoiceNumber || title || "invoice"}.pdf`);
+    } catch (error) {
+      // پیامِ فارسیِ سرور از بلاب بیرون کشیده شده (`api-v1`) — ولی اگر
+      // سند اصلاً روی سرور نباشد، پیش‌نمایشِ محلی بهتر از هیچ است.
+      toast.error(error?.message || "دریافت فاکتور از سرور ممکن نشد.");
+      downloadHtmlPreview();
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -155,11 +184,11 @@ export default function InvoiceDocumentSection({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             type="button"
             variant="outline"
-            className="flex-1 gap-2"
+            className="min-w-24 flex-1 gap-2"
             onClick={handlePrint}
           >
             <Printer className="h-4 w-4" />
@@ -168,17 +197,18 @@ export default function InvoiceDocumentSection({
           <Button
             type="button"
             variant="outline"
-            className="flex-1 gap-2"
+            className="min-w-24 flex-1 gap-2"
             onClick={handleDownload}
+            disabled={isDownloading}
           >
-            <Download className="h-4 w-4" />
-            دانلود
+            {isDownloading ? <Spinner /> : <Download className="h-4 w-4" />}
+            {serverPdf ? "دانلود PDF" : "دانلود"}
           </Button>
         </div>
 
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2">
-            <Label className="text-card-foreground text-sm font-medium">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <Label className="text-card-foreground text-sm font-medium leading-relaxed">
               {attachmentLabel}
             </Label>
             {attachmentRequired && (
@@ -188,17 +218,16 @@ export default function InvoiceDocumentSection({
             )}
           </div>
 
-          {INVOICE_ATTACHMENTS_ENABLED ? (
-            <ImageUploadList
-              list={list}
-              title="فایل‌ها"
+          {attachments ? (
+            <FileUploadList
+              list={attachments}
               withNotes={false}
-              emptyLabel="فایل فاکتور را اینجا اضافه کنید."
+              emptyLabel="فایل فاکتور را اینجا اضافه کنید (تصویر یا PDF)."
             />
           ) : (
             <p className="flex items-start gap-2 rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground leading-relaxed">
               <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-              ضمیمه‌کردن فاکتور تا آماده‌شدن سرویس آن روی سرور غیرفعال است.
+              ضمیمه‌کردن فاکتور برای این سند هنوز روی سرور پشتیبانی نمی‌شود.
             </p>
           )}
         </div>

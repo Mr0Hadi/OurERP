@@ -1,18 +1,19 @@
 import axiosInstance from "@/shared/services/api/axios";
 import {
   idempotent,
-  listParams,
   normalizeListResponse,
 } from "@/shared/services/api/contract";
 import { toApiClaim, fromApiReturn } from "./apiMapping";
 
 /**
- * نسخه‌ی واقعیِ APIِ مرجوعی خرید.
+ * نسخه‌ی هماهنگ‌شده با بکندِ واقعی — کنترلر `api/PurchaseReturn`
+ * (`Backend-Net/docs/api-guide.fa.md`، بخش ۱۰؛ بخش ۷ گزارشِ شکافِ
+ * خرید/فروش).
  *
- * سطحش دقیقاً همان چیزی است که `queries.js` و `mutations.js` امروز از
- * `api-mockData` می‌گیرند — نه یک تابع بیشتر، نه یک آرگومان متفاوت.
- * مهاجرت یعنی عوض‌کردن `./api-mockData` به `./api-v1` در آن دو فایل و
- * هیچ چیز دیگر.
+ * خبر خوب: مدلِ داده‌ی این ماژول (Claim → Resolution → Effect) از قبل
+ * دقیقاً با بکند یکی بود؛ فقط مسیرها REST فرضی (`/purchase-returns/...`)
+ * بودند و باید به الگوی `api/{Controller}/{Action}` بکند عوض می‌شدند.
+ * شکلِ بدنه‌ها دست‌نخورده ماند.
  *
  * سه قاعده‌ی این لایه:
  *
@@ -26,8 +27,9 @@ import { toApiClaim, fromApiReturn } from "./apiMapping";
  *     شناسه برگرداند، هر عملیات یک refetch اضافه می‌خورد و UI پرش
  *     می‌کند.
  *
- *  ۳. عملیاتِ تجمعی (ثبت تصمیم، دور کالا) کلید ایدمپوتنسی می‌گیرد تا
- *     retry شبکه یا دوبار کلیک، دوبار اعمال نشود.
+ *  ۳. عملیاتِ تجمعی (ثبت تصمیم، دور کالا) کلید ایدمپوتنسی می‌گیرد —
+ *     ⚠️ ولی بکندِ فعلی این هدر را اصلاً نمی‌خواند (گزارشِ شکاف، بخش
+ *     ۶)، پس این محافظت فعلاً فقط سمتِ فرانت است، نه واقعی.
  *
  * پوششِ `ResponseDto` در interceptor باز می‌شود، پس اینجا `data` همان
  * محتوای واقعی است.
@@ -36,46 +38,60 @@ import { toApiClaim, fromApiReturn } from "./apiMapping";
 // ─── خواندن ─────────────────────────────────────────────────────────────────
 
 export async function fetchPurchaseReturns(params = {}) {
-  const { data } = await axiosInstance.get("/purchase-returns", {
+  const { data } = await axiosInstance.get("/PurchaseReturn/GetPurchaseReturnList", {
     params: {
-      ...listParams(params),
-      supplierIds: params.supplierIds?.length ? params.supplierIds : undefined,
+      page: params.page,
+      take: params.limit,
+      search: params.search || undefined,
+      // بکند فقط یک supplierId تکی می‌گیرد، نه آرایه.
+      supplierId: params.supplierIds?.[0] ?? undefined,
       status: params.status !== "" ? params.status : undefined,
-      // مشکل و دامنه روی *ادعاها* فیلتر می‌شوند نه روی سند: یک مرجوعی
-      // می‌تواند چند ادعا با مشکل‌های مختلف داشته باشد.
+      // مشکل روی *غالب‌ترین ادعا*ی سند فیلتر می‌شود، نه هر ادعا جدا.
       problem: params.problem !== "" ? params.problem : undefined,
-      scope: params.scope !== "" ? params.scope : undefined,
+      fromDate: params.fromDate || undefined,
+      toDate: params.toDate || undefined,
+      // scope/sortBy/sortOrder روی این لیست پشتیبانی نمی‌شوند.
     },
   });
   return normalizeListResponse(data, { itemsKey: "returnList" });
 }
 
 export async function fetchPurchaseReturnById(id) {
-  const { data } = await axiosInstance.get(`/purchase-returns/${id}`);
+  const { data } = await axiosInstance.get("/PurchaseReturn/GetPurchaseReturnDetail", {
+    params: { id },
+  });
   return fromApiReturn(data);
 }
 
-/** فهرست کوتاهِ خریدهای قابل‌مرجوع برای انتخابگر فرم. */
+/**
+ * فهرست کوتاهِ خریدهای قابل‌مرجوع برای انتخابگر فرم.
+ *
+ * ⚠️ بکند پارامترِ `returnable` ندارد — این فقط لیستِ عادیِ خریدهاست؛
+ * فیلترِ «واقعاً چیزی رسیده که بشود مرجوعش کرد» باید در فرانت (روی
+ * وضعیت/دریافتی‌های هر خرید) انجام شود.
+ */
 export async function fetchReturnablePurchases(search = "") {
-  const { data } = await axiosInstance.get("/purchases", {
-    params: { search: search || undefined, returnable: true, limit: 30 },
+  const { data } = await axiosInstance.get("/Purchase/GetPurchaseList", {
+    params: { invoiceNumber: search || undefined, take: 30 },
   });
   return normalizeListResponse(data, { itemsKey: "purchaseList" }).items;
 }
 
 /**
- * اقلام یک خرید به‌همراه سقف ادعا و مقدارِ ادعاشده در مرجوعی‌های دیگر.
+ * اقلام یک خرید به‌همراه چقدر تا الان دریافت شده.
  *
- * `excludeReturnId` برای صفحه‌ی جزئیات است تا ادعاهای خودِ همان مرجوعی
- * دوبار شمرده نشوند.
- *
- * هر قلم باید `orderLineId` (همان `PurchaseItem.Id`) داشته باشد؛ فرم با
- * همین به خط فاکتور ارجاع می‌دهد، نه با `productId` — یک کالا می‌تواند
- * در دو خط سفارش با قیمت متفاوت باشد.
+ * ⚠️ برخلاف چیزی که این تابع قبلاً فرض می‌کرد، بکند سقفِ *قابل‌ادعا*
+ * (دریافتی منهای آنچه در مرجوعی‌های فعالِ دیگر ادعا شده) را برنمی‌گرداند
+ * — فقط `orderedQuantity`/`receivedQuantity`/`stillOwedQuantity` می‌دهد
+ * (که برای فرمِ *دریافت*، نه فرمِ *مرجوعی*، ساخته شده). سرور سقفِ
+ * ادعا را فقط لحظه‌ی `POST CreatePurchaseReturn` چک می‌کند؛
+ * `excludeReturnId` اینجا اثری ندارد چون endpointِ واقعی چنین
+ * پارامتری نمی‌شناسد. تا وقتی بکند این را اضافه نکند، فرم باید خطای
+ * سرور را هم مدیریت کند.
  */
-export async function fetchPurchaseForReturn(purchaseId, excludeReturnId = null) {
-  const { data } = await axiosInstance.get(`/purchases/${purchaseId}/for-return`, {
-    params: { excludeReturnId: excludeReturnId ?? undefined },
+export async function fetchPurchaseForReturn(purchaseId) {
+  const { data } = await axiosInstance.get("/PurchaseReturn/GetPurchaseReceivingInfo", {
+    params: { purchaseId },
   });
   return data;
 }
@@ -84,7 +100,7 @@ export async function fetchPurchaseForReturn(purchaseId, excludeReturnId = null)
 
 export async function createPurchaseReturn(payload, { idempotencyKey } = {}) {
   const { data } = await axiosInstance.post(
-    "/purchase-returns",
+    "/PurchaseReturn/CreatePurchaseReturn",
     {
       purchaseId: payload.purchaseId,
       returnDate: payload.returnDate,
@@ -112,17 +128,18 @@ export async function addClaimResolution(
   { idempotencyKey } = {},
 ) {
   const { data } = await axiosInstance.post(
-    `/purchase-returns/${returnId}/claims/${claimId}/resolutions`,
-    composition,
+    "/PurchaseReturn/AddClaimResolution",
+    { claimId, composition },
     idempotent(idempotencyKey),
   );
   return fromApiReturn(data);
 }
 
+/** بکند فقط شناسه‌ی *تصمیم* (`resolutionId`) می‌خواهد؛ `returnId`/`claimId` فقط برای رفرشِ کش فرانت لازم بودند. */
 export async function removeClaimResolution(returnId, claimId, resolutionId) {
-  const { data } = await axiosInstance.delete(
-    `/purchase-returns/${returnId}/claims/${claimId}/resolutions/${resolutionId}`,
-  );
+  const { data } = await axiosInstance.delete("/PurchaseReturn/RemoveClaimResolution", {
+    params: { id: resolutionId },
+  });
   return fromApiReturn(data);
 }
 
@@ -132,18 +149,18 @@ export async function removeClaimResolution(returnId, claimId, resolutionId) {
  * بدنه:
  *
  *   {
- *     rounds: [{ effectId, qty, observations: [{ problem, qty, note }] }],
+ *     purchaseReturnId, rounds: [{ effectId, quantity, observations: [{ problem, quantity, note }] }],
  *     date, partyName, partyNationalId, vehiclePlate, note
  *   }
  *
  * `observations` مشاهده‌ی مستقلِ انباردار است و فقط برای اثرِ ورودی
  * معنا دارد. مقدارِ سالم عمداً فرستاده نمی‌شود: سرور آن را از
- * `qty` منهای مجموع مشاهده‌ها حساب می‌کند تا دو عددِ ناسازگار وجود
- * نداشته باشد.
+ * `quantity` منهای مجموع مشاهده‌ها حساب می‌کند تا دو عددِ ناسازگار
+ * وجود نداشته باشد.
  *
  * صفحات انبار این را مستقیم صدا نمی‌زنند؛ آن‌ها endpoint خودشان را
- * دارند و سرور از همان‌جا اثرها را می‌بندد. این مسیر برای وقتی است که
- * خودِ صفحه‌ی مرجوعی دور را ثبت کند.
+ * دارند (`ReceivePurchase`) و سرور از همان‌جا اثرها را نمی‌بندد —
+ * اجرای اثرها همیشه از همین مسیر انجام می‌شود.
  */
 export async function executeGoodsRound(
   returnId,
@@ -151,8 +168,8 @@ export async function executeGoodsRound(
   { idempotencyKey } = {},
 ) {
   const { data } = await axiosInstance.post(
-    `/purchase-returns/${returnId}/goods-rounds`,
-    payload,
+    "/PurchaseReturn/ExecuteGoodsRound",
+    { purchaseReturnId: returnId, ...payload },
     idempotent(idempotencyKey),
   );
   return fromApiReturn(data);
@@ -160,29 +177,32 @@ export async function executeGoodsRound(
 
 // ─── چرخه‌ی عمر ─────────────────────────────────────────────────────────────
 
-export async function rejectPurchaseReturn(returnId, reason) {
-  const { data } = await axiosInstance.post(
-    `/purchase-returns/${returnId}/reject`,
-    { reason },
-  );
+/** بکند «دلیل» را روی رد/لغو نمی‌گیرد — فقط `{id}`. `reason` فعلاً نگه داشته می‌شود ولی فرستاده نمی‌شود. */
+export async function rejectPurchaseReturn(returnId) {
+  const { data } = await axiosInstance.post("/PurchaseReturn/RejectPurchaseReturn", {
+    id: returnId,
+  });
   return fromApiReturn(data);
 }
 
-export async function cancelPurchaseReturn(returnId, reason) {
-  const { data } = await axiosInstance.post(
-    `/purchase-returns/${returnId}/cancel`,
-    { reason },
-  );
+export async function cancelPurchaseReturn(returnId) {
+  const { data } = await axiosInstance.post("/PurchaseReturn/CancelPurchaseReturn", {
+    id: returnId,
+  });
   return fromApiReturn(data);
 }
 
 export async function reopenPurchaseReturn(returnId) {
-  const { data } = await axiosInstance.post(`/purchase-returns/${returnId}/reopen`);
+  const { data } = await axiosInstance.post("/PurchaseReturn/ReopenPurchaseReturn", {
+    id: returnId,
+  });
   return fromApiReturn(data);
 }
 
 export async function removePurchaseReturn(returnId) {
-  const { data } = await axiosInstance.delete(`/purchase-returns/${returnId}`);
+  const { data } = await axiosInstance.delete("/PurchaseReturn/DeletePurchaseReturn", {
+    params: { id: returnId },
+  });
   // پاسخِ حذف هم سند را برمی‌گرداند: لایه‌ی mutation برای پاک‌کردن کش و
   // بازگرداندن کاربر به لیست، به `id` و `purchaseId` نیاز دارد.
   return fromApiReturn(data) ?? { id: returnId };

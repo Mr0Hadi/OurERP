@@ -188,6 +188,19 @@ public List<DocumentAttachmentDto> Attachments { get; set; } = new();
 
 ## ۴. وقتی این‌ها انجام شد، در فرانت چه عوض می‌شود
 
+> **✅ انجام شد سمت فرانت (۲۰۲۶-۰۹-۰۲).** پرچمِ
+> `INVOICE_ATTACHMENTS_ENABLED` به‌کل حذف شد؛ حالا هر صفحه‌ای که
+> `attachments` (خروجی `useImageUploadList`) به `InvoiceDocumentSection`
+> بدهد آپلودر می‌گیرد و بقیه توضیحِ «هنوز پشتیبانی نمی‌شود» — یعنی
+> ضمیمه روی هر چهار صفحه‌ی خرید/فروش (ثبت و ویرایش) فعال است و دو
+> صفحه‌ی مرجوعی تا وصل‌شدنِ `CreatePurchaseReturnCommand`/
+> `CreateSaleReturnCommand` توضیح نشان می‌دهند. PDF هم طبق گزینه‌ی (۱)
+> بند ۲.۴ در `fileConstraints.js` مجاز شد (`validateDocumentFile`) و
+> قلمِ PDF به‌جای بندانگشتی، آیکن می‌گیرد. ضمناً دکمه‌ی «دانلود» حالا
+> وقتی سند روی سرور باشد، PDFِ رسمیِ بخش ۱۳ را می‌گیرد
+> (`shared/services/invoice/api-v1.js`).
+
+
 ۱. `INVOICE_ATTACHMENTS_ENABLED` در `InvoiceDocumentSection.jsx` می‌شود
    `true`.
 ۲. چهار صفحه‌ی جزئیات، `useImageUploadList` را خودشان می‌گیرند و به

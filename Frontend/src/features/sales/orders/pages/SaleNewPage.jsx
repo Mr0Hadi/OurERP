@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useGoBack } from "@/shared/hooks/useGoBack";
 import { Save, X } from "lucide-react";
+import toast from "react-hot-toast";
 import { Button } from "@/shared/components/ui/button";
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { useNavigationStore } from "@/shared/store/navigationStore";
@@ -14,6 +15,8 @@ import SaleItemsSection from "@/features/sales/orders/components/forms/SaleItems
 import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
 import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
 import SaleStatusSection from "../components/forms/SaleStatusSection";
+import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
+import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
 import { ROUTES } from "@/shared/constants/routes";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
@@ -37,6 +40,13 @@ export default function SaleNewPage() {
     useSaleFormStore();
 
   const [showErrors, setShowErrors] = useState(false);
+
+  /**
+   * ضمیمه‌ی پیش‌فاکتور/فاکتورِ صادرشده برای مشتری. `CreateSale` آرایه‌ی
+   * `attachments` را می‌پذیرد (بند ۳ سندِ ضمیمه)، پس همان لحظه‌ی ثبت هم
+   * می‌شود فایل را پیوست کرد.
+   */
+  const attachments = useInvoiceAttachments();
 
   useEffect(() => {
     const fromValidReturn =
@@ -166,6 +176,11 @@ export default function SaleNewPage() {
       return;
     }
 
+    if (attachments.isUploading) {
+      toast.error("تا پایان بارگذاری ضمیمه‌ها صبر کنید.");
+      return;
+    }
+
     const payload = {
       customerId: formData.customerId,
       customerName: formData.customerName,
@@ -193,10 +208,12 @@ export default function SaleNewPage() {
           ? SaleStatusEnum.PROFORMA
           : formData.status,
       totalAmount: computedTotal,
+      attachments: attachments.filesPayload,
     };
 
     createMutation.mutate(payload, {
       onSuccess: () => {
+        attachments.commit();
         navigate(ROUTES.SALES);
         resetForm();
       },
@@ -204,11 +221,13 @@ export default function SaleNewPage() {
   };
 
   const handleCancel = () => {
+    // فایل‌های آپلودشده‌ی این نشست هیچ سندی ندارند که به آن بچسبند.
+    attachments.discard();
     navigate(-1);
     resetForm();
   };
 
-  const isBusy = createMutation.isPending;
+  const isBusy = createMutation.isPending || attachments.isUploading;
 
   return (
     <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in zoom-in-95 duration-300">
@@ -250,6 +269,23 @@ export default function SaleNewPage() {
               onFormChange={setFormData}
               totalAmount={computedTotal}
               errors={{}}
+            />
+
+            <InvoiceDocumentSection
+              title={
+                Number(formData.status ?? SaleStatusEnum.PROFORMA) ===
+                SaleStatusEnum.PROFORMA
+                  ? "پیش‌فاکتور فروش"
+                  : "فاکتور فروش"
+              }
+              invoiceNumber={formData.invoiceNumber}
+              invoiceDate={formData.invoiceDate}
+              partyLabel="مشتری"
+              partyName={formData.customerName}
+              items={items}
+              totalAmount={computedTotal}
+              attachments={attachments}
+              attachmentLabel="پیش‌فاکتور/فاکتور صادرشده برای مشتری"
             />
 
             <SaleStatusSection
