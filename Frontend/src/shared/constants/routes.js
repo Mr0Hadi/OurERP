@@ -98,6 +98,10 @@ export const ROUTES = {
   REPORTS_FINANCIAL: "/reports/financial",
   REPORTS_PROFIT_LOSS: "/reports/profit-loss",
   REPORTS_warehouse: "/reports/warehouse",
+  // مانیتورینگ فعالیت — روی `api/Report` واقعی سوارند (بخش ۱۸ سند).
+  REPORTS_EMPLOYEES: "/reports/employees",
+  REPORTS_CUSTOMERS: "/reports/customers",
+  REPORTS_SUPPLIERS: "/reports/suppliers",
 
   // تنظیمات
   SETTINGS: "/settings",

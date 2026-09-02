@@ -318,6 +318,36 @@ export const navigationData = {
         // },
       ],
     },
+    {
+      title: "گزارش‌ها",
+      url: ROUTES.REPORTS,
+      icon: BarChart3,
+      isActive: false,
+      permission: "reports",
+      items: [
+        {
+          title: "فعالیت کارمندان",
+          url: ROUTES.REPORTS_EMPLOYEES,
+          permission: "reports_view",
+          icon: UserCog,
+          description: "رتبه‌بندی کارمندان بر اساس فروش و خرید ثبت‌شده",
+        },
+        {
+          title: "آمار خرید مشتریان",
+          url: ROUTES.REPORTS_CUSTOMERS,
+          permission: "reports_view",
+          icon: Users,
+          description: "پرخریدترین مشتریان و مانده‌ی تسویه‌نشده",
+        },
+        {
+          title: "آمار خرید از تامین‌کنندگان",
+          url: ROUTES.REPORTS_SUPPLIERS,
+          permission: "reports_view",
+          icon: Truck,
+          description: "خرید از هر تامین‌کننده و وضعیت پرداخت",
+        },
+      ],
+    },
     // {
     //   title: "فاکتورها",
     //   url: ROUTES.INVOICE,
