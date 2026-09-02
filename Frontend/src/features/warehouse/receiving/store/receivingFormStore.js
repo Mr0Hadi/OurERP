@@ -69,21 +69,26 @@ export const useReceivingFormStore = create((set, get) => ({
     // خطوطِ سفارش
     const orderLines = (purchaseData.items || [])
       .map((item) => {
-        // receivableQty از سرور می‌آید و دقیق‌ترین محاسبه‌ی «الان چقدر
-        // واقعاً قابل دریافت است» را دارد (با در نظر گرفتن مشکلات
-        // گزارش‌شده‌ی حل‌نشده و مرجوعی‌های فعال). فرمول ساده‌ی
-        // qty−received−settled فقط به‌عنوان fallback ایمنی نگه داشته
-        // شده.
+        // `receivableQty` شکلِ mock است؛ `stillOwedQuantity` همان
+        // فیلد را در پاسخِ واقعیِ `GetPurchaseReceivingInfo` می‌دهد
+        // (`PurchaseReceivingItemInfoDto`). اگر هیچ‌کدام نبود، خودمان
+        // از `qty`/`orderedQuantity` منهای `receivedQty`/`receivedQuantity`
+        // و `settledQty` حساب می‌کنیم.
         const remaining =
-          item.receivableQty != null
-            ? item.receivableQty
-            : Math.max(
-                0,
-                item.qty - (item.receivedQty || 0) - (item.settledQty || 0),
-              );
+          item.receivableQty ?? item.stillOwedQuantity ??
+          Math.max(
+            0,
+            (item.qty ?? item.orderedQuantity ?? 0) -
+              (item.receivedQty ?? item.receivedQuantity ?? 0) -
+              (item.settledQty || 0),
+          );
         return {
           lineId: `order:${item.productId}`,
           source: RECEIVING_SOURCES.ORDER,
+          // فقط در پاسخِ واقعی هست (mock شناسه‌ی ردیفِ خرید ندارد) —
+          // هر جا موجود باشد همراهِ ردیف نگه داشته می‌شود تا هنگامِ
+          // ارسال به `ReceivePurchase` در دسترس باشد (بخش ۷ سند).
+          purchaseItemId: item.purchaseItemId ?? null,
           productId: item.productId,
           productName: item.productName,
           productCode: item.productCode,

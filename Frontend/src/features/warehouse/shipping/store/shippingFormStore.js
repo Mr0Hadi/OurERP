@@ -55,13 +55,23 @@ export const useShippingFormStore = create((set, get) => ({
 
     const orderLines = (saleData.items || [])
       .map((item) => {
+        // `shippableQty`/`qty`/`shippedQty` شکلِ mock است؛ پاسخِ واقعیِ
+        // `GetSaleDetail` همان ردیفِ خامِ `SaleItem` را می‌دهد:
+        // `id`/`quantity`/`shippedQuantity` (بخش ۱۱ سند).
         const remaining =
-          item.shippableQty != null
-            ? item.shippableQty
-            : Math.max(0, item.qty - (item.shippedQty || 0));
+          item.shippableQty ??
+          Math.max(
+            0,
+            (item.qty ?? item.quantity ?? 0) -
+              (item.shippedQty ?? item.shippedQuantity ?? 0),
+          );
         return {
           lineId: `order:${item.productId}`,
           source: SHIPPING_SOURCES.ORDER,
+          // فقط در پاسخِ واقعی هست (`SaleItem.Id`، mock ندارد) — همراهِ
+          // ردیف نگه داشته می‌شود تا هنگامِ ارسال به `ShipSale` در
+          // دسترس باشد.
+          saleItemId: item.id ?? item.saleItemId ?? null,
           productId: item.productId,
           productName: item.productName,
           productCode: item.productCode,

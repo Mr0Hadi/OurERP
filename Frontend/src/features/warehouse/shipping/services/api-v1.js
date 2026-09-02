@@ -34,32 +34,46 @@ export async function fetchShippingSaleById(id) {
 }
 
 /**
- * ⚠️ شکلِ بدنه با بکند فرق دارد: بکند `{saleId, shippedDate?,
- * shippingNote?, driverFullName?, driverNationalCode?, vehiclePlate?,
- * items:[{saleItemId, shippedQuantity, productUnitBarcodes?}]}`
- * می‌خواهد — بدون `source`؛ سهمِ مرجوعیِ خرید (عودتِ جایگزین به
- * تامین‌کننده) بخشی از این درخواست نیست، باید جدا با
+ * ⚠️ شکلِ بدنه با بکند فرق دارد و باید ترجمه شود: بکند `{saleId,
+ * shippedDate?, shippingNote?, driverFullName?, driverPhoneNumber?,
+ * vehiclePlate?, items:[{saleItemId, shippedQuantity,
+ * productUnitBarcodes?}]}` می‌خواهد — بدون `source`؛ سهمِ مرجوعیِ خرید
+ * (عودتِ جایگزین به تامین‌کننده) بخشی از این درخواست نیست، باید جدا با
  * `confirmSupplierReturnShipment` ثبت شود.
+ *
+ * `shipmentData` همان چیزی است که `useShippingForm().buildPayload()`
+ * می‌سازد (شکلِ فرم/mock: `shippedItems[].shippedQty` با
+ * `driverName`/`driverPhone`) — نه از قبل شکلِ بکند؛ اینجا ترجمه
+ * می‌شود، دقیقاً مثلِ `confirmReceiving` در فایلِ خواهرش.
+ *
+ * `saleItemId` را استور از پاسخِ `GetSaleDetail` (`item.id` روی
+ * `SaleItem`) روی هر ردیف نگه داشته (`shippingFormStore.initializeFromSale`)؛
+ * ردیف‌های مرجوعی (`source: RETURN`) چون `saleItemId` ندارند، از این
+ * درخواست کنار گذاشته می‌شوند.
  */
 export async function confirmShipment(
   saleId,
   shipmentData,
   { idempotencyKey } = {},
 ) {
+  const items = (shipmentData.shippedItems || [])
+    .filter((row) => row.saleItemId != null && (Number(row.shippedQty) || 0) > 0)
+    .map((row) => ({
+      saleItemId: row.saleItemId,
+      shippedQuantity: Number(row.shippedQty) || 0,
+      productUnitBarcodes: row.productUnitBarcodes || null,
+    }));
+
   const { data } = await axiosInstance.post(
     "/Sale/ShipSale",
     {
       saleId,
       shippedDate: shipmentData.shippedDate,
       shippingNote: shipmentData.shippingNote,
-      driverFullName: shipmentData.driverFullName,
-      driverNationalCode: shipmentData.driverNationalCode,
-      vehiclePlate: shipmentData.vehiclePlate,
-      items: (shipmentData.shippedItems || []).map((row) => ({
-        saleItemId: row.saleItemId,
-        shippedQuantity: row.shippedQuantity,
-        productUnitBarcodes: row.productUnitBarcodes || null,
-      })),
+      driverFullName: shipmentData.driverName || undefined,
+      driverPhoneNumber: shipmentData.driverPhone || undefined,
+      vehiclePlate: shipmentData.vehiclePlate || undefined,
+      items,
     },
     // ⚠️ بکند این هدر را نمی‌خواند (گزارشِ شکاف، بخش ۶)؛ retry شبکه
     // همین حالا می‌تواند یک ارسال را دوبار از موجودی کم کند.

@@ -46,6 +46,7 @@ export function useShippingForm(saleData) {
       source: item.source,
       returnId: item.returnId,
       effectId: item.effectId,
+      saleItemId: item.saleItemId ?? null,
       productId: item.productId,
       productCode: item.productCode,
       productName: item.productName,

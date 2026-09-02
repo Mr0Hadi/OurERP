@@ -48,31 +48,49 @@ export async function fetchReceivingPurchaseById(id) {
 }
 
 /**
- * ⚠️ شکلِ بدنه با بکند فرق دارد و باید بازنویسی شود، نه فقط مسیر:
+ * ⚠️ شکلِ بدنه با بکند فرق دارد و باید ترجمه شود، نه فقط مسیر:
  * بکند `{purchaseId, receivedDate?, receivingNote?, driverFullName?,
- * driverNationalCode?, vehiclePlate?, items:[{purchaseItemId,
+ * driverPhoneNumber?, vehiclePlate?, items:[{purchaseItemId,
  * receivedQuantity}], images:[]}` می‌خواهد — بدون `issues`/`source`/
  * `unknownItems`/`excessQty`. مغایرت باید جدا با `createPurchaseReturn`
  * (فیچرِ مرجوعی خرید) ثبت شود، نه در همین درخواست.
+ *
+ * `receivingData` همان چیزی است که `useReceivingForm().buildPayload()`
+ * می‌سازد (شکلِ فرم/mock: `receivedItems[].receivedQty` با
+ * `transporterName`/`transporterPhone`) — نه از قبل شکلِ بکند. اینجا
+ * دقیقاً همان کاری انجام می‌شود که `toApiItems`/`toApiPurchasePayload`
+ * در `purchases/orders/services/api-v1.js` می‌کنند: ترجمه‌ی شکلِ فرم
+ * به شکلِ کامند.
+ *
+ * `purchaseItemId` را استور از پاسخِ `GetPurchaseReceivingInfo` روی
+ * هر ردیف نگه داشته (`receivingFormStore.initializeFromPurchase`)؛
+ * بدونش این تابع نمی‌تواند خطوط را به کامند وصل کند. ردیف‌های مرجوعی
+ * (`source: RETURN`) چون `purchaseItemId` ندارند، از این درخواست کنار
+ * گذاشته می‌شوند — دریافتِ کالای برگشتی endpoint جدایی می‌خواهد که هنوز
+ * روی بکند نیست (نگاه کنید به `confirmReturnIntake`).
  */
 export async function confirmReceiving(
   purchaseId,
   receivingData,
   { idempotencyKey } = {},
 ) {
+  const items = (receivingData.receivedItems || [])
+    .filter((row) => row.purchaseItemId != null && (Number(row.receivedQty) || 0) > 0)
+    .map((row) => ({
+      purchaseItemId: row.purchaseItemId,
+      receivedQuantity: Number(row.receivedQty) || 0,
+    }));
+
   const { data } = await axiosInstance.post(
     "/Purchase/ReceivePurchase",
     {
       purchaseId,
       receivedDate: receivingData.receivedDate,
       receivingNote: receivingData.receivingNote,
-      driverFullName: receivingData.driverFullName,
-      driverNationalCode: receivingData.driverNationalCode,
-      vehiclePlate: receivingData.vehiclePlate,
-      items: (receivingData.receivedItems || []).map((row) => ({
-        purchaseItemId: row.purchaseItemId,
-        receivedQuantity: row.receivedQuantity,
-      })),
+      driverFullName: receivingData.transporterName || undefined,
+      driverPhoneNumber: receivingData.transporterPhone || undefined,
+      vehiclePlate: receivingData.vehiclePlate || undefined,
+      items,
       images: receivingData.images || [],
     },
     // ⚠️ بکند این هدر را نمی‌خواند (گزارشِ شکاف، بخش ۶)؛ retry شبکه

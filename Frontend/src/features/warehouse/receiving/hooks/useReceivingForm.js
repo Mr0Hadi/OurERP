@@ -196,6 +196,7 @@ export function useReceivingForm(purchaseData) {
       source: item.source,
       returnId: item.returnId,
       effectId: item.effectId,
+      purchaseItemId: item.purchaseItemId ?? null,
       productId: item.productId,
       productCode: item.productCode,
       productName: item.productName,
