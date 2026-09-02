@@ -1,9 +1,11 @@
+using Application.Common.Contracts.UserContextService;
 using Application.Features.Purchase.Commands;
 using Application.Features.Purchase.Dtos;
 using Application.Features.Purchase.Queries;
 using Common.Exceptions;
 using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using NSubstitute;
 using WMS.Tests.Support;
 
 namespace WMS.Tests.Integration
@@ -17,8 +19,9 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 1, stock: 0);
             var supplier = scenario.Supplier;
+            var user = Seed.PersistedUser(scope.Context);
 
-            var handler = new CreatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, TestMapper.Instance, scope.UnitOfWork);
+            var handler = new CreatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, TestMapper.Instance, scope.UnitOfWork, FakeUserContext.WithUserId(user.Id));
             await handler.Handle(new CreatePurchaseCommand
             {
                 SupplierId = supplier.Id,
@@ -159,8 +162,9 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
             var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 1, stock: 0);
+            var user = Seed.PersistedUser(scope.Context);
 
-            var handler = new CreatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, TestMapper.Instance, scope.UnitOfWork);
+            var handler = new CreatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, TestMapper.Instance, scope.UnitOfWork, FakeUserContext.WithUserId(user.Id));
             await handler.Handle(new CreatePurchaseCommand
             {
                 SupplierId = scenario.Supplier.Id,

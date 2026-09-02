@@ -28,5 +28,29 @@ namespace WMS.Controllers
         {
             return await _mediator.Send(request);
         }
+
+        [HttpGet("GetSalesPerformanceByEmployee")]
+        public async Task<ActionResult<ResponseDto>> GetSalesPerformanceByEmployee([FromQuery] GetSalesPerformanceByEmployeeQuery request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HttpGet("GetSupplyPerformanceByEmployee")]
+        public async Task<ActionResult<ResponseDto>> GetSupplyPerformanceByEmployee([FromQuery] GetSupplyPerformanceByEmployeeQuery request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HttpGet("GetCustomerPurchaseStatistics")]
+        public async Task<ActionResult<ResponseDto>> GetCustomerPurchaseStatistics([FromQuery] GetCustomerPurchaseStatisticsQuery request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HttpGet("GetSupplierSalesStatistics")]
+        public async Task<ActionResult<ResponseDto>> GetSupplierSalesStatistics([FromQuery] GetSupplierSalesStatisticsQuery request)
+        {
+            return await _mediator.Send(request);
+        }
     }
 }

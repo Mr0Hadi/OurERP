@@ -1,9 +1,11 @@
+using Application.Common.Contracts.UserContextService;
 using Application.Features.Sale.Commands;
 using Application.Features.Sale.Dtos;
 using Application.Features.Sale.Queries;
 using Common.Exceptions;
 using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using NSubstitute;
 using WMS.Tests.Support;
 
 namespace WMS.Tests.Integration
@@ -17,8 +19,9 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0);
             var customer = scenario.Customer;
+            var user = Seed.PersistedUser(scope.Context);
 
-            var handler = new CreateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
+            var handler = new CreateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance, FakeUserContext.WithUserId(user.Id));
             await handler.Handle(new CreateSaleCommand
             {
                 InvoiceNumber = "SALE-NEW",
@@ -181,8 +184,9 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0);
+            var user = Seed.PersistedUser(scope.Context);
 
-            var handler = new CreateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
+            var handler = new CreateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance, FakeUserContext.WithUserId(user.Id));
             await handler.Handle(new CreateSaleCommand
             {
                 CustomerId = scenario.Customer.Id,
@@ -209,8 +213,9 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0);
+            var user = Seed.PersistedUser(scope.Context);
 
-            var handler = new CreateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
+            var handler = new CreateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance, FakeUserContext.WithUserId(user.Id));
             await handler.Handle(new CreateSaleCommand
             {
                 CustomerId = scenario.Customer.Id,

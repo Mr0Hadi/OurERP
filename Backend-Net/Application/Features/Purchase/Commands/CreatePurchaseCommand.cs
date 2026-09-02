@@ -2,6 +2,7 @@
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
+using Application.Common.Contracts.UserContextService;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.Purchase.Dtos;
@@ -64,19 +65,22 @@ namespace Application.Features.Purchase.Commands
         private readonly IObjectStorageService _objectStorageService;
         private readonly IMapper _mapper;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IUserContextService _userContextService;
 
         public CreatePurchaseCommandHandler(
             IPurchaseRepository purchaseRepository,
             IWMSDbContext context,
             IObjectStorageService objectStorageService,
             IMapper mapper,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IUserContextService userContextService)
         {
             _purchaseRepository = purchaseRepository;
             _context = context;
             _objectStorageService = objectStorageService;
             _mapper = mapper;
             _unitOfWork = unitOfWork;
+            _userContextService = userContextService;
         }
 
         public async Task<ResponseDto> Handle(CreatePurchaseCommand request, CancellationToken cancellationToken)
@@ -86,6 +90,7 @@ namespace Application.Features.Purchase.Commands
             var purchase = _mapper.Map<Domain.Entities.Purchase>(request);
             // شماره فاکتور در مرحله‌ی پیش‌فاکتور می‌تواند خالی باشد، ولی ستون NOT NULL است.
             purchase.InvoiceNumber ??= string.Empty;
+            purchase.PurchasingUserId = _userContextService.GetUserId().ToInt();
 
             await _purchaseRepository.AddAsync(purchase, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);

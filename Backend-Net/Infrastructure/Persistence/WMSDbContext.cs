@@ -104,6 +104,18 @@ namespace Infrastructure.Persistence
                 .WithOne(y => y.Sale)
                 .HasForeignKey(x => x.SaleId);
 
+            modelBuilder.Entity<Sale>()
+                .HasOne(x => x.SalesUser)
+                .WithMany()
+                .HasForeignKey(x => x.SalesUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Purchase>()
+                .HasOne(x => x.PurchasingUser)
+                .WithMany()
+                .HasForeignKey(x => x.PurchasingUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             modelBuilder.Entity<Purchase>()
                 .HasMany(x => x.Items)
                 .WithOne(x => x.Purchase)

@@ -2,6 +2,7 @@ using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
+using Application.Common.Contracts.UserContextService;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.Sale.Dtos;
@@ -63,13 +64,15 @@ namespace Application.Features.Sale.Commands
         private readonly IWMSDbContext _context;
         private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IUserContextService _userContextService;
 
-        public CreateSaleCommandHandler(IWMSDbContext context, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, IMapper mapper)
+        public CreateSaleCommandHandler(IWMSDbContext context, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService)
         {
             _context = context;
             _objectStorageService = objectStorageService;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _userContextService = userContextService;
         }
 
         public async Task<ResponseDto> Handle(CreateSaleCommand request, CancellationToken cancellationToken)
@@ -79,6 +82,7 @@ namespace Application.Features.Sale.Commands
             var sale = _mapper.Map<Domain.Entities.Sale>(request);
             // شماره فاکتور در مرحله‌ی پیش‌فاکتور می‌تواند خالی باشد، ولی ستون NOT NULL است.
             sale.InvoiceNumber ??= string.Empty;
+            sale.SalesUserId = _userContextService.GetUserId().ToInt();
 
             // مشتری همان لحظه‌ی ثبت هم می‌تواند کامل پرداخت کرده باشد؛ آن‌وقت دیگر پیش‌فاکتور نمی‌ماند.
             if (sale.Status == SalesStatusEnum.PROFORMA && sale.PaidAmount >= sale.TotalAmount)
