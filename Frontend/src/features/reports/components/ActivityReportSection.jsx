@@ -3,26 +3,23 @@ import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
 import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
 
 import ActivityRangeToolbar from "./ActivityRangeToolbar";
-import ActivityRankTable from "./ActivityRankTable";
+import ActivityRankList from "./ActivityRankList";
 import ActivitySummary from "./ActivitySummary";
 
 /**
- * یک گزارشِ فعالیتِ کامل: نوارِ بازه، خلاصه، و جدولِ رتبه‌بندی.
+ * یک گزارشِ فعالیتِ کامل: نوارِ بازه، خلاصه، و فهرستِ رتبه‌بندی.
  *
  * هر چهار گزارش دقیقاً همین سه تکه را دارند و فقط در «کدام هوک» و
- * «عنوانِ ستون‌ها» فرق می‌کنند؛ پس صفحه‌ها این کامپوننت را با یک استور و
+ * «برچسبِ ستون‌ها» فرق می‌کنند؛ پس صفحه‌ها این کامپوننت را با یک استور و
  * یک هوک صدا می‌زنند و خودشان هیچ منطقِ داده‌ای ندارند.
  */
 export default function ActivityReportSection({
   useFilterStore,
   useReportQuery,
-  hint,
-  nameHeader,
   nameKey = "fullName",
-  countHeader,
   countKey,
   countLabel,
-  amountHeader,
+  countUnit,
   showPayment = false,
   emptyMessage,
 }) {
@@ -43,17 +40,21 @@ export default function ActivityReportSection({
 
   const items = data?.items ?? [];
   const totalPages = data?.totalPages ?? 1;
-  // شماره‌ی صفحه‌ی سرور یک‌مبناست و جدول صفرمبنا.
+  // شماره‌ی صفحه‌ی سرور یک‌مبناست و فهرست صفرمبنا.
   const currentPage = data?.page ? data.page - 1 : pagination.pageIndex;
+
+  /** نوارِ بازه دو تاریخ را با هم می‌دهد (دکمه‌های آماده هر دو را می‌سازند). */
+  const handleRangeChange = (range) => {
+    if (range.fromDate !== fromDate) setFromDate(range.fromDate);
+    if (range.toDate !== toDate) setToDate(range.toDate);
+  };
 
   return (
     <div className="space-y-3">
       <ActivityRangeToolbar
-        hint={hint}
         fromDate={fromDate}
         toDate={toDate}
-        onFromDateChange={setFromDate}
-        onToDateChange={setToDate}
+        onRangeChange={handleRangeChange}
         onReset={resetFilters}
       />
 
@@ -64,23 +65,21 @@ export default function ActivityReportSection({
           <ActivitySummary
             items={items}
             isLoading={isLoading}
-            countLabel={countLabel}
+            countLabel={{ label: countLabel, key: countKey }}
             nameKey={nameKey}
           />
 
           <FetchingOverlay active={isFetching && !isLoading}>
-            <ActivityRankTable
-              data={items}
+            <ActivityRankList
+              items={items}
               isLoading={isLoading}
               totalPages={totalPages}
               currentPage={currentPage}
               pageSize={pagination.pageSize}
               onPaginationChange={setPagination}
-              nameHeader={nameHeader}
               nameKey={nameKey}
-              countHeader={countHeader}
               countKey={countKey}
-              amountHeader={amountHeader}
+              countUnit={countUnit}
               showPayment={showPayment}
               emptyMessage={emptyMessage}
             />

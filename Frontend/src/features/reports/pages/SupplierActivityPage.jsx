@@ -1,7 +1,8 @@
 // src/features/reports/pages/SupplierActivityPage.jsx
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Truck } from "lucide-react";
 
 import ActivityReportSection from "../components/ActivityReportSection";
+import ReportPageHeader from "../components/ReportPageHeader";
 import { useSupplierActivityFilterStore } from "../store/activityFilterStore";
 import { useSupplierSalesStatisticsQuery } from "../services/queries";
 
@@ -13,26 +14,23 @@ import { useSupplierSalesStatisticsQuery } from "../services/queries";
  */
 export default function SupplierActivityPage() {
   return (
-    <div className="container mx-auto space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>آمار خرید از تامین‌کنندگان</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ActivityReportSection
-            useFilterStore={useSupplierActivityFilterStore}
-            useReportQuery={useSupplierSalesStatisticsQuery}
-            hint="رتبه‌بندی تامین‌کنندگان بر اساس مبلغ کل خریدِ ما از آن‌ها؛ بازه روی تاریخ فاکتور اعمال می‌شود."
-            nameHeader="تامین‌کننده"
-            nameKey="companyName"
-            countHeader="تعداد فاکتور"
-            countKey="purchasesCount"
-            countLabel="تعداد فاکتور"
-            showPayment
-            emptyMessage="در این بازه خریدی از تامین‌کنندگان ثبت نشده است."
-          />
-        </CardContent>
-      </Card>
+    <div className="container mx-auto max-w-4xl space-y-4 px-2 sm:px-4">
+      <ReportPageHeader
+        icon={Truck}
+        title="آمار خرید از تامین‌کنندگان"
+        description="رتبه‌بندی تامین‌کنندگان بر اساس مبلغ کل خریدِ ما از آن‌ها، همراه با مانده‌ی پرداخت‌نشده. بازه روی تاریخ فاکتور اعمال می‌شود."
+      />
+
+      <ActivityReportSection
+        useFilterStore={useSupplierActivityFilterStore}
+        useReportQuery={useSupplierSalesStatisticsQuery}
+        nameKey="companyName"
+        countKey="purchasesCount"
+        countLabel="تعداد فاکتور"
+        countUnit="فاکتور"
+        showPayment
+        emptyMessage="در این بازه خریدی از تامین‌کنندگان ثبت نشده است."
+      />
     </div>
   );
 }
