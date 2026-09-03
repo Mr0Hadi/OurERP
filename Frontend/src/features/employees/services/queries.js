@@ -1,7 +1,7 @@
 // src/features/employees/services/queries.js
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
-import { fetchEmployees, fetchEmployeeById } from "./api-mockData";
+import { fetchEmployees, fetchEmployeeById } from "./api-v1";
 import { employeeKeys } from "./queryKeys";
 
 /** فهرست‌های داخلِ کارت‌ها (اعضای تیم، کاندیداها) صفحه‌بندی ندارند. */

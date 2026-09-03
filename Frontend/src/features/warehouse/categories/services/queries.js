@@ -1,7 +1,7 @@
 // src/features/warehouse/categories/services/queries.js
 import { useQuery } from "@tanstack/react-query";
 
-import { fetchProductCategories } from "./api-mockData";
+import { fetchProductCategories } from "./api-v1";
 import { productCategoryKeys } from "./queryKeys";
 
 /**

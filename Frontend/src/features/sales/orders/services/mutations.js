@@ -8,7 +8,7 @@ import {
   updateSaleStatus,
   updateSalePayment,
   removeSale
-} from './api-mockData';
+} from './api-v1';
 import { saleKeys } from './queryKeys';
 import { ROUTES } from '@/shared/constants/routes';
 import { useSaleFormStore } from '../store/saleFormStore';

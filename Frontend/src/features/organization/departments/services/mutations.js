@@ -2,7 +2,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 
-import { createDepartment, updateDepartment, deleteDepartment } from "./api-mockData";
+import { createDepartment, updateDepartment, deleteDepartment } from "./api-v1";
 import { departmentKeys } from "./queryKeys";
 import { teamKeys } from "../../teams/services/queryKeys";
 

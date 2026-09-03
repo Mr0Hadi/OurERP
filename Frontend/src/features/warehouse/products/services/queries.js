@@ -1,7 +1,7 @@
 // src/features/warehouse/products/services/queries.js
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { keepPreviousData } from "@tanstack/react-query";
-import { fetchProducts, fetchProductById, fetchProductByBarcode } from "./api-mockData";
+import { fetchProducts, fetchProductById, fetchProductByBarcode } from "./api-v1";
 import { productKeys } from "./queryKeys";
 
 export function useProductsQuery(filters, pagination, sorting) {

@@ -7,7 +7,7 @@ import {
   updatePurchaseStatus,
   updatePurchasePayment,
   removePurchase,
-} from "./api-mockData";
+} from "./api-v1";
 import { purchaseKeys } from "./queryKeys";
 import {
   incomingQueueKeys,

@@ -117,7 +117,7 @@ export default function LoginPage() {
           </div>
           <div>
             <p className="text-lg font-bold leading-tight">
-              پاسارگارد موتور پارت
+              پاسارگاد موتور پارت
             </p>
             <p className="text-xs text-primary-foreground/70">
               سامانه جامع مدیریت انبار و فروش
@@ -135,7 +135,7 @@ export default function LoginPage() {
             </h1>
             <p className="max-w-md text-sm leading-7 text-primary-foreground/75">
               از انبارداری تا فاکتور فروش، همه‌چیز در یک پلتفرم — سریع، دقیق و
-              قابل اعتماد برای تیم پاسارگارد موتور پارت.
+              قابل اعتماد برای تیم پاسارگاد موتور پارت.
             </p>
           </div>
 
@@ -184,7 +184,7 @@ export default function LoginPage() {
                 className="h-7 w-7 object-contain"
               />
             </div>
-            <p className="text-base font-bold">پاسارگارد موتور پارت</p>
+            <p className="text-base font-bold">پاسارگاد موتور پارت</p>
           </div>
 
           {/* کارت فرم شیشه‌ای */}
@@ -302,7 +302,7 @@ export default function LoginPage() {
           </div>
 
           <p className="mt-6 text-center text-xs text-muted-foreground">
-            © {new Date().getFullYear()} پاسارگارد موتور پارت — تمامی حقوق محفوظ
+            © {new Date().getFullYear()} پاسارگاد موتور پارت — تمامی حقوق محفوظ
             است
           </p>
         </div>

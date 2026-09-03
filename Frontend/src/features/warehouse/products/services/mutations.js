@@ -6,7 +6,7 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
-} from "./api-mockData";
+} from "./api-v1";
 import { ROUTES } from "@/shared/constants/routes";
 import { productKeys } from "./queryKeys";
 

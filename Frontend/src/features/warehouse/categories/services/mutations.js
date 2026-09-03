@@ -2,7 +2,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 
-import { createProductCategory } from "./api-mockData";
+import { createProductCategory } from "./api-v1";
 import { productCategoryKeys } from "./queryKeys";
 
 export const useCreateProductCategoryMutation = () => {

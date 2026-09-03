@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 // ─── درزِ تعویضِ mock و سرور ──────────────────────────────────────────────
 // همان قراردادی که `employees`/`departments`/`teams` دارند: مهاجرت به
 // بک‌اند یعنی عوض‌کردنِ همین یک خط. دو ماژول سطحِ دقیقاً یکسانی دارند.
-import { login, logout, fetchSession } from "./api-mockData";
+import { login, logout, fetchSession } from "./api-v1";
 // import { login, logout, fetchSession } from "./api-v1";
 
 import { authKeys } from "./queryKeys";

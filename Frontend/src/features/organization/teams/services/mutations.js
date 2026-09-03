@@ -7,7 +7,7 @@ import {
   updateTeam,
   assignTeamToDepartment,
   deleteTeam,
-} from "./api-mockData";
+} from "./api-v1";
 import { teamKeys } from "./queryKeys";
 import { departmentKeys } from "../../departments/services/queryKeys";
 import { employeeKeys } from "@/features/employees/services/queryKeys";

@@ -2,7 +2,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 
-import { resolveScannedCode } from "./api-mockData";
+import { resolveScannedCode } from "./api-v1";
 
 /**
  * تشخیص کد اسکن‌شده (دانه، کالا، یا هیچ‌کدام).

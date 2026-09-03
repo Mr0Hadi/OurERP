@@ -1,7 +1,7 @@
 // src/features/organization/teams/services/queries.js
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
-import { fetchTeams, fetchTeamById } from "./api-mockData";
+import { fetchTeams, fetchTeamById } from "./api-v1";
 import { teamKeys } from "./queryKeys";
 
 const OPTIONS_PAGE_SIZE = 200;

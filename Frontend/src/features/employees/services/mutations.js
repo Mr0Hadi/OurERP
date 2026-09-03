@@ -8,7 +8,7 @@ import {
   assignEmployeeMembership,
   deactivateEmployee,
   logoutEmployee,
-} from "./api-mockData";
+} from "./api-v1";
 import { employeeKeys } from "./queryKeys";
 import { teamKeys } from "@/features/organization/teams/services/queryKeys";
 import { departmentKeys } from "@/features/organization/departments/services/queryKeys";

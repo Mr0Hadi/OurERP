@@ -6,7 +6,7 @@ import {
   fetchSalesPerformanceByEmployee,
   fetchSupplierSalesStatistics,
   fetchSupplyPerformanceByEmployee,
-} from "./api-mockData";
+} from "./api-v1";
 // import {
 //   fetchCustomerPurchaseStatistics,
 //   fetchSalesPerformanceByEmployee,

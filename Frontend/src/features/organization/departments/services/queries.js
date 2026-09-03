@@ -2,7 +2,7 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
 import { DEPARTMENT_FALLBACK } from "@/shared/domain/enums/department";
-import { fetchDepartments, fetchDepartmentById } from "./api-mockData";
+import { fetchDepartments, fetchDepartmentById } from "./api-v1";
 import { departmentKeys } from "./queryKeys";
 
 const OPTIONS_PAGE_SIZE = 200;
