@@ -423,6 +423,36 @@ with an `x.InvoiceDate != default` guard.
   silently skips every invoice-field requirement. `PurchaseStatusEnum.PROFORMA` is `0` too.
   The frontend must send `status` explicitly on create.
 
+**`ReturnPaymentMethodEnum` renumbered to match `PaymentTypeEnum` (2026-09-05).** Requested by
+the frontend in `docs/payment-enum-unification.fa.md`: the two enums meant the same things with
+different integers, so a shared "split an amount across payment methods" component produced a
+different meaning depending on which form called it. Now `CASH=0, ON_ACCOUNT=1, CHECK=2,
+TRANSFER=3, MIXED=4, STORE_CREDIT=5` — the first five line up with `PaymentTypeEnum`
+(`ON_ACCOUNT` is that enum's `CREDIT`); `STORE_CREDIT` is the only genuinely extra member and is
+appended at the end.
+
+- **The enum was kept, not merged into `PaymentTypeEnum`** (option A of the two the request
+  offered). Every C# usage referenced members by name, so only the wire numbers changed and no
+  handler/DTO/service code needed touching.
+- **Data migration `20260904225819_renumber-return-payment-method`** remaps the persisted
+  `Method` column on `PurchaseReturnEffects`, `SaleReturnEffects`,
+  `PurchaseReturnEffectMoneyParts`, `SaleReturnEffectMoneyParts`. The old→new map
+  (`1→2, 2→3, 3→1, 4→5, 5→4`) is a **cyclic permutation**, so it must run as a single
+  `UPDATE … CASE` per table — sequential `UPDATE`s would clobber each other. `Down` applies the
+  inverse (`1→3, 2→1, 3→2, 4↔5`). `NULL`/`0` pass through untouched. The migration is otherwise
+  empty (no schema diff — `Method` was already an `int` column). **Applied to the local `WMS`
+  database (2026-09-05)**; contrary to the request's guess that the returns tables were empty,
+  there were 12 rows across the four tables, verified value-by-value before and after.
+- Docs updated: `docs/api-guide.fa.md` §15's `ReturnPaymentMethodEnum` table and the `MIXED`
+  reference in §9 (`MIXED` is now `4`, not `5`), and `docs/frontend-enum-contract.fa.md`'s
+  `PAYMENT_METHODS` row (which had documented the two as deliberately *not* aligned).
+- The request's §6 side note (the frontend was sending claim quantity as `qty` while the DTO
+  expects `Quantity`, so claims silently persisted `0`) was frontend-side and already fixed
+  there; checked the local DB for damage — `PurchaseReturnClaims`/`SaleReturnClaims` have no
+  `Quantity = 0` rows.
+- Build clean; suite 352/361, the same 9 pre-existing failures as before this change (the
+  `IX_Users_PersonelCode` collisions and the `"***"` object-storage placeholder gap).
+
 **Frontend-enum-contract cleanup pass (2026-09-01).** Follow-up audit of
 `docs/frontend-enum-contract.fa.md` against the actual code — most of its checklist turned out to
 already be done (silently, back on 2026-08-28 in the returns-effects rebuild) and the doc just
