@@ -56,6 +56,22 @@ namespace Infrastructure.Persistence
         {
             base.OnModelCreating(modelBuilder);
 
+            modelBuilder.Entity<Customer>()
+            .Property(x => x.Latitude)
+            .HasPrecision(10, 7);
+
+            modelBuilder.Entity<Customer>()
+                .Property(x => x.Longitude)
+                .HasPrecision(10, 7);
+
+            modelBuilder.Entity<Supplier>()
+            .Property(x => x.Latitude)
+            .HasPrecision(10, 7);
+
+            modelBuilder.Entity<Supplier>()
+                .Property(x => x.Longitude)
+                .HasPrecision(10, 7);
+
             modelBuilder.Entity<Department>()
                 .HasOne(d => d.Head)
                 .WithMany()

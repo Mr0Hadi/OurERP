@@ -99,8 +99,8 @@ namespace Application.Features.Supplier.Commands
             // The column stores the bucket object key, so a signed URL echoed back by the frontend
             // is stripped down rather than persisted verbatim.
             supplier.ImageUrl = _objectStorageService.NormalizeKey(request.ImageUrl);
-            supplier.longitude = request.Longitude;
-            supplier.latitude = request.Latitude;
+            supplier.Longitude = request.Longitude;
+            supplier.Latitude = request.Latitude;
             supplier.Description = request.Description;
             supplier.UpdatedAt = DateTime.Now;
 
