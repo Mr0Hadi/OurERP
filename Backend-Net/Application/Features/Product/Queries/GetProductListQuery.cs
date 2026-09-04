@@ -16,6 +16,7 @@ namespace Application.Features.Product.Queries
         public int Take { get; set; } = 10;
         public string? Name { get; set; }
         public string? Code { get; set; }
+        public string? BarCode { get; set; }
         public string? Brand { get; set; }
         public int? ProductCategoryId { get; set; }
         public bool? IsLowOnStock { get; set; }
@@ -45,6 +46,11 @@ namespace Application.Features.Product.Queries
             if (!string.IsNullOrEmpty(request.Code))
             {
                 query = query.Where(p => p.Code.Contains(request.Code));
+            }
+
+            if (!string.IsNullOrEmpty(request.BarCode))
+            {
+                query = query.Where(p => p.BarCode.Contains(request.BarCode));
             }
 
             if (!string.IsNullOrEmpty(request.Brand))
