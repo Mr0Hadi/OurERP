@@ -171,13 +171,13 @@ export async function fetchPurchaseForReturn(purchaseId, excludeReturnId = null)
 export async function fetchPurchaseReturns(params = {}) {
   await delay(500);
 
-  const { supplierIds = [], status = "", problem = "", scope = "" } = params;
+  const { supplierId = "", status = "", problem = "", scope = "" } = params;
 
   let filtered = [...allPurchaseReturns];
 
-  if (Array.isArray(supplierIds) && supplierIds.length) {
-    filtered = filtered.filter((r) =>
-      supplierIds.map(String).includes(String(r.supplierId)),
+  if (supplierId !== "" && supplierId != null) {
+    filtered = filtered.filter(
+      (r) => String(r.supplierId) === String(supplierId),
     );
   }
   // enum عددی است و OPEN صفر — پس «انتخاب‌نشده» فقط رشته‌ی خالی است.

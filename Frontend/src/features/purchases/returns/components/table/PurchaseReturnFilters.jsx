@@ -3,7 +3,7 @@ import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
 import FilterDateInput from "@/shared/components/filters/FilterDateInput";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
-import EntityMultiSelect from "@/shared/components/filters/EntityMultiSelect";
+import EntitySelect from "@/shared/components/filters/EntitySelect";
 import { toFilterOptions } from "@/shared/components/filters/filterUtils";
 import { usePurchaseReturnFilterStore } from "../../store/purchaseReturnFilterStore";
 import {
@@ -19,14 +19,14 @@ const SCOPE_OPTIONS = toFilterOptions(CLAIM_SCOPE_LABELS);
 const PurchaseReturnFilters = ({ suppliers = [], isSuppliersLoading = false }) => {
   const {
     globalSearch,
-    supplierIds,
+    supplierId,
     status,
     problem,
     scope,
     fromDate,
     toDate,
     setGlobalSearch,
-    setSupplierIds,
+    setSupplierId,
     setStatus,
     setProblem,
     setScope,
@@ -64,13 +64,13 @@ const PurchaseReturnFilters = ({ suppliers = [], isSuppliersLoading = false }) =
         onChange={handleGlobalSearch}
       />
 
-      <EntityMultiSelect
+      <EntitySelect
         label="تامین‌کننده"
         placeholder="انتخاب تامین‌کننده..."
         emptyText="تامین‌کننده‌ای یافت نشد"
         items={suppliers}
-        value={supplierIds}
-        onSelect={setSupplierIds}
+        value={supplierId}
+        onSelect={setSupplierId}
         isLoading={isSuppliersLoading}
       />
 

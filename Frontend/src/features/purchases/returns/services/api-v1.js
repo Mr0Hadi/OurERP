@@ -44,7 +44,7 @@ export async function fetchPurchaseReturns(params = {}) {
       take: params.limit,
       search: params.search || undefined,
       // بکند فقط یک supplierId تکی می‌گیرد، نه آرایه.
-      supplierId: params.supplierIds?.[0] ?? undefined,
+      supplierId: params.supplierId || undefined,
       status: params.status !== "" ? params.status : undefined,
       // مشکل روی *غالب‌ترین ادعا*ی سند فیلتر می‌شود، نه هر ادعا جدا.
       problem: params.problem !== "" ? params.problem : undefined,

@@ -1,7 +1,7 @@
 // src/features/employees/pages/EmployeeDetailPage.jsx
 import { useEffect, useState } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
-import { Save, X, Ban, LogOut } from "lucide-react";
+import { Save, X, Trash2, LogOut } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -22,7 +22,7 @@ import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
 
 import {
   useUpdateEmployeeMutation,
-  useDeactivateEmployeeMutation,
+  useRemoveEmployeeMutation,
   useLogoutEmployeeMutation,
 } from "../services/mutations";
 import { useEmployeeQuery } from "../services/queries";
@@ -63,11 +63,11 @@ function EmployeeDetailForm({ employee }) {
   const navigate = useNavigate();
   const location = useLocation();
   const currentUser = useCurrentUser();
-  const [showDeactivateDialog, setShowDeactivateDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   const updateMutation = useUpdateEmployeeMutation();
-  const deactivateMutation = useDeactivateEmployeeMutation();
+  const removeMutation = useRemoveEmployeeMutation();
   const logoutMutation = useLogoutEmployeeMutation();
 
   const { draft, saveDraft, clearDraft } = useFormDraft(
@@ -119,8 +119,8 @@ function EmployeeDetailForm({ employee }) {
     });
   };
 
-  const handleDeactivate = () => {
-    deactivateMutation.mutate(employee.id, {
+  const handleRemove = () => {
+    removeMutation.mutate(employee.id, {
       onSuccess: () => navigate(ROUTES.EMPLOYEES),
     });
   };
@@ -133,7 +133,7 @@ function EmployeeDetailForm({ employee }) {
 
   const isBusy =
     updateMutation.isPending ||
-    deactivateMutation.isPending ||
+    removeMutation.isPending ||
     logoutMutation.isPending;
 
   const displayName = fullNameOf(employee);
@@ -206,49 +206,51 @@ function EmployeeDetailForm({ employee }) {
               خروج اجباری از تمام دستگاه‌ها
             </Button>
 
+            {/* پیش از این اینجا دکمه‌ی «غیرفعال‌کردن دسترسی» بود که
+                دقیقاً همان کارِ چک‌باکسِ کارت «وضعیت حساب کاربری» را
+                می‌کرد — دو راهِ جدا به یک نتیجه، که فقط کاربر را گیج
+                می‌کرد. حالا این دکمه حذفِ کارمند است و آن چک‌باکس
+                غیرفعال‌کردنِ موقت. */}
             <Button
               type="button"
               variant="destructive"
               className="w-full gap-2"
-              onClick={() => setShowDeactivateDialog(true)}
-              disabled={isBusy || isSelf || !employee.isActive}
+              onClick={() => setShowDeleteDialog(true)}
+              disabled={isBusy || isSelf}
             >
-              <Ban className="h-4 w-4" />
-              غیرفعال‌کردن دسترسی
+              <Trash2 className="h-4 w-4" />
+              حذف کارمند
             </Button>
 
             {isSelf && (
               <p className="text-xs text-muted-foreground text-center">
-                نمی‌توانید دسترسی حساب کاربری خودتان را غیرفعال کنید.
+                نمی‌توانید حساب کاربری خودتان را حذف کنید.
               </p>
             )}
           </div>
         </div>
       </form>
 
-      <AlertDialog
-        open={showDeactivateDialog}
-        onOpenChange={setShowDeactivateDialog}
-      >
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>غیرفعال‌کردن دسترسی کارمند</AlertDialogTitle>
+            <AlertDialogTitle>حذف کارمند</AlertDialogTitle>
             <AlertDialogDescription>
-              پس از این کار، {displayName} دیگر نمی‌تواند وارد سیستم شود. اسناد و
-              تراکنش‌های ثبت‌شده توسط او حذف نمی‌شوند و در گزارش‌ها باقی
-              می‌مانند.
+              {displayName} از فهرست کارمندان کنار گذاشته می‌شود و دیگر
+              نمی‌تواند وارد سیستم شود. اسناد و تراکنش‌های ثبت‌شده توسط او
+              حذف نمی‌شوند و در گزارش‌ها باقی می‌مانند.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deactivateMutation.isPending}>
+            <AlertDialogCancel disabled={removeMutation.isPending}>
               انصراف
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDeactivate}
-              disabled={deactivateMutation.isPending}
+              onClick={handleRemove}
+              disabled={removeMutation.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deactivateMutation.isPending ? "در حال انجام..." : "غیرفعال‌کن"}
+              {removeMutation.isPending ? "در حال حذف..." : "حذف"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

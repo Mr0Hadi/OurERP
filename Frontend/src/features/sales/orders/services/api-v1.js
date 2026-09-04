@@ -38,8 +38,9 @@ export {
  * ⚠️ چیزهایی که هنوز حل‌نشده مانده‌اند:
  *  - ثبتِ پرداختِ پله‌ای وجود ندارد؛ `paidAmount` فقط با ارسالِ کل سند
  *    از نو overwrite می‌شود.
- *  - فیلترِ چندمشتری‌ای وجود ندارد؛ لیست فقط یک `customerName`ِ متنی
- *    می‌گیرد، نه `customerId`.
+ *  - فیلترِ لیست `customerId` نمی‌گیرد، فقط `customerName`ِ متنی — پس
+ *    انتخابِ کاربر به نام ترجمه و فرستاده می‌شود. اگر دو مشتری هم‌نام
+ *    باشند، هر دو در نتیجه می‌آیند.
  *  - وضعیتِ `RETURNED` (۶) را بکند واقعاً ست می‌کند (وقتی مرجوعی کامل
  *    تسویه شود) ولی فرانت برچسبی برایش ندارد؛ چنین فروشی بدون برچسب
  *    نمایش داده می‌شود.
@@ -178,8 +179,10 @@ export async function fetchSales(params = {}) {
       page: params.page,
       take: params.limit,
       invoiceNumber: params.search || undefined,
-      // بکند فیلترِ customerId ندارد، فقط جست‌وجوی متنیِ نام مشتری —
-      // چیزی که فیلترِ چندانتخابیِ فرانت (customerIds) اصلاً تولید نمی‌کند.
+      // بکند فیلترِ customerId ندارد، فقط جست‌وجوی متنیِ نام مشتری.
+      // از وقتی کشویی مشتری تک‌انتخابی شد، نامِ انتخاب‌شده هم کنارِ
+      // شناسه در فیلتر می‌نشیند و همان فرستاده می‌شود.
+      customerName: params.customerName || undefined,
       status: params.status !== "" ? params.status : undefined,
       paymentType: params.paymentType !== "" ? params.paymentType : undefined,
       fromDate: params.fromDate || undefined,

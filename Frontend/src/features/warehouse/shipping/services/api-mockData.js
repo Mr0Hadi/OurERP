@@ -181,7 +181,7 @@ function logisticsOf(shipmentData, date) {
 export async function fetchOutgoingQueue(params = {}) {
   await delay(500);
 
-  const { type = "", counterpartyIds = [] } = params;
+  const { type = "", counterpartyId = "" } = params;
   let rows = [];
 
   // OUTGOING_TYPES.SALE عددش صفر است؛ فیلترِ صریحِ همان مقدار نباید مثل
@@ -193,8 +193,8 @@ export async function fetchOutgoingQueue(params = {}) {
     rows.push(...supplierReturnRows());
   }
 
-  if (Array.isArray(counterpartyIds) && counterpartyIds.length > 0) {
-    rows = rows.filter((row) => counterpartyIds.includes(row.counterpartyKey));
+  if (counterpartyId !== "" && counterpartyId != null) {
+    rows = rows.filter((row) => row.counterpartyKey === counterpartyId);
   }
 
   return applyListQuery(rows, params, {

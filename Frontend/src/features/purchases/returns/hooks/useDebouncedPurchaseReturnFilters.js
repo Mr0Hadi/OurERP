@@ -3,7 +3,7 @@ import { usePurchaseReturnFilterStore } from "../store/purchaseReturnFilterStore
 
 export function useDebouncedPurchaseReturnFilters() {
   const globalSearch = usePurchaseReturnFilterStore((s) => s.globalSearch);
-  const supplierIds = usePurchaseReturnFilterStore((s) => s.supplierIds);
+  const supplierId = usePurchaseReturnFilterStore((s) => s.supplierId);
   const status = usePurchaseReturnFilterStore((s) => s.status);
   const problem = usePurchaseReturnFilterStore((s) => s.problem);
   const scope = usePurchaseReturnFilterStore((s) => s.scope);
@@ -12,7 +12,7 @@ export function useDebouncedPurchaseReturnFilters() {
 
   return {
     globalSearch: useDebouncedValue(globalSearch),
-    supplierIds,
+    supplierId,
     status,
     problem,
     scope,

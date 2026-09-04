@@ -72,13 +72,13 @@ export async function createPurchase(purchaseData) {
 export async function fetchPurchases(params = {}) {
   await delay(500);
 
-  const { supplierIds = [], status = "", paymentType = "" } = params;
+  const { supplierId = "", status = "", paymentType = "" } = params;
 
   let filtered = [...allPurchases];
 
-  if (Array.isArray(supplierIds) && supplierIds.length > 0) {
-    filtered = filtered.filter((p) =>
-      supplierIds.map(String).includes(String(p.supplierId)),
+  if (supplierId !== "" && supplierId != null) {
+    filtered = filtered.filter(
+      (p) => String(p.supplierId) === String(supplierId),
     );
   }
 

@@ -3,7 +3,7 @@ import { createFilterStore } from "@/shared/store/createFilterStore";
 export const usePurchaseReturnFilterStore = createFilterStore({
   filters: {
     globalSearch: "",
-    supplierIds: [],
+    supplierId: "",
     status: "",
     problem: "",
     scope: "",

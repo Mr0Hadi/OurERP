@@ -262,7 +262,7 @@ async function applyReturnRows(rows, logistics, executeRound, fallbackReturnId) 
 export async function fetchIncomingQueue(params = {}) {
   await delay(500);
 
-  const { type = "", counterpartyIds = [] } = params;
+  const { type = "", counterpartyId = "" } = params;
   let rows = [];
 
   // INCOMING_TYPES.PURCHASE عددش صفر است؛ فیلترِ صریحِ همان مقدار
@@ -275,9 +275,10 @@ export async function fetchIncomingQueue(params = {}) {
     rows.push(...allSalesReturns.filter(hasPendingGoodsIn).map(salesReturnToRow));
   }
 
-  if (Array.isArray(counterpartyIds) && counterpartyIds.length > 0) {
-    rows = rows.filter((row) =>
-      counterpartyIds.includes(`${row.counterpartyType}:${row.counterpartyId}`),
+  if (counterpartyId !== "" && counterpartyId != null) {
+    rows = rows.filter(
+      (row) =>
+        `${row.counterpartyType}:${row.counterpartyId}` === counterpartyId,
     );
   }
 

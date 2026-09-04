@@ -189,8 +189,7 @@ export async function fetchPurchases(params = {}) {
       page: params.page,
       take: params.limit,
       invoiceNumber: params.search || undefined,
-      // بکند فقط یک SupplierId تکی می‌گیرد؛ اولین انتخاب از چندانتخابیِ فرانت فرستاده می‌شود.
-      supplierId: params.supplierIds?.[0] ?? undefined,
+      supplierId: params.supplierId || undefined,
       status: params.status !== "" ? params.status : undefined,
       fromDate: params.fromDate || undefined,
       toDate: params.toDate || undefined,

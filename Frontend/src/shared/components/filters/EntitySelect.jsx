@@ -5,47 +5,56 @@ import { Label } from "@/shared/components/ui/label";
 import { getPartyName } from "./filterUtils";
 
 /**
- * انتخاب چندتایی از یک لیست موجودیت با جست‌وجوی داخلی.
+ * انتخابِ *یک* موجودیت از یک لیست، با جست‌وجوی داخلی.
+ *
+ * پیش از این چندانتخابی بود، ولی هیچ‌کدام از endpointهای لیست بیش از
+ * یک شناسه نمی‌گیرند (`GetPurchaseList` فقط `SupplierId` تکی،
+ * `GetSaleReturnList` فقط `customerId`). نتیجه‌اش این بود که کاربر سه
+ * تامین‌کننده انتخاب می‌کرد و لایه‌ی API بی‌صدا `[0]` را می‌فرستاد —
+ * یعنی فیلتر چیزی را نشان می‌داد که واقعاً اعمال نشده بود.
+ *
+ * بقیه‌ی فیلترهای این پنل هم تک‌انتخابی‌اند (`FilterSelect`)؛ این یکی
+ * فقط به‌خاطر تعدادِ زیادِ گزینه‌ها جست‌وجو دارد.
  *
  * props:
  *  label, placeholder, emptyText - متن‌های فارسی مخصوص هر صفحه
  *  items                         - لیست کامل گزینه‌ها
- *  value                         - آرایه‌ی کلیدهای انتخاب‌شده
- *  onSelect                      - (nextKeys) => void
+ *  value                         - کلیدِ انتخاب‌شده، یا "" برای «همه»
+ *  onSelect                      - (nextKey, item) => void ("" یعنی پاک‌کردن)
+ *                                  `item` برای فیلترهایی است که سرور
+ *                                  به‌جای شناسه، نام می‌خواهد.
  *  isLoading                     - در حال دریافت لیست
  *  getKey, getLabel              - استخراج کلید و برچسب هر گزینه
- *  renderMeta, renderChipMeta    - اطلاعات فرعی کنار گزینه/چیپ (اختیاری)
- *  showSelectAll                 - نمایش نوار شمارش و «انتخاب همه»
+ *  renderMeta                    - اطلاعات فرعی کنار هر گزینه (اختیاری)
  */
-export default function EntityMultiSelect({
+export default function EntitySelect({
   label,
   placeholder,
   emptyText = "موردی یافت نشد",
   items = [],
-  value = [],
+  value = "",
   onSelect,
   isLoading = false,
   getKey = (item) => item.id,
   getLabel = getPartyName,
   renderMeta,
-  renderChipMeta,
-  showSelectAll = true,
 }) {
   const [inputValue, setInputValue] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef(null);
 
-  const selectedItems = useMemo(
-    () => items.filter((item) => value.includes(getKey(item))),
+  const selectedItem = useMemo(
+    () =>
+      value === "" || value == null
+        ? null
+        : items.find((item) => String(getKey(item)) === String(value)) || null,
     [items, value, getKey],
   );
 
   const filtered = useMemo(() => {
     const search = (inputValue || "").trim().toLowerCase();
     if (!search) return items;
-    return items.filter((item) =>
-      getLabel(item).toLowerCase().includes(search),
-    );
+    return items.filter((item) => getLabel(item).toLowerCase().includes(search));
   }, [inputValue, items, getLabel]);
 
   useEffect(() => {
@@ -58,37 +67,27 @@ export default function EntityMultiSelect({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleToggle = useCallback(
-    (key) =>
-      onSelect(
-        value.includes(key) ? value.filter((v) => v !== key) : [...value, key],
-      ),
-    [value, onSelect],
-  );
-
-  const handleRemove = useCallback(
-    (key, e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      onSelect(value.filter((v) => v !== key));
+  // انتخابِ گزینه‌ی فعلی یعنی «برداشتنِ فیلتر» — همان رفتاری که کلیک
+  // دوباره روی یک رادیو انتظار می‌رود، و راهِ برگشت به «همه» بدون
+  // رفتن سراغ ضربدرِ کنارِ فیلد.
+  const handleSelect = useCallback(
+    (key, item) => {
+      const isUnset = String(key) === String(value);
+      onSelect(isUnset ? "" : key, isUnset ? null : item);
+      setInputValue("");
+      setIsOpen(false);
     },
-    [value, onSelect],
+    [onSelect, value],
   );
 
   const handleClear = useCallback(
     (e) => {
       e?.stopPropagation();
       setInputValue("");
-      onSelect([]);
+      onSelect("", null);
     },
     [onSelect],
   );
-
-  const handleSelectAll = useCallback(() => {
-    const targetList = inputValue.trim() ? filtered : items;
-    onSelect(targetList.map(getKey));
-    setIsOpen(false);
-  }, [inputValue, filtered, items, onSelect, getKey]);
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-start gap-2">
@@ -101,32 +100,15 @@ export default function EntityMultiSelect({
           className="w-full bg-transparent rounded-lg border border-input px-3 py-2 text-sm cursor-pointer hover:border-ring transition-colors dark:bg-input/30 dark:hover:bg-input/50"
           onClick={() => setIsOpen(!isOpen)}
         >
-          <div className="flex items-center gap-2 flex-wrap">
-            {selectedItems.length === 0 ? (
-              <span className="text-muted-foreground">{placeholder}</span>
+          <div className="flex items-center gap-2">
+            {selectedItem ? (
+              <span className="flex-1 truncate">{getLabel(selectedItem)}</span>
             ) : (
-              <div className="flex flex-wrap gap-1 flex-1">
-                {selectedItems.map((item) => (
-                  <div
-                    key={getKey(item)}
-                    className="inline-flex items-center gap-1 bg-primary/10 text-primary px-2 py-0.5 rounded-md text-xs"
-                  >
-                    <span>{getLabel(item)}</span>
-                    {renderChipMeta?.(item)}
-                    <button
-                      type="button"
-                      onClick={(e) => handleRemove(getKey(item), e)}
-                      className="hover:bg-primary/20 rounded-sm p-0.5 transition-colors"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
+              <span className="flex-1 text-muted-foreground">{placeholder}</span>
             )}
 
-            <div className="mr-auto flex items-center gap-1 flex-shrink-0">
-              {value.length > 0 && (
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {selectedItem && (
                 <button
                   type="button"
                   onClick={handleClear}
@@ -170,35 +152,24 @@ export default function EntityMultiSelect({
                 </div>
               ) : (
                 <div className="py-1">
-                  {showSelectAll && (
-                    <div className="px-3 py-2 border-b flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">
-                        {value.length} از {items.length} انتخاب شده
-                      </span>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={handleSelectAll}
-                          className="text-xs text-primary hover:underline"
-                        >
-                          انتخاب همه
-                        </button>
-                        {value.length > 0 && (
-                          <button
-                            type="button"
-                            onClick={handleClear}
-                            className="text-xs text-muted-foreground hover:text-foreground"
-                          >
-                            پاک کردن
-                          </button>
-                        )}
-                      </div>
+                  <button
+                    type="button"
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors ${
+                      selectedItem ? "" : "bg-accent/50"
+                    }`}
+                    onClick={() => handleSelect("")}
+                  >
+                    <div className="h-4 w-4 flex items-center justify-center flex-shrink-0">
+                      {!selectedItem && <Check className="h-3.5 w-3.5 text-primary" />}
                     </div>
-                  )}
+                    <span className="text-right flex-1 text-muted-foreground">
+                      {placeholder}
+                    </span>
+                  </button>
 
                   {filtered.map((item) => {
                     const key = getKey(item);
-                    const isSelected = value.includes(key);
+                    const isSelected = String(key) === String(value);
 
                     return (
                       <button
@@ -207,17 +178,11 @@ export default function EntityMultiSelect({
                         className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors ${
                           isSelected ? "bg-accent/50" : ""
                         }`}
-                        onClick={() => handleToggle(key)}
+                        onClick={() => handleSelect(key, item)}
                       >
-                        <div
-                          className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${
-                            isSelected
-                              ? "bg-primary border-primary"
-                              : "border-input"
-                          }`}
-                        >
+                        <div className="h-4 w-4 flex items-center justify-center flex-shrink-0">
                           {isSelected && (
-                            <Check className="h-3 w-3 text-primary-foreground" />
+                            <Check className="h-3.5 w-3.5 text-primary" />
                           )}
                         </div>
                         <span className="text-right flex-1">

@@ -3,7 +3,7 @@ import { useSalesReturnFilterStore } from "../store/salesReturnFilterStore";
 
 export function useDebouncedSalesReturnFilters() {
   const globalSearch = useSalesReturnFilterStore((s) => s.globalSearch);
-  const customerIds = useSalesReturnFilterStore((s) => s.customerIds);
+  const customerId = useSalesReturnFilterStore((s) => s.customerId);
   const status = useSalesReturnFilterStore((s) => s.status);
   const problem = useSalesReturnFilterStore((s) => s.problem);
   const scope = useSalesReturnFilterStore((s) => s.scope);
@@ -12,7 +12,7 @@ export function useDebouncedSalesReturnFilters() {
 
   return {
     globalSearch: useDebouncedValue(globalSearch),
-    customerIds,
+    customerId,
     status,
     problem,
     scope,

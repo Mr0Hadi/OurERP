@@ -212,6 +212,13 @@ export default function SaleDetailForm({ saleData }) {
               onFormChange={setFormData}
               errors={{}}
             />
+
+            <OrderLogisticsSection
+              title="ارسال و حمل"
+              drivers={saleData.drivers}
+              notes={saleData.shippingNotes}
+              notesLabel="یادداشت‌های ارسال"
+            />
           </div>
 
           <div className="space-y-4">
@@ -257,13 +264,6 @@ export default function SaleDetailForm({ saleData }) {
                   ? "پیش‌فاکتور ارسال‌شده برای مشتری"
                   : "فاکتور صادرشده برای مشتری"
               }
-            />
-
-            <OrderLogisticsSection
-              title="ارسال و حمل"
-              drivers={saleData.drivers}
-              notes={saleData.shippingNotes}
-              notesLabel="یادداشت‌های ارسال"
             />
 
             <SaleStatusSection

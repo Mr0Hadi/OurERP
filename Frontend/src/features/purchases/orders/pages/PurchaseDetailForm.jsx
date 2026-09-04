@@ -235,6 +235,13 @@ export default function PurchaseDetailForm({ purchaseData }) {
               onFormChange={setFormData}
               errors={{ invoiceNumber: invoiceNumberError }}
             />
+
+            <OrderLogisticsSection
+              title="تحویل و حمل"
+              drivers={purchaseData.drivers}
+              notes={purchaseData.receivingNotes}
+              notesLabel="یادداشت‌های دریافت"
+            />
           </div>
 
           <div className="space-y-4">
@@ -280,13 +287,6 @@ export default function PurchaseDetailForm({ purchaseData }) {
                   ? "پیش‌فاکتور دریافتی از تامین‌کننده"
                   : "فاکتور دریافتی از تامین‌کننده"
               }
-            />
-
-            <OrderLogisticsSection
-              title="تحویل و حمل"
-              drivers={purchaseData.drivers}
-              notes={purchaseData.receivingNotes}
-              notesLabel="یادداشت‌های دریافت"
             />
 
             <PurchaseStatusSection

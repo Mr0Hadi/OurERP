@@ -3,7 +3,7 @@ import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
 import FilterDateInput from "@/shared/components/filters/FilterDateInput";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
-import EntityMultiSelect from "@/shared/components/filters/EntityMultiSelect";
+import EntitySelect from "@/shared/components/filters/EntitySelect";
 import { toFilterOptions } from "@/shared/components/filters/filterUtils";
 import { useShippingFilterStore } from "../../store/shippingFilterStore";
 import { OUTGOING_TYPE_LABELS } from "../../domain/shippingVocabulary";
@@ -22,21 +22,15 @@ const renderPartyType = (party) => (
   </span>
 );
 
-const renderPartyTypeChip = (party) => (
-  <span className="text-[10px] opacity-70">
-    ({party.type === "customer" ? "مشتری" : "تامین‌کننده"})
-  </span>
-);
-
 const ShippingFilters = ({ parties = [], isPartiesLoading = false }) => {
   const {
     globalSearch,
-    counterpartyIds,
+    counterpartyId,
     type,
     fromDate,
     toDate,
     setGlobalSearch,
-    setCounterpartyIds,
+    setCounterpartyId,
     setType,
     setFromDate,
     setToDate,
@@ -76,19 +70,17 @@ const ShippingFilters = ({ parties = [], isPartiesLoading = false }) => {
         onChange={handleGlobalSearch}
       />
 
-      <EntityMultiSelect
+      <EntitySelect
         label="مشتری / تامین‌کننده"
         placeholder="انتخاب طرف حساب..."
         emptyText="موردی یافت نشد"
         items={parties}
-        value={counterpartyIds}
-        onSelect={setCounterpartyIds}
+        value={counterpartyId}
+        onSelect={setCounterpartyId}
         isLoading={isPartiesLoading}
         getKey={getPartyKey}
         getLabel={getPartyLabel}
         renderMeta={renderPartyType}
-        renderChipMeta={renderPartyTypeChip}
-        showSelectAll={false}
       />
 
       <FilterSelect

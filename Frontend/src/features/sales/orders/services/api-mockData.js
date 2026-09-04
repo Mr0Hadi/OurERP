@@ -79,12 +79,14 @@ export async function createSale(saleData) {
 export async function fetchSales(params = {}) {
   await delay(500);
 
-  const { status = "", paymentType = "", customerIds = [] } = params;
+  const { status = "", paymentType = "", customerId = "" } = params;
 
   let filtered = [...allSales];
 
-  if (Array.isArray(customerIds) && customerIds.length > 0) {
-    filtered = filtered.filter((s) => customerIds.includes(s.customerId));
+  if (customerId !== "" && customerId != null) {
+    filtered = filtered.filter(
+      (s) => String(s.customerId) === String(customerId),
+    );
   }
 
   if (status !== "" && status !== undefined) {

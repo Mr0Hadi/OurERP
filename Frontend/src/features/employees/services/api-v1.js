@@ -109,7 +109,7 @@ export async function assignEmployeeMembership({
 }
 
 /** حذف نرم: سرور فقط `isActive` را false می‌کند، رکورد را پاک نمی‌کند. */
-export async function deactivateEmployee(id) {
+export async function removeEmployee(id) {
   const { data } = await axiosInstance.delete("/User/DeleteUser", {
     params: { id },
   });

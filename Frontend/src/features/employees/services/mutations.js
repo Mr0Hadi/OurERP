@@ -6,7 +6,7 @@ import {
   createEmployee,
   updateEmployee,
   assignEmployeeMembership,
-  deactivateEmployee,
+  removeEmployee,
   logoutEmployee,
 } from "./api-v1";
 import { employeeKeys } from "./queryKeys";
@@ -79,24 +79,26 @@ export function useAssignEmployeeMembershipMutation() {
 }
 
 /**
- * «حذف» در این دامنه یعنی غیرفعال‌کردن: سرور رکورد را نگه می‌دارد و فقط
- * `isActive` را false می‌کند، چون کارمند در تاریخچه‌ی اسناد (خرید، فروش،
- * رسید انبار) ارجاع دارد و پاک‌کردنش آن‌ها را بی‌صاحب می‌کند.
+ * «حذف» در این دامنه یعنی غیرفعال‌کردن: `DeleteUser` رکورد را نگه
+ * می‌دارد و فقط `isActive` را false می‌کند، چون کارمند در تاریخچه‌ی
+ * اسناد (خرید، فروش، رسید انبار) ارجاع دارد و پاک‌کردنش آن‌ها را
+ * بی‌صاحب می‌کند. پس کارمندِ حذف‌شده هنوز در فهرست دیده می‌شود، با
+ * برچسبِ «غیرفعال».
  */
-export function useDeactivateEmployeeMutation() {
+export function useRemoveEmployeeMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: deactivateEmployee,
+    mutationFn: removeEmployee,
     onSuccess: (_, id) => {
-      toast.success("دسترسی کارمند غیرفعال شد.");
+      toast.success("کارمند حذف شد.");
       queryClient.invalidateQueries({ queryKey: employeeKeys.lists() });
       queryClient.invalidateQueries({ queryKey: employeeKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: teamKeys.all });
       queryClient.invalidateQueries({ queryKey: departmentKeys.all });
     },
     onError: (error) => {
-      toast.error(error?.message || "خطا در غیرفعال‌کردن کارمند");
+      toast.error(error?.message || "خطا در حذف کارمند");
     },
   });
 }
