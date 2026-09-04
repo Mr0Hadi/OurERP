@@ -1,3 +1,5 @@
+using Application.Features.Team.Dtos;
+
 namespace Application.Features.Department.Dtos
 {
     public class DepartmentDto
@@ -8,5 +10,6 @@ namespace Application.Features.Department.Dtos
         public string? HeadName { get; set; }
         public int? DeputyId { get; set; }
         public string? DeputyName { get; set; }
+        public List<TeamDto> Teams { get; set; }
     }
 }

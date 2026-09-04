@@ -17,7 +17,7 @@ namespace Application.Features.Sale.Dtos
         public string? Description { get; set; }
         public int CustomerId { get; set; }
         public string CustomerName { get; set; }
-        public List<SaleItem> Items { get; set; }
+        public List<SaleItemDto> Items { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public List<SaleDriverDto> Drivers { get; set; } = new();

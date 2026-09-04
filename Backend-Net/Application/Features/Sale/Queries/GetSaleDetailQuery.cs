@@ -4,6 +4,7 @@ using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.Sale.Dtos;
 using Common.Exceptions;
+using Domain.Entities;
 using Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -28,45 +29,50 @@ namespace Application.Features.Sale.Queries
         {
             var res = new ResponseDto();
 
-            var sale = await _context.Sales
-                .Include(x => x.Customer)
-                .Include(x => x.Items)
-                .Include(x => x.Drivers)
-                .Include(x => x.ShippingNotes)
-                .FirstOrDefaultAsync(x => x.Id == request.Id) ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
-
-            res.Data = new SaleDto
-            {
-                Id = sale.Id,
-                InvoiceNumber = sale.InvoiceNumber,
-                InvoiceDate = sale.InvoiceDate,
-                Status = sale.Status,
-                PaymentType = sale.PaymentType,
-                TotalAmount = sale.TotalAmount,
-                PaidAmount = sale.PaidAmount,
-                PaymentDetails = sale.PaymentDetails,
-                Description = sale.Description,
-                CustomerId = sale.CustomerId,
-                CustomerName = sale.Customer.FirstName + " " + sale.Customer.LastName,
-                CreatedAt = sale.CreatedAt,
-                UpdatedAt = sale.UpdatedAt,
-                Items = sale.Items,
-                Drivers = sale.Drivers.Select(d => new SaleDriverDto
+            res.Data = await _context.Sales.AsNoTracking()
+                .Where(x => x.Id == request.Id)
+                .Select(x => new SaleDto
                 {
-                    Id = d.Id,
-                    DriverFullName = d.DriverFullName,
-                    DriverPhoneNumber = d.DriverPhoneNumber,
-                    VehiclePlate = d.VehiclePlate,
-                    CreatedAt = d.CreatedAt
-                }).ToList(),
-                ShippingNotes = sale.ShippingNotes.Select(n => new SaleShippingNoteDto
-                {
-                    Id = n.Id,
-                    Note = n.Note,
-                    CreatedAt = n.CreatedAt
-                }).ToList()
-            };
-
+                    Id = x.Id,
+                    InvoiceNumber = x.InvoiceNumber,
+                    InvoiceDate = x.InvoiceDate,
+                    Status = x.Status,
+                    PaymentType = x.PaymentType,
+                    TotalAmount = x.TotalAmount,
+                    PaidAmount = x.PaidAmount,
+                    PaymentDetails = x.PaymentDetails,
+                    Description = x.Description,
+                    CustomerId = x.CustomerId,
+                    CustomerName = x.Customer.FirstName + " " + x.Customer.LastName,
+                    CreatedAt = x.CreatedAt,
+                    UpdatedAt = x.UpdatedAt,
+                    Items = x.Items.Select(y => new SaleItemDto
+                    {
+                        Id = y.Id,
+                        Discount = y.Discount,
+                        ProductId = y.ProductId,
+                        Quantity = y.Quantity,
+                        SaleId = y.SaleId,
+                        SettledQuantity = y.SettledQuantity,
+                        ShippedQuantity = y.ShippedQuantity,
+                        UnitPrice = y.UnitPrice
+                    }).ToList(),
+                    Drivers = x.Drivers.Select(d => new SaleDriverDto
+                    {
+                        Id = d.Id,
+                        DriverFullName = d.DriverFullName,
+                        DriverPhoneNumber = d.DriverPhoneNumber,
+                        VehiclePlate = d.VehiclePlate,
+                        CreatedAt = d.CreatedAt
+                    }).ToList(),
+                    ShippingNotes = x.ShippingNotes.Select(n => new SaleShippingNoteDto
+                    {
+                        Id = n.Id,
+                        Note = n.Note,
+                        CreatedAt = n.CreatedAt
+                    }).ToList()
+                })
+                .FirstOrDefaultAsync() ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
             var attachments = await _context.DocumentAttachments.AsNoTracking()
                 .Where(a => a.DocumentKind == DocumentKindEnum.SALE && a.DocumentId == request.Id)
                 .Select(a => new DocumentAttachmentDto
