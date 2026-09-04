@@ -35,22 +35,22 @@ export function useReceivingForm(purchaseData) {
   }, [purchaseVersion, purchaseData, initializeFromPurchase, initializedForId]);
 
   const allocatedOf = (item) =>
-    (item.issues || []).reduce((sum, i) => sum + (Number(i.qty) || 0), 0);
+    (item.issues || []).reduce((sum, i) => sum + (Number(i.quantity) || 0), 0);
 
   const handleItemChange = (lineId, field, value) => {
     const newItems = formData.items.map((item) => {
       if (item.lineId !== lineId) return item;
       const updated = { ...item, [field]: value };
 
-      if (field === 'receivedQty') {
+      if (field === 'receivedQuantity') {
         let remainingBudget = issueBudgetOf(updated);
         const trimmedIssues = [];
         for (const issue of updated.issues || []) {
           if (remainingBudget <= 0) break;
-          const qty = Math.min(Number(issue.qty) || 0, remainingBudget);
-          if (qty > 0) {
-            trimmedIssues.push({ ...issue, qty });
-            remainingBudget -= qty;
+          const quantity = Math.min(Number(issue.quantity) || 0, remainingBudget);
+          if (quantity > 0) {
+            trimmedIssues.push({ ...issue, quantity });
+            remainingBudget -= quantity;
           }
         }
         updated.issues = trimmedIssues;
@@ -78,7 +78,7 @@ export function useReceivingForm(purchaseData) {
           {
             id: generateId(),
             issueType: defaultIssueTypeFor(item),
-            qty: remaining,
+            quantity: remaining,
             note: '',
           },
         ],
@@ -94,14 +94,14 @@ export function useReceivingForm(purchaseData) {
 
       const newIssues = (item.issues || []).map((issue) => {
         if (issue.id !== issueRowId) return issue;
-        if (field === 'qty') {
+        if (field === 'quantity') {
           const otherAllocated = (item.issues || [])
             .filter((i) => i.id !== issueRowId)
-            .reduce((s, i) => s + (Number(i.qty) || 0), 0);
+            .reduce((s, i) => s + (Number(i.quantity) || 0), 0);
           const maxAllowed = Math.max(0, budget - otherAllocated);
           const num = Number(value);
           const clamped = Number.isNaN(num) || num < 0 ? 0 : Math.min(num, maxAllowed);
-          return { ...issue, qty: clamped };
+          return { ...issue, quantity: clamped };
         }
         return { ...issue, [field]: value };
       });
@@ -127,12 +127,12 @@ export function useReceivingForm(purchaseData) {
   const handleExcessChange = (lineId, field, value) => {
     const newItems = formData.items.map((item) => {
       if (item.lineId !== lineId) return item;
-      if (field === 'excessQty') {
+      if (field === 'excessQuantity') {
         const num = Number(value);
         const safe = Number.isNaN(num) || num < 0 ? 0 : Math.floor(num);
         // با صفرشدن تعداد، یادداشتِ بی‌صاحب هم پاک می‌شود تا چیزی که
         // ثبت نمی‌شود روی صفحه باقی نماند.
-        return { ...item, excessQty: safe, excessNote: safe > 0 ? item.excessNote : '' };
+        return { ...item, excessQuantity: safe, excessNote: safe > 0 ? item.excessNote : '' };
       }
       return { ...item, [field]: value };
     });
@@ -145,7 +145,7 @@ export function useReceivingForm(purchaseData) {
   const handleAddUnknownItem = () => {
     setUnknownItems([
       ...unknownItems,
-      { id: generateId(), productName: '', qty: 1, unit: 'عدد', note: '' },
+      { id: generateId(), productName: '', quantity: 1, unit: 'عدد', note: '' },
     ]);
   };
 
@@ -153,10 +153,10 @@ export function useReceivingForm(purchaseData) {
     setUnknownItems(
       unknownItems.map((row) => {
         if (row.id !== rowId) return row;
-        if (field === 'qty') {
+        if (field === 'quantity') {
           const num = Number(value);
           const safe = Number.isNaN(num) || num < 0 ? 0 : Math.floor(num);
-          return { ...row, qty: safe };
+          return { ...row, quantity: safe };
         }
         return { ...row, [field]: value };
       }),
@@ -168,18 +168,18 @@ export function useReceivingForm(purchaseData) {
   };
 
   const isUnknownRowComplete = (row) =>
-    !!row.productName?.trim() && (Number(row.qty) || 0) > 0;
+    !!row.productName?.trim() && (Number(row.quantity) || 0) > 0;
 
   // ردیف‌های نیمه‌پرشده بی‌صدا حذف نمی‌شوند — انباردار باید ببیند که
   // چیزی که نوشته ثبت نخواهد شد.
   const incompleteUnknownCount = unknownItems.filter(
     (row) =>
       !isUnknownRowComplete(row) &&
-      (!!row.productName?.trim() || (Number(row.qty) || 0) > 0 || !!row.note?.trim()),
+      (!!row.productName?.trim() || (Number(row.quantity) || 0) > 0 || !!row.note?.trim()),
   ).length;
 
   const isAllComplete = formData.items.every(
-    (item) => item.receivedQty >= item.expectedQty,
+    (item) => item.receivedQuantity >= item.expectedQuantity,
   );
 
   // خطوط به تفکیک منبع، برای اینکه صفحه هرکدام را زیر عنوان خودش
@@ -200,19 +200,19 @@ export function useReceivingForm(purchaseData) {
       productId: item.productId,
       productCode: item.productCode,
       productName: item.productName,
-      expectedQty: item.expectedQty,
-      receivedQty: item.receivedQty,
+      expectedQuantity: item.expectedQuantity,
+      receivedQuantity: item.receivedQuantity,
       issues: (item.issues || []).map((i) => ({
         type: i.issueType,
-        qty: Number(i.qty) || 0,
+        quantity: Number(i.quantity) || 0,
         note: i.note || '',
       })),
-      excessQty: Number(item.excessQty) || 0,
+      excessQuantity: Number(item.excessQuantity) || 0,
       excessNote: item.excessNote || '',
     })),
     unknownItems: unknownItems.filter(isUnknownRowComplete).map((row) => ({
       productName: row.productName.trim(),
-      qty: Number(row.qty) || 0,
+      quantity: Number(row.quantity) || 0,
       unit: row.unit?.trim() || 'عدد',
       note: row.note || '',
     })),

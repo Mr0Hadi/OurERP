@@ -7,10 +7,10 @@ import EntityMultiSelect from "@/shared/components/filters/EntityMultiSelect";
 import { toFilterOptions } from "@/shared/components/filters/filterUtils";
 import { usePurchaseFilterStore } from "../../store/purchaseFilterStore";
 import { PURCHASE_STATUS_LABELS } from "@/shared/domain/enums/purchaseStatus";
-import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
+import { DOCUMENT_PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
 
 const STATUS_OPTIONS = toFilterOptions(PURCHASE_STATUS_LABELS);
-const PAYMENT_TYPE_OPTIONS = toFilterOptions(PAYMENT_TYPE_LABELS);
+const PAYMENT_TYPE_OPTIONS = toFilterOptions(DOCUMENT_PAYMENT_TYPE_LABELS);
 
 const renderSupplierPhone = (supplier) =>
   supplier.phone ? (

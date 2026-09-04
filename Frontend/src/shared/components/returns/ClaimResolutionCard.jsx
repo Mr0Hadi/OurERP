@@ -5,8 +5,8 @@ import { Button } from "@/shared/components/ui/button";
 import ResolutionLineRow from "./ResolutionLineRow";
 import ResolutionComposer from "./ResolutionComposer";
 import {
-  claimDecidedQty,
-  claimRemainingQty,
+  claimDecidedQuantity,
+  claimRemainingQuantity,
 } from "@/shared/domain/returns/resolutions";
 
 
@@ -33,9 +33,9 @@ export default function ClaimResolutionCard({
   const [isComposerOpen, setIsComposerOpen] = useState(false);
 
   const resolutions = claim.resolutions || [];
-  const decided = claimDecidedQty(claim);
-  const remaining = claimRemainingQty(claim);
-  const total = Number(claim.qty) || 0;
+  const decided = claimDecidedQuantity(claim);
+  const remaining = claimRemainingQuantity(claim);
+  const total = Number(claim.quantity) || 0;
   const isOffScope = claim.scope === offScopeValue;
   const canDecide = !readOnly && remaining > 0;
 

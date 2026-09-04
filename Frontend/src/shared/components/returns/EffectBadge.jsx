@@ -7,10 +7,10 @@ import {
 import {
   EFFECT_KINDS,
   EFFECT_STATUSES,
-  PAYMENT_METHOD_LABELS,
   isGoodsEffect,
   observationsOf,
 } from "@/shared/domain/returns/effects";
+import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
 import { RETURN_PROBLEM_LABELS } from "@/shared/domain/returns/problems";
 
 const ICONS = {
@@ -40,20 +40,20 @@ export default function EffectBadge({ effect, side, showProductName = false }) {
   const Icon = ICONS[effect.kind];
   const isGoods = isGoodsEffect(effect.kind);
   const isPending = effect.status === EFFECT_STATUSES.PENDING;
-  const done = Number(effect.doneQty) || 0;
+  const done = Number(effect.doneQuantity) || 0;
 
   const value = isGoods
-    ? `${(Number(effect.qty) || 0).toLocaleString("fa-IR")} ${effect.unit || "عدد"}`
+    ? `${(Number(effect.quantity) || 0).toLocaleString("fa-IR")} ${effect.unit || "عدد"}`
     : `${(Number(effect.amount) || 0).toLocaleString("fa-IR")} ریال`;
 
-  const restocked = Number(effect.restockedQty) || 0;
+  const restocked = Number(effect.restockedQuantity) || 0;
   const isIncoming = effect.kind === EFFECT_KINDS.GOODS_IN;
 
   const details = [
     showProductName && isGoods ? effect.productName : null,
     // روش پرداخت enum عددی است و «نقدی» صفر — بررسیِ صریح لازم است.
     !isGoods && effect.method != null
-      ? PAYMENT_METHOD_LABELS[effect.method]
+      ? PAYMENT_TYPE_LABELS[effect.method]
       : null,
     isGoods && done > 0 ? `${done.toLocaleString("fa-IR")} انجام‌شده` : null,
     // برای کالای برگشتی، «انجام شد» و «به موجودی برگشت» یکی نیستند:
@@ -91,7 +91,7 @@ export default function EffectBadge({ effect, side, showProductName = false }) {
             {observations
               .map(
                 (observation) =>
-                  `${observation.qty.toLocaleString("fa-IR")} ${
+                  `${observation.quantity.toLocaleString("fa-IR")} ${
                     RETURN_PROBLEM_LABELS[observation.problem] ??
                     observation.problem
                   }`,

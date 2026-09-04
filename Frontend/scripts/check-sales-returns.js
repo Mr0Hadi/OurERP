@@ -22,10 +22,11 @@ const SALES_DOMAIN = "../src/features/sales/returns/domain";
 const { CLAIM_SCOPES, RETURN_PROBLEMS, SALES_RETURN_STATUSES, RETURN_PROBLEM_LABELS } =
   await import(`${SALES_DOMAIN}/returnVocabulary.js`);
 
+const { PaymentTypeEnum } = await import("../src/shared/domain/enums/paymentType.js");
+
 const {
   EFFECT_KINDS,
   EFFECT_STATUSES,
-  PAYMENT_METHODS,
   affectsInvoiceTotal,
   summarizeEffects,
   stockDeltasOf,
@@ -41,7 +42,7 @@ const {
   expandComposition,
   validateComposition,
   deriveReturnStatus,
-  claimRemainingQty,
+  claimRemainingQuantity,
   canDeleteReturn,
   summarizeReturn,
   buildGoodsLines,
@@ -88,7 +89,7 @@ const mkClaim = (over = {}) => ({
   id: "c1",
   ...brakePad,
   problem: RETURN_PROBLEMS.DEFECTIVE,
-  qty: 10,
+  quantity: 10,
   resolutions: [],
   ...over,
 });
@@ -97,12 +98,12 @@ const kindsOf = (fx) => fx.map((e) => e.kind).sort();
 const money = (direction, amount, over = {}) => ({
   direction,
   amount,
-  method: PAYMENT_METHODS.CASH,
+  method: PaymentTypeEnum.CASH,
   reference: "",
   parts: [],
   ...over,
 });
-const comp = (over = {}) => ({ ...emptyComposition(over.qty ?? 1), ...over });
+const comp = (over = {}) => ({ ...emptyComposition(over.quantity ?? 1), ...over });
 
 section("واژگان");
 check(
@@ -112,22 +113,22 @@ check(
 
 section("ترکیب خالی هیچ اثری نمی‌سازد");
 {
-  const fx = expandComposition(comp({ qty: 4 }), mkClaim());
+  const fx = expandComposition(comp({ quantity: 4 }), mkClaim());
   check("هیچ اثری تولید نشد", fx.length === 0, fx.length);
 }
 
 section("فقط پس‌گرفتن کالا");
 {
-  const fx = expandComposition(comp({ qty: 4, goodsIn: { enabled: true, items: [] } }), mkClaim());
+  const fx = expandComposition(comp({ quantity: 4, goodsIn: { enabled: true, items: [] } }), mkClaim());
   check("یک اثر GOODS_IN", kindsOf(fx).join() === String(EFFECT_KINDS.GOODS_IN));
-  check("تعدادش درست است", fx[0].qty === 4);
+  check("تعدادش درست است", fx[0].quantity === 4);
   check("معلق است تا انبار تحویل بگیرد", fx[0].status === EFFECT_STATUSES.PENDING);
 }
 
 section("پس‌گرفتن + پرداخت وجه");
 {
   const fx = expandComposition(
-    comp({ qty: 4, goodsIn: { enabled: true, items: [] }, money: money(MONEY_DIRECTIONS.PAY, 8_000_000) }),
+    comp({ quantity: 4, goodsIn: { enabled: true, items: [] }, money: money(MONEY_DIRECTIONS.PAY, 8_000_000) }),
     mkClaim(),
   );
   check(
@@ -137,7 +138,7 @@ section("پس‌گرفتن + پرداخت وجه");
   );
   const out = fx.find((e) => e.kind === EFFECT_KINDS.MONEY_OUT);
   check("مبلغ درست", out.amount === 8_000_000);
-  check("روشش نقدی است", out.method === PAYMENT_METHODS.CASH);
+  check("روشش نقدی است", out.method === PaymentTypeEnum.CASH);
   check("اثر پولی همان لحظه اعمال می‌شود", out.status === EFFECT_STATUSES.APPLIED);
 }
 
@@ -145,21 +146,21 @@ section("اعتبار خرید بعدی — یک روشِ پرداخت، نه ی
 {
   const fx = expandComposition(
     comp({
-      qty: 2,
+      quantity: 2,
       money: money(MONEY_DIRECTIONS.PAY, 4_000_000, {
-        method: PAYMENT_METHODS.STORE_CREDIT,
+        method: PaymentTypeEnum.STORE_CREDIT,
       }),
     }),
     mkClaim(),
   );
   check("یک اثر MONEY_OUT", kindsOf(fx).join() === String(EFFECT_KINDS.MONEY_OUT));
-  check("روشش اعتبار خرید بعدی است", fx[0].method === PAYMENT_METHODS.STORE_CREDIT);
+  check("روشش اعتبار خرید بعدی است", fx[0].method === PaymentTypeEnum.STORE_CREDIT);
   check("روی مبلغ فاکتور اثر نمی‌گذارد", affectsInvoiceTotal(fx[0].method) === false);
   check(
     "فقط در جهتِ پرداخت پیشنهاد می‌شود",
-    methodsForDirection(MONEY_DIRECTIONS.PAY).includes(PAYMENT_METHODS.STORE_CREDIT) &&
+    methodsForDirection(MONEY_DIRECTIONS.PAY).includes(PaymentTypeEnum.STORE_CREDIT) &&
       !methodsForDirection(MONEY_DIRECTIONS.RECEIVE).includes(
-        PAYMENT_METHODS.STORE_CREDIT,
+        PaymentTypeEnum.STORE_CREDIT,
       ),
   );
 }
@@ -168,9 +169,9 @@ section("نسیه و ترکیبی");
 {
   const onAccount = expandComposition(
     comp({
-      qty: 2,
+      quantity: 2,
       money: money(MONEY_DIRECTIONS.PAY, 3_000_000, {
-        method: PAYMENT_METHODS.ON_ACCOUNT,
+        method: PaymentTypeEnum.CREDIT,
       }),
     }),
     mkClaim(),
@@ -182,11 +183,11 @@ section("نسیه و ترکیبی");
   );
 
   const mixedMoney = money(MONEY_DIRECTIONS.PAY, "", {
-    method: PAYMENT_METHODS.MIXED,
+    method: PaymentTypeEnum.MIXED,
     parts: [
-      { type: PAYMENT_METHODS.CASH, amount: 1_000_000 },
-      { type: PAYMENT_METHODS.CHECK, amount: 2_500_000, checkNumber: "۱۲۳" },
-      { type: PAYMENT_METHODS.TRANSFER, amount: 0 },
+      { type: PaymentTypeEnum.CASH, amount: 1_000_000 },
+      { type: PaymentTypeEnum.CHECK, amount: 2_500_000, checkNumber: "۱۲۳" },
+      { type: PaymentTypeEnum.TRANSFER, amount: 0 },
     ],
   });
   check(
@@ -195,43 +196,43 @@ section("نسیه و ترکیبی");
     moneyAmountOf(mixedMoney),
   );
 
-  const fx = expandComposition(comp({ qty: 2, money: mixedMoney }), mkClaim());
+  const fx = expandComposition(comp({ quantity: 2, money: mixedMoney }), mkClaim());
   check("یک اثر پولی با مبلغ کل", fx.length === 1 && fx[0].amount === 3_500_000);
   check("ردیف‌های صفر ذخیره نمی‌شوند", fx[0].parts.length === 2, fx[0].parts.length);
   check(
     "ترکیبی بدون هیچ ردیفِ معتبر رد می‌شود",
     validateComposition(
       comp({
-        qty: 2,
+        quantity: 2,
         money: money(MONEY_DIRECTIONS.PAY, "", {
-          method: PAYMENT_METHODS.MIXED,
-          parts: [{ type: PAYMENT_METHODS.CASH, amount: 0 }],
+          method: PaymentTypeEnum.MIXED,
+          parts: [{ type: PaymentTypeEnum.CASH, amount: 0 }],
         }),
       }),
       mkClaim(),
-      { remainingQty: 10 },
+      { remainingQuantity: 10 },
     ).length > 0,
   );
   check(
     "اعتبار خرید بعدی در جهتِ دریافت رد می‌شود",
     validateComposition(
       comp({
-        qty: 1,
+        quantity: 1,
         money: money(MONEY_DIRECTIONS.RECEIVE, 100, {
-          method: PAYMENT_METHODS.STORE_CREDIT,
+          method: PaymentTypeEnum.STORE_CREDIT,
         }),
       }),
       mkClaim(),
-      { remainingQty: 10 },
+      { remainingQuantity: 10 },
     ).length > 0,
   );
 }
 
 section("دریافت وجه از مشتری (کالای اضافه‌ای که نگه می‌دارد)");
 {
-  const off = mkClaim({ scope: CLAIM_SCOPES.OFF_INVOICE, qty: 3 });
+  const off = mkClaim({ scope: CLAIM_SCOPES.OFF_INVOICE, quantity: 3 });
   const fx = expandComposition(
-    comp({ qty: 3, money: money(MONEY_DIRECTIONS.RECEIVE, 6_000_000) }),
+    comp({ quantity: 3, money: money(MONEY_DIRECTIONS.RECEIVE, 6_000_000) }),
     off,
   );
   check("یک اثر MONEY_IN", kindsOf(fx).join() === String(EFFECT_KINDS.MONEY_IN));
@@ -242,9 +243,9 @@ section("تعویض با کالای دیگر + مابه‌التفاوت");
 {
   const fx = expandComposition(
     comp({
-      qty: 2,
+      quantity: 2,
       goodsIn: { enabled: true, items: [] },
-      goodsOut: { enabled: true, items: [{ ...premiumPad, qty: 2 }] },
+      goodsOut: { enabled: true, items: [{ ...premiumPad, quantity: 2 }] },
       money: money(MONEY_DIRECTIONS.RECEIVE, 2_000_000),
     }),
     mkClaim(),
@@ -261,25 +262,25 @@ section("ارسال چند کالای مختلف در یک تصمیم");
 {
   const fx = expandComposition(
     comp({
-      qty: 2,
+      quantity: 2,
       goodsOut: { enabled: true, items: [
-        { ...premiumPad, qty: 2 },
-        { ...brakePad, productId: 3, productName: "روغن ترمز", qty: 5 },
+        { ...premiumPad, quantity: 2 },
+        { ...brakePad, productId: 3, productName: "روغن ترمز", quantity: 5 },
       ] },
     }),
     mkClaim(),
   );
   check("دو اثر GOODS_OUT جدا", fx.length === 2 && fx.every((e) => e.kind === EFFECT_KINDS.GOODS_OUT));
-  check("هر کدام تعداد خودش را دارد", fx[0].qty === 2 && fx[1].qty === 5);
+  check("هر کدام تعداد خودش را دارد", fx[0].quantity === 2 && fx[1].quantity === 5);
 }
 
 section("حرکت موجودی: فقط بخش سالمِ برگشتی به موجودی می‌رود");
 {
-  const fx = expandComposition(comp({ qty: 5, goodsIn: { enabled: true, items: [] } }), mkClaim());
+  const fx = expandComposition(comp({ quantity: 5, goodsIn: { enabled: true, items: [] } }), mkClaim());
   check("تا اجرا نشود هیچ حرکت موجودی نیست", stockDeltasOf(fx).length === 0);
 
-  fx[0].doneQty = 5;
-  fx[0].restockedQty = 2;
+  fx[0].doneQuantity = 5;
+  fx[0].restockedQuantity = 2;
   fx[0].status = EFFECT_STATUSES.APPLIED;
   const deltas = stockDeltasOf(fx);
   check("فقط ۲ واحد سالم به موجودی اضافه می‌شود", deltas[0].delta === 2, JSON.stringify(deltas));
@@ -290,43 +291,43 @@ section("اعتبارسنجی");
   const claim = mkClaim();
   check(
     "تعداد بیش از باقیمانده رد می‌شود",
-    validateComposition(comp({ qty: 12, goodsIn: { enabled: true, items: [] } }), claim, { remainingQty: 10 }).length > 0,
+    validateComposition(comp({ quantity: 12, goodsIn: { enabled: true, items: [] } }), claim, { remainingQuantity: 10 }).length > 0,
   );
   check(
     "ترکیب بدون هیچ اقدامی رد می‌شود",
-    validateComposition(comp({ qty: 2 }), claim, { remainingQty: 10 }).length > 0,
+    validateComposition(comp({ quantity: 2 }), claim, { remainingQuantity: 10 }).length > 0,
   );
   check(
     "محورِ کالاییِ بدون انتخاب، خودش کالای ادعا را می‌گذارد",
     expandComposition(
-      comp({ qty: 2, goodsOut: { enabled: true, items: [] } }),
+      comp({ quantity: 2, goodsOut: { enabled: true, items: [] } }),
       claim,
     ).some((e) => e.kind === EFFECT_KINDS.GOODS_OUT && e.productId === claim.productId),
   );
   check(
     "جابه‌جایی پول با مبلغ صفر رد می‌شود",
-    validateComposition(comp({ qty: 2, money: money(MONEY_DIRECTIONS.PAY, 0) }), claim, {
-      remainingQty: 10,
+    validateComposition(comp({ quantity: 2, money: money(MONEY_DIRECTIONS.PAY, 0) }), claim, {
+      remainingQuantity: 10,
     }).length > 0,
   );
   check(
     "ترکیب معتبر خطا ندارد",
     validateComposition(
-      comp({ qty: 2, goodsIn: { enabled: true, items: [] }, money: money(MONEY_DIRECTIONS.PAY, 4_000_000) }),
+      comp({ quantity: 2, goodsIn: { enabled: true, items: [] }, money: money(MONEY_DIRECTIONS.PAY, 4_000_000) }),
       claim,
-      { remainingQty: 10 },
+      { remainingQuantity: 10 },
     ).length === 0,
   );
 }
 
 section("وضعیت مرجوعی از روی داده مشتق می‌شود");
 {
-  const claim = mkClaim({ qty: 10 });
+  const claim = mkClaim({ quantity: 10 });
   const ret = { status: SALES_RETURN_STATUSES.OPEN, claims: [claim] };
   check("بدون تصمیم → باز", deriveReturnStatus(ret) === SALES_RETURN_STATUSES.OPEN);
 
   claim.resolutions = [
-    buildResolution(comp({ qty: 10, money: money(MONEY_DIRECTIONS.PAY, 1_000_000) }), claim),
+    buildResolution(comp({ quantity: 10, money: money(MONEY_DIRECTIONS.PAY, 1_000_000) }), claim),
   ];
   check(
     "تصمیمِ فقط-پولی مستقیم تسویه می‌شود (بدون دخالت انبار)",
@@ -334,33 +335,33 @@ section("وضعیت مرجوعی از روی داده مشتق می‌شود");
     deriveReturnStatus(ret),
   );
 
-  claim.resolutions = [buildResolution(comp({ qty: 10, goodsIn: { enabled: true, items: [] } }), claim)];
+  claim.resolutions = [buildResolution(comp({ quantity: 10, goodsIn: { enabled: true, items: [] } }), claim)];
   check(
     "تصمیمِ کالایی تا اجرای انبار در حال اجرا می‌ماند",
     deriveReturnStatus(ret) === SALES_RETURN_STATUSES.IN_PROGRESS,
     deriveReturnStatus(ret),
   );
 
-  claim.resolutions = [buildResolution(comp({ qty: 4, goodsIn: { enabled: true, items: [] } }), claim)];
+  claim.resolutions = [buildResolution(comp({ quantity: 4, goodsIn: { enabled: true, items: [] } }), claim)];
   check("تصمیم جزئی → در حال اجرا", deriveReturnStatus(ret) === SALES_RETURN_STATUSES.IN_PROGRESS);
-  check("باقیمانده‌ی ادعا درست است", claimRemainingQty(claim) === 6, claimRemainingQty(claim));
+  check("باقیمانده‌ی ادعا درست است", claimRemainingQuantity(claim) === 6, claimRemainingQuantity(claim));
 }
 
 section("نگهبان حذف و جمع‌بندی مالی");
 {
-  const claim = mkClaim({ qty: 10 });
+  const claim = mkClaim({ quantity: 10 });
   const ret = { status: SALES_RETURN_STATUSES.OPEN, claims: [claim] };
   check("مرجوعیِ بدون تصمیم قابل حذف است", canDeleteReturn(ret));
 
-  claim.resolutions = [buildResolution(comp({ qty: 10, goodsIn: { enabled: true, items: [] } }), claim)];
+  claim.resolutions = [buildResolution(comp({ quantity: 10, goodsIn: { enabled: true, items: [] } }), claim)];
   check(
     "تصمیمِ کالاییِ هنوز اجرانشده مانع حذف نیست",
     canDeleteReturn(ret),
   );
 
   claim.resolutions = [
-    buildResolution(comp({ qty: 6, money: money(MONEY_DIRECTIONS.PAY, 500_000) }), claim),
-    buildResolution(comp({ qty: 4, money: money(MONEY_DIRECTIONS.RECEIVE, 200_000) }), claim),
+    buildResolution(comp({ quantity: 6, money: money(MONEY_DIRECTIONS.PAY, 500_000) }), claim),
+    buildResolution(comp({ quantity: 4, money: money(MONEY_DIRECTIONS.RECEIVE, 200_000) }), claim),
   ];
   check("اثر پولیِ اعمال‌شده جلوی حذف را می‌گیرد", !canDeleteReturn(ret));
 
@@ -370,14 +371,14 @@ section("نگهبان حذف و جمع‌بندی مالی");
 
 section("ردیف‌های انبار از اثرهای معلق ساخته می‌شوند");
 {
-  const claim = mkClaim({ qty: 6 });
+  const claim = mkClaim({ quantity: 6 });
   const ret = { status: SALES_RETURN_STATUSES.OPEN, claims: [claim] };
   claim.resolutions = [
     buildResolution(
       comp({
-        qty: 6,
+        quantity: 6,
         goodsIn: { enabled: true, items: [] },
-        goodsOut: { enabled: true, items: [{ ...premiumPad, qty: 6 }] },
+        goodsOut: { enabled: true, items: [{ ...premiumPad, quantity: 6 }] },
       }),
       claim,
     ),
@@ -393,13 +394,13 @@ section("ردیف‌های انبار از اثرهای معلق ساخته می
 section("جمع‌بندی اثر: پیش‌نمایش در برابر واقعیت");
 {
   const fx = expandComposition(
-    comp({ qty: 3, goodsIn: { enabled: true, items: [] }, money: money(MONEY_DIRECTIONS.PAY, 900_000) }),
+    comp({ quantity: 3, goodsIn: { enabled: true, items: [] }, money: money(MONEY_DIRECTIONS.PAY, 900_000) }),
     mkClaim(),
   );
   const preview = summarizeEffects(fx, { includePending: true });
   const actual = summarizeEffects(fx);
-  check("پیش‌نمایش ۳ عدد برگشتی را می‌شمارد", preview.goodsInQty === 3);
-  check("واقعیت هنوز صفر است (انبار تحویل نگرفته)", actual.goodsInQty === 0);
+  check("پیش‌نمایش ۳ عدد برگشتی را می‌شمارد", preview.goodsInQuantity === 3);
+  check("واقعیت هنوز صفر است (انبار تحویل نگرفته)", actual.goodsInQuantity === 0);
   check("پول در هر دو دیده می‌شود", preview.moneyOut === 900_000 && actual.moneyOut === 900_000);
   check("یک اثر معلق شمرده شد", preview.pendingCount === 1);
 }
@@ -442,7 +443,7 @@ const claimFrom = (saleItem, over = {}) => ({
   productName: saleItem.productName,
   unit: saleItem.unit,
   unitPrice: saleItem.unitPrice,
-  qty: 2,
+  quantity: 2,
   problem: RETURN_PROBLEMS.DEFECTIVE,
   note: "",
   ...over,
@@ -451,13 +452,13 @@ const claimFrom = (saleItem, over = {}) => ({
 const returnableOf = async (productId) =>
   (await api.fetchSaleForReturn(hostSale.id)).items.find(
     (i) => i.productId === productId,
-  ).returnableQty;
+  ).returnableQuantity;
 
 section("اثر مالی: بازگشت وجه، مبلغ فاکتور را کم می‌کند");
 {
   const item = hostSale.items[0];
   const before = saleOf(hostSale.id).totalAmount;
-  const ret = await newReturn([claimFrom(item, { qty: 2 })]);
+  const ret = await newReturn([claimFrom(item, { quantity: 2 })]);
   await api.addClaimResolution(ret.id, ret.claims[0].id, {
     ...emptyComposition(2),
     money: money(MONEY_DIRECTIONS.PAY, 1_500_000),
@@ -491,11 +492,11 @@ section("اثر مالی: اعتبار خرید بعدی روی فاکتور ا�
 {
   const item = hostSale.items[0];
   const before = saleOf(hostSale.id).totalAmount;
-  const ret = await newReturn([claimFrom(item, { qty: 1 })]);
+  const ret = await newReturn([claimFrom(item, { quantity: 1 })]);
   await api.addClaimResolution(ret.id, ret.claims[0].id, {
     ...emptyComposition(1),
     money: money(MONEY_DIRECTIONS.PAY, 900_000, {
-      method: PAYMENT_METHODS.STORE_CREDIT,
+      method: PaymentTypeEnum.STORE_CREDIT,
     }),
   });
   check(
@@ -511,7 +512,7 @@ section("اثر مالی: کالای خارج از فاکتور که مشتری 
   const before = saleOf(hostSale.id).totalAmount;
   const ret = await newReturn([
     claimFrom(item, {
-      qty: 3,
+      quantity: 3,
       scope: CLAIM_SCOPES.OFF_INVOICE,
       problem: RETURN_PROBLEMS.OVER_SHIPPED,
     }),
@@ -532,7 +533,7 @@ section("اثر کالایی: فقط بخش سالمِ برگشتی وارد م�
 {
   const item = hostSale.items[0];
   const stockBefore = stockOf(item.productId);
-  const ret = await newReturn([claimFrom(item, { qty: 4 })]);
+  const ret = await newReturn([claimFrom(item, { quantity: 4 })]);
   const updated = await api.addClaimResolution(ret.id, ret.claims[0].id, {
     ...emptyComposition(4),
     goodsIn: { enabled: true, items: [] },
@@ -550,9 +551,9 @@ section("اثر کالایی: فقط بخش سالمِ برگشتی وارد م�
     rounds: [
       {
         effectId: effect.id,
-        qty: 3,
+        quantity: 3,
         observations: [
-          { problem: RETURN_PROBLEMS.DEFECTIVE, qty: 2, note: "۲ عدد شکسته" },
+          { problem: RETURN_PROBLEMS.DEFECTIVE, quantity: 2, note: "۲ عدد شکسته" },
         ],
       },
     ],
@@ -566,8 +567,8 @@ section("اثر کالایی: فقط بخش سالمِ برگشتی وارد م�
   const e1 = afterRound1.claims[0].resolutions[0].effects[0];
   check(
     "اثر هنوز معلق است (۳ از ۴)",
-    e1.status === EFFECT_STATUSES.PENDING && e1.doneQty === 3,
-    JSON.stringify([e1.status, e1.doneQty]),
+    e1.status === EFFECT_STATUSES.PENDING && e1.doneQuantity === 3,
+    JSON.stringify([e1.status, e1.doneQuantity]),
   );
   check(
     "مرجوعی هنوز تسویه نشده",
@@ -577,11 +578,11 @@ section("اثر کالایی: فقط بخش سالمِ برگشتی وارد م�
 
   // دور دوم: ۱ عدد باقیمانده، سالم
   const afterRound2 = await api.executeGoodsRound(ret.id, {
-    rounds: [{ effectId: effect.id, qty: 1 }],
+    rounds: [{ effectId: effect.id, quantity: 1 }],
   });
   const e2 = afterRound2.claims[0].resolutions[0].effects[0];
-  check("اثر کامل و اجراشده شد", e2.status === EFFECT_STATUSES.APPLIED && e2.doneQty === 4);
-  check("مجموع بازگشته به موجودی = ۲", e2.restockedQty === 2, e2.restockedQty);
+  check("اثر کامل و اجراشده شد", e2.status === EFFECT_STATUSES.APPLIED && e2.doneQuantity === 4);
+  check("مجموع بازگشته به موجودی = ۲", e2.restockedQuantity === 2, e2.restockedQuantity);
   check("موجودی در مجموع ۲ واحد زیاد شد", stockOf(item.productId) === stockBefore + 2);
   check("حالا مرجوعی تسویه شد", afterRound2.status === SALES_RETURN_STATUSES.SETTLED, afterRound2.status);
   check("تاریخچه‌ی هر دو دور ثبت شد", e2.history.length === 2, e2.history.length);
@@ -591,7 +592,7 @@ section("اثر کالایی: فقط بخش سالمِ برگشتی وارد م�
     "مشاهده‌ی انبار با نوع و تعداد نگه داشته شد",
     observed.length === 1 &&
       observed[0].problem === RETURN_PROBLEMS.DEFECTIVE &&
-      observed[0].qty === 2,
+      observed[0].quantity === 2,
     JSON.stringify(observed),
   );
   check(
@@ -604,7 +605,7 @@ section("اثر کالایی: فقط بخش سالمِ برگشتی وارد م�
 section("ایدمپوتنسی: یک کلید، یک بار اعمال");
 {
   const item = hostSale.items[0];
-  const ret = await newReturn([claimFrom(item, { qty: 2 })]);
+  const ret = await newReturn([claimFrom(item, { quantity: 2 })]);
   const withResolution = await api.addClaimResolution(ret.id, ret.claims[0].id, {
     ...emptyComposition(2),
     goodsIn: { enabled: true, items: [] },
@@ -612,29 +613,29 @@ section("ایدمپوتنسی: یک کلید، یک بار اعمال");
   const effect = withResolution.claims[0].resolutions[0].effects[0];
 
   const key = "idem-test-1";
-  const round = { rounds: [{ effectId: effect.id, qty: 1 }] };
+  const round = { rounds: [{ effectId: effect.id, quantity: 1 }] };
 
   const first = await api.executeGoodsRound(ret.id, round, { idempotencyKey: key });
   const again = await api.executeGoodsRound(ret.id, round, { idempotencyKey: key });
 
   const e1 = first.claims[0].resolutions[0].effects[0];
   const e2 = again.claims[0].resolutions[0].effects[0];
-  check("دورِ تکراری با همان کلید دوباره اعمال نمی‌شود", e2.doneQty === 1, e2.doneQty);
-  check("پاسخِ تکراری همان سندِ بار اول است", e1.doneQty === e2.doneQty);
+  check("دورِ تکراری با همان کلید دوباره اعمال نمی‌شود", e2.doneQuantity === 1, e2.doneQuantity);
+  check("پاسخِ تکراری همان سندِ بار اول است", e1.doneQuantity === e2.doneQuantity);
 
   // کلید تازه = قصدِ تازه، پس واقعاً اعمال می‌شود
   const third = await api.executeGoodsRound(ret.id, round, { idempotencyKey: "idem-test-2" });
   check(
     "کلید تازه یعنی عملیات تازه",
-    third.claims[0].resolutions[0].effects[0].doneQty === 2,
-    third.claims[0].resolutions[0].effects[0].doneQty,
+    third.claims[0].resolutions[0].effects[0].doneQuantity === 2,
+    third.claims[0].resolutions[0].effects[0].doneQuantity,
   );
 }
 
 section("سقف ادعا همیشه کل مقدار تحویل‌شده است");
 {
   const item = hostSale.items[0];
-  const delivered = item.shippedQty ?? item.qty;
+  const delivered = item.shippedQuantity ?? item.quantity;
   check(
     "سقف = مقدار تحویل‌شده",
     (await returnableOf(item.productId)) === delivered,
@@ -643,7 +644,7 @@ section("سقف ادعا همیشه کل مقدار تحویل‌شده است")
 
   // یک مرجوعیِ فعال روی همان کالا نباید سقف مرجوعی بعدی را کم کند —
   // واحد فروش باید بتواند برای کل مقدار فاکتور دوباره ادعا ثبت کند.
-  await newReturn([claimFrom(item, { qty: delivered })]);
+  await newReturn([claimFrom(item, { quantity: delivered })]);
   check(
     "ادعای فعالِ قبلی سقف را کم نمی‌کند",
     (await returnableOf(item.productId)) === delivered,
@@ -655,15 +656,15 @@ section("سقف ادعا همیشه کل مقدار تحویل‌شده است")
   );
   check(
     "ولی مقدارِ ادعاشده در مرجوعی‌های دیگر گزارش می‌شود",
-    info.activeClaimedQty >= delivered,
-    info.activeClaimedQty,
+    info.activeClaimedQuantity >= delivered,
+    info.activeClaimedQuantity,
   );
 }
 
 section("چرخه‌ی چندباره: مرجوعی روی مرجوعی");
 {
   const item = hostSale.items[1] ?? hostSale.items[0];
-  const ret = await newReturn([claimFrom(item, { qty: 2 })]);
+  const ret = await newReturn([claimFrom(item, { quantity: 2 })]);
 
   const withRes = await api.addClaimResolution(ret.id, ret.claims[0].id, {
     ...emptyComposition(2),
@@ -674,7 +675,7 @@ section("چرخه‌ی چندباره: مرجوعی روی مرجوعی");
         productCode: item.productCode,
         productName: item.productName,
         unit: item.unit,
-        qty: 2,
+        quantity: 2,
         unitPrice: item.unitPrice,
       },
     ] },
@@ -684,9 +685,9 @@ section("چرخه‌ی چندباره: مرجوعی روی مرجوعی");
   const goodsOut = effects.find((e) => e.kind === EFFECT_KINDS.GOODS_OUT);
 
   await api.executeGoodsRound(ret.id, {
-    rounds: [{ effectId: goodsIn.id, qty: 2, healthyQty: 0 }],
+    rounds: [{ effectId: goodsIn.id, quantity: 2, healthyQuantity: 0 }],
   });
-  await api.executeGoodsRound(ret.id, { rounds: [{ effectId: goodsOut.id, qty: 2 }] });
+  await api.executeGoodsRound(ret.id, { rounds: [{ effectId: goodsOut.id, quantity: 2 }] });
 
   const settled = await api.fetchSalesReturnById(ret.id);
   check(
@@ -705,7 +706,7 @@ section("چرخه‌ی چندباره: مرجوعی روی مرجوعی");
     returnDate: "2026-08-20",
     description: "",
     previousReturnId: ret.id,
-    claims: [claimFrom(item, { qty: 2, problem: RETURN_PROBLEMS.DAMAGED_IN_TRANSIT })],
+    claims: [claimFrom(item, { quantity: 2, problem: RETURN_PROBLEMS.DAMAGED_IN_TRANSIT })],
   });
   check("مرجوعی دوم به اولی زنجیر شد", followUp.previousReturnId === ret.id);
   check("مرجوعی دوم مستقل و باز است", followUp.status === SALES_RETURN_STATUSES.OPEN);
@@ -716,7 +717,7 @@ section("ادعای خارج از فاکتور سهمیه‌ی خط فروش ر�
   const before = await returnableOf(item.productId);
   await newReturn([
     claimFrom(item, {
-      qty: 5,
+      quantity: 5,
       scope: CLAIM_SCOPES.OFF_INVOICE,
       problem: RETURN_PROBLEMS.OVER_SHIPPED,
     }),
@@ -728,13 +729,13 @@ section("ادعای خارج از فاکتور سهمیه‌ی خط فروش ر�
 section("نگهبان چرخه‌ی عمر: بعد از اعمال اثر، حذف ممنوع می‌شود");
 {
   const item = hostSale.items[0];
-  const ret = await newReturn([claimFrom(item, { qty: 1 })]);
+  const ret = await newReturn([claimFrom(item, { quantity: 1 })]);
   await api.removeSalesReturn(ret.id).then(
     () => check("مرجوعیِ دست‌نخورده حذف می‌شود", true),
     (e) => check("مرجوعیِ دست‌نخورده حذف می‌شود", false, e.message),
   );
 
-  const ret2 = await newReturn([claimFrom(item, { qty: 1 })]);
+  const ret2 = await newReturn([claimFrom(item, { quantity: 1 })]);
   await api.addClaimResolution(ret2.id, ret2.claims[0].id, {
     ...emptyComposition(1),
     money: money(MONEY_DIRECTIONS.PAY, 100_000),
@@ -748,7 +749,7 @@ section("نگهبان چرخه‌ی عمر: بعد از اعمال اثر، حذ
 section("اعتبارسنجی موتور: تصمیم بیش از باقیمانده رد می‌شود");
 {
   const item = hostSale.items[0];
-  const ret = await newReturn([claimFrom(item, { qty: 2 })]);
+  const ret = await newReturn([claimFrom(item, { quantity: 2 })]);
   await api
     .addClaimResolution(ret.id, ret.claims[0].id, {
       ...emptyComposition(5),

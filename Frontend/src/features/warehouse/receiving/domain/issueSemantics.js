@@ -27,9 +27,9 @@ export function isObservationLine(item) {
 
 export function issueBudgetOf(item) {
   if (isObservationLine(item)) {
-    return Math.max(0, Number(item.receivedQty) || 0);
+    return Math.max(0, Number(item.receivedQuantity) || 0);
   }
-  return Math.max(0, (item?.expectedQty || 0) - (item?.receivedQty || 0));
+  return Math.max(0, (item?.expectedQuantity || 0) - (item?.receivedQuantity || 0));
 }
 
 /**

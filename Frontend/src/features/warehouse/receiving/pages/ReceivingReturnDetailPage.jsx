@@ -61,7 +61,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
   const returnLines = useMemo(
     () =>
       buildGoodsLines(salesReturn, EFFECT_KINDS.GOODS_IN).filter(
-        (line) => line.remainingQty > 0,
+        (line) => line.remainingQuantity > 0,
       ),
     [salesReturn],
   );
@@ -124,8 +124,8 @@ function ReceivingReturnDetailForm({ salesReturn }) {
 
   const isBusy = intakeMutation.isPending;
   const hasSomethingToRecord =
-    items.some((item) => (Number(item.receivedQty) || 0) > 0) ||
-    items.some((item) => (Number(item.excessQty) || 0) > 0) ||
+    items.some((item) => (Number(item.receivedQuantity) || 0) > 0) ||
+    items.some((item) => (Number(item.excessQuantity) || 0) > 0) ||
     unknownItems.length > 0;
 
   const handleConfirmClick = () => {
@@ -223,7 +223,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
             partyName={formData.supplierName}
             title="اطلاعات دریافت مرجوعی"
             progressLabel="پیشرفت دریافت"
-            progressField="receivedQty"
+            progressField="receivedQuantity"
             dateField="receivedDate"
             dateLabel="تاریخ دریافت"
             noteField="receivingNote"

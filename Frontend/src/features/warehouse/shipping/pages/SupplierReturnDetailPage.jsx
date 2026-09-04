@@ -57,7 +57,7 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
   const returnLines = useMemo(
     () =>
       buildGoodsLines(purchaseReturn, EFFECT_KINDS.GOODS_OUT).filter(
-        (line) => line.remainingQty > 0,
+        (line) => line.remainingQuantity > 0,
       ),
     [purchaseReturn],
   );
@@ -112,7 +112,7 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
 
   const isBusy = confirmMutation.isPending;
   const hasSomethingToSend = items.some(
-    (item) => (Number(item.shippedQty) || 0) > 0,
+    (item) => (Number(item.shippedQuantity) || 0) > 0,
   );
 
   const handleConfirmClick = () => {
@@ -181,7 +181,7 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
             partyName={formData.customerName}
             title="اطلاعات عودت"
             progressLabel="پیشرفت عودت"
-            progressField="shippedQty"
+            progressField="shippedQuantity"
             dateField="shippedDate"
             dateLabel="تاریخ عودت"
             noteField="shippingNote"

@@ -123,11 +123,11 @@ function ReceivingDetailForm({ purchase }) {
   const handleSubmit = () => {
     const payload = buildPayload();
     const hasShortage = displayItems.some(
-      (item) => (item.receivedQty || 0) < item.expectedQty,
+      (item) => (item.receivedQuantity || 0) < item.expectedQuantity,
     );
-    const surplusQty =
-      payload.receivedItems.reduce((sum, i) => sum + (i.excessQty || 0), 0) +
-      payload.unknownItems.reduce((sum, i) => sum + (i.qty || 0), 0);
+    const surplusQuantity =
+      payload.receivedItems.reduce((sum, i) => sum + (i.excessQuantity || 0), 0) +
+      payload.unknownItems.reduce((sum, i) => sum + (i.quantity || 0), 0);
 
     receivingMutation.mutate(
       { purchaseId: payload.id, receivingData: payload },
@@ -135,9 +135,9 @@ function ReceivingDetailForm({ purchase }) {
         onSuccess: () => {
           setShowConfirmDialog(false);
           resetForm();
-          if (surplusQty > 0) {
+          if (surplusQuantity > 0) {
             toast.success(
-              `دریافت ثبت شد. ${surplusQty.toLocaleString("fa-IR")} عدد کالای مازاد برای تصمیم‌گیری به واحد خرید رفت و تا آن زمان وارد موجودی نمی‌شود.`,
+              `دریافت ثبت شد. ${surplusQuantity.toLocaleString("fa-IR")} عدد کالای مازاد برای تصمیم‌گیری به واحد خرید رفت و تا آن زمان وارد موجودی نمی‌شود.`,
             );
           } else if (hasShortage) {
             toast.success(
@@ -151,9 +151,9 @@ function ReceivingDetailForm({ purchase }) {
   };
 
   const hasSurplusEntry =
-    items.some((item) => (Number(item.excessQty) || 0) > 0) ||
+    items.some((item) => (Number(item.excessQuantity) || 0) > 0) ||
     unknownItems.some(
-      (row) => row.productName?.trim() && (Number(row.qty) || 0) > 0,
+      (row) => row.productName?.trim() && (Number(row.quantity) || 0) > 0,
     );
 
   return (
@@ -245,7 +245,7 @@ function ReceivingDetailForm({ purchase }) {
             </Button>
           </div>
 
-          {items.every((i) => !(i.receivedQty > 0)) && (
+          {items.every((i) => !(i.receivedQuantity > 0)) && (
             <p className="text-xs text-muted-foreground text-center px-2">
               این خرید هنوز هیچ دریافتی ندارد. اگر اساساً نباید دریافت شود،
               از صفحه‌ی جزئیات خرید می‌توانید آن را لغو کنید.

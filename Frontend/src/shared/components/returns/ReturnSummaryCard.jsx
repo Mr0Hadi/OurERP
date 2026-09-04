@@ -37,7 +37,7 @@ export default function ReturnSummaryCard({
 
   const stats = useMemo(() => {
     const items = formData.items || [];
-    const expected = items.reduce((sum, i) => sum + (i.expectedQty || 0), 0);
+    const expected = items.reduce((sum, i) => sum + (i.expectedQuantity || 0), 0);
     const done = items.reduce(
       (sum, i) => sum + (Number(i[progressField]) || 0),
       0,

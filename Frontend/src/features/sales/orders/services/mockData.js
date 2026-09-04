@@ -19,8 +19,11 @@ export {
   PaymentTypeEnum as PAYMENT_TYPES,
   PAYMENT_TYPE_LABELS,
 } from "@/shared/domain/enums/paymentType";
-import { PaymentTypeEnum as PAYMENT_TYPES } from "@/shared/domain/enums/paymentType";
-import { PAYMENT_METHODS } from "@/shared/domain/returns/effects";
+import {
+  PaymentTypeEnum,
+  DOCUMENT_PAYMENT_TYPES,
+} from "@/shared/domain/enums/paymentType";
+const PAYMENT_TYPES = PaymentTypeEnum;
 
 // ─── توابع کمکی ────────────────────────────────────────────────────────────
 
@@ -38,19 +41,19 @@ function pickRandom(array) {
 
 /**
  * برای وضعیت‌هایی که یعنی «چیزی ارسال شده» (ارسال ناقص/ارسال‌شده/تحویل
- * کامل)، به هر قلم یک shippedQty واقع‌بینانه می‌دهد تا فیچرهای «ارسال
+ * کامل)، به هر قلم یک shippedQuantity واقع‌بینانه می‌دهد تا فیچرهای «ارسال
  * انبار» و «مرجوعی فروش» روی داده‌ی سازگار کار کنند.
  */
-function applyShippedQty(items, status) {
+function applyShippedQuantity(items, status) {
   return items.map((item) => {
     if (status === SALE_STATUSES.SHIPPED || status === SALE_STATUSES.DELIVERED) {
-      return { ...item, shippedQty: item.qty };
+      return { ...item, shippedQuantity: item.quantity };
     }
     if (status === SALE_STATUSES.PARTIALLY_DELIVERED) {
-      const shippedQty = Math.max(1, Math.min(item.qty - 1, randomInt(1, item.qty)));
-      return { ...item, shippedQty };
+      const shippedQuantity = Math.max(1, Math.min(item.quantity - 1, randomInt(1, item.quantity)));
+      return { ...item, shippedQuantity };
     }
-    return { ...item, shippedQty: 0 };
+    return { ...item, shippedQuantity: 0 };
   });
 }
 
@@ -74,7 +77,7 @@ export const salesMock = [
         productCode: "BRK-001",
         productName: "لنت ترمز جلو",
         unit: "دست",
-        qty: 10,
+        quantity: 10,
         unitPrice: 2000000,
         discount: 0,
         lineTotal: 20000000,
@@ -84,7 +87,7 @@ export const salesMock = [
         productCode: "FLT-002",
         productName: "فیلتر روغن",
         unit: "عدد",
-        qty: 50,
+        quantity: 50,
         unitPrice: 500000,
         discount: 0,
         lineTotal: 25000000,
@@ -110,7 +113,7 @@ export const salesMock = [
         productCode: "BRK-001",
         productName: "لنت ترمز جلو",
         unit: "دست",
-        qty: 10,
+        quantity: 10,
         unitPrice: 1900000,
         discount: 5,
         lineTotal: 18050000,
@@ -120,7 +123,7 @@ export const salesMock = [
         productCode: "SHK-003",
         productName: "کمک فنر جلو",
         unit: "عدد",
-        qty: 3,
+        quantity: 3,
         unitPrice: 3500000,
         discount: 0,
         lineTotal: 10500000,
@@ -140,9 +143,9 @@ export const salesMock = [
     paidAmount: 34608000,
     totalAmount: 34608000,
     mixedPayments: [
-      { id: 1, type: PAYMENT_METHODS.CASH, amount: 15000000 },
-      { id: 2, type: PAYMENT_METHODS.CHECK, amount: 10000000, checkNumber: "1234567890" },
-      { id: 3, type: PAYMENT_METHODS.TRANSFER, amount: 9608000, transferRef: "TRN-87654321" },
+      { id: 1, type: PaymentTypeEnum.CASH, amount: 15000000 },
+      { id: 2, type: PaymentTypeEnum.CHECK, amount: 10000000, checkNumber: "1234567890" },
+      { id: 3, type: PaymentTypeEnum.TRANSFER, amount: 9608000, transferRef: "TRN-87654321" },
     ],
     description: "فروش باتری و لوازم برقی",
     items: [
@@ -151,7 +154,7 @@ export const salesMock = [
         productCode: "BAT-005",
         productName: "باتری ۶۰ آمپر",
         unit: "عدد",
-        qty: 5,
+        quantity: 5,
         unitPrice: 6000000,
         discount: 0,
         lineTotal: 30000000,
@@ -161,7 +164,7 @@ export const salesMock = [
         productCode: "LMP-004",
         productName: "لامپ هدلایت H4",
         unit: "عدد",
-        qty: 12,
+        quantity: 12,
         unitPrice: 400000,
         discount: 4,
         lineTotal: 4608000,
@@ -172,7 +175,7 @@ export const salesMock = [
   },
 ];
 salesMock.forEach((sale) => {
-  sale.items = applyShippedQty(sale.items, sale.status);
+  sale.items = applyShippedQuantity(sale.items, sale.status);
 });
 
 // ─── تولید فروش‌های بیشتر (همه IDها عددی) ────────────────────────────────────
@@ -202,9 +205,9 @@ const MOCK_DESCRIPTIONS = [
 ];
 
 const SINGLE_PAYMENT_TYPES = [
-  PAYMENT_METHODS.CASH,
-  PAYMENT_METHODS.CHECK,
-  PAYMENT_METHODS.TRANSFER,
+  PaymentTypeEnum.CASH,
+  PaymentTypeEnum.CHECK,
+  PaymentTypeEnum.TRANSFER,
 ];
 
 function buildRandomItems() {
@@ -220,16 +223,16 @@ function buildRandomItems() {
     const product = pickRandom(availableProducts);
     usedProductIds.add(product.id);
 
-    const qty = randomInt(1, 20);
+    const quantity = randomInt(1, 20);
     const discount = Math.random() < 0.3 ? randomInt(1, 15) : 0;
-    const lineTotal = qty * product.price * (1 - discount / 100);
+    const lineTotal = quantity * product.price * (1 - discount / 100);
 
     items.push({
       productId: product.id,
       productCode: product.code,
       productName: product.name,
       unit: product.unit,
-      qty,
+      quantity,
       unitPrice: product.price,
       discount,
       lineTotal,
@@ -256,9 +259,9 @@ function buildMixedPayments(totalAmount) {
     const type = pickRandom(SINGLE_PAYMENT_TYPES);
     const payment = { id: k + 1, type, amount: paymentAmount };
 
-    if (type === PAYMENT_METHODS.CHECK) {
+    if (type === PaymentTypeEnum.CHECK) {
       payment.checkNumber = String(randomInt(1000000000, 9999999999));
-    } else if (type === PAYMENT_METHODS.TRANSFER) {
+    } else if (type === PaymentTypeEnum.TRANSFER) {
       payment.transferRef = `TRN-${randomInt(10000000, 99999999)}`;
     }
 
@@ -281,10 +284,10 @@ function generateMoreSales(count = 20) {
   for (let i = 0; i < count; i++) {
     const customer = pickRandom(MOCK_CUSTOMERS);
     const status = pickRandom(GENERATED_SALE_STATUSES);
-    const paymentType = pickRandom(Object.values(PAYMENT_TYPES));
+    const paymentType = pickRandom(DOCUMENT_PAYMENT_TYPES);
 
     const { items: rawItems, totalAmount } = buildRandomItems();
-    const items = applyShippedQty(rawItems, status);
+    const items = applyShippedQuantity(rawItems, status);
 
     // بدون مقدار اولیه: هر سه شاخه‌ی زیر خودشان مقدار می‌دهند.
     let paidAmount;

@@ -33,10 +33,10 @@ function toReturnLine(line) {
     productId: line.productId,
     productName: line.productName,
     productCode: line.productCode,
-    expectedQty: line.remainingQty,
-    receivedQty: line.remainingQty,
+    expectedQuantity: line.remainingQuantity,
+    receivedQuantity: line.remainingQuantity,
     issues: [],
-    excessQty: 0,
+    excessQuantity: 0,
     excessNote: '',
   };
 }
@@ -69,18 +69,18 @@ export const useReceivingFormStore = create((set, get) => ({
     // خطوطِ سفارش
     const orderLines = (purchaseData.items || [])
       .map((item) => {
-        // `receivableQty` شکلِ mock است؛ `stillOwedQuantity` همان
+        // `receivableQuantity` شکلِ mock است؛ `stillOwedQuantity` همان
         // فیلد را در پاسخِ واقعیِ `GetPurchaseReceivingInfo` می‌دهد
         // (`PurchaseReceivingItemInfoDto`). اگر هیچ‌کدام نبود، خودمان
-        // از `qty`/`orderedQuantity` منهای `receivedQty`/`receivedQuantity`
-        // و `settledQty` حساب می‌کنیم.
+        // از `quantity`/`orderedQuantity` منهای `receivedQuantity`/`receivedQuantity`
+        // و `settledQuantity` حساب می‌کنیم.
         const remaining =
-          item.receivableQty ?? item.stillOwedQuantity ??
+          item.receivableQuantity ?? item.stillOwedQuantity ??
           Math.max(
             0,
-            (item.qty ?? item.orderedQuantity ?? 0) -
-              (item.receivedQty ?? item.receivedQuantity ?? 0) -
-              (item.settledQty || 0),
+            (item.quantity ?? item.orderedQuantity ?? 0) -
+              (item.receivedQuantity ?? item.receivedQuantity ?? 0) -
+              (item.settledQuantity || 0),
           );
         return {
           lineId: `order:${item.productId}`,
@@ -92,18 +92,18 @@ export const useReceivingFormStore = create((set, get) => ({
           productId: item.productId,
           productName: item.productName,
           productCode: item.productCode,
-          expectedQty: remaining,
-          receivedQty: remaining,
+          expectedQuantity: remaining,
+          receivedQuantity: remaining,
           issues: [],
           // مازادِ همین قلم: تعدادی که *بیشتر* از سفارش رسیده. عمداً
-          // بیرون از receivedQty نگه داشته می‌شود تا معنای «چقدر از
+          // بیرون از receivedQuantity نگه داشته می‌شود تا معنای «چقدر از
           // سفارش تحویل شد» و تمام محاسباتی که به آن وابسته‌اند دست
           // نخورد.
-          excessQty: 0,
+          excessQuantity: 0,
           excessNote: '',
         };
       })
-      .filter((item) => item.expectedQty > 0);
+      .filter((item) => item.expectedQuantity > 0);
 
     // خطوطِ مرجوعی: کالایی که طرف حساب بابت یک مرجوعی به ما بدهکار
     // است و ممکن است با همین محموله بفرستد. شناسه‌شان اثر است نه

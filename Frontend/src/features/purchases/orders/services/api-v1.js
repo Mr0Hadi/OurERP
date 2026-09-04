@@ -1,5 +1,9 @@
 import axiosInstance from "@/shared/services/api/axios";
-import { normalizeListResponse } from "@/shared/services/api/contract";
+import {
+  normalizeListResponse,
+  documentVersion,
+} from "@/shared/services/api/contract";
+import { toDateOnly } from "@/shared/utils/dateUtils";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 
 export {
@@ -43,38 +47,111 @@ export {
 function toApiItems(items = []) {
   return items.map((item) => ({
     productId: item.productId,
-    quantity: item.qty,
+    quantity: item.quantity,
     unitPrice: item.unitPrice,
     discount: item.discount || 0,
   }));
 }
 
 /**
- * فرم فرانت پرداخت را با ۴ فیلدِ جدا نگه می‌دارد
- * (`paymentType`/`checkNumber`/`transferRef`/`mixedPayments`)؛ بکند
- * فقط یک آرایه‌ی `paymentDetails: {type, amount, checkNumber?,
- * transferRef?}[]` می‌شناسد — که شکلش تقریباً عین `mixedPayments`ِ
- * فرانت است. طبق سند بکند، برای هر `paymentType` غیر از نقدی
- * (`CASH=0`) این آرایه الزامی است؛ برای «نسیه» (`CREDIT=1`) این قاعده
- * توی سند تأیید نشده — همان‌جا `[]` می‌فرستیم و قبل از قطعی‌کردن این
- * تابع حتماً با یک تست واقعی چک شود.
+ * فرم → `paymentDetails`ِ سرور.
+ *
+ * فرم پرداخت را با چهار فیلدِ جدا نگه می‌دارد
+ * (`paymentType`/`checkNumber`/`transferRef`/`mixedPayments`)؛ بکند یک
+ * آرایه‌ی `{type, amount, checkNumber?, transferRef?}[]` می‌خواهد. چون
+ * ردیف‌های ترکیبی هم با `PaymentTypeEnum` شمرده می‌شوند، اینجا فقط
+ * شکل عوض می‌شود نه معنیِ اعداد. طبق اعتبارسنجیِ بکند برای هر
+ * `paymentType` جز نقدی این آرایه الزامی است، پس «نسیه» هم یک ردیف
+ * می‌گیرد.
  */
-function toApiPaymentDetails({ paymentType, paidAmount, checkNumber, transferRef, mixedPayments }) {
+function toApiPaymentDetails({
+  paymentType,
+  paidAmount,
+  checkNumber,
+  transferRef,
+  mixedPayments,
+}) {
   if (paymentType === PaymentTypeEnum.MIXED) {
-    return (mixedPayments || []).map((p) => ({
-      type: p.type,
-      amount: p.amount,
-      checkNumber: p.checkNumber || undefined,
-      transferRef: p.transferRef || undefined,
+    return (mixedPayments || []).map((part) => ({
+      type: part.type,
+      amount: Number(part.amount) || 0,
+      checkNumber: part.checkNumber || undefined,
+      transferRef: part.transferRef || undefined,
     }));
   }
+
+  const amount = Number(paidAmount) || 0;
+
   if (paymentType === PaymentTypeEnum.CHECK) {
-    return [{ type: paymentType, amount: paidAmount, checkNumber: checkNumber || undefined }];
+    return [{ type: paymentType, amount, checkNumber: checkNumber || undefined }];
   }
   if (paymentType === PaymentTypeEnum.TRANSFER) {
-    return [{ type: paymentType, amount: paidAmount, transferRef: transferRef || undefined }];
+    return [{ type: paymentType, amount, transferRef: transferRef || undefined }];
+  }
+  if (paymentType === PaymentTypeEnum.CREDIT) {
+    return [{ type: paymentType, amount }];
   }
   return [];
+}
+
+/**
+ * `paymentDetails`ِ سرور → فیلدهای فرم.
+ *
+ * برعکسِ تابعِ بالا. بدون این، سندی که با پرداختِ ترکیبی ثبت شده بود
+ * هنگام باز شدن هیچ ردیفی نشان نمی‌داد (فرم دنبال `mixedPayments`
+ * می‌گشت و سرور `paymentDetails` فرستاده بود)، و شماره‌ی چک/پیگیریِ
+ * سندهای تک‌روشی هم خالی می‌ماند.
+ */
+function fromApiPaymentDetails(paymentDetails = [], paymentType) {
+  const rows = paymentDetails.map((detail) => ({
+    id: detail.id,
+    type: detail.type,
+    amount: Number(detail.amount) || 0,
+    checkNumber: detail.checkNumber || "",
+    transferRef: detail.transferRef || "",
+  }));
+
+  if (paymentType === PaymentTypeEnum.MIXED) {
+    return { mixedPayments: rows, checkNumber: "", transferRef: "" };
+  }
+
+  // روش‌های تک‌مرحله‌ای یک ردیف بیشتر ندارند؛ شماره‌ی چک/پیگیری از همان
+  // ردیف به فیلدهای مسطحِ فرم برمی‌گردد.
+  const single = rows.find((row) => row.checkNumber || row.transferRef) || rows[0];
+  return {
+    mixedPayments: [],
+    checkNumber: single?.checkNumber || "",
+    transferRef: single?.transferRef || "",
+  };
+}
+
+/**
+ * سرور → فرم، برای کلِ سندِ خرید.
+ *
+ * از وقتی نام‌های فرانت با `PurchaseItemDto` یکی شد، اقلام هیچ ترجمه‌ای
+ * لازم ندارند و این تابع فقط سه کارِ باقی‌مانده را می‌کند: بریدنِ بخشِ
+ * ساعت از تاریخِ فاکتور، پهن‌کردنِ `paymentDetails` روی فیلدهای فرم، و
+ * پرکردنِ آرایه‌های نیامده. راننده‌ها و یادداشت‌های تحویل هم‌شکل‌اند و
+ * دست‌نخورده رد می‌شوند.
+ */
+export function fromApiPurchase(dto) {
+  if (!dto) return dto;
+
+  const purchase = {
+    ...dto,
+    invoiceDate: toDateOnly(dto.invoiceDate),
+    dueDate: toDateOnly(dto.dueDate),
+    items: dto.items || [],
+    paymentDetails: dto.paymentDetails || [],
+    ...fromApiPaymentDetails(dto.paymentDetails, dto.paymentType),
+    drivers: dto.drivers || [],
+    receivingNotes: dto.receivingNotes || [],
+    attachments: dto.attachments || [],
+  };
+
+  // `GetPurchaseDetail` هنوز `updatedAt` نمی‌دهد؛ بدون کلیدِ نسخه، فرم
+  // بعد از بازگشت به همان خرید روی داده‌ی کهنه می‌ماند.
+  return { ...purchase, updatedAt: documentVersion(purchase) };
 }
 
 /**
@@ -127,7 +204,7 @@ export async function fetchPurchaseById(id) {
   const { data } = await axiosInstance.get("/Purchase/GetPurchaseDetail", {
     params: { id },
   });
-  return data;
+  return fromApiPurchase(data);
 }
 
 export async function createPurchase(purchaseData) {

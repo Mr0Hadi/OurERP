@@ -52,11 +52,11 @@ export async function fetchReceivingPurchaseById(id) {
  * بکند `{purchaseId, receivedDate?, receivingNote?, driverFullName?,
  * driverPhoneNumber?, vehiclePlate?, items:[{purchaseItemId,
  * receivedQuantity}], images:[]}` می‌خواهد — بدون `issues`/`source`/
- * `unknownItems`/`excessQty`. مغایرت باید جدا با `createPurchaseReturn`
+ * `unknownItems`/`excessQuantity`. مغایرت باید جدا با `createPurchaseReturn`
  * (فیچرِ مرجوعی خرید) ثبت شود، نه در همین درخواست.
  *
  * `receivingData` همان چیزی است که `useReceivingForm().buildPayload()`
- * می‌سازد (شکلِ فرم/mock: `receivedItems[].receivedQty` با
+ * می‌سازد (شکلِ فرم/mock: `receivedItems[].receivedQuantity` با
  * `transporterName`/`transporterPhone`) — نه از قبل شکلِ بکند. اینجا
  * دقیقاً همان کاری انجام می‌شود که `toApiItems`/`toApiPurchasePayload`
  * در `purchases/orders/services/api-v1.js` می‌کنند: ترجمه‌ی شکلِ فرم
@@ -75,10 +75,10 @@ export async function confirmReceiving(
   { idempotencyKey } = {},
 ) {
   const items = (receivingData.receivedItems || [])
-    .filter((row) => row.purchaseItemId != null && (Number(row.receivedQty) || 0) > 0)
+    .filter((row) => row.purchaseItemId != null && (Number(row.receivedQuantity) || 0) > 0)
     .map((row) => ({
       purchaseItemId: row.purchaseItemId,
-      receivedQuantity: Number(row.receivedQty) || 0,
+      receivedQuantity: Number(row.receivedQuantity) || 0,
     }));
 
   const { data } = await axiosInstance.post(

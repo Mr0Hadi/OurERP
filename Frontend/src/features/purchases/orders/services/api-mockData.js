@@ -16,13 +16,13 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * confirmReceiving در ماژول دریافت انبار، دور به دور، به موجودی اضافه
  * کرده؛ پس برای برگرداندنِ درستِ موجودی هنگام «لغو» خرید لازم است.
  */
-function computeHealthyReceivedQty(item) {
-  const receivedQty = item.receivedQty || 0;
-  const problematicQty = (item.issues || []).reduce(
-    (sum, issue) => sum + (Number(issue.qty) || 0),
+function computeHealthyReceivedQuantity(item) {
+  const receivedQuantity = item.receivedQuantity || 0;
+  const problematicQuantity = (item.issues || []).reduce(
+    (sum, issue) => sum + (Number(issue.quantity) || 0),
     0,
   );
-  return Math.max(0, receivedQty - problematicQty);
+  return Math.max(0, receivedQuantity - problematicQuantity);
 }
 
 /** شناسه‌دهی به اقلامِ تازه — قرینه‌ی سمت فروش. */
@@ -35,7 +35,7 @@ function restorePurchaseStock(purchase) {
     (purchase.items || [])
       .map((item) => ({
         productId: item.productId,
-        delta: computeHealthyReceivedQty(item),
+        delta: computeHealthyReceivedQuantity(item),
       }))
       .filter((entry) => entry.delta > 0),
   );

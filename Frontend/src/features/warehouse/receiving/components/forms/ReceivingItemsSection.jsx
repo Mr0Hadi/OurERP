@@ -38,11 +38,11 @@ export default function ReceivingItemsSection({
   const totals = useMemo(() => {
     return items.reduce(
       (acc, item) => {
-        const received = item.receivedQty || 0;
-        const status = getRowStatus(item.expectedQty, received);
-        acc.expected += item.expectedQty;
+        const received = item.receivedQuantity || 0;
+        const status = getRowStatus(item.expectedQuantity, received);
+        acc.expected += item.expectedQuantity;
         acc.received += received;
-        acc.excess += Number(item.excessQty) || 0;
+        acc.excess += Number(item.excessQuantity) || 0;
         acc[status] += 1;
         return acc;
       },

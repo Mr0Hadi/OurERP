@@ -12,7 +12,7 @@ export const useConfirmReceivingMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    // دریافت تجمعی است: هر دور به `receivedQty` و موجودی اضافه می‌کند.
+    // دریافت تجمعی است: هر دور به `receivedQuantity` و موجودی اضافه می‌کند.
     // بدون کلید ایدمپوتنسی، یک retry شبکه‌ای همان محموله را دوبار
     // وارد انبار می‌کند.
     mutationFn: (variables) =>

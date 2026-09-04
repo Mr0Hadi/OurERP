@@ -132,7 +132,7 @@ export default function PurchasesNewPage() {
             productName: product.name,
             productCode: product.code,
             unit: unitLabelOf(product.unit),
-            qty: 1,
+            quantity: 1,
             unitPrice: product.purchasePrice ?? 0,
             discount: 0,
           },
@@ -166,7 +166,7 @@ export default function PurchasesNewPage() {
   const items = formData.items || [];
 
   const computedTotal = items.reduce((sum, item) => {
-    const base = (item.qty || 0) * (item.unitPrice || 0);
+    const base = (item.quantity || 0) * (item.unitPrice || 0);
     const disc = (base * (item.discount || 0)) / 100;
     return sum + base - disc;
   }, 0);
@@ -218,10 +218,10 @@ export default function PurchasesNewPage() {
         productName: item.productName,
         productCode: item.productCode,
         unit: item.unit,
-        qty: item.qty,
+        quantity: item.quantity,
         unitPrice: item.unitPrice,
         discount: item.discount || 0,
-        lineTotal: item.qty * item.unitPrice * (1 - (item.discount || 0) / 100),
+        lineTotal: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
       })),
       paymentType: formData.paymentType ?? PaymentTypeEnum.CASH,
       paidAmount: finalPaidAmount,

@@ -44,14 +44,20 @@ export const useSaleFormStore = create((set, get) => ({
     const version = `${sale.id}:${sale.updatedAt}`;
     if (initializedForId === version) return;
 
+    // `id` نگه داشته می‌شود چون `UpdateSale` ردیف‌ها را با همان تشخیص
+    // می‌دهد (`id: 0` یعنی ردیف تازه)؛ بدون آن هر ذخیره، اقلامِ سند را
+    // پاک و از نو می‌ساخت.
     const formattedItems = (sale.items || []).map((item) => ({
+      id: item.id,
       productId: item.productId || "",
       productCode: item.productCode || "",
       productName: item.productName || "",
       unit: unitLabelOf(item.unit),
-      qty: item.qty || 1,
-      unitPrice: item.unitPrice || 0,
+      quantity: Number(item.quantity ?? item.quantity) || 1,
+      unitPrice: Number(item.unitPrice) || 0,
       discount: item.discount || 0,
+      shippedQuantity: item.shippedQuantity ?? 0,
+      settledQuantity: item.settledQuantity ?? 0,
     }));
 
     set({

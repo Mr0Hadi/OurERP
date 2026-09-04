@@ -153,8 +153,8 @@ const oldestFirst = (predicate) =>
     );
 
 export function allocateUnitsForSale(saleId, items = []) {
-  items.forEach(({ productId, qty }) => {
-    const needed = Number(qty) || 0;
+  items.forEach(({ productId, quantity }) => {
+    const needed = Number(quantity) || 0;
     if (needed <= 0) return;
 
     const candidates = oldestFirst(

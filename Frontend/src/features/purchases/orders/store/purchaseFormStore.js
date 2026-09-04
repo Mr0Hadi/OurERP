@@ -44,14 +44,20 @@ export const usePurchaseFormStore = create((set, get) => ({
     const version = `${purchaseData.id}:${purchaseData.updatedAt}`;
     if (initializedForId === version) return;
 
+    // `id` و مقدارِ رسیده/تسویه‌شده هم نگه داشته می‌شوند: بدون آن‌ها هر
+    // ذخیره‌ی فرم، ردیف‌های سرور را ناشناس می‌کرد و ستون «رسیده» بعد از
+    // اولین ویرایش خالی می‌شد.
     const formattedItems = (purchaseData.items || []).map((item) => ({
+      id: item.id,
       productId: item.productId,
       productName: item.productName,
       productCode: item.productCode,
       unit: unitLabelOf(item.unit),
-      qty: item.qty,
-      unitPrice: item.unitPrice,
+      quantity: Number(item.quantity ?? item.quantity) || 0,
+      unitPrice: Number(item.unitPrice) || 0,
       discount: item.discount || 0,
+      receivedQuantity: item.receivedQuantity ?? 0,
+      settledQuantity: item.settledQuantity ?? 0,
     }));
 
     set({

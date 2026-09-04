@@ -15,11 +15,11 @@ import {
   affectsInvoiceTotal,
   isGoodsEffect,
   normalizeObservations,
-  observedQtyOf,
+  observedQuantityOf,
 } from "@/shared/domain/returns/effects";
 import {
   buildResolution,
-  claimRemainingQty,
+  claimRemainingQuantity,
   deriveReturnStatus,
   validateComposition,
 } from "@/shared/domain/returns/resolutions";
@@ -77,7 +77,7 @@ function commit(idx, patch) {
     updatedAt: new Date().toISOString(),
   };
   next.totalClaimedAmount = (next.claims || []).reduce(
-    (sum, claim) => sum + (Number(claim.qty) || 0) * (Number(claim.unitPrice) || 0),
+    (sum, claim) => sum + (Number(claim.quantity) || 0) * (Number(claim.unitPrice) || 0),
     0,
   );
   next.status = deriveReturnStatus(next);
@@ -95,8 +95,8 @@ function commit(idx, patch) {
  * کالا مشکل دیگری هم دارد، سقفِ محاسبه‌شده نباید جلویش را بگیرد —
  * تصمیم اینکه ادعا معتبر است یا نه با واحد فروش است، نه با یک فرمول.
  */
-function computeItemReturnableQty(item) {
-  return Math.max(0, item.shippedQty ?? item.qty);
+function computeItemReturnableQuantity(item) {
+  return Math.max(0, item.shippedQuantity ?? item.quantity);
 }
 
 // ─── خواندن ─────────────────────────────────────────────────────────────────
@@ -134,7 +134,7 @@ export async function fetchReturnableSales(search = "") {
  * اطلاعات لازم برای فرم ثبت ادعا.
  *
  * برخلاف نسخه‌ی قبلی، اقلامی که سهمیه‌شان تمام شده هم برگردانده
- * می‌شوند (با returnableQty صفر). دلیلش این است که یک ادعای «خارج از
+ * می‌شوند (با returnableQuantity صفر). دلیلش این است که یک ادعای «خارج از
  * فاکتور» می‌تواند روی همان کالا ثبت شود حتی وقتی سهمیه‌ی روی فاکتور
  * صفر است — دقیقاً حالت اضافه‌ارسال.
  */
@@ -166,13 +166,13 @@ export async function fetchSaleForReturn(saleId, excludeReturnId = null) {
         orderLineId: item.id,
         // آنچه *الان* دست مشتری است: پس‌گرفته‌ها کم و جایگزین‌های
         // ارسال‌شده اضافه می‌شوند.
-        deliveredQty:
-          (item.shippedQty ?? item.qty) +
+        deliveredQuantity:
+          (item.shippedQuantity ?? item.quantity) +
           deliveredAdjustment(siblings, line, { side: "sales" }),
-        returnableQty: computeItemReturnableQty(item),
-        claimedHereQty: claimed.here,
+        returnableQuantity: computeItemReturnableQuantity(item),
+        claimedHereQuantity: claimed.here,
         // فقط برای اطلاع کاربر — سقف نیست.
-        activeClaimedQty: claimed.elsewhere,
+        activeClaimedQuantity: claimed.elsewhere,
       };
     }),
     relatedReturns: relatedReturnsSummary(siblings, excludeReturnId),
@@ -256,7 +256,7 @@ async function createSalesReturnOnce(payload) {
     sourceEffectId: payload.sourceEffectId ?? null,
     claims,
     totalClaimedAmount: claims.reduce(
-      (sum, c) => sum + (Number(c.qty) || 0) * (Number(c.unitPrice) || 0),
+      (sum, c) => sum + (Number(c.quantity) || 0) * (Number(c.unitPrice) || 0),
       0,
     ),
     createdAt: new Date().toISOString(),
@@ -322,7 +322,7 @@ async function addClaimResolutionOnce(returnId, claimId, composition) {
   if (!claim) throw new Error("ادعا یافت نشد");
 
   const errors = validateComposition(composition, claim, {
-    remainingQty: claimRemainingQty(claim),
+    remainingQuantity: claimRemainingQuantity(claim),
   });
   if (errors.length) throw new Error(errors[0]);
 
@@ -369,7 +369,7 @@ export async function removeClaimResolution(returnId, claimId, resolutionId) {
   if (!resolution) throw new Error("تصمیم یافت نشد");
 
   const movedGoods = (resolution.effects || []).some(
-    (effect) => isGoodsEffect(effect.kind) && (Number(effect.doneQty) || 0) > 0,
+    (effect) => isGoodsEffect(effect.kind) && (Number(effect.doneQuantity) || 0) > 0,
   );
   if (movedGoods) {
     throw new Error("بخشی از کالای این تصمیم جابه‌جا شده و دیگر قابل لغو نیست");
@@ -396,12 +396,12 @@ export async function removeClaimResolution(returnId, claimId, resolutionId) {
  * ثبت یک «دور» جابه‌جایی فیزیکی کالا برای چند اثر به‌طور هم‌زمان.
  *
  * همان قرارداد تجمعیِ قبلی، ولی حالا برای هر دو جهت با یک تابع:
- * هر اثر doneQty خودش را دارد و فقط وقتی به qty کامل رسید APPLIED
+ * هر اثر doneQuantity خودش را دارد و فقط وقتی به quantity کامل رسید APPLIED
  * می‌شود؛ تا آن موقع همان مرجوعی دوباره در صف انبار ظاهر می‌شود.
  *
- * rounds: [{ effectId, qty, healthyQty? }]
- *   healthyQty فقط برای GOODS_IN معنا دارد — چقدر از کالای دریافتیِ
- *   همین دور سالم بوده. پیش‌فرضش کل qty است؛ بقیه معیوب فرض می‌شود و
+ * rounds: [{ effectId, quantity, healthyQuantity? }]
+ *   healthyQuantity فقط برای GOODS_IN معنا دارد — چقدر از کالای دریافتیِ
+ *   همین دور سالم بوده. پیش‌فرضش کل quantity است؛ بقیه معیوب فرض می‌شود و
  *   وارد موجودی قابل‌فروش نمی‌شود (ولی ادعا را می‌بندد).
  *
  * logistics: اطلاعات حمل که روی تاریخچه‌ی همان دور ثبت می‌شود.
@@ -435,9 +435,9 @@ async function executeGoodsRoundOnce(returnId, { rounds = [], ...logistics } = {
         if (!isGoodsEffect(effect.kind)) return effect;
         if (effect.status !== EFFECT_STATUSES.PENDING) return effect;
 
-        const remaining = (Number(effect.qty) || 0) - (Number(effect.doneQty) || 0);
-        const qty = Math.max(0, Math.min(Number(entry.qty) || 0, remaining));
-        if (qty <= 0) return effect;
+        const remaining = (Number(effect.quantity) || 0) - (Number(effect.doneQuantity) || 0);
+        const quantity = Math.max(0, Math.min(Number(entry.quantity) || 0, remaining));
+        if (quantity <= 0) return effect;
 
         const isIn = effect.kind === EFFECT_KINDS.GOODS_IN;
         // مقدارِ سالم از روی مشاهده‌ها مشتق می‌شود، نه به‌عنوان یک عددِ
@@ -445,26 +445,26 @@ async function executeGoodsRoundOnce(returnId, { rounds = [], ...logistics } = {
         // بود» نتیجه‌ی همان است. دو ورودیِ مستقل یعنی دو عددی که
         // می‌توانند با هم نخوانند.
         const observations = normalizeObservations(entry.observations);
-        const observedQty = Math.min(observedQtyOf(observations), qty);
-        const healthyQty = isIn ? Math.max(0, qty - observedQty) : qty;
+        const observedQuantity = Math.min(observedQuantityOf(observations), quantity);
+        const healthyQuantity = isIn ? Math.max(0, quantity - observedQuantity) : quantity;
 
         touched += 1;
         if (effect.productId != null) {
           // GOODS_IN فقط بخش سالم را به موجودی قابل‌فروش برمی‌گرداند؛
           // GOODS_OUT کل مقدارِ خارج‌شده را کم می‌کند.
-          const delta = isIn ? healthyQty : -qty;
+          const delta = isIn ? healthyQuantity : -quantity;
           if (delta !== 0) stockDeltas.push({ productId: effect.productId, delta });
         }
 
-        const doneQty = (Number(effect.doneQty) || 0) + qty;
-        const isComplete = doneQty >= (Number(effect.qty) || 0);
+        const doneQuantity = (Number(effect.doneQuantity) || 0) + quantity;
+        const isComplete = doneQuantity >= (Number(effect.quantity) || 0);
 
         return {
           ...effect,
-          doneQty,
-          restockedQty: isIn
-            ? (Number(effect.restockedQty) || 0) + healthyQty
-            : effect.restockedQty,
+          doneQuantity,
+          restockedQuantity: isIn
+            ? (Number(effect.restockedQuantity) || 0) + healthyQuantity
+            : effect.restockedQuantity,
           status: isComplete ? EFFECT_STATUSES.APPLIED : EFFECT_STATUSES.PENDING,
           appliedAt: isComplete ? new Date().toISOString() : null,
           history: [
@@ -472,8 +472,8 @@ async function executeGoodsRoundOnce(returnId, { rounds = [], ...logistics } = {
             {
               id: generateId(),
               date,
-              qty,
-              healthyQty: isIn ? healthyQty : null,
+              quantity,
+              healthyQuantity: isIn ? healthyQuantity : null,
               // مشاهده‌ی مستقل انبار: ممکن است با آنچه طرف حساب ادعا
               // کرده فرق داشته باشد (مشتری گفته «معیوب»، انبار می‌بیند
               // «آسیب در حمل»). هر دو نگه داشته می‌شوند چون هرکدام یک

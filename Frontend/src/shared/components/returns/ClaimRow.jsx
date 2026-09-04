@@ -47,8 +47,8 @@ export default function ClaimRow({
         <Input
           type="number"
           min={0}
-          value={claim.qty}
-          onChange={(e) => onUpdate(claim.id, "qty", e.target.value)}
+          value={claim.quantity}
+          onChange={(e) => onUpdate(claim.id, "quantity", e.target.value)}
           className="h-8 text-center text-xs sm:w-16 shrink-0"
         />
 

@@ -34,9 +34,9 @@ export default function ShippingItemsSection({
   const totals = useMemo(() => {
     return items.reduce(
       (acc, item) => {
-        const shipped = item.shippedQty || 0;
-        const status = getRowStatus(item.expectedQty, shipped);
-        acc.expected += item.expectedQty;
+        const shipped = item.shippedQuantity || 0;
+        const status = getRowStatus(item.expectedQuantity, shipped);
+        acc.expected += item.expectedQuantity;
         acc.shipped += shipped;
         acc[status] += 1;
         return acc;

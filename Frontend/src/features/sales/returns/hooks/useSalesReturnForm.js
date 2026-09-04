@@ -30,13 +30,13 @@ export function useSalesReturnForm() {
   const lines = formData.lines || [];
   const offInvoiceClaims = formData.offInvoiceClaims || [];
 
-  const claimedQtyOf = (line) =>
-    (line.claims || []).reduce((sum, c) => sum + (Number(c.qty) || 0), 0);
+  const claimedQuantityOf = (line) =>
+    (line.claims || []).reduce((sum, c) => sum + (Number(c.quantity) || 0), 0);
 
-  const newClaim = (problem, qty) => ({
+  const newClaim = (problem, quantity) => ({
     id: generateId(),
     problem,
-    qty,
+    quantity,
     note: "",
   });
 
@@ -48,7 +48,7 @@ export function useSalesReturnForm() {
         if (line.lineKey !== lineKey) return line;
         const remaining = Math.max(
           0,
-          line.maxReturnableQty - claimedQtyOf(line),
+          line.maxReturnableQuantity - claimedQuantityOf(line),
         );
         if (remaining <= 0) return line;
         return {
@@ -70,15 +70,15 @@ export function useSalesReturnForm() {
           ...line,
           claims: (line.claims || []).map((claim) => {
             if (claim.id !== claimId) return claim;
-            if (field === "qty") {
+            if (field === "quantity") {
               const others = (line.claims || [])
                 .filter((c) => c.id !== claimId)
-                .reduce((s, c) => s + (Number(c.qty) || 0), 0);
-              const maxAllowed = Math.max(0, line.maxReturnableQty - others);
+                .reduce((s, c) => s + (Number(c.quantity) || 0), 0);
+              const maxAllowed = Math.max(0, line.maxReturnableQuantity - others);
               const num = Number(value);
               return {
                 ...claim,
-                qty: Number.isNaN(num) || num < 0 ? 0 : Math.min(num, maxAllowed),
+                quantity: Number.isNaN(num) || num < 0 ? 0 : Math.min(num, maxAllowed),
               };
             }
             return { ...claim, [field]: value };
@@ -108,7 +108,7 @@ export function useSalesReturnForm() {
       setOffInvoiceClaims(
         offInvoiceClaims.map((c) =>
           c.id === existing.id
-            ? { ...c, qty: (Number(c.qty) || 0) + 1 }
+            ? { ...c, quantity: (Number(c.quantity) || 0) + 1 }
             : c,
         ),
       );
@@ -132,7 +132,7 @@ export function useSalesReturnForm() {
     setOffInvoiceClaims(
       offInvoiceClaims.map((claim) => {
         if (claim.id !== claimId) return claim;
-        if (field === "qty" || field === "unitPrice") {
+        if (field === "quantity" || field === "unitPrice") {
           const num = Number(value);
           return { ...claim, [field]: Number.isNaN(num) || num < 0 ? 0 : num };
         }
@@ -149,7 +149,7 @@ export function useSalesReturnForm() {
 
   const onInvoiceClaims = lines.flatMap((line) =>
     (line.claims || [])
-      .filter((claim) => (Number(claim.qty) || 0) > 0)
+      .filter((claim) => (Number(claim.quantity) || 0) > 0)
       .map((claim) => ({
         scope: CLAIM_SCOPES.ON_ORDER,
         offScopeKind: null,
@@ -159,14 +159,14 @@ export function useSalesReturnForm() {
         productName: line.productName,
         unit: line.unit,
         unitPrice: line.unitPrice,
-        qty: Number(claim.qty) || 0,
+        quantity: Number(claim.quantity) || 0,
         problem: claim.problem,
         note: claim.note || "",
       })),
   );
 
   const preparedOffInvoiceClaims = offInvoiceClaims
-    .filter((claim) => (Number(claim.qty) || 0) > 0)
+    .filter((claim) => (Number(claim.quantity) || 0) > 0)
     .map((claim) => ({
       scope: CLAIM_SCOPES.OFF_ORDER,
       offScopeKind: claim.offScopeKind,
@@ -177,7 +177,7 @@ export function useSalesReturnForm() {
       productName: claim.productName,
       unit: claim.unit,
       unitPrice: Number(claim.unitPrice) || 0,
-      qty: Number(claim.qty) || 0,
+      quantity: Number(claim.quantity) || 0,
       problem: claim.problem,
       note: claim.note || "",
     }));
@@ -185,7 +185,7 @@ export function useSalesReturnForm() {
   const allClaims = [...onInvoiceClaims, ...preparedOffInvoiceClaims];
 
   const computedTotal = allClaims.reduce(
-    (sum, claim) => sum + claim.qty * claim.unitPrice,
+    (sum, claim) => sum + claim.quantity * claim.unitPrice,
     0,
   );
 

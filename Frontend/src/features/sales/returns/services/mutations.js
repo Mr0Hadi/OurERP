@@ -84,7 +84,7 @@ export const useRemoveClaimResolutionMutation = (returnId) => {
 export const useExecuteGoodsRoundMutation = (returnId) => {
   const queryClient = useQueryClient();
   return useMutation({
-    // دورِ کالا تجمعی است (`doneQty` جمع می‌شود)، پس تکرارِ یک
+    // دورِ کالا تجمعی است (`doneQuantity` جمع می‌شود)، پس تکرارِ یک
     // درخواست موجودی را دوبار جابه‌جا می‌کند.
     mutationFn: (payload) =>
       executeGoodsRound(returnId, payload, {

@@ -28,6 +28,7 @@ import SaleItemsSection from "../components/forms/SaleItemsSection";
 import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
 import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
 import SaleStatusSection from "../components/forms/SaleStatusSection";
+import OrderLogisticsSection from "@/shared/components/forms/OrderLogisticsSection";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
@@ -103,7 +104,7 @@ export default function SaleDetailForm({ saleData }) {
   }
 
   const computedTotal = items.reduce((sum, item) => {
-    const base = (item.qty || 0) * (item.unitPrice || 0);
+    const base = (item.quantity || 0) * (item.unitPrice || 0);
     const disc = (base * (item.discount || 0)) / 100;
     return sum + base - disc;
   }, 0);
@@ -161,7 +162,7 @@ export default function SaleDetailForm({ saleData }) {
       description: formData.description || "",
       items: items.map((item) => ({
         ...item,
-        lineTotal: item.qty * item.unitPrice * (1 - (item.discount || 0) / 100),
+        lineTotal: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
       })),
       paymentType: formData.paymentType ?? PaymentTypeEnum.CASH,
       paidAmount: Number(formData.paidAmount) || 0,
@@ -256,6 +257,13 @@ export default function SaleDetailForm({ saleData }) {
                   ? "پیش‌فاکتور ارسال‌شده برای مشتری"
                   : "فاکتور صادرشده برای مشتری"
               }
+            />
+
+            <OrderLogisticsSection
+              title="ارسال و حمل"
+              drivers={saleData.drivers}
+              notes={saleData.shippingNotes}
+              notesLabel="یادداشت‌های ارسال"
             />
 
             <SaleStatusSection

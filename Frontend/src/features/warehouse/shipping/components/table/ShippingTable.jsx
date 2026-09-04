@@ -82,7 +82,7 @@ const ShippingTable = ({
         ),
       },
       {
-        accessorKey: "remainingQty",
+        accessorKey: "remainingQuantity",
         header: "تعداد باقی‌مانده",
         cell: (info) => (
           <span className="tabular-nums text-sm">

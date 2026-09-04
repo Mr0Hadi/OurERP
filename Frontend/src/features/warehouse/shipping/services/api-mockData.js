@@ -7,7 +7,7 @@ import { executeGoodsRound as executeSalesReturnRound } from "@/features/sales/r
 import { allPurchaseReturns } from "@/features/purchases/returns/services/mockData";
 import { executeGoodsRound as executePurchaseReturnRound } from "@/features/purchases/returns/services/api-mockData";
 import { buildGoodsLines, pendingGoodsEffects } from "@/shared/domain/returns/resolutions";
-import { EFFECT_KINDS, remainingQtyOf } from "@/shared/domain/returns/effects";
+import { EFFECT_KINDS, remainingQuantityOf } from "@/shared/domain/returns/effects";
 
 import {
   OUTGOING_TYPES,
@@ -38,8 +38,8 @@ const partyKey = (type, id) => `${type}:${id}`;
  * چقدر از یک قلم فروش هنوز واقعاً قابل ارسال است — همین باعث می‌شود
  * ارسال چندمرحله‌ای (چند محموله/چند ماشین) طبیعی کار کند.
  */
-function computeItemShippableQty(item) {
-  return Math.max(0, (item.qty || 0) - (item.shippedQty || 0));
+function computeItemShippableQuantity(item) {
+  return Math.max(0, (item.quantity || 0) - (item.shippedQuantity || 0));
 }
 
 /**
@@ -51,7 +51,7 @@ function pendingReturnLinesForSale(saleId) {
   allSalesReturns.forEach((ret) => {
     if (Number(ret.saleId) !== Number(saleId)) return;
     buildGoodsLines(ret, EFFECT_KINDS.GOODS_OUT).forEach((line) => {
-      if (line.remainingQty <= 0) return;
+      if (line.remainingQuantity <= 0) return;
       lines.push({ ...line, returnId: ret.id, returnNumber: ret.returnNumber });
     });
   });
@@ -76,8 +76,8 @@ function isSaleAwaitingDispatch(sale) {
  */
 function saleToRow(sale) {
   const returnLines = pendingReturnLinesForSale(sale.id);
-  const returnQty = returnLines.reduce((s, l) => s + l.remainingQty, 0);
-  const openItems = sale.items.filter((item) => computeItemShippableQty(item) > 0);
+  const returnQuantity = returnLines.reduce((s, l) => s + l.remainingQuantity, 0);
+  const openItems = sale.items.filter((item) => computeItemShippableQuantity(item) > 0);
   return {
     id: `sale-${sale.id}`,
     saleId: sale.id,
@@ -91,8 +91,8 @@ function saleToRow(sale) {
     statusLabel: SALE_STATUS_LABELS[sale.status] ?? sale.status,
     itemsCount: openItems.length + returnLines.length,
     returnLinesCount: returnLines.length,
-    remainingQty:
-      openItems.reduce((s, i) => s + computeItemShippableQty(i), 0) + returnQty,
+    remainingQuantity:
+      openItems.reduce((s, i) => s + computeItemShippableQuantity(i), 0) + returnQuantity,
     amount: sale.totalAmount,
     createdAt: sale.createdAt,
     updatedAt: sale.updatedAt,
@@ -109,11 +109,11 @@ function saleToRow(sale) {
 function supplierReturnRows() {
   const rows = [];
   allPurchaseReturns.forEach((purchaseReturn) => {
-    const pendingQtys = pendingGoodsEffects(purchaseReturn, EFFECT_KINDS.GOODS_OUT)
-      .map(remainingQtyOf)
-      .filter((qty) => qty > 0);
+    const pendingQuantities = pendingGoodsEffects(purchaseReturn, EFFECT_KINDS.GOODS_OUT)
+      .map(remainingQuantityOf)
+      .filter((quantity) => quantity > 0);
 
-    if (pendingQtys.length === 0) return;
+    if (pendingQuantities.length === 0) return;
 
     rows.push({
       id: `supplier-return-${purchaseReturn.id}`,
@@ -125,9 +125,9 @@ function supplierReturnRows() {
       refNumber: purchaseReturn.returnNumber,
       counterpartyName: purchaseReturn.supplierName,
       date: (purchaseReturn.updatedAt || purchaseReturn.createdAt || "").slice(0, 10),
-      statusLabel: `${pendingQtys.length.toLocaleString("fa-IR")} قلم عودتی`,
-      itemsCount: pendingQtys.length,
-      remainingQty: pendingQtys.reduce((s, q) => s + q, 0),
+      statusLabel: `${pendingQuantities.length.toLocaleString("fa-IR")} قلم عودتی`,
+      itemsCount: pendingQuantities.length,
+      remainingQuantity: pendingQuantities.reduce((s, q) => s + q, 0),
       amount: 0,
       createdAt: purchaseReturn.createdAt,
       updatedAt: purchaseReturn.updatedAt,
@@ -140,18 +140,18 @@ function supplierReturnRows() {
  * ردیف‌های فرم را به «دورِ اجرای اثر» ترجمه می‌کند و به موتور اثرِ
  * مرجوعی می‌سپارد، گروه‌بندی‌شده بر اساس مرجوعی.
  *
- * برخلاف سمت دریافت، اینجا healthyQty معنا ندارد: کالایی که *ما*
+ * برخلاف سمت دریافت، اینجا healthyQuantity معنا ندارد: کالایی که *ما*
  * می‌فرستیم سالم است؛ اگر نبود اصلاً نمی‌رفت.
  */
 async function applyReturnRows(rows, logistics, executeRound, fallbackReturnId) {
   const byReturn = new Map();
 
   rows.forEach((row) => {
-    const qty = Number(row.shippedQty) || 0;
-    if (qty <= 0) return;
+    const quantity = Number(row.shippedQuantity) || 0;
+    if (quantity <= 0) return;
     const returnId = row.returnId ?? fallbackReturnId;
     if (!byReturn.has(returnId)) byReturn.set(returnId, []);
-    byReturn.get(returnId).push({ effectId: row.effectId, qty });
+    byReturn.get(returnId).push({ effectId: row.effectId, quantity });
   });
 
   let last = null;
@@ -200,12 +200,12 @@ export async function fetchOutgoingQueue(params = {}) {
   return applyListQuery(rows, params, {
     searchFields: ["refNumber", "counterpartyName"],
     dateField: "date",
-    numericFields: ["amount", "itemsCount", "remainingQty"],
+    numericFields: ["amount", "itemsCount", "remainingQuantity"],
   });
 }
 
 /**
- * فروش به‌همراه shippableQty هر قلم و خطوط مرجوعیِ همان فروش. فرم
+ * فروش به‌همراه shippableQuantity هر قلم و خطوط مرجوعیِ همان فروش. فرم
  * ارسال باید فقط از همین مقادیر استفاده کند.
  */
 export async function fetchShippingSaleById(id) {
@@ -218,7 +218,7 @@ export async function fetchShippingSaleById(id) {
     ...sale,
     items: sale.items.map((item) => ({
       ...item,
-      shippableQty: computeItemShippableQty(item),
+      shippableQuantity: computeItemShippableQuantity(item),
     })),
     returnLines: pendingReturnLinesForSale(sale.id),
   };
@@ -266,15 +266,15 @@ async function confirmShipmentOnce(saleId, shipmentData) {
     if (!shippedItem) return item;
     return {
       ...item,
-      shippedQty: Math.min(
-        item.qty,
-        (item.shippedQty || 0) + (shippedItem.shippedQty || 0),
+      shippedQuantity: Math.min(
+        item.quantity,
+        (item.shippedQuantity || 0) + (shippedItem.shippedQuantity || 0),
       ),
     };
   });
 
-  const allShipped = updatedItems.every((i) => (i.shippedQty || 0) >= i.qty);
-  const anyShipped = updatedItems.some((i) => (i.shippedQty || 0) > 0);
+  const allShipped = updatedItems.every((i) => (i.shippedQuantity || 0) >= i.quantity);
+  const anyShipped = updatedItems.some((i) => (i.shippedQuantity || 0) > 0);
 
   let newStatus = sale.status;
   if (allShipped) newStatus = SALE_STATUSES.SHIPPED;
@@ -298,7 +298,7 @@ async function confirmShipmentOnce(saleId, shipmentData) {
         driverPhone: shipmentData.driverPhone || "",
         vehiclePlate: shipmentData.vehiclePlate || "",
         note: shipmentData.shippingNote || "",
-        items: rows.filter((i) => (i.shippedQty || 0) > 0),
+        items: rows.filter((i) => (i.shippedQuantity || 0) > 0),
       },
     ],
     updatedAt: new Date().toISOString(),

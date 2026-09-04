@@ -12,8 +12,8 @@ import ClaimRow from "./ClaimRow";
 
 function LineCard({ line, onAddClaim, onUpdateClaim, onRemoveClaim, problemLabels, deliveredLabel }) {
   const claims = line.claims || [];
-  const allocated = claims.reduce((s, c) => s + (Number(c.qty) || 0), 0);
-  const remaining = Math.max(0, line.maxReturnableQty - allocated);
+  const allocated = claims.reduce((s, c) => s + (Number(c.quantity) || 0), 0);
+  const remaining = Math.max(0, line.maxReturnableQuantity - allocated);
 
   return (
     <div
@@ -33,10 +33,10 @@ function LineCard({ line, onAddClaim, onUpdateClaim, onRemoveClaim, problemLabel
         <div className="text-xs text-muted-foreground tabular-nums shrink-0 text-left">
           <div>
             {allocated.toLocaleString("fa-IR")} از{" "}
-            {line.maxReturnableQty.toLocaleString("fa-IR")} ثبت‌شده
+            {line.maxReturnableQuantity.toLocaleString("fa-IR")} ثبت‌شده
           </div>
           <div className="text-[11px] opacity-70">
-            {deliveredLabel}: {(line.deliveredQty ?? 0).toLocaleString("fa-IR")}
+            {deliveredLabel}: {(line.deliveredQuantity ?? 0).toLocaleString("fa-IR")}
           </div>
         </div>
       </div>
@@ -97,15 +97,15 @@ export default function ClaimsSection({
     () =>
       lines.reduce(
         (acc, line) => {
-          const qty = (line.claims || []).reduce(
-            (s, c) => s + (Number(c.qty) || 0),
+          const quantity = (line.claims || []).reduce(
+            (s, c) => s + (Number(c.quantity) || 0),
             0,
           );
-          acc.qty += qty;
-          acc.amount += qty * line.unitPrice;
+          acc.quantity += quantity;
+          acc.amount += quantity * line.unitPrice;
           return acc;
         },
-        { qty: 0, amount: 0 },
+        { quantity: 0, amount: 0 },
       ),
     [lines],
   );
@@ -137,11 +137,11 @@ export default function ClaimsSection({
           ))
         )}
 
-        {totals.qty > 0 && (
+        {totals.quantity > 0 && (
           <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2.5 border border-border mt-2">
             <span className="text-sm font-medium text-muted-foreground">
               جمع ادعاهای روی سند (
-              {totals.qty.toLocaleString("fa-IR")} عدد):
+              {totals.quantity.toLocaleString("fa-IR")} عدد):
             </span>
             <Badge variant="outline" className="text-sm font-bold">
               {totals.amount.toLocaleString("fa-IR")} ریال

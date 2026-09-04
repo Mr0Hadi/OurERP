@@ -16,10 +16,10 @@ export function createRowStatus({
   emptyKey,
   emptyLabel,
 }) {
-  const getRowStatus = (expectedQty, actualQty) => {
-    const qty = actualQty || 0;
-    if (qty <= 0) return emptyKey;
-    if (qty < expectedQty) return "partial";
+  const getRowStatus = (expectedQuantity, actualQuantity) => {
+    const quantity = actualQuantity || 0;
+    if (quantity <= 0) return emptyKey;
+    if (quantity < expectedQuantity) return "partial";
     return "complete";
   };
 

@@ -66,7 +66,7 @@ const ReceivingTable = ({
       {
         // قرینه‌ی ستونِ صف ارسال: «چند قلم» و «چند عدد» دو سوال جدا
         // هستند و انباردار برای برنامه‌ریزیِ محموله به هر دو نیاز دارد.
-        accessorKey: "remainingQty",
+        accessorKey: "remainingQuantity",
         header: "تعداد باقی‌مانده",
         cell: (info) => (
           <span className="tabular-nums text-sm">

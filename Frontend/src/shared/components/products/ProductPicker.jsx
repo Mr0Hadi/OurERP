@@ -26,7 +26,7 @@ import { unitLabelOf } from "@/shared/domain/enums/productUnit";
  */
 
 const lineTotalOf = (item) =>
-  (Number(item.qty) || 0) *
+  (Number(item.quantity) || 0) *
   (Number(item.unitPrice) || 0) *
   (1 - (Number(item.discount) || 0) / 100);
 
@@ -45,15 +45,15 @@ export default function ProductPicker({
   // برای همین آمده.
   const [isPickerOpen, setIsPickerOpen] = useState(items.length === 0);
 
-  const addedQtyOf = (productId) =>
-    Number(items.find((item) => item.productId === productId)?.qty) || 0;
+  const addedQuantityOf = (productId) =>
+    Number(items.find((item) => item.productId === productId)?.quantity) || 0;
 
   const handleAdd = (product) => {
     if (items.some((item) => item.productId === product.id)) {
       onItemsChange(
         items.map((item) =>
           item.productId === product.id
-            ? { ...item, qty: (Number(item.qty) || 0) + 1 }
+            ? { ...item, quantity: (Number(item.quantity) || 0) + 1 }
             : item,
         ),
       );
@@ -66,7 +66,7 @@ export default function ProductPicker({
         productName: product.name,
         productCode: product.code,
         unit: unitLabelOf(product.unit),
-        qty: 1,
+        quantity: 1,
         unitPrice: priceOf(product),
         discount: 0,
       },
@@ -87,17 +87,36 @@ export default function ProductPicker({
 
   const grandTotal = items.reduce((sum, item) => sum + lineTotalOf(item), 0);
 
+  /**
+   * جزئیاتِ خرید/فروش که از سرور می‌آید نام و واحدِ کالا را کامل ندارد
+   * (`PurchaseItemDto` واحد نمی‌فرستد و `GetSaleDetail` حتی نام کالا را
+   * هم نمی‌دهد). چون فهرستِ کالاها همین‌جا در دسترس است، جای خالی از
+   * روی `productId` پر می‌شود — فقط برای نمایش؛ چیزی به state اضافه
+   * نمی‌شود.
+   */
+  const displayItems = items.map((item) => {
+    if (item.productName && item.unit) return item;
+    const product = products.find((candidate) => candidate.id === item.productId);
+    if (!product) return item;
+    return {
+      ...item,
+      productName: item.productName || product.name,
+      productCode: item.productCode || product.code,
+      unit: item.unit || unitLabelOf(product.unit),
+    };
+  });
+
   const selectedItems = items.length > 0 && (
     <>
       <SelectedItemsTable
-        items={items}
+        items={displayItems}
         onFieldChange={handleFieldChange}
         onRemove={handleRemove}
         lineTotal={lineTotalOf}
         grandTotal={grandTotal}
       />
       <SelectedItemsCards
-        items={items}
+        items={displayItems}
         onFieldChange={handleFieldChange}
         onRemove={handleRemove}
         lineTotal={lineTotalOf}
@@ -113,7 +132,7 @@ export default function ProductPicker({
   ) : (
     <ProductSearchPanel
       products={products}
-      addedQtyOf={addedQtyOf}
+      addedQuantityOf={addedQuantityOf}
       onAdd={handleAdd}
     />
   );

@@ -38,7 +38,7 @@ export default function IssueBreakdownEditor({
   onRemoveIssue,
 }) {
   const issues = item.issues || [];
-  const allocated = issues.reduce((s, i) => s + (Number(i.qty) || 0), 0);
+  const allocated = issues.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
   const remaining = budget - allocated;
   const isObservation = isObservationLine(item);
   const typeOptions = issueTypesFor(item);
@@ -100,9 +100,9 @@ export default function IssueBreakdownEditor({
           <Input
             type="number"
             min={0}
-            value={issue.qty}
+            value={issue.quantity}
             onChange={(e) =>
-              onUpdateIssue(item.lineId, issue.id, "qty", e.target.value)
+              onUpdateIssue(item.lineId, issue.id, "quantity", e.target.value)
             }
             className="h-8 text-center text-xs sm:w-16 shrink-0"
           />

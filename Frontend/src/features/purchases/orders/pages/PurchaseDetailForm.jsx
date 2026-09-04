@@ -26,6 +26,7 @@ import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
 import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
 import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
 import PurchaseStatusSection from "../components/forms/PurchaseStatusSection";
+import OrderLogisticsSection from "@/shared/components/forms/OrderLogisticsSection";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
 import { ROUTES } from "@/shared/constants/routes";
@@ -111,7 +112,7 @@ export default function PurchaseDetailForm({ purchaseData }) {
       : null;
 
   const computedTotal = items.reduce((sum, item) => {
-    const base = (item.qty || 0) * (item.unitPrice || 0);
+    const base = (item.quantity || 0) * (item.unitPrice || 0);
     const disc = (base * (item.discount || 0)) / 100;
     return sum + base - disc;
   }, 0);
@@ -165,7 +166,7 @@ export default function PurchaseDetailForm({ purchaseData }) {
       description: formData.description || "",
       items: items.map((item) => ({
         ...item,
-        lineTotal: item.qty * item.unitPrice * (1 - (item.discount || 0) / 100),
+        lineTotal: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
       })),
       paymentType: formData.paymentType ?? PaymentTypeEnum.CASH,
       paidAmount: Number(formData.paidAmount) || 0,
@@ -279,6 +280,13 @@ export default function PurchaseDetailForm({ purchaseData }) {
                   ? "پیش‌فاکتور دریافتی از تامین‌کننده"
                   : "فاکتور دریافتی از تامین‌کننده"
               }
+            />
+
+            <OrderLogisticsSection
+              title="تحویل و حمل"
+              drivers={purchaseData.drivers}
+              notes={purchaseData.receivingNotes}
+              notesLabel="یادداشت‌های دریافت"
             />
 
             <PurchaseStatusSection

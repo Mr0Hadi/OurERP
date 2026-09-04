@@ -1,5 +1,7 @@
 // src/shared/domain/returns/effects.js
 
+import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+
 /**
  * چهار اثر پایه‌ی یک مرجوعی — مشترک بین مرجوعی فروش و مرجوعی خرید.
  *
@@ -42,52 +44,14 @@ export function isGoodsEffect(kind) {
 // ─── روش جابه‌جایی پول ──────────────────────────────────────────────────────
 
 /**
- * پول از چه راهی جابه‌جا می‌شود.
+ * پول از چه راهی جابه‌جا می‌شود — همان `PaymentTypeEnum`ِ سند.
  *
- * قبلاً این مفهوم بین سه چیز پخش بود — «جهت» (که CREDIT هم داخلش بود)،
- * «کانال»، و «روش». هر سه یک سوال را از سه زاویه می‌پرسیدند و دو تا از
- * سه مقدارِ کانال یا بی‌مصرف بودند یا تکرارِ جهت. حالا فقط دو محور
- * مانده: *جهت* (پول به کدام سمت می‌رود — در returnResolutions) و
- * *روش* (از چه راهی). همین یک لیست، همان واژگانی است که فرم ثبت فروش
- * برای پرداخت استفاده می‌کند.
+ * قبلاً این مفهوم بین سه چیز پخش بود («جهت»، «کانال»، «روش») و بعد از
+ * یکی‌شدنشان باز هم یک شمارشِ جداگانه (`PAYMENT_METHODS`) مانده بود که
+ * فقط شماره‌هایش با سطحِ سند فرق داشت. حالا فقط دو محور مانده: *جهت*
+ * (پول به کدام سمت می‌رود — در returnResolutions) و *روش* (از چه
+ * راهی)، و روش همان واژگانِ فرمِ خرید/فروش است.
  */
-// بدون معادل در بکند — این «روش پرداخت یک اثر مرجوعی» است، نه
-// PaymentTypeEnum سطح سند (اعضایش هم فرق دارند: ON_ACCOUNT/STORE_CREDIT
-// را PaymentTypeEnum ندارد).
-export const PAYMENT_METHODS = {
-  CASH: 0,
-  CHECK: 1,
-  TRANSFER: 2,
-  ON_ACCOUNT: 3,
-  STORE_CREDIT: 4,
-  MIXED: 5,
-};
-
-export const PAYMENT_METHOD_LABELS = {
-  [PAYMENT_METHODS.CASH]: "نقدی",
-  [PAYMENT_METHODS.CHECK]: "چک",
-  [PAYMENT_METHODS.TRANSFER]: "انتقال بانکی",
-  [PAYMENT_METHODS.ON_ACCOUNT]: "نسیه (روی حساب مشتری)",
-  [PAYMENT_METHODS.STORE_CREDIT]: "اعتبار خرید بعدی",
-  [PAYMENT_METHODS.MIXED]: "ترکیبی",
-};
-
-/** روش‌هایی که یک شماره‌ی پیگیری همراه دارند. */
-export const REFERENCE_LABELS = {
-  [PAYMENT_METHODS.CHECK]: "شماره چک",
-  [PAYMENT_METHODS.TRANSFER]: "شماره پیگیری",
-};
-
-/**
- * روش‌هایی که می‌توانند جزءِ یک پرداخت ترکیبی باشند. «نسیه» و «اعتبار»
- * اینجا نیستند چون خودشان یعنی «الان پولی جابه‌جا نمی‌شود» — تکه‌کردنشان
- * بی‌معناست.
- */
-export const SPLITTABLE_PAYMENT_METHODS = [
-  PAYMENT_METHODS.CASH,
-  PAYMENT_METHODS.CHECK,
-  PAYMENT_METHODS.TRANSFER,
-];
 
 /**
  * آیا این روش، ارزشِ همین فاکتور را تغییر می‌دهد؟
@@ -97,7 +61,7 @@ export const SPLITTABLE_PAYMENT_METHODS = [
  * همین فاکتور را جابه‌جا می‌کند و فقط زمانِ تسویه‌اش عقب می‌افتد.
  */
 export function affectsInvoiceTotal(method) {
-  return method !== PAYMENT_METHODS.STORE_CREDIT;
+  return method !== PaymentTypeEnum.STORE_CREDIT;
 }
 
 // ─── وضعیت اجرای اثر ────────────────────────────────────────────────────────
@@ -136,24 +100,24 @@ const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
 /**
- * یک اثر تازه. qty فقط برای اثرهای کالایی معنا دارد و amount فقط برای
+ * یک اثر تازه. quantity فقط برای اثرهای کالایی معنا دارد و amount فقط برای
  * اثرهای پولی؛ عمداً هر دو روی یک شکل نگه داشته می‌شوند تا مصرف‌کننده
  * لازم نباشد دو نوع رکورد جدا بشناسد.
  *
- * doneQty مقدارِ *تجمعیِ* اجراشده است. برای اثرهای کالایی، انبار
- * می‌تواند چند دور جزئی اجرا کند و اثر تا رسیدن doneQty به qty در
+ * doneQuantity مقدارِ *تجمعیِ* اجراشده است. برای اثرهای کالایی، انبار
+ * می‌تواند چند دور جزئی اجرا کند و اثر تا رسیدن doneQuantity به quantity در
  * PENDING می‌ماند — همان قراردادی که ارسال جایگزین و دریافت مرجوعی
  * از قبل داشتند، فقط حالا یکسان‌شده برای هر دو جهت.
  *
- * restockedQty فقط برای GOODS_IN معنا دارد و همیشه ≤ doneQty است:
+ * restockedQuantity فقط برای GOODS_IN معنا دارد و همیشه ≤ doneQuantity است:
  * بخشی از کالای برگشتی که سالم بوده و به موجودی قابل‌فروش برگشته.
- * کالای معیوبِ برگشتی هم دریافت می‌شود (doneQty بالا می‌رود، ادعا
+ * کالای معیوبِ برگشتی هم دریافت می‌شود (doneQuantity بالا می‌رود، ادعا
  * بسته می‌شود) ولی وارد موجودی نمی‌شود. بدون این تفکیک، پس‌گرفتنِ
  * کالای خراب موجودیِ قابل‌فروش را الکی بالا می‌برد.
  */
 export function createEffect({
   kind,
-  qty = 0,
+  quantity = 0,
   productId = null,
   productCode = "",
   productName = "",
@@ -168,9 +132,9 @@ export function createEffect({
   return {
     id: generateId(),
     kind,
-    qty: isGoods ? Number(qty) || 0 : 0,
-    doneQty: 0,
-    restockedQty: kind === EFFECT_KINDS.GOODS_IN ? 0 : null,
+    quantity: isGoods ? Number(quantity) || 0 : 0,
+    doneQuantity: 0,
+    restockedQuantity: kind === EFFECT_KINDS.GOODS_IN ? 0 : null,
     productId: isGoods ? productId : null,
     productCode: isGoods ? productCode : "",
     productName: isGoods ? productName : "",
@@ -195,10 +159,10 @@ export function createEffect({
  * `effect.history` می‌نشیند:
  *
  *   {
- *     id, date, qty,
- *     healthyQty,              // فقط GOODS_IN؛ = qty منهای مجموع مشاهده‌ها
+ *     id, date, quantity,
+ *     healthyQuantity,              // فقط GOODS_IN؛ = quantity منهای مجموع مشاهده‌ها
  *     observations: [          // مشاهده‌ی مستقلِ انباردار
- *       { problem, qty, note }
+ *       { problem, quantity, note }
  *     ],
  *     partyName, partyNationalId, vehiclePlate, note
  *   }
@@ -217,18 +181,18 @@ export function normalizeObservations(observations = []) {
   return observations
     .map((observation) => ({
       problem: observation.problem ?? null,
-      qty: Number(observation.qty) || 0,
+      quantity: Number(observation.quantity) || 0,
       note: observation.note || "",
     }))
     // `problem` یک enum عددی است و عضو اولش صفر — پس بررسی باید صریح
     // باشد، وگرنه مشاهده‌ی «کالای اشتباه ارسال شد» (۰) بی‌صدا حذف می‌شود.
-    .filter((observation) => observation.problem !== null && observation.qty > 0);
+    .filter((observation) => observation.problem !== null && observation.quantity > 0);
 }
 
 /** مجموع تعدادی که در یک دور «مشکل‌دار» گزارش شده. */
-export function observedQtyOf(observations = []) {
+export function observedQuantityOf(observations = []) {
   return normalizeObservations(observations).reduce(
-    (sum, observation) => sum + observation.qty,
+    (sum, observation) => sum + observation.quantity,
     0,
   );
 }
@@ -244,31 +208,31 @@ export function observationsOf(effect) {
 
   (effect?.history || []).forEach((round) => {
     normalizeObservations(round.observations).forEach((observation) => {
-      const current = totals.get(observation.problem) || { qty: 0, notes: [] };
-      current.qty += observation.qty;
+      const current = totals.get(observation.problem) || { quantity: 0, notes: [] };
+      current.quantity += observation.quantity;
       if (observation.note) current.notes.push(observation.note);
       totals.set(observation.problem, current);
     });
   });
 
-  return [...totals.entries()].map(([problem, { qty, notes }]) => ({
+  return [...totals.entries()].map(([problem, { quantity, notes }]) => ({
     problem,
-    qty,
+    quantity,
     note: notes.join(" / "),
   }));
 }
 
 /** مقداری از یک اثر کالایی که هنوز اجرا نشده. */
-export function remainingQtyOf(effect) {
+export function remainingQuantityOf(effect) {
   if (!isGoodsEffect(effect?.kind)) return 0;
-  return Math.max(0, (Number(effect.qty) || 0) - (Number(effect.doneQty) || 0));
+  return Math.max(0, (Number(effect.quantity) || 0) - (Number(effect.doneQuantity) || 0));
 }
 
 // ─── جمع‌بندی ───────────────────────────────────────────────────────────────
 
 const EMPTY_SUMMARY = {
-  goodsInQty: 0,
-  goodsOutQty: 0,
+  goodsInQuantity: 0,
+  goodsOutQuantity: 0,
   moneyIn: 0,
   moneyOut: 0,
   netMoney: 0,
@@ -291,20 +255,20 @@ export function summarizeEffects(effects = [], { includePending = false } = {}) 
     if (pending) sum.pendingCount += 1;
     if (pending && !includePending) return sum;
 
-    // برای اثر کالاییِ در حال اجرا، آنچه واقعاً حرکت کرده doneQty است
-    // نه qty؛ مگر اینکه پیش‌نمایشِ کاملِ تصمیم خواسته شده باشد.
-    const qty = isGoodsEffect(effect.kind)
+    // برای اثر کالاییِ در حال اجرا، آنچه واقعاً حرکت کرده doneQuantity است
+    // نه quantity؛ مگر اینکه پیش‌نمایشِ کاملِ تصمیم خواسته شده باشد.
+    const quantity = isGoodsEffect(effect.kind)
       ? includePending
-        ? Number(effect.qty) || 0
-        : Number(effect.doneQty) || 0
+        ? Number(effect.quantity) || 0
+        : Number(effect.doneQuantity) || 0
       : 0;
 
     switch (effect.kind) {
       case EFFECT_KINDS.GOODS_IN:
-        sum.goodsInQty += qty;
+        sum.goodsInQuantity += quantity;
         break;
       case EFFECT_KINDS.GOODS_OUT:
-        sum.goodsOutQty += qty;
+        sum.goodsOutQuantity += quantity;
         break;
       case EFFECT_KINDS.MONEY_IN:
         sum.moneyIn += Number(effect.amount) || 0;
@@ -330,10 +294,10 @@ export function summarizeEffects(effects = [], { includePending = false } = {}) 
  * وقتی کالای ورودی و خروجی یکی نیستند (تعویض با کالای دیگر) قابل جمع
  * زدن در یک عدد نیست.
  *
- * برای GOODS_IN مبنا restockedQty است نه doneQty — فقط بخش سالمِ
+ * برای GOODS_IN مبنا restockedQuantity است نه doneQuantity — فقط بخش سالمِ
  * کالای برگشتی به موجودی قابل‌فروش برمی‌گردد. در حالت پیش‌نمایش
  * (includePending) هنوز معلوم نیست چقدرش سالم است، پس خوش‌بینانه کل
- * qty فرض می‌شود؛ این عدد فقط برای نمایش به کاربر است و هرگز به
+ * quantity فرض می‌شود؛ این عدد فقط برای نمایش به کاربر است و هرگز به
  * موجودی واقعی اعمال نمی‌شود.
  */
 export function stockDeltasOf(effects = [], { includePending = false } = {}) {
@@ -345,15 +309,15 @@ export function stockDeltasOf(effects = [], { includePending = false } = {}) {
     if (effect.productId == null) return;
 
     const isIn = effect.kind === EFFECT_KINDS.GOODS_IN;
-    const qty = includePending
-      ? Number(effect.qty) || 0
+    const quantity = includePending
+      ? Number(effect.quantity) || 0
       : isIn
-        ? Number(effect.restockedQty) || 0
-        : Number(effect.doneQty) || 0;
-    if (qty <= 0) return;
+        ? Number(effect.restockedQuantity) || 0
+        : Number(effect.doneQuantity) || 0;
+    if (quantity <= 0) return;
 
     const sign = isIn ? 1 : -1;
-    deltas.set(effect.productId, (deltas.get(effect.productId) || 0) + sign * qty);
+    deltas.set(effect.productId, (deltas.get(effect.productId) || 0) + sign * quantity);
   });
 
   return [...deltas.entries()]

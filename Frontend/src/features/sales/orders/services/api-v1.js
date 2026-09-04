@@ -1,7 +1,11 @@
 // src\features\sales\services\api-v1.js
 
 import axiosInstance from "@/shared/services/api/axios";
-import { normalizeListResponse } from "@/shared/services/api/contract";
+import {
+  normalizeListResponse,
+  documentVersion,
+} from "@/shared/services/api/contract";
+import { toDateOnly } from "@/shared/utils/dateUtils";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 
 export {
@@ -43,14 +47,13 @@ export {
 
 /**
  * شکلِ خطِ کالا در `CreateSaleItemDto` — بدون `id`، چون هنوز ردیفی وجود
- * ندارد. `qty` نامِ فرانت است و `quantity` نامِ سرور؛ هر دو پذیرفته
- * می‌شود تا سندی که همین الان از `GetSaleDetail` خوانده شده هم بتواند
- * بی‌تبدیل پس فرستاده شود (مسیرِ `updateSaleStatus`).
+ * ندارد. نام‌ها با سرور یکی است، فقط فیلدهای اضافیِ فرم (نام/کد کالا،
+ * جمعِ خط) کنار گذاشته می‌شوند.
  */
 function toApiCreateItems(items = []) {
   return items.map((item) => ({
     productId: item.productId,
-    quantity: item.qty ?? item.quantity,
+    quantity: item.quantity,
     unitPrice: item.unitPrice,
     discount: item.discount || 0,
   }));
@@ -64,23 +67,83 @@ function toApiUpdateItems(items = []) {
   }));
 }
 
-/** همان نگاشتِ سمتِ خرید — نگاه کنید به توضیحِ کاملش در `purchases/orders/services/api-v1.js`. */
-function toApiPaymentDetails({ paymentType, paidAmount, checkNumber, transferRef, mixedPayments }) {
+/** همان نگاشتِ سمتِ خرید — توضیح کاملش در `purchases/orders/services/api-v1.js`. */
+function toApiPaymentDetails({
+  paymentType,
+  paidAmount,
+  checkNumber,
+  transferRef,
+  mixedPayments,
+}) {
   if (paymentType === PaymentTypeEnum.MIXED) {
-    return (mixedPayments || []).map((p) => ({
-      type: p.type,
-      amount: p.amount,
-      checkNumber: p.checkNumber || undefined,
-      transferRef: p.transferRef || undefined,
+    return (mixedPayments || []).map((part) => ({
+      type: part.type,
+      amount: Number(part.amount) || 0,
+      checkNumber: part.checkNumber || undefined,
+      transferRef: part.transferRef || undefined,
     }));
   }
+
+  const amount = Number(paidAmount) || 0;
+
   if (paymentType === PaymentTypeEnum.CHECK) {
-    return [{ type: paymentType, amount: paidAmount, checkNumber: checkNumber || undefined }];
+    return [{ type: paymentType, amount, checkNumber: checkNumber || undefined }];
   }
   if (paymentType === PaymentTypeEnum.TRANSFER) {
-    return [{ type: paymentType, amount: paidAmount, transferRef: transferRef || undefined }];
+    return [{ type: paymentType, amount, transferRef: transferRef || undefined }];
+  }
+  if (paymentType === PaymentTypeEnum.CREDIT) {
+    return [{ type: paymentType, amount }];
   }
   return [];
+}
+
+/** قرینه‌ی تابعِ بالا: `paymentDetails`ِ سرور روی فیلدهای فرم پهن می‌شود. */
+function fromApiPaymentDetails(paymentDetails = [], paymentType) {
+  const rows = paymentDetails.map((detail) => ({
+    id: detail.id,
+    type: detail.type,
+    amount: Number(detail.amount) || 0,
+    checkNumber: detail.checkNumber || "",
+    transferRef: detail.transferRef || "",
+  }));
+
+  if (paymentType === PaymentTypeEnum.MIXED) {
+    return { mixedPayments: rows, checkNumber: "", transferRef: "" };
+  }
+
+  const single = rows.find((row) => row.checkNumber || row.transferRef) || rows[0];
+  return {
+    mixedPayments: [],
+    checkNumber: single?.checkNumber || "",
+    transferRef: single?.transferRef || "",
+  };
+}
+
+/**
+ * سرور → فرم، برای کلِ سندِ فروش. دوقلوی `fromApiPurchase`؛ تنها
+ * تفاوتش این است که یادداشت‌های حمل اینجا `shippingNotes` نام دارند.
+ *
+ * ⚠️ `GetSaleDetail` موجودیتِ خامِ `SaleItem` را برمی‌گرداند و `Product`
+ * را `Include` نمی‌کند، پس نام و کدِ کالا در پاسخ نیست؛ `ProductPicker`
+ * آن‌ها را از فهرستِ کالاها جبران می‌کند.
+ */
+export function fromApiSale(dto) {
+  if (!dto) return dto;
+
+  const sale = {
+    ...dto,
+    invoiceDate: toDateOnly(dto.invoiceDate),
+    dueDate: toDateOnly(dto.dueDate),
+    items: dto.items || [],
+    paymentDetails: dto.paymentDetails || [],
+    ...fromApiPaymentDetails(dto.paymentDetails, dto.paymentType),
+    drivers: dto.drivers || [],
+    shippingNotes: dto.shippingNotes || [],
+    attachments: dto.attachments || [],
+  };
+
+  return { ...sale, updatedAt: sale.updatedAt || documentVersion(sale) };
 }
 
 /** بند ۳ سندِ `invoice-attachment-requirements.fa.md` — همان شکلِ `filesPayload`ِ هوکِ آپلود. */
@@ -131,7 +194,7 @@ export async function fetchSaleById(id) {
   const { data } = await axiosInstance.get("/Sale/GetSaleDetail", {
     params: { id },
   });
-  return data;
+  return fromApiSale(data);
 }
 
 export async function createSale(saleData) {
