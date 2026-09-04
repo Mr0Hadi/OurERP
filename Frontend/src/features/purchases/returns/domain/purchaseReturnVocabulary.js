@@ -106,5 +106,5 @@ export const PURCHASE_RETURN_STATUS_LABELS =
  * دکمه‌ی مرجوعی به آن نیاز دارد و نباید به پیاده‌سازیِ mock وصل باشد.
  */
 export function hasAnythingArrived(purchase) {
-  return (purchase.items || []).some((item) => (item.receivedQty || 0) > 0);
+  return (purchase.items || []).some((item) => (item.receivedQuantity || 0) > 0);
 }

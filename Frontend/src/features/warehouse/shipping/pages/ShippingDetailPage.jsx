@@ -164,7 +164,7 @@ function ShippingDetailForm({ sale }) {
             </Button>
           </div>
 
-          {items.every((i) => !(i.shippedQty > 0)) && (
+          {items.every((i) => !(i.shippedQuantity > 0)) && (
             <p className="text-xs text-muted-foreground text-center px-2">
               این فروش هنوز هیچ ارسالی ندارد. باقیمانده‌ای که این دور ارسال
               نکنید، برای دور بعدی در همین لیست باقی می‌ماند.

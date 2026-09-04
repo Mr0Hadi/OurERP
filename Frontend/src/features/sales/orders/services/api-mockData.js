@@ -16,7 +16,7 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * موجودی کالاهای یک فروش را به‌طور کامل برمی‌گرداند — دقیقاً معکوسِ
- * کاهشی که در createSale انجام شده (بر اساس qty، نه shippedQty؛ چون
+ * کاهشی که در createSale انجام شده (بر اساس quantity، نه shippedQuantity؛ چون
  * کاهش اولیه هم بدون توجه به وضعیت ارسال انجام شده بود).
  * این تابع فقط هنگام «لغو» فروش صدا زده می‌شود، نه هنگام حذف رکورد.
  */
@@ -29,7 +29,7 @@ function restoreSaleStock(sale) {
   adjustProductsStock(
     (sale.items || []).map((item) => ({
       productId: item.productId,
-      delta: item.qty || 0,
+      delta: item.quantity || 0,
     })),
   );
 }
@@ -63,7 +63,7 @@ export async function createSale(saleData) {
   adjustProductsStock(
     (newSale.items || []).map((item) => ({
       productId: item.productId,
-      delta: -(item.qty || 0),
+      delta: -(item.quantity || 0),
     })),
   );
 
@@ -79,12 +79,14 @@ export async function createSale(saleData) {
 export async function fetchSales(params = {}) {
   await delay(500);
 
-  const { status = "", paymentType = "", customerIds = [] } = params;
+  const { status = "", paymentType = "", customerId = "" } = params;
 
   let filtered = [...allSales];
 
-  if (Array.isArray(customerIds) && customerIds.length > 0) {
-    filtered = filtered.filter((s) => customerIds.includes(s.customerId));
+  if (customerId !== "" && customerId != null) {
+    filtered = filtered.filter(
+      (s) => String(s.customerId) === String(customerId),
+    );
   }
 
   if (status !== "" && status !== undefined) {

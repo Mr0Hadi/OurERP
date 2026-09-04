@@ -11,7 +11,7 @@ import {
   expandComposition,
   validateComposition,
 } from "@/shared/domain/returns/resolutions";
-import { PAYMENT_METHODS } from "@/shared/domain/returns/effects";
+import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { useSyncedComputedValue } from "@/shared/hooks/useSyncedComputedValue";
 import GoodsItemsPicker from "./GoodsItemsPicker";
 import ResolutionMoneySection from "./ResolutionMoneySection";
@@ -48,7 +48,7 @@ export default function ResolutionComposer({
   const [syncedRemaining, setSyncedRemaining] = useState(remaining);
   if (remaining !== syncedRemaining) {
     setSyncedRemaining(remaining);
-    setComposition((prev) => ({ ...prev, qty: remaining }));
+    setComposition((prev) => ({ ...prev, quantity: remaining }));
   }
 
   const patch = (changes) => setComposition((prev) => ({ ...prev, ...changes }));
@@ -59,12 +59,12 @@ export default function ResolutionComposer({
       [slot]: { ...prev[slot], ...changes },
     }));
 
-  const defaultClaimItem = (qtyForItem) => ({
+  const defaultClaimItem = (quantityForItem) => ({
     productId: claim.productId ?? null,
     productCode: claim.productCode ?? "",
     productName: claim.productName ?? "",
     unit: claim.unit ?? "",
-    qty: qtyForItem,
+    quantity: quantityForItem,
     unitPrice: claim.unitPrice ?? 0,
     discount: 0,
   });
@@ -78,12 +78,12 @@ export default function ResolutionComposer({
   // مبلغِ جابه‌جاییِ پول همیشه با تعداد و قیمتِ همین تصمیم همگام
   // می‌ماند — با هر تغییری در تعداد، نه فقط لحظه‌ی انتخاب جهتِ پول.
   const defaultMoneyAmount =
-    (Number(composition.qty) || 0) * (Number(claim.unitPrice) || 0);
+    (Number(composition.quantity) || 0) * (Number(claim.unitPrice) || 0);
   useSyncedComputedValue(
     defaultMoneyAmount,
     (value) => patchMoney({ amount: String(value) }),
     composition.money.direction !== MONEY_DIRECTIONS.NONE &&
-      composition.money.method !== PAYMENT_METHODS.MIXED,
+      composition.money.method !== PaymentTypeEnum.MIXED,
   );
 
   // برای پرداخت ترکیبی، تا وقتی فقط یک ردیف هست (یعنی هنوز تقسیم
@@ -98,7 +98,7 @@ export default function ResolutionComposer({
         ),
       }),
     composition.money.direction !== MONEY_DIRECTIONS.NONE &&
-      composition.money.method === PAYMENT_METHODS.MIXED &&
+      composition.money.method === PaymentTypeEnum.MIXED &&
       moneyParts.length === 1,
   );
 
@@ -108,7 +108,7 @@ export default function ResolutionComposer({
   );
 
   const errors = useMemo(
-    () => validateComposition(composition, claim, { remainingQty: remaining }),
+    () => validateComposition(composition, claim, { remainingQuantity: remaining }),
     [composition, claim, remaining],
   );
 
@@ -118,7 +118,7 @@ export default function ResolutionComposer({
     setComposition(emptyComposition(remaining));
   };
 
-  const qty = Number(composition.qty) || 0;
+  const quantity = Number(composition.quantity) || 0;
   const nothingChosen =
     !composition.goodsIn.enabled &&
     !composition.goodsOut.enabled &&
@@ -135,8 +135,8 @@ export default function ResolutionComposer({
           type="number"
           min={1}
           max={remaining}
-          value={composition.qty}
-          onChange={(e) => patch({ qty: Number(e.target.value) || 0 })}
+          value={composition.quantity}
+          onChange={(e) => patch({ quantity: Number(e.target.value) || 0 })}
           className="h-8 text-xs text-center"
         />
       </div>
@@ -152,7 +152,7 @@ export default function ResolutionComposer({
                   items:
                     checked === true
                       ? allowPicker && composition[slot].items.length === 0
-                        ? [defaultClaimItem(qty)]
+                        ? [defaultClaimItem(quantity)]
                         : composition[slot].items
                       : [],
                 })
@@ -164,7 +164,7 @@ export default function ResolutionComposer({
               <span className="block text-[11px] text-muted-foreground">
                 {allowPicker
                   ? hint
-                  : `${qty.toLocaleString("fa-IR")} ${claim.unit || "عدد"} از ${claim.productName} — ${hint}`}
+                  : `${quantity.toLocaleString("fa-IR")} ${claim.unit || "عدد"} از ${claim.productName} — ${hint}`}
               </span>
             </span>
           </label>
@@ -232,7 +232,7 @@ export default function ResolutionComposer({
         disabled={isBusy || errors.length > 0}
       >
         <Plus className="h-3.5 w-3.5" />
-        ثبت این تصمیم برای {qty.toLocaleString("fa-IR")} عدد
+        ثبت این تصمیم برای {quantity.toLocaleString("fa-IR")} عدد
       </Button>
     </div>
   );

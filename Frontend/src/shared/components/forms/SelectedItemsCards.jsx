@@ -43,9 +43,9 @@ export default function SelectedItemsCards({
               <Input
                 type="number"
                 min={1}
-                value={item.qty}
+                value={item.quantity}
                 onChange={(e) =>
-                  onFieldChange(item.productId, "qty", e.target.value)
+                  onFieldChange(item.productId, "quantity", e.target.value)
                 }
                 className="h-8 text-center text-xs w-full"
               />

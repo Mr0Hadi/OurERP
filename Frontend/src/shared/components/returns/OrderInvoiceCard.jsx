@@ -24,7 +24,7 @@ const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
 export default function OrderInvoiceCard({
   order: sale,
   defaultOpen = true,
-  qtyLabel = "تعداد فاکتور",
+  quantityLabel = "تعداد فاکتور",
   deliveredLabel = "تحویل‌شده",
   partyName,
 }) {
@@ -71,7 +71,7 @@ export default function OrderInvoiceCard({
                 <tr className="border-b border-border text-muted-foreground">
                   <th className="py-2 px-2 text-right font-medium">کالا</th>
                   <th className="py-2 px-2 text-center font-medium">
-                    {qtyLabel}
+                    {quantityLabel}
                   </th>
                   <th className="py-2 px-2 text-center font-medium">
                     {deliveredLabel}
@@ -97,7 +97,7 @@ export default function OrderInvoiceCard({
                       </div>
                     </td>
                     <td className="py-2 px-2 text-center tabular-nums">
-                      {fa(item.qty)} {item.unit}
+                      {fa(item.quantity)} {item.unit}
                     </td>
                     <td className="py-2 px-2 text-center tabular-nums">
                       <DeliveredCell item={item} />
@@ -140,8 +140,8 @@ export default function OrderInvoiceCard({
                   </p>
                 </div>
                 <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
-                  <Row label={qtyLabel}>
-                    {fa(item.qty)} {item.unit}
+                  <Row label={quantityLabel}>
+                    {fa(item.quantity)} {item.unit}
                   </Row>
                   <Row label={deliveredLabel}>
                     <DeliveredCell item={item} />
@@ -184,10 +184,10 @@ function Row({ label, children }) {
  * سند ادعا شده، چقدر در بقیه، و در نتیجه چقدر هنوز آزاد است.
  */
 function DeliveredCell({ item }) {
-  const delivered = item.deliveredQty ?? item.qty;
-  const isShort = delivered < item.qty;
-  const here = Number(item.claimedHereQty) || 0;
-  const elsewhere = Number(item.activeClaimedQty) || 0;
+  const delivered = item.deliveredQuantity ?? item.quantity;
+  const isShort = delivered < item.quantity;
+  const here = Number(item.claimedHereQuantity) || 0;
+  const elsewhere = Number(item.activeClaimedQuantity) || 0;
   const free = Math.max(0, delivered - here - elsewhere);
 
   return (

@@ -3,14 +3,17 @@ import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
 import FilterDateInput from "@/shared/components/filters/FilterDateInput";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
-import EntityMultiSelect from "@/shared/components/filters/EntityMultiSelect";
-import { toFilterOptions } from "@/shared/components/filters/filterUtils";
+import EntitySelect from "@/shared/components/filters/EntitySelect";
+import {
+  toFilterOptions,
+  getPartyName,
+} from "@/shared/components/filters/filterUtils";
 import { useSaleFilterStore } from "../../store/saleFilterStore";
 import { SALE_STATUS_LABELS } from "@/shared/domain/enums/saleStatus";
-import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
+import { DOCUMENT_PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
 
 const STATUS_OPTIONS = toFilterOptions(SALE_STATUS_LABELS);
-const PAYMENT_TYPE_OPTIONS = toFilterOptions(PAYMENT_TYPE_LABELS);
+const PAYMENT_TYPE_OPTIONS = toFilterOptions(DOCUMENT_PAYMENT_TYPE_LABELS);
 
 const renderCustomerPhone = (customer) =>
   customer.phoneNumber ? (
@@ -25,13 +28,14 @@ const renderCustomerPhone = (customer) =>
 const SaleFilters = ({ customers = [], isCustomersLoading = false }) => {
   const {
     globalSearch,
-    customerIds,
+    customerId,
     status,
     paymentType,
     fromDate,
     toDate,
     setGlobalSearch,
-    setCustomerIds,
+    setCustomerId,
+    setCustomerName,
     setStatus,
     setPaymentType,
     setFromDate,
@@ -68,13 +72,16 @@ const SaleFilters = ({ customers = [], isCustomersLoading = false }) => {
         onChange={handleGlobalSearch}
       />
 
-      <EntityMultiSelect
+      <EntitySelect
         label="مشتری"
         placeholder="انتخاب مشتری..."
         emptyText="مشتری‌ای یافت نشد"
         items={customers}
-        value={customerIds}
-        onSelect={setCustomerIds}
+        value={customerId}
+        onSelect={(id, customer) => {
+          setCustomerId(id);
+          setCustomerName(customer ? getPartyName(customer) : "");
+        }}
         isLoading={isCustomersLoading}
         renderMeta={renderCustomerPhone}
       />

@@ -24,7 +24,7 @@ export async function fetchSalesReturns(params = {}) {
       take: params.limit,
       search: params.search || undefined,
       // برخلاف مرجوعی خرید، اینجا هم saleId هم customerId پشتیبانی می‌شود.
-      customerId: params.customerIds?.[0] ?? undefined,
+      customerId: params.customerId || undefined,
       status: params.status !== "" ? params.status : undefined,
       problem: params.problem !== "" ? params.problem : undefined,
       fromDate: params.fromDate || undefined,

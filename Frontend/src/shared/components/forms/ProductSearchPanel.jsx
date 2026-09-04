@@ -24,13 +24,13 @@ import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReference
  * اسکن بارکد همان مسیرِ افزودنِ دستی را طی می‌کند: کالای منطبق پیدا و
  * مستقیم به onAdd داده می‌شود — بدون نیاز به کلیک روی دکمه‌ی افزودن.
  *
- * addedQtyOf(productId) تعدادِ فعلیِ همان کالا در لیست است (صفر یعنی
+ * addedQuantityOf(productId) تعدادِ فعلیِ همان کالا در لیست است (صفر یعنی
  * هنوز اضافه نشده). عمداً «تعداد» است نه یک بولین، چون دکمه‌ی افزودن
  * بعد از اولین کلیک هم فعال می‌ماند و باید نشان دهد الان چندتاست —
  * قبلاً غیرفعال می‌شد و راهی برای زیادکردن تعداد از روی همین لیست
  * نبود.
  */
-export default function ProductSearchPanel({ products, addedQtyOf, onAdd }) {
+export default function ProductSearchPanel({ products, addedQuantityOf, onAdd }) {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
 
@@ -46,11 +46,11 @@ export default function ProductSearchPanel({ products, addedQtyOf, onAdd }) {
       toast.error(`کالایی با کد «${code}» پیدا نشد`);
       return;
     }
-    const previousQty = addedQtyOf(product.id);
+    const previousQuantity = addedQuantityOf(product.id);
     onAdd(product);
     toast.success(
-      previousQty > 0
-        ? `«${product.name}» شد ${(previousQty + 1).toLocaleString("fa-IR")} عدد`
+      previousQuantity > 0
+        ? `«${product.name}» شد ${(previousQuantity + 1).toLocaleString("fa-IR")} عدد`
         : `«${product.name}» اضافه شد`,
     );
   };
@@ -115,7 +115,7 @@ export default function ProductSearchPanel({ products, addedQtyOf, onAdd }) {
           </p>
         ) : (
           filteredProducts.map((product) => {
-            const addedQty = addedQtyOf(product.id);
+            const addedQuantity = addedQuantityOf(product.id);
             return (
             <div
               key={product.id}
@@ -169,19 +169,19 @@ export default function ProductSearchPanel({ products, addedQtyOf, onAdd }) {
               <Button
                 type="button"
                 size="sm"
-                variant={addedQty > 0 ? "secondary" : "default"}
+                variant={addedQuantity > 0 ? "secondary" : "default"}
                 onClick={() => onAdd(product)}
                 title={
-                  addedQty > 0
-                    ? `یکی دیگر اضافه کن (اکنون ${addedQty.toLocaleString("fa-IR")} عدد)`
+                  addedQuantity > 0
+                    ? `یکی دیگر اضافه کن (اکنون ${addedQuantity.toLocaleString("fa-IR")} عدد)`
                     : "افزودن به اقلام"
                 }
                 className="shrink-0 text-xs h-7 px-2 min-w-[3rem] w-full sm:w-auto gap-1"
               >
                 <Plus className="w-3.5 h-3.5" />
-                {addedQty > 0 ? (
+                {addedQuantity > 0 ? (
                   <span className="tabular-nums">
-                    {addedQty.toLocaleString("fa-IR")}
+                    {addedQuantity.toLocaleString("fa-IR")}
                   </span>
                 ) : (
                   <span className="sm:hidden">افزودن</span>

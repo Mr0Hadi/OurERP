@@ -11,7 +11,10 @@ import {
   isPurchaseProforma,
   PAYMENT_TYPES,
 } from "./constants";
-import { PAYMENT_METHODS } from "@/shared/domain/returns/effects";
+import {
+  PaymentTypeEnum,
+  DOCUMENT_PAYMENT_TYPES,
+} from "@/shared/domain/enums/paymentType";
 
 // ─── توابع کمکی ────────────────────────────────────────────────────────────
 
@@ -47,7 +50,7 @@ export const purchasesMock = [
         productCode: "BRK-001",
         productName: "لنت ترمز جلو",
         unit: "دست",
-        qty: 20,
+        quantity: 20,
         unitPrice: 1500000,
         discount: 0,
         lineTotal: 30000000,
@@ -57,7 +60,7 @@ export const purchasesMock = [
         productCode: "FLT-002",
         productName: "فیلتر روغن",
         unit: "عدد",
-        qty: 50,
+        quantity: 50,
         unitPrice: 300000,
         discount: 0,
         lineTotal: 15000000,
@@ -83,7 +86,7 @@ export const purchasesMock = [
         productCode: "BRK-001",
         productName: "لنت ترمز جلو",
         unit: "دست",
-        qty: 15,
+        quantity: 15,
         unitPrice: 1500000,
         discount: 5,
         lineTotal: 21375000,
@@ -93,7 +96,7 @@ export const purchasesMock = [
         productCode: "SHK-003",
         productName: "کمک فنر جلو",
         unit: "عدد",
-        qty: 4,
+        quantity: 4,
         unitPrice: 1800000,
         discount: 0,
         lineTotal: 7200000,
@@ -120,7 +123,7 @@ export const purchasesMock = [
         productCode: "BRG-006",
         productName: "کاسه چرخ عقب",
         unit: "عدد",
-        qty: 30,
+        quantity: 30,
         unitPrice: 800000,
         discount: 10,
         lineTotal: 21600000,
@@ -130,7 +133,7 @@ export const purchasesMock = [
         productCode: "ENG-009",
         productName: "یاتاقان شاتون",
         unit: "عدد",
-        qty: 20,
+        quantity: 20,
         unitPrice: 1420000,
         discount: 0,
         lineTotal: 28400000,
@@ -157,7 +160,7 @@ export const purchasesMock = [
         productCode: "FLT-002",
         productName: "فیلتر روغن",
         unit: "عدد",
-        qty: 60,
+        quantity: 60,
         unitPrice: 300000,
         discount: 0,
         lineTotal: 18000000,
@@ -167,7 +170,7 @@ export const purchasesMock = [
         productCode: "FLT-007",
         productName: "فیلتر هوای موتور",
         unit: "عدد",
-        qty: 40,
+        quantity: 40,
         unitPrice: 425000,
         discount: 0,
         lineTotal: 17000000,
@@ -187,9 +190,9 @@ export const purchasesMock = [
     paidAmount: 60000000,
     totalAmount: 82500000,
     mixedPayments: [
-      { id: 1, type: PAYMENT_METHODS.CASH, amount: 30000000 },
-      { id: 2, type: PAYMENT_METHODS.CHECK, amount: 20000000, checkNumber: "1234567890" },
-      { id: 3, type: PAYMENT_METHODS.TRANSFER, amount: 10000000, transferRef: "TRN-55667788" },
+      { id: 1, type: PaymentTypeEnum.CASH, amount: 30000000 },
+      { id: 2, type: PaymentTypeEnum.CHECK, amount: 20000000, checkNumber: "1234567890" },
+      { id: 3, type: PaymentTypeEnum.TRANSFER, amount: 10000000, transferRef: "TRN-55667788" },
     ],
     description: "خرید کلاچ و دیسک کلاچ - پرداخت ترکیبی",
     items: [
@@ -198,7 +201,7 @@ export const purchasesMock = [
         productCode: "CLT-010",
         productName: "کلاچ کامل",
         unit: "دست",
-        qty: 15,
+        quantity: 15,
         unitPrice: 5500000,
         discount: 0,
         lineTotal: 82500000,
@@ -224,7 +227,7 @@ export const purchasesMock = [
         productCode: "LMP-004",
         productName: "لامپ هدلایت H4",
         unit: "عدد",
-        qty: 100,
+        quantity: 100,
         unitPrice: 240000,
         discount: 0,
         lineTotal: 24000000,
@@ -269,14 +272,12 @@ const MOCK_DESCRIPTIONS = [
   "",
 ];
 
-// این‌ها نوعِ هر ردیفِ داخل mixedPayments هستند، نه خودِ paymentType سند —
-// شکلی که هنوز معادل مستندی در بکند ندارد (سند از paymentDetails حرف
-// می‌زند)، و همان مقادیرِ عددی‌ای می‌ماند که MixedPaymentList (کامپوننت
-// مشترک با ماژول مرجوعی) تولید می‌کند.
+// نوعِ هر ردیفِ داخل mixedPayments — همان `PaymentTypeEnum`ِ سند، چون
+// روی سیم هم `paymentDetails[].type` با همین شمرده می‌شود.
 const SINGLE_PAYMENT_TYPES = [
-  PAYMENT_METHODS.CASH,
-  PAYMENT_METHODS.CHECK,
-  PAYMENT_METHODS.TRANSFER,
+  PaymentTypeEnum.CASH,
+  PaymentTypeEnum.CHECK,
+  PaymentTypeEnum.TRANSFER,
 ];
 
 function buildRandomItems() {
@@ -292,16 +293,16 @@ function buildRandomItems() {
     const product = pickRandom(availableProducts);
     usedProductIds.add(product.id);
 
-    const qty = randomInt(5, 34);
+    const quantity = randomInt(5, 34);
     const discount = Math.random() < 0.3 ? randomInt(1, 15) : 0;
-    const lineTotal = qty * product.price * (1 - discount / 100);
+    const lineTotal = quantity * product.price * (1 - discount / 100);
 
     items.push({
       productId: product.id,
       productCode: product.code,
       productName: product.name,
       unit: product.unit,
-      qty,
+      quantity,
       unitPrice: product.price,
       discount,
       lineTotal,
@@ -328,9 +329,9 @@ function buildMixedPayments(totalAmount) {
     const type = pickRandom(SINGLE_PAYMENT_TYPES);
     const payment = { id: k + 1, type, amount: paymentAmount };
 
-    if (type === PAYMENT_METHODS.CHECK) {
+    if (type === PaymentTypeEnum.CHECK) {
       payment.checkNumber = String(randomInt(1000000000, 9999999999));
-    } else if (type === PAYMENT_METHODS.TRANSFER) {
+    } else if (type === PaymentTypeEnum.TRANSFER) {
       payment.transferRef = `TRN-${randomInt(10000000, 99999999)}`;
     }
 
@@ -345,24 +346,24 @@ function buildMixedPayments(totalAmount) {
 /**
  * مقدارِ دریافت‌شده را با وضعیتی که خودِ خرید ادعا می‌کند هماهنگ می‌کند.
  *
- * پیش از این، اقلام هیچ‌وقت receivedQty نمی‌گرفتند در حالی که وضعیتِ
+ * پیش از این، اقلام هیچ‌وقت receivedQuantity نمی‌گرفتند در حالی که وضعیتِ
  * خرید تصادفی انتخاب می‌شد. نتیجه این بود که خریدهایی با وضعیت
  * «دریافت شده» وجود داشتند که هیچ قلمی از آنها رسیده نبود — و چون
  * معیارِ «قابل مرجوع‌کردن» رسیدنِ واقعیِ کالاست (نه وضعیت)، صفحه‌ی ثبت
  * مرجوعی خرید همیشه خالی بود و عملاً غیرقابل استفاده.
  */
-function withReceivedQty(items, status) {
+function withReceivedQuantity(items, status) {
   return items.map((item) => {
     // اگر خودِ نمونه صراحتاً مقدار داده، دست نمی‌خورد.
-    if (item.receivedQty != null) return item;
+    if (item.receivedQuantity != null) return item;
 
-    let receivedQty = 0;
+    let receivedQuantity = 0;
     if (status === PURCHASE_STATUSES.RECEIVED) {
-      receivedQty = item.qty;
+      receivedQuantity = item.quantity;
     } else if (status === PURCHASE_STATUSES.PARTIALLY_RECEIVED) {
-      receivedQty = randomInt(1, Math.max(1, item.qty - 1));
+      receivedQuantity = randomInt(1, Math.max(1, item.quantity - 1));
     }
-    return { ...item, receivedQty };
+    return { ...item, receivedQuantity };
   });
 }
 
@@ -373,10 +374,10 @@ function generateMorePurchases(count = 20) {
   for (let i = 0; i < count; i++) {
     const supplier = pickRandom(MOCK_SUPPLIERS);
     const status = pickRandom(Object.values(PURCHASE_STATUSES));
-    const paymentType = pickRandom(Object.values(PAYMENT_TYPES));
+    const paymentType = pickRandom(DOCUMENT_PAYMENT_TYPES);
 
     const { items: rawItems, totalAmount } = buildRandomItems();
-    const items = withReceivedQty(rawItems, status);
+    const items = withReceivedQuantity(rawItems, status);
 
     // بدون مقدار اولیه: هر سه شاخه‌ی زیر خودشان مقدار می‌دهند.
     let paidAmount;
@@ -440,7 +441,7 @@ function generateMorePurchases(count = 20) {
 // آرایه نهایی خریدها
 // نرمال‌سازی روی *همه‌ی* خریدها اعمال می‌شود، نه فقط تولیدشده‌ها:
 // نمونه‌های دستیِ بالای فایل هم وضعیت داشتند بدون اینکه اقلامشان
-// receivedQty داشته باشد.
+// receivedQuantity داشته باشد.
 /**
  * هر قلمِ سفارش یک شناسه‌ی یکتا می‌گیرد — معادلِ `PurchaseItem.Id` در
  * بک‌اند. قرینه‌ی `nextSaleItemId` در سمت فروش؛ دلیلش هم همان است:
@@ -456,7 +457,7 @@ export function nextPurchaseItemId() {
 export const allPurchases = [...purchasesMock, ...generateMorePurchases(20)].map(
   (purchase) => ({
     ...purchase,
-    items: withReceivedQty(purchase.items || [], purchase.status).map((item) => ({
+    items: withReceivedQuantity(purchase.items || [], purchase.status).map((item) => ({
       ...item,
       id: item.id ?? nextPurchaseItemId(),
     })),

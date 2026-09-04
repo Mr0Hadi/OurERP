@@ -16,19 +16,19 @@ import {
 // کالاهای ثبت‌نشده. هیچ اکشنی (مثل ثبت مرجوعی) از اینجا انجام نمی‌شود.
 export default function ReceivingMismatchList({ items, unknownItems = [] }) {
   const shortItems = useMemo(
-    () => items.filter((item) => (item.receivedQty || 0) < item.expectedQty),
+    () => items.filter((item) => (item.receivedQuantity || 0) < item.expectedQuantity),
     [items]
   );
 
   const excessItems = useMemo(
-    () => items.filter((item) => (Number(item.excessQty) || 0) > 0),
+    () => items.filter((item) => (Number(item.excessQuantity) || 0) > 0),
     [items]
   );
 
   const namedUnknownItems = useMemo(
     () =>
       unknownItems.filter(
-        (row) => row.productName?.trim() && (Number(row.qty) || 0) > 0
+        (row) => row.productName?.trim() && (Number(row.quantity) || 0) > 0
       ),
     [unknownItems]
   );
@@ -42,15 +42,15 @@ export default function ReceivingMismatchList({ items, unknownItems = [] }) {
   }
 
   const totalShortage = shortItems.reduce(
-    (sum, item) => sum + (item.expectedQty - (item.receivedQty || 0)),
+    (sum, item) => sum + (item.expectedQuantity - (item.receivedQuantity || 0)),
     0
   );
   const totalExcess = excessItems.reduce(
-    (sum, item) => sum + (Number(item.excessQty) || 0),
+    (sum, item) => sum + (Number(item.excessQuantity) || 0),
     0
   );
   const totalUnknown = namedUnknownItems.reduce(
-    (sum, row) => sum + (Number(row.qty) || 0),
+    (sum, row) => sum + (Number(row.quantity) || 0),
     0
   );
 
@@ -74,7 +74,7 @@ export default function ReceivingMismatchList({ items, unknownItems = [] }) {
 
       <CardContent className="space-y-3">
         {shortItems.map((item) => {
-          const shortage = item.expectedQty - (item.receivedQty || 0);
+          const shortage = item.expectedQuantity - (item.receivedQuantity || 0);
           const issues = item.issues || [];
 
           return (
@@ -106,7 +106,7 @@ export default function ReceivingMismatchList({ items, unknownItems = [] }) {
                           )}
                         </div>
                         <span className="shrink-0 tabular-nums font-medium text-card-foreground">
-                          {(Number(issue.qty) || 0).toLocaleString('fa-IR')} عدد
+                          {(Number(issue.quantity) || 0).toLocaleString('fa-IR')} عدد
                         </span>
                       </li>
                     );
@@ -143,7 +143,7 @@ export default function ReceivingMismatchList({ items, unknownItems = [] }) {
                   )}
                 </div>
                 <span className="shrink-0 tabular-nums font-medium text-card-foreground">
-                  {(Number(item.excessQty) || 0).toLocaleString('fa-IR')} عدد
+                  {(Number(item.excessQuantity) || 0).toLocaleString('fa-IR')} عدد
                 </span>
               </div>
             ))}
@@ -169,7 +169,7 @@ export default function ReceivingMismatchList({ items, unknownItems = [] }) {
                   )}
                 </div>
                 <span className="shrink-0 tabular-nums font-medium text-card-foreground">
-                  {(Number(row.qty) || 0).toLocaleString('fa-IR')} {row.unit || 'عدد'}
+                  {(Number(row.quantity) || 0).toLocaleString('fa-IR')} {row.unit || 'عدد'}
                 </span>
               </div>
             ))}

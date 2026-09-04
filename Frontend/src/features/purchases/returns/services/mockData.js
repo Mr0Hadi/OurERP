@@ -6,7 +6,8 @@ import {
   PURCHASE_RETURN_PROBLEMS,
   PURCHASE_RETURN_STATUSES,
 } from "../domain/purchaseReturnVocabulary";
-import { EFFECT_STATUSES, PAYMENT_METHODS } from "@/shared/domain/returns/effects";
+import { EFFECT_STATUSES } from "@/shared/domain/returns/effects";
+import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import {
   MONEY_DIRECTIONS,
   buildResolution,
@@ -69,7 +70,7 @@ const ON_ORDER_PROBLEMS = [
 
 // ─── ساخت ادعا ──────────────────────────────────────────────────────────────
 
-function buildClaim({ purchaseItem, qty, problem, scope, offScopeKind }) {
+function buildClaim({ purchaseItem, quantity, problem, scope, offScopeKind }) {
   return {
     id: generateId(),
     scope,
@@ -80,7 +81,7 @@ function buildClaim({ purchaseItem, qty, problem, scope, offScopeKind }) {
     productName: purchaseItem.productName,
     unit: purchaseItem.unit,
     unitPrice: purchaseItem.unitPrice,
-    qty,
+    quantity,
     problem,
     note: "",
     resolutions: [],
@@ -95,7 +96,7 @@ function buildClaim({ purchaseItem, qty, problem, scope, offScopeKind }) {
 function seedResolutions(claim, target) {
   if (target === PURCHASE_RETURN_STATUSES.OPEN) return;
 
-  const money = (direction, amount, method = PAYMENT_METHODS.CASH) => ({
+  const money = (direction, amount, method = PaymentTypeEnum.CASH) => ({
     direction,
     amount,
     method,
@@ -104,7 +105,7 @@ function seedResolutions(claim, target) {
   });
 
   if (target === PURCHASE_RETURN_STATUSES.IN_PROGRESS) {
-    const half = Math.max(1, Math.floor(claim.qty / 2));
+    const half = Math.max(1, Math.floor(claim.quantity / 2));
     const withReplacement = Math.random() < 0.5;
 
     claim.resolutions.push(
@@ -135,16 +136,16 @@ function seedResolutions(claim, target) {
     : MONEY_DIRECTIONS.RECEIVE; // کسری/عیب را از تامین‌کننده پس می‌گیریم
 
   const method = pickRandom([
-    PAYMENT_METHODS.CASH,
-    PAYMENT_METHODS.TRANSFER,
-    PAYMENT_METHODS.ON_ACCOUNT,
+    PaymentTypeEnum.CASH,
+    PaymentTypeEnum.TRANSFER,
+    PaymentTypeEnum.CREDIT,
   ]);
 
   claim.resolutions.push(
     buildResolution(
       {
-        ...emptyComposition(claim.qty),
-        money: money(direction, claim.qty * claim.unitPrice, method),
+        ...emptyComposition(claim.quantity),
+        money: money(direction, claim.quantity * claim.unitPrice, method),
       },
       claim,
     ),
@@ -175,7 +176,7 @@ function buildReturnFromPurchase(purchase, index) {
   const claims = pickedItems.map((item) => {
     const claim = buildClaim({
       purchaseItem: item,
-      qty: Math.max(1, Math.min(item.qty, randomInt(1, 4))),
+      quantity: Math.max(1, Math.min(item.quantity, randomInt(1, 4))),
       problem: pickRandom(ON_ORDER_PROBLEMS),
       scope: CLAIM_SCOPES.ON_ORDER,
     });
@@ -188,7 +189,7 @@ function buildReturnFromPurchase(purchase, index) {
   if (index % 3 === 1) {
     const claim = buildClaim({
       purchaseItem: pickedItems[0],
-      qty: randomInt(1, 3),
+      quantity: randomInt(1, 3),
       problem: PURCHASE_RETURN_PROBLEMS.OVER_SHIPPED,
       scope: CLAIM_SCOPES.OFF_ORDER,
       offScopeKind: OFF_ORDER_KINDS.EXCESS,
@@ -212,7 +213,7 @@ function buildReturnFromPurchase(purchase, index) {
     description: "",
     previousReturnId: null,
     claims,
-    totalClaimedAmount: claims.reduce((s, c) => s + c.qty * c.unitPrice, 0),
+    totalClaimedAmount: claims.reduce((s, c) => s + c.quantity * c.unitPrice, 0),
     createdAt: createdDate.toISOString(),
     updatedAt: createdDate.toISOString(),
   };
@@ -228,8 +229,8 @@ function markAllGoodsEffectsDone(record) {
     (claim.resolutions || []).forEach((res) =>
       (res.effects || []).forEach((effect) => {
         if (effect.status !== EFFECT_STATUSES.PENDING) return;
-        effect.doneQty = effect.qty;
-        if (effect.restockedQty !== null) effect.restockedQty = effect.qty;
+        effect.doneQuantity = effect.quantity;
+        if (effect.restockedQuantity !== null) effect.restockedQuantity = effect.quantity;
         effect.status = EFFECT_STATUSES.APPLIED;
         effect.appliedAt = new Date().toISOString();
       }),

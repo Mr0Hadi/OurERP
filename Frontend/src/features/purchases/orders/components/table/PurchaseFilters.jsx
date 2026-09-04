@@ -3,14 +3,14 @@ import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
 import FilterDateInput from "@/shared/components/filters/FilterDateInput";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
-import EntityMultiSelect from "@/shared/components/filters/EntityMultiSelect";
+import EntitySelect from "@/shared/components/filters/EntitySelect";
 import { toFilterOptions } from "@/shared/components/filters/filterUtils";
 import { usePurchaseFilterStore } from "../../store/purchaseFilterStore";
 import { PURCHASE_STATUS_LABELS } from "@/shared/domain/enums/purchaseStatus";
-import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
+import { DOCUMENT_PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
 
 const STATUS_OPTIONS = toFilterOptions(PURCHASE_STATUS_LABELS);
-const PAYMENT_TYPE_OPTIONS = toFilterOptions(PAYMENT_TYPE_LABELS);
+const PAYMENT_TYPE_OPTIONS = toFilterOptions(DOCUMENT_PAYMENT_TYPE_LABELS);
 
 const renderSupplierPhone = (supplier) =>
   supplier.phone ? (
@@ -25,13 +25,13 @@ const renderSupplierPhone = (supplier) =>
 const PurchaseFilters = ({ suppliers = [], isSuppliersLoading = false }) => {
   const {
     globalSearch,
-    supplierIds,
+    supplierId,
     status,
     paymentType,
     fromDate,
     toDate,
     setGlobalSearch,
-    setSupplierIds,
+    setSupplierId,
     setStatus,
     setPaymentType,
     setFromDate,
@@ -68,13 +68,13 @@ const PurchaseFilters = ({ suppliers = [], isSuppliersLoading = false }) => {
         onChange={handleGlobalSearch}
       />
 
-      <EntityMultiSelect
+      <EntitySelect
         label="تامین‌کننده"
         placeholder="انتخاب تامین‌کننده..."
         emptyText="تامین‌کننده‌ای یافت نشد"
         items={suppliers}
-        value={supplierIds}
-        onSelect={setSupplierIds}
+        value={supplierId}
+        onSelect={setSupplierId}
         isLoading={isSuppliersLoading}
         renderMeta={renderSupplierPhone}
       />

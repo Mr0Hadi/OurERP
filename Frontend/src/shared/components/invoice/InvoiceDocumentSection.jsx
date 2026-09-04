@@ -49,10 +49,10 @@ function buildInvoiceHtml({
   const rows = (items || [])
     .map((item) => {
       const lineTotal =
-        (item.qty || 0) * (item.unitPrice || 0) * (1 - (item.discount || 0) / 100);
+        (item.quantity || 0) * (item.unitPrice || 0) * (1 - (item.discount || 0) / 100);
       return `<tr>
         <td>${item.productName || ""}</td>
-        <td>${(item.qty || 0).toLocaleString("fa-IR")} ${item.unit || ""}</td>
+        <td>${(item.quantity || 0).toLocaleString("fa-IR")} ${item.unit || ""}</td>
         <td>${(item.unitPrice || 0).toLocaleString("fa-IR")}</td>
         <td>${(item.discount || 0).toLocaleString("fa-IR")}%</td>
         <td>${lineTotal.toLocaleString("fa-IR")}</td>

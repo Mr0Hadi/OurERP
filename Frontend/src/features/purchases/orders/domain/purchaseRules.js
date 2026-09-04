@@ -25,7 +25,7 @@ export function canCancelPurchase(purchase) {
   if (!purchase) return false;
   if (purchase.status !== PURCHASE_STATUSES.SHIPPED) return false;
   const items = purchase.items || [];
-  return items.every((item) => !(item.receivedQty > 0));
+  return items.every((item) => !(item.receivedQuantity > 0));
 }
 
 /**

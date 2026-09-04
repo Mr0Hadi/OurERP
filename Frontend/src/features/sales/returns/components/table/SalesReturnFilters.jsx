@@ -3,7 +3,7 @@ import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
 import FilterDateInput from "@/shared/components/filters/FilterDateInput";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
-import EntityMultiSelect from "@/shared/components/filters/EntityMultiSelect";
+import EntitySelect from "@/shared/components/filters/EntitySelect";
 import { toFilterOptions } from "@/shared/components/filters/filterUtils";
 import { useSalesReturnFilterStore } from "../../store/salesReturnFilterStore";
 import {
@@ -19,14 +19,14 @@ const SCOPE_OPTIONS = toFilterOptions(CLAIM_SCOPE_LABELS);
 const SalesReturnFilters = ({ customers = [], isCustomersLoading = false }) => {
   const {
     globalSearch,
-    customerIds,
+    customerId,
     status,
     problem,
     scope,
     fromDate,
     toDate,
     setGlobalSearch,
-    setCustomerIds,
+    setCustomerId,
     setStatus,
     setProblem,
     setScope,
@@ -64,13 +64,13 @@ const SalesReturnFilters = ({ customers = [], isCustomersLoading = false }) => {
         onChange={handleGlobalSearch}
       />
 
-      <EntityMultiSelect
+      <EntitySelect
         label="مشتری"
         placeholder="انتخاب مشتری..."
         emptyText="مشتری‌ای یافت نشد"
         items={customers}
-        value={customerIds}
-        onSelect={setCustomerIds}
+        value={customerId}
+        onSelect={setCustomerId}
         isLoading={isCustomersLoading}
       />
 

@@ -17,8 +17,11 @@ import { PriceInput } from "@/shared/components/ui/price-input";
 import PaymentSummary from "@/shared/components/forms/PaymentSummary";
 import MixedPaymentList from "@/shared/components/forms/MixedPaymentList";
 import { useSyncedComputedValue } from "@/shared/hooks/useSyncedComputedValue";
-import { PaymentTypeEnum, PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
-import { PAYMENT_METHODS } from "@/shared/domain/returns/effects";
+import {
+  PaymentTypeEnum,
+  PAYMENT_TYPE_LABELS,
+  DOCUMENT_PAYMENT_TYPES,
+} from "@/shared/domain/enums/paymentType";
 import { numberToPersianWords } from "@/shared/lib/number-to-persian-words";
 
 /**
@@ -36,12 +39,15 @@ import { numberToPersianWords } from "@/shared/lib/number-to-persian-words";
  * متوقف می‌شود تا تقسیمِ دستیِ کاربر پاک نشود.
  */
 
-const PAYMENT_TYPE_OPTIONS = Object.entries(PAYMENT_TYPE_LABELS).map(
-  ([value, label]) => ({ value: Number(value), label }),
-);
+const PAYMENT_TYPE_OPTIONS = DOCUMENT_PAYMENT_TYPES.map((value) => ({
+  value,
+  label: PAYMENT_TYPE_LABELS[value],
+}));
 
+// ردیف‌های ترکیبی با همان `PaymentTypeEnum`ِ سند شمرده می‌شوند، پس
+// `mixedPayments` بی هیچ تبدیلی همان `paymentDetails`ِ سرور است.
 const EMPTY_MIXED_PAYMENT = {
-  type: PAYMENT_METHODS.CASH,
+  type: PaymentTypeEnum.CASH,
   amount: "",
   checkNumber: "",
   transferRef: "",

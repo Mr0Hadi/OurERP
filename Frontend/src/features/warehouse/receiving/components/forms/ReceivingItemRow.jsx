@@ -21,11 +21,11 @@ export default function ReceivingItemRow({
   onRemoveIssue,
   onExcessChange,
 }) {
-  const received = item.receivedQty || 0;
+  const received = item.receivedQuantity || 0;
   // سقفِ گزارشِ مشکل به منبعِ خط بستگی دارد (کسری برای خط سفارش،
   // مقدارِ برگشتی برای خط مرجوعی) — issueBudget.js
   const issueBudget = issueBudgetOf(item);
-  const status = getRowStatus(item.expectedQty, received);
+  const status = getRowStatus(item.expectedQuantity, received);
   const config = ROW_STATUS_CONFIG[status];
   const StatusIcon = config.icon;
 
@@ -53,15 +53,15 @@ export default function ReceivingItemRow({
         </td>
 
         <td className="px-2 py-2 text-center tabular-nums">
-          {item.expectedQty.toLocaleString("fa-IR")}
+          {item.expectedQuantity.toLocaleString("fa-IR")}
         </td>
 
         <td className="px-2 py-2">
           <QuantityStepper
-            value={item.receivedQty}
-            max={item.expectedQty}
+            value={item.receivedQuantity}
+            max={item.expectedQuantity}
             onChange={(next) =>
-              onItemChange(item.lineId, "receivedQty", next)
+              onItemChange(item.lineId, "receivedQuantity", next)
             }
           />
         </td>

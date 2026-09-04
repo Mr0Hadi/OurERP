@@ -226,7 +226,7 @@ export async function assignEmployeeMembership({
 }
 
 /** حذف نرم — دقیقاً مثل سرور فقط `isActive` را false می‌کند. */
-export async function deactivateEmployee(id) {
+export async function removeEmployee(id) {
   await delay(400);
 
   const employee = allEmployees.find((item) => item.id == id);

@@ -48,7 +48,7 @@ export default function OffScopeClaimsSection({
 
   const products = productsData?.items ?? [];
   const total = claims.reduce(
-    (sum, c) => sum + (Number(c.qty) || 0) * (Number(c.unitPrice) || 0),
+    (sum, c) => sum + (Number(c.quantity) || 0) * (Number(c.unitPrice) || 0),
     0,
   );
 
@@ -133,9 +133,9 @@ export default function OffScopeClaimsSection({
             ) : (
               <ProductSearchPanel
                 products={products}
-                addedQtyOf={(productId) =>
+                addedQuantityOf={(productId) =>
                   Number(
-                    claims.find((c) => c.productId === productId)?.qty,
+                    claims.find((c) => c.productId === productId)?.quantity,
                   ) || 0
                 }
                 onAdd={(product) =>

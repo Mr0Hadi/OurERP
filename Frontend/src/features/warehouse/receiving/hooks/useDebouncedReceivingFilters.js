@@ -4,14 +4,14 @@ import { useReceivingFilterStore } from "../store/receivingFilterStore";
 export function useDebouncedReceivingFilters() {
   const globalSearch = useReceivingFilterStore((s) => s.globalSearch);
   const type = useReceivingFilterStore((s) => s.type);
-  const counterpartyIds = useReceivingFilterStore((s) => s.counterpartyIds);
+  const counterpartyId = useReceivingFilterStore((s) => s.counterpartyId);
   const fromDate = useReceivingFilterStore((s) => s.fromDate);
   const toDate = useReceivingFilterStore((s) => s.toDate);
 
   return {
     globalSearch: useDebouncedValue(globalSearch),
     type,
-    counterpartyIds,
+    counterpartyId,
     fromDate,
     toDate,
   };

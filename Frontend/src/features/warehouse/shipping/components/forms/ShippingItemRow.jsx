@@ -5,8 +5,8 @@ import { getRowStatus, ROW_STATUS_CONFIG } from "./shippingRowStatus";
 
 /** نمای جدولی یک قلم ارسال. */
 export default function ShippingItemRow({ item, onItemChange }) {
-  const shipped = item.shippedQty || 0;
-  const status = getRowStatus(item.expectedQty, shipped);
+  const shipped = item.shippedQuantity || 0;
+  const status = getRowStatus(item.expectedQuantity, shipped);
   const config = ROW_STATUS_CONFIG[status];
   const StatusIcon = config.icon;
 
@@ -27,14 +27,14 @@ export default function ShippingItemRow({ item, onItemChange }) {
       </td>
 
       <td className="px-2 py-2 text-center tabular-nums">
-        {item.expectedQty.toLocaleString("fa-IR")}
+        {item.expectedQuantity.toLocaleString("fa-IR")}
       </td>
 
       <td className="px-2 py-2">
         <QuantityStepper
-          value={item.shippedQty}
-          max={item.expectedQty}
-          onChange={(next) => onItemChange(item.lineId, "shippedQty", next)}
+          value={item.shippedQuantity}
+          max={item.expectedQuantity}
+          onChange={(next) => onItemChange(item.lineId, "shippedQuantity", next)}
         />
       </td>
 

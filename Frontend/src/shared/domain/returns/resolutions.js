@@ -3,12 +3,14 @@
 import {
   EFFECT_KINDS,
   EFFECT_STATUSES,
-  PAYMENT_METHODS,
-  SPLITTABLE_PAYMENT_METHODS,
   createEffect,
   observationsOf,
   summarizeEffects,
 } from "./effects";
+import {
+  PaymentTypeEnum,
+  SPLITTABLE_PAYMENT_TYPES,
+} from "@/shared/domain/enums/paymentType";
 import { RETURN_STATUSES, isTerminalStatus } from "./statuses";
 
 /**
@@ -63,14 +65,14 @@ export const MONEY_DIRECTIONS = {
  */
 export function methodsForDirection(direction) {
   const base = [
-    PAYMENT_METHODS.CASH,
-    PAYMENT_METHODS.CHECK,
-    PAYMENT_METHODS.TRANSFER,
-    PAYMENT_METHODS.ON_ACCOUNT,
-    PAYMENT_METHODS.MIXED,
+    PaymentTypeEnum.CASH,
+    PaymentTypeEnum.CHECK,
+    PaymentTypeEnum.TRANSFER,
+    PaymentTypeEnum.CREDIT,
+    PaymentTypeEnum.MIXED,
   ];
   return direction === MONEY_DIRECTIONS.PAY
-    ? [...base, PAYMENT_METHODS.STORE_CREDIT]
+    ? [...base, PaymentTypeEnum.STORE_CREDIT]
     : base;
 }
 
@@ -90,7 +92,7 @@ function validMoneyParts(money) {
  */
 export function moneyAmountOf(money) {
   if (!money) return 0;
-  if (money.method === PAYMENT_METHODS.MIXED) {
+  if (money.method === PaymentTypeEnum.MIXED) {
     return validMoneyParts(money).reduce(
       (sum, part) => sum + (Number(part.amount) || 0),
       0,
@@ -108,16 +110,16 @@ export function emptyGoodsSlot() {
 export function emptyMoney() {
   return {
     direction: MONEY_DIRECTIONS.NONE,
-    method: PAYMENT_METHODS.CASH,
+    method: PaymentTypeEnum.CASH,
     amount: "",
     reference: "",
     parts: [],
   };
 }
 
-export function emptyComposition(qty = 1) {
+export function emptyComposition(quantity = 1) {
   return {
-    qty,
+    quantity,
     goodsIn: emptyGoodsSlot(),
     goodsOut: emptyGoodsSlot(),
     money: emptyMoney(),
@@ -132,19 +134,19 @@ export function emptyComposition(qty = 1) {
  * پیش‌فرض همان کالای ادعا با تعدادِ تصمیم است — همان حالتِ پرتکرارِ
  * «همین کالا، همین تعداد».
  */
-function goodsItemsOf(slot, claim, qty) {
+function goodsItemsOf(slot, claim, quantity) {
   const picked = (slot?.items || []).filter(
-    (item) => (Number(item.qty) || 0) > 0,
+    (item) => (Number(item.quantity) || 0) > 0,
   );
   if (picked.length > 0) return picked;
-  if (qty <= 0 || !claim) return [];
+  if (quantity <= 0 || !claim) return [];
   return [
     {
       productId: claim.productId ?? null,
       productCode: claim.productCode ?? "",
       productName: claim.productName ?? "",
       unit: claim.unit ?? "",
-      qty,
+      quantity,
     },
   ];
 }
@@ -157,16 +159,16 @@ export function expandComposition(composition, claim) {
   if (!composition) return [];
 
   const effects = [];
-  const qty = Number(composition.qty) || 0;
+  const quantity = Number(composition.quantity) || 0;
   const note = composition.note || "";
 
   const pushGoods = (slot, kind) => {
     if (!slot?.enabled) return;
-    goodsItemsOf(slot, claim, qty).forEach((item) => {
+    goodsItemsOf(slot, claim, quantity).forEach((item) => {
       effects.push(
         createEffect({
           kind,
-          qty: Number(item.qty) || 0,
+          quantity: Number(item.quantity) || 0,
           productId: item.productId,
           productCode: item.productCode,
           productName: item.productName,
@@ -183,7 +185,7 @@ export function expandComposition(composition, claim) {
   const money = composition.money || {};
   const amount = moneyAmountOf(money);
   if (money.direction !== MONEY_DIRECTIONS.NONE && amount > 0) {
-    const isMixed = money.method === PAYMENT_METHODS.MIXED;
+    const isMixed = money.method === PaymentTypeEnum.MIXED;
     effects.push(
       createEffect({
         kind: money.direction === MONEY_DIRECTIONS.RECEIVE ? MONEY_IN : MONEY_OUT,
@@ -207,7 +209,7 @@ export function expandComposition(composition, claim) {
 export function buildResolution(composition, claim) {
   return {
     id: generateId(),
-    qty: Number(composition.qty) || 0,
+    quantity: Number(composition.quantity) || 0,
     note: composition.note || "",
     effects: expandComposition(composition, claim),
     createdAt: new Date().toISOString(),
@@ -223,16 +225,16 @@ export function buildResolution(composition, claim) {
  * پیام‌ها با واژگانِ خنثی نوشته شده‌اند تا هر دو سمت بتوانند از همین
  * تابع استفاده کنند.
  */
-export function validateComposition(composition, claim, { remainingQty } = {}) {
+export function validateComposition(composition, claim, { remainingQuantity } = {}) {
   const errors = [];
   if (!composition) return ["تصمیمی وارد نشده است"];
 
-  const qty = Number(composition.qty) || 0;
-  if (qty <= 0 || !Number.isInteger(qty)) {
+  const quantity = Number(composition.quantity) || 0;
+  if (quantity <= 0 || !Number.isInteger(quantity)) {
     errors.push("تعداد باید یک عدد صحیح بزرگ‌تر از صفر باشد");
-  } else if (remainingQty != null && qty > remainingQty) {
+  } else if (remainingQuantity != null && quantity > remainingQuantity) {
     errors.push(
-      `تعداد این تصمیم از باقیمانده‌ی ادعا (${remainingQty}) بیشتر است`,
+      `تعداد این تصمیم از باقیمانده‌ی ادعا (${remainingQuantity}) بیشتر است`,
     );
   }
 
@@ -255,14 +257,14 @@ export function validateComposition(composition, claim, { remainingQty } = {}) {
   if (money.direction !== MONEY_DIRECTIONS.NONE) {
     if (!methodsForDirection(money.direction).includes(money.method)) {
       errors.push("روش پرداخت برای این جهت مجاز نیست");
-    } else if (money.method === PAYMENT_METHODS.MIXED) {
+    } else if (money.method === PaymentTypeEnum.MIXED) {
       if (validMoneyParts(money).length === 0) {
         errors.push(
           "برای پرداخت ترکیبی، حداقل یک ردیف با مبلغ بیشتر از صفر لازم است",
         );
       }
       const badPart = validMoneyParts(money).find(
-        (part) => !SPLITTABLE_PAYMENT_METHODS.includes(part.type),
+        (part) => !SPLITTABLE_PAYMENT_TYPES.includes(part.type),
       );
       if (badPart) errors.push("روش یکی از ردیف‌های پرداخت ترکیبی نامعتبر است");
     } else if (!(moneyAmountOf(money) > 0)) {
@@ -275,15 +277,15 @@ export function validateComposition(composition, claim, { remainingQty } = {}) {
 
 // ─── محاسبات روی ادعا و مرجوعی ──────────────────────────────────────────────
 
-export function claimDecidedQty(claim) {
+export function claimDecidedQuantity(claim) {
   return (claim?.resolutions || []).reduce(
-    (sum, res) => sum + (Number(res.qty) || 0),
+    (sum, res) => sum + (Number(res.quantity) || 0),
     0,
   );
 }
 
-export function claimRemainingQty(claim) {
-  return Math.max(0, (Number(claim?.qty) || 0) - claimDecidedQty(claim));
+export function claimRemainingQuantity(claim) {
+  return Math.max(0, (Number(claim?.quantity) || 0) - claimDecidedQuantity(claim));
 }
 
 function allEffectsOf(returnDoc) {
@@ -317,8 +319,8 @@ export function buildGoodsLines(returnDoc, kind, { onlyPending = true } = {}) {
         if (effect.kind !== kind) return;
         if (onlyPending && effect.status !== EFFECT_STATUSES.PENDING) return;
 
-        const qty = Number(effect.qty) || 0;
-        const doneQty = Number(effect.doneQty) || 0;
+        const quantity = Number(effect.quantity) || 0;
+        const doneQuantity = Number(effect.doneQuantity) || 0;
 
         lines.push({
           effectId: effect.id,
@@ -339,10 +341,10 @@ export function buildGoodsLines(returnDoc, kind, { onlyPending = true } = {}) {
           scope: claim.scope,
           claimNote: claim.note || "",
           note: effect.note || "",
-          qty,
-          doneQty,
-          remainingQty: Math.max(0, qty - doneQty),
-          restockedQty: effect.restockedQty,
+          quantity,
+          doneQuantity,
+          remainingQuantity: Math.max(0, quantity - doneQuantity),
+          restockedQuantity: effect.restockedQuantity,
           // مشاهده‌های انبار در همه‌ی دورهای این اثر، تجمیع‌شده.
           observations: observationsOf(effect),
           status: effect.status,
@@ -389,8 +391,8 @@ export function deriveReturnStatus(returnDoc) {
   if (isTerminalStatus(returnDoc?.status)) return returnDoc.status;
 
   const claims = returnDoc?.claims || [];
-  const totalClaimed = claims.reduce((sum, c) => sum + (Number(c.qty) || 0), 0);
-  const totalDecided = claims.reduce((sum, c) => sum + claimDecidedQty(c), 0);
+  const totalClaimed = claims.reduce((sum, c) => sum + (Number(c.quantity) || 0), 0);
+  const totalDecided = claims.reduce((sum, c) => sum + claimDecidedQuantity(c), 0);
 
   if (totalDecided === 0) return RETURN_STATUSES.OPEN;
 

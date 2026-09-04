@@ -49,15 +49,15 @@ const generateId = () =>
 
 // ─── محاسبات داخلی ──────────────────────────────────────────────────────────
 
-function reportedIssuesQty(item) {
-  return (item.issues || []).reduce((sum, i) => sum + (Number(i.qty) || 0), 0);
+function reportedIssuesQuantity(item) {
+  return (item.issues || []).reduce((sum, i) => sum + (Number(i.quantity) || 0), 0);
 }
 
 /**
  * چقدر از یک قلم خرید هنوز «در راه» است.
  *
  * سه دسته‌ی جدا داریم و فقط یکی‌شان قابل دریافت است:
- *   • رسیده           → receivedQty
+ *   • رسیده           → receivedQuantity
  *   • مشکل‌دار گزارش‌شده → issues (کسری، معیوب، اشتباه، ...)
  *   • هیچ‌کدام         → هنوز نرسیده، منتظر محموله‌ی بعدی
  *
@@ -71,12 +71,12 @@ function reportedIssuesQty(item) {
  * مقدار به‌عنوان خطِ مرجوعی در بخش «اقلام مرجوعی» همین صفحه ظاهر
  * می‌شود. اگر تصمیم «بازگشت وجه» باشد، اصلاً نباید برگردد.
  */
-function computeItemReceivableQty(item) {
+function computeItemReceivableQuantity(item) {
   return Math.max(
     0,
-    (Number(item.qty) || 0) -
-      (Number(item.receivedQty) || 0) -
-      reportedIssuesQty(item),
+    (Number(item.quantity) || 0) -
+      (Number(item.receivedQuantity) || 0) -
+      reportedIssuesQuantity(item),
   );
 }
 
@@ -91,7 +91,7 @@ function pendingReturnLinesForPurchase(purchaseId) {
   allPurchaseReturns.forEach((ret) => {
     if (Number(ret.purchaseId) !== Number(purchaseId)) return;
     buildGoodsLines(ret, EFFECT_KINDS.GOODS_IN).forEach((line) => {
-      if (line.remainingQty <= 0) return;
+      if (line.remainingQuantity <= 0) return;
       lines.push({ ...line, returnId: ret.id, returnNumber: ret.returnNumber });
     });
   });
@@ -115,11 +115,11 @@ function pendingReturnLinesForPurchase(purchaseId) {
 function nextPurchaseStatus(purchase, items) {
   if (purchase.status === PURCHASE_STATUSES.CANCELLED) return purchase.status;
 
-  const stillInTransit = items.some((item) => computeItemReceivableQty(item) > 0);
+  const stillInTransit = items.some((item) => computeItemReceivableQuantity(item) > 0);
   if (stillInTransit) return PURCHASE_STATUSES.SHIPPED;
 
   const fullyReceived = items.every(
-    (item) => (item.receivedQty || 0) >= (item.qty || 0),
+    (item) => (item.receivedQuantity || 0) >= (item.quantity || 0),
   );
   return fullyReceived
     ? PURCHASE_STATUSES.RECEIVED
@@ -157,7 +157,7 @@ function isPurchaseAwaitingIntake(purchase) {
 function purchaseToRow(purchase) {
   const returnLines = pendingReturnLinesForPurchase(purchase.id);
   const openItems = (purchase.items || []).filter(
-    (item) => computeItemReceivableQty(item) > 0,
+    (item) => computeItemReceivableQuantity(item) > 0,
   );
 
   return {
@@ -173,9 +173,9 @@ function purchaseToRow(purchase) {
     // تعدادِ واقعیِ کالایی که هنوز باید برسد — «۲ قلم» می‌تواند ۳ عدد
     // باشد یا ۳۰۰ عدد، و انباردار برای برنامه‌ریزی به این عدد هم نیاز
     // دارد. قرینه‌ی همان ستونی که صف ارسال از قبل داشت.
-    remainingQty:
-      openItems.reduce((sum, item) => sum + computeItemReceivableQty(item), 0) +
-      returnLines.reduce((sum, line) => sum + line.remainingQty, 0),
+    remainingQuantity:
+      openItems.reduce((sum, item) => sum + computeItemReceivableQuantity(item), 0) +
+      returnLines.reduce((sum, line) => sum + line.remainingQuantity, 0),
     amount: purchase.totalAmount,
     createdAt: purchase.createdAt,
     updatedAt: purchase.updatedAt,
@@ -185,7 +185,7 @@ function purchaseToRow(purchase) {
 /** همان تعریفِ purchaseToRow، روی خطوطِ مرجوعی. */
 function salesReturnToRow(salesReturn) {
   const openLines = buildGoodsLines(salesReturn, EFFECT_KINDS.GOODS_IN).filter(
-    (line) => line.remainingQty > 0,
+    (line) => line.remainingQuantity > 0,
   );
 
   return {
@@ -198,7 +198,7 @@ function salesReturnToRow(salesReturn) {
     date: salesReturn.returnDate,
     itemsCount: openLines.length,
     returnLinesCount: openLines.length,
-    remainingQty: openLines.reduce((sum, line) => sum + line.remainingQty, 0),
+    remainingQuantity: openLines.reduce((sum, line) => sum + line.remainingQuantity, 0),
     amount: salesReturn.totalClaimedAmount,
     createdAt: salesReturn.createdAt,
     updatedAt: salesReturn.updatedAt,
@@ -223,14 +223,14 @@ async function applyReturnRows(rows, logistics, executeRound, fallbackReturnId) 
   const byReturn = new Map();
 
   rows.forEach((row) => {
-    const qty = Number(row.receivedQty) || 0;
-    if (qty <= 0) return;
+    const quantity = Number(row.receivedQuantity) || 0;
+    if (quantity <= 0) return;
     const entry = {
       effectId: row.effectId,
-      qty,
+      quantity,
       observations: (row.issues || []).map((issue) => ({
         problem: issue.type,
-        qty: Number(issue.qty) || 0,
+        quantity: Number(issue.quantity) || 0,
         note: issue.note || "",
       })),
     };
@@ -262,7 +262,7 @@ async function applyReturnRows(rows, logistics, executeRound, fallbackReturnId) 
 export async function fetchIncomingQueue(params = {}) {
   await delay(500);
 
-  const { type = "", counterpartyIds = [] } = params;
+  const { type = "", counterpartyId = "" } = params;
   let rows = [];
 
   // INCOMING_TYPES.PURCHASE عددش صفر است؛ فیلترِ صریحِ همان مقدار
@@ -275,21 +275,22 @@ export async function fetchIncomingQueue(params = {}) {
     rows.push(...allSalesReturns.filter(hasPendingGoodsIn).map(salesReturnToRow));
   }
 
-  if (Array.isArray(counterpartyIds) && counterpartyIds.length > 0) {
-    rows = rows.filter((row) =>
-      counterpartyIds.includes(`${row.counterpartyType}:${row.counterpartyId}`),
+  if (counterpartyId !== "" && counterpartyId != null) {
+    rows = rows.filter(
+      (row) =>
+        `${row.counterpartyType}:${row.counterpartyId}` === counterpartyId,
     );
   }
 
   return applyListQuery(rows, params, {
     searchFields: ["refNumber", "counterpartyName"],
     dateField: "date",
-    numericFields: ["amount", "itemsCount", "remainingQty"],
+    numericFields: ["amount", "itemsCount", "remainingQuantity"],
   });
 }
 
 /**
- * علاوه بر خودِ خرید، هر قلم با receivableQty (محاسبه‌ی تازه‌ی «الان
+ * علاوه بر خودِ خرید، هر قلم با receivableQuantity (محاسبه‌ی تازه‌ی «الان
  * چقدر قابل دریافت است») enrich می‌شود و خطوط مرجوعیِ همان خرید هم
  * همراهش می‌آید. فرم دریافت باید فقط از همین مقادیر استفاده کند.
  */
@@ -303,7 +304,7 @@ export async function fetchReceivingPurchaseById(id) {
     ...purchase,
     items: purchase.items.map((item) => ({
       ...item,
-      receivableQty: computeItemReceivableQty(item),
+      receivableQuantity: computeItemReceivableQuantity(item),
     })),
     returnLines: pendingReturnLinesForPurchase(purchase.id),
   };
@@ -318,15 +319,15 @@ export async function fetchReceivingPurchaseById(id) {
  *    آن را به‌عنوان «مشکل واقعی» (نه صرفاً دیرکرد ارسال) گزارش کند؛
  *    باقیمانده‌ی گزارش‌نشده خودکار «در انتظار محموله بعدی» تلقی
  *    می‌شود و خرید همچنان SHIPPED و در صف می‌ماند.
- * ۳. موجودی دقیقاً به‌اندازه‌ی receivedQty همین دور افزایش می‌یابد.
+ * ۳. موجودی دقیقاً به‌اندازه‌ی receivedQuantity همین دور افزایش می‌یابد.
  *    سقف هر issue برابر کسری است، یعنی issues همیشه *بیرون* از
- *    receivedQty قرار دارد: کالای معیوب اساساً در تعداد دریافتی شمرده
+ *    receivedQuantity قرار دارد: کالای معیوب اساساً در تعداد دریافتی شمرده
  *    نمی‌شود، پس کم‌کردن دوباره‌اش مقدار سالم را کمتر از واقع ثبت
  *    می‌کرد.
  * ۴. «مازاد» — کالای اضافه‌ی یک قلم شناخته‌شده و کالای کاملاً
  *    ثبت‌نشده — در purchase.surplusItems می‌نشیند، نه در items[].issues
- *    و نه در receivedQty. مازاد بیرون از سقف سفارش است و نباید در
- *    محاسباتی که به qty/receivedQty وابسته‌اند شرکت کند. آرایه روی
+ *    و نه در receivedQuantity. مازاد بیرون از سقف سفارش است و نباید در
+ *    محاسباتی که به quantity/receivedQuantity وابسته‌اند شرکت کند. آرایه روی
  *    خودِ خرید است نه روی قلم، چون کالای ثبت‌نشده قلمی برای نشستن
  *    ندارد.
  * ۵. مازاد وارد موجودی قابل‌فروش نمی‌شود؛ کالا فیزیکاً هست ولی هنوز
@@ -372,24 +373,24 @@ async function confirmReceivingOnce(purchaseId, receivingData) {
     const receivedItem = orderRows.find((ri) => ri.productId === item.productId);
     if (!receivedItem) return item;
 
-    const thisRoundQty = receivedItem.receivedQty || 0;
+    const thisRoundQuantity = receivedItem.receivedQuantity || 0;
 
     // فقط مقداری که انباردار صراحتاً «مشکل» علامت زده به تاریخچه
     // اضافه می‌شود؛ باقیِ کسری صرفاً یعنی هنوز نرسیده.
     const appended = (receivedItem.issues || [])
-      .filter((b) => (Number(b.qty) || 0) > 0)
+      .filter((b) => (Number(b.quantity) || 0) > 0)
       .map((b) => ({
         id: generateId(),
         // نوعِ مشکل enum عددی است و عضو صفر دارد؛ `||` مقدارِ صفر را با
         // پیش‌فرض جایگزین می‌کرد.
         type: b.type ?? DEFAULT_RECEIVING_ISSUE_TYPE,
-        qty: Number(b.qty) || 0,
+        quantity: Number(b.quantity) || 0,
         note: b.note || "",
         date: receivedDate,
       }));
 
-    if (thisRoundQty > 0) {
-      stockIncreases.push({ productId: item.productId, delta: thisRoundQty });
+    if (thisRoundQuantity > 0) {
+      stockIncreases.push({ productId: item.productId, delta: thisRoundQuantity });
     }
 
     // هر مشکلی که انباردار گزارش می‌کند یک *ادعا* روی تامین‌کننده است.
@@ -405,7 +406,7 @@ async function confirmReceivingOnce(purchaseId, receivingData) {
         productName: item.productName,
         unit: item.unit,
         unitPrice: item.unitPrice || 0,
-        qty: issue.qty,
+        quantity: issue.quantity,
         // مقادیر این دو enum عمداً یکی است تا گزارش انبار بدون ترجمه
         // به ادعای خرید تبدیل شود.
         problem: issue.type,
@@ -416,8 +417,8 @@ async function confirmReceivingOnce(purchaseId, receivingData) {
     // قیمت واحدِ مازاد از خودِ قلم سفارش برداشته می‌شود، پس فرم لازم
     // نیست حملش کند — اگر بعداً «نگهداری و تسویه» تصمیم گرفته شود،
     // مبلغ از همین‌جا می‌آید.
-    const excessQty = Number(receivedItem.excessQty) || 0;
-    if (excessQty > 0) {
+    const excessQuantity = Number(receivedItem.excessQuantity) || 0;
+    if (excessQuantity > 0) {
       newSurplusItems.push({
         id: generateId(),
         kind: SURPLUS_KINDS.EXCESS,
@@ -425,7 +426,7 @@ async function confirmReceivingOnce(purchaseId, receivingData) {
         productCode: item.productCode,
         productName: item.productName,
         unit: item.unit,
-        qty: excessQty,
+        quantity: excessQuantity,
         unitPrice: item.unitPrice || 0,
         note: receivedItem.excessNote || "",
         date: receivedDate,
@@ -434,7 +435,7 @@ async function confirmReceivingOnce(purchaseId, receivingData) {
 
     return {
       ...item,
-      receivedQty: (item.receivedQty || 0) + thisRoundQty,
+      receivedQuantity: (item.receivedQuantity || 0) + thisRoundQuantity,
       issues:
         appended.length > 0 ? [...(item.issues || []), ...appended] : item.issues,
     };
@@ -443,8 +444,8 @@ async function confirmReceivingOnce(purchaseId, receivingData) {
   // کالای ثبت‌نشده به هیچ قلمی وصل نیست: نه productId دارد نه
   // productCode، و قیمتش صفر است چون هنوز کسی قیمتی توافق نکرده.
   (receivingData.unknownItems || []).forEach((row) => {
-    const qty = Number(row.qty) || 0;
-    if (qty <= 0 || !row.productName?.trim()) return;
+    const quantity = Number(row.quantity) || 0;
+    if (quantity <= 0 || !row.productName?.trim()) return;
     newSurplusItems.push({
       id: generateId(),
       kind: SURPLUS_KINDS.UNKNOWN,
@@ -452,7 +453,7 @@ async function confirmReceivingOnce(purchaseId, receivingData) {
       productCode: null,
       productName: row.productName.trim(),
       unit: row.unit || "عدد",
-      qty,
+      quantity,
       unitPrice: 0,
       note: row.note || "",
       date: receivedDate,
@@ -473,7 +474,7 @@ async function confirmReceivingOnce(purchaseId, receivingData) {
       productName: surplus.productName,
       unit: surplus.unit,
       unitPrice: surplus.unitPrice || 0,
-      qty: surplus.qty,
+      quantity: surplus.quantity,
       problem: isExcess
         ? PURCHASE_RETURN_PROBLEMS.OVER_SHIPPED
         : PURCHASE_RETURN_PROBLEMS.UNLISTED_ITEM,

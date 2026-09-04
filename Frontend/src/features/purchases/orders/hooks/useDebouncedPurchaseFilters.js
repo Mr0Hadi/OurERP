@@ -3,7 +3,7 @@ import { usePurchaseFilterStore } from "../store/purchaseFilterStore";
 
 export function useDebouncedPurchaseFilters() {
   const globalSearch = usePurchaseFilterStore((s) => s.globalSearch);
-  const supplierIds = usePurchaseFilterStore((s) => s.supplierIds);
+  const supplierId = usePurchaseFilterStore((s) => s.supplierId);
   const status = usePurchaseFilterStore((s) => s.status);
   const paymentType = usePurchaseFilterStore((s) => s.paymentType);
   const fromDate = usePurchaseFilterStore((s) => s.fromDate);
@@ -11,7 +11,7 @@ export function useDebouncedPurchaseFilters() {
 
   return {
     globalSearch: useDebouncedValue(globalSearch),
-    supplierIds,
+    supplierId,
     status,
     paymentType,
     fromDate,

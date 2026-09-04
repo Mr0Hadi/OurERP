@@ -39,8 +39,8 @@ export default function ShippingSummaryCard({ formData, onFormChange }) {
 
   const stats = useMemo(() => {
     const items = formData.items || [];
-    const expected = items.reduce((sum, i) => sum + (i.expectedQty || 0), 0);
-    const shipped = items.reduce((sum, i) => sum + (i.shippedQty || 0), 0);
+    const expected = items.reduce((sum, i) => sum + (i.expectedQuantity || 0), 0);
+    const shipped = items.reduce((sum, i) => sum + (i.shippedQuantity || 0), 0);
     const percent = expected > 0 ? Math.round((shipped / expected) * 100) : 0;
     return { expected, shipped, percent };
   }, [formData.items]);

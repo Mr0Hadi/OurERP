@@ -5,7 +5,8 @@ import {
   RETURN_PROBLEMS,
   SALES_RETURN_STATUSES,
 } from "../domain/returnVocabulary";
-import { EFFECT_STATUSES, PAYMENT_METHODS } from "@/shared/domain/returns/effects";
+import { EFFECT_STATUSES } from "@/shared/domain/returns/effects";
+import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import {
   MONEY_DIRECTIONS,
   buildResolution,
@@ -33,7 +34,7 @@ import {
  *   تعداد. دو مشکل مختلف روی یک کالا = دو ادعا.
  *
  * • «بازرسی» فیلد جدا ندارد. یافته‌های انبار روی اجرای اثرِ GOODS_IN
- *   ثبت می‌شوند (history + restockedQty)، چون بازرسی دیگر یک مرحله‌ی
+ *   ثبت می‌شوند (history + restockedQuantity)، چون بازرسی دیگر یک مرحله‌ی
  *   اجباریِ جداگانه نیست — فقط چیزی است که هنگام تحویل‌گرفتن کالا
  *   اتفاق می‌افتد، و کالا هم فقط وقتی برمی‌گردد که تصمیمی آن را
  *   خواسته باشد.
@@ -81,7 +82,7 @@ const ON_INVOICE_PROBLEMS = [
 
 // ─── ساخت ادعا ──────────────────────────────────────────────────────────────
 
-function buildClaim({ saleItem, qty, problem, scope, offScopeKind }) {
+function buildClaim({ saleItem, quantity, problem, scope, offScopeKind }) {
   return {
     id: generateId(),
     scope,
@@ -92,7 +93,7 @@ function buildClaim({ saleItem, qty, problem, scope, offScopeKind }) {
     productName: saleItem.productName,
     unit: saleItem.unit,
     unitPrice: saleItem.unitPrice,
-    qty,
+    quantity,
     problem,
     note: "",
     resolutions: [],
@@ -111,7 +112,7 @@ function buildClaim({ saleItem, qty, problem, scope, offScopeKind }) {
 function seedResolutions(claim, target) {
   if (target === SALES_RETURN_STATUSES.OPEN) return;
 
-  const money = (direction, amount, method = PAYMENT_METHODS.CASH) => ({
+  const money = (direction, amount, method = PaymentTypeEnum.CASH) => ({
     direction,
     amount,
     method,
@@ -124,7 +125,7 @@ function seedResolutions(claim, target) {
     // نیمی از نمونه‌ها «پس‌گرفتن + بازگشت وجه» (صف دریافت) و نیم دیگر
     // «پس‌گرفتن + ارسال جایگزین» (هر دو صف) می‌گیرند، تا داده‌ی اولیه
     // هم صف دریافت انبار را پر کند و هم صف ارسال.
-    const half = Math.max(1, Math.floor(claim.qty / 2));
+    const half = Math.max(1, Math.floor(claim.quantity / 2));
     const withReplacement = Math.random() < 0.5;
 
     claim.resolutions.push(
@@ -141,7 +142,7 @@ function seedResolutions(claim, target) {
                     productCode: claim.productCode,
                     productName: claim.productName,
                     unit: claim.unit,
-                    qty: half,
+                    quantity: half,
                     unitPrice: claim.unitPrice,
                   },
                 ],
@@ -167,20 +168,20 @@ function seedResolutions(claim, target) {
     : MONEY_DIRECTIONS.PAY;
   const method = pickRandom(
     isOffInvoice
-      ? [PAYMENT_METHODS.CASH, PAYMENT_METHODS.TRANSFER, PAYMENT_METHODS.ON_ACCOUNT]
+      ? [PaymentTypeEnum.CASH, PaymentTypeEnum.TRANSFER, PaymentTypeEnum.CREDIT]
       : [
-          PAYMENT_METHODS.CASH,
-          PAYMENT_METHODS.CHECK,
-          PAYMENT_METHODS.ON_ACCOUNT,
-          PAYMENT_METHODS.STORE_CREDIT,
+          PaymentTypeEnum.CASH,
+          PaymentTypeEnum.CHECK,
+          PaymentTypeEnum.CREDIT,
+          PaymentTypeEnum.STORE_CREDIT,
         ],
   );
 
   claim.resolutions.push(
     buildResolution(
       {
-        ...emptyComposition(claim.qty),
-        money: money(direction, claim.qty * claim.unitPrice, method),
+        ...emptyComposition(claim.quantity),
+        money: money(direction, claim.quantity * claim.unitPrice, method),
       },
       claim,
     ),
@@ -209,11 +210,11 @@ function buildReturnFromSale(sale, index) {
     .slice(0, Math.min(sale.items.length, randomInt(1, 2)));
 
   const claims = pickedItems.map((item) => {
-    const delivered = item.shippedQty ?? item.qty;
-    const qty = Math.max(1, Math.min(delivered, randomInt(1, 4)));
+    const delivered = item.shippedQuantity ?? item.quantity;
+    const quantity = Math.max(1, Math.min(delivered, randomInt(1, 4)));
     const claim = buildClaim({
       saleItem: item,
-      qty,
+      quantity,
       problem: pickRandom(ON_INVOICE_PROBLEMS),
       scope: CLAIM_SCOPES.ON_ORDER,
     });
@@ -227,7 +228,7 @@ function buildReturnFromSale(sale, index) {
     const item = pickedItems[0];
     const claim = buildClaim({
       saleItem: item,
-      qty: randomInt(1, 3),
+      quantity: randomInt(1, 3),
       problem: RETURN_PROBLEMS.OVER_SHIPPED,
       scope: CLAIM_SCOPES.OFF_ORDER,
       offScopeKind: OFF_INVOICE_KINDS.EXCESS,
@@ -252,7 +253,7 @@ function buildReturnFromSale(sale, index) {
     previousReturnId: null,
     sourceEffectId: null,
     claims,
-    totalClaimedAmount: claims.reduce((s, c) => s + c.qty * c.unitPrice, 0),
+    totalClaimedAmount: claims.reduce((s, c) => s + c.quantity * c.unitPrice, 0),
     createdAt: createdDate.toISOString(),
     updatedAt: createdDate.toISOString(),
   };
@@ -270,8 +271,8 @@ function markAllGoodsEffectsDone(record) {
     (claim.resolutions || []).forEach((res) =>
       (res.effects || []).forEach((effect) => {
         if (effect.status !== EFFECT_STATUSES.PENDING) return;
-        effect.doneQty = effect.qty;
-        if (effect.restockedQty !== null) effect.restockedQty = effect.qty;
+        effect.doneQuantity = effect.quantity;
+        if (effect.restockedQuantity !== null) effect.restockedQuantity = effect.quantity;
         effect.status = EFFECT_STATUSES.APPLIED;
         effect.appliedAt = new Date().toISOString();
       }),

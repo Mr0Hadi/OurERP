@@ -30,8 +30,8 @@ export default function ReceivingSummaryCard({ formData, onFormChange }) {
 
   const stats = useMemo(() => {
     const items = formData.items || [];
-    const expected = items.reduce((sum, i) => sum + (i.expectedQty || 0), 0);
-    const received = items.reduce((sum, i) => sum + (i.receivedQty || 0), 0);
+    const expected = items.reduce((sum, i) => sum + (i.expectedQuantity || 0), 0);
+    const received = items.reduce((sum, i) => sum + (i.receivedQuantity || 0), 0);
     const percent = expected > 0 ? Math.round((received / expected) * 100) : 0;
     return { expected, received, percent };
   }, [formData.items]);

@@ -17,8 +17,8 @@ import { Input } from "@/shared/components/ui/input";
  * روی تک‌تک ردیف‌های یک رسید بیست‌قلمی.
  */
 export default function ExcessEntryStrip({ item, onExcessChange }) {
-  const excessQty = Number(item.excessQty) || 0;
-  const [isOpen, setIsOpen] = useState(excessQty > 0);
+  const excessQuantity = Number(item.excessQuantity) || 0;
+  const [isOpen, setIsOpen] = useState(excessQuantity > 0);
 
   if (!isOpen) {
     return (
@@ -36,7 +36,7 @@ export default function ExcessEntryStrip({ item, onExcessChange }) {
   }
 
   const handleClose = () => {
-    onExcessChange(item.lineId, "excessQty", 0);
+    onExcessChange(item.lineId, "excessQuantity", 0);
     setIsOpen(false);
   };
 
@@ -62,9 +62,9 @@ export default function ExcessEntryStrip({ item, onExcessChange }) {
         <Input
           type="number"
           min={0}
-          value={excessQty}
+          value={excessQuantity}
           onChange={(e) =>
-            onExcessChange(item.lineId, "excessQty", e.target.value)
+            onExcessChange(item.lineId, "excessQuantity", e.target.value)
           }
           className="h-8 text-center text-xs sm:w-20 shrink-0"
         />
@@ -75,14 +75,14 @@ export default function ExcessEntryStrip({ item, onExcessChange }) {
             onExcessChange(item.lineId, "excessNote", e.target.value)
           }
           className="h-8 text-xs flex-1"
-          disabled={excessQty <= 0}
+          disabled={excessQuantity <= 0}
         />
       </div>
 
       <p className="text-[11px] text-muted-foreground">
-        {excessQty > 0 ? (
+        {excessQuantity > 0 ? (
           <>
-            {excessQty.toLocaleString("fa-IR")} عدد اضافه ثبت می‌شود. این تعداد
+            {excessQuantity.toLocaleString("fa-IR")} عدد اضافه ثبت می‌شود. این تعداد
             وارد موجودی قابل‌فروش نمی‌شود تا واحد خرید تصمیم بگیرد عودت داده
             شود یا نگه داشته شود.
           </>

@@ -28,9 +28,9 @@ export default function UnknownItemsSection({
   onUpdate,
   onRemove,
 }) {
-  const totalQty = items.reduce(
+  const totalQuantity = items.reduce(
     (sum, row) =>
-      sum + (row.productName?.trim() ? Number(row.qty) || 0 : 0),
+      sum + (row.productName?.trim() ? Number(row.quantity) || 0 : 0),
     0,
   );
 
@@ -41,9 +41,9 @@ export default function UnknownItemsSection({
           <HelpCircle className="h-4 w-4 text-violet-600 dark:text-violet-400" />
           کالای ثبت‌نشده
         </CardTitle>
-        {totalQty > 0 && (
+        {totalQuantity > 0 && (
           <span className="text-xs text-muted-foreground tabular-nums">
-            {totalQty.toLocaleString("fa-IR")} عدد
+            {totalQuantity.toLocaleString("fa-IR")} عدد
           </span>
         )}
       </CardHeader>
@@ -71,8 +71,8 @@ export default function UnknownItemsSection({
             <Input
               type="number"
               min={0}
-              value={row.qty}
-              onChange={(e) => onUpdate(row.id, "qty", e.target.value)}
+              value={row.quantity}
+              onChange={(e) => onUpdate(row.id, "quantity", e.target.value)}
               className="h-8 text-center text-xs sm:w-16 shrink-0"
             />
             <Input

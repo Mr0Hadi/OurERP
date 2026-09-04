@@ -3,7 +3,7 @@ import { createFilterStore } from "@/shared/store/createFilterStore";
 export const useSalesReturnFilterStore = createFilterStore({
   filters: {
     globalSearch: "",
-    customerIds: [],
+    customerId: "",
     status: "",
     problem: "",
     scope: "",

@@ -72,7 +72,7 @@ export function usePurchaseForm() {
   };
 
   const computedTotal = items.reduce((sum, item) => {
-    const base = (item.qty || 0) * (item.unitPrice || 0);
+    const base = (item.quantity || 0) * (item.unitPrice || 0);
     const disc = (base * (item.discount || 0)) / 100;
     return sum + base - disc;
   }, 0);
@@ -89,7 +89,7 @@ export function usePurchaseForm() {
     status: formData.status,
     items: items.map((item) => ({
       ...item,
-      lineTotal: item.qty * item.unitPrice * (1 - (item.discount || 0) / 100),
+      lineTotal: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
     })),
     totalAmount: computedTotal,
   });

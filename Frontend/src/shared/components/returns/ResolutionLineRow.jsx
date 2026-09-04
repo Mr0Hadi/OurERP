@@ -21,7 +21,7 @@ export default function ResolutionLineRow({ resolution, onRemove, isBusy, side }
   const summary = summarizeEffects(effects, { includePending: true });
 
   const hasMovedGoods = effects.some(
-    (effect) => isGoodsEffect(effect.kind) && (Number(effect.doneQty) || 0) > 0,
+    (effect) => isGoodsEffect(effect.kind) && (Number(effect.doneQuantity) || 0) > 0,
   );
   const isPending = effects.some(
     (effect) => effect.status === EFFECT_STATUSES.PENDING,
@@ -33,7 +33,7 @@ export default function ResolutionLineRow({ resolution, onRemove, isBusy, side }
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2 min-w-0">
           <span className="text-xs font-medium text-card-foreground tabular-nums shrink-0">
-            {(Number(resolution.qty) || 0).toLocaleString("fa-IR")} عدد
+            {(Number(resolution.quantity) || 0).toLocaleString("fa-IR")} عدد
           </span>
           {resolution.note && (
             <span className="text-xs text-muted-foreground truncate max-w-full">

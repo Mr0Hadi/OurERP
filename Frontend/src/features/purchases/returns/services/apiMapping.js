@@ -29,7 +29,7 @@ export function toApiClaim(claim) {
     productName: claim.productName ?? "",
     unit: claim.unit ?? "",
     unitPrice: Number(claim.unitPrice) || 0,
-    qty: Number(claim.qty) || 0,
+    quantity: Number(claim.quantity) || 0,
     problem: claim.problem,
     note: claim.note || "",
   };

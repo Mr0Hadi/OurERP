@@ -13,7 +13,7 @@ export function usePurchasesQuery(filters, pagination, sorting) {
       page: pagination.pageIndex + 1,
       limit: pagination.pageSize,
       search: filters.globalSearch || "",
-      supplierIds: filters.supplierIds || [],
+      supplierId: filters.supplierId || "",
       status: filters.status ?? "",
       paymentType: filters.paymentType ?? "",
       fromDate: filters.fromDate || "",

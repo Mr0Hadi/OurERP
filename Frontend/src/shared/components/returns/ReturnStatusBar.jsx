@@ -4,7 +4,7 @@ import { isTerminalStatus } from "@/shared/domain/returns/statuses";
 import { RETURN_STATUS_STYLES } from "@/shared/domain/returns/statuses";
 import { EFFECT_KINDS } from "@/shared/domain/returns/effects";
 import {
-  claimDecidedQty,
+  claimDecidedQuantity,
   summarizeReturn,
 } from "@/shared/domain/returns/resolutions";
 
@@ -20,8 +20,8 @@ const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
  */
 export default function ReturnStatusBar({ returnDoc: salesReturn, statusLabels, side }) {
   const claims = salesReturn.claims || [];
-  const totalClaimed = claims.reduce((s, c) => s + (Number(c.qty) || 0), 0);
-  const totalDecided = claims.reduce((s, c) => s + claimDecidedQty(c), 0);
+  const totalClaimed = claims.reduce((s, c) => s + (Number(c.quantity) || 0), 0);
+  const totalDecided = claims.reduce((s, c) => s + claimDecidedQuantity(c), 0);
   const progress = totalClaimed > 0 ? (totalDecided / totalClaimed) * 100 : 0;
 
   const money = summarizeReturn(salesReturn);

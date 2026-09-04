@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useShippingFormStore } from '../store/shippingFormStore';
-import { clampQty } from "@/shared/utils/qtyUtils";
+import { clampQuantity } from "@/shared/utils/quantityUtils";
 
 /**
  * saleData می‌تواند null باشد: صفحه‌ی عودت به تامین‌کننده خودش استور را
@@ -29,14 +29,14 @@ export function useShippingForm(saleData) {
   const handleItemChange = (lineId, field, value) => {
     const newItems = formData.items.map((item) =>
       item.lineId === lineId
-        ? { ...item, [field]: clampQty(value, item.expectedQty) }
+        ? { ...item, [field]: clampQuantity(value, item.expectedQuantity) }
         : item,
     );
     setShippingItems(newItems);
   };
 
   const isAllComplete = formData.items.every(
-    (item) => (item.shippedQty || 0) >= item.expectedQty,
+    (item) => (item.shippedQuantity || 0) >= item.expectedQuantity,
   );
 
   const buildPayload = () => ({
@@ -50,8 +50,8 @@ export function useShippingForm(saleData) {
       productId: item.productId,
       productCode: item.productCode,
       productName: item.productName,
-      expectedQty: item.expectedQty,
-      shippedQty: item.shippedQty,
+      expectedQuantity: item.expectedQuantity,
+      shippedQuantity: item.shippedQuantity,
     })),
     shippingNote: formData.shippingNote,
     shippedDate: formData.shippedDate,

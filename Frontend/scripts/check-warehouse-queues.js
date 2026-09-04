@@ -91,17 +91,17 @@ section("صف دریافت: بعد از یک دور ناقص، عدد لیست �
       {
         source: "order",
         productId: first.productId,
-        expectedQty: first.qty,
-        receivedQty: first.qty,
+        expectedQuantity: first.quantity,
+        receivedQuantity: first.quantity,
         issues: [],
       },
       // قلم دوم ناقص، با گزارش یک عدد معیوب — باقیمانده‌اش باید باز بماند
       {
         source: "order",
         productId: second.productId,
-        expectedQty: second.qty,
-        receivedQty: Math.max(1, second.qty - 3),
-        issues: [{ type: RECEIVING_ISSUE_TYPES.DEFECTIVE, qty: 1, note: "" }],
+        expectedQuantity: second.quantity,
+        receivedQuantity: Math.max(1, second.quantity - 3),
+        issues: [{ type: RECEIVING_ISSUE_TYPES.DEFECTIVE, quantity: 1, note: "" }],
       },
     ],
     receivedDate: "2026-08-23",
@@ -110,18 +110,18 @@ section("صف دریافت: بعد از یک دور ناقص، عدد لیست �
 
   const detail = await receiving.fetchReceivingPurchaseById(purchase.id);
   const openLines =
-    detail.items.filter((item) => item.receivableQty > 0).length +
+    detail.items.filter((item) => item.receivableQuantity > 0).length +
     (detail.returnLines || []).length;
-  const openQty =
-    detail.items.reduce((sum, item) => sum + item.receivableQty, 0) +
-    (detail.returnLines || []).reduce((sum, line) => sum + line.remainingQty, 0);
+  const openQuantity =
+    detail.items.reduce((sum, item) => sum + item.receivableQuantity, 0) +
+    (detail.returnLines || []).reduce((sum, line) => sum + line.remainingQuantity, 0);
 
   const rowAfter = await incomingRow(purchase.invoiceNumber);
 
   check("قلمِ بسته‌شده دیگر شمرده نمی‌شود", rowAfter.itemsCount === openLines,
     `لیست ${rowAfter.itemsCount} / جزئیات ${openLines}`);
-  check("تعداد باقی‌مانده هم با جزئیات می‌خواند", rowAfter.remainingQty === openQty,
-    `لیست ${rowAfter.remainingQty} / جزئیات ${openQty}`);
+  check("تعداد باقی‌مانده هم با جزئیات می‌خواند", rowAfter.remainingQuantity === openQuantity,
+    `لیست ${rowAfter.remainingQuantity} / جزئیات ${openQuantity}`);
   check("قلمِ ناقص هنوز باز است", openLines > 0, String(openLines));
 }
 
@@ -130,12 +130,12 @@ section("صف دریافت: بعد از یک دور ناقص، عدد لیست �
 section("صف دریافت: ردیف مرجوعی فقط خطوطِ معلق را می‌شمارد");
 {
   const salesReturn = allSalesReturns.find((ret) =>
-    buildGoodsLines(ret, EFFECT_KINDS.GOODS_IN).some((l) => l.remainingQty > 0),
+    buildGoodsLines(ret, EFFECT_KINDS.GOODS_IN).some((l) => l.remainingQuantity > 0),
   );
   check("مرجوعیِ در انتظارِ دریافت در داده‌ی نمونه هست", Boolean(salesReturn));
 
   const openLines = buildGoodsLines(salesReturn, EFFECT_KINDS.GOODS_IN).filter(
-    (line) => line.remainingQty > 0,
+    (line) => line.remainingQuantity > 0,
   );
   const row = await incomingRow(salesReturn.returnNumber);
 
@@ -143,8 +143,8 @@ section("صف دریافت: ردیف مرجوعی فقط خطوطِ معلق ر�
     `${row.itemsCount} / ${openLines.length}`);
   check(
     "تعداد باقی‌مانده = مجموع مقدارِ معلق",
-    row.remainingQty === openLines.reduce((s, l) => s + l.remainingQty, 0),
-    String(row.remainingQty),
+    row.remainingQuantity === openLines.reduce((s, l) => s + l.remainingQuantity, 0),
+    String(row.remainingQuantity),
   );
 }
 
@@ -157,17 +157,17 @@ section("صف ارسال: قلمِ کاملاً ارسال‌شده از شما�
       (s.status === SALE_STATUSES.PROCESSING ||
         s.status === SALE_STATUSES.PARTIALLY_DELIVERED) &&
       (s.items || []).length >= 2 &&
-      s.items.some((i) => (i.qty || 0) - (i.shippedQty || 0) > 0),
+      s.items.some((i) => (i.quantity || 0) - (i.shippedQuantity || 0) > 0),
   );
   check("فروشِ در انتظار ارسال در داده‌ی نمونه هست", Boolean(sale));
 
-  const target = sale.items.find((i) => (i.qty || 0) - (i.shippedQty || 0) > 0);
+  const target = sale.items.find((i) => (i.quantity || 0) - (i.shippedQuantity || 0) > 0);
   await shipping.confirmShipment(sale.id, {
     shippedItems: [
       {
         source: "order",
         productId: target.productId,
-        shippedQty: target.qty - (target.shippedQty || 0),
+        shippedQuantity: target.quantity - (target.shippedQuantity || 0),
       },
     ],
     shippedDate: "2026-08-23",
@@ -176,7 +176,7 @@ section("صف ارسال: قلمِ کاملاً ارسال‌شده از شما�
 
   const detail = await shipping.fetchShippingSaleById(sale.id);
   const openLines =
-    detail.items.filter((item) => item.shippableQty > 0).length +
+    detail.items.filter((item) => item.shippableQuantity > 0).length +
     (detail.returnLines || []).length;
 
   const row = await outgoingRow(sale.invoiceNumber);

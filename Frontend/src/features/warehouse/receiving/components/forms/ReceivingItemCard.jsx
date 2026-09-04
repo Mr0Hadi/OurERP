@@ -15,11 +15,11 @@ export default function ReceivingItemCard({
   onRemoveIssue,
   onExcessChange,
 }) {
-  const received = item.receivedQty || 0;
+  const received = item.receivedQuantity || 0;
   // سقفِ گزارشِ مشکل به منبعِ خط بستگی دارد (کسری برای خط سفارش،
   // مقدارِ برگشتی برای خط مرجوعی) — issueBudget.js
   const issueBudget = issueBudgetOf(item);
-  const status = getRowStatus(item.expectedQty, received);
+  const status = getRowStatus(item.expectedQuantity, received);
   const config = ROW_STATUS_CONFIG[status];
   const StatusIcon = config.icon;
 
@@ -56,13 +56,13 @@ export default function ReceivingItemCard({
         <span className="text-xs text-muted-foreground">
           مورد انتظار:{" "}
           <span className="tabular-nums font-medium text-card-foreground">
-            {item.expectedQty.toLocaleString("fa-IR")}
+            {item.expectedQuantity.toLocaleString("fa-IR")}
           </span>
         </span>
         <QuantityStepper
-          value={item.receivedQty}
-          max={item.expectedQty}
-          onChange={(next) => onItemChange(item.lineId, "receivedQty", next)}
+          value={item.receivedQuantity}
+          max={item.expectedQuantity}
+          onChange={(next) => onItemChange(item.lineId, "receivedQuantity", next)}
           size="sm"
         />
       </div>

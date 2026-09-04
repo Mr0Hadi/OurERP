@@ -1,14 +1,14 @@
 import { Minus, Plus } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
-import { clampQty } from "@/shared/utils/qtyUtils";
+import { clampQuantity } from "@/shared/utils/quantityUtils";
 
 /**
  * شمارنده‌ی تعداد با سقف مشخص.
  *
  * کنترل‌شده و بی‌خبر از شکل داده: هر ماژول خودش تصمیم می‌گیرد مقدار از
  * کدام فیلد خوانده شود و با چه شناسه‌ای برگردد — در دریافت خرید
- * (productId/expectedQty)، در دریافت مرجوعی (lineId/remainingQty).
+ * (productId/expectedQuantity)، در دریافت مرجوعی (lineId/remainingQuantity).
  *
  * value    - مقدار فعلی
  * max      - سقف مجاز
@@ -19,7 +19,7 @@ export default function QuantityStepper({ value, max, onChange, size = "md" }) {
   const dims = size === "sm" ? "h-7 w-7" : "h-8 w-8";
   const inputWidth = size === "sm" ? "w-12" : "w-14";
 
-  const handleStep = (delta) => onChange(clampQty(current + delta, max));
+  const handleStep = (delta) => onChange(clampQuantity(current + delta, max));
 
   return (
     <div className="flex items-center justify-center gap-1">
@@ -38,7 +38,7 @@ export default function QuantityStepper({ value, max, onChange, size = "md" }) {
         min={0}
         max={max}
         value={current}
-        onChange={(e) => onChange(clampQty(e.target.value, max))}
+        onChange={(e) => onChange(clampQuantity(e.target.value, max))}
         className={`${dims.split(" ")[0]} ${inputWidth} text-center text-sm px-1`}
       />
       <Button

@@ -1,6 +1,6 @@
 import { EFFECT_KINDS } from "./effects";
 import { RETURN_STATUSES } from "./statuses";
-import { claimRemainingQty } from "./resolutions";
+import { claimRemainingQuantity } from "./resolutions";
 
 /**
  * نمای «همه‌ی مرجوعی‌های یک سند» — مشترک بین خرید و فروش.
@@ -70,18 +70,18 @@ function eachOnOrderEffect(returnDoc, line, visit) {
  * `line` یک `{ orderLineId, productId }` است، نه فقط شناسه‌ی کالا.
  *
  * چقدر به مقدارِ تحویلِ یک خط اضافه (یا از آن کم) شده، بابت کالایی که
- * *واقعاً* جابه‌جا شده — یعنی فقط doneQty، نه آنچه صرفاً تصمیم گرفته
+ * *واقعاً* جابه‌جا شده — یعنی فقط doneQuantity، نه آنچه صرفاً تصمیم گرفته
  * شده.
  *
  * جهت‌ها قرینه‌ی هم نیستند و این عمدی است، چون شمارنده‌ی پایه‌ی هر
  * سمت فرق می‌کند:
  *
- *  • خرید: receivedQty فقط کالای *سالم* را می‌شمارد — کالای معیوب از
+ *  • خرید: receivedQuantity فقط کالای *سالم* را می‌شمارد — کالای معیوب از
  *    همان ابتدا در آن نیامده. پس کالای جایگزینی که می‌رسد اضافه
  *    می‌شود، ولی عودتِ کالای معیوب چیزی کم نمی‌کند: آن مقدار هرگز
  *    شمرده نشده بود که حالا کم شود.
  *
- *  • فروش: shippedQty هرچه فرستاده‌ایم را می‌شمارد، سالم یا نه. پس
+ *  • فروش: shippedQuantity هرچه فرستاده‌ایم را می‌شمارد، سالم یا نه. پس
  *    پس‌گرفتن از مشتری کم می‌کند و ارسال جایگزین اضافه.
  */
 export function deliveredAdjustment(returns, line, { side }) {
@@ -90,7 +90,7 @@ export function deliveredAdjustment(returns, line, { side }) {
   returns.forEach((ret) => {
     if (!isActiveReturn(ret)) return;
     eachOnOrderEffect(ret, line, (effect) => {
-      const done = Number(effect.doneQty) || 0;
+      const done = Number(effect.doneQuantity) || 0;
       if (done <= 0) return;
 
       if (side === "purchase") {
@@ -109,11 +109,11 @@ export function deliveredAdjustment(returns, line, { side }) {
  * سهمِ هر مرجوعی از یک قلم: چقدر در *این* مرجوعی هنوز معلق است و چقدر
  * در بقیه.
  *
- * عمداً qty خامِ ادعا را نمی‌شمارد، بلکه claimRemainingQty را — یعنی
+ * عمداً quantity خامِ ادعا را نمی‌شمارد، بلکه claimRemainingQuantity را — یعنی
  * سهمی که هنوز تصمیمی برایش گرفته نشده. یک ادعا که تصمیمش گرفته شده
  * دیگر یک رزروِ باز نیست: یا کالای جایگزینش رسیده و همان مقدار از
  * مسیر deliveredAdjustment به تحویل‌شده اضافه شده، یا فقط وجه برگشته
- * و چیزی از قلم کم نشده. اگر همچنان qty کامل شمرده می‌شد، هر ادعای
+ * و چیزی از قلم کم نشده. اگر همچنان quantity کامل شمرده می‌شد، هر ادعای
  * حل‌شده برای همیشه در «مرجوعی دیگر» می‌ماند و عدد با هر مرجوعیِ تازه
  * روی همان قلم فقط بالاتر می‌رفت — دقیقاً چیزی که این تابع باید از آن
  * جلوگیری کند.
@@ -129,7 +129,7 @@ export function claimBreakdown(returns, line, currentReturnId = null) {
     (ret.claims || []).forEach((claim) => {
       if (claim.offScopeKind != null) return;
       if (!matchesLine(claim, line)) return;
-      claimed += claimRemainingQty(claim);
+      claimed += claimRemainingQuantity(claim);
     });
     if (claimed === 0) return;
 

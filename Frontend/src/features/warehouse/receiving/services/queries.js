@@ -19,7 +19,7 @@ export function useIncomingQueueQuery(filters, pagination, sorting) {
       type: filters.type ?? "",
       // این فیلد قبلاً اینجا فراموش شده بود؛ بدون آن، انتخاب کاربر در
       // select مشتری/تامین‌کننده هرگز به درخواست واقعی نمی‌رسید.
-      counterpartyIds: filters.counterpartyIds || [],
+      counterpartyId: filters.counterpartyId || "",
       fromDate: filters.fromDate || "",
       toDate: filters.toDate || "",
       sortBy: sorting?.id ?? "createdAt",

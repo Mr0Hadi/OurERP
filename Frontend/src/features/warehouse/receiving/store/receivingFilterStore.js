@@ -5,7 +5,7 @@ export const useReceivingFilterStore = createFilterStore({
     globalSearch: "",
     type: "",
     // کلیدهای ترکیبی: "customer:5" / "supplier:3"
-    counterpartyIds: [],
+    counterpartyId: "",
     fromDate: "",
     toDate: "",
   },

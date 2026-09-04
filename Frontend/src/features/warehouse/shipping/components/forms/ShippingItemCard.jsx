@@ -5,8 +5,8 @@ import { getRowStatus, ROW_STATUS_CONFIG } from "./shippingRowStatus";
 
 /** نمای موبایل یک قلم ارسال. */
 export default function ShippingItemCard({ item, onItemChange }) {
-  const shipped = item.shippedQty || 0;
-  const status = getRowStatus(item.expectedQty, shipped);
+  const shipped = item.shippedQuantity || 0;
+  const status = getRowStatus(item.expectedQuantity, shipped);
   const config = ROW_STATUS_CONFIG[status];
   const StatusIcon = config.icon;
 
@@ -42,13 +42,13 @@ export default function ShippingItemCard({ item, onItemChange }) {
         <span className="text-xs text-muted-foreground">
           باقی‌مانده برای ارسال:{" "}
           <span className="tabular-nums font-medium text-card-foreground">
-            {item.expectedQty.toLocaleString("fa-IR")}
+            {item.expectedQuantity.toLocaleString("fa-IR")}
           </span>
         </span>
         <QuantityStepper
-          value={item.shippedQty}
-          max={item.expectedQty}
-          onChange={(next) => onItemChange(item.lineId, "shippedQty", next)}
+          value={item.shippedQuantity}
+          max={item.expectedQuantity}
+          onChange={(next) => onItemChange(item.lineId, "shippedQuantity", next)}
           size="sm"
         />
       </div>

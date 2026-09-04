@@ -1,6 +1,7 @@
 // src/shared/domain/returns/apiEnums.js
 
-import { EFFECT_KINDS, EFFECT_STATUSES, PAYMENT_METHODS } from "./effects";
+import { EFFECT_KINDS, EFFECT_STATUSES } from "./effects";
+import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { RETURN_PROBLEMS } from "./problems";
 import { CLAIM_SCOPES, OFF_SCOPE_KINDS } from "./scopes";
 import { RETURN_STATUSES } from "./statuses";
@@ -21,11 +22,11 @@ import { RETURN_STATUSES } from "./statuses";
  *    کسی متوجه نمی‌شود. با این وارسی، همان لحظه در کنسول با نامِ فیلد
  *    و مقدار گزارش می‌شود.
  *
- * ۳. مقادیر همین‌جا (effects.js/problems.js/scopes.js/statuses.js) حالا
- *    عددی‌اند، ولی بکند هنوز این enum های مرجوعی را ندارد — نه شماره‌ها
- *    لزوماً با آنچه بکند روزی اضافه می‌کند یکی خواهد بود، نه حتی خودِ
- *    مدل (بکند enum های بسته دارد؛ اینجا مدلِ ترکیبیِ effect است). روز
- *    اتصال، این‌جا دقیقاً همان‌جایی است که باید نگاشت اضافه شود.
+ * ۳. `method` دیگر شمارشِ مخصوصِ خودش را ندارد و همان `PaymentTypeEnum`
+ *    است؛ بقیه‌ی مقادیر (kind/status/problem/scope) هنوز فقط در فرانت
+ *    تعریف شده‌اند و شماره‌هایشان لزوماً با آنچه بکند روزی اضافه می‌کند
+ *    یکی نیست. روز اتصال، این‌جا دقیقاً همان‌جایی است که باید نگاشت
+ *    اضافه شود.
  *
  * وارسی فقط در حالت توسعه اجرا می‌شود و هرگز چیزی را نمی‌شکند یا
  * تغییر نمی‌دهد؛ کارش فقط گزارش‌کردن است.
@@ -39,7 +40,7 @@ const SCOPE_VALUES = valuesOf(CLAIM_SCOPES);
 const OFF_SCOPE_KIND_VALUES = valuesOf(OFF_SCOPE_KINDS);
 const EFFECT_KIND_VALUES = valuesOf(EFFECT_KINDS);
 const EFFECT_STATUS_VALUES = valuesOf(EFFECT_STATUSES);
-const PAYMENT_METHOD_VALUES = valuesOf(PAYMENT_METHODS);
+const PAYMENT_METHOD_VALUES = valuesOf(PaymentTypeEnum);
 
 /** مسیرِ هر فیلدِ enum در سندِ مرجوعی، برای مستندشدن و برای وارسی. */
 export const RETURN_ENUM_FIELDS = [

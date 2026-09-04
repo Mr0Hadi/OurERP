@@ -42,7 +42,7 @@ export async function fetchShippingSaleById(id) {
  * `confirmSupplierReturnShipment` ثبت شود.
  *
  * `shipmentData` همان چیزی است که `useShippingForm().buildPayload()`
- * می‌سازد (شکلِ فرم/mock: `shippedItems[].shippedQty` با
+ * می‌سازد (شکلِ فرم/mock: `shippedItems[].shippedQuantity` با
  * `driverName`/`driverPhone`) — نه از قبل شکلِ بکند؛ اینجا ترجمه
  * می‌شود، دقیقاً مثلِ `confirmReceiving` در فایلِ خواهرش.
  *
@@ -57,10 +57,10 @@ export async function confirmShipment(
   { idempotencyKey } = {},
 ) {
   const items = (shipmentData.shippedItems || [])
-    .filter((row) => row.saleItemId != null && (Number(row.shippedQty) || 0) > 0)
+    .filter((row) => row.saleItemId != null && (Number(row.shippedQuantity) || 0) > 0)
     .map((row) => ({
       saleItemId: row.saleItemId,
-      shippedQuantity: Number(row.shippedQty) || 0,
+      shippedQuantity: Number(row.shippedQuantity) || 0,
       productUnitBarcodes: row.productUnitBarcodes || null,
     }));
 

@@ -15,7 +15,7 @@ export function usePurchaseReturnsQuery(filters, pagination, sorting) {
       page: pagination.pageIndex + 1,
       limit: pagination.pageSize,
       search: filters.globalSearch || "",
-      supplierIds: filters.supplierIds || [],
+      supplierId: filters.supplierId || "",
       status: filters.status ?? "",
       problem: filters.problem ?? "",
       scope: filters.scope ?? "",

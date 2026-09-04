@@ -61,3 +61,18 @@ export function gregorianToPersian(gregorianDateStr) {
     return "";
   }
 }
+
+/**
+ * هر تاریخی که سرور می‌فرستد → "YYYY-MM-DD".
+ *
+ * بکند `DateTime` را کامل سریالایز می‌کند ("2026-04-01T00:00:00")، ولی
+ * `PersianDatePicker` و مقایسه‌های فرم فقط با بخشِ تاریخ کار می‌کنند و
+ * رشته‌ی زمان‌دار را بی‌صدا نامعتبر می‌گیرند — نتیجه‌اش فیلدِ خالیِ
+ * «تاریخ فاکتور» بود. برشِ ساده کافی است چون سرور تاریخِ سند را بدون
+ * منطقه‌ی زمانی و در نیمه‌شبِ محلی می‌فرستد.
+ */
+export function toDateOnly(value) {
+  if (!value) return "";
+  const match = String(value).match(/^\d{4}-\d{2}-\d{2}/);
+  return match ? match[0] : "";
+}

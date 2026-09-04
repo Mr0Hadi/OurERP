@@ -10,22 +10,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import { PAYMENT_METHODS } from "@/shared/domain/returns/effects";
+import {
+  PAYMENT_TYPE_LABELS,
+  PAYMENT_REFERENCE_FIELDS,
+  SPLITTABLE_PAYMENT_TYPES,
+} from "@/shared/domain/enums/paymentType";
 
-// مقادیرِ عددیِ PAYMENT_METHODS (returns/effects.js) استفاده می‌شود —
-// این کامپوننت هم برای ترکیبیِ فرم فروش/خرید و هم برای پولِ تصمیمِ
-// مرجوعی مشترک است، پس باید با هرچه SPLITTABLE_PAYMENT_METHODS آنجا
-// می‌سنجد یکی باشد.
-const TYPES = [
-  { value: PAYMENT_METHODS.CASH, label: "نقدی" },
-  { value: PAYMENT_METHODS.CHECK, label: "چک" },
-  { value: PAYMENT_METHODS.TRANSFER, label: "انتقال بانکی" },
-];
-
-const REFERENCE_FIELD = {
-  [PAYMENT_METHODS.CHECK]: { field: "checkNumber", label: "شماره چک" },
-  [PAYMENT_METHODS.TRANSFER]: { field: "transferRef", label: "شماره پیگیری" },
-};
+/**
+ * هم فرمِ خرید/فروش و هم بخشِ پولِ تصمیمِ مرجوعی همین کامپوننت را
+ * استفاده می‌کنند، و از وقتی هر دو با `PaymentTypeEnum` می‌شمارند این
+ * فهرست برای هر دو یکی است — پیش از آن، هر مصرف‌کننده باید فهرستِ
+ * خودش را می‌داد.
+ */
+const TYPES = SPLITTABLE_PAYMENT_TYPES.map((value) => ({
+  value,
+  label: PAYMENT_TYPE_LABELS[value],
+  reference: PAYMENT_REFERENCE_FIELDS[value],
+}));
 
 /**
  * تقسیم یک مبلغ بین چند روش پرداخت.
@@ -77,7 +78,7 @@ export default function MixedPaymentList({
       </div>
 
       {payments.map((payment, idx) => {
-        const reference = REFERENCE_FIELD[payment.type];
+        const reference = TYPES.find((t) => t.value === payment.type)?.reference;
         return (
           <div
             key={idx}
@@ -139,9 +140,7 @@ export default function MixedPaymentList({
                   dir="ltr"
                   placeholder={reference.label}
                   value={payment[reference.field] || ""}
-                  onChange={(e) =>
-                    onChange(idx, reference.field, e.target.value)
-                  }
+                  onChange={(e) => onChange(idx, reference.field, e.target.value)}
                   className={`${inputHeight} input-rtl-placeholder`}
                 />
               </div>

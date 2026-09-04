@@ -5,7 +5,7 @@ export const useShippingFilterStore = createFilterStore({
     globalSearch: "",
     // کلید ترکیبی (customer:12 / supplier:3) چون صف ارسال هم به مشتری
     // می‌رود و هم به تامین‌کننده — همان قراردادی که صف دریافت دارد.
-    counterpartyIds: [],
+    counterpartyId: "",
     // '' = همه، 'sale' = ارسال فروش، 'return_replacement' = کالای
     // جایگزین، 'return_to_supplier' = عودت مازاد به تامین‌کننده
     type: "",

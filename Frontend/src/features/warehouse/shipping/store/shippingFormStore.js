@@ -28,8 +28,8 @@ function toReturnLine(line) {
     productId: line.productId,
     productName: line.productName,
     productCode: line.productCode,
-    expectedQty: line.remainingQty,
-    shippedQty: line.remainingQty,
+    expectedQuantity: line.remainingQuantity,
+    shippedQuantity: line.remainingQuantity,
   };
 }
 
@@ -55,15 +55,15 @@ export const useShippingFormStore = create((set, get) => ({
 
     const orderLines = (saleData.items || [])
       .map((item) => {
-        // `shippableQty`/`qty`/`shippedQty` شکلِ mock است؛ پاسخِ واقعیِ
+        // `shippableQuantity`/`quantity`/`shippedQuantity` شکلِ mock است؛ پاسخِ واقعیِ
         // `GetSaleDetail` همان ردیفِ خامِ `SaleItem` را می‌دهد:
         // `id`/`quantity`/`shippedQuantity` (بخش ۱۱ سند).
         const remaining =
-          item.shippableQty ??
+          item.shippableQuantity ??
           Math.max(
             0,
-            (item.qty ?? item.quantity ?? 0) -
-              (item.shippedQty ?? item.shippedQuantity ?? 0),
+            (item.quantity ?? item.quantity ?? 0) -
+              (item.shippedQuantity ?? item.shippedQuantity ?? 0),
           );
         return {
           lineId: `order:${item.productId}`,
@@ -75,11 +75,11 @@ export const useShippingFormStore = create((set, get) => ({
           productId: item.productId,
           productName: item.productName,
           productCode: item.productCode,
-          expectedQty: remaining,
-          shippedQty: remaining,
+          expectedQuantity: remaining,
+          shippedQuantity: remaining,
         };
       })
-      .filter((item) => item.expectedQty > 0);
+      .filter((item) => item.expectedQuantity > 0);
 
     // کالای جایگزینی که بابت مرجوعی‌های همین فروش به مشتری بدهکاریم و
     // می‌تواند با همین ماشین برود.

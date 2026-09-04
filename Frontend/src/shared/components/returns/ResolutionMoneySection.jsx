@@ -14,13 +14,13 @@ import {
   methodsForDirection,
 } from "@/shared/domain/returns/resolutions";
 import {
-  PAYMENT_METHODS,
-  PAYMENT_METHOD_LABELS,
-  REFERENCE_LABELS,
-} from "@/shared/domain/returns/effects";
+  PaymentTypeEnum,
+  PAYMENT_TYPE_LABELS,
+  PAYMENT_REFERENCE_FIELDS,
+} from "@/shared/domain/enums/paymentType";
 
 const EMPTY_PART = {
-  type: PAYMENT_METHODS.CASH,
+  type: PaymentTypeEnum.CASH,
   amount: "",
   checkNumber: "",
   transferRef: "",
@@ -45,7 +45,7 @@ export default function ResolutionMoneySection({
 }) {
   const directionOptions = Object.entries(side.money);
   const direction = money?.direction ?? MONEY_DIRECTIONS.NONE;
-  const method = money?.method ?? PAYMENT_METHODS.CASH;
+  const method = money?.method ?? PaymentTypeEnum.CASH;
   const parts = money?.parts ?? [];
 
   if (direction === MONEY_DIRECTIONS.NONE) {
@@ -60,8 +60,8 @@ export default function ResolutionMoneySection({
     );
   }
 
-  const isMixed = method === PAYMENT_METHODS.MIXED;
-  const referenceLabel = REFERENCE_LABELS[method];
+  const isMixed = method === PaymentTypeEnum.MIXED;
+  const referenceLabel = PAYMENT_REFERENCE_FIELDS[method]?.label;
   const methodOptions = methodsForDirection(direction);
 
   const patchPart = (idx, field, value) =>
@@ -93,7 +93,7 @@ export default function ResolutionMoneySection({
                 method: nextMethod,
                 reference: "",
                 parts:
-                  nextMethod === PAYMENT_METHODS.MIXED && parts.length === 0
+                  nextMethod === PaymentTypeEnum.MIXED && parts.length === 0
                     ? [{ ...EMPTY_PART, amount: String(defaultAmount ?? "") }]
                     : parts,
               });
@@ -105,7 +105,7 @@ export default function ResolutionMoneySection({
             <SelectContent>
               {methodOptions.map((value) => (
                 <SelectItem key={value} value={String(value)}>
-                  {PAYMENT_METHOD_LABELS[value]}
+                  {PAYMENT_TYPE_LABELS[value]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -172,7 +172,7 @@ function DirectionSelect({ direction, money, onChange, options, defaultAmount })
         const allowed = methodsForDirection(value);
         const method = allowed.includes(money?.method)
           ? money.method
-          : PAYMENT_METHODS.CASH;
+          : PaymentTypeEnum.CASH;
         // با انتخاب یک جهتِ واقعی، مبلغ پیش‌فرض همان ارزشِ این تصمیم
         // است؛ کاربر می‌تواند دستی تغییرش دهد.
         const amount =
