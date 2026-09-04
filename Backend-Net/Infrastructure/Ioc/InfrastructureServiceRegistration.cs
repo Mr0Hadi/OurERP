@@ -111,6 +111,24 @@ namespace Infrastructure.Ioc
                 {
                     ServiceURL = options.Endpoint,
                     ForcePathStyle = true,
+
+                    // AWS SDK v4 defaults both of these to WHEN_SUPPORTED, which makes every
+                    // PutObject stream its body as `Content-Encoding: aws-chunked` with a
+                    // trailing `x-amz-checksum-crc32` (X-Amz-Content-SHA256:
+                    // STREAMING-UNSIGNED-PAYLOAD-TRAILER). Real S3 unwraps that framing; Liara
+                    // does not - it stores the chunk headers and the trailer as part of the
+                    // object. The PUT still answers 200, so the upload looks successful and the
+                    // key is saved, but every later GET hands back a file that is a few bytes
+                    // longer than the original and no longer a valid image/PDF - broken
+                    // thumbnails, PDFs that will not open.
+                    //
+                    // WHEN_REQUIRED turns the body back into the plain bytes (UNSIGNED-PAYLOAD
+                    // over HTTPS, which is what DisablePayloadSigning in
+                    // LiaraObjectStorageService.UploadAsync already asks for). Nothing is lost:
+                    // S3 only *requires* a checksum for a handful of operations this code does
+                    // not use, and the transport is TLS either way.
+                    RequestChecksumCalculation = RequestChecksumCalculation.WHEN_REQUIRED,
+                    ResponseChecksumValidation = ResponseChecksumValidation.WHEN_REQUIRED,
                 };
 
                 var credentials = new BasicAWSCredentials(options.AccessKey, options.SecretKey);

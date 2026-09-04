@@ -40,7 +40,11 @@ export default function SignedImage({
     setExpired(false);
   }
 
-  const { data: refreshedUrl, isError } = useImageUrlQuery(imageKey, {
+  const {
+    data: refreshedUrl,
+    isError,
+    refetch: refetchUrl,
+  } = useImageUrlQuery(imageKey, {
     // تا وقتی URLِ همراهِ پاسخ کار می‌کند، چیزی گرفته نمی‌شود.
     enabled: Boolean(imageKey) && (expired || !imageUrl),
   });
@@ -68,7 +72,16 @@ export default function SignedImage({
       alt={alt}
       className={className}
       // یک بار: اگر امضای تازه هم شکست بخورد، حلقه‌ی بی‌پایان نمی‌سازیم.
-      onError={() => !expired && setExpired(true)}
+      //
+      // `refetch` لازم است و اضافه نیست: اگر جای دیگری همین کلید را با
+      // `initialUrl` در کش نشانده باشد، آن مقدار تا ۴۵ دقیقه «تازه»
+      // است و روشن‌شدنِ `enabled` هیچ درخواستی نمی‌سازد — یعنی همان
+      // امضای باطل دوباره برمی‌گشت.
+      onError={() => {
+        if (expired) return;
+        setExpired(true);
+        refetchUrl();
+      }}
       {...imgProps}
     />
   );
