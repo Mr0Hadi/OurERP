@@ -48,10 +48,12 @@ namespace Application.Features.Product.Queries
             var paged = await query
                 .OrderBy(x => x.ProductId)
                 .ThenBy(x => x.SerialNumber)
+                .Include(x => x.Product)
                 .Select(x => new ProductUnitDto
                 {
                     Id = x.Id,
                     ProductId = x.ProductId,
+                    ProductName = x.Product.Name,
                     SerialNumber = x.SerialNumber,
                     Barcode = x.Barcode,
                     BarcodePayload = x.BarcodePayload,
