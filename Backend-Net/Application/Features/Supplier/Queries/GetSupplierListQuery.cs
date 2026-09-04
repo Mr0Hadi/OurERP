@@ -17,6 +17,7 @@ namespace Application.Features.Supplier.Queries
         public UInt64? MinBalance { get; set; }
         public UInt64? MaxBalance { get; set; }
         public string? CompanyNameOrContactName { get; set; }
+        public int? Id { get; set; }
         public BalanceTypeEnum? BalanceType { get; set; }
     }
 
@@ -42,6 +43,11 @@ namespace Application.Features.Supplier.Queries
                     x.CompanyName.Contains(request.CompanyNameOrContactName) 
                     || x.FirstName.Contains(request.CompanyNameOrContactName)
                     || x.LastName.Contains(request.CompanyNameOrContactName));
+            }
+
+            if (request.Id.HasValue)
+            {
+                query = query.Where(x => x.Id == request.Id);
             }
 
             if (request.MinBalance.HasValue)

@@ -13,6 +13,7 @@ namespace Application.Features.User.Query
         public int Page { get; set; } = 1;
         public int Take { get; set; } = 10;
         public string? FullName { get; set; }
+        public int? PersonelCode { get; set; }
         public int? DepartmentId { get; set; }
         public int? TeamId { get; set; }
         public bool? IsActive { get; set; }
@@ -41,6 +42,11 @@ namespace Application.Features.User.Query
             if (request.DepartmentId.HasValue)
             {
                 query = query.Where(x => x.DepartmentId == request.DepartmentId.Value);
+            }
+
+            if (request.PersonelCode.HasValue)
+            {
+                query = query.Where(x => x.PersonelCode == request.PersonelCode.Value);
             }
 
             if (request.TeamId.HasValue)

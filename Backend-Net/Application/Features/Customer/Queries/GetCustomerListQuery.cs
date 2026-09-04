@@ -38,7 +38,7 @@ namespace Application.Features.Customer.Queries
 
             if (request.Id.HasValue)
             {
-                query = query.Where(x => x.Id == request.Id.Value);
+                query = query.Where(x => x.Id == request.Id);
             }
 
             if (!string.IsNullOrEmpty(request.FullName))
