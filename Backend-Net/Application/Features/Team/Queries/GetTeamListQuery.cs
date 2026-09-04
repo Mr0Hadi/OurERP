@@ -26,7 +26,7 @@ namespace Application.Features.Team.Queries
         public async Task<ResponseDto> Handle(GetTeamListQuery request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
-            var query = _context.Teams.AsQueryable();
+            var query = _context.Teams.Where(x => x.IsActive).AsQueryable();
 
             if (!string.IsNullOrEmpty(request.Name))
             {

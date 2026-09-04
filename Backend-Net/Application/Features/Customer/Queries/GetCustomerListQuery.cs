@@ -34,7 +34,7 @@ namespace Application.Features.Customer.Queries
         {
             var res = new ResponseDto();
 
-            var query = _context.Customers.AsQueryable();
+            var query = _context.Customers.Where(x => x.IsActive).AsQueryable();
 
             if (request.Id.HasValue)
             {

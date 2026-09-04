@@ -25,7 +25,7 @@ namespace Application.Features.Department.Queries
         public async Task<ResponseDto> Handle(GetDepartmentListQuery request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
-            var query = _context.Departments.AsQueryable();
+            var query = _context.Departments.Where(x => x.IsActive).AsQueryable();
 
             if (!string.IsNullOrEmpty(request.Name))
             {
