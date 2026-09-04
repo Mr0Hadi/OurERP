@@ -48,7 +48,7 @@ namespace Application.Features.Report.Queries
             var fromDate = request.FromDate ?? toDate.AddMonths(-12);
 
             var sales = await _context.Sales
-                .Where(x => x.InvoiceDate >= fromDate && x.InvoiceDate <= toDate)
+                .Where(x => x.InvoiceDate != null && x.InvoiceDate >= fromDate && x.InvoiceDate <= toDate)
                 .Select(x => new { x.InvoiceDate, x.TotalAmount })
                 .ToListAsync(cancellationToken);
 
@@ -77,7 +77,7 @@ namespace Application.Features.Report.Queries
 
             foreach (var sale in sales)
             {
-                var bucket = GetBucket(BucketKeyFor(sale.InvoiceDate));
+                var bucket = GetBucket(BucketKeyFor(sale.InvoiceDate!.Value));
                 bucket.SalesCount++;
                 bucket.TotalInvoiceAmount += sale.TotalAmount;
             }

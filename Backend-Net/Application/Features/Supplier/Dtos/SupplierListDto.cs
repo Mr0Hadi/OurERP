@@ -6,8 +6,10 @@ namespace Application.Features.Supplier.Dtos
     {
         public int Id { get; set; }
         public string CompanyName { get; set; }
-        public string FullName { get; set; }
+        public string LastName { get; set; }
+        public string FirstName { get; set; }
         public BalanceTypeEnum? BalanceType { get; set; }
+        public UInt64? Balance { get; set; }
         public string? Status { get; set; }
 
         /// <summary>Stable bucket object key; null when the supplier has no image.</summary>

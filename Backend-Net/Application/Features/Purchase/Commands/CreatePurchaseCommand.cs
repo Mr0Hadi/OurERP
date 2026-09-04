@@ -1,4 +1,4 @@
-﻿using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
@@ -24,7 +24,8 @@ namespace Application.Features.Purchase.Commands
         public PurchaseStatusEnum Status { get; set; }
         public List<PaymentDetailDto> PaymentDetails { get; set; }
         public string InvoiceNumber { get; set; }
-        public DateTime InvoiceDate { get; set; }
+        public DateTime? InvoiceDate { get; set; }
+        public DateTime? PaymentDate { get; set; }
         public string? Description { get; set; }
         public List<DocumentAttachmentInputDto> Attachments { get; set; } = new();
     }
@@ -47,8 +48,14 @@ namespace Application.Features.Purchase.Commands
             // در مرحله‌ی پیش‌فاکتور، فاکتور رسمیِ تامین‌کننده هنوز نرسیده؛ شماره و تاریخش نباید الزامی باشد.
             RuleFor(x => x.InvoiceNumber).NotEmpty().When(x => x.Status != PurchaseStatusEnum.PROFORMA)
                 .WithMessage(Validation.RequiredMessage("شماره فاکتور"));
-            RuleFor(x => x.InvoiceDate).NotEmpty().When(x => x.Status != PurchaseStatusEnum.PROFORMA)
+            // تاریخ فاکتور فقط در پیش‌فاکتور می‌تواند null بماند؛ در بقیه‌ی وضعیت‌ها الزامی است.
+            RuleFor(x => x.InvoiceDate).Must(d => d.HasValue && d.Value != default)
+                .When(x => x.Status != PurchaseStatusEnum.PROFORMA)
                 .WithMessage(Validation.RequiredMessage("تاریخ فاکتور"));
+            // مهلت پرداخت اختیاری است (خرید/فروش نقدی مهلتی ندارد)، ولی اگر پر شد نباید قبل از تاریخ فاکتور باشد.
+            RuleFor(x => x.PaymentDate).GreaterThanOrEqualTo(x => x.InvoiceDate)
+                .When(x => x.PaymentDate.HasValue && x.InvoiceDate.HasValue)
+                .WithMessage("مهلت پرداخت نمی‌تواند قبل از تاریخ فاکتور باشد.");
             RuleFor(x => x.PaymentDetails).NotEmpty().When(x => x.PaymentType != PaymentTypeEnum.CASH)
                 .WithMessage("اطلاعات پرداخت باید به طول کامل پر شود.");
             RuleForEach(x => x.Attachments).ChildRules(a =>

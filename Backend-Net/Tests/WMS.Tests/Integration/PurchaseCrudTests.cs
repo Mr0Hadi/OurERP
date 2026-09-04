@@ -239,5 +239,127 @@ namespace WMS.Tests.Integration
             var attachment = verify.DocumentAttachments.Single(a => a.DocumentKind == DocumentKindEnum.PURCHASE && a.DocumentId == scenario.Purchase.Id);
             Assert.Equal("receiving/2026/09/fake.jpg", attachment.ObjectKey);
         }
+
+        [Fact]
+        public async Task CreatePurchase_AsProforma_WithoutInvoiceDate_PersistsNull()
+        {
+            // تاریخ فاکتور در پیش‌فاکتور واقعاً null ذخیره می‌شود، نه 0001-01-01.
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 1, stock: 0);
+            var user = Seed.PersistedUser(scope.Context);
+
+            var handler = new CreatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, TestMapper.Instance, scope.UnitOfWork, FakeUserContext.WithUserId(user.Id));
+            await handler.Handle(new CreatePurchaseCommand
+            {
+                SupplierId = scenario.Supplier.Id,
+                TotalAmount = 5000,
+                PaidAmount = 0,
+                PaymentType = PaymentTypeEnum.CASH,
+                Status = PurchaseStatusEnum.PROFORMA,
+                PaymentDetails = new(),
+                InvoiceNumber = "",
+                InvoiceDate = null,
+                Description = "PROFORMA-NULL-DATE",
+                ProductItemList = new()
+                {
+                    new Application.Features.Purchase.Dtos.CreatePurchaseItemDto { ProductId = scenario.Product.Id, Quantity = 1, UnitPrice = 5000, Discount = 0 },
+                },
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            var purchase = verify.Purchases.Single(x => x.Description == "PROFORMA-NULL-DATE");
+            Assert.Null(purchase.InvoiceDate);
+
+            using var readScope = db.NewScope();
+            var detail = await new GetPurchaseDetailQueryHandler(readScope.Db, FakeObjectStorage.Instance)
+                .Handle(new GetPurchaseDetailQuery { Id = purchase.Id }, CancellationToken.None);
+            Assert.Null(Assert.IsType<PurchaseDto>(detail.Data).InvoiceDate);
+        }
+
+        [Fact]
+        public async Task CreatePurchase_PersistsPaymentDate_AndDetailQueryReturnsIt()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 1, stock: 0);
+            var user = Seed.PersistedUser(scope.Context);
+            var invoiceDate = new DateTime(2026, 8, 1);
+            var paymentDate = new DateTime(2026, 8, 31);
+
+            var handler = new CreatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, TestMapper.Instance, scope.UnitOfWork, FakeUserContext.WithUserId(user.Id));
+            await handler.Handle(new CreatePurchaseCommand
+            {
+                SupplierId = scenario.Supplier.Id,
+                TotalAmount = 5000,
+                PaidAmount = 0,
+                PaymentType = PaymentTypeEnum.CREDIT,
+                Status = PurchaseStatusEnum.PENDING,
+                PaymentDetails = new() { new Application.Common.Dtos.PaymentDetailDto { Type = PaymentTypeEnum.CREDIT, Amount = 5000 } },
+                InvoiceNumber = "INV-DUE",
+                InvoiceDate = invoiceDate,
+                PaymentDate = paymentDate,
+                ProductItemList = new()
+                {
+                    new Application.Features.Purchase.Dtos.CreatePurchaseItemDto { ProductId = scenario.Product.Id, Quantity = 1, UnitPrice = 5000, Discount = 0 },
+                },
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            var purchase = verify.Purchases.Single(x => x.InvoiceNumber == "INV-DUE");
+            Assert.Equal(paymentDate, purchase.PaymentDate);
+
+            using var readScope = db.NewScope();
+            var detail = await new GetPurchaseDetailQueryHandler(readScope.Db, FakeObjectStorage.Instance)
+                .Handle(new GetPurchaseDetailQuery { Id = purchase.Id }, CancellationToken.None);
+            Assert.Equal(paymentDate, Assert.IsType<PurchaseDto>(detail.Data).PaymentDate);
+        }
+
+        [Fact]
+        public async Task UpdatePurchase_ChangesPaymentDate()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 1, stock: 0);
+            var newDue = new DateTime(2026, 12, 1);
+
+            var handler = new UpdatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork);
+            await handler.Handle(new UpdatePurchaseCommand
+            {
+                Id = scenario.Purchase.Id,
+                InvoiceNumber = scenario.Purchase.InvoiceNumber,
+                InvoiceDate = scenario.Purchase.InvoiceDate,
+                PaymentDate = newDue,
+                Status = scenario.Purchase.Status,
+                PaymentType = PaymentTypeEnum.CASH,
+                SupplierId = scenario.Supplier.Id,
+                TotalAmount = 9999,
+                PaidAmount = 0,
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            Assert.Equal(newDue, verify.Purchases.Single(x => x.Id == scenario.Purchase.Id).PaymentDate);
+        }
+
+        [Fact]
+        public async Task GetPurchaseList_FiltersByPaymentDateRange()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 1, stock: 0);
+            scenario.Purchase.PaymentDate = new DateTime(2026, 9, 15);
+            await scope.Context.SaveChangesAsync();
+
+            var handler = new GetPurchaseListQueryHandler(scope.Db);
+            var inRange = await handler.Handle(new GetPurchaseListQuery { FromPaymentDate = new DateTime(2026, 9, 1), ToPaymentDate = new DateTime(2026, 9, 30) }, CancellationToken.None);
+            var outOfRange = await handler.Handle(new GetPurchaseListQuery { FromPaymentDate = new DateTime(2026, 10, 1) }, CancellationToken.None);
+
+            var inList = (System.Collections.IEnumerable)inRange.Data!.GetType().GetProperty("PurchaseList")!.GetValue(inRange.Data)!;
+            var outList = (System.Collections.IEnumerable)outOfRange.Data!.GetType().GetProperty("PurchaseList")!.GetValue(outOfRange.Data)!;
+
+            Assert.Single(inList.Cast<object>());
+            Assert.Empty(outList.Cast<object>());
+        }
+
     }
 }

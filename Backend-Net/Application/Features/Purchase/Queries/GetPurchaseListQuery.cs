@@ -16,8 +16,11 @@ namespace Application.Features.Purchase.Queries
         public string? InvoiceNumber { get; set; }
         public int? SupplierId { get; set; }
         public PurchaseStatusEnum? Status { get; set; }
+        public PaymentTypeEnum? PaymentType { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
+        public DateTime? FromPaymentDate { get; set; }
+        public DateTime? ToPaymentDate { get; set; }
     }
 
     public class GetPurchaseListQueryHandler : IRequestHandler<GetPurchaseListQuery, ResponseDto>
@@ -42,6 +45,11 @@ namespace Application.Features.Purchase.Queries
                 query = query.Where(x => x.SupplierId == request.SupplierId.Value);
             }
 
+            if (request.PaymentType.HasValue)
+            {
+                query = query.Where(x => x.PaymentType == request.PaymentType.Value);
+            }
+
             if (request.Status.HasValue)
             {
                 query = query.Where(x => x.Status == request.Status.Value);
@@ -57,6 +65,16 @@ namespace Application.Features.Purchase.Queries
                 query = query.Where(x => x.InvoiceDate <= request.ToDate.Value);
             }
 
+            if (request.FromPaymentDate.HasValue)
+            {
+                query = query.Where(x => x.PaymentDate >= request.FromPaymentDate.Value);
+            }
+
+            if (request.ToPaymentDate.HasValue)
+            {
+                query = query.Where(x => x.PaymentDate <= request.ToPaymentDate.Value);
+            }
+
             var paged = await query.Select(x => new PurchaseListDto
             {
                 Id = x.Id,
@@ -64,6 +82,7 @@ namespace Application.Features.Purchase.Queries
                 SupplierId = x.SupplierId,
                 SupplierName = x.Supplier.CompanyName,
                 InvoiceDate = x.InvoiceDate,
+                PaymentDate = x.PaymentDate,
                 Status = x.Status,
                 TotalAmount = x.TotalAmount,
                 PaidAmount = x.PaidAmount,

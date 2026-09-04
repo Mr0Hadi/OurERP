@@ -35,6 +35,9 @@ namespace Application.Common.Mapping
 			CreateMap<CreatePurchaseItemDto, PurchaseItem>();
 			CreateMap<PurchaseItem, CreatePurchaseItemDto>();
 
+			CreateMap<SaleItem, SaleItemDto>();
+			CreateMap<SaleItemDto, SaleItem>();
+
 			CreateMap<CreateSaleCommand, Sale>()
 				.ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.ProductIds))
 				.ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.Now))

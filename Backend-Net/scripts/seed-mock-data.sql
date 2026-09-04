@@ -280,19 +280,20 @@ SET IDENTITY_INSERT Suppliers OFF;
    Status is PurchaseStatusEnum: PROFORMA=0, PENDING=1, SHIPPED=2,
    PARTIALLY_RECEIVED=3, RECEIVED=4, CANCELLED=5.
    PaymentType is PaymentTypeEnum: CASH=0, CREDIT=1, CHECK=2, TRANSFER=3, MIXED=4.
-   The mock has no payment date; InvoiceDate is reused for the NOT NULL column.
+   PaymentDate is the credit deadline: NULL for cash rows, invoice date + 30 days
+   for every row bought on credit/check/transfer/mixed.
    --------------------------------------------------------------------------- */
 SET IDENTITY_INSERT Purchases ON;
 INSERT INTO Purchases
     (Id, InvoiceNumber, InvoiceDate, PaymentDate, Status, PaymentType, PaidAmount, TotalAmount,
      Description, SupplierId, IsActive, CreatedAt, UpdatedAt)
 VALUES
-    (1, N'INV-2026-001', '2026-03-15', '2026-03-15', 4, 0, 45000000, 45000000, N'خرید لوازم یدکی موتور',              1, 1, '2026-06-04T10:30:00', '2026-06-04T10:30:00'),
-    (2, N'INV-2026-002', '2026-03-20', '2026-03-20', 2, 1,        0, 28500000, N'خرید لنت و دیسک ترمز',               2, 1, '2026-06-09T14:15:00', '2026-06-09T14:15:00'),
-    (3, N'INV-2026-003', '2026-03-25', '2026-03-25', 3, 2, 50000000, 50000000, N'خرید یاتاقان و بلبرینگ',             3, 1, '2026-06-14T09:45:00', '2026-06-14T09:45:00'),
-    (4, N'INV-2026-004', '2026-03-28', '2026-03-28', 1, 3, 35000000, 35000000, N'خرید فیلترها و روغن موتور',          1, 1, '2026-06-17T11:20:00', '2026-06-17T11:20:00'),
-    (5, N'INV-2026-005', '2026-04-01', '2026-04-01', 4, 4, 60000000, 82500000, N'خرید کلاچ و دیسک کلاچ - پرداخت ترکیبی', 2, 1, '2026-06-20T16:00:00', '2026-06-20T16:00:00'),
-    (6, N'INV-2026-006', '2026-04-02', '2026-04-02', 5, 1,        0, 24000000, N'خرید لامپ - لغو شده به دلیل عدم موجودی', 1, 1, '2026-06-21T08:30:00', '2026-06-21T13:45:00');
+    (1, N'INV-2026-001', '2026-03-15', NULL,         4, 0, 45000000, 45000000, N'خرید لوازم یدکی موتور',              1, 1, '2026-06-04T10:30:00', '2026-06-04T10:30:00'),
+    (2, N'INV-2026-002', '2026-03-20', '2026-04-19', 2, 1,        0, 28500000, N'خرید لنت و دیسک ترمز',               2, 1, '2026-06-09T14:15:00', '2026-06-09T14:15:00'),
+    (3, N'INV-2026-003', '2026-03-25', '2026-04-24', 3, 2, 50000000, 50000000, N'خرید یاتاقان و بلبرینگ',             3, 1, '2026-06-14T09:45:00', '2026-06-14T09:45:00'),
+    (4, N'INV-2026-004', '2026-03-28', '2026-04-27', 1, 3, 35000000, 35000000, N'خرید فیلترها و روغن موتور',          1, 1, '2026-06-17T11:20:00', '2026-06-17T11:20:00'),
+    (5, N'INV-2026-005', '2026-04-01', '2026-05-01', 4, 4, 60000000, 82500000, N'خرید کلاچ و دیسک کلاچ - پرداخت ترکیبی', 2, 1, '2026-06-20T16:00:00', '2026-06-20T16:00:00'),
+    (6, N'INV-2026-006', '2026-04-02', '2026-05-02', 5, 1,        0, 24000000, N'خرید لامپ - لغو شده به دلیل عدم موجودی', 1, 1, '2026-06-21T08:30:00', '2026-06-21T13:45:00');
 SET IDENTITY_INSERT Purchases OFF;
 
 /* Purchase line items. Ids are explicit because PurchaseReturnItem rows in
@@ -333,15 +334,16 @@ INSERT INTO PaymentDetail (Id, PurchaseId, PurchaseId1, SaleId, Type, Amount, ch
    7. Sales — the 3 deterministic rows of sales/services/mockData.js
    Status is SalesStatusEnum: PROFORMA=0, PROCESSING=1, PARTIALLY_DELIVERED=2,
    SHIPPED=3, DELIVERED=4, CANCELLED=5, RETURNED=6. (PENDING removed 2026-09-01 - see docs/frontend-enum-contract.fa.md.)
+   PaymentDate is the customer's credit deadline: NULL on the cash sale.
    --------------------------------------------------------------------------- */
 SET IDENTITY_INSERT Sales ON;
 INSERT INTO Sales
-    (Id, InvoiceNumber, InvoiceDate, Status, PaymentType, PaidAmount, TotalAmount,
+    (Id, InvoiceNumber, InvoiceDate, PaymentDate, Status, PaymentType, PaidAmount, TotalAmount,
      Description, CustomerId, IsActive, CreatedAt, UpdatedAt)
 VALUES
-    (1, N'SALE-2026-001', '2026-06-04', 4, 0, 45000000, 45000000, N'فروش لوازم یدکی موتور', 1, 1, '2026-06-04T10:30:00', '2026-06-04T10:30:00'),
-    (2, N'SALE-2026-002', '2026-06-09', 1, 1,        0, 28550000, N'فروش لنت و دیسک ترمز',  2, 1, '2026-06-09T14:15:00', '2026-06-09T14:15:00'),
-    (3, N'SALE-2026-003', '2026-06-15', 4, 4, 34608000, 34608000, N'فروش باتری و لوازم برقی', 3, 1, '2026-06-15T11:20:00', '2026-06-15T11:20:00');
+    (1, N'SALE-2026-001', '2026-06-04', NULL,        4, 0, 45000000, 45000000, N'فروش لوازم یدکی موتور', 1, 1, '2026-06-04T10:30:00', '2026-06-04T10:30:00'),
+    (2, N'SALE-2026-002', '2026-06-09', '2026-07-09', 1, 1,        0, 28550000, N'فروش لنت و دیسک ترمز',  2, 1, '2026-06-09T14:15:00', '2026-06-09T14:15:00'),
+    (3, N'SALE-2026-003', '2026-06-15', '2026-07-15', 4, 4, 34608000, 34608000, N'فروش باتری و لوازم برقی', 3, 1, '2026-06-15T11:20:00', '2026-06-15T11:20:00');
 SET IDENTITY_INSERT Sales OFF;
 
 /* Sale line items. ShippedQuantity follows the mock's applyShippedQty(): full

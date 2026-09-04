@@ -52,7 +52,9 @@ namespace Application.Features.Invoice.Queries
             {
                 Title = "فاکتور خرید",
                 DocumentNumber = purchase.InvoiceNumber,
-                DocumentDate = purchase.InvoiceDate,
+                // پیش‌فاکتور هنوز تاریخ فاکتور رسمی ندارد؛ تاریخ ثبت سند چاپ می‌شود.
+                DocumentDate = purchase.InvoiceDate ?? purchase.CreatedAt,
+                PaymentDueDate = purchase.PaymentDate,
                 StatusText = purchase.Status.ToString(),
                 Description = purchase.Description,
                 Company = _configuration.GetSection("Company").Get<CompanyInfo>() ?? new CompanyInfo(),

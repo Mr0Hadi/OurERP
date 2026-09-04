@@ -34,11 +34,11 @@ namespace Application.Features.Customer.Queries
         {
             var res = new ResponseDto();
 
-            var query = _context.Customers.AsQueryable();
+            var query = _context.Customers.Where(x => x.IsActive).AsQueryable();
 
             if (request.Id.HasValue)
             {
-                query = query.Where(x => x.Id == request.Id.Value);
+                query = query.Where(x => x.Id == request.Id);
             }
 
             if (!string.IsNullOrEmpty(request.FullName))
@@ -67,7 +67,8 @@ namespace Application.Features.Customer.Queries
             var paged = await query.Select(x => new CustomerListDto
             {
                 Id = x.Id,
-                FullName = x.FirstName + " " + x.LastName,
+                FirstName = x.FirstName,
+                LastName = x.LastName,
                 BalanceType = x.BalanceType,
                 Balance = x.Balance,
                 ImageKey = x.ImageUrl

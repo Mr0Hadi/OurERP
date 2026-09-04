@@ -343,6 +343,116 @@ frontend's proforma commit (`92544f6`) plus `docs/invoice-attachment-requirement
   unrelated to this feature, only surfaced now that the DB layer actually works; not fixed
   here.
 
+**Payment due date (`PaymentDate`) wired end-to-end (2026-09-05).** `Purchase.PaymentDate` had
+existed since the `purchace-and-more` migration but was write-only dead weight — nothing set it,
+read it, or exposed it; `Sale` had no equivalent at all. It is the credit deadline: the date by
+which the buyer (us on a purchase, the customer on a sale) must settle. Now treated the same way
+`InvoiceDate` is, everywhere.
+
+- **Made `DateTime?`, not `DateTime`.** A cash transaction genuinely has no deadline, and the old
+  non-nullable column forced a meaningless `0001-01-01` (the seed script papered over this by
+  copying `InvoiceDate` into it). Widening `Purchases.PaymentDate` to nullable is safe — nothing
+  read it. `Sales.PaymentDate` is new and nullable from the start.
+- **Surfaced on**: `CreatePurchaseCommand`/`UpdatePurchaseCommand`/`CreateSaleCommand`/
+  `UpdateSaleCommand` (bound by AutoMapper's name convention on the Create maps; the Update
+  handlers assign it explicitly next to `InvoiceDate`), `PurchaseDto`/`SaleDto`,
+  `PurchaseListDto`/`SaleListDto`, and all four list/detail query projections.
+- **New list filters** `FromPaymentDate`/`ToPaymentDate` on `GetPurchaseListQuery`/
+  `GetSaleListQuery`, alongside the existing `FromDate`/`ToDate` (which stay on `InvoiceDate`) —
+  this is what a "due soon / overdue" screen needs.
+- **Validation**: optional, but must not precede `InvoiceDate` when present — guarded with
+  `.When(x => x.PaymentDate.HasValue && x.InvoiceDate != default)` so a `PROFORMA` row (whose
+  `InvoiceDate` is legitimately unset) isn't caught by it.
+- **PDFs**: `InvoiceDocumentModel.PaymentDueDate` (nullable, printed only when set) fed from
+  `GetSaleInvoicePdfQuery`/`GetPurchaseInvoicePdfQuery`. The QuestPDF renderer prints it as a
+  third header line under شماره/تاریخ. The **Excel** renderer can't — the official template has no
+  due-date cell — so it appends «مهلت پرداخت: …» into the free-form notes cell (`AE29`) ahead of
+  the description. Not added to `GetSaleReturnCreditNotePdfQuery`: a credit note settles a return,
+  it has no payment deadline of its own.
+- **Deliberately not added to** `GetPurchaseReceivingInfoQuery`/the warehouse-receiving DTOs (a
+  receiving screen doesn't care about payment terms) or the report queries (which group on
+  invoice/shipping dates by design — see §"Known gaps" and `docs/api-guide.fa.md` §14's note).
+- `docs/api-guide.fa.md` §9/§11 updated (list/detail/create/update payloads + the two new query
+  params); `scripts/seed-mock-data.sql` now sets a realistic +30-day deadline on credit rows and
+  `NULL` on cash rows instead of duplicating `InvoiceDate`.
+- Shipped as migration `20260904213229_add-sale-payment-date` (adds `Sales.PaymentDate`, alters
+  `Purchases.PaymentDate` to nullable). **Applied to the local `WMS` database (2026-09-05).**
+- **Tests**: 11 new (`PurchaseCrudTests`/`SaleCrudTests` create+detail round-trip, update, the
+  purchase due-date range filter; `CrudValidatorTests` for all four validators' before/after/null
+  cases), all passing. Suite is 339/347 — the 8 failures are pre-existing and unrelated (verified
+  by running them against a clean tree): 7 collide on the `IX_Users_PersonelCode` unique index
+  added by `20260904200850_personelcode-unique`, and the 8th is the long-documented
+  `GetCustomerList_WithStoredImageKey_AndUnconfiguredBucket_StillReturns200` `"***"` placeholder gap.
+
+**`InvoiceDate` made nullable, enforced per-status (2026-09-05).** `Purchase.InvoiceDate`/
+`Sale.InvoiceDate` were non-nullable `DateTime`, so the PROFORMA relaxation shipped on
+2026-09-01 (validators guarded with `.When(x => x.Status != …PROFORMA)`) let a proforma pass
+validation but still persisted `DateTime.MinValue` — the API handed the frontend a literal
+`0001-01-01T00:00:00` instead of `null`, and `PaymentDate`'s own rule had to work around it
+with an `x.InvoiceDate != default` guard.
+
+- **Now `DateTime?` on both entities**, both commands per side, `PurchaseDto`/`SaleDto`,
+  `PurchaseListDto`/`SaleListDto`, `PurchaseReceivingInfoDto`, and `ReceiveSaleReturnListDto`.
+- **Null is legal if and only if `Status == PROFORMA`.** All four validators
+  (`CreatePurchaseValidator`, `UpdatePurchaseCommandValidator`, `CreateSaleCommandValidator`,
+  `UpdateSaleCommandValidator`) now use `Must(d => d.HasValue && d.Value != default)
+  .When(x => x.Status != …PROFORMA)` rather than `NotEmpty()` — on a `DateTime?`, `NotEmpty()`
+  only rejects `null`, so a caller could still smuggle `0001-01-01` past it. A proforma *may*
+  carry a date; it just isn't required to.
+- **`PaymentDate`'s comparison rule** switched its guard from `x.InvoiceDate != default` to
+  `x.InvoiceDate.HasValue` (FluentValidation's nullable `GreaterThanOrEqualTo` overload).
+- **PDF fallback**: `GetPurchaseInvoicePdfQuery`/`GetSaleInvoicePdfQuery` print
+  `InvoiceDate ?? CreatedAt` — `InvoiceDocumentModel.DocumentDate` stays non-nullable, since a
+  printed document always needs *a* date and the QuestPDF layout has no "no date" branch.
+- **Report bucketing**: `GetPurchaseReportQuery`/`GetSaleReportQuery` gained an explicit
+  `x.InvoiceDate != null` in their `Where` (SQL already excluded nulls via the `>= fromDate`
+  comparison; the filter makes the following `!.Value` honest rather than load-bearing on that
+  side effect). The statistics/list queries needed no change — nullable comparisons translate.
+- Shipped as migration `20260904223059_make-invoice-date-nullable`, which also **backfills**:
+  existing `Status = 0` (PROFORMA) rows holding `0001-01-01` are set to `NULL`. **Applied to
+  the local `WMS` database (2026-09-05).**
+- `docs/api-guide.fa.md` §9/§11/§15 updated.
+- **Tests**: 14 new — 12 validator cases (null-on-proforma valid, null-on-non-proforma invalid,
+  `default(DateTime)`-on-non-proforma invalid, for each of the four validators) and 2
+  integration round-trips (`CreatePurchase`/`CreateSale` as PROFORMA with no date → column is
+  `NULL`, and the purchase detail query returns `null`). Suite is 352/361; the 9 failures are
+  pre-existing and unrelated (verified by running them against a stashed tree) — the
+  `IX_Users_PersonelCode` collisions and the `"***"` object-storage placeholder gap.
+- **Gotcha found while writing the tests**: `SalesStatusEnum.PROFORMA` is `0`, so a
+  `CreateSaleCommand`/`UpdateSaleCommand` that never sets `Status` defaults to PROFORMA and
+  silently skips every invoice-field requirement. `PurchaseStatusEnum.PROFORMA` is `0` too.
+  The frontend must send `status` explicitly on create.
+
+**`ReturnPaymentMethodEnum` renumbered to match `PaymentTypeEnum` (2026-09-05).** Requested by
+the frontend in `docs/payment-enum-unification.fa.md`: the two enums meant the same things with
+different integers, so a shared "split an amount across payment methods" component produced a
+different meaning depending on which form called it. Now `CASH=0, ON_ACCOUNT=1, CHECK=2,
+TRANSFER=3, MIXED=4, STORE_CREDIT=5` — the first five line up with `PaymentTypeEnum`
+(`ON_ACCOUNT` is that enum's `CREDIT`); `STORE_CREDIT` is the only genuinely extra member and is
+appended at the end.
+
+- **The enum was kept, not merged into `PaymentTypeEnum`** (option A of the two the request
+  offered). Every C# usage referenced members by name, so only the wire numbers changed and no
+  handler/DTO/service code needed touching.
+- **Data migration `20260904225819_renumber-return-payment-method`** remaps the persisted
+  `Method` column on `PurchaseReturnEffects`, `SaleReturnEffects`,
+  `PurchaseReturnEffectMoneyParts`, `SaleReturnEffectMoneyParts`. The old→new map
+  (`1→2, 2→3, 3→1, 4→5, 5→4`) is a **cyclic permutation**, so it must run as a single
+  `UPDATE … CASE` per table — sequential `UPDATE`s would clobber each other. `Down` applies the
+  inverse (`1→3, 2→1, 3→2, 4↔5`). `NULL`/`0` pass through untouched. The migration is otherwise
+  empty (no schema diff — `Method` was already an `int` column). **Applied to the local `WMS`
+  database (2026-09-05)**; contrary to the request's guess that the returns tables were empty,
+  there were 12 rows across the four tables, verified value-by-value before and after.
+- Docs updated: `docs/api-guide.fa.md` §15's `ReturnPaymentMethodEnum` table and the `MIXED`
+  reference in §9 (`MIXED` is now `4`, not `5`), and `docs/frontend-enum-contract.fa.md`'s
+  `PAYMENT_METHODS` row (which had documented the two as deliberately *not* aligned).
+- The request's §6 side note (the frontend was sending claim quantity as `qty` while the DTO
+  expects `Quantity`, so claims silently persisted `0`) was frontend-side and already fixed
+  there; checked the local DB for damage — `PurchaseReturnClaims`/`SaleReturnClaims` have no
+  `Quantity = 0` rows.
+- Build clean; suite 352/361, the same 9 pre-existing failures as before this change (the
+  `IX_Users_PersonelCode` collisions and the `"***"` object-storage placeholder gap).
+
 **Frontend-enum-contract cleanup pass (2026-09-01).** Follow-up audit of
 `docs/frontend-enum-contract.fa.md` against the actual code — most of its checklist turned out to
 already be done (silently, back on 2026-08-28 in the returns-effects rebuild) and the doc just

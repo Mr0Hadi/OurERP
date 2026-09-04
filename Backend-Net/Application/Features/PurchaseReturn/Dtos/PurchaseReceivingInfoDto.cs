@@ -6,7 +6,7 @@ namespace Application.Features.PurchaseReturn.Dtos
     {
         public int PurchaseId { get; set; }
         public string InvoiceNumber { get; set; }
-        public DateTime InvoiceDate { get; set; }
+        public DateTime? InvoiceDate { get; set; }
         public PurchaseStatusEnum Status { get; set; }
         public int SupplierId { get; set; }
         public string SupplierName { get; set; }

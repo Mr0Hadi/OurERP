@@ -13,6 +13,7 @@ namespace Application.Features.Department.Queries
         public int Page { get; set; } = 1;
         public int Take { get; set; } = 10;
         public string? Name { get; set; }
+        public string? HeadName { get; set; }
     }
 
     public class GetDepartmentListQueryHandler : IRequestHandler<GetDepartmentListQuery, ResponseDto>
@@ -25,11 +26,16 @@ namespace Application.Features.Department.Queries
         public async Task<ResponseDto> Handle(GetDepartmentListQuery request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
-            var query = _context.Departments.AsQueryable();
+            var query = _context.Departments.Where(x => x.IsActive).AsQueryable();
 
             if (!string.IsNullOrEmpty(request.Name))
             {
                 query = query.Where(x => x.Name.Contains(request.Name));
+            }
+
+            if (!string.IsNullOrEmpty(request.HeadName))
+            {
+                query = query.Where(x => x.Head != null && (x.Head.FirstName + " " + x.Head.LastName).Contains(request.HeadName));
             }
 
             var paged = await query.Select(x => new DepartmentListDto

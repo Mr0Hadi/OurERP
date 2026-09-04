@@ -671,7 +671,9 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
 
 ### `GET api/Purchase/GetPurchaseList`
 
-**Query:** `page`, `take`, `invoiceNumber`, `supplierId`, `status` (enum، بخش ۱۵), `fromDate`, `toDate`.
+**Query:** `page`, `take`, `invoiceNumber`, `supplierId`, `status` (enum، بخش ۱۵), `fromDate`, `toDate`, `fromPaymentDate`, `toPaymentDate`.
+
+`fromDate`/`toDate` روی **تاریخ فاکتور** فیلتر می‌کنند و `fromPaymentDate`/`toPaymentDate` روی **مهلت پرداخت** (`paymentDate`) — برای گرفتن فهرست سررسیدهای نزدیک یا سررسیدگذشته.
 
 **data.purchaseList[]:**
 ```json
@@ -681,6 +683,7 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
   "supplierId": 1,
   "supplierName": "شرکت آلفا",
   "invoiceDate": "2026-08-01T00:00:00",
+  "paymentDate": "2026-08-31T00:00:00",
   "status": 1,
   "paymentType": 0,
   "totalAmount": 50000000,
@@ -696,6 +699,7 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
   "id": 100,
   "invoiceNumber": "INV-1001",
   "invoiceDate": "2026-08-01T00:00:00",
+  "paymentDate": "2026-08-31T00:00:00",
   "status": 1,
   "paymentType": 0,
   "totalAmount": 50000000,
@@ -744,10 +748,15 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
   "paymentDetails": [],
   "invoiceNumber": "INV-1001",
   "invoiceDate": "2026-08-01T00:00:00",
+  "paymentDate": "2026-08-31T00:00:00",
   "description": null
 }
 ```
 اگر `paymentType` غیر از نقدی (`CASH = 0`) باشد، `paymentDetails` الزامی می‌شود.
+
+`paymentDate` (**مهلت پرداخت**) اختیاری است — تاریخی که تا آن، خریدار فرصت تسویه دارد. برای معامله‌ی نقدی `null` بفرستید. اگر مقدار داشته باشد نباید قبل از `invoiceDate` باشد، وگرنه ۴۰۰ برمی‌گردد. در `GetPurchaseList`/`GetPurchaseDetail`/`GetSaleList`/`GetSaleDetail` برگردانده و روی PDF فاکتور هم چاپ می‌شود.
+
+`invoiceDate` (**تاریخ فاکتور**) nullable است و **فقط وقتی `status` برابر `PROFORMA` (۰) باشد** می‌تواند `null` باشد. در هر وضعیت دیگری، `null` (یا مقدار پوچ `0001-01-01`) ۴۰۰ می‌دهد. در خروجی `GetPurchaseList`/`GetPurchaseDetail`/`GetSaleList`/`GetSaleDetail` هم برای ردیف‌های پیش‌فاکتور `null` برمی‌گردد (قبلاً `0001-01-01T00:00:00` بود). روی PDF فاکتور، اگر `null` باشد تاریخ ثبت سند چاپ می‌شود.
 
 **کاربرد:** ثبت سند خرید از تامین‌کننده (هنوز کالا وارد انبار نشده — ورود فیزیکی با `ReceivePurchase` انجام می‌شود، بخش زیر).
 
@@ -759,6 +768,7 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
   "id": 100,
   "invoiceNumber": "INV-1001",
   "invoiceDate": "2026-08-01T00:00:00",
+  "paymentDate": "2026-08-31T00:00:00",
   "status": 1,
   "paymentType": 0,
   "totalAmount": 400000000,
@@ -1038,7 +1048,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 - حداقل یکی از `goodsIn`/`goodsOut`/`money` باید مقدار داشته باشد؛ هر سه هم می‌توانند همزمان پر شوند (مثلاً هم بخشی جایگزین بیاید هم باقی‌مانده بازپرداخت شود).
 - `goodsIn`/`goodsOut`: `{ "quantity": 2, "productId": null }` — `productId` اختیاری است و پیش‌فرض همان محصول ادعا را می‌گیرد (فقط برای جایگزینی با محصول متفاوت لازم است). مجموع مقدار کالا در `goodsIn`+`goodsOut` نمی‌تواند از `composition.quantity` بیشتر شود.
 - `money.kind`: باید `2` (`MONEY_OUT` — پول از شرکت ما خارج می‌شود) یا `3` (`MONEY_IN` — تامین‌کننده به ما پول برمی‌گرداند، معادل «بازپرداخت»؛ رایج‌ترین حالت در مرجوعی خرید) باشد.
-- `money.method`: `ReturnPaymentMethodEnum` (بخش ۱۵). اگر `MIXED` (۵) بود، `parts[]` الزامی می‌شود (هرکدام `{ method, amount, checkNumber?, transferRef? }`) و باید مجموعشان با `amount` برابر باشد.
+- `money.method`: `ReturnPaymentMethodEnum` (بخش ۱۵). اگر `MIXED` (۴) بود، `parts[]` الزامی می‌شود (هرکدام `{ method, amount, checkNumber?, transferRef? }`) و باید مجموعشان با `amount` برابر باشد.
 - **قید مهم:** تنها ترکیب نامعتبر، اثر `GOODS_OUT` روی ادعای مغایرت «اضافی» (`EXCESS`, بخش ۱۵) نیست — برخلاف مدل قدیمی، دیگر جدولی از «مغایرت → تصمیم مجاز» به‌صورت سخت‌کدشده در سرور نیست؛ اگر ترکیب فیزیکی/منطقی نامعتبر باشد (مثلاً مجموع کالا بیشتر از مقدار تصمیم)، سرور ۴۰۰ می‌دهد.
 
 **data خروجی:** `{ "resolutionId": 950, "returnStatus": 1 }`
@@ -1102,7 +1112,9 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 
 ### `GET api/Sale/GetSaleList`
 
-**Query:** `page`, `take`, `invoiceNumber`, `customerName`, `status` (enum), `paymentType` (enum), `fromDate`, `toDate`.
+**Query:** `page`, `take`, `invoiceNumber`, `customerName`, `status` (enum), `paymentType` (enum), `fromDate`, `toDate`, `fromPaymentDate`, `toPaymentDate`.
+
+`fromDate`/`toDate` روی **تاریخ فاکتور** فیلتر می‌کنند و `fromPaymentDate`/`toPaymentDate` روی **مهلت پرداخت** (`paymentDate`) — برای گرفتن فهرست سررسیدهای نزدیک یا سررسیدگذشته.
 
 **data.saleList[]:**
 ```json
@@ -1112,6 +1124,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "customerId": 1,
   "customerName": "علی رضایی",
   "invoiceDate": "2026-08-10T00:00:00",
+  "paymentDate": "2026-09-09T00:00:00",
   "status": 0,
   "paymentType": 0,
   "totalAmount": 30000000,
@@ -1127,6 +1140,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "id": 200,
   "invoiceNumber": "SL-2001",
   "invoiceDate": "2026-08-10T00:00:00",
+  "paymentDate": "2026-09-09T00:00:00",
   "status": 0,
   "paymentType": 0,
   "totalAmount": 30000000,
@@ -1166,6 +1180,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 {
   "invoiceNumber": "SL-2001",
   "invoiceDate": "2026-08-10T00:00:00",
+  "paymentDate": "2026-09-09T00:00:00",
   "status": 0,
   "paymentType": 0,
   "paymentDetails": [],
@@ -1180,6 +1195,10 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 ```
 نام فیلد آرایه‌ی اقلام گمراه‌کننده `productIds` است اما در واقع لیستی از اقلام کامل (محصول + تعداد + قیمت + تخفیف) است، نه فقط شناسه‌ها. اگر `paymentType` غیر نقدی باشد، `paymentDetails` الزامی است.
 
+`paymentDate` (**مهلت پرداخت**) اختیاری است — تاریخی که تا آن، مشتری فرصت تسویه دارد. برای معامله‌ی نقدی `null` بفرستید. اگر مقدار داشته باشد نباید قبل از `invoiceDate` باشد، وگرنه ۴۰۰ برمی‌گردد. در `GetPurchaseList`/`GetPurchaseDetail`/`GetSaleList`/`GetSaleDetail` برگردانده و روی PDF فاکتور هم چاپ می‌شود.
+
+`invoiceDate` (**تاریخ فاکتور**) nullable است و **فقط وقتی `status` برابر `PROFORMA` (۰) باشد** می‌تواند `null` باشد. در هر وضعیت دیگری، `null` (یا مقدار پوچ `0001-01-01`) ۴۰۰ می‌دهد. در خروجی `GetPurchaseList`/`GetPurchaseDetail`/`GetSaleList`/`GetSaleDetail` هم برای ردیف‌های پیش‌فاکتور `null` برمی‌گردد (قبلاً `0001-01-01T00:00:00` بود). روی PDF فاکتور، اگر `null` باشد تاریخ ثبت سند چاپ می‌شود.
+
 ### `PUT api/Sale/UpdateSale`
 
 **Body:**
@@ -1188,6 +1207,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "id": 200,
   "invoiceNumber": "SL-2001",
   "invoiceDate": "2026-08-10T00:00:00",
+  "paymentDate": "2026-09-09T00:00:00",
   "status": 0,
   "paymentType": 0,
   "paymentDetails": [],
@@ -1576,7 +1596,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 | مقدار | معنی |
 |---|---|
-| 0 | پیش‌فاکتور (PROFORMA) — فاکتور رسمیِ تامین‌کننده هنوز نرسیده؛ `InvoiceNumber`/`InvoiceDate` الزامی نیستند. خروج از این وضعیت (از `UpdatePurchase`) به یک `InvoiceNumber` غیرخالی نیاز دارد |
+| 0 | پیش‌فاکتور (PROFORMA) — فاکتور رسمیِ تامین‌کننده هنوز نرسیده؛ `InvoiceNumber`/`InvoiceDate` الزامی نیستند و `invoiceDate` **فقط در همین وضعیت** می‌تواند `null` باشد. خروج از این وضعیت (از `UpdatePurchase`) به یک `InvoiceNumber` غیرخالی نیاز دارد |
 | 1 | در انتظار (PENDING) |
 | 2 | ارسال‌شده توسط تامین‌کننده (SHIPPED) |
 | 3 | دریافت‌جزئی (PARTIALLY_RECEIVED) |
@@ -1681,14 +1701,17 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 2 | باطل (VOID) — فعلاً هیچ‌جا تولید نمی‌شود |
 
 #### `ReturnPaymentMethodEnum` (روش پرداخت یک اثر مالی)
+شماره‌گذاری عمداً با `PaymentTypeEnum` (سطح سند) یکی است — `ON_ACCOUNT` همان `CREDIT` است.
+تنها عضو اضافه `STORE_CREDIT` است که ته فهرست آمده.
+
 | مقدار | معنی |
 |---|---|
 | 0 | نقدی (CASH) |
-| 1 | چک (CHECK) |
-| 2 | انتقال بانکی (TRANSFER) |
-| 3 | نسیه/در حساب (ON_ACCOUNT) |
-| 4 | اعتبار فروشگاهی (STORE_CREDIT) |
-| 5 | ترکیبی (MIXED) — نیازمند `parts[]` |
+| 1 | نسیه/در حساب (ON_ACCOUNT — معادل `CREDIT`) |
+| 2 | چک (CHECK) |
+| 3 | انتقال بانکی (TRANSFER) |
+| 4 | ترکیبی (MIXED) — نیازمند `parts[]` |
+| 5 | اعتبار فروشگاهی (STORE_CREDIT) |
 
 ### `ReportPeriodTypeEnum` (بازه‌ی زمانی گزارش، بخش ۱۸)
 | مقدار | معنی |

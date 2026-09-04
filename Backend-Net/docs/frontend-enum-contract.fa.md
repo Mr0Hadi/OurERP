@@ -230,11 +230,13 @@ returnDoc → claims[] → resolutions[] → effects[]
 
 > **✅ SOLVED (۲۰۲۶-۰۸-۲۸):** `PAYMENT_METHODS` → `ReturnPaymentMethodEnum`، `CLAIM_SCOPES` → `ReturnClaimScopeEnum`، `OFF_SCOPE_KINDS` → `ReturnOffScopeKindEnum` — هر سه با همان اعداد فرانت در کد موجودند. `MONEY_DIRECTIONS` هنوز معادل مستقیم ندارد (جهت پول از ترکیب اثرها استنتاج می‌شود، نه یک enum جدا) — اگر فرانت به این enum مجزا به‌عنوان یک مقدار روی سیم نیاز دارد، اطلاع دهید.
 
+> **✅ SOLVED (۲۰۲۶-۰۹-۰۵):** `ReturnPaymentMethodEnum` با `PaymentTypeEnum` هم‌شماره شد (`CASH=0, ON_ACCOUNT=1, CHECK=2, TRANSFER=3, MIXED=4, STORE_CREDIT=5`) — درخواستِ `docs/payment-enum-unification.fa.md`. مهاجرتِ داده‌ی چرخه‌ای در `20260904225819_renumber-return-payment-method` انجام شده.
+
 **بقیه‌ی مقادیر مرجوعی که بکند اصلاً ندارد:**
 
 | فهرست | مقادیر | کاربرد |
 |---|---|---|
-| `PAYMENT_METHODS` | `0` CASH · `1` CHECK · `2` TRANSFER · `3` ON_ACCOUNT · `4` STORE_CREDIT · `5` MIXED | روش پرداختِ یک اثر پولی. **با `PaymentTypeEnum` سطح سند یکی نیست** — `ON_ACCOUNT` و `STORE_CREDIT` را آن یکی ندارد. |
+| `PAYMENT_METHODS` | `0` CASH · `1` ON_ACCOUNT · `2` CHECK · `3` TRANSFER · `4` MIXED · `5` STORE_CREDIT | روش پرداختِ یک اثر پولی. **از ۲۰۲۶-۰۹-۰۵ با `PaymentTypeEnum` سطح سند هم‌شماره است** (`ON_ACCOUNT` = `CREDIT`)؛ تنها عضو اضافه `STORE_CREDIT` است که ته فهرست آمده. فرانت `PAYMENT_METHODS` را حذف کرده و از همان فهرست `paymentType` استفاده می‌کند. |
 | `MONEY_DIRECTIONS` | `0` NONE · `1` RECEIVE · `2` PAY | جهت پول در فرم تصمیم |
 | `CLAIM_SCOPES` | `0` ON_ORDER · `1` OFF_ORDER | ادعا روی خط سند است یا خارج از آن |
 | `OFF_SCOPE_KINDS` | `0` EXCESS · `1` UNLISTED | نوع ادعای خارج از سند (مازاد در برابر کالای اصلاً تعریف‌نشده) |
