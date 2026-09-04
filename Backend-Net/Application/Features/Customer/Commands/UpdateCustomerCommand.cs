@@ -99,8 +99,8 @@ namespace Application.Features.Customer.Commands
             // The column stores the bucket object key, so a signed URL echoed back by the frontend
             // is stripped down rather than persisted verbatim.
             customer.ImageUrl = _objectStorageService.NormalizeKey(request.ImageUrl);
-            customer.longitude = request.Longitude;
-            customer.latitude = request.Latitude;
+            customer.Longitude = request.Longitude;
+            customer.Latitude = request.Latitude;
             customer.Description = request.Description;
             customer.UpdatedAt = DateTime.Now;
 

@@ -66,6 +66,7 @@ namespace Application.Features.Supplier.Queries
                 FirstName = x.FirstName,
                 LastName = x.LastName,
                 BalanceType = x.BalanceType,
+                Balance = x.Balance,
                 ImageKey = x.ImageUrl
             }).ToPagedAsync(request.Page, request.Take, cancellationToken);
 

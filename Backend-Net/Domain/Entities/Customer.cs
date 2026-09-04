@@ -21,8 +21,8 @@ namespace Domain.Entities
         public UInt64? Balance { get; set; }
         public BalanceTypeEnum BalanceType { get; set; }
         public string? ImageUrl { get; set; }
-        public decimal? longitude { get; set; }
-        public decimal? latitude { get; set; }
+        public decimal? Longitude { get; set; }
+        public decimal? Latitude { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
