@@ -95,7 +95,11 @@ namespace Infrastructure.Persistence
             modelBuilder.Entity<User>()
                 .Property(x => x.PersonelCode)
             .   HasDefaultValueSql("NEXT VALUE FOR UserPersonelCode");
-        
+
+            modelBuilder.Entity<User>()
+                .HasIndex(x => x.PersonelCode)
+                .IsUnique();
+
 
             modelBuilder.Entity<Team>()
                 .HasOne(t => t.Head)
