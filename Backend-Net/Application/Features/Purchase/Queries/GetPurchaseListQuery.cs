@@ -16,6 +16,7 @@ namespace Application.Features.Purchase.Queries
         public string? InvoiceNumber { get; set; }
         public int? SupplierId { get; set; }
         public PurchaseStatusEnum? Status { get; set; }
+        public PaymentTypeEnum? PaymentType { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
     }
@@ -40,6 +41,11 @@ namespace Application.Features.Purchase.Queries
             if (request.SupplierId.HasValue)
             {
                 query = query.Where(x => x.SupplierId == request.SupplierId.Value);
+            }
+
+            if (request.PaymentType.HasValue)
+            {
+                query = query.Where(x => x.PaymentType == request.PaymentType.Value);
             }
 
             if (request.Status.HasValue)
