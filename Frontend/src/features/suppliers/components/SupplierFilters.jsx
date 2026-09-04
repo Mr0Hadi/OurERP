@@ -73,7 +73,7 @@ const SupplierFilters = () => {
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" size="sm" onClick={() => setQuickFilter("all")}>همه</Button>
           <Button type="button" variant="outline" size="sm" onClick={() => setQuickFilter("debtors")}>بدهکاران</Button>
-          <Button type="button" variant="outline" size="sm" onClick={() => setQuickFilter("creditors")}>بستانکاران</Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => setQuickFilter("creditors")}>طلبکاران</Button>
           <Button type="button" variant="outline" size="sm" onClick={() => setQuickFilter("zero")}>بی‌حساب</Button>
         </div>
 

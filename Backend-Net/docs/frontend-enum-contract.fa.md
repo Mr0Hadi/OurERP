@@ -274,7 +274,7 @@ returnDoc → claims[] → resolutions[] → effects[]
 
 ### ۵.۲ فیلتر `balanceType` در لیست مشتری/تامین‌کننده — مستند نشده
 
-فرانت در صفحه‌ی لیست مشتریان و تامین‌کنندگان فیلتر «نوع حساب» (بدهکار / بستانکار / تسویه‌شده) دارد و پارامتر `balanceType` را می‌فرستد. ولی در [`api-guide.fa.md`](./api-guide.fa.md) پارامترهای query این دو endpoint فقط `page`, `take`, `id`, `fullName`, `minBalance`, `maxBalance` ذکر شده.
+فرانت در صفحه‌ی لیست مشتریان و تامین‌کنندگان فیلتر «نوع حساب» (بدهکار / طلبکار / تسویه‌شده) دارد و پارامتر `balanceType` را می‌فرستد. ولی در [`api-guide.fa.md`](./api-guide.fa.md) پارامترهای query این دو endpoint فقط `page`, `take`, `id`, `fullName`, `minBalance`, `maxBalance` ذکر شده.
 
 > **پاسخ (از روی کد، ۱۴۰۵/۰۶/۰۸):** بله، **هر دو** پشتیبانی می‌کنند —
 > `GetCustomerListQuery.BalanceType` و `GetSupplierListQuery.BalanceType`، هر دو

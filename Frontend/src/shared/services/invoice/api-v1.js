@@ -66,7 +66,7 @@ export const getSaleInvoicePdf = (saleId) =>
   fetchPdf("/Invoice/GetSaleInvoicePdf", { saleId });
 
 /**
- * `GET api/Invoice/GetSaleReturnCreditNotePdf` — «برگه‌ی بستانکاری».
+ * `GET api/Invoice/GetSaleReturnCreditNotePdf` — «برگه‌ی طلبکاری».
  * فقط وقتی معنا دارد که مرجوعی حداقل یک اثرِ `MONEY_OUT` داشته باشد؛
  * وگرنه سرور ۴۰۰ با همین توضیح می‌دهد.
  *

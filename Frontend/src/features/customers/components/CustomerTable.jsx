@@ -51,7 +51,7 @@ const BalanceBadge = ({ balance, balanceType }) => {
   if (balanceType === BalanceTypeEnum.CREDITOR) {
     return (
       <Badge className="bg-red-100/80 text-red-700 dark:bg-red-950/60 dark:text-red-300 border-red-200 dark:border-red-800/50 hover:bg-red-100/90 dark:hover:bg-red-950/70 font-light text-lg px-3 py-4 rounded-full transition-colors">
-        بستانکار {amount} ریال
+        طلبکار {amount} ریال
       </Badge>
     );
   }
