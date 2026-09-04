@@ -63,7 +63,8 @@ namespace Application.Features.Supplier.Queries
             {
                 Id = x.Id,
                 CompanyName = x.CompanyName,
-                FullName = x.FirstName + " " + x.LastName,
+                FirstName = x.FirstName,
+                LastName = x.LastName,
                 BalanceType = x.BalanceType,
                 ImageKey = x.ImageUrl
             }).ToPagedAsync(request.Page, request.Take, cancellationToken);

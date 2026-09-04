@@ -67,7 +67,8 @@ namespace Application.Features.Customer.Queries
             var paged = await query.Select(x => new CustomerListDto
             {
                 Id = x.Id,
-                FullName = x.FirstName + " " + x.LastName,
+                FirstName = x.FirstName,
+                LastName = x.LastName,
                 BalanceType = x.BalanceType,
                 Balance = x.Balance,
                 ImageKey = x.ImageUrl
