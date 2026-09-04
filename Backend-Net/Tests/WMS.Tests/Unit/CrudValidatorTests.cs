@@ -437,6 +437,36 @@ namespace WMS.Tests.Unit
 
             Assert.False(_sut.Validate(command).IsValid);
         }
+        [Fact]
+        public void PaymentDateBeforeInvoiceDate_IsInvalid()
+        {
+            var command = Valid();
+            command.InvoiceDate = new DateTime(2026, 8, 1);
+            command.PaymentDate = new DateTime(2026, 7, 20);
+
+            Assert.False(_sut.Validate(command).IsValid);
+        }
+
+        [Fact]
+        public void NullPaymentDate_IsValid()
+        {
+            // مهلت پرداخت اختیاری است - معامله‌ی نقدی اصلاً مهلت ندارد.
+            var command = Valid();
+            command.PaymentDate = null;
+
+            Assert.True(_sut.Validate(command).IsValid);
+        }
+
+        [Fact]
+        public void PaymentDateAfterInvoiceDate_IsValid()
+        {
+            var command = Valid();
+            command.InvoiceDate = new DateTime(2026, 8, 1);
+            command.PaymentDate = new DateTime(2026, 8, 31);
+
+            Assert.True(_sut.Validate(command).IsValid);
+        }
+
     }
 
     public class UpdatePurchaseCommandValidatorTests
@@ -498,6 +528,36 @@ namespace WMS.Tests.Unit
 
             Assert.False(_sut.Validate(command).IsValid);
         }
+        [Fact]
+        public void PaymentDateBeforeInvoiceDate_IsInvalid()
+        {
+            var command = Valid();
+            command.InvoiceDate = new DateTime(2026, 8, 1);
+            command.PaymentDate = new DateTime(2026, 7, 20);
+
+            Assert.False(_sut.Validate(command).IsValid);
+        }
+
+        [Fact]
+        public void NullPaymentDate_IsValid()
+        {
+            // مهلت پرداخت اختیاری است - معامله‌ی نقدی اصلاً مهلت ندارد.
+            var command = Valid();
+            command.PaymentDate = null;
+
+            Assert.True(_sut.Validate(command).IsValid);
+        }
+
+        [Fact]
+        public void PaymentDateAfterInvoiceDate_IsValid()
+        {
+            var command = Valid();
+            command.InvoiceDate = new DateTime(2026, 8, 1);
+            command.PaymentDate = new DateTime(2026, 8, 31);
+
+            Assert.True(_sut.Validate(command).IsValid);
+        }
+
     }
 
     public class UpdateSaleCommandValidatorTests

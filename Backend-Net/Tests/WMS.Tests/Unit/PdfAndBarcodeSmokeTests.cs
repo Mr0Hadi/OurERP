@@ -54,6 +54,7 @@ namespace WMS.Tests.Unit
                 Title = "صورتحساب فروش کالا و خدمات",
                 DocumentNumber = "S-2026-0001",
                 DocumentDate = new DateTime(2026, 8, 30),
+                PaymentDueDate = new DateTime(2026, 9, 29),
                 Company = new CompanyInfo { Name = "شرکت تست", City = "تهران", Currency = "ریال" },
                 CounterpartyLabel = "خریدار",
                 Counterparty = new PartyInfo { Name = "مشتری تست", City = "اصفهان" },

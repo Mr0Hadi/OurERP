@@ -1,4 +1,4 @@
-﻿using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
@@ -25,6 +25,7 @@ namespace Application.Features.Purchase.Commands
         public List<PaymentDetailDto> PaymentDetails { get; set; }
         public string InvoiceNumber { get; set; }
         public DateTime InvoiceDate { get; set; }
+        public DateTime? PaymentDate { get; set; }
         public string? Description { get; set; }
         public List<DocumentAttachmentInputDto> Attachments { get; set; } = new();
     }
@@ -49,6 +50,10 @@ namespace Application.Features.Purchase.Commands
                 .WithMessage(Validation.RequiredMessage("شماره فاکتور"));
             RuleFor(x => x.InvoiceDate).NotEmpty().When(x => x.Status != PurchaseStatusEnum.PROFORMA)
                 .WithMessage(Validation.RequiredMessage("تاریخ فاکتور"));
+            // مهلت پرداخت اختیاری است (خرید/فروش نقدی مهلتی ندارد)، ولی اگر پر شد نباید قبل از تاریخ فاکتور باشد.
+            RuleFor(x => x.PaymentDate).GreaterThanOrEqualTo(x => x.InvoiceDate)
+                .When(x => x.PaymentDate.HasValue && x.InvoiceDate != default)
+                .WithMessage("مهلت پرداخت نمی‌تواند قبل از تاریخ فاکتور باشد.");
             RuleFor(x => x.PaymentDetails).NotEmpty().When(x => x.PaymentType != PaymentTypeEnum.CASH)
                 .WithMessage("اطلاعات پرداخت باید به طول کامل پر شود.");
             RuleForEach(x => x.Attachments).ChildRules(a =>

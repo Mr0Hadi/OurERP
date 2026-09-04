@@ -671,7 +671,9 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
 
 ### `GET api/Purchase/GetPurchaseList`
 
-**Query:** `page`, `take`, `invoiceNumber`, `supplierId`, `status` (enum، بخش ۱۵), `fromDate`, `toDate`.
+**Query:** `page`, `take`, `invoiceNumber`, `supplierId`, `status` (enum، بخش ۱۵), `fromDate`, `toDate`, `fromPaymentDate`, `toPaymentDate`.
+
+`fromDate`/`toDate` روی **تاریخ فاکتور** فیلتر می‌کنند و `fromPaymentDate`/`toPaymentDate` روی **مهلت پرداخت** (`paymentDate`) — برای گرفتن فهرست سررسیدهای نزدیک یا سررسیدگذشته.
 
 **data.purchaseList[]:**
 ```json
@@ -681,6 +683,7 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
   "supplierId": 1,
   "supplierName": "شرکت آلفا",
   "invoiceDate": "2026-08-01T00:00:00",
+  "paymentDate": "2026-08-31T00:00:00",
   "status": 1,
   "paymentType": 0,
   "totalAmount": 50000000,
@@ -696,6 +699,7 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
   "id": 100,
   "invoiceNumber": "INV-1001",
   "invoiceDate": "2026-08-01T00:00:00",
+  "paymentDate": "2026-08-31T00:00:00",
   "status": 1,
   "paymentType": 0,
   "totalAmount": 50000000,
@@ -744,10 +748,13 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
   "paymentDetails": [],
   "invoiceNumber": "INV-1001",
   "invoiceDate": "2026-08-01T00:00:00",
+  "paymentDate": "2026-08-31T00:00:00",
   "description": null
 }
 ```
 اگر `paymentType` غیر از نقدی (`CASH = 0`) باشد، `paymentDetails` الزامی می‌شود.
+
+`paymentDate` (**مهلت پرداخت**) اختیاری است — تاریخی که تا آن، خریدار فرصت تسویه دارد. برای معامله‌ی نقدی `null` بفرستید. اگر مقدار داشته باشد نباید قبل از `invoiceDate` باشد، وگرنه ۴۰۰ برمی‌گردد. در `GetPurchaseList`/`GetPurchaseDetail`/`GetSaleList`/`GetSaleDetail` برگردانده و روی PDF فاکتور هم چاپ می‌شود.
 
 **کاربرد:** ثبت سند خرید از تامین‌کننده (هنوز کالا وارد انبار نشده — ورود فیزیکی با `ReceivePurchase` انجام می‌شود، بخش زیر).
 
@@ -759,6 +766,7 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
   "id": 100,
   "invoiceNumber": "INV-1001",
   "invoiceDate": "2026-08-01T00:00:00",
+  "paymentDate": "2026-08-31T00:00:00",
   "status": 1,
   "paymentType": 0,
   "totalAmount": 400000000,
@@ -1102,7 +1110,9 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 
 ### `GET api/Sale/GetSaleList`
 
-**Query:** `page`, `take`, `invoiceNumber`, `customerName`, `status` (enum), `paymentType` (enum), `fromDate`, `toDate`.
+**Query:** `page`, `take`, `invoiceNumber`, `customerName`, `status` (enum), `paymentType` (enum), `fromDate`, `toDate`, `fromPaymentDate`, `toPaymentDate`.
+
+`fromDate`/`toDate` روی **تاریخ فاکتور** فیلتر می‌کنند و `fromPaymentDate`/`toPaymentDate` روی **مهلت پرداخت** (`paymentDate`) — برای گرفتن فهرست سررسیدهای نزدیک یا سررسیدگذشته.
 
 **data.saleList[]:**
 ```json
@@ -1112,6 +1122,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "customerId": 1,
   "customerName": "علی رضایی",
   "invoiceDate": "2026-08-10T00:00:00",
+  "paymentDate": "2026-09-09T00:00:00",
   "status": 0,
   "paymentType": 0,
   "totalAmount": 30000000,
@@ -1127,6 +1138,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "id": 200,
   "invoiceNumber": "SL-2001",
   "invoiceDate": "2026-08-10T00:00:00",
+  "paymentDate": "2026-09-09T00:00:00",
   "status": 0,
   "paymentType": 0,
   "totalAmount": 30000000,
@@ -1166,6 +1178,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 {
   "invoiceNumber": "SL-2001",
   "invoiceDate": "2026-08-10T00:00:00",
+  "paymentDate": "2026-09-09T00:00:00",
   "status": 0,
   "paymentType": 0,
   "paymentDetails": [],
@@ -1180,6 +1193,8 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 ```
 نام فیلد آرایه‌ی اقلام گمراه‌کننده `productIds` است اما در واقع لیستی از اقلام کامل (محصول + تعداد + قیمت + تخفیف) است، نه فقط شناسه‌ها. اگر `paymentType` غیر نقدی باشد، `paymentDetails` الزامی است.
 
+`paymentDate` (**مهلت پرداخت**) اختیاری است — تاریخی که تا آن، مشتری فرصت تسویه دارد. برای معامله‌ی نقدی `null` بفرستید. اگر مقدار داشته باشد نباید قبل از `invoiceDate` باشد، وگرنه ۴۰۰ برمی‌گردد. در `GetPurchaseList`/`GetPurchaseDetail`/`GetSaleList`/`GetSaleDetail` برگردانده و روی PDF فاکتور هم چاپ می‌شود.
+
 ### `PUT api/Sale/UpdateSale`
 
 **Body:**
@@ -1188,6 +1203,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "id": 200,
   "invoiceNumber": "SL-2001",
   "invoiceDate": "2026-08-10T00:00:00",
+  "paymentDate": "2026-09-09T00:00:00",
   "status": 0,
   "paymentType": 0,
   "paymentDetails": [],

@@ -123,6 +123,9 @@ namespace Infrastructure.Services
                 {
                     col.Item().Text("شماره: " + model.DocumentNumber.ToPersianDigits()).FontSize(8);
                     col.Item().Text("تاریخ: " + PersianDate.ToDisplayString(model.DocumentDate).ToPersianDigits()).FontSize(8);
+
+                    if (model.PaymentDueDate.HasValue)
+                        col.Item().Text("مهلت پرداخت: " + PersianDate.ToDisplayString(model.PaymentDueDate.Value).ToPersianDigits()).FontSize(8);
                 });
 
                 row.RelativeItem(2).AlignCenter().AlignMiddle().Column(col =>

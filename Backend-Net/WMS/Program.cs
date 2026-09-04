@@ -1,15 +1,16 @@
 
 using Application.Ioc;
+using Infrastructure.Ioc;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.OpenApi;
+using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
+using Serilog;
 using System.Text;
 using WMS.Ioc;
+using WMS.Logging;
 using WMS.Middlewares;
-using Serilog;
-using Infrastructure.Ioc;
 
 namespace WMS
 {
@@ -21,6 +22,7 @@ namespace WMS
 
             var builder = WebApplication.CreateBuilder(args);
 
+            SerilogConfiguration.ConfigureLogger(builder.Configuration, builder.Environment.ContentRootPath);
             builder.Host.UseSerilog();
 
             // Add services to the container.
@@ -107,7 +109,15 @@ namespace WMS
             builder.Services.Configure<ApiBehaviorOptions>(options =>
             {
                 options.InvalidModelStateResponseFactory = context =>
-                    ResponseHandler.ResponseHandler.ExceptionResult(400, "فرمت داده ورودی صحیح نمی باشد.", null);
+                {
+                    var details = context.ModelState
+                        .Where(kvp => kvp.Value?.Errors.Count > 0)
+                        .Select(kvp => kvp.Key.ToString());
+
+                    var message = "فرمت داده ورودی صحیح نمی باشد. " + string.Join(" - ", details);
+
+                    return ResponseHandler.ResponseHandler.ExceptionResult(400, message, null);
+                };
             });
 
             var app = builder.Build();

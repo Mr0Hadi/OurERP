@@ -9,6 +9,7 @@ namespace Application.Features.Sale.Dtos
         public int Id { get; set; }
         public string InvoiceNumber { get; set; }
         public DateTime InvoiceDate { get; set; }
+        public DateTime? PaymentDate { get; set; }
         public SalesStatusEnum Status { get; set; }
         public PaymentTypeEnum PaymentType { get; set; }
         public List<PaymentDetail> PaymentDetails { get; set; }

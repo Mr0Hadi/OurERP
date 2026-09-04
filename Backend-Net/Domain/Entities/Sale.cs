@@ -7,6 +7,8 @@ namespace Domain.Entities
         public int Id { get; set; }
         public string InvoiceNumber { get; set; }
         public DateTime InvoiceDate { get; set; }
+        /// <summary>مهلت پرداخت - تاریخی که تا آن، خریدار فرصت تسویه دارد. اختیاری (خرید/فروش نقدی مهلت ندارد).</summary>
+        public DateTime? PaymentDate { get; set; }
         public SalesStatusEnum Status { get; set; }
         public PaymentTypeEnum PaymentType { get; set; }
         public List<PaymentDetail> PaymentDetails { get; set; }

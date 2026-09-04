@@ -5,14 +5,14 @@ namespace WMS.Logging
 {
     public static class SerilogConfiguration
     {
-        public static void ConfigureLogger(IConfiguration configuration)
+        public static void ConfigureLogger(IConfiguration configuration, string contentRootPath)
         {
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
                 .Enrich.FromLogContext()
                 .WriteTo.File(
-                    path: Path.Combine(Environment.CurrentDirectory, "Logs/Requests/request-.log"),
+                    path: Path.Combine(contentRootPath, "Logs/Requests/request-.log"),
                     rollingInterval: RollingInterval.Day,
                     fileSizeLimitBytes: 1_000_000_000, // 1 GB
                     retainedFileCountLimit: 10,
@@ -20,7 +20,7 @@ namespace WMS.Logging
                     outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"
                 )
                 .WriteTo.File(
-                    path: Path.Combine(Environment.CurrentDirectory, "Logs/Errors/error-.log"),
+                    path: Path.Combine(contentRootPath, "Logs/Errors/error-.log"),
                     rollingInterval: RollingInterval.Day,
                     fileSizeLimitBytes: 1_000_000_000,
                     retainedFileCountLimit: 10,

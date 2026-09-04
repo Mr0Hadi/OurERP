@@ -293,5 +293,78 @@ namespace WMS.Tests.Integration
             Assert.Equal(SalesStatusEnum.PROCESSING, sale.Status);
             Assert.False(string.IsNullOrEmpty(sale.InvoiceNumber));
         }
+
+        [Fact]
+        public async Task CreateSale_PersistsPaymentDate_AndDetailQueryReturnsIt()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0);
+            var user = Seed.PersistedUser(scope.Context);
+            var invoiceDate = new DateTime(2026, 8, 10);
+            var paymentDate = new DateTime(2026, 9, 9);
+
+            var handler = new CreateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance, FakeUserContext.WithUserId(user.Id));
+            await handler.Handle(new CreateSaleCommand
+            {
+                InvoiceNumber = "SALE-DUE",
+                InvoiceDate = invoiceDate,
+                PaymentDate = paymentDate,
+                CustomerId = scenario.Customer.Id,
+                TotalAmount = 5000,
+                PaidAmount = 0,
+                PaymentType = PaymentTypeEnum.CASH,
+                PaymentDetails = new(),
+                ProductIds = new()
+                {
+                    new CreateSaleItemDto { ProductId = scenario.Product.Id, Quantity = 1, UnitPrice = 5000, Discount = 0 },
+                },
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            var sale = verify.Sales.Single(x => x.InvoiceNumber == "SALE-DUE");
+            Assert.Equal(paymentDate, sale.PaymentDate);
+
+            using var readScope = db.NewScope();
+            var detail = await new GetSaleDetailQueryHandler(readScope.Db, FakeObjectStorage.Instance)
+                .Handle(new GetSaleDetailQuery { Id = sale.Id }, CancellationToken.None);
+            Assert.Equal(paymentDate, Assert.IsType<SaleDto>(detail.Data).PaymentDate);
+        }
+
+        [Fact]
+        public async Task UpdateSale_ChangesPaymentDate()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0);
+            var newDue = new DateTime(2026, 12, 1);
+
+            var handler = new UpdateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
+            await handler.Handle(new UpdateSaleCommand
+            {
+                Id = scenario.Sale.Id,
+                InvoiceNumber = scenario.Sale.InvoiceNumber,
+                InvoiceDate = scenario.Sale.InvoiceDate,
+                PaymentDate = newDue,
+                Status = scenario.Sale.Status,
+                PaymentType = PaymentTypeEnum.CASH,
+                PaymentDetails = new(),
+                TotalAmount = 5000,
+                PaidAmount = 0,
+                CustomerId = scenario.Customer.Id,
+                Items = scenario.Sale.Items.Select(i => new UpdateSaleItemDto
+                {
+                    Id = i.Id,
+                    ProductId = i.ProductId,
+                    Quantity = i.Quantity,
+                    UnitPrice = i.UnitPrice,
+                    Discount = i.Discount,
+                }).ToList(),
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            Assert.Equal(newDue, verify.Sales.Single(x => x.Id == scenario.Sale.Id).PaymentDate);
+        }
+
     }
 }

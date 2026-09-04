@@ -215,6 +215,11 @@ namespace Infrastructure.Services
 
             SetValue(ws, "G28", Money(model.GrandTotal) + " " + model.Company.Currency);
 
+            // The official template has no dedicated due-date cell, so the payment deadline rides
+            // along in the free-form notes cell, ahead of the description.
+            if (model.PaymentDueDate.HasValue)
+                AppendValue(ws, "AE29", "مهلت پرداخت: " + PersianDate.ToDisplayString(model.PaymentDueDate.Value).ToPersianDigits());
+
             if (!string.IsNullOrWhiteSpace(model.Description))
                 AppendValue(ws, "AE29", model.Description);
         }

@@ -47,6 +47,9 @@ namespace Application.Common.Contracts.Documents
         public string Title { get; set; } = string.Empty;
         public string DocumentNumber { get; set; } = string.Empty;
         public DateTime DocumentDate { get; set; }
+
+        /// <summary>مهلت پرداخت - اختیاری؛ فقط وقتی چاپ می‌شود که سند مهلت تسویه داشته باشد.</summary>
+        public DateTime? PaymentDueDate { get; set; }
         public string StatusText { get; set; } = string.Empty;
         public string? Description { get; set; }
 

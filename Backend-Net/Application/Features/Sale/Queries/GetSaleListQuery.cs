@@ -19,6 +19,8 @@ namespace Application.Features.Sale.Queries
         public PaymentTypeEnum? PaymentType { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
+        public DateTime? FromPaymentDate { get; set; }
+        public DateTime? ToPaymentDate { get; set; }
     }
 
     public class GetSaleListQueryHandler : IRequestHandler<GetSaleListQuery, ResponseDto>
@@ -64,6 +66,16 @@ namespace Application.Features.Sale.Queries
                 query = query.Where(x => x.InvoiceDate <= request.ToDate.Value);
             }
 
+            if (request.FromPaymentDate.HasValue)
+            {
+                query = query.Where(x => x.PaymentDate >= request.FromPaymentDate.Value);
+            }
+
+            if (request.ToPaymentDate.HasValue)
+            {
+                query = query.Where(x => x.PaymentDate <= request.ToPaymentDate.Value);
+            }
+
             var paged = await query.Select(x => new SaleListDto
             {
                 Id = x.Id,
@@ -71,6 +83,7 @@ namespace Application.Features.Sale.Queries
                 CustomerId = x.CustomerId,
                 CustomerName = x.Customer.FirstName + " " + x.Customer.LastName,
                 InvoiceDate = x.InvoiceDate,
+                PaymentDate = x.PaymentDate,
                 Status = x.Status,
                 PaymentType = x.PaymentType,
                 TotalAmount = x.TotalAmount,

@@ -53,6 +53,7 @@ namespace Application.Features.Invoice.Queries
                 Title = "فاکتور خرید",
                 DocumentNumber = purchase.InvoiceNumber,
                 DocumentDate = purchase.InvoiceDate,
+                PaymentDueDate = purchase.PaymentDate,
                 StatusText = purchase.Status.ToString(),
                 Description = purchase.Description,
                 Company = _configuration.GetSection("Company").Get<CompanyInfo>() ?? new CompanyInfo(),

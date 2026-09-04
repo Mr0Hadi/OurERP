@@ -19,6 +19,7 @@ namespace Application.Features.Sale.Commands
     {
         public string InvoiceNumber { get; set; }
         public DateTime InvoiceDate { get; set; }
+        public DateTime? PaymentDate { get; set; }
         public SalesStatusEnum Status { get; set; }
         public PaymentTypeEnum PaymentType { get; set; }
         public List<PaymentDetailDto> PaymentDetails { get; set; }
@@ -39,6 +40,10 @@ namespace Application.Features.Sale.Commands
                 .WithMessage(Validation.RequiredMessage("شماره فاکتور"));
             RuleFor(x => x.InvoiceDate).NotEmpty().When(x => x.Status != SalesStatusEnum.PROFORMA)
                 .WithMessage(Validation.RequiredMessage("تاریخ فاکتور"));
+            // مهلت پرداخت اختیاری است (خرید/فروش نقدی مهلتی ندارد)، ولی اگر پر شد نباید قبل از تاریخ فاکتور باشد.
+            RuleFor(x => x.PaymentDate).GreaterThanOrEqualTo(x => x.InvoiceDate)
+                .When(x => x.PaymentDate.HasValue && x.InvoiceDate != default)
+                .WithMessage("مهلت پرداخت نمی‌تواند قبل از تاریخ فاکتور باشد.");
             RuleFor(x => x.CustomerId).NotEmpty().WithMessage(Validation.RequiredMessage("مشتری"));
             RuleFor(x => x.TotalAmount).Must(p => p > 0).WithMessage("مبلغ کل باید از صفر بیشتر باشد.");
             RuleFor(x => x.PaidAmount).Must(p => p >= 0).WithMessage("مبلغ پرداختی باید بیشتر یا مساوی صفر باشد.");

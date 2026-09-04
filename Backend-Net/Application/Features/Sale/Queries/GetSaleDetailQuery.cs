@@ -36,6 +36,7 @@ namespace Application.Features.Sale.Queries
                     Id = x.Id,
                     InvoiceNumber = x.InvoiceNumber,
                     InvoiceDate = x.InvoiceDate,
+                    PaymentDate = x.PaymentDate,
                     Status = x.Status,
                     PaymentType = x.PaymentType,
                     TotalAmount = x.TotalAmount,

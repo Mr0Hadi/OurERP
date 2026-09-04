@@ -343,6 +343,47 @@ frontend's proforma commit (`92544f6`) plus `docs/invoice-attachment-requirement
   unrelated to this feature, only surfaced now that the DB layer actually works; not fixed
   here.
 
+**Payment due date (`PaymentDate`) wired end-to-end (2026-09-05).** `Purchase.PaymentDate` had
+existed since the `purchace-and-more` migration but was write-only dead weight — nothing set it,
+read it, or exposed it; `Sale` had no equivalent at all. It is the credit deadline: the date by
+which the buyer (us on a purchase, the customer on a sale) must settle. Now treated the same way
+`InvoiceDate` is, everywhere.
+
+- **Made `DateTime?`, not `DateTime`.** A cash transaction genuinely has no deadline, and the old
+  non-nullable column forced a meaningless `0001-01-01` (the seed script papered over this by
+  copying `InvoiceDate` into it). Widening `Purchases.PaymentDate` to nullable is safe — nothing
+  read it. `Sales.PaymentDate` is new and nullable from the start.
+- **Surfaced on**: `CreatePurchaseCommand`/`UpdatePurchaseCommand`/`CreateSaleCommand`/
+  `UpdateSaleCommand` (bound by AutoMapper's name convention on the Create maps; the Update
+  handlers assign it explicitly next to `InvoiceDate`), `PurchaseDto`/`SaleDto`,
+  `PurchaseListDto`/`SaleListDto`, and all four list/detail query projections.
+- **New list filters** `FromPaymentDate`/`ToPaymentDate` on `GetPurchaseListQuery`/
+  `GetSaleListQuery`, alongside the existing `FromDate`/`ToDate` (which stay on `InvoiceDate`) —
+  this is what a "due soon / overdue" screen needs.
+- **Validation**: optional, but must not precede `InvoiceDate` when present — guarded with
+  `.When(x => x.PaymentDate.HasValue && x.InvoiceDate != default)` so a `PROFORMA` row (whose
+  `InvoiceDate` is legitimately unset) isn't caught by it.
+- **PDFs**: `InvoiceDocumentModel.PaymentDueDate` (nullable, printed only when set) fed from
+  `GetSaleInvoicePdfQuery`/`GetPurchaseInvoicePdfQuery`. The QuestPDF renderer prints it as a
+  third header line under شماره/تاریخ. The **Excel** renderer can't — the official template has no
+  due-date cell — so it appends «مهلت پرداخت: …» into the free-form notes cell (`AE29`) ahead of
+  the description. Not added to `GetSaleReturnCreditNotePdfQuery`: a credit note settles a return,
+  it has no payment deadline of its own.
+- **Deliberately not added to** `GetPurchaseReceivingInfoQuery`/the warehouse-receiving DTOs (a
+  receiving screen doesn't care about payment terms) or the report queries (which group on
+  invoice/shipping dates by design — see §"Known gaps" and `docs/api-guide.fa.md` §14's note).
+- `docs/api-guide.fa.md` §9/§11 updated (list/detail/create/update payloads + the two new query
+  params); `scripts/seed-mock-data.sql` now sets a realistic +30-day deadline on credit rows and
+  `NULL` on cash rows instead of duplicating `InvoiceDate`.
+- Shipped as migration `20260904213229_add-sale-payment-date` (adds `Sales.PaymentDate`, alters
+  `Purchases.PaymentDate` to nullable). **Applied to the local `WMS` database (2026-09-05).**
+- **Tests**: 11 new (`PurchaseCrudTests`/`SaleCrudTests` create+detail round-trip, update, the
+  purchase due-date range filter; `CrudValidatorTests` for all four validators' before/after/null
+  cases), all passing. Suite is 339/347 — the 8 failures are pre-existing and unrelated (verified
+  by running them against a clean tree): 7 collide on the `IX_Users_PersonelCode` unique index
+  added by `20260904200850_personelcode-unique`, and the 8th is the long-documented
+  `GetCustomerList_WithStoredImageKey_AndUnconfiguredBucket_StillReturns200` `"***"` placeholder gap.
+
 **Frontend-enum-contract cleanup pass (2026-09-01).** Follow-up audit of
 `docs/frontend-enum-contract.fa.md` against the actual code — most of its checklist turned out to
 already be done (silently, back on 2026-08-28 in the returns-effects rebuild) and the doc just
