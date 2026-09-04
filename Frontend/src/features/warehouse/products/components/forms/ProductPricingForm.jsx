@@ -38,6 +38,7 @@ export default function ProductPricingForm({ register, control }) {
             id="initialStock"
             {...register("initialStock")}
             min="0"
+            placeholder="0"
           />
         </div>
 
@@ -60,7 +61,7 @@ export default function ProductPricingForm({ register, control }) {
             {...register("vat")}
             min="0"
             max="100"
-            placeholder="مثال: 9"
+            placeholder="0"
           />
         </div>
 

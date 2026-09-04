@@ -85,6 +85,7 @@ namespace Application.Features.Product.Queries
                 Name = x.Name,
                 CategoryName = x.ProductCategory.Name,
                 Stock = x.Stock,
+                LowStockThreshold = x.LowStockThreshold,
                 RetailPrice = x.RetailPrice,
                 WholeSalePrice = x.WholeSalePrice,
                 ImageKey = x.ImageUrl

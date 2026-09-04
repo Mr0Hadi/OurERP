@@ -14,27 +14,27 @@ function buildDefaultValues(data) {
       productCategoryId: "",
       brand: "",
       unit: "",
-      initialStock: 0,
+      initialStock: "",
       lowStockThreshold: 10,
       purchasePrice: 0,
       sellPrice1: 0,
       sellPrice2: 0,
-      vat: 0,
+      vat: "",
     };
   }
   return {
     name: data.name || "",
     code: data.code || "",
-    barcode: data.barcode || "",
+    barcode: data.barCode || data.barcode || "",
     productCategoryId: data.productCategoryId ?? "",
     brand: data.brand || "",
     unit: data.unit ?? "",
-    initialStock: data.stock ?? data.initialStock ?? 0,
+    initialStock: (data.stock ?? data.initialStock) || "",
     lowStockThreshold: data.lowStockThreshold ?? 10,
     purchasePrice: data.purchasePrice || 0,
     sellPrice1: data.retailPrice ?? data.sellPrice1 ?? 0,
     sellPrice2: data.wholeSalePrice ?? data.sellPrice2 ?? 0,
-    vat: data.tax ?? data.vat ?? 0,
+    vat: (data.tax ?? data.vat) || "",
   };
 }
 

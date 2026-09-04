@@ -507,7 +507,8 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
   "categoryName": "لوازم خانگی",
   "retailPrice": 25000000,
   "wholeSalePrice": 22000000,
-  "stock": 12
+  "stock": 12,
+  "lowStockThreshold": 3
 }
 ```
 

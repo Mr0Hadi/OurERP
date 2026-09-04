@@ -17,6 +17,18 @@ axiosInstance.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // تورِ ایمنیِ multipart. هدرِ پیش‌فرضِ بالا (`application/json`) روی
+    // هر درخواستی می‌نشیند، و `transformRequest` در axios 1.x وقتی
+    // Content-Type برابرِ application/json باشد بدنه‌ی FormData را با
+    // `formDataToJSON` به JSON تبدیل می‌کند — یعنی فایل اصلاً ارسال
+    // نمی‌شود. با برداشتنِ هدر، axios خودش هنگام ارسال multipart را با
+    // boundaryِ درست می‌گذارد.
+    if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+      delete config.headers["Content-Type"];
+      delete config.headers["content-type"];
+    }
+
     return config;
   },
   (error) => Promise.reject(error)

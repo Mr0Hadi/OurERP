@@ -10,6 +10,7 @@
         public UInt64 RetailPrice { get; set; }
         public UInt64 WholeSalePrice { get; set; }
         public int Stock { get; set; }
+        public int LowStockThreshold { get; set; }
 
         /// <summary>Stable bucket object key; null when the product has no image.</summary>
         public string? ImageKey { get; set; }
