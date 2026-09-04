@@ -18,7 +18,7 @@ namespace Application.Features.Sale.Commands
     public class CreateSaleCommand : IRequest<ResponseDto>
     {
         public string InvoiceNumber { get; set; }
-        public DateTime InvoiceDate { get; set; }
+        public DateTime? InvoiceDate { get; set; }
         public DateTime? PaymentDate { get; set; }
         public SalesStatusEnum Status { get; set; }
         public PaymentTypeEnum PaymentType { get; set; }
@@ -38,11 +38,13 @@ namespace Application.Features.Sale.Commands
             // تا وقتی مشتری پول را کامل نپرداخته، فروش پیش‌فاکتور است و شماره‌ی رسمی ندارد.
             RuleFor(x => x.InvoiceNumber).NotEmpty().When(x => x.Status != SalesStatusEnum.PROFORMA)
                 .WithMessage(Validation.RequiredMessage("شماره فاکتور"));
-            RuleFor(x => x.InvoiceDate).NotEmpty().When(x => x.Status != SalesStatusEnum.PROFORMA)
+            // تاریخ فاکتور فقط در پیش‌فاکتور می‌تواند null بماند؛ در بقیه‌ی وضعیت‌ها الزامی است.
+            RuleFor(x => x.InvoiceDate).Must(d => d.HasValue && d.Value != default)
+                .When(x => x.Status != SalesStatusEnum.PROFORMA)
                 .WithMessage(Validation.RequiredMessage("تاریخ فاکتور"));
             // مهلت پرداخت اختیاری است (خرید/فروش نقدی مهلتی ندارد)، ولی اگر پر شد نباید قبل از تاریخ فاکتور باشد.
             RuleFor(x => x.PaymentDate).GreaterThanOrEqualTo(x => x.InvoiceDate)
-                .When(x => x.PaymentDate.HasValue && x.InvoiceDate != default)
+                .When(x => x.PaymentDate.HasValue && x.InvoiceDate.HasValue)
                 .WithMessage("مهلت پرداخت نمی‌تواند قبل از تاریخ فاکتور باشد.");
             RuleFor(x => x.CustomerId).NotEmpty().WithMessage(Validation.RequiredMessage("مشتری"));
             RuleFor(x => x.TotalAmount).Must(p => p > 0).WithMessage("مبلغ کل باید از صفر بیشتر باشد.");

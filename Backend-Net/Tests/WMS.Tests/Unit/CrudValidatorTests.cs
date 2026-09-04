@@ -467,23 +467,89 @@ namespace WMS.Tests.Unit
             Assert.True(_sut.Validate(command).IsValid);
         }
 
+        [Fact]
+        public void NullInvoiceDate_OnProforma_IsValid()
+        {
+            // تاریخ فاکتور فقط در پیش‌فاکتور می‌تواند null بماند.
+            var command = Valid();
+            command.Status = PurchaseStatusEnum.PROFORMA;
+            command.InvoiceNumber = string.Empty;
+            command.InvoiceDate = null;
+
+            Assert.True(_sut.Validate(command).IsValid);
+        }
+
+        [Fact]
+        public void NullInvoiceDate_OnNonProforma_IsInvalid()
+        {
+            var command = Valid();
+            command.InvoiceDate = null;
+
+            Assert.False(_sut.Validate(command).IsValid);
+        }
+
+        [Fact]
+        public void DefaultInvoiceDate_OnNonProforma_IsInvalid()
+        {
+            // 0001-01-01 همانقدر بی‌معناست که null؛ نباید از فیلتر رد شود.
+            var command = Valid();
+            command.InvoiceDate = default(DateTime);
+
+            Assert.False(_sut.Validate(command).IsValid);
+        }
     }
 
     public class UpdatePurchaseCommandValidatorTests
     {
         private readonly UpdatePurchaseCommandValidator _sut = new();
 
+        private static UpdatePurchaseCommand Valid() => new()
+        {
+            Id = 1,
+            InvoiceNumber = "INV-1",
+            InvoiceDate = DateTime.Now,
+            Status = PurchaseStatusEnum.PENDING,
+            SupplierId = 1,
+            TotalAmount = 100,
+            PaidAmount = 0,
+        };
+
         [Fact]
         public void ZeroSupplierId_IsInvalid()
         {
-            var command = new UpdatePurchaseCommand
-            {
-                InvoiceNumber = "INV-1",
-                InvoiceDate = DateTime.Now,
-                SupplierId = 0,
-                TotalAmount = 100,
-                PaidAmount = 0,
-            };
+            var command = Valid();
+            command.SupplierId = 0;
+
+            Assert.False(_sut.Validate(command).IsValid);
+        }
+
+        [Fact]
+        public void NullInvoiceDate_OnProforma_IsValid()
+        {
+            // تاریخ فاکتور فقط در پیش‌فاکتور می‌تواند null بماند.
+            var command = Valid();
+            command.Status = PurchaseStatusEnum.PROFORMA;
+            command.InvoiceNumber = string.Empty;
+            command.InvoiceDate = null;
+
+            Assert.True(_sut.Validate(command).IsValid);
+        }
+
+        [Fact]
+        public void NullInvoiceDate_OnNonProforma_IsInvalid()
+        {
+            var command = Valid();
+            command.InvoiceDate = null;
+
+            Assert.False(_sut.Validate(command).IsValid);
+        }
+
+        [Fact]
+        public void DefaultInvoiceDate_OnNonProforma_IsInvalid()
+        {
+            // 0001-01-01 همانقدر بی‌معناست که null؛ نباید از فیلتر رد شود.
+            var command = Valid();
+            command.InvoiceDate = default(DateTime);
 
             Assert.False(_sut.Validate(command).IsValid);
         }
@@ -558,6 +624,38 @@ namespace WMS.Tests.Unit
             Assert.True(_sut.Validate(command).IsValid);
         }
 
+        [Fact]
+        public void NullInvoiceDate_OnProforma_IsValid()
+        {
+            // تاریخ فاکتور فقط در پیش‌فاکتور می‌تواند null بماند.
+            var command = Valid();
+            command.Status = SalesStatusEnum.PROFORMA;
+            command.InvoiceNumber = string.Empty;
+            command.InvoiceDate = null;
+
+            Assert.True(_sut.Validate(command).IsValid);
+        }
+
+        [Fact]
+        public void NullInvoiceDate_OnNonProforma_IsInvalid()
+        {
+            var command = Valid();
+            command.Status = SalesStatusEnum.PROCESSING;
+            command.InvoiceDate = null;
+
+            Assert.False(_sut.Validate(command).IsValid);
+        }
+
+        [Fact]
+        public void DefaultInvoiceDate_OnNonProforma_IsInvalid()
+        {
+            // 0001-01-01 همانقدر بی‌معناست که null؛ نباید از فیلتر رد شود.
+            var command = Valid();
+            command.Status = SalesStatusEnum.PROCESSING;
+            command.InvoiceDate = default(DateTime);
+
+            Assert.False(_sut.Validate(command).IsValid);
+        }
     }
 
     public class UpdateSaleCommandValidatorTests
@@ -587,6 +685,39 @@ namespace WMS.Tests.Unit
         {
             var command = Valid();
             command.Items = new();
+
+            Assert.False(_sut.Validate(command).IsValid);
+        }
+
+        [Fact]
+        public void NullInvoiceDate_OnProforma_IsValid()
+        {
+            // تاریخ فاکتور فقط در پیش‌فاکتور می‌تواند null بماند.
+            var command = Valid();
+            command.Status = SalesStatusEnum.PROFORMA;
+            command.InvoiceNumber = string.Empty;
+            command.InvoiceDate = null;
+
+            Assert.True(_sut.Validate(command).IsValid);
+        }
+
+        [Fact]
+        public void NullInvoiceDate_OnNonProforma_IsInvalid()
+        {
+            var command = Valid();
+            command.Status = SalesStatusEnum.PROCESSING;
+            command.InvoiceDate = null;
+
+            Assert.False(_sut.Validate(command).IsValid);
+        }
+
+        [Fact]
+        public void DefaultInvoiceDate_OnNonProforma_IsInvalid()
+        {
+            // 0001-01-01 همانقدر بی‌معناست که null؛ نباید از فیلتر رد شود.
+            var command = Valid();
+            command.Status = SalesStatusEnum.PROCESSING;
+            command.InvoiceDate = default(DateTime);
 
             Assert.False(_sut.Validate(command).IsValid);
         }

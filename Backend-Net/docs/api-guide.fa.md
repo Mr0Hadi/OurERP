@@ -756,6 +756,8 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
 
 `paymentDate` (**مهلت پرداخت**) اختیاری است — تاریخی که تا آن، خریدار فرصت تسویه دارد. برای معامله‌ی نقدی `null` بفرستید. اگر مقدار داشته باشد نباید قبل از `invoiceDate` باشد، وگرنه ۴۰۰ برمی‌گردد. در `GetPurchaseList`/`GetPurchaseDetail`/`GetSaleList`/`GetSaleDetail` برگردانده و روی PDF فاکتور هم چاپ می‌شود.
 
+`invoiceDate` (**تاریخ فاکتور**) nullable است و **فقط وقتی `status` برابر `PROFORMA` (۰) باشد** می‌تواند `null` باشد. در هر وضعیت دیگری، `null` (یا مقدار پوچ `0001-01-01`) ۴۰۰ می‌دهد. در خروجی `GetPurchaseList`/`GetPurchaseDetail`/`GetSaleList`/`GetSaleDetail` هم برای ردیف‌های پیش‌فاکتور `null` برمی‌گردد (قبلاً `0001-01-01T00:00:00` بود). روی PDF فاکتور، اگر `null` باشد تاریخ ثبت سند چاپ می‌شود.
+
 **کاربرد:** ثبت سند خرید از تامین‌کننده (هنوز کالا وارد انبار نشده — ورود فیزیکی با `ReceivePurchase` انجام می‌شود، بخش زیر).
 
 ### `PUT api/Purchase/UpdatePurchase`
@@ -1195,6 +1197,8 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 
 `paymentDate` (**مهلت پرداخت**) اختیاری است — تاریخی که تا آن، مشتری فرصت تسویه دارد. برای معامله‌ی نقدی `null` بفرستید. اگر مقدار داشته باشد نباید قبل از `invoiceDate` باشد، وگرنه ۴۰۰ برمی‌گردد. در `GetPurchaseList`/`GetPurchaseDetail`/`GetSaleList`/`GetSaleDetail` برگردانده و روی PDF فاکتور هم چاپ می‌شود.
 
+`invoiceDate` (**تاریخ فاکتور**) nullable است و **فقط وقتی `status` برابر `PROFORMA` (۰) باشد** می‌تواند `null` باشد. در هر وضعیت دیگری، `null` (یا مقدار پوچ `0001-01-01`) ۴۰۰ می‌دهد. در خروجی `GetPurchaseList`/`GetPurchaseDetail`/`GetSaleList`/`GetSaleDetail` هم برای ردیف‌های پیش‌فاکتور `null` برمی‌گردد (قبلاً `0001-01-01T00:00:00` بود). روی PDF فاکتور، اگر `null` باشد تاریخ ثبت سند چاپ می‌شود.
+
 ### `PUT api/Sale/UpdateSale`
 
 **Body:**
@@ -1592,7 +1596,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 | مقدار | معنی |
 |---|---|
-| 0 | پیش‌فاکتور (PROFORMA) — فاکتور رسمیِ تامین‌کننده هنوز نرسیده؛ `InvoiceNumber`/`InvoiceDate` الزامی نیستند. خروج از این وضعیت (از `UpdatePurchase`) به یک `InvoiceNumber` غیرخالی نیاز دارد |
+| 0 | پیش‌فاکتور (PROFORMA) — فاکتور رسمیِ تامین‌کننده هنوز نرسیده؛ `InvoiceNumber`/`InvoiceDate` الزامی نیستند و `invoiceDate` **فقط در همین وضعیت** می‌تواند `null` باشد. خروج از این وضعیت (از `UpdatePurchase`) به یک `InvoiceNumber` غیرخالی نیاز دارد |
 | 1 | در انتظار (PENDING) |
 | 2 | ارسال‌شده توسط تامین‌کننده (SHIPPED) |
 | 3 | دریافت‌جزئی (PARTIALLY_RECEIVED) |

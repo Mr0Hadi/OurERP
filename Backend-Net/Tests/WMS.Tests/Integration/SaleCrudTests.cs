@@ -295,6 +295,39 @@ namespace WMS.Tests.Integration
         }
 
         [Fact]
+        public async Task CreateSale_AsProforma_WithoutInvoiceDate_PersistsNull()
+        {
+            // تاریخ فاکتور در پیش‌فاکتور واقعاً null ذخیره می‌شود، نه 0001-01-01.
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0);
+            var user = Seed.PersistedUser(scope.Context);
+
+            var handler = new CreateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance, FakeUserContext.WithUserId(user.Id));
+            await handler.Handle(new CreateSaleCommand
+            {
+                InvoiceNumber = "",
+                InvoiceDate = null,
+                Status = SalesStatusEnum.PROFORMA,
+                CustomerId = scenario.Customer.Id,
+                TotalAmount = 5000,
+                PaidAmount = 1000,
+                PaymentType = PaymentTypeEnum.CASH,
+                PaymentDetails = new(),
+                Description = "PROFORMA-NULL-DATE",
+                ProductIds = new()
+                {
+                    new CreateSaleItemDto { ProductId = scenario.Product.Id, Quantity = 1, UnitPrice = 5000, Discount = 0 },
+                },
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            var sale = verify.Sales.Single(x => x.Description == "PROFORMA-NULL-DATE");
+            Assert.Equal(SalesStatusEnum.PROFORMA, sale.Status);
+            Assert.Null(sale.InvoiceDate);
+        }
+
+        [Fact]
         public async Task CreateSale_PersistsPaymentDate_AndDetailQueryReturnsIt()
         {
             using var db = new TestDatabase();

@@ -384,6 +384,45 @@ which the buyer (us on a purchase, the customer on a sale) must settle. Now trea
   added by `20260904200850_personelcode-unique`, and the 8th is the long-documented
   `GetCustomerList_WithStoredImageKey_AndUnconfiguredBucket_StillReturns200` `"***"` placeholder gap.
 
+**`InvoiceDate` made nullable, enforced per-status (2026-09-05).** `Purchase.InvoiceDate`/
+`Sale.InvoiceDate` were non-nullable `DateTime`, so the PROFORMA relaxation shipped on
+2026-09-01 (validators guarded with `.When(x => x.Status != …PROFORMA)`) let a proforma pass
+validation but still persisted `DateTime.MinValue` — the API handed the frontend a literal
+`0001-01-01T00:00:00` instead of `null`, and `PaymentDate`'s own rule had to work around it
+with an `x.InvoiceDate != default` guard.
+
+- **Now `DateTime?` on both entities**, both commands per side, `PurchaseDto`/`SaleDto`,
+  `PurchaseListDto`/`SaleListDto`, `PurchaseReceivingInfoDto`, and `ReceiveSaleReturnListDto`.
+- **Null is legal if and only if `Status == PROFORMA`.** All four validators
+  (`CreatePurchaseValidator`, `UpdatePurchaseCommandValidator`, `CreateSaleCommandValidator`,
+  `UpdateSaleCommandValidator`) now use `Must(d => d.HasValue && d.Value != default)
+  .When(x => x.Status != …PROFORMA)` rather than `NotEmpty()` — on a `DateTime?`, `NotEmpty()`
+  only rejects `null`, so a caller could still smuggle `0001-01-01` past it. A proforma *may*
+  carry a date; it just isn't required to.
+- **`PaymentDate`'s comparison rule** switched its guard from `x.InvoiceDate != default` to
+  `x.InvoiceDate.HasValue` (FluentValidation's nullable `GreaterThanOrEqualTo` overload).
+- **PDF fallback**: `GetPurchaseInvoicePdfQuery`/`GetSaleInvoicePdfQuery` print
+  `InvoiceDate ?? CreatedAt` — `InvoiceDocumentModel.DocumentDate` stays non-nullable, since a
+  printed document always needs *a* date and the QuestPDF layout has no "no date" branch.
+- **Report bucketing**: `GetPurchaseReportQuery`/`GetSaleReportQuery` gained an explicit
+  `x.InvoiceDate != null` in their `Where` (SQL already excluded nulls via the `>= fromDate`
+  comparison; the filter makes the following `!.Value` honest rather than load-bearing on that
+  side effect). The statistics/list queries needed no change — nullable comparisons translate.
+- Shipped as migration `20260904223059_make-invoice-date-nullable`, which also **backfills**:
+  existing `Status = 0` (PROFORMA) rows holding `0001-01-01` are set to `NULL`. **Applied to
+  the local `WMS` database (2026-09-05).**
+- `docs/api-guide.fa.md` §9/§11/§15 updated.
+- **Tests**: 14 new — 12 validator cases (null-on-proforma valid, null-on-non-proforma invalid,
+  `default(DateTime)`-on-non-proforma invalid, for each of the four validators) and 2
+  integration round-trips (`CreatePurchase`/`CreateSale` as PROFORMA with no date → column is
+  `NULL`, and the purchase detail query returns `null`). Suite is 352/361; the 9 failures are
+  pre-existing and unrelated (verified by running them against a stashed tree) — the
+  `IX_Users_PersonelCode` collisions and the `"***"` object-storage placeholder gap.
+- **Gotcha found while writing the tests**: `SalesStatusEnum.PROFORMA` is `0`, so a
+  `CreateSaleCommand`/`UpdateSaleCommand` that never sets `Status` defaults to PROFORMA and
+  silently skips every invoice-field requirement. `PurchaseStatusEnum.PROFORMA` is `0` too.
+  The frontend must send `status` explicitly on create.
+
 **Frontend-enum-contract cleanup pass (2026-09-01).** Follow-up audit of
 `docs/frontend-enum-contract.fa.md` against the actual code — most of its checklist turned out to
 already be done (silently, back on 2026-08-28 in the returns-effects rebuild) and the doc just

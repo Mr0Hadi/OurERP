@@ -241,6 +241,43 @@ namespace WMS.Tests.Integration
         }
 
         [Fact]
+        public async Task CreatePurchase_AsProforma_WithoutInvoiceDate_PersistsNull()
+        {
+            // تاریخ فاکتور در پیش‌فاکتور واقعاً null ذخیره می‌شود، نه 0001-01-01.
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 1, stock: 0);
+            var user = Seed.PersistedUser(scope.Context);
+
+            var handler = new CreatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, TestMapper.Instance, scope.UnitOfWork, FakeUserContext.WithUserId(user.Id));
+            await handler.Handle(new CreatePurchaseCommand
+            {
+                SupplierId = scenario.Supplier.Id,
+                TotalAmount = 5000,
+                PaidAmount = 0,
+                PaymentType = PaymentTypeEnum.CASH,
+                Status = PurchaseStatusEnum.PROFORMA,
+                PaymentDetails = new(),
+                InvoiceNumber = "",
+                InvoiceDate = null,
+                Description = "PROFORMA-NULL-DATE",
+                ProductItemList = new()
+                {
+                    new Application.Features.Purchase.Dtos.CreatePurchaseItemDto { ProductId = scenario.Product.Id, Quantity = 1, UnitPrice = 5000, Discount = 0 },
+                },
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            var purchase = verify.Purchases.Single(x => x.Description == "PROFORMA-NULL-DATE");
+            Assert.Null(purchase.InvoiceDate);
+
+            using var readScope = db.NewScope();
+            var detail = await new GetPurchaseDetailQueryHandler(readScope.Db, FakeObjectStorage.Instance)
+                .Handle(new GetPurchaseDetailQuery { Id = purchase.Id }, CancellationToken.None);
+            Assert.Null(Assert.IsType<PurchaseDto>(detail.Data).InvoiceDate);
+        }
+
+        [Fact]
         public async Task CreatePurchase_PersistsPaymentDate_AndDetailQueryReturnsIt()
         {
             using var db = new TestDatabase();
