@@ -35,7 +35,6 @@ function useActivityQuery(keyFn, fetcher, { filters, pagination }) {
     queryKey: keyFn(params),
     queryFn: () => fetcher(params),
     placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 15,
   });
 }

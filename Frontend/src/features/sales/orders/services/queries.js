@@ -26,14 +26,12 @@ export function useSalesQuery(filters, pagination, sorting) {
   queryClient.prefetchQuery({
     queryKey: saleKeys.list(nextPageParams),
     queryFn: () => fetchSales(nextPageParams),
-    staleTime: 1000 * 60 * 3,
   });
 
   return useQuery({
     queryKey: saleKeys.list(queryParams),
     queryFn: () => fetchSales(queryParams),
     placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 3,
     gcTime: 1000 * 60 * 10,
   });
 }
@@ -43,6 +41,5 @@ export function useSaleQuery(id) {
     queryKey: saleKeys.detail(id),
     queryFn: () => fetchSaleById(id),
     enabled: !!id,
-    staleTime: 1000 * 60 * 5,
   });
 }

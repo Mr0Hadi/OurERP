@@ -27,7 +27,6 @@ export function useEmployeesQuery(filters, pagination, sorting) {
     queryKey: employeeKeys.list(queryParams),
     queryFn: () => fetchEmployees(queryParams),
     placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 3,
   });
 }
 

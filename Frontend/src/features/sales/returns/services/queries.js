@@ -32,7 +32,6 @@ export function useSalesReturnsQuery(filters, pagination, sorting) {
     queryClient.prefetchQuery({
       queryKey: salesReturnKeys.list(nextPageParams),
       queryFn: () => fetchSalesReturns(nextPageParams),
-      staleTime: 1000 * 60 * 3,
     });
   }, [queryClient, queryParams]);
 
@@ -40,7 +39,6 @@ export function useSalesReturnsQuery(filters, pagination, sorting) {
     queryKey: salesReturnKeys.list(queryParams),
     queryFn: () => fetchSalesReturns(queryParams),
     placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 3,
     gcTime: 1000 * 60 * 10,
     refetchOnMount: "always",
   });
@@ -51,7 +49,6 @@ export function useSalesReturnQuery(id) {
     queryKey: salesReturnKeys.detail(id),
     queryFn: () => fetchSalesReturnById(id),
     enabled: !!id,
-    staleTime: 1000 * 60 * 5,
     refetchOnMount: "always",
   });
 }
@@ -61,7 +58,6 @@ export function useReturnableSalesQuery(search) {
   return useQuery({
     queryKey: salesReturnKeys.returnableSalesSearch(search || ""),
     queryFn: () => fetchReturnableSales(search),
-    staleTime: 1000 * 30,
   });
 }
 
@@ -70,7 +66,6 @@ export function useSaleForReturnQuery(saleId, excludeReturnId = null) {
     queryKey: salesReturnKeys.saleForReturn(saleId, excludeReturnId),
     queryFn: () => fetchSaleForReturn(saleId, excludeReturnId),
     enabled: !!saleId,
-    staleTime: 1000 * 30,
     refetchOnMount: "always",
   });
 }

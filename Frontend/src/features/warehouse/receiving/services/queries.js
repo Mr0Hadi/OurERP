@@ -33,7 +33,6 @@ export function useIncomingQueueQuery(filters, pagination, sorting) {
     queryClient.prefetchQuery({
       queryKey: incomingQueueKeys.list(nextPageParams),
       queryFn: () => fetchIncomingQueue(nextPageParams),
-      staleTime: 1000 * 60 * 3,
     });
   }, [queryClient, queryParams]);
 
@@ -41,7 +40,6 @@ export function useIncomingQueueQuery(filters, pagination, sorting) {
     queryKey: incomingQueueKeys.list(queryParams),
     queryFn: () => fetchIncomingQueue(queryParams),
     placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 3,
     gcTime: 1000 * 60 * 10,
     refetchOnMount: "always",
   });
@@ -52,7 +50,6 @@ export function useReceivingPurchaseQuery(id) {
     queryKey: receivingKeys.detail(id),
     queryFn: () => fetchReceivingPurchaseById(id),
     enabled: !!id,
-    staleTime: 1000 * 60 * 5,
     refetchOnMount: "always",
   });
 }

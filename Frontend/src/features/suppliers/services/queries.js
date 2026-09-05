@@ -22,14 +22,12 @@ export function useSuppliersQuery(filters, pagination, sorting) {
   queryClient.prefetchQuery({
     queryKey: supplierKeys.list(nextParams),
     queryFn: () => fetchSuppliers(nextParams),
-    staleTime: 1000 * 60 * 3,
   });
 
   return useQuery({
     queryKey: supplierKeys.list(queryParams),
     queryFn: () => fetchSuppliers(queryParams),
     placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 3,
   });
 }
 

@@ -20,7 +20,6 @@ export function useDepartmentsQuery(filters, pagination, sorting) {
     queryKey: departmentKeys.list(queryParams),
     queryFn: () => fetchDepartments(queryParams),
     placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 5,
   });
 }
 
@@ -44,7 +43,6 @@ export function useDepartmentOptionsQuery() {
   const query = useQuery({
     queryKey: departmentKeys.options(),
     queryFn: () => fetchDepartments({ page: 1, limit: OPTIONS_PAGE_SIZE }),
-    staleTime: 1000 * 60 * 10,
   });
 
   const items = query.data?.items ?? [];

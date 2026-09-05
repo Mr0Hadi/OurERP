@@ -8,7 +8,9 @@ export function QueryProvider({ children }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 1000 * 60 * 1,  // 1 دقیقه default
+            // چند کاربر هم‌زمان روی همان داده کار می‌کنند؛ هر mount/focus
+            // باید از سرور بخواند تا کسی داده‌ی کهنه نبیند.
+            staleTime: 0,
             gcTime: 1000 * 60 * 5,     // 5 دقیقه cache نگه دار
             retry: 1,                   // یک بار retry کافی است
             refetchOnWindowFocus: true, // مهم برای کاربران چند ساعته

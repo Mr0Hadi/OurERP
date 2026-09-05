@@ -22,14 +22,12 @@ export function useCustomersQuery(filters, pagination, sorting) {
   queryClient.prefetchQuery({
     queryKey: customerKeys.list(nextParams),
     queryFn: () => fetchCustomers(nextParams),
-    staleTime: 1000 * 60 * 3,
   });
 
   return useQuery({
     queryKey: customerKeys.list(queryParams),
     queryFn: () => fetchCustomers(queryParams),
     placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 3,
   });
 }
 

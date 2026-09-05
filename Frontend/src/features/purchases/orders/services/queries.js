@@ -30,7 +30,6 @@ export function usePurchasesQuery(filters, pagination, sorting) {
     queryClient.prefetchQuery({
       queryKey: purchaseKeys.list(nextPageParams),
       queryFn: () => fetchPurchases(nextPageParams),
-      staleTime: 1000 * 60 * 3,
     });
   }, [queryClient, queryParams]);
 
@@ -38,7 +37,6 @@ export function usePurchasesQuery(filters, pagination, sorting) {
     queryKey: purchaseKeys.list(queryParams),
     queryFn: () => fetchPurchases(queryParams),
     placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 3,
     gcTime: 1000 * 60 * 10,
   });
 }
@@ -48,7 +46,6 @@ export function usePurchaseQuery(id) {
     queryKey: purchaseKeys.detail(id),
     queryFn: () => fetchPurchaseById(id),
     enabled: !!id,
-    staleTime: 1000 * 60 * 5,
     refetchOnMount: "always",
   });
 }
@@ -101,7 +98,6 @@ export function usePurchaseStatsQuery(params = {}) {
 
       return stats;
     },
-    staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
   });
 }

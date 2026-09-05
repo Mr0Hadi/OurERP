@@ -26,14 +26,12 @@ export function useProductsQuery(filters, pagination, sorting) {
   queryClient.prefetchQuery({
     queryKey: productKeys.list(nextPageParams),
     queryFn: () => fetchProducts(nextPageParams),
-    staleTime: 1000 * 60 * 3,
   });
 
   return useQuery({
     queryKey: productKeys.list(queryParams),
     queryFn: () => fetchProducts(queryParams),
     placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 3,
     gcTime: 1000 * 60 * 10,
   });
 }
@@ -43,7 +41,6 @@ export function useProductQuery(id) {
     queryKey: productKeys.detail(id),
     queryFn: () => fetchProductById(id),
     enabled: !!id,
-    staleTime: 1000 * 60 * 5,
   });
 }
 

@@ -12,7 +12,6 @@ export function useProductCategoriesQuery() {
   return useQuery({
     queryKey: productCategoryKeys.list({}),
     queryFn: () => fetchProductCategories({ limit: 100 }),
-    staleTime: 1000 * 60 * 10,
     select: (data) => data.items ?? [],
   });
 }

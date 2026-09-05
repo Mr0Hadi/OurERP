@@ -20,7 +20,6 @@ export function useTeamsQuery(filters, pagination, sorting) {
     queryKey: teamKeys.list(queryParams),
     queryFn: () => fetchTeams(queryParams),
     placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 5,
   });
 }
 
@@ -53,7 +52,6 @@ export function useTeamOptionsQuery(departmentId = "") {
         sortBy: "name",
         sortOrder: "asc",
       }),
-    staleTime: 1000 * 60 * 5,
   });
 
   const teams = (query.data?.items ?? []).filter((t) => t.isActive !== false);

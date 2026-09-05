@@ -19,6 +19,5 @@ export function useProductUnitsQuery(filters, pagination, sorting) {
     queryKey: productUnitKeys.list(queryParams),
     queryFn: () => fetchProductUnits(queryParams),
     placeholderData: keepPreviousData,
-    staleTime: 1000 * 30,
   });
 }

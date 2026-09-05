@@ -26,7 +26,6 @@ export function useOutgoingQueueQuery(filters, pagination, sorting) {
     queryClient.prefetchQuery({
       queryKey: outgoingQueueKeys.list(nextPageParams),
       queryFn: () => fetchOutgoingQueue(nextPageParams),
-      staleTime: 1000 * 60 * 3,
     });
   }, [queryClient, queryParams]);
 
@@ -34,7 +33,6 @@ export function useOutgoingQueueQuery(filters, pagination, sorting) {
     queryKey: outgoingQueueKeys.list(queryParams),
     queryFn: () => fetchOutgoingQueue(queryParams),
     placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 3,
     gcTime: 1000 * 60 * 10,
     refetchOnMount: "always",
   });
@@ -45,7 +43,6 @@ export function useShippingSaleQuery(id) {
     queryKey: shippingKeys.detail(id),
     queryFn: () => fetchShippingSaleById(id),
     enabled: !!id,
-    staleTime: 1000 * 60 * 5,
     refetchOnMount: "always",
   });
 }

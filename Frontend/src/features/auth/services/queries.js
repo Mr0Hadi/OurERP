@@ -48,8 +48,8 @@ export function useLogoutMutation() {
  * سرور است و جایش کش React Query، نه localStorage.
  *
  * `enabled` به توکن گره خورده تا قبل از ورود درخواستِ ۴۰۱ فرستاده نشود.
- * `staleTime` بلند است چون عضویتِ یک کاربر در طولِ یک نشست عوض نمی‌شود؛
- * اگر شد (`ChangeUserTeam`)، همان mutation باید این کلید را باطل کند.
+ * کش کهنه نگه داشته نمی‌شود (`staleTime: 0`ِ سراسری) چون چند کاربر هم‌زمان
+ * کار می‌کنند و تغییرِ عضویت (`ChangeUserTeam`) باید فوری دیده شود.
  */
 export function useSessionQuery() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -59,7 +59,6 @@ export function useSessionQuery() {
     queryFn: fetchSession,
     enabled: isAuthenticated,
     retry: false,
-    staleTime: 1000 * 60 * 10,
   });
 }
 
