@@ -253,7 +253,7 @@ function buildReturnFromSale(sale, index) {
     previousReturnId: null,
     sourceEffectId: null,
     claims,
-    totalClaimedAmount: claims.reduce((s, c) => s + c.quantity * c.unitPrice, 0),
+    totalAmount: claims.reduce((s, c) => s + c.quantity * c.unitPrice, 0),
     createdAt: createdDate.toISOString(),
     updatedAt: createdDate.toISOString(),
   };

@@ -105,7 +105,7 @@ const PurchaseReturnTable = ({
         cell: (info) => <PurchaseReturnStatusBadge status={info.getValue()} />,
       },
       {
-        accessorKey: "totalClaimedAmount",
+        accessorKey: "totalAmount",
         header: "مبلغ ادعا (ریال)",
         cell: (info) => (
           <span className="tabular-nums text-sm">

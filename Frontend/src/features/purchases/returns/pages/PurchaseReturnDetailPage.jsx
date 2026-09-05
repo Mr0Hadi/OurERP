@@ -116,7 +116,7 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
         partyLabel="تامین‌کننده"
         partyName={purchaseReturn.supplierName}
         items={purchaseReturn.claims}
-        totalAmount={purchaseReturn.totalClaimedAmount}
+        totalAmount={purchaseReturn.totalAmount}
         attachmentRequired
         attachmentLabel="فاکتور یا رسید مرجوعی از تامین‌کننده"
       />

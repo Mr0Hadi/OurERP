@@ -199,7 +199,7 @@ function salesReturnToRow(salesReturn) {
     itemsCount: openLines.length,
     returnLinesCount: openLines.length,
     remainingQuantity: openLines.reduce((sum, line) => sum + line.remainingQuantity, 0),
-    amount: salesReturn.totalClaimedAmount,
+    amount: salesReturn.totalAmount,
     createdAt: salesReturn.createdAt,
     updatedAt: salesReturn.updatedAt,
   };

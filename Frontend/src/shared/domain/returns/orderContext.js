@@ -155,7 +155,7 @@ export function relatedReturnsSummary(returns, currentReturnId) {
       returnNumber: ret.returnNumber,
       returnDate: ret.returnDate,
       status: ret.status,
-      totalClaimedAmount: ret.totalClaimedAmount || 0,
+      totalAmount: ret.totalAmount || 0,
       claimsCount: (ret.claims || []).length,
     }));
 }

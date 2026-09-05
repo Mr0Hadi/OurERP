@@ -69,7 +69,7 @@ export default function RelatedReturnsCard({
                 {gregorianToPersian(ret.returnDate)} ·{" "}
                 {fa(ret.claimsCount)} ادعا ·{" "}
                 <span className="tabular-nums">
-                  {fa(ret.totalClaimedAmount)} ریال
+                  {fa(ret.totalAmount)} ریال
                 </span>
               </p>
             </div>

@@ -42,7 +42,7 @@ export default function ReturnStatusBar({ returnDoc: salesReturn, statusLabels, 
           </StatusChip>
         </div>
         <span className="text-xs text-muted-foreground tabular-nums">
-          ادعا: {fa(salesReturn.totalClaimedAmount)} ریال
+          ادعا: {fa(salesReturn.totalAmount)} ریال
         </span>
       </div>
 

@@ -76,7 +76,7 @@ function commit(idx, patch) {
     ...patch,
     updatedAt: new Date().toISOString(),
   };
-  next.totalClaimedAmount = (next.claims || []).reduce(
+  next.totalAmount = (next.claims || []).reduce(
     (sum, claim) => sum + (Number(claim.quantity) || 0) * (Number(claim.unitPrice) || 0),
     0,
   );
@@ -212,7 +212,7 @@ export async function fetchSalesReturns(params = {}) {
   return applyListQuery(filtered, params, {
     searchFields: ["returnNumber", "saleInvoiceNumber", "customerName"],
     dateField: "returnDate",
-    numericFields: ["totalClaimedAmount"],
+    numericFields: ["totalAmount"],
   });
 }
 
@@ -255,7 +255,7 @@ async function createSalesReturnOnce(payload) {
     previousReturnId: payload.previousReturnId ?? null,
     sourceEffectId: payload.sourceEffectId ?? null,
     claims,
-    totalClaimedAmount: claims.reduce(
+    totalAmount: claims.reduce(
       (sum, c) => sum + (Number(c.quantity) || 0) * (Number(c.unitPrice) || 0),
       0,
     ),
