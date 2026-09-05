@@ -15,6 +15,7 @@ import { createFilterStore } from "@/shared/store/createFilterStore";
 export const useEmployeeFilterStore = createFilterStore({
   filters: {
     globalSearch: "",
+    personelCode: "",
     departmentId: "",
     teamId: "",
     status: "",

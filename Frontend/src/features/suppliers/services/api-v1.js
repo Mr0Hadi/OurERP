@@ -13,11 +13,16 @@ import { normalizeListResponse } from "@/shared/services/api/contract";
  * فیلتر بی‌صدا نادیده گرفته می‌شود:
  * `companyNameOrContactName`, `fromBalance`, `toBalance`, `balanceType`.
  * مرتب‌سازی را سرور اصلاً پشتیبانی نمی‌کند.
+ *
+ * `id` یک فیلترِ کاملاً جدا از `companyNameOrContactName` است (نه
+ * بخشی از همان جست‌وجوی متنی) — تطبیقِ دقیقِ عددی روی شناسه‌ی ردیف،
+ * نه Contains روی نام.
  */
 export async function fetchSuppliers({
   page = 1,
   limit = 10,
   search = "",
+  id = "",
   minBalance = "",
   maxBalance = "",
   balanceType = "",
@@ -27,6 +32,7 @@ export async function fetchSuppliers({
       page,
       take: limit,
       companyNameOrContactName: search || undefined,
+      id: id !== "" ? id : undefined,
       minBalance: minBalance !== "" ? minBalance : undefined,
       maxBalance: maxBalance !== "" ? maxBalance : undefined,
       balanceType: balanceType !== "" ? balanceType : undefined,

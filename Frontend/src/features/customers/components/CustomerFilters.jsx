@@ -8,13 +8,21 @@ import { useCustomerFilterStore } from "../store/customerFilterStore";
 const CustomerFilters = () => {
   const {
     globalSearch,
+    idSearch,
     minDebtCredit,
     maxDebtCredit,
     setGlobalSearch,
+    setIdSearch,
     setDebtCreditRange,
     resetFilters,
     setQuickFilter,
   } = useCustomerFilterStore();
+
+  // فقط رقم — سرور `id` را عددی می‌خواهد؛ غیرِ آن بایند نمی‌شود و فیلتر بی‌صدا نادیده گرفته می‌شود.
+  const handleIdChange = useCallback(
+    (e) => setIdSearch(e.target.value.replace(/[^0-9]/g, "")),
+    [setIdSearch]
+  );
 
   const handleMinDebt = useCallback(
     (next) => setDebtCreditRange(next ?? "", maxDebtCredit),
@@ -28,15 +36,28 @@ const CustomerFilters = () => {
   return (
     <div className="p-3 bg-card border border-border rounded-xl shadow-sm space-y-3">
       {/* ردیف جستجو */}
-      <div className="grid grid-cols-1 gap-5">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:col-span-2">
           <Label className="whitespace-nowrap font-light text-foreground">
             جستجو
           </Label>
           <Input
-            placeholder="نام یا کد مشتری..."
+            placeholder="نام مشتری..."
             value={globalSearch}
             onChange={(e) => setGlobalSearch(e.target.value)}
+            className="flex-1"
+          />
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <Label className="whitespace-nowrap font-light text-foreground">
+            شناسه
+          </Label>
+          <Input
+            placeholder="مثال: 42"
+            value={idSearch}
+            onChange={handleIdChange}
+            inputMode="numeric"
             className="flex-1"
           />
         </div>

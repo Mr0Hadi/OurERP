@@ -16,6 +16,7 @@ export function useEmployeesQuery(filters, pagination, sorting) {
     page: pagination.pageIndex + 1,
     limit: pagination.pageSize,
     search: filters.globalSearch || "",
+    personelCode: filters.personelCode || "",
     departmentId: filters.departmentId ?? "",
     teamId: filters.teamId ?? "",
     status: filters.status ?? "",

@@ -33,6 +33,9 @@ export async function fetchEmployees(params = {}) {
       page: params.page,
       take: params.limit,
       fullName: params.search || undefined,
+      // فیلترِ کاملاً جدا از `fullName` — تطبیقِ دقیقِ عددی روی کدِ
+      // پرسنلی، نه Contains روی نام.
+      personelCode: filterValue(params.personelCode),
       departmentId: filterValue(params.departmentId),
       teamId: filterValue(params.teamId),
       isActive: accountStatusToIsActive(params.status),

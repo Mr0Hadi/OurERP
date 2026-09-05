@@ -17,11 +17,15 @@ import { normalizeListResponse } from "@/shared/services/api/contract";
  *   تامین‌کننده:  `companyNameOrContactName`, `fromBalance`, `toBalance`
  *
  * مرتب‌سازی را هیچ‌کدام پشتیبانی نمی‌کنند.
+ *
+ * `id` یک فیلترِ کاملاً جدا از `fullName` است — تطبیقِ دقیقِ عددی روی
+ * شناسه‌ی ردیف، نه Contains روی نام.
  */
 export async function fetchCustomers({
   page = 1,
   limit = 10,
   search = "",
+  id = "",
   minBalance = "",
   maxBalance = "",
   balanceType = "",
@@ -31,6 +35,7 @@ export async function fetchCustomers({
       page,
       take: limit,
       fullName: search || undefined,
+      id: id !== "" ? id : undefined,
       minBalance: minBalance !== "" ? minBalance : undefined,
       maxBalance: maxBalance !== "" ? maxBalance : undefined,
       balanceType: balanceType !== "" ? balanceType : undefined,

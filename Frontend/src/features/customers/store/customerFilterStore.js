@@ -4,6 +4,7 @@ import { BalanceTypeEnum } from "@/shared/domain/enums/balanceType";
 
 export const useCustomerFilterStore = create((set) => ({
   globalSearch: "",
+  idSearch: "",
   minDebtCredit: "",
   maxDebtCredit: "",
   balanceType: "all", // "all" | BalanceTypeEnum
@@ -26,6 +27,7 @@ export const useCustomerFilterStore = create((set) => ({
     }
   },
   setGlobalSearch: (value) => set({ globalSearch: value }),
+  setIdSearch: (value) => set({ idSearch: value }),
   setDebtCreditRange: (min, max) =>
     set({ minDebtCredit: min, maxDebtCredit: max }),
   setPagination: (pagination) => set({ pagination }),
@@ -33,6 +35,7 @@ export const useCustomerFilterStore = create((set) => ({
   resetFilters: () =>
     set({
       globalSearch: "",
+      idSearch: "",
       minDebtCredit: "",
       maxDebtCredit: "",
       balanceType: "all",

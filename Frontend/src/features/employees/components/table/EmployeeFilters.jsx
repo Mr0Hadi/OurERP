@@ -16,10 +16,12 @@ const STATUS_OPTIONS = toFilterOptions(ACCOUNT_STATUS_LABELS);
 const EmployeeFilters = () => {
   const {
     globalSearch,
+    personelCode,
     departmentId,
     teamId,
     status,
     setGlobalSearch,
+    setPersonelCode,
     setDepartmentId,
     setTeamId,
     setStatus,
@@ -46,6 +48,12 @@ const EmployeeFilters = () => {
     [setGlobalSearch],
   );
 
+  // فقط رقم — سرور `personelCode` را عددی می‌خواهد؛ غیرِ آن بایند نمی‌شود و فیلتر بی‌صدا نادیده گرفته می‌شود.
+  const handlePersonelCode = useCallback(
+    (e) => setPersonelCode(e.target.value.replace(/[^0-9]/g, "")),
+    [setPersonelCode],
+  );
+
   // عوض‌شدن واحد، تیمِ انتخاب‌شده را بی‌معنا می‌کند: تیمی که زیر واحد
   // جدید نیست، نتیجه‌ی همیشه‌خالی می‌دهد و کاربر فکر می‌کند کارمندی وجود
   // ندارد.
@@ -60,15 +68,24 @@ const EmployeeFilters = () => {
   return (
     <FilterPanel
       onReset={resetFilters}
-      firstRowClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+      firstRowClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"
       dateRowClassName="flex pt-3 border-t border-border"
       resetWrapperClassName="flex items-end lg:justify-end w-full"
       resetButtonClassName="w-full sm:w-auto px-4"
     >
       <FilterSearchInput
-        placeholder="نام، نام کاربری یا کد پرسنلی..."
+        label="جستجو"
+        placeholder="نام کارمند..."
         value={globalSearch}
         onChange={handleGlobalSearch}
+      />
+
+      <FilterSearchInput
+        label="کد پرسنلی"
+        placeholder="مثال: 42"
+        value={personelCode}
+        onChange={handlePersonelCode}
+        inputMode="numeric"
       />
 
       <FilterSelect

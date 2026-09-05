@@ -7,6 +7,7 @@ export default function FilterSearchInput({
   placeholder,
   value,
   onChange,
+  ...inputProps
 }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-2">
@@ -20,6 +21,7 @@ export default function FilterSearchInput({
           value={value}
           onChange={onChange}
           className="pr-8"
+          {...inputProps}
         />
       </div>
     </div>

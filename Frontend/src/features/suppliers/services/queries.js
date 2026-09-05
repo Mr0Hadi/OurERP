@@ -11,6 +11,7 @@ export function useSuppliersQuery(filters, pagination, sorting) {
     page: pagination.pageIndex + 1,
     limit: pagination.pageSize,
     search: filters.search || "",
+    id: filters.id || "",
     minBalance: filters.minBalance ?? "",
     maxBalance: filters.maxBalance ?? "",
     balanceType: filters.balanceType !== "all" ? filters.balanceType : "",
