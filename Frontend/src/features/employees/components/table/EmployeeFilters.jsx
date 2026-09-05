@@ -68,10 +68,31 @@ const EmployeeFilters = () => {
   return (
     <FilterPanel
       onReset={resetFilters}
-      firstRowClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"
-      dateRowClassName="flex pt-3 border-t border-border"
-      resetWrapperClassName="flex items-end lg:justify-end w-full"
-      resetButtonClassName="w-full sm:w-auto px-4"
+      firstRowClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+      dateRowClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-3 border-t border-border"
+      resetWrapperClassName="flex items-end sm:col-span-2 lg:col-span-1 lg:justify-end"
+      resetButtonClassName="w-full px-4"
+      dateRow={
+        <>
+          <FilterSelect
+            label="تیم"
+            value={teamId}
+            onChange={setTeamId}
+            allLabel="همه تیم‌ها"
+            options={teamOptions}
+            numeric
+          />
+
+          <FilterSelect
+            label="وضعیت"
+            value={status}
+            onChange={setStatus}
+            allLabel="همه"
+            options={STATUS_OPTIONS}
+            numeric
+          />
+        </>
+      }
     >
       <FilterSearchInput
         label="جستجو"
@@ -94,24 +115,6 @@ const EmployeeFilters = () => {
         onChange={handleDepartmentChange}
         allLabel="همه واحدها"
         options={departmentOptions}
-        numeric
-      />
-
-      <FilterSelect
-        label="تیم"
-        value={teamId}
-        onChange={setTeamId}
-        allLabel="همه تیم‌ها"
-        options={teamOptions}
-        numeric
-      />
-
-      <FilterSelect
-        label="وضعیت"
-        value={status}
-        onChange={setStatus}
-        allLabel="همه"
-        options={STATUS_OPTIONS}
         numeric
       />
     </FilterPanel>
