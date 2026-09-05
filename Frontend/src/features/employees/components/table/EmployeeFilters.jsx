@@ -68,10 +68,10 @@ const EmployeeFilters = () => {
   return (
     <FilterPanel
       onReset={resetFilters}
-      separateReset
       firstRowClassName="grid grid-cols-1 sm:grid-cols-2 gap-4"
-      dateRowClassName="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-border"
-      resetButtonClassName="px-4"
+      dateRowClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-3 border-t border-border"
+      resetWrapperClassName="flex items-end sm:justify-end"
+      resetButtonClassName="w-full sm:w-auto px-4"
       dateRow={
         <>
           <FilterSelect
