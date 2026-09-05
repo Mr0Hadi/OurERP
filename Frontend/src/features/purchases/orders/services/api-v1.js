@@ -19,10 +19,6 @@ export {
  * (`Backend-Net/docs/api-guide.fa.md`، بخش ۹). بکند از الگوی
  * `api/{Controller}/{Action}` استفاده می‌کند، نه REST.
  *
- * ⚠️ همین حالا هیچ کامپوننتی از این فایل import نمی‌کند (خرید/فروش
- * هنوز مستقیم از `api-mockData` می‌خوانند). این فایل فقط برای روزی
- * است که مهاجرت به بکندِ واقعی شروع شود.
- *
  * به‌روزرسانیِ ۲۰۲۶-۰۹-۰۲ — دو شکافِ قبلی بسته شد:
  *  - **پیش‌فاکتور:** `PurchaseStatusEnum.PROFORMA = 0` حالا در بکند هم
  *    هست و شماره‌گذاریِ کلِ enum عیناً با فرانت یکی است (هیچ نگاشتی لازم
@@ -140,7 +136,8 @@ export function fromApiPurchase(dto) {
   const purchase = {
     ...dto,
     invoiceDate: toDateOnly(dto.invoiceDate),
-    dueDate: toDateOnly(dto.dueDate),
+    // فیلدِ سرور `paymentDate` است؛ فرم داخلی همان مفهوم را `dueDate` صدا می‌زند.
+    dueDate: toDateOnly(dto.paymentDate),
     items: dto.items || [],
     paymentDetails: dto.paymentDetails || [],
     ...fromApiPaymentDetails(dto.paymentDetails, dto.paymentType),
@@ -174,6 +171,7 @@ function toApiPurchasePayload(purchaseData) {
     supplierId: purchaseData.supplierId,
     invoiceNumber: purchaseData.invoiceNumber,
     invoiceDate: purchaseData.invoiceDate,
+    paymentDate: purchaseData.dueDate || undefined,
     description: purchaseData.description || undefined,
     status: purchaseData.status,
     paymentType: purchaseData.paymentType,
