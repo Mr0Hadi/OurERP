@@ -53,6 +53,7 @@ const ROUTE_TITLES = {
   [ROUTES.WAREHOUSE_PRODUCTS]: "کالاهای انبار",
   [ROUTES.WAREHOUSE_PRODUCTS_NEW]: "کالای جدید",
   [ROUTES.WAREHOUSE_UNIT_LABELS]: "برچسب کالاها",
+  [ROUTES.WAREHOUSE_CATEGORIES]: "دسته‌بندی کالاها",
   [ROUTES.WAREHOUSE_RECEIVING]: "دریافت کالا",
   [ROUTES.WAREHOUSE_SHIPPING]: "ارسال کالا",
   [ROUTES.WAREHOUSE_STOCK]: "موجودی انبار",

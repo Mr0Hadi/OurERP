@@ -6,6 +6,7 @@ export const ProductNewPage = lazy(() => import('../products/pages/ProductNewPag
 export const ReceivingListPage = lazy(() => import('../receiving/pages/ReceivingListPage'));
 export const ReceivingDetailPage = lazy(() => import('../receiving/pages/ReceivingDetailPage'));
 export const UnitLabelsPage = lazy(() => import('../units/pages/UnitLabelsPage'));
+export const CategoriesPage = lazy(() => import('../categories/pages/CategoriesPage'));
 export const ShippingListPage = lazy(() => import('../shipping/pages/ShippingListPage'));
 export const ShippingDetailPage = lazy(() => import('../shipping/pages/ShippingDetailPage'));
 export const ReceivingReturnDetailPage = lazy(() => import('../receiving/pages/ReceivingReturnDetailPage'));

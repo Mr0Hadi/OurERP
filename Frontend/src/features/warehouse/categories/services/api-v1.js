@@ -20,3 +20,24 @@ export const createProductCategory = async ({ name }) => {
   );
   return data;
 };
+
+/** `PUT api/ProductCategory/UpdateProductCategory` — `id` در بدنه است، نه در مسیر. */
+export const updateProductCategory = async (id, { name }) => {
+  const { data } = await axiosInstance.put(
+    "/ProductCategory/UpdateProductCategory",
+    { id, name },
+  );
+  return data;
+};
+
+/**
+ * `DELETE api/ProductCategory/DeleteProductCategory` — حذف نرم (سرور
+ * فقط `IsActive` را خاموش می‌کند)؛ کالاهای همان دسته دست‌نخورده
+ * می‌مانند، فقط دیگر در فهرست دسته‌بندی‌ها دیده نمی‌شود.
+ */
+export const deleteProductCategory = async (id) => {
+  await axiosInstance.delete("/ProductCategory/DeleteProductCategory", {
+    params: { id },
+  });
+  return { success: true, id };
+};

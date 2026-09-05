@@ -7,6 +7,7 @@ import {
   ReceivingListPage,
   ReceivingDetailPage,
   UnitLabelsPage,
+  CategoriesPage,
   ShippingListPage,
   ShippingDetailPage,
   ReceivingReturnDetailPage,
@@ -45,6 +46,10 @@ export const warehouseRoutes = [
   {
     path: ROUTES.WAREHOUSE_UNIT_LABELS,
     element: <UnitLabelsPage />,
+  },
+  {
+    path: ROUTES.WAREHOUSE_CATEGORIES,
+    element: <CategoriesPage />,
   },
   {
     path: ROUTES.WAREHOUSE_SHIPPING,
