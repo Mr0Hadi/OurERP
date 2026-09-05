@@ -1,5 +1,6 @@
 import axiosInstance from "@/shared/services/api/axios";
 import { idempotent, normalizeListResponse } from "@/shared/services/api/contract";
+import { PurchaseStatusEnum } from "@/shared/domain/enums/purchaseStatus";
 
 /**
  * نسخه‌ی هماهنگ‌شده با بکندِ واقعی برای دریافت انبار (بخش ۷ گزارشِ
@@ -33,7 +34,7 @@ export async function fetchIncomingQueue(params = {}) {
     params: {
       page: params.page,
       take: params.limit,
-      status: 1, // PurchaseStatusEnum.SHIPPED — نگاه کنید به گزارشِ شکاف برای شماره‌ی درستِ enum.
+      status: PurchaseStatusEnum.SHIPPED,
     },
   });
   return normalizeListResponse(data, { itemsKey: "purchaseList" });
