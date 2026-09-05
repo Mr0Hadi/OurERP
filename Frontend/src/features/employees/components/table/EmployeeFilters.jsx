@@ -68,12 +68,21 @@ const EmployeeFilters = () => {
   return (
     <FilterPanel
       onReset={resetFilters}
-      firstRowClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-      dateRowClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-3 border-t border-border"
-      resetWrapperClassName="flex items-end sm:col-span-2 lg:col-span-1 lg:justify-end"
-      resetButtonClassName="w-full px-4"
+      separateReset
+      firstRowClassName="grid grid-cols-1 sm:grid-cols-2 gap-4"
+      dateRowClassName="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-border"
+      resetButtonClassName="px-4"
       dateRow={
         <>
+          <FilterSelect
+            label="واحد"
+            value={departmentId}
+            onChange={handleDepartmentChange}
+            allLabel="همه واحدها"
+            options={departmentOptions}
+            numeric
+          />
+
           <FilterSelect
             label="تیم"
             value={teamId}
@@ -107,15 +116,6 @@ const EmployeeFilters = () => {
         value={personelCode}
         onChange={handlePersonelCode}
         inputMode="numeric"
-      />
-
-      <FilterSelect
-        label="واحد"
-        value={departmentId}
-        onChange={handleDepartmentChange}
-        allLabel="همه واحدها"
-        options={departmentOptions}
-        numeric
       />
     </FilterPanel>
   );
