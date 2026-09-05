@@ -195,6 +195,13 @@ export const navigationData = {
           description: "مشاهده و جستجوی کالاها",
         },
         {
+          title: "دسته‌بندی کالاها",
+          url: ROUTES.WAREHOUSE_CATEGORIES,
+          permission: "warehouse_view",
+          icon: Tags,
+          description: "ایجاد، ویرایش و حذف دسته‌بندی‌های کالا",
+        },
+        {
           title: "تعریف کالای جدید",
           url: ROUTES.WAREHOUSE_PRODUCTS_NEW,
           permission: "warehouse_create",
@@ -221,13 +228,6 @@ export const navigationData = {
           permission: "warehouse_receiving",
           icon: Barcode,
           description: "ساخت و چاپ بارکد تک‌تک اقلام فیزیکی",
-        },
-        {
-          title: "دسته‌بندی کالاها",
-          url: ROUTES.WAREHOUSE_CATEGORIES,
-          permission: "warehouse_view",
-          icon: Tags,
-          description: "ایجاد، ویرایش و حذف دسته‌بندی‌های کالا",
         },
       ],
     },
