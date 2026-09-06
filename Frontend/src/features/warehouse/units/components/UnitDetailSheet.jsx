@@ -1,5 +1,6 @@
 // src/features/warehouse/units/components/UnitDetailSheet.jsx
-import { Printer } from "lucide-react";
+import { useId, useState } from "react";
+import { Printer, QrCode } from "lucide-react";
 
 import {
   Sheet,
@@ -10,7 +11,10 @@ import {
 } from "@/shared/components/ui/sheet";
 import { Button } from "@/shared/components/ui/button";
 import { Separator } from "@/shared/components/ui/separator";
+import { Label } from "@/shared/components/ui/label";
+import { Switch } from "@/shared/components/ui/switch";
 import BarcodeGraphic from "@/shared/components/print/BarcodeGraphic";
+import QrCodeGraphic from "@/shared/components/print/QrCodeGraphic";
 import { gregorianToPersian } from "@/shared/utils/dateUtils";
 
 import UnitStatusBadge from "./UnitStatusBadge";
@@ -31,8 +35,16 @@ function Row({ label, children }) {
  * مقصد مشترکِ کارهای سطحِ دانه: چه از اسکن رسیده باشی، چه از کلیک روی
  * ردیف جدول. چاپ همین‌جاست تا انباردار برای برچسبِ افتاده لازم نباشد
  * جای دیگری برود.
+ *
+ * سوییچِ بارکد/QR اینجا فقط برای *خواندن* است — مثلاً وقتی انباردار
+ * می‌خواهد کدِ همین دانه را با موبایل بردارد بی‌آنکه چیزی چاپ کند.
+ * اینکه روی برچسبِ چاپی کدام نماد برود، تصمیمِ جداگانه‌ای است و در
+ * پیش‌نمایشِ چاپ گرفته می‌شود (`labelCodeKind`).
  */
 export default function UnitDetailSheet({ unit, open, onOpenChange, onPrint }) {
+  const [showQr, setShowQr] = useState(false);
+  const switchId = useId();
+
   if (!unit) return null;
 
   return (
@@ -45,12 +57,38 @@ export default function UnitDetailSheet({ unit, open, onOpenChange, onPrint }) {
         </SheetHeader>
 
         <div className="px-4 space-y-4 overflow-y-auto">
-          <div className="flex justify-center rounded-lg border border-border bg-white p-3">
-            <BarcodeGraphic
-              value={unit.barcodePayload}
-              text={unit.barcode}
-              preset="display"
-            />
+          <div className="space-y-2">
+            <div className="flex items-center justify-end gap-2">
+              <Label
+                htmlFor={switchId}
+                className="flex cursor-pointer items-center gap-1 text-xs font-normal text-muted-foreground"
+              >
+                <QrCode className="h-4 w-4" />
+                نمایش کد QR
+              </Label>
+              <Switch
+                id={switchId}
+                checked={showQr}
+                onCheckedChange={setShowQr}
+                aria-label="نمایش کد QR به‌جای بارکد"
+              />
+            </div>
+
+            <div className="flex justify-center rounded-lg border border-border bg-white p-3">
+              {showQr ? (
+                <QrCodeGraphic
+                  value={unit.barcodePayload}
+                  text={unit.barcode}
+                  preset="display"
+                />
+              ) : (
+                <BarcodeGraphic
+                  value={unit.barcodePayload}
+                  text={unit.barcode}
+                  preset="display"
+                />
+              )}
+            </div>
           </div>
 
           <div className="flex items-center justify-between">

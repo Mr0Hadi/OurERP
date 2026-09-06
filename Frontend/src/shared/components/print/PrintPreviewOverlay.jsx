@@ -30,6 +30,9 @@ import "./print.css";
  * صفحه‌ی اول چاپ می‌شود (توضیح کامل در print.css).
  *
  * سراسری و بی‌خبر از دامنه است تا بعداً برای چاپ فاکتور هم استفاده شود.
+ * به همین دلیل هر تنظیمی که به *محتوای* برچسب برمی‌گردد (مثلاً اینکه
+ * بارکد چاپ شود یا QR) از بیرون و از راهِ `toolbar` می‌آید؛ اینجا فقط
+ * هندسه‌ی ورق را می‌شناسد.
  */
 export default function PrintPreviewOverlay({
   open,
@@ -41,6 +44,7 @@ export default function PrintPreviewOverlay({
   onPrinted,
   presetKey,
   onPresetKeyChange,
+  toolbar = null,
 }) {
   const [internalPreset, setInternalPreset] = useState(DEFAULT_SHEET_PRESET);
   const activePreset = presetKey ?? internalPreset;
@@ -115,6 +119,8 @@ export default function PrintPreviewOverlay({
             ))}
           </SelectContent>
         </Select>
+
+        {toolbar}
 
         <span className="text-sm text-muted-foreground">
           {items.length} برچسب — {pageCount} صفحه

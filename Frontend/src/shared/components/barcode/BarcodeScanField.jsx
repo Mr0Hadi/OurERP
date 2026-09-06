@@ -22,7 +22,8 @@ const CameraScanner = lazy(
  * اسکنر دستیِ انبار مثل صفحه‌کلید عمل می‌کند: کد را می‌نویسد و Enter
  * می‌زند — پس گوش‌دادن به کلید Enter روی خودِ input دقیقاً همان چیزی
  * است که برای اسکنِ پشتِ‌سرهم لازم است. دوربین هم برای دستگاه‌های
- * بدون اسکنر (موبایل/تبلت) است.
+ * بدون اسکنر (موبایل/تبلت) است — و چون دوربین هر دو نماد را می‌خواند،
+ * برچسبی که QR دارد هم از همین‌جا اسکن می‌شود.
  *
  * عمداً از تگ <form> استفاده نشده: این کامپوننت معمولاً داخلِ فرمِ
  * بزرگ‌ترِ صفحه (ثبت فروش/خرید) جاسازی می‌شود و تودرتو کردنِ <form>
@@ -35,7 +36,7 @@ const CameraScanner = lazy(
  */
 export default function BarcodeScanField({
   onScan,
-  placeholder = "اسکن بارکد کالا...",
+  placeholder = "اسکن بارکد یا کد QR کالا...",
   className = "",
   inputClassName = "",
 }) {
@@ -83,7 +84,7 @@ export default function BarcodeScanField({
       <Dialog open={isCameraOpen} onOpenChange={setIsCameraOpen}>
         <DialogContent dir="rtl" className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>اسکن بارکد</DialogTitle>
+            <DialogTitle>اسکن بارکد یا کد QR</DialogTitle>
           </DialogHeader>
 
           {isCameraOpen ? (

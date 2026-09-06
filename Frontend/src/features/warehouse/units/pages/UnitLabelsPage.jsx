@@ -11,6 +11,14 @@ import {
 import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
 import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
 import PrintPreviewOverlay from "@/shared/components/print/PrintPreviewOverlay";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
+import { LABEL_CODE_KIND_OPTIONS } from "@/shared/services/barcode/barcodeConfig";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 
 import { useProductUnitsQuery } from "../services/queries";
@@ -46,7 +54,12 @@ export default function UnitLabelsPage() {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
 
   const unitsStore = useProductUnitFilterStore();
-  const { sheetPresetKey, setSheetPresetKey } = usePrintPreferenceStore();
+  const {
+    sheetPresetKey,
+    setSheetPresetKey,
+    labelCodeKind,
+    setLabelCodeKind,
+  } = usePrintPreferenceStore();
 
   const unitsSearch = useDebouncedValue(unitsStore.globalSearch, 400);
 
@@ -198,10 +211,26 @@ export default function UnitLabelsPage() {
         onOpenChange={setIsPrintOpen}
         title="چاپ برچسب دانه‌ها"
         items={printItems}
-        renderItem={(unit) => <UnitLabel unit={unit} />}
+        renderItem={(unit) => (
+          <UnitLabel unit={unit} codeKind={labelCodeKind} />
+        )}
         getItemKey={(unit) => unit.id}
         presetKey={sheetPresetKey}
         onPresetKeyChange={setSheetPresetKey}
+        toolbar={
+          <Select value={labelCodeKind} onValueChange={setLabelCodeKind}>
+            <SelectTrigger dir="rtl" className="h-9 w-auto min-w-[11rem]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent dir="rtl">
+              {LABEL_CODE_KIND_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        }
       />
     </div>
   );

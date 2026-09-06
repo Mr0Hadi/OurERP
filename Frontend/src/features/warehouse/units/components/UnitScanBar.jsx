@@ -61,7 +61,7 @@ export default function UnitScanBar({
             ref={inputRef}
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            placeholder="بارکد واحد را اسکن یا وارد کنید…"
+            placeholder="بارکد یا کد QR واحد را اسکن یا وارد کنید…"
             className="h-11 pr-9 font-mono text-base"
             autoComplete="off"
             spellCheck={false}
@@ -126,7 +126,7 @@ export default function UnitScanBar({
       <Dialog open={isCameraOpen} onOpenChange={setIsCameraOpen}>
         <DialogContent dir="rtl" className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>اسکن بارکد واحد</DialogTitle>
+            <DialogTitle>اسکن بارکد یا کد QR واحد</DialogTitle>
           </DialogHeader>
 
           {isCameraOpen ? (

@@ -117,6 +117,36 @@ export function parseBarcode(scannedInput) {
 }
 
 /**
+ * همان بخش‌هایی که `formatPayload` با خط‌تیره به هم می‌چسباند، این‌بار
+ * جدا از هم: `["14050608", "0000000010", "0000000003"]`.
+ *
+ * برای جایی است که کد باید در چند سطر شکسته شود چون در یک سطر جا
+ * نمی‌شود (برچسبِ باریکِ رول حرارتی). شکستن از روی همین مرزهای معنادار
+ * انجام می‌شود نه از روی عرضِ ظرف، وگرنه رقم‌ها وسطِ یک بخش می‌شکنند و
+ * کسی که برچسب را با چشم می‌خواند نمی‌فهمد کجای کد است.
+ *
+ * ورودیِ ناشناخته یک تکه برمی‌گردد — به همان دلیلِ `formatPayload`:
+ * نمایشِ خامِ چیزی که در دست است از نمایشِ هیچ بهتر است.
+ */
+export function barcodeSegments(code) {
+  const digits = toPayload(code);
+
+  if (digits.length === PRODUCT_PAYLOAD_LENGTH) {
+    return [digits.slice(0, DATE_SEGMENT_LENGTH), digits.slice(DATE_SEGMENT_LENGTH)];
+  }
+
+  if (digits.length === UNIT_PAYLOAD_LENGTH) {
+    return [
+      digits.slice(0, DATE_SEGMENT_LENGTH),
+      digits.slice(DATE_SEGMENT_LENGTH, PRODUCT_PAYLOAD_LENGTH),
+      digits.slice(PRODUCT_PAYLOAD_LENGTH),
+    ];
+  }
+
+  return [String(code ?? "")];
+}
+
+/**
  * payload → شکلِ خوانا با خط‌تیره.
  *
  * سرور خودش `Barcode` خوانا را ذخیره می‌کند و معمولاً همان مصرف
@@ -126,21 +156,7 @@ export function parseBarcode(scannedInput) {
  * اسکن کرده از نمایشِ رشته‌ی خالی مفیدتر است.
  */
 export function formatPayload(payload) {
-  const digits = toPayload(payload);
-
-  if (digits.length === PRODUCT_PAYLOAD_LENGTH) {
-    return `${digits.slice(0, DATE_SEGMENT_LENGTH)}-${digits.slice(DATE_SEGMENT_LENGTH)}`;
-  }
-
-  if (digits.length === UNIT_PAYLOAD_LENGTH) {
-    return [
-      digits.slice(0, DATE_SEGMENT_LENGTH),
-      digits.slice(DATE_SEGMENT_LENGTH, PRODUCT_PAYLOAD_LENGTH),
-      digits.slice(PRODUCT_PAYLOAD_LENGTH),
-    ].join("-");
-  }
-
-  return String(payload ?? "");
+  return barcodeSegments(payload).join("-");
 }
 
 /**

@@ -6,7 +6,19 @@ import { BarcodeFormat, DecodeHintType } from "@zxing/library";
 
 import { Button } from "@/shared/components/ui/button";
 
+/**
+ * فرمت‌هایی که دوربین دنبالشان می‌گردد.
+ *
+ * QR_CODE عمداً *اولِ* فهرست است: برچسب‌های خودمان هم بارکدِ خطی دارند
+ * هم QR، و QR دوبعدی است، پس از زاویه و فاصله‌ی بازتری خوانده می‌شود؛
+ * وقتی هر دو در کادرند بهتر است همان زودتر جواب بدهد. هر دو نماد یک
+ * payload دارند، پس برای فراخوان فرقی نمی‌کند کدام خوانده شده.
+ *
+ * فهرست را بی‌دلیل بلندتر نکنید: هر فرمتِ اضافه یک عبورِ دیگر روی هر
+ * فریم است و اسکن را کند می‌کند.
+ */
 const BARCODE_FORMATS = [
+  BarcodeFormat.QR_CODE,
   BarcodeFormat.EAN_13,
   BarcodeFormat.EAN_8,
   BarcodeFormat.UPC_A,
@@ -67,7 +79,11 @@ export default function CameraScanner({ onDetected }) {
       .decodeFromConstraints(constraints, videoRef.current, (result, error) => {
         if (result) {
           onDetected(result.getText());
-          toast.success("بارکد با موفقیت اسکن شد");
+          toast.success(
+            result.getBarcodeFormat() === BarcodeFormat.QR_CODE
+              ? "کد QR با موفقیت اسکن شد"
+              : "بارکد با موفقیت اسکن شد",
+          );
           return;
         }
         if (error && error?.name !== "NotFoundException") {
