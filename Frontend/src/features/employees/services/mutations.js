@@ -11,6 +11,7 @@ import {
 import { employeeKeys } from "./queryKeys";
 import { teamKeys } from "@/features/organization/teams/services/queryKeys";
 import { departmentKeys } from "@/features/organization/departments/services/queryKeys";
+import { authKeys } from "@/features/auth/services/queryKeys";
 
 export function useCreateEmployeeMutation() {
   const queryClient = useQueryClient();
@@ -45,6 +46,9 @@ export function useUpdateEmployeeMutation() {
       });
       queryClient.invalidateQueries({ queryKey: teamKeys.all });
       queryClient.invalidateQueries({ queryKey: departmentKeys.all });
+      // اگر کارمندِ ویرایش‌شده خودِ کاربرِ واردشده باشد، `useSessionQuery`
+      // (که دیگه staleTime:0 نداره) باید همین‌جا دستی تازه بشه.
+      queryClient.invalidateQueries({ queryKey: authKeys.session() });
     },
     onError: (error) => {
       toast.error(error?.message || "خطا در ویرایش کارمند");
@@ -70,6 +74,7 @@ export function useAssignEmployeeMembershipMutation() {
       queryClient.invalidateQueries({ queryKey: employeeKeys.all });
       queryClient.invalidateQueries({ queryKey: teamKeys.all });
       queryClient.invalidateQueries({ queryKey: departmentKeys.all });
+      queryClient.invalidateQueries({ queryKey: authKeys.session() });
     },
     onError: (error) => {
       toast.error(error?.message || "خطا در تغییر عضویت کارمند");

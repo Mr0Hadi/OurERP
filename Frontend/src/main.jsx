@@ -67,6 +67,14 @@ const updateSW = registerSW({
   onOfflineReady() {
     toast.success('برنامه برای استفاده آفلاین آماده‌ست', { duration: 3000 })
   },
+  onRegisteredSW(swUrl, registration) {
+    if (!registration) return
+    // بررسیِ دوره‌ایِ نسخه‌ی جدید — پیش‌فرضِ vite-plugin-pwa فقط موقعِ
+    // ناوبریِ سخت چک می‌کنه که ممکنه ساعت‌ها طول بکشه تا پیغام بیاد
+    setInterval(() => {
+      registration.update()
+    }, 15 * 60 * 1000) // هر ۱۵ دقیقه
+  },
 })
 
 createRoot(document.getElementById('root')).render(

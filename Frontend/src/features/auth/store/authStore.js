@@ -18,6 +18,10 @@ export const useAuthStore = create(
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
+      // تا rehydrate از localStorage تمام نشده، isAuthenticated پیش‌فرضِ
+      // false غیرقابل‌اعتماده — رندر کردنِ روت‌ها قبل از این یعنی کاربرِ
+      // واردشده هم برای یک لحظه به لاگین پرتاب بشه (یا برعکس).
+      hasHydrated: false,
 
       /**
        * عضویتِ سازمانیِ *انتخاب‌شده* — فقط یک شناسه، نه خودِ رکورد.
@@ -45,6 +49,8 @@ export const useAuthStore = create(
       setActiveMembership: (membershipId) =>
         set({ activeMembershipId: membershipId }),
 
+      setHasHydrated: (hasHydrated) => set({ hasHydrated }),
+
       logout: () =>
         set({
           accessToken: null,
@@ -62,6 +68,9 @@ export const useAuthStore = create(
         isAuthenticated: state.isAuthenticated,
         activeMembershipId: state.activeMembershipId,
       }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );

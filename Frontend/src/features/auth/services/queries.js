@@ -41,8 +41,14 @@ export function useLogoutMutation() {
  * سرور است و جایش کش React Query، نه localStorage.
  *
  * `enabled` به توکن گره خورده تا قبل از ورود درخواستِ ۴۰۱ فرستاده نشود.
- * کش کهنه نگه داشته نمی‌شود (`staleTime: 0`ِ سراسری) چون چند کاربر هم‌زمان
- * کار می‌کنند و تغییرِ عضویت (`ChangeUserTeam`) باید فوری دیده شود.
+ *
+ * برخلافِ `staleTime: 0`ِ سراسری، اینجا یک `staleTime` مشخص گذاشته شده:
+ * هویتِ کاربر و دپارتمانش برخلافِ داده‌های تراکنشی به‌ندرت تغییر می‌کنند،
+ * پس نیازی نیست هر mount/focus دوباره از سرور خونده بشه. برای این‌که
+ * کهنه‌ماندنش مشکلی ایجاد نکنه، هر جایی که ممکنه عضویت/تیمِ یک کارمند
+ * تغییر کنه (`useUpdateEmployeeMutation`, `useAssignEmployeeMembershipMutation`)
+ * این کوئری را هم صریحاً invalidate می‌کند؛ `useLogoutMutation` هم با
+ * `queryClient.clear()` کاملاً پاکش می‌کند.
  */
 export function useSessionQuery() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -52,6 +58,7 @@ export function useSessionQuery() {
     queryFn: fetchSession,
     enabled: isAuthenticated,
     retry: false,
+    staleTime: 10 * 60 * 1000, // ۱۰ دقیقه
   });
 }
 
