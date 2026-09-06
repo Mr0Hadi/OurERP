@@ -1,4 +1,3 @@
-// src/features/organization/hooks/useEmployeeOptions.js
 import { useMemo } from "react";
 
 import { useEmployeesQuery } from "@/features/employees/services/queries";

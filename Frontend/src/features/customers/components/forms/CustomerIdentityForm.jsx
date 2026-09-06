@@ -1,4 +1,3 @@
-// src/features/customers/components/forms/CustomerIdentityForm.jsx
 import { Controller } from "react-hook-form";
 import { User, Tag } from "lucide-react";
 import { Input } from "@/shared/components/ui/input";

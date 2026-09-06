@@ -1,4 +1,3 @@
-// src/features/warehouse/products/pages/ProductNewPage.jsx
 import { useNavigate } from "react-router-dom";
 import { Save, X } from "lucide-react";
 import { useEffect } from "react";

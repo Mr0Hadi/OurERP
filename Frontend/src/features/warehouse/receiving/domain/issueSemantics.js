@@ -1,5 +1,3 @@
-// src/features/warehouse/receiving/domain/issueSemantics.js
-
 import { RECEIVING_ISSUE_TYPES, RECEIVING_SOURCES } from "./receivingVocabulary";
 import { RETURN_PROBLEMS } from "@/shared/domain/returns/problems";
 

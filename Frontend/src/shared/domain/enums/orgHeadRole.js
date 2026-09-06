@@ -1,5 +1,3 @@
-// src/shared/domain/enums/orgHeadRole.js
-
 /**
  * جایگاهِ سرپرستی — «هد تیم» و «هد واحد».
  *

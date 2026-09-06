@@ -1,4 +1,3 @@
-// src/features/employees/components/forms/EmployeeCredentialsForm.jsx
 import { useState } from "react";
 import { KeyRound, Eye, EyeOff } from "lucide-react";
 

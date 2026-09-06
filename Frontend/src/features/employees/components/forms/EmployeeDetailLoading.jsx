@@ -1,5 +1,3 @@
-// src/features/employees/components/forms/EmployeeDetailLoading.jsx
-
 const FieldSkeleton = () => (
   <div className="space-y-1.5">
     <div className="h-4 w-20 bg-muted rounded" />

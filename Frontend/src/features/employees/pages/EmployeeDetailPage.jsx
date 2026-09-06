@@ -1,4 +1,3 @@
-// src/features/employees/pages/EmployeeDetailPage.jsx
 import { useEffect, useState } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { Save, X, Trash2, LogOut } from "lucide-react";

@@ -1,4 +1,3 @@
-// src/features/warehouse/categories/pages/CategoriesPage.jsx
 import { useState } from "react";
 import { Plus } from "lucide-react";
 

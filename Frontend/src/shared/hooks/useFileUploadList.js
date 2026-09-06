@@ -1,8 +1,8 @@
-// src/shared/hooks/useFileUploadList.js
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
-import { deleteImages, objectKeyOf, uploadImage } from "@/shared/services/files/client";
+import { deleteImages, uploadImage } from "@/shared/services/files/api-v1";
+import { objectKeyOf } from "@/shared/services/files/objectKey";
 import {
   DOCUMENT_ACCEPT,
   IMAGE_ACCEPT,

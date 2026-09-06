@@ -1,4 +1,3 @@
-// src/features/reports/components/ActivityReportSection.jsx
 import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
 import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
 

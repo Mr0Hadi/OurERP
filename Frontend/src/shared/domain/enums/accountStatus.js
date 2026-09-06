@@ -1,5 +1,3 @@
-// src/shared/domain/enums/accountStatus.js
-
 /**
  * `AccountStatusEnum` — وضعیت حساب کاربریِ کارمند.
  *

@@ -1,7 +1,6 @@
-// src/shared/services/files/queries.js
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { getImageUrl } from "./client";
+import { getImageUrl } from "./api-v1";
 import { fileKeys } from "./queryKeys";
 
 /**

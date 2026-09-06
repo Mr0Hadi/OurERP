@@ -1,4 +1,3 @@
-// src/features/warehouse/units/services/queries.js
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
 import { fetchProductUnits } from "./api-v1";

@@ -1,7 +1,6 @@
-// features/customers/pages/CustomersPage.jsx
 import { useCustomersQuery } from "../services/queries";
 import { useCustomerFilterStore } from "../store/customerFilterStore";
-import { useDebouncedFilters } from "../hooks/useDebouncedFilters";
+import { useDebouncedCustomerFilters } from "../hooks/useDebouncedCustomerFilters";
 import CustomerTable from "../components/CustomerTable";
 import CustomerFilters from "../components/CustomerFilters";
 import {
@@ -23,7 +22,7 @@ const CustomersPage = () => {
   const { pagination, sorting, setPagination, setSorting } =
     useCustomerFilterStore();
 
-  const debouncedFilters = useDebouncedFilters();
+  const debouncedFilters = useDebouncedCustomerFilters();
 
   const { data, isLoading, isFetching, isError, error, refetch } =
     useCustomersQuery(debouncedFilters, pagination, sorting);

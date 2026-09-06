@@ -1,4 +1,3 @@
-// src/features/dashboard/components/PeriodTableCard.jsx
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import ChartCard from "@/shared/components/charts/ChartCard";

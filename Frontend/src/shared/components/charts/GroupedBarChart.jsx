@@ -1,4 +1,3 @@
-// src/shared/components/charts/GroupedBarChart.jsx
 import { useState } from "react";
 import {
   barPath,

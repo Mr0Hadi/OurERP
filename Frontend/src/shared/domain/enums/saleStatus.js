@@ -1,5 +1,3 @@
-// src/shared/domain/enums/saleStatus.js
-
 /**
  * `SalesStatusEnum` — وضعیت سند فروش (بخش ۱۵ سند api-guide.fa.md).
  * مقادیر باید دقیقاً با اعداد بکند یکی بمانند؛ روی سیم همیشه عدد است.

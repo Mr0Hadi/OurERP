@@ -1,5 +1,3 @@
-// src/shared/domain/enums/purchaseStatus.js
-
 /**
  * `PurchaseStatusEnum` — وضعیت سند خرید (بخش ۱۵ سند api-guide.fa.md).
  * مقادیر باید دقیقاً با اعداد بکند یکی بمانند؛ روی سیم همیشه عدد است.

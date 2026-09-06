@@ -1,5 +1,3 @@
-// src/features/purchases/returns/domain/purchaseReturnVocabulary.js
-
 import { RETURN_SIDES, SIDE_CONFIG } from "@/shared/domain/returns/sides";
 import {
   PURCHASE_CLAIM_PROBLEMS,
@@ -102,8 +100,8 @@ export const PURCHASE_RETURN_STATUS_LABELS =
  * باشد و باید بشود همان‌جا مرجوعی زد — منتظر ماشین دوم ماندن یعنی ادعا
  * را عقب انداختن.
  *
- * اینجاست نه در api-mockData، چون صفحه‌ی جزئیات خرید هم برای فعال‌کردن
- * دکمه‌ی مرجوعی به آن نیاز دارد و نباید به پیاده‌سازیِ mock وصل باشد.
+ * در لایه‌ی دامنه است نه در سرویس، چون صفحه‌ی جزئیات خرید هم برای
+ * فعال‌کردنِ دکمه‌ی مرجوعی به همین قاعده نیاز دارد.
  */
 export function hasAnythingArrived(purchase) {
   return (purchase.items || []).some((item) => (item.receivedQuantity || 0) > 0);

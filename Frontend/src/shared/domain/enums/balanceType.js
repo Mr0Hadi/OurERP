@@ -1,5 +1,3 @@
-// src/shared/domain/enums/balanceType.js
-
 /**
  * `BalanceTypeEnum` — نوع مانده حساب مشتری/تامین‌کننده.
  * مقادیر باید دقیقاً با اعداد بکند یکی بمانند (بخش ۱۵ سند api-guide.fa.md).

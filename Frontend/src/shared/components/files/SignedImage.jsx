@@ -1,4 +1,3 @@
-// src/shared/components/files/SignedImage.jsx
 import { ImageOff } from "lucide-react";
 import { useState } from "react";
 

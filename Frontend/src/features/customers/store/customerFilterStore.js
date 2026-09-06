@@ -1,43 +1,32 @@
-// features/customers/store/customerFilterStore.js
-import { create } from "zustand";
+import { createFilterStore } from "@/shared/store/createFilterStore";
 import { BalanceTypeEnum } from "@/shared/domain/enums/balanceType";
 
-export const useCustomerFilterStore = create((set) => ({
-  globalSearch: "",
-  idSearch: "",
-  minDebtCredit: "",
-  maxDebtCredit: "",
-  balanceType: "all", // "all" | BalanceTypeEnum
-  pagination: { pageIndex: 0, pageSize: 10 },
-  sorting: null,
+/** میان‌برهای نوار بالای لیست، به مقدار `balanceType` ترجمه می‌شوند. */
+const QUICK_FILTER_BALANCE = {
+  debtors: BalanceTypeEnum.DEBTOR,
+  creditors: BalanceTypeEnum.CREDITOR,
+  zero: BalanceTypeEnum.BALANCED,
+};
 
-  setQuickFilter: (type) => {
-    switch (type) {
-      case "debtors":
-        set({ balanceType: BalanceTypeEnum.DEBTOR, minDebtCredit: "", maxDebtCredit: "" });
-        break;
-      case "creditors":
-        set({ balanceType: BalanceTypeEnum.CREDITOR, minDebtCredit: "", maxDebtCredit: "" });
-        break;
-      case "zero":
-        set({ balanceType: BalanceTypeEnum.BALANCED, minDebtCredit: "", maxDebtCredit: "" });
-        break;
-      default: // all
-        set({ balanceType: "all", minDebtCredit: "", maxDebtCredit: "" });
-    }
+export const useCustomerFilterStore = createFilterStore({
+  filters: {
+    globalSearch: "",
+    idSearch: "",
+    minDebtCredit: "",
+    maxDebtCredit: "",
+    balanceType: "all", // "all" | BalanceTypeEnum
   },
-  setGlobalSearch: (value) => set({ globalSearch: value }),
-  setIdSearch: (value) => set({ idSearch: value }),
-  setDebtCreditRange: (min, max) =>
-    set({ minDebtCredit: min, maxDebtCredit: max }),
-  setPagination: (pagination) => set({ pagination }),
-  setSorting: (sorting) => set({ sorting }),
-  resetFilters: () =>
-    set({
-      globalSearch: "",
-      idSearch: "",
-      minDebtCredit: "",
-      maxDebtCredit: "",
-      balanceType: "all",
-    }),
-}));
+  defaultSorting: null,
+  actions: ({ applyFilters }) => ({
+    // میان‌بر بازه‌ی عددی را هم پاک می‌کند: این دو راهِ رقیبِ بیان یک
+    // چیزند و با هم فعال بمانند، نتیجه‌ی لیست غیرقابل‌توضیح می‌شود.
+    setQuickFilter: (type) =>
+      applyFilters({
+        balanceType: QUICK_FILTER_BALANCE[type] ?? "all",
+        minDebtCredit: "",
+        maxDebtCredit: "",
+      }),
+    setDebtCreditRange: (min, max) =>
+      applyFilters({ minDebtCredit: min, maxDebtCredit: max }),
+  }),
+});

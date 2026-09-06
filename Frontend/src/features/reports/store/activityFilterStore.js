@@ -1,4 +1,3 @@
-// src/features/reports/store/activityFilterStore.js
 import { createFilterStore } from "@/shared/store/createFilterStore";
 
 /**

@@ -1,4 +1,3 @@
-// src/features/warehouse/products/components/forms/ProductPricingForm.jsx
 import { Controller, useWatch } from "react-hook-form";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";

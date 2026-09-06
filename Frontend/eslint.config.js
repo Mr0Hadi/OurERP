@@ -17,10 +17,17 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
-  },
-  {
     rules: {
       "no-unused-vars": "warn",
+    },
+  },
+  {
+    // جدول‌های مسیر: کنارِ هم بودنِ `lazy()`ها و آرایه‌ی مسیرها عمدی است.
+    // مرزِ Fast Refresh اینجا معنا ندارد — این فایل‌ها کامپوننت رندر
+    // نمی‌کنند، فقط نگاشتِ مسیر به صفحه‌اند.
+    files: ["**/routes.jsx"],
+    rules: {
+      "react-refresh/only-export-components": "off",
     },
   },
 ]);

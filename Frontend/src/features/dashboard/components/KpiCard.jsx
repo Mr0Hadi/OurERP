@@ -1,4 +1,3 @@
-// src/features/dashboard/components/KpiCard.jsx
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import {

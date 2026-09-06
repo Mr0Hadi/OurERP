@@ -1,5 +1,3 @@
-// src/shared/domain/returns/effects.js
-
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 
 /**

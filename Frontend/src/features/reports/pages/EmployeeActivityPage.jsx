@@ -1,4 +1,3 @@
-// src/features/reports/pages/EmployeeActivityPage.jsx
 import { UserCog } from "lucide-react";
 
 import {

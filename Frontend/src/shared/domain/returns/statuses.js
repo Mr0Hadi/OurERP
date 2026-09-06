@@ -1,5 +1,3 @@
-// src/shared/domain/returns/statuses.js
-
 /**
  * وضعیت یک مرجوعی — مشترک بین خرید و فروش.
  *

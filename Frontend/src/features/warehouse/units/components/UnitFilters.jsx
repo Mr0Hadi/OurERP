@@ -1,4 +1,3 @@
-// src/features/warehouse/units/components/UnitFilters.jsx
 import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import FilterSelect from "@/shared/components/filters/FilterSelect";

@@ -1,5 +1,3 @@
-// src/shared/domain/enums/imageFolder.js
-
 /**
  * `ImageFolderEnum` — پیشوندِ پوشه‌ی شیء در باکت (بخش ۱۷ سند api-guide.fa.md).
  *

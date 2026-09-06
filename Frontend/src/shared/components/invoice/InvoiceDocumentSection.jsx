@@ -8,7 +8,6 @@ import { Label } from "@/shared/components/ui/label";
 import { Spinner } from "@/shared/components/ui/spinner";
 import FileUploadList from "@/shared/components/files/FileUploadList";
 import {
-  SERVER_INVOICE_PDF_ENABLED,
   getPurchaseInvoicePdf,
   getSaleInvoicePdf,
   getSaleReturnCreditNotePdf,
@@ -117,12 +116,11 @@ export default function InvoiceDocumentSection({
   const [isDownloading, setIsDownloading] = useState(false);
 
   /**
-   * فاکتورِ رسمی را سرور می‌سازد (بخش ۱۳ سند). تا وقتی فیچرهای
-   * خرید/فروش روی داده‌ی mock اند، شناسه‌ها شناسه‌ی سرور نیستند و این
-   * مسیر خاموش می‌ماند — دکمه همان پیش‌نمایشِ HTML را می‌دهد.
+   * فاکتورِ رسمی را سرور می‌سازد (بخش ۱۳ سند) و فقط برای سندِ
+   * ذخیره‌شده معنا دارد؛ بدون `documentId` دکمه همان پیش‌نمایشِ HTML
+   * را می‌دهد.
    */
-  const serverPdf =
-    SERVER_INVOICE_PDF_ENABLED && documentId
+  const serverPdf = documentId
       ? {
           purchase: getPurchaseInvoicePdf,
           sale: getSaleInvoicePdf,

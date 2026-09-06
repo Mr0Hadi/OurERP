@@ -1,4 +1,3 @@
-// src/features/warehouse/products/components/forms/ProductBarcodeDisplay.jsx
 import { useId, useState } from "react";
 import { QrCode } from "lucide-react";
 

@@ -1,5 +1,3 @@
-// src/shared/services/files/fileConstraints.js
-
 /**
  * آینه‌ی محدودیت‌های `UploadImageCommandHandler` در بکند (بخش ۱۷ سند).
  *

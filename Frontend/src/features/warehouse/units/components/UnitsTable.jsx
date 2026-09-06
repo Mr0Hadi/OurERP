@@ -1,6 +1,5 @@
-// src/features/warehouse/units/components/UnitsTable.jsx
 import { useMemo } from "react";
-import { ChevronLeft, RotateCw } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 
 import DataTable from "@/shared/components/table/DataTable";
 import { Button } from "@/shared/components/ui/button";

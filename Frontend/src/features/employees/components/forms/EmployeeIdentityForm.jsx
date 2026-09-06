@@ -1,4 +1,3 @@
-// src/features/employees/components/forms/EmployeeIdentityForm.jsx
 import { UserCog } from "lucide-react";
 
 import FormSectionCard from "@/shared/components/forms/FormSectionCard";

@@ -1,4 +1,3 @@
-// src/features/warehouse/categories/components/CategoryTable.jsx
 import { Pencil, Trash2 } from "lucide-react";
 
 import {

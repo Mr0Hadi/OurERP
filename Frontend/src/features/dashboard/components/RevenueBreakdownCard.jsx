@@ -1,4 +1,3 @@
-// src/features/dashboard/components/RevenueBreakdownCard.jsx
 import ChartCard from "@/shared/components/charts/ChartCard";
 import DonutChart from "@/shared/components/charts/DonutChart";
 

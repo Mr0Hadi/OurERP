@@ -1,4 +1,3 @@
-// features/warehouse/services/queryKeys.js
 export const productKeys = {
   all: ['products'],
   lists: () => [...productKeys.all, 'list'],

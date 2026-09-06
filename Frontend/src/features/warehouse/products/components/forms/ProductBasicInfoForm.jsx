@@ -1,4 +1,3 @@
-// src/features/warehouse/products/components/forms/ProductBasicInfoForm.jsx
 import { Controller, useWatch } from "react-hook-form";
 
 import { Input } from "@/shared/components/ui/input";
@@ -18,7 +17,7 @@ import {
 } from "@/shared/components/ui/select";
 
 import CategoryManager from "./CategoryManager";
-import { formatPayload } from "@/shared/services/barcode/productCode";
+import { formatPayload } from "@/shared/domain/barcode/productCode";
 import { PRODUCT_UNIT_LABELS } from "@/shared/domain/enums/productUnit";
 
 /**

@@ -1,4 +1,3 @@
-// src/features/organization/departments/pages/DepartmentsPage.jsx
 import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
 

@@ -1,4 +1,3 @@
-// src/shared/components/map/LocationPickerMap.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";

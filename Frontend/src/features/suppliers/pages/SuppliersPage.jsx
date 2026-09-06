@@ -1,6 +1,6 @@
 import { useSuppliersQuery } from "../services/queries";
 import { useSupplierFilterStore } from "../store/supplierFilterStore";
-import { useDebouncedFilters } from "../hooks/useDebouncedFilters";
+import { useDebouncedSupplierFilters } from "../hooks/useDebouncedSupplierFilters";
 import SupplierTable from "../components/SupplierTable";
 import SupplierFilters from "../components/SupplierFilters";
 import {
@@ -21,7 +21,7 @@ const SuppliersPage = () => {
   const { pagination, sorting, setPagination, setSorting } =
     useSupplierFilterStore();
 
-  const debouncedFilters = useDebouncedFilters();
+  const debouncedFilters = useDebouncedSupplierFilters();
 
   const { data, isLoading, isFetching, isError, error, refetch } =
     useSuppliersQuery(debouncedFilters, pagination, sorting);

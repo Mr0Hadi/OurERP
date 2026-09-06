@@ -1,4 +1,3 @@
-// src/features/organization/teams/services/queryKeys.js
 export const teamKeys = {
   all: ["teams"],
   lists: () => [...teamKeys.all, "list"],

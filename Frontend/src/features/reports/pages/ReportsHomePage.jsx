@@ -1,4 +1,3 @@
-// src/features/reports/pages/ReportsHomePage.jsx
 import { Link } from "react-router-dom";
 import { BarChart3, ChevronLeft, Truck, UserCog, Users } from "lucide-react";
 

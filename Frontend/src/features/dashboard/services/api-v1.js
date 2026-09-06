@@ -1,4 +1,3 @@
-// src/features/dashboard/services/api-v1.js
 import axiosInstance from "@/shared/services/api/axios";
 import { DEFAULT_REPORT_PERIOD } from "@/shared/domain/enums/reportPeriod";
 

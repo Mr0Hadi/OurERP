@@ -1,4 +1,3 @@
-// src/features/dashboard/store/dashboardFilterStore.js
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { DEFAULT_REPORT_PERIOD } from "@/shared/domain/enums/reportPeriod";

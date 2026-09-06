@@ -1,16 +1,15 @@
-// src/features/auth/services/api-v1.js
 import axiosInstance from "@/shared/services/api/axios";
 import { orgPositionIn } from "@/shared/domain/enums/orgHeadRole";
 import { fetchDepartmentById } from "@/features/organization/departments/services/api-v1";
 import { fetchTeamById } from "@/features/organization/teams/services/api-v1";
 
 /**
- * شناسه‌ی پایدارِ یک عضویت — عیناً همان چیزی که `api-mockData` می‌سازد.
+ * شناسه‌ی پایدارِ یک عضویت.
  *
  * بکند برای عضویت جدولی ندارد که کلید بدهد؛ عضویت همان جفتِ
- * `DepartmentId`/`TeamId` روی خودِ `User` است. یکسان‌بودنِ این فرمول در
- * دو طرف یعنی انتخابِ ذخیره‌شده‌ی کاربر بعد از سوییچِ mock→سرور
- * بی‌معنا نمی‌شود.
+ * `DepartmentId`/`TeamId` روی خودِ `User` است. این شناسه سمتِ فرانت
+ * ساخته می‌شود تا انتخابِ ذخیره‌شده‌ی کاربر در `authStore` کلیدی داشته
+ * باشد که بین رفرش‌ها ثابت بماند.
  */
 export const membershipIdOf = (departmentId, teamId) =>
   `${departmentId ?? "none"}:${teamId ?? "none"}`;

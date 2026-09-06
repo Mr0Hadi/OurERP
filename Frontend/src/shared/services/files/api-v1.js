@@ -1,5 +1,3 @@
-// src/shared/services/files/api-v1.js
-
 import axiosInstance from "@/shared/services/api/axios";
 import { validateDocumentFile } from "./fileConstraints";
 import { objectKeyOf } from "./objectKey";

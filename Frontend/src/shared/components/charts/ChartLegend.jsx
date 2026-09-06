@@ -1,4 +1,3 @@
-// src/shared/components/charts/ChartLegend.jsx
 import { cn } from "@/shared/lib/utils";
 
 /**

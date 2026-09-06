@@ -1,4 +1,3 @@
-
 function PurchasesInvoicesPage() {
   return (
     <div>PurchasesInvoicesPage</div>

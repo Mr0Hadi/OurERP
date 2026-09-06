@@ -1,4 +1,3 @@
-// src/features/organization/teams/services/queries.js
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
 import { fetchTeams, fetchTeamById } from "./api-v1";

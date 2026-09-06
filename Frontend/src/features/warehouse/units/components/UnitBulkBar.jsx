@@ -1,4 +1,3 @@
-// src/features/warehouse/units/components/UnitBulkBar.jsx
 import { Printer, X } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";

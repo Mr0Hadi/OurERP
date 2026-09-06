@@ -1,4 +1,3 @@
-// src/features/organization/teams/components/forms/TeamIdentityForm.jsx
 import { useMemo } from "react";
 import { Users } from "lucide-react";
 

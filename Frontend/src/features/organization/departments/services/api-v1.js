@@ -1,4 +1,3 @@
-// src/features/organization/departments/services/api-v1.js
 import axiosInstance from "@/shared/services/api/axios";
 import { normalizeListResponse } from "@/shared/services/api/contract";
 

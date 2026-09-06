@@ -1,4 +1,3 @@
-// src/shared/hooks/useFormDraft.js
 import { useCallback, useEffect, useState } from "react";
 
 import { useFormDraftStore } from "@/shared/store/formDraftStore";

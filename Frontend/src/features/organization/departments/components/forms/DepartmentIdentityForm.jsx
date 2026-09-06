@@ -1,4 +1,3 @@
-// src/features/organization/departments/components/forms/DepartmentIdentityForm.jsx
 import { Building2 } from "lucide-react";
 
 import FormSectionCard from "@/shared/components/forms/FormSectionCard";

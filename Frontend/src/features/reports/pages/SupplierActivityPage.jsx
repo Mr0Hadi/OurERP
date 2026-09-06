@@ -1,4 +1,3 @@
-// src/features/reports/pages/SupplierActivityPage.jsx
 import { Truck } from "lucide-react";
 
 import ActivityReportSection from "../components/ActivityReportSection";

@@ -1,4 +1,3 @@
-// src/features/employees/components/table/EmployeeFilters.jsx
 import { useCallback, useMemo } from "react";
 
 import FilterPanel from "@/shared/components/filters/FilterPanel";

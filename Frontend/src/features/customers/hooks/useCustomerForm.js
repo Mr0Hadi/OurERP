@@ -1,4 +1,3 @@
-// src/features/customers/hooks/useCustomerForm.js
 import { useForm } from "react-hook-form";
 import { BalanceTypeEnum } from "@/shared/domain/enums/balanceType";
 import { ImageFolderEnum } from "@/shared/domain/enums/imageFolder";

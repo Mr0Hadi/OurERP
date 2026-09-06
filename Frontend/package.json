@@ -9,9 +9,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "st": "node structure.js",
-    "check:returns": "node scripts/check-sales-returns.js",
-    "check:queues": "node scripts/check-warehouse-queues.js"
+    "st": "node structure.js"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

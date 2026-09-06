@@ -1,4 +1,3 @@
-// src/features/organization/departments/components/DepartmentTeamsCard.jsx
 import { useMemo, useState } from "react";
 import { ChevronLeft, Plus, Trash2, Users } from "lucide-react";
 

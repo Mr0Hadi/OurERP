@@ -1,4 +1,3 @@
-// src/shared/components/charts/ChartCard.jsx
 import { Info } from "lucide-react";
 import {
   Card,

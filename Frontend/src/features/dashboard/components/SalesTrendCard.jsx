@@ -1,4 +1,3 @@
-// src/features/dashboard/components/SalesTrendCard.jsx
 import ChartCard from "@/shared/components/charts/ChartCard";
 import TrendChart from "@/shared/components/charts/TrendChart";
 

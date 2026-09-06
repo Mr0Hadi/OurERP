@@ -1,4 +1,3 @@
-// src/features/dashboard/components/SalesVsPurchaseCard.jsx
 import ChartCard from "@/shared/components/charts/ChartCard";
 import GroupedBarChart from "@/shared/components/charts/GroupedBarChart";
 

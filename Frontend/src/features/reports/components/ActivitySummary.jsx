@@ -1,4 +1,3 @@
-// src/features/reports/components/ActivitySummary.jsx
 import { Crown, FileText, Wallet } from "lucide-react";
 
 import { Card, CardContent } from "@/shared/components/ui/card";

@@ -1,4 +1,3 @@
-// src/features/reports/pages/CustomerActivityPage.jsx
 import { Users } from "lucide-react";
 
 import ActivityReportSection from "../components/ActivityReportSection";

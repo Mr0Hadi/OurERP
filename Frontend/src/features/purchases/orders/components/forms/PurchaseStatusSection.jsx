@@ -1,4 +1,3 @@
-
 import {
   Card,
   CardContent,
@@ -74,7 +73,6 @@ const DEFAULT_CONFIG = {
 };
 
 export default function PurchaseStatusSection({
-  status,
   selectedStatus,
   onStatusChange,
 }) {

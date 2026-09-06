@@ -1,5 +1,3 @@
-// src/shared/domain/enums/unitStatus.js
-
 /**
  * `ProductUnitStatusEnum` — وضعیت یک دانه‌ی فیزیکی محصول (بخش ۱۵ سند
  * api-guide.fa.md). مقادیر دقیقاً همان اعداد بکند هستند.

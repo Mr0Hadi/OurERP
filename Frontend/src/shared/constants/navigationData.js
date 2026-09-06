@@ -4,10 +4,7 @@ import { ROUTES } from "./routes";
 import {
   // Navigation
   Home,
-  Settings,
-  SettingsIcon,
   UserCog,
-  Bell,
   HelpCircle,
 
   // Business
@@ -15,7 +12,6 @@ import {
   ShoppingCart,
   Truck,
   Warehouse,
-  Package,
   Box,
   Users,
   Tags,
@@ -24,16 +20,9 @@ import {
   FileText,
   FilePlus,
   ClipboardList,
-  Receipt,
-  QrCode,
   Barcode,
 
   // Financial
-  DollarSign,
-  Percent,
-  TrendingUp,
-  TrendingDown,
-  Calculator,
 
   // Reports
   BarChart3,
@@ -43,8 +32,6 @@ import {
   // Actions
   PlusCircle,
   RotateCcw,
-  Download,
-  Calendar,
 
   // Info
   Info,

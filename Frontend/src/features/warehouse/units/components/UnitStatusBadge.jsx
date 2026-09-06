@@ -1,4 +1,3 @@
-// src/features/warehouse/units/components/UnitStatusBadge.jsx
 import { Package, ShoppingCart, Undo2, Trash2 } from "lucide-react";
 
 import {

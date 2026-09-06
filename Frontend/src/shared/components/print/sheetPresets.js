@@ -1,5 +1,3 @@
-// src/shared/components/print/sheetPresets.js
-
 /**
  * هندسه‌ی صفحه‌ی چاپ برچسب — همه بر حسب میلی‌متر.
  *

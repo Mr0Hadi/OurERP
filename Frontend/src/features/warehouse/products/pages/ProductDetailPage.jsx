@@ -1,4 +1,3 @@
-// src/features/warehouse/products/pages/ProductDetailPage.jsx
 import { useNavigate, useParams } from "react-router-dom";
 import { Save, X, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";

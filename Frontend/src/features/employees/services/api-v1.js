@@ -1,4 +1,3 @@
-// src/features/employees/services/api-v1.js
 import axiosInstance from "@/shared/services/api/axios";
 import { normalizeListResponse } from "@/shared/services/api/contract";
 import { accountStatusToIsActive } from "@/shared/domain/enums/accountStatus";

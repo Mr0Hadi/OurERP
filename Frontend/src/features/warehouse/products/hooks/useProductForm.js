@@ -1,4 +1,3 @@
-// src/features/warehouse/products/hooks/useProductForm.js
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 

@@ -1,4 +1,3 @@
-// features/customers/components/CustomerTable.jsx
 import { useCallback, useMemo } from "react";
 import {
   flexRender,

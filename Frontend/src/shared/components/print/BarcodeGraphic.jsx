@@ -1,11 +1,10 @@
-// src/shared/components/print/BarcodeGraphic.jsx
 import Barcode from "react-barcode";
 
 import {
   BARCODE_PRESETS,
   DEFAULT_SYMBOLOGY,
-} from "@/shared/services/barcode/barcodeConfig";
-import { formatPayload, toPayload } from "@/shared/services/barcode/productCode";
+} from "@/shared/domain/barcode/barcodeConfig";
+import { formatPayload, toPayload } from "@/shared/domain/barcode/productCode";
 
 /**
  * تک‌بارکد، مستقل از اینکه کجا استفاده می‌شود.

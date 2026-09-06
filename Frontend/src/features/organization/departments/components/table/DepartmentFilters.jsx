@@ -1,4 +1,3 @@
-// src/features/organization/departments/components/table/DepartmentFilters.jsx
 import { useCallback } from "react";
 
 import FilterPanel from "@/shared/components/filters/FilterPanel";

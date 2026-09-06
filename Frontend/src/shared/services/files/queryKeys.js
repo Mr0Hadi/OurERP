@@ -1,5 +1,3 @@
-// src/shared/services/files/queryKeys.js
-
 /**
  * کلیدهای کشِ فایل — سراسری، نه مالِ یک فیچر.
  *

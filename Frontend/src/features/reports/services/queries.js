@@ -1,4 +1,3 @@
-// src/features/reports/services/queries.js
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import {
@@ -7,12 +6,6 @@ import {
   fetchSupplierSalesStatistics,
   fetchSupplyPerformanceByEmployee,
 } from "./api-v1";
-// import {
-//   fetchCustomerPurchaseStatistics,
-//   fetchSalesPerformanceByEmployee,
-//   fetchSupplierSalesStatistics,
-//   fetchSupplyPerformanceByEmployee,
-// } from "./api-v1";
 import { activityKeys } from "./queryKeys";
 
 /**

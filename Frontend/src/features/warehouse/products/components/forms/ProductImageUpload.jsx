@@ -1,4 +1,3 @@
-// src/features/warehouse/products/components/forms/ProductImageUpload.jsx
 import { ImagePlus } from "lucide-react";
 
 import {

@@ -1,11 +1,10 @@
-// src/features/warehouse/units/components/UnitLabel.jsx
 import BarcodeGraphic from "@/shared/components/print/BarcodeGraphic";
 import QrCodeGraphic from "@/shared/components/print/QrCodeGraphic";
 import {
   DEFAULT_LABEL_CODE_KIND,
   LABEL_CODE_KINDS,
-} from "@/shared/services/barcode/barcodeConfig";
-import { barcodeSegments } from "@/shared/services/barcode/productCode";
+} from "@/shared/domain/barcode/barcodeConfig";
+import { barcodeSegments } from "@/shared/domain/barcode/productCode";
 import { gregorianToPersian } from "@/shared/utils/dateUtils";
 
 /**

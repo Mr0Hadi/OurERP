@@ -1,8 +1,8 @@
-// src/shared/hooks/useImageUpload.js
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
-import { deleteImages, objectKeyOf, uploadImage } from "@/shared/services/files/client";
+import { deleteImages, uploadImage } from "@/shared/services/files/api-v1";
+import { objectKeyOf } from "@/shared/services/files/objectKey";
 import { validateImageFile } from "@/shared/services/files/fileConstraints";
 import { isDisplayableUrl } from "@/shared/services/files/objectKey";
 import { useImageUrlQuery, useSeedImageUrl } from "@/shared/services/files/queries";

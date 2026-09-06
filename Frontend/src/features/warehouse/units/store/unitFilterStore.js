@@ -1,9 +1,8 @@
-// src/features/warehouse/units/store/unitFilterStore.js
 import { create } from "zustand";
 
 import { createFilterStore } from "@/shared/store/createFilterStore";
 import { DEFAULT_SHEET_PRESET } from "@/shared/components/print/sheetPresets";
-import { DEFAULT_LABEL_CODE_KIND } from "@/shared/services/barcode/barcodeConfig";
+import { DEFAULT_LABEL_CODE_KIND } from "@/shared/domain/barcode/barcodeConfig";
 
 /**
  * انتخاب اندازه‌ی برچسب یک تصمیمِ یک‌بار در روز است، نه هر بار چاپ؛

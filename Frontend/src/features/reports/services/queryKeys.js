@@ -1,5 +1,3 @@
-// src/features/reports/services/queryKeys.js
-
 /**
  * گزارش‌های «فعالیت» فقط با بازه‌ی تاریخ و صفحه شناخته می‌شوند — نه id.
  * جدا از `dashboard/services/queryKeys` است چون آن‌ها بازه‌محورند

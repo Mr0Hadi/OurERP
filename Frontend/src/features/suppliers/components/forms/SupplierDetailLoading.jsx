@@ -1,5 +1,3 @@
-// src/features/suppliers/components/forms/SupplierDetailLoading.jsx
-
 export default function SupplierDetailLoading() {
   return (
     <div className="container m-auto bg-background">

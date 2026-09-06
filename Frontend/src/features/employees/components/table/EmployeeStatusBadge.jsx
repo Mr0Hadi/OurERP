@@ -1,4 +1,3 @@
-// src/features/employees/components/table/EmployeeStatusBadge.jsx
 import { CheckCircle2, Ban } from "lucide-react";
 
 /**

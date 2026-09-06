@@ -1,4 +1,3 @@
-// src/features/employees/store/employeeFilterStore.js
 import { createFilterStore } from "@/shared/store/createFilterStore";
 
 /**

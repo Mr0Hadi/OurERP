@@ -1,5 +1,3 @@
-// src/features/sales/returns/domain/returnVocabulary.js
-
 import { RETURN_SIDES, SIDE_CONFIG } from "@/shared/domain/returns/sides";
 import {
   SALES_CLAIM_PROBLEMS,

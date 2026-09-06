@@ -1,5 +1,3 @@
-// src/shared/domain/returns/sides.js
-
 import { EFFECT_KINDS } from "./effects";
 import { MONEY_DIRECTIONS } from "./resolutions";
 import { RETURN_STATUSES } from "./statuses";

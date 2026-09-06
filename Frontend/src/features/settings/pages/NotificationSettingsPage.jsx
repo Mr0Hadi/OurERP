@@ -1,4 +1,3 @@
-
 function NotificationSettingsPage() {
   return (
     <div>NotificationSettingsPage</div>

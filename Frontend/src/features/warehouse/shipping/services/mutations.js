@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 
-import { confirmShipment, confirmSupplierReturnShipment } from "./api";
+import { confirmShipment, confirmSupplierReturnShipment } from "./api-v1";
 import { outgoingQueueKeys } from "./queryKeys";
 import { purchaseReturnKeys } from "@/features/purchases/returns/services/queryKeys";
 import { invalidateSalesEcosystem } from "@/features/sales/orders/services/sharedInvalidation";

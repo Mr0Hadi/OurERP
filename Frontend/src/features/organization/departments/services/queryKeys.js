@@ -1,4 +1,3 @@
-// src/features/organization/departments/services/queryKeys.js
 export const departmentKeys = {
   all: ["departments"],
   lists: () => [...departmentKeys.all, "list"],

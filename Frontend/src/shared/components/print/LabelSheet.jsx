@@ -1,4 +1,3 @@
-// src/shared/components/print/LabelSheet.jsx
 import {
   getSheetPreset,
   paginateItems,

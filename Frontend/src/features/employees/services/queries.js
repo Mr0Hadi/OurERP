@@ -1,4 +1,3 @@
-// src/features/employees/services/queries.js
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
 import { fetchEmployees, fetchEmployeeById } from "./api-v1";

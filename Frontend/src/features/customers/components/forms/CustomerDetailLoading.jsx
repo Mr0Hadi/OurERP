@@ -1,5 +1,3 @@
-// src/features/customers/components/forms/CustomerDetailLoading.jsx
-
 export default function CustomerDetailLoading() {
   return (
     <div className="container m-auto bg-background">

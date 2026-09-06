@@ -1,4 +1,3 @@
-// src/features/reports/components/ActivityRangeToolbar.jsx
 import { CalendarRange, RotateCcw } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";

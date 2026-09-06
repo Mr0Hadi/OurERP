@@ -1,4 +1,3 @@
-// src/shared/components/charts/ChartTooltip.jsx
 import { cn } from "@/shared/lib/utils";
 
 /**

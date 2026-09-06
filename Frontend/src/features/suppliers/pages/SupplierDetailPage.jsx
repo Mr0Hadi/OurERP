@@ -1,4 +1,3 @@
-// src/features/suppliers/pages/SupplierDetailPage.jsx
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Save, X, Trash2 } from "lucide-react";

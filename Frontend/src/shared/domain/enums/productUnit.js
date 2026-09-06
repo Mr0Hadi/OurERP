@@ -1,5 +1,3 @@
-// src/shared/domain/enums/productUnit.js
-
 /**
  * `ProductUnitEnum` — واحد شمارش محصول (بخش ۱۵ سند api-guide.fa.md).
  * مقادیر باید دقیقاً با اعداد بکند یکی بمانند؛ روی سیم همیشه عدد است.

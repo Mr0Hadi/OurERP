@@ -1,5 +1,3 @@
-// src/features/purchases/orders/services/constants.js
-
 export {
   PurchaseStatusEnum as PURCHASE_STATUSES,
   PURCHASE_STATUS_LABELS,

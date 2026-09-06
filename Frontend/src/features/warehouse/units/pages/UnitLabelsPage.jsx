@@ -1,4 +1,3 @@
-// src/features/warehouse/units/pages/UnitLabelsPage.jsx
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -18,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import { LABEL_CODE_KIND_OPTIONS } from "@/shared/services/barcode/barcodeConfig";
+import { LABEL_CODE_KIND_OPTIONS } from "@/shared/domain/barcode/barcodeConfig";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 
 import { useProductUnitsQuery } from "../services/queries";

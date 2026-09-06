@@ -17,11 +17,17 @@ const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
  * defaultSorting - مرتب‌سازی اولیه و مقدار بازگشت در resetFilters
  * defaultPageSize- اندازه‌ی صفحه‌ی اولیه (فقط مقدار شروع؛ بعد از آن
  *                  انتخاب کاربر حفظ می‌شود)
+ * actions        - اکشن‌های ترکیبی که چند فیلد را با هم ست می‌کنند
+ *                  (مثل بازه‌ی قیمت یا فیلترهای میان‌بر). تابعی که
+ *                  `{ set, applyFilters }` می‌گیرد و آبجکت اکشن‌ها
+ *                  برمی‌گرداند. `applyFilters` همان معنای `set<Field>`
+ *                  را دارد: مقداردهی + بازگشت به صفحه‌ی اول.
  */
 export function createFilterStore({
   filters,
   defaultSorting = DEFAULT_SORTING,
   defaultPageSize = DEFAULT_PAGE_SIZE,
+  actions: extraActions,
 }) {
   const filterKeys = Object.keys(filters);
 
@@ -32,11 +38,13 @@ export function createFilterStore({
 
   return create(
     devtools((set) => {
-      const actions = {};
+      const applyFilters = (values) =>
+        set((state) => ({ ...values, pagination: toFirstPage(state) }));
 
+      const actions = {};
       for (const key of filterKeys) {
         actions[`set${capitalize(key)}`] = (value) =>
-          set((state) => ({ [key]: value, pagination: toFirstPage(state) }));
+          applyFilters({ [key]: value });
       }
 
       return {
@@ -45,6 +53,7 @@ export function createFilterStore({
         sorting: defaultSorting,
 
         ...actions,
+        ...(extraActions?.({ set, applyFilters }) ?? {}),
 
         setPagination: (newPagination) => set({ pagination: newPagination }),
         setSorting: (newSorting) =>

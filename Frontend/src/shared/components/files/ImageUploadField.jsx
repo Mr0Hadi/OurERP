@@ -1,4 +1,3 @@
-// src/shared/components/files/ImageUploadField.jsx
 import { ImagePlus, Loader2, Upload, X, ZoomIn } from "lucide-react";
 import { useId, useState } from "react";
 

@@ -1,4 +1,3 @@
-// src/features/organization/departments/components/table/DepartmentTable.jsx
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";

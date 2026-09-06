@@ -1,4 +1,3 @@
-// src/features/dashboard/components/DashboardToolbar.jsx
 import { RotateCcw } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import PersianDatePicker from "@/shared/components/ui/persian-date-picker";

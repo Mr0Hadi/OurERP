@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { CheckCircle, AlertTriangle, X } from "lucide-react";
-import { toast } from "react-hot-toast";
 
 import { Button } from "@/shared/components/ui/button";
 import {

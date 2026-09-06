@@ -1,5 +1,3 @@
-// src/features/warehouse/units/components/UnitSelectCheckbox.jsx
-
 /**
  * چک‌باکس کوچکِ محلی.
  *

@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
-import { fetchOutgoingQueue, fetchShippingSaleById } from "./api";
+import { fetchOutgoingQueue, fetchShippingSaleById } from "./api-v1";
 import { shippingKeys, outgoingQueueKeys } from "./queryKeys";
 
 export function useOutgoingQueueQuery(filters, pagination, sorting) {

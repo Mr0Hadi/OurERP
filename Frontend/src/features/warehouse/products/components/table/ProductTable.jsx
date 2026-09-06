@@ -1,5 +1,3 @@
-// features/warehouse/components/ProductTable.jsx
-
 import { useCallback, useMemo } from "react";
 import {
   flexRender,

@@ -1,4 +1,3 @@
-// src/features/warehouse/units/components/UnitScanBar.jsx
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { ScanBarcode, Search, X } from "lucide-react";
 

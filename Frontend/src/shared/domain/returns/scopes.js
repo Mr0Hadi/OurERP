@@ -1,5 +1,3 @@
-// src/shared/domain/returns/scopes.js
-
 /**
  * دامنه‌ی ادعا — مشترک بین مرجوعی فروش و مرجوعی خرید.
  *

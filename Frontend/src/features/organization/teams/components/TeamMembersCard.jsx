@@ -1,4 +1,3 @@
-// src/features/organization/teams/components/TeamMembersCard.jsx
 import { useState } from "react";
 import { ChevronLeft, Crown, Plus, UserMinus, Users } from "lucide-react";
 

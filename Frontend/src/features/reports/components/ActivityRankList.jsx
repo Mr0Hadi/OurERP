@@ -1,4 +1,3 @@
-// src/features/reports/components/ActivityRankList.jsx
 import { Inbox } from "lucide-react";
 
 import DataTablePagination from "@/shared/components/table/DataTablePagination";

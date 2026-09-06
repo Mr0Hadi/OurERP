@@ -1,4 +1,3 @@
-// src/shared/components/print/usePrint.js
 import { useCallback, useEffect } from "react";
 
 /**

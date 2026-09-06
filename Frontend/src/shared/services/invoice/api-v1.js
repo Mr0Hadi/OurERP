@@ -1,12 +1,10 @@
-// src/shared/services/invoice/api-v1.js
-
 import axiosInstance from "@/shared/services/api/axios";
 
 /**
  * لایه‌ی تماس با `api/Invoice` (بخش ۱۳ سند api-guide.fa.md) — فاکتورِ
  * *رسمیِ* PDF که خودِ سرور می‌سازد.
  *
- * دو نکته‌ی قرارداد، دقیقاً مثل `services/barcode/api-v1.js`:
+ * دو نکته‌ی قرارداد:
  *
  * ۱. این endpointها پوششِ `ResponseDto` ندارند و مستقیماً
  *    `application/pdf` برمی‌گردانند — پس `responseType: "blob"`.
@@ -23,10 +21,6 @@ import axiosInstance from "@/shared/services/api/axios";
  * سندِ فعلی را با هر وضعیتی (از جمله `PROFORMA`) رندر می‌کنند. تفاوت
  * فقط در این است که سندِ پیش‌فاکتور هنوز شماره‌ی فاکتور ندارد.
  */
-
-/** تا وقتی فیچرهای خرید/فروش روی `api-mockData` هستند، شناسه‌ها شناسه‌ی mock اند و سرور آن‌ها را نمی‌شناسد. */
-export const SERVER_INVOICE_PDF_ENABLED =
-  String(import.meta.env?.VITE_ENABLE_MOCK_API).toLowerCase() !== "true";
 
 async function unwrapBlobError(error) {
   const body = error?.response?.data;

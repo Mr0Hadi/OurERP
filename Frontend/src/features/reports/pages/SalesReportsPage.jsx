@@ -1,5 +1,3 @@
-
-
 function SalesReportsPage() {
   return (
     <div>SalesReportsPage</div>

@@ -10,7 +10,7 @@ import {
   cancelPurchaseReturn,
   reopenPurchaseReturn,
   removePurchaseReturn,
-} from "./api";
+} from "./api-v1";
 import { purchaseReturnKeys } from "./queryKeys";
 import { invalidatePurchaseEcosystem } from "../../orders/services/sharedInvalidation";
 import { ROUTES } from "@/shared/constants/routes";

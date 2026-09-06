@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { keepPreviousData } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
-import { fetchIncomingQueue, fetchReceivingPurchaseById } from "./api";
+import { fetchIncomingQueue, fetchReceivingPurchaseById } from "./api-v1";
 import { receivingKeys, incomingQueueKeys } from "./queryKeys";
 
 /**

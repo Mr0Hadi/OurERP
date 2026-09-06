@@ -1,4 +1,3 @@
-// src/features/suppliers/components/forms/SupplierFinanceForm.jsx
 import { Wallet, TrendingUp, TrendingDown } from "lucide-react";
 import { Controller, useWatch } from "react-hook-form";
 import { Label } from "@/shared/components/ui/label";

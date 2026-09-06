@@ -1,5 +1,3 @@
-// src/shared/domain/enums/department.js
-
 /**
  * `DepartmentEnum` — واحدهای سازمانی.
  *

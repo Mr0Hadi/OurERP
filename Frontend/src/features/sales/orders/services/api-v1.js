@@ -227,8 +227,8 @@ export async function updateSale(id, updates) {
  * ضمیمه‌ها) را بازنویسی می‌کند، فرستادنِ یک `{status}`ِ تنها سند را
  * خالی می‌کند. پس سندِ فعلی اول خوانده می‌شود.
  *
- * امضا عمداً همان امضای `api-mockData` مانده تا مهاجرت فقط عوض‌کردنِ
- * import باشد؛ هزینه‌اش یک رفت‌وبرگشتِ اضافه است.
+ * هزینه‌اش یک رفت‌وبرگشتِ اضافه است تا امضای ساده‌ی `(id, status)` برای
+ * فراخوان حفظ شود.
  */
 export async function updateSaleStatus(id, status) {
   const current = await fetchSaleById(id);

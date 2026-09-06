@@ -1,4 +1,3 @@
-// src/shared/components/print/QrCodeGraphic.jsx
 import { useMemo } from "react";
 // عمداً از مسیرِ عمیق و نه از بشکه‌ی `@zxing/library`: بشکه هر
 // رمزگشای هر فرمتی را با خودش می‌آورد (~۴۵۰ کیلوبایت) در حالی که برای
@@ -8,8 +7,8 @@ import BarcodeFormat from "@zxing/library/esm/core/BarcodeFormat";
 import EncodeHintType from "@zxing/library/esm/core/EncodeHintType";
 import QRCodeWriter from "@zxing/library/esm/core/qrcode/QRCodeWriter";
 
-import { QR_PRESETS, QR_ERROR_CORRECTION } from "@/shared/services/barcode/barcodeConfig";
-import { formatPayload, toPayload } from "@/shared/services/barcode/productCode";
+import { QR_PRESETS, QR_ERROR_CORRECTION } from "@/shared/domain/barcode/barcodeConfig";
+import { formatPayload, toPayload } from "@/shared/domain/barcode/productCode";
 import { cn } from "@/shared/lib/utils";
 
 /**

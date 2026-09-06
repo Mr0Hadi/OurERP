@@ -1,4 +1,3 @@
-
 function GeneralSettingsPage() {
   return (
     <div>GeneralSettingsPage</div>

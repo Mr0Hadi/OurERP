@@ -1,4 +1,3 @@
-// src/shared/components/ui/persian-date-picker.jsx
 import { useState, useEffect, useRef } from "react";
 import { CalendarDays, X } from "lucide-react";
 import { cn } from "@/shared/lib/utils";

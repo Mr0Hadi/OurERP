@@ -5,7 +5,7 @@ import {
   fetchPurchaseReturnById,
   fetchReturnablePurchases,
   fetchPurchaseForReturn,
-} from "./api";
+} from "./api-v1";
 import { purchaseReturnKeys } from "./queryKeys";
 
 export function usePurchaseReturnsQuery(filters, pagination, sorting) {

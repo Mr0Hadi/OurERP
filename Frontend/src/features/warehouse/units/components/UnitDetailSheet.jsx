@@ -1,4 +1,3 @@
-// src/features/warehouse/units/components/UnitDetailSheet.jsx
 import { useId, useState } from "react";
 import { Printer, QrCode } from "lucide-react";
 

@@ -1,4 +1,3 @@
-// src/shared/components/charts/DonutChart.jsx
 import { useMemo, useState } from "react";
 import { donutArcPath, formatCompact, formatPercent } from "./chartUtils";
 import { cn } from "@/shared/lib/utils";

@@ -1,4 +1,3 @@
-// src/shared/components/charts/useChartSize.js
 import { useEffect, useRef, useState } from "react";
 
 /**

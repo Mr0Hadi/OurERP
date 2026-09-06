@@ -1,4 +1,3 @@
-// src/features/organization/teams/pages/TeamNewPage.jsx
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Save, X } from "lucide-react";

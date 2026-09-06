@@ -1,5 +1,3 @@
-// src/shared/domain/enums/barcodeReferenceKind.js
-
 /**
  * `BarcodeReferenceKindEnum` — نتیجه‌ی تفسیر یک بارکد اسکن‌شده (بخش ۱۵
  * سند api-guide.fa.md). قبلاً در فرانت اصلاً به‌عنوان یک enum رسمی

@@ -1,5 +1,3 @@
-// features/warehouse/components/ProductFilters.jsx
-
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";

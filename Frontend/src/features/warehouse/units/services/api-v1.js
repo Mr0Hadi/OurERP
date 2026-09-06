@@ -1,12 +1,10 @@
-// src/features/warehouse/units/services/api-v1.js
-
 import axiosInstance from "@/shared/services/api/axios";
 import { normalizeListResponse } from "@/shared/services/api/contract";
 import {
   parseBarcode,
   productCodeOf,
   toPayload,
-} from "@/shared/services/barcode/productCode";
+} from "@/shared/domain/barcode/productCode";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
 
 /**

@@ -1,6 +1,6 @@
 import { useProductsQuery } from "../services/queries";
 import { useProductFilterStore } from "../store/productFilterStore";
-import { useDebouncedFilters } from "../hooks/useDebouncedFilters";
+import { useDebouncedProductFilters } from "../hooks/useDebouncedProductFilters";
 import ProductTable from "../components/table/ProductTable";
 import ProductFilters from "../components/table/ProductFilters";
 import {
@@ -22,7 +22,7 @@ const ProductsPage = () => {
   const { pagination, sorting, setPagination, setSorting } =
     useProductFilterStore();
 
-  const debouncedFilters = useDebouncedFilters();
+  const debouncedFilters = useDebouncedProductFilters();
 
   const { data, isLoading, isFetching, isError, error, refetch } =
     useProductsQuery(debouncedFilters, pagination, sorting);

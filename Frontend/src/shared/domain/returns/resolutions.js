@@ -1,5 +1,3 @@
-// src/shared/domain/returns/resolutions.js
-
 import {
   EFFECT_KINDS,
   EFFECT_STATUSES,

@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import BarcodeScanField from "@/shared/components/barcode/BarcodeScanField";
-import { parseBarcode } from "@/shared/services/barcode/productCode";
+import { parseBarcode } from "@/shared/domain/barcode/productCode";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
 
 /**

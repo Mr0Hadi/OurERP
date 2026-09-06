@@ -1,5 +1,3 @@
-// src/features/organization/components/OrgDetailLoading.jsx
-
 /** اسکلتونِ مشترک صفحه‌ی جزئیات واحد و تیم — چیدمانشان یکی است. */
 const CardSkeleton = ({ rows = 1, titleWidth = "w-32" }) => (
   <div className="border rounded-2xl overflow-hidden bg-card shadow-md">

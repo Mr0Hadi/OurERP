@@ -1,4 +1,3 @@
-// src/features/organization/departments/hooks/useDebouncedDepartmentFilters.js
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { useDepartmentFilterStore } from "../store/departmentFilterStore";
 

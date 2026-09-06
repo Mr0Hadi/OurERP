@@ -1,5 +1,3 @@
-// src/shared/domain/returns/apiEnums.js
-
 import { EFFECT_KINDS, EFFECT_STATUSES } from "./effects";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { RETURN_PROBLEMS } from "./problems";

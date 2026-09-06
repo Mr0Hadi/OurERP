@@ -1,4 +1,3 @@
-// src/shared/components/charts/TrendChart.jsx
 import { useState } from "react";
 import {
   areaPath,

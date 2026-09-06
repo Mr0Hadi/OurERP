@@ -239,8 +239,8 @@ export async function updatePurchase(id, updates) {
  * `{status}`ِ تنها یعنی پاک‌شدنِ شماره‌ی فاکتور و ضمیمه‌ها — پس سندِ
  * فعلی اول خوانده و بعد با وضعیتِ تازه پس فرستاده می‌شود.
  *
- * امضا عمداً همان امضای `api-mockData` مانده تا مهاجرت فقط عوض‌کردنِ
- * import باشد؛ هزینه‌اش یک رفت‌وبرگشتِ اضافه است.
+ * هزینه‌اش یک رفت‌وبرگشتِ اضافه است تا امضای ساده‌ی `(id, status)` برای
+ * فراخوان حفظ شود.
  */
 export async function updatePurchaseStatus(id, status) {
   const current = await fetchPurchaseById(id);

@@ -1,5 +1,3 @@
-// src/shared/components/invoice/useInvoiceAttachments.js
-
 import { useFileUploadList } from "@/shared/hooks/useFileUploadList";
 import { ImageFolderEnum } from "@/shared/domain/enums/imageFolder";
 

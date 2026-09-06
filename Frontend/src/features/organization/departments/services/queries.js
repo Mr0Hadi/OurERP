@@ -1,4 +1,3 @@
-// src/features/organization/departments/services/queries.js
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
 import { DEPARTMENT_FALLBACK } from "@/shared/domain/enums/department";

@@ -1,4 +1,3 @@
-// src/features/employees/services/queryKeys.js
 export const employeeKeys = {
   all: ["employees"],
   lists: () => [...employeeKeys.all, "list"],

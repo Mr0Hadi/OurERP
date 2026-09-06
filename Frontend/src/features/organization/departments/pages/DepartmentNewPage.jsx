@@ -1,4 +1,3 @@
-// src/features/organization/departments/pages/DepartmentNewPage.jsx
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Save, X } from "lucide-react";

@@ -1,4 +1,3 @@
-// src/shared/components/files/FileUploadList.jsx
 import { FileText, ImagePlus, Paperclip, RotateCcw, X, ZoomIn } from "lucide-react";
 import { useId, useState } from "react";
 

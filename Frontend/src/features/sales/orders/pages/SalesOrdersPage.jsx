@@ -1,4 +1,3 @@
-
 function SalesOrdersPage() {
   return (
     <div>SalesOrdersPage</div>

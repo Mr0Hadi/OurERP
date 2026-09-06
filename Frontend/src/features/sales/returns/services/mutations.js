@@ -10,7 +10,7 @@ import {
   cancelSalesReturn,
   reopenSalesReturn,
   removeSalesReturn,
-} from "./api";
+} from "./api-v1";
 import { salesReturnKeys } from "./queryKeys";
 import { invalidateSalesEcosystem } from "../../orders/services/sharedInvalidation";
 import { ROUTES } from "@/shared/constants/routes";

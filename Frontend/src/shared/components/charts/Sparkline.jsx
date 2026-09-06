@@ -1,4 +1,3 @@
-// src/shared/components/charts/Sparkline.jsx
 import {
   areaPath,
   makeBandScale,

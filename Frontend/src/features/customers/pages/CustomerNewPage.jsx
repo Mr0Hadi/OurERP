@@ -1,4 +1,3 @@
-// src/features/customers/pages/CustomerNewPage.jsx
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Save, X } from "lucide-react";

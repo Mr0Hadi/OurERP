@@ -1,5 +1,3 @@
-// src/shared/components/charts/chartUtils.js
-
 /**
  * ریاضیاتِ مشترکِ نمودارها.
  *

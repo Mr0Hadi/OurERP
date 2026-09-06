@@ -13,7 +13,7 @@ const PAYMENT_STYLES = {
     "bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-100",
 };
 
-/** برچسب نوع پرداخت. labels از mockData ماژول مربوطه پاس داده می‌شود. */
+/** برچسب نوع پرداخت. `labels` نگاشتِ enum→متنِ همان ماژول است. */
 export default function PaymentTypeBadge({ type, labels }) {
   return (
     <Badge className={PAYMENT_STYLES[type] ?? "bg-gray-100 text-gray-800"}>

@@ -1,4 +1,3 @@
-// store/purchaseFormStore.js
 import { create } from "zustand";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { unitLabelOf } from "@/shared/domain/enums/productUnit";
