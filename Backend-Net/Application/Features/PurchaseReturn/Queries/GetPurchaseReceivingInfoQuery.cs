@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -56,10 +56,10 @@ namespace Application.Features.PurchaseReturn.Queries
                     PurchaseId = img.PurchaseId,
                     PurchaseReturnId = img.PurchaseReturnId,
                     ObjectKey = img.ObjectKey,
-                    Url = _objectStorageService.GetPresignedUrl(img.ObjectKey),
+                    Url = _objectStorageService.GetFixedUrl(img.ObjectKey),
                     FileName = img.FileName,
                     Note = img.Note,
-                    CreatedAt = img.CreatedAt,
+                    UploadedAt = img.CreatedAt,
                 }).ToList(),
                 Items = purchase.Items.Select(item => new PurchaseReceivingItemInfoDto
                 {

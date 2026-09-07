@@ -59,7 +59,7 @@ namespace Application.Features.SaleReturn.Commands
             var claim = saleReturn.Claims.First(c => c.Resolutions.Any(r => r.Id == request.Id));
             var resolution = claim.Resolutions.First(r => r.Id == request.Id);
 
-            if (resolution.Effects.Any(e => e.Kind is ReturnEffectKindEnum.GOODS_IN or ReturnEffectKindEnum.GOODS_OUT && e.DoneQuantity > 0))
+            if (resolution.Effects.Any(e => e.Direction is ReturnEffectDirectionEnum.GOODS_IN or ReturnEffectDirectionEnum.GOODS_OUT && e.DoneQuantity > 0))
                 throw new ValidationCustomException("بخشی از کالای این تصمیم جابه‌جا شده و دیگر قابل لغو نیست.");
 
             // Fully-settled resolutions (no PENDING effect) already bumped SettledQuantity when

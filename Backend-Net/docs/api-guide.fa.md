@@ -295,6 +295,26 @@ Authorization: Bearer {accessToken}
 
 حذف نرم کاربر (غیرفعال کردن، `isActive = false`). پارامتر در Query String.
 
+همراه با حذف، **همه‌ی نقش‌های مسئول/جانشین آن کاربر روی هر تیم و هر واحد آزاد می‌شود.** پیش‌تر این کار انجام نمی‌شد، بنابراین `GetTeamDetail`/`GetTeamList` هنوز نام کاربر حذف‌شده را به‌عنوان `headName`/`deputyName` نشان می‌دادند.
+
+### `PUT api/User/ChangeUserTeam`
+
+**Body:**
+```json
+{
+  "userId": 5,
+  "departmentId": 2,
+  "teamId": 7,
+  "isHead": false,
+  "isDeputy": true
+}
+```
+- `teamId` اختیاری است (`null` یعنی کاربر عضو هیچ تیمی نیست، ولی همچنان عضو یک واحد است).
+- `isHead`/`isDeputy` **روی تیم اعمال می‌شوند اگر `teamId` فرستاده شود، و در غیر این صورت روی واحد.** پیش‌تر فقط `Team.HeadId` نوشته می‌شد، بنابراین `isHead` برای کاربرِ بدون تیم بی‌صدا نادیده گرفته می‌شد.
+- هر دو نمی‌توانند همزمان `true` باشند (۴۰۰).
+- **قاعده‌ی جدید:** پیش از اعمال نقش جدید، هر نقش مسئول/جانشینی که این کاربر روی *هر* تیم یا واحد دیگری دارد آزاد می‌شود. یعنی یک کاربر حداکثر مسئول/جانشین یک تیم و یک واحد است. پیش‌تر فقط `HeadId` تیم *قبلی* پاک می‌شد، پس `Team.DeputyId` و هر دو نقش `Department` روی کاربری که رفته بود باقی می‌ماندند و نام‌های کهنه در خروجی تیم/واحد دیده می‌شد.
+- `isDeputy` فیلد جدیدی است؛ کلاینت‌های قدیمی که آن را نمی‌فرستند رفتار قبلی (`false`) را می‌گیرند.
+
 ---
 
 ## 4. مشتریان (Customer)
@@ -848,9 +868,9 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "purchaseInvoiceNumber": "INV-1001",
   "supplierId": 1,
   "supplierName": "شرکت آلفا",
-  "createdAt": "2026-08-05T10:00:00",
+  "previousReturnId": null,
   "status": 0,
-  "dominantProblem": 8,
+  "problems": [8, 3],
   "totalQuantity": 2,
   "totalAmount": 40000000
 }
@@ -872,8 +892,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "supplierName": "شرکت آلفا",
   "description": "محموله اول",
   "previousReturnId": null,
-  "createdAt": "2026-08-05T10:00:00",
-  "updatedAt": "2026-08-05T10:00:00",
+  "previousReturnNumber": null,
   "status": 0,
   "totalAmount": 40000000,
   "totalQuantity": 2,
@@ -886,7 +905,6 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "claims": [
     {
       "id": 700,
-      "purchaseReturnId": 55,
       "scope": 0,
       "offScopeKind": null,
       "purchaseItemId": 1000,
@@ -898,7 +916,6 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
       "quantity": 2,
       "problem": 3,
       "note": "کسری در محموله",
-      "createdAt": "2026-08-05T10:00:00",
       "decidedQuantity": 0,
       "remainingQuantity": 2,
       "resolutions": []
@@ -913,25 +930,23 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 ```json
 {
   "id": 950,
-  "purchaseReturnClaimId": 700,
   "quantity": 2,
   "note": "بازپرداخت کامل کسری",
-  "createdAt": "2026-08-05T11:00:00",
+  "decidedAt": "2026-08-05T11:00:00",
   "effects": [
     {
       "id": 1200,
-      "purchaseReturnResolutionId": 950,
-      "kind": 3,
+      "direction": 3,
       "quantity": 0,
       "doneQuantity": 0,
       "restockedQuantity": null,
       "productId": null,
+      "productName": null,
       "amount": 40000000,
       "method": 0,
       "reference": null,
       "note": null,
       "status": 1,
-      "createdAt": "2026-08-05T11:00:00",
       "appliedAt": "2026-08-05T11:00:00",
       "moneyParts": [],
       "history": []
@@ -939,7 +954,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   ]
 }
 ```
-یک تصمیم می‌تواند تا سه اثر همزمان داشته باشد (مثلاً هم `GOODS_IN` هم `MONEY_IN` برای «بخشی جایگزین، بخشی بازپرداخت»)؛ `effects[]` هرکدام را جدا نشان می‌دهد. `kind` مقادیر `ReturnEffectKindEnum` (بخش ۱۵) است. اثرهای کالایی (`kind = 0` یا `1`) فیلدهای `quantity`/`doneQuantity`/`restockedQuantity`/`productId` را پر می‌کنند و `amount`/`method` را `null` می‌گذارند؛ اثرهای مالی (`kind = 2` یا `3`) برعکس.
+یک تصمیم می‌تواند تا سه اثر همزمان داشته باشد (مثلاً هم `GOODS_IN` هم `MONEY_IN` برای «بخشی جایگزین، بخشی بازپرداخت»)؛ `effects[]` هرکدام را جدا نشان می‌دهد. `direction` مقادیر `ReturnEffectDirectionEnum` (بخش ۱۵) است. اثرهای کالایی (`direction = 0` یا `1`) فیلدهای `quantity`/`doneQuantity`/`restockedQuantity`/`productId` را پر می‌کنند و `amount`/`method` را `null` می‌گذارند؛ اثرهای مالی (`direction = 2` یا `3`) برعکس.
 
 ### `GET api/PurchaseReturn/GetPurchaseReturnPendingEffects`
 
@@ -954,7 +969,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "purchaseReturnId": 55,
   "returnNumber": "PR-000055",
   "claimId": 700,
-  "kind": 0,
+  "direction": 0,
   "productId": 10,
   "productCode": "20260814-000010",
   "productName": "یخچال دو درب",
@@ -1040,15 +1055,17 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
     "note": "بازپرداخت کامل کسری",
     "goodsIn": null,
     "goodsOut": null,
-    "money": { "kind": 3, "method": 0, "amount": 40000000, "reference": null, "parts": null }
+    "moneyIn": { "method": 0, "amount": 40000000, "reference": null, "parts": null },
+    "moneyOut": null
   }
 }
 ```
 - `composition.quantity`: چه مقدار از باقیمانده‌ی ادعا (`remainingQuantity` در `GetPurchaseReturnDetail`) با این تصمیم پوشش داده می‌شود.
-- حداقل یکی از `goodsIn`/`goodsOut`/`money` باید مقدار داشته باشد؛ هر سه هم می‌توانند همزمان پر شوند (مثلاً هم بخشی جایگزین بیاید هم باقی‌مانده بازپرداخت شود).
+- حداقل یکی از `goodsIn`/`goodsOut`/`moneyIn`/`moneyOut` باید مقدار داشته باشد؛ می‌توانند همزمان پر شوند (مثلاً هم بخشی جایگزین بیاید هم باقی‌مانده بازپرداخت شود).
 - `goodsIn`/`goodsOut`: `{ "quantity": 2, "productId": null }` — `productId` اختیاری است و پیش‌فرض همان محصول ادعا را می‌گیرد (فقط برای جایگزینی با محصول متفاوت لازم است). مجموع مقدار کالا در `goodsIn`+`goodsOut` نمی‌تواند از `composition.quantity` بیشتر شود.
-- `money.kind`: باید `2` (`MONEY_OUT` — پول از شرکت ما خارج می‌شود) یا `3` (`MONEY_IN` — تامین‌کننده به ما پول برمی‌گرداند، معادل «بازپرداخت»؛ رایج‌ترین حالت در مرجوعی خرید) باشد.
-- `money.method`: `ReturnPaymentMethodEnum` (بخش ۱۵). اگر `MIXED` (۴) بود، `parts[]` الزامی می‌شود (هرکدام `{ method, amount, checkNumber?, transferRef? }`) و باید مجموعشان با `amount` برابر باشد.
+- **جهت اثر مالی ساختاری است، نه یک فیلد.** `moneyIn` یعنی پول به ما وارد می‌شود (تامین‌کننده بازپرداخت می‌کند — رایج‌ترین حالت در مرجوعی خرید) و `moneyOut` یعنی پول از ما خارج می‌شود. دقیقاً مثل `goodsIn`/`goodsOut`.
+  - **تغییر شکسته نسبت به نسخه‌ی قبل:** قبلاً یک اسلات `money` با فیلد `money.kind` وجود داشت. چون مقدار صفرِ آن enum برابر `GOODS_IN` بود، هر درخواستی که `kind` را نمی‌فرستاد با خطای «جهت اثر مالی نامعتبر است.» رد می‌شد. اسلات‌ها چنین حالتی را غیرقابل‌بیان می‌کنند.
+- `moneyIn.method`/`moneyOut.method`: `ReturnPaymentMethodEnum` (بخش ۱۵). اگر `MIXED` (۴) بود، `parts[]` الزامی می‌شود (هرکدام `{ method, amount, checkNumber?, transferRef? }`) و باید مجموعشان با `amount` برابر باشد.
 - **قید مهم:** تنها ترکیب نامعتبر، اثر `GOODS_OUT` روی ادعای مغایرت «اضافی» (`EXCESS`, بخش ۱۵) نیست — برخلاف مدل قدیمی، دیگر جدولی از «مغایرت → تصمیم مجاز» به‌صورت سخت‌کدشده در سرور نیست؛ اگر ترکیب فیزیکی/منطقی نامعتبر باشد (مثلاً مجموع کالا بیشتر از مقدار تصمیم)، سرور ۴۰۰ می‌دهد.
 
 **data خروجی:** `{ "resolutionId": 950, "returnStatus": 1 }`
@@ -1271,7 +1288,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 مفهوم‌شناسی این مدل دقیقاً مثل مرجوعی خرید است (بخش ۱۰ را حتماً قبل از این بخش بخوانید)، با این تفاوت‌ها:
 - روی مرجوعی فروش، `GOODS_IN` یعنی «مشتری کالا را به ما برمی‌گرداند» و `GOODS_OUT` یعنی «ما کالای جایگزین برای مشتری می‌فرستیم» (جهت برعکسِ مرجوعی خرید).
-- `money.kind = MONEY_OUT` روی مرجوعی فروش یعنی «ما به مشتری پول/اعتبار برمی‌گردانیم» (بازپرداخت یا اعتبار فروشگاهی) — رایج‌ترین حالت اینجا، برخلاف مرجوعی خرید که رایج‌ترین حالتش `MONEY_IN` بود.
+- `moneyOut` روی مرجوعی فروش یعنی «ما به مشتری پول/اعتبار برمی‌گردانیم» (بازپرداخت یا اعتبار فروشگاهی) — رایج‌ترین حالت اینجا، برخلاف مرجوعی خرید که رایج‌ترین حالتش `moneyIn` است.
 - علت ادعا (`problem` روی `SaleReturnClaim`) از همان enum یکپارچه‌ی `ReturnProblemEnum` مرجوعی خرید استفاده می‌کند (بخش ۱۵) — دیگر enum جدای «دلیل مشتری» در برابر «مشکل مشاهده‌شده‌ی انباردار» وجود ندارد؛ مشاهدات فیزیکی هر نوبت (`ExecuteGoodsRound`'s `observations[]`) هم از همین enum استفاده می‌کنند.
 - برخلاف مرجوعی خرید، برای یک فروش می‌تواند **چند مرجوعی فعال به‌طور همزمان** وجود داشته باشد (هر بار `CreateSaleReturn` یک رکورد کاملاً جدید می‌سازد) — این رفتار عوض نشده.
 
@@ -1286,14 +1303,14 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 {
   "id": 80,
   "returnNumber": "SR-000080",
-  "requestDate": "2026-08-12T00:00:00",
+  "returnDate": "2026-08-12T00:00:00",
   "saleId": 200,
   "saleInvoiceNumber": "SL-2001",
   "customerId": 1,
   "customerName": "علی رضایی",
-  "createdAt": "2026-08-12T00:00:00",
+  "previousReturnId": null,
   "status": 0,
-  "dominantProblem": 7,
+  "problems": [7],
   "totalQuantity": 1,
   "totalAmount": 25000000
 }
@@ -1306,15 +1323,14 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 {
   "id": 80,
   "returnNumber": "SR-000080",
-  "requestDate": "2026-08-12T00:00:00",
+  "returnDate": "2026-08-12T00:00:00",
   "saleId": 200,
   "saleInvoiceNumber": "SL-2001",
   "customerId": 1,
   "customerName": "علی رضایی",
   "description": null,
   "previousReturnId": null,
-  "createdAt": "2026-08-12T00:00:00",
-  "updatedAt": "2026-08-12T00:00:00",
+  "previousReturnNumber": null,
   "status": 0,
   "totalAmount": 25000000,
   "totalQuantity": 1,
@@ -1326,7 +1342,6 @@ SaleReturn (یک درخواست مرجوعی مشتری)
   "claims": [
     {
       "id": 400,
-      "saleReturnId": 80,
       "scope": 0,
       "offScopeKind": null,
       "saleItemId": 3000,
@@ -1338,7 +1353,6 @@ SaleReturn (یک درخواست مرجوعی مشتری)
       "quantity": 1,
       "problem": 7,
       "note": "محصول کار نمی‌کند",
-      "createdAt": "2026-08-12T00:00:00",
       "decidedQuantity": 0,
       "remainingQuantity": 1,
       "resolutions": []
@@ -1363,7 +1377,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
   "saleReturnId": 80,
   "returnNumber": "SR-000080",
   "claimId": 400,
-  "kind": 0,
+  "direction": 0,
   "productId": 10,
   "productCode": "20260814-000010",
   "productName": "یخچال دو درب",
@@ -1382,7 +1396,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 ```json
 {
   "saleId": 200,
-  "requestDate": "2026-08-12T00:00:00",
+  "returnDate": "2026-08-12T00:00:00",
   "description": null,
   "previousReturnId": null,
   "claims": [
@@ -1418,11 +1432,12 @@ SaleReturn (یک درخواست مرجوعی مشتری)
     "note": "بازپرداخت کامل",
     "goodsIn": { "quantity": 1, "productId": null },
     "goodsOut": null,
-    "money": null
+    "moneyIn": null,
+    "moneyOut": null
   }
 }
 ```
-این مثال یعنی «مشتری کالا را برمی‌گرداند» (`goodsIn`، بعداً با `ExecuteGoodsRound` بازرسی و به موجودی اضافه می‌شود). برای بازپرداخت نقدی بلافاصله، به‌جای `goodsIn`، یک `money: { "kind": 2, "method": 0, "amount": 25000000 }` بفرستید (`kind = 2` یعنی `MONEY_OUT` — پول از ما به مشتری). **قید مهم:** تنها ترکیب نامعتبر، اثر `GOODS_OUT` (جایگزین) روی ادعایی است که پس از بازرسی «سالم» تشخیص داده شده — چیزی برای جایگزینی وجود ندارد.
+این مثال یعنی «مشتری کالا را برمی‌گرداند» (`goodsIn`، بعداً با `ExecuteGoodsRound` بازرسی و به موجودی اضافه می‌شود). برای بازپرداخت نقدی بلافاصله، به‌جای `goodsIn`، یک `moneyOut: { "method": 0, "amount": 25000000 }` بفرستید (پول از ما به مشتری). **قید مهم:** تنها ترکیب نامعتبر، اثر `GOODS_OUT` (جایگزین) روی ادعایی است که پس از بازرسی «سالم» تشخیص داده شده — چیزی برای جایگزینی وجود ندارد.
 
 **data خروجی:** `{ "resolutionId": 950, "returnStatus": 1 }`
 
@@ -1529,7 +1544,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 3. `POST api/Sale/ShipSale` → ارسال فیزیکی کالا (ممکن است چندمرحله‌ای).
 4. اگر مشتری بعداً مشکلی گزارش داد: `POST api/SaleReturn/CreateSaleReturn` → ثبت درخواست مرجوعی با یک یا چند ادعا (قبل از هر بازرسی فیزیکی).
 5. `GET api/SaleReturn/GetSaleReturnDetail?id={returnId}` → گرفتن `id` هر ادعا (`claims[].id`).
-6. برای هر ادعا، `POST api/SaleReturn/AddClaimResolution` → تصمیم بگیرید: کالا از مشتری برگردد (`goodsIn`)، جایگزین برایش برود (`goodsOut`)، پول/اعتبار برگردانده شود (`money`)، یا ترکیبی از این‌ها.
+6. برای هر ادعا، `POST api/SaleReturn/AddClaimResolution` → تصمیم بگیرید: کالا از مشتری برگردد (`goodsIn`)، جایگزین برایش برود (`goodsOut`)، پول/اعتبار برگردانده شود (`moneyOut`)، یا ترکیبی از این‌ها.
 7. اگر تصمیم شامل اثر کالایی بود، آن اثر `PENDING` می‌ماند تا فیزیکاً اتفاق بیفتد: `GET api/SaleReturn/GetSaleReturnPendingEffects?saleId={id}` → دیدن اثرهای در انتظار (چه کالای برگشتی که باید بازرسی شود، چه جایگزینی که باید ارسال شود)، سپس `POST api/SaleReturn/ExecuteGoodsRound` → ثبت نوبت فیزیکی، با مشخص‌کردن `observations[]` روی برگشتی‌ها اگر بخشی از محموله معیوب بود (فقط مقدار سالم به موجودی برمی‌گردد).
 8. اگر تصمیم شامل اثر `MONEY_OUT` بود، می‌توانید `GET api/Invoice/GetSaleReturnCreditNotePdf?saleReturnId={id}` را برای چاپ برگه‌ی اعتباری صدا بزنید (نیازی به منتظر ماندن برای اجرای اثرهای کالایی نیست، چون اثر مالی همان لحظه‌ی ثبت `APPLIED` شده).
 
@@ -1685,7 +1700,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 3 | رد‌شده (REJECTED) |
 | 4 | لغو‌شده (CANCELLED) |
 
-#### `ReturnEffectKindEnum` (نوع یک اثر پایه‌ای درون یک تصمیم)
+#### `ReturnEffectDirectionEnum` (نوع یک اثر پایه‌ای درون یک تصمیم)
 | مقدار | معنی روی مرجوعی خرید | معنی روی مرجوعی فروش |
 |---|---|---|
 | 0 | کالا وارد می‌شود (GOODS_IN) — تامین‌کننده جایگزین می‌فرستد | کالا وارد می‌شود (GOODS_IN) — مشتری کالا را برمی‌گرداند |
@@ -1737,6 +1752,27 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 این نکات برای جلوگیری از سردرگمی هنگام توسعه فرانت مهم هستند:
 
+### ⚠️ تغییرات شکسته‌ی قرارداد — ۲۰۲۶-۰۹-۰۷
+
+این‌ها در یک تغییر واحد اعمال شدند و فرانت باید هر ردیف را جداگانه مهاجرت دهد.
+
+| کجا | قبل | بعد | چرا |
+|---|---|---|---|
+| `AddClaimResolution` (خرید و فروش) | `composition.money` با فیلد `money.kind` | `composition.moneyIn` / `composition.moneyOut` (بدون فیلد جهت) | مقدار صفرِ enum برابر `GOODS_IN` بود، پس هر درخواستی که `kind` نمی‌فرستاد رد می‌شد. حالا جهت ساختاری است، دقیقاً مثل `goodsIn`/`goodsOut` |
+| اثرها (همه‌ی خروجی‌ها) | `kind` | `direction` | نام `kind` هم‌زمان برای «جهت» و برای مفاهیم دیگر (`offScopeKind`) به کار می‌رفت |
+| `ReturnEffectKindEnum` | — | `ReturnEffectDirectionEnum` | مقادیر عددی **تغییر نکرده‌اند** |
+| لیست مرجوعی (خرید و فروش) | `dominantProblem` (یک عدد) | `problems` (آرایه، به ترتیب بیشترین مقدار ادعا) | `dominantProblem` فقط مشکل بزرگ‌ترین ادعا را می‌داد و برای مرجوعیِ بدون ادعا عدد `0` را به‌عنوان یک مشکل واقعی برمی‌گرداند. `problems[0]` دقیقاً همان مقدار قبلی است |
+| مرجوعی فروش (همه‌جا) | `requestDate` | `returnDate` | هم‌نام شدن با سمت خرید |
+| جزئیات مرجوعی | `createdAt`، `updatedAt` | حذف شد | ستون audit دیتابیس؛ `returnDate` تاریخ دامنه‌ای است |
+| لیست مرجوعی | `createdAt` | حذف شد (و `previousReturnId` اضافه شد) | همان دلیل |
+| ادعا (`claims[]`) | `purchaseReturnId`/`saleReturnId`، `createdAt` | حذف شد | ادعا داخل خود مرجوعی تو در تو است؛ کلید والد تکراری بود |
+| تصمیم (`resolutions[]`) | `purchaseReturnClaimId`/`saleReturnClaimId`، `createdAt` | حذف شد؛ `decidedAt` اضافه شد | همان دلیل — و «زمان ثبت تصمیم» یک مفهوم دامنه‌ای است، نه ستون audit |
+| اثر (`effects[]`) | `purchaseReturnResolutionId`/`saleReturnResolutionId`، `createdAt` | حذف شد؛ `productName` اضافه شد | `appliedAt` تاریخ دامنه‌ای اثر است. بدون `productName`، اثرِ جایگزینی با محصولی متفاوت از ادعا فقط یک شناسه‌ی خام بود |
+| عکس‌های رسید (`receivingImages[]`) | `createdAt` | `uploadedAt` | نام دامنه‌ای به‌جای نام ستون |
+| جزئیات مرجوعی | — | `previousReturnNumber` اضافه شد | `previousReturnId` حالا اعتبارسنجی می‌شود (باید مرجوعیِ همان سند باشد) و شماره‌اش هم برمی‌گردد |
+| `ChangeUserTeam` | فقط `isHead` | `isDeputy` هم اضافه شد | بخش ۳ |
+
+
 - **لیست نقش‌ها (Role) وجود ندارد:** فرم‌های `CreateUser`/`UpdateUser` به `roleId` نیاز دارند اما هیچ endpoint ای برای گرفتن لیست نقش‌های موجود در دیتابیس ارائه نشده. تا اضافه شدن چنین API، مقادیر معتبر `roleId` را باید مستقیماً از تیم بک‌اند بگیرید یا موقتاً هاردکد کنید.
 - **ارسال کد OTP غیرفعال است:** فرآیند بازیابی رمز عبور (`ForgetPassword`) در حال حاضر کد تایید نمی‌خواهد؛ endpoint ارسال OTP در کد کامنت شده و در هیچ کنترلری expose نشده.
 - **`UpdatePurchase` اقلام را ویرایش نمی‌کند** ولی **`UpdateSale` اقلام را ویرایش می‌کند** (بخش‌های ۹ و ۱۱) — این عدم‌تقارن عمدی است، به آن دقت کنید تا در فرم‌های ویرایش دو صفحه‌ی متفاوت طراحی کنید.
@@ -1750,17 +1786,21 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 ## 17. بارگذاری تصاویر (File)
 
-تصاویر در یک فضای ذخیره‌سازی ابری (Liara Object Storage) نگهداری می‌شوند، نه روی سرور برنامه. باکت **خصوصی** است، بنابراین:
+تصاویر در یک فضای ذخیره‌سازی ابری (Liara Object Storage) نگهداری می‌شوند، نه روی سرور برنامه.
 
-- چیزی که در دیتابیس ذخیره می‌شود **کلید شیء (ObjectKey)** است، مثلاً `products/2026/08/3f1c….jpg` — نه یک URL.
-- هر URL که سرور به شما می‌دهد **امضاشده و موقتی** است (پیش‌فرض ۶۰ دقیقه). این URL را **هرگز ذخیره نکنید**؛ منقضی می‌شود.
+- چیزی که در دیتابیس ذخیره می‌شود **کلید شیء (ObjectKey)** است، مثلاً `shelf.jpg` — نه یک URL.
+- **آدرس تصویر به خودِ همین API اشاره می‌کند** (`api/File/GetImage`)، نه به باکت. دلیلش این است که
+  لبهٔ لیارا به هر درخواستی با `User-Agent` مرورگری پاسخ `404 page not found` می‌دهد، پس آدرس باکت
+  در `<img src>` هیچ‌وقت باز نمی‌شود. شرحِ کامل در `image-serving-guide.fa.md`.
+- این آدرس **منقضی نمی‌شود**، ولی همچنان بهتر است ذخیره نشود: میزبانِ داخلِ آن با محیط عوض می‌شود.
+  مقدارِ پایداری که باید نگه دارید `imageKey` است.
 
 ### گردش‌کار دو مرحله‌ای
 
 آپلود جدا از ثبت موجودیت انجام می‌شود، تا بتوانید قبل از ذخیره‌ی فرم پیش‌نمایش تصویر را نشان دهید:
 
 ۱. فایل را به `POST api/File/UploadImage` بفرستید → `objectKey` بگیرید.
-۲. همان `objectKey` را در فیلد `imageUrl` دستور `CreateX`/`UpdateX` (که همچنان JSON ساده است) بفرستید.
+۲. همان `objectKey` را در فیلد **`imageKey`** دستور `CreateX`/`UpdateX` (که همچنان JSON ساده است) بفرستید.
 
 ### `POST api/File/UploadImage`
 
@@ -1775,19 +1815,25 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 ```json
 {
-  "objectKey": "products/2026/08/3f1c8a....jpg",
-  "url": "https://<bucket>.storage.iran.liara.space/products/2026/08/3f1c8a....jpg?X-Amz-Signature=...",
+  "objectKey": "shelf.jpg",
+  "url": "http://localhost:5083/api/File/GetImage?objectKey=shelf.jpg",
   "fileName": "shelf.jpg",
   "contentType": "image/jpeg",
   "size": 84213
 }
 ```
 
-محدودیت‌ها (قابل تنظیم در `appsettings.json`، مقادیر پیش‌فرض): حداکثر **۵ مگابایت**، پسوندهای `.jpg .jpeg .png .webp .gif`. نقض هرکدام خطای ۴۰۰ با پیام فارسی می‌دهد و **هیچ چیزی آپلود نمی‌شود**. نام فایل شما فقط پسوندش استفاده می‌شود؛ کلید را سرور می‌سازد.
+محدودیت‌ها (قابل تنظیم در `appsettings.json`، مقادیر پیش‌فرض): حداکثر **۵ مگابایت**، پسوندهای `.jpg .jpeg .png .webp .gif .pdf`. نقض هرکدام خطای ۴۰۰ با پیام فارسی می‌دهد و **هیچ چیزی آپلود نمی‌شود**.
+
+**کلید همان نام فایل شماست.** اگر آن نام از قبل در باکت باشد، شماره می‌گیرد (`logo.png` → `logo-1.png` → `logo-2.png`) تا فایل قبلی بازنویسی نشود. نام فایل تا یک قطعهٔ مسیر کوتاه می‌شود؛ یعنی `../../x.png` و `C:\path\x.png` هر دو `x.png` ذخیره می‌شوند. پس **همیشه `objectKey` برگشتی را ملاک قرار دهید، نه نامی که فرستادید** — ممکن است متفاوت باشد.
+
+### `GET api/File/GetImage?objectKey=...`
+
+**خودِ فایل** را برمی‌گرداند (نه JSON). این همان چیزی است که در `imageUrl` می‌آید و مستقیم در `<img src>` می‌نشیند. نیاز به توکن ندارد — چون `<img>` نمی‌تواند هدر `Authorization` بفرستد. کلید ناموجود ← ۴۰۴ با پاکت JSON فارسی.
 
 ### `GET api/File/GetImageUrl?objectKey=...`
 
-یک URL امضاشده‌ی تازه می‌سازد. برای صفحاتی که مدت زیادی باز می‌مانند یا پاسخ لیستی که کش شده، به‌جای گرفتن دوباره‌ی کل موجودیت از این استفاده کنید.
+آدرس تصویر را دوباره می‌سازد و همراهش `objectKey` را هم برمی‌گرداند. با کلید یا با یک آدرس تصویرِ قبلی هر دو کار می‌کند.
 
 ### `DELETE api/File/DeleteImage?objectKey=...`
 
@@ -1799,12 +1845,14 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 | فیلد | کاربرد |
 |---|---|
-| `imageKey` | مقدار پایدار. هنگام ویرایش، **این** را در `imageUrl` برگردانید تا تصویر حفظ شود. |
-| `imageUrl` | URL امضاشده‌ی موقت، فقط برای `<img src>`. ذخیره نکنید. |
+| `imageKey` | مقدار پایدار. هنگام ویرایش، **همین** را در فیلد `imageKey` برگردانید تا تصویر حفظ شود. |
+| `imageUrl` | آدرس آمادهٔ نمایش، فقط برای `<img src>`. ذخیره نکنید (میزبانش با محیط عوض می‌شود). |
 
-اگر موجودیت تصویر ندارد، هر دو `null` هستند. برای پاک‌کردن تصویر، در دستور ویرایش `imageUrl` را `null` بفرستید.
+اگر موجودیت تصویر ندارد، هر دو `null` هستند. برای پاک‌کردن تصویر، در دستور ویرایش `imageKey` را `null` بفرستید.
 
-> اگر اشتباهاً `imageUrl` امضاشده را به‌جای `imageKey` برگردانید مشکلی پیش نمی‌آید — سرور آن را به کلید خام تبدیل می‌کند. ولی رفتار درست، برگرداندن `imageKey` است.
+> **نامِ فیلد در دستورهای نوشتن `imageKey` است — نه `imageUrl` و نه `imageObjectKey`.** خواندن و
+> نوشتن حالا قرینه‌اند: `imageKey` می‌گیرید، `imageKey` پس می‌فرستید. اگر اشتباهاً `imageUrl` را
+> بفرستید باز هم کار می‌کند (سرور آن را به کلید خام تبدیل می‌کند)، ولی رفتار درست `imageKey` است.
 
 ### تصاویر رسید کالا از تامین‌کننده
 

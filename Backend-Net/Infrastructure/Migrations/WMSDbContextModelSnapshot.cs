@@ -759,10 +759,10 @@ namespace Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("DoneQuantity")
+                    b.Property<int>("Direction")
                         .HasColumnType("int");
 
-                    b.Property<int>("Kind")
+                    b.Property<int>("DoneQuantity")
                         .HasColumnType("int");
 
                     b.Property<int?>("Method")
@@ -1072,7 +1072,7 @@ namespace Infrastructure.Migrations
                     b.Property<int?>("PreviousReturnId")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("RequestDate")
+                    b.Property<DateTime>("ReturnDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("ReturnNumber")
@@ -1166,10 +1166,10 @@ namespace Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("DoneQuantity")
+                    b.Property<int>("Direction")
                         .HasColumnType("int");
 
-                    b.Property<int>("Kind")
+                    b.Property<int>("DoneQuantity")
                         .HasColumnType("int");
 
                     b.Property<int?>("Method")

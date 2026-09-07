@@ -31,7 +31,7 @@ namespace Application.Features.Customer.Queries
             var customer = await _customerRepository.GetByIdAsync(request.Id, cancellationToken) ?? throw new NotFoundCustomException("مشتری با اطلاعات مورد نظر یافت نشد.");
 
             var dto = _mapper.Map<CustomerDto>(customer);
-            dto.ImageUrl = _objectStorageService.GetPresignedUrl(dto.ImageKey);
+            dto.ImageUrl = _objectStorageService.GetFixedUrl(dto.ImageKey);
 
             res.Data = dto;
             res.Message = "اطلاعات مشتری با موفقیت ارسال شد.";

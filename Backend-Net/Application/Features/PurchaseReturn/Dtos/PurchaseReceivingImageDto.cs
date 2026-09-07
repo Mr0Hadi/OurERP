@@ -14,6 +14,7 @@ namespace Application.Features.PurchaseReturn.Dtos
         public string? Url { get; set; }
         public string? FileName { get; set; }
         public string? Note { get; set; }
-        public DateTime CreatedAt { get; set; }
+        /// <summary>When the photo was captured/uploaded (was the CreatedAt audit column).</summary>
+        public DateTime UploadedAt { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -40,19 +40,27 @@ namespace Application.Features.SaleReturn.Queries
             var untouched = _saleReturnCalculationService.IsUntouched(saleReturn);
             var totalAmount = (UInt64)saleReturn.Claims.Sum(c => (long)c.Quantity * (long)c.UnitPrice);
 
+            // The related return is a plain FK on the entity; resolve its number here so the
+            // client can name it without a second round-trip.
+            var previousReturnNumber = saleReturn.PreviousReturnId == null
+                ? null
+                : await _context.SaleReturns
+                    .Where(x => x.Id == saleReturn.PreviousReturnId.Value)
+                    .Select(x => x.ReturnNumber)
+                    .FirstOrDefaultAsync(cancellationToken);
+
             res.Data = new SaleReturnDetailDto
             {
                 Id = saleReturn.Id,
                 ReturnNumber = saleReturn.ReturnNumber,
-                RequestDate = saleReturn.RequestDate,
+                ReturnDate = saleReturn.ReturnDate,
                 SaleId = saleReturn.SaleId,
                 SaleInvoiceNumber = saleReturn.Sale!.InvoiceNumber,
                 CustomerId = saleReturn.Sale!.CustomerId,
                 CustomerName = saleReturn.Sale!.Customer.FirstName + " " + saleReturn.Sale!.Customer.LastName,
                 Description = saleReturn.Description,
                 PreviousReturnId = saleReturn.PreviousReturnId,
-                CreatedAt = saleReturn.CreatedAt,
-                UpdatedAt = saleReturn.UpdatedAt,
+                PreviousReturnNumber = previousReturnNumber,
                 Status = saleReturn.Status,
                 TotalAmount = totalAmount,
                 TotalQuantity = saleReturn.ClaimedQuantity,
@@ -64,7 +72,6 @@ namespace Application.Features.SaleReturn.Queries
                 Claims = saleReturn.Claims.Select(c => new SaleReturnClaimDto
                 {
                     Id = c.Id,
-                    SaleReturnId = c.SaleReturnId,
                     Scope = c.Scope,
                     OffScopeKind = c.OffScopeKind,
                     SaleItemId = c.SaleItemId,
@@ -76,31 +83,28 @@ namespace Application.Features.SaleReturn.Queries
                     Quantity = c.Quantity,
                     Problem = c.Problem,
                     Note = c.Note,
-                    CreatedAt = c.CreatedAt,
                     DecidedQuantity = c.DecidedQuantity,
                     RemainingQuantity = c.RemainingQuantity,
                     Resolutions = c.Resolutions.Select(r => new SaleReturnResolutionDto
                     {
                         Id = r.Id,
-                        SaleReturnClaimId = r.SaleReturnClaimId,
                         Quantity = r.Quantity,
                         Note = r.Note,
-                        CreatedAt = r.CreatedAt,
+                        DecidedAt = r.CreatedAt,
                         Effects = r.Effects.Select(e => new SaleReturnEffectDto
                         {
                             Id = e.Id,
-                            SaleReturnResolutionId = e.SaleReturnResolutionId,
-                            Kind = e.Kind,
+                            Direction = e.Direction,
                             Quantity = e.Quantity,
                             DoneQuantity = e.DoneQuantity,
                             RestockedQuantity = e.RestockedQuantity,
                             ProductId = e.ProductId,
+                            ProductName = e.Product != null ? e.Product.Name : null,
                             Amount = e.Amount,
                             Method = e.Method,
                             Reference = e.Reference,
                             Note = e.Note,
                             Status = e.Status,
-                            CreatedAt = e.CreatedAt,
                             AppliedAt = e.AppliedAt,
                             MoneyParts = e.MoneyParts.Select(p => new SaleReturnEffectMoneyPartDto
                             {
@@ -120,7 +124,6 @@ namespace Application.Features.SaleReturn.Queries
                                 PartyNationalId = h.PartyNationalId,
                                 VehiclePlate = h.VehiclePlate,
                                 Note = h.Note,
-                                CreatedAt = h.CreatedAt,
                                 Observations = h.Observations.Select(o => new SaleReturnEffectObservationDto
                                 {
                                     Id = o.Id,

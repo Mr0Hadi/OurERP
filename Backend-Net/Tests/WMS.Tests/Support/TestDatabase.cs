@@ -1,5 +1,6 @@
-using Application.Common.Contracts.Barcode;
+﻿using Application.Common.Contracts.Barcode;
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.OrgStructure;
 using Application.Common.Contracts.Documents;
 using Application.Common.Contracts.Invoice;
 using Application.Common.Contracts.InventoryCosting;
@@ -89,6 +90,7 @@ namespace WMS.Tests.Support
             CustomerRepository = new CustomerRepository(context);
             SupplierRepository = new SupplierRepository(context);
             UserRepository = new UserRepository(context);
+            OrgRoleService = new OrgRoleService(context);
             ProductCategoryRepository = new ProductCategoryRepository(context);
             DepartmentRepository = new DepartmentRepository(context);
             TeamRepository = new TeamRepository(context);
@@ -115,6 +117,7 @@ namespace WMS.Tests.Support
         public ICustomerRepository CustomerRepository { get; }
         public ISupplierRepository SupplierRepository { get; }
         public IUserRepository UserRepository { get; }
+        public IOrgRoleService OrgRoleService { get; }
         public IProductCategoryRepository ProductCategoryRepository { get; }
         public IDepartmentRepository DepartmentRepository { get; }
         public ITeamRepository TeamRepository { get; }

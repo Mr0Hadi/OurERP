@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
@@ -109,6 +109,9 @@ namespace Application.Features.Purchase.Commands
                 {
                     DocumentKind = DocumentKindEnum.PURCHASE,
                     DocumentId = purchase.Id,
+                    // Stored as the bare bucket key, so an image URL echoed back by the
+                    // frontend is stripped down rather than persisted verbatim - same rule
+                    // every other write path here follows.
                     ObjectKey = _objectStorageService.NormalizeKey(attachment.ObjectKey) ?? attachment.ObjectKey,
                     FileName = attachment.FileName,
                     Note = attachment.Note,

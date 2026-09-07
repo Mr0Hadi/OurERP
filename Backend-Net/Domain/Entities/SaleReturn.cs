@@ -8,7 +8,7 @@ namespace Domain.Entities
         public int Id { get; set; }
         public string ReturnNumber { get; set; }
         public int SaleId { get; set; }
-        public DateTime RequestDate { get; set; }
+        public DateTime ReturnDate { get; set; }
         public ReturnStatusEnum Status { get; set; }
         public string? Description { get; set; }
 

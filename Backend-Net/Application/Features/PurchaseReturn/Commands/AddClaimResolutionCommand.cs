@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
@@ -28,16 +28,20 @@ namespace Application.Features.PurchaseReturn.Commands
         {
             RuleFor(x => x.ClaimId).GreaterThan(0).WithMessage(Validation.RequiredMessage("ادعا"));
             RuleFor(x => x.Composition.Quantity).GreaterThan(0).WithMessage("مقدار تصمیم باید از صفر بیشتر باشد.");
-            RuleFor(x => x.Composition).Must(c => c.GoodsIn != null || c.GoodsOut != null || c.Money != null)
+            RuleFor(x => x.Composition).Must(c => c.GoodsIn != null || c.GoodsOut != null || c.MoneyIn != null || c.MoneyOut != null)
                 .WithMessage("تصمیم باید حداقل شامل یک اثر (ورود کالا، خروج کالا یا وجه) باشد.");
-            RuleFor(x => x.Composition.Money!.Kind)
-                .Must(k => k == ReturnEffectKindEnum.MONEY_IN || k == ReturnEffectKindEnum.MONEY_OUT)
-                .WithMessage("جهت اثر مالی نامعتبر است.")
-                .When(x => x.Composition.Money != null);
-            RuleFor(x => x.Composition.Money!.Parts)
+
+            // Direction is structural now (which slot the effect sits in), so there is no direction
+            // field left to validate - the old rule on Composition.Money.Direction rejected every
+            // money effect whose sender omitted it, because the enum's zero value is GOODS_IN.
+            RuleFor(x => x.Composition.MoneyIn!.Parts)
                 .Must(parts => parts != null && parts.Count > 0)
                 .WithMessage("پرداخت ترکیبی باید حداقل یک بخش داشته باشد.")
-                .When(x => x.Composition.Money != null && x.Composition.Money.Method == ReturnPaymentMethodEnum.MIXED);
+                .When(x => x.Composition.MoneyIn != null && x.Composition.MoneyIn.Method == ReturnPaymentMethodEnum.MIXED);
+            RuleFor(x => x.Composition.MoneyOut!.Parts)
+                .Must(parts => parts != null && parts.Count > 0)
+                .WithMessage("پرداخت ترکیبی باید حداقل یک بخش داشته باشد.")
+                .When(x => x.Composition.MoneyOut != null && x.Composition.MoneyOut.Method == ReturnPaymentMethodEnum.MIXED);
         }
     }
 
@@ -75,13 +79,34 @@ namespace Application.Features.PurchaseReturn.Commands
             var now = DateTime.Now;
             var effects = _purchaseReturnCalculationService.ExpandComposition(request.Composition, now);
 
+            // ProductId defaults to the claim's own product and is resolved once, here, so every
+            // later reader (ExecuteGoodsRound, the read DTOs) sees a non-null value and none of them
+            // has to re-apply the default.
             foreach (var effect in effects)
             {
-                if (effect.Kind is ReturnEffectKindEnum.GOODS_IN or ReturnEffectKindEnum.GOODS_OUT)
+                if (effect.Direction is ReturnEffectDirectionEnum.GOODS_IN or ReturnEffectDirectionEnum.GOODS_OUT)
                     effect.ProductId ??= claim.ProductId;
             }
 
-            var goodsQtySum = effects.Where(e => e.Kind is ReturnEffectKindEnum.GOODS_IN or ReturnEffectKindEnum.GOODS_OUT).Sum(e => e.Quantity);
+            // An overridden product (a replacement with a different item) used to go unchecked and
+            // only surface as a NotFound at the goods round - i.e. at the warehouse, to the wrong
+            // person, long after the decision was accepted.
+            var overriddenProductIds = effects
+                .Where(e => e.ProductId.HasValue && e.ProductId.Value != claim.ProductId)
+                .Select(e => e.ProductId!.Value)
+                .Distinct()
+                .ToList();
+
+            if (overriddenProductIds.Count > 0)
+            {
+                var foundCount = await _context.Products
+                    .CountAsync(p => overriddenProductIds.Contains(p.Id), cancellationToken);
+
+                if (foundCount != overriddenProductIds.Count)
+                    throw new ValidationCustomException("کالای انتخاب‌شده برای اثر یافت نشد.");
+            }
+
+            var goodsQtySum = effects.Where(e => e.Direction is ReturnEffectDirectionEnum.GOODS_IN or ReturnEffectDirectionEnum.GOODS_OUT).Sum(e => e.Quantity);
             if (goodsQtySum > request.Composition.Quantity)
                 throw new ValidationCustomException("مجموع مقدار کالا در اثرها نمی‌تواند از مقدار تصمیم بیشتر باشد.");
 

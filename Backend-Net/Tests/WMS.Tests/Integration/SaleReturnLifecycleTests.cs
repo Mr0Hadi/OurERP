@@ -105,7 +105,7 @@ namespace WMS.Tests.Integration
                 Composition = new EffectCompositionDto
                 {
                     Quantity = 5,
-                    Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.MONEY_OUT, Method = ReturnPaymentMethodEnum.CASH, Amount = 5 * scenario.Item.UnitPrice },
+                    MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 5 * scenario.Item.UnitPrice },
                 },
             }, CancellationToken.None);
 
@@ -269,7 +269,7 @@ namespace WMS.Tests.Integration
             await addHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 5, Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.MONEY_OUT, Method = ReturnPaymentMethodEnum.CASH, Amount = 500 } },
+                Composition = new EffectCompositionDto { Quantity = 5, MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 500 } },
             }, CancellationToken.None);
 
             var resolutionId = scope.Context.SaleReturnResolutions.Single().Id;
@@ -307,7 +307,7 @@ namespace WMS.Tests.Integration
             await addHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 5, Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.MONEY_OUT, Method = ReturnPaymentMethodEnum.CASH, Amount = 500 } },
+                Composition = new EffectCompositionDto { Quantity = 5, MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 500 } },
             }, CancellationToken.None);
 
             var returnId = scope.Context.SaleReturns.Single().Id;
@@ -410,7 +410,7 @@ namespace WMS.Tests.Integration
 
             var list = ((System.Collections.Generic.IEnumerable<PendingEffectDto>)res.Data!.GetType().GetProperty("PendingEffects")!.GetValue(res.Data)!).ToList();
             var pending = Assert.Single(list);
-            Assert.Equal(ReturnEffectKindEnum.GOODS_IN, pending.Kind);
+            Assert.Equal(ReturnEffectDirectionEnum.GOODS_IN, pending.Direction);
         }
     }
 }

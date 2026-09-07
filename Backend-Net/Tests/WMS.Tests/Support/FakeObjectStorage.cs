@@ -1,5 +1,6 @@
 using Application.Common.Contracts.Storage;
 using Application.Common.Enums;
+using Common.Exceptions;
 
 namespace WMS.Tests.Support
 {
@@ -12,6 +13,9 @@ namespace WMS.Tests.Support
     public class FakeObjectStorage : IObjectStorageService
     {
         public const string Host = "https://test-bucket.storage.example";
+
+        /// <summary>Stands in for ObjectStorageOptions.PublicBaseUrl - the API's own host.</summary>
+        public const string ApiHost = "https://api.test.example";
 
         /// <summary>
         /// Shared instance for the many handler tests that only reach the pure, stateless half of
@@ -28,17 +32,44 @@ namespace WMS.Tests.Support
             using var buffer = new MemoryStream();
             content.CopyTo(buffer);
 
-            var key = $"{folder.ToString().ToLowerInvariant()}/{Guid.NewGuid():N}{Path.GetExtension(fileName)}";
+            // Mirrors LiaraObjectStorageService: the uploader's own file name, reduced to a single
+            // path segment, with a numeric suffix when that name is already taken.
+            var key = ResolveAvailableKey(fileName);
             Objects[key] = buffer.ToArray();
 
             return Task.FromResult(new UploadedFileDto
             {
                 ObjectKey = key,
-                Url = GetPresignedUrl(key),
-                FileName = fileName,
+                Url = GetFixedUrl(key),
+                FileName = key,
                 ContentType = contentType,
                 Size = buffer.Length,
             });
+        }
+
+        private string ResolveAvailableKey(string fileName)
+        {
+            var name = fileName ?? string.Empty;
+            var lastSeparator = name.LastIndexOfAny(new[] { '/', '\\' });
+            if (lastSeparator >= 0)
+                name = name.Substring(lastSeparator + 1);
+
+            var key = new string(name.Where(c => !char.IsControl(c)).ToArray()).Trim().Trim('.');
+            if (string.IsNullOrWhiteSpace(key))
+                key = Guid.NewGuid().ToString("N");
+
+            if (!Objects.ContainsKey(key))
+                return key;
+
+            var extension = Path.GetExtension(key);
+            var stem = key.Substring(0, key.Length - extension.Length);
+
+            for (var suffix = 1; ; suffix++)
+            {
+                var candidate = $"{stem}-{suffix}{extension}";
+                if (!Objects.ContainsKey(candidate))
+                    return candidate;
+            }
         }
 
         public Task DeleteAsync(string objectKey, CancellationToken cancellationToken = default)
@@ -55,7 +86,31 @@ namespace WMS.Tests.Support
             return Task.FromResult(key != null && Objects.ContainsKey(key));
         }
 
-        public string? GetPresignedUrl(string? objectKey)
+        public Task<StoredFileDto> DownloadAsync(string objectKey, CancellationToken cancellationToken = default)
+        {
+            var key = NormalizeKey(objectKey);
+            if (key == null || !Objects.TryGetValue(key, out var content))
+                throw new NotFoundCustomException("تصویر مورد نظر یافت نشد.");
+
+            return Task.FromResult(new StoredFileDto
+            {
+                Content = content,
+                ContentType = "image/jpeg",
+                FileName = Path.GetFileName(key),
+            });
+        }
+
+        /// <summary>
+        /// Mirrors the real service: an URL on the API itself, carrying the key in the query
+        /// string, so <see cref="NormalizeKey"/> round-trips are exercised for real.
+        /// </summary>
+        public string? GetFixedUrl(string? objectKey)
+        {
+            var key = NormalizeKey(objectKey);
+            return key == null ? null : $"{ApiHost}/api/File/GetImage?objectKey={Uri.EscapeDataString(key)}";
+        }
+
+        public string? GetExpirableUrl(string? objectKey)
         {
             var key = NormalizeKey(objectKey);
             return key == null ? null : $"{Host}/{key}?signature=test";
@@ -70,6 +125,12 @@ namespace WMS.Tests.Support
 
             if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
                 return value.TrimStart('/');
+
+            // api/File/GetImage carries the key in the query string, not the path.
+            var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+            var fromQuery = query["objectKey"];
+            if (!string.IsNullOrWhiteSpace(fromQuery))
+                return fromQuery.TrimStart('/');
 
             var path = Uri.UnescapeDataString(uri.AbsolutePath).TrimStart('/');
             return string.IsNullOrWhiteSpace(path) ? null : path;

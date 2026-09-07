@@ -55,7 +55,9 @@ namespace Application.Features.FileStorage.Commands
             if (request.Length > _options.MaxImageSizeBytes)
                 throw new ValidationCustomException($"حجم تصویر نباید بیشتر از {_options.MaxImageSizeBytes / (1024 * 1024)} مگابایت باشد.");
 
-            var extension = Path.GetExtension(request.FileName)?.ToLowerInvariant() ?? string.Empty;
+            // Trimmed first: a name that arrives as "  photo.png  " otherwise yields the extension
+            // ".png  ", which matches nothing in the allow-list and rejects a perfectly good file.
+            var extension = Path.GetExtension(request.FileName?.Trim())?.ToLowerInvariant() ?? string.Empty;
             if (!_options.AllowedImageExtensions.Contains(extension))
                 throw new ValidationCustomException($"فرمت تصویر مجاز نیست. فرمت‌های مجاز: {string.Join("، ", _options.AllowedImageExtensions)}");
 

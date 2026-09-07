@@ -31,7 +31,7 @@ namespace Application.Features.Supplier.Queries
             var supplier = await _supplierRepository.GetByIdAsync(request.Id, cancellationToken) ?? throw new NotFoundCustomException("تامین کننده با اطلاعات مورد نظر یافت نشد.");
 
             var dto = _mapper.Map<SupplierDto>(supplier);
-            dto.ImageUrl = _objectStorageService.GetPresignedUrl(dto.ImageKey);
+            dto.ImageUrl = _objectStorageService.GetFixedUrl(dto.ImageKey);
 
             res.Data = dto;
             res.Message = "اطلاعات تامین کننده با موفقیت ارسال شد.";

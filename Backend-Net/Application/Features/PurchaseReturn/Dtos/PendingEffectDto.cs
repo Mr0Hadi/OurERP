@@ -9,7 +9,7 @@ namespace Application.Features.PurchaseReturn.Dtos
         public int PurchaseReturnId { get; set; }
         public string ReturnNumber { get; set; }
         public int ClaimId { get; set; }
-        public ReturnEffectKindEnum Kind { get; set; }
+        public ReturnEffectDirectionEnum Direction { get; set; }
         public int ProductId { get; set; }
         public string ProductCode { get; set; }
         public string ProductName { get; set; }

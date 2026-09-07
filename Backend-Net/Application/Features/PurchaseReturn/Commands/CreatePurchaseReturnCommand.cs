@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.UnitOfWork;
@@ -90,6 +90,18 @@ namespace Application.Features.PurchaseReturn.Commands
                 var claimable = _purchaseReturnCalculationService.GetClaimableQuantity(purchaseItem, activeReturns);
                 if (requestedQty > claimable)
                     throw new ValidationCustomException($"مقدار ادعاشده برای «{purchaseItem.Product.Name}» از باقیمانده قابل مرجوع کردن این قلم بیشتر است.");
+            }
+
+            // PreviousReturnId was a pure client-supplied pass-through: nothing checked that it
+            // pointed at a return on this same document, or that it existed at all. A cycle is not
+            // reachable here - a brand-new row cannot yet be anyone's target.
+            if (request.PreviousReturnId.HasValue)
+            {
+                var previousBelongsToDocument = await _context.PurchaseReturns
+                    .AnyAsync(x => x.Id == request.PreviousReturnId.Value && x.PurchaseId == request.PurchaseId, cancellationToken);
+
+                if (!previousBelongsToDocument)
+                    throw new ValidationCustomException("مرجوعی قبلی انتخاب‌شده معتبر نیست.");
             }
 
             var now = DateTime.Now;

@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.SaleReturn.Dtos;
@@ -67,12 +67,12 @@ namespace Application.Features.SaleReturn.Queries
 
             if (request.FromDate.HasValue)
             {
-                query = query.Where(x => x.RequestDate >= request.FromDate.Value);
+                query = query.Where(x => x.ReturnDate >= request.FromDate.Value);
             }
 
             if (request.ToDate.HasValue)
             {
-                query = query.Where(x => x.RequestDate <= request.ToDate.Value);
+                query = query.Where(x => x.ReturnDate <= request.ToDate.Value);
             }
 
             if (request.Problem.HasValue)
@@ -86,18 +86,25 @@ namespace Application.Features.SaleReturn.Queries
                 {
                     Id = x.Id,
                     ReturnNumber = x.ReturnNumber,
-                    RequestDate = x.RequestDate,
+                    ReturnDate = x.ReturnDate,
                     SaleId = x.SaleId,
                     SaleInvoiceNumber = x.Sale!.InvoiceNumber,
                     CustomerId = x.Sale!.CustomerId,
                     CustomerName = x.Sale!.Customer.FirstName + " " + x.Sale!.Customer.LastName,
-                    CreatedAt = x.CreatedAt,
+                    PreviousReturnId = x.PreviousReturnId,
                     Status = x.Status,
-                    DominantProblem = x.Claims.OrderByDescending(c => c.Quantity).Select(c => c.Problem).FirstOrDefault(),
+                    Problems = x.Claims.OrderByDescending(c => c.Quantity).Select(c => c.Problem).ToList(),
                     TotalQuantity = x.Claims.Sum(c => c.Quantity),
                     TotalAmount = (UInt64)x.Claims.Sum(c => (long)c.Quantity * (long)c.UnitPrice),
                 })
                 .ToPagedAsync(request.Page, request.Take, cancellationToken);
+
+            // Distinct() inside the projection is not reliably translatable to SQL, so the
+            // page is deduped after materialisation - the same reason signed image URLs are
+            // built here rather than in the projection. Ordering by claim quantity survives,
+            // so the old DominantProblem is simply Problems[0].
+            foreach (var item in paged.Items)
+                item.Problems = item.Problems.Distinct().ToList();
 
             res.Data = new
             {

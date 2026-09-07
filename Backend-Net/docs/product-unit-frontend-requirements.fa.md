@@ -92,7 +92,7 @@ ProductCode = x.Product.Code,
 |---|---|---|---|
 | کالا | `wholesalePrice` | `WholeSalePrice` | **قیمت عمده هرگز ذخیره نمی‌شد** |
 | کالا | `category` (نامِ متنی) | `ProductCategoryId` (عدد) | ۴۰۰ — `ProductCategoryId > 0` |
-| کالا | `imageUrl` | `ImageObjectKey` | تصویر به کالا وصل نمی‌شد |
+| کالا | `imageUrl` | `ImageObjectKey` — **⚠️ منسوخ: از ۱۴۰۵/۰۶/۱۶ نامِ فیلد در هر شش دستور `ImageKey` است، `image-serving-guide.fa.md` را ببینید** | تصویر به کالا وصل نمی‌شد |
 | تامین‌کننده | `lat` / `lng` | `Latitude` / `Longitude` | **موقعیت روی نقشه ذخیره نمی‌شد** |
 | مشتری | `phone` | `PhoneNumber` | **شماره تماس مشتری اصلاً ذخیره نمی‌شد** |
 | مشتری | `lat` / `lng` | `Latitude` / `Longitude` | **موقعیت روی نقشه ذخیره نمی‌شد** |
@@ -132,7 +132,7 @@ ProductCode = x.Product.Code,
 | `"barCode": "20260814000010"` (۱۴ رقم) | ۱۸ رقم |
 | `"barcodePayload"` ۲۱ رقمی | ۲۸ رقم |
 | «۱۴ رقمی … ۲۰ رقمی» در توضیح `ScanBarcodeQuery` | ۱۸ و ۲۸ |
-| `"imageUrl": null` در بدنه‌ی `CreateProduct` | فیلد در Command `ImageObjectKey` نام دارد |
+| `"imageUrl": null` در بدنه‌ی `CreateProduct` | فیلد در Command `ImageKey` نام دارد (تا ۱۴۰۵/۰۶/۱۶ `ImageObjectKey` بود) |
 
 ضمناً `GetPurchaseReceivingLabelsPdf` در کنترلر هست ولی در بخش ۸ سند مستند
 نشده.

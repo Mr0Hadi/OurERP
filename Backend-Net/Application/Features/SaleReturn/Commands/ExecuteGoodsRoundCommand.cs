@@ -1,9 +1,10 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
+using Application.Common.Dtos.Returns;
 using Application.Common.Enums;
 using Common.Exceptions;
 using Common.Extensions;
@@ -26,22 +27,6 @@ namespace Application.Features.SaleReturn.Commands
         public string? PartyName { get; set; }
         public string? PartyNationalId { get; set; }
         public string? VehiclePlate { get; set; }
-        public string? Note { get; set; }
-    }
-
-    public class GoodsRoundLineDto
-    {
-        public int EffectId { get; set; }
-        public int Quantity { get; set; }
-
-        /// <summary>GOODS_IN only: which portion of Quantity had a problem on arrival, and what problem.</summary>
-        public List<GoodsRoundObservationDto> Observations { get; set; } = new();
-    }
-
-    public class GoodsRoundObservationDto
-    {
-        public ReturnProblemEnum Problem { get; set; }
-        public int Quantity { get; set; }
         public string? Note { get; set; }
     }
 
@@ -102,17 +87,17 @@ namespace Application.Features.SaleReturn.Commands
 
                 var (claim, effect) = found;
 
-                if (effect.Kind is not (ReturnEffectKindEnum.GOODS_IN or ReturnEffectKindEnum.GOODS_OUT))
+                if (effect.Direction is not (ReturnEffectDirectionEnum.GOODS_IN or ReturnEffectDirectionEnum.GOODS_OUT))
                     throw new ValidationCustomException("فقط اثرهای کالایی می‌توانند اجرا شوند.");
 
                 if (line.Quantity > effect.UndoneQuantity)
                     throw new ValidationCustomException("مقدار اجرا از باقیمانده این اثر بیشتر است.");
 
-                var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == (effect.ProductId ?? claim.ProductId), cancellationToken)
+                var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == effect.ProductId, cancellationToken)
                     ?? throw new NotFoundCustomException("کالای مورد نظر یافت نشد.");
 
                 var observations = (line.Observations ?? new()).Where(o => o.Quantity > 0).ToList();
-                var healthyQty = effect.Kind == ReturnEffectKindEnum.GOODS_IN ? line.Quantity - observations.Sum(o => o.Quantity) : (int?)null;
+                var healthyQty = effect.Direction == ReturnEffectDirectionEnum.GOODS_IN ? line.Quantity - observations.Sum(o => o.Quantity) : (int?)null;
 
                 var round = new Domain.Entities.SaleReturnEffectRound
                 {
@@ -139,15 +124,20 @@ namespace Application.Features.SaleReturn.Commands
                 effect.History.Add(round);
                 effect.DoneQuantity += line.Quantity;
 
-                if (effect.Kind == ReturnEffectKindEnum.GOODS_IN)
+                if (effect.Direction == ReturnEffectDirectionEnum.GOODS_IN)
                 {
                     var restocked = healthyQty ?? line.Quantity;
                     var scrapped = line.Quantity - restocked;
                     product.Stock += restocked;
                     effect.RestockedQuantity = (effect.RestockedQuantity ?? 0) + restocked;
 
+                    // An OFF_ORDER claim has no sale line, so there are no SOLD units to restore - but
+                    // Product.Stock still went up, and skipping the unit work outright (as this used
+                    // to) silently broke the Stock == COUNT(IN_STOCK units) invariant. Mint instead.
                     if (claim.SaleItemId.HasValue)
                         await _productUnitService.RestoreAsync(claim.SaleItemId.Value, restocked, scrapped, cancellationToken);
+                    else
+                        await _productUnitService.MintAsync(product, restocked, null, cancellationToken);
 
                     if (restocked > 0)
                         await _inventoryCostingService.RecordSaleReturnRestockAsync(product, restocked, claim.SaleItemId, now, cancellationToken);
@@ -159,8 +149,10 @@ namespace Application.Features.SaleReturn.Commands
 
                     product.Stock -= line.Quantity;
 
-                    if (claim.SaleItemId.HasValue)
-                        await _productUnitService.ConsumeAsync(product, line.Quantity, claim.SaleItemId.Value, null, cancellationToken);
+                    // Same invariant: an OFF_ORDER claim's replacement shipment still decrements
+                    // Product.Stock, so it must consume units too. ConsumeAsync now takes a nullable
+                    // sale item for exactly this case.
+                    await _productUnitService.ConsumeAsync(product, line.Quantity, claim.SaleItemId, null, cancellationToken);
 
                     await _inventoryCostingService.RecordReplacementShippedToCustomerAsync(product, line.Quantity, claim.SaleItemId, now, cancellationToken);
                 }

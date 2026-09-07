@@ -1,4 +1,4 @@
-using Application.Common.Contracts.SaleReturn;
+﻿using Application.Common.Contracts.SaleReturn;
 using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,7 +29,13 @@ namespace Infrastructure.Services
                 .Include(x => x.Claims)
                     .ThenInclude(x => x.Resolutions)
                         .ThenInclude(x => x.Effects)
-                            .ThenInclude(x => x.MoneyParts);
+                            .ThenInclude(x => x.MoneyParts)
+                // An effect's product can differ from its claim's (a replacement), so the read side
+                // needs its own Product to name it rather than borrowing the claim's.
+                .Include(x => x.Claims)
+                    .ThenInclude(x => x.Resolutions)
+                        .ThenInclude(x => x.Effects)
+                            .ThenInclude(x => x.Product);
 
             if (includeSaleItems)
             {

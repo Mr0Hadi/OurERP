@@ -93,7 +93,7 @@ namespace Application.Features.Purchase.Queries
                 })
                 .ToListAsync(cancellationToken);
             foreach (var attachment in purchaseDto.Attachments)
-                attachment.Url = _objectStorageService.GetPresignedUrl(attachment.ObjectKey);
+                attachment.Url = _objectStorageService.GetFixedUrl(attachment.ObjectKey);
 
             res.Message = "اطلاعات خرید با موفقیت ارسال شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();

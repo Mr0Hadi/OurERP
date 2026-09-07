@@ -240,6 +240,39 @@ namespace WMS.Tests.Integration
             Assert.Equal("receiving/2026/09/fake.jpg", attachment.ObjectKey);
         }
 
+        // GetPurchaseDetail returns each attachment as { objectKey, url }. Update replaces the
+        // attachment list wholesale, so a frontend that re-sends what it read can easily put the
+        // url back into objectKey - the column must still end up holding the bare key, exactly as
+        // it does for Product/Customer/Supplier images.
+        [Fact]
+        public async Task UpdatePurchase_AttachmentUrlEchoedBack_PersistsTheBareKey()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 1, stock: 0);
+
+            var echoedUrl = FakeObjectStorage.Instance.GetFixedUrl("receiving/2026/09/fake.jpg");
+            Assert.StartsWith("http", echoedUrl);
+
+            await new UpdatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork)
+                .Handle(new UpdatePurchaseCommand
+                {
+                    Id = scenario.Purchase.Id,
+                    InvoiceNumber = "SUPPLIER-INV-2",
+                    InvoiceDate = DateTime.Now,
+                    Status = PurchaseStatusEnum.SHIPPED,
+                    PaymentType = PaymentTypeEnum.CASH,
+                    SupplierId = scenario.Supplier.Id,
+                    TotalAmount = 5000,
+                    PaidAmount = 0,
+                    Attachments = new() { new() { ObjectKey = echoedUrl! } },
+                }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            var attachment = verify.DocumentAttachments.Single(a => a.DocumentKind == DocumentKindEnum.PURCHASE && a.DocumentId == scenario.Purchase.Id);
+            Assert.Equal("receiving/2026/09/fake.jpg", attachment.ObjectKey);
+        }
+
         [Fact]
         public async Task CreatePurchase_AsProforma_WithoutInvoiceDate_PersistsNull()
         {

@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Contracts.UnitOfWork;
@@ -99,6 +99,18 @@ namespace Application.Features.SaleReturn.Commands
                     throw new ValidationCustomException($"مقدار ادعاشده برای «{saleItem.Product.Name}» از باقیمانده قابل مرجوع کردن این قلم بیشتر است.");
             }
 
+            // PreviousReturnId was a pure client-supplied pass-through: nothing checked that it
+            // pointed at a return on this same document, or that it existed at all. A cycle is not
+            // reachable here - a brand-new row cannot yet be anyone's target.
+            if (request.PreviousReturnId.HasValue)
+            {
+                var previousBelongsToDocument = await _context.SaleReturns
+                    .AnyAsync(x => x.Id == request.PreviousReturnId.Value && x.SaleId == request.SaleId, cancellationToken);
+
+                if (!previousBelongsToDocument)
+                    throw new ValidationCustomException("مرجوعی قبلی انتخاب‌شده معتبر نیست.");
+            }
+
             var now = DateTime.Now;
             var returnDate = request.ReturnDate ?? now;
             // Deliberately counts soft-deleted returns too, so a deleted return never frees up its number.
@@ -108,7 +120,7 @@ namespace Application.Features.SaleReturn.Commands
             {
                 ReturnNumber = Generator.GenerateSaleReturnNumber(returnCount + 1),
                 SaleId = request.SaleId,
-                RequestDate = returnDate,
+                ReturnDate = returnDate,
                 Status = ReturnStatusEnum.OPEN,
                 Description = request.Description,
                 PreviousReturnId = request.PreviousReturnId,

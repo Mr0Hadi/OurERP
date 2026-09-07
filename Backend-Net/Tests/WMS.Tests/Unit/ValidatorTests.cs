@@ -1,4 +1,4 @@
-using Application.Common.Dtos.Returns;
+﻿using Application.Common.Dtos.Returns;
 using Application.Features.Account.Command;
 using Application.Features.Purchase.Commands;
 using Application.Features.Purchase.Dtos;
@@ -125,7 +125,7 @@ namespace WMS.Tests.Unit
             var command = new Application.Features.PurchaseReturn.Commands.AddClaimResolutionCommand
             {
                 ClaimId = 0,
-                Composition = new EffectCompositionDto { Quantity = 1, Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.MONEY_OUT, Method = ReturnPaymentMethodEnum.CASH, Amount = 100 } },
+                Composition = new EffectCompositionDto { Quantity = 1, MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 100 } },
             };
 
             Assert.False(_sut.Validate(command).IsValid);
@@ -137,7 +137,7 @@ namespace WMS.Tests.Unit
             var command = new Application.Features.PurchaseReturn.Commands.AddClaimResolutionCommand
             {
                 ClaimId = 1,
-                Composition = new EffectCompositionDto { Quantity = 0, Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.MONEY_OUT, Method = ReturnPaymentMethodEnum.CASH, Amount = 100 } },
+                Composition = new EffectCompositionDto { Quantity = 0, MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 100 } },
             };
 
             Assert.False(_sut.Validate(command).IsValid);
@@ -164,7 +164,7 @@ namespace WMS.Tests.Unit
                 Composition = new EffectCompositionDto
                 {
                     Quantity = 1,
-                    Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.MONEY_OUT, Method = ReturnPaymentMethodEnum.MIXED, Amount = 100, Parts = new() },
+                    MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.MIXED, Amount = 100, Parts = new() },
                 },
             };
 
@@ -262,22 +262,42 @@ namespace WMS.Tests.Unit
             var command = new Application.Features.SaleReturn.Commands.AddClaimResolutionCommand
             {
                 ClaimId = 0,
-                Composition = new EffectCompositionDto { Quantity = 1, Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.MONEY_OUT, Method = ReturnPaymentMethodEnum.STORE_CREDIT, Amount = 100 } },
+                Composition = new EffectCompositionDto { Quantity = 1, MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.STORE_CREDIT, Amount = 100 } },
             };
 
             Assert.False(_sut.Validate(command).IsValid);
         }
 
+        // Replaces InvalidMoneyKind_IsInvalid. Money direction used to be a MoneyEffectDto.Kind
+        // field whose zero value was GOODS_IN, so a caller that simply omitted it got "جهت اثر مالی
+        // نامعتبر است." - which is what made every money-bearing resolution unpostable. Direction is
+        // structural now (MoneyIn/MoneyOut slots), so an invalid direction cannot be expressed and
+        // the interesting case is the one that used to fail: a money effect with nothing but a
+        // method and an amount.
         [Fact]
-        public void InvalidMoneyKind_IsInvalid()
+        public void MoneyEffectWithNoDirectionField_IsValid()
         {
             var command = new Application.Features.SaleReturn.Commands.AddClaimResolutionCommand
             {
                 ClaimId = 1,
-                Composition = new EffectCompositionDto { Quantity = 1, Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.GOODS_IN, Method = ReturnPaymentMethodEnum.CASH, Amount = 100 } },
+                Composition = new EffectCompositionDto { Quantity = 1, MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 100 } },
             };
 
-            Assert.False(_sut.Validate(command).IsValid);
+            var result = _sut.Validate(command);
+            Assert.True(result.IsValid, string.Join(" | ", result.Errors.Select(e => e.ErrorMessage)));
+        }
+
+        [Fact]
+        public void GoodsOnlyResolution_IsValid()
+        {
+            var command = new Application.Features.SaleReturn.Commands.AddClaimResolutionCommand
+            {
+                ClaimId = 1,
+                Composition = new EffectCompositionDto { Quantity = 2, GoodsIn = new GoodsEffectDto { Quantity = 2 } },
+            };
+
+            var result = _sut.Validate(command);
+            Assert.True(result.IsValid, string.Join(" | ", result.Errors.Select(e => e.ErrorMessage)));
         }
 
         [Fact]
@@ -286,7 +306,7 @@ namespace WMS.Tests.Unit
             var command = new Application.Features.SaleReturn.Commands.AddClaimResolutionCommand
             {
                 ClaimId = 1,
-                Composition = new EffectCompositionDto { Quantity = 2, Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.MONEY_OUT, Method = ReturnPaymentMethodEnum.STORE_CREDIT, Amount = 200 } },
+                Composition = new EffectCompositionDto { Quantity = 2, MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.STORE_CREDIT, Amount = 200 } },
             };
 
             Assert.True(_sut.Validate(command).IsValid);

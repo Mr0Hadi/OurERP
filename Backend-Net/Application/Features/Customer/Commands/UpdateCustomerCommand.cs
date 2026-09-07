@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Repositories;
+﻿using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
@@ -34,7 +34,12 @@ namespace Application.Features.Customer.Commands
         /// The ObjectKey returned by POST api/File/UploadImage (folder=CUSTOMERS), or the ImageKey
         /// read off the detail response to keep the existing image. Send null to clear it.
         /// </summary>
-        public string? ImageUrl { get; set; }
+        /// <summary>
+        /// The bucket object key returned as <c>objectKey</c> by POST api/File/UploadImage,
+        /// or as <c>imageKey</c> on any read response. A full image URL is also accepted and
+        /// normalized back down to the key - see IObjectStorageService.NormalizeKey.
+        /// </summary>
+        public string? ImageKey { get; set; }
         public decimal? Longitude { get; set; }
         public decimal? Latitude { get; set; }
     }
@@ -98,7 +103,7 @@ namespace Application.Features.Customer.Commands
             customer.City = request.City;
             // The column stores the bucket object key, so a signed URL echoed back by the frontend
             // is stripped down rather than persisted verbatim.
-            customer.ImageUrl = _objectStorageService.NormalizeKey(request.ImageUrl);
+            customer.ImageUrl = _objectStorageService.NormalizeKey(request.ImageKey);
             customer.Longitude = request.Longitude;
             customer.Latitude = request.Latitude;
             customer.Description = request.Description;

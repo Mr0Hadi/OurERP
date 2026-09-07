@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
@@ -45,6 +45,15 @@ namespace Application.Features.PurchaseReturn.Queries
             var untouched = _purchaseReturnCalculationService.IsUntouched(purchaseReturn);
             var totalAmount = (UInt64)purchaseReturn.Claims.Sum(c => (long)c.Quantity * (long)c.UnitPrice);
 
+            // The related return is a plain FK on the entity; resolve its number here so the
+            // client can name it without a second round-trip.
+            var previousReturnNumber = purchaseReturn.PreviousReturnId == null
+                ? null
+                : await _context.PurchaseReturns
+                    .Where(x => x.Id == purchaseReturn.PreviousReturnId.Value)
+                    .Select(x => x.ReturnNumber)
+                    .FirstOrDefaultAsync(cancellationToken);
+
             res.Data = new PurchaseReturnDetailDto
             {
                 Id = purchaseReturn.Id,
@@ -56,8 +65,7 @@ namespace Application.Features.PurchaseReturn.Queries
                 SupplierName = purchaseReturn.Purchase.Supplier.CompanyName,
                 Description = purchaseReturn.Description,
                 PreviousReturnId = purchaseReturn.PreviousReturnId,
-                CreatedAt = purchaseReturn.CreatedAt,
-                UpdatedAt = purchaseReturn.UpdatedAt,
+                PreviousReturnNumber = previousReturnNumber,
                 Status = purchaseReturn.Status,
                 TotalAmount = totalAmount,
                 TotalQuantity = purchaseReturn.ClaimedQuantity,
@@ -74,15 +82,14 @@ namespace Application.Features.PurchaseReturn.Queries
                         PurchaseId = img.PurchaseId,
                         PurchaseReturnId = img.PurchaseReturnId,
                         ObjectKey = img.ObjectKey,
-                        Url = _objectStorageService.GetPresignedUrl(img.ObjectKey),
+                        Url = _objectStorageService.GetFixedUrl(img.ObjectKey),
                         FileName = img.FileName,
                         Note = img.Note,
-                        CreatedAt = img.CreatedAt,
+                        UploadedAt = img.CreatedAt,
                     }).ToList(),
                 Claims = purchaseReturn.Claims.Select(c => new PurchaseReturnClaimDto
                 {
                     Id = c.Id,
-                    PurchaseReturnId = c.PurchaseReturnId,
                     Scope = c.Scope,
                     OffScopeKind = c.OffScopeKind,
                     PurchaseItemId = c.PurchaseItemId,
@@ -94,31 +101,28 @@ namespace Application.Features.PurchaseReturn.Queries
                     Quantity = c.Quantity,
                     Problem = c.Problem,
                     Note = c.Note,
-                    CreatedAt = c.CreatedAt,
                     DecidedQuantity = c.DecidedQuantity,
                     RemainingQuantity = c.RemainingQuantity,
                     Resolutions = c.Resolutions.Select(r => new PurchaseReturnResolutionDto
                     {
                         Id = r.Id,
-                        PurchaseReturnClaimId = r.PurchaseReturnClaimId,
                         Quantity = r.Quantity,
                         Note = r.Note,
-                        CreatedAt = r.CreatedAt,
+                        DecidedAt = r.CreatedAt,
                         Effects = r.Effects.Select(e => new PurchaseReturnEffectDto
                         {
                             Id = e.Id,
-                            PurchaseReturnResolutionId = e.PurchaseReturnResolutionId,
-                            Kind = e.Kind,
+                            Direction = e.Direction,
                             Quantity = e.Quantity,
                             DoneQuantity = e.DoneQuantity,
                             RestockedQuantity = e.RestockedQuantity,
                             ProductId = e.ProductId,
+                            ProductName = e.Product != null ? e.Product.Name : null,
                             Amount = e.Amount,
                             Method = e.Method,
                             Reference = e.Reference,
                             Note = e.Note,
                             Status = e.Status,
-                            CreatedAt = e.CreatedAt,
                             AppliedAt = e.AppliedAt,
                             MoneyParts = e.MoneyParts.Select(p => new PurchaseReturnEffectMoneyPartDto
                             {
@@ -138,7 +142,6 @@ namespace Application.Features.PurchaseReturn.Queries
                                 PartyNationalId = h.PartyNationalId,
                                 VehiclePlate = h.VehiclePlate,
                                 Note = h.Note,
-                                CreatedAt = h.CreatedAt,
                                 Observations = h.Observations.Select(o => new PurchaseReturnEffectObservationDto
                                 {
                                     Id = o.Id,

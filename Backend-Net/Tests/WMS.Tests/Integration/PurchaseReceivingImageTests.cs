@@ -1,4 +1,4 @@
-using Application.Features.Purchase.Commands;
+﻿using Application.Features.Purchase.Commands;
 using Application.Features.Purchase.Dtos;
 using Application.Features.PurchaseReturn.Dtos;
 using Application.Features.PurchaseReturn.Queries;
@@ -88,7 +88,7 @@ namespace WMS.Tests.Integration
             var info = (PurchaseReceivingInfoDto)(await infoHandler.Handle(new GetPurchaseReceivingInfoQuery { PurchaseId = scenario.Purchase.Id }, CancellationToken.None)).Data!;
 
             Assert.Equal(2, info.ReceivingImages.Count);
-            Assert.All(info.ReceivingImages, img => Assert.Contains(img.ObjectKey, img.Url));
+            Assert.All(info.ReceivingImages, img => Assert.Equal(img.ObjectKey, FakeObjectStorage.Instance.NormalizeKey(img.Url)));
         }
     }
 }

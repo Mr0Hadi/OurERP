@@ -18,6 +18,15 @@ namespace Application.Common.Contracts.Storage
         public string BucketName { get; set; } = string.Empty;
 
         /// <summary>
+        /// This API's own publicly reachable base URL, e.g. <c>https://api.example.ir</c>. Image
+        /// URLs point back here rather than at the bucket, because Liara's storage edge answers
+        /// 404 to browser User-Agents (see <see cref="IObjectStorageService"/>). Must be set per
+        /// environment - left blank, image URLs come out relative (<c>/api/File/GetImage?...</c>),
+        /// which only resolves for a frontend served from this same origin.
+        /// </summary>
+        public string PublicBaseUrl { get; set; } = string.Empty;
+
+        /// <summary>
         /// The bucket is private, so every URL handed to the browser is a short-lived signed one.
         /// Keep this comfortably longer than a page view but far shorter than a cache lifetime.
         /// </summary>

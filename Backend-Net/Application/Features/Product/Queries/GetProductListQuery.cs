@@ -100,7 +100,7 @@ namespace Application.Features.Product.Queries
             // Signing happens after materialization - GetPresignedUrl is a local method call and
             // could not be translated into the SQL projection above.
             foreach (var item in paged.Items)
-                item.ImageUrl = _objectStorageService.GetPresignedUrl(item.ImageKey);
+                item.ImageUrl = _objectStorageService.GetFixedUrl(item.ImageKey);
 
             res.Data = new
             {

@@ -7,13 +7,13 @@ namespace Domain.Entities
     /// One of the four base movements (GOODS_IN/GOODS_OUT/MONEY_OUT/MONEY_IN) a resolution is
     /// composed of. Goods effects (Quantity/DoneQuantity/RestockedQuantity/ProductId snapshot) and
     /// money effects (Amount/Method/Reference/Parts) share this one row shape - only the fields
-    /// relevant to the effect's Kind are populated, matching the frontend's Effect object exactly.
+    /// relevant to the effect's Direction are populated, matching the frontend's Effect object exactly.
     /// </summary>
     public class PurchaseReturnEffect
     {
         public int Id { get; set; }
         public int PurchaseReturnResolutionId { get; set; }
-        public ReturnEffectKindEnum Kind { get; set; }
+        public ReturnEffectDirectionEnum Direction { get; set; }
 
         // Goods effects only (GOODS_IN / GOODS_OUT).
         public int Quantity { get; set; }
