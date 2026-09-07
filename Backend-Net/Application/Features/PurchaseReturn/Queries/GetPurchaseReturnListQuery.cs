@@ -14,6 +14,11 @@ namespace Application.Features.PurchaseReturn.Queries
         public int Page { get; set; } = 1;
         public int Take { get; set; } = 10;
         public string? Search { get; set; }
+        /// <summary>All returns filed against one purchase - the sale side already had the
+        /// equivalent SaleId filter, so this was the only way a document's returns could not be
+        /// pulled together. Combined with PreviousReturnId on each row it is what makes a chain
+        /// of related returns visible.</summary>
+        public int? PurchaseId { get; set; }
         public int? SupplierId { get; set; }
         public ReturnStatusEnum? Status { get; set; }
         public ReturnProblemEnum? Problem { get; set; }
@@ -47,6 +52,11 @@ namespace Application.Features.PurchaseReturn.Queries
                 query = query.Where(x => x.ReturnNumber.Contains(search) ||
                                          x.Purchase.InvoiceNumber.Contains(search) ||
                                          x.Purchase.Supplier.CompanyName.Contains(search));
+            }
+
+            if (request.PurchaseId.HasValue)
+            {
+                query = query.Where(x => x.PurchaseId == request.PurchaseId.Value);
             }
 
             if (request.SupplierId.HasValue)

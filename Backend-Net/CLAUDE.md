@@ -659,6 +659,12 @@ Everything else in the same pass:
   on the *same* document, or that it existed at all. `Create{Purchase,Sale}ReturnCommand` now
   validate it (a cycle is unreachable on create: a brand-new row cannot yet be anyone's target).
   Detail gained `PreviousReturnNumber`; the list DTOs gained `PreviousReturnId`.
+  **`GetPurchaseReturnListQuery` also gained a `PurchaseId` filter** - `GetSaleReturnListQuery` had
+  had the mirror-image `SaleId` filter all along, so a purchase's returns simply could not be pulled
+  together, which made the chain unusable on that side. Deliberately *not* built: an enumeration of
+  sibling returns on the detail response. `?purchaseId=` plus `previousReturnId` on each row is
+  enough for a client to reconstruct "these two or three returns belong to one purchase and follow
+  each other", and that is the whole requirement.
 - **Invoice PDF identity boxes now form a real grid.** A QuestPDF `Row` shares out width among its
   own `RelativeItem`s, so weights only align across rows if every row sums to the same total. The
   three rows in `ComposePartyBox` summed to 7, 8 and 7. All three now sum to 4 x `FieldColumnUnits`,
