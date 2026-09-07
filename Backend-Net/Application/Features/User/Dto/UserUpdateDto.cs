@@ -8,7 +8,8 @@ namespace Application.Features.User.Dto
 		public string Username { get; set; }
 		public string FirstName { get; set; }
 		public string LastName { get; set; }
-		public int? TeamId { get; set; }
+        public string PersonelCode { get; set; }
+        public int? TeamId { get; set; }
 		public int DepartmentId { get; set; }
 		public bool IsActive { get; set; }
 	}
