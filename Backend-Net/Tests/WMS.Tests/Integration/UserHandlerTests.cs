@@ -1,4 +1,4 @@
-using Application.Common.Contracts.UserContextService;
+﻿using Application.Common.Contracts.UserContextService;
 using Application.Features.User.Command;
 using Application.Features.User.Dto;
 using Application.Features.User.Query;
@@ -237,7 +237,7 @@ namespace WMS.Tests.Integration
             scope.Context.Users.Add(user);
             scope.Context.SaveChanges();
 
-            var handler = new DeleteUserCommandHandler(scope.UserRepository, scope.UnitOfWork);
+            var handler = new DeleteUserCommandHandler(scope.UserRepository, scope.OrgRoleService, scope.UnitOfWork);
             await handler.Handle(new DeleteUserCommand { Id = user.Id }, CancellationToken.None);
 
             using var verify = db.NewContext();
@@ -361,7 +361,7 @@ namespace WMS.Tests.Integration
             scope.Context.Users.Add(user);
             scope.Context.SaveChanges();
 
-            var handler = new ChangeUserTeamCommandHandler(scope.UserRepository, scope.DepartmentRepository, scope.TeamRepository, scope.UnitOfWork);
+            var handler = new ChangeUserTeamCommandHandler(scope.UserRepository, scope.DepartmentRepository, scope.TeamRepository, scope.OrgRoleService, scope.UnitOfWork);
             await handler.Handle(new ChangeUserTeamCommand
             {
                 UserId = user.Id,
@@ -394,7 +394,7 @@ namespace WMS.Tests.Integration
             oldTeam.HeadId = user.Id;
             scope.Context.SaveChanges();
 
-            var handler = new ChangeUserTeamCommandHandler(scope.UserRepository, scope.DepartmentRepository, scope.TeamRepository, scope.UnitOfWork);
+            var handler = new ChangeUserTeamCommandHandler(scope.UserRepository, scope.DepartmentRepository, scope.TeamRepository, scope.OrgRoleService, scope.UnitOfWork);
             await handler.Handle(new ChangeUserTeamCommand
             {
                 UserId = user.Id,
@@ -421,7 +421,7 @@ namespace WMS.Tests.Integration
             scope.Context.Users.Add(user);
             scope.Context.SaveChanges();
 
-            var handler = new ChangeUserTeamCommandHandler(scope.UserRepository, scope.DepartmentRepository, scope.TeamRepository, scope.UnitOfWork);
+            var handler = new ChangeUserTeamCommandHandler(scope.UserRepository, scope.DepartmentRepository, scope.TeamRepository, scope.OrgRoleService, scope.UnitOfWork);
 
             await Assert.ThrowsAsync<NotFoundCustomException>(() => handler.Handle(new ChangeUserTeamCommand
             {

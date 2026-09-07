@@ -131,7 +131,7 @@ namespace WMS.Tests.Integration
                 Composition = new EffectCompositionDto
                 {
                     Quantity = 3,
-                    Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.MONEY_IN, Method = ReturnPaymentMethodEnum.CASH, Amount = 3 * scenario.Item.UnitPrice },
+                    MoneyIn = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 3 * scenario.Item.UnitPrice },
                 },
             }, CancellationToken.None);
 
@@ -331,7 +331,7 @@ namespace WMS.Tests.Integration
             await addHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 3, Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.MONEY_IN, Method = ReturnPaymentMethodEnum.CASH, Amount = 300 } },
+                Composition = new EffectCompositionDto { Quantity = 3, MoneyIn = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 300 } },
             }, CancellationToken.None);
 
             var returnId = scope.Context.PurchaseReturns.Single().Id;
@@ -434,7 +434,7 @@ namespace WMS.Tests.Integration
 
             var list = ((System.Collections.Generic.IEnumerable<PendingEffectDto>)res.Data!.GetType().GetProperty("PendingEffects")!.GetValue(res.Data)!).ToList();
             var pending = Assert.Single(list);
-            Assert.Equal(ReturnEffectKindEnum.GOODS_IN, pending.Kind);
+            Assert.Equal(ReturnEffectDirectionEnum.GOODS_IN, pending.Direction);
         }
     }
 }

@@ -29,12 +29,12 @@ namespace Application.Features.Product.Commands
         public int Tax { get; set; }
         public int Stock { get; set; }
         public int LowStockThreshold { get; set; }
-
         /// <summary>
-        /// The ObjectKey returned by POST api/File/UploadImage (folder=PRODUCTS). A full signed
-        /// URL is also accepted and normalized back down to the key - see IObjectStorageService.
+        /// The bucket object key returned as <c>objectKey</c> by POST api/File/UploadImage,
+        /// or as <c>imageKey</c> on any read response. A full image URL is also accepted and
+        /// normalized back down to the key - see IObjectStorageService.NormalizeKey.
         /// </summary>
-        public string? ImageObjectKey { get; set; }
+        public string? ImageKey { get; set; }
         public int ProductCategoryId { get; set; }
     }
 
@@ -84,8 +84,9 @@ namespace Application.Features.Product.Commands
             product.CreatedAt = DateTime.Now;
             product.UpdatedAt = DateTime.Now;
 
-            // The column stores the bucket object key, never a URL - signed URLs expire.
-            product.ImageUrl = _objectStorageService.NormalizeKey(request.ImageObjectKey);
+            // The column stores the bucket object key, never a URL - a browser-facing image URL
+            // echoed back by the frontend is stripped down rather than persisted verbatim.
+            product.ImageUrl = _objectStorageService.NormalizeKey(request.ImageKey);
 
             // Code/BarCode are NOT NULL and only computable once the row has an Id, so the first
             // save needs a placeholder. A Guid rather than "" so a concurrent create can't collide

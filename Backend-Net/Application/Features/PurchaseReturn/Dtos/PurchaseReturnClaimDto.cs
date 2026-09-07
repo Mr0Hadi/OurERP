@@ -1,11 +1,10 @@
-using Domain.Enums;
+﻿using Domain.Enums;
 
 namespace Application.Features.PurchaseReturn.Dtos
 {
     public class PurchaseReturnClaimDto
     {
         public int Id { get; set; }
-        public int PurchaseReturnId { get; set; }
         public ReturnClaimScopeEnum Scope { get; set; }
         public ReturnOffScopeKindEnum? OffScopeKind { get; set; }
         public int? PurchaseItemId { get; set; }
@@ -17,7 +16,6 @@ namespace Application.Features.PurchaseReturn.Dtos
         public int Quantity { get; set; }
         public ReturnProblemEnum Problem { get; set; }
         public string? Note { get; set; }
-        public DateTime CreatedAt { get; set; }
         public int DecidedQuantity { get; set; }
         public int RemainingQuantity { get; set; }
         public List<PurchaseReturnResolutionDto> Resolutions { get; set; } = new();

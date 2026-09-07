@@ -1,10 +1,11 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Barcode;
 using Application.Common.Contracts.Documents;
 using Application.Common.Contracts.Invoice;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductCode;
 using Application.Common.Contracts.ProductUnit;
+using Application.Common.Contracts.OrgStructure;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.SaleReturn;
@@ -57,6 +58,7 @@ namespace Infrastructure.Ioc
 
             services.AddScoped<ITokenService, TokenService>();
 
+            services.AddScoped<IOrgRoleService, OrgRoleService>();
             services.AddScoped<IPurchaseReturnCalculationService, PurchaseReturnCalculationService>();
             services.AddScoped<IPurchaseReturnQueryService, PurchaseReturnQueryService>();
 
@@ -110,7 +112,7 @@ namespace Infrastructure.Ioc
                 var config = new AmazonS3Config
                 {
                     ServiceURL = options.Endpoint,
-                    ForcePathStyle = true,
+                    //ForcePathStyle = true,
 
                     // AWS SDK v4 defaults both of these to WHEN_SUPPORTED, which makes every
                     // PutObject stream its body as `Content-Encoding: aws-chunked` with a

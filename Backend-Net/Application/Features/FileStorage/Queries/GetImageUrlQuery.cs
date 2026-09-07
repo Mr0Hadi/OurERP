@@ -38,14 +38,14 @@ namespace Application.Features.FileStorage.Queries
         {
             var res = new ResponseDto();
 
-            // Signing is local crypto, so there is nothing to await - the Task is only here
-            // because IRequestHandler demands it (see CLAUDE.md section 3, "Async design").
+            // Accepts a bare key or a previously-issued image URL; both come back as the key, so a
+            // frontend can hand this whatever it happens to be holding.
             var key = _objectStorageService.NormalizeKey(request.ObjectKey);
 
             res.Data = new
             {
                 ObjectKey = key,
-                Url = _objectStorageService.GetPresignedUrl(key),
+                Url = _objectStorageService.GetFixedUrl(key)
             };
             res.Message = "آدرس تصویر با موفقیت ارسال شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();

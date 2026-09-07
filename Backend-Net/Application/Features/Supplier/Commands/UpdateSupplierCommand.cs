@@ -30,7 +30,12 @@ namespace Application.Features.Supplier.Commands
         /// The ObjectKey returned by POST api/File/UploadImage (folder=SUPPLIERS), or the ImageKey
         /// read off the detail response to keep the existing image. Send null to clear it.
         /// </summary>
-        public string? ImageUrl { get; set; }
+        /// <summary>
+        /// The bucket object key returned as <c>objectKey</c> by POST api/File/UploadImage,
+        /// or as <c>imageKey</c> on any read response. A full image URL is also accepted and
+        /// normalized back down to the key - see IObjectStorageService.NormalizeKey.
+        /// </summary>
+        public string? ImageKey { get; set; }
         public string? Description { get; set; }
         public UInt64? Balance { get; set; }
         public BalanceTypeEnum? BalanceType { get; set; }
@@ -98,7 +103,7 @@ namespace Application.Features.Supplier.Commands
             supplier.BalanceType = request.BalanceType;
             // The column stores the bucket object key, so a signed URL echoed back by the frontend
             // is stripped down rather than persisted verbatim.
-            supplier.ImageUrl = _objectStorageService.NormalizeKey(request.ImageUrl);
+            supplier.ImageUrl = _objectStorageService.NormalizeKey(request.ImageKey);
             supplier.Longitude = request.Longitude;
             supplier.Latitude = request.Latitude;
             supplier.Description = request.Description;

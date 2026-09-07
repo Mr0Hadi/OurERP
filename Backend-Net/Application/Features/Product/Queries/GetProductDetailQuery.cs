@@ -31,7 +31,7 @@ namespace Application.Features.Product.Queries
 
             var data = await _productRepository.GetByIdAsync(request.Id, cancellationToken) ?? throw new NotFoundCustomException("محصول مورد نظر یافت نشد.");
             var dto = _mapper.Map<ProductDto>(data);
-            dto.ImageUrl = _objectStorageService.GetPresignedUrl(dto.ImageKey);
+            dto.ImageUrl = _objectStorageService.GetFixedUrl(dto.ImageKey);
 
             res.Data = dto;
 

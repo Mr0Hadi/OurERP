@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.ProductCode;
 using Application.Common.Contracts.ProductUnit;
 using Common.Exceptions;
@@ -50,7 +50,7 @@ namespace Infrastructure.Services
             return units;
         }
 
-        public async Task<List<Domain.Entities.ProductUnit>> ConsumeAsync(Domain.Entities.Product product, int count, int saleItemId, List<string>? explicitBarcodes, CancellationToken cancellationToken)
+        public async Task<List<Domain.Entities.ProductUnit>> ConsumeAsync(Domain.Entities.Product product, int count, int? saleItemId, List<string>? explicitBarcodes, CancellationToken cancellationToken)
         {
             var units = new List<Domain.Entities.ProductUnit>();
             if (count <= 0)
@@ -118,6 +118,24 @@ namespace Infrastructure.Services
                     ? ProductUnitStatusEnum.IN_STOCK
                     : ProductUnitStatusEnum.SCRAPPED;
             }
+        }
+
+        public async Task ReturnToSupplierAsync(Domain.Entities.Product product, int count, CancellationToken cancellationToken)
+        {
+            if (count <= 0)
+                return;
+
+            var units = await _context.ProductUnits
+                .Where(x => x.ProductId == product.Id && x.Status == ProductUnitStatusEnum.IN_STOCK)
+                .OrderBy(x => x.SerialNumber)
+                .Take(count)
+                .ToListAsync(cancellationToken);
+
+            if (units.Count < count)
+                throw new ValidationCustomException($"تعداد کافی از دانه‌های موجود «{product.Name}» در انبار برای ثبت این عودت وجود ندارد.");
+
+            foreach (var unit in units)
+                unit.Status = ProductUnitStatusEnum.RETURNED_TO_SUPPLIER;
         }
 
         public async Task ReconcileStockAsync(Domain.Entities.Product product, int newStock, CancellationToken cancellationToken)

@@ -6,7 +6,7 @@ namespace Domain.Enums
     /// returns: on a sale return GOODS_IN is "customer sends goods back", on a purchase return
     /// GOODS_IN is "supplier sends a replacement" - same shape, different counterparty.
     /// </summary>
-    public enum ReturnEffectKindEnum
+    public enum ReturnEffectDirectionEnum
     {
         GOODS_IN,
         GOODS_OUT,

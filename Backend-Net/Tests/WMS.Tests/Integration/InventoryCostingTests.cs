@@ -1,4 +1,4 @@
-using Application.Features.Purchase.Commands;
+﻿using Application.Features.Purchase.Commands;
 using Application.Features.Sale.Commands;
 using Application.Features.SaleReturn.Commands;
 using Application.Common.Dtos.Returns;
@@ -141,7 +141,7 @@ namespace WMS.Tests.Integration
             var saleReturn = new Domain.Entities.SaleReturn
             {
                 ReturnNumber = "SR-" + Guid.NewGuid().ToString("N")[..8],
-                RequestDate = DateTime.Now,
+                ReturnDate = DateTime.Now,
                 Status = ReturnStatusEnum.OPEN,
                 SaleId = scenario.Sale.Id,
                 Claims = new() { claim },
@@ -161,7 +161,7 @@ namespace WMS.Tests.Integration
                 Composition = new EffectCompositionDto
                 {
                     Quantity = 2,
-                    Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.MONEY_OUT, Amount = 100_000, Method = ReturnPaymentMethodEnum.CASH },
+                    MoneyOut = new MoneyEffectDto { Amount = 100_000, Method = ReturnPaymentMethodEnum.CASH },
                 },
             }, CancellationToken.None);
 

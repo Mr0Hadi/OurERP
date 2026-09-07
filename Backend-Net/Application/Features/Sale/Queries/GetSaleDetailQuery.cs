@@ -86,7 +86,7 @@ namespace Application.Features.Sale.Queries
                 })
                 .ToListAsync(cancellationToken);
             foreach (var attachment in attachments)
-                attachment.Url = _objectStorageService.GetPresignedUrl(attachment.ObjectKey);
+                attachment.Url = _objectStorageService.GetFixedUrl(attachment.ObjectKey);
             ((SaleDto)res.Data).Attachments = attachments;
 
             res.Message = "اطلاعات فروش با موفقیت ارسال شد.";

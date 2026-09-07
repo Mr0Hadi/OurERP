@@ -1,4 +1,5 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.ProductCode;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -34,11 +35,13 @@ namespace Application.Features.Product.Queries
     {
         private readonly IWMSDbContext _context;
         private readonly IProductCodeService _productCodeService;
+        private readonly IObjectStorageService _objectStorageService;
 
-        public ScanBarcodeQueryHandler(IWMSDbContext context, IProductCodeService productCodeService)
+        public ScanBarcodeQueryHandler(IWMSDbContext context, IProductCodeService productCodeService, IObjectStorageService objectStorageService)
         {
             _context = context;
             _productCodeService = productCodeService;
+            _objectStorageService = objectStorageService;
         }
 
         public async Task<ResponseDto> Handle(ScanBarcodeQuery request, CancellationToken cancellationToken)
@@ -81,7 +84,12 @@ namespace Application.Features.Product.Queries
                     Tax = product.Tax,
                     Stock = product.Stock,
                     LowStockThreshold = product.LowStockThreshold,
-                    ImageUrl = product.ImageUrl,
+                    // Product.ImageUrl is the bucket KEY. Every other read path splits it into
+                    // ImageKey (stable) + ImageUrl (browser-loadable); this one used to hand the
+                    // raw key back as "imageUrl", which an <img src> resolves against the
+                    // frontend's own origin - a broken image on the scan screen.
+                    ImageKey = product.ImageUrl,
+                    ImageUrl = _objectStorageService.GetFixedUrl(product.ImageUrl),
                     ProductCategoryId = product.ProductCategoryId,
                 },
                 Unit = unit == null ? null : new ProductUnitDto

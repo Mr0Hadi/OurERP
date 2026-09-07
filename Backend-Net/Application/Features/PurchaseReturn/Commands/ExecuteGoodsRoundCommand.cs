@@ -1,9 +1,10 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
+using Application.Common.Dtos.Returns;
 using Application.Common.Enums;
 using Application.Features.PurchaseReturn.Dtos;
 using Common.Exceptions;
@@ -87,17 +88,17 @@ namespace Application.Features.PurchaseReturn.Commands
 
                 var (claim, effect) = found;
 
-                if (effect.Kind is not (ReturnEffectKindEnum.GOODS_IN or ReturnEffectKindEnum.GOODS_OUT))
+                if (effect.Direction is not (ReturnEffectDirectionEnum.GOODS_IN or ReturnEffectDirectionEnum.GOODS_OUT))
                     throw new ValidationCustomException("فقط اثرهای کالایی می‌توانند اجرا شوند.");
 
                 if (line.Quantity > effect.UndoneQuantity)
                     throw new ValidationCustomException("مقدار اجرا از باقیمانده این اثر بیشتر است.");
 
-                var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == (effect.ProductId ?? claim.ProductId), cancellationToken)
+                var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == effect.ProductId, cancellationToken)
                     ?? throw new NotFoundCustomException("کالای مورد نظر یافت نشد.");
 
                 var observations = (line.Observations ?? new()).Where(o => o.Quantity > 0).ToList();
-                var healthyQty = effect.Kind == ReturnEffectKindEnum.GOODS_IN ? line.Quantity - observations.Sum(o => o.Quantity) : (int?)null;
+                var healthyQty = effect.Direction == ReturnEffectDirectionEnum.GOODS_IN ? line.Quantity - observations.Sum(o => o.Quantity) : (int?)null;
 
                 var round = new Domain.Entities.PurchaseReturnEffectRound
                 {
@@ -124,7 +125,7 @@ namespace Application.Features.PurchaseReturn.Commands
                 effect.History.Add(round);
                 effect.DoneQuantity += line.Quantity;
 
-                if (effect.Kind == ReturnEffectKindEnum.GOODS_IN)
+                if (effect.Direction == ReturnEffectDirectionEnum.GOODS_IN)
                 {
                     var restocked = healthyQty ?? line.Quantity;
                     product.Stock += restocked;
@@ -145,17 +146,7 @@ namespace Application.Features.PurchaseReturn.Commands
                     product.Stock -= line.Quantity;
                     await _inventoryCostingService.RecordPurchaseReturnShippedToSupplierAsync(product, line.Quantity, now, cancellationToken);
 
-                    // No existing IProductUnitService method fits "goods leaving to a supplier"
-                    // (ConsumeAsync marks units SOLD, which is the wrong status here) - flip the
-                    // oldest IN_STOCK units for this product directly.
-                    var unitsToReturn = await _context.ProductUnits
-                        .Where(u => u.ProductId == product.Id && u.Status == ProductUnitStatusEnum.IN_STOCK)
-                        .OrderBy(u => u.SerialNumber)
-                        .Take(line.Quantity)
-                        .ToListAsync(cancellationToken);
-
-                    foreach (var unit in unitsToReturn)
-                        unit.Status = ProductUnitStatusEnum.RETURNED_TO_SUPPLIER;
+                    await _productUnitService.ReturnToSupplierAsync(product, line.Quantity, cancellationToken);
                 }
 
                 if (effect.DoneQuantity >= effect.Quantity)

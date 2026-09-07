@@ -1,4 +1,4 @@
-using Application.Common.Dtos.Returns;
+﻿using Application.Common.Dtos.Returns;
 using Application.Features.Invoice.Queries;
 using Application.Features.SaleReturn.Commands;
 using Domain.Enums;
@@ -79,7 +79,7 @@ namespace WMS.Tests.Integration
                 Composition = new EffectCompositionDto
                 {
                     Quantity = 5,
-                    Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.MONEY_OUT, Method = ReturnPaymentMethodEnum.CASH, Amount = 5 * scenario.Item.UnitPrice },
+                    MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 5 * scenario.Item.UnitPrice },
                 },
             }, CancellationToken.None);
 

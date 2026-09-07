@@ -1,4 +1,4 @@
-namespace Application.Common.Contracts.ProductUnit
+﻿namespace Application.Common.Contracts.ProductUnit
 {
     /// <summary>
     /// Keeps Domain.Entities.ProductUnit rows in sync with Product.Stock at every point that
@@ -18,7 +18,7 @@ namespace Application.Common.Contracts.ProductUnit
         /// <paramref name="explicitBarcodes"/> is given (the seller scanned specific units),
         /// those exact units are consumed; otherwise the oldest IN_STOCK units (FIFO by serial) are picked.
         /// </summary>
-        Task<List<Domain.Entities.ProductUnit>> ConsumeAsync(Domain.Entities.Product product, int count, int saleItemId, List<string>? explicitBarcodes, CancellationToken cancellationToken);
+        Task<List<Domain.Entities.ProductUnit>> ConsumeAsync(Domain.Entities.Product product, int count, int? saleItemId, List<string>? explicitBarcodes, CancellationToken cancellationToken);
 
         /// <summary>
         /// Called from ConfirmReturnInspectionCommand: puts <paramref name="healthyCount"/> of the
@@ -26,6 +26,14 @@ namespace Application.Common.Contracts.ProductUnit
         /// SCRAPPED (defective/damaged units never return to sellable stock).
         /// </summary>
         Task RestoreAsync(int saleItemId, int healthyCount, int scrapCount, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Marks <paramref name="count"/> IN_STOCK units RETURNED_TO_SUPPLIER (FIFO by serial) - goods
+        /// physically leaving us back to a supplier on a purchase return. ConsumeAsync marks units SOLD,
+        /// which is the wrong status here, so PurchaseReturn.ExecuteGoodsRoundCommand used to query and
+        /// mutate ProductUnits by hand instead of going through this service.
+        /// </summary>
+        Task ReturnToSupplierAsync(Domain.Entities.Product product, int count, CancellationToken cancellationToken);
 
         /// <summary>
         /// Reconciles ProductUnit rows to a manually-edited Stock value from UpdateProductCommand:

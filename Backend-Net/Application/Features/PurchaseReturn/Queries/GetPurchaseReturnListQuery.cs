@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.PurchaseReturn.Dtos;
@@ -85,13 +85,20 @@ namespace Application.Features.PurchaseReturn.Queries
                     PurchaseInvoiceNumber = x.Purchase.InvoiceNumber,
                     SupplierId = x.Purchase.SupplierId,
                     SupplierName = x.Purchase.Supplier.CompanyName,
-                    CreatedAt = x.CreatedAt,
+                    PreviousReturnId = x.PreviousReturnId,
                     Status = x.Status,
-                    DominantProblem = x.Claims.OrderByDescending(c => c.Quantity).Select(c => c.Problem).FirstOrDefault(),
+                    Problems = x.Claims.OrderByDescending(c => c.Quantity).Select(c => c.Problem).ToList(),
                     TotalQuantity = x.Claims.Sum(c => c.Quantity),
                     TotalAmount = (UInt64)x.Claims.Sum(c => (long)c.Quantity * (long)c.UnitPrice),
                 })
                 .ToPagedAsync(request.Page, request.Take, cancellationToken);
+
+            // Distinct() inside the projection is not reliably translatable to SQL, so the
+            // page is deduped after materialisation - the same reason signed image URLs are
+            // built here rather than in the projection. Ordering by claim quantity survives,
+            // so the old DominantProblem is simply Problems[0].
+            foreach (var item in paged.Items)
+                item.Problems = item.Problems.Distinct().ToList();
 
             res.Data = new
             {

@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Documents;
+﻿using Application.Common.Contracts.Documents;
 using Common.Extensions;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -147,6 +147,9 @@ namespace Infrastructure.Services
         /// always carries our own company even on a purchase invoice (we are still the issuer),
         /// matching what the Excel implementation does.
         /// </summary>
+        /// <summary>Width of one column of the identity-box field grid; every row spans 4 of these.</summary>
+        private const uint FieldColumnUnits = 2;
+
         private static void ComposePartyBox(IContainer container, string title, PartyInfo party)
         {
             container.Border(1).BorderColor(BorderColor).Column(col =>
@@ -158,25 +161,30 @@ namespace Infrastructure.Services
                 {
                     inner.Spacing(3);
 
+                    // A QuestPDF Row shares out its own width among its own RelativeItems, so weights
+                    // only line up across rows if every row sums to the same total. These three used
+                    // to sum to 7, 8 and 7, which is why the boxes never formed a grid. All three now
+                    // sum to FieldGridUnits over a 4-column grid: the wide fields span whole columns
+                    // (نام spans 2, نشانی spans 3) instead of taking an arbitrary weight.
                     inner.Item().Row(row =>
                     {
-                        Field(row, 3, "نام", party.Name);
-                        Field(row, 2, "شماره اقتصادی", party.EconomicCode?.ToPersianDigits());
-                        Field(row, 2, "شماره ثبت", party.RegistrationNumber?.ToPersianDigits());
+                        Field(row, 2 * FieldColumnUnits, "نام", party.Name);
+                        Field(row, FieldColumnUnits, "شماره اقتصادی", party.EconomicCode?.ToPersianDigits());
+                        Field(row, FieldColumnUnits, "شماره ثبت", party.RegistrationNumber?.ToPersianDigits());
                     });
 
                     inner.Item().Row(row =>
                     {
-                        Field(row, 2, "استان", party.Province);
-                        Field(row, 2, "شهر", party.City);
-                        Field(row, 2, "کد پستی", party.PostalCode?.ToPersianDigits());
-                        Field(row, 2, "شناسه ملی", party.NationalId?.ToPersianDigits());
+                        Field(row, FieldColumnUnits, "استان", party.Province);
+                        Field(row, FieldColumnUnits, "شهر", party.City);
+                        Field(row, FieldColumnUnits, "کد پستی", party.PostalCode?.ToPersianDigits());
+                        Field(row, FieldColumnUnits, "شناسه ملی", party.NationalId?.ToPersianDigits());
                     });
 
                     inner.Item().Row(row =>
                     {
-                        Field(row, 5, "نشانی", party.Address);
-                        Field(row, 2, "تلفن", party.PhoneNumber?.ToPersianDigits());
+                        Field(row, 3 * FieldColumnUnits, "نشانی", party.Address);
+                        Field(row, FieldColumnUnits, "تلفن", party.PhoneNumber?.ToPersianDigits());
                     });
                 });
             });

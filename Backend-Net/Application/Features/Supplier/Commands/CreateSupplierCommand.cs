@@ -30,7 +30,12 @@ namespace Application.Features.Supplier.Commands
         /// The ObjectKey returned by POST api/File/UploadImage (folder=SUPPLIERS). A full signed
         /// URL is also accepted and normalized back down to the key - see IObjectStorageService.
         /// </summary>
-        public string? ImageUrl { get; set; }
+        /// <summary>
+        /// The bucket object key returned as <c>objectKey</c> by POST api/File/UploadImage,
+        /// or as <c>imageKey</c> on any read response. A full image URL is also accepted and
+        /// normalized back down to the key - see IObjectStorageService.NormalizeKey.
+        /// </summary>
+        public string? ImageKey { get; set; }
         public string? Description { get; set; }
         public UInt64? Balance { get; set; }
         public BalanceTypeEnum BalanceType { get; set; }
@@ -83,8 +88,7 @@ namespace Application.Features.Supplier.Commands
 
             var newSupplier = _mapper.Map<Domain.Entities.Supplier>(request);
 
-            // The column stores the bucket object key, never a URL - signed URLs expire.
-            newSupplier.ImageUrl = _objectStorageService.NormalizeKey(request.ImageUrl);
+            newSupplier.ImageUrl = _objectStorageService.NormalizeKey(request.ImageKey);
 
             await _supplierRepository.AddAsync(newSupplier, cancellationToken);
             await _unitOfWork.SaveChangesAsync();

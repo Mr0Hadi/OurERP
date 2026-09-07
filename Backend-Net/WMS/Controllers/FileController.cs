@@ -49,7 +49,29 @@ namespace WMS.Controllers
             });
         }
 
-        /// <summary>Re-signs a stored key - signed URLs expire, keys do not.</summary>
+        /// <summary>
+        /// Streams the stored object itself. This is what every ImageUrl in the API points at -
+        /// a browser cannot load a Liara storage URL directly (their edge 404s browser
+        /// User-Agents), so the bytes come back through here, where the AWS SDK fetches them
+        /// server-side.
+        ///
+        /// [AllowAnonymous] because an &lt;img src&gt; cannot send an Authorization header. That
+        /// grants nothing that was not already public: the bucket itself serves these objects to
+        /// any unauthenticated caller today. If the bucket is ever made private, this endpoint has
+        /// to grow an expiring signed token of its own rather than simply being re-[Authorize]d,
+        /// or every image in the frontend breaks again.
+        /// </summary>
+        [AllowAnonymous]
+        [HttpGet("GetImage")]
+        public async Task<IActionResult> GetImage([FromQuery] GetImageFileQuery request)
+        {
+            var file = await _mediator.Send(request);
+
+            // No download file name - this must render inline in an <img>, not save to disk.
+            return File(file.Content, file.ContentType);
+        }
+
+        /// <summary>Rebuilds the browser-loadable URL for a stored key.</summary>
         [HttpGet("GetImageUrl")]
         public async Task<ActionResult<ResponseDto>> GetImageUrl([FromQuery] GetImageUrlQuery request)
         {

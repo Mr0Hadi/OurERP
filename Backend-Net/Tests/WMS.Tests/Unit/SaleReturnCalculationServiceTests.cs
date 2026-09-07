@@ -1,4 +1,4 @@
-using Application.Common.Dtos.Returns;
+﻿using Application.Common.Dtos.Returns;
 using Domain.Entities;
 using Domain.Enums;
 using Infrastructure.Services;
@@ -118,7 +118,7 @@ namespace WMS.Tests.Unit
                     new SaleReturnClaim
                     {
                         Quantity = 3,
-                        Resolutions = { new SaleReturnResolution { Quantity = 3, Effects = { new SaleReturnEffect { Kind = ReturnEffectKindEnum.MONEY_OUT, Status = ReturnEffectStatusEnum.APPLIED } } } },
+                        Resolutions = { new SaleReturnResolution { Quantity = 3, Effects = { new SaleReturnEffect { Direction = ReturnEffectDirectionEnum.MONEY_OUT, Status = ReturnEffectStatusEnum.APPLIED } } } },
                     },
                 },
             };
@@ -232,7 +232,7 @@ namespace WMS.Tests.Unit
             var effects = _sut.ExpandComposition(composition, DateTime.Now);
 
             var effect = Assert.Single(effects);
-            Assert.Equal(ReturnEffectKindEnum.GOODS_IN, effect.Kind);
+            Assert.Equal(ReturnEffectDirectionEnum.GOODS_IN, effect.Direction);
             Assert.Equal(3, effect.Quantity);
             Assert.Equal(ReturnEffectStatusEnum.PENDING, effect.Status);
         }
@@ -243,13 +243,13 @@ namespace WMS.Tests.Unit
             var composition = new EffectCompositionDto
             {
                 Quantity = 2,
-                Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.MONEY_OUT, Method = ReturnPaymentMethodEnum.STORE_CREDIT, Amount = 200 },
+                MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.STORE_CREDIT, Amount = 200 },
             };
 
             var effects = _sut.ExpandComposition(composition, DateTime.Now);
 
             var effect = Assert.Single(effects);
-            Assert.Equal(ReturnEffectKindEnum.MONEY_OUT, effect.Kind);
+            Assert.Equal(ReturnEffectDirectionEnum.MONEY_OUT, effect.Direction);
             Assert.Equal(200UL, effect.Amount);
             Assert.Equal(ReturnEffectStatusEnum.APPLIED, effect.Status);
             Assert.NotNull(effect.AppliedAt);
@@ -262,14 +262,14 @@ namespace WMS.Tests.Unit
             {
                 Quantity = 2,
                 GoodsOut = new GoodsEffectDto { Quantity = 2 },
-                Money = new MoneyEffectDto { Kind = ReturnEffectKindEnum.MONEY_IN, Method = ReturnPaymentMethodEnum.CASH, Amount = 50 },
+                MoneyIn = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 50 },
             };
 
             var effects = _sut.ExpandComposition(composition, DateTime.Now);
 
             Assert.Equal(2, effects.Count);
-            Assert.Contains(effects, e => e.Kind == ReturnEffectKindEnum.GOODS_OUT);
-            Assert.Contains(effects, e => e.Kind == ReturnEffectKindEnum.MONEY_IN);
+            Assert.Contains(effects, e => e.Direction == ReturnEffectDirectionEnum.GOODS_OUT);
+            Assert.Contains(effects, e => e.Direction == ReturnEffectDirectionEnum.MONEY_IN);
         }
     }
 }

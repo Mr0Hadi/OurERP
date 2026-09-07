@@ -90,7 +90,7 @@ namespace Application.Features.Supplier.Queries
             // literal values.
             foreach (var item in paged.Items)
             {
-                item.ImageUrl = _objectStorageService.GetPresignedUrl(item.ImageKey);
+                item.ImageUrl = _objectStorageService.GetFixedUrl(item.ImageKey);
                 item.Status = item.BalanceType.HasValue ? item.BalanceType.Value.GetDescription() : null;
             }
 

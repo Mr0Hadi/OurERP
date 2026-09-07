@@ -51,7 +51,7 @@ namespace Application.Features.Invoice.Queries
 
             var settledEffects = saleReturn.Claims
                 .SelectMany(claim => claim.Resolutions.SelectMany(r => r.Effects.Select(e => (claim, effect: e))))
-                .Where(x => x.effect.Kind == ReturnEffectKindEnum.MONEY_OUT)
+                .Where(x => x.effect.Direction == ReturnEffectDirectionEnum.MONEY_OUT)
                 .ToList();
 
             if (settledEffects.Count == 0)

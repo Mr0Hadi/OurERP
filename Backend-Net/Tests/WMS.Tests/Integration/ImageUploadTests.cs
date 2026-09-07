@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Storage;
+﻿using Application.Common.Contracts.Storage;
 using Application.Common.Enums;
 using Application.Features.Customer.Commands;
 using Application.Features.Customer.Dtos;
@@ -41,10 +41,67 @@ namespace WMS.Tests.Integration
             }, CancellationToken.None);
 
             var uploaded = Assert.IsType<UploadedFileDto>(res.Data);
-            Assert.StartsWith("products/", uploaded.ObjectKey);
-            Assert.EndsWith(".png", uploaded.ObjectKey);
-            Assert.Contains(uploaded.ObjectKey, uploaded.Url);
+            // Keys keep the uploader's own file name so the bucket listing stays readable.
+            Assert.Equal("shelf.png", uploaded.ObjectKey);
+            Assert.Equal(uploaded.ObjectKey, storage.NormalizeKey(uploaded.Url));
             Assert.True(storage.Objects.ContainsKey(uploaded.ObjectKey));
+        }
+
+        // Before this, the key WAS the raw file name, so a second "logo.png" silently replaced the
+        // first one's bytes - and the first entity's ImageUrl then pointed at the wrong picture.
+        [Fact]
+        public async Task UploadImage_SameFileNameTwice_SuffixesTheKeyAndKeepsBothObjects()
+        {
+            var storage = new FakeObjectStorage();
+            var handler = MakeUploadHandler(storage);
+
+            async Task<UploadedFileDto> Upload(byte[] bytes) =>
+                Assert.IsType<UploadedFileDto>((await handler.Handle(new UploadImageCommand
+                {
+                    Content = new MemoryStream(bytes),
+                    FileName = "logo.png",
+                    ContentType = "image/png",
+                    Length = bytes.Length,
+                    Folder = ImageFolderEnum.PRODUCTS,
+                }, CancellationToken.None)).Data);
+
+            var first = await Upload(new byte[] { 1, 1, 1 });
+            var second = await Upload(new byte[] { 2, 2, 2 });
+            var third = await Upload(new byte[] { 3, 3, 3 });
+
+            Assert.Equal("logo.png", first.ObjectKey);
+            Assert.Equal("logo-1.png", second.ObjectKey);
+            Assert.Equal("logo-2.png", third.ObjectKey);
+
+            // The point of the exercise: the first upload's bytes are still there.
+            Assert.Equal(new byte[] { 1, 1, 1 }, storage.Objects["logo.png"]);
+            Assert.Equal(new byte[] { 2, 2, 2 }, storage.Objects["logo-1.png"]);
+            Assert.Equal(3, storage.Objects.Count);
+        }
+
+        // The file name is client-controlled and becomes the key verbatim, so it must not be able
+        // to choose its own prefix in the bucket.
+        [Theory]
+        [InlineData("../../evil.png", "evil.png")]
+        [InlineData("products/2026/logo.png", "logo.png")]
+        [InlineData("C:\\Users\\alisi\\Desktop\\photo.png", "photo.png")]
+        [InlineData("  spaced.png  ", "spaced.png")]
+        public async Task UploadImage_FileNameIsReducedToASinglePathSegment(string sent, string expectedKey)
+        {
+            var storage = new FakeObjectStorage();
+
+            var uploaded = Assert.IsType<UploadedFileDto>((await MakeUploadHandler(storage).Handle(new UploadImageCommand
+            {
+                Content = Bytes(),
+                FileName = sent,
+                ContentType = "image/png",
+                Length = 16,
+                Folder = ImageFolderEnum.PRODUCTS,
+            }, CancellationToken.None)).Data);
+
+            Assert.Equal(expectedKey, uploaded.ObjectKey);
+            Assert.DoesNotContain('/', uploaded.ObjectKey);
+            Assert.DoesNotContain('\\', uploaded.ObjectKey);
         }
 
         [Fact]
@@ -126,7 +183,7 @@ namespace WMS.Tests.Integration
             var key = (string?)payload.GetProperty("ObjectKey")!.GetValue(res.Data);
 
             Assert.Equal("products/abc.png", key);
-            Assert.Contains("products/abc.png", url);
+            Assert.Equal("products/abc.png", storage.NormalizeKey(url));
         }
 
         // The point of NormalizeKey: a frontend that reads ImageUrl off a detail response and
@@ -148,7 +205,7 @@ namespace WMS.Tests.Integration
             var detail = (ProductDto)(await detailHandler.Handle(new GetProductDetailQuery { Id = productId }, CancellationToken.None)).Data!;
 
             Assert.Equal("products/original.png", detail.ImageKey);
-            Assert.StartsWith(FakeObjectStorage.Host, detail.ImageUrl);
+            Assert.StartsWith(FakeObjectStorage.ApiHost, detail.ImageUrl);
 
             // Echo the signed URL back, exactly as a naive frontend would.
             var updateHandler = new UpdateProductCommandHandler(scope.ProductRepository, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork);
@@ -164,7 +221,7 @@ namespace WMS.Tests.Integration
                 Tax = 9,
                 Stock = 0,
                 LowStockThreshold = 1,
-                ImageObjectKey = detail.ImageUrl,
+                ImageKey = detail.ImageUrl,
                 ProductCategoryId = scope.Context.ProductCategories.Single().Id,
             }, CancellationToken.None);
 
@@ -187,7 +244,7 @@ namespace WMS.Tests.Integration
                 Address = "تهران",
                 PostalCode = "1234567890",
                 BalanceType = BalanceTypeEnum.Debtor,
-                ImageUrl = "customers/ali.jpg",
+                ImageKey = "customers/ali.jpg",
             }, CancellationToken.None);
 
             var customerId = scope.Context.Customers.Single().Id;
@@ -196,14 +253,14 @@ namespace WMS.Tests.Integration
                 .Handle(new GetCustomerDetailQuery { Id = customerId }, CancellationToken.None)).Data!;
 
             Assert.Equal("customers/ali.jpg", detail.ImageKey);
-            Assert.Contains("customers/ali.jpg", detail.ImageUrl);
+            Assert.Equal("customers/ali.jpg", FakeObjectStorage.Instance.NormalizeKey(detail.ImageUrl));
 
             var listRes = await new GetCustomerListQueryHandler(scope.Db, FakeObjectStorage.Instance)
                 .Handle(new GetCustomerListQuery(), CancellationToken.None);
 
             var listItem = Assert.Single(ItemsOf<CustomerListDto>(listRes.Data!, "CustomerList"));
             Assert.Equal("customers/ali.jpg", listItem.ImageKey);
-            Assert.Contains("customers/ali.jpg", listItem.ImageUrl);
+            Assert.Equal("customers/ali.jpg", FakeObjectStorage.Instance.NormalizeKey(listItem.ImageUrl));
         }
 
         [Fact]
@@ -222,7 +279,7 @@ namespace WMS.Tests.Integration
                     Address = "تهران",
                     PostalCode = "1234567890",
                     BalanceType = BalanceTypeEnum.Creditor,
-                    ImageUrl = "suppliers/logo.png",
+                    ImageKey = "suppliers/logo.png",
                 }, CancellationToken.None);
 
             var supplierId = scope.Context.Suppliers.Single().Id;
@@ -231,14 +288,14 @@ namespace WMS.Tests.Integration
                 .Handle(new GetSupplierDetailQuery { Id = supplierId }, CancellationToken.None)).Data!;
 
             Assert.Equal("suppliers/logo.png", detail.ImageKey);
-            Assert.Contains("suppliers/logo.png", detail.ImageUrl);
+            Assert.Equal("suppliers/logo.png", FakeObjectStorage.Instance.NormalizeKey(detail.ImageUrl));
 
             var listRes = await new GetSupplierListQueryHandler(scope.Db, FakeObjectStorage.Instance)
                 .Handle(new GetSupplierListQuery(), CancellationToken.None);
 
             var listItem = Assert.Single(ItemsOf<SupplierListDto>(listRes.Data!, "SupplierList"));
             Assert.Equal("suppliers/logo.png", listItem.ImageKey);
-            Assert.Contains("suppliers/logo.png", listItem.ImageUrl);
+            Assert.Equal("suppliers/logo.png", FakeObjectStorage.Instance.NormalizeKey(listItem.ImageUrl));
         }
 
         [Fact]
@@ -258,7 +315,39 @@ namespace WMS.Tests.Integration
             Assert.Null(detail.ImageUrl);
         }
 
-        private static CreateProductCommand NewProduct(Infrastructure.Persistence.WMSDbContext context, string? imageUrl)
+        // The reason images are served through this API at all: Liara's storage edge answers a
+        // plain "404 page not found" to any request carrying a browser User-Agent, so a bucket URL
+        // in an <img src> can never load. GetFixedUrl must therefore point at api/File/GetImage on
+        // our own host - never at the bucket - and GetImageFileQuery must serve the bytes.
+        [Fact]
+        public async Task ImageUrl_PointsAtThisApiRatherThanTheBucket_AndServesTheBytes()
+        {
+            var storage = new FakeObjectStorage();
+
+            var uploaded = Assert.IsType<UploadedFileDto>((await MakeUploadHandler(storage)
+                .Handle(new UploadImageCommand
+                {
+                    Content = new MemoryStream(new byte[] { 1, 2, 3, 4 }),
+                    FileName = "logo.png",
+                    ContentType = "image/png",
+                    Length = 4,
+                    Folder = ImageFolderEnum.PRODUCTS,
+                }, CancellationToken.None)).Data);
+
+            Assert.StartsWith($"{FakeObjectStorage.ApiHost}/api/File/GetImage", uploaded.Url);
+            Assert.DoesNotContain(FakeObjectStorage.Host, uploaded.Url);
+
+            // ...and that URL, fed straight back in, resolves to the object's bytes.
+            var file = await new GetImageFileQueryHandler(storage)
+                .Handle(new GetImageFileQuery { ObjectKey = uploaded.Url! }, CancellationToken.None);
+
+            Assert.Equal(new byte[] { 1, 2, 3, 4 }, file.Content);
+
+            await Assert.ThrowsAsync<NotFoundCustomException>(() => new GetImageFileQueryHandler(storage)
+                .Handle(new GetImageFileQuery { ObjectKey = "products/not-there.png" }, CancellationToken.None));
+        }
+
+        private static CreateProductCommand NewProduct(Infrastructure.Persistence.WMSDbContext context, string? imageKey)
         {
             var category = context.ProductCategories.FirstOrDefault();
             if (category == null)
@@ -279,7 +368,7 @@ namespace WMS.Tests.Integration
                 Tax = 9,
                 Stock = 0,
                 LowStockThreshold = 1,
-                ImageObjectKey = imageUrl,
+                ImageKey = imageKey,
                 ProductCategoryId = category.Id,
             };
         }

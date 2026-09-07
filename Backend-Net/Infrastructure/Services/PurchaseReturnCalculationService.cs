@@ -1,4 +1,4 @@
-using Application.Common.Contracts.PurchaseReturn;
+﻿using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Dtos.Returns;
 using Domain.Entities;
 using Domain.Enums;
@@ -84,7 +84,7 @@ namespace Infrastructure.Services
             {
                 effects.Add(new PurchaseReturnEffect
                 {
-                    Kind = ReturnEffectKindEnum.GOODS_IN,
+                    Direction = ReturnEffectDirectionEnum.GOODS_IN,
                     Quantity = goodsIn.Quantity,
                     ProductId = goodsIn.ProductId,
                     Status = ReturnEffectStatusEnum.PENDING,
@@ -96,7 +96,7 @@ namespace Infrastructure.Services
             {
                 effects.Add(new PurchaseReturnEffect
                 {
-                    Kind = ReturnEffectKindEnum.GOODS_OUT,
+                    Direction = ReturnEffectDirectionEnum.GOODS_OUT,
                     Quantity = goodsOut.Quantity,
                     ProductId = goodsOut.ProductId,
                     Status = ReturnEffectStatusEnum.PENDING,
@@ -104,11 +104,17 @@ namespace Infrastructure.Services
                 });
             }
 
-            if (composition.Money is { Amount: > 0 } money)
+            AddMoney(composition.MoneyIn, ReturnEffectDirectionEnum.MONEY_IN);
+            AddMoney(composition.MoneyOut, ReturnEffectDirectionEnum.MONEY_OUT);
+
+            void AddMoney(MoneyEffectDto? money, ReturnEffectDirectionEnum direction)
             {
+                if (money is not { Amount: > 0 })
+                    return;
+
                 var effect = new PurchaseReturnEffect
                 {
-                    Kind = money.Kind,
+                    Direction = direction,
                     Amount = money.Amount,
                     Method = money.Method,
                     Reference = money.Reference,

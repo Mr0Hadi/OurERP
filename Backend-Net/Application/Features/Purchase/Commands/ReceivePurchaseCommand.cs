@@ -112,16 +112,12 @@ namespace Application.Features.Purchase.Commands
 
             foreach (var image in request.Images ?? new())
             {
-                // Whatever the client sent - a bare key or a (possibly expired) signed URL - only
-                // the stable object key is ever persisted.
-                var objectKey = _objectStorageService.NormalizeKey(image.ObjectKey);
-                if (string.IsNullOrWhiteSpace(objectKey))
-                    continue;
-
                 await _context.PurchaseReceivingImages.AddAsync(new PurchaseReceivingImage
                 {
                     PurchaseId = purchase.Id,
-                    ObjectKey = objectKey,
+                    // Stored as the bare bucket key, so a browser-facing image URL echoed back by
+                    // the frontend is stripped down rather than persisted verbatim.
+                    ObjectKey = _objectStorageService.NormalizeKey(image.ObjectKey) ?? image.ObjectKey,
                     FileName = image.FileName,
                     Note = image.Note,
                     CreatedAt = now,

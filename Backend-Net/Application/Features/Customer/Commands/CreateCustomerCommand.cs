@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Repositories;
+﻿using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
@@ -34,7 +34,12 @@ namespace Application.Features.Customer.Commands
         /// The ObjectKey returned by POST api/File/UploadImage (folder=CUSTOMERS). A full signed
         /// URL is also accepted and normalized back down to the key - see IObjectStorageService.
         /// </summary>
-        public string? ImageUrl { get; set; }
+        /// <summary>
+        /// The bucket object key returned as <c>objectKey</c> by POST api/File/UploadImage,
+        /// or as <c>imageKey</c> on any read response. A full image URL is also accepted and
+        /// normalized back down to the key - see IObjectStorageService.NormalizeKey.
+        /// </summary>
+        public string? ImageKey { get; set; }
         public decimal? Longitude { get; set; }
         public decimal? Latitude { get; set; }
     }
@@ -83,7 +88,7 @@ namespace Application.Features.Customer.Commands
             var newCustomer = _mapper.Map<Domain.Entities.Customer>(request);
 
             // The column stores the bucket object key, never a URL - signed URLs expire.
-            newCustomer.ImageUrl = _objectStorageService.NormalizeKey(request.ImageUrl);
+            newCustomer.ImageUrl = _objectStorageService.NormalizeKey(request.ImageKey);
 
             await _customerRepository.AddAsync(newCustomer, cancellationToken);
             await _unitOfWork.SaveChangesAsync();

@@ -1,4 +1,4 @@
-using Application.Common.Dtos;
+﻿using Application.Common.Dtos;
 using Application.Features.Customer.Commands;
 using Application.Features.Customer.Dtos;
 using Application.Features.Department.Commands;
@@ -54,6 +54,11 @@ namespace Application.Common.Mapping
 				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
 			CreateMap<CreateProductCommand, Product>()
+				// The command carries ImageKey (a bucket object key); the entity column is called
+				// ImageUrl but holds that same key. The handler assigns it through
+				// IObjectStorageService.NormalizeKey, so AutoMapper must not set it by convention -
+				// that would let a full URL echoed back by the frontend land in the column verbatim.
+				.ForMember(dest => dest.ImageUrl, opt => opt.Ignore())
 				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
 			// The entity's ImageUrl column holds the bucket object key (signed URLs expire, so
@@ -70,6 +75,11 @@ namespace Application.Common.Mapping
 			CreateMap<ProductCategory, ProductCategoryDto>();
 
 			CreateMap<CreateSupplierCommand, Supplier>()
+				// The command carries ImageKey (a bucket object key); the entity column is called
+				// ImageUrl but holds that same key. The handler assigns it through
+				// IObjectStorageService.NormalizeKey, so AutoMapper must not set it by convention -
+				// that would let a full URL echoed back by the frontend land in the column verbatim.
+				.ForMember(dest => dest.ImageUrl, opt => opt.Ignore())
 				.ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.Now))
 				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
@@ -87,6 +97,11 @@ namespace Application.Common.Mapping
 				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
 			CreateMap<CreateCustomerCommand, Customer>()
+				// The command carries ImageKey (a bucket object key); the entity column is called
+				// ImageUrl but holds that same key. The handler assigns it through
+				// IObjectStorageService.NormalizeKey, so AutoMapper must not set it by convention -
+				// that would let a full URL echoed back by the frontend land in the column verbatim.
+				.ForMember(dest => dest.ImageUrl, opt => opt.Ignore())
 				.ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.Now))
 				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 

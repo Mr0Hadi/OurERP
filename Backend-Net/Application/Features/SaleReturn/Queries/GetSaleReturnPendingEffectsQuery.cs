@@ -50,7 +50,7 @@ namespace Application.Features.SaleReturn.Queries
                     SaleReturnId = x.returnDoc.Id,
                     ReturnNumber = x.returnDoc.ReturnNumber,
                     ClaimId = x.claim.Id,
-                    Kind = x.effect.Kind,
+                    Direction = x.effect.Direction,
                     ProductId = x.effect.ProductId ?? x.claim.ProductId,
                     ProductCode = x.claim.Product?.Code ?? string.Empty,
                     ProductName = x.claim.Product?.Name ?? string.Empty,

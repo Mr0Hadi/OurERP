@@ -198,7 +198,7 @@ Backend-Net/
 - **Not implemented from the frontend's mock**: the frontend also computes a client-side-only `TRACKABLE` pseudo-status for purchases with reported-but-not-yet-formalized issues (`toVirtualReturnEntry`/`getAllTrackableEntries`). The backend doesn't need this: `ReceivePurchaseCommand` always formalizes issues into a real `PENDING` `PurchaseReturn` immediately (see "one growing return" above), so there's never a gap between "issue reported" and "trackable record exists" to paper over.
 - **Namespace shadowing gotcha** (still applies, now bites in more places): files inside `Application.Features.PurchaseReturn.Commands`/`Queries` and `Application.Common.Contracts.PurchaseReturn`/`Infrastructure.Services` (where `IPurchaseReturnCalculationService` lives) — and anything else nested under a namespace that has `Application.Common.Contracts.PurchaseReturn` as a sibling, e.g. `IWMSDbContext` in `Application.Common.Contracts.Context` — must qualify entities as `Domain.Entities.PurchaseReturn`/`Domain.Entities.Purchase` where the simple name would otherwise resolve to the namespace segment instead of the type.
 - Shipped as migration `20260805211146_purchase-return-lifecycle` (built on top of the last real committed migration, `20260802220706_purchase-return-model`; the intermediate uncommitted `20260805194243_add-purchase-return` migration from the abandoned first rebuild was discarded rather than layered on top). **Not yet applied to any database** — run `dotnet ef database update --project Infrastructure --startup-project WMS` before testing against a real DB.
-- The `WarehouseReceiving` feature (old purchase-side) remains deleted from the first rebuild; only `GetWarehouseReceiveSaleListQuery` survives, still unwired.
+- The `WarehouseReceiving` feature folder is **gone entirely** (deleted 2026-09-07). Its last survivor, `GetWarehouseReceiveSaleListQuery`, was never wired to a controller and had no references outside its own folder.
 
 **Sale shipping & sale returns (2026-08-10).** Built from a business-scenario spec (`docs/return-scenarios-guide.fa.md` section 2, `docs/sale-return-guide.fa.md`) mirroring the `PurchaseReturn` architecture, since no sale-side equivalent existed at all before this. Full detail in `docs/sale-return-guide.fa.md`; summary:
 
@@ -511,6 +511,177 @@ in `docs/frontend-enum-contract.fa.md` itself (now carries ✅ SOLVED markers th
   0 errors. Tests: 335/336 pass — the one failure is the pre-existing, already-documented
   `GetCustomerList_WithStoredImageKey_AndUnconfiguredBucket_StillReturns200` gap (see the
   pre-invoice section above), unrelated to this pass.
+
+**Images are served through the API, not by linking at the bucket (2026-09-07).** Full detail in
+`docs/image-serving-guide.fa.md` / `.en.md`. Summary:
+
+- **Liara's storage edge 404s browser User-Agents.** Any request to `*.storage.c2.liara.site` whose
+  `User-Agent` contains Mozilla/Chrome/Safari/Firefox gets a plain-text `404 page not found` from
+  their router, never reaching the S3 gateway — regardless of path-style vs virtual-host, public vs
+  presigned, HTTP/1.1 vs HTTP/2, or whether the object exists. Proven by header bisection against a
+  known-good object. **No bucket URL can ever load in a browser**, so the signing code was never the
+  problem.
+- **This cannot be fixed in the frontend.** `User-Agent` is a forbidden header name — `fetch` drops
+  it and `XMLHttpRequest.setRequestHeader` refuses ("Refused to set unsafe header"). The one header
+  Liara filters on is the one header a browser never lets JS set. Tested from a real cross-origin
+  page: fetch, fetch+UA, XHR and `<img>` all fail.
+- **`GET api/File/GetImage?objectKey=…`** (`[AllowAnonymous]`, returns `FileResponseDto` via
+  `File(content, contentType)` with no download filename) streams the object server-side, where the
+  SDK's User-Agent is not blocked. Anonymous because `<img src>` cannot send a bearer token; grants
+  nothing new since the bucket is already public-read.
+- **`IObjectStorageService.GetFixedUrl` now returns `{PublicBaseUrl}/api/File/GetImage?objectKey=…`**
+  — our host, never the bucket. The name was kept so all 15 call sites are unchanged. New
+  `DownloadAsync` → `StoredFileDto`. `GetExpirableUrl` still presigns the bucket directly and is now
+  documented **server-to-server only**. `NormalizeKey` was restored and extended to strip our own
+  `?objectKey=` URL (the key is in the query string, not the path) — it had been deleted, and is
+  required again because `ImageUrl` on a read response is now an API URL that a frontend may echo
+  back into an update.
+- **New config `ObjectStorage:PublicBaseUrl`** — this API's own public base URL; must be set per
+  environment. Blank ⇒ relative URLs, which only work same-origin.
+- **`CorsSettings:AllowedOrigins` was `["localhost"]`** — a bare host, not an origin, so
+  `WithOrigins()` matched nothing and **no** browser call from the Vite dev server ever got an
+  `Access-Control-Allow-Origin` (login and lists included; there is no Vite proxy). Fixed to
+  `http://localhost:5173` / `http://127.0.0.1:5173`; **add the production origin before deploying**.
+- **`DisablePayloadSigning` was deliberately NOT restored** — `RequestChecksumCalculation.WHEN_REQUIRED`
+  in the DI registration already handles the `aws-chunked` framing issue; verified byte-identical
+  uploads without it.
+- **Object keys are the uploader's file name, de-duplicated with a numeric suffix**
+  (`logo.png` → `logo-1.png` → `logo-2.png`) rather than the GUID scheme `BuildObjectKey` used to
+  generate — a deliberate choice so the bucket listing stays recognisable. `ResolveAvailableKeyAsync`
+  probes with `ExistsAsync` up to 50 times, then falls back to a GUID suffix rather than failing the
+  upload. **It is check-then-put, not atomic:** this provider *ignores* `If-None-Match: *` (verified
+  against the live bucket — the second PUT returned 200 and clobbered the first), so the race window
+  is one round-trip, versus the old behaviour of overwriting on every same-name upload.
+  `SanitizeFileName` reduces the client-controlled name to a single path segment (both `/` and `\`
+  regardless of host OS, since it comes off an HTTP request), stripping control characters,
+  surrounding whitespace and leading/trailing dots, so `../../evil.png` cannot pick its own prefix.
+  Keys remain guessable by design, on a bucket that is public-read.
+- **`UploadImageCommandHandler` checks the extension allow-list against the TRIMMED file name** —
+  `"  photo.png  "` used to yield extension `".png  "` and be rejected.
+- **`ImageFolderEnum folder` is still accepted and validated but unused** — keys are flat.
+- **Two round-trip bugs found by auditing all 28 consumers of the service, both fixed:**
+  (a) `CreatePurchaseCommand`/`UpdatePurchaseCommand`/`CreateSaleCommand`/`UpdateSaleCommand` all
+  injected `IObjectStorageService` and never called it — `DocumentAttachment.ObjectKey` was persisted
+  verbatim while the detail queries read it back through `GetFixedUrl`. Worst here because Update
+  replaces the attachment list wholesale, so a frontend re-sending what it read can put a URL into
+  the key column. (b) `ScanBarcodeQuery` did not inject the service at all: it set
+  `ImageUrl = product.ImageUrl` (the raw KEY) and left `ImageKey` null — inverted versus every other
+  read path, so `<img src>` resolved against the frontend's origin and the scan screen showed a
+  broken image. Now `ImageKey` + `GetFixedUrl`, matching `GetProductDetailQuery`.
+- **All six image-write fields renamed to `ImageKey` (breaking wire change).** They previously
+  disagreed with each other and with the read side: `CreateProductCommand.ImageUrl`,
+  `UpdateProductCommand.ImageObjectKey`, and `ImageUrl` on the four Customer/Supplier create+update
+  commands. `ImageKey` won over the majority `ImageUrl` because read and write are now symmetric —
+  every read DTO returns `imageKey` (stable) + `imageUrl` (display only), and `imageKey` is what you
+  send back; a write field called `imageUrl` that actually wants a key is the exact trap
+  `NormalizeKey` exists to catch. The entity column is still `ImageUrl` (no rename migration), and
+  the three AutoMapper create-maps now explicitly `Ignore()` it so no convention mapping can bypass
+  `NormalizeKey`. Frontend migration instructions are in `docs/image-serving-guide.*.md` §5 and
+  `docs/api-guide.fa.md` §17.
+- **Gotcha: `DeleteObject` returns 204 for a key that does not exist**, so "delete works" is never
+  evidence the key was right. And a plain-text `404 page not found` is the provider's router, not
+  S3 — only the XML `<Code>NoSuchKey</Code>` means the object is genuinely missing.
+- **Frontend follow-up (latent, not live)**: `objectKeyOf` in
+  `Frontend/src/shared/services/files/objectKey.js` reads the key from a URL's pathname and discards
+  the query string; fed a new-style URL it returns `api/File/GetImage`. Every current call site
+  passes a key rather than a URL, so nothing is broken today.
+- Verified: build clean; 20 image/attachment tests pass (7 added); suite 359/368 with the same 9 pre-existing
+  failures; live browser renders plain/spaced/Persian keys; cross-origin `<img>` loads; de-duplication
+  and file-name sanitisation exercised against the real bucket through the real service.
+
+**Production bug-list pass (2026-09-07).** Eleven reported items, investigated against the running
+code before changing anything. Two of the reported diagnoses did not survive investigation and the
+real causes were different - both are recorded here because the wrong explanation is the more
+tempting one.
+
+- **The money-effect validator was not a null-forgiving/`When()` interaction.** The report blamed
+  `RuleFor(x => x.Composition.Money!.Kind) ... .When(x => x.Composition.Money != null)` for
+  dereferencing `Money` regardless of the condition, and so blocking goods-only resolutions. Ran the
+  validator directly: a goods-only resolution **passes** - FluentValidation resolves the property
+  accessor lazily inside the component loop, after the per-component condition, so the `!` is
+  harmless. What actually failed was every resolution *carrying* a money effect:
+  `MoneyEffectDto.Kind` was a `ReturnEffectKindEnum`, whose zero value is `GOODS_IN`, so any client
+  that omitted `kind` was rejected with the Persian "invalid money direction" message.
+  **Fix:** money direction is now structural, matching goods - `EffectCompositionDto.MoneyIn` /
+  `MoneyOut` slots, and `MoneyEffectDto` carries no direction field at all. The offending rule is
+  gone because the failure it guarded against is no longer representable. `ExpandComposition` on
+  both calculation services grew a local `AddMoney(slot, direction)` to stamp the direction.
+- **The stale team/department names were not an EF navigation-freshness problem.** `GetUserListQuery`
+  is a server-side projection and AutoMapper null-propagates `src.Team.Name`, so neither could go
+  stale. The actual cause: `Team` and `Department` each carry **`HeadId` and `DeputyId`**, but
+  `ChangeUserTeamCommand` only ever wrote `Team.HeadId`. `Team.DeputyId` and both `Department` roles
+  were never released, so `GetTeamDetailQuery`/`GetTeamListQuery` kept rendering
+  `HeadName`/`DeputyName` off a FK pointing at someone who had left; and since nothing stopped a user
+  from being head of several teams at once, which name appeared where looked arbitrary.
+  `DeleteUserCommand` had the same hole - a soft-deleted user stayed head of their team.
+  **Fix:** `IOrgRoleService.ReleaseAllRolesAsync` (`Application/Common/Contracts/OrgStructure/`,
+  implemented by `Infrastructure/Services/OrgRoleService.cs`, registered `Scoped`) releases every
+  headship/deputyship a user holds, called by both commands before assigning. The invariant is now
+  "at most one team role and one department role per user", in one place - it was previously
+  implemented in one handler and forgotten in the other two. `ChangeUserTeamCommand` also gained
+  `IsDeputy`, applies the role to the **department** when `TeamId` is null (previously `IsHead` was
+  silently dropped for a user with no team), and no longer drops its `CancellationToken`.
+
+Everything else in the same pass:
+
+- **`ReturnEffectKindEnum` -> `ReturnEffectDirectionEnum`, `Effect.Kind` -> `Effect.Direction`**
+  across both return domains. Integer values unchanged. A `\bKind\b` word-boundary match
+  deliberately does not hit `OffScopeKind`/`DocumentKind`/the barcode-side `Kind`, so the rename was
+  mechanical and safe.
+- **`SaleReturn.RequestDate` -> `ReturnDate`** - the one genuine naming divergence between the two
+  return sides. Diffing both calculation services, both claim entities, both round entities and all
+  five DTO pairs turned up nothing else: `ReceivedQuantity` vs `ShippedQuantity` and the two
+  `RecomputeXStatus` signatures are semantically different things, correctly named differently. The
+  reported "sale quantity naming diverges from purchase" was, beyond this one field, not borne out.
+- **`GoodsRoundLineDto`/`GoodsRoundObservationDto` hoisted** to `Application/Common/Dtos/Returns/`.
+  The sale side had redeclared them inline, **byte-identical** - copy-paste, not drift.
+- **DB-only fields off the wire.** Removed `CreatedAt`/`UpdatedAt` from the return detail DTOs,
+  `CreatedAt` from the list DTOs, and each nested object's redundant parent FK
+  (`claims[].purchaseReturnId`, `resolutions[].purchaseReturnClaimId`,
+  `effects[].purchaseReturnResolutionId`). Where the timestamp carried real meaning it was renamed
+  to a domain name rather than dropped: `resolutions[].CreatedAt` -> `DecidedAt`,
+  `receivingImages[].CreatedAt` -> `UploadedAt`. Effects already expose `AppliedAt` and rounds
+  already expose `Date`, so those `CreatedAt`s were pure duplication.
+- **`DominantProblem` -> `Problems`** (`List<ReturnProblemEnum>`, ordered by claim quantity so
+  `Problems[0]` is the old value). The old projection also ended in `FirstOrDefault()`, which
+  reported enum value `0` as a real problem for a return with no claims. `Distinct()` is applied in
+  memory after `ToPagedAsync` - it is not reliably translatable inside a collection projection, the
+  same reason signed image URLs are built there.
+- **`GoodsEffectDto.ProductId`.** It was already resolved once in `AddClaimResolutionCommand`
+  (`??= claim.ProductId`) and persisted, so the `?? claim.ProductId` re-defaulting in both
+  `ExecuteGoodsRoundCommand`s was dead code - removed. An *overridden* product (a replacement with a
+  different item) was never validated, so a bogus id surfaced as a `NotFound` at the goods round -
+  at the warehouse, to the wrong person; it is now checked at decision time. Read side gained
+  `effects[].productName`, which required an `Effects -> Product` `ThenInclude` in both query
+  services.
+- **Related returns.** `PreviousReturnId` already existed on both entities and was already on the
+  detail DTOs, but was a pure client-supplied pass-through - nothing checked it pointed at a return
+  on the *same* document, or that it existed at all. `Create{Purchase,Sale}ReturnCommand` now
+  validate it (a cycle is unreachable on create: a brand-new row cannot yet be anyone's target).
+  Detail gained `PreviousReturnNumber`; the list DTOs gained `PreviousReturnId`.
+- **Invoice PDF identity boxes now form a real grid.** A QuestPDF `Row` shares out width among its
+  own `RelativeItem`s, so weights only align across rows if every row sums to the same total. The
+  three rows in `ComposePartyBox` summed to 7, 8 and 7. All three now sum to 4 x `FieldColumnUnits`,
+  with wide fields spanning whole columns (name spans 2, address spans 3).
+- **`WarehouseReceiving` deleted** (see above) and, separately, the `ProductUnit` invariant break it
+  exposed was fixed. The four stock-mutation paths disagreed: purchase `GOODS_IN` minted
+  unconditionally, purchase `GOODS_OUT` hand-rolled a `ProductUnits` query (with a comment admitting
+  no service method fit), and **both sale paths were wrapped in `if (claim.SaleItemId.HasValue)`** -
+  so an `OFF_ORDER` sale-return round moved `Product.Stock` while touching no unit rows, silently
+  breaking `Stock == COUNT(ProductUnit WHERE IN_STOCK)`. `IProductUnitService` gained
+  `ReturnToSupplierAsync` (purchase `GOODS_OUT` now goes through the service), `ConsumeAsync`'s
+  `saleItemId` became nullable, and the sale `GOODS_IN` off-order case mints instead of skipping.
+- Shipped as migration `20260906233052_rename-effect-direction-and-return-date` - three
+  `RenameColumn`s (`SaleReturns.RequestDate`, `SaleReturnEffects.Kind`, `PurchaseReturnEffects.Kind`),
+  no data transformation. **Applied to the local `WMS` database (2026-09-07).**
+- Docs: `docs/api-guide.fa.md` section 3 (`ChangeUserTeam`/`DeleteUser`), sections 10/12 (every
+  changed read and request shape), section 15 (enum rename), and a new breaking-changes table at the
+  top of section 16 that the frontend can migrate against row by row.
+- **Verified:** build clean; suite 360/369. The 9 failures are pre-existing - confirmed by running
+  the full suite in a clean worktree at `HEAD`, which fails the *identical* 9 test names (8
+  `IX_Users_PersonelCode` seed collisions + the long-documented `"***"` object-storage placeholder
+  gap). Two obsolete validator tests were replaced with ones asserting the new guarantees
+  (`MoneyEffectWithNoDirectionField_IsValid`, `GoodsOnlyResolution_IsValid`).
 
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
