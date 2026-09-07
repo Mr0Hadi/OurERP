@@ -856,7 +856,11 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 
 ### `GET api/PurchaseReturn/GetPurchaseReturnList`
 
-**Query:** `page`, `take`, `search` (شماره مرجوعی/فاکتور/نام تامین‌کننده), `supplierId`, `status` (enum `ReturnStatusEnum`, بخش ۱۵), `problem` (enum `ReturnProblemEnum` — فیلتر روی غالب‌ترین علت ادعا), `fromDate`, `toDate`.
+**Query:** `page`, `take`, `search` (شماره مرجوعی/فاکتور/نام تامین‌کننده), `purchaseId`, `supplierId`, `status` (enum `ReturnStatusEnum`, بخش ۱۵), `problem` (enum `ReturnProblemEnum` — فیلتر روی هر یک از علت‌های ادعا), `fromDate`, `toDate`.
+
+`purchaseId` برای دیدن **همه‌ی مرجوعی‌های ثبت‌شده روی یک خرید خاص** است — قرینه‌ی `saleId` در بخش ۱۲. **این پارامتر تا ۲۰۲۶-۰۹-۰۷ وجود نداشت**، یعنی هیچ راهی نبود که مرجوعی‌های یک خرید را کنار هم دید (سمت فروش از اول داشت).
+
+**دیدن مرجوعی‌های مرتبط:** ترکیب `?purchaseId={id}` با فیلد `previousReturnId` روی هر ردیف کافی است تا زنجیره‌ی «مرجوعی دوم پیروِ مرجوعی اول است» را سمت کلاینت بسازید — سرور آرایه‌ی جداگانه‌ای از «مرجوعی‌های خواهر» برنمی‌گرداند و قرار هم نیست برگرداند. `previousReturnId` هنگام ثبت اعتبارسنجی می‌شود و حتماً به مرجوعیِ **همان خرید** اشاره می‌کند، پس زنجیره هیچ‌وقت از سند بیرون نمی‌زند.
 
 **data.returnList[]:**
 ```json
@@ -1297,6 +1301,8 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 **Query:** `page`, `take`, `search`, `saleId`, `customerId`, `status` (enum `ReturnStatusEnum`, بخش ۱۵), `problem` (enum `ReturnProblemEnum`), `fromDate`, `toDate`.
 
 `saleId` برای دیدن **همه‌ی مرجوعی‌های ثبت‌شده روی یک فروش خاص** است — مثلاً در صفحه‌ی جزئیات فروش، یک تب/بخش «مرجوعی‌ها» که با `GET api/SaleReturn/GetSaleReturnList?saleId={id}` پر می‌شود.
+
+**دیدن مرجوعی‌های مرتبط:** دقیقاً مثل سمت خرید (بخش ۱۰) — `?saleId={id}` به‌علاوه‌ی `previousReturnId` روی هر ردیف. `previousReturnId` اعتبارسنجی می‌شود و حتماً به مرجوعیِ همان فروش اشاره می‌کند.
 
 **data.returnList[]:**
 ```json
