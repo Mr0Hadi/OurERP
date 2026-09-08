@@ -1,5 +1,5 @@
 import {
-  EFFECT_KINDS,
+  EFFECT_DIRECTIONS,
   EFFECT_STATUSES,
   createEffect,
   observationsOf,
@@ -19,7 +19,12 @@ import { RETURN_STATUSES, isTerminalStatus } from "./statuses";
  *
  *   ۱. کالایی وارد انبار ما شود؟   (goodsIn)
  *   ۲. کالایی از انبار ما خارج شود؟ (goodsOut)
- *   ۳. پولی جابه‌جا شود؟           (money)
+ *   ۳. پولی جابه‌جا شود؟           (moneyIn / moneyOut)
+ *
+ * محورِ سوم دو اسلاتِ مستقل است، نه یک فیلد با جهت — دقیقاً هم‌شکلِ
+ * `EffectCompositionDto`ی بک‌اند. فقط یکی از این دو در یک لحظه فعال
+ * است؛ فرم این را با یک کشویِ «جهت» ساده می‌کند ولی خودِ ترکیب چنین
+ * فیلدی ندارد (`moneyDirectionOf` پایین همین فایل).
  *
  * محورها نسبت به *ما* نام‌گذاری شده‌اند، نه نسبت به طرف حساب. برای
  * همین یک مدل، هر دو سمت را پوشش می‌دهد و فقط برچسب‌ها فرق می‌کنند:
@@ -41,7 +46,7 @@ import { RETURN_STATUSES, isTerminalStatus } from "./statuses";
 const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
-const { GOODS_IN, GOODS_OUT, MONEY_IN, MONEY_OUT } = EFFECT_KINDS;
+const { GOODS_IN, GOODS_OUT, MONEY_IN, MONEY_OUT } = EFFECT_DIRECTIONS;
 
 // ─── جهت پول ────────────────────────────────────────────────────────────────
 
@@ -77,10 +82,12 @@ export function methodsForDirection(direction) {
 /**
  * تکه‌های معتبرِ یک پرداخت ترکیبی (مبلغ بزرگ‌تر از صفر).
  *
- * شکل هر تکه همان چیزی است که MixedPaymentList مشترک تولید می‌کند —
- * { type, amount, checkNumber?, transferRef? }.
+ * شکل هر تکه همان `MoneyPartDto`ی بک‌اند است — { method, amount,
+ * checkNumber?, transferRef? }. `ResolutionMoneySection` که از
+ * کامپوننتِ عمومیِ `MixedPaymentList` (فیلدش `type` است، نه `method`)
+ * استفاده می‌کند، این یکی تبدیلِ نام را همان‌جا انجام می‌دهد.
  */
-function validMoneyParts(money) {
+export function validMoneyParts(money) {
   return (money?.parts || []).filter((part) => (Number(part.amount) || 0) > 0);
 }
 
@@ -105,9 +112,14 @@ export function emptyGoodsSlot() {
   return { enabled: false, items: [] };
 }
 
-export function emptyMoney() {
+/**
+ * یک اسلاتِ پولیِ خالی — هم‌شکلِ `MoneyEffectDto`ی بک‌اند (`method`,
+ * `amount`, `reference`, `parts`)، به‌علاوه‌ی `enabled` که فقط فرم لازم
+ * دارد (دقیقاً مثل `enabled` روی اسلاتِ کالایی).
+ */
+export function emptyMoneyEffect() {
   return {
-    direction: MONEY_DIRECTIONS.NONE,
+    enabled: false,
     method: PaymentTypeEnum.CASH,
     amount: "",
     reference: "",
@@ -120,9 +132,21 @@ export function emptyComposition(quantity = 1) {
     quantity,
     goodsIn: emptyGoodsSlot(),
     goodsOut: emptyGoodsSlot(),
-    money: emptyMoney(),
+    moneyIn: emptyMoneyEffect(),
+    moneyOut: emptyMoneyEffect(),
     note: "",
   };
+}
+
+/**
+ * جهتِ فعلیِ پول — فقط برای UI (کشوی انتخاب). خودِ ترکیب چنین فیلدی
+ * ندارد؛ جهت از این‌که کدام اسلات `enabled` است مشتق می‌شود، درست
+ * مثلِ بک‌اند که جهت را از *جایگاهِ* اثر می‌فهمد نه یک فیلدِ جدا.
+ */
+export function moneyDirectionOf(composition) {
+  if (composition?.moneyIn?.enabled) return MONEY_DIRECTIONS.RECEIVE;
+  if (composition?.moneyOut?.enabled) return MONEY_DIRECTIONS.PAY;
+  return MONEY_DIRECTIONS.NONE;
 }
 
 // ─── بسط ترکیب به اثر ───────────────────────────────────────────────────────
@@ -160,12 +184,12 @@ export function expandComposition(composition, claim) {
   const quantity = Number(composition.quantity) || 0;
   const note = composition.note || "";
 
-  const pushGoods = (slot, kind) => {
+  const pushGoods = (slot, direction) => {
     if (!slot?.enabled) return;
     goodsItemsOf(slot, claim, quantity).forEach((item) => {
       effects.push(
         createEffect({
-          kind,
+          direction,
           quantity: Number(item.quantity) || 0,
           productId: item.productId,
           productCode: item.productCode,
@@ -180,21 +204,25 @@ export function expandComposition(composition, claim) {
   pushGoods(composition.goodsIn, GOODS_IN);
   pushGoods(composition.goodsOut, GOODS_OUT);
 
-  const money = composition.money || {};
-  const amount = moneyAmountOf(money);
-  if (money.direction !== MONEY_DIRECTIONS.NONE && amount > 0) {
-    const isMixed = money.method === PaymentTypeEnum.MIXED;
+  const pushMoney = (slot, direction) => {
+    if (!slot?.enabled) return;
+    const amount = moneyAmountOf(slot);
+    if (amount <= 0) return;
+    const isMixed = slot.method === PaymentTypeEnum.MIXED;
     effects.push(
       createEffect({
-        kind: money.direction === MONEY_DIRECTIONS.RECEIVE ? MONEY_IN : MONEY_OUT,
+        direction,
         amount,
-        method: money.method,
-        reference: isMixed ? "" : money.reference,
-        parts: isMixed ? validMoneyParts(money) : [],
+        method: slot.method,
+        reference: isMixed ? "" : slot.reference,
+        parts: isMixed ? validMoneyParts(slot) : [],
         note,
       }),
     );
-  }
+  };
+
+  pushMoney(composition.moneyIn, MONEY_IN);
+  pushMoney(composition.moneyOut, MONEY_OUT);
 
   return effects;
 }
@@ -236,36 +264,40 @@ export function validateComposition(composition, claim, { remainingQuantity } = 
     );
   }
 
-  const money = composition.money || {};
+  const direction = moneyDirectionOf(composition);
+  const activeMoney =
+    direction === MONEY_DIRECTIONS.RECEIVE
+      ? composition.moneyIn
+      : direction === MONEY_DIRECTIONS.PAY
+        ? composition.moneyOut
+        : null;
 
   // تصمیمی که هیچ‌کدام از سه محور را فعال نکرده، هیچ اثری تولید نمی‌کند
   // ولی از باقیمانده‌ی ادعا کم می‌شود — یعنی بی‌صدا بخشی از ادعا را
   // می‌بندد بدون اینکه کاری برای طرف حساب انجام شده باشد. برای بستنِ
   // ادعا بدون جبران، مسیرِ صریحِ «رد ادعا» وجود دارد.
   const nothingChosen =
-    !composition.goodsIn?.enabled &&
-    !composition.goodsOut?.enabled &&
-    money.direction === MONEY_DIRECTIONS.NONE;
+    !composition.goodsIn?.enabled && !composition.goodsOut?.enabled && !activeMoney;
   if (nothingChosen) {
     errors.push(
       "این تصمیم هیچ اقدامی ندارد؛ دست‌کم یکی از جابه‌جایی کالا یا پول را انتخاب کنید",
     );
   }
 
-  if (money.direction !== MONEY_DIRECTIONS.NONE) {
-    if (!methodsForDirection(money.direction).includes(money.method)) {
+  if (activeMoney) {
+    if (!methodsForDirection(direction).includes(activeMoney.method)) {
       errors.push("روش پرداخت برای این جهت مجاز نیست");
-    } else if (money.method === PaymentTypeEnum.MIXED) {
-      if (validMoneyParts(money).length === 0) {
+    } else if (activeMoney.method === PaymentTypeEnum.MIXED) {
+      if (validMoneyParts(activeMoney).length === 0) {
         errors.push(
           "برای پرداخت ترکیبی، حداقل یک ردیف با مبلغ بیشتر از صفر لازم است",
         );
       }
-      const badPart = validMoneyParts(money).find(
-        (part) => !SPLITTABLE_PAYMENT_TYPES.includes(part.type),
+      const badPart = validMoneyParts(activeMoney).find(
+        (part) => !SPLITTABLE_PAYMENT_TYPES.includes(part.method),
       );
       if (badPart) errors.push("روش یکی از ردیف‌های پرداخت ترکیبی نامعتبر است");
-    } else if (!(moneyAmountOf(money) > 0)) {
+    } else if (!(moneyAmountOf(activeMoney) > 0)) {
       errors.push("مبلغ باید بزرگ‌تر از صفر باشد");
     }
   }
@@ -297,10 +329,10 @@ function allEffectsOf(returnDoc) {
  * دهند. GOODS_IN به صف «دریافت» می‌رود و GOODS_OUT به صف «ارسال»؛
  * مرجوعی خرید و فروش هر دو از همین مسیر وارد صف می‌شوند.
  */
-export function pendingGoodsEffects(returnDoc, kind) {
+export function pendingGoodsEffects(returnDoc, direction) {
   return allEffectsOf(returnDoc).filter(
     (effect) =>
-      effect.kind === kind && effect.status === EFFECT_STATUSES.PENDING,
+      effect.direction === direction && effect.status === EFFECT_STATUSES.PENDING,
   );
 }
 
@@ -308,13 +340,13 @@ export function pendingGoodsEffects(returnDoc, kind) {
  * تخت‌کردن اثرهای کالاییِ یک مرجوعی به ردیف‌هایی که انبار می‌فهمد —
  * هر ردیف، یک اثر به‌همراه زمینه‌ی ادعایی که از آن آمده.
  */
-export function buildGoodsLines(returnDoc, kind, { onlyPending = true } = {}) {
+export function buildGoodsLines(returnDoc, direction, { onlyPending = true } = {}) {
   const lines = [];
 
   (returnDoc?.claims || []).forEach((claim) => {
     (claim.resolutions || []).forEach((resolution) => {
       (resolution.effects || []).forEach((effect) => {
-        if (effect.kind !== kind) return;
+        if (effect.direction !== direction) return;
         if (onlyPending && effect.status !== EFFECT_STATUSES.PENDING) return;
 
         const quantity = Number(effect.quantity) || 0;

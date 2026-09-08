@@ -2,7 +2,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Badge as StatusChip } from "@/shared/components/ui/badge";
 import { isTerminalStatus } from "@/shared/domain/returns/statuses";
 import { RETURN_STATUS_STYLES } from "@/shared/domain/returns/statuses";
-import { EFFECT_KINDS } from "@/shared/domain/returns/effects";
+import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
 import {
   claimDecidedQuantity,
   summarizeReturn,
@@ -70,7 +70,7 @@ export default function ReturnStatusBar({ returnDoc: salesReturn, statusLabels, 
               variant="outline"
               className="text-[11px] bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-400"
             >
-              {side.effectLabels[EFFECT_KINDS.MONEY_OUT]}: {fa(money.moneyOut)} ریال
+              {side.effectLabels[EFFECT_DIRECTIONS.MONEY_OUT]}: {fa(money.moneyOut)} ریال
             </Badge>
           )}
           {money.moneyIn > 0 && (
@@ -78,7 +78,7 @@ export default function ReturnStatusBar({ returnDoc: salesReturn, statusLabels, 
               variant="outline"
               className="text-[11px] bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-400"
             >
-              {side.effectLabels[EFFECT_KINDS.MONEY_IN]}: {fa(money.moneyIn)} ریال
+              {side.effectLabels[EFFECT_DIRECTIONS.MONEY_IN]}: {fa(money.moneyIn)} ریال
             </Badge>
           )}
         </div>

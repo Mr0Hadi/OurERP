@@ -116,10 +116,12 @@ export async function createPurchaseReturn(payload, { idempotencyKey } = {}) {
 /**
  * ثبت یک تصمیم روی یک ادعا.
  *
- * بدنه همان «ترکیب»ی است که فرم می‌سازد — سه محورِ مستقلِ
- * `goodsIn`/`goodsOut`/`money`. باز کردنش به اثرهای پایه کارِ سرور
- * است؛ اگر فرانت اثرها را بسازد و بفرستد، منطق در دو جا زندگی می‌کند
- * و روزی از هم جدا می‌افتد.
+ * `composition` همان چهار اسلاتِ ساختاریِ بک‌اند است —
+ * `goodsIn`/`goodsOut`/`moneyIn`/`moneyOut` (`EffectCompositionDto`،
+ * از ۲۰۲۶-۰۹-۰۷) — بدون هیچ تبدیلی؛ فرم مستقیم همین شکل را می‌سازد
+ * (`shared/domain/returns/resolutions.js`). باز کردنِ ترکیب به اثرهای
+ * پایه کارِ سرور است؛ اگر فرانت اثرها را بسازد و بفرستد، منطق در دو جا
+ * زندگی می‌کند و روزی از هم جدا می‌افتد.
  */
 export async function addClaimResolution(
   returnId,

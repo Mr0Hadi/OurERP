@@ -2,7 +2,7 @@ import { Trash2 } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import {
-  EFFECT_KINDS,
+  EFFECT_DIRECTIONS,
   EFFECT_STATUSES,
   isGoodsEffect,
   summarizeEffects,
@@ -21,7 +21,7 @@ export default function ResolutionLineRow({ resolution, onRemove, isBusy, side }
   const summary = summarizeEffects(effects, { includePending: true });
 
   const hasMovedGoods = effects.some(
-    (effect) => isGoodsEffect(effect.kind) && (Number(effect.doneQuantity) || 0) > 0,
+    (effect) => isGoodsEffect(effect.direction) && (Number(effect.doneQuantity) || 0) > 0,
   );
   const isPending = effects.some(
     (effect) => effect.status === EFFECT_STATUSES.PENDING,
@@ -93,8 +93,8 @@ export default function ResolutionLineRow({ resolution, onRemove, isBusy, side }
           >
             {Math.abs(summary.netMoney).toLocaleString("fa-IR")} ریال{" "}
             {summary.netMoney > 0
-              ? side.effectLabels[EFFECT_KINDS.MONEY_IN]
-              : side.effectLabels[EFFECT_KINDS.MONEY_OUT]}
+              ? side.effectLabels[EFFECT_DIRECTIONS.MONEY_IN]
+              : side.effectLabels[EFFECT_DIRECTIONS.MONEY_OUT]}
           </span>
         </p>
       )}

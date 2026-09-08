@@ -12,6 +12,7 @@ import MixedPaymentList from "@/shared/components/forms/MixedPaymentList";
 import {
   MONEY_DIRECTIONS,
   methodsForDirection,
+  emptyMoneyEffect,
 } from "@/shared/domain/returns/resolutions";
 import {
   PaymentTypeEnum,
@@ -20,7 +21,7 @@ import {
 } from "@/shared/domain/enums/paymentType";
 
 const EMPTY_PART = {
-  type: PaymentTypeEnum.CASH,
+  method: PaymentTypeEnum.CASH,
   amount: "",
   checkNumber: "",
   transferRef: "",
@@ -29,56 +30,97 @@ const EMPTY_PART = {
 /**
  * بخش پول یک تصمیم: به کدام سمت، از چه راهی، چقدر.
  *
+ * ترکیبِ داخلی دو اسلاتِ مستقل دارد — `moneyIn`/`moneyOut`، دقیقاً
+ * هم‌شکلِ `EffectCompositionDto`ی بک‌اند — نه یک `money` تکی با فیلدِ
+ * جهت. این کامپوننت فقط UI را ساده می‌کند: کاربر یک جهت انتخاب
+ * می‌کند و همان یک اسلات پر می‌شود؛ جهت خودش ذخیره نمی‌شود، از روی
+ * این‌که کدام اسلات `enabled` است مشتق می‌شود (`moneyIn`/`moneyOut`
+ * هرگز هم‌زمان فعال نیستند).
+ *
  * روش‌ها همان‌هایی هستند که فرم ثبت فروش دارد (نقدی / چک / انتقال /
  * نسیه / ترکیبی) به‌علاوه‌ی «اعتبار خرید بعدی» که فقط در جهتِ پرداخت
- * معنا دارد. برای ترکیبی، همان کامپوننتِ مشترکِ صفحه‌ی فروش استفاده
- * می‌شود و مبلغ کل از جمع ردیف‌ها می‌آید.
+ * معنا دارد.
  *
  * برچسبِ جهت‌ها از side می‌آید («... از مشتری» یا «... از تامین‌کننده»)
  * تا همین کامپوننت هر دو سمت را بدهد.
  */
 export default function ResolutionMoneySection({
-  money,
+  moneyIn,
+  moneyOut,
   onChange,
   side,
   defaultAmount,
 }) {
+  const direction = moneyIn?.enabled
+    ? MONEY_DIRECTIONS.RECEIVE
+    : moneyOut?.enabled
+      ? MONEY_DIRECTIONS.PAY
+      : MONEY_DIRECTIONS.NONE;
+  const active =
+    direction === MONEY_DIRECTIONS.RECEIVE
+      ? moneyIn
+      : direction === MONEY_DIRECTIONS.PAY
+        ? moneyOut
+        : null;
+
   const directionOptions = Object.entries(side.money);
-  const direction = money?.direction ?? MONEY_DIRECTIONS.NONE;
-  const method = money?.method ?? PaymentTypeEnum.CASH;
-  const parts = money?.parts ?? [];
+
+  /**
+   * جهت را عوض می‌کند: اسلاتِ تازه را فعال می‌کند و آن یکی را خالی —
+   * هرگز هر دو هم‌زمان فعال نیستند. روشی که برای جهتِ تازه مجاز نیست
+   * باید کنار برود، وگرنه «اعتبار خرید بعدی» روی «دریافت از مشتری» جا
+   * می‌ماند و اعتبارسنجی بی‌دلیل شکست می‌خورد.
+   */
+  const handleDirectionChange = (nextDirection) => {
+    if (nextDirection === MONEY_DIRECTIONS.NONE) {
+      onChange({ moneyIn: emptyMoneyEffect(), moneyOut: emptyMoneyEffect() });
+      return;
+    }
+    const allowed = methodsForDirection(nextDirection);
+    const method =
+      active && allowed.includes(active.method) ? active.method : PaymentTypeEnum.CASH;
+    // با انتخاب یک جهتِ واقعی، مبلغ پیش‌فرض همان ارزشِ این تصمیم است؛
+    // کاربر می‌تواند دستی تغییرش دهد.
+    const amount =
+      active && Number(active.amount) > 0 ? active.amount : String(defaultAmount ?? "");
+    const nextSlot = { enabled: true, method, amount, reference: "", parts: [] };
+    onChange(
+      nextDirection === MONEY_DIRECTIONS.RECEIVE
+        ? { moneyIn: nextSlot, moneyOut: emptyMoneyEffect() }
+        : { moneyIn: emptyMoneyEffect(), moneyOut: nextSlot },
+    );
+  };
+
+  const patchActive = (changes) => {
+    if (!active) return;
+    onChange(
+      direction === MONEY_DIRECTIONS.RECEIVE
+        ? { moneyIn: { ...moneyIn, ...changes } }
+        : { moneyOut: { ...moneyOut, ...changes } },
+    );
+  };
 
   if (direction === MONEY_DIRECTIONS.NONE) {
     return (
       <DirectionSelect
         direction={direction}
-        money={money}
-        onChange={onChange}
+        onChange={handleDirectionChange}
         options={directionOptions}
-        defaultAmount={defaultAmount}
       />
     );
   }
 
-  const isMixed = method === PaymentTypeEnum.MIXED;
-  const referenceLabel = PAYMENT_REFERENCE_FIELDS[method]?.label;
+  const isMixed = active.method === PaymentTypeEnum.MIXED;
+  const referenceLabel = PAYMENT_REFERENCE_FIELDS[active.method]?.label;
   const methodOptions = methodsForDirection(direction);
-
-  const patchPart = (idx, field, value) =>
-    onChange({
-      parts: parts.map((part, i) =>
-        i === idx ? { ...part, [field]: value } : part,
-      ),
-    });
+  const parts = active.parts ?? [];
 
   return (
     <div className="space-y-2">
       <DirectionSelect
         direction={direction}
-        money={money}
-        onChange={onChange}
+        onChange={handleDirectionChange}
         options={directionOptions}
-        defaultAmount={defaultAmount}
       />
 
       <div className="space-y-2 rounded-md border border-border bg-card/60 p-2.5">
@@ -86,10 +128,10 @@ export default function ResolutionMoneySection({
           <Label className="text-[11px] text-muted-foreground">روش</Label>
           {/* روش پرداخت enum عددی است؛ Radix فقط رشته می‌شناسد. */}
           <Select
-            value={String(method)}
+            value={String(active.method)}
             onValueChange={(raw) => {
               const nextMethod = Number(raw);
-              onChange({
+              patchActive({
                 method: nextMethod,
                 reference: "",
                 parts:
@@ -113,15 +155,25 @@ export default function ResolutionMoneySection({
         </div>
 
         {isMixed ? (
+          // MixedPaymentList مشترک (بینِ اینجا و فرمِ خرید/فروش) هر ردیف
+          // را با فیلدِ `type` می‌شناسد؛ ردیف‌های واقعیِ ما با نامِ بک‌اند
+          // (`method`) نگه داشته می‌شوند، پس فقط همین‌جا موقتِ نمایش
+          // نگاشت می‌شود — نه یک لایه‌ی تبدیلِ مستقل.
           <MixedPaymentList
             dense
             title="ردیف‌های پرداخت"
-            payments={parts}
-            onAdd={() => onChange({ parts: [...parts, { ...EMPTY_PART }] })}
-            onRemove={(idx) =>
-              onChange({ parts: parts.filter((_, i) => i !== idx) })
+            payments={parts.map((part) => ({ ...part, type: part.method }))}
+            onAdd={() => patchActive({ parts: [...parts, { ...EMPTY_PART }] })}
+            onRemove={(idx) => patchActive({ parts: parts.filter((_, i) => i !== idx) })}
+            onChange={(idx, field, value) =>
+              patchActive({
+                parts: parts.map((part, i) =>
+                  i === idx
+                    ? { ...part, [field === "type" ? "method" : field]: value }
+                    : part,
+                ),
+              })
             }
-            onChange={patchPart}
           />
         ) : (
           <>
@@ -131,8 +183,8 @@ export default function ResolutionMoneySection({
               </Label>
               <PriceInput
                 min={0}
-                value={money.amount === "" || money.amount == null ? null : Number(money.amount)}
-                onValueChange={(next) => onChange({ amount: next ?? "" })}
+                value={active.amount === "" || active.amount == null ? null : Number(active.amount)}
+                onValueChange={(next) => patchActive({ amount: next ?? "" })}
                 placeholder="مبلغ را وارد کنید"
                 className="h-8 text-xs"
               />
@@ -145,8 +197,8 @@ export default function ResolutionMoneySection({
                 </Label>
                 <Input
                   dir="ltr"
-                  value={money.reference ?? ""}
-                  onChange={(e) => onChange({ reference: e.target.value })}
+                  value={active.reference ?? ""}
+                  onChange={(e) => patchActive({ reference: e.target.value })}
                   placeholder={referenceLabel}
                   className="h-8 text-xs input-rtl-placeholder"
                 />
@@ -159,29 +211,9 @@ export default function ResolutionMoneySection({
   );
 }
 
-function DirectionSelect({ direction, money, onChange, options, defaultAmount }) {
+function DirectionSelect({ direction, onChange, options }) {
   return (
-    <Select
-      value={String(direction)}
-      onValueChange={(raw) => {
-        // جهت هم enum عددی است — Radix رشته می‌دهد.
-        const value = Number(raw);
-        // با عوض‌شدن جهت، روشی که برای جهت تازه مجاز نیست باید کنار
-        // برود — وگرنه «اعتبار خرید بعدی» روی «دریافت از مشتری» جا
-        // می‌ماند و اعتبارسنجی بی‌دلیل شکست می‌خورد.
-        const allowed = methodsForDirection(value);
-        const method = allowed.includes(money?.method)
-          ? money.method
-          : PaymentTypeEnum.CASH;
-        // با انتخاب یک جهتِ واقعی، مبلغ پیش‌فرض همان ارزشِ این تصمیم
-        // است؛ کاربر می‌تواند دستی تغییرش دهد.
-        const amount =
-          value !== MONEY_DIRECTIONS.NONE && !(Number(money?.amount) > 0)
-            ? String(defaultAmount ?? "")
-            : money?.amount;
-        onChange({ direction: value, method, amount });
-      }}
-    >
+    <Select value={String(direction)} onValueChange={(raw) => onChange(Number(raw))}>
       <SelectTrigger className="h-8 text-xs">
         <SelectValue />
       </SelectTrigger>

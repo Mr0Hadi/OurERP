@@ -8,6 +8,10 @@ import {
   claimDecidedQuantity,
   claimRemainingQuantity,
 } from "@/shared/domain/returns/resolutions";
+import {
+  RETURN_PROBLEM_LABELS,
+  RETURN_PROBLEM_STYLES,
+} from "@/shared/domain/returns/problems";
 
 
 /**
@@ -58,9 +62,15 @@ export default function ClaimResolutionCard({
       <div className="flex flex-wrap items-center gap-1.5">
         <Badge
           variant="outline"
-          className={`text-[10px] ${problemStyles[claim.problem] ?? ""}`}
+          className={`text-[10px] ${
+            problemStyles[claim.problem] ??
+            RETURN_PROBLEM_STYLES[claim.problem] ??
+            ""
+          }`}
         >
-          {problemLabels[claim.problem] ?? claim.problem}
+          {problemLabels[claim.problem] ??
+            RETURN_PROBLEM_LABELS[claim.problem] ??
+            claim.problem}
         </Badge>
         {isOffScope && (
           <Badge variant="outline" className="text-[10px]">

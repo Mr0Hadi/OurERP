@@ -18,7 +18,7 @@ import { useHeaderStore } from "@/shared/store/headerStore";
 import { useSalesReturnQuery } from "@/features/sales/returns/services/queries";
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
 import { buildGoodsLines } from "@/shared/domain/returns/resolutions";
-import { EFFECT_KINDS } from "@/shared/domain/returns/effects";
+import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import ReturnSummaryCard from "@/shared/components/returns/ReturnSummaryCard";
 
@@ -60,7 +60,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
 
   const returnLines = useMemo(
     () =>
-      buildGoodsLines(salesReturn, EFFECT_KINDS.GOODS_IN).filter(
+      buildGoodsLines(salesReturn, EFFECT_DIRECTIONS.GOODS_IN).filter(
         (line) => line.remainingQuantity > 0,
       ),
     [salesReturn],

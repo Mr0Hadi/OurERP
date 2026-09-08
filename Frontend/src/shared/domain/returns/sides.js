@@ -1,4 +1,4 @@
-import { EFFECT_KINDS } from "./effects";
+import { EFFECT_DIRECTIONS } from "./effects";
 import { MONEY_DIRECTIONS } from "./resolutions";
 import { RETURN_STATUSES } from "./statuses";
 
@@ -35,7 +35,7 @@ export const SIDE_CONFIG = {
     goodsSlots: [
       {
         slot: GOODS_IN_SLOT,
-        kind: EFFECT_KINDS.GOODS_IN,
+        direction: EFFECT_DIRECTIONS.GOODS_IN,
         label: "کالا از مشتری پس گرفته شود",
         hint: "کالای برگشتی وارد انبار می‌شود",
         // انتخابگر کالا لازم نیست؛ پیش‌فرض همان کالای ادعاست.
@@ -43,7 +43,7 @@ export const SIDE_CONFIG = {
       },
       {
         slot: GOODS_OUT_SLOT,
-        kind: EFFECT_KINDS.GOODS_OUT,
+        direction: EFFECT_DIRECTIONS.GOODS_OUT,
         label: "کالای جایگزین برای مشتری ارسال شود",
         hint: "می‌تواند همان کالا باشد یا کالای دیگری، با هر تعدادی",
         allowPicker: true,
@@ -57,10 +57,10 @@ export const SIDE_CONFIG = {
     },
 
     effectLabels: {
-      [EFFECT_KINDS.GOODS_IN]: "پس‌گرفتن",
-      [EFFECT_KINDS.GOODS_OUT]: "ارسال",
-      [EFFECT_KINDS.MONEY_IN]: "دریافت وجه",
-      [EFFECT_KINDS.MONEY_OUT]: "پرداخت وجه",
+      [EFFECT_DIRECTIONS.GOODS_IN]: "پس‌گرفتن",
+      [EFFECT_DIRECTIONS.GOODS_OUT]: "ارسال",
+      [EFFECT_DIRECTIONS.MONEY_IN]: "دریافت وجه",
+      [EFFECT_DIRECTIONS.MONEY_OUT]: "پرداخت وجه",
     },
 
     statusLabels: {
@@ -72,8 +72,8 @@ export const SIDE_CONFIG = {
     },
 
     warehouse: {
-      [EFFECT_KINDS.GOODS_IN]: "دریافت کالا از مشتری",
-      [EFFECT_KINDS.GOODS_OUT]: "ارسال کالا برای مشتری",
+      [EFFECT_DIRECTIONS.GOODS_IN]: "دریافت کالا از مشتری",
+      [EFFECT_DIRECTIONS.GOODS_OUT]: "ارسال کالا برای مشتری",
     },
   },
 
@@ -87,14 +87,14 @@ export const SIDE_CONFIG = {
     goodsSlots: [
       {
         slot: GOODS_OUT_SLOT,
-        kind: EFFECT_KINDS.GOODS_OUT,
+        direction: EFFECT_DIRECTIONS.GOODS_OUT,
         label: "کالا به تامین‌کننده عودت داده شود",
         hint: "کالا از انبار خارج می‌شود",
         allowPicker: false,
       },
       {
         slot: GOODS_IN_SLOT,
-        kind: EFFECT_KINDS.GOODS_IN,
+        direction: EFFECT_DIRECTIONS.GOODS_IN,
         label: "کالای جایگزین از تامین‌کننده دریافت شود",
         hint: "می‌تواند همان کالا باشد یا کالای دیگری، با هر تعدادی",
         allowPicker: true,
@@ -108,10 +108,10 @@ export const SIDE_CONFIG = {
     },
 
     effectLabels: {
-      [EFFECT_KINDS.GOODS_IN]: "دریافت کالا",
-      [EFFECT_KINDS.GOODS_OUT]: "عودت کالا",
-      [EFFECT_KINDS.MONEY_IN]: "دریافت وجه",
-      [EFFECT_KINDS.MONEY_OUT]: "پرداخت وجه",
+      [EFFECT_DIRECTIONS.GOODS_IN]: "دریافت کالا",
+      [EFFECT_DIRECTIONS.GOODS_OUT]: "عودت کالا",
+      [EFFECT_DIRECTIONS.MONEY_IN]: "دریافت وجه",
+      [EFFECT_DIRECTIONS.MONEY_OUT]: "پرداخت وجه",
     },
 
     statusLabels: {
@@ -123,8 +123,8 @@ export const SIDE_CONFIG = {
     },
 
     warehouse: {
-      [EFFECT_KINDS.GOODS_IN]: "دریافت کالای جایگزین",
-      [EFFECT_KINDS.GOODS_OUT]: "عودت کالا به تامین‌کننده",
+      [EFFECT_DIRECTIONS.GOODS_IN]: "دریافت کالای جایگزین",
+      [EFFECT_DIRECTIONS.GOODS_OUT]: "عودت کالا به تامین‌کننده",
     },
   },
 };

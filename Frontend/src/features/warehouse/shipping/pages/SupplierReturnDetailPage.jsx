@@ -18,7 +18,7 @@ import { useHeaderStore } from "@/shared/store/headerStore";
 import { usePurchaseReturnQuery } from "@/features/purchases/returns/services/queries";
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
 import { buildGoodsLines } from "@/shared/domain/returns/resolutions";
-import { EFFECT_KINDS } from "@/shared/domain/returns/effects";
+import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import ReturnSummaryCard from "@/shared/components/returns/ReturnSummaryCard";
 import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
@@ -56,7 +56,7 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
 
   const returnLines = useMemo(
     () =>
-      buildGoodsLines(purchaseReturn, EFFECT_KINDS.GOODS_OUT).filter(
+      buildGoodsLines(purchaseReturn, EFFECT_DIRECTIONS.GOODS_OUT).filter(
         (line) => line.remainingQuantity > 0,
       ),
     [purchaseReturn],

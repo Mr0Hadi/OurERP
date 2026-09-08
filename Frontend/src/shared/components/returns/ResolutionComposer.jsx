@@ -6,7 +6,6 @@ import { Label } from "@/shared/components/ui/label";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 
 import {
-  MONEY_DIRECTIONS,
   emptyComposition,
   expandComposition,
   validateComposition,
@@ -69,11 +68,12 @@ export default function ResolutionComposer({
     discount: 0,
   });
 
-  const patchMoney = (changes) =>
-    setComposition((prev) => ({
-      ...prev,
-      money: { ...prev.money, ...changes },
-    }));
+  const activeMoneySlotName = composition.moneyIn.enabled
+    ? "moneyIn"
+    : composition.moneyOut.enabled
+      ? "moneyOut"
+      : null;
+  const activeMoney = activeMoneySlotName ? composition[activeMoneySlotName] : null;
 
   // مبلغِ جابه‌جاییِ پول همیشه با تعداد و قیمتِ همین تصمیم همگام
   // می‌ماند — با هر تغییری در تعداد، نه فقط لحظه‌ی انتخاب جهتِ پول.
@@ -81,24 +81,23 @@ export default function ResolutionComposer({
     (Number(composition.quantity) || 0) * (Number(claim.unitPrice) || 0);
   useSyncedComputedValue(
     defaultMoneyAmount,
-    (value) => patchMoney({ amount: String(value) }),
-    composition.money.direction !== MONEY_DIRECTIONS.NONE &&
-      composition.money.method !== PaymentTypeEnum.MIXED,
+    (value) => patchSlot(activeMoneySlotName, { amount: String(value) }),
+    Boolean(activeMoney) && activeMoney.method !== PaymentTypeEnum.MIXED,
   );
 
   // برای پرداخت ترکیبی، تا وقتی فقط یک ردیف هست (یعنی هنوز تقسیم
   // نشده) همان ردیف هم با تعداد و قیمت همگام می‌ماند.
-  const moneyParts = composition.money.parts || [];
+  const moneyParts = activeMoney?.parts || [];
   useSyncedComputedValue(
     defaultMoneyAmount,
     (value) =>
-      patchMoney({
+      patchSlot(activeMoneySlotName, {
         parts: moneyParts.map((part, i) =>
           i === 0 ? { ...part, amount: String(value) } : part,
         ),
       }),
-    composition.money.direction !== MONEY_DIRECTIONS.NONE &&
-      composition.money.method === PaymentTypeEnum.MIXED &&
+    Boolean(activeMoney) &&
+      activeMoney.method === PaymentTypeEnum.MIXED &&
       moneyParts.length === 1,
   );
 
@@ -120,9 +119,7 @@ export default function ResolutionComposer({
 
   const quantity = Number(composition.quantity) || 0;
   const nothingChosen =
-    !composition.goodsIn.enabled &&
-    !composition.goodsOut.enabled &&
-    composition.money?.direction === MONEY_DIRECTIONS.NONE;
+    !composition.goodsIn.enabled && !composition.goodsOut.enabled && !activeMoney;
 
   return (
     <div className="rounded-lg border border-dashed border-primary/30 bg-primary/[0.03] p-3 space-y-3">
@@ -181,8 +178,12 @@ export default function ResolutionComposer({
       <div className="space-y-1.5">
         <Label className="text-[11px] text-muted-foreground">جابه‌جایی پول</Label>
         <ResolutionMoneySection
-          money={composition.money}
-          onChange={patchMoney}
+          moneyIn={composition.moneyIn}
+          moneyOut={composition.moneyOut}
+          // ResolutionMoneySection شیءِ جزئیِ {moneyIn?, moneyOut?} را
+          // مستقیم می‌سازد (چون تغییرِ جهت هر دو اسلات را با هم عوض
+          // می‌کند)؛ `patch` همان را مستقیم روی ترکیب می‌نشاند.
+          onChange={patch}
           side={side}
           defaultAmount={defaultMoneyAmount}
         />

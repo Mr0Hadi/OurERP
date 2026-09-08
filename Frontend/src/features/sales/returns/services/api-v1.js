@@ -81,6 +81,14 @@ export async function createSalesReturn(payload, { idempotencyKey } = {}) {
   return fromApiReturn(data);
 }
 
+/**
+ * ثبت یک تصمیم روی یک ادعا — قرینه‌ی سمتِ خرید.
+ *
+ * `composition` همان چهار اسلاتِ ساختاریِ بک‌اند است —
+ * `goodsIn`/`goodsOut`/`moneyIn`/`moneyOut` (`EffectCompositionDto`،
+ * از ۲۰۲۶-۰۹-۰۷) — بدون هیچ تبدیلی؛ فرم مشترکِ خرید/فروش
+ * (`shared/domain/returns/resolutions.js`) مستقیم همین شکل را می‌سازد.
+ */
 export async function addClaimResolution(
   returnId,
   claimId,

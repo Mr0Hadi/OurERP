@@ -1,4 +1,4 @@
-import { EFFECT_KINDS, EFFECT_STATUSES } from "./effects";
+import { EFFECT_DIRECTIONS, EFFECT_STATUSES } from "./effects";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { RETURN_PROBLEMS } from "./problems";
 import { CLAIM_SCOPES, OFF_SCOPE_KINDS } from "./scopes";
@@ -21,7 +21,7 @@ import { RETURN_STATUSES } from "./statuses";
  *    و مقدار گزارش می‌شود.
  *
  * ۳. `method` دیگر شمارشِ مخصوصِ خودش را ندارد و همان `PaymentTypeEnum`
- *    است؛ بقیه‌ی مقادیر (kind/status/problem/scope) هنوز فقط در فرانت
+ *    است؛ بقیه‌ی مقادیر (direction/status/problem/scope) هنوز فقط در فرانت
  *    تعریف شده‌اند و شماره‌هایشان لزوماً با آنچه بکند روزی اضافه می‌کند
  *    یکی نیست. روز اتصال، این‌جا دقیقاً همان‌جایی است که باید نگاشت
  *    اضافه شود.
@@ -36,7 +36,7 @@ const RETURN_STATUS_VALUES = valuesOf(RETURN_STATUSES);
 const PROBLEM_VALUES = valuesOf(RETURN_PROBLEMS);
 const SCOPE_VALUES = valuesOf(CLAIM_SCOPES);
 const OFF_SCOPE_KIND_VALUES = valuesOf(OFF_SCOPE_KINDS);
-const EFFECT_KIND_VALUES = valuesOf(EFFECT_KINDS);
+const EFFECT_DIRECTION_VALUES = valuesOf(EFFECT_DIRECTIONS);
 const EFFECT_STATUS_VALUES = valuesOf(EFFECT_STATUSES);
 const PAYMENT_METHOD_VALUES = valuesOf(PaymentTypeEnum);
 
@@ -46,7 +46,7 @@ export const RETURN_ENUM_FIELDS = [
   ["claims[].scope", SCOPE_VALUES],
   ["claims[].offScopeKind", OFF_SCOPE_KIND_VALUES],
   ["claims[].problem", PROBLEM_VALUES],
-  ["claims[].resolutions[].effects[].kind", EFFECT_KIND_VALUES],
+  ["claims[].resolutions[].effects[].direction", EFFECT_DIRECTION_VALUES],
   ["claims[].resolutions[].effects[].status", EFFECT_STATUS_VALUES],
   ["claims[].resolutions[].effects[].method", PAYMENT_METHOD_VALUES],
   ["claims[].resolutions[].effects[].history[].observations[].problem", PROBLEM_VALUES],
@@ -88,7 +88,7 @@ export function verifyReturnEnums(doc) {
 
     (claim.resolutions || []).forEach((resolution) => {
       (resolution.effects || []).forEach((effect) => {
-        verify("effects[].kind", effect.kind, EFFECT_KIND_VALUES);
+        verify("effects[].direction", effect.direction, EFFECT_DIRECTION_VALUES);
         verify("effects[].status", effect.status, EFFECT_STATUS_VALUES);
         verify("effects[].method", effect.method, PAYMENT_METHOD_VALUES);
 

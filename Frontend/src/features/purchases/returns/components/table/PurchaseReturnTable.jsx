@@ -9,6 +9,10 @@ import {
   PURCHASE_RETURN_PROBLEM_LABELS,
   PURCHASE_RETURN_PROBLEM_STYLES,
 } from "../../domain/purchaseReturnVocabulary";
+import {
+  RETURN_PROBLEM_LABELS,
+  RETURN_PROBLEM_STYLES,
+} from "@/shared/domain/returns/problems";
 import { Badge } from "@/shared/components/ui/badge";
 import PurchaseReturnStatusBadge from "./PurchaseReturnStatusBadge";
 
@@ -73,8 +77,7 @@ const PurchaseReturnTable = ({
         header: "مشکل‌ها",
         enableSorting: false,
         cell: ({ row }) => {
-          const claims = row.original.claims || [];
-          const problems = [...new Set(claims.map((c) => c.problem))];
+          const problems = row.original.problems || [];
           if (problems.length === 0) {
             return <span className="text-xs text-muted-foreground">—</span>;
           }
@@ -84,9 +87,15 @@ const PurchaseReturnTable = ({
                 <Badge
                   key={problem}
                   variant="outline"
-                  className={`text-[10px] ${PURCHASE_RETURN_PROBLEM_STYLES[problem] ?? ""}`}
+                  className={`text-[10px] ${
+                    PURCHASE_RETURN_PROBLEM_STYLES[problem] ??
+                    RETURN_PROBLEM_STYLES[problem] ??
+                    ""
+                  }`}
                 >
-                  {PURCHASE_RETURN_PROBLEM_LABELS[problem] ?? problem}
+                  {PURCHASE_RETURN_PROBLEM_LABELS[problem] ??
+                    RETURN_PROBLEM_LABELS[problem] ??
+                    problem}
                 </Badge>
               ))}
               {problems.length > 2 && (

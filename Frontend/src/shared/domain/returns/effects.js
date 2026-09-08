@@ -20,23 +20,25 @@ import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
  * تفاوت دو سمت فقط در *برچسب*هاست، نه در مدل؛ برچسب‌ها در sides.js.
  */
 
-// ─── انواع اثر ──────────────────────────────────────────────────────────────
+// ─── جهتِ اثر ────────────────────────────────────────────────────────────────
 
-// بدون معادل در بکند — مدلِ ترکیبیِ خودِ فرانت است، نه یک enum بسته.
-export const EFFECT_KINDS = {
+// همان اعضا و همان اعداد `ReturnEffectDirectionEnum`ِ بکند
+// (`Domain/Enums/ReturnEffectDirectionEnum.cs`) — یک اثرِ خوانده‌شده از
+// سرور بدون هیچ نگاشتی همین‌جا جا می‌افتد.
+export const EFFECT_DIRECTIONS = {
   GOODS_IN: 0,
   GOODS_OUT: 1,
   MONEY_OUT: 2,
   MONEY_IN: 3,
 };
 
-const GOODS_EFFECT_KINDS = [
-  EFFECT_KINDS.GOODS_IN,
-  EFFECT_KINDS.GOODS_OUT,
+const GOODS_EFFECT_DIRECTIONS = [
+  EFFECT_DIRECTIONS.GOODS_IN,
+  EFFECT_DIRECTIONS.GOODS_OUT,
 ];
 
-export function isGoodsEffect(kind) {
-  return GOODS_EFFECT_KINDS.includes(kind);
+export function isGoodsEffect(direction) {
+  return GOODS_EFFECT_DIRECTIONS.includes(direction);
 }
 
 // ─── روش جابه‌جایی پول ──────────────────────────────────────────────────────
@@ -88,8 +90,8 @@ export const EFFECT_STATUSES = {
  * معیارِ ورود یک مرجوعی به صف‌های انبار همین است، نه وضعیت کلی مرجوعی.
  * اثرهای پولی همان لحظه‌ی ثبت اعمال‌شده حساب می‌شوند.
  */
-function initialStatusFor(kind) {
-  return isGoodsEffect(kind) ? EFFECT_STATUSES.PENDING : EFFECT_STATUSES.APPLIED;
+function initialStatusFor(direction) {
+  return isGoodsEffect(direction) ? EFFECT_STATUSES.PENDING : EFFECT_STATUSES.APPLIED;
 }
 
 // ─── ساخت اثر ───────────────────────────────────────────────────────────────
@@ -114,7 +116,7 @@ const generateId = () =>
  * کالای خراب موجودیِ قابل‌فروش را الکی بالا می‌برد.
  */
 export function createEffect({
-  kind,
+  direction,
   quantity = 0,
   productId = null,
   productCode = "",
@@ -126,13 +128,13 @@ export function createEffect({
   parts = [],
   note = "",
 }) {
-  const isGoods = isGoodsEffect(kind);
+  const isGoods = isGoodsEffect(direction);
   return {
     id: generateId(),
-    kind,
+    direction,
     quantity: isGoods ? Number(quantity) || 0 : 0,
     doneQuantity: 0,
-    restockedQuantity: kind === EFFECT_KINDS.GOODS_IN ? 0 : null,
+    restockedQuantity: direction === EFFECT_DIRECTIONS.GOODS_IN ? 0 : null,
     productId: isGoods ? productId : null,
     productCode: isGoods ? productCode : "",
     productName: isGoods ? productName : "",
@@ -143,7 +145,7 @@ export function createEffect({
     // فقط برای روشِ ترکیبی پر می‌شود؛ مجموعِ مبالغش همان amount است.
     parts: isGoods ? [] : parts,
     note: note || "",
-    status: initialStatusFor(kind),
+    status: initialStatusFor(direction),
     history: [],
     createdAt: new Date().toISOString(),
     appliedAt: isGoods ? null : new Date().toISOString(),
@@ -222,7 +224,7 @@ export function observationsOf(effect) {
 
 /** مقداری از یک اثر کالایی که هنوز اجرا نشده. */
 export function remainingQuantityOf(effect) {
-  if (!isGoodsEffect(effect?.kind)) return 0;
+  if (!isGoodsEffect(effect?.direction)) return 0;
   return Math.max(0, (Number(effect.quantity) || 0) - (Number(effect.doneQuantity) || 0));
 }
 
@@ -255,23 +257,23 @@ export function summarizeEffects(effects = [], { includePending = false } = {}) 
 
     // برای اثر کالاییِ در حال اجرا، آنچه واقعاً حرکت کرده doneQuantity است
     // نه quantity؛ مگر اینکه پیش‌نمایشِ کاملِ تصمیم خواسته شده باشد.
-    const quantity = isGoodsEffect(effect.kind)
+    const quantity = isGoodsEffect(effect.direction)
       ? includePending
         ? Number(effect.quantity) || 0
         : Number(effect.doneQuantity) || 0
       : 0;
 
-    switch (effect.kind) {
-      case EFFECT_KINDS.GOODS_IN:
+    switch (effect.direction) {
+      case EFFECT_DIRECTIONS.GOODS_IN:
         sum.goodsInQuantity += quantity;
         break;
-      case EFFECT_KINDS.GOODS_OUT:
+      case EFFECT_DIRECTIONS.GOODS_OUT:
         sum.goodsOutQuantity += quantity;
         break;
-      case EFFECT_KINDS.MONEY_IN:
+      case EFFECT_DIRECTIONS.MONEY_IN:
         sum.moneyIn += Number(effect.amount) || 0;
         break;
-      case EFFECT_KINDS.MONEY_OUT:
+      case EFFECT_DIRECTIONS.MONEY_OUT:
         sum.moneyOut += Number(effect.amount) || 0;
         break;
       default:
@@ -301,12 +303,12 @@ export function summarizeEffects(effects = [], { includePending = false } = {}) 
 export function stockDeltasOf(effects = [], { includePending = false } = {}) {
   const deltas = new Map();
   effects.forEach((effect) => {
-    if (!isGoodsEffect(effect.kind)) return;
+    if (!isGoodsEffect(effect.direction)) return;
     if (effect.status === EFFECT_STATUSES.VOID) return;
     if (effect.status === EFFECT_STATUSES.PENDING && !includePending) return;
     if (effect.productId == null) return;
 
-    const isIn = effect.kind === EFFECT_KINDS.GOODS_IN;
+    const isIn = effect.direction === EFFECT_DIRECTIONS.GOODS_IN;
     const quantity = includePending
       ? Number(effect.quantity) || 0
       : isIn

@@ -5,7 +5,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import {
-  EFFECT_KINDS,
+  EFFECT_DIRECTIONS,
   EFFECT_STATUSES,
   isGoodsEffect,
   observationsOf,
@@ -14,17 +14,17 @@ import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
 import { RETURN_PROBLEM_LABELS } from "@/shared/domain/returns/problems";
 
 const ICONS = {
-  [EFFECT_KINDS.GOODS_IN]: PackagePlus,
-  [EFFECT_KINDS.GOODS_OUT]: PackageMinus,
-  [EFFECT_KINDS.MONEY_IN]: ArrowDownLeft,
-  [EFFECT_KINDS.MONEY_OUT]: ArrowUpRight,
+  [EFFECT_DIRECTIONS.GOODS_IN]: PackagePlus,
+  [EFFECT_DIRECTIONS.GOODS_OUT]: PackageMinus,
+  [EFFECT_DIRECTIONS.MONEY_IN]: ArrowDownLeft,
+  [EFFECT_DIRECTIONS.MONEY_OUT]: ArrowUpRight,
 };
 
 const ACCENTS = {
-  [EFFECT_KINDS.GOODS_IN]: "text-teal-700 dark:text-teal-400",
-  [EFFECT_KINDS.GOODS_OUT]: "text-indigo-700 dark:text-indigo-400",
-  [EFFECT_KINDS.MONEY_IN]: "text-emerald-700 dark:text-emerald-400",
-  [EFFECT_KINDS.MONEY_OUT]: "text-rose-700 dark:text-rose-400",
+  [EFFECT_DIRECTIONS.GOODS_IN]: "text-teal-700 dark:text-teal-400",
+  [EFFECT_DIRECTIONS.GOODS_OUT]: "text-indigo-700 dark:text-indigo-400",
+  [EFFECT_DIRECTIONS.MONEY_IN]: "text-emerald-700 dark:text-emerald-400",
+  [EFFECT_DIRECTIONS.MONEY_OUT]: "text-rose-700 dark:text-rose-400",
 };
 
 /**
@@ -37,8 +37,8 @@ const ACCENTS = {
  * از کارتِ ۲۳۰ پیکسلی می‌زد بیرون.
  */
 export default function EffectBadge({ effect, side, showProductName = false }) {
-  const Icon = ICONS[effect.kind];
-  const isGoods = isGoodsEffect(effect.kind);
+  const Icon = ICONS[effect.direction];
+  const isGoods = isGoodsEffect(effect.direction);
   const isPending = effect.status === EFFECT_STATUSES.PENDING;
   const done = Number(effect.doneQuantity) || 0;
 
@@ -47,7 +47,7 @@ export default function EffectBadge({ effect, side, showProductName = false }) {
     : `${(Number(effect.amount) || 0).toLocaleString("fa-IR")} ریال`;
 
   const restocked = Number(effect.restockedQuantity) || 0;
-  const isIncoming = effect.kind === EFFECT_KINDS.GOODS_IN;
+  const isIncoming = effect.direction === EFFECT_DIRECTIONS.GOODS_IN;
 
   const details = [
     showProductName && isGoods ? effect.productName : null,
@@ -72,12 +72,12 @@ export default function EffectBadge({ effect, side, showProductName = false }) {
     <div className="flex items-start gap-1.5 min-w-0 text-[11px] leading-5">
       {Icon && (
         <Icon
-          className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${ACCENTS[effect.kind] ?? ""}`}
+          className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${ACCENTS[effect.direction] ?? ""}`}
         />
       )}
       <div className="min-w-0">
-        <span className={`font-medium ${ACCENTS[effect.kind] ?? ""}`}>
-          {side.effectLabels[effect.kind]}
+        <span className={`font-medium ${ACCENTS[effect.direction] ?? ""}`}>
+          {side.effectLabels[effect.direction]}
         </span>{" "}
         <span className="tabular-nums font-medium text-card-foreground">
           {value}
