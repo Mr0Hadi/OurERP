@@ -122,7 +122,7 @@ namespace Application.Features.PurchaseReturn.Commands
 
             // A resolution with no pending goods effect (money-only, or nothing at all) settles the
             // claimed quantity immediately; one with a pending goods effect settles it later, once
-            // ExecuteGoodsRoundCommand brings that effect's DoneQuantity up to its Quantity.
+            // ExecuteGoodsRoundCommand brings that effect's AppliedQuantity up to its Quantity.
             if (claim.PurchaseItemId.HasValue && resolution.Effects.All(e => e.Status != ReturnEffectStatusEnum.PENDING))
             {
                 var purchaseItem = purchaseReturn.Purchase!.Items.First(x => x.Id == claim.PurchaseItemId.Value);

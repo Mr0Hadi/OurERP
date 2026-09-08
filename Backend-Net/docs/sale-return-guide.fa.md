@@ -1,5 +1,13 @@
 # راهنمای کامل ماژول «ارسال فروش و مرجوعی از مشتری»
 
+> ⚠️ **این سند منسوخ است.** مدل مرجوعی در ۲۰۲۶-۰۸-۲۸ کاملاً بازنویسی شد و روی ساختار «اثرها»
+> (`Claim → Resolution → Effect → Round`) بنا شد. Entity ها، Command ها و enum هایی که این‌جا
+> توصیف شده‌اند (`InspectionItem`، `Decision`، `…ReturnItem`، `InspectedQuantity`،
+> `ClaimedQuantity`، `ConfirmReturnInspectionCommand`، …) **دیگر در کد وجود ندارند**. این سند فقط
+> به‌عنوان سابقه‌ی طراحی نگه داشته شده. برای وضعیت فعلی به
+> [`returns-effects-and-org-structure-summary.fa.md`](./returns-effects-and-org-structure-summary.fa.md)
+> و بخش‌های ۱۰ و ۱۲ [`api-guide.fa.md`](./api-guide.fa.md) مراجعه کنید.
+
 این سند توضیح می‌دهد که در فیچر `SaleReturn` (و پیش‌نیازش، ارسال چندمرحله‌ای فروش) دقیقاً چه کدی نوشته شده، هر بخش چرا این‌طور طراحی شده، و هر تابع/هندلر روی چه سناریوهایی و با چه منطقی کار می‌کند. این سند مکمل `docs/purchase-return-guide.fa.md` و `docs/return-scenarios-guide.fa.md` (بخش دو) است — همان‌ها منبع سناریوهای کسب‌وکاری بودند؛ این‌جا پیاده‌سازی واقعی مستند می‌شود.
 
 > این فیچر از صفر ساخته شد (نه بازنویسی) چون قبل از آن هیچ‌چیز از مرجوعی فروش در بک‌اند وجود نداشت — نه Entity، نه Command، نه حتی `SaleItem.ShippedQuantity`.

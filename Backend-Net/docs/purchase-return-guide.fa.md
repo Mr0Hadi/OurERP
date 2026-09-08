@@ -1,5 +1,13 @@
 # راهنمای کامل ماژول «دریافت خرید و مرجوعی به تامین‌کننده»
 
+> ⚠️ **این سند منسوخ است.** مدل مرجوعی در ۲۰۲۶-۰۸-۲۸ کاملاً بازنویسی شد و روی ساختار «اثرها»
+> (`Claim → Resolution → Effect → Round`) بنا شد. Entity ها، Command ها و enum هایی که این‌جا
+> توصیف شده‌اند (`InspectionItem`، `Decision`، `…ReturnItem`، `InspectedQuantity`،
+> `ClaimedQuantity`، `ConfirmReturnInspectionCommand`، …) **دیگر در کد وجود ندارند**. این سند فقط
+> به‌عنوان سابقه‌ی طراحی نگه داشته شده. برای وضعیت فعلی به
+> [`returns-effects-and-org-structure-summary.fa.md`](./returns-effects-and-org-structure-summary.fa.md)
+> و بخش‌های ۱۰ و ۱۲ [`api-guide.fa.md`](./api-guide.fa.md) مراجعه کنید.
+
 این سند توضیح می‌دهد که در فیچر `PurchaseReturn` دقیقاً چه کدی نوشته شده، هر بخش چرا این‌طور طراحی شده، و هر تابع/هندلر روی چه سناریوهایی و با چه منطقی کار می‌کند. هدف این است که یک نفر بدون نیاز به خواندن کد بتواند دقیقاً بفهمد سیستم در هر حالت ممکن چه رفتاری دارد.
 
 > این سند مربوط به وضعیت فعلی کد (بعد از تبدیل `PurchaseReturnCalculations` به یک سرویس تزریق‌پذیر به نام `IPurchaseReturnCalculationService`) است.

@@ -55,7 +55,7 @@ namespace Application.Features.PurchaseReturn.Queries
                     ProductName = x.claim.Product?.Name ?? string.Empty,
                     Unit = x.claim.Product?.Unit.GetDescription() ?? string.Empty,
                     Quantity = x.effect.Quantity,
-                    DoneQuantity = x.effect.DoneQuantity,
+                    AppliedQuantity = x.effect.AppliedQuantity,
                     RemainingQuantity = x.effect.RemainingQuantity,
                 })
                 .ToList();
