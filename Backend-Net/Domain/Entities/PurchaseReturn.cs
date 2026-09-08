@@ -42,6 +42,9 @@ namespace Domain.Entities
         public int DecidedQuantity => Claims.Sum(c => c.DecidedQuantity);
 
         [NotMapped]
+        public int RemainingQuantity => Math.Max(0, ClaimedQuantity - DecidedQuantity);
+
+        [NotMapped]
         public IEnumerable<PurchaseReturnEffect> AllEffects => Claims.SelectMany(c => c.Resolutions).SelectMany(r => r.Effects);
     }
 }
