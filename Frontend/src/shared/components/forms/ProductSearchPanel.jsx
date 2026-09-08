@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { unitLabelOf } from "@/shared/domain/enums/productUnit";
-import SignedImage from "@/shared/components/files/SignedImage";
+import RemoteImage from "@/shared/components/files/RemoteImage";
 import {
   Select,
   SelectContent,
@@ -121,8 +121,8 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
               key={product.id}
               className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 rounded-md border border-border bg-card px-3 py-2 hover:bg-accent/50 transition-colors"
             >
-              {/* تصویر — امضای منقضی‌شده خودش تازه می‌شود */}
-              <SignedImage
+              {/* تصویر — اگر پاسخ فقط کلید داشته باشد، آدرس خودش گرفته می‌شود */}
+              <RemoteImage
                 imageKey={product.imageKey}
                 imageUrl={product.imageUrl ?? product.image}
                 alt={product.name}

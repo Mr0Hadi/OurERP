@@ -251,11 +251,6 @@ export default function SaleDetailForm({ saleData }) {
             <InvoiceDocumentSection
               title={isProforma ? "پیش‌فاکتور فروش" : "فاکتور فروش"}
               invoiceNumber={formData.invoiceNumber}
-              invoiceDate={formData.invoiceDate}
-              partyLabel="مشتری"
-              partyName={formData.customerName}
-              items={items}
-              totalAmount={computedTotal}
               attachments={attachments}
               documentKind="sale"
               documentId={saleData.id}

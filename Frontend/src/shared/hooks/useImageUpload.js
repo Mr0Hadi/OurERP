@@ -2,9 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
 import { deleteImages, uploadImage } from "@/shared/services/files/api-v1";
-import { objectKeyOf } from "@/shared/services/files/objectKey";
+import { objectKeyOf, toDisplayableUrl } from "@/shared/services/files/objectKey";
 import { validateImageFile } from "@/shared/services/files/fileConstraints";
-import { isDisplayableUrl } from "@/shared/services/files/objectKey";
 import { useImageUrlQuery, useSeedImageUrl } from "@/shared/services/files/queries";
 
 /**
@@ -27,7 +26,7 @@ import { useImageUrlQuery, useSeedImageUrl } from "@/shared/services/files/queri
  *
  * @param folder        `ImageFolderEnum`
  * @param initialKey    `imageKey` موجودیت در حالت ویرایش
- * @param initialUrl    `imageUrl` امضاشده‌ی همان موجودیت (فقط برای نمایش)
+ * @param initialUrl    `imageUrl` همان موجودیت (فقط برای نمایش)
  * @param deleteOrphans پاک‌کردنِ فایل‌های بی‌صاحب (پیش‌فرض روشن)
  * @param notifyError   toastِ خطا (اگر خطا را کنارِ فیلد نشان می‌دهید خاموشش کنید)
  */
@@ -205,21 +204,20 @@ export function useImageUpload({
   const isUploading = status === "uploading";
 
   /**
-   * موجودیت ممکن است فقط `imageKey` بدهد، یا `imageUrl`ش منقضی شده باشد،
-   * یا (در mock) اصلاً کلیدِ خام در `imageUrl` نشسته باشد. در هر سه حالت
-   * آدرسِ قابل نمایش را باید خودمان بگیریم — وگرنه فرمِ ویرایش «بدون
-   * تصویر» نشان می‌دهد در حالی که تصویر وجود دارد.
+   * موجودیت ممکن است فقط `imageKey` بدهد، یا (در mock) اصلاً کلیدِ خام
+   * در `imageUrl` نشسته باشد. در هر دو حالت آدرسِ نمایشی را باید خودمان
+   * بگیریم — وگرنه فرمِ ویرایش «بدون تصویر» نشان می‌دهد در حالی که
+   * تصویر وجود دارد.
    */
-  const remoteIsDisplayable = isDisplayableUrl(remoteUrl);
-  const { data: signedUrl } = useImageUrlQuery(objectKey, {
-    enabled: Boolean(objectKey) && !localPreview && !remoteIsDisplayable,
+  const remoteDisplayUrl = toDisplayableUrl(remoteUrl);
+  const { data: fetchedUrl } = useImageUrlQuery(objectKey, {
+    enabled: Boolean(objectKey) && !localPreview && !remoteDisplayUrl,
   });
 
   return useMemo(
     () => ({
-      /** آدرسِ نمایش — تا آمدنِ پاسخ فایلِ محلی، بعدش امضای سرور. */
-      previewUrl:
-        localPreview || (remoteIsDisplayable ? remoteUrl : signedUrl) || null,
+      /** آدرسِ نمایش — تا آمدنِ پاسخ فایلِ محلی، بعدش آدرسِ سرور. */
+      previewUrl: localPreview || remoteDisplayUrl || fetchedUrl || null,
       objectKey,
       /**
        * چیزی که باید در `imageUrl` دستور Create/Update برود. `null` یعنی
@@ -247,9 +245,8 @@ export function useImageUpload({
       localPreview,
       objectKey,
       progress,
-      remoteIsDisplayable,
-      remoteUrl,
-      signedUrl,
+      remoteDisplayUrl,
+      fetchedUrl,
       remove,
       reset,
       selectFile,

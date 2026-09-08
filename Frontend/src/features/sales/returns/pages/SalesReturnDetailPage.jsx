@@ -120,11 +120,6 @@ function SalesReturnDetailContent({ salesReturn }) {
       <InvoiceDocumentSection
         title="مرجوعی فروش"
         invoiceNumber={salesReturn.returnNumber}
-        invoiceDate={salesReturn.returnDate}
-        partyLabel="مشتری"
-        partyName={salesReturn.customerName}
-        items={salesReturn.claims}
-        totalAmount={salesReturn.totalAmount}
         documentKind="saleReturn"
         documentId={salesReturn.id}
         attachmentLabel="فاکتور یا رسید مرجوعی برای مشتری"

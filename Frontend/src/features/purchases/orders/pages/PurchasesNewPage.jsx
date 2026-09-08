@@ -301,11 +301,6 @@ export default function PurchasesNewPage() {
                   : "فاکتور خرید"
               }
               invoiceNumber={formData.invoiceNumber}
-              invoiceDate={formData.invoiceDate}
-              partyLabel="تامین‌کننده"
-              partyName={formData.supplierName}
-              items={items}
-              totalAmount={computedTotal}
               attachments={attachments}
               attachmentLabel="پیش‌فاکتور/فاکتور دریافتی از تامین‌کننده"
             />

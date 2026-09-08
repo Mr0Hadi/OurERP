@@ -120,11 +120,6 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
       <InvoiceDocumentSection
         title="مرجوعی خرید"
         invoiceNumber={purchaseReturn.returnNumber}
-        invoiceDate={purchaseReturn.returnDate}
-        partyLabel="تامین‌کننده"
-        partyName={purchaseReturn.supplierName}
-        items={purchaseReturn.claims}
-        totalAmount={purchaseReturn.totalAmount}
         attachmentRequired
         attachmentLabel="فاکتور یا رسید مرجوعی از تامین‌کننده"
       />

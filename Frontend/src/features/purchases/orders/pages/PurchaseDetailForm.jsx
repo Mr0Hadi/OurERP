@@ -269,19 +269,15 @@ export default function PurchaseDetailForm({ purchaseData }) {
 
             {/* در مرحله‌ی پیش‌فاکتور، فاکتور رسمی هنوز نرسیده؛ چیزی
                 که ضمیمه می‌شود پیش‌فاکتورِ تامین‌کننده است. با تغییر
-                وضعیت، شماره‌ی فاکتور و خودِ فاکتور وارد/ضمیمه می‌شوند. */}
+                وضعیت، شماره‌ی فاکتور و خودِ فاکتور وارد/ضمیمه می‌شوند.
+
+                `documentKind` عمداً داده نشده: فاکتور خرید را سرور
+                نمی‌سازد — همان برگه‌ای است که تامین‌کننده فرستاده و
+                اینجا ضمیمه شده، و چاپ/دانلود روی همان انجام می‌شود. */}
             <InvoiceDocumentSection
               title={isProforma ? "پیش‌فاکتور خرید" : "فاکتور خرید"}
               invoiceNumber={formData.invoiceNumber}
-              invoiceDate={formData.invoiceDate}
-              partyLabel="تامین‌کننده"
-              partyName={formData.supplierName}
-              items={items}
-              totalAmount={computedTotal}
               attachments={attachments}
-              documentKind="purchase"
-              documentId={purchaseData.id}
-              attachmentRequired={!isProforma}
               attachmentLabel={
                 isProforma
                   ? "پیش‌فاکتور دریافتی از تامین‌کننده"

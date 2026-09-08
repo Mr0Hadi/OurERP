@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
-import SignedImage from "@/shared/components/files/SignedImage";
+import RemoteImage from "@/shared/components/files/RemoteImage";
 
 /** نام نمایشی طرف حساب در کارت انتخاب: نام شرکت، وگرنه نام و نام خانوادگی. */
 const displayNameOf = (party) =>
@@ -83,7 +83,7 @@ export default function PartyPickerCard({
       <CardContent className="space-y-3">
         {selectedParty ? (
           <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 px-3 py-2.5">
-            <SignedImage
+            <RemoteImage
               imageKey={selectedParty.imageKey}
               imageUrl={selectedParty.imageUrl ?? selectedParty.image}
               alt={displayName}
@@ -149,7 +149,7 @@ export default function PartyPickerCard({
                         onClick={() => handleSelect(party)}
                         className="flex items-center gap-3 w-full px-3 py-2.5 text-right hover:bg-accent/50 transition-colors"
                       >
-                        <SignedImage
+                        <RemoteImage
                           imageKey={party.imageKey}
                           imageUrl={party.imageUrl ?? party.image}
                           alt={name}

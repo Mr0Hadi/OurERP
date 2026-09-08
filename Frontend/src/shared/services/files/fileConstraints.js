@@ -1,3 +1,5 @@
+import { objectKeyOf } from "./objectKey";
+
 /**
  * آینه‌ی محدودیت‌های `UploadImageCommandHandler` در بکند (بخش ۱۷ سند).
  *
@@ -62,12 +64,15 @@ export function extensionOf(fileName = "") {
  * آیا این فایل/کلید PDF است — برای جاهایی که `<img>` جواب نمی‌دهد و
  * باید آیکن و «بازکردن در تب جدید» نشان داده شود.
  *
- * روی `objectKey` هم کار می‌کند (کلید پسوند را نگه می‌دارد) و روی URLِ
- * امضاشده هم، به شرطِ کنارگذاشتنِ query — امضای S3 بعد از `?` می‌آید.
+ * روی نامِ فایل، روی `objectKey` (کلید پسوند را نگه می‌دارد) و روی
+ * آدرسِ تصویرِ سرور کار می‌کند. برای آدرس، *نمی‌شود* فقط تا `?` را
+ * برید: در قراردادِ تازه کلید خودش در کوئری است
+ * (`api/File/GetImage?objectKey=x.pdf`) و بریدنِ کوئری همان پسوندی را
+ * دور می‌ریزد که دنبالش هستیم. `objectKeyOf` هر سه شکل را به کلید
+ * برمی‌گرداند.
  */
 export function isPdfName(nameOrUrl = "") {
-  const withoutQuery = String(nameOrUrl).split("?")[0];
-  return extensionOf(withoutQuery) === ".pdf";
+  return extensionOf(objectKeyOf(String(nameOrUrl)) ?? "") === ".pdf";
 }
 
 function validate(file, { extensions, contentTypes, typeMessage }) {

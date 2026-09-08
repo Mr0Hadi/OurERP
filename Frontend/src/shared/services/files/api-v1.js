@@ -1,6 +1,6 @@
 import axiosInstance from "@/shared/services/api/axios";
 import { validateDocumentFile } from "./fileConstraints";
-import { objectKeyOf } from "./objectKey";
+import { objectKeyOf, toDisplayableUrl } from "./objectKey";
 
 /**
  * لایه‌ی تماسِ خام با `api/File` (بخش ۱۷ سند api-guide.fa.md).
@@ -9,8 +9,11 @@ import { objectKeyOf } from "./objectKey";
  *
  * ۱. آپلود *جدا* از ثبت موجودیت است. این‌جا فقط `objectKey` گرفته می‌شود؛
  *    همان کلید بعداً در فیلد `imageUrl` دستور `CreateX`/`UpdateX` می‌رود.
- * ۲. باکت خصوصی است؛ `url` یک امضای موقتی (پیش‌فرض ۶۰ دقیقه) است و
- *    **هرگز نباید ذخیره شود** — نه در فرم، نه در payload، نه در کش دائمی.
+ * ۲. `url` آدرسِ *ثابتِ* خودِ API است
+ *    (`api/File/GetImage?objectKey=...`) و منقضی نمی‌شود — چون باکتِ
+ *    Liara به User-Agentِ مرورگر ۴۰۴ می‌دهد و بایت‌ها از خودِ API
+ *    می‌آیند. با این حال چیزی که *ذخیره* می‌شود همچنان `objectKey` است،
+ *    نه این آدرس: آدرس با هاستِ سرور عوض می‌شود، کلید نه.
  * ۳. سرور هنگام تعویض تصویر، فایل قبلی را پاک نمی‌کند. پاک‌سازیِ یتیم‌ها
  *    کارِ فرانت است (`useImageUpload` این را مدیریت می‌کند).
  */
@@ -31,7 +34,9 @@ function pick(source, name) {
 function normalizeUploadedFile(data) {
   return {
     objectKey: pick(data, "objectKey") ?? null,
-    url: pick(data, "url") ?? null,
+    // سرور وقتی `PublicBaseUrl` ست نشده باشد آدرسِ نسبی می‌دهد؛ اینجا
+    // مطلق می‌شود تا در `<img src>` مستقلاً کار کند.
+    url: toDisplayableUrl(pick(data, "url")),
     fileName: pick(data, "fileName") ?? "",
     contentType: pick(data, "contentType") ?? null,
     size: pick(data, "size") ?? 0,
@@ -87,10 +92,11 @@ export async function uploadImage({ file, folder, onProgress, signal } = {}) {
 }
 
 /**
- * `GET api/File/GetImageUrl` — امضای تازه برای یک کلیدِ ذخیره‌شده.
+ * `GET api/File/GetImageUrl` — ساختنِ آدرسِ نمایشی برای یک کلیدِ
+ * ذخیره‌شده.
  *
- * برای صفحه‌ای که مدت زیادی باز می‌ماند یا پاسخِ لیستی که کش شده، به‌جای
- * گرفتنِ دوباره‌ی کلِ موجودیت.
+ * برای جایی که فقط `imageKey` در دست است و پاسخ `imageUrl` نداشته.
+ * آدرس منقضی نمی‌شود، پس این تماس یک‌بار برای هر کلید کافی است.
  */
 export async function getImageUrl(objectKey, { signal } = {}) {
   const key = objectKeyOf(objectKey);
@@ -101,7 +107,7 @@ export async function getImageUrl(objectKey, { signal } = {}) {
     signal,
   });
 
-  return pick(data, "url") ?? null;
+  return toDisplayableUrl(pick(data, "url"));
 }
 
 /**

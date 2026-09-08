@@ -279,11 +279,6 @@ export default function SaleNewPage() {
                   : "فاکتور فروش"
               }
               invoiceNumber={formData.invoiceNumber}
-              invoiceDate={formData.invoiceDate}
-              partyLabel="مشتری"
-              partyName={formData.customerName}
-              items={items}
-              totalAmount={computedTotal}
               attachments={attachments}
               attachmentLabel="پیش‌فاکتور/فاکتور صادرشده برای مشتری"
             />

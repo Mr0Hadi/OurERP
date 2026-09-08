@@ -1,16 +1,15 @@
-import SignedImage from "@/shared/components/files/SignedImage";
+import RemoteImage from "@/shared/components/files/RemoteImage";
 
 /**
  * بندانگشتیِ کالا در خطوطِ سند.
  *
- * `imageUrl` که از سرور می‌آید یک امضای موقتی است (بخش ۱۷ سند)؛ در صفحه‌ی
- * دریافت/ارسال که ممکن است ساعت‌ها باز بماند، `<img>` ساده بعد از انقضا
- * فقط یک آیکونِ شکسته می‌شود. `SignedImage` در آن حالت با `imageKey`
- * امضای تازه می‌گیرد.
+ * `imageUrl` همیشه همراهِ پاسخ نمی‌آید — بعضی خطوطِ سند فقط `imageKey`
+ * دارند و `<img>`ِ ساده آن‌جا یک آیکونِ شکسته می‌شود. `RemoteImage` در
+ * آن حالت آدرس را از روی کلید می‌گیرد.
  */
 export default function ProductThumb({ item }) {
   return (
-    <SignedImage
+    <RemoteImage
       imageKey={item.imageKey}
       imageUrl={item.imageUrl ?? item.image}
       alt={item.productName}

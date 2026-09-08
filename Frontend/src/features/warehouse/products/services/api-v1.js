@@ -81,7 +81,7 @@ export const fetchProductByBarcode = async (code) => {
  *
  * پیلود همان چیزی است که `useProductForm.buildProductPayload` می‌سازد —
  * از قبل دقیقاً شکلِ `CreateProductCommand`/`UpdateProductCommand` است
- * (`imageObjectKey`، `wholeSalePrice` با همین حروف)، پس اینجا دوباره
+ * (`imageKey`، `wholeSalePrice` با همین حروف)، پس اینجا دوباره
  * فیلد به فیلد بازسازی نمی‌شود.
  */
 export const createProduct = async (productData) => {

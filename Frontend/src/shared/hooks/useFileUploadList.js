@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
 import { deleteImages, uploadImage } from "@/shared/services/files/api-v1";
-import { objectKeyOf } from "@/shared/services/files/objectKey";
+import { objectKeyOf, toDisplayableUrl } from "@/shared/services/files/objectKey";
 import {
   DOCUMENT_ACCEPT,
   IMAGE_ACCEPT,
@@ -36,7 +36,9 @@ function itemFromServer(entry) {
   return {
     id: localId(),
     objectKey: key,
-    url: entry?.url ?? entry?.imageUrl ?? null,
+    // سرور وقتی `PublicBaseUrl` ست نشده باشد آدرسِ نسبی می‌دهد؛ نسبی
+    // برای فرانتِ روی دامنه‌ی دیگر بی‌معنی است، پس همین‌جا مطلق می‌شود.
+    url: toDisplayableUrl(entry?.url ?? entry?.imageUrl),
     localPreview: null,
     fileName: entry?.fileName ?? "",
     note: entry?.note ?? "",

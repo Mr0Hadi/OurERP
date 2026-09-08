@@ -51,7 +51,15 @@ async function fetchPdf(url, params) {
   }
 }
 
-/** `GET api/Invoice/GetPurchaseInvoicePdf` @returns Blob با `application/pdf` */
+/**
+ * `GET api/Invoice/GetPurchaseInvoicePdf` @returns Blob با `application/pdf`
+ *
+ * ⚠️ در UI استفاده نمی‌شود و عمداً: این سند را *ما* از روی داده‌ی خودمان
+ * می‌سازیم، در حالی که فاکتورِ خرید همان برگه‌ای است که تامین‌کننده
+ * فرستاده و کاربر ضمیمه کرده. صفحه‌ی خرید همان ضمیمه را چاپ/دانلود
+ * می‌کند (`InvoiceDocumentSection`). اینجا می‌ماند چون endpoint وجود
+ * دارد و ممکن است جای دیگری (مثلاً گزارش داخلی) لازم شود.
+ */
 export const getPurchaseInvoicePdf = (purchaseId) =>
   fetchPdf("/Invoice/GetPurchaseInvoicePdf", { purchaseId });
 
@@ -69,14 +77,3 @@ export const getSaleInvoicePdf = (saleId) =>
 export const getSaleReturnCreditNotePdf = (saleReturnId) =>
   fetchPdf("/Invoice/GetSaleReturnCreditNotePdf", { saleReturnId });
 
-/** ذخیره‌ی یک Blob با نامِ دلخواه — همان کارِ دکمه‌ی دانلود، یک‌جا. */
-export function saveBlobAs(blob, fileName) {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = fileName;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-}

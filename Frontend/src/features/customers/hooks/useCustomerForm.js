@@ -87,8 +87,9 @@ const textOrNull = (value) => {
 
 /**
  * `imageKey` همان ObjectKey برگشته از `api/File/UploadImage` است و در
- * فیلد `imageUrl` می‌نشیند (نامِ فیلد در خودِ Command همین است؛ سرور
- * هنگام ذخیره آن را به کلید نرمال می‌کند). `null` یعنی «تصویر را پاک کن».
+ * فیلدی به همین نام می‌نشیند — `ImageKey` روی خودِ Command (سرور هنگام
+ * ذخیره آن را با `NormalizeKey` تمیز می‌کند). `null` یعنی «تصویر را پاک
+ * کن».
  */
 export function buildCustomerPayload(data, imageKey) {
   const amount = Number(data.balanceAmount) || 0;
@@ -113,7 +114,7 @@ export function buildCustomerPayload(data, imageKey) {
     description: textOrNull(data.description),
     balance,
     balanceType,
-    imageUrl: imageKey ?? null,
+    imageKey: imageKey ?? null,
     latitude: numberOrNull(data.latitude),
     longitude: numberOrNull(data.longitude),
   };

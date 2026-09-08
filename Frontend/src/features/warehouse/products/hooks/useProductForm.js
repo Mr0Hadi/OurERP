@@ -68,8 +68,7 @@ export function useProductForm(initialData = null) {
    * - `wholeSalePrice` با همین حروفِ بزرگ‌وکوچک (قبلاً `wholesalePrice`
    *   فرستاده می‌شد و بی‌صدا کنار گذاشته می‌شد — یعنی قیمت عمده هرگز
    *   ذخیره نمی‌شد).
-   * - کلیدِ تصویر در `imageObjectKey` می‌رود نه `imageUrl`؛ `null` یعنی
-   *   «تصویر را پاک کن».
+   * - کلیدِ تصویر در `imageKey` می‌رود؛ `null` یعنی «تصویر را پاک کن».
    */
   const buildProductPayload = (formData) => ({
     name: formData.name,
@@ -82,7 +81,7 @@ export function useProductForm(initialData = null) {
     retailPrice: Number(formData.sellPrice1) || 0,
     wholeSalePrice: Number(formData.sellPrice2) || 0,
     tax: Number(formData.vat) || 0,
-    imageObjectKey: imageUpload.imageKeyPayload,
+    imageKey: imageUpload.imageKeyPayload,
   });
 
   return {

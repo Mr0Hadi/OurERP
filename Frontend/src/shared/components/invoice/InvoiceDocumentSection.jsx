@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Printer, Download, Info } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Printer, Download, FileText, Info } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
@@ -8,24 +8,34 @@ import { Label } from "@/shared/components/ui/label";
 import { Spinner } from "@/shared/components/ui/spinner";
 import FileUploadList from "@/shared/components/files/FileUploadList";
 import {
-  getPurchaseInvoicePdf,
   getSaleInvoicePdf,
   getSaleReturnCreditNotePdf,
-  saveBlobAs,
 } from "@/shared/services/invoice/api-v1";
+import {
+  attachmentDocuments,
+  downloadDocuments,
+  printDocuments,
+  serverDocument,
+} from "@/shared/services/invoice/documentOutput";
 
 /**
  * سند فاکتور/پیش‌فاکتورِ یک سفارش: چاپ و دانلود، و ضمیمه‌کردنِ برگه‌ی
- * واقعی (مثلاً فاکتوری که تامین‌کننده داده).
+ * واقعی.
  *
- * - **چاپ** همیشه یک پیش‌نمایشِ HTML از روی داده‌ی *همین فرم* است، تا
- *   قبل از ذخیره هم کار کند.
- * - **دانلود** اگر سند روی سرور باشد (`documentKind` + `documentId`)
- *   فاکتورِ رسمیِ PDF را از `api/Invoice` می‌گیرد (بخش ۱۳ سند)، وگرنه
- *   همان پیش‌نمایشِ HTML را ذخیره می‌کند.
- * - **ضمیمه** از مسیرِ مشترکِ آپلود (`useInvoiceAttachments` →
- *   `api/File/UploadImage`) رد می‌شود و `objectKey` می‌گیرد؛ همان کلید
- *   بعداً در `attachments`ِ دستور Create/Update می‌نشیند.
+ * چاپ و دانلود روی سندهای *واقعی* کار می‌کنند، نه روی یک بازسازیِ محلی:
+ *
+ * - **خرید:** پیش‌فاکتور و فاکتور را تامین‌کننده می‌فرستد و کاربر دستی
+ *   ضمیمه می‌کند؛ پس همان ضمیمه‌ها چاپ و دانلود می‌شوند. بکند
+ *   `GetPurchaseInvoicePdf` دارد، ولی آن سندی است که *خودمان* از روی
+ *   داده‌ی خودمان می‌سازیم — نه برگه‌ای که تامین‌کننده داده — پس اینجا
+ *   استفاده نمی‌شود.
+ * - **فروش:** فاکتور را بکند می‌سازد (`GetSaleInvoicePdf`) و کاربر هم
+ *   می‌تواند نسخه‌ی دستی ضمیمه کند؛ هر دو چاپ و دانلود می‌شوند.
+ * - **مرجوعی فروش:** «برگه‌ی طلبکاری» را بکند می‌سازد.
+ *
+ * وقتی هیچ سندی وجود ندارد، دکمه‌ها غیرفعال‌اند. قبلاً در آن حالت یک
+ * جدولِ HTML از روی داده‌ی فرم ساخته می‌شد؛ آن برگه فاکتور نبود و
+ * فرستادنش برای طرفِ مقابل فقط سوءتفاهم می‌ساخت.
  *
  * ضمیمه را *صفحه* نگه می‌دارد نه این کامپوننت، چون فقط صفحه‌ای که دستور
  * را می‌فرستد می‌تواند آن را در بدنه بگذارد و بعد از ذخیره‌ی موفق
@@ -36,143 +46,71 @@ import {
  * می‌گیرد و هیچ ضمیمه‌ای ذخیره نشده.
  */
 
-function buildInvoiceHtml({
-  title,
-  invoiceNumber,
-  invoiceDate,
-  partyLabel,
-  partyName,
-  items,
-  totalAmount,
-}) {
-  const rows = (items || [])
-    .map((item) => {
-      const lineTotal =
-        (item.quantity || 0) * (item.unitPrice || 0) * (1 - (item.discount || 0) / 100);
-      return `<tr>
-        <td>${item.productName || ""}</td>
-        <td>${(item.quantity || 0).toLocaleString("fa-IR")} ${item.unit || ""}</td>
-        <td>${(item.unitPrice || 0).toLocaleString("fa-IR")}</td>
-        <td>${(item.discount || 0).toLocaleString("fa-IR")}%</td>
-        <td>${lineTotal.toLocaleString("fa-IR")}</td>
-      </tr>`;
-    })
-    .join("");
-
-  return `<!DOCTYPE html>
-<html dir="rtl" lang="fa">
-<head>
-<meta charset="utf-8" />
-<title>${title}</title>
-<style>
-  body { font-family: Tahoma, Arial, sans-serif; padding: 24px; color: #111; }
-  h1 { font-size: 20px; margin-bottom: 4px; }
-  .meta { margin-bottom: 16px; color: #444; font-size: 13px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-  th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: right; font-size: 13px; }
-  th { background: #f3f3f3; }
-  .total { margin-top: 12px; font-weight: bold; text-align: left; font-size: 14px; }
-</style>
-</head>
-<body>
-  <h1>${title}</h1>
-  <div class="meta">
-    شماره فاکتور: ${invoiceNumber || "—"} | تاریخ: ${invoiceDate || "—"} | ${partyLabel}: ${partyName || "—"}
-  </div>
-  <table>
-    <thead>
-      <tr><th>کالا</th><th>تعداد</th><th>قیمت واحد (ریال)</th><th>تخفیف</th><th>جمع (ریال)</th></tr>
-    </thead>
-    <tbody>${rows}</tbody>
-  </table>
-  <div class="total">جمع کل: ${(totalAmount || 0).toLocaleString("fa-IR")} ریال</div>
-</body>
-</html>`;
-}
-
 /**
  * @param attachments  خروجی `useInvoiceAttachments` از سمتِ صفحه — نبودنش
  *   یعنی این نوع سند هنوز روی سرور جای ضمیمه ندارد.
- * @param documentKind `"purchase"` / `"sale"` / `"saleReturn"` — برای
- *   دانلودِ سندِ رسمیِ PDF از `api/Invoice` (برای مرجوعی فروش، «برگه‌ی
- *   طلبکاری»). نبودنش یعنی فقط پیش‌نمایشِ HTML. مرجوعی خرید سندِ
- *   رسمیِ PDF ندارد.
+ * @param documentKind `"sale"` / `"saleReturn"` — سندی که *سرور*
+ *   می‌سازد و کنارِ ضمیمه‌ها چاپ/دانلود می‌شود (برای مرجوعی فروش،
+ *   «برگه‌ی طلبکاری»). خرید و مرجوعی خرید آن را ندارند: سندشان فقط
+ *   همان چیزی است که کاربر ضمیمه کرده.
  * @param documentId   شناسه‌ی همان سندِ ذخیره‌شده.
  */
 export default function InvoiceDocumentSection({
   title,
   invoiceNumber,
-  invoiceDate,
-  partyLabel,
-  partyName,
-  items,
-  totalAmount,
   attachmentRequired = false,
   attachmentLabel = "فایل فاکتور",
   attachments,
   documentKind,
   documentId,
 }) {
-  const [isDownloading, setIsDownloading] = useState(false);
+  const [isBusy, setIsBusy] = useState(false);
 
   /**
-   * فاکتورِ رسمی را سرور می‌سازد (بخش ۱۳ سند) و فقط برای سندِ
-   * ذخیره‌شده معنا دارد؛ بدون `documentId` دکمه همان پیش‌نمایشِ HTML
-   * را می‌دهد.
+   * سندی که سرور می‌سازد — فقط برای فروش و مرجوعی فروش، و فقط وقتی
+   * سفارش ذخیره شده باشد. خرید عمداً اینجا نیست (بالا توضیح داده شد).
    */
-  const serverPdf = documentId
-      ? {
-          purchase: getPurchaseInvoicePdf,
-          sale: getSaleInvoicePdf,
-          saleReturn: getSaleReturnCreditNotePdf,
-        }[documentKind]
-      : null;
+  const serverPdfFetcher = documentId
+    ? { sale: getSaleInvoicePdf, saleReturn: getSaleReturnCreditNotePdf }[documentKind]
+    : null;
 
-  const invoiceProps = {
-    title,
-    invoiceNumber,
-    invoiceDate,
-    partyLabel,
-    partyName,
-    items,
-    totalAmount,
-  };
+  const documents = useMemo(() => {
+    const list = [];
 
-  const handlePrint = () => {
-    const win = window.open("", "_blank", "width=800,height=1000");
-    if (!win) return;
-    win.document.write(buildInvoiceHtml(invoiceProps));
-    win.document.close();
-    win.focus();
-    win.print();
-  };
-
-  const downloadHtmlPreview = () => {
-    saveBlobAs(
-      new Blob([buildInvoiceHtml(invoiceProps)], { type: "text/html;charset=utf-8" }),
-      `${invoiceNumber || "invoice"}.html`,
-    );
-  };
-
-  const handleDownload = async () => {
-    if (!serverPdf) {
-      downloadHtmlPreview();
-      return;
+    if (serverPdfFetcher) {
+      list.push(
+        serverDocument({
+          name: invoiceNumber || title || "invoice",
+          fetchPdf: () => serverPdfFetcher(documentId),
+        })
+      );
     }
 
-    setIsDownloading(true);
+    list.push(...attachmentDocuments(attachments));
+    return list;
+  }, [attachments, documentId, invoiceNumber, serverPdfFetcher, title]);
+
+  /** پیامِ یکسان برای هر دو دکمه وقتی بعضی سندها نیامدند. */
+  const reportFailures = (failures) => {
+    if (!failures.length) return;
+    toast.error(`دریافت این فایل‌ها ممکن نشد: ${failures.join("، ")}`);
+  };
+
+  const run = async (action) => {
+    setIsBusy(true);
     try {
-      const blob = await serverPdf(documentId);
-      saveBlobAs(blob, `${invoiceNumber || title || "invoice"}.pdf`);
+      reportFailures(await action(documents));
     } catch (error) {
-      // پیامِ فارسیِ سرور از بلاب بیرون کشیده شده (`api-v1`) — ولی اگر
-      // سند اصلاً روی سرور نباشد، پیش‌نمایشِ محلی بهتر از هیچ است.
-      toast.error(error?.message || "دریافت فاکتور از سرور ممکن نشد.");
-      downloadHtmlPreview();
+      // مثلاً وقتی مرورگر پنجره‌ی چاپ را بلوکه می‌کند — بدون این، خطا
+      // بی‌صدا رد می‌شد و دکمه انگار هیچ کاری نمی‌کرد.
+      toast.error(error?.message || "انجام این عملیات ممکن نشد.");
     } finally {
-      setIsDownloading(false);
+      setIsBusy(false);
     }
   };
+
+  // بدون سند، دکمه‌ها کاری ندارند که انجام دهند.
+  const hasDocuments = documents.length > 0;
 
   return (
     <Card>
@@ -187,22 +125,41 @@ export default function InvoiceDocumentSection({
             type="button"
             variant="outline"
             className="min-w-24 flex-1 gap-2"
-            onClick={handlePrint}
+            onClick={() => run(printDocuments)}
+            disabled={isBusy || !hasDocuments}
           >
-            <Printer className="h-4 w-4" />
-            چاپ
+            {isBusy ? <Spinner /> : <Printer className="h-4 w-4" />}
+            چاپ سند
           </Button>
           <Button
             type="button"
             variant="outline"
             className="min-w-24 flex-1 gap-2"
-            onClick={handleDownload}
-            disabled={isDownloading}
+            onClick={() => run(downloadDocuments)}
+            disabled={isBusy || !hasDocuments}
           >
-            {isDownloading ? <Spinner /> : <Download className="h-4 w-4" />}
-            {serverPdf ? "دانلود PDF" : "دانلود"}
+            {isBusy ? <Spinner /> : <Download className="h-4 w-4" />}
+            دانلود سند
           </Button>
         </div>
+
+        {/* بدون این خط، کاربر نمی‌داند دکمه دقیقاً چه چیزی را چاپ
+            می‌کند — مخصوصاً در فروش که سندِ ساختِ سرور و ضمیمه‌ی دستی
+            هر دو ممکن است باشند. */}
+        <p className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
+          <FileText className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+          {hasDocuments ? (
+            <span>
+              {`چاپ و دانلود روی ${documents.length} سند انجام می‌شود: `}
+              {documents.map((document_) => document_.name).join("، ")}
+            </span>
+          ) : (
+            <span>
+              هنوز سندی برای این سفارش وجود ندارد؛ تا وقتی فایلی اضافه
+              نشود، چاپ و دانلود غیرفعال است.
+            </span>
+          )}
+        </p>
 
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
