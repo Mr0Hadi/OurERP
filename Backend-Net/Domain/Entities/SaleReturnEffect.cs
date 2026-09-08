@@ -39,6 +39,6 @@ namespace Domain.Entities
         public List<SaleReturnEffectMoneyPart> MoneyParts { get; set; } = new();
 
         [NotMapped]
-        public int UndoneQuantity => Quantity - DoneQuantity;
+        public int RemainingQuantity => Quantity - DoneQuantity;
     }
 }

@@ -19,8 +19,9 @@ namespace Application.Features.SaleReturn.Dtos
         public string? PreviousReturnNumber { get; set; }
         public ReturnStatusEnum Status { get; set; }
         public UInt64 TotalAmount { get; set; }
-        public int TotalQuantity { get; set; }
+        public int ClaimedQuantity { get; set; }
         public int DecidedQuantity { get; set; }
+        public int RemainingQuantity { get; set; }
         public bool CanDelete { get; set; }
         public bool CanCancel { get; set; }
         public bool CanReject { get; set; }

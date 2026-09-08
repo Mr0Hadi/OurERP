@@ -8,6 +8,7 @@ namespace Application.Features.PurchaseReturn.Dtos
         public ReturnEffectDirectionEnum Direction { get; set; }
         public int Quantity { get; set; }
         public int DoneQuantity { get; set; }
+        public int RemainingQuantity { get; set; }
         public int? RestockedQuantity { get; set; }
         public int? ProductId { get; set; }
 

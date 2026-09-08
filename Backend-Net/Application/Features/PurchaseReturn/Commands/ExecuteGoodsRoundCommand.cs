@@ -91,7 +91,7 @@ namespace Application.Features.PurchaseReturn.Commands
                 if (effect.Direction is not (ReturnEffectDirectionEnum.GOODS_IN or ReturnEffectDirectionEnum.GOODS_OUT))
                     throw new ValidationCustomException("فقط اثرهای کالایی می‌توانند اجرا شوند.");
 
-                if (line.Quantity > effect.UndoneQuantity)
+                if (line.Quantity > effect.RemainingQuantity)
                     throw new ValidationCustomException("مقدار اجرا از باقیمانده این اثر بیشتر است.");
 
                 var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == effect.ProductId, cancellationToken)
