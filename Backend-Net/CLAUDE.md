@@ -689,6 +689,41 @@ Everything else in the same pass:
   gap). Two obsolete validator tests were replaced with ones asserting the new guarantees
   (`MoneyEffectWithNoDirectionField_IsValid`, `GoodsOnlyResolution_IsValid`).
 
+**Quantity-naming unification pass (2026-09-08).** The "total requested / how much handled / how
+much left" triple was spelled five different ways for the middle slot and four for the first, across
+entities and DTOs. `RemainingQuantity` was already universal and unchanged. The triple is now
+`Quantity` / `<stage>Quantity` / `RemainingQuantity`, where the middle name says which stage consumed
+the total:
+
+- **`PurchaseReturn.ClaimedQuantity` / `SaleReturn.ClaimedQuantity` -> `Quantity`.** Both are
+  `[NotMapped]` roll-ups (`Claims.Sum(c => c.Quantity)`), so no schema change. The detail DTOs' field
+  renamed with them.
+- **`PurchaseReturnEffect.DoneQuantity` / `SaleReturnEffect.DoneQuantity` -> `AppliedQuantity`.** Not
+  folded into `DecidedQuantity`: at claim level "decided" means `Resolutions.Sum(r => r.Quantity)` -
+  decisions recorded - while at effect level the counter tracks goods that physically moved through
+  `ExecuteGoodsRoundCommand`. Those are different stages of the same return, and one name for both
+  would have made `RemoveClaimResolutionCommand`'s guard read as a claim about decisions when it is
+  checking movement. `AppliedQuantity` also pairs with the `AppliedAt` / `ReturnEffectStatusEnum.APPLIED`
+  it drives (`if (effect.AppliedQuantity >= effect.Quantity)`).
+- The two detail queries project **both** levels into one response tree, so only the effect-level line
+  moved in each; `purchaseReturn.DecidedQuantity` and `c.DecidedQuantity` above it are untouched.
+- Shipped as migration `20260908120000_rename-effect-applied-quantity` - two `RenameColumn`s
+  (`PurchaseReturnEffects.DoneQuantity`, `SaleReturnEffects.DoneQuantity`), no data transformation.
+  **Not yet applied to any database**, and hand-written rather than scaffolded: there is no .NET SDK
+  on the machine this ran from, so `dotnet ef migrations add` could not be used. Re-scaffolding it
+  against a real SDK before applying is the safe move.
+- **Breaking for the frontend:** `claimedQuantity` -> `quantity` on the return detail response, and
+  `doneQuantity` -> `appliedQuantity` on `effects[]` (detail) and on both pending-effects responses.
+- **Not verified:** nothing here has been compiled or tested, same SDK reason.
+- **Deliberately left alone.** `PurchaseItem`/`SaleItem` carry `Quantity` + `ReceivedQuantity` /
+  `ShippedQuantity` + `SettledQuantity` with no derived remainder - two independent consumption axes
+  (physical movement, and return settlement) against one total, correctly named differently.
+  `PurchaseReceivingItemInfoDto`'s `OrderedQuantity`/`ReceivedQuantity`/`StillOwedQuantity` is the
+  same relationship as `PurchaseItem.Quantity`/`ReceivedQuantity` under different names
+  (`GetPurchaseReceivingInfoQuery` literally assigns `OrderedQuantity = item.Quantity`), and the
+  return list DTOs' `TotalQuantity` is computed identically to the entity's `Quantity` - both are
+  real divergences, both left for a pass that can build and test.
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
 - `PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK (see `WMSDbContextModelSnapshot.cs:119-124`). Needs reconciliation.

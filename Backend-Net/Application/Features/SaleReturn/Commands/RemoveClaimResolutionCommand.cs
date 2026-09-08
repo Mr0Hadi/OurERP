@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Application.Features.SaleReturn.Commands
 {
     // Replaces RemoveSaleReturnDecisionCommand. Only removable while untouched - the frontend's
-    // exact rule: none of the resolution's goods effects may have any DoneQuantity yet.
+    // exact rule: none of the resolution's goods effects may have any AppliedQuantity yet.
     public class RemoveClaimResolutionCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }
@@ -52,14 +52,14 @@ namespace Application.Features.SaleReturn.Commands
 
             // No SETTLED gate here (unlike Add/lifecycle commands): a money-only resolution can
             // settle the return immediately with nothing physically moved yet, and removing it must
-            // stay legal in that case - the frontend's only rule is "no goods effect has DoneQuantity > 0".
+            // stay legal in that case - the frontend's only rule is "no goods effect has AppliedQuantity > 0".
             if (_saleReturnCalculationService.IsTerminal(saleReturn.Status))
                 throw new ValidationCustomException("این مرجوعی دیگر قابل ویرایش نیست.");
 
             var claim = saleReturn.Claims.First(c => c.Resolutions.Any(r => r.Id == request.Id));
             var resolution = claim.Resolutions.First(r => r.Id == request.Id);
 
-            if (resolution.Effects.Any(e => e.Direction is ReturnEffectDirectionEnum.GOODS_IN or ReturnEffectDirectionEnum.GOODS_OUT && e.DoneQuantity > 0))
+            if (resolution.Effects.Any(e => e.Direction is ReturnEffectDirectionEnum.GOODS_IN or ReturnEffectDirectionEnum.GOODS_OUT && e.AppliedQuantity > 0))
                 throw new ValidationCustomException("بخشی از کالای این تصمیم جابه‌جا شده و دیگر قابل لغو نیست.");
 
             // Fully-settled resolutions (no PENDING effect) already bumped SettledQuantity when

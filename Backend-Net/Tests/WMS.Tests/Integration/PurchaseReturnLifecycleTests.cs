@@ -216,7 +216,7 @@ namespace WMS.Tests.Integration
 
             Assert.Equal(stockBefore + 3, product.Stock);
             Assert.Equal(ReturnEffectStatusEnum.APPLIED, effect.Status);
-            Assert.Equal(3, effect.DoneQuantity);
+            Assert.Equal(3, effect.AppliedQuantity);
             Assert.Equal(3, item.SettledQuantity);
             Assert.Equal(ReturnStatusEnum.SETTLED, purchaseReturn.Status);
         }
@@ -249,7 +249,7 @@ namespace WMS.Tests.Integration
             var effect = verify.PurchaseReturnEffects.Single();
 
             Assert.Equal(ReturnEffectStatusEnum.PENDING, effect.Status);
-            Assert.Equal(2, effect.DoneQuantity);
+            Assert.Equal(2, effect.AppliedQuantity);
         }
 
         [Fact]

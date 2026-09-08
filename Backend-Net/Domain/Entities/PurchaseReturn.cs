@@ -36,13 +36,13 @@ namespace Domain.Entities
         // a materialised entity, not inside an EF projection. Only meaningful once the whole
         // Claims -> Resolutions -> Effects spine has been Included; see IReturnQueryService.
         [NotMapped]
-        public int ClaimedQuantity => Claims.Sum(c => c.Quantity);
+        public int Quantity => Claims.Sum(c => c.Quantity);
 
         [NotMapped]
         public int DecidedQuantity => Claims.Sum(c => c.DecidedQuantity);
 
         [NotMapped]
-        public int RemainingQuantity => Math.Max(0, ClaimedQuantity - DecidedQuantity);
+        public int RemainingQuantity => Math.Max(0, Quantity - DecidedQuantity);
 
         [NotMapped]
         public IEnumerable<PurchaseReturnEffect> AllEffects => Claims.SelectMany(c => c.Resolutions).SelectMany(r => r.Effects);

@@ -122,7 +122,7 @@ namespace Application.Features.SaleReturn.Commands
                 }
 
                 effect.History.Add(round);
-                effect.DoneQuantity += line.Quantity;
+                effect.AppliedQuantity += line.Quantity;
 
                 if (effect.Direction == ReturnEffectDirectionEnum.GOODS_IN)
                 {
@@ -157,7 +157,7 @@ namespace Application.Features.SaleReturn.Commands
                     await _inventoryCostingService.RecordReplacementShippedToCustomerAsync(product, line.Quantity, claim.SaleItemId, now, cancellationToken);
                 }
 
-                if (effect.DoneQuantity >= effect.Quantity)
+                if (effect.AppliedQuantity >= effect.Quantity)
                 {
                     effect.Status = ReturnEffectStatusEnum.APPLIED;
                     effect.AppliedAt = now;

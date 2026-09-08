@@ -899,7 +899,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "previousReturnNumber": null,
   "status": 0,
   "totalAmount": 40000000,
-  "totalQuantity": 2,
+  "quantity": 2,
   "decidedQuantity": 0,
   "canDelete": true,
   "canCancel": true,
@@ -942,7 +942,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
       "id": 1200,
       "direction": 3,
       "quantity": 0,
-      "doneQuantity": 0,
+      "appliedQuantity": 0,
       "restockedQuantity": null,
       "productId": null,
       "productName": null,
@@ -958,7 +958,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   ]
 }
 ```
-یک تصمیم می‌تواند تا سه اثر همزمان داشته باشد (مثلاً هم `GOODS_IN` هم `MONEY_IN` برای «بخشی جایگزین، بخشی بازپرداخت»)؛ `effects[]` هرکدام را جدا نشان می‌دهد. `direction` مقادیر `ReturnEffectDirectionEnum` (بخش ۱۵) است. اثرهای کالایی (`direction = 0` یا `1`) فیلدهای `quantity`/`doneQuantity`/`restockedQuantity`/`productId` را پر می‌کنند و `amount`/`method` را `null` می‌گذارند؛ اثرهای مالی (`direction = 2` یا `3`) برعکس.
+یک تصمیم می‌تواند تا سه اثر همزمان داشته باشد (مثلاً هم `GOODS_IN` هم `MONEY_IN` برای «بخشی جایگزین، بخشی بازپرداخت»)؛ `effects[]` هرکدام را جدا نشان می‌دهد. `direction` مقادیر `ReturnEffectDirectionEnum` (بخش ۱۵) است. اثرهای کالایی (`direction = 0` یا `1`) فیلدهای `quantity`/`appliedQuantity`/`restockedQuantity`/`productId` را پر می‌کنند و `amount`/`method` را `null` می‌گذارند؛ اثرهای مالی (`direction = 2` یا `3`) برعکس.
 
 ### `GET api/PurchaseReturn/GetPurchaseReturnPendingEffects`
 
@@ -979,7 +979,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "productName": "یخچال دو درب",
   "unit": "عدد",
   "quantity": 2,
-  "doneQuantity": 0,
+  "appliedQuantity": 0,
   "remainingQuantity": 2
 }
 ```
@@ -1076,7 +1076,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 
 ### `DELETE api/PurchaseReturn/RemoveClaimResolution?id=950`
 
-حذف یک تصمیم — **فقط تا وقتی هیچ‌کدام از اثرهای کالایی‌اش `doneQuantity > 0` نشده باشند** (یعنی هنوز هیچ `ExecuteGoodsRound` روی آن اجرا نشده). اگر بخشی از کالا جابه‌جا شده باشد، دیگر قابل حذف نیست.
+حذف یک تصمیم — **فقط تا وقتی هیچ‌کدام از اثرهای کالایی‌اش `appliedQuantity > 0` نشده باشند** (یعنی هنوز هیچ `ExecuteGoodsRound` روی آن اجرا نشده). اگر بخشی از کالا جابه‌جا شده باشد، دیگر قابل حذف نیست.
 
 ### `POST api/PurchaseReturn/ExecuteGoodsRound`
 
@@ -1103,7 +1103,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 }
 ```
 - `effectId`: از `GetPurchaseReturnPendingEffects` یا `GetPurchaseReturnDetail` (زیر `resolutions[].effects[].id`)، باید یک اثر کالایی (`GOODS_IN`/`GOODS_OUT`) با وضعیت `PENDING` باشد.
-- `quantity`: نباید از باقیمانده‌ی همان اثر (`remainingQuantity`/`quantity - doneQuantity`) بیشتر باشد.
+- `quantity`: نباید از باقیمانده‌ی همان اثر (`remainingQuantity`/`quantity - appliedQuantity`) بیشتر باشد.
 - `observations[]`: **فقط برای `GOODS_IN`** معنی دارد — یعنی وقتی جایگزین از تامین‌کننده می‌رسد، بخشی از همان محموله هم ممکن است مشکل داشته باشد؛ مجموع `quantity` در `observations` از `quantity` همان نوبت کم می‌شود تا مقدار «سالم» به‌دست آید (فقط مقدار سالم به موجودی اضافه می‌شود).
 - `partyName`/`partyNationalId`/`vehiclePlate`/`note`: اطلاعات تحویل‌گیرنده/تحویل‌دهنده، برای مستندسازی هر نوبت (اختیاری).
 
@@ -1339,7 +1339,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
   "previousReturnNumber": null,
   "status": 0,
   "totalAmount": 25000000,
-  "totalQuantity": 1,
+  "quantity": 1,
   "decidedQuantity": 0,
   "canDelete": true,
   "canCancel": true,
@@ -1389,7 +1389,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
   "productName": "یخچال دو درب",
   "unit": "عدد",
   "quantity": 1,
-  "doneQuantity": 0,
+  "appliedQuantity": 0,
   "remainingQuantity": 1
 }
 ```
@@ -1449,7 +1449,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 ### `DELETE api/SaleReturn/RemoveClaimResolution?id=950`
 
-حذف یک تصمیم — فقط تا وقتی هیچ‌کدام از اثرهای کالایی‌اش `doneQuantity > 0` نشده باشند (همان قانون مرجوعی خرید).
+حذف یک تصمیم — فقط تا وقتی هیچ‌کدام از اثرهای کالایی‌اش `appliedQuantity > 0` نشده باشند (همان قانون مرجوعی خرید).
 
 ### `POST api/SaleReturn/ExecuteGoodsRound`
 
@@ -1757,6 +1757,18 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 ## 16. نکات و محدودیت‌های شناخته‌شده
 
 این نکات برای جلوگیری از سردرگمی هنگام توسعه فرانت مهم هستند:
+
+### ⚠️ تغییرات شکسته‌ی قرارداد — ۲۰۲۶-۰۹-۰۸ (یکسان‌سازی نام مقادیر)
+
+سه‌گانه‌ی «کل / رسیدگی‌شده / مانده» در بک‌اند یکسان شد: همه‌جا `quantity` / `<مرحله>Quantity` / `remainingQuantity`. `remainingQuantity` از قبل یکسان بود و **تغییر نکرده**.
+
+| کجا | قبل | بعد | چرا |
+|---|---|---|---|
+| `GetPurchaseReturnDetail` / `GetSaleReturnDetail` (سطح بالا) | `totalQuantity` | `quantity` | فیلد سمت سرور `ClaimedQuantity` بود و در این سند اشتباهاً `totalQuantity` مستند شده بود؛ حالا هر دو `quantity` هستند. **دقت کنید:** `totalQuantity` در پاسخ‌های *لیست* (`GetPurchaseReturnList`/`GetSaleReturnList`) سر جایش است و تغییر نکرده |
+| `effects[]` در جزئیات مرجوعی | `doneQuantity` | `appliedQuantity` | با `appliedAt` و وضعیت `APPLIED` که همین شمارنده آن را فعال می‌کند هم‌نام شد؛ ضمناً از `decidedQuantity` (که «تصمیمِ ثبت‌شده» است، نه «کالای جابه‌جاشده») جدا می‌ماند |
+| `GetPurchaseReturnPendingEffects` / `GetSaleReturnPendingEffects` | `doneQuantity` | `appliedQuantity` | همان |
+
+`decidedQuantity` روی مرجوعی و روی `claims[]` **تغییر نکرده** — این‌ها تصمیم‌های ثبت‌شده را می‌شمارند، در حالی که `appliedQuantity` کالای واقعاً جابه‌جاشده را می‌شمارد. این دو عمداً دو نام متفاوت دارند.
 
 ### ⚠️ تغییرات شکسته‌ی قرارداد — ۲۰۲۶-۰۹-۰۷
 

@@ -114,7 +114,7 @@ PurchaseReturn (سند مرجوعی)
 - **`Claim.Scope`** می‌گوید ادعا روی یک ردیف سفارش است (`ON_ORDER`) یا خارج از آن (`OFF_ORDER`، مثل کالای مازاد یا کالای اصلاً سفارش‌داده‌نشده — `OffScopeKind`).
 - **ادعاهای `OFF_ORDER` هرگز از سهمیه‌ی یک ردیف سفارش کم نمی‌کنند** — دقیقاً طبق قاعده‌ی فرانت.
 - **`Effect.Status`**: اثرهای کالایی (`GOODS_IN`/`GOODS_OUT`) با `PENDING` شروع می‌شوند (منتظر اجرای فیزیکی)؛ اثرهای مالی (`MONEY_IN`/`MONEY_OUT`) بلافاصله `APPLIED` می‌شوند (چیزی برای اجرای بعدی ندارند).
-- **`Effect.DoneQuantity`** به‌مرور، طی چند دور (`Round`)، به `Quantity` می‌رسد — پس ارسال/دریافت چندمرحله‌ای پشتیبانی می‌شود.
+- **`Effect.AppliedQuantity`** به‌مرور، طی چند دور (`Round`)، به `Quantity` می‌رسد — پس ارسال/دریافت چندمرحله‌ای پشتیبانی می‌شود. (این فیلد در ۱۴۰۵/۰۶/۱۷ از `DoneQuantity` به `AppliedQuantity` تغییر نام داد — بخش «به‌روزرسانی» انتهای سند.)
 - enum های جدید مشترک بین خرید و فروش: `ReturnStatusEnum` (`OPEN/IN_PROGRESS/SETTLED/REJECTED/CANCELLED`)، `ReturnClaimScopeEnum`، `ReturnOffScopeKindEnum`، `ReturnProblemEnum` (فضای مقدار ۱۴تایی یکپارچه، جایگزین سه enum قدیمی)، `ReturnEffectKindEnum`، `ReturnEffectStatusEnum` (شامل `VOID` جدید برای اثر لغوشده)، `ReturnPaymentMethodEnum`.
 - enum های حذف‌شده: `PurchaseReturnDecisionTypeEnum`، `SaleReturnDecisionTypeEnum`، `PurchaseReturnStatusEnum`، `SaleReturnStatusEnum`، `PurchaseIssueTypeEnum`، `SalesReturnReasonEnum`، `SalesReturnIssueTypeEnum`، و enum های وضعیت تصمیم قدیمی.
 
@@ -155,3 +155,32 @@ dotnet ef database update --project Infrastructure --startup-project WMS
 ```
 
 پس از آن، فرانت برای اتصال به API واقعی مرجوعی به یک لایه‌ی adapter نیاز دارد (چون مسیرها و برخی جزئیات، مثل idempotency، هنوز با فرض mock فرانت کامل هماهنگ نیستند).
+
+---
+
+## به‌روزرسانی: یکسان‌سازی نام‌گذاری مقادیر (۱۴۰۵/۰۶/۱۷ — ۲۰۲۶-۰۹-۰۸)
+
+سه‌گانه‌ی «کل درخواست‌شده / چقدرش رسیدگی شده / چقدر مانده» در سرتاسر Entity ها و DTO ها با نام‌های ناهماهنگ نوشته شده بود. الگوی نهایی این است:
+
+| سطح | کل | رسیدگی‌شده | مانده |
+|---|---|---|---|
+| `PurchaseReturn` / `SaleReturn` | `Quantity` | `DecidedQuantity` | `RemainingQuantity` |
+| `PurchaseReturnClaim` / `SaleReturnClaim` | `Quantity` | `DecidedQuantity` | `RemainingQuantity` |
+| `PurchaseReturnEffect` / `SaleReturnEffect` | `Quantity` | `AppliedQuantity` | `RemainingQuantity` |
+
+نام سومی (`RemainingQuantity`) از قبل همه‌جا یکسان بود و تغییر نکرد. تغییرات:
+
+- **`PurchaseReturn.ClaimedQuantity` / `SaleReturn.ClaimedQuantity` → `Quantity`** — این‌ها `[NotMapped]` هستند (`Claims.Sum(c => c.Quantity)`)، پس هیچ تغییری در دیتابیس ندارند.
+- **`Effect.DoneQuantity` → `AppliedQuantity`** (هر دو طرف) — عمداً به `DecidedQuantity` تبدیل **نشد**: در سطح ادعا، «تصمیم‌گرفته‌شده» یعنی `Resolutions.Sum(r => r.Quantity)` (تصمیمِ ثبت‌شده روی کاغذ)، ولی در سطح اثر، این شمارنده کالایی را می‌شمارد که واقعاً از طریق `ExecuteGoodsRoundCommand` جابه‌جا شده. این دو مرحله‌ی متفاوت از یک مرجوعی‌اند و یک نام مشترک، شرطِ نگهبانِ `RemoveClaimResolutionCommand` را گمراه‌کننده می‌کرد. ضمناً `AppliedQuantity` با `AppliedAt` و `ReturnEffectStatusEnum.APPLIED` که خودش آن‌ها را فعال می‌کند هم‌خانواده است (`if (effect.AppliedQuantity >= effect.Quantity)`).
+
+**تغییر شکننده برای فرانت‌اند:**
+
+| پاسخ | فیلد قبلی | فیلد جدید |
+|---|---|---|
+| جزئیات مرجوعی (`GetPurchaseReturnDetail` / `GetSaleReturnDetail`) | `claimedQuantity` | `quantity` |
+| `effects[]` در همان پاسخ | `doneQuantity` | `appliedQuantity` |
+| `GetPurchaseReturnPendingEffects` / `GetSaleReturnPendingEffects` | `doneQuantity` | `appliedQuantity` |
+
+**migration:** `20260908120000_rename-effect-applied-quantity` — دو `RenameColumn` روی `PurchaseReturnEffects.DoneQuantity` و `SaleReturnEffects.DoneQuantity`، بدون هیچ تبدیل داده‌ای. **روی هیچ دیتابیسی اجرا نشده است.** این migration دستی نوشته شده (روی ماشینی که این کار انجام شد .NET SDK نصب نبود، پس `dotnet ef migrations add` در دسترس نبود) و همچنین **هیچ build یا تستی روی این تغییرات اجرا نشده** — پیش از اجرا، ساختن دوباره‌ی migration با SDK واقعی و اجرای کامل تست‌ها لازم است.
+
+**آنچه عمداً دست‌نخورده ماند:** `PurchaseItem`/`SaleItem` سه فیلد `Quantity` + `ReceivedQuantity`/`ShippedQuantity` + `SettledQuantity` دارند بدون «مانده»ی مشتق‌شده — این‌ها دو محورِ مستقلِ مصرف روی یک کل هستند (جابه‌جایی فیزیکی، و تسویه‌ی مرجوعی) و درست است که نامشان فرق کند. دو ناهماهنگیِ واقعیِ باقی‌مانده: `PurchaseReceivingItemInfoDto` که همان رابطه را `OrderedQuantity`/`ReceivedQuantity`/`StillOwedQuantity` می‌نامد (در حالی که `GetPurchaseReceivingInfoQuery` عیناً `OrderedQuantity = item.Quantity` می‌نویسد)، و `TotalQuantity` در DTO های لیست که دقیقاً همان چیزی است که DTO جزئیات `Quantity` می‌نامد. هر دو به پاسی موکول شد که بتواند build و تست کند.

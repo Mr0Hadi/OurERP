@@ -23,7 +23,7 @@ namespace Infrastructure.Services
             if (IsTerminal(saleReturn.Status))
                 return saleReturn.Status;
 
-            var totalClaimed = saleReturn.ClaimedQuantity;
+            var totalClaimed = saleReturn.Quantity;
             var totalDecided = saleReturn.DecidedQuantity;
 
             if (totalDecided == 0)

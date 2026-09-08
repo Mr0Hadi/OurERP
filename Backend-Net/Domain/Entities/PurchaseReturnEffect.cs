@@ -5,7 +5,7 @@ namespace Domain.Entities
 {
     /// <summary>
     /// One of the four base movements (GOODS_IN/GOODS_OUT/MONEY_OUT/MONEY_IN) a resolution is
-    /// composed of. Goods effects (Quantity/DoneQuantity/RestockedQuantity/ProductId snapshot) and
+    /// composed of. Goods effects (Quantity/AppliedQuantity/RestockedQuantity/ProductId snapshot) and
     /// money effects (Amount/Method/Reference/Parts) share this one row shape - only the fields
     /// relevant to the effect's Direction are populated, matching the frontend's Effect object exactly.
     /// </summary>
@@ -17,9 +17,9 @@ namespace Domain.Entities
 
         // Goods effects only (GOODS_IN / GOODS_OUT).
         public int Quantity { get; set; }
-        public int DoneQuantity { get; set; }
+        public int AppliedQuantity { get; set; }
 
-        /// <summary>GOODS_IN only: portion of DoneQuantity that was healthy and went back to sellable stock.</summary>
+        /// <summary>GOODS_IN only: portion of AppliedQuantity that was healthy and went back to sellable stock.</summary>
         public int? RestockedQuantity { get; set; }
         public int? ProductId { get; set; }
 
@@ -39,6 +39,6 @@ namespace Domain.Entities
         public List<PurchaseReturnEffectMoneyPart> MoneyParts { get; set; } = new();
 
         [NotMapped]
-        public int RemainingQuantity => Quantity - DoneQuantity;
+        public int RemainingQuantity => Quantity - AppliedQuantity;
     }
 }

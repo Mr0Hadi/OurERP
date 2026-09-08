@@ -15,7 +15,7 @@ namespace Application.Features.SaleReturn.Dtos
         public string ProductName { get; set; }
         public string Unit { get; set; }
         public int Quantity { get; set; }
-        public int DoneQuantity { get; set; }
+        public int AppliedQuantity { get; set; }
         public int RemainingQuantity { get; set; }
     }
 }
