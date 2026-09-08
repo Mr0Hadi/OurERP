@@ -69,3 +69,20 @@ export function useSaleForReturnQuery(saleId, excludeReturnId = null) {
     refetchOnMount: "always",
   });
 }
+
+/**
+ * بقیه‌ی مرجوعی‌های همین فروش — برای کارتِ «مرجوعی‌های دیگر همین
+ * فروش» در صفحه‌ی جزئیات. `GetSaleDetail` (که `useSaleForReturnQuery`
+ * از آن می‌خواند) چنین فهرستی ندارد؛ فیلترِ `saleId` روی لیستِ عادیِ
+ * مرجوعی فروش (که از اول پشتیبانی می‌شد) همین کار را می‌کند.
+ */
+export function useRelatedSalesReturnsQuery(saleId, excludeReturnId = null) {
+  const params = useMemo(() => ({ saleId, limit: 50 }), [saleId]);
+  return useQuery({
+    queryKey: salesReturnKeys.list(params),
+    queryFn: () => fetchSalesReturns(params),
+    enabled: !!saleId,
+    select: (data) =>
+      (data.items || []).filter((item) => item.id !== excludeReturnId),
+  });
+}

@@ -24,6 +24,9 @@ export async function fetchSalesReturns(params = {}) {
       take: params.limit,
       search: params.search || undefined,
       // برخلاف مرجوعی خرید، اینجا هم saleId هم customerId پشتیبانی می‌شود.
+      // مرجوعی‌های همین فروش — کارتِ «مرجوعی‌های دیگر همین فروش» در
+      // صفحه‌ی جزئیات از همین فیلتر استفاده می‌کند.
+      saleId: params.saleId || undefined,
       customerId: params.customerId || undefined,
       status: params.status !== "" ? params.status : undefined,
       problem: params.problem !== "" ? params.problem : undefined,
@@ -114,10 +117,9 @@ export async function removeClaimResolution(returnId, claimId, resolutionId) {
 /**
  * یک دور اجرای اثرهای کالایی — قرینه‌ی سمتِ خرید.
  *
- * ⚠️ اسمِ فیلدِ شناسه روی بدنه‌ی سمتِ فروش (`SaleReturnId` در برابرِ
- * `PurchaseReturnId` سمتِ خرید) در همین جلسه مستقیماً از کدِ بکند
- * تأیید نشد؛ قبل از قطعی‌کردن، با یک درخواستِ واقعی (یا خودِ تیم
- * بکند) چک شود.
+ * فیلدِ شناسه روی بدنه‌ی سمتِ فروش `SaleReturnId` است (در برابرِ
+ * `PurchaseReturnId` سمتِ خرید) — تأیید شده از روی کدِ بکند
+ * (`ExecuteGoodsRoundCommand.cs` سمتِ `SaleReturn`).
  */
 export async function executeGoodsRound(
   returnId,

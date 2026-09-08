@@ -17,7 +17,11 @@ import {
 } from "@/shared/components/ui/alert-dialog";
 import { useHeaderStore } from "@/shared/store/headerStore";
 
-import { usePurchaseReturnQuery, usePurchaseForReturnQuery } from "../services/queries";
+import {
+  usePurchaseReturnQuery,
+  usePurchaseForReturnQuery,
+  useRelatedPurchaseReturnsQuery,
+} from "../services/queries";
 import {
   useAddClaimResolutionMutation,
   useRemoveClaimResolutionMutation,
@@ -52,6 +56,10 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
   // مرجوعی دیگر» را درست نشان دهد — نه ادعاهای همین سند را دوباره
   // به‌عنوان «مرجوعیِ دیگر» بشمارد.
   const { data: sale } = usePurchaseForReturnQuery(
+    purchaseReturn.purchaseId,
+    purchaseReturn.id,
+  );
+  const { data: relatedReturns } = useRelatedPurchaseReturnsQuery(
     purchaseReturn.purchaseId,
     purchaseReturn.id,
   );
@@ -97,7 +105,7 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
       )}
 
       <RelatedReturnsCard
-        returns={sale?.relatedReturns}
+        returns={relatedReturns}
         side={sideConfig(RETURN_SIDES.PURCHASE)}
         detailRoute={ROUTES.PURCHASES_RETURNS_DETAIL}
         title="مرجوعی‌های دیگر همین خرید"

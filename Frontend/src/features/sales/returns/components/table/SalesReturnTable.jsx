@@ -9,6 +9,10 @@ import {
   RETURN_PROBLEM_LABELS,
   RETURN_PROBLEM_STYLES,
 } from "../../domain/returnVocabulary";
+import {
+  RETURN_PROBLEM_LABELS as SHARED_PROBLEM_LABELS,
+  RETURN_PROBLEM_STYLES as SHARED_PROBLEM_STYLES,
+} from "@/shared/domain/returns/problems";
 import { Badge } from "@/shared/components/ui/badge";
 import SalesReturnStatusBadge from "./SalesReturnStatusBadge";
 
@@ -73,8 +77,7 @@ const SalesReturnTable = ({
         header: "مشکل‌ها",
         enableSorting: false,
         cell: ({ row }) => {
-          const claims = row.original.claims || [];
-          const problems = [...new Set(claims.map((c) => c.problem))];
+          const problems = row.original.problems || [];
           if (problems.length === 0) {
             return <span className="text-xs text-muted-foreground">—</span>;
           }
@@ -84,9 +87,15 @@ const SalesReturnTable = ({
                 <Badge
                   key={problem}
                   variant="outline"
-                  className={`text-[10px] ${RETURN_PROBLEM_STYLES[problem] ?? ""}`}
+                  className={`text-[10px] ${
+                    RETURN_PROBLEM_STYLES[problem] ??
+                    SHARED_PROBLEM_STYLES[problem] ??
+                    ""
+                  }`}
                 >
-                  {RETURN_PROBLEM_LABELS[problem] ?? problem}
+                  {RETURN_PROBLEM_LABELS[problem] ??
+                    SHARED_PROBLEM_LABELS[problem] ??
+                    problem}
                 </Badge>
               ))}
               {problems.length > 2 && (

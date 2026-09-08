@@ -69,3 +69,21 @@ export function usePurchaseForReturnQuery(purchaseId, excludeReturnId = null) {
     refetchOnMount: "always",
   });
 }
+
+/**
+ * بقیه‌ی مرجوعی‌های همین خرید — برای کارتِ «مرجوعی‌های دیگر همین
+ * خرید» در صفحه‌ی جزئیات. `GetPurchaseReceivingInfo` (که
+ * `usePurchaseForReturnQuery` از آن می‌خواند) چنین فهرستی ندارد؛
+ * بک‌اند عمداً همین فیلترِ `purchaseId` روی لیستِ عادی را راه‌حل
+ * دانسته، نه یک فیلدِ جداگانه روی پاسخِ خرید.
+ */
+export function useRelatedPurchaseReturnsQuery(purchaseId, excludeReturnId = null) {
+  const params = useMemo(() => ({ purchaseId, limit: 50 }), [purchaseId]);
+  return useQuery({
+    queryKey: purchaseReturnKeys.list(params),
+    queryFn: () => fetchPurchaseReturns(params),
+    enabled: !!purchaseId,
+    select: (data) =>
+      (data.items || []).filter((item) => item.id !== excludeReturnId),
+  });
+}

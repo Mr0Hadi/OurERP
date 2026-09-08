@@ -45,6 +45,10 @@ export async function fetchPurchaseReturns(params = {}) {
       search: params.search || undefined,
       // بکند فقط یک supplierId تکی می‌گیرد، نه آرایه.
       supplierId: params.supplierId || undefined,
+      // مرجوعی‌های همین خرید — کارتِ «مرجوعی‌های دیگر همین خرید» در
+      // صفحه‌ی جزئیات از همین فیلتر استفاده می‌کند، نه یک فیلدِ جدا
+      // روی پاسخِ خرید (که بکند اصلاً ندارد).
+      purchaseId: params.purchaseId || undefined,
       status: params.status !== "" ? params.status : undefined,
       // مشکل روی *غالب‌ترین ادعا*ی سند فیلتر می‌شود، نه هر ادعا جدا.
       problem: params.problem !== "" ? params.problem : undefined,

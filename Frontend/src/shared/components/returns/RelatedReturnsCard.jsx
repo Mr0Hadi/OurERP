@@ -67,7 +67,7 @@ export default function RelatedReturnsCard({
               </div>
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 {gregorianToPersian(ret.returnDate)} ·{" "}
-                {fa(ret.claimsCount)} ادعا ·{" "}
+                {fa(ret.totalQuantity)} عدد کالا ·{" "}
                 <span className="tabular-nums">
                   {fa(ret.totalAmount)} ریال
                 </span>
