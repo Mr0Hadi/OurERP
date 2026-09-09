@@ -29,8 +29,19 @@ namespace Application.Features.SaleReturn.Commands
         {
             RuleFor(x => x.ClaimId).GreaterThan(0).WithMessage(Validation.RequiredMessage("ادعا"));
             RuleFor(x => x.Composition.Quantity).GreaterThan(0).WithMessage("مقدار تصمیم باید از صفر بیشتر باشد.");
-            RuleFor(x => x.Composition).Must(c => c.GoodsIn != null || c.GoodsOut != null || c.MoneyIn != null || c.MoneyOut != null)
+            RuleFor(x => x.Composition).Must(c => (c.GoodsIn?.Count ?? 0) > 0 || (c.GoodsOut?.Count ?? 0) > 0 || c.MoneyIn != null || c.MoneyOut != null)
                 .WithMessage("تصمیم باید حداقل شامل یک اثر (ورود کالا، خروج کالا یا وجه) باشد.");
+
+            RuleForEach(x => x.Composition.GoodsIn).ChildRules(goods =>
+            {
+                goods.RuleFor(g => g.Quantity).GreaterThan(0).WithMessage("مقدار کالای وارده باید از صفر بیشتر باشد.");
+                goods.RuleFor(g => g.ProductId).GreaterThan(0).WithMessage("کالای نامعتبر است.").When(g => g.ProductId.HasValue);
+            });
+            RuleForEach(x => x.Composition.GoodsOut).ChildRules(goods =>
+            {
+                goods.RuleFor(g => g.Quantity).GreaterThan(0).WithMessage("مقدار کالای خارجه باید از صفر بیشتر باشد.");
+                goods.RuleFor(g => g.ProductId).GreaterThan(0).WithMessage("کالای نامعتبر است.").When(g => g.ProductId.HasValue);
+            });
 
             // Direction is structural now (which slot the effect sits in), so there is no direction
             // field left to validate - the old rule on Composition.Money.Direction rejected every

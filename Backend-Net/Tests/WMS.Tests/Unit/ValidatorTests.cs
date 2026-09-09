@@ -177,10 +177,51 @@ namespace WMS.Tests.Unit
             var command = new Application.Features.PurchaseReturn.Commands.AddClaimResolutionCommand
             {
                 ClaimId = 1,
-                Composition = new EffectCompositionDto { Quantity = 2, GoodsOut = new GoodsEffectDto { Quantity = 2 } },
+                Composition = new EffectCompositionDto { Quantity = 2, GoodsOut = new() { new GoodsEffectDto { Quantity = 2 } } },
             };
 
             Assert.True(_sut.Validate(command).IsValid);
+        }
+
+        [Fact]
+        public void MultipleGoodsInItems_IsValid()
+        {
+            var command = new Application.Features.PurchaseReturn.Commands.AddClaimResolutionCommand
+            {
+                ClaimId = 1,
+                Composition = new EffectCompositionDto
+                {
+                    Quantity = 5,
+                    GoodsIn = new()
+                    {
+                        new GoodsEffectDto { Quantity = 3, ProductId = 1 },
+                        new GoodsEffectDto { Quantity = 2, ProductId = 2 },
+                    },
+                },
+            };
+
+            var result = _sut.Validate(command);
+            Assert.True(result.IsValid, string.Join(" | ", result.Errors.Select(e => e.ErrorMessage)));
+        }
+
+        [Fact]
+        public void GoodsInItemWithZeroQuantity_IsInvalid()
+        {
+            var command = new Application.Features.PurchaseReturn.Commands.AddClaimResolutionCommand
+            {
+                ClaimId = 1,
+                Composition = new EffectCompositionDto
+                {
+                    Quantity = 3,
+                    GoodsIn = new()
+                    {
+                        new GoodsEffectDto { Quantity = 3, ProductId = 1 },
+                        new GoodsEffectDto { Quantity = 0, ProductId = 2 },
+                    },
+                },
+            };
+
+            Assert.False(_sut.Validate(command).IsValid);
         }
     }
 
@@ -293,7 +334,7 @@ namespace WMS.Tests.Unit
             var command = new Application.Features.SaleReturn.Commands.AddClaimResolutionCommand
             {
                 ClaimId = 1,
-                Composition = new EffectCompositionDto { Quantity = 2, GoodsIn = new GoodsEffectDto { Quantity = 2 } },
+                Composition = new EffectCompositionDto { Quantity = 2, GoodsIn = new() { new GoodsEffectDto { Quantity = 2 } } },
             };
 
             var result = _sut.Validate(command);
@@ -310,6 +351,47 @@ namespace WMS.Tests.Unit
             };
 
             Assert.True(_sut.Validate(command).IsValid);
+        }
+
+        [Fact]
+        public void MultipleGoodsOutItems_IsValid()
+        {
+            var command = new Application.Features.SaleReturn.Commands.AddClaimResolutionCommand
+            {
+                ClaimId = 1,
+                Composition = new EffectCompositionDto
+                {
+                    Quantity = 5,
+                    GoodsOut = new()
+                    {
+                        new GoodsEffectDto { Quantity = 3, ProductId = 1 },
+                        new GoodsEffectDto { Quantity = 2, ProductId = 2 },
+                    },
+                },
+            };
+
+            var result = _sut.Validate(command);
+            Assert.True(result.IsValid, string.Join(" | ", result.Errors.Select(e => e.ErrorMessage)));
+        }
+
+        [Fact]
+        public void GoodsOutItemWithZeroQuantity_IsInvalid()
+        {
+            var command = new Application.Features.SaleReturn.Commands.AddClaimResolutionCommand
+            {
+                ClaimId = 1,
+                Composition = new EffectCompositionDto
+                {
+                    Quantity = 3,
+                    GoodsOut = new()
+                    {
+                        new GoodsEffectDto { Quantity = 3, ProductId = 1 },
+                        new GoodsEffectDto { Quantity = 0, ProductId = 2 },
+                    },
+                },
+            };
+
+            Assert.False(_sut.Validate(command).IsValid);
         }
     }
 

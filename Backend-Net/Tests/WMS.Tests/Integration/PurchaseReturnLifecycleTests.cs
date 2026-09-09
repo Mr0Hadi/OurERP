@@ -154,7 +154,7 @@ namespace WMS.Tests.Integration
             await handler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 3, GoodsIn = new GoodsEffectDto { Quantity = 3 } },
+                Composition = new EffectCompositionDto { Quantity = 3, GoodsIn = new() { new GoodsEffectDto { Quantity = 3 } } },
             }, CancellationToken.None);
 
             using var verify = db.NewContext();
@@ -165,6 +165,43 @@ namespace WMS.Tests.Integration
             Assert.Equal(0, item.SettledQuantity); // goods effect still pending - nothing settled yet
             Assert.Equal(ReturnEffectStatusEnum.PENDING, effect.Status);
             Assert.Equal(ReturnStatusEnum.IN_PROGRESS, purchaseReturn.Status);
+        }
+
+        [Fact]
+        public async Task AddClaimResolution_MultipleGoodsInProducts_ProducesOneEffectPerProduct()
+        {
+            // A replacement split across two different products - the claim's own product plus one
+            // explicitly overridden - registered in a single resolution.
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var (scenario, claimId) = await SeedReceivedWithClaim(scope);
+
+            var otherProduct = Seed.Product(scenario.Product.ProductCategory!, name: "کالای دوم");
+            scope.Context.Products.Add(otherProduct);
+            scope.Context.SaveChanges();
+
+            var handler = new AddClaimResolutionCommandHandler(scope.Db, scope.PurchaseReturnQueryService, scope.PurchaseReturnCalculation, scope.UnitOfWork);
+            await handler.Handle(new AddClaimResolutionCommand
+            {
+                ClaimId = claimId,
+                Composition = new EffectCompositionDto
+                {
+                    Quantity = 3,
+                    GoodsIn = new()
+                    {
+                        new GoodsEffectDto { Quantity = 2 },
+                        new GoodsEffectDto { Quantity = 1, ProductId = otherProduct.Id },
+                    },
+                },
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            var effects = verify.PurchaseReturnEffects.ToList();
+
+            Assert.Equal(2, effects.Count);
+            Assert.Contains(effects, e => e.ProductId == scenario.Product.Id && e.Quantity == 2);
+            Assert.Contains(effects, e => e.ProductId == otherProduct.Id && e.Quantity == 1);
+            Assert.All(effects, e => Assert.Equal(ReturnEffectDirectionEnum.GOODS_IN, e.Direction));
         }
 
         [Fact]
@@ -179,7 +216,7 @@ namespace WMS.Tests.Integration
             await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 4, GoodsIn = new GoodsEffectDto { Quantity = 4 } },
+                Composition = new EffectCompositionDto { Quantity = 4, GoodsIn = new() { new GoodsEffectDto { Quantity = 4 } } },
             }, CancellationToken.None));
         }
 
@@ -194,7 +231,7 @@ namespace WMS.Tests.Integration
             await addHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 3, GoodsIn = new GoodsEffectDto { Quantity = 3 } },
+                Composition = new EffectCompositionDto { Quantity = 3, GoodsIn = new() { new GoodsEffectDto { Quantity = 3 } } },
             }, CancellationToken.None);
 
             var effectId = scope.Context.PurchaseReturnEffects.Single().Id;
@@ -232,7 +269,7 @@ namespace WMS.Tests.Integration
             await addHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 3, GoodsIn = new GoodsEffectDto { Quantity = 3 } },
+                Composition = new EffectCompositionDto { Quantity = 3, GoodsIn = new() { new GoodsEffectDto { Quantity = 3 } } },
             }, CancellationToken.None);
 
             var effectId = scope.Context.PurchaseReturnEffects.Single().Id;
@@ -263,7 +300,7 @@ namespace WMS.Tests.Integration
             await addHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 3, GoodsIn = new GoodsEffectDto { Quantity = 3 } },
+                Composition = new EffectCompositionDto { Quantity = 3, GoodsIn = new() { new GoodsEffectDto { Quantity = 3 } } },
             }, CancellationToken.None);
 
             var resolutionId = scope.Context.PurchaseReturnResolutions.Single().Id;
@@ -286,7 +323,7 @@ namespace WMS.Tests.Integration
             await addHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 3, GoodsIn = new GoodsEffectDto { Quantity = 3 } },
+                Composition = new EffectCompositionDto { Quantity = 3, GoodsIn = new() { new GoodsEffectDto { Quantity = 3 } } },
             }, CancellationToken.None);
 
             var effectId = scope.Context.PurchaseReturnEffects.Single().Id;
@@ -426,7 +463,7 @@ namespace WMS.Tests.Integration
             await addHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 3, GoodsIn = new GoodsEffectDto { Quantity = 3 } },
+                Composition = new EffectCompositionDto { Quantity = 3, GoodsIn = new() { new GoodsEffectDto { Quantity = 3 } } },
             }, CancellationToken.None);
 
             var handler = new GetPurchaseReturnPendingEffectsQueryHandler(scope.Db, scope.PurchaseReturnQueryService);

@@ -246,7 +246,7 @@ namespace WMS.Tests.Unit
         [Fact]
         public void ExpandComposition_GoodsInOnly_ProducesOnePendingEffect()
         {
-            var composition = new EffectCompositionDto { Quantity = 3, GoodsIn = new GoodsEffectDto { Quantity = 3 } };
+            var composition = new EffectCompositionDto { Quantity = 3, GoodsIn = new() { new GoodsEffectDto { Quantity = 3 } } };
 
             var effects = _sut.ExpandComposition(composition, DateTime.Now);
 
@@ -305,7 +305,7 @@ namespace WMS.Tests.Unit
             var composition = new EffectCompositionDto
             {
                 Quantity = 2,
-                GoodsOut = new GoodsEffectDto { Quantity = 2 },
+                GoodsOut = new() { new GoodsEffectDto { Quantity = 2 } },
                 MoneyIn = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 50 },
             };
 
@@ -314,6 +314,30 @@ namespace WMS.Tests.Unit
             Assert.Equal(2, effects.Count);
             Assert.Contains(effects, e => e.Direction == ReturnEffectDirectionEnum.GOODS_OUT);
             Assert.Contains(effects, e => e.Direction == ReturnEffectDirectionEnum.MONEY_IN);
+        }
+
+        [Fact]
+        public void ExpandComposition_MultipleGoodsInItems_ProducesOneEffectPerItem()
+        {
+            // A replacement split across two different products - one resolution, one direction,
+            // more than one product moving.
+            var composition = new EffectCompositionDto
+            {
+                Quantity = 5,
+                GoodsIn = new()
+                {
+                    new GoodsEffectDto { Quantity = 3, ProductId = 10 },
+                    new GoodsEffectDto { Quantity = 2, ProductId = 20 },
+                },
+            };
+
+            var effects = _sut.ExpandComposition(composition, DateTime.Now);
+
+            Assert.Equal(2, effects.Count);
+            Assert.All(effects, e => Assert.Equal(ReturnEffectDirectionEnum.GOODS_IN, e.Direction));
+            Assert.Contains(effects, e => e.ProductId == 10 && e.Quantity == 3);
+            Assert.Contains(effects, e => e.ProductId == 20 && e.Quantity == 2);
+            Assert.Equal(5, effects.Sum(e => e.Quantity));
         }
     }
 }
