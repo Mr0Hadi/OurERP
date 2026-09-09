@@ -80,28 +80,25 @@ namespace Infrastructure.Services
         {
             var effects = new List<PurchaseReturnEffect>();
 
-            if (composition.GoodsIn is { Quantity: > 0 } goodsIn)
-            {
-                effects.Add(new PurchaseReturnEffect
-                {
-                    Direction = ReturnEffectDirectionEnum.GOODS_IN,
-                    Quantity = goodsIn.Quantity,
-                    ProductId = goodsIn.ProductId,
-                    Status = ReturnEffectStatusEnum.PENDING,
-                    CreatedAt = now,
-                });
-            }
+            AddGoods(composition.GoodsIn, ReturnEffectDirectionEnum.GOODS_IN);
+            AddGoods(composition.GoodsOut, ReturnEffectDirectionEnum.GOODS_OUT);
 
-            if (composition.GoodsOut is { Quantity: > 0 } goodsOut)
+            void AddGoods(List<GoodsEffectDto>? items, ReturnEffectDirectionEnum direction)
             {
-                effects.Add(new PurchaseReturnEffect
+                if (items == null)
+                    return;
+
+                foreach (var item in items.Where(i => i.Quantity > 0))
                 {
-                    Direction = ReturnEffectDirectionEnum.GOODS_OUT,
-                    Quantity = goodsOut.Quantity,
-                    ProductId = goodsOut.ProductId,
-                    Status = ReturnEffectStatusEnum.PENDING,
-                    CreatedAt = now,
-                });
+                    effects.Add(new PurchaseReturnEffect
+                    {
+                        Direction = direction,
+                        Quantity = item.Quantity,
+                        ProductId = item.ProductId,
+                        Status = ReturnEffectStatusEnum.PENDING,
+                        CreatedAt = now,
+                    });
+                }
             }
 
             AddMoney(composition.MoneyIn, ReturnEffectDirectionEnum.MONEY_IN);

@@ -13,14 +13,20 @@ namespace Application.Common.Dtos.Returns
     /// single Money slot instead, which defaulted to GOODS_IN (the enum's zero value) and so
     /// rejected every money effect whose sender omitted the field. A slot cannot default to the
     /// wrong direction, so that whole failure mode is gone.
+    ///
+    /// GoodsIn/GoodsOut are lists, not a single GoodsEffectDto, for the same reason MoneyIn/MoneyOut
+    /// already carry a list of parts under MIXED: one resolution can move more than one product in
+    /// the same direction (e.g. a replacement split across two different products) or the same
+    /// product in more than one line. Each item in the list expands into its own effect row -
+    /// nothing here forces same-product items to merge into one.
     /// </summary>
     public class EffectCompositionDto
     {
         /// <summary>How much of the claim's remaining quantity this decision covers.</summary>
         public int Quantity { get; set; }
         public string? Note { get; set; }
-        public GoodsEffectDto? GoodsIn { get; set; }
-        public GoodsEffectDto? GoodsOut { get; set; }
+        public List<GoodsEffectDto>? GoodsIn { get; set; }
+        public List<GoodsEffectDto>? GoodsOut { get; set; }
 
         /// <summary>Money coming in to us (a supplier refunding us, a customer paying a shortfall).</summary>
         public MoneyEffectDto? MoneyIn { get; set; }
