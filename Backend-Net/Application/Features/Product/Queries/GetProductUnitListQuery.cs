@@ -60,7 +60,6 @@ namespace Application.Features.Product.Queries
                     Status = x.Status,
                     PurchaseItemId = x.PurchaseItemId,
                     SaleItemId = x.SaleItemId,
-                    CreatedAt = x.CreatedAt,
                     SoldAt = x.SoldAt,
                 })
                 .ToPagedAsync(request.Page, request.Take, cancellationToken);

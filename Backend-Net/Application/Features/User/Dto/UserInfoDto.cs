@@ -14,6 +14,5 @@ namespace Application.Features.User.Dto
         public int DepartmentId { get; set; }
         public string DepartmentName { get; set; }
         public bool IsActive { get; set; }
-        public DateTime CreatedAt { get; set; }
 	}
 }

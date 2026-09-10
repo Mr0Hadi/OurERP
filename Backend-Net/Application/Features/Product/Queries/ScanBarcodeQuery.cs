@@ -102,7 +102,6 @@ namespace Application.Features.Product.Queries
                     Status = unit.Status,
                     PurchaseItemId = unit.PurchaseItemId,
                     SaleItemId = unit.SaleItemId,
-                    CreatedAt = unit.CreatedAt,
                     SoldAt = unit.SoldAt,
                 },
             };

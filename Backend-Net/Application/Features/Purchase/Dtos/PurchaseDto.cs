@@ -29,13 +29,11 @@ namespace Application.Features.Purchase.Dtos
         public string DriverFullName { get; set; }
         public string DriverPhoneNumber { get; set; }
         public string VehiclePlate { get; set; }
-        public DateTime CreatedAt { get; set; }
     }
 
     public class PurchaseReceivingNoteDto
     {
         public int Id { get; set; }
         public string Note { get; set; }
-        public DateTime CreatedAt { get; set; }
     }
 }

@@ -13,7 +13,6 @@ namespace Application.Features.Product.Dtos
         public ProductUnitStatusEnum Status { get; set; }
         public int? PurchaseItemId { get; set; }
         public int? SaleItemId { get; set; }
-        public DateTime CreatedAt { get; set; }
         public DateTime? SoldAt { get; set; }
     }
 }

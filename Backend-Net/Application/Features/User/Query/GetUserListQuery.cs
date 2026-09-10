@@ -70,8 +70,7 @@ namespace Application.Features.User.Query
                 DepartmentName = x.Department.Name,
                 TeamId = x.TeamId,
                 TeamName = x.Team != null ? x.Team.Name : null,
-                IsActive = x.IsActive,
-                CreatedAt = x.CreatedAt
+                IsActive = x.IsActive
             }).ToPagedAsync(request.Page, request.Take, cancellationToken);
 
             res.Data = new
