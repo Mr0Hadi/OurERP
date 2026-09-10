@@ -1,18 +1,22 @@
-using Application.Common.Contracts.OrgStructure;
+﻿using Application.Common.Contracts.OrgStructure;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Common.Exceptions;
 using Common.Extensions;
+using Domain.Enums;
 using FluentValidation;
 using MediatR;
 
 namespace Application.Features.Team.Commands
 {
     /// <summary>
-    /// <see cref="HeadId"/>/<see cref="DeputyId"/> must already belong to the team's department -
-    /// see <see cref="Application.Features.Team.Commands.CreateTeamCommand"/>.
+    /// <see cref="HeadId"/>/<see cref="DeputyId"/> carry the team's final state: whoever is named is
+    /// moved into this team (and its department) and given the role, releasing any slot they held
+    /// elsewhere; whoever is dropped stays on as a plain member of the team. All of it runs through
+    /// <see cref="IOrgRoleService.AssignAsync"/>, so the user list/detail pages see the same thing
+    /// this page just wrote.
     /// </summary>
     public class UpdateTeamCommand : IRequest<ResponseDto>
     {
@@ -59,23 +63,26 @@ namespace Application.Features.Team.Commands
 
             var team = await _teamRepository.GetByIdAsync(request.Id, cancellationToken) ?? throw new NotFoundCustomException("تیم مورد نظر یافت نشد.");
 
+            // Final state first, then the assignments - AssignAsync releases the user's slots
+            // before writing the new one, and would otherwise clear what we had just set.
+            team.HeadId = request.HeadId;
+            team.DeputyId = request.DeputyId;
+
             if (request.HeadId.HasValue)
             {
                 var head = await _userRepository.GetByIdAsync(request.HeadId.Value, cancellationToken) ?? throw new NotFoundCustomException("سرپرست انتخاب شده یافت نشد");
-                if (head.DepartmentId != team.DepartmentId) throw new ValidationCustomException("سرپرست باید عضو همین دپارتمان باشد");
-                await _orgRoleService.ReleaseAllRolesAsync(head.Id, cancellationToken);
+                await _orgRoleService.AssignAsync(head, team.DepartmentId, team.Id, OrgRoleEnum.TEAM_HEAD, cancellationToken);
+                _userRepository.Update(head);
             }
 
             if (request.DeputyId.HasValue)
             {
                 var deputy = await _userRepository.GetByIdAsync(request.DeputyId.Value, cancellationToken) ?? throw new NotFoundCustomException("معاون انتخاب شده یافت نشد");
-                if (deputy.DepartmentId != team.DepartmentId) throw new ValidationCustomException("معاون باید عضو همین دپارتمان باشد");
-                await _orgRoleService.ReleaseAllRolesAsync(deputy.Id, cancellationToken);
+                await _orgRoleService.AssignAsync(deputy, team.DepartmentId, team.Id, OrgRoleEnum.TEAM_DEPUTY, cancellationToken);
+                _userRepository.Update(deputy);
             }
 
             team.Name = request.Name;
-            team.HeadId = request.HeadId;
-            team.DeputyId = request.DeputyId;
 
             _teamRepository.Update(team);
             await _unitOfWork.SaveChangesAsync(cancellationToken);

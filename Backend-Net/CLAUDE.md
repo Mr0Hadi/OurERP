@@ -724,6 +724,56 @@ the total:
   return list DTOs' `TotalQuantity` is computed identically to the entity's `Quantity` - both are
   real divergences, both left for a pass that can build and test.
 
+**Org chart: one user, one role, written in one place (2026-09-11).** The reported bug - a user
+moved to another department on the user detail page while their old team still listed them as its
+head - was `UpdateUserCommand` writing only `User.DepartmentId`/`TeamId` and never touching the
+`Team`/`Department` `HeadId`/`DeputyId` slots. `ChangeUserTeamCommand`/`DeleteUserCommand` had been
+fixed for this on 2026-09-07; `UpdateUserCommand` (which is what the user page actually calls) had
+not, and the team/department pages had the mirror-image hole - they wrote the slot without writing
+the user's own placement, so a team head could be someone in a different team entirely.
+
+- **`IOrgRoleService` now owns both halves.** New `AssignAsync(user, departmentId, teamId, role, ct)`
+  and `GetRoleAsync(userId, ct)` alongside the existing `ReleaseAllRolesAsync`. Every command that
+  moves a user or names a head/deputy goes through it: `UpdateUserCommand`, `ChangeUserTeamCommand`,
+  `Create`/`UpdateTeamCommand`, `Create`/`UpdateDepartmentCommand`. Enforced invariants: one
+  department per user; **at most one role, ever** (department head/deputy, team head/deputy, or
+  plain member); a department head/deputy has `TeamId == null`; a team head/deputy is a member of
+  that team in that team's department; and every assignment releases whatever the user held before.
+- **`OrgRoleEnum`** (`Domain/Enums/OrgRoleEnum.cs`): `MEMBER=0, DEPARTMENT_HEAD=1,
+  DEPARTMENT_DEPUTY=2, TEAM_HEAD=3, TEAM_DEPUTY=4`. **Nothing persists it** - it is derived from the
+  `HeadId`/`DeputyId` slots on read, which is why the user list can't drift out of sync with the
+  team/department pages. **No migration: there is no schema change in this pass.**
+- **`UpdateUserCommand.Role` is nullable on purpose.** `null` means "leave the role alone": kept
+  when the user stays in the same team/department, dropped when they move. A frontend that doesn't
+  send it therefore can't silently demote someone by editing their name, and moving someone can't
+  silently keep a slot that no longer exists. `ChangeUserTeamCommand` keeps its older
+  `IsHead`/`IsDeputy` booleans (no wire break) and maps them onto the enum - there `false/false` is
+  an explicit "plain member", since that command exists only to change placement.
+- **Assigning a role now transfers the user, instead of rejecting them.** The 2026-09-07 rule was
+  "the head must already be in this department" (400 otherwise), which made naming a head a
+  three-call dance and made `CreateDepartmentCommand` with a `HeadId` *unconditionally* impossible.
+  Both create handlers now save first (the row needs an `Id` for `User.DepartmentId`/`TeamId` to
+  point at), then assign, then save again; users are loaded up front so a bad id can't leave an
+  orphan team/department behind. Dropping someone from a slot leaves them a plain member of the
+  same team - it does not eject them.
+- **Ordering gotcha in the team/department update handlers:** the request's final `HeadId`/`DeputyId`
+  are written *before* the `AssignAsync` calls, because `AssignAsync` releases the user's slots
+  first and would otherwise clear the value just written.
+- **Read side**: `Role` + `RoleTitle` (Persian, via `EnumExtensions.GetDescription`) added to
+  `UserListDto`/`UserInfoDto`/`UserUpdateDto`. `GetUserListQuery` computes it inside the SQL
+  projection off `x.Team.HeadId`/`x.Department.HeadId` (conditional chains translate fine); the
+  title is filled in after `ToPagedAsync`, same reason signed image URLs are. The two
+  repository-based queries use `GetRoleAsync`.
+- **Tests**: `Tests/WMS.Tests/Integration/OrgRoleTests.cs`, 15 cases covering the reported bug, the
+  keep-vs-drop rule for a null `Role`, both directions of promotion between team and department,
+  the three 400s, deactivation, and the create/update handlers on both sides. All pass. Suite is
+  383/392 - the 9 failures are the long-documented pre-existing ones (8 `IX_Users_PersonelCode`
+  seed collisions + the `"***"` object-storage placeholder gap).
+- `docs/api-guide.fa.md`: section 3 rewritten (it still documented the long-deleted `roleId`/
+  `roleName`), a shared "org placement rules" preamble added, new sections 3b/3c documenting the
+  Department and Team endpoints (previously undocumented), `OrgRoleEnum` added to section 15, and
+  four rows added to section 16's breaking-changes table.
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
 - `PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK (see `WMSDbContextModelSnapshot.cs:119-124`). Needs reconciliation.

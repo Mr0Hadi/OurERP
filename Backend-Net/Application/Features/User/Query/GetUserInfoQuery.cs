@@ -1,4 +1,5 @@
-﻿using Application.Common.Contracts.Repositories;
+﻿using Application.Common.Contracts.OrgStructure;
+using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.UserContextService;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -18,12 +19,14 @@ namespace Application.Features.User.Query
     {
         private readonly IUserRepository _userRepository;
         private readonly IUserContextService _userContextService;
+        private readonly IOrgRoleService _orgRoleService;
         private readonly IMapper _mapper;
 
-		public GetUserInfoQueryHandler(IUserContextService userContextService, IUserRepository userRepository, IMapper mapper)
+		public GetUserInfoQueryHandler(IUserContextService userContextService, IUserRepository userRepository, IOrgRoleService orgRoleService, IMapper mapper)
 		{
 			_userContextService = userContextService;
 			_userRepository = userRepository;
+			_orgRoleService = orgRoleService;
 			_mapper = mapper;
 		}
 
@@ -35,7 +38,11 @@ namespace Application.Features.User.Query
 
             var user = await _userRepository.GetByIdAsync(userId, cancellationToken) ?? throw new NotFoundCustomException("کاربر با این اطلاعات یافت نشد.");
 
-            res.Data = _mapper.Map<UserInfoDto>(user);
+            var dto = _mapper.Map<UserInfoDto>(user);
+            dto.Role = await _orgRoleService.GetRoleAsync(user.Id, cancellationToken);
+            dto.RoleTitle = dto.Role.GetDescription();
+
+            res.Data = dto;
 
             res.Message = "اطلاعات کاربر با موفقیت ارسال شد";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();

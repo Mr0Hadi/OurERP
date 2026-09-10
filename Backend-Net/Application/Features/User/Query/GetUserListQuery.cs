@@ -1,8 +1,9 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.User.Dto;
 using Common.Extensions;
+using Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -70,8 +71,21 @@ namespace Application.Features.User.Query
                 DepartmentName = x.Department.Name,
                 TeamId = x.TeamId,
                 TeamName = x.Team != null ? x.Team.Name : null,
+                // Read back from the slots themselves, so the user list can never disagree with the
+                // team/department pages about who holds what.
+                Role = x.Team != null && x.Team.HeadId == x.Id ? OrgRoleEnum.TEAM_HEAD
+                    : x.Team != null && x.Team.DeputyId == x.Id ? OrgRoleEnum.TEAM_DEPUTY
+                    : x.Department.HeadId == x.Id ? OrgRoleEnum.DEPARTMENT_HEAD
+                    : x.Department.DeputyId == x.Id ? OrgRoleEnum.DEPARTMENT_DEPUTY
+                    : OrgRoleEnum.MEMBER,
                 IsActive = x.IsActive
             }).ToPagedAsync(request.Page, request.Take, cancellationToken);
+
+            // GetDescription is a local call - it cannot be translated into the SQL projection above.
+            foreach (var item in paged.Items)
+            {
+                item.RoleTitle = item.Role.GetDescription();
+            }
 
             res.Data = new
             {

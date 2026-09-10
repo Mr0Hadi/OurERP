@@ -1,4 +1,5 @@
 ﻿using Application.Common.Dtos;
+using Domain.Enums;
 
 namespace Application.Features.User.Dto
 {
@@ -13,6 +14,8 @@ namespace Application.Features.User.Dto
         public string? TeamName { get; set; }
         public int DepartmentId { get; set; }
         public string DepartmentName { get; set; }
+        public OrgRoleEnum Role { get; set; }
+        public string RoleTitle { get; set; }
         public bool IsActive { get; set; }
 	}
 }
