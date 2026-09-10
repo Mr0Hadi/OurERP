@@ -40,7 +40,7 @@ namespace Application.Features.Product.Queries
 
             if (!string.IsNullOrEmpty(request.Name))
             {
-                query = query.Where(p => p.Name.Contains(request.Name));
+                query = query.Where(p => p.Name.Contains(request.Name) || (p.EnglishName != null && p.EnglishName.Contains(request.Name)));
             }
 
             if (!string.IsNullOrEmpty(request.Code))
@@ -89,6 +89,7 @@ namespace Application.Features.Product.Queries
                 Brand = x.Brand,
                 Code = x.Code,
                 Name = x.Name,
+                EnglishName = x.EnglishName,
                 CategoryName = x.ProductCategory.Name,
                 Stock = x.Stock,
                 LowStockThreshold = x.LowStockThreshold,

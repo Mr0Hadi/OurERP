@@ -5,6 +5,7 @@
         public int Id { get; set; }
         public string Code { get; set; }
         public string Name { get; set; }
+        public string? EnglishName { get; set; }
         public string Brand { get; set; }
         public string CategoryName { get; set; }
         public UInt64 RetailPrice { get; set; }

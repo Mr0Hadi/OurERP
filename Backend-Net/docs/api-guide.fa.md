@@ -604,7 +604,7 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
 
 ### `GET api/Product/GetProductList`
 
-**Query:** `page`, `take`, `name`, `code`, `brand`, `productCategoryId`, `isLowOnStock` (true/false — فیلتر محصولات با موجودی زیر آستانه), `fromPrice`, `toPrice`.
+**Query:** `page`, `take`, `name` (هم روی نام فارسی و هم روی `englishName` جستجو می‌کند), `code`, `brand`, `productCategoryId`, `isLowOnStock` (true/false — فیلتر محصولات با موجودی زیر آستانه), `fromPrice`, `toPrice`.
 
 **data.productList[]:**
 ```json
@@ -612,6 +612,7 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
   "id": 10,
   "code": "20260814-000010",
   "name": "یخچال دو درب",
+  "englishName": "Side-by-Side Refrigerator",
   "brand": "Samsung",
   "categoryName": "لوازم خانگی",
   "retailPrice": 25000000,
@@ -630,6 +631,7 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
 {
   "id": 10,
   "name": "یخچال دو درب",
+  "englishName": "Side-by-Side Refrigerator",
   "code": "20260814-000010",
   "barCode": "20260814000010",
   "brand": "Samsung",
@@ -652,6 +654,7 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
 ```json
 {
   "name": "یخچال دو درب",
+  "englishName": "Side-by-Side Refrigerator",
   "brand": "Samsung",
   "unit": 1,
   "purchasePrice": 20000000,
@@ -679,6 +682,7 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
 {
   "id": 10,
   "name": "یخچال دو درب",
+  "englishName": "Side-by-Side Refrigerator",
   "brand": "Samsung",
   "unit": 1,
   "purchasePrice": 20000000,
