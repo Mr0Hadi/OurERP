@@ -1,9 +1,10 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Common.Queries;
 using Common.Exceptions;
 using Common.Extensions;
 using FluentValidation;
@@ -28,15 +29,13 @@ namespace Application.Features.PurchaseReturn.Commands
     public class DeletePurchaseReturnCommandHandler : IRequestHandler<DeletePurchaseReturnCommand, ResponseDto>
     {
         private readonly IWMSDbContext _context;
-        private readonly IPurchaseReturnQueryService _purchaseReturnQueryService;
         private readonly IPurchaseReturnRepository _purchaseReturnRepository;
         private readonly IPurchaseReturnCalculationService _purchaseReturnCalculationService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public DeletePurchaseReturnCommandHandler(IWMSDbContext context, IPurchaseReturnQueryService purchaseReturnQueryService, IPurchaseReturnRepository purchaseReturnRepository, IPurchaseReturnCalculationService purchaseReturnCalculationService, IUnitOfWork unitOfWork)
+        public DeletePurchaseReturnCommandHandler(IWMSDbContext context, IPurchaseReturnRepository purchaseReturnRepository, IPurchaseReturnCalculationService purchaseReturnCalculationService, IUnitOfWork unitOfWork)
         {
             _context = context;
-            _purchaseReturnQueryService = purchaseReturnQueryService;
             _purchaseReturnRepository = purchaseReturnRepository;
             _purchaseReturnCalculationService = purchaseReturnCalculationService;
             _unitOfWork = unitOfWork;
@@ -46,8 +45,9 @@ namespace Application.Features.PurchaseReturn.Commands
         {
             var res = new ResponseDto();
 
-            var purchaseReturn = await _purchaseReturnQueryService
-                .WithReturnGraph(_purchaseReturnQueryService.WhereNotDeleted(_context.PurchaseReturns).Where(x => x.Id == request.Id))
+            var purchaseReturn = await _context.PurchaseReturns.Where(x => x.Id == request.Id)
+                .WhereNotDeleted()
+                .WithReturnGraph()
                 .Include(x => x.Purchase)
                     .ThenInclude(x => x.Items)
                 .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");

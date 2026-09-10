@@ -2,9 +2,10 @@
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Contracts.UnitOfWork;
-using Application.Common.Dtos;
 using Application.Common.Dtos.Returns;
+using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Common.Queries;
 using Common.Exceptions;
 using Common.Extensions;
 using Domain.Enums;
@@ -50,25 +51,43 @@ namespace Application.Features.SaleReturn.Commands
                 .Must(parts => parts != null && parts.Count > 0)
                 .WithMessage("پرداخت ترکیبی باید حداقل یک بخش داشته باشد.")
                 .When(x => x.Composition.MoneyIn != null && x.Composition.MoneyIn.Method == ReturnPaymentMethodEnum.MIXED);
+            // A MIXED payment whose parts do not add up to the total, or parts smuggled in on a
+            // single-method payment (where they were silently dropped), both used to persist.
+            RuleFor(x => x.Composition.MoneyIn!)
+                .Must(money => money.Parts!.Aggregate(0UL, (sum, p) => sum + p.Amount) == money.Amount)
+                .WithMessage("مجموع بخش‌های پرداخت باید برابر مبلغ کل باشد.")
+                .When(x => x.Composition.MoneyIn is { Method: ReturnPaymentMethodEnum.MIXED, Parts.Count: > 0 });
+            RuleFor(x => x.Composition.MoneyIn!.Parts)
+                .Must(parts => parts == null || parts.Count == 0)
+                .WithMessage("بخش‌های پرداخت فقط برای پرداخت ترکیبی مجاز است.")
+                .When(x => x.Composition.MoneyIn != null && x.Composition.MoneyIn.Method != ReturnPaymentMethodEnum.MIXED);
             RuleFor(x => x.Composition.MoneyOut!.Parts)
                 .Must(parts => parts != null && parts.Count > 0)
                 .WithMessage("پرداخت ترکیبی باید حداقل یک بخش داشته باشد.")
                 .When(x => x.Composition.MoneyOut != null && x.Composition.MoneyOut.Method == ReturnPaymentMethodEnum.MIXED);
+            // A MIXED payment whose parts do not add up to the total, or parts smuggled in on a
+            // single-method payment (where they were silently dropped), both used to persist.
+            RuleFor(x => x.Composition.MoneyOut!)
+                .Must(money => money.Parts!.Aggregate(0UL, (sum, p) => sum + p.Amount) == money.Amount)
+                .WithMessage("مجموع بخش‌های پرداخت باید برابر مبلغ کل باشد.")
+                .When(x => x.Composition.MoneyOut is { Method: ReturnPaymentMethodEnum.MIXED, Parts.Count: > 0 });
+            RuleFor(x => x.Composition.MoneyOut!.Parts)
+                .Must(parts => parts == null || parts.Count == 0)
+                .WithMessage("بخش‌های پرداخت فقط برای پرداخت ترکیبی مجاز است.")
+                .When(x => x.Composition.MoneyOut != null && x.Composition.MoneyOut.Method != ReturnPaymentMethodEnum.MIXED);
         }
     }
 
     public class AddClaimResolutionCommandHandler : IRequestHandler<AddClaimResolutionCommand, ResponseDto>
     {
         private readonly IWMSDbContext _context;
-        private readonly ISaleReturnQueryService _saleReturnQueryService;
         private readonly ISaleReturnCalculationService _saleReturnCalculationService;
         private readonly IInventoryCostingService _inventoryCostingService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public AddClaimResolutionCommandHandler(IWMSDbContext context, ISaleReturnQueryService saleReturnQueryService, ISaleReturnCalculationService saleReturnCalculationService, IInventoryCostingService inventoryCostingService, IUnitOfWork unitOfWork)
+        public AddClaimResolutionCommandHandler(IWMSDbContext context, ISaleReturnCalculationService saleReturnCalculationService, IInventoryCostingService inventoryCostingService, IUnitOfWork unitOfWork)
         {
             _context = context;
-            _saleReturnQueryService = saleReturnQueryService;
             _saleReturnCalculationService = saleReturnCalculationService;
             _inventoryCostingService = inventoryCostingService;
             _unitOfWork = unitOfWork;
@@ -78,8 +97,10 @@ namespace Application.Features.SaleReturn.Commands
         {
             var res = new ResponseDto();
 
-            var saleReturn = await _saleReturnQueryService
-                .WithReturnGraph(_saleReturnQueryService.WhereNotDeleted(_context.SaleReturns).Where(x => x.Claims.Any(c => c.Id == request.ClaimId)), includeSaleItems: true)
+            var saleReturn = await _context.SaleReturns.Where(x => x.Claims.Any(c => c.Id == request.ClaimId))
+                .WhereNotDeleted()
+                .WithReturnGraph()
+                .WithSaleItems()
                 .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
             if (_saleReturnCalculationService.IsTerminal(saleReturn.Status) || saleReturn.Status == ReturnStatusEnum.SETTLED)

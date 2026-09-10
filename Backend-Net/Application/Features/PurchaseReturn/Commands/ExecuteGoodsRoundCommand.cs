@@ -3,9 +3,10 @@ using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.UnitOfWork;
-using Application.Common.Dtos;
 using Application.Common.Dtos.Returns;
+using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Common.Queries;
 using Application.Features.PurchaseReturn.Dtos;
 using Common.Exceptions;
 using Common.Extensions;
@@ -48,16 +49,14 @@ namespace Application.Features.PurchaseReturn.Commands
     public class ExecuteGoodsRoundCommandHandler : IRequestHandler<ExecuteGoodsRoundCommand, ResponseDto>
     {
         private readonly IWMSDbContext _context;
-        private readonly IPurchaseReturnQueryService _purchaseReturnQueryService;
         private readonly IPurchaseReturnCalculationService _purchaseReturnCalculationService;
         private readonly IProductUnitService _productUnitService;
         private readonly IInventoryCostingService _inventoryCostingService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public ExecuteGoodsRoundCommandHandler(IWMSDbContext context, IPurchaseReturnQueryService purchaseReturnQueryService, IPurchaseReturnCalculationService purchaseReturnCalculationService, IProductUnitService productUnitService, IInventoryCostingService inventoryCostingService, IUnitOfWork unitOfWork)
+        public ExecuteGoodsRoundCommandHandler(IWMSDbContext context, IPurchaseReturnCalculationService purchaseReturnCalculationService, IProductUnitService productUnitService, IInventoryCostingService inventoryCostingService, IUnitOfWork unitOfWork)
         {
             _context = context;
-            _purchaseReturnQueryService = purchaseReturnQueryService;
             _purchaseReturnCalculationService = purchaseReturnCalculationService;
             _productUnitService = productUnitService;
             _inventoryCostingService = inventoryCostingService;
@@ -68,8 +67,10 @@ namespace Application.Features.PurchaseReturn.Commands
         {
             var res = new ResponseDto();
 
-            var purchaseReturn = await _purchaseReturnQueryService
-                .WithReturnGraph(_purchaseReturnQueryService.WhereNotDeleted(_context.PurchaseReturns).Where(x => x.Id == request.PurchaseReturnId), includePurchaseItems: true)
+            var purchaseReturn = await _context.PurchaseReturns.Where(x => x.Id == request.PurchaseReturnId)
+                .WhereNotDeleted()
+                .WithReturnGraph()
+                .WithPurchaseItems()
                 .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
             if (_purchaseReturnCalculationService.IsTerminal(purchaseReturn.Status))

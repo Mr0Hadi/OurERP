@@ -774,6 +774,62 @@ the user's own placement, so a team head could be someone in a different team en
   Department and Team endpoints (previously undocumented), `OrgRoleEnum` added to section 15, and
   four rows added to section 16's breaking-changes table.
 
+**Return-domain read-side cleanup (2026-09-10).** Applied from a code-review chat on
+`PurchaseReturnQueryService` / `GetPurchaseReturnDetailQuery` / `PurchaseReturnCalculationService`,
+then mirrored to the sale side so the two return domains stay identical in shape. No schema change,
+no migration.
+
+- **`I{Purchase,Sale}ReturnQueryService` are gone**, replaced by static query-composition classes
+  `Application/Common/Queries/{Purchase,Sale}ReturnQueryExtensions.cs`. They were stateless
+  `IQueryable` transformations with no dependencies, so there was nothing to inject and nothing
+  worth mocking; they now live in `Application` rather than `Infrastructure`, which is where the
+  handlers that use them are. Both DI registrations and the `TestDatabase` properties are removed,
+  and `{Purchase,Sale}ReturnRepository` no longer take one.
+- **`WhereActive` is gone; the ambiguity it carried is the reason.** It meant "not soft-deleted AND
+  open", while `WhereNotDeleted` meant "not soft-deleted" - two different senses of *active* in one
+  class. Now: `WhereNotDeleted()` (IsActive) and `WhereOpen()` (status in OPEN|IN_PROGRESS) are
+  separate and composed explicitly, e.g. the repositories' `.WhereNotDeleted().WhereOpen().WithReturnGraph()`.
+  A **global query filter was deliberately NOT added** for soft delete, despite it being the obvious
+  fix - section 7 forbids one, and every read composes `WhereNotDeleted()` instead.
+- **`WithReturnGraph()` now ends in `AsSplitQuery()`.** It Includes four nested collections
+  (Claims → Resolutions → Effects → History → Observations / MoneyParts), which in a single query
+  multiplies the row count at every level. The `includePurchaseItems`/`includeSaleItems` boolean is
+  replaced by a separate `WithPurchaseItems()`/`WithSaleItems()` that composes.
+- **Detail queries rewritten.** `Get{Purchase,Sale}ReturnDetailQuery` are `AsNoTracking`, project
+  through `ToDto()` extension methods in `Application/Features/{Purchase,Sale}Return/Mappings/`
+  instead of ~100 lines of inline nested initialisers, compute the three
+  `CanDelete`/`CanCancel`/`CanReject` flags from one expression, and read `PreviousReturnNumber` off
+  an `Include(x => x.PreviousReturn)` rather than a second round-trip (the navigation and FK already
+  existed). `TotalAmount` is `checked`, so a bad row throws instead of wrapping into a huge number.
+  Soft delete is still filtered - the rewrite that landed before this pass had dropped it on the
+  assumption of a global query filter that this project does not have.
+- **`RecomputePurchaseStatus` no longer reports an item-less purchase as RECEIVED** (`All()` over an
+  empty sequence is true). The sale side already guarded this. The review also flagged the
+  `return purchase.Status` fallback as "sticky"; that was **rejected** - the fallback is what
+  preserves PROFORMA/PENDING/SHIPPED for a purchase with nothing received yet, there is no
+  PurchaseStatusEnum.ORDERED to fall back to, and `ReceivedQuantity` is append-only
+  (`ReceivePurchaseCommand` is the only writer, and it only adds), so the reversal the review worried
+  about is unreachable.
+- **`GetOpenClaimQuantity` filters off-order claims on `Scope`, not on `OffScopeKind == null`** (the
+  comment already said Scope), and now drops soft-deleted and terminal returns itself instead of
+  trusting the caller to have passed only active ones. `excludeReturnId` was **not** added - there is
+  no edit-claim flow, `GetClaimableQuantity` is called only from `Create{Purchase,Sale}ReturnCommand`.
+- **Money compositions are validated.** `Add{Purchase,Sale}ClaimResolutionCommandValidator` now
+  rejects a MIXED payment whose `Parts` do not sum to `Amount`, and `Parts` sent on a non-MIXED
+  payment (previously dropped silently, so the persisted effect disagreed with the request);
+  `ExpandComposition` throws `ValidationCustomException` as a last line of defence. **This is a
+  behaviour change for callers** - both payloads used to be accepted.
+- **`CanReopen(status)` moved onto `I{Purchase,Sale}ReturnCalculationService`** so every transition
+  rule sits behind one interface rather than one of them being inline in a query.
+- **Not applied from the review**: renaming `ReturnStatusEnum` to `ReturnStatus` with PascalCase
+  members (the SCREAMING_CASE names are the documented frontend enum contract), a global soft-delete
+  query filter (section 7), and `ResponseDto<T>` (a project-wide convention change, not a
+  return-domain one).
+- **Not verified**: there is no .NET SDK on the machine this ran from and the local VM has no network
+  to install one, so none of this has been compiled or tested. Run `dotnet build WMS.slnx` and
+  `dotnet test` before trusting it; the last recorded baseline is 383/392 with 9 documented
+  pre-existing failures.
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
 - `PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK (see `WMSDbContextModelSnapshot.cs:119-124`). Needs reconciliation.

@@ -31,7 +31,7 @@ namespace Application.Features.Product.Queries
         public async Task<ResponseDto> Handle(GetProductUnitListQuery request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
-            var query = _context.ProductUnits.AsQueryable();
+            var query = _context.ProductUnits.AsQueryable().AsNoTracking();
 
             if (request.ProductId.HasValue)
                 query = query.Where(x => x.ProductId == request.ProductId);

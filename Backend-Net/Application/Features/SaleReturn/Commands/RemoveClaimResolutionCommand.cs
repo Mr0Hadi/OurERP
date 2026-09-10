@@ -1,8 +1,9 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Common.Queries;
 using Common.Exceptions;
 using Common.Extensions;
 using Domain.Enums;
@@ -30,14 +31,12 @@ namespace Application.Features.SaleReturn.Commands
     public class RemoveClaimResolutionCommandHandler : IRequestHandler<RemoveClaimResolutionCommand, ResponseDto>
     {
         private readonly IWMSDbContext _context;
-        private readonly ISaleReturnQueryService _saleReturnQueryService;
         private readonly ISaleReturnCalculationService _saleReturnCalculationService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public RemoveClaimResolutionCommandHandler(IWMSDbContext context, ISaleReturnQueryService saleReturnQueryService, ISaleReturnCalculationService saleReturnCalculationService, IUnitOfWork unitOfWork)
+        public RemoveClaimResolutionCommandHandler(IWMSDbContext context, ISaleReturnCalculationService saleReturnCalculationService, IUnitOfWork unitOfWork)
         {
             _context = context;
-            _saleReturnQueryService = saleReturnQueryService;
             _saleReturnCalculationService = saleReturnCalculationService;
             _unitOfWork = unitOfWork;
         }
@@ -46,8 +45,10 @@ namespace Application.Features.SaleReturn.Commands
         {
             var res = new ResponseDto();
 
-            var saleReturn = await _saleReturnQueryService
-                .WithReturnGraph(_saleReturnQueryService.WhereNotDeleted(_context.SaleReturns).Where(x => x.Claims.Any(c => c.Resolutions.Any(r => r.Id == request.Id))), includeSaleItems: true)
+            var saleReturn = await _context.SaleReturns.Where(x => x.Claims.Any(c => c.Resolutions.Any(r => r.Id == request.Id)))
+                .WhereNotDeleted()
+                .WithReturnGraph()
+                .WithSaleItems()
                 .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
             // No SETTLED gate here (unlike Add/lifecycle commands): a money-only resolution can

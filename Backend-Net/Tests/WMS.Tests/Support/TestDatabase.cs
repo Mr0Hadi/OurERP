@@ -81,10 +81,8 @@ namespace WMS.Tests.Support
             // Fully qualified: the `using Application.Common.Contracts.UnitOfWork` above makes the
             // bare name `UnitOfWork` resolve to that namespace rather than the type.
             UnitOfWork = new Infrastructure.UnitOfWork.UnitOfWork(context);
-            SaleReturnQueryService = new SaleReturnQueryService();
-            SaleReturnRepository = new SaleReturnRepository(context, SaleReturnQueryService);
-            PurchaseReturnQueryService = new PurchaseReturnQueryService();
-            PurchaseReturnRepository = new PurchaseReturnRepository(context, PurchaseReturnQueryService);
+            SaleReturnRepository = new SaleReturnRepository(context);
+            PurchaseReturnRepository = new PurchaseReturnRepository(context);
             PurchaseRepository = new PurchaseRepository(context);
             ProductRepository = new ProductRepository(context);
             CustomerRepository = new CustomerRepository(context);
@@ -122,10 +120,8 @@ namespace WMS.Tests.Support
         public IDepartmentRepository DepartmentRepository { get; }
         public ITeamRepository TeamRepository { get; }
         public ISaleReturnCalculationService SaleReturnCalculation { get; }
-        public ISaleReturnQueryService SaleReturnQueryService { get; }
         public IInvoiceLineCalculationService InvoiceLineCalculation { get; }
         public IPurchaseReturnCalculationService PurchaseReturnCalculation { get; }
-        public IPurchaseReturnQueryService PurchaseReturnQueryService { get; }
         public IProductCodeService ProductCodeService { get; }
         public IProductUnitService ProductUnitService { get; }
         public IInventoryCostingService InventoryCostingService { get; }

@@ -36,7 +36,7 @@ namespace Application.Features.Product.Queries
         public async Task<ResponseDto> Handle(GetProductListQuery request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
-            var query = _context.Products.Where(x => x.IsActive).AsQueryable();
+            var query = _context.Products.Where(x => x.IsActive).AsQueryable().AsNoTracking();
 
             if (!string.IsNullOrEmpty(request.Name))
             {
