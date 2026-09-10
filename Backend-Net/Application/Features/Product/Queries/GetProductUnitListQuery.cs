@@ -13,6 +13,7 @@ namespace Application.Features.Product.Queries
     {
         public int Page { get; set; } = 1;
         public int Take { get; set; } = 20;
+        public string? ProductName { get; set; }
         public int? ProductId { get; set; }
         public ProductUnitStatusEnum? Status { get; set; }
         public int? FromSerial { get; set; }
@@ -44,6 +45,9 @@ namespace Application.Features.Product.Queries
 
             if (request.ToSerial.HasValue)
                 query = query.Where(x => x.SerialNumber <= request.ToSerial);
+
+            if (!string.IsNullOrEmpty(request.ProductName))
+                query = query.Where(x => x.Product.Name.Contains(request.ProductName));
 
             var paged = await query
                 .OrderBy(x => x.ProductId)
