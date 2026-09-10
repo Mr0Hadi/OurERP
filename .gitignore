@@ -557,3 +557,5 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+/Backend-Net/WMS/Properties/PublishProfiles/FTPProfile.pubxml.user
+/Backend-Net/WMS/Properties/PublishProfiles/FTPProfile.pubxml
