@@ -14,8 +14,12 @@ import { departmentRules } from "../../hooks/useEmployeeForm";
  *
  * تیم *وابسته* به واحد است — فهرست تیم‌ها با `departmentId` فیلتر می‌شود
  * و با عوض‌شدن واحد، تیمِ انتخاب‌شده پاک می‌شود. بدون این پاک‌سازی
- * می‌شد کارمندی ساخت که تیمش زیر واحد دیگری است؛ چنین رکوردی در بکند
- * بی‌معناست و هیچ اعتبارسنجی‌ای هم جلویش را نمی‌گیرد.
+ * فرم با تیمی از واحدِ دیگر ارسال می‌شد و سرور با «تیم انتخاب شده متعلق
+ * به این واحد نیست» ردش می‌کرد.
+ *
+ * در ویرایش (`initialPlacement`)، اگر واحد یا تیم عوض شود هشدار داده
+ * می‌شود که سمتِ مدیریت/معاونتِ فعلیِ کارمند آزاد می‌شود — مدیری که به
+ * واحد دیگری می‌رود نمی‌تواند مدیرِ واحد یا تیمِ قبلی بماند.
  *
  * دکمه‌های «واحد جدید» و «تیم جدید» کاربر را از وسطِ همین فرم به صفحه‌ی
  * ساخت می‌برند و برمی‌گردانند؛ نگه‌داشتن اطلاعاتِ نیمه‌کاره کارِ صفحه است
@@ -57,11 +61,13 @@ export default function EmployeeOrgForm({
    *
    * این یک ظرافتِ ظاهری نیست: واحد قرار است مبنای سطحِ دسترسی باشد
    * (`User.DepartmentId`)، پس اگر کاربر بتواند واحدِ خودش را عوض کند،
-   * دسترسیِ خودش را هم عوض کرده — و هیچ اعتبارسنجی‌ای در `UpdateUser`
-   * جلویش را نمی‌گیرد. دکمه‌های «ایجاد واحد/تیم» هم به همین دلیل
-   * پنهان می‌شوند: ساختنِ واحد کارِ مدیریتِ سازمان است.
+   * دسترسیِ خودش را هم عوض کرده — و `UpdateUser` هنوز چک نمی‌کند که چه
+   * کسی درخواست داده. دکمه‌های «ایجاد واحد/تیم» هم به همین دلیل پنهان
+   * می‌شوند: ساختنِ واحد کارِ مدیریتِ سازمان است.
    */
   readOnly = false,
+  /** `{ departmentId, teamId }` ذخیره‌شده، فقط در حالت ویرایش. */
+  initialPlacement = null,
 }) {
   const departmentId = useWatch({ control, name: "departmentId" });
   const teamId = useWatch({ control, name: "teamId" });
@@ -94,6 +100,13 @@ export default function EmployeeOrgForm({
       setValue("teamId", null);
     }
   }, [departmentId, setValue, readOnly]);
+
+  // `!=` عمدی است: شناسه از سرور عدد و از Select هم عدد می‌آید، ولی
+  // «بدون تیم» یک‌جا `null` و جای دیگر `undefined` است.
+  const placementChanged =
+    initialPlacement != null &&
+    (departmentId != initialPlacement.departmentId ||
+      (teamId ?? null) != (initialPlacement.teamId ?? null));
 
   if (readOnly) {
     // نامِ واحد و تیم از همان فهرست‌هایی خوانده می‌شود که انتخابگرها
@@ -177,6 +190,13 @@ export default function EmployeeOrgForm({
           </CreateButton>
         </div>
       </div>
+
+      {placementChanged && (
+        <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+          با تغییر واحد یا تیم، اگر این کارمند مدیر یا معاونِ تیم یا واحدی باشد،
+          آن سمت آزاد می‌شود.
+        </p>
+      )}
     </FormSectionCard>
   );
 }

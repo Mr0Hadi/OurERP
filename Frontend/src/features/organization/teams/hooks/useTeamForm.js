@@ -29,6 +29,11 @@ function buildDefaultValues(team) {
  * `deputyId` اما همیشه می‌رود — `UpdateTeamCommand` بی‌قید
  * `team.DeputyId = request.DeputyId` می‌گذارد و نفرستادنش معاون را پاک
  * می‌کند.
+ *
+ * در ویرایش، `departmentId` از *رکورد* خوانده می‌شود نه از فرم: واحد در
+ * فرمِ ویرایش قابل‌تغییر نیست، و مقدارِ فرم ممکن است از یک پیش‌نویسِ کهنه
+ * آمده باشد — اگر تیم در این فاصله منتقل شده باشد، ذخیره‌ی فرم آن را
+ * بی‌صدا به واحدِ قبلی برمی‌گرداند.
  */
 export function buildTeamPayload(data, id) {
   return {
@@ -58,6 +63,11 @@ export function useTeamForm(initialData = null, draftValues = null) {
     formMethods,
     isEditing,
     buildPayload: (data) =>
-      buildTeamPayload(data, isEditing ? initialData.id : null),
+      isEditing
+        ? buildTeamPayload(
+            { ...data, departmentId: initialData.departmentId },
+            initialData.id,
+          )
+        : buildTeamPayload(data, null),
   };
 }

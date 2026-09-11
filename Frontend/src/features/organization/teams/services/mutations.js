@@ -36,7 +36,8 @@ export function useUpdateTeamMutation() {
       queryClient.invalidateQueries({ queryKey: teamKeys.all });
       queryClient.invalidateQueries({ queryKey: teamKeys.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: departmentKeys.all });
-      // با تغییر واحدِ تیم، واحدِ اعضایش هم عوض می‌شود.
+      // تعیینِ مدیر/معاون سمت‌های قبلیِ آن فرد را آزاد می‌کند؛ فهرست‌های
+      // کارمندان (و انتخابگرهای مدیر در صفحه‌های دیگر) باید تازه شوند.
       queryClient.invalidateQueries({ queryKey: employeeKeys.all });
     },
     onError: (error) => toast.error(error?.message || "خطا در ویرایش تیم"),
@@ -58,7 +59,8 @@ export function useAssignTeamToDepartmentMutation() {
       toast.success("تیم به این واحد اضافه شد.");
       queryClient.invalidateQueries({ queryKey: teamKeys.all });
       queryClient.invalidateQueries({ queryKey: departmentKeys.all });
-      // اعضای تیم همراهش جابه‌جا می‌شوند، پس واحدِ کارمندها هم عوض شده.
+      // اعضای تیم همراهش به واحدِ جدید می‌روند (قرارداد در `api-v1.js`)،
+      // پس واحدِ کارمندها هم عوض شده.
       queryClient.invalidateQueries({ queryKey: employeeKeys.all });
     },
     onError: (error) => toast.error(error?.message || "خطا در افزودن تیم به واحد"),

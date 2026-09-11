@@ -26,6 +26,7 @@ import { useTeamForm } from "../hooks/useTeamForm";
 import TeamIdentityForm from "../components/forms/TeamIdentityForm";
 import TeamMembersCard from "../components/TeamMembersCard";
 import OrgLeadershipForm from "../../components/OrgLeadershipForm";
+import { useSyncLeadershipValues } from "../../hooks/useSyncLeadershipValues";
 
 function TeamDetailForm({ team }) {
   const navigate = useNavigate();
@@ -50,9 +51,14 @@ function TeamDetailForm({ team }) {
     register,
     control,
     getValues,
+    setValue,
     handleSubmit,
     formState: { errors },
   } = formMethods;
+
+  // «هد/معاون کردن» از کارت اعضا مستقیم روی سرور ذخیره می‌شود؛ فرم باید
+  // همان را ببیند وگرنه ذخیره‌ی بعدی مقدارِ قبلی را برمی‌گرداند.
+  useSyncLeadershipValues(setValue, team.headId, team.deputyId);
 
   /** رفتن به جزئیات یک عضو، بدون از دست دادنِ تغییراتِ نیمه‌کاره‌ی فرم. */
   const leaveWithDraft = (target, state) => {
@@ -96,6 +102,8 @@ function TeamDetailForm({ team }) {
               register={register}
               errors={errors}
               control={control}
+              departmentReadOnly
+              departmentName={team.departmentName}
             />
 
             <div className="rounded-2xl border border-border bg-muted/20 p-4 text-sm">
@@ -119,6 +127,7 @@ function TeamDetailForm({ team }) {
             <OrgLeadershipForm
               control={control}
               errors={errors}
+              departmentId={team.departmentId}
               scopeLabel="تیم"
             />
 

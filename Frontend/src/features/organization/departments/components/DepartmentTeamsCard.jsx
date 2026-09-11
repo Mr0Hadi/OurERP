@@ -203,8 +203,8 @@ export default function DepartmentTeamsCard({
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            تیم از واحد فعلی‌اش جدا و به «{departmentName}» منتقل می‌شود. اعضای
-            تیم فعلاً در واحد قبلی‌شان می‌مانند و باید جداگانه منتقل شوند.
+            تیم با همه‌ی اعضایش به «{departmentName}» منتقل می‌شود. سمت‌های
+            اعضا در واحد قبلی آزاد می‌شود.
           </p>
         </div>
       </div>
