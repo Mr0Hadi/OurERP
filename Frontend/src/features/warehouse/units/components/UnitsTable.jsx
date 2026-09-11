@@ -3,7 +3,6 @@ import { ChevronLeft } from "lucide-react";
 
 import DataTable from "@/shared/components/table/DataTable";
 import { Button } from "@/shared/components/ui/button";
-import { gregorianToPersian } from "@/shared/utils/dateUtils";
 
 import UnitStatusBadge from "./UnitStatusBadge";
 import UnitSelectCheckbox from "./UnitSelectCheckbox";
@@ -17,8 +16,6 @@ export default function UnitsTable({
   currentPage,
   pageSize,
   onPaginationChange,
-  sorting,
-  onSortingChange,
   onOpenUnit,
   selectedIds,
   onToggleSelect,
@@ -42,7 +39,7 @@ export default function UnitsTable({
         cell: (info) => (
           <UnitSelectCheckbox
             checked={selectedIds.has(info.row.original.id)}
-            onChange={() => onToggleSelect(info.row.original.id)}
+            onChange={() => onToggleSelect(info.row.original)}
             label={`انتخاب ${info.row.original.barcode}`}
           />
         ),
@@ -84,15 +81,6 @@ export default function UnitsTable({
         cell: (info) => <UnitStatusBadge status={info.getValue()} />,
       },
       {
-        accessorKey: "createdAt",
-        header: "تاریخ ساخت",
-        cell: (info) => (
-          <span className="text-xs tabular-nums">
-            {info.getValue() ? gregorianToPersian(info.getValue().slice(0, 10)) : "—"}
-          </span>
-        ),
-      },
-      {
         id: "actions",
         header: "",
         enableSorting: false,
@@ -131,8 +119,8 @@ export default function UnitsTable({
       currentPage={currentPage}
       pageSize={pageSize}
       onPaginationChange={onPaginationChange}
-      sorting={sorting}
-      onSortingChange={onSortingChange}
+      // سرور ترتیبِ ثابتِ «کالا، سپس سریال» دارد و مرتب‌سازی نمی‌گیرد.
+      sortable={false}
       getRowKey={getRowKey}
       rowClassName={(row) =>
         selectedIds.has(row.original.id) ? "bg-primary/5" : ""

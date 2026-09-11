@@ -5,16 +5,16 @@ import {
   LABEL_CODE_KINDS,
 } from "@/shared/domain/barcode/barcodeConfig";
 import { barcodeSegments } from "@/shared/domain/barcode/productCode";
-import { gregorianToPersian } from "@/shared/utils/dateUtils";
 
 /**
  * محتوای یک برچسب. عمداً در همین feature می‌ماند و نه در shared —
  * چیدمان صفحه و مکانیزم چاپ سراسری است، ولی «روی برچسب کالا چه
  * نوشته شود» تصمیم انبار است.
  *
- * سطر پایین (کد کالا و تاریخ) برای وقتی است که کسی برچسب را با چشم
- * می‌خواند: بدون اسکنر هم باید بشود فهمید این قلم چه کالایی است و کی
- * وارد انبار شده.
+ * روی برچسب فقط نامِ کالا و بارکدِ سه‌بخشیِ خودِ دانه می‌رود — همان
+ * چیزی که `GetProductLabelsPdf` سرور هم چاپ می‌کند. تاریخِ ساخت و کدِ
+ * کالا (گروهِ دانه) عمداً نیستند: کدِ کالا همان دو بخشِ اولِ بارکدِ دانه
+ * است و تکرارش فقط جای برچسب را می‌گرفت.
  *
  * `codeKind` فقط شکلِ نماد را عوض می‌کند، نه محتوایش: هر دو همان
  * `barcodePayload` را حمل می‌کنند، پس یک برچسبِ QR و یک برچسبِ خطی از
@@ -24,10 +24,6 @@ export default function UnitLabel({
   unit,
   codeKind = DEFAULT_LABEL_CODE_KIND,
 }) {
-  const receivedAt = unit.createdAt
-    ? gregorianToPersian(unit.createdAt.slice(0, 10))
-    : "";
-
   // برچسب‌ها پهن‌اند و کوتاه (۶۲×۳۳ تا ۹۳×۵۳ میلی‌متر). بارکدِ خطی خودش
   // پهن است و در چیدمانِ عمودی جا می‌افتد، ولی QR مربع است: اگر همان‌جا
   // بگذاریمش، ارتفاعِ کمِ برچسب اندازه‌اش را خفه می‌کند و بقیه‌ی عرض
@@ -48,9 +44,9 @@ export default function UnitLabel({
           </div>
 
           {/* کدِ کامل در ستونِ باریکِ کنارِ QR در یک سطر جا نمی‌شود و
-              بریده می‌شد. شکستنش از روی همان سه مرزِ معنادارِ خودش
-              (تاریخ / کالا / سریال) است نه از روی عرضِ ظرف، پس روی
-              باریک‌ترین برچسب هم کامل خوانده می‌شود. */}
+              بریده می‌شد. شکستنش از روی همان سه مرزِ معنادارِ خودش است
+              نه از روی عرضِ ظرف، پس روی باریک‌ترین برچسب هم کامل خوانده
+              می‌شود. */}
           <div className="flex flex-col gap-px font-mono text-[8px] leading-tight">
             {barcodeSegments(unit.barcode).map((segment, index) => (
               <span key={index} className="tabular-nums">
@@ -58,10 +54,6 @@ export default function UnitLabel({
               </span>
             ))}
           </div>
-
-          <span className="px-0.5 text-[7px] leading-tight tabular-nums text-neutral-700">
-            {receivedAt}
-          </span>
         </div>
       </div>
     );
@@ -80,11 +72,6 @@ export default function UnitLabel({
         text={unit.barcode}
         preset="label"
       />
-
-      <div className="flex w-full items-center justify-between gap-1 px-0.5 text-[7px] leading-tight text-neutral-700">
-        <span className="truncate font-mono">{unit.productCode}</span>
-        <span className="shrink-0 tabular-nums">{receivedAt}</span>
-      </div>
     </div>
   );
 }

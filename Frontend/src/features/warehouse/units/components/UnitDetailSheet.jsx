@@ -112,9 +112,6 @@ export default function UnitDetailSheet({ unit, open, onOpenChange, onPrint }) {
             <Row label="سریال">
               <span className="tabular-nums">{unit.serialNumber ?? "—"}</span>
             </Row>
-            <Row label="تاریخ ساخت">
-              <span className="tabular-nums">{formatDate(unit.createdAt)}</span>
-            </Row>
             {unit.soldAt ? (
               <Row label="تاریخ فروش">
                 <span className="tabular-nums">{formatDate(unit.soldAt)}</span>

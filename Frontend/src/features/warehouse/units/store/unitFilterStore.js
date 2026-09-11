@@ -19,11 +19,24 @@ export const usePrintPreferenceStore = create((set) => ({
   setLabelCodeKind: (labelCodeKind) => set({ labelCodeKind }),
 }));
 
-/** فهرست واحدهای ساخته‌شده — پیش‌فرض: تازه‌ترین اول. */
+/**
+ * فیلترهای فهرستِ دانه‌ها — دقیقاً همان‌هایی که `GetProductUnitList`
+ * می‌شناسد: `productId`، `status` و بازه‌ی سریال. جست‌وجوی متنی و
+ * مرتب‌سازی را سرور ندارد (ترتیب همیشه کالا، سپس سریال است)، پس اینجا
+ * هم نیستند تا کاربر فیلتری نبیند که اعمال نمی‌شود.
+ */
 export const useProductUnitFilterStore = createFilterStore({
   filters: {
-    globalSearch: "",
     productId: "",
     status: "",
+    fromSerial: "",
+    toSerial: "",
   },
+  defaultSorting: null,
+  actions: ({ applyFilters }) => ({
+    // سریال per-product است (هر کالا از ۱ می‌شمارد)، پس بازه‌ی سریالِ
+    // کالای قبلی برای کالای جدید بی‌معناست و با عوض‌شدنِ کالا پاک می‌شود.
+    setProductId: (productId) =>
+      applyFilters({ productId, fromSerial: "", toSerial: "" }),
+  }),
 });

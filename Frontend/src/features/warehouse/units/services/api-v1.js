@@ -29,14 +29,17 @@ import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReference
  * `ProductUnitDto` سرور → همان شکلی که کامپوننت‌های این فیچر مصرف
  * می‌کنند.
  *
- * `productName`/`productCode` را سرور می‌دهد (هماهنگ‌شده با تیم بکند،
- * ۱۴۰۵/۰۶/۰۸). دو fallback عمداً نگه داشته شده‌اند و کدِ مرده نیستند:
+ * `productName` را `GetProductUnitList` می‌دهد؛ `productCode` را هنوز نه.
+ * دو fallback عمداً نگه داشته شده‌اند و کدِ مرده نیستند:
  *
  * - `product` — پاسخِ `ScanBarcode` کالا را کنارِ دانه می‌آورد؛ آن نسخه
  *   تازه‌تر و کامل‌تر است، پس بر فیلدهای خودِ دانه اولویت دارد.
  * - `productCodeOf(barcode)` — کدِ کالا *داخلِ* بارکدِ دانه است (دو بخشِ
  *   اول)، پس اگر روزی این فیلد خالی برگردد ستون خالی نمی‌ماند. برای
  *   `productName` چنین چیزی ممکن نیست و `null` می‌ماند.
+ *
+ * `createdAt` عمداً نگاشت نمی‌شود: تاریخِ ساختِ دانه در UI نمایش داده
+ * نمی‌شود و روی برچسب هم نمی‌رود.
  */
 export function normalizeProductUnit(dto, product = null) {
   if (!dto) return null;
@@ -61,7 +64,6 @@ export function normalizeProductUnit(dto, product = null) {
     // شناسه‌ی *خطِ* فروش است نه خودِ فروش — نامش عمداً مثل سرور مانده.
     saleItemId: dto.saleItemId ?? null,
 
-    createdAt: dto.createdAt ?? null,
     soldAt: dto.soldAt ?? null,
   };
 }
@@ -69,9 +71,9 @@ export function normalizeProductUnit(dto, product = null) {
 /**
  * `GET api/Product/GetProductUnitList`
  *
- * سرور فقط `productId`، `status` و بازه‌ی سریال را فیلتر می‌کند —
- * جست‌وجوی متنی و مرتب‌سازی را ندارد؛ اگر صفحه آن‌ها را بفرستد بی‌صدا
- * نادیده گرفته می‌شوند.
+ * سرور فقط `productId`، `status` و بازه‌ی سریال را فیلتر می‌کند و
+ * ترتیبش ثابت است (کالا، سپس سریال) — جست‌وجوی متنی و مرتب‌سازی ندارد،
+ * پس فرستاده هم نمی‌شوند.
  */
 export const fetchProductUnits = async (params = {}) => {
   const { data } = await axiosInstance.get("/Product/GetProductUnitList", {
@@ -138,10 +140,10 @@ export const resolveScannedCode = async (code) => {
  * `responseType: "blob"` و بازکردنِ پیامِ فارسیِ خطا از دلِ بلاب، چون
  * اینترسپتورِ axios با این responseType نمی‌تواند آن را خودش باز کند.
  *
- * صفحه‌ی «برچسب کالاها» فعلاً برچسب‌ها را کاملاً سمتِ مرورگر (Canvas)
- * می‌سازد و به این دو تابع نیازی ندارد — رندرِ محلی سریع‌تر است و آفلاین
- * هم کار می‌کند. این دو برای وقتی‌اند که یک مسیر «دانلود PDF رسمی»
- * (چیدمانِ دقیقِ برگه‌ی چاپِ سرور، نه پیش‌نمایشِ مرورگر) لازم شود.
+ * صفحه‌ی «برچسب کالاها» برچسبِ دانه‌های انتخاب‌شده را کاملاً سمتِ مرورگر
+ * (SVG و `PrintPreviewOverlay`) می‌سازد و به این دو تابع نیازی ندارد —
+ * رندرِ محلی سریع‌تر است و انتخابِ بارکد/QR دارد. این دو برای وقتی‌اند
+ * که یک مسیر «دانلود PDF رسمی» (چیدمانِ برگه‌ی چاپِ سرور) لازم شود.
  */
 
 async function unwrapBlobError(error) {
@@ -187,15 +189,19 @@ export const getBarcodeSvg = (code, options = {}) =>
 
 /**
  * `GET api/Barcode/GetProductLabelsPdf` — برگه‌ی چاپِ سرور، یک برچسب به
- * ازای هر دانه‌ی `IN_STOCK` (یا بازه‌ی سریالِ داده‌شده) از یک کالا.
+ * ازای هر دانه از یک کالا (با بازه‌ی سریالِ اختیاری).
+ *
+ * `status` در سرور nullable است ولی پیش‌فرضش `IN_STOCK`؛ از query string
+ * نمی‌شود «همه» را فرستاد، پس بدونِ `status` فقط دانه‌های موجود چاپ
+ * می‌شوند. برچسبِ سرور فقط نامِ کالا و بارکدِ سه‌بخشیِ دانه را دارد.
  * @returns Blob با `application/pdf`
  */
 export const getProductLabelsPdf = (productId, options = {}) =>
   fetchFile("/Barcode/GetProductLabelsPdf", {
     productId,
-    status: options.status,
-    fromSerial: options.fromSerial,
-    toSerial: options.toSerial,
+    status: options.status || undefined,
+    fromSerial: options.fromSerial || undefined,
+    toSerial: options.toSerial || undefined,
     mode: options.mode,
     columns: options.columns,
     rows: options.rows,
