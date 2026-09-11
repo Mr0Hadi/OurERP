@@ -24,8 +24,8 @@ export function useEmployeesQuery(filters, pagination, sorting, queryOptions = {
     departmentId: filters.departmentId ?? "",
     teamId: filters.teamId ?? "",
     status: filters.status ?? "",
-    sortBy: sorting?.id ?? "createdAt",
-    sortOrder: sorting ? (sorting.desc ? "desc" : "asc") : "desc",
+    sortBy: sorting?.id ?? "fullName",
+    sortOrder: sorting ? (sorting.desc ? "desc" : "asc") : "asc",
   };
 
   return useQuery({

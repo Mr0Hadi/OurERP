@@ -5,7 +5,6 @@ import {
   createEmployee,
   updateEmployee,
   assignEmployeeMembership,
-  removeEmployee,
   logoutEmployee,
 } from "./api-v1";
 import { employeeKeys } from "./queryKeys";
@@ -57,7 +56,7 @@ export function useUpdateEmployeeMutation() {
 }
 
 /**
- * افزودن، حذف و «هد کردن»ِ عضو در صفحه‌ی جزئیات تیم — روی
+ * افزودن، خارج‌کردن و تعیینِ مسئول/جانشینِ تیم در صفحه‌ی جزئیات تیم — روی
  * `ChangeUserTeam` سرور.
  *
  * پیام موفقیت را خودِ صفحه تعیین می‌کند (`successMessage` در متغیرها)،
@@ -78,31 +77,6 @@ export function useAssignEmployeeMembershipMutation() {
     },
     onError: (error) => {
       toast.error(error?.message || "خطا در تغییر عضویت کارمند");
-    },
-  });
-}
-
-/**
- * «حذف» در این دامنه یعنی غیرفعال‌کردن: `DeleteUser` رکورد را نگه
- * می‌دارد و فقط `isActive` را false می‌کند، چون کارمند در تاریخچه‌ی
- * اسناد (خرید، فروش، رسید انبار) ارجاع دارد و پاک‌کردنش آن‌ها را
- * بی‌صاحب می‌کند. پس کارمندِ حذف‌شده هنوز در فهرست دیده می‌شود، با
- * برچسبِ «غیرفعال».
- */
-export function useRemoveEmployeeMutation() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: removeEmployee,
-    onSuccess: (_, id) => {
-      toast.success("کارمند حذف شد.");
-      queryClient.invalidateQueries({ queryKey: employeeKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: employeeKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: teamKeys.all });
-      queryClient.invalidateQueries({ queryKey: departmentKeys.all });
-    },
-    onError: (error) => {
-      toast.error(error?.message || "خطا در حذف کارمند");
     },
   });
 }

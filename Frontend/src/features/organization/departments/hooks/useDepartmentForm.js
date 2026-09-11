@@ -16,23 +16,16 @@ function buildDefaultValues(department) {
 }
 
 /**
- * `headName` در payload نیست — نام مدیر مشتقِ `headId` است و فرستادنش
+ * `headName` در payload نیست — نام مسئول مشتقِ `headId` است و فرستادنش
  * فقط یک کپیِ کهنه‌شدنی می‌ساخت.
  *
- * ثبت فقط `name` می‌فرستد: `CreateDepartment` هر `headId`/`deputyId` را
- * رد می‌کند، چون مدیر باید عضوِ واحد باشد و واحدِ ساخته‌نشده عضوی ندارد.
- *
- * در ویرایش، `deputyId` **باید** همیشه برود: هندلرِ سرور بی‌قید
- * `department.DeputyId = request.DeputyId` می‌گذارد، پس نفرستادنش یعنی
- * پاک‌شدنِ معاونِ ثبت‌شده در هر ذخیره.
+ * `headId`/`deputyId` در ثبت و ویرایش **وضعیتِ نهایی**اند و همیشه
+ * می‌روند: سرور هر کسی را که نامش بیاید به واحد منتقل و نقش‌دار می‌کند، و
+ * نفرستادنِ `deputyId` یعنی برداشتنِ جانشینِ ثبت‌شده.
  */
 export function buildDepartmentPayload(data, id) {
-  if (id == null) {
-    return { name: data.name.trim() };
-  }
-
   return {
-    id: Number(id),
+    ...(id != null ? { id: Number(id) } : {}),
     name: data.name.trim(),
     headId: data.headId ?? null,
     deputyId: data.deputyId ?? null,

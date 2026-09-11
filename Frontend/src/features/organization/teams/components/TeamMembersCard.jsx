@@ -27,11 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import {
-  ORG_POSITION_LABELS,
-  OrgPositionEnum,
-  orgPositionIn,
-} from "@/shared/domain/enums/orgHeadRole";
+import { ORG_ROLE_LABELS, OrgRoleEnum } from "@/shared/domain/enums/orgRole";
 
 import {
   useTeamMembersQuery,
@@ -44,20 +40,20 @@ const fullNameOf = (employee) =>
   `${employee.firstName ?? ""} ${employee.lastName ?? ""}`.trim() ||
   employee.username;
 
+const roleTitleOf = (employee) =>
+  employee.roleTitle ?? ORG_ROLE_LABELS[employee.role] ?? ORG_ROLE_LABELS[OrgRoleEnum.MEMBER];
+
 /**
  * اعضای یک تیم، داخل صفحه‌ی جزئیات همان تیم.
  *
- * همه‌ی کارها — افزودن، خارج‌کردن، «مدیر کردن» و «معاون کردن» — یک دستور در
- * سرورند: `ChangeUserTeam` (با `isHead`/`isDeputy`). عمداً از `UpdateUser`
- * استفاده نمی‌شود چون `ChangeUserTeamCommand` پیش از جابه‌جایی
- * `ReleaseAllRolesAsync` را صدا می‌زند.
+ * همه‌ی کارها — افزودن، خارج‌کردن، «مسئول کردن» و «جانشین کردن» — یک
+ * دستور در سرورند: `ChangeUserTeam` (با `isHead`/`isDeputy`). نقشِ هر عضو
+ * مستقیم از `role`/`roleTitle`ِ فهرستِ کارمندان خوانده می‌شود؛ سرور آن را
+ * از خودِ `headId`/`deputyId` تیم و واحد مشتق می‌کند، پس با این صفحه
+ * اختلاف پیدا نمی‌کند.
  *
- * ⚠️ آن آزادسازی **همه‌ی** سمت‌های کاربر است، نه فقط سمتِ تیمِ قبلی:
- * مدیریت و معاونتِ هر تیم *و واحدی* که داشته باشد — حتی وقتی فقط از این
- * تیم خارج می‌شود. متن‌های راهنما و دیالوگ همین را صریح می‌گویند.
- *
- * افزودنِ عضو، واحدِ کارمند را هم به واحدِ تیم تغییر می‌دهد؛ سرور اجازه‌ی
- * عضویت در تیمی که زیر واحد دیگری است را نمی‌دهد.
+ * قاعده‌ی سرور: هر کاربر یک نقش دارد و هر جابه‌جایی نقشِ قبلی را آزاد
+ * می‌کند. `isHead` و `isDeputy` هر دو false یعنی «عضو ساده».
  */
 export default function TeamMembersCard({ team, onOpenEmployee }) {
   const [memberToAdd, setMemberToAdd] = useState("");
@@ -85,8 +81,8 @@ export default function TeamMembersCard({ team, onOpenEmployee }) {
     );
   };
 
-  const handleAssignPosition = (member, position) => {
-    const isHead = position === OrgPositionEnum.HEAD;
+  const handleAssignRole = (member, role) => {
+    const isHead = role === OrgRoleEnum.TEAM_HEAD;
 
     assignMutation.mutate({
       userId: member.id,
@@ -94,9 +90,7 @@ export default function TeamMembersCard({ team, onOpenEmployee }) {
       teamId: team.id,
       isHead,
       isDeputy: !isHead,
-      successMessage: `${fullNameOf(member)} ${
-        isHead ? "مدیر" : "معاون"
-      } این تیم شد.`,
+      successMessage: `${fullNameOf(member)} ${ORG_ROLE_LABELS[role]} شد.`,
     });
   };
 
@@ -130,81 +124,77 @@ export default function TeamMembersCard({ team, onOpenEmployee }) {
           </p>
         ) : (
           <ul className="divide-y divide-border rounded-xl border border-border">
-            {members.map((member) => {
-              const position = orgPositionIn(team, member.id);
-
-              return (
-                <li
-                  key={member.id}
-                  className={`flex items-center justify-between gap-2 px-3 py-2.5 ${
-                    member.isActive ? "" : "opacity-60"
-                  }`}
-                >
-                  <div className="min-w-0">
-                    <div className="font-medium text-sm truncate">
-                      {fullNameOf(member)}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {ORG_POSITION_LABELS[position]} ·{" "}
-                      {member.personelCode ?? "—"}
-                      {!member.isActive && " · غیرفعال"}
-                    </div>
+            {members.map((member) => (
+              <li
+                key={member.id}
+                className={`flex items-center justify-between gap-2 px-3 py-2.5 ${
+                  member.isActive ? "" : "opacity-60"
+                }`}
+              >
+                <div className="min-w-0">
+                  <div className="font-medium text-sm truncate">
+                    {fullNameOf(member)}
                   </div>
+                  <div className="text-xs text-muted-foreground">
+                    {roleTitleOf(member)} · {member.personelCode ?? "—"}
+                    {!member.isActive && " · غیرفعال"}
+                  </div>
+                </div>
 
-                  <div className="flex items-center gap-1 shrink-0">
-                    {member.isActive && position !== OrgPositionEnum.HEAD && (
+                <div className="flex items-center gap-1 shrink-0">
+                  {member.isActive && member.role !== OrgRoleEnum.TEAM_HEAD && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      title="تعیین به‌عنوان مسئول تیم"
+                      onClick={() =>
+                        handleAssignRole(member, OrgRoleEnum.TEAM_HEAD)
+                      }
+                      disabled={isBusy}
+                    >
+                      <Crown className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {member.isActive &&
+                    member.role !== OrgRoleEnum.TEAM_DEPUTY && (
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        title="تعیین به‌عنوان مدیر تیم"
+                        title="تعیین به‌عنوان جانشین تیم"
                         onClick={() =>
-                          handleAssignPosition(member, OrgPositionEnum.HEAD)
-                        }
-                        disabled={isBusy}
-                      >
-                        <Crown className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {member.isActive && position !== OrgPositionEnum.DEPUTY && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        title="تعیین به‌عنوان معاون تیم"
-                        onClick={() =>
-                          handleAssignPosition(member, OrgPositionEnum.DEPUTY)
+                          handleAssignRole(member, OrgRoleEnum.TEAM_DEPUTY)
                         }
                         disabled={isBusy}
                       >
                         <ShieldCheck className="h-4 w-4" />
                       </Button>
                     )}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="gap-1"
-                      onClick={() => onOpenEmployee(member.id)}
-                    >
-                      جزئیات
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
-                      title="خارج‌کردن از تیم"
-                      onClick={() => setMemberToRemove(member)}
-                      disabled={isBusy}
-                    >
-                      <UserMinus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </li>
-              );
-            })}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1"
+                    onClick={() => onOpenEmployee(member.id)}
+                  >
+                    جزئیات
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    title="خارج‌کردن از تیم"
+                    onClick={() => setMemberToRemove(member)}
+                    disabled={isBusy}
+                  >
+                    <UserMinus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </li>
+            ))}
           </ul>
         )}
 
@@ -236,7 +226,12 @@ export default function TeamMembersCard({ team, onOpenEmployee }) {
                     className="rounded-lg"
                   >
                     {fullNameOf(employee)}
-                    {employee.teamName ? ` (${employee.teamName})` : ""}
+                    {" — "}
+                    {[employee.departmentName, employee.teamName]
+                      .filter(Boolean)
+                      .join(" / ")}
+                    {employee.role !== OrgRoleEnum.MEMBER &&
+                      ` (${roleTitleOf(employee)})`}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -253,9 +248,8 @@ export default function TeamMembersCard({ team, onOpenEmployee }) {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground leading-5">
-            کارمند از تیم قبلی‌اش خارج و واحدش به واحد این تیم تغییر می‌کند. هر
-            سمتِ مدیریت یا معاونتی که در تیم یا واحدِ دیگری داشته باشد آزاد
-            می‌شود.
+            کارمند به‌عنوان عضو ساده به این تیم (و واحدش) منتقل می‌شود. هر نقش
+            مسئول یا جانشینی که جای دیگری داشته باشد آزاد می‌شود.
           </p>
         </div>
       </div>
@@ -269,9 +263,8 @@ export default function TeamMembersCard({ team, onOpenEmployee }) {
             <AlertDialogTitle>خروج عضو از تیم</AlertDialogTitle>
             <AlertDialogDescription>
               {memberToRemove && fullNameOf(memberToRemove)} از «{team.name}»
-              خارج می‌شود. حساب کاربری و واحد سازمانی‌اش دست‌نخورده می‌ماند،
-              ولی هر سمتِ مدیریت یا معاونتی که دارد — در این تیم یا در واحدش —
-              آزاد می‌شود.
+              خارج می‌شود و عضو ساده‌ی واحدش باقی می‌ماند. اگر مسئول یا جانشینِ
+              این تیم باشد، آن نقش آزاد می‌شود.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

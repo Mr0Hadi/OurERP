@@ -1,21 +1,18 @@
 import { useForm } from "react-hook-form";
 import { requiredMessage } from "@/shared/utils/validationRules";
+import { OrgRoleEnum } from "@/shared/domain/enums/orgRole";
 
 /**
  * فرمِ کارمند در دو حالت «ثبت» و «ویرایش» یک شکل دارد ولی دو payload
  * متفاوت می‌سازد، چون سرور دو قرارداد متفاوت دارد:
  *
- *   ثبت    → رمز عبور می‌گیرد، `isActive` نمی‌گیرد (همیشه فعال)
- *   ویرایش → `isActive` می‌گیرد، ولی رمز عبور را *نمی‌پذیرد*
+ *   ثبت    → رمز عبور می‌گیرد؛ `isActive` و `role` نمی‌گیرد (کاربرِ تازه
+ *            همیشه فعال و عضوِ ساده است)
+ *   ویرایش → `isActive` و `role` (اختیاری) می‌گیرد، ولی رمز عبور را
+ *            *نمی‌پذیرد*
  *
- * دو چیز عمداً در این فرم **نیستند**:
- *
- *   `roleId`       — کارمند نقش ندارد؛ سرپرستی روی `Department.HeadId` و
- *                    `Team.HeadId` ذخیره می‌شود و در صفحه‌ی همان واحد یا
- *                    تیم تعیین می‌شود.
- *   `personelCode` — سرور باید بسازدش تا یکتا و پیوسته بماند؛ در حالت
- *                    ویرایش فقط برای *نمایش* از خودِ `employee` خوانده
- *                    می‌شود، نه از فرم.
+ * `personelCode` در فرم نیست — سرور می‌سازدش؛ در ویرایش فقط برای *نمایش*
+ * از خودِ `employee` خوانده می‌شود.
  */
 
 /** واحد اجباری است — هم در UI و هم در اعتبارسنجیِ خودِ سرور. */
@@ -46,6 +43,7 @@ function buildDefaultValues(employee) {
     rePassword: "",
     departmentId: employee.departmentId ?? null,
     teamId: employee.teamId ?? null,
+    role: employee.role ?? OrgRoleEnum.MEMBER,
     isActive: employee.isActive ?? true,
   };
 }
@@ -66,15 +64,34 @@ export function buildCreatePayload(data) {
   };
 }
 
-/** payload دستور `UpdateUser` — کل رکورد، نه فقط فیلدهای تغییرکرده. */
-export function buildUpdatePayload(data, id) {
+/**
+ * payload دستور `UpdateUser` — کل رکورد، نه فقط فیلدهای تغییرکرده.
+ *
+ * `role` فقط وقتی `null` می‌رود که **نه جایگاه و نه نقش** عوض شده باشد؛
+ * سرور `null` را «به نقش دست نزن» می‌فهمد، پس ویرایشِ نام کسی را برکنار
+ * نمی‌کند و اگر نقش در این فاصله از صفحه‌ی تیم/واحد عوض شده باشد، فرمِ
+ * کهنه آن را برنمی‌گرداند. در هر حالت دیگر، انتخابِ صریحِ فرم فرستاده
+ * می‌شود — حتی وقتی کاربر جابه‌جا شده و همان نقشِ قبلی را در مقصد دوباره
+ * انتخاب کرده (با `null` سرور آن را آزاد می‌کرد).
+ */
+export function buildUpdatePayload(data, initial) {
+  const departmentId = toId(data.departmentId);
+  const teamId = toId(data.teamId);
+  const role = data.role ?? OrgRoleEnum.MEMBER;
+
+  const stayed =
+    departmentId == initial.departmentId &&
+    teamId == (initial.teamId ?? null);
+  const roleUnchanged = role === (initial.role ?? OrgRoleEnum.MEMBER);
+
   return {
-    id: Number(id),
+    id: Number(initial.id),
     firstName: data.firstName.trim(),
     lastName: data.lastName.trim(),
     username: data.username.trim(),
-    departmentId: toId(data.departmentId),
-    teamId: toId(data.teamId),
+    departmentId,
+    teamId,
+    role: stayed && roleUnchanged ? null : role,
     isActive: Boolean(data.isActive),
   };
 }
@@ -99,7 +116,7 @@ export function useEmployeeForm(initialData = null, draftValues = null) {
     isEditing,
     buildPayload: (data) =>
       isEditing
-        ? buildUpdatePayload(data, initialData.id)
+        ? buildUpdatePayload(data, initialData)
         : buildCreatePayload(data),
   };
 }

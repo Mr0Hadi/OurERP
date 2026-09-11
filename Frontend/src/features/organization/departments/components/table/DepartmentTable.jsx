@@ -35,7 +35,7 @@ export default function DepartmentTable({
       },
       {
         accessorKey: "headName",
-        header: "مدیر واحد",
+        header: "مسئول واحد",
         cell: (info) =>
           info.getValue() ? (
             <span className="text-sm">{info.getValue()}</span>
@@ -45,7 +45,7 @@ export default function DepartmentTable({
       },
       {
         accessorKey: "deputyName",
-        header: "معاون",
+        header: "جانشین",
         cell: (info) =>
           info.getValue() ? (
             <span className="text-sm">{info.getValue()}</span>

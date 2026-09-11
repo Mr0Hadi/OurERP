@@ -12,12 +12,9 @@ import { teamNameRules, teamDepartmentRules } from "../../hooks/useTeamForm";
  * هر تیم زیرمجموعه‌ی دقیقاً یک واحد است و `Team.DepartmentId` در بکند
  * غیرقابل‌null است — پس واحد اجباری است، نه اختیاری.
  *
- * `departmentReadOnly` (صفحه‌ی ویرایش): واحدِ تیم از فرمِ ویرایش عوض
- * نمی‌شود. انتقالِ تیم اثرِ جانبی دارد — اعضا و مدیر و معاونش هم باید
- * جابه‌جا شوند — و جایش عملیاتِ صریحِ «افزودن تیم موجود» در صفحه‌ی واحدِ
- * مقصد است، نه یک Select که کنار «نام تیم» بی‌صدا ذخیره شود. این کار
- * انتخابگرِ مدیر/معاون را هم ساده نگه می‌دارد: همیشه از کارمندانِ واحدِ
- * فعلیِ تیم.
+ * `departmentReadOnly` (صفحه‌ی ویرایش): تیم بین واحدها جابه‌جا نمی‌شود —
+ * `UpdateTeam` اصلاً `departmentId` نمی‌گیرد — پس واحد فقط نمایش داده
+ * می‌شود.
  */
 export default function TeamIdentityForm({
   register,
@@ -49,7 +46,7 @@ export default function TeamIdentityForm({
           <FormField
             label="واحد سازمانی"
             htmlFor="departmentName"
-            hint="برای انتقال تیم، از صفحه‌ی جزئیات واحدِ مقصد گزینه‌ی «افزودن تیم موجود» را بزنید."
+            hint="واحدِ تیم بعد از ثبت قابل تغییر نیست."
           >
             <Input
               id="departmentName"

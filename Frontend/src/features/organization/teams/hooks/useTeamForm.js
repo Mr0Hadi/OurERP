@@ -22,32 +22,36 @@ function buildDefaultValues(team) {
 }
 
 /**
- * `headName` در payload نیست: نام مدیر از خودِ رکوردِ کارمند خوانده
- * می‌شود (هم در mock و هم در سرور)، و فرستادنش یعنی یک کپیِ کهنه که با
- * تغییر نام کارمند اشتباه می‌شود.
+ * `headName` در payload نیست: نام مسئول از خودِ رکوردِ کارمند خوانده
+ * می‌شود، و فرستادنش یعنی یک کپیِ کهنه که با تغییر نام کارمند اشتباه
+ * می‌شود.
  *
- * `deputyId` اما همیشه می‌رود — `UpdateTeamCommand` بی‌قید
- * `team.DeputyId = request.DeputyId` می‌گذارد و نفرستادنش معاون را پاک
- * می‌کند.
+ * `headId`/`deputyId` وضعیتِ نهاییِ تیم‌اند و همیشه می‌روند — نفرستادنِ
+ * `deputyId` یعنی برداشتنِ جانشین.
  *
- * در ویرایش، `departmentId` از *رکورد* خوانده می‌شود نه از فرم: واحد در
- * فرمِ ویرایش قابل‌تغییر نیست، و مقدارِ فرم ممکن است از یک پیش‌نویسِ کهنه
- * آمده باشد — اگر تیم در این فاصله منتقل شده باشد، ذخیره‌ی فرم آن را
- * بی‌صدا به واحدِ قبلی برمی‌گرداند.
+ * `departmentId` فقط در ثبت می‌رود: `UpdateTeam` آن را نمی‌گیرد و تیم
+ * بین واحدها جابه‌جا نمی‌شود.
  */
 export function buildTeamPayload(data, id) {
-  return {
-    ...(id != null ? { id: Number(id) } : {}),
-    name: data.name.trim(),
-    departmentId: Number(data.departmentId),
+  const leadership = {
     headId: data.headId ?? null,
     deputyId: data.deputyId ?? null,
+  };
+
+  if (id != null) {
+    return { id: Number(id), name: data.name.trim(), ...leadership };
+  }
+
+  return {
+    name: data.name.trim(),
+    departmentId: Number(data.departmentId),
+    ...leadership,
   };
 }
 
 /**
  * @param initialData رکوردِ تیم در حالت ویرایش (یا null در حالت ثبت)
- * @param draftValues پیش‌نویسِ بازگشتی از صفحه‌ی «واحد جدید»
+ * @param draftValues پیش‌نویسِ بازگشتی از صفحه‌ی دیگر
  */
 export function useTeamForm(initialData = null, draftValues = null) {
   const isEditing = Boolean(initialData);
@@ -63,11 +67,6 @@ export function useTeamForm(initialData = null, draftValues = null) {
     formMethods,
     isEditing,
     buildPayload: (data) =>
-      isEditing
-        ? buildTeamPayload(
-            { ...data, departmentId: initialData.departmentId },
-            initialData.id,
-          )
-        : buildTeamPayload(data, null),
+      buildTeamPayload(data, isEditing ? initialData.id : null),
   };
 }

@@ -38,8 +38,8 @@ const DepartmentFilters = () => {
       />
 
       <FilterSearchInput
-        label="مدیر واحد"
-        placeholder="نام مدیر..."
+        label="مسئول واحد"
+        placeholder="نام مسئول..."
         value={headName}
         onChange={handleHeadName}
       />

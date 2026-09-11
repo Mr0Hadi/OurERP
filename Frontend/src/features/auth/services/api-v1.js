@@ -1,7 +1,4 @@
 import axiosInstance from "@/shared/services/api/axios";
-import { orgPositionIn } from "@/shared/domain/enums/orgHeadRole";
-import { fetchDepartmentById } from "@/features/organization/departments/services/api-v1";
-import { fetchTeamById } from "@/features/organization/teams/services/api-v1";
 
 /**
  * شناسه‌ی پایدارِ یک عضویت.
@@ -32,33 +29,19 @@ export async function logout() {
 }
 
 /**
- * نشستِ کاربرِ جاری، ساخته‌شده از سه endpointِ موجود.
+ * نشستِ کاربرِ جاری از `GET api/User/GetUserInfo`.
  *
- * ⚠️ چرا سه تا و نه یکی: `POST api/Account/Login` فقط
- * `TokenDto { AccessToken, RefreshToken }` برمی‌گرداند و **هیچ**
- * اطلاعاتی از خودِ کاربر ندارد. تا وقتی بکند پاسخِ ورود را کامل نکرده،
- * تنها راهِ دانستنِ اینکه «کی وارد شده» این است:
- *
- *   ۱. `GET api/User/GetUserInfo` — کاربر را از روی خودِ توکن پیدا
- *      می‌کند (`UserContextService`)، پس نیازی به شناسه‌ی ذخیره‌شده
- *      سمت کلاینت نیست. ولی فقط `departmentId`/`teamId` می‌دهد.
- *   ۲و۳. `GetDepartmentDetail`/`GetTeamDetail` — *نامِ* واحد و تیم، و
- *      `HeadId`/`DeputyId` که جایگاهِ سرپرستی از رویشان مشتق می‌شود.
- *
- * هر دو فراخوانیِ دوم و سوم موازی‌اند چون به هم وابسته نیستند.
+ * `POST api/Account/Login` فقط توکن برمی‌گرداند؛ کاربر را همین endpoint از
+ * روی خودِ توکن پیدا می‌کند. `UserInfoDto` نامِ واحد و تیم و نقشِ سازمانی
+ * (`role`/`roleTitle`) را خودش دارد، پس درخواستِ جداگانه‌ای به جزئیات
+ * واحد یا تیم لازم نیست.
  *
  * ⚠️ `memberships` امروز همیشه **یک** قلم دارد: `User` در بکند دقیقاً یک
  * `DepartmentId` و حداکثر یک `TeamId` دارد. آرایه‌بودنش برای آینده است
- * — سایدبار وقتی بیش از یکی باشد خودش سوییچر نشان می‌دهد و آن روز فقط
- * همین تابع عوض می‌شود، نه هیچ کامپوننتی.
+ * — سایدبار وقتی بیش از یکی باشد خودش سوییچر نشان می‌دهد.
  */
 export async function fetchSession() {
   const { data: user } = await axiosInstance.get("/User/GetUserInfo");
-
-  const [department, team] = await Promise.all([
-    user.departmentId ? fetchDepartmentById(user.departmentId) : null,
-    user.teamId ? fetchTeamById(user.teamId) : null,
-  ]);
 
   const firstName = user.firstName ?? "";
   const lastName = user.lastName ?? "";
@@ -69,37 +52,30 @@ export async function fetchSession() {
     firstName,
     lastName,
     fullName: `${firstName} ${lastName}`.trim() || user.username,
-    // `UserInfoDto` کدِ پرسنلی ندارد؛ اگر روزی اضافه شد اینجا خودش پر می‌شود.
     personelCode: user.personelCode ?? null,
     isActive: user.isActive,
 
     /**
-     * ⚠️ همیشه null: موجودیتِ `User` در بکند اصلاً ستونِ تصویر ندارد
-     * (`ImageFolderEnum` هم فقط PRODUCTS/CUSTOMERS/SUPPLIERS/RECEIVING
-     * دارد، نه USERS). اینجا صریح اعلام می‌شود تا `nav-user` فیلدی
-     * بخواند که در قرارداد هست — نه یک فیلدِ موهوم که همیشه undefined
-     * است و کسی نمی‌داند عمدی است یا فراموش شده.
+     * ⚠️ همیشه null: موجودیتِ `User` در بکند ستونِ تصویر ندارد. صریح
+     * اعلام می‌شود تا `nav-user` فیلدی بخواند که در قرارداد هست.
      */
-    avatar: user.avatar ?? null,
+    avatar: null,
 
     /**
-     * ⚠️ امروز همیشه خالی است: `UserInfoDto.Permissions` در بکند وجود
-     * دارد ولی نگاشتش در `MappingProfile` کامنت شده و جدولِ `Roles` در
-     * migration `remove-role` حذف شده. اینجا خوانده می‌شود تا روزی که
-     * بکند دوباره پرش کرد، `hasPermission` بدون تغییرِ کد شروع به کار
-     * کند — نه اینکه آن روز تازه دنبال جایش بگردیم.
+     * ⚠️ همیشه خالی: `UserInfoDto` فیلدِ دسترسی ندارد. سطح دسترسی در بکند
+     * هنوز پیاده نشده و قرار است بر پایه‌ی `departmentId` باشد.
      */
-    permissions: (user.permissions ?? []).map((item) => item.title),
+    permissions: [],
 
     memberships: [
       {
         id: membershipIdOf(user.departmentId, user.teamId),
         departmentId: user.departmentId ?? null,
-        departmentName: department?.name ?? null,
-        departmentRole: orgPositionIn(department, user.id),
+        departmentName: user.departmentName ?? null,
         teamId: user.teamId ?? null,
-        teamName: team?.name ?? null,
-        teamRole: orgPositionIn(team, user.id),
+        teamName: user.teamName ?? null,
+        role: user.role,
+        roleTitle: user.roleTitle,
       },
     ],
   };

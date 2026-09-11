@@ -2,18 +2,19 @@ import axiosInstance from "@/shared/services/api/axios";
 import { normalizeListResponse } from "@/shared/services/api/contract";
 
 /**
- * نگاشت روی `api/Team` — CRUD کامل، با فیلتر `name` و `departmentId`
- * روی فهرست.
+ * نگاشت روی `api/Team` — CRUD کامل (سند بکند، بخش ۳ج).
  *
- * `deputyId` مثل واحد همیشه فرستاده می‌شود، وگرنه `UpdateTeamCommand`
- * معاون را پاک می‌کند. مدیر و معاون باید عضوِ واحدِ تیم باشند.
+ * - `GetTeamList` فقط تیم‌های فعال را برمی‌گرداند؛ فیلترهایش `name` و
+ *   `departmentId` است. ردیفِ فهرست فقط *نامِ* مسئول و جانشین را دارد، نه
+ *   شناسه‌شان، و `DepartmentId` هم ندارد — هر جا لازم باشد
+ *   `GetTeamDetail` صدا زده می‌شود.
+ * - `CreateTeam`/`UpdateTeam`: `headId`/`deputyId` وضعیتِ نهاییِ تیم‌اند.
+ *   هر کسی که نامش بیاید به این تیم و واحدش منتقل می‌شود و نقشِ قبلی‌اش
+ *   آزاد می‌شود؛ هر کسی که حذف شود عضوِ ساده‌ی همین تیم می‌ماند.
+ * - تیم بین واحدها جابه‌جا نمی‌شود: `UpdateTeam` `departmentId` نمی‌گیرد.
  *
- * `CreateTeam` باید رکوردِ ساخته‌شده (دست‌کم `id`) را برگرداند تا فرمِ
- * مبدأ (مثلاً ثبت کارمند) تیمِ تازه را خودکار انتخاب کند.
- *
- * ⚠️ `TeamListDto` فقط *نام* مدیر و معاون را دارد، نه شناسه‌شان — و
- * `IsActive` و `DepartmentId` هم ندارد. هر جا به این‌ها نیاز باشد باید
- * `GetTeamDetail` صدا زده شود، نه اینکه از ردیفِ فهرست حدس زده شود.
+ * ⚠️ `CreateTeam` هیچ `data`ی برنمی‌گرداند (نه شناسه)، پس فرمِ مبدأ
+ * نمی‌تواند تیمِ تازه را خودکار انتخاب کند.
  */
 export async function fetchTeams(params = {}) {
   const { data } = await axiosInstance.get("/Team/GetTeamList", {
@@ -49,39 +50,10 @@ export async function updateTeam(payload) {
   const { data } = await axiosInstance.put("/Team/UpdateTeam", {
     id: payload.id,
     name: payload.name,
-    departmentId: payload.departmentId,
     headId: payload.headId ?? null,
     deputyId: payload.deputyId ?? null,
   });
   return data;
-}
-
-/**
- * انتقال یک تیمِ موجود به یک واحد (از صفحه‌ی جزئیات واحد).
- *
- * سرور دستور اختصاصی ندارد و این هم همان `UpdateTeam` است — که **کل
- * رکورد را بازنویسی می‌کند**. برای همین اول `GetTeamDetail` صدا زده
- * می‌شود: ردیفِ فهرست `headId`/`deputyId` ندارد و اگر همان را
- * می‌فرستادیم، انتقالِ تیم مدیر و معاونش را بی‌صدا پاک می‌کرد.
- *
- * قرارداد با `UpdateTeamCommand` وقتی `departmentId` عوض می‌شود:
- *   - تیم و **همه‌ی اعضایش** به واحدِ جدید می‌روند (عضوِ تیم همیشه عضوِ
- *     واحدِ همان تیم است؛ سرور همین را در `CreateUser`/`UpdateUser`/
- *     `ChangeUserTeam` اجبار می‌کند).
- *   - سمت‌های اعضا در واحدِ *قبلی* آزاد می‌شود.
- *   - مدیر یا معاونِ تیم که عضوِ خودِ تیم نیست (و پس به واحدِ جدید
- *     نمی‌رود) از آن سمت کنار گذاشته می‌شود.
- */
-export async function assignTeamToDepartment({ teamId, departmentId }) {
-  const team = await fetchTeamById(teamId);
-
-  return updateTeam({
-    id: teamId,
-    name: team.name,
-    departmentId,
-    headId: team.headId ?? null,
-    deputyId: team.deputyId ?? null,
-  });
 }
 
 /** حذف نرم — سرور اگر تیم کارمند فعال داشته باشد ۴۰۰ می‌دهد. */
