@@ -8,6 +8,7 @@ function buildDefaultValues(data) {
   if (!data) {
     return {
       name: "",
+      englishName: "",
       code: "",
       barcode: "",
       productCategoryId: "",
@@ -23,6 +24,7 @@ function buildDefaultValues(data) {
   }
   return {
     name: data.name || "",
+    englishName: data.englishName || "",
     code: data.code || "",
     barcode: data.barCode || data.barcode || "",
     productCategoryId: data.productCategoryId ?? "",
@@ -72,6 +74,7 @@ export function useProductForm(initialData = null) {
    */
   const buildProductPayload = (formData) => ({
     name: formData.name,
+    englishName: formData.englishName || null,
     brand: formData.brand,
     unit: Number(formData.unit),
     productCategoryId: Number(formData.productCategoryId) || 0,

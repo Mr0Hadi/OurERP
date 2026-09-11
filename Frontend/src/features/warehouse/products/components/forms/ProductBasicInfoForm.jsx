@@ -72,6 +72,22 @@ export default function ProductBasicInfoForm({ register, control, errors }) {
           )}
         </div>
 
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="englishName">نام انگلیسی</Label>
+          <Input
+            id="englishName"
+            dir="ltr"
+            placeholder="e.g. Front Brake Pad"
+            {...register("englishName")}
+            className={errors.englishName ? "border-red-500" : ""}
+          />
+          {errors.englishName && (
+            <span className="text-xs text-red-500">
+              {errors.englishName.message}
+            </span>
+          )}
+        </div>
+
         <ReadOnlyCodeField
           id="code"
           label="کد کالا"
