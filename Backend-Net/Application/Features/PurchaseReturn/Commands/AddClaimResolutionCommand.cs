@@ -27,6 +27,8 @@ namespace Application.Features.PurchaseReturn.Commands
     {
         public AddClaimResolutionCommandValidator()
         {
+            ClassLevelCascadeMode = CascadeMode.Stop;
+            RuleFor(x => x.Composition).NotNull().WithMessage(Validation.RequiredMessage("ترکیب اثرها"));
             RuleFor(x => x.ClaimId).GreaterThan(0).WithMessage(Validation.RequiredMessage("ادعا"));
             RuleFor(x => x.Composition.Quantity).GreaterThan(0).WithMessage("مقدار تصمیم باید از صفر بیشتر باشد.");
             RuleFor(x => x.Composition).Must(c => (c.GoodsIn?.Count ?? 0) > 0 || (c.GoodsOut?.Count ?? 0) > 0 || c.MoneyIn != null || c.MoneyOut != null)
@@ -35,27 +37,31 @@ namespace Application.Features.PurchaseReturn.Commands
             RuleForEach(x => x.Composition.GoodsIn).ChildRules(goods =>
             {
                 goods.RuleFor(g => g.Quantity).GreaterThan(0).WithMessage("مقدار کالای وارده باید از صفر بیشتر باشد.");
-                goods.RuleFor(g => g.ProductId).GreaterThan(0).WithMessage("کالای نامعتبر است.").When(g => g.ProductId.HasValue);
+                goods.RuleFor(g => g.ProductId).GreaterThan(0).WithMessage("کالا نامعتبر است.").When(g => g.ProductId.HasValue);
             });
             RuleForEach(x => x.Composition.GoodsOut).ChildRules(goods =>
             {
                 goods.RuleFor(g => g.Quantity).GreaterThan(0).WithMessage("مقدار کالای خارجه باید از صفر بیشتر باشد.");
-                goods.RuleFor(g => g.ProductId).GreaterThan(0).WithMessage("کالای نامعتبر است.").When(g => g.ProductId.HasValue);
+                goods.RuleFor(g => g.ProductId).GreaterThan(0).WithMessage("کالا نامعتبر است.").When(g => g.ProductId.HasValue);
             });
 
-            // Direction is structural now (which slot the effect sits in), so there is no direction
-            // field left to validate - the old rule on Composition.Money.Direction rejected every
-            // money effect whose sender omitted it, because the enum's zero value is GOODS_IN.
             RuleFor(x => x.Composition.MoneyIn!.Parts)
                 .Must(parts => parts != null && parts.Count > 0)
                 .WithMessage("پرداخت ترکیبی باید حداقل یک بخش داشته باشد.")
                 .When(x => x.Composition.MoneyIn != null && x.Composition.MoneyIn.Method == ReturnPaymentMethodEnum.MIXED);
+            RuleFor(x => x.Composition.MoneyIn!.Amount).GreaterThan(0UL)
+                .WithMessage("مبلغ دریافتی باید از صفر بیشتر باشد.")
+                .When(x => x.Composition.MoneyIn != null);
             // A MIXED payment whose parts do not add up to the total, or parts smuggled in on a
             // single-method payment (where they were silently dropped), both used to persist.
             RuleFor(x => x.Composition.MoneyIn!)
                 .Must(money => money.Parts!.Aggregate(0UL, (sum, p) => sum + p.Amount) == money.Amount)
                 .WithMessage("مجموع بخش‌های پرداخت باید برابر مبلغ کل باشد.")
                 .When(x => x.Composition.MoneyIn is { Method: ReturnPaymentMethodEnum.MIXED, Parts.Count: > 0 });
+            RuleForEach(x => x.Composition.MoneyIn!.Parts)
+                .ChildRules(part => part.RuleFor(p => p.Amount).GreaterThan(0UL)
+                    .WithMessage("مبلغ هر بخش پرداخت باید از صفر بیشتر باشد."))
+                .When(x => x.Composition.MoneyIn?.Parts != null);
             RuleFor(x => x.Composition.MoneyIn!.Parts)
                 .Must(parts => parts == null || parts.Count == 0)
                 .WithMessage("بخش‌های پرداخت فقط برای پرداخت ترکیبی مجاز است.")
@@ -74,6 +80,13 @@ namespace Application.Features.PurchaseReturn.Commands
                 .Must(parts => parts == null || parts.Count == 0)
                 .WithMessage("بخش‌های پرداخت فقط برای پرداخت ترکیبی مجاز است.")
                 .When(x => x.Composition.MoneyOut != null && x.Composition.MoneyOut.Method != ReturnPaymentMethodEnum.MIXED);
+            RuleFor(x => x.Composition.MoneyOut!.Amount).GreaterThan(0UL)
+                .WithMessage("مبلغ پرداختی باید از صفر بیشتر باشد.")
+                .When(x => x.Composition.MoneyOut != null);
+            RuleForEach(x => x.Composition.MoneyOut!.Parts)
+                .ChildRules(part => part.RuleFor(p => p.Amount).GreaterThan(0UL)
+                    .WithMessage("مبلغ هر بخش پرداخت باید از صفر بیشتر باشد."))
+                .When(x => x.Composition.MoneyOut?.Parts != null);
         }
     }
 
