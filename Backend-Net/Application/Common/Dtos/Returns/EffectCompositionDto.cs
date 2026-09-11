@@ -41,6 +41,8 @@ namespace Application.Common.Dtos.Returns
 
         /// <summary>Product moving. Defaults to the claim's own product when omitted (the common case - same item back/out); set explicitly for a replacement with a different product.</summary>
         public int? ProductId { get; set; }
+        public int discount { get; set; }
+        public UInt64 UnitPrice { get; set; }
     }
 
     /// <summary>
