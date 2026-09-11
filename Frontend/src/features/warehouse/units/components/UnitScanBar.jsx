@@ -110,7 +110,7 @@ export default function UnitScanBar({
             className="ms-auto"
             onClick={() => onGoToProduct(scanMiss.product)}
           >
-            ساخت برچسب برای این کالا
+            نمایش واحدهای این کالا
           </Button>
         </div>
       ) : null}

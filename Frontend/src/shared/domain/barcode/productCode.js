@@ -160,7 +160,7 @@ export function formatPayload(payload) {
 /**
  * کدِ کالا از روی بارکدِ یک دانه.
  *
- * `ProductUnitDto` سرور نه `productCode` دارد و نه `productName`؛ ولی
+ * `ProductUnitDto` سرور `productCode` ندارد؛ ولی
  * کدِ کالا *داخلِ* بارکدِ دانه است (دو بخشِ اول). پس به‌جای یک
  * درخواستِ اضافه برای هر ردیف، از خودِ بارکد بیرون کشیده می‌شود.
  */

@@ -5,10 +5,10 @@ const EmployeesPage = lazy(() => import("./pages/EmployeesPage"));
 const EmployeeNewPage = lazy(() => import("./pages/EmployeeNewPage"));
 const EmployeeDetailPage = lazy(() => import("./pages/EmployeeDetailPage"));
 /**
- * فعلاً بدون گارد دسترسی ثبت شده‌اند. وقتی لایه‌ی سطح دسترسی آماده شد،
- * هر سه مسیر باید فقط برای نقش «مدیر سیستم» (`UserRoleEnum.ADMIN`) باز
- * بماند — همان‌طور که آیتم منو هم با `permission: "employees"` فیلتر
- * می‌شود.
+ * فعلاً بدون گارد دسترسی ثبت شده‌اند. نقش‌ها از بکند حذف شده‌اند و سطح
+ * دسترسی قرار است بر پایه‌ی واحدِ کاربر (`User.DepartmentId`) ساخته شود؛
+ * وقتی آماده شد، هر سه مسیر باید فقط برای واحدِ مدیریت باز بماند —
+ * همان‌طور که آیتم منو هم با `permission: "employees"` فیلتر می‌شود.
  */
 export const employeesRoutes = [
   {

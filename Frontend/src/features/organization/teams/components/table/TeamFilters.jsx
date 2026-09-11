@@ -30,8 +30,9 @@ const TeamFilters = () => {
       resetWrapperClassName="flex items-end lg:justify-end w-full"
       resetButtonClassName="w-full sm:w-auto px-4"
     >
+      {/* `GetTeamList` فقط روی نامِ تیم جست‌وجو می‌کند. */}
       <FilterSearchInput
-        placeholder="نام تیم یا مدیر..."
+        placeholder="نام تیم..."
         value={globalSearch}
         onChange={handleSearch}
       />

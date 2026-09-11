@@ -18,7 +18,9 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import { LABEL_CODE_KIND_OPTIONS } from "@/shared/domain/barcode/barcodeConfig";
+import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
+import { useProductsQuery } from "@/features/warehouse/products/services/queries";
 
 import { useProductUnitsQuery } from "../services/queries";
 import { useResolveScannedCodeMutation } from "../services/mutations";
@@ -32,7 +34,10 @@ import UnitLabel from "../components/UnitLabel";
 import UnitScanBar from "../components/UnitScanBar";
 import UnitDetailSheet from "../components/UnitDetailSheet";
 import UnitBulkBar from "../components/UnitBulkBar";
-import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
+
+// همان الگوی فرم‌های فروش/خرید: فهرستِ کالا یک‌جا برای انتخاب‌گر.
+const PRODUCT_PICKER_PAGINATION = { pageIndex: 0, pageSize: 200 };
+const NO_FILTERS = {};
 
 /**
  * صفحه‌ی برچسبِ دانه‌ها: پیدا کردن دانه (با اسکن یا فیلتر) و چاپِ
@@ -40,8 +45,8 @@ import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReference
  *
  * دانه‌ها اینجا ساخته یا ویرایش نمی‌شوند — بکند خودش آن‌ها را هم‌زمان
  * با موجودیِ کالا می‌سازد و وضعیتشان را از مسیرِ فروش/مرجوعی عوض
- * می‌کند. چاپ هم یک کارِ کاملاً سمتِ مرورگر است و چیزی در سرور ثبت
- * نمی‌کند (سرور فیلدی برای سابقه‌ی چاپ ندارد).
+ * می‌کند. چاپ فقط برای دانه‌های انتخاب‌شده در جدول و کاملاً سمتِ مرورگر
+ * است و چیزی در سرور ثبت نمی‌کند (سرور فیلدی برای سابقه‌ی چاپ ندارد).
  */
 export default function UnitLabelsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -50,7 +55,10 @@ export default function UnitLabelsPage() {
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [activeUnit, setActiveUnit] = useState(null);
   const [scanMiss, setScanMiss] = useState(null);
-  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  // خودِ دانه نگه داشته می‌شود نه فقط شناسه‌اش: جدول صفحه‌بندیِ سرور دارد
+  // و ردیف‌های صفحه‌ی قبلی دیگر در `unitRows` نیستند، ولی باید همچنان
+  // شمرده و چاپ شوند.
+  const [selectedUnitsById, setSelectedUnitsById] = useState(() => new Map());
 
   const unitsStore = useProductUnitFilterStore();
   const {
@@ -60,14 +68,27 @@ export default function UnitLabelsPage() {
     setLabelCodeKind,
   } = usePrintPreferenceStore();
 
-  const unitsSearch = useDebouncedValue(unitsStore.globalSearch, 400);
+  // سریال تایپی است؛ هر کلید یک درخواست نسازد.
+  const fromSerial = useDebouncedValue(unitsStore.fromSerial, 400);
+  const toSerial = useDebouncedValue(unitsStore.toSerial, 400);
 
   const resolveCode = useResolveScannedCodeMutation();
 
+  const productsQuery = useProductsQuery(
+    NO_FILTERS,
+    PRODUCT_PICKER_PAGINATION,
+    null,
+  );
+  const products = productsQuery.data?.items ?? [];
+
   const unitsQuery = useProductUnitsQuery(
-    { globalSearch: unitsSearch, status: unitsStore.status },
+    {
+      productId: unitsStore.productId,
+      status: unitsStore.status,
+      fromSerial,
+      toSerial,
+    },
     unitsStore.pagination,
-    unitsStore.sorting,
   );
 
   const openPrintDialog = (units) => {
@@ -92,7 +113,7 @@ export default function UnitLabelsPage() {
    */
   const handleGoToProduct = (product) => {
     setScanMiss(null);
-    unitsStore.setGlobalSearch(product.code || product.name);
+    unitsStore.setProductId(product.id);
   };
 
   /** ورودی از بیرون: `?unit=` یک دانه‌ی مشخص را باز می‌کند. */
@@ -118,21 +139,21 @@ export default function UnitLabelsPage() {
   };
 
   const unitRows = unitsQuery.data?.items ?? [];
-  const selectedUnits = unitRows.filter((unit) => selectedIds.has(unit.id));
+  const selectedUnits = [...selectedUnitsById.values()];
 
-  const toggleSelect = (id) =>
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+  const toggleSelect = (unit) =>
+    setSelectedUnitsById((prev) => {
+      const next = new Map(prev);
+      if (next.has(unit.id)) next.delete(unit.id);
+      else next.set(unit.id, unit);
       return next;
     });
 
   const toggleSelectAll = (rows, shouldSelect) =>
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
+    setSelectedUnitsById((prev) => {
+      const next = new Map(prev);
       rows.forEach((row) =>
-        shouldSelect ? next.add(row.id) : next.delete(row.id),
+        shouldSelect ? next.set(row.id, row) : next.delete(row.id),
       );
       return next;
     });
@@ -153,17 +174,23 @@ export default function UnitLabelsPage() {
 
         <CardContent className="space-y-3 pt-4">
           <UnitFilters
-            globalSearch={unitsStore.globalSearch}
+            products={products}
+            isProductsLoading={productsQuery.isLoading}
+            productId={unitsStore.productId}
             status={unitsStore.status}
-            onSearchChange={unitsStore.setGlobalSearch}
+            fromSerial={unitsStore.fromSerial}
+            toSerial={unitsStore.toSerial}
+            onProductChange={unitsStore.setProductId}
             onStatusChange={unitsStore.setStatus}
+            onFromSerialChange={unitsStore.setFromSerial}
+            onToSerialChange={unitsStore.setToSerial}
             onReset={unitsStore.resetFilters}
           />
 
           <UnitBulkBar
             count={selectedUnits.length}
             onPrint={() => openPrintDialog(selectedUnits)}
-            onClear={() => setSelectedIds(new Set())}
+            onClear={() => setSelectedUnitsById(new Map())}
           />
 
           {unitsQuery.isError ? (
@@ -186,10 +213,8 @@ export default function UnitLabelsPage() {
                 }
                 pageSize={unitsStore.pagination.pageSize}
                 onPaginationChange={unitsStore.setPagination}
-                sorting={unitsStore.sorting}
-                onSortingChange={unitsStore.setSorting}
                 onOpenUnit={setActiveUnit}
-                selectedIds={selectedIds}
+                selectedIds={selectedUnitsById}
                 onToggleSelect={toggleSelect}
                 onToggleSelectAll={toggleSelectAll}
               />

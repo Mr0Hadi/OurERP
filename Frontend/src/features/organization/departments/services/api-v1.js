@@ -2,21 +2,19 @@ import axiosInstance from "@/shared/services/api/axios";
 import { normalizeListResponse } from "@/shared/services/api/contract";
 
 /**
- * نگاشت روی `api/Department` — این کنترلر در بکند وجود دارد و CRUD
- * کاملش پیاده شده.
+ * نگاشت روی `api/Department` — CRUD کامل.
  *
- * `deputyId` (معاون) هم فرستاده می‌شود، چون هندلرهای `Create`/`Update`
- * بی‌قید `department.DeputyId = request.DeputyId` می‌گذارند: نفرستادنش
- * معاونِ ثبت‌شده را در هر ذخیره پاک می‌کند.
+ * - `GetDepartmentList` فقط واحدهای فعال را برمی‌گرداند و دو فیلترِ
+ *   *مستقل* دارد: `name` و `headName` (هر دو با هم AND می‌شوند، پس یک
+ *   کادرِ جست‌وجوی مشترک نمی‌تواند هر دو را پر کند).
+ * - `CreateDepartment` فقط `name` می‌گیرد؛ هر `headId`/`deputyId` را رد
+ *   می‌کند چون مدیر باید عضوِ همان واحد باشد.
+ * - `UpdateDepartment` بی‌قید `DeputyId = request.DeputyId` می‌گذارد، پس
+ *   `deputyId` همیشه فرستاده می‌شود.
  *
- * ⚠️ دو چیزی که سرور هنوز برنمی‌گرداند و صفحه‌ها ناچار خودشان می‌سازند:
- *   `IsActive`  — نه در `DepartmentListDto` هست و نه در `DepartmentDto`،
- *                 و `GetDepartmentList` هم رویش فیلتر نمی‌کند. یعنی واحدِ
- *                 حذف‌شده در فهرست‌ها می‌ماند. گاردِ فرانت (`isActive !==
- *                 false`) تا آن روز بی‌اثر ولی بی‌ضرر است.
- *   شمارنده‌ها  — `TeamCount`/`UserCount` فقط در DTOیِ *فهرست* هستند، نه
- *                 در جزئیات؛ صفحه‌ی جزئیات آن‌ها را از فهرست تیم‌ها و
- *                 `GetUserList` می‌شمارد.
+ * ⚠️ شمارنده‌ها (`TeamCount`/`UserCount`) فقط در DTOیِ *فهرست* هستند، نه
+ * در جزئیات؛ صفحه‌ی جزئیات آن‌ها را از فهرست تیم‌ها و `GetUserList`
+ * می‌شمارد.
  */
 export async function fetchDepartments(params = {}) {
   const { data } = await axiosInstance.get("/Department/GetDepartmentList", {
@@ -24,6 +22,7 @@ export async function fetchDepartments(params = {}) {
       page: params.page,
       take: params.limit,
       name: params.search || undefined,
+      headName: params.headName || undefined,
     },
   });
 
@@ -37,11 +36,10 @@ export async function fetchDepartmentById(id) {
   return data;
 }
 
+/** پاسخ باید رکوردِ ساخته‌شده (دست‌کم `id`) باشد تا فرمِ مبدأ انتخابش کند. */
 export async function createDepartment(payload) {
   const { data } = await axiosInstance.post("/Department/CreateDepartment", {
     name: payload.name,
-    headId: payload.headId ?? null,
-    deputyId: payload.deputyId ?? null,
   });
   return data;
 }

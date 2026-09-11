@@ -32,11 +32,23 @@ export function normalizeListResponse(data, { itemsKey } = {}) {
     [];
   const legacyPage = data.Page || data.page || {};
 
+  const total = legacyPage.Total ?? legacyPage.total ?? legacyItems.length;
+  const take = legacyPage.Take ?? legacyPage.take;
+
+  // سرور با نام‌گذاریِ پیش‌فرضِ ASP.NET (camelCase) `pageCount` می‌فرستد؛
+  // قبلاً فقط `PageCount` خوانده می‌شد و هر فهرستی «صفحه ۱ از ۱» می‌ماند.
+  const pageCount =
+    legacyPage.PageCount ??
+    legacyPage.pageCount ??
+    legacyPage.totalPages ??
+    (take > 0 ? Math.ceil(total / take) : 1);
+
   return {
     items: legacyItems,
-    total: legacyPage.Total ?? legacyPage.total ?? legacyItems.length,
+    total,
     page: legacyPage.Page ?? legacyPage.page ?? 1,
-    totalPages: legacyPage.PageCount ?? legacyPage.totalPages ?? 1,
+    // فهرستِ خالی صفرِ صفحه دارد، ولی شمارنده‌ی «صفحه ۱ از ۰» بی‌معناست.
+    totalPages: Math.max(1, pageCount),
   };
 }
 

@@ -30,6 +30,7 @@ import { useDepartmentForm } from "../hooks/useDepartmentForm";
 import DepartmentIdentityForm from "../components/forms/DepartmentIdentityForm";
 import DepartmentTeamsCard from "../components/DepartmentTeamsCard";
 import OrgLeadershipForm from "../../components/OrgLeadershipForm";
+import { useSyncLeadershipValues } from "../../hooks/useSyncLeadershipValues";
 
 function DepartmentDetailForm({ department }) {
   const navigate = useNavigate();
@@ -63,9 +64,12 @@ function DepartmentDetailForm({ department }) {
     register,
     control,
     getValues,
+    setValue,
     handleSubmit,
     formState: { errors },
   } = formMethods;
+
+  useSyncLeadershipValues(setValue, department.headId, department.deputyId);
 
   const leaveWithDraft = (target, state) => {
     saveDraft(getValues());
@@ -120,7 +124,7 @@ function DepartmentDetailForm({ department }) {
                 </span>
               </div>
               <div className="mt-2 flex items-center justify-between">
-                <span className="text-muted-foreground">تعداد کارمندان</span>
+                <span className="text-muted-foreground">کارمندان فعال</span>
                 <span className="font-medium">
                   {userCount.toLocaleString("fa-IR")} نفر
                 </span>
@@ -145,6 +149,7 @@ function DepartmentDetailForm({ department }) {
             <OrgLeadershipForm
               control={control}
               errors={errors}
+              departmentId={department.id}
               scopeLabel="واحد"
             />
 

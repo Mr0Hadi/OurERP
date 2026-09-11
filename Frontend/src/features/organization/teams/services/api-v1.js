@@ -6,7 +6,10 @@ import { normalizeListResponse } from "@/shared/services/api/contract";
  * روی فهرست.
  *
  * `deputyId` مثل واحد همیشه فرستاده می‌شود، وگرنه `UpdateTeamCommand`
- * معاون را پاک می‌کند.
+ * معاون را پاک می‌کند. مدیر و معاون باید عضوِ واحدِ تیم باشند.
+ *
+ * `CreateTeam` باید رکوردِ ساخته‌شده (دست‌کم `id`) را برگرداند تا فرمِ
+ * مبدأ (مثلاً ثبت کارمند) تیمِ تازه را خودکار انتخاب کند.
  *
  * ⚠️ `TeamListDto` فقط *نام* مدیر و معاون را دارد، نه شناسه‌شان — و
  * `IsActive` و `DepartmentId` هم ندارد. هر جا به این‌ها نیاز باشد باید
@@ -61,8 +64,13 @@ export async function updateTeam(payload) {
  * می‌شود: ردیفِ فهرست `headId`/`deputyId` ندارد و اگر همان را
  * می‌فرستادیم، انتقالِ تیم مدیر و معاونش را بی‌صدا پاک می‌کرد.
  *
- * ⚠️ سرور واحدِ *اعضای* تیم را با تیم جابه‌جا نمی‌کند؛ تا وقتی
- * `UpdateTeamCommand` این را انجام ندهد، اعضا در واحد قبلی می‌مانند.
+ * قرارداد با `UpdateTeamCommand` وقتی `departmentId` عوض می‌شود:
+ *   - تیم و **همه‌ی اعضایش** به واحدِ جدید می‌روند (عضوِ تیم همیشه عضوِ
+ *     واحدِ همان تیم است؛ سرور همین را در `CreateUser`/`UpdateUser`/
+ *     `ChangeUserTeam` اجبار می‌کند).
+ *   - سمت‌های اعضا در واحدِ *قبلی* آزاد می‌شود.
+ *   - مدیر یا معاونِ تیم که عضوِ خودِ تیم نیست (و پس به واحدِ جدید
+ *     نمی‌رود) از آن سمت کنار گذاشته می‌شود.
  */
 export async function assignTeamToDepartment({ teamId, departmentId }) {
   const team = await fetchTeamById(teamId);

@@ -1,5 +1,6 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
+import { AccountStatusEnum } from "@/shared/domain/enums/accountStatus";
 import { fetchEmployees, fetchEmployeeById } from "./api-v1";
 import { employeeKeys } from "./queryKeys";
 
@@ -10,7 +11,11 @@ const BY_NAME = { id: "fullName", desc: false };
 /** فقط شمارنده می‌خواهیم، پس یک ردیف هم لازم نیست. */
 const COUNT_ONLY = { pageIndex: 0, pageSize: 1 };
 
-export function useEmployeesQuery(filters, pagination, sorting) {
+/**
+ * @param queryOptions گزینه‌های اضافه‌ی react-query (مثلاً `enabled`) — برای
+ *        فهرست‌هایی که تا انتخابِ یک واحد نباید درخواستی بزنند.
+ */
+export function useEmployeesQuery(filters, pagination, sorting, queryOptions = {}) {
   const queryParams = {
     page: pagination.pageIndex + 1,
     limit: pagination.pageSize,
@@ -27,6 +32,7 @@ export function useEmployeesQuery(filters, pagination, sorting) {
     queryKey: employeeKeys.list(queryParams),
     queryFn: () => fetchEmployees(queryParams),
     placeholderData: keepPreviousData,
+    ...queryOptions,
   });
 }
 
@@ -39,16 +45,23 @@ export function useEmployeeQuery(id) {
 }
 
 /**
- * تعداد کارمندانِ یک واحد.
+ * تعداد کارمندانِ *فعالِ* یک واحد.
  *
  * از `total` صفحه‌بندی خوانده می‌شود، نه از `UserCount` رکوردِ واحد:
  * `GetDepartmentDetail` در سرور اصلاً شمارنده برنمی‌گرداند (فقط
- * `GetDepartmentList` دارد). شمردنش از همین‌جا یعنی صفحه‌ی جزئیات عددِ
- * درست را نشان بدهد بدون اینکه منتظر تغییرِ آن DTO بمانیم.
+ * `GetDepartmentList` دارد).
+ *
+ * فقط فعال‌ها شمرده می‌شوند چون `DeleteDepartment` فقط کارمندِ *فعال* را
+ * مانع حذف می‌داند. قبلاً غیرفعال‌ها هم شمرده می‌شدند و واحدی که فقط
+ * کارمندِ حذف‌شده داشت، از UI هیچ‌وقت قابل حذف نبود.
  */
 export function useDepartmentUserCountQuery(departmentId) {
   const query = useEmployeesQuery(
-    { globalSearch: "", departmentId: departmentId ?? "" },
+    {
+      globalSearch: "",
+      departmentId: departmentId ?? "",
+      status: AccountStatusEnum.ACTIVE,
+    },
     COUNT_ONLY,
     null,
   );

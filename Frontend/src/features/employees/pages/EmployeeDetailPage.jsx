@@ -161,6 +161,10 @@ function EmployeeDetailForm({ employee }) {
               errors={errors}
               setValue={setValue}
               readOnly={!canEditOrg}
+              initialPlacement={{
+                departmentId: employee.departmentId,
+                teamId: employee.teamId ?? null,
+              }}
               onCreateDepartment={() =>
                 leaveForCreate(ROUTES.ORG_DEPARTMENTS_NEW)
               }

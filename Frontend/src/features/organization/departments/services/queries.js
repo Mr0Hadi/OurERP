@@ -11,6 +11,7 @@ export function useDepartmentsQuery(filters, pagination, sorting) {
     page: pagination.pageIndex + 1,
     limit: pagination.pageSize,
     search: filters.globalSearch || "",
+    headName: filters.headName || "",
     sortBy: sorting?.id ?? "name",
     sortOrder: sorting ? (sorting.desc ? "desc" : "asc") : "asc",
   };

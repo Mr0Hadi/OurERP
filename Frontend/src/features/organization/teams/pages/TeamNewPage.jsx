@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useWatch } from "react-hook-form";
 import { Save, X } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
@@ -40,9 +41,14 @@ export default function TeamNewPage() {
   const {
     register,
     control,
+    setValue,
     handleSubmit,
     formState: { errors },
   } = formMethods;
+
+  // مدیر و معاون باید از کارمندانِ واحدِ انتخاب‌شده باشند؛ با عوض‌شدنِ
+  // واحد، `OrgLeadershipForm` انتخاب‌های قبلی را پاک می‌کند.
+  const departmentId = useWatch({ control, name: "departmentId" });
 
   const onSubmit = (data) => {
     createMutation.mutate(buildPayload(data), {
@@ -81,6 +87,8 @@ export default function TeamNewPage() {
             <OrgLeadershipForm
               control={control}
               errors={errors}
+              setValue={setValue}
+              departmentId={departmentId}
               scopeLabel="تیم"
             />
 

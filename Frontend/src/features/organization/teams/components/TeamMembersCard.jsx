@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { ChevronLeft, Crown, Plus, UserMinus, Users } from "lucide-react";
+import {
+  ChevronLeft,
+  Crown,
+  Plus,
+  ShieldCheck,
+  UserMinus,
+  Users,
+} from "lucide-react";
 
 import FormSectionCard from "@/shared/components/forms/FormSectionCard";
 import { Button } from "@/shared/components/ui/button";
@@ -20,7 +27,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import { ORG_HEAD_ROLE_LABELS, OrgHeadRole } from "@/shared/domain/enums/orgHeadRole";
+import {
+  ORG_POSITION_LABELS,
+  OrgPositionEnum,
+  orgPositionIn,
+} from "@/shared/domain/enums/orgHeadRole";
 
 import {
   useTeamMembersQuery,
@@ -36,14 +47,14 @@ const fullNameOf = (employee) =>
 /**
  * اعضای یک تیم، داخل صفحه‌ی جزئیات همان تیم.
  *
- * هر سه کار — افزودن، خارج‌کردن و «هد کردن» — یک دستور در سرورند:
- * `ChangeUserTeam`. عمداً از `UpdateUser` استفاده نمی‌شود چون
- * `ChangeUserTeamCommand` دو کار اضافه انجام می‌دهد که دستی نمی‌شود
- * انجامشان داد: سرپرستیِ تیمِ *قبلی* را باز می‌کند، و `Team.HeadId` را
- * با همان یک درخواست ست می‌کند.
+ * همه‌ی کارها — افزودن، خارج‌کردن، «مدیر کردن» و «معاون کردن» — یک دستور در
+ * سرورند: `ChangeUserTeam` (با `isHead`/`isDeputy`). عمداً از `UpdateUser`
+ * استفاده نمی‌شود چون `ChangeUserTeamCommand` پیش از جابه‌جایی
+ * `ReleaseAllRolesAsync` را صدا می‌زند.
  *
- * «هد تیم» یک فیلد روی کاربر نیست — همین `Team.HeadId` است. برای همین
- * تعیینش اینجاست و نه در فرم کارمند.
+ * ⚠️ آن آزادسازی **همه‌ی** سمت‌های کاربر است، نه فقط سمتِ تیمِ قبلی:
+ * مدیریت و معاونتِ هر تیم *و واحدی* که داشته باشد — حتی وقتی فقط از این
+ * تیم خارج می‌شود. متن‌های راهنما و دیالوگ همین را صریح می‌گویند.
  *
  * افزودنِ عضو، واحدِ کارمند را هم به واحدِ تیم تغییر می‌دهد؛ سرور اجازه‌ی
  * عضویت در تیمی که زیر واحد دیگری است را نمی‌دهد.
@@ -68,20 +79,24 @@ export default function TeamMembersCard({ team, onOpenEmployee }) {
         userId: employee.id,
         departmentId: team.departmentId,
         teamId: team.id,
-        isHead: false,
         successMessage: `${fullNameOf(employee)} به تیم اضافه شد.`,
       },
       { onSuccess: () => setMemberToAdd("") },
     );
   };
 
-  const handleMakeHead = (member) => {
+  const handleAssignPosition = (member, position) => {
+    const isHead = position === OrgPositionEnum.HEAD;
+
     assignMutation.mutate({
       userId: member.id,
       departmentId: team.departmentId,
       teamId: team.id,
-      isHead: true,
-      successMessage: `${fullNameOf(member)} هد این تیم شد.`,
+      isHead,
+      isDeputy: !isHead,
+      successMessage: `${fullNameOf(member)} ${
+        isHead ? "مدیر" : "معاون"
+      } این تیم شد.`,
     });
   };
 
@@ -116,7 +131,7 @@ export default function TeamMembersCard({ team, onOpenEmployee }) {
         ) : (
           <ul className="divide-y divide-border rounded-xl border border-border">
             {members.map((member) => {
-              const isHead = member.id === team.headId;
+              const position = orgPositionIn(team, member.id);
 
               return (
                 <li
@@ -130,25 +145,39 @@ export default function TeamMembersCard({ team, onOpenEmployee }) {
                       {fullNameOf(member)}
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {isHead
-                        ? ORG_HEAD_ROLE_LABELS[OrgHeadRole.TEAM_HEAD]
-                        : ORG_HEAD_ROLE_LABELS[OrgHeadRole.MEMBER]}{" "}
-                      · {member.personelCode ?? "—"}
+                      {ORG_POSITION_LABELS[position]} ·{" "}
+                      {member.personelCode ?? "—"}
                       {!member.isActive && " · غیرفعال"}
                     </div>
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0">
-                    {!isHead && member.isActive && (
+                    {member.isActive && position !== OrgPositionEnum.HEAD && (
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        title="تعیین به‌عنوان هد تیم"
-                        onClick={() => handleMakeHead(member)}
+                        title="تعیین به‌عنوان مدیر تیم"
+                        onClick={() =>
+                          handleAssignPosition(member, OrgPositionEnum.HEAD)
+                        }
                         disabled={isBusy}
                       >
                         <Crown className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {member.isActive && position !== OrgPositionEnum.DEPUTY && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        title="تعیین به‌عنوان معاون تیم"
+                        onClick={() =>
+                          handleAssignPosition(member, OrgPositionEnum.DEPUTY)
+                        }
+                        disabled={isBusy}
+                      >
+                        <ShieldCheck className="h-4 w-4" />
                       </Button>
                     )}
                     <Button
@@ -223,9 +252,10 @@ export default function TeamMembersCard({ team, onOpenEmployee }) {
               افزودن
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">
-            کارمند از تیم قبلی‌اش خارج و واحدش به واحد این تیم تغییر می‌کند. اگر
-            هد تیم قبلی بوده، آن سرپرستی هم آزاد می‌شود.
+          <p className="text-xs text-muted-foreground leading-5">
+            کارمند از تیم قبلی‌اش خارج و واحدش به واحد این تیم تغییر می‌کند. هر
+            سمتِ مدیریت یا معاونتی که در تیم یا واحدِ دیگری داشته باشد آزاد
+            می‌شود.
           </p>
         </div>
       </div>
@@ -239,8 +269,9 @@ export default function TeamMembersCard({ team, onOpenEmployee }) {
             <AlertDialogTitle>خروج عضو از تیم</AlertDialogTitle>
             <AlertDialogDescription>
               {memberToRemove && fullNameOf(memberToRemove)} از «{team.name}»
-              خارج می‌شود. حساب کاربری و واحد سازمانی‌اش دست‌نخورده می‌ماند و
-              فقط تیمش خالی می‌شود.
+              خارج می‌شود. حساب کاربری و واحد سازمانی‌اش دست‌نخورده می‌ماند،
+              ولی هر سمتِ مدیریت یا معاونتی که دارد — در این تیم یا در واحدش —
+              آزاد می‌شود.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
