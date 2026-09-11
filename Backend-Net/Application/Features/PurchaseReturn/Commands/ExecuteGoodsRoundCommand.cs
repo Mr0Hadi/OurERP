@@ -147,7 +147,7 @@ namespace Application.Features.PurchaseReturn.Commands
                     product.Stock -= line.Quantity;
                     await _inventoryCostingService.RecordPurchaseReturnShippedToSupplierAsync(product, line.Quantity, now, cancellationToken);
 
-                    await _productUnitService.ReturnToSupplierAsync(product, line.Quantity, cancellationToken);
+                    await _productUnitService.ReturnToSupplierAsync(product, line.Quantity, claim.PurchaseItemId, cancellationToken);
                 }
 
                 if (effect.AppliedQuantity >= effect.Quantity)

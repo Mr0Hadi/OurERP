@@ -724,6 +724,33 @@ the total:
   return list DTOs' `TotalQuantity` is computed identically to the entity's `Quantity` - both are
   real divergences, both left for a pass that can build and test.
 
+**ProductUnit: no silent substitution, no silent shortfall (2026-09-11).** `ShipSaleCommand` is
+where a unit leaves the warehouse - `ConsumeAsync` moves it `IN_STOCK -> SOLD` (there is no separate
+"shipped" status; `SOLD` means physically shipped). The only other `SOLD` writer is the sale-return
+`GOODS_OUT` replacement round. Three `IProductUnitService` holes let `Product.Stock` and
+`COUNT(ProductUnit WHERE IN_STOCK)` drift apart, all closed the same way - throw
+`ValidationCustomException` rather than make up the number, and since no service method saves, the
+caller's `Product.Stock` change is discarded with it:
+- **`ConsumeAsync` rejects duplicate scanned barcodes** (compared after `ToPayload` normalization).
+  `[A, A]` used to pass the `Count == count` check, mark one unit `SOLD`, and drop stock by two.
+- **`ReturnToSupplierAsync` gained `int? purchaseItemId`**; `PurchaseReturn.ExecuteGoodsRoundCommand`
+  passes `claim.PurchaseItemId`. With a line, only units received on that line are eligible and a
+  shortfall throws instead of borrowing another purchase's units. `null` (off-order claim) keeps the
+  old FIFO-over-the-product behaviour - there is no purchase to match against.
+- **`RestoreAsync` throws when the sale line has fewer `SOLD` units than `healthyCount + scrapCount`.**
+  It used to restore what it found and carry on while the caller still added the full restocked
+  quantity to stock. Realistically only reachable with pre-`ProductUnit` data or a mis-targeted claim,
+  since claims are already capped by shipped quantity.
+- No schema change, no migration. Docs: `docs/api-guide.fa.md` (`ShipSale`, both `ExecuteGoodsRound`s),
+  `docs/product-code-barcode-invoice-design.fa.md` §1.9 (signatures + the shared rule).
+- **Test fixture fix the `RestoreAsync` guard forced:** `Seed.ShippedSale` set `SaleItem.ShippedQuantity`
+  but minted no `SOLD` units - exactly the inconsistent state the guard rejects - so three
+  `SaleReturnLifecycleTests` goods-in tests started failing. It now mints `shippedQuantity` units as
+  `SOLD` against the line (`Seed.MintUnits` gained optional `status`/`saleItemId`). Seed units' payloads
+  still aren't digits-only, so tests that scan barcodes should mint through `scope.ProductUnitService`.
+- **Tests**: `Tests/WMS.Tests/Integration/ProductUnitServiceTests.cs` (5). Suite 397/406 before those were
+  added, 402/411 after; the 9 failures are the long-documented pre-existing ones.
+
 **Org chart: one user, one role, written in one place (2026-09-11).** The reported bug - a user
 moved to another department on the user detail page while their old team still listed them as its
 head - was `UpdateUserCommand` writing only `User.DepartmentId`/`TeamId` and never touching the

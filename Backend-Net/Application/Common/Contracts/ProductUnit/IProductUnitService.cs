@@ -29,11 +29,12 @@
 
         /// <summary>
         /// Marks <paramref name="count"/> IN_STOCK units RETURNED_TO_SUPPLIER (FIFO by serial) - goods
-        /// physically leaving us back to a supplier on a purchase return. ConsumeAsync marks units SOLD,
-        /// which is the wrong status here, so PurchaseReturn.ExecuteGoodsRoundCommand used to query and
-        /// mutate ProductUnits by hand instead of going through this service.
+        /// physically leaving us back to a supplier on a purchase return. When
+        /// <paramref name="purchaseItemId"/> is given, only units received on that purchase line are
+        /// eligible, and a shortfall throws rather than falling back to units from other purchases.
+        /// ConsumeAsync marks units SOLD, which is the wrong status here.
         /// </summary>
-        Task ReturnToSupplierAsync(Domain.Entities.Product product, int count, CancellationToken cancellationToken);
+        Task ReturnToSupplierAsync(Domain.Entities.Product product, int count, int? purchaseItemId, CancellationToken cancellationToken);
 
         /// <summary>
         /// Reconciles ProductUnit rows to a manually-edited Stock value from UpdateProductCommand:

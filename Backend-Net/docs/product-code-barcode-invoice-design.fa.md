@@ -247,13 +247,19 @@ public class BarcodeReference
 
 ```csharp
 Task<List<ProductUnit>> MintAsync(Product product, int count, int? purchaseItemId, CancellationToken ct);
-Task<List<ProductUnit>> ConsumeAsync(Product product, int count, int saleItemId,
+Task<List<ProductUnit>> ConsumeAsync(Product product, int count, int? saleItemId,
                                      List<string>? explicitBarcodes, CancellationToken ct);
 Task RestoreAsync(int saleItemId, int healthyCount, int scrapCount, CancellationToken ct);
+Task ReturnToSupplierAsync(Product product, int count, int? purchaseItemId, CancellationToken ct);
 Task ReconcileStockAsync(Product product, int newStock, CancellationToken ct);
 ```
 
-هر چهار متد فقط موجودیت‌ها را تغییر می‌دهند و **`SaveChangesAsync` صدا نمی‌زنند** — دقیقاً مثل `IPurchaseReturnCalculationService`، تا هندلر فراخوان صاحب تراکنش بماند.
+همه‌ی این متدها فقط موجودیت‌ها را تغییر می‌دهند و **`SaveChangesAsync` صدا نمی‌زنند** — دقیقاً مثل `IPurchaseReturnCalculationService`، تا هندلر فراخوان صاحب تراکنش بماند.
+
+**قاعده‌ی مشترک (2026-09-11): هیچ متدی کمبود را با دانه‌ی دیگری جبران نمی‌کند.** هر جا تعداد دانه‌ی واجد شرایط کمتر از مقدار درخواستی باشد، `ValidationCustomException` پرتاب می‌شود و چون هندلر هنوز `SaveChangesAsync` نزده، تغییر `Product.Stock` هم ذخیره نمی‌شود:
+- `ConsumeAsync`: بارکد تکراری در `explicitBarcodes` (بعد از نرمال‌سازی) رد می‌شود — وگرنه `[A, A]` از بررسی تعداد عبور می‌کرد، یک دانه `SOLD` می‌شد و موجودی دو واحد کم می‌شد.
+- `RestoreAsync`: باید به‌اندازه‌ی `healthyCount + scrapCount` دانه‌ی `SOLD` روی همان قلم فروش وجود داشته باشد؛ قبلاً کمتر برمی‌گرداند و بی‌صدا ادامه می‌داد، در حالی که موجودی کامل اضافه شده بود.
+- `ReturnToSupplierAsync`: با `purchaseItemId` فقط دانه‌های واردشده روی همان قلم خرید انتخاب می‌شوند (قبلاً هر دانه‌ی `IN_STOCK` کالا، از هر خریدی). `purchaseItemId == null` (ادعای خارج از سفارش) همچنان FIFO روی کل کالاست.
 
 **`EnsureProductCodesCommand`** (ادمینی، `POST api/Product/EnsureProductCodes`): برای هر محصولی که `Code` خالی/غیراستاندارد دارد کد می‌سازد، بارکد هر دانه را از روی `Code` محصول و سریال خودش دوباره می‌سازد، و برای هر محصولی که `COUNT(units IN_STOCK) != Stock` است اختلاف را Mint/Scrap می‌کند. هم برای مهاجرت داده‌ی موجود لازم است هم به‌عنوان تور ایمنی برای حالت شکست بند ۱.۴.
 
