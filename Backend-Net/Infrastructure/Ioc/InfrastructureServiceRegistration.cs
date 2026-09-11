@@ -60,10 +60,8 @@ namespace Infrastructure.Ioc
 
             services.AddScoped<IOrgRoleService, OrgRoleService>();
             services.AddScoped<IPurchaseReturnCalculationService, PurchaseReturnCalculationService>();
-            services.AddScoped<IPurchaseReturnQueryService, PurchaseReturnQueryService>();
 
             services.AddScoped<ISaleReturnCalculationService, SaleReturnCalculationService>();
-            services.AddScoped<ISaleReturnQueryService, SaleReturnQueryService>();
 
             services.AddScoped<IInvoiceLineCalculationService, InvoiceLineCalculationService>();
 

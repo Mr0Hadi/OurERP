@@ -36,11 +36,11 @@ namespace Application.Features.Product.Queries
         public async Task<ResponseDto> Handle(GetProductListQuery request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
-            var query = _context.Products.Where(x => x.IsActive).AsQueryable();
+            var query = _context.Products.Where(x => x.IsActive).AsQueryable().AsNoTracking();
 
             if (!string.IsNullOrEmpty(request.Name))
             {
-                query = query.Where(p => p.Name.Contains(request.Name));
+                query = query.Where(p => p.Name.Contains(request.Name) || (p.EnglishName != null && p.EnglishName.Contains(request.Name)));
             }
 
             if (!string.IsNullOrEmpty(request.Code))
@@ -89,6 +89,7 @@ namespace Application.Features.Product.Queries
                 Brand = x.Brand,
                 Code = x.Code,
                 Name = x.Name,
+                EnglishName = x.EnglishName,
                 CategoryName = x.ProductCategory.Name,
                 Stock = x.Stock,
                 LowStockThreshold = x.LowStockThreshold,

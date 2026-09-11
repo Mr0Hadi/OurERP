@@ -1,5 +1,6 @@
 ﻿using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Dtos.Returns;
+using Common.Exceptions;
 using Domain.Entities;
 using Domain.Enums;
 
@@ -15,6 +16,11 @@ namespace Infrastructure.Services
 
         public bool IsTerminal(ReturnStatusEnum status) => TerminalReturnStatuses.Contains(status);
 
+        public bool CanReopen(ReturnStatusEnum status) => status == ReturnStatusEnum.REJECTED;
+
+        // Money effects are born APPLIED (see ExpandComposition), so a resolution that carries any
+        // money marks the return as touched and locks cancel/reject/delete from that moment on.
+        // That is intentional: money has already moved, there is nothing left to un-do cheaply.
         public bool IsUntouched(PurchaseReturn purchaseReturn) =>
             !purchaseReturn.AllEffects.Any(e => e.Status == ReturnEffectStatusEnum.APPLIED);
 
@@ -37,16 +43,24 @@ namespace Infrastructure.Services
             return ReturnStatusEnum.IN_PROGRESS;
         }
 
-        // Off-order claims (Scope == OFF_ORDER, i.e. OffScopeKind.HasValue) never consume a line's
-        // quota - EXCESS/UNLISTED goods are, by definition, outside what the line ever ordered.
+        // Off-order claims never consume a line's quota - EXCESS/UNLISTED goods are, by definition,
+        // outside what the line ever ordered. Filtered on Scope, the explicit field, rather than on
+        // OffScopeKind being null: the two are meant to agree, and a quota is the wrong place to
+        // depend on that.
+        //
+        // Soft-deleted and terminal returns are filtered here rather than trusted from the caller.
+        // Every caller today passes IPurchaseReturnRepository.GetActiveByPurchaseIdAsync, which
+        // already filters both, but a quota that silently over-counts is a bad thing to leave
+        // resting on the caller getting its query right.
         public int GetOpenClaimQuantity(int purchaseItemId, List<PurchaseReturn> activeReturns)
         {
             if (activeReturns == null || activeReturns.Count == 0)
                 return 0;
 
             return activeReturns
+                .Where(r => r.IsActive && !IsTerminal(r.Status))
                 .SelectMany(r => r.Claims)
-                .Where(c => c.OffScopeKind == null && c.PurchaseItemId == purchaseItemId)
+                .Where(c => c.Scope != ReturnClaimScopeEnum.OFF_ORDER && c.PurchaseItemId == purchaseItemId)
                 .Sum(c => c.RemainingQuantity);
         }
 
@@ -64,6 +78,11 @@ namespace Infrastructure.Services
         {
             if (purchase.Status == PurchaseStatusEnum.CANCELLED)
                 return PurchaseStatusEnum.CANCELLED;
+
+            // All() on an empty sequence is true, so a purchase carrying no items at all would
+            // otherwise come out RECEIVED. Nothing has been received; leave its own status alone.
+            if (purchase.Items.Count == 0)
+                return purchase.Status;
 
             var fullyReceived = purchase.Items.All(i => i.ReceivedQuantity >= i.Quantity);
 
@@ -109,6 +128,8 @@ namespace Infrastructure.Services
                 if (money is not { Amount: > 0 })
                     return;
 
+                ValidateMoney(money);
+
                 var effect = new PurchaseReturnEffect
                 {
                     Direction = direction,
@@ -120,9 +141,9 @@ namespace Infrastructure.Services
                     AppliedAt = now,
                 };
 
-                if (money.Method == ReturnPaymentMethodEnum.MIXED && money.Parts != null)
+                if (money.Method == ReturnPaymentMethodEnum.MIXED)
                 {
-                    effect.MoneyParts = money.Parts.Select(p => new PurchaseReturnEffectMoneyPart
+                    effect.MoneyParts = money.Parts!.Select(p => new PurchaseReturnEffectMoneyPart
                     {
                         Method = p.Method,
                         Amount = p.Amount,
@@ -135,6 +156,25 @@ namespace Infrastructure.Services
             }
 
             return effects;
+        }
+
+        // Last line of defence; AddClaimResolutionCommandValidator rejects these first, so a
+        // request never reaches here. Kept because ExpandComposition is the single place that turns
+        // a composition into rows, and a malformed money effect persisted is a money effect nobody
+        // can reconcile later.
+        private static void ValidateMoney(MoneyEffectDto money)
+        {
+            var isMixed = money.Method == ReturnPaymentMethodEnum.MIXED;
+            var parts = money.Parts;
+
+            if (isMixed && (parts == null || parts.Count == 0))
+                throw new ValidationCustomException("پرداخت ترکیبی باید حداقل یک بخش داشته باشد.");
+
+            if (!isMixed && parts != null && parts.Count > 0)
+                throw new ValidationCustomException("بخش‌های پرداخت فقط برای پرداخت ترکیبی مجاز است.");
+
+            if (isMixed && parts!.Aggregate(0UL, (sum, p) => sum + p.Amount) != money.Amount)
+                throw new ValidationCustomException("مجموع بخش‌های پرداخت باید برابر مبلغ کل باشد.");
         }
     }
 }

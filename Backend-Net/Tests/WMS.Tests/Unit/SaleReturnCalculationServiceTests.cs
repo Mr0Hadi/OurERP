@@ -150,10 +150,39 @@ namespace WMS.Tests.Unit
         {
             var activeReturns = new List<SaleReturn>
             {
-                new() { Claims = { new SaleReturnClaim { SaleItemId = null, OffScopeKind = ReturnOffScopeKindEnum.EXCESS, Quantity = 10 } } },
+                new() { Claims = { new SaleReturnClaim { Scope = ReturnClaimScopeEnum.OFF_ORDER, SaleItemId = null, OffScopeKind = ReturnOffScopeKindEnum.EXCESS, Quantity = 10 } } },
             };
 
             Assert.Equal(0, _sut.GetOpenClaimQuantity(1, activeReturns));
+        }
+
+        [Theory]
+        [InlineData(ReturnStatusEnum.REJECTED, true)]
+        [InlineData(ReturnStatusEnum.CANCELLED, false)]
+        [InlineData(ReturnStatusEnum.OPEN, false)]
+        [InlineData(ReturnStatusEnum.IN_PROGRESS, false)]
+        [InlineData(ReturnStatusEnum.SETTLED, false)]
+        public void CanReopen_OnlyRejected(ReturnStatusEnum status, bool expected)
+        {
+            Assert.Equal(expected, _sut.CanReopen(status));
+        }
+
+        [Fact]
+        public void GetOpenClaimQuantity_TerminalReturnsNeverCount()
+        {
+            // The quota filters these itself rather than trusting the caller's query.
+            var rejected = new SaleReturn
+            {
+                Status = ReturnStatusEnum.REJECTED,
+                Claims = { new SaleReturnClaim { SaleItemId = 1, Quantity = 10 } },
+            };
+            var deleted = new SaleReturn
+            {
+                IsActive = false,
+                Claims = { new SaleReturnClaim { SaleItemId = 1, Quantity = 10 } },
+            };
+
+            Assert.Equal(0, _sut.GetOpenClaimQuantity(1, new List<SaleReturn> { rejected, deleted }));
         }
 
         [Fact]

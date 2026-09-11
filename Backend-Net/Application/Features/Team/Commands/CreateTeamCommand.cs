@@ -1,4 +1,4 @@
-using Application.Common.Contracts.OrgStructure;
+﻿using Application.Common.Contracts.OrgStructure;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
@@ -7,16 +7,17 @@ using AutoMapper;
 using Common.Exceptions;
 using Common.Extensions;
 using Domain.Entities;
+using Domain.Enums;
 using FluentValidation;
 using MediatR;
 
 namespace Application.Features.Team.Commands
 {
     /// <summary>
-    /// <see cref="HeadId"/>/<see cref="DeputyId"/> must already belong to <see cref="DepartmentId"/> -
-    /// setting someone as head/deputy of a team no longer just writes an FK that disagrees with their
-    /// own User.DepartmentId/TeamId. Move the user into the department first (<c>ChangeUserTeamCommand</c>
-    /// or <c>UpdateUserCommand</c>), then assign them here.
+    /// Naming a <see cref="HeadId"/>/<see cref="DeputyId"/> moves that user into the new team and
+    /// <see cref="DepartmentId"/>, releasing any slot they held elsewhere - the FK and the user's own
+    /// DepartmentId/TeamId are written together by <see cref="IOrgRoleService.AssignAsync"/>, so they
+    /// can never disagree. No separate "move the user first" call is needed.
     /// </summary>
     public class CreateTeamCommand : IRequest<ResponseDto>
     {
@@ -64,22 +65,38 @@ namespace Application.Features.Team.Commands
         {
             var res = new ResponseDto();
 
+            // Load the users before creating the team: a bad id must not leave an orphan team behind.
+            Domain.Entities.User? head = null;
+            Domain.Entities.User? deputy = null;
+
             if (request.HeadId.HasValue)
             {
-                var head = await _userRepository.GetByIdAsync(request.HeadId.Value, cancellationToken) ?? throw new NotFoundCustomException("سرپرست انتخاب شده یافت نشد");
-                if (head.DepartmentId != request.DepartmentId) throw new ValidationCustomException("سرپرست باید عضو همین دپارتمان باشد");
-                await _orgRoleService.ReleaseAllRolesAsync(head.Id, cancellationToken);
+                head = await _userRepository.GetByIdAsync(request.HeadId.Value, cancellationToken) ?? throw new NotFoundCustomException("سرپرست انتخاب شده یافت نشد");
             }
 
             if (request.DeputyId.HasValue)
             {
-                var deputy = await _userRepository.GetByIdAsync(request.DeputyId.Value, cancellationToken) ?? throw new NotFoundCustomException("معاون انتخاب شده یافت نشد");
-                if (deputy.DepartmentId != request.DepartmentId) throw new ValidationCustomException("معاون باید عضو همین دپارتمان باشد");
-                await _orgRoleService.ReleaseAllRolesAsync(deputy.Id, cancellationToken);
+                deputy = await _userRepository.GetByIdAsync(request.DeputyId.Value, cancellationToken) ?? throw new NotFoundCustomException("معاون انتخاب شده یافت نشد");
             }
 
             var team = _mapper.Map<Domain.Entities.Team>(request);
             await _teamRepository.AddAsync(team, cancellationToken);
+
+            // The roles can only be assigned once the team has an Id for User.TeamId to point at.
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            if (head != null)
+            {
+                await _orgRoleService.AssignAsync(head, team.DepartmentId, team.Id, OrgRoleEnum.TEAM_HEAD, cancellationToken);
+                _userRepository.Update(head);
+            }
+
+            if (deputy != null)
+            {
+                await _orgRoleService.AssignAsync(deputy, team.DepartmentId, team.Id, OrgRoleEnum.TEAM_DEPUTY, cancellationToken);
+                _userRepository.Update(deputy);
+            }
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             res.Message = "تیم جدید با موفقیت ایجاد شد.";

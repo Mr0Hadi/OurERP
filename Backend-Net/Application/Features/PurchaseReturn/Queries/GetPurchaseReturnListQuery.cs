@@ -1,5 +1,6 @@
 ﻿using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
+using Application.Common.Queries;
 using Application.Common.Enums;
 using Application.Features.PurchaseReturn.Dtos;
 using Common.Extensions;
@@ -40,7 +41,7 @@ namespace Application.Features.PurchaseReturn.Queries
             var res = new ResponseDto();
 
             var query = _context.PurchaseReturns
-                .Where(x => x.IsActive)
+                .WhereNotDeleted()
                 .Include(x => x.Purchase)
                     .ThenInclude(x => x.Supplier)
                 .Include(x => x.Claims)

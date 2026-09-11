@@ -45,13 +45,12 @@ namespace Application.Features.Sale.Queries
                     Description = x.Description,
                     CustomerId = x.CustomerId,
                     CustomerName = x.Customer.FirstName + " " + x.Customer.LastName,
-                    CreatedAt = x.CreatedAt,
-                    UpdatedAt = x.UpdatedAt,
                     Items = x.Items.Select(y => new SaleItemDto
                     {
                         Id = y.Id,
                         Discount = y.Discount,
                         ProductId = y.ProductId,
+                        ProductName = y.Product.Name,
                         Quantity = y.Quantity,
                         SaleId = y.SaleId,
                         SettledQuantity = y.SettledQuantity,
@@ -63,14 +62,12 @@ namespace Application.Features.Sale.Queries
                         Id = d.Id,
                         DriverFullName = d.DriverFullName,
                         DriverPhoneNumber = d.DriverPhoneNumber,
-                        VehiclePlate = d.VehiclePlate,
-                        CreatedAt = d.CreatedAt
+                        VehiclePlate = d.VehiclePlate
                     }).ToList(),
                     ShippingNotes = x.ShippingNotes.Select(n => new SaleShippingNoteDto
                     {
                         Id = n.Id,
-                        Note = n.Note,
-                        CreatedAt = n.CreatedAt
+                        Note = n.Note
                     }).ToList()
                 })
                 .FirstOrDefaultAsync() ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");

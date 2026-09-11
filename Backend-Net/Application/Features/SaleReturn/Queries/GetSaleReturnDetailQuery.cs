@@ -1,147 +1,71 @@
 ﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Dtos;
-using Application.Common.Enums;
+using Application.Common.Queries;
 using Application.Features.SaleReturn.Dtos;
+using Application.Features.SaleReturn.Mappings;
 using Common.Exceptions;
-using Common.Extensions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace Application.Features.SaleReturn.Queries
+namespace Application.Features.SaleReturn.Queries;
+
+public sealed class GetSaleReturnDetailQuery : IRequest<ResponseDto>
 {
-    public class GetSaleReturnDetailQuery : IRequest<ResponseDto>
+    public int Id { get; set; }
+}
+
+public sealed class GetSaleReturnDetailQueryHandler(
+    IWMSDbContext context,
+    ISaleReturnCalculationService calc)
+    : IRequestHandler<GetSaleReturnDetailQuery, ResponseDto>
+{
+    public async Task<ResponseDto> Handle(GetSaleReturnDetailQuery request, CancellationToken cancellationToken)
     {
-        public int Id { get; set; }
-    }
+        // PreviousReturn is Included rather than looked up separately: the FK and its navigation
+        // already exist on the entity, so the extra round-trip bought nothing. It is deliberately
+        // not filtered by IsActive - a soft-deleted earlier return still gets to name itself in the
+        // chain, which is the behaviour the separate lookup had.
+        var saleReturn = await context.SaleReturns
+            .Where(x => x.Id == request.Id)
+            .WhereNotDeleted()
+            .WithReturnGraph()
+            .Include(x => x.Sale!).ThenInclude(s => s.Customer)
+            .Include(x => x.PreviousReturn)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(cancellationToken)
+            ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
-    public class GetSaleReturnDetailQueryHandler : IRequestHandler<GetSaleReturnDetailQuery, ResponseDto>
-    {
-        private readonly IWMSDbContext _context;
-        private readonly ISaleReturnQueryService _saleReturnQueryService;
-        private readonly ISaleReturnCalculationService _saleReturnCalculationService;
+        // One expression, three flags: cancel, reject and delete are all "nothing has happened yet".
+        var untouched = !calc.IsTerminal(saleReturn.Status) && calc.IsUntouched(saleReturn);
 
-        public GetSaleReturnDetailQueryHandler(IWMSDbContext context, ISaleReturnQueryService saleReturnQueryService, ISaleReturnCalculationService saleReturnCalculationService)
+        // checked, so a bad row fails loudly instead of wrapping into a plausible-looking huge number.
+        var totalAmount = checked((ulong)saleReturn.Claims.Sum(c => checked((long)c.Quantity * (long)c.UnitPrice)));
+
+        var dto = new SaleReturnDetailDto
         {
-            _context = context;
-            _saleReturnQueryService = saleReturnQueryService;
-            _saleReturnCalculationService = saleReturnCalculationService;
-        }
+            Id = saleReturn.Id,
+            ReturnNumber = saleReturn.ReturnNumber,
+            ReturnDate = saleReturn.ReturnDate,
+            SaleId = saleReturn.SaleId,
+            SaleInvoiceNumber = saleReturn.Sale!.InvoiceNumber,
+            CustomerId = saleReturn.Sale.CustomerId,
+            CustomerName = saleReturn.Sale.Customer.FirstName + " " + saleReturn.Sale.Customer.LastName,
+            Description = saleReturn.Description,
+            PreviousReturnId = saleReturn.PreviousReturnId,
+            PreviousReturnNumber = saleReturn.PreviousReturn?.ReturnNumber,
+            Status = saleReturn.Status,
+            TotalAmount = totalAmount,
+            Quantity = saleReturn.Quantity,
+            DecidedQuantity = saleReturn.DecidedQuantity,
+            RemainingQuantity = saleReturn.RemainingQuantity,
+            CanDelete = untouched,
+            CanCancel = untouched,
+            CanReject = untouched,
+            CanReopen = calc.CanReopen(saleReturn.Status),
+            Claims = [.. saleReturn.Claims.Select(c => c.ToDto())],
+        };
 
-        public async Task<ResponseDto> Handle(GetSaleReturnDetailQuery request, CancellationToken cancellationToken)
-        {
-            var res = new ResponseDto();
-
-            var saleReturn = await _saleReturnQueryService.WithReturnGraph(_saleReturnQueryService.WhereNotDeleted(_context.SaleReturns))
-                .Include(x => x.Sale!)
-                    .ThenInclude(x => x.Customer)
-                .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
-
-            var untouched = _saleReturnCalculationService.IsUntouched(saleReturn);
-            var totalAmount = (UInt64)saleReturn.Claims.Sum(c => (long)c.Quantity * (long)c.UnitPrice);
-
-            // The related return is a plain FK on the entity; resolve its number here so the
-            // client can name it without a second round-trip.
-            var previousReturnNumber = saleReturn.PreviousReturnId == null
-                ? null
-                : await _context.SaleReturns
-                    .Where(x => x.Id == saleReturn.PreviousReturnId.Value)
-                    .Select(x => x.ReturnNumber)
-                    .FirstOrDefaultAsync(cancellationToken);
-
-            res.Data = new SaleReturnDetailDto
-            {
-                Id = saleReturn.Id,
-                ReturnNumber = saleReturn.ReturnNumber,
-                ReturnDate = saleReturn.ReturnDate,
-                SaleId = saleReturn.SaleId,
-                SaleInvoiceNumber = saleReturn.Sale!.InvoiceNumber,
-                CustomerId = saleReturn.Sale!.CustomerId,
-                CustomerName = saleReturn.Sale!.Customer.FirstName + " " + saleReturn.Sale!.Customer.LastName,
-                Description = saleReturn.Description,
-                PreviousReturnId = saleReturn.PreviousReturnId,
-                PreviousReturnNumber = previousReturnNumber,
-                Status = saleReturn.Status,
-                TotalAmount = totalAmount,
-                Quantity = saleReturn.Quantity,
-                DecidedQuantity = saleReturn.DecidedQuantity,
-                RemainingQuantity = saleReturn.RemainingQuantity,
-                CanDelete = !_saleReturnCalculationService.IsTerminal(saleReturn.Status) && untouched,
-                CanCancel = !_saleReturnCalculationService.IsTerminal(saleReturn.Status) && untouched,
-                CanReject = !_saleReturnCalculationService.IsTerminal(saleReturn.Status) && untouched,
-                CanReopen = saleReturn.Status == Domain.Enums.ReturnStatusEnum.REJECTED,
-                Claims = saleReturn.Claims.Select(c => new SaleReturnClaimDto
-                {
-                    Id = c.Id,
-                    Scope = c.Scope,
-                    OffScopeKind = c.OffScopeKind,
-                    SaleItemId = c.SaleItemId,
-                    ProductId = c.ProductId,
-                    ProductCode = c.Product!.Code,
-                    ProductName = c.Product.Name,
-                    Unit = c.Product.Unit.GetDescription(),
-                    UnitPrice = c.UnitPrice,
-                    Quantity = c.Quantity,
-                    Problem = c.Problem,
-                    Note = c.Note,
-                    DecidedQuantity = c.DecidedQuantity,
-                    RemainingQuantity = c.RemainingQuantity,
-                    Resolutions = c.Resolutions.Select(r => new SaleReturnResolutionDto
-                    {
-                        Id = r.Id,
-                        Quantity = r.Quantity,
-                        Note = r.Note,
-                        DecidedAt = r.CreatedAt,
-                        Effects = r.Effects.Select(e => new SaleReturnEffectDto
-                        {
-                            Id = e.Id,
-                            Direction = e.Direction,
-                            Quantity = e.Quantity,
-                            AppliedQuantity = e.AppliedQuantity,
-                            RemainingQuantity = e.RemainingQuantity,
-                            RestockedQuantity = e.RestockedQuantity,
-                            ProductId = e.ProductId,
-                            ProductName = e.Product != null ? e.Product.Name : null,
-                            Amount = e.Amount,
-                            Method = e.Method,
-                            Reference = e.Reference,
-                            Note = e.Note,
-                            Status = e.Status,
-                            AppliedAt = e.AppliedAt,
-                            MoneyParts = e.MoneyParts.Select(p => new SaleReturnEffectMoneyPartDto
-                            {
-                                Id = p.Id,
-                                Method = p.Method,
-                                Amount = p.Amount,
-                                CheckNumber = p.CheckNumber,
-                                TransferRef = p.TransferRef,
-                            }).ToList(),
-                            History = e.History.Select(h => new SaleReturnEffectRoundDto
-                            {
-                                Id = h.Id,
-                                Date = h.Date,
-                                Quantity = h.Quantity,
-                                HealthyQuantity = h.HealthyQuantity,
-                                PartyName = h.PartyName,
-                                PartyNationalId = h.PartyNationalId,
-                                VehiclePlate = h.VehiclePlate,
-                                Note = h.Note,
-                                Observations = h.Observations.Select(o => new SaleReturnEffectObservationDto
-                                {
-                                    Id = o.Id,
-                                    Problem = o.Problem,
-                                    Quantity = o.Quantity,
-                                    Note = o.Note,
-                                }).ToList(),
-                            }).ToList(),
-                        }).ToList(),
-                    }).ToList(),
-                }).ToList(),
-            };
-
-            res.Message = "اطلاعات مرجوعی فروش با موفقیت ارسال شد.";
-            res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
-            return res;
-        }
+        return ResponseDto.Success("اطلاعات مرجوعی فروش با موفقیت ارسال شد.", dto);
     }
 }

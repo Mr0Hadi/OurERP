@@ -174,6 +174,9 @@ namespace WMS.Tests.Support
             // Product.Stock == COUNT(ProductUnit WHERE Status=IN_STOCK) is an invariant the real
             // handlers maintain (see docs/product-code-barcode-invoice-design.fa.md 1.6) - seed
             // matching units so ShipSaleCommandHandler's FIFO consumption has something to consume.
+            // The shipped quantity's units too, as SOLD against the line - the state ShipSaleCommand
+            // leaves behind, and what a sale-return GOODS_IN round restores from.
+            MintUnits(context, product, shippedQuantity, ProductUnitStatusEnum.SOLD, item.Id);
             MintUnits(context, product, stock);
 
             return new SaleScenario(sale, item, product, customer);
@@ -197,11 +200,11 @@ namespace WMS.Tests.Support
         }
 
         /// <summary>
-        /// Mints <paramref name="count"/> IN_STOCK ProductUnit rows for an already-saved product,
-        /// keeping the Stock/ProductUnit invariant true in fixtures. Public so tests that manually
-        /// bump Product.Stock (rather than going through a handler) can keep it true too.
+        /// Mints <paramref name="count"/> ProductUnit rows (IN_STOCK by default) for an already-saved
+        /// product, keeping the Stock/ProductUnit invariant true in fixtures. Public so tests that
+        /// manually bump Product.Stock (rather than going through a handler) can keep it true too.
         /// </summary>
-        public static void MintUnits(WMSDbContext context, Product product, int count)
+        public static void MintUnits(WMSDbContext context, Product product, int count, ProductUnitStatusEnum status = ProductUnitStatusEnum.IN_STOCK, int? saleItemId = null)
         {
             if (count <= 0)
                 return;
@@ -219,7 +222,9 @@ namespace WMS.Tests.Support
                     SerialNumber = serial,
                     Barcode = barcode,
                     BarcodePayload = barcode.Replace("-", ""),
-                    Status = ProductUnitStatusEnum.IN_STOCK,
+                    Status = status,
+                    SaleItemId = saleItemId,
+                    SoldAt = status == ProductUnitStatusEnum.SOLD ? DateTime.Now : null,
                     CreatedAt = DateTime.Now,
                     IsActive = true,
                 });

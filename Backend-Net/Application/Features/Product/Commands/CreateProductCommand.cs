@@ -21,6 +21,7 @@ namespace Application.Features.Product.Commands
         // Id (see the handler). The frontend should gray this field out ("به‌صورت خودکار تولید
         // می‌شود") rather than send anything - see docs/product-code-barcode-invoice-design.fa.md 1.11.
         public string Name { get; set; }
+        public string? EnglishName { get; set; }
         public string Brand { get; set; }
         public ProductUnitEnum Unit { get; set; }
         public int PurchasePrice { get; set; }

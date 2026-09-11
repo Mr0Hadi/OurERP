@@ -12,6 +12,11 @@
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageReference Include="MediatR" Version="14.2.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.11" />
+    <!-- AsSplitQuery lives in RelationalQueryableExtensions, which ships in .Relational, not
+         in the core package - see Application/Common/Queries/*QueryExtensions.cs. Referenced
+         provider-agnostically here rather than pulling in .SqlServer, which belongs to
+         Infrastructure. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.11" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.11" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.11" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.11" />

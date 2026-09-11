@@ -5,6 +5,7 @@ using Application.Common.Dtos;
 using Application.Common.Enums;
 using Common.Exceptions;
 using Common.Extensions;
+using Domain.Enums;
 using FluentValidation;
 using MediatR;
 
@@ -14,8 +15,11 @@ namespace Application.Features.User.Command
     /// Moves a user between department/team and sets their head/deputy role there.
     ///
     /// <see cref="IsHead"/>/<see cref="IsDeputy"/> apply to the team when <see cref="TeamId"/> is
-    /// supplied, and to the department otherwise. The department case used to be unreachable: the
-    /// handler only ever wrote Team.HeadId, so IsHead was silently dropped for a user with no team.
+    /// supplied, and to the department otherwise; leaving both false makes the user a plain member,
+    /// releasing whatever slot they held before. Moving to a team in another department is a single
+    /// call - pass that department's id and one of its teams.
+    ///
+    /// All of it goes through <see cref="IOrgRoleService.AssignAsync"/>, which owns the invariants.
     /// </summary>
     public class ChangeUserTeamCommand : IRequest<ResponseDto>
     {
@@ -43,16 +47,12 @@ namespace Application.Features.User.Command
     public class ChangeUserTeamCommandHandler : IRequestHandler<ChangeUserTeamCommand, ResponseDto>
     {
         private readonly IUserRepository _userRepository;
-        private readonly IDepartmentRepository _departmentRepository;
-        private readonly ITeamRepository _teamRepository;
         private readonly IOrgRoleService _orgRoleService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public ChangeUserTeamCommandHandler(IUserRepository userRepository, IDepartmentRepository departmentRepository, ITeamRepository teamRepository, IOrgRoleService orgRoleService, IUnitOfWork unitOfWork)
+        public ChangeUserTeamCommandHandler(IUserRepository userRepository, IOrgRoleService orgRoleService, IUnitOfWork unitOfWork)
         {
             _userRepository = userRepository;
-            _departmentRepository = departmentRepository;
-            _teamRepository = teamRepository;
             _orgRoleService = orgRoleService;
             _unitOfWork = unitOfWork;
         }
@@ -63,47 +63,14 @@ namespace Application.Features.User.Command
 
             var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken) ?? throw new NotFoundCustomException("کاربر مورد نظر یافت نشد");
 
-            var department = await _departmentRepository.GetByIdAsync(request.DepartmentId, cancellationToken) ?? throw new NotFoundCustomException("واحد انتخاب شده یافت نشد");
+            var role = request.TeamId.HasValue
+                ? (request.IsHead ? OrgRoleEnum.TEAM_HEAD : request.IsDeputy ? OrgRoleEnum.TEAM_DEPUTY : OrgRoleEnum.MEMBER)
+                : (request.IsHead ? OrgRoleEnum.DEPARTMENT_HEAD : request.IsDeputy ? OrgRoleEnum.DEPARTMENT_DEPUTY : OrgRoleEnum.MEMBER);
 
-            Domain.Entities.Team? team = null;
+            await _orgRoleService.AssignAsync(user, request.DepartmentId, request.TeamId, role, cancellationToken);
 
-            if (request.TeamId.HasValue)
-            {
-                team = await _teamRepository.GetByIdAsync(request.TeamId.Value, cancellationToken) ?? throw new NotFoundCustomException("تیم انتخاب شده یافت نشد");
-
-                if (team.DepartmentId != request.DepartmentId)
-                {
-                    throw new ValidationCustomException("تیم انتخاب شده متعلق به این واحد نیست");
-                }
-            }
-
-            // Release first, assign second. The old handler cleared only the *previous team's*
-            // HeadId, which left Team.DeputyId and both Department roles pointing at a user who had
-            // moved away, and let one user be head of several teams at once.
-            await _orgRoleService.ReleaseAllRolesAsync(user.Id, cancellationToken);
-
-            user.DepartmentId = request.DepartmentId;
-            user.TeamId = request.TeamId;
             user.UpdatedAt = DateTime.Now;
             _userRepository.Update(user);
-
-            if (request.IsHead || request.IsDeputy)
-            {
-                if (team != null)
-                {
-                    if (request.IsHead) team.HeadId = user.Id;
-                    else team.DeputyId = user.Id;
-
-                    _teamRepository.Update(team);
-                }
-                else
-                {
-                    if (request.IsHead) department.HeadId = user.Id;
-                    else department.DeputyId = user.Id;
-
-                    _departmentRepository.Update(department);
-                }
-            }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 

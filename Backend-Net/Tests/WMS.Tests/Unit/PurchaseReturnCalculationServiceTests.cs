@@ -1,4 +1,5 @@
 ﻿using Application.Common.Dtos.Returns;
+using Common.Exceptions;
 using Domain.Entities;
 using Domain.Enums;
 using Infrastructure.Services;
@@ -162,7 +163,7 @@ namespace WMS.Tests.Unit
         {
             var activeReturn = new PurchaseReturn
             {
-                Claims = { new PurchaseReturnClaim { PurchaseItemId = null, OffScopeKind = ReturnOffScopeKindEnum.EXCESS, Quantity = 10 } },
+                Claims = { new PurchaseReturnClaim { Scope = ReturnClaimScopeEnum.OFF_ORDER, PurchaseItemId = null, OffScopeKind = ReturnOffScopeKindEnum.EXCESS, Quantity = 10 } },
             };
 
             Assert.Equal(0, _sut.GetOpenClaimQuantity(1, new() { activeReturn }));
@@ -198,6 +199,79 @@ namespace WMS.Tests.Unit
             };
 
             Assert.Equal(0, _sut.GetClaimableQuantity(item, new() { activeReturn }));
+        }
+
+        [Fact]
+        public void GetOpenClaimQuantity_TerminalReturnsNeverCount()
+        {
+            // The quota filters these itself rather than trusting the caller's query.
+            var rejected = new PurchaseReturn
+            {
+                Status = ReturnStatusEnum.REJECTED,
+                Claims = { new PurchaseReturnClaim { PurchaseItemId = 1, Quantity = 10 } },
+            };
+            var deleted = new PurchaseReturn
+            {
+                IsActive = false,
+                Claims = { new PurchaseReturnClaim { PurchaseItemId = 1, Quantity = 10 } },
+            };
+
+            Assert.Equal(0, _sut.GetOpenClaimQuantity(1, new() { rejected, deleted }));
+        }
+
+        [Theory]
+        [InlineData(ReturnStatusEnum.REJECTED, true)]
+        [InlineData(ReturnStatusEnum.CANCELLED, false)]
+        [InlineData(ReturnStatusEnum.OPEN, false)]
+        [InlineData(ReturnStatusEnum.IN_PROGRESS, false)]
+        [InlineData(ReturnStatusEnum.SETTLED, false)]
+        public void CanReopen_OnlyRejected(ReturnStatusEnum status, bool expected)
+        {
+            Assert.Equal(expected, _sut.CanReopen(status));
+        }
+
+        [Fact]
+        public void RecomputePurchaseStatus_NoItems_KeepsOriginalStatus()
+        {
+            // All() over an empty sequence is true, which used to make an item-less purchase RECEIVED.
+            var purchase = new Purchase { Status = PurchaseStatusEnum.PENDING, Items = new() };
+
+            Assert.Equal(PurchaseStatusEnum.PENDING, _sut.RecomputePurchaseStatus(purchase));
+        }
+
+        [Fact]
+        public void ExpandComposition_MixedPartsNotSummingToAmount_Throws()
+        {
+            var composition = new EffectCompositionDto
+            {
+                Quantity = 1,
+                MoneyOut = new MoneyEffectDto
+                {
+                    Method = ReturnPaymentMethodEnum.MIXED,
+                    Amount = 100,
+                    Parts = new() { new MoneyPartDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 40 } },
+                },
+            };
+
+            Assert.Throws<ValidationCustomException>(() => _sut.ExpandComposition(composition, DateTime.Now));
+        }
+
+        [Fact]
+        public void ExpandComposition_PartsOnNonMixedPayment_Throws()
+        {
+            // These used to be dropped silently, so the persisted effect disagreed with the request.
+            var composition = new EffectCompositionDto
+            {
+                Quantity = 1,
+                MoneyOut = new MoneyEffectDto
+                {
+                    Method = ReturnPaymentMethodEnum.CASH,
+                    Amount = 100,
+                    Parts = new() { new MoneyPartDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 100 } },
+                },
+            };
+
+            Assert.Throws<ValidationCustomException>(() => _sut.ExpandComposition(composition, DateTime.Now));
         }
 
         [Fact]

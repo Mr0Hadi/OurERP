@@ -32,10 +32,11 @@ namespace Application.Features.PurchaseReturn.Queries
             var res = new ResponseDto();
 
             var purchase = await _context.Purchases
+                .Where(x => x.Id == request.PurchaseId)
                 .Include(x => x.Supplier)
                 .Include(x => x.Items)
-                    .ThenInclude(x => x.Product)
-                .FirstOrDefaultAsync(x => x.Id == request.PurchaseId, cancellationToken) ?? throw new NotFoundCustomException("خرید مورد نظر یافت نشد.");
+                .ThenInclude(x => x.Product)
+                .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("خرید مورد نظر یافت نشد.");
 
             var receivingImages = await _context.PurchaseReceivingImages
                 .Where(x => x.PurchaseId == request.PurchaseId)

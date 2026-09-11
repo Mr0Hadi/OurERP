@@ -724,6 +724,139 @@ the total:
   return list DTOs' `TotalQuantity` is computed identically to the entity's `Quantity` - both are
   real divergences, both left for a pass that can build and test.
 
+**ProductUnit: no silent substitution, no silent shortfall (2026-09-11).** `ShipSaleCommand` is
+where a unit leaves the warehouse - `ConsumeAsync` moves it `IN_STOCK -> SOLD` (there is no separate
+"shipped" status; `SOLD` means physically shipped). The only other `SOLD` writer is the sale-return
+`GOODS_OUT` replacement round. Three `IProductUnitService` holes let `Product.Stock` and
+`COUNT(ProductUnit WHERE IN_STOCK)` drift apart, all closed the same way - throw
+`ValidationCustomException` rather than make up the number, and since no service method saves, the
+caller's `Product.Stock` change is discarded with it:
+- **`ConsumeAsync` rejects duplicate scanned barcodes** (compared after `ToPayload` normalization).
+  `[A, A]` used to pass the `Count == count` check, mark one unit `SOLD`, and drop stock by two.
+- **`ReturnToSupplierAsync` gained `int? purchaseItemId`**; `PurchaseReturn.ExecuteGoodsRoundCommand`
+  passes `claim.PurchaseItemId`. With a line, only units received on that line are eligible and a
+  shortfall throws instead of borrowing another purchase's units. `null` (off-order claim) keeps the
+  old FIFO-over-the-product behaviour - there is no purchase to match against.
+- **`RestoreAsync` throws when the sale line has fewer `SOLD` units than `healthyCount + scrapCount`.**
+  It used to restore what it found and carry on while the caller still added the full restocked
+  quantity to stock. Realistically only reachable with pre-`ProductUnit` data or a mis-targeted claim,
+  since claims are already capped by shipped quantity.
+- No schema change, no migration. Docs: `docs/api-guide.fa.md` (`ShipSale`, both `ExecuteGoodsRound`s),
+  `docs/product-code-barcode-invoice-design.fa.md` §1.9 (signatures + the shared rule).
+- **Test fixture fix the `RestoreAsync` guard forced:** `Seed.ShippedSale` set `SaleItem.ShippedQuantity`
+  but minted no `SOLD` units - exactly the inconsistent state the guard rejects - so three
+  `SaleReturnLifecycleTests` goods-in tests started failing. It now mints `shippedQuantity` units as
+  `SOLD` against the line (`Seed.MintUnits` gained optional `status`/`saleItemId`). Seed units' payloads
+  still aren't digits-only, so tests that scan barcodes should mint through `scope.ProductUnitService`.
+- **Tests**: `Tests/WMS.Tests/Integration/ProductUnitServiceTests.cs` (5). Suite 397/406 before those were
+  added, 402/411 after; the 9 failures are the long-documented pre-existing ones.
+
+**Org chart: one user, one role, written in one place (2026-09-11).** The reported bug - a user
+moved to another department on the user detail page while their old team still listed them as its
+head - was `UpdateUserCommand` writing only `User.DepartmentId`/`TeamId` and never touching the
+`Team`/`Department` `HeadId`/`DeputyId` slots. `ChangeUserTeamCommand`/`DeleteUserCommand` had been
+fixed for this on 2026-09-07; `UpdateUserCommand` (which is what the user page actually calls) had
+not, and the team/department pages had the mirror-image hole - they wrote the slot without writing
+the user's own placement, so a team head could be someone in a different team entirely.
+
+- **`IOrgRoleService` now owns both halves.** New `AssignAsync(user, departmentId, teamId, role, ct)`
+  and `GetRoleAsync(userId, ct)` alongside the existing `ReleaseAllRolesAsync`. Every command that
+  moves a user or names a head/deputy goes through it: `UpdateUserCommand`, `ChangeUserTeamCommand`,
+  `Create`/`UpdateTeamCommand`, `Create`/`UpdateDepartmentCommand`. Enforced invariants: one
+  department per user; **at most one role, ever** (department head/deputy, team head/deputy, or
+  plain member); a department head/deputy has `TeamId == null`; a team head/deputy is a member of
+  that team in that team's department; and every assignment releases whatever the user held before.
+- **`OrgRoleEnum`** (`Domain/Enums/OrgRoleEnum.cs`): `MEMBER=0, DEPARTMENT_HEAD=1,
+  DEPARTMENT_DEPUTY=2, TEAM_HEAD=3, TEAM_DEPUTY=4`. **Nothing persists it** - it is derived from the
+  `HeadId`/`DeputyId` slots on read, which is why the user list can't drift out of sync with the
+  team/department pages. **No migration: there is no schema change in this pass.**
+- **`UpdateUserCommand.Role` is nullable on purpose.** `null` means "leave the role alone": kept
+  when the user stays in the same team/department, dropped when they move. A frontend that doesn't
+  send it therefore can't silently demote someone by editing their name, and moving someone can't
+  silently keep a slot that no longer exists. `ChangeUserTeamCommand` keeps its older
+  `IsHead`/`IsDeputy` booleans (no wire break) and maps them onto the enum - there `false/false` is
+  an explicit "plain member", since that command exists only to change placement.
+- **Assigning a role now transfers the user, instead of rejecting them.** The 2026-09-07 rule was
+  "the head must already be in this department" (400 otherwise), which made naming a head a
+  three-call dance and made `CreateDepartmentCommand` with a `HeadId` *unconditionally* impossible.
+  Both create handlers now save first (the row needs an `Id` for `User.DepartmentId`/`TeamId` to
+  point at), then assign, then save again; users are loaded up front so a bad id can't leave an
+  orphan team/department behind. Dropping someone from a slot leaves them a plain member of the
+  same team - it does not eject them.
+- **Ordering gotcha in the team/department update handlers:** the request's final `HeadId`/`DeputyId`
+  are written *before* the `AssignAsync` calls, because `AssignAsync` releases the user's slots
+  first and would otherwise clear the value just written.
+- **Read side**: `Role` + `RoleTitle` (Persian, via `EnumExtensions.GetDescription`) added to
+  `UserListDto`/`UserInfoDto`/`UserUpdateDto`. `GetUserListQuery` computes it inside the SQL
+  projection off `x.Team.HeadId`/`x.Department.HeadId` (conditional chains translate fine); the
+  title is filled in after `ToPagedAsync`, same reason signed image URLs are. The two
+  repository-based queries use `GetRoleAsync`.
+- **Tests**: `Tests/WMS.Tests/Integration/OrgRoleTests.cs`, 15 cases covering the reported bug, the
+  keep-vs-drop rule for a null `Role`, both directions of promotion between team and department,
+  the three 400s, deactivation, and the create/update handlers on both sides. All pass. Suite is
+  383/392 - the 9 failures are the long-documented pre-existing ones (8 `IX_Users_PersonelCode`
+  seed collisions + the `"***"` object-storage placeholder gap).
+- `docs/api-guide.fa.md`: section 3 rewritten (it still documented the long-deleted `roleId`/
+  `roleName`), a shared "org placement rules" preamble added, new sections 3b/3c documenting the
+  Department and Team endpoints (previously undocumented), `OrgRoleEnum` added to section 15, and
+  four rows added to section 16's breaking-changes table.
+
+**Return-domain read-side cleanup (2026-09-10).** Applied from a code-review chat on
+`PurchaseReturnQueryService` / `GetPurchaseReturnDetailQuery` / `PurchaseReturnCalculationService`,
+then mirrored to the sale side so the two return domains stay identical in shape. No schema change,
+no migration.
+
+- **`I{Purchase,Sale}ReturnQueryService` are gone**, replaced by static query-composition classes
+  `Application/Common/Queries/{Purchase,Sale}ReturnQueryExtensions.cs`. They were stateless
+  `IQueryable` transformations with no dependencies, so there was nothing to inject and nothing
+  worth mocking; they now live in `Application` rather than `Infrastructure`, which is where the
+  handlers that use them are. Both DI registrations and the `TestDatabase` properties are removed,
+  and `{Purchase,Sale}ReturnRepository` no longer take one.
+- **`WhereActive` is gone; the ambiguity it carried is the reason.** It meant "not soft-deleted AND
+  open", while `WhereNotDeleted` meant "not soft-deleted" - two different senses of *active* in one
+  class. Now: `WhereNotDeleted()` (IsActive) and `WhereOpen()` (status in OPEN|IN_PROGRESS) are
+  separate and composed explicitly, e.g. the repositories' `.WhereNotDeleted().WhereOpen().WithReturnGraph()`.
+  A **global query filter was deliberately NOT added** for soft delete, despite it being the obvious
+  fix - section 7 forbids one, and every read composes `WhereNotDeleted()` instead.
+- **`WithReturnGraph()` now ends in `AsSplitQuery()`.** It Includes four nested collections
+  (Claims → Resolutions → Effects → History → Observations / MoneyParts), which in a single query
+  multiplies the row count at every level. The `includePurchaseItems`/`includeSaleItems` boolean is
+  replaced by a separate `WithPurchaseItems()`/`WithSaleItems()` that composes.
+- **Detail queries rewritten.** `Get{Purchase,Sale}ReturnDetailQuery` are `AsNoTracking`, project
+  through `ToDto()` extension methods in `Application/Features/{Purchase,Sale}Return/Mappings/`
+  instead of ~100 lines of inline nested initialisers, compute the three
+  `CanDelete`/`CanCancel`/`CanReject` flags from one expression, and read `PreviousReturnNumber` off
+  an `Include(x => x.PreviousReturn)` rather than a second round-trip (the navigation and FK already
+  existed). `TotalAmount` is `checked`, so a bad row throws instead of wrapping into a huge number.
+  Soft delete is still filtered - the rewrite that landed before this pass had dropped it on the
+  assumption of a global query filter that this project does not have.
+- **`RecomputePurchaseStatus` no longer reports an item-less purchase as RECEIVED** (`All()` over an
+  empty sequence is true). The sale side already guarded this. The review also flagged the
+  `return purchase.Status` fallback as "sticky"; that was **rejected** - the fallback is what
+  preserves PROFORMA/PENDING/SHIPPED for a purchase with nothing received yet, there is no
+  PurchaseStatusEnum.ORDERED to fall back to, and `ReceivedQuantity` is append-only
+  (`ReceivePurchaseCommand` is the only writer, and it only adds), so the reversal the review worried
+  about is unreachable.
+- **`GetOpenClaimQuantity` filters off-order claims on `Scope`, not on `OffScopeKind == null`** (the
+  comment already said Scope), and now drops soft-deleted and terminal returns itself instead of
+  trusting the caller to have passed only active ones. `excludeReturnId` was **not** added - there is
+  no edit-claim flow, `GetClaimableQuantity` is called only from `Create{Purchase,Sale}ReturnCommand`.
+- **Money compositions are validated.** `Add{Purchase,Sale}ClaimResolutionCommandValidator` now
+  rejects a MIXED payment whose `Parts` do not sum to `Amount`, and `Parts` sent on a non-MIXED
+  payment (previously dropped silently, so the persisted effect disagreed with the request);
+  `ExpandComposition` throws `ValidationCustomException` as a last line of defence. **This is a
+  behaviour change for callers** - both payloads used to be accepted.
+- **`CanReopen(status)` moved onto `I{Purchase,Sale}ReturnCalculationService`** so every transition
+  rule sits behind one interface rather than one of them being inline in a query.
+- **Not applied from the review**: renaming `ReturnStatusEnum` to `ReturnStatus` with PascalCase
+  members (the SCREAMING_CASE names are the documented frontend enum contract), a global soft-delete
+  query filter (section 7), and `ResponseDto<T>` (a project-wide convention change, not a
+  return-domain one).
+- **Not verified**: there is no .NET SDK on the machine this ran from and the local VM has no network
+  to install one, so none of this has been compiled or tested. Run `dotnet build WMS.slnx` and
+  `dotnet test` before trusting it; the last recorded baseline is 383/392 with 9 documented
+  pre-existing failures.
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
 - `PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK (see `WMSDbContextModelSnapshot.cs:119-124`). Needs reconciliation.

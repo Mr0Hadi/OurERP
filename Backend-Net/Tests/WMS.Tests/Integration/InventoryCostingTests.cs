@@ -151,7 +151,7 @@ namespace WMS.Tests.Integration
             scope.Context.SaleReturns.Add(saleReturn);
             await scope.Context.SaveChangesAsync();
 
-            var addHandler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnQueryService, scope.SaleReturnCalculation, scope.InventoryCostingService, scope.UnitOfWork);
+            var addHandler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.InventoryCostingService, scope.UnitOfWork);
 
             // A partial refund of 100,000 for 2 damaged units (not the full 300,000 list price) -
             // the amount actually refunded is the only revenue-reversal signal used.

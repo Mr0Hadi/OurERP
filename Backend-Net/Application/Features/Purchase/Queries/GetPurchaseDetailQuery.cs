@@ -68,14 +68,12 @@ namespace Application.Features.Purchase.Queries
                         Id = d.Id,
                         DriverFullName = d.DriverFullName,
                         DriverPhoneNumber = d.DriverPhoneNumber,
-                        VehiclePlate = d.VehiclePlate,
-                        CreatedAt = d.CreatedAt
+                        VehiclePlate = d.VehiclePlate
                     }).ToList(),
                     ReceivingNotes = x.ReceivingNotes.Select(n => new PurchaseReceivingNoteDto
                     {
                         Id = n.Id,
-                        Note = n.Note,
-                        CreatedAt = n.CreatedAt
+                        Note = n.Note
                     }).ToList()
                 })
                 .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("خرید مورد نظر یافت نشد.");

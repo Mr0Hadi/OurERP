@@ -1,7 +1,8 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Common.Queries;
 using Application.Features.SaleReturn.Dtos;
 using Common.Extensions;
 using Domain.Enums;
@@ -22,24 +23,22 @@ namespace Application.Features.SaleReturn.Queries
     public class GetSaleReturnPendingEffectsQueryHandler : IRequestHandler<GetSaleReturnPendingEffectsQuery, ResponseDto>
     {
         private readonly IWMSDbContext _context;
-        private readonly ISaleReturnQueryService _saleReturnQueryService;
 
-        public GetSaleReturnPendingEffectsQueryHandler(IWMSDbContext context, ISaleReturnQueryService saleReturnQueryService)
+        public GetSaleReturnPendingEffectsQueryHandler(IWMSDbContext context)
         {
             _context = context;
-            _saleReturnQueryService = saleReturnQueryService;
         }
 
         public async Task<ResponseDto> Handle(GetSaleReturnPendingEffectsQuery request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
 
-            var query = _saleReturnQueryService.WhereNotDeleted(_context.SaleReturns).AsQueryable();
+            var query = _context.SaleReturns.WhereNotDeleted();
 
             if (request.SaleId.HasValue)
                 query = query.Where(x => x.SaleId == request.SaleId.Value);
 
-            var returns = await _saleReturnQueryService.WithReturnGraph(query).ToListAsync(cancellationToken);
+            var returns = await query.WithReturnGraph().ToListAsync(cancellationToken);
 
             var pending = returns
                 .SelectMany(r => r.Claims.SelectMany(c => c.Resolutions.SelectMany(res => res.Effects.Select(e => (returnDoc: r, claim: c, effect: e)))))

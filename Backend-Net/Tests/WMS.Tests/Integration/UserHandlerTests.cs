@@ -183,7 +183,7 @@ namespace WMS.Tests.Integration
             scope.Context.Users.AddRange(user1, user2);
             scope.Context.SaveChanges();
 
-            var handler = new UpdateUserCommandHandler(scope.UserRepository, scope.DepartmentRepository, scope.TeamRepository, scope.UnitOfWork);
+            var handler = new UpdateUserCommandHandler(scope.UserRepository, scope.OrgRoleService, scope.UnitOfWork);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(new UpdateUserCommand
             {
@@ -208,7 +208,7 @@ namespace WMS.Tests.Integration
             scope.Context.Users.Add(user);
             scope.Context.SaveChanges();
 
-            var handler = new UpdateUserCommandHandler(scope.UserRepository, scope.DepartmentRepository, scope.TeamRepository, scope.UnitOfWork);
+            var handler = new UpdateUserCommandHandler(scope.UserRepository, scope.OrgRoleService, scope.UnitOfWork);
             await handler.Handle(new UpdateUserCommand
             {
                 Id = user.Id,
@@ -330,7 +330,7 @@ namespace WMS.Tests.Integration
             var userContext = Substitute.For<IUserContextService>();
             userContext.GetUserId().Returns(user.Id.ToString());
 
-            var handler = new GetUserInfoQueryHandler(userContext, scope.UserRepository, TestMapper.Instance);
+            var handler = new GetUserInfoQueryHandler(userContext, scope.UserRepository, scope.OrgRoleService, TestMapper.Instance);
             var res = await handler.Handle(new GetUserInfoQuery(), CancellationToken.None);
 
             var dto = Assert.IsType<UserInfoDto>(res.Data);
@@ -343,7 +343,7 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
 
-            var handler = new GetUserUpdateQueryHandler(scope.UserRepository, TestMapper.Instance);
+            var handler = new GetUserUpdateQueryHandler(scope.UserRepository, scope.OrgRoleService, TestMapper.Instance);
 
             await Assert.ThrowsAsync<NotFoundCustomException>(() => handler.Handle(new GetUserUpdateQuery { Id = 999 }, CancellationToken.None));
         }
@@ -361,7 +361,7 @@ namespace WMS.Tests.Integration
             scope.Context.Users.Add(user);
             scope.Context.SaveChanges();
 
-            var handler = new ChangeUserTeamCommandHandler(scope.UserRepository, scope.DepartmentRepository, scope.TeamRepository, scope.OrgRoleService, scope.UnitOfWork);
+            var handler = new ChangeUserTeamCommandHandler(scope.UserRepository, scope.OrgRoleService, scope.UnitOfWork);
             await handler.Handle(new ChangeUserTeamCommand
             {
                 UserId = user.Id,
@@ -394,7 +394,7 @@ namespace WMS.Tests.Integration
             oldTeam.HeadId = user.Id;
             scope.Context.SaveChanges();
 
-            var handler = new ChangeUserTeamCommandHandler(scope.UserRepository, scope.DepartmentRepository, scope.TeamRepository, scope.OrgRoleService, scope.UnitOfWork);
+            var handler = new ChangeUserTeamCommandHandler(scope.UserRepository, scope.OrgRoleService, scope.UnitOfWork);
             await handler.Handle(new ChangeUserTeamCommand
             {
                 UserId = user.Id,
@@ -421,7 +421,7 @@ namespace WMS.Tests.Integration
             scope.Context.Users.Add(user);
             scope.Context.SaveChanges();
 
-            var handler = new ChangeUserTeamCommandHandler(scope.UserRepository, scope.DepartmentRepository, scope.TeamRepository, scope.OrgRoleService, scope.UnitOfWork);
+            var handler = new ChangeUserTeamCommandHandler(scope.UserRepository, scope.OrgRoleService, scope.UnitOfWork);
 
             await Assert.ThrowsAsync<NotFoundCustomException>(() => handler.Handle(new ChangeUserTeamCommand
             {

@@ -1,14 +1,28 @@
+﻿using Application.Common.Contracts.OrgStructure;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Common.Exceptions;
 using Common.Extensions;
+using Domain.Enums;
 using FluentValidation;
 using MediatR;
 
 namespace Application.Features.User.Command
 {
+    /// <summary>
+    /// Edits a user from the user detail page, including where they sit in the org chart.
+    ///
+    /// Changing <see cref="DepartmentId"/>/<see cref="TeamId"/> goes through
+    /// <see cref="IOrgRoleService.AssignAsync"/>, so the slot the user used to occupy is released:
+    /// this handler used to write User.DepartmentId/TeamId alone, which left the previous team still
+    /// naming them as its head on the team list/detail pages. Moving to another department's team is
+    /// a single call - send that department's id together with one of its teams.
+    ///
+    /// <see cref="Role"/> is optional: omit it to leave the role as it is (kept when the user stays
+    /// put, dropped when they move), or send one to promote/demote them from this page.
+    /// </summary>
     public class UpdateUserCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }
@@ -17,6 +31,7 @@ namespace Application.Features.User.Command
         public string Username { get; set; }
         public int DepartmentId { get; set; }
         public int? TeamId { get; set; }
+        public OrgRoleEnum? Role { get; set; }
         public bool IsActive { get; set; }
     }
 
@@ -50,14 +65,12 @@ namespace Application.Features.User.Command
     public class UpdateUserCommandHandler : IRequestHandler<UpdateUserCommand, ResponseDto>
     {
         private readonly IUserRepository _userRepository;
-        private readonly IDepartmentRepository _departmentRepository;
-        private readonly ITeamRepository _teamRepository;
+        private readonly IOrgRoleService _orgRoleService;
         private readonly IUnitOfWork _unitOfWork;
-        public UpdateUserCommandHandler(IUserRepository userRepository, IDepartmentRepository departmentRepository, ITeamRepository teamRepository, IUnitOfWork unitOfWork)
+        public UpdateUserCommandHandler(IUserRepository userRepository, IOrgRoleService orgRoleService, IUnitOfWork unitOfWork)
         {
             _userRepository = userRepository;
-            _departmentRepository = departmentRepository;
-            _teamRepository = teamRepository;
+            _orgRoleService = orgRoleService;
             _unitOfWork = unitOfWork;
         }
 
@@ -79,39 +92,26 @@ namespace Application.Features.User.Command
                 throw new ValidationCustomException("کاربر با این شماره موبایل قبلا ثبت شده است");
             }
 
-            var department = await _departmentRepository.GetByIdAsync(request.DepartmentId, cancellationToken);
+            // Placement and role in one place: AssignAsync validates the department/team, releases
+            // every slot the user held elsewhere, and writes both halves of the org chart together.
+            await _orgRoleService.AssignAsync(user, request.DepartmentId, request.TeamId, request.Role, cancellationToken);
 
-            if (department == null)
+            // Deactivating from here is the same thing DeleteUserCommand does, so it frees the slot
+            // the same way - an inactive user must not stay named as anyone's head.
+            if (!request.IsActive)
             {
-                throw new NotFoundCustomException("واحد انتخاب شده یافت نشد");
-            }
-
-            if (request.TeamId.HasValue)
-            {
-                var team = await _teamRepository.GetByIdAsync(request.TeamId.Value, cancellationToken);
-
-                if (team == null)
-                {
-                    throw new NotFoundCustomException("تیم انتخاب شده یافت نشد");
-                }
-
-                if (team.DepartmentId != request.DepartmentId)
-                {
-                    throw new ValidationCustomException("تیم انتخاب شده متعلق به این واحد نیست");
-                }
+                await _orgRoleService.ReleaseAllRolesAsync(user.Id, cancellationToken);
             }
 
             user.Username = request.Username;
             user.FirstName = request.FirstName;
             user.LastName = request.LastName;
             user.IsActive = request.IsActive;
-            user.DepartmentId = request.DepartmentId;
-            user.TeamId = request.TeamId;
             user.UpdatedAt = DateTime.Now;
 
             _userRepository.Update(user);
 
-            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             res.Message = "اطلاعات کاربر با موفقیت بروزرسانی شد";
             res.ResponseMessageType = ResponseMessageTypeEnum.Warning.ToString();

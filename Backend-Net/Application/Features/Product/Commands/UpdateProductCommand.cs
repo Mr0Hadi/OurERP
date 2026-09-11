@@ -19,6 +19,7 @@ namespace Application.Features.Product.Commands
         // see docs/product-code-barcode-invoice-design.fa.md 1.11.
         public int Id { get; set; }
         public string Name { get; set; }
+        public string? EnglishName { get; set; }
         public string Brand { get; set; }
         public ProductUnitEnum Unit { get; set; }
         public UInt64 PurchasePrice { get; set; }
@@ -79,6 +80,7 @@ namespace Application.Features.Product.Commands
             var product = await _productRepository.GetByIdAsync(request.Id, cancellationToken) ?? throw new ValidationCustomException("محصول مورد نظر یافت نشد.");
 
             product.Name = request.Name;
+            product.EnglishName = request.EnglishName;
             product.Brand = request.Brand;
             product.Unit = request.Unit;
             product.PurchasePrice = request.PurchasePrice;

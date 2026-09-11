@@ -1,4 +1,4 @@
-using Domain.Enums;
+﻿using Domain.Enums;
 
 namespace Application.Common.Contracts.SaleReturn
 {
@@ -13,6 +13,12 @@ namespace Application.Common.Contracts.SaleReturn
         bool IsTerminal(ReturnStatusEnum status);
 
         /// <summary>
+        /// Whether a return can be reopened - only an explicitly REJECTED one. Lives here rather
+        /// than inline in the detail query so every transition rule sits behind one interface.
+        /// </summary>
+        bool CanReopen(ReturnStatusEnum status);
+
+        /// <summary>
         /// Whether no effect anywhere on the return has ever reached APPLIED - the guard for
         /// cancel/reject/delete (matches the frontend's isReturnUntouched).
         /// </summary>
@@ -23,7 +29,7 @@ namespace Application.Common.Contracts.SaleReturn
         /// settled: every claimed unit has a resolution and no effect anywhere is still PENDING.
         /// in_progress: otherwise (partially decided, or a goods effect still awaiting a round).
         /// Reject/cancel are explicit actions and are never produced here. Requires the full
-        /// Claims -&gt; Resolutions -&gt; Effects graph to be loaded (see ISaleReturnQueryService).
+        /// Claims -&gt; Resolutions -&gt; Effects graph to be loaded (see SaleReturnQueryExtensions).
         /// </summary>
         ReturnStatusEnum RecomputeReturnStatus(Domain.Entities.SaleReturn saleReturn);
 

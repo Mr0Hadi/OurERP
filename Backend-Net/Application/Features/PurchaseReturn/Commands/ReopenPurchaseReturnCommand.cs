@@ -1,8 +1,9 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Common.Queries;
 using Common.Exceptions;
 using Common.Extensions;
 using Domain.Enums;
@@ -28,14 +29,12 @@ namespace Application.Features.PurchaseReturn.Commands
     public class ReopenPurchaseReturnCommandHandler : IRequestHandler<ReopenPurchaseReturnCommand, ResponseDto>
     {
         private readonly IWMSDbContext _context;
-        private readonly IPurchaseReturnQueryService _purchaseReturnQueryService;
         private readonly IPurchaseReturnCalculationService _purchaseReturnCalculationService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public ReopenPurchaseReturnCommandHandler(IWMSDbContext context, IPurchaseReturnQueryService purchaseReturnQueryService, IPurchaseReturnCalculationService purchaseReturnCalculationService, IUnitOfWork unitOfWork)
+        public ReopenPurchaseReturnCommandHandler(IWMSDbContext context, IPurchaseReturnCalculationService purchaseReturnCalculationService, IUnitOfWork unitOfWork)
         {
             _context = context;
-            _purchaseReturnQueryService = purchaseReturnQueryService;
             _purchaseReturnCalculationService = purchaseReturnCalculationService;
             _unitOfWork = unitOfWork;
         }
@@ -44,13 +43,14 @@ namespace Application.Features.PurchaseReturn.Commands
         {
             var res = new ResponseDto();
 
-            var purchaseReturn = await _purchaseReturnQueryService
-                .WithReturnGraph(_purchaseReturnQueryService.WhereNotDeleted(_context.PurchaseReturns).Where(x => x.Id == request.Id))
+            var purchaseReturn = await _context.PurchaseReturns.Where(x => x.Id == request.Id)
+                .WhereNotDeleted()
+                .WithReturnGraph()
                 .Include(x => x.Purchase)
                     .ThenInclude(x => x.Items)
                 .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
-            if (purchaseReturn.Status != ReturnStatusEnum.REJECTED)
+            if (!_purchaseReturnCalculationService.CanReopen(purchaseReturn.Status))
                 throw new ValidationCustomException("فقط مرجوعی‌های ردشده قابل بازگشایی هستند.");
 
             var now = DateTime.Now;

@@ -34,7 +34,7 @@ namespace Application.Features.Customer.Queries
         {
             var res = new ResponseDto();
 
-            var query = _context.Customers.Where(x => x.IsActive).AsQueryable();
+            var query = _context.Customers.Where(x => x.IsActive).AsQueryable().AsNoTracking();
 
             if (request.Id.HasValue)
             {
@@ -70,14 +70,8 @@ namespace Application.Features.Customer.Queries
                 FirstName = x.FirstName,
                 LastName = x.LastName,
                 BalanceType = x.BalanceType,
-                Balance = x.Balance,
-                ImageKey = x.ImageUrl
+                Balance = x.Balance
             }).ToPagedAsync(request.Page, request.Take, cancellationToken);
-
-            // Signing happens after materialization - GetPresignedUrl is a local method call and
-            // could not be translated into the SQL projection above.
-            foreach (var item in paged.Items)
-                item.ImageUrl = _objectStorageService.GetFixedUrl(item.ImageKey);
 
             res.Data = new
             {

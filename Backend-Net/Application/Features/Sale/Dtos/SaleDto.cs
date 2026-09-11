@@ -19,8 +19,6 @@ namespace Application.Features.Sale.Dtos
         public int CustomerId { get; set; }
         public string CustomerName { get; set; }
         public List<SaleItemDto> Items { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
         public List<SaleDriverDto> Drivers { get; set; } = new();
         public List<SaleShippingNoteDto> ShippingNotes { get; set; } = new();
         public List<DocumentAttachmentDto> Attachments { get; set; } = new();
@@ -32,13 +30,11 @@ namespace Application.Features.Sale.Dtos
         public string DriverFullName { get; set; }
         public string DriverPhoneNumber { get; set; }
         public string VehiclePlate { get; set; }
-        public DateTime CreatedAt { get; set; }
     }
 
     public class SaleShippingNoteDto
     {
         public int Id { get; set; }
         public string Note { get; set; }
-        public DateTime CreatedAt { get; set; }
     }
 }

@@ -63,6 +63,12 @@ namespace Infrastructure.Services
 
                 var payloads = explicitBarcodes.Select(_productCodeService.ToPayload).ToList();
 
+                // Compared after normalization, so the same unit scanned in two different raw formats
+                // is still caught. Without this, [A, A] passes the count check, marks one unit SOLD and
+                // lets Product.Stock drop by two.
+                if (payloads.Distinct().Count() != payloads.Count)
+                    throw new ValidationCustomException("یک بارکد بیش از یک‌بار اسکن شده است.");
+
                 foreach (var payload in payloads)
                 {
                     var unit = await _context.ProductUnits
@@ -112,6 +118,12 @@ namespace Infrastructure.Services
                 .Take(healthyCount + scrapCount)
                 .ToListAsync(cancellationToken);
 
+            // Every unit coming back must be one we actually shipped on this sale line. Restoring
+            // fewer than requested while the caller still bumps Product.Stock by the full amount
+            // would leave stock with no barcoded units behind it.
+            if (soldUnits.Count < healthyCount + scrapCount)
+                throw new ValidationCustomException("تعداد دانه‌های فروخته‌شده این قلم فروش برای ثبت این مرجوعی کافی نیست.");
+
             for (var i = 0; i < soldUnits.Count; i++)
             {
                 soldUnits[i].Status = i < healthyCount
@@ -120,19 +132,28 @@ namespace Infrastructure.Services
             }
         }
 
-        public async Task ReturnToSupplierAsync(Domain.Entities.Product product, int count, CancellationToken cancellationToken)
+        public async Task ReturnToSupplierAsync(Domain.Entities.Product product, int count, int? purchaseItemId, CancellationToken cancellationToken)
         {
             if (count <= 0)
                 return;
 
-            var units = await _context.ProductUnits
-                .Where(x => x.ProductId == product.Id && x.Status == ProductUnitStatusEnum.IN_STOCK)
+            var query = _context.ProductUnits
+                .Where(x => x.ProductId == product.Id && x.Status == ProductUnitStatusEnum.IN_STOCK);
+
+            // Only units that came in on this purchase line can go back to its supplier - never
+            // borrow stock from another purchase to make up the number.
+            if (purchaseItemId.HasValue)
+                query = query.Where(x => x.PurchaseItemId == purchaseItemId.Value);
+
+            var units = await query
                 .OrderBy(x => x.SerialNumber)
                 .Take(count)
                 .ToListAsync(cancellationToken);
 
             if (units.Count < count)
-                throw new ValidationCustomException($"تعداد کافی از دانه‌های موجود «{product.Name}» در انبار برای ثبت این عودت وجود ندارد.");
+                throw new ValidationCustomException(purchaseItemId.HasValue
+                    ? $"تعداد کافی از دانه‌های موجود «{product.Name}» مربوط به این خرید در انبار برای ثبت این عودت وجود ندارد."
+                    : $"تعداد کافی از دانه‌های موجود «{product.Name}» در انبار برای ثبت این عودت وجود ندارد.");
 
             foreach (var unit in units)
                 unit.Status = ProductUnitStatusEnum.RETURNED_TO_SUPPLIER;

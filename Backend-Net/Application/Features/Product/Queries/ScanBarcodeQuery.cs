@@ -54,8 +54,9 @@ namespace Application.Features.Product.Queries
                 throw new NotFoundCustomException("بارکد وارد شده معتبر نیست.");
 
             var product = await _context.Products
+                .Where(x => x.Id == reference.ProductId)
                 .Include(x => x.ProductCategory)
-                .FirstOrDefaultAsync(x => x.Id == reference.ProductId, cancellationToken)
+                .FirstOrDefaultAsync(cancellationToken)
                     ?? throw new NotFoundCustomException("محصول متناظر با این بارکد یافت نشد.");
 
             Domain.Entities.ProductUnit? unit = null;
@@ -74,6 +75,7 @@ namespace Application.Features.Product.Queries
                 {
                     Id = product.Id,
                     Name = product.Name,
+                    EnglishName = product.EnglishName,
                     Code = product.Code,
                     BarCode = product.BarCode,
                     Brand = product.Brand,
@@ -102,7 +104,6 @@ namespace Application.Features.Product.Queries
                     Status = unit.Status,
                     PurchaseItemId = unit.PurchaseItemId,
                     SaleItemId = unit.SaleItemId,
-                    CreatedAt = unit.CreatedAt,
                     SoldAt = unit.SoldAt,
                 },
             };
