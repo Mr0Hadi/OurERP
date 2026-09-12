@@ -22,10 +22,10 @@ import { objectKeyOf } from "./objectKey";
  * فاکتور/پیش‌فاکتور) هر دو را می‌پذیرد.
  */
 
-export const MAX_UPLOAD_SIZE_MB = 5;
-export const MAX_UPLOAD_SIZE_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024;
+const MAX_UPLOAD_SIZE_MB = 5;
+const MAX_UPLOAD_SIZE_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024;
 
-export const ALLOWED_IMAGE_EXTENSIONS = Object.freeze([
+const ALLOWED_IMAGE_EXTENSIONS = Object.freeze([
   ".jpg",
   ".jpeg",
   ".png",
@@ -33,7 +33,7 @@ export const ALLOWED_IMAGE_EXTENSIONS = Object.freeze([
   ".gif",
 ]);
 
-export const ALLOWED_IMAGE_CONTENT_TYPES = Object.freeze([
+const ALLOWED_IMAGE_CONTENT_TYPES = Object.freeze([
   "image/jpeg",
   "image/png",
   "image/webp",
@@ -41,12 +41,12 @@ export const ALLOWED_IMAGE_CONTENT_TYPES = Object.freeze([
 ]);
 
 /** همان فهرست + PDF — سقفِ حجم یکی است (سرور هم یک `MaxImageSizeBytes` دارد). */
-export const ALLOWED_DOCUMENT_EXTENSIONS = Object.freeze([
+const ALLOWED_DOCUMENT_EXTENSIONS = Object.freeze([
   ...ALLOWED_IMAGE_EXTENSIONS,
   ".pdf",
 ]);
 
-export const ALLOWED_DOCUMENT_CONTENT_TYPES = Object.freeze([
+const ALLOWED_DOCUMENT_CONTENT_TYPES = Object.freeze([
   ...ALLOWED_IMAGE_CONTENT_TYPES,
   "application/pdf",
 ]);
@@ -55,7 +55,7 @@ export const ALLOWED_DOCUMENT_CONTENT_TYPES = Object.freeze([
 export const IMAGE_ACCEPT = ALLOWED_IMAGE_EXTENSIONS.join(",");
 export const DOCUMENT_ACCEPT = ALLOWED_DOCUMENT_EXTENSIONS.join(",");
 
-export function extensionOf(fileName = "") {
+function extensionOf(fileName = "") {
   const dot = fileName.lastIndexOf(".");
   return dot < 0 ? "" : fileName.slice(dot).toLowerCase();
 }

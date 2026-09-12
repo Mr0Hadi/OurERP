@@ -1,4 +1,3 @@
-import { persianCompact } from "@/shared/utils/dateUtils";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
 
 /**
@@ -24,24 +23,21 @@ import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReference
  */
 
 /** تاریخ جلالیِ فشرده — `PersianDate.ToCompactString`. */
-export const DATE_SEGMENT_LENGTH = 8;
+const DATE_SEGMENT_LENGTH = 8;
 /** `productId` با صفرِ چپ — `{productId:D10}` در بکند. */
-export const PRODUCT_ID_SEGMENT_LENGTH = 10;
+const PRODUCT_ID_SEGMENT_LENGTH = 10;
 /** شماره‌ی سریالِ دانه با صفرِ چپ — `{serialNumber:D10}`. */
-export const SERIAL_SEGMENT_LENGTH = 10;
+const SERIAL_SEGMENT_LENGTH = 10;
 
 /** طولِ payloadِ کدِ کالا: ۸ + ۱۰. */
-export const PRODUCT_PAYLOAD_LENGTH =
+const PRODUCT_PAYLOAD_LENGTH =
   DATE_SEGMENT_LENGTH + PRODUCT_ID_SEGMENT_LENGTH;
 
 /** طولِ payloadِ بارکدِ دانه: ۸ + ۱۰ + ۱۰. */
-export const UNIT_PAYLOAD_LENGTH =
+const UNIT_PAYLOAD_LENGTH =
   PRODUCT_PAYLOAD_LENGTH + SERIAL_SEGMENT_LENGTH;
 
 const NON_DIGIT = /\D+/g;
-
-const padSegment = (value, length) =>
-  String(Math.max(0, Math.trunc(Number(value) || 0))).padStart(length, "0");
 
 /**
  * هر چیزی که اسکنر یا صفحه‌کلید تولید می‌کند → فقط رقم‌ها.
@@ -52,27 +48,6 @@ const padSegment = (value, length) =>
  */
 export function toPayload(code) {
   return String(code ?? "").replace(NON_DIGIT, "");
-}
-
-/**
- * کدِ خوانای کالا: `14050608-0000000010`.
- *
- * بکند این را فقط *بعد* از گرفتنِ `Id` از دیتابیس می‌سازد، پس فرانت
- * هرگز آن را برای ساختِ کالا نمی‌فرستد؛ این تابع برای mock، پیش‌نمایش
- * و بازسازیِ کد از روی بارکدِ دانه است.
- */
-export function buildProductCode(productId, createdAt = new Date()) {
-  const date = persianCompact(createdAt, "YYYYMMDD");
-  if (!date) return "";
-
-  return `${date}-${padSegment(productId, PRODUCT_ID_SEGMENT_LENGTH)}`;
-}
-
-/** بارکدِ یک دانه: کدِ کالا + سریالِ صفرپرشده. */
-export function buildUnitBarcode(productCode, serialNumber) {
-  if (!productCode) return "";
-
-  return `${productCode}-${padSegment(serialNumber, SERIAL_SEGMENT_LENGTH)}`;
 }
 
 /**

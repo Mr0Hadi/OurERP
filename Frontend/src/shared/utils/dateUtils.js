@@ -3,42 +3,6 @@ import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
 import gregorian from "react-date-object/calendars/gregorian";
 
-/** "1403/05/12" → "2024-08-02" (ISO) | خالی → "" */
-export function persianToGregorian(persianDateStr) {
-  if (!persianDateStr) return "";
-  // اگر از قبل ISO میلادی است (مثلاً از PersianDatePicker)، همان را برگردان
-  if (/^\d{4}-\d{2}-\d{2}$/.test(persianDateStr)) return persianDateStr;
-  try {
-    const d = new DateObject({ date: persianDateStr, calendar: persian, format: "YYYY/MM/DD" });
-    d.convert(gregorian);
-    return d.format("YYYY-MM-DD");
-  } catch {
-    return "";
-  }
-}
-
-/**
- * تاریخ جلالیِ یک لحظه‌ی مشخص، فشرده و بدون جداکننده — قرینه‌ی دقیقِ
- * `PersianDate.ToCompactString` در بکند، که بخشِ تاریخِ کدِ کالا از آن
- * ساخته می‌شود. "YYYYMMDD" → "14050523" و "YYMMDD" → "050523".
- *
- * ورودی هرچیزی است که `new Date()` می‌فهمد (ISO سرور، Date، timestamp)؛
- * ورودیِ نامعتبر رشته‌ی خالی می‌دهد تا کدِ نصفه‌نیمه ساخته نشود.
- */
-export function persianCompact(date = new Date(), format = "YYYYMMDD") {
-  const source = date instanceof Date ? date : new Date(date);
-  if (Number.isNaN(source.getTime())) return "";
-
-  return new DateObject({ date: source, calendar: gregorian })
-    .convert(persian)
-    .format(format);
-}
-
-/** همان `persianCompact` برای «همین حالا». */
-export function todayPersianCompact(format = "YYYYMMDD") {
-  return persianCompact(new Date(), format);
-}
-
 /**
  * "2024-08-02" (ISO) → "1403/05/12" | خالی → ""
  *

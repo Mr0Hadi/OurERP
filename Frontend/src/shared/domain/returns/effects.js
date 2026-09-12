@@ -1,5 +1,3 @@
-import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
-
 /**
  * چهار اثر پایه‌ی یک مرجوعی — مشترک بین مرجوعی فروش و مرجوعی خرید.
  *
@@ -52,17 +50,6 @@ export function isGoodsEffect(direction) {
  * (پول به کدام سمت می‌رود — در returnResolutions) و *روش* (از چه
  * راهی)، و روش همان واژگانِ فرمِ خرید/فروش است.
  */
-
-/**
- * آیا این روش، ارزشِ همین فاکتور را تغییر می‌دهد؟
- *
- * «اعتبار خرید بعدی» تعهدی برای فروشِ *بعدی* است، نه اصلاحی روی این
- * فاکتور — تنها روشی که مبلغ فاکتور را تکان نمی‌دهد. «نسیه» برعکس،
- * همین فاکتور را جابه‌جا می‌کند و فقط زمانِ تسویه‌اش عقب می‌افتد.
- */
-export function affectsInvoiceTotal(method) {
-  return method !== PaymentTypeEnum.STORE_CREDIT;
-}
 
 // ─── وضعیت اجرای اثر ────────────────────────────────────────────────────────
 
@@ -177,7 +164,7 @@ export function createEffect({
  * انباردار می‌بیند «آسیب حمل». هر کدام یک مقصرِ متفاوت را نشان می‌دهد
  * و برای گزارش‌گیری باید هر دو بمانند.
  */
-export function normalizeObservations(observations = []) {
+function normalizeObservations(observations = []) {
   return observations
     .map((observation) => ({
       problem: observation.problem ?? null,
@@ -187,14 +174,6 @@ export function normalizeObservations(observations = []) {
     // `problem` یک enum عددی است و عضو اولش صفر — پس بررسی باید صریح
     // باشد، وگرنه مشاهده‌ی «کالای اشتباه ارسال شد» (۰) بی‌صدا حذف می‌شود.
     .filter((observation) => observation.problem !== null && observation.quantity > 0);
-}
-
-/** مجموع تعدادی که در یک دور «مشکل‌دار» گزارش شده. */
-export function observedQuantityOf(observations = []) {
-  return normalizeObservations(observations).reduce(
-    (sum, observation) => sum + observation.quantity,
-    0,
-  );
 }
 
 /**
@@ -220,12 +199,6 @@ export function observationsOf(effect) {
     quantity,
     note: notes.join(" / "),
   }));
-}
-
-/** مقداری از یک اثر کالایی که هنوز اجرا نشده. */
-export function remainingQuantityOf(effect) {
-  if (!isGoodsEffect(effect?.direction)) return 0;
-  return Math.max(0, (Number(effect.quantity) || 0) - (Number(effect.doneQuantity) || 0));
 }
 
 // ─── جمع‌بندی ───────────────────────────────────────────────────────────────
@@ -284,43 +257,4 @@ export function summarizeEffects(effects = [], { includePending = false } = {}) 
 
   acc.netMoney = acc.moneyIn - acc.moneyOut;
   return acc;
-}
-
-/**
- * حرکت خالص موجودی به تفکیک کالا — کلیدِ محصول به دلتا.
- *
- * این همان چیزی است که موتور اثر (مرحله‌ی بعد) به adjustProductsStock
- * می‌دهد. جدا نگه داشتنش از summarizeEffects عمدی است: تعدادِ کالا
- * وقتی کالای ورودی و خروجی یکی نیستند (تعویض با کالای دیگر) قابل جمع
- * زدن در یک عدد نیست.
- *
- * برای GOODS_IN مبنا restockedQuantity است نه doneQuantity — فقط بخش سالمِ
- * کالای برگشتی به موجودی قابل‌فروش برمی‌گردد. در حالت پیش‌نمایش
- * (includePending) هنوز معلوم نیست چقدرش سالم است، پس خوش‌بینانه کل
- * quantity فرض می‌شود؛ این عدد فقط برای نمایش به کاربر است و هرگز به
- * موجودی واقعی اعمال نمی‌شود.
- */
-export function stockDeltasOf(effects = [], { includePending = false } = {}) {
-  const deltas = new Map();
-  effects.forEach((effect) => {
-    if (!isGoodsEffect(effect.direction)) return;
-    if (effect.status === EFFECT_STATUSES.VOID) return;
-    if (effect.status === EFFECT_STATUSES.PENDING && !includePending) return;
-    if (effect.productId == null) return;
-
-    const isIn = effect.direction === EFFECT_DIRECTIONS.GOODS_IN;
-    const quantity = includePending
-      ? Number(effect.quantity) || 0
-      : isIn
-        ? Number(effect.restockedQuantity) || 0
-        : Number(effect.doneQuantity) || 0;
-    if (quantity <= 0) return;
-
-    const sign = isIn ? 1 : -1;
-    deltas.set(effect.productId, (deltas.get(effect.productId) || 0) + sign * quantity);
-  });
-
-  return [...deltas.entries()]
-    .filter(([, delta]) => delta !== 0)
-    .map(([productId, delta]) => ({ productId, delta }));
 }

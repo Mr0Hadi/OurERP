@@ -21,7 +21,3 @@ export const ACCOUNT_STATUS_LABELS = Object.freeze({
 /** enum → بولینِ `IsActive` که سرور می‌فهمد. */
 export const accountStatusToIsActive = (status) =>
   status === "" || status == null ? undefined : status === AccountStatusEnum.ACTIVE;
-
-/** بولینِ سرور → enum. */
-export const isActiveToAccountStatus = (isActive) =>
-  isActive ? AccountStatusEnum.ACTIVE : AccountStatusEnum.INACTIVE;

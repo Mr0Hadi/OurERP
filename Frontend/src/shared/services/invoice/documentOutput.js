@@ -73,7 +73,7 @@ export function serverDocument({ name, fetchPdf }) {
 }
 
 /** ذخیره‌ی یک Blob با نامِ دلخواه. */
-export function saveBlobAs(blob, fileName) {
+function saveBlobAs(blob, fileName) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;

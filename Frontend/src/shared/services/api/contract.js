@@ -77,7 +77,7 @@ export function listParams(params = {}) {
  * کلید در لایه‌ی mutation ساخته می‌شود (نه اینجا و نه در کامپوننت) تا
  * برای هر «قصدِ کاربر» یکتا باشد و در retryهای همان قصد ثابت بماند.
  */
-export function newIdempotencyKey() {
+function newIdempotencyKey() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
   }

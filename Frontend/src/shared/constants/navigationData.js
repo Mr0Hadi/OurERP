@@ -552,35 +552,3 @@ export const navigationData = {
     },
   ],
 };
-
-export const getFilteredNavigation = (userPermissions) => {
-  const filterByPermission = (items) => {
-    if (!items) return [];
-
-    return items.filter((item) => {
-      if (!item.permission) return true;
-      if (userPermissions.includes("all")) return true;
-      if (item.permission === "all") return true;
-
-      // بررسی دسترسی برای آیتم اصلی
-      const hasAccess = userPermissions.includes(item.permission);
-
-      // اگر آیتم زیرمنو دارد، زیرمنوها را هم فیلتر کن
-      if (item.items && item.items.length > 0) {
-        item.items = item.items.filter((subItem) => {
-          if (!subItem.permission) return true;
-          return userPermissions.includes(subItem.permission);
-        });
-      }
-
-      return hasAccess;
-    });
-  };
-
-  return {
-    navMain: filterByPermission([...navigationData.navMain]),
-    navSecondary: filterByPermission([...navigationData.navSecondary]),
-    tools: filterByPermission([...navigationData.tools]),
-    footerLinks: navigationData.footerLinks,
-  };
-};

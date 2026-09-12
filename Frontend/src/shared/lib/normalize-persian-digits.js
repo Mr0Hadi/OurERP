@@ -25,8 +25,3 @@ const persianAndArabicDigits = {
 export function normalizePersianDigits(value) {
   return value.replace(/[۰-۹٠-٩]/g, (char) => persianAndArabicDigits[char] ?? char);
 }
-
-/** A single-character lookup, for normalizing one keystroke at a time. */
-export function normalizePersianDigit(char) {
-  return persianAndArabicDigits[char]
-}

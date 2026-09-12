@@ -24,13 +24,13 @@ const MOBILE_NUMBER = /^09\d{9}$/;
 const PASSWORD_ALLOWED = /^[a-zA-Z0-9!@#$%^&*()_\-+=[\]{}|\\:;"'<>,.?/~`]+$/;
 const PASSWORD_SPECIAL = /[!@#$%^&*()_\-+=[\]{}|\\:;"'<>,.?/~`]/;
 
-export const isPersianText = (value) => PERSIAN_TEXT.test(value ?? "");
+const isPersianText = (value) => PERSIAN_TEXT.test(value ?? "");
 
-export const isEnglishText = (value) => ENGLISH_TEXT.test(value ?? "");
+const isEnglishText = (value) => ENGLISH_TEXT.test(value ?? "");
 
-export const isMobileNumber = (value) => MOBILE_NUMBER.test(value ?? "");
+const isMobileNumber = (value) => MOBILE_NUMBER.test(value ?? "");
 
-export const isValidPassword = (value) => {
+const isValidPassword = (value) => {
   const password = value ?? "";
   return (
     password.length >= 8 &&
