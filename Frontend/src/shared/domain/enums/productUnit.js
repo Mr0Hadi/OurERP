@@ -13,7 +13,6 @@ const ProductUnitEnum = Object.freeze({
   PAIR: 7,
 });
 
-/** برچسب فارسی هر عضو، فقط برای نمایش در UI. */
 export const PRODUCT_UNIT_LABELS = Object.freeze({
   [ProductUnitEnum.HAND]: "دست",
   [ProductUnitEnum.NUMBER]: "عدد",

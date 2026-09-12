@@ -16,11 +16,8 @@ import { getPartyName } from "./filterUtils";
  * تفاوتش با `FilterSelect` فقط جست‌وجوی داخلی است، برای وقتی گزینه‌ها
  * زیادند.
  *
- * props:
- *  label, placeholder, emptyText - متن‌های فارسی مخصوص هر صفحه
- *  items                         - لیست کامل گزینه‌ها
- *  value                         - کلیدِ انتخاب‌شده، یا "" برای «همه»
- *  onSelect                      - (nextKey, item) => void ("" یعنی پاک‌کردن)
+ * @param value    کلیدِ انتخاب‌شده، یا `""` برای «همه».
+ * @param onSelect `(nextKey, item) => void`؛ `""` یعنی پاک‌کردن.
  *                                  `item` برای فیلترهایی است که سرور
  *                                  به‌جای شناسه، نام می‌خواهد.
  *  isLoading                     - در حال دریافت لیست
