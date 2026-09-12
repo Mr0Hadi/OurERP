@@ -35,8 +35,8 @@ export function normalizeListResponse(data, { itemsKey } = {}) {
   const total = legacyPage.Total ?? legacyPage.total ?? legacyItems.length;
   const take = legacyPage.Take ?? legacyPage.take;
 
-  // سرور با نام‌گذاریِ پیش‌فرضِ ASP.NET (camelCase) `pageCount` می‌فرستد؛
-  // قبلاً فقط `PageCount` خوانده می‌شد و هر فهرستی «صفحه ۱ از ۱» می‌ماند.
+  // سرور با نام‌گذاریِ پیش‌فرضِ ASP.NET (camelCase) `pageCount` می‌فرستد.
+  // خواندنِ فقط `PageCount` یعنی هر فهرستی روی «صفحه ۱ از ۱» می‌ماند.
   const pageCount =
     legacyPage.PageCount ??
     legacyPage.pageCount ??
