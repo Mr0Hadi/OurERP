@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
-import { gregorianToPersian } from "@/shared/utils/dateUtils";
+import { gregorianToPersian } from "@/shared/lib/dateUtils";
 
 const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
 

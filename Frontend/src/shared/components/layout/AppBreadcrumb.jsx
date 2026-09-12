@@ -8,7 +8,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/shared/components/breadcrumb/breadcrumb";
+} from "@/shared/components/ui/breadcrumb";
 
 /**
  * عنوان مسیرهای ثابت — کلید، خودِ مسیر است.

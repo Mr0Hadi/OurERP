@@ -22,7 +22,7 @@ import {
   PAYMENT_TYPE_LABELS,
   DOCUMENT_PAYMENT_TYPES,
 } from "@/shared/domain/enums/paymentType";
-import { numberToPersianWords } from "@/shared/lib/number-to-persian-words";
+import { numberToPersianWords } from "@/shared/lib/numberToPersianWords";
 
 /**
  * بخش پرداختِ یک سند خرید یا فروش.

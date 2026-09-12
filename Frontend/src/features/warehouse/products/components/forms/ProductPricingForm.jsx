@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "@/shared/components/ui/card";
 import { PriceInput } from "@/shared/components/ui/price-input";
-import { numberToPersianWords } from "@/shared/lib/number-to-persian-words";
+import { numberToPersianWords } from "@/shared/lib/numberToPersianWords";
 
 function PriceWords({ value }) {
   if (value === "" || value == null || Number(value) === 0) return null;

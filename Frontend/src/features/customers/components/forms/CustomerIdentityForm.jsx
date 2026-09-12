@@ -10,7 +10,7 @@ import ImageUploadField from "@/shared/components/files/ImageUploadField";
 import {
   mobileRules,
   persianNameRules,
-} from "@/shared/utils/validationRules";
+} from "@/shared/lib/validationRules";
 
 /** پیام خطای زیرِ فیلد — همان متنی که سرور هم برمی‌گرداند. */
 function FieldError({ error }) {

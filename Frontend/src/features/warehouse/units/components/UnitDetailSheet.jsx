@@ -14,7 +14,7 @@ import { Label } from "@/shared/components/ui/label";
 import { Switch } from "@/shared/components/ui/switch";
 import BarcodeGraphic from "@/shared/components/print/BarcodeGraphic";
 import QrCodeGraphic from "@/shared/components/print/QrCodeGraphic";
-import { gregorianToPersian } from "@/shared/utils/dateUtils";
+import { gregorianToPersian } from "@/shared/lib/dateUtils";
 
 import UnitStatusBadge from "./UnitStatusBadge";
 

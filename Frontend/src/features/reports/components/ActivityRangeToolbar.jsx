@@ -2,7 +2,7 @@ import { CalendarRange, RotateCcw } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
-import { gregorianToPersian } from "@/shared/utils/dateUtils";
+import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { cn } from "@/shared/lib/utils";
 
 import { RANGE_PRESETS, matchPreset } from "../domain/dateRanges";

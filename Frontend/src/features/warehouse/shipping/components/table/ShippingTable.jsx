@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Truck } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import DataTable from "@/shared/components/table/DataTable";
-import { gregorianToPersian } from "@/shared/utils/dateUtils";
+import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { ROUTES } from "@/shared/constants/routes";
 import { OUTGOING_TYPES } from "../../domain/shippingVocabulary";
 import ShippingTypeBadge from "./ShippingTypeBadge";

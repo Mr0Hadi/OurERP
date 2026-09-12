@@ -11,7 +11,7 @@ import {
   ComboboxList,
   ComboboxVirtualList,
 } from "@/shared/components/ui/combobox"
-import { persianProvinces } from "@/shared/lib/persian-provinces";
+import { persianProvinces } from "@/shared/lib/persianProvinces";
 import { cn } from "@/shared/lib/utils"
 
 const EMPTY_VALUE = { province: null, city: null }

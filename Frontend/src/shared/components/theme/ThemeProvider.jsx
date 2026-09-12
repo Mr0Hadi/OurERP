@@ -1,12 +1,6 @@
-import { createContext, useContext, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { syncThemeColor } from "@/shared/lib/syncThemeColor"
-
-const initialState = {
-  theme: "system",
-  setTheme: () => null,
-}
-
-const ThemeProviderContext = createContext(initialState)
+import { ThemeProviderContext } from "@/shared/components/theme/themeContext"
 
 // کلاس‌هایی که باید هنگام تغییر تم پاک بشن
 const THEME_CLASSES = [
@@ -60,11 +54,4 @@ export function ThemeProvider({
       {children}
     </ThemeProviderContext.Provider>
   )
-}
-
-export const useTheme = () => {
-  const context = useContext(ThemeProviderContext)
-  if (context === undefined)
-    throw new Error("useTheme must be used within a ThemeProvider")
-  return context
 }

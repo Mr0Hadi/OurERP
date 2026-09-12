@@ -1,4 +1,4 @@
-import { createRowStatus } from "@/shared/utils/createRowStatus";
+import { createRowStatus } from "@/shared/lib/createRowStatus";
 
 export const { getRowStatus, ROW_STATUS_CONFIG } = createRowStatus({
   completeLabel: "کامل",

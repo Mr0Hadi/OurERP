@@ -3,7 +3,7 @@ import { UserCog } from "lucide-react";
 import FormSectionCard from "@/shared/components/forms/FormSectionCard";
 import FormField from "@/shared/components/forms/FormField";
 import { Input } from "@/shared/components/ui/input";
-import { persianNameRules, usernameRules } from "@/shared/utils/validationRules";
+import { persianNameRules, usernameRules } from "@/shared/lib/validationRules";
 
 /**
  * هویت و حسابِ کاربریِ کارمند.

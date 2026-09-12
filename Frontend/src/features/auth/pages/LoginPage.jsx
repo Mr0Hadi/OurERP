@@ -18,7 +18,7 @@ import {
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import { ModeToggle } from "@/shared/components/theme/mode-toggle";
+import { ThemeToggle } from "@/shared/components/theme/ThemeToggle";
 
 import { useLoginMutation } from "../services/queries";
 import { ROUTES } from "@/shared/constants/routes";
@@ -165,7 +165,7 @@ export default function LoginPage() {
       <div className="relative flex w-full flex-1 flex-col items-center justify-center px-6 py-10 lg:w-1/2">
         {/* دکمه تغییر تم */}
         <div className="absolute top-6 left-6">
-          <ModeToggle />
+          <ThemeToggle />
         </div>
 
         {/* بک‌گراند دکوراتیو موبایل */}

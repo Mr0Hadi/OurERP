@@ -9,7 +9,7 @@ import {
 } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { RETURN_STATUS_STYLES } from "@/shared/domain/returns/statuses";
-import { gregorianToPersian } from "@/shared/utils/dateUtils";
+import { gregorianToPersian } from "@/shared/lib/dateUtils";
 
 const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
 

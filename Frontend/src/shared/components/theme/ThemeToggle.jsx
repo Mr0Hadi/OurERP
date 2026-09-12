@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu"
-import { useTheme } from "@/shared/components/theme/theme-provider"
+import { useTheme } from "@/shared/components/theme/themeContext"
 
 // آیکون داینامیک بر اساس تم فعلی
 function ThemeIcon({ theme }) {
@@ -21,7 +21,7 @@ function ThemeIcon({ theme }) {
   return <Sun className="h-[1.2rem] w-[1.2rem]" />
 }
 
-export function ModeToggle() {
+export function ThemeToggle() {
   const { theme, setTheme } = useTheme()
 
   return (

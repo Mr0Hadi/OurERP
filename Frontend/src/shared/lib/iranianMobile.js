@@ -1,4 +1,4 @@
-import { normalizePersianDigits } from "@/shared/lib/normalize-persian-digits"
+import { normalizePersianDigits } from "@/shared/lib/persianDigits"
 
 /**
  * Normalizes an Iranian mobile phone number to the standard 11-digit local

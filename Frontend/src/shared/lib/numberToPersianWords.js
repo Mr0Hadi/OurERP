@@ -1,4 +1,4 @@
-import { normalizePersianDigits } from "@/shared/lib/normalize-persian-digits"
+import { normalizePersianDigits } from "@/shared/lib/persianDigits"
 
 const JOINER = " و "
 const ZERO = "صفر"

@@ -6,9 +6,9 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/shared/components/ui/input-group"
-import { useControllableState } from "@/shared/hooks/use-controllable-state"
-import { isValidNationalId } from "@/shared/lib/national-id"
-import { normalizePersianDigits } from "@/shared/lib/normalize-persian-digits"
+import { useControllableState } from "@/shared/hooks/useControllableState"
+import { isValidNationalId } from "@/shared/lib/nationalId"
+import { normalizePersianDigits } from "@/shared/lib/persianDigits"
 import { cn } from "@/shared/lib/utils"
 
 function normalizeNationalId(value) {

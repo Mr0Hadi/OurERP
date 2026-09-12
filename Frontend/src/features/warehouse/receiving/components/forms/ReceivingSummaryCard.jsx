@@ -11,7 +11,7 @@ import {
   PurchaseStatusEnum as PURCHASE_STATUSES,
   PURCHASE_STATUS_LABELS,
 } from '@/shared/domain/enums/purchaseStatus';
-import { gregorianToPersian } from '@/shared/utils/dateUtils';
+import { gregorianToPersian } from '@/shared/lib/dateUtils';
 
 const STATUS_CONFIG = {
   [PURCHASE_STATUSES.PROFORMA]: { icon: FileText, textColor: 'text-slate-600 dark:text-slate-300' },
