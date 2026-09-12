@@ -403,7 +403,7 @@ export const navigationData = {
     //     },
     //     {
     //       title: "گزارشات انبار",
-    //       url: ROUTES.REPORTS_warehouse,
+    //       url: ROUTES.REPORTS_WAREHOUSE,
     //       permission: "reports_warehouse",
     //       icon: Package,
     //       description: "گزارشات موجودی انبار",

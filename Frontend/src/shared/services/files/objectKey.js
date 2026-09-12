@@ -1,5 +1,3 @@
-// src/shared/services/files/objectKey.js
-
 /**
  * توابعِ خالصِ کارِ با «کلید در برابر آدرس».
  *

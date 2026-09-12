@@ -1,3 +1,5 @@
+import { isValidIranPhone } from "@/shared/lib/iranianMobile";
+
 /**
  * قوانین اعتبارسنجیِ مشترکِ فرم‌ها — آینه‌ی `Common/Extensions/Validation.cs`
  * در بکند.
@@ -18,17 +20,12 @@ const PERSIAN_TEXT = /^[؀-ۿ]+(?: [؀-ۿ]+)*$/;
 /** `Validation.IsEnglishText` — حروف انگلیسی، رقم، فاصله، زیرخط و خط تیره. */
 const ENGLISH_TEXT = /^[A-Za-z\s\d_-]+$/;
 
-/** `Validation.IsMobileNumber` — با ۰۹ شروع می‌شود و ۹ رقم دیگر دارد. */
-const MOBILE_NUMBER = /^09\d{9}$/;
-
 const PASSWORD_ALLOWED = /^[a-zA-Z0-9!@#$%^&*()_\-+=[\]{}|\\:;"'<>,.?/~`]+$/;
 const PASSWORD_SPECIAL = /[!@#$%^&*()_\-+=[\]{}|\\:;"'<>,.?/~`]/;
 
 const isPersianText = (value) => PERSIAN_TEXT.test(value ?? "");
 
 const isEnglishText = (value) => ENGLISH_TEXT.test(value ?? "");
-
-const isMobileNumber = (value) => MOBILE_NUMBER.test(value ?? "");
 
 const isValidPassword = (value) => {
   const password = value ?? "";
@@ -63,7 +60,7 @@ export const persianNameRules = (fieldName) => ({
 export const mobileRules = (fieldName = "شماره تماس") => ({
   required: requiredMessage(fieldName),
   validate: (value) =>
-    isMobileNumber(value?.trim()) || "شماره تماس وارد شده صحیح نمی باشد.",
+    isValidIranPhone(value) || "شماره تماس وارد شده صحیح نمی باشد.",
 });
 
 /** نام کاربری — سرور فقط حروف انگلیسی/رقم/`_`/`-` را می‌پذیرد. */

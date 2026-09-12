@@ -1,5 +1,3 @@
-// src/shared/services/invoice/documentOutput.js
-
 import axiosInstance from "@/shared/services/api/axios";
 import { isPdfName } from "@/shared/services/files/fileConstraints";
 
