@@ -12,8 +12,8 @@ import {
   CitySelectorProvince,
   CitySelectorCity,
 } from "@/shared/components/ui/city-selector";
-import { persianProvinces } from "@/shared/lib/persian-provinces";
-import { requiredMessage } from "@/shared/utils/validationRules";
+import { persianProvinces } from "@/shared/lib/persianProvinces";
+import { requiredMessage } from "@/shared/lib/validationRules";
 import {
   AlertDialog,
   AlertDialogAction,

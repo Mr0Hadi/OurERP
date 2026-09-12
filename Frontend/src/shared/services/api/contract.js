@@ -35,8 +35,8 @@ export function normalizeListResponse(data, { itemsKey } = {}) {
   const total = legacyPage.Total ?? legacyPage.total ?? legacyItems.length;
   const take = legacyPage.Take ?? legacyPage.take;
 
-  // سرور با نام‌گذاریِ پیش‌فرضِ ASP.NET (camelCase) `pageCount` می‌فرستد؛
-  // قبلاً فقط `PageCount` خوانده می‌شد و هر فهرستی «صفحه ۱ از ۱» می‌ماند.
+  // سرور با نام‌گذاریِ پیش‌فرضِ ASP.NET (camelCase) `pageCount` می‌فرستد.
+  // خواندنِ فقط `PageCount` یعنی هر فهرستی روی «صفحه ۱ از ۱» می‌ماند.
   const pageCount =
     legacyPage.PageCount ??
     legacyPage.pageCount ??
@@ -77,7 +77,7 @@ export function listParams(params = {}) {
  * کلید در لایه‌ی mutation ساخته می‌شود (نه اینجا و نه در کامپوننت) تا
  * برای هر «قصدِ کاربر» یکتا باشد و در retryهای همان قصد ثابت بماند.
  */
-export function newIdempotencyKey() {
+function newIdempotencyKey() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
   }

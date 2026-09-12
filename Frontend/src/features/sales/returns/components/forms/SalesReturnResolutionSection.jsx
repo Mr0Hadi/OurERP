@@ -10,13 +10,15 @@ import { Button } from "@/shared/components/ui/button";
 import { ROUTES } from "@/shared/constants/routes";
 
 import {
-  SALES_RETURN_STATUSES,
-  RETURN_PROBLEM_LABELS,
-  RETURN_PROBLEM_STYLES,
-  OFF_INVOICE_KIND_LABELS,
-  CLAIM_SCOPES,
+  SALES_RETURN_PROBLEM_LABELS,
+  SALES_RETURN_PROBLEM_STYLES,
+  OFF_SCOPE_KIND_LABELS,
+} from "../../domain/salesReturnVocabulary";
+import { CLAIM_SCOPES } from "@/shared/domain/returns/scopes";
+import {
+  RETURN_STATUSES,
   isTerminalStatus,
-} from "../../domain/returnVocabulary";
+} from "@/shared/domain/returns/statuses";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import {
   canCancelReturn,
@@ -60,7 +62,7 @@ export default function SalesReturnResolutionSection({
       <CardContent className="space-y-3">
         {!isClosed && <WarehouseQueueNotice salesReturn={salesReturn} />}
 
-        {status === SALES_RETURN_STATUSES.REJECTED && (
+        {status === RETURN_STATUSES.REJECTED && (
           <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 space-y-2">
             <p className="text-sm text-muted-foreground">
               این درخواست رد شده است. اگر لازم است دوباره بررسی شود، بازگشایی‌اش
@@ -78,7 +80,7 @@ export default function SalesReturnResolutionSection({
           </div>
         )}
 
-        {status === SALES_RETURN_STATUSES.CANCELLED && (
+        {status === RETURN_STATUSES.CANCELLED && (
           <p className="text-sm text-muted-foreground">
             این درخواست لغو شده است.
           </p>
@@ -93,9 +95,9 @@ export default function SalesReturnResolutionSection({
             isBusy={isBusy}
             readOnly={isClosed}
             side={SALES_SIDE}
-            problemLabels={RETURN_PROBLEM_LABELS}
-            problemStyles={RETURN_PROBLEM_STYLES}
-            offScopeLabels={OFF_INVOICE_KIND_LABELS}
+            problemLabels={SALES_RETURN_PROBLEM_LABELS}
+            problemStyles={SALES_RETURN_PROBLEM_STYLES}
+            offScopeLabels={OFF_SCOPE_KIND_LABELS}
             offScopeValue={CLAIM_SCOPES.OFF_ORDER}
           />
         ))}

@@ -11,7 +11,7 @@ import {
   SaleStatusEnum as SALE_STATUSES,
   SALE_STATUS_LABELS,
 } from '@/shared/domain/enums/saleStatus';
-import { gregorianToPersian } from '@/shared/utils/dateUtils';
+import { gregorianToPersian } from '@/shared/lib/dateUtils';
 
 const STATUS_CONFIG = {
   [SALE_STATUSES.PROFORMA]: {

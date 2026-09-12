@@ -40,7 +40,7 @@ export const RETURN_STATUS_STYLES = {
 };
 
 /** وضعیت‌هایی که بعد از آن‌ها هیچ تصمیم تازه‌ای پذیرفته نمی‌شود. */
-export const TERMINAL_RETURN_STATUSES = [
+const TERMINAL_RETURN_STATUSES = [
   RETURN_STATUSES.REJECTED,
   RETURN_STATUSES.CANCELLED,
 ];

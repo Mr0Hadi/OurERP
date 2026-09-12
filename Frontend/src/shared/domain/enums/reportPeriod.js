@@ -12,7 +12,7 @@ import gregorian from "react-date-object/calendars/gregorian";
  * خرید دارد و نوع بازه را از همین پارامتر می‌گیرد؛ پس این enum عملاً
  * تنها ورودیِ «سطحِ بزرگ‌نماییِ» داشبورد است.
  */
-export const ReportPeriodTypeEnum = Object.freeze({
+const ReportPeriodTypeEnum = Object.freeze({
   DAILY: 0,
   WEEKLY: 1,
   MONTHLY: 2,
@@ -21,7 +21,7 @@ export const ReportPeriodTypeEnum = Object.freeze({
   ANNUAL: 5,
 });
 
-export const REPORT_PERIOD_LABELS = Object.freeze({
+const REPORT_PERIOD_LABELS = Object.freeze({
   [ReportPeriodTypeEnum.DAILY]: "روزانه",
   [ReportPeriodTypeEnum.WEEKLY]: "هفتگی",
   [ReportPeriodTypeEnum.MONTHLY]: "ماهانه",

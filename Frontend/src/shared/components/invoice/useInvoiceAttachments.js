@@ -20,8 +20,8 @@ import { ImageFolderEnum } from "@/shared/domain/enums/imageFolder";
  * تازه به enum را ندارد. اگر روزی پوشه‌ی مخصوص ساخته شد، همین یک خط
  * عوض می‌شود.
  */
-export const INVOICE_ATTACHMENT_FOLDER = ImageFolderEnum.RECEIVING;
-export const INVOICE_ATTACHMENT_MAX_COUNT = 5;
+const INVOICE_ATTACHMENT_FOLDER = ImageFolderEnum.RECEIVING;
+const INVOICE_ATTACHMENT_MAX_COUNT = 5;
 
 export function useInvoiceAttachments(initialItems = []) {
   return useFileUploadList({

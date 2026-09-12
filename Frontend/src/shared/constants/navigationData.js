@@ -1,54 +1,34 @@
 import { ROUTES } from "./routes";
 
-// Icons from lucide-react
 import {
-  // Navigation
-  Home,
-  UserCog,
-  HelpCircle,
-
-  // Business
-  Store,
-  ShoppingCart,
-  Truck,
-  Warehouse,
-  Box,
-  Users,
-  Tags,
-
-  // Documents
-  FileText,
-  FilePlus,
-  ClipboardList,
-  Barcode,
-
-  // Financial
-
-  // Reports
   BarChart3,
-  List,
+  Barcode,
   BookOpen,
-
-  // Actions
+  Box,
+  Building2,
+  ClipboardList,
+  FilePlus,
+  FileText,
+  HelpCircle,
+  Home,
+  Info,
+  List,
   PlusCircle,
   RotateCcw,
-
-  // Info
-  Info,
   Shield,
-
-  // Company
-  Building2,
+  ShoppingCart,
+  Store,
+  Tags,
+  Truck,
+  UserCog,
+  Users,
+  Warehouse,
 } from "lucide-react";
 
 export const navigationData = {
-  // `user` و `teams` اینجا نیستند: هویتِ کاربر و واحد/تیمِ او صفتِ خودِ
-  // اوست در بکند (`User.DepartmentId`/`TeamId`) و سایدبار آن را از
-  // `useSessionQuery` می‌گیرد، نه از این فایل. این فایل فقط *ساختارِ
-  // منو* را نگه می‌دارد که واقعاً ثابت و ساکن است.
-  // (`User.DepartmentId`/`User.TeamId`) و سایدبار آن را از
-  // `useSessionQuery` می‌گیرد، نه از یک فهرستِ ثابت. فهرستِ قبلی
-  // مجوزها را هم کنارِ نامِ واحد نگه می‌داشت که هیچ‌وقت اعمال نمی‌شد.
+  // فقط *ساختارِ* منو. هویتِ کاربر و واحد/تیمِ او اینجا نیست: صفتِ خودِ
+  // اوست در بکند (`User.DepartmentId`/`User.TeamId`) و سایدبار آن را از
+  // `useSessionQuery` می‌گیرد.
   navMain: [
     {
       title: "داشبورد",
@@ -79,13 +59,6 @@ export const navigationData = {
           icon: PlusCircle,
           description: "ثبت تامین کننده جدید",
         },
-        // {
-        //   title: "گزارشات تامین کنندگان",
-        //   url: ROUTES.REPORTS_PURCHASES,
-        //   permission: "reports_purchases",
-        //   icon: BarChart3,
-        //   description: "گزارشات خرید از تامین کنندگان",
-        // },
       ],
     },
     {
@@ -109,13 +82,6 @@ export const navigationData = {
           icon: PlusCircle,
           description: "ثبت مشتری جدید",
         },
-        // {
-        //   title: "گزارشات مشتریان",
-        //   url: ROUTES.REPORTS_SALES,
-        //   permission: "reports_sales",
-        //   icon: BarChart3,
-        //   description: "گزارشات فروش به مشتریان",
-        // },
       ],
     },
     {
@@ -253,13 +219,6 @@ export const navigationData = {
           icon: List,
           description: "مشاهده لیست مرجوعی‌ها",
         },
-        // {
-        //   title: "لیست فاکتورهای خرید",
-        //   url: ROUTES.PURCHASES_INVOICES,
-        //   permission: "purchases_view",
-        //   icon: Receipt,
-        //   description: "مشاهده فاکتورهای خرید",
-        // },
       ],
     },
     {
@@ -297,20 +256,6 @@ export const navigationData = {
           icon: List,
           description: "مشاهده لیست مرجوعی‌ها",
         },
-        // {
-        //   title: "ثبت فاکتور فروش به مشتری",
-        //   url: ROUTES.SALES_INVOICES_NEW,
-        //   permission: "sales_invoice",
-        //   icon: Receipt,
-        //   description: "صدور فاکتور فروش نهایی",
-        // },
-        // {
-        //   title: "ساخت پیش فاکتور",
-        //   url: ROUTES.SALES_PROFORMA,
-        //   permission: "sales_proforma",
-        //   icon: FileText,
-        //   description: "ایجاد پیش فاکتور برای مشتری",
-        // },
       ],
     },
     {
@@ -343,138 +288,6 @@ export const navigationData = {
         },
       ],
     },
-    // {
-    //   title: "فاکتورها",
-    //   url: ROUTES.INVOICE,
-    //   icon: FileText,
-    //   isActive: false,
-    //   permission: "invoice",
-    //   items: [
-    //     {
-    //       title: "لیست فاکتورها",
-    //       url: ROUTES.INVOICE_LIST,
-    //       permission: "invoice_view",
-    //       icon: List,
-    //       description: "مشاهده تمام فاکتورها",
-    //     },
-    //     {
-    //       title: "فاکتور جدید",
-    //       url: ROUTES.INVOICE_NEW,
-    //       permission: "invoice_create",
-    //       icon: FilePlus,
-    //       description: "ایجاد فاکتور جدید",
-    //     },
-    //   ],
-    // },
-    // {
-    //   title: "گزارشات",
-    //   url: ROUTES.REPORTS,
-    //   icon: BarChart3,
-    //   isActive: false,
-    //   permission: "reports",
-    //   items: [
-    //     {
-    //       title: "گزارشات فروش",
-    //       url: ROUTES.REPORTS_SALES,
-    //       permission: "reports_sales",
-    //       icon: TrendingUp,
-    //       description: "گزارشات تحلیلی فروش",
-    //     },
-    //     {
-    //       title: "گزارشات خرید",
-    //       url: ROUTES.REPORTS_PURCHASES,
-    //       permission: "reports_purchases",
-    //       icon: TrendingDown,
-    //       description: "گزارشات تحلیلی خرید",
-    //     },
-    //     {
-    //       title: "گزارشات مالی",
-    //       url: ROUTES.REPORTS_FINANCIAL,
-    //       permission: "reports_financial",
-    //       icon: DollarSign,
-    //       description: "گزارشات مالی و حسابداری",
-    //     },
-    //     {
-    //       title: "سود و زیان",
-    //       url: ROUTES.REPORTS_PROFIT_LOSS,
-    //       permission: "reports_profit_loss",
-    //       icon: TrendingUp,
-    //       description: "گزارش سود و زیان",
-    //     },
-    //     {
-    //       title: "گزارشات انبار",
-    //       url: ROUTES.REPORTS_warehouse,
-    //       permission: "reports_warehouse",
-    //       icon: Package,
-    //       description: "گزارشات موجودی انبار",
-    //     },
-    //   ],
-    // },
-    // {
-    //   title: "تنظیمات",
-    //   url: ROUTES.SETTINGS,
-    //   icon: Settings,
-    //   isActive: false,
-    //   permission: "settings",
-    //   items: [
-    //     {
-    //       title: "تنظیمات عمومی",
-    //       url: ROUTES.SETTINGS_GENERAL,
-    //       permission: "settings_general",
-    //       icon: SettingsIcon,
-    //       description: "تنظیمات کلی سیستم",
-    //     },
-    //     {
-    //       title: "پروفایل شرکت",
-    //       url: ROUTES.SETTINGS_COMPANY,
-    //       permission: "settings_company",
-    //       icon: Building2,
-    //       description: "اطلاعات شرکت",
-    //     },
-    //     {
-    //       title: "تنظیمات فاکتور",
-    //       url: ROUTES.SETTINGS_INVOICE,
-    //       permission: "settings_invoice",
-    //       icon: FileText,
-    //       description: "تنظیمات چاپ فاکتور",
-    //     },
-    //     {
-    //       title: "تنظیمات مالیات",
-    //       url: ROUTES.SETTINGS_TAX,
-    //       permission: "settings_tax",
-    //       icon: Percent,
-    //       description: "تنظیمات مالیاتی",
-    //     },
-    //     {
-    //       title: "مدیریت کاربران",
-    //       url: ROUTES.SETTINGS_USERS,
-    //       permission: "settings_users",
-    //       icon: UserCog,
-    //       description: "مدیریت کاربران سیستم",
-    //     },
-    //     {
-    //       title: "نقش‌ها و دسترسی‌ها",
-    //       url: ROUTES.SETTINGS_ROLES,
-    //       permission: "settings_roles",
-    //       icon: Shield,
-    //       description: "تعریف نقش‌ها و مجوزها",
-    //     },
-    //     {
-    //       title: "اعلان‌ها",
-    //       url: ROUTES.SETTINGS_NOTIFICATIONS,
-    //       permission: "settings_notifications",
-    //       icon: Bell,
-    //       description: "تنظیمات اعلان‌ها",
-    //     },
-    //     {
-    //       title: "پشتیبان‌گیری",
-    //       url: ROUTES.SETTINGS_BACKUP,
-    //       permission: "settings_backup",
-    //       icon: Download,
-    //       description: "تهیه پشتیبان از داده‌ها",
-    //     },
-    //   ],
-    // },
   ],
   navSecondary: [
     {
@@ -493,41 +306,6 @@ export const navigationData = {
     },
   ],
   tools: [
-    // {
-    //   name: "تبدیل رقم به حروف",
-    //   url: ROUTES.TOOLS_NUMBER_TO_WORDS,
-    //   icon: Calculator,
-    //   permission: "tools",
-    //   description: "تبدیل اعداد به حروف فارسی",
-    // },
-    // {
-    //   name: "تقویم",
-    //   url: ROUTES.TOOLS_CALENDAR,
-    //   icon: Calendar,
-    //   permission: "tools",
-    //   description: "تقویم شمسی و قمری",
-    // },
-    // {
-    //   name: "ماشین حساب",
-    //   url: "/tools/calculator",
-    //   icon: Calculator,
-    //   permission: "tools",
-    //   description: "ماشین حساب علمی",
-    // },
-    // {
-    //   name: "بارکد ساز",
-    //   url: "/tools/barcode",
-    //   icon: Barcode,
-    //   permission: "tools",
-    //   description: "ساخت بارکد برای کالاها",
-    // },
-    // {
-    //   name: "QR Code ساز",
-    //   url: "/tools/qrcode",
-    //   icon: QrCode,
-    //   permission: "tools",
-    //   description: "ساخت QR Code",
-    // },
   ],
   footerLinks: [
     {
@@ -551,36 +329,4 @@ export const navigationData = {
       icon: Info,
     },
   ],
-};
-
-export const getFilteredNavigation = (userPermissions) => {
-  const filterByPermission = (items) => {
-    if (!items) return [];
-
-    return items.filter((item) => {
-      if (!item.permission) return true;
-      if (userPermissions.includes("all")) return true;
-      if (item.permission === "all") return true;
-
-      // بررسی دسترسی برای آیتم اصلی
-      const hasAccess = userPermissions.includes(item.permission);
-
-      // اگر آیتم زیرمنو دارد، زیرمنوها را هم فیلتر کن
-      if (item.items && item.items.length > 0) {
-        item.items = item.items.filter((subItem) => {
-          if (!subItem.permission) return true;
-          return userPermissions.includes(subItem.permission);
-        });
-      }
-
-      return hasAccess;
-    });
-  };
-
-  return {
-    navMain: filterByPermission([...navigationData.navMain]),
-    navSecondary: filterByPermission([...navigationData.navSecondary]),
-    tools: filterByPermission([...navigationData.tools]),
-    footerLinks: navigationData.footerLinks,
-  };
 };

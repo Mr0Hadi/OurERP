@@ -118,7 +118,7 @@ export async function getImageUrl(objectKey, { signal } = {}) {
  * یک فایلِ بی‌استفاده در باکت است — نه چیزی که ارزش داشته باشد جلوی
  * ذخیره‌ی موفقِ کاربر toastِ قرمز بگذارد.
  */
-export async function deleteImage(objectKey) {
+async function deleteImage(objectKey) {
   const key = objectKeyOf(objectKey);
   if (!key) return false;
 

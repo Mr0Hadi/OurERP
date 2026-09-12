@@ -5,11 +5,11 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/shared/components/ui/input-group";
-import { useControllableState } from "@/shared/hooks/use-controllable-state";
+import { useControllableState } from "@/shared/hooks/useControllableState";
 import {
   isValidIranPhone,
   normalizeIranPhone,
-} from "@/shared/lib/iranian-mobile";
+} from "@/shared/lib/iranianMobile";
 import { cn } from "@/shared/lib/utils";
 
 function MobileNumberInput({

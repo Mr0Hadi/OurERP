@@ -1,4 +1,3 @@
-// \src\shared\constants\routes.js
 export const ROUTES = {
   // روت
   ROOT: "/",
@@ -49,7 +48,6 @@ export const ROUTES = {
   SALES_NEW: "/sales/new",
   SALES_DETAIL: "/sales/:id",
   SALES_ORDERS: "/sales/orders",
-  SALES_ORDER_DETAIL: "/sales/orders/:id",
   SALES_INVOICES_NEW: "/sales/invoices/new",
   SALES_PROFORMA: "/sales/proforma-invoice",
   SALES_RETURNS_NEW: "/sales/returns/new",
@@ -57,7 +55,6 @@ export const ROUTES = {
   SALES_RETURNS_DETAIL: "/sales/returns/:id",
 
   // انبار
-  INVENTORY: "/inventory",
   WAREHOUSE: "/warehouse",
   WAREHOUSE_PRODUCTS: "/warehouse/products",
   WAREHOUSE_PRODUCTS_DETAIL: "/warehouse/products/:id",
@@ -73,21 +70,14 @@ export const ROUTES = {
   WAREHOUSE_RECEIVING_RETURN_DETAIL: "/warehouse/receiving/returns/:id",
   WAREHOUSE_SHIPPING_RETURN_DETAIL: "/warehouse/shipping/returns/:id",
 
-  // // محصولات/کالاها
-  // PRODUCTS: "/products",
-  // PRODUCTS_LIST: "/products",
-  // PRODUCTS_NEW: "/products/new",
-  // PRODUCTS_DETAIL: "/products/:id",
 
   // فاکتورها
   INVOICE: "/invoice",
   INVOICE_LIST: "/invoice/list",
   INVOICE_NEW: "/invoice/new",
-  INVOICE_DETAIL: "/invoice/:id",
 
   // تراکنش‌ها
   TRANSACTIONS: "/transactions",
-  TRANSACTIONS_LIST: "/transactions",
   TRANSACTIONS_BUY_SELL: "/transactions/buy-sell",
   TRANSACTIONS_PAYMENTS: "/transactions/payments",
   TRANSACTIONS_RETURNS: "/transactions/returns",
@@ -98,7 +88,7 @@ export const ROUTES = {
   REPORTS_PURCHASES: "/reports/purchases",
   REPORTS_FINANCIAL: "/reports/financial",
   REPORTS_PROFIT_LOSS: "/reports/profit-loss",
-  REPORTS_warehouse: "/reports/warehouse",
+  REPORTS_WAREHOUSE: "/reports/warehouse",
   // مانیتورینگ فعالیت — روی `api/Report` واقعی سوارند (بخش ۱۸ سند).
   REPORTS_EMPLOYEES: "/reports/employees",
   REPORTS_CUSTOMERS: "/reports/customers",

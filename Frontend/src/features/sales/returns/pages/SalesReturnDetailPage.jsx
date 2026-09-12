@@ -37,7 +37,7 @@ import ReturnStatusBar from "@/shared/components/returns/ReturnStatusBar";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
 import RelatedReturnsCard from "@/shared/components/returns/RelatedReturnsCard";
-import { SALES_RETURN_STATUS_LABELS } from "../domain/returnVocabulary";
+import { SALES_RETURN_STATUS_LABELS } from "../domain/salesReturnVocabulary";
 import SalesReturnResolutionSection from "../components/forms/SalesReturnResolutionSection";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";

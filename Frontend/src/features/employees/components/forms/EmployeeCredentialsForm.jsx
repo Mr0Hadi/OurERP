@@ -9,7 +9,7 @@ import {
   passwordRules,
   requiredMessage,
   PASSWORD_RULE_MESSAGE,
-} from "@/shared/utils/validationRules";
+} from "@/shared/lib/validationRules";
 
 /**
  * رمز عبورِ اولیه — فقط هنگام *ثبت* کارمند.

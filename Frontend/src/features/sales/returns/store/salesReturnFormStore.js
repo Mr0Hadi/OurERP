@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { CLAIM_SCOPES } from "../domain/returnVocabulary";
+import { CLAIM_SCOPES } from "@/shared/domain/returns/scopes";
 
 const EMPTY_FORM = {
   saleId: "",

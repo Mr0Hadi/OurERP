@@ -1,5 +1,3 @@
-// src/shared/services/invoice/documentOutput.js
-
 import axiosInstance from "@/shared/services/api/axios";
 import { isPdfName } from "@/shared/services/files/fileConstraints";
 
@@ -14,9 +12,8 @@ import { isPdfName } from "@/shared/services/files/fileConstraints";
  *   (`api/Invoice/GetSaleInvoicePdf`)، و کاربر هم می‌تواند نسخه‌ی
  *   دستی ضمیمه کند. هر دو باید چاپ/دانلود شوند.
  *
- * قبلاً دکمه‌ی چاپ همیشه یک جدولِ HTML از روی *داده‌ی فرم* می‌ساخت و
- * دکمه‌ی دانلود هیچ‌وقت به ضمیمه‌ها کاری نداشت — یعنی کاربر فاکتوری را
- * چاپ می‌کرد که هیچ‌کدام از دو طرفِ معامله امضایش نکرده بود.
+ * یک جدولِ HTML که فرانت از روی داده‌ی فرم بسازد سند نیست: کاربر
+ * فاکتوری چاپ می‌کند که هیچ‌کدام از دو طرفِ معامله امضایش نکرده‌اند.
  *
  * شکلِ یک سند: `{ id, name, isPdf, getBlob }`.
  */
@@ -73,7 +70,7 @@ export function serverDocument({ name, fetchPdf }) {
 }
 
 /** ذخیره‌ی یک Blob با نامِ دلخواه. */
-export function saveBlobAs(blob, fileName) {
+function saveBlobAs(blob, fileName) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;

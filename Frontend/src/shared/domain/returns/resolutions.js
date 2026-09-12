@@ -43,9 +43,6 @@ import { RETURN_STATUSES, isTerminalStatus } from "./statuses";
  *               └─ effects[]← اثرهای پایه (effects.js)
  */
 
-const generateId = () =>
-  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-
 const { GOODS_IN, GOODS_OUT, MONEY_IN, MONEY_OUT } = EFFECT_DIRECTIONS;
 
 // ─── جهت پول ────────────────────────────────────────────────────────────────
@@ -87,7 +84,7 @@ export function methodsForDirection(direction) {
  * کامپوننتِ عمومیِ `MixedPaymentList` (فیلدش `type` است، نه `method`)
  * استفاده می‌کند، این یکی تبدیلِ نام را همان‌جا انجام می‌دهد.
  */
-export function validMoneyParts(money) {
+function validMoneyParts(money) {
   return (money?.parts || []).filter((part) => (Number(part.amount) || 0) > 0);
 }
 
@@ -95,7 +92,7 @@ export function validMoneyParts(money) {
  * مبلغِ مؤثرِ یک جابه‌جایی پول. برای روشِ ترکیبی، مجموعِ تکه‌هاست — نه
  * فیلد amount، که در آن حالت اصلاً پر نمی‌شود.
  */
-export function moneyAmountOf(money) {
+function moneyAmountOf(money) {
   if (!money) return 0;
   if (money.method === PaymentTypeEnum.MIXED) {
     return validMoneyParts(money).reduce(
@@ -108,7 +105,7 @@ export function moneyAmountOf(money) {
 
 // ─── ترکیب خالی ─────────────────────────────────────────────────────────────
 
-export function emptyGoodsSlot() {
+function emptyGoodsSlot() {
   return { enabled: false, items: [] };
 }
 
@@ -143,7 +140,7 @@ export function emptyComposition(quantity = 1) {
  * ندارد؛ جهت از این‌که کدام اسلات `enabled` است مشتق می‌شود، درست
  * مثلِ بک‌اند که جهت را از *جایگاهِ* اثر می‌فهمد نه یک فیلدِ جدا.
  */
-export function moneyDirectionOf(composition) {
+function moneyDirectionOf(composition) {
   if (composition?.moneyIn?.enabled) return MONEY_DIRECTIONS.RECEIVE;
   if (composition?.moneyOut?.enabled) return MONEY_DIRECTIONS.PAY;
   return MONEY_DIRECTIONS.NONE;
@@ -225,21 +222,6 @@ export function expandComposition(composition, claim) {
   pushMoney(composition.moneyOut, MONEY_OUT);
 
   return effects;
-}
-
-/**
- * یک رکورد تصمیمِ کامل — همان چیزی که روی claim.resolutions می‌نشیند.
- * منبع حقیقت effects است؛ خودِ ترکیب نگه داشته نمی‌شود چون از روی
- * اثرها کامل قابل بازخوانی است.
- */
-export function buildResolution(composition, claim) {
-  return {
-    id: generateId(),
-    quantity: Number(composition.quantity) || 0,
-    note: composition.note || "",
-    effects: expandComposition(composition, claim),
-    createdAt: new Date().toISOString(),
-  };
 }
 
 // ─── اعتبارسنجی ─────────────────────────────────────────────────────────────
@@ -329,7 +311,7 @@ function allEffectsOf(returnDoc) {
  * دهند. GOODS_IN به صف «دریافت» می‌رود و GOODS_OUT به صف «ارسال»؛
  * مرجوعی خرید و فروش هر دو از همین مسیر وارد صف می‌شوند.
  */
-export function pendingGoodsEffects(returnDoc, direction) {
+function pendingGoodsEffects(returnDoc, direction) {
   return allEffectsOf(returnDoc).filter(
     (effect) =>
       effect.direction === direction && effect.status === EFFECT_STATUSES.PENDING,
@@ -444,7 +426,7 @@ export function deriveReturnStatus(returnDoc) {
  * اثر کالاییِ معلق دارد، هیچ ردی در دنیای بیرون نگذاشته و برگرداندنش
  * بی‌ضرر است.
  */
-export function isReturnUntouched(returnDoc) {
+function isReturnUntouched(returnDoc) {
   return Boolean(returnDoc) && !hasAppliedEffects(returnDoc);
 }
 

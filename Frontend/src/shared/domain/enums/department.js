@@ -19,7 +19,7 @@ export const DepartmentEnum = Object.freeze({
   IT: 6,
 });
 
-export const DEPARTMENT_LABELS = Object.freeze({
+const DEPARTMENT_LABELS = Object.freeze({
   [DepartmentEnum.MANAGEMENT]: "ادمین کل",
   [DepartmentEnum.SUPPLY]: "واحد تامین",
   [DepartmentEnum.SALES]: "واحد فروش",

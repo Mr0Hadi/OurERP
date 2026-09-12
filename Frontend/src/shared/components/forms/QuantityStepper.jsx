@@ -1,7 +1,7 @@
 import { Minus, Plus } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
-import { clampQuantity } from "@/shared/utils/quantityUtils";
+import { clampQuantity } from "@/shared/lib/quantityUtils";
 
 /**
  * شمارنده‌ی تعداد با سقف مشخص.

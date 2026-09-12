@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
-import { gregorianToPersian } from "@/shared/utils/dateUtils";
+import { gregorianToPersian } from "@/shared/lib/dateUtils";
 
 const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
 
@@ -178,10 +178,10 @@ function Row({ label, children }) {
 /**
  * «تحویل‌شده» با تفکیکِ ادعاها.
  *
- * پیش از این فقط یک عدد مبهم زیرش می‌آمد («n در مرجوعی دیگر») که سهم
- * خودِ این سند را نشان نمی‌داد، پس وقتی روی یک سفارش چند مرجوعی بود
- * معلوم نمی‌شد کدام عدد مالِ کجاست. حالا سه چیز جداست: چقدر در همین
- * سند ادعا شده، چقدر در بقیه، و در نتیجه چقدر هنوز آزاد است.
+ * سه عدد جدا نشان می‌دهد: چقدر در همین سند ادعا شده، چقدر در بقیه‌ی
+ * مرجوعی‌های همین سفارش، و در نتیجه چقدر هنوز آزاد است. یک عددِ
+ * سرجمع کافی نیست — وقتی روی یک سفارش چند مرجوعی هست، معلوم نمی‌کند
+ * کدام سهم مالِ کجاست.
  */
 function DeliveredCell({ item }) {
   const delivered = item.deliveredQuantity ?? item.quantity;

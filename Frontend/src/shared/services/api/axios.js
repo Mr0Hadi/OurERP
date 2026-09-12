@@ -1,4 +1,3 @@
-// src\shared\services\api\axios.js
 import axios from "axios";
 import { useAuthStore } from "@/features/auth/store/authStore";
 

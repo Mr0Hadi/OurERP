@@ -1,4 +1,4 @@
-import { normalizePersianDigits } from "@/shared/lib/normalize-persian-digits"
+import { normalizePersianDigits } from "@/shared/lib/persianDigits"
 
 /**
  * Normalizes an Iranian mobile phone number to the standard 11-digit local
@@ -21,11 +21,4 @@ export function normalizeIranPhone(phone) {
 /** Validates that the normalized value matches the 09xxxxxxxxx shape. */
 export function isValidIranPhone(phone) {
   return /^09\d{9}$/.test(normalizeIranPhone(phone));
-}
-
-/** Masks a phone number, showing only the first 3 and last 4 digits. */
-export function maskIranPhone(phone) {
-  const normalized = normalizeIranPhone(phone)
-  if (!normalized) return phone ?? ""
-  return `${normalized.slice(0, 3)}***${normalized.slice(-4)}`;
 }

@@ -3,15 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import DataTable from "@/shared/components/table/DataTable";
-import { gregorianToPersian } from "@/shared/utils/dateUtils";
+import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { ROUTES } from "@/shared/constants/routes";
+import {
+  SALES_RETURN_PROBLEM_LABELS,
+  SALES_RETURN_PROBLEM_STYLES,
+} from "../../domain/salesReturnVocabulary";
 import {
   RETURN_PROBLEM_LABELS,
   RETURN_PROBLEM_STYLES,
-} from "../../domain/returnVocabulary";
-import {
-  RETURN_PROBLEM_LABELS as SHARED_PROBLEM_LABELS,
-  RETURN_PROBLEM_STYLES as SHARED_PROBLEM_STYLES,
 } from "@/shared/domain/returns/problems";
 import { Badge } from "@/shared/components/ui/badge";
 import SalesReturnStatusBadge from "./SalesReturnStatusBadge";
@@ -88,13 +88,13 @@ const SalesReturnTable = ({
                   key={problem}
                   variant="outline"
                   className={`text-[10px] ${
+                    SALES_RETURN_PROBLEM_STYLES[problem] ??
                     RETURN_PROBLEM_STYLES[problem] ??
-                    SHARED_PROBLEM_STYLES[problem] ??
                     ""
                   }`}
                 >
-                  {RETURN_PROBLEM_LABELS[problem] ??
-                    SHARED_PROBLEM_LABELS[problem] ??
+                  {SALES_RETURN_PROBLEM_LABELS[problem] ??
+                    RETURN_PROBLEM_LABELS[problem] ??
                     problem}
                 </Badge>
               ))}

@@ -1,5 +1,5 @@
 import { useForm } from "react-hook-form";
-import { requiredMessage } from "@/shared/utils/validationRules";
+import { requiredMessage } from "@/shared/lib/validationRules";
 
 export const departmentNameRules = {
   required: requiredMessage("نام واحد"),

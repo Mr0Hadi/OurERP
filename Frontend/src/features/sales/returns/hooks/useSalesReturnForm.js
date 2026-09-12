@@ -1,15 +1,12 @@
 import { useSalesReturnFormStore } from "../store/salesReturnFormStore";
-import {
-  CLAIM_SCOPES,
-  OFF_INVOICE_KINDS,
-  RETURN_PROBLEMS,
-} from "../domain/returnVocabulary";
+import { SALES_RETURN_PROBLEMS } from "../domain/salesReturnVocabulary";
+import { CLAIM_SCOPES, OFF_SCOPE_KINDS } from "@/shared/domain/returns/scopes";
 
 const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
-const DEFAULT_ON_INVOICE_PROBLEM = RETURN_PROBLEMS.DEFECTIVE;
-const DEFAULT_OFF_INVOICE_PROBLEM = RETURN_PROBLEMS.OVER_SHIPPED;
+const DEFAULT_ON_INVOICE_PROBLEM = SALES_RETURN_PROBLEMS.DEFECTIVE;
+const DEFAULT_OFF_INVOICE_PROBLEM = SALES_RETURN_PROBLEMS.OVER_SHIPPED;
 
 /**
  * فرم ثبت ادعای مرجوعی.
@@ -100,7 +97,7 @@ export function useSalesReturnForm() {
 
   // ─── ادعاهای خارج از فاکتور ───────────────────────────────────────
 
-  const handleAddOffInvoiceClaim = (product, kind = OFF_INVOICE_KINDS.EXCESS) => {
+  const handleAddOffInvoiceClaim = (product, kind = OFF_SCOPE_KINDS.EXCESS) => {
     const existing = offInvoiceClaims.find(
       (c) => c.productId === product.productId,
     );

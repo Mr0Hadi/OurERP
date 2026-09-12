@@ -11,8 +11,6 @@ import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
 
 /**
  * شماره و تاریخ فاکتور، سررسید و توضیحات — در فرم خرید و فروش یکسان است.
- *
- * props: formData, onFormChange, errors
  */
 export default function OrderInfoSection({
   formData,

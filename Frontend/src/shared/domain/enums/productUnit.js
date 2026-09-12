@@ -2,7 +2,7 @@
  * `ProductUnitEnum` — واحد شمارش محصول (بخش ۱۵ سند api-guide.fa.md).
  * مقادیر باید دقیقاً با اعداد بکند یکی بمانند؛ روی سیم همیشه عدد است.
  */
-export const ProductUnitEnum = Object.freeze({
+const ProductUnitEnum = Object.freeze({
   HAND: 0,
   NUMBER: 1,
   BOX: 2,
@@ -13,7 +13,6 @@ export const ProductUnitEnum = Object.freeze({
   PAIR: 7,
 });
 
-/** برچسب فارسی هر عضو، فقط برای نمایش در UI. */
 export const PRODUCT_UNIT_LABELS = Object.freeze({
   [ProductUnitEnum.HAND]: "دست",
   [ProductUnitEnum.NUMBER]: "عدد",

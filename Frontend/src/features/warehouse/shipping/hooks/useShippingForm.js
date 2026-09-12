@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useShippingFormStore } from '../store/shippingFormStore';
-import { clampQuantity } from "@/shared/utils/quantityUtils";
+import { clampQuantity } from "@/shared/lib/quantityUtils";
 
 /**
  * saleData می‌تواند null باشد: صفحه‌ی عودت به تامین‌کننده خودش استور را

@@ -10,13 +10,15 @@ import { Button } from "@/shared/components/ui/button";
 import { ROUTES } from "@/shared/constants/routes";
 
 import {
-  PURCHASE_RETURN_STATUSES,
   PURCHASE_RETURN_PROBLEM_LABELS,
   PURCHASE_RETURN_PROBLEM_STYLES,
-  OFF_ORDER_KIND_LABELS,
-  CLAIM_SCOPES,
-  isTerminalStatus,
+  OFF_SCOPE_KIND_LABELS,
 } from "../../domain/purchaseReturnVocabulary";
+import { CLAIM_SCOPES } from "@/shared/domain/returns/scopes";
+import {
+  RETURN_STATUSES,
+  isTerminalStatus,
+} from "@/shared/domain/returns/statuses";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import {
   canCancelReturn,
@@ -60,7 +62,7 @@ export default function PurchaseReturnResolutionSection({
       <CardContent className="space-y-3">
         {!isClosed && <WarehouseQueueNotice purchaseReturn={purchaseReturn} />}
 
-        {status === PURCHASE_RETURN_STATUSES.REJECTED && (
+        {status === RETURN_STATUSES.REJECTED && (
           <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 space-y-2">
             <p className="text-sm text-muted-foreground">
               این درخواست رد شده است. اگر لازم است دوباره بررسی شود، بازگشایی‌اش
@@ -78,7 +80,7 @@ export default function PurchaseReturnResolutionSection({
           </div>
         )}
 
-        {status === PURCHASE_RETURN_STATUSES.CANCELLED && (
+        {status === RETURN_STATUSES.CANCELLED && (
           <p className="text-sm text-muted-foreground">
             این درخواست لغو شده است.
           </p>
@@ -95,7 +97,7 @@ export default function PurchaseReturnResolutionSection({
             side={PURCHASE_SIDE}
             problemLabels={PURCHASE_RETURN_PROBLEM_LABELS}
             problemStyles={PURCHASE_RETURN_PROBLEM_STYLES}
-            offScopeLabels={OFF_ORDER_KIND_LABELS}
+            offScopeLabels={OFF_SCOPE_KIND_LABELS}
             offScopeValue={CLAIM_SCOPES.OFF_ORDER}
           />
         ))}

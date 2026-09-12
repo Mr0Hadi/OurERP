@@ -1,16 +1,16 @@
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
 
-import { AppSidebar } from "@/shared/components/sidebar/app-sidebar";
-import {} from "@/shared/components/breadcrumb/breadcrumb";
+import { AppSidebar } from "@/shared/components/layout/AppSidebar";
+import {} from "@/shared/components/ui/breadcrumb";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/shared/components/ui/sidebar";
-import { ModeToggle } from "@/shared/components/theme/mode-toggle";
+import { ThemeToggle } from "@/shared/components/theme/ThemeToggle";
 import { useNavigationStore } from "@/shared/store/navigationStore";
 
-import { AppBreadcrumb } from "@/shared/components/breadcrumb/AppBreadcrumb";
+import { AppBreadcrumb } from "@/shared/components/layout/AppBreadcrumb";
 import { useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 
@@ -42,7 +42,7 @@ export default function AppLayout() {
           <header className="flex h-16 shrink-0 items-center gap-4 border-b px-4">
             <div className=" ml-auto flex items-center gap-2 ">
               <SidebarTrigger className="-mr-1 ml-auto " />
-              <ModeToggle />
+              <ThemeToggle />
               <div className="flex flex-1 items-center gap-4">
                 {showBack && (
                   <Button

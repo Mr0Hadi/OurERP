@@ -16,9 +16,9 @@ import ClaimsSection from "@/shared/components/returns/ClaimsSection";
 import OffScopeClaimsSection from "@/shared/components/returns/OffScopeClaimsSection";
 import {
   PURCHASE_RETURN_PROBLEM_LABELS,
-  OFF_ORDER_KIND_LABELS,
-  OFF_ORDER_KIND_STYLES,
+  OFF_SCOPE_KIND_LABELS,
 } from "../domain/purchaseReturnVocabulary";
+import { OFF_SCOPE_KIND_STYLES } from "@/shared/domain/returns/scopes";
 import PurchaseReturnInfoSection from "../components/forms/PurchaseReturnInfoSection";
 import PurchaseReturnDetailLoading from "../components/forms/PurchaseReturnDetailLoading";
 import { ROUTES } from "@/shared/constants/routes";
@@ -184,8 +184,8 @@ export default function PurchaseReturnNewPage() {
               onUpdate={handleUpdateOffScopeClaim}
               onRemove={handleRemoveOffScopeClaim}
               problemLabels={PURCHASE_RETURN_PROBLEM_LABELS}
-              kindLabels={OFF_ORDER_KIND_LABELS}
-              kindStyles={OFF_ORDER_KIND_STYLES}
+              kindLabels={OFF_SCOPE_KIND_LABELS}
+              kindStyles={OFF_SCOPE_KIND_STYLES}
               title="کالای خارج از سفارش"
               description="کالایی که در این سفارش نیست یا بیش از مقدار آن رسیده. قیمتش دستی وارد می‌شود چون سقفی روی سفارش ندارد."
             />

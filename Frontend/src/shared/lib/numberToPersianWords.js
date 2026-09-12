@@ -1,4 +1,4 @@
-import { normalizePersianDigits } from "@/shared/lib/normalize-persian-digits"
+import { normalizePersianDigits } from "@/shared/lib/persianDigits"
 
 const JOINER = " و "
 const ZERO = "صفر"
@@ -68,7 +68,7 @@ const FRACTION_ORDINALS = [
   "میلیاردم",
 ]
 
-export const NUMBER_WORDS_LIMITS = {
+const NUMBER_WORDS_LIMITS = {
   /** Longest supported integer part, in digits (up to 999 تریلیارد…). */
   integerDigits: SCALES.length * 3,
   /** Longest supported fractional part, in significant digits (تا میلیاردم). */
