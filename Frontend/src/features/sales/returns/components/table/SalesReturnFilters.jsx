@@ -8,12 +8,12 @@ import { toFilterOptions } from "@/shared/components/filters/filterUtils";
 import { useSalesReturnFilterStore } from "../../store/salesReturnFilterStore";
 import {
   SALES_RETURN_STATUS_LABELS,
-  RETURN_PROBLEM_LABELS,
+  SALES_RETURN_PROBLEM_LABELS,
   CLAIM_SCOPE_LABELS,
-} from "../../domain/returnVocabulary";
+} from "../../domain/salesReturnVocabulary";
 
 const STATUS_OPTIONS = toFilterOptions(SALES_RETURN_STATUS_LABELS);
-const PROBLEM_OPTIONS = toFilterOptions(RETURN_PROBLEM_LABELS);
+const PROBLEM_OPTIONS = toFilterOptions(SALES_RETURN_PROBLEM_LABELS);
 const SCOPE_OPTIONS = toFilterOptions(CLAIM_SCOPE_LABELS);
 
 const SalesReturnFilters = ({ customers = [], isCustomersLoading = false }) => {

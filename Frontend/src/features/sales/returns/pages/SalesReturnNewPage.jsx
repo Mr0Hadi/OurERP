@@ -15,10 +15,10 @@ import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
 import ClaimsSection from "@/shared/components/returns/ClaimsSection";
 import OffScopeClaimsSection from "@/shared/components/returns/OffScopeClaimsSection";
 import {
-  RETURN_PROBLEM_LABELS,
-  OFF_INVOICE_KIND_LABELS,
-  OFF_INVOICE_KIND_STYLES,
-} from "../domain/returnVocabulary";
+  SALES_RETURN_PROBLEM_LABELS,
+  OFF_SCOPE_KIND_LABELS,
+} from "../domain/salesReturnVocabulary";
+import { OFF_SCOPE_KIND_STYLES } from "@/shared/domain/returns/scopes";
 import SalesReturnInfoSection from "../components/forms/SalesReturnInfoSection";
 import SalesReturnDetailLoading from "../components/forms/SalesReturnDetailLoading";
 import { ROUTES } from "@/shared/constants/routes";
@@ -169,7 +169,7 @@ export default function SalesReturnNewPage() {
               onAddClaim={handleAddClaim}
               onUpdateClaim={handleUpdateClaim}
               onRemoveClaim={handleRemoveClaim}
-              problemLabels={RETURN_PROBLEM_LABELS}
+              problemLabels={SALES_RETURN_PROBLEM_LABELS}
               title="مشکلات اقلام فاکتور"
               description="برای هر کالا می‌توانید چند مشکل جدا با تعداد جداگانه ثبت کنید. سقف هر کالا، همان مقداری است که به مشتری تحویل شده."
               emptyText="این فاکتور قلمی برای ادعا ندارد"
@@ -180,9 +180,9 @@ export default function SalesReturnNewPage() {
               onAdd={handleAddOffInvoiceClaim}
               onUpdate={handleUpdateOffInvoiceClaim}
               onRemove={handleRemoveOffInvoiceClaim}
-              problemLabels={RETURN_PROBLEM_LABELS}
-              kindLabels={OFF_INVOICE_KIND_LABELS}
-              kindStyles={OFF_INVOICE_KIND_STYLES}
+              problemLabels={SALES_RETURN_PROBLEM_LABELS}
+              kindLabels={OFF_SCOPE_KIND_LABELS}
+              kindStyles={OFF_SCOPE_KIND_STYLES}
               description="کالایی که در این فاکتور نیست یا بیش از مقدار آن ارسال شده. قیمتش دستی وارد می‌شود چون سقفی روی فاکتور ندارد."
             />
 

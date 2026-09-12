@@ -1,9 +1,6 @@
 import { usePurchaseReturnFormStore } from "../store/purchaseReturnFormStore";
-import {
-  CLAIM_SCOPES,
-  OFF_ORDER_KINDS,
-  PURCHASE_RETURN_PROBLEMS,
-} from "../domain/purchaseReturnVocabulary";
+import { PURCHASE_RETURN_PROBLEMS } from "../domain/purchaseReturnVocabulary";
+import { CLAIM_SCOPES, OFF_SCOPE_KINDS } from "@/shared/domain/returns/scopes";
 
 const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -100,7 +97,7 @@ export function usePurchaseReturnForm() {
 
   // ─── ادعاهای خارج از فاکتور ───────────────────────────────────────
 
-  const handleAddOffScopeClaim = (product, kind = OFF_ORDER_KINDS.EXCESS) => {
+  const handleAddOffScopeClaim = (product, kind = OFF_SCOPE_KINDS.EXCESS) => {
     const existing = offScopeClaims.find(
       (c) => c.productId === product.productId,
     );
