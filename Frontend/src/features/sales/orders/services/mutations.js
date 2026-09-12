@@ -12,7 +12,7 @@ import { saleKeys } from './queryKeys';
 import { ROUTES } from '@/shared/constants/routes';
 import { useSaleFormStore } from '../store/saleFormStore';
 import { invalidateSalesEcosystem } from './sharedInvalidation';
-import { outgoingQueueKeys } from '@/features/warehouse/shipping/services/queryKeys';
+import { shippingKeys } from '@/features/warehouse/shipping/services/queryKeys';
 
 export const useCreateSaleMutation = () => {
   const queryClient = useQueryClient();
@@ -97,7 +97,7 @@ export const useRecordSalePaymentMutation = () => {
       queryClient.invalidateQueries({ queryKey: saleKeys.lists() });
       // صفِ ارسال مبلغ فاکتور را در ستون «مبلغ» نشان می‌دهد — قرینه‌ی
       // همین مسیر در سمت خرید.
-      queryClient.invalidateQueries({ queryKey: outgoingQueueKeys.all });
+      queryClient.invalidateQueries({ queryKey: shippingKeys.lists() });
       toast.success('دریافت وجه با موفقیت ثبت شد');
     },
     onError: (error, variables, context) => {

@@ -1,245 +1,92 @@
 import { useEffect } from 'react';
-import { useReceivingFormStore } from '../store/receivingFormStore';
+import { clampQuantity } from '@/shared/lib/quantityUtils';
 import {
-  defaultIssueTypeFor,
-  issueBudgetOf,
-} from '../domain/issueSemantics';
-
-const generateId = () =>
-  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+  receivingInfoVersion,
+  useReceivingFormStore,
+} from '../store/receivingFormStore';
 
 /**
- * purchaseData می‌تواند null باشد: صفحه‌ی دریافت کالای برگشتی از مشتری
- * خودش استور را با initializeFromSalesReturn پر می‌کند و فقط
- * هندلرهای این هوک را می‌خواهد.
+ * فرمِ یک دورِ دریافتِ خرید.
+ *
+ * فقط «چقدر از هر قلم رسید» و مشخصاتِ محموله را می‌گیرد. گزارشِ مغایرت
+ * اینجا نیست: `ReceivePurchaseCommand` عمداً چنین فیلدی ندارد و
+ * کسری/آسیب/اشتباه باید جدا با `CreatePurchaseReturn` (صفحه‌ی مرجوعیِ
+ * خرید) ثبت شود.
  */
-export function useReceivingForm(purchaseData) {
-  const store = useReceivingFormStore();
+export function useReceivingForm(receivingInfo) {
   const {
     formData,
     setFormData,
-    setReceivingItems,
-    setUnknownItems,
-    initializeFromPurchase,
+    setItems,
+    initializeFromReceivingInfo,
     initializedForId,
     resetForm,
-  } = store;
+  } = useReceivingFormStore();
 
-  const purchaseVersion =
-    purchaseData?.id != null ? `${purchaseData.id}:${purchaseData.updatedAt}` : null;
+  const version = receivingInfoVersion(receivingInfo);
 
   useEffect(() => {
-    if (purchaseVersion && initializedForId !== purchaseVersion) {
-      initializeFromPurchase(purchaseData);
+    if (version && initializedForId !== version) {
+      initializeFromReceivingInfo(receivingInfo);
     }
-  }, [purchaseVersion, purchaseData, initializeFromPurchase, initializedForId]);
+  }, [version, receivingInfo, initializeFromReceivingInfo, initializedForId]);
 
-  const allocatedOf = (item) =>
-    (item.issues || []).reduce((sum, i) => sum + (Number(i.quantity) || 0), 0);
-
-  const handleItemChange = (lineId, field, value) => {
-    const newItems = formData.items.map((item) => {
-      if (item.lineId !== lineId) return item;
-      const updated = { ...item, [field]: value };
-
-      if (field === 'receivedQuantity') {
-        let remainingBudget = issueBudgetOf(updated);
-        const trimmedIssues = [];
-        for (const issue of updated.issues || []) {
-          if (remainingBudget <= 0) break;
-          const quantity = Math.min(Number(issue.quantity) || 0, remainingBudget);
-          if (quantity > 0) {
-            trimmedIssues.push({ ...issue, quantity });
-            remainingBudget -= quantity;
-          }
-        }
-        updated.issues = trimmedIssues;
-      }
-
-      return updated;
-    });
-    setReceivingItems(newItems);
-  };
-
-  // انباردار مجبور نیست کل کسری را به‌عنوان مشکل ثبت کند؛ فقط بخشی
-  // که واقعاً مشکل دارد (نه صرفاً دیرکرد ارسال) را اضافه می‌کند —
-  // بقیه به‌طور خودکار «در انتظار محموله بعدی» تلقی می‌شود.
-  const handleAddIssue = (lineId) => {
-    const newItems = formData.items.map((item) => {
-      if (item.lineId !== lineId) return item;
-      const budget = issueBudgetOf(item);
-      const allocated = allocatedOf(item);
-      const remaining = Math.max(0, budget - allocated);
-      if (remaining <= 0) return item;
-      return {
-        ...item,
-        issues: [
-          ...(item.issues || []),
-          {
-            id: generateId(),
-            issueType: defaultIssueTypeFor(item),
-            quantity: remaining,
-            note: '',
-          },
-        ],
-      };
-    });
-    setReceivingItems(newItems);
-  };
-
-  const handleUpdateIssue = (lineId, issueRowId, field, value) => {
-    const newItems = formData.items.map((item) => {
-      if (item.lineId !== lineId) return item;
-      const budget = issueBudgetOf(item);
-
-      const newIssues = (item.issues || []).map((issue) => {
-        if (issue.id !== issueRowId) return issue;
-        if (field === 'quantity') {
-          const otherAllocated = (item.issues || [])
-            .filter((i) => i.id !== issueRowId)
-            .reduce((s, i) => s + (Number(i.quantity) || 0), 0);
-          const maxAllowed = Math.max(0, budget - otherAllocated);
-          const num = Number(value);
-          const clamped = Number.isNaN(num) || num < 0 ? 0 : Math.min(num, maxAllowed);
-          return { ...issue, quantity: clamped };
-        }
-        return { ...issue, [field]: value };
-      });
-
-      return { ...item, issues: newIssues };
-    });
-    setReceivingItems(newItems);
-  };
-
-  const handleRemoveIssue = (lineId, issueRowId) => {
-    const newItems = formData.items.map((item) =>
-      item.lineId === lineId
-        ? { ...item, issues: (item.issues || []).filter((i) => i.id !== issueRowId) }
-        : item,
-    );
-    setReceivingItems(newItems);
-  };
-
-  // ── مازادِ یک قلم شناخته‌شده ───────────────────────────────────────
-  // برخلاف کسری، مازاد از روی تعدادها قابل استنتاج نیست (چون سقف
-  // دریافتی همان سفارش است)؛ انباردار باید صریحاً اعلامش کند. سقفی
-  // هم ندارد — تامین‌کننده هر تعدادی ممکن است اضافه فرستاده باشد.
-  const handleExcessChange = (lineId, field, value) => {
-    const newItems = formData.items.map((item) => {
-      if (item.lineId !== lineId) return item;
-      if (field === 'excessQuantity') {
-        const num = Number(value);
-        const safe = Number.isNaN(num) || num < 0 ? 0 : Math.floor(num);
-        // با صفرشدن تعداد، یادداشتِ بی‌صاحب هم پاک می‌شود تا چیزی که
-        // ثبت نمی‌شود روی صفحه باقی نماند.
-        return { ...item, excessQuantity: safe, excessNote: safe > 0 ? item.excessNote : '' };
-      }
-      return { ...item, [field]: value };
-    });
-    setReceivingItems(newItems);
-  };
-
-  // ── کالای ثبت‌نشده ────────────────────────────────────────────────
-  const unknownItems = formData.unknownItems || [];
-
-  const handleAddUnknownItem = () => {
-    setUnknownItems([
-      ...unknownItems,
-      { id: generateId(), productName: '', quantity: 1, unit: 'عدد', note: '' },
-    ]);
-  };
-
-  const handleUpdateUnknownItem = (rowId, field, value) => {
-    setUnknownItems(
-      unknownItems.map((row) => {
-        if (row.id !== rowId) return row;
-        if (field === 'quantity') {
-          const num = Number(value);
-          const safe = Number.isNaN(num) || num < 0 ? 0 : Math.floor(num);
-          return { ...row, quantity: safe };
-        }
-        return { ...row, [field]: value };
-      }),
+  const handleItemChange = (purchaseItemId, value) => {
+    setItems(
+      formData.items.map((item) =>
+        item.purchaseItemId === purchaseItemId
+          ? {
+              ...item,
+              // سقفِ همین دور، همان چیزی است که بکند هم چک می‌کند:
+              // بیشتر از باقیمانده‌ی قلم با ۴۰۰ رد می‌شود.
+              receivedQuantity: clampQuantity(value, item.stillOwedQuantity),
+            }
+          : item,
+      ),
     );
   };
 
-  const handleRemoveUnknownItem = (rowId) => {
-    setUnknownItems(unknownItems.filter((row) => row.id !== rowId));
-  };
+  const items = formData.items || [];
 
-  const isUnknownRowComplete = (row) =>
-    !!row.productName?.trim() && (Number(row.quantity) || 0) > 0;
+  const isAllComplete =
+    items.length > 0 &&
+    items.every((item) => item.receivedQuantity >= item.stillOwedQuantity);
 
-  // ردیف‌های نیمه‌پرشده بی‌صدا حذف نمی‌شوند — انباردار باید ببیند که
-  // چیزی که نوشته ثبت نخواهد شد.
-  const incompleteUnknownCount = unknownItems.filter(
-    (row) =>
-      !isUnknownRowComplete(row) &&
-      (!!row.productName?.trim() || (Number(row.quantity) || 0) > 0 || !!row.note?.trim()),
-  ).length;
-
-  const isAllComplete = formData.items.every(
-    (item) => item.receivedQuantity >= item.expectedQuantity,
+  const hasSomethingToReceive = items.some(
+    (item) => (Number(item.receivedQuantity) || 0) > 0,
   );
 
-  // خطوط به تفکیک منبع، برای اینکه صفحه هرکدام را زیر عنوان خودش
-  // نشان بدهد بدون اینکه منطق فرم دو شاخه شود.
-  const linesBySource = formData.items.reduce((acc, item) => {
-    (acc[item.source] ||= []).push(item);
-    return acc;
-  }, {});
-
-  const buildPayload = () => ({
-    id: formData.purchaseId,
-    receivedItems: formData.items.map((item) => ({
-      lineId: item.lineId,
-      source: item.source,
-      returnId: item.returnId,
-      effectId: item.effectId,
-      purchaseItemId: item.purchaseItemId ?? null,
-      productId: item.productId,
-      productCode: item.productCode,
-      productName: item.productName,
-      expectedQuantity: item.expectedQuantity,
-      receivedQuantity: item.receivedQuantity,
-      issues: (item.issues || []).map((i) => ({
-        type: i.issueType,
-        quantity: Number(i.quantity) || 0,
-        note: i.note || '',
+  /**
+   * بدنه‌ی `ReceivePurchaseCommand`. قلمِ با مقدارِ صفر فرستاده نمی‌شود:
+   * اعتبارسنجیِ بکند `ReceivedQuantity > 0` می‌خواهد و کلِ درخواست را
+   * به‌خاطرِ یک ردیفِ صفر رد می‌کند.
+   *
+   * @param images خروجیِ `filesPayload` آپلودرِ صفحه — `{objectKey,
+   *   fileName?, note?}[]`، همان `ReceivePurchaseImageDto`.
+   */
+  const buildCommand = (images = []) => ({
+    purchaseId: formData.purchaseId,
+    receivedDate: formData.receivedDate || undefined,
+    receivingNote: formData.receivingNote || undefined,
+    driverFullName: formData.driverFullName || undefined,
+    driverPhoneNumber: formData.driverPhoneNumber || undefined,
+    vehiclePlate: formData.vehiclePlate || undefined,
+    items: items
+      .filter((item) => (Number(item.receivedQuantity) || 0) > 0)
+      .map((item) => ({
+        purchaseItemId: item.purchaseItemId,
+        receivedQuantity: Number(item.receivedQuantity) || 0,
       })),
-      excessQuantity: Number(item.excessQuantity) || 0,
-      excessNote: item.excessNote || '',
-    })),
-    unknownItems: unknownItems.filter(isUnknownRowComplete).map((row) => ({
-      productName: row.productName.trim(),
-      quantity: Number(row.quantity) || 0,
-      unit: row.unit?.trim() || 'عدد',
-      note: row.note || '',
-    })),
-    receivingNote: formData.receivingNote,
-    receivedDate: formData.receivedDate,
-    transporterName: formData.transporterName,
-    transporterPhone: formData.transporterPhone,
-    vehiclePlate: formData.vehiclePlate,
+    images,
   });
 
   return {
     formData,
     setFormData,
     handleItemChange,
-    handleAddIssue,
-    handleUpdateIssue,
-    handleRemoveIssue,
-    handleExcessChange,
-    unknownItems,
-    handleAddUnknownItem,
-    handleUpdateUnknownItem,
-    handleRemoveUnknownItem,
-    incompleteUnknownCount,
     isAllComplete,
-    linesBySource,
-    buildPayload,
+    hasSomethingToReceive,
+    buildCommand,
     resetForm,
-    initializedForId,
   };
 }

@@ -110,7 +110,9 @@ export default function ClaimResolutionCard({
               isBusy={isBusy}
               side={side}
               onAdd={(composition) => {
-                onAddResolution(claim.id, composition);
+                // خودِ ادعا می‌رود، نه فقط شناسه‌اش: لایه‌ی api برای باز
+                // کردنِ پیش‌فرضِ «همان کالای ادعا» به کالا و قیمتش نیاز دارد.
+                onAddResolution(claim, composition);
                 setIsComposerOpen(false);
               }}
             />

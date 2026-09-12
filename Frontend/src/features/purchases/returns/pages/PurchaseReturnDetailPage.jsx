@@ -127,8 +127,8 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
       <PurchaseReturnResolutionSection
         purchaseReturn={purchaseReturn}
         isBusy={isBusy}
-        onAddResolution={(claimId, composition) =>
-          addResolutionMutation.mutate({ claimId, composition })
+        onAddResolution={(claim, composition) =>
+          addResolutionMutation.mutate({ claim, composition })
         }
         onRemoveResolution={(claimId, resolutionId) =>
           removeResolutionMutation.mutate({ claimId, resolutionId })

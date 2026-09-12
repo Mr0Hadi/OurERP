@@ -24,28 +24,24 @@ export default function ShippingItemsSection({
   const filteredItems = useMemo(() => {
     const term = search.trim().toLowerCase();
     if (!term) return items;
-    return items.filter(
-      (item) =>
-        item.productName?.toLowerCase().includes(term) ||
-        item.productCode?.toLowerCase().includes(term),
-    );
+    return items.filter((item) => item.productName?.toLowerCase().includes(term));
   }, [items, search]);
 
   const totals = useMemo(() => {
     return items.reduce(
       (acc, item) => {
         const shipped = item.shippedQuantity || 0;
-        const status = getRowStatus(item.expectedQuantity, shipped);
-        acc.expected += item.expectedQuantity;
+        const status = getRowStatus(item.remainingQuantity, shipped);
+        acc.expected += item.remainingQuantity;
         acc.shipped += shipped;
         acc[status] += 1;
         return acc;
       },
-      { expected: 0, shipped: 0, complete: 0, partial: 0, pending: 0 },
+      { remaining: 0, shipped: 0, complete: 0, partial: 0, pending: 0 },
     );
   }, [items]);
 
-  const remainingTotal = totals.expected - totals.shipped;
+  const remainingTotal = totals.remaining - totals.shipped;
   const remainingLabel =
     remainingTotal > 0
       ? `باقی‌مانده: ${remainingTotal.toLocaleString("fa-IR")} عدد`
@@ -87,7 +83,7 @@ export default function ShippingItemsSection({
           <div className="relative">
             <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="جست‌وجو بر اساس نام یا کد کالا..."
+              placeholder="جست‌وجو بر اساس نام کالا..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pr-8 text-sm h-9 input-rtl-placeholder"
@@ -112,7 +108,7 @@ export default function ShippingItemsSection({
           <div className="space-y-2 sm:hidden">
             {filteredItems.map((item) => (
               <ShippingItemCard
-                key={item.lineId}
+                key={item.saleItemId}
                 item={item}
                 onItemChange={onItemChange}
               />
@@ -123,7 +119,7 @@ export default function ShippingItemsSection({
                 جمع کل:{" "}
                 <span className="font-bold text-card-foreground tabular-nums">
                   {totals.shipped.toLocaleString("fa-IR")} /{" "}
-                  {totals.expected.toLocaleString("fa-IR")}
+                  {totals.remaining.toLocaleString("fa-IR")}
                 </span>
               </span>
               <span className="text-muted-foreground">{remainingLabel}</span>
@@ -152,7 +148,7 @@ export default function ShippingItemsSection({
               <tbody className="divide-y divide-border">
                 {filteredItems.map((item) => (
                   <ShippingItemRow
-                    key={item.lineId}
+                    key={item.saleItemId}
                     item={item}
                     onItemChange={onItemChange}
                   />
@@ -165,7 +161,7 @@ export default function ShippingItemsSection({
                     جمع کل:
                   </td>
                   <td className="px-2 py-2.5 text-center text-sm font-bold text-card-foreground tabular-nums">
-                    {totals.expected.toLocaleString("fa-IR")}
+                    {totals.remaining.toLocaleString("fa-IR")}
                   </td>
                   <td className="px-2 py-2.5 text-center text-sm font-bold text-card-foreground tabular-nums">
                     {totals.shipped.toLocaleString("fa-IR")}

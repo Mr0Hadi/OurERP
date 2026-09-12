@@ -30,10 +30,10 @@ export default function ReceivingSummaryCard({ formData, onFormChange }) {
 
   const stats = useMemo(() => {
     const items = formData.items || [];
-    const expected = items.reduce((sum, i) => sum + (i.expectedQuantity || 0), 0);
+    const stillOwed = items.reduce((sum, i) => sum + (i.stillOwedQuantity || 0), 0);
     const received = items.reduce((sum, i) => sum + (i.receivedQuantity || 0), 0);
-    const percent = expected > 0 ? Math.round((received / expected) * 100) : 0;
-    return { expected, received, percent };
+    const percent = stillOwed > 0 ? Math.round((received / stillOwed) * 100) : 0;
+    return { stillOwed, received, percent };
   }, [formData.items]);
 
   const config = STATUS_CONFIG[formData.status] ?? DEFAULT_STATUS_CONFIG;
@@ -59,7 +59,7 @@ export default function ReceivingSummaryCard({ formData, onFormChange }) {
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>پیشرفت دریافت</span>
             <span className="tabular-nums font-medium text-card-foreground">
-              {stats.received.toLocaleString('fa-IR')} / {stats.expected.toLocaleString('fa-IR')}
+              {stats.received.toLocaleString('fa-IR')} / {stats.stillOwed.toLocaleString('fa-IR')}
               {' '}({stats.percent.toLocaleString('fa-IR')}٪)
             </span>
           </div>

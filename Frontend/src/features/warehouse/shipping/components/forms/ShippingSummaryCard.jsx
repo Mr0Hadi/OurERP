@@ -39,10 +39,10 @@ export default function ShippingSummaryCard({ formData, onFormChange }) {
 
   const stats = useMemo(() => {
     const items = formData.items || [];
-    const expected = items.reduce((sum, i) => sum + (i.expectedQuantity || 0), 0);
+    const remaining = items.reduce((sum, i) => sum + (i.remainingQuantity || 0), 0);
     const shipped = items.reduce((sum, i) => sum + (i.shippedQuantity || 0), 0);
-    const percent = expected > 0 ? Math.round((shipped / expected) * 100) : 0;
-    return { expected, shipped, percent };
+    const percent = remaining > 0 ? Math.round((shipped / remaining) * 100) : 0;
+    return { remaining, shipped, percent };
   }, [formData.items]);
 
   const config = STATUS_CONFIG[formData.status] ?? DEFAULT_STATUS_CONFIG;
@@ -66,7 +66,7 @@ export default function ShippingSummaryCard({ formData, onFormChange }) {
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>پیشرفت ارسال</span>
             <span className="tabular-nums font-medium text-card-foreground">
-              {stats.shipped.toLocaleString('fa-IR')} / {stats.expected.toLocaleString('fa-IR')}{' '}
+              {stats.shipped.toLocaleString('fa-IR')} / {stats.remaining.toLocaleString('fa-IR')}{' '}
               ({stats.percent.toLocaleString('fa-IR')}٪)
             </span>
           </div>

@@ -4,6 +4,7 @@ import {
   normalizeListResponse,
 } from "@/shared/services/api/contract";
 import { toApiClaim, fromApiReturn } from "./apiMapping";
+import { toApiComposition } from "@/shared/domain/returns/resolutions";
 
 /**
  * نسخه‌ی هماهنگ‌شده با بکندِ واقعی — کنترلر `api/PurchaseReturn`
@@ -122,20 +123,24 @@ export async function createPurchaseReturn(payload, { idempotencyKey } = {}) {
  *
  * `composition` همان چهار اسلاتِ ساختاریِ بک‌اند است —
  * `goodsIn`/`goodsOut`/`moneyIn`/`moneyOut` (`EffectCompositionDto`،
- * از ۲۰۲۶-۰۹-۰۷) — بدون هیچ تبدیلی؛ فرم مستقیم همین شکل را می‌سازد
- * (`shared/domain/returns/resolutions.js`). باز کردنِ ترکیب به اثرهای
- * پایه کارِ سرور است؛ اگر فرانت اثرها را بسازد و بفرستد، منطق در دو جا
- * زندگی می‌کند و روزی از هم جدا می‌افتد.
+ * از ۲۰۲۶-۰۹-۰۷). شکلِ فرم یک لایه با آن فرق دارد و `toApiComposition`
+ * همان‌جا کنارِ `expandComposition` این فاصله را پر می‌کند: `enabled`
+ * فیلدی است که فقط فرم دارد، اسلاتِ کالا در فرم شیء است و در دستور
+ * آرایه، و پیش‌فرضِ «همان کالای ادعا» باید قبل از ارسال باز شود چون
+ * بکند روی آرایه‌ی خالی هیچ اثری نمی‌سازد.
+ *
+ * باز کردنِ ترکیب به اثرهای پایه همچنان کارِ سرور است؛ فرانت فقط شکل را
+ * درست می‌کند، نه معنا را.
  */
 export async function addClaimResolution(
   returnId,
-  claimId,
+  claim,
   composition,
   { idempotencyKey } = {},
 ) {
   const { data } = await axiosInstance.post(
     "/PurchaseReturn/AddClaimResolution",
-    { claimId, composition },
+    { claimId: claim.id, composition: toApiComposition(composition, claim) },
     idempotent(idempotencyKey),
   );
   return fromApiReturn(data);

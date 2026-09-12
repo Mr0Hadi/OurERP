@@ -78,12 +78,12 @@ const generateId = () =>
  * یک اثر تازه. `quantity` فقط کالایی است و `amount` فقط پولی، ولی هر دو
  * روی یک شکل می‌نشینند تا مصرف‌کننده دو نوع رکورد جدا نشناسد.
  *
- * `doneQuantity` مقدارِ *تجمعیِ* اجراشده است: انبار می‌تواند یک اثر
+ * `appliedQuantity` مقدارِ *تجمعیِ* اجراشده است: انبار می‌تواند یک اثر
  * کالایی را چند دور جزئی اجرا کند و اثر تا رسیدنش به `quantity` در
  * PENDING می‌ماند.
  *
  * `restockedQuantity` فقط برای GOODS_IN معنا دارد و همیشه ≤
- * `doneQuantity` است — بخشی از کالای برگشتی که سالم بوده. کالای معیوب
+ * `appliedQuantity` است — بخشی از کالای برگشتی که سالم بوده. کالای معیوب
  * هم دریافت می‌شود (ادعا بسته می‌شود) ولی به موجودیِ قابل‌فروش
  * برنمی‌گردد؛ بدون این تفکیک، پس‌گرفتنِ کالای خراب موجودی را الکی بالا
  * می‌برد.
@@ -106,7 +106,7 @@ export function createEffect({
     id: generateId(),
     direction,
     quantity: isGoods ? Number(quantity) || 0 : 0,
-    doneQuantity: 0,
+    appliedQuantity: 0,
     restockedQuantity: direction === EFFECT_DIRECTIONS.GOODS_IN ? 0 : null,
     productId: isGoods ? productId : null,
     productCode: isGoods ? productCode : "",
@@ -204,12 +204,12 @@ export function summarizeEffects(effects = [], { includePending = false } = {}) 
     if (pending) sum.pendingCount += 1;
     if (pending && !includePending) return sum;
 
-    // برای اثر کالاییِ در حال اجرا، آنچه واقعاً حرکت کرده doneQuantity است
+    // برای اثر کالاییِ در حال اجرا، آنچه واقعاً حرکت کرده appliedQuantity است
     // نه quantity؛ مگر اینکه پیش‌نمایشِ کاملِ تصمیم خواسته شده باشد.
     const quantity = isGoodsEffect(effect.direction)
       ? includePending
         ? Number(effect.quantity) || 0
-        : Number(effect.doneQuantity) || 0
+        : Number(effect.appliedQuantity) || 0
       : 0;
 
     switch (effect.direction) {

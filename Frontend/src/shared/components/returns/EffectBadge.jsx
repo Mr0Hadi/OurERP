@@ -40,7 +40,7 @@ export default function EffectBadge({ effect, side, showProductName = false }) {
   const Icon = ICONS[effect.direction];
   const isGoods = isGoodsEffect(effect.direction);
   const isPending = effect.status === EFFECT_STATUSES.PENDING;
-  const done = Number(effect.doneQuantity) || 0;
+  const done = Number(effect.appliedQuantity) || 0;
 
   const value = isGoods
     ? `${(Number(effect.quantity) || 0).toLocaleString("fa-IR")} ${effect.unit || "عدد"}`

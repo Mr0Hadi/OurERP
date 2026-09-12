@@ -14,15 +14,11 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import { useHeaderStore } from "@/shared/store/headerStore";
-import { useShippingSaleQuery } from "../services/queries";
+import { useSaleForShippingQuery } from "../services/queries";
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
-import { useConfirmShipmentMutation } from "../services/mutations";
+import { useShipSaleMutation } from "../services/mutations";
 import { useShippingForm } from "../hooks/useShippingForm";
 import ShippingItemsSection from "../components/forms/ShippingItemsSection";
-import {
-  SHIPPING_SOURCES,
-  SHIPPING_SOURCE_LABELS,
-} from "../domain/shippingVocabulary";
 import ShippingSummaryCard from "../components/forms/ShippingSummaryCard";
 import ShippingTransporterSection from "../components/forms/ShippingTransporterSection";
 import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
@@ -35,9 +31,13 @@ const SORTING = { id: "name", desc: false };
 
 function ShippingDetailForm({ sale }) {
   const navigate = useNavigate();
-  const shipMutation = useConfirmShipmentMutation();
+  const shipMutation = useShipSaleMutation();
 
-  const { data: productsData } = useProductsQuery(ALL_FILTERS, PAGINATION, SORTING);
+  const { data: productsData } = useProductsQuery(
+    ALL_FILTERS,
+    PAGINATION,
+    SORTING,
+  );
   const productMap = useMemo(() => {
     const map = new Map();
     (productsData?.items || []).forEach((p) => map.set(p.id, p));
@@ -49,7 +49,8 @@ function ShippingDetailForm({ sale }) {
     setFormData,
     handleItemChange,
     isAllComplete,
-    buildPayload,
+    hasSomethingToShip,
+    buildCommand,
     resetForm,
   } = useShippingForm(sale);
 
@@ -75,32 +76,16 @@ function ShippingDetailForm({ sale }) {
     [items, productMap],
   );
 
-  const orderItems = displayItems.filter(
-    (item) => (item.source ?? SHIPPING_SOURCES.ORDER) === SHIPPING_SOURCES.ORDER,
-  );
-  const returnItems = displayItems.filter(
-    (item) => item.source === SHIPPING_SOURCES.RETURN,
-  );
-
   const isBusy = shipMutation.isPending;
 
-  const handleConfirmClick = () => {
-    setShowConfirmDialog(true);
-  };
-
   const handleSubmit = () => {
-    const payload = buildPayload();
-
-    shipMutation.mutate(
-      { saleId: payload.id, shipmentData: payload },
-      {
-        onSuccess: () => {
-          setShowConfirmDialog(false);
-          resetForm();
-          navigate(ROUTES.WAREHOUSE_SHIPPING);
-        },
+    shipMutation.mutate(buildCommand(), {
+      onSuccess: () => {
+        setShowConfirmDialog(false);
+        resetForm();
+        navigate(ROUTES.WAREHOUSE_SHIPPING);
       },
-    );
+    });
   };
 
   return (
@@ -108,23 +93,10 @@ function ShippingDetailForm({ sale }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
           <ShippingItemsSection
-            items={orderItems}
-            title={
-              returnItems.length > 0
-                ? SHIPPING_SOURCE_LABELS[SHIPPING_SOURCES.ORDER]
-                : "اقلام ارسال"
-            }
+            items={displayItems}
             onItemChange={handleItemChange}
           />
 
-          {returnItems.length > 0 && (
-            <ShippingItemsSection
-              items={returnItems}
-              title={SHIPPING_SOURCE_LABELS[SHIPPING_SOURCES.RETURN]}
-              subtitle="کالای جایگزینی که بابت مرجوعی‌های همین فروش به مشتری بدهکاریم و با همین ماشین می‌رود."
-              onItemChange={handleItemChange}
-            />
-          )}
           <ShippingTransporterSection
             formData={formData}
             onFormChange={setFormData}
@@ -141,8 +113,8 @@ function ShippingDetailForm({ sale }) {
                   ? "bg-amber-600 hover:bg-amber-700 text-white"
                   : ""
               }`}
-              disabled={isBusy || items.length === 0}
-              onClick={handleConfirmClick}
+              disabled={isBusy || !hasSomethingToShip}
+              onClick={() => setShowConfirmDialog(true)}
             >
               {isAllComplete ? (
                 <CheckCircle className="h-4 w-4" />
@@ -163,12 +135,10 @@ function ShippingDetailForm({ sale }) {
             </Button>
           </div>
 
-          {items.every((i) => !(i.shippedQuantity > 0)) && (
-            <p className="text-xs text-muted-foreground text-center px-2">
-              این فروش هنوز هیچ ارسالی ندارد. باقیمانده‌ای که این دور ارسال
-              نکنید، برای دور بعدی در همین لیست باقی می‌ماند.
-            </p>
-          )}
+          <p className="text-xs text-muted-foreground text-center px-2">
+            باقیمانده‌ای که این دور ارسال نکنید، برای دور بعدی در همین لیست
+            باقی می‌ماند.
+          </p>
         </div>
       </div>
 
@@ -180,8 +150,8 @@ function ShippingDetailForm({ sale }) {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {isAllComplete
-                ? "آیا مطمئن هستید که همه اقلام به‌طور کامل آماده و ارسال شده‌اند؟"
-                : "بخشی که ارسال نکرده‌اید در انتظار محموله بعدی می‌ماند و این فروش همچنان در لیست ارسال باقی می‌ماند."}
+                ? "آیا مطمئن هستید که همه‌ی باقیمانده‌ی این فروش آماده و ارسال شده است؟ این مقدار همین حالا از موجودی کم می‌شود."
+                : "فقط مقداری که وارد کرده‌اید از موجودی کم می‌شود؛ باقیمانده در انتظار محموله‌ی بعدی می‌ماند و این فروش همچنان در لیست ارسال باقی می‌ماند."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -206,7 +176,7 @@ export default function ShippingDetailPage() {
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  const { data: sale, isLoading, isError } = useShippingSaleQuery(Number(id));
+  const { data: sale, isLoading, isError } = useSaleForShippingQuery(Number(id));
 
   useEffect(() => {
     setHeader({

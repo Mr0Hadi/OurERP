@@ -18,10 +18,6 @@ export default function ReceivingItemsSection({
   title = "اقلام دریافت",
   subtitle,
   onItemChange,
-  onAddIssue,
-  onUpdateIssue,
-  onRemoveIssue,
-  onExcessChange,
 }) {
   const [search, setSearch] = useState("");
 
@@ -39,30 +35,21 @@ export default function ReceivingItemsSection({
     return items.reduce(
       (acc, item) => {
         const received = item.receivedQuantity || 0;
-        const status = getRowStatus(item.expectedQuantity, received);
-        acc.expected += item.expectedQuantity;
+        const status = getRowStatus(item.stillOwedQuantity, received);
+        acc.stillOwed += item.stillOwedQuantity;
         acc.received += received;
-        acc.excess += Number(item.excessQuantity) || 0;
         acc[status] += 1;
         return acc;
       },
-      { expected: 0, received: 0, excess: 0, complete: 0, partial: 0, missing: 0 },
+      { stillOwed: 0, received: 0, complete: 0, partial: 0, missing: 0 },
     );
   }, [items]);
 
-  const shortageTotal = totals.expected - totals.received;
+  const shortageTotal = totals.stillOwed - totals.received;
   const shortageLabel =
     shortageTotal > 0
-      ? `کمبود: ${shortageTotal.toLocaleString("fa-IR")} عدد`
-      : "بدون کمبود";
-
-  const rowHandlers = {
-    onItemChange,
-    onAddIssue,
-    onUpdateIssue,
-    onRemoveIssue,
-    onExcessChange,
-  };
+      ? `نرسیده: ${shortageTotal.toLocaleString("fa-IR")} عدد`
+      : "همه‌ی باقیمانده رسید";
 
   return (
     <Card>
@@ -92,14 +79,6 @@ export default function ReceivingItemsSection({
           >
             نرسیده: {totals.missing.toLocaleString("fa-IR")}
           </Badge>
-          {totals.excess > 0 && (
-            <Badge
-              variant="outline"
-              className="bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/40 dark:border-sky-800 dark:text-sky-400"
-            >
-              اضافه: {totals.excess.toLocaleString("fa-IR")}
-            </Badge>
-          )}
         </div>
       </CardHeader>
 
@@ -128,14 +107,14 @@ export default function ReceivingItemsSection({
           </p>
         )}
 
-        {/* ─── نمای کارتی: موبایل ─────────────────────────────────────── */}
+        {/* نمای کارتی: موبایل */}
         {filteredItems.length > 0 && (
           <div className="space-y-2 sm:hidden">
             {filteredItems.map((item) => (
               <ReceivingItemCard
-                key={item.lineId}
+                key={item.purchaseItemId}
                 item={item}
-                {...rowHandlers}
+                onItemChange={onItemChange}
               />
             ))}
 
@@ -144,7 +123,7 @@ export default function ReceivingItemsSection({
                 جمع کل:{" "}
                 <span className="font-bold text-card-foreground tabular-nums">
                   {totals.received.toLocaleString("fa-IR")} /{" "}
-                  {totals.expected.toLocaleString("fa-IR")}
+                  {totals.stillOwed.toLocaleString("fa-IR")}
                 </span>
               </span>
               <span className="text-muted-foreground">{shortageLabel}</span>
@@ -152,18 +131,21 @@ export default function ReceivingItemsSection({
           </div>
         )}
 
-        {/* ─── نمای جدولی: از sm به بالا ──────────────────────────────── */}
+        {/* نمای جدولی: از sm به بالا */}
         {filteredItems.length > 0 && (
           <div className="hidden sm:block border border-border rounded-lg overflow-x-auto">
-            <table className="w-full text-sm min-w-[640px]">
+            <table className="w-full text-sm min-w-[680px]">
               <thead className="bg-muted text-muted-foreground text-xs">
                 <tr>
                   <th className="text-right px-3 py-2.5 font-medium">کالا</th>
                   <th className="text-center px-2 py-2.5 font-medium w-20">
-                    مورد انتظار
+                    سفارش
+                  </th>
+                  <th className="text-center px-2 py-2.5 font-medium w-20">
+                    باقیمانده
                   </th>
                   <th className="text-center px-2 py-2.5 font-medium w-32">
-                    دریافتی
+                    دریافتی این دور
                   </th>
                   <th className="text-center px-2 py-2.5 font-medium w-24">
                     وضعیت
@@ -173,28 +155,29 @@ export default function ReceivingItemsSection({
               <tbody className="divide-y divide-border">
                 {filteredItems.map((item) => (
                   <ReceivingItemRow
-                    key={item.lineId}
+                    key={item.purchaseItemId}
                     item={item}
-                    {...rowHandlers}
+                    onItemChange={onItemChange}
                   />
                 ))}
               </tbody>
 
               <tfoot className="bg-muted border-t border-border">
                 <tr>
-                  <td className="px-3 py-2.5 text-sm font-medium text-muted-foreground text-right">
+                  <td
+                    className="px-3 py-2.5 text-sm font-medium text-muted-foreground text-right"
+                    colSpan={2}
+                  >
                     جمع کل:
                   </td>
                   <td className="px-2 py-2.5 text-center text-sm font-bold text-card-foreground tabular-nums">
-                    {totals.expected.toLocaleString("fa-IR")}
+                    {totals.stillOwed.toLocaleString("fa-IR")}
                   </td>
                   <td className="px-2 py-2.5 text-center text-sm font-bold text-card-foreground tabular-nums">
                     {totals.received.toLocaleString("fa-IR")}
                   </td>
                   <td className="px-2 py-2.5 text-center text-xs text-muted-foreground">
-                    {shortageTotal > 0
-                      ? `مجموع کمبود: ${shortageTotal.toLocaleString("fa-IR")} عدد`
-                      : "بدون کمبود"}
+                    {shortageLabel}
                   </td>
                 </tr>
               </tfoot>

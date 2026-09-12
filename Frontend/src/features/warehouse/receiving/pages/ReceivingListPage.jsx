@@ -1,29 +1,39 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/ui/card";
 import { useReceivingFilterStore } from "../store/receivingFilterStore";
 import { useDebouncedReceivingFilters } from "../hooks/useDebouncedReceivingFilters";
-import { useIncomingQueueQuery } from "../services/queries";
-import { useCustomersQuery } from "@/features/customers/services/queries";
+import { useReceivablePurchasesQuery } from "../services/queries";
 import { useSuppliersQuery } from "@/features/suppliers/services/queries";
 import ReceivingFilters from "../components/table/ReceivingFilters";
 import ReceivingTable from "../components/table/ReceivingTable";
 import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
 import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
 
-const getPartyName = (p) => p.name || p.companyName || [p.firstName, p.lastName].filter(Boolean).join(" ") || "بدون نام";
-
+/**
+ * صفِ دریافت = `GetPurchaseList` فیلترشده روی وضعیت‌های قابلِ دریافت.
+ *
+ * تحویل‌گرفتنِ کالای برگشتیِ مشتری در این صف نیست: بکند چنین لیستِ
+ * ترکیبی‌ای ندارد و آن کار یک دورِ اثرِ `GOODS_IN` روی خودِ مرجوعیِ فروش
+ * است — از صفحه‌ی همان مرجوعی باز می‌شود.
+ */
 const ReceivingListPage = () => {
-  const { pagination, sorting, setPagination, setSorting } = useReceivingFilterStore();
+  const { pagination, sorting, setPagination, setSorting } =
+    useReceivingFilterStore();
   const debouncedFilters = useDebouncedReceivingFilters();
 
-  const { data, isLoading, isFetching, isError, error, refetch } = useIncomingQueueQuery(debouncedFilters, pagination, sorting);
+  const { data, isLoading, isFetching, isError, error, refetch } =
+    useReceivablePurchasesQuery(debouncedFilters, pagination);
 
-  const { data: customersData, isLoading: isCustomersLoading } = useCustomersQuery({}, { pageIndex: 0, pageSize: 200 }, { id: "name", desc: false });
-  const { data: suppliersData, isLoading: isSuppliersLoading } = useSuppliersQuery({}, { pageIndex: 0, pageSize: 200 }, { id: "name", desc: false });
-
-  const parties = [
-    ...(customersData?.items ?? []).map((c) => ({ key: `customer:${c.id}`, name: getPartyName(c), type: "customer" })),
-    ...(suppliersData?.items ?? []).map((s) => ({ key: `supplier:${s.id}`, name: getPartyName(s), type: "supplier" })),
-  ];
+  const { data: suppliersData, isLoading: isSuppliersLoading } =
+    useSuppliersQuery(
+      {},
+      { pageIndex: 0, pageSize: 200 },
+      { id: "name", desc: false },
+    );
 
   const rows = data?.items ?? [];
   const totalPages = data?.totalPages ?? 1;
@@ -34,19 +44,30 @@ const ReceivingListPage = () => {
       <Card>
         <CardHeader className="flex sm:flex-row flex-col sm:items-center justify-between">
           <CardTitle>دریافت کالاهای انبار</CardTitle>
-          <div className="text-sm text-muted-foreground">بررسی و تأیید کالاهای خریداری‌شده و مرجوعی‌های فروش</div>
+          <div className="text-sm text-muted-foreground">
+            بررسی و ثبت کالاهای خریداری‌شده‌ای که هنوز کامل نرسیده‌اند
+          </div>
         </CardHeader>
 
         <CardContent className="space-y-3">
-          <ReceivingFilters parties={parties} isPartiesLoading={isCustomersLoading || isSuppliersLoading} />
+          <ReceivingFilters
+            suppliers={suppliersData?.items ?? []}
+            isSuppliersLoading={isSuppliersLoading}
+          />
 
           {isError ? (
             <QueryErrorState error={error} onRetry={() => refetch()} />
           ) : (
             <FetchingOverlay active={isFetching && !isLoading}>
               <ReceivingTable
-                data={rows} isLoading={isLoading} totalPages={totalPages} currentPage={currentPage}
-                pageSize={pagination.pageSize} onPaginationChange={setPagination} sorting={sorting} onSortingChange={setSorting}
+                data={rows}
+                isLoading={isLoading}
+                totalPages={totalPages}
+                currentPage={currentPage}
+                pageSize={pagination.pageSize}
+                onPaginationChange={setPagination}
+                sorting={sorting}
+                onSortingChange={setSorting}
               />
             </FetchingOverlay>
           )}

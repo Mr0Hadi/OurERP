@@ -21,7 +21,7 @@ export default function ResolutionLineRow({ resolution, onRemove, isBusy, side }
   const summary = summarizeEffects(effects, { includePending: true });
 
   const hasMovedGoods = effects.some(
-    (effect) => isGoodsEffect(effect.direction) && (Number(effect.doneQuantity) || 0) > 0,
+    (effect) => isGoodsEffect(effect.direction) && (Number(effect.appliedQuantity) || 0) > 0,
   );
   const isPending = effects.some(
     (effect) => effect.status === EFFECT_STATUSES.PENDING,

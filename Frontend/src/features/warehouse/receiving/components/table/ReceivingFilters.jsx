@@ -1,36 +1,39 @@
 import { useCallback } from "react";
 import FilterPanel from "@/shared/components/filters/FilterPanel";
-import FilterSelect from "@/shared/components/filters/FilterSelect";
 import FilterDateInput from "@/shared/components/filters/FilterDateInput";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import EntitySelect from "@/shared/components/filters/EntitySelect";
-import { toFilterOptions } from "@/shared/components/filters/filterUtils";
+import { Label } from "@/shared/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import { useReceivingFilterStore } from "../../store/receivingFilterStore";
-import { INCOMING_TYPE_LABELS } from "../../domain/receivingVocabulary";
+import { RECEIVING_STATUS_OPTIONS } from "../../domain/receivingVocabulary";
 
-const TYPE_OPTIONS = toFilterOptions(INCOMING_TYPE_LABELS);
+const renderSupplierPhone = (supplier) =>
+  supplier.phone ? (
+    <span className="text-xs text-muted-foreground">{supplier.phone}</span>
+  ) : null;
 
-// در این صفحه هم خرید (طرف: تامین‌کننده) و هم مرجوعی فروش (طرف: مشتری)
-// دیده می‌شود، پس هر گزینه با کلید ترکیبی شناخته و نوعش هم نشان داده می‌شود.
-const getPartyKey = (party) => party.key;
-const getPartyLabel = (party) => party.name;
-
-const renderPartyType = (party) => (
-  <span className="text-[10px] text-muted-foreground">
-    {party.type === "customer" ? "مشتری" : "تامین‌کننده"}
-  </span>
-);
-
-const ReceivingFilters = ({ parties = [], isPartiesLoading = false }) => {
+/**
+ * وضعیت اینجا گزینه‌ی «همه» ندارد: `GetPurchaseListQuery` فقط یک مقدار
+ * می‌گیرد و بدونِ آن، خریدهای لغوشده و کاملاً دریافت‌شده هم وارد صف
+ * می‌شوند — یعنی ردیف‌هایی با دکمه‌ی «دریافت» که هیچ کاری نمی‌کند.
+ */
+const ReceivingFilters = ({ suppliers = [], isSuppliersLoading = false }) => {
   const {
     globalSearch,
-    type,
-    counterpartyId,
+    supplierId,
+    status,
     fromDate,
     toDate,
     setGlobalSearch,
-    setType,
-    setCounterpartyId,
+    setSupplierId,
+    setStatus,
     setFromDate,
     setToDate,
     resetFilters,
@@ -64,32 +67,39 @@ const ReceivingFilters = ({ parties = [], isPartiesLoading = false }) => {
       }
     >
       <FilterSearchInput
-        placeholder="نام تامین‌کننده/مشتری، شماره فاکتور/مرجوعی..."
+        placeholder="شماره فاکتور خرید..."
         value={globalSearch}
         onChange={handleGlobalSearch}
       />
 
       <EntitySelect
-        label="مشتری / تامین‌کننده"
-        placeholder="انتخاب طرف حساب..."
-        emptyText="موردی یافت نشد"
-        items={parties}
-        value={counterpartyId}
-        onSelect={setCounterpartyId}
-        isLoading={isPartiesLoading}
-        getKey={getPartyKey}
-        getLabel={getPartyLabel}
-        renderMeta={renderPartyType}
+        label="تامین‌کننده"
+        placeholder="انتخاب تامین‌کننده..."
+        emptyText="تامین‌کننده‌ای یافت نشد"
+        items={suppliers}
+        value={supplierId}
+        onSelect={setSupplierId}
+        isLoading={isSuppliersLoading}
+        renderMeta={renderSupplierPhone}
       />
 
-      <FilterSelect
-        label="نوع"
-        value={type}
-        onChange={setType}
-        allLabel="همه (خرید و مرجوعی)"
-        options={TYPE_OPTIONS}
-        numeric
-      />
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+        <Label className="whitespace-nowrap font-medium text-foreground text-sm">
+          وضعیت
+        </Label>
+        <Select value={String(status)} onValueChange={(v) => setStatus(Number(v))}>
+          <SelectTrigger className="flex-1 w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {RECEIVING_STATUS_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={String(option.value)}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     </FilterPanel>
   );
 };

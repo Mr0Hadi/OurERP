@@ -51,7 +51,7 @@ export const useAddClaimResolutionMutation = (returnId) => {
     mutationFn: (variables) =>
       addClaimResolution(
         returnId,
-        variables.claimId,
+        variables.claim,
         variables.composition,
         { idempotencyKey: idempotencyKeyFor(variables) },
       ),
@@ -84,14 +84,20 @@ export const useRemoveClaimResolutionMutation = (returnId) => {
 export const useExecuteGoodsRoundMutation = (returnId) => {
   const queryClient = useQueryClient();
   return useMutation({
-    // دورِ کالا تجمعی است (`doneQuantity` جمع می‌شود)، پس تکرارِ یک
+    // دورِ کالا تجمعی است (`appliedQuantity` جمع می‌شود)، پس تکرارِ یک
     // درخواست موجودی را دوبار جابه‌جا می‌کند.
     mutationFn: (payload) =>
       executeGoodsRound(returnId, payload, {
         idempotencyKey: idempotencyKeyFor(payload),
       }),
-    onSuccess: (updated) => {
-      finalizeReturnChange(queryClient, updated);
+    // ⚠️ برخلافِ بقیه‌ی دستورها، `ExecuteGoodsRound` سندِ کامل را
+    // برنمی‌گرداند — فقط `{returnStatus}`. پس چیزی برای نشاندن در کش
+    // نیست و سندِ مرجوعی باید صریحاً باطل شود تا از سرور تازه بیاید.
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: purchaseReturnKeys.detail(returnId),
+      });
+      invalidatePurchaseEcosystem(queryClient, null);
       toast.success("جابه‌جایی کالا ثبت شد");
     },
     onError: (error) => toast.error(error?.message || "خطا در ثبت جابه‌جایی کالا"),

@@ -6,7 +6,7 @@ import { getRowStatus, ROW_STATUS_CONFIG } from "./shippingRowStatus";
 /** نمای جدولی یک قلم ارسال. */
 export default function ShippingItemRow({ item, onItemChange }) {
   const shipped = item.shippedQuantity || 0;
-  const status = getRowStatus(item.expectedQuantity, shipped);
+  const status = getRowStatus(item.remainingQuantity, shipped);
   const config = ROW_STATUS_CONFIG[status];
   const StatusIcon = config.icon;
 
@@ -19,22 +19,19 @@ export default function ShippingItemRow({ item, onItemChange }) {
             <div className="font-medium text-card-foreground text-sm truncate">
               {item.productName}
             </div>
-            <div className="text-xs text-muted-foreground mt-0.5">
-              {item.productCode}
-            </div>
           </div>
         </div>
       </td>
 
       <td className="px-2 py-2 text-center tabular-nums">
-        {item.expectedQuantity.toLocaleString("fa-IR")}
+        {item.remainingQuantity.toLocaleString("fa-IR")}
       </td>
 
       <td className="px-2 py-2">
         <QuantityStepper
           value={item.shippedQuantity}
-          max={item.expectedQuantity}
-          onChange={(next) => onItemChange(item.lineId, "shippedQuantity", next)}
+          max={item.remainingQuantity}
+          onChange={(next) => onItemChange(item.saleItemId, next)}
         />
       </td>
 

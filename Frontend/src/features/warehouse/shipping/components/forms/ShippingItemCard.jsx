@@ -6,7 +6,7 @@ import { getRowStatus, ROW_STATUS_CONFIG } from "./shippingRowStatus";
 /** نمای موبایل یک قلم ارسال. */
 export default function ShippingItemCard({ item, onItemChange }) {
   const shipped = item.shippedQuantity || 0;
-  const status = getRowStatus(item.expectedQuantity, shipped);
+  const status = getRowStatus(item.remainingQuantity, shipped);
   const config = ROW_STATUS_CONFIG[status];
   const StatusIcon = config.icon;
 
@@ -20,9 +20,6 @@ export default function ShippingItemCard({ item, onItemChange }) {
           <p className="font-medium text-card-foreground text-sm truncate">
             {item.productName}
           </p>
-          <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground mt-0.5">
-            <span>{item.productCode}</span>
-          </div>
           {item.note && (
             <p className="text-[11px] text-muted-foreground mt-0.5">
               {item.note}
@@ -42,13 +39,13 @@ export default function ShippingItemCard({ item, onItemChange }) {
         <span className="text-xs text-muted-foreground">
           باقی‌مانده برای ارسال:{" "}
           <span className="tabular-nums font-medium text-card-foreground">
-            {item.expectedQuantity.toLocaleString("fa-IR")}
+            {item.remainingQuantity.toLocaleString("fa-IR")}
           </span>
         </span>
         <QuantityStepper
           value={item.shippedQuantity}
-          max={item.expectedQuantity}
-          onChange={(next) => onItemChange(item.lineId, "shippedQuantity", next)}
+          max={item.remainingQuantity}
+          onChange={(next) => onItemChange(item.saleItemId, next)}
           size="sm"
         />
       </div>

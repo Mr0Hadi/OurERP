@@ -11,6 +11,24 @@ import { gregorianToPersian } from "@/shared/lib/dateUtils";
 const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
 
 /**
+ * دو سندِ پشتِ این کارت، دو شکلِ متفاوتِ بک‌اند دارند و هیچ‌کدام فیلدِ
+ * «جمع خط» نمی‌دهد. نامِ هر دو سمت اینجا صریح خوانده می‌شود، نه اینکه
+ * یک لایه‌ی ترجمه بالایشان ساخته شود:
+ *
+ *   خرید → `PurchaseReceivingItemInfoDto`: orderedQuantity / receivedQuantity
+ *   فروش → `SaleItemDto`:                  quantity        / shippedQuantity
+ */
+const orderedOf = (item) => Number(item.orderedQuantity ?? item.quantity) || 0;
+const deliveredOf = (item) =>
+  Number(item.receivedQuantity ?? item.shippedQuantity) || 0;
+
+// `Discount` روی `SaleItemDto` درصد است (سمتِ خرید اصلاً این فیلد را
+// در پاسخِ دریافت نمی‌دهد، پس صفر می‌ماند).
+const lineTotalOf = (item) =>
+  (orderedOf(item) * (Number(item.unitPrice) || 0) *
+    (100 - (Number(item.discount) || 0))) / 100;
+
+/**
  * جزئیات فروش، به شکل خودِ فاکتور.
  *
  * واحد فروش پیش از ثبت هر مشکلی باید همان چیزی را ببیند که مشتری در
@@ -31,10 +49,7 @@ export default function OrderInvoiceCard({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   const items = sale?.items || [];
-  const total = items.reduce(
-    (sum, item) => sum + (Number(item.lineTotal) || 0),
-    0,
-  );
+  const total = items.reduce((sum, item) => sum + lineTotalOf(item), 0);
 
   return (
     <Card>
@@ -85,7 +100,7 @@ export default function OrderInvoiceCard({
               <tbody>
                 {items.map((item) => (
                   <tr
-                    key={item.productId}
+                    key={item.purchaseItemId ?? item.id}
                     className="border-b border-border/50 last:border-0"
                   >
                     <td className="py-2 px-2">
@@ -97,7 +112,7 @@ export default function OrderInvoiceCard({
                       </div>
                     </td>
                     <td className="py-2 px-2 text-center tabular-nums">
-                      {fa(item.quantity)} {item.unit}
+                      {fa(orderedOf(item))} {item.unit || "عدد"}
                     </td>
                     <td className="py-2 px-2 text-center tabular-nums">
                       <DeliveredCell item={item} />
@@ -106,7 +121,7 @@ export default function OrderInvoiceCard({
                       {fa(item.unitPrice)}
                     </td>
                     <td className="py-2 px-2 text-center tabular-nums font-medium">
-                      {fa(item.lineTotal)}
+                      {fa(lineTotalOf(item))}
                     </td>
                   </tr>
                 ))}
@@ -128,7 +143,7 @@ export default function OrderInvoiceCard({
           <div className="md:hidden space-y-2">
             {items.map((item) => (
               <div
-                key={item.productId}
+                key={item.purchaseItemId ?? item.id}
                 className="rounded-lg border border-border p-2.5 space-y-1.5"
               >
                 <div>
@@ -141,7 +156,7 @@ export default function OrderInvoiceCard({
                 </div>
                 <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
                   <Row label={quantityLabel}>
-                    {fa(item.quantity)} {item.unit}
+                    {fa(orderedOf(item))} {item.unit || "عدد"}
                   </Row>
                   <Row label={deliveredLabel}>
                     <DeliveredCell item={item} />
@@ -149,7 +164,7 @@ export default function OrderInvoiceCard({
                   <Row label="قیمت واحد">{fa(item.unitPrice)}</Row>
                   <Row label="جمع خط">
                     <span className="font-medium text-card-foreground">
-                      {fa(item.lineTotal)}
+                      {fa(lineTotalOf(item))}
                     </span>
                   </Row>
                 </div>
@@ -176,41 +191,31 @@ function Row({ label, children }) {
 }
 
 /**
- * «تحویل‌شده» با تفکیکِ ادعاها.
+ * «تحویل‌شده»، و در سمتِ فروش آنچه تا حالا از راهِ مرجوعی تسویه شده.
  *
- * سه عدد جدا نشان می‌دهد: چقدر در همین سند ادعا شده، چقدر در بقیه‌ی
- * مرجوعی‌های همین سفارش، و در نتیجه چقدر هنوز آزاد است. یک عددِ
- * سرجمع کافی نیست — وقتی روی یک سفارش چند مرجوعی هست، معلوم نمی‌کند
- * کدام سهم مالِ کجاست.
+ * ⚠️ اینجا قبلاً سه عدد نشان داده می‌شد — ادعای همین سند، ادعای
+ * مرجوعی‌های دیگرِ همین سفارش، و باقیمانده‌ی بدون ادعا. هیچ‌کدام از آن
+ * سه را بک‌اند نمی‌دهد: نه `PurchaseReceivingItemInfoDto` و نه
+ * `SaleItemDto` چیزی درباره‌ی ادعاهای بازِ سایر مرجوعی‌ها برنمی‌گردانند،
+ * و سقفِ واقعی فقط لحظه‌ی `POST Create*Return` سمتِ سرور چک می‌شود. پس
+ * آن سه عدد همیشه صفر بودند و کادر را بی‌صدا خالی نشان می‌دادند.
+ *
+ * تنها چیزی که واقعاً در دست هست `settledQuantity` سمتِ فروش است.
  */
 function DeliveredCell({ item }) {
-  const delivered = item.deliveredQuantity ?? item.quantity;
-  const isShort = delivered < item.quantity;
-  const here = Number(item.claimedHereQuantity) || 0;
-  const elsewhere = Number(item.activeClaimedQuantity) || 0;
-  const free = Math.max(0, delivered - here - elsewhere);
+  const ordered = orderedOf(item);
+  const delivered = deliveredOf(item);
+  const settled = Number(item.settledQuantity) || 0;
+  const isShort = delivered < ordered;
 
   return (
     <>
       <span className={isShort ? "text-amber-600 dark:text-amber-400" : ""}>
-        {fa(delivered)} {item.unit}
+        {fa(delivered)} {item.unit || "عدد"}
       </span>
-      {(here > 0 || elsewhere > 0) && (
-        <span className="block text-[10px] leading-4 mt-0.5">
-          {here > 0 && (
-            <span className="text-primary">{fa(here)} در همین مرجوعی</span>
-          )}
-          {here > 0 && elsewhere > 0 && (
-            <span className="text-muted-foreground"> · </span>
-          )}
-          {elsewhere > 0 && (
-            <span className="text-amber-600 dark:text-amber-400">
-              {fa(elsewhere)} در مرجوعی دیگر
-            </span>
-          )}
-          <span className="block text-muted-foreground">
-            {fa(free)} بدون ادعا
-          </span>
+      {settled > 0 && (
+        <span className="block text-[10px] leading-4 mt-0.5 text-muted-foreground">
+          {fa(settled)} تسویه‌شده در مرجوعی
         </span>
       )}
     </>

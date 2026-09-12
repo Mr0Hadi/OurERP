@@ -224,6 +224,79 @@ export function expandComposition(composition, claim) {
   return effects;
 }
 
+/**
+ * ترکیبِ فرم → بدنه‌ی `EffectCompositionDto`ی بکند.
+ *
+ * سه تفاوتِ شکلی بین فرم و دستور هست و هر سه واقعی‌اند، نه اختلافِ
+ * نام‌گذاری:
+ *
+ *  ۱. **`enabled` فقط مالِ فرم است.** بکند «خاموش» را با `null` بیان
+ *     می‌کند. این فیلد حذف‌شدنی هم نیست: «تیک خورده ولی هنوز کالایی
+ *     انتخاب نشده» با «تیک نخورده» فرق دارد و پیش‌فرضِ «همان کالای
+ *     ادعا» دقیقاً روی همین تمایز سوار است.
+ *
+ *  ۲. **اسلاتِ کالا در فرم یک شیء است (`{enabled, items}`) و در دستور
+ *     یک آرایه.**
+ *
+ *  ۳. **پیش‌فرضِ «همان کالای ادعا» باید همین‌جا باز شود.** بکند
+ *     `AddGoods` را روی آرایه‌ی خالی اجرا می‌کند و هیچ اثری نمی‌سازد؛
+ *     پس اگر فرم آرایه‌ی خالی بفرستد، تصمیمِ کالایی بی‌صدا گم می‌شود.
+ *     `goodsItemsOf` همان قاعده‌ای است که پیش‌نمایشِ محلی هم از آن
+ *     استفاده می‌کند، پس آنچه کاربر دیده دقیقاً همان چیزی است که ثبت
+ *     می‌شود.
+ */
+export function toApiComposition(composition, claim) {
+  if (!composition) return null;
+
+  const quantity = Number(composition.quantity) || 0;
+
+  const goodsOf = (slot) => {
+    if (!slot?.enabled) return undefined;
+    return goodsItemsOf(slot, claim, quantity)
+      .filter((item) => (Number(item.quantity) || 0) > 0)
+      .map((item) => ({
+        quantity: Number(item.quantity) || 0,
+        // نبودنش یعنی «همان کالای ادعا» — بکند خودش این پیش‌فرض را دارد،
+        // ولی وقتی می‌دانیم کدام کالاست صریح فرستادنش خواناتر است.
+        productId: item.productId ?? claim?.productId ?? null,
+        unitPrice: Number(item.unitPrice ?? claim?.unitPrice) || 0,
+        discount: Number(item.discount) || 0,
+      }));
+  };
+
+  const moneyOf = (slot) => {
+    if (!slot?.enabled) return undefined;
+    const amount = moneyAmountOf(slot);
+    if (amount <= 0) return undefined;
+
+    const isMixed = slot.method === PaymentTypeEnum.MIXED;
+    return {
+      method: slot.method,
+      // برای روشِ ترکیبی، مبلغ همان مجموعِ تکه‌هاست — بکند برابری این دو
+      // را چک می‌کند و نابرابری را با ۴۰۰ رد می‌کند.
+      amount,
+      reference: isMixed ? undefined : slot.reference || undefined,
+      parts: isMixed
+        ? validMoneyParts(slot).map((part) => ({
+            method: part.method,
+            amount: Number(part.amount) || 0,
+            checkNumber: part.checkNumber || undefined,
+            transferRef: part.transferRef || undefined,
+          }))
+        : undefined,
+    };
+  };
+
+  return {
+    quantity,
+    note: composition.note || undefined,
+    goodsIn: goodsOf(composition.goodsIn),
+    goodsOut: goodsOf(composition.goodsOut),
+    moneyIn: moneyOf(composition.moneyIn),
+    moneyOut: moneyOf(composition.moneyOut),
+  };
+}
+
 // ─── اعتبارسنجی ─────────────────────────────────────────────────────────────
 
 /**
@@ -332,7 +405,7 @@ export function buildGoodsLines(returnDoc, direction, { onlyPending = true } = {
         if (onlyPending && effect.status !== EFFECT_STATUSES.PENDING) return;
 
         const quantity = Number(effect.quantity) || 0;
-        const doneQuantity = Number(effect.doneQuantity) || 0;
+        const appliedQuantity = Number(effect.appliedQuantity) || 0;
 
         lines.push({
           effectId: effect.id,
@@ -344,18 +417,25 @@ export function buildGoodsLines(returnDoc, direction, { onlyPending = true } = {
           // کالای اثر است، نه کالای ادعا — وقتی کالای جایگزین با کالای
           // برگشتی فرق دارد، انبار باید کالای واقعیِ جابه‌جاشونده را
           // ببیند.
+          //
+          // ولی `*ReturnEffectDto` فقط `productId`/`productName` دارد و نه
+          // کد کالا و نه واحد. تا وقتی بکند اضافه‌شان نکند، در حالتِ
+          // پرتکرار (اثر روی همان کالای ادعا) از خودِ ادعا برداشته
+          // می‌شوند؛ برای کالای جایگزینِ *متفاوت* خالی می‌مانند، که
+          // بهتر از نشان‌دادنِ کدِ یک کالای دیگر است.
           productId: effect.productId,
-          productCode: effect.productCode,
+          productCode:
+            effect.productId === claim.productId ? claim.productCode : "",
           productName: effect.productName,
-          unit: effect.unit,
+          unit: effect.productId === claim.productId ? claim.unit : "",
           unitPrice: claim.unitPrice,
           problem: claim.problem,
           scope: claim.scope,
           claimNote: claim.note || "",
           note: effect.note || "",
           quantity,
-          doneQuantity,
-          remainingQuantity: Math.max(0, quantity - doneQuantity),
+          appliedQuantity,
+          remainingQuantity: Math.max(0, quantity - appliedQuantity),
           restockedQuantity: effect.restockedQuantity,
           // مشاهده‌های انبار در همه‌ی دورهای این اثر، تجمیع‌شده.
           observations: observationsOf(effect),
