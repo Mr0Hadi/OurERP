@@ -1,4 +1,4 @@
-﻿using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Contracts.UnitOfWork;
@@ -6,6 +6,8 @@ using Application.Common.Dtos.Returns;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Common.Queries;
+using Application.Common.Returns;
+using Application.Features.SaleReturn.Queries;
 using Common.Exceptions;
 using Common.Extensions;
 using Domain.Enums;
@@ -15,8 +17,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.SaleReturn.Commands
 {
-    // Registers one decision against a claim's remaining quantity, expressed as a composition of
-    // up to three effects (goods in / goods out / money) rather than a single closed decision type.
+    // Registers one decision against a claim's remaining quantity, expressed as a list of effects
+    // (goods in / goods out / money in / money out) rather than a single closed decision type.
     // Replaces AddSaleReturnDecisionCommand.
     public class AddClaimResolutionCommand : IRequest<ResponseDto>
     {
@@ -37,11 +39,13 @@ namespace Application.Features.SaleReturn.Commands
             {
                 goods.RuleFor(g => g.Quantity).GreaterThan(0).WithMessage("مقدار کالای وارده باید از صفر بیشتر باشد.");
                 goods.RuleFor(g => g.ProductId).GreaterThan(0).WithMessage("کالای نامعتبر است.").When(g => g.ProductId.HasValue);
+                goods.RuleFor(g => g.UnitPrice).NotNull().WithMessage("قیمت واحد (unitPrice) هر اثر کالایی الزامی است؛ برای کالایی که ادعای مالی ندارد صفر بفرستید.");
             });
             RuleForEach(x => x.Composition.GoodsOut).ChildRules(goods =>
             {
                 goods.RuleFor(g => g.Quantity).GreaterThan(0).WithMessage("مقدار کالای خارجه باید از صفر بیشتر باشد.");
                 goods.RuleFor(g => g.ProductId).GreaterThan(0).WithMessage("کالای نامعتبر است.").When(g => g.ProductId.HasValue);
+                goods.RuleFor(g => g.UnitPrice).NotNull().WithMessage("قیمت واحد (unitPrice) هر اثر کالایی الزامی است؛ برای کالایی که ادعای مالی ندارد صفر بفرستید.");
             });
 
             // Direction is structural now (which slot the effect sits in), so there is no direction
@@ -104,7 +108,7 @@ namespace Application.Features.SaleReturn.Commands
                 .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
             if (_saleReturnCalculationService.IsTerminal(saleReturn.Status) || saleReturn.Status == ReturnStatusEnum.SETTLED)
-                throw new ValidationCustomException("این مرجوعی دیگر قابل ویرایش نیست.");
+                throw new ValidationCustomException(ReturnLifecycleRules.NotEditableMessage(saleReturn.Status));
 
             var claim = saleReturn.Claims.First(x => x.Id == request.ClaimId);
 
@@ -123,9 +127,8 @@ namespace Application.Features.SaleReturn.Commands
                     effect.ProductId ??= claim.ProductId;
             }
 
-            // An overridden product (a replacement with a different item) used to go unchecked and
-            // only surface as a NotFound at the goods round - i.e. at the warehouse, to the wrong
-            // person, long after the decision was accepted.
+            // A product id that does not exist used to go unchecked and only surface as a NotFound at
+            // the goods round - at the warehouse, long after the decision was accepted.
             var overriddenProductIds = effects
                 .Where(e => e.ProductId.HasValue && e.ProductId.Value != claim.ProductId)
                 .Select(e => e.ProductId!.Value)
@@ -141,10 +144,10 @@ namespace Application.Features.SaleReturn.Commands
                     throw new ValidationCustomException("کالای انتخاب‌شده برای اثر یافت نشد.");
             }
 
-            var goodsQtySum = effects.Where(e => e.Direction is ReturnEffectDirectionEnum.GOODS_IN or ReturnEffectDirectionEnum.GOODS_OUT).Sum(e => e.Quantity);
-            if (goodsQtySum > request.Composition.Quantity)
-                throw new ValidationCustomException("مجموع مقدار کالا در اثرها نمی‌تواند از مقدار تصمیم بیشتر باشد.");
+            ReturnMoneyBalance.EnsureSettled(ReturnMoneyBalance.Compute(request.Composition), request.Composition);
 
+            // Every check above runs before anything below touches tracked state or the cost ledger,
+            // so a refused request leaves the loaded graph exactly as it was read.
             var resolution = new Domain.Entities.SaleReturnResolution
             {
                 Quantity = request.Composition.Quantity,
@@ -155,18 +158,18 @@ namespace Application.Features.SaleReturn.Commands
 
             claim.Resolutions.Add(resolution);
 
-            foreach (var moneyOut in resolution.Effects.Where(e => e.Direction == ReturnEffectDirectionEnum.MONEY_OUT && e.Amount.HasValue))
-            {
-                if (claim.Product != null)
-                    await _inventoryCostingService.RecordSaleReturnRefundAsync(claim.Product, moneyOut.Amount!.Value, claim.Id, now, cancellationToken);
-            }
+            // A money effect is revenue: MONEY_IN positive, MONEY_OUT negative. RemoveClaimResolution
+            // writes the reversing row.
+            foreach (var money in resolution.Effects.Where(e => e.Direction is ReturnEffectDirectionEnum.MONEY_IN or ReturnEffectDirectionEnum.MONEY_OUT))
+                await _inventoryCostingService.RecordSaleReturnMoneyAsync(claim.Product!, money.Direction, money.Amount!.Value, claim.Id, now, cancellationToken);
 
-            // A resolution with no pending goods effect (money-only, or nothing at all) settles the
-            // claimed quantity immediately; one with a pending goods effect settles it later, once
+            // A resolution with no pending goods effect (money-only) settles the claimed quantity
+            // immediately; one with a pending goods effect settles it later, once
             // ExecuteGoodsRoundCommand brings that effect's AppliedQuantity up to its Quantity.
-            if (claim.SaleItemId.HasValue && resolution.Effects.All(e => e.Status != ReturnEffectStatusEnum.PENDING))
+            // ON_ORDER only: an EXCESS claim carries its line id too, but must never settle that line.
+            if (claim.OnOrderSaleItemId is int saleItemId && resolution.Effects.All(e => e.Status != ReturnEffectStatusEnum.PENDING))
             {
-                var saleItem = saleReturn.Sale!.Items.First(x => x.Id == claim.SaleItemId.Value);
+                var saleItem = saleReturn.Sale!.Items.First(x => x.Id == saleItemId);
                 saleItem.SettledQuantity += resolution.Quantity;
             }
 
@@ -179,7 +182,7 @@ namespace Application.Features.SaleReturn.Commands
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            res.Data = new { ResolutionId = resolution.Id, ReturnStatus = saleReturn.Status };
+            res.Data = await SaleReturnDetailReader.ReadAsync(_context, _saleReturnCalculationService, saleReturn.Id, cancellationToken);
             res.Message = "تصمیم با موفقیت ثبت شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;

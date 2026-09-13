@@ -69,7 +69,7 @@ namespace WMS.Tests.Integration
                     },
                 },
             }, CancellationToken.None);
-            var saleReturnId = (int)createRes.Data!.GetType().GetProperty("ReturnId")!.GetValue(createRes.Data)!;
+            var saleReturnId = ((Application.Features.SaleReturn.Dtos.SaleReturnDetailDto)createRes.Data!).Id;
             var claimId = scope.Context.SaleReturnClaims.Single().Id;
 
             var decisionHandler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.InventoryCostingService, scope.UnitOfWork);

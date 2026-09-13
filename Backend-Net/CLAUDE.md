@@ -68,12 +68,12 @@ CreateMap<CreateCustomerCommand, Customer>()
 - Pure CPU/in-memory work stays synchronous and must **not** be wrapped in `Task.Run` or given a fake `async`: the calculation services (`IPurchaseReturnCalculationService`, `ISaleReturnCalculationService`), `IProductCodeService`, `IBarcodeRenderer`, `IPdfDocumentService`, `IEnvironmentService`, `IUserContextService`, and `Common/Extensions/Encryption.cs`. `ITokenService.SetTokenAsync` is the one deliberate exception — it keeps a `Task` return so callers have an awaitable seam for a future token store, but its body is `Task.FromResult(...)`, not `async` without an `await`.
 
 **Observed style worth rethinking later** (captured for a future style review — no change requested now):
-- Child rows are added inside handlers via navigation-collection `Add`/`Remove` — there are no per-child repositories (e.g. `purchaseReturnItem.Decisions.Add(...)` in `AddPurchaseReturnDecisionCommandHandler`).
+- Child rows are added inside handlers via navigation-collection `Add`/`Remove` — there are no per-child repositories (e.g. `claim.Resolutions.Add(...)` in `AddClaimResolutionCommandHandler`).
 - The purchase-return feature builds its DTOs by hand in queries/commands; AutoMapper is only used by the classic CRUD features.
-- Money is `UInt64` in entities/commands and lands in the DB as `decimal(20,0)` (see `PurchaseItem.UnitPrice`, `PurchaseReturnDecision.RefundAmount`).
+- Money is `UInt64` in entities/commands and lands in the DB as `decimal(20,0)` (see `PurchaseItem.UnitPrice`, `PurchaseReturnEffect.Amount`).
 - Bulk validation uses `RuleForEach(...).ChildRules(...)` with Persian `WithMessage` texts (see `ReceivePurchaseCommandValidator`).
-- The purchase-return feature has no `IsActive`/soft-delete — lifecycle is `Status` (`PENDING`/`COORDINATING`/`RESOLVED`/`REJECTED`/`CANCELLED`).
-- Shared cross-handler business math (status recompute, receivable-quantity math, the decision validity matrix, replacement auto-fulfillment) lives behind `IPurchaseReturnCalculationService` (`Application/Common/Contracts/PurchaseReturn/`, implemented by `Infrastructure/Services/PurchaseReturnCalculationService.cs`, registered `Scoped` in `InfrastructureServiceRegistration`) — the same interface-in-`Contracts`/implementation-in-`Infrastructure/Services` shape as `ITokenService`/`TokenService` and smshub2's `IDashboardService`/`DashboardService`. Every command that mutates a `PurchaseReturn` or `Purchase` status injects it so the math can't drift out of sync between handlers.
+- Both return features carry `IsActive` (soft delete, filtered per query with `WhereNotDeleted()`) plus a lifecycle `Status` (`ReturnStatusEnum`: `OPEN`/`IN_PROGRESS`/`SETTLED`/`REJECTED`/`CANCELLED`; transitions in `ReturnLifecycleRules`).
+- Shared cross-handler business math (status recompute, claimable-quantity math, the lifecycle blocker, composition expansion) lives behind `IPurchaseReturnCalculationService` (`Application/Common/Contracts/PurchaseReturn/`, implemented by `Infrastructure/Services/PurchaseReturnCalculationService.cs`, registered `Scoped` in `InfrastructureServiceRegistration`) — the same interface-in-`Contracts`/implementation-in-`Infrastructure/Services` shape as `ITokenService`/`TokenService` and smshub2's `IDashboardService`/`DashboardService`. Every command that mutates a `PurchaseReturn` or `Purchase` status injects it so the math can't drift out of sync between handlers.
 
 ## 4. Tooling and dependencies
 
@@ -98,7 +98,7 @@ All projects target `net10.0`, `Nullable=enable`, `ImplicitUsings=enable`. Solut
 - Add a migration (DbContext is in `Infrastructure`, host in `WMS`):
   `dotnet ef migrations add <Name> --project Infrastructure --startup-project WMS`
 - Run: `dotnet run --project WMS` (SQL Server connection string in `WMS/appsettings.json` → `ConnectionStrings:SqlServer`).
-- There is no test project.
+- Tests: `dotnet test Tests/WMS.Tests` (xUnit; integration tests create throwaway `WMS_Test_{guid}` databases on the local SQL Server `Server=.`).
 
 ## 5. Folder structure
 
@@ -106,23 +106,22 @@ All projects target `net10.0`, `Nullable=enable`, `ImplicitUsings=enable`. Solut
 Backend-Net/
 ├── Domain/
 │   ├── Entities/        # Customer, Product, ProductCategory, Purchase, PurchaseItem,
-│   │                    # PurchaseReturn, PurchaseReturnItem, PurchaseReturnDecision,
+│   │                    # PurchaseReturn, PurchaseReturnClaim, PurchaseReturnResolution,
+│   │                    # PurchaseReturnEffect (+ …EffectRound/…EffectObservation/…EffectMoneyPart),
 │   │                    # Sale, SaleItem (now ShippedQuantity/SettledQuantity), Supplier,
 │   │                    # User, Department, Team, PaymentDetail,
-│   │                    # SaleReturn, SaleReturnClaim, SaleReturnItem, SaleReturnDecision,
+│   │                    # SaleReturn, SaleReturnClaim, SaleReturnResolution, SaleReturnEffect
+│   │                    # (same children), InventoryCostLedgerEntry,
 │   │                    # ProductUnit, PurchaseReceivingImage (receiving-session photos,
 │   │                    # keyed on Purchase with a nullable SetNull link to PurchaseReturn)
 │   └── Enums/           # BalanceTypeEnum, PaymentTypeEnum, ProductUnitEnum,
 │                        # PurchaceStatusEnum (typo kept), SalesStatusEnum (now incl. SHIPPED,
 │                        # appended at the end to avoid renumbering),
-│                        # PurchaseIssueTypeEnum, PurchaseReturnDecisionTypeEnum,
-│                        # PurchaseReturnDecisionStatusEnum (AWAITING|RESOLVED),
-│                        # PurchaseReturnStatusEnum (PENDING|COORDINATING|RESOLVED|REJECTED|CANCELLED),
 │                        # PurchaseStatusEnum (…|PARTIALLY_RECEIVED|RECEIVED|…),
-│                        # SalesReturnReasonEnum, SalesReturnIssueTypeEnum (nullable on the
-│                        # entity; null = inspected healthy), SaleReturnStatusEnum
-│                        # (PENDING_INSPECTION|COORDINATING|RESOLVED|REJECTED|CANCELLED),
-│                        # SaleReturnDecisionTypeEnum, SaleReturnDecisionStatusEnum
+│                        # shared return enums: ReturnStatusEnum (OPEN|IN_PROGRESS|SETTLED|
+│                        # REJECTED|CANCELLED), ReturnClaimScopeEnum, ReturnOffScopeKindEnum,
+│                        # ReturnProblemEnum, ReturnEffectDirectionEnum, ReturnEffectStatusEnum,
+│                        # ReturnPaymentMethodEnum; InventoryCostEventTypeEnum
 ├── Application/
 │   ├── Common/
 │   │   ├── Behaviors/   # ValidationBehavior
@@ -143,14 +142,13 @@ Backend-Net/
 │   │   ├── Product/
 │   │   ├── ProductCategory/
 │   │   ├── Purchase/
-│   │   ├── PurchaseReturn/ # Commands/ (ReceivePurchase, Add/RemovePurchaseReturnDecision,
-│   │   │                   # Cancel/Reject/Reopen/DeletePurchaseReturn), Queries/, Dtos/
+│   │   ├── PurchaseReturn/ # Commands/ (CreatePurchaseReturn, Add/RemoveClaimResolution,
+│   │   │                   # ExecuteGoodsRound, Cancel/Reject/Reopen/DeletePurchaseReturn), Queries/, Dtos/
 │   │   │                   # (shared status/quantity math lives in IPurchaseReturnCalculationService, above)
 │   │   ├── Sale/         # Commands/ now incl. ShipSaleCommand (multi-round shipping, prerequisite
 │   │   │                 # for SaleReturn), Queries/, Dtos/
-│   │   ├── SaleReturn/   # Commands/ (CreateSaleReturn, ConfirmReturnInspection,
-│   │   │                 # Add/RemoveSaleReturnDecision, ConfirmReplacementShipment,
-│   │   │                 # Cancel/Reject/Reopen/DeleteSaleReturn), Queries/, Dtos/
+│   │   ├── SaleReturn/   # Commands/ (CreateSaleReturn, Add/RemoveClaimResolution,
+│   │   │                 # ExecuteGoodsRound, Cancel/Reject/Reopen/DeleteSaleReturn), Queries/, Dtos/
 │   │   │                 # (shared status/quantity math lives in ISaleReturnCalculationService, above)
 │   │   ├── Supplier/
 │   │   └── User/        # Command/, Query/, Dto/ (singular — legacy)
@@ -183,6 +181,12 @@ Backend-Net/
 ## 6. Current state
 
 **Implemented**: JWT auth + account flows (login, logout, refresh token, OTP, forget password); full CRUD for Customer, Product, ProductCategory, Supplier; create/update + list/detail for Purchase and Sale; user create/update/info; purchase receiving + returns (below). OpenAPI via Scalar (`/scalar`). **IsActive** exists on every entity and each entity feature folder has a soft-delete command (`DeleteCustomerCommand`, `DeleteProductCommand`, `DeleteProductCategoryCommand`, `DeletePurchaseCommand`, `DeleteSaleCommand`, `DeleteSupplierCommand`, `DeleteUserCommand`), all setting `IsActive = false` and throwing `NotFoundCustomException` when the row is missing. Each controller exposes a matching `[HttpDelete("DeleteX")]` action that `Send`s the command (`DeleteCustomer`, `DeleteProduct`, `DeleteProductCategory`, `DeletePurchase`, `DeleteSale`, `DeleteSupplier`, `DeleteUser`), taking the command via `[FromQuery]`. Create mappings default `IsActive = true` (existing rows default to active via the migration's column default). Schema change shipped as EF migration `20260802123347_add-isactive` (see `Infrastructure/Migrations`).
+
+> **SUPERSEDED — historical.** This entry and "Sale shipping & sale returns (2026-08-10)" below describe the return model that
+> was replaced on 2026-08-28 (`…ReturnItem`/`…ReturnDecision`, closed `DecisionType`, `ConfirmReturnInspection`/`ConfirmReplacementShipment`,
+> `PENDING`/`COORDINATING`/`RESOLVED`/`PENDING_INSPECTION`, receiving-time issues, `ResolveAwaitingReplacements`). None of that exists any more.
+> Multi-round receiving (`ReceivePurchaseCommand`) and shipping (`ShipSaleCommand`) quantities still stand; everything about returns does not.
+> Current return model: the entries from 2026-09-10 onward, `docs/api-guide.fa.md` §10/§12, `docs/return-frontend-migration.fa.md`.
 
 **Purchase receiving & returns (multi-round, frontend-aligned rebuild — 2026-08-06).** This feature was rebuilt a second time to match the already-built React frontend (`Frontend/src/features/purchases/services/returns/`), which encodes a materially richer contract than the first "spec rebuild" (see git history: `ea33dc7`, `00725f2`). The frontend's mock business logic (`services/returns/api-mockData.js`) was treated as the source of truth for behavior; the backend now implements it for real.
 
@@ -857,6 +861,165 @@ no migration.
   `dotnet test` before trusting it; the last recorded baseline is 383/392 with 9 documented
   pre-existing failures.
 
+**Return lifecycle + OFF_ORDER claims (2026-09-11/12).** Both return sides, identical. No schema
+change, no migration. Full API contract in `docs/api-guide.fa.md` §10/§12/§15 and the 2026-09-12
+breaking-changes table in §16.
+
+- **The production symptom ("Cancel/Reject fail, then nothing works, message says untouched") was a
+  contract bug, not a guard bug.** Every return write answered with `Data = null` (lifecycle,
+  RemoveClaimResolution) or a partial object without `id` (Create, AddClaimResolution,
+  ExecuteGoodsRound). The frontend drops a write's response into its detail cache and reads `.id`
+  off it, so a *successful* Reject crashed its `onSuccess`, TanStack Query turned that into an error
+  toast, the page kept showing OPEN, and the user's retry hit an already-REJECTED return, whose
+  refusal said "only untouched returns can be cancelled". **Fix:** every write returns the full
+  detail document via `{Purchase,Sale}ReturnDetailReader.ReadAsync` (also used by the detail query,
+  so there is one document shape); Delete returns `{ Id, PurchaseId }` / `{ Id, SaleId }`.
+  Cost: one extra no-tracking read per write; purchase-side write handlers gained an
+  `IObjectStorageService` constructor parameter (receiving-image URLs).
+- **One state machine**, `Application/Common/Returns/ReturnLifecycleRules.GetBlocker`, reached
+  through `I*ReturnCalculationService.GetLifecycleBlocker`/`CanPerform`; handlers throw its message
+  and the detail DTO's `Can*` flags read the same rule. `IsUntouched`/`CanReopen` are gone.
+  OPEN/IN_PROGRESS allow Cancel/Reject/Delete unless goods moved (**`AppliedQuantity > 0`**, not
+  `Status == APPLIED` - a partially executed goods effect used to let a return be cancelled with
+  stock already changed) or a money effect is recorded; SETTLED/CANCELLED refuse everything;
+  REJECTED allows only Reopen and every refusal points at it. Messages name the status via the new
+  `[Description]`s on `ReturnStatusEnum`.
+- **The money lock was kept on purpose**: money effects are born APPLIED because they record a
+  payment that already happened, and each writes a revenue row to the cost ledger at that moment.
+  The path out is RemoveClaimResolution, which writes the reversing row.
+- **Reopen recomputes** (`OPEN` then `RecomputeReturnStatus`) instead of forcing OPEN; a return
+  rejected with pending resolutions comes back IN_PROGRESS. Pending-effects queries compose
+  `WhereOpen()`, so a rejected/cancelled return's pending goods effects stop reaching the warehouse.
+- **ExecuteGoodsRound validates every line before mutating anything** (per-effect summed quantity,
+  products batch-loaded, stock projected in request order); the only throws left in the apply
+  phase are `ProductUnitService`'s DB-state shortfall checks. Validators reject observations summing
+  above the round quantity or negative (a negative healthy quantity was added to `Product.Stock`).
+  AddClaimResolution/RemoveClaimResolution/Create were audited and already validated before mutating.
+- **EXCESS keeps its order line and is priced at it** (the previous pass had "fixed" the enum
+  comment instead - reverted). Validators: EXCESS requires `OrderLineId`, UNLISTED rejects it.
+  Handlers: any line-bearing claim must reference a line of this document with the same
+  `ProductId`; OFF_ORDER `ProductId` must exist (was a 500 at SaveChanges); EXCESS `UnitPrice` is
+  copied from the line, ON_ORDER/UNLISTED keep the client's.
+- **`PurchaseReturnClaim.OnOrderPurchaseItemId` / `SaleReturnClaim.OnOrderSaleItemId`**
+  (`[NotMapped]`, the line id only when `Scope == ON_ORDER`) are what every quota/settlement/unit
+  site reads: `GetOpenClaimQuantity`, SettledQuantity in Add/RemoveClaimResolution and
+  ExecuteGoodsRound, and `MintAsync`/`ReturnToSupplierAsync`/`RestoreAsync`/`ConsumeAsync` (for the
+  claim's own product). **Never read `PurchaseItemId`/`SaleItemId` for those** - EXCESS has one.
+- **Breaking for the frontend** (not changed from here): the create-return form sends
+  `orderLineId: null` for EXCESS and will now get a 400; its `isReturnUntouched`/`can*Return`
+  helpers still implement the old APPLIED-only rule and should read the server's `can*` flags.
+- Tests: lifecycle regression (reject → stale cancel → reopen → cancel → delete refused), money
+  lock + remove path out + ledger net-zero, partial goods, reopen recompute, pending-effects filter,
+  write responses, reorder, and the EXCESS/UNLISTED/product-existence cases, on both sides; plus
+  validator and `ReturnLifecycleRules` unit tests.
+
+**In-flight unit selection (2026-09-13).** Its own pass, closing the last member of the "reads only
+saved rows" family. No schema change. Detail in `docs/return-offscopekind-and-inflight-ledger-fix.fa.md` §3.
+
+- **`ProductUnitService.SelectUnitsAsync` / `CountUnitsAsync`** are the only way units are selected or
+  counted now (`ConsumeAsync`'s FIFO path, `RestoreAsync`, `ReturnToSupplierAsync`,
+  `ReconcileStockAsync`'s count and scrap pick). Units the context tracks (any state but Deleted) are
+  judged by their in-memory values and excluded by id from the saved query; everything else by its
+  saved row; the order is applied once over both. Before, two movements of one product in one request
+  picked the same unit twice - one unit changed while `Product.Stock` moved twice, directly breaking
+  `Stock == COUNT(ProductUnit WHERE IN_STOCK)` - and units minted moments earlier were invisible (and
+  `ReconcileStockAsync` minted them a second time). `ConsumeAsync`'s explicit-barcode path looks in
+  `ProductUnits.Local` first for the same reason. Added units have no real id (EF keeps temporary keys
+  off the entity), hence the `Id > 0` exclusion.
+- Tests: `Integration/InFlightUnitSelectionTests.cs` - every selection method twice (or after a mint)
+  for one product before `SaveChanges`, and a purchase goods round with two `GOODS_OUT` lines for one
+  product through the real handler.
+
+**Return effect model: four effects, one rule each (2026-09-13).** Supersedes the three entries that stood
+here ("Return money balance, off-invoice stock and excess costing", "Stored stock booking, reversible kept
+extras, per-problem balance", "Return money matrix, invoice-error counting"); the code they described is
+gone. API contract: `docs/api-guide.fa.md` §10 «مدل اثرها», §12, §16 (2026-09-13 table); frontend impact:
+`docs/return-frontend-migration.fa.md` §4.
+
+- **The model.** A resolution is a list of effects of exactly four kinds - `GOODS_IN`, `GOODS_OUT`,
+  `MONEY_IN`, `MONEY_OUT` - in any combination and any quantity. The effect layer does not know *why*:
+  not the claim's problem, not its scope, not whether goods were invoiced or passed through stock.
+- **Enforced at the effect layer, the complete list:** (1) at least one effect; (2) every goods effect
+  carries a client-supplied `UnitPrice` (`GoodsEffectDto.UnitPrice` is `UInt64?` only so omission is a
+  400 - zero is legal); (3) `ReturnMoneyBalance`: Σ GoodsIn qty×price − Σ GoodsOut qty×price, non-zero
+  requires `MoneyOut` (positive) / `MoneyIn` (negative) of **at least** that amount; zero requires and
+  forbids nothing. A floor, not a reconciliation. Request-shape checks stay (positive quantities and
+  amounts, `ProductId` exists, MIXED parts sum); `Composition.Quantity <= claim.RemainingQuantity` is
+  claim-level and stays.
+- **Mechanics, unconditional, both sides.** `ExecuteGoodsRound` GOODS_IN: stock += healthy, units minted
+  (or the ON_ORDER line's SOLD units restored, sale side), cost row at the effect's `UnitCost` (running average
+  when omitted - see the price/cost split entry below) (`PURCHASE_RETURN_REPLACEMENT_RECEIVED` / `SALE_RETURN_RESTOCK`). GOODS_OUT: stock −= quantity, units
+  consumed, cost row at the running average (`PURCHASE_RETURN_SHIPPED_TO_SUPPLIER` /
+  `REPLACEMENT_SHIPPED_TO_CUSTOMER`). `AddClaimResolution` writes one revenue row per money effect -
+  MONEY_IN positive, MONEY_OUT negative (`SALE_RETURN_MONEY_IN` / `SALE_RETURN_REFUND`,
+  `PURCHASE_RETURN_MONEY_IN` / `PURCHASE_RETURN_MONEY_OUT`) - and `RemoveClaimResolution` writes the
+  reversal, on both sides (`IInventoryCostingService.Record{Sale,Purchase}ReturnMoney[Reversal]Async`).
+  The only claim fact the goods round reads is `OnOrder*ItemId`, and only for unit identity (which line
+  units are minted on / returned from), and only when the effect's product is the claim's own product.
+- **Removed, and why each was scenario logic:** `ReturnMoneyBalance.CountsTowardBalance` (the per-problem
+  table) and `UnitPriceOf` (price fallback to the claim) with `Unit/ReturnBalanceProblemTableTests.cs`;
+  OFF_ORDER zero-valuing; the money matrix; the per-direction goods-quantity cap; the sale kept-extras
+  write-off (`SaleReturnEffect.IsKeptByCustomer`/`CostLedgerEntryId`, `ProductUnit.SaleReturnEffectId`,
+  `IProductUnitService.RestoreKeptAsync`, the kept-by-customer lifecycle blocker, `effects[].keptByCustomer`);
+  `RecordPurchaseReturnExcessAcceptedAsync` with its MoneyOut/quantity→claim-price fallback; the
+  "in our books" inference (`PurchaseReturnClaim.InStockQuantity`, `SaleReturnClaim.SentOutQuantity`,
+  `BookedQuantity` on both round entities - dead once every movement is unconditional); the historical
+  line-cost lookup (`GetHistoricalUnitCostAsync`) and the declared-minus-claim cost adjustment; the
+  purchase report counting accepted excess. Ledger events 10/11 (`PURCHASE_RETURN_EXCESS_ACCEPTED`,
+  `SALE_RETURN_EXCESS_KEPT`) are retired and not reused; `SALE_RETURN_PAYMENT_RECEIVED` (12) is renamed
+  `SALE_RETURN_MONEY_IN`; `PURCHASE_RETURN_MONEY_IN` = 13, `PURCHASE_RETURN_MONEY_OUT` = 14 are new.
+  Enum members now carry explicit values.
+- **Kept, not scenario logic:** the claim layer (scope, order line, quota, `OnOrder*ItemId` and every quota/
+  settlement site, EXCESS `UnitPrice` must equal its line's, ON_ORDER `offScopeKind` is a 400), the lifecycle
+  state machine and `can*` flags, write-response shapes, the in-flight ledger and serial fixes, in-flight
+  unit selection, round observations (healthy vs. damaged, which predate these passes).
+- **Reports.** Sale report profit counts `SALE_RETURN_MONEY_IN` alongside `SALE_RETURN_REFUND`. Purchase-return
+  money rows are read by the purchase report only (see the price/cost split entry below).
+- **Migration `20260913051253_return-effect-model`** drops `BookedQuantity` (both round tables),
+  `SaleReturnEffects.IsKeptByCustomer`/`CostLedgerEntryId` and `ProductUnits.SaleReturnEffectId` (with their
+  FKs/indexes), and backfills `UnitPrice` on existing goods effects from their claim. Forward-only on purpose:
+  the two 2026-09-12 migrations it undoes are already in the remote database's history (below).
+- **Correction - where migrations actually go.** `WMS/appsettings.json`'s active connection string is the remote
+  `pasarg17_wms` (since `8e9947e`); the local `Server=.;Database=WMS` line is commented out. The earlier note that
+  `20260912204950_return-booked-quantity-and-kept-extras` and `20260912212317_return-effect-unit-price` were
+  "applied to the local WMS database" was wrong: `dotnet ef database update` applied them to the remote
+  database. Local WMS stops at `20260910231028_add-product-english-name`. `20260913051253_return-effect-model`
+  is **not applied anywhere** - pending the user's decision on which database.
+- Tests: `Integration/ReturnEffectModelTests.cs` (balance floor on both sides, EXCESS line price, OFF_ORDER goods
+  moving stock at their own price and out at the average, money revenue rows and their reversal on both sides),
+  `Unit/ReturnMoneyBalanceTests.cs` rewritten, `UnitPrice`-required validator tests; deleted
+  `ReturnBalanceProblemTableTests`, `ReturnKeptExtrasAndBookedStockTests`, `ReturnMoneyMatrixTests`,
+  `ReturnBalanceAndExcessTests`. Verified: build 0 errors; suite 492/501; a clean worktree at `HEAD` (`1f2c732`) runs 402/411, and the 9 failing test names are identical line by line.
+
+**Return goods effects: price and cost split; purchase-return money is purchase spend (2026-09-13, second pass).**
+Two consequences of the effect model, fixed without adding scenario logic. API: `docs/api-guide.fa.md` §10 «مدل
+اثرها», §12, §16 (2026-09-13 table), §18; frontend: `docs/return-frontend-migration.fa.md` §4.
+
+- **`UnitPrice` did two jobs that disagree.** For the balance rule the right number is the transaction value with the
+  counterparty; for the cost ledger it is what the unit is worth to us. On a sale return those are the sale price and
+  the purchase cost, and entering the pool at the sale price inflated inventory by the margin on every return (bought
+  700, sold 1000, returned at 1000: the resale then costed 1000).
+- **`GoodsEffectDto.UnitCost` (`UInt64?`, optional)**, stored on `{Purchase,Sale}ReturnEffect.UnitCost` and exposed as
+  `effects[].unitCost`. `UnitPrice` now feeds `ReturnMoneyBalance` only; `UnitCost` is what a GOODS_IN round enters the
+  pool at, and when null `InventoryCostingService.UnitCostOrAverageAsync` uses the product's running average at the
+  moment the round executes (staged-or-saved, via `LatestEntryAsync`). When that average is 0 (no ledger history, or
+  no stock left) it falls back to `Product.PurchasePrice` - the existing convention `RecordOpeningBalanceAsync` and
+  `RecordManualAdjustmentInAsync` already use for stock with no cost history, so the codebase has one answer to "what is
+  this unit worth with no history". A unit entering at 0 would book its whole next sale as profit (the first cut of this
+  pass let it through; corrected). Uniform on both sides, no branching: a purchase-side caller that knows price == cost sends both equal.
+  GOODS_OUT ignores it and still leaves at the average. No validation on `UnitCost`.
+- **Purchase-return money is purchase spend, not revenue.** The `PURCHASE_RETURN_MONEY_IN`/`_OUT` rows keep their
+  `RevenueDelta` sign convention (+amount / -amount); `GetPurchaseReportQuery` reads them into a new
+  `PurchaseReportPeriodDto.ReturnMoneyAmount` with the sign flipped (a supplier refund is negative), kept apart from
+  `TotalReceivedValue` (inventory value received). `GetSaleReportQuery` never reads them. Returning goods for your
+  money back is roughly neutral: the goods leaving lower inventory value, the refund lowers purchase spend.
+- **Migration `return-effect-unit-cost`** adds nullable `UnitCost` to `PurchaseReturnEffects` and `SaleReturnEffects`, no
+  backfill (null = average, and already-executed rounds are not re-costed). **Not applied** - the user is handling the
+  database (see the correction about the remote connection string in the entry above).
+- Tests in `Integration/ReturnEffectModelTests.cs`: sale GOODS_IN enters at `UnitCost` 700 while the balance uses the
+  1,200 price; omitted `UnitCost` enters at the running average, and at `Product.PurchasePrice` when there is no cost history; purchase-return money shows as -2,000
+  `ReturnMoneyAmount` in the purchase report and nothing in the sale report. Verified: build 0 errors; suite 495/504; a clean worktree at `HEAD` (`1f2c732`) runs 402/411 with the identical 9 failing test names.
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
 - `PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK (see `WMSDbContextModelSnapshot.cs:119-124`). Needs reconciliation.
@@ -869,12 +1032,15 @@ no migration.
 
 **Product code / barcode / invoice PDF (implemented, 2026-08-14).** Full design in `docs/product-code-barcode-invoice-design.fa.md`, written from a Telegram planning chat between the two devs; implemented per that design's step order (section 4.4).
 - **`Product.Code`** (`DateSegment-ProductId`, `IProductCodeService.BuildProductCode`) is generated after the first `SaveChanges` gives the row an `Id` — `CreateProductCommandHandler` writes a `Guid` placeholder into `Code`/`BarCode` on the first save (both are `NOT NULL`), then overwrites them with the real code and does a second `SaveChanges`. `Code`/`BarCode` are no longer request-bindable on `CreateProductCommand`/`UpdateProductCommand` (removed from both, immutable after creation).
-- **`ProductUnit`** (`Domain/Entities/ProductUnit.cs`) gives every physical unit its own serial + barcode (`ProductCode-Serial`, digits-only `BarcodePayload` for the actual Code128 encoding). `IProductUnitService` (`Infrastructure/Services/ProductUnitService.cs`) is the only thing that mints/consumes/restores/reconciles units: `MintAsync` (receiving, product creation), `ConsumeAsync` (shipping, replacement shipment — FIFO by serial, or against explicit scanned barcodes), `RestoreAsync` (return inspection: healthy → `IN_STOCK`, defective → `SCRAPPED`), `ReconcileStockAsync` (manual `Stock` edits in `UpdateProductCommand`). Wired into all six stock-mutation sites named in the design (`ReceivePurchaseCommand`, `ShipSaleCommand`, `ConfirmReplacementShipmentCommand`, `ConfirmReturnInspectionCommand`, `UpdateProductCommand`, `CreateProductCommand`) — `Product.Stock == COUNT(ProductUnit WHERE Status=IN_STOCK)` is now a maintained invariant, not just documented intent.
+- **`ProductUnit`** (`Domain/Entities/ProductUnit.cs`) gives every physical unit its own serial + barcode (`ProductCode-Serial`, digits-only `BarcodePayload` for the actual Code128 encoding). `IProductUnitService` (`Infrastructure/Services/ProductUnitService.cs`) is the only thing that mints/consumes/restores/reconciles units: `MintAsync` (receiving, product creation), `ConsumeAsync` (shipping, replacement shipment — FIFO by serial, or against explicit scanned barcodes), `RestoreAsync` (return inspection: healthy → `IN_STOCK`, defective → `SCRAPPED`), `ReconcileStockAsync` (manual `Stock` edits in `UpdateProductCommand`). Wired into all six stock-mutation sites named in the design (`ReceivePurchaseCommand`, `ShipSaleCommand`, `ConfirmReplacementShipmentCommand`, `ConfirmReturnInspectionCommand`, `UpdateProductCommand`, `CreateProductCommand`; the two return commands were replaced on 2026-08-28 by `ExecuteGoodsRoundCommand` on both return sides) — `Product.Stock == COUNT(ProductUnit WHERE Status=IN_STOCK)` is now a maintained invariant, not just documented intent.
 - **Scan/lookup**: `GET api/Product/ScanBarcode` normalizes raw scanner input and resolves it to a product (plus the specific unit, if a unit-level barcode was scanned) via `IProductCodeService.Parse`. `GET api/Product/GetProductUnitList` lists units with status/serial-range filters. `POST api/Product/EnsureProductCodes` is the one-shot backfill (fixes any product missing a generated `Code`, reconciles `ProductUnit` counts against `Stock`) — **must be run once** between the two migrations below.
 - **Barcode rendering**: `IBarcodeRenderer` (`Infrastructure/Services/ZXingBarcodeRenderer.cs`) uses ZXing.Net purely for Code128/QR module encoding, then hand-emits the modules as vector SVG (`<rect>` runs) — resolution-independent, so label DPI/printer stays a config concern. `GET api/Barcode/GetBarcodeSvg` renders any already-known code; `GET api/Barcode/GetProductLabelsPdf` renders a full label sheet for a product's units (default: `IN_STOCK` only, optional serial range for "just this receiving batch"). Default sheet layout is 3 columns × 48mm labels on A4 (`BarcodeLabelSheetModel`) — deliberately not 4 columns, which overflows A4 minus margins by a few mm; retune `Columns`/`LabelWidthMm`/`PageMarginMm` together if the target label stock differs.
 - **PDF**: `IPdfDocumentService` (`Infrastructure/Services/QuestPdfDocumentService.cs`), QuestPDF Community license (set in `WMS/Program.cs`), Vazirmatn Regular/Bold embedded as assembly resources (`Infrastructure/Assets/Fonts/`, OFL-licensed) so RTL Persian text renders correctly on a server with no fonts installed. `GET api/Invoice/GetSaleInvoicePdf`, `GetPurchaseInvoicePdf`, and `GetSaleReturnCreditNotePdf` (REFUND/STORE_CREDIT decisions only — `REPLACEMENT` settles in goods, not money) share one invoice layout. Line discount/tax are computed for the printed document only, from `SaleItem/PurchaseItem.Discount` and `Product.Tax` treated as percentages (`IInvoiceLineCalculationService`, `Application/Common/Contracts/Invoice/` + `Infrastructure/Services/InvoiceLineCalculationService.cs`) — neither is persisted anywhere else in the codebase, so this does not change `Sale.TotalAmount`/`Purchase.TotalAmount`. Company letterhead info comes from the `Company` config section in `appsettings.json` (placeholder values — fill in before real use). All PDF/SVG endpoints deliberately return `FileResponseDto`/raw bytes, not `ResponseDto` — a documented, intentional deviation from the project's usual MediatR-returns-ResponseDto convention; `BarcodeController`/`InvoiceController` return `IActionResult` via `File(...)` rather than `ActionResult<ResponseDto>`.
 - **Migrations, in order**: `20260813124442_product-code-barcode-model` (the `ProductUnits` table + `Products.SupplierBarCode`, deliberately **without** a unique index on `Products.Code` — a pre-existing DB may have duplicate/empty codes), then run `EnsureProductCodes` once against that DB, then `20260813224738_product-code-unique-index` (adds the unique index). **Neither migration has been applied to any real database yet.**
 - **Tests**: `Tests/WMS.Tests/Integration/ProductHandlerTests.cs` (code generation, unit minting, stock reconciliation up/down), `Tests/WMS.Tests/Unit/PdfAndBarcodeSmokeTests.cs` (renderer/PDF service smoke tests on hand-built models), `Tests/WMS.Tests/Integration/InvoicePdfTests.cs` (all three PDF endpoints through real seeded `Sale`/`Purchase`/`SaleReturn` entities). `Tests/WMS.Tests/Support/Seed.cs` gained `MintUnits` so fixtures that seed `Product.Stock` directly keep the `ProductUnit` invariant true for handlers that now depend on it.
+
+> **SUPERSEDED — historical.** The two gap lists below describe the pre-2026-08-28 return model (see the note above the
+> 2026-08-06 entry).
 
 **Purchase-return specific gaps / decisions** (multi-round rebuild, see "Current state" above for the full design):
 - **No stock-movement ledger exists**: `Product.Stock` is a plain `int`; `ReceivePurchaseCommand` mutates it directly (`Product.Stock += ReceivedQuantity`). The original Go spec assumed a ledger that does not exist here — still true.
@@ -898,7 +1064,7 @@ no migration.
 - **Don't route reads through repositories for list/detail queries** — inject `IWMSDbContext` and build LINQ directly.
 - **Don't return error messages via `ResponseDto` in handlers** — throw `Common.Exceptions` custom exceptions and let `ExceptionHandlingMiddleware` serialize them.
 - **Don't add a global `IsActive` query filter** — soft delete is an explicit `IsActive = false` write; filtering is done per-query.
-- **Don't add a test project or repository interfaces beyond the thin per-entity ones** — none exist today.
+- **Don't add repository interfaces beyond the thin per-entity ones.** Tests go in the existing `Tests/WMS.Tests` project, not a second one.
 - **Don't rename the intentional typos** (`Paggination.cs`, `PurchaceStatusEnum`) without asking — they are part of the codebase's existing naming.
 - **Don't add a synchronous database call.** No `SaveChanges()`, no `ToList()`/`FirstOrDefault()`/`Count()`/`Any()` on an EF `IQueryable` — use the `...Async(cancellationToken)` counterpart. And never block on a `Task` (`.Result`, `.Wait()`, `.GetAwaiter().GetResult()`); it burns a request thread and can deadlock.
 - **Don't drop the `CancellationToken`.** A handler's token must reach the EF call. Calling `GetByIdAsync(request.Id)` and letting the parameter default is a bug, not a shortcut.

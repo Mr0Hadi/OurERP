@@ -2,6 +2,15 @@
 
 **تاریخ:** ۱۴۰۵/۰۶/۰۶ (۲۰۲۶-۰۸-۲۸)
 
+> ⚠️ **به‌روزرسانی ۲۰۲۶-۰۹-۱۳ — بخشی از فاز ب منسوخ است.** ساختار `Claim → Resolution → Effect → Round` که این‌جا توصیف شده هنوز معتبر است، ولی چند قاعده‌ی آن بعداً عوض شد و این سند **مرجع قواعد فعلی نیست**:
+> - مجاز بودن لغو/رد/حذف دیگر «هیچ اثری اجرا نشده» (`IsUntouched`) نیست؛ یک جدول وضعیت مشترک (`ReturnLifecycleRules`) است: کالای جابه‌جاشده یا اثر مالیِ ثبت‌شده مانع است، و پرچم‌های `can*` از همان محاسبه می‌شوند.
+> - همه‌ی نوشتن‌های مرجوعی سند کامل مرجوعی را برمی‌گردانند.
+> - `ReturnEffectKindEnum` به `ReturnEffectDirectionEnum` تغییر نام داد و اسلات پول به `moneyIn`/`moneyOut` تقسیم شد.
+> - هر اثر کالایی `unitPrice` (الزامی، فقط برای قاعده‌ی تراز) و `unitCost` (اختیاری، برای موجودی) دارد؛ هر تصمیم باید قاعده‌ی تراز را رعایت کند؛ وجوه در دفتر بهای تمام‌شده ثبت و در گزارش فروش (مرجوعی فروش) یا گزارش خرید (مرجوعی خرید) شمرده می‌شوند.
+> - ادعای EXCESS باید به قلم سند ارجاع دهد و قیمتش برابر قیمت همان قلم باشد.
+>
+> قرارداد فعلی: بخش‌های ۱۰ و ۱۲ [`api-guide.fa.md`](./api-guide.fa.md) و [`return-frontend-migration.fa.md`](./return-frontend-migration.fa.md).
+
 ## چرا این سند
 
 دو سند [`org-structure-contract.fa.md`](./org-structure-contract.fa.md) و [`frontend-enum-contract.fa.md`](./frontend-enum-contract.fa.md) فهرست کاملی از ناهماهنگی‌های بکند با فرانت را مشخص کرده بودند. این سند نتیجه‌ی اجرای آن دو سند را توضیح می‌دهد: چه چیزی ساخته شد، چرا این‌طور طراحی شد، و چه چیزی هنوز باقی مانده.
@@ -115,7 +124,7 @@ PurchaseReturn (سند مرجوعی)
 - **ادعاهای `OFF_ORDER` هرگز از سهمیه‌ی یک ردیف سفارش کم نمی‌کنند** — دقیقاً طبق قاعده‌ی فرانت.
 - **`Effect.Status`**: اثرهای کالایی (`GOODS_IN`/`GOODS_OUT`) با `PENDING` شروع می‌شوند (منتظر اجرای فیزیکی)؛ اثرهای مالی (`MONEY_IN`/`MONEY_OUT`) بلافاصله `APPLIED` می‌شوند (چیزی برای اجرای بعدی ندارند).
 - **`Effect.AppliedQuantity`** به‌مرور، طی چند دور (`Round`)، به `Quantity` می‌رسد — پس ارسال/دریافت چندمرحله‌ای پشتیبانی می‌شود. (این فیلد در ۱۴۰۵/۰۶/۱۷ از `DoneQuantity` به `AppliedQuantity` تغییر نام داد — بخش «به‌روزرسانی» انتهای سند.)
-- enum های جدید مشترک بین خرید و فروش: `ReturnStatusEnum` (`OPEN/IN_PROGRESS/SETTLED/REJECTED/CANCELLED`)، `ReturnClaimScopeEnum`، `ReturnOffScopeKindEnum`، `ReturnProblemEnum` (فضای مقدار ۱۴تایی یکپارچه، جایگزین سه enum قدیمی)، `ReturnEffectKindEnum`، `ReturnEffectStatusEnum` (شامل `VOID` جدید برای اثر لغوشده)، `ReturnPaymentMethodEnum`.
+- enum های جدید مشترک بین خرید و فروش: `ReturnStatusEnum` (`OPEN/IN_PROGRESS/SETTLED/REJECTED/CANCELLED`)، `ReturnClaimScopeEnum`، `ReturnOffScopeKindEnum`، `ReturnProblemEnum` (فضای مقدار ۱۴تایی یکپارچه، جایگزین سه enum قدیمی)، `ReturnEffectKindEnum` (بعداً `ReturnEffectDirectionEnum`)، `ReturnEffectStatusEnum` (شامل `VOID` جدید برای اثر لغوشده)، `ReturnPaymentMethodEnum`.
 - enum های حذف‌شده: `PurchaseReturnDecisionTypeEnum`، `SaleReturnDecisionTypeEnum`، `PurchaseReturnStatusEnum`، `SaleReturnStatusEnum`، `PurchaseIssueTypeEnum`، `SalesReturnReasonEnum`، `SalesReturnIssueTypeEnum`، و enum های وضعیت تصمیم قدیمی.
 
 ### دستورها و کوئری‌های جدید (هر دو طرف)
@@ -126,7 +135,7 @@ PurchaseReturn (سند مرجوعی)
 | `AddPurchaseReturnDecisionCommand` / `AddSaleReturnDecisionCommand` | `AddClaimResolutionCommand` | یک «ترکیب» (`Composition`) از حداکثر سه اثر می‌گیرد و به Effect های واقعی تبدیل می‌کند |
 | `RemovePurchaseReturnDecisionCommand` / `RemoveSaleReturnDecisionCommand` | `RemoveClaimResolutionCommand` | فقط وقتی مجاز است که هیچ اثر کالایی آن هنوز اجرا نشده باشد |
 | `ConfirmReturnInspectionCommand` + `ConfirmReplacementShipmentCommand` (فروش) + مسیر ضمنی گزارش مشکل هنگام دریافت (خرید) | `ExecuteGoodsRoundCommand` | یک دستور واحد در هر دو طرف — مستقیماً یک اثر مشخص را هدف می‌گیرد، دیگر نیازی به حدس زدن نیست |
-| `Cancel/Reject/Reopen/DeletePurchaseReturnCommand` و مشابه فروش | همان نام‌ها، منطق داخلی بازنویسی شد | مجاز بودن عمل حالا بر اساس «هیچ اثری اجرا نشده» (`IsUntouched`) است، نه یک وضعیت خاص |
+| `Cancel/Reject/Reopen/DeletePurchaseReturnCommand` و مشابه فروش | همان نام‌ها، منطق داخلی بازنویسی شد | ~~مجاز بودن عمل بر اساس «هیچ اثری اجرا نشده» (`IsUntouched`)~~ — **منسوخ:** حالا `ReturnLifecycleRules` (بنر بالای سند) |
 | `GetPurchaseReceivingInfoQuery` (بخش «مشکلات باز») + `GetSaleReturnInspectionInfoQuery` + `GetReplacementShippingQueueQuery` | `GetPurchaseReturnPendingEffectsQuery` / `GetSaleReturnPendingEffectsQuery` | یک کوئری تعمیم‌یافته: «چه اثرهایی هنوز منتظر اجرا هستند» |
 
 ### تصمیم‌های معماری مهم که حین اجرا گرفته شد
@@ -148,7 +157,7 @@ PurchaseReturn (سند مرجوعی)
 
 ## نتیجه‌گیری و قدم بعدی
 
-هر دو فاز آماده و تست‌شده‌اند. تنها کاری که باقی مانده و عمداً انجام نشده، اجرای واقعی migration ها روی یک دیتابیس است:
+هر دو فاز آماده و تست‌شده‌اند. در زمان نوشتن این سند تنها کار باقی‌مانده اجرای migration ها روی یک دیتابیس بود (**به‌روزرسانی ۲۰۲۶-۰۹-۱۳:** این migration ها اجرا شده‌اند. توجه: `WMS/appsettings.json` فعلی به دیتابیس راه دور `pasarg17_wms` اشاره می‌کند، نه `WMS` محلی؛ این دستور روی همان اجرا می‌شود):
 
 ```bash
 dotnet ef database update --project Infrastructure --startup-project WMS
@@ -181,6 +190,6 @@ dotnet ef database update --project Infrastructure --startup-project WMS
 | `effects[]` در همان پاسخ | `doneQuantity` | `appliedQuantity` |
 | `GetPurchaseReturnPendingEffects` / `GetSaleReturnPendingEffects` | `doneQuantity` | `appliedQuantity` |
 
-**migration:** `20260908120000_rename-effect-applied-quantity` — دو `RenameColumn` روی `PurchaseReturnEffects.DoneQuantity` و `SaleReturnEffects.DoneQuantity`، بدون هیچ تبدیل داده‌ای. **روی هیچ دیتابیسی اجرا نشده است.** این migration دستی نوشته شده (روی ماشینی که این کار انجام شد .NET SDK نصب نبود، پس `dotnet ef migrations add` در دسترس نبود) و همچنین **هیچ build یا تستی روی این تغییرات اجرا نشده** — پیش از اجرا، ساختن دوباره‌ی migration با SDK واقعی و اجرای کامل تست‌ها لازم است.
+**migration:** `20260908120000_rename-effect-applied-quantity` — دو `RenameColumn` روی `PurchaseReturnEffects.DoneQuantity` و `SaleReturnEffects.DoneQuantity`، بدون هیچ تبدیل داده‌ای. این migration دستی نوشته شد (آن زمان .NET SDK در دسترس نبود). **به‌روزرسانی ۲۰۲۶-۰۹-۱۳:** از آن پس build و تست کامل روی آن اجرا شده و در تاریخچه‌ی migration دیتابیس محلی `WMS` و دیتابیس راه دور ثبت است.
 
 **آنچه عمداً دست‌نخورده ماند:** `PurchaseItem`/`SaleItem` سه فیلد `Quantity` + `ReceivedQuantity`/`ShippedQuantity` + `SettledQuantity` دارند بدون «مانده»ی مشتق‌شده — این‌ها دو محورِ مستقلِ مصرف روی یک کل هستند (جابه‌جایی فیزیکی، و تسویه‌ی مرجوعی) و درست است که نامشان فرق کند. دو ناهماهنگیِ واقعیِ باقی‌مانده: `PurchaseReceivingItemInfoDto` که همان رابطه را `OrderedQuantity`/`ReceivedQuantity`/`StillOwedQuantity` می‌نامد (در حالی که `GetPurchaseReceivingInfoQuery` عیناً `OrderedQuantity = item.Quantity` می‌نویسد)، و `TotalQuantity` در DTO های لیست که دقیقاً همان چیزی است که DTO جزئیات `Quantity` می‌نامد. هر دو به پاسی موکول شد که بتواند build و تست کند.

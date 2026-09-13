@@ -1,14 +1,22 @@
 using Domain.Entities;
+using Domain.Enums;
 
 namespace Application.Common.Contracts.InventoryCosting
 {
     /// <summary>
     /// Writes to the perpetual weighted-average-cost (AVCO) inventory ledger
     /// (InventoryCostLedgerEntry) - one method per stock-mutation site that already exists in the
-    /// codebase (ReceivePurchaseCommand, ShipSaleCommand, the two ExecuteGoodsRoundCommands,
+    /// codebase (ReceivePurchaseCommand, ShipSaleCommand, the return commands,
     /// Create/UpdateProductCommand). Every method only stages rows via IWMSDbContext; the caller's
     /// own SaveChangesAsync persists them in the same transaction as the stock/status changes they
     /// accompany, so the ledger can never drift out of sync with Product.Stock.
+    ///
+    /// Return effects follow one rule each, on both sides: an incoming goods effect enters the pool at its
+    /// UnitCost (when omitted, the running average, or Product.PurchasePrice when that is 0), an outgoing one
+    /// leaves at the running average, and a
+    /// money effect writes a row with RevenueDelta = +amount (MONEY_IN) / -amount (MONEY_OUT). The sale
+    /// report reads the sale-return money rows as revenue; the purchase report reads the purchase-return
+    /// ones as purchase spend (sign flipped).
     /// </summary>
     public interface IInventoryCostingService
     {
@@ -31,28 +39,32 @@ namespace Application.Common.Contracts.InventoryCosting
         /// unitPrice * (100-discountPercent)/100 * quantity.</summary>
         Task RecordSaleShipmentAsync(Product product, int quantity, ulong unitPrice, int discountPercent, int saleItemId, DateTime occurredAt, CancellationToken cancellationToken);
 
-        /// <summary>SaleReturn ExecuteGoodsRoundCommand, GOODS_IN (customer returns healthy goods).
-        /// Restocks at the historical average cost of that SaleItem's own past shipments, not the
-        /// current average and not a fresh purchase price - a return is not a new purchase.</summary>
-        Task RecordSaleReturnRestockAsync(Product product, int quantity, int? saleItemId, DateTime occurredAt, CancellationToken cancellationToken);
+        /// <summary>SaleReturn ExecuteGoodsRoundCommand, GOODS_IN: enters the pool at <paramref name="unitCost"/>; when null, the running average, or Product.PurchasePrice when that is 0.</summary>
+        Task RecordSaleReturnRestockAsync(Product product, int quantity, ulong? unitCost, int? saleItemId, DateTime occurredAt, CancellationToken cancellationToken);
 
-        /// <summary>SaleReturn ExecuteGoodsRoundCommand, GOODS_OUT (a replacement shipped for free).
-        /// A real cost with no matching revenue - pure negative profit in the period it ships.</summary>
+        /// <summary>SaleReturn ExecuteGoodsRoundCommand, GOODS_OUT: leaves the pool at the running average.</summary>
         Task RecordReplacementShippedToCustomerAsync(Product product, int quantity, int? saleItemId, DateTime occurredAt, CancellationToken cancellationToken);
 
-        /// <summary>SaleReturn AddClaimResolutionCommand, a MONEY_OUT effect (refund/store credit
-        /// paid to the customer). No inventory movement - pure revenue reversal, using the effect's
-        /// own Amount rather than reconstructing one from the claim's unit price (more correct for
-        /// partial/negotiated refunds, and avoids double-counting against RecordSaleReturnRestockAsync).</summary>
-        Task RecordSaleReturnRefundAsync(Product product, ulong amount, int? saleReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
+        /// <summary>PurchaseReturn ExecuteGoodsRoundCommand, GOODS_IN: enters the pool at <paramref name="unitCost"/>; when null, the running average, or Product.PurchasePrice when that is 0.</summary>
+        Task RecordPurchaseReturnReplacementReceivedAsync(Product product, int quantity, ulong? unitCost, int? purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken);
 
-        /// <summary>PurchaseReturn ExecuteGoodsRoundCommand, GOODS_IN (supplier ships a replacement).
-        /// Restocks at the historical average cost of that PurchaseItem's own past receipts - a
-        /// like-for-like replacement, not a new purchase.</summary>
-        Task RecordPurchaseReturnReplacementReceivedAsync(Product product, int quantity, int? purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken);
-
-        /// <summary>PurchaseReturn ExecuteGoodsRoundCommand, GOODS_OUT (defective stock leaving to
-        /// the supplier). Standard AVCO withdrawal at the current average - no profit impact.</summary>
+        /// <summary>PurchaseReturn ExecuteGoodsRoundCommand, GOODS_OUT: leaves the pool at the running average.</summary>
         Task RecordPurchaseReturnShippedToSupplierAsync(Product product, int quantity, DateTime occurredAt, CancellationToken cancellationToken);
+
+        /// <summary>SaleReturn AddClaimResolutionCommand, a money effect: MONEY_IN is revenue
+        /// (SALE_RETURN_MONEY_IN), MONEY_OUT negative revenue (SALE_RETURN_REFUND). No inventory movement.</summary>
+        Task RecordSaleReturnMoneyAsync(Product product, ReturnEffectDirectionEnum direction, ulong amount, int saleReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
+
+        /// <summary>Undoes <see cref="RecordSaleReturnMoneyAsync"/> when its resolution is removed. The ledger is
+        /// append-only, so this writes a second row of the same event with the opposite RevenueDelta.</summary>
+        Task RecordSaleReturnMoneyReversalAsync(Product product, ReturnEffectDirectionEnum direction, ulong amount, int saleReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
+
+        /// <summary>PurchaseReturn AddClaimResolutionCommand, a money effect (PURCHASE_RETURN_MONEY_IN /
+        /// PURCHASE_RETURN_MONEY_OUT). No inventory movement. Not revenue: the purchase report reads it as
+        /// purchase spend, a supplier refund lowering it and a payment to the supplier raising it.</summary>
+        Task RecordPurchaseReturnMoneyAsync(Product product, ReturnEffectDirectionEnum direction, ulong amount, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
+
+        /// <summary>Undoes <see cref="RecordPurchaseReturnMoneyAsync"/> when its resolution is removed.</summary>
+        Task RecordPurchaseReturnMoneyReversalAsync(Product product, ReturnEffectDirectionEnum direction, ulong amount, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
     }
 }

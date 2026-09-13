@@ -7,6 +7,11 @@
     /// docs/product-code-barcode-invoice-design.fa.md section 1.6). None of these methods call
     /// SaveChangesAsync - the calling handler owns the transaction, same convention as
     /// IPurchaseReturnCalculationService/ISaleReturnCalculationService.
+    ///
+    /// Because nothing here saves, every selection and count sees the request's own unsaved changes:
+    /// units the context tracks are judged by their in-memory state (so a unit consumed, restored or
+    /// minted earlier in the same request is never picked twice or missed), everything else by its saved
+    /// row. Two movements of one product in a single request are therefore safe.
     /// </summary>
     public interface IProductUnitService
     {

@@ -23,6 +23,18 @@ namespace Domain.Entities
         public int? RestockedQuantity { get; set; }
         public int? ProductId { get; set; }
 
+        /// <summary>
+        /// Goods effects only: the client's per-unit transaction value (GoodsEffectDto.UnitPrice, may be zero);
+        /// null on money effects. Feeds the money balance only.
+        /// </summary>
+        public UInt64? UnitPrice { get; set; }
+
+        /// <summary>
+        /// Goods effects only: the per-unit cost a GOODS_IN round enters the inventory pool at
+        /// (GoodsEffectDto.UnitCost). Null means the running average when the round executes, or Product.PurchasePrice when that is 0.
+        /// </summary>
+        public UInt64? UnitCost { get; set; }
+
         // Money effects only (MONEY_OUT / MONEY_IN).
         public UInt64? Amount { get; set; }
         public ReturnPaymentMethodEnum? Method { get; set; }

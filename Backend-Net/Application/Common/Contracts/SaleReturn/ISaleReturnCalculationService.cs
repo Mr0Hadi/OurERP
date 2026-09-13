@@ -1,4 +1,5 @@
-﻿using Domain.Enums;
+﻿using Application.Common.Enums;
+using Domain.Enums;
 
 namespace Application.Common.Contracts.SaleReturn
 {
@@ -13,16 +14,35 @@ namespace Application.Common.Contracts.SaleReturn
         bool IsTerminal(ReturnStatusEnum status);
 
         /// <summary>
-        /// Whether a return can be reopened - only an explicitly REJECTED one. Lives here rather
-        /// than inline in the detail query so every transition rule sits behind one interface.
+        /// The lifecycle state machine, in one place - identical to the purchase side
+        /// (IPurchaseReturnCalculationService.GetLifecycleBlocker). Returns the Persian reason the
+        /// action is refused, or null when it is legal:
+        /// <list type="table">
+        /// <item><term>OPEN / IN_PROGRESS</term><description>Cancel, Reject, Delete - unless goods have
+        /// physically moved (no way back) or a money effect is recorded (way back: remove that
+        /// resolution first). Reopen - refused.</description></item>
+        /// <item><term>SETTLED</term><description>everything refused.</description></item>
+        /// <item><term>REJECTED</term><description>Reopen only; the others point at Reopen.</description></item>
+        /// <item><term>CANCELLED</term><description>everything refused.</description></item>
+        /// </list>
+        /// Needs the full return graph loaded (see SaleReturnQueryExtensions.WithReturnGraph).
         /// </summary>
-        bool CanReopen(ReturnStatusEnum status);
+        string? GetLifecycleBlocker(Domain.Entities.SaleReturn saleReturn, ReturnLifecycleActionEnum action);
+
+        /// <summary><see cref="GetLifecycleBlocker"/> == null - backs the detail DTO's Can* flags.</summary>
+        bool CanPerform(Domain.Entities.SaleReturn saleReturn, ReturnLifecycleActionEnum action);
 
         /// <summary>
-        /// Whether no effect anywhere on the return has ever reached APPLIED - the guard for
-        /// cancel/reject/delete (matches the frontend's isReturnUntouched).
+        /// Whether any goods effect has physically moved at least one unit (AppliedQuantity &gt; 0),
+        /// whether or not the effect has completed. The same test RemoveClaimResolution applies.
         /// </summary>
-        bool IsUntouched(Domain.Entities.SaleReturn saleReturn);
+        bool HasMovedGoods(Domain.Entities.SaleReturn saleReturn);
+
+        /// <summary>
+        /// Whether any money effect is recorded. Money effects are born APPLIED - they record a
+        /// payment that has already happened - so there is no "pending money" state.
+        /// </summary>
+        bool HasRecordedMoney(Domain.Entities.SaleReturn saleReturn);
 
         /// <summary>
         /// open: no resolution has been registered against any claim yet.

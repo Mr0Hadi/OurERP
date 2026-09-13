@@ -1,5 +1,7 @@
 ﻿using Application.Common.Contracts.SaleReturn;
 using Application.Common.Dtos.Returns;
+using Application.Common.Enums;
+using Application.Common.Returns;
 using Common.Exceptions;
 using Domain.Entities;
 using Domain.Enums;
@@ -16,13 +18,21 @@ namespace Infrastructure.Services
 
         public bool IsTerminal(ReturnStatusEnum status) => TerminalReturnStatuses.Contains(status);
 
-        public bool CanReopen(ReturnStatusEnum status) => status == ReturnStatusEnum.REJECTED;
+        // The matrix itself lives in ReturnLifecycleRules so both return sides share one copy; this
+        // service only supplies the two facts it needs from the loaded graph.
+        public string? GetLifecycleBlocker(SaleReturn saleReturn, ReturnLifecycleActionEnum action) =>
+            ReturnLifecycleRules.GetBlocker(saleReturn.Status, HasMovedGoods(saleReturn), HasRecordedMoney(saleReturn), action);
 
-        // Money effects are born APPLIED (see ExpandComposition), so a resolution that carries any
-        // money marks the return as touched and locks cancel/reject/delete from that moment on.
-        // That is intentional: money has already moved, there is nothing left to un-do cheaply.
-        public bool IsUntouched(SaleReturn saleReturn) =>
-            !saleReturn.AllEffects.Any(e => e.Status == ReturnEffectStatusEnum.APPLIED);
+        public bool CanPerform(SaleReturn saleReturn, ReturnLifecycleActionEnum action) =>
+            GetLifecycleBlocker(saleReturn, action) == null;
+
+        // AppliedQuantity, not Status == APPLIED: a goods effect with 1 of 3 units moved is still
+        // PENDING, and the old APPLIED-only test let such a return be cancelled with stock changed.
+        public bool HasMovedGoods(SaleReturn saleReturn) =>
+            saleReturn.AllEffects.Any(e => e.Direction is ReturnEffectDirectionEnum.GOODS_IN or ReturnEffectDirectionEnum.GOODS_OUT && e.AppliedQuantity > 0);
+
+        public bool HasRecordedMoney(SaleReturn saleReturn) =>
+            saleReturn.AllEffects.Any(e => e.Direction is ReturnEffectDirectionEnum.MONEY_IN or ReturnEffectDirectionEnum.MONEY_OUT);
 
         public ReturnStatusEnum RecomputeReturnStatus(SaleReturn saleReturn)
         {
@@ -44,9 +54,9 @@ namespace Infrastructure.Services
         }
 
         // Off-order claims never consume a line's quota - EXCESS/UNLISTED goods are, by definition,
-        // outside what the line ever shipped. Filtered on Scope, the explicit field, rather than on
-        // OffScopeKind being null: the two are meant to agree, and a quota is the wrong place to
-        // depend on that.
+        // outside what the line ever shipped. EXCESS does carry its line reference (for pricing), so
+        // this must key on Scope rather than on the line id being non-null: OnOrder*ItemId is the
+        // line id for ON_ORDER claims only.
         //
         // Soft-deleted and terminal returns are filtered here rather than trusted from the caller.
         // Every caller today passes ISaleReturnRepository.GetActiveBySaleIdAsync, which already
@@ -60,7 +70,7 @@ namespace Infrastructure.Services
             return activeReturns
                 .Where(r => r.IsActive && !IsTerminal(r.Status))
                 .SelectMany(r => r.Claims)
-                .Where(c => c.Scope != ReturnClaimScopeEnum.OFF_ORDER && c.SaleItemId == saleItemId)
+                .Where(c => c.OnOrderSaleItemId == saleItemId)
                 .Sum(c => c.RemainingQuantity);
         }
 
@@ -104,6 +114,8 @@ namespace Infrastructure.Services
                         Direction = direction,
                         Quantity = item.Quantity,
                         ProductId = item.ProductId,
+                        UnitPrice = item.UnitPrice,
+                        UnitCost = item.UnitCost,
                         Status = ReturnEffectStatusEnum.PENDING,
                         CreatedAt = now,
                     });

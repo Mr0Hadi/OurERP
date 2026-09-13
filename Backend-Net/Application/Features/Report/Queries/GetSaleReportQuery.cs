@@ -31,6 +31,8 @@ namespace Application.Features.Report.Queries
             InventoryCostEventTypeEnum.SALE_SHIPPED,
             InventoryCostEventTypeEnum.REPLACEMENT_SHIPPED_TO_CUSTOMER,
             InventoryCostEventTypeEnum.SALE_RETURN_REFUND,
+            // A sale-return MONEY_IN: revenue, the mirror of SALE_RETURN_REFUND.
+            InventoryCostEventTypeEnum.SALE_RETURN_MONEY_IN,
         };
 
         private readonly IWMSDbContext _context;

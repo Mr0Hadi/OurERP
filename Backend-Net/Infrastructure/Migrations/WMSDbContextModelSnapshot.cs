@@ -792,6 +792,12 @@ namespace Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
+                    b.Property<decimal?>("UnitCost")
+                        .HasColumnType("decimal(20,0)");
+
+                    b.Property<decimal?>("UnitPrice")
+                        .HasColumnType("decimal(20,0)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ProductId");
@@ -1198,6 +1204,12 @@ namespace Infrastructure.Migrations
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
+
+                    b.Property<decimal?>("UnitCost")
+                        .HasColumnType("decimal(20,0)");
+
+                    b.Property<decimal?>("UnitPrice")
+                        .HasColumnType("decimal(20,0)");
 
                     b.HasKey("Id");
 

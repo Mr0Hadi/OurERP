@@ -66,6 +66,8 @@ public static class PurchaseReturnMappings
         RestockedQuantity = e.RestockedQuantity,
         ProductId = e.ProductId,
         ProductName = e.Product?.Name,
+        UnitPrice = e.UnitPrice,
+        UnitCost = e.UnitCost,
         Amount = e.Amount,
         Method = e.Method,
         Reference = e.Reference,

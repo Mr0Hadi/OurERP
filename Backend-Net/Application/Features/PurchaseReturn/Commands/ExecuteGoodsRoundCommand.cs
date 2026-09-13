@@ -1,13 +1,15 @@
-﻿using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.PurchaseReturn;
+using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos.Returns;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Common.Queries;
-using Application.Features.PurchaseReturn.Dtos;
+using Application.Common.Returns;
+using Application.Features.PurchaseReturn.Queries;
 using Common.Exceptions;
 using Common.Extensions;
 using Domain.Enums;
@@ -17,8 +19,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.PurchaseReturn.Commands
 {
-    // A physical receiving/dispatch round against one or more goods effects on a return - the
-    // supplier sending a replacement (GOODS_IN) or us physically returning goods (GOODS_OUT).
+    // A physical receiving/dispatch round against one or more goods effects on a return - goods
+    // coming in to us (GOODS_IN) or leaving us back to the supplier (GOODS_OUT).
     // Replaces the purchase side's old implicit receiving-issue path entirely: goods rounds target
     // a specific effect explicitly, there is nothing left to infer.
     public class ExecuteGoodsRoundCommand : IRequest<ResponseDto>
@@ -42,6 +44,13 @@ namespace Application.Features.PurchaseReturn.Commands
             {
                 line.RuleFor(l => l.EffectId).GreaterThan(0).WithMessage(Validation.RequiredMessage("اثر"));
                 line.RuleFor(l => l.Quantity).GreaterThan(0).WithMessage("مقدار اجرا باید از صفر بیشتر باشد.");
+                line.RuleForEach(l => l.Observations).ChildRules(obs =>
+                    obs.RuleFor(o => o.Quantity).GreaterThanOrEqualTo(0).WithMessage("مقدار مشاهده نمی‌تواند منفی باشد."));
+                // Healthy quantity is Quantity minus the observations; more observed than moved made it
+                // negative, and that negative number was added straight to Product.Stock.
+                line.RuleFor(l => l)
+                    .Must(l => (l.Observations ?? new()).Where(o => o.Quantity > 0).Sum(o => o.Quantity) <= l.Quantity)
+                    .WithMessage("مجموع مقدار مشاهده‌ها نمی‌تواند از مقدار اجرا بیشتر باشد.");
             });
         }
     }
@@ -52,14 +61,16 @@ namespace Application.Features.PurchaseReturn.Commands
         private readonly IPurchaseReturnCalculationService _purchaseReturnCalculationService;
         private readonly IProductUnitService _productUnitService;
         private readonly IInventoryCostingService _inventoryCostingService;
+        private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public ExecuteGoodsRoundCommandHandler(IWMSDbContext context, IPurchaseReturnCalculationService purchaseReturnCalculationService, IProductUnitService productUnitService, IInventoryCostingService inventoryCostingService, IUnitOfWork unitOfWork)
+        public ExecuteGoodsRoundCommandHandler(IWMSDbContext context, IPurchaseReturnCalculationService purchaseReturnCalculationService, IProductUnitService productUnitService, IInventoryCostingService inventoryCostingService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
         {
             _context = context;
             _purchaseReturnCalculationService = purchaseReturnCalculationService;
             _productUnitService = productUnitService;
             _inventoryCostingService = inventoryCostingService;
+            _objectStorageService = objectStorageService;
             _unitOfWork = unitOfWork;
         }
 
@@ -74,13 +85,19 @@ namespace Application.Features.PurchaseReturn.Commands
                 .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
             if (_purchaseReturnCalculationService.IsTerminal(purchaseReturn.Status))
-                throw new ValidationCustomException("این مرجوعی دیگر قابل ویرایش نیست.");
+                throw new ValidationCustomException(ReturnLifecycleRules.NotEditableMessage(purchaseReturn.Status));
 
             var effectsById = purchaseReturn.Claims
                 .SelectMany(c => c.Resolutions.SelectMany(r => r.Effects.Select(e => (claim: c, effect: e))))
                 .ToDictionary(x => x.effect.Id);
 
-            var now = request.Date ?? DateTime.Now;
+            // ── Phase 1: validate every line before touching anything. ─────────────────────────────
+            // This used to validate and mutate one line at a time, so a refusal on line 2 threw with
+            // line 1's stock, AppliedQuantity, units and ledger rows already changed on the tracked
+            // graph. Nothing is saved on a throw, but that is only safe as long as nobody ever reuses
+            // the context after catching - so the rule is now: all checks first, then all writes.
+            var plan = new List<(GoodsRoundLineDto line, Domain.Entities.PurchaseReturnClaim claim, Domain.Entities.PurchaseReturnEffect effect, int healthy)>();
+            var requestedPerEffect = new Dictionary<int, int>();
 
             foreach (var line in request.Rounds)
             {
@@ -92,20 +109,59 @@ namespace Application.Features.PurchaseReturn.Commands
                 if (effect.Direction is not (ReturnEffectDirectionEnum.GOODS_IN or ReturnEffectDirectionEnum.GOODS_OUT))
                     throw new ValidationCustomException("فقط اثرهای کالایی می‌توانند اجرا شوند.");
 
-                if (line.Quantity > effect.RemainingQuantity)
+                // Summed per effect: the same effect twice in one round is checked as its total.
+                requestedPerEffect[effect.Id] = requestedPerEffect.GetValueOrDefault(effect.Id) + line.Quantity;
+                if (requestedPerEffect[effect.Id] > effect.RemainingQuantity)
                     throw new ValidationCustomException("مقدار اجرا از باقیمانده این اثر بیشتر است.");
 
-                var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == effect.ProductId, cancellationToken)
-                    ?? throw new NotFoundCustomException("کالای مورد نظر یافت نشد.");
+                var observed = (line.Observations ?? new()).Where(o => o.Quantity > 0).Sum(o => o.Quantity);
+                plan.Add((line, claim, effect, line.Quantity - observed));
+            }
 
-                var observations = (line.Observations ?? new()).Where(o => o.Quantity > 0).ToList();
-                var healthyQty = effect.Direction == ReturnEffectDirectionEnum.GOODS_IN ? line.Quantity - observations.Sum(o => o.Quantity) : (int?)null;
+            var productIds = plan.Select(p => p.effect.ProductId!.Value).Distinct().ToList();
+            var products = await _context.Products
+                .Where(p => productIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id, cancellationToken);
+
+            if (products.Count != productIds.Count)
+                throw new NotFoundCustomException("کالای مورد نظر یافت نشد.");
+
+            // Stock is simulated in request order, so an inbound line earlier in the same round still
+            // covers an outbound one after it.
+            var projectedStock = products.ToDictionary(p => p.Key, p => p.Value.Stock);
+            foreach (var (line, _, effect, healthy) in plan)
+            {
+                var productId = effect.ProductId!.Value;
+
+                if (effect.Direction == ReturnEffectDirectionEnum.GOODS_IN)
+                {
+                    projectedStock[productId] += healthy;
+                }
+                else
+                {
+                    if (line.Quantity > projectedStock[productId])
+                        throw new ValidationCustomException($"موجودی «{products[productId].Name}» برای این عودت کافی نیست.");
+                    projectedStock[productId] -= line.Quantity;
+                }
+            }
+
+            // ── Phase 2: apply. ────────────────────────────────────────────────────────────────────
+            // The same mechanics for every effect, whatever its claim: GOODS_IN raises stock, mints units
+            // and enters the cost pool at the effect's UnitCost (when omitted, the running average, or the purchase price if that is 0); GOODS_OUT lowers stock, consumes
+            // units and leaves the pool at the running average. The only refusals left are
+            // ProductUnitService's own DB-state checks, which throw before SaveChanges.
+            var now = request.Date ?? DateTime.Now;
+
+            foreach (var (line, claim, effect, healthy) in plan)
+            {
+                var product = products[effect.ProductId!.Value];
+                var isGoodsIn = effect.Direction == ReturnEffectDirectionEnum.GOODS_IN;
 
                 var round = new Domain.Entities.PurchaseReturnEffectRound
                 {
                     Date = now,
                     Quantity = line.Quantity,
-                    HealthyQuantity = healthyQty,
+                    HealthyQuantity = isGoodsIn ? healthy : null,
                     PartyName = request.PartyName,
                     PartyNationalId = request.PartyNationalId,
                     VehiclePlate = request.VehiclePlate,
@@ -113,7 +169,7 @@ namespace Application.Features.PurchaseReturn.Commands
                     CreatedAt = now,
                 };
 
-                foreach (var obs in observations)
+                foreach (var obs in (line.Observations ?? new()).Where(o => o.Quantity > 0))
                 {
                     round.Observations.Add(new Domain.Entities.PurchaseReturnEffectObservation
                     {
@@ -126,28 +182,26 @@ namespace Application.Features.PurchaseReturn.Commands
                 effect.History.Add(round);
                 effect.AppliedQuantity += line.Quantity;
 
-                if (effect.Direction == ReturnEffectDirectionEnum.GOODS_IN)
+                // Which purchase line the units belong to - identity only, not a stock or cost rule. Only an
+                // ON_ORDER claim's own product has a line; a different product moved on the same claim does not.
+                var unitLine = effect.ProductId == claim.ProductId ? claim.OnOrderPurchaseItemId : null;
+
+                if (isGoodsIn)
                 {
-                    var restocked = healthyQty ?? line.Quantity;
-                    product.Stock += restocked;
-                    effect.RestockedQuantity = (effect.RestockedQuantity ?? 0) + restocked;
+                    product.Stock += healthy;
+                    effect.RestockedQuantity = (effect.RestockedQuantity ?? 0) + healthy;
 
-                    // The supplier physically sending a replacement is a return-side event, not a
-                    // normal receiving round - it never touches PurchaseItem.ReceivedQuantity.
-                    await _productUnitService.MintAsync(product, restocked, claim.PurchaseItemId, cancellationToken);
+                    // Goods arriving through a return never touch PurchaseItem.ReceivedQuantity.
+                    await _productUnitService.MintAsync(product, healthy, unitLine, cancellationToken);
 
-                    if (restocked > 0)
-                        await _inventoryCostingService.RecordPurchaseReturnReplacementReceivedAsync(product, restocked, claim.PurchaseItemId, now, cancellationToken);
+                    if (healthy > 0)
+                        await _inventoryCostingService.RecordPurchaseReturnReplacementReceivedAsync(product, healthy, effect.UnitCost, unitLine, now, cancellationToken);
                 }
-                else // GOODS_OUT: goods physically leaving us back to the supplier.
+                else
                 {
-                    if (line.Quantity > product.Stock)
-                        throw new ValidationCustomException($"موجودی «{product.Name}» برای این عودت کافی نیست.");
-
                     product.Stock -= line.Quantity;
                     await _inventoryCostingService.RecordPurchaseReturnShippedToSupplierAsync(product, line.Quantity, now, cancellationToken);
-
-                    await _productUnitService.ReturnToSupplierAsync(product, line.Quantity, claim.PurchaseItemId, cancellationToken);
+                    await _productUnitService.ReturnToSupplierAsync(product, line.Quantity, unitLine, cancellationToken);
                 }
 
                 if (effect.AppliedQuantity >= effect.Quantity)
@@ -156,9 +210,9 @@ namespace Application.Features.PurchaseReturn.Commands
                     effect.AppliedAt = now;
 
                     var resolution = claim.Resolutions.First(r => r.Effects.Contains(effect));
-                    if (resolution.Effects.All(e => e.Status != ReturnEffectStatusEnum.PENDING) && claim.PurchaseItemId.HasValue)
+                    if (resolution.Effects.All(e => e.Status != ReturnEffectStatusEnum.PENDING) && claim.OnOrderPurchaseItemId is int purchaseItemId)
                     {
-                        var purchaseItem = purchaseReturn.Purchase!.Items.First(x => x.Id == claim.PurchaseItemId.Value);
+                        var purchaseItem = purchaseReturn.Purchase!.Items.First(x => x.Id == purchaseItemId);
                         purchaseItem.SettledQuantity += resolution.Quantity;
                     }
                 }
@@ -173,7 +227,7 @@ namespace Application.Features.PurchaseReturn.Commands
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            res.Data = new { ReturnStatus = purchaseReturn.Status };
+            res.Data = await PurchaseReturnDetailReader.ReadAsync(_context, _purchaseReturnCalculationService, _objectStorageService, purchaseReturn.Id, cancellationToken);
             res.Message = "اجرای مرحله با موفقیت ثبت شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;

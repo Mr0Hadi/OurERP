@@ -9,8 +9,8 @@ namespace Domain.Entities
     /// time-aware: a later PURCHASE_RECEIVED row can never change the cost already written on an
     /// earlier SALE_SHIPPED row. Profit contribution of a row = RevenueDelta + InventoryValueDelta
     /// (InventoryValueDelta is negative for an outflow, so this nets revenue against COGS in one
-    /// formula for every row, without a branch); only SALE_SHIPPED, REPLACEMENT_SHIPPED_TO_CUSTOMER
-    /// and SALE_RETURN_REFUND ever set a non-zero RevenueDelta.
+    /// formula for every row, without a branch); only SALE_SHIPPED and the return money
+    /// events ever set a non-zero RevenueDelta.
     /// </summary>
     public class InventoryCostLedgerEntry
     {

@@ -32,7 +32,10 @@ namespace Application.Features.PurchaseReturn.Queries
         {
             var res = new ResponseDto();
 
-            var query = _context.PurchaseReturns.WhereNotDeleted();
+            // Open returns only: a REJECTED/CANCELLED return can still hold a goods effect that never
+            // moved (both are legal while nothing has moved), and ExecuteGoodsRound refuses a terminal
+            // return - so listing it would hand the warehouse work it cannot record.
+            var query = _context.PurchaseReturns.WhereNotDeleted().WhereOpen();
 
             if (request.PurchaseId.HasValue)
                 query = query.Where(x => x.PurchaseId == request.PurchaseId.Value);

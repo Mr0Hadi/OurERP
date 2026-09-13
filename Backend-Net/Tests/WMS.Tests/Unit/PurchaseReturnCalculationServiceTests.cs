@@ -1,5 +1,6 @@
 ﻿using Application.Common.Dtos.Returns;
 using Common.Exceptions;
+using Application.Common.Enums;
 using Domain.Entities;
 using Domain.Enums;
 using Infrastructure.Services;
@@ -30,30 +31,71 @@ namespace WMS.Tests.Unit
             Assert.Equal(expected, _sut.IsTerminal(status));
         }
 
-        [Fact]
-        public void IsUntouched_NoEffects_IsTrue()
+        private static PurchaseReturn WithEffects(ReturnStatusEnum status, params PurchaseReturnEffect[] effects) => new()
         {
-            var purchaseReturn = new PurchaseReturn { Claims = { new PurchaseReturnClaim { Quantity = 5 } } };
+            Status = status,
+            Claims =
+            {
+                new PurchaseReturnClaim
+                {
+                    Quantity = 5,
+                    Resolutions = { new PurchaseReturnResolution { Quantity = 5, Effects = effects.ToList() } },
+                },
+            },
+        };
 
-            Assert.True(_sut.IsUntouched(purchaseReturn));
+        [Theory]
+        [InlineData(ReturnLifecycleActionEnum.CANCEL)]
+        [InlineData(ReturnLifecycleActionEnum.REJECT)]
+        [InlineData(ReturnLifecycleActionEnum.DELETE)]
+        public void GetLifecycleBlocker_OpenWithNoEffects_AllowsCancelRejectDelete(ReturnLifecycleActionEnum action)
+        {
+            Assert.Null(_sut.GetLifecycleBlocker(WithEffects(ReturnStatusEnum.OPEN), action));
         }
 
         [Fact]
-        public void IsUntouched_HasAppliedEffect_IsFalse()
+        public void GetLifecycleBlocker_PendingGoodsNothingMoved_AllowsCancel()
         {
-            var purchaseReturn = new PurchaseReturn
-            {
-                Claims =
-                {
-                    new PurchaseReturnClaim
-                    {
-                        Quantity = 5,
-                        Resolutions = { new PurchaseReturnResolution { Quantity = 5, Effects = { new PurchaseReturnEffect { Status = ReturnEffectStatusEnum.APPLIED } } } },
-                    },
-                },
-            };
+            var purchaseReturn = WithEffects(ReturnStatusEnum.IN_PROGRESS, new PurchaseReturnEffect { Direction = ReturnEffectDirectionEnum.GOODS_IN, Quantity = 5, Status = ReturnEffectStatusEnum.PENDING });
 
-            Assert.False(_sut.IsUntouched(purchaseReturn));
+            Assert.Null(_sut.GetLifecycleBlocker(purchaseReturn, ReturnLifecycleActionEnum.CANCEL));
+        }
+
+        [Fact]
+        public void GetLifecycleBlocker_PartiallyMovedGoods_BlocksEvenThoughEffectIsPending()
+        {
+            var purchaseReturn = WithEffects(ReturnStatusEnum.IN_PROGRESS, new PurchaseReturnEffect { Direction = ReturnEffectDirectionEnum.GOODS_OUT, Quantity = 5, AppliedQuantity = 1, Status = ReturnEffectStatusEnum.PENDING });
+
+            Assert.True(_sut.HasMovedGoods(purchaseReturn));
+            Assert.Contains("کالا", _sut.GetLifecycleBlocker(purchaseReturn, ReturnLifecycleActionEnum.CANCEL));
+        }
+
+        [Fact]
+        public void GetLifecycleBlocker_RecordedMoney_BlocksAndPointsAtRemovingTheResolution()
+        {
+            var purchaseReturn = WithEffects(ReturnStatusEnum.IN_PROGRESS, new PurchaseReturnEffect { Direction = ReturnEffectDirectionEnum.MONEY_IN, Amount = 100, Status = ReturnEffectStatusEnum.APPLIED });
+
+            var blocker = _sut.GetLifecycleBlocker(purchaseReturn, ReturnLifecycleActionEnum.REJECT);
+            Assert.Contains("اثر مالی", blocker);
+            Assert.Contains("حذف کنید", blocker);
+        }
+
+        [Theory]
+        [InlineData(ReturnStatusEnum.REJECTED, ReturnLifecycleActionEnum.CANCEL, "بازگشایی")]
+        [InlineData(ReturnStatusEnum.REJECTED, ReturnLifecycleActionEnum.REJECT, "قبلاً رد شده")]
+        [InlineData(ReturnStatusEnum.REJECTED, ReturnLifecycleActionEnum.DELETE, "بازگشایی")]
+        [InlineData(ReturnStatusEnum.CANCELLED, ReturnLifecycleActionEnum.CANCEL, "قبلاً لغو شده")]
+        [InlineData(ReturnStatusEnum.CANCELLED, ReturnLifecycleActionEnum.REOPEN, "قبلاً لغو شده")]
+        [InlineData(ReturnStatusEnum.SETTLED, ReturnLifecycleActionEnum.DELETE, "تسویه شده")]
+        [InlineData(ReturnStatusEnum.OPEN, ReturnLifecycleActionEnum.REOPEN, "در انتظار تصمیم")]
+        [InlineData(ReturnStatusEnum.IN_PROGRESS, ReturnLifecycleActionEnum.REOPEN, "در حال اجرا")]
+        public void GetLifecycleBlocker_RefusalNamesTheActualStatus(ReturnStatusEnum status, ReturnLifecycleActionEnum action, string expectedFragment)
+        {
+            var blocker = _sut.GetLifecycleBlocker(WithEffects(status), action);
+
+            Assert.NotNull(blocker);
+            Assert.Contains(expectedFragment, blocker);
+            Assert.DoesNotContain("دست‌نخورده", blocker);
         }
 
         [Fact]
@@ -225,9 +267,9 @@ namespace WMS.Tests.Unit
         [InlineData(ReturnStatusEnum.OPEN, false)]
         [InlineData(ReturnStatusEnum.IN_PROGRESS, false)]
         [InlineData(ReturnStatusEnum.SETTLED, false)]
-        public void CanReopen_OnlyRejected(ReturnStatusEnum status, bool expected)
+        public void CanPerform_Reopen_OnlyRejected(ReturnStatusEnum status, bool expected)
         {
-            Assert.Equal(expected, _sut.CanReopen(status));
+            Assert.Equal(expected, _sut.CanPerform(WithEffects(status), ReturnLifecycleActionEnum.REOPEN));
         }
 
         [Fact]

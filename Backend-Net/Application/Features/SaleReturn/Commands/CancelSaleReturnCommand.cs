@@ -4,6 +4,7 @@ using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Common.Queries;
+using Application.Features.SaleReturn.Queries;
 using Common.Exceptions;
 using Common.Extensions;
 using Domain.Enums;
@@ -48,14 +49,17 @@ namespace Application.Features.SaleReturn.Commands
                 .WithReturnGraph()
                 .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
-            if (_saleReturnCalculationService.IsTerminal(saleReturn.Status) || !_saleReturnCalculationService.IsUntouched(saleReturn))
-                throw new ValidationCustomException("فقط مرجوعی‌های دست‌نخورده قابل لغو کردن هستند.");
+            // One rule for every lifecycle command, and a reason that names what actually blocks it
+            // (the status, moved goods, or recorded money) - see ReturnLifecycleRules.
+            if (_saleReturnCalculationService.GetLifecycleBlocker(saleReturn, ReturnLifecycleActionEnum.CANCEL) is { } blocker)
+                throw new ValidationCustomException(blocker);
 
             saleReturn.Status = ReturnStatusEnum.CANCELLED;
             saleReturn.UpdatedAt = DateTime.Now;
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+            res.Data = await SaleReturnDetailReader.ReadAsync(_context, _saleReturnCalculationService, saleReturn.Id, cancellationToken);
             res.Message = "مرجوعی با موفقیت لغو شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;

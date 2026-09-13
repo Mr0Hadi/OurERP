@@ -1,10 +1,11 @@
-﻿using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Dtos.Returns;
 using Application.Common.Enums;
+using Application.Features.SaleReturn.Queries;
 using Common.Exceptions;
 using Common.Extensions;
 using Domain.Enums;
@@ -43,6 +44,18 @@ namespace Application.Features.SaleReturn.Commands
                     .When(c => c.Scope == ReturnClaimScopeEnum.ON_ORDER);
                 claim.RuleFor(c => c.OffScopeKind).NotNull().WithMessage("نوع ادعای خارج از سند مشخص نشده است.")
                     .When(c => c.Scope == ReturnClaimScopeEnum.OFF_ORDER);
+                // An on-order claim has no off-scope kind; one sent anyway used to be dropped silently.
+                claim.RuleFor(c => c.OffScopeKind).Null().WithMessage("ادعای روی قلم سند نمی‌تواند نوع ادعای خارج از سند (offScopeKind) داشته باشد.")
+                    .When(c => c.Scope == ReturnClaimScopeEnum.ON_ORDER);
+                claim.RuleFor(c => c.OffScopeKind).IsInEnum().WithMessage("نوع ادعای خارج از سند نامعتبر است.")
+                    .When(c => c.Scope == ReturnClaimScopeEnum.OFF_ORDER && c.OffScopeKind.HasValue);
+                // EXCESS is "more of a line the sale has" - that line prices it, so it must be named.
+                claim.RuleFor(c => c.OrderLineId).NotNull().WithMessage("برای ادعای «بیش از مقدار ارسال‌شده» باید قلم فروش مربوط مشخص شود.")
+                    .When(c => c.Scope == ReturnClaimScopeEnum.OFF_ORDER && c.OffScopeKind == ReturnOffScopeKindEnum.EXCESS);
+                // UNLISTED is a product the sale never listed; a line reference contradicts it and
+                // used to be dropped silently.
+                claim.RuleFor(c => c.OrderLineId).Null().WithMessage("ادعای «کالای خارج از فاکتور» نمی‌تواند به قلم فروش ارجاع داشته باشد.")
+                    .When(c => c.Scope == ReturnClaimScopeEnum.OFF_ORDER && c.OffScopeKind == ReturnOffScopeKindEnum.UNLISTED);
             });
         }
     }
@@ -84,16 +97,49 @@ namespace Application.Features.SaleReturn.Commands
             var activeReturns = await _saleReturnRepository.GetActiveBySaleIdAsync(request.SaleId, cancellationToken);
             var saleItems = sale.Items.ToDictionary(x => x.Id);
 
-            var onOrderRequestedPerItem = request.Claims
-                .Where(c => c.Scope == ReturnClaimScopeEnum.ON_ORDER)
-                .GroupBy(c => c.OrderLineId!.Value)
-                .ToDictionary(g => g.Key, g => g.Sum(c => c.Quantity));
-
-            foreach (var (saleItemId, requestedQty) in onOrderRequestedPerItem)
+            // Every claim that names a line - ON_ORDER and EXCESS alike - must name a line of this
+            // sale, for the same product. The quota and the EXCESS price are both read off that line,
+            // while a later GOODS_IN round adds stock to claim.ProductId - so a claim naming line A
+            // with product B would restore A's units while crediting B's stock.
+            foreach (var claimReq in request.Claims.Where(c => c.OrderLineId.HasValue))
             {
-                if (!saleItems.TryGetValue(saleItemId, out var saleItem))
+                if (!saleItems.TryGetValue(claimReq.OrderLineId!.Value, out var saleItem))
                     throw new NotFoundCustomException("آیتم فروش مورد نظر یافت نشد.");
 
+                if (claimReq.ProductId != saleItem.ProductId)
+                    throw new ValidationCustomException($"کالای ادعاشده با کالای قلم فروش «{saleItem.Product.Name}» مطابقت ندارد.");
+
+                // EXCESS is priced at its order line. A different client price used to be overwritten
+                // silently, so the form showed one number and the server stored another.
+                if (claimReq.Scope == ReturnClaimScopeEnum.OFF_ORDER && claimReq.OffScopeKind == ReturnOffScopeKindEnum.EXCESS && claimReq.UnitPrice != saleItem.UnitPrice)
+                    throw new ValidationCustomException($"قیمت واحد ادعای «بیش از مقدار ارسال‌شده» باید با قیمت واحد قلم فروش «{saleItem.Product.Name}» یعنی {saleItem.UnitPrice} ریال برابر باشد.");
+            }
+
+            // A line-less (UNLISTED) claim's product is otherwise unchecked, and a bad id used to
+            // surface as an FK failure at SaveChanges - a 500 instead of a 400.
+            var offOrderProductIds = request.Claims
+                .Where(c => c.Scope == ReturnClaimScopeEnum.OFF_ORDER)
+                .Select(c => c.ProductId)
+                .Distinct()
+                .ToList();
+
+            if (offOrderProductIds.Count > 0)
+            {
+                var foundCount = await _context.Products.CountAsync(p => offOrderProductIds.Contains(p.Id), cancellationToken);
+                if (foundCount != offOrderProductIds.Count)
+                    throw new ValidationCustomException("کالای انتخاب‌شده برای ادعای خارج از سند یافت نشد.");
+            }
+
+            // Only ON_ORDER claims consume a line's claimable quantity. EXCESS goods are by definition
+            // beyond what the line shipped, so they are never counted against it.
+            var onOrderClaimsPerItem = request.Claims
+                .Where(c => c.Scope == ReturnClaimScopeEnum.ON_ORDER)
+                .GroupBy(c => c.OrderLineId!.Value);
+
+            foreach (var claimsOnItem in onOrderClaimsPerItem)
+            {
+                var saleItem = saleItems[claimsOnItem.Key];
+                var requestedQty = claimsOnItem.Sum(c => c.Quantity);
                 var claimable = _saleReturnCalculationService.GetClaimableQuantity(saleItem, activeReturns);
                 if (requestedQty > claimable)
                     throw new ValidationCustomException($"مقدار ادعاشده برای «{saleItem.Product.Name}» از باقیمانده قابل مرجوع کردن این قلم بیشتر است.");
@@ -131,13 +177,20 @@ namespace Application.Features.SaleReturn.Commands
 
             foreach (var claimReq in request.Claims)
             {
+                var isExcess = claimReq.Scope == ReturnClaimScopeEnum.OFF_ORDER && claimReq.OffScopeKind == ReturnOffScopeKindEnum.EXCESS;
+
                 saleReturn.Claims.Add(new Domain.Entities.SaleReturnClaim
                 {
                     Scope = claimReq.Scope,
                     OffScopeKind = claimReq.Scope == ReturnClaimScopeEnum.OFF_ORDER ? claimReq.OffScopeKind : null,
-                    SaleItemId = claimReq.Scope == ReturnClaimScopeEnum.ON_ORDER ? claimReq.OrderLineId : null,
+                    // The validator guarantees this is set for ON_ORDER and EXCESS and null for UNLISTED.
+                    SaleItemId = claimReq.OrderLineId,
                     ProductId = claimReq.ProductId,
-                    UnitPrice = claimReq.UnitPrice,
+                    // EXCESS is priced at its order line's unit price (a different client value is a 400
+                    // above, so the two are equal here) - the server's copy, so the
+                    // client cannot price the same goods differently from the sale they came from.
+                    // ON_ORDER and UNLISTED keep the client's price (ON_ORDER may carry a net price).
+                    UnitPrice = isExcess ? saleItems[claimReq.OrderLineId!.Value].UnitPrice : claimReq.UnitPrice,
                     Quantity = claimReq.Quantity,
                     Problem = claimReq.Problem,
                     Note = claimReq.Note,
@@ -148,7 +201,7 @@ namespace Application.Features.SaleReturn.Commands
             await _saleReturnRepository.AddAsync(saleReturn, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            res.Data = new { ReturnId = saleReturn.Id, ReturnNumber = saleReturn.ReturnNumber, ReturnStatus = saleReturn.Status };
+            res.Data = await SaleReturnDetailReader.ReadAsync(_context, _saleReturnCalculationService, saleReturn.Id, cancellationToken);
             res.Message = "درخواست مرجوعی با موفقیت ثبت شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;
