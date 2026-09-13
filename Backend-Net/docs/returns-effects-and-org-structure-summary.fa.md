@@ -157,7 +157,7 @@ PurchaseReturn (سند مرجوعی)
 
 ## نتیجه‌گیری و قدم بعدی
 
-هر دو فاز آماده و تست‌شده‌اند. در زمان نوشتن این سند تنها کار باقی‌مانده اجرای migration ها روی یک دیتابیس بود (**به‌روزرسانی ۲۰۲۶-۰۹-۱۳:** این migration ها اجرا شده‌اند. توجه: `WMS/appsettings.json` فعلی به دیتابیس راه دور `pasarg17_wms` اشاره می‌کند، نه `WMS` محلی؛ این دستور روی همان اجرا می‌شود):
+هر دو فاز آماده و تست‌شده‌اند. در زمان نوشتن این سند تنها کار باقی‌مانده اجرای migration ها روی یک دیتابیس بود (**به‌روزرسانی ۲۰۲۶-۰۹-۱۳:** این migration ها اجرا شده‌اند. توجه: از commit `60b3773` هیچ رشته‌ی اتصالی در `WMS/appsettings.json` نیست؛ `ConnectionStrings:SqlServer` باید از محیط بیاید (مثلاً متغیر `ConnectionStrings__SqlServer`) و این دستور روی همان دیتابیسی اجرا می‌شود که محیط تعیین کرده):
 
 ```bash
 dotnet ef database update --project Infrastructure --startup-project WMS

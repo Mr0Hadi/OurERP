@@ -979,12 +979,15 @@ gone. API contract: `docs/api-guide.fa.md` §10 «مدل اثرها», §12, §1
   `SaleReturnEffects.IsKeptByCustomer`/`CostLedgerEntryId` and `ProductUnits.SaleReturnEffectId` (with their
   FKs/indexes), and backfills `UnitPrice` on existing goods effects from their claim. Forward-only on purpose:
   the two 2026-09-12 migrations it undoes are already in the remote database's history (below).
-- **Correction - where migrations actually go.** `WMS/appsettings.json`'s active connection string is the remote
-  `pasarg17_wms` (since `8e9947e`); the local `Server=.;Database=WMS` line is commented out. The earlier note that
-  `20260912204950_return-booked-quantity-and-kept-extras` and `20260912212317_return-effect-unit-price` were
-  "applied to the local WMS database" was wrong: `dotnet ef database update` applied them to the remote
-  database. Local WMS stops at `20260910231028_add-product-english-name`. `20260913051253_return-effect-model`
-  is **not applied anywhere** - pending the user's decision on which database.
+- **Correction - where migrations actually went.** From `8e9947e` until `60b3773`, `WMS/appsettings.json`'s active
+  connection string was the remote `pasarg17_wms` (the local `Server=.;Database=WMS` line was commented out). The
+  earlier note that `20260912204950_return-booked-quantity-and-kept-extras` and `20260912212317_return-effect-unit-price`
+  were "applied to the local WMS database" was wrong: `dotnet ef database update` applied them to that remote
+  database. Local WMS stops at `20260910231028_add-product-english-name`. Since `60b3773` ("Clean up connection
+  strings") `appsettings.json` carries **no** `SqlServer` entry, and neither does `appsettings.Development.json`, so
+  `ConnectionStrings:SqlServer` must come from the environment (e.g. `ConnectionStrings__SqlServer`) and `dotnet ef`
+  targets whatever that supplies. The removed credentials remain in git history. `20260913051253_return-effect-model`
+  and `20260913060230_return-effect-unit-cost` are **not applied anywhere** - the user applies migrations themselves.
 - Tests: `Integration/ReturnEffectModelTests.cs` (balance floor on both sides, EXCESS line price, OFF_ORDER goods
   moving stock at their own price and out at the average, money revenue rows and their reversal on both sides),
   `Unit/ReturnMoneyBalanceTests.cs` rewritten, `UnitPrice`-required validator tests; deleted
