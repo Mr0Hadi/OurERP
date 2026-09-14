@@ -37,12 +37,17 @@ axiosInstance.interceptors.request.use(
 let isRefreshing = false;
 let refreshSubscribers = [];
 
-function subscribeTokenRefresh(callback) {
-  refreshSubscribers.push(callback);
+function subscribeTokenRefresh(onSuccess, onFailure) {
+  refreshSubscribers.push({ onSuccess, onFailure });
 }
 
 function onRefreshed(newToken) {
-  refreshSubscribers.forEach((cb) => cb(newToken));
+  refreshSubscribers.forEach(({ onSuccess }) => onSuccess(newToken));
+  refreshSubscribers = [];
+}
+
+function onRefreshFailed(error) {
+  refreshSubscribers.forEach(({ onFailure }) => onFailure(error));
   refreshSubscribers = [];
 }
 
@@ -110,11 +115,14 @@ axiosInstance.interceptors.response.use(
 
       if (isRefreshing) {
         // منتظر بمون تا رفرش قبلی تموم بشه، بعد با توکن جدید دوباره ارسال کن
-        return new Promise((resolve) => {
-          subscribeTokenRefresh((newToken) => {
-            originalRequest.headers.Authorization = `Bearer ${newToken}`;
-            resolve(axiosInstance(originalRequest));
-          });
+        return new Promise((resolve, reject) => {
+          subscribeTokenRefresh(
+            (newToken) => {
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+              resolve(axiosInstance(originalRequest));
+            },
+            (refreshError) => reject(refreshError)
+          );
         });
       }
 
@@ -122,9 +130,15 @@ axiosInstance.interceptors.response.use(
       isRefreshing = true;
 
       try {
+        // شاید تبِ دیگری همین الان رفرش کرده باشد؛ همیشه آخرین توکن‌های
+        // ذخیره‌شده را بخوان، نه کپیِ احتمالاً کهنه‌ی بالای تابع.
+        const latest = useAuthStore.getState();
         const { data: envelope } = await axios.post(
           `${axiosInstance.defaults.baseURL}/Account/RefreshToken`,
-          { accessToken, refreshToken }
+          {
+            accessToken: latest.accessToken ?? accessToken,
+            refreshToken: latest.refreshToken ?? refreshToken,
+          }
         );
         const data = isEnvelope(envelope) ? unwrapEnvelope(envelope) : envelope;
 
@@ -134,8 +148,16 @@ axiosInstance.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        logout();
-        window.location.href = "/auth/login";
+        // فقط وقتی سرور صراحتاً رفرش را رد کرده logout کن. خطای شبکه/تایم‌اوت
+        // (بدون response) یعنی سرور اصلاً جواب نداده — دلیلی نیست که کاربرِ
+        // واردشده را از حساب بیرون بیندازیم.
+        if (refreshError.response) {
+          logout();
+          onRefreshFailed(refreshError);
+          window.location.href = "/auth/login";
+        } else {
+          onRefreshFailed(refreshError);
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

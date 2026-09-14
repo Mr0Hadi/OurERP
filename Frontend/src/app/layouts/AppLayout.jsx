@@ -18,6 +18,7 @@ import { useHeaderStore } from "@/shared/store/headerStore";
 import { useGoBack } from "@/shared/hooks/useGoBack";
 import { Button } from "@/shared/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { useSessionQuery } from "@/features/auth/services/queries";
 
 
 
@@ -26,13 +27,25 @@ export default function AppLayout() {
   // پیش‌فرضِ دکمه‌ی برگشت، صفحه‌ی قبلی است. صفحه‌ها فقط وقتی onBack
   // می‌دهند که پیش از رفتن کاری داشته باشند (مثلاً پاک‌کردن فرم).
   const goBack = useGoBack();
-  
+
   const location = useLocation();
   const setCurrentPath = useNavigationStore((s) => s.setCurrentPath);
+
+  // `protectedLoader` فقط یک flagِ پرسیست‌شده در localStorage را چک می‌کند،
+  // نه اعتبار واقعی توکن نزد سرور — flag می‌تواند از یک نشستِ قبلیِ منقضی‌شده
+  // مانده باشد. تا وقتی این کوئری (که هر ۴۰۱ را از طریق interceptor به یک
+  // تلاشِ رفرش واقعی می‌رساند) به یک نتیجه‌ی قطعی نرسیده، محتوای محافظت‌شده
+  // را رندر نمی‌کنیم؛ وگرنه همان چیزی می‌شود که کاربر «فلشِ Home قبل از
+  // ریدایرکت به Login» می‌بیند.
+  const { isSuccess: sessionConfirmed } = useSessionQuery();
 
   useEffect(() => {
     setCurrentPath(location.pathname);
   }, [location.pathname, setCurrentPath]);
+
+  if (!sessionConfirmed) {
+    return null;
+  }
 
   return (
     <TooltipProvider>
