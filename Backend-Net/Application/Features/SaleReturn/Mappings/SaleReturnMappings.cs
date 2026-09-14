@@ -39,6 +39,7 @@ public static class SaleReturnMappings
         Quantity = r.Quantity,
         Note = r.Note,
         DecidedAt = r.CreatedAt,
+        IsWriteOff = r.IsWriteOff,
         Effects = [.. r.Effects.Select(e => e.ToDto())],
     };
 
@@ -52,6 +53,8 @@ public static class SaleReturnMappings
         RestockedQuantity = e.RestockedQuantity,
         ProductId = e.ProductId,
         ProductName = e.Product?.Name,
+        UnitPrice = e.UnitPrice,
+        UnitCost = e.UnitCost,
         Amount = e.Amount,
         Method = e.Method,
         Reference = e.Reference,

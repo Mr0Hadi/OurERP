@@ -101,7 +101,8 @@ namespace Application.Features.Product.Commands
                     unitsScrapped += -diff;
 
                 if (diff != 0)
-                    await _productUnitService.ReconcileStockAsync(product, product.Stock, cancellationToken);
+                    await _productUnitService.ReconcileStockAsync(product, product.Stock,
+                        new UnitMovementContext(ProductUnitMovementReasonEnum.MANUAL_ADJUSTMENT, DateTime.Now, Note: "هم‌ترازسازی دانه‌ها با موجودی"), cancellationToken);
             }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);

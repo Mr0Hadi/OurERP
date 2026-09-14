@@ -1,5 +1,7 @@
 ﻿using Application.Common.Contracts.SaleReturn;
 using Application.Common.Dtos.Returns;
+using Application.Common.Enums;
+using Application.Common.Returns;
 using Common.Exceptions;
 using Domain.Entities;
 using Domain.Enums;
@@ -16,13 +18,22 @@ namespace Infrastructure.Services
 
         public bool IsTerminal(ReturnStatusEnum status) => TerminalReturnStatuses.Contains(status);
 
-        public bool CanReopen(ReturnStatusEnum status) => status == ReturnStatusEnum.REJECTED;
+        // The matrix itself lives in ReturnLifecycleRules so both return sides share one copy; this
+        // service only supplies the two facts it needs from the loaded graph.
+        public string? GetLifecycleBlocker(SaleReturn saleReturn, ReturnLifecycleActionEnum action) =>
+            ReturnLifecycleRules.GetBlocker(saleReturn.Status, HasMovedGoods(saleReturn), HasAppliedMoney(saleReturn), action);
 
-        // Money effects are born APPLIED (see ExpandComposition), so a resolution that carries any
-        // money marks the return as touched and locks cancel/reject/delete from that moment on.
-        // That is intentional: money has already moved, there is nothing left to un-do cheaply.
-        public bool IsUntouched(SaleReturn saleReturn) =>
-            !saleReturn.AllEffects.Any(e => e.Status == ReturnEffectStatusEnum.APPLIED);
+        public bool CanPerform(SaleReturn saleReturn, ReturnLifecycleActionEnum action) =>
+            GetLifecycleBlocker(saleReturn, action) == null;
+
+        // AppliedQuantity, not Status == APPLIED: a goods effect with 1 of 3 units moved is still
+        // PENDING, and the old APPLIED-only test let such a return be cancelled with stock changed.
+        public bool HasMovedGoods(SaleReturn saleReturn) =>
+            saleReturn.AllEffects.Any(e => ReturnEffectDirections.IsGoods(e.Direction) && e.AppliedQuantity > 0);
+
+        // APPLIED only: a PENDING money effect is a promise, nothing has moved and nothing is in the ledger.
+        public bool HasAppliedMoney(SaleReturn saleReturn) =>
+            saleReturn.AllEffects.Any(e => e.Direction is ReturnEffectDirectionEnum.MONEY_IN or ReturnEffectDirectionEnum.MONEY_OUT && e.Status == ReturnEffectStatusEnum.APPLIED);
 
         public ReturnStatusEnum RecomputeReturnStatus(SaleReturn saleReturn)
         {
@@ -44,9 +55,9 @@ namespace Infrastructure.Services
         }
 
         // Off-order claims never consume a line's quota - EXCESS/UNLISTED goods are, by definition,
-        // outside what the line ever shipped. Filtered on Scope, the explicit field, rather than on
-        // OffScopeKind being null: the two are meant to agree, and a quota is the wrong place to
-        // depend on that.
+        // outside what the line ever shipped. EXCESS does carry its line reference (for pricing), so
+        // this must key on Scope rather than on the line id being non-null: OnOrder*ItemId is the
+        // line id for ON_ORDER claims only.
         //
         // Soft-deleted and terminal returns are filtered here rather than trusted from the caller.
         // Every caller today passes ISaleReturnRepository.GetActiveBySaleIdAsync, which already
@@ -60,7 +71,7 @@ namespace Infrastructure.Services
             return activeReturns
                 .Where(r => r.IsActive && !IsTerminal(r.Status))
                 .SelectMany(r => r.Claims)
-                .Where(c => c.Scope != ReturnClaimScopeEnum.OFF_ORDER && c.SaleItemId == saleItemId)
+                .Where(c => c.OnOrderSaleItemId == saleItemId)
                 .Sum(c => c.RemainingQuantity);
         }
 
@@ -69,6 +80,18 @@ namespace Infrastructure.Services
             var budget = item.ShippedQuantity - item.SettledQuantity;
             var openClaim = GetOpenClaimQuantity(item.Id, activeReturns);
             return Math.Max(0, budget - openClaim);
+        }
+
+        public int GetOutstandingExcessClaimQuantity(int saleItemId, List<SaleReturn> activeReturns)
+        {
+            if (activeReturns == null || activeReturns.Count == 0)
+                return 0;
+
+            return activeReturns
+                .Where(r => r.IsActive && !IsTerminal(r.Status))
+                .SelectMany(r => r.Claims)
+                .Where(c => c.Scope == ReturnClaimScopeEnum.OFF_ORDER && c.OffScopeKind == ReturnOffScopeKindEnum.EXCESS && c.SaleItemId == saleItemId)
+                .Sum(c => Math.Max(0, c.Quantity - c.Resolutions.Where(r => r.Effects.All(e => e.Status != ReturnEffectStatusEnum.PENDING)).Sum(r => r.Quantity)));
         }
 
         public SalesStatusEnum RecomputeSaleStatus(Sale sale)
@@ -104,11 +127,17 @@ namespace Infrastructure.Services
                         Direction = direction,
                         Quantity = item.Quantity,
                         ProductId = item.ProductId,
+                        UnitPrice = item.UnitPrice,
+                        UnitCost = item.UnitCost,
                         Status = ReturnEffectStatusEnum.PENDING,
                         CreatedAt = now,
                     });
                 }
             }
+
+            // Sale returns have no quarantine; AddClaimResolutionCommandValidator refuses these slots first.
+            if ((composition.GoodsRelease?.Count ?? 0) > 0 || (composition.GoodsScrap?.Count ?? 0) > 0)
+                throw new ValidationCustomException("مرجوعی فروش قرنطینه ندارد؛ آزادسازی و اسقاط فقط در مرجوعی خرید معنا دارد.");
 
             AddMoney(composition.MoneyIn, ReturnEffectDirectionEnum.MONEY_IN);
             AddMoney(composition.MoneyOut, ReturnEffectDirectionEnum.MONEY_OUT);
@@ -126,9 +155,9 @@ namespace Infrastructure.Services
                     Amount = money.Amount,
                     Method = money.Method,
                     Reference = money.Reference,
-                    Status = ReturnEffectStatusEnum.APPLIED,
+                    Status = money.PaidAt.HasValue ? ReturnEffectStatusEnum.APPLIED : ReturnEffectStatusEnum.PENDING,
                     CreatedAt = now,
-                    AppliedAt = now,
+                    AppliedAt = money.PaidAt,
                 };
 
                 if (money.Method == ReturnPaymentMethodEnum.MIXED)

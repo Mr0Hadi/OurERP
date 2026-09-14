@@ -12,6 +12,12 @@ namespace Application.Features.PurchaseReturn.Dtos
         public int? RestockedQuantity { get; set; }
         public int? ProductId { get; set; }
 
+        /// <summary>Goods effects only: the per-unit price the client declared for these goods (may be 0); null on money effects.</summary>
+        public UInt64? UnitPrice { get; set; }
+
+        /// <summary>Goods effects only: the per-unit cost the client declared, or null when the running average is used.</summary>
+        public UInt64? UnitCost { get; set; }
+
         /// <summary>Name of <see cref="ProductId"/>. Without it a replacement effect carrying a
         /// different product than its claim renders as a bare id.</summary>
         public string? ProductName { get; set; }

@@ -12,7 +12,8 @@ namespace Application.Features.Report.Queries
     /// <summary>
     /// One period bucket per row: purchase-count/invoice totals bucketed by Purchase.InvoiceDate,
     /// and TotalReceivedValue bucketed by when goods actually entered inventory (the ledger's
-    /// PURCHASE_RECEIVED rows). No profit concept here - net profit is sales-side only.
+    /// PURCHASE_RECEIVED rows). ReturnMoneyAmount is purchase-return money, bucketed by when it was
+    /// recorded. No profit concept here - net profit is sales-side only.
     /// </summary>
     public class GetPurchaseReportQuery : IRequest<ResponseDto>
     {
@@ -42,9 +43,18 @@ namespace Application.Features.Report.Queries
                 .Select(x => new { x.InvoiceDate, x.TotalAmount })
                 .ToListAsync(cancellationToken);
 
+            // Goods received = what entered the sellable pool plus paid-for goods that went straight to quarantine (defective on
+            // the line): both were bought. Excess and unlisted goods were not paid for and write no row.
             var ledgerRows = await _context.InventoryCostLedgerEntries
-                .Where(x => x.EventType == InventoryCostEventTypeEnum.PURCHASE_RECEIVED && x.OccurredAt >= fromDate && x.OccurredAt <= toDate)
-                .Select(x => new { x.OccurredAt, x.InventoryValueDelta })
+                .Where(x => (x.EventType == InventoryCostEventTypeEnum.PURCHASE_RECEIVED || x.EventType == InventoryCostEventTypeEnum.PURCHASE_RECEIVED_QUARANTINED) && x.OccurredAt >= fromDate && x.OccurredAt <= toDate)
+                .Select(x => new { x.OccurredAt, InventoryValueDelta = x.InventoryValueDelta + x.OffPoolValueDelta })
+                .ToListAsync(cancellationToken);
+
+            // Purchase-return money is purchase spend, not revenue: the row stores RevenueDelta +amount for a
+            // supplier refund, which lowers what we spent, so the sign is flipped here.
+            var returnMoneyRows = await _context.InventoryCostLedgerEntries
+                .Where(x => (x.EventType == InventoryCostEventTypeEnum.PURCHASE_RETURN_MONEY_IN || x.EventType == InventoryCostEventTypeEnum.PURCHASE_RETURN_MONEY_OUT) && x.OccurredAt >= fromDate && x.OccurredAt <= toDate)
+                .Select(x => new { x.OccurredAt, x.RevenueDelta })
                 .ToListAsync(cancellationToken);
 
             var buckets = new SortedDictionary<DateTime, PurchaseReportPeriodDto>();
@@ -76,6 +86,12 @@ namespace Application.Features.Report.Queries
             {
                 var bucket = GetBucket(BucketKeyFor(row.OccurredAt));
                 bucket.TotalReceivedValue += row.InventoryValueDelta;
+            }
+
+            foreach (var row in returnMoneyRows)
+            {
+                var bucket = GetBucket(BucketKeyFor(row.OccurredAt));
+                bucket.ReturnMoneyAmount += -row.RevenueDelta;
             }
 
             res.Data = new { Periods = buckets.Values.ToList() };

@@ -66,6 +66,12 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
+        [HttpPost("ExecuteMoneyEffect")]
+        public async Task<ActionResult<ResponseDto>> ExecuteMoneyEffect([FromBody] ExecuteMoneyEffectCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
         [HttpPost("CancelPurchaseReturn")]
         public async Task<ActionResult<ResponseDto>> CancelPurchaseReturn([FromBody] CancelPurchaseReturnCommand request)
         {

@@ -200,7 +200,7 @@ namespace WMS.Tests.Integration
             using (var check = db.NewContext())
                 Assert.Equal("products/original.png", check.Products.Single().ImageUrl);
 
-            var detailHandler = new GetProductDetailQueryHandler(scope.ProductRepository, TestMapper.Instance, FakeObjectStorage.Instance);
+            var detailHandler = new GetProductDetailQueryHandler(scope.ProductRepository, TestMapper.Instance, FakeObjectStorage.Instance, scope.Db);
             var productId = scope.Context.Products.Single().Id;
             var detail = (ProductDto)(await detailHandler.Handle(new GetProductDetailQuery { Id = productId }, CancellationToken.None)).Data!;
 
@@ -308,7 +308,7 @@ namespace WMS.Tests.Integration
             await createHandler.Handle(NewProduct(scope.Context, null), CancellationToken.None);
 
             var productId = scope.Context.Products.Single().Id;
-            var detail = (ProductDto)(await new GetProductDetailQueryHandler(scope.ProductRepository, TestMapper.Instance, FakeObjectStorage.Instance)
+            var detail = (ProductDto)(await new GetProductDetailQueryHandler(scope.ProductRepository, TestMapper.Instance, FakeObjectStorage.Instance, scope.Db)
                 .Handle(new GetProductDetailQuery { Id = productId }, CancellationToken.None)).Data!;
 
             Assert.Null(detail.ImageKey);

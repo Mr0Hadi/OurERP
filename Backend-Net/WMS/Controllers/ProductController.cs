@@ -42,6 +42,12 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
+        [HttpGet("GetProductUnitHistory")]
+        public async Task<ActionResult<ResponseDto>> GetProductUnitHistory([FromQuery] GetProductUnitHistoryQuery request)
+        {
+            return await _mediator.Send(request);
+        }
+
         [HttpPost("EnsureProductCodes")]
         public async Task<ActionResult<ResponseDto>> EnsureProductCodes([FromBody] EnsureProductCodesCommand request)
         {

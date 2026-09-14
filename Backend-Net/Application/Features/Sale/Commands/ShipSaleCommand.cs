@@ -18,7 +18,8 @@ namespace Application.Features.Sale.Commands
     // Prerequisite for SaleReturn: multi-round shipping to the customer, mirroring
     // ReceivePurchaseCommand's shape but for the outbound side (stock goes DOWN, not up), and
     // without an "issues" concept - problems with what shipped are only ever reported later by
-    // the customer, through SaleReturn.
+    // the customer, through SaleReturn. Excess sent by mistake is recorded here as a warehouse fact
+    // (ExcessQuantity), so the units the customer holds are no longer counted on our shelf.
     public class ShipSaleCommand : IRequest<ResponseDto>
     {
         public int SaleId { get; set; }
@@ -41,7 +42,9 @@ namespace Application.Features.Sale.Commands
             RuleForEach(x => x.Items).ChildRules(item =>
             {
                 item.RuleFor(i => i.SaleItemId).NotNull().WithMessage(Validation.RequiredMessage("آیتم فروش"));
-                item.RuleFor(i => i.ShippedQuantity).GreaterThan(0).WithMessage("مقدار ارسالی باید از صفر بیشتر باشد.");
+                item.RuleFor(i => i.ShippedQuantity).GreaterThanOrEqualTo(0).WithMessage("مقدار ارسالی نمی‌تواند منفی باشد.");
+                item.RuleFor(i => i.ExcessQuantity).GreaterThanOrEqualTo(0).WithMessage("مقدار مازاد نمی‌تواند منفی باشد.");
+                item.RuleFor(i => i).Must(i => i.ShippedQuantity + i.ExcessQuantity > 0).WithMessage("مقدار ارسالی باید از صفر بیشتر باشد.");
             });
             RuleFor(x => x.DriverPhoneNumber).Must(Validation.IsMobileNumber)
                 .When(x => !string.IsNullOrWhiteSpace(x.DriverPhoneNumber))
@@ -83,23 +86,45 @@ namespace Application.Features.Sale.Commands
                 if (!saleItems.TryGetValue(reqItem.SaleItemId, out var saleItem))
                     throw new NotFoundCustomException("آیتم فروش مورد نظر یافت نشد.");
 
+                // Excess is by definition beyond the order, so only the ordered shipment is capped by what the line still owes.
                 var remaining = saleItem.Quantity - saleItem.ShippedQuantity;
                 if (reqItem.ShippedQuantity > remaining)
                     throw new ValidationCustomException($"مقدار وارد شده برای «{saleItem.Product.Name}» از باقیمانده قابل ارسال این قلم بیشتر است.");
 
-                if (reqItem.ShippedQuantity > saleItem.Product.Stock)
+                if (reqItem.ShippedQuantity + reqItem.ExcessQuantity > saleItem.Product.Stock)
                     throw new ValidationCustomException($"موجودی «{saleItem.Product.Name}» برای ارسال این مقدار کافی نیست.");
+
+                if (saleItem.Product.RequiresUnitTracking
+                    && ((reqItem.ShippedQuantity > 0 && (reqItem.ProductUnitBarcodes?.Count ?? 0) == 0)
+                        || (reqItem.ExcessQuantity > 0 && (reqItem.ExcessProductUnitBarcodes?.Count ?? 0) == 0)))
+                    throw new ValidationCustomException($"کالای «{saleItem.Product.Name}» ردیابی دانه‌ای دارد؛ بارکد دانه‌های خروجی باید اسکن شود.");
             }
 
             var now = DateTime.Now;
+            var shippedAt = request.ShippedDate ?? now;
 
             foreach (var reqItem in request.Items)
             {
                 var saleItem = saleItems[reqItem.SaleItemId];
-                saleItem.ShippedQuantity += reqItem.ShippedQuantity;
-                saleItem.Product.Stock -= reqItem.ShippedQuantity;
-                await _productUnitService.ConsumeAsync(saleItem.Product, reqItem.ShippedQuantity, saleItem.Id, reqItem.ProductUnitBarcodes, cancellationToken);
-                await _inventoryCostingService.RecordSaleShipmentAsync(saleItem.Product, reqItem.ShippedQuantity, saleItem.UnitPrice, saleItem.Discount, saleItem.Id, now, cancellationToken);
+
+                if (reqItem.ShippedQuantity > 0)
+                {
+                    saleItem.ShippedQuantity += reqItem.ShippedQuantity;
+                    saleItem.Product.Stock -= reqItem.ShippedQuantity;
+                    await _productUnitService.ConsumeAsync(saleItem.Product, reqItem.ShippedQuantity, saleItem.Id, UnitCustodyReasonEnum.ON_ORDER, reqItem.ProductUnitBarcodes,
+                        new UnitMovementContext(ProductUnitMovementReasonEnum.SALE_SHIPPED, shippedAt, DocumentKindEnum.SALE, sale.Id, CustomerId: sale.CustomerId, Note: request.ShippingNote),
+                        cancellationToken);
+                    await _inventoryCostingService.RecordSaleShipmentAsync(saleItem.Product, reqItem.ShippedQuantity, saleItem.UnitPrice, saleItem.Discount, saleItem.Id, now, cancellationToken);
+                }
+
+                if (reqItem.ExcessQuantity > 0)
+                {
+                    saleItem.Product.Stock -= reqItem.ExcessQuantity;
+                    await _productUnitService.ConsumeAsync(saleItem.Product, reqItem.ExcessQuantity, saleItem.Id, UnitCustodyReasonEnum.EXCESS, reqItem.ExcessProductUnitBarcodes,
+                        new UnitMovementContext(ProductUnitMovementReasonEnum.SALE_SHIPPED_EXCESS, shippedAt, DocumentKindEnum.SALE, sale.Id, CustomerId: sale.CustomerId, Note: request.ShippingNote),
+                        cancellationToken);
+                    await _inventoryCostingService.RecordSaleShippedExcessAsync(saleItem.Product, reqItem.ExcessQuantity, saleItem.Id, now, cancellationToken);
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(request.DriverFullName) || !string.IsNullOrWhiteSpace(request.DriverPhoneNumber) || !string.IsNullOrWhiteSpace(request.VehiclePlate))

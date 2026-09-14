@@ -1,9 +1,11 @@
 ﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.PurchaseReturn;
+using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Common.Queries;
+using Application.Features.PurchaseReturn.Queries;
 using Common.Exceptions;
 using Common.Extensions;
 using Domain.Enums;
@@ -30,12 +32,14 @@ namespace Application.Features.PurchaseReturn.Commands
     {
         private readonly IWMSDbContext _context;
         private readonly IPurchaseReturnCalculationService _purchaseReturnCalculationService;
+        private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public CancelPurchaseReturnCommandHandler(IWMSDbContext context, IPurchaseReturnCalculationService purchaseReturnCalculationService, IUnitOfWork unitOfWork)
+        public CancelPurchaseReturnCommandHandler(IWMSDbContext context, IPurchaseReturnCalculationService purchaseReturnCalculationService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
         {
             _context = context;
             _purchaseReturnCalculationService = purchaseReturnCalculationService;
+            _objectStorageService = objectStorageService;
             _unitOfWork = unitOfWork;
         }
 
@@ -46,12 +50,13 @@ namespace Application.Features.PurchaseReturn.Commands
             var purchaseReturn = await _context.PurchaseReturns.Where(x => x.Id == request.Id)
                 .WhereNotDeleted()
                 .WithReturnGraph()
-                .Include(x => x.Purchase)
-                    .ThenInclude(x => x.Items)
+                .WithPurchaseItems()
                 .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
-            if (_purchaseReturnCalculationService.IsTerminal(purchaseReturn.Status) || !_purchaseReturnCalculationService.IsUntouched(purchaseReturn))
-                throw new ValidationCustomException("فقط مرجوعی‌های دست‌نخورده قابل لغو کردن هستند.");
+            // One rule for every lifecycle command, and a reason that names what actually blocks it
+            // (the status, moved goods, or recorded money) - see ReturnLifecycleRules.
+            if (_purchaseReturnCalculationService.GetLifecycleBlocker(purchaseReturn, ReturnLifecycleActionEnum.CANCEL) is { } blocker)
+                throw new ValidationCustomException(blocker);
 
             var now = DateTime.Now;
             purchaseReturn.Status = ReturnStatusEnum.CANCELLED;
@@ -63,6 +68,7 @@ namespace Application.Features.PurchaseReturn.Commands
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+            res.Data = await PurchaseReturnDetailReader.ReadAsync(_context, _purchaseReturnCalculationService, _objectStorageService, purchaseReturn.Id, cancellationToken);
             res.Message = "مرجوعی با موفقیت لغو شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;

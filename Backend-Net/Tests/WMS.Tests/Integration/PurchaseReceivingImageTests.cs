@@ -25,7 +25,7 @@ namespace WMS.Tests.Integration
             await MakeReceiveHandler(scope).Handle(new ReceivePurchaseCommand
             {
                 PurchaseId = scenario.Purchase.Id,
-                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ReceivedQuantity = 10 } },
+                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ArrivedQuantity = 10 } },
                 Images = new()
                 {
                     new ReceivePurchaseImageDto { ObjectKey = "receiving/pallet.jpg", FileName = "pallet.jpg", Note = "بارگیری سالم" },
@@ -50,7 +50,7 @@ namespace WMS.Tests.Integration
             await MakeReceiveHandler(scope).Handle(new ReceivePurchaseCommand
             {
                 PurchaseId = scenario.Purchase.Id,
-                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ReceivedQuantity = 5 } },
+                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ArrivedQuantity = 5 } },
                 Images = new()
                 {
                     new ReceivePurchaseImageDto { ObjectKey = $"{FakeObjectStorage.Host}/receiving/box.jpg?signature=test" },
@@ -72,14 +72,14 @@ namespace WMS.Tests.Integration
             await handler.Handle(new ReceivePurchaseCommand
             {
                 PurchaseId = scenario.Purchase.Id,
-                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ReceivedQuantity = 4 } },
+                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ArrivedQuantity = 4 } },
                 Images = new() { new ReceivePurchaseImageDto { ObjectKey = "receiving/round-1.jpg" } },
             }, CancellationToken.None);
 
             await handler.Handle(new ReceivePurchaseCommand
             {
                 PurchaseId = scenario.Purchase.Id,
-                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ReceivedQuantity = 6 } },
+                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ArrivedQuantity = 6 } },
                 Images = new() { new ReceivePurchaseImageDto { ObjectKey = "receiving/round-2.jpg" } },
             }, CancellationToken.None);
 

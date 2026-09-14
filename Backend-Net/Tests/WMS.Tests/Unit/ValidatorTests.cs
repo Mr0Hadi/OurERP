@@ -80,7 +80,7 @@ namespace WMS.Tests.Unit
             var command = new ReceivePurchaseCommand
             {
                 PurchaseId = 1,
-                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = 1, ReceivedQuantity = 0 } },
+                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = 1, ArrivedQuantity = 0 } },
             };
 
             Assert.False(_sut.Validate(command).IsValid);
@@ -92,7 +92,7 @@ namespace WMS.Tests.Unit
             var command = new ReceivePurchaseCommand
             {
                 PurchaseId = 1,
-                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = 1, ReceivedQuantity = -1 } },
+                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = 1, ArrivedQuantity = -1 } },
             };
 
             Assert.False(_sut.Validate(command).IsValid);
@@ -106,8 +106,8 @@ namespace WMS.Tests.Unit
                 PurchaseId = 1,
                 Items = new()
                 {
-                    new ReceivePurchaseItemDto { PurchaseItemId = 1, ReceivedQuantity = 1 },
-                    new ReceivePurchaseItemDto { PurchaseItemId = 1, ReceivedQuantity = 2 },
+                    new ReceivePurchaseItemDto { PurchaseItemId = 1, ArrivedQuantity = 1 },
+                    new ReceivePurchaseItemDto { PurchaseItemId = 1, ArrivedQuantity = 2 },
                 },
             };
 
@@ -177,7 +177,31 @@ namespace WMS.Tests.Unit
             var command = new Application.Features.PurchaseReturn.Commands.AddClaimResolutionCommand
             {
                 ClaimId = 1,
+                Composition = new EffectCompositionDto { Quantity = 2, GoodsOut = new() { new GoodsEffectDto { Quantity = 2, UnitPrice = 100 } } },
+            };
+
+            Assert.True(_sut.Validate(command).IsValid);
+        }
+
+        [Fact]
+        public void GoodsEffectWithoutUnitPrice_IsInvalid()
+        {
+            var command = new Application.Features.PurchaseReturn.Commands.AddClaimResolutionCommand
+            {
+                ClaimId = 1,
                 Composition = new EffectCompositionDto { Quantity = 2, GoodsOut = new() { new GoodsEffectDto { Quantity = 2 } } },
+            };
+
+            Assert.False(_sut.Validate(command).IsValid);
+        }
+
+        [Fact]
+        public void GoodsEffectPricedAtZero_IsValid()
+        {
+            var command = new Application.Features.PurchaseReturn.Commands.AddClaimResolutionCommand
+            {
+                ClaimId = 1,
+                Composition = new EffectCompositionDto { Quantity = 2, GoodsIn = new() { new GoodsEffectDto { Quantity = 2, UnitPrice = 0 } } },
             };
 
             Assert.True(_sut.Validate(command).IsValid);
@@ -194,8 +218,8 @@ namespace WMS.Tests.Unit
                     Quantity = 5,
                     GoodsIn = new()
                     {
-                        new GoodsEffectDto { Quantity = 3, ProductId = 1 },
-                        new GoodsEffectDto { Quantity = 2, ProductId = 2 },
+                        new GoodsEffectDto { Quantity = 3, ProductId = 1, UnitPrice = 100 },
+                        new GoodsEffectDto { Quantity = 2, ProductId = 2, UnitPrice = 100 },
                     },
                 },
             };
@@ -215,8 +239,8 @@ namespace WMS.Tests.Unit
                     Quantity = 3,
                     GoodsIn = new()
                     {
-                        new GoodsEffectDto { Quantity = 3, ProductId = 1 },
-                        new GoodsEffectDto { Quantity = 0, ProductId = 2 },
+                        new GoodsEffectDto { Quantity = 3, ProductId = 1, UnitPrice = 100 },
+                        new GoodsEffectDto { Quantity = 0, ProductId = 2, UnitPrice = 100 },
                     },
                 },
             };
@@ -334,11 +358,23 @@ namespace WMS.Tests.Unit
             var command = new Application.Features.SaleReturn.Commands.AddClaimResolutionCommand
             {
                 ClaimId = 1,
-                Composition = new EffectCompositionDto { Quantity = 2, GoodsIn = new() { new GoodsEffectDto { Quantity = 2 } } },
+                Composition = new EffectCompositionDto { Quantity = 2, GoodsIn = new() { new GoodsEffectDto { Quantity = 2, UnitPrice = 100 } } },
             };
 
             var result = _sut.Validate(command);
             Assert.True(result.IsValid, string.Join(" | ", result.Errors.Select(e => e.ErrorMessage)));
+        }
+
+        [Fact]
+        public void GoodsEffectWithoutUnitPrice_IsInvalid()
+        {
+            var command = new Application.Features.SaleReturn.Commands.AddClaimResolutionCommand
+            {
+                ClaimId = 1,
+                Composition = new EffectCompositionDto { Quantity = 2, GoodsIn = new() { new GoodsEffectDto { Quantity = 2 } } },
+            };
+
+            Assert.False(_sut.Validate(command).IsValid);
         }
 
         [Fact]
@@ -364,8 +400,8 @@ namespace WMS.Tests.Unit
                     Quantity = 5,
                     GoodsOut = new()
                     {
-                        new GoodsEffectDto { Quantity = 3, ProductId = 1 },
-                        new GoodsEffectDto { Quantity = 2, ProductId = 2 },
+                        new GoodsEffectDto { Quantity = 3, ProductId = 1, UnitPrice = 100 },
+                        new GoodsEffectDto { Quantity = 2, ProductId = 2, UnitPrice = 100 },
                     },
                 },
             };
@@ -385,8 +421,8 @@ namespace WMS.Tests.Unit
                     Quantity = 3,
                     GoodsOut = new()
                     {
-                        new GoodsEffectDto { Quantity = 3, ProductId = 1 },
-                        new GoodsEffectDto { Quantity = 0, ProductId = 2 },
+                        new GoodsEffectDto { Quantity = 3, ProductId = 1, UnitPrice = 100 },
+                        new GoodsEffectDto { Quantity = 0, ProductId = 2, UnitPrice = 100 },
                     },
                 },
             };
@@ -421,6 +457,107 @@ namespace WMS.Tests.Unit
         public void ValidCredentials_IsValid()
         {
             Assert.True(_sut.Validate(new LoginUserCommand { Username = "admin", Password = "whatever" }).IsValid);
+        }
+    }
+
+    /// <summary>
+    /// The OFF_ORDER shape rules are pure input rules, so they live in the validators rather than the
+    /// handlers: EXCESS must name the order line that prices it, UNLISTED must not name one (it used
+    /// to be accepted and silently dropped).
+    /// </summary>
+    public class OffScopeClaimShapeValidatorTests
+    {
+        private readonly Application.Features.PurchaseReturn.Commands.CreatePurchaseReturnCommandValidator _purchase = new();
+        private readonly CreateSaleReturnCommandValidator _sale = new();
+
+        private static CreateReturnClaimDto Claim(ReturnOffScopeKindEnum kind, int? orderLineId) => new()
+        {
+            Scope = ReturnClaimScopeEnum.OFF_ORDER,
+            OffScopeKind = kind,
+            OrderLineId = orderLineId,
+            ProductId = 1,
+            UnitPrice = 100,
+            Quantity = 1,
+            Problem = ReturnProblemEnum.OVER_SHIPPED,
+        };
+
+        private bool ValidatePurchase(CreateReturnClaimDto claim) =>
+            _purchase.Validate(new Application.Features.PurchaseReturn.Commands.CreatePurchaseReturnCommand { PurchaseId = 1, Claims = new() { claim } }).IsValid;
+
+        private bool ValidateSale(CreateReturnClaimDto claim) =>
+            _sale.Validate(new CreateSaleReturnCommand { SaleId = 1, Claims = new() { claim } }).IsValid;
+
+        [Fact]
+        public void ExcessWithoutOrderLineId_IsInvalid_OnBothSides()
+        {
+            Assert.False(ValidatePurchase(Claim(ReturnOffScopeKindEnum.EXCESS, null)));
+            Assert.False(ValidateSale(Claim(ReturnOffScopeKindEnum.EXCESS, null)));
+        }
+
+        [Fact]
+        public void ExcessWithOrderLineId_IsValid_OnBothSides()
+        {
+            Assert.True(ValidatePurchase(Claim(ReturnOffScopeKindEnum.EXCESS, 10)));
+            Assert.True(ValidateSale(Claim(ReturnOffScopeKindEnum.EXCESS, 10)));
+        }
+
+        [Fact]
+        public void UnlistedWithOrderLineId_IsInvalid_OnBothSides()
+        {
+            Assert.False(ValidatePurchase(Claim(ReturnOffScopeKindEnum.UNLISTED, 10)));
+            Assert.False(ValidateSale(Claim(ReturnOffScopeKindEnum.UNLISTED, 10)));
+        }
+
+        [Fact]
+        public void UnlistedWithoutOrderLineId_IsValid_OnBothSides()
+        {
+            Assert.True(ValidatePurchase(Claim(ReturnOffScopeKindEnum.UNLISTED, null)));
+            Assert.True(ValidateSale(Claim(ReturnOffScopeKindEnum.UNLISTED, null)));
+        }
+    }
+
+    /// <summary>
+    /// Observations are the warehouse's "how much of this arrived damaged"; healthy quantity is the
+    /// round's quantity minus them, so observing more than arrived used to add a negative number to
+    /// Product.Stock. Pure input rule, so it is the validator's job on both sides.
+    /// </summary>
+    public class GoodsRoundObservationValidatorTests
+    {
+        private readonly Application.Features.PurchaseReturn.Commands.ExecuteGoodsRoundCommandValidator _purchase = new();
+        private readonly Application.Features.SaleReturn.Commands.ExecuteGoodsRoundCommandValidator _sale = new();
+
+        private static GoodsRoundLineDto Line(int quantity, params int[] observed) => new()
+        {
+            EffectId = 1,
+            Quantity = quantity,
+            Observations = observed.Select(q => new GoodsRoundObservationDto { Problem = ReturnProblemEnum.DAMAGED_IN_TRANSIT, Quantity = q }).ToList(),
+        };
+
+        private bool ValidatePurchase(GoodsRoundLineDto line) =>
+            _purchase.Validate(new Application.Features.PurchaseReturn.Commands.ExecuteGoodsRoundCommand { PurchaseReturnId = 1, Rounds = new() { line } }).IsValid;
+
+        private bool ValidateSale(GoodsRoundLineDto line) =>
+            _sale.Validate(new Application.Features.SaleReturn.Commands.ExecuteGoodsRoundCommand { SaleReturnId = 1, Rounds = new() { line } }).IsValid;
+
+        [Fact]
+        public void ObservationsExceedingRoundQuantity_IsInvalid_OnBothSides()
+        {
+            Assert.False(ValidatePurchase(Line(2, 3)));
+            Assert.False(ValidateSale(Line(2, 2, 1)));
+        }
+
+        [Fact]
+        public void NegativeObservationQuantity_IsInvalid_OnBothSides()
+        {
+            Assert.False(ValidatePurchase(Line(5, -1)));
+            Assert.False(ValidateSale(Line(5, -1)));
+        }
+
+        [Fact]
+        public void ObservationsWithinRoundQuantity_IsValid_OnBothSides()
+        {
+            Assert.True(ValidatePurchase(Line(5, 2, 1)));
+            Assert.True(ValidateSale(Line(5, 5)));
         }
     }
 }

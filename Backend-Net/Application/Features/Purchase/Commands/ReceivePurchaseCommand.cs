@@ -17,9 +17,23 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.Purchase.Commands
 {
-    // Reports received quantity/stock only - problems with received goods are reported separately
-    // and explicitly via CreatePurchaseReturnCommand (mirrors how sale returns already worked; the
-    // old "report an issue inline while receiving, auto-creates a PurchaseReturn" path is gone).
+    // Receiving by physical count. The warehouse reports what it can actually see - how many arrived per line, how many of those
+    // are bad and why, and products that arrived without a line - and the server turns that into units:
+    //
+    //   S = still owed on the line, A = arrived, D = defective, H = A - D healthy
+    //   h = min(H, S)          healthy on the order  -> IN_STOCK, on the line, into the cost pool at the line price
+    //   d = min(D, S - h)      defective on the order -> QUARANTINED ON_ORDER, on the line, value held off-pool at the line price
+    //   A - h - d              excess                 -> QUARANTINED EXCESS, not on the line, no value (never paid for)
+    //
+    // DELIBERATE EXCEPTION, scoped to receiving only: this healthy-first allocation is the one place the server decides rather than
+    // records. Units of one product are indistinguishable and the worker on the ramp cannot know which of them the line "owns";
+    // nobody else can decide it either. Healthy-first is the only rule under which we never hold a paid-for defective unit while a
+    // healthy one sits unpaid. This is NOT a precedent for inferring anything in return resolutions - the effect layer records what
+    // the client states and infers nothing (see docs/api-guide.fa.md section 10, "effect model").
+    //
+    // Problems are recorded as PurchaseReceivingDiscrepancy rows for the discrepancy form and the audit trail. Claim quotas come
+    // from the units' CustodyReason, never from those rows. Problems with received goods are still reported explicitly through
+    // CreatePurchaseReturnCommand; nothing here creates a return.
     public class ReceivePurchaseCommand : IRequest<ResponseDto>
     {
         public int PurchaseId { get; set; }
@@ -29,21 +43,45 @@ namespace Application.Features.Purchase.Commands
         public string? DriverFullName { get; set; }
         public string? VehiclePlate { get; set; }
         public List<ReceivePurchaseItemDto> Items { get; set; } = new();
+        public List<ReceivePurchaseUnlistedItemDto> UnlistedItems { get; set; } = new();
         public List<ReceivePurchaseImageDto> Images { get; set; } = new();
+    }
+
+    public class ReceivingDefectDtoValidator : AbstractValidator<ReceivingDefectDto>
+    {
+        public ReceivingDefectDtoValidator()
+        {
+            RuleFor(x => x.Problem).IsInEnum().WithMessage("نوع مشکل نامعتبر است.");
+            RuleFor(x => x.Quantity).GreaterThan(0).WithMessage("مقدار کالای مشکل‌دار باید از صفر بیشتر باشد.");
+        }
     }
 
     public class ReceivePurchaseCommandValidator : AbstractValidator<ReceivePurchaseCommand>
     {
+        private const string DefectsExceedArrivedMessage = "مجموع کالای مشکل‌دار نمی‌تواند از مقدار رسیده بیشتر باشد.";
+
         public ReceivePurchaseCommandValidator()
         {
             RuleFor(x => x.PurchaseId).NotNull().WithMessage(Validation.RequiredMessage("خرید"));
-            RuleFor(x => x.Items).NotEmpty().WithMessage(Validation.RequiredMessage("لیست اقلام دریافتی"));
-            RuleFor(x => x.Items).Must(items => items.Select(i => i.PurchaseItemId).Distinct().Count() == items.Count)
+            RuleFor(x => x).Must(x => (x.Items?.Count ?? 0) + (x.UnlistedItems?.Count ?? 0) > 0)
+                .WithMessage(Validation.RequiredMessage("لیست اقلام دریافتی"));
+            RuleFor(x => x.Items).Must(items => items == null || items.Select(i => i.PurchaseItemId).Distinct().Count() == items.Count)
                 .WithMessage("هر آیتم خرید فقط یک‌بار می‌تواند در یک درخواست دریافت ظاهر شود.");
+            RuleFor(x => x.UnlistedItems).Must(items => items == null || items.Select(i => i.ProductId).Distinct().Count() == items.Count)
+                .WithMessage("هر کالای خارج از سند فقط یک‌بار می‌تواند در یک درخواست دریافت ظاهر شود.");
             RuleForEach(x => x.Items).ChildRules(item =>
             {
-                item.RuleFor(i => i.PurchaseItemId).NotNull().WithMessage(Validation.RequiredMessage("آیتم خرید"));
-                item.RuleFor(i => i.ReceivedQuantity).GreaterThan(0).WithMessage("مقدار دریافتی باید از صفر بیشتر باشد.");
+                item.RuleFor(i => i.PurchaseItemId).GreaterThan(0).WithMessage(Validation.RequiredMessage("آیتم خرید"));
+                item.RuleFor(i => i.ArrivedQuantity).GreaterThan(0).WithMessage("مقدار رسیده باید از صفر بیشتر باشد.");
+                item.RuleForEach(i => i.Defects).SetValidator(new ReceivingDefectDtoValidator());
+                item.RuleFor(i => i).Must(i => (i.Defects ?? new()).Sum(d => d.Quantity) <= i.ArrivedQuantity).WithMessage(DefectsExceedArrivedMessage);
+            });
+            RuleForEach(x => x.UnlistedItems).ChildRules(item =>
+            {
+                item.RuleFor(i => i.ProductId).GreaterThan(0).WithMessage(Validation.RequiredMessage("کالا"));
+                item.RuleFor(i => i.ArrivedQuantity).GreaterThan(0).WithMessage("مقدار رسیده باید از صفر بیشتر باشد.");
+                item.RuleForEach(i => i.Defects).SetValidator(new ReceivingDefectDtoValidator());
+                item.RuleFor(i => i).Must(i => (i.Defects ?? new()).Sum(d => d.Quantity) <= i.ArrivedQuantity).WithMessage(DefectsExceedArrivedMessage);
             });
             RuleForEach(x => x.Images).ChildRules(image =>
             {
@@ -86,28 +124,108 @@ namespace Application.Features.Purchase.Commands
             if (purchase.Status == PurchaseStatusEnum.CANCELLED)
                 throw new ValidationCustomException("خرید لغو شده قابل دریافت نیست.");
 
+            var items = request.Items ?? new();
+            var unlistedItems = request.UnlistedItems ?? new();
             var purchaseItems = purchase.Items.ToDictionary(x => x.Id);
 
-            foreach (var reqItem in request.Items)
+            foreach (var reqItem in items)
             {
-                if (!purchaseItems.TryGetValue(reqItem.PurchaseItemId, out var purchaseItem))
+                if (!purchaseItems.ContainsKey(reqItem.PurchaseItemId))
                     throw new NotFoundCustomException("آیتم خرید مورد نظر یافت نشد.");
-
-                var stillOwed = purchaseItem.Quantity - purchaseItem.ReceivedQuantity;
-                if (reqItem.ReceivedQuantity > stillOwed)
-                    throw new ValidationCustomException($"مقدار وارد شده برای «{purchaseItem.Product.Name}» از باقیمانده قابل دریافت این قلم بیشتر است.");
             }
 
-            var now = DateTime.Now;
+            var unlistedProductIds = unlistedItems.Select(x => x.ProductId).ToList();
+            var unlistedProducts = await _context.Products
+                .Where(p => unlistedProductIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id, cancellationToken);
 
-            foreach (var reqItem in request.Items)
+            if (unlistedProducts.Count != unlistedProductIds.Count)
+                throw new NotFoundCustomException("کالای انتخاب‌شده برای اقلام خارج از سند یافت نشد.");
+
+            // A product the purchase does list arrives as excess on its line, never as "unlisted" - otherwise the same
+            // goods could be held under two custody reasons with two different claim quotas.
+            var listed = purchase.Items.FirstOrDefault(i => unlistedProductIds.Contains(i.ProductId));
+            if (listed != null)
+                throw new ValidationCustomException($"کالای «{listed.Product.Name}» در این خرید قلم دارد؛ مقدار اضافه‌ی آن را روی همان قلم ثبت کنید.");
+
+            var now = DateTime.Now;
+            var receivedAt = request.ReceivedDate ?? now;
+            var movement = new UnitMovementContext(ProductUnitMovementReasonEnum.PURCHASE_RECEIVED, receivedAt, DocumentKindEnum.PURCHASE, purchase.Id, SupplierId: purchase.SupplierId, Note: request.ReceivingNote);
+
+            var lines = new List<object>();
+
+            foreach (var reqItem in items)
             {
                 var purchaseItem = purchaseItems[reqItem.PurchaseItemId];
+                var product = purchaseItem.Product;
+                var defects = reqItem.Defects ?? new();
 
-                purchaseItem.ReceivedQuantity += reqItem.ReceivedQuantity;
-                purchaseItem.Product.Stock += reqItem.ReceivedQuantity;
-                await _productUnitService.MintAsync(purchaseItem.Product, reqItem.ReceivedQuantity, purchaseItem.Id, cancellationToken);
-                await _inventoryCostingService.RecordPurchaseReceiptAsync(purchaseItem.Product, reqItem.ReceivedQuantity, purchaseItem.UnitPrice, purchaseItem.Discount, purchaseItem.Id, now, cancellationToken);
+                var stillOwed = Math.Max(0, purchaseItem.Quantity - purchaseItem.ReceivedQuantity);
+                var defective = defects.Sum(d => d.Quantity);
+                var healthy = reqItem.ArrivedQuantity - defective;
+
+                var healthyOnOrder = Math.Min(healthy, stillOwed);
+                var defectiveOnOrder = Math.Min(defective, stillOwed - healthyOnOrder);
+                var excess = reqItem.ArrivedQuantity - healthyOnOrder - defectiveOnOrder;
+
+                // Defective-on-order units are bought, fully: on the line and at the line price. Excess is neither.
+                purchaseItem.ReceivedQuantity += healthyOnOrder + defectiveOnOrder;
+                product.Stock += healthyOnOrder;
+
+                await _productUnitService.MintAsync(product, healthyOnOrder,
+                    new UnitOrigin(purchase.Id, purchaseItem.Id, UnitCustodyReasonEnum.ON_ORDER), movement, cancellationToken);
+                if (healthyOnOrder > 0)
+                    await _inventoryCostingService.RecordPurchaseReceiptAsync(product, healthyOnOrder, purchaseItem.UnitPrice, purchaseItem.Discount, purchaseItem.Id, receivedAt, cancellationToken);
+
+                await _productUnitService.MintAsync(product, defectiveOnOrder,
+                    new UnitOrigin(purchase.Id, purchaseItem.Id, UnitCustodyReasonEnum.ON_ORDER, ProductUnitStatusEnum.QUARANTINED), movement, cancellationToken);
+                if (defectiveOnOrder > 0)
+                    await _inventoryCostingService.RecordPurchaseReceiptQuarantinedAsync(product, defectiveOnOrder, purchaseItem.UnitPrice, purchaseItem.Discount, purchaseItem.Id, receivedAt, cancellationToken);
+
+                // Excess keeps its line id: it is more of this line's product, and an EXCESS claim names the line.
+                await _productUnitService.MintAsync(product, excess,
+                    new UnitOrigin(purchase.Id, purchaseItem.Id, UnitCustodyReasonEnum.EXCESS, ProductUnitStatusEnum.QUARANTINED), movement, cancellationToken);
+
+                // The order line's defective share is filled in the order the defect rows were sent; whatever of a row does
+                // not fit is excess.
+                var onOrderDefectiveLeft = defectiveOnOrder;
+                foreach (var defect in defects)
+                {
+                    var onOrderPart = Math.Min(defect.Quantity, onOrderDefectiveLeft);
+                    onOrderDefectiveLeft -= onOrderPart;
+
+                    await AddDiscrepancyAsync(purchase.Id, purchaseItem.Id, product.Id, UnitCustodyReasonEnum.ON_ORDER, defect.Problem, onOrderPart, defect.Note, receivedAt, now, cancellationToken);
+                    await AddDiscrepancyAsync(purchase.Id, purchaseItem.Id, product.Id, UnitCustodyReasonEnum.EXCESS, defect.Problem, defect.Quantity - onOrderPart, defect.Note, receivedAt, now, cancellationToken);
+                }
+
+                await AddDiscrepancyAsync(purchase.Id, purchaseItem.Id, product.Id, UnitCustodyReasonEnum.EXCESS, ReturnProblemEnum.OVER_SHIPPED, healthy - healthyOnOrder, null, receivedAt, now, cancellationToken);
+
+                lines.Add(new
+                {
+                    PurchaseItemId = purchaseItem.Id,
+                    HealthyOnOrderQuantity = healthyOnOrder,
+                    DefectiveOnOrderQuantity = defectiveOnOrder,
+                    ExcessQuantity = excess,
+                });
+            }
+
+            var unlisted = new List<object>();
+
+            foreach (var reqItem in unlistedItems)
+            {
+                var product = unlistedProducts[reqItem.ProductId];
+                var defects = reqItem.Defects ?? new();
+
+                // Never on a line, never paid for: every unit is held until purchasing decides.
+                await _productUnitService.MintAsync(product, reqItem.ArrivedQuantity,
+                    new UnitOrigin(purchase.Id, null, UnitCustodyReasonEnum.UNLISTED, ProductUnitStatusEnum.QUARANTINED), movement, cancellationToken);
+
+                foreach (var defect in defects)
+                    await AddDiscrepancyAsync(purchase.Id, null, product.Id, UnitCustodyReasonEnum.UNLISTED, defect.Problem, defect.Quantity, defect.Note, receivedAt, now, cancellationToken);
+
+                await AddDiscrepancyAsync(purchase.Id, null, product.Id, UnitCustodyReasonEnum.UNLISTED, ReturnProblemEnum.UNLISTED_ITEM, reqItem.ArrivedQuantity - defects.Sum(d => d.Quantity), null, receivedAt, now, cancellationToken);
+
+                unlisted.Add(new { ProductId = product.Id, QuarantinedQuantity = reqItem.ArrivedQuantity });
             }
 
             foreach (var image in request.Images ?? new())
@@ -155,10 +273,31 @@ namespace Application.Features.Purchase.Commands
             {
                 PurchaseId = purchase.Id,
                 PurchaseStatus = purchase.Status,
+                Lines = lines,
+                UnlistedItems = unlisted,
             };
             res.Message = "دریافت با موفقیت ثبت شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;
+        }
+
+        private async Task AddDiscrepancyAsync(int purchaseId, int? purchaseItemId, int productId, UnitCustodyReasonEnum custodyReason, ReturnProblemEnum problem, int quantity, string? note, DateTime receivedAt, DateTime now, CancellationToken cancellationToken)
+        {
+            if (quantity <= 0)
+                return;
+
+            await _context.PurchaseReceivingDiscrepancies.AddAsync(new PurchaseReceivingDiscrepancy
+            {
+                PurchaseId = purchaseId,
+                PurchaseItemId = purchaseItemId,
+                ProductId = productId,
+                CustodyReason = custodyReason,
+                Problem = problem,
+                Quantity = quantity,
+                Note = note,
+                ReceivedAt = receivedAt,
+                CreatedAt = now,
+            }, cancellationToken);
         }
     }
 }
