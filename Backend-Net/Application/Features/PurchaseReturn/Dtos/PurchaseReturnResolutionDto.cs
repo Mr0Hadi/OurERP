@@ -7,6 +7,7 @@
         public string? Note { get; set; }
         /// <summary>When this decision was registered (was the CreatedAt audit column).</summary>
         public DateTime DecidedAt { get; set; }
+        public bool IsWriteOff { get; set; }
         public List<PurchaseReturnEffectDto> Effects { get; set; } = new();
     }
 }

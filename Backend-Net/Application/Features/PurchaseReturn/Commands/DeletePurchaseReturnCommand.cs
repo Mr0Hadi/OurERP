@@ -48,25 +48,30 @@ namespace Application.Features.PurchaseReturn.Commands
             var purchaseReturn = await _context.PurchaseReturns.Where(x => x.Id == request.Id)
                 .WhereNotDeleted()
                 .WithReturnGraph()
-                .Include(x => x.Purchase)
-                    .ThenInclude(x => x.Items)
+                .WithPurchaseItems()
                 .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
-            if (_purchaseReturnCalculationService.IsTerminal(purchaseReturn.Status) || !_purchaseReturnCalculationService.IsUntouched(purchaseReturn))
-                throw new ValidationCustomException("فقط مرجوعی‌های دست‌نخورده قابل حذف هستند.");
+            // One rule for every lifecycle command, and a reason that names what actually blocks it
+            // (the status, moved goods, or recorded money) - see ReturnLifecycleRules.
+            if (_purchaseReturnCalculationService.GetLifecycleBlocker(purchaseReturn, ReturnLifecycleActionEnum.DELETE) is { } blocker)
+                throw new ValidationCustomException(blocker);
 
+            var now = DateTime.Now;
             var purchase = purchaseReturn.Purchase!;
 
             // Soft delete: the row and its whole claim graph stay, every read filters IsActive out.
             purchaseReturn.IsActive = false;
-            purchaseReturn.UpdatedAt = DateTime.Now;
+            purchaseReturn.UpdatedAt = now;
             _purchaseReturnRepository.Update(purchaseReturn);
 
             purchase.Status = _purchaseReturnCalculationService.RecomputePurchaseStatus(purchase);
-            purchase.UpdatedAt = DateTime.Now;
+            purchase.UpdatedAt = now;
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+            // A deleted return has no document left to return; the client needs only these two to
+            // evict it from its cache and refresh the purchase it belonged to.
+            res.Data = new { Id = purchaseReturn.Id, PurchaseId = purchaseReturn.PurchaseId };
             res.Message = "مرجوعی با موفقیت حذف شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;

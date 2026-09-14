@@ -37,6 +37,14 @@ namespace Application.Features.Product.Commands
         /// </summary>
         public string? ImageKey { get; set; }
         public int ProductCategoryId { get; set; }
+        public bool RequiresUnitTracking { get; set; }
+
+        /// <summary>
+        /// Quick-create at the warehouse door for an off-document product: only name, unit and category are required; brand and
+        /// prices may be empty and Stock must be 0 (goods arrive through receiving). The product is flagged incomplete until
+        /// purchasing fills the missing data through UpdateProduct.
+        /// </summary>
+        public bool IsIncomplete { get; set; }
     }
 
     public class CreateProductCommandValidator : AbstractValidator<CreateProductCommand>
@@ -44,10 +52,14 @@ namespace Application.Features.Product.Commands
         public CreateProductCommandValidator()
         {
             RuleFor(x => x.Name).NotEmpty().WithMessage(Validation.RequiredMessage("نام محصول"));
-            RuleFor(x => x.Brand).NotEmpty().WithMessage(Validation.RequiredMessage("برند محصول"));
-            RuleFor(x => x.PurchasePrice).GreaterThan(0).WithMessage("قیمت خرید باید بزرگتر از صفر باشد.");
-            RuleFor(x => x.RetailPrice).GreaterThan(0).WithMessage("قیمت فروش باید بزرگتر از صفر باشد.");
-            RuleFor(x => x.WholeSalePrice).GreaterThan(0).WithMessage("قیمت عمده فروشی باید بزرگتر از صفر باشد.");
+            RuleFor(x => x.Brand).NotEmpty().WithMessage(Validation.RequiredMessage("برند محصول")).When(x => !x.IsIncomplete);
+            RuleFor(x => x.PurchasePrice).GreaterThan(0).WithMessage("قیمت خرید باید بزرگتر از صفر باشد.").When(x => !x.IsIncomplete);
+            RuleFor(x => x.RetailPrice).GreaterThan(0).WithMessage("قیمت فروش باید بزرگتر از صفر باشد.").When(x => !x.IsIncomplete);
+            RuleFor(x => x.WholeSalePrice).GreaterThan(0).WithMessage("قیمت عمده فروشی باید بزرگتر از صفر باشد.").When(x => !x.IsIncomplete);
+            RuleFor(x => x.PurchasePrice).GreaterThanOrEqualTo(0).WithMessage("قیمت خرید نمی‌تواند منفی باشد.").When(x => x.IsIncomplete);
+            RuleFor(x => x.RetailPrice).GreaterThanOrEqualTo(0).WithMessage("قیمت فروش نمی‌تواند منفی باشد.").When(x => x.IsIncomplete);
+            RuleFor(x => x.WholeSalePrice).GreaterThanOrEqualTo(0).WithMessage("قیمت عمده فروشی نمی‌تواند منفی باشد.").When(x => x.IsIncomplete);
+            RuleFor(x => x.Stock).Equal(0).WithMessage("کالای ناقص با موجودی ثبت نمی‌شود؛ موجودی آن از راه دریافت خرید وارد می‌شود.").When(x => x.IsIncomplete);
             RuleFor(x => x.Tax).GreaterThanOrEqualTo(0).WithMessage("مالیات نمی‌تواند منفی باشد.");
             RuleFor(x => x.Stock).GreaterThanOrEqualTo(0).WithMessage("موجودی نمی‌تواند منفی باشد.");
             RuleFor(x => x.LowStockThreshold).GreaterThanOrEqualTo(0).WithMessage("حداقل موجودی نمی‌تواند منفی باشد.");
@@ -82,6 +94,8 @@ namespace Application.Features.Product.Commands
             var res = new ResponseDto();
 
             var product = _mapper.Map<Domain.Entities.Product>(request);
+            // Brand is a required column; a quick-created product has none yet.
+            product.Brand ??= string.Empty;
             product.CreatedAt = DateTime.Now;
             product.UpdatedAt = DateTime.Now;
 
@@ -106,7 +120,8 @@ namespace Application.Features.Product.Commands
 
             if (product.Stock > 0)
             {
-                await _productUnitService.MintAsync(product, product.Stock, null, cancellationToken);
+                await _productUnitService.MintAsync(product, product.Stock, UnitOrigin.None,
+                    new UnitMovementContext(Domain.Enums.ProductUnitMovementReasonEnum.OPENING_BALANCE, product.CreatedAt), cancellationToken);
                 await _inventoryCostingService.RecordOpeningBalanceAsync(product, product.Stock, product.PurchasePrice, product.CreatedAt, cancellationToken);
             }
 

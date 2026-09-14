@@ -1,4 +1,5 @@
-﻿using Domain.Enums;
+﻿using Application.Common.Enums;
+using Domain.Enums;
 
 namespace Application.Common.Contracts.SaleReturn
 {
@@ -13,16 +14,35 @@ namespace Application.Common.Contracts.SaleReturn
         bool IsTerminal(ReturnStatusEnum status);
 
         /// <summary>
-        /// Whether a return can be reopened - only an explicitly REJECTED one. Lives here rather
-        /// than inline in the detail query so every transition rule sits behind one interface.
+        /// The lifecycle state machine, in one place - identical to the purchase side
+        /// (IPurchaseReturnCalculationService.GetLifecycleBlocker). Returns the Persian reason the
+        /// action is refused, or null when it is legal:
+        /// <list type="table">
+        /// <item><term>OPEN / IN_PROGRESS</term><description>Cancel, Reject, Delete - unless goods have
+        /// physically moved (no way back) or a money effect is recorded (way back: remove that
+        /// resolution first). Reopen - refused.</description></item>
+        /// <item><term>SETTLED</term><description>everything refused.</description></item>
+        /// <item><term>REJECTED</term><description>Reopen only; the others point at Reopen.</description></item>
+        /// <item><term>CANCELLED</term><description>everything refused.</description></item>
+        /// </list>
+        /// Needs the full return graph loaded (see SaleReturnQueryExtensions.WithReturnGraph).
         /// </summary>
-        bool CanReopen(ReturnStatusEnum status);
+        string? GetLifecycleBlocker(Domain.Entities.SaleReturn saleReturn, ReturnLifecycleActionEnum action);
+
+        /// <summary><see cref="GetLifecycleBlocker"/> == null - backs the detail DTO's Can* flags.</summary>
+        bool CanPerform(Domain.Entities.SaleReturn saleReturn, ReturnLifecycleActionEnum action);
 
         /// <summary>
-        /// Whether no effect anywhere on the return has ever reached APPLIED - the guard for
-        /// cancel/reject/delete (matches the frontend's isReturnUntouched).
+        /// Whether any goods effect has physically moved at least one unit (AppliedQuantity &gt; 0),
+        /// whether or not the effect has completed. The same test RemoveClaimResolution applies.
         /// </summary>
-        bool IsUntouched(Domain.Entities.SaleReturn saleReturn);
+        bool HasMovedGoods(Domain.Entities.SaleReturn saleReturn);
+
+        /// <summary>
+        /// Whether any money effect is APPLIED - a payment that has actually moved and has a ledger row.
+        /// A PENDING money effect (promised, not yet paid) does not count.
+        /// </summary>
+        bool HasAppliedMoney(Domain.Entities.SaleReturn saleReturn);
 
         /// <summary>
         /// open: no resolution has been registered against any claim yet.
@@ -48,6 +68,13 @@ namespace Application.Common.Contracts.SaleReturn
         int GetClaimableQuantity(Domain.Entities.SaleItem item, List<Domain.Entities.SaleReturn> activeReturns);
 
         /// <summary>
+        /// How many excess units open EXCESS claims on <paramref name="saleItemId"/> still reserve, across active returns: each claim's
+        /// quantity minus what its completed resolutions already disposed of. The caller subtracts it from the line's units SOLD with
+        /// custody EXCESS - the one source for the EXCESS claim quota.
+        /// </summary>
+        int GetOutstandingExcessClaimQuantity(int saleItemId, List<Domain.Entities.SaleReturn> activeReturns);
+
+        /// <summary>
         /// Sale.Status is only ever overridden by return activity to flip to RETURNED once every
         /// unit ever shipped has been settled through a return resolution whose goods effects (if
         /// any) have all completed. Otherwise the sale's own status is untouched.
@@ -56,8 +83,8 @@ namespace Application.Common.Contracts.SaleReturn
 
         /// <summary>
         /// Expands a composition (the same {quantity, goodsIn, goodsOut, money} shape the frontend
-        /// posts) into the Effect rows it represents. Goods effects start PENDING; money effects
-        /// start APPLIED immediately since there is nothing further to execute.
+        /// posts) into the Effect rows it represents. Goods effects start PENDING; a money effect starts
+        /// APPLIED when the request says when it was paid (PaidAt), PENDING otherwise.
         /// </summary>
         List<Domain.Entities.SaleReturnEffect> ExpandComposition(Application.Common.Dtos.Returns.EffectCompositionDto composition, DateTime now);
     }

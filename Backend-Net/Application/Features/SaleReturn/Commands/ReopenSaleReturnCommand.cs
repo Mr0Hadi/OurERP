@@ -4,6 +4,7 @@ using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Common.Queries;
+using Application.Features.SaleReturn.Queries;
 using Common.Exceptions;
 using Common.Extensions;
 using Domain.Enums;
@@ -48,17 +49,21 @@ namespace Application.Features.SaleReturn.Commands
                 .WithReturnGraph()
                 .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
-            if (!_saleReturnCalculationService.CanReopen(saleReturn.Status))
-                throw new ValidationCustomException("فقط مرجوعی‌های ردشده قابل بازگشایی هستند.");
+            // One rule for every lifecycle command, and a reason that names what actually blocks it
+            // (the status, moved goods, or recorded money) - see ReturnLifecycleRules.
+            if (_saleReturnCalculationService.GetLifecycleBlocker(saleReturn, ReturnLifecycleActionEnum.REOPEN) is { } blocker)
+                throw new ValidationCustomException(blocker);
 
-            // A REJECTED return can only have gotten there while untouched (see Reject's guard), so
-            // reopening it always lands back at OPEN - RecomputeReturnStatus's terminal-status
-            // short-circuit would just hand REJECTED straight back if called on it here instead.
+            // Step out of REJECTED first - RecomputeReturnStatus hands terminal statuses straight back -
+            // then let the graph decide. Not hard-set to OPEN: Reject is legal while a goods resolution
+            // is still pending, so a reopened return can legitimately be IN_PROGRESS.
             saleReturn.Status = ReturnStatusEnum.OPEN;
+            saleReturn.Status = _saleReturnCalculationService.RecomputeReturnStatus(saleReturn);
             saleReturn.UpdatedAt = DateTime.Now;
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+            res.Data = await SaleReturnDetailReader.ReadAsync(_context, _saleReturnCalculationService, saleReturn.Id, cancellationToken);
             res.Message = "مرجوعی دوباره برای هماهنگی باز شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;

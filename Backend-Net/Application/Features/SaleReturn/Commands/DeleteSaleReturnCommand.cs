@@ -50,8 +50,10 @@ namespace Application.Features.SaleReturn.Commands
                 .WithReturnGraph()
                 .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
-            if (_saleReturnCalculationService.IsTerminal(saleReturn.Status) || !_saleReturnCalculationService.IsUntouched(saleReturn))
-                throw new ValidationCustomException("فقط مرجوعی‌های دست‌نخورده قابل حذف هستند.");
+            // One rule for every lifecycle command, and a reason that names what actually blocks it
+            // (the status, moved goods, or recorded money) - see ReturnLifecycleRules.
+            if (_saleReturnCalculationService.GetLifecycleBlocker(saleReturn, ReturnLifecycleActionEnum.DELETE) is { } blocker)
+                throw new ValidationCustomException(blocker);
 
             // Soft delete: the row and its whole claim graph stay, every read filters IsActive out.
             saleReturn.IsActive = false;
@@ -60,6 +62,9 @@ namespace Application.Features.SaleReturn.Commands
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+            // A deleted return has no document left to return; the client needs only these two to
+            // evict it from its cache and refresh the sale it belonged to.
+            res.Data = new { Id = saleReturn.Id, SaleId = saleReturn.SaleId };
             res.Message = "مرجوعی با موفقیت حذف شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;

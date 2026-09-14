@@ -15,6 +15,9 @@ namespace Domain.Entities
         public string? Note { get; set; }
         public DateTime CreatedAt { get; set; }
 
+        /// <summary>Explicit forgiveness: this part of the claim is closed with no effect at all. Carries no effects.</summary>
+        public bool IsWriteOff { get; set; }
+
         public SaleReturnClaim? SaleReturnClaim { get; set; }
         public List<SaleReturnEffect> Effects { get; set; } = new();
     }

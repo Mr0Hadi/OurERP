@@ -6,7 +6,7 @@
 > `ClaimedQuantity`، `ConfirmReturnInspectionCommand`، …) **دیگر در کد وجود ندارند**. این سند فقط
 > به‌عنوان سابقه‌ی طراحی نگه داشته شده. برای وضعیت فعلی به
 > [`returns-effects-and-org-structure-summary.fa.md`](./returns-effects-and-org-structure-summary.fa.md)
-> و بخش‌های ۱۰ و ۱۲ [`api-guide.fa.md`](./api-guide.fa.md) مراجعه کنید.
+> و بخش‌های ۱۰ و ۱۲ [`api-guide.fa.md`](./api-guide.fa.md) و [`return-frontend-migration.fa.md`](./return-frontend-migration.fa.md) (قرارداد فعلی) مراجعه کنید.
 
 این سند توضیح می‌دهد که در فیچر `SaleReturn` (و پیش‌نیازش، ارسال چندمرحله‌ای فروش) دقیقاً چه کدی نوشته شده، هر بخش چرا این‌طور طراحی شده، و هر تابع/هندلر روی چه سناریوهایی و با چه منطقی کار می‌کند. این سند مکمل `docs/purchase-return-guide.fa.md` و `docs/return-scenarios-guide.fa.md` (بخش دو) است — همان‌ها منبع سناریوهای کسب‌وکاری بودند؛ این‌جا پیاده‌سازی واقعی مستند می‌شود.
 

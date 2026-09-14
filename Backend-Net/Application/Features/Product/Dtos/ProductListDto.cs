@@ -12,6 +12,11 @@
         public UInt64 WholeSalePrice { get; set; }
         public int Stock { get; set; }
         public int LowStockThreshold { get; set; }
+        public bool RequiresUnitTracking { get; set; }
+        public bool IsIncomplete { get; set; }
+
+        /// <summary>Units held in quarantine - physically here, not sellable, not part of Stock.</summary>
+        public int QuarantinedCount { get; set; }
 
         /// <summary>Stable bucket object key; null when the product has no image.</summary>
         public string? ImageKey { get; set; }

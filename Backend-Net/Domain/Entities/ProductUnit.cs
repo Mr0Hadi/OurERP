@@ -17,6 +17,12 @@ namespace Domain.Entities
         public int? PurchaseItemId { get; set; }
         public int? SaleItemId { get; set; }
 
+        /// <summary>The purchase the unit arrived on. Set even without a line - an UNLISTED unit has no PurchaseItemId.</summary>
+        public int? PurchaseId { get; set; }
+
+        /// <summary>Why we hold it, for units that came in on a purchase; null otherwise. See UnitCustodyReasonEnum for the one rule allowed to read it.</summary>
+        public UnitCustodyReasonEnum? CustodyReason { get; set; }
+
         public DateTime CreatedAt { get; set; }
         public DateTime? SoldAt { get; set; }
         public bool IsActive { get; set; }

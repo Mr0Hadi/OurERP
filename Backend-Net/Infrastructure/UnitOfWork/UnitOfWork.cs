@@ -17,6 +17,15 @@ namespace Infrastructure.UnitOfWork
 			return await _context.SaveChangesAsync(cancellationToken);
         }
 
+        public async Task<T> ExecuteInTransactionAsync<T>(Func<CancellationToken, Task<T>> work, CancellationToken cancellationToken)
+        {
+            // Disposing an uncommitted transaction rolls it back, so a throw anywhere in work leaves the database untouched.
+            await using var transaction = await _context.BeginTransactionAsync(cancellationToken);
+            var result = await work(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return result;
+        }
+
         public void Dispose()
         {
             _context.Dispose();

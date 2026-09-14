@@ -4,8 +4,9 @@ using Domain.Enums;
 namespace Domain.Entities
 {
     /// <summary>
-    /// One reported problem line within a PurchaseReturn. PurchaseItemId is null when
-    /// Scope == OFF_ORDER (goods claimed outside any ordered line - excess or unlisted).
+    /// One reported problem line within a PurchaseReturn. PurchaseItemId is set for
+    /// Scope == ON_ORDER and for OFF_ORDER/EXCESS (the line the excess is "more of", which prices it),
+    /// and null only for OFF_ORDER/UNLISTED (a product the purchase never listed).
     /// </summary>
     public class PurchaseReturnClaim
     {
@@ -25,6 +26,15 @@ namespace Domain.Entities
         public PurchaseItem? PurchaseItem { get; set; }
         public Product? Product { get; set; }
         public List<PurchaseReturnResolution> Resolutions { get; set; } = new();
+
+        /// <summary>
+        /// The purchase line this claim counts against - PurchaseItemId for ON_ORDER, null otherwise.
+        /// Everything that consumes or settles a line's quota, or scopes units to a line,
+        /// must read this rather than PurchaseItemId: an EXCESS claim has a PurchaseItemId too, but
+        /// its goods are by definition outside that line.
+        /// </summary>
+        [NotMapped]
+        public int? OnOrderPurchaseItemId => Scope == ReturnClaimScopeEnum.ON_ORDER ? PurchaseItemId : null;
 
         [NotMapped]
         public int DecidedQuantity => Resolutions.Sum(r => r.Quantity);

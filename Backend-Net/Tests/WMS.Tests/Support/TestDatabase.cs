@@ -95,7 +95,7 @@ namespace WMS.Tests.Support
             SaleReturnCalculation = new SaleReturnCalculationService();
             PurchaseReturnCalculation = new PurchaseReturnCalculationService();
             ProductCodeService = new ProductCodeService();
-            ProductUnitService = new ProductUnitService(context, ProductCodeService);
+            ProductUnitService = new ProductUnitService(context, ProductCodeService, FakeUserContext.WithUserId());
             InventoryCostingService = new InventoryCostingService(context);
             BarcodeRenderer = new ZXingBarcodeRenderer();
             QuestPdfDocumentService = new QuestPdfDocumentService(BarcodeRenderer);
