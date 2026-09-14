@@ -8,7 +8,6 @@ import { useProductForm } from "../hooks/useProductForm";
 import ProductBasicInfoForm from "../components/forms/ProductBasicInfoForm";
 import ProductPricingForm from "../components/forms/ProductPricingForm";
 import ProductImageUpload from "../components/forms/ProductImageUpload";
-import ProductBarcodeDisplay from "../components/forms/ProductBarcodeDisplay";
 import { useHeaderStore } from "@/shared/store/headerStore";
 
 export default function ProductNewPage() {
@@ -30,7 +29,6 @@ export default function ProductNewPage() {
   const {
     formMethods,
     imageUpload,
-    barcodeValue,
     buildProductPayload,
   } = useProductForm();
 
@@ -69,12 +67,12 @@ export default function ProductNewPage() {
               register={register}
               control={control}
               errors={errors}
+              showGeneratedCodes={false}
             />
             <ProductPricingForm register={register} control={control} />
           </div>
           <div className="flex flex-col gap-4 md:gap-3">
             <ProductImageUpload imageUpload={imageUpload} />
-            <ProductBarcodeDisplay value={barcodeValue} />
             <div className="flex gap-2">
               <Button
                 type="button"

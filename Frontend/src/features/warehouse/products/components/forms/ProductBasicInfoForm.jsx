@@ -48,7 +48,12 @@ function ReadOnlyCodeField({ id, label, value, emptyHint }) {
   );
 }
 
-export default function ProductBasicInfoForm({ register, control, errors }) {
+export default function ProductBasicInfoForm({
+  register,
+  control,
+  errors,
+  showGeneratedCodes = true,
+}) {
   const code = useWatch({ control, name: "code" });
   const barcode = useWatch({ control, name: "barcode" });
 
@@ -88,19 +93,23 @@ export default function ProductBasicInfoForm({ register, control, errors }) {
           )}
         </div>
 
-        <ReadOnlyCodeField
-          id="code"
-          label="کد کالا"
-          value={code}
-          emptyHint="پس از ثبت کالا ساخته می‌شود"
-        />
+        {showGeneratedCodes && (
+          <>
+            <ReadOnlyCodeField
+              id="code"
+              label="کد کالا"
+              value={code}
+              emptyHint="پس از ثبت کالا ساخته می‌شود"
+            />
 
-        <ReadOnlyCodeField
-          id="barcode"
-          label="بارکد"
-          value={formatPayload(barcode)}
-          emptyHint="پس از ثبت کالا ساخته می‌شود"
-        />
+            <ReadOnlyCodeField
+              id="barcode"
+              label="بارکد"
+              value={formatPayload(barcode)}
+              emptyHint="پس از ثبت کالا ساخته می‌شود"
+            />
+          </>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="productCategoryId">
