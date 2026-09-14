@@ -24,5 +24,10 @@ namespace Application.Features.Product.Dtos
         /// <summary>A short-lived signed URL for &lt;img src&gt;. Expires; do not store it.</summary>
         public string? ImageUrl { get; set; }
         public int ProductCategoryId { get; set; }
+        public bool RequiresUnitTracking { get; set; }
+        public bool IsIncomplete { get; set; }
+
+        /// <summary>Units held in quarantine - physically here, not sellable, not part of Stock.</summary>
+        public int QuarantinedCount { get; set; }
     }
 }

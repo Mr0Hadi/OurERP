@@ -37,7 +37,7 @@ namespace WMS.Tests.Integration
                 .Handle(new ReceivePurchaseCommand
                 {
                     PurchaseId = scenario.Purchase.Id,
-                    Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ReceivedQuantity = received } },
+                    Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ArrivedQuantity = received } },
                 }, CancellationToken.None);
             return scenario;
         }
@@ -113,7 +113,7 @@ namespace WMS.Tests.Integration
             await PAdd(scope).Handle(new PR.AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 3, GoodsOut = goodsBack, MoneyIn = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 3500 } },
+                Composition = new EffectCompositionDto { Quantity = 3, GoodsOut = goodsBack, MoneyIn = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 3500 } },
             }, CancellationToken.None);
 
             using var verify2 = db.NewContext();
@@ -148,13 +148,13 @@ namespace WMS.Tests.Integration
             await Assert.ThrowsAsync<ValidationCustomException>(() => SAdd(scope).Handle(new SR.AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = Swap(new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 5 }),
+                Composition = Swap(new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 5 }),
             }, CancellationToken.None));
 
             await SAdd(scope).Handle(new SR.AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = Swap(new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 7 }),
+                Composition = Swap(new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 7 }),
             }, CancellationToken.None);
 
             using var verify = db.NewContext();
@@ -177,8 +177,8 @@ namespace WMS.Tests.Integration
                     Quantity = 1,
                     GoodsIn = new() { new GoodsEffectDto { Quantity = 1, UnitPrice = 10 } },
                     GoodsOut = new() { new GoodsEffectDto { Quantity = 1, UnitPrice = 10 } },
-                    MoneyIn = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 3 },
-                    MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 2 },
+                    MoneyIn = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 3 },
+                    MoneyOut = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 2 },
                 },
             }, CancellationToken.None);
 
@@ -193,7 +193,7 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = await ReceivedPurchase(scope, ordered: 5, received: 5);
+            var scenario = await ReceivedPurchase(scope, ordered: 5, received: 7); // 2 excess held
 
             var ex = await Assert.ThrowsAsync<ValidationCustomException>(() => CreatePurchaseClaim(scope, scenario, Excess(scenario.Item.Id, scenario.Product.Id, 777, 2)));
             Assert.Contains("1000", ex.Error);
@@ -222,7 +222,7 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = await ReceivedPurchase(scope, ordered: 5, received: 5, unitPrice: 1000);
+            var scenario = await ReceivedPurchase(scope, ordered: 5, received: 9, unitPrice: 1000); // 4 excess held
             var claimId = await CreatePurchaseClaim(scope, scenario, Excess(scenario.Item.Id, scenario.Product.Id, 1000, 4));
             var returnId = scope.Context.PurchaseReturns.Single().Id;
 
@@ -233,7 +233,7 @@ namespace WMS.Tests.Integration
                 {
                     Quantity = 2,
                     GoodsIn = new() { new GoodsEffectDto { Quantity = 2, UnitPrice = 900, UnitCost = 900 } },
-                    MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 1800 },
+                    MoneyOut = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 1800 },
                 },
             }, CancellationToken.None);
             await PRound(scope).Handle(new PR.ExecuteGoodsRoundCommand
@@ -261,7 +261,7 @@ namespace WMS.Tests.Integration
             await PRound(scope).Handle(new PR.ExecuteGoodsRoundCommand
             {
                 PurchaseReturnId = returnId,
-                Rounds = new() { new GoodsRoundLineDto { EffectId = LatestEffectId(scope, ReturnEffectDirectionEnum.GOODS_OUT, purchase: true), Quantity = 2 } },
+                Rounds = new() { new GoodsRoundLineDto { EffectId = LatestEffectId(scope, ReturnEffectDirectionEnum.GOODS_OUT, purchase: true), Quantity = 2, Source = ProductUnitStatusEnum.IN_STOCK } },
             }, CancellationToken.None);
 
             using var after = db.NewContext();
@@ -287,7 +287,7 @@ namespace WMS.Tests.Integration
                 {
                     Quantity = 2,
                     GoodsIn = new() { new GoodsEffectDto { Quantity = 2, UnitPrice = 1200, UnitCost = 700 } },
-                    MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 2400 },
+                    MoneyOut = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 2400 },
                 },
             }, CancellationToken.None);
             await SRound(scope).Handle(new SR.ExecuteGoodsRoundCommand
@@ -323,7 +323,7 @@ namespace WMS.Tests.Integration
                 {
                     Quantity = 1,
                     GoodsIn = new() { new GoodsEffectDto { Quantity = 1, UnitPrice = 1500 } },
-                    MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 1500 },
+                    MoneyOut = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 1500 },
                 },
             }, CancellationToken.None);
             await SRound(scope).Handle(new SR.ExecuteGoodsRoundCommand
@@ -354,7 +354,7 @@ namespace WMS.Tests.Integration
                 {
                     Quantity = 1,
                     GoodsIn = new() { new GoodsEffectDto { Quantity = 1, UnitPrice = 1500 } },
-                    MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 1500 },
+                    MoneyOut = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 1500 },
                 },
             }, CancellationToken.None);
             await SRound(scope).Handle(new SR.ExecuteGoodsRoundCommand
@@ -386,7 +386,7 @@ namespace WMS.Tests.Integration
                 {
                     Quantity = 2,
                     GoodsOut = new() { new GoodsEffectDto { Quantity = 2, UnitPrice = 1000, UnitCost = 1000 } },
-                    MoneyIn = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 2000 },
+                    MoneyIn = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 2000 },
                 },
             }, CancellationToken.None);
 
@@ -412,7 +412,7 @@ namespace WMS.Tests.Integration
             await SAdd(scope).Handle(new SR.AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 1, MoneyIn = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 400 } },
+                Composition = new EffectCompositionDto { Quantity = 1, MoneyIn = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 400 } },
             }, CancellationToken.None);
 
             using (var verify = db.NewContext())
@@ -437,7 +437,7 @@ namespace WMS.Tests.Integration
             await PAdd(scope).Handle(new PR.AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 1, MoneyIn = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 500 } },
+                Composition = new EffectCompositionDto { Quantity = 1, MoneyIn = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 500 } },
             }, CancellationToken.None);
 
             using (var verify = db.NewContext())

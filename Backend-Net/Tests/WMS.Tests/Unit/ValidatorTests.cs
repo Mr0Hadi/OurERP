@@ -80,7 +80,7 @@ namespace WMS.Tests.Unit
             var command = new ReceivePurchaseCommand
             {
                 PurchaseId = 1,
-                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = 1, ReceivedQuantity = 0 } },
+                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = 1, ArrivedQuantity = 0 } },
             };
 
             Assert.False(_sut.Validate(command).IsValid);
@@ -92,7 +92,7 @@ namespace WMS.Tests.Unit
             var command = new ReceivePurchaseCommand
             {
                 PurchaseId = 1,
-                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = 1, ReceivedQuantity = -1 } },
+                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = 1, ArrivedQuantity = -1 } },
             };
 
             Assert.False(_sut.Validate(command).IsValid);
@@ -106,8 +106,8 @@ namespace WMS.Tests.Unit
                 PurchaseId = 1,
                 Items = new()
                 {
-                    new ReceivePurchaseItemDto { PurchaseItemId = 1, ReceivedQuantity = 1 },
-                    new ReceivePurchaseItemDto { PurchaseItemId = 1, ReceivedQuantity = 2 },
+                    new ReceivePurchaseItemDto { PurchaseItemId = 1, ArrivedQuantity = 1 },
+                    new ReceivePurchaseItemDto { PurchaseItemId = 1, ArrivedQuantity = 2 },
                 },
             };
 

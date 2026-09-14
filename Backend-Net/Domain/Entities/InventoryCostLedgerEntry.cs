@@ -33,6 +33,13 @@ namespace Domain.Entities
         public decimal RunningInventoryValue { get; set; }
         public decimal RunningAverageCost { get; set; }
         public decimal RevenueDelta { get; set; }
+
+        /// <summary>
+        /// Value we own that is outside the sellable pool: paid-for goods held in quarantine. Never part of RunningInventoryValue
+        /// or the average. Positive when paid-for goods enter quarantine (PURCHASE_RECEIVED_QUARANTINED); negative when they leave
+        /// it. The purchase report counts the positive side as goods received.
+        /// </summary>
+        public decimal OffPoolValueDelta { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 }

@@ -21,7 +21,7 @@ namespace Infrastructure.Services
         // The matrix itself lives in ReturnLifecycleRules so both return sides share one copy; this
         // service only supplies the two facts it needs from the loaded graph.
         public string? GetLifecycleBlocker(SaleReturn saleReturn, ReturnLifecycleActionEnum action) =>
-            ReturnLifecycleRules.GetBlocker(saleReturn.Status, HasMovedGoods(saleReturn), HasRecordedMoney(saleReturn), action);
+            ReturnLifecycleRules.GetBlocker(saleReturn.Status, HasMovedGoods(saleReturn), HasAppliedMoney(saleReturn), action);
 
         public bool CanPerform(SaleReturn saleReturn, ReturnLifecycleActionEnum action) =>
             GetLifecycleBlocker(saleReturn, action) == null;
@@ -29,10 +29,11 @@ namespace Infrastructure.Services
         // AppliedQuantity, not Status == APPLIED: a goods effect with 1 of 3 units moved is still
         // PENDING, and the old APPLIED-only test let such a return be cancelled with stock changed.
         public bool HasMovedGoods(SaleReturn saleReturn) =>
-            saleReturn.AllEffects.Any(e => e.Direction is ReturnEffectDirectionEnum.GOODS_IN or ReturnEffectDirectionEnum.GOODS_OUT && e.AppliedQuantity > 0);
+            saleReturn.AllEffects.Any(e => ReturnEffectDirections.IsGoods(e.Direction) && e.AppliedQuantity > 0);
 
-        public bool HasRecordedMoney(SaleReturn saleReturn) =>
-            saleReturn.AllEffects.Any(e => e.Direction is ReturnEffectDirectionEnum.MONEY_IN or ReturnEffectDirectionEnum.MONEY_OUT);
+        // APPLIED only: a PENDING money effect is a promise, nothing has moved and nothing is in the ledger.
+        public bool HasAppliedMoney(SaleReturn saleReturn) =>
+            saleReturn.AllEffects.Any(e => e.Direction is ReturnEffectDirectionEnum.MONEY_IN or ReturnEffectDirectionEnum.MONEY_OUT && e.Status == ReturnEffectStatusEnum.APPLIED);
 
         public ReturnStatusEnum RecomputeReturnStatus(SaleReturn saleReturn)
         {
@@ -81,6 +82,18 @@ namespace Infrastructure.Services
             return Math.Max(0, budget - openClaim);
         }
 
+        public int GetOutstandingExcessClaimQuantity(int saleItemId, List<SaleReturn> activeReturns)
+        {
+            if (activeReturns == null || activeReturns.Count == 0)
+                return 0;
+
+            return activeReturns
+                .Where(r => r.IsActive && !IsTerminal(r.Status))
+                .SelectMany(r => r.Claims)
+                .Where(c => c.Scope == ReturnClaimScopeEnum.OFF_ORDER && c.OffScopeKind == ReturnOffScopeKindEnum.EXCESS && c.SaleItemId == saleItemId)
+                .Sum(c => Math.Max(0, c.Quantity - c.Resolutions.Where(r => r.Effects.All(e => e.Status != ReturnEffectStatusEnum.PENDING)).Sum(r => r.Quantity)));
+        }
+
         public SalesStatusEnum RecomputeSaleStatus(Sale sale)
         {
             if (sale.Status == SalesStatusEnum.CANCELLED)
@@ -122,6 +135,10 @@ namespace Infrastructure.Services
                 }
             }
 
+            // Sale returns have no quarantine; AddClaimResolutionCommandValidator refuses these slots first.
+            if ((composition.GoodsRelease?.Count ?? 0) > 0 || (composition.GoodsScrap?.Count ?? 0) > 0)
+                throw new ValidationCustomException("مرجوعی فروش قرنطینه ندارد؛ آزادسازی و اسقاط فقط در مرجوعی خرید معنا دارد.");
+
             AddMoney(composition.MoneyIn, ReturnEffectDirectionEnum.MONEY_IN);
             AddMoney(composition.MoneyOut, ReturnEffectDirectionEnum.MONEY_OUT);
 
@@ -138,9 +155,9 @@ namespace Infrastructure.Services
                     Amount = money.Amount,
                     Method = money.Method,
                     Reference = money.Reference,
-                    Status = ReturnEffectStatusEnum.APPLIED,
+                    Status = money.PaidAt.HasValue ? ReturnEffectStatusEnum.APPLIED : ReturnEffectStatusEnum.PENDING,
                     CreatedAt = now,
-                    AppliedAt = now,
+                    AppliedAt = money.PaidAt,
                 };
 
                 if (money.Method == ReturnPaymentMethodEnum.MIXED)

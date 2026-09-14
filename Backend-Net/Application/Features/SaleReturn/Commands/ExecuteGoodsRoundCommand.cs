@@ -50,6 +50,7 @@ namespace Application.Features.SaleReturn.Commands
                 line.RuleFor(l => l)
                     .Must(l => (l.Observations ?? new()).Where(o => o.Quantity > 0).Sum(o => o.Quantity) <= l.Quantity)
                     .WithMessage("مجموع مقدار مشاهده‌ها نمی‌تواند از مقدار اجرا بیشتر باشد.");
+                line.RuleFor(l => l).Must(GoodsRoundBarcodes.CountsMatch).WithMessage(GoodsRoundBarcodes.CountMismatchMessage);
             });
         }
     }
@@ -106,10 +107,21 @@ namespace Application.Features.SaleReturn.Commands
                 if (effect.Direction is not (ReturnEffectDirectionEnum.GOODS_IN or ReturnEffectDirectionEnum.GOODS_OUT))
                     throw new ValidationCustomException("فقط اثرهای کالایی می‌توانند اجرا شوند.");
 
+                // No quarantine on the sale side: goods leaving come off the shelf, goods arriving have no source.
+                if (line.Source.HasValue && !(effect.Direction == ReturnEffectDirectionEnum.GOODS_OUT && line.Source == ProductUnitStatusEnum.IN_STOCK))
+                    throw new ValidationCustomException("مرجوعی فروش قرنطینه ندارد؛ منبع دانه‌ها فقط برای خروج کالا و فقط «موجودی» (IN_STOCK) قابل ذکر است.");
+
                 // Summed per effect: the same effect twice in one round is checked as its total.
                 requestedPerEffect[effect.Id] = requestedPerEffect.GetValueOrDefault(effect.Id) + line.Quantity;
                 if (requestedPerEffect[effect.Id] > effect.RemainingQuantity)
                     throw new ValidationCustomException("مقدار اجرا از باقیمانده این اثر بیشتر است.");
+
+                // Only a customer's own units on their sale line can be scanned coming back; goods arriving without
+                // that line create brand-new units, which have no barcode yet.
+                var restoresLineUnits = effect.ProductId == claim.ProductId
+                    && (claim.OnOrderSaleItemId.HasValue || (claim.OffScopeKind == ReturnOffScopeKindEnum.EXCESS && claim.SaleItemId.HasValue));
+                if (effect.Direction == ReturnEffectDirectionEnum.GOODS_IN && !restoresLineUnits && line.ProductUnitBarcodes is { Count: > 0 })
+                    throw new ValidationCustomException("این کالای ورودی به قلم فروش مرتبط نیست و دانه‌ی تازه می‌سازد؛ بارکدی برای اسکن ندارد، بارکد نفرستید.");
 
                 var observed = (line.Observations ?? new()).Where(o => o.Quantity > 0).Sum(o => o.Quantity);
                 plan.Add((line, claim, effect, line.Quantity - observed));
@@ -136,6 +148,9 @@ namespace Application.Features.SaleReturn.Commands
                 }
                 else
                 {
+                    if (products[productId].RequiresUnitTracking && (line.ProductUnitBarcodes?.Count ?? 0) == 0)
+                        throw new ValidationCustomException($"کالای «{products[productId].Name}» ردیابی دانه‌ای دارد؛ بارکد دانه‌های خروجی باید اسکن شود.");
+
                     if (line.Quantity > projectedStock[productId])
                         throw new ValidationCustomException($"موجودی «{products[productId].Name}» برای این ارسال کافی نیست.");
                     projectedStock[productId] -= line.Quantity;
@@ -183,6 +198,13 @@ namespace Application.Features.SaleReturn.Commands
                 // ON_ORDER claim's own product has a line; a different product moved on the same claim does not.
                 var unitLine = effect.ProductId == claim.ProductId ? claim.OnOrderSaleItemId : null;
 
+                // An EXCESS claim's own product comes back as the excess units recorded on its line (ShipSale ExcessQuantity).
+                var excessLine = effect.ProductId == claim.ProductId && claim.OffScopeKind == ReturnOffScopeKindEnum.EXCESS ? claim.SaleItemId : null;
+
+                var movement = new UnitMovementContext(
+                    isGoodsIn ? ProductUnitMovementReasonEnum.SALE_RETURN_RECEIVED : ProductUnitMovementReasonEnum.SALE_RETURN_SHIPPED,
+                    now, DocumentKindEnum.SALE_RETURN, saleReturn.Id, CustomerId: saleReturn.Sale!.CustomerId, Note: request.Note);
+
                 if (isGoodsIn)
                 {
                     var scrapped = line.Quantity - healthy;
@@ -191,18 +213,23 @@ namespace Application.Features.SaleReturn.Commands
 
                     // With a line, the customer's own SOLD units come back (healthy to IN_STOCK, the rest
                     // SCRAPPED); without one there are no units to restore, so the healthy ones are minted.
+                    // Scanned: the observations' barcodes name exactly which of the scanned units are the scrap.
+                    var scrapBarcodes = (line.Observations ?? new()).SelectMany(o => o.ProductUnitBarcodes ?? new()).ToList();
+
                     if (unitLine is int saleItemId)
-                        await _productUnitService.RestoreAsync(saleItemId, healthy, scrapped, cancellationToken);
+                        await _productUnitService.RestoreAsync(saleItemId, false, healthy, scrapped, line.ProductUnitBarcodes, scrapBarcodes, movement, cancellationToken);
+                    else if (excessLine is int excessSaleItemId)
+                        await _productUnitService.RestoreAsync(excessSaleItemId, true, healthy, scrapped, line.ProductUnitBarcodes, scrapBarcodes, movement, cancellationToken);
                     else
-                        await _productUnitService.MintAsync(product, healthy, null, cancellationToken);
+                        await _productUnitService.MintAsync(product, healthy, UnitOrigin.None, movement, cancellationToken);
 
                     if (healthy > 0)
-                        await _inventoryCostingService.RecordSaleReturnRestockAsync(product, healthy, effect.UnitCost, unitLine, now, cancellationToken);
+                        await _inventoryCostingService.RecordSaleReturnRestockAsync(product, healthy, effect.UnitCost, unitLine ?? excessLine, now, cancellationToken);
                 }
                 else
                 {
                     product.Stock -= line.Quantity;
-                    await _productUnitService.ConsumeAsync(product, line.Quantity, unitLine, null, cancellationToken);
+                    await _productUnitService.ConsumeAsync(product, line.Quantity, unitLine, unitLine.HasValue ? UnitCustodyReasonEnum.ON_ORDER : null, line.ProductUnitBarcodes, movement, cancellationToken);
                     await _inventoryCostingService.RecordReplacementShippedToCustomerAsync(product, line.Quantity, unitLine, now, cancellationToken);
                 }
 

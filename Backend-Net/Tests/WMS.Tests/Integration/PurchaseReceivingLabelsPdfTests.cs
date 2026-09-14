@@ -20,7 +20,7 @@ namespace WMS.Tests.Integration
             await receiveHandler.Handle(new ReceivePurchaseCommand
             {
                 PurchaseId = scenario.Purchase.Id,
-                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ReceivedQuantity = 7 } },
+                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ArrivedQuantity = 7 } },
             }, CancellationToken.None);
 
             var labelsHandler = new GetPurchaseReceivingLabelsPdfQueryHandler(scope.Db, scope.PdfDocumentService);

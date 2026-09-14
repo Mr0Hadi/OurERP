@@ -38,6 +38,8 @@ namespace Infrastructure.Persistence
         public DbSet<SaleReturnEffectObservation> SaleReturnEffectObservations => Set<SaleReturnEffectObservation>();
         public DbSet<SaleReturnEffectMoneyPart> SaleReturnEffectMoneyParts => Set<SaleReturnEffectMoneyPart>();
         public DbSet<ProductUnit> ProductUnits => Set<ProductUnit>();
+        public DbSet<ProductUnitMovement> ProductUnitMovements => Set<ProductUnitMovement>();
+        public DbSet<PurchaseReceivingDiscrepancy> PurchaseReceivingDiscrepancies => Set<PurchaseReceivingDiscrepancy>();
         public DbSet<PurchaseReceivingImage> PurchaseReceivingImages => Set<PurchaseReceivingImage>();
         public DbSet<PurchaseDriver> PurchaseDrivers => Set<PurchaseDriver>();
         public DbSet<PurchaseReceivingNote> PurchaseReceivingNotes => Set<PurchaseReceivingNote>();
@@ -46,6 +48,11 @@ namespace Infrastructure.Persistence
         public DbSet<SaleShippingNote> SaleShippingNotes => Set<SaleShippingNote>();
         public DbSet<PosTerminal> PosTerminals => Set<PosTerminal>();
         public DbSet<InventoryCostLedgerEntry> InventoryCostLedgerEntries => Set<InventoryCostLedgerEntry>();
+
+        public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken)
+        {
+            return Database.BeginTransactionAsync(cancellationToken);
+        }
 
         public async Task<int> ExecuteSqlRawAsync(string sql, CancellationToken cancellationToken = default)
         {
@@ -306,6 +313,41 @@ namespace Infrastructure.Persistence
             modelBuilder.Entity<ProductUnit>()
                 .HasIndex(x => x.PurchaseItemId);
 
+            // Restrict: the movement ledger is append-only history and must never disappear with its unit.
+            // Customer/Supplier/User/document ids are plain columns, not FKs - the ledger records what was true
+            // at the time and must not block or cascade from anything that happens to those rows later.
+            modelBuilder.Entity<ProductUnitMovement>()
+                .HasOne(x => x.ProductUnit)
+                .WithMany()
+                .HasForeignKey(x => x.ProductUnitId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ProductUnitMovement>()
+                .HasIndex(x => new { x.ProductUnitId, x.OccurredAt });
+
+            modelBuilder.Entity<ProductUnitMovement>()
+                .HasIndex(x => x.ProductId);
+
+            modelBuilder.Entity<ProductUnitMovement>()
+                .HasIndex(x => new { x.DocumentKind, x.DocumentId });
+
+            // The claim quota's one query: quarantined units of a purchase by custody reason.
+            modelBuilder.Entity<ProductUnit>()
+                .HasIndex(x => new { x.PurchaseId, x.Status, x.CustodyReason });
+
+            // Cascade from the purchase, like PurchaseReceivingImage; Restrict from the product.
+            modelBuilder.Entity<PurchaseReceivingDiscrepancy>()
+                .HasOne(x => x.Purchase)
+                .WithMany()
+                .HasForeignKey(x => x.PurchaseId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PurchaseReceivingDiscrepancy>()
+                .HasOne(x => x.Product)
+                .WithMany()
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             modelBuilder.Entity<PurchaseReceivingImage>()
                 .HasOne(x => x.Purchase)
                 .WithMany()
@@ -389,6 +431,10 @@ namespace Infrastructure.Persistence
 
             modelBuilder.Entity<InventoryCostLedgerEntry>()
                 .Property(x => x.RevenueDelta)
+                .HasPrecision(18, 4);
+
+            modelBuilder.Entity<InventoryCostLedgerEntry>()
+                .Property(x => x.OffPoolValueDelta)
                 .HasPrecision(18, 4);
 
             modelBuilder.Entity<InventoryCostLedgerEntry>()

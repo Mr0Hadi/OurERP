@@ -79,7 +79,7 @@ namespace WMS.Tests.Integration
                 Composition = new EffectCompositionDto
                 {
                     Quantity = 5,
-                    MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 5 * scenario.Item.UnitPrice },
+                    MoneyOut = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 5 * scenario.Item.UnitPrice },
                 },
             }, CancellationToken.None);
 

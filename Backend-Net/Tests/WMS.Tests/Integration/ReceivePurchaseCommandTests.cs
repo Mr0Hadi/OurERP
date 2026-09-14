@@ -22,7 +22,7 @@ namespace WMS.Tests.Integration
             var command = new ReceivePurchaseCommand
             {
                 PurchaseId = scenario.Purchase.Id,
-                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ReceivedQuantity = 6 } },
+                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ArrivedQuantity = 6 } },
             };
 
             await handler.Handle(command, CancellationToken.None);
@@ -38,20 +38,23 @@ namespace WMS.Tests.Integration
         }
 
         [Fact]
-        public async Task Handle_OverBudgetReceiving_Throws()
+        public async Task Handle_MoreThanOwed_IsRecordedAsQuarantinedExcess_NotRefused()
         {
+            // Arriving beyond what the line still owes is a fact to record, not an error.
             using var db = new TestDatabase();
             using var scope = db.NewScope();
             var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 5, stock: 0);
 
-            var handler = MakeHandler(scope);
-            var command = new ReceivePurchaseCommand
+            await MakeHandler(scope).Handle(new ReceivePurchaseCommand
             {
                 PurchaseId = scenario.Purchase.Id,
-                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ReceivedQuantity = 6 } },
-            };
+                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ArrivedQuantity = 6 } },
+            }, CancellationToken.None);
 
-            await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(command, CancellationToken.None));
+            using var verify = db.NewContext();
+            Assert.Equal(5, verify.PurchaseItems.Single(x => x.Id == scenario.Item.Id).ReceivedQuantity);
+            Assert.Equal(5, verify.Products.Single(x => x.Id == scenario.Product.Id).Stock);
+            Assert.Equal(1, verify.ProductUnits.Count(u => u.Status == ProductUnitStatusEnum.QUARANTINED && u.CustodyReason == UnitCustodyReasonEnum.EXCESS));
         }
 
         [Fact]
@@ -67,7 +70,7 @@ namespace WMS.Tests.Integration
             var command = new ReceivePurchaseCommand
             {
                 PurchaseId = scenario.Purchase.Id,
-                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ReceivedQuantity = 1 } },
+                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ArrivedQuantity = 1 } },
             };
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(command, CancellationToken.None));
@@ -84,13 +87,13 @@ namespace WMS.Tests.Integration
             await handler.Handle(new ReceivePurchaseCommand
             {
                 PurchaseId = scenario.Purchase.Id,
-                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ReceivedQuantity = 5 } },
+                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ArrivedQuantity = 5 } },
             }, CancellationToken.None);
 
             await handler.Handle(new ReceivePurchaseCommand
             {
                 PurchaseId = scenario.Purchase.Id,
-                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ReceivedQuantity = 3 } },
+                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ArrivedQuantity = 3 } },
             }, CancellationToken.None);
 
             using var verify = db.NewContext();
@@ -110,7 +113,7 @@ namespace WMS.Tests.Integration
             await handler.Handle(new ReceivePurchaseCommand
             {
                 PurchaseId = scenario.Purchase.Id,
-                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ReceivedQuantity = 10 } },
+                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ArrivedQuantity = 10 } },
             }, CancellationToken.None);
 
             using var verify = db.NewContext();

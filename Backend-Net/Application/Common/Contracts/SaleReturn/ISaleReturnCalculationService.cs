@@ -39,10 +39,10 @@ namespace Application.Common.Contracts.SaleReturn
         bool HasMovedGoods(Domain.Entities.SaleReturn saleReturn);
 
         /// <summary>
-        /// Whether any money effect is recorded. Money effects are born APPLIED - they record a
-        /// payment that has already happened - so there is no "pending money" state.
+        /// Whether any money effect is APPLIED - a payment that has actually moved and has a ledger row.
+        /// A PENDING money effect (promised, not yet paid) does not count.
         /// </summary>
-        bool HasRecordedMoney(Domain.Entities.SaleReturn saleReturn);
+        bool HasAppliedMoney(Domain.Entities.SaleReturn saleReturn);
 
         /// <summary>
         /// open: no resolution has been registered against any claim yet.
@@ -68,6 +68,13 @@ namespace Application.Common.Contracts.SaleReturn
         int GetClaimableQuantity(Domain.Entities.SaleItem item, List<Domain.Entities.SaleReturn> activeReturns);
 
         /// <summary>
+        /// How many excess units open EXCESS claims on <paramref name="saleItemId"/> still reserve, across active returns: each claim's
+        /// quantity minus what its completed resolutions already disposed of. The caller subtracts it from the line's units SOLD with
+        /// custody EXCESS - the one source for the EXCESS claim quota.
+        /// </summary>
+        int GetOutstandingExcessClaimQuantity(int saleItemId, List<Domain.Entities.SaleReturn> activeReturns);
+
+        /// <summary>
         /// Sale.Status is only ever overridden by return activity to flip to RETURNED once every
         /// unit ever shipped has been settled through a return resolution whose goods effects (if
         /// any) have all completed. Otherwise the sale's own status is untouched.
@@ -76,8 +83,8 @@ namespace Application.Common.Contracts.SaleReturn
 
         /// <summary>
         /// Expands a composition (the same {quantity, goodsIn, goodsOut, money} shape the frontend
-        /// posts) into the Effect rows it represents. Goods effects start PENDING; money effects
-        /// start APPLIED immediately since there is nothing further to execute.
+        /// posts) into the Effect rows it represents. Goods effects start PENDING; a money effect starts
+        /// APPLIED when the request says when it was paid (PaidAt), PENDING otherwise.
         /// </summary>
         List<Domain.Entities.SaleReturnEffect> ExpandComposition(Application.Common.Dtos.Returns.EffectCompositionDto composition, DateTime now);
     }

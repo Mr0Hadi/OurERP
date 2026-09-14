@@ -314,7 +314,7 @@ namespace WMS.Tests.Unit
             var composition = new EffectCompositionDto
             {
                 Quantity = 2,
-                MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.STORE_CREDIT, Amount = 200 },
+                MoneyOut = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.STORE_CREDIT, Amount = 200 },
             };
 
             var effects = _sut.ExpandComposition(composition, DateTime.Now);
@@ -333,7 +333,7 @@ namespace WMS.Tests.Unit
             {
                 Quantity = 2,
                 GoodsOut = new() { new GoodsEffectDto { Quantity = 2 } },
-                MoneyIn = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 50 },
+                MoneyIn = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 50 },
             };
 
             var effects = _sut.ExpandComposition(composition, DateTime.Now);

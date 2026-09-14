@@ -32,8 +32,12 @@ namespace Application.Features.SaleReturn.Commands
         {
             RuleFor(x => x.ClaimId).GreaterThan(0).WithMessage(Validation.RequiredMessage("ادعا"));
             RuleFor(x => x.Composition.Quantity).GreaterThan(0).WithMessage("مقدار تصمیم باید از صفر بیشتر باشد.");
-            RuleFor(x => x.Composition).Must(c => (c.GoodsIn?.Count ?? 0) > 0 || (c.GoodsOut?.Count ?? 0) > 0 || c.MoneyIn != null || c.MoneyOut != null)
-                .WithMessage("تصمیم باید حداقل شامل یک اثر (ورود کالا، خروج کالا یا وجه) باشد.");
+            RuleFor(x => x.Composition).Must(c => c.HasAnyEffect() || c.WriteOff)
+                .WithMessage("تصمیم باید حداقل شامل یک اثر (ورود کالا، خروج کالا یا وجه) یا بخشش صریح (writeOff) باشد.");
+            RuleFor(x => x.Composition).Must(c => !(c.WriteOff && c.HasAnyEffect()))
+                .WithMessage("بخشش (writeOff) یعنی بستن بخشی از ادعا بدون هیچ اثر؛ همراه با اثر مجاز نیست.");
+            RuleFor(x => x.Composition).Must(c => (c.GoodsRelease?.Count ?? 0) == 0 && (c.GoodsScrap?.Count ?? 0) == 0)
+                .WithMessage("مرجوعی فروش قرنطینه ندارد؛ آزادسازی و اسقاط فقط در مرجوعی خرید معنا دارد.");
 
             RuleForEach(x => x.Composition.GoodsIn).ChildRules(goods =>
             {
@@ -123,7 +127,7 @@ namespace Application.Features.SaleReturn.Commands
             // has to re-apply the default.
             foreach (var effect in effects)
             {
-                if (effect.Direction is ReturnEffectDirectionEnum.GOODS_IN or ReturnEffectDirectionEnum.GOODS_OUT)
+                if (ReturnEffectDirections.IsGoods(effect.Direction))
                     effect.ProductId ??= claim.ProductId;
             }
 
@@ -153,19 +157,21 @@ namespace Application.Features.SaleReturn.Commands
                 Quantity = request.Composition.Quantity,
                 Note = request.Composition.Note,
                 CreatedAt = now,
+                IsWriteOff = request.Composition.WriteOff,
                 Effects = effects,
             };
 
             claim.Resolutions.Add(resolution);
 
-            // A money effect is revenue: MONEY_IN positive, MONEY_OUT negative. RemoveClaimResolution
-            // writes the reversing row.
-            foreach (var money in resolution.Effects.Where(e => e.Direction is ReturnEffectDirectionEnum.MONEY_IN or ReturnEffectDirectionEnum.MONEY_OUT))
-                await _inventoryCostingService.RecordSaleReturnMoneyAsync(claim.Product!, money.Direction, money.Amount!.Value, claim.Id, now, cancellationToken);
+            // An APPLIED money effect is revenue: MONEY_IN positive, MONEY_OUT negative, at the moment it was
+            // paid. RemoveClaimResolution writes the reversing row. A PENDING one writes nothing until
+            // ExecuteMoneyEffectCommand records the payment.
+            foreach (var money in resolution.Effects.Where(e => e.Direction is ReturnEffectDirectionEnum.MONEY_IN or ReturnEffectDirectionEnum.MONEY_OUT && e.Status == ReturnEffectStatusEnum.APPLIED))
+                await _inventoryCostingService.RecordSaleReturnMoneyAsync(claim.Product!, money.Direction, money.Amount!.Value, claim.Id, money.AppliedAt ?? now, cancellationToken);
 
-            // A resolution with no pending goods effect (money-only) settles the claimed quantity
-            // immediately; one with a pending goods effect settles it later, once
-            // ExecuteGoodsRoundCommand brings that effect's AppliedQuantity up to its Quantity.
+            // A resolution with no pending effect settles the claimed quantity immediately; one with a
+            // pending effect settles it later, when ExecuteGoodsRoundCommand or ExecuteMoneyEffectCommand
+            // clears the last one.
             // ON_ORDER only: an EXCESS claim carries its line id too, but must never settle that line.
             if (claim.OnOrderSaleItemId is int saleItemId && resolution.Effects.All(e => e.Status != ReturnEffectStatusEnum.PENDING))
             {

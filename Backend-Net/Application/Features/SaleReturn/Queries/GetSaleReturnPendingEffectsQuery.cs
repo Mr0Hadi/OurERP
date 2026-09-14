@@ -45,7 +45,8 @@ namespace Application.Features.SaleReturn.Queries
 
             var pending = returns
                 .SelectMany(r => r.Claims.SelectMany(c => c.Resolutions.SelectMany(res => res.Effects.Select(e => (returnDoc: r, claim: c, effect: e)))))
-                .Where(x => x.effect.Status == ReturnEffectStatusEnum.PENDING)
+                // Goods only: this is the warehouse queue, and a pending money effect is finance's to execute.
+                .Where(x => x.effect.Status == ReturnEffectStatusEnum.PENDING && Application.Common.Returns.ReturnEffectDirections.IsGoods(x.effect.Direction))
                 .Select(x => new PendingEffectDto
                 {
                     EffectId = x.effect.Id,

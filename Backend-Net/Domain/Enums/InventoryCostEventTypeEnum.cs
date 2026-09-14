@@ -42,5 +42,26 @@ namespace Domain.Enums
 
         /// <summary>A purchase-return MONEY_OUT (we pay the supplier): RevenueDelta -amount, read by the purchase report as added purchase spend.</summary>
         PURCHASE_RETURN_MONEY_OUT = 14,
+
+        /// <summary>Receiving: defective units counted on the order line go to quarantine. Paid for, so their value is recorded in
+        /// OffPoolValueDelta at the line's net price; QuantityDelta and the running pool are untouched.</summary>
+        PURCHASE_RECEIVED_QUARANTINED = 15,
+
+        /// <summary>A GOODS_RELEASE: quarantined units enter the sellable pool at the effect's UnitCost (fallbacks as for GOODS_IN),
+        /// and the same value leaves OffPoolValueDelta.</summary>
+        QUARANTINE_RELEASED = 16,
+
+        /// <summary>A GOODS_SCRAP: OffPoolValueDelta -quantity x UnitCost. That amount is the reported scrap loss (sale report).</summary>
+        QUARANTINE_SCRAPPED = 17,
+
+        /// <summary>A purchase-return GOODS_OUT taken from quarantine: the pool is untouched, OffPoolValueDelta -quantity x UnitCost.</summary>
+        PURCHASE_RETURN_SHIPPED_FROM_QUARANTINE = 18,
+
+        /// <summary>A purchase-return GOODS_IN's damaged part, held in quarantine: OffPoolValueDelta +quantity x UnitCost.</summary>
+        PURCHASE_RETURN_REPLACEMENT_QUARANTINED = 19,
+
+        /// <summary>ShipSaleCommand ExcessQuantity: units sent to the customer beyond the order leave the pool at the running average,
+        /// with no revenue. Counted by the sale report as cost, like a replacement shipped to a customer.</summary>
+        SALE_SHIPPED_EXCESS = 20,
     }
 }

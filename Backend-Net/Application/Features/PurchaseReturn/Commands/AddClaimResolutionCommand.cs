@@ -35,8 +35,21 @@ namespace Application.Features.PurchaseReturn.Commands
             RuleFor(x => x.Composition).NotNull().WithMessage(Validation.RequiredMessage("ترکیب اثرها"));
             RuleFor(x => x.ClaimId).GreaterThan(0).WithMessage(Validation.RequiredMessage("ادعا"));
             RuleFor(x => x.Composition.Quantity).GreaterThan(0).WithMessage("مقدار تصمیم باید از صفر بیشتر باشد.");
-            RuleFor(x => x.Composition).Must(c => (c.GoodsIn?.Count ?? 0) > 0 || (c.GoodsOut?.Count ?? 0) > 0 || c.MoneyIn != null || c.MoneyOut != null)
-                .WithMessage("تصمیم باید حداقل شامل یک اثر (ورود کالا، خروج کالا یا وجه) باشد.");
+            RuleFor(x => x.Composition).Must(c => c.HasAnyEffect() || c.WriteOff)
+                .WithMessage("تصمیم باید حداقل شامل یک اثر (ورود، خروج، آزادسازی یا اسقاط کالا، یا وجه) یا بخشش صریح (writeOff) باشد.");
+            RuleFor(x => x.Composition).Must(c => !(c.WriteOff && c.HasAnyEffect()))
+                .WithMessage("بخشش (writeOff) یعنی بستن بخشی از ادعا بدون هیچ اثر؛ همراه با اثر مجاز نیست.");
+
+            RuleForEach(x => x.Composition.GoodsRelease).ChildRules(goods =>
+            {
+                goods.RuleFor(g => g.Quantity).GreaterThan(0).WithMessage("مقدار آزادسازی باید از صفر بیشتر باشد.");
+                goods.RuleFor(g => g.ProductId).GreaterThan(0).WithMessage("کالا نامعتبر است.").When(g => g.ProductId.HasValue);
+            });
+            RuleForEach(x => x.Composition.GoodsScrap).ChildRules(goods =>
+            {
+                goods.RuleFor(g => g.Quantity).GreaterThan(0).WithMessage("مقدار اسقاط باید از صفر بیشتر باشد.");
+                goods.RuleFor(g => g.ProductId).GreaterThan(0).WithMessage("کالا نامعتبر است.").When(g => g.ProductId.HasValue);
+            });
 
             RuleForEach(x => x.Composition.GoodsIn).ChildRules(goods =>
             {
@@ -139,7 +152,7 @@ namespace Application.Features.PurchaseReturn.Commands
             // has to re-apply the default.
             foreach (var effect in effects)
             {
-                if (effect.Direction is ReturnEffectDirectionEnum.GOODS_IN or ReturnEffectDirectionEnum.GOODS_OUT)
+                if (ReturnEffectDirections.IsGoods(effect.Direction))
                     effect.ProductId ??= claim.ProductId;
             }
 
@@ -169,19 +182,21 @@ namespace Application.Features.PurchaseReturn.Commands
                 Quantity = request.Composition.Quantity,
                 Note = request.Composition.Note,
                 CreatedAt = now,
+                IsWriteOff = request.Composition.WriteOff,
                 Effects = effects,
             };
 
             claim.Resolutions.Add(resolution);
 
-            // A money effect is revenue: MONEY_IN positive, MONEY_OUT negative. RemoveClaimResolution
-            // writes the reversing row.
-            foreach (var money in resolution.Effects.Where(e => e.Direction is ReturnEffectDirectionEnum.MONEY_IN or ReturnEffectDirectionEnum.MONEY_OUT))
-                await _inventoryCostingService.RecordPurchaseReturnMoneyAsync(claim.Product!, money.Direction, money.Amount!.Value, claim.Id, now, cancellationToken);
+            // An APPLIED money effect is revenue: MONEY_IN positive, MONEY_OUT negative, at the moment it was
+            // paid. RemoveClaimResolution writes the reversing row. A PENDING one writes nothing until
+            // ExecuteMoneyEffectCommand records the payment.
+            foreach (var money in resolution.Effects.Where(e => e.Direction is ReturnEffectDirectionEnum.MONEY_IN or ReturnEffectDirectionEnum.MONEY_OUT && e.Status == ReturnEffectStatusEnum.APPLIED))
+                await _inventoryCostingService.RecordPurchaseReturnMoneyAsync(claim.Product!, money.Direction, money.Amount!.Value, claim.Id, money.AppliedAt ?? now, cancellationToken);
 
-            // A resolution with no pending goods effect (money-only) settles the claimed quantity
-            // immediately; one with a pending goods effect settles it later, once
-            // ExecuteGoodsRoundCommand brings that effect's AppliedQuantity up to its Quantity.
+            // A resolution with no pending effect settles the claimed quantity immediately; one with a
+            // pending effect settles it later, when ExecuteGoodsRoundCommand or ExecuteMoneyEffectCommand
+            // clears the last one.
             // ON_ORDER only: an EXCESS claim carries its line id too, but must never settle that line.
             if (claim.OnOrderPurchaseItemId is int purchaseItemId && resolution.Effects.All(e => e.Status != ReturnEffectStatusEnum.PENDING))
             {

@@ -140,7 +140,7 @@ namespace WMS.Tests.Integration
                 Composition = new EffectCompositionDto
                 {
                     Quantity = 5,
-                    MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 5 * scenario.Item.UnitPrice },
+                    MoneyOut = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 5 * scenario.Item.UnitPrice },
                 },
             }, CancellationToken.None);
 
@@ -165,7 +165,7 @@ namespace WMS.Tests.Integration
             await addHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 5, GoodsIn = new() { new GoodsEffectDto { Quantity = 5, UnitPrice = 1500 } }, MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 7500 } },
+                Composition = new EffectCompositionDto { Quantity = 5, GoodsIn = new() { new GoodsEffectDto { Quantity = 5, UnitPrice = 1500 } }, MoneyOut = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 7500 } },
             }, CancellationToken.None);
 
             var effectId = scope.Context.SaleReturnEffects.Single(e => e.Direction == ReturnEffectDirectionEnum.GOODS_IN).Id;
@@ -212,7 +212,7 @@ namespace WMS.Tests.Integration
                         new GoodsEffectDto { Quantity = 3, UnitPrice = 1500 },
                         new GoodsEffectDto { Quantity = 2, ProductId = otherProduct.Id, UnitPrice = scenario.Item.UnitPrice },
                     },
-                    MoneyIn = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 5 * scenario.Item.UnitPrice },
+                    MoneyIn = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 5 * scenario.Item.UnitPrice },
                 },
             }, CancellationToken.None);
 
@@ -236,7 +236,7 @@ namespace WMS.Tests.Integration
             await addHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 5, GoodsIn = new() { new GoodsEffectDto { Quantity = 5, UnitPrice = 1500 } }, MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 7500 } },
+                Composition = new EffectCompositionDto { Quantity = 5, GoodsIn = new() { new GoodsEffectDto { Quantity = 5, UnitPrice = 1500 } }, MoneyOut = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 7500 } },
             }, CancellationToken.None);
 
             var effectId = scope.Context.SaleReturnEffects.Single(e => e.Direction == ReturnEffectDirectionEnum.GOODS_IN).Id;
@@ -282,7 +282,7 @@ namespace WMS.Tests.Integration
             await addHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 5, GoodsOut = new() { new GoodsEffectDto { Quantity = 5, UnitPrice = 1500 } }, MoneyIn = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 7500 } },
+                Composition = new EffectCompositionDto { Quantity = 5, GoodsOut = new() { new GoodsEffectDto { Quantity = 5, UnitPrice = 1500 } }, MoneyIn = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 7500 } },
             }, CancellationToken.None);
 
             var effectId = scope.Context.SaleReturnEffects.Single(e => e.Direction == ReturnEffectDirectionEnum.GOODS_OUT).Id;
@@ -311,7 +311,7 @@ namespace WMS.Tests.Integration
             await addHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 5, GoodsIn = new() { new GoodsEffectDto { Quantity = 5, UnitPrice = 1500 } }, MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 7500 } },
+                Composition = new EffectCompositionDto { Quantity = 5, GoodsIn = new() { new GoodsEffectDto { Quantity = 5, UnitPrice = 1500 } }, MoneyOut = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 7500 } },
             }, CancellationToken.None);
 
             var effectId = scope.Context.SaleReturnEffects.Single(e => e.Direction == ReturnEffectDirectionEnum.GOODS_IN).Id;
@@ -341,7 +341,7 @@ namespace WMS.Tests.Integration
             await addHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 5, MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 500 } },
+                Composition = new EffectCompositionDto { Quantity = 5, MoneyOut = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 500 } },
             }, CancellationToken.None);
 
             var resolutionId = scope.Context.SaleReturnResolutions.Single().Id;
@@ -379,7 +379,7 @@ namespace WMS.Tests.Integration
             await addHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 5, MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 500 } },
+                Composition = new EffectCompositionDto { Quantity = 5, MoneyOut = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 500 } },
             }, CancellationToken.None);
 
             var returnId = scope.Context.SaleReturns.Single().Id;
@@ -474,7 +474,7 @@ namespace WMS.Tests.Integration
             await addHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 5, GoodsIn = new() { new GoodsEffectDto { Quantity = 5, UnitPrice = 1500 } }, MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 7500 } },
+                Composition = new EffectCompositionDto { Quantity = 5, GoodsIn = new() { new GoodsEffectDto { Quantity = 5, UnitPrice = 1500 } }, MoneyOut = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 7500 } },
             }, CancellationToken.None);
 
             var handler = new GetSaleReturnPendingEffectsQueryHandler(scope.Db);
@@ -543,7 +543,7 @@ namespace WMS.Tests.Integration
             await NewAdd(scope).Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 2, MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 3000 } },
+                Composition = new EffectCompositionDto { Quantity = 2, MoneyOut = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 3000 } },
             }, CancellationToken.None);
 
             foreach (var attempt in new Func<Task>[]
@@ -579,7 +579,7 @@ namespace WMS.Tests.Integration
             await NewAdd(scope).Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 5, GoodsIn = new() { new GoodsEffectDto { Quantity = 5, UnitPrice = 1500 } }, MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 7500 } },
+                Composition = new EffectCompositionDto { Quantity = 5, GoodsIn = new() { new GoodsEffectDto { Quantity = 5, UnitPrice = 1500 } }, MoneyOut = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 7500 } },
             }, CancellationToken.None);
 
             var effectId = scope.Context.SaleReturnEffects.Single(e => e.Direction == ReturnEffectDirectionEnum.GOODS_IN).Id;
@@ -643,7 +643,7 @@ namespace WMS.Tests.Integration
             var added = await NewAdd(scope).Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 2, GoodsIn = new() { new GoodsEffectDto { Quantity = 2, UnitPrice = 1500 } }, MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 3000 } },
+                Composition = new EffectCompositionDto { Quantity = 2, GoodsIn = new() { new GoodsEffectDto { Quantity = 2, UnitPrice = 1500 } }, MoneyOut = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 3000 } },
             }, CancellationToken.None);
             var addedDoc = Assert.IsType<SaleReturnDetailDto>(added.Data);
             var effectId = Assert.Single(Assert.Single(addedDoc.Claims).Resolutions).Effects.Single(e => e.Direction == ReturnEffectDirectionEnum.GOODS_IN).Id;
@@ -676,12 +676,22 @@ namespace WMS.Tests.Integration
             return ((SaleReturnDetailDto)res.Data!).Id;
         }
 
+        // An EXCESS claim covers only excess recorded as shipped; the line is already fully shipped.
+        private static Task ShipExcess(TestScope scope, SaleScenario scenario, int quantity) =>
+            new Application.Features.Sale.Commands.ShipSaleCommandHandler(scope.Db, scope.ProductUnitService, scope.InventoryCostingService, scope.UnitOfWork)
+                .Handle(new Application.Features.Sale.Commands.ShipSaleCommand
+                {
+                    SaleId = scenario.Sale.Id,
+                    Items = new() { new Application.Features.Sale.Dtos.ShipSaleItemDto { SaleItemId = scenario.Item.Id, ExcessQuantity = quantity } },
+                }, CancellationToken.None);
+
         [Fact]
         public async Task CreateSaleReturn_ExcessClaim_KeepsOrderLineAndIsPricedAtTheLine()
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 5, shippedQuantity: 5, stock: 0, unitPrice: 1500);
+            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 5, shippedQuantity: 5, stock: 2, unitPrice: 1500);
+            await ShipExcess(scope, scenario, 2);
 
             // The line's price must be sent as-is; a different price is a 400 (ReturnBalanceAndExcessTests).
             await CreateReturn(scope, scenario, ExcessClaim(scenario, quantity: 2, clientPrice: 1500));
@@ -744,13 +754,14 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             // stock: 2 - a money-only resolution on off-invoice goods writes the kept extras off.
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 2, shippedQuantity: 2, stock: 2);
+            await ShipExcess(scope, scenario, 2);
             await CreateReturn(scope, scenario, ExcessClaim(scenario, 2));
             var claimId = scope.Context.SaleReturnClaims.Single().Id;
 
             await NewAdd(scope).Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 2, MoneyIn = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 3000 } },
+                Composition = new EffectCompositionDto { Quantity = 2, MoneyIn = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 3000 } },
             }, CancellationToken.None);
 
             using var verify = db.NewContext();
@@ -762,11 +773,13 @@ namespace WMS.Tests.Integration
         [Fact]
         public async Task ExcessClaim_GoodsInRound_RaisesStockLikeAnyOtherClaim_AndDoesNotSettle()
         {
-            // The effect layer does not know the claim is off the invoice: GOODS_IN raises stock and mints
-            // units for every claim. The claim has no line, so the line's own SOLD units are left alone.
+            // GOODS_IN raises stock like any claim. The units that come back are the excess ones recorded on the line
+            // (ShipSale ExcessQuantity) - restored, not minted - and the line's ordered SOLD units are left alone.
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 5, shippedQuantity: 5, stock: 0);
+            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 5, shippedQuantity: 5, stock: 2);
+            await ShipExcess(scope, scenario, 2);
+            var unitsBefore = scope.Context.ProductUnits.Count(u => u.ProductId == scenario.Product.Id);
             var returnId = await CreateReturn(scope, scenario, ExcessClaim(scenario, 2));
             var claimId = scope.Context.SaleReturnClaims.Single().Id;
 
@@ -787,6 +800,7 @@ namespace WMS.Tests.Integration
             Assert.Equal(2, verify.Products.Single(x => x.Id == scenario.Product.Id).Stock);
             Assert.Equal(5, verify.ProductUnits.Count(u => u.SaleItemId == scenario.Item.Id && u.Status == ProductUnitStatusEnum.SOLD));
             Assert.Equal(2, verify.ProductUnits.Count(u => u.ProductId == scenario.Product.Id && u.Status == ProductUnitStatusEnum.IN_STOCK));
+            Assert.Equal(unitsBefore, verify.ProductUnits.Count(u => u.ProductId == scenario.Product.Id)); // restored, not minted
             Assert.Equal(0, verify.SaleItems.Single(x => x.Id == scenario.Item.Id).SettledQuantity);
         }
 
@@ -801,7 +815,7 @@ namespace WMS.Tests.Integration
             await NewAdd(scope).Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 5, GoodsIn = new() { new GoodsEffectDto { Quantity = 5, UnitPrice = 1500 } }, MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 7500 } },
+                Composition = new EffectCompositionDto { Quantity = 5, GoodsIn = new() { new GoodsEffectDto { Quantity = 5, UnitPrice = 1500 } }, MoneyOut = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 7500 } },
             }, CancellationToken.None);
 
             var effect = scope.Context.SaleReturnEffects.Single(e => e.Direction == ReturnEffectDirectionEnum.GOODS_IN);

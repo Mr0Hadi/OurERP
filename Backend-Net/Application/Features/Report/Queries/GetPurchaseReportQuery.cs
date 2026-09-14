@@ -43,9 +43,11 @@ namespace Application.Features.Report.Queries
                 .Select(x => new { x.InvoiceDate, x.TotalAmount })
                 .ToListAsync(cancellationToken);
 
+            // Goods received = what entered the sellable pool plus paid-for goods that went straight to quarantine (defective on
+            // the line): both were bought. Excess and unlisted goods were not paid for and write no row.
             var ledgerRows = await _context.InventoryCostLedgerEntries
-                .Where(x => x.EventType == InventoryCostEventTypeEnum.PURCHASE_RECEIVED && x.OccurredAt >= fromDate && x.OccurredAt <= toDate)
-                .Select(x => new { x.OccurredAt, x.InventoryValueDelta })
+                .Where(x => (x.EventType == InventoryCostEventTypeEnum.PURCHASE_RECEIVED || x.EventType == InventoryCostEventTypeEnum.PURCHASE_RECEIVED_QUARANTINED) && x.OccurredAt >= fromDate && x.OccurredAt <= toDate)
+                .Select(x => new { x.OccurredAt, InventoryValueDelta = x.InventoryValueDelta + x.OffPoolValueDelta })
                 .ToListAsync(cancellationToken);
 
             // Purchase-return money is purchase spend, not revenue: the row stores RevenueDelta +amount for a

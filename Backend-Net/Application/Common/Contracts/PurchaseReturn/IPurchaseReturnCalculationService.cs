@@ -38,10 +38,10 @@ namespace Application.Common.Contracts.PurchaseReturn
         bool HasMovedGoods(Domain.Entities.PurchaseReturn purchaseReturn);
 
         /// <summary>
-        /// Whether any money effect is recorded. Money effects are born APPLIED - they record a
-        /// payment that has already happened - so there is no "pending money" state.
+        /// Whether any money effect is APPLIED - a payment that has actually moved and has a ledger row.
+        /// A PENDING money effect (promised, not yet paid) does not count.
         /// </summary>
-        bool HasRecordedMoney(Domain.Entities.PurchaseReturn purchaseReturn);
+        bool HasAppliedMoney(Domain.Entities.PurchaseReturn purchaseReturn);
 
         /// <summary>
         /// open: no resolution has been registered against any claim yet.
@@ -67,6 +67,14 @@ namespace Application.Common.Contracts.PurchaseReturn
         int GetClaimableQuantity(Domain.Entities.PurchaseItem item, List<Domain.Entities.PurchaseReturn> activeReturns);
 
         /// <summary>
+        /// How many held units existing OFF_ORDER claims of <paramref name="kind"/> still spoken for, across active returns: each
+        /// claim's quantity minus what its completed resolutions (no pending effect) already disposed of. EXCESS claims match on
+        /// the line, UNLISTED claims on the product. The caller subtracts this from the quarantined unit count of the same custody
+        /// reason - the one source for the off-order claim quota.
+        /// </summary>
+        int GetOutstandingOffOrderClaimQuantity(ReturnOffScopeKindEnum kind, int? purchaseItemId, int productId, List<Domain.Entities.PurchaseReturn> activeReturns);
+
+        /// <summary>
         /// Purchase.Status is only ever overridden by return activity to flip back to RECEIVED
         /// once every unit ever received has been settled through a return resolution whose goods
         /// effects (if any) have all completed. Otherwise the purchase's own status is untouched.
@@ -75,8 +83,8 @@ namespace Application.Common.Contracts.PurchaseReturn
 
         /// <summary>
         /// Expands a composition (the same {quantity, goodsIn, goodsOut, money} shape the frontend
-        /// posts) into the Effect rows it represents. Goods effects start PENDING; money effects
-        /// start APPLIED immediately since there is nothing further to execute.
+        /// posts) into the Effect rows it represents. Goods effects start PENDING; a money effect starts
+        /// APPLIED when the request says when it was paid (PaidAt), PENDING otherwise.
         /// </summary>
         List<Domain.Entities.PurchaseReturnEffect> ExpandComposition(EffectCompositionDto composition, DateTime now);
     }

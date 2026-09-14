@@ -30,6 +30,8 @@ namespace Application.Common.Contracts.Context
         DbSet<SaleReturnEffectObservation> SaleReturnEffectObservations { get; }
         DbSet<SaleReturnEffectMoneyPart> SaleReturnEffectMoneyParts { get; }
         DbSet<Domain.Entities.ProductUnit> ProductUnits { get; }
+        DbSet<ProductUnitMovement> ProductUnitMovements { get; }
+        DbSet<PurchaseReceivingDiscrepancy> PurchaseReceivingDiscrepancies { get; }
         DbSet<PurchaseReceivingImage> PurchaseReceivingImages { get; }
         DbSet<PurchaseDriver> PurchaseDrivers { get; }
         DbSet<PurchaseReceivingNote> PurchaseReceivingNotes { get; }
@@ -46,6 +48,9 @@ namespace Application.Common.Contracts.Context
         void Dispose();
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken);
+
+        /// <summary>Only for IUnitOfWork.ExecuteInTransactionAsync - handlers compose atomic work through the unit of work.</summary>
+        Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken);
 
         Task<int> ExecuteSqlRawAsync(string sql, CancellationToken cancellationToken = default);
     }

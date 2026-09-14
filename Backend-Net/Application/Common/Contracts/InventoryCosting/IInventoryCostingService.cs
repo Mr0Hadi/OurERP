@@ -35,9 +35,29 @@ namespace Application.Common.Contracts.InventoryCosting
         /// PurchaseItem; the effective cost entering the pool is unitPrice * (100-discount)/100.</summary>
         Task RecordPurchaseReceiptAsync(Product product, int quantity, ulong unitPrice, int discountPercent, int purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken);
 
+        /// <summary>ReceivePurchaseCommand, defective units counted on the line and held in quarantine: paid for at the line's net
+        /// price, but not sellable, so the value goes to OffPoolValueDelta and the running pool/average are untouched.</summary>
+        Task RecordPurchaseReceiptQuarantinedAsync(Product product, int quantity, ulong unitPrice, int discountPercent, int purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken);
+
+        /// <summary>GOODS_RELEASE: quarantined units enter the pool at <paramref name="unitCost"/> (null: running average, else
+        /// Product.PurchasePrice; an explicit 0 stays 0) and the same value leaves the off-pool balance.</summary>
+        Task RecordQuarantineReleasedAsync(Product product, int quantity, ulong? unitCost, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
+
+        /// <summary>GOODS_SCRAP: quarantined units are scrapped; the loss (quantity x unit cost, same fallbacks) leaves the off-pool balance.</summary>
+        Task RecordQuarantineScrappedAsync(Product product, int quantity, ulong? unitCost, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
+
+        /// <summary>Purchase-return GOODS_OUT from quarantine: nothing leaves the pool; quantity x unit cost leaves the off-pool balance.</summary>
+        Task RecordPurchaseReturnShippedFromQuarantineAsync(Product product, int quantity, ulong? unitCost, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
+
+        /// <summary>Purchase-return GOODS_IN, the damaged part held in quarantine: quantity x unit cost enters the off-pool balance.</summary>
+        Task RecordPurchaseReturnReplacementQuarantinedAsync(Product product, int quantity, ulong? unitCost, int? purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken);
+
         /// <summary>ShipSaleCommand. Consumes at the current running average (AVCO); revenue is
         /// unitPrice * (100-discountPercent)/100 * quantity.</summary>
         Task RecordSaleShipmentAsync(Product product, int quantity, ulong unitPrice, int discountPercent, int saleItemId, DateTime occurredAt, CancellationToken cancellationToken);
+
+        /// <summary>ShipSaleCommand ExcessQuantity: leaves the pool at the running average with no revenue (SALE_SHIPPED_EXCESS).</summary>
+        Task RecordSaleShippedExcessAsync(Product product, int quantity, int saleItemId, DateTime occurredAt, CancellationToken cancellationToken);
 
         /// <summary>SaleReturn ExecuteGoodsRoundCommand, GOODS_IN: enters the pool at <paramref name="unitCost"/>; when null, the running average, or Product.PurchasePrice when that is 0.</summary>
         Task RecordSaleReturnRestockAsync(Product product, int quantity, ulong? unitCost, int? saleItemId, DateTime occurredAt, CancellationToken cancellationToken);

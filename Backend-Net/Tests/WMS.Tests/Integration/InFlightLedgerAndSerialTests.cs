@@ -1,3 +1,4 @@
+using Application.Common.Contracts.ProductUnit;
 using Application.Common.Dtos.Returns;
 using Application.Features.Purchase.Commands;
 using Application.Features.Purchase.Dtos;
@@ -64,8 +65,8 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 10, stock: 0);
 
-            var first = await scope.ProductUnitService.MintAsync(scenario.Product, 2, null, CancellationToken.None);
-            var second = await scope.ProductUnitService.MintAsync(scenario.Product, 3, null, CancellationToken.None);
+            var first = await scope.ProductUnitService.MintAsync(scenario.Product, 2, UnitOrigin.None, Movements.Test, CancellationToken.None);
+            var second = await scope.ProductUnitService.MintAsync(scenario.Product, 3, UnitOrigin.None, Movements.Test, CancellationToken.None);
 
             Assert.Equal(new[] { 1, 2, 3, 4, 5 }, first.Concat(second).Select(u => u.SerialNumber).ToArray());
 
@@ -92,7 +93,7 @@ namespace WMS.Tests.Integration
                 .Handle(new ReceivePurchaseCommand
                 {
                     PurchaseId = scenario.Purchase.Id,
-                    Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ReceivedQuantity = 7 } },
+                    Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ArrivedQuantity = 7 } },
                 }, CancellationToken.None);
 
             await new CreatePurchaseReturnCommandHandler(scope.Db, scope.PurchaseReturnRepository, scope.PurchaseReturnCalculation, FakeObjectStorage.Instance, scope.UnitOfWork)
@@ -121,7 +122,7 @@ namespace WMS.Tests.Integration
                     {
                         Quantity = 3,
                         GoodsIn = new() { new GoodsEffectDto { Quantity = 3, UnitPrice = 1000 } },
-                        MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 3000 },
+                        MoneyOut = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 3000 },
                     },
                 }, CancellationToken.None);
 

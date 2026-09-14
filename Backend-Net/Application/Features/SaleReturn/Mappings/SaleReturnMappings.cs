@@ -39,6 +39,7 @@ public static class SaleReturnMappings
         Quantity = r.Quantity,
         Note = r.Note,
         DecidedAt = r.CreatedAt,
+        IsWriteOff = r.IsWriteOff,
         Effects = [.. r.Effects.Select(e => e.ToDto())],
     };
 

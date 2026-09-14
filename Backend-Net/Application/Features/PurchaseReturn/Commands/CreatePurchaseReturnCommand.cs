@@ -141,6 +141,39 @@ namespace Application.Features.PurchaseReturn.Commands
                     throw new ValidationCustomException($"مقدار ادعاشده برای «{purchaseItem.Product.Name}» از باقیمانده قابل مرجوع کردن این قلم بیشتر است.");
             }
 
+            // OFF_ORDER claims are capped by the goods we actually hold for that reason: quarantined units of this purchase whose
+            // CustodyReason matches (EXCESS on the named line, UNLISTED of the product), minus what open claims already reserve.
+            // CustodyReason is the only source - the receiving discrepancy rows are never read for this.
+            var offOrderClaimGroups = request.Claims
+                .Where(c => c.Scope == ReturnClaimScopeEnum.OFF_ORDER && c.OffScopeKind.HasValue)
+                .GroupBy(c => new { Kind = c.OffScopeKind!.Value, LineId = c.OffScopeKind == ReturnOffScopeKindEnum.EXCESS ? c.OrderLineId : null, c.ProductId })
+                .ToList();
+
+            if (offOrderClaimGroups.Count > 0)
+            {
+                var held = await _context.ProductUnits
+                    .Where(u => u.PurchaseId == request.PurchaseId && u.Status == ProductUnitStatusEnum.QUARANTINED
+                        && (u.CustodyReason == UnitCustodyReasonEnum.EXCESS || u.CustodyReason == UnitCustodyReasonEnum.UNLISTED))
+                    .GroupBy(u => new { u.CustodyReason, u.PurchaseItemId, u.ProductId })
+                    .Select(g => new { g.Key.CustodyReason, g.Key.PurchaseItemId, g.Key.ProductId, Count = g.Count() })
+                    .ToListAsync(cancellationToken);
+
+                foreach (var group in offOrderClaimGroups)
+                {
+                    var isExcess = group.Key.Kind == ReturnOffScopeKindEnum.EXCESS;
+                    var available = isExcess
+                        ? held.Where(h => h.CustodyReason == UnitCustodyReasonEnum.EXCESS && h.PurchaseItemId == group.Key.LineId).Sum(h => h.Count)
+                        : held.Where(h => h.CustodyReason == UnitCustodyReasonEnum.UNLISTED && h.ProductId == group.Key.ProductId).Sum(h => h.Count);
+
+                    var claimable = Math.Max(0, available - _purchaseReturnCalculationService.GetOutstandingOffOrderClaimQuantity(group.Key.Kind, group.Key.LineId, group.Key.ProductId, activeReturns));
+
+                    if (group.Sum(c => c.Quantity) > claimable)
+                        throw new ValidationCustomException(isExcess
+                            ? $"مقدار ادعای «بیش از مقدار سفارش» از کالای مازادِ در قرنطینه‌ی این قلم ({claimable} عدد قابل ادعا) بیشتر است؛ مازاد باید هنگام دریافت ثبت شده باشد."
+                            : $"مقدار ادعای «کالای خارج از سفارش» از کالای خارج از سندِ در قرنطینه‌ی این خرید ({claimable} عدد قابل ادعا) بیشتر است؛ کالا باید هنگام دریافت ثبت شده باشد.");
+                }
+            }
+
             // PreviousReturnId was a pure client-supplied pass-through: nothing checked that it
             // pointed at a return on this same document, or that it existed at all. A cycle is not
             // reachable here - a brand-new row cannot yet be anyone's target.

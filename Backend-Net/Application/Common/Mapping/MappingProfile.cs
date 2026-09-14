@@ -67,7 +67,9 @@ namespace Application.Common.Mapping
 			// AutoMapper can't sign it here because signing needs IObjectStorageService.
 			CreateMap<Product, ProductDto>()
 				.ForMember(dest => dest.ImageKey, opt => opt.MapFrom(src => src.ImageUrl))
-				.ForMember(dest => dest.ImageUrl, opt => opt.Ignore());
+				.ForMember(dest => dest.ImageUrl, opt => opt.Ignore())
+				// Counted from ProductUnits by the query, not a column.
+				.ForMember(dest => dest.QuarantinedCount, opt => opt.Ignore());
 
 			CreateMap<CreateProductCategoryCommand, ProductCategory>()
 				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));

@@ -1,11 +1,14 @@
-﻿using Application.Common.Contracts.Repositories;
+﻿using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.Product.Dtos;
 using AutoMapper;
 using Common.Exceptions;
+using Domain.Enums;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.Product.Queries
 {
@@ -19,11 +22,13 @@ namespace Application.Features.Product.Queries
         private readonly IProductRepository _productRepository;
         private readonly IMapper _mapper;
         private readonly IObjectStorageService _objectStorageService;
-        public GetProductDetailQueryHandler(IProductRepository productRepository, IMapper mapper, IObjectStorageService objectStorageService)
+        private readonly IWMSDbContext _context;
+        public GetProductDetailQueryHandler(IProductRepository productRepository, IMapper mapper, IObjectStorageService objectStorageService, IWMSDbContext context)
         {
             _productRepository = productRepository;
             _mapper = mapper;
             _objectStorageService = objectStorageService;
+            _context = context;
         }
         public async Task<ResponseDto> Handle(GetProductDetailQuery request, CancellationToken cancellationToken)
         {
@@ -32,6 +37,7 @@ namespace Application.Features.Product.Queries
             var data = await _productRepository.GetByIdAsync(request.Id, cancellationToken) ?? throw new NotFoundCustomException("محصول مورد نظر یافت نشد.");
             var dto = _mapper.Map<ProductDto>(data);
             dto.ImageUrl = _objectStorageService.GetFixedUrl(dto.ImageKey);
+            dto.QuarantinedCount = await _context.ProductUnits.CountAsync(u => u.ProductId == data.Id && u.Status == ProductUnitStatusEnum.QUARANTINED, cancellationToken);
 
             res.Data = dto;
 

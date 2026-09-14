@@ -16,13 +16,14 @@ namespace Application.Common.Returns
     /// REJECTED        no (→ Reopen)              yes
     /// CANCELLED       no       no       no       no
     /// </code>
-    /// * refused while goods have physically moved through a goods round (no way back), or while a
-    /// money effect is recorded (way back: remove that resolution, then retry).
+    /// * refused while goods have physically moved through a goods round (no way back), or while an
+    /// APPLIED money effect exists (way back: remove that resolution, then retry).
     ///
-    /// Why money locks: a money effect is born APPLIED because it records a payment that already
-    /// happened, and it also writes a revenue row to the inventory cost ledger.
-    /// Cancelling around it would leave a recorded payment hanging off a dead return. Removing the
-    /// resolution is the path that reverses it properly, so the message sends the user there.
+    /// Why applied money locks: an APPLIED money effect is a payment that has actually moved, and it has
+    /// written a revenue row to the inventory cost ledger. Cancelling around it would leave a real payment
+    /// hanging off a dead return. Removing the resolution is the path that reverses it properly, so the
+    /// message sends the user there. A PENDING money effect is only a promise - no money moved, no ledger
+    /// row - so it does not lock anything.
     /// </summary>
     public static class ReturnLifecycleRules
     {

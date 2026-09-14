@@ -40,11 +40,77 @@ namespace Infrastructure.Services
             return AddEntryAsync(product, quantity, effectiveUnitCost, 0m, InventoryCostEventTypeEnum.PURCHASE_RECEIVED, nameof(PurchaseItem), purchaseItemId, occurredAt, cancellationToken);
         }
 
+        public Task RecordPurchaseReceiptQuarantinedAsync(Product product, int quantity, ulong unitPrice, int discountPercent, int purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken)
+        {
+            var netUnitCost = NetUnitAmount(unitPrice, discountPercent);
+            return AddOffPoolEntryAsync(product, InventoryCostEventTypeEnum.PURCHASE_RECEIVED_QUARANTINED, nameof(PurchaseItem), purchaseItemId, occurredAt, netUnitCost, netUnitCost * quantity, cancellationToken);
+        }
+
+        public async Task RecordQuarantineReleasedAsync(Product product, int quantity, ulong? unitCost, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken)
+        {
+            var cost = await UnitCostOrAverageAsync(product, unitCost, cancellationToken);
+            var entry = await AddEntryAsync(product, quantity, cost, 0m, InventoryCostEventTypeEnum.QUARANTINE_RELEASED, nameof(PurchaseReturnClaim), purchaseReturnClaimId, occurredAt, cancellationToken);
+            entry.OffPoolValueDelta = -(cost * quantity);
+        }
+
+        public async Task RecordQuarantineScrappedAsync(Product product, int quantity, ulong? unitCost, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken)
+        {
+            var cost = await UnitCostOrAverageAsync(product, unitCost, cancellationToken);
+            await AddOffPoolEntryAsync(product, InventoryCostEventTypeEnum.QUARANTINE_SCRAPPED, nameof(PurchaseReturnClaim), purchaseReturnClaimId, occurredAt, cost, -(cost * quantity), cancellationToken);
+        }
+
+        public async Task RecordPurchaseReturnShippedFromQuarantineAsync(Product product, int quantity, ulong? unitCost, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken)
+        {
+            var cost = await UnitCostOrAverageAsync(product, unitCost, cancellationToken);
+            await AddOffPoolEntryAsync(product, InventoryCostEventTypeEnum.PURCHASE_RETURN_SHIPPED_FROM_QUARANTINE, nameof(PurchaseReturnClaim), purchaseReturnClaimId, occurredAt, cost, -(cost * quantity), cancellationToken);
+        }
+
+        public async Task RecordPurchaseReturnReplacementQuarantinedAsync(Product product, int quantity, ulong? unitCost, int? purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken)
+        {
+            var cost = await UnitCostOrAverageAsync(product, unitCost, cancellationToken);
+            await AddOffPoolEntryAsync(product, InventoryCostEventTypeEnum.PURCHASE_RETURN_REPLACEMENT_QUARANTINED, nameof(PurchaseItem), purchaseItemId, occurredAt, cost, cost * quantity, cancellationToken);
+        }
+
+        /// <summary>
+        /// A row that changes only the off-pool balance (value held in quarantine): the running pool totals are carried forward
+        /// unchanged and QuantityDelta is 0. UnitCost is the per-unit value used, so the quantity is |OffPoolValueDelta| / UnitCost.
+        /// </summary>
+        private async Task AddOffPoolEntryAsync(Product product, InventoryCostEventTypeEnum eventType, string? referenceType, int? referenceId, DateTime occurredAt, decimal unitCost, decimal offPoolValueDelta, CancellationToken cancellationToken)
+        {
+            var last = await LatestEntryAsync(product.Id, cancellationToken);
+
+            var entry = new InventoryCostLedgerEntry
+            {
+                ProductId = product.Id,
+                EventType = eventType,
+                ReferenceType = referenceType,
+                ReferenceId = referenceId,
+                OccurredAt = occurredAt,
+                QuantityDelta = 0,
+                UnitCost = unitCost,
+                InventoryValueDelta = 0m,
+                RunningQuantity = last?.RunningQuantity ?? 0,
+                RunningInventoryValue = last?.RunningInventoryValue ?? 0m,
+                RunningAverageCost = last?.RunningAverageCost ?? 0m,
+                RevenueDelta = 0m,
+                OffPoolValueDelta = offPoolValueDelta,
+                CreatedAt = DateTime.Now,
+            };
+
+            await _context.InventoryCostLedgerEntries.AddAsync(entry, cancellationToken);
+            _latestStagedByProduct[product.Id] = entry;
+        }
+
         public Task RecordSaleShipmentAsync(Product product, int quantity, ulong unitPrice, int discountPercent, int saleItemId, DateTime occurredAt, CancellationToken cancellationToken)
         {
             var netUnitRevenue = NetUnitAmount(unitPrice, discountPercent);
             var revenueDelta = netUnitRevenue * quantity;
             return AddEntryAsync(product, -quantity, 0m, revenueDelta, InventoryCostEventTypeEnum.SALE_SHIPPED, nameof(SaleItem), saleItemId, occurredAt, cancellationToken);
+        }
+
+        public Task RecordSaleShippedExcessAsync(Product product, int quantity, int saleItemId, DateTime occurredAt, CancellationToken cancellationToken)
+        {
+            return AddEntryAsync(product, -quantity, 0m, 0m, InventoryCostEventTypeEnum.SALE_SHIPPED_EXCESS, nameof(SaleItem), saleItemId, occurredAt, cancellationToken);
         }
 
         public async Task RecordSaleReturnRestockAsync(Product product, int quantity, ulong? unitCost, int? saleItemId, DateTime occurredAt, CancellationToken cancellationToken)

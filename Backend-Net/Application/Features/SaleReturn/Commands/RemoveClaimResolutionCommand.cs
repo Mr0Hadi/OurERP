@@ -65,7 +65,7 @@ namespace Application.Features.SaleReturn.Commands
             var claim = saleReturn.Claims.First(c => c.Resolutions.Any(r => r.Id == request.Id));
             var resolution = claim.Resolutions.First(r => r.Id == request.Id);
 
-            if (resolution.Effects.Any(e => e.Direction is ReturnEffectDirectionEnum.GOODS_IN or ReturnEffectDirectionEnum.GOODS_OUT && e.AppliedQuantity > 0))
+            if (resolution.Effects.Any(e => ReturnEffectDirections.IsGoods(e.Direction) && e.AppliedQuantity > 0))
                 throw new ValidationCustomException("بخشی از کالای این تصمیم جابه‌جا شده و دیگر قابل لغو نیست.");
 
             // Fully-settled resolutions (no PENDING effect) already bumped SettledQuantity when
@@ -80,10 +80,10 @@ namespace Application.Features.SaleReturn.Commands
 
             var now = DateTime.Now;
 
-            // AddClaimResolution wrote a revenue row for each money effect. Removing the resolution is the
-            // documented way out of a money-locked return (see ReturnLifecycleRules), so it writes the
-            // opposite row - otherwise a cancelled return keeps moving the sale report's revenue.
-            foreach (var money in resolution.Effects.Where(e => e.Direction is ReturnEffectDirectionEnum.MONEY_IN or ReturnEffectDirectionEnum.MONEY_OUT))
+            // Every APPLIED money effect has a revenue row. Removing the resolution is the documented way out
+            // of a money-locked return (see ReturnLifecycleRules), so it writes the opposite row - otherwise a
+            // cancelled return keeps moving the sale report's revenue. A PENDING one never wrote anything.
+            foreach (var money in resolution.Effects.Where(e => e.Direction is ReturnEffectDirectionEnum.MONEY_IN or ReturnEffectDirectionEnum.MONEY_OUT && e.Status == ReturnEffectStatusEnum.APPLIED))
                 await _inventoryCostingService.RecordSaleReturnMoneyReversalAsync(claim.Product!, money.Direction, money.Amount!.Value, claim.Id, now, cancellationToken);
 
             claim.Resolutions.Remove(resolution);

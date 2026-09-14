@@ -1023,6 +1023,75 @@ Two consequences of the effect model, fixed without adding scenario logic. API: 
   1,200 price; omitted `UnitCost` enters at the running average, and at `Product.PurchasePrice` when there is no cost history; purchase-return money shows as -2,000
   `ReturnMoneyAmount` in the purchase report and nothing in the sale report. Verified: build 0 errors; suite 495/504; a clean worktree at `HEAD` (`1f2c732`) runs 402/411 with the identical 9 failing test names.
 
+**Traceable warehouse: quarantine, unit ledger, pending money (2026-09-13/14).** Built from the approved design
+artifact "انبار ردیابی‌پذیر" with four corrections (below). API: `docs/api-guide.fa.md` §7, §9, §10, §12, §15, §18 and
+the four 2026-09-13/14 tables in §16. Phased; each phase is self-contained.
+
+- **Phase 1 - pending money.** `MoneyEffectDto.PaidAt`: sent -> the effect is born APPLIED at that time; omitted -> PENDING,
+  no ledger row, keeps the return IN_PROGRESS (via the existing `hasPending` in `RecomputeReturnStatus` - no change there).
+  `ExecuteMoneyEffectCommand` (both sides, `POST api/{Purchase,Sale}Return/ExecuteMoneyEffect`) applies it: ledger row at
+  `PaidAt`, and settles the line when it clears the resolution's last pending effect. Lifecycle lock is now
+  `HasAppliedMoney` (APPLIED only). `RemoveClaimResolution` reverses APPLIED money only. Pending-effects queries list goods
+  effects only. Five touch points, not two: the `AddMoney` default, the lock, the ledger-row timing, the reversal, settlement.
+- **Phase 2 - `ProductUnitMovement`** (append-only, no IsActive). `ProductUnitService` is its only writer: every method takes
+  a `UnitMovementContext` (reason, document, counterparty, occurredAt), and every minted/changed unit gets a row with a
+  snapshot of its purchase/sale line and the signed-in user. `GET api/Product/GetProductUnitHistory` (by id or scanned
+  barcode). `ProductUnitDto` gained purchase/supplier/sale/customer (correlated subqueries in `ProductUnitProjection`).
+  `GoodsRoundLineDto.ProductUnitBarcodes` (+ `GoodsRoundObservationDto.ProductUnitBarcodes` to name which scanned unit is
+  scrap on a sale-return GOODS_IN); barcodes are refused where units would be minted. Shared scan checks in
+  `ResolveScannedAsync`; shape counts in `GoodsRoundBarcodes.CountsMatch`.
+- **Phase 3 - quarantine at receiving.** `ProductUnitStatusEnum.QUARANTINED = 9` (5-8 left free on purpose),
+  `UnitCustodyReasonEnum` (ON_ORDER/EXCESS/UNLISTED) and `ProductUnit.PurchaseId`. `ReceivePurchaseItemDto` is now
+  `ArrivedQuantity` + `Defects[]`, plus `ReceivePurchaseCommand.UnlistedItems`; the still-owed 400 is gone.
+  **Healthy-first allocation is a deliberate exception scoped to receiving** (documented on the command): `h = min(H, S)`
+  IN_STOCK, `d = min(D, S - h)` QUARANTINED ON_ORDER on the line (counted in `ReceivedQuantity`, value off-pool via
+  `PURCHASE_RECEIVED_QUARANTINED`), rest QUARANTINED EXCESS (no value). It is not a precedent for inference in resolutions.
+  `PurchaseReceivingDiscrepancy` (append-only, same shape as `PurchaseReceivingImage`) records problems per round for form
+  prefill/audit only - **claim quotas never read it**. OFF_ORDER purchase claims are capped by quarantined units of the
+  matching custody minus `GetOutstandingOffOrderClaimQuantity`. `InventoryCostLedgerEntry.OffPoolValueDelta` holds value
+  outside the pool; the purchase report counts it. Quick-create is `CreateProductCommand.IsIncomplete` (name, unit, category;
+  Stock must be 0; same two-save code generation); `IsIncomplete` clears only when `Product.HasCompleteCatalogData`
+  (brand + three prices), so UpdateProduct's brand/price checks moved to the handler and apply to complete products only.
+  `Product.RequiresUnitTracking` persisted (enforcement is Phase 5).
+- **Phase 4 - leaving quarantine.** `GOODS_RELEASE = 4`, `GOODS_SCRAP = 5` (enum values now explicit),
+  `EffectCompositionDto.GoodsRelease/GoodsScrap` (`QuarantineEffectDto`: no UnitPrice, so the balance rule never sees them -
+  no special case in `ReturnMoneyBalance`), purchase side only (sale validator refuses). `GoodsRoundLineDto.Source`: purchase
+  GOODS_OUT **must** state IN_STOCK or QUARANTINED, never inferred. Quarantine units are selected by
+  `QuarantineFor(claim)` - the claim's custody on its line (UNLISTED for another product) - via `UnitSelection` and
+  `ProductUnitService.ReturnToSupplierAsync/ReleaseFromQuarantineAsync/ScrapFromQuarantineAsync`. Cost of leaving quarantine
+  is the effect's `UnitCost` (explicit 0 stays 0; omitted -> average -> PurchasePrice), **never** `CustodyReason`, which is
+  read only by the quota and quarantine selection. Ledger events 16-19 (`QUARANTINE_RELEASED`, `QUARANTINE_SCRAPPED`,
+  `PURCHASE_RETURN_SHIPPED_FROM_QUARANTINE`, `PURCHASE_RETURN_REPLACEMENT_QUARANTINED`); a damaged replacement's units are
+  now held in quarantine instead of vanishing. Sale report `ScrapLoss`, subtracted from `NetProfit`.
+  `EffectCompositionDto.WriteOff` / `*ReturnResolution.IsWriteOff`: the only decision without effects, never with one.
+  `ReturnEffectDirections.IsGoods/IsMoney` replaces the scattered GOODS_IN-or-GOODS_OUT checks.
+- **Phase 5 - sale mirror + unit tracking.** `ShipSaleItemDto.ExcessQuantity`/`ExcessProductUnitBarcodes` (accepted on a
+  fully shipped line; `ShippedQuantity` may be 0): units go SOLD with custody EXCESS on the line, leave the pool at the average
+  with no revenue (`SALE_SHIPPED_EXCESS = 20`, counted as COGS by the sale report). `ConsumeAsync` takes the custody reason
+  (ON_ORDER for the ordered shipment). Sale EXCESS claims are capped by SOLD·EXCESS units on the line minus
+  `GetOutstandingExcessClaimQuantity` - zero until the warehouse records the excess. A sale EXCESS GOODS_IN restores those
+  same units (`RestoreAsync(..., excessUnits: true, ...)`) instead of minting; ordered restores exclude EXCESS units. Sale
+  UNLISTED claims stay uncapped (nothing was shipped to count). `Product.RequiresUnitTracking` makes barcodes mandatory on
+  every outbound movement: ShipSale (both quantities), sale GOODS_OUT, purchase GOODS_OUT (either source). Not on inbound
+  (units are minted) or on release/scrap (internal).
+- **Phase 6 - atomic shipments.** `POST api/Shipment/ReceiveShipment` (purchase receiving + purchase/sale-return GOODS_IN
+  rounds) and `DispatchShipment` (ShipSale + sale/purchase-return GOODS_OUT rounds). **Implemented with a database
+  transaction, not by extracting staging code** (a change from the plan): `IUnitOfWork.ExecuteInTransactionAsync` wraps the
+  existing commands, sent unchanged through `IMediator` so their validators run; each still saves, and a throw rolls all of
+  them back. Safe because `UseSqlServer` has no retrying execution strategy - adding `EnableRetryOnFailure` later would
+  forbid this user-initiated transaction and needs `CreateExecutionStrategy().ExecuteAsync` around it. Direction is checked
+  up front (`ShipmentDirections.EnsureAsync`). `IWMSDbContext.BeginTransactionAsync` exists only for the unit of work.
+- **Migrations, generated, none applied** (the user applies them): `20260913185820_product-unit-movements`,
+  `20260913205653_receiving-quarantine` (hand-added backfill: units with a `PurchaseItemId` get that purchase and
+  `CustodyReason = ON_ORDER`), then `return-write-off` (`IsWriteOff` on both resolution tables).
+- Tests: `PendingMoneyEffectTests`, `ProductUnitMovementTests`, `ReceivingQuarantineTests`, `QuarantineExitTests` (the
+  25/20/10 scenario reconciled: 27 units = 17 stock + 7 returned + 3 scrapped; off-pool nets to 0; purchase spend 20 - 3 = 17).
+  Existing tests now send `PaidAt` where money was paid immediately, receive excess/unlisted goods before claiming them, and
+  state `Source` on purchase GOODS_OUT rounds. The 9 long-documented pre-existing failures are unchanged.
+- **Gap noticed, not fixed:** the ON_ORDER claim quota (`Received - Settled - open RemainingQuantity`) does not reserve
+  quantity that is decided but whose resolution still has a pending effect, so the same units can be claimed twice in that
+  window. The new off-order quota counts outstanding (not-completed) quantity instead.
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
 - `PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK (see `WMSDbContextModelSnapshot.cs:119-124`). Needs reconciliation.

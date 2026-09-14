@@ -193,6 +193,10 @@ namespace Infrastructure.Migrations
                     b.Property<DateTime>("OccurredAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal>("OffPoolValueDelta")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
 
@@ -343,6 +347,9 @@ namespace Infrastructure.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsIncomplete")
+                        .HasColumnType("bit");
+
                     b.Property<int>("LowStockThreshold")
                         .HasColumnType("int");
 
@@ -355,6 +362,9 @@ namespace Infrastructure.Migrations
 
                     b.Property<decimal>("PurchasePrice")
                         .HasColumnType("decimal(20,0)");
+
+                    b.Property<bool>("RequiresUnitTracking")
+                        .HasColumnType("bit");
 
                     b.Property<decimal>("RetailPrice")
                         .HasColumnType("decimal(20,0)");
@@ -426,10 +436,16 @@ namespace Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("CustodyReason")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PurchaseId")
                         .HasColumnType("int");
 
                     b.Property<int?>("PurchaseItemId")
@@ -459,7 +475,73 @@ namespace Infrastructure.Migrations
                     b.HasIndex("ProductId", "SerialNumber")
                         .IsUnique();
 
+                    b.HasIndex("PurchaseId", "Status", "CustodyReason");
+
                     b.ToTable("ProductUnits");
+                });
+
+            modelBuilder.Entity("Domain.Entities.ProductUnitMovement", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("DocumentId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("DocumentKind")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("FromStatus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProductUnitId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PurchaseItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Reason")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SaleItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SupplierId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ToStatus")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("DocumentKind", "DocumentId");
+
+                    b.HasIndex("ProductUnitId", "OccurredAt");
+
+                    b.ToTable("ProductUnitMovements");
                 });
 
             modelBuilder.Entity("Domain.Entities.Purchase", b =>
@@ -588,6 +670,50 @@ namespace Infrastructure.Migrations
                     b.HasIndex("PurchaseId");
 
                     b.ToTable("PurchaseItems");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PurchaseReceivingDiscrepancy", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CustodyReason")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Problem")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PurchaseId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PurchaseItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("PurchaseId");
+
+                    b.ToTable("PurchaseReceivingDiscrepancies");
                 });
 
             modelBuilder.Entity("Domain.Entities.PurchaseReceivingImage", b =>
@@ -916,6 +1042,9 @@ namespace Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsWriteOff")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Note")
                         .HasColumnType("nvarchar(max)");
@@ -1330,6 +1459,9 @@ namespace Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("IsWriteOff")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Note")
                         .HasColumnType("nvarchar(max)");
 
@@ -1614,6 +1746,17 @@ namespace Infrastructure.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("Domain.Entities.ProductUnitMovement", b =>
+                {
+                    b.HasOne("Domain.Entities.ProductUnit", "ProductUnit")
+                        .WithMany()
+                        .HasForeignKey("ProductUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ProductUnit");
+                });
+
             modelBuilder.Entity("Domain.Entities.Purchase", b =>
                 {
                     b.HasOne("Domain.Entities.User", "PurchasingUser")
@@ -1653,6 +1796,25 @@ namespace Infrastructure.Migrations
 
                     b.HasOne("Domain.Entities.Purchase", "Purchase")
                         .WithMany("Items")
+                        .HasForeignKey("PurchaseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("Purchase");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PurchaseReceivingDiscrepancy", b =>
+                {
+                    b.HasOne("Domain.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.Purchase", "Purchase")
+                        .WithMany()
                         .HasForeignKey("PurchaseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

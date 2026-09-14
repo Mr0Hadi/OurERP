@@ -1,3 +1,4 @@
+using Application.Common.Contracts.ProductUnit;
 using Application.Common.Dtos.Returns;
 using Application.Features.Purchase.Commands;
 using Application.Features.Purchase.Dtos;
@@ -26,11 +27,11 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
             var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 10, stock: 0);
-            await scope.ProductUnitService.MintAsync(scenario.Product, 5, null, CancellationToken.None);
+            await scope.ProductUnitService.MintAsync(scenario.Product, 5, UnitOrigin.None, Movements.Test, CancellationToken.None);
             await scope.UnitOfWork.SaveChangesAsync(CancellationToken.None);
 
-            var first = await scope.ProductUnitService.ConsumeAsync(scenario.Product, 2, null, null, CancellationToken.None);
-            var second = await scope.ProductUnitService.ConsumeAsync(scenario.Product, 2, null, null, CancellationToken.None);
+            var first = await scope.ProductUnitService.ConsumeAsync(scenario.Product, 2, null, null, null, Movements.Test, CancellationToken.None);
+            var second = await scope.ProductUnitService.ConsumeAsync(scenario.Product, 2, null, null, null, Movements.Test, CancellationToken.None);
 
             // Before the fix the second call re-selected the first call's units (still IN_STOCK when saved).
             Assert.Empty(first.Select(u => u.Id).Intersect(second.Select(u => u.Id)));
@@ -48,10 +49,10 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 10, stock: 0);
 
-            var minted = await scope.ProductUnitService.MintAsync(scenario.Product, 2, null, CancellationToken.None);
+            var minted = await scope.ProductUnitService.MintAsync(scenario.Product, 2, UnitOrigin.None, Movements.Test, CancellationToken.None);
 
             // Before the fix: no saved IN_STOCK rows, so "not enough units" although two were just minted.
-            var consumed = await scope.ProductUnitService.ConsumeAsync(scenario.Product, 2, null, null, CancellationToken.None);
+            var consumed = await scope.ProductUnitService.ConsumeAsync(scenario.Product, 2, null, null, null, Movements.Test, CancellationToken.None);
             Assert.Equal(minted.Select(u => u.SerialNumber).OrderBy(s => s), consumed.Select(u => u.SerialNumber).OrderBy(s => s));
 
             await scope.UnitOfWork.SaveChangesAsync(CancellationToken.None);
@@ -65,8 +66,8 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 10, stock: 0);
 
-            var minted = await scope.ProductUnitService.MintAsync(scenario.Product, 1, null, CancellationToken.None);
-            var consumed = await scope.ProductUnitService.ConsumeAsync(scenario.Product, 1, null, new List<string> { minted[0].Barcode }, CancellationToken.None);
+            var minted = await scope.ProductUnitService.MintAsync(scenario.Product, 1, UnitOrigin.None, Movements.Test, CancellationToken.None);
+            var consumed = await scope.ProductUnitService.ConsumeAsync(scenario.Product, 1, null, null, new List<string> { minted[0].Barcode }, Movements.Test, CancellationToken.None);
 
             Assert.Same(minted[0], Assert.Single(consumed));
             Assert.Equal(ProductUnitStatusEnum.SOLD, minted[0].Status);
@@ -78,11 +79,11 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
             var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 10, stock: 0);
-            await scope.ProductUnitService.MintAsync(scenario.Product, 4, scenario.Item.Id, CancellationToken.None);
+            await scope.ProductUnitService.MintAsync(scenario.Product, 4, new UnitOrigin(PurchaseItemId: scenario.Item.Id), Movements.Test, CancellationToken.None);
             await scope.UnitOfWork.SaveChangesAsync(CancellationToken.None);
 
-            await scope.ProductUnitService.ReturnToSupplierAsync(scenario.Product, 1, scenario.Item.Id, CancellationToken.None);
-            await scope.ProductUnitService.ReturnToSupplierAsync(scenario.Product, 1, scenario.Item.Id, CancellationToken.None);
+            await scope.ProductUnitService.ReturnToSupplierAsync(scenario.Product, 1, UnitSelection.InStock(scenario.Item.Id), null, Movements.Test, CancellationToken.None);
+            await scope.ProductUnitService.ReturnToSupplierAsync(scenario.Product, 1, UnitSelection.InStock(scenario.Item.Id), null, Movements.Test, CancellationToken.None);
             await scope.UnitOfWork.SaveChangesAsync(CancellationToken.None);
 
             using var verify = db.NewContext();
@@ -97,8 +98,8 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 3, shippedQuantity: 3, stock: 0);
 
-            await scope.ProductUnitService.RestoreAsync(scenario.Item.Id, 1, 0, CancellationToken.None);
-            await scope.ProductUnitService.RestoreAsync(scenario.Item.Id, 1, 0, CancellationToken.None);
+            await scope.ProductUnitService.RestoreAsync(scenario.Item.Id, false, 1, 0, null, null, Movements.Test, CancellationToken.None);
+            await scope.ProductUnitService.RestoreAsync(scenario.Item.Id, false, 1, 0, null, null, Movements.Test, CancellationToken.None);
             await scope.UnitOfWork.SaveChangesAsync(CancellationToken.None);
 
             using var verify = db.NewContext();
@@ -114,10 +115,10 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 2, shippedQuantity: 2, stock: 0);
 
-            await scope.ProductUnitService.RestoreAsync(scenario.Item.Id, 1, 0, CancellationToken.None);
+            await scope.ProductUnitService.RestoreAsync(scenario.Item.Id, false, 1, 0, null, null, Movements.Test, CancellationToken.None);
 
             // Before the fix: nothing IN_STOCK when saved, so the restored unit could not be shipped.
-            var shipped = await scope.ProductUnitService.ConsumeAsync(scenario.Product, 1, null, null, CancellationToken.None);
+            var shipped = await scope.ProductUnitService.ConsumeAsync(scenario.Product, 1, null, null, null, Movements.Test, CancellationToken.None);
             Assert.Single(shipped);
 
             await scope.UnitOfWork.SaveChangesAsync(CancellationToken.None);
@@ -133,10 +134,10 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 10, stock: 0);
 
-            await scope.ProductUnitService.MintAsync(scenario.Product, 3, null, CancellationToken.None);
+            await scope.ProductUnitService.MintAsync(scenario.Product, 3, UnitOrigin.None, Movements.Test, CancellationToken.None);
 
             // Stock of 3 is exactly what was just minted; before the fix it saw 0 saved units and minted 3 more.
-            await scope.ProductUnitService.ReconcileStockAsync(scenario.Product, 3, CancellationToken.None);
+            await scope.ProductUnitService.ReconcileStockAsync(scenario.Product, 3, Movements.Test, CancellationToken.None);
             await scope.UnitOfWork.SaveChangesAsync(CancellationToken.None);
 
             Assert.Equal(3, InStock(db, scenario.Product.Id));
@@ -153,7 +154,7 @@ namespace WMS.Tests.Integration
                 .Handle(new ReceivePurchaseCommand
                 {
                     PurchaseId = scenario.Purchase.Id,
-                    Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ReceivedQuantity = 7 } },
+                    Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ArrivedQuantity = 7 } },
                 }, CancellationToken.None);
 
             await new CreatePurchaseReturnCommandHandler(scope.Db, scope.PurchaseReturnRepository, scope.PurchaseReturnCalculation, FakeObjectStorage.Instance, scope.UnitOfWork)
@@ -182,7 +183,7 @@ namespace WMS.Tests.Integration
                     {
                         Quantity = 2,
                         GoodsOut = new() { new GoodsEffectDto { Quantity = 2, UnitPrice = 1000 } },
-                        MoneyIn = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 2000 },
+                        MoneyIn = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 2000 },
                     },
                 }, CancellationToken.None);
 
@@ -194,8 +195,8 @@ namespace WMS.Tests.Integration
                     PurchaseReturnId = scope.Context.PurchaseReturns.Single().Id,
                     Rounds = new()
                     {
-                        new GoodsRoundLineDto { EffectId = effectId, Quantity = 1 },
-                        new GoodsRoundLineDto { EffectId = effectId, Quantity = 1 },
+                        new GoodsRoundLineDto { EffectId = effectId, Quantity = 1, Source = ProductUnitStatusEnum.IN_STOCK },
+                        new GoodsRoundLineDto { EffectId = effectId, Quantity = 1, Source = ProductUnitStatusEnum.IN_STOCK },
                     },
                 }, CancellationToken.None);
 

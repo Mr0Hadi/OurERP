@@ -213,7 +213,7 @@ namespace WMS.Tests.Integration
             scope.Context.Products.Add(product);
             scope.Context.SaveChanges();
 
-            var handler = new GetProductDetailQueryHandler(scope.ProductRepository, TestMapper.Instance, FakeObjectStorage.Instance);
+            var handler = new GetProductDetailQueryHandler(scope.ProductRepository, TestMapper.Instance, FakeObjectStorage.Instance, scope.Db);
             var res = await handler.Handle(new GetProductDetailQuery { Id = product.Id }, CancellationToken.None);
 
             var dto = Assert.IsType<ProductDto>(res.Data);

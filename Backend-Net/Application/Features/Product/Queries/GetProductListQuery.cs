@@ -22,6 +22,9 @@ namespace Application.Features.Product.Queries
         public bool? IsLowOnStock { get; set; }
         public UInt64? FromPrice { get; set; }
         public UInt64? ToPrice { get; set; }
+
+        /// <summary>true: only quick-created products still waiting for purchasing to complete them.</summary>
+        public bool? IsIncomplete { get; set; }
     }
 
     public class GetProductListQueryHandler : IRequestHandler<GetProductListQuery, ResponseDto>
@@ -83,8 +86,16 @@ namespace Application.Features.Product.Queries
                 query = query.Where(p => p.RetailPrice <= request.ToPrice);
             }
 
+            if (request.IsIncomplete.HasValue)
+            {
+                query = query.Where(p => p.IsIncomplete == request.IsIncomplete.Value);
+            }
+
             var paged = await query.Select(x => new ProductListDto
             {
+                RequiresUnitTracking = x.RequiresUnitTracking,
+                IsIncomplete = x.IsIncomplete,
+                QuarantinedCount = _context.ProductUnits.Count(u => u.ProductId == x.Id && u.Status == Domain.Enums.ProductUnitStatusEnum.QUARANTINED),
                 Id = x.Id,
                 Brand = x.Brand,
                 Code = x.Code,

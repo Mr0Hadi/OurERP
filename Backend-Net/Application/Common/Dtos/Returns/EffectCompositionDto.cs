@@ -32,6 +32,41 @@ namespace Application.Common.Dtos.Returns
 
         /// <summary>Money going out from us.</summary>
         public MoneyEffectDto? MoneyOut { get; set; }
+
+        /// <summary>Purchase returns only: quarantined units released into sellable stock. Not read by the money balance.</summary>
+        public List<QuarantineEffectDto>? GoodsRelease { get; set; }
+
+        /// <summary>Purchase returns only: quarantined units scrapped - a reported loss. Not read by the money balance.</summary>
+        public List<QuarantineEffectDto>? GoodsScrap { get; set; }
+
+        /// <summary>
+        /// Explicit forgiveness: close Quantity of the claim with no effect at all. The only way to decide without an effect,
+        /// and it cannot be combined with one - an empty decision is never implicit.
+        /// </summary>
+        public bool WriteOff { get; set; }
+
+        public bool HasAnyEffect() =>
+            (GoodsIn?.Count ?? 0) > 0 || (GoodsOut?.Count ?? 0) > 0 || (GoodsRelease?.Count ?? 0) > 0 || (GoodsScrap?.Count ?? 0) > 0
+            || MoneyIn != null || MoneyOut != null;
+    }
+
+    /// <summary>
+    /// A movement out of quarantine that stays inside the company. Carries no UnitPrice: there is no counterparty, so it has
+    /// no transaction value and the balance rule never sees it.
+    /// </summary>
+    public class QuarantineEffectDto
+    {
+        public int Quantity { get; set; }
+
+        /// <summary>Defaults to the claim's own product.</summary>
+        public int? ProductId { get; set; }
+
+        /// <summary>
+        /// Rial per unit these goods are worth to us: what a release enters the pool at, and what a scrap books as loss.
+        /// Omitted: the running average, else Product.PurchasePrice. An explicit 0 stays 0 - send the line's effective price
+        /// for defective goods that were paid for, and 0 for excess that never was.
+        /// </summary>
+        public UInt64? UnitCost { get; set; }
     }
 
     public class GoodsEffectDto
@@ -71,6 +106,13 @@ namespace Application.Common.Dtos.Returns
         public ReturnPaymentMethodEnum Method { get; set; }
         public ulong Amount { get; set; }
         public string? Reference { get; set; }
+
+        /// <summary>
+        /// When the money actually moved. Sent: the effect is born APPLIED at this moment and its ledger row
+        /// is written now. Omitted: the effect is a promise - born PENDING, it keeps the return IN_PROGRESS
+        /// and writes nothing to the ledger until ExecuteMoneyEffectCommand records the payment.
+        /// </summary>
+        public DateTime? PaidAt { get; set; }
 
         /// <summary>Required, and must sum to Amount, when Method == MIXED.</summary>
         public List<MoneyPartDto>? Parts { get; set; }

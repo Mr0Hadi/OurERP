@@ -145,6 +145,30 @@ namespace Application.Features.SaleReturn.Commands
                     throw new ValidationCustomException($"مقدار ادعاشده برای «{saleItem.Product.Name}» از باقیمانده قابل مرجوع کردن این قلم بیشتر است.");
             }
 
+            // EXCESS claims are capped by the excess actually recorded as shipped (ShipSale ExcessQuantity): units SOLD on the line with
+            // custody EXCESS, minus what open EXCESS claims already reserve. If the warehouse never confirmed the excess, the cap is 0.
+            var excessClaimsPerItem = request.Claims
+                .Where(c => c.Scope == ReturnClaimScopeEnum.OFF_ORDER && c.OffScopeKind == ReturnOffScopeKindEnum.EXCESS)
+                .GroupBy(c => c.OrderLineId!.Value)
+                .ToList();
+
+            if (excessClaimsPerItem.Count > 0)
+            {
+                var lineIds = excessClaimsPerItem.Select(g => g.Key).ToList();
+                var soldExcess = await _context.ProductUnits
+                    .Where(u => u.SaleItemId != null && lineIds.Contains(u.SaleItemId.Value) && u.Status == ProductUnitStatusEnum.SOLD && u.CustodyReason == UnitCustodyReasonEnum.EXCESS)
+                    .GroupBy(u => u.SaleItemId!.Value)
+                    .Select(g => new { SaleItemId = g.Key, Count = g.Count() })
+                    .ToDictionaryAsync(x => x.SaleItemId, x => x.Count, cancellationToken);
+
+                foreach (var claimsOnItem in excessClaimsPerItem)
+                {
+                    var claimable = Math.Max(0, soldExcess.GetValueOrDefault(claimsOnItem.Key) - _saleReturnCalculationService.GetOutstandingExcessClaimQuantity(claimsOnItem.Key, activeReturns));
+                    if (claimsOnItem.Sum(c => c.Quantity) > claimable)
+                        throw new ValidationCustomException($"مقدار ادعای «بیش از مقدار ارسال‌شده» از مازادِ ثبت‌شده برای «{saleItems[claimsOnItem.Key].Product.Name}» ({claimable} عدد قابل ادعا) بیشتر است؛ مازاد باید اول در ارسال ثبت شده باشد.");
+                }
+            }
+
             // PreviousReturnId was a pure client-supplied pass-through: nothing checked that it
             // pointed at a return on this same document, or that it existed at all. A cycle is not
             // reachable here - a brand-new row cannot yet be anyone's target.
