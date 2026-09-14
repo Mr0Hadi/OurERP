@@ -19,6 +19,7 @@ import { useGoBack } from "@/shared/hooks/useGoBack";
 import { Button } from "@/shared/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { useSessionQuery } from "@/features/auth/services/queries";
+import RouteLoadingOverlay from "@/shared/components/layout/RouteLoadingOverlay";
 
 
 
@@ -49,6 +50,7 @@ export default function AppLayout() {
 
   return (
     <TooltipProvider>
+      <RouteLoadingOverlay />
       <SidebarProvider>
         <AppSidebar side="right" />
         <SidebarInset>
