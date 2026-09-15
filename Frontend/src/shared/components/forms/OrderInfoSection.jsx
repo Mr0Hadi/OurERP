@@ -93,7 +93,7 @@ export default function OrderInfoSection({
         </div>
 
         {showInformalSale && (
-          <div className="flex items-center gap-2 sm:col-span-2">
+          <div className="flex items-center gap-2 self-end pb-2">
             <Checkbox
               id="isInformalSale"
               checked={Boolean(formData.isInformalSale)}
