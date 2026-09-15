@@ -17,15 +17,17 @@ import {
 /**
  * تصمیم‌گیری برای یک ادعا.
  *
- * فرمِ ثبت تصمیم بسته است و فقط با دکمه باز می‌شود. قبلاً برای هر ادعا
- * هم‌زمان باز بود و صفحه‌ی یک مرجوعیِ سه‌قلمی، سه فرمِ کاملِ چک‌باکس‌دار
- * و انتخابگرِ کالا را با هم نشان می‌داد — نه روی دسکتاپ خواندنی بود و
- * نه روی موبایل قابل استفاده.
+ * فرمِ ثبت تصمیم بسته است و فقط با دکمه باز می‌شود. اگر برای هر ادعا
+ * هم‌زمان باز باشد، یک مرجوعیِ سه‌قلمی سه فرمِ کاملِ چک‌باکس‌دار و
+ * انتخابگرِ کالا را با هم نشان می‌دهد — روی موبایل غیرقابل استفاده.
  */
 export default function ClaimResolutionCard({
   claim,
   onAddResolution,
   onRemoveResolution,
+  onExecuteMoney,
+  // `(claim) => ReactNode` — گزارشِ انبار کنارِ همان ادعا (فقط مرجوعی خرید).
+  renderReport,
   isBusy,
   readOnly,
   side,
@@ -84,6 +86,8 @@ export default function ClaimResolutionCard({
         )}
       </div>
 
+      {renderReport?.(claim)}
+
       {resolutions.length > 0 && (
         <div className="space-y-1.5">
           {resolutions.map((resolution) => (
@@ -97,6 +101,7 @@ export default function ClaimResolutionCard({
                   ? () => onRemoveResolution(claim.id, resolution.id)
                   : null
               }
+              onExecuteMoney={!readOnly ? onExecuteMoney : null}
             />
           ))}
         </div>
@@ -111,7 +116,9 @@ export default function ClaimResolutionCard({
               isBusy={isBusy}
               side={side}
               onAdd={(composition) => {
-                onAddResolution(claim.id, composition);
+                // خودِ ادعا می‌رود، نه فقط شناسه‌اش: لایه‌ی api برای باز
+                // کردنِ پیش‌فرضِ «همان کالای ادعا» به کالا و قیمتش نیاز دارد.
+                onAddResolution(claim, composition);
                 setIsComposerOpen(false);
               }}
             />

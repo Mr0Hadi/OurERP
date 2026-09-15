@@ -1,11 +1,13 @@
 import { Trash2 } from "lucide-react";
 import { Input } from "@/shared/components/ui/input";
 import { PriceInput } from "@/shared/components/ui/price-input";
+import ScannedUnitCodes from "./ScannedUnitCodes";
 
 export default function SelectedItemsCards({
   items,
   onFieldChange,
   onRemove,
+  onRemoveUnit,
   lineTotal,
   grandTotal,
 }) {
@@ -79,6 +81,13 @@ export default function SelectedItemsCards({
               />
             </div>
           </div>
+
+          <ScannedUnitCodes
+            codes={item.productUnitBarcodes}
+            quantity={item.quantity}
+            onRemove={onRemoveUnit && ((code) => onRemoveUnit(item.productId, code))}
+            className="rounded-md bg-muted/40 p-2"
+          />
 
           <div className="flex items-center justify-between pt-2 border-t border-border">
             <span className="text-xs text-muted-foreground">جمع</span>

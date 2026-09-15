@@ -1,16 +1,16 @@
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
 
-import { AppSidebar } from "@/shared/components/sidebar/app-sidebar";
-import {} from "@/shared/components/breadcrumb/breadcrumb";
+import { AppSidebar } from "@/shared/components/layout/AppSidebar";
+import {} from "@/shared/components/ui/breadcrumb";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/shared/components/ui/sidebar";
-import { ModeToggle } from "@/shared/components/theme/mode-toggle";
+import { ThemeToggle } from "@/shared/components/theme/ThemeToggle";
 import { useNavigationStore } from "@/shared/store/navigationStore";
 
-import { AppBreadcrumb } from "@/shared/components/breadcrumb/AppBreadcrumb";
+import { AppBreadcrumb } from "@/shared/components/layout/AppBreadcrumb";
 import { useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 
@@ -18,6 +18,8 @@ import { useHeaderStore } from "@/shared/store/headerStore";
 import { useGoBack } from "@/shared/hooks/useGoBack";
 import { Button } from "@/shared/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { useSessionQuery } from "@/features/auth/services/queries";
+import RouteLoadingOverlay from "@/shared/components/layout/RouteLoadingOverlay";
 
 
 
@@ -26,23 +28,36 @@ export default function AppLayout() {
   // پیش‌فرضِ دکمه‌ی برگشت، صفحه‌ی قبلی است. صفحه‌ها فقط وقتی onBack
   // می‌دهند که پیش از رفتن کاری داشته باشند (مثلاً پاک‌کردن فرم).
   const goBack = useGoBack();
-  
+
   const location = useLocation();
   const setCurrentPath = useNavigationStore((s) => s.setCurrentPath);
+
+  // `protectedLoader` فقط یک flagِ پرسیست‌شده در localStorage را چک می‌کند،
+  // نه اعتبار واقعی توکن نزد سرور — flag می‌تواند از یک نشستِ قبلیِ منقضی‌شده
+  // مانده باشد. تا وقتی این کوئری (که هر ۴۰۱ را از طریق interceptor به یک
+  // تلاشِ رفرش واقعی می‌رساند) به یک نتیجه‌ی قطعی نرسیده، محتوای محافظت‌شده
+  // را رندر نمی‌کنیم؛ وگرنه همان چیزی می‌شود که کاربر «فلشِ Home قبل از
+  // ریدایرکت به Login» می‌بیند.
+  const { isSuccess: sessionConfirmed } = useSessionQuery();
 
   useEffect(() => {
     setCurrentPath(location.pathname);
   }, [location.pathname, setCurrentPath]);
 
+  if (!sessionConfirmed) {
+    return null;
+  }
+
   return (
     <TooltipProvider>
+      <RouteLoadingOverlay />
       <SidebarProvider>
         <AppSidebar side="right" />
         <SidebarInset>
           <header className="flex h-16 shrink-0 items-center gap-4 border-b px-4">
             <div className=" ml-auto flex items-center gap-2 ">
               <SidebarTrigger className="-mr-1 ml-auto " />
-              <ModeToggle />
+              <ThemeToggle />
               <div className="flex flex-1 items-center gap-4">
                 {showBack && (
                   <Button

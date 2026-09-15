@@ -40,17 +40,16 @@ namespace Application.Features.Product.Commands
         /// </summary>
         public string? ImageKey { get; set; }
         public int ProductCategoryId { get; set; }
+        public bool RequiresUnitTracking { get; set; }
     }
 
+    // Brand and the three prices are required only once a product is complete - which the validator cannot know - so those
+    // checks live in the handler: an incomplete (quick-created) product may be updated while they are still empty.
     public class UpdateProductCommandValidator : AbstractValidator<UpdateProductCommand>
     {
         public UpdateProductCommandValidator()
         {
             RuleFor(x => x.Name).NotEmpty().WithMessage(Validation.RequiredMessage("نام محصول"));
-            RuleFor(x => x.Brand).NotEmpty().WithMessage(Validation.RequiredMessage("برند محصول"));
-            RuleFor(x => x.PurchasePrice).Must(p => p > 0).WithMessage("قیمت خرید باید بزرگتر از صفر باشد.");
-            RuleFor(x => x.RetailPrice).Must(r => r > 0).WithMessage("قیمت فروش باید بزرگتر از صفر باشد.");
-            RuleFor(x => x.WholeSalePrice).Must(w => w > 0).WithMessage("قیمت عمده فروشی باید بزرگتر از صفر باشد.");
             RuleFor(x => x.Tax).GreaterThanOrEqualTo(0).WithMessage("مالیات نمی‌تواند منفی باشد.");
             RuleFor(x => x.Stock).GreaterThanOrEqualTo(0).WithMessage("موجودی نمی‌تواند منفی باشد.");
             RuleFor(x => x.LowStockThreshold).GreaterThanOrEqualTo(0).WithMessage("حداقل موجودی نمی‌تواند منفی باشد.");
@@ -79,9 +78,22 @@ namespace Application.Features.Product.Commands
             var res = new ResponseDto();
             var product = await _productRepository.GetByIdAsync(request.Id, cancellationToken) ?? throw new ValidationCustomException("محصول مورد نظر یافت نشد.");
 
+            if (!product.IsIncomplete)
+            {
+                if (string.IsNullOrWhiteSpace(request.Brand))
+                    throw new ValidationCustomException(Validation.RequiredMessage("برند محصول"));
+                if (request.PurchasePrice == 0)
+                    throw new ValidationCustomException("قیمت خرید باید بزرگتر از صفر باشد.");
+                if (request.RetailPrice == 0)
+                    throw new ValidationCustomException("قیمت فروش باید بزرگتر از صفر باشد.");
+                if (request.WholeSalePrice == 0)
+                    throw new ValidationCustomException("قیمت عمده فروشی باید بزرگتر از صفر باشد.");
+            }
+
             product.Name = request.Name;
+            product.RequiresUnitTracking = request.RequiresUnitTracking;
             product.EnglishName = request.EnglishName;
-            product.Brand = request.Brand;
+            product.Brand = request.Brand ?? string.Empty;
             product.Unit = request.Unit;
             product.PurchasePrice = request.PurchasePrice;
             product.RetailPrice = request.RetailPrice;
@@ -98,7 +110,8 @@ namespace Application.Features.Product.Commands
             if (request.Stock != product.Stock)
             {
                 var diff = request.Stock - product.Stock;
-                await _productUnitService.ReconcileStockAsync(product, request.Stock, cancellationToken);
+                await _productUnitService.ReconcileStockAsync(product, request.Stock,
+                    new UnitMovementContext(Domain.Enums.ProductUnitMovementReasonEnum.MANUAL_ADJUSTMENT, product.UpdatedAt), cancellationToken);
 
                 if (diff > 0)
                     await _inventoryCostingService.RecordManualAdjustmentInAsync(product, diff, request.PurchasePrice, product.UpdatedAt, cancellationToken);
@@ -106,6 +119,11 @@ namespace Application.Features.Product.Commands
                     await _inventoryCostingService.RecordManualAdjustmentOutAsync(product, -diff, product.UpdatedAt, cancellationToken);
             }
             product.Stock = request.Stock;
+
+            // Cleared only when the data that was missing is actually there - fixing a typo on an incomplete product must not
+            // make it "complete" with no brand or prices.
+            if (product.IsIncomplete && product.HasCompleteCatalogData)
+                product.IsIncomplete = false;
 
             _productRepository.Update(product);
             await _unitOfWork.SaveChangesAsync(cancellationToken);

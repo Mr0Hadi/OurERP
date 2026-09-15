@@ -6,6 +6,7 @@ import {
   addClaimResolution,
   removeClaimResolution,
   executeGoodsRound,
+  executeMoneyEffect,
   rejectPurchaseReturn,
   cancelPurchaseReturn,
   reopenPurchaseReturn,
@@ -51,7 +52,7 @@ export const useAddClaimResolutionMutation = (returnId) => {
     mutationFn: (variables) =>
       addClaimResolution(
         returnId,
-        variables.claimId,
+        variables.claim,
         variables.composition,
         { idempotencyKey: idempotencyKeyFor(variables) },
       ),
@@ -70,7 +71,7 @@ export const useRemoveClaimResolutionMutation = (returnId) => {
       removeClaimResolution(returnId, claimId, resolutionId),
     onSuccess: (updated) => {
       finalizeReturnChange(queryClient, updated);
-      toast.success("تصمیم حذف شد و اثر مالی‌اش برگشت خورد");
+      toast.success("تصمیم حذف شد");
     },
     onError: (error) => toast.error(error?.message || "خطا در حذف تصمیم"),
   });
@@ -84,7 +85,7 @@ export const useRemoveClaimResolutionMutation = (returnId) => {
 export const useExecuteGoodsRoundMutation = (returnId) => {
   const queryClient = useQueryClient();
   return useMutation({
-    // دورِ کالا تجمعی است (`doneQuantity` جمع می‌شود)، پس تکرارِ یک
+    // دورِ کالا تجمعی است (`appliedQuantity` جمع می‌شود)، پس تکرارِ یک
     // درخواست موجودی را دوبار جابه‌جا می‌کند.
     mutationFn: (payload) =>
       executeGoodsRound(returnId, payload, {
@@ -95,6 +96,20 @@ export const useExecuteGoodsRoundMutation = (returnId) => {
       toast.success("جابه‌جایی کالا ثبت شد");
     },
     onError: (error) => toast.error(error?.message || "خطا در ثبت جابه‌جایی کالا"),
+  });
+};
+
+/** ثبتِ پرداختِ یک وعده‌ی مالی — اثر `PENDING` را `APPLIED` می‌کند. */
+export const useExecuteMoneyEffectMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload) =>
+      executeMoneyEffect(payload, { idempotencyKey: idempotencyKeyFor(payload) }),
+    onSuccess: (updated) => {
+      finalizeReturnChange(queryClient, updated);
+      toast.success("پرداخت ثبت شد");
+    },
+    onError: (error) => toast.error(error?.message || "خطا در ثبت پرداخت"),
   });
 };
 

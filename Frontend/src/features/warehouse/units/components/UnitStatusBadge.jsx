@@ -1,4 +1,4 @@
-import { Package, ShoppingCart, Undo2, Trash2 } from "lucide-react";
+import { Package, ShoppingCart, Undo2, Trash2, ShieldAlert } from "lucide-react";
 
 import {
   ProductUnitStatusEnum as UNIT_STATUSES,
@@ -28,6 +28,11 @@ const STATUS_CONFIG = {
   [UNIT_STATUSES.SCRAPPED]: {
     icon: Trash2,
     className: "bg-destructive/5 text-destructive border-destructive/20",
+  },
+  [UNIT_STATUSES.QUARANTINED]: {
+    icon: ShieldAlert,
+    className:
+      "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:border-orange-800 dark:text-orange-400",
   },
 };
 

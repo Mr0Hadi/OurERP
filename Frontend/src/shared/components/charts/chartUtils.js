@@ -243,15 +243,3 @@ export function formatPercent(value, { withSign = false } = {}) {
   const sign = n < 0 ? "−" : withSign && n > 0 ? "+" : "";
   return `${sign}${text}٪`;
 }
-
-/**
- * رنگِ سری‌ها از توکن‌های تم می‌آید نه از مقادیرِ هاردکد — چهار پوسته‌ی
- * برنامه هرکدام `--chart-*` خودشان را دارند.
- */
-export const CHART_COLORS = Object.freeze({
-  1: "var(--chart-1)",
-  2: "var(--chart-2)",
-  3: "var(--chart-3)",
-  4: "var(--chart-4)",
-  5: "var(--chart-5)",
-});

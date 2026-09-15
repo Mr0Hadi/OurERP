@@ -1,6 +1,6 @@
 import { Input } from "@/shared/components/ui/input"
-import { useControllableState } from "@/shared/hooks/use-controllable-state"
-import { normalizePersianDigits } from "@/shared/lib/normalize-persian-digits"
+import { useControllableState } from "@/shared/hooks/useControllableState"
+import { normalizePersianDigits } from "@/shared/lib/persianDigits"
 import { cn } from "@/shared/lib/utils"
 
 function clamp(value, min, max) {

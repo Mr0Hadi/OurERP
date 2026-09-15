@@ -7,12 +7,19 @@ namespace Domain.Enums
     // frontend backed the request out the same week and is back to these same 4 members (see
     // docs/frontend-enum-contract.fa.md section 2). Removed 2026-09-01 for full frontend parity;
     // if a future feature needs them, docs/frontend-enum-contract.fa.md section 2 has the
-    // previously-agreed numbers to reuse.
+    // previously-agreed numbers to reuse. QUARANTINED takes 9, not 5, so those documented numbers stay free.
     public enum ProductUnitStatusEnum
     {
         IN_STOCK = 1,
         SOLD = 2,
         RETURNED_TO_SUPPLIER = 3,
         SCRAPPED = 4,
+
+        /// <summary>
+        /// Physically in our warehouse but not sellable, awaiting a decision: defective goods on the order line,
+        /// excess over the line, or a product the purchase never listed (see ProductUnit.CustodyReason). Not part
+        /// of Product.Stock - the invariant Stock == COUNT(IN_STOCK) is unchanged.
+        /// </summary>
+        QUARANTINED = 9,
     }
 }

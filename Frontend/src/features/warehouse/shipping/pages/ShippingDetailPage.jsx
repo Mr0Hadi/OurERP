@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { CheckCircle, AlertTriangle, X } from "lucide-react";
 
@@ -14,44 +14,109 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import { useHeaderStore } from "@/shared/store/headerStore";
-import { useShippingSaleQuery } from "../services/queries";
-import { useProductsQuery } from "@/features/warehouse/products/services/queries";
-import { useConfirmShipmentMutation } from "../services/mutations";
-import { useShippingForm } from "../hooks/useShippingForm";
-import ShippingItemsSection from "../components/forms/ShippingItemsSection";
 import {
-  SHIPPING_SOURCES,
-  SHIPPING_SOURCE_LABELS,
-} from "../domain/shippingVocabulary";
+  useSaleForShippingQuery,
+  useSaleReturnPendingEffectsQuery,
+} from "../services/queries";
+import { useProductsQuery } from "@/features/warehouse/products/services/queries";
+import { useDispatchShipmentMutation } from "../services/mutations";
+import { useShippingForm } from "../hooks/useShippingForm";
+import { useGoodsRoundForm } from "@/shared/hooks/useGoodsRoundForm";
+import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
+import ShippingItemsSection from "../components/forms/ShippingItemsSection";
 import ShippingSummaryCard from "../components/forms/ShippingSummaryCard";
 import ShippingTransporterSection from "../components/forms/ShippingTransporterSection";
+import GoodsRoundItemsSection from "@/shared/components/returns/GoodsRoundItemsSection";
 import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
 import { ROUTES } from "@/shared/constants/routes";
+import { isExcessAllowedFor } from "../domain/shippingVocabulary";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
 const SORTING = { id: "name", desc: false };
 
+function withProductImage(rows, productMap) {
+  return rows.map((row) => {
+    const product = productMap.get(row.productId);
+    return {
+      ...row,
+      imageKey: product?.imageKey ?? null,
+      imageUrl: product?.imageUrl ?? product?.image ?? null,
+    };
+  });
+}
+
+/**
+ * یک محموله‌ی خروجی برای مشتری: اقلامِ فروش (با مازاد و اسکن)، و کالای
+ * جایگزینی که مرجوعی‌های همین فروش باید برای مشتری بفرستند — همه با یک
+ * `DispatchShipment` و در یک تراکنش.
+ */
 function ShippingDetailForm({ sale }) {
   const navigate = useNavigate();
-  const shipMutation = useConfirmShipmentMutation();
+  const dispatchMutation = useDispatchShipmentMutation();
 
-  const { data: productsData } = useProductsQuery(ALL_FILTERS, PAGINATION, SORTING);
+  const { data: productsData } = useProductsQuery(
+    ALL_FILTERS,
+    PAGINATION,
+    SORTING,
+  );
   const productMap = useMemo(() => {
     const map = new Map();
     (productsData?.items || []).forEach((p) => map.set(p.id, p));
     return map;
   }, [productsData]);
 
+  const isTracked = useCallback(
+    (productId) => Boolean(productMap.get(productId)?.requiresUnitTracking),
+    [productMap],
+  );
+
   const {
     formData,
     setFormData,
+    items,
     handleItemChange,
+    handleExcessChange,
+    handleBarcodesChange,
     isAllComplete,
-    buildPayload,
+    hasSomethingToShip,
+    blockingReason,
+    buildCommand,
     resetForm,
-  } = useShippingForm(sale);
+  } = useShippingForm(sale, { isTracked });
+
+  // کالای جایگزینِ مرجوعی‌های همین فروش که هنوز برای مشتری نرفته.
+  const { data: pendingEffects = [] } = useSaleReturnPendingEffectsQuery(sale.id);
+  const replacementLines = useMemo(
+    () =>
+      pendingEffects
+        .filter(
+          (effect) =>
+            effect.direction === EFFECT_DIRECTIONS.GOODS_OUT &&
+            effect.remainingQuantity > 0,
+        )
+        .map((effect) => ({
+          effectId: effect.effectId,
+          direction: effect.direction,
+          returnId: effect.saleReturnId,
+          reference: effect.returnNumber,
+          productId: effect.productId,
+          productCode: effect.productCode,
+          productName: effect.productName,
+          unit: effect.unit,
+          remainingQuantity: effect.remainingQuantity,
+        })),
+    [pendingEffects],
+  );
+  const replacementBarcodesRequired = useCallback(
+    (line) => isTracked(line.productId),
+    [isTracked],
+  );
+  const replacement = useGoodsRoundForm(replacementLines, {
+    barcodesRequired: replacementBarcodesRequired,
+    startEmpty: true,
+  });
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
@@ -60,47 +125,35 @@ function ShippingDetailForm({ sale }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const items = formData.items || [];
-
-  const displayItems = useMemo(
-    () =>
-      items.map((item) => {
-        const product = productMap.get(item.productId);
-        return {
-          ...item,
-          imageKey: product?.imageKey ?? null,
-          imageUrl: product?.imageUrl ?? product?.image ?? null,
-        };
-      }),
-    [items, productMap],
+  const displayItems = useMemo(() => withProductImage(items, productMap), [items, productMap]);
+  const displayReplacementRounds = useMemo(
+    () => withProductImage(replacement.rounds, productMap),
+    [replacement.rounds, productMap],
   );
 
-  const orderItems = displayItems.filter(
-    (item) => (item.source ?? SHIPPING_SOURCES.ORDER) === SHIPPING_SOURCES.ORDER,
-  );
-  const returnItems = displayItems.filter(
-    (item) => item.source === SHIPPING_SOURCES.RETURN,
-  );
-
-  const isBusy = shipMutation.isPending;
-
-  const handleConfirmClick = () => {
-    setShowConfirmDialog(true);
-  };
+  const isBusy = dispatchMutation.isPending;
+  const hasSomething = hasSomethingToShip || replacement.hasSomethingToRecord;
+  const blocking = blockingReason ?? replacement.blockingReason;
 
   const handleSubmit = () => {
-    const payload = buildPayload();
-
-    shipMutation.mutate(
-      { saleId: payload.id, shipmentData: payload },
-      {
-        onSuccess: () => {
-          setShowConfirmDialog(false);
-          resetForm();
-          navigate(ROUTES.WAREHOUSE_SHIPPING);
-        },
+    const shipmentHeader = {
+      date: formData.shippedDate,
+      partyName: formData.driverFullName,
+      vehiclePlate: formData.vehiclePlate,
+      note: formData.shippingNote,
+    };
+    const command = {
+      sale: buildCommand(),
+      saleReturnRounds: replacement.buildCommandsByReturn(shipmentHeader, "saleReturnId"),
+      purchaseReturnRounds: [],
+    };
+    dispatchMutation.mutate(command, {
+      onSuccess: () => {
+        setShowConfirmDialog(false);
+        resetForm();
+        navigate(ROUTES.WAREHOUSE_SHIPPING);
       },
-    );
+    });
   };
 
   return (
@@ -108,23 +161,25 @@ function ShippingDetailForm({ sale }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
           <ShippingItemsSection
-            items={orderItems}
-            title={
-              returnItems.length > 0
-                ? SHIPPING_SOURCE_LABELS[SHIPPING_SOURCES.ORDER]
-                : "اقلام ارسال"
-            }
+            items={displayItems}
+            isTracked={isTracked}
+            allowExcess={isExcessAllowedFor(sale.status)}
             onItemChange={handleItemChange}
+            onExcessChange={handleExcessChange}
+            onBarcodesChange={handleBarcodesChange}
           />
 
-          {returnItems.length > 0 && (
-            <ShippingItemsSection
-              items={returnItems}
-              title={SHIPPING_SOURCE_LABELS[SHIPPING_SOURCES.RETURN]}
-              subtitle="کالای جایگزینی که بابت مرجوعی‌های همین فروش به مشتری بدهکاریم و با همین ماشین می‌رود."
-              onItemChange={handleItemChange}
+          {replacement.rounds.length > 0 && (
+            <GoodsRoundItemsSection
+              rounds={displayReplacementRounds}
+              title="کالای جایگزینِ مرجوعی"
+              subtitle="طبق تصمیمِ مرجوعی باید برای مشتری ارسال شود. اگر با همین محموله می‌رود، ثبتش کنید."
+              withBarcodes
+              onQuantityChange={replacement.handleQuantityChange}
+              onBarcodesChange={replacement.handleBarcodesChange}
             />
           )}
+
           <ShippingTransporterSection
             formData={formData}
             onFormChange={setFormData}
@@ -134,6 +189,10 @@ function ShippingDetailForm({ sale }) {
         <div className="space-y-4">
           <ShippingSummaryCard formData={formData} onFormChange={setFormData} />
 
+          {blocking && hasSomething && (
+            <p className="text-xs text-destructive px-1">{blocking}</p>
+          )}
+
           <div className="flex gap-2">
             <Button
               className={`flex-1 gap-2 ${
@@ -141,15 +200,15 @@ function ShippingDetailForm({ sale }) {
                   ? "bg-amber-600 hover:bg-amber-700 text-white"
                   : ""
               }`}
-              disabled={isBusy || items.length === 0}
-              onClick={handleConfirmClick}
+              disabled={isBusy || !hasSomething || Boolean(blocking)}
+              onClick={() => setShowConfirmDialog(true)}
             >
               {isAllComplete ? (
                 <CheckCircle className="h-4 w-4" />
               ) : (
                 <AlertTriangle className="h-4 w-4" />
               )}
-              {isAllComplete ? "تأیید ارسال کامل" : "ثبت ارسال (ناقص)"}
+              {isAllComplete ? "تأیید ارسال" : "ثبت ارسال (ناقص)"}
             </Button>
             <Button
               type="button"
@@ -163,34 +222,27 @@ function ShippingDetailForm({ sale }) {
             </Button>
           </div>
 
-          {items.every((i) => !(i.shippedQuantity > 0)) && (
-            <p className="text-xs text-muted-foreground text-center px-2">
-              این فروش هنوز هیچ ارسالی ندارد. باقیمانده‌ای که این دور ارسال
-              نکنید، برای دور بعدی در همین لیست باقی می‌ماند.
-            </p>
-          )}
+          <p className="text-xs text-muted-foreground text-center px-2">
+            باقیمانده‌ای که این دور ارسال نکنید، برای دور بعدی در همین لیست
+            باقی می‌ماند.
+          </p>
         </div>
       </div>
 
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {isAllComplete ? "ثبت ارسال کامل" : "ثبت ارسال ناقص"}
-            </AlertDialogTitle>
+            <AlertDialogTitle>ثبت این محموله</AlertDialogTitle>
             <AlertDialogDescription>
-              {isAllComplete
-                ? "آیا مطمئن هستید که همه اقلام به‌طور کامل آماده و ارسال شده‌اند؟"
-                : "بخشی که ارسال نکرده‌اید در انتظار محموله بعدی می‌ماند و این فروش همچنان در لیست ارسال باقی می‌ماند."}
+              همه‌ی مقادیرِ واردشده (ارسالی، مازاد و جایگزینِ مرجوعی) همین حالا
+              از موجودی کم می‌شوند.
+              {!isAllComplete &&
+                " باقیمانده‌ی سفارش در انتظار محموله‌ی بعدی می‌ماند."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isBusy}>انصراف</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isBusy}
-              onClick={handleSubmit}
-              className={!isAllComplete ? "bg-amber-600 hover:bg-amber-700" : ""}
-            >
+            <AlertDialogAction disabled={isBusy} onClick={handleSubmit}>
               {isBusy ? "در حال ثبت..." : "تأیید"}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -206,7 +258,7 @@ export default function ShippingDetailPage() {
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  const { data: sale, isLoading, isError } = useShippingSaleQuery(Number(id));
+  const { data: sale, isLoading, isError } = useSaleForShippingQuery(Number(id));
 
   useEffect(() => {
     setHeader({

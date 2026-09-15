@@ -1,13 +1,15 @@
-﻿using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.PurchaseReturn;
+using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos.Returns;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Common.Queries;
-using Application.Features.PurchaseReturn.Dtos;
+using Application.Common.Returns;
+using Application.Features.PurchaseReturn.Queries;
 using Common.Exceptions;
 using Common.Extensions;
 using Domain.Enums;
@@ -17,10 +19,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.PurchaseReturn.Commands
 {
-    // A physical receiving/dispatch round against one or more goods effects on a return - the
-    // supplier sending a replacement (GOODS_IN) or us physically returning goods (GOODS_OUT).
-    // Replaces the purchase side's old implicit receiving-issue path entirely: goods rounds target
-    // a specific effect explicitly, there is nothing left to infer.
+    // A physical round against one or more goods effects on a return: goods coming in from the supplier (GOODS_IN), leaving us
+    // back to them (GOODS_OUT), or moving out of quarantine inside the company (GOODS_RELEASE into stock, GOODS_SCRAP).
+    // Goods rounds target a specific effect explicitly; where the units come from is stated on the line, never inferred.
     public class ExecuteGoodsRoundCommand : IRequest<ResponseDto>
     {
         public int PurchaseReturnId { get; set; }
@@ -42,6 +43,15 @@ namespace Application.Features.PurchaseReturn.Commands
             {
                 line.RuleFor(l => l.EffectId).GreaterThan(0).WithMessage(Validation.RequiredMessage("اثر"));
                 line.RuleFor(l => l.Quantity).GreaterThan(0).WithMessage("مقدار اجرا باید از صفر بیشتر باشد.");
+                line.RuleFor(l => l.Source).IsInEnum().WithMessage("منبع دانه‌ها نامعتبر است.").When(l => l.Source.HasValue);
+                line.RuleForEach(l => l.Observations).ChildRules(obs =>
+                    obs.RuleFor(o => o.Quantity).GreaterThanOrEqualTo(0).WithMessage("مقدار مشاهده نمی‌تواند منفی باشد."));
+                // Healthy quantity is Quantity minus the observations; more observed than moved made it
+                // negative, and that negative number was added straight to Product.Stock.
+                line.RuleFor(l => l)
+                    .Must(l => (l.Observations ?? new()).Where(o => o.Quantity > 0).Sum(o => o.Quantity) <= l.Quantity)
+                    .WithMessage("مجموع مقدار مشاهده‌ها نمی‌تواند از مقدار اجرا بیشتر باشد.");
+                line.RuleFor(l => l).Must(GoodsRoundBarcodes.CountsMatch).WithMessage(GoodsRoundBarcodes.CountMismatchMessage);
             });
         }
     }
@@ -52,14 +62,16 @@ namespace Application.Features.PurchaseReturn.Commands
         private readonly IPurchaseReturnCalculationService _purchaseReturnCalculationService;
         private readonly IProductUnitService _productUnitService;
         private readonly IInventoryCostingService _inventoryCostingService;
+        private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public ExecuteGoodsRoundCommandHandler(IWMSDbContext context, IPurchaseReturnCalculationService purchaseReturnCalculationService, IProductUnitService productUnitService, IInventoryCostingService inventoryCostingService, IUnitOfWork unitOfWork)
+        public ExecuteGoodsRoundCommandHandler(IWMSDbContext context, IPurchaseReturnCalculationService purchaseReturnCalculationService, IProductUnitService productUnitService, IInventoryCostingService inventoryCostingService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
         {
             _context = context;
             _purchaseReturnCalculationService = purchaseReturnCalculationService;
             _productUnitService = productUnitService;
             _inventoryCostingService = inventoryCostingService;
+            _objectStorageService = objectStorageService;
             _unitOfWork = unitOfWork;
         }
 
@@ -74,13 +86,19 @@ namespace Application.Features.PurchaseReturn.Commands
                 .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
             if (_purchaseReturnCalculationService.IsTerminal(purchaseReturn.Status))
-                throw new ValidationCustomException("این مرجوعی دیگر قابل ویرایش نیست.");
+                throw new ValidationCustomException(ReturnLifecycleRules.NotEditableMessage(purchaseReturn.Status));
 
             var effectsById = purchaseReturn.Claims
                 .SelectMany(c => c.Resolutions.SelectMany(r => r.Effects.Select(e => (claim: c, effect: e))))
                 .ToDictionary(x => x.effect.Id);
 
-            var now = request.Date ?? DateTime.Now;
+            // ── Phase 1: validate every line before touching anything. ─────────────────────────────
+            // This used to validate and mutate one line at a time, so a refusal on line 2 threw with
+            // line 1's stock, AppliedQuantity, units and ledger rows already changed on the tracked
+            // graph. Nothing is saved on a throw, but that is only safe as long as nobody ever reuses
+            // the context after catching - so the rule is now: all checks first, then all writes.
+            var plan = new List<(GoodsRoundLineDto line, Domain.Entities.PurchaseReturnClaim claim, Domain.Entities.PurchaseReturnEffect effect, int healthy)>();
+            var requestedPerEffect = new Dictionary<int, int>();
 
             foreach (var line in request.Rounds)
             {
@@ -89,23 +107,98 @@ namespace Application.Features.PurchaseReturn.Commands
 
                 var (claim, effect) = found;
 
-                if (effect.Direction is not (ReturnEffectDirectionEnum.GOODS_IN or ReturnEffectDirectionEnum.GOODS_OUT))
+                if (!ReturnEffectDirections.IsGoods(effect.Direction))
                     throw new ValidationCustomException("فقط اثرهای کالایی می‌توانند اجرا شوند.");
 
-                if (line.Quantity > effect.RemainingQuantity)
+                // Summed per effect: the same effect twice in one round is checked as its total.
+                requestedPerEffect[effect.Id] = requestedPerEffect.GetValueOrDefault(effect.Id) + line.Quantity;
+                if (requestedPerEffect[effect.Id] > effect.RemainingQuantity)
                     throw new ValidationCustomException("مقدار اجرا از باقیمانده این اثر بیشتر است.");
 
-                var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == effect.ProductId, cancellationToken)
-                    ?? throw new NotFoundCustomException("کالای مورد نظر یافت نشد.");
+                switch (effect.Direction)
+                {
+                    case ReturnEffectDirectionEnum.GOODS_IN:
+                        if (line.Source.HasValue)
+                            throw new ValidationCustomException("کالای ورودی از جایی در انبار برداشته نمی‌شود؛ منبع (source) نفرستید.");
+                        // A purchase-return GOODS_IN creates brand-new units, which have no barcode to scan yet.
+                        if (line.ProductUnitBarcodes is { Count: > 0 })
+                            throw new ValidationCustomException("کالای ورودی مرجوعی خرید دانه‌ی تازه می‌سازد و بارکدی برای اسکن ندارد؛ بارکد نفرستید.");
+                        break;
 
-                var observations = (line.Observations ?? new()).Where(o => o.Quantity > 0).ToList();
-                var healthyQty = effect.Direction == ReturnEffectDirectionEnum.GOODS_IN ? line.Quantity - observations.Sum(o => o.Quantity) : (int?)null;
+                    case ReturnEffectDirectionEnum.GOODS_OUT:
+                        // Stated by the warehouse, never inferred: shelf stock and quarantine are different goods with different value.
+                        if (line.Source is not (ProductUnitStatusEnum.IN_STOCK or ProductUnitStatusEnum.QUARANTINED))
+                            throw new ValidationCustomException("برای عودت کالا باید مشخص شود دانه‌ها از موجودی (IN_STOCK) برداشته می‌شوند یا از قرنطینه (QUARANTINED).");
+                        break;
+
+                    default: // GOODS_RELEASE, GOODS_SCRAP
+                        if (line.Source is not (null or ProductUnitStatusEnum.QUARANTINED))
+                            throw new ValidationCustomException("آزادسازی و اسقاط فقط از قرنطینه انجام می‌شود.");
+                        break;
+                }
+
+                var observed = effect.Direction == ReturnEffectDirectionEnum.GOODS_IN
+                    ? (line.Observations ?? new()).Where(o => o.Quantity > 0).Sum(o => o.Quantity)
+                    : 0;
+                plan.Add((line, claim, effect, line.Quantity - observed));
+            }
+
+            var productIds = plan.Select(p => p.effect.ProductId!.Value).Distinct().ToList();
+            var products = await _context.Products
+                .Where(p => productIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id, cancellationToken);
+
+            if (products.Count != productIds.Count)
+                throw new NotFoundCustomException("کالای مورد نظر یافت نشد.");
+
+            // Sellable stock is simulated in request order, so an inbound line earlier in the same round still covers an outbound
+            // one after it. Quarantine shortfalls are caught by ProductUnitService against the units themselves.
+            var projectedStock = products.ToDictionary(p => p.Key, p => p.Value.Stock);
+            foreach (var (line, _, effect, healthy) in plan)
+            {
+                var productId = effect.ProductId!.Value;
+
+                // Goods leaving the company, from either source: a tracked product must be scanned.
+                if (effect.Direction == ReturnEffectDirectionEnum.GOODS_OUT && products[productId].RequiresUnitTracking && (line.ProductUnitBarcodes?.Count ?? 0) == 0)
+                    throw new ValidationCustomException($"کالای «{products[productId].Name}» ردیابی دانه‌ای دارد؛ بارکد دانه‌های خروجی باید اسکن شود.");
+
+                switch (effect.Direction)
+                {
+                    case ReturnEffectDirectionEnum.GOODS_IN:
+                        projectedStock[productId] += healthy;
+                        break;
+                    case ReturnEffectDirectionEnum.GOODS_RELEASE:
+                        projectedStock[productId] += line.Quantity;
+                        break;
+                    case ReturnEffectDirectionEnum.GOODS_OUT when line.Source == ProductUnitStatusEnum.IN_STOCK:
+                        if (line.Quantity > projectedStock[productId])
+                            throw new ValidationCustomException($"موجودی «{products[productId].Name}» برای این عودت کافی نیست.");
+                        projectedStock[productId] -= line.Quantity;
+                        break;
+                }
+            }
+
+            // ── Phase 2: apply. ────────────────────────────────────────────────────────────────────
+            // One rule per direction, whatever the claim:
+            //   GOODS_IN       healthy -> stock + pool at UnitCost; damaged part -> quarantine, value off-pool at UnitCost
+            //   GOODS_OUT      IN_STOCK: stock - and pool out at the average; QUARANTINED: off-pool out at UnitCost
+            //   GOODS_RELEASE  quarantine -> stock + pool at UnitCost, off-pool out
+            //   GOODS_SCRAP    quarantine -> scrapped, off-pool out = reported loss
+            // UnitCost omitted: running average, else Product.PurchasePrice; an explicit 0 stays 0. The only refusals left are
+            // ProductUnitService's own unit-state checks, which throw before SaveChanges.
+            var now = request.Date ?? DateTime.Now;
+            var supplierId = purchaseReturn.Purchase!.SupplierId;
+
+            foreach (var (line, claim, effect, healthy) in plan)
+            {
+                var product = products[effect.ProductId!.Value];
+                var isGoodsIn = effect.Direction == ReturnEffectDirectionEnum.GOODS_IN;
 
                 var round = new Domain.Entities.PurchaseReturnEffectRound
                 {
                     Date = now,
                     Quantity = line.Quantity,
-                    HealthyQuantity = healthyQty,
+                    HealthyQuantity = isGoodsIn ? healthy : null,
                     PartyName = request.PartyName,
                     PartyNationalId = request.PartyNationalId,
                     VehiclePlate = request.VehiclePlate,
@@ -113,7 +206,7 @@ namespace Application.Features.PurchaseReturn.Commands
                     CreatedAt = now,
                 };
 
-                foreach (var obs in observations)
+                foreach (var obs in (line.Observations ?? new()).Where(o => isGoodsIn && o.Quantity > 0))
                 {
                     round.Observations.Add(new Domain.Entities.PurchaseReturnEffectObservation
                     {
@@ -126,28 +219,64 @@ namespace Application.Features.PurchaseReturn.Commands
                 effect.History.Add(round);
                 effect.AppliedQuantity += line.Quantity;
 
-                if (effect.Direction == ReturnEffectDirectionEnum.GOODS_IN)
+                // Which purchase line the units belong to - identity only, not a stock or cost rule. Only an
+                // ON_ORDER claim's own product has a line; a different product moved on the same claim does not.
+                var sameProduct = effect.ProductId == claim.ProductId;
+                var unitLine = sameProduct ? claim.OnOrderPurchaseItemId : null;
+                var quarantine = QuarantineFor(claim, sameProduct, purchaseReturn.PurchaseId);
+
+                UnitMovementContext Movement(ProductUnitMovementReasonEnum reason) =>
+                    new(reason, now, DocumentKindEnum.PURCHASE_RETURN, purchaseReturn.Id, SupplierId: supplierId, Note: request.Note);
+
+                switch (effect.Direction)
                 {
-                    var restocked = healthyQty ?? line.Quantity;
-                    product.Stock += restocked;
-                    effect.RestockedQuantity = (effect.RestockedQuantity ?? 0) + restocked;
+                    case ReturnEffectDirectionEnum.GOODS_IN:
+                    {
+                        var damaged = line.Quantity - healthy;
+                        product.Stock += healthy;
+                        effect.RestockedQuantity = (effect.RestockedQuantity ?? 0) + healthy;
 
-                    // The supplier physically sending a replacement is a return-side event, not a
-                    // normal receiving round - it never touches PurchaseItem.ReceivedQuantity.
-                    await _productUnitService.MintAsync(product, restocked, claim.PurchaseItemId, cancellationToken);
+                        // Goods arriving through a return never touch PurchaseItem.ReceivedQuantity.
+                        await _productUnitService.MintAsync(product, healthy,
+                            new UnitOrigin(purchaseReturn.PurchaseId, unitLine, unitLine.HasValue ? UnitCustodyReasonEnum.ON_ORDER : null),
+                            Movement(ProductUnitMovementReasonEnum.PURCHASE_RETURN_RECEIVED), cancellationToken);
+                        if (healthy > 0)
+                            await _inventoryCostingService.RecordPurchaseReturnReplacementReceivedAsync(product, healthy, effect.UnitCost, unitLine, now, cancellationToken);
 
-                    if (restocked > 0)
-                        await _inventoryCostingService.RecordPurchaseReturnReplacementReceivedAsync(product, restocked, claim.PurchaseItemId, now, cancellationToken);
-                }
-                else // GOODS_OUT: goods physically leaving us back to the supplier.
-                {
-                    if (line.Quantity > product.Stock)
-                        throw new ValidationCustomException($"موجودی «{product.Name}» برای این عودت کافی نیست.");
+                        // The damaged part is physically here too: held in quarantine under the claim's custody, not dropped.
+                        await _productUnitService.MintAsync(product, damaged,
+                            new UnitOrigin(quarantine.PurchaseId, quarantine.PurchaseItemId, quarantine.CustodyReason, ProductUnitStatusEnum.QUARANTINED),
+                            Movement(ProductUnitMovementReasonEnum.PURCHASE_RETURN_RECEIVED), cancellationToken);
+                        if (damaged > 0)
+                            await _inventoryCostingService.RecordPurchaseReturnReplacementQuarantinedAsync(product, damaged, effect.UnitCost, unitLine, now, cancellationToken);
+                        break;
+                    }
 
-                    product.Stock -= line.Quantity;
-                    await _inventoryCostingService.RecordPurchaseReturnShippedToSupplierAsync(product, line.Quantity, now, cancellationToken);
+                    case ReturnEffectDirectionEnum.GOODS_OUT when line.Source == ProductUnitStatusEnum.IN_STOCK:
+                        product.Stock -= line.Quantity;
+                        await _inventoryCostingService.RecordPurchaseReturnShippedToSupplierAsync(product, line.Quantity, now, cancellationToken);
+                        await _productUnitService.ReturnToSupplierAsync(product, line.Quantity, UnitSelection.InStock(unitLine), line.ProductUnitBarcodes,
+                            Movement(ProductUnitMovementReasonEnum.PURCHASE_RETURN_SHIPPED), cancellationToken);
+                        break;
 
-                    await _productUnitService.ReturnToSupplierAsync(product, line.Quantity, claim.PurchaseItemId, cancellationToken);
+                    case ReturnEffectDirectionEnum.GOODS_OUT:
+                        await _productUnitService.ReturnToSupplierAsync(product, line.Quantity, quarantine, line.ProductUnitBarcodes,
+                            Movement(ProductUnitMovementReasonEnum.PURCHASE_RETURN_SHIPPED), cancellationToken);
+                        await _inventoryCostingService.RecordPurchaseReturnShippedFromQuarantineAsync(product, line.Quantity, effect.UnitCost, claim.Id, now, cancellationToken);
+                        break;
+
+                    case ReturnEffectDirectionEnum.GOODS_RELEASE:
+                        product.Stock += line.Quantity;
+                        await _productUnitService.ReleaseFromQuarantineAsync(product, line.Quantity, quarantine, line.ProductUnitBarcodes,
+                            Movement(ProductUnitMovementReasonEnum.QUARANTINE_RELEASED), cancellationToken);
+                        await _inventoryCostingService.RecordQuarantineReleasedAsync(product, line.Quantity, effect.UnitCost, claim.Id, now, cancellationToken);
+                        break;
+
+                    case ReturnEffectDirectionEnum.GOODS_SCRAP:
+                        await _productUnitService.ScrapFromQuarantineAsync(product, line.Quantity, quarantine, line.ProductUnitBarcodes,
+                            Movement(ProductUnitMovementReasonEnum.QUARANTINE_SCRAPPED), cancellationToken);
+                        await _inventoryCostingService.RecordQuarantineScrappedAsync(product, line.Quantity, effect.UnitCost, claim.Id, now, cancellationToken);
+                        break;
                 }
 
                 if (effect.AppliedQuantity >= effect.Quantity)
@@ -156,9 +285,9 @@ namespace Application.Features.PurchaseReturn.Commands
                     effect.AppliedAt = now;
 
                     var resolution = claim.Resolutions.First(r => r.Effects.Contains(effect));
-                    if (resolution.Effects.All(e => e.Status != ReturnEffectStatusEnum.PENDING) && claim.PurchaseItemId.HasValue)
+                    if (resolution.Effects.All(e => e.Status != ReturnEffectStatusEnum.PENDING) && claim.OnOrderPurchaseItemId is int purchaseItemId)
                     {
-                        var purchaseItem = purchaseReturn.Purchase!.Items.First(x => x.Id == claim.PurchaseItemId.Value);
+                        var purchaseItem = purchaseReturn.Purchase!.Items.First(x => x.Id == purchaseItemId);
                         purchaseItem.SettledQuantity += resolution.Quantity;
                     }
                 }
@@ -173,10 +302,27 @@ namespace Application.Features.PurchaseReturn.Commands
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            res.Data = new { ReturnStatus = purchaseReturn.Status };
+            res.Data = await PurchaseReturnDetailReader.ReadAsync(_context, _purchaseReturnCalculationService, _objectStorageService, purchaseReturn.Id, cancellationToken);
             res.Message = "اجرای مرحله با موفقیت ثبت شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;
+        }
+
+        /// <summary>
+        /// The quarantined units a claim may move, and the custody a damaged replacement is held under - the same fact the
+        /// off-order claim quota counts (UnitCustodyReasonEnum): an ON_ORDER claim works its line's defective units, an EXCESS
+        /// claim its line's excess, an UNLISTED claim that product's unlisted units on this purchase. Goods of a different product
+        /// than the claim's are held and taken as UNLISTED.
+        /// </summary>
+        private static UnitSelection QuarantineFor(Domain.Entities.PurchaseReturnClaim claim, bool sameProduct, int purchaseId)
+        {
+            if (sameProduct && claim.Scope == ReturnClaimScopeEnum.ON_ORDER)
+                return new(ProductUnitStatusEnum.QUARANTINED, purchaseId, claim.PurchaseItemId, UnitCustodyReasonEnum.ON_ORDER);
+
+            if (sameProduct && claim.OffScopeKind == ReturnOffScopeKindEnum.EXCESS)
+                return new(ProductUnitStatusEnum.QUARANTINED, purchaseId, claim.PurchaseItemId, UnitCustodyReasonEnum.EXCESS);
+
+            return new(ProductUnitStatusEnum.QUARANTINED, purchaseId, null, UnitCustodyReasonEnum.UNLISTED);
         }
     }
 }

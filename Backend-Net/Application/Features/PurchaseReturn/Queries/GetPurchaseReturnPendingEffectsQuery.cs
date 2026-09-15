@@ -32,7 +32,10 @@ namespace Application.Features.PurchaseReturn.Queries
         {
             var res = new ResponseDto();
 
-            var query = _context.PurchaseReturns.WhereNotDeleted();
+            // Open returns only: a REJECTED/CANCELLED return can still hold a goods effect that never
+            // moved (both are legal while nothing has moved), and ExecuteGoodsRound refuses a terminal
+            // return - so listing it would hand the warehouse work it cannot record.
+            var query = _context.PurchaseReturns.WhereNotDeleted().WhereOpen();
 
             if (request.PurchaseId.HasValue)
                 query = query.Where(x => x.PurchaseId == request.PurchaseId.Value);
@@ -41,7 +44,8 @@ namespace Application.Features.PurchaseReturn.Queries
 
             var pending = returns
                 .SelectMany(r => r.Claims.SelectMany(c => c.Resolutions.SelectMany(res => res.Effects.Select(e => (returnDoc: r, claim: c, effect: e)))))
-                .Where(x => x.effect.Status == ReturnEffectStatusEnum.PENDING)
+                // Goods only: this is the warehouse queue, and a pending money effect is finance's to execute.
+                .Where(x => x.effect.Status == ReturnEffectStatusEnum.PENDING && Application.Common.Returns.ReturnEffectDirections.IsGoods(x.effect.Direction))
                 .Select(x => new PendingEffectDto
                 {
                     EffectId = x.effect.Id,

@@ -1,5 +1,7 @@
 ﻿using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Dtos.Returns;
+using Application.Common.Enums;
+using Application.Common.Returns;
 using Common.Exceptions;
 using Domain.Entities;
 using Domain.Enums;
@@ -16,13 +18,22 @@ namespace Infrastructure.Services
 
         public bool IsTerminal(ReturnStatusEnum status) => TerminalReturnStatuses.Contains(status);
 
-        public bool CanReopen(ReturnStatusEnum status) => status == ReturnStatusEnum.REJECTED;
+        // The matrix itself lives in ReturnLifecycleRules so both return sides share one copy; this
+        // service only supplies the two facts it needs from the loaded graph.
+        public string? GetLifecycleBlocker(PurchaseReturn purchaseReturn, ReturnLifecycleActionEnum action) =>
+            ReturnLifecycleRules.GetBlocker(purchaseReturn.Status, HasMovedGoods(purchaseReturn), HasAppliedMoney(purchaseReturn), action);
 
-        // Money effects are born APPLIED (see ExpandComposition), so a resolution that carries any
-        // money marks the return as touched and locks cancel/reject/delete from that moment on.
-        // That is intentional: money has already moved, there is nothing left to un-do cheaply.
-        public bool IsUntouched(PurchaseReturn purchaseReturn) =>
-            !purchaseReturn.AllEffects.Any(e => e.Status == ReturnEffectStatusEnum.APPLIED);
+        public bool CanPerform(PurchaseReturn purchaseReturn, ReturnLifecycleActionEnum action) =>
+            GetLifecycleBlocker(purchaseReturn, action) == null;
+
+        // AppliedQuantity, not Status == APPLIED: a goods effect with 1 of 3 units moved is still
+        // PENDING, and the old APPLIED-only test let such a return be cancelled with stock changed.
+        public bool HasMovedGoods(PurchaseReturn purchaseReturn) =>
+            purchaseReturn.AllEffects.Any(e => ReturnEffectDirections.IsGoods(e.Direction) && e.AppliedQuantity > 0);
+
+        // APPLIED only: a PENDING money effect is a promise, nothing has moved and nothing is in the ledger.
+        public bool HasAppliedMoney(PurchaseReturn purchaseReturn) =>
+            purchaseReturn.AllEffects.Any(e => e.Direction is ReturnEffectDirectionEnum.MONEY_IN or ReturnEffectDirectionEnum.MONEY_OUT && e.Status == ReturnEffectStatusEnum.APPLIED);
 
         public ReturnStatusEnum RecomputeReturnStatus(PurchaseReturn purchaseReturn)
         {
@@ -44,9 +55,9 @@ namespace Infrastructure.Services
         }
 
         // Off-order claims never consume a line's quota - EXCESS/UNLISTED goods are, by definition,
-        // outside what the line ever ordered. Filtered on Scope, the explicit field, rather than on
-        // OffScopeKind being null: the two are meant to agree, and a quota is the wrong place to
-        // depend on that.
+        // outside what the line ever ordered. EXCESS does carry its line reference (for pricing), so
+        // this must key on Scope rather than on the line id being non-null: OnOrder*ItemId is the
+        // line id for ON_ORDER claims only.
         //
         // Soft-deleted and terminal returns are filtered here rather than trusted from the caller.
         // Every caller today passes IPurchaseReturnRepository.GetActiveByPurchaseIdAsync, which
@@ -60,7 +71,7 @@ namespace Infrastructure.Services
             return activeReturns
                 .Where(r => r.IsActive && !IsTerminal(r.Status))
                 .SelectMany(r => r.Claims)
-                .Where(c => c.Scope != ReturnClaimScopeEnum.OFF_ORDER && c.PurchaseItemId == purchaseItemId)
+                .Where(c => c.OnOrderPurchaseItemId == purchaseItemId)
                 .Sum(c => c.RemainingQuantity);
         }
 
@@ -69,6 +80,22 @@ namespace Infrastructure.Services
             var budget = item.ReceivedQuantity - item.SettledQuantity;
             var openClaim = GetOpenClaimQuantity(item.Id, activeReturns);
             return Math.Max(0, budget - openClaim);
+        }
+
+        // Completed resolutions have moved their units out of quarantine (or settled them in money only, leaving the units
+        // held and claimable again); everything else on the claim - undecided, or decided with an effect still pending - still
+        // reserves quarantined units.
+        public int GetOutstandingOffOrderClaimQuantity(ReturnOffScopeKindEnum kind, int? purchaseItemId, int productId, List<PurchaseReturn> activeReturns)
+        {
+            if (activeReturns == null || activeReturns.Count == 0)
+                return 0;
+
+            return activeReturns
+                .Where(r => r.IsActive && !IsTerminal(r.Status))
+                .SelectMany(r => r.Claims)
+                .Where(c => c.Scope == ReturnClaimScopeEnum.OFF_ORDER && c.OffScopeKind == kind)
+                .Where(c => kind == ReturnOffScopeKindEnum.EXCESS ? c.PurchaseItemId == purchaseItemId : c.ProductId == productId)
+                .Sum(c => Math.Max(0, c.Quantity - c.Resolutions.Where(r => r.Effects.All(e => e.Status != ReturnEffectStatusEnum.PENDING)).Sum(r => r.Quantity)));
         }
 
         // Deliberately decoupled from return activity: whether a purchase's receiving is complete is
@@ -114,6 +141,31 @@ namespace Infrastructure.Services
                         Direction = direction,
                         Quantity = item.Quantity,
                         ProductId = item.ProductId,
+                        UnitPrice = item.UnitPrice,
+                        UnitCost = item.UnitCost,
+                        Status = ReturnEffectStatusEnum.PENDING,
+                        CreatedAt = now,
+                    });
+                }
+            }
+
+            AddQuarantine(composition.GoodsRelease, ReturnEffectDirectionEnum.GOODS_RELEASE);
+            AddQuarantine(composition.GoodsScrap, ReturnEffectDirectionEnum.GOODS_SCRAP);
+
+            // No UnitPrice: an internal movement has no counterparty and no transaction value.
+            void AddQuarantine(List<QuarantineEffectDto>? items, ReturnEffectDirectionEnum direction)
+            {
+                if (items == null)
+                    return;
+
+                foreach (var item in items.Where(i => i.Quantity > 0))
+                {
+                    effects.Add(new PurchaseReturnEffect
+                    {
+                        Direction = direction,
+                        Quantity = item.Quantity,
+                        ProductId = item.ProductId,
+                        UnitCost = item.UnitCost,
                         Status = ReturnEffectStatusEnum.PENDING,
                         CreatedAt = now,
                     });
@@ -136,9 +188,9 @@ namespace Infrastructure.Services
                     Amount = money.Amount,
                     Method = money.Method,
                     Reference = money.Reference,
-                    Status = ReturnEffectStatusEnum.APPLIED,
+                    Status = money.PaidAt.HasValue ? ReturnEffectStatusEnum.APPLIED : ReturnEffectStatusEnum.PENDING,
                     CreatedAt = now,
-                    AppliedAt = now,
+                    AppliedAt = money.PaidAt,
                 };
 
                 if (money.Method == ReturnPaymentMethodEnum.MIXED)

@@ -3,19 +3,17 @@ import { MONEY_DIRECTIONS } from "./resolutions";
 import { RETURN_STATUSES } from "./statuses";
 
 /**
- * تفاوت مرجوعی فروش و مرجوعی خرید — که تماماً *زبانی* است، نه منطقی.
+ * تفاوت مرجوعی فروش و مرجوعی خرید — که تقریباً تماماً *زبانی* است.
  *
- * مدل زیرین یکی است (چهار اثر، سه محورِ تصمیم، یک ماشین وضعیت). آنچه
- * فرق می‌کند فقط این است که طرف حساب کیست و هر جهت را با چه کلمه‌ای
- * صدا می‌زنیم. نگه‌داشتن این تفاوت در یک جا باعث می‌شود کامپوننت‌های
- * مشترک بتوانند هر دو سمت را رندر کنند بدون اینکه شرطِ if بنویسند.
+ * مدل زیرین یکی است. آنچه فرق می‌کند این است که طرف حساب کیست، هر جهت را
+ * با چه کلمه‌ای صدا می‌زنیم، و یک تفاوتِ واقعی: فقط مرجوعی خرید قرنطینه
+ * دارد (`quarantineSlots`).
  *
- * ترتیب محورهای کالا هم اینجاست: در فروش، کارِ رایج «پس‌گرفتن» است و
- * در خرید «عودت‌دادن» — پس هر سمت باید محورِ رایجش را اول ببیند.
+ * ترتیب محورهای کالا هم اینجاست: در فروش، کارِ رایج «پس‌گرفتن» است و در
+ * خرید «عودت‌دادن» — پس هر سمت محورِ رایجش را اول می‌بیند.
  */
 
-// بدون معادل در بکند — فقط کلید محلی برای انتخاب بین دو دسته برچسب/
-// تنظیمات همین فایل است، هیچ‌وقت روی سیم منتقل نمی‌شود.
+// بدون معادل در بکند — فقط کلید محلی برای انتخاب بین دو دسته برچسب/تنظیمات.
 export const RETURN_SIDES = {
   SALES: 0,
   PURCHASE: 1,
@@ -31,14 +29,13 @@ export const SIDE_CONFIG = {
     documentLabel: "مرجوعی از فروش",
     orderLabel: "فروش",
 
-    // محورِ رایج اول: کالا از مشتری پس گرفته می‌شود.
     goodsSlots: [
       {
         slot: GOODS_IN_SLOT,
         direction: EFFECT_DIRECTIONS.GOODS_IN,
         label: "کالا از مشتری پس گرفته شود",
         hint: "کالای برگشتی وارد انبار می‌شود",
-        // انتخابگر کالا لازم نیست؛ پیش‌فرض همان کالای ادعاست.
+        priceLabel: "قیمت هر عدد در این معامله",
         allowPicker: false,
       },
       {
@@ -46,9 +43,13 @@ export const SIDE_CONFIG = {
         direction: EFFECT_DIRECTIONS.GOODS_OUT,
         label: "کالای جایگزین برای مشتری ارسال شود",
         hint: "می‌تواند همان کالا باشد یا کالای دیگری، با هر تعدادی",
+        priceLabel: "قیمت هر عدد در این معامله",
         allowPicker: true,
       },
     ],
+
+    // مرجوعی فروش قرنطینه ندارد: کالای برگشتی کالای خودِ ماست.
+    quarantineSlots: [],
 
     money: {
       [MONEY_DIRECTIONS.NONE]: "بدون جابه‌جایی پول",
@@ -61,6 +62,8 @@ export const SIDE_CONFIG = {
       [EFFECT_DIRECTIONS.GOODS_OUT]: "ارسال",
       [EFFECT_DIRECTIONS.MONEY_IN]: "دریافت وجه",
       [EFFECT_DIRECTIONS.MONEY_OUT]: "پرداخت وجه",
+      [EFFECT_DIRECTIONS.GOODS_RELEASE]: "آزادسازی",
+      [EFFECT_DIRECTIONS.GOODS_SCRAP]: "اسقاط",
     },
 
     statusLabels: {
@@ -83,13 +86,13 @@ export const SIDE_CONFIG = {
     documentLabel: "مرجوعی به تامین‌کننده",
     orderLabel: "خرید",
 
-    // محورِ رایج اول: کالا به تامین‌کننده عودت داده می‌شود.
     goodsSlots: [
       {
         slot: GOODS_OUT_SLOT,
         direction: EFFECT_DIRECTIONS.GOODS_OUT,
         label: "کالا به تامین‌کننده عودت داده شود",
-        hint: "کالا از انبار خارج می‌شود",
+        hint: "کالا از انبار یا قرنطینه خارج می‌شود",
+        priceLabel: "ارزش هر عدد در این معامله",
         allowPicker: false,
       },
       {
@@ -97,7 +100,25 @@ export const SIDE_CONFIG = {
         direction: EFFECT_DIRECTIONS.GOODS_IN,
         label: "کالای جایگزین از تامین‌کننده دریافت شود",
         hint: "می‌تواند همان کالا باشد یا کالای دیگری، با هر تعدادی",
+        priceLabel: "ارزش هر عدد در این معامله",
         allowPicker: true,
+      },
+    ],
+
+    quarantineSlots: [
+      {
+        slot: "goodsRelease",
+        direction: EFFECT_DIRECTIONS.GOODS_RELEASE,
+        label: "کالای قرنطینه به موجودی قابل فروش برگردد",
+        hint: "نگه‌داشتنِ کالا — مثلاً با تخفیف یا پرداختِ مازاد",
+        costLabel: "بهای هر عدد برای ما (ورود به موجودی)",
+      },
+      {
+        slot: "goodsScrap",
+        direction: EFFECT_DIRECTIONS.GOODS_SCRAP,
+        label: "کالای قرنطینه اسقاط شود",
+        hint: "کالا از چرخه خارج می‌شود و به‌اندازه‌ی بهایش زیان ثبت می‌شود",
+        costLabel: "بهای هر عدد برای ما (مبلغ زیان)",
       },
     ],
 
@@ -112,6 +133,8 @@ export const SIDE_CONFIG = {
       [EFFECT_DIRECTIONS.GOODS_OUT]: "عودت کالا",
       [EFFECT_DIRECTIONS.MONEY_IN]: "دریافت وجه",
       [EFFECT_DIRECTIONS.MONEY_OUT]: "پرداخت وجه",
+      [EFFECT_DIRECTIONS.GOODS_RELEASE]: "آزادسازی از قرنطینه",
+      [EFFECT_DIRECTIONS.GOODS_SCRAP]: "اسقاط از قرنطینه",
     },
 
     statusLabels: {
@@ -125,6 +148,8 @@ export const SIDE_CONFIG = {
     warehouse: {
       [EFFECT_DIRECTIONS.GOODS_IN]: "دریافت کالای جایگزین",
       [EFFECT_DIRECTIONS.GOODS_OUT]: "عودت کالا به تامین‌کننده",
+      [EFFECT_DIRECTIONS.GOODS_RELEASE]: "آزادسازی از قرنطینه",
+      [EFFECT_DIRECTIONS.GOODS_SCRAP]: "اسقاط از قرنطینه",
     },
   },
 };

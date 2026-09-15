@@ -1,49 +1,31 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/ui/card";
 import { useShippingFilterStore } from "../store/shippingFilterStore";
 import { useDebouncedShippingFilters } from "../hooks/useDebouncedShippingFilters";
-import { useOutgoingQueueQuery } from "../services/queries";
-import { useCustomersQuery } from "@/features/customers/services/queries";
-import { useSuppliersQuery } from "@/features/suppliers/services/queries";
+import { useShippableSalesQuery } from "../services/queries";
 import ShippingFilters from "../components/table/ShippingFilters";
 import ShippingTable from "../components/table/ShippingTable";
 import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
 import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
 
-const getPartyName = (p) =>
-  p.name || p.companyName || [p.firstName, p.lastName].filter(Boolean).join(" ") || "بدون نام";
-
+/**
+ * صفِ ارسال = `GetSaleList` فیلترشده روی وضعیت‌های قابلِ ارسال.
+ *
+ * عودتِ مازاد به تامین‌کننده در این صف نیست: بکند لیستِ ترکیبی ندارد و
+ * آن کار یک دورِ اثرِ `GOODS_OUT` روی خودِ مرجوعیِ خرید است — از صفحه‌ی
+ * همان مرجوعی باز می‌شود.
+ */
 const ShippingListPage = () => {
-  const { pagination, sorting, setPagination, setSorting } = useShippingFilterStore();
+  const { pagination, sorting, setPagination, setSorting } =
+    useShippingFilterStore();
   const debouncedFilters = useDebouncedShippingFilters();
 
   const { data, isLoading, isFetching, isError, error, refetch } =
-    useOutgoingQueueQuery(debouncedFilters, pagination, sorting);
-
-  const { data: customersData, isLoading: isCustomersLoading } = useCustomersQuery(
-    {},
-    { pageIndex: 0, pageSize: 200 },
-    { id: "name", desc: false },
-  );
-  // تامین‌کننده‌ها از وقتی لازم شدند که عودت مازاد هم در همین صف
-  // دیده می‌شود — طرفِ آن محموله‌ها مشتری نیست.
-  const { data: suppliersData, isLoading: isSuppliersLoading } = useSuppliersQuery(
-    {},
-    { pageIndex: 0, pageSize: 200 },
-    { id: "name", desc: false },
-  );
-
-  const parties = [
-    ...(customersData?.items ?? []).map((c) => ({
-      key: `customer:${c.id}`,
-      name: getPartyName(c),
-      type: "customer",
-    })),
-    ...(suppliersData?.items ?? []).map((s) => ({
-      key: `supplier:${s.id}`,
-      name: getPartyName(s),
-      type: "supplier",
-    })),
-  ];
+    useShippableSalesQuery(debouncedFilters, pagination);
 
   const rows = data?.items ?? [];
   const totalPages = data?.totalPages ?? 1;
@@ -55,16 +37,12 @@ const ShippingListPage = () => {
         <CardHeader className="flex sm:flex-row flex-col sm:items-center justify-between">
           <CardTitle>ارسال کالاهای انبار</CardTitle>
           <div className="text-sm text-muted-foreground">
-            آماده‌سازی سفارش‌های مشتریان، کالاهای جایگزین مرجوعی و عودت مازاد به
-            تامین‌کننده
+            آماده‌سازی و ارسال سفارش‌هایی که هنوز کامل تحویل مشتری نشده‌اند
           </div>
         </CardHeader>
 
         <CardContent className="space-y-3">
-          <ShippingFilters
-            parties={parties}
-            isPartiesLoading={isCustomersLoading || isSuppliersLoading}
-          />
+          <ShippingFilters />
 
           {isError ? (
             <QueryErrorState error={error} onRetry={() => refetch()} />

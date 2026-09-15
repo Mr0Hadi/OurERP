@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import { Printer, QrCode } from "lucide-react";
+import { History, Printer, QrCode } from "lucide-react";
 
 import {
   Sheet,
@@ -14,9 +14,11 @@ import { Label } from "@/shared/components/ui/label";
 import { Switch } from "@/shared/components/ui/switch";
 import BarcodeGraphic from "@/shared/components/print/BarcodeGraphic";
 import QrCodeGraphic from "@/shared/components/print/QrCodeGraphic";
-import { gregorianToPersian } from "@/shared/utils/dateUtils";
+import { gregorianToPersian } from "@/shared/lib/dateUtils";
+import { UNIT_STATUS_LABELS } from "@/shared/domain/enums/unitStatus";
 
 import UnitStatusBadge from "./UnitStatusBadge";
+import { useProductUnitHistoryQuery } from "../services/queries";
 
 const formatDate = (value) =>
   value ? gregorianToPersian(value.slice(0, 10)) : "—";
@@ -31,14 +33,65 @@ function Row({ label, children }) {
 }
 
 /**
+ * سفرِ یک دانه: هر جابه‌جایی با تاریخ، دلیل، سند و طرفِ حساب — از دفترِ
+ * حرکتِ دانه‌ها. «این دانه از کجا آمد و به کجا رفت» بدونِ گشتن در اسناد.
+ */
+function UnitHistory({ productUnitId, enabled }) {
+  const { data, isLoading, isError } = useProductUnitHistoryQuery(productUnitId, {
+    enabled,
+  });
+  const movements = data?.movements ?? [];
+
+  return (
+    <div className="space-y-2">
+      <p className="flex items-center gap-1.5 text-sm font-medium">
+        <History className="h-4 w-4 text-muted-foreground" />
+        تاریخچه‌ی جابه‌جایی
+      </p>
+      {isLoading && <p className="text-xs text-muted-foreground">در حال بارگذاری...</p>}
+      {isError && (
+        <p className="text-xs text-destructive">تاریخچه‌ی این دانه خوانده نشد.</p>
+      )}
+      {!isLoading && !isError && movements.length === 0 && (
+        <p className="text-xs text-muted-foreground">جابه‌جایی‌ای ثبت نشده است.</p>
+      )}
+      <ol className="relative space-y-3 border-s border-border ps-4">
+        {movements.map((movement) => (
+          <li key={movement.id} className="space-y-0.5">
+            <span className="absolute -start-1.5 mt-1.5 h-3 w-3 rounded-full border border-background bg-primary/60" />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-medium">{movement.reasonTitle}</span>
+              <span className="text-[11px] tabular-nums text-muted-foreground">
+                {formatDate(movement.occurredAt)}
+              </span>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              {movement.fromStatus != null
+                ? `${UNIT_STATUS_LABELS[movement.fromStatus] ?? movement.fromStatus} ← `
+                : ""}
+              {UNIT_STATUS_LABELS[movement.toStatus] ?? movement.toStatus}
+              {movement.documentNumber && ` · ${movement.documentNumber}`}
+              {(movement.supplierName || movement.customerName) &&
+                ` · ${movement.supplierName ?? movement.customerName}`}
+              {movement.userName && ` · ${movement.userName}`}
+            </p>
+            {movement.note && (
+              <p className="text-[11px] text-muted-foreground">{movement.note}</p>
+            )}
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+/**
  * مقصد مشترکِ کارهای سطحِ دانه: چه از اسکن رسیده باشی، چه از کلیک روی
  * ردیف جدول. چاپ همین‌جاست تا انباردار برای برچسبِ افتاده لازم نباشد
  * جای دیگری برود.
  *
  * سوییچِ بارکد/QR اینجا فقط برای *خواندن* است — مثلاً وقتی انباردار
  * می‌خواهد کدِ همین دانه را با موبایل بردارد بی‌آنکه چیزی چاپ کند.
- * اینکه روی برچسبِ چاپی کدام نماد برود، تصمیمِ جداگانه‌ای است و در
- * پیش‌نمایشِ چاپ گرفته می‌شود (`labelCodeKind`).
  */
 export default function UnitDetailSheet({ unit, open, onOpenChange, onPrint }) {
   const [showQr, setShowQr] = useState(false);
@@ -104,27 +157,43 @@ export default function UnitDetailSheet({ unit, open, onOpenChange, onPrint }) {
                 {unit.productCode}
               </span>
             </Row>
-            {unit.purchaseItemId ? (
-              <Row label="قلم خرید">
-                <span className="font-mono text-xs">{unit.purchaseItemId}</span>
-              </Row>
-            ) : null}
             <Row label="سریال">
               <span className="tabular-nums">{unit.serialNumber ?? "—"}</span>
             </Row>
+            {unit.purchaseId ? (
+              <Row label="ورود با خرید">
+                <span className="font-mono text-xs">
+                  {unit.purchaseInvoiceNumber || unit.purchaseId}
+                </span>
+                {unit.supplierName && (
+                  <span className="block text-[11px] text-muted-foreground">
+                    {unit.supplierName}
+                  </span>
+                )}
+              </Row>
+            ) : null}
+            {unit.saleId ? (
+              <Row label="خروج با فروش">
+                <span className="font-mono text-xs">
+                  {unit.saleInvoiceNumber || unit.saleId}
+                </span>
+                {unit.customerName && (
+                  <span className="block text-[11px] text-muted-foreground">
+                    {unit.customerName}
+                  </span>
+                )}
+              </Row>
+            ) : null}
             {unit.soldAt ? (
               <Row label="تاریخ فروش">
                 <span className="tabular-nums">{formatDate(unit.soldAt)}</span>
               </Row>
             ) : null}
-            {unit.saleItemId || unit.saleId ? (
-              <Row label="فروش">
-                <span className="font-mono text-xs">
-                  {unit.saleItemId ?? unit.saleId}
-                </span>
-              </Row>
-            ) : null}
           </div>
+
+          <Separator />
+
+          <UnitHistory productUnitId={unit.id} enabled={open} />
         </div>
 
         <SheetFooter>

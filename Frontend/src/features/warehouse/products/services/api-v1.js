@@ -1,6 +1,3 @@
-// src\features\warehouse\products\services\api-v1.js
-
-// src/features/warehouse/products/services/api-v1.js
 import axiosInstance from "@/shared/services/api/axios";
 import { normalizeListResponse } from "@/shared/services/api/contract";
 
@@ -37,6 +34,7 @@ export const fetchProducts = async (params = {}) => {
       isLowOnStock: toIsLowOnStock(params.stockStatus),
       fromPrice: params.minPrice || undefined,
       toPrice: params.maxPrice || undefined,
+      isIncomplete: params.isIncomplete === "true" ? true : undefined,
       // سرور مرتب‌سازی ندارد — اگر فرستاده شود بی‌صدا نادیده گرفته می‌شود.
     },
   });

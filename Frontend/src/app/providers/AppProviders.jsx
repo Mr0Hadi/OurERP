@@ -1,5 +1,5 @@
 import { QueryProvider } from './QueryProvider';
-import { ThemeProvider } from '@/shared/components/theme/theme-provider';
+import { ThemeProvider } from '@/shared/components/theme/ThemeProvider';
 import { ToastProvider } from './ToastProvider';
 
 export function AppProviders({ children }) {

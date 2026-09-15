@@ -1,9 +1,5 @@
 import { saleKeys } from "./queryKeys";
-import {
-  shippingKeys,
-  outgoingQueueKeys,
-} from "@/features/warehouse/shipping/services/queryKeys";
-import { incomingQueueKeys } from "@/features/warehouse/receiving/services/queryKeys";
+import { shippingKeys } from "@/features/warehouse/shipping/services/queryKeys";
 import { productKeys } from "@/features/warehouse/products/services/queryKeys";
 import { productUnitKeys } from "@/features/warehouse/units/services/queryKeys";
 import { salesReturnKeys } from "../../returns/services/queryKeys";
@@ -37,8 +33,6 @@ export function invalidateSalesEcosystem(queryClient, saleId, { freshReturnId } 
   }
   queryClient.invalidateQueries({ queryKey: saleKeys.lists() });
   queryClient.invalidateQueries({ queryKey: shippingKeys.lists() });
-  queryClient.invalidateQueries({ queryKey: incomingQueueKeys.all });
-  queryClient.invalidateQueries({ queryKey: outgoingQueueKeys.all });
   queryClient.invalidateQueries({ queryKey: salesReturnKeys.lists() });
   queryClient.invalidateQueries({
     queryKey: salesReturnKeys.details(),

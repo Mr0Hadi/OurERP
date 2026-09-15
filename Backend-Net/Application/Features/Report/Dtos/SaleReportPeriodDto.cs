@@ -12,6 +12,9 @@ namespace Application.Features.Report.Dtos
         /// therefore profit) is only knowable once goods actually leave.</summary>
         public decimal Revenue { get; set; }
         public decimal CostOfGoodsSold { get; set; }
+
+        /// <summary>Value of quarantined goods scrapped in the period (GOODS_SCRAP at its unit cost). Its own line, and subtracted from NetProfit.</summary>
+        public decimal ScrapLoss { get; set; }
         public decimal NetProfit { get; set; }
     }
 }

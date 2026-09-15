@@ -74,3 +74,16 @@ export const useAuthStore = create(
     }
   )
 );
+
+// وقتی تبِ دیگری همین اپ توکن‌ها را رفرش/logout می‌کند، `auth-storage` در
+// localStorage عوض می‌شود ولی state زوستاندِ این تب خودش را sync نمی‌کند
+// (zustand persist بین تب‌ها هیچ ارتباطی برقرار نمی‌کند). بدون این listener،
+// این تب با یک refreshToken قدیمی که سرور همین الان rotate کرده دوباره
+// رفرش می‌زند، رد می‌شود، و کاربر را از یک تبِ کاملاً معتبر هم بیرون می‌اندازد.
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (event) => {
+    if (event.key === "auth-storage" && event.storageArea === localStorage) {
+      useAuthStore.persist.rehydrate();
+    }
+  });
+}

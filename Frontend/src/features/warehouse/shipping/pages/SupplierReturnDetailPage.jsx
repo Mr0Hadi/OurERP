@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AlertCircle, CheckCircle, AlertTriangle, X } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -16,18 +16,18 @@ import {
 } from "@/shared/components/ui/alert-dialog";
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { usePurchaseReturnQuery } from "@/features/purchases/returns/services/queries";
+import { useExecuteGoodsRoundMutation } from "@/features/purchases/returns/services/mutations";
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
 import { buildGoodsLines } from "@/shared/domain/returns/resolutions";
 import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
+import { CLAIM_SCOPES } from "@/shared/domain/returns/scopes";
+import { ProductUnitStatusEnum } from "@/shared/domain/enums/unitStatus";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
-import ReturnSummaryCard from "@/shared/components/returns/ReturnSummaryCard";
+import { useGoodsRoundForm } from "@/shared/hooks/useGoodsRoundForm";
+import GoodsRoundItemsSection from "@/shared/components/returns/GoodsRoundItemsSection";
+import GoodsRoundPartySection from "@/shared/components/returns/GoodsRoundPartySection";
+import GoodsRoundSummaryCard from "@/shared/components/returns/GoodsRoundSummaryCard";
 import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
-
-import { useConfirmSupplierReturnShipmentMutation } from "../services/mutations";
-import { useShippingFormStore } from "../store/shippingFormStore";
-import { useShippingForm } from "../hooks/useShippingForm";
-import ShippingItemsSection from "../components/forms/ShippingItemsSection";
-import ShippingTransporterSection from "../components/forms/ShippingTransporterSection";
 import { ROUTES } from "@/shared/constants/routes";
 
 const PURCHASE_SIDE = sideConfig(RETURN_SIDES.PURCHASE);
@@ -36,46 +36,56 @@ const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
 const SORTING = { id: "name", desc: false };
 
+const { GOODS_OUT, GOODS_RELEASE, GOODS_SCRAP } = EFFECT_DIRECTIONS;
+const WAREHOUSE_DIRECTIONS = [GOODS_OUT, GOODS_RELEASE, GOODS_SCRAP];
+
+const SECTIONS = [
+  {
+    direction: GOODS_OUT,
+    title: "عودت کالا به تامین‌کننده",
+    subtitle: "مبدأ هر ردیف را مشخص کنید: موجودی قابل‌فروش یا قرنطینه.",
+  },
+  {
+    direction: GOODS_RELEASE,
+    title: "آزادسازی از قرنطینه",
+    subtitle: "این کالاها به موجودی قابل‌فروش برمی‌گردند.",
+  },
+  {
+    direction: GOODS_SCRAP,
+    title: "اسقاط از قرنطینه",
+    subtitle: "این کالاها از چرخه خارج و به‌عنوان زیان ثبت می‌شوند.",
+  },
+];
+
+// عودت روی مرجوعی خرید مبدأ می‌خواهد و سرور حدسش نمی‌زند. کالای خارج از
+// سفارش هرگز وارد موجودی نشده، پس پیشنهادِ طبیعی‌اش قرنطینه است؛ برای
+// کالای سهمِ سفارش هر دو ممکن است و انتخاب با انباردار می‌ماند.
+const sourceRequired = (line) => line.direction === GOODS_OUT;
+const defaultSource = (line) =>
+  line.direction === GOODS_OUT && line.scope === CLAIM_SCOPES.OFF_ORDER
+    ? ProductUnitStatusEnum.QUARANTINED
+    : null;
+
 /**
- * عودت کالا به تامین‌کننده.
+ * کارِ انبار روی یک مرجوعیِ خرید: عودت به تامین‌کننده، و تعیین تکلیفِ
+ * کالای قرنطینه (آزادسازی / اسقاط) — همه یک دورِ `ExecuteGoodsRound`.
  *
- * صفحه‌ی جدا دارد چون برخلاف کالای جایگزینِ مشتری، هیچ سندِ خروجی‌ای
- * به سمت تامین‌کننده وجود ندارد که این کالا با آن برود — قرینه‌ی
- * دقیقِ همان حالتی که در دریافت، کالای برگشتیِ مشتری داشت.
- *
- * ولی *فرمش* همان فرم ارسال فروش است، تا انباردار یک رفتار را یاد
- * بگیرد نه دو تا.
+ * `observations` اینجا فرستاده نمی‌شود — کالا از انبارِ خودمان می‌رود.
+ * اسکنِ دانه‌ها برای کالای ردیابی‌پذیر در عودت الزامی و بقیه‌جا اختیاری است.
  */
 function SupplierReturnShipmentForm({ purchaseReturn }) {
   const navigate = useNavigate();
-  const confirmMutation = useConfirmSupplierReturnShipmentMutation();
+  const goodsRoundMutation = useExecuteGoodsRoundMutation(purchaseReturn.id);
+  const backToReturn = () =>
+    navigate(ROUTES.PURCHASES_RETURNS_DETAIL.replace(":id", purchaseReturn.id));
 
-  const initializeFromReturn = useShippingFormStore(
-    (s) => s.initializeFromReturn,
-  );
-
-  const returnLines = useMemo(
+  const lines = useMemo(
     () =>
-      buildGoodsLines(purchaseReturn, EFFECT_DIRECTIONS.GOODS_OUT).filter(
+      buildGoodsLines(purchaseReturn, WAREHOUSE_DIRECTIONS).filter(
         (line) => line.remainingQuantity > 0,
       ),
     [purchaseReturn],
   );
-
-  useEffect(() => {
-    initializeFromReturn(purchaseReturn, returnLines, {
-      partyName: purchaseReturn.supplierName,
-    });
-  }, [purchaseReturn, returnLines, initializeFromReturn]);
-
-  const {
-    formData,
-    setFormData,
-    handleItemChange,
-    isAllComplete,
-    buildPayload,
-    resetForm,
-  } = useShippingForm(null);
 
   const { data: productsData } = useProductsQuery(
     ALL_FILTERS,
@@ -89,124 +99,146 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
     return map;
   }, [productsData]);
 
-  const items = formData.items || [];
-  const displayItems = useMemo(
+  const barcodesRequired = useCallback(
+    (line) =>
+      line.direction === GOODS_OUT &&
+      Boolean(productMap.get(line.productId)?.requiresUnitTracking),
+    [productMap],
+  );
+
+  const {
+    header,
+    setHeader,
+    rounds,
+    handleQuantityChange,
+    handleSourceChange,
+    handleBarcodesChange,
+    isAllComplete,
+    hasSomethingToRecord,
+    blockingReason,
+    buildCommand,
+  } = useGoodsRoundForm(lines, { sourceRequired, defaultSource, barcodesRequired });
+
+  const displayRounds = useMemo(
     () =>
-      items.map((item) => {
-        const product = productMap.get(item.productId);
+      rounds.map((round) => {
+        const product = productMap.get(round.productId);
         return {
-          ...item,
-          // کلیدِ پایدار هم کنارِ URLِ امضاشده می‌آید تا اگر صفحه دیر باز
-          // بماند، بندانگشتی بتواند خودش امضا را تازه کند.
+          ...round,
           imageKey: product?.imageKey ?? null,
           imageUrl: product?.imageUrl ?? product?.image ?? null,
-          brand: product?.brand || "",
         };
       }),
-    [items, productMap],
+    [rounds, productMap],
   );
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
-  useEffect(() => () => resetForm(), []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const isBusy = confirmMutation.isPending;
-  const hasSomethingToSend = items.some(
-    (item) => (Number(item.shippedQuantity) || 0) > 0,
-  );
-
-  const handleConfirmClick = () => {
-    if (!hasSomethingToSend) return;
-    setShowConfirmDialog(true);
-  };
+  const isBusy = goodsRoundMutation.isPending;
 
   const handleSubmit = () => {
     const willStayPending = !isAllComplete;
-    confirmMutation.mutate(
-      { returnId: purchaseReturn.id, shipmentData: buildPayload() },
-      {
-        onSuccess: () => {
-          setShowConfirmDialog(false);
-          resetForm();
-          if (willStayPending) {
-            toast.success(
-              "این دور ثبت شد. باقیمانده هر وقت فرستاده شد، دوباره از همین صفحه ثبت کنید.",
-            );
-          }
-          navigate(ROUTES.WAREHOUSE_SHIPPING);
-        },
+    goodsRoundMutation.mutate(buildCommand(), {
+      onSuccess: () => {
+        setShowConfirmDialog(false);
+        if (willStayPending) {
+          toast.success(
+            "این دور ثبت شد. باقیمانده را هر وقت انجام شد، دوباره از همین صفحه ثبت کنید.",
+          );
+        }
+        backToReturn();
       },
-    );
+    });
   };
 
-  if (items.length === 0) {
+  if (rounds.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
         <CheckCircle className="h-12 w-12 text-[oklch(0.50_0.16_152)]" />
         <p className="text-lg text-muted-foreground">
-          همه‌ی کالاهای این مرجوعی قبلاً به تامین‌کننده عودت داده شده‌اند.
+          برای این مرجوعی کاری در انبار باقی نمانده است.
         </p>
-        <Button
-          variant="outline"
-          onClick={() => navigate(ROUTES.WAREHOUSE_SHIPPING)}
-        >
-          بازگشت به لیست
+        <Button variant="outline" onClick={backToReturn}>
+          بازگشت به مرجوعی
         </Button>
       </div>
     );
   }
 
+  const hasDispatch = rounds.some((round) => round.direction === GOODS_OUT);
+
   return (
     <div className="container max-w-6xl mx-auto px-4 space-y-4 animate-in fade-in zoom-in-95 duration-300">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
-          <ShippingItemsSection
-            items={displayItems}
-            title="اقلام عودتی به تامین‌کننده"
-            subtitle={`مرجوعی ${purchaseReturn.returnNumber} · فاکتور خرید ${purchaseReturn.purchaseInvoiceNumber}`}
-            onItemChange={handleItemChange}
-          />
+          {SECTIONS.map(({ direction, title, subtitle }) => {
+            const sectionRounds = displayRounds.filter(
+              (round) => round.direction === direction,
+            );
+            if (sectionRounds.length === 0) return null;
+            return (
+              <GoodsRoundItemsSection
+                key={direction}
+                rounds={sectionRounds}
+                title={title}
+                subtitle={`${subtitle} · مرجوعی ${purchaseReturn.returnNumber}`}
+                withBarcodes
+                onQuantityChange={handleQuantityChange}
+                onSourceChange={handleSourceChange}
+                onBarcodesChange={handleBarcodesChange}
+              />
+            );
+          })}
 
-          <ShippingTransporterSection
-            formData={formData}
-            onFormChange={setFormData}
-          />
+          {hasDispatch && (
+            <GoodsRoundPartySection
+              title="اطلاعات تحویل‌گیرنده"
+              nameLabel="نام و نام خانوادگی راننده / تحویل‌گیرنده"
+              namePlaceholder="مثلاً: علی رضایی"
+              header={header}
+              onHeaderChange={setHeader}
+              plateHint="اگر کالا با پیک یا حضوری تحویل داده می‌شود و پلاکی در کار نیست، این بخش را خالی بگذارید."
+            />
+          )}
         </div>
 
         <div className="space-y-4">
-          <ReturnSummaryCard
+          <GoodsRoundSummaryCard
             side={PURCHASE_SIDE}
-            formData={formData}
-            onFormChange={setFormData}
-            partyName={formData.customerName}
-            title="اطلاعات عودت"
-            progressLabel="پیشرفت عودت"
-            progressField="shippedQuantity"
-            dateField="shippedDate"
-            dateLabel="تاریخ عودت"
-            noteField="shippingNote"
-            noteLabel="یادداشت عودت"
+            returnDoc={purchaseReturn}
+            partyName={purchaseReturn.supplierName}
+            rounds={rounds}
+            header={header}
+            onHeaderChange={setHeader}
+            title="اطلاعات این دور"
+            progressLabel="پیشرفت کار انبار"
+            dateLabel="تاریخ"
+            noteLabel="یادداشت"
           />
+
+          {blockingReason && hasSomethingToRecord && (
+            <p className="text-xs text-destructive px-1">{blockingReason}</p>
+          )}
 
           <div className="flex gap-2">
             <Button
               className={`flex-1 gap-2 ${
                 !isAllComplete ? "bg-amber-600 hover:bg-amber-700 text-white" : ""
               }`}
-              disabled={isBusy || !hasSomethingToSend}
-              onClick={handleConfirmClick}
+              disabled={isBusy || !hasSomethingToRecord || Boolean(blockingReason)}
+              onClick={() => setShowConfirmDialog(true)}
             >
               {isAllComplete ? (
                 <CheckCircle className="h-4 w-4" />
               ) : (
                 <AlertTriangle className="h-4 w-4" />
               )}
-              {isAllComplete ? "تأیید عودت کامل" : "ثبت این دور از عودت"}
+              {isAllComplete ? "تأیید انجام کامل" : "ثبت این دور"}
             </Button>
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate(ROUTES.WAREHOUSE_SHIPPING)}
+              onClick={backToReturn}
               disabled={isBusy}
               className="gap-2"
             >
@@ -226,11 +258,11 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {isAllComplete ? "ثبت عودت کامل" : "ثبت این دور از عودت"}
+              {isAllComplete ? "ثبت انجام کامل" : "ثبت این دور"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {isAllComplete
-                ? "آیا مطمئن هستید که همه‌ی کالاهای باقی‌مانده به تامین‌کننده عودت داده شده‌اند؟"
+                ? "همه‌ی ردیف‌ها کامل انجام شده‌اند؟ موجودی و قرنطینه همین حالا به‌روز می‌شوند."
                 : "فقط مقادیری که وارد کرده‌اید ثبت می‌شود؛ بقیه برای دور بعدی می‌ماند."}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -264,7 +296,7 @@ export default function SupplierReturnDetailPage() {
 
   useEffect(() => {
     setHeader({
-      title: isLoading ? "در حال بارگذاری..." : "عودت کالا به تامین‌کننده",
+      title: isLoading ? "در حال بارگذاری..." : "کار انبار روی مرجوعی خرید",
       showBack: true,
     });
     return () => clearHeader();
@@ -279,9 +311,9 @@ export default function SupplierReturnDetailPage() {
         <p className="text-lg text-muted-foreground">مرجوعی مورد نظر یافت نشد.</p>
         <Button
           variant="outline"
-          onClick={() => navigate(ROUTES.WAREHOUSE_SHIPPING)}
+          onClick={() => navigate(ROUTES.PURCHASES_RETURNS_LIST)}
         >
-          بازگشت به لیست
+          بازگشت به لیست مرجوعی‌ها
         </Button>
       </div>
     );
@@ -289,7 +321,7 @@ export default function SupplierReturnDetailPage() {
 
   return (
     <SupplierReturnShipmentForm
-      key={`${purchaseReturn.id}:${purchaseReturn.updatedAt}`}
+      key={purchaseReturn.id}
       purchaseReturn={purchaseReturn}
     />
   );

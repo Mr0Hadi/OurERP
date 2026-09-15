@@ -35,8 +35,8 @@ export function normalizeListResponse(data, { itemsKey } = {}) {
   const total = legacyPage.Total ?? legacyPage.total ?? legacyItems.length;
   const take = legacyPage.Take ?? legacyPage.take;
 
-  // سرور با نام‌گذاریِ پیش‌فرضِ ASP.NET (camelCase) `pageCount` می‌فرستد؛
-  // قبلاً فقط `PageCount` خوانده می‌شد و هر فهرستی «صفحه ۱ از ۱» می‌ماند.
+  // سرور با نام‌گذاریِ پیش‌فرضِ ASP.NET (camelCase) `pageCount` می‌فرستد.
+  // خواندنِ فقط `PageCount` یعنی هر فهرستی روی «صفحه ۱ از ۱» می‌ماند.
   const pageCount =
     legacyPage.PageCount ??
     legacyPage.pageCount ??
@@ -69,7 +69,7 @@ export function listParams(params = {}) {
 
 /**
  * چرا لازم است: عملیاتِ نوشتنِ مرجوعی *تجمعی* است — «۳ عدد دریافت شد»
- * روی `doneQuantity` اضافه می‌شود و «این تصمیم را ثبت کن» یک اثر مالی
+ * روی `appliedQuantity` اضافه می‌شود و «این تصمیم را ثبت کن» یک اثر مالی
  * می‌سازد. اگر یک درخواست به‌خاطر قطعی شبکه دوباره فرستاده شود (یا
  * کاربر دوبار کلیک کند)، بدون کلید ایدمپوتنسی همان عملیات دوبار
  * اعمال می‌شود و موجودی یا مبلغ فاکتور غلط می‌شود.
@@ -77,7 +77,7 @@ export function listParams(params = {}) {
  * کلید در لایه‌ی mutation ساخته می‌شود (نه اینجا و نه در کامپوننت) تا
  * برای هر «قصدِ کاربر» یکتا باشد و در retryهای همان قصد ثابت بماند.
  */
-export function newIdempotencyKey() {
+function newIdempotencyKey() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
   }

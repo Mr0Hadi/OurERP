@@ -17,7 +17,7 @@ const buildPreset = (preset) => ({
   perPage: preset.columns * preset.rows,
 });
 
-export const SHEET_PRESETS = {
+const SHEET_PRESETS = {
   // ۳×۸ روی A4: ۱۹۰ ≤ ۱۹۴ و ۲۷۸ ≤ ۲۸۱ — چند میلی‌متر فاصله‌ی امن
   // عمدی است، چون حاشیه‌ی واقعی پرینترها کمی با هم فرق می‌کند.
   "a4-3x8": buildPreset({

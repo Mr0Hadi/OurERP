@@ -1,5 +1,7 @@
 import { create } from "zustand";
-import { CLAIM_SCOPES } from "../domain/purchaseReturnVocabulary";
+import { CLAIM_SCOPES, OFF_SCOPE_KINDS } from "@/shared/domain/returns/scopes";
+import { RETURN_PROBLEMS } from "@/shared/domain/returns/problems";
+import { lineReceivingReport } from "@/shared/domain/returns/receivingReport";
 
 const EMPTY_FORM = {
   purchaseId: "",
@@ -11,9 +13,120 @@ const EMPTY_FORM = {
   previousReturnId: null,
   // هر خط سفارش، با ادعاهای «روی سفارش»ش
   lines: [],
+  // همه‌ی خطوط سفارش — مبنای انتخابِ ادعای «مازاد»
+  orderLines: [],
   // ادعاهای «خارج از سفارش» — کالایی که سفارش توجیهش نمی‌کند
   offScopeClaims: [],
 };
+
+// `UnitCustodyReasonEnum` بکند — فقط برای خواندنِ مغایرت‌های دریافت.
+const CUSTODY_REASONS = { ON_ORDER: 1, EXCESS: 2, UNLISTED: 3 };
+
+const generateId = () =>
+  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+
+/**
+ * پرتکرارترین مشکلی که انبار برای این دسته ثبت کرده — فقط پیشنهادِ فرم؛
+ * کاربر می‌تواند عوضش کند.
+ */
+function dominantProblem(discrepancies, matches, fallback) {
+  const totals = new Map();
+  discrepancies.filter(matches).forEach((d) => {
+    totals.set(d.problem, (totals.get(d.problem) || 0) + (Number(d.quantity) || 0));
+  });
+  let best = fallback;
+  let bestQuantity = 0;
+  totals.forEach((quantity, problem) => {
+    if (quantity > bestQuantity) {
+      best = problem;
+      bestQuantity = quantity;
+    }
+  });
+  return best;
+}
+
+/**
+ * ادعاهای پیش‌پرشده از کالای در قرنطینه‌ی همین خرید.
+ *
+ * مقدارها از شمارِ دانه‌های قرنطینه می‌آیند (همان سقفی که سرور چک
+ * می‌کند)، نه از جمعِ مغایرت‌ها؛ مغایرت‌ها فقط نوعِ مشکل را پیشنهاد می‌دهند.
+ */
+function quarantineClaimsOf(purchase, lines) {
+  const discrepancies = purchase.discrepancies || [];
+  const lineClaims = new Map();
+  const offScopeClaims = [];
+
+  (purchase.items || []).forEach((item) => {
+    const onOrder = Number(item.quarantinedOnOrderQuantity) || 0;
+    const line = lines.find((l) => l.orderLineId === item.purchaseItemId);
+    if (onOrder > 0 && line) {
+      lineClaims.set(item.purchaseItemId, [
+        {
+          id: generateId(),
+          problem: dominantProblem(
+            discrepancies,
+            (d) =>
+              d.purchaseItemId === item.purchaseItemId &&
+              d.custodyReason === CUSTODY_REASONS.ON_ORDER,
+            RETURN_PROBLEMS.DEFECTIVE,
+          ),
+          quantity: Math.min(onOrder, line.maxReturnableQuantity),
+          note: "",
+        },
+      ]);
+    }
+
+    const excess = Number(item.quarantinedExcessQuantity) || 0;
+    if (excess > 0) {
+      offScopeClaims.push({
+        id: generateId(),
+        problem: dominantProblem(
+          discrepancies,
+          (d) =>
+            d.purchaseItemId === item.purchaseItemId &&
+            d.custodyReason === CUSTODY_REASONS.EXCESS,
+          RETURN_PROBLEMS.OVER_SHIPPED,
+        ),
+        quantity: excess,
+        note: "",
+        offScopeKind: OFF_SCOPE_KINDS.EXCESS,
+        orderLineId: item.purchaseItemId,
+        productId: item.productId,
+        productCode: item.productCode,
+        productName: item.productName,
+        unit: item.unit,
+        unitPrice: item.unitPrice,
+      });
+    }
+  });
+
+  (purchase.unlistedItems || []).forEach((item) => {
+    if (!(item.quarantinedQuantity > 0)) return;
+    offScopeClaims.push({
+      id: generateId(),
+      problem: RETURN_PROBLEMS.UNLISTED_ITEM,
+      quantity: item.quarantinedQuantity,
+      note: "",
+      offScopeKind: OFF_SCOPE_KINDS.UNLISTED,
+      orderLineId: null,
+      productId: item.productId,
+      productCode: item.productCode,
+      productName: item.productName,
+      unit: item.unit,
+      // کالای سفارش‌نداده پولی بابتش پرداخت نشده؛ قیمتِ معامله را کاربر وارد می‌کند.
+      unitPrice: 0,
+    });
+  });
+
+  return {
+    lines: lines.map((line) =>
+      lineClaims.has(line.orderLineId)
+        ? { ...line, claims: lineClaims.get(line.orderLineId) }
+        : line,
+    ),
+    offScopeClaims,
+  };
+}
 
 export const usePurchaseReturnFormStore = create((set, get) => ({
   formData: { ...EMPTY_FORM },
@@ -26,9 +139,66 @@ export const usePurchaseReturnFormStore = create((set, get) => ({
   setOffScopeClaims: (offScopeClaims) =>
     set((state) => ({ formData: { ...state.formData, offScopeClaims } })),
 
-  initializeForPurchase: (purchase) => {
-    const version = `purchase:${purchase.purchaseId}:${purchase.purchaseUpdatedAt}`;
+  /**
+   * `purchase` همان `PurchaseReceivingInfoDto`ِ `GetPurchaseReceivingInfo`
+   * است — همان کوئری‌ای که صفحه‌ی دریافت انبار هم از آن می‌خواند.
+   *
+   * `prefillQuarantine` ادعاها را از کالای در قرنطینه پر می‌کند — مسیرِ
+   * «ثبت مغایرت» از صفحه‌ی دریافت.
+   */
+  initializeForPurchase: (purchase, { prefillQuarantine = false } = {}) => {
+    // این پاسخ `updatedAt` ندارد، پس کلیدِ نسخه از محتوا ساخته می‌شود:
+    // با هر دورِ دریافت یا هر مرجوعیِ تازه، ارقام عوض می‌شوند و فرم باید
+    // از نو پر شود.
+    const version = [
+      "purchase",
+      purchase.purchaseId,
+      purchase.status,
+      prefillQuarantine ? "q" : "",
+      (purchase.items || [])
+        .map(
+          (item) =>
+            `${item.purchaseItemId}:${item.receivedQuantity}:${item.quarantinedOnOrderQuantity}:${item.quarantinedExcessQuantity}`,
+        )
+        .join(","),
+    ].join(":");
     if (get().initializedForId === version) return;
+
+    const lines = (purchase.items || [])
+      // فقط قلمی که چیزی از آن تحویل گرفته‌ایم قابل ادعاست: سقفِ ادعا در
+      // بکند `ReceivedQuantity − Settled − ادعاهای باز` است.
+      .filter((item) => item.receivedQuantity > 0)
+      .map((item) => ({
+        lineKey: `${purchase.purchaseId}-${item.purchaseItemId}`,
+        // `CreateReturnClaimDto.OrderLineId` — سمتِ خرید یعنی `PurchaseItemId`.
+        orderLineId: item.purchaseItemId,
+        scope: CLAIM_SCOPES.ON_ORDER,
+        productId: item.productId,
+        productCode: item.productCode,
+        productName: item.productName,
+        unit: item.unit,
+        unitPrice: item.unitPrice,
+        deliveredQuantity: item.receivedQuantity,
+        // ⚠️ سقفِ واقعی ادعاهای بازِ مرجوعی‌های دیگر را هم کم می‌کند که این
+        // پاسخ نمی‌دهد؛ حرفِ آخر را ۴۰۰ سرور می‌زند.
+        maxReturnableQuantity: item.receivedQuantity,
+        // آنچه انباردار موقعِ دریافتِ همین قلم ثبت کرده — فقط نمایش.
+        receivingReport: lineReceivingReport(purchase, item.purchaseItemId),
+        claims: [],
+      }));
+
+    const orderLines = (purchase.items || []).map((item) => ({
+      orderLineId: item.purchaseItemId,
+      productId: item.productId,
+      productCode: item.productCode,
+      productName: item.productName,
+      unit: item.unit,
+      unitPrice: item.unitPrice,
+    }));
+
+    const prefilled = prefillQuarantine
+      ? quarantineClaimsOf(purchase, lines)
+      : { lines, offScopeClaims: [] };
 
     set({
       initializedForId: version,
@@ -38,20 +208,9 @@ export const usePurchaseReturnFormStore = create((set, get) => ({
         purchaseInvoiceNumber: purchase.invoiceNumber,
         supplierId: purchase.supplierId,
         supplierName: purchase.supplierName,
-        lines: purchase.items.map((item) => ({
-          // قرینه‌ی سمت فروش: شناسه‌ی خط سفارش، نه شناسه‌ی کالا.
-          lineKey: `${purchase.purchaseId}-${item.id}`,
-          orderLineId: item.id,
-          scope: CLAIM_SCOPES.ON_ORDER,
-          productId: item.productId,
-          productCode: item.productCode,
-          productName: item.productName,
-          unit: item.unit,
-          unitPrice: item.unitPrice,
-          deliveredQuantity: item.deliveredQuantity,
-          maxReturnableQuantity: item.returnableQuantity,
-          claims: [],
-        })),
+        orderLines,
+        lines: prefilled.lines,
+        offScopeClaims: prefilled.offScopeClaims,
       },
     });
   },

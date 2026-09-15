@@ -22,7 +22,8 @@ namespace WMS.Services
 
         public string? GetUserId()
         {
-            return _httpContextAccessor.HttpContext.User.GetUserCliam("Id");
+            // Null outside a request (e.g. startup work), rather than a NullReferenceException.
+            return _httpContextAccessor.HttpContext?.User.GetUserCliam("Id");
         }
     }
 }

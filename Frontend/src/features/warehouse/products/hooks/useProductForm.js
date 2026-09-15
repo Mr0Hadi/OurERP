@@ -20,6 +20,7 @@ function buildDefaultValues(data) {
       sellPrice1: 0,
       sellPrice2: 0,
       vat: "",
+      requiresUnitTracking: false,
     };
   }
   return {
@@ -36,6 +37,7 @@ function buildDefaultValues(data) {
     sellPrice1: data.retailPrice ?? data.sellPrice1 ?? 0,
     sellPrice2: data.wholeSalePrice ?? data.sellPrice2 ?? 0,
     vat: (data.tax ?? data.vat) || "",
+    requiresUnitTracking: Boolean(data.requiresUnitTracking),
   };
 }
 
@@ -71,6 +73,8 @@ export function useProductForm(initialData = null) {
    *   فرستاده می‌شد و بی‌صدا کنار گذاشته می‌شد — یعنی قیمت عمده هرگز
    *   ذخیره نمی‌شد).
    * - کلیدِ تصویر در `imageKey` می‌رود؛ `null` یعنی «تصویر را پاک کن».
+   * - `isIncomplete` فرستاده نمی‌شود: فقط ساختِ سریع در انبار آن را روشن
+   *   می‌کند و سرور وقتی برند و سه قیمت پر شد خودش خاموشش می‌کند.
    */
   const buildProductPayload = (formData) => ({
     name: formData.name,
@@ -84,6 +88,7 @@ export function useProductForm(initialData = null) {
     retailPrice: Number(formData.sellPrice1) || 0,
     wholeSalePrice: Number(formData.sellPrice2) || 0,
     tax: Number(formData.vat) || 0,
+    requiresUnitTracking: Boolean(formData.requiresUnitTracking),
     imageKey: imageUpload.imageKeyPayload,
   });
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { useWatch } from "react-hook-form";
 import { UserRoundCog } from "lucide-react";
 
@@ -6,120 +6,74 @@ import FormSectionCard from "@/shared/components/forms/FormSectionCard";
 import FormSelectField from "@/shared/components/forms/FormSelectField";
 import { useEmployeeOptions } from "../hooks/useEmployeeOptions";
 
+/** قاعده‌ی سرور برای هر دامنه — `IOrgRoleService.AssignAsync`. */
+const RULE_HINTS = {
+  واحد:
+    "هر کسی به‌عنوان مسئول یا جانشین انتخاب شود، به این واحد منتقل و از تیمش خارج می‌شود (مسئول و جانشینِ واحد عضو هیچ تیمی نیستند) و نقشِ قبلی‌اش آزاد می‌شود. کسی که از این نقش برداشته شود، عضو ساده‌ی همین واحد می‌ماند.",
+  تیم: "هر کسی به‌عنوان مسئول یا جانشین انتخاب شود، به این تیم (و واحدش) منتقل می‌شود و نقشِ قبلی‌اش هر جا که باشد آزاد می‌شود. کسی که از این نقش برداشته شود، عضو ساده‌ی همین تیم می‌ماند.",
+};
+
 /**
- * مدیر و معاونِ یک واحد یا تیم — مشترک بین هر دو، چون قاعده‌شان یکی است.
+ * مسئول و جانشینِ یک واحد یا تیم — مشترک بین هر دو، چون قاعده‌شان یکی است.
  *
- * سه قاعده‌ی سرور که این فرم باید پیش از ارسال رعایت کند:
+ * `headId`/`deputyId` **وضعیتِ نهایی** هستند، هم در ثبت و هم در ویرایش:
+ * سرور هر کسی را که نامش بیاید منتقل و نقش‌دار می‌کند، و هر کسی که حذف
+ * شود را عضوِ ساده باقی می‌گذارد. پس:
  *
- *   ۱. مدیر و معاون باید **عضو همان واحد** باشند (`head.DepartmentId`).
- *      پس گزینه‌ها فقط کارمندانِ `departmentId` هستند؛ بدون واحد، انتخابگر
- *      غیرفعال است.
- *   ۲. معاون نمی‌تواند همان مدیر باشد.
- *   ۳. معاون **اختیاری ولی اجباریِ ارسال** است: `UpdateDepartmentCommand`
- *      و `UpdateTeamCommand` بی‌قید `DeputyId = request.DeputyId` را ست
- *      می‌کنند، پس مقدارِ فعلی همیشه باید در فرم بنشیند و برگردد.
- *
- * انتصاب در سرور با `ReleaseAllRolesAsync` همراه است: فردِ انتخاب‌شده
- * هر سمتِ مدیریت یا معاونتی را که در تیم یا واحد دیگری دارد از دست
- * می‌دهد. متنِ راهنما همین را می‌گوید.
- *
- * @param departmentId واحدی که مدیر و معاون باید از میان کارمندانش باشند
- * @param setValue اگر داده شود، با عوض‌شدنِ `departmentId` مدیر و معاون
- *        پاک می‌شوند (فرم‌هایی که واحدشان قابل‌تغییر است)
+ *   - هر کارمندی (از هر واحدی) قابل انتخاب است؛
+ *   - `deputyId` همیشه فرستاده می‌شود — نفرستادنش جانشین را برمی‌داشت؛
+ *   - «جانشین نمی‌تواند همان مسئول باشد» را سرور هم رد می‌کند.
  */
 export default function OrgLeadershipForm({
   control,
   errors,
-  setValue,
-  departmentId,
   scopeLabel = "واحد",
 }) {
   const headId = useWatch({ control, name: "headId" });
   const deputyId = useWatch({ control, name: "deputyId" });
 
-  const hasDepartment = departmentId != null && departmentId !== "";
-
-  const { options, isLoading } = useEmployeeOptions(
-    hasDepartment ? departmentId : null,
-    { keepIds: [headId, deputyId] },
-  );
-
-  // فقط *تغییرِ* واحد پاک می‌کند، نه مقداردهیِ اولیه — وگرنه در حالت
-  // ویرایش مدیرِ درست پاک می‌شد.
-  const previousDepartment = useRef(departmentId);
-  useEffect(() => {
-    if (!setValue) return;
-    if (previousDepartment.current == departmentId) return;
-    previousDepartment.current = departmentId;
-    setValue("headId", null);
-    setValue("deputyId", null);
-  }, [departmentId, setValue]);
-
-  const outsiderIds = useMemo(
-    () => new Set(options.filter((o) => o.outsider).map((o) => o.value)),
-    [options],
-  );
-
-  const outsiderMessage = `این فرد عضو این ${
-    scopeLabel === "تیم" ? "واحدِ تیم" : "واحد"
-  } نیست؛ فرد دیگری انتخاب کنید یا خالی بگذارید`;
-
-  const headRules = useMemo(
-    () => ({
-      validate: (value) =>
-        value == null || !outsiderIds.has(value) || outsiderMessage,
-    }),
-    [outsiderIds, outsiderMessage],
-  );
+  const { options, isLoading } = useEmployeeOptions({
+    keepIds: [headId, deputyId],
+  });
 
   const deputyRules = useMemo(
     () => ({
-      validate: (value) => {
-        if (value == null) return true;
-        if (value == headId) return "معاون نمی‌تواند همان مدیر باشد";
-        return !outsiderIds.has(value) || outsiderMessage;
-      },
+      validate: (value) =>
+        value == null || value != headId || "جانشین نمی‌تواند همان مسئول باشد",
     }),
-    [headId, outsiderIds, outsiderMessage],
+    [headId],
   );
 
-  const placeholder = (text) =>
-    hasDepartment ? text : "اول واحد را انتخاب کنید";
-
   return (
-    <FormSectionCard icon={UserRoundCog} title={`مدیریت ${scopeLabel}`}>
+    <FormSectionCard icon={UserRoundCog} title={`مسئولیت ${scopeLabel}`}>
       <div className="space-y-5">
         <FormSelectField
           name="headId"
           control={control}
-          label={`مدیر ${scopeLabel}`}
+          label={`مسئول ${scopeLabel}`}
           options={options}
           isLoading={isLoading}
-          disabled={!hasDepartment}
-          placeholder={placeholder("انتخاب مدیر")}
-          emptyLabel="بدون مدیر"
+          placeholder="انتخاب مسئول"
+          emptyLabel="بدون مسئول"
           emptyValue={null}
-          rules={headRules}
           error={errors?.headId}
         />
 
         <FormSelectField
           name="deputyId"
           control={control}
-          label={`معاون ${scopeLabel}`}
+          label={`جانشین ${scopeLabel}`}
           options={options}
           isLoading={isLoading}
-          disabled={!hasDepartment}
-          placeholder={placeholder("انتخاب معاون")}
-          emptyLabel="بدون معاون"
+          placeholder="انتخاب جانشین"
+          emptyLabel="بدون جانشین"
           emptyValue={null}
           rules={deputyRules}
           error={errors?.deputyId}
         />
 
         <p className="text-xs text-muted-foreground leading-5">
-          فقط کارمندانِ همین واحد قابل انتخاب‌اند. فردی که به‌عنوان مدیر یا
-          معاون انتخاب شود، سمتِ قبلی‌اش در هر تیم یا واحدِ دیگری آزاد می‌شود.
+          {RULE_HINTS[scopeLabel] ?? RULE_HINTS.واحد}
         </p>
       </div>
     </FormSectionCard>

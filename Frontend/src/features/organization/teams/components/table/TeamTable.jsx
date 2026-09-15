@@ -39,7 +39,7 @@ export default function TeamTable({
       },
       {
         accessorKey: "headName",
-        header: "مدیر تیم",
+        header: "مسئول تیم",
         cell: (info) =>
           info.getValue() ? (
             <span className="text-sm">{info.getValue()}</span>
@@ -49,7 +49,7 @@ export default function TeamTable({
       },
       {
         accessorKey: "deputyName",
-        header: "معاون",
+        header: "جانشین",
         cell: (info) =>
           info.getValue() ? (
             <span className="text-sm">{info.getValue()}</span>

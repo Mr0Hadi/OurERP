@@ -36,7 +36,7 @@ namespace WMS.Tests.Integration
             await receiveHandler.Handle(new ReceivePurchaseCommand
             {
                 PurchaseId = purchase1.Id,
-                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = purchase1Item.Id, ReceivedQuantity = 10 } },
+                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = purchase1Item.Id, ArrivedQuantity = 10 } },
             }, CancellationToken.None);
 
             var afterFirstReceipt = await scope.Context.InventoryCostLedgerEntries.OrderByDescending(x => x.Id).FirstAsync();
@@ -72,7 +72,7 @@ namespace WMS.Tests.Integration
             await receiveHandler.Handle(new ReceivePurchaseCommand
             {
                 PurchaseId = purchase2.Id,
-                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = purchase2Item.Id, ReceivedQuantity = 10 } },
+                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = purchase2Item.Id, ArrivedQuantity = 10 } },
             }, CancellationToken.None);
 
             Assert.Equal(100_000m, afterFirstSale.RunningAverageCost); // unchanged by the later purchase
@@ -161,7 +161,7 @@ namespace WMS.Tests.Integration
                 Composition = new EffectCompositionDto
                 {
                     Quantity = 2,
-                    MoneyOut = new MoneyEffectDto { Amount = 100_000, Method = ReturnPaymentMethodEnum.CASH },
+                    MoneyOut = new MoneyEffectDto { PaidAt = DateTime.Now, Amount = 100_000, Method = ReturnPaymentMethodEnum.CASH },
                 },
             }, CancellationToken.None);
 

@@ -11,7 +11,7 @@ import {
   ComboboxList,
   ComboboxVirtualList,
 } from "@/shared/components/ui/combobox"
-import { persianProvinces } from "@/shared/lib/persian-provinces";
+import { persianProvinces } from "@/shared/lib/persianProvinces";
 import { cn } from "@/shared/lib/utils"
 
 const EMPTY_VALUE = { province: null, city: null }
@@ -189,7 +189,7 @@ function CitySelectorCity({
       value={value.city}
       onValueChange={(city) => setValue({ ...value, city })}
       disabled={disabled || !value.province}
-      // Provinces can have 50+ cities (see persian-provinces.ts), so the
+      // Provinces can have 50+ cities (see persianProvinces.js), so the
       // city list is windowed via ComboboxVirtualList instead of mounting
       // every item's DOM node.
       virtualized>

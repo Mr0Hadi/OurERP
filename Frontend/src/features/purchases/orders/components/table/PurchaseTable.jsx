@@ -4,7 +4,7 @@ import { Button } from "@/shared/components/ui/button";
 import DataTable from "@/shared/components/table/DataTable";
 import PaymentProgress from "@/shared/components/table/PaymentProgress";
 import PaymentTypeBadge from "@/shared/components/table/PaymentTypeBadge";
-import { gregorianToPersian } from "@/shared/utils/dateUtils";
+import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { ROUTES } from "@/shared/constants/routes";
 import { PURCHASE_STATUS_LABELS } from "@/shared/domain/enums/purchaseStatus";
 import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";

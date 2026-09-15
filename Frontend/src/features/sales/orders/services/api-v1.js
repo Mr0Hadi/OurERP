@@ -1,11 +1,9 @@
-// src\features\sales\services\api-v1.js
-
 import axiosInstance from "@/shared/services/api/axios";
 import {
   normalizeListResponse,
   documentVersion,
 } from "@/shared/services/api/contract";
-import { toDateOnly } from "@/shared/utils/dateUtils";
+import { toDateOnly } from "@/shared/lib/dateUtils";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 
 export {

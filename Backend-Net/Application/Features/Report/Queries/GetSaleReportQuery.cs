@@ -30,7 +30,13 @@ namespace Application.Features.Report.Queries
         {
             InventoryCostEventTypeEnum.SALE_SHIPPED,
             InventoryCostEventTypeEnum.REPLACEMENT_SHIPPED_TO_CUSTOMER,
+            // Excess sent to a customer: cost with no revenue, like a replacement.
+            InventoryCostEventTypeEnum.SALE_SHIPPED_EXCESS,
             InventoryCostEventTypeEnum.SALE_RETURN_REFUND,
+            // A sale-return MONEY_IN: revenue, the mirror of SALE_RETURN_REFUND.
+            InventoryCostEventTypeEnum.SALE_RETURN_MONEY_IN,
+            // Scrapping quarantined goods: a loss reported on its own line.
+            InventoryCostEventTypeEnum.QUARANTINE_SCRAPPED,
         };
 
         private readonly IWMSDbContext _context;
@@ -54,7 +60,7 @@ namespace Application.Features.Report.Queries
 
             var ledgerRows = await _context.InventoryCostLedgerEntries
                 .Where(x => ProfitAffectingEventTypes.Contains(x.EventType) && x.OccurredAt >= fromDate && x.OccurredAt <= toDate)
-                .Select(x => new { x.OccurredAt, x.RevenueDelta, x.InventoryValueDelta })
+                .Select(x => new { x.OccurredAt, x.EventType, x.RevenueDelta, x.InventoryValueDelta, x.OffPoolValueDelta })
                 .ToListAsync(cancellationToken);
 
             var buckets = new SortedDictionary<DateTime, SaleReportPeriodDto>();
@@ -85,6 +91,13 @@ namespace Application.Features.Report.Queries
             foreach (var row in ledgerRows)
             {
                 var bucket = GetBucket(BucketKeyFor(row.OccurredAt));
+                if (row.EventType == InventoryCostEventTypeEnum.QUARANTINE_SCRAPPED)
+                {
+                    bucket.ScrapLoss += -row.OffPoolValueDelta;
+                    bucket.NetProfit += row.OffPoolValueDelta;
+                    continue;
+                }
+
                 bucket.Revenue += row.RevenueDelta;
                 bucket.CostOfGoodsSold += -row.InventoryValueDelta;
                 bucket.NetProfit += row.RevenueDelta + row.InventoryValueDelta;

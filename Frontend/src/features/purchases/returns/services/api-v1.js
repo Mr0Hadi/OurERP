@@ -4,6 +4,7 @@ import {
   normalizeListResponse,
 } from "@/shared/services/api/contract";
 import { toApiClaim, fromApiReturn } from "./apiMapping";
+import { toApiComposition } from "@/shared/domain/returns/resolutions";
 
 /**
  * نسخه‌ی هماهنگ‌شده با بکندِ واقعی — کنترلر `api/PurchaseReturn`
@@ -122,20 +123,24 @@ export async function createPurchaseReturn(payload, { idempotencyKey } = {}) {
  *
  * `composition` همان چهار اسلاتِ ساختاریِ بک‌اند است —
  * `goodsIn`/`goodsOut`/`moneyIn`/`moneyOut` (`EffectCompositionDto`،
- * از ۲۰۲۶-۰۹-۰۷) — بدون هیچ تبدیلی؛ فرم مستقیم همین شکل را می‌سازد
- * (`shared/domain/returns/resolutions.js`). باز کردنِ ترکیب به اثرهای
- * پایه کارِ سرور است؛ اگر فرانت اثرها را بسازد و بفرستد، منطق در دو جا
- * زندگی می‌کند و روزی از هم جدا می‌افتد.
+ * از ۲۰۲۶-۰۹-۰۷). شکلِ فرم یک لایه با آن فرق دارد و `toApiComposition`
+ * همان‌جا کنارِ `expandComposition` این فاصله را پر می‌کند: `enabled`
+ * فیلدی است که فقط فرم دارد، اسلاتِ کالا در فرم شیء است و در دستور
+ * آرایه، و پیش‌فرضِ «همان کالای ادعا» باید قبل از ارسال باز شود چون
+ * بکند روی آرایه‌ی خالی هیچ اثری نمی‌سازد.
+ *
+ * باز کردنِ ترکیب به اثرهای پایه همچنان کارِ سرور است؛ فرانت فقط شکل را
+ * درست می‌کند، نه معنا را.
  */
 export async function addClaimResolution(
   returnId,
-  claimId,
+  claim,
   composition,
   { idempotencyKey } = {},
 ) {
   const { data } = await axiosInstance.post(
     "/PurchaseReturn/AddClaimResolution",
-    { claimId, composition },
+    { claimId: claim.id, composition: toApiComposition(composition, claim) },
     idempotent(idempotencyKey),
   );
   return fromApiReturn(data);
@@ -155,18 +160,16 @@ export async function removeClaimResolution(returnId, claimId, resolutionId) {
  * بدنه:
  *
  *   {
- *     purchaseReturnId, rounds: [{ effectId, quantity, observations: [{ problem, quantity, note }] }],
+ *     purchaseReturnId,
+ *     rounds: [{ effectId, quantity, source?, productUnitBarcodes?,
+ *                observations: [{ problem, quantity, note }] }],
  *     date, partyName, partyNationalId, vehiclePlate, note
  *   }
  *
- * `observations` مشاهده‌ی مستقلِ انباردار است و فقط برای اثرِ ورودی
- * معنا دارد. مقدارِ سالم عمداً فرستاده نمی‌شود: سرور آن را از
- * `quantity` منهای مجموع مشاهده‌ها حساب می‌کند تا دو عددِ ناسازگار
- * وجود نداشته باشد.
- *
- * صفحات انبار این را مستقیم صدا نمی‌زنند؛ آن‌ها endpoint خودشان را
- * دارند (`ReceivePurchase`) و سرور از همان‌جا اثرها را نمی‌بندد —
- * اجرای اثرها همیشه از همین مسیر انجام می‌شود.
+ * `source` (`ProductUnitStatusEnum`) روی عودت الزامی است — از موجودی
+ * (IN_STOCK) یا از قرنطینه (QUARANTINED). `observations` فقط روی اثرِ
+ * ورودی معنا دارد و مقدارِ سالم را سرور از `quantity` منهای مشاهده‌ها
+ * حساب می‌کند.
  */
 export async function executeGoodsRound(
   returnId,
@@ -176,6 +179,22 @@ export async function executeGoodsRound(
   const { data } = await axiosInstance.post(
     "/PurchaseReturn/ExecuteGoodsRound",
     { purchaseReturnId: returnId, ...payload },
+    idempotent(idempotencyKey),
+  );
+  return fromApiReturn(data);
+}
+
+/**
+ * ثبتِ اینکه یک اثر مالیِ معلق (وعده‌ی پرداخت) واقعاً پرداخت شد —
+ * همتای مالیِ `executeGoodsRound`. `paidAt` نفرستادن یعنی «همین حالا».
+ */
+export async function executeMoneyEffect(
+  { effectId, paidAt, reference },
+  { idempotencyKey } = {},
+) {
+  const { data } = await axiosInstance.post(
+    "/PurchaseReturn/ExecuteMoneyEffect",
+    { effectId, paidAt: paidAt || undefined, reference: reference || undefined },
     idempotent(idempotencyKey),
   );
   return fromApiReturn(data);

@@ -69,7 +69,7 @@ namespace WMS.Tests.Integration
                     },
                 },
             }, CancellationToken.None);
-            var saleReturnId = (int)createRes.Data!.GetType().GetProperty("ReturnId")!.GetValue(createRes.Data)!;
+            var saleReturnId = ((Application.Features.SaleReturn.Dtos.SaleReturnDetailDto)createRes.Data!).Id;
             var claimId = scope.Context.SaleReturnClaims.Single().Id;
 
             var decisionHandler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.InventoryCostingService, scope.UnitOfWork);
@@ -79,7 +79,7 @@ namespace WMS.Tests.Integration
                 Composition = new EffectCompositionDto
                 {
                     Quantity = 5,
-                    MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 5 * scenario.Item.UnitPrice },
+                    MoneyOut = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 5 * scenario.Item.UnitPrice },
                 },
             }, CancellationToken.None);
 

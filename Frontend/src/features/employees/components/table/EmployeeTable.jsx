@@ -5,7 +5,7 @@ import { ChevronLeft } from "lucide-react";
 import DataTable from "@/shared/components/table/DataTable";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
-import { gregorianToPersian } from "@/shared/utils/dateUtils";
+import { OrgRoleEnum } from "@/shared/domain/enums/orgRole";
 
 import EmployeeStatusBadge from "./EmployeeStatusBadge";
 
@@ -71,18 +71,25 @@ export default function EmployeeTable({
           ),
       },
       {
+        // `roleTitle` متنِ فارسیِ آماده‌ی سرور است؛ «عضو» کم‌رنگ می‌ماند تا
+        // مسئول‌ها و جانشین‌ها در فهرست دیده شوند.
+        accessorKey: "roleTitle",
+        header: "نقش",
+        cell: ({ row }) =>
+          row.original.role === OrgRoleEnum.MEMBER ? (
+            <span className="text-sm text-muted-foreground">
+              {row.original.roleTitle}
+            </span>
+          ) : (
+            <Badge variant="secondary" className="font-normal">
+              {row.original.roleTitle}
+            </Badge>
+          ),
+      },
+      {
         accessorKey: "isActive",
         header: "وضعیت",
         cell: (info) => <EmployeeStatusBadge isActive={info.getValue()} />,
-      },
-      {
-        accessorKey: "createdAt",
-        header: "تاریخ عضویت",
-        cell: (info) => (
-          <span className="text-sm text-muted-foreground">
-            {gregorianToPersian(info.getValue())}
-          </span>
-        ),
       },
       {
         id: "actions",

@@ -1,9 +1,8 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Save, X, UserRoundCog } from "lucide-react";
+import { Save, X } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import FormSectionCard from "@/shared/components/forms/FormSectionCard";
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { ROUTES } from "@/shared/constants/routes";
 import { useReturnTo } from "@/shared/hooks/useReturnTo";
@@ -11,6 +10,7 @@ import { useReturnTo } from "@/shared/hooks/useReturnTo";
 import { useCreateDepartmentMutation } from "../services/mutations";
 import { useDepartmentForm } from "../hooks/useDepartmentForm";
 import DepartmentIdentityForm from "../components/forms/DepartmentIdentityForm";
+import OrgLeadershipForm from "../../components/OrgLeadershipForm";
 
 export default function DepartmentNewPage() {
   const navigate = useNavigate();
@@ -30,6 +30,7 @@ export default function DepartmentNewPage() {
   const { formMethods, buildPayload } = useDepartmentForm();
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
   } = formMethods;
@@ -63,16 +64,13 @@ export default function DepartmentNewPage() {
           </div>
 
           <div className="lg:col-span-1 space-y-4">
-            {/* انتخابگرِ مدیر و معاون عمداً اینجا نیست: مدیر و معاون باید
-                عضوِ همین واحد باشند و واحدی که هنوز ساخته نشده هیچ عضوی
-                ندارد. `CreateDepartment` هر `headId`/`deputyId` را رد می‌کند. */}
-            <FormSectionCard icon={UserRoundCog} title="مدیریت واحد">
-              <p className="text-sm text-muted-foreground leading-6">
-                مدیر و معاونِ واحد باید از کارمندانِ همین واحد باشند. بعد از ثبت
-                واحد و انتقال کارمندان به آن، از صفحه‌ی جزئیات واحد تعیینشان
-                کنید.
-              </p>
-            </FormSectionCard>
+            {/* `CreateDepartment` مسئول و جانشین را در همان یک درخواست
+                منتقل و نقش‌دار می‌کند. */}
+            <OrgLeadershipForm
+              control={control}
+              errors={errors}
+              scopeLabel="واحد"
+            />
 
             <div className="flex gap-2">
               <Button

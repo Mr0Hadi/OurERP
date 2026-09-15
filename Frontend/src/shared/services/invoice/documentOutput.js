@@ -1,6 +1,3 @@
-// src/shared/services/invoice/documentOutput.js
-
-import axiosInstance from "@/shared/services/api/axios";
 import { isPdfName } from "@/shared/services/files/fileConstraints";
 
 /**
@@ -14,9 +11,8 @@ import { isPdfName } from "@/shared/services/files/fileConstraints";
  *   (`api/Invoice/GetSaleInvoicePdf`)، و کاربر هم می‌تواند نسخه‌ی
  *   دستی ضمیمه کند. هر دو باید چاپ/دانلود شوند.
  *
- * قبلاً دکمه‌ی چاپ همیشه یک جدولِ HTML از روی *داده‌ی فرم* می‌ساخت و
- * دکمه‌ی دانلود هیچ‌وقت به ضمیمه‌ها کاری نداشت — یعنی کاربر فاکتوری را
- * چاپ می‌کرد که هیچ‌کدام از دو طرفِ معامله امضایش نکرده بود.
+ * یک جدولِ HTML که فرانت از روی داده‌ی فرم بسازد سند نیست: کاربر
+ * فاکتوری چاپ می‌کند که هیچ‌کدام از دو طرفِ معامله امضایش نکرده‌اند.
  *
  * شکلِ یک سند: `{ id, name, isPdf, getBlob }`.
  */
@@ -24,17 +20,23 @@ import { isPdfName } from "@/shared/services/files/fileConstraints";
 /**
  * بایت‌های یک ضمیمه.
  *
- * از همان `axiosInstance` رد می‌شود نه `fetch` خام: هدرها، CORS و
- * ترجمه‌ی پیامِ خطا همه یک‌جا تنظیم شده‌اند. آدرس مطلق است، پس
- * `baseURL` نادیده گرفته می‌شود. (`api/File/GetImage` خودش
- * `[AllowAnonymous]` است؛ هدرِ Authorization اضافه ضرری ندارد.)
+ * عمداً با `fetch` خام، نه `axiosInstance`: `api/File/GetImage`
+ * `[AllowAnonymous]` است و به توکن نیازی ندارد، و رد شدن از اینترسپتور
+ * یعنی هر ۴۰۱ یا خطای این درخواستِ فایل مسیرِ رفرش/خروجِ کلِ برنامه را
+ * راه می‌اندازد — همان «چاپ ضمیمه → خروج از حساب».
  */
 async function fetchAttachmentBlob(url) {
-  const { data } = await axiosInstance.get(url, {
-    responseType: "blob",
-    timeout: 60000,
-  });
-  return data;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 60000);
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) {
+      throw new Error(`دریافت فایل ممکن نشد (${response.status}).`);
+    }
+    return await response.blob();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
@@ -73,7 +75,7 @@ export function serverDocument({ name, fetchPdf }) {
 }
 
 /** ذخیره‌ی یک Blob با نامِ دلخواه. */
-export function saveBlobAs(blob, fileName) {
+function saveBlobAs(blob, fileName) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;

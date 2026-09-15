@@ -1,9 +1,23 @@
-﻿using Domain.Enums;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using Domain.Enums;
 
 namespace Domain.Entities
 {
     public class Product
     {
+        /// <summary>Scanning individual units is required for this product (enforced on outbound movements). Bulk goods leave it false.</summary>
+        public bool RequiresUnitTracking { get; set; }
+
+        /// <summary>
+        /// Created by the warehouse with only name, unit and category, to receive an off-document product. Cleared only when
+        /// the catalog data that was missing is actually filled (<see cref="HasCompleteCatalogData"/>), never by any update.
+        /// </summary>
+        public bool IsIncomplete { get; set; }
+
+        /// <summary>The fields a quick-created product lacks: a brand and all three prices.</summary>
+        [NotMapped]
+        public bool HasCompleteCatalogData => !string.IsNullOrWhiteSpace(Brand) && PurchasePrice > 0 && RetailPrice > 0 && WholeSalePrice > 0;
+
         public int Id { get; set; }
         public string Name { get; set; }
         public string? EnglishName { get; set; }

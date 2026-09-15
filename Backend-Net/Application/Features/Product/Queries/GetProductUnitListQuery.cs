@@ -1,7 +1,7 @@
 using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Common.Enums;
-using Application.Features.Product.Dtos;
+using Application.Features.Product.Mappings;
 using Common.Extensions;
 using Domain.Enums;
 using MediatR;
@@ -52,20 +52,7 @@ namespace Application.Features.Product.Queries
             var paged = await query
                 .OrderBy(x => x.ProductId)
                 .ThenBy(x => x.SerialNumber)
-                .Include(x => x.Product)
-                .Select(x => new ProductUnitDto
-                {
-                    Id = x.Id,
-                    ProductId = x.ProductId,
-                    ProductName = x.Product.Name,
-                    SerialNumber = x.SerialNumber,
-                    Barcode = x.Barcode,
-                    BarcodePayload = x.BarcodePayload,
-                    Status = x.Status,
-                    PurchaseItemId = x.PurchaseItemId,
-                    SaleItemId = x.SaleItemId,
-                    SoldAt = x.SoldAt,
-                })
+                .SelectDto(_context)
                 .ToPagedAsync(request.Page, request.Take, cancellationToken);
 
             res.Data = new

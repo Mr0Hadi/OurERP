@@ -15,20 +15,3 @@ export const ImageFolderEnum = Object.freeze({
   SUPPLIERS: 3,
   RECEIVING: 4,
 });
-
-/** برچسب فارسی هر عضو، فقط برای نمایش در UI. */
-export const IMAGE_FOLDER_LABELS = Object.freeze({
-  [ImageFolderEnum.PRODUCTS]: "محصولات",
-  [ImageFolderEnum.CUSTOMERS]: "مشتریان",
-  [ImageFolderEnum.SUPPLIERS]: "تامین‌کنندگان",
-  [ImageFolderEnum.RECEIVING]: "رسید کالا",
-});
-
-export function imageFolderLabelOf(folder) {
-  return IMAGE_FOLDER_LABELS[folder] ?? "";
-}
-
-/** آیا عدد داده‌شده عضوِ معتبرِ enum است — پیش از فرستادن به سرور. */
-export function isValidImageFolder(folder) {
-  return Object.values(ImageFolderEnum).includes(Number(folder));
-}
