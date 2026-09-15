@@ -92,7 +92,7 @@ namespace Application.Features.Sale.Commands
             sale.SalesUserId = _userContextService.GetUserId().ToInt();
 
             // مشتری همان لحظه‌ی ثبت هم می‌تواند کامل پرداخت کرده باشد؛ آن‌وقت دیگر پیش‌فاکتور نمی‌ماند.
-            if (sale.Status == SalesStatusEnum.PROFORMA && sale.PaidAmount >= sale.TotalAmount)
+            if (sale.Status == SalesStatusEnum.PROFORMA && sale.PaidAmount >= 0)
             {
                 var seq = await _context.Sales.CountAsync(cancellationToken) + 1;
                 sale.InvoiceNumber = Generator.GenerateInvoiceNumber(seq);
