@@ -81,7 +81,7 @@ export default function OffScopeClaimsSection({
         <p className="text-xs text-muted-foreground">{description}</p>
       </CardHeader>
       <CardContent className="space-y-2">
-        <div className="flex flex-col sm:flex-row gap-2 h-16">
+        <div className="flex flex-col sm:flex-row gap-2">
           {orderLines.length > 0 && (
             <PickerToggle
               isOpen={openPicker === OFF_SCOPE_KINDS.EXCESS}
@@ -237,13 +237,13 @@ function PickerToggle({ isOpen, onClick, label }) {
       type="button"
       size="sm"
       variant="outline"
-      className="flex-1 h-8 sm:h-8 text-xs gap-1.5"
+      className="w-full sm:flex-1 h-8 text-xs gap-1.5 min-w-0"
       onClick={onClick}
     >
       <ChevronDown
-        className={`h-3.5 w-3.5 transition-transform ${isOpen ? "rotate-180" : ""}`}
+        className={`h-3.5 w-3.5 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
       />
-      افزودن: {label}
+      <span className="truncate">افزودن: {label}</span>
     </Button>
   );
 }
