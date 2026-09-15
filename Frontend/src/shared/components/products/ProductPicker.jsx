@@ -4,7 +4,9 @@ import { Button } from "@/shared/components/ui/button";
 import ProductSearchPanel from "@/shared/components/forms/ProductSearchPanel";
 import SelectedItemsTable from "@/shared/components/forms/SelectedItemsTable";
 import SelectedItemsCards from "@/shared/components/forms/SelectedItemsCards";
+import toast from "react-hot-toast";
 import { unitLabelOf } from "@/shared/domain/enums/productUnit";
+import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
 
 /**
  * انتخاب کالا + فهرست اقلام انتخاب‌شده — یک‌جا و مشترک.
@@ -38,6 +40,8 @@ export default function ProductPicker({
   collapsible = false,
   openLabel = "انتخاب کالا",
   closeLabel = "بستن لیست کالاها",
+  // اسکنِ بارکدِ دانه، کدش را روی همان قلم نگه می‌دارد (`productUnitBarcodes`).
+  trackUnits = false,
 }) {
   // در حالت تاشو، اگر هنوز چیزی انتخاب نشده باز باشد بهتر است — کاربر
   // برای همین آمده.
@@ -46,16 +50,37 @@ export default function ProductPicker({
   const addedQuantityOf = (productId) =>
     Number(items.find((item) => item.productId === productId)?.quantity) || 0;
 
-  const handleAdd = (product) => {
-    if (items.some((item) => item.productId === product.id)) {
+  const handleAdd = (product, reference) => {
+    const unitCode =
+      trackUnits && reference?.kind === BarcodeReferenceKindEnum.UNIT
+        ? reference.normalizedPayload
+        : null;
+
+    if (
+      unitCode &&
+      items.some((item) => (item.productUnitBarcodes || []).includes(unitCode))
+    ) {
+      toast.error("این دانه قبلاً اسکن شده است");
+      return false;
+    }
+
+    const existing = items.find((item) => item.productId === product.id);
+    if (existing) {
       onItemsChange(
-        items.map((item) =>
-          item.productId === product.id
-            ? { ...item, quantity: (Number(item.quantity) || 0) + 1 }
-            : item,
-        ),
+        items.map((item) => {
+          if (item.productId !== product.id) return item;
+          const quantity = Number(item.quantity) || 0;
+          if (!unitCode) return { ...item, quantity: quantity + 1 };
+          // دانه‌های اسکن‌شده اول تعدادِ موجود را پر می‌کنند، بعد تعداد را زیاد.
+          const codes = [...(item.productUnitBarcodes || []), unitCode];
+          return {
+            ...item,
+            productUnitBarcodes: codes,
+            quantity: Math.max(quantity, codes.length),
+          };
+        }),
       );
-      return;
+      return true;
     }
     onItemsChange([
       ...items,
@@ -67,20 +92,40 @@ export default function ProductPicker({
         quantity: 1,
         unitPrice: priceOf(product),
         discount: 0,
+        ...(unitCode && { productUnitBarcodes: [unitCode] }),
       },
     ]);
+    return true;
   };
 
   const handleRemove = (productId) =>
     onItemsChange(items.filter((item) => item.productId !== productId));
 
-  const handleFieldChange = (productId, field, value) =>
+  const handleRemoveUnit = (productId, code) =>
     onItemsChange(
       items.map((item) =>
         item.productId === productId
-          ? { ...item, [field]: Number(value) >= 0 ? Number(value) : 0 }
+          ? {
+              ...item,
+              productUnitBarcodes: (item.productUnitBarcodes || []).filter(
+                (candidate) => candidate !== code,
+              ),
+            }
           : item,
       ),
+    );
+
+  const handleFieldChange = (productId, field, value) =>
+    onItemsChange(
+      items.map((item) => {
+        if (item.productId !== productId) return item;
+        const next = { ...item, [field]: Number(value) >= 0 ? Number(value) : 0 };
+        // کم‌کردنِ تعداد، دانه‌های اسکن‌شده‌ی اضافه را هم کنار می‌گذارد.
+        if (field === "quantity" && item.productUnitBarcodes?.length > next.quantity) {
+          next.productUnitBarcodes = item.productUnitBarcodes.slice(0, next.quantity);
+        }
+        return next;
+      }),
     );
 
   const grandTotal = items.reduce((sum, item) => sum + lineTotalOf(item), 0);
@@ -110,6 +155,7 @@ export default function ProductPicker({
         items={displayItems}
         onFieldChange={handleFieldChange}
         onRemove={handleRemove}
+        onRemoveUnit={trackUnits ? handleRemoveUnit : undefined}
         lineTotal={lineTotalOf}
         grandTotal={grandTotal}
       />
@@ -117,6 +163,7 @@ export default function ProductPicker({
         items={displayItems}
         onFieldChange={handleFieldChange}
         onRemove={handleRemove}
+        onRemoveUnit={trackUnits ? handleRemoveUnit : undefined}
         lineTotal={lineTotalOf}
         grandTotal={grandTotal}
       />

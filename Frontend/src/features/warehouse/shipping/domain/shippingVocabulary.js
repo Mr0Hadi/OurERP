@@ -16,7 +16,24 @@ import {
 export const SHIPPING_ELIGIBLE_STATUSES = [
   SaleStatusEnum.PROCESSING,
   SaleStatusEnum.PARTIALLY_DELIVERED,
+  // کامل‌ارسال‌شده هم در فیلتر هست: مازادِ دیرتر کشف‌شده یا کالای
+  // جایگزینِ مرجوعی روی فروشی ثبت می‌شود که از قبل ارسال/تحویل شده.
+  SaleStatusEnum.SHIPPED,
+  SaleStatusEnum.DELIVERED,
 ];
+
+/**
+ * ثبتِ «مازادِ ارسال‌شده» فقط وقتی معنا دارد که دست‌کم یک محموله رفته باشد:
+ * خطا بعد از ارسال کشف می‌شود. فروشی که هنوز در آماده‌سازی است، مازاد ندارد.
+ */
+export const EXCESS_ALLOWED_STATUSES = [
+  SaleStatusEnum.PARTIALLY_DELIVERED,
+  SaleStatusEnum.SHIPPED,
+  SaleStatusEnum.DELIVERED,
+];
+
+export const isExcessAllowedFor = (status) =>
+  EXCESS_ALLOWED_STATUSES.includes(Number(status));
 
 export const SHIPPING_STATUS_OPTIONS = SHIPPING_ELIGIBLE_STATUSES.map(
   (status) => ({ value: status, label: SALE_STATUS_LABELS[status] }),

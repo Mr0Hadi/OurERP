@@ -1,72 +1,108 @@
 /**
- * چهار اثر پایه‌ی یک مرجوعی — مشترک بین مرجوعی فروش و مرجوعی خرید.
+ * اثرهای پایه‌ی یک مرجوعی — مشترک بین مرجوعی فروش و مرجوعی خرید.
  *
- * تصمیم‌های مرجوعی یک فهرست بسته نیستند، بلکه ترکیبی از چهار حرکتِ
+ * تصمیم‌های مرجوعی یک فهرست بسته نیستند، بلکه ترکیبی از چند حرکتِ
  * ممکن‌اند: کالا وارد انبار ما شود، کالا از انبار ما خارج شود، پول به
  * حساب ما بیاید، پول از حساب ما برود. «بازگشت وجه» و «تعویض» و
  * «اعتبار خرید» همگی فقط *نام*هایی برای ترکیب‌های پرتکرارِ همین
- * چهارتا هستند.
+ * حرکت‌ها هستند.
  *
  * جهت‌ها نسبت به *ما* تعریف شده‌اند، نه نسبت به طرف حساب — به همین
- * دلیل همین چهار اثر برای هر دو سمت کار می‌کند:
+ * دلیل همین اثرها برای هر دو سمت کار می‌کنند:
  *
  *   GOODS_IN  = مشتری کالا را پس می‌دهد  |  تامین‌کننده جایگزین می‌فرستد
  *   GOODS_OUT = برای مشتری می‌فرستیم      |  به تامین‌کننده عودت می‌دهیم
  *   MONEY_IN  = مشتری پول می‌دهد          |  تامین‌کننده پول برمی‌گرداند
  *   MONEY_OUT = به مشتری پس می‌دهیم       |  به تامین‌کننده می‌پردازیم
  *
+ * دو اثرِ آخر فقط در مرجوعی خرید وجود دارند و طرف حساب ندارند — کالای
+ * قرنطینه‌ای که از قبل در انبار ماست تکلیفش روشن می‌شود:
+ *
+ *   GOODS_RELEASE = از قرنطینه به موجودیِ قابل فروش
+ *   GOODS_SCRAP   = از قرنطینه به اسقاط
+ *
  * تفاوت دو سمت فقط در *برچسب*هاست، نه در مدل؛ برچسب‌ها در sides.js.
  */
 
 // ─── جهتِ اثر ────────────────────────────────────────────────────────────────
 
-// همان اعضا و همان اعداد `ReturnEffectDirectionEnum`ِ بکند
-// (`Domain/Enums/ReturnEffectDirectionEnum.cs`) — یک اثرِ خوانده‌شده از
-// سرور بدون هیچ نگاشتی همین‌جا جا می‌افتد.
+// همان اعضا و همان اعداد `ReturnEffectDirectionEnum`ِ بکند — یک اثرِ
+// خوانده‌شده از سرور بدون هیچ نگاشتی همین‌جا جا می‌افتد.
 export const EFFECT_DIRECTIONS = {
   GOODS_IN: 0,
   GOODS_OUT: 1,
   MONEY_OUT: 2,
   MONEY_IN: 3,
+  GOODS_RELEASE: 4,
+  GOODS_SCRAP: 5,
 };
 
 const GOODS_EFFECT_DIRECTIONS = [
   EFFECT_DIRECTIONS.GOODS_IN,
   EFFECT_DIRECTIONS.GOODS_OUT,
+  EFFECT_DIRECTIONS.GOODS_RELEASE,
+  EFFECT_DIRECTIONS.GOODS_SCRAP,
 ];
 
+/** هر اثری که کالای فیزیکی جابه‌جا می‌کند و انبار باید اجرایش کند. */
 export function isGoodsEffect(direction) {
   return GOODS_EFFECT_DIRECTIONS.includes(direction);
+}
+
+export function isMoneyEffect(direction) {
+  return (
+    direction === EFFECT_DIRECTIONS.MONEY_IN ||
+    direction === EFFECT_DIRECTIONS.MONEY_OUT
+  );
+}
+
+/**
+ * کالایی که با طرف حساب معامله می‌شود — فقط این دو `unitPrice` دارند و
+ * در قاعده‌ی تراز شمرده می‌شوند. آزادسازی و اسقاطِ قرنطینه طرف حساب
+ * ندارند، پس ارزشِ معامله هم ندارند.
+ */
+export function isTradedGoodsEffect(direction) {
+  return (
+    direction === EFFECT_DIRECTIONS.GOODS_IN ||
+    direction === EFFECT_DIRECTIONS.GOODS_OUT
+  );
+}
+
+export function isQuarantineEffect(direction) {
+  return (
+    direction === EFFECT_DIRECTIONS.GOODS_RELEASE ||
+    direction === EFFECT_DIRECTIONS.GOODS_SCRAP
+  );
 }
 
 // ─── وضعیت اجرای اثر ────────────────────────────────────────────────────────
 
 /**
  * هر اثر دو مرحله دارد: ثبت شدن (تصمیم گرفته شد) و اعمال شدن (واقعاً
- * اتفاق افتاد). اثرهای کالایی حتماً از PENDING شروع می‌شوند چون
- * منتظر یک اقدام فیزیکی در انبارند؛ اثرهای پولی همان لحظه‌ی ثبت
- * اعمال‌شده حساب می‌شوند، چون ثبتشان توسط واحد فروش خودش همان اقدام
- * مالی است.
+ * اتفاق افتاد).
  *
- * VOID برای اثری است که پیش از اعمال لغو شده — پاک نمی‌شود تا رد
- * تصمیم‌های عوض‌شده در تاریخچه بماند.
+ * - اثر کالایی همیشه `PENDING` متولد می‌شود و با دورِ انبار اجرا می‌شود.
+ * - اثر مالی اگر پول همان لحظه جابه‌جا شده باشد (`paidAt`) `APPLIED`
+ *   متولد می‌شود، وگرنه یک وعده است و تا ثبتِ پرداخت `PENDING` می‌ماند.
+ *
+ * VOID برای اثری است که پیش از اعمال لغو شده.
  */
-// بدون معادل یک‌به‌یک در بکند — PurchaseReturnDecisionStatusEnum/
-// SaleReturnDecisionStatusEnum فقط دو عضو دارند (AWAITING/RESOLVED)،
-// این سه‌تا دارد (VOID معادل ندارد).
 export const EFFECT_STATUSES = {
   PENDING: 0,
   APPLIED: 1,
   VOID: 2,
 };
 
-/**
- * اثرهای کالایی تا وقتی انبار کاری فیزیکی نکند معلق می‌مانند — تنها
- * معیارِ ورود یک مرجوعی به صف‌های انبار همین است، نه وضعیت کلی مرجوعی.
- * اثرهای پولی همان لحظه‌ی ثبت اعمال‌شده حساب می‌شوند.
- */
-function initialStatusFor(direction) {
-  return isGoodsEffect(direction) ? EFFECT_STATUSES.PENDING : EFFECT_STATUSES.APPLIED;
+export function isPendingMoneyEffect(effect) {
+  return (
+    isMoneyEffect(effect?.direction) &&
+    effect?.status === EFFECT_STATUSES.PENDING
+  );
+}
+
+function initialStatusFor(direction, paidAt) {
+  if (isGoodsEffect(direction)) return EFFECT_STATUSES.PENDING;
+  return paidAt ? EFFECT_STATUSES.APPLIED : EFFECT_STATUSES.PENDING;
 }
 
 // ─── ساخت اثر ───────────────────────────────────────────────────────────────
@@ -75,18 +111,12 @@ const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
 /**
- * یک اثر تازه. `quantity` فقط کالایی است و `amount` فقط پولی، ولی هر دو
- * روی یک شکل می‌نشینند تا مصرف‌کننده دو نوع رکورد جدا نشناسد.
+ * یک اثر تازه — فقط برای پیش‌نمایشِ فرم؛ اثرِ واقعی را سرور می‌سازد.
  *
- * `appliedQuantity` مقدارِ *تجمعیِ* اجراشده است: انبار می‌تواند یک اثر
- * کالایی را چند دور جزئی اجرا کند و اثر تا رسیدنش به `quantity` در
- * PENDING می‌ماند.
- *
- * `restockedQuantity` فقط برای GOODS_IN معنا دارد و همیشه ≤
- * `appliedQuantity` است — بخشی از کالای برگشتی که سالم بوده. کالای معیوب
- * هم دریافت می‌شود (ادعا بسته می‌شود) ولی به موجودیِ قابل‌فروش
- * برنمی‌گردد؛ بدون این تفکیک، پس‌گرفتنِ کالای خراب موجودی را الکی بالا
- * می‌برد.
+ * `quantity` فقط کالایی است و `amount` فقط مالی، ولی هر دو روی یک شکل
+ * می‌نشینند تا مصرف‌کننده دو نوع رکورد جدا نشناسد. `unitPrice` فقط روی
+ * کالای معامله‌شده معنا دارد و `unitCost` روی کالایی که وارد موجودی
+ * می‌شود یا از قرنطینه خارج می‌شود.
  */
 export function createEffect({
   direction,
@@ -95,13 +125,17 @@ export function createEffect({
   productCode = "",
   productName = "",
   unit = "",
+  unitPrice = null,
+  unitCost = null,
   amount = 0,
   method = null,
   reference = "",
   parts = [],
   note = "",
+  paidAt = null,
 }) {
   const isGoods = isGoodsEffect(direction);
+  const status = initialStatusFor(direction, paidAt);
   return {
     id: generateId(),
     direction,
@@ -112,16 +146,16 @@ export function createEffect({
     productCode: isGoods ? productCode : "",
     productName: isGoods ? productName : "",
     unit: isGoods ? unit : "",
+    unitPrice: isTradedGoodsEffect(direction) ? unitPrice : null,
+    unitCost: isGoods ? unitCost : null,
     amount: isGoods ? 0 : Number(amount) || 0,
     method: isGoods ? null : method,
     reference: isGoods ? "" : reference || "",
-    // فقط برای روشِ ترکیبی پر می‌شود؛ مجموعِ مبالغش همان amount است.
     parts: isGoods ? [] : parts,
     note: note || "",
-    status: initialStatusFor(direction),
+    status,
     history: [],
-    createdAt: new Date().toISOString(),
-    appliedAt: isGoods ? null : new Date().toISOString(),
+    appliedAt: status === EFFECT_STATUSES.APPLIED ? paidAt : null,
   };
 }
 
@@ -136,9 +170,7 @@ export function createEffect({
  *     partyName, partyNationalId, vehiclePlate, note }
  *
  * `observations` مشاهده‌ی انباردار است و عمداً جدا از ادعای طرف حساب
- * می‌ماند: مشتری می‌گوید «معیوب بود»، انباردار می‌بیند «آسیب حمل». هر
- * کدام مقصرِ دیگری را نشان می‌دهد و گزارش به هر دو نیاز دارد. یک دور
- * می‌تواند چند مشاهده با تعدادهای جدا داشته باشد.
+ * می‌ماند: مشتری می‌گوید «معیوب بود»، انباردار می‌بیند «آسیب حمل».
  */
 function normalizeObservations(observations = []) {
   return observations
@@ -147,17 +179,11 @@ function normalizeObservations(observations = []) {
       quantity: Number(observation.quantity) || 0,
       note: observation.note || "",
     }))
-    // `problem` یک enum عددی است و عضو اولش صفر — پس بررسی باید صریح
-    // باشد، وگرنه مشاهده‌ی «کالای اشتباه ارسال شد» (۰) بی‌صدا حذف می‌شود.
+    // `problem` یک enum عددی است و عضو اولش صفر — بررسی باید صریح باشد.
     .filter((observation) => observation.problem !== null && observation.quantity > 0);
 }
 
-/**
- * مشاهده‌های همه‌ی دورهای یک اثر، تجمیع‌شده روی نوع مشکل.
- *
- * همان چیزی که گزارشِ «چقدر از کالای برگشتی واقعاً معیوب بود» به آن
- * نیاز دارد؛ بدون این، باید در `history` هر اثر جداگانه گشت.
- */
+/** مشاهده‌های همه‌ی دورهای یک اثر، تجمیع‌شده روی نوع مشکل. */
 export function observationsOf(effect) {
   const totals = new Map();
 
@@ -189,12 +215,13 @@ const EMPTY_SUMMARY = {
 };
 
 /**
- * جمعِ اثرها از دید *شرکت*: netMoney مثبت یعنی این مرجوعی در مجموع
- * پول به شرکت رسانده، منفی یعنی از شرکت خارج کرده.
+ * جمعِ اثرها از دید *شرکت*: netMoney مثبت یعنی این مرجوعی در مجموع پول
+ * به شرکت رسانده، منفی یعنی از شرکت خارج کرده.
  *
  * پیش‌فرض فقط اثرهای اعمال‌شده شمرده می‌شوند (تصویر واقعیت). برای
- * پیش‌نمایشِ «اگر این تصمیم ثبت شود چه می‌شود» باید
- * includePending را true داد.
+ * پیش‌نمایشِ «اگر این تصمیم ثبت شود چه می‌شود» باید includePending را
+ * true داد. آزادسازی و اسقاطِ قرنطینه کالا را جابه‌جا نمی‌کنند که به
+ * طرف حساب برسد، پس در این جمع نیستند.
  */
 export function summarizeEffects(effects = [], { includePending = false } = {}) {
   const acc = effects.reduce((sum, effect) => {
@@ -204,8 +231,6 @@ export function summarizeEffects(effects = [], { includePending = false } = {}) 
     if (pending) sum.pendingCount += 1;
     if (pending && !includePending) return sum;
 
-    // برای اثر کالاییِ در حال اجرا، آنچه واقعاً حرکت کرده appliedQuantity است
-    // نه quantity؛ مگر اینکه پیش‌نمایشِ کاملِ تصمیم خواسته شده باشد.
     const quantity = isGoodsEffect(effect.direction)
       ? includePending
         ? Number(effect.quantity) || 0

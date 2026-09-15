@@ -33,6 +33,38 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+/**
+ * زمانِ انقضای یک JWT (میلی‌ثانیه) از روی claimِ `exp`؛ `null` وقتی
+ * خوانا نیست. فقط برای تصمیمِ «رفرش لازم است یا نه» — اعتبارسنجی نیست.
+ */
+function expiresAtOf(token) {
+  try {
+    const payload = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const { exp } = JSON.parse(atob(payload));
+    return typeof exp === "number" ? exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+// اختلافِ ساعتِ کلاینت و سرور؛ نزدیکِ لحظه‌ی انقضا نمی‌شود با اطمینان
+// گفت کدام طرف درست است.
+const CLOCK_SKEW_MS = 2 * 60 * 1000;
+
+/**
+ * سرور رفرش را فقط برای توکنِ *منقضی‌شده* می‌پذیرد و برای توکنِ هنوز
+ * معتبر ۴۰۰ می‌دهد. پس رفرش فقط وقتی فرستاده می‌شود که توکن واقعاً
+ * منقضی شده (یا انقضایش خوانا نیست)؛ ۴۰۱ روی توکنِ معتبر یعنی مشکلِ
+ * دیگری در همان درخواست است، نه انقضا.
+ */
+function isAccessTokenExpired(token) {
+  const expiresAt = expiresAtOf(token);
+  return expiresAt == null || expiresAt <= Date.now();
+}
+
+const bearerOf = (config) =>
+  String(config?.headers?.Authorization ?? "").replace(/^Bearer\s+/i, "") || null;
+
 // مدیریت refresh token برای جلوگیری از race condition چند ریکوئست هم‌زمان
 let isRefreshing = false;
 let refreshSubscribers = [];
@@ -113,6 +145,25 @@ axiosInstance.interceptors.response.use(
         return Promise.reject(error);
       }
 
+      // درخواست با توکنی رفته که دیگر توکنِ فعلی نیست: رفرشِ دیگری (در
+      // همین تب یا تبِ دیگر) قبلاً انجام شده. رفرشِ دوباره با توکنِ تازه
+      // از سرور ۴۰۰ می‌گیرد و کاربر را بی‌دلیل بیرون می‌اندازد؛ فقط با
+      // توکنِ فعلی دوباره بفرست.
+      const sentToken = bearerOf(originalRequest);
+      if (!isRefreshing && accessToken && sentToken && sentToken !== accessToken) {
+        originalRequest._retry = true;
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        return axiosInstance(originalRequest);
+      }
+
+      // توکنِ فعلی هنوز معتبر است؛ این ۴۰۱ ربطی به انقضا ندارد و رفرش
+      // فقط ۴۰۰ برمی‌گرداند. خطای خودِ درخواست به فراخوان می‌رسد.
+      if (!isRefreshing && accessToken && !isAccessTokenExpired(accessToken)) {
+        const serverMessage = messageOf(error);
+        if (serverMessage) error.message = serverMessage;
+        return Promise.reject(error);
+      }
+
       if (isRefreshing) {
         // منتظر بمون تا رفرش قبلی تموم بشه، بعد با توکن جدید دوباره ارسال کن
         return new Promise((resolve, reject) => {
@@ -148,9 +199,28 @@ axiosInstance.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        // فقط وقتی سرور صراحتاً رفرش را رد کرده logout کن. خطای شبکه/تایم‌اوت
-        // (بدون response) یعنی سرور اصلاً جواب نداده — دلیلی نیست که کاربرِ
-        // واردشده را از حساب بیرون بیندازیم.
+        const latest = useAuthStore.getState();
+        const expiresAt = expiresAtOf(latest.accessToken);
+        // ۴۰۰ یعنی از دیدِ سرور توکنِ دسترسی هنوز معتبر است: یا رفرشِ
+        // دیگری همین حالا توکن را عوض کرده، یا ساعتِ کلاینت از سرور جلوتر
+        // است. هیچ‌کدام دلیلِ خروج نیست.
+        const stillValidOnServer =
+          refreshError.response?.status === 400 &&
+          (latest.accessToken !== accessToken ||
+            (expiresAt != null && Date.now() - expiresAt < CLOCK_SKEW_MS));
+
+        if (stillValidOnServer) {
+          onRefreshFailed(refreshError);
+          if (latest.accessToken && latest.accessToken !== accessToken) {
+            originalRequest.headers.Authorization = `Bearer ${latest.accessToken}`;
+            return axiosInstance(originalRequest);
+          }
+          return Promise.reject(error);
+        }
+
+        // فقط وقتی سرور صراحتاً رفرش را رد کرده (رفرش‌توکنِ منقضی/باطل)
+        // logout کن. خطای شبکه/تایم‌اوت (بدون response) یعنی سرور اصلاً
+        // جواب نداده — دلیلی نیست که کاربرِ واردشده را بیرون بیندازیم.
         if (refreshError.response) {
           logout();
           onRefreshFailed(refreshError);

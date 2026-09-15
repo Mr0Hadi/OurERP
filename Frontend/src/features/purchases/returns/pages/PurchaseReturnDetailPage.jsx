@@ -29,8 +29,8 @@ import {
   useCancelPurchaseReturnMutation,
   useReopenPurchaseReturnMutation,
   useRemovePurchaseReturnMutation,
+  useExecuteMoneyEffectMutation,
 } from "../services/mutations";
-import { canDeleteReturn } from "@/shared/domain/returns/resolutions";
 
 import PurchaseReturnDetailLoading from "../components/forms/PurchaseReturnDetailLoading";
 import ReturnStatusBar from "@/shared/components/returns/ReturnStatusBar";
@@ -42,6 +42,10 @@ import PurchaseReturnResolutionSection from "../components/forms/PurchaseReturnR
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
+import ReceivingReportCard, {
+  ReceivingReportLines,
+} from "@/shared/components/returns/ReceivingReport";
+import { claimReceivingReport } from "@/shared/domain/returns/receivingReport";
 
 /**
  * جزئیات یک مرجوعی — یک ستون، به ترتیبِ کاری که کاربر انجام می‌دهد:
@@ -72,8 +76,10 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
   const cancelMutation = useCancelPurchaseReturnMutation(purchaseReturn.id);
   const reopenMutation = useReopenPurchaseReturnMutation(purchaseReturn.id);
   const removeMutation = useRemovePurchaseReturnMutation();
+  const executeMoneyMutation = useExecuteMoneyEffectMutation();
 
   const isBusy =
+    executeMoneyMutation.isPending ||
     addResolutionMutation.isPending ||
     removeResolutionMutation.isPending ||
     rejectMutation.isPending ||
@@ -117,15 +123,19 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
         </p>
       )}
 
+      <ReceivingReportCard receivingInfo={sale} />
+
       <InvoiceDocumentSection
         title="مرجوعی خرید"
         invoiceNumber={purchaseReturn.returnNumber}
-        attachmentRequired
         attachmentLabel="فاکتور یا رسید مرجوعی از تامین‌کننده"
       />
 
       <PurchaseReturnResolutionSection
         purchaseReturn={purchaseReturn}
+        renderClaimReport={(claim) => (
+          <ReceivingReportLines {...claimReceivingReport(sale, claim)} />
+        )}
         isBusy={isBusy}
         onAddResolution={(claim, composition) =>
           addResolutionMutation.mutate({ claim, composition })
@@ -133,12 +143,15 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
         onRemoveResolution={(claimId, resolutionId) =>
           removeResolutionMutation.mutate({ claimId, resolutionId })
         }
+        onExecuteMoney={(effect) =>
+          executeMoneyMutation.mutate({ effectId: effect.id })
+        }
         onReject={() => rejectMutation.mutate()}
         onCancel={() => cancelMutation.mutate()}
         onReopen={() => reopenMutation.mutate()}
       />
 
-      {canDeleteReturn(purchaseReturn) && (
+      {purchaseReturn.canDelete && (
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button

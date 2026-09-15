@@ -6,6 +6,7 @@ import {
   addClaimResolution,
   removeClaimResolution,
   executeGoodsRound,
+  executeMoneyEffect,
   rejectPurchaseReturn,
   cancelPurchaseReturn,
   reopenPurchaseReturn,
@@ -70,7 +71,7 @@ export const useRemoveClaimResolutionMutation = (returnId) => {
       removeClaimResolution(returnId, claimId, resolutionId),
     onSuccess: (updated) => {
       finalizeReturnChange(queryClient, updated);
-      toast.success("تصمیم حذف شد و اثر مالی‌اش برگشت خورد");
+      toast.success("تصمیم حذف شد");
     },
     onError: (error) => toast.error(error?.message || "خطا در حذف تصمیم"),
   });
@@ -90,17 +91,25 @@ export const useExecuteGoodsRoundMutation = (returnId) => {
       executeGoodsRound(returnId, payload, {
         idempotencyKey: idempotencyKeyFor(payload),
       }),
-    // ⚠️ برخلافِ بقیه‌ی دستورها، `ExecuteGoodsRound` سندِ کامل را
-    // برنمی‌گرداند — فقط `{returnStatus}`. پس چیزی برای نشاندن در کش
-    // نیست و سندِ مرجوعی باید صریحاً باطل شود تا از سرور تازه بیاید.
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: purchaseReturnKeys.detail(returnId),
-      });
-      invalidatePurchaseEcosystem(queryClient, null);
+    onSuccess: (updated) => {
+      finalizeReturnChange(queryClient, updated);
       toast.success("جابه‌جایی کالا ثبت شد");
     },
     onError: (error) => toast.error(error?.message || "خطا در ثبت جابه‌جایی کالا"),
+  });
+};
+
+/** ثبتِ پرداختِ یک وعده‌ی مالی — اثر `PENDING` را `APPLIED` می‌کند. */
+export const useExecuteMoneyEffectMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload) =>
+      executeMoneyEffect(payload, { idempotencyKey: idempotencyKeyFor(payload) }),
+    onSuccess: (updated) => {
+      finalizeReturnChange(queryClient, updated);
+      toast.success("پرداخت ثبت شد");
+    },
+    onError: (error) => toast.error(error?.message || "خطا در ثبت پرداخت"),
   });
 };
 

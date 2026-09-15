@@ -3,11 +3,14 @@ import {
   PackagePlus,
   ArrowDownLeft,
   ArrowUpRight,
+  PackageCheck,
+  PackageX,
 } from "lucide-react";
 import {
   EFFECT_DIRECTIONS,
   EFFECT_STATUSES,
   isGoodsEffect,
+  isTradedGoodsEffect,
   observationsOf,
 } from "@/shared/domain/returns/effects";
 import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
@@ -18,6 +21,8 @@ const ICONS = {
   [EFFECT_DIRECTIONS.GOODS_OUT]: PackageMinus,
   [EFFECT_DIRECTIONS.MONEY_IN]: ArrowDownLeft,
   [EFFECT_DIRECTIONS.MONEY_OUT]: ArrowUpRight,
+  [EFFECT_DIRECTIONS.GOODS_RELEASE]: PackageCheck,
+  [EFFECT_DIRECTIONS.GOODS_SCRAP]: PackageX,
 };
 
 const ACCENTS = {
@@ -25,7 +30,11 @@ const ACCENTS = {
   [EFFECT_DIRECTIONS.GOODS_OUT]: "text-indigo-700 dark:text-indigo-400",
   [EFFECT_DIRECTIONS.MONEY_IN]: "text-emerald-700 dark:text-emerald-400",
   [EFFECT_DIRECTIONS.MONEY_OUT]: "text-rose-700 dark:text-rose-400",
+  [EFFECT_DIRECTIONS.GOODS_RELEASE]: "text-sky-700 dark:text-sky-400",
+  [EFFECT_DIRECTIONS.GOODS_SCRAP]: "text-stone-600 dark:text-stone-400",
 };
+
+const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
 
 /**
  * یک اثر پایه، به‌صورت یک سطرِ کوتاه.
@@ -43,25 +52,27 @@ export default function EffectBadge({ effect, side, showProductName = false }) {
   const done = Number(effect.appliedQuantity) || 0;
 
   const value = isGoods
-    ? `${(Number(effect.quantity) || 0).toLocaleString("fa-IR")} ${effect.unit || "عدد"}`
-    : `${(Number(effect.amount) || 0).toLocaleString("fa-IR")} ریال`;
+    ? `${fa(effect.quantity)} ${effect.unit || "عدد"}`
+    : `${fa(effect.amount)} ریال`;
 
   const restocked = Number(effect.restockedQuantity) || 0;
   const isIncoming = effect.direction === EFFECT_DIRECTIONS.GOODS_IN;
+  const hasUnitPrice = isTradedGoodsEffect(effect.direction) && effect.unitPrice != null;
 
   const details = [
     showProductName && isGoods ? effect.productName : null,
+    hasUnitPrice ? `هر عدد ${fa(effect.unitPrice)} ریال` : null,
     // روش پرداخت enum عددی است و «نقدی» صفر — بررسیِ صریح لازم است.
     !isGoods && effect.method != null
       ? PAYMENT_TYPE_LABELS[effect.method]
       : null,
-    isGoods && done > 0 ? `${done.toLocaleString("fa-IR")} انجام‌شده` : null,
+    isGoods && done > 0 ? `${fa(done)} انجام‌شده` : null,
     // برای کالای برگشتی، «انجام شد» و «به موجودی برگشت» یکی نیستند:
     // کالای معیوب تحویل گرفته می‌شود ولی وارد موجودی قابل‌فروش نمی‌شود.
     isIncoming && done > 0 && restocked !== done
-      ? `${restocked.toLocaleString("fa-IR")} به موجودی`
+      ? `${fa(restocked)} به موجودی`
       : null,
-    isPending ? "در انتظار انبار" : null,
+    isPending ? (isGoods ? "در انتظار انبار" : "در انتظار پرداخت") : null,
   ].filter(Boolean);
 
   // مشاهده‌ی انباردار هنگام تحویل — جدا از مشکلی که طرف حساب ادعا کرده،
@@ -91,7 +102,7 @@ export default function EffectBadge({ effect, side, showProductName = false }) {
             {observations
               .map(
                 (observation) =>
-                  `${observation.quantity.toLocaleString("fa-IR")} ${
+                  `${fa(observation.quantity)} ${
                     RETURN_PROBLEM_LABELS[observation.problem] ??
                     observation.problem
                   }`,

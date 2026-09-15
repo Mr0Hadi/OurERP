@@ -26,6 +26,9 @@ import {
 export const RECEIVING_ELIGIBLE_STATUSES = [
   PurchaseStatusEnum.SHIPPED,
   PurchaseStatusEnum.PARTIALLY_RECEIVED,
+  // کامل‌رسیده هم در فیلتر هست: مازادِ دیرتر رسیده یا کالای جایگزینِ
+  // مرجوعی روی خریدی ثبت می‌شود که از قبل «دریافت‌شده» است.
+  PurchaseStatusEnum.RECEIVED,
 ];
 
 export const RECEIVING_STATUS_OPTIONS = RECEIVING_ELIGIBLE_STATUSES.map(

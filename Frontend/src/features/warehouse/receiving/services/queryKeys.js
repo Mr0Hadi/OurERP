@@ -7,4 +7,9 @@ export const receivingKeys = {
   list: (filters) => [...receivingKeys.lists(), { ...filters }],
   details: () => [...receivingKeys.all, 'detail'],
   detail: (purchaseId) => [...receivingKeys.details(), String(purchaseId)],
+  pendingReturnEffects: (purchaseId) => [
+    ...receivingKeys.all,
+    'pending-return-effects',
+    String(purchaseId),
+  ],
 };

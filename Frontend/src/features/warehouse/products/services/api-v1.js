@@ -34,6 +34,7 @@ export const fetchProducts = async (params = {}) => {
       isLowOnStock: toIsLowOnStock(params.stockStatus),
       fromPrice: params.minPrice || undefined,
       toPrice: params.maxPrice || undefined,
+      isIncomplete: params.isIncomplete === "true" ? true : undefined,
       // سرور مرتب‌سازی ندارد — اگر فرستاده شود بی‌صدا نادیده گرفته می‌شود.
     },
   });

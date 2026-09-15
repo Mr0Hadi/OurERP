@@ -6,4 +6,9 @@ export const shippingKeys = {
   list: (filters) => [...shippingKeys.lists(), { ...filters }],
   details: () => [...shippingKeys.all, 'detail'],
   detail: (saleId) => [...shippingKeys.details(), String(saleId)],
+  pendingReturnEffects: (saleId) => [
+    ...shippingKeys.all,
+    'pending-return-effects',
+    String(saleId),
+  ],
 };

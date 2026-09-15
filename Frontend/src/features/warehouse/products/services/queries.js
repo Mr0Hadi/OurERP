@@ -15,6 +15,7 @@ export function useProductsQuery(filters, pagination, sorting) {
     minPrice: filters.minPrice,
     maxPrice: filters.maxPrice,
     stockStatus: filters.stockStatus,
+    isIncomplete: filters.isIncomplete || "",
     // وقتی کاربر مرتب‌سازی ستون را کامل برمی‌دارد، به همان پیش‌فرض
     // «تازه‌ترین اول» برمی‌گردیم، نه به مرتب‌سازی بر اساس نام.
     sortBy: sorting?.id ?? "createdAt",

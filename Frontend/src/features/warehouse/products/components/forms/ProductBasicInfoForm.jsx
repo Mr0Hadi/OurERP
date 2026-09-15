@@ -2,6 +2,8 @@ import { Controller, useWatch } from "react-hook-form";
 
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
+import { Badge } from "@/shared/components/ui/badge";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import {
   Card,
   CardContent,
@@ -53,14 +55,25 @@ export default function ProductBasicInfoForm({
   control,
   errors,
   showGeneratedCodes = true,
+  // کالای ساخته‌شده با «ساخت سریع» در انبار: تا کامل شدن، برند و قیمت
+  // الزامی نیستند (سرور هم همین را می‌پذیرد).
+  isIncomplete = false,
 }) {
   const code = useWatch({ control, name: "code" });
   const barcode = useWatch({ control, name: "barcode" });
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between gap-2">
         <CardTitle className="text-lg">اطلاعات پایه</CardTitle>
+        {isIncomplete && (
+          <Badge
+            variant="outline"
+            className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400"
+          >
+            ناقص — برند و قیمت‌ها را کامل کنید
+          </Badge>
+        )}
       </CardHeader>
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2 md:col-span-2">
@@ -132,12 +145,14 @@ export default function ProductBasicInfoForm({
 
         <div className="space-y-2">
           <Label htmlFor="brand">
-            برند <span className="text-destructive">*</span>
+            برند {!isIncomplete && <span className="text-destructive">*</span>}
           </Label>
           <Input
             id="brand"
             placeholder="مثال: ایساکو"
-            {...register("brand", { required: "وارد کردن برند الزامی است" })}
+            {...register("brand", {
+              required: isIncomplete ? false : "وارد کردن برند الزامی است",
+            })}
             className={errors.brand ? "border-red-500" : ""}
           />
           {errors.brand && (
@@ -174,6 +189,29 @@ export default function ProductBasicInfoForm({
           {errors.unit && (
             <span className="text-xs text-red-500">{errors.unit.message}</span>
           )}
+        </div>
+
+        <div className="md:col-span-2">
+          <Controller
+            name="requiresUnitTracking"
+            control={control}
+            render={({ field }) => (
+              <label className="flex items-start gap-2 cursor-pointer">
+                <Checkbox
+                  checked={Boolean(field.value)}
+                  onCheckedChange={(checked) => field.onChange(checked === true)}
+                  className="mt-0.5"
+                />
+                <span className="text-sm">
+                  ردیابی دانه‌ای
+                  <span className="block text-xs text-muted-foreground">
+                    در هر خروجِ کالا (ارسال، عودت، جایگزین) اسکنِ تک‌تکِ دانه‌ها
+                    الزامی می‌شود. برای کالای فله روشن نکنید.
+                  </span>
+                </span>
+              </label>
+            )}
+          />
         </div>
       </CardContent>
     </Card>

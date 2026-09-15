@@ -10,30 +10,25 @@ import {
   SPLITTABLE_PAYMENT_TYPES,
 } from "@/shared/domain/enums/paymentType";
 import { RETURN_STATUSES, isTerminalStatus } from "./statuses";
+import { CLAIM_SCOPES } from "./scopes";
 
 /**
  * تصمیم‌ها: ترکیب‌شان، بسطشان به اثر، اعتبارسنجی، و ماشین وضعیت —
  * مشترک بین مرجوعی فروش و مرجوعی خرید.
  *
- * یک تصمیم سه محور مستقل دارد که هرکدام می‌تواند باشد یا نباشد:
+ * یک تصمیم چند محور مستقل دارد که هرکدام می‌تواند باشد یا نباشد:
  *
  *   ۱. کالایی وارد انبار ما شود؟   (goodsIn)
  *   ۲. کالایی از انبار ما خارج شود؟ (goodsOut)
  *   ۳. پولی جابه‌جا شود؟           (moneyIn / moneyOut)
+ *   ۴. فقط مرجوعی خرید: کالای قرنطینه آزاد یا اسقاط شود؟ (goodsRelease / goodsScrap)
  *
- * محورِ سوم دو اسلاتِ مستقل است، نه یک فیلد با جهت — دقیقاً هم‌شکلِ
- * `EffectCompositionDto`ی بک‌اند. فقط یکی از این دو در یک لحظه فعال
- * است؛ فرم این را با یک کشویِ «جهت» ساده می‌کند ولی خودِ ترکیب چنین
- * فیلدی ندارد (`moneyDirectionOf` پایین همین فایل).
+ * و یک راهِ صریح برای بستنِ بخشی از ادعا بدون هیچ‌کدام: بخشش (writeOff).
  *
- * محورها نسبت به *ما* نام‌گذاری شده‌اند، نه نسبت به طرف حساب. برای
- * همین یک مدل، هر دو سمت را پوشش می‌دهد و فقط برچسب‌ها فرق می‌کنند:
+ * محورها نسبت به *ما* نام‌گذاری شده‌اند، نه نسبت به طرف حساب:
  *
  *   فروش:  goodsIn = پس‌گرفتن از مشتری   | goodsOut = ارسال برای مشتری
  *   خرید:  goodsIn = دریافت جایگزین      | goodsOut = عودت به تامین‌کننده
- *
- * برچسب‌ها در sides.js. اینجا هیچ متنی درباره‌ی «مشتری» یا
- * «تامین‌کننده» نیست.
  *
  * ساختار داده‌ای که این ماژول فرض می‌کند:
  *
@@ -43,7 +38,8 @@ import { RETURN_STATUSES, isTerminalStatus } from "./statuses";
  *               └─ effects[]← اثرهای پایه (effects.js)
  */
 
-const { GOODS_IN, GOODS_OUT, MONEY_IN, MONEY_OUT } = EFFECT_DIRECTIONS;
+const { GOODS_IN, GOODS_OUT, MONEY_IN, MONEY_OUT, GOODS_RELEASE, GOODS_SCRAP } =
+  EFFECT_DIRECTIONS;
 
 // ─── جهت پول ────────────────────────────────────────────────────────────────
 
@@ -59,9 +55,8 @@ export const MONEY_DIRECTIONS = {
 };
 
 /**
- * روش‌هایی که برای هر جهت معنا دارند. «اعتبار خرید بعدی» فقط وقتی
- * معنا دارد که ما بدهکاریم؛ طرف مقابل نمی‌تواند با اعتبارِ خودش به ما
- * پول بدهد.
+ * روش‌هایی که برای هر جهت معنا دارند. «اعتبار خرید بعدی» فقط وقتی معنا
+ * دارد که ما بدهکاریم.
  */
 export function methodsForDirection(direction) {
   const base = [
@@ -76,23 +71,12 @@ export function methodsForDirection(direction) {
     : base;
 }
 
-/**
- * تکه‌های معتبرِ یک پرداخت ترکیبی (مبلغ بزرگ‌تر از صفر).
- *
- * شکل هر تکه همان `MoneyPartDto`ی بک‌اند است — { method, amount,
- * checkNumber?, transferRef? }. `ResolutionMoneySection` که از
- * کامپوننتِ عمومیِ `MixedPaymentList` (فیلدش `type` است، نه `method`)
- * استفاده می‌کند، این یکی تبدیلِ نام را همان‌جا انجام می‌دهد.
- */
 function validMoneyParts(money) {
   return (money?.parts || []).filter((part) => (Number(part.amount) || 0) > 0);
 }
 
-/**
- * مبلغِ مؤثرِ یک جابه‌جایی پول. برای روشِ ترکیبی، مجموعِ تکه‌هاست — نه
- * فیلد amount، که در آن حالت اصلاً پر نمی‌شود.
- */
-function moneyAmountOf(money) {
+/** مبلغِ مؤثرِ یک جابه‌جایی پول؛ برای روشِ ترکیبی، مجموعِ تکه‌هاست. */
+export function moneyAmountOf(money) {
   if (!money) return 0;
   if (money.method === PaymentTypeEnum.MIXED) {
     return validMoneyParts(money).reduce(
@@ -105,14 +89,25 @@ function moneyAmountOf(money) {
 
 // ─── ترکیب خالی ─────────────────────────────────────────────────────────────
 
+/**
+ * اسلاتِ کالای معامله‌شده. `unitPrice` قیمتِ کالای پیش‌فرض (همان کالای
+ * ادعا) است وقتی کاربر کالای مشخصی انتخاب نکرده؛ اقلامِ انتخاب‌شده قیمتِ
+ * خودشان را دارند. رشته‌ی خالی یعنی «هنوز وارد نشده» — که با صفرِ صریح
+ * فرق دارد، چون بکند `unitPrice` را روی هر اثر کالایی الزامی می‌داند.
+ */
 function emptyGoodsSlot() {
-  return { enabled: false, items: [] };
+  return { enabled: false, items: [], unitPrice: "" };
+}
+
+/** اسلاتِ خروج از قرنطینه — همیشه روی همان کالای ادعا، با `unitCost`. */
+function emptyQuarantineSlot() {
+  return { enabled: false, unitCost: "" };
 }
 
 /**
- * یک اسلاتِ پولیِ خالی — هم‌شکلِ `MoneyEffectDto`ی بک‌اند (`method`,
- * `amount`, `reference`, `parts`)، به‌علاوه‌ی `enabled` که فقط فرم لازم
- * دارد (دقیقاً مثل `enabled` روی اسلاتِ کالایی).
+ * اسلاتِ پولی — هم‌شکلِ `MoneyEffectDto`ی بکند، به‌علاوه‌ی `enabled` و
+ * `paidNow` که فقط فرم لازم دارد. `paidNow` یعنی «پول همین حالا جابه‌جا
+ * شد»؛ نبودنش اثر را یک وعده‌ی معلق می‌کند.
  */
 export function emptyMoneyEffect() {
   return {
@@ -121,6 +116,7 @@ export function emptyMoneyEffect() {
     amount: "",
     reference: "",
     parts: [],
+    paidNow: true,
   };
 }
 
@@ -129,29 +125,41 @@ export function emptyComposition(quantity = 1) {
     quantity,
     goodsIn: emptyGoodsSlot(),
     goodsOut: emptyGoodsSlot(),
+    goodsRelease: emptyQuarantineSlot(),
+    goodsScrap: emptyQuarantineSlot(),
     moneyIn: emptyMoneyEffect(),
     moneyOut: emptyMoneyEffect(),
+    writeOff: false,
     note: "",
   };
 }
 
-/**
- * جهتِ فعلیِ پول — فقط برای UI (کشوی انتخاب). خودِ ترکیب چنین فیلدی
- * ندارد؛ جهت از این‌که کدام اسلات `enabled` است مشتق می‌شود، درست
- * مثلِ بک‌اند که جهت را از *جایگاهِ* اثر می‌فهمد نه یک فیلدِ جدا.
- */
-function moneyDirectionOf(composition) {
+/** جهتِ فعلیِ پول — از روی اسلاتِ فعال مشتق می‌شود، نه یک فیلدِ جدا. */
+export function moneyDirectionOf(composition) {
   if (composition?.moneyIn?.enabled) return MONEY_DIRECTIONS.RECEIVE;
   if (composition?.moneyOut?.enabled) return MONEY_DIRECTIONS.PAY;
   return MONEY_DIRECTIONS.NONE;
 }
 
+/**
+ * بهای پیش‌فرضِ کالایی که از قرنطینه خارج می‌شود — فقط یک *پیشنهاد* برای
+ * فرم است و کاربر می‌تواند عوضش کند؛ سرور هیچ‌وقت آن را حدس نمی‌زند.
+ *
+ * کالای معیوبِ سهمِ سفارش پولش داده شده، پس قیمتِ همان قلم؛ مازاد و
+ * کالای خارج از سند پولی بابتشان داده نشده، پس صفر.
+ */
+export function defaultQuarantineUnitCost(claim) {
+  return claim?.scope === CLAIM_SCOPES.ON_ORDER ? Number(claim.unitPrice) || 0 : 0;
+}
+
 // ─── بسط ترکیب به اثر ───────────────────────────────────────────────────────
 
+const hasValue = (value) => value !== "" && value != null;
+
 /**
- * اقلامِ یک محورِ کالایی. اگر کاربر کالای مشخصی انتخاب نکرده باشد،
- * پیش‌فرض همان کالای ادعا با تعدادِ تصمیم است — همان حالتِ پرتکرارِ
- * «همین کالا، همین تعداد».
+ * اقلامِ یک محورِ کالاییِ معامله‌شده. اگر کاربر کالای مشخصی انتخاب نکرده
+ * باشد، پیش‌فرض همان کالای ادعا با تعدادِ تصمیم است — با قیمتی که روی
+ * اسلات وارد شده.
  */
 function goodsItemsOf(slot, claim, quantity) {
   const picked = (slot?.items || []).filter(
@@ -166,16 +174,81 @@ function goodsItemsOf(slot, claim, quantity) {
       productName: claim.productName ?? "",
       unit: claim.unit ?? "",
       quantity,
+      unitPrice: slot?.unitPrice ?? "",
     },
   ];
 }
 
+const tradedValueOf = (slot, claim, quantity) =>
+  slot?.enabled
+    ? goodsItemsOf(slot, claim, quantity).reduce(
+        (sum, item) =>
+          sum + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0),
+        0,
+      )
+    : 0;
+
 /**
- * ترکیب را به فهرست اثرهای پایه باز می‌کند — تنها چیزی که واقعاً ذخیره
- * و اجرا می‌شود.
+ * قاعده‌ی ترازِ بکند، زنده در فرم:
+ *
+ *   تراز = ارزشِ کالای ورودی − ارزشِ کالای خروجی
+ *
+ * تراز مثبت یعنی ما بدهکاریم و دست‌کم همین مبلغ باید پرداخت شود؛ منفی
+ * یعنی طرف حساب بدهکار است و دست‌کم همین مبلغ باید دریافت شود. کف است،
+ * نه تطبیق: وجهِ بیشتر یا در جهتِ مخالف هم پذیرفته می‌شود.
  */
+export function moneyBalanceOf(composition, claim) {
+  if (!composition || composition.writeOff) {
+    return { balance: 0, requiredDirection: MONEY_DIRECTIONS.NONE, requiredAmount: 0 };
+  }
+  const quantity = Number(composition.quantity) || 0;
+  const balance =
+    tradedValueOf(composition.goodsIn, claim, quantity) -
+    tradedValueOf(composition.goodsOut, claim, quantity);
+
+  if (balance > 0) {
+    return { balance, requiredDirection: MONEY_DIRECTIONS.PAY, requiredAmount: balance };
+  }
+  if (balance < 0) {
+    return {
+      balance,
+      requiredDirection: MONEY_DIRECTIONS.RECEIVE,
+      requiredAmount: -balance,
+    };
+  }
+  return { balance: 0, requiredDirection: MONEY_DIRECTIONS.NONE, requiredAmount: 0 };
+}
+
+/**
+ * همان محاسبه‌ی `moneyBalanceOf`، ردیف‌به‌ردیف — برای اینکه کاربر ببیند
+ * مبلغِ پیشنهادیِ پول از کجا آمده. هر ردیف یک قلمِ کالای معامله‌شده است.
+ */
+export function moneyBalanceBreakdown(composition, claim) {
+  if (!composition || composition.writeOff) return [];
+  const quantity = Number(composition.quantity) || 0;
+  const rowsOf = (slot, direction, sign) =>
+    slot?.enabled
+      ? goodsItemsOf(slot, claim, quantity).map((item) => {
+          const itemQuantity = Number(item.quantity) || 0;
+          const unitPrice = Number(item.unitPrice) || 0;
+          return {
+            direction,
+            productName: item.productName,
+            quantity: itemQuantity,
+            unitPrice,
+            value: sign * itemQuantity * unitPrice,
+          };
+        })
+      : [];
+  return [
+    ...rowsOf(composition.goodsIn, GOODS_IN, 1),
+    ...rowsOf(composition.goodsOut, GOODS_OUT, -1),
+  ];
+}
+
+/** ترکیب را به فهرست اثرهای پایه باز می‌کند — فقط برای پیش‌نمایش. */
 export function expandComposition(composition, claim) {
-  if (!composition) return [];
+  if (!composition || composition.writeOff) return [];
 
   const effects = [];
   const quantity = Number(composition.quantity) || 0;
@@ -192,14 +265,33 @@ export function expandComposition(composition, claim) {
           productCode: item.productCode,
           productName: item.productName,
           unit: item.unit,
+          unitPrice: hasValue(item.unitPrice) ? Number(item.unitPrice) : null,
           note,
         }),
       );
     });
   };
 
+  const pushQuarantine = (slot, direction) => {
+    if (!slot?.enabled || quantity <= 0 || !claim) return;
+    effects.push(
+      createEffect({
+        direction,
+        quantity,
+        productId: claim.productId,
+        productCode: claim.productCode,
+        productName: claim.productName,
+        unit: claim.unit,
+        unitCost: hasValue(slot.unitCost) ? Number(slot.unitCost) : null,
+        note,
+      }),
+    );
+  };
+
   pushGoods(composition.goodsIn, GOODS_IN);
   pushGoods(composition.goodsOut, GOODS_OUT);
+  pushQuarantine(composition.goodsRelease, GOODS_RELEASE);
+  pushQuarantine(composition.goodsScrap, GOODS_SCRAP);
 
   const pushMoney = (slot, direction) => {
     if (!slot?.enabled) return;
@@ -213,6 +305,7 @@ export function expandComposition(composition, claim) {
         method: slot.method,
         reference: isMixed ? "" : slot.reference,
         parts: isMixed ? validMoneyParts(slot) : [],
+        paidAt: slot.paidNow ? new Date().toISOString() : null,
         note,
       }),
     );
@@ -227,28 +320,27 @@ export function expandComposition(composition, claim) {
 /**
  * ترکیبِ فرم → بدنه‌ی `EffectCompositionDto`ی بکند.
  *
- * سه تفاوتِ شکلی بین فرم و دستور هست و هر سه واقعی‌اند، نه اختلافِ
- * نام‌گذاری:
+ * تفاوت‌های شکلیِ فرم و دستور، همه واقعی‌اند، نه اختلافِ نام‌گذاری:
  *
- *  ۱. **`enabled` فقط مالِ فرم است.** بکند «خاموش» را با `null` بیان
- *     می‌کند. این فیلد حذف‌شدنی هم نیست: «تیک خورده ولی هنوز کالایی
- *     انتخاب نشده» با «تیک نخورده» فرق دارد و پیش‌فرضِ «همان کالای
- *     ادعا» دقیقاً روی همین تمایز سوار است.
- *
- *  ۲. **اسلاتِ کالا در فرم یک شیء است (`{enabled, items}`) و در دستور
- *     یک آرایه.**
- *
- *  ۳. **پیش‌فرضِ «همان کالای ادعا» باید همین‌جا باز شود.** بکند
- *     `AddGoods` را روی آرایه‌ی خالی اجرا می‌کند و هیچ اثری نمی‌سازد؛
- *     پس اگر فرم آرایه‌ی خالی بفرستد، تصمیمِ کالایی بی‌صدا گم می‌شود.
- *     `goodsItemsOf` همان قاعده‌ای است که پیش‌نمایشِ محلی هم از آن
- *     استفاده می‌کند، پس آنچه کاربر دیده دقیقاً همان چیزی است که ثبت
- *     می‌شود.
+ *  ۱. `enabled` و `paidNow` فقط مالِ فرم‌اند؛ بکند «خاموش» را با نبودنِ
+ *     اسلات و «پرداخت‌شده» را با `paidAt` بیان می‌کند.
+ *  ۲. اسلاتِ کالا در فرم شیء است (`{enabled, items}`) و در دستور آرایه.
+ *  ۳. پیش‌فرضِ «همان کالای ادعا» همین‌جا باز می‌شود: بکند روی آرایه‌ی
+ *     خالی هیچ اثری نمی‌سازد.
+ *  ۴. `unitPrice` روی هر اثر کالایی فرستاده می‌شود — نفرستادنش ۴۰۰ است.
+ *     `unitCost` روی کالای معامله‌شده عمداً فرستاده نمی‌شود: فرانت بهای
+ *     داخلی را نمی‌داند و سرور در نبودنش میانگینِ جاری را می‌گذارد.
+ *  ۵. بخشش با هیچ اثری همراه نمی‌شود.
  */
 export function toApiComposition(composition, claim) {
   if (!composition) return null;
 
   const quantity = Number(composition.quantity) || 0;
+  const note = composition.note || undefined;
+
+  if (composition.writeOff) {
+    return { quantity, note, writeOff: true };
+  }
 
   const goodsOf = (slot) => {
     if (!slot?.enabled) return undefined;
@@ -256,12 +348,21 @@ export function toApiComposition(composition, claim) {
       .filter((item) => (Number(item.quantity) || 0) > 0)
       .map((item) => ({
         quantity: Number(item.quantity) || 0,
-        // نبودنش یعنی «همان کالای ادعا» — بکند خودش این پیش‌فرض را دارد،
-        // ولی وقتی می‌دانیم کدام کالاست صریح فرستادنش خواناتر است.
         productId: item.productId ?? claim?.productId ?? null,
-        unitPrice: Number(item.unitPrice ?? claim?.unitPrice) || 0,
-        discount: Number(item.discount) || 0,
+        unitPrice: Number(item.unitPrice) || 0,
       }));
+  };
+
+  const quarantineOf = (slot) => {
+    if (!slot?.enabled || quantity <= 0) return undefined;
+    return [
+      {
+        quantity,
+        productId: claim?.productId ?? null,
+        // صفرِ صریح با نفرستادن فرق دارد: نفرستادن یعنی میانگینِ جاری.
+        unitCost: hasValue(slot.unitCost) ? Number(slot.unitCost) : undefined,
+      },
+    ];
   };
 
   const moneyOf = (slot) => {
@@ -272,10 +373,9 @@ export function toApiComposition(composition, claim) {
     const isMixed = slot.method === PaymentTypeEnum.MIXED;
     return {
       method: slot.method,
-      // برای روشِ ترکیبی، مبلغ همان مجموعِ تکه‌هاست — بکند برابری این دو
-      // را چک می‌کند و نابرابری را با ۴۰۰ رد می‌کند.
       amount,
       reference: isMixed ? undefined : slot.reference || undefined,
+      paidAt: slot.paidNow ? new Date().toISOString() : undefined,
       parts: isMixed
         ? validMoneyParts(slot).map((part) => ({
             method: part.method,
@@ -289,9 +389,11 @@ export function toApiComposition(composition, claim) {
 
   return {
     quantity,
-    note: composition.note || undefined,
+    note,
     goodsIn: goodsOf(composition.goodsIn),
     goodsOut: goodsOf(composition.goodsOut),
+    goodsRelease: quarantineOf(composition.goodsRelease),
+    goodsScrap: quarantineOf(composition.goodsScrap),
     moneyIn: moneyOf(composition.moneyIn),
     moneyOut: moneyOf(composition.moneyOut),
   };
@@ -299,14 +401,20 @@ export function toApiComposition(composition, claim) {
 
 // ─── اعتبارسنجی ─────────────────────────────────────────────────────────────
 
+const formatRial = (value) => `${(Number(value) || 0).toLocaleString("fa-IR")} ریال`;
+
 /**
- * فهرست خطاها را برمی‌گرداند (خالی یعنی معتبر) تا فرم و لایه‌ی داده از
- * یک منبع بخوانند و پیام دو جا نوشته نشود.
+ * فهرست خطاها را برمی‌گرداند (خالی یعنی معتبر) تا فرم و لایه‌ی داده از یک
+ * منبع بخوانند.
  *
- * پیام‌ها با واژگانِ خنثی نوشته شده‌اند تا هر دو سمت بتوانند از همین
- * تابع استفاده کنند.
+ * `allowQuarantine` فقط در مرجوعی خرید روشن است — سرور روی مرجوعی فروش
+ * آزادسازی و اسقاط را رد می‌کند.
  */
-export function validateComposition(composition, claim, { remainingQuantity } = {}) {
+export function validateComposition(
+  composition,
+  claim,
+  { remainingQuantity, allowQuarantine = false } = {},
+) {
   const errors = [];
   if (!composition) return ["تصمیمی وارد نشده است"];
 
@@ -327,16 +435,51 @@ export function validateComposition(composition, claim, { remainingQuantity } = 
         ? composition.moneyOut
         : null;
 
-  // تصمیمی که هیچ‌کدام از سه محور را فعال نکرده، هیچ اثری تولید نمی‌کند
-  // ولی از باقیمانده‌ی ادعا کم می‌شود — یعنی بی‌صدا بخشی از ادعا را
-  // می‌بندد بدون اینکه کاری برای طرف حساب انجام شده باشد. برای بستنِ
-  // ادعا بدون جبران، مسیرِ صریحِ «رد ادعا» وجود دارد.
-  const nothingChosen =
-    !composition.goodsIn?.enabled && !composition.goodsOut?.enabled && !activeMoney;
-  if (nothingChosen) {
+  const hasGoods = composition.goodsIn?.enabled || composition.goodsOut?.enabled;
+  const hasQuarantine =
+    composition.goodsRelease?.enabled || composition.goodsScrap?.enabled;
+
+  if (composition.writeOff) {
+    if (hasGoods || hasQuarantine || activeMoney) {
+      errors.push("بخشش با هیچ جابه‌جایی کالا یا پولی همراه نمی‌شود");
+    }
+    return errors;
+  }
+
+  if (!hasGoods && !hasQuarantine && !activeMoney) {
     errors.push(
-      "این تصمیم هیچ اقدامی ندارد؛ دست‌کم یکی از جابه‌جایی کالا یا پول را انتخاب کنید",
+      "این تصمیم هیچ اقدامی ندارد؛ یکی از جابه‌جایی کالا یا پول را انتخاب کنید، یا این تعداد را صریحاً ببخشید",
     );
+  }
+
+  if (hasQuarantine && !allowQuarantine) {
+    errors.push("آزادسازی و اسقاطِ قرنطینه فقط در مرجوعی خرید ممکن است");
+  }
+
+  // یک تصمیم برای همان کالاهای ادعا فقط یک سرنوشت دارد: عودت، آزادسازی یا
+  // اسقاط. هر سه به‌طور پیش‌فرض کلِ تعدادِ تصمیم را برمی‌دارند، پس فعال‌بودنِ
+  // دوتا یعنی یک دانه‌ی قرنطینه دو بار خرج می‌شود. برای تقسیم، چند تصمیم با
+  // تعدادهای جدا ثبت کنید.
+  if (allowQuarantine) {
+    const fates = [
+      composition.goodsOut?.enabled,
+      composition.goodsRelease?.enabled,
+      composition.goodsScrap?.enabled,
+    ].filter(Boolean).length;
+    if (fates > 1) {
+      errors.push(
+        "عودت، آزادسازی و اسقاط را در یک تصمیم ترکیب نکنید؛ برای تقسیم، چند تصمیم با تعداد جدا ثبت کنید",
+      );
+    }
+  }
+
+  const missingPrice = [composition.goodsIn, composition.goodsOut].some(
+    (slot) =>
+      slot?.enabled &&
+      goodsItemsOf(slot, claim, quantity).some((item) => !hasValue(item.unitPrice)),
+  );
+  if (missingPrice) {
+    errors.push("قیمت واحدِ هر کالا را وارد کنید (صفر هم مجاز است)");
   }
 
   if (activeMoney) {
@@ -344,9 +487,7 @@ export function validateComposition(composition, claim, { remainingQuantity } = 
       errors.push("روش پرداخت برای این جهت مجاز نیست");
     } else if (activeMoney.method === PaymentTypeEnum.MIXED) {
       if (validMoneyParts(activeMoney).length === 0) {
-        errors.push(
-          "برای پرداخت ترکیبی، حداقل یک ردیف با مبلغ بیشتر از صفر لازم است",
-        );
+        errors.push("برای پرداخت ترکیبی، حداقل یک ردیف با مبلغ بیشتر از صفر لازم است");
       }
       const badPart = validMoneyParts(activeMoney).find(
         (part) => !SPLITTABLE_PAYMENT_TYPES.includes(part.method),
@@ -358,6 +499,40 @@ export function validateComposition(composition, claim, { remainingQuantity } = 
   }
 
   return errors;
+}
+
+/**
+ * هشدارهایی که نشان داده می‌شوند ولی جلوی ثبت را نمی‌گیرند.
+ *
+ * ترازِ کالا و پول: اگر پولِ این تصمیم از مبلغِ محاسبه‌شده کمتر باشد (یا
+ * در جهتِ دیگر باشد)، کاربر آگاه می‌شود ولی تصمیم با همان مقدار فرستاده
+ * می‌شود؛ حرفِ آخر را سرور می‌زند.
+ */
+export function compositionWarnings(composition, claim) {
+  const warnings = [];
+  if (!composition || composition.writeOff) return warnings;
+
+  const direction = moneyDirectionOf(composition);
+  const activeMoney =
+    direction === MONEY_DIRECTIONS.RECEIVE
+      ? composition.moneyIn
+      : direction === MONEY_DIRECTIONS.PAY
+        ? composition.moneyOut
+        : null;
+
+  const { requiredDirection, requiredAmount } = moneyBalanceOf(composition, claim);
+  if (requiredAmount > 0) {
+    const covered =
+      direction === requiredDirection && moneyAmountOf(activeMoney) >= requiredAmount;
+    if (!covered) {
+      warnings.push(
+        requiredDirection === MONEY_DIRECTIONS.PAY
+          ? `ارزش کالای ورودی ${formatRial(requiredAmount)} بیشتر از کالای خروجی است؛ دست‌کم همین مبلغ باید پرداخت شود`
+          : `ارزش کالای خروجی ${formatRial(requiredAmount)} بیشتر از کالای ورودی است؛ دست‌کم همین مبلغ باید دریافت شود`,
+      );
+    }
+  }
+  return warnings;
 }
 
 // ─── محاسبات روی ادعا و مرجوعی ──────────────────────────────────────────────
@@ -379,65 +554,60 @@ function allEffectsOf(returnDoc) {
   );
 }
 
-/**
- * اثرهای معلقِ کالایی — دقیقاً همان چیزی که صف‌های انبار باید نشان
- * دهند. GOODS_IN به صف «دریافت» می‌رود و GOODS_OUT به صف «ارسال»؛
- * مرجوعی خرید و فروش هر دو از همین مسیر وارد صف می‌شوند.
- */
-function pendingGoodsEffects(returnDoc, direction) {
-  return allEffectsOf(returnDoc).filter(
+function hasPendingEffect(returnDoc, directions) {
+  return allEffectsOf(returnDoc).some(
     (effect) =>
-      effect.direction === direction && effect.status === EFFECT_STATUSES.PENDING,
+      directions.includes(effect.direction) &&
+      effect.status === EFFECT_STATUSES.PENDING,
   );
 }
 
 /**
  * تخت‌کردن اثرهای کالاییِ یک مرجوعی به ردیف‌هایی که انبار می‌فهمد —
  * هر ردیف، یک اثر به‌همراه زمینه‌ی ادعایی که از آن آمده.
+ *
+ * `directions` یک جهت یا فهرستی از جهت‌هاست — صفحه‌ی انبارِ مرجوعیِ خرید
+ * عودت، آزادسازی و اسقاط را با هم نشان می‌دهد.
  */
-export function buildGoodsLines(returnDoc, direction, { onlyPending = true } = {}) {
+export function buildGoodsLines(returnDoc, directions, { onlyPending = true } = {}) {
+  const wanted = Array.isArray(directions) ? directions : [directions];
   const lines = [];
 
   (returnDoc?.claims || []).forEach((claim) => {
     (claim.resolutions || []).forEach((resolution) => {
       (resolution.effects || []).forEach((effect) => {
-        if (effect.direction !== direction) return;
+        if (!wanted.includes(effect.direction)) return;
         if (onlyPending && effect.status !== EFFECT_STATUSES.PENDING) return;
 
         const quantity = Number(effect.quantity) || 0;
         const appliedQuantity = Number(effect.appliedQuantity) || 0;
+        const sameProduct = effect.productId === claim.productId;
 
         lines.push({
           effectId: effect.id,
+          direction: effect.direction,
           claimId: claim.id,
           resolutionId: resolution.id,
-          // خطِ سندی که ادعا رویش نشسته — انبار و بک‌اند با همین به
-          // قلمِ فاکتور/سفارش ارجاع می‌دهند، نه با productId.
           orderLineId: claim.orderLineId ?? null,
           // کالای اثر است، نه کالای ادعا — وقتی کالای جایگزین با کالای
-          // برگشتی فرق دارد، انبار باید کالای واقعیِ جابه‌جاشونده را
-          // ببیند.
-          //
-          // ولی `*ReturnEffectDto` فقط `productId`/`productName` دارد و نه
-          // کد کالا و نه واحد. تا وقتی بکند اضافه‌شان نکند، در حالتِ
-          // پرتکرار (اثر روی همان کالای ادعا) از خودِ ادعا برداشته
-          // می‌شوند؛ برای کالای جایگزینِ *متفاوت* خالی می‌مانند، که
-          // بهتر از نشان‌دادنِ کدِ یک کالای دیگر است.
+          // برگشتی فرق دارد، انبار باید کالای واقعیِ جابه‌جاشونده را ببیند.
+          // `*ReturnEffectDto` کد و واحد ندارد؛ برای همان کالای ادعا از
+          // خودِ ادعا برداشته می‌شوند.
           productId: effect.productId,
-          productCode:
-            effect.productId === claim.productId ? claim.productCode : "",
+          productCode: sameProduct ? claim.productCode : "",
           productName: effect.productName,
-          unit: effect.productId === claim.productId ? claim.unit : "",
-          unitPrice: claim.unitPrice,
+          unit: sameProduct ? claim.unit : "",
+          unitPrice: effect.unitPrice ?? claim.unitPrice,
+          unitCost: effect.unitCost ?? null,
           problem: claim.problem,
           scope: claim.scope,
+          offScopeKind: claim.offScopeKind ?? null,
           claimNote: claim.note || "",
           note: effect.note || "",
           quantity,
           appliedQuantity,
           remainingQuantity: Math.max(0, quantity - appliedQuantity),
           restockedQuantity: effect.restockedQuantity,
-          // مشاهده‌های انبار در همه‌ی دورهای این اثر، تجمیع‌شده.
           observations: observationsOf(effect),
           status: effect.status,
           history: effect.history || [],
@@ -450,17 +620,16 @@ export function buildGoodsLines(returnDoc, direction, { onlyPending = true } = {
 }
 
 export function hasPendingGoodsIn(returnDoc) {
-  return pendingGoodsEffects(returnDoc, GOODS_IN).length > 0;
+  return hasPendingEffect(returnDoc, [GOODS_IN]);
 }
 
 export function hasPendingGoodsOut(returnDoc) {
-  return pendingGoodsEffects(returnDoc, GOODS_OUT).length > 0;
+  return hasPendingEffect(returnDoc, [GOODS_OUT]);
 }
 
-function hasAppliedEffects(returnDoc) {
-  return allEffectsOf(returnDoc).some(
-    (effect) => effect.status === EFFECT_STATUSES.APPLIED,
-  );
+/** آزادسازی یا اسقاطِ قرنطینه‌ای که انبار هنوز اجرا نکرده. */
+export function hasPendingQuarantineExit(returnDoc) {
+  return hasPendingEffect(returnDoc, [GOODS_RELEASE, GOODS_SCRAP]);
 }
 
 export function summarizeReturn(returnDoc, options) {
@@ -470,14 +639,13 @@ export function summarizeReturn(returnDoc, options) {
 // ─── ماشین وضعیت ────────────────────────────────────────────────────────────
 
 /**
- * وضعیت را از روی داده مشتق می‌کند.
+ * وضعیت را از روی داده مشتق می‌کند — همان قاعده‌ی `RecomputeReturnStatus`.
+ * REJECTED/CANCELLED مشتق نمی‌شوند؛ اکشن صریح‌اند.
  *
- * انبار هیچ نقشی در این محاسبه ندارد: مرجوعی‌ای که تصمیمش «فقط بازگشت
- * وجه» است هیچ‌وقت پای انبار به آن باز نمی‌شود و مستقیم از OPEN به
- * SETTLED می‌رود.
- *
- * REJECTED/CANCELLED مشتق نمی‌شوند — اکشن صریح‌اند و همین‌جا دست‌نخورده
- * برگردانده می‌شوند.
+ * نگهبان‌های چرخه‌ی عمر (لغو/رد/حذف/بازگشایی) اینجا نیستند: سند پرچم‌های
+ * `canCancel`/`canReject`/`canDelete`/`canReopen` را از همان قاعده‌ای
+ * می‌آورد که سرور هنگام اجرا اعمال می‌کند، و نسخه‌ی محلی روزی از آن جدا
+ * می‌افتاد.
  */
 export function deriveReturnStatus(returnDoc) {
   if (isTerminalStatus(returnDoc?.status)) return returnDoc.status;
@@ -497,22 +665,3 @@ export function deriveReturnStatus(returnDoc) {
   }
   return RETURN_STATUSES.IN_PROGRESS;
 }
-
-// ─── نگهبان‌های چرخه‌ی عمر ──────────────────────────────────────────────────
-
-/**
- * حذف/لغو/رد فقط تا وقتی مجازند که هیچ اثری واقعاً اعمال نشده باشد.
- * معیار عمداً «اعمال‌شده» است نه «ثبت‌شده»: تصمیمی که ثبت شده ولی هنوز
- * اثر کالاییِ معلق دارد، هیچ ردی در دنیای بیرون نگذاشته و برگرداندنش
- * بی‌ضرر است.
- */
-function isReturnUntouched(returnDoc) {
-  return Boolean(returnDoc) && !hasAppliedEffects(returnDoc);
-}
-
-export function canDeleteReturn(returnDoc) {
-  return isReturnUntouched(returnDoc) && !isTerminalStatus(returnDoc.status);
-}
-
-export const canCancelReturn = canDeleteReturn;
-export const canRejectReturn = canDeleteReturn;

@@ -29,8 +29,8 @@ import {
   useCancelSalesReturnMutation,
   useReopenSalesReturnMutation,
   useRemoveSalesReturnMutation,
+  useExecuteMoneyEffectMutation,
 } from "../services/mutations";
-import { canDeleteReturn } from "@/shared/domain/returns/resolutions";
 
 import SalesReturnDetailLoading from "../components/forms/SalesReturnDetailLoading";
 import ReturnStatusBar from "@/shared/components/returns/ReturnStatusBar";
@@ -42,6 +42,7 @@ import SalesReturnResolutionSection from "../components/forms/SalesReturnResolut
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
+import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
 
 /**
  * جزئیات یک مرجوعی — یک ستون، به ترتیبِ کاری که کاربر انجام می‌دهد:
@@ -72,8 +73,17 @@ function SalesReturnDetailContent({ salesReturn }) {
   const cancelMutation = useCancelSalesReturnMutation(salesReturn.id);
   const reopenMutation = useReopenSalesReturnMutation(salesReturn.id);
   const removeMutation = useRemoveSalesReturnMutation();
+  const hasRefund = (salesReturn.claims || []).some((claim) =>
+    (claim.resolutions || []).some((resolution) =>
+      (resolution.effects || []).some(
+        (effect) => effect.direction === EFFECT_DIRECTIONS.MONEY_OUT,
+      ),
+    ),
+  );
+  const executeMoneyMutation = useExecuteMoneyEffectMutation();
 
   const isBusy =
+    executeMoneyMutation.isPending ||
     addResolutionMutation.isPending ||
     removeResolutionMutation.isPending ||
     rejectMutation.isPending ||
@@ -120,8 +130,10 @@ function SalesReturnDetailContent({ salesReturn }) {
       <InvoiceDocumentSection
         title="مرجوعی فروش"
         invoiceNumber={salesReturn.returnNumber}
+        // برگه‌ی طلبکاری فقط برای مرجوعی‌ای ساخته می‌شود که پولی به مشتری
+        // برگردانده؛ بدون آن سرور ۴۰۰ می‌دهد و دکمه‌ی چاپ فقط خطا می‌سازد.
         documentKind="saleReturn"
-        documentId={salesReturn.id}
+        documentId={hasRefund ? salesReturn.id : null}
         attachmentLabel="فاکتور یا رسید مرجوعی برای مشتری"
       />
 
@@ -134,12 +146,15 @@ function SalesReturnDetailContent({ salesReturn }) {
         onRemoveResolution={(claimId, resolutionId) =>
           removeResolutionMutation.mutate({ claimId, resolutionId })
         }
+        onExecuteMoney={(effect) =>
+          executeMoneyMutation.mutate({ effectId: effect.id })
+        }
         onReject={() => rejectMutation.mutate()}
         onCancel={() => cancelMutation.mutate()}
         onReopen={() => reopenMutation.mutate()}
       />
 
-      {canDeleteReturn(salesReturn) && (
+      {salesReturn.canDelete && (
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button

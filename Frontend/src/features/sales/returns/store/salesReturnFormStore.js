@@ -11,6 +11,8 @@ const EMPTY_FORM = {
   previousReturnId: null,
   // هر خط فاکتور، با ادعاهای «روی فاکتور»ش
   lines: [],
+  // همه‌ی خطوط فاکتور — مبنای انتخابِ ادعای «مازاد» (حتی خطِ کامل‌تسویه‌شده)
+  orderLines: [],
   // ادعاهای «خارج از فاکتور» — کالایی که سفارش توجیهش نمی‌کند
   offInvoiceClaims: [],
 };
@@ -49,6 +51,14 @@ export const useSalesReturnFormStore = create((set, get) => ({
         saleInvoiceNumber: sale.invoiceNumber,
         customerId: sale.customerId,
         customerName: sale.customerName,
+        orderLines: (sale.items || []).map((item) => ({
+          orderLineId: item.id,
+          productId: item.productId,
+          productCode: "",
+          productName: item.productName,
+          unit: "",
+          unitPrice: item.unitPrice,
+        })),
         lines: (sale.items || [])
           // مشتری فقط چیزی را که فرستاده‌ایم می‌تواند برگرداند؛ سقفِ ادعا
           // در بکند `ShippedQuantity − SettledQuantity − ادعاهای باز` است.

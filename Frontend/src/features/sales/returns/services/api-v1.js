@@ -141,6 +141,19 @@ export async function executeGoodsRound(
   return fromApiReturn(data);
 }
 
+/** ثبتِ پرداختِ یک اثر مالیِ معلق — قرینه‌ی سمتِ خرید. */
+export async function executeMoneyEffect(
+  { effectId, paidAt, reference },
+  { idempotencyKey } = {},
+) {
+  const { data } = await axiosInstance.post(
+    "/SaleReturn/ExecuteMoneyEffect",
+    { effectId, paidAt: paidAt || undefined, reference: reference || undefined },
+    idempotent(idempotencyKey),
+  );
+  return fromApiReturn(data);
+}
+
 // ─── چرخه‌ی عمر ─────────────────────────────────────────────────────────────
 
 /** بکند «دلیل» را روی رد/لغو نمی‌گیرد — فقط `{id}`. */

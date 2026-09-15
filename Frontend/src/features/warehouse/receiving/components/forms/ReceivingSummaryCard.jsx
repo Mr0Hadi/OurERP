@@ -31,8 +31,12 @@ export default function ReceivingSummaryCard({ formData, onFormChange }) {
   const stats = useMemo(() => {
     const items = formData.items || [];
     const stillOwed = items.reduce((sum, i) => sum + (i.stillOwedQuantity || 0), 0);
-    const received = items.reduce((sum, i) => sum + (i.receivedQuantity || 0), 0);
-    const percent = stillOwed > 0 ? Math.round((received / stillOwed) * 100) : 0;
+    // سهمِ سفارشِ همین دور؛ رسیده‌ی بیش از باقیمانده (مازاد) پیشرفت را بالا نمی‌برد.
+    const received = items.reduce(
+      (sum, i) => sum + Math.min(i.arrivedQuantity || 0, i.stillOwedQuantity || 0),
+      0,
+    );
+    const percent = stillOwed > 0 ? Math.round((received / stillOwed) * 100) : 100;
     return { stillOwed, received, percent };
   }, [formData.items]);
 

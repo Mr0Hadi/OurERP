@@ -3,19 +3,14 @@ import { idempotent, normalizeListResponse } from "@/shared/services/api/contrac
 import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
 
 /**
- * ارسال انبار روی بکندِ واقعی — قرینه‌ی دقیقِ
- * `warehouse/receiving/services/api-v1.js`:
+ * ارسال انبار روی بکندِ واقعی — قرینه‌ی `warehouse/receiving/services/api-v1.js`:
  *
  *  ۱. صفِ ارسال = `GET api/Sale/GetSaleList` فیلترشده روی وضعیت‌های
  *     قابلِ ارسال (`SHIPPING_ELIGIBLE_STATUSES`).
- *  ۲. جزئیاتِ یک فروش = `GET api/Sale/GetSaleDetail` (`SaleDto`؛
- *     باقیمانده‌ی هر قلم از `quantity - shippedQuantity` درمی‌آید،
- *     چون معادلِ `GetPurchaseReceivingInfo` سمتِ فروش وجود ندارد).
- *  ۳. ثبتِ ارسال = `POST api/Sale/ShipSale`.
- *
- * عودتِ کالا به تامین‌کننده در این ماژول نیست: آن یک دورِ اثرِ
- * `GOODS_OUT` روی مرجوعیِ خرید است و از
- * `features/purchases/returns/services` می‌آید.
+ *  ۲. جزئیاتِ یک فروش = `GET api/Sale/GetSaleDetail`.
+ *  ۳. کالای جایگزینِ منتظرِ ارسال = `GET api/SaleReturn/GetSaleReturnPendingEffects`.
+ *  ۴. ثبت = `POST api/Shipment/DispatchShipment` — ارسالِ فروش و دورهای
+ *     خروجِ مرجوعی در یک تراکنش.
  */
 
 /** فروش‌هایی که هنوز کالایشان کامل از انبار خارج نشده. */
@@ -43,13 +38,21 @@ export async function fetchSaleForShipping(id) {
   return data;
 }
 
+/** اثرهای کالاییِ معلقِ مرجوعی‌های فروش روی این فروش (هر دو جهت؛ فراخوان فیلتر می‌کند). */
+export async function fetchSaleReturnPendingEffects(saleId) {
+  const { data } = await axiosInstance.get("/SaleReturn/GetSaleReturnPendingEffects", {
+    params: { saleId },
+  });
+  return data?.pendingEffects ?? [];
+}
+
 /**
- * یک دورِ ارسال. `command` دقیقاً بدنه‌ی `ShipSaleCommand` است و
- * `useShippingForm().buildCommand()` آن را می‌سازد.
+ * یک محموله‌ی خروجی: `{ sale?, saleReturnRounds[], purchaseReturnRounds[] }`.
+ * خروجی `{ sale, saleReturns, purchaseReturns }`.
  */
-export async function shipSale(command, { idempotencyKey } = {}) {
+export async function dispatchShipment(command, { idempotencyKey } = {}) {
   const { data } = await axiosInstance.post(
-    "/Sale/ShipSale",
+    "/Shipment/DispatchShipment",
     command,
     // ⚠️ بکند این هدر را هنوز نمی‌خواند؛ retry شبکه می‌تواند یک ارسال را
     // دوبار از موجودی کم کند.

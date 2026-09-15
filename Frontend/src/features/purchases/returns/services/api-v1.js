@@ -160,18 +160,16 @@ export async function removeClaimResolution(returnId, claimId, resolutionId) {
  * بدنه:
  *
  *   {
- *     purchaseReturnId, rounds: [{ effectId, quantity, observations: [{ problem, quantity, note }] }],
+ *     purchaseReturnId,
+ *     rounds: [{ effectId, quantity, source?, productUnitBarcodes?,
+ *                observations: [{ problem, quantity, note }] }],
  *     date, partyName, partyNationalId, vehiclePlate, note
  *   }
  *
- * `observations` مشاهده‌ی مستقلِ انباردار است و فقط برای اثرِ ورودی
- * معنا دارد. مقدارِ سالم عمداً فرستاده نمی‌شود: سرور آن را از
- * `quantity` منهای مجموع مشاهده‌ها حساب می‌کند تا دو عددِ ناسازگار
- * وجود نداشته باشد.
- *
- * صفحات انبار این را مستقیم صدا نمی‌زنند؛ آن‌ها endpoint خودشان را
- * دارند (`ReceivePurchase`) و سرور از همان‌جا اثرها را نمی‌بندد —
- * اجرای اثرها همیشه از همین مسیر انجام می‌شود.
+ * `source` (`ProductUnitStatusEnum`) روی عودت الزامی است — از موجودی
+ * (IN_STOCK) یا از قرنطینه (QUARANTINED). `observations` فقط روی اثرِ
+ * ورودی معنا دارد و مقدارِ سالم را سرور از `quantity` منهای مشاهده‌ها
+ * حساب می‌کند.
  */
 export async function executeGoodsRound(
   returnId,
@@ -181,6 +179,22 @@ export async function executeGoodsRound(
   const { data } = await axiosInstance.post(
     "/PurchaseReturn/ExecuteGoodsRound",
     { purchaseReturnId: returnId, ...payload },
+    idempotent(idempotencyKey),
+  );
+  return fromApiReturn(data);
+}
+
+/**
+ * ثبتِ اینکه یک اثر مالیِ معلق (وعده‌ی پرداخت) واقعاً پرداخت شد —
+ * همتای مالیِ `executeGoodsRound`. `paidAt` نفرستادن یعنی «همین حالا».
+ */
+export async function executeMoneyEffect(
+  { effectId, paidAt, reference },
+  { idempotencyKey } = {},
+) {
+  const { data } = await axiosInstance.post(
+    "/PurchaseReturn/ExecuteMoneyEffect",
+    { effectId, paidAt: paidAt || undefined, reference: reference || undefined },
     idempotent(idempotencyKey),
   );
   return fromApiReturn(data);

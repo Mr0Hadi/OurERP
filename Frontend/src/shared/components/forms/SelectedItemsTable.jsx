@@ -1,11 +1,14 @@
+import { Fragment } from "react";
 import { Trash2 } from "lucide-react";
 import { Input } from "@/shared/components/ui/input";
 import { PriceInput } from "@/shared/components/ui/price-input";
+import ScannedUnitCodes from "./ScannedUnitCodes";
 
 export default function SelectedItemsTable({
   items,
   onFieldChange,
   onRemove,
+  onRemoveUnit,
   lineTotal,
   grandTotal,
 }) {
@@ -32,9 +35,11 @@ export default function SelectedItemsTable({
         </thead>
         <tbody className="divide-y divide-border">
           {items.map((item) => (
+            <Fragment key={item.productId}>
             <tr
-              key={item.productId}
-              className="hover:bg-accent/30 transition-colors"
+              className={`hover:bg-accent/30 transition-colors ${
+                item.productUnitBarcodes?.length ? "border-b-0" : ""
+              }`}
             >
               <td className="px-3 py-2">
                 <p className="font-medium text-card-foreground text-sm truncate">
@@ -91,6 +96,21 @@ export default function SelectedItemsTable({
                 </button>
               </td>
             </tr>
+            {/* دانه‌ها زیرِ همان ردیف و به پهنای کلِ جدول — ستونِ کالا برای
+                چند کدِ بلند جا ندارد. */}
+            {item.productUnitBarcodes?.length > 0 && (
+              <tr className="border-t-0">
+                <td colSpan={6} className="px-3 pb-2.5 pt-0">
+                  <ScannedUnitCodes
+                    codes={item.productUnitBarcodes}
+                    quantity={item.quantity}
+                    onRemove={onRemoveUnit && ((code) => onRemoveUnit(item.productId, code))}
+                    className="rounded-md bg-muted/40 p-2"
+                  />
+                </td>
+              </tr>
+            )}
+            </Fragment>
           ))}
         </tbody>
         <tfoot className="bg-muted border-t border-border">

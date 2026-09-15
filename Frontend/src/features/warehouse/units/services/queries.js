@@ -1,6 +1,6 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
-import { fetchProductUnits } from "./api-v1";
+import { fetchProductUnits, fetchProductUnitHistory } from "./api-v1";
 import { productUnitKeys } from "./queryKeys";
 
 export function useProductUnitsQuery(filters, pagination) {
@@ -17,5 +17,14 @@ export function useProductUnitsQuery(filters, pagination) {
     queryKey: productUnitKeys.list(queryParams),
     queryFn: () => fetchProductUnits(queryParams),
     placeholderData: keepPreviousData,
+  });
+}
+
+/** تاریخچه‌ی یک دانه — فقط وقتی برگه‌ی جزئیاتش باز است خوانده می‌شود. */
+export function useProductUnitHistoryQuery(productUnitId, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: productUnitKeys.history(productUnitId),
+    queryFn: () => fetchProductUnitHistory({ productUnitId }),
+    enabled: Boolean(productUnitId) && enabled,
   });
 }

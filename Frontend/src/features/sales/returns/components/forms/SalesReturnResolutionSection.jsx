@@ -21,8 +21,6 @@ import {
 } from "@/shared/domain/returns/statuses";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import {
-  canCancelReturn,
-  canRejectReturn,
   hasPendingGoodsIn,
   hasPendingGoodsOut,
 } from "@/shared/domain/returns/resolutions";
@@ -41,6 +39,7 @@ export default function SalesReturnResolutionSection({
   salesReturn,
   onAddResolution,
   onRemoveResolution,
+  onExecuteMoney,
   onReject,
   onCancel,
   onReopen,
@@ -49,8 +48,8 @@ export default function SalesReturnResolutionSection({
   const status = salesReturn.status;
   const claims = salesReturn.claims || [];
   const isClosed = isTerminalStatus(status);
-  const canReject = canRejectReturn(salesReturn);
-  const canCancel = canCancelReturn(salesReturn);
+  // پرچم‌ها از همان قاعده‌ای می‌آیند که سرور هنگام اجرا اعمال می‌کند.
+  const { canReject, canCancel, canReopen } = salesReturn;
 
   return (
     <Card>
@@ -68,15 +67,17 @@ export default function SalesReturnResolutionSection({
               این درخواست رد شده است. اگر لازم است دوباره بررسی شود، بازگشایی‌اش
               کنید.
             </p>
-            <Button
-              type="button"
-              className="w-full gap-2"
-              disabled={isBusy}
-              onClick={onReopen}
-            >
-              <RotateCcw className="h-4 w-4" />
-              بازگشایی این مرجوعی
-            </Button>
+            {canReopen && (
+              <Button
+                type="button"
+                className="w-full gap-2"
+                disabled={isBusy}
+                onClick={onReopen}
+              >
+                <RotateCcw className="h-4 w-4" />
+                بازگشایی این مرجوعی
+              </Button>
+            )}
           </div>
         )}
 
@@ -92,6 +93,7 @@ export default function SalesReturnResolutionSection({
             claim={claim}
             onAddResolution={onAddResolution}
             onRemoveResolution={onRemoveResolution}
+            onExecuteMoney={onExecuteMoney}
             isBusy={isBusy}
             readOnly={isClosed}
             side={SALES_SIDE}

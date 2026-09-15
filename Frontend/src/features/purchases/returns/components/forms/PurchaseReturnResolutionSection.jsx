@@ -21,10 +21,9 @@ import {
 } from "@/shared/domain/returns/statuses";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import {
-  canCancelReturn,
-  canRejectReturn,
   hasPendingGoodsIn,
   hasPendingGoodsOut,
+  hasPendingQuarantineExit,
 } from "@/shared/domain/returns/resolutions";
 import ClaimResolutionCard from "@/shared/components/returns/ClaimResolutionCard";
 
@@ -41,16 +40,18 @@ export default function PurchaseReturnResolutionSection({
   purchaseReturn,
   onAddResolution,
   onRemoveResolution,
+  onExecuteMoney,
   onReject,
   onCancel,
   onReopen,
   isBusy,
+  renderClaimReport,
 }) {
   const status = purchaseReturn.status;
   const claims = purchaseReturn.claims || [];
   const isClosed = isTerminalStatus(status);
-  const canReject = canRejectReturn(purchaseReturn);
-  const canCancel = canCancelReturn(purchaseReturn);
+  // پرچم‌ها از همان قاعده‌ای می‌آیند که سرور هنگام اجرا اعمال می‌کند.
+  const { canReject, canCancel, canReopen } = purchaseReturn;
 
   return (
     <Card>
@@ -68,15 +69,17 @@ export default function PurchaseReturnResolutionSection({
               این درخواست رد شده است. اگر لازم است دوباره بررسی شود، بازگشایی‌اش
               کنید.
             </p>
-            <Button
-              type="button"
-              className="w-full gap-2"
-              disabled={isBusy}
-              onClick={onReopen}
-            >
-              <RotateCcw className="h-4 w-4" />
-              بازگشایی این مرجوعی
-            </Button>
+            {canReopen && (
+              <Button
+                type="button"
+                className="w-full gap-2"
+                disabled={isBusy}
+                onClick={onReopen}
+              >
+                <RotateCcw className="h-4 w-4" />
+                بازگشایی این مرجوعی
+              </Button>
+            )}
           </div>
         )}
 
@@ -92,6 +95,8 @@ export default function PurchaseReturnResolutionSection({
             claim={claim}
             onAddResolution={onAddResolution}
             onRemoveResolution={onRemoveResolution}
+            onExecuteMoney={onExecuteMoney}
+            renderReport={renderClaimReport}
             isBusy={isBusy}
             readOnly={isClosed}
             side={PURCHASE_SIDE}
@@ -140,7 +145,9 @@ export default function PurchaseReturnResolutionSection({
 function WarehouseQueueNotice({ purchaseReturn }) {
   const navigate = useNavigate();
   const awaitingIntake = hasPendingGoodsIn(purchaseReturn);
-  const awaitingDispatch = hasPendingGoodsOut(purchaseReturn);
+  // عودت و خروج از قرنطینه هر دو در صفحه‌ی انبارِ همین مرجوعی اجرا می‌شوند.
+  const awaitingDispatch =
+    hasPendingGoodsOut(purchaseReturn) || hasPendingQuarantineExit(purchaseReturn);
 
   if (!awaitingIntake && !awaitingDispatch) return null;
 
@@ -184,7 +191,7 @@ function WarehouseQueueNotice({ purchaseReturn }) {
               )
             }
           >
-            عودت کالا به تامین‌کننده
+            عودت / تعیین تکلیف قرنطینه
           </Button>
         )}
       </div>

@@ -19,6 +19,8 @@ const EMPTY_RECEIVING = {
   // خودِ صفحه با `useFileUploadList` نگه می‌دارد.
   receivingImages: [],
   items: [],
+  // کالایی که بدون قلم رسیده — `ReceivePurchaseCommand.UnlistedItems`.
+  unlistedItems: [],
   receivedDate: new Date().toISOString().slice(0, 10),
   receivingNote: '',
   driverFullName: '',
@@ -28,7 +30,7 @@ const EMPTY_RECEIVING = {
 
 /**
  * `GetPurchaseReceivingInfo` فیلد `updatedAt` ندارد، پس کلیدِ نسخه از
- * محتوا ساخته می‌شود: بعد از هر دورِ دریافت، `stillOwedQuantity`ها عوض
+ * محتوا ساخته می‌شود: بعد از هر دورِ دریافت، باقیمانده و قرنطینه عوض
  * می‌شوند و فرم می‌فهمد باید از نو پر شود.
  */
 export function receivingInfoVersion(info) {
@@ -36,7 +38,13 @@ export function receivingInfoVersion(info) {
   return [
     info.purchaseId,
     info.status,
-    (info.items || []).map((i) => `${i.purchaseItemId}:${i.stillOwedQuantity}`).join(','),
+    (info.items || [])
+      .map(
+        (i) =>
+          `${i.purchaseItemId}:${i.stillOwedQuantity}:${i.quarantinedOnOrderQuantity}:${i.quarantinedExcessQuantity}`,
+      )
+      .join(','),
+    (info.unlistedItems || []).map((u) => `${u.productId}:${u.quarantinedQuantity}`).join(','),
     (info.receivingImages || []).length,
   ].join('|');
 }
@@ -53,28 +61,36 @@ export const useReceivingFormStore = create((set, get) => ({
     set((state) => ({
       formData: { ...state.formData, items },
     })),
+  setUnlistedItems: (unlistedItems) =>
+    set((state) => ({
+      formData: { ...state.formData, unlistedItems },
+    })),
 
   initializeFromReceivingInfo: (info) => {
     const version = receivingInfoVersion(info);
     if (get().initializedForId === version) return;
 
-    // فقط اقلامی که هنوز چیزی از آن‌ها بدهکارند؛ قلمِ کاملاً
-    // دریافت‌شده جایی در فرمِ این دور ندارد.
-    const items = (info.items || [])
-      .filter((item) => item.stillOwedQuantity > 0)
-      .map((item) => ({
-        purchaseItemId: item.purchaseItemId,
-        productId: item.productId,
-        productCode: item.productCode,
-        productName: item.productName,
-        unit: item.unit,
-        unitPrice: item.unitPrice,
-        orderedQuantity: item.orderedQuantity,
-        stillOwedQuantity: item.stillOwedQuantity,
-        // مقدارِ همین دور — فیلدِ `ReceivePurchaseItemDto.ReceivedQuantity`.
-        // پیش‌فرض روی کلِ باقیمانده است چون حالتِ پرتکرار «همه رسید» است.
-        receivedQuantity: item.stillOwedQuantity,
-      }));
+    // همه‌ی اقلام می‌مانند، حتی قلمِ کامل‌رسیده: مازادِ دیرتر کشف‌شده هم
+    // روی همان قلم ثبت می‌شود.
+    const items = (info.items || []).map((item) => ({
+      rowKey: `i-${item.purchaseItemId}`,
+      purchaseItemId: item.purchaseItemId,
+      productId: item.productId,
+      productCode: item.productCode,
+      productName: item.productName,
+      unit: item.unit,
+      unitPrice: item.unitPrice,
+      orderedQuantity: item.orderedQuantity,
+      receivedQuantity: item.receivedQuantity,
+      stillOwedQuantity: item.stillOwedQuantity,
+      quarantinedOnOrderQuantity: item.quarantinedOnOrderQuantity ?? 0,
+      quarantinedExcessQuantity: item.quarantinedExcessQuantity ?? 0,
+      // `ReceivePurchaseItemDto.ArrivedQuantity` — کلِ آنچه از این قلم
+      // رسید، سالم و خراب. پیش‌فرض روی باقیمانده چون حالتِ پرتکرار «همه
+      // رسید» است؛ بیشتر از آن هم مجاز است.
+      arrivedQuantity: item.stillOwedQuantity,
+      defects: [],
+    }));
 
     set({
       initializedForId: version,
@@ -88,6 +104,7 @@ export const useReceivingFormStore = create((set, get) => ({
         supplierName: info.supplierName || '',
         receivingImages: info.receivingImages || [],
         items,
+        unlistedItems: [],
         receivedDate: new Date().toISOString().slice(0, 10),
       },
     });

@@ -52,30 +52,31 @@ export const useShippingFormStore = create((set, get) => ({
     const version = saleShippingVersion(sale);
     if (get().initializedForId === version) return;
 
-    // معادلِ `StillOwedQuantity`ِ سمتِ خرید اینجا وجود ندارد؛ باقیمانده
-    // از خودِ `SaleItemDto` حساب می‌شود — همان تفاضلی که بکند هم در
-    // `ShipSaleCommandHandler` چک می‌کند.
-    const items = (sale.items || [])
-      .map((item) => ({
+    // همه‌ی اقلام می‌مانند، حتی قلمِ کامل‌ارسال‌شده: مازادی که بعداً کشف
+    // می‌شود («یکی بیشتر رفت») روی همان قلم ثبت می‌شود.
+    const items = (sale.items || []).map((item) => {
+      const remainingQuantity = Math.max(
+        0,
+        (item.quantity || 0) - (item.shippedQuantity || 0),
+      );
+      return {
         // `SaleItem.Id` — فیلدِ `ShipSaleItemDto.SaleItemId`.
         saleItemId: item.id,
         productId: item.productId,
         productName: item.productName,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
-        remainingQuantity: Math.max(
-          0,
-          (item.quantity || 0) - (item.shippedQuantity || 0),
-        ),
+        remainingQuantity,
         // مقدارِ همین دور — فیلدِ `ShipSaleItemDto.ShippedQuantity`.
-        shippedQuantity: Math.max(
-          0,
-          (item.quantity || 0) - (item.shippedQuantity || 0),
-        ),
-        // بارکدِ واحدهای اسکن‌شده؛ خالی یعنی بکند خودش FIFO انتخاب کند.
+        shippedQuantity: remainingQuantity,
+        // بارکدِ دانه‌های اسکن‌شده؛ خالی یعنی بکند خودش FIFO انتخاب کند
+        // (مگر برای کالای ردیابی‌پذیر).
         productUnitBarcodes: [],
-      }))
-      .filter((item) => item.remainingQuantity > 0);
+        // `ShipSaleItemDto.ExcessQuantity` — دانه‌هایی که بیش از سفارش رفته.
+        excessQuantity: 0,
+        excessProductUnitBarcodes: [],
+      };
+    });
 
     set({
       initializedForId: version,

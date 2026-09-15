@@ -50,6 +50,7 @@ export default function SalesReturnNewPage() {
   const {
     setFormData,
     lines,
+    orderLines,
     offInvoiceClaims,
     allClaims,
     handleAddClaim,
@@ -177,13 +178,14 @@ export default function SalesReturnNewPage() {
 
             <OffScopeClaimsSection
               claims={offInvoiceClaims}
+              orderLines={orderLines}
               onAdd={handleAddOffInvoiceClaim}
               onUpdate={handleUpdateOffInvoiceClaim}
               onRemove={handleRemoveOffInvoiceClaim}
               problemLabels={SALES_RETURN_PROBLEM_LABELS}
               kindLabels={OFF_SCOPE_KIND_LABELS}
               kindStyles={OFF_SCOPE_KIND_STYLES}
-              description="کالایی که در این فاکتور نیست یا بیش از مقدار آن ارسال شده. قیمتش دستی وارد می‌شود چون سقفی روی فاکتور ندارد."
+              description="مازاد: بیش از مقدارِ یک خطِ فاکتور ارسال شده (با قیمت همان خط). نامرتبط: کالایی که در فاکتور نیست (قیمت دستی)."
             />
 
             <SalesReturnInfoSection

@@ -25,6 +25,9 @@ export default function ClaimResolutionCard({
   claim,
   onAddResolution,
   onRemoveResolution,
+  onExecuteMoney,
+  // `(claim) => ReactNode` — گزارشِ انبار کنارِ همان ادعا (فقط مرجوعی خرید).
+  renderReport,
   isBusy,
   readOnly,
   side,
@@ -83,6 +86,8 @@ export default function ClaimResolutionCard({
         )}
       </div>
 
+      {renderReport?.(claim)}
+
       {resolutions.length > 0 && (
         <div className="space-y-1.5">
           {resolutions.map((resolution) => (
@@ -96,6 +101,7 @@ export default function ClaimResolutionCard({
                   ? () => onRemoveResolution(claim.id, resolution.id)
                   : null
               }
+              onExecuteMoney={!readOnly ? onExecuteMoney : null}
             />
           ))}
         </div>

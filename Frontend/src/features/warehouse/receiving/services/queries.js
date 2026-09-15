@@ -1,6 +1,10 @@
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
-import { fetchReceivablePurchases, fetchPurchaseReceivingInfo } from "./api-v1";
+import {
+  fetchReceivablePurchases,
+  fetchPurchaseReceivingInfo,
+  fetchPurchaseReturnPendingEffects,
+} from "./api-v1";
 import { receivingKeys } from "./queryKeys";
 
 /** صفِ دریافت: خریدهایی که کالایشان هنوز کامل نرسیده. */
@@ -33,6 +37,15 @@ export function useReceivablePurchasesQuery(filters, pagination) {
     queryFn: () => fetchReceivablePurchases(queryParams),
     placeholderData: keepPreviousData,
     gcTime: 1000 * 60 * 10,
+    refetchOnMount: "always",
+  });
+}
+
+export function usePurchaseReturnPendingEffectsQuery(purchaseId) {
+  return useQuery({
+    queryKey: receivingKeys.pendingReturnEffects(purchaseId),
+    queryFn: () => fetchPurchaseReturnPendingEffects(purchaseId),
+    enabled: !!purchaseId,
     refetchOnMount: "always",
   });
 }

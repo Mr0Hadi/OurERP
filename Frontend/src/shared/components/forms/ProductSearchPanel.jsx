@@ -46,7 +46,13 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
       return;
     }
     const previousQuantity = addedQuantityOf(product.id);
-    onAdd(product);
+    // مرجعِ بارکد هم داده می‌شود تا فراخوان اگر بخواهد کدِ دانه را نگه دارد؛
+    // `false` یعنی افزودن رد شد (مثلاً دانه‌ی تکراری) و پیامش را خودش داده.
+    if (onAdd(product, reference) === false) return;
+    if (reference.kind === BarcodeReferenceKindEnum.UNIT) {
+      toast.success(`یک دانه از «${product.name}» اسکن شد`);
+      return;
+    }
     toast.success(
       previousQuantity > 0
         ? `«${product.name}» شد ${(previousQuantity + 1).toLocaleString("fa-IR")} عدد`

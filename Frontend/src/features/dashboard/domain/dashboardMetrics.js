@@ -41,11 +41,13 @@ export function buildPeriodSeries(salePeriods, purchasePeriods, periodType) {
         values: {
           revenue: 0,
           costOfGoodsSold: 0,
+          scrapLoss: 0,
           netProfit: 0,
           saleInvoiceAmount: 0,
           salesCount: 0,
           purchaseInvoiceAmount: 0,
           totalReceivedValue: 0,
+          returnMoneyAmount: 0,
           purchasesCount: 0,
         },
       });
@@ -57,6 +59,8 @@ export function buildPeriodSeries(salePeriods, purchasePeriods, periodType) {
     const row = ensure(period);
     row.values.revenue = Number(period.revenue) || 0;
     row.values.costOfGoodsSold = Number(period.costOfGoodsSold) || 0;
+    // زیانِ کالای اسقاط‌شده — سرور آن را از `netProfit` کم کرده است.
+    row.values.scrapLoss = Number(period.scrapLoss) || 0;
     row.values.netProfit = Number(period.netProfit) || 0;
     row.values.saleInvoiceAmount = Number(period.totalInvoiceAmount) || 0;
     row.values.salesCount = Number(period.salesCount) || 0;
@@ -66,6 +70,8 @@ export function buildPeriodSeries(salePeriods, purchasePeriods, periodType) {
     const row = ensure(period);
     row.values.purchaseInvoiceAmount = Number(period.totalInvoiceAmount) || 0;
     row.values.totalReceivedValue = Number(period.totalReceivedValue) || 0;
+    // وجهِ مرجوعیِ خرید؛ منفی یعنی تامین‌کننده پول برگردانده.
+    row.values.returnMoneyAmount = Number(period.returnMoneyAmount) || 0;
     row.values.purchasesCount = Number(period.purchasesCount) || 0;
   }
 
@@ -181,7 +187,7 @@ export function buildKpis(series, periodType) {
     {
       key: "netProfit",
       label: "سود خالص",
-      hint: "درآمد منهای بهای تمام‌شده، با میانگین موزونِ هزینه در لحظه‌ی ارسال",
+      hint: "درآمد منهای بهای تمام‌شده (با میانگین موزونِ هزینه در لحظه‌ی ارسال) و زیانِ اسقاط",
       value: netProfit,
       format: "amount",
       unit: "ریال",
@@ -234,6 +240,12 @@ export function buildRevenueBreakdown(series) {
       label: "بهای تمام‌شده",
       value: sum(series, "costOfGoodsSold"),
       color: "var(--chart-5)",
+    },
+    {
+      key: "scrapLoss",
+      label: "زیان اسقاط",
+      value: sum(series, "scrapLoss"),
+      color: "var(--chart-2)",
     },
     {
       key: "netProfit",

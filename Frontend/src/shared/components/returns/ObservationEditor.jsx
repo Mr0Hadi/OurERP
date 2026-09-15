@@ -30,6 +30,10 @@ export default function ObservationEditor({
   onAddObservation,
   onUpdateObservation,
   onRemoveObservation,
+  title,
+  emptyHint = "اگر بخشی از کالای برگشتی معیوب یا آسیب‌دیده است، اینجا ثبتش کنید. باقیمانده سالم فرض می‌شود و به موجودی قابل‌فروش برمی‌گردد.",
+  healthySuffix = "عدد سالم به موجودی برمی‌گردد",
+  addLabel = "افزودن مشاهده",
 }) {
   const observations = round.observations || [];
   const allocated = observations.reduce(
@@ -42,8 +46,8 @@ export default function ObservationEditor({
     <div className="space-y-2 rounded-lg border border-dashed border-amber-300 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/10 p-2.5">
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-card-foreground">
-          بازرسی کالای برگشتی ({round.quantity.toLocaleString("fa-IR")} عدد
-          دریافت‌شده)
+          {title ??
+            `بازرسی کالای برگشتی (${round.quantity.toLocaleString("fa-IR")} عدد دریافت‌شده)`}
         </span>
         <Button
           type="button"
@@ -56,15 +60,12 @@ export default function ObservationEditor({
           disabled={remaining <= 0}
         >
           <Plus className="h-3 w-3" />
-          افزودن مشاهده
+          {addLabel}
         </Button>
       </div>
 
       {observations.length === 0 && (
-        <p className="text-xs text-muted-foreground">
-          اگر بخشی از کالای برگشتی معیوب یا آسیب‌دیده است، اینجا ثبتش کنید.
-          باقیمانده سالم فرض می‌شود و به موجودی قابل‌فروش برمی‌گردد.
-        </p>
+        <p className="text-xs text-muted-foreground">{emptyHint}</p>
       )}
 
       {observations.map((observation) => (
@@ -145,8 +146,7 @@ export default function ObservationEditor({
           {remaining > 0 && (
             <>
               {" "}
-              — {remaining.toLocaleString("fa-IR")} عدد سالم به موجودی
-              برمی‌گردد
+              — {remaining.toLocaleString("fa-IR")} {healthySuffix}
             </>
           )}
         </p>

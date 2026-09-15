@@ -9,9 +9,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import ProductThumb from "@/shared/components/forms/ProductThumb";
 import QuantityStepper from "@/shared/components/forms/QuantityStepper";
+import UnitBarcodeScanList from "@/shared/components/barcode/UnitBarcodeScanList";
 import { createRowStatus } from "@/shared/lib/createRowStatus";
+import { ProductUnitStatusEnum } from "@/shared/domain/enums/unitStatus";
 import ObservationEditor from "./ObservationEditor";
 
 const { getRowStatus, ROW_STATUS_CONFIG } = createRowStatus({
@@ -21,20 +30,31 @@ const { getRowStatus, ROW_STATUS_CONFIG } = createRowStatus({
   emptyLabel: "انجام نشده",
 });
 
+const SOURCE_OPTIONS = [
+  { value: ProductUnitStatusEnum.IN_STOCK, label: "از موجودی انبار" },
+  { value: ProductUnitStatusEnum.QUARANTINED, label: "از قرنطینه" },
+];
+
 /**
  * اقلامِ یک دورِ کالا روی یک مرجوعی — هر ردیف یک *اثر* است، نه یک کالا:
  * یک کالا می‌تواند در چند ادعا و چند تصمیم ظاهر شود و هرکدام اثرِ
  * جداگانه‌ی خودش را دارد.
  *
- * `withObservations` فقط برای اثرِ ورودی روشن می‌شود؛ در اثرِ خروجی
- * چیزی برای بازرسی وجود ندارد — کالا از انبارِ خودمان می‌رود.
+ * `withObservations` فقط برای اثرِ ورودی روشن می‌شود. `withBarcodes` برای
+ * هر جابه‌جایی‌ای که دانه‌های موجود را برمی‌دارد (خروج، آزادسازی، اسقاط).
+ * انتخابِ مبدأ روی ردیفی دیده می‌شود که `sourceRequired` دارد.
  */
 export default function GoodsRoundItemsSection({
   rounds,
   title,
   subtitle,
   withObservations = false,
+  withBarcodes = false,
+  // متن‌های ویرایشگرِ مشاهده (`title`/`emptyHint`/`healthySuffix`)؛ پیش‌فرض برای کالای برگشتی از مشتری.
+  observationTexts = {},
   onQuantityChange,
+  onSourceChange,
+  onBarcodesChange,
   onAddObservation,
   onUpdateObservation,
   onRemoveObservation,
@@ -111,6 +131,7 @@ export default function GoodsRoundItemsSection({
           );
           const config = ROW_STATUS_CONFIG[status];
           const StatusIcon = config.icon;
+          const quantity = Number(round.quantity) || 0;
 
           return (
             <div
@@ -125,6 +146,12 @@ export default function GoodsRoundItemsSection({
                   </p>
                   <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground mt-0.5">
                     <span>{round.productCode}</span>
+                    {round.reference && (
+                      <>
+                        <span className="text-border">|</span>
+                        <span>{round.reference}</span>
+                      </>
+                    )}
                     {round.unit && (
                       <>
                         <span className="text-border">|</span>
@@ -157,9 +184,48 @@ export default function GoodsRoundItemsSection({
                 />
               </div>
 
-              {withObservations && round.quantity > 0 && (
+              {round.sourceRequired && quantity > 0 && (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    کالا از کجا برداشته می‌شود؟
+                  </span>
+                  {/* enum عددی است؛ Radix فقط رشته می‌شناسد. */}
+                  <Select
+                    value={round.source == null ? "" : String(round.source)}
+                    onValueChange={(raw) => onSourceChange(round.effectId, Number(raw))}
+                  >
+                    <SelectTrigger
+                      className={`h-8 w-40 text-xs ${
+                        round.source == null ? "border-amber-400" : ""
+                      }`}
+                    >
+                      <SelectValue placeholder="انتخاب مبدأ" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SOURCE_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={String(option.value)}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {withBarcodes && quantity > 0 && (
+                <UnitBarcodeScanList
+                  productId={round.productId}
+                  barcodes={round.productUnitBarcodes}
+                  max={quantity}
+                  required={round.barcodesRequired}
+                  onChange={(next) => onBarcodesChange(round.effectId, next)}
+                />
+              )}
+
+              {withObservations && quantity > 0 && (
                 <ObservationEditor
                   round={round}
+                  {...observationTexts}
                   onAddObservation={onAddObservation}
                   onUpdateObservation={onUpdateObservation}
                   onRemoveObservation={onRemoveObservation}

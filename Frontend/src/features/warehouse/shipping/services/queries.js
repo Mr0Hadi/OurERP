@@ -1,6 +1,10 @@
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
-import { fetchShippableSales, fetchSaleForShipping } from "./api-v1";
+import {
+  fetchShippableSales,
+  fetchSaleForShipping,
+  fetchSaleReturnPendingEffects,
+} from "./api-v1";
 import { shippingKeys } from "./queryKeys";
 
 /** صفِ ارسال: فروش‌هایی که کالایشان هنوز کامل نرفته. */
@@ -33,6 +37,15 @@ export function useShippableSalesQuery(filters, pagination) {
     queryFn: () => fetchShippableSales(queryParams),
     placeholderData: keepPreviousData,
     gcTime: 1000 * 60 * 10,
+    refetchOnMount: "always",
+  });
+}
+
+export function useSaleReturnPendingEffectsQuery(saleId) {
+  return useQuery({
+    queryKey: shippingKeys.pendingReturnEffects(saleId),
+    queryFn: () => fetchSaleReturnPendingEffects(saleId),
+    enabled: !!saleId,
     refetchOnMount: "always",
   });
 }

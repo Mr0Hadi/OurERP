@@ -24,13 +24,21 @@ import RemoteImage from "@/shared/components/files/RemoteImage";
 import { useFileUploadList } from "@/shared/hooks/useFileUploadList";
 import { ImageFolderEnum } from "@/shared/domain/enums/imageFolder";
 import { useHeaderStore } from "@/shared/store/headerStore";
-import { usePurchaseReceivingInfoQuery } from "../services/queries";
+import {
+  usePurchaseReceivingInfoQuery,
+  usePurchaseReturnPendingEffectsQuery,
+} from "../services/queries";
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
-import { useReceivePurchaseMutation } from "../services/mutations";
+import { useReceiveShipmentMutation } from "../services/mutations";
 import { useReceivingForm } from "../hooks/useReceivingForm";
+import { useGoodsRoundForm } from "@/shared/hooks/useGoodsRoundForm";
+import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
 import ReceivingItemsSection from "../components/forms/ReceivingItemsSection";
+import ReceivingUnlistedItemsSection from "../components/forms/ReceivingUnlistedItemsSection";
+import ReceivingQuarantineCard from "../components/forms/ReceivingQuarantineCard";
 import ReceivingSummaryCard from "../components/forms/ReceivingSummaryCard";
 import ReceivingTransporterSection from "../components/forms/ReceivingTransporterSection";
+import GoodsRoundItemsSection from "@/shared/components/returns/GoodsRoundItemsSection";
 import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
@@ -43,9 +51,26 @@ const SORTING = { id: "name", desc: false };
 // ندارد، این فقط یک حدِ عملی برای فرم است.
 const MAX_RECEIVING_IMAGES = 10;
 
+function withProductImage(rows, productMap) {
+  return rows.map((row) => {
+    const product = productMap.get(row.productId);
+    return {
+      ...row,
+      imageKey: product?.imageKey ?? null,
+      imageUrl: product?.imageUrl ?? product?.image ?? null,
+      brand: product?.brand || "",
+    };
+  });
+}
+
+/**
+ * یک محموله‌ی ورودی از تامین‌کننده: اقلامِ خرید (با شمارش و خرابی)،
+ * کالای سفارش‌نداده، و کالای جایگزینی که مرجوعی‌های همین خرید منتظرش‌اند
+ * — همه با یک `ReceiveShipment` و در یک تراکنش.
+ */
 function ReceivingDetailForm({ receivingInfo }) {
   const navigate = useNavigate();
-  const receiveMutation = useReceivePurchaseMutation();
+  const receiveMutation = useReceiveShipmentMutation();
 
   const { data: productsData } = useProductsQuery(
     ALL_FILTERS,
@@ -61,12 +86,49 @@ function ReceivingDetailForm({ receivingInfo }) {
   const {
     formData,
     setFormData,
-    handleItemChange,
+    items,
+    unlistedItems,
+    handleArrivedChange,
+    handleAddDefect,
+    handleUpdateDefect,
+    handleRemoveDefect,
+    handleAddUnlisted,
+    handleRemoveUnlisted,
     isAllComplete,
     hasSomethingToReceive,
     buildCommand,
     resetForm,
   } = useReceivingForm(receivingInfo);
+
+  // کالای جایگزینِ مرجوعی‌های همین خرید که هنوز نرسیده.
+  const { data: pendingEffects = [] } = usePurchaseReturnPendingEffectsQuery(
+    receivingInfo.purchaseId,
+  );
+  const replacementLines = useMemo(
+    () =>
+      pendingEffects
+        .filter(
+          (effect) =>
+            effect.direction === EFFECT_DIRECTIONS.GOODS_IN &&
+            effect.remainingQuantity > 0,
+        )
+        .map((effect) => ({
+          effectId: effect.effectId,
+          direction: effect.direction,
+          returnId: effect.purchaseReturnId,
+          reference: effect.returnNumber,
+          productId: effect.productId,
+          productCode: effect.productCode,
+          productName: effect.productName,
+          unit: effect.unit,
+          remainingQuantity: effect.remainingQuantity,
+        })),
+    [pendingEffects],
+  );
+  const replacement = useGoodsRoundForm(replacementLines, {
+    withObservations: true,
+    startEmpty: true,
+  });
 
   // عکس‌های همین دور. `filesPayload` دقیقاً شکلِ
   // `ReceivePurchaseImageDto` است (`{objectKey, fileName?, note?}`).
@@ -82,28 +144,35 @@ function ReceivingDetailForm({ receivingInfo }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const items = formData.items || [];
-
   const displayItems = useMemo(
-    () =>
-      items.map((item) => {
-        const product = productMap.get(item.productId);
-        return {
-          ...item,
-          // کلیدِ پایدار هم کنارِ URLِ امضاشده می‌آید تا اگر صفحه دیر باز
-          // بماند، بندانگشتی بتواند خودش امضا را تازه کند.
-          imageKey: product?.imageKey ?? null,
-          imageUrl: product?.imageUrl ?? product?.image ?? null,
-          brand: product?.brand || "",
-        };
-      }),
+    () => withProductImage(items, productMap),
     [items, productMap],
+  );
+  const displayReplacementRounds = useMemo(
+    () => withProductImage(replacement.rounds, productMap),
+    [replacement.rounds, productMap],
   );
 
   const isBusy = receiveMutation.isPending || images.isUploading;
+  const hasSomething = hasSomethingToReceive || replacement.hasSomethingToRecord;
 
   const handleSubmit = () => {
-    receiveMutation.mutate(buildCommand(images.filesPayload), {
+    // سربرگِ دورهای مرجوعی همان مشخصاتِ خودِ محموله است.
+    const shipmentHeader = {
+      date: formData.receivedDate,
+      partyName: formData.driverFullName,
+      vehiclePlate: formData.vehiclePlate,
+      note: formData.receivingNote,
+    };
+    const command = {
+      purchase: buildCommand(images.filesPayload),
+      purchaseReturnRounds: replacement.buildCommandsByReturn(
+        shipmentHeader,
+        "purchaseReturnId",
+      ),
+      saleReturnRounds: [],
+    };
+    receiveMutation.mutate(command, {
       onSuccess: () => {
         setShowConfirmDialog(false);
         images.commit();
@@ -124,8 +193,40 @@ function ReceivingDetailForm({ receivingInfo }) {
         <div className="lg:col-span-2 space-y-4">
           <ReceivingItemsSection
             items={displayItems}
-            onItemChange={handleItemChange}
+            subtitle="تعدادِ رسیده را بشمارید؛ بیشتر از سفارش هم ثبت می‌شود. خرابی‌ها به قرنطینه می‌روند."
+            onArrivedChange={handleArrivedChange}
+            onAddDefect={handleAddDefect}
+            onUpdateDefect={handleUpdateDefect}
+            onRemoveDefect={handleRemoveDefect}
           />
+
+          <ReceivingUnlistedItemsSection
+            rows={unlistedItems}
+            onAdd={handleAddUnlisted}
+            onRemove={handleRemoveUnlisted}
+            onArrivedChange={handleArrivedChange}
+            onAddDefect={handleAddDefect}
+            onUpdateDefect={handleUpdateDefect}
+            onRemoveDefect={handleRemoveDefect}
+          />
+
+          {replacement.rounds.length > 0 && (
+            <GoodsRoundItemsSection
+              rounds={displayReplacementRounds}
+              title="کالای جایگزینِ مرجوعی"
+              subtitle="تامین‌کننده این‌ها را به‌جای کالای مرجوعی می‌فرستد. اگر در همین محموله رسیده‌اند، ثبتشان کنید."
+              withObservations
+              observationTexts={{
+                emptyHint:
+                  "اگر بخشی از کالای جایگزین خراب رسیده، ثبتش کنید. کالای خراب به قرنطینه می‌رود، نه موجودی.",
+                healthySuffix: "عدد سالم به موجودی",
+              }}
+              onQuantityChange={replacement.handleQuantityChange}
+              onAddObservation={replacement.handleAddObservation}
+              onUpdateObservation={replacement.handleUpdateObservation}
+              onRemoveObservation={replacement.handleRemoveObservation}
+            />
+          )}
 
           <Card>
             <CardHeader className="pb-2">
@@ -183,6 +284,8 @@ function ReceivingDetailForm({ receivingInfo }) {
         <div className="space-y-4">
           <ReceivingSummaryCard formData={formData} onFormChange={setFormData} />
 
+          <ReceivingQuarantineCard receivingInfo={receivingInfo} />
+
           <div className="flex gap-2">
             <Button
               className={`flex-1 gap-2 ${
@@ -190,7 +293,7 @@ function ReceivingDetailForm({ receivingInfo }) {
                   ? "bg-amber-600 hover:bg-amber-700 text-white"
                   : ""
               }`}
-              disabled={isBusy || !hasSomethingToReceive}
+              disabled={isBusy || !hasSomething}
               onClick={() => setShowConfirmDialog(true)}
             >
               {isAllComplete ? (
@@ -198,7 +301,7 @@ function ReceivingDetailForm({ receivingInfo }) {
               ) : (
                 <AlertTriangle className="h-4 w-4" />
               )}
-              {isAllComplete ? "تأیید دریافت کامل" : "ثبت دریافت (با کسری)"}
+              {isAllComplete ? "تأیید دریافت" : "ثبت دریافت (با کسری)"}
             </Button>
             <Button
               type="button"
@@ -213,10 +316,9 @@ function ReceivingDetailForm({ receivingInfo }) {
           </div>
 
           <p className="text-xs text-muted-foreground text-center px-2">
-            باقیمانده‌ای که این دور ثبت نکنید، برای محموله‌ی بعدی در همین
-            لیست می‌ماند. اگر کالایی معیوب یا اشتباه رسیده، آن را از صفحه‌ی
-            «مرجوعی خرید» ثبت کنید — این فرم فقط تعدادِ دریافتی را ثبت
-            می‌کند.
+            باقیمانده‌ای که این دور نرسیده برای محموله‌ی بعدی می‌ماند. کالای
+            خراب، مازاد و سفارش‌نداده به قرنطینه می‌رود و با «ثبت مغایرت»
+            تکلیفش روشن می‌شود.
           </p>
         </div>
       </div>
@@ -224,22 +326,17 @@ function ReceivingDetailForm({ receivingInfo }) {
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {isAllComplete ? "ثبت دریافت کامل" : "ثبت دریافت با کسری"}
-            </AlertDialogTitle>
+            <AlertDialogTitle>ثبت این محموله</AlertDialogTitle>
             <AlertDialogDescription>
-              {isAllComplete
-                ? "آیا مطمئن هستید که همه‌ی باقیمانده‌ی این خرید دریافت شده است؟ این مقدار همین حالا به موجودی اضافه می‌شود."
-                : "فقط مقداری که وارد کرده‌اید به موجودی اضافه می‌شود؛ باقیمانده در انتظار محموله‌ی بعدی می‌ماند و این خرید همچنان در لیست دریافت باقی می‌ماند."}
+              کالای سالمِ سهمِ سفارش به موجودی اضافه می‌شود؛ خرابی‌ها، مازاد و
+              کالای سفارش‌نداده به قرنطینه می‌روند.
+              {!isAllComplete &&
+                " باقیمانده‌ی نرسیده در انتظار محموله‌ی بعدی می‌ماند."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isBusy}>انصراف</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isBusy}
-              onClick={handleSubmit}
-              className={!isAllComplete ? "bg-amber-600 hover:bg-amber-700" : ""}
-            >
+            <AlertDialogAction disabled={isBusy} onClick={handleSubmit}>
               {isBusy ? "در حال ثبت..." : "تأیید"}
             </AlertDialogAction>
           </AlertDialogFooter>
