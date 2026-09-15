@@ -14,11 +14,15 @@ import PurchaseReturnPurchaseSection from "../components/forms/PurchaseReturnPur
 import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
 import ClaimsSection from "@/shared/components/returns/ClaimsSection";
 import OffScopeClaimsSection from "@/shared/components/returns/OffScopeClaimsSection";
+import ReceivingReportCard, {
+  ReceivingReportLines,
+} from "@/shared/components/returns/ReceivingReport";
+import { claimReceivingReport } from "@/shared/domain/returns/receivingReport";
 import {
   PURCHASE_RETURN_PROBLEM_LABELS,
-  OFF_ORDER_KIND_LABELS,
-  OFF_ORDER_KIND_STYLES,
+  OFF_SCOPE_KIND_LABELS,
 } from "../domain/purchaseReturnVocabulary";
+import { OFF_SCOPE_KIND_STYLES } from "@/shared/domain/returns/scopes";
 import PurchaseReturnInfoSection from "../components/forms/PurchaseReturnInfoSection";
 import PurchaseReturnDetailLoading from "../components/forms/PurchaseReturnDetailLoading";
 import { ROUTES } from "@/shared/constants/routes";
@@ -45,11 +49,14 @@ export default function PurchaseReturnNewPage() {
     searchParams.get("purchaseId") ? Number(searchParams.get("purchaseId")) : null,
   );
   const [showErrors, setShowErrors] = useState(false);
+  // `?prefill=quarantine` — آمده از «ثبت مغایرت» در صفحه‌ی دریافت انبار.
+  const prefillQuarantine = searchParams.get("prefill") === "quarantine";
 
   const { formData, resetForm, initializeForPurchase } = usePurchaseReturnFormStore();
   const {
     setFormData,
     lines,
+    orderLines,
     offScopeClaims,
     allClaims,
     handleAddClaim,
@@ -76,8 +83,10 @@ export default function PurchaseReturnNewPage() {
   }, []);
 
   useEffect(() => {
-    if (purchaseForReturn) initializeForPurchase(purchaseForReturn);
-  }, [purchaseForReturn, initializeForPurchase]);
+    if (purchaseForReturn) {
+      initializeForPurchase(purchaseForReturn, { prefillQuarantine });
+    }
+  }, [purchaseForReturn, initializeForPurchase, prefillQuarantine]);
 
   useEffect(() => {
     setHeader({
@@ -166,6 +175,8 @@ export default function PurchaseReturnNewPage() {
               </Button>
             </div>
 
+            <ReceivingReportCard receivingInfo={purchaseForReturn} />
+
             {/* ── پایین: ثبت مشکلات ────────────────────────────────── */}
             <ClaimsSection
               lines={lines}
@@ -180,14 +191,20 @@ export default function PurchaseReturnNewPage() {
 
             <OffScopeClaimsSection
               claims={offScopeClaims}
+              orderLines={orderLines}
               onAdd={handleAddOffScopeClaim}
               onUpdate={handleUpdateOffScopeClaim}
               onRemove={handleRemoveOffScopeClaim}
               problemLabels={PURCHASE_RETURN_PROBLEM_LABELS}
-              kindLabels={OFF_ORDER_KIND_LABELS}
-              kindStyles={OFF_ORDER_KIND_STYLES}
+              kindLabels={OFF_SCOPE_KIND_LABELS}
+              kindStyles={OFF_SCOPE_KIND_STYLES}
+              renderClaimReport={(claim) => (
+                <ReceivingReportLines
+                  {...claimReceivingReport(purchaseForReturn, claim)}
+                />
+              )}
               title="کالای خارج از سفارش"
-              description="کالایی که در این سفارش نیست یا بیش از مقدار آن رسیده. قیمتش دستی وارد می‌شود چون سقفی روی سفارش ندارد."
+              description="مازاد: بیش از مقدارِ یک قلم رسیده (با قیمت همان قلم). نامرتبط: کالایی که سفارش داده نشده (قیمت دستی). سقف هر دو، کالای همان نوع در قرنطینه است."
             />
 
             <PurchaseReturnInfoSection

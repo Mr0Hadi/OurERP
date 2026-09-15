@@ -1,7 +1,7 @@
 import { cva } from "class-variance-authority";
 import { Slot } from "radix-ui"
 
-import { useIsMobile } from "@/shared/hooks/use-mobile"
+import { useIsMobile } from "@/shared/hooks/useIsMobile"
 import { cn } from "@/shared/lib/utils"
 import { Button } from "@/shared/components/ui/button"
 import { Input } from "@/shared/components/ui/input"

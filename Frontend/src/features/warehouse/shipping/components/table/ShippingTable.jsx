@@ -3,31 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { Truck } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import DataTable from "@/shared/components/table/DataTable";
-import { gregorianToPersian } from "@/shared/utils/dateUtils";
+import PaymentProgress from "@/shared/components/table/PaymentProgress";
+import SaleStatusBadge from "@/features/sales/orders/components/table/SaleStatusBadge";
+import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { ROUTES } from "@/shared/constants/routes";
-import { OUTGOING_TYPES } from "../../domain/shippingVocabulary";
-import ShippingTypeBadge from "./ShippingTypeBadge";
 
-// صف ارسال از چند منبع پر می‌شود، پس شناسه‌ی خودِ ردیف کلید است نه اندیس.
+// ردیف‌های این صف همان `SaleListDto`اند، پس شناسه‌ی فروش کلید است.
 const getRowKey = (row) => row.original.id;
-
-// مقصد و برچسب هر نوع محموله در یک جا، تا افزودن نوع بعدی یک ردیف
-// باشد نه یک شرط تودرتوی دیگر.
-const ACTION_BY_TYPE = {
-  [OUTGOING_TYPES.SALE]: {
-    label: "آماده‌سازی و ارسال",
-    buildPath: ({ saleId }) =>
-      ROUTES.WAREHOUSE_SHIPPING_DETAIL.replace(":id", saleId),
-  },
-  [OUTGOING_TYPES.RETURN_TO_SUPPLIER]: {
-    label: "آماده‌سازی عودت",
-    buildPath: ({ returnId }) =>
-      ROUTES.WAREHOUSE_SHIPPING_RETURN_DETAIL.replace(
-        ":id",
-        returnId,
-      ),
-  },
-};
 
 const ShippingTable = ({
   data,
@@ -44,8 +26,8 @@ const ShippingTable = ({
   const columns = useMemo(
     () => [
       {
-        accessorKey: "refNumber",
-        header: "شماره",
+        accessorKey: "invoiceNumber",
+        header: "شماره فاکتور",
         cell: (info) => (
           <span className="font-mono text-xs text-muted-foreground">
             {info.getValue()}
@@ -53,13 +35,13 @@ const ShippingTable = ({
         ),
       },
       {
-        accessorKey: "counterpartyName",
-        header: "مشتری / تامین‌کننده",
+        accessorKey: "customerName",
+        header: "مشتری",
         cell: (info) => <span className="font-light">{info.getValue()}</span>,
       },
       {
-        accessorKey: "date",
-        header: "تاریخ",
+        accessorKey: "invoiceDate",
+        header: "تاریخ فاکتور",
         cell: (info) => (
           <span className="tabular-nums text-sm">
             {gregorianToPersian(info.getValue())}
@@ -67,49 +49,43 @@ const ShippingTable = ({
         ),
       },
       {
-        accessorKey: "type",
-        header: "نوع",
+        accessorKey: "status",
+        header: "وضعیت",
         enableSorting: false,
-        cell: (info) => <ShippingTypeBadge type={info.getValue()} />,
-      },
-      {
-        accessorKey: "itemsCount",
-        header: "اقلام باز",
         cell: (info) => (
-          <span className="tabular-nums text-sm">
-            {info.getValue().toLocaleString("fa-IR")}
-          </span>
+          <SaleStatusBadge status={info.getValue()} />
         ),
       },
       {
-        accessorKey: "remainingQuantity",
-        header: "تعداد باقی‌مانده",
-        cell: (info) => (
-          <span className="tabular-nums text-sm">
-            {info.getValue().toLocaleString("fa-IR")}
-          </span>
+        accessorKey: "totalAmount",
+        header: "مبلغ (ریال)",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <PaymentProgress
+            paid={row.original.paidAmount}
+            total={row.original.totalAmount}
+          />
         ),
       },
       {
         id: "actions",
         header: "عملیات",
         enableSorting: false,
-        cell: ({ row }) => {
-          const { type, returnId, saleId } = row.original;
-          const action = ACTION_BY_TYPE[type] ?? ACTION_BY_TYPE[OUTGOING_TYPES.SALE];
-          const path = action.buildPath({ returnId, saleId });
-          return (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate(path)}
-              className="gap-1"
-            >
-              <Truck className="h-4 w-4" />
-              {action.label}
-            </Button>
-          );
-        },
+        cell: ({ row }) => (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              navigate(
+                ROUTES.WAREHOUSE_SHIPPING_DETAIL.replace(":id", row.original.id),
+              )
+            }
+            className="gap-1"
+          >
+            <Truck className="h-4 w-4" />
+            آماده‌سازی و ارسال
+          </Button>
+        ),
       },
     ],
     [navigate],
@@ -126,7 +102,7 @@ const ShippingTable = ({
       onPaginationChange={onPaginationChange}
       sorting={sorting}
       onSortingChange={onSortingChange}
-      emptyMessage="چیزی برای ارسال یافت نشد."
+      emptyMessage="فروشی در انتظار ارسال نیست."
       getRowKey={getRowKey}
     />
   );

@@ -149,7 +149,6 @@ function DepartmentDetailForm({ department }) {
             <OrgLeadershipForm
               control={control}
               errors={errors}
-              departmentId={department.id}
               scopeLabel="واحد"
             />
 

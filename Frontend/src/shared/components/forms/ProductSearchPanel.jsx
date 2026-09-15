@@ -24,11 +24,10 @@ import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReference
  * اسکن بارکد همان مسیرِ افزودنِ دستی را طی می‌کند: کالای منطبق پیدا و
  * مستقیم به onAdd داده می‌شود — بدون نیاز به کلیک روی دکمه‌ی افزودن.
  *
- * addedQuantityOf(productId) تعدادِ فعلیِ همان کالا در لیست است (صفر یعنی
- * هنوز اضافه نشده). عمداً «تعداد» است نه یک بولین، چون دکمه‌ی افزودن
- * بعد از اولین کلیک هم فعال می‌ماند و باید نشان دهد الان چندتاست —
- * قبلاً غیرفعال می‌شد و راهی برای زیادکردن تعداد از روی همین لیست
- * نبود.
+ * `addedQuantityOf(productId)` تعدادِ فعلیِ همان کالا در لیست است (صفر
+ * یعنی هنوز اضافه نشده). عمداً «تعداد» است نه بولین: دکمه‌ی افزودن بعد
+ * از اولین کلیک هم فعال می‌ماند تا بشود تعداد را از روی همین لیست
+ * زیاد کرد، و باید نشان دهد الان چندتاست.
  */
 export default function ProductSearchPanel({ products, addedQuantityOf, onAdd }) {
   const [search, setSearch] = useState("");
@@ -47,7 +46,13 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
       return;
     }
     const previousQuantity = addedQuantityOf(product.id);
-    onAdd(product);
+    // مرجعِ بارکد هم داده می‌شود تا فراخوان اگر بخواهد کدِ دانه را نگه دارد؛
+    // `false` یعنی افزودن رد شد (مثلاً دانه‌ی تکراری) و پیامش را خودش داده.
+    if (onAdd(product, reference) === false) return;
+    if (reference.kind === BarcodeReferenceKindEnum.UNIT) {
+      toast.success(`یک دانه از «${product.name}» اسکن شد`);
+      return;
+    }
     toast.success(
       previousQuantity > 0
         ? `«${product.name}» شد ${(previousQuantity + 1).toLocaleString("fa-IR")} عدد`

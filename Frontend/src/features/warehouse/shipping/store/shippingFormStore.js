@@ -1,126 +1,94 @@
 import { create } from 'zustand';
-import { SHIPPING_SOURCES } from '../domain/shippingVocabulary';
+import { toDateOnly } from '@/shared/lib/dateUtils';
 
-// این استور در localStorage ذخیره نمی‌شود؛ فرم ارسال داده‌ای موقتی
-// و لحظه‌ای است و باید همیشه از روی آخرین داده‌ی تازه‌ی سرور بازسازی شود.
+// این استور در localStorage ذخیره نمی‌شود؛ فرم ارسال داده‌ای موقتی و
+// لحظه‌ای است و باید همیشه از روی آخرین داده‌ی تازه‌ی سرور بازسازی شود.
+//
+// نام فیلدها عیناً همان `ShipSaleCommand` است تا هنگام ثبت هیچ ترجمه‌ای
+// لازم نباشد؛ فیلدهای فقط‌نمایشیِ سرِ سند از `SaleDto` می‌آیند.
 const EMPTY_SHIPPING = {
   saleId: '',
-  returnId: '',
-  customerName: '',
   invoiceNumber: '',
   invoiceDate: '',
   status: '',
+  customerId: null,
+  customerName: '',
   items: [],
-  shippingNote: '',
   shippedDate: new Date().toISOString().slice(0, 10),
-  driverName: '',
-  driverPhone: '',
+  shippingNote: '',
+  driverFullName: '',
+  driverPhoneNumber: '',
   vehiclePlate: '',
 };
 
-function toReturnLine(line) {
-  return {
-    lineId: `return:${line.effectId}`,
-    source: SHIPPING_SOURCES.RETURN,
-    returnId: line.returnId,
-    returnNumber: line.returnNumber,
-    effectId: line.effectId,
-    productId: line.productId,
-    productName: line.productName,
-    productCode: line.productCode,
-    expectedQuantity: line.remainingQuantity,
-    shippedQuantity: line.remainingQuantity,
-  };
+/**
+ * `GetSaleDetail` فیلد `updatedAt` ندارد، پس کلیدِ نسخه از محتوا ساخته
+ * می‌شود: بعد از هر دورِ ارسال، `shippedQuantity`ها عوض می‌شوند و فرم
+ * می‌فهمد باید از نو پر شود.
+ */
+export function saleShippingVersion(sale) {
+  if (!sale) return null;
+  return [
+    sale.id,
+    sale.status,
+    (sale.items || []).map((i) => `${i.id}:${i.shippedQuantity}`).join(','),
+  ].join('|');
 }
 
 export const useShippingFormStore = create((set, get) => ({
   formData: { ...EMPTY_SHIPPING },
-  // کلید نسخه شامل updatedAt فروش است، نه فقط id — چون وقتی همان
-  // فروش برای دور دومِ ارسال دوباره باز می‌شود، id عوض نمی‌شود ولی
-  // updatedAt چرا.
   initializedForId: null,
 
   setFormData: (data) =>
     set((state) => ({
       formData: { ...state.formData, ...data },
     })),
-  setShippingItems: (items) =>
+  setItems: (items) =>
     set((state) => ({
       formData: { ...state.formData, items },
     })),
-  initializeFromSale: (saleData) => {
-    const { initializedForId } = get();
-    const version = `${saleData.id}:${saleData.updatedAt}`;
-    if (initializedForId === version) return;
 
-    const orderLines = (saleData.items || [])
-      .map((item) => {
-        // `shippableQuantity`/`quantity`/`shippedQuantity` شکلِ mock است؛ پاسخِ واقعیِ
-        // `GetSaleDetail` همان ردیفِ خامِ `SaleItem` را می‌دهد:
-        // `id`/`quantity`/`shippedQuantity` (بخش ۱۱ سند).
-        const remaining =
-          item.shippableQuantity ??
-          Math.max(
-            0,
-            (item.quantity ?? item.quantity ?? 0) -
-              (item.shippedQuantity ?? item.shippedQuantity ?? 0),
-          );
-        return {
-          lineId: `order:${item.productId}`,
-          source: SHIPPING_SOURCES.ORDER,
-          // فقط در پاسخِ واقعی هست (`SaleItem.Id`، mock ندارد) — همراهِ
-          // ردیف نگه داشته می‌شود تا هنگامِ ارسال به `ShipSale` در
-          // دسترس باشد.
-          saleItemId: item.id ?? item.saleItemId ?? null,
-          productId: item.productId,
-          productName: item.productName,
-          productCode: item.productCode,
-          expectedQuantity: remaining,
-          shippedQuantity: remaining,
-        };
-      })
-      .filter((item) => item.expectedQuantity > 0);
+  initializeFromSale: (sale) => {
+    const version = saleShippingVersion(sale);
+    if (get().initializedForId === version) return;
 
-    // کالای جایگزینی که بابت مرجوعی‌های همین فروش به مشتری بدهکاریم و
-    // می‌تواند با همین ماشین برود.
-    const returnLines = (saleData.returnLines || []).map(toReturnLine);
-
-    set({
-      initializedForId: version,
-      formData: {
-        saleId: saleData.id,
-        customerName: saleData.customerName || '',
-        invoiceNumber: saleData.invoiceNumber || '',
-        invoiceDate: saleData.invoiceDate || '',
-        status: saleData.status ?? '',
-        items: [...orderLines, ...returnLines],
-        shippingNote: '',
-        shippedDate: new Date().toISOString().slice(0, 10),
-        driverName: '',
-        driverPhone: '',
-        vehiclePlate: '',
-      },
+    // همه‌ی اقلام می‌مانند، حتی قلمِ کامل‌ارسال‌شده: مازادی که بعداً کشف
+    // می‌شود («یکی بیشتر رفت») روی همان قلم ثبت می‌شود.
+    const items = (sale.items || []).map((item) => {
+      const remainingQuantity = Math.max(
+        0,
+        (item.quantity || 0) - (item.shippedQuantity || 0),
+      );
+      return {
+        // `SaleItem.Id` — فیلدِ `ShipSaleItemDto.SaleItemId`.
+        saleItemId: item.id,
+        productId: item.productId,
+        productName: item.productName,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        remainingQuantity,
+        // مقدارِ همین دور — فیلدِ `ShipSaleItemDto.ShippedQuantity`.
+        shippedQuantity: remainingQuantity,
+        // بارکدِ دانه‌های اسکن‌شده؛ خالی یعنی بکند خودش FIFO انتخاب کند
+        // (مگر برای کالای ردیابی‌پذیر).
+        productUnitBarcodes: [],
+        // `ShipSaleItemDto.ExcessQuantity` — دانه‌هایی که بیش از سفارش رفته.
+        excessQuantity: 0,
+        excessProductUnitBarcodes: [],
+      };
     });
-  },
-  /**
-   * حواله‌ای که فقط کالای مرجوعی می‌برد و پشتش سندِ فروشی نیست —
-   * عودت مازاد به تامین‌کننده. همان فرم، بدون خطِ سفارش.
-   */
-  initializeFromReturn: (returnDoc, returnLines, header = {}) => {
-    const { initializedForId } = get();
-    const version = `return:${returnDoc.id}:${returnDoc.updatedAt}`;
-    if (initializedForId === version) return;
 
     set({
       initializedForId: version,
       formData: {
         ...EMPTY_SHIPPING,
-        returnId: returnDoc.id,
-        customerName: header.partyName || '',
-        invoiceNumber: returnDoc.returnNumber || '',
-        invoiceDate: returnDoc.returnDate || '',
-        status: returnDoc.status ?? '',
-        items: (returnLines || []).map(toReturnLine),
+        saleId: sale.id,
+        invoiceNumber: sale.invoiceNumber || '',
+        invoiceDate: toDateOnly(sale.invoiceDate) || '',
+        status: sale.status ?? '',
+        customerId: sale.customerId ?? null,
+        customerName: sale.customerName || '',
+        items,
         shippedDate: new Date().toISOString().slice(0, 10),
       },
     });

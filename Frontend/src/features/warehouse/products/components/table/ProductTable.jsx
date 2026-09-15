@@ -98,7 +98,17 @@ const ProductTable = ({
         accessorKey: "name",
         header: "نام قطعه",
         cell: (info) => (
-          <span className="font-light">{info.getValue()}</span>
+          <span className="inline-flex flex-wrap items-center justify-center gap-1.5">
+            <span className="font-light">{info.getValue()}</span>
+            {info.row.original.isIncomplete && (
+              <Badge
+                variant="outline"
+                className="text-[10px] bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400"
+              >
+                ناقص
+              </Badge>
+            )}
+          </span>
         ),
       },
       { accessorKey: "brand", header: "برند" },
@@ -116,10 +126,18 @@ const ProductTable = ({
         accessorKey: "stock",
         header: "موجودی",
         cell: (info) => (
-          <StockBadge
-            stock={info.getValue()}
-            threshold={info.row.original.lowStockThreshold}
-          />
+          <span className="inline-flex flex-col items-center gap-0.5">
+            <StockBadge
+              stock={info.getValue()}
+              threshold={info.row.original.lowStockThreshold}
+            />
+            {/* قرنطینه جزو موجودی نیست ولی فیزیکاً در انبار است. */}
+            {info.row.original.quarantinedCount > 0 && (
+              <span className="text-[11px] text-orange-700 dark:text-orange-400">
+                قرنطینه: {info.row.original.quarantinedCount.toLocaleString("fa-IR")}
+              </span>
+            )}
+          </span>
         ),
       },
       {

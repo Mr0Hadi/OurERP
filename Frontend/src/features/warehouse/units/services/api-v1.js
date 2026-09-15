@@ -58,15 +58,41 @@ export function normalizeProductUnit(dto, product = null) {
 
     status: dto.status,
 
-    // «این دانه از کجا آمد» در بکند فقط با `PurchaseItemId` بیان می‌شود؛
-    // نبودنش یعنی سرور خودش هنگام هماهنگیِ موجودی زده است.
+    // «این دانه از کجا آمد»: خرید و تامین‌کننده. نبودنش یعنی دانه بدونِ
+    // خرید ساخته شده (موجودیِ اولیه یا اصلاحِ دستی).
     purchaseItemId: dto.purchaseItemId ?? null,
-    // شناسه‌ی *خطِ* فروش است نه خودِ فروش — نامش عمداً مثل سرور مانده.
+    purchaseId: dto.purchaseId ?? null,
+    purchaseInvoiceNumber: dto.purchaseInvoiceNumber ?? null,
+    supplierId: dto.supplierId ?? null,
+    supplierName: dto.supplierName ?? null,
+
+    // «کجا رفت»: آخرین فروشی که دانه با آن خارج شد، و مشتری‌اش.
     saleItemId: dto.saleItemId ?? null,
+    saleId: dto.saleId ?? null,
+    saleInvoiceNumber: dto.saleInvoiceNumber ?? null,
+    customerId: dto.customerId ?? null,
+    customerName: dto.customerName ?? null,
 
     soldAt: dto.soldAt ?? null,
   };
 }
+
+/**
+ * `GET api/Product/GetProductUnitHistory` — همه‌ی جابه‌جایی‌های یک دانه،
+ * قدیمی‌ترین اول، از دفترِ حرکتِ دانه‌ها. با شناسه یا بارکدِ اسکن‌شده.
+ */
+export const fetchProductUnitHistory = async ({ productUnitId, barcode } = {}) => {
+  const { data } = await axiosInstance.get("/Product/GetProductUnitHistory", {
+    params: {
+      productUnitId: productUnitId || undefined,
+      barcode: barcode || undefined,
+    },
+  });
+  return {
+    unit: normalizeProductUnit(data?.unit),
+    movements: data?.movements ?? [],
+  };
+};
 
 /**
  * `GET api/Product/GetProductUnitList`

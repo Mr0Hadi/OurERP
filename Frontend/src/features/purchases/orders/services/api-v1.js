@@ -3,7 +3,7 @@ import {
   normalizeListResponse,
   documentVersion,
 } from "@/shared/services/api/contract";
-import { toDateOnly } from "@/shared/utils/dateUtils";
+import { toDateOnly } from "@/shared/lib/dateUtils";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 
 export {

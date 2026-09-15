@@ -1,15 +1,23 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 
-import {
-  createTeam,
-  updateTeam,
-  assignTeamToDepartment,
-  deleteTeam,
-} from "./api-v1";
+import { createTeam, updateTeam, deleteTeam } from "./api-v1";
 import { teamKeys } from "./queryKeys";
 import { departmentKeys } from "../../departments/services/queryKeys";
 import { employeeKeys } from "@/features/employees/services/queryKeys";
+import { authKeys } from "@/features/auth/services/queryKeys";
+
+/**
+ * تعیینِ مسئول/جانشینِ تیم کارمند را به تیم (و واحدش) منتقل می‌کند و
+ * نقشِ قبلی‌اش را آزاد می‌کند — شاید مسئولیتِ همان واحد یا تیمِ دیگری. پس
+ * همه‌ی نماهای چارت سازمانی و نشستِ کاربرِ جاری باید تازه شوند.
+ */
+function invalidateOrgChart(queryClient) {
+  queryClient.invalidateQueries({ queryKey: teamKeys.all });
+  queryClient.invalidateQueries({ queryKey: departmentKeys.all });
+  queryClient.invalidateQueries({ queryKey: employeeKeys.all });
+  queryClient.invalidateQueries({ queryKey: authKeys.session() });
+}
 
 export function useCreateTeamMutation() {
   const queryClient = useQueryClient();
@@ -18,9 +26,7 @@ export function useCreateTeamMutation() {
     mutationFn: createTeam,
     onSuccess: () => {
       toast.success("تیم جدید با موفقیت ثبت شد.");
-      queryClient.invalidateQueries({ queryKey: teamKeys.all });
-      // شمارنده‌ی تیم‌های واحد عوض شده است.
-      queryClient.invalidateQueries({ queryKey: departmentKeys.all });
+      invalidateOrgChart(queryClient);
     },
     onError: (error) => toast.error(error?.message || "خطا در ثبت تیم"),
   });
@@ -31,39 +37,11 @@ export function useUpdateTeamMutation() {
 
   return useMutation({
     mutationFn: updateTeam,
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       toast.success("اطلاعات تیم با موفقیت ویرایش شد.");
-      queryClient.invalidateQueries({ queryKey: teamKeys.all });
-      queryClient.invalidateQueries({ queryKey: teamKeys.detail(variables.id) });
-      queryClient.invalidateQueries({ queryKey: departmentKeys.all });
-      // تعیینِ مدیر/معاون سمت‌های قبلیِ آن فرد را آزاد می‌کند؛ فهرست‌های
-      // کارمندان (و انتخابگرهای مدیر در صفحه‌های دیگر) باید تازه شوند.
-      queryClient.invalidateQueries({ queryKey: employeeKeys.all });
+      invalidateOrgChart(queryClient);
     },
     onError: (error) => toast.error(error?.message || "خطا در ویرایش تیم"),
-  });
-}
-
-/**
- * افزودنِ یک تیمِ موجود به یک واحد (از صفحه‌ی جزئیات واحد).
- *
- * جدا از `useUpdateTeamMutation` است چون پیام و نقطه‌ی شروعش فرق دارد:
- * اینجا کاربر «تیم را به واحد اضافه» می‌کند، نه «تیم را ویرایش».
- */
-export function useAssignTeamToDepartmentMutation() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: assignTeamToDepartment,
-    onSuccess: () => {
-      toast.success("تیم به این واحد اضافه شد.");
-      queryClient.invalidateQueries({ queryKey: teamKeys.all });
-      queryClient.invalidateQueries({ queryKey: departmentKeys.all });
-      // اعضای تیم همراهش به واحدِ جدید می‌روند (قرارداد در `api-v1.js`)،
-      // پس واحدِ کارمندها هم عوض شده.
-      queryClient.invalidateQueries({ queryKey: employeeKeys.all });
-    },
-    onError: (error) => toast.error(error?.message || "خطا در افزودن تیم به واحد"),
   });
 }
 
@@ -77,7 +55,6 @@ export function useDeleteTeamMutation() {
       queryClient.invalidateQueries({ queryKey: teamKeys.all });
       queryClient.invalidateQueries({ queryKey: teamKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: departmentKeys.all });
-      // عضویتِ اعضای تیمِ حذف‌شده باز می‌شود.
       queryClient.invalidateQueries({ queryKey: employeeKeys.all });
     },
     onError: (error) => toast.error(error?.message || "خطا در حذف تیم"),

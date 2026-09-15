@@ -6,18 +6,19 @@ import {
 } from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Textarea } from "@/shared/components/ui/textarea";
 import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
 
 /**
  * شماره و تاریخ فاکتور، سررسید و توضیحات — در فرم خرید و فروش یکسان است.
- *
- * props: formData, onFormChange, errors
  */
 export default function OrderInfoSection({
   formData,
   onFormChange,
   errors,
+  // تیکِ «فروش غیر رسمی» — فقط فرم فروش.
+  showInformalSale = false,
 }) {
   const handleChange = (field, value) => {
     onFormChange({ [field]: value });
@@ -90,6 +91,22 @@ export default function OrderInfoSection({
             placeholder="مثال: ۱۴۰۵/۰۵/۰۲"
           />
         </div>
+
+        {showInformalSale && (
+          <div className="flex items-center gap-2 self-end pb-2">
+            <Checkbox
+              id="isInformalSale"
+              checked={Boolean(formData.isInformalSale)}
+              onCheckedChange={(checked) => handleChange("isInformalSale", checked === true)}
+            />
+            <Label
+              htmlFor="isInformalSale"
+              className="text-sm font-medium text-card-foreground cursor-pointer"
+            >
+              فروش غیر رسمی
+            </Label>
+          </div>
+        )}
 
         {/* توضیحات */}
         <div className="space-y-1.5 sm:col-span-2">

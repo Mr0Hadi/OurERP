@@ -1,245 +1,237 @@
 import { useEffect } from 'react';
-import { useReceivingFormStore } from '../store/receivingFormStore';
 import {
-  defaultIssueTypeFor,
-  issueBudgetOf,
-} from '../domain/issueSemantics';
+  receivingInfoVersion,
+  useReceivingFormStore,
+} from '../store/receivingFormStore';
+
+// دریافت سقف ندارد (رسیدنِ بیش از سفارش واقعیت است، نه خطا)؛ این فقط
+// حدِ عملیِ ورودیِ شمارنده است.
+export const NO_QUANTITY_CAP = 99999;
 
 const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
+const toCount = (value) => {
+  const num = Math.floor(Number(value));
+  return Number.isNaN(num) || num < 0 ? 0 : Math.min(num, NO_QUANTITY_CAP);
+};
+
+const defectTotalOf = (row) =>
+  (row.defects || []).reduce((sum, defect) => sum + (Number(defect.quantity) || 0), 0);
+
+/** مشکل‌ها نمی‌توانند از رسیده بیشتر شوند؛ اضافه از ته هرس می‌شود. */
+function trimDefects(defects, arrived) {
+  let budget = arrived;
+  const trimmed = [];
+  for (const defect of defects) {
+    if (budget <= 0) break;
+    const quantity = Math.min(Number(defect.quantity) || 0, budget);
+    if (quantity > 0) {
+      trimmed.push({ ...defect, quantity });
+      budget -= quantity;
+    }
+  }
+  return trimmed;
+}
+
 /**
- * purchaseData می‌تواند null باشد: صفحه‌ی دریافت کالای برگشتی از مشتری
- * خودش استور را با initializeFromSalesReturn پر می‌کند و فقط
- * هندلرهای این هوک را می‌خواهد.
+ * پیش‌نمایشِ تقسیمی که سرور انجام می‌دهد — قاعده‌ی «اول سالم» بخش ۹:
+ *
+ *   h = min(H, S)        سالمِ سهمِ سفارش  → موجودی
+ *   d = min(D, S − h)    خرابِ سهمِ سفارش  → قرنطینه، خریده‌شده
+ *   A − h − d            مازاد             → قرنطینه، بدون ارزش
+ *
+ * فقط نمایش است؛ عددِ نهایی را سرور می‌گذارد.
  */
-export function useReceivingForm(purchaseData) {
-  const store = useReceivingFormStore();
+export function allocationOf(item) {
+  const arrived = Number(item.arrivedQuantity) || 0;
+  const owed = Math.max(0, Number(item.stillOwedQuantity) || 0);
+  const defective = Math.min(defectTotalOf(item), arrived);
+  const healthy = arrived - defective;
+  const healthyOnOrder = Math.min(healthy, owed);
+  const defectiveOnOrder = Math.min(defective, owed - healthyOnOrder);
+  return {
+    healthyOnOrder,
+    defectiveOnOrder,
+    excess: arrived - healthyOnOrder - defectiveOnOrder,
+  };
+}
+
+/**
+ * فرمِ یک دورِ دریافتِ خرید، با شمارش.
+ *
+ * انباردار فقط آنچه را می‌بیند می‌گوید: از هر قلم چند عدد رسید، چندتایش
+ * به چه دلیل خراب است، و چه کالایی بدون قلم رسید. تقسیم به موجودی،
+ * قرنطینه و مازاد کارِ سرور است.
+ */
+export function useReceivingForm(receivingInfo) {
   const {
     formData,
     setFormData,
-    setReceivingItems,
-    setUnknownItems,
-    initializeFromPurchase,
+    setItems,
+    setUnlistedItems,
+    initializeFromReceivingInfo,
     initializedForId,
     resetForm,
-  } = store;
+  } = useReceivingFormStore();
 
-  const purchaseVersion =
-    purchaseData?.id != null ? `${purchaseData.id}:${purchaseData.updatedAt}` : null;
+  const version = receivingInfoVersion(receivingInfo);
 
   useEffect(() => {
-    if (purchaseVersion && initializedForId !== purchaseVersion) {
-      initializeFromPurchase(purchaseData);
+    if (version && initializedForId !== version) {
+      initializeFromReceivingInfo(receivingInfo);
     }
-  }, [purchaseVersion, purchaseData, initializeFromPurchase, initializedForId]);
+  }, [version, receivingInfo, initializeFromReceivingInfo, initializedForId]);
 
-  const allocatedOf = (item) =>
-    (item.issues || []).reduce((sum, i) => sum + (Number(i.quantity) || 0), 0);
+  const items = formData.items || [];
+  const unlistedItems = formData.unlistedItems || [];
 
-  const handleItemChange = (lineId, field, value) => {
-    const newItems = formData.items.map((item) => {
-      if (item.lineId !== lineId) return item;
-      const updated = { ...item, [field]: value };
-
-      if (field === 'receivedQuantity') {
-        let remainingBudget = issueBudgetOf(updated);
-        const trimmedIssues = [];
-        for (const issue of updated.issues || []) {
-          if (remainingBudget <= 0) break;
-          const quantity = Math.min(Number(issue.quantity) || 0, remainingBudget);
-          if (quantity > 0) {
-            trimmedIssues.push({ ...issue, quantity });
-            remainingBudget -= quantity;
-          }
-        }
-        updated.issues = trimmedIssues;
-      }
-
-      return updated;
-    });
-    setReceivingItems(newItems);
+  // هر ردیف با `rowKey` شناخته می‌شود تا ویرایشگرِ مشکل روی هر دو فهرست
+  // یک‌جور کار کند.
+  const patchRow = (rowKey, patch) => {
+    if (rowKey.startsWith('u-')) {
+      setUnlistedItems(
+        unlistedItems.map((row) => (row.rowKey === rowKey ? { ...row, ...patch(row) } : row)),
+      );
+    } else {
+      setItems(items.map((row) => (row.rowKey === rowKey ? { ...row, ...patch(row) } : row)));
+    }
   };
 
-  // انباردار مجبور نیست کل کسری را به‌عنوان مشکل ثبت کند؛ فقط بخشی
-  // که واقعاً مشکل دارد (نه صرفاً دیرکرد ارسال) را اضافه می‌کند —
-  // بقیه به‌طور خودکار «در انتظار محموله بعدی» تلقی می‌شود.
-  const handleAddIssue = (lineId) => {
-    const newItems = formData.items.map((item) => {
-      if (item.lineId !== lineId) return item;
-      const budget = issueBudgetOf(item);
-      const allocated = allocatedOf(item);
-      const remaining = Math.max(0, budget - allocated);
-      if (remaining <= 0) return item;
+  const handleArrivedChange = (rowKey, value) =>
+    patchRow(rowKey, (row) => {
+      const arrivedQuantity = toCount(value);
+      return { arrivedQuantity, defects: trimDefects(row.defects, arrivedQuantity) };
+    });
+
+  const handleAddDefect = (rowKey, problem) =>
+    patchRow(rowKey, (row) => {
+      const remaining = row.arrivedQuantity - defectTotalOf(row);
+      if (remaining <= 0) return {};
       return {
-        ...item,
-        issues: [
-          ...(item.issues || []),
-          {
-            id: generateId(),
-            issueType: defaultIssueTypeFor(item),
-            quantity: remaining,
-            note: '',
-          },
-        ],
+        defects: [...row.defects, { id: generateId(), problem, quantity: 1, note: '' }],
       };
     });
-    setReceivingItems(newItems);
-  };
 
-  const handleUpdateIssue = (lineId, issueRowId, field, value) => {
-    const newItems = formData.items.map((item) => {
-      if (item.lineId !== lineId) return item;
-      const budget = issueBudgetOf(item);
-
-      const newIssues = (item.issues || []).map((issue) => {
-        if (issue.id !== issueRowId) return issue;
-        if (field === 'quantity') {
-          const otherAllocated = (item.issues || [])
-            .filter((i) => i.id !== issueRowId)
-            .reduce((s, i) => s + (Number(i.quantity) || 0), 0);
-          const maxAllowed = Math.max(0, budget - otherAllocated);
-          const num = Number(value);
-          const clamped = Number.isNaN(num) || num < 0 ? 0 : Math.min(num, maxAllowed);
-          return { ...issue, quantity: clamped };
-        }
-        return { ...issue, [field]: value };
-      });
-
-      return { ...item, issues: newIssues };
-    });
-    setReceivingItems(newItems);
-  };
-
-  const handleRemoveIssue = (lineId, issueRowId) => {
-    const newItems = formData.items.map((item) =>
-      item.lineId === lineId
-        ? { ...item, issues: (item.issues || []).filter((i) => i.id !== issueRowId) }
-        : item,
-    );
-    setReceivingItems(newItems);
-  };
-
-  // ── مازادِ یک قلم شناخته‌شده ───────────────────────────────────────
-  // برخلاف کسری، مازاد از روی تعدادها قابل استنتاج نیست (چون سقف
-  // دریافتی همان سفارش است)؛ انباردار باید صریحاً اعلامش کند. سقفی
-  // هم ندارد — تامین‌کننده هر تعدادی ممکن است اضافه فرستاده باشد.
-  const handleExcessChange = (lineId, field, value) => {
-    const newItems = formData.items.map((item) => {
-      if (item.lineId !== lineId) return item;
-      if (field === 'excessQuantity') {
-        const num = Number(value);
-        const safe = Number.isNaN(num) || num < 0 ? 0 : Math.floor(num);
-        // با صفرشدن تعداد، یادداشتِ بی‌صاحب هم پاک می‌شود تا چیزی که
-        // ثبت نمی‌شود روی صفحه باقی نماند.
-        return { ...item, excessQuantity: safe, excessNote: safe > 0 ? item.excessNote : '' };
-      }
-      return { ...item, [field]: value };
-    });
-    setReceivingItems(newItems);
-  };
-
-  // ── کالای ثبت‌نشده ────────────────────────────────────────────────
-  const unknownItems = formData.unknownItems || [];
-
-  const handleAddUnknownItem = () => {
-    setUnknownItems([
-      ...unknownItems,
-      { id: generateId(), productName: '', quantity: 1, unit: 'عدد', note: '' },
-    ]);
-  };
-
-  const handleUpdateUnknownItem = (rowId, field, value) => {
-    setUnknownItems(
-      unknownItems.map((row) => {
-        if (row.id !== rowId) return row;
-        if (field === 'quantity') {
-          const num = Number(value);
-          const safe = Number.isNaN(num) || num < 0 ? 0 : Math.floor(num);
-          return { ...row, quantity: safe };
-        }
-        return { ...row, [field]: value };
+  const handleUpdateDefect = (rowKey, defectId, field, value) =>
+    patchRow(rowKey, (row) => ({
+      defects: row.defects.map((defect) => {
+        if (defect.id !== defectId) return defect;
+        if (field !== 'quantity') return { ...defect, [field]: value };
+        const others = row.defects
+          .filter((entry) => entry.id !== defectId)
+          .reduce((sum, entry) => sum + (Number(entry.quantity) || 0), 0);
+        return {
+          ...defect,
+          quantity: Math.min(toCount(value), Math.max(0, row.arrivedQuantity - others)),
+        };
       }),
-    );
+    }));
+
+  const handleRemoveDefect = (rowKey, defectId) =>
+    patchRow(rowKey, (row) => ({
+      defects: row.defects.filter((defect) => defect.id !== defectId),
+    }));
+
+  /** کالای سفارش‌نداده از فهرست کالاها یا از ساختِ سریع. */
+  const handleAddUnlisted = (product) => {
+    const rowKey = `u-${product.productId}`;
+    if (items.some((item) => item.productId === product.productId)) {
+      // سرور کالای دارای قلم را در `unlistedItems` رد می‌کند؛ مقدارِ اضافه‌اش
+      // روی همان قلم ثبت می‌شود.
+      return { rejected: true };
+    }
+    const existing = unlistedItems.find((row) => row.rowKey === rowKey);
+    if (existing) {
+      patchRow(rowKey, (row) => ({ arrivedQuantity: toCount(row.arrivedQuantity + 1) }));
+      return { rejected: false };
+    }
+    setUnlistedItems([
+      ...unlistedItems,
+      {
+        rowKey,
+        productId: product.productId,
+        productCode: product.productCode,
+        productName: product.productName,
+        unit: product.unit,
+        arrivedQuantity: 1,
+        defects: [],
+      },
+    ]);
+    return { rejected: false };
   };
 
-  const handleRemoveUnknownItem = (rowId) => {
-    setUnknownItems(unknownItems.filter((row) => row.id !== rowId));
+  const handleRemoveUnlisted = (rowKey) =>
+    setUnlistedItems(unlistedItems.filter((row) => row.rowKey !== rowKey));
+
+  const isAllComplete =
+    items.length > 0 &&
+    items.every((item) => item.arrivedQuantity >= item.stillOwedQuantity);
+
+  const hasSomethingToReceive =
+    items.some((item) => (Number(item.arrivedQuantity) || 0) > 0) ||
+    unlistedItems.some((row) => (Number(row.arrivedQuantity) || 0) > 0);
+
+  const defectsOf = (row) =>
+    row.defects
+      .filter((defect) => (Number(defect.quantity) || 0) > 0)
+      .map((defect) => ({
+        problem: defect.problem,
+        quantity: Number(defect.quantity) || 0,
+        note: defect.note || undefined,
+      }));
+
+  /**
+   * بدنه‌ی `ReceivePurchaseCommand`، یا `null` وقتی از خرید چیزی نرسیده
+   * (مثلاً محموله فقط کالای جایگزینِ مرجوعی است). ردیفِ صفر فرستاده
+   * نمی‌شود چون سرور `ArrivedQuantity > 0` می‌خواهد.
+   *
+   * @param images خروجیِ `filesPayload` آپلودرِ صفحه — `ReceivePurchaseImageDto[]`.
+   */
+  const buildCommand = (images = []) => {
+    const commandItems = items
+      .filter((item) => (Number(item.arrivedQuantity) || 0) > 0)
+      .map((item) => ({
+        purchaseItemId: item.purchaseItemId,
+        arrivedQuantity: Number(item.arrivedQuantity) || 0,
+        defects: defectsOf(item),
+      }));
+    const commandUnlisted = unlistedItems
+      .filter((row) => (Number(row.arrivedQuantity) || 0) > 0)
+      .map((row) => ({
+        productId: row.productId,
+        arrivedQuantity: Number(row.arrivedQuantity) || 0,
+        defects: defectsOf(row),
+      }));
+    if (commandItems.length === 0 && commandUnlisted.length === 0) return null;
+
+    return {
+      purchaseId: formData.purchaseId,
+      receivedDate: formData.receivedDate || undefined,
+      receivingNote: formData.receivingNote || undefined,
+      driverFullName: formData.driverFullName || undefined,
+      driverPhoneNumber: formData.driverPhoneNumber || undefined,
+      vehiclePlate: formData.vehiclePlate || undefined,
+      items: commandItems,
+      unlistedItems: commandUnlisted,
+      images,
+    };
   };
-
-  const isUnknownRowComplete = (row) =>
-    !!row.productName?.trim() && (Number(row.quantity) || 0) > 0;
-
-  // ردیف‌های نیمه‌پرشده بی‌صدا حذف نمی‌شوند — انباردار باید ببیند که
-  // چیزی که نوشته ثبت نخواهد شد.
-  const incompleteUnknownCount = unknownItems.filter(
-    (row) =>
-      !isUnknownRowComplete(row) &&
-      (!!row.productName?.trim() || (Number(row.quantity) || 0) > 0 || !!row.note?.trim()),
-  ).length;
-
-  const isAllComplete = formData.items.every(
-    (item) => item.receivedQuantity >= item.expectedQuantity,
-  );
-
-  // خطوط به تفکیک منبع، برای اینکه صفحه هرکدام را زیر عنوان خودش
-  // نشان بدهد بدون اینکه منطق فرم دو شاخه شود.
-  const linesBySource = formData.items.reduce((acc, item) => {
-    (acc[item.source] ||= []).push(item);
-    return acc;
-  }, {});
-
-  const buildPayload = () => ({
-    id: formData.purchaseId,
-    receivedItems: formData.items.map((item) => ({
-      lineId: item.lineId,
-      source: item.source,
-      returnId: item.returnId,
-      effectId: item.effectId,
-      purchaseItemId: item.purchaseItemId ?? null,
-      productId: item.productId,
-      productCode: item.productCode,
-      productName: item.productName,
-      expectedQuantity: item.expectedQuantity,
-      receivedQuantity: item.receivedQuantity,
-      issues: (item.issues || []).map((i) => ({
-        type: i.issueType,
-        quantity: Number(i.quantity) || 0,
-        note: i.note || '',
-      })),
-      excessQuantity: Number(item.excessQuantity) || 0,
-      excessNote: item.excessNote || '',
-    })),
-    unknownItems: unknownItems.filter(isUnknownRowComplete).map((row) => ({
-      productName: row.productName.trim(),
-      quantity: Number(row.quantity) || 0,
-      unit: row.unit?.trim() || 'عدد',
-      note: row.note || '',
-    })),
-    receivingNote: formData.receivingNote,
-    receivedDate: formData.receivedDate,
-    transporterName: formData.transporterName,
-    transporterPhone: formData.transporterPhone,
-    vehiclePlate: formData.vehiclePlate,
-  });
 
   return {
     formData,
     setFormData,
-    handleItemChange,
-    handleAddIssue,
-    handleUpdateIssue,
-    handleRemoveIssue,
-    handleExcessChange,
-    unknownItems,
-    handleAddUnknownItem,
-    handleUpdateUnknownItem,
-    handleRemoveUnknownItem,
-    incompleteUnknownCount,
+    items,
+    unlistedItems,
+    handleArrivedChange,
+    handleAddDefect,
+    handleUpdateDefect,
+    handleRemoveDefect,
+    handleAddUnlisted,
+    handleRemoveUnlisted,
     isAllComplete,
-    linesBySource,
-    buildPayload,
+    hasSomethingToReceive,
+    buildCommand,
     resetForm,
-    initializedForId,
   };
 }

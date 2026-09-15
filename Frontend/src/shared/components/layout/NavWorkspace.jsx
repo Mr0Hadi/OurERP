@@ -25,7 +25,7 @@ import {
 } from "@/shared/components/ui/sidebar";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { DepartmentEnum } from "@/shared/domain/enums/department";
-import { orgPositionLabelOf } from "@/shared/domain/enums/orgHeadRole";
+import { OrgRoleEnum } from "@/shared/domain/enums/orgRole";
 import { useActiveMembership } from "@/features/auth/services/queries";
 import { useAuthStore } from "@/features/auth/store/authStore";
 
@@ -49,20 +49,23 @@ const iconOf = (membership) =>
   DEPARTMENT_ICONS[membership?.departmentId] ?? Building2;
 
 /**
- * خطِ دومِ هر عضویت: نامِ تیم، و جایگاه اگر از «عضو» بالاتر باشد.
+ * خطِ دومِ هر عضویت: نامِ تیم، و نقش اگر از «عضو» بالاتر باشد.
  *
- * اگر کاربر تیم ندارد (سرپرستِ واحد معمولاً ندارد) جایگاهِ واحد جایش
- * می‌نشیند، و اگر آن هم نبود «بدون تیم» — که یک واقعیت است، نه خطا.
+ * مسئول/جانشینِ واحد هیچ‌وقت تیم ندارد، پس برای او خودِ نقش جای نامِ تیم
+ * می‌نشیند؛ و عضوِ ساده‌ی بدونِ تیم «بدون تیم» می‌بیند — که یک واقعیت
+ * است، نه خطا. «عضو» عمداً نوشته نمی‌شود: حالتِ پیش‌فرضِ همه است.
  */
 function subtitleOf(membership) {
   if (!membership) return null;
 
-  const teamPosition = orgPositionLabelOf(membership.teamRole);
+  const roleTitle =
+    membership.role !== OrgRoleEnum.MEMBER ? membership.roleTitle : null;
+
   if (membership.teamName) {
-    return [membership.teamName, teamPosition].filter(Boolean).join(" — ");
+    return [membership.teamName, roleTitle].filter(Boolean).join(" — ");
   }
 
-  return orgPositionLabelOf(membership.departmentRole) ?? "بدون تیم";
+  return roleTitle ?? "بدون تیم";
 }
 
 function WorkspaceIdentity({ membership }) {

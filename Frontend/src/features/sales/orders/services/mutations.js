@@ -8,23 +8,46 @@ import {
   updateSalePayment,
   removeSale
 } from './api-v1';
+import { createInPersonSale } from './inPersonSale';
 import { saleKeys } from './queryKeys';
 import { ROUTES } from '@/shared/constants/routes';
 import { useSaleFormStore } from '../store/saleFormStore';
 import { invalidateSalesEcosystem } from './sharedInvalidation';
-import { outgoingQueueKeys } from '@/features/warehouse/shipping/services/queryKeys';
+import { shippingKeys } from '@/features/warehouse/shipping/services/queryKeys';
 
 export const useCreateSaleMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: createSale,
+    // `CreateSale` داده‌ای برنمی‌گرداند (فقط پیام)، پس شناسه‌ای هم در کار
+    // نیست؛ خواندنِ `created.id` بعد از یک ثبتِ موفق خطا می‌داد.
     onSuccess: (created) => {
       toast.success('فروش با موفقیت ثبت شد');
-      invalidateSalesEcosystem(queryClient, created.id);
+      invalidateSalesEcosystem(queryClient, created?.id ?? null);
     },
     onError: (error) => {
       toast.error(error?.message || 'خطا در ثبت فروش');
+    },
+  });
+};
+
+/** فروشِ حضوری: ثبت، خروجِ کالا با دانه‌های اسکن‌شده، و «تحویل کامل». */
+export const useCreateInPersonSaleMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ payload, scannedBarcodes }) =>
+      createInPersonSale(payload, scannedBarcodes),
+    onSuccess: (created) => {
+      toast.success('فروش حضوری ثبت و تحویل شد');
+      invalidateSalesEcosystem(queryClient, created.id);
+      queryClient.invalidateQueries({ queryKey: shippingKeys.all });
+    },
+    onError: (error) => {
+      // حتی وقتی قدمِ بعدی شکست خورده، فروش ثبت شده و فهرست‌ها باید تازه شوند.
+      if (error?.saleId != null) invalidateSalesEcosystem(queryClient, error.saleId);
+      toast.error(error?.message || 'خطا در ثبت فروش حضوری');
     },
   });
 };
@@ -97,7 +120,7 @@ export const useRecordSalePaymentMutation = () => {
       queryClient.invalidateQueries({ queryKey: saleKeys.lists() });
       // صفِ ارسال مبلغ فاکتور را در ستون «مبلغ» نشان می‌دهد — قرینه‌ی
       // همین مسیر در سمت خرید.
-      queryClient.invalidateQueries({ queryKey: outgoingQueueKeys.all });
+      queryClient.invalidateQueries({ queryKey: shippingKeys.lists() });
       toast.success('دریافت وجه با موفقیت ثبت شد');
     },
     onError: (error, variables, context) => {

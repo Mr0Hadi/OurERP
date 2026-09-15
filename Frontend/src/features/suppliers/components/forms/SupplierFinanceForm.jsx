@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { PriceInput } from "@/shared/components/ui/price-input";
 import { BalanceTypeEnum } from "@/shared/domain/enums/balanceType";
-import { numberToPersianWords } from "@/shared/lib/number-to-persian-words";
+import { numberToPersianWords } from "@/shared/lib/numberToPersianWords";
 
 export default function SupplierFinanceForm({ errors, balanceType, control }) {
   const showAmount = balanceType !== BalanceTypeEnum.BALANCED;

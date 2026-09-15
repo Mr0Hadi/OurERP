@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
-import { Save, X, Trash2, LogOut } from "lucide-react";
+import { Save, X, LogOut } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -21,7 +21,6 @@ import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
 
 import {
   useUpdateEmployeeMutation,
-  useRemoveEmployeeMutation,
   useLogoutEmployeeMutation,
 } from "../services/mutations";
 import { useEmployeeQuery } from "../services/queries";
@@ -62,11 +61,9 @@ function EmployeeDetailForm({ employee }) {
   const navigate = useNavigate();
   const location = useLocation();
   const currentUser = useCurrentUser();
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   const updateMutation = useUpdateEmployeeMutation();
-  const removeMutation = useRemoveEmployeeMutation();
   const logoutMutation = useLogoutEmployeeMutation();
 
   const { draft, saveDraft, clearDraft } = useFormDraft(
@@ -118,22 +115,13 @@ function EmployeeDetailForm({ employee }) {
     });
   };
 
-  const handleRemove = () => {
-    removeMutation.mutate(employee.id, {
-      onSuccess: () => navigate(ROUTES.EMPLOYEES),
-    });
-  };
-
   const handleForceLogout = () => {
     logoutMutation.mutate(employee.id, {
       onSuccess: () => setShowLogoutDialog(false),
     });
   };
 
-  const isBusy =
-    updateMutation.isPending ||
-    removeMutation.isPending ||
-    logoutMutation.isPending;
+  const isBusy = updateMutation.isPending || logoutMutation.isPending;
 
   const displayName = fullNameOf(employee);
 
@@ -164,6 +152,8 @@ function EmployeeDetailForm({ employee }) {
               initialPlacement={{
                 departmentId: employee.departmentId,
                 teamId: employee.teamId ?? null,
+                role: employee.role,
+                roleTitle: employee.roleTitle,
               }}
               onCreateDepartment={() =>
                 leaveForCreate(ROUTES.ORG_DEPARTMENTS_NEW)
@@ -209,55 +199,13 @@ function EmployeeDetailForm({ employee }) {
               خروج اجباری از تمام دستگاه‌ها
             </Button>
 
-            {/* پیش از این اینجا دکمه‌ی «غیرفعال‌کردن دسترسی» بود که
-                دقیقاً همان کارِ چک‌باکسِ کارت «وضعیت حساب کاربری» را
-                می‌کرد — دو راهِ جدا به یک نتیجه، که فقط کاربر را گیج
-                می‌کرد. حالا این دکمه حذفِ کارمند است و آن چک‌باکس
-                غیرفعال‌کردنِ موقت. */}
-            <Button
-              type="button"
-              variant="destructive"
-              className="w-full gap-2"
-              onClick={() => setShowDeleteDialog(true)}
-              disabled={isBusy || isSelf}
-            >
-              <Trash2 className="h-4 w-4" />
-              حذف کارمند
-            </Button>
-
-            {isSelf && (
-              <p className="text-xs text-muted-foreground text-center">
-                نمی‌توانید حساب کاربری خودتان را حذف کنید.
-              </p>
-            )}
+            {/* دکمه‌ی «حذف کارمند» عمداً اینجا نیست: `DeleteUser` هم فقط
+                `isActive = false` می‌کند و نقش‌ها را آزاد می‌کند — دقیقاً همان
+                اثرِ برداشتنِ تیکِ «حساب کاربری فعال است» و ذخیره. دو راه به یک
+                نتیجه فقط کاربر را گیج می‌کرد، و چک‌باکس برگشت‌پذیر هم هست. */}
           </div>
         </div>
       </form>
-
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>حذف کارمند</AlertDialogTitle>
-            <AlertDialogDescription>
-              {displayName} از فهرست کارمندان کنار گذاشته می‌شود و دیگر
-              نمی‌تواند وارد سیستم شود. اسناد و تراکنش‌های ثبت‌شده توسط او
-              حذف نمی‌شوند و در گزارش‌ها باقی می‌مانند.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={removeMutation.isPending}>
-              انصراف
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleRemove}
-              disabled={removeMutation.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {removeMutation.isPending ? "در حال حذف..." : "حذف"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
         <AlertDialogContent>

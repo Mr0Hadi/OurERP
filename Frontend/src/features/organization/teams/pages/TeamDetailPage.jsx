@@ -56,7 +56,7 @@ function TeamDetailForm({ team }) {
     formState: { errors },
   } = formMethods;
 
-  // «هد/معاون کردن» از کارت اعضا مستقیم روی سرور ذخیره می‌شود؛ فرم باید
+  // تعیینِ مسئول/جانشین از کارت اعضا مستقیم روی سرور ذخیره می‌شود؛ فرم باید
   // همان را ببیند وگرنه ذخیره‌ی بعدی مقدارِ قبلی را برمی‌گرداند.
   useSyncLeadershipValues(setValue, team.headId, team.deputyId);
 
@@ -127,7 +127,6 @@ function TeamDetailForm({ team }) {
             <OrgLeadershipForm
               control={control}
               errors={errors}
-              departmentId={team.departmentId}
               scopeLabel="تیم"
             />
 

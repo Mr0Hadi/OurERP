@@ -31,8 +31,10 @@ import { cn } from "@/shared/lib/utils";
 const COLUMNS = [
   { key: "salesCount", label: "تعداد فروش" },
   { key: "revenue", label: "درآمد" },
+  { key: "scrapLoss", label: "زیان اسقاط" },
   { key: "netProfit", label: "سود خالص", emphasize: true },
   { key: "totalReceivedValue", label: "کالای دریافتی" },
+  { key: "returnMoneyAmount", label: "وجه مرجوعی خرید" },
 ];
 
 /**

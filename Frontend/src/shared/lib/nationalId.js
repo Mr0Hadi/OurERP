@@ -1,4 +1,4 @@
-import { normalizePersianDigits } from "@/shared/lib/normalize-persian-digits"
+import { normalizePersianDigits } from "@/shared/lib/persianDigits"
 
 /**
  * 3-digit issuance-office prefixes assigned by Iran's National Organization

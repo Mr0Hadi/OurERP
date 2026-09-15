@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { CheckCircle, AlertTriangle, X } from "lucide-react";
-import { toast } from "react-hot-toast";
 
 import { Button } from "@/shared/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,20 +19,26 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
+import FileUploadList from "@/shared/components/files/FileUploadList";
+import RemoteImage from "@/shared/components/files/RemoteImage";
+import { useFileUploadList } from "@/shared/hooks/useFileUploadList";
+import { ImageFolderEnum } from "@/shared/domain/enums/imageFolder";
 import { useHeaderStore } from "@/shared/store/headerStore";
-import { useReceivingPurchaseQuery } from "../services/queries";
-import { useProductsQuery } from "@/features/warehouse/products/services/queries";
-import { useConfirmReceivingMutation } from "../services/mutations";
-import { useReceivingForm } from "../hooks/useReceivingForm";
-import ReceivingItemsSection from "../components/forms/ReceivingItemsSection";
 import {
-  RECEIVING_SOURCES,
-  RECEIVING_SOURCE_LABELS,
-} from "../domain/receivingVocabulary";
+  usePurchaseReceivingInfoQuery,
+  usePurchaseReturnPendingEffectsQuery,
+} from "../services/queries";
+import { useProductsQuery } from "@/features/warehouse/products/services/queries";
+import { useReceiveShipmentMutation } from "../services/mutations";
+import { useReceivingForm } from "../hooks/useReceivingForm";
+import { useGoodsRoundForm } from "@/shared/hooks/useGoodsRoundForm";
+import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
+import ReceivingItemsSection from "../components/forms/ReceivingItemsSection";
+import ReceivingUnlistedItemsSection from "../components/forms/ReceivingUnlistedItemsSection";
+import ReceivingQuarantineCard from "../components/forms/ReceivingQuarantineCard";
 import ReceivingSummaryCard from "../components/forms/ReceivingSummaryCard";
-import ReceivingMismatchList from "../components/forms/ReceivingMismatchList";
-import UnknownItemsSection from "../components/forms/UnknownItemsSection";
 import ReceivingTransporterSection from "../components/forms/ReceivingTransporterSection";
+import GoodsRoundItemsSection from "@/shared/components/returns/GoodsRoundItemsSection";
 import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
@@ -36,9 +47,30 @@ const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
 const SORTING = { id: "name", desc: false };
 
-function ReceivingDetailForm({ purchase }) {
+// سقفِ عکس‌های یک دورِ دریافت — `ReceivePurchaseCommand.Images` سقفی
+// ندارد، این فقط یک حدِ عملی برای فرم است.
+const MAX_RECEIVING_IMAGES = 10;
+
+function withProductImage(rows, productMap) {
+  return rows.map((row) => {
+    const product = productMap.get(row.productId);
+    return {
+      ...row,
+      imageKey: product?.imageKey ?? null,
+      imageUrl: product?.imageUrl ?? product?.image ?? null,
+      brand: product?.brand || "",
+    };
+  });
+}
+
+/**
+ * یک محموله‌ی ورودی از تامین‌کننده: اقلامِ خرید (با شمارش و خرابی)،
+ * کالای سفارش‌نداده، و کالای جایگزینی که مرجوعی‌های همین خرید منتظرش‌اند
+ * — همه با یک `ReceiveShipment` و در یک تراکنش.
+ */
+function ReceivingDetailForm({ receivingInfo }) {
   const navigate = useNavigate();
-  const receivingMutation = useConfirmReceivingMutation();
+  const receiveMutation = useReceiveShipmentMutation();
 
   const { data: productsData } = useProductsQuery(
     ALL_FILTERS,
@@ -54,156 +86,195 @@ function ReceivingDetailForm({ purchase }) {
   const {
     formData,
     setFormData,
-    handleItemChange,
-    handleAddIssue,
-    handleUpdateIssue,
-    handleRemoveIssue,
-    handleExcessChange,
-    unknownItems,
-    handleAddUnknownItem,
-    handleUpdateUnknownItem,
-    handleRemoveUnknownItem,
-    incompleteUnknownCount,
+    items,
+    unlistedItems,
+    handleArrivedChange,
+    handleAddDefect,
+    handleUpdateDefect,
+    handleRemoveDefect,
+    handleAddUnlisted,
+    handleRemoveUnlisted,
     isAllComplete,
-    buildPayload,
+    hasSomethingToReceive,
+    buildCommand,
     resetForm,
-  } = useReceivingForm(purchase);
+  } = useReceivingForm(receivingInfo);
+
+  // کالای جایگزینِ مرجوعی‌های همین خرید که هنوز نرسیده.
+  const { data: pendingEffects = [] } = usePurchaseReturnPendingEffectsQuery(
+    receivingInfo.purchaseId,
+  );
+  const replacementLines = useMemo(
+    () =>
+      pendingEffects
+        .filter(
+          (effect) =>
+            effect.direction === EFFECT_DIRECTIONS.GOODS_IN &&
+            effect.remainingQuantity > 0,
+        )
+        .map((effect) => ({
+          effectId: effect.effectId,
+          direction: effect.direction,
+          returnId: effect.purchaseReturnId,
+          reference: effect.returnNumber,
+          productId: effect.productId,
+          productCode: effect.productCode,
+          productName: effect.productName,
+          unit: effect.unit,
+          remainingQuantity: effect.remainingQuantity,
+        })),
+    [pendingEffects],
+  );
+  const replacement = useGoodsRoundForm(replacementLines, {
+    withObservations: true,
+    startEmpty: true,
+  });
+
+  // عکس‌های همین دور. `filesPayload` دقیقاً شکلِ
+  // `ReceivePurchaseImageDto` است (`{objectKey, fileName?, note?}`).
+  const images = useFileUploadList({
+    folder: ImageFolderEnum.RECEIVING,
+    maxCount: MAX_RECEIVING_IMAGES,
+  });
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [showUnknownError, setShowUnknownError] = useState(false);
 
   useEffect(() => {
     return () => resetForm();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const items = formData.items || [];
-
   const displayItems = useMemo(
-    () =>
-      items.map((item) => {
-        const product = productMap.get(item.productId);
-        return {
-          ...item,
-          // کلیدِ پایدار هم کنارِ URLِ امضاشده می‌آید تا اگر صفحه دیر باز
-          // بماند، بندانگشتی بتواند خودش امضا را تازه کند.
-          imageKey: product?.imageKey ?? null,
-          imageUrl: product?.imageUrl ?? product?.image ?? null,
-          brand: product?.brand || "",
-        };
-      }),
+    () => withProductImage(items, productMap),
     [items, productMap],
   );
-
-  // خطوط به تفکیک منبع؛ بخشِ مرجوعی فقط وقتی نشان داده می‌شود که
-  // واقعاً چیزی بابت مرجوعی در راه باشد.
-  const orderItems = displayItems.filter(
-    (item) => (item.source ?? RECEIVING_SOURCES.ORDER) === RECEIVING_SOURCES.ORDER,
-  );
-  const returnItems = displayItems.filter(
-    (item) => item.source === RECEIVING_SOURCES.RETURN,
+  const displayReplacementRounds = useMemo(
+    () => withProductImage(replacement.rounds, productMap),
+    [replacement.rounds, productMap],
   );
 
-  const isBusy = receivingMutation.isPending;
-
-  // انباردار فقط دریافت و (در صورت وجود) نوع مشکل واقعی را ثبت
-  // می‌کند. دیگر لازم نیست کل کسری را توضیح دهد — هر بخشی که گزارش
-  // نشود خودکار «در انتظار محموله بعدی» تلقی می‌شود.
-  const handleConfirmClick = () => {
-    // ردیف نیمه‌پرشده‌ی «کالای ثبت‌نشده» بی‌صدا حذف نمی‌شود؛ انباردار
-    // باید تکلیفش را روشن کند وگرنه چیزی که نوشته از دست می‌رود.
-    if (incompleteUnknownCount > 0) {
-      setShowUnknownError(true);
-      return;
-    }
-    setShowUnknownError(false);
-    setShowConfirmDialog(true);
-  };
+  const isBusy = receiveMutation.isPending || images.isUploading;
+  const hasSomething = hasSomethingToReceive || replacement.hasSomethingToRecord;
 
   const handleSubmit = () => {
-    const payload = buildPayload();
-    const hasShortage = displayItems.some(
-      (item) => (item.receivedQuantity || 0) < item.expectedQuantity,
-    );
-    const surplusQuantity =
-      payload.receivedItems.reduce((sum, i) => sum + (i.excessQuantity || 0), 0) +
-      payload.unknownItems.reduce((sum, i) => sum + (i.quantity || 0), 0);
-
-    receivingMutation.mutate(
-      { purchaseId: payload.id, receivingData: payload },
-      {
-        onSuccess: () => {
-          setShowConfirmDialog(false);
-          resetForm();
-          if (surplusQuantity > 0) {
-            toast.success(
-              `دریافت ثبت شد. ${surplusQuantity.toLocaleString("fa-IR")} عدد کالای مازاد برای تصمیم‌گیری به واحد خرید رفت و تا آن زمان وارد موجودی نمی‌شود.`,
-            );
-          } else if (hasShortage) {
-            toast.success(
-              "دریافت ثبت شد. اگر مشکلی گزارش شده، برای واحد خرید ارسال شد؛ باقیمانده منتظر محموله بعدی می‌ماند.",
-            );
-          }
-          navigate(ROUTES.WAREHOUSE_RECEIVING);
-        },
+    // سربرگِ دورهای مرجوعی همان مشخصاتِ خودِ محموله است.
+    const shipmentHeader = {
+      date: formData.receivedDate,
+      partyName: formData.driverFullName,
+      vehiclePlate: formData.vehiclePlate,
+      note: formData.receivingNote,
+    };
+    const command = {
+      purchase: buildCommand(images.filesPayload),
+      purchaseReturnRounds: replacement.buildCommandsByReturn(
+        shipmentHeader,
+        "purchaseReturnId",
+      ),
+      saleReturnRounds: [],
+    };
+    receiveMutation.mutate(command, {
+      onSuccess: () => {
+        setShowConfirmDialog(false);
+        images.commit();
+        resetForm();
+        navigate(ROUTES.WAREHOUSE_RECEIVING);
       },
-    );
+    });
   };
 
-  const hasSurplusEntry =
-    items.some((item) => (Number(item.excessQuantity) || 0) > 0) ||
-    unknownItems.some(
-      (row) => row.productName?.trim() && (Number(row.quantity) || 0) > 0,
-    );
+  const handleCancel = () => {
+    images.discard();
+    navigate(ROUTES.WAREHOUSE_RECEIVING);
+  };
 
   return (
     <div className="container max-w-6xl mx-auto px-4 space-y-4 animate-in fade-in zoom-in-95 duration-300">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
           <ReceivingItemsSection
-            items={orderItems}
-            title={
-              returnItems.length > 0
-                ? RECEIVING_SOURCE_LABELS[RECEIVING_SOURCES.ORDER]
-                : "اقلام دریافت"
-            }
-            onItemChange={handleItemChange}
-            onAddIssue={handleAddIssue}
-            onUpdateIssue={handleUpdateIssue}
-            onRemoveIssue={handleRemoveIssue}
-            onExcessChange={handleExcessChange}
+            items={displayItems}
+            subtitle="تعدادِ رسیده را بشمارید؛ بیشتر از سفارش هم ثبت می‌شود. خرابی‌ها به قرنطینه می‌روند."
+            onArrivedChange={handleArrivedChange}
+            onAddDefect={handleAddDefect}
+            onUpdateDefect={handleUpdateDefect}
+            onRemoveDefect={handleRemoveDefect}
           />
 
-          {returnItems.length > 0 && (
-            <ReceivingItemsSection
-              items={returnItems}
-              title={RECEIVING_SOURCE_LABELS[RECEIVING_SOURCES.RETURN]}
-              subtitle="کالای جایگزینی که تامین‌کننده بابت مرجوعی‌های همین خرید بدهکار است و با همین محموله فرستاده."
-              onItemChange={handleItemChange}
-              onAddIssue={handleAddIssue}
-              onUpdateIssue={handleUpdateIssue}
-              onRemoveIssue={handleRemoveIssue}
-              onExcessChange={handleExcessChange}
+          <ReceivingUnlistedItemsSection
+            rows={unlistedItems}
+            onAdd={handleAddUnlisted}
+            onRemove={handleRemoveUnlisted}
+            onArrivedChange={handleArrivedChange}
+            onAddDefect={handleAddDefect}
+            onUpdateDefect={handleUpdateDefect}
+            onRemoveDefect={handleRemoveDefect}
+          />
+
+          {replacement.rounds.length > 0 && (
+            <GoodsRoundItemsSection
+              rounds={displayReplacementRounds}
+              title="کالای جایگزینِ مرجوعی"
+              subtitle="تامین‌کننده این‌ها را به‌جای کالای مرجوعی می‌فرستد. اگر در همین محموله رسیده‌اند، ثبتشان کنید."
+              withObservations
+              observationTexts={{
+                emptyHint:
+                  "اگر بخشی از کالای جایگزین خراب رسیده، ثبتش کنید. کالای خراب به قرنطینه می‌رود، نه موجودی.",
+                healthySuffix: "عدد سالم به موجودی",
+              }}
+              onQuantityChange={replacement.handleQuantityChange}
+              onAddObservation={replacement.handleAddObservation}
+              onUpdateObservation={replacement.handleUpdateObservation}
+              onRemoveObservation={replacement.handleRemoveObservation}
             />
           )}
-          <UnknownItemsSection
-            items={unknownItems}
-            incompleteCount={incompleteUnknownCount}
-            showErrors={showUnknownError}
-            onAdd={handleAddUnknownItem}
-            onUpdate={(rowId, field, value) => {
-              handleUpdateUnknownItem(rowId, field, value);
-              if (showUnknownError) setShowUnknownError(false);
-            }}
-            onRemove={(rowId) => {
-              handleRemoveUnknownItem(rowId);
-              if (showUnknownError) setShowUnknownError(false);
-            }}
-          />
-          <ReceivingMismatchList
-            items={displayItems}
-            unknownItems={unknownItems}
-          />
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold">
+                عکس‌های دریافت
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                عکسِ محموله، بارنامه یا کارتنِ آسیب‌دیده. عکس‌ها روی خودِ
+                خرید ذخیره می‌شوند و در دورهای بعدی هم دیده می‌شوند.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <FileUploadList
+                list={images}
+                title="عکس‌های این دور"
+                emptyLabel="هنوز عکسی اضافه نشده است."
+                notePlaceholder="توضیح عکس (مثلاً: کارتن آسیب‌دیده)"
+                disabled={isBusy}
+              />
+
+              {/* عکس‌های دورهای قبل فقط نمایش داده می‌شوند؛ اگر داخلِ
+                  آپلودر می‌نشستند، با هر دور دوباره فرستاده و روی سرور
+                  تکراری ذخیره می‌شدند. */}
+              {(formData.receivingImages || []).length > 0 && (
+                <div className="space-y-2 border-t border-border pt-3">
+                  <p className="text-sm font-medium">عکس‌های دورهای قبل</p>
+                  <div className="flex flex-wrap gap-2">
+                    {formData.receivingImages.map((image) => (
+                      <figure key={image.id} className="w-24 space-y-1">
+                        <RemoteImage
+                          imageKey={image.objectKey}
+                          imageUrl={image.url}
+                          alt={image.fileName || "عکس دریافت"}
+                          className="h-24 w-24 rounded-md border border-border object-cover"
+                        />
+                        {image.note && (
+                          <figcaption className="text-[11px] text-muted-foreground line-clamp-2">
+                            {image.note}
+                          </figcaption>
+                        )}
+                      </figure>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <ReceivingTransporterSection
             formData={formData}
             onFormChange={setFormData}
@@ -211,10 +282,9 @@ function ReceivingDetailForm({ purchase }) {
         </div>
 
         <div className="space-y-4">
-          <ReceivingSummaryCard
-            formData={formData}
-            onFormChange={setFormData}
-          />
+          <ReceivingSummaryCard formData={formData} onFormChange={setFormData} />
+
+          <ReceivingQuarantineCard receivingInfo={receivingInfo} />
 
           <div className="flex gap-2">
             <Button
@@ -223,20 +293,20 @@ function ReceivingDetailForm({ purchase }) {
                   ? "bg-amber-600 hover:bg-amber-700 text-white"
                   : ""
               }`}
-              disabled={isBusy || items.length === 0}
-              onClick={handleConfirmClick}
+              disabled={isBusy || !hasSomething}
+              onClick={() => setShowConfirmDialog(true)}
             >
               {isAllComplete ? (
                 <CheckCircle className="h-4 w-4" />
               ) : (
                 <AlertTriangle className="h-4 w-4" />
               )}
-              {isAllComplete ? "تأیید دریافت کامل" : "ثبت دریافت (با کسری)"}
+              {isAllComplete ? "تأیید دریافت" : "ثبت دریافت (با کسری)"}
             </Button>
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate(ROUTES.WAREHOUSE_RECEIVING)}
+              onClick={handleCancel}
               disabled={isBusy}
               className="gap-2"
             >
@@ -245,42 +315,28 @@ function ReceivingDetailForm({ purchase }) {
             </Button>
           </div>
 
-          {items.every((i) => !(i.receivedQuantity > 0)) && (
-            <p className="text-xs text-muted-foreground text-center px-2">
-              این خرید هنوز هیچ دریافتی ندارد. اگر اساساً نباید دریافت شود،
-              از صفحه‌ی جزئیات خرید می‌توانید آن را لغو کنید.
-            </p>
-          )}
+          <p className="text-xs text-muted-foreground text-center px-2">
+            باقیمانده‌ای که این دور نرسیده برای محموله‌ی بعدی می‌ماند. کالای
+            خراب، مازاد و سفارش‌نداده به قرنطینه می‌رود و با «ثبت مغایرت»
+            تکلیفش روشن می‌شود.
+          </p>
         </div>
       </div>
 
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {isAllComplete ? "ثبت دریافت کامل" : "ثبت دریافت با کسری"}
-            </AlertDialogTitle>
+            <AlertDialogTitle>ثبت این محموله</AlertDialogTitle>
             <AlertDialogDescription>
-              {isAllComplete
-                ? "آیا مطمئن هستید که همه اقلام به‌طور کامل دریافت شده‌اند؟"
-                : "بخشی که به‌عنوان مشکل گزارش کرده‌اید برای واحد خرید ارسال می‌شود. بخشی که گزارش نکرده‌اید در انتظار محموله بعدی می‌ماند و این خرید همچنان در لیست دریافت باقی می‌ماند."}
-              {hasSurplusEntry && (
-                <>
-                  {" "}
-                  کالای اضافه و ثبت‌نشده هم به‌عنوان مازاد ثبت می‌شود؛ تا وقتی
-                  واحد خرید تصمیم نگیرد (عودت، نگهداری با پرداخت، یا نگهداری
-                  بدون پرداخت) وارد موجودی قابل‌فروش نمی‌شود.
-                </>
-              )}
+              کالای سالمِ سهمِ سفارش به موجودی اضافه می‌شود؛ خرابی‌ها، مازاد و
+              کالای سفارش‌نداده به قرنطینه می‌روند.
+              {!isAllComplete &&
+                " باقیمانده‌ی نرسیده در انتظار محموله‌ی بعدی می‌ماند."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isBusy}>انصراف</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isBusy}
-              onClick={handleSubmit}
-              className={!isAllComplete ? "bg-amber-600 hover:bg-amber-700" : ""}
-            >
+            <AlertDialogAction disabled={isBusy} onClick={handleSubmit}>
               {isBusy ? "در حال ثبت..." : "تأیید"}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -296,23 +352,27 @@ export default function ReceivingDetailPage() {
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  const { data: purchase, isLoading, isError } = useReceivingPurchaseQuery(Number(id));
+  const {
+    data: receivingInfo,
+    isLoading,
+    isError,
+  } = usePurchaseReceivingInfoQuery(Number(id));
 
   useEffect(() => {
     setHeader({
       title: isLoading
         ? "در حال بارگذاری..."
-        : purchase
+        : receivingInfo
           ? "دریافت کالا"
           : "خطا",
       showBack: true,
     });
     return () => clearHeader();
-  }, [navigate, setHeader, clearHeader, purchase, isLoading]);
+  }, [navigate, setHeader, clearHeader, receivingInfo, isLoading]);
 
   if (isLoading) return <WarehouseFormSkeleton />;
 
-  if (isError || !purchase) {
+  if (isError || !receivingInfo) {
     return (
       <DetailErrorState
         message="خرید مورد نظر یافت نشد."
@@ -321,5 +381,10 @@ export default function ReceivingDetailPage() {
     );
   }
 
-  return <ReceivingDetailForm key={purchase.id} purchase={purchase} />;
+  return (
+    <ReceivingDetailForm
+      key={receivingInfo.purchaseId}
+      receivingInfo={receivingInfo}
+    />
+  );
 }

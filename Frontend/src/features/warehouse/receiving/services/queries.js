@@ -1,14 +1,14 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { keepPreviousData } from "@tanstack/react-query";
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
-import { fetchIncomingQueue, fetchReceivingPurchaseById } from "./api-v1";
-import { receivingKeys, incomingQueueKeys } from "./queryKeys";
+import {
+  fetchReceivablePurchases,
+  fetchPurchaseReceivingInfo,
+  fetchPurchaseReturnPendingEffects,
+} from "./api-v1";
+import { receivingKeys } from "./queryKeys";
 
-/**
- * صف یکپارچه‌ی صفحه‌ی لیست دریافت انبار: هم خریدهای در انتظار دریافت،
- * هم مرجوعی‌های فروش در انتظار بررسی فیزیکی.
- */
-export function useIncomingQueueQuery(filters, pagination, sorting) {
+/** صفِ دریافت: خریدهایی که کالایشان هنوز کامل نرسیده. */
+export function useReceivablePurchasesQuery(filters, pagination) {
   const queryClient = useQueryClient();
 
   const queryParams = useMemo(
@@ -16,40 +16,45 @@ export function useIncomingQueueQuery(filters, pagination, sorting) {
       page: pagination.pageIndex + 1,
       limit: pagination.pageSize,
       search: filters.globalSearch || "",
-      type: filters.type ?? "",
-      // این فیلد قبلاً اینجا فراموش شده بود؛ بدون آن، انتخاب کاربر در
-      // select مشتری/تامین‌کننده هرگز به درخواست واقعی نمی‌رسید.
-      counterpartyId: filters.counterpartyId || "",
+      supplierId: filters.supplierId || "",
+      status: filters.status ?? "",
       fromDate: filters.fromDate || "",
       toDate: filters.toDate || "",
-      sortBy: sorting?.id ?? "createdAt",
-      sortOrder: sorting?.desc ? "desc" : "asc",
     }),
-    [filters, pagination, sorting],
+    [filters, pagination],
   );
 
   useEffect(() => {
     const nextPageParams = { ...queryParams, page: queryParams.page + 1 };
     queryClient.prefetchQuery({
-      queryKey: incomingQueueKeys.list(nextPageParams),
-      queryFn: () => fetchIncomingQueue(nextPageParams),
+      queryKey: receivingKeys.list(nextPageParams),
+      queryFn: () => fetchReceivablePurchases(nextPageParams),
     });
   }, [queryClient, queryParams]);
 
   return useQuery({
-    queryKey: incomingQueueKeys.list(queryParams),
-    queryFn: () => fetchIncomingQueue(queryParams),
+    queryKey: receivingKeys.list(queryParams),
+    queryFn: () => fetchReceivablePurchases(queryParams),
     placeholderData: keepPreviousData,
     gcTime: 1000 * 60 * 10,
     refetchOnMount: "always",
   });
 }
 
-export function useReceivingPurchaseQuery(id) {
+export function usePurchaseReturnPendingEffectsQuery(purchaseId) {
   return useQuery({
-    queryKey: receivingKeys.detail(id),
-    queryFn: () => fetchReceivingPurchaseById(id),
-    enabled: !!id,
+    queryKey: receivingKeys.pendingReturnEffects(purchaseId),
+    queryFn: () => fetchPurchaseReturnPendingEffects(purchaseId),
+    enabled: !!purchaseId,
+    refetchOnMount: "always",
+  });
+}
+
+export function usePurchaseReceivingInfoQuery(purchaseId) {
+  return useQuery({
+    queryKey: receivingKeys.detail(purchaseId),
+    queryFn: () => fetchPurchaseReceivingInfo(purchaseId),
+    enabled: !!purchaseId,
     refetchOnMount: "always",
   });
 }

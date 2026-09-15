@@ -40,18 +40,6 @@ const EFFECT_DIRECTION_VALUES = valuesOf(EFFECT_DIRECTIONS);
 const EFFECT_STATUS_VALUES = valuesOf(EFFECT_STATUSES);
 const PAYMENT_METHOD_VALUES = valuesOf(PaymentTypeEnum);
 
-/** مسیرِ هر فیلدِ enum در سندِ مرجوعی، برای مستندشدن و برای وارسی. */
-export const RETURN_ENUM_FIELDS = [
-  ["status", RETURN_STATUS_VALUES],
-  ["claims[].scope", SCOPE_VALUES],
-  ["claims[].offScopeKind", OFF_SCOPE_KIND_VALUES],
-  ["claims[].problem", PROBLEM_VALUES],
-  ["claims[].resolutions[].effects[].direction", EFFECT_DIRECTION_VALUES],
-  ["claims[].resolutions[].effects[].status", EFFECT_STATUS_VALUES],
-  ["claims[].resolutions[].effects[].method", PAYMENT_METHOD_VALUES],
-  ["claims[].resolutions[].effects[].history[].observations[].problem", PROBLEM_VALUES],
-];
-
 const reported = new Set();
 
 function verify(path, value, allowed) {

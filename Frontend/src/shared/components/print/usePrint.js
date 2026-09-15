@@ -9,7 +9,7 @@ import { useCallback, useEffect } from "react";
  * می‌شود و در shared/services/pdf می‌نشیند؛ مصرف‌کننده‌ها تغییری
  * نمی‌کنند.
  */
-export function browserPrintOutput({ pageSize, pageMarginMm }) {
+function browserPrintOutput({ pageSize, pageMarginMm }) {
   const style = document.createElement("style");
   style.setAttribute("data-print-page-rule", "");
   style.textContent = `@page { size: ${pageSize}; margin: ${pageMarginMm}mm; }`;

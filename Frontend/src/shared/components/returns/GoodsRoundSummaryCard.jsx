@@ -1,53 +1,54 @@
 import { useMemo } from "react";
 import { Undo2 } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/ui/card";
 import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { Badge } from "@/shared/components/ui/badge";
 import { Progress } from "@/shared/components/ui/progress";
 import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
-import { gregorianToPersian } from "@/shared/utils/dateUtils";
+import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { RETURN_STATUS_STYLES } from "@/shared/domain/returns/statuses";
 
 /**
- * قرینه‌ی ReceivingSummaryCard / ShippingSummaryCard برای صفحاتی که سندشان
- * یک خرید یا فروش نیست، خودِ مرجوعی است — دریافت کالای برگشتی از مشتری،
- * و عودت کالا به تامین‌کننده.
+ * کارتِ کنارِ فرمِ یک دورِ کالا — قرینه‌ی `ReceivingSummaryCard` برای
+ * صفحاتی که سندشان یک خرید/فروش نیست، خودِ مرجوعی است.
  *
- * چرا کارت جدا؟ چون آن دو کارت به وضعیتِ خرید/فروش (PURCHASE_STATUSES /
- * SALE_STATUSES) و برچسبِ «تأمین‌کننده»/«شماره فاکتور» قفل‌اند. اینجا
- * وضعیت، وضعیتِ مرجوعی است (side.statusLabels) و طرف حساب و شماره سند
- * را هم صفحه‌ی صدازننده با توجه به side مشخص می‌کند.
+ * `date` و `note` همان فیلدهای سرِ `ExecuteGoodsRoundCommand`اند، پس
+ * این کارت مستقیماً روی `header`ِ هوکِ `useGoodsRoundForm` می‌نشیند.
  */
-export default function ReturnSummaryCard({
+export default function GoodsRoundSummaryCard({
   side,
-  formData,
-  onFormChange,
+  returnDoc,
   partyName,
+  rounds,
+  header,
+  onHeaderChange,
   title,
   progressLabel,
-  progressField,
-  dateField,
   dateLabel,
-  noteField,
   noteLabel,
 }) {
-  const handleChange = (field, value) => onFormChange({ [field]: value });
-
   const stats = useMemo(() => {
-    const items = formData.items || [];
-    const expected = items.reduce((sum, i) => sum + (i.expectedQuantity || 0), 0);
-    const done = items.reduce(
-      (sum, i) => sum + (Number(i[progressField]) || 0),
+    const remaining = rounds.reduce(
+      (sum, round) => sum + (round.remainingQuantity || 0),
       0,
     );
-    const percent = expected > 0 ? Math.round((done / expected) * 100) : 0;
-    return { expected, done, percent };
-  }, [formData.items, progressField]);
+    const done = rounds.reduce(
+      (sum, round) => sum + (Number(round.quantity) || 0),
+      0,
+    );
+    const percent = remaining > 0 ? Math.round((done / remaining) * 100) : 0;
+    return { remaining, done, percent };
+  }, [rounds]);
 
-  const statusStyle = RETURN_STATUS_STYLES[formData.status] ?? "";
-  const statusLabel = side.statusLabels[formData.status] ?? formData.status;
+  const statusStyle = RETURN_STATUS_STYLES[returnDoc.status] ?? "";
+  const statusLabel = side.statusLabels[returnDoc.status] ?? returnDoc.status;
 
   return (
     <Card>
@@ -68,7 +69,7 @@ export default function ReturnSummaryCard({
             <span>{progressLabel}</span>
             <span className="tabular-nums font-medium text-card-foreground">
               {stats.done.toLocaleString("fa-IR")} /{" "}
-              {stats.expected.toLocaleString("fa-IR")} (
+              {stats.remaining.toLocaleString("fa-IR")} (
               {stats.percent.toLocaleString("fa-IR")}٪)
             </span>
           </div>
@@ -84,14 +85,14 @@ export default function ReturnSummaryCard({
           </div>
           <div>
             <Label className="text-xs text-muted-foreground">شماره مرجوعی</Label>
-            <p className="font-medium">{formData.invoiceNumber}</p>
+            <p className="font-medium">{returnDoc.returnNumber}</p>
           </div>
           <div>
             <Label className="text-xs text-muted-foreground">
               تاریخ ثبت مرجوعی
             </Label>
             <p className="font-medium">
-              {gregorianToPersian(formData.invoiceDate)}
+              {gregorianToPersian(returnDoc.returnDate)}
             </p>
           </div>
         </div>
@@ -99,8 +100,8 @@ export default function ReturnSummaryCard({
         <div className="space-y-2 border-t border-border pt-3">
           <Label className="text-sm font-medium">{dateLabel}</Label>
           <PersianDatePicker
-            value={formData[dateField]}
-            onChange={(isoDate) => handleChange(dateField, isoDate)}
+            value={header.date}
+            onChange={(isoDate) => onHeaderChange({ date: isoDate })}
             placeholder="مثال: ۱۴۰۵/۰۵/۰۲"
           />
         </div>
@@ -109,8 +110,8 @@ export default function ReturnSummaryCard({
           <Label className="text-sm font-medium">{noteLabel}</Label>
           <Textarea
             placeholder="توضیحات کلی..."
-            value={formData[noteField] || ""}
-            onChange={(e) => handleChange(noteField, e.target.value)}
+            value={header.note || ""}
+            onChange={(e) => onHeaderChange({ note: e.target.value })}
             rows={3}
             className="resize-none text-sm"
           />

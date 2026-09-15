@@ -11,9 +11,12 @@
  * `SaleItemId` یا `PurchaseItemId` نام دارد، جزئیاتِ ذخیره‌سازیِ آن
  * سمت است و به قرارداد ربطی ندارد.
  *
- * برای همین این ماژول تقریباً خالی است و این نشانه‌ی خوبی است. فقط
- * خواندنِ `saleItemId` را هم تحمل می‌کند تا اگر سرور موقتاً نام
- * قدیمی را فرستاد، صفحه سفید نشود.
+ * تنها نقطه‌ی ناهمنامی، خودِ بکند است و نه انتخابِ ما: بدنه‌ی نوشتن
+ * `OrderLineId` می‌خواهد ولی پاسخِ خواندن همان مقدار را `saleItemId`
+ * صدا می‌زند. یک نام نمی‌تواند هر دو باشد، پس نامِ نوشتن (که قرارداد
+ * مشترکِ دو سمت است) نگه داشته می‌شود و `saleItemId` فقط هنگام
+ * خواندن به آن نگاشت می‌شود — این fallbackِ قدیمی نیست، تنها نامی است
+ * که سرور امروز می‌فرستد.
  */
 
 import { verifyReturnEnums } from "@/shared/domain/returns/apiEnums";
@@ -24,8 +27,8 @@ export function toApiClaim(claim) {
     scope: claim.scope,
     offScopeKind: claim.offScopeKind ?? null,
     productId: claim.productId ?? null,
-    productName: claim.productName ?? "",
-    unit: claim.unit ?? "",
+    // `productName`/`unit` عمداً فرستاده نمی‌شوند: `CreateReturnClaimDto`
+    // ندارَدشان و بکند از روی `productId` خودش پرشان می‌کند.
     unitPrice: Number(claim.unitPrice) || 0,
     quantity: Number(claim.quantity) || 0,
     problem: claim.problem,

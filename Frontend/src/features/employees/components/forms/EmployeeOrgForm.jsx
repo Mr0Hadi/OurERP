@@ -7,19 +7,26 @@ import FormSelectField from "@/shared/components/forms/FormSelectField";
 import { Button } from "@/shared/components/ui/button";
 import { useDepartmentOptionsQuery } from "@/features/organization/departments/services/queries";
 import { useTeamOptionsQuery } from "@/features/organization/teams/services/queries";
+import {
+  ORG_ROLE_LABELS,
+  OrgRoleEnum,
+  orgRolesFor,
+} from "@/shared/domain/enums/orgRole";
 import { departmentRules } from "../../hooks/useEmployeeForm";
 
 /**
- * جایگاه سازمانیِ کارمند: واحد (اجباری) و تیم (اختیاری).
+ * جایگاه سازمانیِ کارمند: واحد (اجباری)، تیم (اختیاری) و — در ویرایش —
+ * نقش.
  *
  * تیم *وابسته* به واحد است — فهرست تیم‌ها با `departmentId` فیلتر می‌شود
- * و با عوض‌شدن واحد، تیمِ انتخاب‌شده پاک می‌شود. بدون این پاک‌سازی
- * فرم با تیمی از واحدِ دیگر ارسال می‌شد و سرور با «تیم انتخاب شده متعلق
- * به این واحد نیست» ردش می‌کرد.
+ * و با عوض‌شدن واحد، تیمِ انتخاب‌شده پاک می‌شود؛ وگرنه سرور با «تیم
+ * انتخاب شده متعلق به این واحد نیست» ردش می‌کرد.
  *
- * در ویرایش (`initialPlacement`)، اگر واحد یا تیم عوض شود هشدار داده
- * می‌شود که سمتِ مدیریت/معاونتِ فعلیِ کارمند آزاد می‌شود — مدیری که به
- * واحد دیگری می‌رود نمی‌تواند مدیرِ واحد یا تیمِ قبلی بماند.
+ * نقش هم وابسته به تیم است (`orgRolesFor`): با تیم فقط «مسئول/جانشینِ
+ * تیم»، بدون تیم فقط «مسئول/جانشینِ واحد» — سرور ترکیبِ دیگر را ۴۰۰
+ * می‌دهد. با تغییرِ جایگاه، نقش به «عضو» برمی‌گردد (همان کاری که سرور
+ * برای کاربرِ جابه‌جاشده می‌کند)، و اگر جایگاه به حالتِ ذخیره‌شده برگردد،
+ * نقشِ ذخیره‌شده هم برمی‌گردد.
  *
  * دکمه‌های «واحد جدید» و «تیم جدید» کاربر را از وسطِ همین فرم به صفحه‌ی
  * ساخت می‌برند و برمی‌گردانند؛ نگه‌داشتن اطلاعاتِ نیمه‌کاره کارِ صفحه است
@@ -50,6 +57,10 @@ const ReadOnlyField = ({ label, value }) => (
   </div>
 );
 
+// `==` عمدی است: «بدون تیم» یک‌جا `null` و جای دیگر `undefined` است.
+const samePlacement = (a, b) =>
+  a.departmentId == b.departmentId && (a.teamId ?? null) == (b.teamId ?? null);
+
 export default function EmployeeOrgForm({
   control,
   errors,
@@ -66,11 +77,16 @@ export default function EmployeeOrgForm({
    * می‌شوند: ساختنِ واحد کارِ مدیریتِ سازمان است.
    */
   readOnly = false,
-  /** `{ departmentId, teamId }` ذخیره‌شده، فقط در حالت ویرایش. */
+  /**
+   * `{ departmentId, teamId, role, roleTitle }` ذخیره‌شده — فقط در حالت
+   * ویرایش. نبودنش یعنی فرمِ ثبت: `CreateUser` نقش نمی‌گیرد.
+   */
   initialPlacement = null,
 }) {
   const departmentId = useWatch({ control, name: "departmentId" });
   const teamId = useWatch({ control, name: "teamId" });
+
+  const isEditing = initialPlacement != null;
 
   const { departments, isLoading: departmentsLoading, isFallback } =
     useDepartmentOptionsQuery();
@@ -88,29 +104,49 @@ export default function EmployeeOrgForm({
     [teams],
   );
 
-  // فقط *تغییرِ* واحد تیم را پاک می‌کند، نه اولین مقداردهی — وگرنه در
-  // حالت ویرایش (و در بازگشت از صفحه‌ی «تیم جدید») تیمِ درست پاک می‌شد.
-  // در حالت فقط‌خواندنی اصلاً اجرا نمی‌شود: آنجا واحد عوض نمی‌شود و این
-  // افکت فقط می‌توانست تیمِ درست را بی‌دلیل خالی کند.
-  const previousDepartment = useRef(departmentId);
+  const roleOptions = useMemo(
+    () =>
+      orgRolesFor(teamId ?? null).map((role) => ({
+        value: role,
+        label: ORG_ROLE_LABELS[role],
+      })),
+    [teamId],
+  );
+
+  // فقط *تغییرِ* جایگاه اثر دارد، نه اولین مقداردهی — وگرنه در حالت
+  // ویرایش (و در بازگشت از صفحه‌ی «تیم جدید») تیم و نقشِ درست پاک می‌شد.
+  // در حالت فقط‌خواندنی اصلاً اجرا نمی‌شود.
+  const previousPlacement = useRef({ departmentId, teamId });
   useEffect(() => {
     if (readOnly) return;
-    if (previousDepartment.current !== departmentId) {
-      previousDepartment.current = departmentId;
-      setValue("teamId", null);
-    }
-  }, [departmentId, setValue, readOnly]);
 
-  // `!=` عمدی است: شناسه از سرور عدد و از Select هم عدد می‌آید، ولی
-  // «بدون تیم» یک‌جا `null` و جای دیگر `undefined` است.
+    const previous = previousPlacement.current;
+    if (samePlacement(previous, { departmentId, teamId })) return;
+
+    const departmentChanged = previous.departmentId != departmentId;
+    const nextTeamId = departmentChanged ? null : teamId;
+    previousPlacement.current = { departmentId, teamId: nextTeamId };
+
+    if (departmentChanged && teamId != null) setValue("teamId", null);
+
+    if (isEditing) {
+      const backHome = samePlacement(initialPlacement, {
+        departmentId,
+        teamId: nextTeamId,
+      });
+      setValue(
+        "role",
+        backHome ? (initialPlacement.role ?? OrgRoleEnum.MEMBER) : OrgRoleEnum.MEMBER,
+      );
+    }
+  }, [departmentId, teamId, setValue, readOnly, isEditing, initialPlacement]);
+
   const placementChanged =
-    initialPlacement != null &&
-    (departmentId != initialPlacement.departmentId ||
-      (teamId ?? null) != (initialPlacement.teamId ?? null));
+    isEditing && !samePlacement(initialPlacement, { departmentId, teamId });
 
   if (readOnly) {
     // نامِ واحد و تیم از همان فهرست‌هایی خوانده می‌شود که انتخابگرها
-    // استفاده می‌کنند، نه از یک prop تازه — پس در mock و سرور یکسان است.
+    // استفاده می‌کنند، نه از یک prop تازه.
     const departmentLabel = departmentOptions.find(
       (option) => option.value == departmentId,
     )?.label;
@@ -119,7 +155,7 @@ export default function EmployeeOrgForm({
 
     return (
       <FormSectionCard icon={Network} title="جایگاه سازمانی">
-        <div className="flex flex-row space-x-5">
+        <div className="flex flex-row flex-wrap gap-5">
           <ReadOnlyField
             label="واحد سازمانی"
             value={departmentsLoading ? "..." : departmentLabel}
@@ -128,9 +164,18 @@ export default function EmployeeOrgForm({
             label="تیم"
             value={teamsLoading ? "..." : (teamLabel ?? "بدون تیم")}
           />
+          {isEditing && (
+            <ReadOnlyField
+              label="نقش سازمانی"
+              value={
+                initialPlacement.roleTitle ??
+                ORG_ROLE_LABELS[initialPlacement.role]
+              }
+            />
+          )}
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
-          واحد و تیم شما توسط مدیر سیستم تعیین می‌شود و از این صفحه قابل
+          واحد، تیم و نقش شما توسط مدیر سیستم تعیین می‌شود و از این صفحه قابل
           تغییر نیست.
         </p>
       </FormSectionCard>
@@ -179,7 +224,9 @@ export default function EmployeeOrgForm({
             hint={
               departmentId != null && !teamsLoading && teamOptions.length === 0
                 ? "این واحد هنوز تیمی ندارد."
-                : "هد تیم و هد واحد در صفحه‌ی همان تیم یا واحد تعیین می‌شود."
+                : isEditing
+                  ? "مسئول و جانشینِ واحد عضو هیچ تیمی نیستند؛ برای آن نقش‌ها تیم را خالی بگذارید."
+                  : "کارمندِ تازه عضو ساده است؛ نقش را بعد از ثبت تعیین کنید."
             }
           />
           <CreateButton
@@ -191,10 +238,30 @@ export default function EmployeeOrgForm({
         </div>
       </div>
 
-      {placementChanged && (
+      {isEditing && (
+        <div className="mt-4 max-w-xs">
+          <FormSelectField
+            name="role"
+            control={control}
+            label="نقش سازمانی"
+            options={roleOptions}
+            disabled={departmentId == null}
+            placeholder="انتخاب نقش"
+            error={errors?.role}
+            hint={
+              teamId != null
+                ? "نقش در همین تیم اعمال می‌شود."
+                : "بدون تیم، نقش روی خودِ واحد اعمال می‌شود."
+            }
+          />
+        </div>
+      )}
+
+      {placementChanged && initialPlacement.role !== OrgRoleEnum.MEMBER && (
         <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-          با تغییر واحد یا تیم، اگر این کارمند مدیر یا معاونِ تیم یا واحدی باشد،
-          آن سمت آزاد می‌شود.
+          با تغییر واحد یا تیم، نقشِ فعلیِ این کارمند («
+          {initialPlacement.roleTitle ?? ORG_ROLE_LABELS[initialPlacement.role]}
+          ») در جای قبلی آزاد می‌شود.
         </p>
       )}
     </FormSectionCard>

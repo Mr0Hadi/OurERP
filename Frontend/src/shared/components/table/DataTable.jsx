@@ -20,18 +20,14 @@ import DataTablePagination from "./DataTablePagination";
 /**
  * پوسته‌ی مشترک جدول‌های سرور-ساید (صفحه‌بندی و مرتب‌سازی دستی).
  *
- * props:
- *  data, columns          - تعریف ستون‌ها و داده‌ی همان صفحه
- *  isLoading              - نمایش اسکلتون به‌جای کل جدول
- *  totalPages, currentPage, pageSize, onPaginationChange
- *  sorting                - آبجکت { id, desc } یا null (تک‌ستونی)
- *  onSortingChange        - (nextSortingOrNull) => void
- *  sortable               - false برای endpoint هایی که مرتب‌سازی ندارند؛
- *                           سرتیترها دکمه‌ی مرده نشان نمی‌دهند
- *  emptyMessage           - متن ردیف خالی داخل جدول
- *  emptyState             - جایگزین کامل جدول وقتی ردیفی نیست (اختیاری)
- *  rowClassName           - (row) => string برای رنگ‌آمیزی شرطی ردیف
- *  getRowKey              - (row) => key در صورت نیاز به کلید ترکیبی
+ * مرتب‌سازی تک‌ستونی است: `sorting` یک `{ id, desc }` است یا `null`.
+ *
+ * @param sortable     برای endpointهایی که مرتب‌سازی ندارند `false` بدهید
+ *                     تا سرتیترها دکمه‌ی مرده نشان ندهند.
+ * @param emptyMessage متنِ ردیفِ خالی *داخلِ* جدول.
+ * @param emptyState   جایگزینِ کاملِ جدول وقتی ردیفی نیست.
+ * @param rowClassName `(row) => string` برای رنگ‌آمیزی شرطی ردیف.
+ * @param getRowKey    `(row) => key`، وقتی کلیدِ ترکیبی لازم است.
  */
 export default function DataTable({
   data,

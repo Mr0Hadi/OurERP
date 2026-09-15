@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select"
-import { normalizePersianDigits } from "@/shared/lib/normalize-persian-digits"
+import { normalizePersianDigits } from "@/shared/lib/persianDigits"
 import { cn } from "@/shared/lib/utils"
 
 /** Value used for the accessibility (wheelchair) plate option. */

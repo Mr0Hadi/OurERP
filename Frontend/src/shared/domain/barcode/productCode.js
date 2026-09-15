@@ -1,4 +1,3 @@
-import { persianCompact } from "@/shared/utils/dateUtils";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
 
 /**
@@ -15,33 +14,29 @@ import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReference
  * | payload        | `140506080000000010`                | داخلِ خودِ میله‌ها (فقط رقم) |
  * | بارکدِ دانه    | `14050608-0000000010-0000000003`    | روی برچسبِ یک قلمِ فیزیکی |
  *
- * چرا اینجا تکرار شده و از سرور گرفته نمی‌شود: فرانت باید *قبل* از هر
- * رفت‌وبرگشت بفهمد کدِ اسکن‌شده کدِ کالاست یا کدِ یک دانه (تا فرمِ
- * درست را باز کند) و باید بتواند همان کد را روی برچسب رندر کند. این
- * منطق خالص است و اگر با بکند واگرا شود، بارکدِ چاپ‌شده دیگر با چیزی
- * که سرور می‌شناسد یکی نیست — پس هر تغییری اینجا باید *همراهِ* تغییرِ
- * `ProductCodeService` انجام شود.
+ * چرا از سرور گرفته نمی‌شود: فرانت باید *قبل* از هر رفت‌وبرگشت بفهمد
+ * کدِ اسکن‌شده کدِ کالاست یا کدِ یک دانه، تا فرمِ درست را باز کند.
+ *
+ * ⚠️ هر تغییری اینجا باید *همراهِ* تغییرِ `ProductCodeService` انجام
+ * شود؛ واگرایی یعنی بارکدِ چاپ‌شده دیگر با آنچه سرور می‌شناسد یکی نیست.
  */
 
 /** تاریخ جلالیِ فشرده — `PersianDate.ToCompactString`. */
-export const DATE_SEGMENT_LENGTH = 8;
+const DATE_SEGMENT_LENGTH = 8;
 /** `productId` با صفرِ چپ — `{productId:D10}` در بکند. */
-export const PRODUCT_ID_SEGMENT_LENGTH = 10;
+const PRODUCT_ID_SEGMENT_LENGTH = 10;
 /** شماره‌ی سریالِ دانه با صفرِ چپ — `{serialNumber:D10}`. */
-export const SERIAL_SEGMENT_LENGTH = 10;
+const SERIAL_SEGMENT_LENGTH = 10;
 
 /** طولِ payloadِ کدِ کالا: ۸ + ۱۰. */
-export const PRODUCT_PAYLOAD_LENGTH =
+const PRODUCT_PAYLOAD_LENGTH =
   DATE_SEGMENT_LENGTH + PRODUCT_ID_SEGMENT_LENGTH;
 
 /** طولِ payloadِ بارکدِ دانه: ۸ + ۱۰ + ۱۰. */
-export const UNIT_PAYLOAD_LENGTH =
+const UNIT_PAYLOAD_LENGTH =
   PRODUCT_PAYLOAD_LENGTH + SERIAL_SEGMENT_LENGTH;
 
 const NON_DIGIT = /\D+/g;
-
-const padSegment = (value, length) =>
-  String(Math.max(0, Math.trunc(Number(value) || 0))).padStart(length, "0");
 
 /**
  * هر چیزی که اسکنر یا صفحه‌کلید تولید می‌کند → فقط رقم‌ها.
@@ -52,27 +47,6 @@ const padSegment = (value, length) =>
  */
 export function toPayload(code) {
   return String(code ?? "").replace(NON_DIGIT, "");
-}
-
-/**
- * کدِ خوانای کالا: `14050608-0000000010`.
- *
- * بکند این را فقط *بعد* از گرفتنِ `Id` از دیتابیس می‌سازد، پس فرانت
- * هرگز آن را برای ساختِ کالا نمی‌فرستد؛ این تابع برای mock، پیش‌نمایش
- * و بازسازیِ کد از روی بارکدِ دانه است.
- */
-export function buildProductCode(productId, createdAt = new Date()) {
-  const date = persianCompact(createdAt, "YYYYMMDD");
-  if (!date) return "";
-
-  return `${date}-${padSegment(productId, PRODUCT_ID_SEGMENT_LENGTH)}`;
-}
-
-/** بارکدِ یک دانه: کدِ کالا + سریالِ صفرپرشده. */
-export function buildUnitBarcode(productCode, serialNumber) {
-  if (!productCode) return "";
-
-  return `${productCode}-${padSegment(serialNumber, SERIAL_SEGMENT_LENGTH)}`;
 }
 
 /**

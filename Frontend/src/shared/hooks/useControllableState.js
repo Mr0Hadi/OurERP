@@ -39,7 +39,9 @@ export function useControllableState(
   // consistently in the same environment. Bundlers should be able to remove the
   // code block entirely in production.
   /* eslint-disable react-hooks/rules-of-hooks */
-  if (process.env.NODE_ENV !== "production") {
+  // `process` وجود ندارد؛ این کد در مرورگر اجرا می‌شود. `import.meta.env.DEV`
+  // را Vite هنگام بیلد به `false` جا می‌زند و بلوک کامل حذف می‌شود.
+  if (import.meta.env.DEV) {
     const isControlledRef = React.useRef(prop !== undefined)
     React.useEffect(() => {
       const wasControlled = isControlledRef.current

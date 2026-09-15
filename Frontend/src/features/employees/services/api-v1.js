@@ -11,15 +11,17 @@ import { accountStatusToIsActive } from "@/shared/domain/enums/accountStatus";
  *
  * قرارداد سه نکته‌ی مهم دارد که شکلِ کلِ فیچر را تعیین می‌کند:
  *
- *   ۱. کارمند **نقش ندارد**. `UserController` هیچ‌جا `roleId` نمی‌گیرد و
- *      نمی‌دهد؛ سرپرستی روی خودِ واحد و تیم ذخیره می‌شود.
+ *   ۱. «نقش» یعنی **نقشِ سازمانی** (`OrgRoleEnum`: عضو، مسئول/جانشینِ واحد،
+ *      مسئول/جانشینِ تیم)، نه سطح دسترسی. سرور ذخیره‌اش نمی‌کند؛ از
+ *      `headId`/`deputyId` تیم و واحد مشتقش می‌کند و در فهرست و جزئیات به
+ *      شکلِ `role` + `roleTitle` برمی‌گرداند.
  *   ۲. واحد اجباری و تیم اختیاری است، و سرور خودش چک می‌کند که تیم
  *      متعلق به همان واحد باشد.
  *   ۳. `PersonelCode` را **سرور** می‌سازد (sequence دیتابیس، از ۱۰۰۰).
  *      نه در ثبت فرستاده می‌شود و نه در ویرایش؛ فقط نمایش داده می‌شود.
- *   ۴. تغییرِ واحد/تیم از `UpdateUser` هم باید سمت‌های مدیریت و معاونتِ
- *      قبلیِ کاربر را آزاد کند — همان کاری که `ChangeUserTeam` می‌کند.
- *      فرمِ ویرایش پیش از ذخیره همین را به کاربر هشدار می‌دهد.
+ *   ۴. `UpdateUser` جایگاه و نقش را با هم می‌نویسد. `role` اختیاری است:
+ *      `null` یعنی «به نقش دست نزن» — اگر کاربر جابه‌جا نشده حفظ می‌شود و
+ *      اگر جابه‌جا شده آزاد می‌شود. غیرفعال‌کردن هم نقش را آزاد می‌کند.
  */
 
 /** فیلترِ خالی نباید روی سیم برود — سرور آن را «مقدارِ صفر» می‌فهمد. */
@@ -78,6 +80,7 @@ export async function updateEmployee(payload) {
     username: payload.username,
     departmentId: payload.departmentId,
     teamId: payload.teamId ?? null,
+    role: payload.role ?? null,
     isActive: payload.isActive,
   });
   return data;
@@ -87,10 +90,10 @@ export async function updateEmployee(payload) {
  * جابه‌جاییِ عضویتِ سازمانی — دستور اختصاصیِ خودِ سرور
  * (`ChangeUserTeamCommand`)، نه `UpdateUser`.
  *
- * پیش از جابه‌جایی **همه‌ی** سمت‌های کاربر (مدیر/معاونِ هر تیم و واحد)
- * را آزاد می‌کند، و بعد با `isHead` یا `isDeputy` او را مدیر یا معاونِ
- * مقصد می‌کند: تیم اگر `teamId` داده شود، وگرنه خودِ واحد. سرور هم‌زمانیِ
- * `isHead` و `isDeputy` را رد می‌کند.
+ * نقشِ قبلیِ کاربر را آزاد می‌کند و با `isHead` یا `isDeputy` او را مسئول
+ * یا جانشینِ مقصد می‌کند: تیم اگر `teamId` داده شود، وگرنه خودِ واحد. هر
+ * دو false یعنی «عضو ساده» — برخلافِ `UpdateUser`، نقش اینجا هیچ‌وقت
+ * ضمنی حفظ نمی‌شود. سرور هم‌زمانیِ `isHead` و `isDeputy` را رد می‌کند.
  *
  * `departmentId` اجباری است (سرور `> 0` می‌خواهد)، حتی وقتی فقط داریم
  * کاربر را از تیم خارج می‌کنیم — در آن حالت واحدِ فعلیِ خودش فرستاده
@@ -109,14 +112,6 @@ export async function assignEmployeeMembership({
     teamId: teamId ?? null,
     isHead: Boolean(isHead),
     isDeputy: Boolean(isDeputy) && !isHead,
-  });
-  return data;
-}
-
-/** حذف نرم: سرور فقط `isActive` را false می‌کند، رکورد را پاک نمی‌کند. */
-export async function removeEmployee(id) {
-  const { data } = await axiosInstance.delete("/User/DeleteUser", {
-    params: { id },
   });
   return data;
 }

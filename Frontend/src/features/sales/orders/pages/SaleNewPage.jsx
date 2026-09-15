@@ -7,7 +7,10 @@ import { Button } from "@/shared/components/ui/button";
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { useNavigationStore } from "@/shared/store/navigationStore";
 import { useSaleFormStore } from "@/features/sales/orders/store/saleFormStore";
-import { useCreateSaleMutation } from "@/features/sales/orders/services/mutations";
+import {
+  useCreateInPersonSaleMutation,
+  useCreateSaleMutation,
+} from "@/features/sales/orders/services/mutations";
 import { useCustomersQuery } from "@/features/customers/services/queries";
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
 import SaleCustomerSection from "@/features/sales/orders/components/forms/SaleCustomerSection";
@@ -86,6 +89,7 @@ export default function SaleNewPage() {
   ]);
 
   const createMutation = useCreateSaleMutation();
+  const inPersonMutation = useCreateInPersonSaleMutation();
 
   const { data: customersData, isLoading: customersLoading } =
     useCustomersQuery(ALL_FILTERS, PAGINATION, SORTING);
@@ -97,6 +101,8 @@ export default function SaleNewPage() {
 
   const customers = customersData?.items || [];
   const products = productsData?.items || [];
+  const isTracked = (productId) =>
+    Boolean(products.find((product) => product.id === productId)?.requiresUnitTracking);
 
   useEffect(() => {
     const state = location.state;
@@ -162,6 +168,17 @@ export default function SaleNewPage() {
 
   const items = formData.items || [];
 
+  /**
+   * دانه‌هایی که در «اقلام فروش» اسکن شده‌اند. اسکنِ دانه یعنی کالا همین‌جا
+   * دستِ مشتری است: فروش ثبت، خروجِ کالا با همین کدها ثبت و «تحویل کامل» می‌شود.
+   */
+  const scannedBarcodes = Object.fromEntries(
+    items
+      .filter((item) => item.productUnitBarcodes?.length)
+      .map((item) => [item.productId, item.productUnitBarcodes]),
+  );
+  const isInPerson = Object.keys(scannedBarcodes).length > 0;
+
   const computedTotal = items.reduce((sum, item) => {
     const base = (item.quantity || 0) * (item.unitPrice || 0);
     const disc = (base * (item.discount || 0)) / 100;
@@ -182,6 +199,14 @@ export default function SaleNewPage() {
     if (attachments.isUploading) {
       toast.error("تا پایان بارگذاری ضمیمه‌ها صبر کنید.");
       return;
+    }
+
+    if (isInPerson) {
+      const blocker = inPersonBlocker();
+      if (blocker) {
+        toast.error(blocker);
+        return;
+      }
     }
 
     const payload = {
@@ -214,13 +239,48 @@ export default function SaleNewPage() {
       attachments: attachments.filesPayload,
     };
 
-    createMutation.mutate(payload, {
-      onSuccess: () => {
-        attachments.commit();
-        navigate(ROUTES.SALES);
-        resetForm();
-      },
-    });
+    const onSuccess = () => {
+      attachments.commit();
+      navigate(ROUTES.SALES);
+      resetForm();
+    };
+
+    if (isInPerson) {
+      inPersonMutation.mutate(
+        { payload, scannedBarcodes },
+        {
+          onSuccess,
+          // فروش ثبت شده ولی قدمِ بعدی نه: ضمیمه‌ها مالِ همان فروش‌اند.
+          onError: (error) => {
+            if (error?.saleId == null) return;
+            attachments.commit();
+            resetForm();
+            navigate(ROUTES.SALES_DETAIL.replace(":id", error.saleId));
+          },
+        },
+      );
+      return;
+    }
+
+    createMutation.mutate(payload, { onSuccess });
+  };
+
+  /** نخستین دلیلی که فروشِ حضوری را ناممکن می‌کند. */
+  const inPersonBlocker = () => {
+    if ((Number(formData.paidAmount) || 0) < computedTotal) {
+      return "در تحویل حضوری پرداخت باید کامل باشد.";
+    }
+    for (const item of items) {
+      const quantity = Number(item.quantity) || 0;
+      const scanned = (scannedBarcodes[item.productId] || []).length;
+      if (isTracked(item.productId) && scanned !== quantity) {
+        return `«${item.productName}» ردیابی‌پذیر است؛ در تحویل حضوری همه‌ی ${quantity.toLocaleString("fa-IR")} دانه را اسکن کنید.`;
+      }
+      if (scanned > 0 && scanned !== quantity) {
+        return `${scanned.toLocaleString("fa-IR")} از ${quantity.toLocaleString("fa-IR")} دانه‌ی «${item.productName}» اسکن شده؛ یا همه را اسکن کنید یا تعداد را اصلاح کنید.`;
+      }
+    }
+    return null;
   };
 
   const handleCancel = () => {
@@ -230,7 +290,8 @@ export default function SaleNewPage() {
     resetForm();
   };
 
-  const isBusy = createMutation.isPending || attachments.isUploading;
+  const isBusy =
+    createMutation.isPending || inPersonMutation.isPending || attachments.isUploading;
 
   return (
     <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in zoom-in-95 duration-300">
@@ -242,11 +303,14 @@ export default function SaleNewPage() {
               onItemsChange={setItems}
               products={products}
               isLoadingProducts={productsLoading}
+              priceMode={formData.priceMode}
+              onPriceModeChange={(priceMode) => setFormData({ priceMode })}
             />
             <OrderInfoSection
               formData={formData}
               onFormChange={setFormData}
               errors={{}}
+              showInformalSale
             />
           </div>
 
@@ -286,11 +350,18 @@ export default function SaleNewPage() {
               attachmentLabel="پیش‌فاکتور/فاکتور صادرشده برای مشتری"
             />
 
-            <SaleStatusSection
-              status={formData.status}
-              selectedStatus={formData.status}
-              onStatusChange={(val) => setFormData({ status: val })}
-            />
+            {isInPerson ? (
+              <p className="rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground">
+                دانه اسکن شده، پس تحویل حضوری است: پرداخت باید کامل باشد و فروش بعد از
+                ثبت «تحویل کامل» می‌شود.
+              </p>
+            ) : (
+              <SaleStatusSection
+                status={formData.status}
+                selectedStatus={formData.status}
+                onStatusChange={(val) => setFormData({ status: val })}
+              />
+            )}
 
             <div className="flex gap-2">
               <Button type="submit" className="flex-1 gap-2" disabled={isBusy}>

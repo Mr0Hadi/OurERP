@@ -3,15 +3,15 @@ import { useShippingFilterStore } from "../store/shippingFilterStore";
 
 export function useDebouncedShippingFilters() {
   const globalSearch = useShippingFilterStore((s) => s.globalSearch);
-  const counterpartyId = useShippingFilterStore((s) => s.counterpartyId);
-  const type = useShippingFilterStore((s) => s.type);
+  const customerName = useShippingFilterStore((s) => s.customerName);
+  const status = useShippingFilterStore((s) => s.status);
   const fromDate = useShippingFilterStore((s) => s.fromDate);
   const toDate = useShippingFilterStore((s) => s.toDate);
 
   return {
     globalSearch: useDebouncedValue(globalSearch),
-    counterpartyId,
-    type,
+    customerName: useDebouncedValue(customerName),
+    status,
     fromDate,
     toDate,
   };

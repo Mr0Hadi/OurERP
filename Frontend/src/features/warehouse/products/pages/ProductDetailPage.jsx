@@ -81,6 +81,7 @@ function ProductDetailForm({ productData }) {
               register={register}
               control={control}
               errors={errors}
+              isIncomplete={Boolean(productData?.isIncomplete)}
             />
             <ProductPricingForm register={register} control={control} />
           </div>

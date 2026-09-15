@@ -1,14 +1,14 @@
+// صفِ ارسال و جزئیاتِ ارسالِ یک فروش. جدا از `saleKeys` می‌ماند چون صف
+// روی `GetSaleList`ِ فیلترشده می‌نشیند و کشِ خودش را دارد.
 export const shippingKeys = {
   all: ['shipping'],
   lists: () => [...shippingKeys.all, 'list'],
   list: (filters) => [...shippingKeys.lists(), { ...filters }],
   details: () => [...shippingKeys.all, 'detail'],
-  detail: (id) => [...shippingKeys.details(), String(id)],
-};
-
-// صف یکپارچه‌ی ارسال انبار (فروش عادی + ارسال کالای جایگزین مرجوعی)
-export const outgoingQueueKeys = {
-  all: ['outgoingQueue'],
-  lists: () => [...outgoingQueueKeys.all, 'list'],
-  list: (filters) => [...outgoingQueueKeys.lists(), { ...filters }],
+  detail: (saleId) => [...shippingKeys.details(), String(saleId)],
+  pendingReturnEffects: (saleId) => [
+    ...shippingKeys.all,
+    'pending-return-effects',
+    String(saleId),
+  ],
 };

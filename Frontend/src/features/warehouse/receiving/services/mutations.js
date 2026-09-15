@@ -1,59 +1,51 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 
-import { confirmReceiving, confirmReturnIntake } from "./api-v1";
-import { incomingQueueKeys } from "./queryKeys";
+import { receiveShipment } from "./api-v1";
+import { receivingKeys } from "./queryKeys";
 import { invalidatePurchaseEcosystem } from "@/features/purchases/orders/services/sharedInvalidation";
 import { invalidateSalesEcosystem } from "@/features/sales/orders/services/sharedInvalidation";
+import { purchaseReturnKeys } from "@/features/purchases/returns/services/queryKeys";
 import { salesReturnKeys } from "@/features/sales/returns/services/queryKeys";
+import { fromApiReturn as fromApiPurchaseReturn } from "@/features/purchases/returns/services/apiMapping";
+import { fromApiReturn as fromApiSalesReturn } from "@/features/sales/returns/services/apiMapping";
 import { idempotencyKeyFor } from "@/shared/services/api/contract";
 
-export const useConfirmReceivingMutation = () => {
+/**
+ * ثبتِ یک محموله‌ی ورودی (`ReceiveShipment`): دریافتِ خرید و دورهای ورودِ
+ * مرجوعی. سندهای مرجوعیِ برگشتی مستقیم در کش می‌نشینند؛ خودِ خرید سند
+ * کامل برنمی‌گرداند و باطل می‌شود.
+ */
+export const useReceiveShipmentMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    // دریافت تجمعی است: هر دور به `receivedQuantity` و موجودی اضافه می‌کند.
-    // بدون کلید ایدمپوتنسی، یک retry شبکه‌ای همان محموله را دوبار
-    // وارد انبار می‌کند.
-    mutationFn: (variables) =>
-      confirmReceiving(variables.purchaseId, variables.receivingData, {
-        idempotencyKey: idempotencyKeyFor(variables),
-      }),
-    onSuccess: (updatedPurchase) => {
-      // این دور دریافت ممکن است هم‌زمان چند مرجوعیِ «در انتظار کالای
-      // جایگزین» را ببندد و هم وضعیت خودِ خرید را عوض کند، پس از تابع
-      // مرکزی استفاده می‌کنیم تا هیچ کشی فراموش نشود.
-      invalidatePurchaseEcosystem(queryClient, updatedPurchase.id);
-      queryClient.invalidateQueries({ queryKey: incomingQueueKeys.lists() });
+    // دریافت تجمعی است: بدون کلید ایدمپوتنسی، یک retry شبکه‌ای همان
+    // محموله را دوبار وارد انبار می‌کند.
+    mutationFn: (command) =>
+      receiveShipment(command, { idempotencyKey: idempotencyKeyFor(command) }),
+    onSuccess: (result, command) => {
+      (result?.purchaseReturns || []).forEach((doc) => {
+        const updated = fromApiPurchaseReturn(doc);
+        queryClient.setQueryData(purchaseReturnKeys.detail(updated.id), updated);
+        invalidatePurchaseEcosystem(queryClient, updated.purchaseId, {
+          freshReturnId: updated.id,
+        });
+      });
+      (result?.saleReturns || []).forEach((doc) => {
+        const updated = fromApiSalesReturn(doc);
+        queryClient.setQueryData(salesReturnKeys.detail(updated.id), updated);
+        invalidateSalesEcosystem(queryClient, updated.saleId, {
+          freshReturnId: updated.id,
+        });
+      });
+      const purchaseId = result?.purchase?.purchaseId ?? command.purchase?.purchaseId;
+      if (purchaseId != null) invalidatePurchaseEcosystem(queryClient, purchaseId);
+      queryClient.invalidateQueries({ queryKey: receivingKeys.all });
       toast.success("دریافت کالا با موفقیت ثبت شد");
     },
     onError: (error) => {
       toast.error(error?.message || "خطا در ثبت دریافت");
-    },
-  });
-};
-
-export const useConfirmReturnIntakeMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (variables) =>
-      confirmReturnIntake(variables.returnId, variables.intakeData, {
-        idempotencyKey: idempotencyKeyFor(variables),
-      }),
-    onSuccess: (updatedReturn) => {
-      queryClient.setQueryData(
-        salesReturnKeys.detail(updatedReturn.id),
-        updatedReturn,
-      );
-      invalidateSalesEcosystem(queryClient, updatedReturn.saleId, {
-        freshReturnId: updatedReturn.id,
-      });
-      queryClient.invalidateQueries({ queryKey: incomingQueueKeys.lists() });
-      toast.success("دریافت کالای مرجوعی ثبت شد");
-    },
-    onError: (error) => {
-      toast.error(error?.message || "خطا در ثبت دریافت مرجوعی");
     },
   });
 };

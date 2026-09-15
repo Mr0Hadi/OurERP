@@ -9,6 +9,7 @@ import {
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import ClaimRow from "./ClaimRow";
+import { ReceivingReportLines } from "./ReceivingReport";
 
 function LineCard({ line, onAddClaim, onUpdateClaim, onRemoveClaim, problemLabels, deliveredLabel }) {
   const claims = line.claims || [];
@@ -40,6 +41,9 @@ function LineCard({ line, onAddClaim, onUpdateClaim, onRemoveClaim, problemLabel
           </div>
         </div>
       </div>
+
+      {/* فقط مرجوعیِ خرید گزارشِ دریافت دارد؛ خطِ فروش آن را ندارد. */}
+      {line.receivingReport && <ReceivingReportLines {...line.receivingReport} />}
 
       {claims.length > 0 && (
         <div className="space-y-1.5">

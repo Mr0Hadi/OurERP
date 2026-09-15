@@ -1,8 +1,8 @@
-import { NavMain } from "@/shared/components/sidebar/nav-main";
-import { NavTools } from "@/shared/components/sidebar/nav-tools";
-import { NavSecondary } from "@/shared/components/sidebar/nav-secondary";
-import { NavUser } from "@/shared/components/sidebar/nav-user";
-import { NavWorkspace } from "@/shared/components/sidebar/nav-workspace";
+import { NavMain } from "@/shared/components/layout/NavMain";
+import { NavTools } from "@/shared/components/layout/NavTools";
+import { NavSecondary } from "@/shared/components/layout/NavSecondary";
+import { NavUser } from "@/shared/components/layout/NavUser";
+import { NavWorkspace } from "@/shared/components/layout/NavWorkspace";
 import {
   Sidebar,
   SidebarContent,

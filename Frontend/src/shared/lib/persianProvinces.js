@@ -5812,15 +5812,3 @@ export const persianProvinces = [
     ],
   },
 ];
-
-export function getProvinceById(id) {
-  return persianProvinces.find((province) => province.id === id);
-}
-
-export function getCityById(id) {
-  for (const province of persianProvinces) {
-    const city = province.cities.find((c) => c.id === id)
-    if (city) return { province, city }
-  }
-  return undefined
-}

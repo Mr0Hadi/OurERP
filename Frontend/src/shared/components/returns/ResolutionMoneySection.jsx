@@ -1,5 +1,6 @@
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import { PriceInput } from "@/shared/components/ui/price-input";
 import {
   Select,
@@ -83,7 +84,13 @@ export default function ResolutionMoneySection({
     // کاربر می‌تواند دستی تغییرش دهد.
     const amount =
       active && Number(active.amount) > 0 ? active.amount : String(defaultAmount ?? "");
-    const nextSlot = { enabled: true, method, amount, reference: "", parts: [] };
+    const nextSlot = {
+      ...emptyMoneyEffect(),
+      enabled: true,
+      method,
+      amount,
+      paidNow: active?.paidNow ?? true,
+    };
     onChange(
       nextDirection === MONEY_DIRECTIONS.RECEIVE
         ? { moneyIn: nextSlot, moneyOut: emptyMoneyEffect() }
@@ -206,6 +213,21 @@ export default function ResolutionMoneySection({
             )}
           </>
         )}
+
+        {/* بدون `paidAt` اثر یک وعده است و تا ثبتِ پرداخت معلق می‌ماند. */}
+        <label className="flex items-start gap-2 cursor-pointer pt-1">
+          <Checkbox
+            checked={active.paidNow !== false}
+            onCheckedChange={(checked) => patchActive({ paidNow: checked === true })}
+            className="mt-0.5"
+          />
+          <span className="text-[11px] text-card-foreground">
+            پول همین حالا جابه‌جا شد
+            <span className="block text-muted-foreground">
+              اگر بعداً پرداخت می‌شود تیک را بردارید؛ تا ثبتِ پرداخت، مرجوعی باز می‌ماند
+            </span>
+          </span>
+        </label>
       </div>
     </div>
   );

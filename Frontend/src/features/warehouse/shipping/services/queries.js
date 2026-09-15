@@ -1,9 +1,14 @@
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
-import { fetchOutgoingQueue, fetchShippingSaleById } from "./api-v1";
-import { shippingKeys, outgoingQueueKeys } from "./queryKeys";
+import {
+  fetchShippableSales,
+  fetchSaleForShipping,
+  fetchSaleReturnPendingEffects,
+} from "./api-v1";
+import { shippingKeys } from "./queryKeys";
 
-export function useOutgoingQueueQuery(filters, pagination, sorting) {
+/** صفِ ارسال: فروش‌هایی که کالایشان هنوز کامل نرفته. */
+export function useShippableSalesQuery(filters, pagination) {
   const queryClient = useQueryClient();
 
   const queryParams = useMemo(
@@ -11,38 +16,45 @@ export function useOutgoingQueueQuery(filters, pagination, sorting) {
       page: pagination.pageIndex + 1,
       limit: pagination.pageSize,
       search: filters.globalSearch || "",
-      type: filters.type ?? "",
-      counterpartyId: filters.counterpartyId || "",
+      customerName: filters.customerName || "",
+      status: filters.status ?? "",
       fromDate: filters.fromDate || "",
       toDate: filters.toDate || "",
-      sortBy: sorting?.id ?? "createdAt",
-      sortOrder: sorting?.desc ? "desc" : "asc",
     }),
-    [filters, pagination, sorting],
+    [filters, pagination],
   );
 
   useEffect(() => {
     const nextPageParams = { ...queryParams, page: queryParams.page + 1 };
     queryClient.prefetchQuery({
-      queryKey: outgoingQueueKeys.list(nextPageParams),
-      queryFn: () => fetchOutgoingQueue(nextPageParams),
+      queryKey: shippingKeys.list(nextPageParams),
+      queryFn: () => fetchShippableSales(nextPageParams),
     });
   }, [queryClient, queryParams]);
 
   return useQuery({
-    queryKey: outgoingQueueKeys.list(queryParams),
-    queryFn: () => fetchOutgoingQueue(queryParams),
+    queryKey: shippingKeys.list(queryParams),
+    queryFn: () => fetchShippableSales(queryParams),
     placeholderData: keepPreviousData,
     gcTime: 1000 * 60 * 10,
     refetchOnMount: "always",
   });
 }
 
-export function useShippingSaleQuery(id) {
+export function useSaleReturnPendingEffectsQuery(saleId) {
   return useQuery({
-    queryKey: shippingKeys.detail(id),
-    queryFn: () => fetchShippingSaleById(id),
-    enabled: !!id,
+    queryKey: shippingKeys.pendingReturnEffects(saleId),
+    queryFn: () => fetchSaleReturnPendingEffects(saleId),
+    enabled: !!saleId,
+    refetchOnMount: "always",
+  });
+}
+
+export function useSaleForShippingQuery(saleId) {
+  return useQuery({
+    queryKey: shippingKeys.detail(saleId),
+    queryFn: () => fetchSaleForShipping(saleId),
+    enabled: !!saleId,
     refetchOnMount: "always",
   });
 }

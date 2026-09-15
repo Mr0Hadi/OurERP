@@ -26,6 +26,3 @@ export const useNavigationStore = create(
     }
   )
 );
-
-export const isComingFrom = (path) =>
-  useNavigationStore.getState().previousPath === path;

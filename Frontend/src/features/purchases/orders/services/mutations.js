@@ -10,7 +10,6 @@ import {
 } from "./api-v1";
 import { purchaseKeys } from "./queryKeys";
 import {
-  incomingQueueKeys,
   receivingKeys,
 } from "@/features/warehouse/receiving/services/queryKeys";
 import { invalidatePurchaseEcosystem } from "./sharedInvalidation";
@@ -123,9 +122,8 @@ export const useRecordPaymentMutation = () => {
         updatedPurchase
       );
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       // صفِ دریافت مبلغ خرید را در ستون «مبلغ» نشان می‌دهد.
-      queryClient.invalidateQueries({ queryKey: incomingQueueKeys.all });
+      queryClient.invalidateQueries({ queryKey: receivingKeys.lists() });
       toast.success("پرداخت با موفقیت ثبت شد");
     },
     onError: (error, variables, context) => {

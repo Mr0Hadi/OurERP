@@ -11,19 +11,13 @@ import {
 } from "@/shared/domain/returns/scopes";
 
 /**
- * واژگانِ مخصوصِ مرجوعی خرید.
+ * واژگانِ مرجوعی خرید — قرینه‌ی `salesReturnVocabulary`.
  *
- * قرینه‌ی returnVocabulary در مرجوعی فروش: فقط *نام‌گذاری* می‌کند و
- * دو محور دارد —
- *
- *   ۱. مشکل چیست؟   → PURCHASE_RETURN_PROBLEMS
- *   ۲. دامنه کجاست؟ → CLAIM_SCOPES (روی سفارش یا بیرون از آن)
- *
- * تصمیم اینجا نیست؛ تصمیم ترکیبی از اثرهاست و جای آن دامنه‌ی مشترک
- * است (shared/domain/returns).
+ * مثل سمت فروش، مقدارها/وضعیت‌ها/دامنه‌ها از `shared/domain/returns`
+ * می‌آیند و اینجا دوباره صادر نمی‌شوند؛ فقط *واژه*ی خرید می‌ماند.
  */
 
-// ─── محور ۱: مشکل ───────────────────────────────────────────────────────────
+// ─── مشکل ───────────────────────────────────────────────────────────────────
 
 /**
  * مشکلِ دقیقی که واحد خرید ثبت می‌کند.
@@ -52,41 +46,26 @@ export const PURCHASE_RETURN_PROBLEM_STYLES = problemStyles(
   PURCHASE_CLAIM_PROBLEMS,
 );
 
-// ─── محور ۲: دامنه‌ی ادعا ───────────────────────────────────────────────────
+// ─── دامنه‌ی ادعا ───────────────────────────────────────────────────────────
 
 /**
  * ادعا یا روی یک خط سفارش می‌نشیند (سقفش مقدار سفارش‌شده)، یا بیرون
  * از سفارش است — کالایی که تامین‌کننده فرستاده ولی سفارش توجیهش
  * نمی‌کند.
- *
- * مقدارها از دامنه‌ی مشترک می‌آیند (scopes.js)؛ فقط برچسب‌ها به زبان
- * خرید نوشته شده‌اند.
  */
-export {
-  CLAIM_SCOPES,
-  OFF_SCOPE_KINDS as OFF_ORDER_KINDS,
-  OFF_SCOPE_KIND_STYLES as OFF_ORDER_KIND_STYLES,
-  isOffScope as isOffOrder,
-} from "@/shared/domain/returns/scopes";
-
 export const CLAIM_SCOPE_LABELS = {
   [CLAIM_SCOPES.ON_ORDER]: "روی سفارش",
   [CLAIM_SCOPES.OFF_ORDER]: "خارج از سفارش",
 };
 
-export const OFF_ORDER_KIND_LABELS = {
+export const OFF_SCOPE_KIND_LABELS = {
   [OFF_SCOPE_KINDS.EXCESS]: "بیش از مقدار سفارش",
   [OFF_SCOPE_KINDS.UNLISTED]: "کالای خارج از سفارش",
 };
 
 // ─── وضعیت ──────────────────────────────────────────────────────────────────
 
-export {
-  RETURN_STATUSES as PURCHASE_RETURN_STATUSES,
-  RETURN_STATUS_STYLES as PURCHASE_RETURN_STATUS_STYLES,
-  isTerminalStatus,
-} from "@/shared/domain/returns/statuses";
-
+/** خودِ وضعیت‌ها مشترک‌اند (`shared/domain/returns/statuses.js`)؛ فقط برچسبشان سمت‌به‌سمت فرق می‌کند. */
 export const PURCHASE_RETURN_STATUS_LABELS =
   SIDE_CONFIG[RETURN_SIDES.PURCHASE].statusLabels;
 

@@ -1,37 +1,36 @@
 import { useCallback } from "react";
 import FilterPanel from "@/shared/components/filters/FilterPanel";
-import FilterSelect from "@/shared/components/filters/FilterSelect";
 import FilterDateInput from "@/shared/components/filters/FilterDateInput";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
-import EntitySelect from "@/shared/components/filters/EntitySelect";
-import { toFilterOptions } from "@/shared/components/filters/filterUtils";
+import { Label } from "@/shared/components/ui/label";
+import { Input } from "@/shared/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import { useShippingFilterStore } from "../../store/shippingFilterStore";
-import { OUTGOING_TYPE_LABELS } from "../../domain/shippingVocabulary";
+import { SHIPPING_STATUS_OPTIONS } from "../../domain/shippingVocabulary";
 
-const TYPE_OPTIONS = toFilterOptions(OUTGOING_TYPE_LABELS);
-
-// از وقتی عودت مازاد به این صف اضافه شد، طرفِ یک محموله می‌تواند مشتری
-// یا تامین‌کننده باشد؛ پس هر گزینه کلید ترکیبی دارد و نوعش هم نشان
-// داده می‌شود — همان قراردادی که صف دریافت از اول داشت.
-const getPartyKey = (party) => party.key;
-const getPartyLabel = (party) => party.name;
-
-const renderPartyType = (party) => (
-  <span className="text-[10px] text-muted-foreground">
-    {party.type === "customer" ? "مشتری" : "تامین‌کننده"}
-  </span>
-);
-
-const ShippingFilters = ({ parties = [], isPartiesLoading = false }) => {
+/**
+ * مشتری اینجا کشویی نیست: `GetSaleListQuery` فیلترِ `CustomerId` ندارد و
+ * فقط روی *نامِ* مشتری جست‌وجو می‌کند، پس یک ورودیِ متنی همان چیزی است
+ * که واقعاً به سرور می‌رود.
+ *
+ * وضعیت هم گزینه‌ی «همه» ندارد — دقیقاً به همان دلیلی که صف دریافت ندارد.
+ */
+const ShippingFilters = () => {
   const {
     globalSearch,
-    counterpartyId,
-    type,
+    customerName,
+    status,
     fromDate,
     toDate,
     setGlobalSearch,
-    setCounterpartyId,
-    setType,
+    setCustomerName,
+    setStatus,
     setFromDate,
     setToDate,
     resetFilters,
@@ -65,32 +64,40 @@ const ShippingFilters = ({ parties = [], isPartiesLoading = false }) => {
       }
     >
       <FilterSearchInput
-        placeholder="نام مشتری/تامین‌کننده، شماره فاکتور/مرجوعی..."
+        placeholder="شماره فاکتور فروش..."
         value={globalSearch}
         onChange={handleGlobalSearch}
       />
 
-      <EntitySelect
-        label="مشتری / تامین‌کننده"
-        placeholder="انتخاب طرف حساب..."
-        emptyText="موردی یافت نشد"
-        items={parties}
-        value={counterpartyId}
-        onSelect={setCounterpartyId}
-        isLoading={isPartiesLoading}
-        getKey={getPartyKey}
-        getLabel={getPartyLabel}
-        renderMeta={renderPartyType}
-      />
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+        <Label className="whitespace-nowrap font-medium text-foreground text-sm">
+          مشتری
+        </Label>
+        <Input
+          placeholder="نام مشتری..."
+          value={customerName}
+          onChange={(e) => setCustomerName(e.target.value)}
+          className="flex-1 w-full input-rtl-placeholder"
+        />
+      </div>
 
-      <FilterSelect
-        label="نوع"
-        value={type}
-        onChange={setType}
-        allLabel="همه (فروش، جایگزین و عودت)"
-        options={TYPE_OPTIONS}
-        numeric
-      />
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+        <Label className="whitespace-nowrap font-medium text-foreground text-sm">
+          وضعیت
+        </Label>
+        <Select value={String(status)} onValueChange={(v) => setStatus(Number(v))}>
+          <SelectTrigger className="flex-1 w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SHIPPING_STATUS_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={String(option.value)}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     </FilterPanel>
   );
 };

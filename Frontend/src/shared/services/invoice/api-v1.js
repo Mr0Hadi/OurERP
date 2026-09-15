@@ -51,18 +51,6 @@ async function fetchPdf(url, params) {
   }
 }
 
-/**
- * `GET api/Invoice/GetPurchaseInvoicePdf` @returns Blob با `application/pdf`
- *
- * ⚠️ در UI استفاده نمی‌شود و عمداً: این سند را *ما* از روی داده‌ی خودمان
- * می‌سازیم، در حالی که فاکتورِ خرید همان برگه‌ای است که تامین‌کننده
- * فرستاده و کاربر ضمیمه کرده. صفحه‌ی خرید همان ضمیمه را چاپ/دانلود
- * می‌کند (`InvoiceDocumentSection`). اینجا می‌ماند چون endpoint وجود
- * دارد و ممکن است جای دیگری (مثلاً گزارش داخلی) لازم شود.
- */
-export const getPurchaseInvoicePdf = (purchaseId) =>
-  fetchPdf("/Invoice/GetPurchaseInvoicePdf", { purchaseId });
-
 /** `GET api/Invoice/GetSaleInvoicePdf` @returns Blob با `application/pdf` */
 export const getSaleInvoicePdf = (saleId) =>
   fetchPdf("/Invoice/GetSaleInvoicePdf", { saleId });

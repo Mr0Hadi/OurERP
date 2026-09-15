@@ -46,6 +46,8 @@ const STOCK_OPTIONS = [
   { value: "outOfStock", label: "ناموجود" },
 ];
 
+const COMPLETENESS_OPTIONS = [{ value: "true", label: "فقط کالاهای ناقص" }];
+
 /** مقدار "all" را به رشته خالی تبدیل می‌کند تا استور با undefined/null کار نکند */
 const normalize = (value) => (value === "all" ? "" : value);
 
@@ -144,11 +146,13 @@ const ProductFilters = () => {
     minPrice,
     maxPrice,
     stockStatus,
+    isIncomplete,
     setGlobalSearch,
     setBrand,
     setProductCategoryId,
     setPriceRange,
     setStockStatus,
+    setIsIncomplete,
     resetFilters,
   } = useProductFilterStore();
 
@@ -231,7 +235,15 @@ const ProductFilters = () => {
       </div>
 
       {/* ردیف دوم: محدوده قیمت + دکمه ریست */}
-      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-5 gap-5 pt-3 border-t border-border">
+      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-6 gap-5 pt-3 border-t border-border">
+        <FilterSelect
+          label="اطلاعات کالا"
+          value={isIncomplete}
+          onChange={setIsIncomplete}
+          allLabel="همه"
+          options={COMPLETENESS_OPTIONS}
+        />
+
         <PriceRangeInput
           label="حداقل قیمت (ریال)"
           value={minPrice === "" ? null : Number(minPrice)}

@@ -13,6 +13,7 @@ export const useProductFilterStore = createFilterStore({
     minPrice: "",
     maxPrice: "",
     stockStatus: "", // "" | "inStock" | "lowStock" | "outOfStock"
+    isIncomplete: "", // "" | "true" — فقط کالاهای ساخته‌شده با «ساخت سریع» که هنوز کامل نشده‌اند
   },
   actions: ({ applyFilters }) => ({
     setPriceRange: (min, max) =>

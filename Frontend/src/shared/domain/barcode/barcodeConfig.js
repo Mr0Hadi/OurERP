@@ -16,23 +16,10 @@
  * `RenderCode128Svg` را برای برچسب‌ها به کار می‌برد)، پس بارکدی که
  * مرورگر چاپ می‌کند و بارکدی که PDF سرور می‌سازد یک چیزند.
  */
-export const SYMBOLOGIES = {
+const SYMBOLOGIES = {
   CODE128: "CODE128",
   EAN13: "EAN13",
 };
-
-/**
- * هندسه‌ی رندرِ سرور، برای وقتی که از `GetBarcodeSvg`/`GetProductLabelsPdf`
- * تصویر می‌گیریم — پیش‌فرض‌های `BarcodeRenderOptions` بکند.
- *
- * `moduleWidthMm` را پایین‌تر از ۰٫۲۵ نبرید: باریک‌ترین میله زیر آن
- * حد، روی پرینترِ ۲۰۳dpi انبار دیگر خوانده نمی‌شود.
- */
-export const SERVER_RENDER_DEFAULTS = Object.freeze({
-  moduleWidthMm: 0.33,
-  barHeightMm: 12,
-  showHumanReadable: true,
-});
 
 /**
  * اندازه‌های آماده‌ی بارکد روی برچسب.

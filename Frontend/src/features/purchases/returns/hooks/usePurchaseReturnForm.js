@@ -1,33 +1,30 @@
 import { usePurchaseReturnFormStore } from "../store/purchaseReturnFormStore";
-import {
-  CLAIM_SCOPES,
-  OFF_ORDER_KINDS,
-  PURCHASE_RETURN_PROBLEMS,
-} from "../domain/purchaseReturnVocabulary";
+import { PURCHASE_RETURN_PROBLEMS } from "../domain/purchaseReturnVocabulary";
+import { CLAIM_SCOPES, OFF_SCOPE_KINDS } from "@/shared/domain/returns/scopes";
 
 const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
 const DEFAULT_ON_ORDER_PROBLEM = PURCHASE_RETURN_PROBLEMS.DEFECTIVE;
-const DEFAULT_OFF_ORDER_PROBLEM = PURCHASE_RETURN_PROBLEMS.OVER_SHIPPED;
+const DEFAULT_EXCESS_PROBLEM = PURCHASE_RETURN_PROBLEMS.OVER_SHIPPED;
+const DEFAULT_UNLISTED_PROBLEM = PURCHASE_RETURN_PROBLEMS.UNLISTED_ITEM;
 
 /**
  * فرم ثبت ادعای مرجوعی.
  *
- * دو دسته ادعا مدیریت می‌شود که قواعدشان فرق دارد:
+ * سه دسته ادعا با قواعد متفاوت:
  *
- *  • روی سفارش  — روی یک خط خرید می‌نشیند و سقفش مقدارِ سفارش‌شده
- *                  است.
- *  • خارج از سفارش — سقف ندارد، چون اصلاً بیرون از سفارش است: کالای
- *                  اضافه‌ای که تامین‌کننده فرستاده یا کالایی که در سفارش
- *                  نبوده.
- *
+ *  • روی سفارش — روی یک خط خرید، سقفش مقدارِ دریافت‌شده.
+ *  • مازاد     — بیش از مقدارِ یک خط رسیده؛ روی همان خط و با قیمت همان
+ *                خط. سقفش دانه‌های مازادِ قرنطینه است (سرور چک می‌کند).
+ *  • نامرتبط   — کالایی که در سفارش نیست؛ بدون خط و با قیمت دستی.
  */
 export function usePurchaseReturnForm() {
   const { formData, setFormData, setLines, setOffScopeClaims, resetForm } =
     usePurchaseReturnFormStore();
 
   const lines = formData.lines || [];
+  const orderLines = formData.orderLines || [];
   const offScopeClaims = formData.offScopeClaims || [];
 
   const claimedQuantityOf = (line) =>
@@ -100,9 +97,16 @@ export function usePurchaseReturnForm() {
 
   // ─── ادعاهای خارج از فاکتور ───────────────────────────────────────
 
-  const handleAddOffScopeClaim = (product, kind = OFF_ORDER_KINDS.EXCESS) => {
-    const existing = offScopeClaims.find(
-      (c) => c.productId === product.productId,
+  /**
+   * مازاد روی یک قلمِ سفارش می‌نشیند (`orderLineId`) و قیمتش همان قیمتِ
+   * قلم است؛ کالای نامرتبط روی هیچ قلمی نیست و قیمتش دستی است.
+   */
+  const handleAddOffScopeClaim = (product, kind) => {
+    const isExcess = kind === OFF_SCOPE_KINDS.EXCESS;
+    const existing = offScopeClaims.find((c) =>
+      c.offScopeKind === kind && isExcess
+        ? c.orderLineId === product.orderLineId
+        : c.offScopeKind === kind && c.productId === product.productId,
     );
     if (existing) {
       setOffScopeClaims(
@@ -117,8 +121,9 @@ export function usePurchaseReturnForm() {
     setOffScopeClaims([
       ...offScopeClaims,
       {
-        ...newClaim(DEFAULT_OFF_ORDER_PROBLEM, 1),
+        ...newClaim(isExcess ? DEFAULT_EXCESS_PROBLEM : DEFAULT_UNLISTED_PROBLEM, 1),
         offScopeKind: kind,
+        orderLineId: isExcess ? product.orderLineId : null,
         productId: product.productId,
         productCode: product.productCode,
         productName: product.productName,
@@ -132,6 +137,10 @@ export function usePurchaseReturnForm() {
     setOffScopeClaims(
       offScopeClaims.map((claim) => {
         if (claim.id !== claimId) return claim;
+        // قیمتِ مازاد از قلمِ سفارش است و سرور مقدارِ دیگری را رد می‌کند.
+        if (field === "unitPrice" && claim.offScopeKind === OFF_SCOPE_KINDS.EXCESS) {
+          return claim;
+        }
         if (field === "quantity" || field === "unitPrice") {
           const num = Number(value);
           return { ...claim, [field]: Number.isNaN(num) || num < 0 ? 0 : num };
@@ -170,8 +179,8 @@ export function usePurchaseReturnForm() {
     .map((claim) => ({
       scope: CLAIM_SCOPES.OFF_ORDER,
       offScopeKind: claim.offScopeKind,
-      // ادعای خارج از سفارش روی هیچ خطی نمی‌نشیند.
-      orderLineId: null,
+      orderLineId:
+        claim.offScopeKind === OFF_SCOPE_KINDS.EXCESS ? claim.orderLineId : null,
       productId: claim.productId,
       productCode: claim.productCode,
       productName: claim.productName,
@@ -204,6 +213,7 @@ export function usePurchaseReturnForm() {
     formData,
     setFormData,
     lines,
+    orderLines,
     offScopeClaims,
     allClaims,
     computedTotal,
