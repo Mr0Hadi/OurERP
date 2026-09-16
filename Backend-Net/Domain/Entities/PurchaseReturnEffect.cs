@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using Domain.Enums;
 
 namespace Domain.Entities
@@ -24,8 +24,8 @@ namespace Domain.Entities
         public int? ProductId { get; set; }
 
         /// <summary>
-        /// Goods effects only: the client's per-unit transaction value (GoodsEffectDto.UnitPrice, may be zero);
-        /// null on money effects. Feeds the money balance only.
+        /// Goods effects only: the per-unit transaction value the client stated (GoodsEffectDto.UnitPrice, may be
+        /// zero or null); null on money effects. Recorded for audit and display - no logic reads it.
         /// </summary>
         public UInt64? UnitPrice { get; set; }
 

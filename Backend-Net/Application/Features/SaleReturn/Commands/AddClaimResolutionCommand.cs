@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Contracts.UnitOfWork;
@@ -43,13 +43,11 @@ namespace Application.Features.SaleReturn.Commands
             {
                 goods.RuleFor(g => g.Quantity).GreaterThan(0).WithMessage("مقدار کالای وارده باید از صفر بیشتر باشد.");
                 goods.RuleFor(g => g.ProductId).GreaterThan(0).WithMessage("کالای نامعتبر است.").When(g => g.ProductId.HasValue);
-                goods.RuleFor(g => g.UnitPrice).NotNull().WithMessage("قیمت واحد (unitPrice) هر اثر کالایی الزامی است؛ برای کالایی که ادعای مالی ندارد صفر بفرستید.");
             });
             RuleForEach(x => x.Composition.GoodsOut).ChildRules(goods =>
             {
                 goods.RuleFor(g => g.Quantity).GreaterThan(0).WithMessage("مقدار کالای خارجه باید از صفر بیشتر باشد.");
                 goods.RuleFor(g => g.ProductId).GreaterThan(0).WithMessage("کالای نامعتبر است.").When(g => g.ProductId.HasValue);
-                goods.RuleFor(g => g.UnitPrice).NotNull().WithMessage("قیمت واحد (unitPrice) هر اثر کالایی الزامی است؛ برای کالایی که ادعای مالی ندارد صفر بفرستید.");
             });
 
             // Direction is structural now (which slot the effect sits in), so there is no direction
@@ -147,8 +145,6 @@ namespace Application.Features.SaleReturn.Commands
                 if (foundCount != overriddenProductIds.Count)
                     throw new ValidationCustomException("کالای انتخاب‌شده برای اثر یافت نشد.");
             }
-
-            ReturnMoneyBalance.EnsureSettled(ReturnMoneyBalance.Compute(request.Composition), request.Composition);
 
             // Every check above runs before anything below touches tracked state or the cost ledger,
             // so a refused request leaves the loaded graph exactly as it was read.

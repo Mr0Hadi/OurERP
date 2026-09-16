@@ -32,7 +32,7 @@ claim.RuleFor(c => c.OffScopeKind).Null()
 در `CreatePurchaseReturnCommandValidator` و `CreateSaleReturnCommandValidator`. نتیجه: ۴۰۰ به‌جای پذیرفتن بی‌صدا. خط ساختن ادعا در handler دست نخورده، چون حالا تنها مقداری که به آن می‌رسد `null` است.
 
 ### آزمون‌ها
-`Tests/WMS.Tests/Unit/ReturnMoneyBalanceTests.cs`، کلاس `OnOrderOffScopeKindValidatorTests`: ادعای ON_ORDER با `offScopeKind` در هر دو سمت نامعتبر است و بدون آن معتبر.
+`Tests/WMS.Tests/Unit/OnOrderOffScopeKindValidatorTests.cs` (تا ۲۰۲۶-۰۹-۱۷ داخل `Unit/ReturnMoneyBalanceTests.cs` بود، که با حذف قاعده‌ی تراز از بین رفت)، کلاس `OnOrderOffScopeKindValidatorTests`: ادعای ON_ORDER با `offScopeKind` در هر دو سمت نامعتبر است و بدون آن معتبر.
 
 ---
 

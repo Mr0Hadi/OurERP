@@ -184,15 +184,16 @@ namespace WMS.Tests.Unit
         }
 
         [Fact]
-        public void GoodsEffectWithoutUnitPrice_IsInvalid()
+        public void GoodsEffectWithoutUnitPrice_IsValid()
         {
+            // UnitPrice is a recorded value, not a requirement: nothing reads it, so omitting it is legal.
             var command = new Application.Features.PurchaseReturn.Commands.AddClaimResolutionCommand
             {
                 ClaimId = 1,
                 Composition = new EffectCompositionDto { Quantity = 2, GoodsOut = new() { new GoodsEffectDto { Quantity = 2 } } },
             };
 
-            Assert.False(_sut.Validate(command).IsValid);
+            Assert.True(_sut.Validate(command).IsValid);
         }
 
         [Fact]
@@ -366,15 +367,16 @@ namespace WMS.Tests.Unit
         }
 
         [Fact]
-        public void GoodsEffectWithoutUnitPrice_IsInvalid()
+        public void GoodsEffectWithoutUnitPrice_IsValid()
         {
+            // UnitPrice is a recorded value, not a requirement: nothing reads it, so omitting it is legal.
             var command = new Application.Features.SaleReturn.Commands.AddClaimResolutionCommand
             {
                 ClaimId = 1,
                 Composition = new EffectCompositionDto { Quantity = 2, GoodsIn = new() { new GoodsEffectDto { Quantity = 2 } } },
             };
 
-            Assert.False(_sut.Validate(command).IsValid);
+            Assert.True(_sut.Validate(command).IsValid);
         }
 
         [Fact]

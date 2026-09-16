@@ -12,7 +12,7 @@ namespace Application.Features.SaleReturn.Dtos
         public int? RestockedQuantity { get; set; }
         public int? ProductId { get; set; }
 
-        /// <summary>Goods effects only: the per-unit price the client declared for these goods (may be 0); null on money effects.</summary>
+        /// <summary>Goods effects only: the per-unit price the client declared for these goods (may be 0 or null); recorded value, not used by any rule.</summary>
         public UInt64? UnitPrice { get; set; }
 
         /// <summary>Goods effects only: the per-unit cost the client declared, or null when the running average is used.</summary>
