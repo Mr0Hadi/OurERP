@@ -1,4 +1,4 @@
-using Application.Common.Dtos.Returns;
+﻿using Application.Common.Dtos.Returns;
 using Application.Features.Purchase.Commands;
 using Application.Features.Purchase.Dtos;
 using Application.Features.PurchaseReturn.Dtos;
@@ -14,7 +14,8 @@ using SR = Application.Features.SaleReturn.Commands;
 namespace WMS.Tests.Integration
 {
     /// <summary>
-    /// The effect model through the real handlers: the balance rule (a floor, on UnitPrice), and one set of
+    /// The effect model through the real handlers: any combination of effects is accepted (no money-balance
+    /// rule - staff settle with the counterparty as they agree), and one set of
     /// mechanics for every claim - GOODS_IN raises stock at its UnitCost (or the running average),
     /// GOODS_OUT lowers it at the running average, and money effects write ledger rows that the sale
     /// report reads as revenue (sale side) and the purchase report as spend (purchase side).
@@ -77,51 +78,35 @@ namespace WMS.Tests.Integration
             Problem = ReturnProblemEnum.OVER_SHIPPED,
         };
 
-        private static object? DataValue(ValidationCustomException ex, string property) =>
-            ex.Data.GetType().GetProperty(property)!.GetValue(ex.Data);
-
         private static int LatestEffectId(TestScope scope, ReturnEffectDirectionEnum direction, bool purchase) => purchase
             ? scope.Context.PurchaseReturnEffects.Where(e => e.Direction == direction).OrderByDescending(e => e.Id).First().Id
             : scope.Context.SaleReturnEffects.Where(e => e.Direction == direction).OrderByDescending(e => e.Id).First().Id;
 
-        // ─── balance ──────────────────────────────────────────────────────────────────────────────
+        // ─── no balance rule: any combination of effects is accepted ─────────────────────────────
 
         [Fact]
-        public async Task Purchase_GoodsOutWithoutMoney_IsRefusedNamingMoneyInAndAmount_ThenAcceptedWithMoreThanThat()
+        public async Task Purchase_GoodsOutWithoutMoney_IsAccepted()
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
             var scenario = await ReceivedPurchase(scope, ordered: 10, received: 7);
             var claimId = await CreatePurchaseClaim(scope, scenario, OnOrder(scenario.Item.Id, scenario.Product.Id, 1000, 3));
 
-            var goodsBack = new List<GoodsEffectDto> { new() { Quantity = 3, UnitPrice = 1000 } };
-            var ex = await Assert.ThrowsAsync<ValidationCustomException>(() => PAdd(scope).Handle(new PR.AddClaimResolutionCommand
-            {
-                ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 3, GoodsOut = goodsBack },
-            }, CancellationToken.None));
-
-            Assert.Contains("moneyIn", ex.Error);
-            Assert.Contains("3000", ex.Error);
-            Assert.Equal(ReturnEffectDirectionEnum.MONEY_IN, DataValue(ex, "RequiredDirection"));
-            Assert.Equal(3000UL, DataValue(ex, "RequiredAmount"));
-
-            using (var verify = db.NewContext())
-                Assert.Empty(verify.PurchaseReturnResolutions);
-
-            // A floor: more than required is accepted.
+            // Goods worth 3,000 go back to the supplier and no money is recorded: the staff may have agreed
+            // on a credit, or on settling later. Nothing forces a matching money effect.
             await PAdd(scope).Handle(new PR.AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = new EffectCompositionDto { Quantity = 3, GoodsOut = goodsBack, MoneyIn = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 3500 } },
+                Composition = new EffectCompositionDto { Quantity = 3, GoodsOut = new List<GoodsEffectDto> { new() { Quantity = 3, UnitPrice = 1000 } } },
             }, CancellationToken.None);
 
-            using var verify2 = db.NewContext();
-            Assert.Single(verify2.PurchaseReturnResolutions);
+            using var verify = db.NewContext();
+            Assert.Single(verify.PurchaseReturnResolutions);
+            Assert.Equal(1000UL, verify.PurchaseReturnEffects.Single(e => e.Direction == ReturnEffectDirectionEnum.GOODS_OUT).UnitPrice);
         }
 
         [Fact]
-        public async Task Sale_ItemAtTenReturnedAgainstReplacementWorthFour_RequiresAtLeastSixBack()
+        public async Task Sale_ItemAtTenSwappedForReplacementWorthFour_NeedsNoMoneyBack()
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
@@ -132,37 +117,27 @@ namespace WMS.Tests.Integration
 
             var claimId = await CreateSaleClaim(scope, scenario, OnOrder(scenario.Item.Id, scenario.Product.Id, 10, 1));
 
-            EffectCompositionDto Swap(MoneyEffectDto? moneyOut) => new()
-            {
-                Quantity = 1,
-                GoodsIn = new() { new GoodsEffectDto { Quantity = 1, UnitPrice = 10 } },
-                GoodsOut = new() { new GoodsEffectDto { Quantity = 1, ProductId = cheaper.Id, UnitPrice = 4 } },
-                MoneyOut = moneyOut,
-            };
-
-            var none = await Assert.ThrowsAsync<ValidationCustomException>(() => SAdd(scope).Handle(new SR.AddClaimResolutionCommand { ClaimId = claimId, Composition = Swap(null) }, CancellationToken.None));
-            Assert.Contains("moneyOut", none.Error);
-            Assert.Equal(ReturnEffectDirectionEnum.MONEY_OUT, DataValue(none, "RequiredDirection"));
-            Assert.Equal(6UL, DataValue(none, "RequiredAmount"));
-
-            await Assert.ThrowsAsync<ValidationCustomException>(() => SAdd(scope).Handle(new SR.AddClaimResolutionCommand
-            {
-                ClaimId = claimId,
-                Composition = Swap(new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 5 }),
-            }, CancellationToken.None));
-
+            // An item worth 10 comes back against a replacement worth 4, with no refund of the difference -
+            // whatever the customer and the staff agreed. The declared prices are still recorded per line.
             await SAdd(scope).Handle(new SR.AddClaimResolutionCommand
             {
                 ClaimId = claimId,
-                Composition = Swap(new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 7 }),
+                Composition = new EffectCompositionDto
+                {
+                    Quantity = 1,
+                    GoodsIn = new() { new GoodsEffectDto { Quantity = 1, UnitPrice = 10 } },
+                    GoodsOut = new() { new GoodsEffectDto { Quantity = 1, ProductId = cheaper.Id, UnitPrice = 4 } },
+                },
             }, CancellationToken.None);
 
             using var verify = db.NewContext();
-            Assert.Equal(3, verify.SaleReturnEffects.Count());
+            Assert.Equal(2, verify.SaleReturnEffects.Count());
+            Assert.Equal(10UL, verify.SaleReturnEffects.Single(e => e.Direction == ReturnEffectDirectionEnum.GOODS_IN).UnitPrice);
+            Assert.Equal(4UL, verify.SaleReturnEffects.Single(e => e.Direction == ReturnEffectDirectionEnum.GOODS_OUT).UnitPrice);
         }
 
         [Fact]
-        public async Task Sale_ZeroBalance_AcceptsMoneyInBothDirections()
+        public async Task Sale_MoneyInBothDirectionsOnOneResolution_IsAccepted()
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
@@ -301,7 +276,7 @@ namespace WMS.Tests.Integration
             Assert.Equal(3, verify.ProductUnits.Count(u => u.SaleItemId == scenario.Item.Id && u.Status == ProductUnitStatusEnum.SOLD));
             var restock = verify.InventoryCostLedgerEntries.Single(x => x.EventType == InventoryCostEventTypeEnum.SALE_RETURN_RESTOCK);
             Assert.Equal(2, restock.QuantityDelta);
-            // The balance used the 1,200 price (hence the 2,400 refund); the pool gets the 700 cost.
+            // The refund is whatever the staff recorded (2,400); the pool gets the 700 cost, not the 1,200 price.
             Assert.Equal(700m, restock.UnitCost);
             Assert.Equal(-2400m, verify.InventoryCostLedgerEntries.Single(x => x.EventType == InventoryCostEventTypeEnum.SALE_RETURN_REFUND).RevenueDelta);
         }
