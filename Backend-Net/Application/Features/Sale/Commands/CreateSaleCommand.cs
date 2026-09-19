@@ -5,6 +5,7 @@ using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Contracts.UserContextService;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Common.Sales;
 using Application.Features.Sale.Dtos;
 using AutoMapper;
 using Common.Extensions;
@@ -91,13 +92,15 @@ namespace Application.Features.Sale.Commands
             sale.InvoiceNumber ??= string.Empty;
             sale.SalesUserId = _userContextService.GetUserId().ToInt();
 
-            // مشتری همان لحظه‌ی ثبت هم می‌تواند کامل پرداخت کرده باشد؛ آن‌وقت دیگر پیش‌فاکتور نمی‌ماند.
-            if (sale.Status == SalesStatusEnum.PROFORMA && sale.PaidAmount >= sale.TotalAmount)
+            // فروش اقساطی در این مرحله هنوز پلن ندارد (پلن بعد از ساخت فروش ثبت می‌شود)، پس
+            // عمداً در پیش‌فاکتور می‌ماند؛ نهایی‌سازی‌اش در CreateSaleInstallmentPlanCommand
+            // اتفاق می‌افتد. فروش غیر اقساطی رفتار قبلی را عیناً نگه می‌دارد: مشتری همان لحظه‌ی
+            // ثبت هم می‌تواند کامل پرداخت کرده باشد، آن‌وقت دیگر پیش‌فاکتور نمی‌ماند.
+            if (sale.PaymentType != PaymentTypeEnum.INSTALLMENT
+                && sale.Status == SalesStatusEnum.PROFORMA
+                && sale.PaidAmount >= sale.TotalAmount)
             {
-                var seq = await _context.Sales.CountAsync(cancellationToken) + 1;
-                sale.InvoiceNumber = Generator.GenerateInvoiceNumber(seq);
-                sale.InvoiceDate = DateTime.Now;
-                sale.Status = SalesStatusEnum.PROCESSING;
+                await SaleInvoiceFinalizer.FinalizeAsync(_context, sale, cancellationToken);
             }
 
             await _context.Sales.AddAsync(sale, cancellationToken);

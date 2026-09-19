@@ -1,4 +1,4 @@
-using Application.Common.Contracts.UserContextService;
+﻿using Application.Common.Contracts.UserContextService;
 using Application.Features.Sale.Commands;
 using Application.Features.Sale.Dtos;
 using Application.Features.Sale.Queries;
@@ -54,7 +54,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 5, shippedQuantity: 0, stock: 0);
 
-            var handler = new UpdateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
+            var handler = new UpdateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, TestMapper.Instance);
 
             await Assert.ThrowsAsync<NotFoundCustomException>(() => handler.Handle(new UpdateSaleCommand
             {
@@ -78,7 +78,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 5, shippedQuantity: 0, stock: 0);
 
-            var handler = new UpdateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
+            var handler = new UpdateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, TestMapper.Instance);
             await handler.Handle(new UpdateSaleCommand
             {
                 Id = scenario.Sale.Id,
@@ -111,7 +111,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 5, shippedQuantity: 0, stock: 0);
 
-            var handler = new UpdateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
+            var handler = new UpdateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, TestMapper.Instance);
             await handler.Handle(new UpdateSaleCommand
             {
                 Id = scenario.Sale.Id,
@@ -246,7 +246,7 @@ namespace WMS.Tests.Integration
             scenario.Sale.InvoiceNumber = "";
             scope.Context.SaveChanges();
 
-            var handler = new UpdateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
+            var handler = new UpdateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, TestMapper.Instance);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(new UpdateSaleCommand
             {
@@ -273,7 +273,7 @@ namespace WMS.Tests.Integration
             scenario.Sale.InvoiceNumber = "";
             scope.Context.SaveChanges();
 
-            var handler = new UpdateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
+            var handler = new UpdateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, TestMapper.Instance);
             await handler.Handle(new UpdateSaleCommand
             {
                 Id = scenario.Sale.Id,
@@ -372,7 +372,7 @@ namespace WMS.Tests.Integration
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0);
             var newDue = new DateTime(2026, 12, 1);
 
-            var handler = new UpdateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
+            var handler = new UpdateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, TestMapper.Instance);
             await handler.Handle(new UpdateSaleCommand
             {
                 Id = scenario.Sale.Id,

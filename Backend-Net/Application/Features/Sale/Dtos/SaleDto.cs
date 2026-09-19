@@ -1,5 +1,5 @@
 using Application.Common.Dtos;
-using Domain.Entities;
+using Application.Features.SaleInstallment.Dtos;
 using Domain.Enums;
 
 namespace Application.Features.Sale.Dtos
@@ -12,7 +12,10 @@ namespace Application.Features.Sale.Dtos
         public DateTime? PaymentDate { get; set; }
         public SalesStatusEnum Status { get; set; }
         public PaymentTypeEnum PaymentType { get; set; }
-        public List<PaymentDetail> PaymentDetails { get; set; }
+        public List<PaymentDetailDto> PaymentDetails { get; set; } = new();
+
+        /// <summary>خلاصه‌ی قرارداد اقساطی - فقط برای فروش‌های اقساطی پر می‌شود.</summary>
+        public SaleInstallmentSummaryDto? InstallmentSummary { get; set; }
         public UInt64 TotalAmount { get; set; }
         public UInt64 PaidAmount { get; set; }
         public string? Description { get; set; }

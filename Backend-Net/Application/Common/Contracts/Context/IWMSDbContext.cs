@@ -40,6 +40,9 @@ namespace Application.Common.Contracts.Context
         DbSet<SaleShippingNote> SaleShippingNotes { get; }
         DbSet<PosTerminal> PosTerminals { get; }
         DbSet<InventoryCostLedgerEntry> InventoryCostLedgerEntries { get; }
+        DbSet<PaymentDetail> PaymentDetails { get; }
+        DbSet<SaleInstallmentPlan> SaleInstallmentPlans { get; }
+        DbSet<SaleInstallment> SaleInstallments { get; }
 
         DbSet<T> Set<T>() where T : class;
 

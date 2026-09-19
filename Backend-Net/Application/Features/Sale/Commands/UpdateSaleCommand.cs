@@ -2,7 +2,9 @@
 using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
+using Application.Common.Contracts.Repositories;
 using Application.Common.Enums;
+using Application.Common.Sales;
 using Application.Features.Sale.Dtos;
 using AutoMapper;
 using Common.Exceptions;
@@ -69,13 +71,15 @@ namespace Application.Features.Sale.Commands
     {
         private readonly IWMSDbContext _context;
         private readonly IObjectStorageService _objectStorageService;
+        private readonly ISaleInstallmentPlanRepository _installmentPlanRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
-        public UpdateSaleCommandHandler(IWMSDbContext context, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, IMapper mapper)
+        public UpdateSaleCommandHandler(IWMSDbContext context, IObjectStorageService objectStorageService, ISaleInstallmentPlanRepository installmentPlanRepository, IUnitOfWork unitOfWork, IMapper mapper)
         {
             _context = context;
             _objectStorageService = objectStorageService;
+            _installmentPlanRepository = installmentPlanRepository;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
         }
@@ -90,19 +94,46 @@ namespace Application.Features.Sale.Commands
             if (hasUnknownItems)
                 throw new NotFoundCustomException("ردیف کالای مورد نظر در این فروش یافت نشد.");
 
-            // خروج از «پیش‌فاکتور» فقط با پرداخت کامل ممکن است؛ فاکتور رسمی هم خودکار ساخته می‌شود.
+            // قرارداد اقساطی فعالِ این فروش - هم شرط خروج از پیش‌فاکتور به آن وابسته است و هم
+            // مبلغ پرداخت‌شده، که در فروش اقساطی همیشه از پلن می‌آید نه از ورودی کاربر.
+            var installmentPlan = request.PaymentType == PaymentTypeEnum.INSTALLMENT
+                ? await _installmentPlanRepository.GetActiveBySaleIdAsync(sale.Id, cancellationToken)
+                : null;
+
+            // مبلغ کل یک فروش اقساطی فقط از مسیر UpdateSaleInstallmentPlan عوض می‌شود، وگرنه
+            // پلن و فروش از هم جدا می‌افتند.
+            if (installmentPlan != null && request.TotalAmount != installmentPlan.TotalAmount)
+                throw new ValidationCustomException("مبلغ کل فروش اقساطی باید از مسیر ویرایش قرارداد اقساطی تغییر کند.");
+
+            // خروج از «پیش‌فاکتور» دو شاخه دارد.
             if (sale.Status == SalesStatusEnum.PROFORMA)
             {
-                var fullyPaid = request.PaidAmount >= request.TotalAmount;
-                if (!fullyPaid && request.Status != SalesStatusEnum.PROFORMA)
-                    throw new ValidationCustomException("تا پرداخت کامل نشود، فروش از حالت پیش‌فاکتور خارج نمی‌شود.");
+                bool canLeaveProforma;
 
-                if (fullyPaid)
+                if (request.PaymentType == PaymentTypeEnum.INSTALLMENT)
+                {
+                    // فروش اقساطی: شرط، «پرداخت کامل» نیست - وجود یک قرارداد اقساطی فعال با
+                    // پیش‌پرداخت ثبت‌شده است. (معمولاً خودِ CreateSaleInstallmentPlanCommand
+                    // فروش را نهایی می‌کند؛ این مسیر برای وقتی است که ویرایش فروش بعد از ثبت
+                    // پلن انجام شود.)
+                    canLeaveProforma = installmentPlan != null && installmentPlan.DownPaymentAmount > 0;
+
+                    if (!canLeaveProforma && request.Status != SalesStatusEnum.PROFORMA)
+                        throw new ValidationCustomException("تا قرارداد اقساطی و پیش‌پرداخت ثبت نشود، فروش از حالت پیش‌فاکتور خارج نمی‌شود.");
+                }
+                else
+                {
+                    canLeaveProforma = request.PaidAmount >= request.TotalAmount;
+
+                    if (!canLeaveProforma && request.Status != SalesStatusEnum.PROFORMA)
+                        throw new ValidationCustomException("تا پرداخت کامل نشود، فروش از حالت پیش‌فاکتور خارج نمی‌شود.");
+                }
+
+                if (canLeaveProforma)
                 {
                     if (string.IsNullOrWhiteSpace(request.InvoiceNumber))
                     {
-                        var seq = await _context.Sales.CountAsync(cancellationToken) + 1;
-                        request.InvoiceNumber = Generator.GenerateInvoiceNumber(seq);
+                        request.InvoiceNumber = await SaleInvoiceFinalizer.NextInvoiceNumberAsync(_context, cancellationToken);
                         request.InvoiceDate = DateTime.Now;
                     }
                     if (request.Status == SalesStatusEnum.PROFORMA)
@@ -116,7 +147,8 @@ namespace Application.Features.Sale.Commands
             sale.Status = request.Status;
             sale.PaymentType = request.PaymentType;
             sale.TotalAmount = request.TotalAmount;
-            sale.PaidAmount = request.PaidAmount;
+            // در فروش اقساطی، مبلغ پرداخت‌شده همیشه از پلن می‌آید (بخش ۴ راهنمای اقساط).
+            sale.PaidAmount = installmentPlan?.PaidAmount ?? request.PaidAmount;
             sale.Description = request.Description;
             sale.CustomerId = request.CustomerId;
             sale.UpdatedAt = DateTime.Now;

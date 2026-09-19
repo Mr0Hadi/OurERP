@@ -25,6 +25,9 @@ namespace Domain.Entities
         public User? SalesUser { get; set; }
         public int? SalesUserId { get; set; }
 
+        /// <summary>قرارداد اقساطی این فروش - یک‌به‌یک، و فقط برای فروش‌های اقساطی پر می‌شود.</summary>
+        public SaleInstallmentPlan? InstallmentPlan { get; set; }
+
         public List<SaleDriver> Drivers { get; set; } = new();
         public List<SaleShippingNote> ShippingNotes { get; set; } = new();
     }

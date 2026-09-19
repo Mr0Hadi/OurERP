@@ -1,3 +1,4 @@
+using Application.Features.SaleInstallment.Dtos;
 using Domain.Enums;
 
 namespace Application.Features.Sale.Dtos
@@ -14,5 +15,8 @@ namespace Application.Features.Sale.Dtos
         public PaymentTypeEnum PaymentType { get; set; }
         public UInt64 TotalAmount { get; set; }
         public UInt64 PaidAmount { get; set; }
+
+        /// <summary>خلاصه‌ی قرارداد اقساطی - فقط برای فروش‌های اقساطی پر می‌شود.</summary>
+        public SaleInstallmentSummaryDto? InstallmentSummary { get; set; }
     }
 }

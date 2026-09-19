@@ -3,6 +3,7 @@ using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.Sale.Dtos;
+using Application.Features.SaleInstallment.Mappings;
 using Common.Exceptions;
 using Domain.Entities;
 using Domain.Enums;
@@ -41,7 +42,16 @@ namespace Application.Features.Sale.Queries
                     PaymentType = x.PaymentType,
                     TotalAmount = x.TotalAmount,
                     PaidAmount = x.PaidAmount,
-                    PaymentDetails = x.PaymentDetails,
+                    PaymentDetails = x.PaymentDetails.OrderBy(p => p.PaidAt).Select(p => new PaymentDetailDto
+                    {
+                        Id = p.Id,
+                        Type = p.Type,
+                        Purpose = p.Purpose,
+                        Amount = p.Amount,
+                        PaidAt = p.PaidAt,
+                        CheckNumber = p.CheckNumber,
+                        TransferRef = p.TransferRef,
+                    }).ToList(),
                     Description = x.Description,
                     CustomerId = x.CustomerId,
                     CustomerName = x.Customer.FirstName + " " + x.Customer.LastName,
@@ -85,6 +95,10 @@ namespace Application.Features.Sale.Queries
             foreach (var attachment in attachments)
                 attachment.Url = _objectStorageService.GetFixedUrl(attachment.ObjectKey);
             ((SaleDto)res.Data).Attachments = attachments;
+
+            // خلاصه‌ی قرارداد اقساطی جدا خوانده می‌شود: roll-upهای پلن در حافظه حساب می‌شوند
+            // و به SQL ترجمه نمی‌شوند.
+            ((SaleDto)res.Data).InstallmentSummary = await SaleInstallmentSummaryReader.ReadForSaleAsync(_context, request.Id, cancellationToken);
 
             res.Message = "اطلاعات فروش با موفقیت ارسال شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();

@@ -26,7 +26,13 @@ namespace Application.Common.Mapping
 	{
 		public MappingProfile()
 		{
-			CreateMap<PaymentDetailDto, PaymentDetail>();
+			// شناسه و کلیدهای خارجی هرگز از ورودی کلاینت نمی‌آیند - handler خودش آن‌ها را می‌نشاند.
+			CreateMap<PaymentDetailDto, PaymentDetail>()
+				.ForMember(dest => dest.Id, opt => opt.Ignore())
+				.ForMember(dest => dest.PurchaseId, opt => opt.Ignore())
+				.ForMember(dest => dest.Purchase, opt => opt.Ignore())
+				.ForMember(dest => dest.SaleId, opt => opt.Ignore())
+				.ForMember(dest => dest.Sale, opt => opt.Ignore());
 
 			CreateMap<PaymentDetail, PaymentDetailDto>();
 

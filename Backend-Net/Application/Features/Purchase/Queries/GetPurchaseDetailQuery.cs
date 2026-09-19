@@ -59,7 +59,9 @@ namespace Application.Features.Purchase.Queries
                     {
                         Id = p.Id,
                         Type = p.Type,
+                        Purpose = p.Purpose,
                         Amount = p.Amount,
+                        PaidAt = p.PaidAt,
                         CheckNumber = p.CheckNumber,
                         TransferRef = p.TransferRef
                     }).ToList(),
