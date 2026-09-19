@@ -1,4 +1,4 @@
-import { lazy, Suspense, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useRef, useState } from "react";
 import { ScanBarcode } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
@@ -44,13 +44,26 @@ export default function BarcodeScanField({
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const inputRef = useRef(null);
 
-  const submit = (code) => {
-    const trimmed = String(code ?? "").trim();
-    if (!trimmed) return;
-    onScan(trimmed);
-    setValue("");
-    inputRef.current?.focus();
-  };
+  const submit = useCallback(
+    (code) => {
+      const trimmed = String(code ?? "").trim();
+      if (!trimmed) return;
+      onScan(trimmed);
+      setValue("");
+      inputRef.current?.focus();
+    },
+    [onScan],
+  );
+
+  // پایدار نگه‌داشتنِ این callback شرطِ سرعتِ اسکنر است: `CameraScanner`
+  // با عوض شدنِ identityِ آن دوربین را از نو باز می‌کند.
+  const handleDetected = useCallback(
+    (text) => {
+      setIsCameraOpen(false);
+      submit(text);
+    },
+    [submit],
+  );
 
   const handleKeyDown = (event) => {
     if (event.key !== "Enter") return;
@@ -95,12 +108,7 @@ export default function BarcodeScanField({
                 </div>
               }
             >
-              <CameraScanner
-                onDetected={(text) => {
-                  setIsCameraOpen(false);
-                  submit(text);
-                }}
-              />
+              <CameraScanner onDetected={handleDetected} />
             </Suspense>
           ) : null}
         </DialogContent>
