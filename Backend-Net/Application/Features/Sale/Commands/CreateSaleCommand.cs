@@ -112,6 +112,7 @@ namespace Application.Features.Sale.Commands
             await _context.DocumentAttachments.AddRangeAsync(attachmentsList, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+            res.Data = new CreatedSaleDto { Id = sale.Id, InvoiceNumber = sale.InvoiceNumber, Status = sale.Status };
             res.Message = "فروش با موفقیت ثبت شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;
