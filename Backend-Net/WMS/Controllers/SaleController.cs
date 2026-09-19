@@ -36,6 +36,12 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
+        [HttpPost("CreateInPersonSale")]
+        public async Task<ActionResult<ResponseDto>> CreateInPersonSale([FromBody] CreateInPersonSaleCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
         [HttpPut("UpdateSale")]
         public async Task<ActionResult<ResponseDto>> UpdateSale([FromBody] UpdateSaleCommand request)
         {
