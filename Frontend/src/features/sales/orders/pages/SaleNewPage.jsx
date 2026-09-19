@@ -186,6 +186,7 @@ export default function SaleNewPage() {
   }, 0);
 
   const isProforma =
+    !isInPerson &&
     Number(formData.status ?? SaleStatusEnum.PROFORMA) === SaleStatusEnum.PROFORMA;
 
   const onSubmit = (e) => {
@@ -311,6 +312,7 @@ export default function SaleNewPage() {
               onFormChange={setFormData}
               errors={{}}
               showInformalSale
+              invoiceNumberDisabled
             />
           </div>
 

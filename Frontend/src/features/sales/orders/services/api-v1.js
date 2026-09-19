@@ -157,8 +157,8 @@ function toApiSalePayload(saleData) {
   return {
     customerId: saleData.customerId,
     invoiceNumber: saleData.invoiceNumber,
-    invoiceDate: saleData.invoiceDate,
-    paymentDate: saleData.dueDate || undefined,
+    invoiceDate: saleData.invoiceDate || null,
+    paymentDate: saleData.dueDate || null,
     description: saleData.description || undefined,
     status: saleData.status,
     paymentType: saleData.paymentType,

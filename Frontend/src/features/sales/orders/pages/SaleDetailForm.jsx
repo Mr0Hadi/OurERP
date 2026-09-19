@@ -211,6 +211,7 @@ export default function SaleDetailForm({ saleData }) {
               formData={formData}
               onFormChange={setFormData}
               errors={{}}
+              invoiceNumberDisabled
             />
 
             <OrderLogisticsSection
