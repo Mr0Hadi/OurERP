@@ -207,6 +207,28 @@ export async function createSale(saleData) {
 }
 
 /**
+ * فروشِ حضوری در یک درخواستِ اتمی: بکند فروش را ثبت (با شماره و تاریخِ
+ * فاکتورِ خودکار)، خروجِ کالا با بارکدِ دانه‌های اسکن‌شده را انجام و وضعیت
+ * را مستقیم «تحویل کامل» می‌کند؛ اگر قدمی شکست بخورد هیچ‌چیز ثبت نمی‌شود.
+ *
+ * @param scannedBarcodes `{ [productId]: string[] }`
+ * @returns `{ id, invoiceNumber, status }`
+ */
+export async function createInPersonSale(saleData, scannedBarcodes = {}) {
+  const { data } = await axiosInstance.post("/Sale/CreateInPersonSale", {
+    sale: {
+      ...toApiSalePayload(saleData),
+      productIds: toApiCreateItems(saleData.items),
+    },
+    scannedItems: Object.entries(scannedBarcodes).map(([productId, barcodes]) => ({
+      productId: Number(productId),
+      productUnitBarcodes: barcodes,
+    })),
+  });
+  return data;
+}
+
+/**
  * `attachments` **جایگزین** می‌شود، نه اضافه: هرچه در آرایه نباشد از
  * سرور پاک می‌شود — پس همیشه فهرستِ نهایی فرستاده شود.
  */

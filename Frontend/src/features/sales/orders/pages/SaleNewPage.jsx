@@ -247,19 +247,7 @@ export default function SaleNewPage() {
     };
 
     if (isInPerson) {
-      inPersonMutation.mutate(
-        { payload, scannedBarcodes },
-        {
-          onSuccess,
-          // فروش ثبت شده ولی قدمِ بعدی نه: ضمیمه‌ها مالِ همان فروش‌اند.
-          onError: (error) => {
-            if (error?.saleId == null) return;
-            attachments.commit();
-            resetForm();
-            navigate(ROUTES.SALES_DETAIL.replace(":id", error.saleId));
-          },
-        },
-      );
+      inPersonMutation.mutate({ payload, scannedBarcodes }, { onSuccess });
       return;
     }
 

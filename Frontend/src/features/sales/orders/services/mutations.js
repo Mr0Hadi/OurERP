@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import {
   createSale,
+  createInPersonSale,
   updateSale,
   updateSaleStatus,
   updateSalePayment,
   removeSale
 } from './api-v1';
-import { createInPersonSale } from './inPersonSale';
 import { saleKeys } from './queryKeys';
 import { ROUTES } from '@/shared/constants/routes';
 import { useSaleFormStore } from '../store/saleFormStore';
@@ -32,7 +32,7 @@ export const useCreateSaleMutation = () => {
   });
 };
 
-/** فروشِ حضوری: ثبت، خروجِ کالا با دانه‌های اسکن‌شده، و «تحویل کامل». */
+/** فروشِ حضوری: یک درخواستِ اتمی که ثبت، خروجِ کالا و «تحویل کامل» را انجام می‌دهد. */
 export const useCreateInPersonSaleMutation = () => {
   const queryClient = useQueryClient();
 
@@ -45,8 +45,6 @@ export const useCreateInPersonSaleMutation = () => {
       queryClient.invalidateQueries({ queryKey: shippingKeys.all });
     },
     onError: (error) => {
-      // حتی وقتی قدمِ بعدی شکست خورده، فروش ثبت شده و فهرست‌ها باید تازه شوند.
-      if (error?.saleId != null) invalidateSalesEcosystem(queryClient, error.saleId);
       toast.error(error?.message || 'خطا در ثبت فروش حضوری');
     },
   });
