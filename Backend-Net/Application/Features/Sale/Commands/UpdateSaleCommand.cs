@@ -2,7 +2,9 @@
 using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
+using Application.Common.Contracts.Repositories;
 using Application.Common.Enums;
+using Application.Common.Sales;
 using Application.Features.Sale.Dtos;
 using AutoMapper;
 using Common.Exceptions;
@@ -52,7 +54,10 @@ namespace Application.Features.Sale.Commands
                 item.RuleFor(i => i.Quantity).GreaterThan(0).WithMessage("تعداد هر محصول باید از صفر بیشتر باشد.");
                 item.RuleFor(i => i.Discount).GreaterThanOrEqualTo(0).WithMessage("تخفیف باید بیشتر یا مساوی صفر باشد.");
             });
-            RuleFor(x => x.PaymentDetails).NotEmpty().When(x => x.PaymentType != PaymentTypeEnum.CASH)
+            // اقساطی استثناست: رکورد پرداختش را خود CreateSaleInstallmentPlan/PaySaleInstallment با
+            // Purpose درست می‌سازد، پس اینجا چیزی برای فرستادن نیست.
+            RuleFor(x => x.PaymentDetails).NotEmpty()
+                .When(x => x.PaymentType != PaymentTypeEnum.CASH && x.PaymentType != PaymentTypeEnum.INSTALLMENT)
                 .WithMessage("اطلاعات پرداخت باید به طول کامل پر شود.");
             RuleForEach(x => x.Attachments).ChildRules(a =>
             {
@@ -65,13 +70,15 @@ namespace Application.Features.Sale.Commands
     {
         private readonly IWMSDbContext _context;
         private readonly IObjectStorageService _objectStorageService;
+        private readonly ISaleInstallmentPlanRepository _installmentPlanRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
-        public UpdateSaleCommandHandler(IWMSDbContext context, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, IMapper mapper)
+        public UpdateSaleCommandHandler(IWMSDbContext context, IObjectStorageService objectStorageService, ISaleInstallmentPlanRepository installmentPlanRepository, IUnitOfWork unitOfWork, IMapper mapper)
         {
             _context = context;
             _objectStorageService = objectStorageService;
+            _installmentPlanRepository = installmentPlanRepository;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
         }
@@ -86,22 +93,41 @@ namespace Application.Features.Sale.Commands
             if (hasUnknownItems)
                 throw new NotFoundCustomException("ردیف کالای مورد نظر در این فروش یافت نشد.");
 
-            // خروج از «پیش‌فاکتور» فقط با پرداخت کامل ممکن است؛ فاکتور رسمی هم خودکار ساخته می‌شود.
-            if (sale.Status == SalesStatusEnum.PROFORMA)
-            {
-                var fullyPaid = request.PaidAmount >= request.TotalAmount;
-                if (!fullyPaid && request.Status != SalesStatusEnum.PROFORMA)
-                    throw new ValidationCustomException("تا پرداخت کامل نشود، فروش از حالت پیش‌فاکتور خارج نمی‌شود.");
+            // قرارداد اقساطی فعالِ این فروش - هم شرط خروج از پیش‌فاکتور به آن وابسته است و هم
+            // مبلغ پرداخت‌شده، که در فروش اقساطی همیشه از پلن می‌آید نه از ورودی کاربر.
+            var installmentPlan = request.PaymentType == PaymentTypeEnum.INSTALLMENT
+                ? await _installmentPlanRepository.GetActiveBySaleIdAsync(sale.Id, cancellationToken)
+                : null;
 
-                if (fullyPaid)
+            // مبلغ کل یک فروش اقساطی فقط از مسیر UpdateSaleInstallmentPlan عوض می‌شود، وگرنه
+            // پلن و فروش از هم جدا می‌افتند.
+            if (installmentPlan != null && request.TotalAmount != installmentPlan.TotalAmount)
+                throw new ValidationCustomException("مبلغ کل فروش اقساطی باید از مسیر ویرایش قرارداد اقساطی تغییر کند.");
+
+            // خروج از «پیش‌فاکتور» دو شاخه دارد.
+            var wasProforma = sale.Status == SalesStatusEnum.PROFORMA;
+            var canLeaveProforma = false;
+            if (wasProforma)
+            {
+                if (request.PaymentType == PaymentTypeEnum.INSTALLMENT)
                 {
-                    var seq = await _context.Sales.CountAsync(cancellationToken) + 1;
-                    sale.InvoiceNumber = Generator.GenerateInvoiceNumber(seq);
-                    request.InvoiceDate = DateTime.Now;
-                    
-                    if (request.Status == SalesStatusEnum.PROFORMA)
-                        request.Status = SalesStatusEnum.PROCESSING;
+                    // فروش اقساطی: شرط، «پرداخت کامل» نیست - وجود یک قرارداد اقساطی فعال با
+                    // پیش‌پرداخت ثبت‌شده است. (معمولاً خودِ CreateSaleInstallmentPlanCommand
+                    // فروش را نهایی می‌کند؛ این مسیر برای وقتی است که ویرایش فروش بعد از ثبت
+                    // پلن انجام شود.)
+                    canLeaveProforma = installmentPlan != null && installmentPlan.DownPaymentAmount > 0;
+
+                    if (!canLeaveProforma && request.Status != SalesStatusEnum.PROFORMA)
+                        throw new ValidationCustomException("تا قرارداد اقساطی و پیش‌پرداخت ثبت نشود، فروش از حالت پیش‌فاکتور خارج نمی‌شود.");
                 }
+                else
+                {
+                    canLeaveProforma = request.PaidAmount >= request.TotalAmount;
+
+                    if (!canLeaveProforma && request.Status != SalesStatusEnum.PROFORMA)
+                        throw new ValidationCustomException("تا پرداخت کامل نشود، فروش از حالت پیش‌فاکتور خارج نمی‌شود.");
+                }
+
             }
 
             sale.InvoiceDate = request.InvoiceDate;
@@ -109,10 +135,16 @@ namespace Application.Features.Sale.Commands
             sale.Status = request.Status;
             sale.PaymentType = request.PaymentType;
             sale.TotalAmount = request.TotalAmount;
-            sale.PaidAmount = request.PaidAmount;
+            // در فروش اقساطی، مبلغ پرداخت‌شده همیشه از پلن می‌آید (بخش ۴ راهنمای اقساط).
+            sale.PaidAmount = installmentPlan?.PaidAmount ?? request.PaidAmount;
             sale.Description = request.Description;
             sale.CustomerId = request.CustomerId;
             sale.UpdatedAt = DateTime.Now;
+
+            // شماره‌ی فاکتور رسمی را سرور تولید می‌کند (روی خودِ موجودیت، نه از ورودی کاربر) و
+            // وضعیت را از پیش‌فاکتور بیرون می‌برد - همان مسیری که CreateSale هم می‌رود.
+            if (canLeaveProforma)
+                await SaleInvoiceFinalizer.FinalizeAsync(_context, sale, cancellationToken);
 
             foreach (var existing in sale.Items.ToList())
             {
@@ -131,6 +163,31 @@ namespace Application.Features.Sale.Commands
 
             foreach (var incoming in request.Items.Where(x => x.Id == 0))
                 sale.Items.Add(_mapper.Map<Domain.Entities.SaleItem>(incoming));
+
+            // رکوردهای پرداخت: CreateSale آن‌ها را از راه نگاشت AutoMapper روی گراف فروش ذخیره
+            // می‌کند، ولی این handler فیلدها را تک‌تک می‌نشاند و تا امروز اصلاً به آن‌ها دست
+            // نمی‌زد - یعنی ویرایش فروش، پرداخت‌های تازه را بی‌صدا دور می‌ریخت.
+            //
+            // فروش اقساطی استثناست و کاملاً نادیده گرفته می‌شود: رکوردهای پرداختش (پیش‌پرداخت و
+            // اقساط، با Purpose خودشان) مالِ فیچر اقساط‌اند و فقط از مسیر همان دستورها عوض
+            // می‌شوند - دقیقاً به همان دلیلی که PaidAmount هم از پلن خوانده می‌شود، نه از ورودی.
+            if (installmentPlan == null && request.PaymentType != PaymentTypeEnum.INSTALLMENT)
+            {
+                // مثل ضمیمه‌ها جایگزینی کامل است، نه افزودنی - فرانت همیشه فهرست نهایی را می‌فرستد.
+                var existingPayments = await _context.PaymentDetails
+                    .Where(x => x.SaleId == sale.Id)
+                    .ToListAsync(cancellationToken);
+                _context.PaymentDetails.RemoveRange(existingPayments);
+
+                foreach (var payment in request.PaymentDetails ?? new List<PaymentDetailDto>())
+                {
+                    var entity = _mapper.Map<Domain.Entities.PaymentDetail>(payment);
+                    entity.SaleId = sale.Id;
+                    // Purpose از ورودی خوانده نمی‌شود: از این مسیر فقط پرداخت عادی ثبت می‌شود.
+                    entity.Purpose = PaymentPurposeEnum.NORMAL;
+                    await _context.PaymentDetails.AddAsync(entity, cancellationToken);
+                }
+            }
 
             _context.Sales.Update(sale);
 

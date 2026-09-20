@@ -92,6 +92,7 @@ namespace WMS.Tests.Support
             ProductCategoryRepository = new ProductCategoryRepository(context);
             DepartmentRepository = new DepartmentRepository(context);
             TeamRepository = new TeamRepository(context);
+            SaleInstallmentPlanRepository = new SaleInstallmentPlanRepository(context);
             SaleReturnCalculation = new SaleReturnCalculationService();
             PurchaseReturnCalculation = new PurchaseReturnCalculationService();
             ProductCodeService = new ProductCodeService();
@@ -119,6 +120,7 @@ namespace WMS.Tests.Support
         public IProductCategoryRepository ProductCategoryRepository { get; }
         public IDepartmentRepository DepartmentRepository { get; }
         public ITeamRepository TeamRepository { get; }
+        public ISaleInstallmentPlanRepository SaleInstallmentPlanRepository { get; }
         public ISaleReturnCalculationService SaleReturnCalculation { get; }
         public IInvoiceLineCalculationService InvoiceLineCalculation { get; }
         public IPurchaseReturnCalculationService PurchaseReturnCalculation { get; }

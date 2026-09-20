@@ -21,6 +21,7 @@
 9. [خرید (Purchase)](#9-خرید-purchase)
 10. [مرجوعی خرید (PurchaseReturn)](#10-مرجوعی-خرید-purchasereturn)
 11. [فروش (Sale)](#11-فروش-sale)
+    - [فروش اقساطی (SaleInstallment)](#۱۱ب-فروش-اقساطی-saleinstallment)
 12. [مرجوعی فروش (SaleReturn)](#12-مرجوعی-فروش-salereturn)
 13. [فاکتور PDF (Invoice)](#13-فاکتور-pdf-invoice)
 14. [سناریوهای کامل گردش‌کار](#14-سناریوهای-کامل-گردش‌کار)
@@ -934,12 +935,17 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
   "paymentDate": "2026-08-31T00:00:00",
   "status": 1,
   "paymentType": 0,
+  "paymentDetails": [
+    { "type": 2, "amount": 150000000, "paidAt": "2026-08-31T00:00:00", "checkNumber": "12345" }
+  ],
   "totalAmount": 400000000,
   "paidAmount": 150000000,
   "description": null,
   "supplierId": 1
 }
 ```
+`paymentDetails` **جایگزینی کامل** است، نه افزودنی — مثل `attachments`: فهرست نهایی را بفرستید، هرچه نفرستید حذف می‌شود. اگر `paymentType` غیر نقدی باشد الزامی است (همان قاعده‌ی `CreatePurchase`). `purpose` از ورودی خوانده نمی‌شود و همیشه `NORMAL` ثبت می‌شود — خرید اقساطی وجود ندارد. در `GetPurchaseDetail` → `paymentDetails[]` برمی‌گردد.
+
 **نکته‌ی مهم:** این API فقط فیلدهای سطح خرید را ویرایش می‌کند و **اقلام خرید (`items`) را نمی‌گیرد و تغییر نمی‌دهد**. برای ویرایش اقلام یا وضعیت دریافت باید از `ReceivePurchase` استفاده کرد. گردش‌کار: `GetPurchaseDetail` → پر کردن فرم با فیلدهای سطح بالا → `UpdatePurchase` با کل فیلدها + `id`.
 
 ### `DELETE api/Purchase/DeletePurchase?id=100`
@@ -1445,9 +1451,12 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "status": 0,
   "paymentType": 0,
   "totalAmount": 30000000,
-  "paidAmount": 30000000
+  "paidAmount": 30000000,
+  "installmentSummary": null
 }
 ```
+
+`installmentSummary` فقط برای فروش‌های اقساطی پر می‌شود و برای بقیه `null` است — شکل کاملش در بخش ۱۱ب.
 
 ### `GET api/Sale/GetSaleDetail?id=200`
 
@@ -1462,7 +1471,10 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "paymentType": 0,
   "totalAmount": 30000000,
   "paidAmount": 30000000,
-  "paymentDetails": [],
+  "paymentDetails": [
+    { "id": 1, "type": 0, "purpose": 1, "amount": 2000000, "paidAt": "2026-08-10T00:00:00", "checkNumber": null, "transferRef": null }
+  ],
+  "installmentSummary": null,
   "description": null,
   "customerId": 1,
   "customerName": "علی رضایی",
@@ -1490,12 +1502,15 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 ```
 `drivers[]`/`shippingNotes[]`: مثل `drivers[]`/`receivingNotes[]` در `GetPurchaseDetail` (بخش ۹) اما برای سمت ارسال — تاریخچه‌ی هر نوبت `ShipSale` که این فیلدها را فرستاده باشد.
 
+`paymentDetails[]`: `type` همان `PaymentTypeEnum` است و می‌گوید **چطور** پرداخت شد؛ `purpose` (`PaymentPurposeEnum`، بخش ۱۵) می‌گوید **این پرداخت چیست** — پرداخت عادی، پیش‌پرداخت قرارداد اقساطی، یا پرداخت قسط. `id` از `Guid` به `int` تغییر کرده (بخش ۱۶).
+
+`installmentSummary`: خلاصه‌ی قرارداد اقساطی، فقط برای فروش اقساطی؛ شکل کاملش در بخش ۱۱ب.
+
 ### `POST api/Sale/CreateSale`
 
 **Body:**
 ```json
 {
-  "invoiceNumber": "SL-2001",
   "invoiceDate": "2026-08-10T00:00:00",
   "paymentDate": "2026-09-09T00:00:00",
   "status": 0,
@@ -1510,7 +1525,11 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   ]
 }
 ```
-نام فیلد آرایه‌ی اقلام گمراه‌کننده `productIds` است اما در واقع لیستی از اقلام کامل (محصول + تعداد + قیمت + تخفیف) است، نه فقط شناسه‌ها. اگر `paymentType` غیر نقدی باشد، `paymentDetails` الزامی است.
+نام فیلد آرایه‌ی اقلام گمراه‌کننده `productIds` است اما در واقع لیستی از اقلام کامل (محصول + تعداد + قیمت + تخفیف) است، نه فقط شناسه‌ها. اگر `paymentType` غیر نقدی باشد `paymentDetails` الزامی است — **به‌جز `INSTALLMENT` (۵)**، که رکورد پرداختش را خود `CreateSaleInstallmentPlan`/`PaySaleInstallment` با `purpose` درست می‌سازد و اینجا باید خالی بماند. همین استثنا روی `UpdateSale` هم هست.
+
+`invoiceNumber` **فرستاده نمی‌شود** — شماره‌ی فاکتور رسمی را سرور تولید می‌کند، دقیقاً وقتی فروش از پیش‌فاکتور خارج شود (بخش ۱۶، تغییرات ۲۰۲۶-۰۹-۲۰). تا آن لحظه رشته‌ی خالی است.
+
+**data خروجی:** `{ "id": 200, "invoiceNumber": "INV-2026-0007", "status": 1 }` — شناسه‌ی فروش ساخته‌شده، شماره‌ی فاکتور (خالی اگر هنوز پیش‌فاکتور است) و وضعیت نهایی.
 
 `paymentDate` (**مهلت پرداخت**) اختیاری است — تاریخی که تا آن، مشتری فرصت تسویه دارد. برای معامله‌ی نقدی `null` بفرستید. اگر مقدار داشته باشد نباید قبل از `invoiceDate` باشد، وگرنه ۴۰۰ برمی‌گردد. در `GetPurchaseList`/`GetPurchaseDetail`/`GetSaleList`/`GetSaleDetail` برگردانده و روی PDF فاکتور هم چاپ می‌شود.
 
@@ -1522,7 +1541,6 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 ```json
 {
   "id": 200,
-  "invoiceNumber": "SL-2001",
   "invoiceDate": "2026-08-10T00:00:00",
   "paymentDate": "2026-09-09T00:00:00",
   "status": 0,
@@ -1544,6 +1562,35 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 - هر قلم قبلی که در آرایه‌ی جدید نباشد **حذف** می‌شود.
 
 بنابراین ترتیب صحیح ویرایش فروش: `GetSaleDetail` → کاربر آرایه‌ی `items` را در UI دستکاری می‌کند (ویرایش/حذف/افزودن ردیف) → کل آرایه‌ی نهایی (با `id`های درست برای ردیف‌های موجود و `id: 0` برای ردیف‌های تازه) به `UpdateSale` فرستاده می‌شود.
+
+`paymentDetails` هم **جایگزینی کامل** است، نه افزودنی — مثل `attachments`: فهرست نهایی را بفرستید، هرچه نفرستید حذف می‌شود. `purpose` از ورودی خوانده نمی‌شود و همیشه `NORMAL` ثبت می‌شود؛ از این مسیر فقط پرداخت عادی ثبت می‌شود. **روی فروش اقساطی کلاً نادیده گرفته می‌شود** (مثل `paidAmount`): رکوردهای پیش‌پرداخت و اقساط مالِ فیچر اقساط‌اند و فقط از مسیر `CreateSaleInstallmentPlan`/`PaySaleInstallment`/`SettleSaleInstallmentPlan` عوض می‌شوند. هر دو مسیر در `GetSaleDetail` → `paymentDetails[]` برمی‌گردند.
+
+### `POST api/Sale/CreateInPersonSale`
+
+فروش حضوری: مشتری همان‌جا کامل پرداخت می‌کند و کالا را با خودش می‌برد. یک دستور **اتمیک** که سه مرحله‌ی موجود را زیر یک تراکنش دیتابیس اجرا می‌کند — `CreateSale` (که با پرداخت کامل خودش شماره و تاریخ فاکتور را صادر می‌کند)، `ShipSale` (کسر موجودی و خروج دانه‌های اسکن‌شده) و نشاندن وضعیت `DELIVERED`. خطا در هر مرحله همه چیز را برمی‌گرداند، پس فروش نیمه‌کاره باقی نمی‌ماند.
+
+**Body:**
+```json
+{
+  "sale": { "...": "همان بدنه‌ی CreateSale" },
+  "scannedItems": [
+    { "productId": 10, "productUnitBarcodes": ["1002600010000001", "1002600010000002"] }
+  ],
+  "shippingNote": "تحویل حضوری به مشتری"
+}
+```
+- `sale`: عیناً بدنه‌ی `CreateSale`. مقدار `status` هرچه بفرستید نادیده گرفته و `PROFORMA` گذاشته می‌شود؛ خود دستور آن را تا `DELIVERED` جلو می‌برد.
+- **فروش غیر اقساطی:** `sale.paidAmount` باید ≥ `sale.totalAmount` باشد، وگرنه ۴۰۰ («در تحویل حضوری پرداخت باید کامل باشد.»).
+- **فروش اقساطی (`sale.paymentType = INSTALLMENT`، ۵): پشتیبانی می‌شود.** مشتری می‌تواند حضوری خرید کند و روش پرداخت را اقساطی بگذارد؛ آنچه فروش را از پیش‌فاکتور بیرون می‌آورد **پیش‌پرداخت** است، نه پرداخت کامل. در این حالت:
+  - `installmentPlan` **الزامی است** (وگرنه ۴۰۰): عیناً بدنه‌ی `CreateSaleInstallmentPlan` (بخش ۱۱ب) بدون `saleId` — `saleId` هرچه بفرستید نادیده گرفته و با فروشِ تازه‌ساخته‌شده پر می‌شود. در همان تراکنش و **پیش از خروج کالا** ثبت می‌شود.
+  - `installmentPlan.downPaymentAmount` باید **بیشتر از صفر** باشد، وگرنه ۴۰۰. پیش‌فاکتور یعنی خریدی که حتی یک ریال بابتش پرداخت نشده؛ کالا با چنین فروشی از انبار خارج نمی‌شود.
+  - `sale.paidAmount` هرچه بفرستید نادیده گرفته می‌شود — از پیش‌پرداخت قرارداد پر می‌شود.
+  - `sale.paymentDetails` را **خالی بفرستید**: رکورد پیش‌پرداخت را خود ثبت قرارداد با `purpose = INSTALLMENT_DOWN_PAYMENT` می‌سازد.
+  - `installmentPlan` روی فروش غیر اقساطی ۴۰۰ می‌گیرد.
+- `scannedItems`: بارکد دانه‌ها، گروه‌شده بر اساس محصول؛ برای هر محصول به ترتیب بین ردیف‌های همان محصول پخش می‌شود. تعداد کمتر یا بیشتر از اقلام فروش ۴۰۰ می‌گیرد. برای کالای بدون ردیابی دانه‌ای می‌توان نفرستاد — مگر `product.requiresUnitTracking` که آن‌وقت خود `ShipSale` الزام می‌کند (بخش ۷).
+- `shippingNote` اختیاری؛ پیش‌فرض «تحویل حضوری به مشتری».
+
+**data خروجی:** `{ "id": 200, "invoiceNumber": "INV-2026-0007", "status": 4 }` (`4 = DELIVERED`).
 
 ### `DELETE api/Sale/DeleteSale?id=200`
 
@@ -1576,6 +1623,248 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 - **کالای با `requiresUnitTracking: true`:** `productUnitBarcodes` (و در صورت ارسال مازاد، `excessProductUnitBarcodes`) **الزامی** است؛ نفرستادنش ۴۰۰.
 
 **data خروجی:** `{ "saleId": 200, "saleStatus": 7 }` (مقدار enum وضعیت فروش، بخش ۱۵).
+
+---
+
+## ۱۱ب. فروش اقساطی (SaleInstallment)
+
+کنترلر: `api/SaleInstallment`. این فیچر فقط سمت **فروش** است؛ خرید و تامین‌کننده هیچ معادلی ندارند.
+
+**مدل ذهنی.** یک فروش با `paymentType = 5` (`INSTALLMENT`) یک **قرارداد اقساطی** (`SaleInstallmentPlan`، یک‌به‌یک با فروش) دارد که زیرش **سطرهای قسط** (`SaleInstallment`) نشسته‌اند. سطرها رکورد واقعی و ذخیره‌شده‌اند. در کنارشان یک آبجکت **خلاصه** (`installmentSummary`) وجود دارد که ذخیره نمی‌شود و هر بار از روی همان سطرها ساخته می‌شود؛ هرجا `paymentDetails` یک فروش دیده می‌شود، این خلاصه هم کنارش می‌آید.
+
+**تفاوت `INSTALLMENT` با `MIXED`:** در `MIXED` کل مبلغ یکجا پرداخت می‌شود ولی با چند روش. در `INSTALLMENT` مبلغ در طول زمان و ماه‌به‌ماه پرداخت می‌شود.
+
+### قواعد محاسبه
+
+- `totalAmount` = قیمت نقدی + درصد افزایش، و **باید با `sale.totalAmount` برابر باشد**. فرانت خودش این عدد را حساب می‌کند و می‌فرستد؛ بکند فقط سازگاری‌اش را با `cashAmount + round(cashAmount × markupPercentage / 100)` (با تلورانس ۱ واحد) و برابری‌اش با مبلغ فروش بررسی می‌کند.
+- `financedAmount = totalAmount - downPaymentAmount`
+- `installmentAmount = financedAmount / installmentCount` با **تقسیم صحیح**. باقیمانده‌ی رُند روی **قسط آخر** می‌نشیند، نه قسط اول — این‌طور همه‌ی اقساط جز آخری عدد گرد و یکسانی دارند.
+- سررسید قسط `n` (۱-based) = `firstDueDate.AddMonths(n - 1)` — فاصله‌ی ثابت ماهانه.
+- **تعداد اقساط سمت سرور به مجموعه‌ی خاصی محدود نیست**؛ هر عدد مثبت پذیرفته می‌شود. قرار است فرانت چند گزینه‌ی از پیش تعیین‌شده نشان دهد. اگر روزی خواستیم این محدودیت را سمت سرور هم اعمال کنیم، جایش `CreateSaleInstallmentPlanCommandValidator` است.
+
+### خروج از پیش‌فاکتور برای فروش اقساطی
+
+برای فروش **غیر اقساطی** قاعده بدون تغییر است: تا `paidAmount >= totalAmount` نشود، فروش از `PROFORMA` خارج نمی‌شود.
+
+برای فروش **اقساطی** شرط، «پرداخت کامل» نیست — «وجود قرارداد اقساطی فعال با پیش‌پرداخت ثبت‌شده» است. چون پلن **بعد از** ساخت فروش ساخته می‌شود، یک فروش اقساطی در `CreateSale` عمداً در `PROFORMA` می‌ماند؛ نهایی‌سازی (تولید شماره‌ی فاکتور رسمی، `invoiceDate`، و رفتن به `PROCESSING`) در `CreateSaleInstallmentPlan` اتفاق می‌افتد. `UpdateSale` هم می‌تواند فروش اقساطیِ دارای پلن و پیش‌پرداخت را از `PROFORMA` خارج کند.
+
+> `sale.paidAmount` بعد از هر پرداخت (پیش‌پرداخت، قسط، تسویه‌ی زودهنگام) به‌روز می‌شود و همیشه برابر `plan.paidAmount` است. به همین دلیل `UpdateSale` روی یک فروش اقساطیِ دارای پلن، `paidAmount` ورودی را نادیده می‌گیرد و `totalAmount` متفاوت با مبلغ پلن را با ۴۰۰ رد می‌کند — مبلغ کل فقط از مسیر `UpdateSaleInstallmentPlan` عوض می‌شود.
+
+### `POST api/SaleInstallment/CreateSaleInstallmentPlan`
+
+```json
+{
+  "saleId": 200,
+  "cashAmount": 10000000,
+  "markupPercentage": 20,
+  "totalAmount": 12000000,
+  "downPaymentAmount": 2000000,
+  "installmentCount": 5,
+  "firstDueDate": "2026-10-01T00:00:00",
+  "latePenaltyPercentage": 2,
+  "paymentType": 0,
+  "checkNumber": null,
+  "transferRef": null,
+  "paidAt": "2026-09-01T00:00:00"
+}
+```
+
+چهار فیلد آخر مربوط به **پرداخت پیش‌پرداخت** است؛ `paidAt` اختیاری است و پیش‌فرضش «الان» است. اعتبارسنجی‌ها: فروش باید وجود داشته و فعال باشد، `paymentType` فروش باید `INSTALLMENT` باشد، نباید از قبل پلن فعالی داشته باشد، `totalAmount` باید با مبلغ فروش برابر باشد، `downPaymentAmount < totalAmount`، `installmentCount > 0`، `markupPercentage >= 0`، و `firstDueDate` نباید قبل از تاریخ پیش‌پرداخت باشد.
+
+اثر: پلن + تمام سطرهای قسط در وضعیت `PENDING` ساخته می‌شوند، یک `PaymentDetail` با `purpose = 1` (`INSTALLMENT_DOWN_PAYMENT`) ثبت می‌شود، `sale.paidAmount` به‌روز می‌شود، و در صورت نیاز فروش از پیش‌فاکتور خارج می‌شود.
+
+**`latePenaltyPercentage` فقط ذخیره می‌شود.** هیچ محاسبه‌ای روی آن انجام نمی‌شود و هیچ‌جا خوانده نمی‌شود — بخش «موارد باز» پایین همین بخش.
+
+**data خروجی:** همان سند کامل `GetSaleInstallmentPlanDetail` (پایین). همه‌ی commandهای این بخش همین سند را برمی‌گردانند، تا پاسخ یک write دقیقاً همان شکلی باشد که یک read می‌دهد.
+
+### `PUT api/SaleInstallment/UpdateSaleInstallmentPlan`
+
+```json
+{
+  "id": 10,
+  "cashAmount": 10000000,
+  "markupPercentage": 20,
+  "totalAmount": 12000000,
+  "installmentCount": 8,
+  "firstDueDate": "2026-12-01T00:00:00",
+  "latePenaltyPercentage": 2
+}
+```
+
+ویرایش پس از شروع پرداخت هم مجاز است، ولی **فقط بخش پرداخت‌نشده**:
+
+- سطرهای `PAID` هرگز تغییر نمی‌کنند و هیچ‌وقت حذف نمی‌شوند؛ `PaymentDetail`های ثبت‌شده هم دست‌نخورده می‌مانند.
+- `installmentCount` نمی‌تواند از تعداد سطرهای `PAID` کمتر شود.
+- `totalAmount` نمی‌تواند از `plan.paidAmount` کمتر شود؛ اگر عوض شود، `sale.totalAmount` هم با آن هماهنگ می‌شود.
+- `downPaymentAmount` پس از ثبت **قابل تغییر نیست** و در بدنه‌ی این درخواست هم نمی‌آید.
+- سطرهای پرداخت‌نشده حذف و با زمان‌بندی جدید بازتولید می‌شوند، با **ادامه‌ی شماره‌گذاری از آخرین سطر `PAID`**. مبلغ `totalAmount - paidAmount` فقط روی همین سطرهای جدید پخش می‌شود و باقیمانده‌ی رُند باز هم روی آخرین سطر می‌نشیند.
+
+### `DELETE api/SaleInstallment/DeleteSaleInstallmentPlan?id=10`
+
+ابطال قرارداد: `isActive = false`، `status = CANCELLED`، و همه‌ی سطرهای `PENDING`/`OVERDUE` به `CANCELLED` می‌روند. سطرهای `PAID` دست‌نخورده می‌مانند، `PaymentDetail`های ثبت‌شده **حذف نمی‌شوند** (رکورد مالی واقعی‌اند) و به همین دلیل `sale.paidAmount` هم تغییر نمی‌کند.
+
+### `POST api/SaleInstallment/PaySaleInstallment`
+
+```json
+{
+  "saleInstallmentId": 101,
+  "paymentType": 3,
+  "checkNumber": null,
+  "transferRef": "TRX-9",
+  "paidAt": "2026-10-01T00:00:00"
+}
+```
+
+- **یک قسط = یک پرداخت کامل.** پرداخت جزئی وجود ندارد؛ مبلغ از روی `installment.amount` برداشته می‌شود، نه از ورودی کاربر.
+- پرداخت **زودتر از سررسید** مجاز است — هیچ اعتبارسنجی‌ای روی `dueDate` نیست. پرداخت **خارج از ترتیب** هم رد نمی‌شود (سطر مشخصاً با `id` هدف گرفته می‌شود).
+- اگر سطر `PAID` یا `CANCELLED` باشد، یا پلن `ACTIVE` نباشد، ۴۰۰ برمی‌گردد.
+- اثر: یک `PaymentDetail` با `purpose = 2` (`INSTALLMENT`) ساخته و به سطر لینک می‌شود؛ سطر `PAID` می‌شود؛ اگر هیچ سطر پرداخت‌نشده‌ای نماند پلن `SETTLED` می‌شود؛ `sale.paidAmount` به‌روز می‌شود.
+
+### `POST api/SaleInstallment/SettleSaleInstallmentPlan`
+
+```json
+{
+  "saleId": 200,
+  "planId": null,
+  "paymentType": 3,
+  "checkNumber": null,
+  "transferRef": "TRX-SETTLE",
+  "paidAt": "2026-11-05T00:00:00"
+}
+```
+
+تسویه‌ی کامل زودهنگام: یکی از `saleId` یا `planId` کافی است. مبلغ دقیقاً `plan.remainingAmount` است، **بدون هیچ تخفیفی** روی درصد افزایش. یک `PaymentDetail` یکجا ساخته می‌شود و تمام سطرهای پرداخت‌نشده با همان `paidAt`/`paymentType`/`paymentDetailId` به `PAID` می‌روند؛ پلن `SETTLED` و `sale.paidAmount = plan.totalAmount` می‌شود.
+
+### `GET api/SaleInstallment/GetSaleInstallmentPlanDetail?saleId=200`
+
+`planId` یا `saleId` — یکی کافی است. اگر روی یک فروش هم پلن ابطال‌شده باشد و هم پلن جدید، پلن جاری برگردانده می‌شود.
+
+```json
+{
+  "id": 10,
+  "saleId": 200,
+  "invoiceNumber": "INV-2026-0007",
+  "customerId": 1,
+  "customerName": "علی رضایی",
+  "cashAmount": 10000000,
+  "markupPercentage": 20,
+  "totalAmount": 12000000,
+  "downPaymentAmount": 2000000,
+  "financedAmount": 10000000,
+  "installmentCount": 5,
+  "installmentAmount": 2000000,
+  "firstDueDate": "2026-10-01T00:00:00",
+  "latePenaltyPercentage": 2,
+  "status": 0,
+  "statusTitle": "جاری",
+  "paidInstallmentCount": 1,
+  "remainingInstallmentCount": 4,
+  "paidInstallmentsAmount": 2000000,
+  "paidAmount": 4000000,
+  "remainingAmount": 8000000,
+  "lastPaymentDate": "2026-10-01T00:00:00",
+  "nextDueDate": "2026-11-01T00:00:00",
+  "createdAt": "2026-09-01T00:00:00",
+  "installments": [
+    {
+      "id": 101, "number": 1, "dueDate": "2026-10-01T00:00:00", "amount": 2000000,
+      "status": 1, "statusTitle": "پرداخت‌شده", "paidAt": "2026-10-01T00:00:00",
+      "paymentType": 3, "paymentDetailId": 2
+    }
+  ],
+  "paymentDetails": [
+    { "id": 1, "type": 0, "purpose": 1, "amount": 2000000, "paidAt": "2026-09-01T00:00:00", "checkNumber": null, "transferRef": null },
+    { "id": 2, "type": 3, "purpose": 2, "amount": 2000000, "paidAt": "2026-10-01T00:00:00", "checkNumber": null, "transferRef": "TRX-9" }
+  ]
+}
+```
+
+`lastPaymentDate`: آخرین `paidAt` بین سطرهای `PAID`؛ اگر هیچ قسطی پرداخت نشده باشد، تاریخ پیش‌پرداخت. `nextDueDate`: کمترین `dueDate` بین سطرهای پرداخت‌نشده؛ پس از تسویه `null`.
+
+### `GET api/SaleInstallment/GetSaleInstallmentPlanList`
+
+**Query:** `page`, `take`, `customerId`, `saleId`, `status`, `fromNextDueDate`, `toNextDueDate`, `fromCreatedAt`, `toCreatedAt`.
+
+**data.saleInstallmentPlanList[]:**
+```json
+{
+  "planId": 10,
+  "saleId": 200,
+  "invoiceNumber": "INV-2026-0007",
+  "customerId": 1,
+  "customerName": "علی رضایی",
+  "totalAmount": 12000000,
+  "paidAmount": 4000000,
+  "remainingAmount": 8000000,
+  "installmentCount": 5,
+  "paidInstallmentCount": 1,
+  "nextDueDate": "2026-11-01T00:00:00",
+  "lastPaymentDate": "2026-10-01T00:00:00",
+  "status": 0,
+  "statusTitle": "جاری"
+}
+```
+
+### `GET api/SaleInstallment/GetSaleInstallmentList`
+
+لیست **تک‌تک اقساط در سطح کل سیستم**. صفحه‌های «سررسیدگذشته» و «پرداخت‌های پیش‌رو» روی همین اندپوینت ساخته می‌شوند — اندپوینت جداگانه‌ای برای آن دو وجود ندارد:
+
+- **سررسیدگذشته:** `status=0` (`PENDING`) و `toDueDate=امروز`
+- **پرداخت‌های پیش‌رو:** `status=0` و `fromDueDate=امروز` (و در صورت نیاز `toDueDate=امروز+۳۰ روز`)
+
+**Query:** `page`, `take`, `customerId`, `saleId`, `planId`, `status`, `fromDueDate`, `toDueDate`, `fromPaidAt`, `toPaidAt`. مرتب‌سازی پیش‌فرض بر اساس `dueDate`.
+
+**data.saleInstallmentList[]:**
+```json
+{
+  "installmentId": 101,
+  "number": 1,
+  "dueDate": "2026-10-01T00:00:00",
+  "amount": 2000000,
+  "status": 0,
+  "statusTitle": "پرداخت‌نشده",
+  "paidAt": null,
+  "paymentType": null,
+  "planId": 10,
+  "saleId": 200,
+  "invoiceNumber": "INV-2026-0007",
+  "customerId": 1,
+  "customerName": "علی رضایی"
+}
+```
+
+### `installmentSummary` روی فروش
+
+روی `GetSaleDetail` و هر ردیف `GetSaleList`، برای فروش‌های غیر اقساطی `null` است:
+
+```json
+{
+  "planId": 10,
+  "totalAmount": 12000000,
+  "downPaymentAmount": 2000000,
+  "installmentCount": 5,
+  "paidInstallmentCount": 1,
+  "lastPaymentDate": "2026-10-01T00:00:00",
+  "nextDueDate": "2026-11-01T00:00:00",
+  "paidAmount": 4000000,
+  "remainingAmount": 8000000,
+  "status": 0,
+  "statusTitle": "جاری"
+}
+```
+
+بدون لیست سطرها — اینجا فقط خلاصه است؛ سطرها در `GetSaleInstallmentPlanDetail` می‌آیند.
+
+### موارد باز (عمداً پیاده‌سازی‌نشده)
+
+۱. **علامت‌گذاری دیرکرد.** `OVERDUE` عضو `SaleInstallmentStatusEnum` هست ولی **هیچ کدی آن را نمی‌نویسد**: هیچ background service، هیچ job و هیچ اندپوینت بازمحاسبه‌ای وجود ندارد. تشخیص دیرکرد از روی `dueDate` کارِ فرانت است. این عضو برای وقتی نگه داشته شده که بعداً تصمیم بگیریم علامت‌گذاری دستی یا خودکار اضافه کنیم — فراموش نشده است.
+
+۲. **جریمه‌ی دیرکرد.** `latePenaltyPercentage` روی پلن ذخیره می‌شود (اوپراتور دستی وارد می‌کند) ولی هیچ محاسبه‌ای روی آن انجام نمی‌شود و هیچ‌جا خوانده نمی‌شود. پرسش‌های بازی که باید پاسخ بگیرند: درصد نسبت به چه پایه‌ای (مبلغ قسط معوق یا کل باقیمانده)؟ به ازای هر روز تأخیر یا هر ماه؟ خودکار محاسبه شود یا اوپراتور موقع دریافت، مبلغ نهایی را ثبت کند؟ جریمه به `totalAmount` اضافه شود یا جدا نگه داشته شود؟ (توصیه: **جدا** — وگرنه رابطه‌ی `paidAmount == totalAmount ⇔ SETTLED` می‌شکند و منطق تسویه به‌هم می‌ریزد.) نقطه‌ی ورودش `PaySaleInstallmentCommand` است و احتمالاً یک `Purpose = LATE_PENALTY` روی `PaymentPurposeEnum` به‌علاوه‌ی یک فیلد `PenaltyAmount` روی `SaleInstallment` می‌خواهد.
+
+۳. **تخفیف تسویه‌ی زودهنگام.** الان `SettleSaleInstallmentPlan` دقیقاً `remainingAmount` را می‌گیرد. اگر بعداً تصمیم شد بخشی از درصد افزایش برگردد، تنها جایی که تغییر می‌کند محاسبه‌ی مبلغ در همان handler است، به‌علاوه‌ی احتمالاً یک فیلد `EarlySettlementDiscountAmount` روی پلن برای ثبت مقدار برگشتی.
+
+۴. **اثر مرجوعی فروش (`SaleReturn`) روی اقساط باقی‌مانده.** خارج از scope است و هیچ اتصالی بین این دو دامنه ساخته نشده. اگر مشتری کالایی را مرجوع کند، سطرهای قسط به‌طور خودکار تعدیل نمی‌شوند؛ فعلاً کار اوپراتور است (`UpdateSaleInstallmentPlan`).
+
 
 ---
 
@@ -1937,6 +2226,35 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 2 | چک (CHECK) |
 | 3 | انتقال بانکی (TRANSFER) |
 | 4 | ترکیبی (MIXED) |
+| 5 | اقساطی (INSTALLMENT) |
+
+`INSTALLMENT` آخر لیست اضافه شده و شماره‌ی هیچ عضو موجودی عوض نشده است. تفاوتش با `MIXED`: در `MIXED` کل مبلغ یکجا ولی با چند روش پرداخت می‌شود؛ در `INSTALLMENT` مبلغ در طول زمان و ماه‌به‌ماه (بخش ۱۱ب).
+
+### `PaymentPurposeEnum` (هدف پرداخت — روی `paymentDetails[]`)
+| مقدار | معنی |
+|---|---|
+| 0 | پرداخت عادی (NORMAL) |
+| 1 | پیش‌پرداخت قرارداد اقساطی (INSTALLMENT_DOWN_PAYMENT) |
+| 2 | پرداخت قسط (INSTALLMENT) |
+
+`type` می‌گوید **چطور** پرداخت شد، `purpose` می‌گوید **این پرداخت چیست**. این دو محور مستقل‌اند: یک قسط می‌تواند با چک پرداخت شود (`type = 2`, `purpose = 2`).
+
+### `SaleInstallmentPlanStatusEnum` (وضعیت قرارداد اقساطی)
+| مقدار | معنی |
+|---|---|
+| 0 | جاری (ACTIVE) |
+| 1 | تسویه شده (SETTLED) |
+| 2 | ابطال شده (CANCELLED) |
+
+### `SaleInstallmentStatusEnum` (وضعیت یک سطر قسط)
+| مقدار | معنی |
+|---|---|
+| 0 | پرداخت‌نشده (PENDING) |
+| 1 | پرداخت‌شده (PAID) |
+| 2 | سررسید گذشته (OVERDUE) |
+| 3 | ابطال شده (CANCELLED) |
+
+⚠️ **`OVERDUE` را هیچ کدی نمی‌نویسد.** هیچ background service، هیچ job و هیچ اندپوینت بازمحاسبه‌ای برای علامت‌گذاری دیرکرد وجود ندارد؛ تشخیصش از روی `dueDate` کارِ فرانت است (بخش ۱۱ب، «موارد باز»). این عضو عمداً تعریف شده تا اگر بعداً علامت‌گذاری دستی/خودکار اضافه شد، شماره‌ها عوض نشوند.
 
 ### `ProductUnitEnum` (واحد شمارش محصول)
 | مقدار | معنی |
@@ -2172,6 +2490,30 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 **بدون تغییر:** فیلد `unitPrice` و ستون‌های `PurchaseReturnEffects.UnitPrice`/`SaleReturnEffects.UnitPrice` سر جای خودشان هستند و در `effects[].unitPrice` برمی‌گردند، پس **هیچ migration‌ای لازم نیست و هیچ داده‌ای از دست نمی‌رود**. فرستادن `unitPrice` مثل قبل کار می‌کند؛ هر پیلودی که امروز درست است فردا هم درست است. قواعد لایه‌ی ادعا (دامنه، قلم سند، سهمیه، `unitPrice` ادعای EXCESS برابر قیمت قلم)، چرخه‌ی عمر، و `unitCost` هیچ‌کدام تغییر نکردند.
 
 **فرانت:** مسیر خطای `data.requiredDirection`/`requiredAmount` دیگر هرگز فعال نمی‌شود و اگر فرمی تراز را زنده محاسبه می‌کند و دکمه‌ی ثبت را قفل می‌کند، آن قفل باید برداشته شود. محاسبه‌ی تراز به‌عنوان یک عدد راهنما برای پیش‌فرض کردن مبلغ وجه اشکالی ندارد و حتی مفید است.
+
+### ⚠️ تغییرات شکسته‌ی قرارداد — ۲۰۲۶-۰۹-۲۰ (فروش حضوری و شماره‌ی فاکتور)
+
+| کجا | قبل | بعد | چرا |
+|---|---|---|---|
+| `CreateSale` / `UpdateSale` — `invoiceNumber` | فیلد ورودی بود و کلاینت آن را می‌فرستاد | **حذف شد**؛ سرور هنگام خروج از پیش‌فاکتور خودش تولیدش می‌کند | شماره‌ی رسمی نباید دست کلاینت باشد؛ `CreateSaleInstallmentPlan` هم از همان مسیر می‌رود |
+| `CreateSale` — `data` | خالی بود | `{ id, invoiceNumber, status }` | فراخوان بدون یک کوئری دیگر شناسه و شماره‌ی فاکتور را لازم دارد |
+| `POST api/Sale/CreateInPersonSale` | — | **جدید** (بخش ۱۱) | ثبت اتمیک فروش حضوری، نقدی یا اقساطی |
+| `CreateSale` / `UpdateSale` — `paymentDetails` | برای هر `paymentType` غیر `CASH` الزامی بود | `INSTALLMENT` مستثنا شد؛ خالی فرستاده می‌شود | رکورد پیش‌پرداخت را ثبت قرارداد می‌سازد، نه کلاینت — با این قانون اصلاً نمی‌شد فروش اقساطی ساخت |
+| `UpdateSale` — `paymentDetails` | اعتبارسنجی می‌شد ولی **هیچ‌وقت ذخیره نمی‌شد** (در `CreateSale` ذخیره می‌شد) | ذخیره می‌شود، با جایگزینی کامل؛ روی فروش اقساطی نادیده گرفته می‌شود | ویرایش فروش، پرداخت‌های تازه را بی‌صدا دور می‌ریخت |
+| `UpdatePurchase` — `paymentDetails` | **فیلد اصلاً وجود نداشت** | اضافه شد؛ جایگزینی کامل، و برای `paymentType` غیر نقدی الزامی | پرداخت‌های یک خرید بعد از ثبت اولیه اصلاً قابل اصلاح نبود |
+
+### ⚠️ تغییرات شکسته‌ی قرارداد — ۲۰۲۶-۰۹-۲۰ (فروش اقساطی)
+
+| کجا | قبل | بعد | چرا |
+|---|---|---|---|
+| `paymentDetails[].id` (روی `GetSaleDetail`، `GetPurchaseDetail` و ورودی Create/Update) | `Guid` | `int` | همه‌ی شناسه‌های این پروژه `int` هستند؛ `Guid` بودن این یکی باعث یک FK سایه‌ای (`PurchaseId1`) روی جدول هم شده بود |
+| `paymentDetails[]` | `{ id, type, amount, checkNumber, transferRef }` | + `purpose` (`PaymentPurposeEnum`) و `paidAt` (تاریخ واقعی پرداخت) | باید بشود «پرداخت عادی» را از «پیش‌پرداخت قرارداد اقساطی» و «پرداخت قسط» تشخیص داد |
+| `GetSaleDetail` → `paymentDetails[]` | موجودیت خام `PaymentDetail` | همان DTO بالا | ناوبری‌های موجودیت روی wire نشت نکنند |
+| `PaymentTypeEnum` | تا `4` (`MIXED`) | + `5` = `INSTALLMENT` | افزودنی، هیچ عضوی شماره‌گذاری مجدد نشده |
+| خروج فروش از `PROFORMA` | همیشه شرط `paidAmount >= totalAmount` | برای `paymentType = 5` شرط، «پلن اقساط فعال + پیش‌پرداخت ثبت‌شده» است | مشتری قسطی هرگز کل مبلغ را یکجا نمی‌پردازد |
+| `UpdateSale` روی فروش اقساطیِ دارای پلن | `paidAmount`/`totalAmount` ورودی مستقیم می‌نشست | `paidAmount` از پلن می‌آید؛ `totalAmount` متفاوت با پلن ۴۰۰ می‌گیرد | پلن و فروش نباید از هم جدا بیفتند |
+
+**افزودنی، بدون شکست:** `installmentSummary` (nullable) روی `GetSaleDetail` و هر ردیف `GetSaleList`، و کنترلر تازه‌ی `api/SaleInstallment` (بخش ۱۱ب).
 
 ### تغییرات قرارداد — ۲۰۲۶-۰۹-۱۴ (رسید و ارسال یکپارچه) — افزودنی، بدون شکست
 

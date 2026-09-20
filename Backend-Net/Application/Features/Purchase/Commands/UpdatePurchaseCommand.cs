@@ -5,6 +5,7 @@ using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Common.Exceptions;
+using AutoMapper;
 using Common.Extensions;
 using Domain.Enums;
 using FluentValidation;
@@ -21,6 +22,7 @@ namespace Application.Features.Purchase.Commands
         public DateTime? PaymentDate { get; set; }
         public PurchaseStatusEnum Status { get; set; }
         public PaymentTypeEnum PaymentType { get; set; }
+        public List<PaymentDetailDto> PaymentDetails { get; set; } = new();
         public UInt64 TotalAmount { get; set; }
         public UInt64 PaidAmount { get; set; }
         public string? Description { get; set; }
@@ -46,6 +48,8 @@ namespace Application.Features.Purchase.Commands
             RuleFor(x => x.SupplierId).GreaterThan(0).WithMessage(Validation.RequiredMessage("فروشنده"));
             RuleFor(x => x.TotalAmount).Must(p => p > 0).WithMessage("مبلغ کل باید از صفر بیشتر باشد.");
             RuleFor(x => x.PaidAmount).Must(p => p >= 0).WithMessage("مبلغ پرداختی باید بیشتر یا مساوی صفر باشد.");
+            RuleFor(x => x.PaymentDetails).NotEmpty().When(x => x.PaymentType != PaymentTypeEnum.CASH)
+                .WithMessage("اطلاعات پرداخت باید به طول کامل پر شود.");
             RuleForEach(x => x.Attachments).ChildRules(a =>
             {
                 a.RuleFor(i => i.ObjectKey).NotEmpty().WithMessage(Validation.RequiredMessage("کلید فایل ضمیمه"));
@@ -59,17 +63,20 @@ namespace Application.Features.Purchase.Commands
         private readonly IWMSDbContext _context;
         private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
         public UpdatePurchaseCommandHandler(
             IPurchaseRepository purchaseRepository,
             IWMSDbContext context,
             IObjectStorageService objectStorageService,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IMapper mapper)
         {
             _purchaseRepository = purchaseRepository;
             _context = context;
             _objectStorageService = objectStorageService;
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
 
         public async Task<ResponseDto> Handle(UpdatePurchaseCommand request, CancellationToken cancellationToken)
@@ -96,6 +103,24 @@ namespace Application.Features.Purchase.Commands
             purchase.UpdatedAt = DateTime.Now;
 
             _purchaseRepository.Update(purchase);
+
+            // رکوردهای پرداخت: مثل ضمیمه‌ها جایگزینی کامل است، نه افزودنی - فرانت همیشه فهرست
+            // نهایی را می‌فرستد. CreatePurchase آن‌ها را از راه نگاشت AutoMapper روی گراف خرید
+            // ذخیره می‌کند؛ این handler تا امروز اصلاً فیلدش را نمی‌گرفت، پس وضعیت پرداخت یک خرید
+            // بعد از ثبت اولیه قابل اصلاح نبود.
+            var existingPayments = await _context.PaymentDetails
+                .Where(x => x.PurchaseId == purchase.Id)
+                .ToListAsync(cancellationToken);
+            _context.PaymentDetails.RemoveRange(existingPayments);
+
+            foreach (var payment in request.PaymentDetails)
+            {
+                var entity = _mapper.Map<Domain.Entities.PaymentDetail>(payment);
+                entity.PurchaseId = purchase.Id;
+                // Purpose از ورودی خوانده نمی‌شود: خرید اقساطی وجود ندارد، هر پرداختی عادی است.
+                entity.Purpose = PaymentPurposeEnum.NORMAL;
+                await _context.PaymentDetails.AddAsync(entity, cancellationToken);
+            }
 
             // ضمیمه‌ها به‌طور کامل جایگزین می‌شوند، نه اضافه - فرانت همیشه فهرست نهایی را می‌فرستد.
             var existingAttachments = await _context.DocumentAttachments

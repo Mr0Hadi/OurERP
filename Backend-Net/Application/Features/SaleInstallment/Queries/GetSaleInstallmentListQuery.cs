@@ -1,0 +1,122 @@
+using Application.Common.Contracts.Context;
+using Application.Common.Dtos;
+using Application.Common.Enums;
+using Application.Features.SaleInstallment.Dtos;
+using Common.Extensions;
+using Domain.Enums;
+using MediatR;
+
+namespace Application.Features.SaleInstallment.Queries
+{
+    /// <summary>
+    /// لیست تک‌تک اقساط در سطح کل سیستم. صفحه‌های «سررسیدگذشته» و «پرداخت‌های پیش‌رو» روی
+    /// همین اندپوینت ساخته می‌شوند - اندپوینت جداگانه‌ای برای آن‌ها وجود ندارد:
+    /// «سررسیدگذشته» یعنی <c>status = PENDING</c> و <c>toDueDate = امروز</c>، که سمت فرانت
+    /// ساخته می‌شود.
+    /// </summary>
+    public class GetSaleInstallmentListQuery : IRequest<ResponseDto>
+    {
+        public int Page { get; set; } = 1;
+        public int Take { get; set; } = 10;
+        public int? CustomerId { get; set; }
+        public int? SaleId { get; set; }
+        public int? PlanId { get; set; }
+        public SaleInstallmentStatusEnum? Status { get; set; }
+        public DateTime? FromDueDate { get; set; }
+        public DateTime? ToDueDate { get; set; }
+        public DateTime? FromPaidAt { get; set; }
+        public DateTime? ToPaidAt { get; set; }
+    }
+
+    public class GetSaleInstallmentListQueryHandler : IRequestHandler<GetSaleInstallmentListQuery, ResponseDto>
+    {
+        private readonly IWMSDbContext _context;
+
+        public GetSaleInstallmentListQueryHandler(IWMSDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<ResponseDto> Handle(GetSaleInstallmentListQuery request, CancellationToken cancellationToken)
+        {
+            var res = new ResponseDto();
+            var query = _context.SaleInstallments.AsQueryable();
+
+            if (request.CustomerId.HasValue)
+            {
+                query = query.Where(x => x.Plan.Sale.CustomerId == request.CustomerId.Value);
+            }
+
+            if (request.SaleId.HasValue)
+            {
+                query = query.Where(x => x.Plan.SaleId == request.SaleId.Value);
+            }
+
+            if (request.PlanId.HasValue)
+            {
+                query = query.Where(x => x.SaleInstallmentPlanId == request.PlanId.Value);
+            }
+
+            if (request.Status.HasValue)
+            {
+                query = query.Where(x => x.Status == request.Status.Value);
+            }
+
+            if (request.FromDueDate.HasValue)
+            {
+                query = query.Where(x => x.DueDate >= request.FromDueDate.Value);
+            }
+
+            if (request.ToDueDate.HasValue)
+            {
+                query = query.Where(x => x.DueDate <= request.ToDueDate.Value);
+            }
+
+            if (request.FromPaidAt.HasValue)
+            {
+                query = query.Where(x => x.PaidAt >= request.FromPaidAt.Value);
+            }
+
+            if (request.ToPaidAt.HasValue)
+            {
+                query = query.Where(x => x.PaidAt <= request.ToPaidAt.Value);
+            }
+
+            var paged = await query.OrderBy(x => x.DueDate).ThenBy(x => x.Id).Select(x => new SaleInstallmentListDto
+            {
+                InstallmentId = x.Id,
+                Number = x.Number,
+                DueDate = x.DueDate,
+                Amount = x.Amount,
+                Status = x.Status,
+                PaidAt = x.PaidAt,
+                PaymentType = x.PaymentType,
+                PlanId = x.SaleInstallmentPlanId,
+                SaleId = x.Plan.SaleId,
+                InvoiceNumber = x.Plan.Sale.InvoiceNumber,
+                CustomerId = x.Plan.Sale.CustomerId,
+                CustomerName = x.Plan.Sale.Customer.FirstName + " " + x.Plan.Sale.Customer.LastName,
+            }).ToPagedAsync(request.Page, request.Take, cancellationToken);
+
+            // GetDescription یک فراخوانی محلی است و به SQL ترجمه نمی‌شود، پس بعد از
+            // materialize شدن صفحه پر می‌شود.
+            foreach (var item in paged.Items)
+                item.StatusTitle = item.Status.GetDescription();
+
+            res.Data = new
+            {
+                SaleInstallmentList = paged.Items,
+                Page = new ResponsePageDto
+                {
+                    Page = request.Page,
+                    PageCount = paged.PageCount,
+                    Take = request.Take,
+                    Total = paged.TotalCount
+                }
+            };
+            res.Message = "لیست اقساط با موفقیت ارسال شد.";
+            res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
+            return res;
+        }
+    }
+}

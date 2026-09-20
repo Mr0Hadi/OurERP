@@ -2,6 +2,7 @@ using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.Sale.Dtos;
+using Application.Features.SaleInstallment.Mappings;
 using Common.Extensions;
 using Domain.Enums;
 using MediatR;
@@ -89,6 +90,16 @@ namespace Application.Features.Sale.Queries
                 TotalAmount = x.TotalAmount,
                 PaidAmount = x.PaidAmount
             }).ToPagedAsync(request.Page, request.Take, cancellationToken);
+
+            // خلاصه‌ی اقساط برای کل صفحه در یک round-trip، بعد از materialize شدن صفحه -
+            // همان جایی و به همان دلیلی که امضای URL تصاویر در بقیه‌ی لیست‌ها انجام می‌شود.
+            var summaries = await SaleInstallmentSummaryReader.ReadForSalesAsync(
+                _context, paged.Items.Select(x => x.Id).ToList(), cancellationToken);
+            foreach (var item in paged.Items)
+            {
+                if (summaries.TryGetValue(item.Id, out var summary))
+                    item.InstallmentSummary = summary;
+            }
 
             res.Data = new
             {

@@ -1,4 +1,4 @@
-using Application.Features.Purchase.Commands;
+﻿using Application.Features.Purchase.Commands;
 using Application.Features.Purchase.Dtos;
 using Application.Features.Sale.Commands;
 using Application.Features.Sale.Dtos;
@@ -65,7 +65,6 @@ namespace WMS.Tests.Unit
         {
             var command = new CreateSaleCommand
             {
-                InvoiceNumber = "S-1",
                 InvoiceDate = DateTime.Now,
                 CustomerId = 1,
                 TotalAmount = 4000,

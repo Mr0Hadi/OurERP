@@ -48,6 +48,9 @@ namespace Infrastructure.Persistence
         public DbSet<SaleShippingNote> SaleShippingNotes => Set<SaleShippingNote>();
         public DbSet<PosTerminal> PosTerminals => Set<PosTerminal>();
         public DbSet<InventoryCostLedgerEntry> InventoryCostLedgerEntries => Set<InventoryCostLedgerEntry>();
+        public DbSet<PaymentDetail> PaymentDetails => Set<PaymentDetail>();
+        public DbSet<SaleInstallmentPlan> SaleInstallmentPlans => Set<SaleInstallmentPlan>();
+        public DbSet<SaleInstallment> SaleInstallments => Set<SaleInstallment>();
 
         public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken)
         {
@@ -451,6 +454,70 @@ namespace Infrastructure.Persistence
 
             modelBuilder.Entity<DocumentAttachment>()
                 .HasIndex(x => new { x.DocumentKind, x.DocumentId });
+
+            // هر دو رابطه صریح کانفیگ می‌شوند تا EF از روی Sale.PaymentDetails یک FK سایه‌ای
+            // (PurchaseId1) نسازد - همان ناسازگاری‌ای که قبلاً بین Guid PurchaseId و Purchase.Id
+            // از نوع int وجود داشت. هر دو FK اختیاری‌اند: یک پرداخت یا به خرید وصل است یا به فروش.
+            modelBuilder.Entity<PaymentDetail>()
+                .HasOne(x => x.Purchase)
+                .WithMany(x => x.PaymentDetails)
+                .HasForeignKey(x => x.PurchaseId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PaymentDetail>()
+                .HasOne(x => x.Sale)
+                .WithMany(x => x.PaymentDetails)
+                .HasForeignKey(x => x.SaleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PaymentDetail>()
+                .HasIndex(x => x.PurchaseId);
+
+            modelBuilder.Entity<PaymentDetail>()
+                .HasIndex(x => x.SaleId);
+
+            modelBuilder.Entity<PaymentDetail>()
+                .Property(x => x.Amount)
+                .HasPrecision(20, 0);
+
+            // یک‌به‌یک با فروش.
+            modelBuilder.Entity<SaleInstallmentPlan>()
+                .HasOne(x => x.Sale)
+                .WithOne(x => x.InstallmentPlan)
+                .HasForeignKey<SaleInstallmentPlan>(x => x.SaleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SaleInstallmentPlan>()
+                .HasIndex(x => x.SaleId)
+                .IsUnique();
+
+            modelBuilder.Entity<SaleInstallmentPlan>()
+                .Property(x => x.MarkupPercentage)
+                .HasPrecision(9, 4);
+
+            modelBuilder.Entity<SaleInstallmentPlan>()
+                .Property(x => x.LatePenaltyPercentage)
+                .HasPrecision(9, 4);
+
+            modelBuilder.Entity<SaleInstallment>()
+                .HasOne(x => x.Plan)
+                .WithMany(x => x.Installments)
+                .HasForeignKey(x => x.SaleInstallmentPlanId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Restrict: PaymentDetail یک رکورد مالی واقعی است و نباید با حذف سطر قسط برود.
+            modelBuilder.Entity<SaleInstallment>()
+                .HasOne(x => x.PaymentDetail)
+                .WithMany()
+                .HasForeignKey(x => x.PaymentDetailId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<SaleInstallment>()
+                .HasIndex(x => new { x.SaleInstallmentPlanId, x.Number })
+                .IsUnique();
+
+            modelBuilder.Entity<SaleInstallment>()
+                .HasIndex(x => x.DueDate);
         }
     }
 }

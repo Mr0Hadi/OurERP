@@ -52,6 +52,7 @@ namespace Infrastructure.Ioc
             services.AddScoped<IDepartmentRepository, DepartmentRepository>();
             services.AddScoped<ITeamRepository, TeamRepository>();
             services.AddScoped<IPosTerminalRepository, PosTerminalRepository>();
+            services.AddScoped<ISaleInstallmentPlanRepository, SaleInstallmentPlanRepository>();
 
             //UnitOfWork
             services.AddScoped<IUnitOfWork, UnitOfWork.UnitOfWork>();

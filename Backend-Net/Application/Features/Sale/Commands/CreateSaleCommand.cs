@@ -5,6 +5,7 @@ using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Contracts.UserContextService;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Common.Sales;
 using Application.Features.Sale.Dtos;
 using AutoMapper;
 using Common.Extensions;
@@ -53,7 +54,10 @@ namespace Application.Features.Sale.Commands
                 item.RuleFor(i => i.Quantity).GreaterThan(0).WithMessage("تعداد هر محصول باید از صفر بیشتر باشد.");
                 item.RuleFor(i => i.Discount).GreaterThanOrEqualTo(0).WithMessage("تخفیف باید بیشتر یا مساوی صفر باشد.");
             });
-            RuleFor(x => x.PaymentDetails).NotEmpty().When(x => x.PaymentType != PaymentTypeEnum.CASH)
+            // اقساطی استثناست: رکورد پرداختش را خود CreateSaleInstallmentPlan/PaySaleInstallment با
+            // Purpose درست می‌سازد، پس اینجا چیزی برای فرستادن نیست.
+            RuleFor(x => x.PaymentDetails).NotEmpty()
+                .When(x => x.PaymentType != PaymentTypeEnum.CASH && x.PaymentType != PaymentTypeEnum.INSTALLMENT)
                 .WithMessage("اطلاعات پرداخت باید به طول کامل پر شود.");
             RuleForEach(x => x.Attachments).ChildRules(a =>
             {
@@ -88,12 +92,15 @@ namespace Application.Features.Sale.Commands
             sale.InvoiceNumber ??= string.Empty;
             sale.SalesUserId = _userContextService.GetUserId().ToInt();
 
-            if (sale.Status == SalesStatusEnum.PROFORMA && sale.PaidAmount > 0)
+            // فروش اقساطی در این مرحله هنوز پلن ندارد (پلن بعد از ساخت فروش ثبت می‌شود)، پس
+            // عمداً در پیش‌فاکتور می‌ماند؛ نهایی‌سازی‌اش در CreateSaleInstallmentPlanCommand
+            // اتفاق می‌افتد. فروش غیر اقساطی رفتار قبلی را عیناً نگه می‌دارد: مشتری همان لحظه‌ی
+            // ثبت هم می‌تواند کامل پرداخت کرده باشد، آن‌وقت دیگر پیش‌فاکتور نمی‌ماند.
+            if (sale.PaymentType != PaymentTypeEnum.INSTALLMENT
+                && sale.Status == SalesStatusEnum.PROFORMA
+                && sale.PaidAmount >= sale.TotalAmount)
             {
-                var seq = await _context.Sales.CountAsync(cancellationToken) + 1;
-                sale.InvoiceNumber = Generator.GenerateInvoiceNumber(seq);
-                sale.InvoiceDate = DateTime.Now;
-                sale.Status = SalesStatusEnum.PROCESSING;
+                await SaleInvoiceFinalizer.FinalizeAsync(_context, sale, cancellationToken);
             }
 
             await _context.Sales.AddAsync(sale, cancellationToken);

@@ -954,9 +954,8 @@ frontend: `docs/return-frontend-migration.fa.md` §4.
 - Tests: the two balance tests in `Integration/ReturnEffectModelTests.cs` now assert the opposite - goods out with
   no money, and an uneven swap with no refund, are accepted and their declared prices persisted; both
   `GoodsEffectWithoutUnitPrice_IsInvalid` cases in `Unit/ValidatorTests.cs` became `_IsValid`.
-- **Not verified:** no .NET SDK on the machine this ran from, so nothing here has been compiled or tested. Run
-  `dotnet build WMS.slnx` and `dotnet test Tests/WMS.Tests`; the last recorded baseline is 495/504 with the 9
-  long-documented pre-existing failures.
+- **Verified 2026-09-20** (it shipped unverified - no .NET SDK on the machine it was written on): build clean,
+  suite 547/558 with the 11 long-documented pre-existing failures.
 
 **Return effect model: four effects, one rule each (2026-09-13).** Supersedes the three entries that stood
 here ("Return money balance, off-invoice stock and excess costing", "Stored stock booking, reversible kept
@@ -1118,9 +1117,152 @@ the four 2026-09-13/14 tables in §16. Phased; each phase is self-contained.
   quantity that is decided but whose resolution still has a pending effect, so the same units can be claimed twice in that
   window. The new off-order quota counts outstanding (not-completed) quantity instead.
 
+**Installment sales (2026-09-20).** A new payment method on the sale side only - `Purchase`/`Supplier` are
+untouched. Design decisions in `docs/sale-installment-guide.fa.md`; API contract in `docs/api-guide.fa.md`
+§11b/§15 and the 2026-09-20 breaking-changes table in §16.
+
+- **`PaymentDetail` was fixed first**, since the whole feature sits on it. `Guid Id`/`Guid PurchaseId` became
+  `int Id`/`int? PurchaseId` (every id in this project is an `int`), `int? SaleId`/`Sale? Sale` were added, and
+  **both** relationships are now configured explicitly in `WMSDbContext` so the shadow `PurchaseId1` FK - which EF
+  had been generating off `Sale.PaymentDetails` and which is listed under "Known gaps" below - is gone. New fields:
+  `PaidAt` and `Purpose` (`PaymentPurposeEnum`: `NORMAL`/`INSTALLMENT_DOWN_PAYMENT`/`INSTALLMENT`). `Type`
+  (`PaymentTypeEnum`) still means *how* the money moved; `Purpose` means *what this payment is* - two independent
+  axes. `PaymentDetailDto.Id` changed `Guid` -> `int` (breaking on the wire), and `SaleDto.PaymentDetails` now
+  returns that DTO instead of the raw entity.
+- **`PaymentTypeEnum.INSTALLMENT = 5`** appended (nothing renumbered). It differs from `MIXED` in time, not method:
+  `MIXED` pays the whole amount at once through several methods, `INSTALLMENT` pays it month by month.
+- **Three levels, and the middle one is the only one that is both real and derived.** `SaleInstallmentPlan`
+  (one-to-one with `Sale`, unique index on `SaleId`) -> `SaleInstallment` rows (unique index on
+  `(SaleInstallmentPlanId, Number)`, no `IsActive` - lifecycle is `Status`, the `PurchaseReturn` pattern) plus
+  `SaleInstallmentSummaryDto`, which is **never stored**. An installment is separately payable, separately
+  cancellable and links to a real `PaymentDetail`, so it has identity and earns a row; the summary is a pure
+  function of those rows, and storing it would mean keeping one number in sync across five write handlers - the
+  bargain already struck for `Sale.PaidAmount` and not worth repeating.
+- **`Sale.PaidAmount` is the one duplicated number**, always equal to `plan.PaidAmount`, updated by all five
+  payment-touching handlers. Consequently `UpdateSaleCommand` on an installment sale that has a plan ignores the
+  request's `PaidAmount` (reads it off the plan) and rejects a `TotalAmount` that disagrees with the plan - the
+  total only changes through `UpdateSaleInstallmentPlan`. Cancelling a plan leaves `PaidAmount` alone: money taken
+  is money taken.
+- **The PROFORMA exit rule is now two branches.** Non-installment: unchanged (`PaidAmount >= TotalAmount`).
+  Installment: the condition is "an active plan with a recorded down payment", not full payment. Because the plan is
+  created *after* the sale, an installment sale deliberately stays `PROFORMA` through `CreateSale`; the
+  finalization happens in `CreateSaleInstallmentPlanCommandHandler`. The invoice-number generation lives once, in
+  `Application/Common/Sales/SaleInvoiceFinalizer`, used by all three handlers.
+- **The rounding remainder lands on the LAST installment**, not the first (`InstallmentSchedule.Build`, a sync
+  helper per the async rule - it is pure in-memory math). A customer counting their contract reads "eleven at 1,666
+  and a last one at 1,669" as correct and "first one at 1,669" as a bug; it also defers the odd number until the end,
+  where a mid-contract plan edit has usually not reached it yet.
+- **Plan edits regenerate only the unpaid tail.** `PAID` rows and their `PaymentDetail`s are never touched or
+  deleted; unpaid rows are dropped and rebuilt with numbering continuing from the highest `PAID` number, and
+  `TotalAmount - PaidAmount` (not `FinancedAmount`) is spread over just those new rows. `DownPaymentAmount` is not
+  editable. **The delete and the insert are two separate `SaveChanges`** - new numbers can overlap deleted ones and
+  EF does not guarantee delete-before-insert within one batch, which would break the
+  `(SaleInstallmentPlanId, Number)` unique index.
+- **`SaleInstallmentStatusEnum.OVERDUE` is defined and deliberately never written** by any code: no background
+  service, no job, no recompute endpoint. Spotting a late installment from `DueDate` is the frontend's job
+  (`PENDING` + `dueDate < today`). Queries count it alongside `PENDING` as "unpaid" so nothing breaks if it is ever
+  written. It is documented as *not forgotten* in the enum's own comment, `docs/sale-installment-guide.fa.md` §5.1
+  and api-guide §15.
+- **One installment = one full payment**; there is no partial payment and the amount comes from `installment.Amount`,
+  never from the request. Paying early and paying out of order are both allowed - the row is targeted by `Id`.
+  `SettleSaleInstallmentPlanCommand` charges exactly `RemainingAmount` with no early-settlement discount.
+- **`GetSaleInstallmentListQuery` is the one system-wide installment endpoint**; the "overdue" and "upcoming
+  payments" screens are built from its filters, not from endpoints of their own.
+- **The `[NotMapped]` roll-ups are in-memory only** (same trap as the return domain): any handler or query that
+  reads them must `Include(Installments)` or it silently computes zero and persists it. `GetSaleInstallmentPlanListQuery`
+  therefore spells its sums and `NextDueDate` out in a server-side projection (through a `decimal` intermediate row,
+  since LINQ has no `Sum` over `UInt64`), and `SaleInstallmentSummaryReader` loads a whole page's plans in one
+  round-trip and computes after `ToPagedAsync` - the same place and reason signed image URLs are built.
+- **Three open items, marked with short `// TODO`s rather than dead code**: late-penalty calculation
+  (`LatePenaltyPercentage` is stored and read by nothing; entry point `PaySaleInstallmentCommand`; keep the penalty
+  *separate* from `TotalAmount` or the `PaidAmount == TotalAmount <=> SETTLED` relation breaks), early-settlement
+  discount (one amount calculation in `SettleSaleInstallmentPlanCommandHandler`), and the effect of a `SaleReturn` on
+  remaining installments (no link between the two domains at all). All four (incl. `OVERDUE`) in
+  `docs/sale-installment-guide.fa.md` §5.
+- Shipped as migration `20260919210106_add-sale-installment-plan`. **Generated, not applied** - the user applies
+  migrations themselves. Its `PaymentDetail` half was **hand-corrected to drop/recreate** the table instead of the
+  `ALTER`s EF scaffolded: SQL Server converts neither `uniqueidentifier` -> `int` on an existing column nor adds
+  `IDENTITY` via `ALTER`, so the scaffolded version would have failed at run time. There is no real data on that
+  table, so drop/recreate is safe; the reason is written above the migration class.
+- **Tests**: `Tests/WMS.Tests/Integration/SaleInstallmentTests.cs`, 17 cases - schedule and due-date generation,
+  the remainder on the last row, automatic PROFORMA exit, paying through to `SETTLED` with `Sale.PaidAmount`/
+  `NextDueDate`, early and out-of-order payment, early settlement under one `PaymentDetail`, the two refusals
+  (already-`PAID` row, `CANCELLED` plan), plan-edit regeneration with `PAID` rows intact, cancellation touching only
+  unpaid rows, both list queries' server-side roll-ups, the summary on `GetSaleDetail`, and that a **non-installment**
+  sale keeps the old PROFORMA behaviour exactly. All pass. Suite is 554/565; the 11 failures are pre-existing -
+  verified by running the full suite in a clean worktree at `main` (`9b9804b`), which fails the identical 11 test
+  names (the documented `IX_Users_PersonelCode` and `"***"` object-storage cases, plus the LibreOffice-dependent
+  `InvoicePdfTests`).
+
+**In-person sale, and `invoiceNumber` off the sale commands (merged 2026-09-20).** Came in from
+`main` (PR #38, `f3c252d`) and was merged onto the installment branch; this entry records the merge
+fallout that was fixed here, not the feature's own design. API: `docs/api-guide.fa.md` §11
+(`CreateInPersonSale`, the two request bodies) and the 2026-09-20 «فروش حضوری و شماره‌ی فاکتور»
+table in §16.
+
+- **`CreateInPersonSaleCommand`** (`POST api/Sale/CreateInPersonSale`) composes `CreateSale` +
+  `ShipSale` + `Status = DELIVERED` inside `IUnitOfWork.ExecuteInTransactionAsync`, sending both
+  through `IMediator` so their validators run - the same shape `Shipment`'s two atomic commands use.
+- **`CreateSaleCommand.InvoiceNumber`/`UpdateSaleCommand.InvoiceNumber` were removed** (breaking).
+  The official number is server-generated, which is what `SaleInvoiceFinalizer` already did; the
+  client no longer supplies it. `CreateSale` now answers with `CreatedSaleDto { Id, InvoiceNumber,
+  Status }` in `res.Data`, which is how the in-person command learns the new sale's id.
+- **The merge left `UpdateSaleCommandHandler` uncompilable** - three stray `}` and two references to
+  the removed `request.InvoiceNumber`. Repaired by hoisting `canLeaveProforma` out of the
+  proforma block and calling `SaleInvoiceFinalizer.FinalizeAsync(_context, sale, ct)` **after** the
+  request fields are copied onto the entity, so the number/date/PROCESSING land on the entity rather
+  than being round-tripped through the request. Behaviour is identical to the pre-merge version; both
+  installment branches of the proforma-exit rule are untouched.
+- **PR #38 also left the test project uncompilable on `main`** (17 sites still set `InvoiceNumber` on
+  the two sale commands). Removed here; the two `SaleCrudTests` cases that looked their sale up *by*
+  invoice number now use the id from `CreatedSaleDto`.
+- **An in-person sale may be an installment sale**, and the command now carries the contract:
+  `CreateInPersonSaleCommand.InstallmentPlan` (a `CreateSaleInstallmentPlanCommand`, its `SaleId`
+  overwritten from the sale just created, same idiom as the nested `Sale`) is sent inside the
+  transaction **before** `ShipSale`. Required when `PaymentType == INSTALLMENT`, refused otherwise,
+  and its `DownPaymentAmount` must be `> 0`; the full-payment rule now applies only to non-installment
+  sales. **A proforma is a sale nobody has paid a rial towards** - what takes a sale out of it is money
+  changing hands, which for an installment sale is the down payment, and that is exactly what issues
+  the official invoice number (`CreateSaleInstallmentPlanCommandHandler` already finalizes). Refusing a
+  zero down payment is the real invariant: goods must not leave the warehouse against a proforma.
+- **`CreateSale`/`UpdateSale` required `PaymentDetails` for every non-`CASH` payment type**, which made
+  `PaymentType = INSTALLMENT` unconstructible through the API at all - the down payment's
+  `PaymentDetail` is written by `CreateSaleInstallmentPlanCommand` with
+  `Purpose = INSTALLMENT_DOWN_PAYMENT`, so there is nothing for the client to send. `INSTALLMENT` is
+  now exempt in both validators. Found by the in-person installment test; it was a gap on the ordinary
+  installment path too, which the installment session's tests missed because they seed the proforma
+  sale directly rather than through `CreateSale`.
+- **`UpdateSaleCommandHandler` never persisted `request.PaymentDetails`** - it validated the list and
+  dropped it, so editing a sale silently discarded any new payment and the payment state could only
+  ever be whatever `CreateSale` first wrote. (`CreateSaleCommandHandler` has always persisted them,
+  not through handler code but through AutoMapper's name convention on `CreateMap<CreateSaleCommand,
+  Sale>()`: `Sale.PaymentDetails` is a navigation collection and a `PaymentDetailDto -> PaymentDetail`
+  map exists, so the rows save with the sale graph. Grepping the handler shows nothing - hence the
+  earlier wrong claim in this file's first draft that neither side saved them.) `UpdateSale` now
+  replaces the sale's payment rows wholesale, the same contract `Attachments` already has, and forces
+  `Purpose = NORMAL` - that endpoint only ever records an ordinary payment.
+  - **An installment sale is skipped entirely**, exactly as `PaidAmount` already is: its
+    `INSTALLMENT_DOWN_PAYMENT`/`INSTALLMENT` rows belong to the installment feature and a wholesale
+    replace would delete the payment history. Guarded on both the loaded plan and the request's
+    `PaymentType`, so a sale with no plan yet is covered too.
+  - **`UpdatePurchaseCommand` had the same hole, one step worse:** it did not accept `PaymentDetails`
+    at all, so a purchase's payments were frozen at whatever `CreatePurchase` first wrote (that one
+    saves through the same AutoMapper convention - confirmed by a test written before the change,
+    which passes against unmodified `CreatePurchaseCommandHandler`). The field, the non-`CASH`
+    requirement `CreatePurchase` already had, and the same wholesale replace are now on Update; the
+    handler gained an `IMapper` parameter. No installment branch here - the installment feature is
+    sale-only, so every purchase payment is `Purpose = NORMAL`.
+- No schema change, no migration. Tests: `Tests/WMS.Tests/Integration/InPersonSaleTests.cs` (4 -
+  cash round-trip, installment with down payment, and both refusals, each asserting stock did not
+  move on refusal), 3 in `SaleCrudTests` (create persists the payment rows, update replaces them,
+  update leaves an installment sale's rows alone) and 2 in `PurchaseCrudTests` (the same for the
+  purchase side). **Verified: build clean, suite 556/567**, the 11 failures being the
+  long-documented pre-existing ones (8 `IX_Users_PersonelCode`/functional-seed collisions, the
+  `"***"` object-storage placeholder, and the two LibreOffice-dependent `InvoicePdfTests`).
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
-- `PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK (see `WMSDbContextModelSnapshot.cs:119-124`). Needs reconciliation.
+- ~~`PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK.~~ **Fixed 2026-09-20** - see the installment-sales entry above: both ids are `int`, both relationships are configured explicitly, and the shadow FK is gone.
 - `IWMSDbContext` does not expose `DbSet<PurchaseItem>`/`DbSet<SaleItem>` (the concrete `WMSDbContext` does), and the two concrete DbSet properties use `{ get; set; }` while the rest use `=> Set<T>()`.
 - List DTOs/queries do not yet surface or filter on `IsActive`; soft-deleted rows are only hidden if a query explicitly filters. Consider adding `IsActive` filters to list queries. (Note: `PurchaseReturn` has no `IsActive` — its lifecycle is `Status` alone, with per-decision `ResolvedAt`; purchase-return queries intentionally do not filter `IsActive`.)
 - Validator class naming is inconsistent: `CreateCustomerCommandValidation`/`CreateSupplierCommandValidation` vs the standard `...CommandValidator` suffix.
