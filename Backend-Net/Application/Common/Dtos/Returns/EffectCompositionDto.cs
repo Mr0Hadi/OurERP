@@ -1,4 +1,4 @@
-using Domain.Enums;
+﻿using Domain.Enums;
 
 namespace Application.Common.Dtos.Returns
 {
@@ -33,10 +33,10 @@ namespace Application.Common.Dtos.Returns
         /// <summary>Money going out from us.</summary>
         public MoneyEffectDto? MoneyOut { get; set; }
 
-        /// <summary>Purchase returns only: quarantined units released into sellable stock. Not read by the money balance.</summary>
+        /// <summary>Purchase returns only: quarantined units released into sellable stock.</summary>
         public List<QuarantineEffectDto>? GoodsRelease { get; set; }
 
-        /// <summary>Purchase returns only: quarantined units scrapped - a reported loss. Not read by the money balance.</summary>
+        /// <summary>Purchase returns only: quarantined units scrapped - a reported loss.</summary>
         public List<QuarantineEffectDto>? GoodsScrap { get; set; }
 
         /// <summary>
@@ -51,8 +51,8 @@ namespace Application.Common.Dtos.Returns
     }
 
     /// <summary>
-    /// A movement out of quarantine that stays inside the company. Carries no UnitPrice: there is no counterparty, so it has
-    /// no transaction value and the balance rule never sees it.
+    /// A movement out of quarantine that stays inside the company. Carries no UnitPrice: there is no counterparty,
+    /// so it has no transaction value at all.
     /// </summary>
     public class QuarantineEffectDto
     {
@@ -80,11 +80,12 @@ namespace Application.Common.Dtos.Returns
         public int discount { get; set; }
 
         /// <summary>
-        /// Rial per unit: the transaction value with the counterparty. <b>Required</b> on every goods effect
-        /// and may be zero - goods that carry no monetary claim are priced at zero, and that is the client's
-        /// call, never inferred by the server. Feeds the money balance
-        /// (Application.Common.Returns.ReturnMoneyBalance) and nothing else. Nullable only so an omitted
-        /// value is a 400 rather than silently arriving as 0.
+        /// Rial per unit: the transaction value agreed with the counterparty, recorded for audit and display.
+        /// <b>Optional and never validated.</b> No server logic reads it - the money that actually moves is
+        /// stated by MoneyIn/MoneyOut, and what a GOODS_IN round enters the pool at is <see cref="UnitCost"/>.
+        /// It earns its place on a resolution carrying several goods lines under one money effect, where the
+        /// money amount alone cannot say what each line was worth. Zero is legal; null means the client did
+        /// not state a per-unit value.
         /// </summary>
         public UInt64? UnitPrice { get; set; }
 

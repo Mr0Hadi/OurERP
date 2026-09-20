@@ -19,7 +19,6 @@ namespace Application.Features.Sale.Commands
     public class UpdateSaleCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }
-        public string InvoiceNumber { get; set; }
         public DateTime? InvoiceDate { get; set; }
         public DateTime? PaymentDate { get; set; }
         public SalesStatusEnum Status { get; set; }
@@ -37,9 +36,6 @@ namespace Application.Features.Sale.Commands
     {
         public UpdateSaleCommandValidator()
         {
-            // تا وقتی مشتری پول را کامل نپرداخته، فروش پیش‌فاکتور است و شماره‌ی رسمی ندارد.
-            RuleFor(x => x.InvoiceNumber).NotEmpty().When(x => x.Status != SalesStatusEnum.PROFORMA)
-                .WithMessage(Validation.RequiredMessage("شماره فاکتور"));
             // تاریخ فاکتور فقط در پیش‌فاکتور می‌تواند null بماند؛ در بقیه‌ی وضعیت‌ها الزامی است.
             RuleFor(x => x.InvoiceDate).Must(d => d.HasValue && d.Value != default)
                 .When(x => x.Status != SalesStatusEnum.PROFORMA)
@@ -136,12 +132,14 @@ namespace Application.Features.Sale.Commands
                         request.InvoiceNumber = await SaleInvoiceFinalizer.NextInvoiceNumberAsync(_context, cancellationToken);
                         request.InvoiceDate = DateTime.Now;
                     }
+                    }
+                    }
+                    }
                     if (request.Status == SalesStatusEnum.PROFORMA)
                         request.Status = SalesStatusEnum.PROCESSING;
                 }
             }
 
-            sale.InvoiceNumber = request.InvoiceNumber ?? string.Empty;
             sale.InvoiceDate = request.InvoiceDate;
             sale.PaymentDate = request.PaymentDate;
             sale.Status = request.Status;

@@ -13,12 +13,12 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.Net.Mail;
 
 namespace Application.Features.Sale.Commands
 {
     public class CreateSaleCommand : IRequest<ResponseDto>
     {
-        public string InvoiceNumber { get; set; }
         public DateTime? InvoiceDate { get; set; }
         public DateTime? PaymentDate { get; set; }
         public SalesStatusEnum Status { get; set; }
@@ -36,9 +36,6 @@ namespace Application.Features.Sale.Commands
     {
         public CreateSaleCommandValidator()
         {
-            // تا وقتی مشتری پول را کامل نپرداخته، فروش پیش‌فاکتور است و شماره‌ی رسمی ندارد.
-            RuleFor(x => x.InvoiceNumber).NotEmpty().When(x => x.Status != SalesStatusEnum.PROFORMA)
-                .WithMessage(Validation.RequiredMessage("شماره فاکتور"));
             // تاریخ فاکتور فقط در پیش‌فاکتور می‌تواند null بماند؛ در بقیه‌ی وضعیت‌ها الزامی است.
             RuleFor(x => x.InvoiceDate).Must(d => d.HasValue && d.Value != default)
                 .When(x => x.Status != SalesStatusEnum.PROFORMA)
@@ -88,7 +85,7 @@ namespace Application.Features.Sale.Commands
             var res = new ResponseDto();
 
             var sale = _mapper.Map<Domain.Entities.Sale>(request);
-            // شماره فاکتور در مرحله‌ی پیش‌فاکتور می‌تواند خالی باشد، ولی ستون NOT NULL است.
+
             sale.InvoiceNumber ??= string.Empty;
             sale.SalesUserId = _userContextService.GetUserId().ToInt();
 
@@ -106,25 +103,20 @@ namespace Application.Features.Sale.Commands
             await _context.Sales.AddAsync(sale, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            foreach (var attachment in request.Attachments)
+            var attachmentsList = request.Attachments.Select(x => new Domain.Entities.DocumentAttachment
             {
-                await _context.DocumentAttachments.AddAsync(new Domain.Entities.DocumentAttachment
-                {
-                    DocumentKind = DocumentKindEnum.SALE,
-                    DocumentId = sale.Id,
-                    // Stored as the bare bucket key, so an image URL echoed back by the
-                    // frontend is stripped down rather than persisted verbatim - same rule
-                    // every other write path here follows.
-                    ObjectKey = _objectStorageService.NormalizeKey(attachment.ObjectKey) ?? attachment.ObjectKey,
-                    FileName = attachment.FileName,
-                    Note = attachment.Note,
-                    CreatedAt = DateTime.Now,
-                }, cancellationToken);
-            }
+                DocumentKind = DocumentKindEnum.SALE,
+                DocumentId = sale.Id,
+                ObjectKey = _objectStorageService.NormalizeKey(x.ObjectKey) ?? x.ObjectKey,
+                FileName = x.FileName,
+                Note = x.Note,
+                CreatedAt = DateTime.Now,
+            });
+           
+            await _context.DocumentAttachments.AddRangeAsync(attachmentsList, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            if (request.Attachments.Count > 0)
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-
+            res.Data = new CreatedSaleDto { Id = sale.Id, InvoiceNumber = sale.InvoiceNumber, Status = sale.Status };
             res.Message = "فروش با موفقیت ثبت شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;

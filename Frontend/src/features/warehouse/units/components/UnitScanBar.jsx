@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { ScanBarcode, Search, X } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
@@ -40,11 +40,25 @@ export default function UnitScanBar({
     inputRef.current?.focus();
   }, []);
 
-  const submit = (code) => {
-    const trimmed = String(code ?? "").trim();
-    if (!trimmed) return;
-    onScan(trimmed);
-  };
+  const submit = useCallback(
+    (code) => {
+      const trimmed = String(code ?? "").trim();
+      if (!trimmed) return;
+      onScan(trimmed);
+    },
+    [onScan],
+  );
+
+  // پایدار نگه‌داشتنِ این callback شرطِ سرعتِ اسکنر است: `CameraScanner`
+  // با عوض شدنِ identityِ آن دوربین را از نو باز می‌کند.
+  const handleDetected = useCallback(
+    (text) => {
+      setIsCameraOpen(false);
+      setValue(text);
+      submit(text);
+    },
+    [submit],
+  );
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -136,13 +150,7 @@ export default function UnitScanBar({
                 </div>
               }
             >
-              <CameraScanner
-                onDetected={(text) => {
-                  setIsCameraOpen(false);
-                  setValue(text);
-                  submit(text);
-                }}
-              />
+              <CameraScanner onDetected={handleDetected} />
             </Suspense>
           ) : null}
         </DialogContent>

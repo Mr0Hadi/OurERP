@@ -19,6 +19,8 @@ export default function OrderInfoSection({
   errors,
   // تیکِ «فروش غیر رسمی» — فقط فرم فروش.
   showInformalSale = false,
+  // شماره فاکتور فروش را بکند می‌سازد؛ ورودی فقط نمایشی است.
+  invoiceNumberDisabled = false,
 }) {
   const handleChange = (field, value) => {
     onFormChange({ [field]: value });
@@ -42,7 +44,12 @@ export default function OrderInfoSection({
           </Label>
           <Input
             id="invoiceNumber"
-            placeholder="مثال: INV-1023"
+            placeholder={
+              invoiceNumberDisabled
+                ? "توسط سیستم ساخته می‌شود"
+                : "مثال: INV-1023"
+            }
+            disabled={invoiceNumberDisabled}
             value={formData.invoiceNumber || ""}
             onChange={(e) => handleChange("invoiceNumber", e.target.value)}
             className={`input-rtl-placeholder h-9 ${

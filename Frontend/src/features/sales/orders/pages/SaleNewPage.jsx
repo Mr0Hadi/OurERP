@@ -185,6 +185,10 @@ export default function SaleNewPage() {
     return sum + base - disc;
   }, 0);
 
+  const isProforma =
+    !isInPerson &&
+    Number(formData.status ?? SaleStatusEnum.PROFORMA) === SaleStatusEnum.PROFORMA;
+
   const onSubmit = (e) => {
     e.preventDefault();
 
@@ -224,7 +228,7 @@ export default function SaleNewPage() {
         lineTotal: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
       })),
       paymentType: formData.paymentType ?? PaymentTypeEnum.CASH,
-      paidAmount: Number(formData.paidAmount) || 0,
+      paidAmount: isProforma ? 0 : Number(formData.paidAmount) || 0,
       checkNumber: formData.checkNumber || null,
       transferRef: formData.transferRef || null,
       mixedPayments: formData.mixedPayments || [],
@@ -243,19 +247,7 @@ export default function SaleNewPage() {
     };
 
     if (isInPerson) {
-      inPersonMutation.mutate(
-        { payload, scannedBarcodes },
-        {
-          onSuccess,
-          // فروش ثبت شده ولی قدمِ بعدی نه: ضمیمه‌ها مالِ همان فروش‌اند.
-          onError: (error) => {
-            if (error?.saleId == null) return;
-            attachments.commit();
-            resetForm();
-            navigate(ROUTES.SALES_DETAIL.replace(":id", error.saleId));
-          },
-        },
-      );
+      inPersonMutation.mutate({ payload, scannedBarcodes }, { onSuccess });
       return;
     }
 
@@ -308,6 +300,7 @@ export default function SaleNewPage() {
               onFormChange={setFormData}
               errors={{}}
               showInformalSale
+              invoiceNumberDisabled
             />
           </div>
 
@@ -333,12 +326,12 @@ export default function SaleNewPage() {
               onFormChange={setFormData}
               totalAmount={computedTotal}
               errors={{}}
+              isProforma={isProforma}
             />
 
             <InvoiceDocumentSection
               title={
-                Number(formData.status ?? SaleStatusEnum.PROFORMA) ===
-                SaleStatusEnum.PROFORMA
+                isProforma
                   ? "پیش‌فاکتور فروش"
                   : "فاکتور فروش"
               }

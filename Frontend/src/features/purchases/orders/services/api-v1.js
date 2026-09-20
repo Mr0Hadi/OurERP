@@ -170,8 +170,8 @@ function toApiPurchasePayload(purchaseData) {
   return {
     supplierId: purchaseData.supplierId,
     invoiceNumber: purchaseData.invoiceNumber,
-    invoiceDate: purchaseData.invoiceDate,
-    paymentDate: purchaseData.dueDate || undefined,
+    invoiceDate: purchaseData.invoiceDate || null,
+    paymentDate: purchaseData.dueDate || null,
     description: purchaseData.description || undefined,
     status: purchaseData.status,
     paymentType: purchaseData.paymentType,

@@ -171,6 +171,10 @@ export default function PurchasesNewPage() {
     return sum + base - disc;
   }, 0);
 
+  const isProforma =
+    Number(formData.status ?? PurchaseStatusEnum.PROFORMA) ===
+    PurchaseStatusEnum.PROFORMA;
+
   const onSubmit = (e) => {
     e.preventDefault();
 
@@ -224,7 +228,7 @@ export default function PurchasesNewPage() {
         lineTotal: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
       })),
       paymentType: formData.paymentType ?? PaymentTypeEnum.CASH,
-      paidAmount: finalPaidAmount,
+      paidAmount: isProforma ? 0 : finalPaidAmount,
       ...paymentDetails,
       status:
         formData.status === "" || formData.status == null
@@ -291,12 +295,12 @@ export default function PurchasesNewPage() {
               onFormChange={setFormData}
               totalAmount={computedTotal}
               errors={{}}
+              isProforma={isProforma}
             />
 
             <InvoiceDocumentSection
               title={
-                Number(formData.status ?? PurchaseStatusEnum.PROFORMA) ===
-                PurchaseStatusEnum.PROFORMA
+                isProforma
                   ? "پیش‌فاکتور خرید"
                   : "فاکتور خرید"
               }

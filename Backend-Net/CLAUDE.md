@@ -930,6 +930,34 @@ saved rows" family. No schema change. Detail in `docs/return-offscopekind-and-in
   for one product before `SaveChanges`, and a purchase goods round with two `GOODS_OUT` lines for one
   product through the real handler.
 
+**Return money balance removed; `UnitPrice` is a recorded value, not a rule (2026-09-17).** The effect layer
+was meant to carry no strict validation - staff settle with the supplier or customer as they agree - and
+`ReturnMoneyBalance` did the opposite. API: `docs/api-guide.fa.md` §10 «مدل اثرها» and the 2026-09-17 table in §16;
+frontend: `docs/return-frontend-migration.fa.md` §4.
+
+- **Deleted:** `Application/Common/Returns/ReturnMoneyBalance.cs`, its two `EnsureSettled` call sites in
+  `{Purchase,Sale}Return/Commands/AddClaimResolutionCommand`, the four `RuleFor(g => g.UnitPrice).NotNull()`
+  rules in those files' validators, and `Tests/WMS.Tests/Unit/ReturnMoneyBalanceTests.cs`. The effect layer's
+  complete rule list is now "at least one effect".
+- **`UnitPrice` stayed, everywhere it was.** `GoodsEffectDto.UnitPrice`, `{Purchase,Sale}ReturnEffect.UnitPrice`,
+  their columns and `effects[].unitPrice` are untouched and still written by `ExpandComposition` - so **no
+  migration, no data loss, no wire break**, and any payload that was valid before is still valid. It is now
+  optional and read by nothing: an audit/display record of the per-line transaction value agreed with the
+  counterparty. It earns its keep on a resolution carrying several goods lines under one money effect, where
+  the money amount alone cannot say what each line was worth. The money that actually moves is
+  `MoneyIn`/`MoneyOut.Amount`; what a GOODS_IN round enters the pool at is `UnitCost`.
+- **The `data.requiredDirection`/`requiredAmount` error contract is gone** - that 400 can no longer happen.
+  A frontend that locks its submit button on a live balance calculation must stop doing so.
+- **Care needed on the delete:** `Unit/ReturnMoneyBalanceTests.cs` also held `OnOrderOffScopeKindValidatorTests`,
+  which covers a **claim-level** rule that still stands. It was moved verbatim into its own file,
+  `Tests/WMS.Tests/Unit/OnOrderOffScopeKindValidatorTests.cs`.
+- Tests: the two balance tests in `Integration/ReturnEffectModelTests.cs` now assert the opposite - goods out with
+  no money, and an uneven swap with no refund, are accepted and their declared prices persisted; both
+  `GoodsEffectWithoutUnitPrice_IsInvalid` cases in `Unit/ValidatorTests.cs` became `_IsValid`.
+- **Not verified:** no .NET SDK on the machine this ran from, so nothing here has been compiled or tested. Run
+  `dotnet build WMS.slnx` and `dotnet test Tests/WMS.Tests`; the last recorded baseline is 495/504 with the 9
+  long-documented pre-existing failures.
+
 **Return effect model: four effects, one rule each (2026-09-13).** Supersedes the three entries that stood
 here ("Return money balance, off-invoice stock and excess costing", "Stored stock booking, reversible kept
 extras, per-problem balance", "Return money matrix, invoice-error counting"); the code they described is
@@ -939,11 +967,9 @@ gone. API contract: `docs/api-guide.fa.md` §10 «مدل اثرها», §12, §1
 - **The model.** A resolution is a list of effects of exactly four kinds - `GOODS_IN`, `GOODS_OUT`,
   `MONEY_IN`, `MONEY_OUT` - in any combination and any quantity. The effect layer does not know *why*:
   not the claim's problem, not its scope, not whether goods were invoiced or passed through stock.
-- **Enforced at the effect layer, the complete list:** (1) at least one effect; (2) every goods effect
-  carries a client-supplied `UnitPrice` (`GoodsEffectDto.UnitPrice` is `UInt64?` only so omission is a
-  400 - zero is legal); (3) `ReturnMoneyBalance`: Σ GoodsIn qty×price − Σ GoodsOut qty×price, non-zero
-  requires `MoneyOut` (positive) / `MoneyIn` (negative) of **at least** that amount; zero requires and
-  forbids nothing. A floor, not a reconciliation. Request-shape checks stay (positive quantities and
+- **Enforced at the effect layer, the complete list:** (1) at least one effect. That is all - see the
+  2026-09-17 entry above, which removed `ReturnMoneyBalance` and the `UnitPrice`-required rule.
+  Request-shape checks stay (positive quantities and
   amounts, `ProductId` exists, MIXED parts sum); `Composition.Quantity <= claim.RemainingQuantity` is
   claim-level and stays.
 - **Mechanics, unconditional, both sides.** `ExecuteGoodsRound` GOODS_IN: stock += healthy, units minted
@@ -1003,7 +1029,7 @@ Two consequences of the effect model, fixed without adding scenario logic. API: 
   the purchase cost, and entering the pool at the sale price inflated inventory by the margin on every return (bought
   700, sold 1000, returned at 1000: the resale then costed 1000).
 - **`GoodsEffectDto.UnitCost` (`UInt64?`, optional)**, stored on `{Purchase,Sale}ReturnEffect.UnitCost` and exposed as
-  `effects[].unitCost`. `UnitPrice` now feeds `ReturnMoneyBalance` only; `UnitCost` is what a GOODS_IN round enters the
+  `effects[].unitCost`. `UnitPrice` fed `ReturnMoneyBalance` only (and, since 2026-09-17, nothing); `UnitCost` is what a GOODS_IN round enters the
   pool at, and when null `InventoryCostingService.UnitCostOrAverageAsync` uses the product's running average at the
   moment the round executes (staged-or-saved, via `LatestEntryAsync`). When that average is 0 (no ledger history, or
   no stock left) it falls back to `Product.PurchasePrice` - the existing convention `RecordOpeningBalanceAsync` and
@@ -1054,8 +1080,8 @@ the four 2026-09-13/14 tables in §16. Phased; each phase is self-contained.
   (brand + three prices), so UpdateProduct's brand/price checks moved to the handler and apply to complete products only.
   `Product.RequiresUnitTracking` persisted (enforcement is Phase 5).
 - **Phase 4 - leaving quarantine.** `GOODS_RELEASE = 4`, `GOODS_SCRAP = 5` (enum values now explicit),
-  `EffectCompositionDto.GoodsRelease/GoodsScrap` (`QuarantineEffectDto`: no UnitPrice, so the balance rule never sees them -
-  no special case in `ReturnMoneyBalance`), purchase side only (sale validator refuses). `GoodsRoundLineDto.Source`: purchase
+  `EffectCompositionDto.GoodsRelease/GoodsScrap` (`QuarantineEffectDto`: no UnitPrice - an internal
+  movement has no counterparty), purchase side only (sale validator refuses). `GoodsRoundLineDto.Source`: purchase
   GOODS_OUT **must** state IN_STOCK or QUARANTINED, never inferred. Quarantine units are selected by
   `QuarantineFor(claim)` - the claim's custody on its line (UNLISTED for another product) - via `UnitSelection` and
   `ProductUnitService.ReturnToSupplierAsync/ReleaseFromQuarantineAsync/ScrapFromQuarantineAsync`. Cost of leaving quarantine

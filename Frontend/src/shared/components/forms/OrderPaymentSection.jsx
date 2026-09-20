@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -59,6 +60,7 @@ export default function OrderPaymentSection({
   onFormChange,
   totalAmount = 0,
   errors,
+  isProforma = false,
 }) {
   const handleChange = (field, value) => onFormChange({ [field]: value });
 
@@ -78,8 +80,22 @@ export default function OrderPaymentSection({
   useSyncedComputedValue(
     totalAmount,
     (value) => handleChange("paidAmount", String(value)),
-    isSingleMethodType(paymentType),
+    isSingleMethodType(paymentType) && !isProforma,
   );
+
+  // پیش‌فاکتور هیچ پرداختی ندارد: مبلغ پرداختی صفر و قفل می‌شود. با خروج
+  // از پیش‌فاکتور، مبلغ دوباره با جمع کل پر می‌شود — هوکِ همگام‌سازی فقط
+  // با تغییرِ جمع کل اجرا می‌شود، نه با روشن‌شدنِ دوباره‌اش.
+  const wasProforma = useRef(isProforma);
+  useEffect(() => {
+    if (isProforma) {
+      if (formData.paidAmount !== "0") handleChange("paidAmount", "0");
+    } else if (wasProforma.current && isSingleMethodType(paymentType)) {
+      handleChange("paidAmount", String(totalAmount));
+    }
+    wasProforma.current = isProforma;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isProforma]);
 
   useSyncedComputedValue(
     totalAmount,
@@ -102,7 +118,7 @@ export default function OrderPaymentSection({
         value === PaymentTypeEnum.MIXED
           ? [{ ...EMPTY_MIXED_PAYMENT, amount: String(totalAmount) }]
           : [],
-      paidAmount: singleMethod ? String(totalAmount) : "",
+      paidAmount: isProforma ? "0" : singleMethod ? String(totalAmount) : "",
       checkNumber: "",
       transferRef: "",
     });
@@ -181,6 +197,7 @@ export default function OrderPaymentSection({
               placeholder="صفر"
               value={formData.paidAmount === "" || formData.paidAmount == null ? null : Number(formData.paidAmount)}
               onValueChange={(next) => handleChange("paidAmount", next ?? "")}
+              disabled={isProforma}
               className={`h-9 ${
                 errors?.paidAmount
                   ? "border-destructive focus-visible:ring-destructive/30"
@@ -189,6 +206,10 @@ export default function OrderPaymentSection({
             />
             {errors?.paidAmount ? (
               <p className="text-xs text-destructive">{errors.paidAmount}</p>
+            ) : isProforma ? (
+              <p className="text-xs text-muted-foreground">
+                در وضعیت پیش‌فاکتور هیچ مبلغی پرداخت نشده است.
+              </p>
             ) : (
               formData.paidAmount !== "" && formData.paidAmount != null && Number(formData.paidAmount) !== 0 && (
                 <p className="text-xs text-muted-foreground">

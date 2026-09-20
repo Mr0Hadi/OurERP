@@ -80,6 +80,18 @@ export default defineConfig({
               expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
             },
           },
+          // wasmِ اسکنر بارکد — عمداً precache نشده: حدود یک مگابایت است و
+          // فقط مرورگرهای بدونِ `BarcodeDetector` نیتیو (iOS، فایرفاکس)
+          // به آن نیاز دارند. با CacheFirst بعد از اولین اسکن آفلاین هم
+          // کار می‌کند، ولی به نصبِ هر دستگاهی اضافه نمی‌شود.
+          {
+            urlPattern: ({ url }) => url.pathname.endsWith(".wasm"),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "wasm-cache",
+              expiration: { maxEntries: 5, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            },
+          },
           // فونت‌ها
           {
             urlPattern: ({ request }) => request.destination === "font",
