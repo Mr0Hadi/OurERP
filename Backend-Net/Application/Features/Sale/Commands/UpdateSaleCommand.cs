@@ -54,7 +54,10 @@ namespace Application.Features.Sale.Commands
                 item.RuleFor(i => i.Quantity).GreaterThan(0).WithMessage("تعداد هر محصول باید از صفر بیشتر باشد.");
                 item.RuleFor(i => i.Discount).GreaterThanOrEqualTo(0).WithMessage("تخفیف باید بیشتر یا مساوی صفر باشد.");
             });
-            RuleFor(x => x.PaymentDetails).NotEmpty().When(x => x.PaymentType != PaymentTypeEnum.CASH)
+            // اقساطی استثناست: رکورد پرداختش را خود CreateSaleInstallmentPlan/PaySaleInstallment با
+            // Purpose درست می‌سازد، پس اینجا چیزی برای فرستادن نیست.
+            RuleFor(x => x.PaymentDetails).NotEmpty()
+                .When(x => x.PaymentType != PaymentTypeEnum.CASH && x.PaymentType != PaymentTypeEnum.INSTALLMENT)
                 .WithMessage("اطلاعات پرداخت باید به طول کامل پر شود.");
             RuleForEach(x => x.Attachments).ChildRules(a =>
             {
@@ -102,10 +105,10 @@ namespace Application.Features.Sale.Commands
                 throw new ValidationCustomException("مبلغ کل فروش اقساطی باید از مسیر ویرایش قرارداد اقساطی تغییر کند.");
 
             // خروج از «پیش‌فاکتور» دو شاخه دارد.
-            if (sale.Status == SalesStatusEnum.PROFORMA)
+            var wasProforma = sale.Status == SalesStatusEnum.PROFORMA;
+            var canLeaveProforma = false;
+            if (wasProforma)
             {
-                bool canLeaveProforma;
-
                 if (request.PaymentType == PaymentTypeEnum.INSTALLMENT)
                 {
                     // فروش اقساطی: شرط، «پرداخت کامل» نیست - وجود یک قرارداد اقساطی فعال با
@@ -125,19 +128,6 @@ namespace Application.Features.Sale.Commands
                         throw new ValidationCustomException("تا پرداخت کامل نشود، فروش از حالت پیش‌فاکتور خارج نمی‌شود.");
                 }
 
-                if (canLeaveProforma)
-                {
-                    if (string.IsNullOrWhiteSpace(request.InvoiceNumber))
-                    {
-                        request.InvoiceNumber = await SaleInvoiceFinalizer.NextInvoiceNumberAsync(_context, cancellationToken);
-                        request.InvoiceDate = DateTime.Now;
-                    }
-                    }
-                    }
-                    }
-                    if (request.Status == SalesStatusEnum.PROFORMA)
-                        request.Status = SalesStatusEnum.PROCESSING;
-                }
             }
 
             sale.InvoiceDate = request.InvoiceDate;
@@ -150,6 +140,11 @@ namespace Application.Features.Sale.Commands
             sale.Description = request.Description;
             sale.CustomerId = request.CustomerId;
             sale.UpdatedAt = DateTime.Now;
+
+            // شماره‌ی فاکتور رسمی را سرور تولید می‌کند (روی خودِ موجودیت، نه از ورودی کاربر) و
+            // وضعیت را از پیش‌فاکتور بیرون می‌برد - همان مسیری که CreateSale هم می‌رود.
+            if (canLeaveProforma)
+                await SaleInvoiceFinalizer.FinalizeAsync(_context, sale, cancellationToken);
 
             foreach (var existing in sale.Items.ToList())
             {
@@ -168,6 +163,31 @@ namespace Application.Features.Sale.Commands
 
             foreach (var incoming in request.Items.Where(x => x.Id == 0))
                 sale.Items.Add(_mapper.Map<Domain.Entities.SaleItem>(incoming));
+
+            // رکوردهای پرداخت: CreateSale آن‌ها را از راه نگاشت AutoMapper روی گراف فروش ذخیره
+            // می‌کند، ولی این handler فیلدها را تک‌تک می‌نشاند و تا امروز اصلاً به آن‌ها دست
+            // نمی‌زد - یعنی ویرایش فروش، پرداخت‌های تازه را بی‌صدا دور می‌ریخت.
+            //
+            // فروش اقساطی استثناست و کاملاً نادیده گرفته می‌شود: رکوردهای پرداختش (پیش‌پرداخت و
+            // اقساط، با Purpose خودشان) مالِ فیچر اقساط‌اند و فقط از مسیر همان دستورها عوض
+            // می‌شوند - دقیقاً به همان دلیلی که PaidAmount هم از پلن خوانده می‌شود، نه از ورودی.
+            if (installmentPlan == null && request.PaymentType != PaymentTypeEnum.INSTALLMENT)
+            {
+                // مثل ضمیمه‌ها جایگزینی کامل است، نه افزودنی - فرانت همیشه فهرست نهایی را می‌فرستد.
+                var existingPayments = await _context.PaymentDetails
+                    .Where(x => x.SaleId == sale.Id)
+                    .ToListAsync(cancellationToken);
+                _context.PaymentDetails.RemoveRange(existingPayments);
+
+                foreach (var payment in request.PaymentDetails ?? new List<PaymentDetailDto>())
+                {
+                    var entity = _mapper.Map<Domain.Entities.PaymentDetail>(payment);
+                    entity.SaleId = sale.Id;
+                    // Purpose از ورودی خوانده نمی‌شود: از این مسیر فقط پرداخت عادی ثبت می‌شود.
+                    entity.Purpose = PaymentPurposeEnum.NORMAL;
+                    await _context.PaymentDetails.AddAsync(entity, cancellationToken);
+                }
+            }
 
             _context.Sales.Update(sale);
 

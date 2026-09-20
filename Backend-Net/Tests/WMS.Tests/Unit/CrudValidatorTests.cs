@@ -1,4 +1,4 @@
-using Application.Common.Dtos;
+﻿using Application.Common.Dtos;
 using Application.Features.Account.Command;
 using Application.Features.Customer.Commands;
 using Application.Features.Product.Commands;
@@ -473,7 +473,6 @@ namespace WMS.Tests.Unit
             // تاریخ فاکتور فقط در پیش‌فاکتور می‌تواند null بماند.
             var command = Valid();
             command.Status = PurchaseStatusEnum.PROFORMA;
-            command.InvoiceNumber = string.Empty;
             command.InvoiceDate = null;
 
             Assert.True(_sut.Validate(command).IsValid);
@@ -529,7 +528,6 @@ namespace WMS.Tests.Unit
             // تاریخ فاکتور فقط در پیش‌فاکتور می‌تواند null بماند.
             var command = Valid();
             command.Status = PurchaseStatusEnum.PROFORMA;
-            command.InvoiceNumber = string.Empty;
             command.InvoiceDate = null;
 
             Assert.True(_sut.Validate(command).IsValid);
@@ -561,7 +559,6 @@ namespace WMS.Tests.Unit
 
         private static CreateSaleCommand Valid() => new()
         {
-            InvoiceNumber = "S-1",
             InvoiceDate = DateTime.Now,
             CustomerId = 1,
             TotalAmount = 100,
@@ -630,7 +627,6 @@ namespace WMS.Tests.Unit
             // تاریخ فاکتور فقط در پیش‌فاکتور می‌تواند null بماند.
             var command = Valid();
             command.Status = SalesStatusEnum.PROFORMA;
-            command.InvoiceNumber = string.Empty;
             command.InvoiceDate = null;
 
             Assert.True(_sut.Validate(command).IsValid);
@@ -664,7 +660,6 @@ namespace WMS.Tests.Unit
 
         private static UpdateSaleCommand Valid() => new()
         {
-            InvoiceNumber = "S-1",
             InvoiceDate = DateTime.Now,
             CustomerId = 1,
             TotalAmount = 100,
@@ -695,7 +690,6 @@ namespace WMS.Tests.Unit
             // تاریخ فاکتور فقط در پیش‌فاکتور می‌تواند null بماند.
             var command = Valid();
             command.Status = SalesStatusEnum.PROFORMA;
-            command.InvoiceNumber = string.Empty;
             command.InvoiceDate = null;
 
             Assert.True(_sut.Validate(command).IsValid);

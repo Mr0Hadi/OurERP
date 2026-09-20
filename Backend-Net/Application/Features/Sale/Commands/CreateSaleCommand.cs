@@ -54,7 +54,10 @@ namespace Application.Features.Sale.Commands
                 item.RuleFor(i => i.Quantity).GreaterThan(0).WithMessage("تعداد هر محصول باید از صفر بیشتر باشد.");
                 item.RuleFor(i => i.Discount).GreaterThanOrEqualTo(0).WithMessage("تخفیف باید بیشتر یا مساوی صفر باشد.");
             });
-            RuleFor(x => x.PaymentDetails).NotEmpty().When(x => x.PaymentType != PaymentTypeEnum.CASH)
+            // اقساطی استثناست: رکورد پرداختش را خود CreateSaleInstallmentPlan/PaySaleInstallment با
+            // Purpose درست می‌سازد، پس اینجا چیزی برای فرستادن نیست.
+            RuleFor(x => x.PaymentDetails).NotEmpty()
+                .When(x => x.PaymentType != PaymentTypeEnum.CASH && x.PaymentType != PaymentTypeEnum.INSTALLMENT)
                 .WithMessage("اطلاعات پرداخت باید به طول کامل پر شود.");
             RuleForEach(x => x.Attachments).ChildRules(a =>
             {

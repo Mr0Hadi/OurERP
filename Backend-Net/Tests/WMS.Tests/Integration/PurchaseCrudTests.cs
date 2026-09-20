@@ -1,4 +1,5 @@
-using Application.Common.Contracts.UserContextService;
+﻿using Application.Common.Contracts.UserContextService;
+using Application.Common.Dtos;
 using Application.Features.Purchase.Commands;
 using Application.Features.Purchase.Dtos;
 using Application.Features.Purchase.Queries;
@@ -53,12 +54,90 @@ namespace WMS.Tests.Integration
         }
 
         [Fact]
+        public async Task CreatePurchase_PersistsPaymentDetails()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 1, stock: 0);
+            var user = Seed.PersistedUser(scope.Context);
+
+            var handler = new CreatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, TestMapper.Instance, scope.UnitOfWork, FakeUserContext.WithUserId(user.Id));
+            await handler.Handle(new CreatePurchaseCommand
+            {
+                SupplierId = scenario.Supplier.Id,
+                TotalAmount = 5000,
+                PaidAmount = 5000,
+                PaymentType = PaymentTypeEnum.CHECK,
+                Status = PurchaseStatusEnum.SHIPPED,
+                PaymentDetails = new()
+                {
+                    new PaymentDetailDto { Type = PaymentTypeEnum.CHECK, Amount = 5000, PaidAt = new DateTime(2026, 8, 10), CheckNumber = "P-CHK-1" },
+                },
+                InvoiceNumber = "INV-PAY",
+                InvoiceDate = DateTime.Now,
+                ProductItemList = new()
+                {
+                    new CreatePurchaseItemDto { ProductId = scenario.Product.Id, Quantity = 1, UnitPrice = 5000, Discount = 0 },
+                },
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            var purchase = verify.Purchases.Single(x => x.InvoiceNumber == "INV-PAY");
+            var payment = Assert.Single(verify.PaymentDetails.Where(x => x.PurchaseId == purchase.Id));
+            Assert.Equal(PaymentTypeEnum.CHECK, payment.Type);
+            Assert.Equal(PaymentPurposeEnum.NORMAL, payment.Purpose);
+            Assert.Equal(5000m, payment.Amount);
+            Assert.Equal("P-CHK-1", payment.CheckNumber);
+        }
+
+        [Fact]
+        public async Task UpdatePurchase_ReplacesPaymentDetails()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 5, stock: 0);
+            scope.Context.PaymentDetails.Add(new Domain.Entities.PaymentDetail
+            {
+                PurchaseId = scenario.Purchase.Id,
+                Type = PaymentTypeEnum.CASH,
+                Purpose = PaymentPurposeEnum.NORMAL,
+                Amount = 1000,
+                PaidAt = new DateTime(2026, 8, 1),
+            });
+            scope.Context.SaveChanges();
+
+            var handler = new UpdatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
+            await handler.Handle(new UpdatePurchaseCommand
+            {
+                Id = scenario.Purchase.Id,
+                InvoiceNumber = "INV-PAY-UPD",
+                InvoiceDate = DateTime.Now,
+                Status = PurchaseStatusEnum.SHIPPED,
+                PaymentType = PaymentTypeEnum.TRANSFER,
+                PaymentDetails = new()
+                {
+                    new PaymentDetailDto { Type = PaymentTypeEnum.TRANSFER, Amount = 4000, PaidAt = new DateTime(2026, 9, 1), TransferRef = "P-TR-9" },
+                },
+                SupplierId = scenario.Supplier.Id,
+                TotalAmount = 4000,
+                PaidAmount = 4000,
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            var payment = Assert.Single(verify.PaymentDetails.Where(x => x.PurchaseId == scenario.Purchase.Id));
+            Assert.Equal(PaymentTypeEnum.TRANSFER, payment.Type);
+            Assert.Equal(4000m, payment.Amount);
+            Assert.Equal("P-TR-9", payment.TransferRef);
+            Assert.Equal(PaymentPurposeEnum.NORMAL, payment.Purpose);
+        }
+
+        [Fact]
         public async Task UpdatePurchase_UnknownId_ThrowsNotFound()
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
 
-            var handler = new UpdatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var handler = new UpdatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
 
             await Assert.ThrowsAsync<NotFoundCustomException>(() => handler.Handle(new UpdatePurchaseCommand
             {
@@ -78,7 +157,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 5, stock: 0);
 
-            var handler = new UpdatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var handler = new UpdatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
             await handler.Handle(new UpdatePurchaseCommand
             {
                 Id = scenario.Purchase.Id,
@@ -194,7 +273,7 @@ namespace WMS.Tests.Integration
             scenario.Purchase.Status = PurchaseStatusEnum.PROFORMA;
             scope.Context.SaveChanges();
 
-            var handler = new UpdatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var handler = new UpdatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(new UpdatePurchaseCommand
             {
@@ -218,7 +297,7 @@ namespace WMS.Tests.Integration
             scenario.Purchase.Status = PurchaseStatusEnum.PROFORMA;
             scope.Context.SaveChanges();
 
-            var handler = new UpdatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var handler = new UpdatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
             await handler.Handle(new UpdatePurchaseCommand
             {
                 Id = scenario.Purchase.Id,
@@ -254,7 +333,7 @@ namespace WMS.Tests.Integration
             var echoedUrl = FakeObjectStorage.Instance.GetFixedUrl("receiving/2026/09/fake.jpg");
             Assert.StartsWith("http", echoedUrl);
 
-            await new UpdatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork)
+            await new UpdatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance)
                 .Handle(new UpdatePurchaseCommand
                 {
                     Id = scenario.Purchase.Id,
@@ -356,7 +435,7 @@ namespace WMS.Tests.Integration
             var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 1, stock: 0);
             var newDue = new DateTime(2026, 12, 1);
 
-            var handler = new UpdatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var handler = new UpdatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance);
             await handler.Handle(new UpdatePurchaseCommand
             {
                 Id = scenario.Purchase.Id,

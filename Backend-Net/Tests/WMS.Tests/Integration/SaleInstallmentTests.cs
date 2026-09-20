@@ -1,4 +1,4 @@
-using Application.Features.Sale.Commands;
+﻿using Application.Features.Sale.Commands;
 using Application.Features.Sale.Dtos;
 using Application.Features.SaleInstallment.Commands;
 using Application.Features.SaleInstallment.Dtos;
@@ -446,7 +446,6 @@ namespace WMS.Tests.Integration
             UpdateSaleCommand Command(ulong paidAmount, SalesStatusEnum status) => new()
             {
                 Id = scenario.Sale.Id,
-                InvoiceNumber = "",
                 InvoiceDate = DateTime.Now,
                 Status = status,
                 PaymentType = PaymentTypeEnum.CASH,
@@ -482,7 +481,6 @@ namespace WMS.Tests.Integration
             await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(new UpdateSaleCommand
             {
                 Id = scenario.Sale.Id,
-                InvoiceNumber = "",
                 InvoiceDate = DateTime.Now,
                 Status = SalesStatusEnum.PROCESSING,
                 PaymentType = PaymentTypeEnum.INSTALLMENT,

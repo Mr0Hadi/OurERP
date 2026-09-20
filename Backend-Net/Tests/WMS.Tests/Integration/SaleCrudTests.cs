@@ -1,4 +1,5 @@
 ﻿using Application.Common.Contracts.UserContextService;
+using Application.Common.Dtos;
 using Application.Features.Sale.Commands;
 using Application.Features.Sale.Dtos;
 using Application.Features.Sale.Queries;
@@ -22,9 +23,8 @@ namespace WMS.Tests.Integration
             var user = Seed.PersistedUser(scope.Context);
 
             var handler = new CreateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance, FakeUserContext.WithUserId(user.Id));
-            await handler.Handle(new CreateSaleCommand
+            var created = await handler.Handle(new CreateSaleCommand
             {
-                InvoiceNumber = "SALE-NEW",
                 InvoiceDate = DateTime.Now,
                 CustomerId = customer.Id,
                 TotalAmount = 5000,
@@ -38,13 +38,127 @@ namespace WMS.Tests.Integration
             }, CancellationToken.None);
 
             using var verify = db.NewContext();
-            var sale = verify.Sales.Include(x => x.Items).Single(x => x.InvoiceNumber == "SALE-NEW");
+            var createdId = Assert.IsType<CreatedSaleDto>(created.Data).Id;
+            var sale = verify.Sales.Include(x => x.Items).Single(x => x.Id == createdId);
 
             Assert.Equal(5000UL, sale.TotalAmount);
             Assert.Equal(1000UL, sale.PaidAmount);
             var item = Assert.Single(sale.Items);
             Assert.Equal(2, item.Quantity);
             Assert.Equal(scenario.Product.Id, item.ProductId);
+        }
+
+        [Fact]
+        public async Task CreateSale_PersistsPaymentDetails()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0);
+            var user = Seed.PersistedUser(scope.Context);
+
+            var handler = new CreateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance, FakeUserContext.WithUserId(user.Id));
+            var created = await handler.Handle(new CreateSaleCommand
+            {
+                InvoiceDate = DateTime.Now,
+                Status = SalesStatusEnum.PROCESSING,
+                CustomerId = scenario.Customer.Id,
+                TotalAmount = 5000,
+                PaidAmount = 5000,
+                PaymentType = PaymentTypeEnum.CHECK,
+                PaymentDetails = new()
+                {
+                    new PaymentDetailDto { Type = PaymentTypeEnum.CHECK, Amount = 5000, PaidAt = new DateTime(2026, 8, 10), CheckNumber = "CHK-1" },
+                },
+                ProductIds = new() { new CreateSaleItemDto { ProductId = scenario.Product.Id, Quantity = 1, UnitPrice = 5000, Discount = 0 } },
+            }, CancellationToken.None);
+
+            var createdId = Assert.IsType<CreatedSaleDto>(created.Data).Id;
+
+            using var verify = db.NewContext();
+            var payment = Assert.Single(verify.PaymentDetails.Where(x => x.SaleId == createdId));
+            Assert.Equal(PaymentTypeEnum.CHECK, payment.Type);
+            Assert.Equal(PaymentPurposeEnum.NORMAL, payment.Purpose);
+            Assert.Equal(5000m, payment.Amount);
+            Assert.Equal("CHK-1", payment.CheckNumber);
+        }
+
+        [Fact]
+        public async Task UpdateSale_ReplacesPaymentDetails()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 5, shippedQuantity: 0, stock: 0);
+            scope.Context.PaymentDetails.Add(new Domain.Entities.PaymentDetail
+            {
+                SaleId = scenario.Sale.Id,
+                Type = PaymentTypeEnum.CASH,
+                Purpose = PaymentPurposeEnum.NORMAL,
+                Amount = 1000,
+                PaidAt = new DateTime(2026, 8, 1),
+            });
+            scope.Context.SaveChanges();
+
+            var handler = new UpdateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, TestMapper.Instance);
+            await handler.Handle(new UpdateSaleCommand
+            {
+                Id = scenario.Sale.Id,
+                InvoiceDate = DateTime.Now,
+                Status = SalesStatusEnum.PROCESSING,
+                PaymentType = PaymentTypeEnum.TRANSFER,
+                PaymentDetails = new()
+                {
+                    new PaymentDetailDto { Type = PaymentTypeEnum.TRANSFER, Amount = 3000, PaidAt = new DateTime(2026, 9, 1), TransferRef = "TR-9" },
+                },
+                CustomerId = scenario.Customer.Id,
+                TotalAmount = 3000,
+                PaidAmount = 3000,
+                Items = scenario.Sale.Items.Select(x => new UpdateSaleItemDto { Id = x.Id, ProductId = x.ProductId, Quantity = x.Quantity, UnitPrice = x.UnitPrice, Discount = x.Discount }).ToList(),
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            var payment = Assert.Single(verify.PaymentDetails.Where(x => x.SaleId == scenario.Sale.Id));
+            Assert.Equal(PaymentTypeEnum.TRANSFER, payment.Type);
+            Assert.Equal(3000m, payment.Amount);
+            Assert.Equal("TR-9", payment.TransferRef);
+        }
+
+        [Fact]
+        public async Task UpdateSale_OnInstallmentSale_LeavesInstallmentPaymentsAlone()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0, unitPrice: 12_000_000);
+            scenario.Sale.PaymentType = PaymentTypeEnum.INSTALLMENT;
+            scenario.Sale.TotalAmount = 12_000_000;
+            // پیش‌پرداختی که فیچر اقساط ثبت کرده است - ویرایش فروش نباید به آن دست بزند.
+            scope.Context.PaymentDetails.Add(new Domain.Entities.PaymentDetail
+            {
+                SaleId = scenario.Sale.Id,
+                Type = PaymentTypeEnum.CASH,
+                Purpose = PaymentPurposeEnum.INSTALLMENT_DOWN_PAYMENT,
+                Amount = 2_000_000,
+                PaidAt = new DateTime(2026, 8, 1),
+            });
+            scope.Context.SaveChanges();
+
+            var handler = new UpdateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, TestMapper.Instance);
+            await handler.Handle(new UpdateSaleCommand
+            {
+                Id = scenario.Sale.Id,
+                InvoiceDate = DateTime.Now,
+                Status = SalesStatusEnum.PROCESSING,
+                PaymentType = PaymentTypeEnum.INSTALLMENT,
+                PaymentDetails = new(),
+                CustomerId = scenario.Customer.Id,
+                TotalAmount = 12_000_000,
+                PaidAmount = 0,
+                Items = scenario.Sale.Items.Select(x => new UpdateSaleItemDto { Id = x.Id, ProductId = x.ProductId, Quantity = x.Quantity, UnitPrice = x.UnitPrice, Discount = x.Discount }).ToList(),
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            var payment = Assert.Single(verify.PaymentDetails.Where(x => x.SaleId == scenario.Sale.Id));
+            Assert.Equal(PaymentPurposeEnum.INSTALLMENT_DOWN_PAYMENT, payment.Purpose);
+            Assert.Equal(2_000_000m, payment.Amount);
         }
 
         [Fact]
@@ -59,7 +173,6 @@ namespace WMS.Tests.Integration
             await Assert.ThrowsAsync<NotFoundCustomException>(() => handler.Handle(new UpdateSaleCommand
             {
                 Id = scenario.Sale.Id,
-                InvoiceNumber = scenario.Sale.InvoiceNumber,
                 InvoiceDate = DateTime.Now,
                 Status = SalesStatusEnum.PROCESSING,
                 PaymentType = PaymentTypeEnum.CASH,
@@ -82,7 +195,6 @@ namespace WMS.Tests.Integration
             await handler.Handle(new UpdateSaleCommand
             {
                 Id = scenario.Sale.Id,
-                InvoiceNumber = scenario.Sale.InvoiceNumber,
                 InvoiceDate = DateTime.Now,
                 Status = SalesStatusEnum.PROCESSING,
                 PaymentType = PaymentTypeEnum.CASH,
@@ -115,7 +227,6 @@ namespace WMS.Tests.Integration
             await handler.Handle(new UpdateSaleCommand
             {
                 Id = scenario.Sale.Id,
-                InvoiceNumber = scenario.Sale.InvoiceNumber,
                 InvoiceDate = DateTime.Now,
                 Status = SalesStatusEnum.PROCESSING,
                 PaymentType = PaymentTypeEnum.CASH,
@@ -251,7 +362,6 @@ namespace WMS.Tests.Integration
             await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(new UpdateSaleCommand
             {
                 Id = scenario.Sale.Id,
-                InvoiceNumber = "",
                 InvoiceDate = DateTime.Now,
                 Status = SalesStatusEnum.PROCESSING,
                 PaymentType = PaymentTypeEnum.CASH,
@@ -277,7 +387,6 @@ namespace WMS.Tests.Integration
             await handler.Handle(new UpdateSaleCommand
             {
                 Id = scenario.Sale.Id,
-                InvoiceNumber = "",
                 InvoiceDate = DateTime.Now,
                 Status = SalesStatusEnum.PROFORMA,
                 PaymentType = PaymentTypeEnum.CASH,
@@ -306,7 +415,6 @@ namespace WMS.Tests.Integration
             var handler = new CreateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance, FakeUserContext.WithUserId(user.Id));
             await handler.Handle(new CreateSaleCommand
             {
-                InvoiceNumber = "",
                 InvoiceDate = null,
                 Status = SalesStatusEnum.PROFORMA,
                 CustomerId = scenario.Customer.Id,
@@ -338,9 +446,8 @@ namespace WMS.Tests.Integration
             var paymentDate = new DateTime(2026, 9, 9);
 
             var handler = new CreateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance, FakeUserContext.WithUserId(user.Id));
-            await handler.Handle(new CreateSaleCommand
+            var created = await handler.Handle(new CreateSaleCommand
             {
-                InvoiceNumber = "SALE-DUE",
                 InvoiceDate = invoiceDate,
                 PaymentDate = paymentDate,
                 CustomerId = scenario.Customer.Id,
@@ -355,7 +462,8 @@ namespace WMS.Tests.Integration
             }, CancellationToken.None);
 
             using var verify = db.NewContext();
-            var sale = verify.Sales.Single(x => x.InvoiceNumber == "SALE-DUE");
+            var createdId = Assert.IsType<CreatedSaleDto>(created.Data).Id;
+            var sale = verify.Sales.Single(x => x.Id == createdId);
             Assert.Equal(paymentDate, sale.PaymentDate);
 
             using var readScope = db.NewScope();
@@ -376,7 +484,6 @@ namespace WMS.Tests.Integration
             await handler.Handle(new UpdateSaleCommand
             {
                 Id = scenario.Sale.Id,
-                InvoiceNumber = scenario.Sale.InvoiceNumber,
                 InvoiceDate = scenario.Sale.InvoiceDate,
                 PaymentDate = newDue,
                 Status = scenario.Sale.Status,

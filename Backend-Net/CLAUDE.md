@@ -954,9 +954,8 @@ frontend: `docs/return-frontend-migration.fa.md` §4.
 - Tests: the two balance tests in `Integration/ReturnEffectModelTests.cs` now assert the opposite - goods out with
   no money, and an uneven swap with no refund, are accepted and their declared prices persisted; both
   `GoodsEffectWithoutUnitPrice_IsInvalid` cases in `Unit/ValidatorTests.cs` became `_IsValid`.
-- **Not verified:** no .NET SDK on the machine this ran from, so nothing here has been compiled or tested. Run
-  `dotnet build WMS.slnx` and `dotnet test Tests/WMS.Tests`; the last recorded baseline is 495/504 with the 9
-  long-documented pre-existing failures.
+- **Verified 2026-09-20** (it shipped unverified - no .NET SDK on the machine it was written on): build clean,
+  suite 547/558 with the 11 long-documented pre-existing failures.
 
 **Return effect model: four effects, one rule each (2026-09-13).** Supersedes the three entries that stood
 here ("Return money balance, off-invoice stock and excess costing", "Stored stock booking, reversible kept
@@ -1194,6 +1193,72 @@ untouched. Design decisions in `docs/sale-installment-guide.fa.md`; API contract
   verified by running the full suite in a clean worktree at `main` (`9b9804b`), which fails the identical 11 test
   names (the documented `IX_Users_PersonelCode` and `"***"` object-storage cases, plus the LibreOffice-dependent
   `InvoicePdfTests`).
+
+**In-person sale, and `invoiceNumber` off the sale commands (merged 2026-09-20).** Came in from
+`main` (PR #38, `f3c252d`) and was merged onto the installment branch; this entry records the merge
+fallout that was fixed here, not the feature's own design. API: `docs/api-guide.fa.md` §11
+(`CreateInPersonSale`, the two request bodies) and the 2026-09-20 «فروش حضوری و شماره‌ی فاکتور»
+table in §16.
+
+- **`CreateInPersonSaleCommand`** (`POST api/Sale/CreateInPersonSale`) composes `CreateSale` +
+  `ShipSale` + `Status = DELIVERED` inside `IUnitOfWork.ExecuteInTransactionAsync`, sending both
+  through `IMediator` so their validators run - the same shape `Shipment`'s two atomic commands use.
+- **`CreateSaleCommand.InvoiceNumber`/`UpdateSaleCommand.InvoiceNumber` were removed** (breaking).
+  The official number is server-generated, which is what `SaleInvoiceFinalizer` already did; the
+  client no longer supplies it. `CreateSale` now answers with `CreatedSaleDto { Id, InvoiceNumber,
+  Status }` in `res.Data`, which is how the in-person command learns the new sale's id.
+- **The merge left `UpdateSaleCommandHandler` uncompilable** - three stray `}` and two references to
+  the removed `request.InvoiceNumber`. Repaired by hoisting `canLeaveProforma` out of the
+  proforma block and calling `SaleInvoiceFinalizer.FinalizeAsync(_context, sale, ct)` **after** the
+  request fields are copied onto the entity, so the number/date/PROCESSING land on the entity rather
+  than being round-tripped through the request. Behaviour is identical to the pre-merge version; both
+  installment branches of the proforma-exit rule are untouched.
+- **PR #38 also left the test project uncompilable on `main`** (17 sites still set `InvoiceNumber` on
+  the two sale commands). Removed here; the two `SaleCrudTests` cases that looked their sale up *by*
+  invoice number now use the id from `CreatedSaleDto`.
+- **An in-person sale may be an installment sale**, and the command now carries the contract:
+  `CreateInPersonSaleCommand.InstallmentPlan` (a `CreateSaleInstallmentPlanCommand`, its `SaleId`
+  overwritten from the sale just created, same idiom as the nested `Sale`) is sent inside the
+  transaction **before** `ShipSale`. Required when `PaymentType == INSTALLMENT`, refused otherwise,
+  and its `DownPaymentAmount` must be `> 0`; the full-payment rule now applies only to non-installment
+  sales. **A proforma is a sale nobody has paid a rial towards** - what takes a sale out of it is money
+  changing hands, which for an installment sale is the down payment, and that is exactly what issues
+  the official invoice number (`CreateSaleInstallmentPlanCommandHandler` already finalizes). Refusing a
+  zero down payment is the real invariant: goods must not leave the warehouse against a proforma.
+- **`CreateSale`/`UpdateSale` required `PaymentDetails` for every non-`CASH` payment type**, which made
+  `PaymentType = INSTALLMENT` unconstructible through the API at all - the down payment's
+  `PaymentDetail` is written by `CreateSaleInstallmentPlanCommand` with
+  `Purpose = INSTALLMENT_DOWN_PAYMENT`, so there is nothing for the client to send. `INSTALLMENT` is
+  now exempt in both validators. Found by the in-person installment test; it was a gap on the ordinary
+  installment path too, which the installment session's tests missed because they seed the proforma
+  sale directly rather than through `CreateSale`.
+- **`UpdateSaleCommandHandler` never persisted `request.PaymentDetails`** - it validated the list and
+  dropped it, so editing a sale silently discarded any new payment and the payment state could only
+  ever be whatever `CreateSale` first wrote. (`CreateSaleCommandHandler` has always persisted them,
+  not through handler code but through AutoMapper's name convention on `CreateMap<CreateSaleCommand,
+  Sale>()`: `Sale.PaymentDetails` is a navigation collection and a `PaymentDetailDto -> PaymentDetail`
+  map exists, so the rows save with the sale graph. Grepping the handler shows nothing - hence the
+  earlier wrong claim in this file's first draft that neither side saved them.) `UpdateSale` now
+  replaces the sale's payment rows wholesale, the same contract `Attachments` already has, and forces
+  `Purpose = NORMAL` - that endpoint only ever records an ordinary payment.
+  - **An installment sale is skipped entirely**, exactly as `PaidAmount` already is: its
+    `INSTALLMENT_DOWN_PAYMENT`/`INSTALLMENT` rows belong to the installment feature and a wholesale
+    replace would delete the payment history. Guarded on both the loaded plan and the request's
+    `PaymentType`, so a sale with no plan yet is covered too.
+  - **`UpdatePurchaseCommand` had the same hole, one step worse:** it did not accept `PaymentDetails`
+    at all, so a purchase's payments were frozen at whatever `CreatePurchase` first wrote (that one
+    saves through the same AutoMapper convention - confirmed by a test written before the change,
+    which passes against unmodified `CreatePurchaseCommandHandler`). The field, the non-`CASH`
+    requirement `CreatePurchase` already had, and the same wholesale replace are now on Update; the
+    handler gained an `IMapper` parameter. No installment branch here - the installment feature is
+    sale-only, so every purchase payment is `Purpose = NORMAL`.
+- No schema change, no migration. Tests: `Tests/WMS.Tests/Integration/InPersonSaleTests.cs` (4 -
+  cash round-trip, installment with down payment, and both refusals, each asserting stock did not
+  move on refusal), 3 in `SaleCrudTests` (create persists the payment rows, update replaces them,
+  update leaves an installment sale's rows alone) and 2 in `PurchaseCrudTests` (the same for the
+  purchase side). **Verified: build clean, suite 556/567**, the 11 failures being the
+  long-documented pre-existing ones (8 `IX_Users_PersonelCode`/functional-seed collisions, the
+  `"***"` object-storage placeholder, and the two LibreOffice-dependent `InvoicePdfTests`).
 
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
