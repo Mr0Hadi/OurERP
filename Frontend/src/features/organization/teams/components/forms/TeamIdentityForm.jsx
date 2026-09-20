@@ -23,7 +23,7 @@ export default function TeamIdentityForm({
   departmentReadOnly = false,
   departmentName,
 }) {
-  const { departments, isLoading, isFallback } = useDepartmentOptionsQuery();
+  const { departments, isLoading } = useDepartmentOptionsQuery();
 
   const departmentOptions = useMemo(
     () => departments.map((d) => ({ value: d.id, label: d.name })),
@@ -67,8 +67,8 @@ export default function TeamIdentityForm({
             error={errors.departmentId}
             rules={teamDepartmentRules}
             hint={
-              isFallback
-                ? "فهرست واحدها هنوز از سرور نیامده؛ مقادیر پیش‌فرض نمایش داده می‌شود."
+              !isLoading && departmentOptions.length === 0
+                ? "هنوز واحدی ثبت نشده؛ اول یک واحد بسازید."
                 : undefined
             }
           />

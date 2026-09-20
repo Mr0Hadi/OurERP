@@ -6,9 +6,6 @@ import DataTable from "@/shared/components/table/DataTable";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 
-const rowClassName = (row) =>
-  row.original.isActive === false ? "opacity-60 bg-muted/30" : "";
-
 export default function TeamTable({
   data,
   isLoading,
@@ -16,8 +13,6 @@ export default function TeamTable({
   currentPage,
   pageSize,
   onPaginationChange,
-  sorting,
-  onSortingChange,
 }) {
   const navigate = useNavigate();
 
@@ -95,11 +90,8 @@ export default function TeamTable({
       currentPage={currentPage}
       pageSize={pageSize}
       onPaginationChange={onPaginationChange}
-      sorting={sorting}
-      onSortingChange={onSortingChange}
-      // `GetUserList`/`GetDepartmentList`/`GetTeamList` هیچ‌کدام sortBy نمی‌گیرند.
+      // `GetTeamList` هیچ پارامترِ مرتب‌سازی نمی‌گیرد؛ ترتیب را سرور می‌دهد.
       sortable={false}
-      rowClassName={rowClassName}
       emptyMessage="تیمی یافت نشد."
     />
   );

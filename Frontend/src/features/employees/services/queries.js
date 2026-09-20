@@ -1,45 +1,39 @@
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+﻿import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
-import { AccountStatusEnum } from "@/shared/domain/enums/accountStatus";
-import { fetchEmployees, fetchEmployeeById } from "./api-v1";
-import { employeeKeys } from "./queryKeys";
+import { getUserList, getUserUpdate } from "./api-v1";
+import { userKeys } from "./queryKeys";
 
 /** فهرست‌های داخلِ کارت‌ها (اعضای تیم، کاندیداها) صفحه‌بندی ندارند. */
-const ALL_ROWS = { pageIndex: 0, pageSize: 200 };
-const BY_NAME = { id: "fullName", desc: false };
+const ALL_ROWS = { page: 1, take: 200 };
 
 /** فقط شمارنده می‌خواهیم، پس یک ردیف هم لازم نیست. */
-const COUNT_ONLY = { pageIndex: 0, pageSize: 1 };
+const COUNT_ONLY = { page: 1, take: 1 };
 
 /**
+ * فهرستِ کارمندان — `GetUserList`.
+ *
+ * `params` دقیقاً همان چیزی است که سرور می‌گیرد: `page`, `take`,
+ * `fullName`, `personelCode`, `departmentId`, `teamId`, `isActive`. هیچ
+ * نامی ترجمه نمی‌شود و پاسخ هم همان `{ userList, page }` سرور است.
+ *
+ * ⚠️ `GetUserList` مرتب‌سازی نمی‌گیرد؛ ترتیبِ ردیف‌ها را سرور تعیین می‌کند.
+ *
  * @param queryOptions گزینه‌های اضافه‌ی react-query (مثلاً `enabled`) — برای
  *        فهرست‌هایی که تا انتخابِ یک واحد نباید درخواستی بزنند.
  */
-export function useEmployeesQuery(filters, pagination, sorting, queryOptions = {}) {
-  const queryParams = {
-    page: pagination.pageIndex + 1,
-    limit: pagination.pageSize,
-    search: filters.globalSearch || "",
-    personelCode: filters.personelCode || "",
-    departmentId: filters.departmentId ?? "",
-    teamId: filters.teamId ?? "",
-    status: filters.status ?? "",
-    sortBy: sorting?.id ?? "fullName",
-    sortOrder: sorting ? (sorting.desc ? "desc" : "asc") : "asc",
-  };
-
+export function useUserListQuery(params, queryOptions = {}) {
   return useQuery({
-    queryKey: employeeKeys.list(queryParams),
-    queryFn: () => fetchEmployees(queryParams),
+    queryKey: userKeys.list(params),
+    queryFn: () => getUserList(params),
     placeholderData: keepPreviousData,
     ...queryOptions,
   });
 }
 
-export function useEmployeeQuery(id) {
+export function useUserUpdateQuery(id) {
   return useQuery({
-    queryKey: employeeKeys.detail(id),
-    queryFn: () => fetchEmployeeById(id),
+    queryKey: userKeys.detail(id),
+    queryFn: () => getUserUpdate(id),
     enabled: !!id,
   });
 }
@@ -47,7 +41,7 @@ export function useEmployeeQuery(id) {
 /**
  * تعداد کارمندانِ *فعالِ* یک واحد.
  *
- * از `total` صفحه‌بندی خوانده می‌شود، نه از `UserCount` رکوردِ واحد:
+ * از `page.total` خوانده می‌شود، نه از `userCount` رکوردِ واحد:
  * `GetDepartmentDetail` در سرور اصلاً شمارنده برنمی‌گرداند (فقط
  * `GetDepartmentList` دارد).
  *
@@ -56,17 +50,13 @@ export function useEmployeeQuery(id) {
  * کارمندِ حذف‌شده داشت، از UI هیچ‌وقت قابل حذف نبود.
  */
 export function useDepartmentUserCountQuery(departmentId) {
-  const query = useEmployeesQuery(
-    {
-      globalSearch: "",
-      departmentId: departmentId ?? "",
-      status: AccountStatusEnum.ACTIVE,
-    },
-    COUNT_ONLY,
-    null,
-  );
+  const query = useUserListQuery({
+    ...COUNT_ONLY,
+    departmentId: departmentId ?? "",
+    isActive: true,
+  });
 
-  return { ...query, count: query.data?.total ?? 0 };
+  return { ...query, userCount: query.data?.page?.total ?? 0 };
 }
 
 /**
@@ -76,16 +66,18 @@ export function useDepartmentUserCountQuery(departmentId) {
  * شود، مدیر تیم راهی برای خارج‌کردنش ندارد.
  */
 export function useTeamMembersQuery(teamId) {
-  const query = useEmployeesQuery(
-    { globalSearch: "", teamId: teamId ?? "" },
-    ALL_ROWS,
-    BY_NAME,
-  );
+  const query = useUserListQuery({ ...ALL_ROWS, teamId: teamId ?? "" });
+
+  const members = query.data?.userList ?? [];
 
   return {
     ...query,
-    members: query.data?.items ?? [],
-    memberCount: query.data?.total ?? 0,
+    members,
+    // شمارنده فقط فعال‌ها را می‌شمارد - همان چیزی که `TeamListDto.UserCount`
+    // می‌دهد و همان شرطی که `DeleteTeam` برای «آیا این تیم هنوز عضوی دارد»
+    // می‌گذارد. `page.total` این‌جا کار نمی‌کند چون خودِ فهرست عمداً
+    // غیرفعال‌ها را هم می‌آورد.
+    activeMemberCount: members.filter((user) => user.isActive).length,
   };
 }
 
@@ -101,10 +93,10 @@ export function useTeamMembersQuery(teamId) {
  * روزمره است و `ChangeUserTeam` دقیقاً برای همین ساخته شده.
  */
 export function useTeamCandidatesQuery(teamId) {
-  const query = useEmployeesQuery({ globalSearch: "" }, ALL_ROWS, BY_NAME);
+  const query = useUserListQuery({ ...ALL_ROWS, isActive: true });
 
-  const candidates = (query.data?.items ?? []).filter(
-    (employee) => employee.isActive && employee.teamId != teamId,
+  const candidates = (query.data?.userList ?? []).filter(
+    (user) => user.teamId != teamId,
   );
 
   return { ...query, candidates };

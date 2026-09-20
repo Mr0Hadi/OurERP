@@ -3,9 +3,12 @@
  * `numeric: true` برای فیلترهایی که مقدارشان enum عددی است — چون
  * Select همیشه رشته برمی‌گرداند، باید همان‌جا به عدد برگردد وگرنه
  * مقایسه‌ی بعدی با مقدار عددیِ واقعی (`===`) هیچ‌وقت true نمی‌شود.
+ * `boolean: true` همین کار را برای فیلترهای بولینِ سرور می‌کند (مثل
+ * `isActive` در `GetUserList`).
  */
-export const normalizeFilterValue = (value, { numeric = false } = {}) => {
+export const normalizeFilterValue = (value, { numeric = false, boolean = false } = {}) => {
   if (value === "all") return "";
+  if (boolean) return value === "true";
   return numeric ? Number(value) : value;
 };
 

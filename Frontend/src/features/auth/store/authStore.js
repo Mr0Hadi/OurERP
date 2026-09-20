@@ -2,13 +2,12 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
 /**
- * استورِ احراز هویت — فقط چیزهایی که *فقط* اینجا می‌توانند باشند:
- * توکن‌ها و انتخابِ کاربر.
+ * استورِ احراز هویت — فقط چیزی که *فقط* اینجا می‌تواند باشد: توکن‌ها.
  *
  * ⚠️ هویتِ کاربر (نام، واحد، تیم، مجوزها) عمداً اینجا **نیست**. پاسخِ
  * `POST api/Account/Login` فقط `TokenDto` است و هیچ اطلاعاتی از کاربر
  * ندارد؛ آن اطلاعات از `GET api/User/GetUserInfo` می‌آید و جایش
- * React Query است (`useSessionQuery`). نگه‌داشتنِ کپی‌اش در localStorage
+ * React Query است (`useUserInfoQuery`). نگه‌داشتنِ کپی‌اش در localStorage
  * یعنی بعد از هر `UpdateUser`/`ChangeUserTeam` یک نسخه‌ی کهنه بماند که
  * هیچ‌چیز باطلش نمی‌کند.
  */
@@ -23,12 +22,6 @@ export const useAuthStore = create(
       // واردشده هم برای یک لحظه به لاگین پرتاب بشه (یا برعکس).
       hasHydrated: false,
 
-      /**
-       * عضویتِ سازمانیِ *انتخاب‌شده* — فقط یک شناسه، نه خودِ رکورد.
-       * خودِ فهرستِ عضویت‌ها از سرور می‌آید و هر بار تازه خوانده می‌شود.
-       */
-      activeMembershipId: null,
-
       // بعد از رفرش موفق فقط توکن‌ها آپدیت می‌شن
       setTokens: (accessToken, refreshToken) =>
         set({
@@ -42,12 +35,7 @@ export const useAuthStore = create(
           accessToken,
           refreshToken,
           isAuthenticated: true,
-          // انتخابِ کاربرِ قبلی به کاربرِ جدید به ارث نمی‌رسد.
-          activeMembershipId: null,
         }),
-
-      setActiveMembership: (membershipId) =>
-        set({ activeMembershipId: membershipId }),
 
       setHasHydrated: (hasHydrated) => set({ hasHydrated }),
 
@@ -56,7 +44,6 @@ export const useAuthStore = create(
           accessToken: null,
           refreshToken: null,
           isAuthenticated: false,
-          activeMembershipId: null,
         }),
     }),
     {
@@ -66,7 +53,6 @@ export const useAuthStore = create(
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
-        activeMembershipId: state.activeMembershipId,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);

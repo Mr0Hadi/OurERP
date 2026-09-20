@@ -1,25 +1,26 @@
 import { createFilterStore } from "@/shared/store/createFilterStore";
 
 /**
- * دقیقاً همان فیلترهایی که `GetUserList` در سرور می‌شناسد: نام، کد
- * پرسنلی، واحد، تیم و وضعیت. فیلترِ «نقش» وجود ندارد چون سرور رویش فیلتر
- * نمی‌کند.
+ * دقیقاً همان فیلترهایی که `GetUserList` در سرور می‌شناسد و با همان
+ * نام‌ها: `fullName`, `personelCode`, `departmentId`, `teamId`,
+ * `isActive`. فیلترِ «نقش» وجود ندارد چون سرور رویش فیلتر نمی‌کند.
  *
- * شناسه‌ها عددی‌اند و رشته‌ی خالی یعنی «فیلتر نشده» — همان قراردادی که
- * `normalizeFilterValue` در `FilterSelect` رعایت می‌کند.
+ * رشته‌ی خالی یعنی «فیلتر نشده» — همان قراردادی که `normalizeFilterValue`
+ * در `FilterSelect` رعایت می‌کند و در `api-v1` به `undefined` تبدیل
+ * می‌شود تا روی سیم نرود.
  *
  * `departmentId` و `teamId` به هم وابسته‌اند: با عوض‌شدن واحد، تیمِ
  * انتخاب‌شده دیگر معنا ندارد و در `EmployeeFilters` پاک می‌شود.
  *
- * مرتب‌سازیِ پیش‌فرض روی نام است: `UserListDto` دیگر `createdAt` ندارد.
+ * مرتب‌سازی ندارد: `GetUserList` هیچ پارامترِ مرتب‌سازی نمی‌گیرد.
  */
 export const useEmployeeFilterStore = createFilterStore({
   filters: {
-    globalSearch: "",
+    fullName: "",
     personelCode: "",
     departmentId: "",
     teamId: "",
-    status: "",
+    isActive: "",
   },
-  defaultSorting: { id: "fullName", desc: false },
+  defaultSorting: null,
 });

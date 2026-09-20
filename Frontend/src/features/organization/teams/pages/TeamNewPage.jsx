@@ -46,16 +46,12 @@ export default function TeamNewPage() {
 
   const onSubmit = (data) => {
     createMutation.mutate(buildPayload(data), {
-      onSuccess: (created) => {
-        if (hasReturnTo) {
-          goBack({
-            createdTeamId: created?.id ?? null,
-            createdTeamName: created?.name ?? data.name,
-            createdTeamDepartmentId: Number(data.departmentId),
-          });
-        } else {
-          navigate(ROUTES.ORG_TEAMS);
-        }
+      // ⚠️ `CreateTeam` هیچ `Data`ی برنمی‌گرداند (نه شناسه)، پس فرمِ مبدأ
+      // نمی‌تواند تیمِ تازه را خودکار انتخاب کند؛ فقط واحدی که کاربر
+      // همین‌جا انتخاب کرد با او برمی‌گردد.
+      onSuccess: () => {
+        if (hasReturnTo) goBack({ departmentId: Number(data.departmentId) });
+        else navigate(ROUTES.ORG_TEAMS);
       },
     });
   };

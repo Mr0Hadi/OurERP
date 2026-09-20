@@ -7,7 +7,7 @@ import { useDepartmentOptionsQuery } from "../../../departments/services/queries
 import { useTeamFilterStore } from "../../store/teamFilterStore";
 
 const TeamFilters = () => {
-  const { globalSearch, departmentId, setGlobalSearch, setDepartmentId, resetFilters } =
+  const { name, departmentId, setName, setDepartmentId, resetFilters } =
     useTeamFilterStore();
 
   const { departments } = useDepartmentOptionsQuery();
@@ -17,10 +17,7 @@ const TeamFilters = () => {
     [departments],
   );
 
-  const handleSearch = useCallback(
-    (e) => setGlobalSearch(e.target.value),
-    [setGlobalSearch],
-  );
+  const handleName = useCallback((e) => setName(e.target.value), [setName]);
 
   return (
     <FilterPanel
@@ -33,8 +30,8 @@ const TeamFilters = () => {
       {/* `GetTeamList` فقط روی نامِ تیم جست‌وجو می‌کند. */}
       <FilterSearchInput
         placeholder="نام تیم..."
-        value={globalSearch}
-        onChange={handleSearch}
+        value={name}
+        onChange={handleName}
       />
 
       <FilterSelect

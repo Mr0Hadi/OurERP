@@ -18,7 +18,7 @@ import { useHeaderStore } from "@/shared/store/headerStore";
 import { useGoBack } from "@/shared/hooks/useGoBack";
 import { Button } from "@/shared/components/ui/button";
 import { ArrowRight } from "lucide-react";
-import { useSessionQuery } from "@/features/auth/services/queries";
+import { useUserInfoQuery } from "@/features/auth/services/queries";
 import RouteLoadingOverlay from "@/shared/components/layout/RouteLoadingOverlay";
 
 
@@ -38,7 +38,7 @@ export default function AppLayout() {
   // تلاشِ رفرش واقعی می‌رساند) به یک نتیجه‌ی قطعی نرسیده، محتوای محافظت‌شده
   // را رندر نمی‌کنیم؛ وگرنه همان چیزی می‌شود که کاربر «فلشِ Home قبل از
   // ریدایرکت به Login» می‌بیند.
-  const { isSuccess: sessionConfirmed } = useSessionQuery();
+  const { isSuccess: sessionConfirmed } = useUserInfoQuery();
 
   useEffect(() => {
     setCurrentPath(location.pathname);

@@ -9,13 +9,10 @@ import { useDepartmentFilterStore } from "../../store/departmentFilterStore";
  * را AND می‌کند؛ یک کادرِ «نام واحد یا مدیر» نمی‌تواند هر دو را درست پر کند.
  */
 const DepartmentFilters = () => {
-  const { globalSearch, headName, setGlobalSearch, setHeadName, resetFilters } =
+  const { name, headName, setName, setHeadName, resetFilters } =
     useDepartmentFilterStore();
 
-  const handleSearch = useCallback(
-    (e) => setGlobalSearch(e.target.value),
-    [setGlobalSearch],
-  );
+  const handleName = useCallback((e) => setName(e.target.value), [setName]);
 
   const handleHeadName = useCallback(
     (e) => setHeadName(e.target.value),
@@ -33,8 +30,8 @@ const DepartmentFilters = () => {
       <FilterSearchInput
         label="نام واحد"
         placeholder="نام واحد..."
-        value={globalSearch}
-        onChange={handleSearch}
+        value={name}
+        onChange={handleName}
       />
 
       <FilterSearchInput

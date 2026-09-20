@@ -33,15 +33,14 @@ import {
   useTeamMembersQuery,
   useTeamCandidatesQuery,
 } from "@/features/employees/services/queries";
-import { useAssignEmployeeMembershipMutation } from "@/features/employees/services/mutations";
+import { useChangeUserTeamMutation } from "@/features/employees/services/mutations";
 
-const fullNameOf = (employee) =>
-  employee.fullName ||
-  `${employee.firstName ?? ""} ${employee.lastName ?? ""}`.trim() ||
-  employee.username;
+/** `UserListDto` نامِ کامل ندارد؛ از `firstName`/`lastName` ساخته می‌شود. */
+const fullNameOf = (user) =>
+  `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.username;
 
-const roleTitleOf = (employee) =>
-  employee.roleTitle ?? ORG_ROLE_LABELS[employee.role] ?? ORG_ROLE_LABELS[OrgRoleEnum.MEMBER];
+const roleTitleOf = (user) =>
+  user.roleTitle ?? ORG_ROLE_LABELS[user.role] ?? ORG_ROLE_LABELS[OrgRoleEnum.MEMBER];
 
 /**
  * اعضای یک تیم، داخل صفحه‌ی جزئیات همان تیم.
@@ -62,20 +61,20 @@ export default function TeamMembersCard({ team, onOpenEmployee }) {
   const { members, isLoading } = useTeamMembersQuery(team.id);
   const { candidates } = useTeamCandidatesQuery(team.id);
 
-  const assignMutation = useAssignEmployeeMembershipMutation();
+  const assignMutation = useChangeUserTeamMutation();
 
   const handleAdd = () => {
     if (memberToAdd === "") return;
 
-    const employee = candidates.find((item) => item.id === Number(memberToAdd));
-    if (!employee) return;
+    const user = candidates.find((item) => item.id === Number(memberToAdd));
+    if (!user) return;
 
     assignMutation.mutate(
       {
-        userId: employee.id,
+        userId: user.id,
         departmentId: team.departmentId,
         teamId: team.id,
-        successMessage: `${fullNameOf(employee)} به تیم اضافه شد.`,
+        successMessage: `${fullNameOf(user)} به تیم اضافه شد.`,
       },
       { onSuccess: () => setMemberToAdd("") },
     );
@@ -219,19 +218,19 @@ export default function TeamMembersCard({ team, onOpenEmployee }) {
                 />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
-                {candidates.map((employee) => (
+                {candidates.map((user) => (
                   <SelectItem
-                    key={employee.id}
-                    value={String(employee.id)}
+                    key={user.id}
+                    value={String(user.id)}
                     className="rounded-lg"
                   >
-                    {fullNameOf(employee)}
+                    {fullNameOf(user)}
                     {" — "}
-                    {[employee.departmentName, employee.teamName]
+                    {[user.departmentName, user.teamName]
                       .filter(Boolean)
                       .join(" / ")}
-                    {employee.role !== OrgRoleEnum.MEMBER &&
-                      ` (${roleTitleOf(employee)})`}
+                    {user.role !== OrgRoleEnum.MEMBER &&
+                      ` (${roleTitleOf(user)})`}
                   </SelectItem>
                 ))}
               </SelectContent>

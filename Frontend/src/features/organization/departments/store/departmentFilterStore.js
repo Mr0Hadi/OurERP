@@ -1,10 +1,12 @@
 import { createFilterStore } from "@/shared/store/createFilterStore";
 
 /**
- * `globalSearch` روی نامِ واحد و `headName` روی نامِ مدیر — دو فیلترِ
- * مستقلِ `GetDepartmentList` که سرور با هم AND می‌کند.
+ * دو فیلترِ مستقلِ `GetDepartmentList` با همان نام‌های سرور: `name` روی
+ * نامِ واحد و `headName` روی نامِ مسئول؛ سرور آن‌ها را AND می‌کند.
+ *
+ * مرتب‌سازی ندارد: این endpoint پارامترِ مرتب‌سازی نمی‌گیرد.
  */
 export const useDepartmentFilterStore = createFilterStore({
-  filters: { globalSearch: "", headName: "" },
-  defaultSorting: { id: "name", desc: false },
+  filters: { name: "", headName: "" },
+  defaultSorting: null,
 });

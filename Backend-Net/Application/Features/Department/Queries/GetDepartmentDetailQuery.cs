@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.Department.Dtos;
@@ -36,7 +36,7 @@ namespace Application.Features.Department.Queries
                     HeadName = x.Head != null ? x.Head.FirstName + " " + x.Head.LastName : null,
                     DeputyId = x.DeputyId,
                     DeputyName = x.Deputy != null ? x.Deputy.FirstName + " " + x.Deputy.LastName : null,
-                    Teams = x.Teams.Select(y => new TeamDto
+                    Teams = x.Teams.Where(y => y.IsActive).Select(y => new TeamDto
                     {
                         Id = y.Id,
                         DepartmentId = x.Id,

@@ -5,9 +5,6 @@ import { ChevronLeft } from "lucide-react";
 import DataTable from "@/shared/components/table/DataTable";
 import { Button } from "@/shared/components/ui/button";
 
-const rowClassName = (row) =>
-  row.original.isActive === false ? "opacity-60 bg-muted/30" : "";
-
 const CountCell = ({ value, suffix }) => (
   <span className="text-sm">
     {Number(value ?? 0).toLocaleString("fa-IR")} {suffix}
@@ -21,8 +18,6 @@ export default function DepartmentTable({
   currentPage,
   pageSize,
   onPaginationChange,
-  sorting,
-  onSortingChange,
 }) {
   const navigate = useNavigate();
 
@@ -92,11 +87,8 @@ export default function DepartmentTable({
       currentPage={currentPage}
       pageSize={pageSize}
       onPaginationChange={onPaginationChange}
-      sorting={sorting}
-      onSortingChange={onSortingChange}
-      // `GetUserList`/`GetDepartmentList`/`GetTeamList` هیچ‌کدام sortBy نمی‌گیرند.
+      // `GetDepartmentList` هیچ پارامترِ مرتب‌سازی نمی‌گیرد؛ ترتیب را سرور می‌دهد.
       sortable={false}
-      rowClassName={rowClassName}
       emptyMessage="واحدی یافت نشد."
     />
   );

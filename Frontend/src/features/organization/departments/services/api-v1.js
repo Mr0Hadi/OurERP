@@ -1,38 +1,43 @@
 import axiosInstance from "@/shared/services/api/axios";
-import { normalizeListResponse } from "@/shared/services/api/contract";
 
 /**
- * نگاشت روی `api/Department` — CRUD کامل (سند بکند، بخش ۳ب).
+ * نگاشت روی `api/Department` — CRUD کامل، با همان نام‌های بکند.
  *
  * - `GetDepartmentList` فقط واحدهای فعال را برمی‌گرداند و دو فیلترِ
- *   *مستقل* دارد: `name` و `headName` (با هم AND می‌شوند).
+ *   *مستقل* دارد: `name` و `headName` (با هم AND می‌شوند). پاسخ همان
+ *   `{ departmentList, page: { page, pageCount, take, total } }` سرور است.
  * - `CreateDepartment`/`UpdateDepartment`: `headId`/`deputyId` وضعیتِ
  *   نهاییِ واحدند. هر کسی که نامش بیاید به این واحد منتقل و از تیمش خارج
  *   می‌شود (مسئول/جانشینِ واحد عضو هیچ تیمی نیست) و نقشِ قبلی‌اش آزاد
  *   می‌شود؛ هر کسی که حذف شود عضوِ ساده‌ی همین واحد می‌ماند. پس
  *   `deputyId` همیشه فرستاده می‌شود.
  *
- * ⚠️ شمارنده‌ها (`TeamCount`/`UserCount`) فقط در DTOیِ *فهرست* هستند، نه
- * در جزئیات؛ صفحه‌ی جزئیات آن‌ها را از فهرست تیم‌ها و `GetUserList`
- * می‌شمارد.
+ * ⚠️ شمارنده‌ها (`teamCount`/`userCount`) فقط در `DepartmentListDto` هستند،
+ *   نه در `DepartmentDto`؛ صفحه‌ی جزئیات آن‌ها را از فهرست تیم‌ها و
+ *   `GetUserList` می‌شمارد.
  *
- * ⚠️ `CreateDepartment` هیچ `data`ی برنمی‌گرداند (نه شناسه)، پس فرمِ
- * مبدأ نمی‌تواند واحدِ تازه را خودکار انتخاب کند.
+ * ⚠️ `CreateDepartment` هیچ `Data`ی برنمی‌گرداند (نه شناسه)، پس فرمِ مبدأ
+ *   نمی‌تواند واحدِ تازه را خودکار انتخاب کند.
  */
-export async function fetchDepartments(params = {}) {
+
+/** فیلترِ خالی نباید روی سیم برود. */
+const filterValue = (value) =>
+  value === "" || value == null ? undefined : value;
+
+export async function getDepartmentList(params = {}) {
   const { data } = await axiosInstance.get("/Department/GetDepartmentList", {
     params: {
       page: params.page,
-      take: params.limit,
-      name: params.search || undefined,
-      headName: params.headName || undefined,
+      take: params.take,
+      name: filterValue(params.name),
+      headName: filterValue(params.headName),
     },
   });
 
-  return normalizeListResponse(data, { itemsKey: "departmentList" });
+  return data;
 }
 
-export async function fetchDepartmentById(id) {
+export async function getDepartmentDetail(id) {
   const { data } = await axiosInstance.get("/Department/GetDepartmentDetail", {
     params: { id },
   });

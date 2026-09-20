@@ -1,31 +1,29 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
-import { fetchTeams, fetchTeamById } from "./api-v1";
+import { getTeamList, getTeamDetail } from "./api-v1";
 import { teamKeys } from "./queryKeys";
 
-const OPTIONS_PAGE_SIZE = 200;
+const OPTIONS_TAKE = 200;
 
-export function useTeamsQuery(filters, pagination, sorting) {
-  const queryParams = {
-    page: pagination.pageIndex + 1,
-    limit: pagination.pageSize,
-    search: filters.globalSearch || "",
-    departmentId: filters.departmentId ?? "",
-    sortBy: sorting?.id ?? "name",
-    sortOrder: sorting ? (sorting.desc ? "desc" : "asc") : "asc",
-  };
-
+/**
+ * فهرستِ تیم‌ها — `GetTeamList`.
+ *
+ * `params` همان پارامترهای سرور است (`page`, `take`, `name`,
+ * `departmentId`) و پاسخ هم همان `{ teamList, page }`. این endpoint
+ * مرتب‌سازی نمی‌گیرد.
+ */
+export function useTeamListQuery(params) {
   return useQuery({
-    queryKey: teamKeys.list(queryParams),
-    queryFn: () => fetchTeams(queryParams),
+    queryKey: teamKeys.list(params),
+    queryFn: () => getTeamList(params),
     placeholderData: keepPreviousData,
   });
 }
 
-export function useTeamQuery(id) {
+export function useTeamDetailQuery(id) {
   return useQuery({
     queryKey: teamKeys.detail(id),
-    queryFn: () => fetchTeamById(id),
+    queryFn: () => getTeamDetail(id),
     enabled: !!id,
   });
 }
@@ -35,25 +33,21 @@ export function useTeamQuery(id) {
  *
  * `departmentId` اختیاری است: فرم کارمند فقط تیم‌های واحدِ انتخاب‌شده را
  * می‌خواهد (تیمی که زیر واحد دیگری است، انتخابِ نامعتبری است)، ولی
- * انتخابگرِ «افزودن تیم موجود» در صفحه‌ی واحد، همه‌ی تیم‌ها را لازم دارد.
+ * فیلترِ فهرستِ کارمندان همه‌ی تیم‌ها را لازم دارد.
  *
- * برخلاف واحدها اینجا fallback ای در کار نیست — تیم هیچ enum ای ندارد و
- * فهرست خالی یعنی واقعاً تیمی تعریف نشده.
+ * `GetTeamList` خودش فقط تیم‌های فعال را برمی‌گرداند، پس فیلترِ دیگری
+ * لازم نیست و فهرستِ خالی یعنی واقعاً تیمی تعریف نشده.
  */
 export function useTeamOptionsQuery(departmentId = "") {
   const query = useQuery({
     queryKey: teamKeys.options(departmentId),
     queryFn: () =>
-      fetchTeams({
+      getTeamList({
         page: 1,
-        limit: OPTIONS_PAGE_SIZE,
+        take: OPTIONS_TAKE,
         departmentId: departmentId ?? "",
-        sortBy: "name",
-        sortOrder: "asc",
       }),
   });
 
-  const teams = (query.data?.items ?? []).filter((t) => t.isActive !== false);
-
-  return { ...query, teams };
+  return { ...query, teams: query.data?.teamList ?? [] };
 }

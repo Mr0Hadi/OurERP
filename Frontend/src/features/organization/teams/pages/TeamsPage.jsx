@@ -14,25 +14,27 @@ import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
 
 import { useTeamFilterStore } from "../store/teamFilterStore";
 import { useDebouncedTeamFilters } from "../hooks/useDebouncedTeamFilters";
-import { useTeamsQuery } from "../services/queries";
+import { useTeamListQuery } from "../services/queries";
 import TeamFilters from "../components/table/TeamFilters";
 import TeamTable from "../components/table/TeamTable";
 
 const TeamsPage = () => {
   const navigate = useNavigate();
-  const { pagination, sorting, setPagination, setSorting } = useTeamFilterStore();
+  const { pagination, setPagination } = useTeamFilterStore();
 
-  const debouncedFilters = useDebouncedTeamFilters();
+  const filters = useDebouncedTeamFilters();
 
-  const { data, isLoading, isFetching, isError, error, refetch } = useTeamsQuery(
-    debouncedFilters,
-    pagination,
-    sorting,
-  );
+  // `page` در سرور از ۱ شروع می‌شود و `pageIndex` جدول از ۰.
+  const { data, isLoading, isFetching, isError, error, refetch } =
+    useTeamListQuery({
+      page: pagination.pageIndex + 1,
+      take: pagination.pageSize,
+      ...filters,
+    });
 
-  const teams = data?.items ?? [];
-  const totalPages = data?.totalPages ?? 1;
-  const currentPage = data?.page ? data.page - 1 : pagination.pageIndex;
+  const teamList = data?.teamList ?? [];
+  const pageCount = data?.page?.pageCount ?? 1;
+  const currentPage = data?.page?.page ? data.page.page - 1 : pagination.pageIndex;
 
   return (
     <div className="container mx-auto space-y-6">
@@ -53,14 +55,12 @@ const TeamsPage = () => {
           ) : (
             <FetchingOverlay active={isFetching && !isLoading}>
               <TeamTable
-                data={teams}
+                data={teamList}
                 isLoading={isLoading}
-                totalPages={totalPages}
+                totalPages={pageCount}
                 currentPage={currentPage}
                 pageSize={pagination.pageSize}
                 onPaginationChange={setPagination}
-                sorting={sorting}
-                onSortingChange={setSorting}
               />
             </FetchingOverlay>
           )}

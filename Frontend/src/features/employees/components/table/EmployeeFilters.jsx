@@ -3,27 +3,32 @@ import { useCallback, useMemo } from "react";
 import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
-import { toFilterOptions } from "@/shared/components/filters/filterUtils";
-import { ACCOUNT_STATUS_LABELS } from "@/shared/domain/enums/accountStatus";
 import { useDepartmentOptionsQuery } from "@/features/organization/departments/services/queries";
 import { useTeamOptionsQuery } from "@/features/organization/teams/services/queries";
 
 import { useEmployeeFilterStore } from "../../store/employeeFilterStore";
 
-const STATUS_OPTIONS = toFilterOptions(ACCOUNT_STATUS_LABELS);
+/**
+ * وضعیتِ حساب در بکند یک بولینِ ساده است (`User.IsActive`)، نه enum؛ پس
+ * همین‌جا دو گزینه‌ی بولین ساخته می‌شود و «همه» یعنی فیلتر نشده.
+ */
+const IS_ACTIVE_OPTIONS = [
+  { value: true, label: "فعال" },
+  { value: false, label: "غیرفعال" },
+];
 
 const EmployeeFilters = () => {
   const {
-    globalSearch,
+    fullName,
     personelCode,
     departmentId,
     teamId,
-    status,
-    setGlobalSearch,
+    isActive,
+    setFullName,
     setPersonelCode,
     setDepartmentId,
     setTeamId,
-    setStatus,
+    setIsActive,
     resetFilters,
   } = useEmployeeFilterStore();
 
@@ -42,9 +47,9 @@ const EmployeeFilters = () => {
     [teams],
   );
 
-  const handleGlobalSearch = useCallback(
-    (e) => setGlobalSearch(e.target.value),
-    [setGlobalSearch],
+  const handleFullName = useCallback(
+    (e) => setFullName(e.target.value),
+    [setFullName],
   );
 
   // فقط رقم — سرور `personelCode` را عددی می‌خواهد؛ غیرِ آن بایند نمی‌شود و فیلتر بی‌صدا نادیده گرفته می‌شود.
@@ -93,11 +98,11 @@ const EmployeeFilters = () => {
 
           <FilterSelect
             label="وضعیت"
-            value={status}
-            onChange={setStatus}
+            value={isActive}
+            onChange={setIsActive}
             allLabel="همه"
-            options={STATUS_OPTIONS}
-            numeric
+            options={IS_ACTIVE_OPTIONS}
+            boolean
           />
         </>
       }
@@ -105,13 +110,13 @@ const EmployeeFilters = () => {
       <FilterSearchInput
         label="جستجو"
         placeholder="نام کارمند..."
-        value={globalSearch}
-        onChange={handleGlobalSearch}
+        value={fullName}
+        onChange={handleFullName}
       />
 
       <FilterSearchInput
         label="کد پرسنلی"
-        placeholder="مثال: 42"
+        placeholder="مثال: 1042"
         value={personelCode}
         onChange={handlePersonelCode}
         inputMode="numeric"

@@ -19,7 +19,11 @@ export default function DepartmentNewPage() {
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   // اگر از فرم کارمند (یا هر فرم دیگری) به اینجا آمده باشیم، بعد از ثبت
-  // باید به همان‌جا برگردیم و شناسه‌ی واحدِ تازه‌ساخته را با خودمان ببریم.
+  // باید به همان‌جا برگردیم.
+  //
+  // ⚠️ `CreateDepartment` هیچ `Data`ی برنمی‌گرداند — نه شناسه و نه نام —
+  // پس چیزی برای «انتخابِ خودکارِ واحدِ تازه» در فرمِ مبدأ وجود ندارد و
+  // کاربر خودش آن را از فهرستِ تازه‌شده انتخاب می‌کند.
   const { hasReturnTo, goBack } = useReturnTo(ROUTES.ORG_DEPARTMENTS);
 
   useEffect(() => {
@@ -37,15 +41,9 @@ export default function DepartmentNewPage() {
 
   const onSubmit = (data) => {
     createMutation.mutate(buildPayload(data), {
-      onSuccess: (created) => {
-        if (hasReturnTo) {
-          goBack({
-            createdDepartmentId: created?.id ?? null,
-            createdDepartmentName: created?.name ?? data.name,
-          });
-        } else {
-          navigate(ROUTES.ORG_DEPARTMENTS);
-        }
+      onSuccess: () => {
+        if (hasReturnTo) goBack();
+        else navigate(ROUTES.ORG_DEPARTMENTS);
       },
     });
   };
@@ -92,7 +90,7 @@ export default function DepartmentNewPage() {
             {hasReturnTo && (
               <p className="text-xs text-muted-foreground text-center">
                 بعد از ثبت، به فرمِ قبلی برمی‌گردید و اطلاعاتی که وارد کرده‌اید
-                سر جایش می‌ماند.
+                سر جایش می‌ماند؛ واحدِ تازه را از فهرست انتخاب کنید.
               </p>
             )}
           </div>

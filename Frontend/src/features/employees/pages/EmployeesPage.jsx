@@ -14,23 +14,27 @@ import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
 
 import { useEmployeeFilterStore } from "../store/employeeFilterStore";
 import { useDebouncedEmployeeFilters } from "../hooks/useDebouncedEmployeeFilters";
-import { useEmployeesQuery } from "../services/queries";
+import { useUserListQuery } from "../services/queries";
 import EmployeeFilters from "../components/table/EmployeeFilters";
 import EmployeeTable from "../components/table/EmployeeTable";
 
 const EmployeesPage = () => {
   const navigate = useNavigate();
-  const { pagination, sorting, setPagination, setSorting } =
-    useEmployeeFilterStore();
+  const { pagination, setPagination } = useEmployeeFilterStore();
 
-  const debouncedFilters = useDebouncedEmployeeFilters();
+  const filters = useDebouncedEmployeeFilters();
 
+  // `page` در سرور از ۱ شروع می‌شود و `pageIndex` جدول از ۰.
   const { data, isLoading, isFetching, isError, error, refetch } =
-    useEmployeesQuery(debouncedFilters, pagination, sorting);
+    useUserListQuery({
+      page: pagination.pageIndex + 1,
+      take: pagination.pageSize,
+      ...filters,
+    });
 
-  const employees = data?.items ?? [];
-  const totalPages = data?.totalPages ?? 1;
-  const currentPage = data?.page ? data.page - 1 : pagination.pageIndex;
+  const userList = data?.userList ?? [];
+  const pageCount = data?.page?.pageCount ?? 1;
+  const currentPage = data?.page?.page ? data.page.page - 1 : pagination.pageIndex;
 
   return (
     <div className="container mx-auto space-y-6">
@@ -54,14 +58,12 @@ const EmployeesPage = () => {
           ) : (
             <FetchingOverlay active={isFetching && !isLoading}>
               <EmployeeTable
-                data={employees}
+                data={userList}
                 isLoading={isLoading}
-                totalPages={totalPages}
+                totalPages={pageCount}
                 currentPage={currentPage}
                 pageSize={pagination.pageSize}
                 onPaginationChange={setPagination}
-                sorting={sorting}
-                onSortingChange={setSorting}
               />
             </FetchingOverlay>
           )}

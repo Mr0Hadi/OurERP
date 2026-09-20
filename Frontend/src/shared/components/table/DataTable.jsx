@@ -51,7 +51,7 @@ export default function DataTable({
     (updater) => {
       const next =
         typeof updater === "function" ? updater(sortingState) : updater;
-      onSortingChange(next[0] ?? null);
+      onSortingChange?.(next[0] ?? null);
     },
     [sortingState, onSortingChange],
   );

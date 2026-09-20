@@ -1,16 +1,5 @@
 import axiosInstance from "@/shared/services/api/axios";
 
-/**
- * شناسه‌ی پایدارِ یک عضویت.
- *
- * بکند برای عضویت جدولی ندارد که کلید بدهد؛ عضویت همان جفتِ
- * `DepartmentId`/`TeamId` روی خودِ `User` است. این شناسه سمتِ فرانت
- * ساخته می‌شود تا انتخابِ ذخیره‌شده‌ی کاربر در `authStore` کلیدی داشته
- * باشد که بین رفرش‌ها ثابت بماند.
- */
-export const membershipIdOf = (departmentId, teamId) =>
-  `${departmentId ?? "none"}:${teamId ?? "none"}`;
-
 export async function login({ username, password }) {
   const { data } = await axiosInstance.post("/Account/Login", {
     username,
@@ -29,54 +18,21 @@ export async function logout() {
 }
 
 /**
- * نشستِ کاربرِ جاری از `GET api/User/GetUserInfo`.
+ * کاربرِ جاری از `GET api/User/GetUserInfo`.
  *
  * `POST api/Account/Login` فقط توکن برمی‌گرداند؛ کاربر را همین endpoint از
- * روی خودِ توکن پیدا می‌کند. `UserInfoDto` نامِ واحد و تیم و نقشِ سازمانی
- * (`role`/`roleTitle`) را خودش دارد، پس درخواستِ جداگانه‌ای به جزئیات
- * واحد یا تیم لازم نیست.
+ * روی خودِ توکن پیدا می‌کند و `UserInfoDto` را بی‌کم‌وکاست برمی‌گرداند:
  *
- * ⚠️ `memberships` امروز همیشه **یک** قلم دارد: `User` در بکند دقیقاً یک
- * `DepartmentId` و حداکثر یک `TeamId` دارد. آرایه‌بودنش برای آینده است
- * — سایدبار وقتی بیش از یکی باشد خودش سوییچر نشان می‌دهد.
+ *   { id, username, personelCode, firstName, lastName,
+ *     departmentId, departmentName, teamId, teamName,
+ *     role, roleTitle, isActive }
+ *
+ * هیچ‌چیز بازنویسی نمی‌شود — نه نامِ فیلد و نه شکلِ آن. `User` در بکند
+ * ستونِ تصویر و فیلدِ دسترسی ندارد، و دقیقاً یک `departmentId` و حداکثر
+ * یک `teamId` دارد؛ پس «آواتار»، «مجوزها» و فهرستِ «عضویت‌ها» هم اینجا
+ * ساخته نمی‌شوند.
  */
-export async function fetchSession() {
-  const { data: user } = await axiosInstance.get("/User/GetUserInfo");
-
-  const firstName = user.firstName ?? "";
-  const lastName = user.lastName ?? "";
-
-  return {
-    id: user.id,
-    username: user.username,
-    firstName,
-    lastName,
-    fullName: `${firstName} ${lastName}`.trim() || user.username,
-    personelCode: user.personelCode ?? null,
-    isActive: user.isActive,
-
-    /**
-     * ⚠️ همیشه null: موجودیتِ `User` در بکند ستونِ تصویر ندارد. صریح
-     * اعلام می‌شود تا `NavUser` فیلدی بخواند که در قرارداد هست.
-     */
-    avatar: null,
-
-    /**
-     * ⚠️ همیشه خالی: `UserInfoDto` فیلدِ دسترسی ندارد. سطح دسترسی در بکند
-     * هنوز پیاده نشده و قرار است بر پایه‌ی `departmentId` باشد.
-     */
-    permissions: [],
-
-    memberships: [
-      {
-        id: membershipIdOf(user.departmentId, user.teamId),
-        departmentId: user.departmentId ?? null,
-        departmentName: user.departmentName ?? null,
-        teamId: user.teamId ?? null,
-        teamName: user.teamName ?? null,
-        role: user.role,
-        roleTitle: user.roleTitle,
-      },
-    ],
-  };
+export async function getUserInfo() {
+  const { data } = await axiosInstance.get("/User/GetUserInfo");
+  return data;
 }

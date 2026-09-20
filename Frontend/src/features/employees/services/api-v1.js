@@ -1,23 +1,23 @@
 import axiosInstance from "@/shared/services/api/axios";
-import { normalizeListResponse } from "@/shared/services/api/contract";
-import { accountStatusToIsActive } from "@/shared/domain/enums/accountStatus";
 
 /**
- * لایه‌ی سرورِ فیچر کارمندان — نگاشت مستقیم روی `api/User` و
+ * لایه‌ی سرورِ فیچر کارمندان — نگاشتِ مستقیم روی `api/User` و
  * `api/Account/LogoutUserById`.
  *
- * پوششِ `ResponseDto` را axios باز می‌کند، پس اینجا `data` همان محتوای
- * `Data` است.
+ * نام‌ها همان نام‌های بکندند: پارامترِ کوئری، فیلدِ payload و فیلدِ پاسخ
+ * هیچ‌کدام ترجمه نمی‌شوند. پوششِ `ResponseDto` را axios باز می‌کند، پس
+ * `data` همان محتوای `Data` است و `GetUserList` دقیقاً
+ * `{ userList, page: { page, pageCount, take, total } }` برمی‌گرداند.
  *
- * قرارداد سه نکته‌ی مهم دارد که شکلِ کلِ فیچر را تعیین می‌کند:
+ * قرارداد چهار نکته‌ی مهم دارد که شکلِ کلِ فیچر را تعیین می‌کند:
  *
  *   ۱. «نقش» یعنی **نقشِ سازمانی** (`OrgRoleEnum`: عضو، مسئول/جانشینِ واحد،
  *      مسئول/جانشینِ تیم)، نه سطح دسترسی. سرور ذخیره‌اش نمی‌کند؛ از
  *      `headId`/`deputyId` تیم و واحد مشتقش می‌کند و در فهرست و جزئیات به
  *      شکلِ `role` + `roleTitle` برمی‌گرداند.
- *   ۲. واحد اجباری و تیم اختیاری است، و سرور خودش چک می‌کند که تیم
- *      متعلق به همان واحد باشد.
- *   ۳. `PersonelCode` را **سرور** می‌سازد (sequence دیتابیس، از ۱۰۰۰).
+ *   ۲. `departmentId` اجباری و `teamId` اختیاری است، و سرور خودش چک می‌کند
+ *      که تیم متعلق به همان واحد باشد.
+ *   ۳. `personelCode` را **سرور** می‌سازد (sequence دیتابیس، از ۱۰۰۰).
  *      نه در ثبت فرستاده می‌شود و نه در ویرایش؛ فقط نمایش داده می‌شود.
  *   ۴. `UpdateUser` جایگاه و نقش را با هم می‌نویسد. `role` اختیاری است:
  *      `null` یعنی «به نقش دست نزن» — اگر کاربر جابه‌جا نشده حفظ می‌شود و
@@ -28,22 +28,22 @@ import { accountStatusToIsActive } from "@/shared/domain/enums/accountStatus";
 const filterValue = (value) =>
   value === "" || value == null ? undefined : value;
 
-export async function fetchEmployees(params = {}) {
+export async function getUserList(params = {}) {
   const { data } = await axiosInstance.get("/User/GetUserList", {
     params: {
       page: params.page,
-      take: params.limit,
-      fullName: params.search || undefined,
+      take: params.take,
+      fullName: filterValue(params.fullName),
       // فیلترِ کاملاً جدا از `fullName` — تطبیقِ دقیقِ عددی روی کدِ
       // پرسنلی، نه Contains روی نام.
       personelCode: filterValue(params.personelCode),
       departmentId: filterValue(params.departmentId),
       teamId: filterValue(params.teamId),
-      isActive: accountStatusToIsActive(params.status),
+      isActive: filterValue(params.isActive),
     },
   });
 
-  return normalizeListResponse(data, { itemsKey: "userList" });
+  return data;
 }
 
 /**
@@ -51,14 +51,14 @@ export async function fetchEmployees(params = {}) {
  * توکن) و `GetUserUpdate` (یک کاربر مشخص، مخصوص پر کردن فرم ویرایش).
  * صفحه‌ی مدیریت همیشه دومی را می‌خواهد.
  */
-export async function fetchEmployeeById(id) {
+export async function getUserUpdate(id) {
   const { data } = await axiosInstance.get("/User/GetUserUpdate", {
     params: { id },
   });
   return data;
 }
 
-export async function createEmployee(payload) {
+export async function createUser(payload) {
   // `fisrtName` غلط املایی است ولی همان چیزی است که سرور می‌پذیرد.
   // اصلاحش اینجا یعنی نام خالی ذخیره شود.
   const { data } = await axiosInstance.post("/User/CreateUser", {
@@ -72,7 +72,7 @@ export async function createEmployee(payload) {
   return data;
 }
 
-export async function updateEmployee(payload) {
+export async function updateUser(payload) {
   const { data } = await axiosInstance.put("/User/UpdateUser", {
     id: payload.id,
     firstName: payload.firstName,
@@ -99,7 +99,7 @@ export async function updateEmployee(payload) {
  * کاربر را از تیم خارج می‌کنیم — در آن حالت واحدِ فعلیِ خودش فرستاده
  * می‌شود.
  */
-export async function assignEmployeeMembership({
+export async function changeUserTeam({
   userId,
   departmentId,
   teamId,
@@ -117,7 +117,7 @@ export async function assignEmployeeMembership({
 }
 
 /** خروج اجباری یک کارمند از تمام سشن‌هایش (عملیات ادمین). */
-export async function logoutEmployee(id) {
+export async function logoutUserById(id) {
   const { data } = await axiosInstance.post("/Account/LogoutUserById", {
     userId: Number(id),
   });

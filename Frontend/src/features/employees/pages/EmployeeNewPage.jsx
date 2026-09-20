@@ -7,7 +7,7 @@ import { useHeaderStore } from "@/shared/store/headerStore";
 import { ROUTES } from "@/shared/constants/routes";
 import { useFormDraft } from "@/shared/hooks/useFormDraft";
 
-import { useCreateEmployeeMutation } from "../services/mutations";
+import { useCreateUserMutation } from "../services/mutations";
 import { useEmployeeForm } from "../hooks/useEmployeeForm";
 import EmployeeIdentityForm from "../components/forms/EmployeeIdentityForm";
 import EmployeeCredentialsForm from "../components/forms/EmployeeCredentialsForm";
@@ -16,30 +16,21 @@ import EmployeeOrgForm from "../components/forms/EmployeeOrgForm";
 const DRAFT_KEY = "employee:new";
 
 /**
- * مقادیرِ اولیه = پیش‌نویسِ ذخیره‌شده + هر چیزی که تازه ساخته شده.
+ * مقادیرِ اولیه = پیش‌نویسِ ذخیره‌شده + واحدی که در صفحه‌ی «تیم جدید»
+ * انتخاب شده.
  *
- * وقتی کاربر از همین‌جا به «واحد جدید» می‌رود و برمی‌گردد، صفحه‌ی واحد
- * شناسه‌ی واحدِ ساخته‌شده را در `location.state` می‌گذارد؛ همان را روی
- * پیش‌نویس می‌نشانیم تا کاربر مجبور نباشد چیزی را که همین الان ساخته
- * دوباره از فهرست پیدا کند.
+ * `CreateDepartment` و `CreateTeam` در سرور هیچ `Data`ی برنمی‌گردانند —
+ * نه شناسه‌ی رکوردِ تازه — پس تنها چیزی که می‌شود با کاربر برگرداند
+ * `departmentId`ی است که خودش در آن صفحه انتخاب کرده. تیمِ تازه را از
+ * فهرستِ به‌روزشده انتخاب می‌کند.
  */
 function mergeDraft(draft, state) {
-  if (!draft && !state?.createdDepartmentId && !state?.createdTeamId) {
-    return null;
-  }
+  if (!draft && state?.departmentId == null) return null;
 
   const merged = { ...(draft ?? {}) };
 
-  if (state?.createdDepartmentId != null) {
-    merged.departmentId = state.createdDepartmentId;
-  }
-  if (state?.createdTeamId != null) {
-    // تیمِ تازه‌ساخته‌شده واحدِ خودش را هم تحمیل می‌کند؛ اگر کاربر در
-    // صفحه‌ی تیم واحد دیگری انتخاب کرده باشد، همان درست است.
-    merged.teamId = state.createdTeamId;
-    if (state.createdTeamDepartmentId != null) {
-      merged.departmentId = state.createdTeamDepartmentId;
-    }
+  if (state?.departmentId != null) {
+    merged.departmentId = Number(state.departmentId);
   }
 
   return merged;
@@ -48,7 +39,7 @@ function mergeDraft(draft, state) {
 export default function EmployeeNewPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const createMutation = useCreateEmployeeMutation();
+  const createMutation = useCreateUserMutation();
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 

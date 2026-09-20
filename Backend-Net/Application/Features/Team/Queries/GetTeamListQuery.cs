@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.Team.Dtos;
@@ -45,7 +45,7 @@ namespace Application.Features.Team.Queries
                 DepartmentName = x.Department.Name,
                 HeadName = x.Head != null ? x.Head.FirstName + " " + x.Head.LastName : null,
                 DeputyName = x.Deputy != null ? x.Deputy.FirstName + " " + x.Deputy.LastName : null,
-                UserCount = x.Users.Count
+                UserCount = x.Users.Count(u => u.IsActive)
             }).ToPagedAsync(request.Page, request.Take, cancellationToken);
 
             res.Data = new

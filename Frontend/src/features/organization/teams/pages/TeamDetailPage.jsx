@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Save, X, Trash2 } from "lucide-react";
 
@@ -20,7 +20,7 @@ import { useFormDraft } from "@/shared/hooks/useFormDraft";
 import OrgDetailLoading from "../../components/OrgDetailLoading";
 
 import { useUpdateTeamMutation, useDeleteTeamMutation } from "../services/mutations";
-import { useTeamQuery } from "../services/queries";
+import { useTeamDetailQuery } from "../services/queries";
 import { useTeamMembersQuery } from "@/features/employees/services/queries";
 import { useTeamForm } from "../hooks/useTeamForm";
 import TeamIdentityForm from "../components/forms/TeamIdentityForm";
@@ -41,10 +41,14 @@ function TeamDetailForm({ team }) {
 
   /**
    * تعداد اعضا از خودِ فهرست اعضا شمرده می‌شود، نه از `team.userCount`:
-   * `GetTeamDetail` در سرور `UserCount` ندارد (فقط `GetTeamList` دارد).
+   * `GetTeamDetail` در سرور `userCount` ندارد (فقط `GetTeamList` دارد).
    * همان query ای است که کارت اعضا می‌زند، پس درخواستِ اضافه‌ای نمی‌رود.
+   *
+   * فقط فعال‌ها شمرده می‌شوند تا با عددِ همین تیم در صفحه‌ی فهرست یکی
+   * باشد؛ فهرستِ زیرش عمداً عضوِ غیرفعال را هم نشان می‌دهد تا بشود
+   * خارجش کرد.
    */
-  const { members, memberCount } = useTeamMembersQuery(team.id);
+  const { members, activeMemberCount } = useTeamMembersQuery(team.id);
 
   const { formMethods, buildPayload } = useTeamForm(team, draft);
   const {
@@ -108,9 +112,9 @@ function TeamDetailForm({ team }) {
 
             <div className="rounded-2xl border border-border bg-muted/20 p-4 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">تعداد اعضا</span>
+                <span className="text-muted-foreground">کارمندان فعال</span>
                 <span className="font-medium">
-                  {memberCount.toLocaleString("fa-IR")} نفر
+                  {activeMemberCount.toLocaleString("fa-IR")} نفر
                 </span>
               </div>
             </div>
@@ -203,7 +207,7 @@ export default function TeamDetailPage() {
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  const { data: team, isLoading, isError } = useTeamQuery(id);
+  const { data: team, isLoading, isError } = useTeamDetailQuery(id);
 
   useEffect(() => {
     setHeader({

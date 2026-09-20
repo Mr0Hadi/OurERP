@@ -14,23 +14,27 @@ import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
 
 import { useDepartmentFilterStore } from "../store/departmentFilterStore";
 import { useDebouncedDepartmentFilters } from "../hooks/useDebouncedDepartmentFilters";
-import { useDepartmentsQuery } from "../services/queries";
+import { useDepartmentListQuery } from "../services/queries";
 import DepartmentFilters from "../components/table/DepartmentFilters";
 import DepartmentTable from "../components/table/DepartmentTable";
 
 const DepartmentsPage = () => {
   const navigate = useNavigate();
-  const { pagination, sorting, setPagination, setSorting } =
-    useDepartmentFilterStore();
+  const { pagination, setPagination } = useDepartmentFilterStore();
 
-  const debouncedFilters = useDebouncedDepartmentFilters();
+  const filters = useDebouncedDepartmentFilters();
 
+  // `page` در سرور از ۱ شروع می‌شود و `pageIndex` جدول از ۰.
   const { data, isLoading, isFetching, isError, error, refetch } =
-    useDepartmentsQuery(debouncedFilters, pagination, sorting);
+    useDepartmentListQuery({
+      page: pagination.pageIndex + 1,
+      take: pagination.pageSize,
+      ...filters,
+    });
 
-  const departments = data?.items ?? [];
-  const totalPages = data?.totalPages ?? 1;
-  const currentPage = data?.page ? data.page - 1 : pagination.pageIndex;
+  const departmentList = data?.departmentList ?? [];
+  const pageCount = data?.page?.pageCount ?? 1;
+  const currentPage = data?.page?.page ? data.page.page - 1 : pagination.pageIndex;
 
   return (
     <div className="container mx-auto space-y-6">
@@ -54,14 +58,12 @@ const DepartmentsPage = () => {
           ) : (
             <FetchingOverlay active={isFetching && !isLoading}>
               <DepartmentTable
-                data={departments}
+                data={departmentList}
                 isLoading={isLoading}
-                totalPages={totalPages}
+                totalPages={pageCount}
                 currentPage={currentPage}
                 pageSize={pagination.pageSize}
                 onPaginationChange={setPagination}
-                sorting={sorting}
-                onSortingChange={setSorting}
               />
             </FetchingOverlay>
           )}

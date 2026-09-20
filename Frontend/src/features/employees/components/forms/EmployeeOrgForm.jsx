@@ -88,7 +88,7 @@ export default function EmployeeOrgForm({
 
   const isEditing = initialPlacement != null;
 
-  const { departments, isLoading: departmentsLoading, isFallback } =
+  const { departments, isLoading: departmentsLoading } =
     useDepartmentOptionsQuery();
   const { teams, isLoading: teamsLoading } = useTeamOptionsQuery(
     departmentId ?? "",
@@ -197,8 +197,8 @@ export default function EmployeeOrgForm({
             error={errors?.departmentId}
             rules={departmentRules}
             hint={
-              isFallback
-                ? "فهرست واحدها هنوز از سرور نیامده؛ مقادیر پیش‌فرض نمایش داده می‌شود."
+              !departmentsLoading && departmentOptions.length === 0
+                ? "هنوز واحدی ثبت نشده؛ اول یک واحد بسازید."
                 : undefined
             }
           />

@@ -1,7 +1,7 @@
-export const employeeKeys = {
-  all: ["employees"],
-  lists: () => [...employeeKeys.all, "list"],
-  list: (filters) => [...employeeKeys.lists(), { ...filters }],
-  details: () => [...employeeKeys.all, "detail"],
-  detail: (id) => [...employeeKeys.details(), String(id)],
+export const userKeys = {
+  all: ["users"],
+  lists: () => [...userKeys.all, "list"],
+  list: (params) => [...userKeys.lists(), { ...params }],
+  details: () => [...userKeys.all, "detail"],
+  detail: (id) => [...userKeys.details(), String(id)],
 };

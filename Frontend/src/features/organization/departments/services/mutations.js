@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import { createDepartment, updateDepartment, deleteDepartment } from "./api-v1";
 import { departmentKeys } from "./queryKeys";
 import { teamKeys } from "../../teams/services/queryKeys";
-import { employeeKeys } from "@/features/employees/services/queryKeys";
+import { userKeys } from "@/features/employees/services/queryKeys";
 import { authKeys } from "@/features/auth/services/queryKeys";
 
 /**
@@ -15,7 +15,7 @@ import { authKeys } from "@/features/auth/services/queryKeys";
 function invalidateOrgChart(queryClient) {
   queryClient.invalidateQueries({ queryKey: departmentKeys.all });
   queryClient.invalidateQueries({ queryKey: teamKeys.all });
-  queryClient.invalidateQueries({ queryKey: employeeKeys.all });
+  queryClient.invalidateQueries({ queryKey: userKeys.all });
   queryClient.invalidateQueries({ queryKey: authKeys.session() });
 }
 

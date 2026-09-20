@@ -1,7 +1,12 @@
 import { createFilterStore } from "@/shared/store/createFilterStore";
 
-/** `departmentId` عددی است (`DepartmentEnum`)؛ رشته‌ی خالی یعنی «همه». */
+/**
+ * دو فیلترِ `GetTeamList` با همان نام‌های سرور: `name` روی نامِ تیم و
+ * `departmentId` (عددی؛ رشته‌ی خالی یعنی «همه»).
+ *
+ * مرتب‌سازی ندارد: این endpoint پارامترِ مرتب‌سازی نمی‌گیرد.
+ */
 export const useTeamFilterStore = createFilterStore({
-  filters: { globalSearch: "", departmentId: "" },
-  defaultSorting: { id: "name", desc: false },
+  filters: { name: "", departmentId: "" },
+  defaultSorting: null,
 });

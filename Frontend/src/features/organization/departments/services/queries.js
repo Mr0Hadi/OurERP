@@ -1,32 +1,29 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
-import { DEPARTMENT_FALLBACK } from "@/shared/domain/enums/department";
-import { fetchDepartments, fetchDepartmentById } from "./api-v1";
+import { getDepartmentList, getDepartmentDetail } from "./api-v1";
 import { departmentKeys } from "./queryKeys";
 
-const OPTIONS_PAGE_SIZE = 200;
+const OPTIONS_TAKE = 200;
 
-export function useDepartmentsQuery(filters, pagination, sorting) {
-  const queryParams = {
-    page: pagination.pageIndex + 1,
-    limit: pagination.pageSize,
-    search: filters.globalSearch || "",
-    headName: filters.headName || "",
-    sortBy: sorting?.id ?? "name",
-    sortOrder: sorting ? (sorting.desc ? "desc" : "asc") : "asc",
-  };
-
+/**
+ * فهرستِ واحدها — `GetDepartmentList`.
+ *
+ * `params` همان پارامترهای سرور است (`page`, `take`, `name`, `headName`)
+ * و پاسخ هم همان `{ departmentList, page }`. این endpoint مرتب‌سازی
+ * نمی‌گیرد.
+ */
+export function useDepartmentListQuery(params) {
   return useQuery({
-    queryKey: departmentKeys.list(queryParams),
-    queryFn: () => fetchDepartments(queryParams),
+    queryKey: departmentKeys.list(params),
+    queryFn: () => getDepartmentList(params),
     placeholderData: keepPreviousData,
   });
 }
 
-export function useDepartmentQuery(id) {
+export function useDepartmentDetailQuery(id) {
   return useQuery({
     queryKey: departmentKeys.detail(id),
-    queryFn: () => fetchDepartmentById(id),
+    queryFn: () => getDepartmentDetail(id),
     enabled: !!id,
   });
 }
@@ -34,23 +31,15 @@ export function useDepartmentQuery(id) {
 /**
  * فهرست واحدها برای پر کردن Select ها.
  *
- * تا وقتی بکند ردیف‌های `Department` را سید نکرده، پاسخِ خالی یعنی
- * انتخابگرِ خالی و کاربر گیر می‌کند. پس `DEPARTMENT_FALLBACK` (همان
- * enum عددی) جای خالی را پر می‌کند. داده‌ی سرور همیشه برنده است؛
- * fallback فقط وقتی می‌آید که سرور چیزی نداشته باشد.
+ * `GetDepartmentList` خودش فقط واحدهای فعال را برمی‌گرداند
+ * (`Where(x => x.IsActive)`)، پس فیلترِ دیگری لازم نیست و فهرستِ خالی
+ * یعنی واقعاً واحدی تعریف نشده.
  */
 export function useDepartmentOptionsQuery() {
   const query = useQuery({
     queryKey: departmentKeys.options(),
-    queryFn: () => fetchDepartments({ page: 1, limit: OPTIONS_PAGE_SIZE }),
+    queryFn: () => getDepartmentList({ page: 1, take: OPTIONS_TAKE }),
   });
 
-  const items = query.data?.items ?? [];
-  const source = items.length > 0 ? items : DEPARTMENT_FALLBACK;
-
-  return {
-    ...query,
-    departments: source.filter((d) => d.isActive !== false),
-    isFallback: items.length === 0 && !query.isLoading,
-  };
+  return { ...query, departments: query.data?.departmentList ?? [] };
 }

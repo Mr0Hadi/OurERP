@@ -20,8 +20,6 @@ export default function EmployeeTable({
   currentPage,
   pageSize,
   onPaginationChange,
-  sorting,
-  onSortingChange,
 }) {
   const navigate = useNavigate();
 
@@ -120,9 +118,7 @@ export default function EmployeeTable({
       currentPage={currentPage}
       pageSize={pageSize}
       onPaginationChange={onPaginationChange}
-      sorting={sorting}
-      onSortingChange={onSortingChange}
-      // `GetUserList`/`GetDepartmentList`/`GetTeamList` هیچ‌کدام sortBy نمی‌گیرند.
+      // `GetUserList` هیچ پارامترِ مرتب‌سازی نمی‌گیرد؛ ترتیب را سرور می‌دهد.
       sortable={false}
       rowClassName={rowClassName}
       emptyMessage="کارمندی یافت نشد."

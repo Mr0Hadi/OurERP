@@ -28,7 +28,7 @@ import {
 export const navigationData = {
   // فقط *ساختارِ* منو. هویتِ کاربر و واحد/تیمِ او اینجا نیست: صفتِ خودِ
   // اوست در بکند (`User.DepartmentId`/`User.TeamId`) و سایدبار آن را از
-  // `useSessionQuery` می‌گیرد.
+  // `useUserInfoQuery` می‌گیرد.
   navMain: [
     {
       title: "داشبورد",

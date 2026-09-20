@@ -1,35 +1,40 @@
 import axiosInstance from "@/shared/services/api/axios";
-import { normalizeListResponse } from "@/shared/services/api/contract";
 
 /**
- * نگاشت روی `api/Team` — CRUD کامل (سند بکند، بخش ۳ج).
+ * نگاشت روی `api/Team` — CRUD کامل، با همان نام‌های بکند.
  *
  * - `GetTeamList` فقط تیم‌های فعال را برمی‌گرداند؛ فیلترهایش `name` و
- *   `departmentId` است. ردیفِ فهرست فقط *نامِ* مسئول و جانشین را دارد، نه
- *   شناسه‌شان، و `DepartmentId` هم ندارد — هر جا لازم باشد
- *   `GetTeamDetail` صدا زده می‌شود.
+ *   `departmentId` است و پاسخ همان `{ teamList, page }` سرور. ردیفِ فهرست
+ *   (`TeamListDto`) فقط *نامِ* مسئول و جانشین را دارد، نه شناسه‌شان، و
+ *   `departmentId` هم ندارد — هر جا لازم باشد `GetTeamDetail` صدا زده
+ *   می‌شود.
  * - `CreateTeam`/`UpdateTeam`: `headId`/`deputyId` وضعیتِ نهاییِ تیم‌اند.
  *   هر کسی که نامش بیاید به این تیم و واحدش منتقل می‌شود و نقشِ قبلی‌اش
  *   آزاد می‌شود؛ هر کسی که حذف شود عضوِ ساده‌ی همین تیم می‌ماند.
  * - تیم بین واحدها جابه‌جا نمی‌شود: `UpdateTeam` `departmentId` نمی‌گیرد.
  *
- * ⚠️ `CreateTeam` هیچ `data`ی برنمی‌گرداند (نه شناسه)، پس فرمِ مبدأ
- * نمی‌تواند تیمِ تازه را خودکار انتخاب کند.
+ * ⚠️ `CreateTeam` هیچ `Data`ی برنمی‌گرداند (نه شناسه)، پس فرمِ مبدأ
+ *   نمی‌تواند تیمِ تازه را خودکار انتخاب کند.
  */
-export async function fetchTeams(params = {}) {
+
+/** فیلترِ خالی نباید روی سیم برود. */
+const filterValue = (value) =>
+  value === "" || value == null ? undefined : value;
+
+export async function getTeamList(params = {}) {
   const { data } = await axiosInstance.get("/Team/GetTeamList", {
     params: {
       page: params.page,
-      take: params.limit,
-      name: params.search || undefined,
-      departmentId: params.departmentId !== "" ? params.departmentId : undefined,
+      take: params.take,
+      name: filterValue(params.name),
+      departmentId: filterValue(params.departmentId),
     },
   });
 
-  return normalizeListResponse(data, { itemsKey: "teamList" });
+  return data;
 }
 
-export async function fetchTeamById(id) {
+export async function getTeamDetail(id) {
   const { data } = await axiosInstance.get("/Team/GetTeamDetail", {
     params: { id },
   });

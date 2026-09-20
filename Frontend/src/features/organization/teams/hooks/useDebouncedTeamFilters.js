@@ -2,8 +2,8 @@ import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { useTeamFilterStore } from "../store/teamFilterStore";
 
 export function useDebouncedTeamFilters() {
-  const globalSearch = useTeamFilterStore((s) => s.globalSearch);
+  const name = useTeamFilterStore((s) => s.name);
   const departmentId = useTeamFilterStore((s) => s.departmentId);
 
-  return { globalSearch: useDebouncedValue(globalSearch), departmentId };
+  return { name: useDebouncedValue(name), departmentId };
 }

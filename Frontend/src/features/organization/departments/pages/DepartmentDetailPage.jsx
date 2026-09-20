@@ -23,7 +23,7 @@ import {
   useUpdateDepartmentMutation,
   useDeleteDepartmentMutation,
 } from "../services/mutations";
-import { useDepartmentQuery } from "../services/queries";
+import { useDepartmentDetailQuery } from "../services/queries";
 import { useTeamOptionsQuery } from "../../teams/services/queries";
 import { useDepartmentUserCountQuery } from "@/features/employees/services/queries";
 import { useDepartmentForm } from "../hooks/useDepartmentForm";
@@ -43,7 +43,7 @@ function DepartmentDetailForm({ department }) {
 
   /**
    * شمارنده‌ها از خودِ داده شمرده می‌شوند، نه از رکوردِ واحد:
-   * `GetDepartmentDetail` در سرور `TeamCount`/`UserCount` ندارد (فقط
+   * `GetDepartmentDetail` در سرور `teamCount`/`userCount` ندارد (فقط
    * `GetDepartmentList` دارد) و تکیه‌کردن به آن‌ها یعنی این صفحه همیشه
    * «۰ تیم / ۰ نفر» نشان بدهد و دکمه‌ی حذف هیچ‌وقت قفل نشود.
    *
@@ -51,7 +51,7 @@ function DepartmentDetailForm({ department }) {
    * پس react-query یکی‌شان می‌کند و درخواستِ اضافه‌ای نمی‌رود.
    */
   const { teams } = useTeamOptionsQuery(department.id);
-  const { count: userCount } = useDepartmentUserCountQuery(department.id);
+  const { userCount } = useDepartmentUserCountQuery(department.id);
 
   // رفتن به «تیم جدید» یا جزئیات یک تیم نباید تغییراتِ نیمه‌کاره‌ی همین
   // فرم را از بین ببرد — همان الگوی «ثبت خرید جدید».
@@ -225,7 +225,8 @@ export default function DepartmentDetailPage() {
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  const { data: department, isLoading, isError } = useDepartmentQuery(id);
+  const { data: department, isLoading, isError } =
+    useDepartmentDetailQuery(id);
 
   useEffect(() => {
     setHeader({

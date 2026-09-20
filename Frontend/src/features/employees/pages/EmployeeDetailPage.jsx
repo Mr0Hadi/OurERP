@@ -20,10 +20,10 @@ import { useFormDraft } from "@/shared/hooks/useFormDraft";
 import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
 
 import {
-  useUpdateEmployeeMutation,
-  useLogoutEmployeeMutation,
+  useUpdateUserMutation,
+  useLogoutUserByIdMutation,
 } from "../services/mutations";
-import { useEmployeeQuery } from "../services/queries";
+import { useUserUpdateQuery } from "../services/queries";
 import { useEmployeeForm } from "../hooks/useEmployeeForm";
 import EmployeeIdentityForm from "../components/forms/EmployeeIdentityForm";
 import EmployeeAccessForm from "../components/forms/EmployeeAccessForm";
@@ -37,22 +37,17 @@ const fullNameOf = (employee) =>
 /**
  * پیش‌نویسِ برگشتی از صفحه‌ی «واحد/تیم جدید» را روی مقادیرِ فرم می‌نشاند.
  *
- * همان منطقِ صفحه‌ی ثبت است، فقط اینجا پیش‌نویس *ممکن است* وجود نداشته
- * باشد (کاربر مستقیم وارد صفحه شده) و در آن حالت مقادیر از خودِ رکورد
- * می‌آیند.
+ * همان منطقِ صفحه‌ی ثبت است: `CreateDepartment`/`CreateTeam` شناسه‌ی
+ * رکوردِ تازه را برنمی‌گردانند، پس فقط واحدی که کاربر خودش در آن صفحه
+ * انتخاب کرده با او برمی‌گردد. اگر پیش‌نویسی نباشد (کاربر مستقیم وارد
+ * صفحه شده)، مقادیر از خودِ رکورد می‌آیند.
  */
 function mergeDraft(draft, state) {
   if (!draft) return null;
 
   const merged = { ...draft };
-  if (state?.createdDepartmentId != null) {
-    merged.departmentId = state.createdDepartmentId;
-  }
-  if (state?.createdTeamId != null) {
-    merged.teamId = state.createdTeamId;
-    if (state.createdTeamDepartmentId != null) {
-      merged.departmentId = state.createdTeamDepartmentId;
-    }
+  if (state?.departmentId != null) {
+    merged.departmentId = Number(state.departmentId);
   }
   return merged;
 }
@@ -63,8 +58,8 @@ function EmployeeDetailForm({ employee }) {
   const currentUser = useCurrentUser();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
-  const updateMutation = useUpdateEmployeeMutation();
-  const logoutMutation = useLogoutEmployeeMutation();
+  const updateMutation = useUpdateUserMutation();
+  const logoutMutation = useLogoutUserByIdMutation();
 
   const { draft, saveDraft, clearDraft } = useFormDraft(
     `employee:${employee.id}`,
@@ -240,7 +235,7 @@ export default function EmployeeDetailPage() {
   const clearHeader = useHeaderStore((s) => s.clearHeader);
   const currentUser = useCurrentUser();
 
-  const { data: employee, isLoading, isError } = useEmployeeQuery(id);
+  const { data: employee, isLoading, isError } = useUserUpdateQuery(id);
 
   // همان مسیر، دو معنا: از سایدبار «حساب کاربری من» است و از فهرست
   // کارمندان «ویرایش کارمند». عنوان باید همان را بگوید که کاربر انتظار
