@@ -28,6 +28,8 @@ export default function ClaimResolutionCard({
   onExecuteMoney,
   // `(claim) => ReactNode` — گزارشِ انبار کنارِ همان ادعا (فقط مرجوعی خرید).
   renderReport,
+  // `(claim) => number | null` — کالای این ادعا در قرنطینه (فقط مرجوعی خرید).
+  quarantineOf,
   isBusy,
   readOnly,
   side,
@@ -115,6 +117,7 @@ export default function ClaimResolutionCard({
               remaining={remaining}
               isBusy={isBusy}
               side={side}
+              quarantineAvailable={quarantineOf ? quarantineOf(claim) : null}
               onAdd={(composition) => {
                 // خودِ ادعا می‌رود، نه فقط شناسه‌اش: لایه‌ی api برای باز
                 // کردنِ پیش‌فرضِ «همان کالای ادعا» به کالا و قیمتش نیاز دارد.

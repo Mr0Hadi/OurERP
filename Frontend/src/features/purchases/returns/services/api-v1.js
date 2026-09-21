@@ -140,7 +140,11 @@ export async function addClaimResolution(
 ) {
   const { data } = await axiosInstance.post(
     "/PurchaseReturn/AddClaimResolution",
-    { claimId: claim.id, composition: toApiComposition(composition, claim) },
+    {
+      claimId: claim.id,
+      // پلِ سازگاری با بکندِ فعلی؛ به `toApiComposition` نگاه کنید.
+      composition: toApiComposition(composition, claim, { quarantineCost: true }),
+    },
     idempotent(idempotencyKey),
   );
   return fromApiReturn(data);
