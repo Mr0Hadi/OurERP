@@ -170,6 +170,7 @@ export default function PurchaseDetailForm({ purchaseData }) {
       })),
       paymentType: formData.paymentType ?? PaymentTypeEnum.CASH,
       paidAmount: Number(formData.paidAmount) || 0,
+      paymentPaidAt: formData.paymentPaidAt || null,
       checkNumber: formData.checkNumber || null,
       transferRef: formData.transferRef || null,
       mixedPayments: formData.mixedPayments || [],

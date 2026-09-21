@@ -63,29 +63,37 @@ function toApiItems(items = []) {
 function toApiPaymentDetails({
   paymentType,
   paidAmount,
+  paymentPaidAt,
   checkNumber,
   transferRef,
   mixedPayments,
 }) {
+  // `paidAt` در بکند غیرِ nullable است و نفرستادنش `0001-01-01` ذخیره
+  // می‌کند. ردیفی که از سرور آمده تاریخِ خودش را نگه می‌دارد، چون
+  // `UpdatePurchase` ردیف‌ها را کامل جایگزین می‌کند.
+  const now = new Date().toISOString();
+
   if (paymentType === PaymentTypeEnum.MIXED) {
     return (mixedPayments || []).map((part) => ({
       type: part.type,
       amount: Number(part.amount) || 0,
+      paidAt: part.paidAt || now,
       checkNumber: part.checkNumber || undefined,
       transferRef: part.transferRef || undefined,
     }));
   }
 
   const amount = Number(paidAmount) || 0;
+  const paidAt = paymentPaidAt || now;
 
   if (paymentType === PaymentTypeEnum.CHECK) {
-    return [{ type: paymentType, amount, checkNumber: checkNumber || undefined }];
+    return [{ type: paymentType, amount, paidAt, checkNumber: checkNumber || undefined }];
   }
   if (paymentType === PaymentTypeEnum.TRANSFER) {
-    return [{ type: paymentType, amount, transferRef: transferRef || undefined }];
+    return [{ type: paymentType, amount, paidAt, transferRef: transferRef || undefined }];
   }
   if (paymentType === PaymentTypeEnum.CREDIT) {
-    return [{ type: paymentType, amount }];
+    return [{ type: paymentType, amount, paidAt }];
   }
   return [];
 }
@@ -103,12 +111,13 @@ function fromApiPaymentDetails(paymentDetails = [], paymentType) {
     id: detail.id,
     type: detail.type,
     amount: Number(detail.amount) || 0,
+    paidAt: detail.paidAt || null,
     checkNumber: detail.checkNumber || "",
     transferRef: detail.transferRef || "",
   }));
 
   if (paymentType === PaymentTypeEnum.MIXED) {
-    return { mixedPayments: rows, checkNumber: "", transferRef: "" };
+    return { mixedPayments: rows, checkNumber: "", transferRef: "", paymentPaidAt: null };
   }
 
   // روش‌های تک‌مرحله‌ای یک ردیف بیشتر ندارند؛ شماره‌ی چک/پیگیری از همان
@@ -118,6 +127,7 @@ function fromApiPaymentDetails(paymentDetails = [], paymentType) {
     mixedPayments: [],
     checkNumber: single?.checkNumber || "",
     transferRef: single?.transferRef || "",
+    paymentPaidAt: single?.paidAt || null,
   };
 }
 
@@ -215,19 +225,16 @@ export async function createPurchase(purchaseData) {
 
 /**
  * «اقلام» در بدنه نادیده گرفته می‌شود — `UpdatePurchase` فقط فیلدهای سطح
- * سند را می‌پذیرد. `attachments` اما جدی است و **جایگزین** می‌شود: هرچه
- * در آرایه نباشد از سرور پاک می‌شود، پس همیشه فهرستِ نهایی فرستاده شود.
- *
- * `paymentDetails` عمداً فرستاده نمی‌شود: برخلافِ `CreatePurchaseCommand`،
- * `UpdatePurchaseCommand` اصلاً چنین فیلدی ندارد — فرستادنش فقط بی‌صدا
- * نادیده گرفته می‌شد (extra JSON property). یعنی جزئیاتِ پرداخت
- * (`checkNumber`/`transferRef`) بعد از ثبتِ اولیه از راهِ این endpoint
- * قابلِ ویرایش نیستند؛ فقط خودِ `paidAmount` است.
+ * سند را می‌پذیرد. `attachments` و `paymentDetails` اما هر دو
+ * **جایگزینیِ کامل**اند: هرچه در آرایه نباشد از سرور پاک می‌شود، پس
+ * همیشه فهرستِ نهایی فرستاده می‌شود. برای هر `paymentType` جز نقدی،
+ * `paymentDetails` خالی با ۴۰۰ رد می‌شود.
  */
 export async function updatePurchase(id, updates) {
   const { data } = await axiosInstance.put("/Purchase/UpdatePurchase", {
     id,
     ...toApiPurchasePayload(updates),
+    paymentDetails: toApiPaymentDetails(updates),
   });
   return data;
 }
