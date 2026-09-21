@@ -1292,6 +1292,31 @@ table in §16.
   quarantine/unit/return-effect classes 66/66; full suite 552/572 - the 20 failures are the 17 functional tests whose
   `WmsApiFactory` still targets `Server=.`, the 2 LibreOffice `InvoicePdfTests` and 1 `PersonelCode` collision.
 
+**Scrap from sellable stock; closing a purchase line short (2026-09-21).** The two gaps a comparison with SAP, Odoo,
+Business Central and NetSuite turned up (defective goods found on the shelf can be scrapped - Odoo scrap order / SAP 551;
+a PO line the supplier will never finish can be closed - SAP "delivery completed"). API: `docs/api-guide.fa.md` §9, §10,
+§15 and the 2026-09-21 table in §16.
+
+- **`GOODS_SCRAP` accepts `Source = IN_STOCK`** on the purchase goods round (omitted/QUARANTINED behaves as before).
+  Stock is projected and checked like a shelf GOODS_OUT, `ProductUnitService.ScrapFromStockAsync` moves IN_STOCK units
+  (on the claim's line for ON_ORDER) to SCRAPPED with movement `STOCK_SCRAPPED = 12`, and
+  `RecordStockScrappedAsync` writes ledger event `STOCK_SCRAPPED = 21` - an ordinary outbound row at the running average,
+  no revenue. `GetSaleReportQuery` books it as `ScrapLoss` (from `InventoryValueDelta`), never as COGS.
+- **The decision-time quarantine check now covers `GOODS_RELEASE` only**: scrap, like GOODS_OUT, can take shelf or
+  quarantine and the warehouse states which at execution. Promised units are pending releases only.
+- **`PurchaseItem.ShortClosedQuantity` / `ShortClosedAt`** and the `[NotMapped] StillOwedQuantity` (Quantity - Received -
+  ShortClosed), now the single definition read by `ReceivePurchaseCommand` (anything arriving on a closed line is excess),
+  `GetPurchaseReceivingInfoQuery` and `RecomputePurchaseStatus` (a closed line counts as complete; `ShortClosed > 0` alone
+  makes a purchase PARTIALLY_RECEIVED). `ClosePurchaseItemCommand` / `ReopenPurchaseItemCommand`
+  (`POST api/Purchase/ClosePurchaseItem|ReopenPurchaseItem`) are physical only - no stock, unit, ledger or money effect.
+- **Open, deliberately not built:** money back for goods that were paid for and never delivered. The ON_ORDER claim quota is
+  `Received - Settled - open`, so there is no claim to hang a MONEY_IN on for never-received units; a design question for the
+  user (a money-only SHORT_SHIPPED claim capped by `ShortClosedQuantity` would fit the effect model), not something to guess.
+- Migration `scrap-from-stock-and-short-close` (two columns on `PurchaseItems`). **Generated, not applied.**
+- Tests: `Integration/PurchaseShortCloseTests.cs` (3) and two in `QuarantineExitTests` (scrap from shelf end to end incl. the
+  sale report; release from shelf refused). Full suite against `.\SQLEXPRESS` (temporary `TestDatabase` redirect, reverted):
+  557/577, the same 20 environmental failures as the previous entry.
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
 - ~~`PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK.~~ **Fixed 2026-09-20** - see the installment-sales entry above: both ids are `int`, both relationships are configured explicitly, and the shadow FK is gone.

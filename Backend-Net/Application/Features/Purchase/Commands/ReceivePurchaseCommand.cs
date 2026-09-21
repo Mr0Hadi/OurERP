@@ -160,7 +160,8 @@ namespace Application.Features.Purchase.Commands
                 var product = purchaseItem.Product;
                 var defects = reqItem.Defects ?? new();
 
-                var stillOwed = Math.Max(0, purchaseItem.Quantity - purchaseItem.ReceivedQuantity);
+                // A line closed short owes nothing more: whatever still arrives on it is excess.
+                var stillOwed = purchaseItem.StillOwedQuantity;
                 var defective = defects.Sum(d => d.Quantity);
                 var healthy = reqItem.ArrivedQuantity - defective;
 

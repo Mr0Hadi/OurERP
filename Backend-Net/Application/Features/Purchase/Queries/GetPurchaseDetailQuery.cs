@@ -53,7 +53,9 @@ namespace Application.Features.Purchase.Queries
                         UnitPrice = i.UnitPrice,
                         Discount = i.Discount,
                         ReceivedQuantity = i.ReceivedQuantity,
-                        SettledQuantity = i.SettledQuantity
+                        SettledQuantity = i.SettledQuantity,
+                        ShortClosedQuantity = i.ShortClosedQuantity,
+                        ShortClosedAt = i.ShortClosedAt
                     }).ToList(),
                     PaymentDetails = x.PaymentDetails.Select(p => new PaymentDetailDto
                     {

@@ -60,6 +60,11 @@ namespace Infrastructure.Services
             return AddOffPoolEntryAsync(product, InventoryCostEventTypeEnum.QUARANTINE_SCRAPPED, nameof(PurchaseReturnClaim), purchaseReturnClaimId, occurredAt, PerUnit(heldValue, quantity), -heldValue, cancellationToken);
         }
 
+        public Task RecordStockScrappedAsync(Product product, int quantity, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken)
+        {
+            return AddEntryAsync(product, -quantity, 0m, 0m, InventoryCostEventTypeEnum.STOCK_SCRAPPED, nameof(PurchaseReturnClaim), purchaseReturnClaimId, occurredAt, cancellationToken);
+        }
+
         public Task RecordPurchaseReturnShippedFromQuarantineAsync(Product product, int quantity, decimal heldValue, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken)
         {
             return AddOffPoolEntryAsync(product, InventoryCostEventTypeEnum.PURCHASE_RETURN_SHIPPED_FROM_QUARANTINE, nameof(PurchaseReturnClaim), purchaseReturnClaimId, occurredAt, PerUnit(heldValue, quantity), -heldValue, cancellationToken);

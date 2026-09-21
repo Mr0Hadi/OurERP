@@ -63,5 +63,9 @@ namespace Domain.Enums
         /// <summary>ShipSaleCommand ExcessQuantity: units sent to the customer beyond the order leave the pool at the running average,
         /// with no revenue. Counted by the sale report as cost, like a replacement shipped to a customer.</summary>
         SALE_SHIPPED_EXCESS = 20,
+
+        /// <summary>A purchase-return GOODS_SCRAP taken from sellable stock (a defect found after receiving): leaves the pool at the
+        /// running average, like any outbound row, with no revenue. The sale report shows it as scrap loss, not cost of goods sold.</summary>
+        STOCK_SCRAPPED = 21,
     }
 }

@@ -62,5 +62,8 @@ namespace Application.Features.PurchaseReturn.Dtos
         public int OrderedQuantity { get; set; }
         public int ReceivedQuantity { get; set; }
         public int StillOwedQuantity { get; set; }
+
+        /// <summary>Ordered units written off the line by ClosePurchaseItem; not owed any more.</summary>
+        public int ShortClosedQuantity { get; set; }
     }
 }

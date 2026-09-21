@@ -35,8 +35,9 @@ namespace Application.Features.Report.Queries
             InventoryCostEventTypeEnum.SALE_RETURN_REFUND,
             // A sale-return MONEY_IN: revenue, the mirror of SALE_RETURN_REFUND.
             InventoryCostEventTypeEnum.SALE_RETURN_MONEY_IN,
-            // Scrapping quarantined goods: a loss reported on its own line.
+            // Scrapping quarantined goods, or defective goods taken off the shelf: a loss reported on its own line.
             InventoryCostEventTypeEnum.QUARANTINE_SCRAPPED,
+            InventoryCostEventTypeEnum.STOCK_SCRAPPED,
         };
 
         private readonly IWMSDbContext _context;
@@ -95,6 +96,14 @@ namespace Application.Features.Report.Queries
                 {
                     bucket.ScrapLoss += -row.OffPoolValueDelta;
                     bucket.NetProfit += row.OffPoolValueDelta;
+                    continue;
+                }
+
+                // Out of the pool rather than off-pool, but a loss all the same - never cost of goods sold.
+                if (row.EventType == InventoryCostEventTypeEnum.STOCK_SCRAPPED)
+                {
+                    bucket.ScrapLoss += -row.InventoryValueDelta;
+                    bucket.NetProfit += row.InventoryValueDelta;
                     continue;
                 }
 

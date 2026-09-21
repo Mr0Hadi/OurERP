@@ -1013,6 +1013,20 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
 }
 ```
 
+### `POST api/Purchase/ClosePurchaseItem` / `POST api/Purchase/ReopenPurchaseItem`
+
+**Body:** `{ "purchaseItemId": 1000 }`
+
+**بستنِ قلم («تامین‌کننده بقیه را نمی‌فرستد»)** — همان «Delivery completed» در SAP. مقدارِ هنوز نرسیده‌ی قلم (`quantity − receivedQuantity`) در `shortClosedQuantity` ثبت می‌شود و دیگر انتظارش نمی‌رود:
+- خرید می‌تواند به `RECEIVED` برسد (قبلاً تا ابد `PARTIALLY_RECEIVED` می‌ماند).
+- `stillOwedQuantity` در `GetPurchaseReceivingInfo` صفر می‌شود؛ اگر بعداً چیزی روی این قلم برسد، **مازاد** حساب می‌شود و به قرنطینه می‌رود.
+- فقط فیزیکی است: موجودی، دانه‌ها، دفتر ارزش و پول تغییر نمی‌کنند. اگر بابت کالای نرسیده پول داده شده، برگشتش را واحد خرید خودش ثبت می‌کند.
+- ۴۰۰ اگر قلم قبلاً بسته شده، چیزی برای بستن نمانده، یا خرید لغو شده است.
+
+**بازگشایی** همان را برمی‌گرداند: `shortClosedQuantity = 0` و مقدار دوباره انتظار می‌رود. کالایی که در فاصله‌ی بسته‌بودن به‌عنوان مازاد رسیده، مازاد می‌ماند.
+
+**data خروجی (هر دو):** `{ purchaseId, purchaseStatus, purchaseItemId, receivedQuantity, shortClosedQuantity, shortClosedAt, stillOwedQuantity }`. روی `GetPurchaseDetail` → `items[]` هم `shortClosedQuantity`/`shortClosedAt` برمی‌گردد و روی `GetPurchaseReceivingInfo` → `items[].shortClosedQuantity`.
+
 ---
 
 ## 10. مرجوعی خرید (PurchaseReturn)
@@ -1305,7 +1319,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 | `GOODS_IN` | موجودی به اندازه‌ی مقدار سالم زیاد می‌شود؛ دانه‌ها ساخته یا برگردانده می‌شوند | با `unitCost` اثر وارد میانگین موزون می‌شود؛ اگر `unitCost` فرستاده نشده، با میانگین جاری، و اگر آن صفر باشد با `purchasePrice` کالا | — |
 | `GOODS_OUT` | منبع `IN_STOCK`: موجودی کم می‌شود؛ دانه‌ها مصرف می‌شوند. منبع `QUARANTINED` (فقط خرید): موجودی تغییر نمی‌کند | `IN_STOCK`: با میانگین جاری خارج می‌شود. `QUARANTINED`: جمع `QuarantineCost` همان دانه‌ها از ارزش بیرون از میانگین کم می‌شود (`PURCHASE_RETURN_SHIPPED_FROM_QUARANTINE`) | — |
 | `GOODS_RELEASE` (خرید) | دانه‌های قرنطینه `IN_STOCK` می‌شوند؛ موجودی زیاد می‌شود | با جمع `QuarantineCost` دانه‌ها وارد میانگین، همان ارزش از بیرونِ میانگین کم (`QUARANTINE_RELEASED`) | — |
-| `GOODS_SCRAP` (خرید) | دانه‌های قرنطینه `SCRAPPED` می‌شوند | جمع `QuarantineCost` دانه‌ها از بیرونِ میانگین کم (`QUARANTINE_SCRAPPED`) | فروش: `scrapLoss` جدا، و از `netProfit` کم می‌شود |
+| `GOODS_SCRAP` (خرید) | منبع `QUARANTINED` (پیش‌فرض): دانه‌های قرنطینه `SCRAPPED` می‌شوند. منبع `IN_STOCK`: موجودی کم و دانه‌ها `SCRAPPED` | `QUARANTINED`: جمع `QuarantineCost` دانه‌ها از بیرونِ میانگین کم (`QUARANTINE_SCRAPPED`). `IN_STOCK`: با میانگین جاری از میانگین خارج (`STOCK_SCRAPPED`) | فروش: `scrapLoss` جدا، و از `netProfit` کم می‌شود |
 | `MONEY_IN` | — | ردیف بدون جابه‌جایی کالا | فروش: درآمد **مثبت** در گزارش فروش. خرید: **کاهش** هزینه‌ی خرید در گزارش خرید |
 | `MONEY_OUT` | — | ردیف بدون جابه‌جایی کالا | فروش: درآمد **منفی** در گزارش فروش. خرید: **افزایش** هزینه‌ی خرید در گزارش خرید |
 
@@ -1350,7 +1364,8 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 ```
 - `source` — **از کجای انبار؟** انباردار اعلام می‌کند؛ سرور هیچ‌وقت از یکی به دیگری عقب‌نشینی نمی‌کند:
   - `GOODS_OUT`: **الزامی** — `1` (`IN_STOCK`، موجودی قفسه) یا `9` (`QUARANTINED`). نفرستادنش ۴۰۰.
-  - `GOODS_RELEASE`/`GOODS_SCRAP`: `9` یا نفرستید (همیشه از قرنطینه).
+  - `GOODS_RELEASE`: `9` یا نفرستید (همیشه از قرنطینه).
+  - `GOODS_SCRAP`: `9` یا نفرستید (از قرنطینه)، یا `1` (`IN_STOCK`) — اسقاط کالای معیوبی که بعد از دریافت روی قفسه پیدا شده. از قفسه: موجودی کم می‌شود، دانه‌ها (از همان قلم، برای ادعای ON_ORDER) `SCRAPPED` می‌شوند و با میانگین جاری از دفتر خارج می‌شوند (رویداد `STOCK_SCRAPPED`)؛ در گزارش فروش جزو `scrapLoss` است، نه `costOfGoodsSold`. کمبود موجودی ۴۰۰.
   - `GOODS_IN`: نفرستید (۴۰۰).
   - از قرنطینه فقط دانه‌های **همان ادعا** برداشته می‌شوند: ادعای ON_ORDER دانه‌های خرابِ سهم سفارشِ همان قلم، ادعای EXCESS مازادِ همان قلم، ادعای UNLISTED همان کالای خارج از سند در همین خرید (کالایی متفاوت از کالای ادعا: خارج از سند). کمبود ۴۰۰ است و از دسته‌ی دیگر قرض گرفته نمی‌شود.
 - `GOODS_IN` با `observations`: بخش آسیب‌دیده‌ی کالای رسیده **دیگر ناپدید نمی‌شود** — دانه‌اش ساخته و در قرنطینه (با علت همان ادعا) نگه داشته می‌شود و ارزشش (`unitCost` اثر، یا در نبودنش میانگین جاری) بیرون از میانگین ثبت و روی خودِ دانه (`QuarantineCost`) نگه داشته می‌شود (`PURCHASE_RETURN_REPLACEMENT_QUARANTINED`)؛ روی آن می‌توان ادعای تازه ثبت کرد.
@@ -2305,6 +2320,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 9 | آزادسازی از قرنطینه (QUARANTINE_RELEASED) |
 | 10 | اسقاط از قرنطینه (QUARANTINE_SCRAPPED) |
 | 11 | ارسال مازاد به مشتری (SALE_SHIPPED_EXCESS) |
+| 12 | اسقاط از موجودی (STOCK_SCRAPPED) — کالای معیوبِ روی قفسه، از مرجوعی خرید |
 
 ### `DocumentKindEnum` (نوع سند — پیوست‌ها و حرکت دانه‌ها)
 | مقدار | معنی |
@@ -2477,6 +2493,19 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 ## 16. نکات و محدودیت‌های شناخته‌شده
 
 این نکات برای جلوگیری از سردرگمی هنگام توسعه فرانت مهم هستند:
+
+### تغییرات قرارداد — ۲۰۲۶-۰۹-۲۱ (اسقاط از قفسه و بستنِ قلم خرید) — افزودنی، یک مورد آسان‌گیرانه‌تر
+
+| کجا | قبل | بعد | چرا |
+|---|---|---|---|
+| `ExecuteGoodsRound` خرید، `GOODS_SCRAP` → `source` | فقط `9` یا نفرستادن | `1` (`IN_STOCK`) هم مجاز: اسقاط کالای معیوبِ روی قفسه | عیبی که بعد از دریافت پیدا می‌شود راهی جز عودت نداشت (مثل scrap order در Odoo و حرکت 551 در SAP) |
+| `AddClaimResolution` خرید، `goodsScrap` | ۴۰۰ اگر قرنطینه کافی نبود | **چک نمی‌شود** — منبع را انبار موقع اجرا اعلام می‌کند، مثل `goodsOut`. چک قرنطینه فقط برای `goodsRelease` می‌ماند | |
+| `POST api/Purchase/ClosePurchaseItem` / `ReopenPurchaseItem` | — | جدید (بخش ۹) | خریدی که تامین‌کننده بقیه‌اش را نمی‌فرستد تا ابد `PARTIALLY_RECEIVED` می‌ماند |
+| `GetPurchaseDetail` → `items[]`، `GetPurchaseReceivingInfo` → `items[]` | — | `shortClosedQuantity` (+ `shortClosedAt` در جزئیات خرید) | |
+| `ProductUnitMovementReasonEnum` | — | `STOCK_SCRAPPED = 12` | |
+| رویداد دفتر ارزش | — | `STOCK_SCRAPPED = 21`؛ گزارش فروش آن را در `scrapLoss` می‌شمارد | |
+
+migration: `scrap-from-stock-and-short-close` (ستون‌های `PurchaseItems.ShortClosedQuantity` با پیش‌فرض `0` و `ShortClosedAt`).
 
 ### تغییرات قرارداد — ۲۰۲۶-۰۹-۲۱ (بهای کالای قرنطینه روی خودِ دانه) — بدون شکستِ شکل
 
@@ -2802,7 +2831,7 @@ migration: `quarantine-unit-cost` (ستون `ProductUnits.QuarantineCost`، `dec
 ```
 - `revenue`: مجموع مبلغ خالص فروش‌های ارسال‌شده در این بازه (پس از کسر تخفیف قلمی) + وجوه مرجوعی‌های فروش: `moneyOut` به‌صورت منفی و `moneyIn` به‌صورت مثبت.
 - `costOfGoodsSold`: بهای تمام‌شده‌ی کالای فروخته‌شده در همین بازه، محاسبه‌شده با میانگین موزون هزینه در لحظه‌ی ارسال (نه قیمت خرید فعلی محصول).
-- `scrapLoss`: ارزش کالای قرنطینه‌ای که در همین بازه اسقاط شد (`goodsScrap` مرجوعی خرید، با ارزشی که هر دانه با آن وارد قرنطینه شده بود؛ بخش ۱۰). یک خط مستقل است و در `revenue`/`costOfGoodsSold` نیست.
+- `scrapLoss`: ارزش کالایی که در همین بازه اسقاط شد (`goodsScrap` مرجوعی خرید؛ بخش ۱۰): از قرنطینه با ارزشی که هر دانه با آن وارد قرنطینه شده بود، از قفسه با میانگین جاری. یک خط مستقل است و در `revenue`/`costOfGoodsSold` نیست.
 - `netProfit`: `revenue - costOfGoodsSold - scrapLoss` (شامل بهای کالایی که با `goodsOut` مرجوعی فروش ارسال شد و وجوه مرجوعی‌های فروش؛ بخش ۱۰، «مدل اثرها»).
 
 ### `GET api/Report/GetPurchaseReport`

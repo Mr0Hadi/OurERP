@@ -409,7 +409,7 @@ namespace WMS.Tests.Integration
         }
 
         [Fact]
-        public async Task Scrap_OfGoodsThatAreNotInQuarantine_IsRefusedAtDecision()
+        public async Task Release_OfGoodsThatAreNotInQuarantine_IsRefusedAtDecision()
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
@@ -419,7 +419,7 @@ namespace WMS.Tests.Integration
             await Assert.ThrowsAsync<ValidationCustomException>(() => Add(scope).Handle(new PR.AddClaimResolutionCommand { ClaimId = claims[0], Composition = new EffectCompositionDto
             {
                 Quantity = 2,
-                GoodsScrap = new() { new QuarantineEffectDto { Quantity = 2 } },
+                GoodsRelease = new() { new QuarantineEffectDto { Quantity = 2 } },
             } }, CancellationToken.None));
 
             using var verify = db.NewContext();
@@ -437,7 +437,7 @@ namespace WMS.Tests.Integration
             await Add(scope).Handle(new PR.AddClaimResolutionCommand { ClaimId = claims[0], Composition = new EffectCompositionDto
             {
                 Quantity = 2,
-                GoodsScrap = new() { new QuarantineEffectDto { Quantity = 2 } },
+                GoodsRelease = new() { new QuarantineEffectDto { Quantity = 2 } },
             } }, CancellationToken.None);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => Add(scope).Handle(new PR.AddClaimResolutionCommand { ClaimId = claims[1], Composition = new EffectCompositionDto
@@ -445,6 +445,65 @@ namespace WMS.Tests.Integration
                 Quantity = 1,
                 GoodsRelease = new() { new QuarantineEffectDto { Quantity = 1 } },
             } }, CancellationToken.None));
+        }
+
+        [Fact]
+        public async Task Scrap_FromSellableStock_LowersStockAtTheAverage_AndIsAReportedLoss()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var s = await Received(scope, ordered: 10, arrived: 10, defective: 0); // all 10 on the shelf at 1000
+            var claims = await CreateReturn(scope, s, OnOrder(s, 2)); // the defect is found later, on the shelf
+
+            // The supplier says "throw them away" - the decision is not refused, the source is stated by the warehouse.
+            await Add(scope).Handle(new PR.AddClaimResolutionCommand { ClaimId = claims[0], Composition = new EffectCompositionDto
+            {
+                Quantity = 2,
+                GoodsScrap = new() { new QuarantineEffectDto { Quantity = 2 } },
+            } }, CancellationToken.None);
+            await Round(scope).Handle(new PR.ExecuteGoodsRoundCommand
+            {
+                PurchaseReturnId = scope.Context.PurchaseReturns.Single().Id,
+                Rounds = new() { new GoodsRoundLineDto { EffectId = EffectId(scope, 0, ReturnEffectDirectionEnum.GOODS_SCRAP), Quantity = 2, Source = ProductUnitStatusEnum.IN_STOCK } },
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            Assert.Equal(8, verify.Products.Single(p => p.Id == s.Product.Id).Stock);
+            Assert.Equal(8, verify.ProductUnits.Count(u => u.Status == ProductUnitStatusEnum.IN_STOCK));
+            Assert.Equal(2, verify.ProductUnits.Count(u => u.Status == ProductUnitStatusEnum.SCRAPPED));
+            Assert.Equal(2, verify.ProductUnitMovements.Count(m => m.Reason == ProductUnitMovementReasonEnum.STOCK_SCRAPPED));
+
+            var ledger = verify.InventoryCostLedgerEntries.OrderBy(x => x.Id).ToList();
+            Assert.Equal(8, ledger.Last().RunningQuantity);
+            Assert.Equal(8000m, ledger.Last().RunningInventoryValue);
+            Assert.Equal(-2000m, ledger.Single(x => x.EventType == InventoryCostEventTypeEnum.STOCK_SCRAPPED).InventoryValueDelta);
+
+            var report = Periods<SaleReportPeriodDto>((await new GetSaleReportQueryHandler(scope.Db).Handle(new GetSaleReportQuery(), CancellationToken.None)).Data!);
+            Assert.Equal(2000m, report.Sum(p => p.ScrapLoss));
+            Assert.Equal(0m, report.Sum(p => p.CostOfGoodsSold));
+            Assert.Equal(-2000m, report.Sum(p => p.NetProfit));
+            Assert.Equal(ReturnStatusEnum.SETTLED, verify.PurchaseReturns.Single().Status);
+        }
+
+        [Fact]
+        public async Task Scrap_FromSellableStock_BeyondStock_IsRefused_AndRelease_FromStock_IsRefused()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var s = await Received(scope, ordered: 10, arrived: 10, defective: 2); // 8 on the shelf, 2 held
+            var claims = await CreateReturn(scope, s, OnOrder(s, 2));
+
+            await Add(scope).Handle(new PR.AddClaimResolutionCommand { ClaimId = claims[0], Composition = new EffectCompositionDto
+            {
+                Quantity = 2,
+                GoodsRelease = new() { new QuarantineEffectDto { Quantity = 2 } },
+            } }, CancellationToken.None);
+
+            await Assert.ThrowsAsync<ValidationCustomException>(() => Round(scope).Handle(new PR.ExecuteGoodsRoundCommand
+            {
+                PurchaseReturnId = scope.Context.PurchaseReturns.Single().Id,
+                Rounds = new() { new GoodsRoundLineDto { EffectId = EffectId(scope, 0, ReturnEffectDirectionEnum.GOODS_RELEASE), Quantity = 2, Source = ProductUnitStatusEnum.IN_STOCK } },
+            }, CancellationToken.None));
         }
 
         [Fact]

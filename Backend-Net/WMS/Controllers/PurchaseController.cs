@@ -53,5 +53,17 @@ namespace WMS.Controllers
         {
             return await _mediator.Send(request);
         }
+
+        [HttpPost("ClosePurchaseItem")]
+        public async Task<ActionResult<ResponseDto>> ClosePurchaseItem([FromBody] ClosePurchaseItemCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HttpPost("ReopenPurchaseItem")]
+        public async Task<ActionResult<ResponseDto>> ReopenPurchaseItem([FromBody] ReopenPurchaseItemCommand request)
+        {
+            return await _mediator.Send(request);
+        }
     }
 }

@@ -49,6 +49,10 @@ namespace Application.Common.Contracts.InventoryCosting
         /// <summary>GOODS_SCRAP: quarantined units are scrapped; their held value leaves the off-pool balance as a reported loss.</summary>
         Task RecordQuarantineScrappedAsync(Product product, int quantity, decimal heldValue, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
 
+        /// <summary>Purchase-return GOODS_SCRAP from sellable stock: leaves the pool at the running average with no revenue
+        /// (STOCK_SCRAPPED); the sale report shows the value as scrap loss.</summary>
+        Task RecordStockScrappedAsync(Product product, int quantity, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
+
         /// <summary>Purchase-return GOODS_OUT from quarantine: nothing leaves the pool; the units' held value leaves the off-pool balance.</summary>
         Task RecordPurchaseReturnShippedFromQuarantineAsync(Product product, int quantity, decimal heldValue, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
 

@@ -218,16 +218,16 @@ namespace Application.Features.PurchaseReturn.Commands
         }
 
         /// <summary>
-        /// Release and scrap can only take units that are in quarantine for this claim. Checked here, at decision time, rather
-        /// than left to the warehouse: a decision to scrap goods that sit on the shelf (a defect found after receiving) used to
-        /// be accepted and then fail at the goods round, leaving the return stuck IN_PROGRESS. Units already promised to other
-        /// pending release/scrap effects on any open return of this purchase count as taken. GOODS_OUT is not checked - where
-        /// it takes units from (shelf or quarantine) is only stated by the warehouse when it executes.
+        /// Release can only take units that are in quarantine for this claim. Checked here, at decision time, rather than left to
+        /// the warehouse: a decision to release goods that are not held used to be accepted and then fail at the goods round,
+        /// leaving the return stuck IN_PROGRESS. Units already promised to other pending releases on any open return of this
+        /// purchase count as taken. Scrap and GOODS_OUT are not checked: both can take units from the shelf or from quarantine,
+        /// and which one is only stated by the warehouse when it executes.
         /// </summary>
         private async Task EnsureQuarantineCoversAsync(Domain.Entities.PurchaseReturnClaim claim, List<Domain.Entities.PurchaseReturnEffect> effects, int purchaseId, CancellationToken cancellationToken)
         {
             var requested = effects
-                .Where(e => e.Direction is ReturnEffectDirectionEnum.GOODS_RELEASE or ReturnEffectDirectionEnum.GOODS_SCRAP)
+                .Where(e => e.Direction == ReturnEffectDirectionEnum.GOODS_RELEASE)
                 .GroupBy(e => e.ProductId!.Value)
                 .ToList();
 
@@ -256,7 +256,7 @@ namespace Application.Features.PurchaseReturn.Commands
                 var promised = openReturns
                     .SelectMany(r => r.Claims)
                     .SelectMany(c => c.Resolutions.SelectMany(res => res.Effects).Select(e => (claim: c, effect: e)))
-                    .Where(x => x.effect.Direction is ReturnEffectDirectionEnum.GOODS_RELEASE or ReturnEffectDirectionEnum.GOODS_SCRAP
+                    .Where(x => x.effect.Direction == ReturnEffectDirectionEnum.GOODS_RELEASE
                         && x.effect.Status == ReturnEffectStatusEnum.PENDING
                         && x.effect.ProductId == productId
                         && PurchaseReturnQuarantine.For(x.claim, productId == x.claim.ProductId, purchaseId) == selection)
@@ -265,7 +265,7 @@ namespace Application.Features.PurchaseReturn.Commands
                 var available = Math.Max(0, held - promised);
                 if (group.Sum(e => e.Quantity) > available)
                     throw new ValidationCustomException(
-                        $"برای این ادعا فقط {available} عدد کالا در قرنطینه آزاد است؛ آزادسازی و اسقاط فقط روی کالای قرنطینه ممکن است. کالایی که در موجودی قابل فروش است را با عودت به تامین‌کننده برگردانید.");
+                        $"برای این ادعا فقط {available} عدد کالا در قرنطینه آزاد است؛ آزادسازی فقط روی کالای قرنطینه ممکن است (کالای روی قفسه همین حالا قابل فروش است).");
             }
         }
     }

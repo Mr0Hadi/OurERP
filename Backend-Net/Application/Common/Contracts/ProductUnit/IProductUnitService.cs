@@ -57,6 +57,9 @@ namespace Application.Common.Contracts.ProductUnit
         /// Returns the units moved, so the caller can book their <c>QuarantineCost</c>.</summary>
         Task<List<Domain.Entities.ProductUnit>> ScrapFromQuarantineAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken);
 
+        /// <summary>IN_STOCK units matching <paramref name="selection"/> become SCRAPPED. The caller lowers Product.Stock.</summary>
+        Task<List<Domain.Entities.ProductUnit>> ScrapFromStockAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken);
+
         /// <summary>
         /// Reconciles ProductUnit rows to a manually-edited Stock value from UpdateProductCommand:
         /// mints the difference if the new stock is higher, scraps the newest units (by serial) if lower.

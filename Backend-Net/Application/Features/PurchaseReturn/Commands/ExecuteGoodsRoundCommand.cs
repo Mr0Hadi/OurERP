@@ -131,9 +131,14 @@ namespace Application.Features.PurchaseReturn.Commands
                             throw new ValidationCustomException("برای عودت کالا باید مشخص شود دانه‌ها از موجودی (IN_STOCK) برداشته می‌شوند یا از قرنطینه (QUARANTINED).");
                         break;
 
-                    default: // GOODS_RELEASE, GOODS_SCRAP
+                    case ReturnEffectDirectionEnum.GOODS_RELEASE:
                         if (line.Source is not (null or ProductUnitStatusEnum.QUARANTINED))
-                            throw new ValidationCustomException("آزادسازی و اسقاط فقط از قرنطینه انجام می‌شود.");
+                            throw new ValidationCustomException("آزادسازی فقط از قرنطینه انجام می‌شود.");
+                        break;
+
+                    default: // GOODS_SCRAP: from quarantine (the default, as before) or from sellable stock - a defect found after receiving.
+                        if (line.Source is not (null or ProductUnitStatusEnum.QUARANTINED or ProductUnitStatusEnum.IN_STOCK))
+                            throw new ValidationCustomException("اسقاط فقط از قرنطینه (QUARANTINED) یا از موجودی قابل فروش (IN_STOCK) انجام می‌شود.");
                         break;
                 }
 
@@ -175,6 +180,11 @@ namespace Application.Features.PurchaseReturn.Commands
                             throw new ValidationCustomException($"موجودی «{products[productId].Name}» برای این عودت کافی نیست.");
                         projectedStock[productId] -= line.Quantity;
                         break;
+                    case ReturnEffectDirectionEnum.GOODS_SCRAP when line.Source == ProductUnitStatusEnum.IN_STOCK:
+                        if (line.Quantity > projectedStock[productId])
+                            throw new ValidationCustomException($"موجودی «{products[productId].Name}» برای این اسقاط کافی نیست.");
+                        projectedStock[productId] -= line.Quantity;
+                        break;
                 }
             }
 
@@ -183,7 +193,8 @@ namespace Application.Features.PurchaseReturn.Commands
             //   GOODS_IN       healthy -> stock + pool at UnitCost; damaged part -> quarantine, value off-pool at UnitCost
             //   GOODS_OUT      IN_STOCK: stock - and pool out at the average; QUARANTINED: off-pool out at the units' held value
             //   GOODS_RELEASE  quarantine -> stock + pool at the units' held value, off-pool out
-            //   GOODS_SCRAP    quarantine -> scrapped, off-pool out = reported loss at the units' held value
+            //   GOODS_SCRAP    QUARANTINED (default): scrapped, off-pool out = reported loss at the units' held value;
+            //                  IN_STOCK: stock - and pool out at the average = reported loss (a defect found on the shelf)
             // GOODS_IN UnitCost omitted: running average, else Product.PurchasePrice. Leaving quarantine never reads a cost from the
             // decision: each unit carries the value it entered with (ProductUnit.QuarantineCost). The only refusals left are
             // ProductUnitService's own unit-state checks, which throw before SaveChanges.
@@ -279,6 +290,13 @@ namespace Application.Features.PurchaseReturn.Commands
                         await _inventoryCostingService.RecordQuarantineReleasedAsync(product, line.Quantity, HeldValueOf(units), claim.Id, now, cancellationToken);
                         break;
                     }
+
+                    case ReturnEffectDirectionEnum.GOODS_SCRAP when line.Source == ProductUnitStatusEnum.IN_STOCK:
+                        product.Stock -= line.Quantity;
+                        await _productUnitService.ScrapFromStockAsync(product, line.Quantity, UnitSelection.InStock(unitLine), line.ProductUnitBarcodes,
+                            Movement(ProductUnitMovementReasonEnum.STOCK_SCRAPPED), cancellationToken);
+                        await _inventoryCostingService.RecordStockScrappedAsync(product, line.Quantity, claim.Id, now, cancellationToken);
+                        break;
 
                     case ReturnEffectDirectionEnum.GOODS_SCRAP:
                     {

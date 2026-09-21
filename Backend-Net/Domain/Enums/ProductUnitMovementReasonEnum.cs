@@ -40,5 +40,8 @@ namespace Domain.Enums
 
         [Description("ارسال مازاد به مشتری")]
         SALE_SHIPPED_EXCESS = 11,
+
+        [Description("اسقاط از موجودی")]
+        STOCK_SCRAPPED = 12,
     }
 }

@@ -176,6 +176,11 @@ namespace Infrastructure.Services
         public Task<List<Domain.Entities.ProductUnit>> ScrapFromQuarantineAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken) =>
             MoveSelectedAsync(product, count, RequireQuarantine(selection), explicitBarcodes, ProductUnitStatusEnum.SCRAPPED, movement, cancellationToken);
 
+        public Task<List<Domain.Entities.ProductUnit>> ScrapFromStockAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken) =>
+            MoveSelectedAsync(product, count,
+                selection.Status == ProductUnitStatusEnum.IN_STOCK ? selection : throw new InvalidOperationException($"Scrap from stock takes IN_STOCK units only, not {selection.Status}."),
+                explicitBarcodes, ProductUnitStatusEnum.SCRAPPED, movement, cancellationToken);
+
         private static UnitSelection RequireQuarantine(UnitSelection selection) =>
             selection.Status == ProductUnitStatusEnum.QUARANTINED
                 ? selection
