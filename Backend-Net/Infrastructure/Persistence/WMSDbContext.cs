@@ -316,6 +316,11 @@ namespace Infrastructure.Persistence
             modelBuilder.Entity<ProductUnit>()
                 .HasIndex(x => x.PurchaseItemId);
 
+            // Same precision as the cost ledger's off-pool column it has to net against to zero.
+            modelBuilder.Entity<ProductUnit>()
+                .Property(x => x.QuarantineCost)
+                .HasPrecision(18, 4);
+
             // Restrict: the movement ledger is append-only history and must never disappear with its unit.
             // Customer/Supplier/User/document ids are plain columns, not FKs - the ledger records what was true
             // at the time and must not block or cascade from anything that happens to those rows later.

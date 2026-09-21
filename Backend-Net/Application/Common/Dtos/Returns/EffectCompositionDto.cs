@@ -62,9 +62,8 @@ namespace Application.Common.Dtos.Returns
         public int? ProductId { get; set; }
 
         /// <summary>
-        /// Rial per unit these goods are worth to us: what a release enters the pool at, and what a scrap books as loss.
-        /// Omitted: the running average, else Product.PurchasePrice. An explicit 0 stays 0 - send the line's effective price
-        /// for defective goods that were paid for, and 0 for excess that never was.
+        /// <b>Ignored by the server</b> (2026-09-21). A release or scrap moves each unit at the value it entered quarantine with
+        /// (ProductUnit.QuarantineCost), which staff never type. Kept only so existing payloads still bind.
         /// </summary>
         public UInt64? UnitCost { get; set; }
     }
@@ -93,7 +92,8 @@ namespace Application.Common.Dtos.Returns
         /// Rial per unit: what the goods are worth to us - the cost a GOODS_IN round enters the inventory
         /// pool at. Optional: omitted means the product's running average at the moment the round executes, or
         /// Product.PurchasePrice when that average is 0 (no cost history) - the codebase's one fallback for such stock.
-        /// Never read by the balance rule, and GOODS_OUT always leaves at the running average whatever it says.
+        /// GOODS_OUT never reads it: from shelf stock it leaves at the running average, from quarantine at the units' own
+        /// QuarantineCost.
         /// </summary>
         public UInt64? UnitCost { get; set; }
     }

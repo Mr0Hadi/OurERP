@@ -12,8 +12,8 @@ using SR = Application.Features.SaleReturn.Commands;
 namespace WMS.Tests.Integration
 {
     /// <summary>
-    /// Goods leaving quarantine - returned from a stated source, released into stock, or scrapped - each at the effect's
-    /// UnitCost; the off-pool balance; scrap as a reported loss; explicit write-off. The first test is the design's combined
+    /// Goods leaving quarantine - returned from a stated source, released into stock, or scrapped - each at the value the unit
+    /// entered quarantine with (ProductUnit.QuarantineCost), never a cost sent on the decision; the off-pool balance; scrap as a reported loss; explicit write-off. The first test is the design's combined
     /// scenario (25 arrived, 20 ordered, 10 defective) reconciled unit by unit and rial by rial.
     /// </summary>
     public class QuarantineExitTests
@@ -21,9 +21,14 @@ namespace WMS.Tests.Integration
         private static PR.AddClaimResolutionCommandHandler Add(TestScope s) => new(s.Db, s.PurchaseReturnCalculation, s.InventoryCostingService, FakeObjectStorage.Instance, s.UnitOfWork);
         private static PR.ExecuteGoodsRoundCommandHandler Round(TestScope s) => new(s.Db, s.PurchaseReturnCalculation, s.ProductUnitService, s.InventoryCostingService, FakeObjectStorage.Instance, s.UnitOfWork);
 
-        private static async Task<PurchaseScenario> Received(TestScope scope, int ordered, int arrived, int defective)
+        private static async Task<PurchaseScenario> Received(TestScope scope, int ordered, int arrived, int defective, int discountPercent = 0)
         {
             var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: ordered, stock: 0, unitPrice: 1000);
+            if (discountPercent > 0)
+            {
+                scenario.Item.Discount = discountPercent;
+                scope.Context.SaveChanges();
+            }
             await new ReceivePurchaseCommandHandler(scope.Db, scope.PurchaseReturnCalculation, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork)
                 .Handle(new ReceivePurchaseCommand
                 {
@@ -332,6 +337,114 @@ namespace WMS.Tests.Integration
             Assert.Empty(verify.PurchaseReturnEffects);
             Assert.Equal(2, verify.PurchaseItems.Single(x => x.Id == s.Item.Id).SettledQuantity);
             Assert.Equal(ReturnStatusEnum.SETTLED, verify.PurchaseReturns.Single().Status);
+        }
+
+        [Fact]
+        public async Task Receiving_StampsEachQuarantinedUnitWithTheValueItEnteredWith()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            // Ordered 10, arrived 12, 3 defective, 20% line discount. Healthy-first: 9 healthy -> stock, 1 defective on the
+            // order (paid for, held at the NET price 800 - not the 1000 list price), 2 defective excess (never paid for, 0).
+            var s = await Received(scope, ordered: 10, arrived: 12, defective: 3, discountPercent: 20);
+
+            using var verify = db.NewContext();
+            var units = verify.ProductUnits.Where(u => u.ProductId == s.Product.Id).ToList();
+            Assert.Equal(800m, units.Single(u => u.Status == ProductUnitStatusEnum.QUARANTINED && u.CustodyReason == UnitCustodyReasonEnum.ON_ORDER).QuarantineCost);
+            Assert.All(units.Where(u => u.CustodyReason == UnitCustodyReasonEnum.EXCESS), u => Assert.Equal(0m, u.QuarantineCost));
+            Assert.All(units.Where(u => u.Status == ProductUnitStatusEnum.IN_STOCK), u => Assert.Null(u.QuarantineCost));
+        }
+
+        [Fact]
+        public async Task Release_IgnoresAnyClientCost_AndMovesTheHeldNetValue()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var s = await Received(scope, ordered: 10, arrived: 10, defective: 2, discountPercent: 20); // 8 stock at 800, 2 held at 800
+            var claims = await CreateReturn(scope, s, OnOrder(s, 2));
+
+            // A cost typed by staff (here the gross list price, the old default) must not reach the ledger.
+            await Add(scope).Handle(new PR.AddClaimResolutionCommand { ClaimId = claims[0], Composition = new EffectCompositionDto
+            {
+                Quantity = 2,
+                GoodsRelease = new() { new QuarantineEffectDto { Quantity = 2, UnitCost = 1000 } },
+            } }, CancellationToken.None);
+            await Round(scope).Handle(new PR.ExecuteGoodsRoundCommand
+            {
+                PurchaseReturnId = scope.Context.PurchaseReturns.Single().Id,
+                Rounds = new() { new GoodsRoundLineDto { EffectId = EffectId(scope, 0, ReturnEffectDirectionEnum.GOODS_RELEASE), Quantity = 2 } },
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            var ledger = verify.InventoryCostLedgerEntries.OrderBy(x => x.Id).ToList();
+            Assert.Equal(10m * 800m, ledger.Last().RunningInventoryValue);
+            Assert.Equal(0m, ledger.Sum(x => x.OffPoolValueDelta));
+            Assert.Null(verify.PurchaseReturnEffects.Single().UnitCost);
+        }
+
+        [Fact]
+        public async Task ReturnExcessFromQuarantine_WithNoCostSent_LeavesTheQuarantineBalanceAtZero()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var s = await Received(scope, ordered: 5, arrived: 7, defective: 0); // 2 healthy excess, held at 0
+            var claims = await CreateReturn(scope, s, Excess(s, 2));
+
+            // No UnitCost at all - what the simplified form sends. The old rule took the running average off-pool here,
+            // leaving the quarantine balance negative for goods that were never paid for.
+            await Add(scope).Handle(new PR.AddClaimResolutionCommand { ClaimId = claims[0], Composition = new EffectCompositionDto
+            {
+                Quantity = 2,
+                GoodsOut = new() { new GoodsEffectDto { Quantity = 2 } },
+            } }, CancellationToken.None);
+            await Round(scope).Handle(new PR.ExecuteGoodsRoundCommand
+            {
+                PurchaseReturnId = scope.Context.PurchaseReturns.Single().Id,
+                Rounds = new() { new GoodsRoundLineDto { EffectId = EffectId(scope, 0, ReturnEffectDirectionEnum.GOODS_OUT), Quantity = 2, Source = ProductUnitStatusEnum.QUARANTINED } },
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            Assert.Equal(0m, verify.InventoryCostLedgerEntries.Sum(x => x.OffPoolValueDelta));
+            Assert.Equal(2, verify.ProductUnits.Count(u => u.Status == ProductUnitStatusEnum.RETURNED_TO_SUPPLIER));
+        }
+
+        [Fact]
+        public async Task Scrap_OfGoodsThatAreNotInQuarantine_IsRefusedAtDecision()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var s = await Received(scope, ordered: 10, arrived: 10, defective: 0); // everything on the shelf; the defect is found later
+            var claims = await CreateReturn(scope, s, OnOrder(s, 2));
+
+            await Assert.ThrowsAsync<ValidationCustomException>(() => Add(scope).Handle(new PR.AddClaimResolutionCommand { ClaimId = claims[0], Composition = new EffectCompositionDto
+            {
+                Quantity = 2,
+                GoodsScrap = new() { new QuarantineEffectDto { Quantity = 2 } },
+            } }, CancellationToken.None));
+
+            using var verify = db.NewContext();
+            Assert.Empty(verify.PurchaseReturnResolutions);
+        }
+
+        [Fact]
+        public async Task Release_OfUnitsAlreadyPromisedToAnotherDecision_IsRefused()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var s = await Received(scope, ordered: 10, arrived: 10, defective: 2); // 2 held for the line
+            var claims = await CreateReturn(scope, s, OnOrder(s, 2), OnOrder(s, 2));
+
+            await Add(scope).Handle(new PR.AddClaimResolutionCommand { ClaimId = claims[0], Composition = new EffectCompositionDto
+            {
+                Quantity = 2,
+                GoodsScrap = new() { new QuarantineEffectDto { Quantity = 2 } },
+            } }, CancellationToken.None);
+
+            await Assert.ThrowsAsync<ValidationCustomException>(() => Add(scope).Handle(new PR.AddClaimResolutionCommand { ClaimId = claims[1], Composition = new EffectCompositionDto
+            {
+                Quantity = 1,
+                GoodsRelease = new() { new QuarantineEffectDto { Quantity = 1 } },
+            } }, CancellationToken.None));
         }
 
         [Fact]

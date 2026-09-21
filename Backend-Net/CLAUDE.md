@@ -1260,6 +1260,38 @@ table in §16.
   long-documented pre-existing ones (8 `IX_Users_PersonelCode`/functional-seed collisions, the
   `"***"` object-storage placeholder, and the two LibreOffice-dependent `InvoicePdfTests`).
 
+**Quarantine units carry their own value (2026-09-21).** Supersedes Phase 4's "cost of leaving quarantine is the effect's
+`UnitCost`" in the traceable-warehouse entry above. API: `docs/api-guide.fa.md` §10 and the 2026-09-21 table in §16.
+
+- **Why.** Staff decide *what* happens to returned goods (money in/out, goods in/out/release/scrap); the value of goods in
+  our books is a recorded fact, not a negotiation. Asking the client for it (`QuarantineEffectDto.UnitCost`, and
+  `GoodsEffectDto.UnitCost` on a GOODS_OUT from quarantine) let a typed number corrupt the ledger: the frontend defaulted
+  to the gross line price (off-pool entered at the net price), and a return of excess with no cost sent left at the running
+  average although it had entered at 0 - either way the off-pool balance of the product never returned to zero.
+- **`ProductUnit.QuarantineCost`** (`decimal(18,4)`, same precision as `OffPoolValueDelta`) is stamped when a unit is
+  minted QUARANTINED - `UnitOrigin.Quarantined(..., cost)`; `MintAsync` throws `InvalidOperationException` for a
+  quarantined origin without one. Values: the paid-for defective share of a line = net line price (returned by
+  `RecordPurchaseReceiptQuarantinedAsync`), EXCESS/UNLISTED = 0, a damaged replacement = its entry cost (returned by
+  `RecordPurchaseReturnReplacementQuarantinedAsync`). Null for units never quarantined; kept after leaving as a record.
+- **Leaving quarantine reads only the units.** `ReturnToSupplierAsync`/`ReleaseFromQuarantineAsync`/`ScrapFromQuarantineAsync`
+  now return the units they moved; `ExecuteGoodsRound` sums their `QuarantineCost` (`HeldValueOf`) and passes that
+  `heldValue` to the three ledger methods. `RecordQuarantineReleasedAsync` enters the pool with the exact total
+  (`AddEntryAsync(..., inboundValue:)`), not quantity x average-of-costs, so pool and off-pool move by the same amount.
+  `ExpandComposition` no longer copies `UnitCost` onto release/scrap effects; the DTO field stays only so old payloads bind.
+  `GoodsEffectDto.UnitCost` still applies to GOODS_IN (entry into the pool).
+- **Decision-time check.** `AddClaimResolution` (purchase) refuses release/scrap beyond the claim's quarantined units minus
+  what pending release/scrap effects on open returns of the same purchase already promised. GOODS_OUT is not checked -
+  its source is only stated by the warehouse at execution. The claim -> quarantine selection moved from a private method
+  on `ExecuteGoodsRoundCommand` to `Application/Common/Returns/PurchaseReturnQuarantine.For`, shared by both.
+- Migration `20260921170535_quarantine-unit-cost` adds the column and backfills units currently QUARANTINED (ON_ORDER with
+  a line -> net line price, everything else 0; a damaged replacement under ON_ORDER custody also gets the line price - its
+  entry cost was never stored, and the data is test data). **Generated, not applied.**
+- Tests: 5 new in `Integration/QuarantineExitTests.cs` (net-price stamping with a line discount, release ignoring a sent
+  cost, excess returned with no cost leaves off-pool at 0, scrap of shelf goods refused at decision, double promise
+  refused). Verified against a local `.\SQLEXPRESS` by temporarily pointing `TestDatabase` at it (reverted): the 7
+  quarantine/unit/return-effect classes 66/66; full suite 552/572 - the 20 failures are the 17 functional tests whose
+  `WmsApiFactory` still targets `Server=.`, the 2 LibreOffice `InvoicePdfTests` and 1 `PersonelCode` collision.
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
 - ~~`PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK.~~ **Fixed 2026-09-20** - see the installment-sales entry above: both ids are `int`, both relationships are configured explicitly, and the shadow FK is gone.

@@ -40,36 +40,40 @@ namespace Infrastructure.Services
             return AddEntryAsync(product, quantity, effectiveUnitCost, 0m, InventoryCostEventTypeEnum.PURCHASE_RECEIVED, nameof(PurchaseItem), purchaseItemId, occurredAt, cancellationToken);
         }
 
-        public Task RecordPurchaseReceiptQuarantinedAsync(Product product, int quantity, ulong unitPrice, int discountPercent, int purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken)
+        public async Task<decimal> RecordPurchaseReceiptQuarantinedAsync(Product product, int quantity, ulong unitPrice, int discountPercent, int purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken)
         {
             var netUnitCost = NetUnitAmount(unitPrice, discountPercent);
-            return AddOffPoolEntryAsync(product, InventoryCostEventTypeEnum.PURCHASE_RECEIVED_QUARANTINED, nameof(PurchaseItem), purchaseItemId, occurredAt, netUnitCost, netUnitCost * quantity, cancellationToken);
+            await AddOffPoolEntryAsync(product, InventoryCostEventTypeEnum.PURCHASE_RECEIVED_QUARANTINED, nameof(PurchaseItem), purchaseItemId, occurredAt, netUnitCost, netUnitCost * quantity, cancellationToken);
+            return netUnitCost;
         }
 
-        public async Task RecordQuarantineReleasedAsync(Product product, int quantity, ulong? unitCost, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken)
+        public async Task RecordQuarantineReleasedAsync(Product product, int quantity, decimal heldValue, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken)
         {
-            var cost = await UnitCostOrAverageAsync(product, unitCost, cancellationToken);
-            var entry = await AddEntryAsync(product, quantity, cost, 0m, InventoryCostEventTypeEnum.QUARANTINE_RELEASED, nameof(PurchaseReturnClaim), purchaseReturnClaimId, occurredAt, cancellationToken);
-            entry.OffPoolValueDelta = -(cost * quantity);
+            // The pool takes the held value as-is rather than quantity x (heldValue / quantity), so the pool and the off-pool
+            // balance move by exactly the same amount even when the units carried different costs.
+            var entry = await AddEntryAsync(product, quantity, PerUnit(heldValue, quantity), 0m, InventoryCostEventTypeEnum.QUARANTINE_RELEASED, nameof(PurchaseReturnClaim), purchaseReturnClaimId, occurredAt, cancellationToken, inboundValue: heldValue);
+            entry.OffPoolValueDelta = -heldValue;
         }
 
-        public async Task RecordQuarantineScrappedAsync(Product product, int quantity, ulong? unitCost, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken)
+        public Task RecordQuarantineScrappedAsync(Product product, int quantity, decimal heldValue, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken)
         {
-            var cost = await UnitCostOrAverageAsync(product, unitCost, cancellationToken);
-            await AddOffPoolEntryAsync(product, InventoryCostEventTypeEnum.QUARANTINE_SCRAPPED, nameof(PurchaseReturnClaim), purchaseReturnClaimId, occurredAt, cost, -(cost * quantity), cancellationToken);
+            return AddOffPoolEntryAsync(product, InventoryCostEventTypeEnum.QUARANTINE_SCRAPPED, nameof(PurchaseReturnClaim), purchaseReturnClaimId, occurredAt, PerUnit(heldValue, quantity), -heldValue, cancellationToken);
         }
 
-        public async Task RecordPurchaseReturnShippedFromQuarantineAsync(Product product, int quantity, ulong? unitCost, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken)
+        public Task RecordPurchaseReturnShippedFromQuarantineAsync(Product product, int quantity, decimal heldValue, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken)
         {
-            var cost = await UnitCostOrAverageAsync(product, unitCost, cancellationToken);
-            await AddOffPoolEntryAsync(product, InventoryCostEventTypeEnum.PURCHASE_RETURN_SHIPPED_FROM_QUARANTINE, nameof(PurchaseReturnClaim), purchaseReturnClaimId, occurredAt, cost, -(cost * quantity), cancellationToken);
+            return AddOffPoolEntryAsync(product, InventoryCostEventTypeEnum.PURCHASE_RETURN_SHIPPED_FROM_QUARANTINE, nameof(PurchaseReturnClaim), purchaseReturnClaimId, occurredAt, PerUnit(heldValue, quantity), -heldValue, cancellationToken);
         }
 
-        public async Task RecordPurchaseReturnReplacementQuarantinedAsync(Product product, int quantity, ulong? unitCost, int? purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken)
+        public async Task<decimal> RecordPurchaseReturnReplacementQuarantinedAsync(Product product, int quantity, ulong? unitCost, int? purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken)
         {
             var cost = await UnitCostOrAverageAsync(product, unitCost, cancellationToken);
             await AddOffPoolEntryAsync(product, InventoryCostEventTypeEnum.PURCHASE_RETURN_REPLACEMENT_QUARANTINED, nameof(PurchaseItem), purchaseItemId, occurredAt, cost, cost * quantity, cancellationToken);
+            return cost;
         }
+
+        /// <summary>The per-unit figure shown on a ledger row whose units may have carried different costs.</summary>
+        private static decimal PerUnit(decimal value, int quantity) => quantity > 0 ? value / quantity : 0m;
 
         /// <summary>
         /// A row that changes only the off-pool balance (value held in quarantine): the running pool totals are carried forward
@@ -192,11 +196,12 @@ namespace Infrastructure.Services
         }
 
         /// <summary>The one place inventory quantity/value/average is ever updated. Inbound rows
-        /// (quantityDelta > 0) add value at the caller-supplied unitCost. Outbound rows
+        /// (quantityDelta > 0) add value at the caller-supplied unitCost, or exactly inboundValue when the
+        /// caller already knows the total (units that carried different costs). Outbound rows
         /// (quantityDelta &lt; 0) always consume at the average that already exists - the caller's
         /// unitCost is ignored, which is what makes this AVCO rather than a naive average: a future
         /// purchase can never change the cost already written on a past sale.</summary>
-        private async Task<InventoryCostLedgerEntry> AddEntryAsync(Product product, int quantityDelta, decimal unitCost, decimal revenueDelta, InventoryCostEventTypeEnum eventType, string? referenceType, int? referenceId, DateTime occurredAt, CancellationToken cancellationToken)
+        private async Task<InventoryCostLedgerEntry> AddEntryAsync(Product product, int quantityDelta, decimal unitCost, decimal revenueDelta, InventoryCostEventTypeEnum eventType, string? referenceType, int? referenceId, DateTime occurredAt, CancellationToken cancellationToken, decimal? inboundValue = null)
         {
             var last = await LatestEntryAsync(product.Id, cancellationToken);
 
@@ -206,7 +211,7 @@ namespace Infrastructure.Services
             decimal valueDelta;
             if (quantityDelta > 0)
             {
-                valueDelta = quantityDelta * unitCost;
+                valueDelta = inboundValue ?? quantityDelta * unitCost;
             }
             else
             {

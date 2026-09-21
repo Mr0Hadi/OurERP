@@ -152,7 +152,8 @@ namespace Infrastructure.Services
             AddQuarantine(composition.GoodsRelease, ReturnEffectDirectionEnum.GOODS_RELEASE);
             AddQuarantine(composition.GoodsScrap, ReturnEffectDirectionEnum.GOODS_SCRAP);
 
-            // No UnitPrice: an internal movement has no counterparty and no transaction value.
+            // No UnitPrice: an internal movement has no counterparty and no transaction value. No UnitCost either: the units
+            // leave quarantine at the value each one entered with (ProductUnit.QuarantineCost), whatever the client sends.
             void AddQuarantine(List<QuarantineEffectDto>? items, ReturnEffectDirectionEnum direction)
             {
                 if (items == null)
@@ -165,7 +166,6 @@ namespace Infrastructure.Services
                         Direction = direction,
                         Quantity = item.Quantity,
                         ProductId = item.ProductId,
-                        UnitCost = item.UnitCost,
                         Status = ReturnEffectStatusEnum.PENDING,
                         CreatedAt = now,
                     });

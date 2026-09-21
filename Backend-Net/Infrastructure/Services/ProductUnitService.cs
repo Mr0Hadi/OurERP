@@ -31,6 +31,10 @@ namespace Infrastructure.Services
             if (origin.Status is not (ProductUnitStatusEnum.IN_STOCK or ProductUnitStatusEnum.QUARANTINED))
                 throw new InvalidOperationException($"Units can only be minted IN_STOCK or QUARANTINED, not {origin.Status}.");
 
+            // A quarantined unit without a value would leave the quarantine balance unreconcilable on its way out.
+            if (origin.Status == ProductUnitStatusEnum.QUARANTINED && origin.QuarantineCost is null)
+                throw new InvalidOperationException("Units minted QUARANTINED must state their QuarantineCost.");
+
             var nextSerial = await GetNextSerialAsync(product.Id, cancellationToken);
 
             for (var i = 0; i < count; i++)
@@ -48,6 +52,7 @@ namespace Infrastructure.Services
                     PurchaseId = origin.PurchaseId,
                     PurchaseItemId = origin.PurchaseItemId,
                     CustodyReason = origin.CustodyReason,
+                    QuarantineCost = origin.Status == ProductUnitStatusEnum.QUARANTINED ? origin.QuarantineCost : null,
                     CreatedAt = DateTime.Now,
                     IsActive = true
                 };
@@ -162,13 +167,13 @@ namespace Infrastructure.Services
             }
         }
 
-        public Task ReturnToSupplierAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken) =>
+        public Task<List<Domain.Entities.ProductUnit>> ReturnToSupplierAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken) =>
             MoveSelectedAsync(product, count, selection, explicitBarcodes, ProductUnitStatusEnum.RETURNED_TO_SUPPLIER, movement, cancellationToken);
 
-        public Task ReleaseFromQuarantineAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken) =>
+        public Task<List<Domain.Entities.ProductUnit>> ReleaseFromQuarantineAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken) =>
             MoveSelectedAsync(product, count, RequireQuarantine(selection), explicitBarcodes, ProductUnitStatusEnum.IN_STOCK, movement, cancellationToken);
 
-        public Task ScrapFromQuarantineAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken) =>
+        public Task<List<Domain.Entities.ProductUnit>> ScrapFromQuarantineAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken) =>
             MoveSelectedAsync(product, count, RequireQuarantine(selection), explicitBarcodes, ProductUnitStatusEnum.SCRAPPED, movement, cancellationToken);
 
         private static UnitSelection RequireQuarantine(UnitSelection selection) =>
@@ -181,10 +186,10 @@ namespace Infrastructure.Services
         /// or FIFO by serial. The selection is never widened to make up a shortfall - only units of that status, and of that
         /// purchase/line/custody reason when given, are eligible.
         /// </summary>
-        private async Task MoveSelectedAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, ProductUnitStatusEnum toStatus, UnitMovementContext movement, CancellationToken cancellationToken)
+        private async Task<List<Domain.Entities.ProductUnit>> MoveSelectedAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, ProductUnitStatusEnum toStatus, UnitMovementContext movement, CancellationToken cancellationToken)
         {
             if (count <= 0)
-                return;
+                return new();
 
             var filter = FilterFor(product.Id, selection);
             var inQuarantine = selection.Status == ProductUnitStatusEnum.QUARANTINED;
@@ -227,6 +232,8 @@ namespace Infrastructure.Services
                 unit.Status = toStatus;
                 await RecordAsync(unit, from, movement, cancellationToken);
             }
+
+            return units;
         }
 
         private static Expression<Func<Domain.Entities.ProductUnit, bool>> FilterFor(int productId, UnitSelection selection)
