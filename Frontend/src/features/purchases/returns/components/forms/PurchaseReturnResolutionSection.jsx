@@ -46,6 +46,7 @@ export default function PurchaseReturnResolutionSection({
   onReopen,
   isBusy,
   renderClaimReport,
+  quarantineOf,
 }) {
   const status = purchaseReturn.status;
   const claims = purchaseReturn.claims || [];
@@ -97,6 +98,7 @@ export default function PurchaseReturnResolutionSection({
             onRemoveResolution={onRemoveResolution}
             onExecuteMoney={onExecuteMoney}
             renderReport={renderClaimReport}
+            quarantineOf={quarantineOf}
             isBusy={isBusy}
             readOnly={isClosed}
             side={PURCHASE_SIDE}

@@ -6,6 +6,30 @@ import { OFF_SCOPE_KINDS } from "./scopes";
  * مرجوعی خرید — خروجی مستقیم به `ReceivingReportLines` داده می‌شود.
  */
 
+/**
+ * چند عدد از کالای همین ادعا الان در قرنطینه است — همان دسته‌ای که سرور
+ * برای آزادسازی و اسقاط از آن برمی‌دارد: ادعای روی سفارش خرابیِ سهمِ
+ * سفارشِ قلمش، مازاد مازادِ همان قلم، و سفارش‌نداده همان کالا در همین
+ * خرید. `null` یعنی گزارشِ دریافت هنوز نیامده.
+ */
+export function claimQuarantinedQuantity(receivingInfo, claim) {
+  if (!receivingInfo || !claim) return null;
+
+  if (claim.offScopeKind === OFF_SCOPE_KINDS.UNLISTED) {
+    return (
+      (receivingInfo.unlistedItems || []).find((entry) => entry.productId === claim.productId)
+        ?.quarantinedQuantity ?? 0
+    );
+  }
+
+  const item = (receivingInfo.items || []).find(
+    (entry) => entry.purchaseItemId === (claim.orderLineId ?? null),
+  );
+  return claim.offScopeKind === OFF_SCOPE_KINDS.EXCESS
+    ? item?.quarantinedExcessQuantity ?? 0
+    : item?.quarantinedOnOrderQuantity ?? 0;
+}
+
 /** گزارشِ یک قلمِ سفارش: خرابیِ سهمِ سفارش و مازادِ همان قلم. */
 export function lineReceivingReport(receivingInfo, purchaseItemId) {
   const item = (receivingInfo?.items || []).find(

@@ -1,22 +1,16 @@
 import { useCallback, useMemo, useState } from "react";
-import { Plus, Scale } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Checkbox } from "@/shared/components/ui/checkbox";
-import { PriceInput } from "@/shared/components/ui/price-input";
 
 import {
   MONEY_DIRECTIONS,
-  defaultQuarantineUnitCost,
   emptyComposition,
-  compositionWarnings,
-  emptyMoneyEffect,
   expandComposition,
-  moneyAmountOf,
-  moneyBalanceBreakdown,
-  moneyBalanceOf,
   moneyDirectionOf,
+  suggestedMoneyAmount,
   validateComposition,
 } from "@/shared/domain/returns/resolutions";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
@@ -27,85 +21,23 @@ import EffectBadge from "./EffectBadge";
 
 const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
 
-const priceValue = (value) => (value === "" || value == null ? null : Number(value));
-
-/**
- * مابه‌التفاوت، قدم‌به‌قدم: ارزشِ هر کالای ورودی مثبت و هر کالای خروجی
- * منفی، و جمعشان همان مبلغی است که در «جابه‌جایی پول» پیش‌فرض گذاشته
- * شده — تا کاربر بداند عدد از کجا آمده، نه اینکه فقط آن را ببیند.
- */
-function BalanceBreakdown({
-  rows,
-  side,
-  requiredDirection,
-  requiredAmount,
-  activeAmount,
-  onApply,
-}) {
-  if (rows.length === 0) return null;
-  const isBalanced = requiredAmount === 0;
-  const isShort = activeAmount != null && activeAmount < requiredAmount;
-
-  return (
-    <div className="space-y-1.5 rounded-md border border-border bg-muted/40 p-2 text-[11px]">
-      <p className="flex items-center gap-1.5 font-medium text-card-foreground">
-        <Scale className="h-3.5 w-3.5 shrink-0" />
-        محاسبه‌ی مابه‌التفاوت
-      </p>
-      <ul className="space-y-0.5 tabular-nums">
-        {rows.map((row, index) => (
-          <li key={index} className="flex justify-between gap-2 text-muted-foreground">
-            <span className="truncate">
-              {side.effectLabels[row.direction]} · {row.productName} · {fa(row.quantity)} ×{" "}
-              {fa(row.unitPrice)}
-            </span>
-            <span className={row.value < 0 ? "text-destructive" : "text-card-foreground"}>
-              {row.value < 0 ? "−" : "+"}
-              {fa(Math.abs(row.value))}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <div className="flex justify-between gap-2 border-t border-border pt-1 font-medium text-card-foreground">
-        <span>
-          {isBalanced
-            ? "تراز صفر است؛ پولی لازم نیست"
-            : `باید ${side.money[requiredDirection]} شود (دست‌کم)`}
-        </span>
-        {!isBalanced && <span className="tabular-nums">{fa(requiredAmount)} ریال</span>}
-      </div>
-      {!isBalanced && (
-        <p className="text-muted-foreground">
-          همین مبلغ به‌عنوان پیش‌فرض در «جابه‌جایی پول» گذاشته شده؛ بیشتر از آن هم مجاز است.
-          {isShort && onApply && (
-            <button
-              type="button"
-              className="mr-1 text-primary underline underline-offset-2"
-              onClick={onApply}
-            >
-              برگرداندن به مبلغ محاسبه‌شده
-            </button>
-          )}
-        </p>
-      )}
-    </div>
-  );
-}
-
 /**
  * ثبت یک تصمیم برای بخشی از یک ادعا — مشترک بین خرید و فروش.
  *
  * چند سوال مستقل، نه یک فهرست از حالت‌های از پیش ترکیب‌شده:
  *
- *   ۱ و ۲. کالا وارد انبار شود؟ کالا از انبار خارج شود؟ (هر کدام با قیمتِ معامله)
- *   ۳.     فقط خرید: کالای قرنطینه آزاد یا اسقاط شود؟
- *   ۴.     پولی جابه‌جا شود؟ همین حالا یا بعداً؟
+ *   ۱ و ۲. کالا وارد انبار شود؟ کالا از انبار خارج شود؟
+ *   ۳.     فقط خرید، وقتی کالایی از این ادعا در قرنطینه است: آزاد یا اسقاط شود؟
+ *   ۴.     پولی جابه‌جا شود؟ چقدر؟ همین حالا یا بعداً؟
  *
  * یا به‌جای همه‌ی این‌ها: این تعداد صریحاً بخشیده شود.
  *
- * قاعده‌ی تراز زنده حساب می‌شود: وقتی ارزش کالای ورودی و خروجی برابر
- * نیست، جهت و مبلغِ لازمِ پول پیشنهاد می‌شود — همان قاعده‌ای که سرور با
- * ۴۰۰ اعمال می‌کند.
+ * تصمیم دستِ کارمند است: هیچ قیمت یا بهایی از او خواسته نمی‌شود و هیچ
+ * ترازی بین کالا و پول اجبار نمی‌شود. فقط مبلغِ پول با «تعداد × قیمتِ
+ * ادعا» پیشنهاد می‌شود و قابل تغییر است.
+ *
+ * `quarantineAvailable` (فقط خرید): تعدادِ کالای این ادعا در قرنطینه؛
+ * `null` یعنی نامعلوم.
  */
 export default function ResolutionComposer({
   claim,
@@ -113,6 +45,7 @@ export default function ResolutionComposer({
   onAdd,
   isBusy,
   side,
+  quarantineAvailable = null,
 }) {
   const [composition, setComposition] = useState(() =>
     emptyComposition(remaining),
@@ -140,6 +73,8 @@ export default function ResolutionComposer({
   const claimPrice = Number(claim.unitPrice) || 0;
   const quantity = Number(composition.quantity) || 0;
   const allowQuarantine = side.quarantineSlots.length > 0;
+  // آزادسازی و اسقاط فقط وقتی معنا دارند که کالایی از این ادعا در قرنطینه باشد.
+  const showQuarantine = allowQuarantine && quarantineAvailable !== 0;
 
   const defaultClaimItem = (quantityForItem) => ({
     productId: claim.productId ?? null,
@@ -151,8 +86,6 @@ export default function ResolutionComposer({
     discount: 0,
   });
 
-  const { requiredDirection, requiredAmount } = moneyBalanceOf(composition, claim);
-  const hasTradedGoods = composition.goodsIn.enabled || composition.goodsOut.enabled;
   const direction = moneyDirectionOf(composition);
   const activeMoneySlotName =
     direction === MONEY_DIRECTIONS.RECEIVE
@@ -162,11 +95,10 @@ export default function ResolutionComposer({
         : null;
   const activeMoney = activeMoneySlotName ? composition[activeMoneySlotName] : null;
 
-  // مبلغِ پیش‌فرض: وقتی کالا معامله می‌شود همان ترازِ لازم است، وگرنه
-  // ارزشِ همین تعداد از ادعا (بازپرداختِ بدون جابه‌جایی کالا).
-  const defaultMoneyAmount = hasTradedGoods ? requiredAmount : quantity * claimPrice;
+  // فقط پیشنهاد: وقتی کاربر جهتِ پول را باز می‌کند، مبلغ با همین پر می‌شود
+  // و تا وقتی دستی عوضش نکرده با تعداد همگام می‌ماند.
+  const defaultMoneyAmount = suggestedMoneyAmount(composition, claim);
 
-  // مبلغ با تعداد و قیمت همگام می‌ماند تا کاربر دستی تغییرش نداده باشد.
   useSyncedComputedValue(
     defaultMoneyAmount,
     (value) => patchSlot(activeMoneySlotName, { amount: String(value) }),
@@ -187,25 +119,6 @@ export default function ResolutionComposer({
       moneyParts.length === 1,
   );
 
-  // وقتی ترازِ کالا جهتِ پول را اجبار می‌کند، همان جهت خودکار باز می‌شود
-  // — کاربر نباید برای یک قاعده‌ی حسابداری دنبال دکمه بگردد.
-  const applyRequiredMoney = useCallback(
-    (required) => {
-      if (required === MONEY_DIRECTIONS.NONE) return;
-      setComposition((prev) => {
-        const current = moneyDirectionOf(prev);
-        if (current === required) return prev;
-        const { requiredAmount: amount } = moneyBalanceOf(prev, claim);
-        const slot = { ...emptyMoneyEffect(), enabled: true, amount: String(amount) };
-        return required === MONEY_DIRECTIONS.RECEIVE
-          ? { ...prev, moneyIn: slot, moneyOut: emptyMoneyEffect() }
-          : { ...prev, moneyIn: emptyMoneyEffect(), moneyOut: slot };
-      });
-    },
-    [claim],
-  );
-  useSyncedComputedValue(requiredDirection, applyRequiredMoney, !composition.writeOff);
-
   const previewEffects = useMemo(
     () => expandComposition(composition, claim),
     [composition, claim],
@@ -216,14 +129,9 @@ export default function ResolutionComposer({
       validateComposition(composition, claim, {
         remainingQuantity: remaining,
         allowQuarantine,
+        quarantineAvailable,
       }),
-    [composition, claim, remaining, allowQuarantine],
-  );
-
-  // نمایش داده می‌شوند ولی ثبت را قفل نمی‌کنند.
-  const warnings = useMemo(
-    () => compositionWarnings(composition, claim),
-    [composition, claim],
+    [composition, claim, remaining, allowQuarantine, quarantineAvailable],
   );
 
   const handleSubmit = () => {
@@ -257,7 +165,7 @@ export default function ResolutionComposer({
 
       {!composition.writeOff && (
         <>
-          {side.goodsSlots.map(({ slot, label, hint, priceLabel, allowPicker }) => (
+          {side.goodsSlots.map(({ slot, label, hint, allowPicker }) => (
             <div key={slot} className="space-y-2">
               <label className="flex items-start gap-2 cursor-pointer">
                 <Checkbox
@@ -265,10 +173,6 @@ export default function ResolutionComposer({
                   onCheckedChange={(checked) =>
                     patchSlot(slot, {
                       enabled: checked === true,
-                      unitPrice:
-                        composition[slot].unitPrice === ""
-                          ? String(claimPrice)
-                          : composition[slot].unitPrice,
                       items:
                         checked === true
                           ? allowPicker && composition[slot].items.length === 0
@@ -289,94 +193,33 @@ export default function ResolutionComposer({
                 </span>
               </label>
 
-              {composition[slot].enabled &&
-                (allowPicker ? (
-                  // قیمتِ هر قلم در جدولِ انتخابگر ویرایش می‌شود.
-                  <GoodsItemsPicker
-                    items={composition[slot].items}
-                    onItemsChange={(items) => patchSlot(slot, { items })}
-                  />
-                ) : (
-                  <div className="space-y-1 pr-6">
-                    <Label className="text-[11px] text-muted-foreground">
-                      {priceLabel} (ریال)
-                    </Label>
-                    <PriceInput
-                      min={0}
-                      value={priceValue(composition[slot].unitPrice)}
-                      onValueChange={(next) =>
-                        patchSlot(slot, { unitPrice: next ?? "" })
-                      }
-                      placeholder="صفر هم مجاز است"
-                      className="h-8 text-xs"
-                    />
-                  </div>
-                ))}
+              {composition[slot].enabled && allowPicker && (
+                <GoodsItemsPicker
+                  items={composition[slot].items}
+                  onItemsChange={(items) => patchSlot(slot, { items })}
+                />
+              )}
             </div>
           ))}
 
-          {side.quarantineSlots.map(({ slot, label, hint, costLabel }) => (
-            <div key={slot} className="space-y-2">
-              <label className="flex items-start gap-2 cursor-pointer">
+          {showQuarantine &&
+            side.quarantineSlots.map(({ slot, label, hint }) => (
+              <label key={slot} className="flex items-start gap-2 cursor-pointer">
                 <Checkbox
                   checked={composition[slot].enabled}
-                  onCheckedChange={(checked) =>
-                    patchSlot(slot, {
-                      enabled: checked === true,
-                      unitCost:
-                        composition[slot].unitCost === ""
-                          ? String(defaultQuarantineUnitCost(claim))
-                          : composition[slot].unitCost,
-                    })
-                  }
+                  onCheckedChange={(checked) => patchSlot(slot, { enabled: checked === true })}
                   className="mt-0.5"
                 />
                 <span className="text-xs text-card-foreground">
                   {label}
                   <span className="block text-[11px] text-muted-foreground">
                     {fa(quantity)} {claim.unit || "عدد"} از {claim.productName} — {hint}
+                    {quarantineAvailable != null &&
+                      ` (در قرنطینه: ${fa(quarantineAvailable)})`}
                   </span>
                 </span>
               </label>
-
-              {composition[slot].enabled && (
-                <div className="space-y-1 pr-6">
-                  <Label className="text-[11px] text-muted-foreground">
-                    {costLabel} (ریال)
-                  </Label>
-                  <PriceInput
-                    min={0}
-                    value={priceValue(composition[slot].unitCost)}
-                    onValueChange={(next) => patchSlot(slot, { unitCost: next ?? "" })}
-                    placeholder="خالی = میانگین جاری"
-                    className="h-8 text-xs"
-                  />
-                </div>
-              )}
-            </div>
-          ))}
-
-          {hasTradedGoods && (
-            <BalanceBreakdown
-              rows={moneyBalanceBreakdown(composition, claim)}
-              side={side}
-              requiredDirection={requiredDirection}
-              requiredAmount={requiredAmount}
-              activeAmount={
-                activeMoney && direction === requiredDirection
-                  ? moneyAmountOf(activeMoney)
-                  : null
-              }
-              onApply={
-                activeMoney && direction === requiredDirection
-                  ? () =>
-                      patchSlot(activeMoneySlotName, {
-                        amount: String(requiredAmount),
-                      })
-                  : null
-              }
-            />
-          )}
+            ))}
 
           <div className="space-y-1.5">
             <Label className="text-[11px] text-muted-foreground">جابه‌جایی پول</Label>
@@ -436,12 +279,6 @@ export default function ResolutionComposer({
       {errors.length > 0 && (
         <p className="text-[11px] text-destructive px-0.5">{errors[0]}</p>
       )}
-
-      {warnings.map((warning) => (
-        <p key={warning} className="text-[11px] text-amber-700 dark:text-amber-400 px-0.5">
-          {warning}
-        </p>
-      ))}
 
       <Button
         type="button"

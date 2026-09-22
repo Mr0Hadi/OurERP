@@ -45,7 +45,10 @@ import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentS
 import ReceivingReportCard, {
   ReceivingReportLines,
 } from "@/shared/components/returns/ReceivingReport";
-import { claimReceivingReport } from "@/shared/domain/returns/receivingReport";
+import {
+  claimQuarantinedQuantity,
+  claimReceivingReport,
+} from "@/shared/domain/returns/receivingReport";
 
 /**
  * جزئیات یک مرجوعی — یک ستون، به ترتیبِ کاری که کاربر انجام می‌دهد:
@@ -136,6 +139,7 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
         renderClaimReport={(claim) => (
           <ReceivingReportLines {...claimReceivingReport(sale, claim)} />
         )}
+        quarantineOf={(claim) => claimQuarantinedQuantity(sale, claim)}
         isBusy={isBusy}
         onAddResolution={(claim, composition) =>
           addResolutionMutation.mutate({ claim, composition })

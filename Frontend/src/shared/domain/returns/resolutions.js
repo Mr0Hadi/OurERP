@@ -90,18 +90,18 @@ export function moneyAmountOf(money) {
 // ─── ترکیب خالی ─────────────────────────────────────────────────────────────
 
 /**
- * اسلاتِ کالای معامله‌شده. `unitPrice` قیمتِ کالای پیش‌فرض (همان کالای
- * ادعا) است وقتی کاربر کالای مشخصی انتخاب نکرده؛ اقلامِ انتخاب‌شده قیمتِ
- * خودشان را دارند. رشته‌ی خالی یعنی «هنوز وارد نشده» — که با صفرِ صریح
- * فرق دارد، چون بکند `unitPrice` را روی هر اثر کالایی الزامی می‌داند.
+ * اسلاتِ کالای معامله‌شده: فقط «بله/نه» و، در محوری که انتخابگر دارد،
+ * اقلامِ انتخاب‌شده. کارمند قیمت یا بهایی وارد نمی‌کند — پولی که واقعاً
+ * جابه‌جا می‌شود فقط در بخشِ پول تعیین می‌شود (بکند از ۲۰۲۶-۰۹-۱۷ قیمتِ
+ * کالا را نمی‌خواند).
  */
 function emptyGoodsSlot() {
-  return { enabled: false, items: [], unitPrice: "" };
+  return { enabled: false, items: [] };
 }
 
-/** اسلاتِ خروج از قرنطینه — همیشه روی همان کالای ادعا، با `unitCost`. */
+/** اسلاتِ خروج از قرنطینه — همیشه روی همان کالای ادعا. */
 function emptyQuarantineSlot() {
-  return { enabled: false, unitCost: "" };
+  return { enabled: false };
 }
 
 /**
@@ -142,8 +142,12 @@ export function moneyDirectionOf(composition) {
 }
 
 /**
- * بهای پیش‌فرضِ کالایی که از قرنطینه خارج می‌شود — فقط یک *پیشنهاد* برای
- * فرم است و کاربر می‌تواند عوضش کند؛ سرور هیچ‌وقت آن را حدس نمی‌زند.
+ * بهای کالایی که از قرنطینه خارج می‌شود — به کاربر نشان داده نمی‌شود.
+ *
+ * ⚠️ فقط پلِ سازگاری است: بکندِ فعلیِ `main` این عدد را روی آزادسازی،
+ * اسقاط و عودت از قرنطینه می‌خواند. برنچِ `feature/quarantine-unit-cost`
+ * بها را روی خودِ دانه نگه می‌دارد و این فیلد را نادیده می‌گیرد؛ بعد از
+ * ادغامِ آن، این تابع و فرستادنش حذف می‌شوند.
  *
  * کالای معیوبِ سهمِ سفارش پولش داده شده، پس قیمتِ همان قلم؛ مازاد و
  * کالای خارج از سند پولی بابتشان داده نشده، پس صفر.
@@ -158,8 +162,8 @@ const hasValue = (value) => value !== "" && value != null;
 
 /**
  * اقلامِ یک محورِ کالاییِ معامله‌شده. اگر کاربر کالای مشخصی انتخاب نکرده
- * باشد، پیش‌فرض همان کالای ادعا با تعدادِ تصمیم است — با قیمتی که روی
- * اسلات وارد شده.
+ * باشد، پیش‌فرض همان کالای ادعا با تعدادِ تصمیم است. قیمتِ ادعا فقط
+ * به‌عنوان سابقه روی اثر ثبت می‌شود؛ هیچ قاعده‌ای آن را نمی‌خواند.
  */
 function goodsItemsOf(slot, claim, quantity) {
   const picked = (slot?.items || []).filter(
@@ -174,76 +178,19 @@ function goodsItemsOf(slot, claim, quantity) {
       productName: claim.productName ?? "",
       unit: claim.unit ?? "",
       quantity,
-      unitPrice: slot?.unitPrice ?? "",
+      unitPrice: claim.unitPrice ?? null,
     },
   ];
 }
 
-const tradedValueOf = (slot, claim, quantity) =>
-  slot?.enabled
-    ? goodsItemsOf(slot, claim, quantity).reduce(
-        (sum, item) =>
-          sum + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0),
-        0,
-      )
-    : 0;
-
 /**
- * قاعده‌ی ترازِ بکند، زنده در فرم:
- *
- *   تراز = ارزشِ کالای ورودی − ارزشِ کالای خروجی
- *
- * تراز مثبت یعنی ما بدهکاریم و دست‌کم همین مبلغ باید پرداخت شود؛ منفی
- * یعنی طرف حساب بدهکار است و دست‌کم همین مبلغ باید دریافت شود. کف است،
- * نه تطبیق: وجهِ بیشتر یا در جهتِ مخالف هم پذیرفته می‌شود.
+ * مبلغِ پیشنهادیِ پول: ارزشِ همین تعداد از ادعا به قیمتِ ادعا. فقط
+ * پیشنهاد است — کارمند بعد از گفت‌وگو با طرف حساب هر مبلغی را ثبت
+ * می‌کند و هیچ قاعده‌ای آن را با کالا تراز نمی‌کند.
  */
-export function moneyBalanceOf(composition, claim) {
-  if (!composition || composition.writeOff) {
-    return { balance: 0, requiredDirection: MONEY_DIRECTIONS.NONE, requiredAmount: 0 };
-  }
-  const quantity = Number(composition.quantity) || 0;
-  const balance =
-    tradedValueOf(composition.goodsIn, claim, quantity) -
-    tradedValueOf(composition.goodsOut, claim, quantity);
-
-  if (balance > 0) {
-    return { balance, requiredDirection: MONEY_DIRECTIONS.PAY, requiredAmount: balance };
-  }
-  if (balance < 0) {
-    return {
-      balance,
-      requiredDirection: MONEY_DIRECTIONS.RECEIVE,
-      requiredAmount: -balance,
-    };
-  }
-  return { balance: 0, requiredDirection: MONEY_DIRECTIONS.NONE, requiredAmount: 0 };
-}
-
-/**
- * همان محاسبه‌ی `moneyBalanceOf`، ردیف‌به‌ردیف — برای اینکه کاربر ببیند
- * مبلغِ پیشنهادیِ پول از کجا آمده. هر ردیف یک قلمِ کالای معامله‌شده است.
- */
-export function moneyBalanceBreakdown(composition, claim) {
-  if (!composition || composition.writeOff) return [];
-  const quantity = Number(composition.quantity) || 0;
-  const rowsOf = (slot, direction, sign) =>
-    slot?.enabled
-      ? goodsItemsOf(slot, claim, quantity).map((item) => {
-          const itemQuantity = Number(item.quantity) || 0;
-          const unitPrice = Number(item.unitPrice) || 0;
-          return {
-            direction,
-            productName: item.productName,
-            quantity: itemQuantity,
-            unitPrice,
-            value: sign * itemQuantity * unitPrice,
-          };
-        })
-      : [];
-  return [
-    ...rowsOf(composition.goodsIn, GOODS_IN, 1),
-    ...rowsOf(composition.goodsOut, GOODS_OUT, -1),
-  ];
+export function suggestedMoneyAmount(composition, claim) {
+  const quantity = Number(composition?.quantity) || 0;
+  return quantity * (Number(claim?.unitPrice) || 0);
 }
 
 /** ترکیب را به فهرست اثرهای پایه باز می‌کند — فقط برای پیش‌نمایش. */
@@ -282,7 +229,6 @@ export function expandComposition(composition, claim) {
         productCode: claim.productCode,
         productName: claim.productName,
         unit: claim.unit,
-        unitCost: hasValue(slot.unitCost) ? Number(slot.unitCost) : null,
         note,
       }),
     );
@@ -327,12 +273,15 @@ export function expandComposition(composition, claim) {
  *  ۲. اسلاتِ کالا در فرم شیء است (`{enabled, items}`) و در دستور آرایه.
  *  ۳. پیش‌فرضِ «همان کالای ادعا» همین‌جا باز می‌شود: بکند روی آرایه‌ی
  *     خالی هیچ اثری نمی‌سازد.
- *  ۴. `unitPrice` روی هر اثر کالایی فرستاده می‌شود — نفرستادنش ۴۰۰ است.
- *     `unitCost` روی کالای معامله‌شده عمداً فرستاده نمی‌شود: فرانت بهای
- *     داخلی را نمی‌داند و سرور در نبودنش میانگینِ جاری را می‌گذارد.
+ *  ۴. `unitPrice` فقط سابقه است (قیمتِ ادعا برای همان کالا، یا قیمتی که
+ *     در انتخابگر مانده) و نبودنش مجاز است.
  *  ۵. بخشش با هیچ اثری همراه نمی‌شود.
+ *
+ * `quarantineCost` (فقط مرجوعی خرید): پلِ سازگاری با بکندِ فعلیِ `main` —
+ * بهای خروج از قرنطینه را بی‌صدا از `defaultQuarantineUnitCost` می‌فرستد.
+ * بعد از ادغامِ `feature/quarantine-unit-cost` حذف شود.
  */
-export function toApiComposition(composition, claim) {
+export function toApiComposition(composition, claim, { quarantineCost = false } = {}) {
   if (!composition) return null;
 
   const quantity = Number(composition.quantity) || 0;
@@ -342,15 +291,23 @@ export function toApiComposition(composition, claim) {
     return { quantity, note, writeOff: true };
   }
 
-  const goodsOf = (slot) => {
+  const heldCost = quarantineCost ? defaultQuarantineUnitCost(claim) : undefined;
+
+  const goodsOf = (slot, { fromQuarantine = false } = {}) => {
     if (!slot?.enabled) return undefined;
     return goodsItemsOf(slot, claim, quantity)
       .filter((item) => (Number(item.quantity) || 0) > 0)
-      .map((item) => ({
-        quantity: Number(item.quantity) || 0,
-        productId: item.productId ?? claim?.productId ?? null,
-        unitPrice: Number(item.unitPrice) || 0,
-      }));
+      .map((item) => {
+        const productId = item.productId ?? claim?.productId ?? null;
+        return {
+          quantity: Number(item.quantity) || 0,
+          productId,
+          unitPrice: hasValue(item.unitPrice) ? Number(item.unitPrice) : undefined,
+          // فقط وقتی عودت از قرنطینه باشد خوانده می‌شود؛ از قفسه نادیده گرفته می‌شود.
+          unitCost:
+            fromQuarantine && productId === claim?.productId ? heldCost : undefined,
+        };
+      });
   };
 
   const quarantineOf = (slot) => {
@@ -359,8 +316,7 @@ export function toApiComposition(composition, claim) {
       {
         quantity,
         productId: claim?.productId ?? null,
-        // صفرِ صریح با نفرستادن فرق دارد: نفرستادن یعنی میانگینِ جاری.
-        unitCost: hasValue(slot.unitCost) ? Number(slot.unitCost) : undefined,
+        unitCost: heldCost,
       },
     ];
   };
@@ -391,7 +347,7 @@ export function toApiComposition(composition, claim) {
     quantity,
     note,
     goodsIn: goodsOf(composition.goodsIn),
-    goodsOut: goodsOf(composition.goodsOut),
+    goodsOut: goodsOf(composition.goodsOut, { fromQuarantine: quarantineCost }),
     goodsRelease: quarantineOf(composition.goodsRelease),
     goodsScrap: quarantineOf(composition.goodsScrap),
     moneyIn: moneyOf(composition.moneyIn),
@@ -401,19 +357,19 @@ export function toApiComposition(composition, claim) {
 
 // ─── اعتبارسنجی ─────────────────────────────────────────────────────────────
 
-const formatRial = (value) => `${(Number(value) || 0).toLocaleString("fa-IR")} ریال`;
-
 /**
  * فهرست خطاها را برمی‌گرداند (خالی یعنی معتبر) تا فرم و لایه‌ی داده از یک
- * منبع بخوانند.
+ * منبع بخوانند. فقط شکلِ تصمیم را می‌سنجد، نه «درستیِ» توافق: هیچ قیمت یا
+ * ترازی الزامی نیست.
  *
  * `allowQuarantine` فقط در مرجوعی خرید روشن است — سرور روی مرجوعی فروش
- * آزادسازی و اسقاط را رد می‌کند.
+ * آزادسازی و اسقاط را رد می‌کند. `quarantineAvailable` تعدادِ کالای همین
+ * ادعا در قرنطینه است (`null` یعنی نامعلوم، پس سنجیده نمی‌شود).
  */
 export function validateComposition(
   composition,
   claim,
-  { remainingQuantity, allowQuarantine = false } = {},
+  { remainingQuantity, allowQuarantine = false, quarantineAvailable = null } = {},
 ) {
   const errors = [];
   if (!composition) return ["تصمیمی وارد نشده است"];
@@ -473,13 +429,10 @@ export function validateComposition(
     }
   }
 
-  const missingPrice = [composition.goodsIn, composition.goodsOut].some(
-    (slot) =>
-      slot?.enabled &&
-      goodsItemsOf(slot, claim, quantity).some((item) => !hasValue(item.unitPrice)),
-  );
-  if (missingPrice) {
-    errors.push("قیمت واحدِ هر کالا را وارد کنید (صفر هم مجاز است)");
+  if (hasQuarantine && quarantineAvailable != null && quantity > quarantineAvailable) {
+    errors.push(
+      `برای این ادعا فقط ${quarantineAvailable.toLocaleString("fa-IR")} عدد کالا در قرنطینه است`,
+    );
   }
 
   if (activeMoney) {
@@ -499,40 +452,6 @@ export function validateComposition(
   }
 
   return errors;
-}
-
-/**
- * هشدارهایی که نشان داده می‌شوند ولی جلوی ثبت را نمی‌گیرند.
- *
- * ترازِ کالا و پول: اگر پولِ این تصمیم از مبلغِ محاسبه‌شده کمتر باشد (یا
- * در جهتِ دیگر باشد)، کاربر آگاه می‌شود ولی تصمیم با همان مقدار فرستاده
- * می‌شود؛ حرفِ آخر را سرور می‌زند.
- */
-export function compositionWarnings(composition, claim) {
-  const warnings = [];
-  if (!composition || composition.writeOff) return warnings;
-
-  const direction = moneyDirectionOf(composition);
-  const activeMoney =
-    direction === MONEY_DIRECTIONS.RECEIVE
-      ? composition.moneyIn
-      : direction === MONEY_DIRECTIONS.PAY
-        ? composition.moneyOut
-        : null;
-
-  const { requiredDirection, requiredAmount } = moneyBalanceOf(composition, claim);
-  if (requiredAmount > 0) {
-    const covered =
-      direction === requiredDirection && moneyAmountOf(activeMoney) >= requiredAmount;
-    if (!covered) {
-      warnings.push(
-        requiredDirection === MONEY_DIRECTIONS.PAY
-          ? `ارزش کالای ورودی ${formatRial(requiredAmount)} بیشتر از کالای خروجی است؛ دست‌کم همین مبلغ باید پرداخت شود`
-          : `ارزش کالای خروجی ${formatRial(requiredAmount)} بیشتر از کالای ورودی است؛ دست‌کم همین مبلغ باید دریافت شود`,
-      );
-    }
-  }
-  return warnings;
 }
 
 // ─── محاسبات روی ادعا و مرجوعی ──────────────────────────────────────────────

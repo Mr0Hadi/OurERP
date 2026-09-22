@@ -35,7 +35,6 @@ export const SIDE_CONFIG = {
         direction: EFFECT_DIRECTIONS.GOODS_IN,
         label: "کالا از مشتری پس گرفته شود",
         hint: "کالای برگشتی وارد انبار می‌شود",
-        priceLabel: "قیمت هر عدد در این معامله",
         allowPicker: false,
       },
       {
@@ -43,7 +42,6 @@ export const SIDE_CONFIG = {
         direction: EFFECT_DIRECTIONS.GOODS_OUT,
         label: "کالای جایگزین برای مشتری ارسال شود",
         hint: "می‌تواند همان کالا باشد یا کالای دیگری، با هر تعدادی",
-        priceLabel: "قیمت هر عدد در این معامله",
         allowPicker: true,
       },
     ],
@@ -92,7 +90,6 @@ export const SIDE_CONFIG = {
         direction: EFFECT_DIRECTIONS.GOODS_OUT,
         label: "کالا به تامین‌کننده عودت داده شود",
         hint: "کالا از انبار یا قرنطینه خارج می‌شود",
-        priceLabel: "ارزش هر عدد در این معامله",
         allowPicker: false,
       },
       {
@@ -100,7 +97,6 @@ export const SIDE_CONFIG = {
         direction: EFFECT_DIRECTIONS.GOODS_IN,
         label: "کالای جایگزین از تامین‌کننده دریافت شود",
         hint: "می‌تواند همان کالا باشد یا کالای دیگری، با هر تعدادی",
-        priceLabel: "ارزش هر عدد در این معامله",
         allowPicker: true,
       },
     ],
@@ -111,14 +107,12 @@ export const SIDE_CONFIG = {
         direction: EFFECT_DIRECTIONS.GOODS_RELEASE,
         label: "کالای قرنطینه به موجودی قابل فروش برگردد",
         hint: "نگه‌داشتنِ کالا — مثلاً با تخفیف یا پرداختِ مازاد",
-        costLabel: "بهای هر عدد برای ما (ورود به موجودی)",
       },
       {
         slot: "goodsScrap",
         direction: EFFECT_DIRECTIONS.GOODS_SCRAP,
         label: "کالای قرنطینه اسقاط شود",
         hint: "کالا از چرخه خارج می‌شود و به‌اندازه‌ی بهایش زیان ثبت می‌شود",
-        costLabel: "بهای هر عدد برای ما (مبلغ زیان)",
       },
     ],
 
