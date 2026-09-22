@@ -44,9 +44,11 @@ namespace Application.Features.Report.Queries
                 .ToListAsync(cancellationToken);
 
             // Goods received = what entered the sellable pool plus paid-for goods that went straight to quarantine (defective on
-            // the line): both were bought. Excess and unlisted goods were not paid for and write no row.
+            // the line): both were bought. Excess and unlisted goods were not paid for and write no row - until they are bought
+            // through AcceptPurchaseExcess, which adds them to the order at the line's net price (pool in, off-pool out, so the
+            // sum below is exactly what the supplier is owed for them).
             var ledgerRows = await _context.InventoryCostLedgerEntries
-                .Where(x => (x.EventType == InventoryCostEventTypeEnum.PURCHASE_RECEIVED || x.EventType == InventoryCostEventTypeEnum.PURCHASE_RECEIVED_QUARANTINED) && x.OccurredAt >= fromDate && x.OccurredAt <= toDate)
+                .Where(x => (x.EventType == InventoryCostEventTypeEnum.PURCHASE_RECEIVED || x.EventType == InventoryCostEventTypeEnum.PURCHASE_RECEIVED_QUARANTINED || x.EventType == InventoryCostEventTypeEnum.PURCHASE_EXCESS_ACCEPTED) && x.OccurredAt >= fromDate && x.OccurredAt <= toDate)
                 .Select(x => new { x.OccurredAt, InventoryValueDelta = x.InventoryValueDelta + x.OffPoolValueDelta })
                 .ToListAsync(cancellationToken);
 

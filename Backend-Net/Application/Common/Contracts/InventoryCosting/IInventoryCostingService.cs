@@ -60,6 +60,10 @@ namespace Application.Common.Contracts.InventoryCosting
         /// (null: running average, else Product.PurchasePrice). Returns the unit cost used - the units' QuarantineCost.</summary>
         Task<decimal> RecordPurchaseReturnReplacementQuarantinedAsync(Product product, int quantity, ulong? unitCost, int? purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken);
 
+        /// <summary>AcceptPurchaseExcess: <paramref name="quantity"/> quarantined units bought after all. They enter the pool at the
+        /// line's net price and <paramref name="heldValue"/> (the sum of their QuarantineCost) leaves the off-pool balance.</summary>
+        Task RecordPurchaseExcessAcceptedAsync(Product product, int quantity, ulong unitPrice, int discountPercent, decimal heldValue, int purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken);
+
         /// <summary>ShipSaleCommand. Consumes at the current running average (AVCO); revenue is
         /// unitPrice * (100-discountPercent)/100 * quantity.</summary>
         Task RecordSaleShipmentAsync(Product product, int quantity, ulong unitPrice, int discountPercent, int saleItemId, DateTime occurredAt, CancellationToken cancellationToken);

@@ -40,6 +40,15 @@ namespace Application.Features.PurchaseReturn.Commands
             RuleFor(x => x.Composition).Must(c => !(c.WriteOff && c.HasAnyEffect()))
                 .WithMessage("بخشش (writeOff) یعنی بستن بخشی از ادعا بدون هیچ اثر؛ همراه با اثر مجاز نیست.");
 
+            // Releasing quarantined goods puts them in stock at the value each unit already carries - 0 for excess and unlisted
+            // goods, which is right only when they really are free. Paying for them in the same breath says they are not: the
+            // money would land in purchase spend while the goods entered the pool at 0, so the next sale of them would be booked
+            // as pure profit. Buying them belongs on the order (AcceptPurchaseExcess), where they enter at the price we pay.
+            // A shape rule about one request, deliberately not an inference over history: a release and a later, separate
+            // MONEY_OUT are still accepted, because nothing in the data says that money was for those goods.
+            RuleFor(x => x.Composition).Must(c => (c.GoodsRelease?.Count ?? 0) == 0 || c.MoneyOut == null)
+                .WithMessage("آزادسازی از قرنطینه فقط برای کالایی است که رایگان نزد ما می‌ماند. اگر بابت این کالا به تامین‌کننده پول می‌پردازید، آن را از صفحه‌ی «دریافت کالا» به سفارش اضافه کنید تا با قیمت خودش وارد انبار شود.");
+
             RuleForEach(x => x.Composition.GoodsRelease).ChildRules(goods =>
             {
                 goods.RuleFor(g => g.Quantity).GreaterThan(0).WithMessage("مقدار آزادسازی باید از صفر بیشتر باشد.");

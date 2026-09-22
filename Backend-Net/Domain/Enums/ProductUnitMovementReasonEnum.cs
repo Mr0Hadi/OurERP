@@ -43,5 +43,8 @@ namespace Domain.Enums
 
         [Description("اسقاط از موجودی")]
         STOCK_SCRAPPED = 12,
+
+        [Description("پذیرش مازاد در خرید")]
+        PURCHASE_EXCESS_ACCEPTED = 13,
     }
 }

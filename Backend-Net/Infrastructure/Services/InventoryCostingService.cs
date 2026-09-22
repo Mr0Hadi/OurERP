@@ -77,6 +77,13 @@ namespace Infrastructure.Services
             return cost;
         }
 
+        public async Task RecordPurchaseExcessAcceptedAsync(Product product, int quantity, ulong unitPrice, int discountPercent, decimal heldValue, int purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken)
+        {
+            var netUnitCost = NetUnitAmount(unitPrice, discountPercent);
+            var entry = await AddEntryAsync(product, quantity, netUnitCost, 0m, InventoryCostEventTypeEnum.PURCHASE_EXCESS_ACCEPTED, nameof(PurchaseItem), purchaseItemId, occurredAt, cancellationToken);
+            entry.OffPoolValueDelta = -heldValue;
+        }
+
         /// <summary>The per-unit figure shown on a ledger row whose units may have carried different costs.</summary>
         private static decimal PerUnit(decimal value, int quantity) => quantity > 0 ? value / quantity : 0m;
 

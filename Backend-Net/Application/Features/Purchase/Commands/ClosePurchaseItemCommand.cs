@@ -52,6 +52,12 @@ namespace Application.Features.Purchase.Commands
             if (purchase.Status == PurchaseStatusEnum.CANCELLED)
                 throw new ValidationCustomException("قلمِ خرید لغوشده قابل بستن نیست.");
 
+            // Short close ends a delivery that has started. Before anything arrived there is no delivery to end: the order itself
+            // is still open to change (UpdatePurchase) or to cancel. Without this, closing every line of a PROFORMA/PENDING
+            // purchase made it RECEIVED with nothing received and no invoice number ever required.
+            if (!purchase.Items.Any(i => i.ReceivedQuantity > 0))
+                throw new ValidationCustomException("هنوز هیچ کالایی از این خرید دریافت نشده است؛ به‌جای بستنِ قلم، سفارش را ویرایش یا لغو کنید.");
+
             if (item.ShortClosedQuantity > 0)
                 throw new ValidationCustomException("این قلم قبلاً بسته شده است.");
 

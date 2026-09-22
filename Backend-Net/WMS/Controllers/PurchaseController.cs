@@ -60,6 +60,12 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
+        [HttpPost("AcceptPurchaseExcess")]
+        public async Task<ActionResult<ResponseDto>> AcceptPurchaseExcess([FromBody] AcceptPurchaseExcessCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
         [HttpPost("ReopenPurchaseItem")]
         public async Task<ActionResult<ResponseDto>> ReopenPurchaseItem([FromBody] ReopenPurchaseItemCommand request)
         {

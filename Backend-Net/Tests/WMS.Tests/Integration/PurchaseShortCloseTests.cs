@@ -85,8 +85,30 @@ namespace WMS.Tests.Integration
             await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(new ClosePurchaseItemCommand { PurchaseItemId = full.Item.Id }, CancellationToken.None));
 
             var partial = Seed.PendingPurchase(scope.Context, orderedQuantity: 3);
+            await ReceiveAsync(scope, partial, 1);
             await handler.Handle(new ClosePurchaseItemCommand { PurchaseItemId = partial.Item.Id }, CancellationToken.None);
             await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(new ClosePurchaseItemCommand { PurchaseItemId = partial.Item.Id }, CancellationToken.None));
+        }
+
+        [Theory]
+        [InlineData(PurchaseStatusEnum.PROFORMA)]
+        [InlineData(PurchaseStatusEnum.PENDING)]
+        [InlineData(PurchaseStatusEnum.SHIPPED)]
+        public async Task Close_BeforeAnythingWasReceived_IsRefused_AndThePurchaseIsUntouched(PurchaseStatusEnum status)
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var s = Seed.PendingPurchase(scope.Context, orderedQuantity: 10);
+            s.Purchase.Status = status;
+            scope.Context.SaveChanges();
+
+            await Assert.ThrowsAsync<ValidationCustomException>(() =>
+                new ClosePurchaseItemCommandHandler(scope.Db, scope.PurchaseReturnCalculation, scope.UnitOfWork)
+                    .Handle(new ClosePurchaseItemCommand { PurchaseItemId = s.Item.Id }, CancellationToken.None));
+
+            using var verify = db.NewContext();
+            Assert.Equal(0, verify.PurchaseItems.Single(x => x.Id == s.Item.Id).ShortClosedQuantity);
+            Assert.Equal(status, verify.Purchases.Single().Status);
         }
     }
 }

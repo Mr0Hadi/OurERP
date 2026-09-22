@@ -176,6 +176,14 @@ namespace Infrastructure.Services
         public Task<List<Domain.Entities.ProductUnit>> ScrapFromQuarantineAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken) =>
             MoveSelectedAsync(product, count, RequireQuarantine(selection), explicitBarcodes, ProductUnitStatusEnum.SCRAPPED, movement, cancellationToken);
 
+        public Task<List<Domain.Entities.ProductUnit>> AcceptExcessAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, int purchaseItemId, UnitMovementContext movement, CancellationToken cancellationToken) =>
+            MoveSelectedAsync(product, count, RequireQuarantine(selection), explicitBarcodes, ProductUnitStatusEnum.IN_STOCK, movement, cancellationToken,
+                retag: unit =>
+                {
+                    unit.PurchaseItemId = purchaseItemId;
+                    unit.CustodyReason = UnitCustodyReasonEnum.ON_ORDER;
+                });
+
         public Task<List<Domain.Entities.ProductUnit>> ScrapFromStockAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken) =>
             MoveSelectedAsync(product, count,
                 selection.Status == ProductUnitStatusEnum.IN_STOCK ? selection : throw new InvalidOperationException($"Scrap from stock takes IN_STOCK units only, not {selection.Status}."),
@@ -191,7 +199,7 @@ namespace Infrastructure.Services
         /// or FIFO by serial. The selection is never widened to make up a shortfall - only units of that status, and of that
         /// purchase/line/custody reason when given, are eligible.
         /// </summary>
-        private async Task<List<Domain.Entities.ProductUnit>> MoveSelectedAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, ProductUnitStatusEnum toStatus, UnitMovementContext movement, CancellationToken cancellationToken)
+        private async Task<List<Domain.Entities.ProductUnit>> MoveSelectedAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, ProductUnitStatusEnum toStatus, UnitMovementContext movement, CancellationToken cancellationToken, Action<Domain.Entities.ProductUnit>? retag = null)
         {
             if (count <= 0)
                 return new();
@@ -235,6 +243,8 @@ namespace Infrastructure.Services
             {
                 var from = unit.Status;
                 unit.Status = toStatus;
+                // Before the movement row, so its line snapshot is the one the unit now belongs to.
+                retag?.Invoke(unit);
                 await RecordAsync(unit, from, movement, cancellationToken);
             }
 
