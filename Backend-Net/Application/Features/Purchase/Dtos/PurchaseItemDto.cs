@@ -11,5 +11,9 @@
         public int Discount { get; set; }
         public int ReceivedQuantity { get; set; }
         public int SettledQuantity { get; set; }
+
+        /// <summary>Ordered units the supplier will never deliver (ClosePurchaseItem); 0 while the line is open.</summary>
+        public int ShortClosedQuantity { get; set; }
+        public DateTime? ShortClosedAt { get; set; }
     }
 }

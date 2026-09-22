@@ -31,6 +31,10 @@ namespace Infrastructure.Services
             if (origin.Status is not (ProductUnitStatusEnum.IN_STOCK or ProductUnitStatusEnum.QUARANTINED))
                 throw new InvalidOperationException($"Units can only be minted IN_STOCK or QUARANTINED, not {origin.Status}.");
 
+            // A quarantined unit without a value would leave the quarantine balance unreconcilable on its way out.
+            if (origin.Status == ProductUnitStatusEnum.QUARANTINED && origin.QuarantineCost is null)
+                throw new InvalidOperationException("Units minted QUARANTINED must state their QuarantineCost.");
+
             var nextSerial = await GetNextSerialAsync(product.Id, cancellationToken);
 
             for (var i = 0; i < count; i++)
@@ -48,6 +52,7 @@ namespace Infrastructure.Services
                     PurchaseId = origin.PurchaseId,
                     PurchaseItemId = origin.PurchaseItemId,
                     CustodyReason = origin.CustodyReason,
+                    QuarantineCost = origin.Status == ProductUnitStatusEnum.QUARANTINED ? origin.QuarantineCost : null,
                     CreatedAt = DateTime.Now,
                     IsActive = true
                 };
@@ -162,14 +167,27 @@ namespace Infrastructure.Services
             }
         }
 
-        public Task ReturnToSupplierAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken) =>
+        public Task<List<Domain.Entities.ProductUnit>> ReturnToSupplierAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken) =>
             MoveSelectedAsync(product, count, selection, explicitBarcodes, ProductUnitStatusEnum.RETURNED_TO_SUPPLIER, movement, cancellationToken);
 
-        public Task ReleaseFromQuarantineAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken) =>
+        public Task<List<Domain.Entities.ProductUnit>> ReleaseFromQuarantineAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken) =>
             MoveSelectedAsync(product, count, RequireQuarantine(selection), explicitBarcodes, ProductUnitStatusEnum.IN_STOCK, movement, cancellationToken);
 
-        public Task ScrapFromQuarantineAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken) =>
+        public Task<List<Domain.Entities.ProductUnit>> ScrapFromQuarantineAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken) =>
             MoveSelectedAsync(product, count, RequireQuarantine(selection), explicitBarcodes, ProductUnitStatusEnum.SCRAPPED, movement, cancellationToken);
+
+        public Task<List<Domain.Entities.ProductUnit>> AcceptExcessAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, int purchaseItemId, UnitMovementContext movement, CancellationToken cancellationToken) =>
+            MoveSelectedAsync(product, count, RequireQuarantine(selection), explicitBarcodes, ProductUnitStatusEnum.IN_STOCK, movement, cancellationToken,
+                retag: unit =>
+                {
+                    unit.PurchaseItemId = purchaseItemId;
+                    unit.CustodyReason = UnitCustodyReasonEnum.ON_ORDER;
+                });
+
+        public Task<List<Domain.Entities.ProductUnit>> ScrapFromStockAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken) =>
+            MoveSelectedAsync(product, count,
+                selection.Status == ProductUnitStatusEnum.IN_STOCK ? selection : throw new InvalidOperationException($"Scrap from stock takes IN_STOCK units only, not {selection.Status}."),
+                explicitBarcodes, ProductUnitStatusEnum.SCRAPPED, movement, cancellationToken);
 
         private static UnitSelection RequireQuarantine(UnitSelection selection) =>
             selection.Status == ProductUnitStatusEnum.QUARANTINED
@@ -181,10 +199,10 @@ namespace Infrastructure.Services
         /// or FIFO by serial. The selection is never widened to make up a shortfall - only units of that status, and of that
         /// purchase/line/custody reason when given, are eligible.
         /// </summary>
-        private async Task MoveSelectedAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, ProductUnitStatusEnum toStatus, UnitMovementContext movement, CancellationToken cancellationToken)
+        private async Task<List<Domain.Entities.ProductUnit>> MoveSelectedAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, ProductUnitStatusEnum toStatus, UnitMovementContext movement, CancellationToken cancellationToken, Action<Domain.Entities.ProductUnit>? retag = null)
         {
             if (count <= 0)
-                return;
+                return new();
 
             var filter = FilterFor(product.Id, selection);
             var inQuarantine = selection.Status == ProductUnitStatusEnum.QUARANTINED;
@@ -225,8 +243,12 @@ namespace Infrastructure.Services
             {
                 var from = unit.Status;
                 unit.Status = toStatus;
+                // Before the movement row, so its line snapshot is the one the unit now belongs to.
+                retag?.Invoke(unit);
                 await RecordAsync(unit, from, movement, cancellationToken);
             }
+
+            return units;
         }
 
         private static Expression<Func<Domain.Entities.ProductUnit, bool>> FilterFor(int productId, UnitSelection selection)

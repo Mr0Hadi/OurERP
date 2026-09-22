@@ -40,6 +40,15 @@ namespace Application.Features.PurchaseReturn.Commands
             RuleFor(x => x.Composition).Must(c => !(c.WriteOff && c.HasAnyEffect()))
                 .WithMessage("بخشش (writeOff) یعنی بستن بخشی از ادعا بدون هیچ اثر؛ همراه با اثر مجاز نیست.");
 
+            // Releasing quarantined goods puts them in stock at the value each unit already carries - 0 for excess and unlisted
+            // goods, which is right only when they really are free. Paying for them in the same breath says they are not: the
+            // money would land in purchase spend while the goods entered the pool at 0, so the next sale of them would be booked
+            // as pure profit. Buying them belongs on the order (AcceptPurchaseExcess), where they enter at the price we pay.
+            // A shape rule about one request, deliberately not an inference over history: a release and a later, separate
+            // MONEY_OUT are still accepted, because nothing in the data says that money was for those goods.
+            RuleFor(x => x.Composition).Must(c => (c.GoodsRelease?.Count ?? 0) == 0 || c.MoneyOut == null)
+                .WithMessage("آزادسازی از قرنطینه فقط برای کالایی است که رایگان نزد ما می‌ماند. اگر بابت این کالا به تامین‌کننده پول می‌پردازید، آن را از صفحه‌ی «دریافت کالا» به سفارش اضافه کنید تا با قیمت خودش وارد انبار شود.");
+
             RuleForEach(x => x.Composition.GoodsRelease).ChildRules(goods =>
             {
                 goods.RuleFor(g => g.Quantity).GreaterThan(0).WithMessage("مقدار آزادسازی باید از صفر بیشتر باشد.");
@@ -171,6 +180,8 @@ namespace Application.Features.PurchaseReturn.Commands
                     throw new ValidationCustomException("کالای انتخاب‌شده برای اثر یافت نشد.");
             }
 
+            await EnsureQuarantineCoversAsync(claim, effects, purchaseReturn.PurchaseId, cancellationToken);
+
             // Every check above runs before anything below touches tracked state or the cost ledger,
             // so a refused request leaves the loaded graph exactly as it was read.
             var resolution = new Domain.Entities.PurchaseReturnResolution
@@ -213,6 +224,58 @@ namespace Application.Features.PurchaseReturn.Commands
             res.Message = "تصمیم با موفقیت ثبت شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;
+        }
+
+        /// <summary>
+        /// Release can only take units that are in quarantine for this claim. Checked here, at decision time, rather than left to
+        /// the warehouse: a decision to release goods that are not held used to be accepted and then fail at the goods round,
+        /// leaving the return stuck IN_PROGRESS. Units already promised to other pending releases on any open return of this
+        /// purchase count as taken. Scrap and GOODS_OUT are not checked: both can take units from the shelf or from quarantine,
+        /// and which one is only stated by the warehouse when it executes.
+        /// </summary>
+        private async Task EnsureQuarantineCoversAsync(Domain.Entities.PurchaseReturnClaim claim, List<Domain.Entities.PurchaseReturnEffect> effects, int purchaseId, CancellationToken cancellationToken)
+        {
+            var requested = effects
+                .Where(e => e.Direction == ReturnEffectDirectionEnum.GOODS_RELEASE)
+                .GroupBy(e => e.ProductId!.Value)
+                .ToList();
+
+            if (requested.Count == 0)
+                return;
+
+            var openReturns = await _context.PurchaseReturns
+                .Where(x => x.PurchaseId == purchaseId)
+                .WhereNotDeleted()
+                .WhereOpen()
+                .WithReturnGraph()
+                .ToListAsync(cancellationToken);
+
+            foreach (var group in requested)
+            {
+                var productId = group.Key;
+                var selection = PurchaseReturnQuarantine.For(claim, productId == claim.ProductId, purchaseId);
+
+                var held = await _context.ProductUnits.CountAsync(u =>
+                    u.ProductId == productId
+                    && u.Status == ProductUnitStatusEnum.QUARANTINED
+                    && u.PurchaseId == selection.PurchaseId
+                    && (selection.PurchaseItemId == null || u.PurchaseItemId == selection.PurchaseItemId)
+                    && u.CustodyReason == selection.CustodyReason, cancellationToken);
+
+                var promised = openReturns
+                    .SelectMany(r => r.Claims)
+                    .SelectMany(c => c.Resolutions.SelectMany(res => res.Effects).Select(e => (claim: c, effect: e)))
+                    .Where(x => x.effect.Direction == ReturnEffectDirectionEnum.GOODS_RELEASE
+                        && x.effect.Status == ReturnEffectStatusEnum.PENDING
+                        && x.effect.ProductId == productId
+                        && PurchaseReturnQuarantine.For(x.claim, productId == x.claim.ProductId, purchaseId) == selection)
+                    .Sum(x => x.effect.Quantity - x.effect.AppliedQuantity);
+
+                var available = Math.Max(0, held - promised);
+                if (group.Sum(e => e.Quantity) > available)
+                    throw new ValidationCustomException(
+                        $"برای این ادعا فقط {available} عدد کالا در قرنطینه آزاد است؛ آزادسازی فقط روی کالای قرنطینه ممکن است (کالای روی قفسه همین حالا قابل فروش است).");
+            }
         }
     }
 }

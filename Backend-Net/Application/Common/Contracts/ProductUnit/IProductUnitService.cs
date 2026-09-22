@@ -45,15 +45,25 @@ namespace Application.Common.Contracts.ProductUnit
         /// <summary>
         /// Marks <paramref name="count"/> units matching <paramref name="selection"/> RETURNED_TO_SUPPLIER - the scanned ones, or
         /// FIFO. The selection is the whole rule: a shortfall throws rather than widening it (another line, another purchase,
-        /// shelf stock instead of quarantine).
+        /// shelf stock instead of quarantine). Returns the units moved.
         /// </summary>
-        Task ReturnToSupplierAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken);
+        Task<List<Domain.Entities.ProductUnit>> ReturnToSupplierAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken);
 
-        /// <summary>QUARANTINED units matching <paramref name="selection"/> become IN_STOCK. The caller raises Product.Stock.</summary>
-        Task ReleaseFromQuarantineAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken);
+        /// <summary>QUARANTINED units matching <paramref name="selection"/> become IN_STOCK. The caller raises Product.Stock.
+        /// Returns the units moved, so the caller can book their <c>QuarantineCost</c>.</summary>
+        Task<List<Domain.Entities.ProductUnit>> ReleaseFromQuarantineAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken);
 
-        /// <summary>QUARANTINED units matching <paramref name="selection"/> become SCRAPPED. Product.Stock is untouched.</summary>
-        Task ScrapFromQuarantineAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken);
+        /// <summary>QUARANTINED units matching <paramref name="selection"/> become SCRAPPED. Product.Stock is untouched.
+        /// Returns the units moved, so the caller can book their <c>QuarantineCost</c>.</summary>
+        Task<List<Domain.Entities.ProductUnit>> ScrapFromQuarantineAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken);
+
+        /// <summary>QUARANTINED units matching <paramref name="selection"/> become IN_STOCK and part of the order: custody ON_ORDER on
+        /// <paramref name="purchaseItemId"/>. The caller raises Product.Stock. Returns the units moved (their QuarantineCost is
+        /// what leaves the off-pool balance).</summary>
+        Task<List<Domain.Entities.ProductUnit>> AcceptExcessAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, int purchaseItemId, UnitMovementContext movement, CancellationToken cancellationToken);
+
+        /// <summary>IN_STOCK units matching <paramref name="selection"/> become SCRAPPED. The caller lowers Product.Stock.</summary>
+        Task<List<Domain.Entities.ProductUnit>> ScrapFromStockAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken);
 
         /// <summary>
         /// Reconciles ProductUnit rows to a manually-edited Stock value from UpdateProductCommand:

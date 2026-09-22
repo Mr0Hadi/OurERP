@@ -131,9 +131,14 @@ namespace Application.Features.PurchaseReturn.Commands
                             throw new ValidationCustomException("برای عودت کالا باید مشخص شود دانه‌ها از موجودی (IN_STOCK) برداشته می‌شوند یا از قرنطینه (QUARANTINED).");
                         break;
 
-                    default: // GOODS_RELEASE, GOODS_SCRAP
+                    case ReturnEffectDirectionEnum.GOODS_RELEASE:
                         if (line.Source is not (null or ProductUnitStatusEnum.QUARANTINED))
-                            throw new ValidationCustomException("آزادسازی و اسقاط فقط از قرنطینه انجام می‌شود.");
+                            throw new ValidationCustomException("آزادسازی فقط از قرنطینه انجام می‌شود.");
+                        break;
+
+                    default: // GOODS_SCRAP: from quarantine (the default, as before) or from sellable stock - a defect found after receiving.
+                        if (line.Source is not (null or ProductUnitStatusEnum.QUARANTINED or ProductUnitStatusEnum.IN_STOCK))
+                            throw new ValidationCustomException("اسقاط فقط از قرنطینه (QUARANTINED) یا از موجودی قابل فروش (IN_STOCK) انجام می‌شود.");
                         break;
                 }
 
@@ -175,16 +180,23 @@ namespace Application.Features.PurchaseReturn.Commands
                             throw new ValidationCustomException($"موجودی «{products[productId].Name}» برای این عودت کافی نیست.");
                         projectedStock[productId] -= line.Quantity;
                         break;
+                    case ReturnEffectDirectionEnum.GOODS_SCRAP when line.Source == ProductUnitStatusEnum.IN_STOCK:
+                        if (line.Quantity > projectedStock[productId])
+                            throw new ValidationCustomException($"موجودی «{products[productId].Name}» برای این اسقاط کافی نیست.");
+                        projectedStock[productId] -= line.Quantity;
+                        break;
                 }
             }
 
             // ── Phase 2: apply. ────────────────────────────────────────────────────────────────────
             // One rule per direction, whatever the claim:
             //   GOODS_IN       healthy -> stock + pool at UnitCost; damaged part -> quarantine, value off-pool at UnitCost
-            //   GOODS_OUT      IN_STOCK: stock - and pool out at the average; QUARANTINED: off-pool out at UnitCost
-            //   GOODS_RELEASE  quarantine -> stock + pool at UnitCost, off-pool out
-            //   GOODS_SCRAP    quarantine -> scrapped, off-pool out = reported loss
-            // UnitCost omitted: running average, else Product.PurchasePrice; an explicit 0 stays 0. The only refusals left are
+            //   GOODS_OUT      IN_STOCK: stock - and pool out at the average; QUARANTINED: off-pool out at the units' held value
+            //   GOODS_RELEASE  quarantine -> stock + pool at the units' held value, off-pool out
+            //   GOODS_SCRAP    QUARANTINED (default): scrapped, off-pool out = reported loss at the units' held value;
+            //                  IN_STOCK: stock - and pool out at the average = reported loss (a defect found on the shelf)
+            // GOODS_IN UnitCost omitted: running average, else Product.PurchasePrice. Leaving quarantine never reads a cost from the
+            // decision: each unit carries the value it entered with (ProductUnit.QuarantineCost). The only refusals left are
             // ProductUnitService's own unit-state checks, which throw before SaveChanges.
             var now = request.Date ?? DateTime.Now;
             var supplierId = purchaseReturn.Purchase!.SupplierId;
@@ -223,7 +235,7 @@ namespace Application.Features.PurchaseReturn.Commands
                 // ON_ORDER claim's own product has a line; a different product moved on the same claim does not.
                 var sameProduct = effect.ProductId == claim.ProductId;
                 var unitLine = sameProduct ? claim.OnOrderPurchaseItemId : null;
-                var quarantine = QuarantineFor(claim, sameProduct, purchaseReturn.PurchaseId);
+                var quarantine = PurchaseReturnQuarantine.For(claim, sameProduct, purchaseReturn.PurchaseId);
 
                 UnitMovementContext Movement(ProductUnitMovementReasonEnum reason) =>
                     new(reason, now, DocumentKindEnum.PURCHASE_RETURN, purchaseReturn.Id, SupplierId: supplierId, Note: request.Note);
@@ -243,12 +255,15 @@ namespace Application.Features.PurchaseReturn.Commands
                         if (healthy > 0)
                             await _inventoryCostingService.RecordPurchaseReturnReplacementReceivedAsync(product, healthy, effect.UnitCost, unitLine, now, cancellationToken);
 
-                        // The damaged part is physically here too: held in quarantine under the claim's custody, not dropped.
-                        await _productUnitService.MintAsync(product, damaged,
-                            new UnitOrigin(quarantine.PurchaseId, quarantine.PurchaseItemId, quarantine.CustodyReason, ProductUnitStatusEnum.QUARANTINED),
-                            Movement(ProductUnitMovementReasonEnum.PURCHASE_RETURN_RECEIVED), cancellationToken);
+                        // The damaged part is physically here too: held in quarantine under the claim's custody, not dropped, and
+                        // carrying the value it entered the off-pool balance with.
                         if (damaged > 0)
-                            await _inventoryCostingService.RecordPurchaseReturnReplacementQuarantinedAsync(product, damaged, effect.UnitCost, unitLine, now, cancellationToken);
+                        {
+                            var damagedCost = await _inventoryCostingService.RecordPurchaseReturnReplacementQuarantinedAsync(product, damaged, effect.UnitCost, unitLine, now, cancellationToken);
+                            await _productUnitService.MintAsync(product, damaged,
+                                UnitOrigin.Quarantined(quarantine.PurchaseId, quarantine.PurchaseItemId, quarantine.CustodyReason, damagedCost),
+                                Movement(ProductUnitMovementReasonEnum.PURCHASE_RETURN_RECEIVED), cancellationToken);
+                        }
                         break;
                     }
 
@@ -260,23 +275,36 @@ namespace Application.Features.PurchaseReturn.Commands
                         break;
 
                     case ReturnEffectDirectionEnum.GOODS_OUT:
-                        await _productUnitService.ReturnToSupplierAsync(product, line.Quantity, quarantine, line.ProductUnitBarcodes,
+                    {
+                        var units = await _productUnitService.ReturnToSupplierAsync(product, line.Quantity, quarantine, line.ProductUnitBarcodes,
                             Movement(ProductUnitMovementReasonEnum.PURCHASE_RETURN_SHIPPED), cancellationToken);
-                        await _inventoryCostingService.RecordPurchaseReturnShippedFromQuarantineAsync(product, line.Quantity, effect.UnitCost, claim.Id, now, cancellationToken);
+                        await _inventoryCostingService.RecordPurchaseReturnShippedFromQuarantineAsync(product, line.Quantity, HeldValueOf(units), claim.Id, now, cancellationToken);
                         break;
+                    }
 
                     case ReturnEffectDirectionEnum.GOODS_RELEASE:
+                    {
                         product.Stock += line.Quantity;
-                        await _productUnitService.ReleaseFromQuarantineAsync(product, line.Quantity, quarantine, line.ProductUnitBarcodes,
+                        var units = await _productUnitService.ReleaseFromQuarantineAsync(product, line.Quantity, quarantine, line.ProductUnitBarcodes,
                             Movement(ProductUnitMovementReasonEnum.QUARANTINE_RELEASED), cancellationToken);
-                        await _inventoryCostingService.RecordQuarantineReleasedAsync(product, line.Quantity, effect.UnitCost, claim.Id, now, cancellationToken);
+                        await _inventoryCostingService.RecordQuarantineReleasedAsync(product, line.Quantity, HeldValueOf(units), claim.Id, now, cancellationToken);
+                        break;
+                    }
+
+                    case ReturnEffectDirectionEnum.GOODS_SCRAP when line.Source == ProductUnitStatusEnum.IN_STOCK:
+                        product.Stock -= line.Quantity;
+                        await _productUnitService.ScrapFromStockAsync(product, line.Quantity, UnitSelection.InStock(unitLine), line.ProductUnitBarcodes,
+                            Movement(ProductUnitMovementReasonEnum.STOCK_SCRAPPED), cancellationToken);
+                        await _inventoryCostingService.RecordStockScrappedAsync(product, line.Quantity, claim.Id, now, cancellationToken);
                         break;
 
                     case ReturnEffectDirectionEnum.GOODS_SCRAP:
-                        await _productUnitService.ScrapFromQuarantineAsync(product, line.Quantity, quarantine, line.ProductUnitBarcodes,
+                    {
+                        var units = await _productUnitService.ScrapFromQuarantineAsync(product, line.Quantity, quarantine, line.ProductUnitBarcodes,
                             Movement(ProductUnitMovementReasonEnum.QUARANTINE_SCRAPPED), cancellationToken);
-                        await _inventoryCostingService.RecordQuarantineScrappedAsync(product, line.Quantity, effect.UnitCost, claim.Id, now, cancellationToken);
+                        await _inventoryCostingService.RecordQuarantineScrappedAsync(product, line.Quantity, HeldValueOf(units), claim.Id, now, cancellationToken);
                         break;
+                    }
                 }
 
                 if (effect.AppliedQuantity >= effect.Quantity)
@@ -308,21 +336,8 @@ namespace Application.Features.PurchaseReturn.Commands
             return res;
         }
 
-        /// <summary>
-        /// The quarantined units a claim may move, and the custody a damaged replacement is held under - the same fact the
-        /// off-order claim quota counts (UnitCustodyReasonEnum): an ON_ORDER claim works its line's defective units, an EXCESS
-        /// claim its line's excess, an UNLISTED claim that product's unlisted units on this purchase. Goods of a different product
-        /// than the claim's are held and taken as UNLISTED.
-        /// </summary>
-        private static UnitSelection QuarantineFor(Domain.Entities.PurchaseReturnClaim claim, bool sameProduct, int purchaseId)
-        {
-            if (sameProduct && claim.Scope == ReturnClaimScopeEnum.ON_ORDER)
-                return new(ProductUnitStatusEnum.QUARANTINED, purchaseId, claim.PurchaseItemId, UnitCustodyReasonEnum.ON_ORDER);
-
-            if (sameProduct && claim.OffScopeKind == ReturnOffScopeKindEnum.EXCESS)
-                return new(ProductUnitStatusEnum.QUARANTINED, purchaseId, claim.PurchaseItemId, UnitCustodyReasonEnum.EXCESS);
-
-            return new(ProductUnitStatusEnum.QUARANTINED, purchaseId, null, UnitCustodyReasonEnum.UNLISTED);
-        }
+        /// <summary>What the moved quarantine units carried off-pool. The migration that added QuarantineCost backfilled every unit
+        /// then in quarantine, and MintAsync refuses a quarantined unit without one, so a null here is not expected; it counts as 0.</summary>
+        private static decimal HeldValueOf(List<Domain.Entities.ProductUnit> units) => units.Sum(u => u.QuarantineCost ?? 0m);
     }
 }

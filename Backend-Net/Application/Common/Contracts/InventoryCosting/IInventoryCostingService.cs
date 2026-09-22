@@ -36,21 +36,33 @@ namespace Application.Common.Contracts.InventoryCosting
         Task RecordPurchaseReceiptAsync(Product product, int quantity, ulong unitPrice, int discountPercent, int purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken);
 
         /// <summary>ReceivePurchaseCommand, defective units counted on the line and held in quarantine: paid for at the line's net
-        /// price, but not sellable, so the value goes to OffPoolValueDelta and the running pool/average are untouched.</summary>
-        Task RecordPurchaseReceiptQuarantinedAsync(Product product, int quantity, ulong unitPrice, int discountPercent, int purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken);
+        /// price, but not sellable, so the value goes to OffPoolValueDelta and the running pool/average are untouched.
+        /// Returns that net unit price - the QuarantineCost the caller stamps on the units.</summary>
+        Task<decimal> RecordPurchaseReceiptQuarantinedAsync(Product product, int quantity, ulong unitPrice, int discountPercent, int purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken);
 
-        /// <summary>GOODS_RELEASE: quarantined units enter the pool at <paramref name="unitCost"/> (null: running average, else
-        /// Product.PurchasePrice; an explicit 0 stays 0) and the same value leaves the off-pool balance.</summary>
-        Task RecordQuarantineReleasedAsync(Product product, int quantity, ulong? unitCost, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
+        // The three quarantine exits below take heldValue - the sum of the moved units' ProductUnit.QuarantineCost - and never a
+        // client-supplied cost: a unit leaves quarantine at exactly the value it entered with.
 
-        /// <summary>GOODS_SCRAP: quarantined units are scrapped; the loss (quantity x unit cost, same fallbacks) leaves the off-pool balance.</summary>
-        Task RecordQuarantineScrappedAsync(Product product, int quantity, ulong? unitCost, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
+        /// <summary>GOODS_RELEASE: quarantined units enter the pool at their held value and the same value leaves the off-pool balance.</summary>
+        Task RecordQuarantineReleasedAsync(Product product, int quantity, decimal heldValue, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
 
-        /// <summary>Purchase-return GOODS_OUT from quarantine: nothing leaves the pool; quantity x unit cost leaves the off-pool balance.</summary>
-        Task RecordPurchaseReturnShippedFromQuarantineAsync(Product product, int quantity, ulong? unitCost, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
+        /// <summary>GOODS_SCRAP: quarantined units are scrapped; their held value leaves the off-pool balance as a reported loss.</summary>
+        Task RecordQuarantineScrappedAsync(Product product, int quantity, decimal heldValue, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
 
-        /// <summary>Purchase-return GOODS_IN, the damaged part held in quarantine: quantity x unit cost enters the off-pool balance.</summary>
-        Task RecordPurchaseReturnReplacementQuarantinedAsync(Product product, int quantity, ulong? unitCost, int? purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken);
+        /// <summary>Purchase-return GOODS_SCRAP from sellable stock: leaves the pool at the running average with no revenue
+        /// (STOCK_SCRAPPED); the sale report shows the value as scrap loss.</summary>
+        Task RecordStockScrappedAsync(Product product, int quantity, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
+
+        /// <summary>Purchase-return GOODS_OUT from quarantine: nothing leaves the pool; the units' held value leaves the off-pool balance.</summary>
+        Task RecordPurchaseReturnShippedFromQuarantineAsync(Product product, int quantity, decimal heldValue, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
+
+        /// <summary>Purchase-return GOODS_IN, the damaged part held in quarantine: quantity x unit cost enters the off-pool balance
+        /// (null: running average, else Product.PurchasePrice). Returns the unit cost used - the units' QuarantineCost.</summary>
+        Task<decimal> RecordPurchaseReturnReplacementQuarantinedAsync(Product product, int quantity, ulong? unitCost, int? purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken);
+
+        /// <summary>AcceptPurchaseExcess: <paramref name="quantity"/> quarantined units bought after all. They enter the pool at the
+        /// line's net price and <paramref name="heldValue"/> (the sum of their QuarantineCost) leaves the off-pool balance.</summary>
+        Task RecordPurchaseExcessAcceptedAsync(Product product, int quantity, ulong unitPrice, int discountPercent, decimal heldValue, int purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken);
 
         /// <summary>ShipSaleCommand. Consumes at the current running average (AVCO); revenue is
         /// unitPrice * (100-discountPercent)/100 * quantity.</summary>

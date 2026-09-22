@@ -4,6 +4,7 @@ using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(WMSDbContext))]
-    partial class WMSDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260921170535_quarantine-unit-cost")]
+    partial class quarantineunitcost
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -668,12 +671,6 @@ namespace Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("SettledQuantity")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("ShortClosedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("ShortClosedQuantity")
                         .HasColumnType("int");
 
                     b.Property<decimal>("UnitPrice")

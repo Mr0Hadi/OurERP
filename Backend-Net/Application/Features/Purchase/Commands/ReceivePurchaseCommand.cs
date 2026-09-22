@@ -160,7 +160,8 @@ namespace Application.Features.Purchase.Commands
                 var product = purchaseItem.Product;
                 var defects = reqItem.Defects ?? new();
 
-                var stillOwed = Math.Max(0, purchaseItem.Quantity - purchaseItem.ReceivedQuantity);
+                // A line closed short owes nothing more: whatever still arrives on it is excess.
+                var stillOwed = purchaseItem.StillOwedQuantity;
                 var defective = defects.Sum(d => d.Quantity);
                 var healthy = reqItem.ArrivedQuantity - defective;
 
@@ -177,14 +178,18 @@ namespace Application.Features.Purchase.Commands
                 if (healthyOnOrder > 0)
                     await _inventoryCostingService.RecordPurchaseReceiptAsync(product, healthyOnOrder, purchaseItem.UnitPrice, purchaseItem.Discount, purchaseItem.Id, receivedAt, cancellationToken);
 
-                await _productUnitService.MintAsync(product, defectiveOnOrder,
-                    new UnitOrigin(purchase.Id, purchaseItem.Id, UnitCustodyReasonEnum.ON_ORDER, ProductUnitStatusEnum.QUARANTINED), movement, cancellationToken);
+                // Each quarantined unit carries the value it entered with, so whatever later takes it out of quarantine moves
+                // exactly that value: the paid-for defective share at the line's net price, excess at 0 (never paid for).
                 if (defectiveOnOrder > 0)
-                    await _inventoryCostingService.RecordPurchaseReceiptQuarantinedAsync(product, defectiveOnOrder, purchaseItem.UnitPrice, purchaseItem.Discount, purchaseItem.Id, receivedAt, cancellationToken);
+                {
+                    var netUnitCost = await _inventoryCostingService.RecordPurchaseReceiptQuarantinedAsync(product, defectiveOnOrder, purchaseItem.UnitPrice, purchaseItem.Discount, purchaseItem.Id, receivedAt, cancellationToken);
+                    await _productUnitService.MintAsync(product, defectiveOnOrder,
+                        UnitOrigin.Quarantined(purchase.Id, purchaseItem.Id, UnitCustodyReasonEnum.ON_ORDER, netUnitCost), movement, cancellationToken);
+                }
 
                 // Excess keeps its line id: it is more of this line's product, and an EXCESS claim names the line.
                 await _productUnitService.MintAsync(product, excess,
-                    new UnitOrigin(purchase.Id, purchaseItem.Id, UnitCustodyReasonEnum.EXCESS, ProductUnitStatusEnum.QUARANTINED), movement, cancellationToken);
+                    UnitOrigin.Quarantined(purchase.Id, purchaseItem.Id, UnitCustodyReasonEnum.EXCESS, 0m), movement, cancellationToken);
 
                 // The order line's defective share is filled in the order the defect rows were sent; whatever of a row does
                 // not fit is excess.
@@ -218,7 +223,7 @@ namespace Application.Features.Purchase.Commands
 
                 // Never on a line, never paid for: every unit is held until purchasing decides.
                 await _productUnitService.MintAsync(product, reqItem.ArrivedQuantity,
-                    new UnitOrigin(purchase.Id, null, UnitCustodyReasonEnum.UNLISTED, ProductUnitStatusEnum.QUARANTINED), movement, cancellationToken);
+                    UnitOrigin.Quarantined(purchase.Id, null, UnitCustodyReasonEnum.UNLISTED, 0m), movement, cancellationToken);
 
                 foreach (var defect in defects)
                     await AddDiscrepancyAsync(purchase.Id, null, product.Id, UnitCustodyReasonEnum.UNLISTED, defect.Problem, defect.Quantity, defect.Note, receivedAt, now, cancellationToken);

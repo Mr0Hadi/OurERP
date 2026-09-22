@@ -99,7 +99,7 @@ namespace Infrastructure.Services
         }
 
         // Deliberately decoupled from return activity: whether a purchase's receiving is complete is
-        // a question about ReceivedQuantity vs ordered Quantity alone. A still-open return claim
+        // a question about ReceivedQuantity (plus what was closed short) vs ordered Quantity alone. A still-open return claim
         // against already-received goods does not block RECEIVED - the two concerns are independent.
         public PurchaseStatusEnum RecomputePurchaseStatus(Purchase purchase)
         {
@@ -111,12 +111,13 @@ namespace Infrastructure.Services
             if (purchase.Items.Count == 0)
                 return purchase.Status;
 
-            var fullyReceived = purchase.Items.All(i => i.ReceivedQuantity >= i.Quantity);
+            // A line closed short is done: its missing units are no longer expected.
+            var fullyReceived = purchase.Items.All(i => i.StillOwedQuantity == 0);
 
             if (fullyReceived)
                 return PurchaseStatusEnum.RECEIVED;
 
-            if (purchase.Items.Any(i => i.ReceivedQuantity > 0))
+            if (purchase.Items.Any(i => i.ReceivedQuantity > 0 || i.ShortClosedQuantity > 0))
                 return PurchaseStatusEnum.PARTIALLY_RECEIVED;
 
             return purchase.Status;
@@ -152,7 +153,8 @@ namespace Infrastructure.Services
             AddQuarantine(composition.GoodsRelease, ReturnEffectDirectionEnum.GOODS_RELEASE);
             AddQuarantine(composition.GoodsScrap, ReturnEffectDirectionEnum.GOODS_SCRAP);
 
-            // No UnitPrice: an internal movement has no counterparty and no transaction value.
+            // No UnitPrice: an internal movement has no counterparty and no transaction value. No UnitCost either: the units
+            // leave quarantine at the value each one entered with (ProductUnit.QuarantineCost), whatever the client sends.
             void AddQuarantine(List<QuarantineEffectDto>? items, ReturnEffectDirectionEnum direction)
             {
                 if (items == null)
@@ -165,7 +167,6 @@ namespace Infrastructure.Services
                         Direction = direction,
                         Quantity = item.Quantity,
                         ProductId = item.ProductId,
-                        UnitCost = item.UnitCost,
                         Status = ReturnEffectStatusEnum.PENDING,
                         CreatedAt = now,
                     });

@@ -1260,6 +1260,111 @@ table in §16.
   long-documented pre-existing ones (8 `IX_Users_PersonelCode`/functional-seed collisions, the
   `"***"` object-storage placeholder, and the two LibreOffice-dependent `InvoicePdfTests`).
 
+**Quarantine units carry their own value (2026-09-21).** Supersedes Phase 4's "cost of leaving quarantine is the effect's
+`UnitCost`" in the traceable-warehouse entry above. API: `docs/api-guide.fa.md` §10 and the 2026-09-21 table in §16.
+
+- **Why.** Staff decide *what* happens to returned goods (money in/out, goods in/out/release/scrap); the value of goods in
+  our books is a recorded fact, not a negotiation. Asking the client for it (`QuarantineEffectDto.UnitCost`, and
+  `GoodsEffectDto.UnitCost` on a GOODS_OUT from quarantine) let a typed number corrupt the ledger: the frontend defaulted
+  to the gross line price (off-pool entered at the net price), and a return of excess with no cost sent left at the running
+  average although it had entered at 0 - either way the off-pool balance of the product never returned to zero.
+- **`ProductUnit.QuarantineCost`** (`decimal(18,4)`, same precision as `OffPoolValueDelta`) is stamped when a unit is
+  minted QUARANTINED - `UnitOrigin.Quarantined(..., cost)`; `MintAsync` throws `InvalidOperationException` for a
+  quarantined origin without one. Values: the paid-for defective share of a line = net line price (returned by
+  `RecordPurchaseReceiptQuarantinedAsync`), EXCESS/UNLISTED = 0, a damaged replacement = its entry cost (returned by
+  `RecordPurchaseReturnReplacementQuarantinedAsync`). Null for units never quarantined; kept after leaving as a record.
+- **Leaving quarantine reads only the units.** `ReturnToSupplierAsync`/`ReleaseFromQuarantineAsync`/`ScrapFromQuarantineAsync`
+  now return the units they moved; `ExecuteGoodsRound` sums their `QuarantineCost` (`HeldValueOf`) and passes that
+  `heldValue` to the three ledger methods. `RecordQuarantineReleasedAsync` enters the pool with the exact total
+  (`AddEntryAsync(..., inboundValue:)`), not quantity x average-of-costs, so pool and off-pool move by the same amount.
+  `ExpandComposition` no longer copies `UnitCost` onto release/scrap effects; the DTO field stays only so old payloads bind.
+  `GoodsEffectDto.UnitCost` still applies to GOODS_IN (entry into the pool).
+- **Decision-time check.** `AddClaimResolution` (purchase) refuses release/scrap beyond the claim's quarantined units minus
+  what pending release/scrap effects on open returns of the same purchase already promised. GOODS_OUT is not checked -
+  its source is only stated by the warehouse at execution. The claim -> quarantine selection moved from a private method
+  on `ExecuteGoodsRoundCommand` to `Application/Common/Returns/PurchaseReturnQuarantine.For`, shared by both.
+- Migration `20260921170535_quarantine-unit-cost` adds the column and backfills units currently QUARANTINED (ON_ORDER with
+  a line -> net line price, everything else 0; a damaged replacement under ON_ORDER custody also gets the line price - its
+  entry cost was never stored, and the data is test data). **Generated, not applied.**
+- Tests: 5 new in `Integration/QuarantineExitTests.cs` (net-price stamping with a line discount, release ignoring a sent
+  cost, excess returned with no cost leaves off-pool at 0, scrap of shelf goods refused at decision, double promise
+  refused). Verified against a local `.\SQLEXPRESS` by temporarily pointing `TestDatabase` at it (reverted): the 7
+  quarantine/unit/return-effect classes 66/66; full suite 552/572 - the 20 failures are the 17 functional tests whose
+  `WmsApiFactory` still targets `Server=.`, the 2 LibreOffice `InvoicePdfTests` and 1 `PersonelCode` collision.
+
+**Scrap from sellable stock; closing a purchase line short (2026-09-21).** The two gaps a comparison with SAP, Odoo,
+Business Central and NetSuite turned up (defective goods found on the shelf can be scrapped - Odoo scrap order / SAP 551;
+a PO line the supplier will never finish can be closed - SAP "delivery completed"). API: `docs/api-guide.fa.md` §9, §10,
+§15 and the 2026-09-21 table in §16.
+
+- **`GOODS_SCRAP` accepts `Source = IN_STOCK`** on the purchase goods round (omitted/QUARANTINED behaves as before).
+  Stock is projected and checked like a shelf GOODS_OUT, `ProductUnitService.ScrapFromStockAsync` moves IN_STOCK units
+  (on the claim's line for ON_ORDER) to SCRAPPED with movement `STOCK_SCRAPPED = 12`, and
+  `RecordStockScrappedAsync` writes ledger event `STOCK_SCRAPPED = 21` - an ordinary outbound row at the running average,
+  no revenue. `GetSaleReportQuery` books it as `ScrapLoss` (from `InventoryValueDelta`), never as COGS.
+- **The decision-time quarantine check now covers `GOODS_RELEASE` only**: scrap, like GOODS_OUT, can take shelf or
+  quarantine and the warehouse states which at execution. Promised units are pending releases only.
+- **`PurchaseItem.ShortClosedQuantity` / `ShortClosedAt`** and the `[NotMapped] StillOwedQuantity` (Quantity - Received -
+  ShortClosed), now the single definition read by `ReceivePurchaseCommand` (anything arriving on a closed line is excess),
+  `GetPurchaseReceivingInfoQuery` and `RecomputePurchaseStatus` (a closed line counts as complete; `ShortClosed > 0` alone
+  makes a purchase PARTIALLY_RECEIVED). `ClosePurchaseItemCommand` / `ReopenPurchaseItemCommand`
+  (`POST api/Purchase/ClosePurchaseItem|ReopenPurchaseItem`) are physical only - no stock, unit, ledger or money effect.
+  Close is refused until something has been received on the purchase (any line `ReceivedQuantity > 0`, 2026-09-22):
+  before that the order is still editable/cancellable, and closing every line of a PROFORMA/PENDING purchase used to make it
+  RECEIVED with nothing received and no invoice number ever required.
+- **Open, deliberately not built:** money back for goods that were paid for and never delivered. The ON_ORDER claim quota is
+  `Received - Settled - open`, so there is no claim to hang a MONEY_IN on for never-received units; a design question for the
+  user (a money-only SHORT_SHIPPED claim capped by `ShortClosedQuantity` would fit the effect model), not something to guess.
+- Migration `scrap-from-stock-and-short-close` (two columns on `PurchaseItems`). **Generated, not applied.**
+- Tests: `Integration/PurchaseShortCloseTests.cs` (3) and two in `QuarantineExitTests` (scrap from shelf end to end incl. the
+  sale report; release from shelf refused). Full suite against `.\SQLEXPRESS` (temporary `TestDatabase` redirect, reverted):
+  557/577, the same 20 environmental failures as the previous entry.
+
+**Buying the excess instead of releasing it free (2026-09-22).** `AcceptPurchaseExcessCommand`
+(`POST api/Purchase/AcceptPurchaseExcess`). API: `docs/api-guide.fa.md` §9 and the 2026-09-22 table in §16.
+**No schema change, no migration.**
+
+- **The hole it closes.** Quarantined EXCESS/UNLISTED units carry `QuarantineCost = 0` (nobody paid for them), so the only
+  way out was a return resolution: `GOODS_RELEASE` (enters the pool at 0) plus a `MONEY_OUT` (purchase spend, no inventory
+  value). The money we paid never reached the cost pool - the goods were then sold at a cost of 0 and the sale report
+  overstated profit by exactly what we paid. Releasing at 0 now means what it says: free goods.
+- **Accepting them adds them to the order** (SAP / Odoo over-delivery handling), which is also why no new "cost" field was
+  invented: on a line, the price is the line's; unlisted goods get a **new `PurchaseItem`** at the supplier's invoice price,
+  a document fact like any purchase line, not a number the warehouse guesses. `UnitPrice`/`Discount` sent for a line-based
+  row is a 400. Excess on a line grows both `Quantity` and `ReceivedQuantity`, so `StillOwedQuantity` (and a short close) is
+  unaffected.
+- **Units:** `IProductUnitService.AcceptExcessAsync` = `MoveSelectedAsync(QUARANTINED -> IN_STOCK)` with a new `retag`
+  callback that sets `PurchaseItemId` and `CustodyReason = ON_ORDER` **before** `RecordAsync`, so the movement row's line
+  snapshot is the line the unit now belongs to. Ledger: `PURCHASE_EXCESS_ACCEPTED = 22` (pool in at the net line price,
+  `OffPoolValueDelta = -heldValue`), movement reason `PURCHASE_EXCESS_ACCEPTED = 13`. `GetPurchaseReportQuery` counts it in
+  `TotalReceivedValue` alongside the two `PURCHASE_RECEIVED*` events. `Purchase.TotalAmount` grows by the same amount; the
+  payment itself still goes through `UpdatePurchase`'s `PaymentDetails`/`PaidAmount`.
+- **Quota:** the same one an OFF_ORDER claim is capped by (held units of that custody minus
+  `GetOutstandingOffOrderClaimQuantity`), so a unit is either bought or claimed back, never both.
+- **Transaction, and why:** a new line needs a real `Id` before its units move (every `ProductUnitMovement` snapshots the
+  unit's line as a plain int), so the handler saves the new lines mid-flight. It runs inside
+  `IUnitOfWork.ExecuteInTransactionAsync`, so a refusal on a later row rolls the new lines back too - covered by
+  `ARefusedRequest_MovesNothing`.
+- **`goodsRelease` + `moneyOut` in one resolution is now a 400** (purchase side, `AddClaimResolutionCommandValidator`), and the
+  Persian message names the **screen** («دریافت کالا»), not the endpoint - the person reading it is a warehouse user, to whom
+  `AcceptPurchaseExcess` means nothing. A shape rule about one request, so it does not reach into the effect layer's
+  scenario-free contract: `goodsRelease` + `moneyIn` stays legal (keep defective goods we paid for, take part of the money back)
+  and so does `goodsOut` + `moneyOut`.
+- **Still open** (deliberately): release at 0 today and record a `MONEY_OUT` next week and the ledger is wrong again, because
+  nothing in the data ties that money to those goods - tying them would be exactly the inference the effect layer refuses. The
+  validator catches the common, visible case and teaches the right path at the moment of the decision; the rest is a frontend
+  guidance problem, written up in `docs/return-frontend-migration.fa.md` §5. Quarantined goods cannot be sold
+  (`ConsumeAsync` selects IN_STOCK only), so nothing can be sold at 0 before one of these two paths is taken.
+- **Frontend work, documented not done** (`docs/return-frontend-migration.fa.md` §5, which a later session should pick up):
+  an "accept excess" action on the receiving screen next to `ReceivingQuarantineCard`, and a decision form that offers release
+  only for `quarantinedOnOrderQuantity` and sends excess/unlisted quantity to that screen instead.
+- **Rejected once, recorded so it is not re-proposed:** banning zero-value goods from entering stock outright. It would have
+  closed every door at once, but it also outlaws genuine supplier bonus/sample goods, whose standard treatment is exactly the
+  average dilution that releasing at 0 produces (the user's own call, after seeing what it would remove).
+- Tests: `Tests/WMS.Tests/Integration/PurchaseExcessAcceptedTests.cs` (5) - the line case end to end incl. the running average
+  and the purchase report, the net-price case with a 25% line discount, the new unlisted line, the two quota refusals, and the
+  all-or-nothing rollback. Build clean; the 5 pass.
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
 - ~~`PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK.~~ **Fixed 2026-09-20** - see the installment-sales entry above: both ids are `int`, both relationships are configured explicitly, and the shadow FK is gone.

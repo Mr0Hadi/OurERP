@@ -248,6 +248,79 @@ namespace WMS.Tests.Unit
 
             Assert.False(_sut.Validate(command).IsValid);
         }
+
+        // Releasing quarantined goods values them at what they carry (0 for excess/unlisted); paying for them in the same
+        // resolution says they are not free, and that purchase belongs on the order instead - so the pair is refused and the
+        // message sends staff to the receiving screen. Everything around it stays legal.
+        [Fact]
+        public void ReleaseWithMoneyOut_IsInvalid()
+        {
+            var command = new Application.Features.PurchaseReturn.Commands.AddClaimResolutionCommand
+            {
+                ClaimId = 1,
+                Composition = new EffectCompositionDto
+                {
+                    Quantity = 2,
+                    GoodsRelease = new() { new QuarantineEffectDto { Quantity = 2 } },
+                    MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 2000 },
+                },
+            };
+
+            var result = _sut.Validate(command);
+            Assert.False(result.IsValid);
+            Assert.Contains("دریافت کالا", string.Join(" | ", result.Errors.Select(e => e.ErrorMessage)));
+        }
+
+        [Fact]
+        public void ReleaseAlone_IsValid()
+        {
+            var command = new Application.Features.PurchaseReturn.Commands.AddClaimResolutionCommand
+            {
+                ClaimId = 1,
+                Composition = new EffectCompositionDto { Quantity = 2, GoodsRelease = new() { new QuarantineEffectDto { Quantity = 2 } } },
+            };
+
+            var result = _sut.Validate(command);
+            Assert.True(result.IsValid, string.Join(" | ", result.Errors.Select(e => e.ErrorMessage)));
+        }
+
+        // Keeping defective goods we already paid for and taking part of the money back: the units carry the line's price, so
+        // nothing is mis-valued.
+        [Fact]
+        public void ReleaseWithMoneyIn_IsValid()
+        {
+            var command = new Application.Features.PurchaseReturn.Commands.AddClaimResolutionCommand
+            {
+                ClaimId = 1,
+                Composition = new EffectCompositionDto
+                {
+                    Quantity = 2,
+                    GoodsRelease = new() { new QuarantineEffectDto { Quantity = 2 } },
+                    MoneyIn = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 500 },
+                },
+            };
+
+            var result = _sut.Validate(command);
+            Assert.True(result.IsValid, string.Join(" | ", result.Errors.Select(e => e.ErrorMessage)));
+        }
+
+        [Fact]
+        public void GoodsOutWithMoneyOut_IsValid()
+        {
+            var command = new Application.Features.PurchaseReturn.Commands.AddClaimResolutionCommand
+            {
+                ClaimId = 1,
+                Composition = new EffectCompositionDto
+                {
+                    Quantity = 2,
+                    GoodsOut = new() { new GoodsEffectDto { Quantity = 2, UnitPrice = 1000 } },
+                    MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 2000 },
+                },
+            };
+
+            var result = _sut.Validate(command);
+            Assert.True(result.IsValid, string.Join(" | ", result.Errors.Select(e => e.ErrorMessage)));
+        }
     }
 
     public class CreateSaleReturnCommandValidatorTests

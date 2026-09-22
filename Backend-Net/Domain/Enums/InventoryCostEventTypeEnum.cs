@@ -63,5 +63,14 @@ namespace Domain.Enums
         /// <summary>ShipSaleCommand ExcessQuantity: units sent to the customer beyond the order leave the pool at the running average,
         /// with no revenue. Counted by the sale report as cost, like a replacement shipped to a customer.</summary>
         SALE_SHIPPED_EXCESS = 20,
+
+        /// <summary>A purchase-return GOODS_SCRAP taken from sellable stock (a defect found after receiving): leaves the pool at the
+        /// running average, like any outbound row, with no revenue. The sale report shows it as scrap loss, not cost of goods sold.</summary>
+        STOCK_SCRAPPED = 21,
+
+        /// <summary>AcceptPurchaseExcess: quarantined excess/unlisted units we agreed to buy become part of the order. They enter the
+        /// pool at the line's net price - the price we pay - and whatever value they held off-pool leaves it. The purchase report
+        /// counts the pool value as received purchase value, exactly like PURCHASE_RECEIVED.</summary>
+        PURCHASE_EXCESS_ACCEPTED = 22,
     }
 }

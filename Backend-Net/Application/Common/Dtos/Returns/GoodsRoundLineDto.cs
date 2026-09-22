@@ -23,7 +23,8 @@ namespace Application.Common.Dtos.Returns
 
         /// <summary>
         /// Where the units come from, stated by the warehouse - the server never falls back from one to the other.
-        /// Purchase GOODS_OUT: required, IN_STOCK (shelf stock) or QUARANTINED. GOODS_RELEASE/GOODS_SCRAP: QUARANTINED or omitted.
+        /// Purchase GOODS_OUT: required, IN_STOCK (shelf stock) or QUARANTINED. GOODS_RELEASE: QUARANTINED or omitted.
+        /// GOODS_SCRAP: QUARANTINED or omitted (quarantine), or IN_STOCK - scrapping a defect found on the shelf after receiving.
         /// GOODS_IN: must be omitted. Sale returns: omitted, or IN_STOCK on GOODS_OUT.
         /// </summary>
         public ProductUnitStatusEnum? Source { get; set; }
