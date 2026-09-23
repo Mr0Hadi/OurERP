@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -51,6 +51,7 @@ namespace Infrastructure.Persistence
         public DbSet<PaymentDetail> PaymentDetails => Set<PaymentDetail>();
         public DbSet<SaleInstallmentPlan> SaleInstallmentPlans => Set<SaleInstallmentPlan>();
         public DbSet<SaleInstallment> SaleInstallments => Set<SaleInstallment>();
+        public DbSet<UserPermission> UserPermissions => Set<UserPermission>();
 
         public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken)
         {
@@ -109,6 +110,26 @@ namespace Infrastructure.Persistence
             modelBuilder.Entity<User>()
                 .HasIndex(x => x.PersonelCode)
                 .IsUnique();
+
+            // (UserId, Permission) is the whole key - a permission is either granted or it is
+            // not, so there is no surrogate id and no way to hold the same one twice.
+            modelBuilder.Entity<UserPermission>()
+                .HasKey(x => new { x.UserId, x.Permission });
+
+            modelBuilder.Entity<UserPermission>()
+                .HasOne(x => x.User)
+                .WithMany(x => x.Permissions)
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Restrict, not Cascade: two FKs into Users on one table would otherwise give SQL
+            // Server multiple cascade paths and it refuses the schema. Deleting the granter must
+            // not delete what they granted anyway - users are soft-deleted here regardless.
+            modelBuilder.Entity<UserPermission>()
+                .HasOne(x => x.GrantedBy)
+                .WithMany()
+                .HasForeignKey(x => x.GrantedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
 
 
             modelBuilder.Entity<Team>()

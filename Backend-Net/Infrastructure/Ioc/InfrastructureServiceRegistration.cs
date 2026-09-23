@@ -6,6 +6,7 @@ using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductCode;
 using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.OrgStructure;
+using Application.Common.Contracts.Permissions;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.SaleReturn;
@@ -60,6 +61,7 @@ namespace Infrastructure.Ioc
             services.AddScoped<ITokenService, TokenService>();
 
             services.AddScoped<IOrgRoleService, OrgRoleService>();
+            services.AddScoped<IPermissionService, PermissionService>();
             services.AddScoped<IPurchaseReturnCalculationService, PurchaseReturnCalculationService>();
 
             services.AddScoped<ISaleReturnCalculationService, SaleReturnCalculationService>();

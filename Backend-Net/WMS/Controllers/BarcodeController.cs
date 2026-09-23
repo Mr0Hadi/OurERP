@@ -1,7 +1,9 @@
-using Application.Features.Barcode.Queries;
+﻿using Application.Features.Barcode.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Domain.Enums;
+using WMS.Authorization;
 
 namespace WMS.Controllers
 {
@@ -20,6 +22,7 @@ namespace WMS.Controllers
             _mediator = mediator;
         }
 
+        [HasPermission(PermissionEnum.BarcodePrint)]
         [HttpGet("GetBarcodeSvg")]
         public async Task<IActionResult> GetBarcodeSvg([FromQuery] GetBarcodeSvgQuery request)
         {
@@ -27,6 +30,7 @@ namespace WMS.Controllers
             return File(file.Content, file.ContentType, file.FileName);
         }
 
+        [HasPermission(PermissionEnum.BarcodePrint)]
         [HttpGet("GetProductLabelsPdf")]
         public async Task<IActionResult> GetProductLabelsPdf([FromQuery] GetProductLabelsPdfQuery request)
         {
@@ -34,6 +38,7 @@ namespace WMS.Controllers
             return File(file.Content, file.ContentType, file.FileName);
         }
 
+        [HasPermission(PermissionEnum.BarcodePrint)]
         [HttpGet("GetPurchaseReceivingLabelsPdf")]
         public async Task<IActionResult> GetPurchaseReceivingLabelsPdf([FromQuery] GetPurchaseReceivingLabelsPdfQuery request)
         {

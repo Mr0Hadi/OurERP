@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -187,6 +187,9 @@ namespace WMS.Tests.Functional
 
             context.Users.Add(user);
             context.SaveChanges();
+
+            // Every endpoint these tests call is guarded by a permission now.
+            Seed.GrantAllPermissions(context, user.Id);
         }
 
         private async Task<string> LoginAsSeededAdmin(IServiceScope scope)

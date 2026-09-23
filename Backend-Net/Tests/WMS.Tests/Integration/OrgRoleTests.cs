@@ -1,4 +1,4 @@
-using Application.Features.Department.Commands;
+﻿using Application.Features.Department.Commands;
 using Application.Features.Team.Commands;
 using Application.Features.User.Command;
 using Application.Features.User.Dto;
@@ -341,8 +341,6 @@ namespace WMS.Tests.Integration
             var team = Seed.Team(department);
             var head = Seed.User(department, team, username: "teamhead");
             var member = Seed.User(department, team, username: "member");
-            // The unique IX_Users_PersonelCode index makes Seed.User's fixed 1001 collide.
-            member.PersonelCode = 1002;
             scope.Context.Users.AddRange(head, member);
             scope.Context.SaveChanges();
 

@@ -13,6 +13,7 @@
 3. [کاربران (User)](#3-کاربران-user)
    - [واحدها (Department)](#۳ب-واحدها-department)
    - [تیم‌ها (Team)](#۳ج-تیم‌ها-team)
+   - [دسترسی‌ها (Permission)](#۳د-دسترسی‌ها-permission)
 4. [مشتریان (Customer)](#4-مشتریان-customer)
 5. [تامین‌کنندگان (Supplier)](#5-تامین‌کنندگان-supplier)
 6. [دسته‌بندی محصولات (ProductCategory)](#6-دسته‌بندی-محصولات-productcategory)
@@ -54,6 +55,24 @@ Authorization: Bearer {accessToken}
 ```
 
 `accessToken` از API لاگین (`POST api/Account/Login`) به‌دست می‌آید. توکن‌ها JWT هستند و منقضی می‌شوند؛ برای گرفتن توکن جدید باید از `POST api/Account/RefreshToken` استفاده شود (بخش ۲).
+
+### مجوز دسترسی (Authorization)
+
+از ۲۰۲۶-۰۹-۲۲ هر endpoint به یک **دسترسی (Permission)** مشخص گره خورده است. ورود به سامانه کافی نیست؛ کاربر باید آن دسترسی را در لیست خودش داشته باشد وگرنه پاسخ **۴۰۳** می‌گیرد:
+
+```json
+{ "data": null, "message": "شما دسترسی لازم برای انجام این عملیات را ندارید.", "responseMessageType": "Danger" }
+```
+
+چند نکته که مستقیماً روی فرانت اثر دارد:
+
+- **دسترسی‌ها داخل توکن نیستند.** در هر درخواست از دیتابیس خوانده می‌شوند، پس گرفتن یک دسترسی **بلافاصله** اثر می‌کند و نیازی به لاگین دوباره یا انتظار تا انقضای توکن نیست. در مقابل، فرانت نمی‌تواند لیست دسترسی‌ها را از توکن استخراج کند و باید `GET api/Permission/GetMyPermissions` را صدا بزند.
+- **مخفی‌کردن دکمه فقط UX است.** بررسی واقعی سمت سرور انجام می‌شود؛ هیچ‌وقت به پنهان‌بودن دکمه به‌عنوان محافظت تکیه نکنید.
+- **۴۰۱ در برابر ۴۰۳:** ۴۰۱ یعنی توکن نداری یا نامعتبر است (باید Refresh یا Login کنی)؛ ۴۰۳ یعنی توکنت درست است ولی این کار اجازه ندارد (Refresh کمکی نمی‌کند).
+- کاربر غیرفعال‌شده هیچ دسترسی‌ای ندارد، حتی اگر توکنش هنوز منقضی نشده باشد.
+- تعداد کمی endpoint عمداً بدون دسترسی‌اند چون کار شخصیِ خود کاربرند: `Account/Logout`، `User/GetUserInfo`، `User/UpdateUserInfo`، `User/ChangePassword`، `File/GetImageUrl` و `Permission/GetMyPermissions`. بدون توکن هم فقط `Account/Login`، `Account/RefreshToken`، `Account/ForgetPassword` و `File/GetImage` کار می‌کنند.
+
+جدول کامل «کدام endpoint چه دسترسی‌ای می‌خواهد» در بخش ۳د آمده است.
 
 ### قالب پاسخ موفق (Response Envelope)
 
@@ -404,6 +423,112 @@ Authorization: Bearer {accessToken}
 - `headId`/`deputyId` **وضعیت نهایی** تیم هستند: هرکس نامش بیاید **به این تیم و واحدش منتقل می‌شود** و هر نقش دیگری که داشت (مسئولیت تیم قبلی، مسئولیت/جانشینی واحد) آزاد می‌شود. هرکس حذف شود، عضو ساده‌ی همان تیم باقی می‌ماند.
 - `headId == deputyId` خطای ۴۰۰ است.
 - **تغییر رفتار:** پیش‌تر لازم بود کاربر از قبل عضو همان واحد باشد وگرنه ۴۰۰ می‌گرفتید. حالا انتخاب او خودش انتقال را انجام می‌دهد.
+
+---
+
+## ۳د. دسترسی‌ها (Permission)
+
+کنترلر: `api/Permission`.
+
+دسترسی‌ها **به شخص** داده می‌شوند، نه به واحد یا تیم: لیست دسترسی‌های هر کاربر مجموعه‌ی ردیف‌های خودش است و با تغییر واحد یا تیم هیچ تغییری نمی‌کند. چیزی ارث برده نمی‌شود و جای دومی برای نگاه‌کردن وجود ندارد.
+
+| متد | مسیر | دسترسی لازم | توضیح |
+|---|---|---|---|
+| GET | `api/Permission/GetMyPermissions` | — (فقط ورود) | دسترسی‌های خودِ کاربر واردشده؛ منبع ساخت منو و مخفی‌کردن دکمه‌ها |
+| GET | `api/Permission/GetPermissionList` | `PermissionView` | فهرست کامل دسترسی‌ها، گروه‌بندی‌شده |
+| GET | `api/Permission/GetUserPermissions?userId=12` | `PermissionView` | دسترسی‌های یک کاربر + همان فهرست گروه‌بندی‌شده (برای رندر چک‌باکس‌ها با یک درخواست) |
+| PUT | `api/Permission/UpdateUserPermissions` | `PermissionManage` | جایگزینی کامل لیست |
+
+**`GetMyPermissions`** →
+
+```json
+{
+  "data": {
+    "permissions": [ { "permission": 90, "name": "SaleView", "title": "مشاهده فروش‌ها" } ],
+    "permissionNames": ["SaleView"]
+  },
+  "message": "دسترسی‌های کاربر با موفقیت ارسال شد.",
+  "responseMessageType": "Success"
+}
+```
+
+`permissionNames` برای شرط‌های فرانت راحت‌تر است (`can("SaleShip")`) و نام‌ها برخلاف اعداد هیچ‌وقت عوض نمی‌شوند.
+
+**`GetPermissionList` / بخش `permissionGroups` در `GetUserPermissions`** →
+
+```json
+{
+  "data": {
+    "permissionGroups": [
+      {
+        "group": 5,
+        "groupTitle": "فروش",
+        "permissions": [
+          { "permission": 90, "name": "SaleView", "title": "مشاهده فروش‌ها" },
+          { "permission": 94, "name": "SaleShip", "title": "ارسال کالا به مشتری" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**`GetUserPermissions`** علاوه بر `permissionGroups`، آرایه‌ی `permissions` را هم دارد که هر عضوش `grantedAt` و `grantedByFullName` (ممکن است `null` باشد) را نیز حمل می‌کند.
+
+**`UpdateUserPermissions`** →
+
+```json
+{ "userId": 12, "permissions": [90, 94, 40] }
+```
+
+- قرارداد **جایگزینی کامل** است، مثل `attachments` و `paymentDetails`: هر چه فرستاده شود لیست نهایی است و آرایه‌ی خالی یعنی همه‌چیز گرفته شود.
+- پاسخ: `{ "userId": 12, "addedCount": 2, "removedCount": 1 }`.
+- اثرش **فوری** است؛ کاربر هدف لازم نیست دوباره وارد شود.
+- کاربر نمی‌تواند دسترسی `PermissionManage` را **از خودش** بگیرد (۴۰۰) — تنها اشتباهی که بدون دسترسی مستقیم به دیتابیس برگشت‌پذیر نیست.
+- عددی که در `PermissionEnum` تعریف نشده باشد ۴۰۰ می‌گیرد.
+
+### کدام endpoint چه دسترسی‌ای می‌خواهد
+
+| حوزه | نمونه endpoint ها | دسترسی |
+|---|---|---|
+| کاربران | `GetUserList` | `UserView` |
+| | `CreateUser` | `UserCreate` |
+| | `UpdateUser`، `ChangeUserTeam`، `GetUserUpdate`، `LogoutUserById` | `UserUpdate` |
+| | `DeleteUser` | `UserDelete` |
+| واحد/تیم | `GetDepartmentList`، `GetDepartmentDetail` | `DepartmentView` |
+| | `Create/Update/DeleteDepartment` | `DepartmentManage` |
+| | `GetTeamList`، `GetTeamDetail` | `TeamView` |
+| | `Create/Update/DeleteTeam` | `TeamManage` |
+| کالا | `GetProductList`، `GetProductDetail`، `ScanBarcode` | `ProductView` |
+| | `CreateProduct` / `UpdateProduct` / `DeleteProduct` | `ProductCreate` / `ProductUpdate` / `ProductDelete` |
+| | `GetProductUnitList`، `GetProductUnitHistory` | `ProductUnitView` |
+| | `EnsureProductCodes`، `EnsureInventoryCostLedger` | `InventoryMaintenance` |
+| دسته‌بندی | `GetProductCategoryList/Detail` / بقیه | `ProductCategoryView` / `ProductCategoryManage` |
+| مشتری، تامین‌کننده | مثل کالا، چهار دسترسی View/Create/Update/Delete | `CustomerX` / `SupplierX` |
+| خرید | `GetPurchaseList/Detail` | `PurchaseView` |
+| | `CreatePurchase` / `UpdatePurchase` / `DeletePurchase` | `PurchaseCreate` / `PurchaseUpdate` / `PurchaseDelete` |
+| | `ReceivePurchase`، `Shipment/ReceiveShipment` | `PurchaseReceive` |
+| | `ClosePurchaseItem`، `ReopenPurchaseItem` | `PurchaseItemClose` |
+| | `AcceptPurchaseExcess` | `PurchaseAcceptExcess` |
+| فروش | `GetSaleList/Detail` | `SaleView` |
+| | `CreateSale` / `UpdateSale` / `DeleteSale` | `SaleCreate` / `SaleUpdate` / `SaleDelete` |
+| | `ShipSale`، `Shipment/DispatchShipment` | `SaleShip` |
+| | `CreateInPersonSale` | `SaleInPerson` |
+| اقساط | `Get...` / `Create,Update,DeletePlan` / `PaySaleInstallment`،`SettleSaleInstallmentPlan` | `SaleInstallmentView` / `SaleInstallmentManage` / `SaleInstallmentPay` |
+| مرجوعی خرید | خواندن‌ها (شامل `GetPurchaseReceivingInfo`) | `PurchaseReturnView` |
+| | `CreatePurchaseReturn` | `PurchaseReturnCreate` |
+| | `Add/RemoveClaimResolution` | `PurchaseReturnDecide` |
+| | `ExecuteGoodsRound`، `ExecuteMoneyEffect` | `PurchaseReturnExecute` |
+| | `Cancel/Reject/Reopen/DeletePurchaseReturn` | `PurchaseReturnLifecycle` |
+| مرجوعی فروش | دقیقاً قرینه‌ی بالا | `SaleReturnX` |
+| فایل و چاپ | `UploadImage` / `DeleteImage` | `FileUpload` / `FileDelete` |
+| | `Invoice/*` | `InvoicePrint` |
+| | `Barcode/*` | `BarcodePrint` |
+| گزارش | تمام `Report/*` | `ReportView` |
+| کارت‌خوان | `Pos/Charge` | `PosCharge` |
+| | `GetPosTerminalList/Detail` / بقیه | `PosTerminalView` / `PosTerminalManage` |
+
+`CreateInPersonSale` و `Shipment/*` داخل خودشان چند کامند دیگر را اجرا می‌کنند؛ فقط همان یک دسترسیِ بالا لازم است، نه دسترسی‌های کامندهای داخلی.
 
 ---
 
@@ -2247,6 +2372,91 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 **یادآوری:** در JSON، این مقادیر همیشه به‌صورت عدد صحیح ارسال/دریافت می‌شوند (نه رشته)، مگر جایی که صریحاً استثنا ذکر شده (مثل `SupplierListDto.status` که رشته است).
 
+### `PermissionGroupEnum` (گروه نمایشی دسترسی‌ها)
+| مقدار | معنی |
+|---|---|
+| 1 | مدیریت کاربران و دسترسی‌ها |
+| 2 | ساختار سازمانی |
+| 3 | اطلاعات پایه |
+| 4 | خرید |
+| 5 | فروش |
+| 6 | اقساط |
+| 7 | مرجوعی خرید |
+| 8 | مرجوعی فروش |
+| 9 | انبار |
+| 10 | اسناد و چاپ |
+| 11 | گزارش‌ها |
+| 12 | کارت‌خوان |
+
+گروه فقط برای چیدمان صفحه‌ی مدیریت دسترسی است؛ هیچ‌وقت خودِ گروه به کسی داده نمی‌شود.
+
+### `PermissionEnum` (دسترسی‌ها)
+
+اعداد **هیچ‌وقت عوض نمی‌شوند** و عدد یک عضو حذف‌شده دوباره استفاده نخواهد شد. هر گروه از یک عدد رُند شروع می‌شود تا افزودن عضو جدید هیچ عدد دیگری را جابه‌جا نکند. توصیه: در فرانت روی `name` شرط بگذارید نه روی عدد.
+
+| عدد | نام | عنوان |
+|---|---|---|
+| 1 | UserView | مشاهده لیست کاربران |
+| 2 | UserCreate | ایجاد کاربر |
+| 3 | UserUpdate | ویرایش کاربر |
+| 4 | UserDelete | حذف کاربر |
+| 5 | PermissionView | مشاهده دسترسی‌های کاربران |
+| 6 | PermissionManage | مدیریت دسترسی‌های کاربران |
+| 20 | DepartmentView | مشاهده دپارتمان‌ها |
+| 21 | DepartmentManage | مدیریت دپارتمان‌ها |
+| 22 | TeamView | مشاهده تیم‌ها |
+| 23 | TeamManage | مدیریت تیم‌ها |
+| 40 | ProductView | مشاهده کالاها |
+| 41 | ProductCreate | ایجاد کالا |
+| 42 | ProductUpdate | ویرایش کالا |
+| 43 | ProductDelete | حذف کالا |
+| 44 | ProductCategoryView | مشاهده دسته‌بندی کالا |
+| 45 | ProductCategoryManage | مدیریت دسته‌بندی کالا |
+| 46 | CustomerView | مشاهده مشتریان |
+| 47 | CustomerCreate | ایجاد مشتری |
+| 48 | CustomerUpdate | ویرایش مشتری |
+| 49 | CustomerDelete | حذف مشتری |
+| 50 | SupplierView | مشاهده تأمین‌کنندگان |
+| 51 | SupplierCreate | ایجاد تأمین‌کننده |
+| 52 | SupplierUpdate | ویرایش تأمین‌کننده |
+| 53 | SupplierDelete | حذف تأمین‌کننده |
+| 70 | PurchaseView | مشاهده خریدها |
+| 71 | PurchaseCreate | ثبت خرید |
+| 72 | PurchaseUpdate | ویرایش خرید |
+| 73 | PurchaseDelete | حذف خرید |
+| 74 | PurchaseReceive | دریافت کالا در انبار |
+| 75 | PurchaseItemClose | بستن و بازکردن ردیف خرید |
+| 76 | PurchaseAcceptExcess | خرید کالای مازاد |
+| 90 | SaleView | مشاهده فروش‌ها |
+| 91 | SaleCreate | ثبت فروش |
+| 92 | SaleUpdate | ویرایش فروش |
+| 93 | SaleDelete | حذف فروش |
+| 94 | SaleShip | ارسال کالا به مشتری |
+| 95 | SaleInPerson | فروش حضوری |
+| 110 | SaleInstallmentView | مشاهده اقساط |
+| 111 | SaleInstallmentManage | مدیریت قرارداد اقساطی |
+| 112 | SaleInstallmentPay | دریافت قسط |
+| 130 | PurchaseReturnView | مشاهده مرجوعی خرید |
+| 131 | PurchaseReturnCreate | ثبت مرجوعی خرید |
+| 132 | PurchaseReturnDecide | ثبت تصمیم مرجوعی خرید |
+| 133 | PurchaseReturnExecute | اجرای اثرهای مرجوعی خرید |
+| 134 | PurchaseReturnLifecycle | ابطال، رد و بازگشایی مرجوعی خرید |
+| 150 | SaleReturnView | مشاهده مرجوعی فروش |
+| 151 | SaleReturnCreate | ثبت مرجوعی فروش |
+| 152 | SaleReturnDecide | ثبت تصمیم مرجوعی فروش |
+| 153 | SaleReturnExecute | اجرای اثرهای مرجوعی فروش |
+| 154 | SaleReturnLifecycle | ابطال، رد و بازگشایی مرجوعی فروش |
+| 170 | ProductUnitView | مشاهده واحدهای کالا و تاریخچه آن‌ها |
+| 171 | InventoryMaintenance | عملیات نگهداشت انبار |
+| 190 | FileUpload | بارگذاری فایل و تصویر |
+| 191 | FileDelete | حذف فایل و تصویر |
+| 192 | InvoicePrint | چاپ فاکتور |
+| 193 | BarcodePrint | چاپ بارکد و برچسب |
+| 210 | ReportView | مشاهده گزارش‌ها |
+| 230 | PosCharge | دریافت وجه با کارت‌خوان |
+| 231 | PosTerminalView | مشاهده کارت‌خوان‌ها |
+| 232 | PosTerminalManage | مدیریت کارت‌خوان‌ها |
+
 ### `OrgRoleEnum` (نقش کاربر در چارت سازمانی)
 | مقدار | معنی |
 |---|---|
@@ -2526,6 +2736,20 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 ## 16. نکات و محدودیت‌های شناخته‌شده
 
 این نکات برای جلوگیری از سردرگمی هنگام توسعه فرانت مهم هستند:
+
+### تغییرات قرارداد — ۲۰۲۶-۰۹-۲۲ (دسترسی‌های مبتنی بر شخص) — **شکننده**
+
+| کجا | قبل | بعد | چرا |
+|---|---|---|---|
+| همه‌ی endpoint ها | ورود کافی بود | علاوه بر ورود، دسترسی مربوطه لازم است، وگرنه **۴۰۳** | محدودکردن دسترسی هر شخص به بخش‌های مختلف سامانه |
+| `POST api/Account/Logout` | بدون توکن هم قابل صدا زدن بود | نیاز به `[Authorize]` | هندلرش از قبل شناسه‌ی کاربر واردشده را می‌خواند و بدون توکن خطا می‌داد |
+| `POST api/Account/LogoutUserById` | برای همه باز بود | `UserUpdate` | خارج‌کردن اجباری کاربر دیگر یک کار مدیریتی است |
+| `api/Permission/*` | — | جدید (بخش ۳د) | |
+| `PermissionEnum`، `PermissionGroupEnum` | — | جدید (بخش ۱۵) | |
+
+**کاری که فرانت باید بکند:** بعد از لاگین یک‌بار `GET api/Permission/GetMyPermissions` را صدا بزنید و منو/دکمه‌ها را بر اساس `permissionNames` بسازید؛ و ۴۰۳ را جدا از ۴۰۱ مدیریت کنید (۴۰۳ با Refresh درست نمی‌شود).
+
+migration: `20260922213512_add-user-permissions` (فقط جدول `UserPermissions`). **اولین ردیف دسترسی باید مستقیماً در دیتابیس درج شود** — تا وقتی هیچ‌کس `PermissionManage` نداشته باشد، از داخل سامانه نمی‌توان دسترسی‌ای داد.
 
 ### تغییرات قرارداد — ۲۰۲۶-۰۹-۲۲ (خریدنِ کالای مازاد) — افزودنی
 

@@ -1,7 +1,9 @@
-using Application.Features.Invoice.Queries;
+﻿using Application.Features.Invoice.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Domain.Enums;
+using WMS.Authorization;
 
 namespace WMS.Controllers
 {
@@ -18,6 +20,7 @@ namespace WMS.Controllers
             _mediator = mediator;
         }
 
+        [HasPermission(PermissionEnum.InvoicePrint)]
         [HttpGet("GetSaleInvoicePdf")]
         public async Task<IActionResult> GetSaleInvoicePdf([FromQuery] GetSaleInvoicePdfQuery request)
         {
@@ -25,6 +28,7 @@ namespace WMS.Controllers
             return File(file.Content, file.ContentType, file.FileName);
         }
 
+        [HasPermission(PermissionEnum.InvoicePrint)]
         [HttpGet("GetSaleReturnCreditNotePdf")]
         public async Task<IActionResult> GetSaleReturnCreditNotePdf([FromQuery] GetSaleReturnCreditNotePdfQuery request)
         {

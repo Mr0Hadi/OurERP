@@ -1,9 +1,11 @@
-using Application.Features.User.Command;
+﻿using Application.Features.User.Command;
 using Application.Common.Dtos;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Application.Features.User.Query;
+using Domain.Enums;
+using WMS.Authorization;
 
 namespace WMS.Controllers
 {
@@ -24,24 +26,28 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
+        [HasPermission(PermissionEnum.UserUpdate)]
         [HttpGet("GetUserUpdate")]
         public async Task<ActionResult<ResponseDto>> GetUserUpdate([FromQuery] GetUserUpdateQuery request)
         {
             return await _mediator.Send(request);
         }
 
+        [HasPermission(PermissionEnum.UserView)]
         [HttpGet("GetUserList")]
         public async Task<ActionResult<ResponseDto>> GetUserList([FromQuery] GetUserListQuery request)
         {
             return await _mediator.Send(request);
         }
 
+        [HasPermission(PermissionEnum.UserCreate)]
         [HttpPost("CreateUser")]
         public async Task<ActionResult<ResponseDto>> CreateUser([FromBody] CreateUserCommand request)
         {
             return await _mediator.Send(request);
         }
 
+        [HasPermission(PermissionEnum.UserUpdate)]
         [HttpPut("UpdateUser")]
         public async Task<ActionResult<ResponseDto>> UpdateUser([FromBody] UpdateUserCommand request)
         {
@@ -60,12 +66,14 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
+        [HasPermission(PermissionEnum.UserUpdate)]
         [HttpPut("ChangeUserTeam")]
         public async Task<ActionResult<ResponseDto>> ChangeUserTeam([FromBody] ChangeUserTeamCommand request)
         {
             return await _mediator.Send(request);
         }
 
+        [HasPermission(PermissionEnum.UserDelete)]
         [HttpDelete("DeleteUser")]
         public async Task<ActionResult<ResponseDto>> DeleteUser([FromQuery] DeleteUserCommand request)
         {

@@ -1,4 +1,4 @@
-
+﻿
 using Application.Ioc;
 using Infrastructure.Ioc;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -89,9 +89,9 @@ namespace WMS
             });
 
 
-            // Authorization policies are not yet department-based (see CLAUDE.md); role-based
-            // claims/policies were removed since Department/Team now carry organizational structure.
-            builder.Services.AddAuthorization();
+            // One policy per PermissionEnum member; what a user holds is read from the
+            // UserPermissions table on each request, never from claims in the token.
+            builder.Services.AddPermissionAuthorization();
 
             var allowedOrigins = builder.Configuration.GetSection("CorsSettings:AllowedOrigins").Get<string[]>();
 

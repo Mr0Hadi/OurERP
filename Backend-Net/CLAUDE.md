@@ -1365,6 +1365,77 @@ a PO line the supplier will never finish can be closed - SAP "delivery completed
   and the purchase report, the net-price case with a 25% line discount, the new unlisted line, the two quota refusals, and the
   all-or-nothing rollback. Build clean; the 5 pass.
 
+**Claim-based permissions (2026-09-22).** Authorization, which had been absent since role-based auth was
+removed on 2026-08-26. Modelled on smshub2's permission system but with three deliberate departures, each
+noted below. API contract: `docs/api-guide.fa.md` section 1 (Authorization), the new section 3d, section 15's
+two enum tables and the 2026-09-22 breaking-changes table in section 16.
+
+- **Permissions belong to the person, not to their department or team.** A user's list is the set of their own
+  `UserPermissions` rows; changing department or team changes nothing. Department-inherited permissions were
+  considered and rejected by the user - see [[project-super-user-second-book-feature]] in memory for the
+  feature that drove that call.
+- **The enum is the catalogue; there is no Permissions table** (departure 1 from smshub2, which keeps both an
+  enum and a `tblPermissions` table that have to be seeded in sync). A permission with no code guarding it is
+  meaningless, so one can never be added from a UI - the table bought nothing and cost a seeding step.
+  `PermissionEnum` carries `[Description]` (Persian label) and `[PermissionGroup]` (display section); helpers
+  live in `Common/Extensions/PermissionExtensions.cs`. **The integers are persisted and are a frontend
+  contract - section 7's never-renumber rule applies, and each group starts at a round number with room to
+  grow.**
+- **Permissions are NOT claims in the JWT** (departure 2; smshub2 bakes one claim per permission at login).
+  `IPermissionService` (`Application/Common/Contracts/Permissions/`, implemented by
+  `Infrastructure/Services/PermissionService.cs`, registered `Scoped`) reads them per request behind an
+  `IMemoryCache` entry keyed `UserPermissions:{userId}`, invalidated explicitly by `UpdateUserPermissions` and
+  `DeleteUser` and expiring after 5 minutes as a safety net for a row changed by hand in the database.
+  Revoking therefore takes effect on the user's next request instead of whenever their token expires. The
+  query filters on `x.User.IsActive`, so a deactivated user holds nothing and every check fails closed.
+- **Enforced on the controller action, not in a MediatR pipeline behaviour.** This codebase composes commands
+  by sending other commands through `IMediator` (`CreateInPersonSaleCommand`, `ReceiveShipmentCommand`,
+  `DispatchShipmentCommand`), and a behaviour would demand the inner commands' permissions from a user who
+  only asked for the outer one. `[HasPermission(PermissionEnum.X)]` (`WMS/Authorization/`) is a typed
+  `AuthorizeAttribute` whose policy name is the enum member's name; `AddPermissionAuthorization()`
+  (`WMS/Ioc/`) registers one policy per member at startup, generated from the enum so there is no second list.
+  `PermissionAuthorizationHandler` is `Scoped` (it resolves the scoped DbContext) and takes the request's
+  `CancellationToken` off `IHttpContextAccessor`, since `AuthorizationHandlerContext` carries none.
+- **The cost of that choice is that nothing forces a new endpoint to carry a guard**, so
+  `Tests/WMS.Tests/Unit/EndpointPermissionCoverageTests.cs` reflects over every controller action and fails
+  unless it has `[HasPermission]` or is named in one of two short exception lists (anonymous / authenticated-
+  only) with a reason. A third test fails when an exception entry goes stale.
+- **`PermissionAuthorizationResultHandler`** turns ASP.NET's empty-bodied 401/403 into the project's
+  `ResponseDto.Danger(...)` envelope. Without it a 403 is the one response with no `message` for the frontend
+  to show - `UseAuthorization` neither throws nor runs inside `ExceptionHandlingMiddleware`.
+- **`RestrictedPermissionAttribute` exists and nothing carries it yet.** A restricted permission is invisible
+  to anyone who does not hold it and can only be granted by a holder (`PermissionExtensions.ManageableBy`,
+  used by both the read and the write side so a permission can never be granted through a screen that would
+  not show it). This is departure 3 and the groundwork for the planned super-user feature: plain
+  `PermissionManage` is self-escalating by nature, so "cannot see it, cannot grant it" is the only rule that
+  actually holds an ordinary administrator out. **Ordinary permissions are deliberately NOT subject to a
+  "you may only grant what you hold" rule** - that was the first design and it deadlocks, because nobody
+  holds a permission the day it ships and so nobody could ever grant it.
+- **`UpdateUserPermissionsCommand` replaces wholesale, scoped to what the caller may manage.** Rows the caller
+  cannot see are left on the target untouched rather than deleted for not appearing in a list the caller was
+  never shown. A user cannot remove `PermissionManage` from themselves (the one mistake that is unrecoverable
+  without direct SQL). Queries: `GetPermissionList` (catalogue, grouped), `GetUserPermissions` (one user, plus
+  the catalogue so the edit screen needs one call), `GetMyPermissions` (no permission required - every user may
+  ask what they can do).
+- **Bootstrap is one manual row, ever**: until somebody holds `PermissionManage` there is no way to grant
+  anything from inside the system. Insert it directly into `UserPermissions`.
+- **Two endpoints changed behaviour beyond gaining a guard**: `Account/Logout` now requires `[Authorize]` (its
+  handler already read the signed-in user's id and threw without one), and `Account/LogoutUserById` - forcibly
+  ending someone else's session, previously open to anyone - now requires `UserUpdate`.
+- Shipped as migration `20260922213512_add-user-permissions` (the `UserPermissions` table only:
+  `(UserId, Permission)` composite key, `GrantedAt`, nullable `GrantedByUserId` with `Restrict` since two FKs
+  into `Users` on one table would otherwise give SQL Server multiple cascade paths). **Generated, not applied**
+  - the user applies migrations themselves.
+- **Test-suite side effects, all improvements**: `Seed.User` no longer sets a fixed `PersonelCode = 1001`,
+  letting the `UserPersonelCode` sequence assign it - that literal was the cause of the long-documented
+  `IX_Users_PersonelCode` collisions, so 9 tests that had been failing for months now pass. Both functional
+  `SeedAdminUser` helpers call the new `Seed.GrantAllPermissions`. One assertion in
+  `ApiFunctionalTests.CreateProduct_WithMalformedBody_...` was stale (the model-state message appends the
+  offending field names) and only surfaced once its seeding worked; it now asserts the prefix.
+- **Verified:** build clean; suite **608/611**. The 3 failures are the environmental ones documented
+  throughout this file - 2 `InvoicePdfTests` needing LibreOffice and the `"***"` object-storage placeholder
+  gap. The previous recorded baseline was 11 failures.
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
 - ~~`PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK.~~ **Fixed 2026-09-20** - see the installment-sales entry above: both ids are `int`, both relationships are configured explicitly, and the shadow FK is gone.
@@ -1373,7 +1444,7 @@ a PO line the supplier will never finish can be closed - SAP "delivery completed
 - Validator class naming is inconsistent: `CreateCustomerCommandValidation`/`CreateSupplierCommandValidation` vs the standard `...CommandValidator` suffix.
 - `Customer.longitude/latitude` and `Supplier.longitude/latitude` are lowercase in entities while commands use `Longitude/Latitude` — AutoMapper needs config for these.
 - Serilog file sinks (`WMS/Logging/SerilogConfiguration.cs`) are never invoked; `Program.cs` only calls `builder.Host.UseSerilog()`, so request/error file logging is not actually wired.
-- `PurchaseItem`, `SaleItem`, `PaymentDetail` have no feature folders (no CRUD yet). Role-based authorization was removed (2026-08-26): `User.RoleId`/`Role` are gone, along with the `Admin`/`User` JWT claims and authorization policies. Authorization is not yet re-implemented; it is planned to be based on `User.DepartmentId` (Team is not a factor in access control).
+- `PurchaseItem`, `SaleItem`, `PaymentDetail` have no feature folders (no CRUD yet). ~~Authorization is not yet re-implemented; it is planned to be based on `User.DepartmentId`.~~ **Done 2026-09-22, but not department-based** - see the claim-based permissions entry above: permissions belong to the person, and `Department`/`Team` are not an input to access control at all. Row-level scoping (which rows, as opposed to which action) is still not implemented and is a separate axis - do not try to express it as permissions.
 
 **Product code / barcode / invoice PDF (implemented, 2026-08-14).** Full design in `docs/product-code-barcode-invoice-design.fa.md`, written from a Telegram planning chat between the two devs; implemented per that design's step order (section 4.4).
 - **`Product.Code`** (`DateSegment-ProductId`, `IProductCodeService.BuildProductCode`) is generated after the first `SaveChanges` gives the row an `Id` — `CreateProductCommandHandler` writes a `Guid` placeholder into `Code`/`BarCode` on the first save (both are `NOT NULL`), then overwrites them with the real code and does a second `SaveChanges`. `Code`/`BarCode` are no longer request-bindable on `CreateProductCommand`/`UpdateProductCommand` (removed from both, immutable after creation).

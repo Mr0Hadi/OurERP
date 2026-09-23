@@ -1,6 +1,7 @@
 ﻿using Application.Common.Contracts.Barcode;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.OrgStructure;
+using Application.Common.Contracts.Permissions;
 using Application.Common.Contracts.Documents;
 using Application.Common.Contracts.Invoice;
 using Application.Common.Contracts.InventoryCosting;
@@ -14,6 +15,7 @@ using Infrastructure.Persistence;
 using Infrastructure.Repositories;
 using Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 
 namespace WMS.Tests.Support
@@ -89,6 +91,10 @@ namespace WMS.Tests.Support
             SupplierRepository = new SupplierRepository(context);
             UserRepository = new UserRepository(context);
             OrgRoleService = new OrgRoleService(context);
+            // A cache per scope, so one test's grants can never be seen by another - the real
+            // registration shares one process-wide IMemoryCache, which xUnit's parallel classes
+            // would turn into cross-test bleed.
+            PermissionService = new PermissionService(context, new MemoryCache(new MemoryCacheOptions()));
             ProductCategoryRepository = new ProductCategoryRepository(context);
             DepartmentRepository = new DepartmentRepository(context);
             TeamRepository = new TeamRepository(context);
@@ -117,6 +123,7 @@ namespace WMS.Tests.Support
         public ISupplierRepository SupplierRepository { get; }
         public IUserRepository UserRepository { get; }
         public IOrgRoleService OrgRoleService { get; }
+        public IPermissionService PermissionService { get; }
         public IProductCategoryRepository ProductCategoryRepository { get; }
         public IDepartmentRepository DepartmentRepository { get; }
         public ITeamRepository TeamRepository { get; }

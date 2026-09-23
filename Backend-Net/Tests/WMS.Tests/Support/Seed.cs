@@ -1,4 +1,4 @@
-using Common.Extensions;
+﻿using Common.Extensions;
 using Domain.Entities;
 using Domain.Enums;
 using Infrastructure.Persistence;
@@ -138,13 +138,34 @@ namespace WMS.Tests.Support
                 LastName = "تست",
                 Username = username,
                 PasswordHash = password.ToHashSHA256(),
-                PersonelCode = 1001,
+                // Left at 0 so the Users.PersonelCode sequence assigns it: EF treats the CLR
+                // default as the sentinel for a value-generated column and omits it from the
+                // INSERT. A fixed literal here collided on IX_Users_PersonelCode the moment a
+                // test seeded a second user.
                 IsActive = true,
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now,
                 Department = department,
                 Team = team,
             };
+
+        /// <summary>
+        /// Grants every permission in the catalogue. For fixtures that stand in for an
+        /// administrator - endpoints are guarded per permission, so a seeded user with no rows
+        /// gets a 403 from everything.
+        /// </summary>
+        public static void GrantAllPermissions(WMSDbContext context, int userId)
+        {
+            foreach (var permission in Common.Extensions.PermissionExtensions.All)
+                context.UserPermissions.Add(new UserPermission
+                {
+                    UserId = userId,
+                    Permission = permission,
+                    GrantedAt = DateTime.Now,
+                });
+
+            context.SaveChanges();
+        }
 
         /// <summary>Persists a standalone user (with its own department) for tests that only need
         /// a valid Users.Id to satisfy Sale.SalesUserId/Purchase.PurchasingUserId's FK.</summary>
