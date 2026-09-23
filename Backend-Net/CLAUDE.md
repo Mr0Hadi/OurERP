@@ -1368,7 +1368,9 @@ a PO line the supplier will never finish can be closed - SAP "delivery completed
 **Claim-based permissions (2026-09-22).** Authorization, which had been absent since role-based auth was
 removed on 2026-08-26. Modelled on smshub2's permission system but with three deliberate departures, each
 noted below. API contract: `docs/api-guide.fa.md` section 1 (Authorization), the new section 3d, section 15's
-two enum tables and the 2026-09-22 breaking-changes table in section 16.
+two enum tables and the 2026-09-22 breaking-changes table in section 16. Frontend migration guide:
+`docs/permission-frontend-guide.fa.md` (nothing in `Frontend/` has been changed - the guide says what
+the server now expects, what the frontend does today, and what to add).
 
 - **Permissions belong to the person, not to their department or team.** A user's list is the set of their own
   `UserPermissions` rows; changing department or team changes nothing. Department-inherited permissions were
