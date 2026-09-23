@@ -33,6 +33,13 @@ export const ROUTES = {
   ORG_TEAMS_NEW: "/organization/teams/new",
   ORG_TEAMS_DETAIL: "/organization/teams/:id",
 
+  // سطح دسترسی — دسترسیِ کارمندان و الگوی پیشنهادیِ هر واحد
+  ACCESS: "/access",
+  ACCESS_USERS: "/access/users",
+  ACCESS_USERS_DETAIL: "/access/users/:id",
+  ACCESS_TEMPLATES: "/access/templates",
+  ACCESS_TEMPLATES_DETAIL: "/access/templates/:id",
+
   // خرید
   PURCHASES: "/purchases",
   PURCHASES_DETAIL: "/purchases/:id",

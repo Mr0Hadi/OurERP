@@ -12,14 +12,17 @@ import { useNavigationStore } from "@/shared/store/navigationStore";
 
 import { AppBreadcrumb } from "@/shared/components/layout/AppBreadcrumb";
 import { useEffect } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { useGoBack } from "@/shared/hooks/useGoBack";
 import { Button } from "@/shared/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, WifiOff } from "lucide-react";
+import { useAuthStore } from "@/features/auth/store/authStore";
+import { ROUTES } from "@/shared/constants/routes";
 import { useUserInfoQuery } from "@/features/auth/services/queries";
 import RouteLoadingOverlay from "@/shared/components/layout/RouteLoadingOverlay";
+import PermissionGate from "../routes/PermissionGate";
 
 
 
@@ -38,11 +41,57 @@ export default function AppLayout() {
   // تلاشِ رفرش واقعی می‌رساند) به یک نتیجه‌ی قطعی نرسیده، محتوای محافظت‌شده
   // را رندر نمی‌کنیم؛ وگرنه همان چیزی می‌شود که کاربر «فلشِ Home قبل از
   // ریدایرکت به Login» می‌بیند.
-  const { isSuccess: sessionConfirmed } = useUserInfoQuery();
+  const {
+    isSuccess: sessionConfirmed,
+    isError: sessionFailed,
+    error: sessionError,
+    refetch: retrySession,
+    isFetching: sessionRetrying,
+  } = useUserInfoQuery();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const logout = useAuthStore((s) => s.logout);
 
   useEffect(() => {
     setCurrentPath(location.pathname);
   }, [location.pathname, setCurrentPath]);
+
+  // نشست از دست رفته (interceptor رفرش را ناموفق دید و خارج کرد، یا سرور
+  // هنوز ۴۰۱ می‌دهد): به ورود، نه صفحه‌ی سفید. `protectedLoader` فقط هنگامِ
+  // ناوبری اجرا می‌شود، پس این حالت را خودِ layout باید بگیرد.
+  const sessionRejected =
+    !isAuthenticated || (sessionFailed && sessionError?.response?.status === 401);
+
+  if (sessionRejected) {
+    if (isAuthenticated) logout();
+    const from = encodeURIComponent(location.pathname + location.search);
+    return <Navigate to={`${ROUTES.LOGIN}?from=${from}`} replace />;
+  }
+
+  // هر خطای دیگر (سرور در دسترس نیست، ۵۰۰): کاربر خارج نمی‌شود، ولی باید
+  // بداند چه شده و بتواند دوباره تلاش کند.
+  if (sessionFailed) {
+    return (
+      <div className="flex min-h-svh flex-col items-center justify-center gap-4 p-6 text-center">
+        <WifiOff className="size-10 text-muted-foreground" />
+        <div className="space-y-1">
+          <p className="font-bold">ارتباط با سرور برقرار نشد</p>
+          <p className="text-sm text-muted-foreground">
+            {/* بدونِ response یعنی سرور اصلاً جواب نداده؛ پیامِ axios انگلیسی است. */}
+            {(sessionError?.response && sessionError.message) ||
+              "لطفاً اتصال اینترنت را بررسی کنید و دوباره تلاش کنید."}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={() => retrySession()} disabled={sessionRetrying}>
+            {sessionRetrying ? "در حال تلاش..." : "تلاش دوباره"}
+          </Button>
+          <Button variant="outline" onClick={logout}>
+            ورود دوباره
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (!sessionConfirmed) {
     return null;
@@ -77,7 +126,9 @@ export default function AppLayout() {
             <AppBreadcrumb />
           </header>
           <div className="flex p-4">
-            <Outlet />
+            <PermissionGate>
+              <Outlet />
+            </PermissionGate>
           </div>
         </SidebarInset>
       </SidebarProvider>

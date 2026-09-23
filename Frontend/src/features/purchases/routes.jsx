@@ -13,34 +13,42 @@ const PurchaseReturnDetailPage = lazy(() => import("./returns/pages/PurchaseRetu
 export const purchasesRoutes = [
   {
     path: ROUTES.PURCHASES,
+    handle: { permission: "PurchaseView" },
     element: <PurchasesPage />,
   },
   {
     path: ROUTES.PURCHASES_NEW,
+    handle: { permission: "PurchaseCreate" },
     element: <PurchasesNewPage />,
   },
   {
     path: ROUTES.PURCHASES_INVOICES,
+    handle: { permission: "PurchaseView" },
     element: <PurchasesInvoicesPage />,
   },
   {
     path: ROUTES.PURCHASES_DETAIL,
+    handle: { permission: "PurchaseView" },
     element: <PurchaseDetailPage />,
   },
   {
     path: ROUTES.PURCHASES_INVOICE_DETAIL,
+    handle: { permission: "PurchaseView" },
     element: <PurchaseInvoiceDetailPage />,
   },
   {
     path: ROUTES.PURCHASES_RETURNS_NEW,
+    handle: { permission: "PurchaseReturnCreate" },
     element: <PurchaseReturnNewPage />,
   },
   {
     path: ROUTES.PURCHASES_RETURNS_LIST,
+    handle: { permission: "PurchaseReturnView" },
     element: <PurchaseReturnsListPage />,
   },
   {
     path: ROUTES.PURCHASES_RETURNS_DETAIL,
+    handle: { permission: "PurchaseReturnView" },
     element: <PurchaseReturnDetailPage />,
   },
 ];

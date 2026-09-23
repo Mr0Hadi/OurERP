@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { login, logout, getUserInfo } from "./api-v1";
+import { login, logout, getUserInfo, getMyPermissions } from "./api-v1";
 import { authKeys } from "./queryKeys";
 import { useAuthStore } from "../store/authStore";
 
@@ -58,5 +58,27 @@ export function useUserInfoQuery() {
     enabled: isAuthenticated,
     retry: false,
     staleTime: 10 * 60 * 1000, // ۱۰ دقیقه
+  });
+}
+
+/**
+ * دسترسی‌های کاربرِ واردشده — `GetMyPermissions`.
+ *
+ * عمداً در `authStore`/localStorage نیست: ادمین هر لحظه می‌تواند دسترسی
+ * را عوض کند و سرور همان لحظه رفتارش را عوض می‌کند؛ کپیِ پرسیست‌شده
+ * چیزی ندارد که باطلش کند. `staleTime` فقط برای این است که هر mount یک
+ * درخواست نزند؛ هر جا دسترسی‌های خودِ کاربر عوض شود (`useUpdateUserPermissionsMutation`)
+ * صریحاً invalidate می‌شود، و `useLogoutMutation` با `queryClient.clear()`
+ * پاکش می‌کند.
+ */
+export function useMyPermissionsQuery() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  return useQuery({
+    queryKey: authKeys.myPermissions(),
+    queryFn: getMyPermissions,
+    enabled: isAuthenticated,
+    retry: false,
+    staleTime: 5 * 60 * 1000, // ۵ دقیقه
   });
 }

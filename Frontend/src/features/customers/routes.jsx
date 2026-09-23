@@ -8,14 +8,17 @@ const CustomerNewPage = lazy(() => import("./pages/CustomerNewPage"));
 export const customersRoutes = [
   {
     path: ROUTES.CUSTOMERS_LIST,
+    handle: { permission: "CustomerView" },
     element: <CustomersPage />,
   },
   {
     path: ROUTES.CUSTOMERS_NEW,
+    handle: { permission: "CustomerCreate" },
     element: <CustomerNewPage />,
   },
   {
     path: ROUTES.CUSTOMERS_DETAIL,
+    handle: { permission: "CustomerView" },
     element: <CustomerDetailPage />,
   }
 ];

@@ -19,6 +19,7 @@ import { purchasesRoutes } from "@/features/purchases/routes";
 import { salesRoutes } from "@/features/sales/routes";
 import { employeesRoutes } from "@/features/employees/routes";
 import { organizationRoutes } from "@/features/organization/routes";
+import { permissionsRoutes } from "@/features/permissions/routes";
 import { notifyNavigationStart } from "@/shared/lib/routeTransitionBus";
 
 export const router = createBrowserRouter([
@@ -37,6 +38,7 @@ export const router = createBrowserRouter([
       ...customersRoutes,
       ...employeesRoutes,
       ...organizationRoutes,
+      ...permissionsRoutes,
       ...purchasesRoutes,
       ...warehouseRoutes,
       ...invoiceRoutes,

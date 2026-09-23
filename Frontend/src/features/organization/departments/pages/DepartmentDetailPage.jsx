@@ -31,6 +31,7 @@ import DepartmentIdentityForm from "../components/forms/DepartmentIdentityForm";
 import DepartmentTeamsCard from "../components/DepartmentTeamsCard";
 import OrgLeadershipForm from "../../components/OrgLeadershipForm";
 import { useSyncLeadershipValues } from "../../hooks/useSyncLeadershipValues";
+import DepartmentTemplateSummaryCard from "@/features/permissions/components/DepartmentTemplateSummaryCard";
 
 function DepartmentDetailForm({ department }) {
   const navigate = useNavigate();
@@ -151,6 +152,8 @@ function DepartmentDetailForm({ department }) {
               errors={errors}
               scopeLabel="واحد"
             />
+
+            <DepartmentTemplateSummaryCard departmentId={department.id} />
 
             <div className="flex gap-2">
               <Button

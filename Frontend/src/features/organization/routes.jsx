@@ -10,9 +10,7 @@ const TeamDetailPage = lazy(() => import("./teams/pages/TeamDetailPage"));
 /**
  * ساختار سازمانی — واحدها و تیم‌ها.
  *
- * مثل کارمندان، فعلاً بدون گارد دسترسی ثبت شده‌اند و بعد از آماده‌شدن
- * لایه‌ی سطح دسترسی (بر پایه‌ی واحدِ کاربر، نه نقش) باید فقط برای واحدِ
- * مدیریت باز بمانند.
+ * `handle.permission` را `PermissionGate` (در `AppLayout`) می‌خواند.
  *
  * ترتیب مهم است: مسیرهای `new` قبل از `:id` می‌آیند وگرنه
  * `/organization/teams/new` با `:id === "new"` تطبیق پیدا می‌کند.
@@ -20,26 +18,32 @@ const TeamDetailPage = lazy(() => import("./teams/pages/TeamDetailPage"));
 export const organizationRoutes = [
   {
     path: ROUTES.ORG_DEPARTMENTS,
+    handle: { permission: "DepartmentView" },
     element: <DepartmentsPage />,
   },
   {
     path: ROUTES.ORG_DEPARTMENTS_NEW,
+    handle: { permission: "DepartmentManage" },
     element: <DepartmentNewPage />,
   },
   {
     path: ROUTES.ORG_DEPARTMENTS_DETAIL,
+    handle: { permission: "DepartmentView" },
     element: <DepartmentDetailPage />,
   },
   {
     path: ROUTES.ORG_TEAMS,
+    handle: { permission: "TeamView" },
     element: <TeamsPage />,
   },
   {
     path: ROUTES.ORG_TEAMS_NEW,
+    handle: { permission: "TeamManage" },
     element: <TeamNewPage />,
   },
   {
     path: ROUTES.ORG_TEAMS_DETAIL,
+    handle: { permission: "TeamView" },
     element: <TeamDetailPage />,
   },
 ];

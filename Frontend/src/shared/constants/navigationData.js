@@ -10,6 +10,8 @@ import {
   FilePlus,
   FileText,
   HelpCircle,
+  KeyRound,
+  LayoutTemplate,
   Home,
   Info,
   List,
@@ -26,6 +28,12 @@ import {
 } from "lucide-react";
 
 export const navigationData = {
+  // `permission` روی هر زیرآیتم نامِ یک عضوِ `PermissionEnum` سرور است (یا
+  // آرایه‌ای از نام‌ها که *هرکدام* کافی است) و `AppSidebar` با آن فیلتر
+  // می‌کند. آیتم‌های والد دسترسیِ خودشان را ندارند: والد وقتی دیده می‌شود
+  // که دست‌کم یکی از فرزندانش دیده شود. آیتمِ بدون `permission` برای هر
+  // کاربرِ واردشده نمایش داده می‌شود.
+  //
   // فقط *ساختارِ* منو. هویتِ کاربر و واحد/تیمِ او اینجا نیست: صفتِ خودِ
   // اوست در بکند (`User.DepartmentId`/`User.TeamId`) و سایدبار آن را از
   // `useUserInfoQuery` می‌گیرد.
@@ -35,7 +43,6 @@ export const navigationData = {
       url: ROUTES.DASHBOARD,
       icon: Home,
       isActive: false,
-      permission: "dashboard",
       items: [],
     },
     {
@@ -43,19 +50,18 @@ export const navigationData = {
       url: ROUTES.SUPPLIERS,
       icon: Truck,
       isActive: false,
-      permission: "suppliers",
       items: [
         {
           title: "لیست تامین کنندگان",
           url: ROUTES.SUPPLIERS_LIST,
-          permission: "suppliers_view",
+          permission: "SupplierView",
           icon: List,
           description: "مشاهده و جستجوی تامین کنندگان",
         },
         {
           title: "اضافه کردن تامین کننده",
           url: ROUTES.SUPPLIERS_NEW,
-          permission: "suppliers_create",
+          permission: "SupplierCreate",
           icon: PlusCircle,
           description: "ثبت تامین کننده جدید",
         },
@@ -66,19 +72,18 @@ export const navigationData = {
       url: ROUTES.CUSTOMERS,
       icon: Users,
       isActive: false,
-      permission: "customers",
       items: [
         {
           title: "لیست مشتریان",
           url: ROUTES.CUSTOMERS_LIST,
-          permission: "customers_view",
+          permission: "CustomerView",
           icon: List,
           description: "مشاهده و جستجوی مشتریان",
         },
         {
           title: "اضافه کردن مشتری جدید",
           url: ROUTES.CUSTOMERS_NEW,
-          permission: "customers_create",
+          permission: "CustomerCreate",
           icon: PlusCircle,
           description: "ثبت مشتری جدید",
         },
@@ -89,21 +94,18 @@ export const navigationData = {
       url: ROUTES.EMPLOYEES,
       icon: UserCog,
       isActive: false,
-      // فقط ادمین — وقتی لایه‌ی سطح دسترسی آماده شد، این permission باید
-      // تنها به نقش «مدیر سیستم» داده شود.
-      permission: "employees",
       items: [
         {
           title: "لیست کارمندان",
           url: ROUTES.EMPLOYEES_LIST,
-          permission: "employees_view",
+          permission: "UserView",
           icon: List,
           description: "مشاهده و جستجوی کاربران سیستم",
         },
         {
           title: "افزودن کارمند جدید",
           url: ROUTES.EMPLOYEES_NEW,
-          permission: "employees_create",
+          permission: "UserCreate",
           icon: PlusCircle,
           description: "ثبت کارمند و ساخت حساب کاربری",
         },
@@ -114,22 +116,42 @@ export const navigationData = {
       url: ROUTES.ORGANIZATION,
       icon: Building2,
       isActive: false,
-      // فقط ادمین — همراه با «کارمندان».
-      permission: "organization",
       items: [
         {
           title: "واحدهای سازمانی",
           url: ROUTES.ORG_DEPARTMENTS,
-          permission: "organization_view",
+          permission: "DepartmentView",
           icon: Building2,
           description: "تعریف واحدها و تعیین مدیر هر واحد",
         },
         {
           title: "تیم‌ها",
           url: ROUTES.ORG_TEAMS,
-          permission: "organization_view",
+          permission: "TeamView",
           icon: Users,
           description: "تعریف تیم‌های هر واحد و تعیین مدیر تیم",
+        },
+      ],
+    },
+    {
+      title: "سطح دسترسی",
+      url: ROUTES.ACCESS_USERS,
+      icon: KeyRound,
+      isActive: false,
+      items: [
+        {
+          title: "دسترسی کارمندان",
+          url: ROUTES.ACCESS_USERS,
+          permission: "PermissionView",
+          icon: KeyRound,
+          description: "تعیین دسترسی هر کارمند، با پیشنهادِ الگوی واحدش",
+        },
+        {
+          title: "الگوهای واحدها",
+          url: ROUTES.ACCESS_TEMPLATES,
+          permission: "PermissionView",
+          icon: LayoutTemplate,
+          description: "دسترسی‌هایی که معمولاً به کارمندانِ هر واحد داده می‌شود",
         },
       ],
     },
@@ -138,47 +160,46 @@ export const navigationData = {
       url: ROUTES.WAREHOUSE,
       icon: Warehouse,
       isActive: false,
-      permission: "warehouse",
       items: [
         {
           title: "لیست کالاها",
           url: ROUTES.WAREHOUSE_PRODUCTS,
-          permission: "warehouse_view",
+          permission: "ProductView",
           icon: Box,
           description: "مشاهده و جستجوی کالاها",
         },
         {
           title: "دسته‌بندی کالاها",
           url: ROUTES.WAREHOUSE_CATEGORIES,
-          permission: "warehouse_view",
+          permission: "ProductCategoryView",
           icon: Tags,
           description: "ایجاد، ویرایش و حذف دسته‌بندی‌های کالا",
         },
         {
           title: "تعریف کالای جدید",
           url: ROUTES.WAREHOUSE_PRODUCTS_NEW,
-          permission: "warehouse_create",
+          permission: "ProductCreate",
           icon: PlusCircle,
           description: "ثبت کالای جدید",
         },
         {
           title: "دریافت کالا",
           url: ROUTES.WAREHOUSE_RECEIVING,
-          permission: "warehouse_receiving",
+          permission: "PurchaseReceive",
           icon: ClipboardList,
           description: "مشاهده و تأیید کالاهای دریافتی",
         },
         {
           title: "ارسال کالا",
           url: ROUTES.WAREHOUSE_SHIPPING,
-          permission: "warehouse_shipping",
+          permission: "SaleShip",
           icon: ClipboardList,
           description: "مشاهده و تأیید کالاهای ارسالی",
         },
         {
           title: "برچسب کالاها",
           url: ROUTES.WAREHOUSE_UNIT_LABELS,
-          permission: "warehouse_receiving",
+          permission: "ProductUnitView",
           icon: Barcode,
           description: "ساخت و چاپ بارکد تک‌تک اقلام فیزیکی",
         },
@@ -189,33 +210,32 @@ export const navigationData = {
       url: ROUTES.PURCHASES,
       icon: ShoppingCart,
       isActive: false,
-      permission: "purchases",
       items: [
         {
           title: "لیست خرید ها",
           url: ROUTES.PURCHASES,
-          permission: "purchases_create",
+          permission: "PurchaseView",
           icon: FilePlus,
           description: "لیست خرید های ثبت شده",
         },
         {
           title: "ثبت خرید جدید",
           url: ROUTES.PURCHASES_NEW,
-          permission: "purchases_create",
+          permission: "PurchaseCreate",
           icon: FilePlus,
           description: "ثبت فاکتور خرید جدید",
         },
         {
           title: "ثبت مرجوعی به تامین‌کننده",
           url: ROUTES.PURCHASES_RETURNS_NEW,
-          permission: "purchases_returns",
+          permission: "PurchaseReturnCreate",
           icon: RotateCcw,
           description: "ثبت مرجوعی کالا به تامین‌کننده",
         },
         {
           title: "لیست مرجوعی‌ها",
           url: ROUTES.PURCHASES_RETURNS_LIST,
-          permission: "purchases_returns",
+          permission: "PurchaseReturnView",
           icon: List,
           description: "مشاهده لیست مرجوعی‌ها",
         },
@@ -226,33 +246,32 @@ export const navigationData = {
       url: ROUTES.SALES,
       icon: Store,
       isActive: false,
-      permission: "sales",
       items: [
         {
           title: "لیست فروش ها",
           url: ROUTES.SALES,
-          permission: "purchases_create",
+          permission: "SaleView",
           icon: FilePlus,
           description: "لیست فروش های ثبت شده",
         },
         {
           title: "ثبت فروش جدید",
           url: ROUTES.SALES_NEW,
-          permission: "sales_create",
+          permission: ["SaleCreate", "SaleInPerson"],
           icon: FilePlus,
           description: "ثبت فاکتور فروش جدید",
         },
         {
           title: "ثبت مرجوعی از مشتری",
           url: ROUTES.SALES_RETURNS_NEW,
-          permission: "sales_returns",
+          permission: "SaleReturnCreate",
           icon: RotateCcw,
           description: "ثبت مرجوعی کالا از مشتری",
         },
         {
           title: "لیست مرجوعی‌ها",
           url: ROUTES.SALES_RETURNS_LIST,
-          permission: "sales_returns",
+          permission: "SaleReturnView",
           icon: List,
           description: "مشاهده لیست مرجوعی‌ها",
         },
@@ -263,26 +282,25 @@ export const navigationData = {
       url: ROUTES.REPORTS,
       icon: BarChart3,
       isActive: false,
-      permission: "reports",
       items: [
         {
           title: "فعالیت کارمندان",
           url: ROUTES.REPORTS_EMPLOYEES,
-          permission: "reports_view",
+          permission: "ReportView",
           icon: UserCog,
           description: "رتبه‌بندی کارمندان بر اساس فروش و خرید ثبت‌شده",
         },
         {
           title: "آمار خرید مشتریان",
           url: ROUTES.REPORTS_CUSTOMERS,
-          permission: "reports_view",
+          permission: "ReportView",
           icon: Users,
           description: "پرخریدترین مشتریان و مانده‌ی تسویه‌نشده",
         },
         {
           title: "آمار خرید از تامین‌کنندگان",
           url: ROUTES.REPORTS_SUPPLIERS,
-          permission: "reports_view",
+          permission: "ReportView",
           icon: Truck,
           description: "خرید از هر تامین‌کننده و وضعیت پرداخت",
         },
@@ -294,14 +312,12 @@ export const navigationData = {
       title: "پشتیبانی",
       // url: ROUTES.FEEDBACK,
       icon: HelpCircle,
-      permission: "support",
       description: "ارسال بازخورد و گزارش مشکل",
     },
     {
       title: "مستندات",
       // url: "/docs",
       icon: BookOpen,
-      permission: "all",
       description: "مستندات و راهنما",
     },
   ],

@@ -35,6 +35,10 @@ const ROUTE_TITLES = {
   [ROUTES.ORG_TEAMS]: "تیم‌ها",
   [ROUTES.ORG_TEAMS_NEW]: "تیم جدید",
 
+  [ROUTES.ACCESS]: "سطح دسترسی",
+  [ROUTES.ACCESS_USERS]: "دسترسی کارمندان",
+  [ROUTES.ACCESS_TEMPLATES]: "الگوهای دسترسی واحدها",
+
   [ROUTES.PURCHASES]: "خرید",
   [ROUTES.PURCHASES_NEW]: "ثبت خرید جدید",
   [ROUTES.PURCHASES_INVOICES]: "فاکتورهای خرید",
@@ -108,6 +112,8 @@ const DETAIL_TITLES = {
   [ROUTES.EMPLOYEES_LIST]: "جزئیات کارمند",
   [ROUTES.ORG_DEPARTMENTS]: "جزئیات واحد",
   [ROUTES.ORG_TEAMS]: "جزئیات تیم",
+  [ROUTES.ACCESS_USERS]: "کارمند",
+  [ROUTES.ACCESS_TEMPLATES]: "واحد",
 
   [ROUTES.PURCHASES]: "جزئیات خرید",
   [ROUTES.PURCHASES_INVOICES]: "جزئیات فاکتور خرید",
@@ -131,7 +137,7 @@ const DETAIL_TITLES = {
  * در URL اند. عنوانشان نمایش داده می‌شود تا مسیر ناقص به نظر نرسد، ولی
  * لینک نمی‌شوند چون کلیک روی‌شان کاربر را به ۴۰۴ می‌برد.
  */
-const NON_LINKABLE = new Set([ROUTES.ORGANIZATION]);
+const NON_LINKABLE = new Set([ROUTES.ORGANIZATION, ROUTES.ACCESS]);
 
 const isIdSegment = (segment) => /^\d+$/.test(segment);
 

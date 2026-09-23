@@ -25,46 +25,57 @@ export const warehouseRoutes = [
   },
   {
     path: ROUTES.WAREHOUSE_PRODUCTS,
+    handle: { permission: "ProductView" },
     element: <ProductsPage />,
   },
   {
     path: ROUTES.WAREHOUSE_PRODUCTS_NEW,
+    handle: { permission: "ProductCreate" },
     element: <ProductNewPage />,
   },
   {
     path: ROUTES.WAREHOUSE_PRODUCTS_DETAIL,
+    handle: { permission: "ProductView" },
     element: <ProductDetailPage />,
   },
   {
     path: ROUTES.WAREHOUSE_RECEIVING,
+    handle: { permission: "PurchaseReceive" },
     element: <ReceivingListPage />,
   },
   {
     path: ROUTES.WAREHOUSE_RECEIVING_DETAIL,
+    handle: { permission: "PurchaseReceive" },
     element: <ReceivingDetailPage />,
   },
   {
     path: ROUTES.WAREHOUSE_UNIT_LABELS,
+    handle: { permission: "ProductUnitView" },
     element: <UnitLabelsPage />,
   },
   {
     path: ROUTES.WAREHOUSE_CATEGORIES,
+    handle: { permission: "ProductCategoryView" },
     element: <CategoriesPage />,
   },
   {
     path: ROUTES.WAREHOUSE_SHIPPING,
+    handle: { permission: "SaleShip" },
     element: <ShippingListPage />,
   },
   {
     path: ROUTES.WAREHOUSE_SHIPPING_DETAIL,
+    handle: { permission: "SaleShip" },
     element: <ShippingDetailPage />,
   },
   {
     path: ROUTES.WAREHOUSE_RECEIVING_RETURN_DETAIL,
+    handle: { permission: "SaleReturnExecute" },
     element: <ReceivingReturnDetailPage />,
   },
   {
     path: ROUTES.WAREHOUSE_SHIPPING_RETURN_DETAIL,
+    handle: { permission: "PurchaseReturnExecute" },
     element: <SupplierReturnDetailPage />,
   },
 ];

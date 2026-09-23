@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
+import { useWatch } from "react-hook-form";
 import { Save, X, LogOut } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
@@ -29,6 +30,7 @@ import EmployeeIdentityForm from "../components/forms/EmployeeIdentityForm";
 import EmployeeAccessForm from "../components/forms/EmployeeAccessForm";
 import EmployeeOrgForm from "../components/forms/EmployeeOrgForm";
 import EmployeeDetailLoading from "../components/forms/EmployeeDetailLoading";
+import EmployeeAccessSummaryCard from "@/features/permissions/components/EmployeeAccessSummaryCard";
 
 const fullNameOf = (employee) =>
   `${employee.firstName ?? ""} ${employee.lastName ?? ""}`.trim() ||
@@ -77,6 +79,8 @@ function EmployeeDetailForm({ employee }) {
     handleSubmit,
     formState: { errors },
   } = formMethods;
+
+  const selectedDepartmentId = useWatch({ control, name: "departmentId" });
 
   /** از فرمِ ویرایش هم می‌شود واحد یا تیم تازه ساخت، بدون از دست دادن تغییرات. */
   const leaveForCreate = (target, state) => {
@@ -164,6 +168,15 @@ function EmployeeDetailForm({ employee }) {
               control={control}
               isEditing
               readOnly={!canEditOrg}
+            />
+
+            {/* ویرایشگرِ دسترسی در Sheet است و endpoint و ذخیره‌ی خودش را دارد؛
+                این کارت فقط خلاصه است. */}
+            <EmployeeAccessSummaryCard
+              userId={employee.id}
+              isSelf={isSelf}
+              departmentId={selectedDepartmentId}
+              initialDepartmentId={employee.departmentId}
             />
 
             <div className="flex gap-2">

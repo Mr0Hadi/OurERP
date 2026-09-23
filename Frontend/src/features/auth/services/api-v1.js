@@ -36,3 +36,9 @@ export async function getUserInfo() {
   const { data } = await axiosInstance.get("/User/GetUserInfo");
   return data;
 }
+
+
+export async function getMyPermissions() {
+  const { data } = await axiosInstance.get("/Permission/GetMyPermissions");
+  return data;
+}

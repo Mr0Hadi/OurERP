@@ -12,7 +12,7 @@ export function QueryProvider({ children }) {
             // باید از سرور بخواند تا کسی داده‌ی کهنه نبیند.
             staleTime: 0,
             gcTime: 1000 * 60 * 5,     // 5 دقیقه cache نگه دار
-            retry: 1,                   // یک بار retry کافی است
+            retry: (failureCount, error) => !error?.isForbidden && failureCount < 1,
             refetchOnWindowFocus: true, // مهم برای کاربران چند ساعته
           },
         },

@@ -39,13 +39,7 @@ axiosInstance.interceptors.request.use(
  * پنج‌بخشی است نه JWT سه‌بخشیِ معمول. بخشِ دومش کلیدِ رمزشده است، نه JSON —
  * پس نمی‌شود اینجا `exp` را از رویِ خودِ توکن خواند؛ تنها کسی که می‌تواند
  * بگوید توکن منقضی شده یا نه خودِ سرور است.
- *
- * پیامِ ثابتی که سرور برای همین حالت برمی‌گرداند («توکنِ دسترسی هنوز
- * معتبر است، رفرش لازم نبود») - `UserRefreshTokenCommand`. رفرش هر وقت
- * با این پیام ۴۰۰ بدهد یعنی تلاش زودهنگام بوده، نه این‌که رفرش‌توکن باطل
- * باشد؛ کاربر نباید بابتش بیرون بیفتد.
  */
-const ACCESS_TOKEN_STILL_VALID_MESSAGE = "توکن منقضی نشده است و معتبر است";
 
 const bearerOf = (config) =>
   String(config?.headers?.Authorization ?? "").replace(/^Bearer\s+/i, "") || null;
@@ -177,22 +171,24 @@ axiosInstance.interceptors.response.use(
         return axiosInstance(originalRequest);
       } catch (refreshError) {
         const latest = useAuthStore.getState();
-        // ۴۰۰ یعنی از دیدِ سرور توکنِ دسترسی هنوز معتبر است: یا رفرشِ
-        // دیگری همین حالا توکن را عوض کرده، یا خودِ سرور صراحتاً همین
-        // پیام را داده (تلاشِ زودهنگام، نه رفرش‌توکنِ باطل). هیچ‌کدام
-        // دلیلِ خروج نیست.
-        const stillValidOnServer =
+        // رفرشِ دیگری (همین تب یا تبِ دیگر) در همین فاصله توکن را عوض کرده
+        // و سرور رفرشِ دوباره با توکنِ قدیمی را ۴۰۰ داده؛ با توکنِ تازه
+        // دوباره بفرست.
+        //
+        // ولی اگر توکن عوض *نشده*، ۴۰۰ (حتی با پیامِ «توکن منقضی نشده است
+        // و معتبر است») بن‌بست است نه تلاشِ زودهنگام: سرور همین توکن را با
+        // ۴۰۱ رد کرده و رفرشش هم نمی‌کند — مثلاً بعد از ری‌استارتِ سرور که
+        // فهرستِ توکن‌های درون‌حافظه‌ی `CachingMiddleware` خالی شده. نگه‌داشتنِ
+        // کاربر در این حالت یعنی صفحه‌ی سفید؛ به بلوکِ خروجِ پایین می‌رود.
+        const refreshedElsewhere =
           refreshError.response?.status === 400 &&
-          (latest.accessToken !== accessToken ||
-            messageOf(refreshError) === ACCESS_TOKEN_STILL_VALID_MESSAGE);
+          latest.accessToken &&
+          latest.accessToken !== accessToken;
 
-        if (stillValidOnServer) {
+        if (refreshedElsewhere) {
           onRefreshFailed(refreshError);
-          if (latest.accessToken && latest.accessToken !== accessToken) {
-            originalRequest.headers.Authorization = `Bearer ${latest.accessToken}`;
-            return axiosInstance(originalRequest);
-          }
-          return Promise.reject(error);
+          originalRequest.headers.Authorization = `Bearer ${latest.accessToken}`;
+          return axiosInstance(originalRequest);
         }
 
         // فقط وقتی سرور صراحتاً رفرش را رد کرده (رفرش‌توکنِ منقضی/باطل)
@@ -210,6 +206,8 @@ axiosInstance.interceptors.response.use(
         isRefreshing = false;
       }
     }
+    
+    if (status === 403) error.isForbidden = true;
 
     // لایه‌های بالادستی (mutationها) فقط `error.message` را toast
     // می‌کنند؛ بدون این، کاربر پیام عمومیِ axios را می‌بیند به‌جای
