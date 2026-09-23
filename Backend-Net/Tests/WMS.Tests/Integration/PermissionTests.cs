@@ -24,6 +24,12 @@ namespace WMS.Tests.Integration
         private static GetPermissionListQueryHandler GetPermissionList(TestScope scope, int actorId)
             => new(scope.PermissionService, FakeUserContext.WithUserId(actorId));
 
+        private static UpdateDepartmentPermissionTemplateCommandHandler UpdateTemplate(TestScope scope, int actorId)
+            => new(scope.Db, scope.PermissionService, FakeUserContext.WithUserId(actorId), scope.UnitOfWork);
+
+        private static GetDepartmentPermissionTemplateQueryHandler GetTemplate(TestScope scope, int actorId)
+            => new(scope.Db, scope.PermissionService, FakeUserContext.WithUserId(actorId));
+
         private static User AddUser(WMSDbContext context, string username)
         {
             var user = Seed.User(Seed.Department("واحد " + username), null, username);
@@ -309,6 +315,101 @@ namespace WMS.Tests.Integration
             await Assert.ThrowsAsync<NotFoundCustomException>(() =>
                 GetUserPermissions(scope, admin.Id)
                     .Handle(new GetUserPermissionsQuery { UserId = 999999 }, CancellationToken.None));
+        }
+
+        [Fact]
+        public async Task DepartmentTemplate_ReplacesWholesale_AndGrantsNobodyAnything()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var admin = AddUser(scope.Context, "admin");
+            var member = AddUser(scope.Context, "member");
+            Grant(scope.Context, admin.Id, PermissionEnum.PermissionManage);
+
+            await UpdateTemplate(scope, admin.Id).Handle(new UpdateDepartmentPermissionTemplateCommand
+            {
+                DepartmentId = member.DepartmentId,
+                Permissions = new List<PermissionEnum> { PermissionEnum.SaleView, PermissionEnum.SaleCreate }
+            }, CancellationToken.None);
+
+            var response = await UpdateTemplate(scope, admin.Id).Handle(new UpdateDepartmentPermissionTemplateCommand
+            {
+                DepartmentId = member.DepartmentId,
+                // SaleView stays, SaleCreate goes, SaleShip arrives.
+                Permissions = new List<PermissionEnum> { PermissionEnum.SaleView, PermissionEnum.SaleShip }
+            }, CancellationToken.None);
+
+            Assert.Equal("Success", response.ResponseMessageType);
+
+            using var verify = db.NewContext();
+            var rows = verify.DepartmentPermissionTemplates.Where(x => x.DepartmentId == member.DepartmentId)
+                .Select(x => x.Permission).ToList();
+            Assert.Equal(2, rows.Count);
+            Assert.Contains(PermissionEnum.SaleView, rows);
+            Assert.Contains(PermissionEnum.SaleShip, rows);
+
+            // A template is only a suggestion: the department's members hold nothing because of it.
+            Assert.False(await scope.PermissionService.HasPermissionAsync(member.Id, PermissionEnum.SaleView, CancellationToken.None));
+        }
+
+        [Fact]
+        public async Task DepartmentTemplate_Get_ReturnsTheTemplateAndTheCatalogue()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var admin = AddUser(scope.Context, "admin");
+            Grant(scope.Context, admin.Id, PermissionEnum.PermissionView);
+            scope.Context.DepartmentPermissionTemplates.AddRange(
+                new DepartmentPermissionTemplate { DepartmentId = admin.DepartmentId, Permission = PermissionEnum.SaleShip },
+                new DepartmentPermissionTemplate { DepartmentId = admin.DepartmentId, Permission = PermissionEnum.SaleView });
+            scope.Context.SaveChanges();
+
+            var response = await GetTemplate(scope, admin.Id)
+                .Handle(new GetDepartmentPermissionTemplateQuery { DepartmentId = admin.DepartmentId }, CancellationToken.None);
+
+            var names = response.Data!.GetType().GetProperty("PermissionNames")!.GetValue(response.Data!) as List<string>;
+            var groups = response.Data!.GetType().GetProperty("PermissionGroups")!.GetValue(response.Data!)
+                as List<Application.Features.Permission.Dtos.PermissionGroupDto>;
+
+            // Catalogue order, not insertion order.
+            Assert.Equal(new List<string> { "SaleView", "SaleShip" }, names);
+            Assert.Equal(Enum.GetValues<PermissionEnum>().Length, groups!.Sum(x => x.Permissions.Count));
+        }
+
+        [Fact]
+        public async Task DepartmentTemplate_OnAMissingDepartment_Throws()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var admin = AddUser(scope.Context, "admin");
+            Grant(scope.Context, admin.Id, PermissionEnum.PermissionView, PermissionEnum.PermissionManage);
+
+            await Assert.ThrowsAsync<NotFoundCustomException>(() =>
+                GetTemplate(scope, admin.Id)
+                    .Handle(new GetDepartmentPermissionTemplateQuery { DepartmentId = 999999 }, CancellationToken.None));
+
+            await Assert.ThrowsAsync<NotFoundCustomException>(() =>
+                UpdateTemplate(scope, admin.Id).Handle(new UpdateDepartmentPermissionTemplateCommand
+                {
+                    DepartmentId = 999999,
+                    Permissions = new List<PermissionEnum> { PermissionEnum.SaleView }
+                }, CancellationToken.None));
+        }
+
+        [Fact]
+        public async Task DepartmentTemplate_RejectsAPermissionThatIsNotInTheCatalogue()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var admin = AddUser(scope.Context, "admin");
+            Grant(scope.Context, admin.Id, PermissionEnum.PermissionManage);
+
+            await Assert.ThrowsAsync<ValidationCustomException>(() =>
+                UpdateTemplate(scope, admin.Id).Handle(new UpdateDepartmentPermissionTemplateCommand
+                {
+                    DepartmentId = admin.DepartmentId,
+                    Permissions = new List<PermissionEnum> { (PermissionEnum)9999 }
+                }, CancellationToken.None));
         }
     }
 }

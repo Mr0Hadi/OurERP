@@ -1438,6 +1438,19 @@ the server now expects, what the frontend does today, and what to add).
   throughout this file - 2 `InvoicePdfTests` needing LibreOffice and the `"***"` object-storage placeholder
   gap. The previous recorded baseline was 11 failures.
 
+**Department permission templates (2026-09-23).** A department can carry a *suggested* permission set
+(`DepartmentPermissionTemplate`, key `(DepartmentId, Permission)`, cascade on the department). It grants
+nothing - the permission check still reads only `UserPermissions` - and editing it changes nobody's access.
+The frontend offers it on the user screen (the template of the department *selected in the form*, so moving a
+user shows the destination's template) for the admin to apply to the checkboxes; saving is still
+`UpdateUserPermissions`. Endpoints on `PermissionController`: `GetDepartmentPermissionTemplate`
+(`PermissionView`, returns the template plus the grouped catalogue) and `UpdateDepartmentPermissionTemplate`
+(`PermissionManage`, wholesale-within-manageable like the user command). Tests in `PermissionTests`
+(`DepartmentTemplate_*`).
+- **Written without `dotnet` available: not compiled, tests not run, migration not generated.** Run
+  `dotnet build WMS.slnx`, then `dotnet ef migrations add add-department-permission-templates --project
+  Infrastructure --startup-project WMS`, then `dotnet test Tests/WMS.Tests`.
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
 - ~~`PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK.~~ **Fixed 2026-09-20** - see the installment-sales entry above: both ids are `int`, both relationships are configured explicitly, and the shadow FK is gone.

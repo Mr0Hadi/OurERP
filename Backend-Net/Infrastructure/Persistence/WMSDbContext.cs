@@ -52,6 +52,7 @@ namespace Infrastructure.Persistence
         public DbSet<SaleInstallmentPlan> SaleInstallmentPlans => Set<SaleInstallmentPlan>();
         public DbSet<SaleInstallment> SaleInstallments => Set<SaleInstallment>();
         public DbSet<UserPermission> UserPermissions => Set<UserPermission>();
+        public DbSet<DepartmentPermissionTemplate> DepartmentPermissionTemplates => Set<DepartmentPermissionTemplate>();
 
         public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken)
         {
@@ -130,6 +131,17 @@ namespace Infrastructure.Persistence
                 .WithMany()
                 .HasForeignKey(x => x.GrantedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Same shape as UserPermission: the pair is the key. Cascade is safe here - a template
+            // row means nothing without its department, and it is the only FK on the table.
+            modelBuilder.Entity<DepartmentPermissionTemplate>()
+                .HasKey(x => new { x.DepartmentId, x.Permission });
+
+            modelBuilder.Entity<DepartmentPermissionTemplate>()
+                .HasOne(x => x.Department)
+                .WithMany(x => x.PermissionTemplate)
+                .HasForeignKey(x => x.DepartmentId)
+                .OnDelete(DeleteBehavior.Cascade);
 
 
             modelBuilder.Entity<Team>()

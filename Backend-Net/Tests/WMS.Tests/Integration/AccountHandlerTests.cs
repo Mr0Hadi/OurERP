@@ -170,9 +170,42 @@ namespace WMS.Tests.Integration
             var tokenService = Substitute.For<ITokenService>();
             tokenService.GetTokenInfo("access-token").Returns(new TokenInfoDto { Id = "1", IsExpired = false, Username = "x" });
 
-            var handler = new UserRefreshTokenCommandHandler(MakeConfiguration(), tokenService, scope.UserRepository, scope.UnitOfWork, TestMapper.Instance, new MemoryCache(new MemoryCacheOptions()));
+            // Still accepted by CachingMiddleware - refreshing it early is pointless.
+            var cache = new MemoryCache(new MemoryCacheOptions());
+            cache.Set("UserTokens:1", new HashSet<string> { "access-token" });
+
+            var handler = new UserRefreshTokenCommandHandler(MakeConfiguration(), tokenService, scope.UserRepository, scope.UnitOfWork, TestMapper.Instance, cache);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(new UserRefreshTokenCommand { AccessToken = "access-token", RefreshToken = "refresh-token" }, CancellationToken.None));
+        }
+
+        [Fact]
+        public async Task UserRefreshToken_NotExpiredButUnknownToServer_IssuesNewToken()
+        {
+            // After a restart the in-memory token set is empty: CachingMiddleware rejects the
+            // still-unexpired token, so refusing to refresh it would lock the user out for good.
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var department = Seed.Department();
+            var team = Seed.Team(department);
+            var user = Seed.User(department, team);
+            user.RefreshToken = "the-real-refresh-token";
+            user.ExpireRefreshToken = DateTime.Now.AddMinutes(30);
+            scope.Context.Users.Add(user);
+            scope.Context.SaveChanges();
+
+            var tokenService = Substitute.For<ITokenService>();
+            tokenService.GetTokenInfo("live-access-token").Returns(new TokenInfoDto { Id = user.Id.ToString(), IsExpired = false, Username = user.Username });
+            tokenService.SetTokenAsync(Arg.Any<Application.Features.User.Dto.TokenUserInfoDto>())
+                .Returns(new TokenDto { AccessToken = "new-access-token", RefreshToken = "new-refresh-token" });
+
+            var cache = new MemoryCache(new MemoryCacheOptions());
+            var handler = new UserRefreshTokenCommandHandler(MakeConfiguration(), tokenService, scope.UserRepository, scope.UnitOfWork, TestMapper.Instance, cache);
+
+            var res = await handler.Handle(new UserRefreshTokenCommand { AccessToken = "live-access-token", RefreshToken = "the-real-refresh-token" }, CancellationToken.None);
+
+            Assert.Equal("new-access-token", Assert.IsType<TokenDto>(res.Data).AccessToken);
+            Assert.Contains("new-access-token", cache.Get<HashSet<string>>($"UserTokens:{user.Id}")!);
         }
 
         [Fact]
