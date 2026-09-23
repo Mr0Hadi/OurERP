@@ -293,7 +293,9 @@ frontend's proforma commit (`92544f6`) plus `docs/invoice-attachment-requirement
   `InvoiceDate = DateTime.Now`, and forces `Status = PROCESSING`. `UpdateSaleCommandHandler`
   additionally **rejects** an attempt to move a `PROFORMA` sale to any other status without
   full payment (`ValidationCustomException`) — staff cannot manually push a sale out of
-  proforma before the customer has paid.
+  proforma before the customer has paid. **Changed 2026-09-24: the threshold is now
+  `PaidAmount > 0`, not full payment** — see the dated entry "Proforma exits on the first
+  payment" further down.
 - **`DocumentAttachment`** (`Domain/Entities/DocumentAttachment.cs`) is a new *shared* table —
   option (a) from `docs/invoice-attachment-requirements.fa.md` — keyed loosely by
   `(DocumentKind, DocumentId)` instead of a real FK, so one table backs every document kind.
@@ -1143,7 +1145,8 @@ untouched. Design decisions in `docs/sale-installment-guide.fa.md`; API contract
   request's `PaidAmount` (reads it off the plan) and rejects a `TotalAmount` that disagrees with the plan - the
   total only changes through `UpdateSaleInstallmentPlan`. Cancelling a plan leaves `PaidAmount` alone: money taken
   is money taken.
-- **The PROFORMA exit rule is now two branches.** Non-installment: unchanged (`PaidAmount >= TotalAmount`).
+- **The PROFORMA exit rule is now two branches.** Non-installment: unchanged (`PaidAmount >= TotalAmount`; since
+  2026-09-24 `PaidAmount > 0`, see "Proforma exits on the first payment").
   Installment: the condition is "an active plan with a recorded down payment", not full payment. Because the plan is
   created *after* the sale, an installment sale deliberately stays `PROFORMA` through `CreateSale`; the
   finalization happens in `CreateSaleInstallmentPlanCommandHandler`. The invoice-number generation lives once, in
@@ -1450,6 +1453,32 @@ user shows the destination's template) for the admin to apply to the checkboxes;
 - **Written without `dotnet` available: not compiled, tests not run, migration not generated.** Run
   `dotnet build WMS.slnx`, then `dotnet ef migrations add add-department-permission-templates --project
   Infrastructure --startup-project WMS`, then `dotnet test Tests/WMS.Tests`.
+
+**Proforma exits on the first payment (2026-09-24).** A non-installment sale leaves `PROFORMA` as soon as
+`PaidAmount > 0`, no longer only at `PaidAmount >= TotalAmount`. API: `docs/api-guide.fa.md` §11b, §15
+(`SalesStatusEnum`) and the 2026-09-24 table in §16.
+
+- **Why:** a proforma is a sale nobody has paid a rial towards. Once any money has changed hands the sale is real
+  and gets its official invoice number - the same reasoning that already made the installment down payment the
+  exit condition. Goods must still never leave the warehouse against a proforma.
+- `CreateSaleCommandHandler` finalizes (via `SaleInvoiceFinalizer`) when `PaidAmount > 0`; `UpdateSaleCommandHandler`'s
+  non-installment branch sets `canLeaveProforma = request.PaidAmount > 0` and still throws `ValidationCustomException`
+  on a manual exit with nothing paid. **Keep that throw**: without it `Status` is copied straight from the request, so
+  a sale could reach `PROCESSING` with no payment and an empty `InvoiceNumber`, and then be shipped.
+- **Unchanged:** installment sales (active plan + down payment) and non-installment `CreateInPersonSaleCommand`, which
+  still requires full payment because the customer takes the goods on the spot.
+- **One-way:** lowering `PaidAmount` back to 0 later does not return the sale to `PROFORMA`; its invoice number stays.
+  A `PROCESSING` sale can therefore still owe money - debt is `TotalAmount - PaidAmount`, never the status.
+- No schema change, no migration.
+- **Tests rewritten to the new rule** (`SaleCrudTests`): stays proforma only with `PaidAmount = 0`
+  (`CreateSale_ProformaWithNoPayment_…`, `UpdateSale_ProformaWithNoPayment_ManualStatusChange_ThrowsValidation`),
+  one rial finalizes on create (`CreateSale_ProformaWithAnyPayment_…`), a partial payment finalizes on update
+  (`UpdateSale_ProformaReceivingFirstPayment_AutoFinalizes`), and new
+  `UpdateSale_ProformaWithPartialPayment_ManualStatusChange_StillIssuesInvoiceNumber` guards the "no invoice number"
+  hole above. `CreateSale_AsProforma_WithoutInvoiceDate_PersistsNull` now sends `PaidAmount = 0`, and
+  `SaleInstallmentTests.NonInstallmentSale_KeepsTheOriginalProformaExitRule` became `…_LeavesProformaOnFirstPayment`.
+  **Verified:** build clean, suite 614/617; the 3 failures are the documented environmental ones (2 LibreOffice
+  `InvoicePdfTests`, the `"***"` object-storage placeholder).
 
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.

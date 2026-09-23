@@ -23,7 +23,7 @@ namespace Application.Common.Sales
         /// <summary>
         /// فروش را از پیش‌فاکتور خارج می‌کند: اگر هنوز شماره‌ی رسمی ندارد یکی تولید می‌کند و
         /// تاریخ فاکتور را می‌نشاند، و وضعیت را به PROCESSING می‌برد. شرطِ «آیا مجاز است؟»
-        /// بیرون از اینجا تصمیم گرفته می‌شود - فروش عادی با پرداخت کامل، فروش اقساطی با وجود
+        /// بیرون از اینجا تصمیم گرفته می‌شود - فروش عادی با اولین پرداخت (PaidAmount > 0)، فروش اقساطی با وجود
         /// پلن فعال و ثبت پیش‌پرداخت.
         /// </summary>
         public static async Task FinalizeAsync(IWMSDbContext context, Domain.Entities.Sale sale, CancellationToken cancellationToken)
