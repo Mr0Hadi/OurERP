@@ -64,7 +64,15 @@ namespace Application.Features.Account.Command
                 throw new ValidationCustomException("توکن معتبر نیست");
             }
 
-            if (tokenInfo.IsExpired == false)
+            var cacheKey = $"UserTokens:{tokenInfo.Id}";
+            var userTokens = _memoryCache.GetOrCreate(cacheKey, entry => new HashSet<string>());
+
+            // "Not expired" alone is not "still usable": CachingMiddleware only accepts tokens held
+            // in this in-memory set, which is empty after every restart. Refusing to refresh such a
+            // token deadlocked the client - every request 401s and every refresh 400s. A token the
+            // server no longer knows is refreshed like an expired one; the refresh-token check below
+            // still stops a logged-out user, since both logout commands null it.
+            if (tokenInfo.IsExpired == false && userTokens.Contains(request.AccessToken))
             {
                 throw new ValidationCustomException("توکن منقضی نشده است و معتبر است");
             }
@@ -94,9 +102,6 @@ namespace Application.Features.Account.Command
             var userInfo = _mapper.Map<TokenUserInfoDto>(user);
 
             var data = await _tokenService.SetTokenAsync(userInfo);
-
-            var cacheKey = $"UserTokens:{userInfo.Id}";
-            var userTokens = _memoryCache.GetOrCreate(cacheKey, entry => new HashSet<string>());
 
             userTokens.Remove(request.AccessToken);
 

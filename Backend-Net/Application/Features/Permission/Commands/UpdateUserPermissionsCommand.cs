@@ -69,6 +69,7 @@ namespace Application.Features.Permission.Commands
             var res = new ResponseDto();
 
             var user = await _context.Users
+                .Include(x => x.Permissions)
                 .FirstOrDefaultAsync(x => x.Id == request.UserId && x.IsActive, cancellationToken);
 
             if (user == null) throw new NotFoundCustomException("کاربر با این شناسه یافت نشد.");
@@ -84,34 +85,32 @@ namespace Application.Features.Permission.Commands
             if (requested.Any(permission => !manageable.Contains(permission)))
                 throw new ValidationCustomException("یکی از دسترسی‌های انتخاب‌شده معتبر نیست یا اجازه واگذاری آن را ندارید.");
 
-            var existing = await _context.UserPermissions
-                .Where(x => x.UserId == request.UserId)
-                .ToListAsync(cancellationToken);
-
-            var toRemove = existing
-                .Where(x => manageable.Contains(x.Permission) && !requested.Contains(x.Permission))
-                .ToList();
-
             // The one unrecoverable mistake: dropping your own key to this very screen leaves
             // nobody able to hand it back without direct database access.
-            if (request.UserId == actorId && toRemove.Any(x => x.Permission == PermissionEnum.PermissionManage))
+            if (request.UserId == actorId
+                && !requested.Contains(PermissionEnum.PermissionManage)
+                && user.Permissions.Any(x => x.Permission == PermissionEnum.PermissionManage))
                 throw new ValidationCustomException("نمی‌توانید دسترسی «مدیریت دسترسی‌های کاربران» را از خودتان بگیرید.");
 
-            var alreadyHeld = existing.Select(x => x.Permission).ToHashSet();
-
-            var toAdd = requested
-                .Where(permission => !alreadyHeld.Contains(permission))
-                .Select(permission => new Domain.Entities.UserPermission
-                {
-                    UserId = request.UserId,
-                    Permission = permission,
-                    GrantedAt = DateTime.Now,
-                    GrantedByUserId = actorId > 0 ? actorId : null
-                })
+            // The final list: what was requested plus the rows the caller cannot manage. The change
+            // tracker diffs it against the snapshot taken at load - a dropped row is an orphan of a
+            // required FK and is deleted, a new one is inserted. Kept rows must be the SAME tracked
+            // instances (hence the lookup), both so GrantedAt/GrantedBy survive and so no second
+            // instance with the same (UserId, Permission) key is ever attached.
+            user.Permissions = requested
+                .Select(permission => user.Permissions.FirstOrDefault(x => x.Permission == permission)
+                    ?? new Domain.Entities.UserPermission
+                    {
+                        Permission = permission,
+                        GrantedAt = DateTime.Now,
+                        GrantedByUserId = actorId > 0 ? actorId : null
+                    })
+                .Concat(user.Permissions.Where(x => !manageable.Contains(x.Permission)))
                 .ToList();
 
-            _context.UserPermissions.RemoveRange(toRemove);
-            await _context.UserPermissions.AddRangeAsync(toAdd, cancellationToken);
+            var changes = _context.ChangeTracker.Entries<Domain.Entities.UserPermission>().ToList();
+            var addedCount = changes.Count(x => x.State == EntityState.Added);
+            var removedCount = changes.Count(x => x.State == EntityState.Deleted);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -121,8 +120,8 @@ namespace Application.Features.Permission.Commands
             res.Data = new
             {
                 UserId = request.UserId,
-                AddedCount = toAdd.Count,
-                RemovedCount = toRemove.Count
+                AddedCount = addedCount,
+                RemovedCount = removedCount
             };
             res.Message = "دسترسی‌های کاربر با موفقیت ثبت شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();

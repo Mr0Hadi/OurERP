@@ -51,5 +51,23 @@ namespace WMS.Controllers
         {
             return await _mediator.Send(request);
         }
+
+        /// <summary>
+        /// A department's suggested permission set. Offered on the user screen as a shortcut;
+        /// it grants nothing by itself.
+        /// </summary>
+        [HttpGet("GetDepartmentPermissionTemplate")]
+        [HasPermission(PermissionEnum.PermissionView)]
+        public async Task<ActionResult<ResponseDto>> GetDepartmentPermissionTemplate([FromQuery] GetDepartmentPermissionTemplateQuery request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HttpPut("UpdateDepartmentPermissionTemplate")]
+        [HasPermission(PermissionEnum.PermissionManage)]
+        public async Task<ActionResult<ResponseDto>> UpdateDepartmentPermissionTemplate([FromBody] UpdateDepartmentPermissionTemplateCommand request)
+        {
+            return await _mediator.Send(request);
+        }
     }
 }

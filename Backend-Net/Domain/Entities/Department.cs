@@ -11,5 +11,8 @@
         public User? Deputy { get; set; }
         public List<Team> Teams { get; set; }
         public List<User> Users { get; set; }
+
+        /// <summary>Suggested permissions only - see <see cref="DepartmentPermissionTemplate"/>.</summary>
+        public List<DepartmentPermissionTemplate> PermissionTemplate { get; set; }
     }
 }

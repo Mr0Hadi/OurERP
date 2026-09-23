@@ -438,6 +438,8 @@ Authorization: Bearer {accessToken}
 | GET | `api/Permission/GetPermissionList` | `PermissionView` | فهرست کامل دسترسی‌ها، گروه‌بندی‌شده |
 | GET | `api/Permission/GetUserPermissions?userId=12` | `PermissionView` | دسترسی‌های یک کاربر + همان فهرست گروه‌بندی‌شده (برای رندر چک‌باکس‌ها با یک درخواست) |
 | PUT | `api/Permission/UpdateUserPermissions` | `PermissionManage` | جایگزینی کامل لیست |
+| GET | `api/Permission/GetDepartmentPermissionTemplate?departmentId=2` | `PermissionView` | الگوی پیشنهادیِ دسترسی یک واحد + همان فهرست گروه‌بندی‌شده |
+| PUT | `api/Permission/UpdateDepartmentPermissionTemplate` | `PermissionManage` | جایگزینی کامل الگوی واحد |
 
 **`GetMyPermissions`** →
 
@@ -486,6 +488,34 @@ Authorization: Bearer {accessToken}
 - اثرش **فوری** است؛ کاربر هدف لازم نیست دوباره وارد شود.
 - کاربر نمی‌تواند دسترسی `PermissionManage` را **از خودش** بگیرد (۴۰۰) — تنها اشتباهی که بدون دسترسی مستقیم به دیتابیس برگشت‌پذیر نیست.
 - عددی که در `PermissionEnum` تعریف نشده باشد ۴۰۰ می‌گیرد.
+
+### الگوی دسترسی واحد (Department permission template)
+
+هر واحد می‌تواند یک **الگوی پیشنهادی** داشته باشد: «کارمندان این واحد معمولاً این دسترسی‌ها را دارند». الگو **هیچ دسترسی‌ای نمی‌دهد** — بررسی دسترسی فقط ردیف‌های خودِ کاربر را می‌خواند. الگو فقط در صفحه‌ی ویرایش کارمند (یا هنگام جابه‌جایی او بین واحدها) به ادمین نشان داده می‌شود تا با یک کلیک روی چک‌باکس‌ها اعمالش کند؛ چیزی که بعد ذخیره می‌شود همچنان با `UpdateUserPermissions` و لیست صریح خودِ کاربر است. بنابراین **تغییر الگو دسترسی هیچ‌کس را عوض نمی‌کند.**
+
+**`GetDepartmentPermissionTemplate?departmentId=2`** →
+
+```json
+{
+  "data": {
+    "departmentId": 2,
+    "departmentName": "فروش",
+    "permissions": [ { "permission": 90, "name": "SaleView", "title": "مشاهده فروش‌ها" } ],
+    "permissionNames": ["SaleView"],
+    "permissionGroups": [ /* همان شکل GetPermissionList */ ]
+  }
+}
+```
+
+**`UpdateDepartmentPermissionTemplate`** →
+
+```json
+{ "departmentId": 2, "permissions": [90, 91, 94] }
+```
+
+- مثل `UpdateUserPermissions` **جایگزینی کامل** است و آرایه‌ی خالی الگو را پاک می‌کند. پاسخ: `{ "departmentId": 2, "addedCount": 2, "removedCount": 0 }`.
+- واحد ناموجود یا حذف‌شده ۴۰۴؛ عدد نامعتبر ۴۰۰.
+- دسترسی‌های محدود (restricted) که درخواست‌دهنده ندارد، مثل صفحه‌ی کاربر نه نمایش داده می‌شوند و نه با ذخیره پاک می‌شوند.
 
 ### کدام endpoint چه دسترسی‌ای می‌خواهد
 
