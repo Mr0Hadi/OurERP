@@ -1,5 +1,5 @@
-import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useMemo } from "react";
 import {
   fetchReceivablePurchases,
   fetchPurchaseReceivingInfo,
@@ -9,8 +9,6 @@ import { receivingKeys } from "./queryKeys";
 
 /** صفِ دریافت: خریدهایی که کالایشان هنوز کامل نرسیده. */
 export function useReceivablePurchasesQuery(filters, pagination) {
-  const queryClient = useQueryClient();
-
   const queryParams = useMemo(
     () => ({
       page: pagination.pageIndex + 1,
@@ -23,14 +21,6 @@ export function useReceivablePurchasesQuery(filters, pagination) {
     }),
     [filters, pagination],
   );
-
-  useEffect(() => {
-    const nextPageParams = { ...queryParams, page: queryParams.page + 1 };
-    queryClient.prefetchQuery({
-      queryKey: receivingKeys.list(nextPageParams),
-      queryFn: () => fetchReceivablePurchases(nextPageParams),
-    });
-  }, [queryClient, queryParams]);
 
   return useQuery({
     queryKey: receivingKeys.list(queryParams),

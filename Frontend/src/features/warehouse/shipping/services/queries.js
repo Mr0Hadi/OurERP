@@ -1,5 +1,5 @@
-import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useMemo } from "react";
 import {
   fetchShippableSales,
   fetchSaleForShipping,
@@ -9,8 +9,6 @@ import { shippingKeys } from "./queryKeys";
 
 /** صفِ ارسال: فروش‌هایی که کالایشان هنوز کامل نرفته. */
 export function useShippableSalesQuery(filters, pagination) {
-  const queryClient = useQueryClient();
-
   const queryParams = useMemo(
     () => ({
       page: pagination.pageIndex + 1,
@@ -23,14 +21,6 @@ export function useShippableSalesQuery(filters, pagination) {
     }),
     [filters, pagination],
   );
-
-  useEffect(() => {
-    const nextPageParams = { ...queryParams, page: queryParams.page + 1 };
-    queryClient.prefetchQuery({
-      queryKey: shippingKeys.list(nextPageParams),
-      queryFn: () => fetchShippableSales(nextPageParams),
-    });
-  }, [queryClient, queryParams]);
 
   return useQuery({
     queryKey: shippingKeys.list(queryParams),

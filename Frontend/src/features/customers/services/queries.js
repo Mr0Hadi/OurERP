@@ -1,11 +1,9 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { customerKeys } from "./queryKeys";
 import { fetchCustomers, getCustomerById } from "./api-v1";
 import { keepPreviousData } from "@tanstack/react-query";
 
 export function useCustomersQuery(filters, pagination, sorting) {
-  const queryClient = useQueryClient();
-
   const queryParams = {
     page: pagination.pageIndex + 1,
     limit: pagination.pageSize,
@@ -17,12 +15,6 @@ export function useCustomersQuery(filters, pagination, sorting) {
     sortBy: sorting?.id ?? "lastName",
     sortOrder: sorting?.desc ? "desc" : "asc",
   };
-
-  const nextParams = { ...queryParams, page: queryParams.page + 1 };
-  queryClient.prefetchQuery({
-    queryKey: customerKeys.list(nextParams),
-    queryFn: () => fetchCustomers(nextParams),
-  });
 
   return useQuery({
     queryKey: customerKeys.list(queryParams),

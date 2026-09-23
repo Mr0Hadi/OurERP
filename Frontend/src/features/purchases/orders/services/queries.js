@@ -1,13 +1,10 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { keepPreviousData } from "@tanstack/react-query";
-import { useEffect } from "react";
 import { fetchPurchases, fetchPurchaseById } from "./api-v1";
 import { purchaseKeys } from "./queryKeys";
 import { useMemo } from "react";
 
 export function usePurchasesQuery(filters, pagination, sorting) {
-  const queryClient = useQueryClient();
-
   const queryParams = useMemo(
     () => ({
       page: pagination.pageIndex + 1,
@@ -23,15 +20,6 @@ export function usePurchasesQuery(filters, pagination, sorting) {
     }),
     [filters, pagination, sorting],
   );
-
-  // انتقال به effect
-  useEffect(() => {
-    const nextPageParams = { ...queryParams, page: queryParams.page + 1 };
-    queryClient.prefetchQuery({
-      queryKey: purchaseKeys.list(nextPageParams),
-      queryFn: () => fetchPurchases(nextPageParams),
-    });
-  }, [queryClient, queryParams]);
 
   return useQuery({
     queryKey: purchaseKeys.list(queryParams),

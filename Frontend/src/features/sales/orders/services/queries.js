@@ -1,11 +1,9 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { keepPreviousData } from '@tanstack/react-query';
 import { fetchSales, fetchSaleById } from './api-v1';
 import { saleKeys } from './queryKeys';
 
 export function useSalesQuery(filters, pagination, sorting) {
-  const queryClient = useQueryClient();
-
   const queryParams = {
     page: pagination.pageIndex + 1,
     limit: pagination.pageSize,
@@ -19,12 +17,6 @@ export function useSalesQuery(filters, pagination, sorting) {
     sortBy: sorting?.id ?? 'createdAt',
     sortOrder: sorting?.desc ? 'desc' : 'asc',
   };
-
-  const nextPageParams = { ...queryParams, page: queryParams.page + 1 };
-  queryClient.prefetchQuery({
-    queryKey: saleKeys.list(nextPageParams),
-    queryFn: () => fetchSales(nextPageParams),
-  });
 
   return useQuery({
     queryKey: saleKeys.list(queryParams),

@@ -1,5 +1,5 @@
-import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useMemo } from "react";
 import {
   fetchPurchaseReturns,
   fetchPurchaseReturnById,
@@ -9,7 +9,6 @@ import {
 import { purchaseReturnKeys } from "./queryKeys";
 
 export function usePurchaseReturnsQuery(filters, pagination, sorting) {
-  const queryClient = useQueryClient();
   const queryParams = useMemo(
     () => ({
       page: pagination.pageIndex + 1,
@@ -26,14 +25,6 @@ export function usePurchaseReturnsQuery(filters, pagination, sorting) {
     }),
     [filters, pagination, sorting],
   );
-
-  useEffect(() => {
-    const nextPageParams = { ...queryParams, page: queryParams.page + 1 };
-    queryClient.prefetchQuery({
-      queryKey: purchaseReturnKeys.list(nextPageParams),
-      queryFn: () => fetchPurchaseReturns(nextPageParams),
-    });
-  }, [queryClient, queryParams]);
 
   return useQuery({
     queryKey: purchaseReturnKeys.list(queryParams),
