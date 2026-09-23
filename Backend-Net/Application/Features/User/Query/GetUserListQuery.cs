@@ -1,6 +1,7 @@
 ﻿using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Common.Queries;
 using Application.Features.User.Dto;
 using Common.Extensions;
 using Domain.Enums;
@@ -9,6 +10,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.User.Query
 {
+    public enum UserListSortEnum
+    {
+        ID = 0,
+        FIRST_NAME = 1,
+        LAST_NAME = 2,
+        USERNAME = 3,
+        PERSONEL_CODE = 4,
+        DEPARTMENT_NAME = 5,
+        TEAM_NAME = 6,
+    }
+
     public class GetUserListQuery : IRequest<ResponseDto>
     {
         public int Page { get; set; } = 1;
@@ -18,6 +30,8 @@ namespace Application.Features.User.Query
         public int? DepartmentId { get; set; }
         public int? TeamId { get; set; }
         public bool? IsActive { get; set; }
+        public UserListSortEnum? SortBy { get; set; }
+        public SortDirectionEnum? SortDirection { get; set; }
     }
 
     public class GetUserListQueryHandler : IRequestHandler<GetUserListQuery, ResponseDto>
@@ -60,7 +74,20 @@ namespace Application.Features.User.Query
                 query = query.Where(x => x.IsActive == request.IsActive.Value);
             }
 
-            var paged = await query.Select(x => new UserListDto
+            // Default: newest first.
+            var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
+            var sorted = request.SortBy switch
+            {
+                UserListSortEnum.FIRST_NAME => query.SortBy(x => x.FirstName, direction),
+                UserListSortEnum.LAST_NAME => query.SortBy(x => x.LastName, direction),
+                UserListSortEnum.USERNAME => query.SortBy(x => x.Username, direction),
+                UserListSortEnum.PERSONEL_CODE => query.SortBy(x => x.PersonelCode, direction),
+                UserListSortEnum.DEPARTMENT_NAME => query.SortBy(x => x.Department.Name, direction),
+                UserListSortEnum.TEAM_NAME => query.SortBy(x => x.Team != null ? x.Team.Name : null, direction),
+                _ => query.SortBy(x => x.Id, direction),
+            };
+
+            var paged = await sorted.ThenSortBy(x => x.Id, direction).Select(x => new UserListDto
             {
                 Id = x.Id,
                 FirstName = x.FirstName,

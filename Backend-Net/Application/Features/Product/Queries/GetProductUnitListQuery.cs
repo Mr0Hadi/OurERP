@@ -1,6 +1,7 @@
 using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Common.Queries;
 using Application.Features.Product.Mappings;
 using Common.Extensions;
 using Domain.Enums;
@@ -9,6 +10,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.Product.Queries
 {
+    public enum ProductUnitListSortEnum
+    {
+        SERIAL_NUMBER = 0,
+        PRODUCT_NAME = 1,
+        STATUS = 2,
+        SOLD_AT = 3,
+    }
+
     public class GetProductUnitListQuery : IRequest<ResponseDto>
     {
         public int Page { get; set; } = 1;
@@ -18,6 +27,8 @@ namespace Application.Features.Product.Queries
         public ProductUnitStatusEnum? Status { get; set; }
         public int? FromSerial { get; set; }
         public int? ToSerial { get; set; }
+        public ProductUnitListSortEnum? SortBy { get; set; }
+        public SortDirectionEnum? SortDirection { get; set; }
     }
 
     public class GetProductUnitListQueryHandler : IRequestHandler<GetProductUnitListQuery, ResponseDto>
@@ -49,9 +60,19 @@ namespace Application.Features.Product.Queries
             if (!string.IsNullOrEmpty(request.ProductName))
                 query = query.Where(x => x.Product.Name.Contains(request.ProductName));
 
-            var paged = await query
-                .OrderBy(x => x.ProductId)
-                .ThenBy(x => x.SerialNumber)
+            // Default: grouped by product, then by serial.
+            var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.ASC);
+            var sorted = request.SortBy switch
+            {
+                ProductUnitListSortEnum.SERIAL_NUMBER => query.SortBy(x => x.SerialNumber, direction),
+                ProductUnitListSortEnum.PRODUCT_NAME => query.SortBy(x => x.Product.Name, direction).ThenSortBy(x => x.SerialNumber, direction),
+                ProductUnitListSortEnum.STATUS => query.SortBy(x => x.Status, direction),
+                ProductUnitListSortEnum.SOLD_AT => query.SortBy(x => x.SoldAt, direction),
+                _ => query.SortBy(x => x.ProductId, direction).ThenSortBy(x => x.SerialNumber, direction),
+            };
+
+            var paged = await sorted
+                .ThenSortBy(x => x.Id, direction)
                 .SelectDto(_context)
                 .ToPagedAsync(request.Page, request.Take, cancellationToken);
 

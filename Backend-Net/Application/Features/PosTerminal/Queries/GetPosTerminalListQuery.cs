@@ -1,17 +1,27 @@
 using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Common.Queries;
 using Application.Features.PosTerminal.Dtos;
 using Common.Extensions;
 using MediatR;
 
 namespace Application.Features.PosTerminal.Queries
 {
+    public enum PosTerminalListSortEnum
+    {
+        ID = 0,
+        NAME = 1,
+        VENDOR = 2,
+    }
+
     public class GetPosTerminalListQuery : IRequest<ResponseDto>
     {
         public int Page { get; set; } = 1;
         public int Take { get; set; } = 10;
         public string? Name { get; set; }
+        public PosTerminalListSortEnum? SortBy { get; set; }
+        public SortDirectionEnum? SortDirection { get; set; }
     }
 
     public class GetPosTerminalListQueryHandler : IRequestHandler<GetPosTerminalListQuery, ResponseDto>
@@ -31,7 +41,16 @@ namespace Application.Features.PosTerminal.Queries
                 query = query.Where(x => x.Name.Contains(request.Name));
             }
 
-            var paged = await query.Select(x => new PosTerminalListDto
+            // Default: alphabetical.
+            var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.ASC);
+            var sorted = request.SortBy switch
+            {
+                PosTerminalListSortEnum.ID => query.SortBy(x => x.Id, direction),
+                PosTerminalListSortEnum.VENDOR => query.SortBy(x => x.Vendor, direction),
+                _ => query.SortBy(x => x.Name, direction),
+            };
+
+            var paged = await sorted.ThenSortBy(x => x.Id, direction).Select(x => new PosTerminalListDto
             {
                 Id = x.Id,
                 Name = x.Name,

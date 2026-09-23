@@ -2,6 +2,7 @@ using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Common.Queries;
 using Application.Features.Supplier.Dtos;
 using Common.Extensions;
 using Domain.Enums;
@@ -10,6 +11,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.Supplier.Queries
 {
+    public enum SupplierListSortEnum
+    {
+        ID = 0,
+        COMPANY_NAME = 1,
+        FIRST_NAME = 2,
+        LAST_NAME = 3,
+        BALANCE = 4,
+        BALANCE_TYPE = 5,
+    }
+
     public class GetSupplierListQuery : IRequest<ResponseDto>
     {
         public int Page { get; set; } = 1;
@@ -19,6 +30,8 @@ namespace Application.Features.Supplier.Queries
         public string? CompanyNameOrContactName { get; set; }
         public int? Id { get; set; }
         public BalanceTypeEnum? BalanceType { get; set; }
+        public SupplierListSortEnum? SortBy { get; set; }
+        public SortDirectionEnum? SortDirection { get; set; }
     }
 
     public class GetSupplierListQueryHandler : IRequestHandler<GetSupplierListQuery, ResponseDto>
@@ -65,7 +78,19 @@ namespace Application.Features.Supplier.Queries
                 query = query.Where(x => x.BalanceType == request.BalanceType.Value);
             }
 
-            var paged = await query.Select(x => new SupplierListDto
+            // Default: newest first.
+            var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
+            var sorted = request.SortBy switch
+            {
+                SupplierListSortEnum.COMPANY_NAME => query.SortBy(x => x.CompanyName, direction),
+                SupplierListSortEnum.FIRST_NAME => query.SortBy(x => x.FirstName, direction),
+                SupplierListSortEnum.LAST_NAME => query.SortBy(x => x.LastName, direction),
+                SupplierListSortEnum.BALANCE => query.SortBy(x => x.Balance, direction),
+                SupplierListSortEnum.BALANCE_TYPE => query.SortBy(x => x.BalanceType, direction),
+                _ => query.SortBy(x => x.Id, direction),
+            };
+
+            var paged = await sorted.ThenSortBy(x => x.Id, direction).Select(x => new SupplierListDto
             {
                 Id = x.Id,
                 CompanyName = x.CompanyName,

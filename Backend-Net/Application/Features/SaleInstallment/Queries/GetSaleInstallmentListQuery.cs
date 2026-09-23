@@ -1,6 +1,7 @@
 using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Common.Queries;
 using Application.Features.SaleInstallment.Dtos;
 using Common.Extensions;
 using Domain.Enums;
@@ -8,6 +9,17 @@ using MediatR;
 
 namespace Application.Features.SaleInstallment.Queries
 {
+    public enum SaleInstallmentListSortEnum
+    {
+        DUE_DATE = 0,
+        NUMBER = 1,
+        AMOUNT = 2,
+        STATUS = 3,
+        PAID_AT = 4,
+        INVOICE_NUMBER = 5,
+        CUSTOMER_NAME = 6,
+    }
+
     /// <summary>
     /// لیست تک‌تک اقساط در سطح کل سیستم. صفحه‌های «سررسیدگذشته» و «پرداخت‌های پیش‌رو» روی
     /// همین اندپوینت ساخته می‌شوند - اندپوینت جداگانه‌ای برای آن‌ها وجود ندارد:
@@ -26,6 +38,8 @@ namespace Application.Features.SaleInstallment.Queries
         public DateTime? ToDueDate { get; set; }
         public DateTime? FromPaidAt { get; set; }
         public DateTime? ToPaidAt { get; set; }
+        public SaleInstallmentListSortEnum? SortBy { get; set; }
+        public SortDirectionEnum? SortDirection { get; set; }
     }
 
     public class GetSaleInstallmentListQueryHandler : IRequestHandler<GetSaleInstallmentListQuery, ResponseDto>
@@ -82,7 +96,20 @@ namespace Application.Features.SaleInstallment.Queries
                 query = query.Where(x => x.PaidAt <= request.ToPaidAt.Value);
             }
 
-            var paged = await query.OrderBy(x => x.DueDate).ThenBy(x => x.Id).Select(x => new SaleInstallmentListDto
+            // Default: earliest due date first.
+            var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.ASC);
+            var sorted = request.SortBy switch
+            {
+                SaleInstallmentListSortEnum.NUMBER => query.SortBy(x => x.Number, direction),
+                SaleInstallmentListSortEnum.AMOUNT => query.SortBy(x => x.Amount, direction),
+                SaleInstallmentListSortEnum.STATUS => query.SortBy(x => x.Status, direction),
+                SaleInstallmentListSortEnum.PAID_AT => query.SortBy(x => x.PaidAt, direction),
+                SaleInstallmentListSortEnum.INVOICE_NUMBER => query.SortBy(x => x.Plan.Sale.InvoiceNumber, direction),
+                SaleInstallmentListSortEnum.CUSTOMER_NAME => query.SortBy(x => x.Plan.Sale.Customer.FirstName + " " + x.Plan.Sale.Customer.LastName, direction),
+                _ => query.SortBy(x => x.DueDate, direction),
+            };
+
+            var paged = await sorted.ThenSortBy(x => x.Id, direction).Select(x => new SaleInstallmentListDto
             {
                 InstallmentId = x.Id,
                 Number = x.Number,
