@@ -67,10 +67,11 @@ namespace Application.Features.Permission.Commands
         {
             var res = new ResponseDto();
 
-            var exists = await _context.Departments
-                .AnyAsync(x => x.Id == request.DepartmentId && x.IsActive, cancellationToken);
+            var department = await _context.Departments
+                .Include(x => x.PermissionTemplate)
+                .FirstOrDefaultAsync(x => x.Id == request.DepartmentId && x.IsActive, cancellationToken);
 
-            if (!exists) throw new NotFoundCustomException("واحد با این شناسه یافت نشد.");
+            if (department == null) throw new NotFoundCustomException("واحد با این شناسه یافت نشد.");
 
             var actorId = Convert.ToInt32(_userContextService.GetUserId());
             var held = await _permissionService.GetUserPermissionsAsync(actorId, cancellationToken);
@@ -83,27 +84,18 @@ namespace Application.Features.Permission.Commands
             if (requested.Any(permission => !manageable.Contains(permission)))
                 throw new ValidationCustomException("یکی از دسترسی‌های انتخاب‌شده معتبر نیست یا اجازه واگذاری آن را ندارید.");
 
-            var existing = await _context.DepartmentPermissionTemplates
-                .Where(x => x.DepartmentId == request.DepartmentId)
-                .ToListAsync(cancellationToken);
-
-            var toRemove = existing
-                .Where(x => manageable.Contains(x.Permission) && !requested.Contains(x.Permission))
+            // Same change-tracker sync as UpdateUserPermissions: the final list is diffed against the
+            // snapshot taken at load, and kept rows reuse their tracked instance so no duplicate key
+            // is attached.
+            department.PermissionTemplate = requested
+                .Select(permission => department.PermissionTemplate.FirstOrDefault(x => x.Permission == permission)
+                    ?? new Domain.Entities.DepartmentPermissionTemplate { Permission = permission })
+                .Concat(department.PermissionTemplate.Where(x => !manageable.Contains(x.Permission)))
                 .ToList();
 
-            var alreadyIn = existing.Select(x => x.Permission).ToHashSet();
-
-            var toAdd = requested
-                .Where(permission => !alreadyIn.Contains(permission))
-                .Select(permission => new Domain.Entities.DepartmentPermissionTemplate
-                {
-                    DepartmentId = request.DepartmentId,
-                    Permission = permission
-                })
-                .ToList();
-
-            _context.DepartmentPermissionTemplates.RemoveRange(toRemove);
-            await _context.DepartmentPermissionTemplates.AddRangeAsync(toAdd, cancellationToken);
+            var changes = _context.ChangeTracker.Entries<Domain.Entities.DepartmentPermissionTemplate>().ToList();
+            var addedCount = changes.Count(x => x.State == EntityState.Added);
+            var removedCount = changes.Count(x => x.State == EntityState.Deleted);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -112,8 +104,8 @@ namespace Application.Features.Permission.Commands
             res.Data = new
             {
                 DepartmentId = request.DepartmentId,
-                AddedCount = toAdd.Count,
-                RemovedCount = toRemove.Count
+                AddedCount = addedCount,
+                RemovedCount = removedCount
             };
             res.Message = "الگوی دسترسی واحد با موفقیت ثبت شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
