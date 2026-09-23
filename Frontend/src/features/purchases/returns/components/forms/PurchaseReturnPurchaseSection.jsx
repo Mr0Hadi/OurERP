@@ -5,6 +5,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { useReturnablePurchasesQuery } from "../../services/queries";
+import { PURCHASE_STATUS_LABELS } from "@/shared/domain/enums/purchaseStatus";
 
 /**
  * انتخاب خریدِ مبدا برای ثبت مرجوعی.
@@ -65,7 +66,7 @@ export default function PurchaseReturnPurchaseSection({
                 placeholder={
                   isLoading
                     ? "در حال بارگذاری..."
-                    : "جست‌وجو با شماره فاکتور یا نام تامین‌کننده..."
+                    : "جست‌وجو با شماره فاکتور..."
                 }
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -94,7 +95,7 @@ export default function PurchaseReturnPurchaseSection({
                         </p>
                         <p className="text-xs text-muted-foreground truncate">
                           تاریخ: {gregorianToPersian(p.invoiceDate)} |{" "}
-                          {(p.itemsCount ?? 0).toLocaleString("fa-IR")} قلم
+                          {PURCHASE_STATUS_LABELS[p.status]}
                         </p>
                       </div>
                     </button>

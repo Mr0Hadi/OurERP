@@ -1,5 +1,5 @@
 import { EFFECT_DIRECTIONS, EFFECT_STATUSES } from "./effects";
-import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+import { RETURN_PAYMENT_METHODS } from "@/shared/domain/enums/paymentType";
 import { RETURN_PROBLEMS } from "./problems";
 import { CLAIM_SCOPES, OFF_SCOPE_KINDS } from "./scopes";
 import { RETURN_STATUSES } from "./statuses";
@@ -20,11 +20,10 @@ import { RETURN_STATUSES } from "./statuses";
  *    کسی متوجه نمی‌شود. با این وارسی، همان لحظه در کنسول با نامِ فیلد
  *    و مقدار گزارش می‌شود.
  *
- * ۳. `method` دیگر شمارشِ مخصوصِ خودش را ندارد و همان `PaymentTypeEnum`
- *    است؛ بقیه‌ی مقادیر (direction/status/problem/scope) هنوز فقط در فرانت
- *    تعریف شده‌اند و شماره‌هایشان لزوماً با آنچه بکند روزی اضافه می‌کند
- *    یکی نیست. روز اتصال، این‌جا دقیقاً همان‌جایی است که باید نگاشت
- *    اضافه شود.
+ * ۳. همه‌ی این شمارش‌ها عدد به عدد با enumهای بکند یکی‌اند. `method`
+ *    با `RETURN_PAYMENT_METHODS` سنجیده می‌شود، نه کلِ `PaymentTypeEnum`:
+ *    عدد ۵ در `ReturnPaymentMethodEnum`ِ بکند «اعتبار خرید بعدی» است که
+ *    فرانت پشتیبانی نمی‌کند، و اگر روزی برسد باید همین‌جا دیده شود.
  *
  * وارسی فقط در حالت توسعه اجرا می‌شود و هرگز چیزی را نمی‌شکند یا
  * تغییر نمی‌دهد؛ کارش فقط گزارش‌کردن است.
@@ -38,7 +37,7 @@ const SCOPE_VALUES = valuesOf(CLAIM_SCOPES);
 const OFF_SCOPE_KIND_VALUES = valuesOf(OFF_SCOPE_KINDS);
 const EFFECT_DIRECTION_VALUES = valuesOf(EFFECT_DIRECTIONS);
 const EFFECT_STATUS_VALUES = valuesOf(EFFECT_STATUSES);
-const PAYMENT_METHOD_VALUES = valuesOf(PaymentTypeEnum);
+const PAYMENT_METHOD_VALUES = new Set(RETURN_PAYMENT_METHODS);
 
 const reported = new Set();
 

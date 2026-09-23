@@ -6,7 +6,6 @@ export function useDebouncedPurchaseReturnFilters() {
   const supplierId = usePurchaseReturnFilterStore((s) => s.supplierId);
   const status = usePurchaseReturnFilterStore((s) => s.status);
   const problem = usePurchaseReturnFilterStore((s) => s.problem);
-  const scope = usePurchaseReturnFilterStore((s) => s.scope);
   const fromDate = usePurchaseReturnFilterStore((s) => s.fromDate);
   const toDate = usePurchaseReturnFilterStore((s) => s.toDate);
 
@@ -15,7 +14,6 @@ export function useDebouncedPurchaseReturnFilters() {
     supplierId,
     status,
     problem,
-    scope,
     fromDate,
     toDate,
   };

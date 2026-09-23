@@ -30,8 +30,6 @@ const PurchaseReturnTable = ({
   currentPage,
   pageSize,
   onPaginationChange,
-  sorting,
-  onSortingChange,
 }) => {
   const navigate = useNavigate();
 
@@ -153,8 +151,8 @@ const PurchaseReturnTable = ({
       currentPage={currentPage}
       pageSize={pageSize}
       onPaginationChange={onPaginationChange}
-      sorting={sorting}
-      onSortingChange={onSortingChange}
+      // `GetPurchaseReturnList` مرتب‌سازی نمی‌گیرد؛ ترتیب همیشه جدیدترین‌ها اول است.
+      sortable={false}
       emptyState={EMPTY_STATE}
     />
   );

@@ -2,6 +2,11 @@ import { create } from "zustand";
 import { CLAIM_SCOPES, OFF_SCOPE_KINDS } from "@/shared/domain/returns/scopes";
 import { RETURN_PROBLEMS } from "@/shared/domain/returns/problems";
 import { lineReceivingReport } from "@/shared/domain/returns/receivingReport";
+import {
+  claimableQuantityOf,
+  freeExcessQuantityOf,
+  freeUnlistedQuantityOf,
+} from "../domain/purchaseReturnVocabulary";
 
 const EMPTY_FORM = {
   purchaseId: "",
@@ -17,7 +22,30 @@ const EMPTY_FORM = {
   orderLines: [],
   // ادعاهای «خارج از سفارش» — کالایی که سفارش توجیهش نمی‌کند
   offScopeClaims: [],
+  // سقفِ سرور برای ادعاهای خارج از سفارش، کلیدخورده با `offScopeCapKey`
+  offScopeCaps: {},
 };
+
+/**
+ * کلیدِ سقفِ یک ادعای خارج از سفارش: مازاد روی قلمش، سفارش‌نداده روی کالایش
+ * — همان گروه‌بندی‌ای که `CreatePurchaseReturn` سقف را رویش چک می‌کند.
+ */
+export const offScopeCapKey = (kind, { orderLineId, productId }) =>
+  kind === OFF_SCOPE_KINDS.EXCESS ? `excess:${orderLineId}` : `unlisted:${productId}`;
+
+/** `freeExcessQuantity`/`freeQuantity`: قرنطینه منهای رزروِ ادعاهای بازِ دیگر. */
+function offScopeCapsOf(purchase) {
+  const caps = {};
+  (purchase.items || []).forEach((item) => {
+    caps[offScopeCapKey(OFF_SCOPE_KINDS.EXCESS, { orderLineId: item.purchaseItemId })] =
+      freeExcessQuantityOf(item);
+  });
+  (purchase.unlistedItems || []).forEach((item) => {
+    caps[offScopeCapKey(OFF_SCOPE_KINDS.UNLISTED, { productId: item.productId })] =
+      freeUnlistedQuantityOf(item);
+  });
+  return caps;
+}
 
 // `UnitCustodyReasonEnum` بکند — فقط برای خواندنِ مغایرت‌های دریافت.
 const CUSTODY_REASONS = { ON_ORDER: 1, EXCESS: 2, UNLISTED: 3 };
@@ -76,7 +104,8 @@ function quarantineClaimsOf(purchase, lines) {
       ]);
     }
 
-    const excess = Number(item.quarantinedExcessQuantity) || 0;
+    // سقفِ سرور: قرنطینه منهای آنچه ادعاهای بازِ دیگر رزرو کرده‌اند.
+    const excess = freeExcessQuantityOf(item);
     if (excess > 0) {
       offScopeClaims.push({
         id: generateId(),
@@ -101,11 +130,12 @@ function quarantineClaimsOf(purchase, lines) {
   });
 
   (purchase.unlistedItems || []).forEach((item) => {
-    if (!(item.quarantinedQuantity > 0)) return;
+    const free = freeUnlistedQuantityOf(item);
+    if (free <= 0) return;
     offScopeClaims.push({
       id: generateId(),
       problem: RETURN_PROBLEMS.UNLISTED_ITEM,
-      quantity: item.quarantinedQuantity,
+      quantity: free,
       note: "",
       offScopeKind: OFF_SCOPE_KINDS.UNLISTED,
       orderLineId: null,
@@ -158,16 +188,16 @@ export const usePurchaseReturnFormStore = create((set, get) => ({
       (purchase.items || [])
         .map(
           (item) =>
-            `${item.purchaseItemId}:${item.receivedQuantity}:${item.quarantinedOnOrderQuantity}:${item.quarantinedExcessQuantity}`,
+            `${item.purchaseItemId}:${claimableQuantityOf(item)}:${item.quarantinedOnOrderQuantity}:${freeExcessQuantityOf(item)}`,
         )
         .join(","),
     ].join(":");
     if (get().initializedForId === version) return;
 
     const lines = (purchase.items || [])
-      // فقط قلمی که چیزی از آن تحویل گرفته‌ایم قابل ادعاست: سقفِ ادعا در
-      // بکند `ReceivedQuantity − Settled − ادعاهای باز` است.
-      .filter((item) => item.receivedQuantity > 0)
+      // فقط قلمی که هنوز جا برای ادعا دارد: `claimableQuantity` همان سقفِ
+      // بکند است (`ReceivedQuantity − Settled − ادعاهای بازِ دیگر`).
+      .filter((item) => claimableQuantityOf(item) > 0)
       .map((item) => ({
         lineKey: `${purchase.purchaseId}-${item.purchaseItemId}`,
         // `CreateReturnClaimDto.OrderLineId` — سمتِ خرید یعنی `PurchaseItemId`.
@@ -179,9 +209,7 @@ export const usePurchaseReturnFormStore = create((set, get) => ({
         unit: item.unit,
         unitPrice: item.unitPrice,
         deliveredQuantity: item.receivedQuantity,
-        // ⚠️ سقفِ واقعی ادعاهای بازِ مرجوعی‌های دیگر را هم کم می‌کند که این
-        // پاسخ نمی‌دهد؛ حرفِ آخر را ۴۰۰ سرور می‌زند.
-        maxReturnableQuantity: item.receivedQuantity,
+        maxReturnableQuantity: claimableQuantityOf(item),
         // آنچه انباردار موقعِ دریافتِ همین قلم ثبت کرده — فقط نمایش.
         receivingReport: lineReceivingReport(purchase, item.purchaseItemId),
         claims: [],
@@ -211,6 +239,7 @@ export const usePurchaseReturnFormStore = create((set, get) => ({
         orderLines,
         lines: prefilled.lines,
         offScopeClaims: prefilled.offScopeClaims,
+        offScopeCaps: offScopeCapsOf(purchase),
       },
     });
   },

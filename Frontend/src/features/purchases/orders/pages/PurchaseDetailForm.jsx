@@ -23,6 +23,8 @@ import {
 import { useSuppliersQuery } from "@/features/suppliers/services/queries";
 import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection";
 import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
+import PurchaseItemsReceivingSection from "../components/forms/PurchaseItemsReceivingSection";
+import PurchaseExcessSection from "../components/forms/PurchaseExcessSection";
 import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
 import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
 import PurchaseStatusSection from "../components/forms/PurchaseStatusSection";
@@ -35,6 +37,7 @@ import {
   canDeletePurchase,
   canCancelPurchase,
   getPurchaseLockReason,
+  itemEditErrors,
 } from "@/features/purchases/orders/domain/purchaseRules";
 import {
   PURCHASE_STATUSES,
@@ -157,6 +160,14 @@ export default function PurchaseDetailForm({ purchaseData }) {
       return;
     }
 
+    // اقلامی که انبار از آن‌ها تحویل گرفته نمی‌توانند حذف یا کمتر از
+    // مقدارِ رسیده شوند.
+    const itemErrors = itemEditErrors(purchaseData.items, items);
+    if (itemErrors.length > 0) {
+      toast.error(itemErrors[0]);
+      return;
+    }
+
     const payload = {
       supplierId: formData.supplierId,
       supplierName: formData.supplierName,
@@ -231,6 +242,8 @@ export default function PurchaseDetailForm({ purchaseData }) {
               isLoadingProducts={productsLoading}
               onItemsChange={setItems}
             />
+            <PurchaseItemsReceivingSection purchase={purchaseData} />
+            <PurchaseExcessSection purchase={purchaseData} />
             <OrderInfoSection
               formData={formData}
               onFormChange={setFormData}
@@ -289,6 +302,7 @@ export default function PurchaseDetailForm({ purchaseData }) {
             <PurchaseStatusSection
               status={formData.status}
               selectedStatus={formData.status}
+              savedStatus={purchaseData.status}
               onStatusChange={(val) => setFormData({ status: val })}
             />
 

@@ -7,10 +7,10 @@ import {
 } from "./effects";
 import {
   PaymentTypeEnum,
+  RETURN_PAYMENT_METHODS,
   SPLITTABLE_PAYMENT_TYPES,
 } from "@/shared/domain/enums/paymentType";
 import { RETURN_STATUSES, isTerminalStatus } from "./statuses";
-import { CLAIM_SCOPES } from "./scopes";
 
 /**
  * تصمیم‌ها: ترکیب‌شان، بسطشان به اثر، اعتبارسنجی، و ماشین وضعیت —
@@ -54,21 +54,9 @@ export const MONEY_DIRECTIONS = {
   PAY: 2,
 };
 
-/**
- * روش‌هایی که برای هر جهت معنا دارند. «اعتبار خرید بعدی» فقط وقتی معنا
- * دارد که ما بدهکاریم.
- */
-export function methodsForDirection(direction) {
-  const base = [
-    PaymentTypeEnum.CASH,
-    PaymentTypeEnum.CHECK,
-    PaymentTypeEnum.TRANSFER,
-    PaymentTypeEnum.CREDIT,
-    PaymentTypeEnum.MIXED,
-  ];
-  return direction === MONEY_DIRECTIONS.PAY
-    ? [...base, PaymentTypeEnum.STORE_CREDIT]
-    : base;
+/** روش‌هایی که یک جابه‌جاییِ پولِ مرجوعی می‌تواند داشته باشد — برای هر دو جهت یکی است. */
+export function methodsForDirection() {
+  return RETURN_PAYMENT_METHODS;
 }
 
 function validMoneyParts(money) {
@@ -139,21 +127,6 @@ export function moneyDirectionOf(composition) {
   if (composition?.moneyIn?.enabled) return MONEY_DIRECTIONS.RECEIVE;
   if (composition?.moneyOut?.enabled) return MONEY_DIRECTIONS.PAY;
   return MONEY_DIRECTIONS.NONE;
-}
-
-/**
- * بهای کالایی که از قرنطینه خارج می‌شود — به کاربر نشان داده نمی‌شود.
- *
- * ⚠️ فقط پلِ سازگاری است: بکندِ فعلیِ `main` این عدد را روی آزادسازی،
- * اسقاط و عودت از قرنطینه می‌خواند. برنچِ `feature/quarantine-unit-cost`
- * بها را روی خودِ دانه نگه می‌دارد و این فیلد را نادیده می‌گیرد؛ بعد از
- * ادغامِ آن، این تابع و فرستادنش حذف می‌شوند.
- *
- * کالای معیوبِ سهمِ سفارش پولش داده شده، پس قیمتِ همان قلم؛ مازاد و
- * کالای خارج از سند پولی بابتشان داده نشده، پس صفر.
- */
-export function defaultQuarantineUnitCost(claim) {
-  return claim?.scope === CLAIM_SCOPES.ON_ORDER ? Number(claim.unitPrice) || 0 : 0;
 }
 
 // ─── بسط ترکیب به اثر ───────────────────────────────────────────────────────
@@ -276,12 +249,11 @@ export function expandComposition(composition, claim) {
  *  ۴. `unitPrice` فقط سابقه است (قیمتِ ادعا برای همان کالا، یا قیمتی که
  *     در انتخابگر مانده) و نبودنش مجاز است.
  *  ۵. بخشش با هیچ اثری همراه نمی‌شود.
- *
- * `quarantineCost` (فقط مرجوعی خرید): پلِ سازگاری با بکندِ فعلیِ `main` —
- * بهای خروج از قرنطینه را بی‌صدا از `defaultQuarantineUnitCost` می‌فرستد.
- * بعد از ادغامِ `feature/quarantine-unit-cost` حذف شود.
+ *  ۶. `unitCost` فرستاده نمی‌شود: آزادسازی، اسقاط و عودت از قرنطینه با
+ *     بهای ثبت‌شده روی خودِ دانه (`QuarantineCost`) حرکت می‌کنند و بکند
+ *     هر عددی را که فرانت بفرستد نادیده می‌گیرد.
  */
-export function toApiComposition(composition, claim, { quarantineCost = false } = {}) {
+export function toApiComposition(composition, claim) {
   if (!composition) return null;
 
   const quantity = Number(composition.quantity) || 0;
@@ -291,9 +263,7 @@ export function toApiComposition(composition, claim, { quarantineCost = false } 
     return { quantity, note, writeOff: true };
   }
 
-  const heldCost = quarantineCost ? defaultQuarantineUnitCost(claim) : undefined;
-
-  const goodsOf = (slot, { fromQuarantine = false } = {}) => {
+  const goodsOf = (slot) => {
     if (!slot?.enabled) return undefined;
     return goodsItemsOf(slot, claim, quantity)
       .filter((item) => (Number(item.quantity) || 0) > 0)
@@ -303,9 +273,6 @@ export function toApiComposition(composition, claim, { quarantineCost = false } 
           quantity: Number(item.quantity) || 0,
           productId,
           unitPrice: hasValue(item.unitPrice) ? Number(item.unitPrice) : undefined,
-          // فقط وقتی عودت از قرنطینه باشد خوانده می‌شود؛ از قفسه نادیده گرفته می‌شود.
-          unitCost:
-            fromQuarantine && productId === claim?.productId ? heldCost : undefined,
         };
       });
   };
@@ -316,7 +283,6 @@ export function toApiComposition(composition, claim, { quarantineCost = false } 
       {
         quantity,
         productId: claim?.productId ?? null,
-        unitCost: heldCost,
       },
     ];
   };
@@ -347,7 +313,7 @@ export function toApiComposition(composition, claim, { quarantineCost = false } 
     quantity,
     note,
     goodsIn: goodsOf(composition.goodsIn),
-    goodsOut: goodsOf(composition.goodsOut, { fromQuarantine: quarantineCost }),
+    goodsOut: goodsOf(composition.goodsOut),
     goodsRelease: quarantineOf(composition.goodsRelease),
     goodsScrap: quarantineOf(composition.goodsScrap),
     moneyIn: moneyOf(composition.moneyIn),

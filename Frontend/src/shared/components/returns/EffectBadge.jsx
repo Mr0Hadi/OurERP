@@ -13,7 +13,10 @@ import {
   isTradedGoodsEffect,
   observationsOf,
 } from "@/shared/domain/returns/effects";
-import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
+import {
+  PAYMENT_TYPE_LABELS,
+  RETURN_PAYMENT_METHODS,
+} from "@/shared/domain/enums/paymentType";
 import { RETURN_PROBLEM_LABELS } from "@/shared/domain/returns/problems";
 
 const ICONS = {
@@ -63,8 +66,12 @@ export default function EffectBadge({ effect, side, showProductName = false }) {
     showProductName && isGoods ? effect.productName : null,
     hasUnitPrice ? `هر عدد ${fa(effect.unitPrice)} ریال` : null,
     // روش پرداخت enum عددی است و «نقدی» صفر — بررسیِ صریح لازم است.
+    // عددی بیرون از روش‌های مرجوعی (مثلاً ۵ که در `PaymentTypeEnum` «اقساطی»
+    // است) نباید با برچسبِ آن نوعِ سند خوانده شود.
     !isGoods && effect.method != null
-      ? PAYMENT_TYPE_LABELS[effect.method]
+      ? RETURN_PAYMENT_METHODS.includes(effect.method)
+        ? PAYMENT_TYPE_LABELS[effect.method]
+        : "روش نامشخص"
       : null,
     isGoods && done > 0 ? `${fa(done)} انجام‌شده` : null,
     // برای کالای برگشتی، «انجام شد» و «به موجودی برگشت» یکی نیستند:

@@ -59,13 +59,7 @@ import {
  * کنارِ وضعیت است و ستون دوم اصلاً لازم نیست.
  */
 function PurchaseReturnDetailContent({ purchaseReturn }) {
-  // مرجوعیِ خودش از سقف مستثنا می‌شود تا کارت فاکتور، «ادعاشده در
-  // مرجوعی دیگر» را درست نشان دهد — نه ادعاهای همین سند را دوباره
-  // به‌عنوان «مرجوعیِ دیگر» بشمارد.
-  const { data: sale } = usePurchaseForReturnQuery(
-    purchaseReturn.purchaseId,
-    purchaseReturn.id,
-  );
+  const { data: sale } = usePurchaseForReturnQuery(purchaseReturn.purchaseId);
   const { data: relatedReturns } = useRelatedPurchaseReturnsQuery(
     purchaseReturn.purchaseId,
     purchaseReturn.id,

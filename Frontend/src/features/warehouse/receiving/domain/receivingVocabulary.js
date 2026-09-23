@@ -19,9 +19,8 @@ import {
  * چون باقیمانده با محموله‌ی بعدی می‌آید و `ReceivePurchase` چند دور
  * پشتِ‌سرِهم را می‌پذیرد.
  *
- * `GetPurchaseListQuery` فقط یک `status` می‌گیرد (نه چند مقدار)، پس صف
- * همیشه روی یکی از این دو وضعیت است و کاربر با فیلترِ وضعیت بینشان
- * جابه‌جا می‌شود.
+ * صف با `statuses` چند وضعیت را با هم می‌خواهد
+ * (`Backend-Net/docs/purchase-frontend-sync-requests.fa.md` بند ۱۲).
  */
 export const RECEIVING_ELIGIBLE_STATUSES = [
   PurchaseStatusEnum.SHIPPED,
@@ -31,6 +30,30 @@ export const RECEIVING_ELIGIBLE_STATUSES = [
   PurchaseStatusEnum.RECEIVED,
 ];
 
-export const RECEIVING_STATUS_OPTIONS = RECEIVING_ELIGIBLE_STATUSES.map(
-  (status) => ({ value: status, label: PURCHASE_STATUS_LABELS[status] }),
-);
+/**
+ * پیش‌فرضِ صف: هر خریدی که هنوز چیزی از آن انتظار می‌رود — «ارسال شده» و
+ * «تحویل ناقص» با هم. بدونِ این، خریدی که محموله‌ی اولش رسیده از صفِ
+ * پیش‌فرض بیرون می‌افتاد و انباردار باقیمانده‌اش را نمی‌دید.
+ */
+export const RECEIVING_AWAITING = "awaiting";
+
+export const RECEIVING_AWAITING_STATUSES = [
+  PurchaseStatusEnum.SHIPPED,
+  PurchaseStatusEnum.PARTIALLY_RECEIVED,
+];
+
+export const RECEIVING_STATUS_OPTIONS = [
+  { value: RECEIVING_AWAITING, label: "در انتظار دریافت (ارسال‌شده و ناقص)" },
+  ...RECEIVING_ELIGIBLE_STATUSES.map((status) => ({
+    value: status,
+    label: PURCHASE_STATUS_LABELS[status],
+  })),
+];
+
+/** مقدارِ فیلترِ وضعیت → فهرستِ وضعیت‌هایی که صف نشان می‌دهد. */
+export function receivingStatusesOf(filterValue) {
+  if (filterValue === RECEIVING_AWAITING || filterValue === "" || filterValue == null) {
+    return RECEIVING_AWAITING_STATUSES;
+  }
+  return [Number(filterValue)];
+}

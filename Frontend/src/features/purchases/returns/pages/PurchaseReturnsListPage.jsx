@@ -24,11 +24,11 @@ export default function PurchaseReturnsListPage() {
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  const { pagination, sorting, setPagination, setSorting } = usePurchaseReturnFilterStore();
+  const { pagination, setPagination } = usePurchaseReturnFilterStore();
   const debouncedFilters = useDebouncedPurchaseReturnFilters();
 
   const { data, isLoading, isFetching, isError, error, refetch } =
-    usePurchaseReturnsQuery(debouncedFilters, pagination, sorting);
+    usePurchaseReturnsQuery(debouncedFilters, pagination);
 
   const { data: suppliersData, isLoading: isSuppliersLoading } =
     useSuppliersQuery(
@@ -86,8 +86,6 @@ export default function PurchaseReturnsListPage() {
                 currentPage={currentPage}
                 pageSize={pagination.pageSize}
                 onPaginationChange={setPagination}
-                sorting={sorting}
-                onSortingChange={setSorting}
               />
             </FetchingOverlay>
           )}

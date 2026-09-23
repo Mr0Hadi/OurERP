@@ -1,4 +1,8 @@
-import { usePurchaseReturnFormStore } from "../store/purchaseReturnFormStore";
+import toast from "react-hot-toast";
+import {
+  usePurchaseReturnFormStore,
+  offScopeCapKey,
+} from "../store/purchaseReturnFormStore";
 import { PURCHASE_RETURN_PROBLEMS } from "../domain/purchaseReturnVocabulary";
 import { CLAIM_SCOPES, OFF_SCOPE_KINDS } from "@/shared/domain/returns/scopes";
 
@@ -16,8 +20,12 @@ const DEFAULT_UNLISTED_PROBLEM = PURCHASE_RETURN_PROBLEMS.UNLISTED_ITEM;
  *
  *  • روی سفارش — روی یک خط خرید، سقفش مقدارِ دریافت‌شده.
  *  • مازاد     — بیش از مقدارِ یک خط رسیده؛ روی همان خط و با قیمت همان
- *                خط. سقفش دانه‌های مازادِ قرنطینه است (سرور چک می‌کند).
- *  • نامرتبط   — کالایی که در سفارش نیست؛ بدون خط و با قیمت دستی.
+ *                خط. سقفش دانه‌های مازادِ آزادِ قرنطینه است.
+ *  • نامرتبط   — کالایی که در سفارش نیست؛ بدون خط و با قیمت دستی. سقفش
+ *                دانه‌های سفارش‌ندادهِ آزادِ قرنطینه‌ی همین کالاست.
+ *
+ * هر دو سقفِ خارج از سفارش را سرور در `GetPurchaseReceivingInfo` می‌دهد
+ * (`offScopeCaps`)؛ کالایی که در قرنطینه نیست سقفش صفر است.
  */
 export function usePurchaseReturnForm() {
   const { formData, setFormData, setLines, setOffScopeClaims, resetForm } =
@@ -26,6 +34,21 @@ export function usePurchaseReturnForm() {
   const lines = formData.lines || [];
   const orderLines = formData.orderLines || [];
   const offScopeClaims = formData.offScopeClaims || [];
+  const offScopeCaps = formData.offScopeCaps || {};
+
+  /** سقفِ باقی‌مانده برای یک ادعای خارج از سفارش، با کسرِ ادعاهای دیگرِ همین فرم روی همان گروه. */
+  const offScopeRemaining = (kind, target, exceptId = null) => {
+    const key = offScopeCapKey(kind, target);
+    const used = offScopeClaims
+      .filter(
+        (c) =>
+          c.id !== exceptId &&
+          c.offScopeKind === kind &&
+          offScopeCapKey(c.offScopeKind, c) === key,
+      )
+      .reduce((sum, c) => sum + (Number(c.quantity) || 0), 0);
+    return Math.max(0, (offScopeCaps[key] ?? 0) - used);
+  };
 
   const claimedQuantityOf = (line) =>
     (line.claims || []).reduce((sum, c) => sum + (Number(c.quantity) || 0), 0);
@@ -108,6 +131,14 @@ export function usePurchaseReturnForm() {
         ? c.orderLineId === product.orderLineId
         : c.offScopeKind === kind && c.productId === product.productId,
     );
+    if (offScopeRemaining(kind, product) <= 0) {
+      toast.error(
+        isExcess
+          ? "از این قلم کالای مازادِ آزادی در قرنطینه نیست"
+          : "از این کالا چیزی در قرنطینه‌ی این خرید نیست",
+      );
+      return false;
+    }
     if (existing) {
       setOffScopeClaims(
         offScopeClaims.map((c) =>
@@ -116,7 +147,7 @@ export function usePurchaseReturnForm() {
             : c,
         ),
       );
-      return;
+      return true;
     }
     setOffScopeClaims([
       ...offScopeClaims,
@@ -131,6 +162,7 @@ export function usePurchaseReturnForm() {
         unitPrice: product.unitPrice,
       },
     ]);
+    return true;
   };
 
   const handleUpdateOffScopeClaim = (claimId, field, value) => {
@@ -141,9 +173,14 @@ export function usePurchaseReturnForm() {
         if (field === "unitPrice" && claim.offScopeKind === OFF_SCOPE_KINDS.EXCESS) {
           return claim;
         }
-        if (field === "quantity" || field === "unitPrice") {
+        if (field === "quantity") {
           const num = Number(value);
-          return { ...claim, [field]: Number.isNaN(num) || num < 0 ? 0 : num };
+          const max = offScopeRemaining(claim.offScopeKind, claim, claim.id);
+          return { ...claim, quantity: Number.isNaN(num) || num < 0 ? 0 : Math.min(num, max) };
+        }
+        if (field === "unitPrice") {
+          const num = Number(value);
+          return { ...claim, unitPrice: Number.isNaN(num) || num < 0 ? 0 : num };
         }
         return { ...claim, [field]: value };
       }),

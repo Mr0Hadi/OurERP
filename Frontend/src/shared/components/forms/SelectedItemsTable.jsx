@@ -11,9 +11,16 @@ export default function SelectedItemsTable({
   onRemoveUnit,
   lineTotal,
   grandTotal,
+  // `true` یعنی جدول به عرضِ ظرفِ خودش (`@container/picker`) واکنش نشان
+  // دهد، نه به عرضِ صفحه — برای جاهایی که انتخابگر داخلِ یک کارتِ باریک است.
+  byContainer = false,
 }) {
   return (
-    <div className="hidden md:block border border-border rounded-lg overflow-hidden">
+    <div
+      className={`${
+        byContainer ? "hidden @2xl/picker:block" : "hidden md:block"
+      } border border-border rounded-lg overflow-hidden`}
+    >
       <table className="w-full text-sm table-fixed">
         <thead className="bg-muted text-muted-foreground text-xs">
           <tr>

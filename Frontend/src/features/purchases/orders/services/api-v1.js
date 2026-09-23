@@ -1,5 +1,6 @@
 import axiosInstance from "@/shared/services/api/axios";
 import {
+  idempotent,
   normalizeListResponse,
   documentVersion,
 } from "@/shared/services/api/contract";
@@ -28,20 +29,24 @@ export {
  *    `GetPurchaseDetail` برگردانده می‌شود. رفتارِ Update **جایگزینیِ
  *    کامل** است، پس همیشه فهرستِ نهایی فرستاده می‌شود.
  *
- * ⚠️ چیزهایی که هنوز حل‌نشده مانده‌اند:
- *  - ویرایشِ اقلامِ خرید ممکن نیست؛ `UpdatePurchase` فقط فیلدهای سطح
- *    سند را می‌گیرد.
- *  - ثبتِ پرداختِ پله‌ای وجود ندارد؛ `paidAmount` فقط با ارسالِ کل سند
- *    از نو overwrite می‌شود — به همین دلیل `updatePurchasePayment`
- *    اینجا هنوز به یک endpoint واقعی وصل نیست.
- *  - فیلترِ چندتامین‌کننده‌ای، `search` آزاد، و `sortBy`/`sortOrder`
- *    پشتیبانی نمی‌شوند؛ لیست فقط `SupplierId` تکی و `InvoiceNumber`
- *    می‌گیرد.
+ * ویرایشِ اقلام: `UpdatePurchase` فهرستِ نهاییِ اقلام را در `productItemList`
+ * می‌گیرد — `id` پر یعنی قلمِ موجود، خالی یعنی قلمِ تازه، و قلمی که در
+ * فهرست نباشد حذف می‌شود. قلمی که از آن دریافت شده نه حذف می‌شود و نه
+ * کمتر از «رسیده + بسته‌شده» (`itemEditErrors` همین را پیش از ارسال چک
+ * می‌کند). قرارداد: `Backend-Net/docs/purchase-frontend-sync-requests.fa.md` بند ۲.
+ *
+ * چیزهایی که بکند عمداً ندارد و فرانت هم دیگر وانمود نمی‌کند دارد:
+ *  - ثبتِ پرداختِ پله‌ای endpoint ندارد؛ پرداخت با همان `paymentDetails`ِ
+ *    `UpdatePurchase` (جایگزینیِ کامل) ثبت می‌شود.
+ *  - فیلترِ چندتامین‌کننده‌ای، `search` آزاد و مرتب‌سازی پشتیبانی
+ *    نمی‌شوند؛ لیست همیشه جدیدترین‌ها را اول می‌دهد.
  */
 
 /** `PurchaseItemDto` واقعی فقط این چهار فیلد را می‌خواهد؛ نام/کد/واحد/جمعِ خط را خودِ بکند از `productId` پر می‌کند. */
 function toApiItems(items = []) {
   return items.map((item) => ({
+    // فقط روی ویرایش معنا دارد: قلمِ موجود را از قلمِ تازه جدا می‌کند.
+    id: item.id ?? undefined,
     productId: item.productId,
     quantity: item.quantity,
     unitPrice: item.unitPrice,
@@ -199,9 +204,12 @@ export async function fetchPurchases(params = {}) {
       invoiceNumber: params.search || undefined,
       supplierId: params.supplierId || undefined,
       status: params.status !== "" ? params.status : undefined,
+      paymentType:
+        params.paymentType !== "" && params.paymentType != null
+          ? params.paymentType
+          : undefined,
       fromDate: params.fromDate || undefined,
       toDate: params.toDate || undefined,
-      // paymentType, sortBy, sortOrder روی این لیست پشتیبانی نمی‌شوند.
     },
   });
   return normalizeListResponse(data, { itemsKey: "purchaseList" });
@@ -224,8 +232,9 @@ export async function createPurchase(purchaseData) {
 }
 
 /**
- * «اقلام» در بدنه نادیده گرفته می‌شود — `UpdatePurchase` فقط فیلدهای سطح
- * سند را می‌پذیرد. `attachments` و `paymentDetails` اما هر دو
+ * `productItemList` فهرستِ *نهاییِ* اقلام است (جایگزینیِ کامل، با `id`ِ
+ * قلم‌های موجود) و `totalAmount` از همین اقلام حساب شده است.
+ * `attachments` و `paymentDetails` اما هر دو
  * **جایگزینیِ کامل**اند: هرچه در آرایه نباشد از سرور پاک می‌شود، پس
  * همیشه فهرستِ نهایی فرستاده می‌شود. برای هر `paymentType` جز نقدی،
  * `paymentDetails` خالی با ۴۰۰ رد می‌شود.
@@ -235,6 +244,7 @@ export async function updatePurchase(id, updates) {
     id,
     ...toApiPurchasePayload(updates),
     paymentDetails: toApiPaymentDetails(updates),
+    productItemList: toApiItems(updates.items),
   });
   return data;
 }
@@ -246,29 +256,81 @@ export async function updatePurchase(id, updates) {
  * `{status}`ِ تنها یعنی پاک‌شدنِ شماره‌ی فاکتور و ضمیمه‌ها — پس سندِ
  * فعلی اول خوانده و بعد با وضعیتِ تازه پس فرستاده می‌شود.
  *
- * هزینه‌اش یک رفت‌وبرگشتِ اضافه است تا امضای ساده‌ی `(id, status)` برای
- * فراخوان حفظ شود.
+ * `UpdatePurchase` هیچ `data`یی برنمی‌گرداند؛ این تابع سندِ تازه را
+ * دوباره می‌خواند تا فراخوان چیزی واقعی برای نشاندن در کش داشته باشد.
  */
 export async function updatePurchaseStatus(id, status) {
   const current = await fetchPurchaseById(id);
-  return updatePurchase(id, { ...current, status });
+  await updatePurchase(id, { ...current, status });
+  return fetchPurchaseById(id);
+}
+
+/** `DeletePurchase` هیچ `data`یی برنمی‌گرداند؛ شناسه برای پاک‌کردنِ کش از خودِ ورودی برمی‌گردد. */
+export async function removePurchase(id) {
+  await axiosInstance.delete("/Purchase/DeletePurchase", {
+    params: { id },
+  });
+  return { id };
+}
+
+// ─── اقلامِ پس از ثبت ───────────────────────────────────────────────────────
+
+/**
+ * «تامین‌کننده بقیه را نمی‌فرستد» — مقدارِ هنوز‌بدهکارِ قلم دیگر انتظار
+ * نمی‌رود و وضعیت خرید از نو حساب می‌شود. فقط وقتی مجاز است که چیزی از
+ * خرید رسیده باشد؛ هیچ پولی خودکار برنمی‌گردد.
+ *
+ * پاسخ: `{purchaseId, purchaseStatus, purchaseItemId, receivedQuantity,
+ * shortClosedQuantity, shortClosedAt, stillOwedQuantity}`.
+ */
+export async function closePurchaseItem(purchaseItemId) {
+  const { data } = await axiosInstance.post("/Purchase/ClosePurchaseItem", {
+    purchaseItemId,
+  });
+  return data;
+}
+
+/** برعکسِ `closePurchaseItem` — مقدارِ بسته‌شده دوباره بدهکار می‌شود. */
+export async function reopenPurchaseItem(purchaseItemId) {
+  const { data } = await axiosInstance.post("/Purchase/ReopenPurchaseItem", {
+    purchaseItemId,
+  });
+  return data;
 }
 
 /**
- * ⚠️ هیچ endpointِ ثبتِ‌پرداختِ پله‌ای روی بکند نیست (گزارشِ شکاف،
- * بخش ۶). این تابع فعلاً امضایش را نگه می‌دارد ولی جایی برای صدازدن
- * ندارد؛ وقتی بکند این قابلیت را اضافه کرد، پیاده‌سازی واقعی همین‌جا
- * می‌آید.
+ * «کالای اضافه را نگه می‌داریم و پولش را می‌دهیم» — دانه‌های قرنطینه‌ی
+ * مازاد/سفارش‌نداده وارد سفارش و موجودی می‌شوند و `totalAmount` خرید
+ * بالا می‌رود. پرداختِ خودِ این مبلغ همچنان با `UpdatePurchase` ثبت می‌شود.
+ *
+ * هر ردیف دقیقاً یکی از این دو است:
+ *  - مازادِ یک قلم: `{purchaseItemId, quantity}` — با قیمت و تخفیفِ همان
+ *    قلم؛ فرستادنِ `unitPrice`/`discount` ۴۰۰ می‌گیرد.
+ *  - کالای سفارش‌نداده: `{productId, quantity, unitPrice, discount?}` —
+ *    قیمتِ فاکتورِ تامین‌کننده الزامی است.
  */
-export async function updatePurchasePayment() {
-  throw new Error(
-    "بکند فعلاً endpointِ ثبتِ پرداختِ پله‌ای ندارد — به گزارشِ شکافِ خرید/فروش مراجعه کنید.",
+export async function acceptPurchaseExcess(
+  { purchaseId, date, note, items },
+  { idempotencyKey } = {},
+) {
+  const { data } = await axiosInstance.post(
+    "/Purchase/AcceptPurchaseExcess",
+    {
+      purchaseId,
+      date: date || undefined,
+      note: note || undefined,
+      items: items.map((item) =>
+        item.purchaseItemId != null
+          ? { purchaseItemId: item.purchaseItemId, quantity: Number(item.quantity) || 0 }
+          : {
+              productId: item.productId,
+              quantity: Number(item.quantity) || 0,
+              unitPrice: Number(item.unitPrice) || 0,
+              discount: Number(item.discount) || 0,
+            },
+      ),
+    },
+    idempotent(idempotencyKey),
   );
-}
-
-export async function removePurchase(id) {
-  const { data } = await axiosInstance.delete("/Purchase/DeletePurchase", {
-    params: { id },
-  });
   return data;
 }

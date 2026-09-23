@@ -113,7 +113,14 @@ export const SALES_CLAIM_PROBLEMS = [
   RETURN_PROBLEMS.OTHER,
 ];
 
-/** مشکل‌هایی که واحد خرید روی تامین‌کننده ثبت می‌کند. */
+/**
+ * مشکل‌هایی که واحد خرید روی تامین‌کننده ثبت می‌کند — برای *نمایش*
+ * (برچسبِ ادعاهای موجود، فیلترِ لیست).
+ *
+ * «کسری تحویل» و «تعداد در فاکتور اشتباه» اینجا برای ادعاهای قدیمی
+ * مانده‌اند ولی دیگر قابل انتخاب نیستند — `PURCHASE_ON_ORDER_CLAIM_PROBLEMS`
+ * و `PURCHASE_OFF_ORDER_CLAIM_PROBLEMS` را ببینید.
+ */
 export const PURCHASE_CLAIM_PROBLEMS = [
   RETURN_PROBLEMS.SHORT_SHIPPED,
   RETURN_PROBLEMS.DEFECTIVE,
@@ -128,13 +135,51 @@ export const PURCHASE_CLAIM_PROBLEMS = [
 ];
 
 /**
- * چیزی که انباردار *هنگام تحویل‌گرفتن* می‌بیند — مستقل از آنچه طرف
- * حساب ادعا کرده. مشکل‌هایی مثل «انصراف مشتری» یا «تعداد در فاکتور
- * اشتباه ثبت شد» اینجا نیستند چون با نگاه‌کردن به کالا قابل مشاهده
- * نیستند.
+ * مشکل‌های قابل انتخاب برای ادعای *روی قلمِ سفارش* — یعنی روی کالایی که
+ * رسیده و سهمِ همان سفارش است. پس فقط چیزی که روی خودِ کالا دیده می‌شود:
+ *
+ *  - «کسری» و «تعداد در فاکتور اشتباه» اینجا نیستند: مشکلِ مقدار است نه
+ *    کالا، و ادعا روی دانه‌های سالمِ رسیده می‌نشست. کسری یا با محموله‌ی
+ *    بعد می‌رسد یا قلمش در صفحه‌ی خرید بسته می‌شود؛ فاکتورِ اشتباه با
+ *    ویرایشِ اقلامِ خرید اصلاح می‌شود.
+ *  - «بیش از سفارش» و «کالای سفارش‌نداده» مالِ ادعای خارج از سفارش‌اند.
+ */
+export const PURCHASE_ON_ORDER_CLAIM_PROBLEMS = [
+  RETURN_PROBLEMS.DEFECTIVE,
+  RETURN_PROBLEMS.DAMAGED_IN_TRANSIT,
+  RETURN_PROBLEMS.WRONG_ITEM_SHIPPED,
+  RETURN_PROBLEMS.EXPIRED,
+  RETURN_PROBLEMS.QUALITY_ISSUE,
+  RETURN_PROBLEMS.OTHER,
+];
+
+/**
+ * مشکل‌های قابل انتخاب برای ادعای *خارج از سفارش* (مازاد / سفارش‌نداده).
+ * پیش‌فرضشان «بیش از سفارش» / «سفارش‌نداده» است، ولی کالای اضافه هم
+ * ممکن است خراب رسیده باشد.
+ */
+export const PURCHASE_OFF_ORDER_CLAIM_PROBLEMS = [
+  RETURN_PROBLEMS.OVER_SHIPPED,
+  RETURN_PROBLEMS.UNLISTED_ITEM,
+  RETURN_PROBLEMS.DEFECTIVE,
+  RETURN_PROBLEMS.DAMAGED_IN_TRANSIT,
+  RETURN_PROBLEMS.WRONG_ITEM_SHIPPED,
+  RETURN_PROBLEMS.EXPIRED,
+  RETURN_PROBLEMS.QUALITY_ISSUE,
+  RETURN_PROBLEMS.OTHER,
+];
+
+/**
+ * چیزی که انباردار *هنگام تحویل‌گرفتن* روی کالای رسیده می‌بیند — مستقل
+ * از آنچه طرف حساب ادعا کرده. مشکل‌هایی مثل «انصراف مشتری» یا «تعداد در
+ * فاکتور اشتباه ثبت شد» اینجا نیستند چون با نگاه‌کردن به کالا قابل
+ * مشاهده نیستند.
+ *
+ * «کسری» هم عمداً نیست: هر مشاهده بخشی از مقدارِ *رسیده* است و سرور آن
+ * را دانه‌ی رسیده‌ی مشکل‌دار حساب می‌کند (قرنطینه، دریافت‌شده و پرداخت‌شده).
+ * کالایی که نرسیده با واردکردنِ مقدارِ رسیده‌ی کمتر ثبت می‌شود.
  */
 export const OBSERVED_PROBLEMS = [
-  RETURN_PROBLEMS.SHORT_SHIPPED,
   RETURN_PROBLEMS.DEFECTIVE,
   RETURN_PROBLEMS.DAMAGED_IN_TRANSIT,
   RETURN_PROBLEMS.WRONG_ITEM_SHIPPED,

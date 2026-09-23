@@ -12,7 +12,10 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import { useReceivingFilterStore } from "../../store/receivingFilterStore";
-import { RECEIVING_STATUS_OPTIONS } from "../../domain/receivingVocabulary";
+import {
+  RECEIVING_AWAITING,
+  RECEIVING_STATUS_OPTIONS,
+} from "../../domain/receivingVocabulary";
 
 const renderSupplierPhone = (supplier) =>
   supplier.phone ? (
@@ -20,9 +23,8 @@ const renderSupplierPhone = (supplier) =>
   ) : null;
 
 /**
- * وضعیت اینجا گزینه‌ی «همه» ندارد: `GetPurchaseListQuery` فقط یک مقدار
- * می‌گیرد و بدونِ آن، خریدهای لغوشده و کاملاً دریافت‌شده هم وارد صف
- * می‌شوند — یعنی ردیف‌هایی با دکمه‌ی «دریافت» که هیچ کاری نمی‌کند.
+ * وضعیت اینجا گزینه‌ی «همه» ندارد — پیش‌نویس و لغوشده جایی در صفِ دریافت
+ * ندارند. پیش‌فرض «در انتظار دریافت» است (ارسال‌شده و ناقص با هم).
  */
 const ReceivingFilters = ({ suppliers = [], isSuppliersLoading = false }) => {
   const {
@@ -87,7 +89,12 @@ const ReceivingFilters = ({ suppliers = [], isSuppliersLoading = false }) => {
         <Label className="whitespace-nowrap font-medium text-foreground text-sm">
           وضعیت
         </Label>
-        <Select value={String(status)} onValueChange={(v) => setStatus(Number(v))}>
+        <Select
+          value={String(status)}
+          onValueChange={(v) =>
+            setStatus(v === RECEIVING_AWAITING ? RECEIVING_AWAITING : Number(v))
+          }
+        >
           <SelectTrigger className="flex-1 w-full">
             <SelectValue />
           </SelectTrigger>

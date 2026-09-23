@@ -5,6 +5,7 @@ import {
 } from "@/shared/services/api/contract";
 import { toApiClaim, fromApiReturn } from "./apiMapping";
 import { toApiComposition } from "@/shared/domain/returns/resolutions";
+import { PurchaseStatusEnum } from "@/shared/domain/enums/purchaseStatus";
 
 /**
  * نسخه‌ی هماهنگ‌شده با بکندِ واقعی — کنترلر `api/PurchaseReturn`
@@ -29,8 +30,8 @@ import { toApiComposition } from "@/shared/domain/returns/resolutions";
  *     می‌کند.
  *
  *  ۳. عملیاتِ تجمعی (ثبت تصمیم، دور کالا) کلید ایدمپوتنسی می‌گیرد —
- *     ⚠️ ولی بکندِ فعلی این هدر را اصلاً نمی‌خواند (گزارشِ شکاف، بخش
- *     ۶)، پس این محافظت فعلاً فقط سمتِ فرانت است، نه واقعی.
+ *     ⚠️ ولی بکندِ فعلی این هدر را اصلاً نمی‌خواند، پس این محافظت فعلاً
+ *     فقط سمتِ فرانت است، نه واقعی.
  *
  * پوششِ `ResponseDto` در interceptor باز می‌شود، پس اینجا `data` همان
  * محتوای واقعی است.
@@ -55,7 +56,6 @@ export async function fetchPurchaseReturns(params = {}) {
       problem: params.problem !== "" ? params.problem : undefined,
       fromDate: params.fromDate || undefined,
       toDate: params.toDate || undefined,
-      // scope/sortBy/sortOrder روی این لیست پشتیبانی نمی‌شوند.
     },
   });
   return normalizeListResponse(data, { itemsKey: "returnList" });
@@ -69,30 +69,38 @@ export async function fetchPurchaseReturnById(id) {
 }
 
 /**
+ * وضعیت‌هایی که هیچ کالایی در آن‌ها نرسیده (یا خرید لغو شده) و بکند
+ * روی آن‌ها مرجوعی نمی‌پذیرد یا چیزی برای ادعا ندارد.
+ */
+const NON_RETURNABLE_STATUSES = new Set([
+  PurchaseStatusEnum.PROFORMA,
+  PurchaseStatusEnum.PENDING,
+  PurchaseStatusEnum.CANCELLED,
+]);
+
+/**
  * فهرست کوتاهِ خریدهای قابل‌مرجوع برای انتخابگر فرم.
  *
- * ⚠️ بکند پارامترِ `returnable` ندارد — این فقط لیستِ عادیِ خریدهاست؛
- * فیلترِ «واقعاً چیزی رسیده که بشود مرجوعش کرد» باید در فرانت (روی
- * وضعیت/دریافتی‌های هر خرید) انجام شود.
+ * بکند پارامترِ `returnable` ندارد و `GetPurchaseList` فقط روی
+ * `invoiceNumber` جست‌وجو می‌کند؛ پس لیستِ عادی گرفته و خریدهایی که
+ * هنوز چیزی از آن‌ها نرسیده یا لغو شده‌اند همین‌جا کنار گذاشته می‌شوند.
  */
 export async function fetchReturnablePurchases(search = "") {
   const { data } = await axiosInstance.get("/Purchase/GetPurchaseList", {
     params: { invoiceNumber: search || undefined, take: 30 },
   });
-  return normalizeListResponse(data, { itemsKey: "purchaseList" }).items;
+  return normalizeListResponse(data, { itemsKey: "purchaseList" }).items.filter(
+    (purchase) => !NON_RETURNABLE_STATUSES.has(Number(purchase.status)),
+  );
 }
 
 /**
- * اقلام یک خرید به‌همراه چقدر تا الان دریافت شده.
+ * اقلام یک خرید برای فرمِ مرجوعی — `PurchaseReceivingInfoDto`.
  *
- * ⚠️ برخلاف چیزی که این تابع قبلاً فرض می‌کرد، بکند سقفِ *قابل‌ادعا*
- * (دریافتی منهای آنچه در مرجوعی‌های فعالِ دیگر ادعا شده) را برنمی‌گرداند
- * — فقط `orderedQuantity`/`receivedQuantity`/`stillOwedQuantity` می‌دهد
- * (که برای فرمِ *دریافت*، نه فرمِ *مرجوعی*، ساخته شده). سرور سقفِ
- * ادعا را فقط لحظه‌ی `POST CreatePurchaseReturn` چک می‌کند؛
- * `excludeReturnId` اینجا اثری ندارد چون endpointِ واقعی چنین
- * پارامتری نمی‌شناسد. تا وقتی بکند این را اضافه نکند، فرم باید خطای
- * سرور را هم مدیریت کند.
+ * سقف‌ها با `claimableQuantityOf` / `freeExcessQuantityOf` /
+ * `freeUnlistedQuantityOf` در `purchaseReturnVocabulary` خوانده می‌شوند —
+ * فیلدهای دقیقشان هنوز درخواستی از بکند است و تا آن وقت عددِ
+ * نزدیکِ موجود جایشان می‌نشیند.
  */
 export async function fetchPurchaseForReturn(purchaseId) {
   const { data } = await axiosInstance.get("/PurchaseReturn/GetPurchaseReceivingInfo", {
@@ -142,8 +150,7 @@ export async function addClaimResolution(
     "/PurchaseReturn/AddClaimResolution",
     {
       claimId: claim.id,
-      // پلِ سازگاری با بکندِ فعلی؛ به `toApiComposition` نگاه کنید.
-      composition: toApiComposition(composition, claim, { quarantineCost: true }),
+      composition: toApiComposition(composition, claim),
     },
     idempotent(idempotencyKey),
   );

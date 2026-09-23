@@ -1,6 +1,8 @@
 import { RETURN_SIDES, SIDE_CONFIG } from "@/shared/domain/returns/sides";
 import {
   PURCHASE_CLAIM_PROBLEMS,
+  PURCHASE_ON_ORDER_CLAIM_PROBLEMS,
+  PURCHASE_OFF_ORDER_CLAIM_PROBLEMS,
   problemLabels,
   problemStyles,
   problemSubset,
@@ -41,6 +43,17 @@ export const PURCHASE_RETURN_PROBLEM_LABELS = problemLabels(
     [PURCHASE_RETURN_PROBLEMS.UNLISTED_ITEM]: "کالای سفارش‌نداده",
   },
 );
+
+const labelsFor = (problems) =>
+  Object.fromEntries(
+    problems.map((problem) => [problem, PURCHASE_RETURN_PROBLEM_LABELS[problem]]),
+  );
+
+/** گزینه‌های «نوع مشکل» برای ادعای روی قلمِ سفارش در فرمِ ثبت. */
+export const PURCHASE_ON_ORDER_PROBLEM_LABELS = labelsFor(PURCHASE_ON_ORDER_CLAIM_PROBLEMS);
+
+/** گزینه‌های «نوع مشکل» برای ادعای خارج از سفارش در فرمِ ثبت. */
+export const PURCHASE_OFF_ORDER_PROBLEM_LABELS = labelsFor(PURCHASE_OFF_ORDER_CLAIM_PROBLEMS);
 
 export const PURCHASE_RETURN_PROBLEM_STYLES = problemStyles(
   PURCHASE_CLAIM_PROBLEMS,
@@ -85,3 +98,31 @@ export const PURCHASE_RETURN_STATUS_LABELS =
 export function hasAnythingArrived(purchase) {
   return (purchase.items || []).some((item) => (item.receivedQuantity || 0) > 0);
 }
+
+// ─── سقف‌های ادعا از `GetPurchaseReceivingInfo` ─────────────────────────────
+
+/**
+ * سقف‌های ادعا و خریدِ مازاد روی `PurchaseReceivingInfoDto`.
+ *
+ * فیلدهای `claimableQuantity` / `freeExcessQuantity` / `freeQuantity`
+ * درخواستِ ما از بکند‌اند (`Backend-Net/docs/purchase-frontend-sync-requests.fa.md`
+ * بند ۱) و ممکن است هنوز نرسند. تا آن وقت از نزدیک‌ترین عددی که هست
+ * استفاده می‌شود — دریافت‌شده یا کلِ قرنطینه — که ادعاهای بازِ مرجوعی‌های
+ * دیگر را کم نمی‌کند؛ پس در آن فاصله حرفِ آخر را ۴۰۰ سرور می‌زند.
+ */
+const firstNumber = (...values) => {
+  const found = values.find((value) => value != null);
+  return Number(found) || 0;
+};
+
+/** سقفِ ادعای روی سفارش برای یک قلم: رسیده − تسویه‌شده − ادعاهای باز. */
+export const claimableQuantityOf = (item) =>
+  firstNumber(item?.claimableQuantity, item?.receivedQuantity);
+
+/** مازادِ آزادِ قرنطینه روی یک قلم (منهای رزروِ ادعاهای باز). */
+export const freeExcessQuantityOf = (item) =>
+  firstNumber(item?.freeExcessQuantity, item?.quarantinedExcessQuantity);
+
+/** کالای سفارش‌ندادهِ آزادِ قرنطینه (منهای رزروِ ادعاهای باز). */
+export const freeUnlistedQuantityOf = (item) =>
+  firstNumber(item?.freeQuantity, item?.quarantinedQuantity);

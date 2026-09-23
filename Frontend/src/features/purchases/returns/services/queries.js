@@ -8,7 +8,7 @@ import {
 } from "./api-v1";
 import { purchaseReturnKeys } from "./queryKeys";
 
-export function usePurchaseReturnsQuery(filters, pagination, sorting) {
+export function usePurchaseReturnsQuery(filters, pagination) {
   const queryParams = useMemo(
     () => ({
       page: pagination.pageIndex + 1,
@@ -17,13 +17,10 @@ export function usePurchaseReturnsQuery(filters, pagination, sorting) {
       supplierId: filters.supplierId || "",
       status: filters.status ?? "",
       problem: filters.problem ?? "",
-      scope: filters.scope ?? "",
       fromDate: filters.fromDate || "",
       toDate: filters.toDate || "",
-      sortBy: sorting?.id ?? "createdAt",
-      sortOrder: sorting?.desc ? "desc" : "asc",
     }),
-    [filters, pagination, sorting],
+    [filters, pagination],
   );
 
   return useQuery({
@@ -52,10 +49,10 @@ export function useReturnablePurchasesQuery(search) {
   });
 }
 
-export function usePurchaseForReturnQuery(purchaseId, excludeReturnId = null) {
+export function usePurchaseForReturnQuery(purchaseId) {
   return useQuery({
-    queryKey: purchaseReturnKeys.purchaseForReturn(purchaseId, excludeReturnId),
-    queryFn: () => fetchPurchaseForReturn(purchaseId, excludeReturnId),
+    queryKey: purchaseReturnKeys.purchaseForReturn(purchaseId),
+    queryFn: () => fetchPurchaseForReturn(purchaseId),
     enabled: !!purchaseId,
     refetchOnMount: "always",
   });

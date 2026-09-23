@@ -19,7 +19,8 @@ import ReceivingReportCard, {
 } from "@/shared/components/returns/ReceivingReport";
 import { claimReceivingReport } from "@/shared/domain/returns/receivingReport";
 import {
-  PURCHASE_RETURN_PROBLEM_LABELS,
+  PURCHASE_ON_ORDER_PROBLEM_LABELS,
+  PURCHASE_OFF_ORDER_PROBLEM_LABELS,
   OFF_SCOPE_KIND_LABELS,
 } from "../domain/purchaseReturnVocabulary";
 import { OFF_SCOPE_KIND_STYLES } from "@/shared/domain/returns/scopes";
@@ -183,9 +184,9 @@ export default function PurchaseReturnNewPage() {
               onAddClaim={handleAddClaim}
               onUpdateClaim={handleUpdateClaim}
               onRemoveClaim={handleRemoveClaim}
-              problemLabels={PURCHASE_RETURN_PROBLEM_LABELS}
+              problemLabels={PURCHASE_ON_ORDER_PROBLEM_LABELS}
               title="مشکلات اقلام سفارش"
-              description="برای هر کالا می‌توانید چند مشکل جدا با تعداد جداگانه ثبت کنید. سقف هر کالا، همان مقدارِ سفارش‌شده است."
+              description="برای هر کالا می‌توانید چند مشکل جدا با تعداد جداگانه ثبت کنید. سقف هر کالا مقدارِ رسیده‌ای است که هنوز در مرجوعیِ دیگری ادعا نشده. کالایی که نرسیده (کسری) مرجوعی ندارد: یا با محموله‌ی بعد می‌رسد، یا قلمش را در صفحه‌ی خرید ببندید."
               emptyText="این سفارش قلمی برای ادعا ندارد"
             />
 
@@ -195,7 +196,7 @@ export default function PurchaseReturnNewPage() {
               onAdd={handleAddOffScopeClaim}
               onUpdate={handleUpdateOffScopeClaim}
               onRemove={handleRemoveOffScopeClaim}
-              problemLabels={PURCHASE_RETURN_PROBLEM_LABELS}
+              problemLabels={PURCHASE_OFF_ORDER_PROBLEM_LABELS}
               kindLabels={OFF_SCOPE_KIND_LABELS}
               kindStyles={OFF_SCOPE_KIND_STYLES}
               renderClaimReport={(claim) => (

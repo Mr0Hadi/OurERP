@@ -17,8 +17,6 @@ const PurchaseTable = ({
   currentPage,
   pageSize,
   onPaginationChange,
-  sorting,
-  onSortingChange,
 }) => {
   const navigate = useNavigate();
 
@@ -108,8 +106,8 @@ const PurchaseTable = ({
       currentPage={currentPage}
       pageSize={pageSize}
       onPaginationChange={onPaginationChange}
-      sorting={sorting}
-      onSortingChange={onSortingChange}
+      // `GetPurchaseList` مرتب‌سازی نمی‌گیرد؛ ترتیب همیشه جدیدترین‌ها اول است.
+      sortable={false}
       emptyMessage="خریدی یافت نشد."
     />
   );

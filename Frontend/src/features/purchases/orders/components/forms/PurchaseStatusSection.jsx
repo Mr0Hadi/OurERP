@@ -17,6 +17,10 @@ import {
   PURCHASE_STATUS_LABELS,
 } from "@/shared/domain/enums/purchaseStatus";
 import {
+  MANUAL_PURCHASE_STATUSES,
+  isPurchaseStatusLocked,
+} from "../../domain/purchaseRules";
+import {
   Clock,
   Truck,
   PackageCheck,
@@ -72,10 +76,17 @@ const DEFAULT_CONFIG = {
   borderColor: "border-border",
 };
 
+/**
+ * @param savedStatus وضعیتِ ذخیره‌شده روی سرور؛ برای خریدِ تازه خالی.
+ */
 export default function PurchaseStatusSection({
   selectedStatus,
+  savedStatus,
   onStatusChange,
 }) {
+  const locked = isPurchaseStatusLocked(savedStatus);
+  const options = locked ? [Number(savedStatus)] : MANUAL_PURCHASE_STATUSES;
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -95,13 +106,16 @@ export default function PurchaseStatusSection({
           <Select
             value={selectedStatus === "" || selectedStatus == null ? "" : String(selectedStatus)}
             onValueChange={(value) => onStatusChange(Number(value))}
+            disabled={locked}
           >
             <SelectTrigger className="h-9">
               <SelectValue placeholder="وضعیت را انتخاب کنید" />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(PURCHASE_STATUS_LABELS).map(([key, label]) => {
-                const itemConfig = STATUS_CONFIG[key] ?? DEFAULT_CONFIG;
+              {options.map((status) => {
+                const key = String(status);
+                const label = PURCHASE_STATUS_LABELS[status];
+                const itemConfig = STATUS_CONFIG[status] ?? DEFAULT_CONFIG;
                 const ItemIcon = itemConfig.icon;
                 return (
                   <SelectItem key={key} value={key}>
@@ -116,11 +130,20 @@ export default function PurchaseStatusSection({
               })}
             </SelectContent>
           </Select>
+          {locked ? (
+            <p className="text-xs text-muted-foreground">
+              این وضعیت را دریافتِ انبار تعیین می‌کند و دستی عوض نمی‌شود. اگر
+              تامین‌کننده بقیه‌ی کالا را نمی‌فرستد، قلمش را در «وضعیت دریافت
+              اقلام» ببندید.
+            </p>
+          ) : (
           <p className="text-xs text-muted-foreground">
             وقتی تامین‌کننده فاکتور رسمی را فرستاد، شماره‌ی فاکتور را در
             «اطلاعات فاکتور» وارد و خودِ فاکتور را ضمیمه کنید، بعد وضعیت
-            را به «در انتظار ارسال» ببرید.
+            را به «در انتظار ارسال» ببرید. «تحویل ناقص/کامل» را دریافتِ
+            انبار تعیین می‌کند.
           </p>
+          )}
         </div>
       </CardContent>
     </Card>

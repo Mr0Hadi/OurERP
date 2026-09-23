@@ -9,12 +9,10 @@ import { usePurchaseReturnFilterStore } from "../../store/purchaseReturnFilterSt
 import {
   PURCHASE_RETURN_STATUS_LABELS,
   PURCHASE_RETURN_PROBLEM_LABELS,
-  CLAIM_SCOPE_LABELS,
 } from "../../domain/purchaseReturnVocabulary";
 
 const STATUS_OPTIONS = toFilterOptions(PURCHASE_RETURN_STATUS_LABELS);
 const PROBLEM_OPTIONS = toFilterOptions(PURCHASE_RETURN_PROBLEM_LABELS);
-const SCOPE_OPTIONS = toFilterOptions(CLAIM_SCOPE_LABELS);
 
 const PurchaseReturnFilters = ({ suppliers = [], isSuppliersLoading = false }) => {
   const {
@@ -22,14 +20,12 @@ const PurchaseReturnFilters = ({ suppliers = [], isSuppliersLoading = false }) =
     supplierId,
     status,
     problem,
-    scope,
     fromDate,
     toDate,
     setGlobalSearch,
     setSupplierId,
     setStatus,
     setProblem,
-    setScope,
     setFromDate,
     setToDate,
     resetFilters,
@@ -89,15 +85,6 @@ const PurchaseReturnFilters = ({ suppliers = [], isSuppliersLoading = false }) =
         onChange={setProblem}
         allLabel="همه مشکل‌ها"
         options={PROBLEM_OPTIONS}
-        numeric
-      />
-
-      <FilterSelect
-        label="دامنه"
-        value={scope}
-        onChange={setScope}
-        allLabel="همه"
-        options={SCOPE_OPTIONS}
         numeric
       />
     </FilterPanel>

@@ -10,9 +10,11 @@ export default function SelectedItemsCards({
   onRemoveUnit,
   lineTotal,
   grandTotal,
+  // قرینه‌ی همین prop در `SelectedItemsTable`.
+  byContainer = false,
 }) {
   return (
-    <div className="md:hidden space-y-2">
+    <div className={`${byContainer ? "@2xl/picker:hidden" : "md:hidden"} space-y-2`}>
       {items.map((item) => (
         <div
           key={item.productId}

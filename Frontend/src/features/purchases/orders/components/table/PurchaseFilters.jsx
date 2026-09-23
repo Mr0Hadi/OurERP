@@ -63,7 +63,7 @@ const PurchaseFilters = ({ suppliers = [], isSuppliersLoading = false }) => {
       }
     >
       <FilterSearchInput
-        placeholder="شماره فاکتور، توضیحات..."
+        placeholder="شماره فاکتور..."
         value={globalSearch}
         onChange={handleGlobalSearch}
       />

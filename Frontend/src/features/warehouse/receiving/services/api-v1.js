@@ -1,12 +1,12 @@
 import axiosInstance from "@/shared/services/api/axios";
 import { idempotent, normalizeListResponse } from "@/shared/services/api/contract";
-import { PurchaseStatusEnum } from "@/shared/domain/enums/purchaseStatus";
+import { receivingStatusesOf } from "../domain/receivingVocabulary";
 
 /**
  * دریافت انبار روی بکندِ واقعی:
  *
- *  ۱. صفِ دریافت = `GET api/Purchase/GetPurchaseList` فیلترشده روی
- *     وضعیت‌های قابلِ دریافت (`RECEIVING_ELIGIBLE_STATUSES`).
+ *  ۱. صفِ دریافت = `GET api/Purchase/GetPurchaseList` فیلترشده با `statuses`
+ *     روی وضعیت‌های قابلِ دریافت (`receivingStatusesOf`).
  *  ۲. جزئیاتِ یک خرید برای انبار = `GET api/PurchaseReturn/GetPurchaseReceivingInfo`
  *     (باقیمانده، قرنطینه و مغایرت‌های هر قلم).
  *  ۳. کالای جایگزینِ منتظرِ ورود = `GET api/PurchaseReturn/GetPurchaseReturnPendingEffects`.
@@ -14,20 +14,33 @@ import { PurchaseStatusEnum } from "@/shared/domain/enums/purchaseStatus";
  *     ورودِ مرجوعی در یک تراکنش؛ یک محموله یک رسید است.
  */
 
-/** خریدهایی که هنوز کالایشان به انبار نرسیده (کاملاً یا بخشی). */
+/**
+ * خریدهایی که هنوز کالایشان به انبار نرسیده (کاملاً یا بخشی).
+ *
+ * `statuses` به شکلِ `statuses=2&statuses=3` فرستاده می‌شود (همان شکلی که
+ * ASP.NET برای `List<>` می‌خواند). ردیف‌ها یک بار دیگر هم با همین فهرست
+ * فیلتر می‌شوند تا صف هرگز پیش‌نویس یا خریدِ لغوشده نشان ندهد.
+ */
 export async function fetchReceivablePurchases(params = {}) {
+  const statuses = receivingStatusesOf(params.status);
   const { data } = await axiosInstance.get("/Purchase/GetPurchaseList", {
     params: {
       page: params.page,
       take: params.limit,
       invoiceNumber: params.search || undefined,
       supplierId: params.supplierId || undefined,
-      status: params.status !== "" ? params.status : PurchaseStatusEnum.SHIPPED,
+      statuses,
       fromDate: params.fromDate || undefined,
       toDate: params.toDate || undefined,
     },
+    paramsSerializer: { indexes: null },
   });
-  return normalizeListResponse(data, { itemsKey: "purchaseList" });
+  const list = normalizeListResponse(data, { itemsKey: "purchaseList" });
+  const allowed = new Set(statuses);
+  return {
+    ...list,
+    items: list.items.filter((purchase) => allowed.has(Number(purchase.status))),
+  };
 }
 
 /** `PurchaseReceivingInfoDto`: اقلام با باقیمانده و قرنطینه، کالای سفارش‌نداده، مغایرت‌ها و عکس‌ها. */

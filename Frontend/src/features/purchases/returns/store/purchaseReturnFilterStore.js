@@ -6,7 +6,6 @@ export const usePurchaseReturnFilterStore = createFilterStore({
     supplierId: "",
     status: "",
     problem: "",
-    scope: "",
     fromDate: "",
     toDate: "",
   },
