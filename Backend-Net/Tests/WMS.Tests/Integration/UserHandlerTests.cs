@@ -237,7 +237,7 @@ namespace WMS.Tests.Integration
             scope.Context.Users.Add(user);
             scope.Context.SaveChanges();
 
-            var handler = new DeleteUserCommandHandler(scope.UserRepository, scope.OrgRoleService, scope.UnitOfWork);
+            var handler = new DeleteUserCommandHandler(scope.UserRepository, scope.OrgRoleService, scope.PermissionService, scope.UnitOfWork);
             await handler.Handle(new DeleteUserCommand { Id = user.Id }, CancellationToken.None);
 
             using var verify = db.NewContext();

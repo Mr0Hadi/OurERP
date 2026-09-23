@@ -1,4 +1,4 @@
-using Domain.Entities;
+﻿using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
@@ -43,6 +43,7 @@ namespace Application.Common.Contracts.Context
         DbSet<PaymentDetail> PaymentDetails { get; }
         DbSet<SaleInstallmentPlan> SaleInstallmentPlans { get; }
         DbSet<SaleInstallment> SaleInstallments { get; }
+        DbSet<UserPermission> UserPermissions { get; }
 
         DbSet<T> Set<T>() where T : class;
 

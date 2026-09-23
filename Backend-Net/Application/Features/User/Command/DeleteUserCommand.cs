@@ -1,4 +1,5 @@
 ﻿using Application.Common.Contracts.OrgStructure;
+using Application.Common.Contracts.Permissions;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
@@ -17,12 +18,15 @@ namespace Application.Features.User.Command
     {
         private readonly IUserRepository _userRepository;
         private readonly IOrgRoleService _orgRoleService;
+        private readonly IPermissionService _permissionService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public DeleteUserCommandHandler(IUserRepository userRepository, IOrgRoleService orgRoleService, IUnitOfWork unitOfWork)
+        public DeleteUserCommandHandler(IUserRepository userRepository, IOrgRoleService orgRoleService,
+            IPermissionService permissionService, IUnitOfWork unitOfWork)
         {
             _userRepository = userRepository;
             _orgRoleService = orgRoleService;
+            _permissionService = permissionService;
             _unitOfWork = unitOfWork;
         }
 
@@ -40,6 +44,10 @@ namespace Application.Features.User.Command
 
             _userRepository.Update(user);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            // A deactivated user holds nothing (PermissionService filters on User.IsActive), but
+            // a list cached moments ago would keep answering yes until it expired.
+            _permissionService.Invalidate(user.Id);
 
             res.Message = "کاربر با موفقیت حذف شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();

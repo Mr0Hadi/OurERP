@@ -1,9 +1,11 @@
-using Application.Features.PosTerminal.Commands;
+﻿using Application.Features.PosTerminal.Commands;
 using Application.Features.PosTerminal.Queries;
 using Application.Common.Dtos;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Domain.Enums;
+using WMS.Authorization;
 
 namespace WMS.Controllers
 {
@@ -18,30 +20,35 @@ namespace WMS.Controllers
             _mediator = mediator;
         }
 
+        [HasPermission(PermissionEnum.PosTerminalView)]
         [HttpGet("GetPosTerminalList")]
         public async Task<ActionResult<ResponseDto>> GetPosTerminalList([FromQuery] GetPosTerminalListQuery request)
         {
             return await _mediator.Send(request);
         }
 
+        [HasPermission(PermissionEnum.PosTerminalView)]
         [HttpGet("GetPosTerminalDetail")]
         public async Task<ActionResult<ResponseDto>> GetPosTerminalDetail([FromQuery] GetPosTerminalDetailQuery request)
         {
             return await _mediator.Send(request);
         }
 
+        [HasPermission(PermissionEnum.PosTerminalManage)]
         [HttpPost("CreatePosTerminal")]
         public async Task<ActionResult<ResponseDto>> CreatePosTerminal([FromBody] CreatePosTerminalCommand request)
         {
             return await _mediator.Send(request);
         }
 
+        [HasPermission(PermissionEnum.PosTerminalManage)]
         [HttpPut("UpdatePosTerminal")]
         public async Task<ActionResult<ResponseDto>> UpdatePosTerminal([FromBody] UpdatePosTerminalCommand request)
         {
             return await _mediator.Send(request);
         }
 
+        [HasPermission(PermissionEnum.PosTerminalManage)]
         [HttpDelete("DeletePosTerminal")]
         public async Task<ActionResult<ResponseDto>> DeletePosTerminal([FromQuery] DeletePosTerminalCommand request)
         {

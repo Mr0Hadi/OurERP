@@ -1,10 +1,12 @@
-using Application.Common.Dtos;
+﻿using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.FileStorage.Commands;
 using Application.Features.FileStorage.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Domain.Enums;
+using WMS.Authorization;
 
 namespace WMS.Controllers
 {
@@ -29,6 +31,7 @@ namespace WMS.Controllers
         /// multipart/form-data: "file" is the image, "folder" picks the bucket prefix
         /// (1=PRODUCTS, 2=CUSTOMERS, 3=SUPPLIERS, 4=RECEIVING).
         /// </summary>
+        [HasPermission(PermissionEnum.FileUpload)]
         [HttpPost("UploadImage")]
         public async Task<ActionResult<ResponseDto>> UploadImage(IFormFile file, [FromForm] ImageFolderEnum folder)
         {
@@ -78,6 +81,7 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
+        [HasPermission(PermissionEnum.FileDelete)]
         [HttpDelete("DeleteImage")]
         public async Task<ActionResult<ResponseDto>> DeleteImage([FromQuery] DeleteImageCommand request)
         {

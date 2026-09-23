@@ -1,8 +1,10 @@
-using Application.Features.Pos.Commands;
+﻿using Application.Features.Pos.Commands;
 using Application.Common.Dtos;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Domain.Enums;
+using WMS.Authorization;
 
 namespace WMS.Controllers
 {
@@ -17,6 +19,7 @@ namespace WMS.Controllers
             _mediator = mediator;
         }
 
+        [HasPermission(PermissionEnum.PosCharge)]
         [HttpPost("Charge")]
         public async Task<ActionResult<ResponseDto>> Charge([FromBody] ChargePosCommand request)
         {

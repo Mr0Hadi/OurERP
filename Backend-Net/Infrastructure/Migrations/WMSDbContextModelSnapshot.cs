@@ -1807,6 +1807,27 @@ namespace Infrastructure.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("Domain.Entities.UserPermission", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Permission")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("GrantedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("GrantedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("UserId", "Permission");
+
+                    b.HasIndex("GrantedByUserId");
+
+                    b.ToTable("UserPermissions");
+                });
+
             modelBuilder.Entity("Domain.Entities.Department", b =>
                 {
                     b.HasOne("Domain.Entities.User", "Deputy")
@@ -2324,6 +2345,24 @@ namespace Infrastructure.Migrations
                     b.Navigation("Team");
                 });
 
+            modelBuilder.Entity("Domain.Entities.UserPermission", b =>
+                {
+                    b.HasOne("Domain.Entities.User", "GrantedBy")
+                        .WithMany()
+                        .HasForeignKey("GrantedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Domain.Entities.User", "User")
+                        .WithMany("Permissions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("GrantedBy");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Domain.Entities.Department", b =>
                 {
                     b.Navigation("Teams");
@@ -2424,6 +2463,11 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("Domain.Entities.Team", b =>
                 {
                     b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("Domain.Entities.User", b =>
+                {
+                    b.Navigation("Permissions");
                 });
 #pragma warning restore 612, 618
         }

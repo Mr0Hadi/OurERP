@@ -17,6 +17,7 @@ namespace Domain.Entities
         public Department Department { get; set; }
         public int? TeamId { get; set; }
         public Team? Team { get; set; }
+        public List<UserPermission> Permissions { get; set; } = new();
         public string? RefreshToken { get; set; }
         public DateTime? ExpireRefreshToken { get; set; }
     }

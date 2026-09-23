@@ -1,9 +1,11 @@
-using Application.Features.ProductCategory.Commands;
+﻿using Application.Features.ProductCategory.Commands;
 using Application.Features.ProductCategory.Queries;
 using Application.Common.Dtos;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Domain.Enums;
+using WMS.Authorization;
 
 namespace WMS.Controllers
 {
@@ -18,30 +20,35 @@ namespace WMS.Controllers
             _mediator = mediator;
         }
 
+        [HasPermission(PermissionEnum.ProductCategoryView)]
         [HttpGet("GetProductCategoryList")]
         public async Task<ActionResult<ResponseDto>> GetProductCategoryList([FromQuery] GetProductCategoryListQuery request)
         {
             return await _mediator.Send(request);
         }
 
+        [HasPermission(PermissionEnum.ProductCategoryView)]
         [HttpGet("GetProductCategoryDetail")]
         public async Task<ActionResult<ResponseDto>> GetProductCategoryDetail([FromQuery] GetProductCategoryDetailQuery request)
         {
             return await _mediator.Send(request);
         }
 
+        [HasPermission(PermissionEnum.ProductCategoryManage)]
         [HttpPost("CreateProductCategory")]
         public async Task<ActionResult<ResponseDto>> CreateProductCategory([FromBody] CreateProductCategoryCommand request)
         {
             return await _mediator.Send(request);
         }
 
+        [HasPermission(PermissionEnum.ProductCategoryManage)]
         [HttpPut("UpdateProductCategory")]
         public async Task<ActionResult<ResponseDto>> UpdateProductCategory([FromBody] UpdateProductCategoryCommand request)
         {
             return await _mediator.Send(request);
         }
 
+        [HasPermission(PermissionEnum.ProductCategoryManage)]
         [HttpDelete("DeleteProductCategory")]
         public async Task<ActionResult<ResponseDto>> DeleteProductCategory([FromQuery] DeleteProductCategoryCommand request)
         {

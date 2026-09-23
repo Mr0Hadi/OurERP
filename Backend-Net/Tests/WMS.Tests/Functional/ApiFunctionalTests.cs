@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -54,7 +54,9 @@ namespace WMS.Tests.Functional
             var body = await response.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(body);
             var message = doc.RootElement.TryGetProperty("message", out var m) ? m : doc.RootElement.GetProperty("Message");
-            Assert.Equal("فرمت داده ورودی صحیح نمی باشد.", message.GetString());
+            // InvalidModelStateResponseFactory appends the offending field names after the
+            // sentence ("... Name - Brand"), so the prefix is what is fixed.
+            Assert.StartsWith("فرمت داده ورودی صحیح نمی باشد.", message.GetString());
         }
 
         [Fact]
@@ -103,6 +105,9 @@ namespace WMS.Tests.Functional
 
             context.Users.Add(user);
             context.SaveChanges();
+
+            // Every endpoint these tests call is guarded by a permission now.
+            Seed.GrantAllPermissions(context, user.Id);
         }
 
         private async Task<string> LoginAsSeededAdmin(IServiceScope scope)
