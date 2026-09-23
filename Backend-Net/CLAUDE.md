@@ -42,6 +42,7 @@ A warehouse-management REST API (`Backend-Net/WMS`) handling products, product c
 - Every handler starts with `var res = new ResponseDto();`.
 - Guard clauses first; throw custom exceptions rather than returning errors.
 - List queries build an `IQueryable`, apply filters with `if (request.X.HasValue)` / `if (!string.IsNullOrEmpty(request.X))` blocks, then `Select(...).ToPagedAsync(request.Page, request.Take, cancellationToken)` and read `paged.Items` / `paged.PageCount` / `paged.TotalCount`.
+- Every paged list query takes `SortBy` (its own `<X>ListSortEnum`, declared at the top of the query file) + `SortDirection` (`SortDirectionEnum`), resolves the direction with `SortingExtensions.ResolveDirection`, switches on `SortBy` with `.SortBy(...)`, and **always ends with `.ThenSortBy(x => x.Id, direction)`** before `ToPagedAsync` - paging without a unique final key is non-deterministic on SQL Server. A new list query needs a case in `ListSortingTests.EverySortOption_OfEveryListQuery_Executes`.
 - `res.Message` is Persian UI text; `res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();` before `return res;`.
 
 **Error handling** (in `Common/Exceptions/`)
@@ -1479,6 +1480,27 @@ user shows the destination's template) for the admin to apply to the checkboxes;
   `SaleInstallmentTests.NonInstallmentSale_KeepsTheOriginalProformaExitRule` became `…_LeavesProformaOnFirstPayment`.
   **Verified:** build clean, suite 614/617; the 3 failures are the documented environmental ones (2 LibreOffice
   `InvoicePdfTests`, the `"***"` object-storage placeholder).
+
+**Sortable list queries (2026-09-24).** All 19 paged list queries take optional `SortBy` + `SortDirection`. API:
+`docs/api-guide.fa.md` §1 «مرتب‌سازی» (every enum and default) and the 2026-09-24 sorting table in §16. No schema change.
+
+- **Fixed along the way: 10 of them had no `OrderBy` at all** (customer, supplier, product, category, purchase, sale, user,
+  department, team, POS terminal), so page contents were whatever SQL Server returned - a row could appear on two pages or
+  none. The rest had a sort without a unique tie-breaker. Every list now ends with `ThenSortBy(Id)` (`CustomerId`/`UserId`/
+  `PlanId` on the rows that have no `Id`).
+- **Helpers**: `Application/Common/Queries/SortingExtensions.cs` (`SortBy`, `ThenSortBy`, `ResolveDirection`) and
+  `Application/Common/Enums/SortDirectionEnum.cs`. Direction rule: explicit `SortDirection` wins; a `SortBy` alone sorts
+  ascending; nothing sent uses the query's own default (newest first for documents/people, alphabetical for catalogues,
+  due date ascending for installments, biggest total first for the four statistics reports).
+- **Where the sort is applied**: on the entity before `Select` when every key is a column or navigation; on the projected
+  DTO/row after `Select` when a key is computed there (`QuarantinedCount`, `ProductCount`, `TeamCount`/`UserCount`,
+  the installment plan's paid/remaining sums, the report aggregates). Fields filled after `ToPagedAsync` (`ImageUrl`,
+  `RoleTitle`, `StatusTitle`, supplier `Status`, `Problems`, `InstallmentSummary`) are not sortable by construction.
+- **Enum columns sort by integer, not by Persian label.**
+- **Tests**: `Integration/ListSortingTests.cs` - one smoke test running every `SortBy` of every query in both directions
+  against SQL Server (a key EF cannot translate compiles and only fails at run time), plus behaviour tests for a plain
+  column, a computed count, alphabetical default, tie-breaking across pages and a navigation/concatenated key;
+  `Unit/SortingExtensionsTests.cs`.
 
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.

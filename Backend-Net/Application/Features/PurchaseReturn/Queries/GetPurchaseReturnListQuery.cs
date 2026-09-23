@@ -10,6 +10,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.PurchaseReturn.Queries
 {
+    public enum PurchaseReturnListSortEnum
+    {
+        CREATED_AT = 0,
+        RETURN_NUMBER = 1,
+        RETURN_DATE = 2,
+        PURCHASE_INVOICE_NUMBER = 3,
+        SUPPLIER_NAME = 4,
+        STATUS = 5,
+        TOTAL_QUANTITY = 6,
+        TOTAL_AMOUNT = 7,
+    }
+
     public class GetPurchaseReturnListQuery : IRequest<ResponseDto>
     {
         public int Page { get; set; } = 1;
@@ -25,6 +37,8 @@ namespace Application.Features.PurchaseReturn.Queries
         public ReturnProblemEnum? Problem { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
+        public PurchaseReturnListSortEnum? SortBy { get; set; }
+        public SortDirectionEnum? SortDirection { get; set; }
     }
 
     public class GetPurchaseReturnListQueryHandler : IRequestHandler<GetPurchaseReturnListQuery, ResponseDto>
@@ -85,8 +99,22 @@ namespace Application.Features.PurchaseReturn.Queries
                 query = query.Where(x => x.Claims.Any(c => c.Problem == request.Problem.Value));
             }
 
-            var paged = await query
-                .OrderByDescending(x => x.CreatedAt)
+            // Default: newest first.
+            var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
+            var sorted = request.SortBy switch
+            {
+                PurchaseReturnListSortEnum.RETURN_NUMBER => query.SortBy(x => x.ReturnNumber, direction),
+                PurchaseReturnListSortEnum.RETURN_DATE => query.SortBy(x => x.ReturnDate, direction),
+                PurchaseReturnListSortEnum.PURCHASE_INVOICE_NUMBER => query.SortBy(x => x.Purchase.InvoiceNumber, direction),
+                PurchaseReturnListSortEnum.SUPPLIER_NAME => query.SortBy(x => x.Purchase.Supplier.CompanyName, direction),
+                PurchaseReturnListSortEnum.STATUS => query.SortBy(x => x.Status, direction),
+                PurchaseReturnListSortEnum.TOTAL_QUANTITY => query.SortBy(x => x.Claims.Sum(c => c.Quantity), direction),
+                PurchaseReturnListSortEnum.TOTAL_AMOUNT => query.SortBy(x => x.Claims.Sum(c => (long)c.Quantity * (long)c.UnitPrice), direction),
+                _ => query.SortBy(x => x.CreatedAt, direction),
+            };
+
+            var paged = await sorted
+                .ThenSortBy(x => x.Id, direction)
                 .Select(x => new PurchaseReturnListDto
                 {
                     Id = x.Id,

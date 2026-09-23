@@ -1,6 +1,7 @@
 ﻿using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Common.Queries;
 using Application.Features.Team.Dtos;
 using Common.Extensions;
 using MediatR;
@@ -8,12 +9,23 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.Team.Queries
 {
+    public enum TeamListSortEnum
+    {
+        ID = 0,
+        NAME = 1,
+        DEPARTMENT_NAME = 2,
+        HEAD_NAME = 3,
+        USER_COUNT = 4,
+    }
+
     public class GetTeamListQuery : IRequest<ResponseDto>
     {
         public int Page { get; set; } = 1;
         public int Take { get; set; } = 10;
         public string? Name { get; set; }
         public int? DepartmentId { get; set; }
+        public TeamListSortEnum? SortBy { get; set; }
+        public SortDirectionEnum? SortDirection { get; set; }
     }
 
     public class GetTeamListQueryHandler : IRequestHandler<GetTeamListQuery, ResponseDto>
@@ -38,7 +50,7 @@ namespace Application.Features.Team.Queries
                 query = query.Where(x => x.DepartmentId == request.DepartmentId.Value);
             }
 
-            var paged = await query.Select(x => new TeamListDto
+            var projected = query.Select(x => new TeamListDto
             {
                 Id = x.Id,
                 Name = x.Name,
@@ -46,7 +58,20 @@ namespace Application.Features.Team.Queries
                 HeadName = x.Head != null ? x.Head.FirstName + " " + x.Head.LastName : null,
                 DeputyName = x.Deputy != null ? x.Deputy.FirstName + " " + x.Deputy.LastName : null,
                 UserCount = x.Users.Count(u => u.IsActive)
-            }).ToPagedAsync(request.Page, request.Take, cancellationToken);
+            });
+
+            // Sorted on the projection so the count is sortable too. Default: alphabetical.
+            var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.ASC);
+            var sorted = request.SortBy switch
+            {
+                TeamListSortEnum.ID => projected.SortBy(x => x.Id, direction),
+                TeamListSortEnum.DEPARTMENT_NAME => projected.SortBy(x => x.DepartmentName, direction),
+                TeamListSortEnum.HEAD_NAME => projected.SortBy(x => x.HeadName, direction),
+                TeamListSortEnum.USER_COUNT => projected.SortBy(x => x.UserCount, direction),
+                _ => projected.SortBy(x => x.Name, direction),
+            };
+
+            var paged = await sorted.ThenSortBy(x => x.Id, direction).ToPagedAsync(request.Page, request.Take, cancellationToken);
 
             res.Data = new
             {

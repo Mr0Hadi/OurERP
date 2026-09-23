@@ -2,6 +2,7 @@ using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Common.Queries;
 using Application.Features.Customer.Dtos;
 using Common.Extensions;
 using Domain.Enums;
@@ -10,6 +11,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.Customer.Queries
 {
+    public enum CustomerListSortEnum
+    {
+        ID = 0,
+        FIRST_NAME = 1,
+        LAST_NAME = 2,
+        BALANCE = 3,
+        BALANCE_TYPE = 4,
+    }
+
     public class GetCustomerListQuery : IRequest<ResponseDto>
     {
         public int Page { get; set; } = 1;
@@ -19,6 +29,8 @@ namespace Application.Features.Customer.Queries
         public UInt64? MinBalance { get; set; }
         public UInt64? MaxBalance { get; set; }
         public BalanceTypeEnum? BalanceType { get; set; }
+        public CustomerListSortEnum? SortBy { get; set; }
+        public SortDirectionEnum? SortDirection { get; set; }
     }
 
     public class GetCustomerListQueryHandler : IRequestHandler<GetCustomerListQuery, ResponseDto>
@@ -64,7 +76,18 @@ namespace Application.Features.Customer.Queries
                 query = query.Where(x => x.BalanceType == request.BalanceType.Value);
             }
 
-            var paged = await query.Select(x => new CustomerListDto
+            // Default: newest first.
+            var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
+            var sorted = request.SortBy switch
+            {
+                CustomerListSortEnum.FIRST_NAME => query.SortBy(x => x.FirstName, direction),
+                CustomerListSortEnum.LAST_NAME => query.SortBy(x => x.LastName, direction),
+                CustomerListSortEnum.BALANCE => query.SortBy(x => x.Balance, direction),
+                CustomerListSortEnum.BALANCE_TYPE => query.SortBy(x => x.BalanceType, direction),
+                _ => query.SortBy(x => x.Id, direction),
+            };
+
+            var paged = await sorted.ThenSortBy(x => x.Id, direction).Select(x => new CustomerListDto
             {
                 Id = x.Id,
                 FirstName = x.FirstName,

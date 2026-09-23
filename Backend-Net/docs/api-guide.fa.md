@@ -128,6 +128,49 @@ Authorization: Bearer {accessToken}
 
 نام کلید آرایه لیست به ازای هر API فرق دارد (مثلاً `productList`، `customerList` و ...) که در بخش مربوطه ذکر شده. توجه: نام کلیدها هنگام سریالایز شدن JSON با حروف کوچک شروع می‌شوند (camelCase)، حتی اگر در کد C# با حرف بزرگ نوشته شده باشند.
 
+### مرتب‌سازی (Sorting)
+
+همه‌ی API های لیست صفحه‌بندی‌شده دو پارامتر اختیاری query string دارند:
+
+| پارامتر | نوع | معنی |
+|---|---|---|
+| `SortBy` | enum مخصوص همان لیست (جدول زیر) | ستونی که بر اساسش مرتب شود |
+| `SortDirection` | `SortDirectionEnum`: `ASC = 0`، `DESC = 1` | جهت |
+
+- هیچ‌کدام را نفرستید: ترتیب پیش‌فرض همان لیست (ستون «پیش‌فرض» در جدول).
+- فقط `SortBy` را بفرستید: صعودی (`ASC`).
+- فقط `SortDirection` را بفرستید: ستون پیش‌فرض با همان جهت.
+- ردیف‌هایی که روی ستون انتخابی برابرند همیشه با `id` (در همان جهت) مرتب می‌شوند، پس صفحه‌ها هرگز هم‌پوشانی ندارند و ردیفی جا نمی‌افتد.
+- مرتب‌سازی روی enum ها (`status`، `balanceType`، ...) بر اساس **عدد** enum است، نه برچسب فارسی.
+- فیلدهایی که بعد از خواندن صفحه ساخته می‌شوند قابل مرتب‌سازی نیستند: `imageUrl`/`imageKey`، `roleTitle`، `statusTitle`، `status` متنیِ تامین‌کننده، `problems` و `installmentSummary`.
+- مقدار نامعتبر برای `SortBy` یا `SortDirection` خطای ۴۰۰ می‌دهد.
+
+مثال: `GET api/Product/GetProductList?SortBy=5&SortDirection=1` یعنی گران‌ترین قیمت خرده‌فروشی اول.
+
+| API | enum `SortBy` و مقادیر | پیش‌فرض |
+|---|---|---|
+| `Customer/GetCustomerList` | `CustomerListSortEnum`: `ID=0, FIRST_NAME=1, LAST_NAME=2, BALANCE=3, BALANCE_TYPE=4` | `ID` نزولی |
+| `Supplier/GetSupplierList` | `SupplierListSortEnum`: `ID=0, COMPANY_NAME=1, FIRST_NAME=2, LAST_NAME=3, BALANCE=4, BALANCE_TYPE=5` | `ID` نزولی |
+| `Product/GetProductList` | `ProductListSortEnum`: `ID=0, CODE=1, NAME=2, BRAND=3, CATEGORY_NAME=4, RETAIL_PRICE=5, WHOLESALE_PRICE=6, STOCK=7, QUARANTINED_COUNT=8` | `ID` نزولی |
+| `Product/GetProductUnitList` | `ProductUnitListSortEnum`: `SERIAL_NUMBER=0, PRODUCT_NAME=1, STATUS=2, SOLD_AT=3` | محصول، سپس سریال، صعودی |
+| `ProductCategory/GetProductCategoryList` | `ProductCategoryListSortEnum`: `ID=0, NAME=1, PRODUCT_COUNT=2` | `NAME` صعودی |
+| `Purchase/GetPurchaseList` | `PurchaseListSortEnum`: `ID=0, INVOICE_NUMBER=1, SUPPLIER_NAME=2, INVOICE_DATE=3, PAYMENT_DATE=4, STATUS=5, PAYMENT_TYPE=6, TOTAL_AMOUNT=7, PAID_AMOUNT=8` | `ID` نزولی |
+| `Sale/GetSaleList` | `SaleListSortEnum`: `ID=0, INVOICE_NUMBER=1, CUSTOMER_NAME=2, INVOICE_DATE=3, PAYMENT_DATE=4, STATUS=5, PAYMENT_TYPE=6, TOTAL_AMOUNT=7, PAID_AMOUNT=8` | `ID` نزولی |
+| `PurchaseReturn/GetPurchaseReturnList` | `PurchaseReturnListSortEnum`: `CREATED_AT=0, RETURN_NUMBER=1, RETURN_DATE=2, PURCHASE_INVOICE_NUMBER=3, SUPPLIER_NAME=4, STATUS=5, TOTAL_QUANTITY=6, TOTAL_AMOUNT=7` | `CREATED_AT` نزولی |
+| `SaleReturn/GetSaleReturnList` | `SaleReturnListSortEnum`: `CREATED_AT=0, RETURN_NUMBER=1, RETURN_DATE=2, SALE_INVOICE_NUMBER=3, CUSTOMER_NAME=4, STATUS=5, TOTAL_QUANTITY=6, TOTAL_AMOUNT=7` | `CREATED_AT` نزولی |
+| `SaleInstallment/GetSaleInstallmentList` | `SaleInstallmentListSortEnum`: `DUE_DATE=0, NUMBER=1, AMOUNT=2, STATUS=3, PAID_AT=4, INVOICE_NUMBER=5, CUSTOMER_NAME=6` | `DUE_DATE` صعودی |
+| `SaleInstallment/GetSaleInstallmentPlanList` | `SaleInstallmentPlanListSortEnum`: `ID=0, CREATED_AT=1, INVOICE_NUMBER=2, CUSTOMER_NAME=3, TOTAL_AMOUNT=4, PAID_AMOUNT=5, REMAINING_AMOUNT=6, NEXT_DUE_DATE=7, STATUS=8` | `ID` نزولی |
+| `User/GetUserList` | `UserListSortEnum`: `ID=0, FIRST_NAME=1, LAST_NAME=2, USERNAME=3, PERSONEL_CODE=4, DEPARTMENT_NAME=5, TEAM_NAME=6` | `ID` نزولی |
+| `Department/GetDepartmentList` | `DepartmentListSortEnum`: `ID=0, NAME=1, HEAD_NAME=2, TEAM_COUNT=3, USER_COUNT=4` | `NAME` صعودی |
+| `Team/GetTeamList` | `TeamListSortEnum`: `ID=0, NAME=1, DEPARTMENT_NAME=2, HEAD_NAME=3, USER_COUNT=4` | `NAME` صعودی |
+| `PosTerminal/GetPosTerminalList` | `PosTerminalListSortEnum`: `ID=0, NAME=1, VENDOR=2` | `NAME` صعودی |
+| `Report/GetCustomerPurchaseStatistics` | `CustomerPurchaseStatisticsSortEnum`: `TOTAL_INVOICE_AMOUNT=0, FULL_NAME=1, SALES_COUNT=2, TOTAL_PAID_AMOUNT=3` | `TOTAL_INVOICE_AMOUNT` نزولی |
+| `Report/GetSupplierSalesStatistics` | `SupplierSalesStatisticsSortEnum`: `TOTAL_INVOICE_AMOUNT=0, COMPANY_NAME=1, PURCHASES_COUNT=2, TOTAL_PAID_AMOUNT=3` | `TOTAL_INVOICE_AMOUNT` نزولی |
+| `Report/GetSalesPerformanceByEmployee` | `SalesPerformanceByEmployeeSortEnum`: `TOTAL_INVOICE_AMOUNT=0, FULL_NAME=1, SALES_COUNT=2` | `TOTAL_INVOICE_AMOUNT` نزولی |
+| `Report/GetSupplyPerformanceByEmployee` | `SupplyPerformanceByEmployeeSortEnum`: `TOTAL_INVOICE_AMOUNT=0, FULL_NAME=1, PURCHASES_COUNT=2` | `TOTAL_INVOICE_AMOUNT` نزولی |
+
+لیست‌های بدون صفحه‌بندی (`GetPurchaseReturnPendingEffects`، `GetSaleReturnPendingEffects`، `GetProductUnitHistory`، لیست دسترسی‌ها، گزارش‌های دوره‌ای) مرتب‌سازی قابل انتخاب ندارند و ترتیب ثابت خودشان را دارند.
+
 ### Enum ها به‌صورت عدد سریالایز می‌شوند
 
 **نکته‌ی مهم:** این پروژه از سریالایزر پیش‌فرض ASP.NET Core (`System.Text.Json`) بدون تنظیم خاص برای enum استفاده می‌کند. یعنی:
@@ -2766,6 +2809,16 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 ## 16. نکات و محدودیت‌های شناخته‌شده
 
 این نکات برای جلوگیری از سردرگمی هنگام توسعه فرانت مهم هستند:
+
+### تغییرات قرارداد — ۲۰۲۶-۰۹-۲۴ (مرتب‌سازی لیست‌ها) — افزودنی
+
+| کجا | قبل | بعد | چرا |
+|---|---|---|---|
+| همه‌ی ۱۹ لیست صفحه‌بندی‌شده | پارامتر مرتب‌سازی نداشتند | `SortBy` + `SortDirection` اختیاری (بخش ۱ «مرتب‌سازی») | مرتب‌سازی ستون‌های جدول در فرانت |
+| مشتری، تامین‌کننده، محصول، دسته‌بندی، خرید، فروش، کاربر، واحد، تیم، پایانه‌ی POS | **بدون ترتیب مشخص** بودند؛ SQL Server بدون `ORDER BY` ترتیبی تضمین نمی‌کند و یک ردیف می‌توانست در دو صفحه تکرار شود یا در هیچ صفحه‌ای نیاید | ترتیب پیش‌فرض ثابت (جدول بخش ۱) | صفحه‌بندی پایدار |
+| همه‌ی لیست‌ها | ردیف‌های برابر روی ستون مرتب‌سازی ترتیب ثابتی نداشتند | با `id` شکسته می‌شوند | همان |
+
+هیچ فیلدی حذف یا تغییرنام نشده و درخواستی که این دو پارامتر را نفرستد معتبر می‌ماند؛ فقط ترتیب پیش‌فرضِ لیست‌هایی که قبلاً ترتیبی نداشتند حالا مشخص است.
 
 ### تغییرات قرارداد — ۲۰۲۶-۰۹-۲۴ (خروج از پیش‌فاکتور با اولین پرداخت) — تغییر رفتار، بدون شکستِ شکل
 

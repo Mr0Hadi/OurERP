@@ -1,6 +1,7 @@
 using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Common.Queries;
 using Application.Features.Report.Dtos;
 using Common.Extensions;
 using MediatR;
@@ -19,6 +20,15 @@ namespace Application.Features.Report.Queries
         public int Take { get; set; } = 10;
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
+        public SupplyPerformanceByEmployeeSortEnum? SortBy { get; set; }
+        public SortDirectionEnum? SortDirection { get; set; }
+    }
+
+    public enum SupplyPerformanceByEmployeeSortEnum
+    {
+        TOTAL_INVOICE_AMOUNT = 0,
+        FULL_NAME = 1,
+        PURCHASES_COUNT = 2,
     }
 
     public class GetSupplyPerformanceByEmployeeQueryHandler : IRequestHandler<GetSupplyPerformanceByEmployeeQuery, ResponseDto>
@@ -50,10 +60,18 @@ namespace Application.Features.Report.Queries
                     FullName = g.Key.FirstName + " " + g.Key.LastName,
                     PurchasesCount = g.Count(),
                     TotalInvoiceAmount = (UInt64)g.Sum(x => (decimal)x.TotalAmount)
-                })
-                .OrderByDescending(x => x.TotalInvoiceAmount);
+                });
 
-            var paged = await grouped.ToPagedAsync(request.Page, request.Take, cancellationToken);
+            // Default: top buyers first.
+            var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
+            var sorted = request.SortBy switch
+            {
+                SupplyPerformanceByEmployeeSortEnum.FULL_NAME => grouped.SortBy(x => x.FullName, direction),
+                SupplyPerformanceByEmployeeSortEnum.PURCHASES_COUNT => grouped.SortBy(x => x.PurchasesCount, direction),
+                _ => grouped.SortBy(x => x.TotalInvoiceAmount, direction),
+            };
+
+            var paged = await sorted.ThenSortBy(x => x.UserId, direction).ToPagedAsync(request.Page, request.Take, cancellationToken);
 
             res.Data = new
             {

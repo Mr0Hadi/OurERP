@@ -1,6 +1,7 @@
 using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Common.Queries;
 using Application.Features.SaleInstallment.Dtos;
 using Common.Extensions;
 using Domain.Enums;
@@ -8,6 +9,19 @@ using MediatR;
 
 namespace Application.Features.SaleInstallment.Queries
 {
+    public enum SaleInstallmentPlanListSortEnum
+    {
+        ID = 0,
+        CREATED_AT = 1,
+        INVOICE_NUMBER = 2,
+        CUSTOMER_NAME = 3,
+        TOTAL_AMOUNT = 4,
+        PAID_AMOUNT = 5,
+        REMAINING_AMOUNT = 6,
+        NEXT_DUE_DATE = 7,
+        STATUS = 8,
+    }
+
     /// <summary>لیست قراردادهای اقساطی.</summary>
     public class GetSaleInstallmentPlanListQuery : IRequest<ResponseDto>
     {
@@ -20,6 +34,8 @@ namespace Application.Features.SaleInstallment.Queries
         public DateTime? ToNextDueDate { get; set; }
         public DateTime? FromCreatedAt { get; set; }
         public DateTime? ToCreatedAt { get; set; }
+        public SaleInstallmentPlanListSortEnum? SortBy { get; set; }
+        public SortDirectionEnum? SortDirection { get; set; }
     }
 
     public class GetSaleInstallmentPlanListQueryHandler : IRequestHandler<GetSaleInstallmentPlanListQuery, ResponseDto>
@@ -99,7 +115,7 @@ namespace Application.Features.SaleInstallment.Queries
             }
 
             // roll-upهای [NotMapped] پلن به SQL ترجمه نمی‌شوند، پس جمع‌ها اینجا صریح نوشته شده‌اند.
-            var paged = await query.OrderByDescending(x => x.Id).Select(x => new PlanRow
+            var rows = query.Select(x => new PlanRow
             {
                 PlanId = x.Id,
                 SaleId = x.SaleId,
@@ -121,7 +137,24 @@ namespace Application.Features.SaleInstallment.Queries
                     .Max(i => i.PaidAt),
                 CreatedAt = x.CreatedAt,
                 Status = x.Status,
-            }).ToPagedAsync(request.Page, request.Take, cancellationToken);
+            });
+
+            // Sorted on the server-side row so the paid/remaining sums are sortable too. Default: newest first.
+            var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
+            var sorted = request.SortBy switch
+            {
+                SaleInstallmentPlanListSortEnum.CREATED_AT => rows.SortBy(x => x.CreatedAt, direction),
+                SaleInstallmentPlanListSortEnum.INVOICE_NUMBER => rows.SortBy(x => x.InvoiceNumber, direction),
+                SaleInstallmentPlanListSortEnum.CUSTOMER_NAME => rows.SortBy(x => x.CustomerName, direction),
+                SaleInstallmentPlanListSortEnum.TOTAL_AMOUNT => rows.SortBy(x => x.TotalAmount, direction),
+                SaleInstallmentPlanListSortEnum.PAID_AMOUNT => rows.SortBy(x => x.DownPaymentAmount + x.PaidInstallmentsAmount, direction),
+                SaleInstallmentPlanListSortEnum.REMAINING_AMOUNT => rows.SortBy(x => x.TotalAmount - x.DownPaymentAmount - x.PaidInstallmentsAmount, direction),
+                SaleInstallmentPlanListSortEnum.NEXT_DUE_DATE => rows.SortBy(x => x.NextDueDate, direction),
+                SaleInstallmentPlanListSortEnum.STATUS => rows.SortBy(x => x.Status, direction),
+                _ => rows.SortBy(x => x.PlanId, direction),
+            };
+
+            var paged = await sorted.ThenSortBy(x => x.PlanId, direction).ToPagedAsync(request.Page, request.Take, cancellationToken);
 
             var items = paged.Items.Select(row =>
             {

@@ -2,6 +2,7 @@
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Common.Queries;
 using Application.Features.Product.Dtos;
 using Common.Extensions;
 using Domain.Entities;
@@ -10,6 +11,19 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.Product.Queries
 {
+    public enum ProductListSortEnum
+    {
+        ID = 0,
+        CODE = 1,
+        NAME = 2,
+        BRAND = 3,
+        CATEGORY_NAME = 4,
+        RETAIL_PRICE = 5,
+        WHOLESALE_PRICE = 6,
+        STOCK = 7,
+        QUARANTINED_COUNT = 8,
+    }
+
     public class GetProductListQuery : IRequest<ResponseDto>
     {
         public int Page { get; set; } = 1;
@@ -25,6 +39,8 @@ namespace Application.Features.Product.Queries
 
         /// <summary>true: only quick-created products still waiting for purchasing to complete them.</summary>
         public bool? IsIncomplete { get; set; }
+        public ProductListSortEnum? SortBy { get; set; }
+        public SortDirectionEnum? SortDirection { get; set; }
     }
 
     public class GetProductListQueryHandler : IRequestHandler<GetProductListQuery, ResponseDto>
@@ -91,7 +107,7 @@ namespace Application.Features.Product.Queries
                 query = query.Where(p => p.IsIncomplete == request.IsIncomplete.Value);
             }
 
-            var paged = await query.Select(x => new ProductListDto
+            var projected = query.Select(x => new ProductListDto
             {
                 RequiresUnitTracking = x.RequiresUnitTracking,
                 IsIncomplete = x.IsIncomplete,
@@ -107,7 +123,24 @@ namespace Application.Features.Product.Queries
                 RetailPrice = x.RetailPrice,
                 WholeSalePrice = x.WholeSalePrice,
                 ImageKey = x.ImageUrl
-            }).ToPagedAsync(request.Page, request.Take, cancellationToken);
+            });
+
+            // Sorted on the projection so the computed QuarantinedCount is sortable too. Default: newest first.
+            var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
+            var sorted = request.SortBy switch
+            {
+                ProductListSortEnum.CODE => projected.SortBy(x => x.Code, direction),
+                ProductListSortEnum.NAME => projected.SortBy(x => x.Name, direction),
+                ProductListSortEnum.BRAND => projected.SortBy(x => x.Brand, direction),
+                ProductListSortEnum.CATEGORY_NAME => projected.SortBy(x => x.CategoryName, direction),
+                ProductListSortEnum.RETAIL_PRICE => projected.SortBy(x => x.RetailPrice, direction),
+                ProductListSortEnum.WHOLESALE_PRICE => projected.SortBy(x => x.WholeSalePrice, direction),
+                ProductListSortEnum.STOCK => projected.SortBy(x => x.Stock, direction),
+                ProductListSortEnum.QUARANTINED_COUNT => projected.SortBy(x => x.QuarantinedCount, direction),
+                _ => projected.SortBy(x => x.Id, direction),
+            };
+
+            var paged = await sorted.ThenSortBy(x => x.Id, direction).ToPagedAsync(request.Page, request.Take, cancellationToken);
 
             // Signing happens after materialization - GetPresignedUrl is a local method call and
             // could not be translated into the SQL projection above.

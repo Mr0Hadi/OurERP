@@ -1,6 +1,7 @@
 using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Common.Queries;
 using Application.Features.Purchase.Dtos;
 using Common.Extensions;
 using Domain.Enums;
@@ -9,6 +10,19 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.Purchase.Queries
 {
+    public enum PurchaseListSortEnum
+    {
+        ID = 0,
+        INVOICE_NUMBER = 1,
+        SUPPLIER_NAME = 2,
+        INVOICE_DATE = 3,
+        PAYMENT_DATE = 4,
+        STATUS = 5,
+        PAYMENT_TYPE = 6,
+        TOTAL_AMOUNT = 7,
+        PAID_AMOUNT = 8,
+    }
+
     public class GetPurchaseListQuery : IRequest<ResponseDto>
     {
         public int Page { get; set; } = 1;
@@ -21,6 +35,8 @@ namespace Application.Features.Purchase.Queries
         public DateTime? ToDate { get; set; }
         public DateTime? FromPaymentDate { get; set; }
         public DateTime? ToPaymentDate { get; set; }
+        public PurchaseListSortEnum? SortBy { get; set; }
+        public SortDirectionEnum? SortDirection { get; set; }
     }
 
     public class GetPurchaseListQueryHandler : IRequestHandler<GetPurchaseListQuery, ResponseDto>
@@ -75,7 +91,22 @@ namespace Application.Features.Purchase.Queries
                 query = query.Where(x => x.PaymentDate <= request.ToPaymentDate.Value);
             }
 
-            var paged = await query.Select(x => new PurchaseListDto
+            // Default: newest first.
+            var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
+            var sorted = request.SortBy switch
+            {
+                PurchaseListSortEnum.INVOICE_NUMBER => query.SortBy(x => x.InvoiceNumber, direction),
+                PurchaseListSortEnum.SUPPLIER_NAME => query.SortBy(x => x.Supplier.CompanyName, direction),
+                PurchaseListSortEnum.INVOICE_DATE => query.SortBy(x => x.InvoiceDate, direction),
+                PurchaseListSortEnum.PAYMENT_DATE => query.SortBy(x => x.PaymentDate, direction),
+                PurchaseListSortEnum.STATUS => query.SortBy(x => x.Status, direction),
+                PurchaseListSortEnum.PAYMENT_TYPE => query.SortBy(x => x.PaymentType, direction),
+                PurchaseListSortEnum.TOTAL_AMOUNT => query.SortBy(x => x.TotalAmount, direction),
+                PurchaseListSortEnum.PAID_AMOUNT => query.SortBy(x => x.PaidAmount, direction),
+                _ => query.SortBy(x => x.Id, direction),
+            };
+
+            var paged = await sorted.ThenSortBy(x => x.Id, direction).Select(x => new PurchaseListDto
             {
                 Id = x.Id,
                 InvoiceNumber = x.InvoiceNumber,

@@ -1,6 +1,7 @@
 using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Common.Queries;
 using Application.Features.Report.Dtos;
 using Common.Extensions;
 using MediatR;
@@ -15,6 +16,16 @@ namespace Application.Features.Report.Queries
         public int Take { get; set; } = 10;
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
+        public SupplierSalesStatisticsSortEnum? SortBy { get; set; }
+        public SortDirectionEnum? SortDirection { get; set; }
+    }
+
+    public enum SupplierSalesStatisticsSortEnum
+    {
+        TOTAL_INVOICE_AMOUNT = 0,
+        COMPANY_NAME = 1,
+        PURCHASES_COUNT = 2,
+        TOTAL_PAID_AMOUNT = 3,
     }
 
     public class GetSupplierSalesStatisticsQueryHandler : IRequestHandler<GetSupplierSalesStatisticsQuery, ResponseDto>
@@ -47,10 +58,19 @@ namespace Application.Features.Report.Queries
                     PurchasesCount = g.Count(),
                     TotalInvoiceAmount = (UInt64)g.Sum(x => (decimal)x.TotalAmount),
                     TotalPaidAmount = (UInt64)g.Sum(x => (decimal)x.PaidAmount)
-                })
-                .OrderByDescending(x => x.TotalInvoiceAmount);
+                });
 
-            var paged = await grouped.ToPagedAsync(request.Page, request.Take, cancellationToken);
+            // Default: biggest suppliers first.
+            var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
+            var sorted = request.SortBy switch
+            {
+                SupplierSalesStatisticsSortEnum.COMPANY_NAME => grouped.SortBy(x => x.CompanyName, direction),
+                SupplierSalesStatisticsSortEnum.PURCHASES_COUNT => grouped.SortBy(x => x.PurchasesCount, direction),
+                SupplierSalesStatisticsSortEnum.TOTAL_PAID_AMOUNT => grouped.SortBy(x => x.TotalPaidAmount, direction),
+                _ => grouped.SortBy(x => x.TotalInvoiceAmount, direction),
+            };
+
+            var paged = await sorted.ThenSortBy(x => x.SupplierId, direction).ToPagedAsync(request.Page, request.Take, cancellationToken);
 
             res.Data = new
             {
