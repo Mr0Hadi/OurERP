@@ -35,34 +35,39 @@ function pickBackCamera(list) {
   return backs.find((d) => !SECONDARY_CAMERA_RE.test(d.label)) ?? backs[0];
 }
 
+function boxOf(hit, videoWidth, videoHeight) {
+  let x, y, width, height;
+  if (hit.boundingBox) {
+    ({ x, y, width, height } = hit.boundingBox);
+  } else if (hit.cornerPoints?.length) {
+    const xs = hit.cornerPoints.map((p) => p.x);
+    const ys = hit.cornerPoints.map((p) => p.y);
+    x = Math.min(...xs);
+    y = Math.min(...ys);
+    width = Math.max(...xs) - x;
+    height = Math.max(...ys) - y;
+  } else {
+    return null;
+  }
+  return {
+    left: (x / videoWidth) * 100,
+    top: (y / videoHeight) * 100,
+    width: (width / videoWidth) * 100,
+    height: (height / videoHeight) * 100,
+  };
+}
+
 /**
  * اسکنرِ دوربین برای بارکد و QR.
  *
- * پیش از این روی `@zxing/browser` بود و کند بود؛ سه علتِ اصلی که اینجا
- * برطرف شده‌اند، برای اینکه دوباره برنگردند:
- *
- * ۱. آن کتابخانه بینِ هر دو تلاشِ دیکد ۵۰۰ms `setTimeout` می‌گذاشت —
- *    یعنی ۲ فریم در ثانیه از ۳۰ فریم. اینجا حلقه روی
- *    `requestVideoFrameCallback` است و هر فریمِ واقعیِ دوربین را
- *    می‌بیند.
- * ۲. انتخابِ دوربین پیش از گرفتنِ مجوز انجام می‌شد، جایی که
- *    `enumerateDevices` هنوز `label` خالی برمی‌گرداند؛ پس هیچ‌وقت
- *    دوربینِ پشت پیدا نمی‌شد و آخرین دستگاهِ فهرست انتخاب می‌شد که
- *    معمولاً ultra-wide است. حالا اول استریم باز می‌شود و *بعد*
- *    فهرست‌گیری انجام می‌شود.
- * ۳. `onDetected` در فراخوان‌ها یک arrow درون‌خطی است، پس هر رندرِ والد
- *    وابستگیِ effect را عوض می‌کرد و دوربین را از نو باز می‌کرد
- *    (`getUserMedia` روی موبایل تا یک ثانیه طول می‌کشد). اینجا از
- *    طریقِ ref خوانده می‌شود و اصلاً وابستگیِ effect نیست.
- *
- * دیکد هم دیگر روی ریسه‌ی UI نیست: `BarcodeDetector` نیتیو است و
- * fallbackِ wasm هم خارج از جاوااسکریپتِ ما اجرا می‌شود.
  */
 export default function CameraScanner({ onDetected }) {
   const [devices, setDevices] = useState([]);
   const [deviceId, setDeviceId] = useState(null);
   const [torchOn, setTorchOn] = useState(false);
   const [torchSupported, setTorchSupported] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState(IDEAL_WIDTH / IDEAL_HEIGHT);
+  const [hitBox, setHitBox] = useState(null);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -116,6 +121,10 @@ export default function CameraScanner({ onDetected }) {
       video.srcObject = stream;
       await video.play();
 
+      if (video.videoWidth && video.videoHeight) {
+        setAspectRatio(video.videoWidth / video.videoHeight);
+      }
+
       const track = stream.getVideoTracks()[0];
       setTorchSupported(Boolean(track?.getCapabilities?.().torch));
 
@@ -155,11 +164,10 @@ export default function CameraScanner({ onDetected }) {
         }
         detecting = true;
         try {
-          // خودِ <video> را می‌دهیم، نه canvas: کپیِ اضافه‌ی هر فریم
-          // حذف می‌شود.
           const [hit] = await detector.detect(video);
           if (hit?.rawValue) {
             cancelled = true;
+            setHitBox(boxOf(hit, video.videoWidth, video.videoHeight));
             onDetectedRef.current(hit.rawValue);
             toast.success(
               hit.format === "qr_code"
@@ -200,6 +208,7 @@ export default function CameraScanner({ onDetected }) {
       video.srcObject = null;
       setTorchOn(false);
       setTorchSupported(false);
+      setHitBox(null);
     };
   }, [deviceId]);
 
@@ -222,13 +231,27 @@ export default function CameraScanner({ onDetected }) {
   };
 
   return (
-    <div className="relative w-full aspect-video bg-black rounded-md overflow-hidden">
+    <div
+      className="relative w-full bg-black rounded-md overflow-hidden"
+      style={{ aspectRatio }}
+    >
       <video
         ref={videoRef}
         className="w-full h-full object-cover"
         muted
         playsInline
       />
+      {hitBox && (
+        <div
+          className="pointer-events-none absolute rounded-md border-4 border-emerald-400 shadow-[0_0_12px_2px_rgba(52,211,153,0.8)]"
+          style={{
+            left: `${hitBox.left}%`,
+            top: `${hitBox.top}%`,
+            width: `${hitBox.width}%`,
+            height: `${hitBox.height}%`,
+          }}
+        />
+      )}
 
       <div className="absolute inset-x-0 bottom-2 flex justify-center gap-2">
         {devices.length > 1 && (
