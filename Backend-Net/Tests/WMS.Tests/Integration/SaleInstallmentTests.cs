@@ -433,7 +433,7 @@ namespace WMS.Tests.Integration
         }
 
         [Fact]
-        public async Task NonInstallmentSale_KeepsTheOriginalProformaExitRule()
+        public async Task NonInstallmentSale_LeavesProformaOnFirstPayment()
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
@@ -456,11 +456,11 @@ namespace WMS.Tests.Integration
                 Items = new() { new UpdateSaleItemDto { Id = scenario.Item.Id, ProductId = scenario.Product.Id, Quantity = 1, UnitPrice = 5_000, Discount = 0 } },
             };
 
-            // پرداخت ناقص + تلاش برای خروج دستی = همان خطای قبلی.
-            await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(Command(1_000, SalesStatusEnum.PROCESSING), CancellationToken.None));
+            // بدون هیچ پرداختی + تلاش برای خروج دستی = خطا.
+            await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(Command(0, SalesStatusEnum.PROCESSING), CancellationToken.None));
 
-            // پرداخت کامل = همان نهایی‌سازی خودکار قبلی.
-            await handler.Handle(Command(5_000, SalesStatusEnum.PROFORMA), CancellationToken.None);
+            // اولین پرداخت، حتی ناقص = نهایی‌سازی خودکار.
+            await handler.Handle(Command(1_000, SalesStatusEnum.PROFORMA), CancellationToken.None);
 
             using var verify = db.NewContext();
             var sale = verify.Sales.Single(x => x.Id == scenario.Sale.Id);

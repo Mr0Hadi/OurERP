@@ -94,11 +94,11 @@ namespace Application.Features.Sale.Commands
 
             // فروش اقساطی در این مرحله هنوز پلن ندارد (پلن بعد از ساخت فروش ثبت می‌شود)، پس
             // عمداً در پیش‌فاکتور می‌ماند؛ نهایی‌سازی‌اش در CreateSaleInstallmentPlanCommand
-            // اتفاق می‌افتد. فروش غیر اقساطی رفتار قبلی را عیناً نگه می‌دارد: مشتری همان لحظه‌ی
-            // ثبت هم می‌تواند کامل پرداخت کرده باشد، آن‌وقت دیگر پیش‌فاکتور نمی‌ماند.
+            // اتفاق می‌افتد. فروش غیر اقساطی با اولین ریالِ پرداخت از پیش‌فاکتور خارج می‌شود:
+            // پیش‌فاکتور یعنی فروشی که هنوز هیچ پولی بابتش جابه‌جا نشده.
             if (sale.PaymentType != PaymentTypeEnum.INSTALLMENT
                 && sale.Status == SalesStatusEnum.PROFORMA
-                && sale.PaidAmount >= sale.TotalAmount)
+                && sale.PaidAmount > 0)
             {
                 await SaleInvoiceFinalizer.FinalizeAsync(_context, sale, cancellationToken);
             }

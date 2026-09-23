@@ -290,7 +290,7 @@ namespace WMS.Tests.Integration
         }
 
         [Fact]
-        public async Task CreateSale_ProformaWithPartialPayment_StaysProformaWithoutInvoiceNumber()
+        public async Task CreateSale_ProformaWithNoPayment_StaysProformaWithoutInvoiceNumber()
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
@@ -302,7 +302,7 @@ namespace WMS.Tests.Integration
             {
                 CustomerId = scenario.Customer.Id,
                 TotalAmount = 5000,
-                PaidAmount = 1000,
+                PaidAmount = 0,
                 PaymentType = PaymentTypeEnum.CASH,
                 Status = SalesStatusEnum.PROFORMA,
                 PaymentDetails = new(),
@@ -319,7 +319,7 @@ namespace WMS.Tests.Integration
         }
 
         [Fact]
-        public async Task CreateSale_ProformaWithFullPayment_AutoFinalizesWithGeneratedInvoiceNumber()
+        public async Task CreateSale_ProformaWithAnyPayment_AutoFinalizesWithGeneratedInvoiceNumber()
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
@@ -331,7 +331,8 @@ namespace WMS.Tests.Integration
             {
                 CustomerId = scenario.Customer.Id,
                 TotalAmount = 5000,
-                PaidAmount = 5000,
+                // یک ریال کافی است: پیش‌فاکتور یعنی هنوز هیچ پولی جابه‌جا نشده.
+                PaidAmount = 1,
                 PaymentType = PaymentTypeEnum.CASH,
                 Status = SalesStatusEnum.PROFORMA,
                 PaymentDetails = new(),
@@ -348,7 +349,7 @@ namespace WMS.Tests.Integration
         }
 
         [Fact]
-        public async Task UpdateSale_ProformaWithoutFullPayment_ManualStatusChange_ThrowsValidation()
+        public async Task UpdateSale_ProformaWithNoPayment_ManualStatusChange_ThrowsValidation()
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
@@ -368,13 +369,13 @@ namespace WMS.Tests.Integration
                 PaymentDetails = new(),
                 CustomerId = scenario.Customer.Id,
                 TotalAmount = 5000,
-                PaidAmount = 1000,
+                PaidAmount = 0,
                 Items = new() { new UpdateSaleItemDto { Id = scenario.Item.Id, ProductId = scenario.Product.Id, Quantity = 5, UnitPrice = 1000, Discount = 0 } },
             }, CancellationToken.None));
         }
 
         [Fact]
-        public async Task UpdateSale_ProformaReachingFullPayment_AutoFinalizes()
+        public async Task UpdateSale_ProformaReceivingFirstPayment_AutoFinalizes()
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
@@ -393,7 +394,39 @@ namespace WMS.Tests.Integration
                 PaymentDetails = new(),
                 CustomerId = scenario.Customer.Id,
                 TotalAmount = 5000,
-                PaidAmount = 5000,
+                PaidAmount = 1000,
+                Items = new() { new UpdateSaleItemDto { Id = scenario.Item.Id, ProductId = scenario.Product.Id, Quantity = 5, UnitPrice = 1000, Discount = 0 } },
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            var sale = verify.Sales.Single(x => x.Id == scenario.Sale.Id);
+            Assert.Equal(SalesStatusEnum.PROCESSING, sale.Status);
+            Assert.False(string.IsNullOrEmpty(sale.InvoiceNumber));
+        }
+
+        [Fact]
+        public async Task UpdateSale_ProformaWithPartialPayment_ManualStatusChange_StillIssuesInvoiceNumber()
+        {
+            // خروج دستی با پرداخت ناقص مجاز است، ولی نباید فروش را بدون شماره‌ی فاکتور رسمی
+            // از پیش‌فاکتور بیرون ببرد - شماره را همیشه سرور می‌سازد.
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 5, shippedQuantity: 0, stock: 0);
+            scenario.Sale.Status = SalesStatusEnum.PROFORMA;
+            scenario.Sale.InvoiceNumber = "";
+            scope.Context.SaveChanges();
+
+            var handler = new UpdateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, TestMapper.Instance);
+            await handler.Handle(new UpdateSaleCommand
+            {
+                Id = scenario.Sale.Id,
+                InvoiceDate = DateTime.Now,
+                Status = SalesStatusEnum.PROCESSING,
+                PaymentType = PaymentTypeEnum.CASH,
+                PaymentDetails = new(),
+                CustomerId = scenario.Customer.Id,
+                TotalAmount = 5000,
+                PaidAmount = 1000,
                 Items = new() { new UpdateSaleItemDto { Id = scenario.Item.Id, ProductId = scenario.Product.Id, Quantity = 5, UnitPrice = 1000, Discount = 0 } },
             }, CancellationToken.None);
 
@@ -419,7 +452,8 @@ namespace WMS.Tests.Integration
                 Status = SalesStatusEnum.PROFORMA,
                 CustomerId = scenario.Customer.Id,
                 TotalAmount = 5000,
-                PaidAmount = 1000,
+                // هر پرداختی فروش را نهایی می‌کند، پس پیش‌فاکتور یعنی پرداخت صفر.
+                PaidAmount = 0,
                 PaymentType = PaymentTypeEnum.CASH,
                 PaymentDetails = new(),
                 Description = "PROFORMA-NULL-DATE",

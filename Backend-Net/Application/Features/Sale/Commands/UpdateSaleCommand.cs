@@ -122,10 +122,10 @@ namespace Application.Features.Sale.Commands
                 }
                 else
                 {
-                    canLeaveProforma = request.PaidAmount >= request.TotalAmount;
+                    canLeaveProforma = request.PaidAmount > 0;
 
                     if (!canLeaveProforma && request.Status != SalesStatusEnum.PROFORMA)
-                        throw new ValidationCustomException("تا پرداخت کامل نشود، فروش از حالت پیش‌فاکتور خارج نمی‌شود.");
+                        throw new ValidationCustomException("تا پرداختی ثبت نشود، فروش از حالت پیش‌فاکتور خارج نمی‌شود.");
                 }
 
             }
