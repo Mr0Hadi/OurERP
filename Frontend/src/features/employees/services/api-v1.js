@@ -123,3 +123,17 @@ export async function logoutUserById(id) {
   });
   return data;
 }
+
+/**
+ * بازنشانیِ رمز عبورِ یک کارمندِ دیگر توسط مسئول — برخلاف `ChangePassword`
+ * (که فقط روی کاربرِ جاریِ توکن کار می‌کند و رمز قبلی می‌خواهد)، این برای
+ * کارمندی است که رمزش را فراموش کرده؛ سرور رمز قبلی نمی‌خواهد.
+ */
+export async function resetUserPassword({ userId, password, rePassword }) {
+  const { data } = await axiosInstance.put("/User/ResetUserPassword", {
+    userId: Number(userId),
+    password,
+    rePassword,
+  });
+  return data;
+}

@@ -6,6 +6,7 @@ import {
   updateUser,
   changeUserTeam,
   logoutUserById,
+  resetUserPassword,
 } from "./api-v1";
 import { userKeys } from "./queryKeys";
 import { teamKeys } from "@/features/organization/teams/services/queryKeys";
@@ -90,6 +91,19 @@ export function useLogoutUserByIdMutation() {
     },
     onError: (error) => {
       toast.error(error?.message || "خطا در خروج اجباری کارمند");
+    },
+  });
+}
+
+/** بازنشانیِ رمز عبورِ کارمندی که آن را فراموش کرده (عملیات ادمین). */
+export function useResetUserPasswordMutation() {
+  return useMutation({
+    mutationFn: resetUserPassword,
+    onSuccess: () => {
+      toast.success("رمز عبور کارمند با موفقیت بازنشانی شد.");
+    },
+    onError: (error) => {
+      toast.error(error?.message || "خطا در بازنشانی رمز عبور");
     },
   });
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { useWatch } from "react-hook-form";
-import { Save, X, LogOut } from "lucide-react";
+import { Save, X, LogOut, KeyRound } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -19,6 +19,7 @@ import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { useFormDraft } from "@/shared/hooks/useFormDraft";
 import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
+import { usePermission } from "@/features/auth/hooks/usePermission";
 
 import {
   useUpdateUserMutation,
@@ -30,6 +31,7 @@ import EmployeeIdentityForm from "../components/forms/EmployeeIdentityForm";
 import EmployeeAccessForm from "../components/forms/EmployeeAccessForm";
 import EmployeeOrgForm from "../components/forms/EmployeeOrgForm";
 import EmployeeDetailLoading from "../components/forms/EmployeeDetailLoading";
+import ResetPasswordDialog from "../components/forms/ResetPasswordDialog";
 import EmployeeAccessSummaryCard from "@/features/permissions/components/EmployeeAccessSummaryCard";
 
 const fullNameOf = (employee) =>
@@ -58,7 +60,9 @@ function EmployeeDetailForm({ employee }) {
   const navigate = useNavigate();
   const location = useLocation();
   const currentUser = useCurrentUser();
+  const { can } = usePermission();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [showResetPasswordDialog, setShowResetPasswordDialog] = useState(false);
 
   const updateMutation = useUpdateUserMutation();
   const logoutMutation = useLogoutUserByIdMutation();
@@ -105,6 +109,10 @@ function EmployeeDetailForm({ employee }) {
    */
   const canEditOrg = currentUser != null && !isSelf;
 
+  // بازنشانیِ رمز عبور فقط برای مسئولِ دارای دسترسیِ ویرایشِ کاربر و روی
+  // حسابِ *شخصِ دیگر* است — خودِ کاربر برای عوض‌کردنِ رمزش راهِ دیگری دارد.
+  const canResetPassword = canEditOrg && can("UserUpdate");
+
   const onSubmit = (data) => {
     updateMutation.mutate(buildPayload(data), {
       onSuccess: () => {
@@ -139,6 +147,14 @@ function EmployeeDetailForm({ employee }) {
               isEditing
               personelCode={employee.personelCode}
             />
+
+            <EmployeeAccessSummaryCard
+              userId={employee.id}
+              isSelf={isSelf}
+              departmentId={selectedDepartmentId}
+              initialDepartmentId={employee.departmentId}
+            />
+
           </div>
 
           {/* ستون چپ - جایگاه سازمانی، دسترسی و عملیات ادمین */}
@@ -170,15 +186,6 @@ function EmployeeDetailForm({ employee }) {
               readOnly={!canEditOrg}
             />
 
-            {/* ویرایشگرِ دسترسی در Sheet است و endpoint و ذخیره‌ی خودش را دارد؛
-                این کارت فقط خلاصه است. */}
-            <EmployeeAccessSummaryCard
-              userId={employee.id}
-              isSelf={isSelf}
-              departmentId={selectedDepartmentId}
-              initialDepartmentId={employee.departmentId}
-            />
-
             <div className="flex gap-2">
               <Button
                 type="button"
@@ -206,6 +213,19 @@ function EmployeeDetailForm({ employee }) {
               <LogOut className="h-4 w-4" />
               خروج اجباری از تمام دستگاه‌ها
             </Button>
+
+            {canResetPassword && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2"
+                onClick={() => setShowResetPasswordDialog(true)}
+                disabled={isBusy}
+              >
+                <KeyRound className="h-4 w-4" />
+                بازنشانی رمز عبور
+              </Button>
+            )}
 
             {/* دکمه‌ی «حذف کارمند» عمداً اینجا نیست: `DeleteUser` هم فقط
                 `isActive = false` می‌کند و نقش‌ها را آزاد می‌کند — دقیقاً همان
@@ -237,6 +257,15 @@ function EmployeeDetailForm({ employee }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {canResetPassword && (
+        <ResetPasswordDialog
+          open={showResetPasswordDialog}
+          onOpenChange={setShowResetPasswordDialog}
+          userId={employee.id}
+          displayName={displayName}
+        />
+      )}
     </div>
   );
 }
