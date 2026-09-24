@@ -69,33 +69,6 @@ export function canReopenPurchaseItem(purchase, item) {
   return (Number(item.shortClosedQuantity) || 0) > 0;
 }
 
-// ─── ویرایشِ اقلامِ خریدِ ثبت‌شده ────────────────────────────────────────────
-
-/**
- * قلمی که انبار از آن تحویل گرفته نه حذف می‌شود و نه کمتر از مقدارِ
- * رسیده (به‌علاوه‌ی مقدارِ بسته‌شده) می‌شود — وگرنه «مانده» منفی می‌شد و
- * دانه‌های دریافت‌شده به قلمی اشاره می‌کردند که دیگر نیست.
- */
-export function itemEditErrors(savedItems = [], formItems = []) {
-  const errors = [];
-  savedItems.forEach((saved) => {
-    const floor =
-      (Number(saved.receivedQuantity) || 0) + (Number(saved.shortClosedQuantity) || 0);
-    if (floor <= 0) return;
-    const current = formItems.find(
-      (item) => (item.id != null ? item.id === saved.id : item.productId === saved.productId),
-    );
-    if (!current) {
-      errors.push(`«${saved.productName}» از انبار تحویل گرفته شده و قابل حذف نیست.`);
-    } else if ((Number(current.quantity) || 0) < floor) {
-      errors.push(
-        `مقدارِ «${saved.productName}» نمی‌تواند کمتر از ${floor.toLocaleString("fa-IR")} (رسیده و بسته‌شده) باشد.`,
-      );
-    }
-  });
-  return errors;
-}
-
 // ─── وضعیتِ دستی ────────────────────────────────────────────────────────────
 
 /**

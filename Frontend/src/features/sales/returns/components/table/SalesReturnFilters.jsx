@@ -9,12 +9,10 @@ import { useSalesReturnFilterStore } from "../../store/salesReturnFilterStore";
 import {
   SALES_RETURN_STATUS_LABELS,
   SALES_RETURN_PROBLEM_LABELS,
-  CLAIM_SCOPE_LABELS,
 } from "../../domain/salesReturnVocabulary";
 
 const STATUS_OPTIONS = toFilterOptions(SALES_RETURN_STATUS_LABELS);
 const PROBLEM_OPTIONS = toFilterOptions(SALES_RETURN_PROBLEM_LABELS);
-const SCOPE_OPTIONS = toFilterOptions(CLAIM_SCOPE_LABELS);
 
 const SalesReturnFilters = ({ customers = [], isCustomersLoading = false }) => {
   const {
@@ -22,14 +20,12 @@ const SalesReturnFilters = ({ customers = [], isCustomersLoading = false }) => {
     customerId,
     status,
     problem,
-    scope,
     fromDate,
     toDate,
     setGlobalSearch,
     setCustomerId,
     setStatus,
     setProblem,
-    setScope,
     setFromDate,
     setToDate,
     resetFilters,
@@ -89,15 +85,6 @@ const SalesReturnFilters = ({ customers = [], isCustomersLoading = false }) => {
         onChange={setProblem}
         allLabel="همه مشکل‌ها"
         options={PROBLEM_OPTIONS}
-        numeric
-      />
-
-      <FilterSelect
-        label="دامنه"
-        value={scope}
-        onChange={setScope}
-        allLabel="همه"
-        options={SCOPE_OPTIONS}
         numeric
       />
     </FilterPanel>

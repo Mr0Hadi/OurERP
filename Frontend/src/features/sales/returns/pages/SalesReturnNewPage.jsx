@@ -15,7 +15,8 @@ import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
 import ClaimsSection from "@/shared/components/returns/ClaimsSection";
 import OffScopeClaimsSection from "@/shared/components/returns/OffScopeClaimsSection";
 import {
-  SALES_RETURN_PROBLEM_LABELS,
+  SALES_ON_ORDER_PROBLEM_LABELS,
+  SALES_OFF_ORDER_PROBLEM_LABELS,
   OFF_SCOPE_KIND_LABELS,
 } from "../domain/salesReturnVocabulary";
 import { OFF_SCOPE_KIND_STYLES } from "@/shared/domain/returns/scopes";
@@ -170,7 +171,7 @@ export default function SalesReturnNewPage() {
               onAddClaim={handleAddClaim}
               onUpdateClaim={handleUpdateClaim}
               onRemoveClaim={handleRemoveClaim}
-              problemLabels={SALES_RETURN_PROBLEM_LABELS}
+              problemLabels={SALES_ON_ORDER_PROBLEM_LABELS}
               title="مشکلات اقلام فاکتور"
               description="برای هر کالا می‌توانید چند مشکل جدا با تعداد جداگانه ثبت کنید. سقف هر کالا، همان مقداری است که به مشتری تحویل شده."
               emptyText="این فاکتور قلمی برای ادعا ندارد"
@@ -182,7 +183,7 @@ export default function SalesReturnNewPage() {
               onAdd={handleAddOffInvoiceClaim}
               onUpdate={handleUpdateOffInvoiceClaim}
               onRemove={handleRemoveOffInvoiceClaim}
-              problemLabels={SALES_RETURN_PROBLEM_LABELS}
+              problemLabels={SALES_OFF_ORDER_PROBLEM_LABELS}
               kindLabels={OFF_SCOPE_KIND_LABELS}
               kindStyles={OFF_SCOPE_KIND_STYLES}
               description="مازاد: بیش از مقدارِ یک خطِ فاکتور ارسال شده (با قیمت همان خط). نامرتبط: کالایی که در فاکتور نیست (قیمت دستی)."

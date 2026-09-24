@@ -11,6 +11,7 @@ const EMPTY_FORM = {
   description: "",
   paymentType: PaymentTypeEnum.CASH,
   paidAmount: "",
+  paymentPaidAt: null,
   checkNumber: "",
   transferRef: "",
   mixedPayments: [], // اضافه شد
@@ -77,6 +78,7 @@ export const useSaleFormStore = create((set, get) => ({
         description: sale.description || "",
         paymentType: sale.paymentType ?? PaymentTypeEnum.CASH,
         paidAmount: sale.paidAmount?.toString() || "",
+        paymentPaidAt: sale.paymentPaidAt || null,
         checkNumber: sale.checkNumber || "",
         transferRef: sale.transferRef || "",
         mixedPayments: sale.mixedPayments || [],

@@ -14,8 +14,7 @@ export function useSalesQuery(filters, pagination, sorting) {
     paymentType: filters.paymentType ?? '',
     fromDate: filters.fromDate || '',
     toDate: filters.toDate || '',
-    sortBy: sorting?.id ?? 'createdAt',
-    sortOrder: sorting?.desc ? 'desc' : 'asc',
+    sorting: sorting?.id ? { id: sorting.id, desc: !!sorting.desc } : null,
   };
 
   return useQuery({

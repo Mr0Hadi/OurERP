@@ -7,10 +7,8 @@
  * و «لغو شده» در انتها. به همین دلیل ترتیبِ کلیدهای عددی همان ترتیبِ
  * نمایش است و جایی لازم نیست دستی مرتب شود.
  *
- * ✅ بکند از ۲۰۲۶-۰۹-۰۲ همین شماره‌گذاری را دارد. تنها تفاوت،
- * `RETURNED = 6` است که فقط سمتِ بکند وجود دارد (با تسویه‌ی کاملِ یک
- * مرجوعی ست می‌شود) و اینجا برچسبی ندارد — چنین فروشی بدون برچسب
- * نمایش داده می‌شود.
+ * عیناً همان `SalesStatusEnum`ِ بکند. `RETURNED` را فقط سرور می‌گذارد —
+ * وقتی هر دانه‌ی ارسال‌شده‌ی فروش از راهِ مرجوعی تسویه شده باشد.
  */
 export const SaleStatusEnum = Object.freeze({
   PROFORMA: 0,
@@ -19,6 +17,7 @@ export const SaleStatusEnum = Object.freeze({
   SHIPPED: 3,
   DELIVERED: 4,
   CANCELLED: 5,
+  RETURNED: 6,
 });
 
 export const SALE_STATUS_LABELS = Object.freeze({
@@ -28,16 +27,17 @@ export const SALE_STATUS_LABELS = Object.freeze({
   [SaleStatusEnum.SHIPPED]: "ارسال شده",
   [SaleStatusEnum.DELIVERED]: "تحویل کامل",
   [SaleStatusEnum.CANCELLED]: "لغو شده",
+  [SaleStatusEnum.RETURNED]: "مرجوع شده",
 });
 
 /**
- * هنوز پیش‌فاکتور است: فروش ثبت شده ولی مشتری هنوز کاملاً نپرداخته، پس
+ * هنوز پیش‌فاکتور است: فروشی که هنوز هیچ پولی بابتش جابه‌جا نشده، پس
  * شماره‌ی فاکتور رسمی ندارد.
  *
- * خروج از این وضعیت **دستی نیست**: به‌محضِ اینکه
- * `paidAmount >= totalAmount` شود، خودِ بکند در `CreateSale`/`UpdateSale`
- * شماره‌ی فاکتور را می‌سازد، تاریخ می‌زند و وضعیت را «آماده‌سازی انبار»
- * می‌کند؛ تلاش برای خروجِ دستی بدون تسویه‌ی کامل رد می‌شود.
+ * خروج از این وضعیت **دستی نیست**: با اولین پرداخت (`paidAmount > 0`)،
+ * خودِ بکند در `CreateSale`/`UpdateSale` شماره‌ی فاکتور را می‌سازد، تاریخ
+ * می‌زند و وضعیت را «آماده‌سازی انبار» می‌کند. فروشِ اقساطی با ثبتِ
+ * قرارداد و پیش‌پرداخت نهایی می‌شود.
  */
 export function isSaleProforma(status) {
   return Number(status) === SaleStatusEnum.PROFORMA;

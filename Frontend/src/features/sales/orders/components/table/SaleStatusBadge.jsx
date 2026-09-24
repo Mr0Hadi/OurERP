@@ -14,6 +14,8 @@ const STATUS_STYLES = {
     "bg-indigo-100 text-indigo-800 border-indigo-300 hover:bg-indigo-100",
   [SALE_STATUSES.DELIVERED]: "bg-green-100 text-green-800 border-green-300 hover:bg-green-100",
   [SALE_STATUSES.CANCELLED]: "bg-red-100 text-red-800 border-red-300 hover:bg-red-100",
+  [SALE_STATUSES.RETURNED]:
+    "bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-100",
 };
 
 export default function SaleStatusBadge({ status }) {

@@ -8,7 +8,7 @@ import {
 } from "./api-v1";
 import { purchaseReturnKeys } from "./queryKeys";
 
-export function usePurchaseReturnsQuery(filters, pagination) {
+export function usePurchaseReturnsQuery(filters, pagination, sorting) {
   const queryParams = useMemo(
     () => ({
       page: pagination.pageIndex + 1,
@@ -19,8 +19,9 @@ export function usePurchaseReturnsQuery(filters, pagination) {
       problem: filters.problem ?? "",
       fromDate: filters.fromDate || "",
       toDate: filters.toDate || "",
+      sorting: sorting?.id ? { id: sorting.id, desc: !!sorting.desc } : null,
     }),
-    [filters, pagination],
+    [filters, pagination, sorting],
   );
 
   return useQuery({

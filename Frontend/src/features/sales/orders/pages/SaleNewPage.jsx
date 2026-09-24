@@ -185,9 +185,10 @@ export default function SaleNewPage() {
     return sum + base - disc;
   }, 0);
 
-  const isProforma =
-    !isInPerson &&
-    Number(formData.status ?? SaleStatusEnum.PROFORMA) === SaleStatusEnum.PROFORMA;
+  // فروشِ تازه همیشه پیش‌فاکتور ثبت می‌شود و سرور با اولین ریالِ پرداخت
+  // خودش آن را به فاکتورِ رسمی تبدیل می‌کند؛ پس «پیش‌فاکتور بودن» اینجا
+  // فقط از روی پرداخت پیش‌بینی می‌شود (برای عنوانِ کارتِ سند).
+  const isProforma = !isInPerson && !(Number(formData.paidAmount) > 0);
 
   const onSubmit = (e) => {
     e.preventDefault();
@@ -213,7 +214,6 @@ export default function SaleNewPage() {
     const payload = {
       customerId: formData.customerId,
       customerName: formData.customerName,
-      invoiceNumber: formData.invoiceNumber,
       invoiceDate: formData.invoiceDate,
       dueDate: formData.dueDate || null,
       description: formData.description || "",
@@ -228,14 +228,12 @@ export default function SaleNewPage() {
         lineTotal: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
       })),
       paymentType: formData.paymentType ?? PaymentTypeEnum.CASH,
-      paidAmount: isProforma ? 0 : Number(formData.paidAmount) || 0,
+      paidAmount: Number(formData.paidAmount) || 0,
+      paymentPaidAt: formData.paymentPaidAt || null,
       checkNumber: formData.checkNumber || null,
       transferRef: formData.transferRef || null,
       mixedPayments: formData.mixedPayments || [],
-      status:
-        formData.status === "" || formData.status == null
-          ? SaleStatusEnum.PROFORMA
-          : formData.status,
+      status: SaleStatusEnum.PROFORMA,
       totalAmount: computedTotal,
       attachments: attachments.filesPayload,
     };
@@ -326,7 +324,6 @@ export default function SaleNewPage() {
               onFormChange={setFormData}
               totalAmount={computedTotal}
               errors={{}}
-              isProforma={isProforma}
             />
 
             <InvoiceDocumentSection
@@ -346,11 +343,7 @@ export default function SaleNewPage() {
                 ثبت «تحویل کامل» می‌شود.
               </p>
             ) : (
-              <SaleStatusSection
-                status={formData.status}
-                selectedStatus={formData.status}
-                onStatusChange={(val) => setFormData({ status: val })}
-              />
+              <SaleStatusSection />
             )}
 
             <div className="flex gap-2">

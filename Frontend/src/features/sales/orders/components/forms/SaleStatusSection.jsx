@@ -24,7 +24,12 @@ import {
   XCircle,
   Activity,
   FileText,
+  Undo2,
 } from "lucide-react";
+import {
+  manualSaleStatusOptions,
+  saleStatusHint,
+} from "../../domain/saleRules";
 
 const STATUS_CONFIG = {
   [SALE_STATUSES.PROFORMA]: {
@@ -51,6 +56,10 @@ const STATUS_CONFIG = {
     icon: XCircle,
     textColor: "text-destructive",
   },
+  [SALE_STATUSES.RETURNED]: {
+    icon: Undo2,
+    textColor: "text-purple-600 dark:text-purple-400",
+  },
 };
 
 const DEFAULT_CONFIG = {
@@ -58,17 +67,34 @@ const DEFAULT_CONFIG = {
   textColor: "text-card-foreground",
 };
 
+function StatusLabel({ status }) {
+  const config = STATUS_CONFIG[status] ?? DEFAULT_CONFIG;
+  const Icon = config.icon;
+  return (
+    <span className={`flex items-center gap-2 ${config.textColor}`}>
+      <Icon className="h-3.5 w-3.5" />
+      {SALE_STATUS_LABELS[status] ?? status}
+    </span>
+  );
+}
+
 /**
- * @param proformaLocked فروش پیش‌فاکتور است و مشتری هنوز کامل نپرداخته.
- *   بکند خروجِ دستی از پیش‌فاکتور را در این حالت رد می‌کند
- *   (`UpdateSaleCommandHandler`)، پس بقیه‌ی وضعیت‌ها اینجا غیرفعال‌اند تا
- *   کاربر به‌جای خطای سرور، دلیل را همین‌جا ببیند.
+ * وضعیتِ فروش. بیشترِ وضعیت‌ها را سرور تعیین می‌کند — پیش‌فاکتور با اولین
+ * پرداخت خارج می‌شود و «ارسال ناقص/شده» را ارسالِ انبار می‌گذارد — پس
+ * کشویی فقط قدم‌های دستیِ مجاز را نشان می‌دهد (`manualSaleStatusOptions`).
+ *
+ * @param sale فروشِ ذخیره‌شده؛ برای فروشِ تازه خالی — آن‌وقت فقط
+ *   «پیش‌فاکتور» نشان داده می‌شود و انتخابی در کار نیست.
  */
-export default function SaleStatusSection({
-  selectedStatus,
-  onStatusChange,
-  proformaLocked = false,
-}) {
+export default function SaleStatusSection({ sale, selectedStatus, onStatusChange }) {
+  const isNew = !sale;
+  const options = isNew ? [SALE_STATUSES.PROFORMA] : manualSaleStatusOptions(sale);
+  const locked = options.length <= 1;
+  const value =
+    selectedStatus === "" || selectedStatus == null
+      ? String(options[0])
+      : String(selectedStatus);
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -81,44 +107,28 @@ export default function SaleStatusSection({
       <CardContent className="space-y-4 mt-0">
         <div className="space-y-1.5">
           <Label className="text-sm font-medium text-card-foreground">
-            تغییر وضعیت
+            {locked ? "وضعیت" : "تغییر وضعیت"}
           </Label>
           <Select
-            value={selectedStatus === "" || selectedStatus == null ? "" : String(selectedStatus)}
-            onValueChange={(value) => onStatusChange(Number(value))}
+            value={value}
+            onValueChange={(next) => onStatusChange(Number(next))}
+            disabled={locked}
           >
             <SelectTrigger className="h-9">
-              <SelectValue placeholder="وضعیت را انتخاب کنید" />
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(SALE_STATUS_LABELS).map(([key, label]) => {
-                const itemConfig = STATUS_CONFIG[key] ?? DEFAULT_CONFIG;
-                const ItemIcon = itemConfig.icon;
-                const disabled =
-                  proformaLocked && Number(key) !== SALE_STATUSES.PROFORMA;
-                return (
-                  <SelectItem key={key} value={key} disabled={disabled}>
-                    <span
-                      className={`flex items-center gap-2 ${itemConfig.textColor}`}
-                    >
-                      <ItemIcon className="h-3.5 w-3.5" />
-                      {label}
-                    </span>
-                  </SelectItem>
-                );
-              })}
+              {options.map((status) => (
+                <SelectItem key={status} value={String(status)}>
+                  <StatusLabel status={status} />
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            {proformaLocked
-              ? "این فروش پیش‌فاکتور است: با ثبتِ پرداختِ کامل، سرور خودش شماره‌ی فاکتور را می‌سازد و وضعیت را به «آماده‌سازی انبار» می‌برد. تا آن زمان تغییر دستیِ وضعیت ممکن نیست."
-              : "خروج از «پیش‌فاکتور» با تسویه‌ی کاملِ مشتری و به‌صورت خودکار انجام می‌شود؛ فاکتور رسمی و شماره‌اش را هم همان‌جا سرور می‌سازد."}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            وضعیت «ارسال ناقص»، «ارسال شده» و بخشی از «تحویل کامل» معمولاً
-            به‌صورت خودکار از صفحه‌ی «ارسال کالا»ی انبار به‌روزرسانی
-            می‌شوند؛ تغییر دستی آن‌ها از اینجا هم ممکن است ولی توصیه
-            نمی‌شود.
+            {isNew
+              ? "فروشِ تازه پیش‌فاکتور ثبت می‌شود. اگر پرداختی وارد کنید، سرور همان لحظه شماره‌ی فاکتور رسمی را می‌سازد و فروش را به «آماده‌سازی انبار» می‌برد."
+              : saleStatusHint(sale.status)}
           </p>
         </div>
       </CardContent>

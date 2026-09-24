@@ -11,6 +11,8 @@ import ShippingFilters from "../components/table/ShippingFilters";
 import ShippingTable from "../components/table/ShippingTable";
 import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
 import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
+import { useQueueRows } from "../../shared/useQueueRows";
+import { needsDocumentList } from "../../shared/queueFilters";
 
 /**
  * صفِ ارسال = `GetSaleList` فیلترشده روی وضعیت‌های قابلِ ارسال.
@@ -25,10 +27,16 @@ const ShippingListPage = () => {
   const debouncedFilters = useDebouncedShippingFilters();
 
   const { data, isLoading, isFetching, isError, error, refetch } =
-    useShippableSalesQuery(debouncedFilters, pagination);
+    useShippableSalesQuery(debouncedFilters, pagination, sorting);
 
-  const rows = data?.items ?? [];
-  const totalPages = data?.totalPages ?? 1;
+  // کالای مرجوعیِ منتظر (`useQueueRows`): جایگزین روی ردیفِ همان خرید/فروش
+  // علامت می‌خورد؛ برگشتیِ مشتری / عودت به تامین‌کننده ردیفِ خودش را دارد.
+  const buildRows = useQueueRows("out", debouncedFilters, pagination.pageIndex === 0);
+  const rows = buildRows(data?.items ?? []);
+  // دو حالتِ مرجوعیِ فیلتر یک صفحه‌اند و صفحه‌بندیِ سرور ندارند.
+  const totalPages = needsDocumentList(debouncedFilters.status)
+    ? data?.totalPages ?? 1
+    : 1;
   const currentPage = data?.page ? data.page - 1 : pagination.pageIndex;
 
   return (

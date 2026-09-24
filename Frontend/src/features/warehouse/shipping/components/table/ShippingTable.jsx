@@ -3,13 +3,23 @@ import { useNavigate } from "react-router-dom";
 import { Truck } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import DataTable from "@/shared/components/table/DataTable";
-import PaymentProgress from "@/shared/components/table/PaymentProgress";
 import SaleStatusBadge from "@/features/sales/orders/components/table/SaleStatusBadge";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { ROUTES } from "@/shared/constants/routes";
+import {
+  isReturnRow,
+  queueRowKey,
+  queueRowClassName,
+} from "../../../shared/useQueueRows";
+import {
+  QueueNumberCell,
+  ReturnKindBadge,
+  PendingReplacementNote,
+  ReturnActionCell,
+} from "../../../shared/returnRowCells";
 
-// ردیف‌های این صف همان `SaleListDto`اند، پس شناسه‌ی فروش کلید است.
-const getRowKey = (row) => row.original.id;
+// ردیف‌ها `SaleListDto`اند، به‌علاوه‌ی ردیف‌های «کالای مرجوعی»
+// (`useQueueRows`) که کلیدِ خودشان را دارند.
 
 const ShippingTable = ({
   data,
@@ -28,50 +38,51 @@ const ShippingTable = ({
       {
         accessorKey: "invoiceNumber",
         header: "شماره فاکتور",
+        cell: (info) => <QueueNumberCell row={info.row.original} />,
+      },
+      {
+        accessorKey: "customerName",
+        header: "مشتری / تامین‌کننده",
         cell: (info) => (
-          <span className="font-mono text-xs text-muted-foreground">
-            {info.getValue()}
+          <span className="font-light">
+            {isReturnRow(info.row.original)
+              ? info.row.original.counterpartyName
+              : info.getValue()}
           </span>
         ),
       },
       {
-        accessorKey: "customerName",
-        header: "مشتری",
-        cell: (info) => <span className="font-light">{info.getValue()}</span>,
-      },
-      {
         accessorKey: "invoiceDate",
-        header: "تاریخ فاکتور",
+        header: "تاریخ",
         cell: (info) => (
           <span className="tabular-nums text-sm">
-            {gregorianToPersian(info.getValue())}
+            {gregorianToPersian(
+              isReturnRow(info.row.original) ? info.row.original.date : info.getValue(),
+            )}
           </span>
         ),
       },
       {
         accessorKey: "status",
         header: "وضعیت",
-        enableSorting: false,
-        cell: (info) => (
-          <SaleStatusBadge status={info.getValue()} />
-        ),
-      },
-      {
-        accessorKey: "totalAmount",
-        header: "مبلغ (ریال)",
-        enableSorting: false,
-        cell: ({ row }) => (
-          <PaymentProgress
-            paid={row.original.paidAmount}
-            total={row.original.totalAmount}
-          />
-        ),
+        cell: (info) =>
+          isReturnRow(info.row.original) ? (
+            <ReturnKindBadge row={info.row.original} />
+          ) : (
+            <div className="flex flex-col items-center">
+              <SaleStatusBadge status={info.getValue()} />
+              <PendingReplacementNote row={info.row.original} />
+            </div>
+          ),
       },
       {
         id: "actions",
         header: "عملیات",
         enableSorting: false,
-        cell: ({ row }) => (
+        cell: ({ row }) =>
+          isReturnRow(row.original) ? (
+            <ReturnActionCell row={row.original} navigate={navigate} />
+          ) : (
           <Button
             variant="outline"
             size="sm"
@@ -103,7 +114,8 @@ const ShippingTable = ({
       sorting={sorting}
       onSortingChange={onSortingChange}
       emptyMessage="فروشی در انتظار ارسال نیست."
-      getRowKey={getRowKey}
+      getRowKey={queueRowKey}
+      rowClassName={queueRowClassName}
     />
   );
 };

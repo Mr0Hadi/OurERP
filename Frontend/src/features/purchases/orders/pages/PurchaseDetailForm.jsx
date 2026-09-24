@@ -23,7 +23,7 @@ import {
 import { useSuppliersQuery } from "@/features/suppliers/services/queries";
 import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection";
 import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
-import PurchaseItemsReceivingSection from "../components/forms/PurchaseItemsReceivingSection";
+import PurchaseItemsCard from "../components/forms/PurchaseItemsCard";
 import PurchaseExcessSection from "../components/forms/PurchaseExcessSection";
 import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
 import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
@@ -37,7 +37,6 @@ import {
   canDeletePurchase,
   canCancelPurchase,
   getPurchaseLockReason,
-  itemEditErrors,
 } from "@/features/purchases/orders/domain/purchaseRules";
 import {
   PURCHASE_STATUSES,
@@ -114,11 +113,15 @@ export default function PurchaseDetailForm({ purchaseData }) {
       ? "برای خروج از پیش‌فاکتور، شماره فاکتور تامین‌کننده الزامی است"
       : null;
 
-  const computedTotal = items.reduce((sum, item) => {
-    const base = (item.quantity || 0) * (item.unitPrice || 0);
-    const disc = (base * (item.discount || 0)) / 100;
-    return sum + base - disc;
-  }, 0);
+  // اقلام فقط در پیش‌فاکتور تغییر می‌کنند؛ بعد از آن جمع همان مبلغِ
+  // ذخیره‌شده‌ی سرور است (که `AcceptPurchaseExcess` هم آن را جلو می‌برد).
+  const computedTotal = isProforma
+    ? items.reduce((sum, item) => {
+        const base = (item.quantity || 0) * (item.unitPrice || 0);
+        const disc = (base * (item.discount || 0)) / 100;
+        return sum + base - disc;
+      }, 0)
+    : Number(purchaseData.totalAmount) || 0;
 
   // initializeFromPurchase باید فقط یک‌بار هنگام mount اجرا شود
   useEffect(() => {
@@ -157,14 +160,6 @@ export default function PurchaseDetailForm({ purchaseData }) {
     if (leavingProforma && !String(formData.invoiceNumber || "").trim()) {
       setShowErrors(true);
       toast.error("برای خروج از پیش‌فاکتور، شماره فاکتور تامین‌کننده را وارد کنید.");
-      return;
-    }
-
-    // اقلامی که انبار از آن‌ها تحویل گرفته نمی‌توانند حذف یا کمتر از
-    // مقدارِ رسیده شوند.
-    const itemErrors = itemEditErrors(purchaseData.items, items);
-    if (itemErrors.length > 0) {
-      toast.error(itemErrors[0]);
       return;
     }
 
@@ -236,13 +231,16 @@ export default function PurchaseDetailForm({ purchaseData }) {
       <form onSubmit={onSubmit}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 space-y-4">
-            <PurchaseItemsSection
-              items={items}
-              products={products}
-              isLoadingProducts={productsLoading}
-              onItemsChange={setItems}
-            />
-            <PurchaseItemsReceivingSection purchase={purchaseData} />
+            {isProforma ? (
+              <PurchaseItemsSection
+                items={items}
+                products={products}
+                isLoadingProducts={productsLoading}
+                onItemsChange={setItems}
+              />
+            ) : (
+              <PurchaseItemsCard purchase={purchaseData} />
+            )}
             <PurchaseExcessSection purchase={purchaseData} />
             <OrderInfoSection
               formData={formData}

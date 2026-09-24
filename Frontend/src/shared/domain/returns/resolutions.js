@@ -395,7 +395,13 @@ export function validateComposition(
     }
   }
 
-  if (hasQuarantine && quarantineAvailable != null && quantity > quarantineAvailable) {
+  // فقط آزادسازی به قرنطینه بسته است؛ اسقاط می‌تواند از موجودی هم باشد
+  // (همان قاعده‌ی `AddClaimResolution` در بکند).
+  if (
+    composition.goodsRelease?.enabled &&
+    quarantineAvailable != null &&
+    quantity > quarantineAvailable
+  ) {
     errors.push(
       `برای این ادعا فقط ${quarantineAvailable.toLocaleString("fa-IR")} عدد کالا در قرنطینه است`,
     );

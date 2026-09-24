@@ -12,13 +12,14 @@ import ReceivingFilters from "../components/table/ReceivingFilters";
 import ReceivingTable from "../components/table/ReceivingTable";
 import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
 import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
+import { useQueueRows } from "../../shared/useQueueRows";
+import { needsDocumentList } from "../../shared/queueFilters";
 
 /**
  * صفِ دریافت = `GetPurchaseList` فیلترشده روی وضعیت‌های قابلِ دریافت.
  *
- * تحویل‌گرفتنِ کالای برگشتیِ مشتری در این صف نیست: بکند چنین لیستِ
- * ترکیبی‌ای ندارد و آن کار یک دورِ اثرِ `GOODS_IN` روی خودِ مرجوعیِ فروش
- * است — از صفحه‌ی همان مرجوعی باز می‌شود.
+ * کالای مرجوعی (جایگزینِ تامین‌کننده، برگشتیِ مشتری) در کارتِ جدای
+ * «کالای مرجوعی منتظر دریافت» بالای همین صفحه می‌آید.
  */
 const ReceivingListPage = () => {
   const { pagination, sorting, setPagination, setSorting } =
@@ -26,7 +27,7 @@ const ReceivingListPage = () => {
   const debouncedFilters = useDebouncedReceivingFilters();
 
   const { data, isLoading, isFetching, isError, error, refetch } =
-    useReceivablePurchasesQuery(debouncedFilters, pagination);
+    useReceivablePurchasesQuery(debouncedFilters, pagination, sorting);
 
   const { data: suppliersData, isLoading: isSuppliersLoading } =
     useSuppliersQuery(
@@ -35,8 +36,14 @@ const ReceivingListPage = () => {
       { id: "name", desc: false },
     );
 
-  const rows = data?.items ?? [];
-  const totalPages = data?.totalPages ?? 1;
+  // کالای مرجوعیِ منتظر (`useQueueRows`): جایگزین روی ردیفِ همان خرید/فروش
+  // علامت می‌خورد؛ برگشتیِ مشتری / عودت به تامین‌کننده ردیفِ خودش را دارد.
+  const buildRows = useQueueRows("in", debouncedFilters, pagination.pageIndex === 0);
+  const rows = buildRows(data?.items ?? []);
+  // دو حالتِ مرجوعیِ فیلتر یک صفحه‌اند و صفحه‌بندیِ سرور ندارند.
+  const totalPages = needsDocumentList(debouncedFilters.status)
+    ? data?.totalPages ?? 1
+    : 1;
   const currentPage = data?.page ? data.page - 1 : pagination.pageIndex;
 
   return (

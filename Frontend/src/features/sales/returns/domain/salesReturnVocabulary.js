@@ -46,6 +46,37 @@ export const SALES_RETURN_PROBLEM_LABELS = problemLabels(SALES_CLAIM_PROBLEMS, {
 
 export const SALES_RETURN_PROBLEM_STYLES = problemStyles(SALES_CLAIM_PROBLEMS);
 
+const OFF_ORDER_ONLY = [
+  SALES_RETURN_PROBLEMS.OVER_SHIPPED,
+  SALES_RETURN_PROBLEMS.UNLISTED_ITEM,
+];
+
+/**
+ * گزینه‌های «نوع مشکل» برای ادعای روی قلمِ فاکتور — همه جز «بیشتر از
+ * فاکتور» و «کالای خارج از فاکتور» که مالِ ادعای خارج از فاکتورند.
+ * («کمتر از فاکتور» اینجا می‌ماند: برخلافِ خرید، ادعای مشتری روی دانه‌هایی
+ * است که ما ارسال‌شده ثبت کرده‌ایم و او می‌گوید نرسیده.)
+ */
+export const SALES_ON_ORDER_PROBLEM_LABELS = Object.fromEntries(
+  Object.entries(SALES_RETURN_PROBLEM_LABELS).filter(
+    ([value]) => !OFF_ORDER_ONLY.includes(Number(value)),
+  ),
+);
+
+/** گزینه‌های «نوع مشکل» برای ادعای خارج از فاکتور. */
+export const SALES_OFF_ORDER_PROBLEM_LABELS = Object.fromEntries(
+  Object.entries(SALES_RETURN_PROBLEM_LABELS).filter(
+    ([value]) =>
+      OFF_ORDER_ONLY.includes(Number(value)) ||
+      [
+        SALES_RETURN_PROBLEMS.WRONG_ITEM_SHIPPED,
+        SALES_RETURN_PROBLEMS.DEFECTIVE,
+        SALES_RETURN_PROBLEMS.DAMAGED_IN_TRANSIT,
+        SALES_RETURN_PROBLEMS.OTHER,
+      ].includes(Number(value)),
+  ),
+);
+
 // ─── دامنه‌ی ادعا ───────────────────────────────────────────────────────────
 
 /**

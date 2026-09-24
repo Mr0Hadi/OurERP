@@ -6,6 +6,19 @@ import {
 } from "@/shared/services/api/contract";
 import { toDateOnly } from "@/shared/lib/dateUtils";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+import { toApiSort } from "@/shared/services/api/sorting";
+
+/** `PurchaseListSortEnum`ِ بکند، بر اساسِ شناسه‌ی ستونِ جدول. */
+export const PURCHASE_SORT_COLUMNS = {
+  invoiceNumber: 1,
+  supplierName: 2,
+  invoiceDate: 3,
+  paymentDate: 4,
+  status: 5,
+  paymentType: 6,
+  totalAmount: 7,
+  paidAmount: 8,
+};
 
 export {
   PURCHASE_STATUSES,
@@ -29,17 +42,17 @@ export {
  *    `GetPurchaseDetail` برگردانده می‌شود. رفتارِ Update **جایگزینیِ
  *    کامل** است، پس همیشه فهرستِ نهایی فرستاده می‌شود.
  *
- * ویرایشِ اقلام: `UpdatePurchase` فهرستِ نهاییِ اقلام را در `productItemList`
- * می‌گیرد — `id` پر یعنی قلمِ موجود، خالی یعنی قلمِ تازه، و قلمی که در
- * فهرست نباشد حذف می‌شود. قلمی که از آن دریافت شده نه حذف می‌شود و نه
- * کمتر از «رسیده + بسته‌شده» (`itemEditErrors` همین را پیش از ارسال چک
- * می‌کند). قرارداد: `Backend-Net/docs/purchase-frontend-sync-requests.fa.md` بند ۲.
+ * ویرایشِ اقلام — فقط در پیش‌فاکتور: `UpdatePurchase` فهرستِ نهاییِ اقلام را
+ * در `productItemList` می‌گیرد — `id` پر یعنی قلمِ موجود، خالی یعنی قلمِ
+ * تازه، و قلمی که در فهرست نباشد حذف می‌شود. بیرون از پیش‌فاکتور فرم اقلام
+ * را فقط‌خواندنی نشان می‌دهد و همان اقلامِ ذخیره‌شده را پس می‌فرستد.
+ * قرارداد: `Backend-Net/docs/purchase-frontend-sync-requests.fa.md` بند ۲.
  *
  * چیزهایی که بکند عمداً ندارد و فرانت هم دیگر وانمود نمی‌کند دارد:
  *  - ثبتِ پرداختِ پله‌ای endpoint ندارد؛ پرداخت با همان `paymentDetails`ِ
  *    `UpdatePurchase` (جایگزینیِ کامل) ثبت می‌شود.
- *  - فیلترِ چندتامین‌کننده‌ای، `search` آزاد و مرتب‌سازی پشتیبانی
- *    نمی‌شوند؛ لیست همیشه جدیدترین‌ها را اول می‌دهد.
+ *  - فیلترِ چندتامین‌کننده‌ای و `search` آزاد پشتیبانی نمی‌شوند.
+ *    مرتب‌سازی با `sortBy`/`sortDirection` (`PurchaseListSortEnum`).
  */
 
 /** `PurchaseItemDto` واقعی فقط این چهار فیلد را می‌خواهد؛ نام/کد/واحد/جمعِ خط را خودِ بکند از `productId` پر می‌کند. */
@@ -210,6 +223,7 @@ export async function fetchPurchases(params = {}) {
           : undefined,
       fromDate: params.fromDate || undefined,
       toDate: params.toDate || undefined,
+      ...toApiSort(params.sorting, PURCHASE_SORT_COLUMNS),
     },
   });
   return normalizeListResponse(data, { itemsKey: "purchaseList" });
