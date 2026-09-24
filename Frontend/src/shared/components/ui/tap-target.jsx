@@ -19,7 +19,7 @@ const RADIUS_CLASSES = {
   full: "before:rounded-full",
 }
 
-function Hitbox({
+function TapTarget({
   size = "md",
   radius = "md",
   className,
@@ -28,7 +28,7 @@ function Hitbox({
 }) {
   return (
     <span
-      data-slot="hitbox"
+      data-slot="tap-target"
       className={cn(
         "relative inline-flex before:absolute before:content-['']",
         SIZE_CLASSES[size],
@@ -41,4 +41,4 @@ function Hitbox({
   );
 }
 
-export { Hitbox }
+export { TapTarget }

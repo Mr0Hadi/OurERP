@@ -5,7 +5,7 @@ import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox"
 import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react"
 import { Virtuoso } from "react-virtuoso";
 
-import { Hitbox } from "@/shared/components/ui/hitbox"
+import { TapTarget } from "@/shared/components/ui/tap-target"
 import { ScrollArea } from "@/shared/components/ui/scroll-area"
 import { cn } from "@/shared/lib/utils"
 
@@ -389,12 +389,12 @@ function ComboboxChip({
       )}
       {...props}>
       {children}
-      <Hitbox size="sm" radius="sm">
+      <TapTarget size="sm" radius="sm">
         <ComboboxPrimitive.ChipRemove
           className="inline-flex size-4 items-center justify-center rounded-sm hover:bg-background/60">
           <XIcon className="size-3" />
         </ComboboxPrimitive.ChipRemove>
-      </Hitbox>
+      </TapTarget>
     </ComboboxPrimitive.Chip>
   );
 }
