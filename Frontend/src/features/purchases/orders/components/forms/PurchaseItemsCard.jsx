@@ -13,6 +13,7 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import OrderItemsReadOnly from "@/shared/components/forms/OrderItemsReadOnly";
+import UnitsPageLink from "@/features/warehouse/units/components/UnitsPageLink";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import {
   stillOwedOf,
@@ -56,6 +57,7 @@ export default function PurchaseItemsCard({ purchase }) {
   const reopenMutation = useReopenPurchaseItemMutation(purchase.id);
   const [closing, setClosing] = useState(null);
   const busy = closeMutation.isPending || reopenMutation.isPending;
+  const hasReceived = (purchase.items || []).some((item) => Number(item.receivedQuantity) > 0);
 
   const confirmClose = () => {
     if (!closing) return;
@@ -97,6 +99,14 @@ export default function PurchaseItemsCard({ purchase }) {
     <>
       <OrderItemsReadOnly
         title="اقلام خرید"
+        headerAction={
+          hasReceived && (
+            <UnitsPageLink
+              params={{ view: "unlabeled", purchaseId: purchase.id }}
+              label="برچسب دانه‌های این خرید"
+            />
+          )
+        }
         items={purchase.items || []}
         description="اقلام فقط در مرحله‌ی پیش‌فاکتور قابل ویرایش‌اند. قلمی را که تامین‌کننده بقیه‌اش را نمی‌فرستد می‌توانید ببندید."
         columns={[

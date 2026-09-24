@@ -66,6 +66,7 @@ export const ROUTES = {
   WAREHOUSE_PRODUCTS: "/warehouse/products",
   WAREHOUSE_PRODUCTS_DETAIL: "/warehouse/products/:id",
   WAREHOUSE_PRODUCTS_NEW: "/warehouse/products/new",
+  WAREHOUSE_UNITS: "/warehouse/units",
   WAREHOUSE_UNIT_LABELS: "/warehouse/unit-labels",
   WAREHOUSE_CATEGORIES: "/warehouse/categories",
   WAREHOUSE_STOCK: "/warehouse/stock",

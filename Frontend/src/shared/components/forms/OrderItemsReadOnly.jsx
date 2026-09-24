@@ -31,6 +31,7 @@ const lineTotalOf = (item) =>
  *   «مانده» در خرید). `render` می‌تواند متن یا یک المان برگرداند.
  * @param renderActions اختیاری — `(item) => node` برای دکمه‌های هر قلم.
  * @param description متنِ زیرِ عنوان؛ پیش‌فرض یادآوریِ «فقط در پیش‌فاکتور».
+ * @param headerAction اختیاری — دکمه/پیوندی کنارِ عنوان (مثلاً «دانه‌ها و برچسب‌ها»).
  */
 export default function OrderItemsReadOnly({
   title,
@@ -38,16 +39,20 @@ export default function OrderItemsReadOnly({
   columns = [],
   renderActions,
   description = "اقلام فقط در مرحله‌ی پیش‌فاکتور قابل ویرایش‌اند.",
+  headerAction = null,
 }) {
   const total = items.reduce((sum, item) => sum + lineTotalOf(item), 0);
 
   return (
     <Card className="@container/items">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold text-card-foreground flex items-center gap-2">
-          {title}
-          <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-        </CardTitle>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle className="text-base font-semibold text-card-foreground flex items-center gap-2">
+            {title}
+            <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+          </CardTitle>
+          {headerAction}
+        </div>
         <p className="text-xs text-muted-foreground">{description}</p>
       </CardHeader>
 

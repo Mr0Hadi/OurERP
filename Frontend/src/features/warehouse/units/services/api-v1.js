@@ -1,45 +1,34 @@
 import axiosInstance from "@/shared/services/api/axios";
-import { normalizeListResponse } from "@/shared/services/api/contract";
+import { normalizeListResponse, idempotent } from "@/shared/services/api/contract";
+import { toApiSort } from "@/shared/services/api/sorting";
 import {
   parseBarcode,
   productCodeOf,
   toPayload,
 } from "@/shared/domain/barcode/productCode";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
+import { UNIT_SORT_COLUMNS } from "../domain/unitVocabulary";
 
 /**
- * لایه‌ی تماس با دانه‌های فیزیکیِ کالا.
+ * لایه‌ی تماس با دانه‌های فیزیکیِ کالا — همه زیرِ `api/Product`.
  *
- * برخلافِ چیزی که نامِ صفحه («برچسب کالاها») القا می‌کند، بکند کنترلرِ
- * جدایی برای دانه‌ها ندارد: هر چه هست زیر `api/Product` است
- * (`GetProductUnitList` و `ScanBarcode` — بخش ۷ سند api-guide.fa.md) و
- * خودِ دانه‌ها هم *اثرِ جانبیِ* موجودی‌اند، نه چیزی که مستقیم ساخته یا
- * ویرایش شود:
+ * دانه‌ها اثرِ جانبیِ موجودی‌اند: با دریافتِ خرید یا افزایشِ موجودی ساخته
+ * و با فروش/مرجوعی جابه‌جا می‌شوند. این صفحه دانه نمی‌سازد؛ فقط می‌بیند،
+ * برچسب می‌زند و سه کارِ دستیِ انبار را انجام می‌دهد (قرنطینه، آزادسازی،
+ * اسقاط).
  *
- * - ساخت: `UpdateProduct` با `stock` بزرگ‌تر → سرور خودش دانه می‌زند.
- * - مصرف: ثبتِ فروش → سرور خودش `SOLD` می‌کند.
- *
- * به همین دلیل این فایل فقط همین دو تماس را دارد؛ هر چیز دیگری که
- * صفحه لازم داشت (ساخت دستی، ثبتِ چاپ، اصلاحِ دستیِ وضعیت) از فرانت
- * حذف شد. جزئیات در
- * `Backend-Net/docs/product-unit-frontend-requirements.fa.md`.
+ * قرارداد (فیلترهای تازه، خلاصه، ثبتِ چاپ، کارهای دستی) در
+ * `Backend-Net/docs/product-unit-management-requirements.fa.md` است.
  */
 
+const serializeArrays = { paramsSerializer: { indexes: null } };
+
 /**
- * `ProductUnitDto` سرور → همان شکلی که کامپوننت‌های این فیچر مصرف
- * می‌کنند.
+ * `ProductUnitDto` سرور → شکلی که کامپوننت‌های این فیچر مصرف می‌کنند.
  *
- * `productName` را `GetProductUnitList` می‌دهد؛ `productCode` را هنوز نه.
- * دو fallback عمداً نگه داشته شده‌اند و کدِ مرده نیستند:
- *
- * - `product` — پاسخِ `ScanBarcode` کالا را کنارِ دانه می‌آورد؛ آن نسخه
- *   تازه‌تر و کامل‌تر است، پس بر فیلدهای خودِ دانه اولویت دارد.
- * - `productCodeOf(barcode)` — کدِ کالا *داخلِ* بارکدِ دانه است (دو بخشِ
- *   اول)، پس اگر روزی این فیلد خالی برگردد ستون خالی نمی‌ماند. برای
- *   `productName` چنین چیزی ممکن نیست و `null` می‌ماند.
- *
- * `createdAt` عمداً نگاشت نمی‌شود: تاریخِ ساختِ دانه در UI نمایش داده
- * نمی‌شود و روی برچسب هم نمی‌رود.
+ * `product` (پاسخِ `ScanBarcode`) تازه‌تر از فیلدهای خودِ دانه است، پس
+ * اولویت دارد؛ `productCodeOf(barcode)` هم تورِ ایمنیِ کدِ کالاست، چون کد
+ * همان دو بخشِ اولِ بارکدِ دانه است.
  */
 export function normalizeProductUnit(dto, product = null) {
   if (!dto) return null;
@@ -49,17 +38,20 @@ export function normalizeProductUnit(dto, product = null) {
     productId: dto.productId,
     serialNumber: dto.serialNumber,
 
-    // بارکدِ خوانا برای نمایش، payload برای رندرِ میله‌ها و مقایسه با سرور.
+    // بارکدِ خوانا برای نمایش، payload برای رندرِ میله‌ها و مقایسه.
     barcode: dto.barcode ?? "",
     barcodePayload: dto.barcodePayload ?? toPayload(dto.barcode),
 
     productCode: product?.code ?? dto.productCode ?? productCodeOf(dto.barcode),
     productName: product?.name ?? dto.productName ?? null,
+    requiresUnitTracking: Boolean(
+      product?.requiresUnitTracking ?? dto.requiresUnitTracking,
+    ),
 
     status: dto.status,
+    custodyReason: dto.custodyReason ?? null,
 
-    // «این دانه از کجا آمد»: خرید و تامین‌کننده. نبودنش یعنی دانه بدونِ
-    // خرید ساخته شده (موجودیِ اولیه یا اصلاحِ دستی).
+    // «از کجا آمد»: خرید و تامین‌کننده. نبودنش یعنی موجودیِ اولیه یا اصلاح.
     purchaseItemId: dto.purchaseItemId ?? null,
     purchaseId: dto.purchaseId ?? null,
     purchaseInvoiceNumber: dto.purchaseInvoiceNumber ?? null,
@@ -72,16 +64,112 @@ export function normalizeProductUnit(dto, product = null) {
     saleInvoiceNumber: dto.saleInvoiceNumber ?? null,
     customerId: dto.customerId ?? null,
     customerName: dto.customerName ?? null,
-
     soldAt: dto.soldAt ?? null,
+
+    // قرنطینه: از کی، با کدام سند، با چه ارزشی (بند ۲).
+    quarantinedAt: dto.quarantinedAt ?? null,
+    quarantineCost: dto.quarantineCost ?? null,
+    quarantineDocumentKind: dto.quarantineDocumentKind ?? null,
+    quarantineDocumentId: dto.quarantineDocumentId ?? null,
+    quarantineDocumentNumber: dto.quarantineDocumentNumber ?? null,
+
+    // برچسب (بند ۱).
+    printCount: Number(dto.printCount) || 0,
+    firstPrintedAt: dto.firstPrintedAt ?? null,
+    lastPrintedAt: dto.lastPrintedAt ?? null,
+    lastPrintedByName: dto.lastPrintedByName ?? null,
+
+    createdAt: dto.createdAt ?? null,
+    lastMovementAt: dto.lastMovementAt ?? null,
+  };
+}
+
+/** فیلترهای فرم → پارامترهای `GetProductUnitList`. خالی یعنی «بدون فیلتر». */
+function toListParams(filters = {}) {
+  return {
+    search: filters.search?.trim() || undefined,
+    productId: filters.productId || undefined,
+    // یک وضعیت از کشویی، یا چند وضعیت از نما (مثلاً صفِ چاپ).
+    status: filters.status || undefined,
+    statuses: filters.statuses?.length ? filters.statuses : undefined,
+    custodyReason: filters.custodyReason || undefined,
+    labelState: filters.labelState || undefined,
+    supplierId: filters.supplierId || undefined,
+    customerId: filters.customerId || undefined,
+    purchaseId: filters.purchaseId || undefined,
+    saleId: filters.saleId || undefined,
+    fromDate: filters.fromDate || undefined,
+    toDate: filters.toDate || undefined,
+    fromSerial: filters.fromSerial || undefined,
+    toSerial: filters.toSerial || undefined,
+  };
+}
+
+/** `GET api/Product/GetProductUnitList` — یک صفحه. */
+export async function fetchProductUnits({ filters, page = 1, take = 20, sorting } = {}) {
+  const { data } = await axiosInstance.get("/Product/GetProductUnitList", {
+    params: {
+      page,
+      take,
+      ...toListParams(filters),
+      ...toApiSort(sorting, UNIT_SORT_COLUMNS),
+    },
+    ...serializeArrays,
+  });
+
+  const list = normalizeListResponse(data, { itemsKey: "productUnitList" });
+  return { ...list, items: list.items.map((dto) => normalizeProductUnit(dto)) };
+}
+
+/** بزرگ‌ترین صفحه‌ای که یک‌جا خوانده می‌شود (چاپ و خروجیِ همه‌ی نتایج، شمارش). */
+const BULK_PAGE_SIZE = 200;
+
+/**
+ * همه‌ی دانه‌های یک فیلتر، صفحه به صفحه تا سقفِ `limit`.
+ * `truncated` یعنی نتایج بیشتر از سقف بود و بقیه خوانده نشد.
+ */
+export async function fetchAllProductUnits(filters, { limit = 2000, sorting } = {}) {
+  const items = [];
+  let page = 1;
+  let total = 0;
+
+  for (;;) {
+    const result = await fetchProductUnits({ filters, page, take: BULK_PAGE_SIZE, sorting });
+    total = result.total ?? total;
+    items.push(...result.items);
+    if (items.length >= limit || page >= result.totalPages || result.items.length === 0) break;
+    page += 1;
+  }
+
+  return {
+    items: items.slice(0, limit),
+    total,
+    truncated: total > limit,
   };
 }
 
 /**
- * `GET api/Product/GetProductUnitHistory` — همه‌ی جابه‌جایی‌های یک دانه،
- * قدیمی‌ترین اول، از دفترِ حرکتِ دانه‌ها. با شناسه یا بارکدِ اسکن‌شده.
+ * `GET api/Product/GetProductUnitSummary` — شمارشِ دانه‌ها به تفکیکِ وضعیت،
+ * علتِ قرنطینه و برچسب (بند ۳). با `productId` برای یک کالا.
  */
-export const fetchProductUnitHistory = async ({ productUnitId, barcode } = {}) => {
+export async function fetchProductUnitSummary({ productId } = {}) {
+  const { data } = await axiosInstance.get("/Product/GetProductUnitSummary", {
+    params: { productId: productId || undefined },
+  });
+
+  const toMap = (rows, key) =>
+    Object.fromEntries((rows ?? []).map((row) => [row[key], row]));
+
+  return {
+    byStatus: toMap(data?.byStatus, "status"),
+    quarantineByReason: toMap(data?.quarantineByReason, "custodyReason"),
+    quarantineValue: Number(data?.quarantineValue) || 0,
+    unprintedCount: Number(data?.unprintedCount) || 0,
+  };
+}
+
+/** `GET api/Product/GetProductUnitHistory` — سفرِ یک دانه، قدیمی‌ترین اول. */
+export async function fetchProductUnitHistory({ productUnitId, barcode } = {}) {
   const { data } = await axiosInstance.get("/Product/GetProductUnitHistory", {
     params: {
       productUnitId: productUnitId || undefined,
@@ -92,147 +180,59 @@ export const fetchProductUnitHistory = async ({ productUnitId, barcode } = {}) =
     unit: normalizeProductUnit(data?.unit),
     movements: data?.movements ?? [],
   };
-};
+}
 
 /**
- * `GET api/Product/GetProductUnitList`
+ * `GET api/Product/ScanBarcode?code=...` — کدِ کالا یا بارکدِ دانه.
  *
- * سرور فقط `productId`، `status` و بازه‌ی سریال را فیلتر می‌کند و
- * ترتیبش ثابت است (کالا، سپس سریال) — جست‌وجوی متنی و مرتب‌سازی ندارد،
- * پس فرستاده هم نمی‌شوند.
+ * تفسیرِ محلی قبل از شبکه انجام می‌شود تا ورودیِ بی‌ربط (مثلاً بارکدِ
+ * تامین‌کننده روی کارتن) یک رفت‌وبرگشتِ بی‌فایده نسازد.
  */
-export const fetchProductUnits = async (params = {}) => {
-  const { data } = await axiosInstance.get("/Product/GetProductUnitList", {
-    params: {
-      page: params.page,
-      take: params.limit,
-      productId: params.productId || undefined,
-      status: params.status || undefined,
-      fromSerial: params.fromSerial || undefined,
-      toSerial: params.toSerial || undefined,
-    },
-  });
-
-  const list = normalizeListResponse(data, { itemsKey: "productUnitList" });
-
-  return {
-    ...list,
-    items: list.items.map((dto) => normalizeProductUnit(dto)),
-  };
-};
-
-/**
- * `GET api/Product/ScanBarcode?code=...`
- *
- * ورودی هرچه اسکنر بدهد: کدِ کالا یا بارکدِ دانه، با یا بدونِ
- * خط‌تیره‌های نمایشی. سرور برای کدِ نامعتبر ۴۰۴ می‌دهد، پس `UNKNOWN`
- * در پاسخِ *موفق* هرگز دیده نمی‌شود.
- *
- * تفسیرِ محلیِ کد قبل از شبکه انجام می‌شود تا ورودیِ بی‌ربط (مثلاً
- * بارکدِ تامین‌کننده روی کارتن) یک رفت‌وبرگشتِ بی‌فایده نسازد.
- */
-export const resolveScannedCode = async (code) => {
+export async function resolveScannedCode(code) {
   const reference = parseBarcode(code);
 
   if (reference.kind === BarcodeReferenceKindEnum.UNKNOWN) {
-    return {
-      kind: BarcodeReferenceKindEnum.UNKNOWN,
-      normalizedPayload: reference.normalizedPayload,
-      product: null,
-      unit: null,
-    };
+    return { kind: BarcodeReferenceKindEnum.UNKNOWN, code, product: null, unit: null };
   }
 
-  const { data } = await axiosInstance.get("/Product/ScanBarcode", {
-    params: { code },
-  });
-
+  const { data } = await axiosInstance.get("/Product/ScanBarcode", { params: { code } });
   const product = data?.product ?? null;
 
   return {
     kind: data?.kind ?? reference.kind,
-    normalizedPayload: data?.normalizedPayload ?? reference.normalizedPayload,
-    categoryName: data?.categoryName ?? null,
+    code,
     product,
     unit: normalizeProductUnit(data?.unit, product),
   };
-};
-
-// ─── چاپِ برچسب — `api/Barcode` ─────────────────────────────────────────────
-
-/**
- * `api/Barcode` پوششِ `ResponseDto` ندارد و مستقیماً فایل (SVG/PDF)
- * برمی‌گرداند — همان قراردادِ `shared/services/invoice/api-v1.js`:
- * `responseType: "blob"` و بازکردنِ پیامِ فارسیِ خطا از دلِ بلاب، چون
- * اینترسپتورِ axios با این responseType نمی‌تواند آن را خودش باز کند.
- *
- * صفحه‌ی «برچسب کالاها» برچسبِ دانه‌های انتخاب‌شده را کاملاً سمتِ مرورگر
- * (SVG و `PrintPreviewOverlay`) می‌سازد و به این دو تابع نیازی ندارد —
- * رندرِ محلی سریع‌تر است و انتخابِ بارکد/QR دارد. این دو برای وقتی‌اند
- * که یک مسیر «دانلود PDF رسمی» (چیدمانِ برگه‌ی چاپِ سرور) لازم شود.
- */
-
-async function unwrapBlobError(error) {
-  const body = error?.response?.data;
-  if (!(body instanceof Blob)) throw error;
-
-  try {
-    const parsed = JSON.parse(await body.text());
-    const message = parsed?.Message ?? parsed?.message ?? parsed?.title;
-    if (message) error.message = message;
-  } catch {
-    // بدنه‌ی غیر JSON (مثلاً صفحه‌ی خطای پروکسی) — پیامِ خودِ axios می‌ماند.
-  }
-
-  throw error;
-}
-
-async function fetchFile(url, params) {
-  try {
-    const { data } = await axiosInstance.get(url, {
-      params,
-      responseType: "blob",
-      timeout: 60000,
-    });
-    return data;
-  } catch (error) {
-    return unwrapBlobError(error);
-  }
 }
 
 /**
- * `GET api/Barcode/GetBarcodeSvg` — رندرِ برداریِ یک کدِ از قبل شناخته‌شده
- * (کدِ کالا یا بارکدِ یک دانه، معمولاً از `ScanBarcode`/`GetProductUnitList`).
- * @returns Blob با `image/svg+xml`
+ * `POST api/Product/MarkProductUnitsPrinted` (بند ۱) — بعد از اینکه
+ * انباردار تأیید کرد برچسب‌ها واقعاً چاپ شدند.
  */
-export const getBarcodeSvg = (code, options = {}) =>
-  fetchFile("/Barcode/GetBarcodeSvg", {
-    code,
-    moduleWidthMm: options.moduleWidthMm,
-    barHeightMm: options.barHeightMm,
-    showHumanReadable: options.showHumanReadable,
+export async function markProductUnitsPrinted(productUnitIds) {
+  const { data } = await axiosInstance.post("/Product/MarkProductUnitsPrinted", {
+    productUnitIds,
   });
+  return data;
+}
 
 /**
- * `GET api/Barcode/GetProductLabelsPdf` — برگه‌ی چاپِ سرور، یک برچسب به
- * ازای هر دانه از یک کالا (با بازه‌ی سریالِ اختیاری).
- *
- * `status` در سرور nullable است ولی پیش‌فرضش `IN_STOCK`؛ از query string
- * نمی‌شود «همه» را فرستاد، پس بدونِ `status` فقط دانه‌های موجود چاپ
- * می‌شوند. برچسبِ سرور فقط نامِ کالا و بارکدِ سه‌بخشیِ دانه را دارد.
- * @returns Blob با `application/pdf`
+ * `POST api/Product/ApplyProductUnitAction` (بند ۴) — قرنطینه، آزادسازی
+ * یا اسقاطِ دستیِ چند دانه با یک علت. موجودی و بهای تمام‌شده را سرور جابه‌جا
+ * می‌کند؛ ایدمپوتنت است چون موجودی را عوض می‌کند.
  */
-export const getProductLabelsPdf = (productId, options = {}) =>
-  fetchFile("/Barcode/GetProductLabelsPdf", {
-    productId,
-    status: options.status || undefined,
-    fromSerial: options.fromSerial || undefined,
-    toSerial: options.toSerial || undefined,
-    mode: options.mode,
-    columns: options.columns,
-    rows: options.rows,
-    labelWidthMm: options.labelWidthMm,
-    labelHeightMm: options.labelHeightMm,
-    showProductName: options.showProductName,
-    showPrice: options.showPrice,
-  });
+export async function applyProductUnitAction(payload, { idempotencyKey } = {}) {
+  const { data } = await axiosInstance.post(
+    "/Product/ApplyProductUnitAction",
+    {
+      action: payload.action,
+      productUnitIds: payload.productUnitIds,
+      reason: payload.reason,
+      note: payload.note?.trim() || undefined,
+      occurredAt: payload.occurredAt || undefined,
+    },
+    idempotent(idempotencyKey),
+  );
+  return data;
+}

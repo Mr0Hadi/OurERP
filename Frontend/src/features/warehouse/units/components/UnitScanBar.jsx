@@ -1,122 +1,83 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { ScanBarcode, Search, X } from "lucide-react";
+import { ListPlus, Search } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import { Input } from "@/shared/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/shared/components/ui/dialog";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
 
-const CameraScanner = lazy(
-  () => import("@/features/warehouse/products/components/forms/CameraScanner"),
-);
+import { SCAN_MODES } from "../domain/unitVocabulary";
+import ScanInput from "./ScanInput";
+
+const MODE_OPTIONS = [
+  { value: SCAN_MODES.OPEN, label: "باز کردن دانه", icon: Search },
+  { value: SCAN_MODES.SELECT, label: "افزودن به انتخاب", icon: ListPlus },
+];
 
 /**
- * نوار اسکن، همیشه بالای صفحه.
- *
- * اسکنر دستیِ انبار مثل صفحه‌کلید عمل می‌کند: کد را می‌نویسد و Enter
- * می‌زند — پس یک input ساده با submit دقیقاً همان چیزی است که لازم
- * است، نه فیلترِ تدریجیِ جدول. دوربین هم برای تبلتِ بدون اسکنر هست.
- *
- * ورودی می‌تواند شکلِ خوانا (با خط‌تیره) یا payloadِ خام باشد؛ لایه‌ی
- * سرویس با همان منطقِ بکند نرمال‌سازی‌اش می‌کند، پس اینجا هیچ پاک‌سازیِ
- * کاراکتری لازم نیست.
+ * نوارِ اسکن، همیشه بالای صفحه — با دو حالت:
+ *  - **باز کردن:** هر اسکن جزئیاتِ همان دانه را باز می‌کند.
+ *  - **افزودن به انتخاب:** اسکنِ پیاپی؛ هر دانه به انتخاب اضافه می‌شود. برای
+ *    «برچسبِ این ده تا افتاده» یا «این‌ها را با هم قرنطینه کن».
  */
 export default function UnitScanBar({
+  mode,
+  onModeChange,
   onScan,
   scanMiss,
+  lastAdded,
   isSearching,
   onGoToProduct,
 }) {
-  const [value, setValue] = useState("");
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
-  const inputRef = useRef(null);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  const submit = useCallback(
-    (code) => {
-      const trimmed = String(code ?? "").trim();
-      if (!trimmed) return;
-      onScan(trimmed);
-    },
-    [onScan],
-  );
-
-  // پایدار نگه‌داشتنِ این callback شرطِ سرعتِ اسکنر است: `CameraScanner`
-  // با عوض شدنِ identityِ آن دوربین را از نو باز می‌کند.
-  const handleDetected = useCallback(
-    (text) => {
-      setIsCameraOpen(false);
-      setValue(text);
-      submit(text);
-    },
-    [submit],
-  );
-
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    submit(value);
-  };
+  const selecting = mode === SCAN_MODES.SELECT;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
-      <form onSubmit={handleSubmit} className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            ref={inputRef}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder="بارکد یا کد QR واحد را اسکن یا وارد کنید…"
-            className="h-11 pr-9 font-mono text-base"
-            autoComplete="off"
-            spellCheck={false}
-          />
-          {value ? (
+    <div className="space-y-2 rounded-xl border border-border bg-card p-3 shadow-sm">
+      <div className="flex flex-wrap items-center gap-1" role="radiogroup" aria-label="حالت اسکن">
+        {MODE_OPTIONS.map((option) => {
+          const Icon = option.icon;
+          const active = option.value === mode;
+          return (
             <button
+              key={option.value}
               type="button"
-              onClick={() => setValue("")}
-              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:bg-muted"
-              aria-label="پاک کردن"
+              role="radio"
+              aria-checked={active}
+              onClick={() => onModeChange(option.value)}
+              className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs transition-colors ${
+                active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+              }`}
             >
-              <X className="h-4 w-4" />
+              <Icon className="h-3.5 w-3.5" />
+              {option.label}
             </button>
-          ) : null}
-        </div>
+          );
+        })}
+      </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          className="h-11 shrink-0 px-3"
-          onClick={() => setIsCameraOpen(true)}
-          title="اسکن با دوربین"
-        >
-          <ScanBarcode className="h-5 w-5" />
-        </Button>
+      <ScanInput
+        onSubmit={onScan}
+        continuous={selecting}
+        autoFocusKey={mode}
+        isBusy={isSearching}
+        submitLabel={selecting ? "افزودن" : "یافتن"}
+        placeholder={
+          selecting
+            ? "دانه‌ها را پشتِ سرِ هم اسکن کنید…"
+            : "بارکد یا کد QR دانه را اسکن یا وارد کنید…"
+        }
+      />
 
-        <Button
-          type="submit"
-          size="lg"
-          className="h-11 shrink-0"
-          disabled={!value.trim() || isSearching}
-        >
-          {isSearching ? "…" : "یافتن"}
-        </Button>
-      </form>
+      {selecting && lastAdded && (
+        <p className="text-xs text-muted-foreground" aria-live="polite">
+          {lastAdded.duplicate ? "قبلاً انتخاب شده بود: " : "افزوده شد: "}
+          <span className="text-foreground">{lastAdded.unit.productName}</span>{" "}
+          <span className="font-mono" dir="ltr">
+            {lastAdded.unit.barcode}
+          </span>
+        </p>
+      )}
 
       {scanMiss?.kind === BarcodeReferenceKindEnum.PRODUCT ? (
-        <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-amber-50 p-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-          <span>
-            این بارکدِ خودِ کالای «{scanMiss.product.name}» است، نه یک واحد.
-          </span>
+        <div className="flex flex-wrap items-center gap-2 rounded-lg bg-amber-50 p-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+          <span>این بارکدِ خودِ کالای «{scanMiss.product.name}» است، نه یک دانه.</span>
           <Button
             type="button"
             size="sm"
@@ -124,37 +85,16 @@ export default function UnitScanBar({
             className="ms-auto"
             onClick={() => onGoToProduct(scanMiss.product)}
           >
-            نمایش واحدهای این کالا
+            نمایش دانه‌های این کالا
           </Button>
         </div>
       ) : null}
 
       {scanMiss?.kind === BarcodeReferenceKindEnum.UNKNOWN ? (
-        <p className="mt-2 text-sm text-destructive">
-          هیچ واحد یا کالایی با کد «
-          <span className="font-mono">{scanMiss.code}</span>» پیدا نشد.
+        <p className="text-sm text-destructive">
+          هیچ دانه یا کالایی با کد «<span className="font-mono">{scanMiss.code}</span>» پیدا نشد.
         </p>
       ) : null}
-
-      <Dialog open={isCameraOpen} onOpenChange={setIsCameraOpen}>
-        <DialogContent dir="rtl" className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>اسکن بارکد یا کد QR واحد</DialogTitle>
-          </DialogHeader>
-
-          {isCameraOpen ? (
-            <Suspense
-              fallback={
-                <div className="flex aspect-video w-full items-center justify-center rounded-md bg-black text-sm text-white">
-                  در حال آماده‌سازی دوربین...
-                </div>
-              }
-            >
-              <CameraScanner onDetected={handleDetected} />
-            </Suspense>
-          ) : null}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

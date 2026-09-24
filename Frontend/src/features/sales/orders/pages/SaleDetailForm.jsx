@@ -33,6 +33,7 @@ import {
   canDeleteSale,
 } from "../domain/saleRules";
 import OrderItemsReadOnly from "@/shared/components/forms/OrderItemsReadOnly";
+import UnitsPageLink from "@/features/warehouse/units/components/UnitsPageLink";
 import OrderLogisticsSection from "@/shared/components/forms/OrderLogisticsSection";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
@@ -198,6 +199,14 @@ export default function SaleDetailForm({ saleData }) {
               <OrderItemsReadOnly
                 title="اقلام فروش"
                 items={saleData.items}
+                headerAction={
+                  saleData.items?.some((item) => Number(item.shippedQuantity) > 0) && (
+                    <UnitsPageLink
+                      params={{ saleId: saleData.id }}
+                      label="دانه‌های ارسال‌شده"
+                    />
+                  )
+                }
                 columns={[
                   {
                     key: "shipped",

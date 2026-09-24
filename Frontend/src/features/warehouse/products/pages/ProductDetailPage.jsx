@@ -21,6 +21,7 @@ import ProductPricingForm from "../components/forms/ProductPricingForm";
 import ProductImageUpload from "../components/forms/ProductImageUpload";
 import ProductBarcodeDisplay from "../components/forms/ProductBarcodeDisplay";
 import ProductDetailLoading from "../components/forms/ProductDetailLoading";
+import UnitsPageLink from "../../units/components/UnitsPageLink";
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
@@ -88,6 +89,11 @@ function ProductDetailForm({ productData }) {
           <div className="flex flex-col gap-4 md:gap-3">
             <ProductImageUpload imageUpload={imageUpload} />
             <ProductBarcodeDisplay value={barcodeValue} />
+            <UnitsPageLink
+              params={{ productId: productData.id }}
+              label="دانه‌ها، قرنطینه و برچسب‌های این کالا"
+              className="w-full"
+            />
             <div className="flex gap-2">
               <Button
                 type="button"
