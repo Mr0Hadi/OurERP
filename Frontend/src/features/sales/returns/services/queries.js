@@ -17,11 +17,9 @@ export function useSalesReturnsQuery(filters, pagination, sorting) {
       customerId: filters.customerId || "",
       status: filters.status ?? "",
       problem: filters.problem ?? "",
-      scope: filters.scope ?? "",
       fromDate: filters.fromDate || "",
       toDate: filters.toDate || "",
-      sortBy: sorting?.id ?? "createdAt",
-      sortOrder: sorting?.desc ? "desc" : "asc",
+      sorting: sorting?.id ? { id: sorting.id, desc: !!sorting.desc } : null,
     }),
     [filters, pagination, sorting],
   );

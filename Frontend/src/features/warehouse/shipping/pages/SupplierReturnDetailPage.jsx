@@ -15,12 +15,16 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import { useHeaderStore } from "@/shared/store/headerStore";
-import { usePurchaseReturnQuery } from "@/features/purchases/returns/services/queries";
+import {
+  usePurchaseReturnQuery,
+  usePurchaseForReturnQuery,
+} from "@/features/purchases/returns/services/queries";
 import { useExecuteGoodsRoundMutation } from "@/features/purchases/returns/services/mutations";
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
 import { buildGoodsLines } from "@/shared/domain/returns/resolutions";
 import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
 import { CLAIM_SCOPES } from "@/shared/domain/returns/scopes";
+import { claimQuarantinedQuantity } from "@/shared/domain/returns/receivingReport";
 import { ProductUnitStatusEnum } from "@/shared/domain/enums/unitStatus";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import { useGoodsRoundForm } from "@/shared/hooks/useGoodsRoundForm";
@@ -52,26 +56,36 @@ const SECTIONS = [
   },
   {
     direction: GOODS_SCRAP,
-    title: "اسقاط از قرنطینه",
-    subtitle: "این کالاها از چرخه خارج و به‌عنوان زیان ثبت می‌شوند.",
+    title: "اسقاط",
+    subtitle:
+      "این کالاها از چرخه خارج و به‌عنوان زیان ثبت می‌شوند. معمولاً از قرنطینه؛ اگر عیب بعد از دریافت روی کالای موجودی پیدا شده، مبدأ را «موجودی» بگذارید.",
   },
 ];
 
-// عودت روی مرجوعی خرید مبدأ می‌خواهد و سرور حدسش نمی‌زند. کالای خارج از
-// سفارش هرگز وارد موجودی نشده، پس پیشنهادِ طبیعی‌اش قرنطینه است؛ برای
-// کالای سهمِ سفارش هر دو ممکن است و انتخاب با انباردار می‌ماند.
-const sourceRequired = (line) => line.direction === GOODS_OUT;
-const defaultSource = (line) =>
-  line.direction === GOODS_OUT && line.scope === CLAIM_SCOPES.OFF_ORDER
-    ? ProductUnitStatusEnum.QUARANTINED
-    : null;
+// مبدأ را انباردار می‌گوید و سرور حدسش نمی‌زند؛ فرم فقط پیشنهاد می‌دهد:
+//  - عودت: کالای خارج از سفارش هرگز وارد موجودی نشده، پس قرنطینه. برای
+//    کالای سهمِ سفارش، اگر انبار هنگامِ دریافت همین مقدار را خراب گزارش
+//    کرده و در قرنطینه است، قرنطینه؛ وگرنه (عیبی که بعداً روی قفسه پیدا
+//    شده) انتخاب با انباردار می‌ماند.
+//  - اسقاط: پیش‌فرض قرنطینه؛ «موجودی» برای عیبی که بعد از دریافت روی قفسه
+//    پیدا شده (بکند `Source = IN_STOCK` را روی اسقاط هم می‌پذیرد).
+//  - آزادسازی همیشه از قرنطینه است و مبدأ نمی‌خواهد.
+const sourceRequired = (line) =>
+  line.direction === GOODS_OUT || line.direction === GOODS_SCRAP;
+const suggestSource = (line, receivingInfo) => {
+  if (line.direction === GOODS_SCRAP) return ProductUnitStatusEnum.QUARANTINED;
+  if (line.direction !== GOODS_OUT) return null;
+  if (line.scope === CLAIM_SCOPES.OFF_ORDER) return ProductUnitStatusEnum.QUARANTINED;
+  const quarantined = claimQuarantinedQuantity(receivingInfo, line) ?? 0;
+  return quarantined >= line.remainingQuantity ? ProductUnitStatusEnum.QUARANTINED : null;
+};
 
 /**
  * کارِ انبار روی یک مرجوعیِ خرید: عودت به تامین‌کننده، و تعیین تکلیفِ
  * کالای قرنطینه (آزادسازی / اسقاط) — همه یک دورِ `ExecuteGoodsRound`.
  *
  * `observations` اینجا فرستاده نمی‌شود — کالا از انبارِ خودمان می‌رود.
- * اسکنِ دانه‌ها برای کالای ردیابی‌پذیر در عودت الزامی و بقیه‌جا اختیاری است.
+ * اسکنِ دانه‌ها فقط در عودتِ کالای ردیابی‌پذیر از موجودیِ قفسه الزامی و بقیه‌جا اختیاری است.
  */
 function SupplierReturnShipmentForm({ purchaseReturn }) {
   const navigate = useNavigate();
@@ -99,9 +113,20 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
     return map;
   }, [productsData]);
 
+  const { data: receivingInfo } = usePurchaseForReturnQuery(purchaseReturn.purchaseId);
+  const defaultSource = useCallback(
+    (line) => suggestSource(line, receivingInfo),
+    [receivingInfo],
+  );
+
+  // اسکن فقط وقتی الزامی است که کالای ردیابی‌پذیر از *قفسه* برمی‌گردد: باید
+  // معلوم شود دقیقاً کدام دانه‌ی برچسب‌خورده رفت. دانه‌ی قرنطینه هنگامِ
+  // دریافت کنار گذاشته شده و ممکن است هنوز برچسب نخورده باشد؛ سرور آن را
+  // از روی قرنطینه‌ی همان قلم برمی‌دارد، پس اسکنش اختیاری است.
   const barcodesRequired = useCallback(
-    (line) =>
+    (line, source) =>
       line.direction === GOODS_OUT &&
+      source === ProductUnitStatusEnum.IN_STOCK &&
       Boolean(productMap.get(line.productId)?.requiresUnitTracking),
     [productMap],
   );

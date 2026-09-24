@@ -28,6 +28,11 @@ import SaleItemsSection from "../components/forms/SaleItemsSection";
 import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
 import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
 import SaleStatusSection from "../components/forms/SaleStatusSection";
+import {
+  RETURNABLE_SALE_STATUSES,
+  canDeleteSale,
+} from "../domain/saleRules";
+import OrderItemsReadOnly from "@/shared/components/forms/OrderItemsReadOnly";
 import OrderLogisticsSection from "@/shared/components/forms/OrderLogisticsSection";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
@@ -43,11 +48,6 @@ const SORTING = { id: "name", desc: false };
 
 // وضعیت‌هایی که ثبت مرجوعی از روی آن‌ها ممکن است — یعنی چیزی از انبار
 // بیرون رفته باشد. عددی‌اند چون `status` روی سیم همیشه عدد است.
-const RETURNABLE_STATUSES = [
-  SaleStatusEnum.SHIPPED,
-  SaleStatusEnum.PARTIALLY_DELIVERED,
-  SaleStatusEnum.DELIVERED,
-];
 
 export default function SaleDetailForm({ saleData }) {
   const navigate = useNavigate();
@@ -103,33 +103,25 @@ export default function SaleDetailForm({ saleData }) {
     return null;
   }
 
-  const computedTotal = items.reduce((sum, item) => {
-    const base = (item.quantity || 0) * (item.unitPrice || 0);
-    const disc = (base * (item.discount || 0)) / 100;
-    return sum + base - disc;
-  }, 0);
-
   // وضعیتِ *ذخیره‌شده* — نه انتخابِ در حال ویرایش؛ عنوان کارت سند باید
   // به فروشِ روی سرور واکنش نشان بدهد، نه به مقدارِ موقتِ فرم.
   const isProforma = isSaleProforma(saleData.status);
+
+  // اقلام فقط در پیش‌فاکتور تغییر می‌کنند؛ بعد از آن جمع همان مبلغِ
+  // ذخیره‌شده‌ی سرور است (در فروشِ اقساطی هم باید با قرارداد برابر بماند).
+  const computedTotal = isProforma
+    ? items.reduce((sum, item) => {
+        const base = (item.quantity || 0) * (item.unitPrice || 0);
+        const disc = (base * (item.discount || 0)) / 100;
+        return sum + base - disc;
+      }, 0)
+    : Number(saleData.totalAmount) || 0;
 
   const selectedStatus =
     formData.status === "" || formData.status == null
       ? SaleStatusEnum.PROFORMA
       : Number(formData.status);
 
-  /**
-   * قاعده‌ی بکند برای فروش (`CreateSaleCommandHandler`/
-   * `UpdateSaleCommandHandler`): خروج از پیش‌فاکتور *دستی نیست*. اگر
-   * `paidAmount >= totalAmount` باشد، خودِ سرور شماره‌ی فاکتور را
-   * می‌سازد، تاریخ می‌زند و وضعیت را به «آماده‌سازی انبار» می‌برد؛ و
-   * تلاش برای بردنِ دستیِ یک پیش‌فاکتورِ پرداخت‌نشده به وضعیتی دیگر با
-   * خطای اعتبارسنجی رد می‌شود. پس همین‌جا هم جلویش گرفته می‌شود تا
-   * کاربر به‌جای خطای سرور، دلیل را کنارِ فیلد ببیند.
-   */
-  const paidAmount = Number(formData.paidAmount) || 0;
-  const isFullyPaid = computedTotal > 0 && paidAmount >= computedTotal;
-  const proformaLocked = isProforma && !isFullyPaid;
 
   const onSubmit = (e) => {
     e.preventDefault();
@@ -146,17 +138,10 @@ export default function SaleDetailForm({ saleData }) {
       return;
     }
 
-    if (proformaLocked && selectedStatus !== SaleStatusEnum.PROFORMA) {
-      toast.error(
-        "تا تسویه‌ی کاملِ مشتری، فروش از «پیش‌فاکتور» خارج نمی‌شود؛ با ثبتِ پرداختِ کامل، فاکتور رسمی خودکار صادر می‌شود.",
-      );
-      return;
-    }
 
     const payload = {
       customerId: formData.customerId,
       customerName: formData.customerName,
-      invoiceNumber: formData.invoiceNumber,
       invoiceDate: formData.invoiceDate,
       dueDate: formData.dueDate || null,
       description: formData.description || "",
@@ -169,8 +154,9 @@ export default function SaleDetailForm({ saleData }) {
       checkNumber: formData.checkNumber || null,
       transferRef: formData.transferRef || null,
       mixedPayments: formData.mixedPayments || [],
-      // سندی که هنوز شماره‌ی فاکتور رسمی ندارد در مرحله‌ی پیش‌فاکتور
-      // است؛ ذخیره‌ی ساده‌ی فرم نباید آن را جلو ببرد.
+      paymentPaidAt: formData.paymentPaidAt || null,
+      // خروج از پیش‌فاکتور کارِ سرور است (با اولین پرداخت)؛ اینجا فقط
+      // قدم‌های دستیِ مجاز (`manualSaleStatusOptions`) فرستاده می‌شوند.
       status: selectedStatus,
       totalAmount: computedTotal,
       attachments: attachments.filesPayload,
@@ -201,12 +187,27 @@ export default function SaleDetailForm({ saleData }) {
       <form onSubmit={onSubmit}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 space-y-4">
-            <SaleItemsSection
-              items={items}
-              products={products}
-              isLoadingProducts={productsLoading}
-              onItemsChange={setItems}
-            />
+            {isProforma ? (
+              <SaleItemsSection
+                items={items}
+                products={products}
+                isLoadingProducts={productsLoading}
+                onItemsChange={setItems}
+              />
+            ) : (
+              <OrderItemsReadOnly
+                title="اقلام فروش"
+                items={saleData.items}
+                columns={[
+                  {
+                    key: "shipped",
+                    label: "ارسال‌شده",
+                    render: (item) =>
+                      (Number(item.shippedQuantity) || 0).toLocaleString("fa-IR"),
+                  },
+                ]}
+              />
+            )}
             <OrderInfoSection
               formData={formData}
               onFormChange={setFormData}
@@ -263,10 +264,9 @@ export default function SaleDetailForm({ saleData }) {
             />
 
             <SaleStatusSection
-              status={formData.status}
+              sale={saleData}
               selectedStatus={formData.status}
               onStatusChange={(val) => setFormData({ status: val })}
-              proformaLocked={proformaLocked}
             />
 
             <div className="flex gap-2">
@@ -291,7 +291,7 @@ export default function SaleDetailForm({ saleData }) {
               </Button>
             </div>
 
-            {RETURNABLE_STATUSES.includes(saleData.status) && (
+            {RETURNABLE_SALE_STATUSES.includes(Number(saleData.status)) && (
               <Button
                 type="button"
                 variant="outline"
@@ -306,16 +306,23 @@ export default function SaleDetailForm({ saleData }) {
               </Button>
             )}
 
-            <Button
-              type="button"
-              variant="destructive"
-              className="w-full gap-2"
-              onClick={() => setShowDeleteDialog(true)}
-              disabled={isBusy}
-            >
-              <Trash2 className="h-4 w-4" />
-              حذف فروش
-            </Button>
+            {canDeleteSale(saleData) ? (
+              <Button
+                type="button"
+                variant="destructive"
+                className="w-full gap-2"
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={isBusy}
+              >
+                <Trash2 className="h-4 w-4" />
+                حذف فروش
+              </Button>
+            ) : (
+              <p className="text-xs text-muted-foreground text-center px-2">
+                از این فروش کالا ارسال شده و دیگر قابل حذف نیست؛ برای برگشتِ
+                کالا مرجوعی ثبت کنید.
+              </p>
+            )}
           </div>
         </div>
       </form>

@@ -1,4 +1,6 @@
 import axiosInstance from "@/shared/services/api/axios";
+import { toApiSort } from "@/shared/services/api/sorting";
+import { PURCHASE_SORT_COLUMNS } from "@/features/purchases/orders/services/api-v1";
 import { idempotent, normalizeListResponse } from "@/shared/services/api/contract";
 import { receivingStatusesOf } from "../domain/receivingVocabulary";
 
@@ -32,6 +34,7 @@ export async function fetchReceivablePurchases(params = {}) {
       statuses,
       fromDate: params.fromDate || undefined,
       toDate: params.toDate || undefined,
+      ...toApiSort(params.sorting, PURCHASE_SORT_COLUMNS),
     },
     paramsSerializer: { indexes: null },
   });

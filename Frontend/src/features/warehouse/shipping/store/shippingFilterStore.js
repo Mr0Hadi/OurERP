@@ -1,5 +1,5 @@
 import { createFilterStore } from "@/shared/store/createFilterStore";
-import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
+import { SHIPPING_AWAITING } from "../domain/shippingVocabulary";
 
 export const useShippingFilterStore = createFilterStore({
   filters: {
@@ -7,8 +7,8 @@ export const useShippingFilterStore = createFilterStore({
     globalSearch: "",
     // بکند اینجا `CustomerId` ندارد؛ فیلترِ مشتری روی *نام* است.
     customerName: "",
-    // صف پیش‌فرض روی «آماده‌سازی انبار» است؛ «ارسال ناقص» با همین فیلتر دیده می‌شود.
-    status: SaleStatusEnum.PROCESSING,
+    // صفِ پیش‌فرض: «آماده‌سازی انبار» و «ارسال ناقص» با هم.
+    status: SHIPPING_AWAITING,
     fromDate: "",
     toDate: "",
   },

@@ -13,6 +13,7 @@ import {
 } from "@/shared/components/ui/select";
 import { useShippingFilterStore } from "../../store/shippingFilterStore";
 import { SHIPPING_STATUS_OPTIONS } from "../../domain/shippingVocabulary";
+import { parseQueueFilter } from "../../../shared/queueFilters";
 
 /**
  * مشتری اینجا کشویی نیست: `GetSaleListQuery` فیلترِ `CustomerId` ندارد و
@@ -85,7 +86,10 @@ const ShippingFilters = () => {
         <Label className="whitespace-nowrap font-medium text-foreground text-sm">
           وضعیت
         </Label>
-        <Select value={String(status)} onValueChange={(v) => setStatus(Number(v))}>
+        <Select
+          value={String(status)}
+          onValueChange={(v) => setStatus(parseQueueFilter(v))}
+        >
           <SelectTrigger className="flex-1 w-full">
             <SelectValue />
           </SelectTrigger>

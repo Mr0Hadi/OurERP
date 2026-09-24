@@ -5,6 +5,19 @@ import {
 } from "@/shared/services/api/contract";
 import { toApiClaim, fromApiReturn } from "./apiMapping";
 import { toApiComposition } from "@/shared/domain/returns/resolutions";
+import { toApiSort } from "@/shared/services/api/sorting";
+import { RETURNABLE_SALE_STATUSES } from "@/features/sales/orders/domain/saleRules";
+
+/** `SaleReturnListSortEnum`ِ بکند، بر اساسِ شناسه‌ی ستونِ جدول. */
+const SALE_RETURN_SORT_COLUMNS = {
+  returnNumber: 1,
+  returnDate: 2,
+  saleInvoiceNumber: 3,
+  customerName: 4,
+  status: 5,
+  totalQuantity: 6,
+  totalAmount: 7,
+};
 
 /**
  * نسخه‌ی هماهنگ‌شده با بکندِ واقعی — کنترلر `api/SaleReturn`
@@ -33,7 +46,7 @@ export async function fetchSalesReturns(params = {}) {
       problem: params.problem !== "" ? params.problem : undefined,
       fromDate: params.fromDate || undefined,
       toDate: params.toDate || undefined,
-      // scope/sortBy/sortOrder روی این لیست پشتیبانی نمی‌شوند.
+      ...toApiSort(params.sorting, SALE_RETURN_SORT_COLUMNS),
     },
   });
   return normalizeListResponse(data, { itemsKey: "returnList" });
@@ -46,12 +59,18 @@ export async function fetchSalesReturnById(id) {
   return fromApiReturn(data);
 }
 
-/** فهرست کوتاهِ فروش‌های قابل‌مرجوع برای انتخابگر فرم — بکند `returnable` ندارد، فیلترِ نهایی سمتِ فرانت است. */
+/**
+ * فهرست کوتاهِ فروش‌های قابل‌مرجوع برای انتخابگر فرم. بکند `returnable`
+ * ندارد؛ فروش‌هایی که `CreateSaleReturn` رد می‌کند (هنوز ارسال‌نشده، لغو یا
+ * مرجوع‌شده) همین‌جا کنار گذاشته می‌شوند.
+ */
 export async function fetchReturnableSales(search = "") {
   const { data } = await axiosInstance.get("/Sale/GetSaleList", {
     params: { invoiceNumber: search || undefined, take: 30 },
   });
-  return normalizeListResponse(data, { itemsKey: "saleList" }).items;
+  return normalizeListResponse(data, { itemsKey: "saleList" }).items.filter((sale) =>
+    RETURNABLE_SALE_STATUSES.includes(Number(sale.status)),
+  );
 }
 
 /**

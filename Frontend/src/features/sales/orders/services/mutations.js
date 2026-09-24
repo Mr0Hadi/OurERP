@@ -6,7 +6,6 @@ import {
   createInPersonSale,
   updateSale,
   updateSaleStatus,
-  updateSalePayment,
   removeSale
 } from './api-v1';
 import { saleKeys } from './queryKeys';
@@ -81,11 +80,13 @@ export const useUpdateSaleStatusMutation = () => {
       }
       return { previousSale };
     },
-    onSuccess: (updatedSale) => {
-      queryClient.setQueryData(saleKeys.detail(updatedSale.id), updatedSale);
+    // `updateSaleStatus` سندِ تازه‌خوانده را برمی‌گرداند (`UpdateSale` خودش
+    // `data` ندارد). شناسه از ورودی خوانده می‌شود، نه از پاسخ.
+    onSuccess: (updatedSale, { id }) => {
+      if (updatedSale) queryClient.setQueryData(saleKeys.detail(id), updatedSale);
       // تغییر دستی وضعیت فروش می‌تواند واجدشرایط‌بودنِ آن برای «ارسال
       // انبار» یا «مرجوعی فروش» را هم تغییر دهد.
-      invalidateSalesEcosystem(queryClient, updatedSale.id);
+      invalidateSalesEcosystem(queryClient, id);
       toast.success('وضعیت فروش به‌روزرسانی شد');
     },
     onError: (error, variables, context) => {
@@ -97,53 +98,20 @@ export const useUpdateSaleStatusMutation = () => {
   });
 };
 
-export const useRecordSalePaymentMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, paymentData }) => updateSalePayment(id, paymentData),
-    onMutate: async ({ id, paymentData }) => {
-      await queryClient.cancelQueries({ queryKey: saleKeys.detail(id) });
-      const previousSale = queryClient.getQueryData(saleKeys.detail(id));
-      if (previousSale) {
-        queryClient.setQueryData(saleKeys.detail(id), {
-          ...previousSale,
-          paidAmount: previousSale.paidAmount + paymentData.amount,
-        });
-      }
-      return { previousSale };
-    },
-    onSuccess: (updatedSale) => {
-      queryClient.setQueryData(saleKeys.detail(updatedSale.id), updatedSale);
-      queryClient.invalidateQueries({ queryKey: saleKeys.lists() });
-      // صفِ ارسال مبلغ فاکتور را در ستون «مبلغ» نشان می‌دهد — قرینه‌ی
-      // همین مسیر در سمت خرید.
-      queryClient.invalidateQueries({ queryKey: shippingKeys.lists() });
-      toast.success('دریافت وجه با موفقیت ثبت شد');
-    },
-    onError: (error, variables, context) => {
-      if (context?.previousSale) {
-        queryClient.setQueryData(saleKeys.detail(variables.id), context.previousSale);
-      }
-      toast.error(error?.message || 'خطا در ثبت دریافت وجه');
-    },
-  });
-};
-
 export const useRemoveSaleMutation = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   return useMutation({
     mutationFn: removeSale,
-    onSuccess: (removedSale) => {
-      queryClient.removeQueries({ queryKey: saleKeys.detail(removedSale.id) });
-      invalidateSalesEcosystem(queryClient, removedSale.id);
-      toast.success("خرید با موفقیت حذف شد");
+    onSuccess: (_, id) => {
+      queryClient.removeQueries({ queryKey: saleKeys.detail(id) });
+      invalidateSalesEcosystem(queryClient);
+      toast.success("فروش با موفقیت حذف شد");
       navigate(ROUTES.SALES);
     },
     onError: (error) => {
-      toast.error(error?.message || "خطا در حذف خرید");
+      toast.error(error?.message || "خطا در حذف فروش");
     },
   });
 };

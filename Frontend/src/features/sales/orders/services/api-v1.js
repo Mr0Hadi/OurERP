@@ -5,6 +5,7 @@ import {
 } from "@/shared/services/api/contract";
 import { toDateOnly } from "@/shared/lib/dateUtils";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+import { toApiSort } from "@/shared/services/api/sorting";
 
 export {
   SaleStatusEnum as SALE_STATUSES,
@@ -13,32 +14,31 @@ export {
 } from "@/shared/domain/enums/saleStatus";
 
 /**
- * نسخه‌ی هماهنگ‌شده با بکندِ واقعی — کنترلر `api/Sale`
- * (`Backend-Net/docs/api-guide.fa.md`، بخش ۱۱). بکند از الگوی
- * `api/{Controller}/{Action}` استفاده می‌کند، نه REST.
+ * کنترلر `api/Sale` (`Backend-Net/docs/api-guide.fa.md`، بخش ۱۱). بکند از
+ * الگوی `api/{Controller}/{Action}` استفاده می‌کند، نه REST.
  *
- * به‌روزرسانیِ ۲۰۲۶-۰۹-۰۲ — دو شکافِ قبلی بسته شد:
- *  - **پیش‌فاکتور:** `SalesStatusEnum.PROFORMA = 0` در بکند هم هست و
- *    شش عضوِ اولِ enum عیناً با فرانت یکی است. در پیش‌فاکتور،
- *    `invoiceNumber`/`invoiceDate` الزامی نیستند. **خروج از پیش‌فاکتور
- *    دستی نیست:** اگر `paidAmount >= totalAmount` باشد، خودِ
- *    `CreateSale`/`UpdateSale` شماره‌ی فاکتور را می‌سازد، تاریخ می‌زند و
- *    وضعیت را `PROCESSING` می‌کند؛ و تلاش برای خروجِ دستی بدون تسویه‌ی
- *    کامل با ۴۰۰ رد می‌شود.
- *  - **ضمیمه‌ی فاکتور:** `attachments` روی Create/Update پذیرفته و در
- *    `GetSaleDetail` برگردانده می‌شود. رفتارِ Update **جایگزینیِ کامل**
- *    است، پس همیشه فهرستِ نهایی فرستاده می‌شود.
- *
- * ⚠️ چیزهایی که هنوز حل‌نشده مانده‌اند:
- *  - ثبتِ پرداختِ پله‌ای وجود ندارد؛ `paidAmount` فقط با ارسالِ کل سند
- *    از نو overwrite می‌شود.
- *  - فیلترِ لیست `customerId` نمی‌گیرد، فقط `customerName`ِ متنی — پس
- *    انتخابِ کاربر به نام ترجمه و فرستاده می‌شود. اگر دو مشتری هم‌نام
- *    باشند، هر دو در نتیجه می‌آیند.
- *  - وضعیتِ `RETURNED` (۶) را بکند واقعاً ست می‌کند (وقتی مرجوعی کامل
- *    تسویه شود) ولی فرانت برچسبی برایش ندارد؛ چنین فروشی بدون برچسب
- *    نمایش داده می‌شود.
+ *  - **پیش‌فاکتور:** فروشِ تازه همیشه پیش‌فاکتور ثبت می‌شود. با اولین
+ *    ریالِ پرداخت (`paidAmount > 0`) خودِ `CreateSale`/`UpdateSale` شماره‌ی
+ *    فاکتور را می‌سازد، تاریخ می‌زند و وضعیت را `PROCESSING` می‌کند. فرانت
+ *    شماره‌ی فاکتور نمی‌فرستد.
+ *  - **اقلام:** `UpdateSale` اقلام را کامل جایگزین می‌کند؛ `id:0` یعنی
+ *    ردیفِ تازه.
+ *  - **ضمیمه و پرداخت:** هر دو روی Update **جایگزینیِ کامل**اند.
+ *  - **لیست:** فیلترِ مشتری فقط `customerName`ِ متنی است (نه `customerId`)؛
+ *    مرتب‌سازی با `sortBy`/`sortDirection` (`SaleListSortEnum`).
  */
+
+/** `SaleListSortEnum`ِ بکند، بر اساسِ شناسه‌ی ستونِ جدول. */
+export const SALE_SORT_COLUMNS = {
+  invoiceNumber: 1,
+  customerName: 2,
+  invoiceDate: 3,
+  paymentDate: 4,
+  status: 5,
+  paymentType: 6,
+  totalAmount: 7,
+  paidAmount: 8,
+};
 
 /**
  * شکلِ خطِ کالا در `CreateSaleItemDto` — بدون `id`، چون هنوز ردیفی وجود
@@ -62,33 +62,42 @@ function toApiUpdateItems(items = []) {
   }));
 }
 
-/** همان نگاشتِ سمتِ خرید — توضیح کاملش در `purchases/orders/services/api-v1.js`. */
+/**
+ * همان نگاشتِ سمتِ خرید — توضیح کاملش در `purchases/orders/services/api-v1.js`.
+ * `paidAt` در `PaymentDetailDto` غیرِ nullable است و نفرستادنش `0001-01-01`
+ * ذخیره می‌کند؛ ردیفی که از سرور آمده تاریخِ خودش را نگه می‌دارد.
+ */
 function toApiPaymentDetails({
   paymentType,
   paidAmount,
+  paymentPaidAt,
   checkNumber,
   transferRef,
   mixedPayments,
 }) {
+  const now = new Date().toISOString();
+
   if (paymentType === PaymentTypeEnum.MIXED) {
     return (mixedPayments || []).map((part) => ({
       type: part.type,
       amount: Number(part.amount) || 0,
+      paidAt: part.paidAt || now,
       checkNumber: part.checkNumber || undefined,
       transferRef: part.transferRef || undefined,
     }));
   }
 
   const amount = Number(paidAmount) || 0;
+  const paidAt = paymentPaidAt || now;
 
   if (paymentType === PaymentTypeEnum.CHECK) {
-    return [{ type: paymentType, amount, checkNumber: checkNumber || undefined }];
+    return [{ type: paymentType, amount, paidAt, checkNumber: checkNumber || undefined }];
   }
   if (paymentType === PaymentTypeEnum.TRANSFER) {
-    return [{ type: paymentType, amount, transferRef: transferRef || undefined }];
+    return [{ type: paymentType, amount, paidAt, transferRef: transferRef || undefined }];
   }
   if (paymentType === PaymentTypeEnum.CREDIT) {
-    return [{ type: paymentType, amount }];
+    return [{ type: paymentType, amount, paidAt }];
   }
   return [];
 }
@@ -99,12 +108,13 @@ function fromApiPaymentDetails(paymentDetails = [], paymentType) {
     id: detail.id,
     type: detail.type,
     amount: Number(detail.amount) || 0,
+    paidAt: detail.paidAt || null,
     checkNumber: detail.checkNumber || "",
     transferRef: detail.transferRef || "",
   }));
 
   if (paymentType === PaymentTypeEnum.MIXED) {
-    return { mixedPayments: rows, checkNumber: "", transferRef: "" };
+    return { mixedPayments: rows, checkNumber: "", transferRef: "", paymentPaidAt: null };
   }
 
   const single = rows.find((row) => row.checkNumber || row.transferRef) || rows[0];
@@ -112,6 +122,7 @@ function fromApiPaymentDetails(paymentDetails = [], paymentType) {
     mixedPayments: [],
     checkNumber: single?.checkNumber || "",
     transferRef: single?.transferRef || "",
+    paymentPaidAt: single?.paidAt || null,
   };
 }
 
@@ -119,9 +130,8 @@ function fromApiPaymentDetails(paymentDetails = [], paymentType) {
  * سرور → فرم، برای کلِ سندِ فروش. دوقلوی `fromApiPurchase`؛ تنها
  * تفاوتش این است که یادداشت‌های حمل اینجا `shippingNotes` نام دارند.
  *
- * ⚠️ `GetSaleDetail` موجودیتِ خامِ `SaleItem` را برمی‌گرداند و `Product`
- * را `Include` نمی‌کند، پس نام و کدِ کالا در پاسخ نیست؛ `ProductPicker`
- * آن‌ها را از فهرستِ کالاها جبران می‌کند.
+ * `SaleItemDto` نامِ کالا را دارد ولی کد و واحد را نه؛ `ProductPicker`
+ * آن دو را از فهرستِ کالاها جبران می‌کند.
  */
 export function fromApiSale(dto) {
   if (!dto) return dto;
@@ -156,7 +166,6 @@ function toApiAttachments(attachments = []) {
 function toApiSalePayload(saleData) {
   return {
     customerId: saleData.customerId,
-    invoiceNumber: saleData.invoiceNumber,
     invoiceDate: saleData.invoiceDate || null,
     paymentDate: saleData.dueDate || null,
     description: saleData.description || undefined,
@@ -183,7 +192,7 @@ export async function fetchSales(params = {}) {
       paymentType: params.paymentType !== "" ? params.paymentType : undefined,
       fromDate: params.fromDate || undefined,
       toDate: params.toDate || undefined,
-      // sortBy/sortOrder روی این لیست پشتیبانی نمی‌شوند.
+      ...toApiSort(params.sorting, SALE_SORT_COLUMNS),
     },
   });
   return normalizeListResponse(data, { itemsKey: "saleList" });
@@ -244,32 +253,21 @@ export async function updateSale(id, updates) {
 /**
  * جایگزینِ واقعی برای PATCH وضعیت وجود ندارد؛ باید کل سند را با
  * `UpdateSale` فرستاد — و چون آن دستور همه‌چیز (از جمله اقلام و
- * ضمیمه‌ها) را بازنویسی می‌کند، فرستادنِ یک `{status}`ِ تنها سند را
- * خالی می‌کند. پس سندِ فعلی اول خوانده می‌شود.
+ * ضمیمه‌ها) را بازنویسی می‌کند، سندِ فعلی اول خوانده می‌شود.
  *
- * هزینه‌اش یک رفت‌وبرگشتِ اضافه است تا امضای ساده‌ی `(id, status)` برای
- * فراخوان حفظ شود.
+ * `UpdateSale` هیچ `data`یی برنمی‌گرداند؛ سندِ تازه دوباره خوانده می‌شود
+ * تا فراخوان چیزی واقعی برای نشاندن در کش داشته باشد.
  */
 export async function updateSaleStatus(id, status) {
   const current = await fetchSaleById(id);
-  return updateSale(id, { ...current, status });
+  await updateSale(id, { ...current, status });
+  return fetchSaleById(id);
 }
 
-/**
- * ⚠️ هیچ endpointِ ثبتِ‌پرداختِ پله‌ای روی بکند نیست (گزارشِ شکاف،
- * بخش ۶). این تابع فعلاً امضایش را نگه می‌دارد ولی جایی برای صدازدن
- * ندارد؛ وقتی بکند این قابلیت را اضافه کرد، پیاده‌سازی واقعی همین‌جا
- * می‌آید.
- */
-export async function updateSalePayment() {
-  throw new Error(
-    "بکند فعلاً endpointِ ثبتِ پرداختِ پله‌ای ندارد — به گزارشِ شکافِ خرید/فروش مراجعه کنید.",
-  );
-}
-
+/** `DeleteSale` هیچ `data`یی برنمی‌گرداند؛ شناسه برای پاک‌کردنِ کش از خودِ ورودی برمی‌گردد. */
 export async function removeSale(id) {
-  const { data } = await axiosInstance.delete("/Sale/DeleteSale", {
+  await axiosInstance.delete("/Sale/DeleteSale", {
     params: { id },
   });
-  return data;
+  return { id };
 }

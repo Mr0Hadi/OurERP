@@ -6,6 +6,18 @@ import {
 import { toApiClaim, fromApiReturn } from "./apiMapping";
 import { toApiComposition } from "@/shared/domain/returns/resolutions";
 import { PurchaseStatusEnum } from "@/shared/domain/enums/purchaseStatus";
+import { toApiSort } from "@/shared/services/api/sorting";
+
+/** `PurchaseReturnListSortEnum`ِ بکند، بر اساسِ شناسه‌ی ستونِ جدول. */
+const PURCHASE_RETURN_SORT_COLUMNS = {
+  returnNumber: 1,
+  returnDate: 2,
+  purchaseInvoiceNumber: 3,
+  supplierName: 4,
+  status: 5,
+  totalQuantity: 6,
+  totalAmount: 7,
+};
 
 /**
  * نسخه‌ی هماهنگ‌شده با بکندِ واقعی — کنترلر `api/PurchaseReturn`
@@ -56,6 +68,7 @@ export async function fetchPurchaseReturns(params = {}) {
       problem: params.problem !== "" ? params.problem : undefined,
       fromDate: params.fromDate || undefined,
       toDate: params.toDate || undefined,
+      ...toApiSort(params.sorting, PURCHASE_RETURN_SORT_COLUMNS),
     },
   });
   return normalizeListResponse(data, { itemsKey: "returnList" });

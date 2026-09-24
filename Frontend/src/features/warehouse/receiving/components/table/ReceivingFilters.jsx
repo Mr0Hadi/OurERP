@@ -12,10 +12,8 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import { useReceivingFilterStore } from "../../store/receivingFilterStore";
-import {
-  RECEIVING_AWAITING,
-  RECEIVING_STATUS_OPTIONS,
-} from "../../domain/receivingVocabulary";
+import { RECEIVING_STATUS_OPTIONS } from "../../domain/receivingVocabulary";
+import { parseQueueFilter } from "../../../shared/queueFilters";
 
 const renderSupplierPhone = (supplier) =>
   supplier.phone ? (
@@ -91,9 +89,7 @@ const ReceivingFilters = ({ suppliers = [], isSuppliersLoading = false }) => {
         </Label>
         <Select
           value={String(status)}
-          onValueChange={(v) =>
-            setStatus(v === RECEIVING_AWAITING ? RECEIVING_AWAITING : Number(v))
-          }
+          onValueChange={(v) => setStatus(parseQueueFilter(v))}
         >
           <SelectTrigger className="flex-1 w-full">
             <SelectValue />

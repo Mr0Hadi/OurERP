@@ -4,7 +4,7 @@ import { fetchPurchases, fetchPurchaseById } from "./api-v1";
 import { purchaseKeys } from "./queryKeys";
 import { useMemo } from "react";
 
-export function usePurchasesQuery(filters, pagination) {
+export function usePurchasesQuery(filters, pagination, sorting) {
   const queryParams = useMemo(
     () => ({
       page: pagination.pageIndex + 1,
@@ -15,8 +15,9 @@ export function usePurchasesQuery(filters, pagination) {
       paymentType: filters.paymentType ?? "",
       fromDate: filters.fromDate || "",
       toDate: filters.toDate || "",
+      sorting: sorting?.id ? { id: sorting.id, desc: !!sorting.desc } : null,
     }),
-    [filters, pagination],
+    [filters, pagination, sorting],
   );
 
   return useQuery({

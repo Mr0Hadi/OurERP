@@ -49,13 +49,11 @@ const SaleTable = ({
       {
         accessorKey: "status",
         header: "وضعیت",
-        enableSorting: false,
         cell: (info) => <SaleStatusBadge status={info.getValue()} />,
       },
       {
         accessorKey: "paymentType",
         header: "نوع پرداخت",
-        enableSorting: false,
         cell: (info) => (
           <PaymentTypeBadge
             type={info.getValue()}

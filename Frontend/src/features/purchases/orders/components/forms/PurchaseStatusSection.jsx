@@ -133,8 +133,8 @@ export default function PurchaseStatusSection({
           {locked ? (
             <p className="text-xs text-muted-foreground">
               این وضعیت را دریافتِ انبار تعیین می‌کند و دستی عوض نمی‌شود. اگر
-              تامین‌کننده بقیه‌ی کالا را نمی‌فرستد، قلمش را در «وضعیت دریافت
-              اقلام» ببندید.
+              تامین‌کننده بقیه‌ی کالا را نمی‌فرستد، قلمش را در کارتِ «اقلام خرید»
+              ببندید.
             </p>
           ) : (
           <p className="text-xs text-muted-foreground">

@@ -19,12 +19,12 @@ import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
 
 const PurchasesPage = () => {
   const navigate = useNavigate();
-  const { pagination, setPagination } =
+  const { pagination, sorting, setPagination, setSorting } =
     usePurchaseFilterStore();
   const debouncedFilters = useDebouncedPurchaseFilters();
 
   const { data, isLoading, isFetching, isError, error, refetch } =
-    usePurchasesQuery(debouncedFilters, pagination);
+    usePurchasesQuery(debouncedFilters, pagination, sorting);
 
   const { data: suppliersData, isLoading: isSuppliersLoading } =
     useSuppliersQuery(
@@ -66,6 +66,8 @@ const PurchasesPage = () => {
                 currentPage={currentPage}
                 pageSize={pagination.pageSize}
                 onPaginationChange={setPagination}
+                sorting={sorting}
+                onSortingChange={setSorting}
               />
             </FetchingOverlay>
           )}

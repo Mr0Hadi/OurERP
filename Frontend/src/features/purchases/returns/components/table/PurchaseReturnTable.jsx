@@ -30,6 +30,8 @@ const PurchaseReturnTable = ({
   currentPage,
   pageSize,
   onPaginationChange,
+  sorting,
+  onSortingChange,
 }) => {
   const navigate = useNavigate();
 
@@ -47,7 +49,6 @@ const PurchaseReturnTable = ({
       {
         accessorKey: "purchaseInvoiceNumber",
         header: "فاکتور خرید",
-        enableSorting: false,
         cell: (info) => (
           <span className="font-mono text-xs text-muted-foreground">
             {info.getValue()}
@@ -108,7 +109,6 @@ const PurchaseReturnTable = ({
       {
         accessorKey: "status",
         header: "وضعیت",
-        enableSorting: false,
         cell: (info) => <PurchaseReturnStatusBadge status={info.getValue()} />,
       },
       {
@@ -151,8 +151,8 @@ const PurchaseReturnTable = ({
       currentPage={currentPage}
       pageSize={pageSize}
       onPaginationChange={onPaginationChange}
-      // `GetPurchaseReturnList` مرتب‌سازی نمی‌گیرد؛ ترتیب همیشه جدیدترین‌ها اول است.
-      sortable={false}
+      sorting={sorting}
+      onSortingChange={onSortingChange}
       emptyState={EMPTY_STATE}
     />
   );
