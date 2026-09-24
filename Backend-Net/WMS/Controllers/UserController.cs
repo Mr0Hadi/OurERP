@@ -67,6 +67,13 @@ namespace WMS.Controllers
         }
 
         [HasPermission(PermissionEnum.UserUpdate)]
+        [HttpPut("ResetUserPassword")]
+        public async Task<ActionResult<ResponseDto>> ResetUserPassword([FromBody] ResetUserPasswordCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.UserUpdate)]
         [HttpPut("ChangeUserTeam")]
         public async Task<ActionResult<ResponseDto>> ChangeUserTeam([FromBody] ChangeUserTeamCommand request)
         {
