@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { CheckCircle, AlertTriangle, X } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
@@ -67,8 +67,13 @@ function withProductImage(rows, productMap) {
  * یک محموله‌ی ورودی از تامین‌کننده: اقلامِ خرید (با شمارش و خرابی)،
  * کالای سفارش‌نداده، و کالای جایگزینی که مرجوعی‌های همین خرید منتظرش‌اند
  * — همه با یک `ReceiveShipment` و در یک تراکنش.
+ *
+ * `replacementReturnId` (از صفِ «مرجوعی‌های در انتظار دریافت»، `?returnId=`):
+ * فقط کالای جایگزینِ همان مرجوعی ثبت می‌شود؛ اقلامِ خرید، کالای
+ * سفارش‌نداده، عکس‌ها و کارتِ قرنطینه که مالِ دریافتِ خودِ خریدند پنهان‌اند.
  */
-function ReceivingDetailForm({ receivingInfo }) {
+function ReceivingDetailForm({ receivingInfo, replacementReturnId }) {
+  const replacementOnly = replacementReturnId != null;
   const navigate = useNavigate();
   const receiveMutation = useReceiveShipmentMutation();
 
@@ -110,7 +115,9 @@ function ReceivingDetailForm({ receivingInfo }) {
         .filter(
           (effect) =>
             effect.direction === EFFECT_DIRECTIONS.GOODS_IN &&
-            effect.remainingQuantity > 0,
+            effect.remainingQuantity > 0 &&
+            (!replacementOnly ||
+              effect.purchaseReturnId === replacementReturnId),
         )
         .map((effect) => ({
           effectId: effect.effectId,
@@ -123,11 +130,11 @@ function ReceivingDetailForm({ receivingInfo }) {
           unit: effect.unit,
           remainingQuantity: effect.remainingQuantity,
         })),
-    [pendingEffects],
+    [pendingEffects, replacementOnly, replacementReturnId],
   );
   const replacement = useGoodsRoundForm(replacementLines, {
     withObservations: true,
-    startEmpty: true,
+    startEmpty: !replacementOnly,
   });
 
   // عکس‌های همین دور. `filesPayload` دقیقاً شکلِ
@@ -154,7 +161,10 @@ function ReceivingDetailForm({ receivingInfo }) {
   );
 
   const isBusy = receiveMutation.isPending || images.isUploading;
-  const hasSomething = hasSomethingToReceive || replacement.hasSomethingToRecord;
+  const hasSomething = replacementOnly
+    ? replacement.hasSomethingToRecord
+    : hasSomethingToReceive || replacement.hasSomethingToRecord;
+  const complete = replacementOnly ? replacement.isAllComplete : isAllComplete;
 
   const handleSubmit = () => {
     // سربرگِ دورهای مرجوعی همان مشخصاتِ خودِ محموله است.
@@ -165,7 +175,7 @@ function ReceivingDetailForm({ receivingInfo }) {
       note: formData.receivingNote,
     };
     const command = {
-      purchase: buildCommand(images.filesPayload),
+      purchase: replacementOnly ? null : buildCommand(images.filesPayload),
       purchaseReturnRounds: replacement.buildCommandsByReturn(
         shipmentHeader,
         "purchaseReturnId",
@@ -191,30 +201,38 @@ function ReceivingDetailForm({ receivingInfo }) {
     <div className="container max-w-6xl mx-auto px-4 space-y-4 animate-in fade-in zoom-in-95 duration-300">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
-          <ReceivingItemsSection
-            items={displayItems}
-            subtitle="تعدادِ رسیده را بشمارید؛ بیشتر از سفارش هم ثبت می‌شود. خرابی‌ها به قرنطینه می‌روند."
-            onArrivedChange={handleArrivedChange}
-            onAddDefect={handleAddDefect}
-            onUpdateDefect={handleUpdateDefect}
-            onRemoveDefect={handleRemoveDefect}
-          />
+          {!replacementOnly && (
+            <ReceivingItemsSection
+              items={displayItems}
+              subtitle="تعدادِ رسیده را بشمارید؛ بیشتر از سفارش هم ثبت می‌شود. خرابی‌ها به قرنطینه می‌روند."
+              onArrivedChange={handleArrivedChange}
+              onAddDefect={handleAddDefect}
+              onUpdateDefect={handleUpdateDefect}
+              onRemoveDefect={handleRemoveDefect}
+            />
+          )}
 
-          <ReceivingUnlistedItemsSection
-            rows={unlistedItems}
-            onAdd={handleAddUnlisted}
-            onRemove={handleRemoveUnlisted}
-            onArrivedChange={handleArrivedChange}
-            onAddDefect={handleAddDefect}
-            onUpdateDefect={handleUpdateDefect}
-            onRemoveDefect={handleRemoveDefect}
-          />
+          {!replacementOnly && (
+            <ReceivingUnlistedItemsSection
+              rows={unlistedItems}
+              onAdd={handleAddUnlisted}
+              onRemove={handleRemoveUnlisted}
+              onArrivedChange={handleArrivedChange}
+              onAddDefect={handleAddDefect}
+              onUpdateDefect={handleUpdateDefect}
+              onRemoveDefect={handleRemoveDefect}
+            />
+          )}
 
           {replacement.rounds.length > 0 && (
             <GoodsRoundItemsSection
               rounds={displayReplacementRounds}
               title="کالای جایگزینِ مرجوعی"
-              subtitle="تامین‌کننده این‌ها را به‌جای کالای مرجوعی می‌فرستد. اگر در همین محموله رسیده‌اند، ثبتشان کنید."
+              subtitle={
+                replacementOnly
+                  ? "کالای جایگزینی که تامین‌کننده فرستاده. تعدادِ رسیده را تأیید کنید؛ اگر بخشی خراب است، ثبتش کنید."
+                  : "تامین‌کننده این‌ها را به‌جای کالای مرجوعی می‌فرستد. اگر در همین محموله رسیده‌اند، ثبتشان کنید."
+              }
               withObservations
               observationTexts={{
                 emptyHint:
@@ -228,52 +246,54 @@ function ReceivingDetailForm({ receivingInfo }) {
             />
           )}
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-semibold">
-                عکس‌های دریافت
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">
-                عکسِ محموله، بارنامه یا کارتنِ آسیب‌دیده. عکس‌ها روی خودِ
-                خرید ذخیره می‌شوند و در دورهای بعدی هم دیده می‌شوند.
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <FileUploadList
-                list={images}
-                title="عکس‌های این دور"
-                emptyLabel="هنوز عکسی اضافه نشده است."
-                notePlaceholder="توضیح عکس (مثلاً: کارتن آسیب‌دیده)"
-                disabled={isBusy}
-              />
+          {!replacementOnly && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-semibold">
+                  عکس‌های دریافت
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  عکسِ محموله، بارنامه یا کارتنِ آسیب‌دیده. عکس‌ها روی خودِ خرید
+                  ذخیره می‌شوند و در دورهای بعدی هم دیده می‌شوند.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <FileUploadList
+                  list={images}
+                  title="عکس‌های این دور"
+                  emptyLabel="هنوز عکسی اضافه نشده است."
+                  notePlaceholder="توضیح عکس (مثلاً: کارتن آسیب‌دیده)"
+                  disabled={isBusy}
+                />
 
-              {/* عکس‌های دورهای قبل فقط نمایش داده می‌شوند؛ اگر داخلِ
+                {/* عکس‌های دورهای قبل فقط نمایش داده می‌شوند؛ اگر داخلِ
                   آپلودر می‌نشستند، با هر دور دوباره فرستاده و روی سرور
                   تکراری ذخیره می‌شدند. */}
-              {(formData.receivingImages || []).length > 0 && (
-                <div className="space-y-2 border-t border-border pt-3">
-                  <p className="text-sm font-medium">عکس‌های دورهای قبل</p>
-                  <div className="flex flex-wrap gap-2">
-                    {formData.receivingImages.map((image) => (
-                      <figure key={image.id} className="w-24 space-y-1">
-                        <RemoteImage
-                          imageKey={image.objectKey}
-                          imageUrl={image.url}
-                          alt={image.fileName || "عکس دریافت"}
-                          className="h-24 w-24 rounded-md border border-border object-cover"
-                        />
-                        {image.note && (
-                          <figcaption className="text-[11px] text-muted-foreground line-clamp-2">
-                            {image.note}
-                          </figcaption>
-                        )}
-                      </figure>
-                    ))}
+                {(formData.receivingImages || []).length > 0 && (
+                  <div className="space-y-2 border-t border-border pt-3">
+                    <p className="text-sm font-medium">عکس‌های دورهای قبل</p>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.receivingImages.map((image) => (
+                        <figure key={image.id} className="w-24 space-y-1">
+                          <RemoteImage
+                            imageKey={image.objectKey}
+                            imageUrl={image.url}
+                            alt={image.fileName || "عکس دریافت"}
+                            className="h-24 w-24 rounded-md border border-border object-cover"
+                          />
+                          {image.note && (
+                            <figcaption className="text-[11px] text-muted-foreground line-clamp-2">
+                              {image.note}
+                            </figcaption>
+                          )}
+                        </figure>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <ReceivingTransporterSection
             formData={formData}
@@ -282,26 +302,40 @@ function ReceivingDetailForm({ receivingInfo }) {
         </div>
 
         <div className="space-y-4">
-          <ReceivingSummaryCard formData={formData} onFormChange={setFormData} />
+          <ReceivingSummaryCard
+            formData={formData}
+            onFormChange={setFormData}
+            replacementOnly={replacementOnly}
+          />
 
-          <ReceivingQuarantineCard receivingInfo={receivingInfo} />
+          {!replacementOnly && (
+            <ReceivingQuarantineCard receivingInfo={receivingInfo} />
+          )}
 
           <div className="flex gap-2">
             <Button
               className={`flex-1 gap-2 ${
-                !isAllComplete && items.length > 0
+                !complete && (replacementOnly || items.length > 0)
                   ? "bg-amber-600 hover:bg-amber-700 text-white"
                   : ""
               }`}
-              disabled={isBusy || !hasSomething}
+              disabled={
+                isBusy ||
+                !hasSomething ||
+                Boolean(replacementOnly && replacement.blockingReason)
+              }
               onClick={() => setShowConfirmDialog(true)}
             >
-              {isAllComplete ? (
+              {complete ? (
                 <CheckCircle className="h-4 w-4" />
               ) : (
                 <AlertTriangle className="h-4 w-4" />
               )}
-              {isAllComplete ? "تأیید دریافت" : "ثبت دریافت (با کسری)"}
+              {replacementOnly
+                ? "ثبت دریافت جایگزین"
+                : isAllComplete
+                  ? "تأیید دریافت"
+                  : "ثبت دریافت (با کسری)"}
             </Button>
             <Button
               type="button"
@@ -315,11 +349,13 @@ function ReceivingDetailForm({ receivingInfo }) {
             </Button>
           </div>
 
-          <p className="text-xs text-muted-foreground text-center px-2">
-            باقیمانده‌ای که این دور نرسیده برای محموله‌ی بعدی می‌ماند. کالای
-            خراب، مازاد و سفارش‌نداده به قرنطینه می‌رود و با «ثبت مغایرت»
-            تکلیفش روشن می‌شود.
-          </p>
+          {!replacementOnly && (
+            <p className="text-xs text-muted-foreground text-center px-2">
+              باقیمانده‌ای که این دور نرسیده برای محموله‌ی بعدی می‌ماند. کالای
+              خراب، مازاد و سفارش‌نداده به قرنطینه می‌رود و با «ثبت مغایرت»
+              تکلیفش روشن می‌شود.
+            </p>
+          )}
         </div>
       </div>
 
@@ -348,6 +384,10 @@ function ReceivingDetailForm({ receivingInfo }) {
 
 export default function ReceivingDetailPage() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const replacementReturnId = searchParams.get("returnId")
+    ? Number(searchParams.get("returnId"))
+    : null;
   const navigate = useNavigate();
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
@@ -363,12 +403,21 @@ export default function ReceivingDetailPage() {
       title: isLoading
         ? "در حال بارگذاری..."
         : receivingInfo
-          ? "دریافت کالا"
+          ? replacementReturnId != null
+            ? "دریافت کالای جایگزین"
+            : "دریافت کالا"
           : "خطا",
       showBack: true,
     });
     return () => clearHeader();
-  }, [navigate, setHeader, clearHeader, receivingInfo, isLoading]);
+  }, [
+    navigate,
+    setHeader,
+    clearHeader,
+    receivingInfo,
+    isLoading,
+    replacementReturnId,
+  ]);
 
   if (isLoading) return <WarehouseFormSkeleton />;
 
@@ -383,8 +432,9 @@ export default function ReceivingDetailPage() {
 
   return (
     <ReceivingDetailForm
-      key={receivingInfo.purchaseId}
+      key={`${receivingInfo.purchaseId}:${replacementReturnId ?? ""}`}
       receivingInfo={receivingInfo}
+      replacementReturnId={replacementReturnId}
     />
   );
 }

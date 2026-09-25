@@ -32,37 +32,10 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
-import { Badge } from "@/shared/components/ui/badge";
-import { BalanceTypeEnum } from "@/shared/domain/enums/balanceType";
+import LedgerBalanceBadge from "@/features/partyAccount/components/LedgerBalanceBadge";
+import { partyBalanceOf } from "@/features/partyAccount/domain/partyBalance";
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 50];
-
-const BalanceBadge = ({ balance, balanceType }) => {
-  const amount = Math.abs(Number(balance) || 0).toLocaleString("fa-IR");
-
-  if (balanceType === BalanceTypeEnum.DEBTOR) {
-    return (
-      <Badge className="bg-emerald-100/80 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100/90 dark:hover:bg-emerald-950/70 font-light text-lg px-3 py-4 rounded-full transition-colors">
-        بدهکار {amount} ریال
-      </Badge>
-    );
-  }
-  if (balanceType === BalanceTypeEnum.CREDITOR) {
-    return (
-      <Badge className="bg-red-100/80 text-red-700 dark:bg-red-950/60 dark:text-red-300 border-red-200 dark:border-red-800/50 hover:bg-red-100/90 dark:hover:bg-red-950/70 font-light text-lg px-3 py-4 rounded-full transition-colors">
-        طلبکار {amount} ریال
-      </Badge>
-    );
-  }
-  return (
-    <Badge
-      variant="outline"
-      className="text-muted-foreground font-light text-lg px-3 py-4 rounded-full"
-    >
-      صفر ریال
-    </Badge>
-  );
-};
 
 const SortIcon = ({ direction }) => {
   if (direction === "asc") return <ArrowUp className="h-4 w-4" />;
@@ -120,12 +93,16 @@ const CustomerTable = ({
         ),
       },
       {
-        accessorKey: "balance",
-        header: "وضعیت مالی",
+        // مانده‌ی دفتر حساب اشخاص (یا مانده‌ی دستی، اگر سرور هنوز دفتر ندارد).
+        // سرور روی آن مرتب نمی‌کند.
+        id: "ledgerBalance",
+        accessorFn: partyBalanceOf,
+        header: "مانده حساب",
+        enableSorting: false,
         cell: (info) => (
-          <BalanceBadge
+          <LedgerBalanceBadge
             balance={info.getValue()}
-            balanceType={info.row.original.balanceType}
+            className="font-light text-lg px-3 py-4 rounded-full"
           />
         ),
       },

@@ -37,6 +37,7 @@ import ReturnStatusBar from "@/shared/components/returns/ReturnStatusBar";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
 import RelatedReturnsCard from "@/shared/components/returns/RelatedReturnsCard";
+import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
 import { SALES_RETURN_STATUS_LABELS } from "../domain/salesReturnVocabulary";
 import SalesReturnResolutionSection from "../components/forms/SalesReturnResolutionSection";
 import { ROUTES } from "@/shared/constants/routes";
@@ -61,6 +62,13 @@ function SalesReturnDetailContent({ salesReturn }) {
     salesReturn.id,
   );
   const { data: relatedReturns } = useRelatedSalesReturnsQuery(
+    salesReturn.saleId,
+    salesReturn.id,
+  );
+
+  // روی هر کالا، چقدر در مرجوعی‌های دیگرِ همین سند ثبت شده.
+  const claimsElsewhere = useClaimsInOtherReturns(
+    "sale",
     salesReturn.saleId,
     salesReturn.id,
   );
@@ -111,6 +119,7 @@ function SalesReturnDetailContent({ salesReturn }) {
           order={sale}
           partyName={salesReturn.customerName}
           defaultOpen={false}
+          claimsElsewhere={claimsElsewhere}
         />
       )}
 

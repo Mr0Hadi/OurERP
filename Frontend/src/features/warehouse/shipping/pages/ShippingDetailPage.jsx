@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { CheckCircle, AlertTriangle, X } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
@@ -52,7 +52,12 @@ function withProductImage(rows, productMap) {
  * جایگزینی که مرجوعی‌های همین فروش باید برای مشتری بفرستند — همه با یک
  * `DispatchShipment` و در یک تراکنش.
  */
-function ShippingDetailForm({ sale }) {
+/**
+ * @param replacementReturnId از صفِ «مرجوعی‌های در انتظار ارسال» (`?returnId=`):
+ *   فقط کالای جایگزینِ همان مرجوعی ارسال می‌شود و اقلامِ خودِ فروش پنهان‌اند.
+ */
+function ShippingDetailForm({ sale, replacementReturnId }) {
+  const replacementOnly = replacementReturnId != null;
   const navigate = useNavigate();
   const dispatchMutation = useDispatchShipmentMutation();
 
@@ -94,7 +99,8 @@ function ShippingDetailForm({ sale }) {
         .filter(
           (effect) =>
             effect.direction === EFFECT_DIRECTIONS.GOODS_OUT &&
-            effect.remainingQuantity > 0,
+            effect.remainingQuantity > 0 &&
+            (!replacementOnly || effect.saleReturnId === replacementReturnId),
         )
         .map((effect) => ({
           effectId: effect.effectId,
@@ -107,7 +113,7 @@ function ShippingDetailForm({ sale }) {
           unit: effect.unit,
           remainingQuantity: effect.remainingQuantity,
         })),
-    [pendingEffects],
+    [pendingEffects, replacementOnly, replacementReturnId],
   );
   const replacementBarcodesRequired = useCallback(
     (line) => isTracked(line.productId),
@@ -115,7 +121,8 @@ function ShippingDetailForm({ sale }) {
   );
   const replacement = useGoodsRoundForm(replacementLines, {
     barcodesRequired: replacementBarcodesRequired,
-    startEmpty: true,
+    // وقتی کاربر فقط برای همین جایگزین آمده، مقدارها از اول پرند.
+    startEmpty: !replacementOnly,
   });
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -132,8 +139,13 @@ function ShippingDetailForm({ sale }) {
   );
 
   const isBusy = dispatchMutation.isPending;
-  const hasSomething = hasSomethingToShip || replacement.hasSomethingToRecord;
-  const blocking = blockingReason ?? replacement.blockingReason;
+  const hasSomething = replacementOnly
+    ? replacement.hasSomethingToRecord
+    : hasSomethingToShip || replacement.hasSomethingToRecord;
+  const blocking = replacementOnly
+    ? replacement.blockingReason
+    : (blockingReason ?? replacement.blockingReason);
+  const complete = replacementOnly ? replacement.isAllComplete : isAllComplete;
 
   const handleSubmit = () => {
     const shipmentHeader = {
@@ -143,8 +155,11 @@ function ShippingDetailForm({ sale }) {
       note: formData.shippingNote,
     };
     const command = {
-      sale: buildCommand(),
-      saleReturnRounds: replacement.buildCommandsByReturn(shipmentHeader, "saleReturnId"),
+      sale: replacementOnly ? null : buildCommand(),
+      saleReturnRounds: replacement.buildCommandsByReturn(
+        shipmentHeader,
+        "saleReturnId",
+      ),
       purchaseReturnRounds: [],
     };
     dispatchMutation.mutate(command, {
@@ -160,20 +175,26 @@ function ShippingDetailForm({ sale }) {
     <div className="container max-w-6xl mx-auto px-4 space-y-4 animate-in fade-in zoom-in-95 duration-300">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
-          <ShippingItemsSection
-            items={displayItems}
-            isTracked={isTracked}
-            allowExcess={isExcessAllowedFor(sale.status)}
-            onItemChange={handleItemChange}
-            onExcessChange={handleExcessChange}
-            onBarcodesChange={handleBarcodesChange}
-          />
+          {!replacementOnly && (
+            <ShippingItemsSection
+              items={displayItems}
+              isTracked={isTracked}
+              allowExcess={isExcessAllowedFor(sale.status)}
+              onItemChange={handleItemChange}
+              onExcessChange={handleExcessChange}
+              onBarcodesChange={handleBarcodesChange}
+            />
+          )}
 
           {replacement.rounds.length > 0 && (
             <GoodsRoundItemsSection
               rounds={displayReplacementRounds}
               title="کالای جایگزینِ مرجوعی"
-              subtitle="طبق تصمیمِ مرجوعی باید برای مشتری ارسال شود. اگر با همین محموله می‌رود، ثبتش کنید."
+              subtitle={
+                replacementOnly
+                  ? `کالای جایگزین برای ${sale.customerName || "مشتری"}. مقدارِ ارسالیِ این دور را تأیید کنید.`
+                  : "طبق تصمیمِ مرجوعی باید برای مشتری ارسال شود. اگر با همین محموله می‌رود، ثبتش کنید."
+              }
               withBarcodes
               onQuantityChange={replacement.handleQuantityChange}
               onBarcodesChange={replacement.handleBarcodesChange}
@@ -196,19 +217,23 @@ function ShippingDetailForm({ sale }) {
           <div className="flex gap-2">
             <Button
               className={`flex-1 gap-2 ${
-                !isAllComplete && items.length > 0
+                !complete && (replacementOnly || items.length > 0)
                   ? "bg-amber-600 hover:bg-amber-700 text-white"
                   : ""
               }`}
               disabled={isBusy || !hasSomething || Boolean(blocking)}
               onClick={() => setShowConfirmDialog(true)}
             >
-              {isAllComplete ? (
+              {complete ? (
                 <CheckCircle className="h-4 w-4" />
               ) : (
                 <AlertTriangle className="h-4 w-4" />
               )}
-              {isAllComplete ? "تأیید ارسال" : "ثبت ارسال (ناقص)"}
+              {replacementOnly
+                ? "ثبت ارسال جایگزین"
+                : isAllComplete
+                  ? "تأیید ارسال"
+                  : "ثبت ارسال (ناقص)"}
             </Button>
             <Button
               type="button"
@@ -254,6 +279,10 @@ function ShippingDetailForm({ sale }) {
 
 export default function ShippingDetailPage() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const replacementReturnId = searchParams.get("returnId")
+    ? Number(searchParams.get("returnId"))
+    : null;
   const navigate = useNavigate();
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
@@ -262,11 +291,17 @@ export default function ShippingDetailPage() {
 
   useEffect(() => {
     setHeader({
-      title: isLoading ? "در حال بارگذاری..." : sale ? "ارسال کالا" : "خطا",
+      title: isLoading
+        ? "در حال بارگذاری..."
+        : sale
+          ? replacementReturnId != null
+            ? "ارسال کالای جایگزین"
+            : "ارسال کالا"
+          : "خطا",
       showBack: true,
     });
     return () => clearHeader();
-  }, [navigate, setHeader, clearHeader, sale, isLoading]);
+  }, [navigate, setHeader, clearHeader, sale, isLoading, replacementReturnId]);
 
   if (isLoading)
     return (
@@ -286,5 +321,11 @@ export default function ShippingDetailPage() {
     );
   }
 
-  return <ShippingDetailForm key={sale.id} sale={sale} />;
+  return (
+    <ShippingDetailForm
+      key={`${sale.id}:${replacementReturnId ?? ""}`}
+      sale={sale}
+      replacementReturnId={replacementReturnId}
+    />
+  );
 }

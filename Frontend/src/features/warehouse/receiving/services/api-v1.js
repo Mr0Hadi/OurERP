@@ -18,8 +18,12 @@ import { receivingStatusesOf } from "../domain/receivingVocabulary";
  * خریدهایی که هنوز کالایشان به انبار نرسیده (کاملاً یا بخشی).
  *
  * `statuses` به شکلِ `statuses=2&statuses=3` فرستاده می‌شود (همان شکلی که
- * ASP.NET برای `List<>` می‌خواند). ردیف‌ها یک بار دیگر هم با همین فهرست
- * فیلتر می‌شوند تا صف هرگز پیش‌نویس یا خریدِ لغوشده نشان ندهد.
+ * ASP.NET برای `List<>` می‌خواند). بکندِ تازه همین را فیلتر می‌کند؛ ردیف‌ها
+ * یک بار دیگر هم اینجا فیلتر می‌شوند تا روی سرورِ قدیمی‌تر (که `statuses`
+ * را نمی‌شناسد) صف هرگز پیش‌فاکتور یا خریدِ لغوشده نشان ندهد.
+ *
+ * جست‌وجو فقط روی شماره‌ی فاکتور است (`invoiceNumber`)؛ تامین‌کننده
+ * فیلترِ جدای خودش را دارد.
  */
 export async function fetchReceivablePurchases(params = {}) {
   const statuses = receivingStatusesOf(params.status);

@@ -54,6 +54,23 @@ export const persianNameRules = (fieldName) => ({
 });
 
 /**
+ * نامِ اختیاریِ یک شخص که با فیلدِ دیگری جفت است (نام و نام خانوادگیِ
+ * مسئولِ تامین‌کننده): هر دو خالی مجاز است، ولی اگر یکی پر شد دیگری هم
+ * لازم است، و هر کدام فقط حروف فارسی.
+ */
+export const optionalPersonNameRules = (fieldName, pairedField) => ({
+  validate: (value, formValues) => {
+    const trimmed = value?.trim();
+    if (!trimmed) {
+      return formValues?.[pairedField]?.trim()
+        ? requiredMessage(fieldName)
+        : true;
+    }
+    return isPersianText(trimmed) || `${fieldName} فقط باید حروف فارسی باشد`;
+  },
+});
+
+/**
  * شماره‌ی موبایلِ اجباری. سرور روی مشتری/تامین‌کننده *فقط موبایل* را
  * می‌پذیرد و شماره‌ی ثابت را رد می‌کند.
  */

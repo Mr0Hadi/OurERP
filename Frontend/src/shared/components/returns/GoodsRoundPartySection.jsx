@@ -42,6 +42,9 @@ export default function GoodsRoundPartySection({
   header,
   onHeaderChange,
   plateHint,
+  // کدِ ملی برای کسی که کالای مشتری را برمی‌گرداند سند است؛ برای رانندهٔ
+  // تامین‌کننده که کالا را می‌برد لازم نیست.
+  showNationalId = true,
 }) {
   return (
     <Card>
@@ -57,7 +60,9 @@ export default function GoodsRoundPartySection({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div
+          className={`grid grid-cols-1 gap-4 ${showNationalId ? "md:grid-cols-2" : ""}`}
+        >
           <div className="space-y-1.5">
             <Label className="text-sm font-medium flex items-center gap-1.5">
               <User className="h-3.5 w-3.5 text-muted-foreground" />
@@ -71,21 +76,23 @@ export default function GoodsRoundPartySection({
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-sm font-medium flex items-center gap-1.5">
-              <IdCard className="h-3.5 w-3.5 text-muted-foreground" />
-              کد ملی (اختیاری)
-            </Label>
-            <Input
-              inputMode="numeric"
-              placeholder="مثلاً: ۰۰۱۲۳۴۵۶۷۸"
-              value={header.partyNationalId || ""}
-              onChange={(e) =>
-                onHeaderChange({ partyNationalId: e.target.value })
-              }
-              className="h-9 text-sm"
-            />
-          </div>
+          {showNationalId && (
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                <IdCard className="h-3.5 w-3.5 text-muted-foreground" />
+                کد ملی (اختیاری)
+              </Label>
+              <Input
+                inputMode="numeric"
+                placeholder="مثلاً: ۰۰۱۲۳۴۵۶۷۸"
+                value={header.partyNationalId || ""}
+                onChange={(e) =>
+                  onHeaderChange({ partyNationalId: e.target.value })
+                }
+                className="h-9 text-sm"
+              />
+            </div>
+          )}
         </div>
 
         <div className="space-y-1.5">

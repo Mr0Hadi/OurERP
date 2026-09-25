@@ -126,7 +126,7 @@ export default function CustomerAddressForm({
 
         <div className="space-y-1.5">
           <Label htmlFor="postalCode" className="text-sm font-medium">
-            کد پستی <span className="text-destructive">*</span>
+            کد پستی (اختیاری)
           </Label>
           <div className="relative">
             <Mail className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -135,9 +135,7 @@ export default function CustomerAddressForm({
               dir="ltr" 
               placeholder="1234567890" 
               className="h-10 pr-10 rounded-lg transition-all input-rtl-placeholder"
-              {...register("postalCode", {
-                required: requiredMessage("کد پستی"),
-              })} 
+              {...register("postalCode")}
             />
           </div>
           {errors?.postalCode && (

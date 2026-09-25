@@ -36,6 +36,11 @@ import { numberToPersianWords } from "@/shared/lib/numberToPersianWords";
  * ردیف هست، با جمع کل سند همگام می‌ماند — با هر تغییری در اقلام، نه
  * فقط لحظه‌ی انتخاب نوع پرداخت. به‌محض افزودن ردیف دوم، همگام‌سازی
  * متوقف می‌شود تا تقسیمِ دستیِ کاربر پاک نشود.
+ *
+ * مبلغ‌ها فقط در *ثبتِ* سند فرستاده می‌شوند (`paymentDetails`ِ Create).
+ * روی سندِ ثبت‌شده `termsOnly` روشن است: فقط «شرایط پرداخت»
+ * (`paymentType`) انتخاب می‌شود و ردیف‌های پرداخت در `DocumentPaymentsCard`
+ * جدا ثبت، اصلاح یا باطل می‌شوند.
  */
 
 const PAYMENT_TYPE_OPTIONS = DOCUMENT_PAYMENT_TYPES.map((value) => ({
@@ -61,6 +66,7 @@ export default function OrderPaymentSection({
   totalAmount = 0,
   errors,
   isProforma = false,
+  termsOnly = false,
 }) {
   const handleChange = (field, value) => onFormChange({ [field]: value });
 
@@ -141,6 +147,47 @@ export default function OrderPaymentSection({
       ),
     });
 
+  const paymentTypeSelect = (
+    <div className="space-y-1.5">
+      <Label className="text-card-foreground text-sm font-medium">
+        {termsOnly ? "شرایط پرداخت" : "نوع پرداخت"}
+      </Label>
+      <Select
+        value={String(paymentType)}
+        onValueChange={handlePaymentTypeChange}
+      >
+        <SelectTrigger className="h-9">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {PAYMENT_TYPE_OPTIONS.map((t) => (
+            <SelectItem key={t.value} value={String(t.value)}>
+              {t.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
+  if (termsOnly) {
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold text-card-foreground">
+            شرایط پرداخت
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {paymentTypeSelect}
+          <p className="text-xs text-muted-foreground">
+            پرداخت‌ها جدا در کارت «پرداخت‌ها» ثبت می‌شوند.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -155,23 +202,7 @@ export default function OrderPaymentSection({
           isCredit={paymentType === PaymentTypeEnum.CREDIT}
         />
 
-        <div className="space-y-1.5">
-          <Label className="text-card-foreground text-sm font-medium">
-            نوع پرداخت
-          </Label>
-          <Select value={String(paymentType)} onValueChange={handlePaymentTypeChange}>
-            <SelectTrigger className="h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAYMENT_TYPE_OPTIONS.map((t) => (
-                <SelectItem key={t.value} value={String(t.value)}>
-                  {t.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {paymentTypeSelect}
 
         {paymentType === PaymentTypeEnum.MIXED && (
           <MixedPaymentList

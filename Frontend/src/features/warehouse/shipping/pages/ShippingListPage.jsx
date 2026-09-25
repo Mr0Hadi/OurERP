@@ -11,6 +11,7 @@ import ShippingFilters from "../components/table/ShippingFilters";
 import ShippingTable from "../components/table/ShippingTable";
 import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
 import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
+import PendingReturnGoodsCard from "../../returnsQueue/PendingReturnGoodsCard";
 
 /**
  * صفِ ارسال = `GetSaleList` فیلترشده روی وضعیت‌های قابلِ ارسال.
@@ -33,6 +34,8 @@ const ShippingListPage = () => {
 
   return (
     <div className="container mx-auto space-y-6">
+      <PendingReturnGoodsCard side="shipping" />
+
       <Card>
         <CardHeader className="flex sm:flex-row flex-col sm:items-center justify-between">
           <CardTitle>ارسال کالاهای انبار</CardTitle>

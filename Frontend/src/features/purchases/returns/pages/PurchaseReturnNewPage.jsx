@@ -12,8 +12,9 @@ import { useCreatePurchaseReturnMutation } from "../services/mutations";
 
 import PurchaseReturnPurchaseSection from "../components/forms/PurchaseReturnPurchaseSection";
 import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
-import ClaimsSection from "@/shared/components/returns/ClaimsSection";
-import OffScopeClaimsSection from "@/shared/components/returns/OffScopeClaimsSection";
+import ReturnItemsSection from "@/shared/components/returns/ReturnItemsSection";
+import PurchaseExcessSection from "../components/forms/PurchaseExcessSection";
+import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
 import ReceivingReportCard, {
   ReceivingReportLines,
 } from "@/shared/components/returns/ReceivingReport";
@@ -76,6 +77,11 @@ export default function PurchaseReturnNewPage() {
     isError,
     error,
   } = usePurchaseForReturnQuery(selectedPurchaseId);
+  // ادعاهای مرجوعی‌های قبلیِ همین خرید، کنارِ هر کالا.
+  const claimsElsewhere = useClaimsInOtherReturns(
+    "purchase",
+    selectedPurchaseId,
+  );
 
   useEffect(() => {
     resetForm();
@@ -162,6 +168,7 @@ export default function PurchaseReturnNewPage() {
             <OrderInvoiceCard
               order={purchaseForReturn}
               partyName={purchaseForReturn.supplierName}
+              claimsElsewhere={claimsElsewhere}
             />
 
             <div className="flex justify-end">
@@ -178,34 +185,38 @@ export default function PurchaseReturnNewPage() {
 
             <ReceivingReportCard receivingInfo={purchaseForReturn} />
 
+            {/* کالای مازاد/سفارش‌نداده‌ی قرنطینه را می‌شود به‌جای پس‌فرستادن، خرید. */}
+            <PurchaseExcessSection
+              purchase={{
+                id: selectedPurchaseId,
+                status: purchaseForReturn.status,
+              }}
+            />
+
             {/* ── پایین: ثبت مشکلات ────────────────────────────────── */}
-            <ClaimsSection
+            <ReturnItemsSection
               lines={lines}
+              offScopeClaims={offScopeClaims}
+              orderLines={orderLines}
+              claimsElsewhere={claimsElsewhere}
               onAddClaim={handleAddClaim}
               onUpdateClaim={handleUpdateClaim}
               onRemoveClaim={handleRemoveClaim}
+              onAddOffScope={handleAddOffScopeClaim}
+              onUpdateOffScope={handleUpdateOffScopeClaim}
+              onRemoveOffScope={handleRemoveOffScopeClaim}
               problemLabels={PURCHASE_ON_ORDER_PROBLEM_LABELS}
-              title="مشکلات اقلام سفارش"
-              description="برای هر کالا می‌توانید چند مشکل جدا با تعداد جداگانه ثبت کنید. سقف هر کالا مقدارِ رسیده‌ای است که هنوز در مرجوعیِ دیگری ادعا نشده. کالایی که نرسیده (کسری) مرجوعی ندارد: یا با محموله‌ی بعد می‌رسد، یا قلمش را در صفحه‌ی خرید ببندید."
-              emptyText="این سفارش قلمی برای ادعا ندارد"
-            />
-
-            <OffScopeClaimsSection
-              claims={offScopeClaims}
-              orderLines={orderLines}
-              onAdd={handleAddOffScopeClaim}
-              onUpdate={handleUpdateOffScopeClaim}
-              onRemove={handleRemoveOffScopeClaim}
-              problemLabels={PURCHASE_OFF_ORDER_PROBLEM_LABELS}
+              offScopeProblemLabels={PURCHASE_OFF_ORDER_PROBLEM_LABELS}
               kindLabels={OFF_SCOPE_KIND_LABELS}
               kindStyles={OFF_SCOPE_KIND_STYLES}
-              renderClaimReport={(claim) => (
+              renderOffScopeReport={(claim) => (
                 <ReceivingReportLines
                   {...claimReceivingReport(purchaseForReturn, claim)}
                 />
               )}
-              title="کالای خارج از سفارش"
-              description="مازاد: بیش از مقدارِ یک قلم رسیده (با قیمت همان قلم). نامرتبط: کالایی که سفارش داده نشده (قیمت دستی). سقف هر دو، کالای همان نوع در قرنطینه است."
+              description="برای هر کالا می‌توانید چند مشکل جدا با تعداد جداگانه ثبت کنید. سقف هر کالا مقدارِ رسیده‌ای است که هنوز در مرجوعیِ دیگری ادعا نشده. اگر بیشتر از سفارش رسیده، «مازاد» را روی همان کالا ثبت کنید. کالایی که نرسیده (کسری) مرجوعی ندارد: یا با محموله‌ی بعد می‌رسد، یا قلمش را در صفحه‌ی خرید ببندید."
+              emptyText="این سفارش قلمی برای ادعا ندارد"
+              unlistedHint="کالایی که سفارش داده نشده ولی رسیده؛ سقفش کالای همان نوع در قرنطینه است."
             />
 
             <PurchaseReturnInfoSection

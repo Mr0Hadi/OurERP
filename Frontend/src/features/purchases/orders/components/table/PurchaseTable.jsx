@@ -73,7 +73,9 @@ const PurchaseTable = ({
         cell: ({ row }) => (
           <PaymentProgress
             paid={row.original.paidAmount}
-            total={row.original.totalAmount}
+            // بدهی = مبلغ قابل پرداخت − پرداخت‌شده (فروش اقساطی: با سود؛
+            // خرید: منهای قلم‌های بسته‌شده). لیست خرید هنوز آن را ندارد.
+            total={row.original.payableAmount ?? row.original.totalAmount}
           />
         ),
       },

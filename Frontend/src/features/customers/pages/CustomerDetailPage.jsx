@@ -25,9 +25,17 @@ import CustomerFinanceForm from "../components/forms/CustomerFinanceForm";
 import CustomerAddressForm from "../components/forms/CustomerAddressForm";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
+import PartyStatementCard from "@/features/partyAccount/components/PartyStatementCard";
+import {
+  openingBalanceOf,
+  partyBalanceOf,
+} from "@/features/partyAccount/domain/partyBalance";
+import { usePermission } from "@/features/auth/hooks/usePermission";
 
 function CustomerDetailForm({ customerData }) {
   const navigate = useNavigate();
+  const { can } = usePermission();
+  const canViewStatement = can("PartyStatementView");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const updateMutation = useUpdateCustomerMutation();
@@ -138,6 +146,17 @@ function CustomerDetailForm({ customerData }) {
           </div>
         </div>
       </form>
+
+      {/* گردش حساب از دفتر حساب اشخاص؛ مانده‌ی بالای فرم «مانده‌ی اولیه»ِ دستی است. */}
+      {canViewStatement && (
+        <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+          <PartyStatementCard
+            customerId={customerData.id}
+            totalBalance={partyBalanceOf(customerData)}
+            openingBalance={openingBalanceOf(customerData)}
+          />
+        </div>
+      )}
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>

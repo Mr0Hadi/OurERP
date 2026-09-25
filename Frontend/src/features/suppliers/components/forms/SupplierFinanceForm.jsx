@@ -22,7 +22,7 @@ export default function SupplierFinanceForm({ errors, balanceType, control }) {
           <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
             <Wallet className="h-4.5 w-4.5 text-primary" />
           </div>
-          وضعیت مالی
+          مانده‌ی اولیه (دستی)
         </CardTitle>
       </CardHeader>
       <CardContent className="px-6 py-5">
