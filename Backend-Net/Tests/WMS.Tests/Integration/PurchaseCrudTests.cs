@@ -324,6 +324,52 @@ namespace WMS.Tests.Integration
             await Assert.ThrowsAsync<NotFoundCustomException>(() => handler.Handle(new GetPurchaseDetailQuery { Id = 999 }, CancellationToken.None));
         }
 
+        private static List<PurchaseListDto> PurchaseListOf(ResponseDto res) =>
+            ((System.Collections.IEnumerable)res.Data!.GetType().GetProperty("PurchaseList")!.GetValue(res.Data)!).Cast<PurchaseListDto>().ToList();
+
+        private static Domain.Entities.Purchase AddPurchase(TestScope scope, string supplierName, PurchaseStatusEnum status)
+        {
+            var purchase = Seed.Purchase(Seed.Supplier(supplierName), status, Seed.PurchaseItem(Seed.Product(Seed.Category()), 1));
+            scope.Context.Purchases.Add(purchase);
+            scope.Context.SaveChanges();
+            return purchase;
+        }
+
+        [Fact]
+        public async Task GetPurchaseList_Statuses_MatchesAnyOfThem()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var shipped = AddPurchase(scope, "الف", PurchaseStatusEnum.SHIPPED);
+            var partial = AddPurchase(scope, "ب", PurchaseStatusEnum.PARTIALLY_RECEIVED);
+            AddPurchase(scope, "پ", PurchaseStatusEnum.PROFORMA);
+            AddPurchase(scope, "ت", PurchaseStatusEnum.RECEIVED);
+
+            var res = await new GetPurchaseListQueryHandler(scope.Db).Handle(new GetPurchaseListQuery
+            {
+                Statuses = new() { PurchaseStatusEnum.SHIPPED, PurchaseStatusEnum.PARTIALLY_RECEIVED },
+            }, CancellationToken.None);
+
+            Assert.Equal(new[] { shipped.Id, partial.Id }.OrderBy(x => x), PurchaseListOf(res).Select(x => x.Id).OrderBy(x => x));
+        }
+
+        [Fact]
+        public async Task GetPurchaseList_Search_MatchesInvoiceNumberOrSupplierName()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var bySupplier = AddPurchase(scope, "صنایع فولاد آریا", PurchaseStatusEnum.PENDING);
+            var byInvoice = AddPurchase(scope, "شرکت دیگر", PurchaseStatusEnum.PENDING);
+            AddPurchase(scope, "شرکت سوم", PurchaseStatusEnum.PENDING);
+
+            var handler = new GetPurchaseListQueryHandler(scope.Db);
+            var supplierHit = await handler.Handle(new GetPurchaseListQuery { Search = " فولاد " }, CancellationToken.None);
+            var invoiceHit = await handler.Handle(new GetPurchaseListQuery { Search = byInvoice.InvoiceNumber }, CancellationToken.None);
+
+            Assert.Equal(bySupplier.Id, Assert.Single(PurchaseListOf(supplierHit)).Id);
+            Assert.Equal(byInvoice.Id, Assert.Single(PurchaseListOf(invoiceHit)).Id);
+        }
+
         [Fact]
         public async Task GetPurchaseList_FiltersByStatus()
         {

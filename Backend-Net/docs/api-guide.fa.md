@@ -108,6 +108,21 @@ Authorization: Bearer {accessToken}
 - کد وضعیت را برای تشخیص نوع خطا (۴۰۴ یعنی یافت نشد، ۴۰۰ یعنی اعتبارسنجی) و `message` را برای نمایش متن به کاربر استفاده کنید.
 - به `responseMessageType` تکیه نکنید برای تشخیص خطا؛ کد HTTP معیار اصلی است.
 
+### تکرارِ امن نوشتن‌ها (`Idempotency-Key`) — از ۲۰۲۶-۰۹-۲۵
+
+هر درخواستِ نوشتنی (`POST`/`PUT`/`PATCH`/`DELETE`) از کاربرِ واردشده می‌تواند هدرِ `Idempotency-Key` داشته باشد (یک رشته‌ی یکتا، مثلاً GUID، حداکثر ۲۵۵ نویسه). برای هر **عملِ کاربر** یک کلید بسازید و در retryهای همان عمل **همان کلید** را بفرستید:
+
+| وضعیت | پاسخ |
+|---|---|
+| اولین بار با این کلید | عادی اجرا می‌شود. اگر موفق بود (۲xx)، پاسخ ۲۴ ساعت نگه داشته می‌شود. |
+| تکرار همان درخواست (همان مسیر، query و بدنه) بعد از موفقیت | **دوباره اجرا نمی‌شود**؛ همان پاسخِ اول با همان کد برمی‌گردد و هدرِ `Idempotency-Replayed: true` دارد. |
+| تکرار در حالی که درخواستِ اول هنوز در حال اجراست | ۴۰۹ — چند لحظه بعد دوباره بفرستید. |
+| همان کلید برای درخواستی دیگر (مسیر یا بدنه‌ی متفاوت) | ۴۲۲ — برای هر عملِ تازه کلیدِ تازه لازم است. |
+| درخواستِ اول خطا داد (۴xx/۵xx) | کلید آزاد می‌شود؛ retry دوباره اجرا می‌شود (نوشتنِ ناموفق چیزی ذخیره نکرده است). |
+
+- کلید برای هر کاربر جداست؛ کلیدِ یکسانِ دو کاربر با هم تداخلی ندارد. درخواستِ بدون هدر یا بدون ورود دست‌نخورده اجرا می‌شود.
+- حافظه‌ی کلیدها در همان پروسه‌ی سرور است: با ری‌استارتِ سرور پاک می‌شود، و اگر روزی چند نمونه‌ی API پشت load balancer اجرا شود باید به یک مخزنِ مشترک منتقل شود.
+
 ### صفحه‌بندی (Pagination)
 
 تمام API های لیست، پارامترهای ورودی `Page` (پیش‌فرض ۱) و `Take` (اندازه صفحه، پیش‌فرض معمولاً ۱۰ یا ۲۰) را می‌گیرند و در `data` این ساختار مشترک را دارند:
@@ -1145,7 +1160,10 @@ append-only است: ردیفی ویرایش یا حذف نمی‌شود، و ه�
 
 ### `GET api/Purchase/GetPurchaseList`
 
-**Query:** `page`, `take`, `invoiceNumber`, `supplierId`, `status` (enum، بخش ۱۵), `fromDate`, `toDate`, `fromPaymentDate`, `toPaymentDate`.
+**Query:** `page`, `take`, `invoiceNumber`, `search`, `supplierId`, `status` (enum، بخش ۱۵), `statuses`, `fromDate`, `toDate`, `fromPaymentDate`, `toPaymentDate`.
+
+- `search`: شماره‌ی فاکتور **یا** نام شرکتِ تامین‌کننده را شامل باشد (مثل `search` در `GetPurchaseReturnList`). فاصله‌های دو طرف حذف می‌شوند.
+- `statuses`: هر کدام از این وضعیت‌ها، به شکلِ `?statuses=2&statuses=3` — مثلاً صفِ دریافتِ انبار («ارسال‌شده» و «تحویل ناقص» با هم). با `status` و بقیه‌ی فیلترها «و» می‌شود.
 
 `fromDate`/`toDate` روی **تاریخ فاکتور** فیلتر می‌کنند و `fromPaymentDate`/`toPaymentDate` روی **مهلت پرداخت** (`paymentDate`) — برای گرفتن فهرست سررسیدهای نزدیک یا سررسیدگذشته.
 
@@ -1381,6 +1399,7 @@ data: سند کامل. دسترسی: `PurchaseUpdate`.
 - `driverFullName`/`driverPhoneNumber`/`vehiclePlate`/`receivingNote` همگی اختیاری‌اند و هرکدام مستقل از بقیه ذخیره می‌شوند (یعنی می‌توانید فقط یکی را بفرستید) — هر نوبت `ReceivePurchase` که این فیلدها را داشته باشد یک ردیف تاریخچه‌ی تازه می‌سازد (`drivers[]`/`receivingNotes[]` در `GetPurchaseDetail`، بالا)، نه بازنویسی نوبت قبلی.
 - `items[].arrivedQuantity`: کل تعدادی که از این قلم رسید (سالم و خراب). **بیشتر از باقیمانده‌ی قلم هم مجاز است** — رسیدنِ ۲۵ عدد در برابر ۲۰ سفارش خطا نیست، واقعیت است و ثبت می‌شود.
 - `items[].defects[]`: چندتا از همان رسیده‌ها خراب‌اند، به تفکیک `problem` (`ReturnProblemEnum`، بخش ۱۵) و با یادداشت اختیاری. مجموعشان نمی‌تواند از `arrivedQuantity` بیشتر باشد.
+  **`problem` فقط مشکلی است که با دیدنِ کالا دیده می‌شود** (از ۲۰۲۶-۰۹-۲۵): `WRONG_ITEM_SHIPPED`، `DEFECTIVE`، `DAMAGED_IN_TRANSIT`، `QUALITY_ISSUE`، `EXPIRED`، `OTHER` — بقیه ۴۰۰ می‌گیرند. کسری را با `arrivedQuantity` کمتر بیان کنید (مانده روی قلم بدهکار می‌ماند)؛ مشکلِ فاکتور/سفارش در ادعای مرجوعی ثبت می‌شود. همین قاعده روی `observations[]` در `ExecuteGoodsRound` هر دو سمت مرجوعی هم هست.
 - `unlistedItems[]`: کالایی که در این خرید **هیچ قلمی ندارد** (`productId` باید در کاتالوگ وجود داشته باشد — اگر نیست، اول با ساخت سریع کالا بسازید، بخش ۷). کالایی که در خرید قلم دارد اینجا ۴۰۰ می‌گیرد؛ مقدار اضافه‌اش را روی همان قلم بفرستید. هر درخواست باید دست‌کم یک `items` یا `unlistedItems` داشته باشد.
 - **قاعده‌ی تقسیم («اول سالم»)** برای هر قلم — `S` باقیمانده‌ی قلم، `A` رسیده، `D` خراب، `H = A − D` سالم:
 
@@ -1631,11 +1650,13 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
       "receivedQuantity": 15,
       "stillOwedQuantity": 5,
       "quarantinedOnOrderQuantity": 2,
-      "quarantinedExcessQuantity": 0
+      "quarantinedExcessQuantity": 0,
+      "freeExcessQuantity": 0,
+      "claimableQuantity": 13
     }
   ],
   "unlistedItems": [
-    { "productId": 55, "productCode": "20260901-000055", "productName": "شیر فلکه ۳ اینچ", "unit": "عدد", "quarantinedQuantity": 5 }
+    { "productId": 55, "productCode": "20260901-000055", "productName": "شیر فلکه ۳ اینچ", "unit": "عدد", "quarantinedQuantity": 5, "freeQuantity": 3 }
   ],
   "discrepancies": [
     { "id": 1, "purchaseItemId": 1000, "productId": 10, "productName": "یخچال دو درب", "custodyReason": 1, "problem": 7, "quantity": 2, "note": "ایراد تولید", "receivedAt": "2026-08-05T10:00:00" }
@@ -1644,6 +1665,10 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 ```
 `stillOwedQuantity` یعنی چه مقدار دیگر از این قلم «سهم سفارش» است — برای راهنمایی فرم؛ **سقف ورودی نیست**، چون بیشتر از آن هم پذیرفته و به‌عنوان مازاد قرنطینه می‌شود.
 - `quarantinedOnOrderQuantity`/`quarantinedExcessQuantity`/`unlistedItems[].quarantinedQuantity`: دانه‌هایی که **همین حالا** در قرنطینه‌اند (با علت `ON_ORDER`/`EXCESS`/`UNLISTED`) — همان عددی که سقف ادعای مرجوعی از آن محاسبه می‌شود.
+- **سقف‌های آماده (از ۲۰۲۶-۰۹-۲۵)** — همان عددهایی که سرور هنگامِ ثبت چک می‌کند، پس فرم می‌تواند مستقیم سقفش کند:
+  - `items[].claimableQuantity`: بیشترین مقدارِ ادعای تازه‌ی `ON_ORDER` روی این قلم (دریافت‌شده − تسویه‌شده − ادعاهای بازِ مرجوعی‌های دیگر).
+  - `items[].freeExcessQuantity`: `quarantinedExcessQuantity` منهای آنچه ادعاهای بازِ `EXCESS` روی همین قلم رزرو کرده‌اند (حداقل صفر) — سقفِ ادعای `EXCESS` و سقفِ `AcceptPurchaseExcess` برای این قلم.
+  - `unlistedItems[].freeQuantity`: همین، برای کالای خارج از سند (`UNLISTED`).
 - `discrepancies[]`: همه‌ی مغایرت‌های ثبت‌شده در نوبت‌های دریافت، از قدیم به جدید (`custodyReason`: `UnitCustodyReasonEnum`، بخش ۱۵). برای پیش‌پرکردن فرم «ثبت مغایرت» — یک ادعا برای هر ردیف یا گروه. این ردیف‌ها سابقه‌اند و با عودت یا تصمیم بعدی تغییر نمی‌کنند؛ مقدار قابل ادعا را از اعداد قرنطینه‌ی بالا بخوانید. توجه: این endpoint دیگر چیزی درباره‌ی مغایرت‌ها یا مرجوعی فعال نمی‌گوید (آن مسئولیت کاملاً به `GetPurchaseReturnPendingEffects`/`GetPurchaseReturnList` منتقل شده)؛ `receivingImages` هم اینجا و هم زیر `GetPurchaseReturnDetail` (فقط عکس‌های همان مرجوعی) برمی‌گردد، هرکدام با `url` امضاشده (بخش ۱۷).
 
 ### `POST api/PurchaseReturn/CreatePurchaseReturn`
@@ -1850,19 +1875,20 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 
 ### `POST api/PurchaseReturn/CancelPurchaseReturn`
 
-**Body:** `{ "id": 55 }` — طبق جدول بالا (`canCancel: true`). تصمیم‌های در انتظارِ بدون جابه‌جایی کالا مانعی نیستند.
+**Body:** `{ "id": 55, "reason": "تامین‌کننده جنس را پس گرفت" }` — طبق جدول بالا (`canCancel: true`). تصمیم‌های در انتظارِ بدون جابه‌جایی کالا مانعی نیستند.
+`reason` اختیاری است (حداکثر ۵۰۰ نویسه) و روی سند به‌صورت `statusReason` می‌ماند؛ خالی یا فقط فاصله یعنی `null`.
 
 **data خروجی:** سند کامل مرجوعی — دقیقاً همان شکل خروجی `GetPurchaseReturnDetail` (با `id`، `purchaseId`، `status`، `canCancel`/`canReject`/`canDelete`/`canReopen` و کل درخت `claims`).
 
 ### `POST api/PurchaseReturn/RejectPurchaseReturn`
 
-**Body:** `{ "id": 55 }` — همان شرط لغو، با معنای «رد شد» (مثلاً تامین‌کننده مغایرت را قبول نکرد).
+**Body:** `{ "id": 55, "reason": "تامین‌کننده مغایرت را نپذیرفت" }` — همان شرط لغو، با معنای «رد شد». `reason` مثل لغو اختیاری است و در `statusReason` ذخیره می‌شود.
 
 **data خروجی:** سند کامل مرجوعی — دقیقاً همان شکل خروجی `GetPurchaseReturnDetail` (با `id`، `purchaseId`، `status`، `canCancel`/`canReject`/`canDelete`/`canReopen` و کل درخت `claims`).
 
 ### `POST api/PurchaseReturn/ReopenPurchaseReturn`
 
-**Body:** `{ "id": 55 }` — فقط برای مرجوعی‌های رد‌شده (`canReopen: true`). وضعیت از روی داده **دوباره محاسبه می‌شود**: مرجوعی‌ای که پیش از رد، تصمیم ثبت‌شده داشت به `IN_PROGRESS` برمی‌گردد، نه همیشه `OPEN`.
+**Body:** `{ "id": 55 }` — فقط برای مرجوعی‌های رد‌شده (`canReopen: true`). `statusReason` پاک می‌شود، چون دیگر وضعیتِ فعلی را توصیف نمی‌کند. وضعیت از روی داده **دوباره محاسبه می‌شود**: مرجوعی‌ای که پیش از رد، تصمیم ثبت‌شده داشت به `IN_PROGRESS` برمی‌گردد، نه همیشه `OPEN`.
 
 **data خروجی:** سند کامل مرجوعی — دقیقاً همان شکل خروجی `GetPurchaseReturnDetail` (با `id`، `purchaseId`، `status`، `canCancel`/`canReject`/`canDelete`/`canReopen` و کل درخت `claims`).
 
@@ -2570,13 +2596,13 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 ### `POST api/SaleReturn/CancelSaleReturn`
 
-**Body:** `{ "id": 80 }` — همان جدول چرخه‌ی عمر مرجوعی خرید (بخش ۱۰، پیش از `CancelPurchaseReturn`)؛ دو طرف یک قاعده‌ی مشترک دارند (`canCancel: true`).
+**Body:** `{ "id": 80, "reason": "..." }` (`reason` اختیاری، مثل مرجوعی خرید) — همان جدول چرخه‌ی عمر مرجوعی خرید (بخش ۱۰، پیش از `CancelPurchaseReturn`)؛ دو طرف یک قاعده‌ی مشترک دارند (`canCancel: true`).
 
 **data خروجی:** سند کامل مرجوعی — دقیقاً همان شکل خروجی `GetSaleReturnDetail` (با `id`، `saleId`، `status`، پرچم‌های `can*` و کل درخت `claims`).
 
 ### `POST api/SaleReturn/RejectSaleReturn`
 
-**Body:** `{ "id": 80 }` — همان شرط لغو.
+**Body:** `{ "id": 80, "reason": "..." }` — همان شرط لغو؛ `reason` اختیاری.
 
 **data خروجی:** سند کامل مرجوعی — دقیقاً همان شکل خروجی `GetSaleReturnDetail` (با `id`، `saleId`، `status`، پرچم‌های `can*` و کل درخت `claims`).
 
@@ -3089,6 +3115,16 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 ## 16. نکات و محدودیت‌های شناخته‌شده
 
 این نکات برای جلوگیری از سردرگمی هنگام توسعه فرانت مهم هستند:
+
+### تغییرات قرارداد — ۲۰۲۶-۰۹-۲۵ (بندهای ۱، ۵، ۶، ۸، ۱۰ و ۱۲ درخواست فرانت) — افزودنی، به‌جز یک سخت‌گیری
+
+| کجا | قبل | بعد | چرا |
+|---|---|---|---|
+| همه‌ی نوشتن‌ها | هدرِ `Idempotency-Key` نادیده گرفته می‌شد | تکرار همان درخواست پاسخِ اول را برمی‌گرداند (`Idempotency-Replayed: true`)؛ ۴۰۹ هنگام اجرای هم‌زمان، ۴۲۲ برای کلیدِ به‌کاررفته روی درخواستی دیگر (بخش ۱) | retry شبکه پرداخت یا دور کالا را دوبار ثبت نکند |
+| `ReceivePurchase` → `defects[].problem`، `ExecuteGoodsRound` (هر دو سمت) → `observations[].problem` | هر عضوِ `ReturnProblemEnum` | فقط `WRONG_ITEM_SHIPPED`/`DEFECTIVE`/`DAMAGED_IN_TRANSIT`/`QUALITY_ISSUE`/`EXPIRED`/`OTHER`؛ بقیه ۴۰۰ | **سخت‌گیری**: «۳ تا کسری» در ردیف خرابی، ۳ دانه‌ی خیالیِ دریافت‌شده می‌ساخت |
+| `GetPurchaseList` | فقط `status` تکی و `invoiceNumber` | + `statuses` (چندتایی) و `search` (شماره فاکتور یا نام تامین‌کننده) | صفِ دریافت و جست‌وجو با نام تامین‌کننده |
+| `GetPurchaseReceivingInfo` | فقط عددهای خام قرنطینه | + `items[].claimableQuantity`، `items[].freeExcessQuantity`، `unlistedItems[].freeQuantity` | سقف‌هایی که سرور چک می‌کند، بدون ۴۰۰ غافلگیرکننده |
+| `Cancel/Reject{Purchase,Sale}Return` | فقط `{ id }` | + `reason` اختیاری؛ جزئیات مرجوعی `statusReason` دارد (با `Reopen` پاک می‌شود) | سابقه‌ی دلیلِ رد/لغو |
 
 ### تغییرات قرارداد — ۲۰۲۶-۰۹-۲۴ (دفتر حساب اشخاص) — افزودنی
 

@@ -1677,6 +1677,37 @@ table), §9 (`ClosePurchaseItem` and purchase `payableAmount`), §15 (the two le
 - **Not built, noted:** an "apply a customer's credit balance to a new invoice" (allocation) flow; `PurchaseListDto` has no
   `PayableAmount` (the list projection would need the lines).
 
+**Frontend sync requests 1, 5, 6, 8, 10, 12 (2026-09-25).** The rest of `docs/purchase-frontend-sync-requests.fa.md` (2, 3, 4, 7,
+9, 11 were done in the three-phase pass above). API: `docs/api-guide.fa.md` §1 (Idempotency-Key), §9, §10, §12 and the 2026-09-25
+table in §16. Frontend: `docs/frontend-sync-followup.fa.md`.
+
+- **10 - only observable problems on arrived goods.** `Application/Common/Returns/ObservedProblems` (`WRONG_ITEM_SHIPPED`, `DEFECTIVE`,
+  `DAMAGED_IN_TRANSIT`, `QUALITY_ISSUE`, `EXPIRED`, `OTHER` - the frontend's `OBSERVED_PROBLEMS`) guards `ReceivingDefectDto.Problem` and
+  `GoodsRoundObservationDto.Problem` on both return sides. Every such row is part of what ARRIVED and becomes a received, quarantined unit,
+  so `SHORT_SHIPPED` there minted units that never came. A shortage is a smaller `ArrivedQuantity`; paperwork problems belong on a claim.
+- **12 / 8 - `GetPurchaseList`** gained `Statuses` (`List<PurchaseStatusEnum>`, `?statuses=2&statuses=3`, ANDed with the other filters)
+  and `Search` (invoice number or supplier company name, trimmed, like `GetPurchaseReturnList`).
+- **1 - `GetPurchaseReceivingInfo`** returns `items[].ClaimableQuantity`, `items[].FreeExcessQuantity` and `unlistedItems[].FreeQuantity`,
+  computed from the same open returns (`WhereNotDeleted().WhereOpen().WithReturnGraph()`) and the same
+  `IPurchaseReturnCalculationService` calls `CreatePurchaseReturn`/`AcceptPurchaseExcess` enforce. The handler gained that service.
+- **6 - `StatusReason`** (`nvarchar(500)`, nullable) on `PurchaseReturn`/`SaleReturn`, surfaced on both detail DTOs. `Reason` on the four
+  Reject/Cancel commands (optional, trimmed, blank = null, max 500 via `Application/Common/Returns/ReturnStatusReason`); Reopen clears it,
+  so it always describes the current closed state. Migration `20260925121547_return-status-reason`. **Generated, not applied.**
+- **5 - `Idempotency-Key`.** `WMS/Middlewares/IdempotencyMiddleware` + singleton `WMS/Idempotency/IdempotencyStore` (over `IMemoryCache`),
+  registered after `CachingMiddleware`, so it runs inside `ExceptionHandlingMiddleware` and after the token check. Applies to
+  POST/PUT/PATCH/DELETE from a signed-in user carrying the header; the key is scoped `{userId}:{key}` and fingerprinted by
+  method + path + query + SHA-256 of the body. First request runs into a buffer; a 2xx response (up to 2 MB) is kept 24 h and replayed with
+  `Idempotency-Replayed: true` (exposed via CORS). Anything else - a 4xx/5xx or a thrown exception - releases the key, so a retry runs
+  again (failed writes save nothing). In flight: 409; same key, different request: 422; key over 255 chars: 400. An in-flight marker
+  expires after 5 minutes in case its request died. **Single-process** like the permission cache: several API instances would need a shared
+  store behind the same class. A request whose handler saved and then threw (e.g. the detail read after SaveChanges) would re-run on retry -
+  an accepted edge.
+- Tests: validator theories for 10 (`ReceivePurchaseCommandValidatorTests`, `GoodsRoundObservationValidatorTests`); `PurchaseCrudTests`
+  (`Statuses`, `Search`); `ReceivingQuarantineTests.ReceivingInfo_FreeAndClaimableQuantities_SubtractOpenClaims`; both lifecycle test
+  classes (reason stored/trimmed/cleared, 500-char limit); `Unit/IdempotencyStoreTests` and two functional tests through the real host
+  (replay + one row, 422 on reuse, no key = no dedupe, failed write releases the key). Suite 715/718 - the 3 documented environmental
+  failures.
+
 **Store credit removed (2026-09-24).** Store credit is not a feature of this system; it was a leftover
 from the old closed-`DecisionType` return model. API: `docs/api-guide.fa.md` §15 and the 2026-09-24
 «حذف اعتبار فروشگاهی» table in §16.

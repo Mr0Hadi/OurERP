@@ -30,6 +30,12 @@ namespace Application.Features.PurchaseReturn.Dtos
         public string ProductName { get; set; }
         public string Unit { get; set; }
         public int QuarantinedQuantity { get; set; }
+
+        /// <summary>
+        /// QuarantinedQuantity minus what open return claims (UNLISTED) already reserve - the most an UNLISTED claim or
+        /// AcceptPurchaseExcess can still take. The same number both handlers enforce.
+        /// </summary>
+        public int FreeQuantity { get; set; }
     }
 
     public class PurchaseReceivingDiscrepancyDto
@@ -52,6 +58,15 @@ namespace Application.Features.PurchaseReturn.Dtos
 
         /// <summary>Excess units of this line still held in quarantine.</summary>
         public int QuarantinedExcessQuantity { get; set; }
+
+        /// <summary>
+        /// QuarantinedExcessQuantity minus what open EXCESS claims on this line already reserve - the most an EXCESS claim or
+        /// AcceptPurchaseExcess can still take.
+        /// </summary>
+        public int FreeExcessQuantity { get; set; }
+
+        /// <summary>The most a new ON_ORDER claim on this line can take (received, minus settled, minus open claims).</summary>
+        public int ClaimableQuantity { get; set; }
 
         public int PurchaseItemId { get; set; }
         public int ProductId { get; set; }

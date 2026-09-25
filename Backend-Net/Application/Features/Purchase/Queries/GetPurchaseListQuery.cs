@@ -28,8 +28,15 @@ namespace Application.Features.Purchase.Queries
         public int Page { get; set; } = 1;
         public int Take { get; set; } = 10;
         public string? InvoiceNumber { get; set; }
+        /// <summary>Matches the invoice number or the supplier's company name, like GetPurchaseReturnList's Search.</summary>
+        public string? Search { get; set; }
         public int? SupplierId { get; set; }
         public PurchaseStatusEnum? Status { get; set; }
+        /// <summary>
+        /// Any of these statuses (?statuses=2&amp;statuses=3) - e.g. the warehouse receiving queue, which wants SHIPPED and
+        /// PARTIALLY_RECEIVED together. Combines with Status by AND, like every other filter.
+        /// </summary>
+        public List<PurchaseStatusEnum>? Statuses { get; set; }
         public PaymentTypeEnum? PaymentType { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
@@ -56,6 +63,12 @@ namespace Application.Features.Purchase.Queries
                 query = query.Where(x => x.InvoiceNumber.Contains(request.InvoiceNumber));
             }
 
+            if (!string.IsNullOrWhiteSpace(request.Search))
+            {
+                var search = request.Search.Trim();
+                query = query.Where(x => x.InvoiceNumber.Contains(search) || x.Supplier.CompanyName.Contains(search));
+            }
+
             if (request.SupplierId.HasValue)
             {
                 query = query.Where(x => x.SupplierId == request.SupplierId.Value);
@@ -69,6 +82,12 @@ namespace Application.Features.Purchase.Queries
             if (request.Status.HasValue)
             {
                 query = query.Where(x => x.Status == request.Status.Value);
+            }
+
+            if (request.Statuses is { Count: > 0 })
+            {
+                var statuses = request.Statuses;
+                query = query.Where(x => statuses.Contains(x.Status));
             }
 
             if (request.FromDate.HasValue)

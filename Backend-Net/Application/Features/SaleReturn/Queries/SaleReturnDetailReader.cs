@@ -52,6 +52,7 @@ public static class SaleReturnDetailReader
             Description = saleReturn.Description,
             PreviousReturnId = saleReturn.PreviousReturnId,
             PreviousReturnNumber = saleReturn.PreviousReturn?.ReturnNumber,
+            StatusReason = saleReturn.StatusReason,
             Status = saleReturn.Status,
             TotalAmount = totalAmount,
             Quantity = saleReturn.Quantity,

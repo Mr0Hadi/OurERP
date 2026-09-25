@@ -4,6 +4,7 @@ using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Common.Queries;
+using Application.Common.Returns;
 using Application.Features.SaleReturn.Queries;
 using Common.Exceptions;
 using Common.Extensions;
@@ -17,6 +18,9 @@ namespace Application.Features.SaleReturn.Commands
     public class CancelSaleReturnCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }
+
+        /// <summary>Optional; stored on the return as StatusReason.</summary>
+        public string? Reason { get; set; }
     }
 
     public class CancelSaleReturnCommandValidator : AbstractValidator<CancelSaleReturnCommand>
@@ -24,6 +28,7 @@ namespace Application.Features.SaleReturn.Commands
         public CancelSaleReturnCommandValidator()
         {
             RuleFor(x => x.Id).GreaterThan(0).WithMessage(Validation.RequiredMessage("مرجوعی"));
+            RuleFor(x => x.Reason).MaximumLength(ReturnStatusReason.MaxLength).WithMessage(ReturnStatusReason.TooLongMessage);
         }
     }
 
@@ -55,6 +60,7 @@ namespace Application.Features.SaleReturn.Commands
                 throw new ValidationCustomException(blocker);
 
             saleReturn.Status = ReturnStatusEnum.CANCELLED;
+            saleReturn.StatusReason = ReturnStatusReason.Normalize(request.Reason);
             saleReturn.UpdatedAt = DateTime.Now;
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);

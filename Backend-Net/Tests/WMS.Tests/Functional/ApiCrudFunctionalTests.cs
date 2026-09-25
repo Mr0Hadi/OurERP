@@ -168,6 +168,65 @@ namespace WMS.Tests.Functional
             Assert.Equal(HttpStatusCode.OK, deleteResponse.StatusCode);
         }
 
+        private static HttpRequestMessage CreateCategoryRequest(string name, string? idempotencyKey)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, "/api/ProductCategory/CreateProductCategory")
+            {
+                Content = JsonContent.Create(new { Name = name }),
+            };
+            if (idempotencyKey != null)
+                request.Headers.Add("Idempotency-Key", idempotencyKey);
+            return request;
+        }
+
+        [Fact]
+        public async Task IdempotencyKey_RepeatedWrite_IsReplayed_NotRunTwice()
+        {
+            using var scope = _factory.Services.CreateScope();
+            var token = await LoginAsSeededAdmin(scope);
+            var client = _factory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            var name = $"دسته-{Guid.NewGuid():N}";
+            var key = Guid.NewGuid().ToString();
+
+            var first = await client.SendAsync(CreateCategoryRequest(name, key));
+            var second = await client.SendAsync(CreateCategoryRequest(name, key));
+
+            Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+            Assert.False(first.Headers.Contains("Idempotency-Replayed"));
+            Assert.Equal("true", second.Headers.GetValues("Idempotency-Replayed").Single());
+            Assert.Equal(await first.Content.ReadAsStringAsync(), await second.Content.ReadAsStringAsync());
+
+            var context = scope.ServiceProvider.GetRequiredService<WMSDbContext>();
+            Assert.Equal(1, context.ProductCategories.Count(x => x.Name == name));
+
+            // The same key on a different request is refused, not replayed.
+            var reused = await client.SendAsync(CreateCategoryRequest(name + "-دیگر", key));
+            Assert.Equal((HttpStatusCode)422, reused.StatusCode);
+
+            // Without a key nothing is deduplicated.
+            await client.SendAsync(CreateCategoryRequest(name, null));
+            Assert.Equal(2, context.ProductCategories.Count(x => x.Name == name));
+        }
+
+        [Fact]
+        public async Task IdempotencyKey_FailedWrite_ReleasesTheKey()
+        {
+            using var scope = _factory.Services.CreateScope();
+            var token = await LoginAsSeededAdmin(scope);
+            var client = _factory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            var key = Guid.NewGuid().ToString();
+
+            var failed = await client.SendAsync(CreateCategoryRequest("", key));
+            Assert.Equal(HttpStatusCode.BadRequest, failed.StatusCode);
+
+            var retried = await client.SendAsync(CreateCategoryRequest($"دسته-{Guid.NewGuid():N}", key));
+            Assert.Equal(HttpStatusCode.OK, retried.StatusCode);
+            Assert.False(retried.Headers.Contains("Idempotency-Replayed"));
+        }
+
         private static JsonElement GetProperty(JsonElement element, string camelCaseName)
         {
             if (element.TryGetProperty(camelCaseName, out var camel))

@@ -66,6 +66,43 @@ namespace WMS.Tests.Unit
     {
         private readonly ReceivePurchaseCommandValidator _sut = new();
 
+        private static ReceivePurchaseCommand WithDefect(ReturnProblemEnum problem) => new()
+        {
+            PurchaseId = 1,
+            Items = new()
+            {
+                new ReceivePurchaseItemDto
+                {
+                    PurchaseItemId = 1,
+                    ArrivedQuantity = 5,
+                    Defects = new() { new ReceivingDefectDto { Problem = problem, Quantity = 1 } },
+                },
+            },
+        };
+
+        // A defect is part of what ARRIVED; a shortage or a paperwork problem cannot be seen on a unit.
+        [Theory]
+        [InlineData(ReturnProblemEnum.SHORT_SHIPPED)]
+        [InlineData(ReturnProblemEnum.OVER_SHIPPED)]
+        [InlineData(ReturnProblemEnum.WRONG_QTY_INVOICED)]
+        [InlineData(ReturnProblemEnum.WRONG_QTY_ORDERED)]
+        [InlineData(ReturnProblemEnum.WRONG_ITEM_INVOICED)]
+        [InlineData(ReturnProblemEnum.WRONG_ITEM_ORDERED)]
+        [InlineData(ReturnProblemEnum.CHANGED_MIND)]
+        [InlineData(ReturnProblemEnum.UNLISTED_ITEM)]
+        public void NonObservableDefect_IsInvalid(ReturnProblemEnum problem) =>
+            Assert.False(_sut.Validate(WithDefect(problem)).IsValid);
+
+        [Theory]
+        [InlineData(ReturnProblemEnum.DEFECTIVE)]
+        [InlineData(ReturnProblemEnum.DAMAGED_IN_TRANSIT)]
+        [InlineData(ReturnProblemEnum.WRONG_ITEM_SHIPPED)]
+        [InlineData(ReturnProblemEnum.EXPIRED)]
+        [InlineData(ReturnProblemEnum.QUALITY_ISSUE)]
+        [InlineData(ReturnProblemEnum.OTHER)]
+        public void ObservableDefect_IsValid(ReturnProblemEnum problem) =>
+            Assert.True(_sut.Validate(WithDefect(problem)).IsValid);
+
         [Fact]
         public void EmptyItems_IsInvalid()
         {
@@ -652,6 +689,24 @@ namespace WMS.Tests.Unit
         {
             Assert.False(ValidatePurchase(Line(5, -1)));
             Assert.False(ValidateSale(Line(5, -1)));
+        }
+
+        [Theory]
+        [InlineData(ReturnProblemEnum.SHORT_SHIPPED)]
+        [InlineData(ReturnProblemEnum.OVER_SHIPPED)]
+        [InlineData(ReturnProblemEnum.CHANGED_MIND)]
+        [InlineData(ReturnProblemEnum.WRONG_QTY_INVOICED)]
+        public void NonObservableObservation_IsInvalid_OnBothSides(ReturnProblemEnum problem)
+        {
+            var line = new GoodsRoundLineDto
+            {
+                EffectId = 1,
+                Quantity = 3,
+                Observations = new() { new GoodsRoundObservationDto { Problem = problem, Quantity = 1 } },
+            };
+
+            Assert.False(ValidatePurchase(line));
+            Assert.False(ValidateSale(line));
         }
 
         [Fact]

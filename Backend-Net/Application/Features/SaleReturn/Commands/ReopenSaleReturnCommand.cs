@@ -58,6 +58,7 @@ namespace Application.Features.SaleReturn.Commands
             // then let the graph decide. Not hard-set to OPEN: Reject is legal while a goods resolution
             // is still pending, so a reopened return can legitimately be IN_PROGRESS.
             saleReturn.Status = ReturnStatusEnum.OPEN;
+            saleReturn.StatusReason = null;
             saleReturn.Status = _saleReturnCalculationService.RecomputeReturnStatus(saleReturn);
             saleReturn.UpdatedAt = DateTime.Now;
 

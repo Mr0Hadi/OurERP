@@ -205,6 +205,10 @@ namespace Infrastructure.Persistence
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<PurchaseReturn>()
+                .Property(x => x.StatusReason)
+                .HasMaxLength(500);
+
+            modelBuilder.Entity<PurchaseReturn>()
                 .HasOne(x => x.PreviousReturn)
                 .WithMany()
                 .HasForeignKey(x => x.PreviousReturnId)
@@ -269,6 +273,10 @@ namespace Infrastructure.Persistence
                 .WithMany()
                 .HasForeignKey(x => x.SaleId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<SaleReturn>()
+                .Property(x => x.StatusReason)
+                .HasMaxLength(500);
 
             modelBuilder.Entity<SaleReturn>()
                 .HasOne(x => x.PreviousReturn)

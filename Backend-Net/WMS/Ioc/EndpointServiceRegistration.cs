@@ -1,5 +1,6 @@
 ﻿using Application.Common.Contracts.Environment;
 using Application.Common.Contracts.UserContextService;
+using WMS.Idempotency;
 using WMS.Services;
 
 namespace WMS.Ioc
@@ -13,6 +14,7 @@ namespace WMS.Ioc
             services.AddScoped<IUserContextService, UserContextService>();
 
             services.AddMemoryCache();
+            services.AddSingleton<IdempotencyStore>();
 
             services.AddScoped<IEnvironmentService, EnvironmentService>();
 

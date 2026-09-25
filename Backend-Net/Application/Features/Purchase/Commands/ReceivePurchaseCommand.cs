@@ -1,3 +1,4 @@
+using Application.Common.Returns;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductUnit;
@@ -52,6 +53,7 @@ namespace Application.Features.Purchase.Commands
         public ReceivingDefectDtoValidator()
         {
             RuleFor(x => x.Problem).IsInEnum().WithMessage("نوع مشکل نامعتبر است.");
+            RuleFor(x => x.Problem).Must(ObservedProblems.IsObservable).WithMessage(ObservedProblems.NotObservableMessage);
             RuleFor(x => x.Quantity).GreaterThan(0).WithMessage("مقدار کالای مشکل‌دار باید از صفر بیشتر باشد.");
         }
     }
