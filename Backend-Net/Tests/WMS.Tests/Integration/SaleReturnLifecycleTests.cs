@@ -502,6 +502,36 @@ namespace WMS.Tests.Integration
         }
 
         [Fact]
+        public async Task RejectAndCancel_StoreTheReason_AndReopenClearsIt()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            await SeedShippedWithClaim(scope);
+            var returnId = scope.Context.SaleReturns.Single().Id;
+
+            var rejected = await NewReject(scope).Handle(new RejectSaleReturnCommand { Id = returnId, Reason = "  تامین‌کننده نپذیرفت  " }, CancellationToken.None);
+            Assert.Equal("تامین‌کننده نپذیرفت", Assert.IsType<SaleReturnDetailDto>(rejected.Data).StatusReason);
+
+            var reopened = await NewReopen(scope).Handle(new ReopenSaleReturnCommand { Id = returnId }, CancellationToken.None);
+            Assert.Null(Assert.IsType<SaleReturnDetailDto>(reopened.Data).StatusReason);
+
+            var cancelled = await NewCancel(scope).Handle(new CancelSaleReturnCommand { Id = returnId, Reason = "   " }, CancellationToken.None);
+            Assert.Null(Assert.IsType<SaleReturnDetailDto>(cancelled.Data).StatusReason);
+
+            using var verify = db.NewContext();
+            Assert.Null(verify.SaleReturns.Single().StatusReason);
+        }
+
+        [Fact]
+        public void Reason_LongerThan500_IsInvalid()
+        {
+            var tooLong = new string('x', 501);
+            Assert.False(new RejectSaleReturnCommandValidator().Validate(new RejectSaleReturnCommand { Id = 1, Reason = tooLong }).IsValid);
+            Assert.False(new CancelSaleReturnCommandValidator().Validate(new CancelSaleReturnCommand { Id = 1, Reason = tooLong }).IsValid);
+            Assert.True(new CancelSaleReturnCommandValidator().Validate(new CancelSaleReturnCommand { Id = 1, Reason = new string('x', 500) }).IsValid);
+        }
+
+        [Fact]
         public async Task Regression_RejectThenStaleCancel_NamesRejectedAndReopenThenCancelWorks()
         {
             using var db = new TestDatabase();

@@ -84,7 +84,7 @@ namespace WMS.Tests.Integration
             }, CancellationToken.None);
 
             using var readScope = db.NewScope();
-            var infoHandler = new GetPurchaseReceivingInfoQueryHandler(readScope.Db, FakeObjectStorage.Instance);
+            var infoHandler = new GetPurchaseReceivingInfoQueryHandler(readScope.Db, FakeObjectStorage.Instance, readScope.PurchaseReturnCalculation);
             var info = (PurchaseReceivingInfoDto)(await infoHandler.Handle(new GetPurchaseReceivingInfoQuery { PurchaseId = scenario.Purchase.Id }, CancellationToken.None)).Data!;
 
             Assert.Equal(2, info.ReceivingImages.Count);

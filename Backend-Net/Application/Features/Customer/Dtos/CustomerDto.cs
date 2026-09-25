@@ -20,6 +20,12 @@ namespace Application.Features.Customer.Dtos
         public string? Description { get; set; }
         public UInt64? Balance { get; set; }
         public BalanceTypeEnum BalanceType { get; set; }
+
+        /// <summary>
+        /// From the party ledger: what this party owes us (positive) or we owe them (negative), from every issued invoice,
+        /// payment and on-account return settlement since the ledger started. Unlike Balance/BalanceType, which are typed by hand.
+        /// </summary>
+        public decimal LedgerBalance { get; set; }
         /// <summary>The stable bucket object key - send this back on update to keep the image.</summary>
         public string? ImageKey { get; set; }
 

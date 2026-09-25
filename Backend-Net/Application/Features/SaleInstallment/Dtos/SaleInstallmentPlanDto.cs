@@ -12,8 +12,14 @@ namespace Application.Features.SaleInstallment.Dtos
         public int CustomerId { get; set; }
         public string CustomerName { get; set; } = string.Empty;
 
+        /// <summary>Principal = the sale's invoice total (lines + tax).</summary>
         public UInt64 CashAmount { get; set; }
         public decimal MarkupPercentage { get; set; }
+
+        /// <summary>The installment charge, kept apart from the invoice.</summary>
+        public UInt64 InstallmentChargeAmount { get; set; }
+
+        /// <summary>What the customer pays in total = CashAmount + InstallmentChargeAmount.</summary>
         public UInt64 TotalAmount { get; set; }
         public UInt64 DownPaymentAmount { get; set; }
         public UInt64 FinancedAmount { get; set; }

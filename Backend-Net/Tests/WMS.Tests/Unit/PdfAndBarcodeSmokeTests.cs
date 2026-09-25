@@ -76,6 +76,33 @@ namespace WMS.Tests.Unit
             Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(bytes, 0, 4));
         }
 
+        // An installment sale prints two more rows under the invoice total: the charge and what the customer pays.
+        [Fact]
+        public async Task RenderInvoiceAsync_QuestPdfEngine_InstallmentSale_ProducesNonEmptyPdf()
+        {
+            var service = new QuestPdfInvoiceDocumentService(new QuestPdfDocumentService(new ZXingBarcodeRenderer()));
+            var model = new InvoiceDocumentModel
+            {
+                Title = "صورتحساب فروش کالا و خدمات",
+                DocumentNumber = "S-2026-0002",
+                DocumentDate = new DateTime(2026, 9, 24),
+                Company = new CompanyInfo { Name = "شرکت تست", Currency = "ریال" },
+                Counterparty = new PartyInfo { Name = "مشتری تست" },
+                Lines = new() { new InvoiceLineModel { RowNumber = 1, ProductCode = "P-1", ProductName = "کالا", Quantity = 1, UnitPrice = 10_000_000, TaxAmount = 1_000_000, LineTotal = 11_000_000 } },
+                SubTotal = 10_000_000,
+                TotalTax = 1_000_000,
+                GrandTotal = 11_000_000,
+                InstallmentChargeAmount = 2_200_000,
+                PayableAmount = 13_200_000,
+                PaidAmount = 1_200_000,
+                Balance = 12_000_000,
+            };
+
+            var bytes = await service.RenderInvoiceAsync(model);
+
+            Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(bytes, 0, 4));
+        }
+
         [Fact]
         public void RenderBarcodeLabels_SheetMode_ProducesNonEmptyPdf()
         {

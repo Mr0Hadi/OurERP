@@ -1,3 +1,4 @@
+using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
@@ -95,6 +96,11 @@ namespace Application.Features.Customer.Queries
                 BalanceType = x.BalanceType,
                 Balance = x.Balance
             }).ToPagedAsync(request.Page, request.Take, cancellationToken);
+
+            // After paging, one grouped query for the whole page - same place and reason as signed image URLs.
+            var balances = await PartyLedger.CustomerBalancesAsync(_context, paged.Items.Select(x => x.Id).ToList(), cancellationToken);
+            foreach (var item in paged.Items)
+                item.LedgerBalance = balances.GetValueOrDefault(item.Id);
 
             res.Data = new
             {

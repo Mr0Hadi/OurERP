@@ -26,6 +26,9 @@ namespace Application.Features.Product.Commands
         public UInt64 RetailPrice { get; set; }
         public UInt64 WholeSalePrice { get; set; }
         public int Tax { get; set; }
+
+        /// <summary>TAXABLE (default) or EXEMPT. Every new invoice line of this product snapshots it; issued invoices keep theirs.</summary>
+        public Domain.Enums.TaxCategoryEnum TaxCategory { get; set; } = Domain.Enums.TaxCategoryEnum.TAXABLE;
         public int Stock { get; set; }
         public int LowStockThreshold { get; set; }
 
@@ -51,6 +54,8 @@ namespace Application.Features.Product.Commands
         {
             RuleFor(x => x.Name).NotEmpty().WithMessage(Validation.RequiredMessage("نام محصول"));
             RuleFor(x => x.Tax).GreaterThanOrEqualTo(0).WithMessage("مالیات نمی‌تواند منفی باشد.");
+            RuleFor(x => x.Tax).LessThanOrEqualTo(100).WithMessage("درصد مالیات نمی‌تواند از ۱۰۰ بیشتر باشد.");
+            RuleFor(x => x.TaxCategory).IsInEnum().WithMessage("وضعیت مالیاتی کالا نامعتبر است.");
             RuleFor(x => x.Stock).GreaterThanOrEqualTo(0).WithMessage("موجودی نمی‌تواند منفی باشد.");
             RuleFor(x => x.LowStockThreshold).GreaterThanOrEqualTo(0).WithMessage("حداقل موجودی نمی‌تواند منفی باشد.");
             RuleFor(x => x.ProductCategoryId).GreaterThan(0).WithMessage(Validation.RequiredMessage("شناسه دسته‌بندی محصول"));
@@ -99,6 +104,7 @@ namespace Application.Features.Product.Commands
             product.RetailPrice = request.RetailPrice;
             product.WholeSalePrice = request.WholeSalePrice;
             product.Tax = request.Tax;
+            product.TaxCategory = request.TaxCategory;
             product.LowStockThreshold = request.LowStockThreshold;
             // The column stores the bucket object key, never a URL - a browser-facing image URL
             // echoed back by the frontend is stripped down rather than persisted verbatim.

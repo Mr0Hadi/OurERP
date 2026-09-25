@@ -28,6 +28,9 @@ namespace Application.Features.Product.Commands
         public int RetailPrice { get; set; }
         public int WholeSalePrice { get; set; }
         public int Tax { get; set; }
+
+        /// <summary>TAXABLE (default) or EXEMPT. Every new invoice line of this product snapshots it; issued invoices keep theirs.</summary>
+        public Domain.Enums.TaxCategoryEnum TaxCategory { get; set; } = Domain.Enums.TaxCategoryEnum.TAXABLE;
         public int Stock { get; set; }
         public int LowStockThreshold { get; set; }
         /// <summary>
@@ -61,6 +64,8 @@ namespace Application.Features.Product.Commands
             RuleFor(x => x.WholeSalePrice).GreaterThanOrEqualTo(0).WithMessage("قیمت عمده فروشی نمی‌تواند منفی باشد.").When(x => x.IsIncomplete);
             RuleFor(x => x.Stock).Equal(0).WithMessage("کالای ناقص با موجودی ثبت نمی‌شود؛ موجودی آن از راه دریافت خرید وارد می‌شود.").When(x => x.IsIncomplete);
             RuleFor(x => x.Tax).GreaterThanOrEqualTo(0).WithMessage("مالیات نمی‌تواند منفی باشد.");
+            RuleFor(x => x.Tax).LessThanOrEqualTo(100).WithMessage("درصد مالیات نمی‌تواند از ۱۰۰ بیشتر باشد.");
+            RuleFor(x => x.TaxCategory).IsInEnum().WithMessage("وضعیت مالیاتی کالا نامعتبر است.");
             RuleFor(x => x.Stock).GreaterThanOrEqualTo(0).WithMessage("موجودی نمی‌تواند منفی باشد.");
             RuleFor(x => x.LowStockThreshold).GreaterThanOrEqualTo(0).WithMessage("حداقل موجودی نمی‌تواند منفی باشد.");
             RuleFor(x => x.ProductCategoryId).GreaterThan(0).WithMessage(Validation.RequiredMessage("شناسه دسته‌بندی محصول"));

@@ -201,7 +201,7 @@ namespace Infrastructure.Services
         }
 
         /// <summary>UnitPrice * (100-discountPercent)/100 - Discount is a percentage everywhere in
-        /// this codebase (see IInvoiceLineCalculationService's doc comment), never a flat amount.</summary>
+        /// this codebase (see InvoiceLineMath), never a flat amount.</summary>
         private static decimal NetUnitAmount(ulong unitPrice, int discountPercent)
         {
             return unitPrice * (100m - discountPercent) / 100m;

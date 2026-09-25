@@ -16,7 +16,7 @@ namespace WMS.Tests.Integration
         /// یک فروش اقساطی در حالت پیش‌فاکتور: دقیقاً همان چیزی که CreateSale برای
         /// PaymentType = INSTALLMENT می‌سازد (بدون شماره‌ی فاکتور رسمی).
         /// </summary>
-        private static SaleScenario ProformaInstallmentSale(Infrastructure.Persistence.WMSDbContext context, ulong totalAmount)
+        private static SaleScenario ProformaInstallmentSale(Infrastructure.Persistence.WMSDbContext context, ulong totalAmount /* the invoice total = the plan's cash amount */)
         {
             var scenario = Seed.ShippedSale(context, orderedQuantity: 1, shippedQuantity: 0, stock: 0, unitPrice: totalAmount);
             scenario.Sale.Status = SalesStatusEnum.PROFORMA;
@@ -30,13 +30,12 @@ namespace WMS.Tests.Integration
             return scenario;
         }
 
-        private static CreateSaleInstallmentPlanCommand PlanCommand(int saleId, ulong cash, decimal markup, ulong total, ulong downPayment, int count, DateTime firstDue)
+        /// <summary>The plan's principal is the sale's invoice total and its charge/total are computed by the server.</summary>
+        private static CreateSaleInstallmentPlanCommand PlanCommand(int saleId, decimal markup, ulong downPayment, int count, DateTime firstDue)
             => new()
             {
                 SaleId = saleId,
-                CashAmount = cash,
                 MarkupPercentage = markup,
-                TotalAmount = total,
                 DownPaymentAmount = downPayment,
                 InstallmentCount = count,
                 FirstDueDate = firstDue,
@@ -50,10 +49,10 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
             // نقدی ۱۰٬۰۰۰٬۰۰۰ با ۲۰٪ افزایش = ۱۲٬۰۰۰٬۰۰۰
-            var scenario = ProformaInstallmentSale(scope.Context, 12_000_000);
+            var scenario = ProformaInstallmentSale(scope.Context, 10_000_000);
 
             var handler = new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork);
-            await handler.Handle(PlanCommand(scenario.Sale.Id, 10_000_000, 20m, 12_000_000, 2_000_000, 5, new DateTime(2026, 2, 1)), CancellationToken.None);
+            await handler.Handle(PlanCommand(scenario.Sale.Id, 20m, 2_000_000, 5, new DateTime(2026, 2, 1)), CancellationToken.None);
 
             using var verify = db.NewContext();
             var plan = verify.SaleInstallmentPlans.Include(x => x.Installments).Single(x => x.SaleId == scenario.Sale.Id);
@@ -85,10 +84,10 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
             // ۱۰٬۰۰۰ باقیمانده روی ۳ قسط: ۳۳۳۳ / ۳۳۳۳ / ۳۳۳۴
-            var scenario = ProformaInstallmentSale(scope.Context, 11_000);
+            var scenario = ProformaInstallmentSale(scope.Context, 10_000);
 
             var handler = new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork);
-            await handler.Handle(PlanCommand(scenario.Sale.Id, 10_000, 10m, 11_000, 1_000, 3, new DateTime(2026, 2, 1)), CancellationToken.None);
+            await handler.Handle(PlanCommand(scenario.Sale.Id, 10m, 1_000, 3, new DateTime(2026, 2, 1)), CancellationToken.None);
 
             using var verify = db.NewContext();
             var installments = verify.SaleInstallments
@@ -105,10 +104,10 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = ProformaInstallmentSale(scope.Context, 12_000_000);
+            var scenario = ProformaInstallmentSale(scope.Context, 10_000_000);
 
             var handler = new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork);
-            await handler.Handle(PlanCommand(scenario.Sale.Id, 10_000_000, 20m, 12_000_000, 2_000_000, 5, new DateTime(2026, 2, 1)), CancellationToken.None);
+            await handler.Handle(PlanCommand(scenario.Sale.Id, 20m, 2_000_000, 5, new DateTime(2026, 2, 1)), CancellationToken.None);
 
             using var verify = db.NewContext();
             var sale = verify.Sales.Single(x => x.Id == scenario.Sale.Id);
@@ -123,14 +122,14 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = ProformaInstallmentSale(scope.Context, 12_000_000);
+            var scenario = ProformaInstallmentSale(scope.Context, 10_000_000);
             scenario.Sale.PaymentType = PaymentTypeEnum.CASH;
             scope.Context.SaveChanges();
 
             var handler = new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(
-                PlanCommand(scenario.Sale.Id, 10_000_000, 20m, 12_000_000, 2_000_000, 5, new DateTime(2026, 2, 1)), CancellationToken.None));
+                PlanCommand(scenario.Sale.Id, 20m, 2_000_000, 5, new DateTime(2026, 2, 1)), CancellationToken.None));
         }
 
         [Fact]
@@ -138,10 +137,10 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = ProformaInstallmentSale(scope.Context, 11_000);
+            var scenario = ProformaInstallmentSale(scope.Context, 10_000);
 
             var createHandler = new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork);
-            await createHandler.Handle(PlanCommand(scenario.Sale.Id, 10_000, 10m, 11_000, 1_000, 3, new DateTime(2026, 2, 1)), CancellationToken.None);
+            await createHandler.Handle(PlanCommand(scenario.Sale.Id, 10m, 1_000, 3, new DateTime(2026, 2, 1)), CancellationToken.None);
 
             var payHandler = new PaySaleInstallmentCommandHandler(scope.Db, scope.UnitOfWork);
             var detailHandler = new GetSaleInstallmentPlanDetailQueryHandler(scope.Db);
@@ -197,10 +196,10 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = ProformaInstallmentSale(scope.Context, 11_000);
+            var scenario = ProformaInstallmentSale(scope.Context, 10_000);
 
             var createHandler = new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork);
-            await createHandler.Handle(PlanCommand(scenario.Sale.Id, 10_000, 10m, 11_000, 1_000, 3, new DateTime(2026, 12, 1)), CancellationToken.None);
+            await createHandler.Handle(PlanCommand(scenario.Sale.Id, 10m, 1_000, 3, new DateTime(2026, 12, 1)), CancellationToken.None);
 
             var first = scope.Context.SaleInstallments.Where(x => x.Plan.SaleId == scenario.Sale.Id).OrderBy(x => x.Number).First();
 
@@ -222,10 +221,10 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = ProformaInstallmentSale(scope.Context, 11_000);
+            var scenario = ProformaInstallmentSale(scope.Context, 10_000);
 
             var createHandler = new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork);
-            await createHandler.Handle(PlanCommand(scenario.Sale.Id, 10_000, 10m, 11_000, 1_000, 3, new DateTime(2026, 2, 1)), CancellationToken.None);
+            await createHandler.Handle(PlanCommand(scenario.Sale.Id, 10m, 1_000, 3, new DateTime(2026, 2, 1)), CancellationToken.None);
 
             var third = scope.Context.SaleInstallments.Single(x => x.Plan.SaleId == scenario.Sale.Id && x.Number == 3);
 
@@ -252,10 +251,10 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = ProformaInstallmentSale(scope.Context, 11_000);
+            var scenario = ProformaInstallmentSale(scope.Context, 10_000);
 
             var createHandler = new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork);
-            await createHandler.Handle(PlanCommand(scenario.Sale.Id, 10_000, 10m, 11_000, 1_000, 3, new DateTime(2026, 2, 1)), CancellationToken.None);
+            await createHandler.Handle(PlanCommand(scenario.Sale.Id, 10m, 1_000, 3, new DateTime(2026, 2, 1)), CancellationToken.None);
 
             var first = scope.Context.SaleInstallments.Where(x => x.Plan.SaleId == scenario.Sale.Id).OrderBy(x => x.Number).First();
             var payHandler = new PaySaleInstallmentCommandHandler(scope.Db, scope.UnitOfWork);
@@ -271,10 +270,10 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = ProformaInstallmentSale(scope.Context, 11_000);
+            var scenario = ProformaInstallmentSale(scope.Context, 10_000);
 
             var createHandler = new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork);
-            await createHandler.Handle(PlanCommand(scenario.Sale.Id, 10_000, 10m, 11_000, 1_000, 3, new DateTime(2026, 2, 1)), CancellationToken.None);
+            await createHandler.Handle(PlanCommand(scenario.Sale.Id, 10m, 1_000, 3, new DateTime(2026, 2, 1)), CancellationToken.None);
 
             var planId = scope.Context.SaleInstallmentPlans.Single(x => x.SaleId == scenario.Sale.Id).Id;
             var first = scope.Context.SaleInstallments.Where(x => x.SaleInstallmentPlanId == planId).OrderBy(x => x.Number).First();
@@ -293,10 +292,10 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = ProformaInstallmentSale(scope.Context, 11_000);
+            var scenario = ProformaInstallmentSale(scope.Context, 10_000);
 
             var createHandler = new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork);
-            await createHandler.Handle(PlanCommand(scenario.Sale.Id, 10_000, 10m, 11_000, 1_000, 3, new DateTime(2026, 2, 1)), CancellationToken.None);
+            await createHandler.Handle(PlanCommand(scenario.Sale.Id, 10m, 1_000, 3, new DateTime(2026, 2, 1)), CancellationToken.None);
 
             var first = scope.Context.SaleInstallments.Where(x => x.Plan.SaleId == scenario.Sale.Id).OrderBy(x => x.Number).First();
             await new PaySaleInstallmentCommandHandler(scope.Db, scope.UnitOfWork).Handle(
@@ -331,10 +330,10 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = ProformaInstallmentSale(scope.Context, 11_000);
+            var scenario = ProformaInstallmentSale(scope.Context, 10_000);
 
             var createHandler = new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork);
-            await createHandler.Handle(PlanCommand(scenario.Sale.Id, 10_000, 10m, 11_000, 1_000, 3, new DateTime(2026, 2, 1)), CancellationToken.None);
+            await createHandler.Handle(PlanCommand(scenario.Sale.Id, 10m, 1_000, 3, new DateTime(2026, 2, 1)), CancellationToken.None);
 
             var planId = scope.Context.SaleInstallmentPlans.Single(x => x.SaleId == scenario.Sale.Id).Id;
             var first = scope.Context.SaleInstallments.Where(x => x.SaleInstallmentPlanId == planId).OrderBy(x => x.Number).First();
@@ -346,9 +345,7 @@ namespace WMS.Tests.Integration
             await new UpdateSaleInstallmentPlanCommandHandler(scope.Db, scope.UnitOfWork).Handle(new UpdateSaleInstallmentPlanCommand
             {
                 Id = planId,
-                CashAmount = 10_000,
                 MarkupPercentage = 10m,
-                TotalAmount = 11_000,
                 InstallmentCount = 5,
                 FirstDueDate = new DateTime(2026, 5, 1),
             }, CancellationToken.None);
@@ -379,10 +376,10 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = ProformaInstallmentSale(scope.Context, 11_000);
+            var scenario = ProformaInstallmentSale(scope.Context, 10_000);
 
             var createHandler = new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork);
-            await createHandler.Handle(PlanCommand(scenario.Sale.Id, 10_000, 10m, 11_000, 1_000, 3, new DateTime(2026, 2, 1)), CancellationToken.None);
+            await createHandler.Handle(PlanCommand(scenario.Sale.Id, 10m, 1_000, 3, new DateTime(2026, 2, 1)), CancellationToken.None);
 
             var planId = scope.Context.SaleInstallmentPlans.Single(x => x.SaleId == scenario.Sale.Id).Id;
             var payHandler = new PaySaleInstallmentCommandHandler(scope.Db, scope.UnitOfWork);
@@ -393,9 +390,7 @@ namespace WMS.Tests.Integration
                 .Handle(new UpdateSaleInstallmentPlanCommand
                 {
                     Id = planId,
-                    CashAmount = 10_000,
                     MarkupPercentage = 10m,
-                    TotalAmount = 11_000,
                     InstallmentCount = 1,
                     FirstDueDate = new DateTime(2026, 5, 1),
                 }, CancellationToken.None));
@@ -406,10 +401,10 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = ProformaInstallmentSale(scope.Context, 11_000);
+            var scenario = ProformaInstallmentSale(scope.Context, 10_000);
 
             var createHandler = new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork);
-            await createHandler.Handle(PlanCommand(scenario.Sale.Id, 10_000, 10m, 11_000, 1_000, 3, new DateTime(2026, 2, 1)), CancellationToken.None);
+            await createHandler.Handle(PlanCommand(scenario.Sale.Id, 10m, 1_000, 3, new DateTime(2026, 2, 1)), CancellationToken.None);
 
             var planId = scope.Context.SaleInstallmentPlans.Single(x => x.SaleId == scenario.Sale.Id).Id;
             var first = scope.Context.SaleInstallments.Where(x => x.SaleInstallmentPlanId == planId).OrderBy(x => x.Number).First();
@@ -441,26 +436,9 @@ namespace WMS.Tests.Integration
             scenario.Sale.PaymentType = PaymentTypeEnum.CASH;
             scope.Context.SaveChanges();
 
-            var handler = new UpdateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, TestMapper.Instance);
-
-            UpdateSaleCommand Command(ulong paidAmount, SalesStatusEnum status) => new()
-            {
-                Id = scenario.Sale.Id,
-                InvoiceDate = DateTime.Now,
-                Status = status,
-                PaymentType = PaymentTypeEnum.CASH,
-                PaymentDetails = new(),
-                CustomerId = scenario.Customer.Id,
-                TotalAmount = 5_000,
-                PaidAmount = paidAmount,
-                Items = new() { new UpdateSaleItemDto { Id = scenario.Item.Id, ProductId = scenario.Product.Id, Quantity = 1, UnitPrice = 5_000, Discount = 0 } },
-            };
-
-            // بدون هیچ پرداختی + تلاش برای خروج دستی = خطا.
-            await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(Command(0, SalesStatusEnum.PROCESSING), CancellationToken.None));
-
-            // اولین پرداخت، حتی ناقص = نهایی‌سازی خودکار.
-            await handler.Handle(Command(1_000, SalesStatusEnum.PROFORMA), CancellationToken.None);
+            // اولین پرداخت، حتی ناقص = نهایی‌سازی خودکار. (خروج دستی دیگر راهی ندارد: UpdateSale وضعیت نمی‌گیرد.)
+            await new AddSalePaymentCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork)
+                .Handle(new AddSalePaymentCommand { SaleId = scenario.Sale.Id, Type = PaymentTypeEnum.CASH, Amount = 1_000 }, CancellationToken.None);
 
             using var verify = db.NewContext();
             var sale = verify.Sales.Single(x => x.Id == scenario.Sale.Id);
@@ -475,21 +453,12 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = ProformaInstallmentSale(scope.Context, 5_000);
 
-            var handler = new UpdateSaleCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, TestMapper.Instance);
+            // حتی با پرداخت کامل: پول فروش اقساطی فقط از مسیر قرارداد می‌آید، پس بدون قرارداد از پیش‌فاکتور خارج نمی‌شود.
+            await Assert.ThrowsAsync<ValidationCustomException>(() => new AddSalePaymentCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork)
+                .Handle(new AddSalePaymentCommand { SaleId = scenario.Sale.Id, Type = PaymentTypeEnum.CASH, Amount = 5_000 }, CancellationToken.None));
 
-            // حتی با PaidAmount کامل: بدون قرارداد اقساطی، فروش اقساطی از پیش‌فاکتور خارج نمی‌شود.
-            await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(new UpdateSaleCommand
-            {
-                Id = scenario.Sale.Id,
-                InvoiceDate = DateTime.Now,
-                Status = SalesStatusEnum.PROCESSING,
-                PaymentType = PaymentTypeEnum.INSTALLMENT,
-                PaymentDetails = new(),
-                CustomerId = scenario.Customer.Id,
-                TotalAmount = 5_000,
-                PaidAmount = 5_000,
-                Items = new() { new UpdateSaleItemDto { Id = scenario.Item.Id, ProductId = scenario.Product.Id, Quantity = 1, UnitPrice = 5_000, Discount = 0 } },
-            }, CancellationToken.None));
+            using var verify = db.NewContext();
+            Assert.Equal(SalesStatusEnum.PROFORMA, verify.Sales.Single(x => x.Id == scenario.Sale.Id).Status);
         }
 
         [Fact]
@@ -497,10 +466,10 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = ProformaInstallmentSale(scope.Context, 11_000);
+            var scenario = ProformaInstallmentSale(scope.Context, 10_000);
 
             var createHandler = new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork);
-            await createHandler.Handle(PlanCommand(scenario.Sale.Id, 10_000, 10m, 11_000, 1_000, 3, new DateTime(2026, 2, 1)), CancellationToken.None);
+            await createHandler.Handle(PlanCommand(scenario.Sale.Id, 10m, 1_000, 3, new DateTime(2026, 2, 1)), CancellationToken.None);
 
             var first = scope.Context.SaleInstallments.Where(x => x.Plan.SaleId == scenario.Sale.Id).OrderBy(x => x.Number).First();
             await new PaySaleInstallmentCommandHandler(scope.Db, scope.UnitOfWork).Handle(
@@ -533,10 +502,10 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = ProformaInstallmentSale(scope.Context, 11_000);
+            var scenario = ProformaInstallmentSale(scope.Context, 10_000);
 
             var createHandler = new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork);
-            await createHandler.Handle(PlanCommand(scenario.Sale.Id, 10_000, 10m, 11_000, 1_000, 3, new DateTime(2026, 2, 1)), CancellationToken.None);
+            await createHandler.Handle(PlanCommand(scenario.Sale.Id, 10m, 1_000, 3, new DateTime(2026, 2, 1)), CancellationToken.None);
 
             var response = await new Application.Features.Sale.Queries.GetSaleDetailQueryHandler(scope.Db, FakeObjectStorage.Instance)
                 .Handle(new Application.Features.Sale.Queries.GetSaleDetailQuery { Id = scenario.Sale.Id }, CancellationToken.None);

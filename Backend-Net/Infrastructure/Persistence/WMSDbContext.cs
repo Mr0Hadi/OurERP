@@ -49,6 +49,7 @@ namespace Infrastructure.Persistence
         public DbSet<PosTerminal> PosTerminals => Set<PosTerminal>();
         public DbSet<InventoryCostLedgerEntry> InventoryCostLedgerEntries => Set<InventoryCostLedgerEntry>();
         public DbSet<PaymentDetail> PaymentDetails => Set<PaymentDetail>();
+        public DbSet<PartyLedgerEntry> PartyLedgerEntries => Set<PartyLedgerEntry>();
         public DbSet<SaleInstallmentPlan> SaleInstallmentPlans => Set<SaleInstallmentPlan>();
         public DbSet<SaleInstallment> SaleInstallments => Set<SaleInstallment>();
         public DbSet<UserPermission> UserPermissions => Set<UserPermission>();
@@ -204,6 +205,10 @@ namespace Infrastructure.Persistence
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<PurchaseReturn>()
+                .Property(x => x.StatusReason)
+                .HasMaxLength(500);
+
+            modelBuilder.Entity<PurchaseReturn>()
                 .HasOne(x => x.PreviousReturn)
                 .WithMany()
                 .HasForeignKey(x => x.PreviousReturnId)
@@ -268,6 +273,10 @@ namespace Infrastructure.Persistence
                 .WithMany()
                 .HasForeignKey(x => x.SaleId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<SaleReturn>()
+                .Property(x => x.StatusReason)
+                .HasMaxLength(500);
 
             modelBuilder.Entity<SaleReturn>()
                 .HasOne(x => x.PreviousReturn)
@@ -517,6 +526,35 @@ namespace Infrastructure.Persistence
             modelBuilder.Entity<PaymentDetail>()
                 .Property(x => x.Amount)
                 .HasPrecision(20, 0);
+
+            // Restrict: a supplement line points at the ordered line it grew out of; neither is ever deleted once the
+            // invoice is issued, and a cascade here would give SQL Server a second path from Purchases.
+            modelBuilder.Entity<PurchaseItem>()
+                .HasOne(x => x.SupplementOf)
+                .WithMany()
+                .HasForeignKey(x => x.SupplementOfPurchaseItemId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Party ledger: append-only, so every link is Restrict - nothing it points at is ever hard-deleted while it
+            // has rows (returns are referenced by plain claim ids precisely because they can be).
+            modelBuilder.Entity<PartyLedgerEntry>(entry =>
+            {
+                entry.ToTable(t =>
+                {
+                    t.HasCheckConstraint("CK_PartyLedgerEntries_OneParty",
+                        "([CustomerId] IS NOT NULL AND [SupplierId] IS NULL) OR ([CustomerId] IS NULL AND [SupplierId] IS NOT NULL)");
+                    t.HasCheckConstraint("CK_PartyLedgerEntries_PositiveAmount", "[Amount] > 0");
+                });
+                entry.HasOne(x => x.Customer).WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
+                entry.HasOne(x => x.Supplier).WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+                entry.HasOne(x => x.Sale).WithMany().HasForeignKey(x => x.SaleId).OnDelete(DeleteBehavior.Restrict);
+                entry.HasOne(x => x.Purchase).WithMany().HasForeignKey(x => x.PurchaseId).OnDelete(DeleteBehavior.Restrict);
+                entry.HasOne(x => x.PaymentDetail).WithMany().HasForeignKey(x => x.PaymentDetailId).OnDelete(DeleteBehavior.Restrict);
+                entry.HasOne(x => x.ReversalOf).WithMany().HasForeignKey(x => x.ReversalOfEntryId).OnDelete(DeleteBehavior.Restrict);
+                entry.Property(x => x.Description).HasMaxLength(200);
+                entry.HasIndex(x => new { x.CustomerId, x.OccurredAt });
+                entry.HasIndex(x => new { x.SupplierId, x.OccurredAt });
+            });
 
             // یک‌به‌یک با فروش.
             modelBuilder.Entity<SaleInstallmentPlan>()

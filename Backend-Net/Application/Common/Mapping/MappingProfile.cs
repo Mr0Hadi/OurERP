@@ -19,6 +19,7 @@ using Application.Features.User.Dto;
 using AutoMapper;
 using Common.Extensions;
 using Domain.Entities;
+using Domain.Enums;
 
 namespace Application.Common.Mapping
 {
@@ -32,7 +33,10 @@ namespace Application.Common.Mapping
 				.ForMember(dest => dest.PurchaseId, opt => opt.Ignore())
 				.ForMember(dest => dest.Purchase, opt => opt.Ignore())
 				.ForMember(dest => dest.SaleId, opt => opt.Ignore())
-				.ForMember(dest => dest.Sale, opt => opt.Ignore());
+				.ForMember(dest => dest.Sale, opt => opt.Ignore())
+				// Direction is the document's own (the handler sets it); a row is never born voided.
+				.ForMember(dest => dest.Direction, opt => opt.Ignore())
+				.ForMember(dest => dest.VoidedAt, opt => opt.Ignore());
 
 			CreateMap<PaymentDetail, PaymentDetailDto>();
 
@@ -46,6 +50,12 @@ namespace Application.Common.Mapping
 
 			CreateMap<CreateSaleCommand, Sale>()
 				.ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.ProductIds))
+				// A sale is born PROFORMA and leaves it only on its first payment (the handler finalizes it);
+				// PaidAmount is the sum of the payment rows.
+				.ForMember(dest => dest.Status, opt => opt.MapFrom(src => SalesStatusEnum.PROFORMA))
+				.ForMember(dest => dest.PaidAmount, opt => opt.Ignore())
+				// TotalAmount is the sum of the line totals (InvoiceLineMath), set by the handler.
+				.ForMember(dest => dest.TotalAmount, opt => opt.Ignore())
 				.ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.Now))
 				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
@@ -54,8 +64,10 @@ namespace Application.Common.Mapping
 
 			CreateMap<CreatePurchaseCommand, Purchase>()
 				.ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.ProductItemList))
-				.ForMember(dest => dest.TotalAmount, opt => opt.MapFrom(src => src.TotalAmount))
-				.ForMember(dest => dest.PaidAmount, opt => opt.MapFrom(src => src.PaidAmount))
+				// TotalAmount is the sum of the line totals (InvoiceLineMath), set by the handler.
+				.ForMember(dest => dest.TotalAmount, opt => opt.Ignore())
+				// PaidAmount is the sum of the payment rows (DocumentPayments.NetPaid), set by the handler.
+				.ForMember(dest => dest.PaidAmount, opt => opt.Ignore())
 				.ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.Now))
 				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
@@ -93,7 +105,9 @@ namespace Application.Common.Mapping
 
 			CreateMap<Supplier, SupplierDto>()
 				.ForMember(dest => dest.ImageKey, opt => opt.MapFrom(src => src.ImageUrl))
-				.ForMember(dest => dest.ImageUrl, opt => opt.Ignore());
+				.ForMember(dest => dest.ImageUrl, opt => opt.Ignore())
+				// Summed from the party ledger by the query, not a column.
+				.ForMember(dest => dest.LedgerBalance, opt => opt.Ignore());
 
 			CreateMap<CreateDepartmentCommand, Domain.Entities.Department>()
 				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
@@ -115,7 +129,9 @@ namespace Application.Common.Mapping
 
 			CreateMap<Customer, CustomerDto>()
 				.ForMember(dest => dest.ImageKey, opt => opt.MapFrom(src => src.ImageUrl))
-				.ForMember(dest => dest.ImageUrl, opt => opt.Ignore());
+				.ForMember(dest => dest.ImageUrl, opt => opt.Ignore())
+				// Summed from the party ledger by the query, not a column.
+				.ForMember(dest => dest.LedgerBalance, opt => opt.Ignore());
 
 			CreateMap<User, TokenUserInfoDto>();
 

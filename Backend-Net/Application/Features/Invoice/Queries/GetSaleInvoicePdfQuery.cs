@@ -1,6 +1,5 @@
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Documents;
-using Application.Common.Contracts.Invoice;
 using Application.Common.Dtos;
 using Common.Exceptions;
 using Common.Extensions;
@@ -19,14 +18,12 @@ namespace Application.Features.Invoice.Queries
     {
         private readonly IWMSDbContext _context;
         private readonly IPdfDocumentService _pdfDocumentService;
-        private readonly IInvoiceLineCalculationService _invoiceLineCalculationService;
         private readonly IConfiguration _configuration;
 
-        public GetSaleInvoicePdfQueryHandler(IWMSDbContext context, IPdfDocumentService pdfDocumentService, IInvoiceLineCalculationService invoiceLineCalculationService, IConfiguration configuration)
+        public GetSaleInvoicePdfQueryHandler(IWMSDbContext context, IPdfDocumentService pdfDocumentService, IConfiguration configuration)
         {
             _context = context;
             _pdfDocumentService = pdfDocumentService;
-            _invoiceLineCalculationService = invoiceLineCalculationService;
             _configuration = configuration;
         }
 
@@ -36,17 +33,25 @@ namespace Application.Features.Invoice.Queries
                 .Include(x => x.Customer)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Product)
+                .Include(x => x.InstallmentPlan)
                 .FirstOrDefaultAsync(x => x.Id == request.SaleId, cancellationToken)
                     ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
 
-            var lines = sale.Items.Select((item, index) => _invoiceLineCalculationService.BuildLine(
-                index + 1,
-                item.Product.Code,
-                item.Product.Name,
-                item.Quantity,
-                item.UnitPrice,
-                item.Discount,
-                item.Product.Tax)).ToList();
+            // The document prints what is stored on each line (InvoiceLineMath) - it computes nothing of its own, so the
+            // PDF, the API and Sale.TotalAmount can never disagree.
+            var lines = sale.Items.OrderBy(i => i.Id).Select((item, index) => new InvoiceLineModel
+            {
+                RowNumber = index + 1,
+                ProductCode = item.Product.Code,
+                ProductName = item.Product.Name,
+                Quantity = item.Quantity,
+                UnitPrice = item.UnitPrice,
+                DiscountAmount = item.DiscountAmount,
+                TaxAmount = item.TaxAmount,
+                LineTotal = item.TotalAmount,
+            }).ToList();
+
+            var plan = sale.InstallmentPlan is { IsActive: true } ? sale.InstallmentPlan : null;
 
             var model = new InvoiceDocumentModel
             {
@@ -72,13 +77,15 @@ namespace Application.Features.Invoice.Queries
                     City = sale.Customer.City,
                 },
                 Lines = lines,
-                SubTotal = lines.Aggregate(0UL, (sum, l) => sum + (ulong)l.Quantity * l.UnitPrice),
-                TotalDiscount = lines.Aggregate(0UL, (sum, l) => sum + l.DiscountAmount),
-                TotalTax = lines.Aggregate(0UL, (sum, l) => sum + l.TaxAmount),
-                GrandTotal = lines.Aggregate(0UL, (sum, l) => sum + l.LineTotal),
+                SubTotal = sale.Items.Aggregate(0UL, (sum, l) => sum + l.GrossAmount),
+                TotalDiscount = sale.Items.Aggregate(0UL, (sum, l) => sum + l.DiscountAmount),
+                TotalTax = sale.Items.Aggregate(0UL, (sum, l) => sum + l.TaxAmount),
+                GrandTotal = sale.TotalAmount,
+                InstallmentChargeAmount = plan?.InstallmentChargeAmount,
+                PayableAmount = plan?.TotalAmount,
                 PaidAmount = sale.PaidAmount,
             };
-            model.Balance = (long)model.GrandTotal - (long)model.PaidAmount;
+            model.Balance = (long)(model.PayableAmount ?? model.GrandTotal) - (long)model.PaidAmount;
 
             var bytes = await _pdfDocumentService.RenderInvoiceAsync(model, cancellationToken);
 

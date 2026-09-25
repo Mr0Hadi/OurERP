@@ -497,6 +497,36 @@ namespace WMS.Tests.Integration
         }
 
         [Fact]
+        public async Task RejectAndCancel_StoreTheReason_AndReopenClearsIt()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            await SeedReceivedWithClaim(scope);
+            var returnId = scope.Context.PurchaseReturns.Single().Id;
+
+            var rejected = await NewReject(scope).Handle(new RejectPurchaseReturnCommand { Id = returnId, Reason = "  تامین‌کننده نپذیرفت  " }, CancellationToken.None);
+            Assert.Equal("تامین‌کننده نپذیرفت", Assert.IsType<PurchaseReturnDetailDto>(rejected.Data).StatusReason);
+
+            var reopened = await NewReopen(scope).Handle(new ReopenPurchaseReturnCommand { Id = returnId }, CancellationToken.None);
+            Assert.Null(Assert.IsType<PurchaseReturnDetailDto>(reopened.Data).StatusReason);
+
+            var cancelled = await NewCancel(scope).Handle(new CancelPurchaseReturnCommand { Id = returnId, Reason = "   " }, CancellationToken.None);
+            Assert.Null(Assert.IsType<PurchaseReturnDetailDto>(cancelled.Data).StatusReason);
+
+            using var verify = db.NewContext();
+            Assert.Null(verify.PurchaseReturns.Single().StatusReason);
+        }
+
+        [Fact]
+        public void Reason_LongerThan500_IsInvalid()
+        {
+            var tooLong = new string('x', 501);
+            Assert.False(new RejectPurchaseReturnCommandValidator().Validate(new RejectPurchaseReturnCommand { Id = 1, Reason = tooLong }).IsValid);
+            Assert.False(new CancelPurchaseReturnCommandValidator().Validate(new CancelPurchaseReturnCommand { Id = 1, Reason = tooLong }).IsValid);
+            Assert.True(new CancelPurchaseReturnCommandValidator().Validate(new CancelPurchaseReturnCommand { Id = 1, Reason = new string('x', 500) }).IsValid);
+        }
+
+        [Fact]
         public async Task Regression_RejectThenStaleCancel_NamesRejectedAndReopenThenCancelWorks()
         {
             // The production sequence: Reject succeeds server-side, the client does not learn it, the

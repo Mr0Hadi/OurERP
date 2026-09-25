@@ -75,7 +75,7 @@ namespace WMS.Tests.Integration
             scope.Context.Suppliers.Add(supplier);
             scope.Context.SaveChanges();
 
-            var handler = new GetSupplierDetailQueryHandler(scope.SupplierRepository, TestMapper.Instance, FakeObjectStorage.Instance);
+            var handler = new GetSupplierDetailQueryHandler(scope.SupplierRepository, TestMapper.Instance, FakeObjectStorage.Instance, scope.Db);
             var res = await handler.Handle(new GetSupplierDetailQuery { Id = supplier.Id }, CancellationToken.None);
 
             var dto = Assert.IsType<SupplierDto>(res.Data);

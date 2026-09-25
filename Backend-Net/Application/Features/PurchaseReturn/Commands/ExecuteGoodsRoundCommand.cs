@@ -45,7 +45,10 @@ namespace Application.Features.PurchaseReturn.Commands
                 line.RuleFor(l => l.Quantity).GreaterThan(0).WithMessage("مقدار اجرا باید از صفر بیشتر باشد.");
                 line.RuleFor(l => l.Source).IsInEnum().WithMessage("منبع دانه‌ها نامعتبر است.").When(l => l.Source.HasValue);
                 line.RuleForEach(l => l.Observations).ChildRules(obs =>
-                    obs.RuleFor(o => o.Quantity).GreaterThanOrEqualTo(0).WithMessage("مقدار مشاهده نمی‌تواند منفی باشد."));
+                {
+                    obs.RuleFor(o => o.Quantity).GreaterThanOrEqualTo(0).WithMessage("مقدار مشاهده نمی‌تواند منفی باشد.");
+                    obs.RuleFor(o => o.Problem).Must(ObservedProblems.IsObservable).WithMessage(ObservedProblems.NotObservableMessage);
+                });
                 // Healthy quantity is Quantity minus the observations; more observed than moved made it
                 // negative, and that negative number was added straight to Product.Stock.
                 line.RuleFor(l => l)

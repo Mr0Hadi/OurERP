@@ -1,3 +1,4 @@
+using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
@@ -113,8 +114,10 @@ namespace Application.Features.Supplier.Queries
             // an English literal to the same display text used elsewhere in the app - so no
             // upstream consumer should be relying on the old "Creditor"/"Debtor"/"Balanced"
             // literal values.
+            var balances = await PartyLedger.SupplierBalancesAsync(_context, paged.Items.Select(x => x.Id).ToList(), cancellationToken);
             foreach (var item in paged.Items)
             {
+                item.LedgerBalance = balances.GetValueOrDefault(item.Id);
                 item.ImageUrl = _objectStorageService.GetFixedUrl(item.ImageKey);
                 item.Status = item.BalanceType.HasValue ? item.BalanceType.Value.GetDescription() : null;
             }

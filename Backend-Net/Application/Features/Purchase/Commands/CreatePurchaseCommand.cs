@@ -1,11 +1,15 @@
-﻿using Application.Common.Contracts.Context;
+using Application.Common.Ledger;
+using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Contracts.UserContextService;
+using Application.Common.Documents;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Common.Payments;
 using Application.Features.Purchase.Dtos;
+using Application.Features.Purchase.Queries;
 using AutoMapper;
 using Common.Extensions;
 using Domain.Enums;
@@ -18,11 +22,16 @@ namespace Application.Features.Purchase.Commands
     {
         public List<CreatePurchaseItemDto> ProductItemList { get; set; }
         public int SupplierId { get; set; }
-        public UInt64 TotalAmount { get; set; }
-        public UInt64 PaidAmount { get; set; }
         public PaymentTypeEnum PaymentType { get; set; }
+
+        /// <summary>PROFORMA, PENDING or SHIPPED. Anything past PROFORMA needs the supplier's invoice number and date.</summary>
         public PurchaseStatusEnum Status { get; set; }
-        public List<PaymentDetailDto> PaymentDetails { get; set; }
+
+        /// <summary>
+        /// Payments already made, e.g. a prepayment on a proforma. Optional; always money we paid (OUT). PaidAmount is
+        /// their sum - it is not accepted from the client.
+        /// </summary>
+        public List<PaymentDetailDto> PaymentDetails { get; set; } = new();
         public string InvoiceNumber { get; set; }
         public DateTime? InvoiceDate { get; set; }
         public DateTime? PaymentDate { get; set; }
@@ -39,12 +48,11 @@ namespace Application.Features.Purchase.Commands
             {
                 item.RuleFor(i => i.ProductId).GreaterThan(0).WithMessage(Validation.RequiredMessage("محصول"));
                 item.RuleFor(i => i.Quantity).GreaterThan(0).WithMessage("تعداد هر محصول باید از صفر بیشتر باشد.");
-                item.RuleFor(i => i.Discount).GreaterThanOrEqualTo(0).WithMessage("تخفیف باید بیشتر یا مساوی صفر باشد.");
+                item.RuleFor(i => i.Discount).InclusiveBetween(0, 100).WithMessage("تخفیف باید بین ۰ تا ۱۰۰ درصد باشد.");
             });
             RuleFor(x => x.SupplierId).NotEmpty().WithMessage(Validation.RequiredMessage("فروشنده"));
-            RuleFor(x => x.Status).IsInEnum().WithMessage("وضعیت نامعتبر است.");
-            RuleFor(x => x.TotalAmount).Must(p => p > 0).WithMessage("مبلغ کل باید از صفر بیشتر باشد.");
-            RuleFor(x => x.PaidAmount).Must(p => p >= 0).WithMessage("مبلغ پرداختی باید بیشتر یا مساوی صفر باشد.");
+            RuleFor(x => x.Status).Must(DocumentLockRules.IsManualPurchaseStatus)
+                .WithMessage("خرید فقط با وضعیت پیش‌فاکتور، در انتظار یا ارسال‌شده ثبت می‌شود.");
             // در مرحله‌ی پیش‌فاکتور، فاکتور رسمیِ تامین‌کننده هنوز نرسیده؛ شماره و تاریخش نباید الزامی باشد.
             RuleFor(x => x.InvoiceNumber).NotEmpty().When(x => x.Status != PurchaseStatusEnum.PROFORMA)
                 .WithMessage(Validation.RequiredMessage("شماره فاکتور"));
@@ -56,8 +64,7 @@ namespace Application.Features.Purchase.Commands
             RuleFor(x => x.PaymentDate).GreaterThanOrEqualTo(x => x.InvoiceDate)
                 .When(x => x.PaymentDate.HasValue && x.InvoiceDate.HasValue)
                 .WithMessage("مهلت پرداخت نمی‌تواند قبل از تاریخ فاکتور باشد.");
-            RuleFor(x => x.PaymentDetails).NotEmpty().When(x => x.PaymentType != PaymentTypeEnum.CASH)
-                .WithMessage("اطلاعات پرداخت باید به طول کامل پر شود.");
+            RuleForEach(x => x.PaymentDetails).SetValidator(new PaymentRowValidator());
             RuleForEach(x => x.Attachments).ChildRules(a =>
             {
                 a.RuleFor(i => i.ObjectKey).NotEmpty().WithMessage(Validation.RequiredMessage("کلید فایل ضمیمه"));
@@ -99,28 +106,40 @@ namespace Application.Features.Purchase.Commands
             purchase.InvoiceNumber ??= string.Empty;
             purchase.PurchasingUserId = _userContextService.GetUserId().ToInt();
 
+            // مبالغ هر قلم (با مالیاتِ کالا) و جمع سند را سرور حساب می‌کند؛ جمعی از کلاینت گرفته نمی‌شود.
+            var products = await DocumentProducts.LoadAsync(_context, purchase.Items.Select(i => i.ProductId), cancellationToken);
+            foreach (var item in purchase.Items)
+                InvoiceLineMath.Stamp(item, products[item.ProductId]);
+            purchase.TotalAmount = InvoiceLineMath.DocumentTotal(purchase.Items);
+
+            // ردیف‌های پرداخت از راه نگاشت AutoMapper روی گراف خرید ذخیره می‌شوند؛ جهتشان همیشه جهت خود سند است
+            // (پولی که ما داده‌ایم) و PaidAmount جمع همین ردیف‌هاست، نه عددی از کلاینت.
+            purchase.PaymentDetails ??= new();
+            foreach (var payment in purchase.PaymentDetails)
+            {
+                payment.Direction = DocumentPayments.PurchaseDirection;
+                payment.Purpose = PaymentPurposeEnum.NORMAL;
+                if (payment.PaidAt == default)
+                    payment.PaidAt = DateTime.Now;
+            }
+            purchase.PaidAmount = DocumentPayments.NetPaid(purchase.PaymentDetails, DocumentPayments.PurchaseDirection);
+            foreach (var payment in purchase.PaymentDetails)
+                await PartyLedger.PurchasePaymentAsync(_context, purchase, payment, cancellationToken);
+
+            // Created past PROFORMA = the supplier's invoice is already recorded: it goes on the supplier's account.
+            if (purchase.Status != PurchaseStatusEnum.PROFORMA)
+                await PartyLedger.PurchaseInvoiceRecordedAsync(_context, purchase, purchase.InvoiceDate ?? DateTime.Now, cancellationToken);
+
             await _purchaseRepository.AddAsync(purchase, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            foreach (var attachment in request.Attachments)
+            if (request.Attachments.Count > 0)
             {
-                await _context.DocumentAttachments.AddAsync(new Domain.Entities.DocumentAttachment
-                {
-                    DocumentKind = DocumentKindEnum.PURCHASE,
-                    DocumentId = purchase.Id,
-                    // Stored as the bare bucket key, so an image URL echoed back by the
-                    // frontend is stripped down rather than persisted verbatim - same rule
-                    // every other write path here follows.
-                    ObjectKey = _objectStorageService.NormalizeKey(attachment.ObjectKey) ?? attachment.ObjectKey,
-                    FileName = attachment.FileName,
-                    Note = attachment.Note,
-                    CreatedAt = DateTime.Now,
-                }, cancellationToken);
+                await DocumentAttachmentWriter.AddAsync(_context, _objectStorageService, DocumentKindEnum.PURCHASE, purchase.Id, request.Attachments, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
             }
 
-            if (request.Attachments.Count > 0)
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-
+            res.Data = await PurchaseDetailReader.ReadAsync(_context, _objectStorageService, purchase.Id, cancellationToken);
             res.Message = "خرید با موفقیت ثبت شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;

@@ -12,6 +12,12 @@ namespace Domain.Entities
         public ReturnStatusEnum Status { get; set; }
         public string? Description { get; set; }
 
+        /// <summary>
+        /// Why the return was rejected or cancelled, as the user typed it (optional). Set by Reject/Cancel and cleared by Reopen,
+        /// so it always describes the current closed state.
+        /// </summary>
+        public string? StatusReason { get; set; }
+
         /// <summary>Soft-delete flag. A deleted return keeps its row (and its whole claim graph) and is
         /// filtered out of every read - see ISaleReturnQueryService.WhereNotDeleted.</summary>
         public bool IsActive { get; set; } = true;

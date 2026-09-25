@@ -24,6 +24,12 @@ namespace Application.Features.Supplier.Dtos
         public string? Description { get; set; }
         public UInt64? Balance { get; set; }
         public BalanceTypeEnum? BalanceType { get; set; }
+
+        /// <summary>
+        /// From the party ledger: what this party owes us (positive) or we owe them (negative), from every issued invoice,
+        /// payment and on-account return settlement since the ledger started. Unlike Balance/BalanceType, which are typed by hand.
+        /// </summary>
+        public decimal LedgerBalance { get; set; }
         public decimal? Longitude { get; set; }
         public decimal? Latitude { get; set; }
     }

@@ -1,3 +1,4 @@
+using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.PurchaseReturn;
@@ -88,6 +89,7 @@ namespace Application.Features.PurchaseReturn.Commands
                 effect.Reference = request.Reference;
 
             await _inventoryCostingService.RecordPurchaseReturnMoneyAsync(claim.Product!, effect.Direction, effect.Amount!.Value, claim.Id, paidAt, cancellationToken);
+            await PartyLedger.PurchaseReturnMoneyAsync(_context, purchaseReturn.Purchase!, purchaseReturn.ReturnNumber, claim.Id, effect, reversal: false, paidAt, cancellationToken);
 
             // Mirrors ExecuteGoodsRound: the transition that clears a resolution's last pending effect settles
             // its quantity. ON_ORDER only - an EXCESS claim never settles its line.

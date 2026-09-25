@@ -17,6 +17,12 @@ namespace Application.Features.Sale.Dtos
         /// <summary>خلاصه‌ی قرارداد اقساطی - فقط برای فروش‌های اقساطی پر می‌شود.</summary>
         public SaleInstallmentSummaryDto? InstallmentSummary { get; set; }
         public UInt64 TotalAmount { get; set; }
+
+        /// <summary>
+        /// What the customer pays in total: TotalAmount (the invoice), plus the installment charge on an installment sale
+        /// with a live plan. Debt is always PayableAmount - PaidAmount.
+        /// </summary>
+        public UInt64 PayableAmount { get; set; }
         public UInt64 PaidAmount { get; set; }
         public string? Description { get; set; }
         public int CustomerId { get; set; }

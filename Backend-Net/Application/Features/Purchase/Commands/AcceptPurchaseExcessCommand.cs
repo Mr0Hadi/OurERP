@@ -1,8 +1,10 @@
+using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.UnitOfWork;
+using Application.Common.Documents;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Common.Queries;
@@ -16,11 +18,12 @@ using Microsoft.EntityFrameworkCore;
 namespace Application.Features.Purchase.Commands
 {
     // "We keep the extra goods and pay for them": quarantined EXCESS/UNLISTED units become part of the order (SAP / Odoo: the
-    // over-delivery is added to the PO and received against it). Excess of a line is bought at that line's price - the quantity of
-    // the line and its received quantity grow together; unlisted goods get a new line at the supplier's invoice price. Either way
-    // the units become IN_STOCK, custody ON_ORDER on that line, and enter the cost pool at the net price - so what we pay for them
-    // is also what they cost when sold. Purchase.TotalAmount grows by the same amount; the payment itself is recorded through
-    // UpdatePurchase's PaymentDetails/PaidAmount like any other purchase payment.
+    // over-delivery is added to the PO and received against it). An issued invoice is never edited, only supplemented, so every
+    // acceptance adds a NEW line (IsSupplement): excess of an ordered line becomes a supplement line pointing back at it
+    // (SupplementOfPurchaseItemId) at that line's price and discount, unlisted goods a supplement line at the supplier's invoice
+    // price. No number on an existing line changes. Either way the units become IN_STOCK, custody ON_ORDER on the new line, and
+    // enter the cost pool at the net price - so what we pay for them is also what they cost when sold. Purchase.TotalAmount grows
+    // by the same amount; the payment itself is recorded through AddPurchasePayment like any other purchase payment.
     //
     // Why not a return resolution (GOODS_RELEASE + MONEY_OUT): a release carries the units' own quarantine value, 0 for goods nobody
     // paid for, and a MONEY_OUT is purchase spend with no inventory value - the goods would be sold at a cost of 0 and profit
@@ -169,17 +172,32 @@ namespace Application.Features.Purchase.Commands
 
             res.Data = await _unitOfWork.ExecuteInTransactionAsync(async ct =>
             {
-                // Unlisted goods need their line to exist - with an id - before the units move: every unit movement row snapshots
+                // Every supplement line needs to exist - with an id - before the units move: every unit movement row snapshots
                 // the unit's line. Saved inside the transaction, so a unit-level refusal below rolls the new lines back too.
                 var targets = new List<(AcceptPurchaseExcessItemDto Request, Domain.Entities.PurchaseItem Line, UnitSelection Selection)>();
                 foreach (var item in request.Items)
                 {
                     if (item.PurchaseItemId.HasValue)
                     {
-                        var line = lines[item.PurchaseItemId.Value];
-                        line.Quantity += item.Quantity;
-                        line.ReceivedQuantity += item.Quantity;
-                        targets.Add((item, line, new UnitSelection(ProductUnitStatusEnum.QUARANTINED, purchase.Id, line.Id, UnitCustodyReasonEnum.EXCESS)));
+                        var ordered = lines[item.PurchaseItemId.Value];
+                        var line = new Domain.Entities.PurchaseItem
+                        {
+                            ProductId = ordered.ProductId,
+                            Product = ordered.Product,
+                            Quantity = item.Quantity,
+                            ReceivedQuantity = item.Quantity,
+                            UnitPrice = ordered.UnitPrice,
+                            Discount = ordered.Discount,
+                            // Same invoice, same terms: the ordered line's tax snapshot, not the product's current rate.
+                            TaxCategory = ordered.TaxCategory,
+                            TaxPercent = ordered.TaxPercent,
+                            IsSupplement = true,
+                            SupplementOfPurchaseItemId = ordered.Id,
+                        };
+                        InvoiceLineMath.Recompute(line);
+                        purchase.Items.Add(line);
+                        // The units are held on the ORDERED line; they move to the supplement line as they are accepted.
+                        targets.Add((item, line, new UnitSelection(ProductUnitStatusEnum.QUARANTINED, purchase.Id, ordered.Id, UnitCustodyReasonEnum.EXCESS)));
                     }
                     else
                     {
@@ -192,14 +210,15 @@ namespace Application.Features.Purchase.Commands
                             ReceivedQuantity = item.Quantity,
                             UnitPrice = item.UnitPrice!.Value,
                             Discount = item.Discount ?? 0,
+                            IsSupplement = true,
                         };
+                        InvoiceLineMath.Stamp(line, product);
                         purchase.Items.Add(line);
                         targets.Add((item, line, new UnitSelection(ProductUnitStatusEnum.QUARANTINED, purchase.Id, null, UnitCustodyReasonEnum.UNLISTED)));
                     }
                 }
 
-                if (targets.Any(t => t.Line.Id == 0))
-                    await _unitOfWork.SaveChangesAsync(ct);
+                await _unitOfWork.SaveChangesAsync(ct);
 
                 var accepted = new List<object>();
                 foreach (var (item, line, selection) in targets)
@@ -211,12 +230,15 @@ namespace Application.Features.Purchase.Commands
                     var heldValue = units.Sum(u => u.QuarantineCost ?? 0m);
                     await _inventoryCostingService.RecordPurchaseExcessAcceptedAsync(product, item.Quantity, line.UnitPrice, line.Discount, heldValue, line.Id, occurredAt, ct);
 
-                    var lineAmount = (ulong)Math.Round(line.UnitPrice * (100m - line.Discount) / 100m * item.Quantity, MidpointRounding.AwayFromZero);
-                    purchase.TotalAmount += lineAmount;
+                    // The invoice grows by the line total, tax included; the cost pool above takes the net price only.
+                    var lineAmount = line.TotalAmount;
+                    purchase.TotalAmount = checked(purchase.TotalAmount + lineAmount);
+                    await PartyLedger.PurchaseSupplementAsync(_context, purchase, lineAmount, occurredAt, ct);
 
                     accepted.Add(new
                     {
                         PurchaseItemId = line.Id,
+                        line.SupplementOfPurchaseItemId,
                         line.ProductId,
                         AcceptedQuantity = item.Quantity,
                         line.Quantity,

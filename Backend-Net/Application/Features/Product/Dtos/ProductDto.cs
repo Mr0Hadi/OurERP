@@ -16,6 +16,7 @@ namespace Application.Features.Product.Dtos
         public UInt64 RetailPrice { get; set; }
         public UInt64 WholeSalePrice { get; set; }
         public int Tax { get; set; }
+        public Domain.Enums.TaxCategoryEnum TaxCategory { get; set; }
         public int Stock { get; set; }
         public int LowStockThreshold { get; set; }
         /// <summary>The stable bucket object key - send this back on update to keep the image.</summary>

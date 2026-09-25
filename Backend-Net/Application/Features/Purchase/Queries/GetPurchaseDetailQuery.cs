@@ -2,11 +2,7 @@ using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
 using Application.Common.Enums;
-using Application.Features.Purchase.Dtos;
-using Common.Exceptions;
-using Domain.Enums;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.Purchase.Queries
 {
@@ -28,74 +24,7 @@ namespace Application.Features.Purchase.Queries
         {
             var res = new ResponseDto();
 
-            res.Data = await _context.Purchases.AsNoTracking()
-                .Where(x => x.Id == request.Id)
-                .Select(x => new PurchaseDto
-                {
-                    Id = x.Id,
-                    InvoiceNumber = x.InvoiceNumber,
-                    InvoiceDate = x.InvoiceDate,
-                    PaymentDate = x.PaymentDate,
-                    Status = x.Status,
-                    PaymentType = x.PaymentType,
-                    TotalAmount = x.TotalAmount,
-                    PaidAmount = x.PaidAmount,
-                    Description = x.Description,
-                    SupplierId = x.SupplierId,
-                    SupplierName = x.Supplier.CompanyName,
-                    Items = x.Items.Select(i => new PurchaseItemDto
-                    {
-                        Id = i.Id,
-                        ProductId = i.ProductId,
-                        ProductName = i.Product.Name,
-                        ProductCode = i.Product.Code,
-                        Quantity = i.Quantity,
-                        UnitPrice = i.UnitPrice,
-                        Discount = i.Discount,
-                        ReceivedQuantity = i.ReceivedQuantity,
-                        SettledQuantity = i.SettledQuantity,
-                        ShortClosedQuantity = i.ShortClosedQuantity,
-                        ShortClosedAt = i.ShortClosedAt
-                    }).ToList(),
-                    PaymentDetails = x.PaymentDetails.Select(p => new PaymentDetailDto
-                    {
-                        Id = p.Id,
-                        Type = p.Type,
-                        Purpose = p.Purpose,
-                        Amount = p.Amount,
-                        PaidAt = p.PaidAt,
-                        CheckNumber = p.CheckNumber,
-                        TransferRef = p.TransferRef
-                    }).ToList(),
-                    Drivers = x.Drivers.Select(d => new PurchaseDriverDto
-                    {
-                        Id = d.Id,
-                        DriverFullName = d.DriverFullName,
-                        DriverPhoneNumber = d.DriverPhoneNumber,
-                        VehiclePlate = d.VehiclePlate
-                    }).ToList(),
-                    ReceivingNotes = x.ReceivingNotes.Select(n => new PurchaseReceivingNoteDto
-                    {
-                        Id = n.Id,
-                        Note = n.Note
-                    }).ToList()
-                })
-                .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("خرید مورد نظر یافت نشد.");
-
-            var purchaseDto = (PurchaseDto)res.Data;
-            purchaseDto.Attachments = await _context.DocumentAttachments.AsNoTracking()
-                .Where(a => a.DocumentKind == DocumentKindEnum.PURCHASE && a.DocumentId == request.Id)
-                .Select(a => new DocumentAttachmentDto
-                {
-                    Id = a.Id,
-                    ObjectKey = a.ObjectKey,
-                    FileName = a.FileName,
-                    Note = a.Note,
-                    CreatedAt = a.CreatedAt
-                })
-                .ToListAsync(cancellationToken);
-            foreach (var attachment in purchaseDto.Attachments)
-                attachment.Url = _objectStorageService.GetFixedUrl(attachment.ObjectKey);
+            res.Data = await PurchaseDetailReader.ReadAsync(_context, _objectStorageService, request.Id, cancellationToken);
 
             res.Message = "اطلاعات خرید با موفقیت ارسال شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();

@@ -1,3 +1,4 @@
+using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.UnitOfWork;
@@ -19,13 +20,13 @@ namespace Application.Features.SaleInstallment.Commands
     /// به‌عنوان یک PaymentDetail واقعی ثبت می‌کند. اگر فروش در پیش‌فاکتور باشد، همین‌جا -
     /// نه در CreateSale - نهایی می‌شود: در فروش اقساطی شرطِ خروج «پرداخت کامل» نیست، بلکه
     /// «وجود پلن فعال به‌همراه پیش‌پرداخت ثبت‌شده» است.
+    /// قیمت نقدی = جمع فاکتور فروش، سود اقساط = round(قیمت نقدی × درصد)، مبلغ قابل پرداخت = جمع این دو؛ هر سه را سرور
+    /// می‌نشاند و فاکتور فروش (Sale.TotalAmount) دست نمی‌خورد.
     /// </summary>
     public class CreateSaleInstallmentPlanCommand : IRequest<ResponseDto>
     {
         public int SaleId { get; set; }
-        public UInt64 CashAmount { get; set; }
         public decimal MarkupPercentage { get; set; }
-        public UInt64 TotalAmount { get; set; }
         public UInt64 DownPaymentAmount { get; set; }
         public int InstallmentCount { get; set; }
         public DateTime FirstDueDate { get; set; }
@@ -43,9 +44,7 @@ namespace Application.Features.SaleInstallment.Commands
         public CreateSaleInstallmentPlanCommandValidator()
         {
             RuleFor(x => x.SaleId).GreaterThan(0).WithMessage(Validation.RequiredMessage("فروش"));
-            RuleFor(x => x.CashAmount).Must(x => x > 0).WithMessage("قیمت نقدی باید از صفر بیشتر باشد.");
             RuleFor(x => x.MarkupPercentage).GreaterThanOrEqualTo(0).WithMessage("درصد افزایش نمی‌تواند منفی باشد.");
-            RuleFor(x => x.TotalAmount).Must(x => x > 0).WithMessage("مبلغ کل باید از صفر بیشتر باشد.");
             // تعداد اقساط سمت سرور به مجموعه‌ی خاصی محدود نیست - فرانت چند گزینه‌ی از پیش
             // تعیین‌شده نشان می‌دهد. اگر روزی خواستیم این محدودیت را سمت سرور هم اعمال کنیم،
             // جایش دقیقاً همین‌جاست.
@@ -54,8 +53,6 @@ namespace Application.Features.SaleInstallment.Commands
             RuleFor(x => x.LatePenaltyPercentage).GreaterThanOrEqualTo(0)
                 .When(x => x.LatePenaltyPercentage.HasValue)
                 .WithMessage("درصد جریمه‌ی دیرکرد نمی‌تواند منفی باشد.");
-            RuleFor(x => x.DownPaymentAmount).Must((command, down) => down < command.TotalAmount)
-                .WithMessage("پیش‌پرداخت باید از مبلغ کل کمتر باشد.");
         }
     }
 
@@ -86,29 +83,27 @@ namespace Application.Features.SaleInstallment.Commands
             if (existingPlan != null)
                 throw new ValidationCustomException("برای این فروش قرارداد اقساطی فعالی ثبت شده است.");
 
-            if (request.TotalAmount != sale.TotalAmount)
-                throw new ValidationCustomException("مبلغ کل قرارداد اقساطی باید با مبلغ کل فروش برابر باشد.");
+            var cashAmount = sale.TotalAmount;
+            var chargeAmount = InstallmentSchedule.ChargeAmount(cashAmount, request.MarkupPercentage);
+            var totalAmount = checked(cashAmount + chargeAmount);
 
-            // سازگاری «قیمت نقدی + درصد افزایش» با مبلغ کل. فرانت خودش این عدد را حساب می‌کند و
-            // می‌فرستد؛ اینجا فقط با یک تلورانس کوچک (اختلاف رُند) بررسی می‌شود.
-            var expectedTotal = InstallmentSchedule.ExpectedTotalAmount(request.CashAmount, request.MarkupPercentage);
-            var difference = expectedTotal > request.TotalAmount ? expectedTotal - request.TotalAmount : request.TotalAmount - expectedTotal;
-            if (difference > 1UL)
-                throw new ValidationCustomException("مبلغ کل با قیمت نقدی و درصد افزایش هم‌خوانی ندارد.");
+            if (request.DownPaymentAmount >= totalAmount)
+                throw new ValidationCustomException("پیش‌پرداخت باید از مبلغ قابل پرداخت قرارداد کمتر باشد.");
 
             var paidAt = request.PaidAt ?? DateTime.Now;
             if (request.FirstDueDate.Date < paidAt.Date)
                 throw new ValidationCustomException("سررسید اولین قسط نمی‌تواند قبل از تاریخ پیش‌پرداخت باشد.");
 
             var now = DateTime.Now;
-            var financedAmount = request.TotalAmount - request.DownPaymentAmount;
+            var financedAmount = totalAmount - request.DownPaymentAmount;
 
             var plan = new Domain.Entities.SaleInstallmentPlan
             {
                 SaleId = sale.Id,
-                CashAmount = request.CashAmount,
+                CashAmount = cashAmount,
                 MarkupPercentage = request.MarkupPercentage,
-                TotalAmount = request.TotalAmount,
+                InstallmentChargeAmount = chargeAmount,
+                TotalAmount = totalAmount,
                 DownPaymentAmount = request.DownPaymentAmount,
                 FinancedAmount = financedAmount,
                 InstallmentCount = request.InstallmentCount,
@@ -124,16 +119,19 @@ namespace Application.Features.SaleInstallment.Commands
 
             await _planRepository.AddAsync(plan, cancellationToken);
 
-            await _context.PaymentDetails.AddAsync(new Domain.Entities.PaymentDetail
+            var downPayment = new Domain.Entities.PaymentDetail
             {
                 SaleId = sale.Id,
                 Type = request.PaymentType,
                 Purpose = PaymentPurposeEnum.INSTALLMENT_DOWN_PAYMENT,
+                Direction = PaymentDirectionEnum.IN,
                 Amount = request.DownPaymentAmount,
                 PaidAt = paidAt,
                 CheckNumber = request.CheckNumber,
                 TransferRef = request.TransferRef,
-            }, cancellationToken);
+            };
+            await _context.PaymentDetails.AddAsync(downPayment, cancellationToken);
+            await PartyLedger.SalePaymentAsync(_context, sale, downPayment, cancellationToken);
 
             // تنها عددی که در دو جا نگه داشته می‌شود: همیشه برابر plan.PaidAmount.
             sale.PaidAmount = plan.PaidAmount;
@@ -143,6 +141,9 @@ namespace Application.Features.SaleInstallment.Commands
             // جای شرط «پرداخت کامل» را می‌گیرد.
             if (sale.Status == SalesStatusEnum.PROFORMA && plan.DownPaymentAmount > 0)
                 await SaleInvoiceFinalizer.FinalizeAsync(_context, sale, cancellationToken);
+
+            // The charge goes on the customer's account together with the invoice; a proforma has neither yet.
+            await PartyLedger.InstallmentChargeChangedAsync(_context, sale, plan.InstallmentChargeAmount, paidAt, cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 

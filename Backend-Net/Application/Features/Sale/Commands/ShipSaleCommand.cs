@@ -79,6 +79,10 @@ namespace Application.Features.Sale.Commands
             if (sale.Status == SalesStatusEnum.CANCELLED)
                 throw new ValidationCustomException("فروش لغو شده قابل ارسال نیست.");
 
+            // A proforma is still an editable draft that nobody has paid a rial towards: goods never leave against it.
+            if (sale.Status == SalesStatusEnum.PROFORMA)
+                throw new ValidationCustomException("پیش‌فاکتور قابل ارسال نیست؛ فروش با ثبت اولین پرداخت از پیش‌فاکتور خارج می‌شود.");
+
             var saleItems = sale.Items.ToDictionary(x => x.Id);
 
             foreach (var reqItem in request.Items)

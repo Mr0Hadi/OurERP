@@ -1,3 +1,4 @@
+using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.PurchaseReturn;
@@ -86,7 +87,10 @@ namespace Application.Features.PurchaseReturn.Commands
             // Every APPLIED money effect has a revenue row; the ledger is append-only, so removing the
             // resolution writes the opposite row. A PENDING one never wrote anything, so there is nothing to reverse.
             foreach (var money in resolution.Effects.Where(e => e.Direction is ReturnEffectDirectionEnum.MONEY_IN or ReturnEffectDirectionEnum.MONEY_OUT && e.Status == ReturnEffectStatusEnum.APPLIED))
+            {
                 await _inventoryCostingService.RecordPurchaseReturnMoneyReversalAsync(claim.Product!, money.Direction, money.Amount!.Value, claim.Id, now, cancellationToken);
+                await PartyLedger.PurchaseReturnMoneyAsync(_context, purchaseReturn.Purchase!, purchaseReturn.ReturnNumber, claim.Id, money, reversal: true, now, cancellationToken);
+            }
 
             claim.Resolutions.Remove(resolution);
             _context.PurchaseReturnResolutions.Remove(resolution);

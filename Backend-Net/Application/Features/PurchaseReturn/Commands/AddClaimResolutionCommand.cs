@@ -1,4 +1,5 @@
-﻿using Application.Common.Contracts.Context;
+﻿using Application.Common.Ledger;
+using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Storage;
@@ -71,6 +72,20 @@ namespace Application.Features.PurchaseReturn.Commands
                 goods.RuleFor(g => g.ProductId).GreaterThan(0).WithMessage("کالا نامعتبر است.").When(g => g.ProductId.HasValue);
             });
 
+            // Method must be a defined member: an undefined integer (e.g. the removed STORE_CREDIT = 5)
+            // would otherwise bind and persist, since no rule below reads anything but MIXED.
+            RuleFor(x => x.Composition.MoneyIn!.Method).IsInEnum()
+                .WithMessage("روش پرداخت نامعتبر است.")
+                .When(x => x.Composition.MoneyIn != null);
+            RuleFor(x => x.Composition.MoneyOut!.Method).IsInEnum()
+                .WithMessage("روش پرداخت نامعتبر است.")
+                .When(x => x.Composition.MoneyOut != null);
+            RuleForEach(x => x.Composition.MoneyIn!.Parts)
+                .ChildRules(part => part.RuleFor(p => p.Method).IsInEnum().WithMessage("روش پرداخت نامعتبر است."))
+                .When(x => x.Composition.MoneyIn?.Parts != null);
+            RuleForEach(x => x.Composition.MoneyOut!.Parts)
+                .ChildRules(part => part.RuleFor(p => p.Method).IsInEnum().WithMessage("روش پرداخت نامعتبر است."))
+                .When(x => x.Composition.MoneyOut?.Parts != null);
             RuleFor(x => x.Composition.MoneyIn!.Parts)
                 .Must(parts => parts != null && parts.Count > 0)
                 .WithMessage("پرداخت ترکیبی باید حداقل یک بخش داشته باشد.")
@@ -199,7 +214,10 @@ namespace Application.Features.PurchaseReturn.Commands
             // paid. RemoveClaimResolution writes the reversing row. A PENDING one writes nothing until
             // ExecuteMoneyEffectCommand records the payment.
             foreach (var money in resolution.Effects.Where(e => e.Direction is ReturnEffectDirectionEnum.MONEY_IN or ReturnEffectDirectionEnum.MONEY_OUT && e.Status == ReturnEffectStatusEnum.APPLIED))
+            {
                 await _inventoryCostingService.RecordPurchaseReturnMoneyAsync(claim.Product!, money.Direction, money.Amount!.Value, claim.Id, money.AppliedAt ?? now, cancellationToken);
+                await PartyLedger.PurchaseReturnMoneyAsync(_context, purchaseReturn.Purchase!, purchaseReturn.ReturnNumber, claim.Id, money, reversal: false, money.AppliedAt ?? now, cancellationToken);
+            }
 
             // A resolution with no pending effect settles the claimed quantity immediately; one with a
             // pending effect settles it later, when ExecuteGoodsRoundCommand or ExecuteMoneyEffectCommand

@@ -1,7 +1,9 @@
 ﻿using Application.Common.Contracts.Context;
+using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Common.Queries;
 using Application.Features.PurchaseReturn.Dtos;
 using Common.Exceptions;
 using Common.Extensions;
@@ -21,11 +23,14 @@ namespace Application.Features.PurchaseReturn.Queries
     {
         private readonly IWMSDbContext _context;
         private readonly IObjectStorageService _objectStorageService;
+        private readonly IPurchaseReturnCalculationService _purchaseReturnCalculationService;
 
-        public GetPurchaseReceivingInfoQueryHandler(IWMSDbContext context, IObjectStorageService objectStorageService)
+        public GetPurchaseReceivingInfoQueryHandler(IWMSDbContext context, IObjectStorageService objectStorageService,
+            IPurchaseReturnCalculationService purchaseReturnCalculationService)
         {
             _context = context;
             _objectStorageService = objectStorageService;
+            _purchaseReturnCalculationService = purchaseReturnCalculationService;
         }
 
         public async Task<ResponseDto> Handle(GetPurchaseReceivingInfoQuery request, CancellationToken cancellationToken)
@@ -48,6 +53,16 @@ namespace Application.Features.PurchaseReturn.Queries
                 .Where(u => u.PurchaseId == request.PurchaseId && u.Status == ProductUnitStatusEnum.QUARANTINED)
                 .GroupBy(u => new { u.CustodyReason, u.PurchaseItemId, u.ProductId })
                 .Select(g => new { g.Key.CustodyReason, g.Key.PurchaseItemId, g.Key.ProductId, Count = g.Count() })
+                .ToListAsync(cancellationToken);
+
+            // The same open returns CreatePurchaseReturn and AcceptPurchaseExcess read, so the free/claimable numbers below are
+            // exactly the caps those handlers enforce.
+            var openReturns = await _context.PurchaseReturns
+                .AsNoTracking()
+                .Where(x => x.PurchaseId == request.PurchaseId)
+                .WhereNotDeleted()
+                .WhereOpen()
+                .WithReturnGraph()
                 .ToListAsync(cancellationToken);
 
             var discrepancies = await _context.PurchaseReceivingDiscrepancies
@@ -92,28 +107,41 @@ namespace Application.Features.PurchaseReturn.Queries
                     Note = img.Note,
                     UploadedAt = img.CreatedAt,
                 }).ToList(),
-                Items = purchase.Items.Select(item => new PurchaseReceivingItemInfoDto
+                Items = purchase.Items.Select(item =>
                 {
-                    PurchaseItemId = item.Id,
-                    ProductId = item.ProductId,
-                    ProductCode = item.Product.Code,
-                    ProductName = item.Product.Name,
-                    Unit = item.Product.Unit.GetDescription(),
-                    UnitPrice = item.UnitPrice,
-                    OrderedQuantity = item.Quantity,
-                    ReceivedQuantity = item.ReceivedQuantity,
-                    StillOwedQuantity = item.StillOwedQuantity,
-                    ShortClosedQuantity = item.ShortClosedQuantity,
-                    QuarantinedOnOrderQuantity = held.Where(h => h.CustodyReason == UnitCustodyReasonEnum.ON_ORDER && h.PurchaseItemId == item.Id).Sum(h => h.Count),
-                    QuarantinedExcessQuantity = held.Where(h => h.CustodyReason == UnitCustodyReasonEnum.EXCESS && h.PurchaseItemId == item.Id).Sum(h => h.Count),
+                    var quarantinedExcess = held.Where(h => h.CustodyReason == UnitCustodyReasonEnum.EXCESS && h.PurchaseItemId == item.Id).Sum(h => h.Count);
+                    return new PurchaseReceivingItemInfoDto
+                    {
+                        PurchaseItemId = item.Id,
+                        ProductId = item.ProductId,
+                        ProductCode = item.Product.Code,
+                        ProductName = item.Product.Name,
+                        Unit = item.Product.Unit.GetDescription(),
+                        UnitPrice = item.UnitPrice,
+                        OrderedQuantity = item.Quantity,
+                        ReceivedQuantity = item.ReceivedQuantity,
+                        StillOwedQuantity = item.StillOwedQuantity,
+                        ShortClosedQuantity = item.ShortClosedQuantity,
+                        QuarantinedOnOrderQuantity = held.Where(h => h.CustodyReason == UnitCustodyReasonEnum.ON_ORDER && h.PurchaseItemId == item.Id).Sum(h => h.Count),
+                        QuarantinedExcessQuantity = quarantinedExcess,
+                        FreeExcessQuantity = Math.Max(0, quarantinedExcess - _purchaseReturnCalculationService.GetOutstandingOffOrderClaimQuantity(
+                            ReturnOffScopeKindEnum.EXCESS, item.Id, item.ProductId, openReturns)),
+                        ClaimableQuantity = _purchaseReturnCalculationService.GetClaimableQuantity(item, openReturns),
+                    };
                 }).ToList(),
-                UnlistedItems = unlistedProducts.Select(p => new PurchaseReceivingUnlistedInfoDto
+                UnlistedItems = unlistedProducts.Select(p =>
                 {
-                    ProductId = p.Id,
-                    ProductCode = p.Code,
-                    ProductName = p.Name,
-                    Unit = p.Unit.GetDescription(),
-                    QuarantinedQuantity = held.Where(h => h.CustodyReason == UnitCustodyReasonEnum.UNLISTED && h.ProductId == p.Id).Sum(h => h.Count),
+                    var quarantined = held.Where(h => h.CustodyReason == UnitCustodyReasonEnum.UNLISTED && h.ProductId == p.Id).Sum(h => h.Count);
+                    return new PurchaseReceivingUnlistedInfoDto
+                    {
+                        ProductId = p.Id,
+                        ProductCode = p.Code,
+                        ProductName = p.Name,
+                        Unit = p.Unit.GetDescription(),
+                        QuarantinedQuantity = quarantined,
+                        FreeQuantity = Math.Max(0, quarantined - _purchaseReturnCalculationService.GetOutstandingOffOrderClaimQuantity(
+                            ReturnOffScopeKindEnum.UNLISTED, null, p.Id, openReturns)),
+                    };
                 }).ToList(),
                 Discrepancies = discrepancies,
             };
