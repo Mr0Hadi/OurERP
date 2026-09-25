@@ -6,6 +6,8 @@ import { useSaleQuery } from "@/features/sales/orders/services/queries";
 import OrderFormSkeleton from "@/shared/components/skeletons/OrderFormSkeleton";
 import { ROUTES } from "@/shared/constants/routes";
 import SaleDetailForm from "./SaleDetailForm";
+import SaleIssuedView from "./SaleIssuedView";
+import { isSaleProforma } from "@/shared/domain/enums/saleStatus";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 
 export default function SaleDetailPage() {
@@ -23,7 +25,13 @@ export default function SaleDetailPage() {
 
   useEffect(() => {
     setHeader({
-      title: saleLoading ? "در حال بارگذاری..." : sale ? "ویرایش فروش" : "خطا",
+      title: saleLoading
+        ? "در حال بارگذاری..."
+        : sale
+          ? isSaleProforma(sale.status)
+            ? "ویرایش پیش‌فاکتور فروش"
+            : `فاکتور فروش ${sale.invoiceNumber || ""}`.trim()
+          : "خطا",
       showBack: true,
     });
     return () => clearHeader();
@@ -42,5 +50,9 @@ export default function SaleDetailPage() {
     );
   }
 
+  // قفل پیش‌فاکتور: فقط پیش‌فاکتور ویرایش می‌شود؛ فروشِ صادرشده فقط‌خواندنی است.
+  if (!isSaleProforma(sale.status)) {
+    return <SaleIssuedView key={sale.id} sale={sale} />;
+  }
   return <SaleDetailForm key={sale.id} saleData={sale} />;
 }

@@ -259,9 +259,11 @@ namespace Application.Features.Purchase.Commands
                 await _context.PurchaseDrivers.AddAsync(new PurchaseDriver
                 {
                     PurchaseId = purchase.Id,
-                    DriverFullName = request.DriverFullName,
-                    DriverPhoneNumber = request.DriverPhoneNumber,
-                    VehiclePlate = request.VehiclePlate,
+                    // All three are optional and independent, but the columns are NOT NULL: filling
+                    // only the name used to fail the insert, so the UI effectively demanded all three.
+                    DriverFullName = request.DriverFullName ?? string.Empty,
+                    DriverPhoneNumber = request.DriverPhoneNumber ?? string.Empty,
+                    VehiclePlate = request.VehiclePlate ?? string.Empty,
                     CreatedAt = now,
                 }, cancellationToken);
             }

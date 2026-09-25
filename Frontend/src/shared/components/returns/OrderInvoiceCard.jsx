@@ -7,6 +7,8 @@ import {
   CardTitle,
 } from "@/shared/components/ui/card";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
+import { invoiceLineAmounts } from "@/shared/domain/invoice/lineMath";
+import { claimLineKey } from "@/shared/hooks/useClaimsInOtherReturns";
 
 const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
 
@@ -22,11 +24,13 @@ const orderedOf = (item) => Number(item.orderedQuantity ?? item.quantity) || 0;
 const deliveredOf = (item) =>
   Number(item.receivedQuantity ?? item.shippedQuantity) || 0;
 
-// `Discount` روی `SaleItemDto` درصد است (سمتِ خرید اصلاً این فیلد را
-// در پاسخِ دریافت نمی‌دهد، پس صفر می‌ماند).
+// جمعِ قلم همان عددی است که سرور روی فاکتور ذخیره کرده (با تخفیف و
+// مالیات)؛ پاسخی که آن را ندارد با همان قاعده‌ی سرور پیش‌نمایش می‌شود.
+// `Discount` روی `SaleItemDto` درصد است (سمتِ خرید در پاسخِ دریافت نیست).
 const lineTotalOf = (item) =>
-  (orderedOf(item) * (Number(item.unitPrice) || 0) *
-    (100 - (Number(item.discount) || 0))) / 100;
+  item.totalAmount != null
+    ? Number(item.totalAmount) || 0
+    : invoiceLineAmounts({ ...item, quantity: orderedOf(item) }).totalAmount;
 
 /**
  * جزئیات فروش، به شکل خودِ فاکتور.
@@ -45,6 +49,8 @@ export default function OrderInvoiceCard({
   quantityLabel = "تعداد فاکتور",
   deliveredLabel = "تحویل‌شده",
   partyName,
+  // خروجیِ `useClaimsInOtherReturns`: مقدارِ ادعاشده‌ی هر خط در مرجوعی‌های دیگرِ همین سند.
+  claimsElsewhere,
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
@@ -115,7 +121,10 @@ export default function OrderInvoiceCard({
                       {fa(orderedOf(item))} {item.unit || "عدد"}
                     </td>
                     <td className="py-2 px-2 text-center tabular-nums">
-                      <DeliveredCell item={item} />
+                      <DeliveredCell
+                        item={item}
+                        claimsElsewhere={claimsElsewhere}
+                      />
                     </td>
                     <td className="py-2 px-2 text-center tabular-nums">
                       {fa(item.unitPrice)}
@@ -159,7 +168,10 @@ export default function OrderInvoiceCard({
                     {fa(orderedOf(item))} {item.unit || "عدد"}
                   </Row>
                   <Row label={deliveredLabel}>
-                    <DeliveredCell item={item} />
+                    <DeliveredCell
+                      item={item}
+                      claimsElsewhere={claimsElsewhere}
+                    />
                   </Row>
                   <Row label="قیمت واحد">{fa(item.unitPrice)}</Row>
                   <Row label="جمع خط">
@@ -202,7 +214,10 @@ function Row({ label, children }) {
  *
  * تنها چیزی که واقعاً در دست هست `settledQuantity` سمتِ فروش است.
  */
-function DeliveredCell({ item }) {
+function DeliveredCell({ item, claimsElsewhere }) {
+  const earlier = claimsElsewhere?.get(
+    claimLineKey({ orderLineId: item.purchaseItemId ?? item.id }),
+  );
   const ordered = orderedOf(item);
   const delivered = deliveredOf(item);
   const settled = Number(item.settledQuantity) || 0;
@@ -216,6 +231,11 @@ function DeliveredCell({ item }) {
       {settled > 0 && (
         <span className="block text-[10px] leading-4 mt-0.5 text-muted-foreground">
           {fa(settled)} تسویه‌شده در مرجوعی
+        </span>
+      )}
+      {earlier?.quantity > 0 && (
+        <span className="block text-[10px] leading-4 mt-0.5 text-amber-700 dark:text-amber-400">
+          {fa(earlier.quantity)} در {earlier.returnNumbers.join("، ")}
         </span>
       )}
     </>

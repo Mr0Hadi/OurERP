@@ -23,6 +23,7 @@ import { useProductsQuery } from "@/features/warehouse/products/services/queries
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { PurchaseStatusEnum } from "@/shared/domain/enums/purchaseStatus";
 import { unitLabelOf } from "@/shared/domain/enums/productUnit";
+import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -165,11 +166,9 @@ export default function PurchasesNewPage() {
 
   const items = formData.items || [];
 
-  const computedTotal = items.reduce((sum, item) => {
-    const base = (item.quantity || 0) * (item.unitPrice || 0);
-    const disc = (base * (item.discount || 0)) / 100;
-    return sum + base - disc;
-  }, 0);
+  // پیش‌نمایش با قاعده‌ی سرور (تخفیف و مالیات گرد، هر قلم جدا). جمع
+  // فرستاده نمی‌شود؛ سرور خودش از اقلام و مالیاتِ کالاها حساب می‌کند.
+  const computedTotal = invoiceTotals(items).totalAmount;
 
   const isProforma =
     Number(formData.status ?? PurchaseStatusEnum.PROFORMA) ===
@@ -225,16 +224,15 @@ export default function PurchasesNewPage() {
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         discount: item.discount || 0,
-        lineTotal: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
       })),
       paymentType: formData.paymentType ?? PaymentTypeEnum.CASH,
+      // فقط برای ساختنِ `paymentDetails`؛ خودِ `paidAmount` فرستاده نمی‌شود.
       paidAmount: isProforma ? 0 : finalPaidAmount,
       ...paymentDetails,
       status:
         formData.status === "" || formData.status == null
           ? PurchaseStatusEnum.PROFORMA
           : formData.status,
-      totalAmount: computedTotal,
       attachments: attachments.filesPayload,
     };
 

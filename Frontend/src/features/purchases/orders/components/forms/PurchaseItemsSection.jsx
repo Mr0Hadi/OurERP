@@ -45,6 +45,7 @@ export default function PurchaseItemsSection({
           onItemsChange={onItemsChange}
           products={products}
           priceOf={(product) => product.purchasePrice ?? 0}
+          showTaxHint
         />
       </CardContent>
     </Card>

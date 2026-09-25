@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "@/shared/components/ui/card";
 import { PriceInput } from "@/shared/components/ui/price-input";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import { numberToPersianWords } from "@/shared/lib/numberToPersianWords";
 
 function PriceWords({ value }) {
@@ -19,10 +20,11 @@ function PriceWords({ value }) {
   );
 }
 
-export default function ProductPricingForm({ register, control }) {
+export default function ProductPricingForm({ register, control, errors = {} }) {
   const purchasePrice = useWatch({ control, name: "purchasePrice" });
   const sellPrice1 = useWatch({ control, name: "sellPrice1" });
   const sellPrice2 = useWatch({ control, name: "sellPrice2" });
+  const taxExempt = useWatch({ control, name: "taxExempt" });
 
   return (
     <Card>
@@ -52,15 +54,40 @@ export default function ProductPricingForm({ register, control }) {
           />
         </div>
 
+        {/* سرور مالیاتِ هر قلمِ فاکتور را از همین دو فیلد حساب می‌کند؛ کالای
+            معاف صفر مالیات می‌گیرد. فاکتورهای صادرشده نرخِ خودشان را نگه
+            می‌دارند و با تغییرِ این‌جا عوض نمی‌شوند. */}
         <div className="space-y-2">
           <Label htmlFor="vat">مالیات بر ارزش افزوده (درصد %)</Label>
           <Input
             type="number"
             id="vat"
-            {...register("vat")}
+            {...register("vat", {
+              min: { value: 0, message: "درصد مالیات نمی‌تواند منفی باشد" },
+              max: { value: 100, message: "درصد مالیات حداکثر ۱۰۰ است" },
+            })}
             min="0"
             max="100"
             placeholder="0"
+            disabled={Boolean(taxExempt)}
+          />
+          {errors.vat && (
+            <span className="text-xs text-red-500">{errors.vat.message}</span>
+          )}
+          <Controller
+            name="taxExempt"
+            control={control}
+            render={({ field }) => (
+              <label className="flex items-center gap-2 cursor-pointer text-sm">
+                <Checkbox
+                  checked={Boolean(field.value)}
+                  onCheckedChange={(checked) =>
+                    field.onChange(checked === true)
+                  }
+                />
+                معاف از مالیات
+              </label>
+            )}
           />
         </div>
 

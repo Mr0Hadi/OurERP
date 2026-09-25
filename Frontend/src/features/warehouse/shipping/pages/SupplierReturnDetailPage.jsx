@@ -217,8 +217,9 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
 
           {hasDispatch && (
             <GoodsRoundPartySection
-              title="اطلاعات تحویل‌گیرنده"
-              nameLabel="نام و نام خانوادگی راننده / تحویل‌گیرنده"
+              title="راننده‌ی تامین‌کننده (تحویل‌گیرنده‌ی کالای مرجوعی)"
+              nameLabel="نام و نام خانوادگی (اختیاری)"
+              showNationalId={false}
               namePlaceholder="مثلاً: علی رضایی"
               header={header}
               onHeaderChange={setHeader}

@@ -1,5 +1,6 @@
 import axiosInstance from "@/shared/services/api/axios";
 import {
+  idempotent,
   normalizeListResponse,
   documentVersion,
 } from "@/shared/services/api/contract";
@@ -17,15 +18,21 @@ export {
  * کنترلر `api/Sale` (`Backend-Net/docs/api-guide.fa.md`، بخش ۱۱). بکند از
  * الگوی `api/{Controller}/{Action}` استفاده می‌کند، نه REST.
  *
- *  - **پیش‌فاکتور:** فروشِ تازه همیشه پیش‌فاکتور ثبت می‌شود. با اولین
- *    ریالِ پرداخت (`paidAmount > 0`) خودِ `CreateSale`/`UpdateSale` شماره‌ی
- *    فاکتور را می‌سازد، تاریخ می‌زند و وضعیت را `PROCESSING` می‌کند. فرانت
- *    شماره‌ی فاکتور نمی‌فرستد.
- *  - **اقلام:** `UpdateSale` اقلام را کامل جایگزین می‌کند؛ `id:0` یعنی
- *    ردیفِ تازه.
- *  - **ضمیمه و پرداخت:** هر دو روی Update **جایگزینیِ کامل**اند.
- *  - **لیست:** فیلترِ مشتری فقط `customerName`ِ متنی است (نه `customerId`)؛
- *    مرتب‌سازی با `sortBy`/`sortDirection` (`SaleListSortEnum`).
+ * **قفل پیش‌فاکتور (۲۰۲۶-۰۹-۲۴):** فروش همیشه پیش‌فاکتور ثبت می‌شود و
+ * **اولین ریال پرداخت** (`paymentDetails`ِ `CreateSale` یا
+ * `AddSalePayment`) فاکتور را صادر می‌کند: شماره‌ی رسمی، تاریخ و وضعیتِ
+ * «آماده‌سازی انبار». راهِ دستی‌ای نیست و `status` دیگر فرستاده نمی‌شود.
+ * فقط پیش‌فاکتور با `UpdateSale` ویرایش می‌شود؛ بعد از صدور فقط
+ * پرداخت‌ها، وضعیت (`ChangeSaleStatus`: تحویل/لغو)، پیوست‌ها و مهلت
+ * پرداخت، هر کدام با endpoint خودش. خروج یک‌طرفه است: ابطالِ پرداخت
+ * فروش را به پیش‌فاکتور برنمی‌گرداند.
+ *
+ * `totalAmount` و `paidAmount` فرستاده نمی‌شوند. بدهی مشتری همیشه
+ * `payableAmount − paidAmount` است (در فروش اقساطی `payableAmount` سودِ
+ * اقساط را هم دارد).
+ *
+ * ⚠️ فیلترِ لیست `customerId` نمی‌گیرد، فقط `customerName`ِ متنی — پس
+ * انتخابِ کاربر به نام ترجمه و فرستاده می‌شود.
  */
 
 /** `SaleListSortEnum`ِ بکند، بر اساسِ شناسه‌ی ستونِ جدول. */
@@ -64,8 +71,7 @@ function toApiUpdateItems(items = []) {
 
 /**
  * همان نگاشتِ سمتِ خرید — توضیح کاملش در `purchases/orders/services/api-v1.js`.
- * `paidAt` در `PaymentDetailDto` غیرِ nullable است و نفرستادنش `0001-01-01`
- * ذخیره می‌کند؛ ردیفی که از سرور آمده تاریخِ خودش را نگه می‌دارد.
+ * فقط در `CreateSale`/`CreateInPersonSale`؛ ردیفِ بی‌مبلغ فرستاده نمی‌شود.
  */
 function toApiPaymentDetails({
   paymentType,
@@ -75,31 +81,32 @@ function toApiPaymentDetails({
   transferRef,
   mixedPayments,
 }) {
-  const now = new Date().toISOString();
-
-  if (paymentType === PaymentTypeEnum.MIXED) {
-    return (mixedPayments || []).map((part) => ({
-      type: part.type,
-      amount: Number(part.amount) || 0,
-      paidAt: part.paidAt || now,
-      checkNumber: part.checkNumber || undefined,
-      transferRef: part.transferRef || undefined,
-    }));
-  }
-
-  const amount = Number(paidAmount) || 0;
-  const paidAt = paymentPaidAt || now;
-
-  if (paymentType === PaymentTypeEnum.CHECK) {
-    return [{ type: paymentType, amount, paidAt, checkNumber: checkNumber || undefined }];
-  }
-  if (paymentType === PaymentTypeEnum.TRANSFER) {
-    return [{ type: paymentType, amount, paidAt, transferRef: transferRef || undefined }];
-  }
-  if (paymentType === PaymentTypeEnum.CREDIT) {
-    return [{ type: paymentType, amount, paidAt }];
-  }
-  return [];
+  const rows =
+    paymentType === PaymentTypeEnum.MIXED
+      ? (mixedPayments || []).map((part) => ({
+          type: part.type,
+          amount: Number(part.amount) || 0,
+          paidAt: part.paidAt || undefined,
+          checkNumber: part.checkNumber || undefined,
+          transferRef: part.transferRef || undefined,
+        }))
+      : [
+          {
+            type: paymentType,
+            amount: Number(paidAmount) || 0,
+            // خالی یعنی «همین حالا» (سرور خودش می‌گذارد).
+            paidAt: paymentPaidAt || undefined,
+            checkNumber:
+              paymentType === PaymentTypeEnum.CHECK
+                ? checkNumber || undefined
+                : undefined,
+            transferRef:
+              paymentType === PaymentTypeEnum.TRANSFER
+                ? transferRef || undefined
+                : undefined,
+          },
+        ];
+  return rows.filter((row) => row.amount > 0);
 }
 
 /** قرینه‌ی تابعِ بالا: `paymentDetails`ِ سرور روی فیلدهای فرم پهن می‌شود. */
@@ -130,8 +137,8 @@ function fromApiPaymentDetails(paymentDetails = [], paymentType) {
  * سرور → فرم، برای کلِ سندِ فروش. دوقلوی `fromApiPurchase`؛ تنها
  * تفاوتش این است که یادداشت‌های حمل اینجا `shippingNotes` نام دارند.
  *
- * `SaleItemDto` نامِ کالا را دارد ولی کد و واحد را نه؛ `ProductPicker`
- * آن دو را از فهرستِ کالاها جبران می‌کند.
+ * اقلام نام کالا و مبالغِ ذخیره‌شده (`grossAmount`…`totalAmount`، نرخ
+ * مالیات) را دارند؛ کدِ کالا را `ProductPicker` از فهرستِ کالاها پر می‌کند.
  */
 export function fromApiSale(dto) {
   if (!dto) return dto;
@@ -163,17 +170,14 @@ function toApiAttachments(attachments = []) {
     }));
 }
 
+/** بدنه‌ی مشترکِ Create/Update. شماره‌ی فاکتور را همیشه سرور می‌سازد. */
 function toApiSalePayload(saleData) {
   return {
     customerId: saleData.customerId,
     invoiceDate: saleData.invoiceDate || null,
     paymentDate: saleData.dueDate || null,
     description: saleData.description || undefined,
-    status: saleData.status,
     paymentType: saleData.paymentType,
-    totalAmount: saleData.totalAmount,
-    paidAmount: saleData.paidAmount,
-    paymentDetails: toApiPaymentDetails(saleData),
     attachments: toApiAttachments(saleData.attachments),
   };
 }
@@ -205,13 +209,24 @@ export async function fetchSaleById(id) {
   return fromApiSale(data);
 }
 
-export async function createSale(saleData) {
-  const { data } = await axiosInstance.post("/Sale/CreateSale", {
-    ...toApiSalePayload(saleData),
-    // نامِ فیلد گمراه‌کننده است: با وجودِ اسمِ `productIds`، بکند لیستی
-    // از اقلامِ کامل (محصول+تعداد+قیمت+تخفیف) می‌خواهد، نه فقط شناسه.
-    productIds: toApiCreateItems(saleData.items),
-  });
+/**
+ * فروش همیشه پیش‌فاکتور ثبت می‌شود؛ `paymentDetails` با مبلغِ بیشتر از
+ * صفر همین‌جا فاکتور را صادر می‌کند.
+ *
+ * @returns `{ id, invoiceNumber, status }`
+ */
+export async function createSale(saleData, { idempotencyKey } = {}) {
+  const { data } = await axiosInstance.post(
+    "/Sale/CreateSale",
+    {
+      ...toApiSalePayload(saleData),
+      paymentDetails: toApiPaymentDetails(saleData),
+      // نامِ فیلد گمراه‌کننده است: با وجودِ اسمِ `productIds`، بکند لیستی
+      // از اقلامِ کامل (محصول+تعداد+قیمت+تخفیف) می‌خواهد، نه فقط شناسه.
+      productIds: toApiCreateItems(saleData.items),
+    },
+    idempotent(idempotencyKey),
+  );
   return data;
 }
 
@@ -219,27 +234,39 @@ export async function createSale(saleData) {
  * فروشِ حضوری در یک درخواستِ اتمی: بکند فروش را ثبت (با شماره و تاریخِ
  * فاکتورِ خودکار)، خروجِ کالا با بارکدِ دانه‌های اسکن‌شده را انجام و وضعیت
  * را مستقیم «تحویل کامل» می‌کند؛ اگر قدمی شکست بخورد هیچ‌چیز ثبت نمی‌شود.
+ * retry بدون کلید یعنی کالا دوبار از انبار کم می‌شد.
  *
  * @param scannedBarcodes `{ [productId]: string[] }`
  * @returns `{ id, invoiceNumber, status }`
  */
-export async function createInPersonSale(saleData, scannedBarcodes = {}) {
-  const { data } = await axiosInstance.post("/Sale/CreateInPersonSale", {
-    sale: {
-      ...toApiSalePayload(saleData),
-      productIds: toApiCreateItems(saleData.items),
+export async function createInPersonSale(
+  saleData,
+  scannedBarcodes = {},
+  { idempotencyKey } = {},
+) {
+  const { data } = await axiosInstance.post(
+    "/Sale/CreateInPersonSale",
+    {
+      sale: {
+        ...toApiSalePayload(saleData),
+        paymentDetails: toApiPaymentDetails(saleData),
+        productIds: toApiCreateItems(saleData.items),
+      },
+      scannedItems: Object.entries(scannedBarcodes).map(
+        ([productId, barcodes]) => ({
+          productId: Number(productId),
+          productUnitBarcodes: barcodes,
+        }),
+      ),
     },
-    scannedItems: Object.entries(scannedBarcodes).map(([productId, barcodes]) => ({
-      productId: Number(productId),
-      productUnitBarcodes: barcodes,
-    })),
-  });
+    idempotent(idempotencyKey),
+  );
   return data;
 }
 
 /**
- * `attachments` **جایگزین** می‌شود، نه اضافه: هرچه در آرایه نباشد از
- * سرور پاک می‌شود — پس همیشه فهرستِ نهایی فرستاده شود.
+ * فقط پیش‌فاکتور. `items` و `attachments` هر دو **جایگزینیِ کامل**اند.
+ * وضعیت و پرداخت اینجا نیستند: خروج از پیش‌فاکتور فقط با پرداخت.
  */
 export async function updateSale(id, updates) {
   const { data } = await axiosInstance.put("/Sale/UpdateSale", {
@@ -247,27 +274,78 @@ export async function updateSale(id, updates) {
     ...toApiSalePayload(updates),
     items: toApiUpdateItems(updates.items),
   });
-  return data;
+  return fromApiSale(data);
 }
+
+/** فقط `DELIVERED` (از «ارسال شده») و `CANCELLED` (پیش از هر ارسالی). */
+export async function changeSaleStatus(id, status) {
+  const { data } = await axiosInstance.post("/Sale/ChangeSaleStatus", {
+    id,
+    status,
+  });
+  return fromApiSale(data);
+}
+
+/** پیوست‌ها در هر وضعیتی؛ جایگزینیِ کامل. */
+export async function updateSaleAttachments(id, attachments) {
+  const { data } = await axiosInstance.put("/Sale/UpdateSaleAttachments", {
+    id,
+    attachments: toApiAttachments(attachments),
+  });
+  return fromApiSale(data);
+}
+
+/** مهلت پرداخت در هر وضعیتی؛ `null` یعنی بدون مهلت. */
+export async function updateSalePaymentDate(id, paymentDate) {
+  const { data } = await axiosInstance.put("/Sale/UpdateSalePaymentDate", {
+    id,
+    paymentDate: paymentDate || null,
+  });
+  return fromApiSale(data);
+}
+
+// ─── پرداخت‌ها ──────────────────────────────────────────────────────────────
 
 /**
- * جایگزینِ واقعی برای PATCH وضعیت وجود ندارد؛ باید کل سند را با
- * `UpdateSale` فرستاد — و چون آن دستور همه‌چیز (از جمله اقلام و
- * ضمیمه‌ها) را بازنویسی می‌کند، سندِ فعلی اول خوانده می‌شود.
- *
- * `UpdateSale` هیچ `data`یی برنمی‌گرداند؛ سندِ تازه دوباره خوانده می‌شود
- * تا فراخوان چیزی واقعی برای نشاندن در کش داشته باشد.
+ * `direction`: خالی یا `IN` = مشتری پرداخت؛ `OUT` = پول به مشتری برگشت.
+ * اولین `IN` روی پیش‌فاکتور فاکتور را صادر می‌کند. فروش اقساطی تا وقتی
+ * قراردادش لغو نشده از این مسیر پرداخت نمی‌گیرد.
  */
-export async function updateSaleStatus(id, status) {
-  const current = await fetchSaleById(id);
-  await updateSale(id, { ...current, status });
-  return fetchSaleById(id);
+export async function addSalePayment(
+  { saleId, type, amount, paidAt, checkNumber, transferRef, direction },
+  { idempotencyKey } = {},
+) {
+  const { data } = await axiosInstance.post(
+    "/Sale/AddSalePayment",
+    { saleId, type, amount, paidAt, checkNumber, transferRef, direction },
+    idempotent(idempotencyKey),
+  );
+  return fromApiSale(data);
 }
 
-/** `DeleteSale` هیچ `data`یی برنمی‌گرداند؛ شناسه برای پاک‌کردنِ کش از خودِ ورودی برمی‌گردد. */
+export async function editSalePayment(
+  { paymentId, type, amount, paidAt, checkNumber, transferRef },
+  { idempotencyKey } = {},
+) {
+  const { data } = await axiosInstance.post(
+    "/Sale/EditSalePayment",
+    { paymentId, type, amount, paidAt, checkNumber, transferRef },
+    idempotent(idempotencyKey),
+  );
+  return fromApiSale(data);
+}
+
+export async function voidSalePayment(paymentId) {
+  const { data } = await axiosInstance.post("/Sale/VoidSalePayment", {
+    paymentId,
+  });
+  return fromApiSale(data);
+}
+
+/** فقط پیش‌فاکتور؛ خروجی `{ id }`. فروشِ صادرشده لغو می‌شود، نه حذف. */
 export async function removeSale(id) {
-  await axiosInstance.delete("/Sale/DeleteSale", {
+  const { data } = await axiosInstance.delete("/Sale/DeleteSale", {
     params: { id },
   });
-  return { id };
+  return data ?? { id };
 }

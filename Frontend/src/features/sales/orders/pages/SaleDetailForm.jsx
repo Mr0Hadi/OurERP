@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Save, X, Trash2, Undo2 } from "lucide-react";
+import { Save, X, Trash2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -18,6 +18,7 @@ import { useSaleFormStore } from "@/features/sales/orders/store/saleFormStore";
 import {
   useUpdateSaleMutation,
   useRemoveSaleMutation,
+  useSalePaymentMutations,
 } from "@/features/sales/orders/services/mutations";
 import { useCustomersQuery } from "@/features/customers/services/queries";
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
@@ -25,33 +26,32 @@ import { ROUTES } from "@/shared/constants/routes";
 
 import SaleCustomerSection from "../components/forms/SaleCustomerSection";
 import SaleItemsSection from "../components/forms/SaleItemsSection";
+import SalePaymentsCard from "../components/forms/SalePaymentsCard";
 import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
 import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
-import SaleStatusSection from "../components/forms/SaleStatusSection";
-import {
-  RETURNABLE_SALE_STATUSES,
-  canDeleteSale,
-} from "../domain/saleRules";
-import OrderItemsReadOnly from "@/shared/components/forms/OrderItemsReadOnly";
-import UnitsPageLink from "@/features/warehouse/units/components/UnitsPageLink";
-import OrderLogisticsSection from "@/shared/components/forms/OrderLogisticsSection";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
-import {
-  SaleStatusEnum,
-  isSaleProforma,
-} from "@/shared/domain/enums/saleStatus";
+import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
+import { usePermission } from "@/features/auth/hooks/usePermission";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
 const SORTING = { id: "name", desc: false };
 
-// وضعیت‌هایی که ثبت مرجوعی از روی آن‌ها ممکن است — یعنی چیزی از انبار
-// بیرون رفته باشد. عددی‌اند چون `status` روی سیم همیشه عدد است.
-
+/**
+ * ویرایشِ فروشی که هنوز **پیش‌فاکتور** است — تنها وضعیتی که `UpdateSale`
+ * می‌پذیرد. فروشِ صادرشده در `SaleIssuedView` باز می‌شود.
+ *
+ * وضعیت دستی انتخاب نمی‌شود: اولین دریافت از کارتِ «پرداخت‌ها» فاکتور را
+ * صادر می‌کند و صفحه خودش به نمای فاکتورِ صادرشده می‌رود. تغییرِ نذخیره‌شده‌ی
+ * اقلام را پیش از ثبتِ پرداخت ذخیره کنید، چون بعد از صدور ویرایش ممکن نیست.
+ */
 export default function SaleDetailForm({ saleData }) {
   const navigate = useNavigate();
+  const { can, isError: permissionsUnknown } = usePermission();
+  const allow = (permission) => permissionsUnknown || can(permission);
+
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
 
@@ -84,6 +84,7 @@ export default function SaleDetailForm({ saleData }) {
 
   const updateMutation = useUpdateSaleMutation(saleData.id);
   const deleteMutation = useRemoveSaleMutation();
+  const payments = useSalePaymentMutations(saleData.id);
 
   const items = formData.items || [];
 
@@ -104,25 +105,8 @@ export default function SaleDetailForm({ saleData }) {
     return null;
   }
 
-  // وضعیتِ *ذخیره‌شده* — نه انتخابِ در حال ویرایش؛ عنوان کارت سند باید
-  // به فروشِ روی سرور واکنش نشان بدهد، نه به مقدارِ موقتِ فرم.
-  const isProforma = isSaleProforma(saleData.status);
-
-  // اقلام فقط در پیش‌فاکتور تغییر می‌کنند؛ بعد از آن جمع همان مبلغِ
-  // ذخیره‌شده‌ی سرور است (در فروشِ اقساطی هم باید با قرارداد برابر بماند).
-  const computedTotal = isProforma
-    ? items.reduce((sum, item) => {
-        const base = (item.quantity || 0) * (item.unitPrice || 0);
-        const disc = (base * (item.discount || 0)) / 100;
-        return sum + base - disc;
-      }, 0)
-    : Number(saleData.totalAmount) || 0;
-
-  const selectedStatus =
-    formData.status === "" || formData.status == null
-      ? SaleStatusEnum.PROFORMA
-      : Number(formData.status);
-
+  // پیش‌نمایش با قاعده‌ی سرور؛ عددِ نهایی همان است که سرور پس از ذخیره برمی‌گرداند.
+  const computedTotal = invoiceTotals(items).totalAmount;
 
   const onSubmit = (e) => {
     e.preventDefault();
@@ -139,33 +123,20 @@ export default function SaleDetailForm({ saleData }) {
       return;
     }
 
-
     const payload = {
       customerId: formData.customerId,
-      customerName: formData.customerName,
       invoiceDate: formData.invoiceDate,
       dueDate: formData.dueDate || null,
       description: formData.description || "",
-      items: items.map((item) => ({
-        ...item,
-        lineTotal: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
-      })),
+      items,
       paymentType: formData.paymentType ?? PaymentTypeEnum.CASH,
-      paidAmount: Number(formData.paidAmount) || 0,
-      checkNumber: formData.checkNumber || null,
-      transferRef: formData.transferRef || null,
-      mixedPayments: formData.mixedPayments || [],
-      paymentPaidAt: formData.paymentPaidAt || null,
-      // خروج از پیش‌فاکتور کارِ سرور است (با اولین پرداخت)؛ اینجا فقط
-      // قدم‌های دستیِ مجاز (`manualSaleStatusOptions`) فرستاده می‌شوند.
-      status: selectedStatus,
-      totalAmount: computedTotal,
       attachments: attachments.filesPayload,
     };
 
     updateMutation.mutate(payload, {
       onSuccess: () => {
         attachments.commit();
+        resetForm();
         navigate(ROUTES.SALES);
       },
     });
@@ -188,47 +159,17 @@ export default function SaleDetailForm({ saleData }) {
       <form onSubmit={onSubmit}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 space-y-4">
-            {isProforma ? (
-              <SaleItemsSection
-                items={items}
-                products={products}
-                isLoadingProducts={productsLoading}
-                onItemsChange={setItems}
-              />
-            ) : (
-              <OrderItemsReadOnly
-                title="اقلام فروش"
-                items={saleData.items}
-                headerAction={
-                  saleData.items?.some((item) => Number(item.shippedQuantity) > 0) && (
-                    <UnitsPageLink
-                      params={{ saleId: saleData.id }}
-                      label="دانه‌های ارسال‌شده"
-                    />
-                  )
-                }
-                columns={[
-                  {
-                    key: "shipped",
-                    label: "ارسال‌شده",
-                    render: (item) =>
-                      (Number(item.shippedQuantity) || 0).toLocaleString("fa-IR"),
-                  },
-                ]}
-              />
-            )}
+            <SaleItemsSection
+              items={items}
+              products={products}
+              isLoadingProducts={productsLoading}
+              onItemsChange={setItems}
+            />
             <OrderInfoSection
               formData={formData}
               onFormChange={setFormData}
               errors={{}}
               invoiceNumberDisabled
-            />
-
-            <OrderLogisticsSection
-              title="ارسال و حمل"
-              drivers={saleData.drivers}
-              notes={saleData.shippingNotes}
-              notesLabel="یادداشت‌های ارسال"
             />
           </div>
 
@@ -254,68 +195,54 @@ export default function SaleDetailForm({ saleData }) {
               onFormChange={setFormData}
               totalAmount={computedTotal}
               errors={{}}
+              termsOnly
             />
 
-            {/* تا وقتی فروش پیش‌فاکتور است، سندِ چاپی و ضمیمه هم
-                پیش‌فاکتورند؛ فاکتور رسمی و شماره‌اش را بکند با تغییر
-                وضعیت به «آماده‌سازی انبار» می‌سازد. */}
+            <SalePaymentsCard
+              sale={saleData}
+              payments={payments}
+              canManage={allow("SalePayment")}
+              notice="اولین دریافت فاکتور رسمی را صادر می‌کند و فروش دیگر ویرایش نمی‌شود؛ تغییرهای اقلام را پیش از آن ذخیره کنید."
+            />
+
             <InvoiceDocumentSection
-              title={isProforma ? "پیش‌فاکتور فروش" : "فاکتور فروش"}
+              title="پیش‌فاکتور فروش"
               invoiceNumber={formData.invoiceNumber}
               attachments={attachments}
               documentKind="sale"
               documentId={saleData.id}
-              attachmentLabel={
-                isProforma
-                  ? "پیش‌فاکتور ارسال‌شده برای مشتری"
-                  : "فاکتور صادرشده برای مشتری"
-              }
+              attachmentLabel="پیش‌فاکتور ارسال‌شده برای مشتری"
             />
 
-            <SaleStatusSection
-              sale={saleData}
-              selectedStatus={formData.status}
-              onStatusChange={(val) => setFormData({ status: val })}
-            />
-
-            <div className="flex gap-2">
-              <Button type="submit" className="flex-1 gap-2" disabled={isBusy}>
-                <Save className="h-4 w-4" />
-                {updateMutation.isPending
-                  ? "در حال ذخیره..."
-                  : "به‌روزرسانی فروش"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  attachments.discard();
-                  navigate(-1);
-                }}
-                disabled={isBusy}
-                className="gap-2"
-              >
-                <X className="h-4 w-4" />
-                انصراف
-              </Button>
-            </div>
-
-            {RETURNABLE_SALE_STATUSES.includes(Number(saleData.status)) && (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full gap-2"
-                onClick={() =>
-                  navigate(`${ROUTES.SALES_RETURNS_NEW}?saleId=${saleData.id}`)
-                }
-                disabled={isBusy}
-              >
-                <Undo2 className="h-4 w-4" />
-                ثبت مرجوعی از این فروش
-              </Button>
+            {allow("SaleUpdate") && (
+              <div className="flex gap-2">
+                <Button
+                  type="submit"
+                  className="flex-1 gap-2"
+                  disabled={isBusy}
+                >
+                  <Save className="h-4 w-4" />
+                  {updateMutation.isPending
+                    ? "در حال ذخیره..."
+                    : "به‌روزرسانی پیش‌فاکتور"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    attachments.discard();
+                    navigate(-1);
+                  }}
+                  disabled={isBusy}
+                  className="gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  انصراف
+                </Button>
+              </div>
             )}
 
-            {canDeleteSale(saleData) ? (
+            {allow("SaleDelete") && (
               <Button
                 type="button"
                 variant="destructive"
@@ -324,13 +251,8 @@ export default function SaleDetailForm({ saleData }) {
                 disabled={isBusy}
               >
                 <Trash2 className="h-4 w-4" />
-                حذف فروش
+                حذف پیش‌فاکتور
               </Button>
-            ) : (
-              <p className="text-xs text-muted-foreground text-center px-2">
-                از این فروش کالا ارسال شده و دیگر قابل حذف نیست؛ برای برگشتِ
-                کالا مرجوعی ثبت کنید.
-              </p>
             )}
           </div>
         </div>
@@ -339,10 +261,10 @@ export default function SaleDetailForm({ saleData }) {
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>حذف فروش</AlertDialogTitle>
+            <AlertDialogTitle>حذف پیش‌فاکتور فروش</AlertDialogTitle>
             <AlertDialogDescription>
-              آیا از حذف این فروش اطمینان دارید؟ این عملیات اطلاعات فروش ثبت شده
-              را به طور کامل حذف میکند.
+              آیا از حذف این پیش‌فاکتور اطمینان دارید؟ سندِ حذف‌شده دیگر در
+              فهرست فروش‌ها دیده نمی‌شود.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

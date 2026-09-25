@@ -84,7 +84,11 @@ function ProductDetailForm({ productData }) {
               errors={errors}
               isIncomplete={Boolean(productData?.isIncomplete)}
             />
-            <ProductPricingForm register={register} control={control} />
+            <ProductPricingForm
+              register={register}
+              control={control}
+              errors={errors}
+            />
           </div>
           <div className="flex flex-col gap-4 md:gap-3">
             <ProductImageUpload imageUpload={imageUpload} />

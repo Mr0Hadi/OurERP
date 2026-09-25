@@ -101,6 +101,7 @@ export default function SaleItemsSection({
           products={products}
           priceOf={mode.priceOf}
           trackUnits
+          showTaxHint
         />
       </CardContent>
     </Card>

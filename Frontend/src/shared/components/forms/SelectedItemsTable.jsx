@@ -11,6 +11,8 @@ export default function SelectedItemsTable({
   onRemoveUnit,
   lineTotal,
   grandTotal,
+  taxAmount = 0,
+  taxUnknown = false,
   // `true` یعنی جدول به عرضِ ظرفِ خودش (`@container/picker`) واکنش نشان
   // دهد، نه به عرضِ صفحه — برای جاهایی که انتخابگر داخلِ یک کارتِ باریک است.
   byContainer = false,
@@ -18,23 +20,24 @@ export default function SelectedItemsTable({
   return (
     <div
       className={`${
-        byContainer ? "hidden @2xl/picker:block" : "hidden md:block"
+        byContainer ? "hidden @2xl/picker:block" : "hidden xl:block"
       } border border-border rounded-lg overflow-hidden`}
     >
       <table className="w-full text-sm table-fixed">
         <thead className="bg-muted text-muted-foreground text-xs">
           <tr>
             <th className="text-right px-3 py-2.5 font-medium">کالا</th>
+            {/* قیمتِ ریالی تا ۱۲ رقم با جداکننده دارد؛ ستونش باید جای کلِ عدد را داشته باشد. */}
             <th className="text-center px-2 py-2.5 font-medium w-20">
               تعداد
             </th>
-            <th className="text-center px-2 py-2.5 font-medium w-28">
+            <th className="text-center px-2 py-2.5 font-medium w-44">
               قیمت واحد
             </th>
-            <th className="text-center px-2 py-2.5 font-medium w-20">
+            <th className="text-center px-2 py-2.5 font-medium w-16">
               تخفیف %
             </th>
-            <th className="text-center px-2 py-2.5 font-medium w-28">
+            <th className="text-center px-2 py-2.5 font-medium w-36">
               جمع
             </th>
             <th className="w-8 px-2 py-2.5" />
@@ -74,7 +77,7 @@ export default function SelectedItemsTable({
                   onValueChange={(next) =>
                     onFieldChange(item.productId, "unitPrice", next ?? "")
                   }
-                  className="h-7 text-center text-xs w-full"
+                  className="h-8 text-center text-sm tabular-nums w-full"
                 />
               </td>
               <td className="px-2 py-2">
@@ -121,6 +124,20 @@ export default function SelectedItemsTable({
           ))}
         </tbody>
         <tfoot className="bg-muted border-t border-border">
+          {taxAmount > 0 && (
+            <tr>
+              <td
+                colSpan={4}
+                className="px-3 pt-2.5 text-xs text-muted-foreground text-right"
+              >
+                مالیات (در جمع اقلام آمده):
+              </td>
+              <td className="px-2 pt-2.5 text-center text-xs text-muted-foreground">
+                {taxAmount.toLocaleString("fa-IR")}
+              </td>
+              <td />
+            </tr>
+          )}
           <tr>
             <td
               colSpan={4}
@@ -133,6 +150,13 @@ export default function SelectedItemsTable({
             </td>
             <td />
           </tr>
+          {taxUnknown && (
+            <tr>
+              <td colSpan={6} className="px-3 pb-2.5 text-xs text-muted-foreground text-right">
+                مالیاتِ کالاهای تازه‌انتخاب‌شده را سرور هنگام ذخیره حساب و به جمع اضافه می‌کند.
+              </td>
+            </tr>
+          )}
         </tfoot>
       </table>
     </div>

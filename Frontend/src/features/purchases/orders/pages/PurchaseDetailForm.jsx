@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Save, X, Trash2, Ban, Undo2 } from "lucide-react";
+import { Save, X, Trash2, Ban } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -17,40 +17,50 @@ import {
 import { usePurchaseFormStore } from "@/features/purchases/orders/store/purchaseFormStore";
 import {
   useUpdatePurchaseMutation,
-  useUpdatePurchaseStatusMutation,
+  useChangePurchaseStatusMutation,
   useRemovePurchaseMutation,
+  usePurchasePaymentMutations,
 } from "@/features/purchases/orders/services/mutations";
 import { useSuppliersQuery } from "@/features/suppliers/services/queries";
 import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection";
 import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
-import PurchaseItemsCard from "../components/forms/PurchaseItemsCard";
-import PurchaseExcessSection from "../components/forms/PurchaseExcessSection";
 import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
 import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
 import PurchaseStatusSection from "../components/forms/PurchaseStatusSection";
-import OrderLogisticsSection from "@/shared/components/forms/OrderLogisticsSection";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
 import { ROUTES } from "@/shared/constants/routes";
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
 import {
   canDeletePurchase,
-  canCancelPurchase,
-  getPurchaseLockReason,
+  hasLivePayments,
 } from "@/features/purchases/orders/domain/purchaseRules";
-import {
-  PURCHASE_STATUSES,
-  isPurchaseProforma,
-} from "@/features/purchases/orders/services/constants";
-import { hasAnythingArrived } from "@/features/purchases/returns/domain/purchaseReturnVocabulary";
+import { PURCHASE_STATUSES } from "@/features/purchases/orders/services/constants";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
+import { usePermission } from "@/features/auth/hooks/usePermission";
+import PurchasePaymentsCard from "../components/forms/PurchasePaymentsCard";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
 const SORTING = { id: "name", desc: false };
 
+/**
+ * ویرایشِ خریدی که هنوز **پیش‌فاکتور** است — تنها وضعیتی که
+ * `UpdatePurchase` می‌پذیرد. خریدِ صادرشده در `PurchaseIssuedView` باز
+ * می‌شود.
+ *
+ * پیش‌فاکتور کالا جابه‌جا نمی‌کند، پس اقلام آزادانه ویرایش می‌شوند.
+ * پیش‌پرداخت به تامین‌کننده خرید را قفل نمی‌کند و جدا در کارت
+ * «پرداخت‌ها» ثبت می‌شود. خروج از پیش‌فاکتور با انتخابِ «در انتظار
+ * ارسال»/«ارسال‌شده» و شماره و تاریخِ فاکتورِ تامین‌کننده است.
+ */
 export default function PurchaseDetailForm({ purchaseData }) {
   const navigate = useNavigate();
+  const { can, isError: permissionsUnknown } = usePermission();
+  // اگر فهرستِ دسترسی نیامد، دکمه‌ها می‌مانند و خودِ سرور ۴۰۳ می‌دهد.
+  const allow = (permission) => permissionsUnknown || can(permission);
+
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
@@ -63,11 +73,6 @@ export default function PurchaseDetailForm({ purchaseData }) {
     initializeFromPurchase,
     initializedForId,
   } = usePurchaseFormStore();
-
-  // مرجوعی خرید حالا دقیقاً مثل مرجوعی فروش است: تا وقتی چیزی از
-  // خرید رسیده باشد می‌شود ادعا ثبت کرد. معیار خودِ کالای رسیده است نه
-  // وضعیت خرید — نیمی که با ماشین اول آمده هم قابل ادعاست.
-  const canReturn = hasAnythingArrived(purchaseData);
 
   const { data: suppliersData, isLoading: suppliersLoading } =
     useSuppliersQuery(ALL_FILTERS, PAGINATION, SORTING);
@@ -89,10 +94,8 @@ export default function PurchaseDetailForm({ purchaseData }) {
 
   const updateMutation = useUpdatePurchaseMutation(purchaseData.id);
   const deleteMutation = useRemovePurchaseMutation();
-  const statusMutation = useUpdatePurchaseStatusMutation();
-  // وضعیتِ *ذخیره‌شده* — نه انتخابِ در حال ویرایش؛ عنوان کارت سند باید
-  // به خودِ خریدِ روی سرور واکنش نشان بدهد.
-  const isProforma = isPurchaseProforma(purchaseData.status);
+  const statusMutation = useChangePurchaseStatusMutation(purchaseData.id);
+  const payments = usePurchasePaymentMutations(purchaseData.id);
 
   const items = formData.items || [];
 
@@ -105,23 +108,24 @@ export default function PurchaseDetailForm({ purchaseData }) {
       ? PURCHASE_STATUSES.PROFORMA
       : Number(formData.status);
 
-  const leavingProforma =
-    isProforma && selectedStatus !== PURCHASE_STATUSES.PROFORMA;
+  const leavingProforma = selectedStatus !== PURCHASE_STATUSES.PROFORMA;
+  const missingInvoiceNumber = !String(formData.invoiceNumber || "").trim();
+  const missingInvoiceDate = !formData.invoiceDate;
 
-  const invoiceNumberError =
-    showErrors && leavingProforma && !String(formData.invoiceNumber || "").trim()
-      ? "برای خروج از پیش‌فاکتور، شماره فاکتور تامین‌کننده الزامی است"
-      : null;
+  const infoErrors =
+    showErrors && leavingProforma
+      ? {
+          invoiceNumber: missingInvoiceNumber
+            ? "برای خروج از پیش‌فاکتور، شماره فاکتور تامین‌کننده الزامی است"
+            : null,
+          invoiceDate: missingInvoiceDate
+            ? "برای خروج از پیش‌فاکتور، تاریخ فاکتور الزامی است"
+            : null,
+        }
+      : {};
 
-  // اقلام فقط در پیش‌فاکتور تغییر می‌کنند؛ بعد از آن جمع همان مبلغِ
-  // ذخیره‌شده‌ی سرور است (که `AcceptPurchaseExcess` هم آن را جلو می‌برد).
-  const computedTotal = isProforma
-    ? items.reduce((sum, item) => {
-        const base = (item.quantity || 0) * (item.unitPrice || 0);
-        const disc = (base * (item.discount || 0)) / 100;
-        return sum + base - disc;
-      }, 0)
-    : Number(purchaseData.totalAmount) || 0;
+  // پیش‌نمایش با قاعده‌ی سرور؛ عددِ نهایی همان است که سرور پس از ذخیره برمی‌گرداند.
+  const computedTotal = invoiceTotals(items).totalAmount;
 
   // initializeFromPurchase باید فقط یک‌بار هنگام mount اجرا شود
   useEffect(() => {
@@ -155,41 +159,37 @@ export default function PurchaseDetailForm({ purchaseData }) {
       return;
     }
 
-    // قاعده‌ی بکند (`UpdatePurchaseCommandHandler`): خروج از پیش‌فاکتور
-    // یعنی فاکتور رسمیِ تامین‌کننده رسیده، پس شماره‌اش باید ثبت شده باشد.
-    if (leavingProforma && !String(formData.invoiceNumber || "").trim()) {
+    if (items.length === 0) {
+      toast.error("خرید باید دست‌کم یک قلم داشته باشد.");
+      return;
+    }
+
+    // قاعده‌ی بکند: خروج از پیش‌فاکتور یعنی فاکتور رسمیِ تامین‌کننده
+    // رسیده، پس شماره و تاریخش باید ثبت شده باشد.
+    if (leavingProforma && (missingInvoiceNumber || missingInvoiceDate)) {
       setShowErrors(true);
-      toast.error("برای خروج از پیش‌فاکتور، شماره فاکتور تامین‌کننده را وارد کنید.");
+      toast.error(
+        "برای خروج از پیش‌فاکتور، شماره و تاریخ فاکتور تامین‌کننده را وارد کنید.",
+      );
       return;
     }
 
     const payload = {
       supplierId: formData.supplierId,
-      supplierName: formData.supplierName,
       invoiceNumber: formData.invoiceNumber,
       invoiceDate: formData.invoiceDate,
       dueDate: formData.dueDate || null,
       description: formData.description || "",
-      items: items.map((item) => ({
-        ...item,
-        lineTotal: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
-      })),
+      items,
       paymentType: formData.paymentType ?? PaymentTypeEnum.CASH,
-      paidAmount: Number(formData.paidAmount) || 0,
-      paymentPaidAt: formData.paymentPaidAt || null,
-      checkNumber: formData.checkNumber || null,
-      transferRef: formData.transferRef || null,
-      mixedPayments: formData.mixedPayments || [],
-      // خریدی که هنوز وضعیت ندارد در مرحله‌ی پیش‌فاکتور است؛ ذخیره‌ی
-      // ساده‌ی فرم نباید آن را جلو ببرد.
       status: selectedStatus,
-      totalAmount: computedTotal,
       attachments: attachments.filesPayload,
     };
 
     updateMutation.mutate(payload, {
       onSuccess: () => {
         attachments.commit();
+        resetForm();
         navigate(ROUTES.PURCHASES);
       },
     });
@@ -197,28 +197,24 @@ export default function PurchaseDetailForm({ purchaseData }) {
 
   const handleDelete = () => {
     deleteMutation.mutate(purchaseData.id, {
-      onSuccess: () => {
-        resetForm();
-        navigate(ROUTES.PURCHASES);
-      },
+      onSuccess: () => resetForm(),
     });
   };
 
   const handleCancel = () => {
-    statusMutation.mutate(
-      { id: purchaseData.id, status: PURCHASE_STATUSES.CANCELLED },
-      {
-        onSuccess: () => {
-          resetForm();
-          navigate(ROUTES.PURCHASES);
-        },
+    statusMutation.mutate(PURCHASE_STATUSES.CANCELLED, {
+      onSuccess: () => {
+        setShowCancelDialog(false);
+        resetForm();
       },
-    );
+    });
   };
 
-  const deletable = canDeletePurchase(purchaseData);
-  const cancellable = !deletable && canCancelPurchase(purchaseData);
-  const lockReason = getPurchaseLockReason(purchaseData);
+  // پیش‌فاکتوری که پیش‌پرداختِ زنده دارد حذف نمی‌شود (سرور ۴۰۰ می‌دهد)؛
+  // یا پرداخت‌ها ابطال شوند یا خرید لغو شود.
+  const livePayments = hasLivePayments(purchaseData);
+  const deletable = canDeletePurchase(purchaseData) && !livePayments;
+  const canUpdate = allow("PurchaseUpdate");
 
   const isBusy =
     updateMutation.isPending ||
@@ -231,28 +227,16 @@ export default function PurchaseDetailForm({ purchaseData }) {
       <form onSubmit={onSubmit}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 space-y-4">
-            {isProforma ? (
-              <PurchaseItemsSection
-                items={items}
-                products={products}
-                isLoadingProducts={productsLoading}
-                onItemsChange={setItems}
-              />
-            ) : (
-              <PurchaseItemsCard purchase={purchaseData} />
-            )}
-            <PurchaseExcessSection purchase={purchaseData} />
+            <PurchaseItemsSection
+              items={items}
+              products={products}
+              isLoadingProducts={productsLoading}
+              onItemsChange={setItems}
+            />
             <OrderInfoSection
               formData={formData}
               onFormChange={setFormData}
-              errors={{ invoiceNumber: invoiceNumberError }}
-            />
-
-            <OrderLogisticsSection
-              title="تحویل و حمل"
-              drivers={purchaseData.drivers}
-              notes={purchaseData.receivingNotes}
-              notesLabel="یادداشت‌های دریافت"
+              errors={infoErrors}
             />
           </div>
 
@@ -277,73 +261,64 @@ export default function PurchaseDetailForm({ purchaseData }) {
               onFormChange={setFormData}
               totalAmount={computedTotal}
               errors={{}}
+              termsOnly
+            />
+
+            <PurchasePaymentsCard
+              purchase={purchaseData}
+              payments={payments}
+              canManage={allow("PurchasePayment")}
+              notice="پیش‌پرداخت، خرید را از پیش‌فاکتور خارج نمی‌کند؛ همان لحظه روی حساب تامین‌کننده می‌نشیند."
             />
 
             {/* در مرحله‌ی پیش‌فاکتور، فاکتور رسمی هنوز نرسیده؛ چیزی
-                که ضمیمه می‌شود پیش‌فاکتورِ تامین‌کننده است. با تغییر
-                وضعیت، شماره‌ی فاکتور و خودِ فاکتور وارد/ضمیمه می‌شوند.
+                که ضمیمه می‌شود پیش‌فاکتورِ تامین‌کننده است.
 
                 `documentKind` عمداً داده نشده: فاکتور خرید را سرور
                 نمی‌سازد — همان برگه‌ای است که تامین‌کننده فرستاده و
                 اینجا ضمیمه شده، و چاپ/دانلود روی همان انجام می‌شود. */}
             <InvoiceDocumentSection
-              title={isProforma ? "پیش‌فاکتور خرید" : "فاکتور خرید"}
+              title="پیش‌فاکتور خرید"
               invoiceNumber={formData.invoiceNumber}
               attachments={attachments}
-              attachmentLabel={
-                isProforma
-                  ? "پیش‌فاکتور دریافتی از تامین‌کننده"
-                  : "فاکتور دریافتی از تامین‌کننده"
-              }
+              attachmentLabel="پیش‌فاکتور یا فاکتور دریافتی از تامین‌کننده"
             />
 
             <PurchaseStatusSection
-              status={formData.status}
               selectedStatus={formData.status}
               savedStatus={purchaseData.status}
               onStatusChange={(val) => setFormData({ status: val })}
             />
 
-            <div className="flex gap-2">
-              <Button type="submit" className="flex-1 gap-2" disabled={isBusy}>
-                <Save className="h-4 w-4" />
-                {updateMutation.isPending
-                  ? "در حال ذخیره..."
-                  : "به‌روزرسانی خرید"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  attachments.discard();
-                  navigate(-1);
-                }}
-                disabled={isBusy}
-                className="gap-2"
-              >
-                <X className="h-4 w-4" />
-                انصراف
-              </Button>
-            </div>
-
-            {canReturn && (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full gap-2"
-                onClick={() =>
-                  navigate(
-                    `${ROUTES.PURCHASES_RETURNS_NEW}?purchaseId=${purchaseData.id}`,
-                  )
-                }
-                disabled={isBusy}
-              >
-                <Undo2 className="h-4 w-4" />
-                ثبت مرجوعی برای این خرید
-              </Button>
+            {canUpdate && (
+              <div className="flex gap-2">
+                <Button
+                  type="submit"
+                  className="flex-1 gap-2"
+                  disabled={isBusy}
+                >
+                  <Save className="h-4 w-4" />
+                  {updateMutation.isPending
+                    ? "در حال ذخیره..."
+                    : "به‌روزرسانی پیش‌فاکتور"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    attachments.discard();
+                    navigate(-1);
+                  }}
+                  disabled={isBusy}
+                  className="gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  انصراف
+                </Button>
+              </div>
             )}
 
-            {deletable && (
+            {deletable && allow("PurchaseDelete") && (
               <Button
                 type="button"
                 variant="destructive"
@@ -352,40 +327,39 @@ export default function PurchaseDetailForm({ purchaseData }) {
                 disabled={isBusy}
               >
                 <Trash2 className="h-4 w-4" />
-                حذف خرید
+                حذف پیش‌فاکتور
               </Button>
             )}
 
-            {cancellable && (
-              <Button
-                type="button"
-                variant="destructive"
-                className="w-full gap-2"
-                onClick={() => setShowCancelDialog(true)}
-                disabled={isBusy}
-              >
-                <Ban className="h-4 w-4" />
-                لغو خرید
-              </Button>
-            )}
-
-            {lockReason && (
-              <p className="text-xs text-muted-foreground text-center px-2">
-                {lockReason}
-              </p>
+            {livePayments && canUpdate && (
+              <>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="w-full gap-2"
+                  onClick={() => setShowCancelDialog(true)}
+                  disabled={isBusy}
+                >
+                  <Ban className="h-4 w-4" />
+                  لغو خرید
+                </Button>
+                <p className="text-xs text-muted-foreground text-center px-2">
+                  این پیش‌فاکتور پیش‌پرداخت دارد و حذف نمی‌شود؛ یا پرداخت‌ها را
+                  باطل کنید یا خرید را لغو کنید.
+                </p>
+              </>
             )}
           </div>
         </div>
       </form>
 
-      {/* دیالوگ حذف کامل */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>حذف خرید</AlertDialogTitle>
+            <AlertDialogTitle>حذف پیش‌فاکتور خرید</AlertDialogTitle>
             <AlertDialogDescription>
-              آیا از حذف این خرید اطمینان دارید؟ این عملیات اطلاعات خرید ثبت شده
-              را به طور کامل حذف میکند
+              آیا از حذف این پیش‌فاکتور اطمینان دارید؟ سندِ حذف‌شده دیگر در
+              فهرست خریدها دیده نمی‌شود.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -403,30 +377,51 @@ export default function PurchaseDetailForm({ purchaseData }) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* دیالوگ لغو */}
-      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>لغو خرید</AlertDialogTitle>
-            <AlertDialogDescription>
-              این خرید ارسال شده ولی هنوز چیزی از آن در انبار دریافت نشده است.
-              با لغو، وضعیت آن به «لغو شده» تغییر می‌کند و سابقه‌ی آن حفظ می‌شود.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={statusMutation.isPending}>
-              انصراف
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleCancel}
-              disabled={statusMutation.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {statusMutation.isPending ? "در حال لغو..." : "لغو خرید"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <CancelPurchaseDialog
+        open={showCancelDialog}
+        onOpenChange={setShowCancelDialog}
+        isPending={statusMutation.isPending}
+        onConfirm={handleCancel}
+      />
     </div>
+  );
+}
+
+/** لغوِ خرید — نهایی است؛ پرداخت‌ها روی خرید می‌مانند. */
+export function CancelPurchaseDialog({
+  open,
+  onOpenChange,
+  isPending,
+  onConfirm,
+}) {
+  return (
+    <AlertDialog
+      open={open}
+      onOpenChange={(next) => !isPending && onOpenChange(next)}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>لغو خرید</AlertDialogTitle>
+          <AlertDialogDescription>
+            لغو نهایی است و قابل بازگشت نیست. پرداخت‌های انجام‌شده روی خرید
+            می‌مانند؛ پولی که تامین‌کننده برمی‌گرداند را با «پول برگشتی» در کارت
+            پرداخت‌ها ثبت کنید.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isPending}>انصراف</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={(event) => {
+              event.preventDefault();
+              onConfirm();
+            }}
+            disabled={isPending}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {isPending ? "در حال لغو..." : "لغو خرید"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

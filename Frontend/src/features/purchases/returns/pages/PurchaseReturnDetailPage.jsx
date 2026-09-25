@@ -37,6 +37,7 @@ import ReturnStatusBar from "@/shared/components/returns/ReturnStatusBar";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
 import RelatedReturnsCard from "@/shared/components/returns/RelatedReturnsCard";
+import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
 import { PURCHASE_RETURN_STATUS_LABELS } from "../domain/purchaseReturnVocabulary";
 import PurchaseReturnResolutionSection from "../components/forms/PurchaseReturnResolutionSection";
 import { ROUTES } from "@/shared/constants/routes";
@@ -65,7 +66,16 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
     purchaseReturn.id,
   );
 
-  const addResolutionMutation = useAddClaimResolutionMutation(purchaseReturn.id);
+  // روی هر کالا، چقدر در مرجوعی‌های دیگرِ همین سند ثبت شده.
+  const claimsElsewhere = useClaimsInOtherReturns(
+    "purchase",
+    purchaseReturn.purchaseId,
+    purchaseReturn.id,
+  );
+
+  const addResolutionMutation = useAddClaimResolutionMutation(
+    purchaseReturn.id,
+  );
   const removeResolutionMutation = useRemoveClaimResolutionMutation(
     purchaseReturn.id,
   );
@@ -104,6 +114,7 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
           order={sale}
           partyName={purchaseReturn.supplierName}
           defaultOpen={false}
+          claimsElsewhere={claimsElsewhere}
         />
       )}
 
@@ -144,8 +155,8 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
         onExecuteMoney={(effect) =>
           executeMoneyMutation.mutate({ effectId: effect.id })
         }
-        onReject={() => rejectMutation.mutate()}
-        onCancel={() => cancelMutation.mutate()}
+        onReject={(reason, options) => rejectMutation.mutate(reason, options)}
+        onCancel={(reason, options) => cancelMutation.mutate(reason, options)}
         onReopen={() => reopenMutation.mutate()}
       />
 

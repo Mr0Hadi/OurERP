@@ -23,6 +23,7 @@ import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAtt
 import { ROUTES } from "@/shared/constants/routes";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
+import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -179,16 +180,18 @@ export default function SaleNewPage() {
   );
   const isInPerson = Object.keys(scannedBarcodes).length > 0;
 
-  const computedTotal = items.reduce((sum, item) => {
-    const base = (item.quantity || 0) * (item.unitPrice || 0);
-    const disc = (base * (item.discount || 0)) / 100;
-    return sum + base - disc;
-  }, 0);
+  // پیش‌نمایش با قاعده‌ی سرور (تخفیف و مالیات گرد، هر قلم جدا). جمع
+  // فرستاده نمی‌شود؛ سرور خودش از اقلام و مالیاتِ کالاها حساب می‌کند.
+  const computedTotal = invoiceTotals(items).totalAmount;
 
-  // فروشِ تازه همیشه پیش‌فاکتور ثبت می‌شود و سرور با اولین ریالِ پرداخت
-  // خودش آن را به فاکتورِ رسمی تبدیل می‌کند؛ پس «پیش‌فاکتور بودن» اینجا
-  // فقط از روی پرداخت پیش‌بینی می‌شود (برای عنوانِ کارتِ سند).
-  const isProforma = !isInPerson && !(Number(formData.paidAmount) > 0);
+  /**
+   * `status` روی سیم نمی‌رود: فروش همیشه پیش‌فاکتور ثبت می‌شود و اولین
+   * ریالِ پرداخت فاکتور را صادر می‌کند. اینجا فقط تعیین می‌کند فرم
+   * پرداختی بفرستد یا نه.
+   */
+  const isProforma =
+    !isInPerson &&
+    Number(formData.status ?? SaleStatusEnum.PROFORMA) === SaleStatusEnum.PROFORMA;
 
   const onSubmit = (e) => {
     e.preventDefault();
@@ -225,16 +228,14 @@ export default function SaleNewPage() {
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         discount: item.discount || 0,
-        lineTotal: item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100),
       })),
       paymentType: formData.paymentType ?? PaymentTypeEnum.CASH,
-      paidAmount: Number(formData.paidAmount) || 0,
+      // فقط برای ساختنِ `paymentDetails`؛ خودِ `paidAmount` فرستاده نمی‌شود.
+      paidAmount: isProforma ? 0 : Number(formData.paidAmount) || 0,
       paymentPaidAt: formData.paymentPaidAt || null,
       checkNumber: formData.checkNumber || null,
       transferRef: formData.transferRef || null,
-      mixedPayments: formData.mixedPayments || [],
-      status: SaleStatusEnum.PROFORMA,
-      totalAmount: computedTotal,
+      mixedPayments: isProforma ? [] : formData.mixedPayments || [],
       attachments: attachments.filesPayload,
     };
 
@@ -343,7 +344,10 @@ export default function SaleNewPage() {
                 ثبت «تحویل کامل» می‌شود.
               </p>
             ) : (
-              <SaleStatusSection />
+              <SaleStatusSection
+                selectedStatus={formData.status}
+                onStatusChange={(status) => setFormData({ status })}
+              />
             )}
 
             <div className="flex gap-2">
