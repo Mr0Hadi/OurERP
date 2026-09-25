@@ -209,6 +209,13 @@ axiosInstance.interceptors.response.use(
     
     if (status === 403) error.isForbidden = true;
 
+    // ۴۲۲ یعنی یک Idempotency-Key برای دو درخواستِ متفاوت به کار رفته — در
+    // کارکردِ درست پیش نمی‌آید و نشانه‌ی باگ در فرانت است (مثلاً شیءِ
+    // variables بعد از ساخته‌شدن تغییر کرده).
+    if (status === 422 && import.meta.env?.DEV) {
+      console.error("Idempotency-Key reused for a different request", originalRequest);
+    }
+
     // لایه‌های بالادستی (mutationها) فقط `error.message` را toast
     // می‌کنند؛ بدون این، کاربر پیام عمومیِ axios را می‌بیند به‌جای
     // پیامِ دقیقی که سرور فرستاده.

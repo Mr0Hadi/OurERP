@@ -11,9 +11,6 @@ import { toApiComposition } from "@/shared/domain/returns/resolutions";
  * (`Backend-Net/docs/api-guide.fa.md`، بخش ۱۲؛ بخش ۷ گزارشِ شکافِ
  * خرید/فروش). قرینه‌ی دقیقِ `purchases/returns/services/api-v1.js`؛
  * توضیحاتِ کامل همان‌جاست.
- *
- * ⚠️ بکندِ فعلی هدرِ Idempotency-Key را نمی‌خواند — این محافظت فعلاً
- * فقط سمتِ فرانت است.
  */
 
 // ─── خواندن ─────────────────────────────────────────────────────────────────
@@ -156,17 +153,19 @@ export async function executeMoneyEffect(
 
 // ─── چرخه‌ی عمر ─────────────────────────────────────────────────────────────
 
-/** بکند «دلیل» را روی رد/لغو نمی‌گیرد — فقط `{id}`. */
-export async function rejectSalesReturn(returnId) {
+/** `reason` اختیاری است؛ قرینه‌ی `rejectPurchaseReturn`. */
+export async function rejectSalesReturn(returnId, reason) {
   const { data } = await axiosInstance.post("/SaleReturn/RejectSaleReturn", {
     id: returnId,
+    reason: reason?.trim() || undefined,
   });
   return fromApiReturn(data);
 }
 
-export async function cancelSalesReturn(returnId) {
+export async function cancelSalesReturn(returnId, reason) {
   const { data } = await axiosInstance.post("/SaleReturn/CancelSaleReturn", {
     id: returnId,
+    reason: reason?.trim() || undefined,
   });
   return fromApiReturn(data);
 }

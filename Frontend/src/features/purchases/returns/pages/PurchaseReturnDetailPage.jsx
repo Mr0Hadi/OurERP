@@ -144,8 +144,8 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
         onExecuteMoney={(effect) =>
           executeMoneyMutation.mutate({ effectId: effect.id })
         }
-        onReject={() => rejectMutation.mutate()}
-        onCancel={() => cancelMutation.mutate()}
+        onReject={(reason, options) => rejectMutation.mutate(reason, options)}
+        onCancel={(reason, options) => cancelMutation.mutate(reason, options)}
         onReopen={() => reopenMutation.mutate()}
       />
 

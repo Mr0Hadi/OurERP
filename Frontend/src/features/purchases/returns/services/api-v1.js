@@ -29,9 +29,9 @@ import { PurchaseStatusEnum } from "@/shared/domain/enums/purchaseStatus";
  *     شناسه برگرداند، هر عملیات یک refetch اضافه می‌خورد و UI پرش
  *     می‌کند.
  *
- *  ۳. عملیاتِ تجمعی (ثبت تصمیم، دور کالا) کلید ایدمپوتنسی می‌گیرد —
- *     ⚠️ ولی بکندِ فعلی این هدر را اصلاً نمی‌خواند، پس این محافظت فعلاً
- *     فقط سمتِ فرانت است، نه واقعی.
+ *  ۳. عملیاتِ تجمعی (ثبت تصمیم، دور کالا) کلید ایدمپوتنسی می‌گیرد.
+ *     سرور پاسخِ موفقِ همان کلید را دوباره پخش می‌کند، و وقتی درخواستِ
+ *     اول هنوز در جریان است ۴۰۹ می‌دهد (که mutation دوباره می‌فرستد).
  *
  * پوششِ `ResponseDto` در interceptor باز می‌شود، پس اینجا `data` همان
  * محتوای واقعی است.
@@ -213,17 +213,23 @@ export async function executeMoneyEffect(
 
 // ─── چرخه‌ی عمر ─────────────────────────────────────────────────────────────
 
-/** بکند «دلیل» را روی رد/لغو نمی‌گیرد — فقط `{id}`. `reason` فعلاً نگه داشته می‌شود ولی فرستاده نمی‌شود. */
-export async function rejectPurchaseReturn(returnId) {
+/**
+ * `reason` اختیاری است (حداکثر ۵۰۰ نویسه) و روی سند به‌صورت
+ * `statusReason` برمی‌گردد. رشته‌ی خالی یعنی «بی‌دلیل»؛ بازگشایی آن را
+ * پاک می‌کند.
+ */
+export async function rejectPurchaseReturn(returnId, reason) {
   const { data } = await axiosInstance.post("/PurchaseReturn/RejectPurchaseReturn", {
     id: returnId,
+    reason: reason?.trim() || undefined,
   });
   return fromApiReturn(data);
 }
 
-export async function cancelPurchaseReturn(returnId) {
+export async function cancelPurchaseReturn(returnId, reason) {
   const { data } = await axiosInstance.post("/PurchaseReturn/CancelPurchaseReturn", {
     id: returnId,
+    reason: reason?.trim() || undefined,
   });
   return fromApiReturn(data);
 }
