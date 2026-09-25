@@ -150,6 +150,10 @@ namespace Domain.Enums
         [Description("خرید کالای مازاد")]
         PurchaseAcceptExcess = 76,
 
+        [PermissionGroup(PermissionGroupEnum.Purchase)]
+        [Description("ثبت و ابطال پرداخت خرید")]
+        PurchasePayment = 77,
+
         // --- فروش ---
         [PermissionGroup(PermissionGroupEnum.Sale)]
         [Description("مشاهده فروش‌ها")]
@@ -174,6 +178,10 @@ namespace Domain.Enums
         [PermissionGroup(PermissionGroupEnum.Sale)]
         [Description("فروش حضوری")]
         SaleInPerson = 95,
+
+        [PermissionGroup(PermissionGroupEnum.Sale)]
+        [Description("ثبت و ابطال پرداخت فروش")]
+        SalePayment = 96,
 
         // --- اقساط ---
         [PermissionGroup(PermissionGroupEnum.Installment)]
@@ -272,6 +280,11 @@ namespace Domain.Enums
 
         [PermissionGroup(PermissionGroupEnum.Pos)]
         [Description("مدیریت کارت‌خوان‌ها")]
-        PosTerminalManage = 232
+        PosTerminalManage = 232,
+
+        // --- حساب اشخاص ---
+        [PermissionGroup(PermissionGroupEnum.PartyAccounts)]
+        [Description("مشاهده گردش حساب مشتریان و تامین‌کنندگان")]
+        PartyStatementView = 250
     }
 }

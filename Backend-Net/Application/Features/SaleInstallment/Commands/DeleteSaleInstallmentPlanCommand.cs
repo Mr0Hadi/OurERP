@@ -1,3 +1,4 @@
+using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
@@ -47,6 +48,7 @@ namespace Application.Features.SaleInstallment.Commands
 
             var plan = await _context.SaleInstallmentPlans
                 .Include(x => x.Installments)
+                .Include(x => x.Sale)
                 .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
                 ?? throw new NotFoundCustomException("قرارداد اقساطی مورد نظر یافت نشد.");
 
@@ -65,6 +67,9 @@ namespace Application.Features.SaleInstallment.Commands
             plan.IsActive = false;
             plan.Status = SaleInstallmentPlanStatusEnum.CANCELLED;
             plan.UpdatedAt = now;
+
+            // A cancelled plan no longer adds its charge to what the customer owes.
+            await PartyLedger.InstallmentChargeChangedAsync(_context, plan.Sale, 0UL, now, cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 

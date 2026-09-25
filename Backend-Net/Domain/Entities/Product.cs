@@ -29,7 +29,11 @@ namespace Domain.Entities
         public UInt64 PurchasePrice { get; set; }
         public UInt64 RetailPrice { get; set; }
         public UInt64 WholeSalePrice { get; set; }
+        /// <summary>Default tax percent for new invoice lines of this product; each line snapshots it (InvoiceLineMath).</summary>
         public int Tax { get; set; }
+
+        /// <summary>EXEMPT lines carry no tax whatever <see cref="Tax"/> says.</summary>
+        public TaxCategoryEnum TaxCategory { get; set; } = TaxCategoryEnum.TAXABLE;
         public int Stock { get; set; }
         public int LowStockThreshold { get; set; }
         public string? ImageUrl { get; set; }

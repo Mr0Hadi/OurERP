@@ -1,3 +1,4 @@
+using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
@@ -77,12 +78,14 @@ namespace Application.Features.SaleInstallment.Commands
                 SaleId = plan.SaleId,
                 Type = request.PaymentType,
                 Purpose = PaymentPurposeEnum.INSTALLMENT,
+                Direction = PaymentDirectionEnum.IN,
                 Amount = installment.Amount,
                 PaidAt = paidAt,
                 CheckNumber = request.CheckNumber,
                 TransferRef = request.TransferRef,
             };
             await _context.PaymentDetails.AddAsync(payment, cancellationToken);
+            await PartyLedger.SalePaymentAsync(_context, plan.Sale, payment, cancellationToken);
 
             installment.Status = SaleInstallmentStatusEnum.PAID;
             installment.PaidAt = paidAt;

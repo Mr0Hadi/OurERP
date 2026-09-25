@@ -583,10 +583,14 @@ Authorization: Bearer {accessToken}
 | | `ReceivePurchase`، `Shipment/ReceiveShipment` | `PurchaseReceive` |
 | | `ClosePurchaseItem`، `ReopenPurchaseItem` | `PurchaseItemClose` |
 | | `AcceptPurchaseExcess` | `PurchaseAcceptExcess` |
+| | `ChangePurchaseStatus`، `UpdatePurchaseAttachments`، `UpdatePurchasePaymentDate` | `PurchaseUpdate` |
+| | `Add/Edit/VoidPurchasePayment` | `PurchasePayment` |
 | فروش | `GetSaleList/Detail` | `SaleView` |
 | | `CreateSale` / `UpdateSale` / `DeleteSale` | `SaleCreate` / `SaleUpdate` / `SaleDelete` |
 | | `ShipSale`، `Shipment/DispatchShipment` | `SaleShip` |
 | | `CreateInPersonSale` | `SaleInPerson` |
+| | `ChangeSaleStatus`، `UpdateSaleAttachments`، `UpdateSalePaymentDate` | `SaleUpdate` |
+| | `Add/Edit/VoidSalePayment` | `SalePayment` |
 | اقساط | `Get...` / `Create,Update,DeletePlan` / `PaySaleInstallment`،`SettleSaleInstallmentPlan` | `SaleInstallmentView` / `SaleInstallmentManage` / `SaleInstallmentPay` |
 | مرجوعی خرید | خواندن‌ها (شامل `GetPurchaseReceivingInfo`) | `PurchaseReturnView` |
 | | `CreatePurchaseReturn` | `PurchaseReturnCreate` |
@@ -600,6 +604,7 @@ Authorization: Bearer {accessToken}
 | گزارش | تمام `Report/*` | `ReportView` |
 | کارت‌خوان | `Pos/Charge` | `PosCharge` |
 | | `GetPosTerminalList/Detail` / بقیه | `PosTerminalView` / `PosTerminalManage` |
+| حساب اشخاص | `PartyAccount/GetPartyStatement` | `PartyStatementView` |
 
 `CreateInPersonSale` و `Shipment/*` داخل خودشان چند کامند دیگر را اجرا می‌کنند؛ فقط همان یک دسترسیِ بالا لازم است، نه دسترسی‌های کامندهای داخلی.
 
@@ -761,6 +766,70 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
 
 ---
 
+## ۵ب. حساب اشخاص (PartyAccount) — از ۲۰۲۶-۰۹-۲۴
+
+کنترلر: `api/PartyAccount`. **دفتر حساب اشخاص** ثبت می‌کند هر مشتری یا تامین‌کننده چقدر به ما بدهکار است یا ما به او. جدولی
+append-only است: ردیفی ویرایش یا حذف نمی‌شود، و هر چیزی که پس گرفته شود یک ردیف **برگشت** (`REVERSAL`) می‌گیرد که به ردیف اصلی اشاره
+دارد. این دفتر جدا از دفتر هزینه‌ی کالاست؛ آن یکی ارزش موجودی و سود را حساب می‌کند.
+
+**مانده = جمع بدهکار − جمع بستانکار.** مثبت یعنی طرف به ما بدهکار است، منفی یعنی ما به طرف بدهکاریم. این خوانش برای مشتری و
+تامین‌کننده یکی است.
+
+**چه چیزی ردیف می‌سازد** (همه در همان ذخیره‌ای که خود سند تغییر می‌کند):
+
+| رویداد | ردیف | نوع (`entryType`) |
+|---|---|---|
+| صدور فاکتور فروش (اولین پرداخت، یا قرارداد اقساطی با پیش‌پرداخت) | مشتری **بدهکار** به اندازه‌ی `totalAmount` | `SALE_INVOICE` |
+| خروج خرید از پیش‌فاکتور (ثبت فاکتور تامین‌کننده) | تامین‌کننده **بستانکار** به اندازه‌ی `totalAmount` | `PURCHASE_INVOICE` |
+| قلم ضمیمه‌ی خرید (`AcceptPurchaseExcess`) | تامین‌کننده بستانکار به اندازه‌ی جمع قلم | `PURCHASE_SUPPLEMENT` |
+| بستن قلم خرید با کسری (`ClosePurchaseItem`) | تامین‌کننده **بدهکار** به اندازه‌ی سهم مقدارِ نرسیده از جمع قلم (با مالیات، گرد نیم به بالا)؛ `ReopenPurchaseItem` برش می‌گرداند | `PURCHASE_SHORT_CLOSE` |
+| سود اقساط (قرارداد روی فاکتور صادرشده) | مشتری بدهکار | `INSTALLMENT_CHARGE` |
+| هر ردیف پرداخت | پول به ما (`IN`) ← طرف **بستانکار**؛ پول از ما (`OUT`) ← طرف **بدهکار** | `PAYMENT` |
+| اثر پولی مرجوعی با روش «در حساب» (`ON_ACCOUNT`) | `MONEY_IN` ← بدهکار، `MONEY_OUT` ← بستانکار | `RETURN_SETTLEMENT` |
+| ابطال پرداخت، لغو فاکتور صادرشده، تغییر یا لغو سود اقساط، حذف تصمیم مرجوعی | ردیف مخالفِ ردیف اصلی | `REVERSAL` |
+
+- **پیش‌فاکتور روی حساب نمی‌آید**، مگر پیش‌پرداختِ خرید: آن پول واقعاً رفته و تا رسیدن فاکتور، تامین‌کننده به ما بدهکار است.
+- **پول نقدی/چک/انتقالی که در مرجوعی جابه‌جا می‌شود روی حساب اثری ندارد**، چون برگشت کالا و برگشت پول همدیگر را خنثی می‌کنند. فقط
+  بخشِ «در حساب» روی حساب می‌ماند. مثلاً مشتری کالا را پس داده و به‌جای پول نقد، مبلغ از بدهی‌اش کم شده است.
+- **دفتر از روز اجرای migration شروع می‌شود**؛ فاکتورها و پرداخت‌های قبلی روی حساب کسی نیستند.
+
+### `GET api/PartyAccount/GetPartyStatement?customerId=1&fromDate=2026-09-01&toDate=2026-09-30`
+
+گردش حساب. **دقیقاً یکی** از `customerId` یا `supplierId` (وگرنه ۴۰۰). `fromDate`/`toDate` اختیاری‌اند. صفحه‌بندی ندارد، چون ماندهٔ
+جاری فقط روی یک بازه‌ی پیوسته معنا دارد؛ بازه را با تاریخ کوچک کنید. طرفِ ناموجود ۴۰۴ می‌دهد. دسترسی: `PartyStatementView`.
+
+```json
+{
+  "customerId": 1,
+  "supplierId": null,
+  "partyName": "علی رضایی",
+  "fromDate": "2026-09-01T00:00:00",
+  "toDate": "2026-09-30T00:00:00",
+  "openingBalance": 0,
+  "totalDebit": 11000000,
+  "totalCredit": 2000000,
+  "closingBalance": 9000000,
+  "entries": [
+    { "id": 51, "occurredAt": "2026-09-02T10:00:00", "entryType": 1, "entryTypeTitle": "صدور فاکتور فروش", "direction": 1,
+      "debit": 11000000, "credit": 0, "runningBalance": 11000000, "description": "فاکتور فروش INV-2026-0007",
+      "saleId": 200, "purchaseId": null, "paymentDetailId": null, "saleReturnClaimId": null, "purchaseReturnClaimId": null, "reversalOfEntryId": null },
+    { "id": 52, "occurredAt": "2026-09-02T10:00:00", "entryType": 5, "entryTypeTitle": "پرداخت", "direction": 2,
+      "debit": 0, "credit": 2000000, "runningBalance": 9000000, "description": "پرداخت فاکتور فروش INV-2026-0007",
+      "saleId": 200, "purchaseId": null, "paymentDetailId": 77, "saleReturnClaimId": null, "purchaseReturnClaimId": null, "reversalOfEntryId": null }
+  ]
+}
+```
+
+- ردیف‌ها به ترتیب `occurredAt` و بعد `id`. `occurredAt` تاریخ کسب‌وکاری است: تاریخ فاکتور، تاریخ پرداخت (`paidAt`) و مانند آن.
+- `openingBalance` مانده‌ی همه‌ی ردیف‌های قبل از `fromDate` است و بدون `fromDate` برابر ۰.
+- `closingBalance = openingBalance + totalDebit − totalCredit`، و برابر `runningBalance` آخرین ردیف.
+
+**مانده در مشتری و تامین‌کننده:** `GetCustomerList`، `GetCustomerDetail`، `GetSupplierList` و `GetSupplierDetail` فیلد تازه‌ی
+**`ledgerBalance`** دارند: مانده‌ی همین دفتر با همان علامت. فیلدهای قدیمی `balance`/`balanceType` همان عددی‌اند که دستی وارد می‌شود و
+دست نخورده‌اند؛ برای نمایش «بدهکاری واقعی» از `ledgerBalance` استفاده کنید.
+
+---
+
 ## 6. دسته‌بندی محصولات (ProductCategory)
 
 کنترلر: `api/ProductCategory`. ساده‌ترین CRUD موجود.
@@ -841,6 +910,7 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
   "retailPrice": 25000000,
   "wholeSalePrice": 22000000,
   "tax": 9,
+  "taxCategory": 1,
   "stock": 12,
   "lowStockThreshold": 3,
   "imageUrl": null,
@@ -862,6 +932,7 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
   "retailPrice": 25000000,
   "wholeSalePrice": 22000000,
   "tax": 9,
+  "taxCategory": 1,
   "stock": 0,
   "lowStockThreshold": 3,
   "imageUrl": null,
@@ -893,6 +964,7 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
   "retailPrice": 25000000,
   "wholeSalePrice": 22000000,
   "tax": 9,
+  "taxCategory": 1,
   "stock": 15,
   "lowStockThreshold": 3,
   "imageUrl": null,
@@ -1031,6 +1103,46 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
 
 کنترلر: `api/Purchase`.
 
+> **قفل پیش‌فاکتور (از ۲۰۲۶-۰۹-۲۴) — برای خرید و فروش یکسان.** سند فقط تا وقتی **پیش‌فاکتور** (`PROFORMA`) است
+> قابل ویرایش است — همه‌چیزش: اقلام، قیمت، تخفیف، طرف حساب، تاریخ‌ها. به محض خروج از پیش‌فاکتور، فاکتور **صادرشده** است و
+> `Update...` با ۴۰۰ رد می‌شود. پس از صدور فقط این چهار چیز باز می‌ماند، هر کدام با endpoint خودش:
+> **پرداخت‌ها** (`Add/Edit/Void...Payment`)، **وضعیت** (`Change...Status`)، **پیوست‌ها** (`Update...Attachments`) و **مهلت پرداخت**
+> (`Update...PaymentDate`). خروج یک‌طرفه است: فروش با **اولین ریال پرداخت** خارج می‌شود (و شماره‌ی فاکتور رسمی می‌گیرد)، خرید وقتی
+> **فاکتور رسمی تامین‌کننده** (شماره و تاریخ) ثبت شود — پیش‌پرداخت به تامین‌کننده خرید را قفل نمی‌کند.
+>
+> **اصلاح اشتباه روی فاکتور صادرشده** (مثلاً قیمت اشتباه وارد شده و پول گرفته شده): ویرایش نداریم. اگر هنوز کالایی جابه‌جا نشده،
+> سند را **لغو** کنید (`Change...Status` → `CANCELLED`) و **دوباره ثبت** کنید؛ پول گرفته‌شده روی سند لغوشده می‌ماند و با یک ردیف
+> پرداختِ برعکس (`direction`) برگردانده می‌شود. اگر کالا جابه‌جا شده، از مسیر **مرجوعی** اقدام کنید. فرانت این را باید به کاربر بگوید،
+> چون دکمه‌ی «ویرایش» بعد از صدور دیگر کار نمی‌کند.
+>
+> **پیش‌فاکتور کالا جابه‌جا نمی‌کند:** `ReceivePurchase` روی خرید پیش‌فاکتور و `ShipSale` روی فروش پیش‌فاکتور ۴۰۰ می‌دهند.
+>
+> **`paidAmount` دیگر از کلاینت گرفته نمی‌شود.** همیشه برابر است با جمع ردیف‌های `paymentDetails[]` باطل‌نشده در جهت خود سند
+> منهای ردیف‌های جهت مخالف (پول برگشتی). هر افزودن/اصلاح/ابطال ردیف، `paidAmount` را در همان ذخیره دوباره حساب می‌کند.
+> ردیف پرداخت هرگز پاک نمی‌شود: ابطال فقط `voidedAt` را پر می‌کند و ردیف در فهرست می‌ماند؛ اصلاح = ابطال ردیف قبلی + ردیف تازه.
+
+> **مبالغ فاکتور را سرور حساب می‌کند (از ۲۰۲۶-۰۹-۲۴) — خرید و فروش.** کلاینت برای هر قلم فقط `quantity`، `unitPrice` و
+> `discount` (درصد، ۰ تا ۱۰۰) می‌فرستد. **`totalAmount` از هیچ درخواستی گرفته نمی‌شود.** سرور برای هر قلم وضعیت و نرخ مالیاتِ کالا را
+> برمی‌دارد (`taxCategory`، `taxPercent`؛ کالای معاف = ۰٪) و این مبالغ را حساب و روی همان قلم ذخیره می‌کند:
+>
+> | مبلغ | فرمول | گرد می‌شود؟ |
+> |---|---|---|
+> | `grossAmount` | `quantity × unitPrice` | نه (همیشه عدد صحیح) |
+> | `discountAmount` | `grossAmount × discount / 100` | بله، به نزدیک‌ترین ریال |
+> | `netAmount` | `grossAmount − discountAmount` | نه |
+> | `taxAmount` | `netAmount × taxPercent / 100` | بله، به نزدیک‌ترین ریال |
+> | `totalAmount` قلم | `netAmount + taxAmount` | نه |
+> | `totalAmount` سند | جمع `totalAmount` اقلام | نه |
+>
+> گرد کردن **نیم به بالا** است (۰٫۵ ریال ← ۱)، **هر قلم جدا**، تا جمع ردیف‌های چاپ‌شده همیشه دقیقاً برابر جمع فاکتور باشد. مثال: ۳ عدد ×
+> ۳۳۳٬۳۳۳ با ۷٪ تخفیف و ۱۰٪ مالیات ← ۹۹۹٬۹۹۹ − ۷۰٬۰۰۰ (از ۶۹٬۹۹۹٫۹۳) = ۹۲۹٬۹۹۹ + ۹۳٬۰۰۰ (از ۹۲٬۹۹۹٫۹) = **۱٬۰۲۲٬۹۹۹**. فرانت
+> برای پیش‌نمایش فرم همین قاعده را پیاده کند، ولی عدد نهایی همیشه عددی است که سرور برمی‌گرداند.
+>
+> **پیش‌فاکتور با هر ذخیره دوباره حساب می‌شود** (نرخ مالیات هم دوباره از کالا خوانده می‌شود). **فاکتور صادرشده ثابت است**: اگر بعداً
+> نرخ مالیات کالا عوض شود، فاکتورهای قبلی تغییر نمی‌کنند. PDF فاکتور هم همین اعداد ذخیره‌شده را چاپ می‌کند و چیزی حساب نمی‌کند.
+> درآمد و بهای تمام‌شده در گزارش سود همچنان **بدون مالیات** است؛ مالیات فقط در جمع فاکتور می‌آید.
+
+
 ### `GET api/Purchase/GetPurchaseList`
 
 **Query:** `page`, `take`, `invoiceNumber`, `supplierId`, `status` (enum، بخش ۱۵), `fromDate`, `toDate`, `fromPaymentDate`, `toPaymentDate`.
@@ -1076,12 +1188,24 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
       "quantity": 20,
       "unitPrice": 20000000,
       "discount": 0,
+      "taxCategory": 1,
+      "taxPercent": 10,
+      "grossAmount": 400000000,
+      "discountAmount": 0,
+      "netAmount": 400000000,
+      "taxAmount": 40000000,
+      "totalAmount": 440000000,
       "receivedQuantity": 5,
       "settledQuantity": 0,
-      "purchaseId": 100
+      "shortClosedQuantity": 0,
+      "shortClosedAt": null,
+      "isSupplement": false,
+      "supplementOfPurchaseItemId": null
     }
   ],
-  "paymentDetails": [ /* در صورت پرداخت غیرنقدی */ ],
+  "paymentDetails": [
+    { "id": 7, "type": 3, "purpose": 0, "direction": 2, "amount": 30000000, "paidAt": "2026-08-02T00:00:00", "voidedAt": null, "checkNumber": null, "transferRef": "TR-1" }
+  ],
   "drivers": [
     { "id": 1, "driverFullName": "علی محمدی", "driverPhoneNumber": "09121234567", "vehiclePlate": "12ط34567", "createdAt": "2026-08-05T10:00:00" }
   ],
@@ -1091,6 +1215,16 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
 }
 ```
 `drivers[]`/`receivingNotes[]`: تاریخچه‌ی راننده/وسیله‌نقلیه و یادداشت هر نوبت دریافت (از `ReceivePurchase`، زیر همین بخش) — هر بار که `ReceivePurchase` با این فیلدها صدا زده شود، یک ردیف تازه اضافه می‌شود، نه بازنویسی قبلی؛ هر دو اختیاری‌اند و اگر فرستاده نشوند ردیفی هم ساخته نمی‌شود.
+
+`paymentDetails[]` همه‌ی ردیف‌ها را برمی‌گرداند، **باطل‌شده‌ها هم** (`voidedAt` پر است؛ در `paidAmount` حساب نمی‌شوند) — سابقه‌ی
+پرداخت کامل است. `direction` (`PaymentDirectionEnum`، بخش ۱۵) از دید ما است: در خرید `2 = OUT` یعنی ما پرداختیم و `1 = IN` یعنی
+تامین‌کننده پول برگرداند.
+
+**`payableAmount`** (از ۲۰۲۶-۰۹-۲۴): آنچه واقعاً بابت این خرید بدهکاریم = `totalAmount` (فاکتور صادرشده، که ویرایش نمی‌شود) منهای سهم
+مقدارهایی که با `ClosePurchaseItem` بسته شده‌اند. **بدهی = `payableAmount − paidAmount`.** همان عددی است که حساب تامین‌کننده نشان می‌دهد.
+
+`items[].isSupplement`: قلمی که بعد از صدور فاکتور با `AcceptPurchaseExcess` به آن **ضمیمه** شده (پایین همین بخش)؛
+`supplementOfPurchaseItemId` قلم سفارشی‌ای است که آن مازاد رویش رسیده بود (برای کالای خارج از سند `null`).
 
 `items[].receivedQuantity` و `items[].settledQuantity` تجمعی هستند (در طول چند بار دریافت افزایش پیدا می‌کنند) — برای دانستن دقیق «چه مقدار از این قلم باقی مانده تا دریافت شود»، به‌جای محاسبه‌ی دستی از این عدد، از `GetPurchaseReceivingInfo` (بخش ۱۰) استفاده کنید که این محاسبه را برای شما انجام داده.
 
@@ -1103,26 +1237,35 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
     { "productId": 10, "quantity": 20, "unitPrice": 20000000, "discount": 0 }
   ],
   "supplierId": 1,
-  "totalPrice": 400000000,
-  "paidPrice": 100000000,
   "paymentType": 0,
   "status": 0,
-  "paymentDetails": [],
+  "paymentDetails": [
+    { "type": 3, "amount": 100000000, "paidAt": "2026-08-01T00:00:00", "transferRef": "PRE-1" }
+  ],
   "invoiceNumber": "INV-1001",
   "invoiceDate": "2026-08-01T00:00:00",
   "paymentDate": "2026-08-31T00:00:00",
-  "description": null
+  "description": null,
+  "attachments": []
 }
 ```
-اگر `paymentType` غیر از نقدی (`CASH = 0`) باشد، `paymentDetails` الزامی می‌شود.
+- `status` فقط `PROFORMA` (۰)، `PENDING` (۱) یا `SHIPPED` (۲)؛ هر وضعیت دیگری ۴۰۰.
+- **`totalAmount` فرستاده نمی‌شود** — سرور از اقلام و مالیات کالاها حساب می‌کند (بالای همین بخش). کالای ناموجود ⇒ ۴۰۴.
+- `paymentDetails` **اختیاری** است — پرداخت‌هایی که همین حالا انجام شده، مثلاً پیش‌پرداخت روی پیش‌فاکتور. هر ردیف یک
+  جابه‌جایی پول است: `amount > 0` و `type` یکی از `CASH`/`CREDIT`/`CHECK`/`TRANSFER` (`MIXED`/`INSTALLMENT` روی ردیف ۴۰۰). جهت
+  ردیف‌ها همیشه «ما پرداختیم» (`OUT`) است و `direction`/`voidedAt` فرستاده‌شده نادیده گرفته می‌شود. `paidAt` نفرستید = همین لحظه.
+- **`paidAmount` فرستاده نمی‌شود** — جمع همین ردیف‌هاست. قاعده‌ی قدیمیِ «غیرنقدی بدون `paymentDetails` = ۴۰۰» حذف شد: شرایط پرداخت
+  (`paymentType`) خودش پرداخت نیست.
 
 `paymentDate` (**مهلت پرداخت**) اختیاری است — تاریخی که تا آن، خریدار فرصت تسویه دارد. برای معامله‌ی نقدی `null` بفرستید. اگر مقدار داشته باشد نباید قبل از `invoiceDate` باشد، وگرنه ۴۰۰ برمی‌گردد. در `GetPurchaseList`/`GetPurchaseDetail`/`GetSaleList`/`GetSaleDetail` برگردانده و روی PDF فاکتور هم چاپ می‌شود.
 
-`invoiceDate` (**تاریخ فاکتور**) nullable است و **فقط وقتی `status` برابر `PROFORMA` (۰) باشد** می‌تواند `null` باشد. در هر وضعیت دیگری، `null` (یا مقدار پوچ `0001-01-01`) ۴۰۰ می‌دهد. در خروجی `GetPurchaseList`/`GetPurchaseDetail`/`GetSaleList`/`GetSaleDetail` هم برای ردیف‌های پیش‌فاکتور `null` برمی‌گردد (قبلاً `0001-01-01T00:00:00` بود). روی PDF فاکتور، اگر `null` باشد تاریخ ثبت سند چاپ می‌شود.
+`invoiceDate` (**تاریخ فاکتور**) nullable است و **فقط وقتی `status` برابر `PROFORMA` (۰) باشد** می‌تواند `null` باشد. در هر وضعیت دیگری، `null` (یا مقدار پوچ `0001-01-01`) ۴۰۰ می‌دهد. روی PDF فاکتور، اگر `null` باشد تاریخ ثبت سند چاپ می‌شود.
+
+**data خروجی:** سند کامل، همان شکل `GetPurchaseDetail`.
 
 **کاربرد:** ثبت سند خرید از تامین‌کننده (هنوز کالا وارد انبار نشده — ورود فیزیکی با `ReceivePurchase` انجام می‌شود، بخش زیر).
 
-### `PUT api/Purchase/UpdatePurchase`
+### `PUT api/Purchase/UpdatePurchase` — فقط پیش‌فاکتور
 
 **Body:**
 ```json
@@ -1133,22 +1276,74 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
   "paymentDate": "2026-08-31T00:00:00",
   "status": 1,
   "paymentType": 0,
-  "paymentDetails": [
-    { "type": 2, "amount": 150000000, "paidAt": "2026-08-31T00:00:00", "checkNumber": "12345" }
-  ],
-  "totalAmount": 400000000,
-  "paidAmount": 150000000,
   "description": null,
-  "supplierId": 1
+  "supplierId": 1,
+  "productItemList": [
+    { "id": 1000, "productId": 10, "quantity": 12, "unitPrice": 100000, "discount": 0 },
+    { "productId": 15, "quantity": 5, "unitPrice": 130000, "discount": 5 }
+  ],
+  "attachments": []
 }
 ```
-`paymentDetails` **جایگزینی کامل** است، نه افزودنی — مثل `attachments`: فهرست نهایی را بفرستید، هرچه نفرستید حذف می‌شود. اگر `paymentType` غیر نقدی باشد الزامی است (همان قاعده‌ی `CreatePurchase`). `purpose` از ورودی خوانده نمی‌شود و همیشه `NORMAL` ثبت می‌شود — خرید اقساطی وجود ندارد. در `GetPurchaseDetail` → `paymentDetails[]` برمی‌گردد.
+- **فقط وقتی خرید هنوز `PROFORMA` است**؛ روی خرید صادرشده ۴۰۰ (پیام: سند از پیش‌فاکتور خارج شده…).
+- **`totalAmount` فرستاده نمی‌شود** — با هر ذخیره‌ی پیش‌فاکتور از اقلام و نرخ مالیات فعلی کالاها دوباره حساب می‌شود.
+- `productItemList` **جایگزینی کامل** است: `id` پر = همان قلمِ این خرید ویرایش می‌شود (`id` که مال این خرید نیست ⇒ ۴۰۴)، `id` خالی
+  = قلم تازه، قلمی که در فهرست نیامده ⇒ حذف. فهرست خالی ⇒ ۴۰۰. `discount` بین ۰ تا ۱۰۰.
+- `status`: `PROFORMA` (ماندن در پیش‌فاکتور)، یا `PENDING`/`SHIPPED` برای **خروج** — که شماره و تاریخ فاکتور تامین‌کننده را لازم
+  دارد (۴۰۰ در غیر این صورت) و خرید را قفل می‌کند. `PARTIALLY_RECEIVED`/`RECEIVED`/`CANCELLED` اینجا ۴۰۰ (اولی‌ها از دریافت حساب
+  می‌شوند، لغو با `ChangePurchaseStatus`).
+- `paymentDetails` و `paidAmount` **دیگر اینجا نیستند** — پرداخت‌ها با `AddPurchasePayment`/`EditPurchasePayment`/`VoidPurchasePayment`.
+- `attachments` جایگزینی کامل است (بعد از صدور: `UpdatePurchaseAttachments`).
+- **data خروجی:** سند کامل (شکل `GetPurchaseDetail`).
 
-**نکته‌ی مهم:** این API فقط فیلدهای سطح خرید را ویرایش می‌کند و **اقلام خرید (`items`) را نمی‌گیرد و تغییر نمی‌دهد**. برای ویرایش اقلام یا وضعیت دریافت باید از `ReceivePurchase` استفاده کرد. گردش‌کار: `GetPurchaseDetail` → پر کردن فرم با فیلدهای سطح بالا → `UpdatePurchase` با کل فیلدها + `id`.
+### `POST api/Purchase/ChangePurchaseStatus`
+
+`{ "id": 100, "status": 1 }` — تغییر دستی وضعیت، قبل یا بعد از صدور. مجاز:
+- `PROFORMA` ⇒ `PENDING`/`SHIPPED`: فقط اگر شماره و تاریخ فاکتور تامین‌کننده از قبل روی پیش‌فاکتور ثبت شده باشد (با `UpdatePurchase`)، وگرنه ۴۰۰.
+- `PENDING` ⇄ `SHIPPED`.
+- `CANCELLED` از `PROFORMA`/`PENDING`/`SHIPPED`، فقط وقتی هیچ کالایی دریافت نشده. لغو نهایی است. پرداخت‌ها روی خرید لغوشده می‌مانند؛
+  پولی که تامین‌کننده برمی‌گرداند با `AddPurchasePayment` و `direction: 1` (`IN`) ثبت می‌شود.
+- مقصد `PROFORMA`/`PARTIALLY_RECEIVED`/`RECEIVED` همیشه ۴۰۰؛ خریدی که در `PARTIALLY_RECEIVED`/`RECEIVED` است دستی تغییر نمی‌کند (کسری را
+  با `ClosePurchaseItem` یا مرجوعی ببندید).
+
+**data خروجی:** سند کامل. دسترسی: `PurchaseUpdate`.
+
+### `PUT api/Purchase/UpdatePurchaseAttachments`
+
+`{ "id": 100, "attachments": [ { "objectKey": "...", "fileName": "...", "note": null } ] }` — در **هر وضعیتی**. جایگزینی کامل. `objectKey`
+اگر URL بازگشتی خود API باشد، کلید خالص ذخیره می‌شود. data: سند کامل. دسترسی: `PurchaseUpdate`.
+
+### `PUT api/Purchase/UpdatePurchasePaymentDate`
+
+`{ "id": 100, "paymentDate": "2026-10-01T00:00:00" }` — مهلت پرداخت، در **هر وضعیتی**؛ `null` = بدون مهلت. قبل از `invoiceDate` ⇒ ۴۰۰.
+data: سند کامل. دسترسی: `PurchaseUpdate`.
+
+### `POST api/Purchase/AddPurchasePayment`
+
+```json
+{ "purchaseId": 100, "type": 3, "amount": 50000000, "paidAt": "2026-08-20T00:00:00", "checkNumber": null, "transferRef": "TR-77", "direction": null }
+```
+- در **هر وضعیتی** — روی پیش‌فاکتور یعنی پیش‌پرداخت، و خرید را از پیش‌فاکتور خارج **نمی‌کند**.
+- `direction`: خالی یا `2` (`OUT`) = ما پرداختیم؛ `1` (`IN`) = تامین‌کننده پول برگرداند (بازپرداخت).
+- `type` یکی از `CASH`/`CREDIT`/`CHECK`/`TRANSFER`؛ `amount > 0`؛ `paidAt` خالی = همین لحظه.
+- روی خرید لغوشده فقط `IN` پذیرفته می‌شود. پول برگشتی بیشتر از پرداخت‌شده ⇒ ۴۰۰.
+- data: سند کامل (با `paidAmount` تازه). دسترسی: `PurchasePayment`.
+
+### `POST api/Purchase/EditPurchasePayment`
+
+`{ "paymentId": 7, "type": 2, "amount": 45000000, "paidAt": "...", "checkNumber": "C-9", "transferRef": null }` — اصلاح یک ردیف: ردیف قبلی
+باطل و ردیف تازه با همان جهت ثبت می‌شود، در یک ذخیره. هر دو ردیف در پاسخ دیده می‌شوند. ردیفِ باطل‌شده یا ردیف اقساطی ⇒ ۴۰۰.
+دسترسی: `PurchasePayment`.
+
+### `POST api/Purchase/VoidPurchasePayment`
+
+`{ "paymentId": 7 }` — ابطال ردیفی که اشتباه ثبت شده؛ ردیف می‌ماند (`voidedAt`) و از `paidAmount` بیرون می‌رود. دوباره‌ابطال ⇒ ۴۰۰؛ اگر
+بعد از ابطال پول برگشتی از پرداخت‌شده بیشتر شود ⇒ ۴۰۰. دسترسی: `PurchasePayment`.
 
 ### `DELETE api/Purchase/DeletePurchase?id=100`
 
-حذف نرم خرید.
+حذف نرم — **فقط پیش‌فاکتور**؛ خرید صادرشده را لغو کنید (۴۰۰). پیش‌فاکتوری که پیش‌پرداخت دارد ⇒ ۴۰۰ تا پرداخت‌ها ابطال شوند.
+خرید حذف‌شده دیگر در `GetPurchaseList` نمی‌آید و `GetPurchaseDetail` برایش ۴۰۴ می‌دهد. **data خروجی:** `{ "id": 100 }`.
 
 ### `POST api/Purchase/ReceivePurchase`
 
@@ -1213,6 +1408,11 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
 
 ### `POST api/Purchase/ClosePurchaseItem` / `POST api/Purchase/ReopenPurchaseItem`
 
+> **از ۲۰۲۶-۰۹-۲۴:** بستن قلم علاوه بر اثر فیزیکی، سهم مقدار نرسیده را از بدهی ما به تامین‌کننده کم می‌کند (ردیف `PURCHASE_SHORT_CLOSE`
+> در حساب تامین‌کننده، بخش ۵ب) و `payableAmount` خرید را پایین می‌آورد. خودِ فاکتور و `totalAmount` عوض نمی‌شود. اگر پول آن مقدار قبلاً
+> پرداخت شده، تامین‌کننده به ما بدهکار می‌شود و پولی که پس می‌دهد با `AddPurchasePayment` و `direction: 1` ثبت می‌شود. بازگشایی قلم
+> این ردیف را برمی‌گرداند.
+
 **Body:** `{ "purchaseItemId": 1000 }`
 
 **بستنِ قلم («تامین‌کننده بقیه را نمی‌فرستد»)** — همان «Delivery completed» در SAP. مقدارِ هنوز نرسیده‌ی قلم (`quantity − receivedQuantity`) در `shortClosedQuantity` ثبت می‌شود و دیگر انتظارش نمی‌رود:
@@ -1230,7 +1430,7 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
 
 ### `POST api/Purchase/AcceptPurchaseExcess`
 
-**«کالای اضافه را نگه می‌داریم و پولش را می‌دهیم.»** کالای مازاد یا خارج از سندی که در قرنطینه نگه داشته شده، **به خودِ سفارش اضافه می‌شود**: دانه‌ها از قرنطینه به موجودی می‌آیند، `custodyReason` آن‌ها `ON_ORDER` می‌شود و با قیمت خالصِ قلم وارد میانگینِ بهای موجودی می‌شوند. مبلغ کل خرید هم به همان اندازه زیاد می‌شود؛ پرداختش مثل هر پرداخت دیگر با `UpdatePurchase` (فیلدهای `paymentDetails`/`paidAmount`) ثبت می‌شود.
+**«کالای اضافه را نگه می‌داریم و پولش را می‌دهیم.»** کالای مازاد یا خارج از سندی که در قرنطینه نگه داشته شده، **به‌صورت قلم ضمیمه به فاکتور اضافه می‌شود** — فاکتور صادرشده ویرایش نمی‌شود، فقط ضمیمه می‌گیرد: هر ردیف پذیرش یک **قلم تازه** (`isSupplement: true`) می‌سازد و هیچ عددی روی اقلام قبلی عوض نمی‌شود. دانه‌ها از قرنطینه به موجودی می‌آیند، به قلم ضمیمه منتقل می‌شوند، `custodyReason` آن‌ها `ON_ORDER` می‌شود و با قیمت خالص وارد میانگینِ بهای موجودی می‌شوند. مبلغ کل خرید به اندازه‌ی **جمع قلم ضمیمه با مالیات** زیاد می‌شود (قلم ضمیمه‌ی مازادِ یک قلم، `taxPercent` همان قلم سفارشی را می‌گیرد، نه نرخ فعلی کالا؛ کالای خارج از سند نرخ کالا را)؛ میانگین بهای موجودی فقط قیمت خالص را می‌گیرد. پرداختش مثل هر پرداخت دیگر با `AddPurchasePayment` ثبت می‌شود.
 
 ```json
 {
@@ -1245,14 +1445,14 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
 ```
 
 - هر ردیف **دقیقاً یکی** از این دو را دارد: `purchaseItemId` (مازادِ آن قلم) یا `productId` (کالای خارج از سند).
-- **مازادِ یک قلم با قیمت و تخفیفِ همان قلم خریده می‌شود**؛ `unitPrice`/`discount` نفرستید (۴۰۰). مقدارِ قلم و مقدار دریافت‌شده‌اش هر دو به یک اندازه زیاد می‌شوند، پس `stillOwedQuantity` تغییر نمی‌کند.
-- **کالای خارج از سند یک قلم تازه می‌گیرد** و `unitPrice` (قیمت فاکتور تامین‌کننده) الزامی است؛ `discount` اختیاری است.
+- **مازادِ یک قلم با قیمت و تخفیفِ همان قلم خریده می‌شود**؛ `unitPrice`/`discount` نفرستید (۴۰۰). قلم ضمیمه `supplementOfPurchaseItemId` = همان قلم دارد؛ خودِ قلم سفارشی (مقدار، دریافت‌شده، `stillOwedQuantity`) دست نمی‌خورد. (تا ۲۰۲۶-۰۹-۲۴ مقدار قلم سفارشی بزرگ می‌شد.)
+- **کالای خارج از سند** هم قلم ضمیمه می‌گیرد (`supplementOfPurchaseItemId: null`) و `unitPrice` (قیمت فاکتور تامین‌کننده) الزامی است؛ `discount` اختیاری است.
 - سقف هر ردیف: دانه‌های قرنطینه‌ی همان custody منهای آن‌چه ادعاهای مرجوعیِ باز رزرو کرده‌اند — همان سهمیه‌ای که ادعای `OFF_ORDER` با آن سنجیده می‌شود. پس یک دانه یا خریده می‌شود یا پس داده می‌شود، هرگز هر دو. بیشتر از آن ۴۰۰ است و **هیچ بخشی از درخواست اعمال نمی‌شود** (کل عملیات در یک تراکنش است).
 - `productUnitBarcodes` اختیاری است: اگر بفرستید دقیقاً همان دانه‌ها، وگرنه FIFO بر اساس سریال.
 - رویداد دفتر ارزش: `PURCHASE_EXCESS_ACCEPTED = 22` (ورود به میانگین با قیمت خالص، خروج ارزشِ نگهداشته از بیرونِ میانگین)؛ علت حرکت دانه: `PURCHASE_EXCESS_ACCEPTED = 13`. گزارش خرید این مبلغ را در `totalReceivedValue` می‌شمارد.
 - ۴۰۰ برای خرید لغوشده، و ۴۰۴ برای قلم/کالای ناموجود.
 
-**data خروجی:** `{ purchaseId, purchaseStatus, totalAmount, paidAmount, items: [{ purchaseItemId, productId, acceptedQuantity, quantity, receivedQuantity, unitPrice, discount, amount }] }`.
+**data خروجی:** `{ purchaseId, purchaseStatus, totalAmount, paidAmount, items: [{ purchaseItemId, supplementOfPurchaseItemId, productId, acceptedQuantity, quantity, receivedQuantity, unitPrice, discount, amount }] }` — `purchaseItemId` شناسه‌ی **قلم ضمیمه‌ی تازه** است.
 
 > **کِی این، کِی آزادسازی؟** `GOODS_RELEASE` در مرجوعی خرید یعنی «کالا مجانی مالِ ماست»: دانه با ارزشِ خودش (برای مازاد صفر) وارد موجودی می‌شود. اگر قرار است پولی بابتش بدهید، از این endpoint استفاده کنید؛ وگرنه کالا با بهای صفر فروخته می‌شود و سودِ آن فروش به همان اندازه بیشتر از واقعیت گزارش می‌شود.
 
@@ -1676,6 +1876,14 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 
 ## 11. فروش (Sale)
 
+> **قفل پیش‌فاکتور و پرداخت‌ها:** همان قاعده‌ی ابتدای بخش ۹. در فروش، خروج از پیش‌فاکتور **فقط** با پرداخت اتفاق می‌افتد: اولین ریال
+> (`CreateSale` با `paymentDetails`، یا `AddSalePayment`) شماره و تاریخ فاکتور رسمی را صادر و وضعیت را `PROCESSING` می‌کند؛ در فروش اقساطی،
+> ثبت قرارداد با پیش‌پرداخت. هیچ endpointی دیگر اجازه‌ی انتخاب دستیِ خروج نمی‌دهد.
+>
+> **مبالغ:** همان قاعده‌ی ابتدای بخش ۹ — `totalAmount` از اقلام و مالیات حساب می‌شود و فرستاده نمی‌شود. **`payableAmount`** (تازه، در
+> جزئیات و لیست) مبلغی است که مشتری در کل می‌پردازد: در فروش عادی برابر `totalAmount`، در فروش اقساطیِ دارای قرارداد جاری
+> `totalAmount + سود اقساط`. **بدهی مشتری همیشه `payableAmount − paidAmount` است.**
+
 کنترلر: `api/Sale`.
 
 ### `GET api/Sale/GetSaleList`
@@ -1696,6 +1904,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "status": 0,
   "paymentType": 0,
   "totalAmount": 30000000,
+  "payableAmount": 30000000,
   "paidAmount": 30000000,
   "installmentSummary": null
 }
@@ -1715,9 +1924,10 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "status": 0,
   "paymentType": 0,
   "totalAmount": 30000000,
+  "payableAmount": 30000000,
   "paidAmount": 30000000,
   "paymentDetails": [
-    { "id": 1, "type": 0, "purpose": 1, "amount": 2000000, "paidAt": "2026-08-10T00:00:00", "checkNumber": null, "transferRef": null }
+    { "id": 1, "type": 0, "purpose": 1, "direction": 1, "amount": 2000000, "paidAt": "2026-08-10T00:00:00", "voidedAt": null, "checkNumber": null, "transferRef": null }
   ],
   "installmentSummary": null,
   "description": null,
@@ -1747,7 +1957,8 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 ```
 `drivers[]`/`shippingNotes[]`: مثل `drivers[]`/`receivingNotes[]` در `GetPurchaseDetail` (بخش ۹) اما برای سمت ارسال — تاریخچه‌ی هر نوبت `ShipSale` که این فیلدها را فرستاده باشد.
 
-`paymentDetails[]`: `type` همان `PaymentTypeEnum` است و می‌گوید **چطور** پرداخت شد؛ `purpose` (`PaymentPurposeEnum`، بخش ۱۵) می‌گوید **این پرداخت چیست** — پرداخت عادی، پیش‌پرداخت قرارداد اقساطی، یا پرداخت قسط. `id` از `Guid` به `int` تغییر کرده (بخش ۱۶).
+`paymentDetails[]`: شامل ردیف‌های باطل‌شده (`voidedAt` پر) — آن‌ها در `paidAmount` حساب نمی‌شوند. `direction` در فروش: `1 = IN` پرداخت
+مشتری، `2 = OUT` پولی که به مشتری برگردانده شد. `type` همان `PaymentTypeEnum` است و می‌گوید **چطور** پرداخت شد؛ `purpose` (`PaymentPurposeEnum`، بخش ۱۵) می‌گوید **این پرداخت چیست** — پرداخت عادی، پیش‌پرداخت قرارداد اقساطی، یا پرداخت قسط. `id` از `Guid` به `int` تغییر کرده (بخش ۱۶).
 
 `installmentSummary`: خلاصه‌ی قرارداد اقساطی، فقط برای فروش اقساطی؛ شکل کاملش در بخش ۱۱ب.
 
@@ -1756,59 +1967,84 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 **Body:**
 ```json
 {
-  "invoiceDate": "2026-08-10T00:00:00",
+  "invoiceDate": null,
   "paymentDate": "2026-09-09T00:00:00",
-  "status": 0,
   "paymentType": 0,
-  "paymentDetails": [],
-  "totalAmount": 50000000,
-  "paidAmount": 50000000,
+  "paymentDetails": [
+    { "type": 0, "amount": 10000000, "paidAt": "2026-08-10T00:00:00" }
+  ],
   "description": null,
   "customerId": 1,
   "productIds": [
     { "productId": 10, "quantity": 2, "unitPrice": 25000000, "discount": 0 }
-  ]
+  ],
+  "attachments": []
 }
 ```
-نام فیلد آرایه‌ی اقلام گمراه‌کننده `productIds` است اما در واقع لیستی از اقلام کامل (محصول + تعداد + قیمت + تخفیف) است، نه فقط شناسه‌ها. اگر `paymentType` غیر نقدی باشد `paymentDetails` الزامی است — **به‌جز `INSTALLMENT` (۵)**، که رکورد پرداختش را خود `CreateSaleInstallmentPlan`/`PaySaleInstallment` با `purpose` درست می‌سازد و اینجا باید خالی بماند. همین استثنا روی `UpdateSale` هم هست.
+- فروش **همیشه پیش‌فاکتور ثبت می‌شود**؛ `status` دیگر فرستاده نمی‌شود (اگر بفرستید نادیده گرفته می‌شود).
+- `paymentDetails` اختیاری است: پولی که همراه سفارش گرفته شده. اگر جمعش بیشتر از صفر باشد، همین‌جا فاکتور صادر می‌شود (شماره‌ی رسمی،
+  `invoiceDate` اگر خالی است، `PROCESSING`). هر ردیف: `amount > 0`، `type` یکی از `CASH`/`CREDIT`/`CHECK`/`TRANSFER`. جهت همیشه `IN`.
+- **فروش اقساطی** (`paymentType = 5`): `paymentDetails` باید خالی باشد (۴۰۰) — پیش‌پرداخت و اقساط را قرارداد اقساطی ثبت می‌کند.
+- **`paidAmount` فرستاده نمی‌شود** — جمع ردیف‌هاست. قاعده‌ی قدیمیِ «غیرنقدی بدون `paymentDetails` = ۴۰۰» حذف شد.
+- **`totalAmount` فرستاده نمی‌شود** — سرور از اقلام و مالیات کالاها حساب می‌کند (ابتدای بخش ۹). کالای ناموجود ⇒ ۴۰۴.
+- `invoiceDate` اختیاری است؛ `invoiceNumber` را همیشه سرور می‌سازد.
+- نام فیلد آرایه‌ی اقلام گمراه‌کننده `productIds` است اما لیست اقلام کامل (محصول + تعداد + قیمت + تخفیف) است.
 
-`invoiceNumber` **فرستاده نمی‌شود** — شماره‌ی فاکتور رسمی را سرور تولید می‌کند، دقیقاً وقتی فروش از پیش‌فاکتور خارج شود (بخش ۱۶، تغییرات ۲۰۲۶-۰۹-۲۰). تا آن لحظه رشته‌ی خالی است.
+**data خروجی:** `{ "id": 200, "invoiceNumber": "INV-2026-0007", "status": 1 }` — شناسه، شماره‌ی فاکتور (خالی اگر هنوز پیش‌فاکتور است) و وضعیت.
 
-**data خروجی:** `{ "id": 200, "invoiceNumber": "INV-2026-0007", "status": 1 }` — شناسه‌ی فروش ساخته‌شده، شماره‌ی فاکتور (خالی اگر هنوز پیش‌فاکتور است) و وضعیت نهایی.
+`paymentDate` (**مهلت پرداخت**) اختیاری است؛ اگر مقدار داشته باشد نباید قبل از `invoiceDate` باشد (۴۰۰).
 
-`paymentDate` (**مهلت پرداخت**) اختیاری است — تاریخی که تا آن، مشتری فرصت تسویه دارد. برای معامله‌ی نقدی `null` بفرستید. اگر مقدار داشته باشد نباید قبل از `invoiceDate` باشد، وگرنه ۴۰۰ برمی‌گردد. در `GetPurchaseList`/`GetPurchaseDetail`/`GetSaleList`/`GetSaleDetail` برگردانده و روی PDF فاکتور هم چاپ می‌شود.
-
-`invoiceDate` (**تاریخ فاکتور**) nullable است و **فقط وقتی `status` برابر `PROFORMA` (۰) باشد** می‌تواند `null` باشد. در هر وضعیت دیگری، `null` (یا مقدار پوچ `0001-01-01`) ۴۰۰ می‌دهد. در خروجی `GetPurchaseList`/`GetPurchaseDetail`/`GetSaleList`/`GetSaleDetail` هم برای ردیف‌های پیش‌فاکتور `null` برمی‌گردد (قبلاً `0001-01-01T00:00:00` بود). روی PDF فاکتور، اگر `null` باشد تاریخ ثبت سند چاپ می‌شود.
-
-### `PUT api/Sale/UpdateSale`
+### `PUT api/Sale/UpdateSale` — فقط پیش‌فاکتور
 
 **Body:**
 ```json
 {
   "id": 200,
-  "invoiceDate": "2026-08-10T00:00:00",
+  "invoiceDate": null,
   "paymentDate": "2026-09-09T00:00:00",
-  "status": 0,
   "paymentType": 0,
-  "paymentDetails": [],
-  "totalAmount": 50000000,
-  "paidAmount": 50000000,
   "description": null,
   "customerId": 1,
   "items": [
     { "id": 3000, "productId": 10, "quantity": 3, "unitPrice": 25000000, "discount": 0 },
     { "id": 0, "productId": 15, "quantity": 1, "unitPrice": 10000000, "discount": 0 }
-  ]
+  ],
+  "attachments": []
 }
 ```
-برخلاف `UpdatePurchase`، این API **اقلام (`items`) را هم می‌گیرد و به‌طور کامل هماهنگ می‌کند**:
-- قلمی با `id` موجود (مثل `3000`) ویرایش می‌شود.
-- قلم با `id: 0` به‌عنوان ردیف **جدید** اضافه می‌شود.
-- هر قلم قبلی که در آرایه‌ی جدید نباشد **حذف** می‌شود.
+- **فقط وقتی فروش هنوز `PROFORMA` است**؛ روی فروش صادرشده ۴۰۰.
+- `status`، `paymentDetails` و `paidAmount` **دیگر اینجا نیستند** — خروج از پیش‌فاکتور فقط با پرداخت (`AddSalePayment`)، تغییر وضعیت با
+  `ChangeSaleStatus`.
+- `items` جایگزینی کامل: `id` موجود = ویرایش، `id: 0` = ردیف تازه، ردیفی که نیامده = حذف.
+- **`totalAmount` فرستاده نمی‌شود** — با هر ذخیره‌ی پیش‌فاکتور از اقلام و نرخ مالیات فعلی کالاها دوباره حساب می‌شود.
+- اگر پیش‌فاکتور قرارداد اقساطی (بدون پیش‌پرداخت) دارد: `paymentType` باید `INSTALLMENT` بماند و جمع تازه‌ی اقلام نمی‌تواند با اصل قرارداد فرق کند (۴۰۰) — برای تغییر اقلام، اول قرارداد را حذف کنید.
+- **data خروجی:** سند کامل (شکل `GetSaleDetail`).
 
-بنابراین ترتیب صحیح ویرایش فروش: `GetSaleDetail` → کاربر آرایه‌ی `items` را در UI دستکاری می‌کند (ویرایش/حذف/افزودن ردیف) → کل آرایه‌ی نهایی (با `id`های درست برای ردیف‌های موجود و `id: 0` برای ردیف‌های تازه) به `UpdateSale` فرستاده می‌شود.
+### `POST api/Sale/ChangeSaleStatus`
 
-`paymentDetails` هم **جایگزینی کامل** است، نه افزودنی — مثل `attachments`: فهرست نهایی را بفرستید، هرچه نفرستید حذف می‌شود. `purpose` از ورودی خوانده نمی‌شود و همیشه `NORMAL` ثبت می‌شود؛ از این مسیر فقط پرداخت عادی ثبت می‌شود. **روی فروش اقساطی کلاً نادیده گرفته می‌شود** (مثل `paidAmount`): رکوردهای پیش‌پرداخت و اقساط مالِ فیچر اقساط‌اند و فقط از مسیر `CreateSaleInstallmentPlan`/`PaySaleInstallment`/`SettleSaleInstallmentPlan` عوض می‌شوند. هر دو مسیر در `GetSaleDetail` → `paymentDetails[]` برمی‌گردند.
+`{ "id": 200, "status": 4 }` — فقط دو مقصد:
+- `DELIVERED` (۴): فقط وقتی فروش `SHIPPED` است (همه‌ی اقلام ارسال شده).
+- `CANCELLED` (۵): فقط وقتی هیچ کالایی ارسال نشده و قرارداد اقساطیِ فعال ندارد. نهایی است. پرداخت‌ها روی فروش لغوشده می‌مانند؛
+  پول برگشتی به مشتری با `AddSalePayment` و `direction: 2` (`OUT`) ثبت می‌شود.
+- هر مقصد دیگری ۴۰۰ (بقیه‌ی وضعیت‌ها را سیستم می‌گذارد: `PROCESSING` با اولین پرداخت، `PARTIALLY_DELIVERED`/`SHIPPED` با ارسال، `RETURNED` با مرجوعی).
+
+data: سند کامل. دسترسی: `SaleUpdate`.
+
+### `PUT api/Sale/UpdateSaleAttachments` / `PUT api/Sale/UpdateSalePaymentDate`
+
+مثل نسخه‌ی خرید (بخش ۹): `{ "id", "attachments": [...] }` و `{ "id", "paymentDate" }`، در هر وضعیتی. دسترسی: `SaleUpdate`.
+
+### `POST api/Sale/AddSalePayment` / `EditSalePayment` / `VoidSalePayment`
+
+همان شکل و قواعد نسخه‌ی خرید (بخش ۹) با `saleId` به‌جای `purchaseId`، با این تفاوت‌ها:
+- `direction` خالی یا `1` (`IN`) = مشتری پرداخت؛ `2` (`OUT`) = پول به مشتری برگشت.
+- **اولین `IN` روی پیش‌فاکتور فاکتور را صادر می‌کند** (شماره‌ی رسمی + `PROCESSING`) و فروش قفل می‌شود. ابطال بعدیِ همان پرداخت، فروش را
+  به پیش‌فاکتور برنمی‌گرداند — شماره‌ی فاکتور می‌ماند.
+- **فروش اقساطی:** تا وقتی قرارداد اقساطی‌اش لغو نشده، ۴۰۰ — پول آن از مسیر `CreateSaleInstallmentPlan`/`PaySaleInstallment`/`SettleSaleInstallmentPlan`
+  می‌آید. ردیف‌های اقساطی (`purpose ≠ 0`) با `Edit`/`Void` تغییر نمی‌کنند (۴۰۰).
+- روی فروش لغوشده فقط `OUT`.
+
+دسترسی: `SalePayment`.
 
 ### `POST api/Sale/CreateInPersonSale`
 
@@ -1824,12 +2060,11 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "shippingNote": "تحویل حضوری به مشتری"
 }
 ```
-- `sale`: عیناً بدنه‌ی `CreateSale`. مقدار `status` هرچه بفرستید نادیده گرفته و `PROFORMA` گذاشته می‌شود؛ خود دستور آن را تا `DELIVERED` جلو می‌برد.
-- **فروش غیر اقساطی:** `sale.paidAmount` باید ≥ `sale.totalAmount` باشد، وگرنه ۴۰۰ («در تحویل حضوری پرداخت باید کامل باشد.»).
+- `sale`: عیناً بدنه‌ی `CreateSale`؛ خود دستور فروش را تا `DELIVERED` جلو می‌برد.
+- **فروش غیر اقساطی:** جمع `sale.paymentDetails[].amount` باید ≥ جمع فاکتوری باشد که سرور از اقلام حساب می‌کند، وگرنه ۴۰۰ («در تحویل حضوری پرداخت باید کامل باشد.») و هیچ‌چیز ثبت نمی‌شود.
 - **فروش اقساطی (`sale.paymentType = INSTALLMENT`، ۵): پشتیبانی می‌شود.** مشتری می‌تواند حضوری خرید کند و روش پرداخت را اقساطی بگذارد؛ آنچه فروش را از پیش‌فاکتور بیرون می‌آورد **پیش‌پرداخت** است، نه پرداخت کامل. در این حالت:
   - `installmentPlan` **الزامی است** (وگرنه ۴۰۰): عیناً بدنه‌ی `CreateSaleInstallmentPlan` (بخش ۱۱ب) بدون `saleId` — `saleId` هرچه بفرستید نادیده گرفته و با فروشِ تازه‌ساخته‌شده پر می‌شود. در همان تراکنش و **پیش از خروج کالا** ثبت می‌شود.
   - `installmentPlan.downPaymentAmount` باید **بیشتر از صفر** باشد، وگرنه ۴۰۰. پیش‌فاکتور یعنی خریدی که حتی یک ریال بابتش پرداخت نشده؛ کالا با چنین فروشی از انبار خارج نمی‌شود.
-  - `sale.paidAmount` هرچه بفرستید نادیده گرفته می‌شود — از پیش‌پرداخت قرارداد پر می‌شود.
   - `sale.paymentDetails` را **خالی بفرستید**: رکورد پیش‌پرداخت را خود ثبت قرارداد با `purpose = INSTALLMENT_DOWN_PAYMENT` می‌سازد.
   - `installmentPlan` روی فروش غیر اقساطی ۴۰۰ می‌گیرد.
 - `scannedItems`: بارکد دانه‌ها، گروه‌شده بر اساس محصول؛ برای هر محصول به ترتیب بین ردیف‌های همان محصول پخش می‌شود. تعداد کمتر یا بیشتر از اقلام فروش ۴۰۰ می‌گیرد. برای کالای بدون ردیابی دانه‌ای می‌توان نفرستاد — مگر `product.requiresUnitTracking` که آن‌وقت خود `ShipSale` الزام می‌کند (بخش ۷).
@@ -1838,6 +2073,9 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 **data خروجی:** `{ "id": 200, "invoiceNumber": "INV-2026-0007", "status": 4 }` (`4 = DELIVERED`).
 
 ### `DELETE api/Sale/DeleteSale?id=200`
+
+حذف نرم — **فقط پیش‌فاکتور** (فروش صادرشده را لغو کنید، ۴۰۰). پیش‌فاکتوری که قرارداد اقساطی دارد ⇒ ۴۰۰ تا قرارداد حذف شود. فروش
+حذف‌شده در `GetSaleList` نمی‌آید و `GetSaleDetail` ۴۰۴ می‌دهد. **data خروجی:** `{ "id": 200 }`.
 
 ### `POST api/Sale/ShipSale`
 
@@ -1881,7 +2119,12 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 
 ### قواعد محاسبه
 
-- `totalAmount` = قیمت نقدی + درصد افزایش، و **باید با `sale.totalAmount` برابر باشد**. فرانت خودش این عدد را حساب می‌کند و می‌فرستد؛ بکند فقط سازگاری‌اش را با `cashAmount + round(cashAmount × markupPercentage / 100)` (با تلورانس ۱ واحد) و برابری‌اش با مبلغ فروش بررسی می‌کند.
+- **هر سه مبلغ را سرور حساب می‌کند** (از ۲۰۲۶-۰۹-۲۴؛ قبلاً کلاینت می‌فرستاد):
+  - `cashAmount` (اصل) = **جمع فاکتور فروش** (`sale.totalAmount`، اقلام + مالیات).
+  - `installmentChargeAmount` (سود اقساط) = `round(cashAmount × markupPercentage / 100)`، نیم به بالا.
+  - `totalAmount` (مبلغ قابل پرداخت) = `cashAmount + installmentChargeAmount`.
+- **`sale.totalAmount` دیگر با مبلغ قرارداد بازنویسی نمی‌شود.** فاکتور فقط اقلام و مالیاتشان است؛ سود اقساط روی قرارداد می‌ماند. مبلغی
+  که مشتری در کل می‌پردازد در `sale.payableAmount` (= `plan.totalAmount`) و `installmentSummary.totalAmount` است.
 - `financedAmount = totalAmount - downPaymentAmount`
 - `installmentAmount = financedAmount / installmentCount` با **تقسیم صحیح**. باقیمانده‌ی رُند روی **قسط آخر** می‌نشیند، نه قسط اول — این‌طور همه‌ی اقساط جز آخری عدد گرد و یکسانی دارند.
 - سررسید قسط `n` (۱-based) = `firstDueDate.AddMonths(n - 1)` — فاصله‌ی ثابت ماهانه.
@@ -1893,16 +2136,15 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 
 برای فروش **اقساطی** شرط، «پرداخت کامل» نیست — «وجود قرارداد اقساطی فعال با پیش‌پرداخت ثبت‌شده» است. چون پلن **بعد از** ساخت فروش ساخته می‌شود، یک فروش اقساطی در `CreateSale` عمداً در `PROFORMA` می‌ماند؛ نهایی‌سازی (تولید شماره‌ی فاکتور رسمی، `invoiceDate`، و رفتن به `PROCESSING`) در `CreateSaleInstallmentPlan` اتفاق می‌افتد. `UpdateSale` هم می‌تواند فروش اقساطیِ دارای پلن و پیش‌پرداخت را از `PROFORMA` خارج کند.
 
-> `sale.paidAmount` بعد از هر پرداخت (پیش‌پرداخت، قسط، تسویه‌ی زودهنگام) به‌روز می‌شود و همیشه برابر `plan.paidAmount` است. به همین دلیل `UpdateSale` روی یک فروش اقساطیِ دارای پلن، `paidAmount` ورودی را نادیده می‌گیرد و `totalAmount` متفاوت با مبلغ پلن را با ۴۰۰ رد می‌کند — مبلغ کل فقط از مسیر `UpdateSaleInstallmentPlan` عوض می‌شود.
+> `sale.paidAmount` بعد از هر پرداخت (پیش‌پرداخت، قسط، تسویه‌ی زودهنگام) به‌روز می‌شود و همیشه برابر `plan.paidAmount` است. اصل قرارداد
+> به جمع فاکتور قفل است: `UpdateSaleInstallmentPlan` فقط درصد سود، تعداد اقساط، تاریخ‌ها و جریمه را عوض می‌کند.
 
 ### `POST api/SaleInstallment/CreateSaleInstallmentPlan`
 
 ```json
 {
   "saleId": 200,
-  "cashAmount": 10000000,
   "markupPercentage": 20,
-  "totalAmount": 12000000,
   "downPaymentAmount": 2000000,
   "installmentCount": 5,
   "firstDueDate": "2026-10-01T00:00:00",
@@ -1914,7 +2156,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 }
 ```
 
-چهار فیلد آخر مربوط به **پرداخت پیش‌پرداخت** است؛ `paidAt` اختیاری است و پیش‌فرضش «الان» است. اعتبارسنجی‌ها: فروش باید وجود داشته و فعال باشد، `paymentType` فروش باید `INSTALLMENT` باشد، نباید از قبل پلن فعالی داشته باشد، `totalAmount` باید با مبلغ فروش برابر باشد، `downPaymentAmount < totalAmount`، `installmentCount > 0`، `markupPercentage >= 0`، و `firstDueDate` نباید قبل از تاریخ پیش‌پرداخت باشد.
+چهار فیلد آخر مربوط به **پرداخت پیش‌پرداخت** است؛ `paidAt` اختیاری است و پیش‌فرضش «الان» است. اعتبارسنجی‌ها: فروش باید وجود داشته و فعال باشد، `paymentType` فروش باید `INSTALLMENT` باشد، نباید از قبل پلن فعالی داشته باشد، `downPaymentAmount` کمتر از مبلغ قابل پرداختِ محاسبه‌شده (`totalAmount` قرارداد)، `installmentCount > 0`، `markupPercentage >= 0`، و `firstDueDate` نباید قبل از تاریخ پیش‌پرداخت باشد.
 
 اثر: پلن + تمام سطرهای قسط در وضعیت `PENDING` ساخته می‌شوند، یک `PaymentDetail` با `purpose = 1` (`INSTALLMENT_DOWN_PAYMENT`) ثبت می‌شود، `sale.paidAmount` به‌روز می‌شود، و در صورت نیاز فروش از پیش‌فاکتور خارج می‌شود.
 
@@ -1927,9 +2169,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 ```json
 {
   "id": 10,
-  "cashAmount": 10000000,
   "markupPercentage": 20,
-  "totalAmount": 12000000,
   "installmentCount": 8,
   "firstDueDate": "2026-12-01T00:00:00",
   "latePenaltyPercentage": 2
@@ -1993,6 +2233,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "customerName": "علی رضایی",
   "cashAmount": 10000000,
   "markupPercentage": 20,
+  "installmentChargeAmount": 2000000,
   "totalAmount": 12000000,
   "downPaymentAmount": 2000000,
   "financedAmount": 10000000,
@@ -2126,7 +2367,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 مفهوم‌شناسی این مدل دقیقاً مثل مرجوعی خرید است (بخش ۱۰ را حتماً قبل از این بخش بخوانید)، با این تفاوت‌ها:
 - روی مرجوعی فروش، `GOODS_IN` یعنی «مشتری کالا را به ما برمی‌گرداند» و `GOODS_OUT` یعنی «ما کالای جایگزین برای مشتری می‌فرستیم» (جهت برعکسِ مرجوعی خرید).
-- `moneyOut` روی مرجوعی فروش یعنی «ما به مشتری پول/اعتبار برمی‌گردانیم» (بازپرداخت یا اعتبار فروشگاهی) — رایج‌ترین حالت اینجا، برخلاف مرجوعی خرید که رایج‌ترین حالتش `moneyIn` است.
+- `moneyOut` روی مرجوعی فروش یعنی «ما به مشتری پول برمی‌گردانیم» (بازپرداخت) — رایج‌ترین حالت اینجا، برخلاف مرجوعی خرید که رایج‌ترین حالتش `moneyIn` است.
 - علت ادعا (`problem` روی `SaleReturnClaim`) از همان enum یکپارچه‌ی `ReturnProblemEnum` مرجوعی خرید استفاده می‌کند (بخش ۱۵) — دیگر enum جدای «دلیل مشتری» در برابر «مشکل مشاهده‌شده‌ی انباردار» وجود ندارد؛ مشاهدات فیزیکی هر نوبت (`ExecuteGoodsRound`'s `observations[]`) هم از همین enum استفاده می‌کنند.
 - برخلاف مرجوعی خرید، برای یک فروش می‌تواند **چند مرجوعی فعال به‌طور همزمان** وجود داشته باشد (هر بار `CreateSaleReturn` یک رکورد کاملاً جدید می‌سازد) — این رفتار عوض نشده.
 
@@ -2389,9 +2630,12 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 معادل فاکتور خرید، با اطلاعات تامین‌کننده.
 
+> **فاکتور فروش (از ۲۰۲۶-۰۹-۲۴):** مبالغ هر ردیف و جمع‌ها همان اعداد ذخیره‌شده روی اقلام و سند است، نه محاسبه‌ی جداگانه. روی فروش
+> اقساطی دو خط اضافه چاپ می‌شود: «سود اقساط» و «جمع قابل پرداخت»؛ «مانده» = جمع قابل پرداخت − پرداخت‌شده.
+
 ### `GET api/Invoice/GetSaleReturnCreditNotePdf?saleReturnId=80`
 
-برگه‌ی اعتباری مرجوعی — **فقط اثرهای مالی از نوع `MONEY_OUT`** (پول یا اعتبار فروشگاهی که به مشتری برگردانده شده، بخش ۱۲) را نشان می‌دهد؛ یک ردیف چاپی به ازای هر اثر، نه هر محصول. اگر مرجوعی هیچ اثر `MONEY_OUT` ثبت‌شده‌ای نداشته باشد (مثلاً فقط `GOODS_IN`/`GOODS_OUT` دارد)، این API خطای ۴۰۰ می‌دهد. یعنی دکمه‌ی «چاپ برگه اعتباری» را فقط وقتی نشان دهید که حداقل یک تصمیم شامل اثر `MONEY_OUT` روی مرجوعی ثبت شده باشد.
+برگه‌ی اعتباری مرجوعی — **فقط اثرهای مالی از نوع `MONEY_OUT`** (پولی که به مشتری برگردانده شده، بخش ۱۲) را نشان می‌دهد؛ یک ردیف چاپی به ازای هر اثر، نه هر محصول. اگر مرجوعی هیچ اثر `MONEY_OUT` ثبت‌شده‌ای نداشته باشد (مثلاً فقط `GOODS_IN`/`GOODS_OUT` دارد)، این API خطای ۴۰۰ می‌دهد. یعنی دکمه‌ی «چاپ برگه اعتباری» را فقط وقتی نشان دهید که حداقل یک تصمیم شامل اثر `MONEY_OUT` روی مرجوعی ثبت شده باشد.
 
 ---
 
@@ -2500,12 +2744,14 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 74 | PurchaseReceive | دریافت کالا در انبار |
 | 75 | PurchaseItemClose | بستن و بازکردن ردیف خرید |
 | 76 | PurchaseAcceptExcess | خرید کالای مازاد |
+| 77 | PurchasePayment | ثبت و ابطال پرداخت خرید |
 | 90 | SaleView | مشاهده فروش‌ها |
 | 91 | SaleCreate | ثبت فروش |
 | 92 | SaleUpdate | ویرایش فروش |
 | 93 | SaleDelete | حذف فروش |
 | 94 | SaleShip | ارسال کالا به مشتری |
 | 95 | SaleInPerson | فروش حضوری |
+| 96 | SalePayment | ثبت و ابطال پرداخت فروش |
 | 110 | SaleInstallmentView | مشاهده اقساط |
 | 111 | SaleInstallmentManage | مدیریت قرارداد اقساطی |
 | 112 | SaleInstallmentPay | دریافت قسط |
@@ -2529,6 +2775,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 230 | PosCharge | دریافت وجه با کارت‌خوان |
 | 231 | PosTerminalView | مشاهده کارت‌خوان‌ها |
 | 232 | PosTerminalManage | مدیریت کارت‌خوان‌ها |
+| 250 | PartyStatementView | مشاهده گردش حساب مشتریان و تامین‌کنندگان |
 
 ### `OrgRoleEnum` (نقش کاربر در چارت سازمانی)
 | مقدار | معنی |
@@ -2568,6 +2815,40 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 2 | پرداخت قسط (INSTALLMENT) |
 
 `type` می‌گوید **چطور** پرداخت شد، `purpose` می‌گوید **این پرداخت چیست**. این دو محور مستقل‌اند: یک قسط می‌تواند با چک پرداخت شود (`type = 2`, `purpose = 2`).
+
+### `TaxCategoryEnum` (وضعیت مالیاتی کالا و قلم فاکتور، از ۲۰۲۶-۰۹-۲۴)
+| مقدار | معنی |
+|---|---|
+| 1 | مشمول مالیات (TAXABLE) — پیش‌فرض |
+| 2 | معاف از مالیات (EXEMPT) — `taxPercent` قلم ۰ |
+
+برچسب داخلی خود ماست، نه طبقه‌بندی سامانه‌ی مؤدیان. `0` معتبر نیست.
+
+### `PartyLedgerDirectionEnum` (طرف ردیف دفتر حساب اشخاص، بخش ۵ب)
+| مقدار | معنی |
+|---|---|
+| 1 | بدهکار (DEBIT) |
+| 2 | بستانکار (CREDIT) |
+
+### `PartyLedgerEntryTypeEnum` (نوع ردیف دفتر حساب اشخاص، بخش ۵ب)
+| مقدار | معنی |
+|---|---|
+| 1 | صدور فاکتور فروش (SALE_INVOICE) |
+| 2 | ثبت فاکتور خرید (PURCHASE_INVOICE) |
+| 3 | ضمیمه‌ی فاکتور خرید (PURCHASE_SUPPLEMENT) |
+| 4 | سود اقساط (INSTALLMENT_CHARGE) |
+| 5 | پرداخت (PAYMENT) |
+| 6 | تسویه‌ی مرجوعی در حساب (RETURN_SETTLEMENT) |
+| 7 | برگشت (REVERSAL) — `reversalOfEntryId` ردیف اصلی را نشان می‌دهد |
+| 8 | بستن قلم خرید با کسری (PURCHASE_SHORT_CLOSE) |
+
+### `PaymentDirectionEnum` (جهت پول — روی `paymentDetails[]`، از ۲۰۲۶-۰۹-۲۴)
+| مقدار | معنی |
+|---|---|
+| 1 | دریافت (IN) — پول به ما رسید: پرداخت مشتری، یا پول برگشتی تامین‌کننده |
+| 2 | پرداخت (OUT) — پول از ما رفت: پرداخت به تامین‌کننده، یا پول برگشتی به مشتری |
+
+از دید ما است، نه نسبت به سند. `paidAmount` فروش = `IN` منهای `OUT`؛ `paidAmount` خرید = `OUT` منهای `IN` (فقط ردیف‌های باطل‌نشده). `0` مقدار معتبری نیست.
 
 ### `SaleInstallmentPlanStatusEnum` (وضعیت قرارداد اقساطی)
 | مقدار | معنی |
@@ -2775,7 +3056,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 #### `ReturnPaymentMethodEnum` (روش پرداخت یک اثر مالی)
 شماره‌گذاری عمداً با `PaymentTypeEnum` (سطح سند) یکی است — `ON_ACCOUNT` همان `CREDIT` است.
-تنها عضو اضافه `STORE_CREDIT` است که ته فهرست آمده.
+`5` (اعتبار فروشگاهی، `STORE_CREDIT`) از ۲۰۲۶-۰۹-۲۴ حذف شده و با ۴۰۰ «روش پرداخت نامعتبر است.» رد می‌شود؛ این عدد دوباره استفاده نمی‌شود.
 
 | مقدار | معنی |
 |---|---|
@@ -2784,7 +3065,6 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 2 | چک (CHECK) |
 | 3 | انتقال بانکی (TRANSFER) |
 | 4 | ترکیبی (MIXED) — نیازمند `parts[]` |
-| 5 | اعتبار فروشگاهی (STORE_CREDIT) |
 
 ### `ReportPeriodTypeEnum` (بازه‌ی زمانی گزارش، بخش ۱۸)
 | مقدار | معنی |
@@ -2809,6 +3089,68 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 ## 16. نکات و محدودیت‌های شناخته‌شده
 
 این نکات برای جلوگیری از سردرگمی هنگام توسعه فرانت مهم هستند:
+
+### تغییرات قرارداد — ۲۰۲۶-۰۹-۲۴ (دفتر حساب اشخاص) — افزودنی
+
+| کجا | قبل | بعد | چرا |
+|---|---|---|---|
+| — | — | `GET api/PartyAccount/GetPartyStatement` (بخش ۵ب) | گردش حساب هر مشتری و تامین‌کننده |
+| لیست و جزئیات مشتری و تامین‌کننده | فقط `balance`/`balanceType` دستی | + `ledgerBalance` از روی دفتر | «چقدر بدهکار است» از روی رویدادهای واقعی |
+| دسترسی‌ها | — | `PartyStatementView = 250` (گروه «حساب اشخاص») | دیدن حساب مالی اشخاص نقش جدایی است |
+| جزئیات خرید | — | `payableAmount` = `totalAmount` منهای سهم قلم‌های بسته‌شده با کسری | بند ۱۱ درخواست فرانت: کسریِ پرداخت‌شده بدون ویرایش فاکتور |
+
+هیچ فیلدی حذف یا تغییرنام نشده است. رفتار نوشتن‌ها هم عوض نشده؛ فقط ردیف‌های دفتر در کنار آن‌ها ثبت می‌شوند.
+
+### تغییرات قرارداد — ۲۰۲۶-۰۹-۲۴ (مبالغ و مالیات فاکتور روی سرور، سود اقساط جدا) — **شکننده**
+
+قاعده و مثال گرد کردن در ابتدای بخش ۹. راهنمای فرانت: `docs/proforma-lock-frontend-guide.fa.md` بخش ۱۰.
+
+| کجا | قبل | بعد | چرا |
+|---|---|---|---|
+| `Create/UpdatePurchase`، `Create/UpdateSale` | `totalAmount` از کلاینت | حذف؛ سرور از اقلام + مالیات کالا حساب می‌کند | جمع سند با اقلامش ناسازگار نمی‌شود |
+| `items[]` در جزئیات خرید و فروش | فقط `quantity`/`unitPrice`/`discount` | + `taxCategory`، `taxPercent`، `grossAmount`، `discountAmount`، `netAmount`، `taxAmount`، `totalAmount` | مبالغ هر قلم ثبت می‌شوند و فاکتور صادرشده با تغییر نرخ کالا عوض نمی‌شود |
+| `totalAmount` خرید و فروش | بدون مالیات (عدد کلاینت) | **با مالیات** | مالیات باید در فاکتور و بدهی بیاید |
+| `discount` اقلام | فقط ≥ ۰ | ۰ تا ۱۰۰ | تخفیف بیش از ۱۰۰٪ خالص منفی می‌سازد |
+| کالا | `tax` | + `taxCategory` (`TaxCategoryEnum`) | کالای معاف |
+| `CreateSaleInstallmentPlan` / `UpdateSaleInstallmentPlan` | `cashAmount`، `totalAmount` از کلاینت | حذف؛ `cashAmount` = جمع فاکتور، `installmentChargeAmount` و `totalAmount` محاسبه می‌شوند | اصل قرارداد به فاکتور قفل است |
+| فروش اقساطی | `sale.totalAmount` = نقدی + سود | `sale.totalAmount` = فقط فاکتور؛ سود روی قرارداد | فاکتور و سود اقساط قاطی نمی‌شوند |
+| جزئیات و لیست فروش | — | `payableAmount` | یک عدد برای «مشتری در کل چقدر باید بدهد»؛ بدهی = `payableAmount − paidAmount` |
+| `installmentSummary` / جزئیات قرارداد | `totalAmount` | + `cashAmount`، `installmentChargeAmount` | سه عدد جدا دیده شوند |
+| `AcceptPurchaseExcess` | خرید به اندازه‌ی مبلغ خالص بزرگ می‌شد | به اندازه‌ی جمع قلم ضمیمه با مالیات | همان قاعده‌ی بقیه‌ی اقلام |
+| PDF فاکتور فروش | خودش مبالغ را حساب می‌کرد | اعداد ذخیره‌شده؛ در فروش اقساطی «سود اقساط» و «جمع قابل پرداخت» هم چاپ می‌شود | PDF، API و جمع سند یک عدد می‌گویند |
+
+### تغییرات قرارداد — ۲۰۲۶-۰۹-۲۴ (قفل پیش‌فاکتور، پرداخت‌های جدا، قلم ضمیمه) — **شکننده**
+
+قاعده‌ی کلی در ابتدای بخش ۹. راهنمای مهاجرت فرانت: `docs/proforma-lock-frontend-guide.fa.md`.
+
+| کجا | قبل | بعد | چرا |
+|---|---|---|---|
+| `UpdatePurchase` / `UpdateSale` | در هر وضعیتی | فقط روی پیش‌فاکتور؛ وگرنه ۴۰۰ | فاکتور صادرشده سند قطعی است و ویرایش نمی‌شود؛ اصلاح با لغو و ثبت دوباره یا مرجوعی |
+| `UpdatePurchase` | اقلام نمی‌گرفت | `productItemList` با `id?`، جایگزینی کامل | ویرایش اقلام پیش‌فاکتور (بند ۲ درخواست فرانت) |
+| `Create/UpdatePurchase`، `Create/UpdateSale` | `paidAmount` از کلاینت | حذف؛ همیشه جمع ردیف‌های `paymentDetails` | عدد و ردیف‌ها دیگر نمی‌توانند با هم نخوانند |
+| `UpdatePurchase` / `UpdateSale` | `paymentDetails` جایگزینی کامل | حذف؛ `Add/Edit/Void{Purchase,Sale}Payment` | ردیف پرداخت هیچ‌وقت پاک نمی‌شود؛ اصلاح = ابطال + ردیف تازه |
+| `CreateSale` / `UpdateSale` | `status` | حذف؛ فروش همیشه پیش‌فاکتور ثبت می‌شود و با اولین پرداخت خارج می‌شود | خروج از پیش‌فاکتور فقط با پول |
+| `UpdatePurchase` | هر `status` | فقط `PROFORMA`/`PENDING`/`SHIPPED` | `PARTIALLY_RECEIVED`/`RECEIVED` از دریافت حساب می‌شوند (بند ۹ درخواست فرانت) |
+| — | — | `ChangePurchaseStatus`، `ChangeSaleStatus` | تغییر وضعیت بعد از صدور، با قواعد لغو |
+| — | — | `Update{Purchase,Sale}Attachments`، `Update{Purchase,Sale}PaymentDate` | این دو بعد از صدور باز می‌مانند |
+| `Create/Update*` | «غیرنقدی بدون `paymentDetails`» = ۴۰۰ | مجاز | شرایط پرداخت خودش پرداخت نیست |
+| `paymentDetails[]` | — | + `direction` (`PaymentDirectionEnum`)، `voidedAt`؛ ردیف‌های باطل‌شده هم برمی‌گردند | پول برگشتی و ابطال |
+| `ReceivePurchase` / `ShipSale` | روی پیش‌فاکتور مجاز | ۴۰۰ | پیش‌فاکتور کالا جابه‌جا نمی‌کند |
+| `DeletePurchase` / `DeleteSale` | هر وضعیت، `data: null` | فقط پیش‌فاکتور؛ `data: { id }` | فاکتور صادرشده لغو می‌شود، نه حذف |
+| `GetPurchaseList/Detail`، `GetSaleList/Detail` | سند حذف‌شده دیده می‌شد | نه؛ جزئیات ۴۰۴ | بند ۳ درخواست فرانت |
+| `CreatePurchase` / `UpdatePurchase` / `UpdateSale` | `data: null` | سند کامل | بند ۴ درخواست فرانت |
+| `AcceptPurchaseExcess` | مازاد مقدار قلم سفارشی را بزرگ می‌کرد | همیشه قلم ضمیمه‌ی تازه (`isSupplement`, `supplementOfPurchaseItemId`) | فاکتور صادرشده ضمیمه می‌گیرد، ویرایش نمی‌شود |
+| دسترسی‌ها | — | `PurchasePayment = 77`، `SalePayment = 96` | ثبت و ابطال پرداخت نقش جدایی است |
+
+### تغییرات قرارداد — ۲۰۲۶-۰۹-۲۴ (حذف اعتبار فروشگاهی) — **شکننده**
+
+| کجا | قبل | بعد | چرا |
+|---|---|---|---|
+| `ReturnPaymentMethodEnum` | `5` = `STORE_CREDIT` (اعتبار فروشگاهی) | عضو حذف شد؛ `method: 5` روی `moneyIn`/`moneyOut` و روی `parts[]` ⇒ ۴۰۰ «روش پرداخت نامعتبر است.» (هر دو سمت مرجوعی) | اعتبار فروشگاهی قابلیت این سیستم نیست؛ مانده‌ی باقی از نسخه‌های قبلی بود |
+| داده‌ی موجود | اثرها/بخش‌های پولی با `method = 5` | migration `remove-store-credit` آن‌ها را به `1` (`ON_ACCOUNT`، «در حساب») برد | نزدیک‌ترین معنای باقی‌مانده: تسویه روی حساب طرف، بدون جابه‌جایی پول |
+| `GetSaleReturnCreditNotePdf` | برچسب «(اعتبار فروشگاهی)» یا «(استرداد وجه)» کنار هر ردیف | همیشه «(استرداد وجه)» | همان |
+
+فرانت خرید/فروش این روش را پیش‌تر حذف کرده بود؛ اگر جایی هنوز `5` را برچسب «روش نامشخص» می‌زند، بعد از اجرای migration دیگر چنین ردیفی نمی‌آید.
 
 ### تغییرات قرارداد — ۲۰۲۶-۰۹-۲۴ (مرتب‌سازی لیست‌ها) — افزودنی
 

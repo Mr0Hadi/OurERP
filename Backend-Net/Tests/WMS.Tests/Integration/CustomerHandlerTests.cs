@@ -114,7 +114,7 @@ namespace WMS.Tests.Integration
             scope.Context.Customers.Add(customer);
             scope.Context.SaveChanges();
 
-            var handler = new GetCustomerDetailQueryHandler(scope.CustomerRepository, TestMapper.Instance, FakeObjectStorage.Instance);
+            var handler = new GetCustomerDetailQueryHandler(scope.CustomerRepository, TestMapper.Instance, FakeObjectStorage.Instance, scope.Db);
             var res = await handler.Handle(new GetCustomerDetailQuery { Id = customer.Id }, CancellationToken.None);
 
             var dto = Assert.IsType<CustomerDto>(res.Data);

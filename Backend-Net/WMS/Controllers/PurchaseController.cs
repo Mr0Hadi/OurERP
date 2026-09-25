@@ -48,6 +48,48 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
+        [HasPermission(PermissionEnum.PurchaseUpdate)]
+        [HttpPost("ChangePurchaseStatus")]
+        public async Task<ActionResult<ResponseDto>> ChangePurchaseStatus([FromBody] ChangePurchaseStatusCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.PurchaseUpdate)]
+        [HttpPut("UpdatePurchaseAttachments")]
+        public async Task<ActionResult<ResponseDto>> UpdatePurchaseAttachments([FromBody] UpdatePurchaseAttachmentsCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.PurchaseUpdate)]
+        [HttpPut("UpdatePurchasePaymentDate")]
+        public async Task<ActionResult<ResponseDto>> UpdatePurchasePaymentDate([FromBody] UpdatePurchasePaymentDateCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.PurchasePayment)]
+        [HttpPost("AddPurchasePayment")]
+        public async Task<ActionResult<ResponseDto>> AddPurchasePayment([FromBody] AddPurchasePaymentCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.PurchasePayment)]
+        [HttpPost("EditPurchasePayment")]
+        public async Task<ActionResult<ResponseDto>> EditPurchasePayment([FromBody] EditPurchasePaymentCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.PurchasePayment)]
+        [HttpPost("VoidPurchasePayment")]
+        public async Task<ActionResult<ResponseDto>> VoidPurchasePayment([FromBody] VoidPurchasePaymentCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
         [HasPermission(PermissionEnum.PurchaseDelete)]
         [HttpDelete("DeletePurchase")]
         public async Task<ActionResult<ResponseDto>> DeletePurchase([FromQuery] DeletePurchaseCommand request)

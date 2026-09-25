@@ -41,6 +41,7 @@ namespace Application.Common.Contracts.Context
         DbSet<PosTerminal> PosTerminals { get; }
         DbSet<InventoryCostLedgerEntry> InventoryCostLedgerEntries { get; }
         DbSet<PaymentDetail> PaymentDetails { get; }
+        DbSet<PartyLedgerEntry> PartyLedgerEntries { get; }
         DbSet<SaleInstallmentPlan> SaleInstallmentPlans { get; }
         DbSet<SaleInstallment> SaleInstallments { get; }
         DbSet<UserPermission> UserPermissions { get; }

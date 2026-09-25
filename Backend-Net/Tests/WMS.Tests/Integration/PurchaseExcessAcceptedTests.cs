@@ -33,7 +33,7 @@ namespace WMS.Tests.Integration
             }, CancellationToken.None);
 
         [Fact]
-        public async Task ExcessOnALine_JoinsTheOrder_AtTheLinePrice()
+        public async Task ExcessOnALine_BecomesASupplementLine_AtTheLinePrice()
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
@@ -48,17 +48,25 @@ namespace WMS.Tests.Integration
             }, CancellationToken.None);
 
             using var verify = db.NewContext();
+            // The issued invoice is supplemented, never edited: the ordered line is exactly as it was, and the accepted
+            // excess is a new line pointing back at it, at the same price.
             var item = verify.PurchaseItems.Single(x => x.Id == s.Item.Id);
-            Assert.Equal((15, 15, 0), (item.Quantity, item.ReceivedQuantity, item.StillOwedQuantity));
+            Assert.Equal((10, 10, 0), (item.Quantity, item.ReceivedQuantity, item.StillOwedQuantity));
+            Assert.False(item.IsSupplement);
+            var supplement = verify.PurchaseItems.Single(x => x.PurchaseId == s.Purchase.Id && x.Id != s.Item.Id);
+            Assert.True(supplement.IsSupplement);
+            Assert.Equal(s.Item.Id, supplement.SupplementOfPurchaseItemId);
+            Assert.Equal((5, 5, 0, item.UnitPrice, item.Discount), (supplement.Quantity, supplement.ReceivedQuantity, supplement.StillOwedQuantity, supplement.UnitPrice, supplement.Discount));
             Assert.Equal(PurchaseStatusEnum.RECEIVED, verify.Purchases.Single().Status);
             Assert.Equal(totalBefore + 5_000, verify.Purchases.Single().TotalAmount);
 
-            // Units: on the shelf, on the line, no longer excess.
+            // Units: on the shelf, no longer excess; the 5 accepted ones now belong to the supplement line.
             var units = verify.ProductUnits.Where(u => u.ProductId == s.Product.Id).ToList();
             Assert.Equal(15, units.Count(u => u.Status == ProductUnitStatusEnum.IN_STOCK));
             Assert.DoesNotContain(units, u => u.Status == ProductUnitStatusEnum.QUARANTINED);
             Assert.All(units, u => Assert.Equal(UnitCustodyReasonEnum.ON_ORDER, u.CustodyReason));
-            Assert.All(units, u => Assert.Equal(s.Item.Id, u.PurchaseItemId));
+            Assert.Equal(10, units.Count(u => u.PurchaseItemId == s.Item.Id));
+            Assert.Equal(5, units.Count(u => u.PurchaseItemId == supplement.Id));
             Assert.Equal(15, verify.Products.Single(p => p.Id == s.Product.Id).Stock);
             Assert.Equal(5, verify.ProductUnitMovements.Count(m => m.Reason == ProductUnitMovementReasonEnum.PURCHASE_EXCESS_ACCEPTED));
 
@@ -71,6 +79,36 @@ namespace WMS.Tests.Integration
 
             var report = Periods<PurchaseReportPeriodDto>((await new GetPurchaseReportQueryHandler(scope.Db).Handle(new GetPurchaseReportQuery(), CancellationToken.None)).Data!);
             Assert.Equal(15_000m, report.Sum(p => p.TotalReceivedValue));
+        }
+
+        [Fact]
+        public async Task SupplementLine_InheritsTheOrderedLinesTax_AndTheInvoiceGrowsTaxInclusive()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var s = Seed.PendingPurchase(scope.Context, orderedQuantity: 4, stock: 0, unitPrice: 1000);
+            // The invoice was issued at 10%; the product's rate has changed to 5% since.
+            s.Item.TaxPercent = 10;
+            s.Product.Tax = 5;
+            scope.Context.SaveChanges();
+            var totalBefore = s.Purchase.TotalAmount;
+            await ReceiveAsync(scope, s, 6);
+
+            await Accept(scope).Handle(new AcceptPurchaseExcessCommand
+            {
+                PurchaseId = s.Purchase.Id,
+                Items = new() { new AcceptPurchaseExcessItemDto { PurchaseItemId = s.Item.Id, Quantity = 2 } },
+            }, CancellationToken.None);
+
+            using var verify = db.NewContext();
+            var supplement = verify.PurchaseItems.Single(x => x.PurchaseId == s.Purchase.Id && x.IsSupplement);
+            Assert.Equal(10, supplement.TaxPercent);
+            Assert.Equal((2_000UL, 200UL, 2_200UL), (supplement.NetAmount, supplement.TaxAmount, supplement.TotalAmount));
+            Assert.Equal(totalBefore + 2_200, verify.Purchases.Single().TotalAmount);
+
+            // The cost pool takes the net price only - tax is not part of what the goods cost.
+            var accepted = verify.InventoryCostLedgerEntries.Single(x => x.EventType == InventoryCostEventTypeEnum.PURCHASE_EXCESS_ACCEPTED);
+            Assert.Equal(2_000m, accepted.InventoryValueDelta);
         }
 
         [Fact]

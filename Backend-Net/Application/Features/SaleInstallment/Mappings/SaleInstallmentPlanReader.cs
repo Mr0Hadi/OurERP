@@ -46,6 +46,7 @@ namespace Application.Features.SaleInstallment.Mappings
                 CustomerName = plan.Sale.Customer.FirstName + " " + plan.Sale.Customer.LastName,
                 CashAmount = plan.CashAmount,
                 MarkupPercentage = plan.MarkupPercentage,
+                InstallmentChargeAmount = plan.InstallmentChargeAmount,
                 TotalAmount = plan.TotalAmount,
                 DownPaymentAmount = plan.DownPaymentAmount,
                 FinancedAmount = plan.FinancedAmount,

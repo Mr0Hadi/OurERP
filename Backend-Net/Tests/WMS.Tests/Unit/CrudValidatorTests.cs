@@ -373,8 +373,6 @@ namespace WMS.Tests.Unit
         {
             ProductItemList = new() { new CreatePurchaseItemDto { ProductId = 1, Quantity = 2, UnitPrice = 100, Discount = 0 } },
             SupplierId = 1,
-            TotalAmount = 200,
-            PaidAmount = 0,
             PaymentType = PaymentTypeEnum.CASH,
             Status = PurchaseStatusEnum.PENDING,
             PaymentDetails = new(),
@@ -420,20 +418,32 @@ namespace WMS.Tests.Unit
         }
 
         [Fact]
-        public void NonCashPaymentWithoutPaymentDetails_IsInvalid()
+        public void NonCashPaymentWithoutPaymentDetails_IsValid()
         {
+            // Payment terms are not a payment: a credit/transfer purchase with nothing paid yet is legitimate, and its
+            // payments are recorded with AddPurchasePayment when the money moves.
             var command = Valid();
             command.PaymentType = PaymentTypeEnum.TRANSFER;
             command.PaymentDetails = new();
+
+            Assert.True(_sut.Validate(command).IsValid);
+        }
+
+        [Fact]
+        public void PaymentRowWithAMixedMethod_IsInvalid()
+        {
+            var command = Valid();
+            command.PaymentDetails = new() { new Application.Common.Dtos.PaymentDetailDto { Type = PaymentTypeEnum.MIXED, Amount = 100 } };
 
             Assert.False(_sut.Validate(command).IsValid);
         }
 
         [Fact]
-        public void ZeroTotalPrice_IsInvalid()
+        public void DiscountAbove100Percent_IsInvalid()
         {
+            // The total is computed by the server now; a discount over 100% would make a line's net amount negative.
             var command = Valid();
-            command.TotalAmount = 0;
+            command.ProductItemList[0].Discount = 101;
 
             Assert.False(_sut.Validate(command).IsValid);
         }
@@ -509,8 +519,7 @@ namespace WMS.Tests.Unit
             InvoiceDate = DateTime.Now,
             Status = PurchaseStatusEnum.PENDING,
             SupplierId = 1,
-            TotalAmount = 100,
-            PaidAmount = 0,
+            ProductItemList = new() { new UpdatePurchaseItemDto { ProductId = 1, Quantity = 1, UnitPrice = 100 } },
         };
 
         [Fact]
@@ -561,8 +570,6 @@ namespace WMS.Tests.Unit
         {
             InvoiceDate = DateTime.Now,
             CustomerId = 1,
-            TotalAmount = 100,
-            PaidAmount = 0,
             PaymentType = PaymentTypeEnum.CASH,
             PaymentDetails = new(),
             ProductIds = new() { new CreateSaleItemDto { ProductId = 1, Quantity = 1, UnitPrice = 100, Discount = 0 } },
@@ -622,35 +629,14 @@ namespace WMS.Tests.Unit
         }
 
         [Fact]
-        public void NullInvoiceDate_OnProforma_IsValid()
+        public void NullInvoiceDate_IsValid()
         {
-            // تاریخ فاکتور فقط در پیش‌فاکتور می‌تواند null بماند.
+            // فروش همیشه پیش‌فاکتور ثبت می‌شود و وضعیتی در درخواست ندارد؛ تاریخ فاکتور را اولین پرداخت
+            // (SaleInvoiceFinalizer) می‌نشاند اگر خالی مانده باشد.
             var command = Valid();
-            command.Status = SalesStatusEnum.PROFORMA;
             command.InvoiceDate = null;
 
             Assert.True(_sut.Validate(command).IsValid);
-        }
-
-        [Fact]
-        public void NullInvoiceDate_OnNonProforma_IsInvalid()
-        {
-            var command = Valid();
-            command.Status = SalesStatusEnum.PROCESSING;
-            command.InvoiceDate = null;
-
-            Assert.False(_sut.Validate(command).IsValid);
-        }
-
-        [Fact]
-        public void DefaultInvoiceDate_OnNonProforma_IsInvalid()
-        {
-            // 0001-01-01 همانقدر بی‌معناست که null؛ نباید از فیلتر رد شود.
-            var command = Valid();
-            command.Status = SalesStatusEnum.PROCESSING;
-            command.InvoiceDate = default(DateTime);
-
-            Assert.False(_sut.Validate(command).IsValid);
         }
     }
 
@@ -662,10 +648,7 @@ namespace WMS.Tests.Unit
         {
             InvoiceDate = DateTime.Now,
             CustomerId = 1,
-            TotalAmount = 100,
-            PaidAmount = 0,
             PaymentType = PaymentTypeEnum.CASH,
-            PaymentDetails = new(),
             Items = new() { new UpdateSaleItemDto { Id = 0, ProductId = 1, Quantity = 1, UnitPrice = 100, Discount = 0 } },
         };
 
@@ -685,35 +668,14 @@ namespace WMS.Tests.Unit
         }
 
         [Fact]
-        public void NullInvoiceDate_OnProforma_IsValid()
+        public void NullInvoiceDate_IsValid()
         {
-            // تاریخ فاکتور فقط در پیش‌فاکتور می‌تواند null بماند.
+            // فروش همیشه پیش‌فاکتور ثبت می‌شود و وضعیتی در درخواست ندارد؛ تاریخ فاکتور را اولین پرداخت
+            // (SaleInvoiceFinalizer) می‌نشاند اگر خالی مانده باشد.
             var command = Valid();
-            command.Status = SalesStatusEnum.PROFORMA;
             command.InvoiceDate = null;
 
             Assert.True(_sut.Validate(command).IsValid);
-        }
-
-        [Fact]
-        public void NullInvoiceDate_OnNonProforma_IsInvalid()
-        {
-            var command = Valid();
-            command.Status = SalesStatusEnum.PROCESSING;
-            command.InvoiceDate = null;
-
-            Assert.False(_sut.Validate(command).IsValid);
-        }
-
-        [Fact]
-        public void DefaultInvoiceDate_OnNonProforma_IsInvalid()
-        {
-            // 0001-01-01 همانقدر بی‌معناست که null؛ نباید از فیلتر رد شود.
-            var command = Valid();
-            command.Status = SalesStatusEnum.PROCESSING;
-            command.InvoiceDate = default(DateTime);
-
-            Assert.False(_sut.Validate(command).IsValid);
         }
     }
 }

@@ -55,6 +55,48 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
+        [HasPermission(PermissionEnum.SaleUpdate)]
+        [HttpPost("ChangeSaleStatus")]
+        public async Task<ActionResult<ResponseDto>> ChangeSaleStatus([FromBody] ChangeSaleStatusCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.SaleUpdate)]
+        [HttpPut("UpdateSaleAttachments")]
+        public async Task<ActionResult<ResponseDto>> UpdateSaleAttachments([FromBody] UpdateSaleAttachmentsCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.SaleUpdate)]
+        [HttpPut("UpdateSalePaymentDate")]
+        public async Task<ActionResult<ResponseDto>> UpdateSalePaymentDate([FromBody] UpdateSalePaymentDateCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.SalePayment)]
+        [HttpPost("AddSalePayment")]
+        public async Task<ActionResult<ResponseDto>> AddSalePayment([FromBody] AddSalePaymentCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.SalePayment)]
+        [HttpPost("EditSalePayment")]
+        public async Task<ActionResult<ResponseDto>> EditSalePayment([FromBody] EditSalePaymentCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.SalePayment)]
+        [HttpPost("VoidSalePayment")]
+        public async Task<ActionResult<ResponseDto>> VoidSalePayment([FromBody] VoidSalePaymentCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
         [HasPermission(PermissionEnum.SaleDelete)]
         [HttpDelete("DeleteSale")]
         public async Task<ActionResult<ResponseDto>> DeleteSale([FromQuery] DeleteSaleCommand request)

@@ -15,13 +15,19 @@ namespace Domain.Entities
         public int SaleId { get; set; }
         public Sale Sale { get; set; }
 
-        /// <summary>قیمت نقدی پایه، قبل از افزایش.</summary>
+        /// <summary>قیمت نقدی = جمع فاکتور فروش (<c>Sale.TotalAmount</c>، با مالیات). سرور می‌نشاند، نه کلاینت.</summary>
         public UInt64 CashAmount { get; set; }
 
         /// <summary>درصد افزایش روی قیمت نقدی؛ دستی توسط اوپراتور وارد می‌شود.</summary>
         public decimal MarkupPercentage { get; set; }
 
-        /// <summary>مبلغ کل قسطی. باید با <c>Sale.TotalAmount</c> برابر باشد.</summary>
+        /// <summary>
+        /// سود اقساط = round(CashAmount × MarkupPercentage / 100). جدا از جمع فاکتور نگه داشته می‌شود: فاکتور فقط اقلام و
+        /// مالیاتشان است، این مبلغ هزینه‌ی خرید قسطی است. طبقه‌بندی حسابداری‌اش (درآمد مالی یا چیز دیگر) عمداً اینجا تعیین نمی‌شود.
+        /// </summary>
+        public UInt64 InstallmentChargeAmount { get; set; }
+
+        /// <summary>مبلغ نهایی قابل پرداخت مشتری = CashAmount + InstallmentChargeAmount. سرور حساب می‌کند.</summary>
         public UInt64 TotalAmount { get; set; }
 
         public UInt64 DownPaymentAmount { get; set; }

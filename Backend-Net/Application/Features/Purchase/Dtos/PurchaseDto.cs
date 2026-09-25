@@ -12,6 +12,12 @@ namespace Application.Features.Purchase.Dtos
         public PurchaseStatusEnum Status { get; set; }
         public PaymentTypeEnum PaymentType { get; set; }
         public UInt64 TotalAmount { get; set; }
+
+        /// <summary>
+        /// What we actually owe for this purchase: TotalAmount (the issued invoice, never edited) minus the share of every line
+        /// closed short. Debt = PayableAmount - PaidAmount.
+        /// </summary>
+        public UInt64 PayableAmount { get; set; }
         public UInt64 PaidAmount { get; set; }
         public string? Description { get; set; }
         public int SupplierId { get; set; }

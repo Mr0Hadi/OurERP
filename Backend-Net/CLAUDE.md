@@ -430,7 +430,7 @@ with an `x.InvoiceDate != default` guard.
   silently skips every invoice-field requirement. `PurchaseStatusEnum.PROFORMA` is `0` too.
   The frontend must send `status` explicitly on create.
 
-**`ReturnPaymentMethodEnum` renumbered to match `PaymentTypeEnum` (2026-09-05).** Requested by
+**`ReturnPaymentMethodEnum` renumbered to match `PaymentTypeEnum` (2026-09-05).** *(`STORE_CREDIT` was removed on 2026-09-24 - see "Store credit removed" below.)* Requested by
 the frontend in `docs/payment-enum-unification.fa.md`: the two enums meant the same things with
 different integers, so a shared "split an amount across payment methods" component produced a
 different meaning depending on which form called it. Now `CASH=0, ON_ACCOUNT=1, CHECK=2,
@@ -1502,6 +1502,199 @@ user shows the destination's template) for the admin to apply to the checkboxes;
   column, a computed count, alphabetical default, tie-breaking across pages and a navigation/concatenated key;
   `Unit/SortingExtensionsTests.cs`.
 
+**Proforma lock, separate payments, supplement lines (2026-09-24) - phase 1 of 3.** Agreed with the user as one
+design: (1) documents are editable only as PROFORMA and payments/status/attachments/due date get their own commands,
+(2) the server computes line amounts and `TotalAmount` with tax, (3) an append-only party ledger (customer/supplier
+receivables and payables). Only (1) is built. API: `docs/api-guide.fa.md` §9/§11 (the lock rules sit at the top of §9),
+§15 `PaymentDirectionEnum`, and the 2026-09-24 «قفل پیش‌فاکتور» table in §16. Frontend: `docs/proforma-lock-frontend-guide.fa.md`.
+
+- **Only a PROFORMA is edited.** `Application/Common/Documents/DocumentLockRules.EnsureDraft` guards `UpdatePurchase`/`UpdateSale`.
+  After that, only four things stay open, each through its own command: payments (`Add/Edit/Void{Purchase,Sale}Payment`),
+  status (`Change{Purchase,Sale}Status`), attachments (`Update{Purchase,Sale}Attachments`) and the due date
+  (`Update{Purchase,Sale}PaymentDate`). Every such write, plus Create/Update Purchase, returns the full document through
+  `{Purchase,Sale}DetailReader` (static, same pattern as the return readers; both filter `IsActive`). CreateSale keeps
+  returning `CreatedSaleDto`, because `CreateInPersonSale` reads it.
+- **Leaving PROFORMA is one-way.** A sale leaves on its first IN payment: `CreateSale` with rows or `AddSalePayment` calls
+  `SaleInvoiceFinalizer`. `status` is gone from `CreateSaleCommand`/`UpdateSaleCommand`; the mapping forces PROFORMA. A
+  purchase leaves when the supplier's invoice is recorded: `UpdatePurchase` to PENDING/SHIPPED with invoice number and date,
+  or `ChangePurchaseStatus` once both are stored. A prepayment does NOT lock a purchase (the user's decision: prepayments
+  happen and the final invoice must still be matchable). Voiding a sale's payment back to 0 does not return it to
+  PROFORMA.
+- **Correcting an issued invoice is cancel-and-reissue** (nothing moved yet) **or a return** (goods moved). There is never
+  an edit. The frontend guide tells the user this.
+- **Status rules.** Purchase manual statuses are PROFORMA/PENDING/SHIPPED (`IsManualPurchaseStatus`); PARTIALLY_RECEIVED/
+  RECEIVED are computed and never chosen or left by hand. Cancel is allowed only with nothing received. For a sale,
+  `ChangeSaleStatus` offers DELIVERED (from SHIPPED only) and CANCELLED (nothing shipped, no active installment plan).
+  Every other sale status is system-set. CANCELLED is final on both sides.
+- **`ReceivePurchase`/`ShipSale` refuse a PROFORMA.** Before this nothing stopped goods moving against a draft whose
+  lines could still change.
+- **`PaidAmount` = rows, never the client.** `PaymentDetail` gained `Direction` (`PaymentDirectionEnum`: IN=1, OUT=2,
+  absolute from our side; a sale's natural direction is IN, a purchase's OUT) and `VoidedAt`. `Application/Common/Payments/
+  DocumentPayments.NetPaid` is the one definition: non-voided rows in the document's direction minus the rest. It throws
+  when refunds would exceed payments. A row is never edited or deleted: void stamps `VoidedAt`, edit = void + new row
+  (`PaymentWriter`). Only NORMAL rows go through these commands; installment rows stay with the installment commands
+  (which now set `Direction = IN`). `AddSalePayment` on an installment sale is refused until its plan is CANCELLED.
+  `paidAmount` was removed from all four Create/Update commands, and `paymentDetails` from both Updates. The old rule
+  "non-CASH needs `paymentDetails`" is gone (payment terms are not a payment). A row's `Type` must be
+  CASH/CREDIT/CHECK/TRANSFER (`PaymentRowValidator`/`PaymentInputValidator`).
+- **Delete is PROFORMA-only** on both sides and returns `{ Id }`. A purchase draft carrying a prepayment is refused until
+  the payments are voided; a sale draft carrying an installment plan is refused until the plan is deleted.
+- **`UpdatePurchase` edits lines** (`ProductItemList`, `UpdatePurchaseItemDto { int? Id, ... }`, wholesale). This is sync
+  request item 2. None of the "received line" rules were needed, because a draft cannot be received; a legacy draft that
+  does have received quantities is refused.
+- **Accepted excess is a supplement line.** `PurchaseItem.IsSupplement` + `SupplementOfPurchaseItemId` (self FK, Restrict).
+  `AcceptPurchaseExcessCommand` always adds a new line, even for an ordered product, at the ordered line's price and
+  discount. The units move to that line; the ordered line is untouched (it used to grow). An issued invoice is only ever
+  supplemented, never edited.
+- **Lists hide soft-deleted documents** (`GetPurchaseList`/`GetSaleList` filter `IsActive`; the detail readers 404).
+- **Permissions:** `PurchasePayment = 77`, `SalePayment = 96`. Status, attachments and due date use `PurchaseUpdate`/
+  `SaleUpdate`.
+- **Migration `20260924195203_payment-rows-and-supplement-lines`.** It adds the columns and backfills: every existing row
+  gets its document's own direction; a document with `PaidAmount > 0` and no rows gets one NORMAL row for that amount
+  (dated at `CreatedAt`); then every `PaidAmount` is recomputed from its rows. Excess accepted before this migration stays
+  merged into its line. **Generated, not applied** - it ran cleanly from scratch against a throwaway local database
+  (`WMS_MigCheck_0924`, since dropped).
+- **Tests:** `PurchaseCrudTests`/`SaleCrudTests` rewritten around the lock (draft-only update and delete, status rules,
+  payments add/edit/void/refund/cancelled, the receive/ship guards). Also updated: `CrudValidatorTests`,
+  `MappingProfileTests`, `InPersonSaleTests`, `SaleInstallmentTests`, and `PurchaseExcessAcceptedTests` (supplement line).
+  Suite 657/660; the 3 failures are the documented environmental ones.
+- **Phases 2 and 3 are built** - see the next two entries.
+
+**Invoice line amounts, tax and the installment charge on the server (2026-09-24) - phase 2 of 3.** API: `docs/api-guide.fa.md`
+§9 (the amounts table and rounding example, right after the lock block), §11/§11b, §13, §15 `TaxCategoryEnum`, and the 2026-09-24
+«مبالغ و مالیات فاکتور» table in §16. Frontend: `docs/proforma-lock-frontend-guide.fa.md` §10.
+
+- **`Application/Common/Documents/InvoiceLineMath` is the one definition** (static, sync - pure math). Per line: Gross = Q x P
+  (exact); Discount = round(Gross x d%); Net = Gross - Discount; Tax = round(Net x t%); Total = Net + Tax. Document total =
+  the sum of line totals. All whole rials, `MidpointRounding.AwayFromZero` (C#'s default banker's rounding would turn 2.5 into 2),
+  rounding only where a percentage is applied and per line, so printed rows always add up to the printed total.
+  `Stamp(line, product)` takes the product's tax; `Recompute(line)` keeps the line's own snapshot.
+- **Both line entities implement `Domain/Entities/IInvoiceLine`** and store `TaxCategory`, `TaxPercent`, `GrossAmount`,
+  `DiscountAmount`, `NetAmount`, `TaxAmount`, `TotalAmount`. `Product.TaxCategory` (`TaxCategoryEnum`: TAXABLE=1, EXEMPT=2,
+  starts at 1 on purpose) sits next to the existing `Product.Tax` percent; an EXEMPT line stores `TaxPercent = 0`.
+  `TaxCategoryEnum` is our own label, not the Moadian classification; a new member (e.g. zero-rated) is appended.
+- **`TotalAmount` is gone from `Create/UpdatePurchase` and `Create/UpdateSale`.** `DocumentProducts.LoadAsync` loads the lines'
+  products (a missing id is a 404 instead of an FK failure at save), every line is stamped, and the total is summed. A draft is
+  re-stamped on every save (the tax is re-read from the product); an issued invoice is never touched, so a later rate change does
+  not reach it. `Discount` is validated 0-100 everywhere (above 100 would make Net negative), and product `Tax` <= 100.
+- **Totals are now tax-inclusive.** Revenue and cost are still net of tax: the cost ledger keeps using unit price and discount
+  (`NetUnitAmount`), untouched.
+- **`AcceptPurchaseExcess`:** a supplement of an ordered line copies that line's `TaxCategory`/`TaxPercent` (same invoice, same
+  terms) and `Recompute`s; an unlisted supplement is `Stamp`ed from the product. The purchase total grows by the line total,
+  tax included; the pool takes the net price.
+- **Installments.** `SaleInstallmentPlan.InstallmentChargeAmount` is new. `CashAmount` = `Sale.TotalAmount` (the invoice),
+  charge = `InstallmentSchedule.ChargeAmount` (round half up), `TotalAmount` = cash + charge. All three are set by the server;
+  `CashAmount`/`TotalAmount` were removed from both plan commands. **`Sale.TotalAmount` is never overwritten by a plan any
+  more** (it used to become cash + markup). A proforma carrying a plan with no down payment refuses an `UpdateSale` whose new
+  total differs from the plan's cash (delete the plan first). The in-person full-payment check moved from the validator into
+  the handler, inside the transaction, because the total is only known once `CreateSale` has computed it.
+- **`PayableAmount`** on `SaleDto`/`SaleListDto`: the live plan's `TotalAmount` when there is one (`InstallmentPlan.IsActive`),
+  otherwise `TotalAmount`. Debt is always `PayableAmount - PaidAmount`. `SaleInstallmentSummaryDto` and `SaleInstallmentPlanDto`
+  gained `CashAmount`/`InstallmentChargeAmount`.
+- **The sale invoice PDF prints the stored amounts.** `IInvoiceLineCalculationService`/`InvoiceLineCalculationService` were
+  deleted: they recomputed amounts for printing only, with truncating integer division that disagreed with the stored total.
+  `InvoiceDocumentModel` gained `InstallmentChargeAmount`/`PayableAmount` (null unless there is a live plan). QuestPDF prints
+  «سود اقساط» and «جمع قابل پرداخت» under «جمع فاکتور»; the official Excel template has no cells for them, so they go into the
+  notes cell (`AE29`) like the due date. `Balance` = (payable or invoice total) - paid. **There is no purchase invoice PDF** -
+  the old product-code entry below mentioned `GetPurchaseInvoicePdf`, but it does not exist.
+- **Migration `20260924212237_invoice-line-amounts-and-tax`**, with a SQL backfill:
+  - every product and line is set TAXABLE;
+  - each line snapshots its product's current rate, and its amounts are computed with the same formula (SQL Server's `ROUND` is
+    half away from zero for these positive values);
+  - each plan's charge = old total - cash, and its sale's total goes back to the plan's cash;
+  - drafts (PROFORMA) without a plan are re-totalled from their lines.
+  Issued invoices keep their stored `TotalAmount` (a historical fact, even where it was typed by hand). It was verified against
+  a throwaway local database seeded with a draft, an issued sale, an installment sale and a draft purchase: every number
+  matched the C# (incl. 70,000 / 93,000 in the rounding example). **Generated, not applied.**
+- **Tests:** `Unit/InvoiceLineMathTests.cs` (the worked example, half-up rounding, exempt, recompute, document total, the
+  charge). `Integration/InvoiceAmountsTests.cs`: create stamps and totals on both sides; draft re-reads the rate while an issued
+  invoice keeps it; unknown product is a 404; the plan charge is kept apart and `PayableAmount` appears on detail and list; plan
+  edits recompute the charge on the same principal; a proforma with a plan cannot change its total. Plus
+  `PurchaseExcessAcceptedTests` (supplement inherits the line's tax, tax-inclusive growth, net into the pool) and a QuestPDF smoke
+  test for the installment layout. Existing tests lost their `TotalAmount`/`CashAmount` inputs; installment seeds now carry the
+  invoice (cash) total. Suite 672/675 - the 3 documented environmental failures.
+
+**Party ledger - customer and supplier accounts (2026-09-24) - phase 3 of 3.** API: `docs/api-guide.fa.md` §5b (the rules
+table), §9 (`ClosePurchaseItem` and purchase `payableAmount`), §15 (the two ledger enums, permission 250), and the 2026-09-24
+«دفتر حساب اشخاص» table in §16. Frontend: `docs/proforma-lock-frontend-guide.fa.md` §11. Sync request item 11 is answered in
+`docs/purchase-frontend-sync-requests.fa.md`.
+
+- **`PartyLedgerEntry`** is append-only (no IsActive; never edited or deleted). Exactly one of `CustomerId`/`SupplierId` is set,
+  `Amount > 0` (both are check constraints), and `Direction` is DEBIT or CREDIT. **Balance = sum(DEBIT) - sum(CREDIT), positive =
+  the party owes us**, the same reading for customers and suppliers. Other columns: `EntryType`, `OccurredAt` (business date,
+  orders the statement), and links through navigations to `Sale`/`Purchase`/`PaymentDetail`, so rows written in the same request
+  as a new sale or payment link before ids exist. Plain int ids (not FKs) for `SaleReturnClaimId`/`PurchaseReturnClaimId`/
+  `PurchaseItemId`, because a return can be hard-deleted and the rows must outlive it. `ReversalOfEntryId` is a self-FK. All FKs are
+  `Restrict`. It is separate from `InventoryCostLedgerEntry`, which values stock and books accrual revenue at shipment and is
+  untouched.
+- **`Application/Common/Ledger/PartyLedger` is the only writer**: static, it stages rows and never saves, so every row lands in the
+  same SaveChanges as the change it records. The rules:
+
+  | Event | Row |
+  |---|---|
+  | sale invoice issued (inside `SaleInvoiceFinalizer`, the one issuing path) | customer DEBIT total |
+  | purchase leaves PROFORMA (`CreatePurchase` past PROFORMA, `UpdatePurchase` leaving, `ChangePurchaseStatus` from PROFORMA) | supplier CREDIT total |
+  | supplement line (`AcceptPurchaseExcess`) | supplier CREDIT the line total |
+  | line closed short (`ClosePurchaseItem`) | supplier DEBIT = `InvoiceLineMath.ShareOfTotal(line.TotalAmount, Quantity, ShortClosedQuantity)` |
+  | installment charge on an issued sale (`InstallmentChargeChangedAsync`: create, update, and 0 on plan delete) | customer DEBIT the charge |
+  | every payment row | IN -> CREDIT, OUT -> DEBIT (void -> reversal; edit -> reversal + new row) |
+  | return money | only the ON_ACCOUNT part (incl. ON_ACCOUNT parts of MIXED) is written: MONEY_IN -> DEBIT, MONEY_OUT -> CREDIT |
+  | cancelling an issued sale/purchase, reopening a short-closed line, removing a return resolution with money | REVERSAL rows |
+
+- **Why cash return money writes nothing:** goods coming back and money going out cancel on the account (return credit + refund
+  debit), so only an on-account settlement moves the balance. This keeps the effect layer scenario-free: the rule reads the money
+  method and nothing else.
+- **Why short close writes a row:** the issued invoice is never edited, so without it a paid-and-short-closed line left the supplier
+  "owed" the undelivered units (invoice credit 10, payment debit 10, refund credit 2 = we owe 2 - wrong). With it: 10 - 10 + 2 - 2 = 0.
+  `PurchaseDto.PayableAmount` (= TotalAmount minus the same shares) makes the document agree with the account; debt is
+  `PayableAmount - PaidAmount` on both documents now.
+- **Proformas are not on the account** (their invoice is not issued), except a purchase prepayment - that money did move.
+- **Read side:** `GET api/PartyAccount/GetPartyStatement` (`customerId` xor `supplierId`, optional `fromDate`/`toDate`; opening
+  balance before `fromDate`, running balance per row). It is deliberately not paged - a running balance needs a contiguous range.
+  The feature folder is `PartyAccount`, not `PartyLedger`, because that namespace would shadow the class. `LedgerBalance` is on
+  customer and supplier list/detail: lists compute it for the page in one grouped query after `ToPagedAsync`, details via
+  `PartyLedger.BalanceAsync`. The detail handlers gained an `IWMSDbContext` parameter. `Balance`/`BalanceType` (hand-typed) are
+  untouched and should eventually become derived or be removed. Permission `PartyStatementView = 250`, group `PartyAccounts = 13`.
+- **Migration `20260924222250_party-ledger`** (table, check constraints, indexes on `(CustomerId, OccurredAt)`/`(SupplierId,
+  OccurredAt)`). **Not backfilled, by agreement**: the ledger starts empty the day it is applied. Legacy purchases can therefore get
+  a short-close DEBIT without their invoice CREDIT. The whole chain applies cleanly from scratch to a throwaway database.
+  **Generated, not applied.**
+- **Tests:** `Integration/PartyLedgerTests.cs` (12):
+  - proforma not on the account until the first payment;
+  - void = reversal;
+  - cancel + refund settles;
+  - customer list/detail balance;
+  - purchase prepayment -> invoice -> final payment;
+  - cancelled issued purchase reversed, cancelled draft writes nothing;
+  - installment charge create/update/delete;
+  - statement opening balance;
+  - the 10/8/2 short-close scenario incl. reopen;
+  - return money cash vs on-account (MIXED) with reversal;
+  - validator;
+  - the check constraint.
+
+  Suite 684/687 - the 3 documented environmental failures.
+- **Not built, noted:** an "apply a customer's credit balance to a new invoice" (allocation) flow; `PurchaseListDto` has no
+  `PayableAmount` (the list projection would need the lines).
+
+**Store credit removed (2026-09-24).** Store credit is not a feature of this system; it was a leftover
+from the old closed-`DecisionType` return model. API: `docs/api-guide.fa.md` §15 and the 2026-09-24
+«حذف اعتبار فروشگاهی» table in §16.
+
+- `ReturnPaymentMethodEnum.STORE_CREDIT = 5` deleted. **Do not reuse 5.** Both `AddClaimResolutionCommandValidator`s
+  now run `IsInEnum` on `MoneyIn`/`MoneyOut.Method` and on each part's `Method` - before this nothing checked that
+  `Method` was a defined member (the rules only compared against `MIXED`), so an undefined integer would have bound
+  and persisted.
+- `GetSaleReturnCreditNotePdfQuery` always labels a line «(استرداد وجه)».
+- Migration `20260924151248_remove-store-credit`: no schema change; `UPDATE ... SET Method = 1 WHERE Method = 5` on
+  `PurchaseReturnEffects`, `SaleReturnEffects` and both `...EffectMoneyParts` tables (`ON_ACCOUNT` is the closest
+  remaining meaning). `Down` is a no-op on purpose. **Generated, not applied.**
+- The superseded historical guides (`sale-return-guide.fa.md`, `return-scenarios-guide.fa.md`) and the stale comment in
+  `scripts/seed-mock-data.sql` still mention the old `STORE_CREDIT` decision type; they describe a model that no longer
+  exists and were left as history.
+- Tests: `UndefinedMoneyMethod_IsInvalid` on both validator test classes; three tests that used `STORE_CREDIT` as an
+  arbitrary method now use `ON_ACCOUNT`.
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
 - ~~`PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK.~~ **Fixed 2026-09-20** - see the installment-sales entry above: both ids are `int`, both relationships are configured explicitly, and the shadow FK is gone.
@@ -1517,7 +1710,7 @@ user shows the destination's template) for the admin to apply to the checkboxes;
 - **`ProductUnit`** (`Domain/Entities/ProductUnit.cs`) gives every physical unit its own serial + barcode (`ProductCode-Serial`, digits-only `BarcodePayload` for the actual Code128 encoding). `IProductUnitService` (`Infrastructure/Services/ProductUnitService.cs`) is the only thing that mints/consumes/restores/reconciles units: `MintAsync` (receiving, product creation), `ConsumeAsync` (shipping, replacement shipment — FIFO by serial, or against explicit scanned barcodes), `RestoreAsync` (return inspection: healthy → `IN_STOCK`, defective → `SCRAPPED`), `ReconcileStockAsync` (manual `Stock` edits in `UpdateProductCommand`). Wired into all six stock-mutation sites named in the design (`ReceivePurchaseCommand`, `ShipSaleCommand`, `ConfirmReplacementShipmentCommand`, `ConfirmReturnInspectionCommand`, `UpdateProductCommand`, `CreateProductCommand`; the two return commands were replaced on 2026-08-28 by `ExecuteGoodsRoundCommand` on both return sides) — `Product.Stock == COUNT(ProductUnit WHERE Status=IN_STOCK)` is now a maintained invariant, not just documented intent.
 - **Scan/lookup**: `GET api/Product/ScanBarcode` normalizes raw scanner input and resolves it to a product (plus the specific unit, if a unit-level barcode was scanned) via `IProductCodeService.Parse`. `GET api/Product/GetProductUnitList` lists units with status/serial-range filters. `POST api/Product/EnsureProductCodes` is the one-shot backfill (fixes any product missing a generated `Code`, reconciles `ProductUnit` counts against `Stock`) — **must be run once** between the two migrations below.
 - **Barcode rendering**: `IBarcodeRenderer` (`Infrastructure/Services/ZXingBarcodeRenderer.cs`) uses ZXing.Net purely for Code128/QR module encoding, then hand-emits the modules as vector SVG (`<rect>` runs) — resolution-independent, so label DPI/printer stays a config concern. `GET api/Barcode/GetBarcodeSvg` renders any already-known code; `GET api/Barcode/GetProductLabelsPdf` renders a full label sheet for a product's units (default: `IN_STOCK` only, optional serial range for "just this receiving batch"). Default sheet layout is 3 columns × 48mm labels on A4 (`BarcodeLabelSheetModel`) — deliberately not 4 columns, which overflows A4 minus margins by a few mm; retune `Columns`/`LabelWidthMm`/`PageMarginMm` together if the target label stock differs.
-- **PDF**: `IPdfDocumentService` (`Infrastructure/Services/QuestPdfDocumentService.cs`), QuestPDF Community license (set in `WMS/Program.cs`), Vazirmatn Regular/Bold embedded as assembly resources (`Infrastructure/Assets/Fonts/`, OFL-licensed) so RTL Persian text renders correctly on a server with no fonts installed. `GET api/Invoice/GetSaleInvoicePdf`, `GetPurchaseInvoicePdf`, and `GetSaleReturnCreditNotePdf` (REFUND/STORE_CREDIT decisions only — `REPLACEMENT` settles in goods, not money) share one invoice layout. Line discount/tax are computed for the printed document only, from `SaleItem/PurchaseItem.Discount` and `Product.Tax` treated as percentages (`IInvoiceLineCalculationService`, `Application/Common/Contracts/Invoice/` + `Infrastructure/Services/InvoiceLineCalculationService.cs`) — neither is persisted anywhere else in the codebase, so this does not change `Sale.TotalAmount`/`Purchase.TotalAmount`. Company letterhead info comes from the `Company` config section in `appsettings.json` (placeholder values — fill in before real use). All PDF/SVG endpoints deliberately return `FileResponseDto`/raw bytes, not `ResponseDto` — a documented, intentional deviation from the project's usual MediatR-returns-ResponseDto convention; `BarcodeController`/`InvoiceController` return `IActionResult` via `File(...)` rather than `ActionResult<ResponseDto>`.
+- **PDF**: `IPdfDocumentService` (`Infrastructure/Services/QuestPdfDocumentService.cs`), QuestPDF Community license (set in `WMS/Program.cs`), Vazirmatn Regular/Bold embedded as assembly resources (`Infrastructure/Assets/Fonts/`, OFL-licensed) so RTL Persian text renders correctly on a server with no fonts installed. `GET api/Invoice/GetSaleInvoicePdf`, `GetPurchaseInvoicePdf`, and `GetSaleReturnCreditNotePdf` (REFUND/STORE_CREDIT decisions only — `REPLACEMENT` settles in goods, not money) share one invoice layout. ~~Line discount/tax are computed for the printed document only (`IInvoiceLineCalculationService`)~~ - superseded 2026-09-24: the amounts are stored on each line by `InvoiceLineMath` and the PDF prints them (see "Invoice line amounts, tax and the installment charge"). Company letterhead info comes from the `Company` config section in `appsettings.json` (placeholder values — fill in before real use). All PDF/SVG endpoints deliberately return `FileResponseDto`/raw bytes, not `ResponseDto` — a documented, intentional deviation from the project's usual MediatR-returns-ResponseDto convention; `BarcodeController`/`InvoiceController` return `IActionResult` via `File(...)` rather than `ActionResult<ResponseDto>`.
 - **Migrations, in order**: `20260813124442_product-code-barcode-model` (the `ProductUnits` table + `Products.SupplierBarCode`, deliberately **without** a unique index on `Products.Code` — a pre-existing DB may have duplicate/empty codes), then run `EnsureProductCodes` once against that DB, then `20260813224738_product-code-unique-index` (adds the unique index). **Neither migration has been applied to any real database yet.**
 - **Tests**: `Tests/WMS.Tests/Integration/ProductHandlerTests.cs` (code generation, unit minting, stock reconciliation up/down), `Tests/WMS.Tests/Unit/PdfAndBarcodeSmokeTests.cs` (renderer/PDF service smoke tests on hand-built models), `Tests/WMS.Tests/Integration/InvoicePdfTests.cs` (all three PDF endpoints through real seeded `Sale`/`Purchase`/`SaleReturn` entities). `Tests/WMS.Tests/Support/Seed.cs` gained `MintUnits` so fixtures that seed `Product.Stock` directly keep the `ProductUnit` invariant true for handlers that now depend on it.
 

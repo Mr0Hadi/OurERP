@@ -36,13 +36,12 @@ namespace WMS.Tests.Unit
         }
 
         [Fact]
-        public void CreatePurchaseCommand_ToPurchase_MapsTotalAndPaidAmountAndItems()
+        public void CreatePurchaseCommand_ToPurchase_MapsItems_ButNeitherTotalNorPaidAmount()
         {
+            // PaidAmount is the sum of the payment rows, set by the handler - the mapping must not invent one.
             var command = new CreatePurchaseCommand
             {
                 SupplierId = 1,
-                TotalAmount = 5000,
-                PaidAmount = 1000,
                 PaymentType = PaymentTypeEnum.CASH,
                 Status = PurchaseStatusEnum.SHIPPED,
                 PaymentDetails = new(),
@@ -53,22 +52,21 @@ namespace WMS.Tests.Unit
 
             var purchase = TestMapper.Instance.Map<Purchase>(command);
 
-            Assert.Equal(5000UL, purchase.TotalAmount);
-            Assert.Equal(1000UL, purchase.PaidAmount);
+            // Both totals are computed by the handler (InvoiceLineMath, DocumentPayments), never mapped.
+            Assert.Equal(0UL, purchase.TotalAmount);
+            Assert.Equal(0UL, purchase.PaidAmount);
             var item = Assert.Single(purchase.Items);
             Assert.Equal(7, item.ProductId);
             Assert.Equal(3, item.Quantity);
         }
 
         [Fact]
-        public void CreateSaleCommand_ToSale_MapsTotalAndPaidAmountAndItems()
+        public void CreateSaleCommand_ToSale_MapsItems_AsAProforma_WithoutATotal()
         {
             var command = new CreateSaleCommand
             {
                 InvoiceDate = DateTime.Now,
                 CustomerId = 1,
-                TotalAmount = 4000,
-                PaidAmount = 500,
                 PaymentType = PaymentTypeEnum.CASH,
                 PaymentDetails = new(),
                 ProductIds = new() { new CreateSaleItemDto { ProductId = 9, Quantity = 2, UnitPrice = 2000, Discount = 0 } },
@@ -76,8 +74,9 @@ namespace WMS.Tests.Unit
 
             var sale = TestMapper.Instance.Map<Sale>(command);
 
-            Assert.Equal(4000UL, sale.TotalAmount);
-            Assert.Equal(500UL, sale.PaidAmount);
+            Assert.Equal(0UL, sale.TotalAmount);
+            Assert.Equal(0UL, sale.PaidAmount);
+            Assert.Equal(SalesStatusEnum.PROFORMA, sale.Status);
             var item = Assert.Single(sale.Items);
             Assert.Equal(9, item.ProductId);
         }

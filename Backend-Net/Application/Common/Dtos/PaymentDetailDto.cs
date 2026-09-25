@@ -16,7 +16,17 @@ namespace Application.Common.Dtos
         /// <summary>«این پرداخت چیست» - پیش‌فرض پرداخت عادی.</summary>
         public PaymentPurposeEnum Purpose { get; set; }
 
+        /// <summary>
+        /// Read only: IN = money we received, OUT = money we paid. On CreateSale/CreatePurchase it is ignored - a row
+        /// sent there is always in the document's own direction (sale IN, purchase OUT); refunds go through
+        /// AddSalePayment/AddPurchasePayment.
+        /// </summary>
+        public PaymentDirectionEnum Direction { get; set; }
+
         public decimal Amount { get; set; }
+
+        /// <summary>Read only: set when the row was voided. A voided row stays in the list and no longer counts.</summary>
+        public DateTime? VoidedAt { get; set; }
 
         /// <summary>تاریخ واقعی پرداخت.</summary>
         public DateTime PaidAt { get; set; }

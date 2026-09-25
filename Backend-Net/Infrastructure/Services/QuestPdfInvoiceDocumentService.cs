@@ -265,10 +265,25 @@ namespace Infrastructure.Services
 
                     row.RelativeItem(2).Text(text =>
                     {
-                        text.Span("مبلغ قابل پرداخت: ").Bold().FontSize(9);
+                        // On an installment sale the invoice total is not what the customer pays - the next row is.
+                        text.Span(model.PayableAmount.HasValue ? "جمع فاکتور: " : "مبلغ قابل پرداخت: ").Bold().FontSize(9);
                         text.Span($"{Money(model.GrandTotal)} {model.Company.Currency}").Bold().FontSize(9);
                     });
                 });
+
+                if (model.PayableAmount.HasValue)
+                {
+                    col.Item().Border(1).BorderColor(BorderColor).Padding(4).Row(row =>
+                    {
+                        Total(row, "سود اقساط", model.InstallmentChargeAmount ?? 0UL, model.Company.Currency);
+
+                        row.RelativeItem(2).Text(text =>
+                        {
+                            text.Span("جمع قابل پرداخت: ").Bold().FontSize(9);
+                            text.Span($"{Money(model.PayableAmount.Value)} {model.Company.Currency}").Bold().FontSize(9);
+                        });
+                    });
+                }
 
                 col.Item().Border(1).BorderColor(BorderColor).Padding(4).Row(row =>
                 {

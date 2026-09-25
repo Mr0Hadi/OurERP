@@ -49,7 +49,7 @@ namespace Application.Features.Purchase.Queries
         public async Task<ResponseDto> Handle(GetPurchaseListQuery request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
-            var query = _context.Purchases.AsQueryable();
+            var query = _context.Purchases.Where(x => x.IsActive);
 
             if (!string.IsNullOrEmpty(request.InvoiceNumber))
             {

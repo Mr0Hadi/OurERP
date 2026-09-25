@@ -3,7 +3,6 @@ using Application.Common.Contracts.Context;
 using Application.Common.Contracts.OrgStructure;
 using Application.Common.Contracts.Permissions;
 using Application.Common.Contracts.Documents;
-using Application.Common.Contracts.Invoice;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductCode;
 using Application.Common.Contracts.ProductUnit;
@@ -109,7 +108,6 @@ namespace WMS.Tests.Support
             // Invoice rendering shells out to LibreOffice - not exercised by tests that don't call
             // RenderInvoiceAsync (soffice is not guaranteed to be installed on the test runner).
             PdfDocumentService = new ExcelInvoiceDocumentService(QuestPdfDocumentService, Options.Create(new LibreOfficeOptions()));
-            InvoiceLineCalculation = new InvoiceLineCalculationService();
         }
 
         public WMSDbContext Context { get; }
@@ -129,7 +127,6 @@ namespace WMS.Tests.Support
         public ITeamRepository TeamRepository { get; }
         public ISaleInstallmentPlanRepository SaleInstallmentPlanRepository { get; }
         public ISaleReturnCalculationService SaleReturnCalculation { get; }
-        public IInvoiceLineCalculationService InvoiceLineCalculation { get; }
         public IPurchaseReturnCalculationService PurchaseReturnCalculation { get; }
         public IProductCodeService ProductCodeService { get; }
         public IProductUnitService ProductUnitService { get; }

@@ -215,6 +215,12 @@ namespace Infrastructure.Services
 
             SetValue(ws, "G28", Money(model.GrandTotal) + " " + model.Company.Currency);
 
+            // The official template has no installment rows: the charge and what the customer pays in total ride along in
+            // the free-form notes cell, like the due date below. G28 stays the invoice total, lines and tax only.
+            if (model.PayableAmount.HasValue)
+                AppendValue(ws, "AE29", "سود اقساط: " + Money(model.InstallmentChargeAmount ?? 0UL) + " " + model.Company.Currency
+                    + " - جمع قابل پرداخت: " + Money(model.PayableAmount.Value) + " " + model.Company.Currency);
+
             // The official template has no dedicated due-date cell, so the payment deadline rides
             // along in the free-form notes cell, ahead of the description.
             if (model.PaymentDueDate.HasValue)

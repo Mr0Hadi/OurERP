@@ -250,6 +250,82 @@ namespace Infrastructure.Migrations
                     b.ToTable("InventoryCostLedgerEntries");
                 });
 
+            modelBuilder.Entity("Domain.Entities.PartyLedgerEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(20,0)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("Direction")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EntryType")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("PaymentDetailId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PurchaseId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PurchaseItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PurchaseReturnClaimId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ReversalOfEntryId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SaleId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SaleReturnClaimId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SupplierId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaymentDetailId");
+
+                    b.HasIndex("PurchaseId");
+
+                    b.HasIndex("ReversalOfEntryId");
+
+                    b.HasIndex("SaleId");
+
+                    b.HasIndex("CustomerId", "OccurredAt");
+
+                    b.HasIndex("SupplierId", "OccurredAt");
+
+                    b.ToTable("PartyLedgerEntries", t =>
+                        {
+                            t.HasCheckConstraint("CK_PartyLedgerEntries_OneParty", "([CustomerId] IS NOT NULL AND [SupplierId] IS NULL) OR ([CustomerId] IS NULL AND [SupplierId] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_PartyLedgerEntries_PositiveAmount", "[Amount] > 0");
+                        });
+                });
+
             modelBuilder.Entity("Domain.Entities.PaymentDetail", b =>
                 {
                     b.Property<int>("Id")
@@ -264,6 +340,9 @@ namespace Infrastructure.Migrations
 
                     b.Property<string>("CheckNumber")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Direction")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("PaidAt")
                         .HasColumnType("datetime2");
@@ -282,6 +361,9 @@ namespace Infrastructure.Migrations
 
                     b.Property<int>("Type")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("VoidedAt")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -395,6 +477,9 @@ namespace Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Tax")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TaxCategory")
                         .HasColumnType("int");
 
                     b.Property<int>("Unit")
@@ -668,6 +753,18 @@ namespace Infrastructure.Migrations
                     b.Property<int>("Discount")
                         .HasColumnType("int");
 
+                    b.Property<decimal>("DiscountAmount")
+                        .HasColumnType("decimal(20,0)");
+
+                    b.Property<decimal>("GrossAmount")
+                        .HasColumnType("decimal(20,0)");
+
+                    b.Property<bool>("IsSupplement")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("NetAmount")
+                        .HasColumnType("decimal(20,0)");
+
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
 
@@ -689,6 +786,21 @@ namespace Infrastructure.Migrations
                     b.Property<int>("ShortClosedQuantity")
                         .HasColumnType("int");
 
+                    b.Property<int?>("SupplementOfPurchaseItemId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("TaxAmount")
+                        .HasColumnType("decimal(20,0)");
+
+                    b.Property<int>("TaxCategory")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TaxPercent")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(20,0)");
+
                     b.Property<decimal>("UnitPrice")
                         .HasColumnType("decimal(20,0)");
 
@@ -697,6 +809,8 @@ namespace Infrastructure.Migrations
                     b.HasIndex("ProductId");
 
                     b.HasIndex("PurchaseId");
+
+                    b.HasIndex("SupplementOfPurchaseItemId");
 
                     b.ToTable("PurchaseItems");
                 });
@@ -1257,6 +1371,9 @@ namespace Infrastructure.Migrations
                     b.Property<decimal>("InstallmentAmount")
                         .HasColumnType("decimal(20,0)");
 
+                    b.Property<decimal>("InstallmentChargeAmount")
+                        .HasColumnType("decimal(20,0)");
+
                     b.Property<int>("InstallmentCount")
                         .HasColumnType("int");
 
@@ -1302,6 +1419,15 @@ namespace Infrastructure.Migrations
                     b.Property<int>("Discount")
                         .HasColumnType("int");
 
+                    b.Property<decimal>("DiscountAmount")
+                        .HasColumnType("decimal(20,0)");
+
+                    b.Property<decimal>("GrossAmount")
+                        .HasColumnType("decimal(20,0)");
+
+                    b.Property<decimal>("NetAmount")
+                        .HasColumnType("decimal(20,0)");
+
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
 
@@ -1316,6 +1442,18 @@ namespace Infrastructure.Migrations
 
                     b.Property<int>("ShippedQuantity")
                         .HasColumnType("int");
+
+                    b.Property<decimal>("TaxAmount")
+                        .HasColumnType("decimal(20,0)");
+
+                    b.Property<int>("TaxCategory")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TaxPercent")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(20,0)");
 
                     b.Property<decimal>("UnitPrice")
                         .HasColumnType("decimal(20,0)");
@@ -1880,6 +2018,51 @@ namespace Infrastructure.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("Domain.Entities.PartyLedgerEntry", b =>
+                {
+                    b.HasOne("Domain.Entities.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Domain.Entities.PaymentDetail", "PaymentDetail")
+                        .WithMany()
+                        .HasForeignKey("PaymentDetailId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Domain.Entities.Purchase", "Purchase")
+                        .WithMany()
+                        .HasForeignKey("PurchaseId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Domain.Entities.PartyLedgerEntry", "ReversalOf")
+                        .WithMany()
+                        .HasForeignKey("ReversalOfEntryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Domain.Entities.Sale", "Sale")
+                        .WithMany()
+                        .HasForeignKey("SaleId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Domain.Entities.Supplier", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("PaymentDetail");
+
+                    b.Navigation("Purchase");
+
+                    b.Navigation("ReversalOf");
+
+                    b.Navigation("Sale");
+
+                    b.Navigation("Supplier");
+                });
+
             modelBuilder.Entity("Domain.Entities.PaymentDetail", b =>
                 {
                     b.HasOne("Domain.Entities.Purchase", "Purchase")
@@ -1973,9 +2156,16 @@ namespace Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Domain.Entities.PurchaseItem", "SupplementOf")
+                        .WithMany()
+                        .HasForeignKey("SupplementOfPurchaseItemId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Product");
 
                     b.Navigation("Purchase");
+
+                    b.Navigation("SupplementOf");
                 });
 
             modelBuilder.Entity("Domain.Entities.PurchaseReceivingDiscrepancy", b =>

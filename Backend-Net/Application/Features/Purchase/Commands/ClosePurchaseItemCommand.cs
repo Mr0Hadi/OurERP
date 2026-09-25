@@ -1,3 +1,4 @@
+using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.UnitOfWork;
@@ -68,6 +69,9 @@ namespace Application.Features.Purchase.Commands
             var now = DateTime.Now;
             item.ShortClosedQuantity = missing;
             item.ShortClosedAt = now;
+
+            // The issued invoice is not edited: the undelivered share comes off what we owe the supplier instead.
+            await PartyLedger.PurchaseShortClosedAsync(_context, purchase, item, now, cancellationToken);
 
             purchase.Status = _purchaseReturnCalculationService.RecomputePurchaseStatus(purchase);
             purchase.UpdatedAt = now;

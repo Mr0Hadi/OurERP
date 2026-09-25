@@ -2,13 +2,7 @@ using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
 using Application.Common.Enums;
-using Application.Features.Sale.Dtos;
-using Application.Features.SaleInstallment.Mappings;
-using Common.Exceptions;
-using Domain.Entities;
-using Domain.Enums;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.Sale.Queries
 {
@@ -30,75 +24,7 @@ namespace Application.Features.Sale.Queries
         {
             var res = new ResponseDto();
 
-            res.Data = await _context.Sales.AsNoTracking()
-                .Where(x => x.Id == request.Id)
-                .Select(x => new SaleDto
-                {
-                    Id = x.Id,
-                    InvoiceNumber = x.InvoiceNumber,
-                    InvoiceDate = x.InvoiceDate,
-                    PaymentDate = x.PaymentDate,
-                    Status = x.Status,
-                    PaymentType = x.PaymentType,
-                    TotalAmount = x.TotalAmount,
-                    PaidAmount = x.PaidAmount,
-                    PaymentDetails = x.PaymentDetails.OrderBy(p => p.PaidAt).Select(p => new PaymentDetailDto
-                    {
-                        Id = p.Id,
-                        Type = p.Type,
-                        Purpose = p.Purpose,
-                        Amount = p.Amount,
-                        PaidAt = p.PaidAt,
-                        CheckNumber = p.CheckNumber,
-                        TransferRef = p.TransferRef,
-                    }).ToList(),
-                    Description = x.Description,
-                    CustomerId = x.CustomerId,
-                    CustomerName = x.Customer.FirstName + " " + x.Customer.LastName,
-                    Items = x.Items.Select(y => new SaleItemDto
-                    {
-                        Id = y.Id,
-                        Discount = y.Discount,
-                        ProductId = y.ProductId,
-                        ProductName = y.Product.Name,
-                        Quantity = y.Quantity,
-                        SaleId = y.SaleId,
-                        SettledQuantity = y.SettledQuantity,
-                        ShippedQuantity = y.ShippedQuantity,
-                        UnitPrice = y.UnitPrice
-                    }).ToList(),
-                    Drivers = x.Drivers.Select(d => new SaleDriverDto
-                    {
-                        Id = d.Id,
-                        DriverFullName = d.DriverFullName,
-                        DriverPhoneNumber = d.DriverPhoneNumber,
-                        VehiclePlate = d.VehiclePlate
-                    }).ToList(),
-                    ShippingNotes = x.ShippingNotes.Select(n => new SaleShippingNoteDto
-                    {
-                        Id = n.Id,
-                        Note = n.Note
-                    }).ToList()
-                })
-                .FirstOrDefaultAsync() ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
-            var attachments = await _context.DocumentAttachments.AsNoTracking()
-                .Where(a => a.DocumentKind == DocumentKindEnum.SALE && a.DocumentId == request.Id)
-                .Select(a => new DocumentAttachmentDto
-                {
-                    Id = a.Id,
-                    ObjectKey = a.ObjectKey,
-                    FileName = a.FileName,
-                    Note = a.Note,
-                    CreatedAt = a.CreatedAt
-                })
-                .ToListAsync(cancellationToken);
-            foreach (var attachment in attachments)
-                attachment.Url = _objectStorageService.GetFixedUrl(attachment.ObjectKey);
-            ((SaleDto)res.Data).Attachments = attachments;
-
-            // خلاصه‌ی قرارداد اقساطی جدا خوانده می‌شود: roll-upهای پلن در حافظه حساب می‌شوند
-            // و به SQL ترجمه نمی‌شوند.
-            ((SaleDto)res.Data).InstallmentSummary = await SaleInstallmentSummaryReader.ReadForSaleAsync(_context, request.Id, cancellationToken);
+            res.Data = await SaleDetailReader.ReadAsync(_context, _objectStorageService, request.Id, cancellationToken);
 
             res.Message = "اطلاعات فروش با موفقیت ارسال شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();

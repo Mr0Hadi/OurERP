@@ -119,6 +119,19 @@ namespace WMS.Tests.Unit
     {
         private readonly Application.Features.PurchaseReturn.Commands.AddClaimResolutionCommandValidator _sut = new();
 
+        // STORE_CREDIT (5) was removed from ReturnPaymentMethodEnum; an undefined method must not bind and persist.
+        [Fact]
+        public void UndefinedMoneyMethod_IsInvalid()
+        {
+            var command = new Application.Features.PurchaseReturn.Commands.AddClaimResolutionCommand
+            {
+                ClaimId = 1,
+                Composition = new EffectCompositionDto { Quantity = 1, MoneyOut = new MoneyEffectDto { Method = (ReturnPaymentMethodEnum)5, Amount = 100 } },
+            };
+
+            Assert.False(_sut.Validate(command).IsValid);
+        }
+
         [Fact]
         public void ZeroClaimId_IsInvalid()
         {
@@ -395,13 +408,26 @@ namespace WMS.Tests.Unit
     {
         private readonly Application.Features.SaleReturn.Commands.AddClaimResolutionCommandValidator _sut = new();
 
+        // STORE_CREDIT (5) was removed from ReturnPaymentMethodEnum; an undefined method must not bind and persist.
+        [Fact]
+        public void UndefinedMoneyMethod_IsInvalid()
+        {
+            var command = new Application.Features.SaleReturn.Commands.AddClaimResolutionCommand
+            {
+                ClaimId = 1,
+                Composition = new EffectCompositionDto { Quantity = 1, MoneyOut = new MoneyEffectDto { Method = (ReturnPaymentMethodEnum)5, Amount = 100 } },
+            };
+
+            Assert.False(_sut.Validate(command).IsValid);
+        }
+
         [Fact]
         public void ZeroClaimId_IsInvalid()
         {
             var command = new Application.Features.SaleReturn.Commands.AddClaimResolutionCommand
             {
                 ClaimId = 0,
-                Composition = new EffectCompositionDto { Quantity = 1, MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.STORE_CREDIT, Amount = 100 } },
+                Composition = new EffectCompositionDto { Quantity = 1, MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.ON_ACCOUNT, Amount = 100 } },
             };
 
             Assert.False(_sut.Validate(command).IsValid);
@@ -458,7 +484,7 @@ namespace WMS.Tests.Unit
             var command = new Application.Features.SaleReturn.Commands.AddClaimResolutionCommand
             {
                 ClaimId = 1,
-                Composition = new EffectCompositionDto { Quantity = 2, MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.STORE_CREDIT, Amount = 200 } },
+                Composition = new EffectCompositionDto { Quantity = 2, MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.ON_ACCOUNT, Amount = 200 } },
             };
 
             Assert.True(_sut.Validate(command).IsValid);

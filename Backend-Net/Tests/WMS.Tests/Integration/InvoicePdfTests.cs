@@ -23,7 +23,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 3, shippedQuantity: 3, stock: 0);
 
-            var handler = new GetSaleInvoicePdfQueryHandler(scope.Db, scope.PdfDocumentService, scope.InvoiceLineCalculation, EmptyConfig());
+            var handler = new GetSaleInvoicePdfQueryHandler(scope.Db, scope.PdfDocumentService, EmptyConfig());
             var file = await handler.Handle(new GetSaleInvoicePdfQuery { SaleId = scenario.Sale.Id }, CancellationToken.None);
 
             Assert.NotEmpty(file.Content);

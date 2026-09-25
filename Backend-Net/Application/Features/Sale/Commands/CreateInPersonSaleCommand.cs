@@ -47,10 +47,6 @@ namespace Application.Features.Sale.Commands
         public CreateInPersonSaleCommandValidator()
         {
             RuleFor(x => x.Sale).NotNull().WithMessage("اطلاعات فروش الزامی است.");
-            // فروش غیر اقساطی: کل مبلغ همان‌جا پرداخت می‌شود.
-            RuleFor(x => x.Sale.PaidAmount).GreaterThanOrEqualTo(x => x.Sale.TotalAmount)
-                .When(x => x.Sale != null && x.Sale.PaymentType != PaymentTypeEnum.INSTALLMENT)
-                .WithMessage("در تحویل حضوری پرداخت باید کامل باشد.");
 
             // فروش اقساطی: قرارداد باید همین‌جا ثبت شود، وگرنه فروش در پیش‌فاکتور می‌ماند و
             // شماره‌ی فاکتور رسمی نمی‌گیرد - در حالی که کالا از انبار خارج شده است.
@@ -90,9 +86,7 @@ namespace Application.Features.Sale.Commands
         {
             var res = new ResponseDto();
 
-            // Created as a proforma with full payment: CreateSale itself issues the official invoice number and date.
-            request.Sale.Status = SalesStatusEnum.PROFORMA;
-
+            // CreateSale always creates a proforma; the full payment sent with it issues the official invoice number and date.
             res.Data = await _unitOfWork.ExecuteInTransactionAsync(async ct =>
             {
                 var created = (await _mediator.Send(request.Sale, ct)).Data as CreatedSaleDto
@@ -108,6 +102,11 @@ namespace Application.Features.Sale.Commands
                 }
 
                 var sale = await _context.Sales.Include(x => x.Items).FirstAsync(x => x.Id == created.Id, ct);
+
+                // فروش غیر اقساطی: کل مبلغ همان‌جا پرداخت می‌شود. جمع فاکتور را سرور از اقلام حساب می‌کند، پس این بررسی
+                // بعد از ساخت فروش و داخل همین تراکنش انجام می‌شود - رد شدنش فروش را هم برمی‌گرداند.
+                if (sale.PaymentType != PaymentTypeEnum.INSTALLMENT && sale.PaidAmount < sale.TotalAmount)
+                    throw new ValidationCustomException("در تحویل حضوری پرداخت باید کامل باشد.");
 
                 // Scanned barcodes are pooled per product and handed to that product's lines in order.
                 var pools = request.ScannedItems

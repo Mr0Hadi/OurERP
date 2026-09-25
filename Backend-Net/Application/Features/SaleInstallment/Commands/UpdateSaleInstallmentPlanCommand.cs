@@ -1,3 +1,4 @@
+using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
@@ -23,9 +24,12 @@ namespace Application.Features.SaleInstallment.Commands
     public class UpdateSaleInstallmentPlanCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }
-        public UInt64 CashAmount { get; set; }
+
+        /// <summary>
+        /// The plan's principal is the sale's invoice total and cannot be changed here; the markup percentage, the number
+        /// of installments, the dates and the penalty can. Charge and payable total are recomputed by the server.
+        /// </summary>
         public decimal MarkupPercentage { get; set; }
-        public UInt64 TotalAmount { get; set; }
         public int InstallmentCount { get; set; }
         public DateTime FirstDueDate { get; set; }
         public decimal? LatePenaltyPercentage { get; set; }
@@ -36,9 +40,7 @@ namespace Application.Features.SaleInstallment.Commands
         public UpdateSaleInstallmentPlanCommandValidator()
         {
             RuleFor(x => x.Id).GreaterThan(0).WithMessage(Validation.RequiredMessage("قرارداد اقساطی"));
-            RuleFor(x => x.CashAmount).Must(x => x > 0).WithMessage("قیمت نقدی باید از صفر بیشتر باشد.");
             RuleFor(x => x.MarkupPercentage).GreaterThanOrEqualTo(0).WithMessage("درصد افزایش نمی‌تواند منفی باشد.");
-            RuleFor(x => x.TotalAmount).Must(x => x > 0).WithMessage("مبلغ کل باید از صفر بیشتر باشد.");
             RuleFor(x => x.InstallmentCount).GreaterThan(0).WithMessage("تعداد اقساط باید از صفر بیشتر باشد.");
             RuleFor(x => x.FirstDueDate).Must(d => d != default).WithMessage(Validation.RequiredMessage("سررسید اولین قسط"));
             RuleFor(x => x.LatePenaltyPercentage).GreaterThanOrEqualTo(0)
@@ -76,17 +78,17 @@ namespace Application.Features.SaleInstallment.Commands
             if (request.InstallmentCount < paidInstallments.Count)
                 throw new ValidationCustomException("تعداد اقساط نمی‌تواند از تعداد اقساط پرداخت‌شده کمتر باشد.");
 
-            var paidAmount = plan.PaidAmount;
-            if (request.TotalAmount < paidAmount)
-                throw new ValidationCustomException("مبلغ کل نمی‌تواند از مبلغ پرداخت‌شده کمتر باشد.");
+            // Principal = the invoice total, locked with the invoice; only the charge follows the new percentage.
+            var cashAmount = plan.Sale.TotalAmount;
+            var chargeAmount = InstallmentSchedule.ChargeAmount(cashAmount, request.MarkupPercentage);
+            var totalAmount = checked(cashAmount + chargeAmount);
 
-            var expectedTotal = InstallmentSchedule.ExpectedTotalAmount(request.CashAmount, request.MarkupPercentage);
-            var difference = expectedTotal > request.TotalAmount ? expectedTotal - request.TotalAmount : request.TotalAmount - expectedTotal;
-            if (difference > 1UL)
-                throw new ValidationCustomException("مبلغ کل با قیمت نقدی و درصد افزایش هم‌خوانی ندارد.");
+            var paidAmount = plan.PaidAmount;
+            if (totalAmount < paidAmount)
+                throw new ValidationCustomException("مبلغ قابل پرداخت قرارداد نمی‌تواند از مبلغ پرداخت‌شده کمتر باشد.");
 
             var newRowCount = request.InstallmentCount - paidInstallments.Count;
-            var remainingToSchedule = request.TotalAmount - paidAmount;
+            var remainingToSchedule = totalAmount - paidAmount;
 
             if (newRowCount == 0 && remainingToSchedule > 0UL)
                 throw new ValidationCustomException("برای مبلغ باقیمانده باید حداقل یک قسط پرداخت‌نشده وجود داشته باشد.");
@@ -114,19 +116,20 @@ namespace Application.Features.SaleInstallment.Commands
             foreach (var installment in InstallmentSchedule.Build(remainingToSchedule, newRowCount, request.FirstDueDate, startNumber))
                 plan.Installments.Add(installment);
 
-            plan.CashAmount = request.CashAmount;
+            plan.CashAmount = cashAmount;
             plan.MarkupPercentage = request.MarkupPercentage;
-            plan.TotalAmount = request.TotalAmount;
+            plan.InstallmentChargeAmount = chargeAmount;
+            plan.TotalAmount = totalAmount;
             // پیش‌پرداخت پس از ثبت قابل تغییر نیست - پرداختش انجام شده.
-            plan.FinancedAmount = request.TotalAmount - plan.DownPaymentAmount;
+            plan.FinancedAmount = totalAmount - plan.DownPaymentAmount;
             plan.InstallmentCount = request.InstallmentCount;
             plan.InstallmentAmount = InstallmentSchedule.BaseInstallmentAmount(remainingToSchedule, newRowCount);
             plan.FirstDueDate = request.FirstDueDate;
             plan.LatePenaltyPercentage = request.LatePenaltyPercentage;
             plan.UpdatedAt = now;
+            await PartyLedger.InstallmentChargeChangedAsync(_context, plan.Sale, chargeAmount, now, cancellationToken);
 
-            // اگر مبلغ کل عوض شد، فروش هم باید با آن هماهنگ شود.
-            plan.Sale.TotalAmount = request.TotalAmount;
+            // جمع فاکتور فروش دست نمی‌خورد - فاکتور فقط اقلام و مالیاتشان است، سود اقساط روی قرارداد می‌ماند.
             plan.Sale.PaidAmount = paidAmount;
             plan.Sale.UpdatedAt = now;
 

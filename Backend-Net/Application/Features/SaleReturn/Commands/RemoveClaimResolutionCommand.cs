@@ -1,3 +1,4 @@
+using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.SaleReturn;
@@ -84,7 +85,10 @@ namespace Application.Features.SaleReturn.Commands
             // of a money-locked return (see ReturnLifecycleRules), so it writes the opposite row - otherwise a
             // cancelled return keeps moving the sale report's revenue. A PENDING one never wrote anything.
             foreach (var money in resolution.Effects.Where(e => e.Direction is ReturnEffectDirectionEnum.MONEY_IN or ReturnEffectDirectionEnum.MONEY_OUT && e.Status == ReturnEffectStatusEnum.APPLIED))
+            {
                 await _inventoryCostingService.RecordSaleReturnMoneyReversalAsync(claim.Product!, money.Direction, money.Amount!.Value, claim.Id, now, cancellationToken);
+                await PartyLedger.SaleReturnMoneyAsync(_context, saleReturn.Sale!, saleReturn.ReturnNumber, claim.Id, money, reversal: true, now, cancellationToken);
+            }
 
             claim.Resolutions.Remove(resolution);
             _context.SaleReturnResolutions.Remove(resolution);

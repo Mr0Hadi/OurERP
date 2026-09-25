@@ -124,6 +124,11 @@ namespace Application.Features.Purchase.Commands
             if (purchase.Status == PurchaseStatusEnum.CANCELLED)
                 throw new ValidationCustomException("خرید لغو شده قابل دریافت نیست.");
 
+            // A proforma is still an editable draft: receiving against it would tie units, cost rows and return claims to
+            // lines that can still change. It leaves PROFORMA when the supplier's official invoice is recorded.
+            if (purchase.Status == PurchaseStatusEnum.PROFORMA)
+                throw new ValidationCustomException("پیش‌فاکتور قابل دریافت نیست؛ ابتدا فاکتور رسمی تامین‌کننده را ثبت کنید.");
+
             var items = request.Items ?? new();
             var unlistedItems = request.UnlistedItems ?? new();
             var purchaseItems = purchase.Items.ToDictionary(x => x.Id);
