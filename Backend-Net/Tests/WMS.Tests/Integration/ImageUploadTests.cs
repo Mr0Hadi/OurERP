@@ -249,7 +249,7 @@ namespace WMS.Tests.Integration
 
             var customerId = scope.Context.Customers.Single().Id;
 
-            var detail = (CustomerDto)(await new GetCustomerDetailQueryHandler(scope.CustomerRepository, TestMapper.Instance, FakeObjectStorage.Instance)
+            var detail = (CustomerDto)(await new GetCustomerDetailQueryHandler(scope.CustomerRepository, TestMapper.Instance, FakeObjectStorage.Instance, scope.Db)
                 .Handle(new GetCustomerDetailQuery { Id = customerId }, CancellationToken.None)).Data!;
 
             Assert.Equal("customers/ali.jpg", detail.ImageKey);
@@ -284,7 +284,7 @@ namespace WMS.Tests.Integration
 
             var supplierId = scope.Context.Suppliers.Single().Id;
 
-            var detail = (SupplierDto)(await new GetSupplierDetailQueryHandler(scope.SupplierRepository, TestMapper.Instance, FakeObjectStorage.Instance)
+            var detail = (SupplierDto)(await new GetSupplierDetailQueryHandler(scope.SupplierRepository, TestMapper.Instance, FakeObjectStorage.Instance, scope.Db)
                 .Handle(new GetSupplierDetailQuery { Id = supplierId }, CancellationToken.None)).Data!;
 
             Assert.Equal("suppliers/logo.png", detail.ImageKey);

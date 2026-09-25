@@ -1,3 +1,4 @@
+using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Common.Extensions;
 using Domain.Enums;
@@ -35,7 +36,11 @@ namespace Application.Common.Sales
             }
 
             if (sale.Status == SalesStatusEnum.PROFORMA)
+            {
                 sale.Status = SalesStatusEnum.PROCESSING;
+                // Issuing the invoice is what puts it on the customer's account.
+                await PartyLedger.SaleInvoiceIssuedAsync(context, sale, sale.InvoiceDate ?? DateTime.Now, cancellationToken);
+            }
         }
     }
 }

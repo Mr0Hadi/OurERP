@@ -146,7 +146,7 @@ returnDoc → claims[] → resolutions[] → effects[]
 | `REFUND` (خرید) | `GOODS_OUT` + `MONEY_IN` |
 | `REPLACEMENT` (فروش) | `GOODS_IN` + `GOODS_OUT` |
 | `REPLACEMENT` (خرید) | `GOODS_OUT` + `GOODS_IN` |
-| `STORE_CREDIT` / `CREDIT` | `GOODS_IN` + `MONEY_OUT` با `method = STORE_CREDIT` |
+| `STORE_CREDIT` / `CREDIT` | ~~`GOODS_IN` + `MONEY_OUT` با `method = STORE_CREDIT`~~ — اعتبار فروشگاهی از ۲۰۲۶-۰۹-۲۴ حذف شد |
 | `NO_COMPENSATION` / `WRITE_OFF` | فقط `GOODS_IN` (یا `GOODS_OUT`)، بدون اثر پولی |
 
 **چرا فرانت این مدل را انتخاب کرده:** ترکیب‌هایی لازم می‌شود که در enum بسته جا نمی‌شوند — مثلاً «نصف را پس بگیر و پولش را بده، نصف دیگر را جایگزین بفرست»، یا «کالای مازاد را نگه می‌داریم و بابتش به تامین‌کننده پول می‌دهیم» (که `MONEY_OUT` بدون هیچ حرکت کالایی است). با enum بسته، هرکدام از این‌ها یک عضو جدید می‌خواهد.
@@ -235,11 +235,13 @@ returnDoc → claims[] → resolutions[] → effects[]
 
 > **✅ SOLVED (۲۰۲۶-۰۹-۰۵):** `ReturnPaymentMethodEnum` با `PaymentTypeEnum` هم‌شماره شد (`CASH=0, ON_ACCOUNT=1, CHECK=2, TRANSFER=3, MIXED=4, STORE_CREDIT=5`) — درخواستِ `docs/payment-enum-unification.fa.md`. مهاجرتِ داده‌ی چرخه‌ای در `20260904225819_renumber-return-payment-method` انجام شده.
 
+> **✅ ۲۰۲۶-۰۹-۲۴:** `STORE_CREDIT = 5` حذف شد (اعتبار فروشگاهی قابلیت این سیستم نیست). `5` حالا با ۴۰۰ رد می‌شود؛ ردیف‌های موجود با migration `remove-store-credit` به `ON_ACCOUNT` رفتند.
+
 **بقیه‌ی مقادیر مرجوعی که بکند اصلاً ندارد:**
 
 | فهرست | مقادیر | کاربرد |
 |---|---|---|
-| `PAYMENT_METHODS` | `0` CASH · `1` ON_ACCOUNT · `2` CHECK · `3` TRANSFER · `4` MIXED · `5` STORE_CREDIT | روش پرداختِ یک اثر پولی. **از ۲۰۲۶-۰۹-۰۵ با `PaymentTypeEnum` سطح سند هم‌شماره است** (`ON_ACCOUNT` = `CREDIT`)؛ تنها عضو اضافه `STORE_CREDIT` است که ته فهرست آمده. فرانت `PAYMENT_METHODS` را حذف کرده و از همان فهرست `paymentType` استفاده می‌کند. |
+| `PAYMENT_METHODS` | `0` CASH · `1` ON_ACCOUNT · `2` CHECK · `3` TRANSFER · `4` MIXED | روش پرداختِ یک اثر پولی. **از ۲۰۲۶-۰۹-۰۵ با `PaymentTypeEnum` سطح سند هم‌شماره است** (`ON_ACCOUNT` = `CREDIT`)؛ `5` STORE_CREDIT از ۲۰۲۶-۰۹-۲۴ حذف شده. فرانت `PAYMENT_METHODS` را حذف کرده و از همان فهرست `paymentType` استفاده می‌کند. |
 | `MONEY_DIRECTIONS` | `0` NONE · `1` RECEIVE · `2` PAY | جهت پول در فرم تصمیم |
 | `CLAIM_SCOPES` | `0` ON_ORDER · `1` OFF_ORDER | ادعا روی خط سند است یا خارج از آن |
 | `OFF_SCOPE_KINDS` | `0` EXCESS · `1` UNLISTED | نوع ادعای خارج از سند (مازاد در برابر کالای اصلاً تعریف‌نشده) |

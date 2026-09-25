@@ -14,6 +14,9 @@ namespace Application.Features.Sale.Dtos
         public SalesStatusEnum Status { get; set; }
         public PaymentTypeEnum PaymentType { get; set; }
         public UInt64 TotalAmount { get; set; }
+
+        /// <summary>What the customer pays in total (invoice + installment charge on a live plan). Debt = PayableAmount - PaidAmount.</summary>
+        public UInt64 PayableAmount { get; set; }
         public UInt64 PaidAmount { get; set; }
 
         /// <summary>خلاصه‌ی قرارداد اقساطی - فقط برای فروش‌های اقساطی پر می‌شود.</summary>

@@ -34,6 +34,8 @@ namespace Application.Features.SaleInstallment.Mappings
                 .ToDictionary(plan => plan.SaleId, plan => new SaleInstallmentSummaryDto
                 {
                     PlanId = plan.Id,
+                    CashAmount = plan.CashAmount,
+                    InstallmentChargeAmount = plan.InstallmentChargeAmount,
                     TotalAmount = plan.TotalAmount,
                     DownPaymentAmount = plan.DownPaymentAmount,
                     InstallmentCount = plan.InstallmentCount,

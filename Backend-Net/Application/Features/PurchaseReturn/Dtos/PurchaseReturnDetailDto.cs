@@ -17,6 +17,9 @@ namespace Application.Features.PurchaseReturn.Dtos
         /// <summary>Return number of <see cref="PreviousReturnId"/>, so the client can name the
         /// related return without a second call. Null when this return starts a chain.</summary>
         public string? PreviousReturnNumber { get; set; }
+
+        /// <summary>Why the return was rejected or cancelled (null otherwise, or when no reason was given).</summary>
+        public string? StatusReason { get; set; }
         public ReturnStatusEnum Status { get; set; }
         public UInt64 TotalAmount { get; set; }
         public int Quantity { get; set; }

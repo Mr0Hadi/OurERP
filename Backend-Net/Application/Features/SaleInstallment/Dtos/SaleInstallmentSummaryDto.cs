@@ -10,6 +10,13 @@ namespace Application.Features.SaleInstallment.Dtos
     public class SaleInstallmentSummaryDto
     {
         public int PlanId { get; set; }
+        /// <summary>Principal = the sale's invoice total.</summary>
+        public UInt64 CashAmount { get; set; }
+
+        /// <summary>The installment charge.</summary>
+        public UInt64 InstallmentChargeAmount { get; set; }
+
+        /// <summary>What the customer pays in total = CashAmount + InstallmentChargeAmount.</summary>
         public UInt64 TotalAmount { get; set; }
         public UInt64 DownPaymentAmount { get; set; }
         public int InstallmentCount { get; set; }

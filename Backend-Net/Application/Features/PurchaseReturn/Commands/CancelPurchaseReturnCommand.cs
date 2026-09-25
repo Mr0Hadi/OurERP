@@ -5,6 +5,7 @@ using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Common.Queries;
+using Application.Common.Returns;
 using Application.Features.PurchaseReturn.Queries;
 using Common.Exceptions;
 using Common.Extensions;
@@ -18,6 +19,9 @@ namespace Application.Features.PurchaseReturn.Commands
     public class CancelPurchaseReturnCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }
+
+        /// <summary>Optional; stored on the return as StatusReason.</summary>
+        public string? Reason { get; set; }
     }
 
     public class CancelPurchaseReturnCommandValidator : AbstractValidator<CancelPurchaseReturnCommand>
@@ -25,6 +29,7 @@ namespace Application.Features.PurchaseReturn.Commands
         public CancelPurchaseReturnCommandValidator()
         {
             RuleFor(x => x.Id).GreaterThan(0).WithMessage(Validation.RequiredMessage("مرجوعی"));
+            RuleFor(x => x.Reason).MaximumLength(ReturnStatusReason.MaxLength).WithMessage(ReturnStatusReason.TooLongMessage);
         }
     }
 
@@ -60,6 +65,7 @@ namespace Application.Features.PurchaseReturn.Commands
 
             var now = DateTime.Now;
             purchaseReturn.Status = ReturnStatusEnum.CANCELLED;
+            purchaseReturn.StatusReason = ReturnStatusReason.Normalize(request.Reason);
             purchaseReturn.UpdatedAt = now;
 
             var purchase = purchaseReturn.Purchase!;

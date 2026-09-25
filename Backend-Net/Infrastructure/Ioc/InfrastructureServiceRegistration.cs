@@ -1,7 +1,6 @@
 ﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Barcode;
 using Application.Common.Contracts.Documents;
-using Application.Common.Contracts.Invoice;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductCode;
 using Application.Common.Contracts.ProductUnit;
@@ -66,7 +65,6 @@ namespace Infrastructure.Ioc
 
             services.AddScoped<ISaleReturnCalculationService, SaleReturnCalculationService>();
 
-            services.AddScoped<IInvoiceLineCalculationService, InvoiceLineCalculationService>();
 
             services.AddScoped<IProductCodeService, ProductCodeService>();
             services.AddScoped<IProductUnitService, ProductUnitService>();

@@ -1,4 +1,6 @@
-﻿using Application.Common.Contracts.Repositories;
+﻿using Application.Common.Contracts.Context;
+using Application.Common.Ledger;
+using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -19,11 +21,13 @@ namespace Application.Features.Supplier.Queries
         private readonly ISupplierRepository _supplierRepository;
         private readonly IMapper _mapper;
         private readonly IObjectStorageService _objectStorageService;
-        public GetSupplierDetailQueryHandler(ISupplierRepository supplierRepository, IMapper mapper, IObjectStorageService objectStorageService)
+        private readonly IWMSDbContext _context;
+        public GetSupplierDetailQueryHandler(ISupplierRepository supplierRepository, IMapper mapper, IObjectStorageService objectStorageService, IWMSDbContext context)
         {
             _supplierRepository = supplierRepository;
             _mapper = mapper;
             _objectStorageService = objectStorageService;
+            _context = context;
         }
         public async Task<ResponseDto> Handle(GetSupplierDetailQuery request, CancellationToken cancellationToken)
         {
@@ -31,6 +35,7 @@ namespace Application.Features.Supplier.Queries
             var supplier = await _supplierRepository.GetByIdAsync(request.Id, cancellationToken) ?? throw new NotFoundCustomException("تامین کننده با اطلاعات مورد نظر یافت نشد.");
 
             var dto = _mapper.Map<SupplierDto>(supplier);
+            dto.LedgerBalance = await PartyLedger.BalanceAsync(_context, null, supplier.Id, cancellationToken);
             dto.ImageUrl = _objectStorageService.GetFixedUrl(dto.ImageKey);
 
             res.Data = dto;

@@ -102,6 +102,7 @@ namespace WMS
                     policy.WithOrigins(allowedOrigins)
                           .AllowAnyHeader()
                           .AllowAnyMethod()
+                          .WithExposedHeaders(IdempotencyMiddleware.ReplayedHeaderName)
                           .AllowCredentials();
                 });
             });
@@ -150,6 +151,9 @@ namespace WMS
             app.UseMiddleware<ExceptionHandlingMiddleware>();
 
             app.UseMiddleware<CachingMiddleware>();
+
+            // Inside the exception handler (a failed write releases its key) and after the token check.
+            app.UseMiddleware<IdempotencyMiddleware>();
 
             app.MapControllers();
 

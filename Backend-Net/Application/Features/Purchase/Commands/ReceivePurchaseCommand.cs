@@ -1,3 +1,4 @@
+using Application.Common.Returns;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductUnit;
@@ -52,6 +53,7 @@ namespace Application.Features.Purchase.Commands
         public ReceivingDefectDtoValidator()
         {
             RuleFor(x => x.Problem).IsInEnum().WithMessage("نوع مشکل نامعتبر است.");
+            RuleFor(x => x.Problem).Must(ObservedProblems.IsObservable).WithMessage(ObservedProblems.NotObservableMessage);
             RuleFor(x => x.Quantity).GreaterThan(0).WithMessage("مقدار کالای مشکل‌دار باید از صفر بیشتر باشد.");
         }
     }
@@ -123,6 +125,11 @@ namespace Application.Features.Purchase.Commands
 
             if (purchase.Status == PurchaseStatusEnum.CANCELLED)
                 throw new ValidationCustomException("خرید لغو شده قابل دریافت نیست.");
+
+            // A proforma is still an editable draft: receiving against it would tie units, cost rows and return claims to
+            // lines that can still change. It leaves PROFORMA when the supplier's official invoice is recorded.
+            if (purchase.Status == PurchaseStatusEnum.PROFORMA)
+                throw new ValidationCustomException("پیش‌فاکتور قابل دریافت نیست؛ ابتدا فاکتور رسمی تامین‌کننده را ثبت کنید.");
 
             var items = request.Items ?? new();
             var unlistedItems = request.UnlistedItems ?? new();

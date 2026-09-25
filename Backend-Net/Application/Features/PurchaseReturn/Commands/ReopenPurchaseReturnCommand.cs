@@ -63,6 +63,7 @@ namespace Application.Features.PurchaseReturn.Commands
             // then let the graph decide. Not hard-set to OPEN: Reject is legal while a goods resolution
             // is still pending, so a reopened return can legitimately be IN_PROGRESS.
             purchaseReturn.Status = ReturnStatusEnum.OPEN;
+            purchaseReturn.StatusReason = null;
             purchaseReturn.Status = _purchaseReturnCalculationService.RecomputeReturnStatus(purchaseReturn);
             purchaseReturn.UpdatedAt = now;
 

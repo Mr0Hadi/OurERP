@@ -43,6 +43,9 @@ namespace Domain.Enums
         Reports = 11,
 
         [Description("کارت‌خوان")]
-        Pos = 12
+        Pos = 12,
+
+        [Description("حساب اشخاص")]
+        PartyAccounts = 13
     }
 }

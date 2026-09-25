@@ -56,17 +56,16 @@ namespace Application.Features.Invoice.Queries
                 .ToList();
 
             if (settledEffects.Count == 0)
-                throw new ValidationCustomException("این مرجوعی هیچ اثر مالی (استرداد یا اعتبار فروشگاهی) ندارد.");
+                throw new ValidationCustomException("این مرجوعی هیچ اثر مالی (استرداد وجه) ندارد.");
 
             var lines = settledEffects.Select((x, index) =>
             {
                 var amount = x.effect.Amount ?? 0;
-                var methodLabel = x.effect.Method == ReturnPaymentMethodEnum.STORE_CREDIT ? " (اعتبار فروشگاهی)" : " (استرداد وجه)";
                 return new InvoiceLineModel
                 {
                     RowNumber = index + 1,
                     ProductCode = x.claim.Product?.Code ?? string.Empty,
-                    ProductName = (x.claim.Product?.Name ?? string.Empty) + methodLabel,
+                    ProductName = (x.claim.Product?.Name ?? string.Empty) + " (استرداد وجه)",
                     Quantity = x.claim.Quantity,
                     UnitPrice = x.claim.UnitPrice,
                     DiscountAmount = 0,

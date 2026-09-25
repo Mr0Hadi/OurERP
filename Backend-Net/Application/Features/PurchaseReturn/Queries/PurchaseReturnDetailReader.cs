@@ -60,6 +60,7 @@ public static class PurchaseReturnDetailReader
             Description = purchaseReturn.Description,
             PreviousReturnId = purchaseReturn.PreviousReturnId,
             PreviousReturnNumber = purchaseReturn.PreviousReturn?.ReturnNumber,
+            StatusReason = purchaseReturn.StatusReason,
             Status = purchaseReturn.Status,
             TotalAmount = totalAmount,
             Quantity = purchaseReturn.Quantity,

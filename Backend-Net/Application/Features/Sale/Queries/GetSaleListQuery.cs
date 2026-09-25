@@ -50,7 +50,7 @@ namespace Application.Features.Sale.Queries
         public async Task<ResponseDto> Handle(GetSaleListQuery request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
-            var query = _context.Sales.AsQueryable();
+            var query = _context.Sales.Where(x => x.IsActive);
 
             if (!string.IsNullOrEmpty(request.InvoiceNumber))
             {
@@ -119,6 +119,8 @@ namespace Application.Features.Sale.Queries
                 Status = x.Status,
                 PaymentType = x.PaymentType,
                 TotalAmount = x.TotalAmount,
+                // A live plan (not cancelled) adds its charge on top of the invoice.
+                PayableAmount = x.InstallmentPlan != null && x.InstallmentPlan.IsActive ? x.InstallmentPlan.TotalAmount : x.TotalAmount,
                 PaidAmount = x.PaidAmount
             }).ToPagedAsync(request.Page, request.Take, cancellationToken);
 

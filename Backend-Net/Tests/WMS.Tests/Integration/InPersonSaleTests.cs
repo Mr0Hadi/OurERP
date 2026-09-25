@@ -44,11 +44,9 @@ namespace WMS.Tests.Integration
         private static CreateSaleCommand SaleBody(SaleScenario scenario, PaymentTypeEnum paymentType, ulong totalAmount, ulong paidAmount) => new()
         {
             InvoiceDate = DateTime.Now,
-            Status = SalesStatusEnum.PROFORMA,
             PaymentType = paymentType,
-            PaymentDetails = new(),
-            TotalAmount = totalAmount,
-            PaidAmount = paidAmount,
+            // PaidAmount is never sent: it is the sum of these rows.
+            PaymentDetails = paidAmount > 0 ? new() { new Application.Common.Dtos.PaymentDetailDto { Type = PaymentTypeEnum.CASH, Amount = paidAmount } } : new(),
             CustomerId = scenario.Customer.Id,
             ProductIds = new()
             {
@@ -58,10 +56,8 @@ namespace WMS.Tests.Integration
 
         private static CreateSaleInstallmentPlanCommand PlanBody(ulong downPaymentAmount) => new()
         {
-            // نقدی ۱۰٬۰۰۰٬۰۰۰ با ۲۰٪ افزایش = ۱۲٬۰۰۰٬۰۰۰
-            CashAmount = 10_000_000,
+            // جمع فاکتور ۱۰٬۰۰۰٬۰۰۰ با ۲۰٪ سود اقساط = ۱۲٬۰۰۰٬۰۰۰ قابل پرداخت (سرور حساب می‌کند)
             MarkupPercentage = 20m,
-            TotalAmount = 12_000_000,
             DownPaymentAmount = downPaymentAmount,
             InstallmentCount = 5,
             FirstDueDate = DateTime.Now.AddMonths(1),
@@ -103,7 +99,7 @@ namespace WMS.Tests.Integration
 
             var res = await Mediator(scope).Send(new CreateInPersonSaleCommand
             {
-                Sale = SaleBody(scenario, PaymentTypeEnum.INSTALLMENT, 12_000_000, 0),
+                Sale = SaleBody(scenario, PaymentTypeEnum.INSTALLMENT, 10_000_000, 0),
                 InstallmentPlan = PlanBody(downPaymentAmount: 2_000_000),
             });
 
@@ -136,7 +132,7 @@ namespace WMS.Tests.Integration
             // بدون قرارداد، فروش در پیش‌فاکتور می‌ماند در حالی که کالا از انبار خارج شده است.
             await Assert.ThrowsAsync<ValidationCustomException>(() => Mediator(scope).Send(new CreateInPersonSaleCommand
             {
-                Sale = SaleBody(scenario, PaymentTypeEnum.INSTALLMENT, 12_000_000, 0),
+                Sale = SaleBody(scenario, PaymentTypeEnum.INSTALLMENT, 10_000_000, 0),
             }));
 
             using var verify = db.NewContext();
@@ -154,7 +150,7 @@ namespace WMS.Tests.Integration
             // پیش‌فاکتور یعنی خریدی که حتی یک ریال بابتش پرداخت نشده؛ کالا با آن تحویل نمی‌شود.
             await Assert.ThrowsAsync<ValidationCustomException>(() => Mediator(scope).Send(new CreateInPersonSaleCommand
             {
-                Sale = SaleBody(scenario, PaymentTypeEnum.INSTALLMENT, 12_000_000, 0),
+                Sale = SaleBody(scenario, PaymentTypeEnum.INSTALLMENT, 10_000_000, 0),
                 InstallmentPlan = PlanBody(downPaymentAmount: 0),
             }));
 

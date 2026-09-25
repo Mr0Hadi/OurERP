@@ -1,3 +1,5 @@
+using Application.Common.Contracts.Context;
+using Application.Common.Ledger;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
@@ -19,11 +21,13 @@ namespace Application.Features.Customer.Queries
         private readonly ICustomerRepository _customerRepository;
         private readonly IMapper _mapper;
         private readonly IObjectStorageService _objectStorageService;
-        public GetCustomerDetailQueryHandler(ICustomerRepository customerRepository, IMapper mapper, IObjectStorageService objectStorageService)
+        private readonly IWMSDbContext _context;
+        public GetCustomerDetailQueryHandler(ICustomerRepository customerRepository, IMapper mapper, IObjectStorageService objectStorageService, IWMSDbContext context)
         {
             _customerRepository = customerRepository;
             _mapper = mapper;
             _objectStorageService = objectStorageService;
+            _context = context;
         }
         public async Task<ResponseDto> Handle(GetCustomerDetailQuery request, CancellationToken cancellationToken)
         {
@@ -32,6 +36,7 @@ namespace Application.Features.Customer.Queries
 
             var dto = _mapper.Map<CustomerDto>(customer);
             dto.ImageUrl = _objectStorageService.GetFixedUrl(dto.ImageKey);
+            dto.LedgerBalance = await PartyLedger.BalanceAsync(_context, customer.Id, null, cancellationToken);
 
             res.Data = dto;
             res.Message = "اطلاعات مشتری با موفقیت ارسال شد.";

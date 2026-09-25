@@ -177,6 +177,49 @@ namespace WMS.Tests.Integration
         }
 
         [Fact]
+        public async Task ReceivingInfo_FreeAndClaimableQuantities_SubtractOpenClaims()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 5, stock: 0);
+            var valve = Seed.Product(scenario.Product.ProductCategory!, name: "شیر فلکه");
+            scope.Context.Products.Add(valve);
+            scope.Context.SaveChanges();
+
+            // 5 ordered, 7 arrived (2 excess on the line) plus 3 unlisted valves.
+            await Receive(scope).Handle(new ReceivePurchaseCommand
+            {
+                PurchaseId = scenario.Purchase.Id,
+                Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = scenario.Item.Id, ArrivedQuantity = 7 } },
+                UnlistedItems = new() { new ReceivePurchaseUnlistedItemDto { ProductId = valve.Id, ArrivedQuantity = 3 } },
+            }, CancellationToken.None);
+
+            await CreateReturn(scope).Handle(new PR.CreatePurchaseReturnCommand
+            {
+                PurchaseId = scenario.Purchase.Id,
+                Claims = new()
+                {
+                    new CreateReturnClaimDto { Scope = ReturnClaimScopeEnum.ON_ORDER, OrderLineId = scenario.Item.Id, ProductId = scenario.Product.Id, UnitPrice = scenario.Item.UnitPrice, Quantity = 2, Problem = ReturnProblemEnum.DEFECTIVE },
+                    ExcessClaim(scenario, 1),
+                    new CreateReturnClaimDto { Scope = ReturnClaimScopeEnum.OFF_ORDER, OffScopeKind = ReturnOffScopeKindEnum.UNLISTED, ProductId = valve.Id, UnitPrice = 0, Quantity = 2, Problem = ReturnProblemEnum.UNLISTED_ITEM },
+                },
+            }, CancellationToken.None);
+
+            using var read = db.NewScope();
+            var res = await new Application.Features.PurchaseReturn.Queries.GetPurchaseReceivingInfoQueryHandler(read.Db, FakeObjectStorage.Instance, read.PurchaseReturnCalculation)
+                .Handle(new Application.Features.PurchaseReturn.Queries.GetPurchaseReceivingInfoQuery { PurchaseId = scenario.Purchase.Id }, CancellationToken.None);
+            var info = (Application.Features.PurchaseReturn.Dtos.PurchaseReceivingInfoDto)res.Data!;
+
+            var line = Assert.Single(info.Items);
+            Assert.Equal(2, line.QuarantinedExcessQuantity);
+            Assert.Equal(1, line.FreeExcessQuantity);   // 2 held - 1 claimed
+            Assert.Equal(3, line.ClaimableQuantity);    // 5 received - 2 claimed
+            var unlisted = Assert.Single(info.UnlistedItems);
+            Assert.Equal(3, unlisted.QuarantinedQuantity);
+            Assert.Equal(1, unlisted.FreeQuantity);     // 3 held - 2 claimed
+        }
+
+        [Fact]
         public async Task UnlistedClaim_WithNothingHeld_IsRefused()
         {
             using var db = new TestDatabase();

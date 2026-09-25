@@ -19,12 +19,15 @@ namespace Application.Common.Sales
             return financedAmount / (UInt64)installmentCount;
         }
 
-        /// <summary>مبلغ کل قسطی از روی قیمت نقدی و درصد افزایش (برای اعتبارسنجی سازگاری).</summary>
-        public static UInt64 ExpectedTotalAmount(UInt64 cashAmount, decimal markupPercentage)
+        /// <summary>
+        /// سود اقساط: round(قیمت نقدی × درصد / ۱۰۰)، نیم به بالا - همان قاعده‌ی گردکردنِ مبالغ فاکتور (InvoiceLineMath).
+        /// سرور حساب می‌کند؛ مبلغ قابل پرداخت = قیمت نقدی + همین عدد.
+        /// </summary>
+        public static UInt64 ChargeAmount(UInt64 cashAmount, decimal markupPercentage)
         {
-            var markup = Math.Round(cashAmount * markupPercentage / 100m, MidpointRounding.AwayFromZero);
+            var charge = Math.Round(cashAmount * markupPercentage / 100m, MidpointRounding.AwayFromZero);
 
-            return cashAmount + (UInt64)Math.Max(0m, markup);
+            return (UInt64)Math.Max(0m, charge);
         }
 
         /// <summary>

@@ -1,3 +1,4 @@
+using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.UnitOfWork;
@@ -56,6 +57,7 @@ namespace Application.Features.Purchase.Commands
             var now = DateTime.Now;
             item.ShortClosedQuantity = 0;
             item.ShortClosedAt = null;
+            await PartyLedger.PurchaseItemReopenedAsync(_context, item, now, cancellationToken);
 
             purchase.Status = _purchaseReturnCalculationService.RecomputePurchaseStatus(purchase);
             purchase.UpdatedAt = now;

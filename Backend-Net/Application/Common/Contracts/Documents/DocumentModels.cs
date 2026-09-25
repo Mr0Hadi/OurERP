@@ -65,7 +65,15 @@ namespace Application.Common.Contracts.Documents
         public ulong TotalDiscount { get; set; }
         public ulong TotalTax { get; set; }
         public ulong GrandTotal { get; set; }
+
+        /// <summary>Installment sale only: the plan's charge, printed under the invoice total. Null otherwise.</summary>
+        public ulong? InstallmentChargeAmount { get; set; }
+
+        /// <summary>Installment sale only: GrandTotal + InstallmentChargeAmount, what the customer pays. Null otherwise.</summary>
+        public ulong? PayableAmount { get; set; }
         public ulong PaidAmount { get; set; }
+
+        /// <summary>(PayableAmount ?? GrandTotal) - PaidAmount.</summary>
         public long Balance { get; set; }
     }
 
