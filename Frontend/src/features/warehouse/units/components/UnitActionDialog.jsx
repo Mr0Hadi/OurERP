@@ -27,13 +27,13 @@ import {
   canApply,
   isPurchaseQuarantine,
   noteRequired,
-  fa,
 } from "../domain/unitVocabulary";
+import { formatNumber } from "@/shared/lib/numberFormat";
 import { useApplyUnitActionMutation } from "../services/mutations";
 
 /** چرا بخشی از انتخاب کنار گذاشته شد — به زبانِ کاری، نه «مجاز نیست». */
 function skippedReason(units) {
-  return `${fa(units.length)} دانه در وضعیتی است که این کار رویش معنا ندارد`;
+  return `${formatNumber(units.length)} دانه در وضعیتی است که این کار رویش معنا ندارد`;
 }
 
 function ActionForm({ action, units, onDone, onCancel }) {
@@ -67,7 +67,7 @@ function ActionForm({ action, units, onDone, onCancel }) {
     <form onSubmit={submit} className="space-y-4">
       <DialogHeader>
         <DialogTitle>
-          {meta.label} — {fa(eligible.length)} دانه
+          {meta.label} — {formatNumber(eligible.length)} دانه
         </DialogTitle>
         <DialogDescription>{meta.description}</DialogDescription>
       </DialogHeader>
@@ -81,7 +81,7 @@ function ActionForm({ action, units, onDone, onCancel }) {
 
       {purchaseQuarantine > 0 && (
         <p className="rounded-lg bg-muted/60 p-2 text-xs leading-5 text-muted-foreground">
-          {fa(purchaseQuarantine)} دانه از قرنطینه‌ی دریافتِ خرید است؛ حسابِ خریدِ آن با تامین‌کننده هم
+          {formatNumber(purchaseQuarantine)} دانه از قرنطینه‌ی دریافتِ خرید است؛ حسابِ خریدِ آن با تامین‌کننده هم
           همراهِ این کار به‌روز می‌شود.
         </p>
       )}
@@ -140,7 +140,7 @@ function ActionForm({ action, units, onDone, onCancel }) {
           variant={meta.tone === "destructive" ? "destructive" : "default"}
           disabled={eligible.length === 0 || mutation.isPending}
         >
-          {mutation.isPending ? "در حال ثبت..." : `${fa(eligible.length)} دانه ${meta.verb}`}
+          {mutation.isPending ? "در حال ثبت..." : `${formatNumber(eligible.length)} دانه ${meta.verb}`}
         </Button>
       </DialogFooter>
     </form>

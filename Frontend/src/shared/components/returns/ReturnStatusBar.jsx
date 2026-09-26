@@ -7,8 +7,7 @@ import {
   claimDecidedQuantity,
   summarizeReturn,
 } from "@/shared/domain/returns/resolutions";
-
-const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
+import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
 
 /**
  * نوارِ بالای صفحه‌ی جزئیات: وضعیت، پیشرفت تصمیم‌گیری، و خالص مالی.
@@ -41,7 +40,7 @@ export default function ReturnStatusBar({ returnDoc: salesReturn, statusLabels, 
           </StatusChip>
         </div>
         <span className="text-xs text-muted-foreground tabular-nums">
-          ادعا: {fa(salesReturn.totalAmount)} ریال
+          ادعا: {formatRial(salesReturn.totalAmount)}
         </span>
       </div>
 
@@ -50,7 +49,7 @@ export default function ReturnStatusBar({ returnDoc: salesReturn, statusLabels, 
           <div className="flex items-center justify-between text-[11px] text-muted-foreground">
             <span>پیشرفت تصمیم‌گیری</span>
             <span className="tabular-nums font-medium text-card-foreground">
-              {fa(totalDecided)} / {fa(totalClaimed)} عدد
+              {formatNumber(totalDecided)} / {formatNumber(totalClaimed)} عدد
             </span>
           </div>
           <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
@@ -69,7 +68,7 @@ export default function ReturnStatusBar({ returnDoc: salesReturn, statusLabels, 
               variant="outline"
               className="text-[11px] bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-400"
             >
-              {side.effectLabels[EFFECT_DIRECTIONS.MONEY_OUT]}: {fa(money.moneyOut)} ریال
+              {side.effectLabels[EFFECT_DIRECTIONS.MONEY_OUT]}: {formatRial(money.moneyOut)}
             </Badge>
           )}
           {money.moneyIn > 0 && (
@@ -77,7 +76,7 @@ export default function ReturnStatusBar({ returnDoc: salesReturn, statusLabels, 
               variant="outline"
               className="text-[11px] bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-400"
             >
-              {side.effectLabels[EFFECT_DIRECTIONS.MONEY_IN]}: {fa(money.moneyIn)} ریال
+              {side.effectLabels[EFFECT_DIRECTIONS.MONEY_IN]}: {formatRial(money.moneyIn)}
             </Badge>
           )}
         </div>

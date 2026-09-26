@@ -13,8 +13,8 @@ import AccessListPane from "../components/AccessListPane";
 import DepartmentTemplatePanel from "../components/DepartmentTemplatePanel";
 import UnsavedChangesDialog from "../components/UnsavedChangesDialog";
 import { useUnsavedChangesGuard } from "../hooks/useUnsavedChangesGuard";
+import { formatNumber } from "@/shared/lib/numberFormat";
 
-const toFa = (n) => Number(n ?? 0).toLocaleString("fa-IR");
 const detailPath = (id) => ROUTES.ACCESS_TEMPLATES_DETAIL.replace(":id", id);
 
 function DepartmentTemplateDetail({ departmentId, name, onDirtyChange }) {
@@ -35,7 +35,7 @@ function DepartmentTemplateDetail({ departmentId, name, onDirtyChange }) {
         <div className="min-w-0 flex-1">
           <h2 className="truncate font-bold">الگوی واحد «{name ?? "..."}»</h2>
           <p className="truncate text-xs text-muted-foreground">
-            {toFa(userCount)} کارمند فعال · الگو به کسی دسترسی نمی‌دهد و فقط
+            {formatNumber(userCount)} کارمند فعال · الگو به کسی دسترسی نمی‌دهد و فقط
             هنگام تنظیم دسترسی کارمندانِ این واحد پیشنهاد می‌شود
           </p>
         </div>
@@ -98,11 +98,11 @@ export default function DepartmentTemplatesPage() {
         items={visible.map((d) => ({
           id: d.id,
           title: d.name,
-          subtitle: d.userCount != null ? `${toFa(d.userCount)} کارمند` : null,
+          subtitle: d.userCount != null ? `${formatNumber(d.userCount)} کارمند` : null,
           to: detailPath(d.id),
         }))}
         emptyText="واحدی پیدا نشد."
-        footerText={`${toFa(departments.length)} واحد`}
+        footerText={`${formatNumber(departments.length)} واحد`}
       />
 
       <main className={id ? "flex min-h-0 min-w-0 flex-col" : "hidden min-h-0 min-w-0 lg:flex"}>

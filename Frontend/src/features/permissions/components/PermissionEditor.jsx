@@ -5,8 +5,7 @@ import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { cn } from "@/shared/lib/utils";
-
-const toFa = (n) => n.toLocaleString("fa-IR");
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /** حرفِ «ی/ک» عربی و فاصله‌ی مجازی نباید جست‌وجو را خراب کنند. */
 const normalize = (text) =>
@@ -111,9 +110,9 @@ export default function PermissionEditor({
 
   const views = [
     { id: "all", label: "همه" },
-    { id: "selected", label: `داده‌شده (${toFa(selectedCount)})` },
+    { id: "selected", label: `داده‌شده (${formatNumber(selectedCount)})` },
     ...(hasTemplate
-      ? [{ id: "diff", label: `تفاوت با الگو (${toFa(diffCount)})` }]
+      ? [{ id: "diff", label: `تفاوت با الگو (${formatNumber(diffCount)})` }]
       : []),
   ];
 
@@ -232,7 +231,7 @@ export default function PermissionEditor({
                   />
                 </div>
                 <span className="w-12 text-left text-xs text-muted-foreground tabular-nums">
-                  {toFa(count)}/{toFa(total)}
+                  {formatNumber(count)}/{formatNumber(total)}
                 </span>
                 {!filtering && (
                   <ChevronDown

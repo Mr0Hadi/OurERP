@@ -9,8 +9,7 @@ import {
 import { Badge } from "@/shared/components/ui/badge";
 import { TaxCategoryEnum } from "@/shared/domain/enums/taxCategory";
 import { invoiceLineAmounts } from "@/shared/domain/invoice/lineMath";
-
-const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
+import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
 
 /**
  * مبالغِ ذخیره‌شده‌ی سرور روی هر قلم (`taxAmount`، `totalAmount`)؛ فاکتورِ
@@ -115,7 +114,7 @@ export default function OrderItemsReadOnly({
                   {renderDetails?.(item)}
                   <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
                     <dt className="text-muted-foreground">تعداد</dt>
-                    <dd className="text-left tabular-nums">{fa(item.quantity)}</dd>
+                    <dd className="text-left tabular-nums">{formatNumber(item.quantity)}</dd>
                     {columns.map((column) => (
                       <Fragment key={column.key}>
                         <dt className="text-muted-foreground">{column.label}</dt>
@@ -123,24 +122,24 @@ export default function OrderItemsReadOnly({
                       </Fragment>
                     ))}
                     <dt className="text-muted-foreground">قیمت واحد</dt>
-                    <dd className="text-left tabular-nums">{fa(item.unitPrice)}</dd>
+                    <dd className="text-left tabular-nums">{formatNumber(item.unitPrice)}</dd>
                     {Number(item.discount) > 0 && (
                       <>
                         <dt className="text-muted-foreground">تخفیف</dt>
-                        <dd className="text-left tabular-nums">{fa(item.discount)}٪</dd>
+                        <dd className="text-left tabular-nums">{formatNumber(item.discount)}٪</dd>
                       </>
                     )}
                     {amountsOf(item).taxAmount > 0 && (
                       <>
                         <dt className="text-muted-foreground">
-                          مالیات {fa(item.taxPercent)}٪
+                          مالیات {formatNumber(item.taxPercent)}٪
                         </dt>
-                        <dd className="text-left tabular-nums">{fa(amountsOf(item).taxAmount)}</dd>
+                        <dd className="text-left tabular-nums">{formatNumber(amountsOf(item).taxAmount)}</dd>
                       </>
                     )}
                     <dt className="text-muted-foreground">جمع</dt>
                     <dd className="text-left tabular-nums font-medium">
-                      {fa(amountsOf(item).totalAmount)}
+                      {formatNumber(amountsOf(item).totalAmount)}
                     </dd>
                   </dl>
                   {renderActions && (
@@ -186,21 +185,21 @@ export default function OrderItemsReadOnly({
                         )}
                         {renderDetails && <div className="mt-1">{renderDetails(item)}</div>}
                       </td>
-                      <td className="px-2 py-2 text-center tabular-nums">{fa(item.quantity)}</td>
+                      <td className="px-2 py-2 text-center tabular-nums">{formatNumber(item.quantity)}</td>
                       {columns.map((column) => (
                         <td key={column.key} className="px-2 py-2 text-center tabular-nums">
                           {column.render(item)}
                         </td>
                       ))}
-                      <td className="px-2 py-2 text-center tabular-nums">{fa(item.unitPrice)}</td>
+                      <td className="px-2 py-2 text-center tabular-nums">{formatNumber(item.unitPrice)}</td>
                       <td className="px-2 py-2 text-center tabular-nums">
-                        {Number(item.discount) > 0 ? `${fa(item.discount)}٪` : "—"}
+                        {Number(item.discount) > 0 ? `${formatNumber(item.discount)}٪` : "—"}
                       </td>
                       <td className="px-2 py-2 text-center tabular-nums">
-                        {amountsOf(item).taxAmount > 0 ? fa(amountsOf(item).taxAmount) : "—"}
+                        {amountsOf(item).taxAmount > 0 ? formatNumber(amountsOf(item).taxAmount) : "—"}
                       </td>
                       <td className="px-2 py-2 text-center tabular-nums">
-                        {fa(amountsOf(item).totalAmount)}
+                        {formatNumber(amountsOf(item).totalAmount)}
                       </td>
                       {renderActions && (
                         <td className="px-2 py-2 whitespace-nowrap">{renderActions(item)}</td>
@@ -217,12 +216,12 @@ export default function OrderItemsReadOnly({
           {taxSum > 0 && (
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>جمع مالیات</span>
-              <span className="tabular-nums">{fa(taxSum)}</span>
+              <span className="tabular-nums">{formatNumber(taxSum)}</span>
             </div>
           )}
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">جمع فاکتور</span>
-            <span className="font-semibold tabular-nums">{fa(total)} ریال</span>
+            <span className="font-semibold tabular-nums">{formatRial(total)}</span>
           </div>
         </div>
 

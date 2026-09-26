@@ -9,16 +9,7 @@ import {
 } from "@/shared/components/ui/card";
 import { PriceInput } from "@/shared/components/ui/price-input";
 import { Checkbox } from "@/shared/components/ui/checkbox";
-import { numberToPersianWords } from "@/shared/lib/numberToPersianWords";
-
-function PriceWords({ value }) {
-  if (value === "" || value == null || Number(value) === 0) return null;
-  return (
-    <p className="text-xs text-muted-foreground">
-      {numberToPersianWords(Number(value) / 10, { suffix: "تومان" })}
-    </p>
-  );
-}
+import AmountInWords from "@/shared/components/forms/AmountInWords";
 
 export default function ProductPricingForm({ register, control, errors = {} }) {
   const purchasePrice = useWatch({ control, name: "purchasePrice" });
@@ -105,7 +96,7 @@ export default function ProductPricingForm({ register, control, errors = {} }) {
               />
             )}
           />
-          <PriceWords value={purchasePrice} />
+          <AmountInWords rial={purchasePrice} />
         </div>
 
         <div className="space-y-2">
@@ -122,7 +113,7 @@ export default function ProductPricingForm({ register, control, errors = {} }) {
               />
             )}
           />
-          <PriceWords value={sellPrice1} />
+          <AmountInWords rial={sellPrice1} />
         </div>
 
         <div className="space-y-2">
@@ -139,7 +130,7 @@ export default function ProductPricingForm({ register, control, errors = {} }) {
               />
             )}
           />
-          <PriceWords value={sellPrice2} />
+          <AmountInWords rial={sellPrice2} />
         </div>
       </CardContent>
     </Card>

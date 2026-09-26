@@ -5,15 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { PriceInput } from "@/shared/components/ui/price-input";
 import { BalanceTypeEnum } from "@/shared/domain/enums/balanceType";
-import { numberToPersianWords } from "@/shared/lib/numberToPersianWords";
+import { rialAmountInWords } from "@/shared/lib/numberToPersianWords";
 
 export default function SupplierFinanceForm({ errors, balanceType, control }) {
   const showAmount = balanceType !== BalanceTypeEnum.BALANCED;
   const balanceAmount = useWatch({ control, name: "balanceAmount" });
-  const balanceAmountWords =
-    balanceAmount !== "" && balanceAmount != null
-      ? numberToPersianWords(Number(balanceAmount) / 10, { suffix: "تومان" })
-      : "";
+  const balanceAmountWords = rialAmountInWords(balanceAmount);
 
   return (
     <Card className="shadow-md rounded-2xl overflow-hidden pt-0 gap-0">

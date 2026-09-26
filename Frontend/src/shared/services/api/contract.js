@@ -1,10 +1,7 @@
 /**
  * قراردادِ مشترکِ لایه‌ی `api-v1` — چیزهایی که به دامنه ربط ندارند ولی
- * هر فایلِ API به آن‌ها نیاز دارد.
- *
- * هدف این است که تفاوتِ mock و سرور فقط در «از کجا داده می‌آید» باشد،
- * نه در «داده چه شکلی است». هر چیزی که شکل را یکسان نگه می‌دارد
- * (صفحه‌بندی، کلید ایدمپوتنسی) اینجاست تا در ده فایل تکرار نشود.
+ * هر فایلِ API به آن‌ها نیاز دارد (صفحه‌بندی، کلید ایدمپوتنسی، نسخه‌ی سند)،
+ * تا در ده فایل تکرار نشوند.
  */
 
 // ─── صفحه‌بندی ──────────────────────────────────────────────────────────────
@@ -14,54 +11,38 @@
  *
  *   { items, total, page, totalPages }
  *
- * همان چیزی که `applyListQuery` در mock تولید می‌کند. سرور هم باید
- * دقیقاً همین را برگرداند تا سوییچِ mock→v1 هیچ کامپوننتی را دست
- * نزند.
- *
- * شاخه‌ی دوم برای پوششِ خانگیِ بک‌اند است — `{ XList, Page: { Page,
- * PageCount, Take, Total } }`. این شاخه یک تورِ ایمنی است، نه بخشی از
- * قرارداد: اگر بک‌اند همان سبکِ قدیمی را بفرستد، صفحه سفید نمی‌شود.
+ * بک‌اند فهرست‌ها را به‌شکلِ `{ XList, Page: { Page, PageCount, Take, Total } }`
+ * می‌فرستد؛ این تابع آن را به شکلِ استاندارد درمی‌آورد تا کامپوننت‌ها به
+ * نام‌گذاریِ هر endpoint وابسته نباشند. پاسخی که از قبل `items` دارد
+ * دست‌نخورده برمی‌گردد.
  */
 export function normalizeListResponse(data, { itemsKey } = {}) {
   if (!data) return { items: [], total: 0, page: 1, totalPages: 1 };
   if (Array.isArray(data.items)) return data;
 
-  const legacyItems =
+  const listItems =
     (itemsKey && data[itemsKey]) ||
     Object.entries(data).find(([, value]) => Array.isArray(value))?.[1] ||
     [];
-  const legacyPage = data.Page || data.page || {};
+  const pageInfo = data.Page || data.page || {};
 
-  const total = legacyPage.Total ?? legacyPage.total ?? legacyItems.length;
-  const take = legacyPage.Take ?? legacyPage.take;
+  const total = pageInfo.Total ?? pageInfo.total ?? listItems.length;
+  const take = pageInfo.Take ?? pageInfo.take;
 
   // سرور با نام‌گذاریِ پیش‌فرضِ ASP.NET (camelCase) `pageCount` می‌فرستد.
   // خواندنِ فقط `PageCount` یعنی هر فهرستی روی «صفحه ۱ از ۱» می‌ماند.
   const pageCount =
-    legacyPage.PageCount ??
-    legacyPage.pageCount ??
-    legacyPage.totalPages ??
+    pageInfo.PageCount ??
+    pageInfo.pageCount ??
+    pageInfo.totalPages ??
     (take > 0 ? Math.ceil(total / take) : 1);
 
   return {
-    items: legacyItems,
+    items: listItems,
     total,
-    page: legacyPage.Page ?? legacyPage.page ?? 1,
+    page: pageInfo.Page ?? pageInfo.page ?? 1,
     // فهرستِ خالی صفرِ صفحه دارد، ولی شمارنده‌ی «صفحه ۱ از ۰» بی‌معناست.
     totalPages: Math.max(1, pageCount),
-  };
-}
-
-/** پارامترهای مشترکِ هر فهرست — نام‌ها camelCase و یکسان با mock. */
-export function listParams(params = {}) {
-  return {
-    page: params.page,
-    limit: params.limit,
-    search: params.search || undefined,
-    fromDate: params.fromDate || undefined,
-    toDate: params.toDate || undefined,
-    sortBy: params.sortBy || undefined,
-    sortOrder: params.sortOrder || undefined,
   };
 }
 

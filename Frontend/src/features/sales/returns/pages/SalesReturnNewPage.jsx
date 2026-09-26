@@ -24,6 +24,7 @@ import SalesReturnInfoSection from "../components/forms/SalesReturnInfoSection";
 import SalesReturnDetailLoading from "../components/forms/SalesReturnDetailLoading";
 import { ROUTES } from "@/shared/constants/routes";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
+import { formatRial } from "@/shared/lib/numberFormat";
 
 /**
  * ثبت درخواست مرجوعی — دو مرحله‌ی عمودی روی یک صفحه.
@@ -207,7 +208,7 @@ export default function SalesReturnNewPage() {
                   جمع مبلغ ادعای مرجوعی:{" "}
                 </span>
                 <span className="font-bold text-card-foreground">
-                  {computedTotal.toLocaleString("fa-IR")} ریال
+                  {formatRial(computedTotal)}
                 </span>
               </div>
               <div className="flex gap-2">

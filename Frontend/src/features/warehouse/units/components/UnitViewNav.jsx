@@ -11,9 +11,9 @@ import {
   LABEL_FILTERS,
   UNIT_SEGMENTS,
   UNIT_SEGMENT_META,
-  fa,
   segmentNeedsLabels,
 } from "../domain/unitVocabulary";
+import { formatNumber } from "@/shared/lib/numberFormat";
 import { LABEL_VIEWS, SEGMENT_VIEWS } from "./unitViews";
 
 /** Radix مقدارِ خالی نمی‌پذیرد. */
@@ -61,7 +61,7 @@ function NavItem({ active, disabled, icon: Icon, label, hint, count, onClick }) 
             active ? "bg-primary/15 text-primary" : "text-muted-foreground",
           )}
         >
-          {fa(count)}
+          {formatNumber(count)}
         </span>
       )}
     </button>
@@ -107,7 +107,7 @@ export default function UnitViewNav({
                 <SelectItem key={value} value={value}>
                   <Icon className="size-4" />
                   {UNIT_SEGMENT_META[value].label}
-                  {count != null && <span className="text-xs text-muted-foreground">({fa(count)})</span>}
+                  {count != null && <span className="text-xs text-muted-foreground">({formatNumber(count)})</span>}
                 </SelectItem>
               );
             })}

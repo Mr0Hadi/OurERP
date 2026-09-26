@@ -29,6 +29,7 @@ import PurchaseReturnInfoSection from "../components/forms/PurchaseReturnInfoSec
 import PurchaseReturnDetailLoading from "../components/forms/PurchaseReturnDetailLoading";
 import { ROUTES } from "@/shared/constants/routes";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
+import { formatRial } from "@/shared/lib/numberFormat";
 
 /**
  * ثبت مرجوعی به تامین‌کننده — دو مرحله‌ی عمودی روی یک صفحه.
@@ -237,7 +238,7 @@ export default function PurchaseReturnNewPage() {
                   جمع مبلغ ادعای مرجوعی:{" "}
                 </span>
                 <span className="font-bold text-card-foreground">
-                  {computedTotal.toLocaleString("fa-IR")} ریال
+                  {formatRial(computedTotal)}
                 </span>
               </div>
               <div className="flex gap-2">

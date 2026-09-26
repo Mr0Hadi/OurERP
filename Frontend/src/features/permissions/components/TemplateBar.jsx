@@ -12,8 +12,7 @@ import { cn } from "@/shared/lib/utils";
 import { useDepartmentOptionsQuery } from "@/features/organization/departments/services/queries";
 
 import { difference, sameSet } from "./permissionSets";
-
-const toFa = (n) => n.toLocaleString("fa-IR");
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
  * نوارِ یک‌خطیِ الگو بالای ویرایشگر: الگوی کدام واحد، فاصله‌ی کاربر با آن،
@@ -65,8 +64,8 @@ export default function TemplateBar({
     );
   } else {
     status = [
-      missing.length > 0 && `${toFa(missing.length)} مورد کم`,
-      extra.length > 0 && `${toFa(extra.length)} مورد اضافه`,
+      missing.length > 0 && `${formatNumber(missing.length)} مورد کم`,
+      extra.length > 0 && `${formatNumber(extra.length)} مورد اضافه`,
     ]
       .filter(Boolean)
       .join(" · ");

@@ -263,8 +263,6 @@ export const UNIT_SORT_COLUMNS = Object.freeze({
 
 // ─── نمایش ──────────────────────────────────────────────────────────────────
 
-export const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
-
 export const formatDate = (value) =>
   value ? gregorianToPersian(String(value).slice(0, 10)) : "—";
 

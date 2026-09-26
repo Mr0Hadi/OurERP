@@ -9,7 +9,8 @@ import {
   FONT_SIZES_PT,
   LABEL_CODE_TYPES,
 } from "../domain/labelTemplate";
-import { fa, formatDate } from "../domain/unitVocabulary";
+import { formatDate } from "../domain/unitVocabulary";
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /** فاصله‌ی امنِ لبه‌ی برچسب؛ پرینترهای برچسب لبه را دقیق نمی‌زنند. */
 const PADDING_MM = 1.5;
@@ -28,7 +29,7 @@ function textLinesOf(unit, fields, party) {
   const document = party?.documentNumber ?? unit.saleInvoiceNumber ?? unit.purchaseInvoiceNumber;
 
   const meta = [
-    fields.serial && `سریال ${fa(unit.serialNumber)}`,
+    fields.serial && `سریال ${formatNumber(unit.serialNumber)}`,
     fields.receivedAt && unit.createdAt && formatDate(unit.createdAt),
     fields.document && document,
   ].filter(Boolean);

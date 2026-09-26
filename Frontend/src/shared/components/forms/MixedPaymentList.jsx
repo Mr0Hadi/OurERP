@@ -15,6 +15,7 @@ import {
   PAYMENT_REFERENCE_FIELDS,
   SPLITTABLE_PAYMENT_TYPES,
 } from "@/shared/domain/enums/paymentType";
+import { formatRial } from "@/shared/lib/numberFormat";
 
 /**
  * یکی برای همه‌ی مصرف‌کننده‌ها: هم فرمِ خرید/فروش و هم بخشِ پولِ تصمیمِ
@@ -151,7 +152,7 @@ export default function MixedPaymentList({
         <div className="flex items-center justify-between rounded-md bg-muted px-2.5 py-2 text-xs">
           <span className="text-muted-foreground">جمع ردیف‌ها</span>
           <span className="font-bold tabular-nums text-card-foreground">
-            {total.toLocaleString("fa-IR")} ریال
+            {formatRial(total)}
           </span>
         </div>
       )}

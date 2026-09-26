@@ -23,11 +23,11 @@ import {
   DocumentKindEnum,
   documentRouteOf,
   daysSince,
-  fa,
   formatDate,
   needsLabel,
   whereaboutsOf,
 } from "../domain/unitVocabulary";
+import { formatNumber } from "@/shared/lib/numberFormat";
 import UnitStatusBadge from "./UnitStatusBadge";
 import { unitOperationsFor } from "./unitOperations";
 import { useProductUnitHistoryQuery } from "../services/queries";
@@ -264,7 +264,7 @@ export default function UnitDetailSheet({ unit, open, onOpenChange, onPrint, onA
           <SheetTitle className="pe-8 text-base">{unit.productName ?? "دانه‌ی کالا"}</SheetTitle>
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <UnitStatusBadge status={unit.status} />
-            <span className="tabular-nums">سریال {fa(unit.serialNumber)}</span>
+            <span className="tabular-nums">سریال {formatNumber(unit.serialNumber)}</span>
           </div>
         </SheetHeader>
 
@@ -347,7 +347,7 @@ export default function UnitDetailSheet({ unit, open, onOpenChange, onPrint, onA
                 <Row label="در قرنطینه از">
                   <span className="tabular-nums">
                     {formatDate(unit.quarantinedAt)}
-                    {quarantineDays != null && ` (${fa(quarantineDays)} روز)`}
+                    {quarantineDays != null && ` (${formatNumber(quarantineDays)} روز)`}
                   </span>
                   {unit.quarantineDocumentId && (
                     <span className="block">
@@ -362,13 +362,13 @@ export default function UnitDetailSheet({ unit, open, onOpenChange, onPrint, onA
               )}
               {unit.quarantineCost != null && (
                 <Row label="ارزشِ نگه‌داشته">
-                  <span className="tabular-nums">{fa(unit.quarantineCost)} ریال</span>
+                  <span className="tabular-nums">{formatNumber(unit.quarantineCost)} ریال</span>
                 </Row>
               )}
               <Row label="برچسب">
                 {unit.printCount > 0 ? (
                   <span className="text-xs">
-                    {fa(unit.printCount)} بار، آخرین {formatDate(unit.lastPrintedAt)}
+                    {formatNumber(unit.printCount)} بار، آخرین {formatDate(unit.lastPrintedAt)}
                     {unit.lastPrintedByName && (
                       <span className="block text-[11px] text-muted-foreground">
                         توسط {unit.lastPrintedByName}

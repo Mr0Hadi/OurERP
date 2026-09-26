@@ -1,7 +1,6 @@
 import { ScanBarcode, X } from "lucide-react";
 import { barcodeSegments, formatPayload } from "@/shared/domain/barcode/productCode";
-
-const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
  * دانه‌های اسکن‌شده‌ی یک قلم، داخلِ همان ردیفِ اقلام.
@@ -29,7 +28,7 @@ export default function ScannedUnitCodes({ codes = [], quantity, onRemove, class
               : "bg-amber-500/10 text-amber-700 dark:text-amber-400"
           }`}
         >
-          {fa(codes.length)} از {fa(total)}
+          {formatNumber(codes.length)} از {formatNumber(total)}
         </span>
       </div>
 

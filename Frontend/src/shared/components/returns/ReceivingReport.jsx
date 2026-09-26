@@ -11,8 +11,7 @@ import RemoteImage from "@/shared/components/files/RemoteImage";
 import { RETURN_PROBLEM_LABELS } from "@/shared/domain/returns/problems";
 import { UNIT_CUSTODY_REASON_LABELS } from "@/shared/domain/enums/unitStatus";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
-
-const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 const ORANGE_BADGE =
   "text-[10px] bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:border-orange-800 dark:text-orange-400";
@@ -37,7 +36,7 @@ export function ReceivingReportLines({ quarantined = [], discrepancies = [] }) {
         <div className="flex flex-wrap gap-1">
           {shownQuarantine.map((entry) => (
             <Badge key={entry.label} variant="outline" className={ORANGE_BADGE}>
-              {entry.label}: {fa(entry.quantity)}
+              {entry.label}: {formatNumber(entry.quantity)}
             </Badge>
           ))}
         </div>
@@ -46,7 +45,7 @@ export function ReceivingReportLines({ quarantined = [], discrepancies = [] }) {
         <ul className="space-y-0.5 text-muted-foreground">
           {discrepancies.map((d) => (
             <li key={d.id}>
-              {gregorianToPersian(d.receivedAt)} · {fa(d.quantity)}{" "}
+              {gregorianToPersian(d.receivedAt)} · {formatNumber(d.quantity)}{" "}
               {RETURN_PROBLEM_LABELS[d.problem] ?? d.problem} (
               {UNIT_CUSTODY_REASON_LABELS[d.custodyReason] ?? d.custodyReason})
               {d.note && ` — ${d.note}`}
@@ -91,8 +90,8 @@ export default function ReceivingReportCard({ receivingInfo }) {
           گزارش انبار از دریافت این خرید
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          {fa(quarantinedTotal)} عدد در قرنطینه · {fa(discrepancyCount)} مغایرت ثبت‌شده ·{" "}
-          {fa(images.length)} عکس. جزئیاتِ هر کالا کنارِ همان کالا آمده است.
+          {formatNumber(quarantinedTotal)} عدد در قرنطینه · {formatNumber(discrepancyCount)} مغایرت ثبت‌شده ·{" "}
+          {formatNumber(images.length)} عکس. جزئیاتِ هر کالا کنارِ همان کالا آمده است.
         </p>
       </CardHeader>
       {images.length > 0 && (

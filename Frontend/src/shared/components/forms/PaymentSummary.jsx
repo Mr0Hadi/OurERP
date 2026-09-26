@@ -1,3 +1,5 @@
+import { formatRial } from "@/shared/lib/numberFormat";
+
 export default function PaymentSummary({ totalAmount, paidAmount, isCredit }) {
   const remaining = totalAmount - paidAmount;
 
@@ -6,7 +8,7 @@ export default function PaymentSummary({ totalAmount, paidAmount, isCredit }) {
       <div className="flex justify-between items-center">
         <span className="text-muted-foreground">جمع کل فاکتور</span>
         <span className="font-medium text-card-foreground">
-          {totalAmount.toLocaleString("fa-IR")} ریال
+          {formatRial(totalAmount)}
         </span>
       </div>
       {!isCredit && (
@@ -14,7 +16,7 @@ export default function PaymentSummary({ totalAmount, paidAmount, isCredit }) {
           <div className="flex justify-between items-center">
             <span className="text-muted-foreground">مبلغ پرداختی</span>
             <span className="font-medium text-card-foreground">
-              {paidAmount.toLocaleString("fa-IR")} ریال
+              {formatRial(paidAmount)}
             </span>
           </div>
           <div className="flex justify-between items-center border-t border-border pt-2">
@@ -26,7 +28,7 @@ export default function PaymentSummary({ totalAmount, paidAmount, isCredit }) {
                   : "text-[oklch(0.50_0.16_152)]"
               }`}
             >
-              {remaining.toLocaleString("fa-IR")} ریال
+              {formatRial(remaining)}
             </span>
           </div>
         </>

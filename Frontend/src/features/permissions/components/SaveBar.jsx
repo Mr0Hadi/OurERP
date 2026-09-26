@@ -1,7 +1,6 @@
 import { RotateCcw, Save } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
-
-const toFa = (n) => n.toLocaleString("fa-IR");
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /** نوارِ پایینیِ ویرایشگر: خلاصه‌ی تغییرات + بازگردانی + ذخیره. */
 export default function SaveBar({
@@ -22,12 +21,12 @@ export default function SaveBar({
           <>
             {added > 0 && (
               <span className="text-emerald-600 dark:text-emerald-400">
-                {toFa(added)} افزوده
+                {formatNumber(added)} افزوده
               </span>
             )}
             {added > 0 && removed > 0 && "، "}
             {removed > 0 && (
-              <span className="text-destructive">{toFa(removed)} حذف</span>
+              <span className="text-destructive">{formatNumber(removed)} حذف</span>
             )}{" "}
             — ذخیره نشده
           </>

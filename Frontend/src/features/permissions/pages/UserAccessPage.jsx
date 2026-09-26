@@ -26,8 +26,8 @@ import { initialsOf } from "../components/initialsOf";
 import UserPermissionsPanel from "../components/UserPermissionsPanel";
 import UnsavedChangesDialog from "../components/UnsavedChangesDialog";
 import { useUnsavedChangesGuard } from "../hooks/useUnsavedChangesGuard";
+import { formatNumber } from "@/shared/lib/numberFormat";
 
-const toFa = (n) => Number(n ?? 0).toLocaleString("fa-IR");
 const detailPath = (id) => ROUTES.ACCESS_USERS_DETAIL.replace(":id", id);
 const fullNameOf = (u) =>
   `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.username;
@@ -80,7 +80,7 @@ function EmployeeList({ selectedId, className }) {
         to: detailPath(u.id),
       }))}
       emptyText="کارمندی پیدا نشد."
-      footerText={`${toFa(data?.page?.total ?? users.length)} کارمند فعال`}
+      footerText={`${formatNumber(data?.page?.total ?? users.length)} کارمند فعال`}
     />
   );
 }
@@ -95,7 +95,7 @@ function UserAccessDetail({ userId, onDirtyChange }) {
   const { data: employee } = useUserUpdateQuery(canEditEmployee ? userId : null);
 
   const isSelf = currentUser != null && String(currentUser.id) === String(userId);
-  const name = employee ? fullNameOf(employee) : `کارمند ${toFa(userId)}`;
+  const name = employee ? fullNameOf(employee) : `کارمند ${formatNumber(userId)}`;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
@@ -123,7 +123,7 @@ function UserAccessDetail({ userId, onDirtyChange }) {
                 employee.departmentName,
                 employee.teamName,
                 employee.roleTitle,
-                employee.personelCode && `کد ${toFa(employee.personelCode)}`,
+                employee.personelCode && `کد ${formatNumber(employee.personelCode)}`,
               ]
                 .filter(Boolean)
                 .join(" · ")}

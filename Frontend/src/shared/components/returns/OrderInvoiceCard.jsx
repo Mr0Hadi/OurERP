@@ -9,8 +9,7 @@ import {
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { invoiceLineAmounts } from "@/shared/domain/invoice/lineMath";
 import { claimLineKey } from "@/shared/hooks/useClaimsInOtherReturns";
-
-const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
+import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
 
 /**
  * دو سندِ پشتِ این کارت، دو شکلِ متفاوتِ بک‌اند دارند و هیچ‌کدام فیلدِ
@@ -72,7 +71,7 @@ export default function OrderInvoiceCard({
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
               {partyName} · {gregorianToPersian(sale.invoiceDate)} ·{" "}
-              <span className="tabular-nums">{fa(total)} ریال</span>
+              <span className="tabular-nums">{formatRial(total)}</span>
             </p>
           </div>
           <ChevronDown
@@ -118,7 +117,7 @@ export default function OrderInvoiceCard({
                       </div>
                     </td>
                     <td className="py-2 px-2 text-center tabular-nums">
-                      {fa(orderedOf(item))} {item.unit || "عدد"}
+                      {formatNumber(orderedOf(item))} {item.unit || "عدد"}
                     </td>
                     <td className="py-2 px-2 text-center tabular-nums">
                       <DeliveredCell
@@ -127,10 +126,10 @@ export default function OrderInvoiceCard({
                       />
                     </td>
                     <td className="py-2 px-2 text-center tabular-nums">
-                      {fa(item.unitPrice)}
+                      {formatNumber(item.unitPrice)}
                     </td>
                     <td className="py-2 px-2 text-center tabular-nums font-medium">
-                      {fa(lineTotalOf(item))}
+                      {formatNumber(lineTotalOf(item))}
                     </td>
                   </tr>
                 ))}
@@ -141,7 +140,7 @@ export default function OrderInvoiceCard({
                     جمع کل سند
                   </td>
                   <td className="py-2 px-2 text-center font-bold tabular-nums">
-                    {fa(total)} ریال
+                    {formatRial(total)}
                   </td>
                 </tr>
               </tfoot>
@@ -165,7 +164,7 @@ export default function OrderInvoiceCard({
                 </div>
                 <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
                   <Row label={quantityLabel}>
-                    {fa(orderedOf(item))} {item.unit || "عدد"}
+                    {formatNumber(orderedOf(item))} {item.unit || "عدد"}
                   </Row>
                   <Row label={deliveredLabel}>
                     <DeliveredCell
@@ -173,10 +172,10 @@ export default function OrderInvoiceCard({
                       claimsElsewhere={claimsElsewhere}
                     />
                   </Row>
-                  <Row label="قیمت واحد">{fa(item.unitPrice)}</Row>
+                  <Row label="قیمت واحد">{formatNumber(item.unitPrice)}</Row>
                   <Row label="جمع خط">
                     <span className="font-medium text-card-foreground">
-                      {fa(lineTotalOf(item))}
+                      {formatNumber(lineTotalOf(item))}
                     </span>
                   </Row>
                 </div>
@@ -184,7 +183,7 @@ export default function OrderInvoiceCard({
             ))}
             <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2 text-xs">
               <span className="text-muted-foreground">جمع کل سند</span>
-              <span className="font-bold tabular-nums">{fa(total)} ریال</span>
+              <span className="font-bold tabular-nums">{formatRial(total)}</span>
             </div>
           </div>
         </CardContent>
@@ -226,16 +225,16 @@ function DeliveredCell({ item, claimsElsewhere }) {
   return (
     <>
       <span className={isShort ? "text-amber-600 dark:text-amber-400" : ""}>
-        {fa(delivered)} {item.unit || "عدد"}
+        {formatNumber(delivered)} {item.unit || "عدد"}
       </span>
       {settled > 0 && (
         <span className="block text-[10px] leading-4 mt-0.5 text-muted-foreground">
-          {fa(settled)} تسویه‌شده در مرجوعی
+          {formatNumber(settled)} تسویه‌شده در مرجوعی
         </span>
       )}
       {earlier?.quantity > 0 && (
         <span className="block text-[10px] leading-4 mt-0.5 text-amber-700 dark:text-amber-400">
-          {fa(earlier.quantity)} در {earlier.returnNumbers.join("، ")}
+          {formatNumber(earlier.quantity)} در {earlier.returnNumbers.join("، ")}
         </span>
       )}
     </>

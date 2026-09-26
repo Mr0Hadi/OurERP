@@ -9,8 +9,9 @@ import FilterSelect from "@/shared/components/filters/FilterSelect";
 import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
 import { UNIT_CUSTODY_REASON_LABELS } from "@/shared/domain/enums/unitStatus";
 
-import { UNIT_SEGMENTS, fa } from "../domain/unitVocabulary";
+import { UNIT_SEGMENTS} from "../domain/unitVocabulary";
 import UnitActiveFilters from "./UnitActiveFilters";
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 const CUSTODY_OPTIONS = Object.entries(UNIT_CUSTODY_REASON_LABELS).map(([value, label]) => ({
   value: Number(value),
@@ -90,7 +91,7 @@ export default function UnitFilterBar({
             <span className="sm:hidden">فیلترها</span>
             {advancedActive > 0 && (
               <span className="rounded-full bg-primary px-1.5 text-[11px] text-primary-foreground tabular-nums">
-                {fa(advancedActive)}
+                {formatNumber(advancedActive)}
               </span>
             )}
             <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showMore ? "rotate-180" : ""}`} />

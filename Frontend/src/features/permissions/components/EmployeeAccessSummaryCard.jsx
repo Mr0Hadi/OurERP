@@ -21,8 +21,7 @@ import GroupChips from "./GroupChips";
 import UserPermissionsPanel from "./UserPermissionsPanel";
 import UnsavedChangesDialog from "./UnsavedChangesDialog";
 import { difference, toNumberSet } from "./permissionSets";
-
-const toFa = (n) => n.toLocaleString("fa-IR");
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /** یک خطِ وضعیت: کارمند نسبت به الگوی واحد کجاست. */
 function TemplateStatus({ template, held }) {
@@ -53,7 +52,7 @@ function TemplateStatus({ template, held }) {
   return (
     <p className="text-xs text-muted-foreground">
       نسبت به الگوی «{name}»:{" "}
-      {[missing > 0 && `${toFa(missing)} مورد کم`, extra > 0 && `${toFa(extra)} مورد اضافه`]
+      {[missing > 0 && `${formatNumber(missing)} مورد کم`, extra > 0 && `${formatNumber(extra)} مورد اضافه`]
         .filter(Boolean)
         .join("، ")}
     </p>
@@ -152,7 +151,7 @@ export default function EmployeeAccessSummaryCard({
             ) : (
               <>
                 <p className="text-sm">
-                  <span className="font-semibold">{toFa(held.size)}</span>{" "}
+                  <span className="font-semibold">{formatNumber(held.size)}</span>{" "}
                   دسترسی
                 </p>
                 <GroupChips groups={data.permissionGroups} selected={held} />

@@ -30,8 +30,7 @@ import {
   useClosePurchaseItemMutation,
   useReopenPurchaseItemMutation,
 } from "../../services/mutations";
-
-const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /** «مانده»ی یک قلم: بدهکار، بسته‌شده، یا کامل. */
 function RemainingCell({ item }) {
@@ -40,12 +39,12 @@ function RemainingCell({ item }) {
     return (
       <Badge variant="secondary" className="gap-1 font-normal">
         <Lock className="h-3 w-3" />
-        {fa(shortClosed)} بسته‌شده
+        {formatNumber(shortClosed)} بسته‌شده
       </Badge>
     );
   }
   const owed = stillOwedOf(item);
-  return owed > 0 ? fa(owed) : <span className="text-muted-foreground">—</span>;
+  return owed > 0 ? formatNumber(owed) : <span className="text-muted-foreground">—</span>;
 }
 
 /**
@@ -177,7 +176,7 @@ export default function PurchaseItemsCard({ purchase }) {
         }
         description="اقلام فقط در مرحله‌ی پیش‌فاکتور قابل ویرایش‌اند. قلمی را که تامین‌کننده بقیه‌اش را نمی‌فرستد می‌توانید ببندید."
         columns={[
-          { key: "received", label: "رسیده", render: (item) => fa(item.receivedQuantity) },
+          { key: "received", label: "رسیده", render: (item) => formatNumber(item.receivedQuantity) },
           { key: "remaining", label: "مانده", render: (item) => <RemainingCell item={item} /> },
         ]}
         renderActions={canManageLines ? renderActions : undefined}
@@ -188,7 +187,7 @@ export default function PurchaseItemsCard({ purchase }) {
           <AlertDialogHeader>
             <AlertDialogTitle>بستن قلم «{closing?.productName}»</AlertDialogTitle>
             <AlertDialogDescription>
-              {fa(closing ? stillOwedOf(closing) : 0)} عدد باقیمانده‌ی این قلم دیگر
+              {formatNumber(closing ? stillOwedOf(closing) : 0)} عدد باقیمانده‌ی این قلم دیگر
               انتظار نمی‌رود و وضعیت خرید از نو حساب می‌شود. فاکتور ویرایش
               نمی‌شود، ولی سهمِ این مقدار از «مبلغ قابل پرداخت» و از بدهی ما به
               تامین‌کننده کم می‌شود. پولی خودکار برنمی‌گردد؛ اگر بابت این مقدار

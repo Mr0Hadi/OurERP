@@ -26,9 +26,8 @@ import {
   PaymentPurposeEnum,
 } from "@/shared/domain/enums/paymentDirection";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
+import { formatRial } from "@/shared/lib/numberFormat";
 
-const formatRial = (value) =>
-  `${(Number(value) || 0).toLocaleString("fa-IR")} ریال`;
 
 /**
  * ردیف‌های پرداختِ یک سندِ خرید یا فروش، و ثبت/اصلاح/ابطالِ آن‌ها

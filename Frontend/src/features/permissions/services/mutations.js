@@ -8,15 +8,14 @@ import {
 import { permissionKeys } from "./queryKeys";
 import { authKeys } from "@/features/auth/services/queryKeys";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
-
-const toFa = (n) => Number(n ?? 0).toLocaleString("fa-IR");
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /** «۳ دسترسی اضافه و ۱ دسترسی حذف شد» — از پاسخِ `{ addedCount, removedCount }`. */
 function changeSummary({ addedCount, removedCount } = {}) {
   if (!addedCount && !removedCount) return "تغییری ثبت نشد.";
   const parts = [];
-  if (addedCount) parts.push(`${toFa(addedCount)} دسترسی اضافه`);
-  if (removedCount) parts.push(`${toFa(removedCount)} دسترسی حذف`);
+  if (addedCount) parts.push(`${formatNumber(addedCount)} دسترسی اضافه`);
+  if (removedCount) parts.push(`${formatNumber(removedCount)} دسترسی حذف`);
   return `${parts.join(" و ")} شد.`;
 }
 

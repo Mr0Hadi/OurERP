@@ -4,11 +4,10 @@ import {
   saleShippingVersion,
   useShippingFormStore,
 } from '../store/shippingFormStore';
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 // مازاد سقفِ منطقی ندارد؛ این فقط حدِ عملیِ ورودیِ شمارنده است.
 export const EXCESS_QUANTITY_CAP = 99999;
-
-const fa = (value) => (Number(value) || 0).toLocaleString('fa-IR');
 
 /**
  * فرمِ یک دورِ ارسالِ فروش — قرینه‌ی `useReceivingForm`.
@@ -89,7 +88,7 @@ export function useShippingForm(sale, { isTracked = () => false } = {}) {
         const count = Number(quantity) || 0;
         if (count <= 0) continue;
         if (isTracked(item.productId) && barcodes.length !== count) {
-          return `«${item.productName}» ردیابی‌پذیر است؛ همه‌ی ${fa(count)} دانه‌ی ${label} را اسکن کنید`;
+          return `«${item.productName}» ردیابی‌پذیر است؛ همه‌ی ${formatNumber(count)} دانه‌ی ${label} را اسکن کنید`;
         }
         if (barcodes.length > 0 && barcodes.length !== count) {
           return `تعداد دانه‌های اسکن‌شده‌ی ${label} «${item.productName}» با مقدارش برابر نیست`;

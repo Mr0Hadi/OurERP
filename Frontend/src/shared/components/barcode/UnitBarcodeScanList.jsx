@@ -5,8 +5,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import BarcodeScanField from "./BarcodeScanField";
 import { parseBarcode } from "@/shared/domain/barcode/productCode";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
-
-const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
  * فهرستِ بارکدِ دانه‌هایی که در یک جابه‌جایی اسکن شده‌اند.
@@ -39,7 +38,7 @@ export default function UnitBarcodeScanList({
       return;
     }
     if (max != null && barcodes.length >= max) {
-      toast.error(`برای این ردیف فقط ${fa(max)} دانه لازم است`);
+      toast.error(`برای این ردیف فقط ${formatNumber(max)} دانه لازم است`);
       return;
     }
     onChange([...barcodes, parsed.normalizedPayload]);
@@ -64,7 +63,7 @@ export default function UnitBarcodeScanList({
                 : "text-muted-foreground"
           }`}
         >
-          {fa(count)} از {fa(max)}
+          {formatNumber(count)} از {formatNumber(max)}
         </span>
       </div>
       <BarcodeScanField

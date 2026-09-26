@@ -18,8 +18,7 @@ import { useSyncedComputedValue } from "@/shared/hooks/useSyncedComputedValue";
 import GoodsItemsPicker from "./GoodsItemsPicker";
 import ResolutionMoneySection from "./ResolutionMoneySection";
 import EffectBadge from "./EffectBadge";
-
-const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
  * ثبت یک تصمیم برای بخشی از یک ادعا — مشترک بین خرید و فروش.
@@ -156,7 +155,7 @@ export default function ResolutionComposer({
     <div className="rounded-lg border border-dashed border-primary/30 bg-primary/[0.03] p-3 space-y-3">
       <div className="space-y-1">
         <Label className="text-[11px] text-muted-foreground">
-          این تصمیم برای چند عدد از این ادعاست؟ (باقیمانده: {fa(remaining)})
+          این تصمیم برای چند عدد از این ادعاست؟ (باقیمانده: {formatNumber(remaining)})
         </Label>
         <Input
           type="number"
@@ -193,7 +192,7 @@ export default function ResolutionComposer({
                   <span className="block text-[11px] text-muted-foreground">
                     {allowPicker
                       ? hint
-                      : `${fa(quantity)} ${claim.unit || "عدد"} از ${claim.productName} — ${hint}`}
+                      : `${formatNumber(quantity)} ${claim.unit || "عدد"} از ${claim.productName} — ${hint}`}
                   </span>
                 </span>
               </label>
@@ -218,10 +217,10 @@ export default function ResolutionComposer({
                 <span className="text-xs text-card-foreground">
                   {label}
                   <span className="block text-[11px] text-muted-foreground">
-                    {fa(quantity)} {claim.unit || "عدد"} از {claim.productName} — {hint}
+                    {formatNumber(quantity)} {claim.unit || "عدد"} از {claim.productName} — {hint}
                     {slot === "goodsRelease" &&
                       quarantineAvailable != null &&
-                      ` (در قرنطینه: ${fa(quarantineAvailable)})`}
+                      ` (در قرنطینه: ${formatNumber(quarantineAvailable)})`}
                   </span>
                 </span>
               </label>
@@ -294,7 +293,7 @@ export default function ResolutionComposer({
         disabled={isBusy || errors.length > 0}
       >
         <Plus className="h-3.5 w-3.5" />
-        {composition.writeOff ? "بخشیدنِ" : "ثبت این تصمیم برای"} {fa(quantity)} عدد
+        {composition.writeOff ? "بخشیدنِ" : "ثبت این تصمیم برای"} {formatNumber(quantity)} عدد
       </Button>
     </div>
   );

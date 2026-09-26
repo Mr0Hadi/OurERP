@@ -4,8 +4,7 @@ import QuantityStepper from "@/shared/components/forms/QuantityStepper";
 import ObservationEditor from "@/shared/components/returns/ObservationEditor";
 import { getRowStatus, ROW_STATUS_CONFIG } from "./receivingRowStatus";
 import { allocationOf, NO_QUANTITY_CAP } from "../../hooks/useReceivingForm";
-
-const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
  * یک قلمِ دریافت: چند عدد رسید، چندتایش خراب است، و پیش‌نمایشِ اینکه
@@ -54,11 +53,11 @@ export default function ReceivingItemCard({
 
       <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/60">
         <span className="text-xs text-muted-foreground">
-          سفارش {fa(item.orderedQuantity)} · قبلاً {fa(item.receivedQuantity)} · باقیمانده{" "}
+          سفارش {formatNumber(item.orderedQuantity)} · قبلاً {formatNumber(item.receivedQuantity)} · باقیمانده{" "}
           <span className="tabular-nums font-medium text-card-foreground">
-            {fa(item.stillOwedQuantity)}
+            {formatNumber(item.stillOwedQuantity)}
           </span>
-          {quarantined > 0 && ` · در قرنطینه ${fa(quarantined)}`}
+          {quarantined > 0 && ` · در قرنطینه ${formatNumber(quarantined)}`}
         </span>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">رسیده این دور</span>
@@ -75,16 +74,16 @@ export default function ReceivingItemCard({
         <>
           <div className="flex flex-wrap gap-1.5 text-[11px]">
             <Badge variant="outline" className={ROW_STATUS_CONFIG.complete.badgeClass}>
-              به موجودی: {fa(allocation.healthyOnOrder)}
+              به موجودی: {formatNumber(allocation.healthyOnOrder)}
             </Badge>
             {allocation.defectiveOnOrder > 0 && (
               <Badge variant="outline" className={ROW_STATUS_CONFIG.partial.badgeClass}>
-                قرنطینه (خراب، سهم سفارش): {fa(allocation.defectiveOnOrder)}
+                قرنطینه (خراب، سهم سفارش): {formatNumber(allocation.defectiveOnOrder)}
               </Badge>
             )}
             {allocation.excess > 0 && (
               <Badge variant="outline" className={ROW_STATUS_CONFIG.partial.badgeClass}>
-                قرنطینه (مازاد): {fa(allocation.excess)}
+                قرنطینه (مازاد): {formatNumber(allocation.excess)}
               </Badge>
             )}
           </div>
@@ -94,7 +93,7 @@ export default function ReceivingItemCard({
             onAddObservation={onAddDefect}
             onUpdateObservation={onUpdateDefect}
             onRemoveObservation={onRemoveDefect}
-            title={`خرابی‌های این قلم (${fa(arrived)} عدد رسیده)`}
+            title={`خرابی‌های این قلم (${formatNumber(arrived)} عدد رسیده)`}
             emptyHint="اگر بخشی از رسیده‌ها خراب است، تعداد و علتش را ثبت کنید. کالای خراب به قرنطینه می‌رود، نه موجودی."
             healthySuffix="عدد سالم"
             addLabel="افزودن خرابی"

@@ -2,8 +2,9 @@ import { useNavigate } from "react-router-dom";
 import { Lock, X } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import { fa } from "../domain/unitVocabulary";
+
 import { unitOperationsFor } from "./unitOperations";
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
  * نوارِ چسبانِ پایینِ صفحه وقتی دانه‌ای انتخاب شده — همان کارهای جزئیاتِ
@@ -47,7 +48,7 @@ export default function UnitBulkBar({
           <Button type="button" variant="ghost" size="icon-sm" aria-label="لغو انتخاب" onClick={onClear}>
             <X className="h-4 w-4" />
           </Button>
-          <span className="text-sm font-semibold whitespace-nowrap tabular-nums">{fa(count)} دانه</span>
+          <span className="text-sm font-semibold whitespace-nowrap tabular-nums">{formatNumber(count)} دانه</span>
           {totalResults > count && (
             <Button
               type="button"
@@ -57,7 +58,7 @@ export default function UnitBulkBar({
               disabled={isSelectingAll}
               onClick={onSelectAllResults}
             >
-              {isSelectingAll ? "در حال انتخاب…" : `همه‌ی ${fa(totalResults)}`}
+              {isSelectingAll ? "در حال انتخاب…" : `همه‌ی ${formatNumber(totalResults)}`}
             </Button>
           )}
         </div>
@@ -85,7 +86,7 @@ export default function UnitBulkBar({
                 {operation.label}
                 {operation.count < count && (
                   <span className={`text-[11px] tabular-nums ${primary ? "opacity-80" : "text-muted-foreground"}`}>
-                    ({fa(operation.count)})
+                    ({formatNumber(operation.count)})
                   </span>
                 )}
               </Button>

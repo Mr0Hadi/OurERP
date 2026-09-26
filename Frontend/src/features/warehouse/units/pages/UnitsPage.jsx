@@ -18,9 +18,9 @@ import { useCustomersQuery } from "@/features/customers/services/queries";
 import {
   LABEL_FILTERS,
   effectiveUnitFilters,
-  fa,
   segmentFromLegacyView,
 } from "../domain/unitVocabulary";
+import { formatNumber } from "@/shared/lib/numberFormat";
 import { fetchAllProductUnits } from "../services/api-v1";
 import { useProductUnitsQuery, useProductUnitSummaryQuery } from "../services/queries";
 import { useResolveScannedCodeMutation } from "../services/mutations";
@@ -197,7 +197,7 @@ export default function UnitsPage() {
     try {
       const result = await fetchAllProductUnits(listFilters, { limit: BULK_LIMIT, sorting });
       if (result.truncated) {
-        toast(`فقط ${fa(BULK_LIMIT)} دانه‌ی اول از ${fa(result.total)} انتخاب شد؛ فیلتر را دقیق‌تر کنید.`);
+        toast(`فقط ${formatNumber(BULK_LIMIT)} دانه‌ی اول از ${formatNumber(result.total)} انتخاب شد؛ فیلتر را دقیق‌تر کنید.`);
       }
       setSelectedById(new Map(result.items.map((unit) => [unit.id, unit])));
     } catch (error) {
@@ -235,11 +235,11 @@ export default function UnitsPage() {
           return;
         }
         if (selectedById.has(result.unit.id)) {
-          toast(`سریال ${fa(result.unit.serialNumber)} قبلاً انتخاب شده`);
+          toast(`سریال ${formatNumber(result.unit.serialNumber)} قبلاً انتخاب شده`);
           return;
         }
         toggleSelect(result.unit);
-        toast.success(`${result.unit.productName ?? ""}، سریال ${fa(result.unit.serialNumber)} اضافه شد`);
+        toast.success(`${result.unit.productName ?? ""}، سریال ${formatNumber(result.unit.serialNumber)} اضافه شد`);
       },
     });
   };
@@ -318,7 +318,7 @@ export default function UnitsPage() {
   const productName = store.productId
     ? products.find((product) => String(product.id) === String(store.productId))?.name
     : null;
-  const resultsText = unitsQuery.isLoading ? "در حال بارگذاری…" : `${fa(totalResults)} دانه`;
+  const resultsText = unitsQuery.isLoading ? "در حال بارگذاری…" : `${formatNumber(totalResults)} دانه`;
 
   return (
     <div className="w-full">

@@ -10,8 +10,7 @@ import {
 import { Badge } from "@/shared/components/ui/badge";
 import { RETURN_STATUS_STYLES } from "@/shared/domain/returns/statuses";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
-
-const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
+import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
 
 /**
  * بقیه‌ی مرجوعی‌های همین سند.
@@ -40,7 +39,7 @@ export default function RelatedReturnsCard({
           <Layers className="h-4 w-4 text-muted-foreground" />
           {title}
           <Badge variant="secondary" className="text-[10px]">
-            {fa(returns.length)}
+            {formatNumber(returns.length)}
           </Badge>
         </CardTitle>
       </CardHeader>
@@ -66,9 +65,9 @@ export default function RelatedReturnsCard({
               </div>
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 {gregorianToPersian(ret.returnDate)} ·{" "}
-                {fa(ret.totalQuantity)} عدد کالا ·{" "}
+                {formatNumber(ret.totalQuantity)} عدد کالا ·{" "}
                 <span className="tabular-nums">
-                  {fa(ret.totalAmount)} ریال
+                  {formatRial(ret.totalAmount)}
                 </span>
               </p>
             </div>

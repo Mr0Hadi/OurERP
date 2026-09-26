@@ -7,8 +7,7 @@ import QuantityStepper from "@/shared/components/forms/QuantityStepper";
 import UnitBarcodeScanList from "@/shared/components/barcode/UnitBarcodeScanList";
 import { getRowStatus, ROW_STATUS_CONFIG } from "./shippingRowStatus";
 import { EXCESS_QUANTITY_CAP } from "../../hooks/useShippingForm";
-
-const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
  * یک قلمِ ارسال: سهمِ سفارشِ همین دور، و در صورت نیاز مازاد و اسکنِ دانه‌ها.
@@ -50,7 +49,7 @@ export default function ShippingItemCard({
             {item.productName}
           </p>
           <p className="text-[11px] text-muted-foreground mt-0.5">
-            سفارش {fa(item.quantity)}
+            سفارش {formatNumber(item.quantity)}
             {isTracked && " · ردیابی دانه‌ای"}
           </p>
         </div>
@@ -71,7 +70,7 @@ export default function ShippingItemCard({
           <span className="text-xs text-muted-foreground">
             باقی‌مانده برای ارسال:{" "}
             <span className="tabular-nums font-medium text-card-foreground">
-              {fa(item.remainingQuantity)}
+              {formatNumber(item.remainingQuantity)}
             </span>
           </span>
           <QuantityStepper

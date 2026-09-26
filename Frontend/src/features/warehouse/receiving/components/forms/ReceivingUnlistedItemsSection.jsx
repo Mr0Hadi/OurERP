@@ -16,12 +16,11 @@ import { useProductsQuery } from "@/features/warehouse/products/services/queries
 import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 import { NO_QUANTITY_CAP } from "../../hooks/useReceivingForm";
 import QuickCreateProductDialog from "./QuickCreateProductDialog";
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
 const SORTING = { id: "name", desc: false };
-
-const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
 
 /**
  * کالایی که رسیده ولی در این خرید هیچ قلمی ندارد. تماماً به قرنطینه
@@ -99,7 +98,7 @@ export default function ReceivingUnlistedItemsSection({
                 onAddObservation={onAddDefect}
                 onUpdateObservation={onUpdateDefect}
                 onRemoveObservation={onRemoveDefect}
-                title={`خرابی‌ها (${fa(row.arrivedQuantity)} عدد رسیده)`}
+                title={`خرابی‌ها (${formatNumber(row.arrivedQuantity)} عدد رسیده)`}
                 emptyHint="اگر بخشی از این کالا خراب هم هست، ثبتش کنید تا در فرم مغایرت پیشنهاد شود."
                 healthySuffix="عدد سالم"
                 addLabel="افزودن خرابی"

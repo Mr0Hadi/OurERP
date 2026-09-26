@@ -15,12 +15,12 @@ import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 import { claimLineKey } from "@/shared/hooks/useClaimsInOtherReturns";
 import ClaimRow from "./ClaimRow";
 import { ReceivingReportLines } from "./ReceivingReport";
+import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
 const SORTING = { id: "name", desc: false };
 
-const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
 const sumQuantity = (claims) =>
   claims.reduce((sum, claim) => sum + (Number(claim.quantity) || 0), 0);
 
@@ -30,7 +30,7 @@ function EarlierClaims({ entry }) {
   return (
     <p className="flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-[11px] text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
       <History className="h-3.5 w-3.5 shrink-0" />
-      {fa(entry.quantity)} عدد قبلاً در {entry.returnNumbers.join("، ")} ثبت شده
+      {formatNumber(entry.quantity)} عدد قبلاً در {entry.returnNumbers.join("، ")} ثبت شده
     </p>
   );
 }
@@ -80,10 +80,10 @@ function LineCard({
         </div>
         <div className="text-xs text-muted-foreground tabular-nums shrink-0 text-left">
           <div>
-            {fa(allocated)} از {fa(line.maxReturnableQuantity)} ثبت‌شده
+            {formatNumber(allocated)} از {formatNumber(line.maxReturnableQuantity)} ثبت‌شده
           </div>
           <div className="text-[11px] opacity-70">
-            {deliveredLabel}: {fa(line.deliveredQuantity ?? 0)}
+            {deliveredLabel}: {formatNumber(line.deliveredQuantity ?? 0)}
           </div>
         </div>
       </div>
@@ -121,7 +121,7 @@ function LineCard({
             className={`text-[10px] ${kindStyles[OFF_SCOPE_KINDS.EXCESS] ?? ""}`}
           >
             {kindLabels[OFF_SCOPE_KINDS.EXCESS] ?? "مازاد"} · قیمت قلم{" "}
-            {fa(claim.unitPrice)} ریال
+            {formatRial(claim.unitPrice)}
           </Badge>
           {renderExcessReport?.(claim)}
           <ClaimRow
@@ -369,10 +369,10 @@ export default function ReturnItemsSection({
         {totalQuantity > 0 && (
           <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2.5 border border-border">
             <span className="text-sm font-medium text-muted-foreground">
-              جمع ادعاها ({fa(totalQuantity)} عدد):
+              جمع ادعاها ({formatNumber(totalQuantity)} عدد):
             </span>
             <Badge variant="outline" className="text-sm font-bold">
-              {fa(onOrderAmount + offScopeAmount)} ریال
+              {formatRial(onOrderAmount + offScopeAmount)}
             </Badge>
           </div>
         )}
