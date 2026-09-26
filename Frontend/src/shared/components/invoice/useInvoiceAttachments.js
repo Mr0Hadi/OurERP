@@ -32,5 +32,3 @@ export function useInvoiceAttachments(initialItems = []) {
     initialItems,
   });
 }
-
-export default useInvoiceAttachments;

@@ -88,9 +88,12 @@ export default function SaleDetailForm({ saleData }) {
 
   const items = formData.items || [];
 
-  // initializeFromSale باید فقط یک‌بار هنگام mount اجرا شود
+  // فرم فقط وقتی از داده‌ی سرور پر می‌شود که سند عوض شود یا نسخه‌ی تازه‌ای
+  // از آن برسد (updatedAt). وابستگی عمداً به id/updatedAt است، نه کل آبجکت،
+  // تا تغییرات در حال ویرایش کاربر فقط با تغییر واقعی سند بازنویسی شود.
   useEffect(() => {
     initializeFromSale(saleData);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saleData.id, saleData.updatedAt, initializeFromSale]);
 
   // ضمیمه‌ها هم با همان کلیدِ فرم تازه می‌شوند — وگرنه بعد از ذخیره،

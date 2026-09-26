@@ -8,24 +8,8 @@ import {
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { MobileNumberInput } from "@/shared/components/ui/mobile-number-input";
-import {
-  DEFAULT_PLATE_VALUE,
-  PlateInput,
-} from "@/shared/components/ui/plate-input";
-
-const PLATE_STRING_SEPARATOR = "|";
-
-function plateValueToString({ twoDigit, letter, threeDigit, serial }) {
-  if (!twoDigit && !threeDigit && !serial) return "";
-  return [twoDigit, letter, threeDigit, serial].join(PLATE_STRING_SEPARATOR);
-}
-
-function plateStringToValue(value) {
-  if (!value) return DEFAULT_PLATE_VALUE;
-  const [twoDigit = "", letter = "", threeDigit = "", serial = ""] =
-    value.split(PLATE_STRING_SEPARATOR);
-  return { twoDigit, letter, threeDigit, serial };
-}
+import { PlateInput } from "@/shared/components/ui/plate-input";
+import { plateStringToValue, plateValueToString } from "@/shared/lib/plate";
 
 /**
  * فردی که کالا را تحویل می‌دهد یا تحویل می‌گیرد — `PartyName`،

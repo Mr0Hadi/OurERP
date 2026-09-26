@@ -322,5 +322,3 @@ export function useFileUploadList({
     ]
   );
 }
-
-export default useFileUploadList;

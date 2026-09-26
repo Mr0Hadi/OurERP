@@ -28,6 +28,9 @@ import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
 const SORTING = { id: "name", desc: false };
+// مرجع ثابت برای «هنوز داده نیامده»؛ `|| []` در هر رندر آرایه‌ی تازه می‌سازد
+// و افکت‌هایی که به این لیست وابسته‌اند را بی‌دلیل دوباره اجرا می‌کند.
+const EMPTY_LIST = [];
 
 export default function PurchasesNewPage() {
   const navigate = useNavigate();
@@ -100,8 +103,8 @@ export default function PurchasesNewPage() {
     SORTING,
   );
 
-  const suppliers = suppliersData?.items || [];
-  const products = productsData?.items || [];
+  const suppliers = suppliersData?.items ?? EMPTY_LIST;
+  const products = productsData?.items ?? EMPTY_LIST;
 
   useEffect(() => {
     const state = location.state;

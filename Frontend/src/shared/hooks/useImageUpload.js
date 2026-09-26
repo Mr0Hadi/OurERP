@@ -254,5 +254,3 @@ export function useImageUpload({
     ]
   );
 }
-
-export default useImageUpload;
