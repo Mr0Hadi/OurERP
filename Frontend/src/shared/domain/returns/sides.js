@@ -111,8 +111,8 @@ export const SIDE_CONFIG = {
       {
         slot: "goodsScrap",
         direction: EFFECT_DIRECTIONS.GOODS_SCRAP,
-        label: "کالای قرنطینه اسقاط شود",
-        hint: "کالا از چرخه خارج می‌شود و به‌اندازه‌ی بهایش زیان ثبت می‌شود",
+        label: "کالا اسقاط شود",
+        hint: "از قرنطینه، یا از موجودی اگر عیب بعد از دریافت پیدا شده — کالا از چرخه خارج و زیان ثبت می‌شود",
       },
     ],
 
@@ -128,7 +128,7 @@ export const SIDE_CONFIG = {
       [EFFECT_DIRECTIONS.MONEY_IN]: "دریافت وجه",
       [EFFECT_DIRECTIONS.MONEY_OUT]: "پرداخت وجه",
       [EFFECT_DIRECTIONS.GOODS_RELEASE]: "آزادسازی از قرنطینه",
-      [EFFECT_DIRECTIONS.GOODS_SCRAP]: "اسقاط از قرنطینه",
+      [EFFECT_DIRECTIONS.GOODS_SCRAP]: "اسقاط",
     },
 
     statusLabels: {
@@ -143,7 +143,7 @@ export const SIDE_CONFIG = {
       [EFFECT_DIRECTIONS.GOODS_IN]: "دریافت کالای جایگزین",
       [EFFECT_DIRECTIONS.GOODS_OUT]: "عودت کالا به تامین‌کننده",
       [EFFECT_DIRECTIONS.GOODS_RELEASE]: "آزادسازی از قرنطینه",
-      [EFFECT_DIRECTIONS.GOODS_SCRAP]: "اسقاط از قرنطینه",
+      [EFFECT_DIRECTIONS.GOODS_SCRAP]: "اسقاط",
     },
   },
 };

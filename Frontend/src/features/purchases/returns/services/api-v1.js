@@ -6,6 +6,18 @@ import {
 import { toApiClaim, fromApiReturn } from "./apiMapping";
 import { toApiComposition } from "@/shared/domain/returns/resolutions";
 import { PurchaseStatusEnum } from "@/shared/domain/enums/purchaseStatus";
+import { toApiSort } from "@/shared/services/api/sorting";
+
+/** `PurchaseReturnListSortEnum`ِ بکند، بر اساسِ شناسه‌ی ستونِ جدول. */
+const PURCHASE_RETURN_SORT_COLUMNS = {
+  returnNumber: 1,
+  returnDate: 2,
+  purchaseInvoiceNumber: 3,
+  supplierName: 4,
+  status: 5,
+  totalQuantity: 6,
+  totalAmount: 7,
+};
 
 /**
  * نسخه‌ی هماهنگ‌شده با بکندِ واقعی — کنترلر `api/PurchaseReturn`
@@ -29,9 +41,9 @@ import { PurchaseStatusEnum } from "@/shared/domain/enums/purchaseStatus";
  *     شناسه برگرداند، هر عملیات یک refetch اضافه می‌خورد و UI پرش
  *     می‌کند.
  *
- *  ۳. عملیاتِ تجمعی (ثبت تصمیم، دور کالا) کلید ایدمپوتنسی می‌گیرد —
- *     ⚠️ ولی بکندِ فعلی این هدر را اصلاً نمی‌خواند، پس این محافظت فعلاً
- *     فقط سمتِ فرانت است، نه واقعی.
+ *  ۳. عملیاتِ تجمعی (ثبت تصمیم، دور کالا) کلید ایدمپوتنسی می‌گیرد.
+ *     سرور پاسخِ موفقِ همان کلید را دوباره پخش می‌کند، و وقتی درخواستِ
+ *     اول هنوز در جریان است ۴۰۹ می‌دهد (که mutation دوباره می‌فرستد).
  *
  * پوششِ `ResponseDto` در interceptor باز می‌شود، پس اینجا `data` همان
  * محتوای واقعی است.
@@ -56,6 +68,7 @@ export async function fetchPurchaseReturns(params = {}) {
       problem: params.problem !== "" ? params.problem : undefined,
       fromDate: params.fromDate || undefined,
       toDate: params.toDate || undefined,
+      ...toApiSort(params.sorting, PURCHASE_RETURN_SORT_COLUMNS),
     },
   });
   return normalizeListResponse(data, { itemsKey: "returnList" });
@@ -174,7 +187,7 @@ export async function removeClaimResolution(returnId, claimId, resolutionId) {
  *     purchaseReturnId,
  *     rounds: [{ effectId, quantity, source?, productUnitBarcodes?,
  *                observations: [{ problem, quantity, note }] }],
- *     date, partyName, partyNationalId, vehiclePlate, note
+ *     date, partyName, partyPhoneNumber, vehiclePlate, note
  *   }
  *
  * `source` (`ProductUnitStatusEnum`) روی عودت الزامی است — از موجودی
@@ -213,17 +226,23 @@ export async function executeMoneyEffect(
 
 // ─── چرخه‌ی عمر ─────────────────────────────────────────────────────────────
 
-/** بکند «دلیل» را روی رد/لغو نمی‌گیرد — فقط `{id}`. `reason` فعلاً نگه داشته می‌شود ولی فرستاده نمی‌شود. */
-export async function rejectPurchaseReturn(returnId) {
+/**
+ * `reason` اختیاری است (حداکثر ۵۰۰ نویسه) و روی سند به‌صورت
+ * `statusReason` برمی‌گردد. رشته‌ی خالی یعنی «بی‌دلیل»؛ بازگشایی آن را
+ * پاک می‌کند.
+ */
+export async function rejectPurchaseReturn(returnId, reason) {
   const { data } = await axiosInstance.post("/PurchaseReturn/RejectPurchaseReturn", {
     id: returnId,
+    reason: reason?.trim() || undefined,
   });
   return fromApiReturn(data);
 }
 
-export async function cancelPurchaseReturn(returnId) {
+export async function cancelPurchaseReturn(returnId, reason) {
   const { data } = await axiosInstance.post("/PurchaseReturn/CancelPurchaseReturn", {
     id: returnId,
+    reason: reason?.trim() || undefined,
   });
   return fromApiReturn(data);
 }

@@ -116,7 +116,7 @@ export const useExecuteMoneyEffectMutation = () => {
 export const useRejectPurchaseReturnMutation = (returnId) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => rejectPurchaseReturn(returnId),
+    mutationFn: (reason) => rejectPurchaseReturn(returnId, reason),
     onSuccess: (updated) => {
       finalizeReturnChange(queryClient, updated);
       toast.success("درخواست به‌عنوان رد‌شده ثبت شد");
@@ -128,7 +128,7 @@ export const useRejectPurchaseReturnMutation = (returnId) => {
 export const useCancelPurchaseReturnMutation = (returnId) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => cancelPurchaseReturn(returnId),
+    mutationFn: (reason) => cancelPurchaseReturn(returnId, reason),
     onSuccess: (updated) => {
       finalizeReturnChange(queryClient, updated);
       toast.success("مرجوعی لغو شد");

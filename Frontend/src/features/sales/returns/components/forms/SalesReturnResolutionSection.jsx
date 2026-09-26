@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Ban, RotateCcw, Warehouse, XCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -25,6 +26,7 @@ import {
   hasPendingGoodsOut,
 } from "@/shared/domain/returns/resolutions";
 import ClaimResolutionCard from "@/shared/components/returns/ClaimResolutionCard";
+import ReturnStatusReasonDialog from "@/shared/components/returns/ReturnStatusReasonDialog";
 
 const SALES_SIDE = sideConfig(RETURN_SIDES.SALES);
 
@@ -49,7 +51,9 @@ export default function SalesReturnResolutionSection({
   const claims = salesReturn.claims || [];
   const isClosed = isTerminalStatus(status);
   // پرچم‌ها از همان قاعده‌ای می‌آیند که سرور هنگام اجرا اعمال می‌کند.
-  const { canReject, canCancel, canReopen } = salesReturn;
+  const { canReject, canCancel, canReopen, statusReason } = salesReturn;
+  // «reject» | «cancel» | null — هر دو از همان دیالوگِ دلیل می‌گذرند.
+  const [reasonAction, setReasonAction] = useState(null);
 
   return (
     <Card>
@@ -67,6 +71,7 @@ export default function SalesReturnResolutionSection({
               این درخواست رد شده است. اگر لازم است دوباره بررسی شود، بازگشایی‌اش
               کنید.
             </p>
+            <StatusReason reason={statusReason} />
             {canReopen && (
               <Button
                 type="button"
@@ -82,9 +87,12 @@ export default function SalesReturnResolutionSection({
         )}
 
         {status === RETURN_STATUSES.CANCELLED && (
-          <p className="text-sm text-muted-foreground">
-            این درخواست لغو شده است.
-          </p>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              این درخواست لغو شده است.
+            </p>
+            <StatusReason reason={statusReason} />
+          </div>
         )}
 
         {claims.map((claim) => (
@@ -113,7 +121,7 @@ export default function SalesReturnResolutionSection({
                 size="sm"
                 className="flex-1 gap-2 border-destructive/30 text-destructive hover:bg-destructive/10"
                 disabled={isBusy}
-                onClick={onReject}
+                onClick={() => setReasonAction("reject")}
               >
                 <XCircle className="h-4 w-4" />
                 رد ادعای مشتری
@@ -126,7 +134,7 @@ export default function SalesReturnResolutionSection({
                 size="sm"
                 className="gap-2 text-muted-foreground"
                 disabled={isBusy}
-                onClick={onCancel}
+                onClick={() => setReasonAction("cancel")}
               >
                 <Ban className="h-4 w-4" />
                 لغو درخواست
@@ -134,8 +142,37 @@ export default function SalesReturnResolutionSection({
             )}
           </div>
         )}
+
+        <ReturnStatusReasonDialog
+          open={reasonAction !== null}
+          onOpenChange={(open) => !open && setReasonAction(null)}
+          title={reasonAction === "reject" ? "رد ادعای مشتری" : "لغو درخواست"}
+          description={
+            reasonAction === "reject"
+              ? "درخواست رد می‌شود و تا بازگشایی، تصمیمی روی آن ثبت نمی‌شود."
+              : "درخواست لغو می‌شود و دیگر قابل بازگشایی نیست."
+          }
+          confirmLabel={reasonAction === "reject" ? "رد شود" : "لغو شود"}
+          isPending={isBusy}
+          onConfirm={(reason, close) =>
+            (reasonAction === "reject" ? onReject : onCancel)(reason, {
+              onSuccess: close,
+            })
+          }
+        />
       </CardContent>
     </Card>
+  );
+}
+
+/** دلیلی که هنگامِ رد یا لغو ثبت شده؛ مرجوعی‌های قدیمی دلیلی ندارند. */
+function StatusReason({ reason }) {
+  if (!reason) return null;
+  return (
+    <p className="text-sm whitespace-pre-line rounded-md bg-muted/50 px-2.5 py-2">
+      <span className="text-muted-foreground">دلیل: </span>
+      {reason}
+    </p>
   );
 }
 

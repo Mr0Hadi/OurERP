@@ -21,7 +21,6 @@ import {
   PackageOpen,
   Truck,
   PackageCheck,
-  XCircle,
   Activity,
   FileText,
 } from "lucide-react";
@@ -47,28 +46,34 @@ const STATUS_CONFIG = {
     icon: PackageCheck,
     textColor: "text-[oklch(0.50_0.16_152)] dark:text-[oklch(0.70_0.16_152)]",
   },
-  [SALE_STATUSES.CANCELLED]: {
-    icon: XCircle,
-    textColor: "text-destructive",
-  },
 };
 
-const DEFAULT_CONFIG = {
-  icon: Activity,
-  textColor: "text-card-foreground",
-};
+/** وضعیت‌هایی که هنگامِ ثبت قابل انتخاب‌اند. */
+const SELECTABLE = [SALE_STATUSES.PROFORMA, SALE_STATUSES.PROCESSING];
+
+/** وضعیت‌هایی که فقط ارسالِ انبار (یا فروش حضوری) می‌گذارد — نمایشی و غیرفعال. */
+const WAREHOUSE_SET = [
+  SALE_STATUSES.PARTIALLY_DELIVERED,
+  SALE_STATUSES.SHIPPED,
+  SALE_STATUSES.DELIVERED,
+];
 
 /**
- * @param proformaLocked فروش پیش‌فاکتور است و مشتری هنوز کامل نپرداخته.
- *   بکند خروجِ دستی از پیش‌فاکتور را در این حالت رد می‌کند
- *   (`UpdateSaleCommandHandler`)، پس بقیه‌ی وضعیت‌ها اینجا غیرفعال‌اند تا
- *   کاربر به‌جای خطای سرور، دلیل را همین‌جا ببیند.
+ * وضعیتِ فروشِ تازه — هم‌شکلِ `PurchaseStatusSection`.
+ *
+ * بکند `status` را از فرم نمی‌گیرد: فروش پیش‌فاکتور ثبت می‌شود و **اولین
+ * دریافت** فاکتور را صادر و وضعیت را «آماده‌سازی انبار» می‌کند. پس
+ * «آماده‌سازی انبار» اینجا یعنی «با دریافت وجه ثبت کن» (بخش پرداخت فعال
+ * می‌شود) و «پیش‌فاکتور» یعنی بدون پرداخت. «ارسال ناقص/ارسال شده/تحویل»
+ * را ارسالِ انبار می‌گذارد؛ برای تحویلِ همین‌جا دانه‌ها را در اقلام اسکن
+ * کنید تا فروش حضوری ثبت شود.
  */
-export default function SaleStatusSection({
-  selectedStatus,
-  onStatusChange,
-  proformaLocked = false,
-}) {
+export default function SaleStatusSection({ selectedStatus, onStatusChange }) {
+  const value =
+    selectedStatus === "" || selectedStatus == null
+      ? String(SALE_STATUSES.PROFORMA)
+      : String(selectedStatus);
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -78,49 +83,53 @@ export default function SaleStatusSection({
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="space-y-4 mt-0">
-        <div className="space-y-1.5">
-          <Label className="text-sm font-medium text-card-foreground">
-            تغییر وضعیت
-          </Label>
-          <Select
-            value={selectedStatus === "" || selectedStatus == null ? "" : String(selectedStatus)}
-            onValueChange={(value) => onStatusChange(Number(value))}
-          >
-            <SelectTrigger className="h-9">
-              <SelectValue placeholder="وضعیت را انتخاب کنید" />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(SALE_STATUS_LABELS).map(([key, label]) => {
-                const itemConfig = STATUS_CONFIG[key] ?? DEFAULT_CONFIG;
-                const ItemIcon = itemConfig.icon;
-                const disabled =
-                  proformaLocked && Number(key) !== SALE_STATUSES.PROFORMA;
-                return (
-                  <SelectItem key={key} value={key} disabled={disabled}>
-                    <span
-                      className={`flex items-center gap-2 ${itemConfig.textColor}`}
-                    >
-                      <ItemIcon className="h-3.5 w-3.5" />
-                      {label}
-                    </span>
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            {proformaLocked
-              ? "این فروش پیش‌فاکتور است: با ثبتِ پرداختِ کامل، سرور خودش شماره‌ی فاکتور را می‌سازد و وضعیت را به «آماده‌سازی انبار» می‌برد. تا آن زمان تغییر دستیِ وضعیت ممکن نیست."
-              : "خروج از «پیش‌فاکتور» با تسویه‌ی کاملِ مشتری و به‌صورت خودکار انجام می‌شود؛ فاکتور رسمی و شماره‌اش را هم همان‌جا سرور می‌سازد."}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            وضعیت «ارسال ناقص»، «ارسال شده» و بخشی از «تحویل کامل» معمولاً
-            به‌صورت خودکار از صفحه‌ی «ارسال کالا»ی انبار به‌روزرسانی
-            می‌شوند؛ تغییر دستی آن‌ها از اینجا هم ممکن است ولی توصیه
-            نمی‌شود.
-          </p>
-        </div>
+      <CardContent className="space-y-1.5 mt-0">
+        <Label className="text-sm font-medium text-card-foreground">
+          وضعیت هنگام ثبت
+        </Label>
+        <Select
+          value={value}
+          onValueChange={(next) => onStatusChange(Number(next))}
+        >
+          <SelectTrigger className="h-9">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {[...SELECTABLE, ...WAREHOUSE_SET].map((status) => {
+              const config = STATUS_CONFIG[status];
+              const Icon = config.icon;
+              const disabled = !SELECTABLE.includes(status);
+              return (
+                <SelectItem
+                  key={status}
+                  value={String(status)}
+                  disabled={disabled}
+                >
+                  <span
+                    className={`flex items-center gap-2 ${config.textColor}`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {SALE_STATUS_LABELS[status]}
+                    {disabled && (
+                      <span className="text-xs text-muted-foreground">
+                        (با ارسال انبار)
+                      </span>
+                    )}
+                  </span>
+                </SelectItem>
+              );
+            })}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          {Number(value) === SALE_STATUSES.PROFORMA
+            ? "بدون دریافت وجه ثبت می‌شود و اقلام بعداً هم قابل ویرایش‌اند."
+            : "با ثبتِ مبلغ دریافتی، فاکتور رسمی صادر و به صف ارسال انبار فرستاده می‌شود. اگر مبلغی دریافت نشود، پیش‌فاکتور می‌ماند."}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          برای تحویلِ همین‌جا به مشتری، دانه‌ها را در «اقلام فروش» اسکن کنید تا
+          فروش حضوری و «تحویل کامل» ثبت شود.
+        </p>
       </CardContent>
     </Card>
   );

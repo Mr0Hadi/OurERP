@@ -73,8 +73,13 @@ export default function ResolutionComposer({
   const claimPrice = Number(claim.unitPrice) || 0;
   const quantity = Number(composition.quantity) || 0;
   const allowQuarantine = side.quarantineSlots.length > 0;
-  // آزادسازی و اسقاط فقط وقتی معنا دارند که کالایی از این ادعا در قرنطینه باشد.
-  const showQuarantine = allowQuarantine && quarantineAvailable !== 0;
+  // آزادسازی فقط از قرنطینه است، پس فقط وقتی کالایی از این ادعا آنجاست دیده
+  // می‌شود. اسقاط می‌تواند از موجودی هم باشد (عیبی که بعد از دریافت روی قفسه
+  // پیدا شده) و مبدأش را انبار موقعِ اجرا می‌گوید.
+  const quarantineSlots = side.quarantineSlots.filter(
+    ({ slot }) => slot !== "goodsRelease" || quarantineAvailable !== 0,
+  );
+  const showQuarantine = allowQuarantine && quarantineSlots.length > 0;
 
   const defaultClaimItem = (quantityForItem) => ({
     productId: claim.productId ?? null,
@@ -203,7 +208,7 @@ export default function ResolutionComposer({
           ))}
 
           {showQuarantine &&
-            side.quarantineSlots.map(({ slot, label, hint }) => (
+            quarantineSlots.map(({ slot, label, hint }) => (
               <label key={slot} className="flex items-start gap-2 cursor-pointer">
                 <Checkbox
                   checked={composition[slot].enabled}
@@ -214,7 +219,8 @@ export default function ResolutionComposer({
                   {label}
                   <span className="block text-[11px] text-muted-foreground">
                     {fa(quantity)} {claim.unit || "عدد"} از {claim.productName} — {hint}
-                    {quarantineAvailable != null &&
+                    {slot === "goodsRelease" &&
+                      quarantineAvailable != null &&
                       ` (در قرنطینه: ${fa(quarantineAvailable)})`}
                   </span>
                 </span>

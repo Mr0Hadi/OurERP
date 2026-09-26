@@ -1,20 +1,26 @@
+import { useEffect, useRef } from "react";
+
 /**
- * چک‌باکس کوچکِ محلی.
- *
- * shared/ui هنوز primitive چک‌باکس ندارد و اضافه‌کردنش به‌عنوان اثر
- * جانبیِ این تغییر درست نبود؛ انتخاب ردیف تنها جایی است که لازم می‌شود.
- * اندازه‌اش عمداً بزرگ‌تر از حد معمول است چون با دست و روی تبلت زده
- * می‌شود.
+ * چک‌باکسِ انتخابِ دانه. ناحیه‌ی لمسش عمداً بزرگ‌تر از خودِ جعبه است چون
+ * روی تبلت و با دست زده می‌شود. `indeterminate` برای «بخشی از این صفحه
+ * انتخاب شده».
  */
-export default function UnitSelectCheckbox({ checked, onChange, label }) {
+export default function UnitSelectCheckbox({ checked, onChange, label, indeterminate = false }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = indeterminate;
+  }, [indeterminate]);
+
   return (
-    <label className="flex h-9 w-9 cursor-pointer items-center justify-center">
+    <label className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center">
       <input
+        ref={ref}
         type="checkbox"
         checked={checked}
         onChange={onChange}
         aria-label={label}
-        className="h-4.5 w-4.5 cursor-pointer accent-primary"
+        className="h-4 w-4 cursor-pointer accent-primary"
       />
     </label>
   );

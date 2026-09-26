@@ -25,9 +25,17 @@ import SupplierAddressForm from "../components/forms/SupplierAddressForm";
 import SupplierDetailLoading from "../components/forms/SupplierDetailLoading";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
+import PartyStatementCard from "@/features/partyAccount/components/PartyStatementCard";
+import {
+  openingBalanceOf,
+  partyBalanceOf,
+} from "@/features/partyAccount/domain/partyBalance";
+import { usePermission } from "@/features/auth/hooks/usePermission";
 
 function SupplierDetailForm({ supplierData }) {
   const navigate = useNavigate();
+  const { can } = usePermission();
+  const canViewStatement = can("PartyStatementView");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const updateMutation = useUpdateSupplierMutation();
@@ -141,6 +149,17 @@ const {
           </div>
         </div>
       </form>
+
+      {/* گردش حساب از دفتر حساب اشخاص؛ مانده‌ی بالای فرم «مانده‌ی اولیه»ِ دستی است. */}
+      {canViewStatement && (
+        <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+          <PartyStatementCard
+            supplierId={supplierData.id}
+            totalBalance={partyBalanceOf(supplierData)}
+            openingBalance={openingBalanceOf(supplierData)}
+          />
+        </div>
+      )}
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>

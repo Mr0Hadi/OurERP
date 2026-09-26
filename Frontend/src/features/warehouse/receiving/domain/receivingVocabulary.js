@@ -2,6 +2,7 @@ import {
   PurchaseStatusEnum,
   PURCHASE_STATUS_LABELS,
 } from "@/shared/domain/enums/purchaseStatus";
+import { QUEUE_FILTER } from "../../shared/queueFilters";
 
 /**
  * واژگانِ دریافت انبار — نام‌گذاری، بدون هیچ محاسبه‌ای.
@@ -35,7 +36,7 @@ export const RECEIVING_ELIGIBLE_STATUSES = [
  * «تحویل ناقص» با هم. بدونِ این، خریدی که محموله‌ی اولش رسیده از صفِ
  * پیش‌فرض بیرون می‌افتاد و انباردار باقیمانده‌اش را نمی‌دید.
  */
-export const RECEIVING_AWAITING = "awaiting";
+export const RECEIVING_AWAITING = QUEUE_FILTER.AWAITING;
 
 export const RECEIVING_AWAITING_STATUSES = [
   PurchaseStatusEnum.SHIPPED,
@@ -48,6 +49,8 @@ export const RECEIVING_STATUS_OPTIONS = [
     value: status,
     label: PURCHASE_STATUS_LABELS[status],
   })),
+  { value: QUEUE_FILTER.RETURNS, label: "مرجوعی: برگشتی از مشتری" },
+  { value: QUEUE_FILTER.REPLACEMENTS, label: "مرجوعی: جایگزین از تامین‌کننده" },
 ];
 
 /** مقدارِ فیلترِ وضعیت → فهرستِ وضعیت‌هایی که صف نشان می‌دهد. */

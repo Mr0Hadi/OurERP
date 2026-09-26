@@ -25,9 +25,16 @@ import { salesReturnKeys } from "../../returns/services/queryKeys";
  * مرجوعی‌های *دیگرِ* همان سند همچنان باطل می‌شوند، چون سهمیه و کارت
  * «مرجوعی‌های دیگر» آن‌ها عوض شده.
  */
-export function invalidateSalesEcosystem(queryClient, saleId, { freshReturnId } = {}) {
+export function invalidateSalesEcosystem(
+  queryClient,
+  saleId,
+  { freshReturnId, freshSale = false } = {},
+) {
   if (saleId != null) {
-    queryClient.invalidateQueries({ queryKey: saleKeys.detail(saleId) });
+    // `freshSale`: پاسخِ همین نوشتن سندِ کاملِ فروش بود و در کش نشسته.
+    if (!freshSale) {
+      queryClient.invalidateQueries({ queryKey: saleKeys.detail(saleId) });
+    }
     queryClient.invalidateQueries({ queryKey: shippingKeys.detail(saleId) });
     queryClient.invalidateQueries({ queryKey: salesReturnKeys.saleForReturnAll(saleId) });
   }

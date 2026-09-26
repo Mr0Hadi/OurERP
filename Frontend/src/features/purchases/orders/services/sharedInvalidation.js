@@ -15,11 +15,19 @@ import { productUnitKeys } from "@/features/warehouse/units/services/queryKeys";
 export function invalidatePurchaseEcosystem(
   queryClient,
   purchaseId,
-  { freshReturnId } = {},
+  { freshReturnId, freshPurchase = false } = {},
 ) {
   if (purchaseId != null) {
-    queryClient.invalidateQueries({ queryKey: purchaseKeys.detail(purchaseId) });
-    queryClient.invalidateQueries({ queryKey: receivingKeys.detail(purchaseId) });
+    // `freshPurchase`: پاسخِ همین نوشتن سندِ کامل بود و در کش نشسته؛
+    // خواندنِ دوباره‌اش فقط یک رفت‌وبرگشتِ اضافه است.
+    if (!freshPurchase) {
+      queryClient.invalidateQueries({
+        queryKey: purchaseKeys.detail(purchaseId),
+      });
+    }
+    queryClient.invalidateQueries({
+      queryKey: receivingKeys.detail(purchaseId),
+    });
     queryClient.invalidateQueries({
       queryKey: purchaseReturnKeys.purchaseForReturnAll(purchaseId),
     });

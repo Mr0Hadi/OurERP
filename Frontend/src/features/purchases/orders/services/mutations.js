@@ -4,7 +4,12 @@ import { toast } from "react-hot-toast";
 import {
   createPurchase,
   updatePurchase,
-  updatePurchaseStatus,
+  changePurchaseStatus,
+  updatePurchaseAttachments,
+  updatePurchasePaymentDate,
+  addPurchasePayment,
+  editPurchasePayment,
+  voidPurchasePayment,
   removePurchase,
   closePurchaseItem,
   reopenPurchaseItem,
@@ -14,17 +19,33 @@ import { purchaseKeys } from "./queryKeys";
 import { invalidatePurchaseEcosystem } from "./sharedInvalidation";
 import { idempotencyKeyFor } from "@/shared/services/api/contract";
 import { ROUTES } from "@/shared/constants/routes";
-import { usePurchaseFormStore } from "../store/purchaseFormStore";
+import { supplierKeys } from "@/features/suppliers/services/queryKeys";
+
+/**
+ * هر نوشتنِ خرید سندِ کامل را برمی‌گرداند: همان در کشِ جزئیات می‌نشیند
+ * (بدون درخواستِ دوباره) و بقیه‌ی اکوسیستم باطل می‌شود. مانده‌ی حسابِ
+ * تامین‌کننده هم با صدور، پرداخت و لغو تکان می‌خورد.
+ */
+function applyPurchase(queryClient, purchase) {
+  if (purchase?.id != null) {
+    queryClient.setQueryData(purchaseKeys.detail(purchase.id), purchase);
+  }
+  invalidatePurchaseEcosystem(queryClient, purchase?.id, {
+    freshPurchase: true,
+  });
+  queryClient.invalidateQueries({ queryKey: supplierKeys.all });
+}
 
 export const useCreatePurchaseMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: createPurchase,
-    // `CreatePurchase` شناسه‌ی سندِ تازه را برنمی‌گرداند؛ فقط لیست‌ها باطل می‌شوند.
-    onSuccess: () => {
+    // پیش‌پرداختِ همراهِ ثبت در دفتر حساب می‌نشیند؛ retry نباید سندِ دوم بسازد.
+    mutationFn: (payload) =>
+      createPurchase(payload, { idempotencyKey: idempotencyKeyFor(payload) }),
+    onSuccess: (created) => {
       toast.success("خرید با موفقیت ثبت شد");
-      invalidatePurchaseEcosystem(queryClient);
+      applyPurchase(queryClient, created);
     },
     onError: (error) => {
       toast.error(error?.message || "خطا در ثبت خرید");
@@ -32,19 +53,17 @@ export const useCreatePurchaseMutation = () => {
   });
 };
 
+/** فقط پیش‌فاکتور. */
 export const useUpdatePurchaseMutation = (id) => {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
 
   return useMutation({
     mutationFn: (purchaseData) => updatePurchase(id, purchaseData),
-    onSuccess: () => {
+    onSuccess: (updated) => {
       // ویرایش خرید تعداد اقلام را عوض می‌کند، پس «چقدر قابل دریافت
       // است» و در نتیجه صف دریافت هم عوض می‌شود — نه فقط خودِ خرید.
-      invalidatePurchaseEcosystem(queryClient, id);
+      applyPurchase(queryClient, updated);
       toast.success("خرید با موفقیت ویرایش شد");
-      navigate(ROUTES.PURCHASES_LIST);
-      usePurchaseFormStore.getState().resetForm();
     },
     onError: (error) => {
       toast.error(error?.message || "خطا در ویرایش خرید");
@@ -52,48 +71,89 @@ export const useUpdatePurchaseMutation = (id) => {
   });
 };
 
-export const useUpdatePurchaseStatusMutation = () => {
+export const useChangePurchaseStatusMutation = (id) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, status }) => updatePurchaseStatus(id, status),
-    onMutate: async ({ id, status }) => {
-      await queryClient.cancelQueries({ queryKey: purchaseKeys.detail(id) });
-
-      const previousPurchase = queryClient.getQueryData(
-        purchaseKeys.detail(id)
-      );
-
-      if (previousPurchase) {
-        queryClient.setQueryData(purchaseKeys.detail(id), {
-          ...previousPurchase,
-          status,
-        });
-      }
-
-      return { previousPurchase };
-    },
-    // `updatePurchaseStatus` سندِ تازه‌خوانده را برمی‌گرداند (`UpdatePurchase`
-    // خودش `data` ندارد). شناسه از ورودی خوانده می‌شود، نه از پاسخ.
-    onSuccess: (updatedPurchase, { id }) => {
-      if (updatedPurchase) {
-        queryClient.setQueryData(purchaseKeys.detail(id), updatedPurchase);
-      }
-      // تغییر وضعیت به «ارسال‌شده» همین خرید را وارد صف دریافت انبار
-      // می‌کند و «لغو» از آن بیرون می‌برد.
-      invalidatePurchaseEcosystem(queryClient, id);
+    mutationFn: (status) => changePurchaseStatus(id, status),
+    onSuccess: (updated) => {
+      // «ارسال‌شده» خرید را وارد صف دریافت انبار می‌کند و «لغو» بیرون می‌برد.
+      applyPurchase(queryClient, updated);
       toast.success("وضعیت خرید به‌روزرسانی شد");
     },
-    onError: (error, variables, context) => {
-      if (context?.previousPurchase) {
-        queryClient.setQueryData(
-          purchaseKeys.detail(variables.id),
-          context.previousPurchase
-        );
-      }
-      toast.error(error?.message || "خطا در به‌روزرسانی وضعیت");
-    },
+    onError: (error) => toast.error(error?.message || "خطا در تغییر وضعیت"),
   });
+};
+
+export const useUpdatePurchaseAttachmentsMutation = (id) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (attachments) => updatePurchaseAttachments(id, attachments),
+    onSuccess: (updated) => {
+      applyPurchase(queryClient, updated);
+      toast.success("پیوست‌ها ذخیره شد");
+    },
+    onError: (error) =>
+      toast.error(error?.message || "خطا در ذخیره‌ی پیوست‌ها"),
+  });
+};
+
+export const useUpdatePurchasePaymentDateMutation = (id) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (paymentDate) => updatePurchasePaymentDate(id, paymentDate),
+    onSuccess: (updated) => {
+      applyPurchase(queryClient, updated);
+      toast.success("مهلت پرداخت ذخیره شد");
+    },
+    onError: (error) =>
+      toast.error(error?.message || "خطا در ذخیره‌ی مهلت پرداخت"),
+  });
+};
+
+/**
+ * ثبت و اصلاحِ پرداخت تجمعی‌اند (retry یعنی پرداختِ دوم، هم در سند و هم
+ * در حسابِ تامین‌کننده)، پس کلیدِ ایدمپوتنسی می‌گیرند. ابطالِ دوباره را
+ * خودِ سرور با ۴۰۰ رد می‌کند.
+ */
+export const usePurchasePaymentMutations = (purchaseId) => {
+  const queryClient = useQueryClient();
+  const onSuccess = (message) => (updated) => {
+    applyPurchase(queryClient, updated);
+    toast.success(message);
+  };
+  const onError = (fallback) => (error) =>
+    toast.error(error?.message || fallback);
+
+  const add = useMutation({
+    mutationFn: (payment) => {
+      const payload = { ...payment, purchaseId };
+      return addPurchasePayment(payload, {
+        idempotencyKey: idempotencyKeyFor(payment),
+      });
+    },
+    onSuccess: onSuccess("پرداخت ثبت شد"),
+    onError: onError("خطا در ثبت پرداخت"),
+  });
+
+  const edit = useMutation({
+    mutationFn: (payment) =>
+      editPurchasePayment(payment, {
+        idempotencyKey: idempotencyKeyFor(payment),
+      }),
+    onSuccess: onSuccess("پرداخت اصلاح شد"),
+    onError: onError("خطا در اصلاح پرداخت"),
+  });
+
+  const voidPayment = useMutation({
+    mutationFn: voidPurchasePayment,
+    onSuccess: onSuccess("پرداخت باطل شد"),
+    onError: onError("خطا در ابطال پرداخت"),
+  });
+
+  return { add, edit, void: voidPayment };
 };
 
 export const useRemovePurchaseMutation = () => {
@@ -107,6 +167,7 @@ export const useRemovePurchaseMutation = () => {
       // خریدِ حذف‌شده باید از صف دریافت و از فهرست «خریدهای قابل
       // مرجوع‌کردن» هم بیرون برود.
       invalidatePurchaseEcosystem(queryClient);
+      queryClient.invalidateQueries({ queryKey: supplierKeys.all });
       toast.success("خرید با موفقیت حذف شد");
       navigate(ROUTES.PURCHASES_LIST);
     },
@@ -119,6 +180,7 @@ export const useRemovePurchaseMutation = () => {
 /**
  * بستن و بازگشاییِ یک قلم هر دو وضعیتِ خرید و صفِ دریافت را عوض می‌کنند
  * (مقدارِ بدهکارِ قلم تغییر می‌کند)، پس کلِ اکوسیستمِ خرید باطل می‌شود.
+ * هر دو `payableAmount` و حسابِ تامین‌کننده را هم تکان می‌دهند.
  */
 export const useClosePurchaseItemMutation = (purchaseId) => {
   const queryClient = useQueryClient();
@@ -126,6 +188,7 @@ export const useClosePurchaseItemMutation = (purchaseId) => {
     mutationFn: closePurchaseItem,
     onSuccess: () => {
       invalidatePurchaseEcosystem(queryClient, purchaseId);
+      queryClient.invalidateQueries({ queryKey: supplierKeys.all });
       toast.success("قلم بسته شد؛ باقیمانده‌اش دیگر انتظار نمی‌رود");
     },
     onError: (error) => toast.error(error?.message || "خطا در بستن قلم"),
@@ -138,6 +201,7 @@ export const useReopenPurchaseItemMutation = (purchaseId) => {
     mutationFn: reopenPurchaseItem,
     onSuccess: () => {
       invalidatePurchaseEcosystem(queryClient, purchaseId);
+      queryClient.invalidateQueries({ queryKey: supplierKeys.all });
       toast.success("قلم دوباره باز شد");
     },
     onError: (error) => toast.error(error?.message || "خطا در بازگشایی قلم"),
@@ -146,9 +210,8 @@ export const useReopenPurchaseItemMutation = (purchaseId) => {
 
 /**
  * خریدِ کالای مازاد/سفارش‌نداده‌ی در قرنطینه. موجودی و جمعِ خرید را
- * تکان می‌دهد. کلید ایدمپوتنسی مثل بقیه‌ی دستورهای تجمعی فرستاده
- * می‌شود، ولی بکند هنوز آن را نمی‌خواند — محافظِ واقعی در برابر
- * دوبار-کلیک، غیرفعال‌بودنِ دکمه تا پایانِ درخواست است.
+ * تکان می‌دهد و قلمِ ضمیمه می‌سازد، پس مثل بقیه‌ی دستورهای تجمعی کلیدِ
+ * ایدمپوتنسی می‌گیرد.
  */
 export const useAcceptPurchaseExcessMutation = (purchaseId) => {
   const queryClient = useQueryClient();
@@ -160,7 +223,10 @@ export const useAcceptPurchaseExcessMutation = (purchaseId) => {
       ),
     onSuccess: () => {
       invalidatePurchaseEcosystem(queryClient, purchaseId);
-      toast.success("کالای مازاد به خرید اضافه شد و وارد موجودی شد");
+      queryClient.invalidateQueries({ queryKey: supplierKeys.all });
+      toast.success(
+        "کالای مازاد به‌صورت قلمِ ضمیمه به خرید اضافه شد و وارد موجودی شد",
+      );
     },
     onError: (error) => toast.error(error?.message || "خطا در پذیرش کالای مازاد"),
   });

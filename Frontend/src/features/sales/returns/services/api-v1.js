@@ -5,15 +5,25 @@ import {
 } from "@/shared/services/api/contract";
 import { toApiClaim, fromApiReturn } from "./apiMapping";
 import { toApiComposition } from "@/shared/domain/returns/resolutions";
+import { toApiSort } from "@/shared/services/api/sorting";
+import { RETURNABLE_SALE_STATUSES } from "@/features/sales/orders/domain/saleRules";
+
+/** `SaleReturnListSortEnum`ِ بکند، بر اساسِ شناسه‌ی ستونِ جدول. */
+const SALE_RETURN_SORT_COLUMNS = {
+  returnNumber: 1,
+  returnDate: 2,
+  saleInvoiceNumber: 3,
+  customerName: 4,
+  status: 5,
+  totalQuantity: 6,
+  totalAmount: 7,
+};
 
 /**
  * نسخه‌ی هماهنگ‌شده با بکندِ واقعی — کنترلر `api/SaleReturn`
  * (`Backend-Net/docs/api-guide.fa.md`، بخش ۱۲؛ بخش ۷ گزارشِ شکافِ
  * خرید/فروش). قرینه‌ی دقیقِ `purchases/returns/services/api-v1.js`؛
  * توضیحاتِ کامل همان‌جاست.
- *
- * ⚠️ بکندِ فعلی هدرِ Idempotency-Key را نمی‌خواند — این محافظت فعلاً
- * فقط سمتِ فرانت است.
  */
 
 // ─── خواندن ─────────────────────────────────────────────────────────────────
@@ -33,7 +43,7 @@ export async function fetchSalesReturns(params = {}) {
       problem: params.problem !== "" ? params.problem : undefined,
       fromDate: params.fromDate || undefined,
       toDate: params.toDate || undefined,
-      // scope/sortBy/sortOrder روی این لیست پشتیبانی نمی‌شوند.
+      ...toApiSort(params.sorting, SALE_RETURN_SORT_COLUMNS),
     },
   });
   return normalizeListResponse(data, { itemsKey: "returnList" });
@@ -46,12 +56,18 @@ export async function fetchSalesReturnById(id) {
   return fromApiReturn(data);
 }
 
-/** فهرست کوتاهِ فروش‌های قابل‌مرجوع برای انتخابگر فرم — بکند `returnable` ندارد، فیلترِ نهایی سمتِ فرانت است. */
+/**
+ * فهرست کوتاهِ فروش‌های قابل‌مرجوع برای انتخابگر فرم. بکند `returnable`
+ * ندارد؛ فروش‌هایی که `CreateSaleReturn` رد می‌کند (هنوز ارسال‌نشده، لغو یا
+ * مرجوع‌شده) همین‌جا کنار گذاشته می‌شوند.
+ */
 export async function fetchReturnableSales(search = "") {
   const { data } = await axiosInstance.get("/Sale/GetSaleList", {
     params: { invoiceNumber: search || undefined, take: 30 },
   });
-  return normalizeListResponse(data, { itemsKey: "saleList" }).items;
+  return normalizeListResponse(data, { itemsKey: "saleList" }).items.filter((sale) =>
+    RETURNABLE_SALE_STATUSES.includes(Number(sale.status)),
+  );
 }
 
 /**
@@ -156,17 +172,19 @@ export async function executeMoneyEffect(
 
 // ─── چرخه‌ی عمر ─────────────────────────────────────────────────────────────
 
-/** بکند «دلیل» را روی رد/لغو نمی‌گیرد — فقط `{id}`. */
-export async function rejectSalesReturn(returnId) {
+/** `reason` اختیاری است؛ قرینه‌ی `rejectPurchaseReturn`. */
+export async function rejectSalesReturn(returnId, reason) {
   const { data } = await axiosInstance.post("/SaleReturn/RejectSaleReturn", {
     id: returnId,
+    reason: reason?.trim() || undefined,
   });
   return fromApiReturn(data);
 }
 
-export async function cancelSalesReturn(returnId) {
+export async function cancelSalesReturn(returnId, reason) {
   const { data } = await axiosInstance.post("/SaleReturn/CancelSaleReturn", {
     id: returnId,
+    reason: reason?.trim() || undefined,
   });
   return fromApiReturn(data);
 }

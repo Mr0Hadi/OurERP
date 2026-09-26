@@ -1,5 +1,5 @@
 import { lazy } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { ROUTES } from "@/shared/constants/routes";
 
 const ProductsPage = lazy(() => import("./products/pages/ProductsPage"));
@@ -7,12 +7,18 @@ const ProductDetailPage = lazy(() => import("./products/pages/ProductDetailPage"
 const ProductNewPage = lazy(() => import("./products/pages/ProductNewPage"));
 const ReceivingListPage = lazy(() => import("./receiving/pages/ReceivingListPage"));
 const ReceivingDetailPage = lazy(() => import("./receiving/pages/ReceivingDetailPage"));
-const UnitLabelsPage = lazy(() => import("./units/pages/UnitLabelsPage"));
+const UnitsPage = lazy(() => import("./units/pages/UnitsPage"));
 const CategoriesPage = lazy(() => import("./categories/pages/CategoriesPage"));
 const ShippingListPage = lazy(() => import("./shipping/pages/ShippingListPage"));
 const ShippingDetailPage = lazy(() => import("./shipping/pages/ShippingDetailPage"));
 const ReceivingReturnDetailPage = lazy(() => import("./receiving/pages/ReceivingReturnDetailPage"));
 const SupplierReturnDetailPage = lazy(() => import("./shipping/pages/SupplierReturnDetailPage"));
+
+/** نشانیِ قدیمی → نشانیِ تازه، با همان پارامترها (`?unit=`، `?productId=`). */
+function RedirectKeepingSearch({ to }) {
+  const { search } = useLocation();
+  return <Navigate to={{ pathname: to, search }} replace />;
+}
 
 export const warehouseRoutes = [
   // «انبار» در سایدبار به این مسیر لینک می‌دهد ولی صفحه‌ی مرورِ کلی
@@ -49,9 +55,13 @@ export const warehouseRoutes = [
     element: <ReceivingDetailPage />,
   },
   {
-    path: ROUTES.WAREHOUSE_UNIT_LABELS,
+    path: ROUTES.WAREHOUSE_UNITS,
     handle: { permission: "ProductUnitView" },
-    element: <UnitLabelsPage />,
+    element: <UnitsPage />,
+  },
+  {
+    path: ROUTES.WAREHOUSE_UNIT_LABELS,
+    element: <RedirectKeepingSearch to={ROUTES.WAREHOUSE_UNITS} />,
   },
   {
     path: ROUTES.WAREHOUSE_CATEGORIES,

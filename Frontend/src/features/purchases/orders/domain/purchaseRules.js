@@ -1,42 +1,59 @@
 import { PURCHASE_STATUSES } from "../services/constants";
 
 /**
- * حذف کامل خرید فقط زمانی مجاز است که هنوز هیچ اتفاق واقعی‌ای
- * (ارسال توسط تامین‌کننده، دریافت در انبار) برای آن رخ نداده باشد.
- *
- * «پیش‌فاکتور» هم اینجاست: سندی که هنوز فاکتور رسمی‌اش نرسیده، از
- * «در انتظار ارسال» هم عقب‌تر است.
+ * حذف فقط برای پیش‌فاکتور است (`DeletePurchase`)؛ خریدِ صادرشده لغو
+ * می‌شود، نه حذف. پیش‌فاکتوری که پیش‌پرداختِ باطل‌نشده دارد را سرور رد
+ * می‌کند تا پرداخت‌ها اول ابطال شوند.
  */
 export function canDeletePurchase(purchase) {
   if (!purchase) return false;
-  return (
-    purchase.status === PURCHASE_STATUSES.PROFORMA ||
-    purchase.status === PURCHASE_STATUSES.PENDING
-  );
+  return purchase.status === PURCHASE_STATUSES.PROFORMA;
+}
+
+/** پیش‌پرداختِ باطل‌نشده‌ای که جلوی حذفِ پیش‌فاکتور را می‌گیرد. */
+export function hasLivePayments(doc) {
+  return (doc?.paymentDetails || []).some((payment) => !payment.voidedAt);
 }
 
 /**
- * لغو (نه حذف) خرید زمانی مجاز است که کالا ارسال شده باشد
- * ولی هنوز هیچ قلمی در انبار دریافت نشده باشد.
- * پس از اولین دریافت، خرید دیگر نه حذف می‌شود و نه لغو —
- * چون سابقه‌ی انبار و احتمالاً مالی روی آن ثبت شده است.
+ * لغو (`ChangePurchaseStatus` → `CANCELLED`) از پیش‌فاکتور، «در انتظار
+ * ارسال» و «ارسال‌شده»، تا وقتی هیچ کالایی دریافت نشده. لغو نهایی است و
+ * پرداخت‌ها روی خرید می‌مانند.
  */
 export function canCancelPurchase(purchase) {
   if (!purchase) return false;
-  if (purchase.status !== PURCHASE_STATUSES.SHIPPED) return false;
-  const items = purchase.items || [];
-  return items.every((item) => !(item.receivedQuantity > 0));
+  if (!MANUAL_PURCHASE_STATUSES.includes(purchase.status)) return false;
+  return (purchase.items || []).every((item) => !(item.receivedQuantity > 0));
 }
 
-/**
- * برای نمایش پیام راهنما در جاهایی که نه حذف و نه لغو ممکن است
- */
+/** برای نمایش پیام راهنما وقتی نه حذف و نه لغو ممکن است. */
 export function getPurchaseLockReason(purchase) {
   if (!purchase) return null;
   if (canDeletePurchase(purchase) || canCancelPurchase(purchase)) return null;
   if (purchase.status === PURCHASE_STATUSES.CANCELLED) return null;
-  return "این خرید دارای سابقه‌ی دریافت یا تسویه در انبار است و دیگر قابل حذف یا لغو نیست.";
+  return "کالای این خرید در انبار دریافت شده و دیگر قابل لغو نیست؛ برای اصلاح از مسیر مرجوعی اقدام کنید.";
 }
+
+/**
+ * مقصدهای مجازِ `ChangePurchaseStatus` از وضعیتِ فعلی (به‌جز «لغو» که
+ * دکمه و دیالوگِ خودش را دارد). خروج از پیش‌فاکتور شماره و تاریخِ
+ * فاکتورِ ذخیره‌شده را لازم دارد.
+ */
+export function purchaseStatusTargets(purchase) {
+  switch (purchase?.status) {
+    case PURCHASE_STATUSES.PROFORMA:
+      return purchase.invoiceNumber && purchase.invoiceDate
+        ? [PURCHASE_STATUSES.PENDING, PURCHASE_STATUSES.SHIPPED]
+        : [];
+    case PURCHASE_STATUSES.PENDING:
+      return [PURCHASE_STATUSES.SHIPPED];
+    case PURCHASE_STATUSES.SHIPPED:
+      return [PURCHASE_STATUSES.PENDING];
+    default:
+      return [];
+  }
+}
+
 // ─── قلم‌های خرید پس از ثبت ─────────────────────────────────────────────────
 
 /** همان `PurchaseItem.StillOwedQuantity`ِ بکند: سفارش − رسیده − بسته‌شده. */
@@ -69,37 +86,11 @@ export function canReopenPurchaseItem(purchase, item) {
   return (Number(item.shortClosedQuantity) || 0) > 0;
 }
 
-// ─── ویرایشِ اقلامِ خریدِ ثبت‌شده ────────────────────────────────────────────
-
-/**
- * قلمی که انبار از آن تحویل گرفته نه حذف می‌شود و نه کمتر از مقدارِ
- * رسیده (به‌علاوه‌ی مقدارِ بسته‌شده) می‌شود — وگرنه «مانده» منفی می‌شد و
- * دانه‌های دریافت‌شده به قلمی اشاره می‌کردند که دیگر نیست.
- */
-export function itemEditErrors(savedItems = [], formItems = []) {
-  const errors = [];
-  savedItems.forEach((saved) => {
-    const floor =
-      (Number(saved.receivedQuantity) || 0) + (Number(saved.shortClosedQuantity) || 0);
-    if (floor <= 0) return;
-    const current = formItems.find(
-      (item) => (item.id != null ? item.id === saved.id : item.productId === saved.productId),
-    );
-    if (!current) {
-      errors.push(`«${saved.productName}» از انبار تحویل گرفته شده و قابل حذف نیست.`);
-    } else if ((Number(current.quantity) || 0) < floor) {
-      errors.push(
-        `مقدارِ «${saved.productName}» نمی‌تواند کمتر از ${floor.toLocaleString("fa-IR")} (رسیده و بسته‌شده) باشد.`,
-      );
-    }
-  });
-  return errors;
-}
-
 // ─── وضعیتِ دستی ────────────────────────────────────────────────────────────
 
 /**
- * وضعیت‌هایی که واحد خرید دستی انتخاب می‌کند — مراحلِ پیش از رسیدنِ کالا.
+ * وضعیت‌هایی که واحد خرید دستی انتخاب می‌کند — مراحلِ پیش از رسیدنِ کالا،
+ * و همان سه وضعیتی که `CreatePurchase`/`UpdatePurchase` می‌پذیرند.
  * «تحویل ناقص/کامل» را فقط دریافتِ انبار تعیین می‌کند (سرور بعد از هر دورِ
  * دریافت از نو حسابش می‌کند) و «لغو» دکمه و دیالوگِ خودش را دارد.
  */

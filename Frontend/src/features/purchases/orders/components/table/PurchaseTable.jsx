@@ -17,6 +17,8 @@ const PurchaseTable = ({
   currentPage,
   pageSize,
   onPaginationChange,
+  sorting,
+  onSortingChange,
 }) => {
   const navigate = useNavigate();
 
@@ -48,7 +50,6 @@ const PurchaseTable = ({
       {
         accessorKey: "status",
         header: "وضعیت",
-        enableSorting: false,
         cell: (info) => (
           <PurchaseStatusBadge
             status={info.getValue()}
@@ -59,7 +60,6 @@ const PurchaseTable = ({
       {
         accessorKey: "paymentType",
         header: "نوع پرداخت",
-        enableSorting: false,
         cell: (info) => (
           <PaymentTypeBadge
             type={info.getValue()}
@@ -73,7 +73,9 @@ const PurchaseTable = ({
         cell: ({ row }) => (
           <PaymentProgress
             paid={row.original.paidAmount}
-            total={row.original.totalAmount}
+            // بدهی = مبلغ قابل پرداخت − پرداخت‌شده (فروش اقساطی: با سود؛
+            // خرید: منهای قلم‌های بسته‌شده). لیست خرید هنوز آن را ندارد.
+            total={row.original.payableAmount ?? row.original.totalAmount}
           />
         ),
       },
@@ -106,8 +108,8 @@ const PurchaseTable = ({
       currentPage={currentPage}
       pageSize={pageSize}
       onPaginationChange={onPaginationChange}
-      // `GetPurchaseList` مرتب‌سازی نمی‌گیرد؛ ترتیب همیشه جدیدترین‌ها اول است.
-      sortable={false}
+      sorting={sorting}
+      onSortingChange={onSortingChange}
       emptyMessage="خریدی یافت نشد."
     />
   );

@@ -10,11 +10,15 @@ export default function SelectedItemsCards({
   onRemoveUnit,
   lineTotal,
   grandTotal,
+  taxAmount = 0,
+  taxUnknown = false,
   // قرینه‌ی همین prop در `SelectedItemsTable`.
   byContainer = false,
 }) {
   return (
-    <div className={`${byContainer ? "@2xl/picker:hidden" : "md:hidden"} space-y-2`}>
+    <div
+      className={`${byContainer ? "@2xl/picker:hidden" : "xl:hidden"} space-y-2`}
+    >
       {items.map((item) => (
         <div
           key={item.productId}
@@ -39,7 +43,8 @@ export default function SelectedItemsCards({
             </button>
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          {/* قیمتِ ریالی طولانی است؛ دو ستون از چهار را می‌گیرد. */}
+          <div className="grid grid-cols-4 gap-2">
             <div className="space-y-1">
               <label className="text-[11px] text-muted-foreground">
                 تعداد
@@ -54,7 +59,7 @@ export default function SelectedItemsCards({
                 className="h-8 text-center text-xs w-full"
               />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1 col-span-2">
               <label className="text-[11px] text-muted-foreground">
                 قیمت واحد
               </label>
@@ -64,7 +69,7 @@ export default function SelectedItemsCards({
                 onValueChange={(next) =>
                   onFieldChange(item.productId, "unitPrice", next ?? "")
                 }
-                className="h-8 text-center text-xs w-full"
+                className="h-8 text-center text-sm tabular-nums w-full"
               />
             </div>
             <div className="space-y-1">
@@ -100,13 +105,27 @@ export default function SelectedItemsCards({
         </div>
       ))}
 
-      <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2.5 border border-border">
-        <span className="text-sm font-medium text-muted-foreground">
-          جمع کل اقلام:
-        </span>
-        <span className="text-sm font-bold text-card-foreground">
-          {grandTotal.toLocaleString("fa-IR")}
-        </span>
+      <div className="rounded-lg bg-muted px-3 py-2.5 border border-border space-y-1">
+        {taxAmount > 0 && (
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>مالیات (در جمع اقلام آمده):</span>
+            <span>{taxAmount.toLocaleString("fa-IR")}</span>
+          </div>
+        )}
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-muted-foreground">
+            جمع کل اقلام:
+          </span>
+          <span className="text-sm font-bold text-card-foreground">
+            {grandTotal.toLocaleString("fa-IR")}
+          </span>
+        </div>
+        {taxUnknown && (
+          <p className="text-xs text-muted-foreground">
+            مالیاتِ کالاهای تازه‌انتخاب‌شده را سرور هنگام ذخیره حساب و به جمع
+            اضافه می‌کند.
+          </p>
+        )}
       </div>
     </div>
   );

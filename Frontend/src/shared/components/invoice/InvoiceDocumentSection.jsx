@@ -63,6 +63,10 @@ export default function InvoiceDocumentSection({
   attachments,
   documentKind,
   documentId,
+  // متنِ «هنوز سندی نیست» وقتی دلیلش چیزی جز «فایلی اضافه نشده» است.
+  emptyHint,
+  // نامِ فایلِ سندی که سرور می‌سازد؛ پیش‌فرض شماره‌ی سند.
+  serverDocumentName,
 }) {
   const [isBusy, setIsBusy] = useState(false);
 
@@ -80,7 +84,7 @@ export default function InvoiceDocumentSection({
     if (serverPdfFetcher) {
       list.push(
         serverDocument({
-          name: invoiceNumber || title || "invoice",
+          name: serverDocumentName || invoiceNumber || title || "invoice",
           fetchPdf: () => serverPdfFetcher(documentId),
         })
       );
@@ -88,7 +92,7 @@ export default function InvoiceDocumentSection({
 
     list.push(...attachmentDocuments(attachments));
     return list;
-  }, [attachments, documentId, invoiceNumber, serverPdfFetcher, title]);
+  }, [attachments, documentId, invoiceNumber, serverDocumentName, serverPdfFetcher, title]);
 
   /** پیامِ یکسان برای هر دو دکمه وقتی بعضی سندها نیامدند. */
   const reportFailures = (failures) => {
@@ -155,8 +159,8 @@ export default function InvoiceDocumentSection({
             </span>
           ) : (
             <span>
-              هنوز سندی برای این سفارش وجود ندارد؛ تا وقتی فایلی اضافه
-              نشود، چاپ و دانلود غیرفعال است.
+              {emptyHint ??
+                "هنوز سندی برای این سفارش وجود ندارد؛ تا وقتی فایلی اضافه نشود، چاپ و دانلود غیرفعال است."}
             </span>
           )}
         </p>

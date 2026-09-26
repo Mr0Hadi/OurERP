@@ -11,6 +11,7 @@ const EMPTY_FORM = {
   description: "",
   paymentType: PaymentTypeEnum.CASH,
   paidAmount: "",
+  paymentPaidAt: null,
   checkNumber: "",
   transferRef: "",
   mixedPayments: [], // اضافه شد
@@ -61,6 +62,9 @@ export const useSaleFormStore = create((set, get) => ({
       quantity: Number(item.quantity ?? item.quantity) || 1,
       unitPrice: Number(item.unitPrice) || 0,
       discount: item.discount || 0,
+      // نرخ مالیاتی که سرور برای این قلم نگه داشته — پیش‌نمایشِ جمع با آن حساب می‌شود.
+      taxPercent: item.taxPercent,
+      taxCategory: item.taxCategory,
       shippedQuantity: item.shippedQuantity ?? 0,
       settledQuantity: item.settledQuantity ?? 0,
     }));
@@ -77,6 +81,7 @@ export const useSaleFormStore = create((set, get) => ({
         description: sale.description || "",
         paymentType: sale.paymentType ?? PaymentTypeEnum.CASH,
         paidAmount: sale.paidAmount?.toString() || "",
+        paymentPaidAt: sale.paymentPaidAt || null,
         checkNumber: sale.checkNumber || "",
         transferRef: sale.transferRef || "",
         mixedPayments: sale.mixedPayments || [],

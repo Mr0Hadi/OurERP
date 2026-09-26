@@ -23,7 +23,12 @@ const STATUS_CONFIG = {
 };
 const DEFAULT_STATUS_CONFIG = { icon: Activity, textColor: 'text-card-foreground' };
 
-export default function ReceivingSummaryCard({ formData, onFormChange }) {
+/** `replacementOnly`: دریافتِ کالای جایگزینِ مرجوعی، نه خودِ خرید — پیشرفتِ خرید بی‌ربط است. */
+export default function ReceivingSummaryCard({
+  formData,
+  onFormChange,
+  replacementOnly = false,
+}) {
   const handleChange = (field, value) => {
     onFormChange({ [field]: value });
   };
@@ -50,25 +55,33 @@ export default function ReceivingSummaryCard({ formData, onFormChange }) {
       </CardHeader>
       <CardContent className="space-y-4">
         {/* وضعیت فعلی خرید */}
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">وضعیت خرید</span>
-          <Badge variant="secondary" className={`gap-1.5 ${config.textColor}`}>
-            <StatusIcon className="h-3.5 w-3.5" />
-            {PURCHASE_STATUS_LABELS[formData.status] ?? formData.status}
-          </Badge>
-        </div>
+        {!replacementOnly && (
+          <>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">وضعیت خرید</span>
+              <Badge
+                variant="secondary"
+                className={`gap-1.5 ${config.textColor}`}
+              >
+                <StatusIcon className="h-3.5 w-3.5" />
+                {PURCHASE_STATUS_LABELS[formData.status] ?? formData.status}
+              </Badge>
+            </div>
 
-        {/* پیشرفت دریافت */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>پیشرفت دریافت</span>
-            <span className="tabular-nums font-medium text-card-foreground">
-              {stats.received.toLocaleString('fa-IR')} / {stats.stillOwed.toLocaleString('fa-IR')}
-              {' '}({stats.percent.toLocaleString('fa-IR')}٪)
-            </span>
-          </div>
-          <Progress value={stats.percent} className="h-2" />
-        </div>
+            {/* پیشرفت دریافت */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>پیشرفت دریافت</span>
+                <span className="tabular-nums font-medium text-card-foreground">
+                  {stats.received.toLocaleString("fa-IR")} /{" "}
+                  {stats.stillOwed.toLocaleString("fa-IR")} (
+                  {stats.percent.toLocaleString("fa-IR")}٪)
+                </span>
+              </div>
+              <Progress value={stats.percent} className="h-2" />
+            </div>
+          </>
+        )}
 
         <div className="grid grid-cols-1 gap-2 text-sm border-t border-border pt-3">
           <div>

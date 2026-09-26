@@ -49,7 +49,6 @@ const SalesReturnTable = ({
       {
         accessorKey: "saleInvoiceNumber",
         header: "فاکتور فروش",
-        enableSorting: false,
         cell: (info) => (
           <span className="font-mono text-xs text-muted-foreground">
             {info.getValue()}
@@ -110,7 +109,6 @@ const SalesReturnTable = ({
       {
         accessorKey: "status",
         header: "وضعیت",
-        enableSorting: false,
         cell: (info) => <SalesReturnStatusBadge status={info.getValue()} />,
       },
       {

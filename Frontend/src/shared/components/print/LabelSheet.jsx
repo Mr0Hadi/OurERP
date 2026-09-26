@@ -15,14 +15,18 @@ import {
  *
  * از محتوای برچسب بی‌خبر است: هر ماژول renderItem خودش را می‌دهد، پس
  * برای چاپ فاکتور هم قابل استفاده است.
+ *
+ * `preset` (اختیاری) هندسه‌ی آماده‌ای است که مصرف‌کننده خودش ساخته — مثلاً
+ * برچسبِ اندازه‌ی سفارشی — و بر `presetKey` مقدم است.
  */
 export default function LabelSheet({
   items,
   renderItem,
   presetKey = DEFAULT_SHEET_PRESET,
+  preset: presetOverride,
   getItemKey = (item, index) => item.id ?? index,
 }) {
-  const preset = getSheetPreset(presetKey);
+  const preset = presetOverride ?? getSheetPreset(presetKey);
   const pages = paginateItems(items, preset);
 
   return (

@@ -37,6 +37,7 @@ import ReturnStatusBar from "@/shared/components/returns/ReturnStatusBar";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
 import RelatedReturnsCard from "@/shared/components/returns/RelatedReturnsCard";
+import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
 import { SALES_RETURN_STATUS_LABELS } from "../domain/salesReturnVocabulary";
 import SalesReturnResolutionSection from "../components/forms/SalesReturnResolutionSection";
 import { ROUTES } from "@/shared/constants/routes";
@@ -61,6 +62,13 @@ function SalesReturnDetailContent({ salesReturn }) {
     salesReturn.id,
   );
   const { data: relatedReturns } = useRelatedSalesReturnsQuery(
+    salesReturn.saleId,
+    salesReturn.id,
+  );
+
+  // روی هر کالا، چقدر در مرجوعی‌های دیگرِ همین سند ثبت شده.
+  const claimsElsewhere = useClaimsInOtherReturns(
+    "sale",
     salesReturn.saleId,
     salesReturn.id,
   );
@@ -111,6 +119,7 @@ function SalesReturnDetailContent({ salesReturn }) {
           order={sale}
           partyName={salesReturn.customerName}
           defaultOpen={false}
+          claimsElsewhere={claimsElsewhere}
         />
       )}
 
@@ -134,6 +143,8 @@ function SalesReturnDetailContent({ salesReturn }) {
         // برگردانده؛ بدون آن سرور ۴۰۰ می‌دهد و دکمه‌ی چاپ فقط خطا می‌سازد.
         documentKind="saleReturn"
         documentId={hasRefund ? salesReturn.id : null}
+        serverDocumentName={`برگه-طلبکاری-${salesReturn.returnNumber}`}
+        emptyHint="برگه‌ی طلبکاری (سندِ استرداد وجه) فقط برای مرجوعی‌ای ساخته می‌شود که در تصمیمش پولی به مشتری برگردانده شده باشد."
         attachmentLabel="فاکتور یا رسید مرجوعی برای مشتری"
       />
 
@@ -149,8 +160,8 @@ function SalesReturnDetailContent({ salesReturn }) {
         onExecuteMoney={(effect) =>
           executeMoneyMutation.mutate({ effectId: effect.id })
         }
-        onReject={() => rejectMutation.mutate()}
-        onCancel={() => cancelMutation.mutate()}
+        onReject={(reason, options) => rejectMutation.mutate(reason, options)}
+        onCancel={(reason, options) => cancelMutation.mutate(reason, options)}
         onReopen={() => reopenMutation.mutate()}
       />
 

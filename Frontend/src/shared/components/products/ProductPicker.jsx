@@ -7,6 +7,10 @@ import SelectedItemsCards from "@/shared/components/forms/SelectedItemsCards";
 import toast from "react-hot-toast";
 import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
+import {
+  invoiceLineAmounts,
+  invoiceTotals,
+} from "@/shared/domain/invoice/lineMath";
 
 /**
  * انتخاب کالا + فهرست اقلام انتخاب‌شده — یک‌جا و مشترک.
@@ -25,10 +29,18 @@ import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReference
  * چه از دکمه‌ی + و چه از اسکن بارکد.
  */
 
-const lineTotalOf = (item) =>
-  (Number(item.quantity) || 0) *
-  (Number(item.unitPrice) || 0) *
-  (1 - (Number(item.discount) || 0) / 100);
+/**
+ * جمعِ قلم با همان قاعده‌ی سرور (تخفیف و مالیات گرد، هر قلم جدا). قلمی
+ * که نرخ مالیاتش معلوم نیست (کالای تازه‌انتخاب‌شده) بدون مالیات حساب
+ * می‌شود؛ `showTaxHint` این را به کاربر می‌گوید.
+ */
+const lineTotalOf = (item) => invoiceLineAmounts(item).totalAmount;
+
+/** نرخ مالیاتِ کالا، اگر شیءِ کالا آن را دارد — روی قلم نگه داشته می‌شود. */
+const taxFieldsOf = (product) =>
+  product?.tax != null
+    ? { taxPercent: Number(product.tax) || 0, taxCategory: product.taxCategory }
+    : {};
 
 export default function ProductPicker({
   items,
@@ -42,6 +54,8 @@ export default function ProductPicker({
   closeLabel = "بستن لیست کالاها",
   // اسکنِ بارکدِ دانه، کدش را روی همان قلم نگه می‌دارد (`productUnitBarcodes`).
   trackUnits = false,
+  // فرم خرید/فروش: جمع با مالیات است و سرور مالیاتِ قلم‌های تازه را حساب می‌کند.
+  showTaxHint = false,
 }) {
   // در حالت تاشو، اگر هنوز چیزی انتخاب نشده باز باشد بهتر است — کاربر
   // برای همین آمده.
@@ -92,6 +106,7 @@ export default function ProductPicker({
         quantity: 1,
         unitPrice: priceOf(product),
         discount: 0,
+        ...taxFieldsOf(product),
         ...(unitCode && { productUnitBarcodes: [unitCode] }),
       },
     ]);
@@ -128,7 +143,8 @@ export default function ProductPicker({
       }),
     );
 
-  const grandTotal = items.reduce((sum, item) => sum + lineTotalOf(item), 0);
+  const totals = invoiceTotals(items);
+  const grandTotal = totals.totalAmount;
 
   /**
    * جزئیاتِ خرید/فروش که از سرور می‌آید نام و واحدِ کالا را کامل ندارد
@@ -138,10 +154,13 @@ export default function ProductPicker({
    * نمی‌شود.
    */
   const displayItems = items.map((item) => {
-    if (item.productName && item.unit) return item;
-    const product = products.find((candidate) => candidate.id === item.productId);
+    if (item.productName && item.unit && item.taxPercent != null) return item;
+    const product = products.find(
+      (candidate) => candidate.id === item.productId,
+    );
     if (!product) return item;
     return {
+      ...taxFieldsOf(product),
       ...item,
       productName: item.productName || product.name,
       productCode: item.productCode || product.code,
@@ -153,6 +172,8 @@ export default function ProductPicker({
     <>
       <SelectedItemsTable
         items={displayItems}
+        taxAmount={totals.taxAmount}
+        taxUnknown={showTaxHint && totals.taxUnknown}
         onFieldChange={handleFieldChange}
         onRemove={handleRemove}
         onRemoveUnit={trackUnits ? handleRemoveUnit : undefined}
@@ -162,6 +183,8 @@ export default function ProductPicker({
       />
       <SelectedItemsCards
         items={displayItems}
+        taxAmount={totals.taxAmount}
+        taxUnknown={showTaxHint && totals.taxUnknown}
         onFieldChange={handleFieldChange}
         onRemove={handleRemove}
         onRemoveUnit={trackUnits ? handleRemoveUnit : undefined}

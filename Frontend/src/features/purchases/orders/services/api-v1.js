@@ -6,6 +6,19 @@ import {
 } from "@/shared/services/api/contract";
 import { toDateOnly } from "@/shared/lib/dateUtils";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+import { toApiSort } from "@/shared/services/api/sorting";
+
+/** `PurchaseListSortEnum`ِ بکند، بر اساسِ شناسه‌ی ستونِ جدول. */
+export const PURCHASE_SORT_COLUMNS = {
+  invoiceNumber: 1,
+  supplierName: 2,
+  invoiceDate: 3,
+  paymentDate: 4,
+  status: 5,
+  paymentType: 6,
+  totalAmount: 7,
+  paidAmount: 8,
+};
 
 export {
   PURCHASE_STATUSES,
@@ -20,26 +33,21 @@ export {
  * (`Backend-Net/docs/api-guide.fa.md`، بخش ۹). بکند از الگوی
  * `api/{Controller}/{Action}` استفاده می‌کند، نه REST.
  *
- * به‌روزرسانیِ ۲۰۲۶-۰۹-۰۲ — دو شکافِ قبلی بسته شد:
- *  - **پیش‌فاکتور:** `PurchaseStatusEnum.PROFORMA = 0` حالا در بکند هم
- *    هست و شماره‌گذاریِ کلِ enum عیناً با فرانت یکی است (هیچ نگاشتی لازم
- *    نیست). در وضعیت پیش‌فاکتور، `invoiceNumber`/`invoiceDate` الزامی
- *    نیستند؛ ولی خروج از پیش‌فاکتور بدون شماره‌ی فاکتور با ۴۰۰ رد می‌شود.
- *  - **ضمیمه‌ی فاکتور:** `attachments` روی Create/Update پذیرفته و در
- *    `GetPurchaseDetail` برگردانده می‌شود. رفتارِ Update **جایگزینیِ
- *    کامل** است، پس همیشه فهرستِ نهایی فرستاده می‌شود.
+ * **قفل پیش‌فاکتور (۲۰۲۶-۰۹-۲۴):** خرید فقط تا وقتی `PROFORMA` است با
+ * `UpdatePurchase` ویرایش می‌شود. بعد از ثبتِ فاکتور تامین‌کننده، فقط
+ * چهار چیز باز می‌ماند و هر کدام endpoint خودش را دارد: پرداخت‌ها
+ * (`Add/Edit/VoidPurchasePayment`)، وضعیت (`ChangePurchaseStatus`)،
+ * پیوست‌ها (`UpdatePurchaseAttachments`) و مهلت پرداخت
+ * (`UpdatePurchasePaymentDate`). همه‌ی این‌ها و Create/Update سندِ کامل
+ * (شکلِ `GetPurchaseDetail`) را برمی‌گردانند.
  *
- * ویرایشِ اقلام: `UpdatePurchase` فهرستِ نهاییِ اقلام را در `productItemList`
- * می‌گیرد — `id` پر یعنی قلمِ موجود، خالی یعنی قلمِ تازه، و قلمی که در
- * فهرست نباشد حذف می‌شود. قلمی که از آن دریافت شده نه حذف می‌شود و نه
- * کمتر از «رسیده + بسته‌شده» (`itemEditErrors` همین را پیش از ارسال چک
- * می‌کند). قرارداد: `Backend-Net/docs/purchase-frontend-sync-requests.fa.md` بند ۲.
+ * `totalAmount` و `paidAmount` دیگر فرستاده نمی‌شوند: سرور جمع را از
+ * اقلام و مالیاتِ کالاها، و پرداخت‌شده را از ردیف‌های پرداخت حساب می‌کند.
  *
- * چیزهایی که بکند عمداً ندارد و فرانت هم دیگر وانمود نمی‌کند دارد:
- *  - ثبتِ پرداختِ پله‌ای endpoint ندارد؛ پرداخت با همان `paymentDetails`ِ
- *    `UpdatePurchase` (جایگزینیِ کامل) ثبت می‌شود.
- *  - فیلترِ چندتامین‌کننده‌ای، `search` آزاد و مرتب‌سازی پشتیبانی
- *    نمی‌شوند؛ لیست همیشه جدیدترین‌ها را اول می‌دهد.
+ * جست‌وجو فقط روی شماره‌ی فاکتور است (`invoiceNumber`)؛ تامین‌کننده
+ * فیلترِ جدای خودش را دارد.
+ *
+ * مرتب‌سازی با `sortBy`/`sortDirection` (`PurchaseListSortEnum`).
  */
 
 /** `PurchaseItemDto` واقعی فقط این چهار فیلد را می‌خواهد؛ نام/کد/واحد/جمعِ خط را خودِ بکند از `productId` پر می‌کند. */
@@ -55,17 +63,18 @@ function toApiItems(items = []) {
 }
 
 /**
- * فرم → `paymentDetails`ِ سرور.
+ * فرم → `paymentDetails`ِ `CreatePurchase`: پولی که همان لحظه‌ی ثبت
+ * داده شده (مثلاً پیش‌پرداخت). بعد از ثبت، پرداخت‌ها فقط با
+ * `Add/Edit/VoidPurchasePayment` تغییر می‌کنند.
  *
  * فرم پرداخت را با چهار فیلدِ جدا نگه می‌دارد
  * (`paymentType`/`checkNumber`/`transferRef`/`mixedPayments`)؛ بکند یک
- * آرایه‌ی `{type, amount, checkNumber?, transferRef?}[]` می‌خواهد. چون
- * ردیف‌های ترکیبی هم با `PaymentTypeEnum` شمرده می‌شوند، اینجا فقط
- * شکل عوض می‌شود نه معنیِ اعداد. طبق اعتبارسنجیِ بکند برای هر
- * `paymentType` جز نقدی این آرایه الزامی است، پس «نسیه» هم یک ردیف
- * می‌گیرد.
+ * آرایه‌ی `{type, amount, paidAt?, checkNumber?, transferRef?}[]` می‌خواهد.
+ * هر ردیف یک جابه‌جاییِ واقعیِ پول است، پس ردیفِ بی‌مبلغ فرستاده نمی‌شود
+ * (سرور `amount > 0` می‌خواهد) و «نسیه» — که شرایط پرداخت است نه
+ * پرداخت — ردیفی ندارد مگر مبلغی واقعاً داده شده باشد.
  */
-function toApiPaymentDetails({
+export function toApiPaymentDetails({
   paymentType,
   paidAmount,
   paymentPaidAt,
@@ -73,34 +82,33 @@ function toApiPaymentDetails({
   transferRef,
   mixedPayments,
 }) {
-  // `paidAt` در بکند غیرِ nullable است و نفرستادنش `0001-01-01` ذخیره
-  // می‌کند. ردیفی که از سرور آمده تاریخِ خودش را نگه می‌دارد، چون
-  // `UpdatePurchase` ردیف‌ها را کامل جایگزین می‌کند.
   const now = new Date().toISOString();
 
-  if (paymentType === PaymentTypeEnum.MIXED) {
-    return (mixedPayments || []).map((part) => ({
-      type: part.type,
-      amount: Number(part.amount) || 0,
-      paidAt: part.paidAt || now,
-      checkNumber: part.checkNumber || undefined,
-      transferRef: part.transferRef || undefined,
-    }));
-  }
-
-  const amount = Number(paidAmount) || 0;
-  const paidAt = paymentPaidAt || now;
-
-  if (paymentType === PaymentTypeEnum.CHECK) {
-    return [{ type: paymentType, amount, paidAt, checkNumber: checkNumber || undefined }];
-  }
-  if (paymentType === PaymentTypeEnum.TRANSFER) {
-    return [{ type: paymentType, amount, paidAt, transferRef: transferRef || undefined }];
-  }
-  if (paymentType === PaymentTypeEnum.CREDIT) {
-    return [{ type: paymentType, amount, paidAt }];
-  }
-  return [];
+  const rows =
+    paymentType === PaymentTypeEnum.MIXED
+      ? (mixedPayments || []).map((part) => ({
+          type: part.type,
+          amount: Number(part.amount) || 0,
+          paidAt: part.paidAt || now,
+          checkNumber: part.checkNumber || undefined,
+          transferRef: part.transferRef || undefined,
+        }))
+      : [
+          {
+            type: paymentType,
+            amount: Number(paidAmount) || 0,
+            paidAt: paymentPaidAt || now,
+            checkNumber:
+              paymentType === PaymentTypeEnum.CHECK
+                ? checkNumber || undefined
+                : undefined,
+            transferRef:
+              paymentType === PaymentTypeEnum.TRANSFER
+                ? transferRef || undefined
+                : undefined,
+          },
+        ];
+  return rows.filter((row) => row.amount > 0);
 }
 
 /**
@@ -171,7 +179,7 @@ export function fromApiPurchase(dto) {
  * `{objectKey, fileName?, note?}`. همان شکلی که `useInvoiceAttachments`
  * در `filesPayload` می‌دهد، پس معمولاً بدونِ تبدیل رد می‌شود.
  */
-function toApiAttachments(attachments = []) {
+export function toApiAttachments(attachments = []) {
   return attachments
     .filter((item) => item?.objectKey)
     .map((item) => ({
@@ -190,8 +198,6 @@ function toApiPurchasePayload(purchaseData) {
     description: purchaseData.description || undefined,
     status: purchaseData.status,
     paymentType: purchaseData.paymentType,
-    totalAmount: purchaseData.totalAmount,
-    paidAmount: purchaseData.paidAmount,
     attachments: toApiAttachments(purchaseData.attachments),
   };
 }
@@ -210,6 +216,7 @@ export async function fetchPurchases(params = {}) {
           : undefined,
       fromDate: params.fromDate || undefined,
       toDate: params.toDate || undefined,
+      ...toApiSort(params.sorting, PURCHASE_SORT_COLUMNS),
     },
   });
   return normalizeListResponse(data, { itemsKey: "purchaseList" });
@@ -222,55 +229,116 @@ export async function fetchPurchaseById(id) {
   return fromApiPurchase(data);
 }
 
-export async function createPurchase(purchaseData) {
-  const { data } = await axiosInstance.post("/Purchase/CreatePurchase", {
-    ...toApiPurchasePayload(purchaseData),
-    paymentDetails: toApiPaymentDetails(purchaseData),
-    productItemList: toApiItems(purchaseData.items),
-  });
-  return data;
+/** `CreatePurchase` سندِ کامل را برمی‌گرداند (شکلِ `GetPurchaseDetail`). */
+export async function createPurchase(purchaseData, { idempotencyKey } = {}) {
+  const { data } = await axiosInstance.post(
+    "/Purchase/CreatePurchase",
+    {
+      ...toApiPurchasePayload(purchaseData),
+      paymentDetails: toApiPaymentDetails(purchaseData),
+      productItemList: toApiItems(purchaseData.items),
+    },
+    idempotent(idempotencyKey),
+  );
+  return fromApiPurchase(data);
 }
 
 /**
- * `productItemList` فهرستِ *نهاییِ* اقلام است (جایگزینیِ کامل، با `id`ِ
- * قلم‌های موجود) و `totalAmount` از همین اقلام حساب شده است.
- * `attachments` و `paymentDetails` اما هر دو
- * **جایگزینیِ کامل**اند: هرچه در آرایه نباشد از سرور پاک می‌شود، پس
- * همیشه فهرستِ نهایی فرستاده می‌شود. برای هر `paymentType` جز نقدی،
- * `paymentDetails` خالی با ۴۰۰ رد می‌شود.
+ * فقط پیش‌فاکتور. `productItemList` فهرستِ *نهاییِ* اقلام است (جایگزینیِ
+ * کامل، با `id`ِ قلم‌های موجود) و `attachments` هم جایگزینیِ کامل است.
+ * `status` برابر `PENDING`/`SHIPPED` یعنی خروج از پیش‌فاکتور، که شماره و
+ * تاریخِ فاکتورِ تامین‌کننده را لازم دارد. پرداخت‌ها اینجا نیستند.
  */
 export async function updatePurchase(id, updates) {
   const { data } = await axiosInstance.put("/Purchase/UpdatePurchase", {
     id,
     ...toApiPurchasePayload(updates),
-    paymentDetails: toApiPaymentDetails(updates),
     productItemList: toApiItems(updates.items),
   });
-  return data;
+  return fromApiPurchase(data);
 }
 
 /**
- * جایگزینِ واقعی برای PATCH وضعیت وجود ندارد؛ باید کل سند را با
- * `UpdatePurchase` فرستاد. و چون آن دستور همه‌ی فیلدها را بازنویسی
- * می‌کند (`attachments` را هم *جایگزین* می‌کند)، فرستادنِ یک
- * `{status}`ِ تنها یعنی پاک‌شدنِ شماره‌ی فاکتور و ضمیمه‌ها — پس سندِ
- * فعلی اول خوانده و بعد با وضعیتِ تازه پس فرستاده می‌شود.
- *
- * `UpdatePurchase` هیچ `data`یی برنمی‌گرداند؛ این تابع سندِ تازه را
- * دوباره می‌خواند تا فراخوان چیزی واقعی برای نشاندن در کش داشته باشد.
+ * تغییرِ دستیِ وضعیت، قبل یا بعد از صدور: `PROFORMA → PENDING/SHIPPED`
+ * (شماره و تاریخِ فاکتور باید از قبل ذخیره شده باشد)، `PENDING ⇄ SHIPPED`،
+ * و `CANCELLED` تا وقتی چیزی دریافت نشده.
  */
-export async function updatePurchaseStatus(id, status) {
-  const current = await fetchPurchaseById(id);
-  await updatePurchase(id, { ...current, status });
-  return fetchPurchaseById(id);
+export async function changePurchaseStatus(id, status) {
+  const { data } = await axiosInstance.post("/Purchase/ChangePurchaseStatus", {
+    id,
+    status,
+  });
+  return fromApiPurchase(data);
 }
 
-/** `DeletePurchase` هیچ `data`یی برنمی‌گرداند؛ شناسه برای پاک‌کردنِ کش از خودِ ورودی برمی‌گردد. */
+/** پیوست‌ها در هر وضعیتی؛ جایگزینیِ کامل. */
+export async function updatePurchaseAttachments(id, attachments) {
+  const { data } = await axiosInstance.put(
+    "/Purchase/UpdatePurchaseAttachments",
+    {
+      id,
+      attachments: toApiAttachments(attachments),
+    },
+  );
+  return fromApiPurchase(data);
+}
+
+/** مهلت پرداخت در هر وضعیتی؛ `null` یعنی بدون مهلت. */
+export async function updatePurchasePaymentDate(id, paymentDate) {
+  const { data } = await axiosInstance.put(
+    "/Purchase/UpdatePurchasePaymentDate",
+    {
+      id,
+      paymentDate: paymentDate || null,
+    },
+  );
+  return fromApiPurchase(data);
+}
+
+// ─── پرداخت‌ها ──────────────────────────────────────────────────────────────
+
+/**
+ * `direction`: خالی یا `OUT` = ما پرداختیم؛ `IN` = تامین‌کننده پول
+ * برگرداند. روی خریدِ لغوشده فقط `IN` پذیرفته می‌شود.
+ */
+export async function addPurchasePayment(
+  { purchaseId, type, amount, paidAt, checkNumber, transferRef, direction },
+  { idempotencyKey } = {},
+) {
+  const { data } = await axiosInstance.post(
+    "/Purchase/AddPurchasePayment",
+    { purchaseId, type, amount, paidAt, checkNumber, transferRef, direction },
+    idempotent(idempotencyKey),
+  );
+  return fromApiPurchase(data);
+}
+
+/** ردیفِ قبلی باطل و ردیفِ تازه با همان جهت ثبت می‌شود؛ `id`ِ ردیف عوض می‌شود. */
+export async function editPurchasePayment(
+  { paymentId, type, amount, paidAt, checkNumber, transferRef },
+  { idempotencyKey } = {},
+) {
+  const { data } = await axiosInstance.post(
+    "/Purchase/EditPurchasePayment",
+    { paymentId, type, amount, paidAt, checkNumber, transferRef },
+    idempotent(idempotencyKey),
+  );
+  return fromApiPurchase(data);
+}
+
+export async function voidPurchasePayment(paymentId) {
+  const { data } = await axiosInstance.post("/Purchase/VoidPurchasePayment", {
+    paymentId,
+  });
+  return fromApiPurchase(data);
+}
+
+/** فقط پیش‌فاکتور؛ خروجی `{ id }`. خریدِ صادرشده لغو می‌شود، نه حذف. */
 export async function removePurchase(id) {
-  await axiosInstance.delete("/Purchase/DeletePurchase", {
+  const { data } = await axiosInstance.delete("/Purchase/DeletePurchase", {
     params: { id },
   });
-  return { id };
+  return data ?? { id };
 }
 
 // ─── اقلامِ پس از ثبت ───────────────────────────────────────────────────────
@@ -300,8 +368,10 @@ export async function reopenPurchaseItem(purchaseItemId) {
 
 /**
  * «کالای اضافه را نگه می‌داریم و پولش را می‌دهیم» — دانه‌های قرنطینه‌ی
- * مازاد/سفارش‌نداده وارد سفارش و موجودی می‌شوند و `totalAmount` خرید
- * بالا می‌رود. پرداختِ خودِ این مبلغ همچنان با `UpdatePurchase` ثبت می‌شود.
+ * مازاد/سفارش‌نداده وارد موجودی می‌شوند و فاکتور یک **قلمِ ضمیمه‌ی تازه**
+ * (`isSupplement`) می‌گیرد؛ قلمِ سفارشی دست نمی‌خورد. `purchaseItemId`
+ * در خروجی شناسه‌ی همان قلمِ ضمیمه است. پرداختِ این مبلغ با
+ * `AddPurchasePayment` ثبت می‌شود.
  *
  * هر ردیف دقیقاً یکی از این دو است:
  *  - مازادِ یک قلم: `{purchaseItemId, quantity}` — با قیمت و تخفیفِ همان

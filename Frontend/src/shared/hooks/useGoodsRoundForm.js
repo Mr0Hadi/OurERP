@@ -15,7 +15,8 @@ import { clampQuantity } from "@/shared/lib/quantityUtils";
  *    (QUARANTINED). سرور حدس نمی‌زند؛ `sourceRequired(line)` می‌گوید کدام
  *    ردیف باید آن را داشته باشد و `defaultSource(line)` پیشنهادِ اولیه است.
  *  • `productUnitBarcodes` — دانه‌های اسکن‌شده؛ یا به تعدادِ دقیقِ ردیف یا
- *    هیچ. `barcodesRequired(line)` برای کالای ردیابی‌پذیر روشن است.
+ *    هیچ. `barcodesRequired(line, source)` می‌گوید اسکن الزامی است یا نه —
+ *    مبدأ هم ورودی است، چون برداشتن از قفسه با برداشتن از قرنطینه فرق دارد.
  *
  * `observations` فقط برای اثرِ ورودی (`GOODS_IN`) معنا دارد: مقدارِ سالم
  * را خودِ بکند از `quantity` منهای مجموعِ مشاهده‌ها حساب می‌کند.
@@ -28,7 +29,7 @@ const generateId = () =>
 const emptyHeader = () => ({
   date: new Date().toISOString().slice(0, 10),
   partyName: "",
-  partyNationalId: "",
+  partyPhoneNumber: "",
   vehiclePlate: "",
   note: "",
 });
@@ -66,7 +67,7 @@ export function useGoodsRoundForm(
       observations: [],
       sourceRequired: sourceRequired(line),
       source: defaultSource(line),
-      barcodesRequired: barcodesRequired(line),
+      barcodesRequired: barcodesRequired(line, defaultSource(line)),
       productUnitBarcodes: [],
     }),
     [sourceRequired, defaultSource, barcodesRequired, startEmpty],
@@ -77,12 +78,12 @@ export function useGoodsRoundForm(
 
   // کلیدِ نسخه از خودِ اثرها ساخته می‌شود: بعد از ثبتِ یک دور،
   // `remainingQuantity`ها عوض می‌شوند و فرم باید از نو پر شود. `barcodesRequired`
-  // هم در کلید است چون به فهرستِ کالاها بستگی دارد که دیرتر می‌رسد.
+  // و `defaultSource` هم در کلیدند چون به داده‌ای بستگی دارند که دیرتر می‌رسد.
   //
   // ریست در همان رندر انجام می‌شود، نه در effect — الگوی رسمیِ «ریستِ
   // state با تغییرِ prop».
   const linesVersion = (lines || [])
-    .map((line) => `${line.effectId}:${line.remainingQuantity}:${barcodesRequired(line)}`)
+    .map((line) => `${line.effectId}:${line.remainingQuantity}:${barcodesRequired(line, defaultSource(line))}:${defaultSource(line)}`)
     .join(",");
   const [lastLinesVersion, setLastLinesVersion] = useState(linesVersion);
   if (lastLinesVersion !== linesVersion) {
@@ -130,8 +131,12 @@ export function useGoodsRoundForm(
   );
 
   const handleSourceChange = useCallback(
-    (effectId, source) => patchRound(effectId, () => ({ source })),
-    [patchRound],
+    (effectId, source) =>
+      patchRound(effectId, (round) => ({
+        source,
+        barcodesRequired: barcodesRequired(round, source),
+      })),
+    [patchRound, barcodesRequired],
   );
 
   const handleBarcodesChange = useCallback(
@@ -252,7 +257,7 @@ export function useGoodsRoundForm(
   const headerOf = (source) => ({
     date: source.date || undefined,
     partyName: source.partyName || undefined,
-    partyNationalId: source.partyNationalId || undefined,
+    partyPhoneNumber: source.partyPhoneNumber || undefined,
     vehiclePlate: source.vehiclePlate || undefined,
     note: source.note || undefined,
   });

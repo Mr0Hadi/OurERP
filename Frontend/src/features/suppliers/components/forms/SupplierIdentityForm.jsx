@@ -14,7 +14,7 @@ import { NationalIdInput } from "@/shared/components/ui/national-id-input";
 import ImageUploadField from "@/shared/components/files/ImageUploadField";
 import {
   mobileRules,
-  persianNameRules,
+  optionalPersonNameRules,
   requiredMessage,
 } from "@/shared/lib/validationRules";
 
@@ -65,26 +65,32 @@ export default function SupplierIdentityForm({ register, control, errors, imageU
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="firstName" className="text-sm font-medium">
-                  نام مسئول <Required />
+                  نام مسئول
                 </Label>
                 <Input
                   id="firstName"
                   placeholder="نام"
                   className="h-10 rounded-lg transition-all"
-                  {...register("firstName", persianNameRules("نام"))}
+                  {...register(
+                    "firstName",
+                    optionalPersonNameRules("نام", "lastName"),
+                  )}
                 />
                 <FieldError error={errors?.firstName} />
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="lastName" className="text-sm font-medium">
-                  نام خانوادگی <Required />
+                  نام خانوادگی مسئول
                 </Label>
                 <Input
                   id="lastName"
                   placeholder="نام خانوادگی"
                   className="h-10 rounded-lg transition-all"
-                  {...register("lastName", persianNameRules("نام خانوادگی"))}
+                  {...register(
+                    "lastName",
+                    optionalPersonNameRules("نام خانوادگی", "firstName"),
+                  )}
                 />
                 <FieldError error={errors?.lastName} />
               </div>

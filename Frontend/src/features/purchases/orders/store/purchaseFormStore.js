@@ -56,6 +56,9 @@ export const usePurchaseFormStore = create((set, get) => ({
       quantity: Number(item.quantity ?? item.quantity) || 0,
       unitPrice: Number(item.unitPrice) || 0,
       discount: item.discount || 0,
+      // نرخ مالیاتی که سرور برای این قلم نگه داشته — پیش‌نمایشِ جمع با آن حساب می‌شود.
+      taxPercent: item.taxPercent,
+      taxCategory: item.taxCategory,
       receivedQuantity: item.receivedQuantity ?? 0,
       settledQuantity: item.settledQuantity ?? 0,
     }));

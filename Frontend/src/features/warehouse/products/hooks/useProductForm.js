@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 
 import { ImageFolderEnum } from "@/shared/domain/enums/imageFolder";
+import { TaxCategoryEnum } from "@/shared/domain/enums/taxCategory";
 import { useImageUpload } from "@/shared/hooks/useImageUpload";
 
 function buildDefaultValues(data) {
@@ -37,6 +38,7 @@ function buildDefaultValues(data) {
     sellPrice1: data.retailPrice ?? data.sellPrice1 ?? 0,
     sellPrice2: data.wholeSalePrice ?? data.sellPrice2 ?? 0,
     vat: (data.tax ?? data.vat) || "",
+    taxExempt: data.taxCategory === TaxCategoryEnum.EXEMPT,
     requiresUnitTracking: Boolean(data.requiresUnitTracking),
   };
 }
@@ -88,6 +90,9 @@ export function useProductForm(initialData = null) {
     retailPrice: Number(formData.sellPrice1) || 0,
     wholeSalePrice: Number(formData.sellPrice2) || 0,
     tax: Number(formData.vat) || 0,
+    taxCategory: formData.taxExempt
+      ? TaxCategoryEnum.EXEMPT
+      : TaxCategoryEnum.TAXABLE,
     requiresUnitTracking: Boolean(formData.requiresUnitTracking),
     imageKey: imageUpload.imageKeyPayload,
   });

@@ -1,4 +1,4 @@
-import { User, IdCard } from "lucide-react";
+import { Phone, User } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -7,6 +7,7 @@ import {
 } from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
+import { MobileNumberInput } from "@/shared/components/ui/mobile-number-input";
 import {
   DEFAULT_PLATE_VALUE,
   PlateInput,
@@ -28,11 +29,12 @@ function plateStringToValue(value) {
 
 /**
  * فردی که کالا را تحویل می‌دهد یا تحویل می‌گیرد — `PartyName`،
- * `PartyNationalId` و `VehiclePlate` روی `ExecuteGoodsRoundCommand`.
+ * `PartyPhoneNumber` و `VehiclePlate` روی `ExecuteGoodsRoundCommand`.
  *
- * جدا از `TransporterSection` است چون فیلدِ دومِ آن شماره‌ی موبایل است و
- * اینجا بکند کدِ ملی می‌خواهد؛ در دورِ کالای مرجوعی، هویتِ تحویل‌گیرنده
- * سندِ ماست، نه راهی برای تماس با او.
+ * شماره‌ی تماس، مثلِ راننده‌ی خرید و فروش (`TransporterSection`)، نه کدِ ملی:
+ * برای پیگیریِ کالای مرجوعی باید بشود با تحویل‌دهنده/تحویل‌گیرنده تماس
+ * گرفت. تا بکند `PartyNationalId` را به `PartyPhoneNumber` تغییر دهد
+ * (سندِ `frontend-requests.fa.md`) این فیلد ذخیره نمی‌شود.
  */
 export default function GoodsRoundPartySection({
   title,
@@ -57,7 +59,9 @@ export default function GoodsRoundPartySection({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div
+          className="grid grid-cols-1 gap-4 md:grid-cols-2"
+        >
           <div className="space-y-1.5">
             <Label className="text-sm font-medium flex items-center gap-1.5">
               <User className="h-3.5 w-3.5 text-muted-foreground" />
@@ -73,16 +77,12 @@ export default function GoodsRoundPartySection({
 
           <div className="space-y-1.5">
             <Label className="text-sm font-medium flex items-center gap-1.5">
-              <IdCard className="h-3.5 w-3.5 text-muted-foreground" />
-              کد ملی (اختیاری)
+              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+              شماره تلفن (اختیاری)
             </Label>
-            <Input
-              inputMode="numeric"
-              placeholder="مثلاً: ۰۰۱۲۳۴۵۶۷۸"
-              value={header.partyNationalId || ""}
-              onChange={(e) =>
-                onHeaderChange({ partyNationalId: e.target.value })
-              }
+            <MobileNumberInput
+              value={header.partyPhoneNumber || ""}
+              onValueChange={(partyPhoneNumber) => onHeaderChange({ partyPhoneNumber })}
               className="h-9 text-sm"
             />
           </div>

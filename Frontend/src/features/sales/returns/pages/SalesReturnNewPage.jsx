@@ -12,10 +12,11 @@ import { useCreateSalesReturnMutation } from "../services/mutations";
 
 import SalesReturnSaleSection from "../components/forms/SalesReturnSaleSection";
 import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
-import ClaimsSection from "@/shared/components/returns/ClaimsSection";
-import OffScopeClaimsSection from "@/shared/components/returns/OffScopeClaimsSection";
+import ReturnItemsSection from "@/shared/components/returns/ReturnItemsSection";
+import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
 import {
-  SALES_RETURN_PROBLEM_LABELS,
+  SALES_ON_ORDER_PROBLEM_LABELS,
+  SALES_OFF_ORDER_PROBLEM_LABELS,
   OFF_SCOPE_KIND_LABELS,
 } from "../domain/salesReturnVocabulary";
 import { OFF_SCOPE_KIND_STYLES } from "@/shared/domain/returns/scopes";
@@ -69,6 +70,8 @@ export default function SalesReturnNewPage() {
     isError,
     error,
   } = useSaleForReturnQuery(selectedSaleId);
+  // ادعاهای مرجوعی‌های قبلیِ همین فروش، کنارِ هر کالا.
+  const claimsElsewhere = useClaimsInOtherReturns("sale", selectedSaleId);
 
   useEffect(() => {
     resetForm();
@@ -150,6 +153,7 @@ export default function SalesReturnNewPage() {
             <OrderInvoiceCard
               order={saleForReturn}
               partyName={saleForReturn.customerName}
+              claimsElsewhere={claimsElsewhere}
             />
 
             <div className="flex justify-end">
@@ -165,27 +169,24 @@ export default function SalesReturnNewPage() {
             </div>
 
             {/* ── پایین: ثبت مشکلات ────────────────────────────────── */}
-            <ClaimsSection
+            <ReturnItemsSection
               lines={lines}
+              offScopeClaims={offInvoiceClaims}
+              orderLines={orderLines}
+              claimsElsewhere={claimsElsewhere}
               onAddClaim={handleAddClaim}
               onUpdateClaim={handleUpdateClaim}
               onRemoveClaim={handleRemoveClaim}
-              problemLabels={SALES_RETURN_PROBLEM_LABELS}
-              title="مشکلات اقلام فاکتور"
-              description="برای هر کالا می‌توانید چند مشکل جدا با تعداد جداگانه ثبت کنید. سقف هر کالا، همان مقداری است که به مشتری تحویل شده."
-              emptyText="این فاکتور قلمی برای ادعا ندارد"
-            />
-
-            <OffScopeClaimsSection
-              claims={offInvoiceClaims}
-              orderLines={orderLines}
-              onAdd={handleAddOffInvoiceClaim}
-              onUpdate={handleUpdateOffInvoiceClaim}
-              onRemove={handleRemoveOffInvoiceClaim}
-              problemLabels={SALES_RETURN_PROBLEM_LABELS}
+              onAddOffScope={handleAddOffInvoiceClaim}
+              onUpdateOffScope={handleUpdateOffInvoiceClaim}
+              onRemoveOffScope={handleRemoveOffInvoiceClaim}
+              problemLabels={SALES_ON_ORDER_PROBLEM_LABELS}
+              offScopeProblemLabels={SALES_OFF_ORDER_PROBLEM_LABELS}
               kindLabels={OFF_SCOPE_KIND_LABELS}
               kindStyles={OFF_SCOPE_KIND_STYLES}
-              description="مازاد: بیش از مقدارِ یک خطِ فاکتور ارسال شده (با قیمت همان خط). نامرتبط: کالایی که در فاکتور نیست (قیمت دستی)."
+              description="برای هر کالا می‌توانید چند مشکل جدا با تعداد جداگانه ثبت کنید. سقف هر کالا همان مقداری است که به مشتری تحویل شده؛ اگر بیشتر از فاکتور ارسال شده، «مازاد» را روی همان کالا ثبت کنید (با قیمت همان خط)."
+              emptyText="این فاکتور قلمی برای ادعا ندارد"
+              unlistedHint="کالایی که اصلاً در فاکتور نیست؛ قیمتش دستی وارد می‌شود."
             />
 
             <SalesReturnInfoSection
