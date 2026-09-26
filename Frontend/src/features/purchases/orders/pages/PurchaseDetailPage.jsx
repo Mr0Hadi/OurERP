@@ -16,7 +16,13 @@ export default function PurchaseDetailPage() {
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  const { data: purchase, isLoading, isError } = usePurchaseQuery(id);
+  const {
+    data: purchase,
+    isLoading,
+    isError,
+    error: loadError,
+    refetch: retryLoad,
+  } = usePurchaseQuery(id);
 
   useEffect(() => {
     setHeader({
@@ -37,7 +43,9 @@ export default function PurchaseDetailPage() {
   if (isError || !purchase) {
     return (
       <DetailErrorState
-        message="خرید مورد نظر یافت نشد یا خطایی رخ داده است."
+        error={loadError}
+        notFoundMessage="خرید مورد نظر یافت نشد."
+        onRetry={retryLoad}
         onBack={() => navigate(ROUTES.PURCHASES)}
       />
     );

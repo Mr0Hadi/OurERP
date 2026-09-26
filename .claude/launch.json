@@ -4,9 +4,26 @@
     {
       "name": "ourerp-dev",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["vite", "--port", "5173"],
+      "runtimeArgs": [
+        "vite",
+        "--port",
+        "5173"
+      ],
       "cwd": "Frontend",
       "port": 5173
+    },
+    {
+      "name": "ourerp-offline",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "VITE_API_BASE_URL=http://127.0.0.1:9/api",
+        "npx",
+        "vite",
+        "--port",
+        "5174"
+      ],
+      "cwd": "Frontend",
+      "port": 5174
     }
   ]
 }

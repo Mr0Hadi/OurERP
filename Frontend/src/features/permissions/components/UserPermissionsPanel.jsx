@@ -14,6 +14,7 @@ import PermissionEditor from "./PermissionEditor";
 import SaveBar from "./SaveBar";
 import TemplateBar from "./TemplateBar";
 import { orderedByCatalogue, toNumberSet } from "./permissionSets";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 function Editor({
   userId,
@@ -145,7 +146,7 @@ export default function UserPermissionsPanel({
         </div>
       ) : isError || !data ? (
         <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-          {error?.message || "خطا در دریافت دسترسی‌های کارمند."}
+          {getErrorMessage(error, "خطا در دریافت دسترسی‌های کارمند.")}
         </p>
       ) : (
         <Editor

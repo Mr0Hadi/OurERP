@@ -37,8 +37,15 @@
   - `PrintPreviewOverlay` (بی‌استفاده از زمان طراحی جدید برچسب) و وابستگی‌های
     `@persianlabs/icons` و `@undecaf/zbar-wasm` حذف شدند.
   - `knip` با `knip.json` اضافه شد (`pnpm knip`).
-- [ ] **۱. لایه‌ی مشترک** — `shared/services/api`، `lib`، `hooks`، `store`، `components`؛
-  فایل مرکزی پیام‌ها؛ کامپوننت‌های پایه (جدول لیستی، فیلتر، فرم آدرس).
+- [ ] **۱. لایه‌ی مشترک**
+  - [x] ۱.۱ پیام‌های خطا: `shared/lib/errorMessage.js` (`getErrorMessage`). اینترسپتور axios
+    `error.serverMessage` و یک `error.message` همیشه فارسی می‌گذارد. ۷۶ مورد `error.message || "..."`
+    تبدیل شد (قبلاً در قطع شبکه/خطای ۵۰۰ متن انگلیسی axios نشان داده می‌شد). ورود در قطع شبکه
+    دیگر «رمز اشتباه است» نمی‌گوید. `DetailErrorState` بین «یافت نشد» و «خطای موقت» (با دکمه‌ی
+    تلاش دوباره) فرق می‌گذارد. کوئری‌ها روی خطای ۴xx دیگر retry نمی‌کنند.
+  - [ ] ۱.۲ بقیه‌ی `shared/services` (files، invoice)، `lib`، `hooks`، `store`
+  - [ ] ۱.۳ کامپوننت‌های پایه (جدول لیستی، فیلتر، فرم آدرس) و `shared/components`
+  - برای تست خطای شبکه: پیکربندی `ourerp-offline` در `.claude/launch.json` (API روی پورت بسته).
 - [ ] **۲. فیچرها** (هر کدام: کد مرده، شکستن فایل بزرگ، کامپوننت مشترک، کامنت، متن پیام‌ها، موارد بکند)
   - [ ] auth
   - [ ] customers + suppliers
@@ -65,7 +72,11 @@
 - shared: `SHEET_PRESET_OPTIONS`، `DEFAULT_LABEL_CODE_KIND`، `LABEL_CODE_KIND_OPTIONS`،
   `DOCUMENT_PAYMENT_DIRECTION`، `TAX_CATEGORY_LABELS`، `listParams`
 
+### متن پیام‌ها برای مرور در فاز هر فیچر
+- units: `"انجام نشد"` (mutations.js) خیلی مبهم است.
+
 ### کد تکراری
+- mutationهای مرجوعی خرید و فروش (`purchases/returns/services/mutations.js` و `sales/returns/...`) تقریباً یکسان‌اند.
 - `CustomerTable` / `SupplierTable` (~۵۷ خط تفاوت از ۳۰۹) و `ProductTable` هر کدام `useReactTable`
   خودشان را دارند در حالی که `shared/components/table/DataTable.jsx` وجود دارد.
 - `PurchasesNewPage` / `SaleNewPage` ساختار تقریباً یکسان دارند.

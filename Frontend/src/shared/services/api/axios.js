@@ -1,5 +1,7 @@
 import axios from "axios";
 import { useAuthStore } from "@/features/auth/store/authStore";
+import { ROUTES } from "@/shared/constants/routes";
+import { extractServerMessage, getErrorMessage } from "@/shared/lib/errorMessage";
 
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5083/api",
@@ -91,14 +93,18 @@ function unwrapEnvelope(body) {
   return "Data" in body ? body.Data : body.data;
 }
 
-/** پیامِ فارسیِ خطا از پوشش بیرون کشیده می‌شود تا toastها معنادار بمانند. */
-function messageOf(error) {
-  const body = error?.response?.data;
-  if (isEnvelope(body)) return body.Message ?? body.message;
-  if (typeof body?.Message === "string") return body.Message;
-  if (typeof body?.message === "string") return body.message;
-  if (typeof body?.title === "string") return body.title;
-  return null;
+/**
+ * پیامِ خطا را برای لایه‌های بالادستی آماده می‌کند.
+ *
+ * `serverMessage` پیامِ فارسیِ خودِ سرور است (اگر فرستاده باشد) و
+ * `message` همیشه یک متنِ فارسیِ قابل‌نمایش می‌شود، تا حتی کدی که هنوز
+ * مستقیم `error.message` را نشان می‌دهد متنِ انگلیسیِ axios را به کاربر
+ * نشان ندهد. برای انتخابِ پیام در UI از `getErrorMessage` استفاده کنید.
+ */
+function attachUserMessage(error) {
+  error.serverMessage = extractServerMessage(error?.response?.data);
+  error.message = getErrorMessage(error);
+  return error;
 }
 
 axiosInstance.interceptors.response.use(
@@ -121,7 +127,7 @@ axiosInstance.interceptors.response.use(
 
       if (!refreshToken) {
         logout();
-        return Promise.reject(error);
+        return Promise.reject(attachUserMessage(error));
       }
 
       // درخواست با توکنی رفته که دیگر توکنِ فعلی نیست: رفرشِ دیگری (در
@@ -194,10 +200,11 @@ axiosInstance.interceptors.response.use(
         // فقط وقتی سرور صراحتاً رفرش را رد کرده (رفرش‌توکنِ منقضی/باطل)
         // logout کن. خطای شبکه/تایم‌اوت (بدون response) یعنی سرور اصلاً
         // جواب نداده — دلیلی نیست که کاربرِ واردشده را بیرون بیندازیم.
+        attachUserMessage(refreshError);
         if (refreshError.response) {
           logout();
           onRefreshFailed(refreshError);
-          window.location.href = "/auth/login";
+          window.location.href = ROUTES.LOGIN;
         } else {
           onRefreshFailed(refreshError);
         }
@@ -206,8 +213,6 @@ axiosInstance.interceptors.response.use(
         isRefreshing = false;
       }
     }
-    
-    if (status === 403) error.isForbidden = true;
 
     // ۴۲۲ یعنی یک Idempotency-Key برای دو درخواستِ متفاوت به کار رفته — در
     // کارکردِ درست پیش نمی‌آید و نشانه‌ی باگ در فرانت است (مثلاً شیءِ
@@ -216,13 +221,7 @@ axiosInstance.interceptors.response.use(
       console.error("Idempotency-Key reused for a different request", originalRequest);
     }
 
-    // لایه‌های بالادستی (mutationها) فقط `error.message` را toast
-    // می‌کنند؛ بدون این، کاربر پیام عمومیِ axios را می‌بیند به‌جای
-    // پیامِ دقیقی که سرور فرستاده.
-    const serverMessage = messageOf(error);
-    if (serverMessage) error.message = serverMessage;
-
-    return Promise.reject(error);
+    return Promise.reject(attachUserMessage(error));
   }
 );
 

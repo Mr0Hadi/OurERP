@@ -194,7 +194,13 @@ export default function SupplierDetailPage() {
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  const { data: supplier, isLoading, isError } = useSupplierQuery(id);
+  const {
+    data: supplier,
+    isLoading,
+    isError,
+    error: loadError,
+    refetch: retryLoad,
+  } = useSupplierQuery(id);
 
   useEffect(() => {
     setHeader({
@@ -215,7 +221,9 @@ export default function SupplierDetailPage() {
   if (isError || !supplier) {
     return (
       <DetailErrorState
-        message="تامین‌کننده مورد نظر یافت نشد یا خطایی رخ داده است."
+        error={loadError}
+        notFoundMessage="تامین‌کننده مورد نظر یافت نشد."
+        onRetry={retryLoad}
         onBack={() => navigate(ROUTES.SUPPLIERS)}
       />
     );

@@ -10,6 +10,7 @@ import { salesReturnKeys } from "@/features/sales/returns/services/queryKeys";
 import { fromApiReturn as fromApiPurchaseReturn } from "@/features/purchases/returns/services/apiMapping";
 import { fromApiReturn as fromApiSalesReturn } from "@/features/sales/returns/services/apiMapping";
 import { idempotencyKeyFor } from "@/shared/services/api/contract";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 /**
  * ثبتِ یک محموله‌ی ورودی (`ReceiveShipment`): دریافتِ خرید و دورهای ورودِ
@@ -45,7 +46,7 @@ export const useReceiveShipmentMutation = () => {
       toast.success("دریافت کالا با موفقیت ثبت شد");
     },
     onError: (error) => {
-      toast.error(error?.message || "خطا در ثبت دریافت");
+      toast.error(getErrorMessage(error, "خطا در ثبت دریافت"));
     },
   });
 };

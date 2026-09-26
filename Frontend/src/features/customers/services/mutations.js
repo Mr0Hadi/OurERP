@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createCustomer, updateCustomer, deleteCustomer } from "./api-v1";
 import { customerKeys } from "./queryKeys";
 import toast from "react-hot-toast";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 export function useCreateCustomerMutation() {
   const queryClient = useQueryClient();
@@ -13,7 +14,7 @@ export function useCreateCustomerMutation() {
       queryClient.invalidateQueries({ queryKey: customerKeys.lists() });
     },
     onError: (error) => {
-      toast.error(error.message || "خطا در ثبت مشتری جدید.");
+      toast.error(getErrorMessage(error, "خطا در ثبت مشتری جدید."));
     },
   });
 }
@@ -29,7 +30,7 @@ export const useUpdateCustomerMutation = () => {
       toast.success("اطلاعات مشتری با موفقیت ویرایش شد.");
     },
     onError: (error) => {
-      toast.error(error.message || "خطا در ویرایش اطلاعات.");
+      toast.error(getErrorMessage(error, "خطا در ویرایش اطلاعات."));
     },
   });
 };
@@ -44,7 +45,7 @@ export const useDeleteCustomerMutation = () => {
       toast.success("مشتری با موفقیت حذف شد.");
     },
     onError: (error) => {
-      toast.error(error?.message || "خطا در حذف مشتری.");
+      toast.error(getErrorMessage(error, "خطا در حذف مشتری."));
     },
   });
 };

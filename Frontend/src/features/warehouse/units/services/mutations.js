@@ -12,6 +12,7 @@ import {
   applyProductUnitAction,
 } from "./api-v1";
 import { productUnitKeys } from "./queryKeys";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 /**
  * تشخیص کد اسکن‌شده (دانه، کالا، یا هیچ‌کدام).
@@ -23,7 +24,7 @@ export const useResolveScannedCodeMutation = ({ silent = false } = {}) =>
   useMutation({
     mutationFn: resolveScannedCode,
     onError: (error) => {
-      if (!silent) toast.error(error?.message || "خطا در جست‌وجوی کد");
+      if (!silent) toast.error(getErrorMessage(error, "خطا در جست‌وجوی کد"));
     },
   });
 
@@ -40,7 +41,7 @@ export const useMarkUnitsPrintedMutation = () => {
       toast.error(
         error?.response?.status === 404
           ? "برچسب‌ها چاپ شدند، ولی ثبتِ چاپ هنوز روی سرور پیاده نشده است."
-          : error?.message || "ثبتِ چاپ انجام نشد",
+          : getErrorMessage(error, "ثبتِ چاپ انجام نشد"),
       ),
   });
 };
@@ -63,6 +64,6 @@ export const useApplyUnitActionMutation = () => {
       queryClient.invalidateQueries({ queryKey: purchaseKeys.all });
       queryClient.invalidateQueries({ queryKey: supplierKeys.all });
     },
-    onError: (error) => toast.error(error?.message || "انجام نشد"),
+    onError: (error) => toast.error(getErrorMessage(error, "انجام نشد")),
   });
 };

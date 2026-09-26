@@ -160,7 +160,13 @@ export default function ProductDetailPage() {
   const setHeader = useHeaderStore((state) => state.setHeader);
   const clearHeader = useHeaderStore((state) => state.clearHeader);
 
-  const { data: productData, isLoading, isError } = useProductQuery(id);
+  const {
+    data: productData,
+    isLoading,
+    isError,
+    error: loadError,
+    refetch: retryLoad,
+  } = useProductQuery(id);
 
   useEffect(() => {
     setHeader({
@@ -182,7 +188,9 @@ export default function ProductDetailPage() {
   if (isError || !productData) {
     return (
       <DetailErrorState
-        message="کالا مورد نظر یافت نشد یا خطایی رخ داده است."
+        error={loadError}
+        notFoundMessage="کالای مورد نظر یافت نشد."
+        onRetry={retryLoad}
         onBack={() => navigate(ROUTES.WAREHOUSE_PRODUCTS)}
       />
     );

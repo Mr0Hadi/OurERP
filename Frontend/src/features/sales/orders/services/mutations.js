@@ -17,6 +17,7 @@ import { invalidateSalesEcosystem } from "./sharedInvalidation";
 import { shippingKeys } from "@/features/warehouse/shipping/services/queryKeys";
 import { customerKeys } from "@/features/customers/services/queryKeys";
 import { idempotencyKeyFor } from "@/shared/services/api/contract";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 /**
  * هر نوشتنِ فروش (به‌جز Create) سندِ کامل را برمی‌گرداند: همان در کشِ
@@ -48,7 +49,7 @@ export const useCreateSaleMutation = () => {
       queryClient.invalidateQueries({ queryKey: customerKeys.all });
     },
     onError: (error) => {
-      toast.error(error?.message || 'خطا در ثبت فروش');
+      toast.error(getErrorMessage(error, 'خطا در ثبت فروش'));
     },
   });
 };
@@ -69,7 +70,7 @@ export const useCreateInPersonSaleMutation = () => {
       queryClient.invalidateQueries({ queryKey: customerKeys.all });
     },
     onError: (error) => {
-      toast.error(error?.message || 'خطا در ثبت فروش حضوری');
+      toast.error(getErrorMessage(error, 'خطا در ثبت فروش حضوری'));
     },
   });
 };
@@ -85,7 +86,7 @@ export const useUpdateSaleMutation = (id) => {
       toast.success("پیش‌فاکتور فروش ویرایش شد");
     },
     onError: (error) => {
-      toast.error(error?.message || 'خطا در ویرایش فروش');
+      toast.error(getErrorMessage(error, 'خطا در ویرایش فروش'));
     },
   });
 };
@@ -100,7 +101,7 @@ export const useChangeSaleStatusMutation = (id) => {
       applySale(queryClient, updated);
       toast.success("وضعیت فروش به‌روزرسانی شد");
     },
-    onError: (error) => toast.error(error?.message || "خطا در تغییر وضعیت"),
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در تغییر وضعیت")),
   });
 };
 
@@ -114,7 +115,7 @@ export const useUpdateSaleAttachmentsMutation = (id) => {
       toast.success("پیوست‌ها ذخیره شد");
     },
     onError: (error) =>
-      toast.error(error?.message || "خطا در ذخیره‌ی پیوست‌ها"),
+      toast.error(getErrorMessage(error, "خطا در ذخیره‌ی پیوست‌ها")),
   });
 };
 
@@ -128,7 +129,7 @@ export const useUpdateSalePaymentDateMutation = (id) => {
       toast.success("مهلت پرداخت ذخیره شد");
     },
     onError: (error) =>
-      toast.error(error?.message || "خطا در ذخیره‌ی مهلت پرداخت"),
+      toast.error(getErrorMessage(error, "خطا در ذخیره‌ی مهلت پرداخت")),
   });
 };
 
@@ -143,7 +144,7 @@ export const useSalePaymentMutations = (saleId) => {
     toast.success(message);
   };
   const onError = (fallback) => (error) =>
-    toast.error(error?.message || fallback);
+    toast.error(getErrorMessage(error, fallback));
 
   const add = useMutation({
     mutationFn: (payment) =>
@@ -185,7 +186,7 @@ export const useRemoveSaleMutation = () => {
       toast.success("پیش‌فاکتور فروش حذف شد");
     },
     onError: (error) => {
-      toast.error(error?.message || "خطا در حذف فروش");
+      toast.error(getErrorMessage(error, "خطا در حذف فروش"));
     },
   });
 };

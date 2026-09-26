@@ -396,6 +396,8 @@ export default function ReceivingDetailPage() {
     data: receivingInfo,
     isLoading,
     isError,
+    error: loadError,
+    refetch: retryLoad,
   } = usePurchaseReceivingInfoQuery(Number(id));
 
   useEffect(() => {
@@ -424,7 +426,9 @@ export default function ReceivingDetailPage() {
   if (isError || !receivingInfo) {
     return (
       <DetailErrorState
-        message="خرید مورد نظر یافت نشد."
+        error={loadError}
+        notFoundMessage="خرید مورد نظر یافت نشد."
+        onRetry={retryLoad}
         onBack={() => navigate(ROUTES.WAREHOUSE_RECEIVING)}
       />
     );

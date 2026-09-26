@@ -17,6 +17,7 @@ import {
   printDocuments,
   serverDocument,
 } from "@/shared/services/invoice/documentOutput";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 /**
  * سند فاکتور/پیش‌فاکتورِ یک سفارش: چاپ و دانلود، و ضمیمه‌کردنِ برگه‌ی
@@ -107,7 +108,7 @@ export default function InvoiceDocumentSection({
     } catch (error) {
       // مثلاً وقتی مرورگر پنجره‌ی چاپ را بلوکه می‌کند — بدون این، خطا
       // بی‌صدا رد می‌شد و دکمه انگار هیچ کاری نمی‌کرد.
-      toast.error(error?.message || "انجام این عملیات ممکن نشد.");
+      toast.error(getErrorMessage(error, "انجام این عملیات ممکن نشد."));
     } finally {
       setIsBusy(false);
     }

@@ -277,7 +277,13 @@ export default function EmployeeDetailPage() {
   const clearHeader = useHeaderStore((s) => s.clearHeader);
   const currentUser = useCurrentUser();
 
-  const { data: employee, isLoading, isError } = useUserUpdateQuery(id);
+  const {
+    data: employee,
+    isLoading,
+    isError,
+    error: loadError,
+    refetch: retryLoad,
+  } = useUserUpdateQuery(id);
 
   // همان مسیر، دو معنا: از سایدبار «حساب کاربری من» است و از فهرست
   // کارمندان «ویرایش کارمند». عنوان باید همان را بگوید که کاربر انتظار
@@ -305,7 +311,9 @@ export default function EmployeeDetailPage() {
   if (isError || !employee) {
     return (
       <DetailErrorState
-        message="کارمند مورد نظر یافت نشد یا خطایی رخ داده است."
+        error={loadError}
+        notFoundMessage="کارمند مورد نظر یافت نشد."
+        onRetry={retryLoad}
         onBack={() => navigate(ROUTES.EMPLOYEES)}
       />
     );

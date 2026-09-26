@@ -210,6 +210,8 @@ export default function PurchaseReturnDetailPage() {
     data: purchaseReturn,
     isLoading,
     isError,
+    error: loadError,
+    refetch: retryLoad,
   } = usePurchaseReturnQuery(Number(id));
 
   useEffect(() => {
@@ -229,7 +231,9 @@ export default function PurchaseReturnDetailPage() {
   if (isError || !purchaseReturn) {
     return (
       <DetailErrorState
-        message="مرجوعی مورد نظر یافت نشد."
+        error={loadError}
+        notFoundMessage="مرجوعی مورد نظر یافت نشد."
+        onRetry={retryLoad}
         onBack={() => navigate(ROUTES.PURCHASES_RETURNS_LIST)}
       />
     );

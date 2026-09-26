@@ -191,7 +191,13 @@ export default function CustomerDetailPage() {
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  const { data: customer, isLoading, isError } = useCustomerQuery(id);
+  const {
+    data: customer,
+    isLoading,
+    isError,
+    error: loadError,
+    refetch: retryLoad,
+  } = useCustomerQuery(id);
 
   useEffect(() => {
     setHeader({
@@ -210,7 +216,9 @@ export default function CustomerDetailPage() {
   if (isError || !customer) {
     return (
       <DetailErrorState
-        message="مشتری مورد نظر یافت نشد یا خطایی رخ داده است."
+        error={loadError}
+        notFoundMessage="مشتری مورد نظر یافت نشد."
+        onRetry={retryLoad}
         onBack={() => navigate(ROUTES.CUSTOMERS)}
       />
     );

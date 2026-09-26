@@ -33,6 +33,7 @@ import UnitsList from "../components/UnitsList";
 import UnitDetailSheet from "../components/UnitDetailSheet";
 import UnitActionDialog from "../components/UnitActionDialog";
 import LabelPrintDesigner from "../components/LabelPrintDesigner";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 const PICKER_PAGINATION = { pageIndex: 0, pageSize: 200 };
 const NAME_SORTING = { id: "name", desc: false };
@@ -200,7 +201,7 @@ export default function UnitsPage() {
       }
       setSelectedById(new Map(result.items.map((unit) => [unit.id, unit])));
     } catch (error) {
-      toast.error(error?.message || "خواندنِ نتایج انجام نشد");
+      toast.error(getErrorMessage(error, "خواندنِ نتایج انجام نشد"));
     } finally {
       setIsFetchingAll(false);
     }

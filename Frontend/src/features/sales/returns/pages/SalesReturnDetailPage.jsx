@@ -213,6 +213,8 @@ export default function SalesReturnDetailPage() {
     data: salesReturn,
     isLoading,
     isError,
+    error: loadError,
+    refetch: retryLoad,
   } = useSalesReturnQuery(Number(id));
 
   useEffect(() => {
@@ -232,7 +234,9 @@ export default function SalesReturnDetailPage() {
   if (isError || !salesReturn) {
     return (
       <DetailErrorState
-        message="مرجوعی مورد نظر یافت نشد."
+        error={loadError}
+        notFoundMessage="مرجوعی مورد نظر یافت نشد."
+        onRetry={retryLoad}
         onBack={() => navigate(ROUTES.SALES_RETURNS_LIST)}
       />
     );

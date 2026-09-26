@@ -8,6 +8,7 @@ import {
 } from "./api-v1";
 import { ROUTES } from "@/shared/constants/routes";
 import { productKeys } from "./queryKeys";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 export const useCreateProductMutation = () => {
   const queryClient = useQueryClient();
@@ -19,7 +20,7 @@ export const useCreateProductMutation = () => {
       queryClient.invalidateQueries({ queryKey: productKeys.lists() });
     },
     onError: (error) => {
-      toast.error(error?.message || "خطا در ایجاد کالا");
+      toast.error(getErrorMessage(error, "خطا در ایجاد کالا"));
     },
   });
 };
@@ -37,7 +38,7 @@ export const useUpdateProductMutation = (id) => {
       navigate(ROUTES.WAREHOUSE_PRODUCTS);
     },
     onError: (error) => {
-      toast.error(error.message || "خطا در ویرایش کالا");
+      toast.error(getErrorMessage(error, "خطا در ویرایش کالا"));
     },
   });
 };
@@ -52,7 +53,7 @@ export const useDeleteProductMutation = () => {
       toast.success("کالا با موفقیت حذف شد");
     },
     onError: (error) => {
-      toast.error(error?.message || "خطا در حذف کالا");
+      toast.error(getErrorMessage(error, "خطا در حذف کالا"));
     },
   });
 };

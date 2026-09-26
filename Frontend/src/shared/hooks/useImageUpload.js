@@ -5,6 +5,7 @@ import { deleteImages, uploadImage } from "@/shared/services/files/api-v1";
 import { objectKeyOf, toDisplayableUrl } from "@/shared/services/files/objectKey";
 import { validateImageFile } from "@/shared/services/files/fileConstraints";
 import { useImageUrlQuery, useSeedImageUrl } from "@/shared/services/files/queries";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 /**
  * تکْ‌تصویرِ یک موجودیت (محصول، مشتری، تامین‌کننده، …) — همان گردش‌کارِ
@@ -134,7 +135,7 @@ export function useImageUpload({
         if (controller.signal.aborted) return null;
         revokeLocalPreview();
         setLocalPreview(null);
-        fail(uploadError?.message || "خطا در بارگذاری تصویر.");
+        fail(getErrorMessage(uploadError, "خطا در بارگذاری تصویر."));
         return null;
       }
     },

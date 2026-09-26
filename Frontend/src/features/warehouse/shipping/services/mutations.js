@@ -10,6 +10,7 @@ import { purchaseReturnKeys } from "@/features/purchases/returns/services/queryK
 import { fromApiReturn as fromApiSalesReturn } from "@/features/sales/returns/services/apiMapping";
 import { fromApiReturn as fromApiPurchaseReturn } from "@/features/purchases/returns/services/apiMapping";
 import { idempotencyKeyFor } from "@/shared/services/api/contract";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 /**
  * ثبتِ یک محموله‌ی خروجی (`DispatchShipment`): ارسالِ فروش و دورهای
@@ -43,6 +44,6 @@ export const useDispatchShipmentMutation = () => {
       queryClient.invalidateQueries({ queryKey: shippingKeys.all });
       toast.success("ارسال کالا با موفقیت ثبت شد");
     },
-    onError: (error) => toast.error(error?.message || "خطا در ثبت ارسال"),
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در ثبت ارسال")),
   });
 };

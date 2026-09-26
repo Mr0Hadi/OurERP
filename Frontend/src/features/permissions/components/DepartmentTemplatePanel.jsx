@@ -10,6 +10,7 @@ import { usePermissionDraft } from "../hooks/usePermissionDraft";
 import PermissionEditor from "./PermissionEditor";
 import SaveBar from "./SaveBar";
 import { orderedByCatalogue } from "./permissionSets";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 function Editor({ departmentId, data, editable, onDirtyChange }) {
   const mutation = useUpdateDepartmentPermissionTemplateMutation();
@@ -75,7 +76,7 @@ export default function DepartmentTemplatePanel({
         <Skeleton className="h-80 w-full rounded-xl" />
       ) : isError || !data ? (
         <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-          {error?.message || "خطا در دریافت الگوی دسترسی واحد."}
+          {getErrorMessage(error, "خطا در دریافت الگوی دسترسی واحد.")}
         </p>
       ) : (
         <Editor

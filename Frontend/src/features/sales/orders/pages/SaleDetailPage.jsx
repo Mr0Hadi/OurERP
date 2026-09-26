@@ -21,6 +21,8 @@ export default function SaleDetailPage() {
     data: sale,
     isLoading: saleLoading,
     isError: saleError,
+    error: loadError,
+    refetch: retryLoad,
   } = useSaleQuery(id);
 
   useEffect(() => {
@@ -42,9 +44,9 @@ export default function SaleDetailPage() {
   if (saleError || !sale) {
     return (
       <DetailErrorState
-        message={
-          saleError ? "خطا در بارگذاری اطلاعات" : "فروشی با این شناسه یافت نشد."
-        }
+        error={loadError}
+        notFoundMessage="فروش مورد نظر یافت نشد."
+        onRetry={retryLoad}
         onBack={() => navigate(ROUTES.SALES)}
       />
     );

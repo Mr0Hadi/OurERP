@@ -16,6 +16,7 @@ import { purchaseReturnKeys } from "./queryKeys";
 import { invalidatePurchaseEcosystem } from "../../orders/services/sharedInvalidation";
 import { ROUTES } from "@/shared/constants/routes";
 import { idempotencyKeyFor } from "@/shared/services/api/contract";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 const finalizeReturnChange = (queryClient, updated) => {
   // پاسخِ هر عملیاتِ نوشتن، سندِ کاملِ به‌روزشده است؛ پس مستقیم می‌نشیند
@@ -40,7 +41,7 @@ export const useCreatePurchaseReturnMutation = () => {
       invalidatePurchaseEcosystem(queryClient, created.purchaseId);
       navigate(ROUTES.PURCHASES_RETURNS_DETAIL.replace(":id", created.id));
     },
-    onError: (error) => toast.error(error?.message || "خطا در ثبت مرجوعی"),
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در ثبت مرجوعی")),
   });
 };
 
@@ -60,7 +61,7 @@ export const useAddClaimResolutionMutation = (returnId) => {
       finalizeReturnChange(queryClient, updated);
       toast.success("تصمیم ثبت شد");
     },
-    onError: (error) => toast.error(error?.message || "خطا در ثبت تصمیم"),
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در ثبت تصمیم")),
   });
 };
 
@@ -73,7 +74,7 @@ export const useRemoveClaimResolutionMutation = (returnId) => {
       finalizeReturnChange(queryClient, updated);
       toast.success("تصمیم حذف شد");
     },
-    onError: (error) => toast.error(error?.message || "خطا در حذف تصمیم"),
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در حذف تصمیم")),
   });
 };
 
@@ -95,7 +96,7 @@ export const useExecuteGoodsRoundMutation = (returnId) => {
       finalizeReturnChange(queryClient, updated);
       toast.success("جابه‌جایی کالا ثبت شد");
     },
-    onError: (error) => toast.error(error?.message || "خطا در ثبت جابه‌جایی کالا"),
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در ثبت جابه‌جایی کالا")),
   });
 };
 
@@ -109,7 +110,7 @@ export const useExecuteMoneyEffectMutation = () => {
       finalizeReturnChange(queryClient, updated);
       toast.success("پرداخت ثبت شد");
     },
-    onError: (error) => toast.error(error?.message || "خطا در ثبت پرداخت"),
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در ثبت پرداخت")),
   });
 };
 
@@ -121,7 +122,7 @@ export const useRejectPurchaseReturnMutation = (returnId) => {
       finalizeReturnChange(queryClient, updated);
       toast.success("درخواست به‌عنوان رد‌شده ثبت شد");
     },
-    onError: (error) => toast.error(error?.message || "خطا در ثبت رد درخواست"),
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در ثبت رد درخواست")),
   });
 };
 
@@ -133,7 +134,7 @@ export const useCancelPurchaseReturnMutation = (returnId) => {
       finalizeReturnChange(queryClient, updated);
       toast.success("مرجوعی لغو شد");
     },
-    onError: (error) => toast.error(error?.message || "خطا در لغو مرجوعی"),
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در لغو مرجوعی")),
   });
 };
 
@@ -145,7 +146,7 @@ export const useReopenPurchaseReturnMutation = (returnId) => {
       finalizeReturnChange(queryClient, updated);
       toast.success("مرجوعی دوباره برای بررسی باز شد");
     },
-    onError: (error) => toast.error(error?.message || "خطا در بازگشایی مرجوعی"),
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در بازگشایی مرجوعی")),
   });
 };
 
@@ -160,6 +161,6 @@ export const useRemovePurchaseReturnMutation = () => {
       toast.success("مرجوعی حذف شد");
       navigate(ROUTES.PURCHASES_RETURNS_LIST);
     },
-    onError: (error) => toast.error(error?.message || "خطا در حذف مرجوعی"),
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در حذف مرجوعی")),
   });
 };

@@ -207,7 +207,13 @@ export default function TeamDetailPage() {
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  const { data: team, isLoading, isError } = useTeamDetailQuery(id);
+  const {
+    data: team,
+    isLoading,
+    isError,
+    error: loadError,
+    refetch: retryLoad,
+  } = useTeamDetailQuery(id);
 
   useEffect(() => {
     setHeader({
@@ -226,7 +232,9 @@ export default function TeamDetailPage() {
   if (isError || !team) {
     return (
       <DetailErrorState
-        message="تیم مورد نظر یافت نشد یا خطایی رخ داده است."
+        error={loadError}
+        notFoundMessage="تیم مورد نظر یافت نشد."
+        onRetry={retryLoad}
         onBack={() => navigate(ROUTES.ORG_TEAMS)}
       />
     );

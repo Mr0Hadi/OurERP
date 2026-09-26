@@ -7,6 +7,7 @@ import {
 } from "./api-v1";
 import { permissionKeys } from "./queryKeys";
 import { authKeys } from "@/features/auth/services/queryKeys";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 const toFa = (n) => Number(n ?? 0).toLocaleString("fa-IR");
 
@@ -35,7 +36,7 @@ export function useUpdateUserPermissionsMutation() {
       queryClient.invalidateQueries({ queryKey: authKeys.myPermissions() });
     },
     onError: (error) => {
-      toast.error(error?.message || "خطا در ثبت دسترسی‌ها");
+      toast.error(getErrorMessage(error, "خطا در ثبت دسترسی‌ها"));
     },
   });
 }
@@ -52,7 +53,7 @@ export function useUpdateDepartmentPermissionTemplateMutation() {
       });
     },
     onError: (error) => {
-      toast.error(error?.message || "خطا در ثبت الگوی دسترسی واحد");
+      toast.error(getErrorMessage(error, "خطا در ثبت الگوی دسترسی واحد"));
     },
   });
 }

@@ -228,8 +228,13 @@ export default function DepartmentDetailPage() {
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  const { data: department, isLoading, isError } =
-    useDepartmentDetailQuery(id);
+  const {
+    data: department,
+    isLoading,
+    isError,
+    error: loadError,
+    refetch: retryLoad,
+  } = useDepartmentDetailQuery(id);
 
   useEffect(() => {
     setHeader({
@@ -248,7 +253,9 @@ export default function DepartmentDetailPage() {
   if (isError || !department) {
     return (
       <DetailErrorState
-        message="واحد مورد نظر یافت نشد یا خطایی رخ داده است."
+        error={loadError}
+        notFoundMessage="واحد مورد نظر یافت نشد."
+        onRetry={retryLoad}
         onBack={() => navigate(ROUTES.ORG_DEPARTMENTS)}
       />
     );

@@ -287,7 +287,7 @@ export default function ShippingDetailPage() {
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  const { data: sale, isLoading, isError } = useSaleForShippingQuery(Number(id));
+  const { data: sale, isLoading, isError, error: loadError, refetch: retryLoad } = useSaleForShippingQuery(Number(id));
 
   useEffect(() => {
     setHeader({
@@ -315,7 +315,9 @@ export default function ShippingDetailPage() {
   if (isError || !sale) {
     return (
       <DetailErrorState
-        message="فروش مورد نظر یافت نشد."
+        error={loadError}
+        notFoundMessage="فروش مورد نظر یافت نشد."
+        onRetry={retryLoad}
         onBack={() => navigate(ROUTES.WAREHOUSE_SHIPPING)}
       />
     );
