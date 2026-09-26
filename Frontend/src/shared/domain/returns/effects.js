@@ -166,7 +166,7 @@ export function createEffect({
  *   { id, date, quantity,
  *     healthyQuantity,  // فقط GOODS_IN؛ quantity منهای مجموع مشاهده‌ها
  *     observations: [{ problem, quantity, note }],
- *     partyName, partyNationalId, vehiclePlate, note }
+ *     partyName, partyPhoneNumber, vehiclePlate, note }
  *
  * `observations` مشاهده‌ی انباردار است و عمداً جدا از ادعای طرف حساب
  * می‌ماند: مشتری می‌گوید «معیوب بود»، انباردار می‌بیند «آسیب حمل».

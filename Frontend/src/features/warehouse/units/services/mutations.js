@@ -3,6 +3,8 @@ import { toast } from "react-hot-toast";
 
 import { idempotencyKeyFor } from "@/shared/services/api/contract";
 import { productKeys } from "@/features/warehouse/products/services/queryKeys";
+import { purchaseKeys } from "@/features/purchases/orders/services/queryKeys";
+import { supplierKeys } from "@/features/suppliers/services/queryKeys";
 import { UNIT_ACTION_META } from "../domain/unitVocabulary";
 import {
   resolveScannedCode,
@@ -34,13 +36,19 @@ export const useMarkUnitsPrintedMutation = () => {
       queryClient.invalidateQueries({ queryKey: productUnitKeys.lists() });
       queryClient.invalidateQueries({ queryKey: productUnitKeys.summaries() });
     },
-    onError: (error) => toast.error(error?.message || "ثبتِ چاپ انجام نشد"),
+    onError: (error) =>
+      toast.error(
+        error?.response?.status === 404
+          ? "برچسب‌ها چاپ شدند، ولی ثبتِ چاپ هنوز روی سرور پیاده نشده است."
+          : error?.message || "ثبتِ چاپ انجام نشد",
+      ),
   });
 };
 
 /**
  * قرنطینه / آزادسازی / اسقاطِ دستی. موجودیِ کالا عوض می‌شود، پس فهرستِ
- * کالاها و کارت‌های موجودی هم باید تازه شوند.
+ * کالاها و کارت‌های موجودی هم باید تازه شوند؛ برای قرنطینه‌ی دریافتِ خرید
+ * حسابِ خرید و تامین‌کننده هم عوض می‌شود.
  */
 export const useApplyUnitActionMutation = () => {
   const queryClient = useQueryClient();
@@ -52,6 +60,8 @@ export const useApplyUnitActionMutation = () => {
       toast.success(`${UNIT_ACTION_META[variables.action].label}: ${count} دانه`);
       queryClient.invalidateQueries({ queryKey: productUnitKeys.all });
       queryClient.invalidateQueries({ queryKey: productKeys.all });
+      queryClient.invalidateQueries({ queryKey: purchaseKeys.all });
+      queryClient.invalidateQueries({ queryKey: supplierKeys.all });
     },
     onError: (error) => toast.error(error?.message || "انجام نشد"),
   });

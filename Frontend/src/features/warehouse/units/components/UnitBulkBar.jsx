@@ -1,25 +1,17 @@
-import { ChevronDown, Download, ListChecks, Printer, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Lock, X } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/shared/components/ui/dropdown-menu";
-
-import { UnitActionEnum, UNIT_ACTION_META, canApply, fa } from "../domain/unitVocabulary";
-
-const ACTIONS = [UnitActionEnum.QUARANTINE, UnitActionEnum.RELEASE, UnitActionEnum.SCRAP];
+import { fa } from "../domain/unitVocabulary";
+import { unitOperationsFor } from "./unitOperations";
 
 /**
- * نوارِ کارهای دسته‌ای روی دانه‌های انتخاب‌شده — فقط وقتی چیزی انتخاب
- * شده، یا وقتی فهرست نتیجه دارد و می‌شود «همه‌ی نتایج» را یک‌جا گرفت.
+ * نوارِ چسبانِ پایینِ صفحه وقتی دانه‌ای انتخاب شده — همان کارهای جزئیاتِ
+ * دانه، برای همه‌ی انتخاب‌ها (`unitOperationsFor`).
  *
- * هر کار کنارِ خودش می‌گوید روی چند دانه از انتخاب مجاز است، تا انباردار
- * قبل از باز کردنِ دیالوگ بداند چه اتفاقی می‌افتد.
+ * عددِ کنارِ هر دکمه می‌گوید روی چند دانه اعمال می‌شود، تا کاربر قبل از
+ * کلیک بداند؛ بقیه در دیالوگِ همان کار با دلیل فهرست می‌شوند. کاری که الان
+ * ممکن نیست غیرفعال است و دلیلش روی دکمه.
  */
 export default function UnitBulkBar({
   selectedUnits,
@@ -28,115 +20,85 @@ export default function UnitBulkBar({
   onSelectAllResults,
   onPrint,
   onAction,
-  onExport,
   onClear,
   canManage,
 }) {
+  const navigate = useNavigate();
   const count = selectedUnits.length;
-  const canSelectAll = totalResults > count;
+  if (count === 0) return null;
 
-  if (!count) {
-    return totalResults > 0 ? (
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
-        <span>{fa(totalResults)} دانه با این فیلترها</span>
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" size="sm" className="gap-1" onClick={onExport}>
-            <Download className="h-4 w-4" />
-            خروجی CSV همه
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="gap-1"
-            onClick={onSelectAllResults}
-            disabled={isSelectingAll}
-          >
-            <ListChecks className="h-4 w-4" />
-            {isSelectingAll ? "در حال خواندن..." : "انتخاب همه‌ی نتایج"}
-          </Button>
-        </div>
-      </div>
-    ) : null;
-  }
+  const operations = unitOperationsFor(selectedUnits, { canManage });
+  // دکمه‌ی غیرفعال tooltip نشان نمی‌دهد؛ دلیل‌ها زیرِ نوار نوشته می‌شوند.
+  const hints = [...new Set(operations.filter((op) => op.disabled && op.hint).map((op) => op.hint))];
+  const run = (operation) => {
+    if (operation.kind === "print") onPrint(selectedUnits);
+    else if (operation.kind === "return") navigate(operation.route);
+    else onAction(operation.action, selectedUnits);
+  };
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 p-2">
-      <span className="px-2 text-sm font-medium tabular-nums">{fa(count)} دانه انتخاب شده</span>
-      {canSelectAll && (
-        <Button
-          type="button"
-          variant="link"
-          size="sm"
-          className="px-1"
-          onClick={onSelectAllResults}
-          disabled={isSelectingAll}
-        >
-          {isSelectingAll ? "در حال خواندن..." : `انتخاب همه‌ی ${fa(totalResults)} نتیجه`}
-        </Button>
-      )}
+    <div className="pointer-events-none sticky bottom-3 z-30 flex justify-center">
+      <div
+        role="toolbar"
+        aria-label="کارهای دانه‌های انتخاب‌شده"
+        className="pointer-events-auto flex w-full max-w-4xl flex-wrap items-center gap-2 rounded-2xl border border-border bg-popover/95 p-2 shadow-xl backdrop-blur supports-[backdrop-filter]:bg-popover/85"
+      >
+        <div className="flex items-center gap-1">
+          <Button type="button" variant="ghost" size="icon-sm" aria-label="لغو انتخاب" onClick={onClear}>
+            <X className="h-4 w-4" />
+          </Button>
+          <span className="text-sm font-semibold whitespace-nowrap tabular-nums">{fa(count)} دانه</span>
+          {totalResults > count && (
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              className="h-7 px-1 text-xs"
+              disabled={isSelectingAll}
+              onClick={onSelectAllResults}
+            >
+              {isSelectingAll ? "در حال انتخاب…" : `همه‌ی ${fa(totalResults)}`}
+            </Button>
+          )}
+        </div>
 
-      <div className="ms-auto flex flex-wrap items-center gap-2">
-        <Button type="button" size="lg" className="gap-2" onClick={onPrint}>
-          <Printer className="h-4 w-4" />
-          چاپ {fa(count)} برچسب
-        </Button>
-
-        {canManage && (
-          <DropdownMenu dir="rtl">
-            <DropdownMenuTrigger asChild>
-              <Button type="button" variant="outline" size="lg" className="gap-1">
-                کارِ انبار
-                <ChevronDown className="h-4 w-4" />
+        <div className="ms-auto flex flex-wrap items-center justify-end gap-1.5">
+          {operations.map((operation) => {
+            const Icon = operation.icon;
+            const primary = operation.kind === "print";
+            return (
+              <Button
+                key={operation.key}
+                type="button"
+                size="sm"
+                variant={primary ? "default" : "outline"}
+                disabled={operation.disabled}
+                title={operation.hint}
+                className={`gap-1.5 ${
+                  operation.destructive
+                    ? "border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    : ""
+                } ${primary ? "order-last" : ""}`}
+                onClick={() => run(operation)}
+              >
+                <Icon className="h-4 w-4" />
+                {operation.label}
+                {operation.count < count && (
+                  <span className={`text-[11px] tabular-nums ${primary ? "opacity-80" : "text-muted-foreground"}`}>
+                    ({fa(operation.count)})
+                  </span>
+                )}
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-56">
-              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                روی دانه‌های مجازِ انتخاب
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {ACTIONS.map((action) => {
-                const eligible = selectedUnits.filter((unit) => canApply(unit, action)).length;
-                return (
-                  <DropdownMenuItem
-                    key={action}
-                    disabled={eligible === 0}
-                    variant={action === UnitActionEnum.SCRAP ? "destructive" : "default"}
-                    onSelect={() => onAction(action)}
-                    className="justify-between gap-4"
-                  >
-                    {UNIT_ACTION_META[action].label}
-                    <span className="text-xs tabular-nums text-muted-foreground">
-                      {fa(eligible)} از {fa(count)}
-                    </span>
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+            );
+          })}
+        </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          className="gap-1"
-          onClick={onExport}
-          title="خروجی CSV از انتخاب"
-        >
-          <Download className="h-4 w-4" />
-          CSV
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="lg"
-          className="gap-1"
-          onClick={onClear}
-          aria-label="لغو انتخاب"
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        {hints.length > 0 && (
+          <p className="flex basis-full items-center gap-1.5 px-1 text-[11px] text-muted-foreground">
+            <Lock className="h-3 w-3 shrink-0" />
+            {hints.join("؛ ")}
+          </p>
+        )}
       </div>
     </div>
   );

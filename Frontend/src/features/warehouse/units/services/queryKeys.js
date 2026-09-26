@@ -5,5 +5,4 @@ export const productUnitKeys = {
   summaries: () => [...productUnitKeys.all, "summary"],
   summary: (productId) => [...productUnitKeys.summaries(), String(productId ?? "")],
   history: (productUnitId) => [...productUnitKeys.all, "history", String(productUnitId)],
-  stocktake: (productId) => [...productUnitKeys.all, "stocktake", String(productId)],
 };

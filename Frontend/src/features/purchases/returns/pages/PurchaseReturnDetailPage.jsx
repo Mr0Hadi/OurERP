@@ -137,6 +137,8 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
         title="مرجوعی خرید"
         invoiceNumber={purchaseReturn.returnNumber}
         attachmentLabel="فاکتور یا رسید مرجوعی از تامین‌کننده"
+        // سندِ چاپیِ مرجوعی خرید هنوز در بکند نیست: Backend-Net/docs/frontend-requests.fa.md (بخشِ ۵)
+        emptyHint="چاپ برگه‌ی مرجوعی به تامین‌کننده هنوز در سرور آماده نشده است."
       />
 
       <PurchaseReturnResolutionSection

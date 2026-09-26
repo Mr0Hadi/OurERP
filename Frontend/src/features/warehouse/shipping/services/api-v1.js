@@ -18,7 +18,7 @@ import { shippingStatusesOf } from "../domain/shippingVocabulary";
 /** فروش‌هایی که هنوز کالایشان کامل از انبار خارج نشده. */
 /**
  * صفِ ارسال. `statuses` به شکلِ `statuses=1&statuses=2` فرستاده می‌شود
- * (درخواستِ بند ۸ در `Backend-Net/docs/sale-frontend-sync-requests.fa.md`)؛
+ * (درخواستِ بند ۸ در `Backend-Net/docs/frontend-requests.fa.md` بخشِ ۳)؛
  * ردیف‌ها یک بار دیگر هم با همین فهرست فیلتر می‌شوند تا پیش‌فاکتور یا
  * لغوشده هرگز در صف نیاید.
  */

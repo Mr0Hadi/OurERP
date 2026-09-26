@@ -31,21 +31,9 @@ import {
 } from "../domain/unitVocabulary";
 import { useApplyUnitActionMutation } from "../services/mutations";
 
-/**
- * چرا بخشی از انتخاب کنار گذاشته شد — به زبانِ کاری، نه «مجاز نیست».
- * قرنطینه‌ی دریافتِ خرید را فقط مرجوعیِ خرید تعیین تکلیف می‌کند.
- */
+/** چرا بخشی از انتخاب کنار گذاشته شد — به زبانِ کاری، نه «مجاز نیست». */
 function skippedReason(units) {
-  const purchaseQuarantine = units.filter(isPurchaseQuarantine).length;
-  const gone = units.length - purchaseQuarantine;
-  const parts = [];
-  if (purchaseQuarantine) {
-    parts.push(`${fa(purchaseQuarantine)} دانه قرنطینه‌ی دریافتِ خرید است و از «مرجوعی خرید» تعیین تکلیف می‌شود`);
-  }
-  if (gone) {
-    parts.push(`${fa(gone)} دانه در وضعیتی است که این کار رویش معنا ندارد`);
-  }
-  return parts.join("؛ ");
+  return `${fa(units.length)} دانه در وضعیتی است که این کار رویش معنا ندارد`;
 }
 
 function ActionForm({ action, units, onDone, onCancel }) {
@@ -53,6 +41,7 @@ function ActionForm({ action, units, onDone, onCancel }) {
   const reasons = REASONS_BY_ACTION[action];
   const eligible = units.filter((unit) => canApply(unit, action));
   const skipped = units.filter((unit) => !canApply(unit, action));
+  const purchaseQuarantine = eligible.filter(isPurchaseQuarantine).length;
 
   const [reason, setReason] = useState(reasons[0]);
   const [note, setNote] = useState("");
@@ -87,6 +76,13 @@ function ActionForm({ action, units, onDone, onCancel }) {
         <p className="flex items-start gap-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           {skippedReason(skipped)}. این‌ها دست نمی‌خورند.
+        </p>
+      )}
+
+      {purchaseQuarantine > 0 && (
+        <p className="rounded-lg bg-muted/60 p-2 text-xs leading-5 text-muted-foreground">
+          {fa(purchaseQuarantine)} دانه از قرنطینه‌ی دریافتِ خرید است؛ حسابِ خریدِ آن با تامین‌کننده هم
+          همراهِ این کار به‌روز می‌شود.
         </p>
       )}
 

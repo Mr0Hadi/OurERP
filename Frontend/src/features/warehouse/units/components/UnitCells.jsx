@@ -43,27 +43,28 @@ export function UnitProductCell({ unit }) {
 }
 
 /** «کجاست؟» — جای فعلی و طرفِ حساب، با پیوند به سندِ فروش اگر هست. */
-export function UnitWhereabouts({ unit }) {
+export function UnitWhereabouts({ unit, detailOnly = false }) {
   const where = whereaboutsOf(unit);
   const saleLink =
     unit.status === UNIT_STATUSES.SOLD ? documentRouteOf(DocumentKindEnum.SALE, unit.saleId) : null;
 
   return (
     <div className="flex min-w-0 flex-col">
-      <span className="text-sm">{where.place}</span>
+      {/* کنارِ نشانِ وضعیت، خودِ جایگاه تکراری است؛ فقط جزئیات می‌آید. */}
+      {!detailOnly && <span className="text-sm">{where.place}</span>}
       {(where.detail || where.document) && (
         <span className="truncate text-[11px] text-muted-foreground">
           {where.detail}
           {where.document &&
             (saleLink ? (
               <>
-                {" · "}
+                {"، "}
                 <Link to={saleLink} className="font-mono underline-offset-2 hover:underline">
                   {where.document}
                 </Link>
               </>
             ) : (
-              ` · ${where.document}`
+              `، ${where.document}`
             ))}
         </span>
       )}
@@ -75,7 +76,7 @@ export function UnitWhereabouts({ unit }) {
  * وضعیتِ برچسب. فقط برای دانه‌ای که هنوز در انبار است «نخورده» هشدار است؛
  * دانه‌ای که رفته دیگر برچسب لازم ندارد.
  */
-export function UnitLabelStateBadge({ unit }) {
+export function UnitLabelStateBadge({ unit, compact = false }) {
   if (unit.printCount > 0) {
     return (
       <span
@@ -87,12 +88,12 @@ export function UnitLabelStateBadge({ unit }) {
         }
       >
         <Printer className="h-3 w-3" />
-        {fa(unit.printCount)}× · {formatDate(unit.lastPrintedAt)}
+        {fa(unit.printCount)}×، {formatDate(unit.lastPrintedAt)}
       </span>
     );
   }
   if (!LABELABLE_STATUSES.includes(unit.status)) {
-    return <span className="text-xs text-muted-foreground">—</span>;
+    return compact ? null : <span className="text-xs text-muted-foreground">—</span>;
   }
   return (
     <span className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">

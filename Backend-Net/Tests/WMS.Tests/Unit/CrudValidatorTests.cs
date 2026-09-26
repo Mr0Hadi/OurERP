@@ -65,7 +65,7 @@ namespace WMS.Tests.Unit
         private readonly UpdateCustomerCommandValidator _sut = new();
 
         [Fact]
-        public void EmptyPostalCode_IsValid()
+        public void EmptyPostalCode_IsInvalid()
         {
             var command = new UpdateCustomerCommand
             {
@@ -76,7 +76,7 @@ namespace WMS.Tests.Unit
                 PostalCode = "",
             };
 
-            Assert.True(_sut.Validate(command).IsValid);
+            Assert.False(_sut.Validate(command).IsValid);
         }
     }
 
@@ -203,26 +203,6 @@ namespace WMS.Tests.Unit
         {
             var command = Valid();
             command.Phone = "abc";
-
-            Assert.False(_sut.Validate(command).IsValid);
-        }
-
-        [Fact]
-        public void CompanyWithoutContactPerson_IsValid()
-        {
-            var command = Valid();
-            command.FirstName = "";
-            command.LastName = "";
-            command.PostalCode = "";
-
-            Assert.True(_sut.Validate(command).IsValid);
-        }
-
-        [Fact]
-        public void HalfAContactName_IsInvalid()
-        {
-            var command = Valid();
-            command.LastName = "";
 
             Assert.False(_sut.Validate(command).IsValid);
         }

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { ChevronLeft } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ChevronLeft, PackageOpen, Tags } from "lucide-react";
 
 import DataTable from "@/shared/components/table/DataTable";
 import DataTablePagination from "@/shared/components/table/DataTablePagination";
@@ -7,183 +8,162 @@ import TableLoadingSkeleton from "@/shared/components/table/TableLoadingSkeleton
 import { Button } from "@/shared/components/ui/button";
 import { UNIT_CUSTODY_REASON_LABELS } from "@/shared/domain/enums/unitStatus";
 
-import { UNIT_VIEWS, formatDate } from "../domain/unitVocabulary";
+import {
+  DocumentKindEnum,
+  LABEL_FILTERS,
+  UNIT_SEGMENTS,
+  documentRouteOf,
+  fa,
+} from "../domain/unitVocabulary";
 import UnitStatusBadge from "./UnitStatusBadge";
 import UnitSelectCheckbox from "./UnitSelectCheckbox";
-import {
-  UnitBarcodeCell,
-  UnitProductCell,
-  UnitWhereabouts,
-  UnitLabelStateBadge,
-  UnitQuarantineAge,
-  UnitQuarantineSource,
-  UnitValueCell,
-} from "./UnitCells";
+import { UnitLabelStateBadge, UnitQuarantineAge, UnitWhereabouts } from "./UnitCells";
 
-const getRowKey = (row) => row.original.id;
-
-function StatusCell({ unit }) {
+/** کالا و بارکد در یک خانه؛ کلیک جزئیات و مسیرِ دانه را باز می‌کند. */
+function UnitIdentity({ unit, onOpen }) {
   return (
-    <div className="flex flex-col items-center gap-0.5">
-      <UnitStatusBadge status={unit.status} />
-      {unit.custodyReason && (
-        <span className="text-[11px] text-muted-foreground">
-          {UNIT_CUSTODY_REASON_LABELS[unit.custodyReason]}
-        </span>
-      )}
+    <button
+      type="button"
+      onClick={() => onOpen(unit)}
+      className="group/id flex min-w-0 flex-col items-start gap-0.5 text-right"
+    >
+      <span className="max-w-full truncate text-sm font-medium group-hover/id:text-primary group-hover/id:underline">
+        {unit.productName ?? "—"}
+      </span>
+      <span className="max-w-full truncate font-mono text-xs text-muted-foreground" dir="ltr">
+        {unit.barcode}
+      </span>
+      <span className="text-[11px] text-muted-foreground tabular-nums">سریال {fa(unit.serialNumber)}</span>
+    </button>
+  );
+}
+
+/** از کجا آمد: تامین‌کننده و فاکتورِ خرید؛ بدونِ خرید یعنی موجودیِ اولیه. */
+function UnitOrigin({ unit }) {
+  if (!unit.purchaseId) return <span className="text-xs text-muted-foreground">موجودی اولیه</span>;
+  return (
+    <div className="flex min-w-0 flex-col">
+      <span className="truncate text-sm">{unit.supplierName ?? "—"}</span>
+      <Link
+        to={documentRouteOf(DocumentKindEnum.PURCHASE, unit.purchaseId)}
+        className="font-mono text-[11px] text-muted-foreground hover:text-primary hover:underline"
+      >
+        {unit.purchaseInvoiceNumber || `#${unit.purchaseId}`}
+      </Link>
     </div>
   );
 }
 
-function OriginCell({ unit }) {
-  if (!unit.purchaseId) {
-    return <span className="text-xs text-muted-foreground">موجودی اولیه / اصلاح</span>;
-  }
+/** علت و مدتِ قرنطینه — ستونِ «منشأ» در جایگاهِ قرنطینه. */
+function QuarantineInfo({ unit }) {
   return (
-    <div className="flex flex-col">
-      <span className="font-mono text-xs">{unit.purchaseInvoiceNumber || unit.purchaseId}</span>
-      {unit.supplierName && (
-        <span className="text-[11px] text-muted-foreground">{unit.supplierName}</span>
-      )}
+    <div className="flex flex-col gap-0.5">
+      <span className="text-sm">{UNIT_CUSTODY_REASON_LABELS[unit.custodyReason] ?? "دریافت خرید"}</span>
+      <UnitQuarantineAge unit={unit} />
     </div>
   );
 }
 
 /**
- * ستون‌های هر تب. ستون‌های مشترک (انتخاب، بارکد، کالا، جزئیات) همیشه
- * هستند؛ وسطِ جدول به کارِ همان تب می‌پردازد:
- *  - همه: وضعیت، کجاست، برچسب.
- *  - قرنطینه: علت، چند روز، سندِ منشأ، ارزشِ نگه‌داشته.
- *  - صفِ چاپ: وضعیت، تاریخِ ورود، خرید — تا برچسب‌های یک دریافت کنار هم چاپ شوند.
- *
- * ستونِ قابلِ مرتب‌سازی `accessorKey` دارد (TanStack بدونِ accessor مرتب
- * نمی‌کند)؛ نامش همان کلیدِ `UNIT_SORT_COLUMNS` است که به سرور می‌رود.
+ * یک دکمه برای هر ردیف: جزئیات، که همه‌ی کارهای همان دانه هم آنجاست. کارِ
+ * روی چند دانه با انتخاب و نوارِ پایینِ صفحه — تکی و دسته‌ای یک مسیر دارند.
  */
-function viewColumns(view) {
-  if (view === UNIT_VIEWS.QUARANTINE) {
-    return [
-      {
-        id: "custodyReason",
-        header: "علت",
-        enableSorting: false,
-        cell: ({ row }) => (
-          <span className="text-sm">
-            {UNIT_CUSTODY_REASON_LABELS[row.original.custodyReason] ?? "—"}
-          </span>
-        ),
-      },
-      {
-        accessorKey: "quarantinedAt",
-        header: "در قرنطینه",
-        cell: ({ row }) => <UnitQuarantineAge unit={row.original} />,
-      },
-      {
-        id: "quarantineSource",
-        header: "سند",
-        enableSorting: false,
-        cell: ({ row }) => <UnitQuarantineSource unit={row.original} />,
-      },
-      {
-        id: "quarantineCost",
-        header: "ارزش (ریال)",
-        enableSorting: false,
-        cell: ({ row }) => <UnitValueCell value={row.original.quarantineCost} />,
-      },
-    ];
-  }
-  if (view === UNIT_VIEWS.UNLABELED) {
-    return [
-      {
-        accessorKey: "status",
-        header: "وضعیت",
-        cell: ({ row }) => <StatusCell unit={row.original} />,
-      },
-      {
-        accessorKey: "createdAt",
-        header: "ورود به انبار",
-        cell: ({ row }) => (
-          <span className="text-xs tabular-nums">{formatDate(row.original.createdAt)}</span>
-        ),
-      },
-      {
-        id: "origin",
-        header: "خرید",
-        enableSorting: false,
-        cell: ({ row }) => <OriginCell unit={row.original} />,
-      },
-    ];
-  }
-  return [
-    {
-      accessorKey: "status",
-      header: "وضعیت",
-      cell: ({ row }) => <StatusCell unit={row.original} />,
-    },
-    {
-      id: "whereabouts",
-      header: "کجاست",
-      enableSorting: false,
-      cell: ({ row }) => <UnitWhereabouts unit={row.original} />,
-    },
-    {
-      accessorKey: "lastPrintedAt",
-      header: "برچسب",
-      cell: ({ row }) => <UnitLabelStateBadge unit={row.original} />,
-    },
-  ];
+function OpenButton({ unit, onOpen }) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="h-8 gap-1 text-xs"
+      onClick={() => onOpen(unit)}
+    >
+      جزئیات
+      <ChevronLeft className="h-3.5 w-3.5" />
+    </Button>
+  );
 }
 
-/** کارتِ یک دانه برای عرضِ کم — همان اطلاعاتِ ردیف، بدونِ اسکرولِ افقی. */
-function UnitCard({ unit, view, selected, onToggleSelect, onOpen }) {
+/** کارتِ یک دانه در عرضِ کم — همان اطلاعاتِ ردیف، فشرده. */
+function UnitCard({ unit, isQuarantine, selected, onToggleSelect, onOpen }) {
   return (
     <li
-      className={`flex items-start gap-2 rounded-lg border p-3 ${
-        selected ? "border-primary/40 bg-primary/5" : "border-border"
+      className={`rounded-xl border p-3 transition-colors ${
+        selected ? "border-primary/40 bg-primary/5" : "border-border bg-card"
       }`}
     >
-      <UnitSelectCheckbox
-        checked={selected}
-        onChange={() => onToggleSelect(unit)}
-        label={`انتخاب ${unit.barcode}`}
-      />
-      <button
-        type="button"
-        onClick={() => onOpen(unit)}
-        className="flex min-w-0 flex-1 flex-col gap-2 text-start"
-      >
-        <div className="flex items-start justify-between gap-2">
-          <UnitProductCell unit={unit} />
-          <UnitStatusBadge status={unit.status} />
+      <div className="flex items-start gap-1">
+        <div className="-ms-2 -mt-1.5">
+          <UnitSelectCheckbox
+            checked={selected}
+            onChange={() => onToggleSelect(unit)}
+            label={`انتخاب ${unit.barcode}`}
+          />
         </div>
-        <UnitBarcodeCell unit={unit} />
-        <div className="flex flex-wrap items-end justify-between gap-2">
-          {view === UNIT_VIEWS.QUARANTINE ? (
-            <>
-              <span className="text-xs">
-                {UNIT_CUSTODY_REASON_LABELS[unit.custodyReason] ?? "—"}
-              </span>
-              <UnitQuarantineAge unit={unit} />
-            </>
-          ) : (
-            <>
-              <UnitWhereabouts unit={unit} />
-              <UnitLabelStateBadge unit={unit} />
-            </>
-          )}
+        <div className="min-w-0 flex-1">
+          <UnitIdentity unit={unit} onOpen={onOpen} />
         </div>
-      </button>
+        <UnitStatusBadge status={unit.status} />
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-3 border-t border-dashed border-border pt-2 text-xs">
+        {isQuarantine ? <QuarantineInfo unit={unit} /> : <UnitWhereabouts unit={unit} />}
+        <UnitOrigin unit={unit} />
+      </div>
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <UnitLabelStateBadge unit={unit} compact />
+        <div className="ms-auto">
+          <OpenButton unit={unit} onOpen={onOpen} />
+        </div>
+      </div>
     </li>
+  );
+}
+
+function EmptyState({ segment, labelFilter, hasFilters, onClearFilters }) {
+  const allLabeled = labelFilter === LABEL_FILTERS.UNPRINTED;
+  const Icon = allLabeled ? Tags : PackageOpen;
+  const title = allLabeled
+    ? "همه برچسب خورده‌اند"
+    : hasFilters
+      ? "دانه‌ای با این فیلترها پیدا نشد"
+      : segment === UNIT_SEGMENTS.QUARANTINE
+        ? "قرنطینه خالی است"
+        : "دانه‌ای اینجا نیست";
+  const hint = allLabeled
+    ? "دانه‌ی بدونِ برچسبی در این جایگاه نمانده."
+    : hasFilters
+      ? "فیلترها یا جست‌وجو را تغییر دهید."
+      : null;
+
+  return (
+    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border py-14 text-center">
+      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+        <Icon className="h-6 w-6 text-muted-foreground" />
+      </span>
+      <p className="font-medium">{title}</p>
+      {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
+      {hasFilters && (
+        <Button type="button" variant="outline" size="sm" className="mt-1" onClick={onClearFilters}>
+          پاک کردن فیلترها
+        </Button>
+      )}
+    </div>
   );
 }
 
 /**
  * فهرستِ دانه‌ها: در عرضِ کافی جدول با مرتب‌سازیِ سرور، در عرضِ کم کارت.
- * چیدمان به عرضِ خودِ کارتِ صفحه واکنش نشان می‌دهد (container query)،
- * نه به عرضِ پنجره — سایدبارِ باز هم حساب می‌شود.
+ * چیدمان به عرضِ خودِ کارتِ صفحه واکنش نشان می‌دهد (container query)، نه
+ * به پنجره — سایدبارِ باز هم حساب می‌شود.
+ *
+ * ستون‌ها: «دانه» (کالا، بارکد، سریال)، «کجاست»، «منشأ» (در قرنطینه: علت و
+ * مدت)، «برچسب» و «جزئیات». کارها (تکی یا دسته‌ای) با انتخاب یا از جزئیات.
  */
 export default function UnitsList({
   units,
-  view,
+  segment,
+  labelFilter,
+  hasFilters,
+  onClearFilters,
   isLoading,
   totalPages,
   currentPage,
@@ -196,8 +176,9 @@ export default function UnitsList({
   onToggleSelectAll,
   onOpenUnit,
 }) {
-  const allOnPageSelected =
-    units.length > 0 && units.every((unit) => selectedIds.has(unit.id));
+  const allOnPageSelected = units.length > 0 && units.every((unit) => selectedIds.has(unit.id));
+  const someOnPageSelected = !allOnPageSelected && units.some((unit) => selectedIds.has(unit.id));
+  const isQuarantine = segment === UNIT_SEGMENTS.QUARANTINE;
 
   const columns = useMemo(
     () => [
@@ -207,6 +188,7 @@ export default function UnitsList({
         header: () => (
           <UnitSelectCheckbox
             checked={allOnPageSelected}
+            indeterminate={someOnPageSelected}
             onChange={() => onToggleSelectAll(units, !allOnPageSelected)}
             label="انتخاب همه‌ی این صفحه"
           />
@@ -220,45 +202,68 @@ export default function UnitsList({
         ),
       },
       {
-        accessorKey: "serialNumber",
-        header: "بارکد / سریال",
-        cell: ({ row }) => <UnitBarcodeCell unit={row.original} />,
+        accessorKey: "productName",
+        header: "دانه",
+        cell: ({ row }) => <UnitIdentity unit={row.original} onOpen={onOpenUnit} />,
       },
       {
-        accessorKey: "productName",
-        header: "کالا",
-        cell: ({ row }) => <UnitProductCell unit={row.original} />,
+        accessorKey: "status",
+        header: "کجاست",
+        cell: ({ row }) => (
+          <div className="flex flex-col items-start gap-1">
+            <UnitStatusBadge status={row.original.status} />
+            <UnitWhereabouts unit={row.original} detailOnly />
+          </div>
+        ),
       },
-      ...viewColumns(view),
+      isQuarantine
+        ? {
+            accessorKey: "quarantinedAt",
+            header: "علت و مدت",
+            cell: ({ row }) => <QuarantineInfo unit={row.original} />,
+          }
+        : {
+            id: "origin",
+            header: "منشأ",
+            enableSorting: false,
+            cell: ({ row }) => <UnitOrigin unit={row.original} />,
+          },
+      {
+        accessorKey: "lastPrintedAt",
+        header: "برچسب",
+        cell: ({ row }) => <UnitLabelStateBadge unit={row.original} />,
+      },
       {
         id: "actions",
         header: "",
         enableSorting: false,
         cell: ({ row }) => (
           <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="ghost"
-              size="lg"
-              className="gap-1 px-2"
-              onClick={() => onOpenUnit(row.original)}
-            >
-              جزئیات
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
+            <OpenButton unit={row.original} onOpen={onOpenUnit} />
           </div>
         ),
       },
     ],
-    [view, units, selectedIds, allOnPageSelected, onToggleSelect, onToggleSelectAll, onOpenUnit],
+    [
+      units,
+      selectedIds,
+      allOnPageSelected,
+      someOnPageSelected,
+      isQuarantine,
+      onToggleSelect,
+      onToggleSelectAll,
+      onOpenUnit,
+    ],
   );
 
-  const emptyMessage =
-    view === UNIT_VIEWS.UNLABELED
-      ? "همه‌ی دانه‌های انبار برچسب خورده‌اند."
-      : view === UNIT_VIEWS.QUARANTINE
-        ? "قرنطینه خالی است."
-        : "دانه‌ای با این فیلترها پیدا نشد.";
+  const empty = (
+    <EmptyState
+      segment={segment}
+      labelFilter={labelFilter}
+      hasFilters={hasFilters}
+      onClearFilters={onClearFilters}
+    />
+  );
 
   return (
     <div className="@container/units">
@@ -273,9 +278,9 @@ export default function UnitsList({
           onPaginationChange={onPaginationChange}
           sorting={sorting}
           onSortingChange={onSortingChange}
-          getRowKey={getRowKey}
+          getRowKey={(row) => row.original.id}
           rowClassName={(row) => (selectedIds.has(row.original.id) ? "bg-primary/5" : "")}
-          emptyMessage={emptyMessage}
+          emptyState={empty}
         />
       </div>
 
@@ -283,37 +288,38 @@ export default function UnitsList({
         {isLoading ? (
           <TableLoadingSkeleton />
         ) : units.length === 0 ? (
-          <p className="py-10 text-center text-sm text-muted-foreground">{emptyMessage}</p>
+          empty
         ) : (
           <>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <UnitSelectCheckbox
                 checked={allOnPageSelected}
+                indeterminate={someOnPageSelected}
                 onChange={() => onToggleSelectAll(units, !allOnPageSelected)}
                 label="انتخاب همه‌ی این صفحه"
               />
-              همه‌ی این صفحه
+              انتخاب همه‌ی این صفحه
             </div>
             <ul className="space-y-2">
               {units.map((unit) => (
                 <UnitCard
                   key={unit.id}
                   unit={unit}
-                  view={view}
+                  isQuarantine={isQuarantine}
                   selected={selectedIds.has(unit.id)}
                   onToggleSelect={onToggleSelect}
                   onOpen={onOpenUnit}
                 />
               ))}
             </ul>
+            <DataTablePagination
+              totalPages={totalPages}
+              currentPage={currentPage}
+              pageSize={pageSize}
+              onPaginationChange={onPaginationChange}
+            />
           </>
         )}
-        <DataTablePagination
-          totalPages={totalPages}
-          currentPage={currentPage}
-          pageSize={pageSize}
-          onPaginationChange={onPaginationChange}
-        />
       </div>
     </div>
   );

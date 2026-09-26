@@ -2,12 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
 
-import { Card, CardContent } from "@/shared/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { Printer } from "lucide-react";
+
+import { Button } from "@/shared/components/ui/button";
 import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
 import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
-import { ProductUnitStatusEnum as UNIT_STATUSES } from "@/shared/domain/enums/unitStatus";
+import { parseBarcode } from "@/shared/domain/barcode/productCode";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
@@ -15,68 +16,75 @@ import { useSuppliersQuery } from "@/features/suppliers/services/queries";
 import { useCustomersQuery } from "@/features/customers/services/queries";
 
 import {
-  SCAN_MODES,
-  UNIT_VIEWS,
-  UNIT_VIEW_LABELS,
+  LABEL_FILTERS,
   effectiveUnitFilters,
   fa,
+  segmentFromLegacyView,
 } from "../domain/unitVocabulary";
-import { downloadUnitsCsv } from "../domain/unitCsv";
 import { fetchAllProductUnits } from "../services/api-v1";
 import { useProductUnitsQuery, useProductUnitSummaryQuery } from "../services/queries";
 import { useResolveScannedCodeMutation } from "../services/mutations";
 import { URL_FILTER_KEYS, useProductUnitFilterStore } from "../store/unitFilterStore";
-import UnitScanBar from "../components/UnitScanBar";
-import UnitSummaryCards from "../components/UnitSummaryCards";
-import UnitFilters from "../components/UnitFilters";
+import UnitSearchField from "../components/UnitSearchField";
+import UnitFilterBar from "../components/UnitFilterBar";
+import UnitViewNav from "../components/UnitViewNav";
 import UnitBulkBar from "../components/UnitBulkBar";
 import UnitsList from "../components/UnitsList";
 import UnitDetailSheet from "../components/UnitDetailSheet";
 import UnitActionDialog from "../components/UnitActionDialog";
-import UnitPrintDialog from "../components/UnitPrintDialog";
-import StocktakePanel from "../components/StocktakePanel";
+import LabelPrintDesigner from "../components/LabelPrintDesigner";
 
 const PICKER_PAGINATION = { pageIndex: 0, pageSize: 200 };
 const NAME_SORTING = { id: "name", desc: false };
 const NO_FILTERS = {};
 
-/** سقفِ «انتخاب همه‌ی نتایج» و خروجیِ همه — بیشتر از این یعنی فیلترِ دقیق‌تر. */
+/** سقفِ «انتخاب همه‌ی نتایج» — بیشتر از این یعنی فیلترِ دقیق‌تر. */
 const BULK_LIMIT = 2000;
 
-/** مقدارِ عددیِ پارامترِ آدرس (شناسه، enum)؛ `view` رشته می‌ماند. */
-const parseUrlValue = (key, raw) => (key === "view" ? raw : Number(raw) || "");
+/** مقدارِ پارامترِ آدرس: `segment` و `labelFilter` رشته، بقیه عدد (شناسه یا enum). */
+const parseUrlValue = (key, raw) =>
+  key === "segment" || key === "labelFilter" ? raw : Number(raw) || "";
 
 /**
- * دانه‌ها و برچسب‌ها — مدیریتِ کاملِ هر دانه‌ی فیزیکیِ کالا:
+ * دانه‌ها و برچسب‌ها — مدیریتِ هر دانه‌ی فیزیکیِ کالا در یک صفحه:
  *
- *  - **کجاست؟** هر دانه در انبار، قرنطینه، نزدِ مشتری، نزدِ تامین‌کننده یا
- *    اسقاط؛ با تاریخچه‌ی کاملِ جابه‌جایی.
- *  - **قرنطینه:** علت، سن، سندِ منشأ و ارزش؛ آزادسازی و اسقاطِ دستی، یا
- *    ارجاع به مرجوعیِ خرید.
- *  - **برچسب:** صفِ دانه‌های بی‌برچسب، چاپِ دسته‌ای و ثبتِ اینکه کدام دانه
- *    کی و چند بار برچسب خورده.
- *  - **شمارش:** مقایسه‌ی قفسه با سیستم، دانه به دانه.
+ *  - **کجاست؟** جایگاهِ هر دانه (انبار، قرنطینه، نزدِ مشتری، نزدِ تامین‌کننده،
+ *    اسقاط) با شمارش، و در جزئیاتش مسیر و تاریخچه‌ی کامل.
+ *  - **قرنطینه:** تعیین تکلیف کنارِ هر دانه — عودت به تامین‌کننده (مرجوعیِ
+ *    خرید)، بازگشت به موجودی یا اسقاط.
+ *  - **برچسب:** «بدون برچسب» صفِ چاپ است؛ انتخابِ دسته‌ای (یا اسکنِ
+ *    پیاپیِ دانه‌ها) و چاپ با طراحِ برچسب (اندازه، بارکد/QR، متن‌ها).
+ *  - **کارها:** هر کار (چاپ، قرنطینه، بازگشت به موجودی، اسقاط، عودت) هم تکی
+ *    از «جزئیات» و هم دسته‌ای با انتخاب و نوارِ پایینِ صفحه.
+ *
+ * چیدمان مثلِ «دسترسی کارمندان»: ستونِ کناری (کالا + نماهای جایگاه و برچسب،
+ * با شمارش) و کنارش سربرگِ نمای جاری و فهرست. شکستن با عرضِ پنجره است نه
+ * عرضِ محتوا، تا با باز شدنِ منوی اصلیِ سایت ستون بسته نشود؛ در عرضِ کم
+ * نماها دو انتخاب‌گرند.
+ *
+ * یک فیلدِ اسکن/جست‌وجو: تایپ فهرست را فیلتر می‌کند؛ اسکن یا Enter روی
+ * بارکدِ دانه جزئیاتش را باز می‌کند (یا در «اسکنِ پیاپی» به انتخاب اضافه‌اش
+ * می‌کند) و بارکدِ کالا فهرست را روی همان کالا می‌برد.
  *
  * پیوند از صفحه‌های دیگر با پارامترِ آدرس: `?productId=`، `?purchaseId=`،
- * `?view=unlabeled`، `?unit=<بارکد>` و …
+ * `?saleId=`، `?segment=quarantine`، `?labelFilter=unprinted`، `?unit=<بارکد>`،
+ * و `?view=unlabeled` (قدیمی).
  */
 export default function UnitsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { can } = usePermission();
-  const canManage = can("ProductUnitManage");
+  const { can, isError: permissionsUnknown } = usePermission();
+  const canManage = permissionsUnknown || can("ProductUnitManage");
 
   const store = useProductUnitFilterStore();
-  const { view, pagination, sorting } = store;
+  const { pagination, sorting } = store;
 
-  const [scanMode, setScanMode] = useState(SCAN_MODES.OPEN);
-  const [scanMiss, setScanMiss] = useState(null);
-  const [lastAdded, setLastAdded] = useState(null);
+  const [scanToSelect, setScanToSelect] = useState(false);
   const [activeUnit, setActiveUnit] = useState(null);
   const [actionRequest, setActionRequest] = useState(null);
   const [printUnits, setPrintUnits] = useState(null);
   const [isFetchingAll, setIsFetchingAll] = useState(false);
   // خودِ دانه نگه داشته می‌شود نه فقط شناسه: صفحه‌بندی سمتِ سرور است و
-  // دانه‌های صفحه‌ی قبل دیگر در فهرست نیستند ولی باید چاپ و شمرده شوند.
+  // دانه‌های صفحه‌ی قبل دیگر در فهرست نیستند ولی باید چاپ شوند.
   const [selectedById, setSelectedById] = useState(() => new Map());
 
   // ─── داده ─────────────────────────────────────────────────────────────────
@@ -88,12 +96,11 @@ export default function UnitsPage() {
   const listFilters = useMemo(
     () =>
       effectiveUnitFilters({
-        view,
+        segment: store.segment,
+        labelFilter: store.labelFilter,
         search,
         productId: store.productId,
-        status: store.status,
         custodyReason: store.custodyReason,
-        labelState: store.labelState,
         supplierId: store.supplierId,
         customerId: store.customerId,
         purchaseId: store.purchaseId,
@@ -104,12 +111,11 @@ export default function UnitsPage() {
         toSerial,
       }),
     [
-      view,
+      store.segment,
+      store.labelFilter,
       search,
       store.productId,
-      store.status,
       store.custodyReason,
-      store.labelState,
       store.supplierId,
       store.customerId,
       store.purchaseId,
@@ -121,27 +127,25 @@ export default function UnitsPage() {
     ],
   );
 
-  const isListView = view !== UNIT_VIEWS.STOCKTAKE;
-  const unitsQuery = useProductUnitsQuery(listFilters, pagination, sorting, {
-    enabled: isListView,
-  });
+  const unitsQuery = useProductUnitsQuery(listFilters, pagination, sorting);
   const summaryQuery = useProductUnitSummaryQuery(store.productId);
+  const summary = summaryQuery.isError ? null : summaryQuery.data;
 
   const productsQuery = useProductsQuery(NO_FILTERS, PICKER_PAGINATION, null);
   const suppliersQuery = useSuppliersQuery(NO_FILTERS, PICKER_PAGINATION, NAME_SORTING);
   const customersQuery = useCustomersQuery(NO_FILTERS, PICKER_PAGINATION, NAME_SORTING);
-  const products = productsQuery.data?.items ?? [];
 
   const units = unitsQuery.data?.items ?? [];
   const totalResults = unitsQuery.data?.total ?? 0;
   const selectedUnits = useMemo(() => [...selectedById.values()], [selectedById]);
+  const selectedIds = useMemo(() => new Set(selectedById.keys()), [selectedById]);
 
   // ─── پیوندِ ورودی ─────────────────────────────────────────────────────────
 
   const resolveCode = useResolveScannedCodeMutation();
 
   useEffect(() => {
-    const values = {};
+    const values = { ...segmentFromLegacyView(searchParams.get("view")) };
     URL_FILTER_KEYS.forEach((key) => {
       const raw = searchParams.get(key);
       if (raw) values[key] = parseUrlValue(key, raw);
@@ -154,7 +158,7 @@ export default function UnitsPage() {
         onSuccess: (result) =>
           result.kind === BarcodeReferenceKindEnum.UNIT
             ? setActiveUnit(result.unit)
-            : setScanMiss({ kind: BarcodeReferenceKindEnum.UNKNOWN, code: unitCode }),
+            : toast.error("دانه‌ای با این بارکد پیدا نشد."),
       });
     }
     if (Object.keys(values).length || unitCode) setSearchParams({}, { replace: true });
@@ -187,14 +191,14 @@ export default function UnitsPage() {
     [],
   );
 
-  const withAllResults = async (consume) => {
+  const selectAllResults = async () => {
     setIsFetchingAll(true);
     try {
       const result = await fetchAllProductUnits(listFilters, { limit: BULK_LIMIT, sorting });
       if (result.truncated) {
-        toast(`فقط ${fa(BULK_LIMIT)} دانه‌ی اول از ${fa(result.total)} خوانده شد؛ فیلتر را دقیق‌تر کنید.`);
+        toast(`فقط ${fa(BULK_LIMIT)} دانه‌ی اول از ${fa(result.total)} انتخاب شد؛ فیلتر را دقیق‌تر کنید.`);
       }
-      consume(result.items);
+      setSelectedById(new Map(result.items.map((unit) => [unit.id, unit])));
     } catch (error) {
       toast.error(error?.message || "خواندنِ نتایج انجام نشد");
     } finally {
@@ -202,62 +206,55 @@ export default function UnitsPage() {
     }
   };
 
-  const selectAllResults = () =>
-    withAllResults((items) => setSelectedById(new Map(items.map((unit) => [unit.id, unit]))));
+  // ─── اسکن / جست‌وجو ──────────────────────────────────────────────────────
 
-  const exportCsv = () =>
-    selectedUnits.length
-      ? downloadUnitsCsv(selectedUnits)
-      : withAllResults((items) => downloadUnitsCsv(items));
-
-  // ─── اسکن ────────────────────────────────────────────────────────────────
-
+  /**
+   * Enter یا اسکن: بارکدِ دانه → جزئیات (یا افزودن به انتخاب در «اسکنِ
+   * پیاپی»)، بارکدِ کالا → فهرستِ همان کالا، متنِ عادی → همان جست‌وجوی
+   * فهرست که با تایپ اعمال شده.
+   */
   const handleScan = (code) => {
-    setScanMiss(null);
+    // متنِ عادی همان جست‌وجوی فهرست است که با تایپ اعمال شده.
+    if (parseBarcode(code).kind === BarcodeReferenceKindEnum.UNKNOWN) return;
     resolveCode.mutate(code, {
       onSuccess: (result) => {
-        if (result.kind !== BarcodeReferenceKindEnum.UNIT) {
-          setScanMiss(
-            result.kind === BarcodeReferenceKindEnum.PRODUCT
-              ? result
-              : { kind: BarcodeReferenceKindEnum.UNKNOWN, code },
-          );
+        if (result.kind === BarcodeReferenceKindEnum.PRODUCT && result.product) {
+          store.setSearch("");
+          store.setProductId(result.product.id);
+          toast.success(`فهرست روی «${result.product.name}»`);
           return;
         }
-        if (scanMode === SCAN_MODES.OPEN) {
+        if (result.kind !== BarcodeReferenceKindEnum.UNIT || !result.unit) {
+          toast.error("این کد به هیچ دانه یا کالایی نمی‌خورد.");
+          return;
+        }
+        store.setSearch("");
+        if (!scanToSelect) {
           setActiveUnit(result.unit);
           return;
         }
-        const duplicate = selectedById.has(result.unit.id);
-        if (!duplicate) toggleSelect(result.unit);
-        setLastAdded({ unit: result.unit, duplicate });
+        if (selectedById.has(result.unit.id)) {
+          toast(`سریال ${fa(result.unit.serialNumber)} قبلاً انتخاب شده`);
+          return;
+        }
+        toggleSelect(result.unit);
+        toast.success(`${result.unit.productName ?? ""}، سریال ${fa(result.unit.serialNumber)} اضافه شد`);
       },
     });
   };
 
-  /** «این بارکدِ کالاست» → دانه‌های همان کالا، در همین تب. */
-  const goToProduct = (product) => {
-    setScanMiss(null);
-    store.setProductId(product.id);
-  };
-
-  // ─── ناوبری بینِ تب‌ها و کارت‌ها ────────────────────────────────────────
-
-  const changeView = (next) => {
-    if (next === view) return;
-    clearSelection();
-    store.setView(next);
-  };
-
-  const selectSummary = (target) => {
-    clearSelection();
-    store.setView(target.view);
-    if (target.view === UNIT_VIEWS.ALL) store.setStatus(target.status ?? "");
-  };
-
   // ─── کارها ───────────────────────────────────────────────────────────────
 
-  const requestAction = (action, targetUnits) => setActionRequest({ action, units: targetUnits });
+  const changeSegment = (segment) => {
+    if (segment === store.segment) return;
+    clearSelection();
+    store.setSegment(segment);
+  };
+
+  const requestAction = useCallback(
+    (action, targetUnits) => setActionRequest({ action, units: targetUnits }),
+    [],
+  );
 
   const handleActionDone = (affected) => {
     setActionRequest(null);
@@ -280,110 +277,165 @@ export default function UnitsPage() {
     setPrintUnits(null);
   };
 
-  const summary = summaryQuery.data;
-  const tabCount = {
-    [UNIT_VIEWS.QUARANTINE]: summary?.byStatus?.[UNIT_STATUSES.QUARANTINED]?.count,
-    [UNIT_VIEWS.UNLABELED]: summary?.unprintedCount,
+  const changeLabelFilter = (labelFilter) => {
+    if (labelFilter === (store.labelFilter || "")) return;
+    clearSelection();
+    store.setLabelFilter(labelFilter);
   };
 
+  const clearFilters = () => {
+    clearSelection();
+    store.clearAdvanced();
+    store.setSearch("");
+  };
+
+  const viewNavProps = {
+    segment: store.segment,
+    labelFilter: store.labelFilter,
+    summary,
+    onSegmentChange: changeSegment,
+    onLabelFilterChange: changeLabelFilter,
+  };
+
+  const currentPage = unitsQuery.data?.page ? unitsQuery.data.page - 1 : pagination.pageIndex;
+  const isPrintQueue = store.labelFilter === LABEL_FILTERS.UNPRINTED;
+  const hasFilters = Boolean(
+    store.search ||
+      store.productId ||
+      store.supplierId ||
+      store.customerId ||
+      store.purchaseId ||
+      store.saleId ||
+      store.fromDate ||
+      store.toDate ||
+      store.fromSerial ||
+      store.toSerial ||
+      store.custodyReason,
+  );
+
+  const products = productsQuery.data?.items ?? [];
+  const productName = store.productId
+    ? products.find((product) => String(product.id) === String(store.productId))?.name
+    : null;
+  const resultsText = unitsQuery.isLoading ? "در حال بارگذاری…" : `${fa(totalResults)} دانه`;
+
   return (
-    <div className="container mx-auto space-y-4">
-      <UnitScanBar
-        mode={scanMode}
-        onModeChange={(mode) => {
-          setScanMode(mode);
-          setLastAdded(null);
-        }}
-        onScan={handleScan}
-        scanMiss={scanMiss}
-        lastAdded={lastAdded}
-        isSearching={resolveCode.isPending}
-        onGoToProduct={goToProduct}
-      />
+    <div className="w-full">
+      {/* <UnitViewNav
+        variant="pane"
+        className="hidden lg:sticky lg:top-4 lg:flex lg:max-h-[calc(100svh-6.5rem)]"
+        header={
+          <div className="[&_label]:sr-only">
+            <EntitySelect
+              label="کالا"
+              placeholder="همه‌ی کالاها"
+              emptyText="کالایی یافت نشد"
+              items={products}
+              value={store.productId}
+              onSelect={(id) => store.setProductId(id)}
+              renderMeta={(product) => product.code}
+            />
+          </div>
+        }
+        footerText={`${resultsText} در این نما`}
+        {...viewNavProps}
+      /> */}
 
-      <UnitSummaryCards
-        summary={summary}
-        isLoading={summaryQuery.isLoading}
-        isError={summaryQuery.isError}
-        current={{ view, status: store.status }}
-        onSelect={selectSummary}
-      />
-
-      <Tabs value={view} onValueChange={changeView} className="gap-3">
-        <TabsList className="h-auto w-full flex-wrap sm:w-fit">
-          {Object.values(UNIT_VIEWS).map((value) => (
-            <TabsTrigger key={value} value={value} className="flex-1 gap-1.5 sm:flex-none">
-              {UNIT_VIEW_LABELS[value]}
-              {tabCount[value] > 0 && (
-                <span className="rounded-full bg-primary/10 px-1.5 text-[11px] tabular-nums text-primary">
-                  {fa(tabCount[value])}
-                </span>
-              )}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-
-      {isListView ? (
-        <Card>
-          <CardContent className="space-y-3 pt-4">
-            <UnitFilters
-              filters={store}
-              actions={store}
+      <main className="flex min-w-0 flex-col gap-3">
+        {/* کارت اصلی: ناحیه فیلتر/سربرگ + بدنه لیست */}
+        <div className="overflow-hidden rounded-2xl border border-border bg-card">
+          {/* ناحیه بالایی: فیلترها و سربرگ نما */}
+          <div className="space-y-3 p-3 sm:p-4">
+            <UnitFilterBar
+              store={store}
+              search={
+                <UnitSearchField
+                  value={store.search}
+                  onChange={store.setSearch}
+                  onScan={handleScan}
+                  isBusy={resolveCode.isPending}
+                  scanToSelect={scanToSelect}
+                  onScanModeChange={setScanToSelect}
+                />
+              }
               products={products}
-              isProductsLoading={productsQuery.isLoading}
               suppliers={suppliersQuery.data?.items ?? []}
-              isSuppliersLoading={suppliersQuery.isLoading}
               customers={customersQuery.data?.items ?? []}
-              isCustomersLoading={customersQuery.isLoading}
+              isLoadingParties={suppliersQuery.isLoading || customersQuery.isLoading}
             />
 
-            <UnitBulkBar
-              selectedUnits={selectedUnits}
-              totalResults={totalResults}
-              isSelectingAll={isFetchingAll}
-              onSelectAllResults={selectAllResults}
-              onPrint={() => openPrint(selectedUnits)}
-              onAction={(action) => requestAction(action, selectedUnits)}
-              onExport={exportCsv}
-              onClear={clearSelection}
-              canManage={canManage}
-            />
+            {/* سربرگِ نمای جاری — همان کارتِ سربرگِ کارمند در «دسترسی کارمندان». */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border pt-3">
+              <UnitViewNav variant="select" className="w-full" {...viewNavProps} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs text-muted-foreground">
+                  {[productName && `کالا: ${productName}`, resultsText]
+                    .filter(Boolean)
+                    .join("، ")}
+                </p>
+              </div>
+              {isPrintQueue && totalResults > 0 && selectedUnits.length === 0 && (
+                <Button
+                  type="button"
+                  size="sm"
+                  className="gap-1.5"
+                  disabled={isFetchingAll}
+                  onClick={selectAllResults}
+                >
+                  <Printer className="size-4" />
+                  {isFetchingAll ? "در حال انتخاب…" : "انتخاب همه برای چاپ"}
+                </Button>
+              )}
+            </div>
+          </div>
 
+          {/* بدنه لیست: جدا شده با border-t و padding مستقل */}
+          <div className="border-t border-border p-3 sm:p-4">
             {unitsQuery.isError ? (
-              <QueryErrorState error={unitsQuery.error} onRetry={() => unitsQuery.refetch()} />
+              <QueryErrorState
+                error={unitsQuery.error}
+                onRetry={() => unitsQuery.refetch()}
+              />
             ) : (
               <FetchingOverlay active={unitsQuery.isFetching && !unitsQuery.isLoading}>
                 <UnitsList
                   units={units}
-                  view={view}
+                  segment={store.segment}
+                  labelFilter={store.labelFilter}
+                  hasFilters={hasFilters}
+                  onClearFilters={clearFilters}
                   isLoading={unitsQuery.isLoading}
                   totalPages={unitsQuery.data?.totalPages ?? 1}
-                  currentPage={unitsQuery.data?.page ? unitsQuery.data.page - 1 : pagination.pageIndex}
+                  currentPage={currentPage}
                   pageSize={pagination.pageSize}
                   onPaginationChange={store.setPagination}
                   sorting={sorting}
                   onSortingChange={store.setSorting}
-                  selectedIds={selectedById}
+                  selectedIds={selectedIds}
                   onToggleSelect={toggleSelect}
                   onToggleSelectAll={toggleSelectAll}
                   onOpenUnit={setActiveUnit}
                 />
               </FetchingOverlay>
             )}
-          </CardContent>
-        </Card>
-      ) : (
-        <StocktakePanel
-          products={products}
-          isProductsLoading={productsQuery.isLoading}
-          onOpenUnit={setActiveUnit}
+          </div>
+        </div>
+
+        <UnitBulkBar
+          selectedUnits={selectedUnits}
+          totalResults={totalResults}
+          isSelectingAll={isFetchingAll}
+          onSelectAllResults={selectAllResults}
+          onPrint={openPrint}
+          onAction={requestAction}
+          onClear={clearSelection}
+          canManage={canManage}
         />
-      )}
+      </main>
 
       <UnitDetailSheet
         unit={activeUnit}
-        open={!!activeUnit}
+        open={Boolean(activeUnit)}
         onOpenChange={(open) => !open && setActiveUnit(null)}
         onPrint={(unit) => openPrint([unit])}
         onAction={requestAction}
@@ -396,7 +448,7 @@ export default function UnitsPage() {
         onDone={handleActionDone}
       />
 
-      <UnitPrintDialog units={printUnits} onClose={closePrint} />
+      <LabelPrintDesigner units={printUnits} onClose={closePrint} />
     </div>
   );
 }

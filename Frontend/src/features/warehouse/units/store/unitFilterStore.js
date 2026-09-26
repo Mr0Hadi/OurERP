@@ -2,47 +2,66 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 import { createFilterStore } from "@/shared/store/createFilterStore";
-import { DEFAULT_SHEET_PRESET } from "@/shared/components/print/sheetPresets";
-import { DEFAULT_LABEL_CODE_KIND } from "@/shared/domain/barcode/barcodeConfig";
-import { UNIT_VIEWS } from "../domain/unitVocabulary";
+import { DEFAULT_LABEL_TEMPLATE } from "../domain/labelTemplate";
+import { LABEL_FILTERS, UNIT_SEGMENTS, segmentNeedsLabels } from "../domain/unitVocabulary";
 
 /**
- * اندازه‌ی ورقِ برچسب و بارکد/QR به پرینتر و اسکنرِ انبار بستگی دارند، نه
- * به این دسته‌ی خاص؛ پس بینِ نشست‌ها هم می‌مانند.
+ * قالبِ برچسب به پرینتر و اسکنرِ انبار بستگی دارد، نه به این دسته‌ی خاص؛
+ * پس بینِ نشست‌ها می‌ماند. `fields` جدا ادغام می‌شود تا فیلدِ تازه‌ای که
+ * بعداً به قالب اضافه شود، در ذخیره‌ی قدیمیِ مرورگر گم نشود.
  */
-export const usePrintPreferenceStore = create(
+export const useLabelTemplateStore = create(
   persist(
     (set) => ({
-      sheetPresetKey: DEFAULT_SHEET_PRESET,
-      setSheetPresetKey: (sheetPresetKey) => set({ sheetPresetKey }),
-
-      labelCodeKind: DEFAULT_LABEL_CODE_KIND,
-      setLabelCodeKind: (labelCodeKind) => set({ labelCodeKind }),
+      template: DEFAULT_LABEL_TEMPLATE,
+      updateTemplate: (patch) =>
+        set((state) => ({ template: { ...state.template, ...patch } })),
+      setField: (key, value) =>
+        set((state) => ({
+          template: {
+            ...state.template,
+            fields: { ...state.template.fields, [key]: value },
+          },
+        })),
+      resetTemplate: () => set({ template: DEFAULT_LABEL_TEMPLATE }),
     }),
-    { name: "unit-label-print-preferences" },
+    {
+      name: "unit-label-template",
+      version: 1,
+      merge: (persisted, current) => {
+        const saved = persisted?.template ?? {};
+        return {
+          ...current,
+          template: {
+            ...DEFAULT_LABEL_TEMPLATE,
+            ...saved,
+            custom: { ...DEFAULT_LABEL_TEMPLATE.custom, ...saved.custom },
+            fields: { ...DEFAULT_LABEL_TEMPLATE.fields, ...saved.fields },
+          },
+        };
+      },
+    },
   ),
 );
 
 /** فیلترهایی که از آدرس (`?productId=…`) هم پر می‌شوند — پیوند از صفحه‌های دیگر. */
 export const URL_FILTER_KEYS = Object.freeze([
-  "view",
+  "segment",
   "productId",
-  "status",
-  "custodyReason",
-  "labelState",
   "purchaseId",
   "saleId",
   "supplierId",
   "customerId",
+  "custodyReason",
+  "labelFilter",
 ]);
 
-const EMPTY_FILTERS = {
-  view: UNIT_VIEWS.ALL,
+export const EMPTY_UNIT_FILTERS = Object.freeze({
+  segment: UNIT_SEGMENTS.ALL,
+  labelFilter: "",
   search: "",
   productId: "",
-  status: "",
   custodyReason: "",
-  labelState: "",
   supplierId: "",
   customerId: "",
   purchaseId: "",
@@ -51,15 +70,15 @@ const EMPTY_FILTERS = {
   toDate: "",
   fromSerial: "",
   toSerial: "",
-};
+});
 
 /**
- * فیلترهای صفحه‌ی دانه‌ها. `view` تبِ فعال است و فیلترِ ثابتِ خودش را
- * (قرنطینه، صفِ چاپ) در `effectiveUnitFilters` اضافه می‌کند؛ بقیه‌ی
- * فیلترها بینِ تب‌ها مشترک‌اند تا مثلاً «کالای X» با عوض کردنِ تب بماند.
+ * فیلترهای صفحه‌ی دانه‌ها. `segment` جایگاهِ دانه است (انبار، قرنطینه، نزدِ
+ * مشتری…) و `labelFilter` («نخورده» = صفِ چاپ) روی همان جایگاه می‌نشیند؛ بقیه‌ی
+ * فیلترها بینِ جایگاه‌ها مشترک‌اند تا «کالای X» با عوض کردنِ جایگاه بماند.
  */
 export const useProductUnitFilterStore = createFilterStore({
-  filters: EMPTY_FILTERS,
+  filters: EMPTY_UNIT_FILTERS,
   defaultSorting: null,
   defaultPageSize: 20,
   actions: ({ applyFilters }) => ({
@@ -67,14 +86,33 @@ export const useProductUnitFilterStore = createFilterStore({
     // کالای قبلی برای کالای جدید بی‌معناست.
     setProductId: (productId) =>
       applyFilters({ productId, fromSerial: "", toSerial: "" }),
-    // تبِ قرنطینه وضعیت را خودش ثابت می‌کند و علتِ قرنطینه فقط آنجا معنا دارد.
-    setView: (view) =>
-      applyFilters(
-        view === UNIT_VIEWS.QUARANTINE
-          ? { view, status: "" }
-          : { view, custodyReason: "" },
-      ),
+    // علتِ قرنطینه فقط در جایگاهِ قرنطینه معنا دارد.
+    // فیلترِ برچسب هم در جایگاهی که برچسب ندارد (فروخته، اسقاط…) بی‌معناست.
+    setSegment: (segment) =>
+      applyFilters({
+        segment,
+        ...(segment === UNIT_SEGMENTS.QUARANTINE ? {} : { custodyReason: "" }),
+        ...(segmentNeedsLabels(segment) ? {} : { labelFilter: "" }),
+      }),
+    /** صفِ چاپ: همه‌ی دانه‌های هنوز در انبار که برچسب نخورده‌اند. */
+    openPrintQueue: () =>
+      applyFilters({ segment: UNIT_SEGMENTS.ALL, labelFilter: LABEL_FILTERS.UNPRINTED }),
+    /** فیلترهای جزئی — جایگاه، جست‌وجو و برچسب می‌مانند. */
+    clearAdvanced: () =>
+      applyFilters({
+        productId: "",
+        custodyReason: "",
+        supplierId: "",
+        customerId: "",
+        purchaseId: "",
+        saleId: "",
+        fromDate: "",
+        toDate: "",
+        fromSerial: "",
+        toSerial: "",
+      }),
     /** پیوندِ ورودی: همه‌ی فیلترها از نو، فقط با همین مقادیر. */
-    openWith: (values) => applyFilters({ ...EMPTY_FILTERS, ...values }),
+    openWith: (values) => applyFilters({ ...EMPTY_UNIT_FILTERS, ...values }),
+    clearAll: () => applyFilters({ ...EMPTY_UNIT_FILTERS }),
   }),
 });

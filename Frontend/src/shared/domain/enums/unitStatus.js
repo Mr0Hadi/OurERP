@@ -27,7 +27,7 @@ export const UNIT_STATUS_LABELS = Object.freeze({
  *
  * سه عضوِ اول از دریافتِ خرید می‌آیند و تکلیفشان با تامین‌کننده (مرجوعی
  * خرید) روشن می‌شود. دو عضوِ آخر درخواستِ سندِ
- * `Backend-Net/docs/product-unit-management-requirements.fa.md` (بند ۵) و
+ * `Backend-Net/docs/frontend-requests.fa.md` (بخشِ ۴، بند ۵) و
  * بند ۱۰ سندِ فروش‌اند: کالای معیوبِ برگشتی از مشتری، و دانه‌ای که انباردار
  * خودش از قفسه به قرنطینه برده — این دو را خودِ انبار تعیین تکلیف می‌کند.
  */

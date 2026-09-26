@@ -219,7 +219,6 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
             <GoodsRoundPartySection
               title="راننده‌ی تامین‌کننده (تحویل‌گیرنده‌ی کالای مرجوعی)"
               nameLabel="نام و نام خانوادگی (اختیاری)"
-              showNationalId={false}
               namePlaceholder="مثلاً: علی رضایی"
               header={header}
               onHeaderChange={setHeader}

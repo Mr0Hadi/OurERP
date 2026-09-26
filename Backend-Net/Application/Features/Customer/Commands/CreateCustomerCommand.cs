@@ -18,7 +18,7 @@ namespace Application.Features.Customer.Commands
         public string LastName { get; set; }
         public string PhoneNumber { get; set; }
         public string Address { get; set; }
-        public string PostalCode { get; set; } = string.Empty;
+        public string PostalCode { get; set; }
         public string? RefferalCode { get; set; }
         public UInt64? CreditLimit { get; set; }
         public string? EconomicCode { get; set; }
@@ -63,8 +63,8 @@ namespace Application.Features.Customer.Commands
                 .WithMessage("شماره تماس وارد شده صحیح نمی باشد.");
             RuleFor(x => x.Address).NotEmpty()
                 .WithMessage(Validation.RequiredMessage("آدرس"));
-            // Postal code is optional: many counterparties (walk-in customers, suppliers met at the
-            // bazaar) do not have one on file. When given it is stored as typed.
+            RuleFor(x => x.PostalCode).NotEmpty()
+                .WithMessage(Validation.RequiredMessage("کد پستی"));
         }
     }
 
@@ -83,8 +83,6 @@ namespace Application.Features.Customer.Commands
         }
         public async Task<ResponseDto> Handle(CreateCustomerCommand request, CancellationToken cancellationToken)
         {
-            // The columns are NOT NULL; an explicit JSON null for an optional field becomes "".
-            request.PostalCode ??= string.Empty;
             var res = new ResponseDto();
 
             var newCustomer = _mapper.Map<Domain.Entities.Customer>(request);

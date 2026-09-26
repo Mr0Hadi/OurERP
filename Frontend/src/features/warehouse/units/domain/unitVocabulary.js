@@ -1,6 +1,5 @@
 import {
   ProductUnitStatusEnum as UNIT_STATUSES,
-  UnitCustodyReasonEnum as CUSTODY,
   UNIT_STATUS_LABELS,
   UNIT_CUSTODY_REASON_LABELS,
   PURCHASE_CUSTODY_REASONS,
@@ -12,29 +11,43 @@ import { gregorianToPersian } from "@/shared/lib/dateUtils";
  * واژگانِ صفحه‌ی «دانه‌ها و برچسب‌ها» — هر قاعده‌ای که به یک دانه‌ی فیزیکی
  * برمی‌گردد و بیش از یک کامپوننت لازمش دارد.
  *
- * قرارداد با بکند در `Backend-Net/docs/product-unit-management-requirements.fa.md`
+ * قرارداد با بکند در `Backend-Net/docs/frontend-requests.fa.md` (بخشِ ۴)
  * است؛ شماره‌ی بندها در کامنت‌ها به همان سند اشاره می‌کند.
  */
 
-// ─── نماها ───────────────────────────────────────────────────────────────────
+// ─── جایگاه ─────────────────────────────────────────────────────────────────
 
-/** چهار تبِ صفحه. سه تای اول یک فهرست‌اند با فیلترِ ثابتِ متفاوت. */
-export const UNIT_VIEWS = Object.freeze({
+/**
+ * جایگاهِ دانه — نوارِ بالای فهرست. هر جایگاه یک وضعیتِ سرور است؛ «همه»
+ * بدونِ فیلتر.
+ */
+export const UNIT_SEGMENTS = Object.freeze({
   ALL: "all",
+  IN_STOCK: "in-stock",
   QUARANTINE: "quarantine",
-  UNLABELED: "unlabeled",
-  STOCKTAKE: "stocktake",
+  WITH_CUSTOMER: "with-customer",
+  RETURNED: "returned",
+  SCRAPPED: "scrapped",
 });
 
-export const UNIT_VIEW_LABELS = Object.freeze({
-  [UNIT_VIEWS.ALL]: "همه‌ی دانه‌ها",
-  [UNIT_VIEWS.QUARANTINE]: "قرنطینه",
-  [UNIT_VIEWS.UNLABELED]: "صف چاپ برچسب",
-  [UNIT_VIEWS.STOCKTAKE]: "شمارش دانه‌ای",
+export const UNIT_SEGMENT_META = Object.freeze({
+  [UNIT_SEGMENTS.ALL]: { label: "همه", status: null },
+  [UNIT_SEGMENTS.IN_STOCK]: { label: "در انبار", status: UNIT_STATUSES.IN_STOCK },
+  [UNIT_SEGMENTS.QUARANTINE]: { label: "قرنطینه", status: UNIT_STATUSES.QUARANTINED },
+  [UNIT_SEGMENTS.WITH_CUSTOMER]: { label: "نزد مشتری", status: UNIT_STATUSES.SOLD },
+  [UNIT_SEGMENTS.RETURNED]: {
+    label: "عودت به تامین‌کننده",
+    status: UNIT_STATUSES.RETURNED_TO_SUPPLIER,
+  },
+  [UNIT_SEGMENTS.SCRAPPED]: { label: "اسقاط", status: UNIT_STATUSES.SCRAPPED },
 });
 
-/** دو حالتِ نوارِ اسکن: باز کردنِ جزئیات، یا افزودنِ پیاپی به انتخاب. */
-export const SCAN_MODES = Object.freeze({ OPEN: "open", SELECT: "select" });
+/** پیوندهای قدیمی (`?view=unlabeled` / `?view=quarantine`) هنوز کار می‌کنند. */
+export function segmentFromLegacyView(view) {
+  if (view === "quarantine") return { segment: UNIT_SEGMENTS.QUARANTINE };
+  if (view === "unlabeled") return { segment: UNIT_SEGMENTS.ALL, labelFilter: "unprinted" };
+  return {};
+}
 
 // ─── برچسب ───────────────────────────────────────────────────────────────────
 
@@ -145,14 +158,21 @@ export const noteRequired = (action, reason) =>
  */
 export const isPurchaseQuarantine = (unit) =>
   unit.status === UNIT_STATUSES.QUARANTINED &&
-  PURCHASE_CUSTODY_REASONS.includes(unit.custodyReason);
+  // بکندِ فعلی `custodyReason` را نمی‌دهد و تنها قرنطینه‌ای که امروز دارد
+  // قرنطینه‌ی دریافتِ خرید است؛ علتِ نامعلوم همان حساب می‌شود.
+  (unit.custodyReason == null || PURCHASE_CUSTODY_REASONS.includes(unit.custodyReason));
 
-/** کارهایی که روی این دانه مجازند — همان قاعده‌ی سرور (بند ۴). */
+/**
+ * کارهایی که روی این دانه مجازند (بند ۴). هر قرنطینه‌ای — دستی، برگشتی از
+ * مشتری یا دریافتِ خرید — هر سه راه را دارد: بازگشت به موجودی، اسقاط، یا
+ * عودت به تامین‌کننده (`purchaseReturnRouteOf`). برای قرنطینه‌ی خرید سرور
+ * حسابِ باز با تامین‌کننده را هم می‌بندد (تصمیمِ محصول ۲۰۲۶-۰۹-۲۶).
+ */
 export function allowedActionsOf(unit) {
   if (unit.status === UNIT_STATUSES.IN_STOCK) {
     return [UnitActionEnum.QUARANTINE, UnitActionEnum.SCRAP];
   }
-  if (unit.status === UNIT_STATUSES.QUARANTINED && !isPurchaseQuarantine(unit)) {
+  if (unit.status === UNIT_STATUSES.QUARANTINED) {
     return [UnitActionEnum.RELEASE, UnitActionEnum.SCRAP];
   }
   return [];
@@ -161,15 +181,14 @@ export function allowedActionsOf(unit) {
 export const canApply = (unit, action) => allowedActionsOf(unit).includes(action);
 
 /**
- * مسیرِ تعیین تکلیف در مرجوعیِ خرید: قرنطینه‌ی دریافت با پیش‌پرشدن از
- * گزارشِ انبار، و کالای معیوبِ برگشتی از مشتری روی خریدی که از آن آمده بود.
+ * عودت به تامین‌کننده از مرجوعیِ خریدی که دانه با آن آمده. قرنطینه‌ی دریافت
+ * با پیش‌پرشدن از گزارشِ انبار. دانه‌ی بدونِ خرید (موجودیِ اولیه) تامین‌کننده‌ای
+ * ندارد که به او برگردد.
  */
 export function purchaseReturnRouteOf(unit) {
   if (unit.status !== UNIT_STATUSES.QUARANTINED || !unit.purchaseId) return null;
   const base = `${ROUTES.PURCHASES_RETURNS_NEW}?purchaseId=${unit.purchaseId}`;
-  if (isPurchaseQuarantine(unit)) return `${base}&prefill=quarantine`;
-  if (unit.custodyReason === CUSTODY.CUSTOMER_RETURN) return base;
-  return null;
+  return isPurchaseQuarantine(unit) ? `${base}&prefill=quarantine` : base;
 }
 
 // ─── «کجاست؟» ───────────────────────────────────────────────────────────────
@@ -184,8 +203,8 @@ export function whereaboutsOf(unit) {
       return { place: "انبار", detail: "قابل فروش" };
     case UNIT_STATUSES.QUARANTINED:
       return {
-        place: "انبار · قرنطینه",
-        detail: UNIT_CUSTODY_REASON_LABELS[unit.custodyReason] ?? "منتظر تصمیم",
+        place: "قرنطینه",
+        detail: UNIT_CUSTODY_REASON_LABELS[unit.custodyReason] ?? "دریافت خرید",
       };
     case UNIT_STATUSES.SOLD:
       return {
@@ -257,29 +276,51 @@ export function daysSince(value, now = Date.now()) {
   return Math.max(0, Math.floor((now - time) / 86_400_000));
 }
 
-// ─── فیلترِ مؤثرِ هر تب ─────────────────────────────────────────────────────
+// ─── فیلترِ مؤثر ───────────────────────────────────────────────────────────
+
+/** فیلترِ «وضعیت برچسب». */
+export const LABEL_FILTERS = Object.freeze({ UNPRINTED: "unprinted", PRINTED: "printed" });
+
+export const LABEL_FILTER_OPTIONS = Object.freeze([
+  { value: LABEL_FILTERS.UNPRINTED, label: "برچسب نخورده" },
+  { value: LABEL_FILTERS.PRINTED, label: "برچسب خورده" },
+]);
 
 /**
- * فیلترِ فرم + فیلترِ ثابتِ تب → آنچه به `GetProductUnitList` می‌رود.
- * فیلتری که تبِ فعلی نشانش نمی‌دهد (مثلاً مشتری در قرنطینه) هم اعمال
- * نمی‌شود، تا کاربر نتیجه‌ای نبیند که دلیلش پنهان است.
- * - قرنطینه: فقط `QUARANTINED`، با علتِ اختیاری.
- * - صفِ چاپ: دانه‌های هنوز در انبار (قفسه یا قرنطینه) که برچسب نخورده‌اند.
+ * جایگاهی که برچسب برایش معنا دارد: دانه‌ای که هنوز در انبار است (قفسه یا
+ * قرنطینه). فروخته، عودت‌شده یا اسقاط‌شده دیگر برچسب لازم ندارد.
+ */
+export const segmentNeedsLabels = (segment) => {
+  const status = UNIT_SEGMENT_META[segment]?.status;
+  return !status || LABELABLE_STATUSES.includes(status);
+};
+
+/**
+ * فیلترِ فرم → آنچه به `GetProductUnitList` می‌رود.
+ * - جایگاه وضعیت را ثابت می‌کند؛ علتِ قرنطینه فقط در جایگاهِ قرنطینه.
+ * - «برچسب نخورده» صفِ چاپ است: فقط دانه‌های هنوز در انبار — در جایگاهِ
+ *   انتخاب‌شده، یا اگر «همه» است، قفسه و قرنطینه با هم.
  */
 export function effectiveUnitFilters(filters) {
-  const { view, ...rest } = filters;
-  if (view === UNIT_VIEWS.QUARANTINE) {
-    return { ...rest, status: UNIT_STATUSES.QUARANTINED, customerId: "" };
-  }
-  if (view === UNIT_VIEWS.UNLABELED) {
+  const { segment, labelFilter, ...rest } = filters;
+  const status = UNIT_SEGMENT_META[segment]?.status ?? "";
+  const custodyReason = segment === UNIT_SEGMENTS.QUARANTINE ? rest.custodyReason : "";
+
+  if (labelFilter === LABEL_FILTERS.UNPRINTED && segmentNeedsLabels(segment)) {
     return {
       ...rest,
+      custodyReason,
       status: "",
-      statuses: rest.status ? [rest.status] : LABELABLE_STATUSES,
+      statuses: status ? [status] : LABELABLE_STATUSES,
       labelState: UnitLabelStateEnum.UNPRINTED,
-      custodyReason: "",
-      customerId: "",
     };
   }
-  return { ...rest, custodyReason: "" };
+
+  return {
+    ...rest,
+    custodyReason,
+    status,
+    statuses: [],
+    labelState: labelFilter === LABEL_FILTERS.PRINTED ? UnitLabelStateEnum.PRINTED : "",
+  };
 }

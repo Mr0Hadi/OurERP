@@ -187,7 +187,7 @@ export async function removeClaimResolution(returnId, claimId, resolutionId) {
  *     purchaseReturnId,
  *     rounds: [{ effectId, quantity, source?, productUnitBarcodes?,
  *                observations: [{ problem, quantity, note }] }],
- *     date, partyName, partyNationalId, vehiclePlate, note
+ *     date, partyName, partyPhoneNumber, vehiclePlate, note
  *   }
  *
  * `source` (`ProductUnitStatusEnum`) روی عودت الزامی است — از موجودی

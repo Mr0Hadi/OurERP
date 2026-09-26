@@ -143,6 +143,8 @@ function SalesReturnDetailContent({ salesReturn }) {
         // برگردانده؛ بدون آن سرور ۴۰۰ می‌دهد و دکمه‌ی چاپ فقط خطا می‌سازد.
         documentKind="saleReturn"
         documentId={hasRefund ? salesReturn.id : null}
+        serverDocumentName={`برگه-طلبکاری-${salesReturn.returnNumber}`}
+        emptyHint="برگه‌ی طلبکاری (سندِ استرداد وجه) فقط برای مرجوعی‌ای ساخته می‌شود که در تصمیمش پولی به مشتری برگردانده شده باشد."
         attachmentLabel="فاکتور یا رسید مرجوعی برای مشتری"
       />
 

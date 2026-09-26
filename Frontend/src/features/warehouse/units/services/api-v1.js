@@ -18,7 +18,7 @@ import { UNIT_SORT_COLUMNS } from "../domain/unitVocabulary";
  * اسقاط).
  *
  * قرارداد (فیلترهای تازه، خلاصه، ثبتِ چاپ، کارهای دستی) در
- * `Backend-Net/docs/product-unit-management-requirements.fa.md` است.
+ * `Backend-Net/docs/frontend-requests.fa.md` (بخشِ ۴) است.
  */
 
 const serializeArrays = { paramsSerializer: { indexes: null } };

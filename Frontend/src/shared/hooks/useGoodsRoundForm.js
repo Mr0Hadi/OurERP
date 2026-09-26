@@ -29,7 +29,7 @@ const generateId = () =>
 const emptyHeader = () => ({
   date: new Date().toISOString().slice(0, 10),
   partyName: "",
-  partyNationalId: "",
+  partyPhoneNumber: "",
   vehiclePlate: "",
   note: "",
 });
@@ -257,7 +257,7 @@ export function useGoodsRoundForm(
   const headerOf = (source) => ({
     date: source.date || undefined,
     partyName: source.partyName || undefined,
-    partyNationalId: source.partyNationalId || undefined,
+    partyPhoneNumber: source.partyPhoneNumber || undefined,
     vehiclePlate: source.vehiclePlate || undefined,
     note: source.note || undefined,
   });

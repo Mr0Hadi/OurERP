@@ -1,9 +1,7 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
-import { STOCKTAKE_EXPECTED_STATUSES } from "../domain/stocktake";
 import {
   fetchProductUnits,
-  fetchAllProductUnits,
   fetchProductUnitSummary,
   fetchProductUnitHistory,
 } from "./api-v1";
@@ -40,24 +38,5 @@ export function useProductUnitHistoryQuery(productUnitId, { enabled = true } = {
     queryKey: productUnitKeys.history(productUnitId),
     queryFn: () => fetchProductUnitHistory({ productUnitId }),
     enabled: Boolean(productUnitId) && enabled,
-  });
-}
-
-/**
- * دانه‌هایی که شمارش انتظارشان را دارد: همه‌ی دانه‌های «در انبار»ِ یک
- * کالا. شمارش روی همین عکسِ لحظه‌ای انجام می‌شود، پس با فوکوس دوباره
- * خوانده نمی‌شود تا وسطِ کار فهرست زیرِ دستِ انباردار عوض نشود.
- */
-export function useStocktakeExpectedQuery(productId) {
-  return useQuery({
-    queryKey: productUnitKeys.stocktake(productId),
-    queryFn: () =>
-      fetchAllProductUnits(
-        { productId, statuses: STOCKTAKE_EXPECTED_STATUSES },
-        { limit: 5000 },
-      ),
-    enabled: Boolean(productId),
-    staleTime: Infinity,
-    refetchOnWindowFocus: false,
   });
 }

@@ -143,7 +143,7 @@ ProductCode = x.Product.Code,
 
 - [ ] `ProductName` + `ProductCode` در `ProductUnitDto` — **توافق شد؛ فرانت از قبل می‌خواندشان**
 - [ ] `search` روی `Barcode`/`BarcodePayload` در `GetProductUnitList` (اختیاری)
-- [ ] سابقه‌ی چاپ + `MarkProductUnitsPrinted` — حالا تصمیم شده و فرانتش ساخته شده؛ جزئیات در [`product-unit-management-requirements.fa.md`](./product-unit-management-requirements.fa.md) بند ۱
+- [ ] سابقه‌ی چاپ + `MarkProductUnitsPrinted` — حالا تصمیم شده و فرانتش ساخته شده؛ جزئیات در [`frontend-requests.fa.md`](./frontend-requests.fa.md) بخشِ ۴، بند ۱
 - [ ] اصلاح مثال‌های بخش ۷ و مستندسازی `GetPurchaseReceivingLabelsPdf` در بخش ۸
 - [x] ~~بررسی ماژول مشتری~~ — انجام شد؛ سه فیلدِ ساکت داشت و رفع شدند (بخش ۴)
 - [ ] تصمیم درباره‌ی غلط املاییِ `RefferalCode` (بخش ۴)
