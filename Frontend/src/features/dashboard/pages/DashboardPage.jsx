@@ -1,37 +1,43 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { SlidersHorizontal } from "lucide-react";
+import { Button } from "@/shared/components/ui/button";
+import { Skeleton } from "@/shared/components/ui/skeleton";
+import { cn } from "@/shared/lib/utils";
 import { useDashboardFilterStore } from "../store/dashboardFilterStore";
-import { useDashboardReportsQuery } from "../services/queries";
-import {
-  buildKpis,
-  buildPeriodSeries,
-  buildRevenueBreakdown,
-  describeRange,
-} from "../domain/dashboardMetrics";
-import { PREVIOUS_PERIOD_LABELS } from "@/shared/domain/enums/reportPeriod";
+import { useDashboardContext } from "../hooks/useDashboardContext";
+import { useDashboardLayout } from "../hooks/useDashboardLayout";
+import { WIDGETS_BY_ID, packRows } from "../domain/widgetRegistry";
+import { WIDGET_COMPONENTS } from "../components/widgets";
 import DashboardToolbar from "../components/DashboardToolbar";
-import KpiCard from "../components/KpiCard";
-import SalesTrendCard from "../components/SalesTrendCard";
-import SalesVsPurchaseCard from "../components/SalesVsPurchaseCard";
-import RevenueBreakdownCard from "../components/RevenueBreakdownCard";
-import PeriodTableCard from "../components/PeriodTableCard";
-import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
-import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
+import DashboardCustomizeSheet from "../components/DashboardCustomizeSheet";
+
+const COLUMN_CLASSES = {
+  1: "xl:col-span-1",
+  2: "xl:col-span-2",
+  3: "xl:col-span-3",
+};
 
 /**
- * داشبورد روی `api/Report` سوار است (بخش ۱۸ سند api-guide.fa.md) — دو
- * endpoint، هر دو بدونِ صفحه‌بندی و با یک پارامترِ «نوع بازه».
+ * داشبوردِ شخصی — هر کاربر داشبوردِ خودش را می‌بیند.
  *
- * صفحه هیچ محاسبه‌ای خودش نمی‌کند: داده‌ی خام از `services` می‌آید و
- * `domain/dashboardMetrics` آن را به سری و شاخص تبدیل می‌کند. دلیلش این
- * است که همین مشتقات بعداً در صفحه‌ی «گزارش‌گیری» هم لازم می‌شوند و
- * نباید در JSX یک صفحه دفن شوند.
+ * صفحه خودش هیچ تصمیمی نمی‌گیرد؛ سه لایه را کنارِ هم می‌گذارد:
+ *   - `useDashboardContext` — نقشِ سازمانی، واحد/تیم و دسترسی‌ها؛
+ *   - `useDashboardLayout`  — کدام ویجت‌ها، به چه ترتیبی (پیش‌فرضِ نقش +
+ *                             انتخابِ خودِ کاربر)؛
+ *   - `WIDGET_COMPONENTS`   — رندرِ هر ویجت.
  *
- * `min-w-0` روی ریشه و روی هر خانه‌ی گرید اتفاقی نیست: والدِ `<Outlet>`
- * در `AppLayout` یک فلکس‌باکس است و آیتم‌های فلکس/گرید به‌صورت پیش‌فرض
- * زیرِ عرضِ محتوایشان کوچک نمی‌شوند. بدونِ آن، باز کردنِ سایدبار به‌جای
- * تنگ‌کردنِ نمودارها و جدول، کلِ صفحه را افقی اسکرول می‌کرد.
+ * نوارِ بازه یک‌بار و بالای صفحه است، نه روی هر ویجت: «عملکرد من» و «نمای
+ * کل سازمان» کنارِ هم فقط وقتی قابلِ مقایسه‌اند که بازه‌شان یکی باشد.
+ * اگر هیچ ویجتِ بازه‌داری روشن نباشد، نوار هم نیست.
+ *
+ * `min-w-0` روی ریشه و هر خانه‌ی گرید لازم است: والدِ `<Outlet>` فلکس
+ * است و بدونِ آن بازشدنِ سایدبار کلِ صفحه را افقی اسکرول می‌کرد.
  */
 export default function DashboardPage() {
+  const [customizing, setCustomizing] = useState(false);
+  const { context, isPending } = useDashboardContext();
+  const layout = useDashboardLayout(context);
+
   const {
     periodType,
     fromDate,
@@ -47,83 +53,72 @@ export default function DashboardPage() {
     [periodType, fromDate, toDate],
   );
 
-  const {
-    salePeriods,
-    purchasePeriods,
-    isLoading,
-    isFetching,
-    isError,
-    error,
-    refetch,
-  } = useDashboardReportsQuery(params);
+  if (isPending) {
+    return (
+      <div className="w-full min-w-0 space-y-4">
+        <Skeleton className="h-20 w-full rounded-xl" />
+        <Skeleton className="h-48 w-full rounded-xl" />
+      </div>
+    );
+  }
 
-  const series = useMemo(
-    () => buildPeriodSeries(salePeriods, purchasePeriods, periodType),
-    [salePeriods, purchasePeriods, periodType],
+  const hasPeriodic = layout.visibleIds.some((id) => WIDGETS_BY_ID[id]?.periodic);
+
+  const customizeButton = (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={() => setCustomizing(true)}
+      className="shrink-0 gap-2 self-start sm:self-center"
+    >
+      <SlidersHorizontal className="size-4" />
+      شخصی‌سازی
+    </Button>
   );
-  const kpis = useMemo(() => buildKpis(series, periodType), [series, periodType]);
-  const breakdown = useMemo(() => buildRevenueBreakdown(series), [series]);
-  const rangeLabel = describeRange(series);
+
+  const WelcomeWidget = WIDGET_COMPONENTS.welcome;
+  const gridIds = layout.visibleIds.filter((id) => !WIDGETS_BY_ID[id].locked);
+  const columns = packRows(gridIds);
 
   return (
     <div className="w-full min-w-0 space-y-4">
-      <DashboardToolbar
-        periodType={periodType}
-        onPeriodTypeChange={setPeriodType}
-        fromDate={fromDate}
-        toDate={toDate}
-        onFromDateChange={setFromDate}
-        onToDateChange={setToDate}
-        onReset={resetFilters}
-      />
+      <WelcomeWidget context={context} action={customizeButton} />
 
-      {isError ? (
-        <QueryErrorState error={error} onRetry={() => refetch()} />
-      ) : (
-        // با تغییرِ بازه، داده‌ی قبلی سرِ جایش می‌ماند و فقط محو می‌شود
-        // (`keepPreviousData` در هوک)؛ پوششِ fetching همان انتقالِ نرم را
-        // نشان می‌دهد بدونِ این‌که چیدمان بپرد.
-        <FetchingOverlay active={isFetching && !isLoading}>
-          <div className="min-w-0 space-y-3 sm:space-y-4">
-            {/* بدونِ این سطر، کارت‌ها گمراه‌کننده‌اند: عددشان مجموعِ کلِ
-                بازه است و با عوض‌کردنِ سطحِ گزارش تغییر نمی‌کند (بازه‌ی
-                تاریخی همان است)، در حالی که درصدها با همان کلیک عوض
-                می‌شوند. یک سطرِ کوچک هر دو را توضیح می‌دهد. */}
-            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 px-1 text-xs text-muted-foreground">
-              <span>{rangeLabel ? `مجموع ${rangeLabel}` : "مجموع بازه"}</span>
-              <span>
-                درصدها نسبت به {PREVIOUS_PERIOD_LABELS[periodType] ?? "بازه قبل"}
-              </span>
-            </div>
-
-            <div className="grid min-w-0 grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-              {kpis.map((kpi) => (
-                <div key={kpi.key} className="min-w-0">
-                  <KpiCard kpi={kpi} isLoading={isLoading} />
-                </div>
-              ))}
-            </div>
-
-            
-
-            <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-3">
-              <div className="min-w-0 xl:col-span-2">
-                <SalesVsPurchaseCard series={series} isLoading={isLoading} />
-              </div>
-              <div className="min-w-0">
-                <RevenueBreakdownCard
-                  segments={breakdown}
-                  isLoading={isLoading}
-                />
-              </div>
-            </div>
-
-            <SalesTrendCard series={series} isLoading={isLoading} />
-
-            <PeriodTableCard series={series} isLoading={isLoading} />
-          </div>
-        </FetchingOverlay>
+      {/* نوارِ بازه درست زیرِ سرِ صفحه، تا معلوم باشد به همه‌ی عددهای
+          زیرش مربوط است. */}
+      {hasPeriodic && (
+        <DashboardToolbar
+          periodType={periodType}
+          onPeriodTypeChange={setPeriodType}
+          fromDate={fromDate}
+          toDate={toDate}
+          onFromDateChange={setFromDate}
+          onToDateChange={setToDate}
+          onReset={resetFilters}
+        />
       )}
+
+      <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-3">
+        {gridIds.map((id) => {
+          const Widget = WIDGET_COMPONENTS[id];
+          if (!Widget) return null;
+          return (
+            <div
+              key={id}
+              className={cn("min-w-0", COLUMN_CLASSES[columns[id]])}
+            >
+              <Widget context={context} params={params} />
+            </div>
+          );
+        })}
+      </div>
+
+      <DashboardCustomizeSheet
+        open={customizing}
+        onOpenChange={setCustomizing}
+        layout={layout}
+      />
     </div>
   );
 }

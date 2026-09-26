@@ -93,7 +93,7 @@ export function buildPeriodSeries(salePeriods, purchasePeriods, periodType) {
 
 // ─── جمع‌ها و شاخص‌ها ───────────────────────────────────────────────────────
 
-const sum = (series, key) =>
+export const sumOf = (series, key) =>
   series.reduce((acc, row) => acc + (Number(row.values[key]) || 0), 0);
 
 /** حاشیه‌ی سود بر حسب درصد؛ بدونِ درآمد، تعریف‌نشده است نه صفر. */
@@ -123,7 +123,7 @@ function completedPeriods(series) {
  * `null` وقتی مبنا صفر است: «رشدِ بی‌نهایت» عددِ بی‌معنایی است و در
  * کارت به‌صورت «—» نشان داده می‌شود، نه ۱۰۰٪+ که خواننده را گمراه کند.
  */
-function periodOverPeriodChange(series, key) {
+export function periodOverPeriodChange(series, key) {
   const closed = completedPeriods(series);
   if (closed.length < 2) return null;
   const current = Number(closed[closed.length - 1].values[key]) || 0;
@@ -132,7 +132,7 @@ function periodOverPeriodChange(series, key) {
   return ((current - previous) / Math.abs(previous)) * 100;
 }
 
-const sparkOf = (series, key) =>
+export const sparkOf = (series, key) =>
   series.map((row) => Number(row.values[key]) || 0);
 
 /**
@@ -160,8 +160,8 @@ export function describeRange(series) {
  * دقیقاً برعکسِ واقعیت خوانده می‌شد.
  */
 export function buildKpis(series, periodType) {
-  const revenue = sum(series, "revenue");
-  const netProfit = sum(series, "netProfit");
+  const revenue = sumOf(series, "revenue");
+  const netProfit = sumOf(series, "netProfit");
   const margin = profitMargin(netProfit, revenue);
 
   // مجموع‌ها به `periodType` بی‌اعتنا هستند — بازه‌ی تاریخی همان است و
@@ -215,7 +215,7 @@ export function buildKpis(series, periodType) {
       key: "totalReceivedValue",
       label: "کالای دریافتی",
       hint: "ارزش واقعی کالای واردشده به انبار در همین بازه",
-      value: sum(series, "totalReceivedValue"),
+      value: sumOf(series, "totalReceivedValue"),
       format: "amount",
       unit: "ریال",
       change: periodOverPeriodChange(series, "totalReceivedValue"),
@@ -238,19 +238,19 @@ export function buildRevenueBreakdown(series) {
     {
       key: "costOfGoodsSold",
       label: "بهای تمام‌شده",
-      value: sum(series, "costOfGoodsSold"),
+      value: sumOf(series, "costOfGoodsSold"),
       color: "var(--chart-5)",
     },
     {
       key: "scrapLoss",
       label: "زیان اسقاط",
-      value: sum(series, "scrapLoss"),
+      value: sumOf(series, "scrapLoss"),
       color: "var(--chart-2)",
     },
     {
       key: "netProfit",
       label: "سود خالص",
-      value: sum(series, "netProfit"),
+      value: sumOf(series, "netProfit"),
       color: "var(--chart-3)",
     },
   ];

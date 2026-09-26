@@ -1,6 +1,11 @@
-import { useQueries, keepPreviousData } from "@tanstack/react-query";
-import { fetchSaleReport, fetchPurchaseReport } from "./api-v1";
-import { reportKeys } from "./queryKeys";
+import { useQueries, useQuery, keepPreviousData } from "@tanstack/react-query";
+import {
+  fetchSaleReport,
+  fetchPurchaseReport,
+  fetchScopePerformance,
+  fetchQueueCount,
+} from "./api-v1";
+import { reportKeys, dashboardKeys } from "./queryKeys";
 
 /**
  * هر دو گزارش با *یک* هوک گرفته می‌شوند.
@@ -46,4 +51,60 @@ export function useDashboardReportsQuery(params) {
     error: results.find((r) => r.error)?.error ?? null,
     refetch: () => results.forEach((r) => r.refetch()),
   };
+}
+
+/**
+ * گزارشِ یک محدوده («من»، «تیم»، «واحد»).
+ *
+ * ۴۰۴ تکرار نمی‌شود: یعنی سرور هنوز این گزارش را ندارد، نه خطای گذرا —
+ * ویجت همان را به‌صورتِ «هنوز فعال نشده» نشان می‌دهد (`isUnavailable`).
+ * ۴۰۳ هم همین‌طور: نقشِ کاربر همین حالا عوض شده و کشِ `GetUserInfo`
+ * هنوز نقشِ قبلی را دارد.
+ */
+export function useScopePerformanceQuery(scope, params) {
+  const query = useQuery({
+    queryKey: reportKeys.scope(scope, params),
+    queryFn: () => fetchScopePerformance(scope, params),
+    placeholderData: keepPreviousData,
+    retry: (failureCount, error) =>
+      ![403, 404].includes(error?.response?.status) && failureCount < 1,
+  });
+
+  return {
+    ...query,
+    isUnavailable: query.error?.response?.status === 404,
+  };
+}
+
+/**
+ * شمارنده‌ی همه‌ی صف‌های قابلِ دیدنِ این کاربر — یک درخواست برای هر
+ * (صف، وضعیت)، موازی. هر صف جمعِ بخش‌هایش را می‌گیرد، و خطای یک صف
+ * بقیه را از کار نمی‌اندازد.
+ */
+export function useQueueCountsQuery(queues) {
+  const parts = queues.flatMap((queue) =>
+    queue.parts.map((part) => ({ queue, part })),
+  );
+
+  const results = useQueries({
+    queries: parts.map(({ queue, part }) => ({
+      queryKey: dashboardKeys.queue(queue.source, part.status),
+      queryFn: () => fetchQueueCount(queue.source, part.status),
+    })),
+  });
+
+  return queues.map((queue) => {
+    const own = parts
+      .map((entry, index) => ({ ...entry, result: results[index] }))
+      .filter((entry) => entry.queue.id === queue.id);
+
+    return {
+      queue,
+      total: own.reduce((acc, e) => acc + (e.result.data ?? 0), 0),
+      parts: own.map((e) => ({ ...e.part, count: e.result.data ?? 0 })),
+      isLoading: own.some((e) => e.result.isLoading),
+      isError: own.some((e) => e.result.isError),
+      refetch: () => own.forEach((e) => e.result.refetch()),
+    };
+  });
 }
