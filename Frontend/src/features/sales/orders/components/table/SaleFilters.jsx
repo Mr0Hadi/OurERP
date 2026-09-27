@@ -27,13 +27,13 @@ const renderCustomerPhone = (customer) =>
  */
 const SaleFilters = ({ customers = [], isCustomersLoading = false }) => {
   const {
-    globalSearch,
+    invoiceNumber,
     customerId,
     status,
     paymentType,
     fromDate,
     toDate,
-    setGlobalSearch,
+    setInvoiceNumber,
     setCustomerId,
     setCustomerName,
     setStatus,
@@ -44,8 +44,8 @@ const SaleFilters = ({ customers = [], isCustomersLoading = false }) => {
   } = useSaleFilterStore();
 
   const handleGlobalSearch = useCallback(
-    (e) => setGlobalSearch(e.target.value),
-    [setGlobalSearch],
+    (e) => setInvoiceNumber(e.target.value),
+    [setInvoiceNumber],
   );
 
   return (
@@ -68,7 +68,7 @@ const SaleFilters = ({ customers = [], isCustomersLoading = false }) => {
     >
       <FilterSearchInput
         placeholder="شماره فاکتور، توضیحات..."
-        value={globalSearch}
+        value={invoiceNumber}
         onChange={handleGlobalSearch}
       />
 

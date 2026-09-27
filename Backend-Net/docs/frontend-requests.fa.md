@@ -23,6 +23,7 @@
 | ۴ | صفحه‌ی «دانه‌ها و برچسب‌ها» — بندهای ۱ تا ۸ | **بالا** |
 | ۵ | سندِ چاپیِ مرجوعیِ خرید و پیوستِ مرجوعی | متوسط |
 | ۶ | داشبوردِ شخصی — گزارشِ «من / تیم من / واحد من» (`GetScopePerformance`) | **بالا** |
+| ۷ | یکدست‌کردنِ نام‌ها (سه جا که بکند یک مفهوم را دو جور نام‌گذاری کرده) و تاریخِ خالیِ `MinValue` | متوسط |
 
 ---
 
@@ -783,6 +784,53 @@ POST api/Product/SetProductUnitLocation
 
 ---
 
+## بخشِ ۷ — یکدست‌کردنِ نام‌ها (۲۰۲۶-۰۹-۲۸)
+
+فرانت لایه‌های «ترجمه‌ی نام» را حذف کرده و همه‌جا مستقیم با نام‌های بکند کار می‌کند (پارامترهای لیست، فیلدهای
+payload و پاسخ). فقط سه جا مانده که خودِ بکند برای یک مفهوم دو نام دارد؛ فرانت آن‌جا یک خطِ نگاشت نگه داشته و با
+اصلاحِ هر بند، همان یک خط حذف می‌شود. هیچ‌کدام رفتار را عوض نمی‌کند.
+
+### ۷.۱ — `CreateUserCommand.FisrtName` → `FirstName`
+
+غلطِ املایی؛ `UpdateUserCommand` و همه‌ی DTOها `FirstName` دارند. فرانت امروز در ثبتِ کارمند `fisrtName` می‌فرستد
+(`features/employees/hooks/useEmployeeForm.js`).
+
+**تا آن وقت:** کار می‌کند؛ فقط یک نگاشتِ اضافه در فرانت.
+
+### ۷.۲ — `RefferalCode` → `ReferralCode` (مشتری)
+
+غلطِ املایی در `CreateCustomerCommand`، `UpdateCustomerCommand` و `CustomerDto` (و ستونِ `Customer.RefferalCode`).
+اگر تغییرِ نامِ ستون migration سنگینی است، کافی است فقط نامِ property در Command/DTO عوض شود.
+
+**تا آن وقت:** فرانت فیلدِ فرم را `referralCode` نگه می‌دارد و فقط در payload به `refferalCode` نگاشت می‌کند.
+
+### ۷.۳ — `OrderLineId` در پاسخِ خواندنِ ادعای مرجوعی
+
+بدنه‌ی نوشتن (`CreateReturnClaimDto.OrderLineId`) برای هر دو سمت `OrderLineId` می‌خواهد، ولی پاسخِ خواندن
+(`PurchaseReturnClaimDto.PurchaseItemId`، `SaleReturnClaimDto.SaleItemId`) همان مقدار را با نامِ دیگری برمی‌گرداند.
+پیشنهاد: `public int? OrderLineId => PurchaseItemId;` (و در سمتِ فروش `=> SaleItemId`) به دو DTO اضافه شود؛
+فیلدهای فعلی برای سازگاری می‌مانند.
+
+**تا آن وقت:** `shared/domain/returns/claimsApi.js` هنگامِ خواندن `purchaseItemId`/`saleItemId` را به `orderLineId` می‌برد.
+
+### ۷.۴ — تاریخِ خالی: `null` به‌جای `0001-01-01`
+
+`GetPurchaseDetail` برای بعضی خریدها `paymentDate: "0001-01-01T00:00:00"` (همان `DateTime.MinValue`) برمی‌گرداند
+(روی سرورِ تست: خریدِ ۸)، در حالی که خریدِ دیگری بدونِ مهلت `null` دارد. یعنی جایی یک `DateTime` غیرِ nullable
+پیش‌فرض گرفته است. پیشنهاد: `PaymentDate` در موجودیت/DTO از نوعِ `DateTime?` باشد و مقدارهای `MinValue` موجود به
+`null` اصلاح شوند.
+
+**تا آن وقت:** فرانت (`toDateOnly`) سالِ `0001` را «بدونِ تاریخ» می‌خواند.
+
+### چک‌لیستِ این بخش
+
+- [ ] ۷.۱ — `FisrtName` → `FirstName`
+- [ ] ۷.۲ — `RefferalCode` → `ReferralCode`
+- [ ] ۷.۳ — `OrderLineId` در `PurchaseReturnClaimDto` و `SaleReturnClaimDto`
+- [ ] ۷.۴ — `PaymentDate` خالی = `null`، نه `DateTime.MinValue`
+
+---
+
 ## چک‌لیستِ کل
 
 - [ ] ۱.۱ — کد پستیِ اختیاری (مشتری و تامین‌کننده)
@@ -794,3 +842,4 @@ POST api/Product/SetProductUnitLocation
 - [ ] ۴ — بندهای ۱ تا ۸ دانه‌ها و برچسب‌ها
 - [ ] ۵ — `GetPurchaseReturnPdf` و (اختیاری) پیوستِ مرجوعی
 - [ ] ۶ — `GetScopePerformance` (داشبوردِ شخصی) و دو بندِ اختیاری
+- [ ] ۷ — یکدست‌کردنِ نام‌ها (`FirstName`، `ReferralCode`، `OrderLineId`)

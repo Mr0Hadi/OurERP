@@ -170,7 +170,7 @@ export default function PurchaseDetailForm({ purchaseData }) {
       supplierId: formData.supplierId,
       invoiceNumber: formData.invoiceNumber,
       invoiceDate: formData.invoiceDate,
-      dueDate: formData.dueDate || null,
+      paymentDate: formData.paymentDate || null,
       description: formData.description || "",
       items,
       paymentType: formData.paymentType ?? PaymentTypeEnum.CASH,

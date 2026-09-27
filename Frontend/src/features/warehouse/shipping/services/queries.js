@@ -1,5 +1,4 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { useMemo } from "react";
 import { needsDocumentList } from "../../shared/queueFilters";
 import {
   fetchShippableSales,
@@ -7,31 +6,38 @@ import {
   fetchSaleReturnPendingEffects,
 } from "./api-v1";
 import { shippingKeys } from "./queryKeys";
+import { listQuery } from "@/shared/services/api/contract";
+import { useDebouncedFilters } from "@/shared/hooks/useDebouncedFilters";
+import { SALE_SORT_COLUMNS } from "@/features/sales/orders/services/api-v1";
+import { shippingStatusesOf } from "../domain/shippingVocabulary";
+import { useShippingFilterStore } from "../store/shippingFilterStore";
+
+/** فیلترهای فعلیِ صفِ ارسال؛ ورودی‌های متنی با تأخیر. */
+export function useShippingListFilters() {
+  return useDebouncedFilters(useShippingFilterStore, {
+    text: ["invoiceNumber", "customerName"],
+    instant: ["status", "fromDate", "toDate"],
+  });
+}
 
 /** صفِ ارسال: فروش‌هایی که کالایشان هنوز کامل نرفته. */
 export function useShippableSalesQuery(filters, pagination, sorting) {
-  const queryParams = useMemo(
-    () => ({
-      page: pagination.pageIndex + 1,
-      limit: pagination.pageSize,
-      search: filters.globalSearch || "",
-      customerName: filters.customerName || "",
-      status: filters.status ?? "",
-      fromDate: filters.fromDate || "",
-      toDate: filters.toDate || "",
-      sorting: sorting?.id ? { id: sorting.id, desc: !!sorting.desc } : null,
-    }),
-    [filters, pagination, sorting],
-  );
+  const { status, ...serverFilters } = filters;
+  const params = listQuery({
+    filters: { ...serverFilters, statuses: shippingStatusesOf(status) },
+    pagination,
+    sorting,
+    sortColumns: SALE_SORT_COLUMNS,
+  });
 
   return useQuery({
-    queryKey: shippingKeys.list(queryParams),
-    queryFn: () => fetchShippableSales(queryParams),
+    queryKey: shippingKeys.list(params),
+    queryFn: () => fetchShippableSales(params),
     placeholderData: keepPreviousData,
     gcTime: 1000 * 60 * 10,
     refetchOnMount: "always",
     // دو حالتِ مرجوعیِ فیلتر از فهرستِ سندها استفاده نمی‌کنند.
-    enabled: needsDocumentList(filters.status),
+    enabled: needsDocumentList(status),
   });
 }
 

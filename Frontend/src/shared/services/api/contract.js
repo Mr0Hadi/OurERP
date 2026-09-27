@@ -51,6 +51,16 @@ export function normalizeListResponse(data, { itemsKey } = {}) {
 const isEmptyFilter = (value) => value === "" || value == null || value === "all";
 
 /**
+ * پارامترهای خالی ("" / null / undefined / "all") حذف می‌شوند — سرور فیلترِ خالی
+ * را «مقدارِ صفر/خالی» می‌فهمد، نه «بدونِ فیلتر».
+ */
+export function compactParams(params) {
+  return Object.fromEntries(
+    Object.entries(params).filter(([, value]) => !isEmptyFilter(value)),
+  );
+}
+
+/**
  * پارامترهای استانداردِ هر `Get*ListQuery`ِ بکند، با *همان نام‌های بکند*:
  * `page`/`take` + فیلترها + `sortBy`/`sortDirection`.
  *
@@ -72,9 +82,7 @@ export function listQuery({ filters = {}, pagination, sorting, sortColumns = {} 
     ...filters,
     ...toApiSort(sorting, sortColumns),
   };
-  return Object.fromEntries(
-    Object.entries(params).filter(([, value]) => !isEmptyFilter(value)),
-  );
+  return compactParams(params);
 }
 
 // ─── ایدمپوتنسی ─────────────────────────────────────────────────────────────

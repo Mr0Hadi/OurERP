@@ -206,7 +206,7 @@ export default function SaleNewPage() {
       customerId: formData.customerId,
       customerName: formData.customerName,
       invoiceDate: formData.invoiceDate,
-      dueDate: formData.dueDate || null,
+      paymentDate: formData.paymentDate || null,
       description: formData.description || "",
       items: items.map((item) => ({
         productId: item.productId,

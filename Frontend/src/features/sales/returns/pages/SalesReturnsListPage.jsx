@@ -8,13 +8,12 @@ import { useCustomersOptionsQuery } from "@/features/customers/services/queries"
 
 import SalesReturnFilters from "../components/table/SalesReturnFilters";
 import SalesReturnTable from "../components/table/SalesReturnTable";
-import { useDebouncedSalesReturnFilters } from "../hooks/useDebouncedSalesReturnFilters";
-import { useSalesReturnsQuery } from "../services/queries";
+import { useSalesReturnListFilters, useSalesReturnsQuery } from "../services/queries";
 import { useSalesReturnFilterStore } from "../store/salesReturnFilterStore";
 
 export default function SalesReturnsListPage() {
   const listState = useSalesReturnFilterStore();
-  const filters = useDebouncedSalesReturnFilters();
+  const filters = useSalesReturnListFilters();
   const query = useSalesReturnsQuery(filters, listState.pagination, listState.sorting);
   const { customers, isLoading: isCustomersLoading } = useCustomersOptionsQuery();
 

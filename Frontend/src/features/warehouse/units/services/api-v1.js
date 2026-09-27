@@ -1,6 +1,5 @@
 import axiosInstance from "@/shared/services/api/axios";
-import { normalizeListResponse, idempotent } from "@/shared/services/api/contract";
-import { toApiSort } from "@/shared/services/api/sorting";
+import { idempotent, listQuery, normalizeListResponse } from "@/shared/services/api/contract";
 import {
   parseBarcode,
   productCodeOf,
@@ -21,100 +20,36 @@ import { UNIT_SORT_COLUMNS } from "../domain/unitVocabulary";
  * `Backend-Net/docs/frontend-requests.fa.md` (بخشِ ۴) است.
  */
 
-const serializeArrays = { paramsSerializer: { indexes: null } };
-
 /**
- * `ProductUnitDto` سرور → شکلی که کامپوننت‌های این فیچر مصرف می‌کنند.
+ * `ProductUnitDto`ِ سرور با همان نام‌ها، به‌علاوه‌ی چند فیلدِ مشتق:
  *
- * `product` (پاسخِ `ScanBarcode`) تازه‌تر از فیلدهای خودِ دانه است، پس
- * اولویت دارد؛ `productCodeOf(barcode)` هم تورِ ایمنیِ کدِ کالاست، چون کد
- * همان دو بخشِ اولِ بارکدِ دانه است.
+ *  - `barcodePayload`: payloadِ رندرِ میله‌ها، اگر سرور نفرستاده باشد از بارکدِ خوانا.
+ *  - `productCode`/`productName`/`requiresUnitTracking`: `product` (پاسخِ `ScanBarcode`)
+ *    تازه‌تر از فیلدهای خودِ دانه است و اولویت دارد؛ کدِ کالا در نبودِ هر دو
+ *    از دو بخشِ اولِ بارکدِ دانه خوانده می‌شود.
  */
 export function normalizeProductUnit(dto, product = null) {
   if (!dto) return null;
-
   return {
-    id: dto.id,
-    productId: dto.productId,
-    serialNumber: dto.serialNumber,
-
-    // بارکدِ خوانا برای نمایش، payload برای رندرِ میله‌ها و مقایسه.
+    ...dto,
     barcode: dto.barcode ?? "",
     barcodePayload: dto.barcodePayload ?? toPayload(dto.barcode),
-
     productCode: product?.code ?? dto.productCode ?? productCodeOf(dto.barcode),
     productName: product?.name ?? dto.productName ?? null,
-    requiresUnitTracking: Boolean(
-      product?.requiresUnitTracking ?? dto.requiresUnitTracking,
-    ),
-
-    status: dto.status,
-    custodyReason: dto.custodyReason ?? null,
-
-    // «از کجا آمد»: خرید و تامین‌کننده. نبودنش یعنی موجودیِ اولیه یا اصلاح.
-    purchaseItemId: dto.purchaseItemId ?? null,
-    purchaseId: dto.purchaseId ?? null,
-    purchaseInvoiceNumber: dto.purchaseInvoiceNumber ?? null,
-    supplierId: dto.supplierId ?? null,
-    supplierName: dto.supplierName ?? null,
-
-    // «کجا رفت»: آخرین فروشی که دانه با آن خارج شد، و مشتری‌اش.
-    saleItemId: dto.saleItemId ?? null,
-    saleId: dto.saleId ?? null,
-    saleInvoiceNumber: dto.saleInvoiceNumber ?? null,
-    customerId: dto.customerId ?? null,
-    customerName: dto.customerName ?? null,
-    soldAt: dto.soldAt ?? null,
-
-    // قرنطینه: از کی، با کدام سند، با چه ارزشی (بند ۲).
-    quarantinedAt: dto.quarantinedAt ?? null,
-    quarantineCost: dto.quarantineCost ?? null,
-    quarantineDocumentKind: dto.quarantineDocumentKind ?? null,
-    quarantineDocumentId: dto.quarantineDocumentId ?? null,
-    quarantineDocumentNumber: dto.quarantineDocumentNumber ?? null,
-
-    // برچسب (بند ۱).
+    requiresUnitTracking: Boolean(product?.requiresUnitTracking ?? dto.requiresUnitTracking),
     printCount: Number(dto.printCount) || 0,
-    firstPrintedAt: dto.firstPrintedAt ?? null,
-    lastPrintedAt: dto.lastPrintedAt ?? null,
-    lastPrintedByName: dto.lastPrintedByName ?? null,
-
-    createdAt: dto.createdAt ?? null,
-    lastMovementAt: dto.lastMovementAt ?? null,
-  };
-}
-
-/** فیلترهای فرم → پارامترهای `GetProductUnitList`. خالی یعنی «بدون فیلتر». */
-function toListParams(filters = {}) {
-  return {
-    search: filters.search?.trim() || undefined,
-    productId: filters.productId || undefined,
-    // یک وضعیت از کشویی، یا چند وضعیت از نما (مثلاً صفِ چاپ).
-    status: filters.status || undefined,
-    statuses: filters.statuses?.length ? filters.statuses : undefined,
-    custodyReason: filters.custodyReason || undefined,
-    labelState: filters.labelState || undefined,
-    supplierId: filters.supplierId || undefined,
-    customerId: filters.customerId || undefined,
-    purchaseId: filters.purchaseId || undefined,
-    saleId: filters.saleId || undefined,
-    fromDate: filters.fromDate || undefined,
-    toDate: filters.toDate || undefined,
-    fromSerial: filters.fromSerial || undefined,
-    toSerial: filters.toSerial || undefined,
   };
 }
 
 /** `GET api/Product/GetProductUnitList` — یک صفحه. */
 export async function fetchProductUnits({ filters, page = 1, take = 20, sorting } = {}) {
   const { data } = await axiosInstance.get("/Product/GetProductUnitList", {
-    params: {
-      page,
-      take,
-      ...toListParams(filters),
-      ...toApiSort(sorting, UNIT_SORT_COLUMNS),
-    },
-    ...serializeArrays,
+    params: listQuery({
+      filters: { ...filters, search: filters?.search?.trim() },
+      pagination: { pageIndex: page - 1, pageSize: take },
+      sorting,
+      sortColumns: UNIT_SORT_COLUMNS,
+    }),
   });
 
   const list = normalizeListResponse(data, { itemsKey: "productUnitList" });

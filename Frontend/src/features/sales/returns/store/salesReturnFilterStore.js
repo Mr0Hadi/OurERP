@@ -1,8 +1,9 @@
 import { createFilterStore } from "@/shared/store/createFilterStore";
 
+/** فیلترهای لیستِ مرجوعی — نام‌ها همان پارامترهای `GetSaleReturnListQuery`. */
 export const useSalesReturnFilterStore = createFilterStore({
   filters: {
-    globalSearch: "",
+    search: "",
     customerId: "",
     status: "",
     problem: "",

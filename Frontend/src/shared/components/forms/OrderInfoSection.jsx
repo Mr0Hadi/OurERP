@@ -86,15 +86,15 @@ export default function OrderInfoSection({
         {/* تاریخ سررسید */}
         <div className="space-y-1.5">
           <Label
-            htmlFor="dueDate"
+            htmlFor="paymentDate"
             className="text-sm font-medium text-card-foreground"
           >
             تاریخ سررسید
           </Label>
           <PersianDatePicker
-            id="dueDate"
-            value={formData.dueDate}
-            onChange={(isoDate) => handleChange("dueDate", isoDate)}
+            id="paymentDate"
+            value={formData.paymentDate}
+            onChange={(isoDate) => handleChange("paymentDate", isoDate)}
             placeholder="مثال: ۱۴۰۵/۰۵/۰۲"
           />
         </div>

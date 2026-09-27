@@ -6,7 +6,6 @@ import {
 } from "@/shared/services/api/contract";
 import { toDateOnly } from "@/shared/lib/dateUtils";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
-import { toApiSort } from "@/shared/services/api/sorting";
 
 /** `PurchaseListSortEnum`ِ بکند، بر اساسِ شناسه‌ی ستونِ جدول. */
 export const PURCHASE_SORT_COLUMNS = {
@@ -159,8 +158,7 @@ export function fromApiPurchase(dto) {
   const purchase = {
     ...dto,
     invoiceDate: toDateOnly(dto.invoiceDate),
-    // فیلدِ سرور `paymentDate` است؛ فرم داخلی همان مفهوم را `dueDate` صدا می‌زند.
-    dueDate: toDateOnly(dto.paymentDate),
+    paymentDate: toDateOnly(dto.paymentDate),
     items: dto.items || [],
     paymentDetails: dto.paymentDetails || [],
     ...fromApiPaymentDetails(dto.paymentDetails, dto.paymentType),
@@ -194,7 +192,7 @@ function toApiPurchasePayload(purchaseData) {
     supplierId: purchaseData.supplierId,
     invoiceNumber: purchaseData.invoiceNumber,
     invoiceDate: purchaseData.invoiceDate || null,
-    paymentDate: purchaseData.dueDate || null,
+    paymentDate: purchaseData.paymentDate || null,
     description: purchaseData.description || undefined,
     status: purchaseData.status,
     paymentType: purchaseData.paymentType,
@@ -202,23 +200,9 @@ function toApiPurchasePayload(purchaseData) {
   };
 }
 
-export async function fetchPurchases(params = {}) {
-  const { data } = await axiosInstance.get("/Purchase/GetPurchaseList", {
-    params: {
-      page: params.page,
-      take: params.limit,
-      invoiceNumber: params.search || undefined,
-      supplierId: params.supplierId || undefined,
-      status: params.status !== "" ? params.status : undefined,
-      paymentType:
-        params.paymentType !== "" && params.paymentType != null
-          ? params.paymentType
-          : undefined,
-      fromDate: params.fromDate || undefined,
-      toDate: params.toDate || undefined,
-      ...toApiSort(params.sorting, PURCHASE_SORT_COLUMNS),
-    },
-  });
+/** `GET GetPurchaseList` — پارامترها از `listQuery` با همان نام‌های `GetPurchaseListQuery`. */
+export async function fetchPurchases(params) {
+  const { data } = await axiosInstance.get("/Purchase/GetPurchaseList", { params });
   return normalizeListResponse(data, { itemsKey: "purchaseList" });
 }
 

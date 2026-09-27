@@ -1,4 +1,5 @@
 import axiosInstance from "@/shared/services/api/axios";
+import { compactParams } from "@/shared/services/api/contract";
 
 /**
  * نگاشت روی `api/Team` — CRUD کامل، با همان نام‌های بکند.
@@ -17,18 +18,14 @@ import axiosInstance from "@/shared/services/api/axios";
  *   نمی‌تواند تیمِ تازه را خودکار انتخاب کند.
  */
 
-/** فیلترِ خالی نباید روی سیم برود. */
-const filterValue = (value) =>
-  value === "" || value == null ? undefined : value;
-
 export async function getTeamList(params = {}) {
   const { data } = await axiosInstance.get("/Team/GetTeamList", {
-    params: {
+    params: compactParams({
       page: params.page,
       take: params.take,
-      name: filterValue(params.name),
-      departmentId: filterValue(params.departmentId),
-    },
+      name: params.name,
+      departmentId: params.departmentId,
+    }),
   });
 
   return data;

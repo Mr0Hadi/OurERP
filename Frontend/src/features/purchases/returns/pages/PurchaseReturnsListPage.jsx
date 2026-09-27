@@ -8,13 +8,12 @@ import { useSuppliersOptionsQuery } from "@/features/suppliers/services/queries"
 
 import PurchaseReturnFilters from "../components/table/PurchaseReturnFilters";
 import PurchaseReturnTable from "../components/table/PurchaseReturnTable";
-import { useDebouncedPurchaseReturnFilters } from "../hooks/useDebouncedPurchaseReturnFilters";
-import { usePurchaseReturnsQuery } from "../services/queries";
+import { usePurchaseReturnListFilters, usePurchaseReturnsQuery } from "../services/queries";
 import { usePurchaseReturnFilterStore } from "../store/purchaseReturnFilterStore";
 
 export default function PurchaseReturnsListPage() {
   const listState = usePurchaseReturnFilterStore();
-  const filters = useDebouncedPurchaseReturnFilters();
+  const filters = usePurchaseReturnListFilters();
   const query = usePurchaseReturnsQuery(filters, listState.pagination, listState.sorting);
   const { suppliers, isLoading: isSuppliersLoading } = useSuppliersOptionsQuery();
 

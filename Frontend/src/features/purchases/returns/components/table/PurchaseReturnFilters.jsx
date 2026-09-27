@@ -16,13 +16,13 @@ const PROBLEM_OPTIONS = toFilterOptions(PURCHASE_RETURN_PROBLEM_LABELS);
 
 const PurchaseReturnFilters = ({ suppliers = [], isSuppliersLoading = false }) => {
   const {
-    globalSearch,
+    search,
     supplierId,
     status,
     problem,
     fromDate,
     toDate,
-    setGlobalSearch,
+    setSearch,
     setSupplierId,
     setStatus,
     setProblem,
@@ -32,8 +32,8 @@ const PurchaseReturnFilters = ({ suppliers = [], isSuppliersLoading = false }) =
   } = usePurchaseReturnFilterStore();
 
   const handleGlobalSearch = useCallback(
-    (e) => setGlobalSearch(e.target.value),
-    [setGlobalSearch],
+    (e) => setSearch(e.target.value),
+    [setSearch],
   );
 
   return (
@@ -56,7 +56,7 @@ const PurchaseReturnFilters = ({ suppliers = [], isSuppliersLoading = false }) =
     >
       <FilterSearchInput
         placeholder="شماره مرجوعی، فاکتور، تامین‌کننده..."
-        value={globalSearch}
+        value={search}
         onChange={handleGlobalSearch}
       />
 

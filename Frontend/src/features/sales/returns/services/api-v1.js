@@ -3,13 +3,12 @@ import {
   idempotent,
   normalizeListResponse,
 } from "@/shared/services/api/contract";
-import { toApiClaim, fromApiReturn } from "./apiMapping";
+import { toApiClaim, fromApiSaleReturn } from "@/shared/domain/returns/claimsApi";
 import { toApiComposition } from "@/shared/domain/returns/resolutions";
-import { toApiSort } from "@/shared/services/api/sorting";
 import { RETURNABLE_SALE_STATUSES } from "@/features/sales/orders/domain/saleRules";
 
 /** `SaleReturnListSortEnum`ِ بکند، بر اساسِ شناسه‌ی ستونِ جدول. */
-const SALE_RETURN_SORT_COLUMNS = {
+export const SALE_RETURN_SORT_COLUMNS = {
   returnNumber: 1,
   returnDate: 2,
   saleInvoiceNumber: 3,
@@ -28,24 +27,12 @@ const SALE_RETURN_SORT_COLUMNS = {
 
 // ─── خواندن ─────────────────────────────────────────────────────────────────
 
-export async function fetchSalesReturns(params = {}) {
-  const { data } = await axiosInstance.get("/SaleReturn/GetSaleReturnList", {
-    params: {
-      page: params.page,
-      take: params.limit,
-      search: params.search || undefined,
-      // برخلاف مرجوعی خرید، اینجا هم saleId هم customerId پشتیبانی می‌شود.
-      // مرجوعی‌های همین فروش — کارتِ «مرجوعی‌های دیگر همین فروش» در
-      // صفحه‌ی جزئیات از همین فیلتر استفاده می‌کند.
-      saleId: params.saleId || undefined,
-      customerId: params.customerId || undefined,
-      status: params.status !== "" ? params.status : undefined,
-      problem: params.problem !== "" ? params.problem : undefined,
-      fromDate: params.fromDate || undefined,
-      toDate: params.toDate || undefined,
-      ...toApiSort(params.sorting, SALE_RETURN_SORT_COLUMNS),
-    },
-  });
+/**
+ * `GET GetSaleReturnList` — پارامترها با همان نام‌های `GetSaleReturnListQuery`: از `listQuery`
+ * برای لیست، یا `{ saleId, take }` برای «مرجوعی‌های دیگرِ همین سند».
+ */
+export async function fetchSalesReturns(params) {
+  const { data } = await axiosInstance.get("/SaleReturn/GetSaleReturnList", { params });
   return normalizeListResponse(data, { itemsKey: "returnList" });
 }
 
@@ -53,7 +40,7 @@ export async function fetchSalesReturnById(id) {
   const { data } = await axiosInstance.get("/SaleReturn/GetSaleReturnDetail", {
     params: { id },
   });
-  return fromApiReturn(data);
+  return fromApiSaleReturn(data);
 }
 
 /**
@@ -98,7 +85,7 @@ export async function createSalesReturn(payload, { idempotencyKey } = {}) {
     },
     idempotent(idempotencyKey),
   );
-  return fromApiReturn(data);
+  return fromApiSaleReturn(data);
 }
 
 /**
@@ -126,7 +113,7 @@ export async function addClaimResolution(
     { claimId: claim.id, composition: toApiComposition(composition, claim) },
     idempotent(idempotencyKey),
   );
-  return fromApiReturn(data);
+  return fromApiSaleReturn(data);
 }
 
 /** بکند فقط شناسه‌ی *تصمیم* (`resolutionId`) می‌خواهد؛ `returnId`/`claimId` فقط برای رفرشِ کش فرانت لازم بودند. */
@@ -134,7 +121,7 @@ export async function removeClaimResolution(returnId, claimId, resolutionId) {
   const { data } = await axiosInstance.delete("/SaleReturn/RemoveClaimResolution", {
     params: { id: resolutionId },
   });
-  return fromApiReturn(data);
+  return fromApiSaleReturn(data);
 }
 
 /**
@@ -154,7 +141,7 @@ export async function executeGoodsRound(
     { saleReturnId: returnId, ...payload },
     idempotent(idempotencyKey),
   );
-  return fromApiReturn(data);
+  return fromApiSaleReturn(data);
 }
 
 /** ثبتِ پرداختِ یک اثر مالیِ معلق — قرینه‌ی سمتِ خرید. */
@@ -167,7 +154,7 @@ export async function executeMoneyEffect(
     { effectId, paidAt: paidAt || undefined, reference: reference || undefined },
     idempotent(idempotencyKey),
   );
-  return fromApiReturn(data);
+  return fromApiSaleReturn(data);
 }
 
 // ─── چرخه‌ی عمر ─────────────────────────────────────────────────────────────
@@ -178,7 +165,7 @@ export async function rejectSalesReturn(returnId, reason) {
     id: returnId,
     reason: reason?.trim() || undefined,
   });
-  return fromApiReturn(data);
+  return fromApiSaleReturn(data);
 }
 
 export async function cancelSalesReturn(returnId, reason) {
@@ -186,14 +173,14 @@ export async function cancelSalesReturn(returnId, reason) {
     id: returnId,
     reason: reason?.trim() || undefined,
   });
-  return fromApiReturn(data);
+  return fromApiSaleReturn(data);
 }
 
 export async function reopenSalesReturn(returnId) {
   const { data } = await axiosInstance.post("/SaleReturn/ReopenSaleReturn", {
     id: returnId,
   });
-  return fromApiReturn(data);
+  return fromApiSaleReturn(data);
 }
 
 export async function removeSalesReturn(returnId) {
@@ -202,5 +189,5 @@ export async function removeSalesReturn(returnId) {
   });
   // پاسخِ حذف هم سند را برمی‌گرداند: لایه‌ی mutation برای پاک‌کردن کش و
   // بازگرداندن کاربر به لیست، به `id` و `saleId` نیاز دارد.
-  return fromApiReturn(data) ?? { id: returnId };
+  return fromApiSaleReturn(data) ?? { id: returnId };
 }

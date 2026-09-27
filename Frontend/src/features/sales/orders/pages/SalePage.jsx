@@ -5,13 +5,12 @@ import { useCustomersOptionsQuery } from "@/features/customers/services/queries"
 
 import SaleFilters from "../components/table/SaleFilters";
 import SaleTable from "../components/table/SaleTable";
-import { useDebouncedSaleFilters } from "../hooks/useDebouncedSaleFilters";
-import { useSalesQuery } from "../services/queries";
+import { useSaleListFilters, useSalesQuery } from "../services/queries";
 import { useSaleFilterStore } from "../store/saleFilterStore";
 
 export default function SalePage() {
   const listState = useSaleFilterStore();
-  const filters = useDebouncedSaleFilters();
+  const filters = useSaleListFilters();
   const query = useSalesQuery(filters, listState.pagination, listState.sorting);
   const { customers, isLoading: isCustomersLoading } = useCustomersOptionsQuery();
 

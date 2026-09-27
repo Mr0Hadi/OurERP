@@ -6,7 +6,6 @@ import {
 } from "@/shared/services/api/contract";
 import { toDateOnly } from "@/shared/lib/dateUtils";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
-import { toApiSort } from "@/shared/services/api/sorting";
 
 export {
   SaleStatusEnum as SALE_STATUSES,
@@ -146,8 +145,7 @@ export function fromApiSale(dto) {
   const sale = {
     ...dto,
     invoiceDate: toDateOnly(dto.invoiceDate),
-    // فیلدِ سرور `paymentDate` است؛ فرم داخلی همان مفهوم را `dueDate` صدا می‌زند.
-    dueDate: toDateOnly(dto.paymentDate),
+    paymentDate: toDateOnly(dto.paymentDate),
     items: dto.items || [],
     paymentDetails: dto.paymentDetails || [],
     ...fromApiPaymentDetails(dto.paymentDetails, dto.paymentType),
@@ -175,30 +173,16 @@ function toApiSalePayload(saleData) {
   return {
     customerId: saleData.customerId,
     invoiceDate: saleData.invoiceDate || null,
-    paymentDate: saleData.dueDate || null,
+    paymentDate: saleData.paymentDate || null,
     description: saleData.description || undefined,
     paymentType: saleData.paymentType,
     attachments: toApiAttachments(saleData.attachments),
   };
 }
 
-export async function fetchSales(params = {}) {
-  const { data } = await axiosInstance.get("/Sale/GetSaleList", {
-    params: {
-      page: params.page,
-      take: params.limit,
-      invoiceNumber: params.search || undefined,
-      // بکند فیلترِ customerId ندارد، فقط جست‌وجوی متنیِ نام مشتری.
-      // از وقتی کشویی مشتری تک‌انتخابی شد، نامِ انتخاب‌شده هم کنارِ
-      // شناسه در فیلتر می‌نشیند و همان فرستاده می‌شود.
-      customerName: params.customerName || undefined,
-      status: params.status !== "" ? params.status : undefined,
-      paymentType: params.paymentType !== "" ? params.paymentType : undefined,
-      fromDate: params.fromDate || undefined,
-      toDate: params.toDate || undefined,
-      ...toApiSort(params.sorting, SALE_SORT_COLUMNS),
-    },
-  });
+/** `GET GetSaleList` — پارامترها از `listQuery` با همان نام‌های `GetSaleListQuery`. */
+export async function fetchSales(params) {
+  const { data } = await axiosInstance.get("/Sale/GetSaleList", { params });
   return normalizeListResponse(data, { itemsKey: "saleList" });
 }
 

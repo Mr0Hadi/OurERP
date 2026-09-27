@@ -88,7 +88,7 @@ const dateOnly = (value) => (value ? String(value).slice(0, 10) : "");
 
 /** همان فیلترهای صف روی ردیف‌هایی که فرانت اضافه می‌کند. */
 function matchesFilters(row, filters) {
-  const search = String(filters.globalSearch || "").trim();
+  const search = String(filters.invoiceNumber || "").trim();
   if (
     search &&
     !String(row.returnNumber || "").includes(search) &&

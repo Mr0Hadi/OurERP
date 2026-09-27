@@ -86,7 +86,18 @@
     - [x] مشتری، تامین‌کننده، کالا: `listQuery` + `useDebouncedFilters`؛ `PartyListFilters` مشترک.
       باگ‌ها: مرتب‌سازیِ این سه جدول هیچ‌وقت به سرور نمی‌رفت؛ فیلتر «فقط ناقص» کالا ارسال نمی‌شد؛
       گزینه‌ی «ناموجود» بی‌اثر بود. با سرورِ تست بررسی شد.
-    - [ ] خرید، فروش، مرجوعی‌ها، صف‌های انبار، دانه‌ها، سازمان
+    - [x] خرید، فروش، مرجوعی‌ها، صف‌های دریافت/ارسال، دانه‌ها، سازمان: فیلترها با نامِ بکند،
+      `compactParams` جای سه کپیِ `filterValue`، `paramsSerializer` سراسری در axios (آرایه‌ها به شکلِ ASP.NET).
+    - [x] `dueDate` → `paymentDate` (نامِ بکند) در همه‌ی فرم‌ها و نماها.
+    - [x] `apiMapping`ِ دو سمتِ مرجوعی یکی شد (`shared/domain/returns/claimsApi.js`)؛ فقط تبدیلِ عددی و
+      یک خطِ `orderLineId` ماند.
+    - [x] `normalizeProductUnit` از کپیِ فیلد‌به‌فیلد به `{ ...dto }` + چند فیلدِ مشتق رسید.
+    - [x] صفِ دریافت دیگر ردیف‌ها را سمتِ فرانت دوباره فیلتر نمی‌کند (`statuses` روی خرید پشتیبانی می‌شود و
+      فیلترِ اضافه صفحه را کوتاه می‌کرد). صفِ ارسال هنوز فیلتر می‌کند تا بکند `Statuses` را روی فروش بدهد.
+    - [x] سه نگاشتِ باقی‌مانده که از ناهمنامیِ خودِ بکند می‌آیند (`FisrtName`، `RefferalCode`، `OrderLineId`)
+      و تاریخِ `0001-01-01` → بخشِ ۷ سندِ درخواست‌ها.
+    - همه با سرورِ تست بررسی شد: پارامترهای ۹ لیست، `statuses` آرایه‌ای، `labelState` دانه‌ها، مهلتِ پرداخت،
+      ادعاهای مرجوعی.
 - قاعده: داده‌ی ساختگی (mock) ساخته نمی‌شود؛ بررسی روی سرورِ تست.
 - [ ] **۲. فیچرها** (هر کدام: کد مرده، شکستن فایل بزرگ، کامپوننت مشترک، کامنت، متن پیام‌ها، موارد بکند)
   - [ ] auth
@@ -106,7 +117,6 @@
 ### export های بی‌استفاده (خروجی `pnpm knip`)
 هر کدام در مرحله‌ی فیچر خودش بررسی شود: یا کد مرده است، یا قرار بوده جایی استفاده شود و نشده (باگ احتمالی).
 
-- purchases: `usePurchaseStatsQuery`
 - sales: `manualSaleStatusOptions`، `saleStatusHint`، `canDeleteSale` (بررسی شود حذف فروش بدون این قاعده محافظت می‌شود یا نه)
 - returns: `CLAIM_SCOPE_LABELS` (خرید و فروش)، `isQuarantineEffect`، `deriveReturnStatus`، `isOffScope`
 - units: `UnitBarcodeCell`، `UnitProductCell`، `UnitQuarantineSource`، `UnitValueCell`،
@@ -115,6 +125,7 @@
   `DOCUMENT_PAYMENT_DIRECTION`، `TAX_CATEGORY_LABELS`، `listParams`
 
 ### متن پیام‌ها برای مرور در فاز هر فیچر
+- جدول‌های مرجوعی (خرید/فروش) هنوز دکمه‌ی `navigate` دارند نه `detailsColumn` (باز کردن در تب جدید کار نمی‌کند).
 - units: `"انجام نشد"` (mutations.js) خیلی مبهم است.
 - units: شماره‌ی سریال دانه با جداکننده‌ی هزارگان نمایش داده می‌شود («سریال ۱۲٬۳۴۵»)؛ سریال عدد مقداری نیست.
 - `ResolutionLineRow`، `LedgerBalanceBadge` و چند متن template هنوز «ریال» را دستی می‌چسبانند → `formatRial`.

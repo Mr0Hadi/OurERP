@@ -6,6 +6,9 @@ import { extractServerMessage, getErrorMessage } from "@/shared/lib/errorMessage
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5083/api",
   timeout: 15000,
+  // آرایه‌ها به شکلِ `statuses=2&statuses=3` (نه `statuses[]=2`)؛ همان شکلی که
+  // ASP.NET برای `List<>` در query می‌خواند.
+  paramsSerializer: { indexes: null },
   headers: {
     "Content-Type": "application/json",
   },

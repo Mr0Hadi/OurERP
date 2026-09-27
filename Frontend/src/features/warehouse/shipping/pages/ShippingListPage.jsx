@@ -3,8 +3,7 @@ import ServerTable from "@/shared/components/table/ServerTable";
 
 import ShippingFilters from "../components/table/ShippingFilters";
 import ShippingTable from "../components/table/ShippingTable";
-import { useDebouncedShippingFilters } from "../hooks/useDebouncedShippingFilters";
-import { useShippableSalesQuery } from "../services/queries";
+import { useShippableSalesQuery, useShippingListFilters } from "../services/queries";
 import { useShippingFilterStore } from "../store/shippingFilterStore";
 import { useQueueRows } from "../../shared/useQueueRows";
 import { needsDocumentList } from "../../shared/queueFilters";
@@ -19,7 +18,7 @@ import { needsDocumentList } from "../../shared/queueFilters";
  */
 export default function ShippingListPage() {
   const listState = useShippingFilterStore();
-  const filters = useDebouncedShippingFilters();
+  const filters = useShippingListFilters();
   const query = useShippableSalesQuery(filters, listState.pagination, listState.sorting);
   const buildRows = useQueueRows("out", filters, listState.pagination.pageIndex === 0);
 

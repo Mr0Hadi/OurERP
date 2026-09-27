@@ -118,7 +118,7 @@ export default function SaleDetailForm({ saleData }) {
     const payload = {
       customerId: formData.customerId,
       invoiceDate: formData.invoiceDate,
-      dueDate: formData.dueDate || null,
+      paymentDate: formData.paymentDate || null,
       description: formData.description || "",
       items,
       paymentType: formData.paymentType ?? PaymentTypeEnum.CASH,

@@ -202,7 +202,7 @@ export default function PurchasesNewPage() {
       supplierName: formData.supplierName,
       invoiceNumber: formData.invoiceNumber,
       invoiceDate: formData.invoiceDate,
-      dueDate: formData.dueDate || null,
+      paymentDate: formData.paymentDate || null,
       description: formData.description || "",
       items: items.map((item) => ({
         productId: item.productId,

@@ -1,4 +1,5 @@
 import axiosInstance from "@/shared/services/api/axios";
+import { compactParams } from "@/shared/services/api/contract";
 
 /**
  * نگاشت روی `api/Department` — CRUD کامل، با همان نام‌های بکند.
@@ -20,18 +21,14 @@ import axiosInstance from "@/shared/services/api/axios";
  *   نمی‌تواند واحدِ تازه را خودکار انتخاب کند.
  */
 
-/** فیلترِ خالی نباید روی سیم برود. */
-const filterValue = (value) =>
-  value === "" || value == null ? undefined : value;
-
 export async function getDepartmentList(params = {}) {
   const { data } = await axiosInstance.get("/Department/GetDepartmentList", {
-    params: {
+    params: compactParams({
       page: params.page,
       take: params.take,
-      name: filterValue(params.name),
-      headName: filterValue(params.headName),
-    },
+      name: params.name,
+      headName: params.headName,
+    }),
   });
 
   return data;

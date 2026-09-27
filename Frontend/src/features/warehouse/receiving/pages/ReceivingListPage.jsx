@@ -4,8 +4,7 @@ import { useSuppliersOptionsQuery } from "@/features/suppliers/services/queries"
 
 import ReceivingFilters from "../components/table/ReceivingFilters";
 import ReceivingTable from "../components/table/ReceivingTable";
-import { useDebouncedReceivingFilters } from "../hooks/useDebouncedReceivingFilters";
-import { useReceivablePurchasesQuery } from "../services/queries";
+import { useReceivablePurchasesQuery, useReceivingListFilters } from "../services/queries";
 import { useReceivingFilterStore } from "../store/receivingFilterStore";
 import { useQueueRows } from "../../shared/useQueueRows";
 import { needsDocumentList } from "../../shared/queueFilters";
@@ -19,7 +18,7 @@ import { needsDocumentList } from "../../shared/queueFilters";
  */
 export default function ReceivingListPage() {
   const listState = useReceivingFilterStore();
-  const filters = useDebouncedReceivingFilters();
+  const filters = useReceivingListFilters();
   const query = useReceivablePurchasesQuery(filters, listState.pagination, listState.sorting);
   const { suppliers, isLoading: isSuppliersLoading } = useSuppliersOptionsQuery();
   const buildRows = useQueueRows("in", filters, listState.pagination.pageIndex === 0);

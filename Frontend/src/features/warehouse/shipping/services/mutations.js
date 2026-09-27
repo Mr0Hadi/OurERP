@@ -7,8 +7,7 @@ import { invalidateSalesEcosystem } from "@/features/sales/orders/services/share
 import { invalidatePurchaseEcosystem } from "@/features/purchases/orders/services/sharedInvalidation";
 import { salesReturnKeys } from "@/features/sales/returns/services/queryKeys";
 import { purchaseReturnKeys } from "@/features/purchases/returns/services/queryKeys";
-import { fromApiReturn as fromApiSalesReturn } from "@/features/sales/returns/services/apiMapping";
-import { fromApiReturn as fromApiPurchaseReturn } from "@/features/purchases/returns/services/apiMapping";
+import { fromApiPurchaseReturn, fromApiSaleReturn } from "@/shared/domain/returns/claimsApi";
 import { idempotencyKeyFor } from "@/shared/services/api/contract";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
 
@@ -26,7 +25,7 @@ export const useDispatchShipmentMutation = () => {
       dispatchShipment(command, { idempotencyKey: idempotencyKeyFor(command) }),
     onSuccess: (result, command) => {
       (result?.saleReturns || []).forEach((doc) => {
-        const updated = fromApiSalesReturn(doc);
+        const updated = fromApiSaleReturn(doc);
         queryClient.setQueryData(salesReturnKeys.detail(updated.id), updated);
         invalidateSalesEcosystem(queryClient, updated.saleId, {
           freshReturnId: updated.id,

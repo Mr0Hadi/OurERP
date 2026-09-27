@@ -1,8 +1,9 @@
 import { createFilterStore } from "@/shared/store/createFilterStore";
 
+/** فیلترهای لیستِ خرید — نام‌ها همان پارامترهای `GetPurchaseListQuery`. */
 export const usePurchaseFilterStore = createFilterStore({
   filters: {
-    globalSearch: "",
+    invoiceNumber: "",
     supplierId: "",
     status: "",
     paymentType: "",

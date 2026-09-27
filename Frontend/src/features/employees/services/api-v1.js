@@ -1,4 +1,5 @@
 import axiosInstance from "@/shared/services/api/axios";
+import { compactParams } from "@/shared/services/api/contract";
 
 /**
  * لایه‌ی سرورِ فیچر کارمندان — نگاشتِ مستقیم روی `api/User` و
@@ -24,23 +25,19 @@ import axiosInstance from "@/shared/services/api/axios";
  *      اگر جابه‌جا شده آزاد می‌شود. غیرفعال‌کردن هم نقش را آزاد می‌کند.
  */
 
-/** فیلترِ خالی نباید روی سیم برود — سرور آن را «مقدارِ صفر» می‌فهمد. */
-const filterValue = (value) =>
-  value === "" || value == null ? undefined : value;
-
 export async function getUserList(params = {}) {
   const { data } = await axiosInstance.get("/User/GetUserList", {
-    params: {
+    params: compactParams({
       page: params.page,
       take: params.take,
-      fullName: filterValue(params.fullName),
+      fullName: params.fullName,
       // فیلترِ کاملاً جدا از `fullName` — تطبیقِ دقیقِ عددی روی کدِ
       // پرسنلی، نه Contains روی نام.
-      personelCode: filterValue(params.personelCode),
-      departmentId: filterValue(params.departmentId),
-      teamId: filterValue(params.teamId),
-      isActive: filterValue(params.isActive),
-    },
+      personelCode: params.personelCode,
+      departmentId: params.departmentId,
+      teamId: params.teamId,
+      isActive: params.isActive,
+    }),
   });
 
   return data;

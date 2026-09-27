@@ -24,12 +24,12 @@ import { parseQueueFilter } from "../../../shared/queueFilters";
  */
 const ShippingFilters = () => {
   const {
-    globalSearch,
+    invoiceNumber,
     customerName,
     status,
     fromDate,
     toDate,
-    setGlobalSearch,
+    setInvoiceNumber,
     setCustomerName,
     setStatus,
     setFromDate,
@@ -38,8 +38,8 @@ const ShippingFilters = () => {
   } = useShippingFilterStore();
 
   const handleGlobalSearch = useCallback(
-    (e) => setGlobalSearch(e.target.value),
-    [setGlobalSearch],
+    (e) => setInvoiceNumber(e.target.value),
+    [setInvoiceNumber],
   );
 
   return (
@@ -66,7 +66,7 @@ const ShippingFilters = () => {
     >
       <FilterSearchInput
         placeholder="شماره فاکتور فروش..."
-        value={globalSearch}
+        value={invoiceNumber}
         onChange={handleGlobalSearch}
       />
 

@@ -1,8 +1,5 @@
 import axiosInstance from "@/shared/services/api/axios";
-import { toApiSort } from "@/shared/services/api/sorting";
-import { PURCHASE_SORT_COLUMNS } from "@/features/purchases/orders/services/api-v1";
 import { idempotent, normalizeListResponse } from "@/shared/services/api/contract";
-import { receivingStatusesOf } from "../domain/receivingVocabulary";
 
 /**
  * دریافت انبار روی بکندِ واقعی:
@@ -17,37 +14,12 @@ import { receivingStatusesOf } from "../domain/receivingVocabulary";
  */
 
 /**
- * خریدهایی که هنوز کالایشان به انبار نرسیده (کاملاً یا بخشی).
- *
- * `statuses` به شکلِ `statuses=2&statuses=3` فرستاده می‌شود (همان شکلی که
- * ASP.NET برای `List<>` می‌خواند). بکندِ تازه همین را فیلتر می‌کند؛ ردیف‌ها
- * یک بار دیگر هم اینجا فیلتر می‌شوند تا روی سرورِ قدیمی‌تر (که `statuses`
- * را نمی‌شناسد) صف هرگز پیش‌فاکتور یا خریدِ لغوشده نشان ندهد.
- *
- * جست‌وجو فقط روی شماره‌ی فاکتور است (`invoiceNumber`)؛ تامین‌کننده
- * فیلترِ جدای خودش را دارد.
+ * خریدهایی که هنوز کالایشان به انبار نرسیده (کاملاً یا بخشی) — `GetPurchaseList`
+ * با `statuses` (پارامترها از `listQuery`، با نام‌های `GetPurchaseListQuery`).
  */
-export async function fetchReceivablePurchases(params = {}) {
-  const statuses = receivingStatusesOf(params.status);
-  const { data } = await axiosInstance.get("/Purchase/GetPurchaseList", {
-    params: {
-      page: params.page,
-      take: params.limit,
-      invoiceNumber: params.search || undefined,
-      supplierId: params.supplierId || undefined,
-      statuses,
-      fromDate: params.fromDate || undefined,
-      toDate: params.toDate || undefined,
-      ...toApiSort(params.sorting, PURCHASE_SORT_COLUMNS),
-    },
-    paramsSerializer: { indexes: null },
-  });
-  const list = normalizeListResponse(data, { itemsKey: "purchaseList" });
-  const allowed = new Set(statuses);
-  return {
-    ...list,
-    items: list.items.filter((purchase) => allowed.has(Number(purchase.status))),
-  };
+export async function fetchReceivablePurchases(params) {
+  const { data } = await axiosInstance.get("/Purchase/GetPurchaseList", { params });
+  return normalizeListResponse(data, { itemsKey: "purchaseList" });
 }
 
 /** `PurchaseReceivingInfoDto`: اقلام با باقیمانده و قرنطینه، کالای سفارش‌نداده، مغایرت‌ها و عکس‌ها. */

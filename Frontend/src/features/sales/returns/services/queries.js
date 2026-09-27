@@ -1,32 +1,30 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useMemo } from "react";
 import {
+  SALE_RETURN_SORT_COLUMNS,
   fetchSalesReturns,
   fetchSalesReturnById,
   fetchReturnableSales,
   fetchSaleForReturn,
 } from "./api-v1";
 import { salesReturnKeys } from "./queryKeys";
+import { listQuery } from "@/shared/services/api/contract";
+import { useDebouncedFilters } from "@/shared/hooks/useDebouncedFilters";
+import { useSalesReturnFilterStore } from "../store/salesReturnFilterStore";
+
+/** فیلترهای فعلیِ لیستِ مرجوعی؛ جست‌وجوی متنی با تأخیر. */
+export function useSalesReturnListFilters() {
+  return useDebouncedFilters(useSalesReturnFilterStore, {
+    text: ["search"],
+    instant: ["customerId", "status", "problem", "fromDate", "toDate"],
+  });
+}
 
 export function useSalesReturnsQuery(filters, pagination, sorting) {
-  const queryParams = useMemo(
-    () => ({
-      page: pagination.pageIndex + 1,
-      limit: pagination.pageSize,
-      search: filters.globalSearch || "",
-      customerId: filters.customerId || "",
-      status: filters.status ?? "",
-      problem: filters.problem ?? "",
-      fromDate: filters.fromDate || "",
-      toDate: filters.toDate || "",
-      sorting: sorting?.id ? { id: sorting.id, desc: !!sorting.desc } : null,
-    }),
-    [filters, pagination, sorting],
-  );
-
+  const params = listQuery({ filters, pagination, sorting, sortColumns: SALE_RETURN_SORT_COLUMNS });
   return useQuery({
-    queryKey: salesReturnKeys.list(queryParams),
-    queryFn: () => fetchSalesReturns(queryParams),
+    queryKey: salesReturnKeys.list(params),
+    queryFn: () => fetchSalesReturns(params),
     placeholderData: keepPreviousData,
     gcTime: 1000 * 60 * 10,
     refetchOnMount: "always",
@@ -66,7 +64,7 @@ export function useSaleForReturnQuery(saleId, excludeReturnId = null) {
  * مرجوعی فروش (که از اول پشتیبانی می‌شد) همین کار را می‌کند.
  */
 export function useRelatedSalesReturnsQuery(saleId, excludeReturnId = null) {
-  const params = useMemo(() => ({ saleId, limit: 50 }), [saleId]);
+  const params = useMemo(() => ({ saleId, take: 50 }), [saleId]);
   return useQuery({
     queryKey: salesReturnKeys.list(params),
     queryFn: () => fetchSalesReturns(params),
