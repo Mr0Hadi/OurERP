@@ -33,6 +33,11 @@ namespace Application.Features.Report.Queries
             // Excess sent to a customer: cost with no revenue, like a replacement.
             InventoryCostEventTypeEnum.SALE_SHIPPED_EXCESS,
             InventoryCostEventTypeEnum.SALE_RETURN_REFUND,
+            // Goods a customer brought back: the cost that left with them at shipment comes back off cost of goods sold, whether
+            // they went back on the shelf (restock) or into quarantine as defective. Without this a returned unit that was sold
+            // again was costed twice, and a returned unit later scrapped counted both as cost of goods sold and as scrap loss.
+            InventoryCostEventTypeEnum.SALE_RETURN_RESTOCK,
+            InventoryCostEventTypeEnum.SALE_RETURN_QUARANTINED,
             // A sale-return MONEY_IN: revenue, the mirror of SALE_RETURN_REFUND.
             InventoryCostEventTypeEnum.SALE_RETURN_MONEY_IN,
             // Scrapping quarantined goods, or defective goods taken off the shelf: a loss reported on its own line.
@@ -92,6 +97,15 @@ namespace Application.Features.Report.Queries
             foreach (var row in ledgerRows)
             {
                 var bucket = GetBucket(BucketKeyFor(row.OccurredAt));
+
+                // Held off-pool, so the value is in OffPoolValueDelta rather than InventoryValueDelta.
+                if (row.EventType == InventoryCostEventTypeEnum.SALE_RETURN_QUARANTINED)
+                {
+                    bucket.CostOfGoodsSold -= row.OffPoolValueDelta;
+                    bucket.NetProfit += row.OffPoolValueDelta;
+                    continue;
+                }
+
                 if (row.EventType == InventoryCostEventTypeEnum.QUARANTINE_SCRAPPED)
                 {
                     bucket.ScrapLoss += -row.OffPoolValueDelta;

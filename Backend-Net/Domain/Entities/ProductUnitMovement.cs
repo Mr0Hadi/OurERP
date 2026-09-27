@@ -40,6 +40,9 @@ namespace Domain.Entities
 
         public string? Note { get; set; }
 
+        /// <summary>Manual warehouse actions only (ApplyProductUnitAction): why it was done. Null for every document-driven movement.</summary>
+        public UnitActionReasonEnum? ActionReason { get; set; }
+
         /// <summary>When the movement physically happened (the document's date), as opposed to CreatedAt.</summary>
         public DateTime OccurredAt { get; set; }
         public DateTime CreatedAt { get; set; }

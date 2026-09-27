@@ -41,7 +41,7 @@ namespace WMS.Tests.Integration
             return scenario;
         }
 
-        private static AddSalePaymentCommandHandler AddSalePayment(TestScope scope) => new(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork);
+        private static AddSalePaymentCommandHandler AddSalePayment(TestScope scope) => new(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation);
 
         [Fact]
         public async Task ProformaSale_IsNotOnTheAccount_UntilItsFirstPaymentIssuesIt()
@@ -73,7 +73,7 @@ namespace WMS.Tests.Integration
             var dto = Assert.IsType<SaleDto>((await AddSalePayment(scope).Handle(
                 new AddSalePaymentCommand { SaleId = s.Sale.Id, Type = PaymentTypeEnum.CASH, Amount = 4_000 }, CancellationToken.None)).Data);
 
-            await new VoidSalePaymentCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork)
+            await new VoidSalePaymentCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation)
                 .Handle(new VoidSalePaymentCommand { PaymentId = dto.PaymentDetails.Single().Id }, CancellationToken.None);
 
             var statement = await StatementAsync(db, customerId: s.Customer.Id);
@@ -94,7 +94,7 @@ namespace WMS.Tests.Integration
             await AddSalePayment(scope).Handle(new AddSalePaymentCommand { SaleId = s.Sale.Id, Type = PaymentTypeEnum.CASH, Amount = 10_000 }, CancellationToken.None);
             Assert.Equal(0m, (await StatementAsync(db, customerId: s.Customer.Id)).ClosingBalance);
 
-            await new ChangeSaleStatusCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork)
+            await new ChangeSaleStatusCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation)
                 .Handle(new ChangeSaleStatusCommand { Id = s.Sale.Id, Status = SalesStatusEnum.CANCELLED }, CancellationToken.None);
             // The money is still with us: we owe it back.
             Assert.Equal(-10_000m, (await StatementAsync(db, customerId: s.Customer.Id)).ClosingBalance);

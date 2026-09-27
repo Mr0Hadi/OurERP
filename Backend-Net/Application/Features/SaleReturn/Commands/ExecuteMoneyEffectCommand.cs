@@ -2,6 +2,7 @@ using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.SaleReturn;
+using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -44,13 +45,15 @@ namespace Application.Features.SaleReturn.Commands
         private readonly IWMSDbContext _context;
         private readonly ISaleReturnCalculationService _saleReturnCalculationService;
         private readonly IInventoryCostingService _inventoryCostingService;
+        private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public ExecuteMoneyEffectCommandHandler(IWMSDbContext context, ISaleReturnCalculationService saleReturnCalculationService, IInventoryCostingService inventoryCostingService, IUnitOfWork unitOfWork)
+        public ExecuteMoneyEffectCommandHandler(IWMSDbContext context, ISaleReturnCalculationService saleReturnCalculationService, IInventoryCostingService inventoryCostingService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
         {
             _context = context;
             _saleReturnCalculationService = saleReturnCalculationService;
             _inventoryCostingService = inventoryCostingService;
+            _objectStorageService = objectStorageService;
             _unitOfWork = unitOfWork;
         }
 
@@ -100,12 +103,11 @@ namespace Application.Features.SaleReturn.Commands
             saleReturn.UpdatedAt = now;
 
             var sale = saleReturn.Sale!;
-            sale.Status = _saleReturnCalculationService.RecomputeSaleStatus(sale);
             sale.UpdatedAt = now;
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            res.Data = await SaleReturnDetailReader.ReadAsync(_context, _saleReturnCalculationService, saleReturn.Id, cancellationToken);
+            res.Data = await SaleReturnDetailReader.ReadAsync(_context, _saleReturnCalculationService, _objectStorageService, saleReturn.Id, cancellationToken);
             res.Message = "پرداخت با موفقیت ثبت شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;

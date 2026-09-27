@@ -40,18 +40,19 @@ namespace Application.Common.Contracts.InventoryCosting
         /// Returns that net unit price - the QuarantineCost the caller stamps on the units.</summary>
         Task<decimal> RecordPurchaseReceiptQuarantinedAsync(Product product, int quantity, ulong unitPrice, int discountPercent, int purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken);
 
+        // purchaseReturnClaimId on the release/scrap rows below is null for a manual warehouse action (ApplyProductUnitAction).
         // The three quarantine exits below take heldValue - the sum of the moved units' ProductUnit.QuarantineCost - and never a
         // client-supplied cost: a unit leaves quarantine at exactly the value it entered with.
 
         /// <summary>GOODS_RELEASE: quarantined units enter the pool at their held value and the same value leaves the off-pool balance.</summary>
-        Task RecordQuarantineReleasedAsync(Product product, int quantity, decimal heldValue, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
+        Task RecordQuarantineReleasedAsync(Product product, int quantity, decimal heldValue, int? purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
 
         /// <summary>GOODS_SCRAP: quarantined units are scrapped; their held value leaves the off-pool balance as a reported loss.</summary>
-        Task RecordQuarantineScrappedAsync(Product product, int quantity, decimal heldValue, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
+        Task RecordQuarantineScrappedAsync(Product product, int quantity, decimal heldValue, int? purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
 
         /// <summary>Purchase-return GOODS_SCRAP from sellable stock: leaves the pool at the running average with no revenue
         /// (STOCK_SCRAPPED); the sale report shows the value as scrap loss.</summary>
-        Task RecordStockScrappedAsync(Product product, int quantity, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
+        Task RecordStockScrappedAsync(Product product, int quantity, int? purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
 
         /// <summary>Purchase-return GOODS_OUT from quarantine: nothing leaves the pool; the units' held value leaves the off-pool balance.</summary>
         Task RecordPurchaseReturnShippedFromQuarantineAsync(Product product, int quantity, decimal heldValue, int purchaseReturnClaimId, DateTime occurredAt, CancellationToken cancellationToken);
@@ -60,9 +61,12 @@ namespace Application.Common.Contracts.InventoryCosting
         /// (null: running average, else Product.PurchasePrice). Returns the unit cost used - the units' QuarantineCost.</summary>
         Task<decimal> RecordPurchaseReturnReplacementQuarantinedAsync(Product product, int quantity, ulong? unitCost, int? purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken);
 
-        /// <summary>AcceptPurchaseExcess: <paramref name="quantity"/> quarantined units bought after all. They enter the pool at the
-        /// line's net price and <paramref name="heldValue"/> (the sum of their QuarantineCost) leaves the off-pool balance.</summary>
-        Task RecordPurchaseExcessAcceptedAsync(Product product, int quantity, ulong unitPrice, int discountPercent, decimal heldValue, int purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken);
+        /// <summary>
+        /// AcceptPurchaseExcess: <paramref name="quantity"/> quarantined units bought after all. They stay in quarantine (2026-09-27): the
+        /// off-pool balance moves from <paramref name="heldValue"/> (the sum of their old QuarantineCost) to quantity x the line's net
+        /// price, which is what the units now carry. Nothing enters the pool until they are released. Returns that net unit price.
+        /// </summary>
+        Task<decimal> RecordPurchaseExcessAcceptedAsync(Product product, int quantity, ulong unitPrice, int discountPercent, decimal heldValue, int purchaseItemId, DateTime occurredAt, CancellationToken cancellationToken);
 
         /// <summary>ShipSaleCommand. Consumes at the current running average (AVCO); revenue is
         /// unitPrice * (100-discountPercent)/100 * quantity.</summary>
@@ -72,7 +76,17 @@ namespace Application.Common.Contracts.InventoryCosting
         Task RecordSaleShippedExcessAsync(Product product, int quantity, int saleItemId, DateTime occurredAt, CancellationToken cancellationToken);
 
         /// <summary>SaleReturn ExecuteGoodsRoundCommand, GOODS_IN: enters the pool at <paramref name="unitCost"/>; when null, the running average, or Product.PurchasePrice when that is 0.</summary>
+        /// <summary>ApplyProductUnitAction QUARANTINE: <paramref name="quantity"/> units leave the pool at the running average into the
+        /// off-pool balance (STOCK_QUARANTINED). Returns the per-unit value used - the units' QuarantineCost.</summary>
+        Task<decimal> RecordStockQuarantinedAsync(Product product, int quantity, DateTime occurredAt, CancellationToken cancellationToken);
+
         Task RecordSaleReturnRestockAsync(Product product, int quantity, ulong? unitCost, int? saleItemId, DateTime occurredAt, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// SaleReturn ExecuteGoodsRoundCommand, GOODS_IN's defective part, held in quarantine: off-pool value in at the same per-unit cost a
+        /// healthy restock would use (SALE_RETURN_QUARANTINED). Returns that per-unit cost, which the units carry as QuarantineCost.
+        /// </summary>
+        Task<decimal> RecordSaleReturnQuarantinedAsync(Product product, int quantity, ulong? unitCost, int? saleItemId, DateTime occurredAt, CancellationToken cancellationToken);
 
         /// <summary>SaleReturn ExecuteGoodsRoundCommand, GOODS_OUT: leaves the pool at the running average.</summary>
         Task RecordReplacementShippedToCustomerAsync(Product product, int quantity, int? saleItemId, DateTime occurredAt, CancellationToken cancellationToken);

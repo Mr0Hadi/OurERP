@@ -19,6 +19,21 @@
         public UInt64 TotalAmount { get; set; }
         public int ShippedQuantity { get; set; }
         public int SettledQuantity { get; set; }
+
+        public string ProductCode { get; set; } = string.Empty;
+        public string Unit { get; set; } = string.Empty;
+
+        /// <summary>
+        /// How much of this line a new ON_ORDER claim may still take: shipped - settled - what open claims of other returns
+        /// already reserve. The same number CreateSaleReturn enforces (ISaleReturnCalculationService.GetClaimableQuantity).
+        /// </summary>
+        public int ClaimableQuantity { get; set; }
+
+        /// <summary>
+        /// How much an EXCESS claim on this line may still take: units that left on it as excess (ShipSale ExcessQuantity, SOLD
+        /// with custody EXCESS) minus what open EXCESS claims already reserve. 0 until the warehouse records excess.
+        /// </summary>
+        public int ClaimableExcessQuantity { get; set; }
         public int SaleId { get; set; }
     }
 }

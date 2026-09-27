@@ -23,6 +23,13 @@ namespace Application.Features.Sale.Dtos
         /// with a live plan. Debt is always PayableAmount - PaidAmount.
         /// </summary>
         public UInt64 PayableAmount { get; set; }
+
+        /// <summary>
+        /// Returns against this sale (not deleted), and whether one is still open (OPEN/IN_PROGRESS). This replaces the removed
+        /// SalesStatusEnum.RETURNED: a return is a document of its own, not a stage of the sale.
+        /// </summary>
+        public int ReturnCount { get; set; }
+        public bool HasOpenReturn { get; set; }
         public UInt64 PaidAmount { get; set; }
         public string? Description { get; set; }
         public int CustomerId { get; set; }

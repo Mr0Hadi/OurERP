@@ -41,7 +41,7 @@ namespace Application.Features.SaleReturn.Queries
             if (request.SaleId.HasValue)
                 query = query.Where(x => x.SaleId == request.SaleId.Value);
 
-            var returns = await query.WithReturnGraph().ToListAsync(cancellationToken);
+            var returns = await query.Include(x => x.Sale!).ThenInclude(s => s.Customer).WithReturnGraph().ToListAsync(cancellationToken);
 
             var pending = returns
                 .SelectMany(r => r.Claims.SelectMany(c => c.Resolutions.SelectMany(res => res.Effects.Select(e => (returnDoc: r, claim: c, effect: e)))))
@@ -52,12 +52,16 @@ namespace Application.Features.SaleReturn.Queries
                     EffectId = x.effect.Id,
                     SaleReturnId = x.returnDoc.Id,
                     ReturnNumber = x.returnDoc.ReturnNumber,
+                    ReturnDate = x.returnDoc.ReturnDate,
+                    SaleId = x.returnDoc.SaleId,
+                    InvoiceNumber = x.returnDoc.Sale?.InvoiceNumber ?? string.Empty,
+                    CustomerName = (x.returnDoc.Sale?.Customer == null ? string.Empty : x.returnDoc.Sale.Customer.FirstName + " " + x.returnDoc.Sale.Customer.LastName) ?? string.Empty,
                     ClaimId = x.claim.Id,
                     Direction = x.effect.Direction,
                     ProductId = x.effect.ProductId ?? x.claim.ProductId,
-                    ProductCode = x.claim.Product?.Code ?? string.Empty,
-                    ProductName = x.claim.Product?.Name ?? string.Empty,
-                    Unit = x.claim.Product?.Unit.GetDescription() ?? string.Empty,
+                    ProductCode = (x.effect.Product ?? x.claim.Product)?.Code ?? string.Empty,
+                    ProductName = (x.effect.Product ?? x.claim.Product)?.Name ?? string.Empty,
+                    Unit = (x.effect.Product ?? x.claim.Product)?.Unit.GetDescription() ?? string.Empty,
                     Quantity = x.effect.Quantity,
                     AppliedQuantity = x.effect.AppliedQuantity,
                     RemainingQuantity = x.effect.RemainingQuantity,

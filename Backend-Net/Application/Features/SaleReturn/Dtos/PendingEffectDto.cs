@@ -8,6 +8,11 @@ namespace Application.Features.SaleReturn.Dtos
         public int EffectId { get; set; }
         public int SaleReturnId { get; set; }
         public string ReturnNumber { get; set; }
+        public DateTime ReturnDate { get; set; }
+        /// <summary>The sale the return belongs to - a replacement is received/shipped on that sale's screen.</summary>
+        public int SaleId { get; set; }
+        public string InvoiceNumber { get; set; }
+        public string CustomerName { get; set; }
         public int ClaimId { get; set; }
         public ReturnEffectDirectionEnum Direction { get; set; }
         public int ProductId { get; set; }

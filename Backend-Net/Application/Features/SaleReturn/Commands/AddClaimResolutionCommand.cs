@@ -2,6 +2,7 @@
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.SaleReturn;
+using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos.Returns;
 using Application.Common.Dtos;
@@ -42,11 +43,13 @@ namespace Application.Features.SaleReturn.Commands
 
             RuleForEach(x => x.Composition.GoodsIn).ChildRules(goods =>
             {
+                goods.RuleFor(g => g.Source).Null().WithMessage("در مرجوعی فروش منبع (source) فرستاده نمی‌شود.");
                 goods.RuleFor(g => g.Quantity).GreaterThan(0).WithMessage("مقدار کالای وارده باید از صفر بیشتر باشد.");
                 goods.RuleFor(g => g.ProductId).GreaterThan(0).WithMessage("کالای نامعتبر است.").When(g => g.ProductId.HasValue);
             });
             RuleForEach(x => x.Composition.GoodsOut).ChildRules(goods =>
             {
+                goods.RuleFor(g => g.Source).Null().WithMessage("در مرجوعی فروش منبع (source) فرستاده نمی‌شود؛ کالای ارسالی همیشه از موجودی است.");
                 goods.RuleFor(g => g.Quantity).GreaterThan(0).WithMessage("مقدار کالای خارجه باید از صفر بیشتر باشد.");
                 goods.RuleFor(g => g.ProductId).GreaterThan(0).WithMessage("کالای نامعتبر است.").When(g => g.ProductId.HasValue);
             });
@@ -104,13 +107,15 @@ namespace Application.Features.SaleReturn.Commands
         private readonly IWMSDbContext _context;
         private readonly ISaleReturnCalculationService _saleReturnCalculationService;
         private readonly IInventoryCostingService _inventoryCostingService;
+        private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public AddClaimResolutionCommandHandler(IWMSDbContext context, ISaleReturnCalculationService saleReturnCalculationService, IInventoryCostingService inventoryCostingService, IUnitOfWork unitOfWork)
+        public AddClaimResolutionCommandHandler(IWMSDbContext context, ISaleReturnCalculationService saleReturnCalculationService, IInventoryCostingService inventoryCostingService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
         {
             _context = context;
             _saleReturnCalculationService = saleReturnCalculationService;
             _inventoryCostingService = inventoryCostingService;
+            _objectStorageService = objectStorageService;
             _unitOfWork = unitOfWork;
         }
 
@@ -197,12 +202,11 @@ namespace Application.Features.SaleReturn.Commands
             saleReturn.UpdatedAt = now;
 
             var sale = saleReturn.Sale!;
-            sale.Status = _saleReturnCalculationService.RecomputeSaleStatus(sale);
             sale.UpdatedAt = now;
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            res.Data = await SaleReturnDetailReader.ReadAsync(_context, _saleReturnCalculationService, saleReturn.Id, cancellationToken);
+            res.Data = await SaleReturnDetailReader.ReadAsync(_context, _saleReturnCalculationService, _objectStorageService, saleReturn.Id, cancellationToken);
             res.Message = "تصمیم با موفقیت ثبت شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;

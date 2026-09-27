@@ -27,9 +27,9 @@ namespace WMS.Tests.Integration
         private static PR.AddClaimResolutionCommandHandler PAdd(TestScope s) => new(s.Db, s.PurchaseReturnCalculation, s.InventoryCostingService, FakeObjectStorage.Instance, s.UnitOfWork);
         private static PR.RemoveClaimResolutionCommandHandler PRemove(TestScope s) => new(s.Db, s.PurchaseReturnCalculation, s.InventoryCostingService, FakeObjectStorage.Instance, s.UnitOfWork);
         private static PR.ExecuteGoodsRoundCommandHandler PRound(TestScope s) => new(s.Db, s.PurchaseReturnCalculation, s.ProductUnitService, s.InventoryCostingService, FakeObjectStorage.Instance, s.UnitOfWork);
-        private static SR.AddClaimResolutionCommandHandler SAdd(TestScope s) => new(s.Db, s.SaleReturnCalculation, s.InventoryCostingService, s.UnitOfWork);
-        private static SR.RemoveClaimResolutionCommandHandler SRemove(TestScope s) => new(s.Db, s.SaleReturnCalculation, s.InventoryCostingService, s.UnitOfWork);
-        private static SR.ExecuteGoodsRoundCommandHandler SRound(TestScope s) => new(s.Db, s.SaleReturnCalculation, s.ProductUnitService, s.InventoryCostingService, s.UnitOfWork);
+        private static SR.AddClaimResolutionCommandHandler SAdd(TestScope s) => new(s.Db, s.SaleReturnCalculation, s.InventoryCostingService, FakeObjectStorage.Instance, s.UnitOfWork);
+        private static SR.RemoveClaimResolutionCommandHandler SRemove(TestScope s) => new(s.Db, s.SaleReturnCalculation, s.InventoryCostingService, FakeObjectStorage.Instance, s.UnitOfWork);
+        private static SR.ExecuteGoodsRoundCommandHandler SRound(TestScope s) => new(s.Db, s.SaleReturnCalculation, s.ProductUnitService, s.InventoryCostingService, FakeObjectStorage.Instance, s.UnitOfWork);
 
         private static async Task<PurchaseScenario> ReceivedPurchase(TestScope scope, int ordered, int received, ulong unitPrice = 1000)
         {
@@ -52,7 +52,7 @@ namespace WMS.Tests.Integration
 
         private static async Task<int> CreateSaleClaim(TestScope scope, SaleScenario scenario, CreateReturnClaimDto claim)
         {
-            var res = await new SR.CreateSaleReturnCommandHandler(scope.Db, scope.SaleReturnRepository, scope.SaleReturnCalculation, scope.UnitOfWork)
+            var res = await new SR.CreateSaleReturnCommandHandler(scope.Db, scope.SaleReturnRepository, scope.SaleReturnCalculation, FakeObjectStorage.Instance, scope.UnitOfWork)
                 .Handle(new SR.CreateSaleReturnCommand { SaleId = scenario.Sale.Id, Claims = new() { claim } }, CancellationToken.None);
             return Assert.Single(Assert.IsType<SaleReturnDetailDto>(res.Data).Claims).Id;
         }

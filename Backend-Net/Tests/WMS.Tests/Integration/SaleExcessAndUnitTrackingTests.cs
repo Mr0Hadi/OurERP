@@ -19,7 +19,7 @@ namespace WMS.Tests.Integration
     public class SaleExcessAndUnitTrackingTests
     {
         private static ShipSaleCommandHandler Ship(TestScope s) => new(s.Db, s.ProductUnitService, s.InventoryCostingService, s.UnitOfWork);
-        private static SR.CreateSaleReturnCommandHandler CreateReturn(TestScope s) => new(s.Db, s.SaleReturnRepository, s.SaleReturnCalculation, s.UnitOfWork);
+        private static SR.CreateSaleReturnCommandHandler CreateReturn(TestScope s) => new(s.Db, s.SaleReturnRepository, s.SaleReturnCalculation, FakeObjectStorage.Instance, s.UnitOfWork);
 
         private static CreateReturnClaimDto ExcessClaim(SaleScenario s, int quantity) => new()
         {

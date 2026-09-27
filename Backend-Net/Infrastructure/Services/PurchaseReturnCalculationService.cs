@@ -98,6 +98,35 @@ namespace Infrastructure.Services
                 .Sum(c => Math.Max(0, c.Quantity - c.Resolutions.Where(r => r.Effects.All(e => e.Status != ReturnEffectStatusEnum.PENDING)).Sum(r => r.Quantity)));
         }
 
+        public int GetReservedQuarantineQuantity(Application.Common.Contracts.ProductUnit.UnitSelection selection, int productId, int purchaseId, List<PurchaseReturn> openReturns)
+        {
+            var live = (openReturns ?? new()).Where(r => r.IsActive && !IsTerminal(r.Status)).ToList();
+
+            var byClaims = selection.CustodyReason switch
+            {
+                UnitCustodyReasonEnum.EXCESS => GetOutstandingOffOrderClaimQuantity(ReturnOffScopeKindEnum.EXCESS, selection.PurchaseItemId, productId, live),
+                UnitCustodyReasonEnum.UNLISTED => GetOutstandingOffOrderClaimQuantity(ReturnOffScopeKindEnum.UNLISTED, null, productId, live),
+                _ => 0,
+            };
+
+            var byEffects = live
+                .SelectMany(r => r.Claims)
+                .SelectMany(c => c.Resolutions.SelectMany(res => res.Effects).Select(e => (claim: c, effect: e)))
+                .Where(x => x.effect.Status == ReturnEffectStatusEnum.PENDING
+                    && x.effect.ProductId == productId
+                    && x.effect.Direction is ReturnEffectDirectionEnum.GOODS_OUT or ReturnEffectDirectionEnum.GOODS_RELEASE or ReturnEffectDirectionEnum.GOODS_SCRAP
+                    && x.effect.Source != ProductUnitStatusEnum.IN_STOCK)
+                .Where(x =>
+                {
+                    var sameProduct = x.effect.ProductId == x.claim.ProductId;
+                    return !PurchaseReturnQuarantine.IsReservedByClaim(x.claim, sameProduct)
+                        && PurchaseReturnQuarantine.For(x.claim, sameProduct, purchaseId) == selection;
+                })
+                .Sum(x => x.effect.RemainingQuantity);
+
+            return byClaims + byEffects;
+        }
+
         // Deliberately decoupled from return activity: whether a purchase's receiving is complete is
         // a question about ReceivedQuantity (plus what was closed short) vs ordered Quantity alone. A still-open return claim
         // against already-received goods does not block RECEIVED - the two concerns are independent.
@@ -144,6 +173,8 @@ namespace Infrastructure.Services
                         ProductId = item.ProductId,
                         UnitPrice = item.UnitPrice,
                         UnitCost = item.UnitCost,
+                        // Validated to be set for GOODS_OUT and absent for GOODS_IN.
+                        Source = direction == ReturnEffectDirectionEnum.GOODS_OUT ? item.Source : null,
                         Status = ReturnEffectStatusEnum.PENDING,
                         CreatedAt = now,
                     });
@@ -167,6 +198,8 @@ namespace Infrastructure.Services
                         Direction = direction,
                         Quantity = item.Quantity,
                         ProductId = item.ProductId,
+                        // A release always takes quarantined units; a scrap does unless the shelf was stated.
+                        Source = direction == ReturnEffectDirectionEnum.GOODS_RELEASE ? ProductUnitStatusEnum.QUARANTINED : item.Source ?? ProductUnitStatusEnum.QUARANTINED,
                         Status = ReturnEffectStatusEnum.PENDING,
                         CreatedAt = now,
                     });

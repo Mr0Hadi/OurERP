@@ -7,6 +7,8 @@ using Common.Exceptions;
 using Domain.Enums;
 using WMS.Tests.Support;
 using PR = Application.Features.PurchaseReturn.Commands;
+using ApplyProductUnitActionCommandHandlerAlias = Application.Features.Product.Commands.ApplyProductUnitActionCommandHandler;
+using ApplyProductUnitActionCommand = Application.Features.Product.Commands.ApplyProductUnitActionCommand;
 
 namespace WMS.Tests.Integration
 {
@@ -14,6 +16,9 @@ namespace WMS.Tests.Integration
     /// Buying the extra goods instead of releasing them for free: AcceptPurchaseExcess puts quarantined EXCESS/UNLISTED units on
     /// the order, so what we pay for them is also what they cost when sold. The old path (a return resolution releasing at the
     /// units' own value, 0, plus a MONEY_OUT) left the money in purchase spend and the goods in the pool at 0.
+    ///
+    /// Since 2026-09-27 buying is the money step only: the units stay in quarantine, held at the price paid, and a separate
+    /// ApplyProductUnitAction RELEASE (or scrap, or a return) decides where they go.
     /// </summary>
     public class PurchaseExcessAcceptedTests
     {
@@ -22,6 +27,9 @@ namespace WMS.Tests.Integration
 
         private static AcceptPurchaseExcessCommandHandler Accept(TestScope s) =>
             new(s.Db, s.PurchaseReturnCalculation, s.ProductUnitService, s.InventoryCostingService, s.UnitOfWork);
+
+        private static ApplyProductUnitActionCommandHandlerAlias Release(TestScope s) =>
+            new(s.Db, s.ProductUnitService, s.InventoryCostingService, s.PurchaseReturnCalculation, s.UnitOfWork);
 
         private static List<T> Periods<T>(object data) => (List<T>)data.GetType().GetProperty("Periods")!.GetValue(data)!;
 
@@ -60,25 +68,36 @@ namespace WMS.Tests.Integration
             Assert.Equal(PurchaseStatusEnum.RECEIVED, verify.Purchases.Single().Status);
             Assert.Equal(totalBefore + 5_000, verify.Purchases.Single().TotalAmount);
 
-            // Units: on the shelf, no longer excess; the 5 accepted ones now belong to the supplement line.
+            // Units: bought, but still in quarantine - on the supplement line, no longer excess, held at the price paid.
             var units = verify.ProductUnits.Where(u => u.ProductId == s.Product.Id).ToList();
-            Assert.Equal(15, units.Count(u => u.Status == ProductUnitStatusEnum.IN_STOCK));
-            Assert.DoesNotContain(units, u => u.Status == ProductUnitStatusEnum.QUARANTINED);
-            Assert.All(units, u => Assert.Equal(UnitCustodyReasonEnum.ON_ORDER, u.CustodyReason));
-            Assert.Equal(10, units.Count(u => u.PurchaseItemId == s.Item.Id));
-            Assert.Equal(5, units.Count(u => u.PurchaseItemId == supplement.Id));
-            Assert.Equal(15, verify.Products.Single(p => p.Id == s.Product.Id).Stock);
+            Assert.Equal(10, units.Count(u => u.Status == ProductUnitStatusEnum.IN_STOCK && u.PurchaseItemId == s.Item.Id));
+            var bought = units.Where(u => u.PurchaseItemId == supplement.Id).ToList();
+            Assert.Equal(5, bought.Count);
+            Assert.All(bought, u => Assert.Equal((ProductUnitStatusEnum.QUARANTINED, (UnitCustodyReasonEnum?)UnitCustodyReasonEnum.ON_ORDER, (decimal?)1_000m), (u.Status, u.CustodyReason, u.QuarantineCost)));
+            Assert.Equal(10, verify.Products.Single(p => p.Id == s.Product.Id).Stock);
             Assert.Equal(5, verify.ProductUnitMovements.Count(m => m.Reason == ProductUnitMovementReasonEnum.PURCHASE_EXCESS_ACCEPTED));
 
-            // Rials: all 15 in the pool at 1,000 - the whole point. Releasing them for free would have given an average of 666.
             var ledger = verify.InventoryCostLedgerEntries.Where(x => x.ProductId == s.Product.Id).OrderBy(x => x.Id).ToList();
-            Assert.Equal(15, ledger.Last().RunningQuantity);
-            Assert.Equal(15_000m, ledger.Last().RunningInventoryValue);
-            Assert.Equal(1_000m, ledger.Last().RunningAverageCost);
-            Assert.Equal(0m, ledger.Sum(x => x.OffPoolValueDelta));
+            Assert.Equal(10_000m, ledger.Last().RunningInventoryValue);
+            Assert.Equal(5_000m, ledger.Sum(x => x.OffPoolValueDelta)); // held off-pool at what we pay
 
+            // The purchase report counts what was bought, wherever it sits.
             var report = Periods<PurchaseReportPeriodDto>((await new GetPurchaseReportQueryHandler(scope.Db).Handle(new GetPurchaseReportQuery(), CancellationToken.None)).Data!);
             Assert.Equal(15_000m, report.Sum(p => p.TotalReceivedValue));
+
+            // Released onto the shelf: all 15 in the pool at 1,000 - the whole point. Releasing unbought excess would have given 666.
+            await Release(scope).Handle(new ApplyProductUnitActionCommand
+            {
+                Action = ProductUnitActionEnum.RELEASE,
+                Reason = UnitActionReasonEnum.INSPECTION_PASSED,
+                ProductUnitIds = bought.Select(u => u.Id).ToList(),
+            }, CancellationToken.None);
+
+            using var after = db.NewContext();
+            var last = after.InventoryCostLedgerEntries.Where(x => x.ProductId == s.Product.Id).OrderBy(x => x.Id).Last();
+            Assert.Equal((15, 15_000m, 1_000m), (last.RunningQuantity, last.RunningInventoryValue, last.RunningAverageCost));
+            Assert.Equal(0m, after.InventoryCostLedgerEntries.Where(x => x.ProductId == s.Product.Id).Sum(x => x.OffPoolValueDelta));
+            Assert.Equal(15, after.Products.Single(p => p.Id == s.Product.Id).Stock);
         }
 
         [Fact]
@@ -106,9 +125,9 @@ namespace WMS.Tests.Integration
             Assert.Equal((2_000UL, 200UL, 2_200UL), (supplement.NetAmount, supplement.TaxAmount, supplement.TotalAmount));
             Assert.Equal(totalBefore + 2_200, verify.Purchases.Single().TotalAmount);
 
-            // The cost pool takes the net price only - tax is not part of what the goods cost.
+            // Held at the net price only - tax is not part of what the goods cost.
             var accepted = verify.InventoryCostLedgerEntries.Single(x => x.EventType == InventoryCostEventTypeEnum.PURCHASE_EXCESS_ACCEPTED);
-            Assert.Equal(2_000m, accepted.InventoryValueDelta);
+            Assert.Equal(2_000m, accepted.OffPoolValueDelta);
         }
 
         [Fact]
@@ -130,7 +149,7 @@ namespace WMS.Tests.Integration
 
             using var verify = db.NewContext();
             var accepted = verify.InventoryCostLedgerEntries.Single(x => x.EventType == InventoryCostEventTypeEnum.PURCHASE_EXCESS_ACCEPTED);
-            Assert.Equal(1_500m, accepted.InventoryValueDelta); // 2 x 750, not 2 x 1000
+            Assert.Equal(1_500m, accepted.OffPoolValueDelta); // 2 x 750, not 2 x 1000
             Assert.Equal(750m, verify.InventoryCostLedgerEntries.OrderBy(x => x.Id).Last().RunningAverageCost);
             Assert.Equal(totalBefore + 1_500, verify.Purchases.Single().TotalAmount);
         }
@@ -162,10 +181,10 @@ namespace WMS.Tests.Integration
             Assert.Equal((3, 3, 2_000ul, 0), (line.Quantity, line.ReceivedQuantity, line.UnitPrice, line.Discount));
 
             var units = verify.ProductUnits.Where(u => u.ProductId == valve.Id).ToList();
-            Assert.Equal(3, units.Count(u => u.Status == ProductUnitStatusEnum.IN_STOCK && u.CustodyReason == UnitCustodyReasonEnum.ON_ORDER && u.PurchaseItemId == line.Id));
-            Assert.Equal(1, units.Count(u => u.Status == ProductUnitStatusEnum.QUARANTINED)); // the fourth was not bought
-            Assert.Equal(3, verify.Products.Single(p => p.Id == valve.Id).Stock);
-            Assert.Equal(6_000m, verify.InventoryCostLedgerEntries.Where(x => x.ProductId == valve.Id).Sum(x => x.InventoryValueDelta));
+            Assert.Equal(3, units.Count(u => u.Status == ProductUnitStatusEnum.QUARANTINED && u.CustodyReason == UnitCustodyReasonEnum.ON_ORDER && u.PurchaseItemId == line.Id && u.QuarantineCost == 2_000m));
+            Assert.Equal(1, units.Count(u => u.CustodyReason == UnitCustodyReasonEnum.UNLISTED)); // the fourth was not bought
+            Assert.Equal(0, verify.Products.Single(p => p.Id == valve.Id).Stock); // bought, not yet released
+            Assert.Equal(6_000m, verify.InventoryCostLedgerEntries.Where(x => x.ProductId == valve.Id).Sum(x => x.OffPoolValueDelta));
         }
 
         [Fact]
@@ -215,8 +234,8 @@ namespace WMS.Tests.Integration
             }, CancellationToken.None);
 
             using var verify = db.NewContext();
-            Assert.Equal(6, verify.Products.Single(p => p.Id == s.Product.Id).Stock);
-            Assert.Equal(2, verify.ProductUnits.Count(u => u.ProductId == s.Product.Id && u.Status == ProductUnitStatusEnum.QUARANTINED));
+            Assert.Equal(5, verify.Products.Single(p => p.Id == s.Product.Id).Stock); // the bought one waits in quarantine
+            Assert.Equal(2, verify.ProductUnits.Count(u => u.ProductId == s.Product.Id && u.Status == ProductUnitStatusEnum.QUARANTINED && u.CustodyReason == UnitCustodyReasonEnum.EXCESS));
         }
 
         [Fact]

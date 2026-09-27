@@ -14,12 +14,12 @@ namespace Application.Features.Supplier.Commands
 {
     public class CreateSupplierCommand : IRequest<ResponseDto>
     {
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
         public string CompanyName { get; set; }
         public string Phone { get; set; }
         public string Address { get; set; }
-        public string PostalCode { get; set; }
+        public string PostalCode { get; set; } = string.Empty;
         public string? EconomicCode { get; set; }
         public string? NationalId { get; set; }
         public string? RegistrationNumber { get; set; }
@@ -47,15 +47,23 @@ namespace Application.Features.Supplier.Commands
     {
         public CreateSupplierCommandValidator()
         {
+            // A supplier is always a company (CompanyName is its name everywhere); the contact
+            // person's name is only needed when the deal goes through an intermediary, so it is
+            // optional - but if one half is given, both are, and both must be Persian text.
             RuleFor(x => x.FirstName)
-                .NotEmpty()
-                .WithMessage(Validation.RequiredMessage("نام"))
                 .Must(Validation.IsPersianText)
-                .WithMessage("نام باید تنها شامل حروف فارسی باشد.");
+                .WithMessage("نام باید تنها شامل حروف فارسی باشد.")
+                .When(x => !string.IsNullOrWhiteSpace(x.FirstName));
+            RuleFor(x => x.LastName)
+                .Must(Validation.IsPersianText)
+                .WithMessage("نام خانوادگی باید تنها شامل حروف فارسی باشد.")
+                .When(x => !string.IsNullOrWhiteSpace(x.LastName));
             RuleFor(x => x.LastName).NotEmpty()
-                .WithMessage(Validation.RequiredMessage("نام خانوادگی"))
-                .Must(Validation.IsPersianText)
-                .WithMessage("نام خانوادگی باید تنها شامل حروف فارسی باشد.");
+                .WithMessage(Validation.RequiredMessage("نام خانوادگی مسئول"))
+                .When(x => !string.IsNullOrWhiteSpace(x.FirstName));
+            RuleFor(x => x.FirstName).NotEmpty()
+                .WithMessage(Validation.RequiredMessage("نام مسئول"))
+                .When(x => !string.IsNullOrWhiteSpace(x.LastName));
             RuleFor(x => x.CompanyName).NotEmpty()
                 .WithMessage(Validation.RequiredMessage("نام شرکت"));
             RuleFor(x => x.Phone).NotEmpty()
@@ -64,8 +72,8 @@ namespace Application.Features.Supplier.Commands
                 .WithMessage("شماره تماس وارد شده صحیح نمی باشد.");
             RuleFor(x => x.Address).NotEmpty()
                 .WithMessage(Validation.RequiredMessage("آدرس"));
-            RuleFor(x => x.PostalCode).NotEmpty()
-                .WithMessage(Validation.RequiredMessage("کد پستی"));
+            // Postal code is optional: many counterparties (walk-in customers, suppliers met at the
+            // bazaar) do not have one on file. When given it is stored as typed.
         }
     }
 
@@ -84,6 +92,10 @@ namespace Application.Features.Supplier.Commands
         }
         public async Task<ResponseDto> Handle(CreateSupplierCommand request, CancellationToken cancellationToken)
         {
+            // The columns are NOT NULL; an explicit JSON null for an optional field becomes "".
+            request.PostalCode ??= string.Empty;
+            request.FirstName ??= string.Empty;
+            request.LastName ??= string.Empty;
             var res = new ResponseDto();
 
             var newSupplier = _mapper.Map<Domain.Entities.Supplier>(request);

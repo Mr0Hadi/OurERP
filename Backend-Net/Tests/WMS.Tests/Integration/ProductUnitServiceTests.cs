@@ -77,23 +77,25 @@ namespace WMS.Tests.Integration
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 3, shippedQuantity: 3, stock: 0);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() =>
-                scope.ProductUnitService.RestoreAsync(scenario.Item.Id, false, 3, 2, null, null, Movements.Test, CancellationToken.None));
+                scope.ProductUnitService.RestoreAsync(scenario.Item.Id, false, 3, 2, 0m, null, null, Movements.Test, CancellationToken.None));
         }
 
         [Fact]
-        public async Task RestoreAsync_WithinSoldOnSaleLine_RestocksHealthyAndScrapsRest()
+        public async Task RestoreAsync_WithinSoldOnSaleLine_RestocksHealthy_AndQuarantinesTheDefective()
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
 
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 3, shippedQuantity: 3, stock: 0);
 
-            await scope.ProductUnitService.RestoreAsync(scenario.Item.Id, false, 2, 1, null, null, Movements.Test, CancellationToken.None);
+            await scope.ProductUnitService.RestoreAsync(scenario.Item.Id, false, 2, 1, 700m, null, null, Movements.Test, CancellationToken.None);
             await scope.UnitOfWork.SaveChangesAsync(CancellationToken.None);
 
             using var verify = db.NewContext();
             Assert.Equal(2, verify.ProductUnits.Count(x => x.ProductId == scenario.Product.Id && x.Status == ProductUnitStatusEnum.IN_STOCK));
-            Assert.Equal(1, verify.ProductUnits.Count(x => x.ProductId == scenario.Product.Id && x.Status == ProductUnitStatusEnum.SCRAPPED));
+            var defective = verify.ProductUnits.Single(x => x.ProductId == scenario.Product.Id && x.Status == ProductUnitStatusEnum.QUARANTINED);
+            Assert.Equal(UnitCustodyReasonEnum.CUSTOMER_RETURN, defective.CustodyReason);
+            Assert.Equal(700m, defective.QuarantineCost);
         }
     }
 }

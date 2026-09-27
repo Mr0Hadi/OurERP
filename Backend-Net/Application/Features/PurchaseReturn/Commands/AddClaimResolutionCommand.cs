@@ -52,22 +52,31 @@ namespace Application.Features.PurchaseReturn.Commands
 
             RuleForEach(x => x.Composition.GoodsRelease).ChildRules(goods =>
             {
+                goods.RuleFor(g => g.Source).Must(s => s is null or ProductUnitStatusEnum.QUARANTINED)
+                    .WithMessage("آزادسازی فقط از قرنطینه انجام می‌شود.");
                 goods.RuleFor(g => g.Quantity).GreaterThan(0).WithMessage("مقدار آزادسازی باید از صفر بیشتر باشد.");
                 goods.RuleFor(g => g.ProductId).GreaterThan(0).WithMessage("کالا نامعتبر است.").When(g => g.ProductId.HasValue);
             });
             RuleForEach(x => x.Composition.GoodsScrap).ChildRules(goods =>
             {
+                goods.RuleFor(g => g.Source).Must(s => s is null or ProductUnitStatusEnum.QUARANTINED or ProductUnitStatusEnum.IN_STOCK)
+                    .WithMessage("اسقاط فقط از قرنطینه (QUARANTINED) یا از موجودی قابل فروش (IN_STOCK) انجام می‌شود.");
                 goods.RuleFor(g => g.Quantity).GreaterThan(0).WithMessage("مقدار اسقاط باید از صفر بیشتر باشد.");
                 goods.RuleFor(g => g.ProductId).GreaterThan(0).WithMessage("کالا نامعتبر است.").When(g => g.ProductId.HasValue);
             });
 
             RuleForEach(x => x.Composition.GoodsIn).ChildRules(goods =>
             {
+                goods.RuleFor(g => g.Source).Null().WithMessage("کالای ورودی از جایی در انبار برداشته نمی‌شود؛ منبع (source) نفرستید.");
                 goods.RuleFor(g => g.Quantity).GreaterThan(0).WithMessage("مقدار کالای وارده باید از صفر بیشتر باشد.");
                 goods.RuleFor(g => g.ProductId).GreaterThan(0).WithMessage("کالا نامعتبر است.").When(g => g.ProductId.HasValue);
             });
             RuleForEach(x => x.Composition.GoodsOut).ChildRules(goods =>
             {
+                // Stated with the decision, never inferred: shelf stock and quarantine are different goods with different value,
+                // and a quarantine source reserves those units from now on.
+                goods.RuleFor(g => g.Source).Must(s => s is ProductUnitStatusEnum.IN_STOCK or ProductUnitStatusEnum.QUARANTINED)
+                    .WithMessage("برای عودت کالا باید مشخص شود از موجودی (IN_STOCK) برداشته می‌شود یا از قرنطینه (QUARANTINED).");
                 goods.RuleFor(g => g.Quantity).GreaterThan(0).WithMessage("مقدار کالای خارجه باید از صفر بیشتر باشد.");
                 goods.RuleFor(g => g.ProductId).GreaterThan(0).WithMessage("کالا نامعتبر است.").When(g => g.ProductId.HasValue);
             });
@@ -245,16 +254,17 @@ namespace Application.Features.PurchaseReturn.Commands
         }
 
         /// <summary>
-        /// Release can only take units that are in quarantine for this claim. Checked here, at decision time, rather than left to
-        /// the warehouse: a decision to release goods that are not held used to be accepted and then fail at the goods round,
-        /// leaving the return stuck IN_PROGRESS. Units already promised to other pending releases on any open return of this
-        /// purchase count as taken. Scrap and GOODS_OUT are not checked: both can take units from the shelf or from quarantine,
-        /// and which one is only stated by the warehouse when it executes.
+        /// Every effect that takes units from quarantine - a release, a scrap or a return stated as QUARANTINED - must find them
+        /// free when the decision is made: held units of its quarantine group minus what other decisions on this purchase's open
+        /// returns already reserve (IPurchaseReturnCalculationService.GetReservedQuarantineQuantity). Checked here, not at the goods
+        /// round, so the refusal reaches whoever agreed the deal with the supplier, not the warehouse. An EXCESS/UNLISTED claim
+        /// reserved its own quantity when it was created, so its own outstanding part counts as available to it. Shelf-sourced
+        /// effects reserve nothing: shelf stock stays sellable and is checked when the round runs.
         /// </summary>
         private async Task EnsureQuarantineCoversAsync(Domain.Entities.PurchaseReturnClaim claim, List<Domain.Entities.PurchaseReturnEffect> effects, int purchaseId, CancellationToken cancellationToken)
         {
             var requested = effects
-                .Where(e => e.Direction == ReturnEffectDirectionEnum.GOODS_RELEASE)
+                .Where(e => e.Source == ProductUnitStatusEnum.QUARANTINED)
                 .GroupBy(e => e.ProductId!.Value)
                 .ToList();
 
@@ -266,33 +276,27 @@ namespace Application.Features.PurchaseReturn.Commands
                 .WhereNotDeleted()
                 .WhereOpen()
                 .WithReturnGraph()
+                .AsNoTracking()
                 .ToListAsync(cancellationToken);
 
             foreach (var group in requested)
             {
                 var productId = group.Key;
-                var selection = PurchaseReturnQuarantine.For(claim, productId == claim.ProductId, purchaseId);
+                var sameProduct = productId == claim.ProductId;
+                var selection = PurchaseReturnQuarantine.For(claim, sameProduct, purchaseId);
 
-                var held = await _context.ProductUnits.CountAsync(u =>
-                    u.ProductId == productId
-                    && u.Status == ProductUnitStatusEnum.QUARANTINED
-                    && u.PurchaseId == selection.PurchaseId
-                    && (selection.PurchaseItemId == null || u.PurchaseItemId == selection.PurchaseItemId)
-                    && u.CustodyReason == selection.CustodyReason, cancellationToken);
+                var held = await _context.ProductUnits.CountAsync(selection.ToFilter(productId), cancellationToken);
+                var reserved = _purchaseReturnCalculationService.GetReservedQuarantineQuantity(selection, productId, purchaseId, openReturns);
 
-                var promised = openReturns
-                    .SelectMany(r => r.Claims)
-                    .SelectMany(c => c.Resolutions.SelectMany(res => res.Effects).Select(e => (claim: c, effect: e)))
-                    .Where(x => x.effect.Direction == ReturnEffectDirectionEnum.GOODS_RELEASE
-                        && x.effect.Status == ReturnEffectStatusEnum.PENDING
-                        && x.effect.ProductId == productId
-                        && PurchaseReturnQuarantine.For(x.claim, productId == x.claim.ProductId, purchaseId) == selection)
-                    .Sum(x => x.effect.Quantity - x.effect.AppliedQuantity);
+                // This claim's own reservation is what these effects draw on.
+                if (PurchaseReturnQuarantine.IsReservedByClaim(claim, sameProduct))
+                    reserved -= Math.Max(0, claim.Quantity - claim.Resolutions.Where(r => r.Effects.All(e => e.Status != ReturnEffectStatusEnum.PENDING)).Sum(r => r.Quantity));
 
-                var available = Math.Max(0, held - promised);
+                var available = Math.Max(0, held - Math.Max(0, reserved));
                 if (group.Sum(e => e.Quantity) > available)
                     throw new ValidationCustomException(
-                        $"برای این ادعا فقط {available} عدد کالا در قرنطینه آزاد است؛ آزادسازی فقط روی کالای قرنطینه ممکن است (کالای روی قفسه همین حالا قابل فروش است).");
+                        $"در قرنطینه‌ی مربوط به این ادعا {held} دانه هست که {Math.Max(0, reserved)} تای آن برای تصمیم‌های دیگرِ همین خرید رزرو شده؛ فقط {available} دانه آزاد است. "
+                        + "اگر کالا روی قفسه است، منبع را «موجودی» (IN_STOCK) بگذارید.");
             }
         }
     }

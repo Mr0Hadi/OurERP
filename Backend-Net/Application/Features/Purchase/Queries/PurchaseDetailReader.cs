@@ -86,19 +86,7 @@ namespace Application.Features.Purchase.Queries
             var shortClosed = purchase.Items.Aggregate(0UL, (sum, i) => sum + InvoiceLineMath.ShareOfTotal(i.TotalAmount, i.Quantity, i.ShortClosedQuantity));
             purchase.PayableAmount = purchase.TotalAmount > shortClosed ? purchase.TotalAmount - shortClosed : 0UL;
 
-            purchase.Attachments = await context.DocumentAttachments.AsNoTracking()
-                .Where(a => a.DocumentKind == DocumentKindEnum.PURCHASE && a.DocumentId == purchaseId)
-                .Select(a => new DocumentAttachmentDto
-                {
-                    Id = a.Id,
-                    ObjectKey = a.ObjectKey,
-                    FileName = a.FileName,
-                    Note = a.Note,
-                    CreatedAt = a.CreatedAt
-                })
-                .ToListAsync(cancellationToken);
-            foreach (var attachment in purchase.Attachments)
-                attachment.Url = objectStorageService.GetFixedUrl(attachment.ObjectKey);
+            purchase.Attachments = await DocumentAttachmentWriter.ReadAsync(context, objectStorageService, DocumentKindEnum.PURCHASE, purchaseId, cancellationToken);
 
             return purchase;
         }

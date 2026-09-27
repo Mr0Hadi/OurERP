@@ -52,7 +52,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 5, shippedQuantity: 5, stock: 0);
 
-            var createHandler = new CreateSaleReturnCommandHandler(scope.Db, scope.SaleReturnRepository, scope.SaleReturnCalculation, scope.UnitOfWork);
+            var createHandler = new CreateSaleReturnCommandHandler(scope.Db, scope.SaleReturnRepository, scope.SaleReturnCalculation, FakeObjectStorage.Instance, scope.UnitOfWork);
             var createRes = await createHandler.Handle(new CreateSaleReturnCommand
             {
                 SaleId = scenario.Sale.Id,
@@ -72,7 +72,7 @@ namespace WMS.Tests.Integration
             var saleReturnId = ((Application.Features.SaleReturn.Dtos.SaleReturnDetailDto)createRes.Data!).Id;
             var claimId = scope.Context.SaleReturnClaims.Single().Id;
 
-            var decisionHandler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.InventoryCostingService, scope.UnitOfWork);
+            var decisionHandler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork);
             await decisionHandler.Handle(new AddClaimResolutionCommand
             {
                 ClaimId = claimId,

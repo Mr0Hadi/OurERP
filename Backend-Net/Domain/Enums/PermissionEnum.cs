@@ -247,6 +247,12 @@ namespace Domain.Enums
         [Description("عملیات نگهداشت انبار")]
         InventoryMaintenance = 171,
 
+        // Manual warehouse actions on single units (quarantine, release, scrap). Scrap is a
+        // financial loss, so it is separate from ProductUnitView, which every storekeeper holds.
+        [PermissionGroup(PermissionGroupEnum.Warehouse)]
+        [Description("مدیریت دانه‌ها: قرنطینه، آزادسازی و اسقاط")]
+        ProductUnitManage = 172,
+
         // --- اسناد و چاپ ---
         [PermissionGroup(PermissionGroupEnum.Documents)]
         [Description("بارگذاری فایل و تصویر")]

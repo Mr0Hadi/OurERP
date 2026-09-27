@@ -116,6 +116,8 @@ namespace Application.Features.Product.Queries
                     ToStatus = m.ToStatus,
                     Reason = m.Reason,
                     ReasonTitle = m.Reason.GetDescription(),
+                    ActionReason = m.ActionReason,
+                    ActionReasonTitle = m.ActionReason.HasValue ? m.ActionReason.Value.GetDescription() : null,
                     DocumentKind = m.DocumentKind,
                     DocumentId = m.DocumentId,
                     DocumentNumber = DocumentNumberOf(m),

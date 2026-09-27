@@ -32,6 +32,32 @@ namespace Domain.Entities
         /// </summary>
         public decimal? QuarantineCost { get; set; }
 
+        /// <summary>
+        /// When the unit last entered quarantine, and the document that put it there (null document for a manual warehouse
+        /// action). Stamped by ProductUnitService on every move into QUARANTINED and kept after it leaves, like QuarantineCost.
+        /// The same fact is in the unit's movement rows; it is copied here because the unit list sorts and filters on it.
+        /// </summary>
+        public DateTime? QuarantinedAt { get; set; }
+        public DocumentKindEnum? QuarantineDocumentKind { get; set; }
+        public int? QuarantineDocumentId { get; set; }
+
+        /// <summary>
+        /// Label printing (MarkProductUnitsPrinted): how many times this unit's label was printed, and when/by whom first and last.
+        /// Not a movement - printing does not change where the unit is. "Unprinted" means IN_STOCK or QUARANTINED with PrintCount 0.
+        /// </summary>
+        public int PrintCount { get; set; }
+
+        /// <summary>
+        /// The shelf the unit sits on, e.g. "A-03-2" - optional free text, stored normalised (upper case, no spaces; see
+        /// BinLocations.Normalize) so "a-03-2 " and "A-03-2" are one shelf. Set with SetProductUnitLocation; only meaningful while
+        /// the unit is here (IN_STOCK or QUARANTINED), so ProductUnitService clears it whenever the unit leaves. Not a movement:
+        /// moving between shelves writes no ProductUnitMovement row.
+        /// </summary>
+        public string? BinLocation { get; set; }
+        public DateTime? FirstPrintedAt { get; set; }
+        public DateTime? LastPrintedAt { get; set; }
+        public int? LastPrintedByUserId { get; set; }
+
         public DateTime CreatedAt { get; set; }
         public DateTime? SoldAt { get; set; }
         public bool IsActive { get; set; }

@@ -22,7 +22,9 @@ namespace Application.Common.Dtos.Returns
         public List<string>? ProductUnitBarcodes { get; set; }
 
         /// <summary>
-        /// Where the units come from, stated by the warehouse - the server never falls back from one to the other.
+        /// Since 2026-09-27 a purchase-return effect carries its source from the decision, and this may be omitted (or repeat it -
+        /// a different value is a 400). It is still required only for a GOODS_OUT decided before that.
+        /// Where the units come from - the server never falls back from one to the other.
         /// Purchase GOODS_OUT: required, IN_STOCK (shelf stock) or QUARANTINED. GOODS_RELEASE: QUARANTINED or omitted.
         /// GOODS_SCRAP: QUARANTINED or omitted (quarantine), or IN_STOCK - scrapping a defect found on the shelf after receiving.
         /// GOODS_IN: must be omitted. Sale returns: omitted, or IN_STOCK on GOODS_OUT.

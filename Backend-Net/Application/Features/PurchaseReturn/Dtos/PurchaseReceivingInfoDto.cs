@@ -56,6 +56,22 @@ namespace Application.Features.PurchaseReturn.Dtos
         /// <summary>Defective units counted on this line and still held in quarantine.</summary>
         public int QuarantinedOnOrderQuantity { get; set; }
 
+        /// <summary>
+        /// Defective units of this line a customer brought back, held in quarantine (custody CUSTOMER_RETURN). An ON_ORDER purchase-return
+        /// claim on this line takes them together with QuarantinedOnOrderQuantity (goodsOut with source QUARANTINED sends them back to
+        /// the supplier).
+        /// </summary>
+        public int QuarantinedCustomerReturnQuantity { get; set; }
+
+        /// <summary>Units of this line the warehouse took off the shelf into quarantine itself (custody WAREHOUSE_HOLD).</summary>
+        public int QuarantinedWarehouseHoldQuantity { get; set; }
+
+        /// <summary>
+        /// Of this line's paid-for quarantine (ON_ORDER + CUSTOMER_RETURN + WAREHOUSE_HOLD), how many no decision has reserved yet:
+        /// the most a new goodsOut/goodsRelease/goodsScrap with source QUARANTINED on an ON_ORDER claim of this line may take.
+        /// </summary>
+        public int FreeQuarantinedOnOrderQuantity { get; set; }
+
         /// <summary>Excess units of this line still held in quarantine.</summary>
         public int QuarantinedExcessQuantity { get; set; }
 

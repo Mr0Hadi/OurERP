@@ -2,6 +2,7 @@ using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.SaleReturn;
+using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos.Returns;
 using Application.Common.Dtos;
@@ -28,7 +29,7 @@ namespace Application.Features.SaleReturn.Commands
         public List<GoodsRoundLineDto> Rounds { get; set; } = new();
         public DateTime? Date { get; set; }
         public string? PartyName { get; set; }
-        public string? PartyNationalId { get; set; }
+        public string? PartyPhoneNumber { get; set; }
         public string? VehiclePlate { get; set; }
         public string? Note { get; set; }
     }
@@ -38,6 +39,9 @@ namespace Application.Features.SaleReturn.Commands
         public ExecuteGoodsRoundCommandValidator()
         {
             RuleFor(x => x.SaleReturnId).GreaterThan(0).WithMessage(Validation.RequiredMessage("مرجوعی"));
+            RuleFor(x => x.PartyPhoneNumber).Must(Validation.IsMobileNumber)
+                .When(x => !string.IsNullOrWhiteSpace(x.PartyPhoneNumber))
+                .WithMessage("شماره تماس تحویل‌دهنده/تحویل‌گیرنده صحیح نمی باشد.");
             RuleFor(x => x.Rounds).NotEmpty().WithMessage(Validation.RequiredMessage("لیست اثرها"));
             RuleForEach(x => x.Rounds).ChildRules(line =>
             {
@@ -64,14 +68,16 @@ namespace Application.Features.SaleReturn.Commands
         private readonly ISaleReturnCalculationService _saleReturnCalculationService;
         private readonly IProductUnitService _productUnitService;
         private readonly IInventoryCostingService _inventoryCostingService;
+        private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public ExecuteGoodsRoundCommandHandler(IWMSDbContext context, ISaleReturnCalculationService saleReturnCalculationService, IProductUnitService productUnitService, IInventoryCostingService inventoryCostingService, IUnitOfWork unitOfWork)
+        public ExecuteGoodsRoundCommandHandler(IWMSDbContext context, ISaleReturnCalculationService saleReturnCalculationService, IProductUnitService productUnitService, IInventoryCostingService inventoryCostingService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
         {
             _context = context;
             _saleReturnCalculationService = saleReturnCalculationService;
             _productUnitService = productUnitService;
             _inventoryCostingService = inventoryCostingService;
+            _objectStorageService = objectStorageService;
             _unitOfWork = unitOfWork;
         }
 
@@ -178,7 +184,7 @@ namespace Application.Features.SaleReturn.Commands
                     Quantity = line.Quantity,
                     HealthyQuantity = isGoodsIn ? healthy : null,
                     PartyName = request.PartyName,
-                    PartyNationalId = request.PartyNationalId,
+                    PartyPhoneNumber = request.PartyPhoneNumber,
                     VehiclePlate = request.VehiclePlate,
                     Note = request.Note,
                     CreatedAt = now,
@@ -210,21 +216,32 @@ namespace Application.Features.SaleReturn.Commands
 
                 if (isGoodsIn)
                 {
-                    var scrapped = line.Quantity - healthy;
+                    var defective = line.Quantity - healthy;
                     product.Stock += healthy;
                     effect.RestockedQuantity = (effect.RestockedQuantity ?? 0) + healthy;
 
-                    // With a line, the customer's own SOLD units come back (healthy to IN_STOCK, the rest
-                    // SCRAPPED); without one there are no units to restore, so the healthy ones are minted.
-                    // Scanned: the observations' barcodes name exactly which of the scanned units are the scrap.
-                    var scrapBarcodes = (line.Observations ?? new()).SelectMany(o => o.ProductUnitBarcodes ?? new()).ToList();
+                    // The defective part is held in quarantine (custody CUSTOMER_RETURN), not scrapped on arrival: sending it back to
+                    // the supplier, releasing it or scrapping it is a later decision. It carries the value a healthy unit would have
+                    // come back at, and the sale report reverses that cost of goods sold just as it does for a restock.
+                    var defectiveUnitCost = defective > 0
+                        ? await _inventoryCostingService.RecordSaleReturnQuarantinedAsync(product, defective, effect.UnitCost, unitLine ?? excessLine, now, cancellationToken)
+                        : 0m;
+
+                    // With a line, the customer's own SOLD units come back (healthy to IN_STOCK, defective to QUARANTINED); without
+                    // one there are no units to restore, so both parts are minted. Scanned: the observations' barcodes name exactly
+                    // which of the scanned units are the defective ones.
+                    var defectiveBarcodes = (line.Observations ?? new()).SelectMany(o => o.ProductUnitBarcodes ?? new()).ToList();
 
                     if (unitLine is int saleItemId)
-                        await _productUnitService.RestoreAsync(saleItemId, false, healthy, scrapped, line.ProductUnitBarcodes, scrapBarcodes, movement, cancellationToken);
+                        await _productUnitService.RestoreAsync(saleItemId, false, healthy, defective, defectiveUnitCost, line.ProductUnitBarcodes, defectiveBarcodes, movement, cancellationToken);
                     else if (excessLine is int excessSaleItemId)
-                        await _productUnitService.RestoreAsync(excessSaleItemId, true, healthy, scrapped, line.ProductUnitBarcodes, scrapBarcodes, movement, cancellationToken);
+                        await _productUnitService.RestoreAsync(excessSaleItemId, true, healthy, defective, defectiveUnitCost, line.ProductUnitBarcodes, defectiveBarcodes, movement, cancellationToken);
                     else
+                    {
                         await _productUnitService.MintAsync(product, healthy, UnitOrigin.None, movement, cancellationToken);
+                        await _productUnitService.MintAsync(product, defective,
+                            UnitOrigin.Quarantined(null, null, UnitCustodyReasonEnum.CUSTOMER_RETURN, defectiveUnitCost), movement, cancellationToken);
+                    }
 
                     if (healthy > 0)
                         await _inventoryCostingService.RecordSaleReturnRestockAsync(product, healthy, effect.UnitCost, unitLine ?? excessLine, now, cancellationToken);
@@ -254,12 +271,11 @@ namespace Application.Features.SaleReturn.Commands
             saleReturn.UpdatedAt = now;
 
             var sale = saleReturn.Sale!;
-            sale.Status = _saleReturnCalculationService.RecomputeSaleStatus(sale);
             sale.UpdatedAt = now;
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            res.Data = await SaleReturnDetailReader.ReadAsync(_context, _saleReturnCalculationService, saleReturn.Id, cancellationToken);
+            res.Data = await SaleReturnDetailReader.ReadAsync(_context, _saleReturnCalculationService, _objectStorageService, saleReturn.Id, cancellationToken);
             res.Message = "اجرای مرحله با موفقیت ثبت شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;

@@ -1,5 +1,7 @@
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.SaleReturn;
+using Application.Common.Contracts.Storage;
+using Application.Common.Documents;
 using Application.Common.Enums;
 using Application.Common.Queries;
 using Application.Features.SaleReturn.Dtos;
@@ -20,6 +22,7 @@ public static class SaleReturnDetailReader
     public static async Task<SaleReturnDetailDto> ReadAsync(
         IWMSDbContext context,
         ISaleReturnCalculationService calc,
+        IObjectStorageService storage,
         int saleReturnId,
         CancellationToken cancellationToken)
     {
@@ -38,6 +41,18 @@ public static class SaleReturnDetailReader
             ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
         // checked, so a bad row fails loudly instead of wrapping into a plausible-looking huge number.
+        // "This return is what last put it there": a unit can be quarantined, released, sold and brought back again on another return.
+        var quarantinedQuantity = await context.ProductUnits.AsNoTracking()
+            .Where(u => u.Status == Domain.Enums.ProductUnitStatusEnum.QUARANTINED && u.CustodyReason == Domain.Enums.UnitCustodyReasonEnum.CUSTOMER_RETURN)
+            .Where(u => context.ProductUnitMovements
+                .Where(m => m.ProductUnitId == u.Id && m.ToStatus == Domain.Enums.ProductUnitStatusEnum.QUARANTINED)
+                .OrderByDescending(m => m.Id)
+                .Select(m => m.DocumentKind == Domain.Enums.DocumentKindEnum.SALE_RETURN && m.DocumentId == saleReturn.Id)
+                .FirstOrDefault())
+            .CountAsync(cancellationToken);
+
+        var attachments = await DocumentAttachmentWriter.ReadAsync(context, storage, Domain.Enums.DocumentKindEnum.SALE_RETURN, saleReturn.Id, cancellationToken);
+
         var totalAmount = checked((ulong)saleReturn.Claims.Sum(c => checked((long)c.Quantity * (long)c.UnitPrice)));
 
         return new SaleReturnDetailDto
@@ -65,6 +80,8 @@ public static class SaleReturnDetailReader
             CanReject = calc.CanPerform(saleReturn, ReturnLifecycleActionEnum.REJECT),
             CanReopen = calc.CanPerform(saleReturn, ReturnLifecycleActionEnum.REOPEN),
             Claims = [.. saleReturn.Claims.Select(c => c.ToDto())],
+            Attachments = attachments,
+            QuarantinedQuantity = quarantinedQuantity,
         };
     }
 }

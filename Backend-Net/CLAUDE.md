@@ -1726,6 +1726,129 @@ from the old closed-`DecisionType` return model. API: `docs/api-guide.fa.md` §1
 - Tests: `UndefinedMoneyMethod_IsInvalid` on both validator test classes; three tests that used `STORE_CREDIT` as an
   arbitrary method now use `ON_ACCOUNT`.
 
+**Frontend requests, first pass (2026-09-27).** From `docs/frontend-requests.fa.md`: sections 1, 2, 5, 6 and sale items 6, 8, 9
+of section 3. Sale items 5, 7, 10 and all of section 4 (units page) are still open and waiting on a design talk with the user,
+in particular 4.4's RELEASE/SCRAP on purchase-receiving quarantine and 3.10 (customer-return defects to quarantine). API:
+`docs/api-guide.fa.md` (the 2026-09-27 table in section 16 lists everything).
+
+- **Section 1** re-applies what the frontend had written straight into the backend in `868fe99` and then reverted: optional
+  postal code (customer + supplier), optional supplier contact person ("one half given => both"), driver fields stored as `""`
+  instead of failing the NOT NULL insert, and `PermissionEnum.ProductUnitManage = 172` (nothing guards with it yet).
+- **`PartyNationalId` -> `PartyPhoneNumber`** on both return goods rounds (entity, command, history DTO), optional
+  `IsMobileNumber`. Migration `20260927080827_rename-return-party-national-id-to-phone-number` (two `RenameColumn`s).
+  **Generated, not applied.**
+- `GetSaleList` gained `CustomerId` and `Statuses`. Both `PendingEffectDto`s gained `ReturnDate`, `PurchaseId`/`SaleId`,
+  `InvoiceNumber` and the party name; their product fields now name the effect's own product (a replacement can be another item)
+  instead of the claim's.
+- **Return attachments** reuse `DocumentAttachment` with `DocumentKindEnum.PURCHASE_RETURN`/`SALE_RETURN`:
+  `Update{Purchase,Sale}ReturnAttachmentsCommand` (wholesale, any status, `*ReturnCreate` permission) and `Attachments` on both
+  detail DTOs. `DocumentAttachmentWriter.ReadAsync` is now the one read path for all four document kinds. Since every sale-return
+  write answers with the detail document, all eight sale-return write handlers and `GetSaleReturnDetailQuery` now take
+  `IObjectStorageService` (the purchase side already did).
+- **`GetPurchaseReturnPdf`** (`Invoice/GetPurchaseReturnPdf`, `InvoicePrint`): the shared invoice layout, one line per claim,
+  decisions summarised per effect kind in the notes, "paid" = applied MONEY_IN and "balance" = pending MONEY_IN. Printed for every
+  purchase return. `ReturnProblemEnum`/`ReturnPaymentMethodEnum` gained Persian `[Description]`s for it (the frontend's labels).
+  For the record: the endpoint removed on 2026-09-11 was `GetPurchaseInvoicePdf` (the purchase invoice), not this one; the
+  api-guide still documented it and now says it does not exist.
+- **`GetScopePerformance`** (`Report/GetScopePerformance`, `ReportScopeEnum` ME/TEAM/DEPARTMENT): counts and invoice totals only,
+  never revenue/cost. No `[HasPermission]` (listed in the coverage test's `AuthenticatedOnly`); TEAM/DEPARTMENT are gated in the
+  handler through `IOrgRoleService.GetRoleAsync`, and the team/department is always the caller's own. Today's membership, active
+  users only, soft-deleted documents excluded (the org-wide `GetSaleReport`/`GetPurchaseReport` do *not* filter `IsActive` - a
+  deleted proforma that carried an invoice date still counts there; not changed here). `GetSales/SupplyPerformanceByEmployee`
+  gained `TeamId`/`DepartmentId`.
+- **Section 4 item 6 (Stock 87 vs 88 IN_STOCK units, product 53):** every `Product.Stock` write was re-read against its unit
+  move and none is asymmetric; the database in the local `appsettings.json` (`pasargad_`) is empty, so the record's history could
+  not be checked from here. Unresolved.
+- Tests: `Integration/FrontendRequestsTests.cs` (14). Suite 731/734, the 3 documented environmental failures.
+
+**Frontend requests, second pass: sale items 5, 7, 10 (2026-09-27).** Still open from that doc: section 4 (units page) and
+4.4's release/scrap of *purchase-receiving* quarantine (EXCESS/UNLISTED) - under discussion with the user, not decided.
+
+- **Item 5.** `SaleItemDto` gained `ClaimableQuantity`/`ClaimableExcessQuantity` (the exact numbers `CreateSaleReturn` checks,
+  via `ISaleReturnCalculationService`), `ProductCode`, `Unit`. Computed in `SaleDetailReader.FillClaimCapsAsync`, so the detail
+  query and every sale write answer with them; `SaleDetailReader.ReadAsync` and its eight callers now take the calc service.
+- **Item 7 - `SalesStatusEnum.RETURNED` removed (6, never reuse).** This reverses the 2026-08-10 decision (made in the old
+  `DecisionType` model) that return activity flips a sale to RETURNED. In the effect model "settled" means *any* decision, a
+  replacement included, so fully swapped sales read as returned, and `RecomputeSaleStatus` returned the current status when the
+  condition stopped holding, so RETURNED never came back off. `RecomputeSaleStatus` and its four call sites are gone; a sale's
+  status comes from shipping, manual delivery and cancel only. `SaleDto`/`SaleListDto` gained `ReturnCount`/`HasOpenReturn`.
+  Migration `20260927094346_remove-sale-returned-status` (data only: 6 -> SHIPPED, or PARTIALLY_DELIVERED when a line is not
+  fully shipped; DELIVERED is not recoverable). **Generated, not applied.**
+- **Item 10 - defective customer returns are quarantined, not scrapped.** The defective part of a sale-return GOODS_IN becomes
+  `QUARANTINED` with `UnitCustodyReasonEnum.CUSTOMER_RETURN = 4` and `QuarantineCost` = the same per-unit value a healthy restock
+  uses (`UnitCostOrAverageAsync`), recorded as ledger event `SALE_RETURN_QUARANTINED = 23` (off-pool in). On a line
+  (`RestoreAsync`, now `defectiveCount`/`defectiveUnitCost`) the customer's own SOLD units move; with no line (OFF_ORDER) the
+  defective part is minted into quarantine - it used to vanish without a unit. The unit keeps its `PurchaseItemId`.
+  - **Way out:** `PurchaseReturnQuarantine.For` gives an ON_ORDER purchase claim `IncludeCustomerReturns`, so its quarantine is
+    the line's ON_ORDER *and* CUSTOMER_RETURN units (`UnitSelection.IncludeCustomerReturns`, honoured by `FilterFor` and the
+    release-promise count in `PurchaseReturn/AddClaimResolutionCommand`). goodsOut with source QUARANTINED sends them back to
+    the supplier; goodsRelease/goodsScrap work too. Minting a damaged replacement still uses ON_ORDER. `UnitCustodyReasonEnum`'s
+    comment now names this as its second allowed reader.
+  - **Sale report fix that came with it:** `GetSaleReportQuery` now reads `SALE_RETURN_RESTOCK` and `SALE_RETURN_QUARANTINED` as
+    cost-of-goods-sold reversals. It never reversed COGS when goods came back, so a returned-and-resold unit was costed twice and
+    a returned-and-scrapped unit counted as COGS *and* scrap loss. The 2026-08-28 costing design left restock out on purpose,
+    but that reasoning was about not double-counting *revenue* (refunds come from MONEY_OUT) - COGS was never considered. The
+    report is computed from the ledger, so past periods change too.
+  - Visibility: `SaleReturnDetailDto.QuarantinedQuantity` (units this return last put in quarantine, via the latest
+    `ProductUnitMovement` into QUARANTINED) and `PurchaseReceivingItemInfoDto.QuarantinedCustomerReturnQuantity`.
+  - **Not built:** release/scrap of customer-return quarantine *without* a purchase return (frontend section 4.4,
+    `ApplyProductUnitAction`). Until then a unit with no purchase line (OFF_ORDER) has no way out of quarantine.
+  - Old units already SCRAPPED by earlier sale returns stay SCRAPPED; no data migration. No schema change for item 10.
+- Tests: `Integration/CustomerReturnQuarantineTests.cs` (5: quarantine on the line at its cost, back to the supplier with the
+  off-pool balance closing at 0, scrap as one loss not two, healthy return + resale costed once, off-order defect minted into
+  quarantine), one more in `FrontendRequestsTests`; four `RecomputeSaleStatus` unit tests deleted and three RETURNED assertions
+  updated.
+
+**Quarantine as a waiting room: source at decision, reservations, manual actions, units page (2026-09-27, third pass).** Agreed
+with the user step by step. The model: goods arrive; the shelf takes healthy ordered goods, everything else waits in quarantine
+labelled paid/unpaid (QuarantineCost); from there each unit gets one of three physical fates - back to the supplier (purchase
+return only: counterparty and money), onto the shelf (release), or scrap - and, for unpaid goods only, a separate money decision
+(AcceptPurchaseExcess). API: `docs/api-guide.fa.md` sections 7, 9, 10, 15 and the 2026-09-27 table in 16.
+
+- **Phase 1 - the source is stated with the decision ("option B").** `PurchaseReturnEffect.Source` (`ProductUnitStatusEnum?`);
+  purchase `goodsOut[].source` required (IN_STOCK/QUARANTINED), `goodsScrap[].source` optional (default QUARANTINED),
+  `goodsRelease` always QUARANTINED, `goodsIn` and every sale-return goods effect refuse it (validators). `ExecuteGoodsRound`
+  takes the effect's source; a different `rounds[].source` is a 400; only a GOODS_OUT decided before the column still states it
+  at execution. Migration `purchase-return-effect-source` backfills GOODS_RELEASE rows with 9.
+  - **One reservation definition:** `IPurchaseReturnCalculationService.GetReservedQuarantineQuantity(selection, productId,
+    purchaseId, openReturns)` = outstanding EXCESS/UNLISTED claim quantity (claims reserve at creation) + remaining quantity of
+    pending quarantine-taking effects not under such a claim (`PurchaseReturnQuarantine.IsReservedByClaim`). Effects with no source
+    count as quarantine (the careful reading). Read by the decision-time check (`EnsureQuarantineCoversAsync`, now for every
+    quarantine effect, not just release), `CreatePurchaseReturn`'s off-order quota, `AcceptPurchaseExcess`,
+    `GetPurchaseReceivingInfo` (new `FreeQuarantinedOnOrderQuantity`, `QuarantinedWarehouseHoldQuantity`) and
+    `ApplyProductUnitAction`. Shelf stock is never reserved.
+  - `UnitSelection.ToFilter(productId)` is now the one unit filter (the service's `FilterFor` delegates to it) and
+    `IncludeLineHolds` (renamed from `IncludeCustomerReturns`) makes an ON_ORDER claim's quarantine ON_ORDER + CUSTOMER_RETURN +
+    **WAREHOUSE_HOLD = 5** units of its line.
+- **Phase 2 - `ApplyProductUnitAction`** (`POST api/Product/ApplyProductUnitAction`, `ProductUnitManage`): QUARANTINE (IN_STOCK ->
+  QUARANTINED/WAREHOUSE_HOLD at the running average, ledger `STOCK_QUARANTINED = 24`, movement `STOCK_QUARANTINED = 14`), RELEASE,
+  SCRAP (from shelf at the average, from quarantine at QuarantineCost). All or nothing; refuses reserved units (by group count, not
+  by particular unit); note required for scrap, reason OTHER, and any exit of unpaid (EXCESS/UNLISTED) goods.
+  `ProductUnitService.ApplyActionAsync` does the status change so the service stays the only writer of unit status.
+  `ProductUnitMovement.ActionReason` (`UnitActionReasonEnum`) + `ProductUnitActionEnum`. The quarantine ledger exits
+  (`RecordQuarantineReleasedAsync`, `RecordQuarantineScrappedAsync`, `RecordStockScrappedAsync`) take a nullable claim id.
+  - **`AcceptPurchaseExcess` is the money step only ("option A").** Units stay QUARANTINED, retagged ON_ORDER on the supplement
+    line with QuarantineCost = net line price; Stock does not move; `PURCHASE_EXCESS_ACCEPTED` is now an off-pool row
+    (net x qty - old held value), so the purchase report still counts the price. Release onto the shelf is a separate action.
+  - Migration `product-unit-action-reason`.
+- **Phase 3 - units page (frontend-requests section 4, items 1-3).** `ProductUnit` gained `PrintCount`/`FirstPrintedAt`/
+  `LastPrintedAt`/`LastPrintedByUserId` (`MarkProductUnitsPrinted`, `ProductUnitView`, no movement row) and
+  `QuarantinedAt`/`QuarantineDocumentKind`/`QuarantineDocumentId`, stamped centrally in `ProductUnitService.RecordAsync` on every
+  move *into* quarantine (denormalised from the movement rows on purpose: the list sorts on it). `GetProductUnitList` gained
+  search/statuses/custody/labelState/supplier/customer/purchase/sale/date filters, three sorts, `Take` capped at 200 and the new
+  fields; `GetProductUnitSummary`. Migration `product-unit-print-and-quarantine-stamp` backfills the quarantine stamp from movements.
+- **Still open from section 4:** item 6 (Stock vs IN_STOCK mismatch, product 53 on the frontend's test server - code reviewed,
+  no asymmetric path found; one hole is that `Product.Stock` has no concurrency token, so two concurrent writes can lose an
+  update while units stay right). Item 8 was built afterwards:
+- **Shelf location (section 4 item 8), agreed per unit.** `ProductUnit.BinLocation` (optional, `nvarchar(50)`), normalised by
+  `BinLocations.Normalize` (upper case, whitespace removed, blank = null) on write and on search; `SetProductUnitLocationCommand`
+  (`ProductUnitManage`, IN_STOCK/QUARANTINED only, no movement row); cleared centrally in `ProductUnitService.RecordAsync` whenever
+  a unit's status leaves IN_STOCK/QUARANTINED; `GetProductUnitList.BinLocation` is a prefix filter. Free text on purpose - a
+  shelf table can come later without discarding this. Migration `product-unit-bin-location`, not applied.
+- **Verified:** all migrations from scratch apply to a throwaway local database (dropped afterwards). Tests:
+  `QuarantineReservationTests` (4), `ApplyProductUnitActionTests` (7), `ProductUnitPageTests` (3), `PurchaseExcessAcceptedTests`
+  rewritten to the new behaviour, the off-order customer-return test now scraps its unit. **None of the new migrations is applied.**
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
 - ~~`PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK.~~ **Fixed 2026-09-20** - see the installment-sales entry above: both ids are `int`, both relationships are configured explicitly, and the shadow FK is gone.

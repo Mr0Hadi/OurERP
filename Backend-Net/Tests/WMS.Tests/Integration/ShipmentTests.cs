@@ -140,14 +140,14 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var s = Seed.ShippedSale(scope.Context, orderedQuantity: 5, shippedQuantity: 3, stock: 10);
 
-            await new SR.CreateSaleReturnCommandHandler(scope.Db, scope.SaleReturnRepository, scope.SaleReturnCalculation, scope.UnitOfWork)
+            await new SR.CreateSaleReturnCommandHandler(scope.Db, scope.SaleReturnRepository, scope.SaleReturnCalculation, FakeObjectStorage.Instance, scope.UnitOfWork)
                 .Handle(new SR.CreateSaleReturnCommand
                 {
                     SaleId = s.Sale.Id,
                     Claims = new() { new CreateReturnClaimDto { Scope = ReturnClaimScopeEnum.ON_ORDER, OrderLineId = s.Item.Id, ProductId = s.Product.Id, UnitPrice = s.Item.UnitPrice, Quantity = 1, Problem = ReturnProblemEnum.DEFECTIVE } },
                 }, CancellationToken.None);
 
-            await new SR.AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.InventoryCostingService, scope.UnitOfWork)
+            await new SR.AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork)
                 .Handle(new SR.AddClaimResolutionCommand { ClaimId = scope.Context.SaleReturnClaims.Single().Id, Composition = new EffectCompositionDto { Quantity = 1, GoodsOut = new() { new GoodsEffectDto { Quantity = 1, UnitPrice = 0 } } } }, CancellationToken.None);
 
             await Mediator(scope).Send(new DispatchShipmentCommand

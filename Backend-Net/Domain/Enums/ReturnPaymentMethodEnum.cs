@@ -1,3 +1,5 @@
+using System.ComponentModel;
+
 namespace Domain.Enums
 {
     /// <summary>
@@ -9,10 +11,15 @@ namespace Domain.Enums
     /// </summary>
     public enum ReturnPaymentMethodEnum
     {
+        [Description("نقدی")]
         CASH = 0,
+        [Description("به حساب")]
         ON_ACCOUNT = 1,
+        [Description("چک")]
         CHECK = 2,
+        [Description("انتقال بانکی")]
         TRANSFER = 3,
+        [Description("ترکیبی")]
         MIXED = 4,
     }
 }
