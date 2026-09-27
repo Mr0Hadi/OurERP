@@ -5,7 +5,7 @@ import { Button } from "@/shared/components/ui/button";
 import DataTable from "@/shared/components/table/DataTable";
 import SaleStatusBadge from "@/shared/components/status/SaleStatusBadge";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import {
   isReturnRow,
   queueRowKey,
@@ -88,7 +88,7 @@ const ShippingTable = ({
             size="sm"
             onClick={() =>
               navigate(
-                ROUTES.WAREHOUSE_SHIPPING_DETAIL.replace(":id", row.original.id),
+                routeWithId(ROUTES.WAREHOUSE_SHIPPING_DETAIL, row.original.id),
               )
             }
             className="gap-1"

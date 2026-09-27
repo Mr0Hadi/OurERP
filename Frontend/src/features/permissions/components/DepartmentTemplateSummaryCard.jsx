@@ -5,7 +5,7 @@ import { LayoutTemplate, Pencil } from "lucide-react";
 import FormSectionCard from "@/shared/components/forms/FormSectionCard";
 import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 
 import { useDepartmentPermissionTemplateQuery } from "../services/queries";
@@ -34,7 +34,7 @@ export default function DepartmentTemplateSummaryCard({ departmentId }) {
       contentClassName="px-6 py-4"
       action={
         <Button asChild variant="outline" size="sm" className="gap-1.5">
-          <Link to={ROUTES.ACCESS_TEMPLATES_DETAIL.replace(":id", departmentId)}>
+          <Link to={routeWithId(ROUTES.ACCESS_TEMPLATES_DETAIL, departmentId)}>
             <Pencil className="size-3.5" />
             {can("PermissionManage") ? "ویرایش" : "مشاهده"}
           </Link>

@@ -1,9 +1,7 @@
-import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Save, X } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import { useHeaderStore } from "@/shared/store/headerStore";
 import { ROUTES } from "@/shared/constants/routes";
 import { useFormDraft } from "@/shared/hooks/useFormDraft";
 
@@ -12,6 +10,7 @@ import { useEmployeeForm } from "../hooks/useEmployeeForm";
 import EmployeeIdentityForm from "../components/forms/EmployeeIdentityForm";
 import EmployeeCredentialsForm from "../components/forms/EmployeeCredentialsForm";
 import EmployeeOrgForm from "../components/forms/EmployeeOrgForm";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 const DRAFT_KEY = "employee:new";
 
@@ -40,15 +39,10 @@ export default function EmployeeNewPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const createMutation = useCreateUserMutation();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   const { draft, saveDraft, clearDraft } = useFormDraft(DRAFT_KEY);
 
-  useEffect(() => {
-    setHeader({ title: "ثبت کارمند جدید", showBack: true });
-    return () => clearHeader();
-  }, [setHeader, clearHeader]);
+  usePageHeader({ title: "ثبت کارمند جدید", showBack: true });
 
   const { formMethods, buildPayload } = useEmployeeForm(
     null,

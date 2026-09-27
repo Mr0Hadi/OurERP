@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Link2, Trash2 } from "lucide-react";
 
@@ -15,7 +14,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/shared/components/ui/alert-dialog";
-import { useHeaderStore } from "@/shared/store/headerStore";
 
 import {
   usePurchaseReturnQuery,
@@ -49,6 +47,7 @@ import {
   claimQuarantinedQuantity,
   claimReceivingReport,
 } from "@/shared/domain/returns/receivingReport";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 /**
  * جزئیات یک مرجوعی — یک ستون، به ترتیبِ کاری که کاربر انجام می‌دهد:
@@ -201,8 +200,6 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
 export default function PurchaseReturnDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   const {
     data: purchaseReturn,
@@ -212,17 +209,14 @@ export default function PurchaseReturnDetailPage() {
     refetch: retryLoad,
   } = usePurchaseReturnQuery(Number(id));
 
-  useEffect(() => {
-    setHeader({
-      title: isLoading
-        ? "در حال بارگذاری..."
-        : purchaseReturn
-          ? "جزئیات مرجوعی"
-          : "خطا",
-      showBack: true,
-    });
-    return () => clearHeader();
-  }, [navigate, setHeader, clearHeader, purchaseReturn, isLoading]);
+  usePageHeader({
+    title: isLoading
+      ? "در حال بارگذاری..."
+      : purchaseReturn
+        ? "جزئیات مرجوعی"
+        : "خطا",
+    showBack: true,
+  });
 
   if (isLoading) return <PurchaseReturnDetailLoading />;
 

@@ -4,7 +4,7 @@ import { Search } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import DataTable from "@/shared/components/table/DataTable";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import {
   SALES_RETURN_PROBLEM_LABELS,
   SALES_RETURN_PROBLEM_STYLES,
@@ -133,7 +133,7 @@ const SalesReturnTable = ({
             size="sm"
             onClick={() =>
               navigate(
-                ROUTES.SALES_RETURNS_DETAIL.replace(":id", row.original.id),
+                routeWithId(ROUTES.SALES_RETURNS_DETAIL, row.original.id),
               )
             }
           >

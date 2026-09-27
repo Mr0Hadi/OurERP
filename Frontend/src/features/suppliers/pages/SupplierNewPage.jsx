@@ -1,27 +1,21 @@
-import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Save, X } from "lucide-react";
 import { useCreateSupplierMutation } from "../services/mutations";
 import { useSupplierForm } from "../hooks/useSupplierForm";
-import { useHeaderStore } from "@/shared/store/headerStore";
 import { Button } from "@/shared/components/ui/button";
 import SupplierIdentityForm from "../components/forms/SupplierIdentityForm";
 import SupplierFinanceForm from "../components/forms/SupplierFinanceForm";
 import SupplierAddressForm from "../components/forms/SupplierAddressForm";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 export default function SupplierNewPage() {
   const navigate = useNavigate();
   const createMutation = useCreateSupplierMutation();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  useEffect(() => {
-    setHeader({
-      title: "اضافه کردن تامین کننده جدید",
-      showBack: true,
-    });
-    return () => clearHeader();
-  }, [navigate, setHeader, clearHeader]);
+  usePageHeader({
+    title: "اضافه کردن تامین کننده جدید",
+    showBack: true,
+  });
 
 const {
     formMethods,

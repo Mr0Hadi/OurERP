@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { fetchPurchaseReturnPendingEffects } from "@/features/warehouse/receiving/services/api-v1";
 import {
   fetchSaleReturnPendingEffects,
@@ -47,7 +47,7 @@ const QUEUES = {
       side: "sale",
       directions: [GOODS_IN],
       label: "برگشتی از مشتری",
-      link: (row) => ROUTES.WAREHOUSE_RECEIVING_RETURN_DETAIL.replace(":id", row.returnId),
+      link: (row) => routeWithId(ROUTES.WAREHOUSE_RECEIVING_RETURN_DETAIL, row.returnId),
     },
     action: "ثبت دریافت",
     awaitingStatuses: RECEIVING_AWAITING_STATUSES,
@@ -58,7 +58,7 @@ const QUEUES = {
       side: "purchase",
       directions: [GOODS_OUT, GOODS_RELEASE, GOODS_SCRAP],
       label: "عودت به تامین‌کننده",
-      link: (row) => ROUTES.WAREHOUSE_SHIPPING_RETURN_DETAIL.replace(":id", row.returnId),
+      link: (row) => routeWithId(ROUTES.WAREHOUSE_SHIPPING_RETURN_DETAIL, row.returnId),
     },
     action: "ثبت ارسال",
     awaitingStatuses: SHIPPING_AWAITING_STATUSES,

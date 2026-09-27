@@ -12,7 +12,7 @@ import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
 import { Label } from "@/shared/components/ui/label";
 import { usePartyStatementQuery } from "../services/queries";
 import LedgerBalanceBadge from "./LedgerBalanceBadge";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { formatNumber } from "@/shared/lib/numberFormat";
 
@@ -39,13 +39,13 @@ function BalanceText({ value }) {
 function sourceLinkOf(entry) {
   if (entry.saleId) {
     return {
-      to: ROUTES.SALES_DETAIL.replace(":id", entry.saleId),
+      to: routeWithId(ROUTES.SALES_DETAIL, entry.saleId),
       label: "فاکتور فروش",
     };
   }
   if (entry.purchaseId) {
     return {
-      to: ROUTES.PURCHASES_DETAIL.replace(":id", entry.purchaseId),
+      to: routeWithId(ROUTES.PURCHASES_DETAIL, entry.purchaseId),
       label: "فاکتور خرید",
     };
   }

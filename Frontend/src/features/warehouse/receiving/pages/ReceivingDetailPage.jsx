@@ -23,7 +23,6 @@ import FileUploadList from "@/shared/components/files/FileUploadList";
 import RemoteImage from "@/shared/components/files/RemoteImage";
 import { useFileUploadList } from "@/shared/hooks/useFileUploadList";
 import { ImageFolderEnum } from "@/shared/domain/enums/imageFolder";
-import { useHeaderStore } from "@/shared/store/headerStore";
 import {
   usePurchaseReceivingInfoQuery,
   usePurchaseReturnPendingEffectsQuery,
@@ -42,6 +41,7 @@ import GoodsRoundItemsSection from "@/shared/components/returns/GoodsRoundItemsS
 import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -389,8 +389,6 @@ export default function ReceivingDetailPage() {
     ? Number(searchParams.get("returnId"))
     : null;
   const navigate = useNavigate();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   const {
     data: receivingInfo,
@@ -400,26 +398,16 @@ export default function ReceivingDetailPage() {
     refetch: retryLoad,
   } = usePurchaseReceivingInfoQuery(Number(id));
 
-  useEffect(() => {
-    setHeader({
-      title: isLoading
-        ? "در حال بارگذاری..."
-        : receivingInfo
-          ? replacementReturnId != null
-            ? "دریافت کالای جایگزین"
-            : "دریافت کالا"
-          : "خطا",
-      showBack: true,
-    });
-    return () => clearHeader();
-  }, [
-    navigate,
-    setHeader,
-    clearHeader,
-    receivingInfo,
-    isLoading,
-    replacementReturnId,
-  ]);
+  usePageHeader({
+    title: isLoading
+      ? "در حال بارگذاری..."
+      : receivingInfo
+        ? replacementReturnId != null
+          ? "دریافت کالای جایگزین"
+          : "دریافت کالا"
+        : "خطا",
+    showBack: true,
+  });
 
   if (isLoading) return <WarehouseFormSkeleton />;
 

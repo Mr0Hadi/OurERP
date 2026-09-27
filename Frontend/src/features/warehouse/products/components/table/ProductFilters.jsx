@@ -15,7 +15,7 @@ import {
 import BarcodeScanField from "@/shared/components/barcode/BarcodeScanField";
 import { useProductFilterStore } from "../../store/productFilterStore";
 import { fetchProductByBarcode } from "../../services/queries";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { useProductCategoriesQuery } from "@/features/warehouse/categories/services/queries";
 
 // ─── ثابت‌ها (خارج از کامپوننت تا در هر رندر بازسازی نشوند) ─────────────────
@@ -176,7 +176,7 @@ const ProductFilters = () => {
         toast.error(`کالایی با کد «${code}» پیدا نشد`);
         return;
       }
-      navigate(ROUTES.WAREHOUSE_PRODUCTS_DETAIL.replace(":id", product.id));
+      navigate(routeWithId(ROUTES.WAREHOUSE_PRODUCTS_DETAIL, product.id));
     } catch {
       toast.error("خطا در جست‌وجوی بارکد");
     } finally {

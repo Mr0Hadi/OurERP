@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Save, X, Trash2 } from "lucide-react";
 import {
@@ -7,7 +7,6 @@ import {
 } from "../services/mutations";
 import { useSupplierQuery } from "../services/queries";
 import { useSupplierForm } from "../hooks/useSupplierForm";
-import { useHeaderStore } from "@/shared/store/headerStore";
 import { Button } from "@/shared/components/ui/button";
 import {
   AlertDialog,
@@ -31,6 +30,7 @@ import {
   partyBalanceOf,
 } from "@/features/partyAccount/domain/partyBalance";
 import { usePermission } from "@/features/auth/hooks/usePermission";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 function SupplierDetailForm({ supplierData }) {
   const navigate = useNavigate();
@@ -191,8 +191,6 @@ const {
 export default function SupplierDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   const {
     data: supplier,
@@ -202,19 +200,16 @@ export default function SupplierDetailPage() {
     refetch: retryLoad,
   } = useSupplierQuery(id);
 
-  useEffect(() => {
-    setHeader({
-      title: isLoading
-        ? "در حال بارگذاری..."
-        : supplier
-        ? `ویرایش تامین‌کننده: ${
-            supplier.companyName || `${supplier.firstName} ${supplier.lastName}`
-          }`
-        : "خطا",
-      showBack: true,
-    });
-    return () => clearHeader();
-  }, [navigate, setHeader, clearHeader, supplier, isLoading]);
+  usePageHeader({
+    title: isLoading
+      ? "در حال بارگذاری..."
+      : supplier
+      ? `ویرایش تامین‌کننده: ${
+          supplier.companyName || `${supplier.firstName} ${supplier.lastName}`
+        }`
+      : "خطا",
+    showBack: true,
+  });
 
   if (isLoading) return <SupplierDetailLoading />;
 

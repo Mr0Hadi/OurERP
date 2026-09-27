@@ -14,7 +14,7 @@ import {
 } from "./api-v1";
 import { salesReturnKeys } from "./queryKeys";
 import { invalidateSalesEcosystem } from "../../orders/services/sharedInvalidation";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { idempotencyKeyFor } from "@/shared/services/api/contract";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
 
@@ -39,7 +39,7 @@ export const useCreateSalesReturnMutation = () => {
     onSuccess: (created) => {
       toast.success("درخواست مرجوعی ثبت شد؛ حالا می‌توانید برایش تصمیم بگیرید");
       invalidateSalesEcosystem(queryClient, created.saleId);
-      navigate(ROUTES.SALES_RETURNS_DETAIL.replace(":id", created.id));
+      navigate(routeWithId(ROUTES.SALES_RETURNS_DETAIL, created.id));
     },
     onError: (error) => toast.error(getErrorMessage(error, "خطا در ثبت مرجوعی")),
   });

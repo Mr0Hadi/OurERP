@@ -1,12 +1,11 @@
 import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/shared/components/ui/button";
 import DataTable from "@/shared/components/table/DataTable";
 import PaymentProgress from "@/shared/components/table/PaymentProgress";
 import PaymentTypeBadge from "@/shared/components/status/PaymentTypeBadge";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import PurchaseStatusBadge from "@/shared/components/status/PurchaseStatusBadge";
+import { detailsColumn } from "@/shared/components/table/columns";
 
 const PurchaseTable = ({
   data,
@@ -18,7 +17,6 @@ const PurchaseTable = ({
   sorting,
   onSortingChange,
 }) => {
-  const navigate = useNavigate();
 
   const columns = useMemo(
     () => [
@@ -71,24 +69,9 @@ const PurchaseTable = ({
           />
         ),
       },
-      {
-        id: "actions",
-        header: "جزئیات",
-        enableSorting: false,
-        cell: ({ row }) => (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              navigate(ROUTES.PURCHASES_DETAIL.replace(":id", row.original.id))
-            }
-          >
-            جزئیات بیشتر
-          </Button>
-        ),
-      },
+      detailsColumn((row) => routeWithId(ROUTES.PURCHASES_DETAIL, row.id)),
     ],
-    [navigate],
+    [],
   );
 
   return (

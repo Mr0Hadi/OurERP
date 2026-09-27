@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AlertCircle, CheckCircle, AlertTriangle, X } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -14,7 +14,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import { useHeaderStore } from "@/shared/store/headerStore";
 import {
   usePurchaseReturnQuery,
   usePurchaseForReturnQuery,
@@ -32,7 +31,8 @@ import GoodsRoundItemsSection from "@/shared/components/returns/GoodsRoundItemsS
 import GoodsRoundPartySection from "@/shared/components/returns/GoodsRoundPartySection";
 import GoodsRoundSummaryCard from "@/shared/components/returns/GoodsRoundSummaryCard";
 import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 const PURCHASE_SIDE = sideConfig(RETURN_SIDES.PURCHASE);
 
@@ -91,7 +91,7 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
   const navigate = useNavigate();
   const goodsRoundMutation = useExecuteGoodsRoundMutation(purchaseReturn.id);
   const backToReturn = () =>
-    navigate(ROUTES.PURCHASES_RETURNS_DETAIL.replace(":id", purchaseReturn.id));
+    navigate(routeWithId(ROUTES.PURCHASES_RETURNS_DETAIL, purchaseReturn.id));
 
   const lines = useMemo(
     () =>
@@ -310,8 +310,6 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
 export default function SupplierReturnDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   const {
     data: purchaseReturn,
@@ -319,13 +317,10 @@ export default function SupplierReturnDetailPage() {
     isError,
   } = usePurchaseReturnQuery(Number(id));
 
-  useEffect(() => {
-    setHeader({
-      title: isLoading ? "در حال بارگذاری..." : "کار انبار روی مرجوعی خرید",
-      showBack: true,
-    });
-    return () => clearHeader();
-  }, [setHeader, clearHeader, isLoading]);
+  usePageHeader({
+    title: isLoading ? "در حال بارگذاری..." : "کار انبار روی مرجوعی خرید",
+    showBack: true,
+  });
 
   if (isLoading) return <WarehouseFormSkeleton />;
 

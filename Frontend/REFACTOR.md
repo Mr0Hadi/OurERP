@@ -70,7 +70,18 @@
       نقشه‌های تکراری وضعیت→آیکن/رنگ در ۴ کارت و ۲ badge تکراری مرجوعی حذف شد؛
       badgeهای خرید/فروش/پرداخت از فیچرها به `shared/components/status` رفتند (انبار هم مصرفشان می‌کند).
       صفحه‌ی `/dev/ui` برای بررسی بصری.
-    - [ ] ۱.۳.۲ جدول/فیلتر/فرم‌های پایه و شکستن کامپوننت‌های بزرگ مشترک
+    - [x] ۱.۳.۲ صفحه‌های لیست و جدول‌ها:
+      - `CustomerTable`/`SupplierTable`/`ProductTable` (هر کدام ~۳۰۰ خط کپیِ `DataTable`) فقط تعریف ستون شدند.
+      - `ServerTable` (کوئری + خطا + overlay + صفحه‌بندی) و `ListPageLayout` (کارت/عنوان/دکمه‌ی ایجاد)؛
+        ۹ صفحه‌ی لیست از ~۷۰ خط به ~۲۵ خط رسیدند.
+      - ستونِ «جزئیات» (`detailsColumn`/`DetailsLink`) لینکِ واقعی است: باز کردن در تب جدید کار می‌کند؛
+        متن‌های «جزئیات بیشتر»/«مدیریت» یکی شد.
+      - `routeWithId` جای template string و `.replace(":id")` در ۳۷ جا.
+      - `usePageHeader` جای افکتِ تکراریِ `setHeader`/`clearHeader` در ۲۴ صفحه.
+      - `useSuppliersOptionsQuery`/`useCustomersOptionsQuery` برای dropdownها.
+      - تست در مرورگر با mock API محلی: لیست‌ها، صفحه‌بندی، لینک جزئیات، و `DetailErrorState` برای ۴۰۴
+        (پیامِ سرور، بدونِ retry).
+    - [ ] ۱.۳.۳ بقیه‌ی `shared/components` (فرم‌ها، فایل‌ها، نقشه، ...)
   - برای تست خطای شبکه: پیکربندی `ourerp-offline` در `.claude/launch.json` (API روی پورت بسته).
 - [ ] **۲. فیچرها** (هر کدام: کد مرده، شکستن فایل بزرگ، کامپوننت مشترک، کامنت، متن پیام‌ها، موارد بکند)
   - [ ] auth
@@ -110,9 +121,15 @@
 - `PurchasesNewPage` / `SaleNewPage` ساختار تقریباً یکسان دارند.
 - `PurchaseDetailForm` / `SaleDetailForm` هم الگوی یکسان دارند.
 
+### معماری
+- کارمندان/تیم‌ها/واحدها پاسخِ لیست را نرمال نمی‌کنند (`data.page.page`، `userList`)؛ باید از
+  `normalizeListResponse` رد شوند تا روی `ServerTable` بیایند.
+- `PurchasesNewPage`/`SaleNewPage`/`*ReturnNewPage` هنوز `setHeader` دستی با `onBack` پیچیده دارند (فاز purchases/sales).
+- جدول‌های دیگر (`PurchaseTable`، `SaleTable`، ...) هنوز `useMemo(() => [...], [])` دارند؛ ستون‌ها می‌توانند ثابتِ ماژول باشند.
+
 ### پرفرمنس
 - `navigationStore` (`previousPath`/`returnPath`) فقط در `PurchasesNewPage`/`SaleNewPage` برای برگشت استفاده می‌شود؛ احتمالاً با `useReturnTo` قابل جایگزینی است (فاز purchases/sales).
-- صفحه‌های ثبت خرید/فروش برای انتخاب کالا و طرف حساب ۲۰۰ ردیف را یک‌جا می‌گیرند
+- حدود ۱۳ جا (صفحه‌های ثبت، جزئیات انبار، مرجوعی، dropdownهای فیلتر) ۲۰۰ ردیفِ کالا/طرف حساب را یک‌جا می‌گیرند
   (`pageSize: 200`)؛ باید به جست‌وجوی سمت سرور تبدیل شود → درخواست بکند.
 - داده‌ی استان/شهر (۵۸۰۰ خط) در باندل JS است.
 

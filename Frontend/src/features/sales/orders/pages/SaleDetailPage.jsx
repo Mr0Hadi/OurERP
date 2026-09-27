@@ -1,7 +1,5 @@
-import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
-import { useHeaderStore } from "@/shared/store/headerStore";
 import { useSaleQuery } from "@/features/sales/orders/services/queries";
 import OrderFormSkeleton from "@/shared/components/skeletons/OrderFormSkeleton";
 import { ROUTES } from "@/shared/constants/routes";
@@ -9,13 +7,12 @@ import SaleDetailForm from "./SaleDetailForm";
 import SaleIssuedView from "./SaleIssuedView";
 import { isSaleProforma } from "@/shared/domain/enums/saleStatus";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 export default function SaleDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   const {
     data: sale,
@@ -25,19 +22,16 @@ export default function SaleDetailPage() {
     refetch: retryLoad,
   } = useSaleQuery(id);
 
-  useEffect(() => {
-    setHeader({
-      title: saleLoading
-        ? "در حال بارگذاری..."
-        : sale
-          ? isSaleProforma(sale.status)
-            ? "ویرایش پیش‌فاکتور فروش"
-            : `فاکتور فروش ${sale.invoiceNumber || ""}`.trim()
-          : "خطا",
-      showBack: true,
-    });
-    return () => clearHeader();
-  }, [setHeader, clearHeader, navigate, sale, saleLoading]);
+  usePageHeader({
+    title: saleLoading
+      ? "در حال بارگذاری..."
+      : sale
+        ? isSaleProforma(sale.status)
+          ? "ویرایش پیش‌فاکتور فروش"
+          : `فاکتور فروش ${sale.invoiceNumber || ""}`.trim()
+        : "خطا",
+    showBack: true,
+  });
 
   if (saleLoading) return <OrderFormSkeleton />;
 

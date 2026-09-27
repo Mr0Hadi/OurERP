@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AlertCircle, CheckCircle, AlertTriangle, X, Undo2 } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -15,7 +15,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import { useHeaderStore } from "@/shared/store/headerStore";
 import { useSalesReturnQuery } from "@/features/sales/returns/services/queries";
 import { useExecuteGoodsRoundMutation } from "@/features/sales/returns/services/mutations";
 import { useProductsQuery } from "@/features/warehouse/products/services/queries";
@@ -28,7 +27,8 @@ import GoodsRoundPartySection from "@/shared/components/returns/GoodsRoundPartyS
 import GoodsRoundSummaryCard from "@/shared/components/returns/GoodsRoundSummaryCard";
 
 import ReturnDetailLoading from "../components/forms/ReturnDetailLoading";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 const SALES_SIDE = sideConfig(RETURN_SIDES.SALES);
 
@@ -111,7 +111,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
             "این دور ثبت شد. باقیمانده هر وقت رسید، دوباره از همین صفحه ثبت کنید.",
           );
         }
-        navigate(ROUTES.SALES_RETURNS_DETAIL.replace(":id", salesReturn.id));
+        navigate(routeWithId(ROUTES.SALES_RETURNS_DETAIL, salesReturn.id));
       },
     });
   };
@@ -125,7 +125,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
         </p>
         <Button
           variant="outline"
-          onClick={() => navigate(ROUTES.SALES_RETURNS_DETAIL.replace(":id", salesReturn.id))}
+          onClick={() => navigate(routeWithId(ROUTES.SALES_RETURNS_DETAIL, salesReturn.id))}
         >
           بازگشت به لیست مرجوعی‌ها
         </Button>
@@ -201,7 +201,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate(ROUTES.SALES_RETURNS_DETAIL.replace(":id", salesReturn.id))}
+              onClick={() => navigate(routeWithId(ROUTES.SALES_RETURNS_DETAIL, salesReturn.id))}
               disabled={isBusy}
               className="gap-2"
             >
@@ -252,8 +252,6 @@ function ReceivingReturnDetailForm({ salesReturn }) {
 export default function ReceivingReturnDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   const {
     data: salesReturn,
@@ -261,17 +259,14 @@ export default function ReceivingReturnDetailPage() {
     isError,
   } = useSalesReturnQuery(Number(id));
 
-  useEffect(() => {
-    setHeader({
-      title: isLoading
-        ? "در حال بارگذاری..."
-        : salesReturn
-          ? "دریافت کالای مرجوعی"
-          : "خطا",
-      showBack: true,
-    });
-    return () => clearHeader();
-  }, [navigate, setHeader, clearHeader, salesReturn, isLoading]);
+  usePageHeader({
+    title: isLoading
+      ? "در حال بارگذاری..."
+      : salesReturn
+        ? "دریافت کالای مرجوعی"
+        : "خطا",
+    showBack: true,
+  });
 
   if (isLoading) return <ReturnDetailLoading />;
 

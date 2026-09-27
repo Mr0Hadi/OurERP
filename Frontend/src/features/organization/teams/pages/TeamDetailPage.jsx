@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+﻿import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Save, X, Trash2 } from "lucide-react";
 
@@ -13,8 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import { useHeaderStore } from "@/shared/store/headerStore";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { useFormDraft } from "@/shared/hooks/useFormDraft";
 import OrgDetailLoading from "../../components/OrgDetailLoading";
@@ -27,12 +26,13 @@ import TeamIdentityForm from "../components/forms/TeamIdentityForm";
 import TeamMembersCard from "../components/TeamMembersCard";
 import OrgLeadershipForm from "../../components/OrgLeadershipForm";
 import { useSyncLeadershipValues } from "../../hooks/useSyncLeadershipValues";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 function TeamDetailForm({ team }) {
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const selfPath = `/organization/teams/${team.id}`;
+  const selfPath = routeWithId(ROUTES.ORG_TEAMS_DETAIL, team.id);
 
   const updateMutation = useUpdateTeamMutation();
   const deleteMutation = useDeleteTeamMutation();
@@ -122,7 +122,7 @@ function TeamDetailForm({ team }) {
             <TeamMembersCard
               team={team}
               onOpenEmployee={(employeeId) =>
-                leaveWithDraft(`/employees/${employeeId}`)
+                leaveWithDraft(routeWithId(ROUTES.EMPLOYEES_DETAIL, employeeId))
               }
             />
           </div>
@@ -204,8 +204,6 @@ function TeamDetailForm({ team }) {
 export default function TeamDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   const {
     data: team,
@@ -215,17 +213,14 @@ export default function TeamDetailPage() {
     refetch: retryLoad,
   } = useTeamDetailQuery(id);
 
-  useEffect(() => {
-    setHeader({
-      title: isLoading
-        ? "در حال بارگذاری..."
-        : team
-          ? `ویرایش تیم: ${team.name}`
-          : "خطا",
-      showBack: true,
-    });
-    return () => clearHeader();
-  }, [setHeader, clearHeader, team, isLoading]);
+  usePageHeader({
+    title: isLoading
+      ? "در حال بارگذاری..."
+      : team
+        ? `ویرایش تیم: ${team.name}`
+        : "خطا",
+    showBack: true,
+  });
 
   if (isLoading) return <OrgDetailLoading />;
 

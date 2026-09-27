@@ -30,3 +30,20 @@ export const useCustomerQuery = (id) => {
     enabled: !!id,
   });
 };
+// ─── گزینه‌های انتخاب ───────────────────────────────────────────────────────
+
+const OPTIONS_PAGINATION = { pageIndex: 0, pageSize: 200 };
+const OPTIONS_SORTING = { id: "name", desc: false };
+const NO_FILTERS = {};
+const NO_CUSTOMERS = [];
+
+/**
+ * فهرستِ customerها برای dropdownِ فیلتر و فرم‌ها (حداکثر ۲۰۰ ردیف، مرتب بر اساس نام).
+ *
+ * TODO(بکند): با رشدِ داده، ۲۰۰ ردیفِ اول کافی نیست؛ جست‌وجوی سمتِ سرور لازم است
+ * (سندِ frontend-requests.fa.md).
+ */
+export function useCustomersOptionsQuery() {
+  const { data, isLoading } = useCustomersQuery(NO_FILTERS, OPTIONS_PAGINATION, OPTIONS_SORTING);
+  return { customers: data?.items ?? NO_CUSTOMERS, isLoading };
+}

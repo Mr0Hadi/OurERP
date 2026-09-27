@@ -14,7 +14,7 @@ import {
 } from "./api-v1";
 import { purchaseReturnKeys } from "./queryKeys";
 import { invalidatePurchaseEcosystem } from "../../orders/services/sharedInvalidation";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { idempotencyKeyFor } from "@/shared/services/api/contract";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
 
@@ -39,7 +39,7 @@ export const useCreatePurchaseReturnMutation = () => {
     onSuccess: (created) => {
       toast.success("درخواست مرجوعی ثبت شد؛ حالا می‌توانید برایش تصمیم بگیرید");
       invalidatePurchaseEcosystem(queryClient, created.purchaseId);
-      navigate(ROUTES.PURCHASES_RETURNS_DETAIL.replace(":id", created.id));
+      navigate(routeWithId(ROUTES.PURCHASES_RETURNS_DETAIL, created.id));
     },
     onError: (error) => toast.error(getErrorMessage(error, "خطا در ثبت مرجوعی")),
   });

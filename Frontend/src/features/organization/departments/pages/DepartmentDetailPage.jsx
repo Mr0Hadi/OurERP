@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Save, X, Trash2 } from "lucide-react";
 
@@ -13,8 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import { useHeaderStore } from "@/shared/store/headerStore";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { useFormDraft } from "@/shared/hooks/useFormDraft";
 import OrgDetailLoading from "../../components/OrgDetailLoading";
@@ -32,12 +31,13 @@ import DepartmentTeamsCard from "../components/DepartmentTeamsCard";
 import OrgLeadershipForm from "../../components/OrgLeadershipForm";
 import { useSyncLeadershipValues } from "../../hooks/useSyncLeadershipValues";
 import DepartmentTemplateSummaryCard from "@/features/permissions/components/DepartmentTemplateSummaryCard";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 function DepartmentDetailForm({ department }) {
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const selfPath = `/organization/departments/${department.id}`;
+  const selfPath = routeWithId(ROUTES.ORG_DEPARTMENTS_DETAIL, department.id);
 
   const updateMutation = useUpdateDepartmentMutation();
   const deleteMutation = useDeleteDepartmentMutation();
@@ -136,7 +136,7 @@ function DepartmentDetailForm({ department }) {
               departmentId={department.id}
               departmentName={department.name}
               onOpenTeam={(teamId) =>
-                leaveWithDraft(`/organization/teams/${teamId}`)
+                leaveWithDraft(routeWithId(ROUTES.ORG_TEAMS_DETAIL, teamId))
               }
               onCreateTeam={() =>
                 leaveWithDraft(ROUTES.ORG_TEAMS_NEW, {
@@ -225,8 +225,6 @@ function DepartmentDetailForm({ department }) {
 export default function DepartmentDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   const {
     data: department,
@@ -236,17 +234,14 @@ export default function DepartmentDetailPage() {
     refetch: retryLoad,
   } = useDepartmentDetailQuery(id);
 
-  useEffect(() => {
-    setHeader({
-      title: isLoading
-        ? "در حال بارگذاری..."
-        : department
-          ? `ویرایش واحد: ${department.name}`
-          : "خطا",
-      showBack: true,
-    });
-    return () => clearHeader();
-  }, [setHeader, clearHeader, department, isLoading]);
+  usePageHeader({
+    title: isLoading
+      ? "در حال بارگذاری..."
+      : department
+        ? `ویرایش واحد: ${department.name}`
+        : "خطا",
+    showBack: true,
+  });
 
   if (isLoading) return <OrgDetailLoading />;
 

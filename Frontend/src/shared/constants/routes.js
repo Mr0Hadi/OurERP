@@ -124,3 +124,13 @@ export const ROUTES = {
   AUTH: "/auth",
   LOGIN: "/auth/login",
 };
+
+/**
+ * آدرسِ یک رکورد از الگوی مسیر: `routeWithId(ROUTES.CUSTOMERS_DETAIL, 5)` → `/customers/5`.
+ *
+ * جای template stringهای دستی (`\`/customers/${id}\``) و `.replace(":id", …)` که
+ * با هر تغییرِ مسیر باید جداگانه پیدا و عوض می‌شدند.
+ */
+export function routeWithId(pattern, id) {
+  return pattern.replace(":id", encodeURIComponent(String(id)));
+}

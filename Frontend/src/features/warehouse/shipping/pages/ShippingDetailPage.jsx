@@ -13,7 +13,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import { useHeaderStore } from "@/shared/store/headerStore";
 import {
   useSaleForShippingQuery,
   useSaleReturnPendingEffectsQuery,
@@ -31,6 +30,7 @@ import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSk
 import { ROUTES } from "@/shared/constants/routes";
 import { isExcessAllowedFor } from "../domain/shippingVocabulary";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 const ALL_FILTERS = {};
 const PAGINATION = { pageIndex: 0, pageSize: 200 };
@@ -284,24 +284,19 @@ export default function ShippingDetailPage() {
     ? Number(searchParams.get("returnId"))
     : null;
   const navigate = useNavigate();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   const { data: sale, isLoading, isError, error: loadError, refetch: retryLoad } = useSaleForShippingQuery(Number(id));
 
-  useEffect(() => {
-    setHeader({
-      title: isLoading
-        ? "در حال بارگذاری..."
-        : sale
-          ? replacementReturnId != null
-            ? "ارسال کالای جایگزین"
-            : "ارسال کالا"
-          : "خطا",
-      showBack: true,
-    });
-    return () => clearHeader();
-  }, [navigate, setHeader, clearHeader, sale, isLoading, replacementReturnId]);
+  usePageHeader({
+    title: isLoading
+      ? "در حال بارگذاری..."
+      : sale
+        ? replacementReturnId != null
+          ? "ارسال کالای جایگزین"
+          : "ارسال کالا"
+        : "خطا",
+    showBack: true,
+  });
 
   if (isLoading)
     return (

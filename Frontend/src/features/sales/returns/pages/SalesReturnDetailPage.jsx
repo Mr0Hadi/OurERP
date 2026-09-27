@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Link2, Trash2 } from "lucide-react";
 
@@ -15,7 +14,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/shared/components/ui/alert-dialog";
-import { useHeaderStore } from "@/shared/store/headerStore";
 
 import {
   useSalesReturnQuery,
@@ -43,6 +41,7 @@ import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 /**
  * جزئیات یک مرجوعی — یک ستون، به ترتیبِ کاری که کاربر انجام می‌دهد:
@@ -204,8 +203,6 @@ function SalesReturnDetailContent({ salesReturn }) {
 export default function SalesReturnDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   const {
     data: salesReturn,
@@ -215,17 +212,14 @@ export default function SalesReturnDetailPage() {
     refetch: retryLoad,
   } = useSalesReturnQuery(Number(id));
 
-  useEffect(() => {
-    setHeader({
-      title: isLoading
-        ? "در حال بارگذاری..."
-        : salesReturn
-          ? "جزئیات مرجوعی"
-          : "خطا",
-      showBack: true,
-    });
-    return () => clearHeader();
-  }, [navigate, setHeader, clearHeader, salesReturn, isLoading]);
+  usePageHeader({
+    title: isLoading
+      ? "در حال بارگذاری..."
+      : salesReturn
+        ? "جزئیات مرجوعی"
+        : "خطا",
+    showBack: true,
+  });
 
   if (isLoading) return <SalesReturnDetailLoading />;
 

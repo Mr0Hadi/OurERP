@@ -1,9 +1,8 @@
 import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { ChevronLeft } from "lucide-react";
 
 import DataTable from "@/shared/components/table/DataTable";
-import { Button } from "@/shared/components/ui/button";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
+import { detailsColumn } from "@/shared/components/table/columns";
 
 const CountCell = ({ value, suffix }) => (
   <span className="text-sm">
@@ -19,7 +18,6 @@ export default function DepartmentTable({
   pageSize,
   onPaginationChange,
 }) {
-  const navigate = useNavigate();
 
   const columns = useMemo(
     () => [
@@ -58,24 +56,9 @@ export default function DepartmentTable({
         header: "تعداد کارمند",
         cell: (info) => <CountCell value={info.getValue()} suffix="نفر" />,
       },
-      {
-        id: "actions",
-        header: "جزئیات",
-        enableSorting: false,
-        cell: ({ row }) => (
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1"
-            onClick={() => navigate(`/organization/departments/${row.original.id}`)}
-          >
-            جزئیات
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-        ),
-      },
+      detailsColumn((row) => routeWithId(ROUTES.ORG_DEPARTMENTS_DETAIL, row.id)),
     ],
-    [navigate],
+    [],
   );
 
   return (

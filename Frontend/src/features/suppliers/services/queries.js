@@ -31,3 +31,20 @@ export const useSupplierQuery = (id) => {
     enabled: !!id,
   });
 };
+// ─── گزینه‌های انتخاب ───────────────────────────────────────────────────────
+
+const OPTIONS_PAGINATION = { pageIndex: 0, pageSize: 200 };
+const OPTIONS_SORTING = { id: "name", desc: false };
+const NO_FILTERS = {};
+const NO_SUPPLIERS = [];
+
+/**
+ * فهرستِ supplierها برای dropdownِ فیلتر و فرم‌ها (حداکثر ۲۰۰ ردیف، مرتب بر اساس نام).
+ *
+ * TODO(بکند): با رشدِ داده، ۲۰۰ ردیفِ اول کافی نیست؛ جست‌وجوی سمتِ سرور لازم است
+ * (سندِ frontend-requests.fa.md).
+ */
+export function useSuppliersOptionsQuery() {
+  const { data, isLoading } = useSuppliersQuery(NO_FILTERS, OPTIONS_PAGINATION, OPTIONS_SORTING);
+  return { suppliers: data?.items ?? NO_SUPPLIERS, isLoading };
+}

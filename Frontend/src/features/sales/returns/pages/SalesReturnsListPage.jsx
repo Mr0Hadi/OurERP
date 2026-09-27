@@ -1,88 +1,33 @@
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Undo2, Plus } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/shared/components/ui/card";
-import { Button } from "@/shared/components/ui/button";
-import { useHeaderStore } from "@/shared/store/headerStore";
-import { useSalesReturnFilterStore } from "../store/salesReturnFilterStore";
-import { useDebouncedSalesReturnFilters } from "../hooks/useDebouncedSalesReturnFilters";
-import { useSalesReturnsQuery } from "../services/queries";
-import { useCustomersQuery } from "@/features/customers/services/queries";
+import { Undo2 } from "lucide-react";
+
+import ListPageLayout from "@/shared/components/layout/ListPageLayout";
+import ServerTable from "@/shared/components/table/ServerTable";
+import { ROUTES } from "@/shared/constants/routes";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
+import { useCustomersOptionsQuery } from "@/features/customers/services/queries";
+
 import SalesReturnFilters from "../components/table/SalesReturnFilters";
 import SalesReturnTable from "../components/table/SalesReturnTable";
-import { ROUTES } from "@/shared/constants/routes";
-import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
-import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
+import { useDebouncedSalesReturnFilters } from "../hooks/useDebouncedSalesReturnFilters";
+import { useSalesReturnsQuery } from "../services/queries";
+import { useSalesReturnFilterStore } from "../store/salesReturnFilterStore";
 
 export default function SalesReturnsListPage() {
-  const navigate = useNavigate();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
+  const listState = useSalesReturnFilterStore();
+  const filters = useDebouncedSalesReturnFilters();
+  const query = useSalesReturnsQuery(filters, listState.pagination, listState.sorting);
+  const { customers, isLoading: isCustomersLoading } = useCustomersOptionsQuery();
 
-  const { pagination, sorting, setPagination, setSorting } = useSalesReturnFilterStore();
-  const debouncedFilters = useDebouncedSalesReturnFilters();
-
-  const { data, isLoading, isFetching, isError, error, refetch } =
-    useSalesReturnsQuery(debouncedFilters, pagination, sorting);
-
-  const { data: customersData, isLoading: isCustomersLoading } = useCustomersQuery(
-    {},
-    { pageIndex: 0, pageSize: 200 },
-    { id: "name", desc: false },
-  );
-
-  const customers = customersData?.items ?? [];
-  const returns = data?.items ?? [];
-  const totalPages = data?.totalPages ?? 1;
-  const currentPage = data?.page ? data.page - 1 : pagination.pageIndex;
-
-  useEffect(() => {
-    setHeader({ title: "مرجوعی از فروش", showBack: false });
-    return () => clearHeader();
-  }, [setHeader, clearHeader]);
+  usePageHeader({ title: "مرجوعی از فروش" });
 
   return (
-    <div className="container mx-auto space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Undo2 className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <CardTitle>مرجوعی از فروش</CardTitle>
-            </div>
-          </div>
-          <Button className="gap-2" onClick={() => navigate(ROUTES.SALES_RETURNS_NEW)}>
-            <Plus className="h-4 w-4" />
-            ثبت مرجوعی جدید
-          </Button>
-        </CardHeader>
-
-        <CardContent className="space-y-3">
-          <SalesReturnFilters customers={customers} isCustomersLoading={isCustomersLoading} />
-
-          {isError ? (
-            <QueryErrorState error={error} onRetry={() => refetch()} />
-          ) : (
-            <FetchingOverlay active={isFetching && !isLoading}>
-              <SalesReturnTable
-                data={returns}
-                isLoading={isLoading}
-                totalPages={totalPages}
-                currentPage={currentPage}
-                pageSize={pagination.pageSize}
-                onPaginationChange={setPagination}
-                sorting={sorting}
-                onSortingChange={setSorting}
-              />
-            </FetchingOverlay>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <ListPageLayout
+      title="مرجوعی از فروش"
+      icon={Undo2}
+      create={{ label: "ثبت مرجوعی جدید", to: ROUTES.SALES_RETURNS_NEW }}
+    >
+      <SalesReturnFilters customers={customers} isCustomersLoading={isCustomersLoading} />
+      <ServerTable query={query} listState={listState} table={SalesReturnTable} />
+    </ListPageLayout>
   );
 }

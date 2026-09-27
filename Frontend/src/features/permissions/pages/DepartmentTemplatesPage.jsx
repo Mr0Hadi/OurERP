@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowRight, Building2, LayoutTemplate } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import { useHeaderStore } from "@/shared/store/headerStore";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { useDepartmentOptionsQuery } from "@/features/organization/departments/services/queries";
 import { useDepartmentUserCountQuery } from "@/features/employees/services/queries";
@@ -14,8 +13,9 @@ import DepartmentTemplatePanel from "../components/DepartmentTemplatePanel";
 import UnsavedChangesDialog from "../components/UnsavedChangesDialog";
 import { useUnsavedChangesGuard } from "../hooks/useUnsavedChangesGuard";
 import { formatNumber } from "@/shared/lib/numberFormat";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
-const detailPath = (id) => ROUTES.ACCESS_TEMPLATES_DETAIL.replace(":id", id);
+const detailPath = (id) => routeWithId(ROUTES.ACCESS_TEMPLATES_DETAIL, id);
 
 function DepartmentTemplateDetail({ departmentId, name, onDirtyChange }) {
   const { can } = usePermission();
@@ -41,7 +41,7 @@ function DepartmentTemplateDetail({ departmentId, name, onDirtyChange }) {
         </div>
         {can("DepartmentView") && (
           <Button asChild variant="outline" size="sm">
-            <Link to={ROUTES.ORG_DEPARTMENTS_DETAIL.replace(":id", departmentId)}>
+            <Link to={routeWithId(ROUTES.ORG_DEPARTMENTS_DETAIL, departmentId)}>
               <span className="hidden sm:inline">صفحه‌ی واحد</span>
               <Building2 className="size-3.5 sm:hidden" />
             </Link>
@@ -63,8 +63,6 @@ function DepartmentTemplateDetail({ departmentId, name, onDirtyChange }) {
  */
 export default function DepartmentTemplatesPage() {
   const { id } = useParams();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   const [search, setSearch] = useState("");
   const { departments, isLoading } = useDepartmentOptionsQuery();
@@ -77,10 +75,7 @@ export default function DepartmentTemplatesPage() {
     setDirty(false);
   }
 
-  useEffect(() => {
-    setHeader({ title: "الگوهای دسترسی واحدها" });
-    return () => clearHeader();
-  }, [setHeader, clearHeader]);
+  usePageHeader({ title: "الگوهای دسترسی واحدها" });
 
   const needle = search.trim();
   const visible = departments.filter((d) => !needle || d.name.includes(needle));

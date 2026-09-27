@@ -11,6 +11,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import ReturnStatusBadge from "./ReturnStatusBadge";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
+import { routeWithId } from "@/shared/constants/routes";
 
 /**
  * بقیه‌ی مرجوعی‌های همین سند.
@@ -48,7 +49,7 @@ export default function RelatedReturnsCard({
           <button
             key={ret.id}
             type="button"
-            onClick={() => navigate(detailRoute.replace(":id", ret.id))}
+            onClick={() => navigate(routeWithId(detailRoute, ret.id))}
             className="w-full flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-right hover:bg-accent/50 transition-colors"
           >
             <div className="flex-1 min-w-0">

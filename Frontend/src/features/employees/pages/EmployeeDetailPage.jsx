@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { useWatch } from "react-hook-form";
 import { Save, X, LogOut, KeyRound } from "lucide-react";
@@ -14,8 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import { useHeaderStore } from "@/shared/store/headerStore";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { useFormDraft } from "@/shared/hooks/useFormDraft";
 import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
@@ -33,6 +32,7 @@ import EmployeeOrgForm from "../components/forms/EmployeeOrgForm";
 import EmployeeDetailLoading from "../components/forms/EmployeeDetailLoading";
 import ResetPasswordDialog from "../components/forms/ResetPasswordDialog";
 import EmployeeAccessSummaryCard from "@/features/permissions/components/EmployeeAccessSummaryCard";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 const fullNameOf = (employee) =>
   `${employee.firstName ?? ""} ${employee.lastName ?? ""}`.trim() ||
@@ -90,7 +90,7 @@ function EmployeeDetailForm({ employee }) {
   const leaveForCreate = (target, state) => {
     saveDraft(getValues());
     navigate(target, {
-      state: { returnTo: `/employees/${employee.id}`, ...state },
+      state: { returnTo: routeWithId(ROUTES.EMPLOYEES_DETAIL, employee.id), ...state },
     });
   };
 
@@ -273,8 +273,6 @@ function EmployeeDetailForm({ employee }) {
 export default function EmployeeDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
   const currentUser = useCurrentUser();
 
   const {
@@ -292,19 +290,16 @@ export default function EmployeeDetailPage() {
     currentUser != null && employee != null &&
     String(currentUser.id) === String(employee.id);
 
-  useEffect(() => {
-    setHeader({
-      title: isLoading
-        ? "در حال بارگذاری..."
-        : employee
-          ? isSelf
-            ? "حساب کاربری من"
-            : `ویرایش کارمند: ${fullNameOf(employee)}`
-          : "خطا",
-      showBack: true,
-    });
-    return () => clearHeader();
-  }, [setHeader, clearHeader, employee, isLoading, isSelf]);
+  usePageHeader({
+    title: isLoading
+      ? "در حال بارگذاری..."
+      : employee
+        ? isSelf
+          ? "حساب کاربری من"
+          : `ویرایش کارمند: ${fullNameOf(employee)}`
+        : "خطا",
+    showBack: true,
+  });
 
   if (isLoading) return <EmployeeDetailLoading />;
 
