@@ -537,14 +537,30 @@ namespace Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("BinLocation")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<int?>("CustodyReason")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("FirstPrintedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastPrintedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("LastPrintedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PrintCount")
+                        .HasColumnType("int");
 
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
@@ -558,6 +574,15 @@ namespace Infrastructure.Migrations
                     b.Property<decimal?>("QuarantineCost")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
+
+                    b.Property<int?>("QuarantineDocumentId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("QuarantineDocumentKind")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("QuarantinedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<int?>("SaleItemId")
                         .HasColumnType("int");
@@ -595,6 +620,9 @@ namespace Infrastructure.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ActionReason")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -1062,6 +1090,9 @@ namespace Infrastructure.Migrations
                     b.Property<int?>("RestockedQuantity")
                         .HasColumnType("int");
 
+                    b.Property<int?>("Source")
+                        .HasColumnType("int");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -1160,7 +1191,7 @@ namespace Infrastructure.Migrations
                     b.Property<string>("PartyName")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("PartyNationalId")
+                    b.Property<string>("PartyPhoneNumber")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("PurchaseReturnEffectId")
@@ -1714,7 +1745,7 @@ namespace Infrastructure.Migrations
                     b.Property<string>("PartyName")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("PartyNationalId")
+                    b.Property<string>("PartyPhoneNumber")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Quantity")

@@ -1,5 +1,6 @@
 using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.SaleReturn;
 using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
@@ -40,12 +41,14 @@ namespace Application.Features.Sale.Commands
     {
         private readonly IWMSDbContext _context;
         private readonly IObjectStorageService _objectStorageService;
+        private readonly ISaleReturnCalculationService _saleReturnCalculationService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public ChangeSaleStatusCommandHandler(IWMSDbContext context, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
+        public ChangeSaleStatusCommandHandler(IWMSDbContext context, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, ISaleReturnCalculationService saleReturnCalculationService)
         {
             _context = context;
             _objectStorageService = objectStorageService;
+            _saleReturnCalculationService = saleReturnCalculationService;
             _unitOfWork = unitOfWork;
         }
 
@@ -58,8 +61,8 @@ namespace Application.Features.Sale.Commands
                 .FirstOrDefaultAsync(x => x.Id == request.Id && x.IsActive, cancellationToken)
                 ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
 
-            if (sale.Status is SalesStatusEnum.CANCELLED or SalesStatusEnum.RETURNED)
-                throw new ValidationCustomException("فروش لغوشده یا مرجوع‌شده قابل تغییر وضعیت نیست.");
+            if (sale.Status == SalesStatusEnum.CANCELLED)
+                throw new ValidationCustomException("فروش لغوشده قابل تغییر وضعیت نیست.");
 
             if (request.Status == SalesStatusEnum.DELIVERED)
             {
@@ -86,7 +89,7 @@ namespace Application.Features.Sale.Commands
             sale.UpdatedAt = DateTime.Now;
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            res.Data = await SaleDetailReader.ReadAsync(_context, _objectStorageService, sale.Id, cancellationToken);
+            res.Data = await SaleDetailReader.ReadAsync(_context, _objectStorageService, _saleReturnCalculationService, sale.Id, cancellationToken);
             res.Message = "وضعیت فروش با موفقیت تغییر کرد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;

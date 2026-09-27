@@ -44,7 +44,7 @@ namespace WMS.Tests.Integration
             await RunAll<CustomerListSortEnum>((s, d) => new GetCustomerListQueryHandler(scope.Db, storage).Handle(new GetCustomerListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<SupplierListSortEnum>((s, d) => new GetSupplierListQueryHandler(scope.Db, storage).Handle(new GetSupplierListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<ProductListSortEnum>((s, d) => new GetProductListQueryHandler(scope.Db, storage).Handle(new GetProductListQuery { SortBy = s, SortDirection = d }, ct));
-            await RunAll<ProductUnitListSortEnum>((s, d) => new GetProductUnitListQueryHandler(scope.Db).Handle(new GetProductUnitListQuery { SortBy = s, SortDirection = d }, ct));
+            await RunAll<ProductUnitListSortEnum>((s, d) => new GetProductUnitListQueryHandler(scope.Db, scope.ProductCodeService).Handle(new GetProductUnitListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<ProductCategoryListSortEnum>((s, d) => new GetProductCategoryListQueryHandler(scope.Db).Handle(new GetProductCategoryListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<PurchaseListSortEnum>((s, d) => new GetPurchaseListQueryHandler(scope.Db).Handle(new GetPurchaseListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<SaleListSortEnum>((s, d) => new GetSaleListQueryHandler(scope.Db).Handle(new GetSaleListQuery { SortBy = s, SortDirection = d }, ct));

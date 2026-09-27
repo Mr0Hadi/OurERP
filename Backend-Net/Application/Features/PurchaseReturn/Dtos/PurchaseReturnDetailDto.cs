@@ -31,6 +31,9 @@ namespace Application.Features.PurchaseReturn.Dtos
         public bool CanReopen { get; set; }
         public List<PurchaseReturnClaimDto> Claims { get; set; } = new();
 
+        /// <summary>Supplier/customer receipts, photos of the goods - replaced wholesale by Update*ReturnAttachments.</summary>
+        public List<Application.Common.Dtos.DocumentAttachmentDto> Attachments { get; set; } = new();
+
         /// <summary>Photos captured on the receiving rounds that opened or extended this return.</summary>
         public List<PurchaseReceivingImageDto> ReceivingImages { get; set; } = new();
     }

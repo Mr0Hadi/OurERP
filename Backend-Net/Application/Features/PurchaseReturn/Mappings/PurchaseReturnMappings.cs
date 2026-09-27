@@ -61,6 +61,7 @@ public static class PurchaseReturnMappings
     {
         Id = e.Id,
         Direction = e.Direction,
+        Source = e.Source,
         Quantity = e.Quantity,
         AppliedQuantity = e.AppliedQuantity,
         RemainingQuantity = e.RemainingQuantity,
@@ -95,7 +96,7 @@ public static class PurchaseReturnMappings
         Quantity = h.Quantity,
         HealthyQuantity = h.HealthyQuantity,
         PartyName = h.PartyName,
-        PartyNationalId = h.PartyNationalId,
+        PartyPhoneNumber = h.PartyPhoneNumber,
         VehiclePlate = h.VehiclePlate,
         Note = h.Note,
         Observations = [.. h.Observations.Select(o => o.ToDto())],

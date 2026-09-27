@@ -1,4 +1,5 @@
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.SaleReturn;
 using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Documents;
@@ -37,12 +38,14 @@ namespace Application.Features.Sale.Commands
     {
         private readonly IWMSDbContext _context;
         private readonly IObjectStorageService _objectStorageService;
+        private readonly ISaleReturnCalculationService _saleReturnCalculationService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public UpdateSaleAttachmentsCommandHandler(IWMSDbContext context, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
+        public UpdateSaleAttachmentsCommandHandler(IWMSDbContext context, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, ISaleReturnCalculationService saleReturnCalculationService)
         {
             _context = context;
             _objectStorageService = objectStorageService;
+            _saleReturnCalculationService = saleReturnCalculationService;
             _unitOfWork = unitOfWork;
         }
 
@@ -57,7 +60,7 @@ namespace Application.Features.Sale.Commands
             await DocumentAttachmentWriter.ReplaceAsync(_context, _objectStorageService, DocumentKindEnum.SALE, request.Id, request.Attachments, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            res.Data = await SaleDetailReader.ReadAsync(_context, _objectStorageService, request.Id, cancellationToken);
+            res.Data = await SaleDetailReader.ReadAsync(_context, _objectStorageService, _saleReturnCalculationService, request.Id, cancellationToken);
             res.Message = "ضمیمه‌های فروش با موفقیت بروزرسانی شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;

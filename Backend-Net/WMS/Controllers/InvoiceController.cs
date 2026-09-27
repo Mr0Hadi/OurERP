@@ -29,6 +29,14 @@ namespace WMS.Controllers
         }
 
         [HasPermission(PermissionEnum.InvoicePrint)]
+        [HttpGet("GetPurchaseReturnPdf")]
+        public async Task<IActionResult> GetPurchaseReturnPdf([FromQuery] GetPurchaseReturnPdfQuery request)
+        {
+            var file = await _mediator.Send(request);
+            return File(file.Content, file.ContentType, file.FileName);
+        }
+
+        [HasPermission(PermissionEnum.InvoicePrint)]
         [HttpGet("GetSaleReturnCreditNotePdf")]
         public async Task<IActionResult> GetSaleReturnCreditNotePdf([FromQuery] GetSaleReturnCreditNotePdfQuery request)
         {

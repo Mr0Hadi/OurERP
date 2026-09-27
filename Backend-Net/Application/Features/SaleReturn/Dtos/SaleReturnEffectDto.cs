@@ -47,7 +47,7 @@ namespace Application.Features.SaleReturn.Dtos
         public int Quantity { get; set; }
         public int? HealthyQuantity { get; set; }
         public string? PartyName { get; set; }
-        public string? PartyNationalId { get; set; }
+        public string? PartyPhoneNumber { get; set; }
         public string? VehiclePlate { get; set; }
         public string? Note { get; set; }
         public List<SaleReturnEffectObservationDto> Observations { get; set; } = new();

@@ -156,8 +156,10 @@ namespace Application.Features.Purchase.Commands
                 var inQuarantine = isExcess
                     ? held.Where(h => h.CustodyReason == UnitCustodyReasonEnum.EXCESS && h.PurchaseItemId == item.PurchaseItemId).Sum(h => h.Count)
                     : held.Where(h => h.CustodyReason == UnitCustodyReasonEnum.UNLISTED && h.ProductId == productId).Sum(h => h.Count);
-                var reserved = _purchaseReturnCalculationService.GetOutstandingOffOrderClaimQuantity(
-                    isExcess ? ReturnOffScopeKindEnum.EXCESS : ReturnOffScopeKindEnum.UNLISTED, item.PurchaseItemId, productId, activeReturns);
+                var reserved = _purchaseReturnCalculationService.GetReservedQuarantineQuantity(
+                    new Application.Common.Contracts.ProductUnit.UnitSelection(ProductUnitStatusEnum.QUARANTINED, purchase.Id, item.PurchaseItemId,
+                        isExcess ? UnitCustodyReasonEnum.EXCESS : UnitCustodyReasonEnum.UNLISTED),
+                    productId, purchase.Id, activeReturns);
                 var available = Math.Max(0, inQuarantine - reserved);
 
                 if (item.Quantity > available)
@@ -224,10 +226,10 @@ namespace Application.Features.Purchase.Commands
                 foreach (var (item, line, selection) in targets)
                 {
                     var product = line.Product;
-                    var units = await _productUnitService.AcceptExcessAsync(product, item.Quantity, selection, item.ProductUnitBarcodes, line.Id, movement, ct);
-                    product.Stock += item.Quantity;
-
-                    var heldValue = units.Sum(u => u.QuarantineCost ?? 0m);
+                    // Buying them is the money half only: they stay in quarantine, now held at the price we pay, until someone
+                    // releases, scraps or returns them (2026-09-27). Stock does not move here.
+                    var netUnitCost = line.UnitPrice * (100m - line.Discount) / 100m;
+                    var (_, heldValue) = await _productUnitService.AcceptExcessAsync(product, item.Quantity, selection, item.ProductUnitBarcodes, line.Id, netUnitCost, movement, ct);
                     await _inventoryCostingService.RecordPurchaseExcessAcceptedAsync(product, item.Quantity, line.UnitPrice, line.Discount, heldValue, line.Id, occurredAt, ct);
 
                     // The invoice grows by the line total, tax included; the cost pool above takes the net price only.

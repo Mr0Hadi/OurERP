@@ -233,7 +233,7 @@ namespace WMS.Tests.Integration
         {
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 10, shippedQuantity: 10, stock: 0);
 
-            await new SR.CreateSaleReturnCommandHandler(scope.Db, scope.SaleReturnRepository, scope.SaleReturnCalculation, scope.UnitOfWork)
+            await new SR.CreateSaleReturnCommandHandler(scope.Db, scope.SaleReturnRepository, scope.SaleReturnCalculation, FakeObjectStorage.Instance, scope.UnitOfWork)
                 .Handle(new SR.CreateSaleReturnCommand
                 {
                     SaleId = scenario.Sale.Id,
@@ -250,7 +250,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (scenario, claimId) = await SeedSaleClaim(scope);
 
-            await new SR.AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.InventoryCostingService, scope.UnitOfWork)
+            await new SR.AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork)
                 .Handle(new SR.AddClaimResolutionCommand
                 {
                     ClaimId = claimId,
@@ -267,7 +267,7 @@ namespace WMS.Tests.Integration
             var saleReturn = scope.Context.SaleReturns.Single();
             Assert.Null(scope.SaleReturnCalculation.GetLifecycleBlocker(saleReturn, Application.Common.Enums.ReturnLifecycleActionEnum.CANCEL));
 
-            await new SR.ExecuteMoneyEffectCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.InventoryCostingService, scope.UnitOfWork)
+            await new SR.ExecuteMoneyEffectCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork)
                 .Handle(new SR.ExecuteMoneyEffectCommand { EffectId = scope.Context.SaleReturnEffects.Single().Id }, CancellationToken.None);
 
             using var after = db.NewContext();

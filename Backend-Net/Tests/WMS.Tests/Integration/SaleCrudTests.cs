@@ -15,11 +15,11 @@ namespace WMS.Tests.Integration
             new(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance, FakeUserContext.WithUserId(userId));
 
         private static UpdateSaleCommandHandler UpdateHandler(TestScope scope) =>
-            new(scope.Db, FakeObjectStorage.Instance, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, TestMapper.Instance);
+            new(scope.Db, FakeObjectStorage.Instance, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, TestMapper.Instance, scope.SaleReturnCalculation);
 
-        private static AddSalePaymentCommandHandler AddPayment(TestScope scope) => new(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork);
+        private static AddSalePaymentCommandHandler AddPayment(TestScope scope) => new(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation);
 
-        private static ChangeSaleStatusCommandHandler StatusHandler(TestScope scope) => new(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork);
+        private static ChangeSaleStatusCommandHandler StatusHandler(TestScope scope) => new(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation);
 
         /// <summary>A sale nothing has been shipped or paid on, turned back into a draft for tests that edit it.</summary>
         private static SaleScenario ProformaSale(TestScope scope, int orderedQuantity = 5)
@@ -191,7 +191,7 @@ namespace WMS.Tests.Integration
             Assert.False(verify.Sales.Single(x => x.Id == scenario.Sale.Id).IsActive);
 
             using var read = db.NewScope();
-            await Assert.ThrowsAsync<NotFoundCustomException>(() => new GetSaleDetailQueryHandler(read.Db, FakeObjectStorage.Instance)
+            await Assert.ThrowsAsync<NotFoundCustomException>(() => new GetSaleDetailQueryHandler(read.Db, FakeObjectStorage.Instance, scope.SaleReturnCalculation)
                 .Handle(new GetSaleDetailQuery { Id = scenario.Sale.Id }, CancellationToken.None));
             var list = await new GetSaleListQueryHandler(read.Db).Handle(new GetSaleListQuery(), CancellationToken.None);
             Assert.Empty(((System.Collections.IEnumerable)list.Data!.GetType().GetProperty("SaleList")!.GetValue(list.Data)!).Cast<object>());
@@ -215,7 +215,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 3, shippedQuantity: 0, stock: 0);
 
-            var handler = new GetSaleDetailQueryHandler(scope.Db, FakeObjectStorage.Instance);
+            var handler = new GetSaleDetailQueryHandler(scope.Db, FakeObjectStorage.Instance, scope.SaleReturnCalculation);
             var res = await handler.Handle(new GetSaleDetailQuery { Id = scenario.Sale.Id }, CancellationToken.None);
 
             var dto = Assert.IsType<SaleDto>(res.Data);
@@ -346,7 +346,7 @@ namespace WMS.Tests.Integration
             Assert.Equal(paymentDate, sale.PaymentDate);
 
             using var readScope = db.NewScope();
-            var detail = await new GetSaleDetailQueryHandler(readScope.Db, FakeObjectStorage.Instance)
+            var detail = await new GetSaleDetailQueryHandler(readScope.Db, FakeObjectStorage.Instance, scope.SaleReturnCalculation)
                 .Handle(new GetSaleDetailQuery { Id = sale.Id }, CancellationToken.None);
             Assert.Equal(paymentDate, Assert.IsType<SaleDto>(detail.Data).PaymentDate);
         }
@@ -359,7 +359,7 @@ namespace WMS.Tests.Integration
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0);
             var newDue = DateTime.Now.Date.AddMonths(2);
 
-            await new UpdateSalePaymentDateCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork)
+            await new UpdateSalePaymentDateCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation)
                 .Handle(new UpdateSalePaymentDateCommand { Id = scenario.Sale.Id, PaymentDate = newDue }, CancellationToken.None);
 
             using var verify = db.NewContext();
@@ -374,7 +374,7 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0);
-            var handler = new UpdateSaleAttachmentsCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var handler = new UpdateSaleAttachmentsCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation);
 
             await handler.Handle(new UpdateSaleAttachmentsCommand { Id = scenario.Sale.Id, Attachments = new() { new() { ObjectKey = "a.pdf" }, new() { ObjectKey = "b.pdf" } } }, CancellationToken.None);
             var res = await handler.Handle(new UpdateSaleAttachmentsCommand { Id = scenario.Sale.Id, Attachments = new() { new() { ObjectKey = "c.pdf" } } }, CancellationToken.None);
@@ -411,7 +411,7 @@ namespace WMS.Tests.Integration
             var paid = Assert.IsType<SaleDto>((await AddPayment(scope).Handle(
                 new AddSalePaymentCommand { SaleId = scenario.Sale.Id, Type = PaymentTypeEnum.CASH, Amount = 1000 }, CancellationToken.None)).Data);
 
-            var voided = Assert.IsType<SaleDto>((await new VoidSalePaymentCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork)
+            var voided = Assert.IsType<SaleDto>((await new VoidSalePaymentCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation)
                 .Handle(new VoidSalePaymentCommand { PaymentId = paid.PaymentDetails.Single().Id }, CancellationToken.None)).Data);
 
             Assert.Equal(0UL, voided.PaidAmount);
@@ -432,7 +432,7 @@ namespace WMS.Tests.Integration
             var first = Assert.IsType<SaleDto>((await AddPayment(scope).Handle(
                 new AddSalePaymentCommand { SaleId = scenario.Sale.Id, Type = PaymentTypeEnum.CASH, Amount = 3000 }, CancellationToken.None)).Data).PaymentDetails.Single();
 
-            var afterEdit = Assert.IsType<SaleDto>((await new EditSalePaymentCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork)
+            var afterEdit = Assert.IsType<SaleDto>((await new EditSalePaymentCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation)
                 .Handle(new EditSalePaymentCommand { PaymentId = first.Id, Type = PaymentTypeEnum.TRANSFER, Amount = 2500, TransferRef = "TR-1" }, CancellationToken.None)).Data);
             Assert.Equal(2500UL, afterEdit.PaidAmount);
             Assert.Equal(2, afterEdit.PaymentDetails.Count);
@@ -480,7 +480,7 @@ namespace WMS.Tests.Integration
             scope.Context.PaymentDetails.Add(row);
             scope.Context.SaveChanges();
 
-            await Assert.ThrowsAsync<ValidationCustomException>(() => new VoidSalePaymentCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork)
+            await Assert.ThrowsAsync<ValidationCustomException>(() => new VoidSalePaymentCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation)
                 .Handle(new VoidSalePaymentCommand { PaymentId = row.Id }, CancellationToken.None));
         }
 
@@ -558,7 +558,6 @@ namespace WMS.Tests.Integration
         [InlineData(SalesStatusEnum.PROFORMA)]
         [InlineData(SalesStatusEnum.PROCESSING)]
         [InlineData(SalesStatusEnum.SHIPPED)]
-        [InlineData(SalesStatusEnum.RETURNED)]
         public void ChangeSaleStatusValidator_SystemSetStatus_IsInvalid(SalesStatusEnum status)
         {
             Assert.False(new ChangeSaleStatusCommandValidator().Validate(new ChangeSaleStatusCommand { Id = 1, Status = status }).IsValid);

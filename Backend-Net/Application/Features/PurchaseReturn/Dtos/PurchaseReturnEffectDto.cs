@@ -6,6 +6,9 @@ namespace Application.Features.PurchaseReturn.Dtos
     {
         public int Id { get; set; }
         public ReturnEffectDirectionEnum Direction { get; set; }
+
+        /// <summary>Goods leaving our hands: IN_STOCK or QUARANTINED, stated with the decision. Null for goods in, money, and older effects.</summary>
+        public ProductUnitStatusEnum? Source { get; set; }
         public int Quantity { get; set; }
         public int AppliedQuantity { get; set; }
         public int RemainingQuantity { get; set; }
@@ -47,7 +50,7 @@ namespace Application.Features.PurchaseReturn.Dtos
         public int Quantity { get; set; }
         public int? HealthyQuantity { get; set; }
         public string? PartyName { get; set; }
-        public string? PartyNationalId { get; set; }
+        public string? PartyPhoneNumber { get; set; }
         public string? VehiclePlate { get; set; }
         public string? Note { get; set; }
         public List<PurchaseReturnEffectObservationDto> Observations { get; set; } = new();

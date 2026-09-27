@@ -40,7 +40,7 @@ namespace Application.Features.PurchaseReturn.Queries
             if (request.PurchaseId.HasValue)
                 query = query.Where(x => x.PurchaseId == request.PurchaseId.Value);
 
-            var returns = await query.WithReturnGraph().ToListAsync(cancellationToken);
+            var returns = await query.Include(x => x.Purchase!).ThenInclude(p => p.Supplier).WithReturnGraph().ToListAsync(cancellationToken);
 
             var pending = returns
                 .SelectMany(r => r.Claims.SelectMany(c => c.Resolutions.SelectMany(res => res.Effects.Select(e => (returnDoc: r, claim: c, effect: e)))))
@@ -51,12 +51,16 @@ namespace Application.Features.PurchaseReturn.Queries
                     EffectId = x.effect.Id,
                     PurchaseReturnId = x.returnDoc.Id,
                     ReturnNumber = x.returnDoc.ReturnNumber,
+                    ReturnDate = x.returnDoc.ReturnDate,
+                    PurchaseId = x.returnDoc.PurchaseId,
+                    InvoiceNumber = x.returnDoc.Purchase?.InvoiceNumber ?? string.Empty,
+                    SupplierName = x.returnDoc.Purchase?.Supplier?.CompanyName ?? string.Empty,
                     ClaimId = x.claim.Id,
                     Direction = x.effect.Direction,
                     ProductId = x.effect.ProductId ?? x.claim.ProductId,
-                    ProductCode = x.claim.Product?.Code ?? string.Empty,
-                    ProductName = x.claim.Product?.Name ?? string.Empty,
-                    Unit = x.claim.Product?.Unit.GetDescription() ?? string.Empty,
+                    ProductCode = (x.effect.Product ?? x.claim.Product)?.Code ?? string.Empty,
+                    ProductName = (x.effect.Product ?? x.claim.Product)?.Name ?? string.Empty,
+                    Unit = (x.effect.Product ?? x.claim.Product)?.Unit.GetDescription() ?? string.Empty,
                     Quantity = x.effect.Quantity,
                     AppliedQuantity = x.effect.AppliedQuantity,
                     RemainingQuantity = x.effect.RemainingQuantity,

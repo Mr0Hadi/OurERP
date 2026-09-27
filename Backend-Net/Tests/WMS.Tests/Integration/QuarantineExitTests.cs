@@ -459,7 +459,7 @@ namespace WMS.Tests.Integration
             await Add(scope).Handle(new PR.AddClaimResolutionCommand { ClaimId = claims[0], Composition = new EffectCompositionDto
             {
                 Quantity = 2,
-                GoodsScrap = new() { new QuarantineEffectDto { Quantity = 2 } },
+                GoodsScrap = new() { new QuarantineEffectDto { Quantity = 2, Source = ProductUnitStatusEnum.IN_STOCK } },
             } }, CancellationToken.None);
             await Round(scope).Handle(new PR.ExecuteGoodsRoundCommand
             {

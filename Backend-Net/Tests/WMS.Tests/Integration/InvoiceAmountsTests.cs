@@ -22,12 +22,12 @@ namespace WMS.Tests.Integration
             new(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance, FakeUserContext.WithUserId(userId));
 
         private static UpdateSaleCommandHandler UpdateSale(TestScope scope) =>
-            new(scope.Db, FakeObjectStorage.Instance, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, TestMapper.Instance);
+            new(scope.Db, FakeObjectStorage.Instance, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, TestMapper.Instance, scope.SaleReturnCalculation);
 
         private static async Task<SaleDto> DetailAsync(TestDatabase db, int saleId)
         {
             using var read = db.NewScope();
-            return Assert.IsType<SaleDto>((await new GetSaleDetailQueryHandler(read.Db, FakeObjectStorage.Instance)
+            return Assert.IsType<SaleDto>((await new GetSaleDetailQueryHandler(read.Db, FakeObjectStorage.Instance, read.SaleReturnCalculation)
                 .Handle(new GetSaleDetailQuery { Id = saleId }, CancellationToken.None)).Data);
         }
 
@@ -96,7 +96,7 @@ namespace WMS.Tests.Integration
             Assert.Equal(1_090UL, (await DetailAsync(db, scenario.Sale.Id)).TotalAmount);
 
             // Issued: the rate changing again does nothing to it.
-            await new AddSalePaymentCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork)
+            await new AddSalePaymentCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation)
                 .Handle(new AddSalePaymentCommand { SaleId = scenario.Sale.Id, Type = PaymentTypeEnum.CASH, Amount = 100 }, CancellationToken.None);
             scenario.Product.Tax = 20;
             scope.Context.SaveChanges();

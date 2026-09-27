@@ -105,12 +105,12 @@ namespace Infrastructure.Services
             return units;
         }
 
-        public async Task RestoreAsync(int saleItemId, bool excessUnits, int healthyCount, int scrapCount, List<string>? barcodes, List<string>? scrapBarcodes, UnitMovementContext movement, CancellationToken cancellationToken)
+        public async Task RestoreAsync(int saleItemId, bool excessUnits, int healthyCount, int defectiveCount, decimal defectiveUnitCost, List<string>? barcodes, List<string>? defectiveBarcodes, UnitMovementContext movement, CancellationToken cancellationToken)
         {
-            if (healthyCount <= 0 && scrapCount <= 0)
+            if (healthyCount <= 0 && defectiveCount <= 0)
                 return;
 
-            var total = healthyCount + scrapCount;
+            var total = healthyCount + defectiveCount;
             List<Domain.Entities.ProductUnit> units;
             HashSet<string> scrapPayloads;
 
@@ -127,10 +127,10 @@ namespace Infrastructure.Services
                     "تعداد بارکدهای اسکن‌شده با مقدار این مرحله مطابقت ندارد.",
                     cancellationToken);
 
-                var scanned = (scrapBarcodes ?? new()).Select(_productCodeService.ToPayload).ToList();
+                var scanned = (defectiveBarcodes ?? new()).Select(_productCodeService.ToPayload).ToList();
                 scrapPayloads = scanned.ToHashSet();
 
-                if (scanned.Count != scrapCount || scrapPayloads.Count != scanned.Count)
+                if (scanned.Count != defectiveCount || scrapPayloads.Count != scanned.Count)
                     throw new ValidationCustomException("بارکد دانه‌های معیوب باید دقیقاً به تعداد دانه‌های معیوب و بدون تکرار اسکن شود.");
 
                 if (!scrapPayloads.All(p => units.Any(u => u.BarcodePayload == p)))
@@ -138,7 +138,7 @@ namespace Infrastructure.Services
             }
             else
             {
-                if (scrapBarcodes is { Count: > 0 })
+                if (defectiveBarcodes is { Count: > 0 })
                     throw new ValidationCustomException("بارکد دانه‌های معیوب بدون بارکد کل دانه‌های مرحله قابل ثبت نیست.");
 
                 units = await SelectUnitsAsync(
@@ -160,9 +160,17 @@ namespace Infrastructure.Services
             foreach (var unit in units)
             {
                 var from = unit.Status;
-                unit.Status = scrapPayloads.Contains(unit.BarcodePayload)
-                    ? ProductUnitStatusEnum.SCRAPPED
-                    : ProductUnitStatusEnum.IN_STOCK;
+                if (scrapPayloads.Contains(unit.BarcodePayload))
+                {
+                    // Held, not destroyed: whether it goes back to the supplier, back on the shelf or to scrap is decided later.
+                    unit.Status = ProductUnitStatusEnum.QUARANTINED;
+                    unit.CustodyReason = UnitCustodyReasonEnum.CUSTOMER_RETURN;
+                    unit.QuarantineCost = defectiveUnitCost;
+                }
+                else
+                {
+                    unit.Status = ProductUnitStatusEnum.IN_STOCK;
+                }
                 await RecordAsync(unit, from, movement, cancellationToken);
             }
         }
@@ -176,13 +184,44 @@ namespace Infrastructure.Services
         public Task<List<Domain.Entities.ProductUnit>> ScrapFromQuarantineAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken) =>
             MoveSelectedAsync(product, count, RequireQuarantine(selection), explicitBarcodes, ProductUnitStatusEnum.SCRAPPED, movement, cancellationToken);
 
-        public Task<List<Domain.Entities.ProductUnit>> AcceptExcessAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, int purchaseItemId, UnitMovementContext movement, CancellationToken cancellationToken) =>
-            MoveSelectedAsync(product, count, RequireQuarantine(selection), explicitBarcodes, ProductUnitStatusEnum.IN_STOCK, movement, cancellationToken,
+        public async Task<(List<Domain.Entities.ProductUnit> Units, decimal PreviousHeldValue)> AcceptExcessAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, int purchaseItemId, decimal netUnitCost, UnitMovementContext movement, CancellationToken cancellationToken)
+        {
+            var previous = 0m;
+            var units = await MoveSelectedAsync(product, count, RequireQuarantine(selection), explicitBarcodes, ProductUnitStatusEnum.QUARANTINED, movement, cancellationToken,
                 retag: unit =>
                 {
+                    previous += unit.QuarantineCost ?? 0m;
                     unit.PurchaseItemId = purchaseItemId;
                     unit.CustodyReason = UnitCustodyReasonEnum.ON_ORDER;
+                    unit.QuarantineCost = netUnitCost;
                 });
+            return (units, previous);
+        }
+
+        public async Task ApplyActionAsync(IReadOnlyCollection<Domain.Entities.ProductUnit> units, ProductUnitActionEnum action, decimal? quarantineCost, UnitMovementContext movement, CancellationToken cancellationToken)
+        {
+            foreach (var unit in units)
+            {
+                var from = unit.Status;
+                switch (action)
+                {
+                    case ProductUnitActionEnum.QUARANTINE when from == ProductUnitStatusEnum.IN_STOCK:
+                        unit.Status = ProductUnitStatusEnum.QUARANTINED;
+                        unit.CustodyReason = UnitCustodyReasonEnum.WAREHOUSE_HOLD;
+                        unit.QuarantineCost = quarantineCost ?? throw new InvalidOperationException("A unit put into quarantine must state its QuarantineCost.");
+                        break;
+                    case ProductUnitActionEnum.RELEASE when from == ProductUnitStatusEnum.QUARANTINED:
+                        unit.Status = ProductUnitStatusEnum.IN_STOCK;
+                        break;
+                    case ProductUnitActionEnum.SCRAP when from is ProductUnitStatusEnum.IN_STOCK or ProductUnitStatusEnum.QUARANTINED:
+                        unit.Status = ProductUnitStatusEnum.SCRAPPED;
+                        break;
+                    default:
+                        throw new InvalidOperationException($"{action} cannot be applied to a unit in {from}.");
+                }
+                await RecordAsync(unit, from, movement, cancellationToken);
+            }
+        }
 
         public Task<List<Domain.Entities.ProductUnit>> ScrapFromStockAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken) =>
             MoveSelectedAsync(product, count,
@@ -251,19 +290,8 @@ namespace Infrastructure.Services
             return units;
         }
 
-        private static Expression<Func<Domain.Entities.ProductUnit, bool>> FilterFor(int productId, UnitSelection selection)
-        {
-            var status = selection.Status;
-            var purchaseId = selection.PurchaseId;
-            var purchaseItemId = selection.PurchaseItemId;
-            var custodyReason = selection.CustodyReason;
-
-            return x => x.ProductId == productId
-                && x.Status == status
-                && (purchaseId == null || x.PurchaseId == purchaseId)
-                && (purchaseItemId == null || x.PurchaseItemId == purchaseItemId)
-                && (custodyReason == null || x.CustodyReason == custodyReason);
-        }
+        private static Expression<Func<Domain.Entities.ProductUnit, bool>> FilterFor(int productId, UnitSelection selection) =>
+            selection.ToFilter(productId);
 
         public async Task ReconcileStockAsync(Domain.Entities.Product product, int newStock, UnitMovementContext movement, CancellationToken cancellationToken)
         {
@@ -345,6 +373,18 @@ namespace Infrastructure.Services
 
         private async Task RecordAsync(Domain.Entities.ProductUnit unit, ProductUnitStatusEnum? fromStatus, UnitMovementContext movement, CancellationToken cancellationToken)
         {
+            // A shelf only means something while the unit is here.
+            if (unit.Status is not (ProductUnitStatusEnum.IN_STOCK or ProductUnitStatusEnum.QUARANTINED))
+                unit.BinLocation = null;
+
+            // Entering quarantine (not moving within it - AcceptExcess keeps the original entry): stamp when and by which document.
+            if (unit.Status == ProductUnitStatusEnum.QUARANTINED && fromStatus != ProductUnitStatusEnum.QUARANTINED)
+            {
+                unit.QuarantinedAt = movement.OccurredAt;
+                unit.QuarantineDocumentKind = movement.DocumentKind;
+                unit.QuarantineDocumentId = movement.DocumentId;
+            }
+
             await _context.ProductUnitMovements.AddAsync(new Domain.Entities.ProductUnitMovement
             {
                 // The navigation, not the id: a unit minted in this request has no id until SaveChanges.
@@ -361,6 +401,7 @@ namespace Infrastructure.Services
                 SupplierId = movement.SupplierId,
                 UserId = int.TryParse(_userContextService.GetUserId(), out var userId) ? userId : null,
                 Note = movement.Note,
+                ActionReason = movement.ActionReason,
                 OccurredAt = movement.OccurredAt,
                 CreatedAt = DateTime.Now,
             }, cancellationToken);

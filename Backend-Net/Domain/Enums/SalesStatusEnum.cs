@@ -25,6 +25,11 @@ namespace Domain.Enums
         SHIPPED,
         DELIVERED,
         CANCELLED,
-        RETURNED,
+
+        // RETURNED = 6 was removed on 2026-09-27. A sale's status says how far shipping got, never what happened after:
+        // returns are their own documents with their own status (as in Odoo, SAP, Business Central, NetSuite). It was set
+        // when every shipped unit was "settled", but a settlement is any decision - a replacement too - so a sale whose
+        // goods were all swapped read as returned, and it never came back when a resolution was removed. Migration
+        // remove-sale-returned-status moved persisted rows back to SHIPPED/PARTIALLY_DELIVERED. Do not reuse 6.
     }
 }

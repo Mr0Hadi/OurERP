@@ -165,7 +165,9 @@ namespace Application.Features.PurchaseReturn.Commands
                         ? held.Where(h => h.CustodyReason == UnitCustodyReasonEnum.EXCESS && h.PurchaseItemId == group.Key.LineId).Sum(h => h.Count)
                         : held.Where(h => h.CustodyReason == UnitCustodyReasonEnum.UNLISTED && h.ProductId == group.Key.ProductId).Sum(h => h.Count);
 
-                    var claimable = Math.Max(0, available - _purchaseReturnCalculationService.GetOutstandingOffOrderClaimQuantity(group.Key.Kind, group.Key.LineId, group.Key.ProductId, activeReturns));
+                    var selection = new Application.Common.Contracts.ProductUnit.UnitSelection(ProductUnitStatusEnum.QUARANTINED, request.PurchaseId,
+                        group.Key.LineId, isExcess ? UnitCustodyReasonEnum.EXCESS : UnitCustodyReasonEnum.UNLISTED);
+                    var claimable = Math.Max(0, available - _purchaseReturnCalculationService.GetReservedQuarantineQuantity(selection, group.Key.ProductId, request.PurchaseId, activeReturns));
 
                     if (group.Sum(c => c.Quantity) > claimable)
                         throw new ValidationCustomException(isExcess

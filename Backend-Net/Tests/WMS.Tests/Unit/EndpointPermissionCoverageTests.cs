@@ -33,6 +33,7 @@ namespace WMS.Tests.Unit
             "AccountController.Logout",                 // ending your own session
             "FileController.GetImageUrl",               // re-signs a key the caller already has
             "PermissionController.GetMyPermissions",    // asking what you yourself may do
+            "ReportController.GetScopePerformance",     // your own numbers; TEAM/DEPARTMENT gated by org role in the handler
             "UserController.GetUserInfo",               // your own profile
             "UserController.UpdateUserInfo",            // your own name
             "UserController.ChangePassword",            // your own password

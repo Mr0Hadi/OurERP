@@ -227,7 +227,7 @@ namespace WMS.Tests.Unit
             var command = new Application.Features.PurchaseReturn.Commands.AddClaimResolutionCommand
             {
                 ClaimId = 1,
-                Composition = new EffectCompositionDto { Quantity = 2, GoodsOut = new() { new GoodsEffectDto { Quantity = 2, UnitPrice = 100 } } },
+                Composition = new EffectCompositionDto { Quantity = 2, GoodsOut = new() { new GoodsEffectDto { Source = ProductUnitStatusEnum.IN_STOCK, Quantity = 2, UnitPrice = 100 } } },
             };
 
             Assert.True(_sut.Validate(command).IsValid);
@@ -240,7 +240,7 @@ namespace WMS.Tests.Unit
             var command = new Application.Features.PurchaseReturn.Commands.AddClaimResolutionCommand
             {
                 ClaimId = 1,
-                Composition = new EffectCompositionDto { Quantity = 2, GoodsOut = new() { new GoodsEffectDto { Quantity = 2 } } },
+                Composition = new EffectCompositionDto { Quantity = 2, GoodsOut = new() { new GoodsEffectDto { Source = ProductUnitStatusEnum.IN_STOCK, Quantity = 2 } } },
             };
 
             Assert.True(_sut.Validate(command).IsValid);
@@ -363,7 +363,7 @@ namespace WMS.Tests.Unit
                 Composition = new EffectCompositionDto
                 {
                     Quantity = 2,
-                    GoodsOut = new() { new GoodsEffectDto { Quantity = 2, UnitPrice = 1000 } },
+                    GoodsOut = new() { new GoodsEffectDto { Source = ProductUnitStatusEnum.IN_STOCK, Quantity = 2, UnitPrice = 1000 } },
                     MoneyOut = new MoneyEffectDto { Method = ReturnPaymentMethodEnum.CASH, Amount = 2000 },
                 },
             };

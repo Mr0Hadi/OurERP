@@ -1,4 +1,5 @@
-﻿using Application.Common.Contracts.Context;
+using Application.Common.Contracts.ProductUnit;
+using Application.Common.Contracts.Context;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
@@ -110,6 +111,10 @@ namespace Application.Features.PurchaseReturn.Queries
                 Items = purchase.Items.Select(item =>
                 {
                     var quarantinedExcess = held.Where(h => h.CustodyReason == UnitCustodyReasonEnum.EXCESS && h.PurchaseItemId == item.Id).Sum(h => h.Count);
+                    var quarantinedOnLine = held.Where(h => h.PurchaseItemId == item.Id && h.CustodyReason is UnitCustodyReasonEnum.ON_ORDER
+                        or UnitCustodyReasonEnum.CUSTOMER_RETURN or UnitCustodyReasonEnum.WAREHOUSE_HOLD).Sum(h => h.Count);
+                    var lineGroup = new UnitSelection(ProductUnitStatusEnum.QUARANTINED, purchase.Id, item.Id, UnitCustodyReasonEnum.ON_ORDER, IncludeLineHolds: true);
+                    var excessGroup = new UnitSelection(ProductUnitStatusEnum.QUARANTINED, purchase.Id, item.Id, UnitCustodyReasonEnum.EXCESS);
                     return new PurchaseReceivingItemInfoDto
                     {
                         PurchaseItemId = item.Id,
@@ -123,9 +128,11 @@ namespace Application.Features.PurchaseReturn.Queries
                         StillOwedQuantity = item.StillOwedQuantity,
                         ShortClosedQuantity = item.ShortClosedQuantity,
                         QuarantinedOnOrderQuantity = held.Where(h => h.CustodyReason == UnitCustodyReasonEnum.ON_ORDER && h.PurchaseItemId == item.Id).Sum(h => h.Count),
+                        QuarantinedCustomerReturnQuantity = held.Where(h => h.CustodyReason == UnitCustodyReasonEnum.CUSTOMER_RETURN && h.PurchaseItemId == item.Id).Sum(h => h.Count),
+                        QuarantinedWarehouseHoldQuantity = held.Where(h => h.CustodyReason == UnitCustodyReasonEnum.WAREHOUSE_HOLD && h.PurchaseItemId == item.Id).Sum(h => h.Count),
+                        FreeQuarantinedOnOrderQuantity = Math.Max(0, quarantinedOnLine - _purchaseReturnCalculationService.GetReservedQuarantineQuantity(lineGroup, item.ProductId, purchase.Id, openReturns)),
                         QuarantinedExcessQuantity = quarantinedExcess,
-                        FreeExcessQuantity = Math.Max(0, quarantinedExcess - _purchaseReturnCalculationService.GetOutstandingOffOrderClaimQuantity(
-                            ReturnOffScopeKindEnum.EXCESS, item.Id, item.ProductId, openReturns)),
+                        FreeExcessQuantity = Math.Max(0, quarantinedExcess - _purchaseReturnCalculationService.GetReservedQuarantineQuantity(excessGroup, item.ProductId, purchase.Id, openReturns)),
                         ClaimableQuantity = _purchaseReturnCalculationService.GetClaimableQuantity(item, openReturns),
                     };
                 }).ToList(),
@@ -139,8 +146,8 @@ namespace Application.Features.PurchaseReturn.Queries
                         ProductName = p.Name,
                         Unit = p.Unit.GetDescription(),
                         QuarantinedQuantity = quarantined,
-                        FreeQuantity = Math.Max(0, quarantined - _purchaseReturnCalculationService.GetOutstandingOffOrderClaimQuantity(
-                            ReturnOffScopeKindEnum.UNLISTED, null, p.Id, openReturns)),
+                        FreeQuantity = Math.Max(0, quarantined - _purchaseReturnCalculationService.GetReservedQuarantineQuantity(
+                            new UnitSelection(ProductUnitStatusEnum.QUARANTINED, purchase.Id, null, UnitCustodyReasonEnum.UNLISTED), p.Id, purchase.Id, openReturns)),
                     };
                 }).ToList(),
                 Discrepancies = discrepancies,

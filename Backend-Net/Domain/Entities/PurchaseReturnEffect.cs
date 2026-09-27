@@ -35,6 +35,15 @@ namespace Domain.Entities
         /// </summary>
         public UInt64? UnitCost { get; set; }
 
+        /// <summary>
+        /// Goods leaving our hands only: where the units are taken from, stated when the decision is made (2026-09-27), so the
+        /// quarantine units a pending effect will take are known - and reserved - from that moment rather than guessed at.
+        /// GOODS_OUT: IN_STOCK or QUARANTINED. GOODS_RELEASE: QUARANTINED. GOODS_SCRAP: QUARANTINED or IN_STOCK. GOODS_IN and money
+        /// effects: null. Null on a goods-out effect decided before this column existed: the warehouse states it at execution, as it
+        /// used to, and until then it counts as a quarantine reservation (the careful reading).
+        /// </summary>
+        public ProductUnitStatusEnum? Source { get; set; }
+
         // Money effects only (MONEY_OUT / MONEY_IN).
         public UInt64? Amount { get; set; }
         public ReturnPaymentMethodEnum? Method { get; set; }

@@ -28,7 +28,7 @@ namespace Application.Features.PurchaseReturn.Commands
         public List<GoodsRoundLineDto> Rounds { get; set; } = new();
         public DateTime? Date { get; set; }
         public string? PartyName { get; set; }
-        public string? PartyNationalId { get; set; }
+        public string? PartyPhoneNumber { get; set; }
         public string? VehiclePlate { get; set; }
         public string? Note { get; set; }
     }
@@ -38,6 +38,9 @@ namespace Application.Features.PurchaseReturn.Commands
         public ExecuteGoodsRoundCommandValidator()
         {
             RuleFor(x => x.PurchaseReturnId).GreaterThan(0).WithMessage(Validation.RequiredMessage("مرجوعی"));
+            RuleFor(x => x.PartyPhoneNumber).Must(Validation.IsMobileNumber)
+                .When(x => !string.IsNullOrWhiteSpace(x.PartyPhoneNumber))
+                .WithMessage("شماره تماس تحویل‌دهنده/تحویل‌گیرنده صحیح نمی باشد.");
             RuleFor(x => x.Rounds).NotEmpty().WithMessage(Validation.RequiredMessage("لیست اثرها"));
             RuleForEach(x => x.Rounds).ChildRules(line =>
             {
@@ -112,6 +115,15 @@ namespace Application.Features.PurchaseReturn.Commands
 
                 if (!ReturnEffectDirections.IsGoods(effect.Direction))
                     throw new ValidationCustomException("فقط اثرهای کالایی می‌توانند اجرا شوند.");
+
+                // The source belongs to the decision. A round may repeat it, not change it; only an effect decided before the
+                // source was stated with the decision (Source null) still takes it from the warehouse here.
+                if (effect.Source.HasValue)
+                {
+                    if (line.Source.HasValue && line.Source != effect.Source)
+                        throw new ValidationCustomException("منبعِ این اثر هنگام ثبت تصمیم مشخص شده و در اجرا قابل تغییر نیست.");
+                    line.Source = effect.Source;
+                }
 
                 // Summed per effect: the same effect twice in one round is checked as its total.
                 requestedPerEffect[effect.Id] = requestedPerEffect.GetValueOrDefault(effect.Id) + line.Quantity;
@@ -215,7 +227,7 @@ namespace Application.Features.PurchaseReturn.Commands
                     Quantity = line.Quantity,
                     HealthyQuantity = isGoodsIn ? healthy : null,
                     PartyName = request.PartyName,
-                    PartyNationalId = request.PartyNationalId,
+                    PartyPhoneNumber = request.PartyPhoneNumber,
                     VehiclePlate = request.VehiclePlate,
                     Note = request.Note,
                     CreatedAt = now,

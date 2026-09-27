@@ -167,7 +167,7 @@ Authorization: Bearer {accessToken}
 | `Customer/GetCustomerList` | `CustomerListSortEnum`: `ID=0, FIRST_NAME=1, LAST_NAME=2, BALANCE=3, BALANCE_TYPE=4` | `ID` نزولی |
 | `Supplier/GetSupplierList` | `SupplierListSortEnum`: `ID=0, COMPANY_NAME=1, FIRST_NAME=2, LAST_NAME=3, BALANCE=4, BALANCE_TYPE=5` | `ID` نزولی |
 | `Product/GetProductList` | `ProductListSortEnum`: `ID=0, CODE=1, NAME=2, BRAND=3, CATEGORY_NAME=4, RETAIL_PRICE=5, WHOLESALE_PRICE=6, STOCK=7, QUARANTINED_COUNT=8` | `ID` نزولی |
-| `Product/GetProductUnitList` | `ProductUnitListSortEnum`: `SERIAL_NUMBER=0, PRODUCT_NAME=1, STATUS=2, SOLD_AT=3` | محصول، سپس سریال، صعودی |
+| `Product/GetProductUnitList` | `ProductUnitListSortEnum`: `SERIAL_NUMBER=0, PRODUCT_NAME=1, STATUS=2, SOLD_AT=3, CREATED_AT=4, LAST_PRINTED_AT=5, QUARANTINED_AT=6` | محصول، سپس سریال، صعودی |
 | `ProductCategory/GetProductCategoryList` | `ProductCategoryListSortEnum`: `ID=0, NAME=1, PRODUCT_COUNT=2` | `NAME` صعودی |
 | `Purchase/GetPurchaseList` | `PurchaseListSortEnum`: `ID=0, INVOICE_NUMBER=1, SUPPLIER_NAME=2, INVOICE_DATE=3, PAYMENT_DATE=4, STATUS=5, PAYMENT_TYPE=6, TOTAL_AMOUNT=7, PAID_AMOUNT=8` | `ID` نزولی |
 | `Sale/GetSaleList` | `SaleListSortEnum`: `ID=0, INVOICE_NUMBER=1, CUSTOMER_NAME=2, INVOICE_DATE=3, PAYMENT_DATE=4, STATUS=5, PAYMENT_TYPE=6, TOTAL_AMOUNT=7, PAID_AMOUNT=8` | `ID` نزولی |
@@ -589,7 +589,8 @@ Authorization: Bearer {accessToken}
 | | `Create/Update/DeleteTeam` | `TeamManage` |
 | کالا | `GetProductList`، `GetProductDetail`، `ScanBarcode` | `ProductView` |
 | | `CreateProduct` / `UpdateProduct` / `DeleteProduct` | `ProductCreate` / `ProductUpdate` / `ProductDelete` |
-| | `GetProductUnitList`، `GetProductUnitHistory` | `ProductUnitView` |
+| | `GetProductUnitList`، `GetProductUnitHistory`، `GetProductUnitSummary`، `MarkProductUnitsPrinted` | `ProductUnitView` |
+| | `ApplyProductUnitAction`، `SetProductUnitLocation` | `ProductUnitManage` |
 | | `EnsureProductCodes`، `EnsureInventoryCostLedger` | `InventoryMaintenance` |
 | دسته‌بندی | `GetProductCategoryList/Detail` / بقیه | `ProductCategoryView` / `ProductCategoryManage` |
 | مشتری، تامین‌کننده | مثل کالا، چهار دسترسی View/Create/Update/Delete | `CustomerX` / `SupplierX` |
@@ -608,7 +609,7 @@ Authorization: Bearer {accessToken}
 | | `Add/Edit/VoidSalePayment` | `SalePayment` |
 | اقساط | `Get...` / `Create,Update,DeletePlan` / `PaySaleInstallment`،`SettleSaleInstallmentPlan` | `SaleInstallmentView` / `SaleInstallmentManage` / `SaleInstallmentPay` |
 | مرجوعی خرید | خواندن‌ها (شامل `GetPurchaseReceivingInfo`) | `PurchaseReturnView` |
-| | `CreatePurchaseReturn` | `PurchaseReturnCreate` |
+| | `CreatePurchaseReturn`، `UpdatePurchaseReturnAttachments` | `PurchaseReturnCreate` |
 | | `Add/RemoveClaimResolution` | `PurchaseReturnDecide` |
 | | `ExecuteGoodsRound`، `ExecuteMoneyEffect` | `PurchaseReturnExecute` |
 | | `Cancel/Reject/Reopen/DeletePurchaseReturn` | `PurchaseReturnLifecycle` |
@@ -616,7 +617,8 @@ Authorization: Bearer {accessToken}
 | فایل و چاپ | `UploadImage` / `DeleteImage` | `FileUpload` / `FileDelete` |
 | | `Invoice/*` | `InvoicePrint` |
 | | `Barcode/*` | `BarcodePrint` |
-| گزارش | تمام `Report/*` | `ReportView` |
+| گزارش | تمام `Report/*` به‌جز `GetScopePerformance` | `ReportView` |
+| | `Report/GetScopePerformance` | بدون دسترسی؛ `ME` برای همه، `TEAM`/`DEPARTMENT` فقط مسئول/جانشین (از چارتِ سازمانی) |
 | کارت‌خوان | `Pos/Charge` | `PosCharge` |
 | | `GetPosTerminalList/Detail` / بقیه | `PosTerminalView` / `PosTerminalManage` |
 | حساب اشخاص | `PartyAccount/GetPartyStatement` | `PartyStatementView` |
@@ -688,7 +690,7 @@ Authorization: Bearer {accessToken}
   "latitude": null
 }
 ```
-قوانین: نام/نام‌خانوادگی فقط فارسی، شماره تماس با فرمت موبایل ایران (`09xxxxxxxxx`)، آدرس و کدپستی الزامی.
+قوانین: نام/نام‌خانوادگی فقط فارسی، شماره تماس با فرمت موبایل ایران (`09xxxxxxxxx`)، آدرس الزامی. **کد پستی اختیاری است** (از ۲۰۲۶-۰۹-۲۷)؛ خالی یا `null` به‌صورت رشته‌ی خالی ذخیره می‌شود.
 
 ### `PUT api/Customer/UpdateCustomer`
 
@@ -771,6 +773,8 @@ extension method پروژه (`Common.Extensions.EnumExtensions.GetDescription()`
   "latitude": null
 }
 ```
+قوانین (از ۲۰۲۶-۰۹-۲۷): `companyName` الزامی. `firstName`/`lastName` (مسئولِ تامین‌کننده) **اختیاری‌اند، ولی اگر یکی پر شد دیگری هم لازم است** و هر کدام که پر است باید فارسی باشد. `postalCode` اختیاری. خالی یا `null` به‌صورت رشته‌ی خالی ذخیره می‌شود.
+
 (دقت: در Command فیلدهای مکان با حروف کوچک `longitude`/`latitude` تعریف شده‌اند نه Pascal — هرچند JSON در نهایت camelCase است پس تفاوتی در ارسال حس نمی‌شود.)
 
 ### `PUT api/Supplier/UpdateSupplier`
@@ -1024,13 +1028,51 @@ append-only است: ردیفی ویرایش یا حذف نمی‌شود، و ه�
 
 ### `GET api/Product/GetProductUnitList`
 
-**Query:** `page`, `take`, `productId`, `status` (enum وضعیت دانه، بخش ۱۵), `fromSerial`, `toSerial`.
+**Query:** `page`, `take` (حداکثر ۲۰۰)، `productId`, `productName`, `status` (enum وضعیت دانه، بخش ۱۵), `fromSerial`, `toSerial`، و از ۲۰۲۶-۰۹-۲۷:
+
+| پارامتر | معنا |
+|---|---|
+| `search` | بارکد (با هر قالبی که اسکنر بدهد؛ ارقام ملاک است)، سریال، یا بخشی از نام یا کدِ کالا |
+| `statuses` | چند وضعیت با هم (`?statuses=1&statuses=9`)؛ با `status` AND می‌شود |
+| `custodyReason` | علت نگهداری (`UnitCustodyReasonEnum`) |
+| `labelState` | `1` بدون برچسب (`IN_STOCK`/`QUARANTINED` با `printCount = 0` — صفِ چاپ)، `2` برچسب‌خورده |
+| `supplierId` / `purchaseId` | تامین‌کننده / خریدی که دانه با آن وارد شد |
+| `customerId` / `saleId` | مشتری / فروشی که دانه آخرین بار با آن رفت |
+| `fromDate` / `toDate` | روی `createdAt` (ورود به انبار) |
+| `binLocation` | شروعِ کدِ قفسه (`A-03` همه‌ی `A-03-*` را می‌آورد)؛ مثلِ مقدارِ ذخیره‌شده یکدست می‌شود |
 
 **کاربرد:** صفحه‌ی مدیریت انبار برای دیدن تک‌تک دانه‌های یک محصول (مثلاً قبل از چاپ برچسب یا برای پیگیری یک سریال خاص).
 
 **data.productUnitList[]:** همان ساختار `unit` که در `ScanBarcode` دیدیم (بدون بخش product)، به‌علاوه‌ی مبدأ و مقصد دانه تا فرانت برای هر ردیف درخواست جدا نزند:
 - `purchaseId`، `purchaseInvoiceNumber`، `supplierId`، `supplierName`: خریدی که دانه با آن وارد شد (برای موجودی اولیه و اصلاح دستی `null`).
 - `saleId`، `saleInvoiceNumber`، `customerId`، `customerName`: آخرین فروشی که دانه با آن خارج شد (برای دانه‌ی هرگز فروخته‌نشده `null`).
+- از ۲۰۲۶-۰۹-۲۷: `productCode`، `requiresUnitTracking`، `createdAt`، `lastMovementAt` (آخرین حرکت)، `custodyReason`، `quarantineCost`، `quarantinedAt` و `quarantineDocumentKind`/`quarantineDocumentId`/`quarantineDocumentNumber` (سندی که دانه را **آخرین بار** به قرنطینه برد؛ برای کار دستیِ انبار `null`؛ بعد از خروج از قرنطینه هم می‌ماند)، `printCount`، `firstPrintedAt`، `lastPrintedAt`، `lastPrintedByName`، `binLocation` (قفسه؛ فقط تا وقتی دانه در انبار یا قرنطینه است). خریدِ دانه‌ی خارج از سند (بدون قلم) هم حالا در `purchaseId`/`supplierName` دیده می‌شود.
+
+### `POST api/Product/SetProductUnitLocation` (از ۲۰۲۶-۰۹-۲۷)
+
+**Body:** `{ "productUnitIds": [101, 102], "binLocation": "A-03-2" }` → **data:** `{ "affectedCount": 2 }`. دسترسی `ProductUnitManage`.
+- قفسه‌ی هر **دانه** — متنِ آزاد و اختیاری، حداکثر ۵۰ نویسه. سرور یکدستش می‌کند (حروف بزرگ، بدون فاصله): `" a-03 -2 "` همان `A-03-2` است. خالی یا `null` قفسه را پاک می‌کند.
+- فقط دانه‌ی `IN_STOCK` یا `QUARANTINED`؛ بقیه ۴۰۰. همه یا هیچ. حرکتِ دانه ثبت **نمی‌شود** (جابه‌جایی بین قفسه‌ها تغییرِ وضعیت نیست).
+- وقتی دانه از انبار می‌رود (فروش، عودت، اسقاط) قفسه‌اش خودکار پاک می‌شود.
+
+### `GET api/Product/GetProductUnitSummary` (از ۲۰۲۶-۰۹-۲۷)
+
+**Query:** `productId` (اختیاری). دسترسی `ProductUnitView`. شمارش‌های صفحه‌ی دانه‌ها:
+```json
+{
+  "byStatus": [ { "status": 1, "count": 105 }, { "status": 9, "count": 3 } ],
+  "quarantineByReason": [ { "custodyReason": 1, "count": 2, "value": 200000 }, { "custodyReason": 2, "count": 1, "value": 0 } ],
+  "quarantineValue": 200000,
+  "unprintedCount": 97
+}
+```
+`byStatus` فقط وضعیت‌هایی را دارد که دانه دارند. `value` جمعِ `quarantineCost` است. `unprintedCount` همان تعریفِ `labelState = 1`.
+
+### `POST api/Product/MarkProductUnitsPrinted` (از ۲۰۲۶-۰۹-۲۷)
+
+**Body:** `{ "productUnitIds": [101, 102, 103] }` → **data:** `{ "updatedCount": 3 }`. دسترسی `ProductUnitView` (چاپ کارِ روزمره‌ی انباردار است).
+- بعد از اینکه کاربر در پنجره‌ی «برچسب‌ها چاپ شدند؟» بله زد بفرستید. هر فراخوانی `printCount` هر دانه را یکی بالا می‌برد، `lastPrintedAt`/`lastPrintedByName` را به‌روز می‌کند و `firstPrintedAt` را فقط بار اول. چاپِ دوباره‌ی برچسبِ افتاده هم همین مسیر است.
+- شناسه‌ی ناموجود ۴۰۴، همه یا هیچ. حرکتِ دانه ثبت **نمی‌شود** (چاپ جابه‌جایی نیست). برچسب‌هایی که پیش از این تاریخ چاپ شده‌اند ثبت نشده‌اند؛ همه‌ی دانه‌ها از صفر شروع می‌کنند.
 
 ### `GET api/Product/GetProductUnitHistory`
 
@@ -1071,6 +1113,29 @@ append-only است: ردیفی ویرایش یا حذف نمی‌شود، و ه�
 - `purchaseItemId`/`saleItemId` عکسِ لحظه‌ی همان حرکت‌اند، نه وضعیت فعلی دانه.
 - `occurredAt` تاریخ خودِ رویداد است (تاریخ دریافت/ارسال/نوبت)، نه لحظه‌ی ثبت.
 - دانه‌ی ناموجود: ۴۰۴.
+- `actionReason`/`actionReasonTitle` (از ۲۰۲۶-۰۹-۲۷): فقط روی حرکت‌های `ApplyProductUnitAction` — علتِ کار (`UnitActionReasonEnum`) و عنوان فارسی‌اش؛ برای حرکت‌های سندی `null`.
+
+### `POST api/Product/ApplyProductUnitAction` (از ۲۰۲۶-۰۹-۲۷)
+
+کارِ دستیِ انبار روی دانه‌های مشخص، **بدون مرجوعی خرید**: از قفسه به قرنطینه، از قرنطینه به قفسه، یا اسقاط از هر دو. این قدمِ دومِ هر قرنطینه‌ای است — معیوبِ دریافت، مازادی که خریدیم یا رایگان نگه می‌داریم، برگشتیِ معیوبِ مشتری (با یا بدون قلم خرید) و آنچه خودِ انبار نگه داشته. عودت به تامین‌کننده همچنان فقط از مسیر مرجوعی خرید است (طرف حساب و پول دارد).
+
+**Body:**
+```json
+{ "action": 2, "productUnitIds": [101, 102], "reason": 5, "note": null, "occurredAt": null }
+```
+- `action`: `ProductUnitActionEnum` (بخش ۱۵) — `1` انتقال به قرنطینه، `2` بازگشت به موجودی، `3` اسقاط. `reason`: `UnitActionReasonEnum`. `occurredAt` اختیاری (پیش‌فرض اکنون). حداکثر ۲۰۰۰ دانه، بدون تکرار.
+- **همه یا هیچ:** اگر یک دانه مجاز نباشد، کل درخواست ۴۰۰ می‌گیرد و هیچ چیز عوض نمی‌شود.
+- **یادداشت اجباری:** برای هر اسقاط، برای علتِ «سایر موارد»، و برای آزادسازی/اسقاطِ کالای **پرداخت‌نشده** (مازاد یا خارج از سند که قبول نشده) — «بدون پرداخت وارد/خارج می‌شود؛ اگر تامین‌کننده پولش را می‌خواهد اول قبول مازاد».
+- **رزرو:** دانه‌هایی که تصمیمِ یک مرجوعیِ خرید رویشان حساب کرده (بخش ۱۰، «رزرو قرنطینه») آزاد یا اسقاط نمی‌شوند. رزرو **تعدادی** است نه دانه‌به‌دانه: از یک دسته‌ی قرنطینه هر دانه‌ای را می‌شود برداشت، تا وقتی تعداد از سهمِ آزاد بیشتر نشود. پیام خطا شماره‌ی مرجوعیِ مانع را می‌گوید.
+- دسترسی: `ProductUnitManage`. `Idempotency-Key` خوانده می‌شود.
+- **data:** `{ "affectedCount": 2 }`
+
+| کار | از | به | موجودی | ارزش |
+|---|---|---|---|---|
+| `1` قرنطینه | `IN_STOCK` | `QUARANTINED`، علت `WAREHOUSE_HOLD` | −۱ | از میانگین با میانگین جاری خارج و بیرونِ میانگین نگه داشته می‌شود (`STOCK_QUARANTINED`)؛ همین روی دانه (`quarantineCost`) می‌ماند. قلمِ خرید روی دانه می‌ماند، پس ادعای ON_ORDER مرجوعیِ خرید روی همان قلم می‌تواند پسش بدهد |
+| `2` آزادسازی | `QUARANTINED` | `IN_STOCK` | +۱ | با ارزشِ خودِ دانه وارد میانگین می‌شود (`QUARANTINE_RELEASED`) — مازادِ رایگان با صفر |
+| `3` اسقاط | `QUARANTINED` | `SCRAPPED` | — | زیانِ اسقاط = ارزشِ خودِ دانه (`QUARANTINE_SCRAPPED`) |
+| `3` اسقاط | `IN_STOCK` | `SCRAPPED` | −۱ | زیانِ اسقاط با میانگین جاری (`STOCK_SCRAPPED`) |
 
 ### `POST api/Product/EnsureProductCodes`
 
@@ -1449,7 +1514,7 @@ data: سند کامل. دسترسی: `PurchaseUpdate`.
 
 ### `POST api/Purchase/AcceptPurchaseExcess`
 
-**«کالای اضافه را نگه می‌داریم و پولش را می‌دهیم.»** کالای مازاد یا خارج از سندی که در قرنطینه نگه داشته شده، **به‌صورت قلم ضمیمه به فاکتور اضافه می‌شود** — فاکتور صادرشده ویرایش نمی‌شود، فقط ضمیمه می‌گیرد: هر ردیف پذیرش یک **قلم تازه** (`isSupplement: true`) می‌سازد و هیچ عددی روی اقلام قبلی عوض نمی‌شود. دانه‌ها از قرنطینه به موجودی می‌آیند، به قلم ضمیمه منتقل می‌شوند، `custodyReason` آن‌ها `ON_ORDER` می‌شود و با قیمت خالص وارد میانگینِ بهای موجودی می‌شوند. مبلغ کل خرید به اندازه‌ی **جمع قلم ضمیمه با مالیات** زیاد می‌شود (قلم ضمیمه‌ی مازادِ یک قلم، `taxPercent` همان قلم سفارشی را می‌گیرد، نه نرخ فعلی کالا؛ کالای خارج از سند نرخ کالا را)؛ میانگین بهای موجودی فقط قیمت خالص را می‌گیرد. پرداختش مثل هر پرداخت دیگر با `AddPurchasePayment` ثبت می‌شود.
+**«کالای اضافه را نگه می‌داریم و پولش را می‌دهیم.»** کالای مازاد یا خارج از سندی که در قرنطینه نگه داشته شده، **به‌صورت قلم ضمیمه به فاکتور اضافه می‌شود** — فاکتور صادرشده ویرایش نمی‌شود، فقط ضمیمه می‌گیرد: هر ردیف پذیرش یک **قلم تازه** (`isSupplement: true`) می‌سازد و هیچ عددی روی اقلام قبلی عوض نمی‌شود. **از ۲۰۲۶-۰۹-۲۷ دانه‌ها در قرنطینه می‌مانند:** به قلم ضمیمه منتقل می‌شوند، `custodyReason` آن‌ها `ON_ORDER` و `quarantineCost` آن‌ها قیمت خالص قلم می‌شود، ولی **موجودی عوض نمی‌شود**. خریدن تصمیمِ مالی است؛ اینکه کالا روی قفسه برود، اسقاط شود یا پس داده شود قدمِ جداست (`ApplyProductUnitAction`، یا مرجوعی خرید). برای کالای سالم یعنی بعد از این، یک «بازگشت به موجودی» هم لازم است؛ تا آن موقع کالای خراب هیچ‌وقت قابل فروش نمی‌شود. مبلغ کل خرید به اندازه‌ی **جمع قلم ضمیمه با مالیات** زیاد می‌شود (قلم ضمیمه‌ی مازادِ یک قلم، `taxPercent` همان قلم سفارشی را می‌گیرد، نه نرخ فعلی کالا؛ کالای خارج از سند نرخ کالا را)؛ میانگین بهای موجودی فقط قیمت خالص را می‌گیرد. پرداختش مثل هر پرداخت دیگر با `AddPurchasePayment` ثبت می‌شود.
 
 ```json
 {
@@ -1468,12 +1533,12 @@ data: سند کامل. دسترسی: `PurchaseUpdate`.
 - **کالای خارج از سند** هم قلم ضمیمه می‌گیرد (`supplementOfPurchaseItemId: null`) و `unitPrice` (قیمت فاکتور تامین‌کننده) الزامی است؛ `discount` اختیاری است.
 - سقف هر ردیف: دانه‌های قرنطینه‌ی همان custody منهای آن‌چه ادعاهای مرجوعیِ باز رزرو کرده‌اند — همان سهمیه‌ای که ادعای `OFF_ORDER` با آن سنجیده می‌شود. پس یک دانه یا خریده می‌شود یا پس داده می‌شود، هرگز هر دو. بیشتر از آن ۴۰۰ است و **هیچ بخشی از درخواست اعمال نمی‌شود** (کل عملیات در یک تراکنش است).
 - `productUnitBarcodes` اختیاری است: اگر بفرستید دقیقاً همان دانه‌ها، وگرنه FIFO بر اساس سریال.
-- رویداد دفتر ارزش: `PURCHASE_EXCESS_ACCEPTED = 22` (ورود به میانگین با قیمت خالص، خروج ارزشِ نگهداشته از بیرونِ میانگین)؛ علت حرکت دانه: `PURCHASE_EXCESS_ACCEPTED = 13`. گزارش خرید این مبلغ را در `totalReceivedValue` می‌شمارد.
+- رویداد دفتر ارزش: `PURCHASE_EXCESS_ACCEPTED = 22` (ارزشِ بیرونِ میانگین از ارزشِ قبلیِ دانه‌ها — برای مازاد صفر — به قیمت خالص می‌رسد؛ میانگین فقط با آزادسازی تغییر می‌کند)؛ علت حرکت دانه: `PURCHASE_EXCESS_ACCEPTED = 13`. گزارش خرید این مبلغ را در `totalReceivedValue` می‌شمارد.
 - ۴۰۰ برای خرید لغوشده، و ۴۰۴ برای قلم/کالای ناموجود.
 
 **data خروجی:** `{ purchaseId, purchaseStatus, totalAmount, paidAmount, items: [{ purchaseItemId, supplementOfPurchaseItemId, productId, acceptedQuantity, quantity, receivedQuantity, unitPrice, discount, amount }] }` — `purchaseItemId` شناسه‌ی **قلم ضمیمه‌ی تازه** است.
 
-> **کِی این، کِی آزادسازی؟** `GOODS_RELEASE` در مرجوعی خرید یعنی «کالا مجانی مالِ ماست»: دانه با ارزشِ خودش (برای مازاد صفر) وارد موجودی می‌شود. اگر قرار است پولی بابتش بدهید، از این endpoint استفاده کنید؛ وگرنه کالا با بهای صفر فروخته می‌شود و سودِ آن فروش به همان اندازه بیشتر از واقعیت گزارش می‌شود.
+> **کِی این، کِی آزادسازی؟** آزادسازیِ مازادی که قبول نشده (با `GOODS_RELEASE` مرجوعی خرید یا `ApplyProductUnitAction`) یعنی «کالا مجانی مالِ ماست»: دانه با ارزشِ خودش (برای مازاد صفر) وارد موجودی می‌شود. اگر قرار است پولی بابتش بدهید، از این endpoint استفاده کنید؛ وگرنه کالا با بهای صفر فروخته می‌شود و سودِ آن فروش به همان اندازه بیشتر از واقعیت گزارش می‌شود.
 
 ---
 
@@ -1519,6 +1584,12 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "totalAmount": 40000000
 }
 ```
+
+### `PUT api/PurchaseReturn/UpdatePurchaseReturnAttachments`
+
+**Body:** `{ "id": 55, "attachments": [ { "objectKey": "receipt.pdf", "fileName": "رسید.pdf", "note": null } ] }`
+
+پیوست‌های مرجوعی (رسیدِ امضاشده، عکسِ کالا) — مثل `UpdatePurchaseAttachments`: **جایگزینیِ کامل** (فهرستِ نهایی را بفرستید)، در **هر وضعیتی** (رسیدِ امضاشده معمولاً بعد از رفتنِ کالا می‌رسد)؛ فایل اول با `File/UploadImage` بالا می‌رود. دسترسی: `PurchaseReturnCreate`. خروجی: سند کامل مرجوعی. جزئیاتِ مرجوعی حالا `attachments[]` دارد (همان شکلِ `attachments` خرید و فروش: `id`، `objectKey`، `url`، `fileName`، `note`، `createdAt`).
 
 ### `GET api/PurchaseReturn/GetPurchaseReturnDetail?id=55`
 
@@ -1612,6 +1683,10 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "effectId": 1200,
   "purchaseReturnId": 55,
   "returnNumber": "PR-000055",
+  "returnDate": "2026-08-20T00:00:00",
+  "purchaseId": 100,
+  "invoiceNumber": "INV-1001",
+  "supplierName": "شرکت آلفا",
   "claimId": 700,
   "direction": 0,
   "productId": 10,
@@ -1623,6 +1698,8 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "remainingQuantity": 2
 }
 ```
+
+`purchaseId`/`saleId` (از ۲۰۲۶-۰۹-۲۷): سندِ اصلی — کالای جایگزین در صفحه‌ی دریافت/ارسالِ **همان** خرید/فروش ثبت می‌شود. `productCode`/`productName`/`unit` مالِ کالای خودِ اثر است (جایگزین ممکن است کالای دیگری باشد)، نه کالای ادعا.
 
 ### `GET api/PurchaseReturn/GetPurchaseReceivingInfo?purchaseId=100`
 
@@ -1739,7 +1816,8 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 ```
 - `composition.quantity`: چه مقدار از باقیمانده‌ی ادعا (`remainingQuantity` در `GetPurchaseReturnDetail`) با این تصمیم پوشش داده می‌شود.
 - حداقل یکی از `goodsIn`/`goodsOut`/`moneyIn`/`moneyOut` باید مقدار داشته باشد؛ می‌توانند همزمان پر شوند (مثلاً هم بخشی جایگزین بیاید هم باقی‌مانده بازپرداخت شود).
-- `goodsIn`/`goodsOut`: فهرستی از `{ "quantity": 2, "productId": null, "unitPrice": 20000000, "unitCost": null }`
+- `goodsIn`/`goodsOut`: فهرستی از `{ "quantity": 2, "productId": null, "unitPrice": 20000000, "unitCost": null, "source": null }`
+  - **`source` — منبعِ کالای خروجی، از لحظه‌ی تصمیم (از ۲۰۲۶-۰۹-۲۷، فقط مرجوعی خرید):** روی `goodsOut` **الزامی** است: `1` (موجودی قفسه) یا `9` (قرنطینه). کسی که با تامین‌کننده توافق می‌کند می‌گوید کالا از کجا برداشته می‌شود؛ انبار فقط اجرا می‌کند. اگر `9` باشد، همان لحظه چک می‌شود که در قرنطینه‌ی این ادعا به‌اندازه‌ی کافی دانه‌ی **آزاد** هست (دانه‌های قرنطینه منهای آنچه تصمیم‌های دیگرِ مرجوعی‌های بازِ همین خرید رزرو کرده‌اند؛ پایین را ببینید) و از آن به بعد این دانه‌ها برای این تصمیم رزرو می‌شوند. `1` هیچ رزروی ندارد: موجودی قفسه قابل فروش می‌ماند و فقط موقع اجرا چک می‌شود. روی `goodsIn`، و روی هر اثر کالایی مرجوعی فروش، نفرستید (۴۰۰). منبع در جزئیات مرجوعی در `effects[].source` برمی‌گردد.
   - `productId` اختیاری است و پیش‌فرض همان محصول ادعا را می‌گیرد.
   - `unitPrice` (ریال برای هر واحد) **اختیاری** است و هیچ منطقی آن را نمی‌خواند: ارزش توافق‌شده‌ی معامله با طرف مقابل، که فقط برای سابقه و نمایش ثبت می‌شود. `0` و نفرستادن هر دو مجازند. جایی به کار می‌آید که یک تصمیم چند قلم کالا زیر یک اثر مالی دارد و از روی مبلغ کل نمی‌شود فهمید سهم هر قلم چقدر بوده. روی اثر ذخیره می‌شود و در `effects[].unitPrice` برمی‌گردد. فیلد `discount` خوانده نمی‌شود. پولی که واقعاً جابه‌جا می‌شود فقط `moneyIn`/`moneyOut` است و بهای ورود به موجودی فقط `unitCost`.
   - `unitCost` (ریال برای هر واحد) **اختیاری** است: بهای کالا برای ما، یعنی مبلغی که اثر `goodsIn` با آن وارد میانگین موزون موجودی می‌شود. اگر فرستاده نشود (`null`)، **میانگین موزون جاری همان کالا در لحظه‌ی اجرای نوبت** استفاده می‌شود؛ و اگر آن میانگین صفر باشد (کالا سابقه‌ی بها یا موجودی ندارد)، **`purchasePrice` خود کالا** — همان مبنایی که موجودی اولیه و افزایش دستی موجودی هم برای کالای بدون سابقه‌ی خرید استفاده می‌کنند. کالا هیچ‌وقت با بهای صفر وارد نمی‌شود، چون در آن صورت فروش بعدی‌اش تمام مبلغ را سود نشان می‌داد. روی `goodsOut` اثری ندارد (خروج همیشه با میانگین جاری است). روی اثر ذخیره می‌شود و در `effects[].unitCost` برمی‌گردد. فرانت معمولاً بهای داخلی را نمی‌داند و باید آن را نفرستد؛ فراخوان پشتیبان که بها را می‌داند می‌تواند بفرستد. در مرجوعی خرید قیمت و بها معمولاً یک عدد است و فراخوان هر دو را برابر می‌فرستد — سرور این حالت را جدا نمی‌کند و فقط دو فیلد را می‌خواند.
@@ -1750,7 +1828,8 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   - **فرستاده شود:** اثر مالی همان لحظه `APPLIED` است (`appliedAt = paidAt`) و ردیف دفترش با همان تاریخ نوشته می‌شود.
   - **فرستاده نشود:** اثر یک **وعده** است — `PENDING` می‌ماند، هیچ ردیفی در دفتر نمی‌نویسد، مرجوعی را `IN_PROGRESS` نگه می‌دارد و چرخه‌ی عمر را قفل نمی‌کند. وقتی پول رسید با `ExecuteMoneyEffect` (پایین) اجرا می‌شود.
 
-- `goodsRelease`/`goodsScrap` (**فقط مرجوعی خرید**): فهرستی از `{ "quantity": 2, "productId": null }` برای دانه‌های **قرنطینه** — آزادسازی به موجودی قابل فروش، یا اسقاط. جابه‌جایی داخلی است و طرف مقابل ندارد، پس `unitPrice` ندارد. **بها هم از کلاینت خوانده نمی‌شود** (از ۲۰۲۶-۰۹-۲۱): هر دانه با همان ارزشی خارج می‌شود که با آن وارد قرنطینه شده (`ProductUnit.QuarantineCost`) — خرابِ سهم سفارش با قیمت خالص قلم (بعد از تخفیف)، مازاد و کالای خارج از سفارش با صفر، جایگزینِ آسیب‌دیده با بهای ورودش. فیلد `unitCost` اگر فرستاده شود نادیده گرفته می‌شود. **موقع ثبت تصمیم چک می‌شود** که به‌اندازه‌ی کافی دانه‌ی قرنطینه برای همین ادعا هست (منهای آنچه تصمیم‌های معلقِ آزادسازی/اسقاط دیگر روی مرجوعی‌های باز همین خرید برداشته‌اند)؛ وگرنه ۴۰۰ — کالایی که روی قفسه است (عیبی که بعد از دریافت پیدا شده) آزادسازی یا اسقاط نمی‌شود و باید عودت شود. روی مرجوعی فروش ۴۰۰.
+- `goodsRelease`/`goodsScrap` (**فقط مرجوعی خرید**): فهرستی از `{ "quantity": 2, "productId": null }` برای دانه‌های **قرنطینه** — آزادسازی به موجودی قابل فروش، یا اسقاط. جابه‌جایی داخلی است و طرف مقابل ندارد، پس `unitPrice` ندارد. **بها هم از کلاینت خوانده نمی‌شود** (از ۲۰۲۶-۰۹-۲۱): هر دانه با همان ارزشی خارج می‌شود که با آن وارد قرنطینه شده (`ProductUnit.QuarantineCost`) — خرابِ سهم سفارش با قیمت خالص قلم (بعد از تخفیف)، مازاد و کالای خارج از سفارش با صفر، جایگزینِ آسیب‌دیده با بهای ورودش. فیلد `unitCost` اگر فرستاده شود نادیده گرفته می‌شود. `goodsScrap` می‌تواند `source` بگیرد: `9` (پیش‌فرض، قرنطینه) یا `1` (کالای معیوبی که روی قفسه پیدا شده). `goodsRelease` همیشه از قرنطینه است. **هر اثری که از قرنطینه برمی‌دارد موقع ثبت تصمیم چک و رزرو می‌شود** (مثل `goodsOut` با `source = 9`)؛ کمبود ۴۰۰ است. روی مرجوعی فروش ۴۰۰.
+- **رزرو قرنطینه (از ۲۰۲۶-۰۹-۲۷)، یک تعریف برای همه‌جا:** دانه‌های آزاد یک گروهِ قرنطینه = دانه‌های آن گروه منهای رزروها. رزرو دو جور است: (۱) ادعای EXCESS/UNLISTED از لحظه‌ی ساخته شدن مقدارِ باقی‌مانده‌اش را رزرو می‌کند و اثرهای زیرِ خودش از همان رزرو برمی‌دارند؛ (۲) هر اثرِ معلقِ دیگری که از قرنطینه برمی‌دارد (`goodsOut`/`goodsScrap` با منبع `9`، و هر `goodsRelease`) به‌اندازه‌ی اجرانشده‌اش رزرو می‌کند. اثرهای عودتی که پیش از این تاریخ بی‌منبع ثبت شده‌اند محتاطانه رزرو قرنطینه حساب می‌شوند. گروهِ ادعای ON_ORDER روی یک قلم = دانه‌های قرنطینه‌ی آن قلم با علت `ON_ORDER`، `CUSTOMER_RETURN` یا `WAREHOUSE_HOLD` (همه کالای پرداخت‌شده‌ی همان قلم). همین عدد سقفِ ادعای مازاد/خارج از سند، `AcceptPurchaseExcess`، و «آزاد»های `GetPurchaseReceivingInfo` است.
 - **`goodsRelease` با `moneyOut` در یک تصمیم ۴۰۰ است** (از ۲۰۲۶-۰۹-۲۲، فقط مرجوعی خرید): آزادسازی یعنی کالا با ارزشِ خودش وارد موجودی می‌شود — برای مازاد و کالای خارج از سند یعنی صفر، که فقط وقتی درست است که کالا واقعاً رایگان باشد. اگر بابتش پول می‌دهید، مسیرش `AcceptPurchaseExcess` است (بخش ۹): آن‌جا کالا روی سفارش می‌نشیند و با قیمتی که می‌پردازید وارد بهای موجودی می‌شود. `goodsRelease` با `moneyIn` مجاز است (کالای معیوبِ پرداخت‌شده را نگه می‌داریم و بخشی از پول را پس می‌گیریم)، و `goodsOut` با `moneyOut` هم مجاز است. این یک قانونِ شکلی روی همین درخواست است؛ آزادسازی در یک تصمیم و `moneyOut` در تصمیمی جدا همچنان پذیرفته می‌شود، چون هیچ‌چیز در داده نمی‌گوید آن پول بابت همان کالاست.
 - `writeOff` (bool): **بخشش صریح** — بستن `quantity` از ادعا بدون هیچ اثر. تنها راه ثبت تصمیم بدون اثر است و **با هیچ اثری همراه نمی‌شود** (۴۰۰). تصمیم بخشش همان لحظه تسویه می‌شود و در خروجی `resolutions[].isWriteOff: true` دارد.
 - روی `goodsOut` مرجوعی خرید، وقتی دانه‌ها از قرنطینه برداشته شوند (`ExecuteGoodsRound` → `source`، پایین)، ارزش همان دانه‌ها (`QuarantineCost`) از ارزش نگهداری‌شده‌ی بیرون از میانگین کم می‌شود؛ `unitCost` اثر خوانده نمی‌شود.
@@ -1802,7 +1881,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "purchaseReturnId": 55,
   "date": "2026-08-10T09:00:00",
   "partyName": "راننده تامین‌کننده",
-  "partyNationalId": null,
+  "partyPhoneNumber": null,
   "vehiclePlate": null,
   "note": null,
   "rounds": [
@@ -1817,12 +1896,12 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   ]
 }
 ```
-- `source` — **از کجای انبار؟** انباردار اعلام می‌کند؛ سرور هیچ‌وقت از یکی به دیگری عقب‌نشینی نمی‌کند:
+- `source` — **از کجای انبار؟** از ۲۰۲۶-۰۹-۲۷ منبع روی خودِ تصمیم ثبت شده (`AddClaimResolution`)؛ اینجا **نفرستید**، یا اگر فرستادید باید همان باشد (غیر از آن ۴۰۰). فقط برای `GOODS_OUT`ی که پیش از این تاریخ بی‌منبع ثبت شده، انباردار هنوز اینجا اعلام می‌کند. قواعد منبع (سرور هیچ‌وقت از یکی به دیگری عقب‌نشینی نمی‌کند):
   - `GOODS_OUT`: **الزامی** — `1` (`IN_STOCK`، موجودی قفسه) یا `9` (`QUARANTINED`). نفرستادنش ۴۰۰.
   - `GOODS_RELEASE`: `9` یا نفرستید (همیشه از قرنطینه).
   - `GOODS_SCRAP`: `9` یا نفرستید (از قرنطینه)، یا `1` (`IN_STOCK`) — اسقاط کالای معیوبی که بعد از دریافت روی قفسه پیدا شده. از قفسه: موجودی کم می‌شود، دانه‌ها (از همان قلم، برای ادعای ON_ORDER) `SCRAPPED` می‌شوند و با میانگین جاری از دفتر خارج می‌شوند (رویداد `STOCK_SCRAPPED`)؛ در گزارش فروش جزو `scrapLoss` است، نه `costOfGoodsSold`. کمبود موجودی ۴۰۰.
   - `GOODS_IN`: نفرستید (۴۰۰).
-  - از قرنطینه فقط دانه‌های **همان ادعا** برداشته می‌شوند: ادعای ON_ORDER دانه‌های خرابِ سهم سفارشِ همان قلم، ادعای EXCESS مازادِ همان قلم، ادعای UNLISTED همان کالای خارج از سند در همین خرید (کالایی متفاوت از کالای ادعا: خارج از سند). کمبود ۴۰۰ است و از دسته‌ی دیگر قرض گرفته نمی‌شود.
+  - از قرنطینه فقط دانه‌های **همان ادعا** برداشته می‌شوند: ادعای ON_ORDER دانه‌های پرداخت‌شده‌ی قرنطینه‌ی همان قلم (خرابِ هنگام دریافت، برگشتیِ معیوبِ مشتری، و آنچه انبار خودش از قفسه به قرنطینه برده)، ادعای EXCESS مازادِ همان قلم، ادعای UNLISTED همان کالای خارج از سند در همین خرید (کالایی متفاوت از کالای ادعا: خارج از سند). کمبود ۴۰۰ است و از دسته‌ی دیگر قرض گرفته نمی‌شود.
 - `GOODS_IN` با `observations`: بخش آسیب‌دیده‌ی کالای رسیده **دیگر ناپدید نمی‌شود** — دانه‌اش ساخته و در قرنطینه (با علت همان ادعا) نگه داشته می‌شود و ارزشش (`unitCost` اثر، یا در نبودنش میانگین جاری) بیرون از میانگین ثبت و روی خودِ دانه (`QuarantineCost`) نگه داشته می‌شود (`PURCHASE_RETURN_REPLACEMENT_QUARANTINED`)؛ روی آن می‌توان ادعای تازه ثبت کرد.
 - `productUnitBarcodes` (اختیاری): بارکد دقیق دانه‌هایی که جابه‌جا می‌شوند. اگر فرستاده شود باید دقیقاً `quantity` بارکدِ بدون تکرار باشد، و سرور **همان** دانه‌ها را برمی‌دارد؛ نفرستادنش یعنی سرور قدیمی‌ترین دانه‌ها را انتخاب می‌کند (همان رفتار قبلی). در مرجوعی خرید:
   - روی `GOODS_OUT`: هر بارکد باید از همین کالا، `IN_STOCK` و — وقتی اثر همان محصولِ ادعای ON_ORDER است — از دانه‌های همان قلم خرید باشد؛ وگرنه ۴۰۰.
@@ -1830,7 +1909,7 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 - `effectId`: از `GetPurchaseReturnPendingEffects` یا `GetPurchaseReturnDetail` (زیر `resolutions[].effects[].id`)، باید یک اثر کالایی (`GOODS_IN`/`GOODS_OUT`) با وضعیت `PENDING` باشد.
 - `quantity`: نباید از باقیمانده‌ی همان اثر (`remainingQuantity`/`quantity - appliedQuantity`) بیشتر باشد.
 - `observations[]`: **فقط برای `GOODS_IN`** معنی دارد — یعنی وقتی جایگزین از تامین‌کننده می‌رسد، بخشی از همان محموله هم ممکن است مشکل داشته باشد؛ مجموع `quantity` در `observations` از `quantity` همان نوبت کم می‌شود تا مقدار «سالم» به‌دست آید (فقط مقدار سالم به موجودی اضافه می‌شود).
-- `partyName`/`partyNationalId`/`vehiclePlate`/`note`: اطلاعات تحویل‌گیرنده/تحویل‌دهنده، برای مستندسازی هر نوبت (اختیاری).
+- `partyName`/`partyPhoneNumber`/`vehiclePlate`/`note`: اطلاعات تحویل‌گیرنده/تحویل‌دهنده، برای مستندسازی هر نوبت (اختیاری). `partyPhoneNumber` اگر فرستاده شود باید شماره موبایل معتبر باشد (تا ۲۰۲۶-۰۹-۲۷ `partyNationalId` بود).
 - روی `GOODS_IN`: موجودی به اندازه‌ی مقدار سالم زیاد می‌شود، برای همان مقدار دانه ساخته می‌شود و با `unitCost` اثر (یا در نبودنش میانگین جاری) وارد میانگین موزون می‌شود (رویداد `PURCHASE_RETURN_REPLACEMENT_RECEIVED`). `receivedQuantity` قلم خرید تغییر نمی‌کند.
 - روی `GOODS_OUT`: موجودی کم می‌شود، دانه‌ها `RETURNED_TO_SUPPLIER` می‌شوند و کالا با میانگین جاری از دفتر خارج می‌شود (رویداد `PURCHASE_RETURN_SHIPPED_TO_SUPPLIER`). اگر موجودی کافی نباشد ۴۰۰.
 - این دو قاعده برای هر ادعا یکسان است — ON_ORDER، EXCESS یا UNLISTED.
@@ -1914,7 +1993,9 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 
 ### `GET api/Sale/GetSaleList`
 
-**Query:** `page`, `take`, `invoiceNumber`, `customerName`, `status` (enum), `paymentType` (enum), `fromDate`, `toDate`, `fromPaymentDate`, `toPaymentDate`.
+**Query:** `page`, `take`, `invoiceNumber`, `customerName`, `customerId`, `status` (enum), `statuses` (چندتایی: `?statuses=1&statuses=2`)، `paymentType` (enum), `fromDate`, `toDate`, `fromPaymentDate`, `toPaymentDate`.
+
+`customerId` دقیقاً یک مشتری را می‌گیرد (دو مشتریِ هم‌نام قاطی نمی‌شوند). `statuses` هر کدام از وضعیت‌ها را می‌پذیرد — مثلاً صفِ ارسال انبار: `PROCESSING` و `PARTIALLY_DELIVERED`. همه‌ی فیلترها با هم AND می‌شوند.
 
 `fromDate`/`toDate` روی **تاریخ فاکتور** فیلتر می‌کنند و `fromPaymentDate`/`toPaymentDate` روی **مهلت پرداخت** (`paymentDate`) — برای گرفتن فهرست سررسیدهای نزدیک یا سررسیدگذشته.
 
@@ -1939,6 +2020,12 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 `installmentSummary` فقط برای فروش‌های اقساطی پر می‌شود و برای بقیه `null` است — شکل کاملش در بخش ۱۱ب.
 
 ### `GET api/Sale/GetSaleDetail?id=200`
+
+از ۲۰۲۶-۰۹-۲۷ (در همین سند و در پاسخِ همه‌ی نوشتن‌های فروش):
+- `items[].claimableQuantity`: سقفِ ادعای ON_ORDER تازه روی این قلم = ارسال‌شده − تسویه‌شده − آنچه ادعاهای بازِ مرجوعی‌های دیگر رزرو کرده‌اند. همان عددی است که `CreateSaleReturn` چک می‌کند؛ فرم مرجوعی این را بخواند، نه `shippedQuantity − settledQuantity`.
+- `items[].claimableExcessQuantity`: سقفِ ادعای EXCESS روی این قلم = دانه‌هایی که با `excessQuantity` اضافه ارسال شده‌اند − ادعاهای بازِ EXCESS. تا انبار مازادی ثبت نکرده ۰ است.
+- `items[].productCode`، `items[].unit`.
+- `returnCount` (مرجوعی‌های حذف‌نشده) و `hasOpenReturn` (مرجوعیِ باز یا در حال اجرا) — جای وضعیتِ حذف‌شده‌ی `RETURNED`. روی `GetSaleList` هم هستند.
 
 **data:**
 ```json
@@ -1970,9 +2057,15 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
       "discount": 0,
       "shippedQuantity": 0,
       "settledQuantity": 0,
+      "productCode": "20260814-000010",
+      "unit": "عدد",
+      "claimableQuantity": 0,
+      "claimableExcessQuantity": 0,
       "saleId": 200
     }
   ],
+  "returnCount": 0,
+  "hasOpenReturn": false,
   "drivers": [
     { "id": 1, "driverFullName": "رضا احمدی", "driverPhoneNumber": "09129876543", "vehiclePlate": "34ب12345", "createdAt": "2026-08-11T09:00:00" }
   ],
@@ -2423,6 +2516,12 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 }
 ```
 
+### `PUT api/SaleReturn/UpdateSaleReturnAttachments`
+
+**Body:** `{ "id": 55, "attachments": [ { "objectKey": "receipt.pdf", "fileName": "رسید.pdf", "note": null } ] }`
+
+پیوست‌های مرجوعی (رسیدِ امضاشده، عکسِ کالا) — مثل `UpdatePurchaseAttachments`: **جایگزینیِ کامل** (فهرستِ نهایی را بفرستید)، در **هر وضعیتی** (رسیدِ امضاشده معمولاً بعد از رفتنِ کالا می‌رسد)؛ فایل اول با `File/UploadImage` بالا می‌رود. دسترسی: `SaleReturnCreate`. خروجی: سند کامل مرجوعی. جزئیاتِ مرجوعی حالا `attachments[]` دارد (همان شکلِ `attachments` خرید و فروش: `id`، `objectKey`، `url`، `fileName`، `note`، `createdAt`).
+
 ### `GET api/SaleReturn/GetSaleReturnDetail?id=80`
 
 **data:**
@@ -2483,6 +2582,10 @@ SaleReturn (یک درخواست مرجوعی مشتری)
   "effectId": 1200,
   "saleReturnId": 80,
   "returnNumber": "SR-000080",
+  "returnDate": "2026-08-20T00:00:00",
+  "saleId": 200,
+  "invoiceNumber": "SL-2001",
+  "customerName": "علی رضایی",
   "claimId": 400,
   "direction": 0,
   "productId": 10,
@@ -2494,6 +2597,8 @@ SaleReturn (یک درخواست مرجوعی مشتری)
   "remainingQuantity": 1
 }
 ```
+
+`purchaseId`/`saleId` (از ۲۰۲۶-۰۹-۲۷): سندِ اصلی — کالای جایگزین در صفحه‌ی دریافت/ارسالِ **همان** خرید/فروش ثبت می‌شود. `productCode`/`productName`/`unit` مالِ کالای خودِ اثر است (جایگزین ممکن است کالای دیگری باشد)، نه کالای ادعا.
 
 ### `POST api/SaleReturn/CreateSaleReturn`
 
@@ -2565,7 +2670,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
   "saleReturnId": 80,
   "date": "2026-08-13T09:00:00",
   "partyName": null,
-  "partyNationalId": null,
+  "partyPhoneNumber": null,
   "vehiclePlate": null,
   "note": null,
   "rounds": [
@@ -2580,8 +2685,9 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 }
 ```
 - روی `GOODS_IN` (کالا از مشتری برمی‌گردد): `observations[]` مشخص می‌کند چه بخشی از همان نوبت مشکل داشته؛ موجودی به اندازه‌ی مقدار «سالم» (`quantity` نوبت منهای مجموع `observations`) زیاد می‌شود و همان مقدار با `unitCost` اثر (یا در نبودنش میانگین جاری) وارد میانگین موزون می‌شود (رویداد `SALE_RETURN_RESTOCK`) — نه با `unitPrice`، که قیمت فروش است و موجودی را به اندازه‌ی حاشیه‌ی سود بیش از واقع نشان می‌داد. اگر `observations` خالی باشد، کل نوبت سالم است.
-  - هویت دانه‌ها: وقتی اثر همان محصولِ یک ادعای ON_ORDER است، کل `quantity` نوبت (سالم + معیوب) باید از دانه‌هایی باشد که روی همان قلم فروش `SOLD` شده‌اند: سالم‌ها `IN_STOCK` و معیوب‌ها `SCRAPPED` می‌شوند. اگر کافی نباشد ۴۰۰ «تعداد دانه‌های فروخته‌شده این قلم فروش برای ثبت این مرجوعی کافی نیست.» برمی‌گردد. وقتی اثر همان محصولِ یک ادعای **EXCESS** است، همین کار با دانه‌های `SOLD` با علت `EXCESS` همان قلم انجام می‌شود (همان دانه‌هایی که با `excessQuantity` ارسال شدند برمی‌گردند، دانه‌ی تازه ساخته نمی‌شود) و دانه‌های سفارشی قلم دست‌نخورده می‌مانند. در غیر این صورت برای مقدار سالم دانه‌ی جدید ساخته می‌شود.
-  - **اسکن دانه‌های برگشتی:** وقتی اثر همان محصولِ ادعای ON_ORDER است، `rounds[].productUnitBarcodes` می‌تواند دقیقاً `quantity` بارکد از دانه‌های `SOLD` همان قلم فروش باشد. در این حالت هر `observations[]` با `quantity` مثبت **باید** `productUnitBarcodes` خودش را هم داشته باشد — دقیقاً به تعداد خودش و از میان بارکدهای همان نوبت — تا سرور بداند کدام دانه‌ی اسکن‌شده معیوب است: همان‌ها `SCRAPPED` و بقیه `IN_STOCK` می‌شوند. بدون بارکدِ نوبت، بارکد روی مشاهده مجاز نیست. برای کالای ورودی‌ای که به قلم فروش مربوط نیست (دانه‌ی تازه ساخته می‌شود) بارکد مجاز نیست (۴۰۰).
+  - **بخشِ معیوب به قرنطینه می‌رود، اسقاط نمی‌شود (از ۲۰۲۶-۰۹-۲۷):** دانه‌ها `QUARANTINED` با علت `CUSTOMER_RETURN` (بخش ۱۵) و با همان ارزشی که بخشِ سالم برمی‌گردد (`unitCost` اثر، یا میانگین جاری، یا قیمت خرید محصول) نگه داشته می‌شوند (رویداد `SALE_RETURN_QUARANTINED`). موجودی قابل فروش فقط با بخشِ سالم بالا می‌رود. راهِ خروج: عودت به تامین‌کننده با یک مرجوعیِ خرید ON_ORDER روی قلمِ خریدِ منشأ (`goodsOut` با `source = 9`)، یا `goodsRelease`/`goodsScrap` همان مرجوعی. تعداد باقی‌مانده در قرنطینه در `quarantinedQuantity` جزئیاتِ مرجوعی فروش و در `items[].quarantinedCustomerReturnQuantity` در `GetPurchaseReceivingInfo` دیده می‌شود (آنجا `items[].quarantinedWarehouseHoldQuantity` و `items[].freeQuarantinedOnOrderQuantity` — چند دانه از قرنطینه‌ی پرداخت‌شده‌ی این قلم هنوز رزرو نشده — هم هست). کالای خارج از فاکتور هم دیگر گم نمی‌شود: بخشِ معیوبش به همین شکل در قرنطینه ساخته می‌شود.
+  - هویت دانه‌ها: وقتی اثر همان محصولِ یک ادعای ON_ORDER است، کل `quantity` نوبت (سالم + معیوب) باید از دانه‌هایی باشد که روی همان قلم فروش `SOLD` شده‌اند: سالم‌ها `IN_STOCK` و معیوب‌ها `QUARANTINED` می‌شوند. اگر کافی نباشد ۴۰۰ «تعداد دانه‌های فروخته‌شده این قلم فروش برای ثبت این مرجوعی کافی نیست.» برمی‌گردد. وقتی اثر همان محصولِ یک ادعای **EXCESS** است، همین کار با دانه‌های `SOLD` با علت `EXCESS` همان قلم انجام می‌شود (همان دانه‌هایی که با `excessQuantity` ارسال شدند برمی‌گردند، دانه‌ی تازه ساخته نمی‌شود) و دانه‌های سفارشی قلم دست‌نخورده می‌مانند. در غیر این صورت برای مقدار سالم دانه‌ی جدید ساخته می‌شود.
+  - **اسکن دانه‌های برگشتی:** وقتی اثر همان محصولِ ادعای ON_ORDER است، `rounds[].productUnitBarcodes` می‌تواند دقیقاً `quantity` بارکد از دانه‌های `SOLD` همان قلم فروش باشد. در این حالت هر `observations[]` با `quantity` مثبت **باید** `productUnitBarcodes` خودش را هم داشته باشد — دقیقاً به تعداد خودش و از میان بارکدهای همان نوبت — تا سرور بداند کدام دانه‌ی اسکن‌شده معیوب است: همان‌ها `QUARANTINED` و بقیه `IN_STOCK` می‌شوند. بدون بارکدِ نوبت، بارکد روی مشاهده مجاز نیست. برای کالای ورودی‌ای که به قلم فروش مربوط نیست (دانه‌ی تازه ساخته می‌شود) بارکد مجاز نیست (۴۰۰).
 - روی `GOODS_OUT` (ما کالا برای مشتری می‌فرستیم): `observations[]` نادیده گرفته می‌شود؛ کل `quantity` از موجودی کم می‌شود، دانه‌ها `SOLD` می‌شوند و کالا با میانگین جاری از دفتر خارج می‌شود (رویداد `REPLACEMENT_SHIPPED_TO_CUSTOMER`). `productUnitBarcodes` اختیاری است و اگر فرستاده شود همان دانه‌های `IN_STOCK` برداشته می‌شوند.
 - این قواعد برای هر ادعا یکسان است — ON_ORDER، EXCESS یا UNLISTED.
 - مثل مرجوعی خرید: همه‌ی نوبت‌ها پیش از هر تغییری بررسی می‌شوند، `observations` نمی‌تواند از `quantity` نوبت بیشتر یا منفی باشد، و اثرهای مرجوعی رد‌شده/لغوشده در `GetSaleReturnPendingEffects` برنمی‌گردند.
@@ -2652,12 +2758,21 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 فاکتور فروش کامل (شرکت، مشتری، اقلام، تخفیف، مالیات، جمع کل، مانده حساب) به‌صورت PDF فارسی راست‌به‌چپ.
 
-### `GET api/Invoice/GetPurchaseInvoicePdf?purchaseId=100`
-
-معادل فاکتور خرید، با اطلاعات تامین‌کننده.
+> `GetPurchaseInvoicePdf` **وجود ندارد** (۲۰۲۶-۰۹-۱۱ حذف شد): فاکتورِ خرید را تامین‌کننده صادر می‌کند و همان پیوست چاپ می‌شود، نه سندی که ما از روی داده‌ی خودمان بسازیم.
 
 > **فاکتور فروش (از ۲۰۲۶-۰۹-۲۴):** مبالغ هر ردیف و جمع‌ها همان اعداد ذخیره‌شده روی اقلام و سند است، نه محاسبه‌ی جداگانه. روی فروش
 > اقساطی دو خط اضافه چاپ می‌شود: «سود اقساط» و «جمع قابل پرداخت»؛ «مانده» = جمع قابل پرداخت − پرداخت‌شده.
+
+### `GET api/Invoice/GetPurchaseReturnPdf?purchaseReturnId=55` (از ۲۰۲۶-۰۹-۲۷)
+
+«برگه مرجوعی به تامین‌کننده» — برای **هر** مرجوعیِ خرید ساخته می‌شود (برخلافِ برگه‌ی طلبکاری، شرطِ اثرِ پولی ندارد؛ برگه همراهِ کالا می‌رود). همان قالبِ فاکتور:
+
+- سربرگ: شماره و تاریخِ مرجوعی، وضعیت، تامین‌کننده؛ شماره‌ی فاکتورِ خریدِ منشأ در توضیحات.
+- ردیف‌ها: **یک ردیف برای هر ادعا** — کالا (با عنوانِ فارسیِ مشکل)، کد، تعداد، قیمتِ واحدِ ادعا، جمع.
+- توضیحات: خلاصه‌ی تصمیم‌ها، یک جمله برای هر نوعِ اثر (عودت، جایگزین، آزادسازی، اسقاط: «انجام‌شده از کل»؛ دریافت/پرداختِ وجه: انجام‌شده و در انتظار، با روش).
+- «پرداخت شده» = وجهی که تامین‌کننده برگردانده (`MONEY_IN` اعمال‌شده) و «مانده» = وجهی که هنوز منتظرش هستیم (`MONEY_IN` معلق). قالبِ Excel این دو خانه را ندارد و آن‌ها فقط در توضیحات می‌آیند.
+
+دسترسی `InvoicePrint` (مثلِ بقیه‌ی `Invoice/*`). مرجوعیِ ناموجود یا حذف‌شده ۴۰۴.
 
 ### `GET api/Invoice/GetSaleReturnCreditNotePdf?saleReturnId=80`
 
@@ -2793,6 +2908,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 154 | SaleReturnLifecycle | ابطال، رد و بازگشایی مرجوعی فروش |
 | 170 | ProductUnitView | مشاهده واحدهای کالا و تاریخچه آن‌ها |
 | 171 | InventoryMaintenance | عملیات نگهداشت انبار |
+| 172 | ProductUnitManage | مدیریت دانه‌ها: قرنطینه، آزادسازی و اسقاط |
 | 190 | FileUpload | بارگذاری فایل و تصویر |
 | 191 | FileDelete | حذف فایل و تصویر |
 | 192 | InvoicePrint | چاپ فاکتور |
@@ -2920,6 +3036,8 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 1 | سهم سفارش (ON_ORDER) — روی قلم سند؛ در خرید با قیمت قلم خریده‌شده |
 | 2 | مازاد (EXCESS) — بیش از قلم: در خرید دانه‌ی قرنطینه‌ی پرداخت‌نشده، در فروش دانه‌ی `SOLD` که اضافه به مشتری رفته |
 | 3 | خارج از سند (UNLISTED) — کالایی که خرید اصلاً قلمی برایش ندارد |
+| 4 | برگشتیِ معیوب از مشتری (CUSTOMER_RETURN) — از ۲۰۲۶-۰۹-۲۷: بخشِ معیوبِ `GOODS_IN` مرجوعی فروش. در قرنطینه با ارزشی که کالای سالم با آن برمی‌گشت؛ قلمِ خریدِ منشأ روی دانه می‌ماند، پس ادعای ON_ORDER مرجوعیِ خرید روی همان قلم آن را هم برمی‌دارد (`goodsOut` با `source` قرنطینه) |
+| 5 | نگهداشتِ انبار (WAREHOUSE_HOLD) — از ۲۰۲۶-۰۹-۲۷: انباردار خودش از قفسه به قرنطینه برده (`ApplyProductUnitAction`)؛ قلمِ خرید روی دانه می‌ماند و ادعای ON_ORDER آن قلم می‌تواند پسش بدهد |
 
 ### `BarcodeReferenceKindEnum` (نتیجه‌ی تفسیر یک بارکد اسکن‌شده)
 | مقدار | معنی |
@@ -2927,6 +3045,23 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 1 | بارکد محصول (PRODUCT) |
 | 2 | بارکد یک دانه‌ی خاص (UNIT) |
 | 3 | نامعتبر/ناشناخته (UNKNOWN) — در عمل باعث خطای ۴۰۴ می‌شود |
+
+### `ProductUnitActionEnum` (کارِ دستیِ انبار، `ApplyProductUnitAction`)
+| مقدار | معنی |
+|---|---|
+| 1 | انتقال به قرنطینه (QUARANTINE) |
+| 2 | بازگشت به موجودی (RELEASE) |
+| 3 | اسقاط (SCRAP) |
+
+### `UnitActionReasonEnum` (علتِ کارِ دستی)
+| مقدار | معنی |
+|---|---|
+| 1 | آسیب در انبار (DAMAGED_IN_WAREHOUSE) |
+| 2 | عیبِ کشف‌شده (DEFECT_FOUND) |
+| 3 | تاریخ گذشته (EXPIRED) |
+| 4 | نیاز به بررسی (NEEDS_INSPECTION) |
+| 5 | بررسی شد - سالم (INSPECTION_PASSED) |
+| 9 | سایر موارد (OTHER) — یادداشت اجباری |
 
 ### `ProductUnitMovementReasonEnum` (علت یک حرکت دانه، `GetProductUnitHistory`)
 | مقدار | معنی |
@@ -2943,7 +3078,8 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 10 | اسقاط از قرنطینه (QUARANTINE_SCRAPPED) |
 | 11 | ارسال مازاد به مشتری (SALE_SHIPPED_EXCESS) |
 | 12 | اسقاط از موجودی (STOCK_SCRAPPED) — کالای معیوبِ روی قفسه، از مرجوعی خرید |
-| 13 | پذیرش مازاد در خرید (PURCHASE_EXCESS_ACCEPTED) — کالای قرنطینه که خریدیم |
+| 13 | پذیرش مازاد در خرید (PURCHASE_EXCESS_ACCEPTED) — کالای قرنطینه که خریدیم؛ از ۲۰۲۶-۰۹-۲۷ در قرنطینه می‌ماند |
+| 14 | انتقال به قرنطینه (STOCK_QUARANTINED) — `ApplyProductUnitAction` |
 
 ### `DocumentKindEnum` (نوع سند — پیوست‌ها و حرکت دانه‌ها)
 | مقدار | معنی |
@@ -2984,7 +3120,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 3 | ارسال‌شده کامل (SHIPPED) |
 | 4 | تحویل‌شده (DELIVERED) |
 | 5 | لغو‌شده (CANCELLED) |
-| 6 | مرجوع‌شده (RETURNED) — فقط بکند؛ فرانت هنوز معادلی برایش ندارد |
+| ~~6~~ | **حذف شد (۲۰۲۶-۰۹-۲۷)** — `RETURNED`. وضعیتِ فروش فقط می‌گوید ارسال تا کجا رفته؛ مرجوعی سندِ جدای خودش است. ردیف‌های موجود با migration به `SHIPPED`/`PARTIALLY_DELIVERED` برگشتند. عدد ۶ دوباره استفاده نمی‌شود. برای «این فروش مرجوعی دارد» از `returnCount`/`hasOpenReturn` استفاده کنید. |
 
 (عضو `PENDING` که قبلاً اینجا `0` بود کلاً حذف شد — فرانت هیچ‌وقت تولیدش نمی‌کرد و همان برچسبِ
 `PROCESSING` را برایش نشان می‌داد، پس تفکیک‌شان روی سیم معنایی نداشت. هر جا در فروش قبلاً
@@ -3092,6 +3228,13 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 3 | انتقال بانکی (TRANSFER) |
 | 4 | ترکیبی (MIXED) — نیازمند `parts[]` |
 
+### `ReportScopeEnum` (محدوده‌ی `GetScopePerformance`، بخش ۱۸)
+| مقدار | معنی |
+|---|---|
+| 0 | ME — اسنادِ خودِ کاربر |
+| 1 | TEAM — اعضای امروزِ تیمِ کاربر (فقط مسئول/جانشینِ تیم) |
+| 2 | DEPARTMENT — اعضای امروزِ واحدِ کاربر، با یا بدونِ تیم (فقط مسئول/جانشینِ واحد) |
+
 ### `ReportPeriodTypeEnum` (بازه‌ی زمانی گزارش، بخش ۱۸)
 | مقدار | معنی |
 |---|---|
@@ -3115,6 +3258,31 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 ## 16. نکات و محدودیت‌های شناخته‌شده
 
 این نکات برای جلوگیری از سردرگمی هنگام توسعه فرانت مهم هستند:
+
+### تغییرات قرارداد — ۲۰۲۶-۰۹-۲۷ (`frontend-requests.fa.md`) — یک تغییرِ نام، بقیه افزودنی یا آسان‌گیرانه
+
+| کجا | قبل | بعد | چرا |
+|---|---|---|---|
+| `ExecuteGoodsRound` (هر دو سمت) → بدنه، و `effects[].history[]` در جزئیات | `partyNationalId` | **`partyPhoneNumber`**، اختیاری، باید موبایل معتبر باشد | **شکننده (تغییر نام)**: برای پیگیری باید بشود تماس گرفت |
+| `Create/UpdateCustomer`، `Create/UpdateSupplier` | `postalCode` الزامی؛ نام/نام‌خانوادگیِ مسئولِ تامین‌کننده الزامی | اختیاری؛ برای تامین‌کننده «یکی پر ⇒ هر دو» | آسان‌گیرانه‌تر |
+| `ReceivePurchase`/`ShipSale` | فقط نامِ راننده ⇒ ۵۰۰ (NOT NULL) | فیلدهای خالی `""` ذخیره می‌شوند | باگ |
+| `PermissionEnum` | — | `ProductUnitManage = 172` | کارهای دستی روی دانه؛ هنوز endpointی پشتش نیست |
+| `GetSaleList` | — | `customerId`، `statuses` | فیلتر دقیق و صفِ ارسال |
+| `Get{Purchase,Sale}ReturnPendingEffects` | فقط شناسه‌ی مرجوعی | + `returnDate`، `purchaseId`/`saleId`، `invoiceNumber`، `supplierName`/`customerName`؛ نام/کد کالا از کالای خودِ اثر | صفِ انبار بدونِ خواندنِ جزئیاتِ هر مرجوعی |
+| — | — | `PUT Update{Purchase,Sale}ReturnAttachments`؛ `attachments[]` در جزئیاتِ مرجوعی | پیوستِ مرجوعی |
+| — | — | `GET api/Invoice/GetPurchaseReturnPdf` | برگه‌ی همراهِ کالا |
+| — | — | `GET api/Report/GetScopePerformance`؛ `teamId`/`departmentId` روی دو گزارشِ عملکردِ کارمندان | داشبوردِ شخصی |
+| `AddClaimResolution` خرید → `goodsOut[].source` | منبع فقط موقع اجرا (`rounds[].source`) | **الزامی در تصمیم** (`1` یا `9`)؛ `goodsScrap[].source` اختیاری (پیش‌فرض `9`)؛ اجرا منبعِ تصمیم را می‌گیرد و مقدارِ دیگر ۴۰۰ است | **شکننده**: قرنطینه از لحظه‌ی تصمیم رزرو می‌شود و کمبود به کسی که تصمیم گرفته گفته می‌شود، نه به انبار |
+| `GetPurchaseReceivingInfo` | — | `items[].freeQuarantinedOnOrderQuantity`، `items[].quarantinedWarehouseHoldQuantity`؛ «آزاد»ها منهای رزروِ تصمیم‌ها هم هستند | سقفِ واقعیِ برداشت از قرنطینه |
+| `AcceptPurchaseExcess` | کالا به موجودی می‌رفت | **در قرنطینه می‌ماند** (ON_ORDER، با قیمت خالص)؛ موجودی عوض نمی‌شود؛ بعد `ApplyProductUnitAction` آزادسازی | **تغییر رفتار**: خریدن و روی قفسه گذاشتن دو تصمیمِ جدا؛ کالای خراب هیچ‌وقت وسط کار قابل فروش نمی‌شود |
+| — | — | `POST api/Product/ApplyProductUnitAction`؛ enumهای `ProductUnitActionEnum`/`UnitActionReasonEnum`؛ `WAREHOUSE_HOLD = 5`؛ `STOCK_QUARANTINED = 14`؛ `actionReason` در تاریخچه‌ی دانه | کارِ دستیِ انبار بدون مرجوعیِ ساختگی |
+| `GetProductUnitList` | فقط `productId`/`status`/`productName`/سریال | + `search`، `statuses`، `custodyReason`، `labelState`، `supplierId`، `customerId`، `purchaseId`، `saleId`، `fromDate`/`toDate`؛ سه مرتب‌سازیِ تازه؛ `take` حداکثر ۲۰۰؛ فیلدهای قرنطینه، چاپ و `productCode` روی هر ردیف | صفحه‌ی «دانه‌ها و برچسب‌ها» |
+| — | — | `GET GetProductUnitSummary`، `POST MarkProductUnitsPrinted` | شمارش‌ها و سابقه‌ی چاپ |
+| — | — | `POST SetProductUnitLocation`؛ `binLocation` روی دانه و فیلترِ `binLocation` در فهرست | قفسه‌ی هر دانه |
+| `SalesStatusEnum` | `RETURNED = 6` خودکار وقتی همه‌ی ارسال‌شده‌ها تسویه می‌شد | **حذف شد**؛ وضعیت فقط از ارسال/تحویل/لغو؛ + `returnCount`/`hasOpenReturn` روی فروش | **شکننده**: تعویض هم «مرجوع‌شده» نشان داده می‌شد و با حذف تصمیم برنمی‌گشت |
+| `GetSaleDetail` (و پاسخ نوشتن‌های فروش) | — | `items[].claimableQuantity`، `claimableExcessQuantity`، `productCode`، `unit` | سقفِ ادعا همان عددی که سرور چک می‌کند |
+| `ExecuteGoodsRound` مرجوعی فروش، `GOODS_IN` | بخشِ معیوب `SCRAPPED` (بیرون از فاکتور: اصلاً دانه‌ای ساخته نمی‌شد) | `QUARANTINED`/`CUSTOMER_RETURN` با ارزش؛ + `quarantinedQuantity` روی جزئیات مرجوعی فروش، `quarantinedCustomerReturnQuantity` روی `GetPurchaseReceivingInfo` | **تغییر رفتار**: کالای معیوب قابل عودت به تامین‌کننده می‌ماند |
+| گزارش فروش `costOfGoodsSold`/`netProfit` | کالای برگشتی بهای تمام‌شده را کم نمی‌کرد | کم می‌کند (سالم و معیوب) | **تغییر عدد**: فروش + برگشت + فروشِ دوباره دو بار هزینه حساب می‌شد |
 
 ### تغییرات قرارداد — ۲۰۲۶-۰۹-۲۵ (بندهای ۱، ۵، ۶، ۸، ۱۰ و ۱۲ درخواست فرانت) — افزودنی، به‌جز یک سخت‌گیری
 
@@ -3569,8 +3737,8 @@ migration: `quarantine-unit-cost` (ستون `ProductUnits.QuarantineCost`، `dec
 }
 ```
 - `revenue`: مجموع مبلغ خالص فروش‌های ارسال‌شده در این بازه (پس از کسر تخفیف قلمی) + وجوه مرجوعی‌های فروش: `moneyOut` به‌صورت منفی و `moneyIn` به‌صورت مثبت.
-- `costOfGoodsSold`: بهای تمام‌شده‌ی کالای فروخته‌شده در همین بازه، محاسبه‌شده با میانگین موزون هزینه در لحظه‌ی ارسال (نه قیمت خرید فعلی محصول).
-- `scrapLoss`: ارزش کالایی که در همین بازه اسقاط شد (`goodsScrap` مرجوعی خرید؛ بخش ۱۰): از قرنطینه با ارزشی که هر دانه با آن وارد قرنطینه شده بود، از قفسه با میانگین جاری. یک خط مستقل است و در `revenue`/`costOfGoodsSold` نیست.
+- `costOfGoodsSold`: بهای تمام‌شده‌ی کالای فروخته‌شده در همین بازه، محاسبه‌شده با میانگین موزون هزینه در لحظه‌ی ارسال (نه قیمت خرید فعلی محصول). **از ۲۰۲۶-۰۹-۲۷ کالایی که مشتری برمی‌گرداند این عدد را کم می‌کند** (سالم: `SALE_RETURN_RESTOCK`، معیوب: `SALE_RETURN_QUARANTINED`)؛ پیش از این کالای برگشتی‌ای که دوباره فروخته می‌شد دو بار بهای تمام‌شده حساب می‌شد. عدد می‌تواند در بازه‌ای که برگشتی بیشتر از فروش دارد منفی شود. این گزارش از روی دفتر محاسبه می‌شود، پس عددهای گذشته هم با همین قاعده عوض می‌شوند.
+- `scrapLoss`: ارزش کالایی که در همین بازه اسقاط شد (`goodsScrap` مرجوعی خرید؛ بخش ۱۰؛ شاملِ برگشتیِ معیوبِ مشتری): از قرنطینه با ارزشی که هر دانه با آن وارد قرنطینه شده بود، از قفسه با میانگین جاری. یک خط مستقل است و در `revenue`/`costOfGoodsSold` نیست.
 - `netProfit`: `revenue - costOfGoodsSold - scrapLoss` (شامل بهای کالایی که با `goodsOut` مرجوعی فروش ارسال شد و وجوه مرجوعی‌های فروش؛ بخش ۱۰، «مدل اثرها»).
 
 ### `GET api/Report/GetPurchaseReport`
@@ -3597,3 +3765,35 @@ migration: `quarantine-unit-cost` (ستون `ProductUnits.QuarantineCost`، `dec
 `totalReceivedValue`: ارزش واقعیِ کالای خریده‌شده‌ای که در همین بازه به انبار رسید (قیمت خرید هر قلم پس از تخفیف، ضرب در تعداد دریافتیِ سهم سفارش) — **شامل کالای خرابِ سهم سفارش که مستقیم به قرنطینه رفت** (پولش داده شده)، ولی نه مازاد یا کالای خارج از سند (بخش ۹، `ReceivePurchase`) — ممکن است با `totalInvoiceAmount` یکی نباشد چون یکی بر اساس تاریخ فاکتور و دیگری بر اساس تاریخ دریافت فیزیکی است.
 
 `returnMoneyAmount`: وجوه مرجوعی‌های خرید در همین بازه (بر اساس زمان ثبت تصمیم)، به‌عنوان هزینه‌ی خرید: `moneyIn` (تامین‌کننده به ما پرداخت) **منفی** و `moneyOut` (ما به تامین‌کننده پرداختیم) **مثبت**. جدا از `totalReceivedValue` نگه داشته شده چون آن ارزش کالای دریافتی است. این وجوه در گزارش فروش شمرده نمی‌شوند.
+
+### `GET api/Report/GetScopePerformance` (از ۲۰۲۶-۰۹-۲۷)
+
+عملکردِ «من»، «تیم من» یا «واحد من» برای داشبوردِ شخصی. **`ReportView` لازم ندارد و عمداً درآمد، بهای تمام‌شده و سود ندارد** — فقط تعداد و مبلغِ فاکتورها.
+
+**Query:** `scope` (`ReportScopeEnum`، الزامی: `0` ME، `1` TEAM، `2` DEPARTMENT)، `periodType`، `fromDate`، `toDate` (همان پیش‌فرض‌های `GetSaleReport`: ماهانه، ۱۲ ماهِ اخیر).
+
+- شناسه‌ی تیم/واحد **پارامتر نیست**؛ سرور آن را از کاربرِ واردشده می‌خواند.
+- `TEAM` فقط برای مسئول/جانشینِ تیم، `DEPARTMENT` فقط برای مسئول/جانشینِ واحد؛ بقیه ۴۰۳. نقش همان است که `GetUserInfo` برمی‌گرداند.
+- عضویتِ **امروز** ملاک است (تاریخچه‌ی عضویت ذخیره نمی‌شود): کسی که تیم عوض کرده سابقه‌اش را با خودش می‌برد؛ اسنادِ کاربرِ غیرفعال در هیچ محدوده‌ای نیست.
+- شمارش مثلِ `GetSaleReport`/`GetPurchaseReport`: روی `invoiceDate`، فقط اسنادِ تاریخ‌دار، مبلغ = `totalAmount`؛ اسنادِ حذف‌شده حساب نمی‌شوند. فقط اسنادی که `salesUserId`/`purchasingUserId` دارند مالِ کسی‌اند.
+
+**data:**
+```json
+{
+  "scope": 1,
+  "scopeName": "تیم فروش حضوری",
+  "periods": [
+    { "periodStart": "2026-08-23T00:00:00", "periodEnd": "2026-09-23T00:00:00", "salesCount": 42, "saleInvoiceAmount": 318000000, "purchasesCount": 0, "purchaseInvoiceAmount": 0 }
+  ],
+  "members": [
+    { "userId": 7, "fullName": "سارا کریمی", "role": 3, "roleTitle": "مسئول تیم", "teamId": 4, "teamName": "تیم فروش حضوری", "salesCount": 210, "saleInvoiceAmount": 3100000000, "purchasesCount": 0, "purchaseInvoiceAmount": 0 }
+  ]
+}
+```
+
+- `scopeName`: برای `ME` خالی.
+- `members`: برای `ME` خالی؛ برای تیم/واحد **همه‌ی اعضای فعالِ فعلی**، حتی بدونِ سند (با صفر). جمعِ کلِ بازه، بدونِ صفحه‌بندی و ترتیبِ خاص. جمعِ `periods` با جمعِ `members` برابر است.
+
+### فیلترِ تیم/واحد روی `GetSalesPerformanceByEmployee` و `GetSupplyPerformanceByEmployee` (از ۲۰۲۶-۰۹-۲۷)
+
+`teamId` و `departmentId` (اختیاری): رتبه‌بندی فقط بینِ کارمندانی که **امروز** در آن تیم/واحدند. دسترسی مثلِ قبل `ReportView`.

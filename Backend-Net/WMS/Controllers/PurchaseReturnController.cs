@@ -55,6 +55,13 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
+        [HasPermission(PermissionEnum.PurchaseReturnCreate)]
+        [HttpPut("UpdatePurchaseReturnAttachments")]
+        public async Task<ActionResult<ResponseDto>> UpdatePurchaseReturnAttachments([FromBody] UpdatePurchaseReturnAttachmentsCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
         [HasPermission(PermissionEnum.PurchaseReturnDecide)]
         [HttpPost("AddClaimResolution")]
         public async Task<ActionResult<ResponseDto>> AddClaimResolution([FromBody] AddClaimResolutionCommand request)

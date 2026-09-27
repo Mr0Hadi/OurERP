@@ -30,7 +30,14 @@ namespace Application.Features.Sale.Queries
         public int Take { get; set; } = 10;
         public string? InvoiceNumber { get; set; }
         public string? CustomerName { get; set; }
+        /// <summary>Exact customer, so two customers with the same name are not mixed (the mirror of GetPurchaseList's SupplierId).</summary>
+        public int? CustomerId { get; set; }
         public SalesStatusEnum? Status { get; set; }
+        /// <summary>
+        /// Any of these statuses (?statuses=1&amp;statuses=2) - e.g. the warehouse shipping queue, which wants PROCESSING and
+        /// PARTIALLY_DELIVERED together. Combines with Status by AND, like every other filter.
+        /// </summary>
+        public List<SalesStatusEnum>? Statuses { get; set; }
         public PaymentTypeEnum? PaymentType { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
@@ -63,9 +70,20 @@ namespace Application.Features.Sale.Queries
                     (x.Customer.FirstName + " " + x.Customer.LastName).Contains(request.CustomerName));
             }
 
+            if (request.CustomerId.HasValue)
+            {
+                query = query.Where(x => x.CustomerId == request.CustomerId.Value);
+            }
+
             if (request.Status.HasValue)
             {
                 query = query.Where(x => x.Status == request.Status.Value);
+            }
+
+            if (request.Statuses is { Count: > 0 })
+            {
+                var statuses = request.Statuses;
+                query = query.Where(x => statuses.Contains(x.Status));
             }
 
             if (request.PaymentType.HasValue)
@@ -121,6 +139,9 @@ namespace Application.Features.Sale.Queries
                 TotalAmount = x.TotalAmount,
                 // A live plan (not cancelled) adds its charge on top of the invoice.
                 PayableAmount = x.InstallmentPlan != null && x.InstallmentPlan.IsActive ? x.InstallmentPlan.TotalAmount : x.TotalAmount,
+                ReturnCount = _context.SaleReturns.Count(r => r.SaleId == x.Id && r.IsActive),
+                HasOpenReturn = _context.SaleReturns.Any(r => r.SaleId == x.Id && r.IsActive
+                    && (r.Status == ReturnStatusEnum.OPEN || r.Status == ReturnStatusEnum.IN_PROGRESS)),
                 PaidAmount = x.PaidAmount
             }).ToPagedAsync(request.Page, request.Take, cancellationToken);
 

@@ -34,5 +34,9 @@ namespace Application.Features.Product.Dtos
         public int? UserId { get; set; }
         public string? UserName { get; set; }
         public string? Note { get; set; }
+
+        /// <summary>Manual warehouse actions only: why (UnitActionReasonEnum) and its Persian title.</summary>
+        public UnitActionReasonEnum? ActionReason { get; set; }
+        public string? ActionReasonTitle { get; set; }
     }
 }

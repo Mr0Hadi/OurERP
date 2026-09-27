@@ -20,6 +20,10 @@ namespace Application.Features.Report.Queries
         public int Take { get; set; } = 10;
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
+        /// <summary>Only employees who are in this team today (membership history is not stored).</summary>
+        public int? TeamId { get; set; }
+        /// <summary>Only employees who are in this department today, with or without a team.</summary>
+        public int? DepartmentId { get; set; }
         public SalesPerformanceByEmployeeSortEnum? SortBy { get; set; }
         public SortDirectionEnum? SortDirection { get; set; }
     }
@@ -45,6 +49,12 @@ namespace Application.Features.Report.Queries
             var res = new ResponseDto();
 
             var query = _context.Sales.Where(x => x.SalesUserId.HasValue);
+
+            if (request.TeamId.HasValue)
+                query = query.Where(x => x.SalesUser!.TeamId == request.TeamId.Value);
+
+            if (request.DepartmentId.HasValue)
+                query = query.Where(x => x.SalesUser!.DepartmentId == request.DepartmentId.Value);
 
             if (request.FromDate.HasValue)
                 query = query.Where(x => x.InvoiceDate >= request.FromDate.Value);

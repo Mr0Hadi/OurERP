@@ -437,7 +437,7 @@ namespace WMS.Tests.Integration
             scope.Context.SaveChanges();
 
             // اولین پرداخت، حتی ناقص = نهایی‌سازی خودکار. (خروج دستی دیگر راهی ندارد: UpdateSale وضعیت نمی‌گیرد.)
-            await new AddSalePaymentCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork)
+            await new AddSalePaymentCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation)
                 .Handle(new AddSalePaymentCommand { SaleId = scenario.Sale.Id, Type = PaymentTypeEnum.CASH, Amount = 1_000 }, CancellationToken.None);
 
             using var verify = db.NewContext();
@@ -454,7 +454,7 @@ namespace WMS.Tests.Integration
             var scenario = ProformaInstallmentSale(scope.Context, 5_000);
 
             // حتی با پرداخت کامل: پول فروش اقساطی فقط از مسیر قرارداد می‌آید، پس بدون قرارداد از پیش‌فاکتور خارج نمی‌شود.
-            await Assert.ThrowsAsync<ValidationCustomException>(() => new AddSalePaymentCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork)
+            await Assert.ThrowsAsync<ValidationCustomException>(() => new AddSalePaymentCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation)
                 .Handle(new AddSalePaymentCommand { SaleId = scenario.Sale.Id, Type = PaymentTypeEnum.CASH, Amount = 5_000 }, CancellationToken.None));
 
             using var verify = db.NewContext();
@@ -507,7 +507,7 @@ namespace WMS.Tests.Integration
             var createHandler = new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork);
             await createHandler.Handle(PlanCommand(scenario.Sale.Id, 10m, 1_000, 3, new DateTime(2026, 2, 1)), CancellationToken.None);
 
-            var response = await new Application.Features.Sale.Queries.GetSaleDetailQueryHandler(scope.Db, FakeObjectStorage.Instance)
+            var response = await new Application.Features.Sale.Queries.GetSaleDetailQueryHandler(scope.Db, FakeObjectStorage.Instance, scope.SaleReturnCalculation)
                 .Handle(new Application.Features.Sale.Queries.GetSaleDetailQuery { Id = scenario.Sale.Id }, CancellationToken.None);
 
             var sale = (SaleDto)response.Data!;

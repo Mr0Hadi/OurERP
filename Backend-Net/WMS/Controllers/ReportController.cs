@@ -19,6 +19,14 @@ namespace WMS.Controllers
             _mediator = mediator;
         }
 
+        // No [HasPermission]: who may ask is decided by the org chart inside the handler (ME for anyone, TEAM/DEPARTMENT for
+        // their heads and deputies), and it never shows revenue or cost - see GetScopePerformanceQuery.
+        [HttpGet("GetScopePerformance")]
+        public async Task<ActionResult<ResponseDto>> GetScopePerformance([FromQuery] GetScopePerformanceQuery request)
+        {
+            return await _mediator.Send(request);
+        }
+
         [HasPermission(PermissionEnum.ReportView)]
         [HttpGet("GetSaleReport")]
         public async Task<ActionResult<ResponseDto>> GetSaleReport([FromQuery] GetSaleReportQuery request)

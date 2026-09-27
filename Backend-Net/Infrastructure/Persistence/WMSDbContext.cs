@@ -381,6 +381,10 @@ namespace Infrastructure.Persistence
             modelBuilder.Entity<ProductUnitMovement>()
                 .HasIndex(x => new { x.DocumentKind, x.DocumentId });
 
+            modelBuilder.Entity<ProductUnit>()
+                .Property(x => x.BinLocation)
+                .HasMaxLength(Application.Common.Contracts.ProductUnit.BinLocations.MaxLength);
+
             // The claim quota's one query: quarantined units of a purchase by custody reason.
             modelBuilder.Entity<ProductUnit>()
                 .HasIndex(x => new { x.PurchaseId, x.Status, x.CustodyReason });

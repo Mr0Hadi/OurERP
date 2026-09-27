@@ -72,5 +72,15 @@ namespace Domain.Enums
         /// pool at the line's net price - the price we pay - and whatever value they held off-pool leaves it. The purchase report
         /// counts the pool value as received purchase value, exactly like PURCHASE_RECEIVED.</summary>
         PURCHASE_EXCESS_ACCEPTED = 22,
+
+        /// <summary>A sale-return GOODS_IN's defective part, held in quarantine (custody CUSTOMER_RETURN): OffPoolValueDelta +quantity x
+        /// cost (the effect's UnitCost, else the running average, else Product.PurchasePrice - the same value a healthy restock enters
+        /// at). The sale report reverses that much cost of goods sold, exactly like SALE_RETURN_RESTOCK: the goods came back.</summary>
+        SALE_RETURN_QUARANTINED = 23,
+
+        /// <summary>ApplyProductUnitAction QUARANTINE: sellable units taken off the shelf into quarantine (custody WAREHOUSE_HOLD). They
+        /// leave the pool at the running average and the same value enters OffPoolValueDelta - the units carry it as QuarantineCost.
+        /// No profit effect: the goods are still ours, just not for sale.</summary>
+        STOCK_QUARANTINED = 24,
     }
 }

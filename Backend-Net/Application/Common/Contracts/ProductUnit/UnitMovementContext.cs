@@ -14,5 +14,6 @@ namespace Application.Common.Contracts.ProductUnit
         int? DocumentId = null,
         int? CustomerId = null,
         int? SupplierId = null,
-        string? Note = null);
+        string? Note = null,
+        UnitActionReasonEnum? ActionReason = null);
 }

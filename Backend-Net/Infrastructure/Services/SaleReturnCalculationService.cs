@@ -94,20 +94,6 @@ namespace Infrastructure.Services
                 .Sum(c => Math.Max(0, c.Quantity - c.Resolutions.Where(r => r.Effects.All(e => e.Status != ReturnEffectStatusEnum.PENDING)).Sum(r => r.Quantity)));
         }
 
-        public SalesStatusEnum RecomputeSaleStatus(Sale sale)
-        {
-            if (sale.Status == SalesStatusEnum.CANCELLED)
-                return SalesStatusEnum.CANCELLED;
-
-            var fullyReturned = sale.Items.Count > 0 &&
-                sale.Items.All(i => i.ShippedQuantity > 0 && i.SettledQuantity >= i.ShippedQuantity);
-
-            if (fullyReturned)
-                return SalesStatusEnum.RETURNED;
-
-            return sale.Status;
-        }
-
         public List<SaleReturnEffect> ExpandComposition(EffectCompositionDto composition, DateTime now)
         {
             var effects = new List<SaleReturnEffect>();

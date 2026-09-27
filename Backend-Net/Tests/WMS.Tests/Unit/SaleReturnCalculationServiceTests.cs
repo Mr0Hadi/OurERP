@@ -252,50 +252,6 @@ namespace WMS.Tests.Unit
         }
 
         [Fact]
-        public void RecomputeSaleStatus_Cancelled_StaysCancelled()
-        {
-            var sale = new Sale { Status = SalesStatusEnum.CANCELLED, Items = new() { new SaleItem { ShippedQuantity = 5, SettledQuantity = 5 } } };
-
-            Assert.Equal(SalesStatusEnum.CANCELLED, _sut.RecomputeSaleStatus(sale));
-        }
-
-        [Fact]
-        public void RecomputeSaleStatus_EveryShippedUnitSettled_BecomesReturned()
-        {
-            var sale = new Sale
-            {
-                Status = SalesStatusEnum.SHIPPED,
-                Items = new() { new SaleItem { ShippedQuantity = 5, SettledQuantity = 5 } },
-            };
-
-            Assert.Equal(SalesStatusEnum.RETURNED, _sut.RecomputeSaleStatus(sale));
-        }
-
-        [Fact]
-        public void RecomputeSaleStatus_PartiallySettled_KeepsOriginalStatus()
-        {
-            var sale = new Sale
-            {
-                Status = SalesStatusEnum.SHIPPED,
-                Items = new() { new SaleItem { ShippedQuantity = 5, SettledQuantity = 2 } },
-            };
-
-            Assert.Equal(SalesStatusEnum.SHIPPED, _sut.RecomputeSaleStatus(sale));
-        }
-
-        [Fact]
-        public void RecomputeSaleStatus_ItemNeverShipped_IsNotConsideredFullyReturned()
-        {
-            var sale = new Sale
-            {
-                Status = SalesStatusEnum.PROCESSING,
-                Items = new() { new SaleItem { ShippedQuantity = 0, SettledQuantity = 0 } },
-            };
-
-            Assert.Equal(SalesStatusEnum.PROCESSING, _sut.RecomputeSaleStatus(sale));
-        }
-
-        [Fact]
         public void ExpandComposition_GoodsInOnly_ProducesOnePendingEffect()
         {
             var composition = new EffectCompositionDto { Quantity = 3, GoodsIn = new() { new GoodsEffectDto { Quantity = 3 } } };

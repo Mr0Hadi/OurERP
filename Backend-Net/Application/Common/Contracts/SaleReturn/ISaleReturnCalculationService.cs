@@ -75,13 +75,6 @@ namespace Application.Common.Contracts.SaleReturn
         int GetOutstandingExcessClaimQuantity(int saleItemId, List<Domain.Entities.SaleReturn> activeReturns);
 
         /// <summary>
-        /// Sale.Status is only ever overridden by return activity to flip to RETURNED once every
-        /// unit ever shipped has been settled through a return resolution whose goods effects (if
-        /// any) have all completed. Otherwise the sale's own status is untouched.
-        /// </summary>
-        SalesStatusEnum RecomputeSaleStatus(Domain.Entities.Sale sale);
-
-        /// <summary>
         /// Expands a composition (the same {quantity, goodsIn, goodsOut, money} shape the frontend
         /// posts) into the Effect rows it represents. Goods effects start PENDING; a money effect starts
         /// APPLIED when the request says when it was paid (PaidAt), PENDING otherwise.

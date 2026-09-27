@@ -1,6 +1,7 @@
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.SaleReturn;
+using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Dtos.Returns;
@@ -65,13 +66,15 @@ namespace Application.Features.SaleReturn.Commands
         private readonly IWMSDbContext _context;
         private readonly ISaleReturnRepository _saleReturnRepository;
         private readonly ISaleReturnCalculationService _saleReturnCalculationService;
+        private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public CreateSaleReturnCommandHandler(IWMSDbContext context, ISaleReturnRepository saleReturnRepository, ISaleReturnCalculationService saleReturnCalculationService, IUnitOfWork unitOfWork)
+        public CreateSaleReturnCommandHandler(IWMSDbContext context, ISaleReturnRepository saleReturnRepository, ISaleReturnCalculationService saleReturnCalculationService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
         {
             _context = context;
             _saleReturnRepository = saleReturnRepository;
             _saleReturnCalculationService = saleReturnCalculationService;
+            _objectStorageService = objectStorageService;
             _unitOfWork = unitOfWork;
         }
 
@@ -225,7 +228,7 @@ namespace Application.Features.SaleReturn.Commands
             await _saleReturnRepository.AddAsync(saleReturn, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            res.Data = await SaleReturnDetailReader.ReadAsync(_context, _saleReturnCalculationService, saleReturn.Id, cancellationToken);
+            res.Data = await SaleReturnDetailReader.ReadAsync(_context, _saleReturnCalculationService, _objectStorageService, saleReturn.Id, cancellationToken);
             res.Message = "درخواست مرجوعی با موفقیت ثبت شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;

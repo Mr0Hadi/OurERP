@@ -1,6 +1,7 @@
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Storage;
+using Application.Common.Documents;
 using Application.Common.Enums;
 using Application.Common.Queries;
 using Application.Features.PurchaseReturn.Dtos;
@@ -46,6 +47,8 @@ public static class PurchaseReturnDetailReader
             ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
 
         // checked, so a bad row fails loudly instead of wrapping into a plausible-looking huge number.
+        var attachments = await DocumentAttachmentWriter.ReadAsync(context, storage, Domain.Enums.DocumentKindEnum.PURCHASE_RETURN, purchaseReturn.Id, cancellationToken);
+
         var totalAmount = checked((ulong)purchaseReturn.Claims.Sum(c => checked((long)c.Quantity * (long)c.UnitPrice)));
 
         return new PurchaseReturnDetailDto
@@ -74,6 +77,7 @@ public static class PurchaseReturnDetailReader
             CanReopen = calc.CanPerform(purchaseReturn, ReturnLifecycleActionEnum.REOPEN),
             ReceivingImages = [.. purchaseReturn.ReceivingImages.Select(i => i.ToDto(storage))],
             Claims = [.. purchaseReturn.Claims.Select(c => c.ToDto())],
+            Attachments = attachments,
         };
     }
 }

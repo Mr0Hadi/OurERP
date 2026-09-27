@@ -98,8 +98,8 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 3, shippedQuantity: 3, stock: 0);
 
-            await scope.ProductUnitService.RestoreAsync(scenario.Item.Id, false, 1, 0, null, null, Movements.Test, CancellationToken.None);
-            await scope.ProductUnitService.RestoreAsync(scenario.Item.Id, false, 1, 0, null, null, Movements.Test, CancellationToken.None);
+            await scope.ProductUnitService.RestoreAsync(scenario.Item.Id, false, 1, 0, 0m, null, null, Movements.Test, CancellationToken.None);
+            await scope.ProductUnitService.RestoreAsync(scenario.Item.Id, false, 1, 0, 0m, null, null, Movements.Test, CancellationToken.None);
             await scope.UnitOfWork.SaveChangesAsync(CancellationToken.None);
 
             using var verify = db.NewContext();
@@ -115,7 +115,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 2, shippedQuantity: 2, stock: 0);
 
-            await scope.ProductUnitService.RestoreAsync(scenario.Item.Id, false, 1, 0, null, null, Movements.Test, CancellationToken.None);
+            await scope.ProductUnitService.RestoreAsync(scenario.Item.Id, false, 1, 0, 0m, null, null, Movements.Test, CancellationToken.None);
 
             // Before the fix: nothing IN_STOCK when saved, so the restored unit could not be shipped.
             var shipped = await scope.ProductUnitService.ConsumeAsync(scenario.Product, 1, null, null, null, Movements.Test, CancellationToken.None);

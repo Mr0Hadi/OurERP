@@ -75,6 +75,21 @@ namespace Application.Common.Contracts.PurchaseReturn
         int GetOutstandingOffOrderClaimQuantity(ReturnOffScopeKindEnum kind, int? purchaseItemId, int productId, List<Domain.Entities.PurchaseReturn> activeReturns);
 
         /// <summary>
+        /// How many of the quarantined units <paramref name="selection"/> covers are already spoken for on the open returns of
+        /// <paramref name="purchaseId"/> - the one definition of a quarantine reservation, read by the decision-time check, by manual
+        /// warehouse actions (ApplyProductUnitAction), by AcceptPurchaseExcess and by the receiving screen. Two kinds of reservation:
+        /// <list type="bullet">
+        /// <item>an EXCESS/UNLISTED claim reserves its outstanding quantity from the moment it exists
+        /// (<see cref="GetOutstandingOffOrderClaimQuantity"/>); the effects decided under it draw on that and are not counted again;</item>
+        /// <item>any other pending goods effect that takes units from quarantine - GOODS_OUT or GOODS_SCRAP with Source QUARANTINED,
+        /// every GOODS_RELEASE - reserves what it has not executed yet. A goods effect with no Source (decided before the source was
+        /// stated with the decision) counts as quarantine: the careful reading.</item>
+        /// </list>
+        /// Free units = held units matching <paramref name="selection"/> minus this.
+        /// </summary>
+        int GetReservedQuarantineQuantity(Application.Common.Contracts.ProductUnit.UnitSelection selection, int productId, int purchaseId, List<Domain.Entities.PurchaseReturn> openReturns);
+
+        /// <summary>
         /// Purchase.Status is only ever overridden by return activity to flip back to RECEIVED
         /// once every unit ever received has been settled through a return resolution whose goods
         /// effects (if any) have all completed. Otherwise the purchase's own status is untouched.

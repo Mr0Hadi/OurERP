@@ -81,7 +81,7 @@ public static class SaleReturnMappings
         Quantity = h.Quantity,
         HealthyQuantity = h.HealthyQuantity,
         PartyName = h.PartyName,
-        PartyNationalId = h.PartyNationalId,
+        PartyPhoneNumber = h.PartyPhoneNumber,
         VehiclePlate = h.VehiclePlate,
         Note = h.Note,
         Observations = [.. h.Observations.Select(o => o.ToDto())],

@@ -1,5 +1,6 @@
 using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.SaleReturn;
 using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
@@ -34,12 +35,14 @@ namespace Application.Features.Sale.Commands
     {
         private readonly IWMSDbContext _context;
         private readonly IObjectStorageService _objectStorageService;
+        private readonly ISaleReturnCalculationService _saleReturnCalculationService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public VoidSalePaymentCommandHandler(IWMSDbContext context, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
+        public VoidSalePaymentCommandHandler(IWMSDbContext context, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, ISaleReturnCalculationService saleReturnCalculationService)
         {
             _context = context;
             _objectStorageService = objectStorageService;
+            _saleReturnCalculationService = saleReturnCalculationService;
             _unitOfWork = unitOfWork;
         }
 
@@ -60,7 +63,7 @@ namespace Application.Features.Sale.Commands
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            res.Data = await SaleDetailReader.ReadAsync(_context, _objectStorageService, sale.Id, cancellationToken);
+            res.Data = await SaleDetailReader.ReadAsync(_context, _objectStorageService, _saleReturnCalculationService, sale.Id, cancellationToken);
             res.Message = "پرداخت فروش ابطال شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;

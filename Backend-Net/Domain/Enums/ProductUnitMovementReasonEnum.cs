@@ -46,5 +46,8 @@ namespace Domain.Enums
 
         [Description("پذیرش مازاد در خرید")]
         PURCHASE_EXCESS_ACCEPTED = 13,
+
+        [Description("انتقال به قرنطینه")]
+        STOCK_QUARANTINED = 14,
     }
 }

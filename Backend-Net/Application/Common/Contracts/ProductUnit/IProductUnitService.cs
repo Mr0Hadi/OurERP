@@ -34,13 +34,15 @@ namespace Application.Common.Contracts.ProductUnit
         Task<List<Domain.Entities.ProductUnit>> ConsumeAsync(Domain.Entities.Product product, int count, int? saleItemId, Domain.Enums.UnitCustodyReasonEnum? custodyReason, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken);
 
         /// <summary>
-        /// A customer's units coming back on a sale line: <paramref name="healthyCount"/> of the line's SOLD units
-        /// go back to IN_STOCK and <paramref name="scrapCount"/> become SCRAPPED. <paramref name="excessUnits"/> picks which of the line's
-        /// sold units: the excess ones (custody EXCESS) or the ordered ones (everything else). With
-        /// <paramref name="barcodes"/> (all units coming back, healthy and scrap), <paramref name="scrapBarcodes"/>
-        /// names which of them are scrap and must count exactly <paramref name="scrapCount"/>.
+        /// A customer's units coming back on a sale line: <paramref name="healthyCount"/> of the line's SOLD units go back to IN_STOCK
+        /// and <paramref name="defectiveCount"/> go to QUARANTINED under custody CUSTOMER_RETURN, carrying
+        /// <paramref name="defectiveUnitCost"/> as their QuarantineCost (they used to be SCRAPPED on arrival). Their purchase line is kept,
+        /// so a purchase return on that line can send them back to the supplier. <paramref name="excessUnits"/> picks which of the
+        /// line's sold units: the excess ones (custody EXCESS) or the ordered ones (everything else). With <paramref name="barcodes"/>
+        /// (all units coming back, healthy and defective), <paramref name="defectiveBarcodes"/> names which of them are defective and
+        /// must count exactly <paramref name="defectiveCount"/>.
         /// </summary>
-        Task RestoreAsync(int saleItemId, bool excessUnits, int healthyCount, int scrapCount, List<string>? barcodes, List<string>? scrapBarcodes, UnitMovementContext movement, CancellationToken cancellationToken);
+        Task RestoreAsync(int saleItemId, bool excessUnits, int healthyCount, int defectiveCount, decimal defectiveUnitCost, List<string>? barcodes, List<string>? defectiveBarcodes, UnitMovementContext movement, CancellationToken cancellationToken);
 
         /// <summary>
         /// Marks <paramref name="count"/> units matching <paramref name="selection"/> RETURNED_TO_SUPPLIER - the scanned ones, or
@@ -57,10 +59,25 @@ namespace Application.Common.Contracts.ProductUnit
         /// Returns the units moved, so the caller can book their <c>QuarantineCost</c>.</summary>
         Task<List<Domain.Entities.ProductUnit>> ScrapFromQuarantineAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken);
 
-        /// <summary>QUARANTINED units matching <paramref name="selection"/> become IN_STOCK and part of the order: custody ON_ORDER on
-        /// <paramref name="purchaseItemId"/>. The caller raises Product.Stock. Returns the units moved (their QuarantineCost is
-        /// what leaves the off-pool balance).</summary>
-        Task<List<Domain.Entities.ProductUnit>> AcceptExcessAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, int purchaseItemId, UnitMovementContext movement, CancellationToken cancellationToken);
+        /// <summary>
+        /// QUARANTINED units matching <paramref name="selection"/> become part of the order - custody ON_ORDER on
+        /// <paramref name="purchaseItemId"/>, QuarantineCost <paramref name="netUnitCost"/> - and <b>stay in quarantine</b> (2026-09-27):
+        /// buying them is a money decision, putting them on the shelf is a separate one (ApplyProductUnitAction RELEASE). Stock does not
+        /// change. Returns the units moved and the value they were held at before (the sum of their old QuarantineCost).
+        /// </summary>
+        Task<(List<Domain.Entities.ProductUnit> Units, decimal PreviousHeldValue)> AcceptExcessAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, int purchaseItemId, decimal netUnitCost, UnitMovementContext movement, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Manual warehouse action (ApplyProductUnitAction) on exactly these units, already loaded and checked by the caller:
+        /// <list type="bullet">
+        /// <item><see cref="Domain.Enums.ProductUnitActionEnum.QUARANTINE"/>: IN_STOCK to QUARANTINED, custody WAREHOUSE_HOLD, QuarantineCost
+        /// <paramref name="quarantineCost"/>. Purchase links are kept, so an ON_ORDER claim on the unit's line can still send it back.</item>
+        /// <item><see cref="Domain.Enums.ProductUnitActionEnum.RELEASE"/>: QUARANTINED to IN_STOCK.</item>
+        /// <item><see cref="Domain.Enums.ProductUnitActionEnum.SCRAP"/>: IN_STOCK or QUARANTINED to SCRAPPED.</item>
+        /// </list>
+        /// Throws InvalidOperationException for a unit in the wrong status: the caller's validation should have refused it.
+        /// </summary>
+        Task ApplyActionAsync(IReadOnlyCollection<Domain.Entities.ProductUnit> units, Domain.Enums.ProductUnitActionEnum action, decimal? quarantineCost, UnitMovementContext movement, CancellationToken cancellationToken);
 
         /// <summary>IN_STOCK units matching <paramref name="selection"/> become SCRAPPED. The caller lowers Product.Stock.</summary>
         Task<List<Domain.Entities.ProductUnit>> ScrapFromStockAsync(Domain.Entities.Product product, int count, UnitSelection selection, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken);

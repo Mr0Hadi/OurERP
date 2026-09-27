@@ -62,6 +62,12 @@ namespace Application.Common.Dtos.Returns
         public int? ProductId { get; set; }
 
         /// <summary>
+        /// Purchase goodsScrap only (2026-09-27): QUARANTINED (the default) or IN_STOCK - a defect found on the shelf. goodsRelease is
+        /// always from quarantine and takes none. Stated with the decision so the quarantine units it will take are reserved now.
+        /// </summary>
+        public Domain.Enums.ProductUnitStatusEnum? Source { get; set; }
+
+        /// <summary>
         /// <b>Ignored by the server</b> (2026-09-21). A release or scrap moves each unit at the value it entered quarantine with
         /// (ProductUnit.QuarantineCost), which staff never type. Kept only so existing payloads still bind.
         /// </summary>
@@ -74,6 +80,13 @@ namespace Application.Common.Dtos.Returns
 
         /// <summary>Product moving. Defaults to the claim's own product when omitted.</summary>
         public int? ProductId { get; set; }
+
+        /// <summary>
+        /// Purchase goodsOut only, and required there (2026-09-27): IN_STOCK (shelf) or QUARANTINED. Stated when the decision is made -
+        /// by whoever agrees it with the supplier - so quarantine units are reserved for it from that moment, and the warehouse only
+        /// executes. goodsIn, and every goods effect of a sale return, must omit it.
+        /// </summary>
+        public Domain.Enums.ProductUnitStatusEnum? Source { get; set; }
 
         /// <summary>Not read anywhere - ignored by the server. Kept only so existing payloads still bind.</summary>
         public int discount { get; set; }

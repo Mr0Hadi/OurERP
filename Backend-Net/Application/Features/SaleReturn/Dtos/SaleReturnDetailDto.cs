@@ -30,5 +30,14 @@ namespace Application.Features.SaleReturn.Dtos
         public bool CanReject { get; set; }
         public bool CanReopen { get; set; }
         public List<SaleReturnClaimDto> Claims { get; set; } = new();
+
+        /// <summary>
+        /// Units this return brought back as defective that are still in quarantine (custody CUSTOMER_RETURN, and this return is what
+        /// last put them there). They leave through a purchase return to the supplier, a release or a scrap.
+        /// </summary>
+        public int QuarantinedQuantity { get; set; }
+
+        /// <summary>Supplier/customer receipts, photos of the goods - replaced wholesale by Update*ReturnAttachments.</summary>
+        public List<Application.Common.Dtos.DocumentAttachmentDto> Attachments { get; set; } = new();
     }
 }

@@ -17,6 +17,13 @@ namespace Application.Features.Sale.Dtos
 
         /// <summary>What the customer pays in total (invoice + installment charge on a live plan). Debt = PayableAmount - PaidAmount.</summary>
         public UInt64 PayableAmount { get; set; }
+
+        /// <summary>
+        /// Returns against this sale (not deleted), and whether one is still open (OPEN/IN_PROGRESS). This replaces the removed
+        /// SalesStatusEnum.RETURNED: a return is a document of its own, not a stage of the sale.
+        /// </summary>
+        public int ReturnCount { get; set; }
+        public bool HasOpenReturn { get; set; }
         public UInt64 PaidAmount { get; set; }
 
         /// <summary>خلاصه‌ی قرارداد اقساطی - فقط برای فروش‌های اقساطی پر می‌شود.</summary>

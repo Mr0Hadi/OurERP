@@ -34,6 +34,35 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
+        [HasPermission(PermissionEnum.ProductUnitView)]
+        [HttpGet("GetProductUnitSummary")]
+        public async Task<ActionResult<ResponseDto>> GetProductUnitSummary([FromQuery] GetProductUnitSummaryQuery request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        // Printing is the storekeeper's everyday work, so it rides on the view permission.
+        [HasPermission(PermissionEnum.ProductUnitView)]
+        [HttpPost("MarkProductUnitsPrinted")]
+        public async Task<ActionResult<ResponseDto>> MarkProductUnitsPrinted([FromBody] MarkProductUnitsPrintedCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.ProductUnitManage)]
+        [HttpPost("SetProductUnitLocation")]
+        public async Task<ActionResult<ResponseDto>> SetProductUnitLocation([FromBody] SetProductUnitLocationCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.ProductUnitManage)]
+        [HttpPost("ApplyProductUnitAction")]
+        public async Task<ActionResult<ResponseDto>> ApplyProductUnitAction([FromBody] ApplyProductUnitActionCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
         [HasPermission(PermissionEnum.ProductView)]
         [HttpGet("ScanBarcode")]
         public async Task<ActionResult<ResponseDto>> ScanBarcode([FromQuery] ScanBarcodeQuery request)

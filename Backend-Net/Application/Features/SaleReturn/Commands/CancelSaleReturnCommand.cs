@@ -1,5 +1,6 @@
 ﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.SaleReturn;
+using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -36,12 +37,14 @@ namespace Application.Features.SaleReturn.Commands
     {
         private readonly IWMSDbContext _context;
         private readonly ISaleReturnCalculationService _saleReturnCalculationService;
+        private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public CancelSaleReturnCommandHandler(IWMSDbContext context, ISaleReturnCalculationService saleReturnCalculationService, IUnitOfWork unitOfWork)
+        public CancelSaleReturnCommandHandler(IWMSDbContext context, ISaleReturnCalculationService saleReturnCalculationService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
         {
             _context = context;
             _saleReturnCalculationService = saleReturnCalculationService;
+            _objectStorageService = objectStorageService;
             _unitOfWork = unitOfWork;
         }
 
@@ -65,7 +68,7 @@ namespace Application.Features.SaleReturn.Commands
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            res.Data = await SaleReturnDetailReader.ReadAsync(_context, _saleReturnCalculationService, saleReturn.Id, cancellationToken);
+            res.Data = await SaleReturnDetailReader.ReadAsync(_context, _saleReturnCalculationService, _objectStorageService, saleReturn.Id, cancellationToken);
             res.Message = "مرجوعی با موفقیت لغو شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;

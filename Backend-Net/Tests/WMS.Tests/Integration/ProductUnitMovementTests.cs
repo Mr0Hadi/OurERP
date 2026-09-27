@@ -172,14 +172,14 @@ namespace WMS.Tests.Integration
             var sold = await scope.ProductUnitService.ConsumeAsync(scenario.Product, 2, scenario.Item.Id, null, null, Movements.Test, CancellationToken.None);
             await scope.UnitOfWork.SaveChangesAsync(CancellationToken.None);
 
-            await new SR.CreateSaleReturnCommandHandler(scope.Db, scope.SaleReturnRepository, scope.SaleReturnCalculation, scope.UnitOfWork)
+            await new SR.CreateSaleReturnCommandHandler(scope.Db, scope.SaleReturnRepository, scope.SaleReturnCalculation, FakeObjectStorage.Instance, scope.UnitOfWork)
                 .Handle(new SR.CreateSaleReturnCommand
                 {
                     SaleId = scenario.Sale.Id,
                     Claims = new() { new CreateReturnClaimDto { Scope = ReturnClaimScopeEnum.ON_ORDER, OrderLineId = scenario.Item.Id, ProductId = scenario.Product.Id, UnitPrice = scenario.Item.UnitPrice, Quantity = 2, Problem = ReturnProblemEnum.DEFECTIVE } },
                 }, CancellationToken.None);
 
-            await new SR.AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.InventoryCostingService, scope.UnitOfWork)
+            await new SR.AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork)
                 .Handle(new SR.AddClaimResolutionCommand
                 {
                     ClaimId = scope.Context.SaleReturnClaims.Single().Id,
@@ -189,7 +189,7 @@ namespace WMS.Tests.Integration
             var healthyUnit = sold[0];
             var defectiveUnit = sold[1];
 
-            await new SR.ExecuteGoodsRoundCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.ProductUnitService, scope.InventoryCostingService, scope.UnitOfWork)
+            await new SR.ExecuteGoodsRoundCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork)
                 .Handle(new SR.ExecuteGoodsRoundCommand
                 {
                     SaleReturnId = scope.Context.SaleReturns.Single().Id,
@@ -207,7 +207,7 @@ namespace WMS.Tests.Integration
 
             using var verify = db.NewContext();
             Assert.Equal(ProductUnitStatusEnum.IN_STOCK, verify.ProductUnits.Single(u => u.Id == healthyUnit.Id).Status);
-            Assert.Equal(ProductUnitStatusEnum.SCRAPPED, verify.ProductUnits.Single(u => u.Id == defectiveUnit.Id).Status);
+            Assert.Equal(ProductUnitStatusEnum.QUARANTINED, verify.ProductUnits.Single(u => u.Id == defectiveUnit.Id).Status);
 
             var back = verify.ProductUnitMovements.Where(m => m.Reason == ProductUnitMovementReasonEnum.SALE_RETURN_RECEIVED).ToList();
             Assert.Equal(2, back.Count);
