@@ -36,6 +36,16 @@ export const PAYMENT_TYPE_LABELS = Object.freeze({
   [PaymentTypeEnum.INSTALLMENT]: "اقساطی",
 });
 
+/** رنگِ هر نوع پرداخت برای `StatusBadge`؛ صرفاً برای تمایزِ بصری، نه خوب/بد. */
+export const PAYMENT_TYPE_TONES = Object.freeze({
+  [PaymentTypeEnum.CASH]: "success",
+  [PaymentTypeEnum.CREDIT]: "special",
+  [PaymentTypeEnum.CHECK]: "info",
+  [PaymentTypeEnum.TRANSFER]: "primary",
+  [PaymentTypeEnum.MIXED]: "warning",
+  [PaymentTypeEnum.INSTALLMENT]: "caution",
+});
+
 /**
  * نوع‌هایی که یک *سندِ* خرید/فروش می‌تواند داشته باشد.
  *

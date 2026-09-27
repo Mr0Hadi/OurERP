@@ -15,38 +15,12 @@ import {
 import {
   SaleStatusEnum as SALE_STATUSES,
   SALE_STATUS_LABELS,
+  SALE_STATUS_TONES,
 } from "@/shared/domain/enums/saleStatus";
-import {
-  Loader2,
-  PackageOpen,
-  Truck,
-  PackageCheck,
-  Activity,
-  FileText,
-} from "lucide-react";
+import { Activity } from "lucide-react";
 
-const STATUS_CONFIG = {
-  [SALE_STATUSES.PROFORMA]: {
-    icon: FileText,
-    textColor: "text-slate-600 dark:text-slate-300",
-  },
-  [SALE_STATUSES.PROCESSING]: {
-    icon: Loader2,
-    textColor: "text-blue-600 dark:text-blue-400",
-  },
-  [SALE_STATUSES.PARTIALLY_DELIVERED]: {
-    icon: PackageOpen,
-    textColor: "text-orange-600 dark:text-orange-400",
-  },
-  [SALE_STATUSES.SHIPPED]: {
-    icon: Truck,
-    textColor: "text-indigo-600 dark:text-indigo-400",
-  },
-  [SALE_STATUSES.DELIVERED]: {
-    icon: PackageCheck,
-    textColor: "text-[oklch(0.50_0.16_152)] dark:text-[oklch(0.70_0.16_152)]",
-  },
-};
+import StatusText from "@/shared/components/status/StatusText";
+import { SALE_STATUS_ICONS } from "@/shared/components/status/statusIcons";
 
 /** وضعیت‌هایی که هنگامِ ثبت قابل انتخاب‌اند. */
 const SELECTABLE = [SALE_STATUSES.PROFORMA, SALE_STATUSES.PROCESSING];
@@ -96,8 +70,6 @@ export default function SaleStatusSection({ selectedStatus, onStatusChange }) {
           </SelectTrigger>
           <SelectContent>
             {[...SELECTABLE, ...WAREHOUSE_SET].map((status) => {
-              const config = STATUS_CONFIG[status];
-              const Icon = config.icon;
               const disabled = !SELECTABLE.includes(status);
               return (
                 <SelectItem
@@ -105,17 +77,14 @@ export default function SaleStatusSection({ selectedStatus, onStatusChange }) {
                   value={String(status)}
                   disabled={disabled}
                 >
-                  <span
-                    className={`flex items-center gap-2 ${config.textColor}`}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
+                  <StatusText tone={SALE_STATUS_TONES[status]} icon={SALE_STATUS_ICONS[status]}>
                     {SALE_STATUS_LABELS[status]}
                     {disabled && (
                       <span className="text-xs text-muted-foreground">
                         (با ارسال انبار)
                       </span>
                     )}
-                  </span>
+                  </StatusText>
                 </SelectItem>
               );
             })}

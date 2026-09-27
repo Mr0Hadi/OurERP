@@ -1,38 +1,12 @@
 import { useMemo } from 'react';
-import { Loader2, PackageOpen, PackageCheck, Activity, FileText } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Label } from '@/shared/components/ui/label';
 import { Textarea } from '@/shared/components/ui/textarea';
-import { Badge } from '@/shared/components/ui/badge';
-import { Progress } from '@/shared/components/ui/progress';
+import ProgressStat from '@/shared/components/feedback/ProgressStat';
 import PersianDatePicker from '@/shared/components/ui/persian-date-picker';
-import {
-  SaleStatusEnum as SALE_STATUSES,
-  SALE_STATUS_LABELS,
-} from '@/shared/domain/enums/saleStatus';
+import SaleStatusBadge from '@/shared/components/status/SaleStatusBadge';
 import { gregorianToPersian } from '@/shared/lib/dateUtils';
-
-const STATUS_CONFIG = {
-  [SALE_STATUSES.PROFORMA]: {
-    icon: FileText,
-    textColor: 'text-slate-600 dark:text-slate-300',
-  },
-  [SALE_STATUSES.PROCESSING]: { icon: Loader2, textColor: 'text-blue-600 dark:text-blue-400' },
-  [SALE_STATUSES.PARTIALLY_DELIVERED]: {
-    icon: PackageOpen,
-    textColor: 'text-orange-600 dark:text-orange-400',
-  },
-  [SALE_STATUSES.SHIPPED]: {
-    icon: PackageCheck,
-    textColor: 'text-indigo-600 dark:text-indigo-400',
-  },
-  [SALE_STATUSES.DELIVERED]: {
-    icon: PackageCheck,
-    textColor: 'text-[oklch(0.50_0.16_152)] dark:text-[oklch(0.70_0.16_152)]',
-  },
-};
-const DEFAULT_STATUS_CONFIG = { icon: Activity, textColor: 'text-card-foreground' };
 
 export default function ShippingSummaryCard({ formData, onFormChange }) {
   const handleChange = (field, value) => onFormChange({ [field]: value });
@@ -45,9 +19,6 @@ export default function ShippingSummaryCard({ formData, onFormChange }) {
     return { remaining, shipped, percent };
   }, [formData.items]);
 
-  const config = STATUS_CONFIG[formData.status] ?? DEFAULT_STATUS_CONFIG;
-  const StatusIcon = config.icon;
-
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -56,22 +27,15 @@ export default function ShippingSummaryCard({ formData, onFormChange }) {
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">وضعیت فروش</span>
-          <Badge variant="secondary" className={`gap-1.5 ${config.textColor}`}>
-            <StatusIcon className="h-3.5 w-3.5" />
-            {SALE_STATUS_LABELS[formData.status] ?? formData.status}
-          </Badge>
+          <SaleStatusBadge status={formData.status} withIcon />
         </div>
 
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>پیشرفت ارسال</span>
-            <span className="tabular-nums font-medium text-card-foreground">
-              {stats.shipped.toLocaleString('fa-IR')} / {stats.remaining.toLocaleString('fa-IR')}{' '}
-              ({stats.percent.toLocaleString('fa-IR')}٪)
-            </span>
-          </div>
-          <Progress value={stats.percent} className="h-2" />
-        </div>
+        <ProgressStat
+          label="پیشرفت ارسال"
+          done={stats.shipped}
+          total={stats.remaining}
+          percent={stats.percent}
+        />
 
         <div className="grid grid-cols-1 gap-2 text-sm border-t border-border pt-3">
           <div>

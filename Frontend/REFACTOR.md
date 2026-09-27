@@ -15,6 +15,18 @@
 - کامپوننت‌های `src/shared/components/ui/*` تولید shadcn هستند؛ فقط در صورت نیاز واقعی دست بخورند.
 - به کد بکند دست نمی‌زنیم؛ نیازهای سمت سرور به‌صورت بخش شماره‌دار در سند درخواست‌ها نوشته می‌شود.
 
+### قواعد استایل
+
+- رنگِ وضعیت هرگز مستقیم از پالت Tailwind (`amber-50`، `green-700`، `oklch(...)`) نوشته نمی‌شود.
+  معنا انتخاب می‌شود و ظاهر از توکن‌های `index.css` می‌آید: `neutral`، `primary`، `info`، `success`،
+  `warning`، `caution`، `special`، `danger` (تعریف و راهنما در `shared/lib/tone.js`).
+- وضعیت → `StatusBadge` (یا `PurchaseStatusBadge`/`SaleStatusBadge`/`PaymentTypeBadge`/`ReturnStatusBadge`
+  در `shared/components/status/`)، متن رنگی → `StatusText`، باکس توضیح/هشدار → `Notice`،
+  پیشرفت شمارشی → `ProgressStat`.
+- نگاشت «وضعیت → tone» کنار labelها در `shared/domain/enums/*` است؛ آیکن‌ها در `status/statusIcons.js`.
+- کلاس `dark:` برای رنگ لازم نیست؛ توکن‌ها در هر تم (روشن/تیره/دسترس‌پذیر/…) تعریف شده‌اند.
+- راهنمای زنده: `pnpm dev` و بعد `/dev/ui` (فقط در dev؛ وارد build تولید نمی‌شود).
+
 ## مبنای اندازه‌ی باندل (قبل از ریفکتور، `main`)
 
 | مورد | خام | gzip |
@@ -51,7 +63,14 @@
     - هدر `multipart` بی‌اثر در آپلود حذف شد (اینترسپتور همیشه پاکش می‌کرد؛ با تست axios تأیید شد).
     - آزادسازی آدرس‌های blob بعد از چاپ تصاویر ضمیمه.
     - کامنت‌های قدیمی مربوط به لایه‌ی mock (دیگر وجود ندارد) اصلاح شد؛ `listParams` بی‌استفاده حذف شد.
-  - [ ] ۱.۳ کامپوننت‌های پایه (جدول لیستی، فیلتر، فرم آدرس) و `shared/components`
+  - [ ] ۱.۳ `shared/components`
+    - [x] ۱.۳.۱ سیستم طراحی وضعیت: توکن‌های `success/warning/caution/info/special` در هر سه تم،
+      `tone.js`، `StatusBadge`، `StatusText`، `Notice`، `ProgressStat`، `ReturnStatusBadge`.
+      سه سبک badge (که نیمی dark mode نداشتند) یکی شد؛ codemod رنگ‌های خام ۴۰ فایل را به توکن برد؛
+      نقشه‌های تکراری وضعیت→آیکن/رنگ در ۴ کارت و ۲ badge تکراری مرجوعی حذف شد؛
+      badgeهای خرید/فروش/پرداخت از فیچرها به `shared/components/status` رفتند (انبار هم مصرفشان می‌کند).
+      صفحه‌ی `/dev/ui` برای بررسی بصری.
+    - [ ] ۱.۳.۲ جدول/فیلتر/فرم‌های پایه و شکستن کامپوننت‌های بزرگ مشترک
   - برای تست خطای شبکه: پیکربندی `ourerp-offline` در `.claude/launch.json` (API روی پورت بسته).
 - [ ] **۲. فیچرها** (هر کدام: کد مرده، شکستن فایل بزرگ، کامپوننت مشترک، کامنت، متن پیام‌ها، موارد بکند)
   - [ ] auth

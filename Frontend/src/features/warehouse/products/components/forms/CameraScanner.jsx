@@ -243,7 +243,7 @@ export default function CameraScanner({ onDetected }) {
       />
       {hitBox && (
         <div
-          className="pointer-events-none absolute rounded-md border-4 border-emerald-400 shadow-[0_0_12px_2px_rgba(52,211,153,0.8)]"
+          className="pointer-events-none absolute rounded-md border-4 border-success/50 shadow-[0_0_12px_2px_rgba(52,211,153,0.8)]"
           style={{
             left: `${hitBox.left}%`,
             top: `${hitBox.top}%`,

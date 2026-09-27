@@ -3,12 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/shared/components/ui/button";
 import DataTable from "@/shared/components/table/DataTable";
 import PaymentProgress from "@/shared/components/table/PaymentProgress";
-import PaymentTypeBadge from "@/shared/components/table/PaymentTypeBadge";
+import PaymentTypeBadge from "@/shared/components/status/PaymentTypeBadge";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { ROUTES } from "@/shared/constants/routes";
-import { PURCHASE_STATUS_LABELS } from "@/shared/domain/enums/purchaseStatus";
-import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
-import PurchaseStatusBadge from "./PurchaseStatusBadge";
+import PurchaseStatusBadge from "@/shared/components/status/PurchaseStatusBadge";
 
 const PurchaseTable = ({
   data,
@@ -51,20 +49,14 @@ const PurchaseTable = ({
         accessorKey: "status",
         header: "وضعیت",
         cell: (info) => (
-          <PurchaseStatusBadge
-            status={info.getValue()}
-            labels={PURCHASE_STATUS_LABELS}
-          />
+          <PurchaseStatusBadge status={info.getValue()} />
         ),
       },
       {
         accessorKey: "paymentType",
         header: "نوع پرداخت",
         cell: (info) => (
-          <PaymentTypeBadge
-            type={info.getValue()}
-            labels={PAYMENT_TYPE_LABELS}
-          />
+          <PaymentTypeBadge type={info.getValue()} />
         ),
       },
       {

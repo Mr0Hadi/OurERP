@@ -38,7 +38,6 @@ import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
 import RelatedReturnsCard from "@/shared/components/returns/RelatedReturnsCard";
 import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
-import { PURCHASE_RETURN_STATUS_LABELS } from "../domain/purchaseReturnVocabulary";
 import PurchaseReturnResolutionSection from "../components/forms/PurchaseReturnResolutionSection";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
@@ -98,7 +97,6 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
     <div className="container max-w-3xl mx-auto px-4 space-y-3 animate-in fade-in zoom-in-95 duration-300">
       <ReturnStatusBar
         returnDoc={purchaseReturn}
-        statusLabels={PURCHASE_RETURN_STATUS_LABELS}
         side={sideConfig(RETURN_SIDES.PURCHASE)}
       />
 

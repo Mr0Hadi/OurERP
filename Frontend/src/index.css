@@ -33,6 +33,12 @@
     --color-input: var(--input);
     --color-border: var(--border);
     --color-destructive: var(--destructive);
+    /* رنگ‌های معنایی وضعیت — فقط از طریق `shared/lib/tone.js` مصرف شوند. */
+    --color-success: var(--success);
+    --color-warning: var(--warning);
+    --color-caution: var(--caution);
+    --color-info: var(--info);
+    --color-special: var(--special);
     --color-accent-foreground: var(--accent-foreground);
     --color-accent: var(--accent);
     --color-muted-foreground: var(--muted-foreground);
@@ -74,6 +80,12 @@
     --accent: oklch(0.93 0.010 264);             /* کمی رنگ primary */
     --accent-foreground: oklch(0.25 0.010 264);
     --destructive: oklch(0.57 0.22 27);
+    /* وضعیت‌ها: موفق / در انتظار / نیازمند توجه (قرنطینه، ناقص) / اطلاع / خاص (مرجوعی، نسیه) */
+    --success: oklch(0.52 0.15 152);
+    --warning: oklch(0.58 0.14 75);
+    --caution: oklch(0.56 0.19 35);
+    --info: oklch(0.52 0.11 215);
+    --special: oklch(0.50 0.22 302);
     --border: oklch(0.88 0.006 240);
     --input: oklch(0.88 0.006 240);
     --ring: oklch(0.55 0.18 264);
@@ -110,6 +122,11 @@
     --accent: oklch(0.269 0 0);
     --accent-foreground: oklch(0.985 0 0);
     --destructive: oklch(0.70 0.19 22);
+    --success: oklch(0.76 0.15 155);
+    --warning: oklch(0.83 0.15 85);
+    --caution: oklch(0.73 0.17 42);
+    --info: oklch(0.78 0.11 210);
+    --special: oklch(0.74 0.16 305);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
     --ring: oklch(0.556 0 0);
@@ -167,6 +184,13 @@
 
     /* destructive: آبی بسیار تیره به جای قرمز — ایمن برای کوررنگی */
     --destructive: oklch(0.32 0.20 255);
+
+    /* وضعیت‌ها: تیره‌تر برای کنتراست بالا؛ تمایز همیشه با آیکن و متن هم منتقل می‌شود */
+    --success: oklch(0.38 0.12 170);
+    --warning: oklch(0.47 0.12 80);
+    --caution: oklch(0.42 0.15 35);
+    --info: oklch(0.38 0.10 215);
+    --special: oklch(0.36 0.18 300);
 
     /* border پررنگ‌تر برای دیدن واضح مرز عناصر */
     --border: oklch(0.72 0.016 240);

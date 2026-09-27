@@ -316,7 +316,7 @@ function ReceivingDetailForm({ receivingInfo, replacementReturnId }) {
             <Button
               className={`flex-1 gap-2 ${
                 !complete && (replacementOnly || items.length > 0)
-                  ? "bg-amber-600 hover:bg-amber-700 text-white"
+                  ? "bg-warning hover:bg-warning text-white"
                   : ""
               }`}
               disabled={

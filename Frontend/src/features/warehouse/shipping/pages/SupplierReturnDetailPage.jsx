@@ -179,7 +179,7 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
   if (rounds.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <CheckCircle className="h-12 w-12 text-[oklch(0.50_0.16_152)]" />
+        <CheckCircle className="h-12 w-12 text-success" />
         <p className="text-lg text-muted-foreground">
           برای این مرجوعی کاری در انبار باقی نمانده است.
         </p>
@@ -248,7 +248,7 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
           <div className="flex gap-2">
             <Button
               className={`flex-1 gap-2 ${
-                !isAllComplete ? "bg-amber-600 hover:bg-amber-700 text-white" : ""
+                !isAllComplete ? "bg-warning hover:bg-warning text-white" : ""
               }`}
               disabled={isBusy || !hasSomethingToRecord || Boolean(blockingReason)}
               onClick={() => setShowConfirmDialog(true)}
@@ -296,7 +296,7 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
             <AlertDialogAction
               disabled={isBusy}
               onClick={handleSubmit}
-              className={!isAllComplete ? "bg-amber-600 hover:bg-amber-700" : ""}
+              className={!isAllComplete ? "bg-warning hover:bg-warning" : ""}
             >
               {isBusy ? "در حال ثبت..." : "تأیید"}
             </AlertDialogAction>

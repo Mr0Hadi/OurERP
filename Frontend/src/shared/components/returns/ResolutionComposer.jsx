@@ -152,7 +152,7 @@ export default function ResolutionComposer({
     );
 
   return (
-    <div className="rounded-lg border border-dashed border-primary/30 bg-primary/[0.03] p-3 space-y-3">
+    <div className="rounded-lg border border-dashed border-primary/30 bg-primary/3 p-3 space-y-3">
       <div className="space-y-1">
         <Label className="text-[11px] text-muted-foreground">
           این تصمیم برای چند عدد از این ادعاست؟ (باقیمانده: {formatNumber(remaining)})

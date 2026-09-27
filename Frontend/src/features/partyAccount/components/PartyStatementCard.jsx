@@ -27,8 +27,8 @@ function BalanceText({ value }) {
     <span
       className={
         number > 0
-          ? "text-amber-700 dark:text-amber-300"
-          : "text-sky-700 dark:text-sky-300"
+          ? "text-warning"
+          : "text-info"
       }
     >
       {formatNumber(Math.abs(number))} {number > 0 ? "بد" : "بس"}

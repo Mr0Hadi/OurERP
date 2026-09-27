@@ -35,10 +35,10 @@ export default function ReceivingQuarantineCard({ receivingInfo }) {
   const hasQuarantine = lines.length > 0 || unlisted.length > 0;
 
   return (
-    <Card className="border-orange-200 dark:border-orange-900">
+    <Card className="border-caution/25">
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <ShieldAlert className="h-4 w-4 text-orange-600" />
+          <ShieldAlert className="h-4 w-4 text-caution" />
           قرنطینه و مغایرت‌ها
         </CardTitle>
       </CardHeader>

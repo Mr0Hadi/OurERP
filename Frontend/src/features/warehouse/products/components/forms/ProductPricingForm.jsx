@@ -63,7 +63,7 @@ export default function ProductPricingForm({ register, control, errors = {} }) {
             disabled={Boolean(taxExempt)}
           />
           {errors.vat && (
-            <span className="text-xs text-red-500">{errors.vat.message}</span>
+            <span className="text-xs text-destructive">{errors.vat.message}</span>
           )}
           <Controller
             name="taxExempt"

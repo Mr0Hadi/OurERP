@@ -69,7 +69,7 @@ export default function ProductBasicInfoForm({
         {isIncomplete && (
           <Badge
             variant="outline"
-            className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400"
+            className="bg-warning/10 text-warning border-warning/25"
           >
             ناقص — برند و قیمت‌ها را کامل کنید
           </Badge>
@@ -83,10 +83,10 @@ export default function ProductBasicInfoForm({
             {...register("name", {
               required: "وارد کردن نام کالا الزامی است",
             })}
-            className={errors.name ? "border-red-500" : ""}
+            className={errors.name ? "border-destructive/50" : ""}
           />
           {errors.name && (
-            <span className="text-xs text-red-500">{errors.name.message}</span>
+            <span className="text-xs text-destructive">{errors.name.message}</span>
           )}
         </div>
 
@@ -97,10 +97,10 @@ export default function ProductBasicInfoForm({
             dir="ltr"
             placeholder="e.g. Front Brake Pad"
             {...register("englishName")}
-            className={errors.englishName ? "border-red-500" : ""}
+            className={errors.englishName ? "border-destructive/50" : ""}
           />
           {errors.englishName && (
-            <span className="text-xs text-red-500">
+            <span className="text-xs text-destructive">
               {errors.englishName.message}
             </span>
           )}
@@ -137,7 +137,7 @@ export default function ProductBasicInfoForm({
             )}
           />
           {errors.productCategoryId && (
-            <span className="text-xs text-red-500">
+            <span className="text-xs text-destructive">
               {errors.productCategoryId.message}
             </span>
           )}
@@ -153,10 +153,10 @@ export default function ProductBasicInfoForm({
             {...register("brand", {
               required: isIncomplete ? false : "وارد کردن برند الزامی است",
             })}
-            className={errors.brand ? "border-red-500" : ""}
+            className={errors.brand ? "border-destructive/50" : ""}
           />
           {errors.brand && (
-            <span className="text-xs text-red-500">{errors.brand.message}</span>
+            <span className="text-xs text-destructive">{errors.brand.message}</span>
           )}
         </div>
 
@@ -187,7 +187,7 @@ export default function ProductBasicInfoForm({
             )}
           />
           {errors.unit && (
-            <span className="text-xs text-red-500">{errors.unit.message}</span>
+            <span className="text-xs text-destructive">{errors.unit.message}</span>
           )}
         </div>
 

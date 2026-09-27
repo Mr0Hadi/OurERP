@@ -57,7 +57,7 @@ export default function TemplateBar({
     status = "این واحد هنوز الگو ندارد";
   } else if (matches) {
     status = (
-      <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+      <span className="inline-flex items-center gap-1 text-success">
         <CircleCheck className="size-3.5" />
         مطابق الگو
       </span>
@@ -76,12 +76,12 @@ export default function TemplateBar({
       className={cn(
         "rounded-xl border px-3 py-2",
         moving
-          ? "border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40"
+          ? "border-warning/30 bg-warning/10"
           : "border-border bg-muted/30",
       )}
     >
       {moving && template && (
-        <p className="mb-1.5 text-xs font-medium text-amber-900 dark:text-amber-200">
+        <p className="mb-1.5 text-xs font-medium text-warning">
           این کارمند به واحد «{template.departmentName}» منتقل می‌شود؛ دسترسی‌ها
           خودکار عوض نمی‌شوند.
         </p>
@@ -89,7 +89,7 @@ export default function TemplateBar({
 
       <div className="flex flex-wrap items-center gap-2">
         <Sparkles
-          className={cn("size-4 shrink-0", moving ? "text-amber-600" : "text-primary")}
+          className={cn("size-4 shrink-0", moving ? "text-warning" : "text-primary")}
         />
         <span className="text-xs text-muted-foreground">الگوی واحد</span>
 

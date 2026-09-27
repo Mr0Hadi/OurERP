@@ -48,13 +48,13 @@ export default function SupplierFinanceForm({ errors, balanceType, control }) {
                     </SelectItem>
                     <SelectItem value={String(BalanceTypeEnum.DEBTOR)} className="rounded-lg">
                       <div className="flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-500" />
+                        <TrendingUp className="h-4 w-4 text-success" />
                         بدهکار به ما
                       </div>
                     </SelectItem>
                     <SelectItem value={String(BalanceTypeEnum.CREDITOR)} className="rounded-lg">
                       <div className="flex items-center gap-2">
-                        <TrendingDown className="h-4 w-4 text-red-600 dark:text-red-500" />
+                        <TrendingDown className="h-4 w-4 text-destructive" />
                         طلبکار (ما بدهکاریم)
                       </div>
                     </SelectItem>

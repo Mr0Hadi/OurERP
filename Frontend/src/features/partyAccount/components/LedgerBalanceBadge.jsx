@@ -10,7 +10,7 @@ export default function LedgerBalanceBadge({ balance, className = "" }) {
   if (value > 0) {
     return (
       <Badge
-        className={`bg-amber-100/80 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800/50 ${className}`}
+        className={`bg-warning/12 text-warning border-warning/25 ${className}`}
       >
         بدهکار {amount} ریال
       </Badge>
@@ -19,7 +19,7 @@ export default function LedgerBalanceBadge({ balance, className = "" }) {
   if (value < 0) {
     return (
       <Badge
-        className={`bg-sky-100/80 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 border-sky-200 dark:border-sky-800/50 ${className}`}
+        className={`bg-info/12 text-info border-info/25 ${className}`}
       >
         بستانکار {amount} ریال
       </Badge>

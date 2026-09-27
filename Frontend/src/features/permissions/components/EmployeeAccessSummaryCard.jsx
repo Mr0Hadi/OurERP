@@ -22,6 +22,7 @@ import UserPermissionsPanel from "./UserPermissionsPanel";
 import UnsavedChangesDialog from "./UnsavedChangesDialog";
 import { difference, toNumberSet } from "./permissionSets";
 import { formatNumber } from "@/shared/lib/numberFormat";
+import Notice from "@/shared/components/feedback/Notice";
 
 /** یک خطِ وضعیت: کارمند نسبت به الگوی واحد کجاست. */
 function TemplateStatus({ template, held }) {
@@ -42,7 +43,7 @@ function TemplateStatus({ template, held }) {
 
   if (missing === 0 && extra === 0) {
     return (
-      <p className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+      <p className="inline-flex items-center gap-1 text-xs text-success">
         <CircleCheck className="size-3.5" />
         مطابق الگوی واحد «{name}»
       </p>
@@ -126,9 +127,7 @@ export default function EmployeeAccessSummaryCard({
         ) : (
           <div className="space-y-2.5">
             {moving && template && (
-              <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-                <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
-                <div className="flex-1">
+              <Notice tone="warning" icon={TriangleAlert}>
                   با جابه‌جایی به «{template.departmentName}» دسترسی‌ها خودکار عوض
                   نمی‌شوند.
                   {editable && (
@@ -140,8 +139,7 @@ export default function EmployeeAccessSummaryCard({
                       بررسی الگوی این واحد
                     </button>
                   )}
-                </div>
-              </div>
+              </Notice>
             )}
 
             {held.size === 0 ? (

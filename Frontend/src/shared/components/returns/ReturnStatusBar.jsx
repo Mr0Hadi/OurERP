@@ -1,7 +1,6 @@
-import { Badge } from "@/shared/components/ui/badge";
-import { Badge as StatusChip } from "@/shared/components/ui/badge";
 import { isTerminalStatus } from "@/shared/domain/returns/statuses";
-import { RETURN_STATUS_STYLES } from "@/shared/domain/returns/statuses";
+import StatusBadge from "@/shared/components/status/StatusBadge";
+import ReturnStatusBadge from "./ReturnStatusBadge";
 import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
 import {
   claimDecidedQuantity,
@@ -16,7 +15,7 @@ import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
  * موبایل سایدبار به ته صفحه می‌افتد، و خلاصه‌ی مرجوعی باید بالا و در
  * دسترس بماند.
  */
-export default function ReturnStatusBar({ returnDoc: salesReturn, statusLabels, side }) {
+export default function ReturnStatusBar({ returnDoc: salesReturn, side }) {
   const claims = salesReturn.claims || [];
   const totalClaimed = claims.reduce((s, c) => s + (Number(c.quantity) || 0), 0);
   const totalDecided = claims.reduce((s, c) => s + claimDecidedQuantity(c), 0);
@@ -32,12 +31,7 @@ export default function ReturnStatusBar({ returnDoc: salesReturn, statusLabels, 
           <span className="font-mono text-sm font-medium text-card-foreground">
             {salesReturn.returnNumber}
           </span>
-          <StatusChip
-            variant="outline"
-            className={RETURN_STATUS_STYLES[salesReturn.status] ?? ""}
-          >
-            {statusLabels[salesReturn.status] ?? salesReturn.status}
-          </StatusChip>
+          <ReturnStatusBadge status={salesReturn.status} side={side} />
         </div>
         <span className="text-xs text-muted-foreground tabular-nums">
           ادعا: {formatRial(salesReturn.totalAmount)}
@@ -54,7 +48,7 @@ export default function ReturnStatusBar({ returnDoc: salesReturn, statusLabels, 
           </div>
           <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
             <div
-              className="h-full rounded-full bg-[oklch(0.50_0.16_152)] transition-all"
+              className="h-full rounded-full bg-success transition-all"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -64,20 +58,14 @@ export default function ReturnStatusBar({ returnDoc: salesReturn, statusLabels, 
       {(money.moneyOut > 0 || money.moneyIn > 0) && (
         <div className="flex flex-wrap gap-1.5 border-t border-border pt-2">
           {money.moneyOut > 0 && (
-            <Badge
-              variant="outline"
-              className="text-[11px] bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-400"
-            >
+            <StatusBadge tone="danger">
               {side.effectLabels[EFFECT_DIRECTIONS.MONEY_OUT]}: {formatRial(money.moneyOut)}
-            </Badge>
+            </StatusBadge>
           )}
           {money.moneyIn > 0 && (
-            <Badge
-              variant="outline"
-              className="text-[11px] bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-400"
-            >
+            <StatusBadge tone="success">
               {side.effectLabels[EFFECT_DIRECTIONS.MONEY_IN]}: {formatRial(money.moneyIn)}
-            </Badge>
+            </StatusBadge>
           )}
         </div>
       )}

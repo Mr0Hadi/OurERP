@@ -137,7 +137,7 @@ export default function DocumentPaymentsCard({
               className={`font-semibold ${
                 remaining > 0
                   ? "text-destructive"
-                  : "text-[oklch(0.50_0.16_152)]"
+                  : "text-success"
               }`}
             >
               {formatRial(Math.abs(remaining))}

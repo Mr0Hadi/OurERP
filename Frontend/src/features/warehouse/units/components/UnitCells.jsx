@@ -96,7 +96,7 @@ export function UnitLabelStateBadge({ unit, compact = false }) {
     return compact ? null : <span className="text-xs text-muted-foreground">—</span>;
   }
   return (
-    <span className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+    <span className="inline-flex items-center gap-1 rounded-md border border-warning/30 bg-warning/10 px-1.5 py-0.5 text-[11px] text-warning">
       <Tag className="h-3 w-3" />
       برچسب نخورده
     </span>

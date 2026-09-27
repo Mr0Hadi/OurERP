@@ -220,7 +220,7 @@ export default function PermissionEditor({
                 </span>
                 {groupDiff && (
                   <span
-                    className="size-1.5 rounded-full bg-amber-500"
+                    className="size-1.5 rounded-full bg-warning"
                     title="با الگو تفاوت دارد"
                   />
                 )}
@@ -294,7 +294,7 @@ function PermissionRow({
     <li
       className={cn(
         "flex h-8 items-center gap-2 rounded-md px-1.5",
-        inTemplate && !checked && "bg-amber-500/10",
+        inTemplate && !checked && "bg-warning/10",
       )}
     >
       <Checkbox
@@ -310,7 +310,7 @@ function PermissionRow({
           "flex-1 truncate text-sm",
           disabled || locked ? "cursor-not-allowed text-muted-foreground" : "cursor-pointer",
           removed && "text-muted-foreground line-through",
-          added && "font-medium text-emerald-600 dark:text-emerald-400",
+          added && "font-medium text-success",
         )}
       >
         {item.title}

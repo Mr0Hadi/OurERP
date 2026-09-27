@@ -24,8 +24,8 @@ export default function ScannedUnitCodes({ codes = [], quantity, onRemove, class
         <span
           className={`rounded-full px-2 py-0.5 text-[10px] font-medium tabular-nums ${
             isComplete
-              ? "bg-[oklch(0.50_0.16_152)]/10 text-[oklch(0.50_0.16_152)]"
-              : "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+              ? "bg-success/10 text-success"
+              : "bg-warning/10 text-warning"
           }`}
         >
           {formatNumber(codes.length)} از {formatNumber(total)}

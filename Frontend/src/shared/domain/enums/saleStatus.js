@@ -30,6 +30,17 @@ export const SALE_STATUS_LABELS = Object.freeze({
   [SaleStatusEnum.RETURNED]: "مرجوع شده",
 });
 
+/** رنگِ معناییِ هر وضعیت برای `StatusBadge` (معناها در `shared/lib/tone.js`). */
+export const SALE_STATUS_TONES = Object.freeze({
+  [SaleStatusEnum.PROFORMA]: "neutral",
+  [SaleStatusEnum.PROCESSING]: "info",
+  [SaleStatusEnum.PARTIALLY_DELIVERED]: "caution",
+  [SaleStatusEnum.SHIPPED]: "primary",
+  [SaleStatusEnum.DELIVERED]: "success",
+  [SaleStatusEnum.CANCELLED]: "danger",
+  [SaleStatusEnum.RETURNED]: "special",
+});
+
 /**
  * هنوز پیش‌فاکتور است: هیچ پولی بابتش گرفته نشده، پس شماره‌ی فاکتور
  * رسمی ندارد و تنها وضعیتی است که فروش در آن ویرایش می‌شود.

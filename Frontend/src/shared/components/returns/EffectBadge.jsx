@@ -19,6 +19,7 @@ import {
 } from "@/shared/domain/enums/paymentType";
 import { RETURN_PROBLEM_LABELS } from "@/shared/domain/returns/problems";
 import { formatNumber } from "@/shared/lib/numberFormat";
+import { toneText } from "@/shared/lib/tone";
 
 const ICONS = {
   [EFFECT_DIRECTIONS.GOODS_IN]: PackagePlus,
@@ -29,13 +30,14 @@ const ICONS = {
   [EFFECT_DIRECTIONS.GOODS_SCRAP]: PackageX,
 };
 
+/** رنگِ هر جهتِ اثر: ورودی‌ها سبز، خروجِ پول قرمز، بقیه بی‌طرف‌تر. */
 const ACCENTS = {
-  [EFFECT_DIRECTIONS.GOODS_IN]: "text-teal-700 dark:text-teal-400",
-  [EFFECT_DIRECTIONS.GOODS_OUT]: "text-indigo-700 dark:text-indigo-400",
-  [EFFECT_DIRECTIONS.MONEY_IN]: "text-emerald-700 dark:text-emerald-400",
-  [EFFECT_DIRECTIONS.MONEY_OUT]: "text-rose-700 dark:text-rose-400",
-  [EFFECT_DIRECTIONS.GOODS_RELEASE]: "text-sky-700 dark:text-sky-400",
-  [EFFECT_DIRECTIONS.GOODS_SCRAP]: "text-stone-600 dark:text-stone-400",
+  [EFFECT_DIRECTIONS.GOODS_IN]: toneText("success"),
+  [EFFECT_DIRECTIONS.GOODS_OUT]: toneText("primary"),
+  [EFFECT_DIRECTIONS.MONEY_IN]: toneText("success"),
+  [EFFECT_DIRECTIONS.MONEY_OUT]: toneText("danger"),
+  [EFFECT_DIRECTIONS.GOODS_RELEASE]: toneText("info"),
+  [EFFECT_DIRECTIONS.GOODS_SCRAP]: toneText("neutral"),
 };
 
 /**

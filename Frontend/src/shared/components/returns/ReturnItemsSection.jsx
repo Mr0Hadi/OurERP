@@ -28,7 +28,7 @@ const sumQuantity = (claims) =>
 function EarlierClaims({ entry }) {
   if (!entry || entry.quantity <= 0) return null;
   return (
-    <p className="flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-[11px] text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+    <p className="flex items-center gap-1 rounded-md bg-warning/10 px-2 py-1 text-[11px] text-warning">
       <History className="h-3.5 w-3.5 shrink-0" />
       {formatNumber(entry.quantity)} عدد قبلاً در {entry.returnNumbers.join("، ")} ثبت شده
     </p>
@@ -66,7 +66,7 @@ function LineCard({
   return (
     <div
       className={`border border-border rounded-lg p-3 space-y-2.5 ${
-        hasAny ? "bg-primary/[0.03]" : ""
+        hasAny ? "bg-primary/3" : ""
       }`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -333,7 +333,7 @@ export default function ReturnItemsSection({
           {unlisted.map((claim) => (
             <div
               key={claim.id}
-              className="border border-border rounded-lg p-2.5 space-y-2 bg-primary/[0.03]"
+              className="border border-border rounded-lg p-2.5 space-y-2 bg-primary/3"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">

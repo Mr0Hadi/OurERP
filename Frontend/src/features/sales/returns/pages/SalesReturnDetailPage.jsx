@@ -38,7 +38,6 @@ import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
 import RelatedReturnsCard from "@/shared/components/returns/RelatedReturnsCard";
 import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
-import { SALES_RETURN_STATUS_LABELS } from "../domain/salesReturnVocabulary";
 import SalesReturnResolutionSection from "../components/forms/SalesReturnResolutionSection";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
@@ -103,7 +102,6 @@ function SalesReturnDetailContent({ salesReturn }) {
     <div className="container max-w-3xl mx-auto px-4 space-y-3 animate-in fade-in zoom-in-95 duration-300">
       <ReturnStatusBar
         returnDoc={salesReturn}
-        statusLabels={SALES_RETURN_STATUS_LABELS}
         side={sideConfig(RETURN_SIDES.SALES)}
       />
 

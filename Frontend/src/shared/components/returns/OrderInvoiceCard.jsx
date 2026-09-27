@@ -224,7 +224,7 @@ function DeliveredCell({ item, claimsElsewhere }) {
 
   return (
     <>
-      <span className={isShort ? "text-amber-600 dark:text-amber-400" : ""}>
+      <span className={isShort ? "text-warning" : ""}>
         {formatNumber(delivered)} {item.unit || "عدد"}
       </span>
       {settled > 0 && (
@@ -233,7 +233,7 @@ function DeliveredCell({ item, claimsElsewhere }) {
         </span>
       )}
       {earlier?.quantity > 0 && (
-        <span className="block text-[10px] leading-4 mt-0.5 text-amber-700 dark:text-amber-400">
+        <span className="block text-[10px] leading-4 mt-0.5 text-warning">
           {formatNumber(earlier.quantity)} در {earlier.returnNumbers.join("، ")}
         </span>
       )}

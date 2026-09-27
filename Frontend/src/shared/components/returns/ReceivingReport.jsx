@@ -14,7 +14,7 @@ import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { formatNumber } from "@/shared/lib/numberFormat";
 
 const ORANGE_BADGE =
-  "text-[10px] bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:border-orange-800 dark:text-orange-400";
+  "text-[10px] bg-caution/10 text-caution border-caution/25";
 
 /**
  * گزارشِ انبار برای *یک* بخشِ فرم — یک قلمِ سفارش، یا ادعای مازاد/نامرتبطِ
@@ -27,8 +27,8 @@ export function ReceivingReportLines({ quarantined = [], discrepancies = [] }) {
   if (shownQuarantine.length === 0 && discrepancies.length === 0) return null;
 
   return (
-    <div className="space-y-1 rounded-md border border-dashed border-orange-300 bg-orange-50/40 p-2 text-[11px] dark:border-orange-900 dark:bg-orange-950/10">
-      <p className="flex items-center gap-1 font-medium text-orange-800 dark:text-orange-300">
+    <div className="space-y-1 rounded-md border border-dashed border-caution/30 bg-caution/4 p-2 text-[11px]">
+      <p className="flex items-center gap-1 font-medium text-caution">
         <ClipboardList className="h-3.5 w-3.5" />
         گزارش انبار از دریافت
       </p>
@@ -83,10 +83,10 @@ export default function ReceivingReportCard({ receivingInfo }) {
   }
 
   return (
-    <Card className="border-orange-200 dark:border-orange-900">
+    <Card className="border-caution/25">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base font-semibold">
-          <ShieldAlert className="h-4 w-4 text-orange-600" />
+          <ShieldAlert className="h-4 w-4 text-caution" />
           گزارش انبار از دریافت این خرید
         </CardTitle>
         <p className="text-xs text-muted-foreground">

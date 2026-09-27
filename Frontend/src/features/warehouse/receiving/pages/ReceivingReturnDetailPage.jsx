@@ -119,7 +119,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
   if (rounds.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <CheckCircle className="h-12 w-12 text-[oklch(0.50_0.16_152)]" />
+        <CheckCircle className="h-12 w-12 text-success" />
         <p className="text-lg text-muted-foreground">
           برای این مرجوعی کالایی در انتظار تحویل نیست.
         </p>
@@ -153,7 +153,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
             headerBadge={
               <Badge
                 variant="secondary"
-                className="gap-1.5 text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40"
+                className="gap-1.5 text-primary bg-primary/10"
               >
                 <Undo2 className="h-3.5 w-3.5" />
                 نوع دریافت: مرجوعی فروش
@@ -184,7 +184,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
           <div className="flex gap-2">
             <Button
               className={`flex-1 gap-2 ${
-                !isAllComplete ? "bg-amber-600 hover:bg-amber-700 text-white" : ""
+                !isAllComplete ? "bg-warning hover:bg-warning text-white" : ""
               }`}
               disabled={isBusy || !hasSomethingToRecord}
               onClick={() => setShowConfirmDialog(true)}
@@ -238,7 +238,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
             <AlertDialogAction
               disabled={isBusy}
               onClick={handleSubmit}
-              className={!isAllComplete ? "bg-amber-600 hover:bg-amber-700" : ""}
+              className={!isAllComplete ? "bg-warning hover:bg-warning" : ""}
             >
               {isBusy ? "در حال ثبت..." : "تأیید"}
             </AlertDialogAction>

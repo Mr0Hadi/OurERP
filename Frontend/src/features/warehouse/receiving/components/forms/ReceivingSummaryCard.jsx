@@ -1,27 +1,12 @@
 import { useMemo } from 'react';
-import { Truck, PackageCheck, PackageOpen, Clock, XCircle, Activity, FileText } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Label } from '@/shared/components/ui/label';
 import { Textarea } from '@/shared/components/ui/textarea';
-import { Badge } from '@/shared/components/ui/badge';
-import { Progress } from '@/shared/components/ui/progress';
+import ProgressStat from '@/shared/components/feedback/ProgressStat';
 import PersianDatePicker from '@/shared/components/ui/persian-date-picker';
-import {
-  PurchaseStatusEnum as PURCHASE_STATUSES,
-  PURCHASE_STATUS_LABELS,
-} from '@/shared/domain/enums/purchaseStatus';
+import PurchaseStatusBadge from '@/shared/components/status/PurchaseStatusBadge';
 import { gregorianToPersian } from '@/shared/lib/dateUtils';
-
-const STATUS_CONFIG = {
-  [PURCHASE_STATUSES.PROFORMA]: { icon: FileText, textColor: 'text-slate-600 dark:text-slate-300' },
-  [PURCHASE_STATUSES.PENDING]: { icon: Clock, textColor: 'text-amber-600 dark:text-amber-400' },
-  [PURCHASE_STATUSES.SHIPPED]: { icon: Truck, textColor: 'text-blue-600 dark:text-blue-400' },
-  [PURCHASE_STATUSES.PARTIALLY_RECEIVED]: { icon: PackageOpen, textColor: 'text-orange-600 dark:text-orange-400' },
-  [PURCHASE_STATUSES.RECEIVED]: { icon: PackageCheck, textColor: 'text-[oklch(0.50_0.16_152)] dark:text-[oklch(0.70_0.16_152)]' },
-  [PURCHASE_STATUSES.CANCELLED]: { icon: XCircle, textColor: 'text-destructive' },
-};
-const DEFAULT_STATUS_CONFIG = { icon: Activity, textColor: 'text-card-foreground' };
 
 /** `replacementOnly`: دریافتِ کالای جایگزینِ مرجوعی، نه خودِ خرید — پیشرفتِ خرید بی‌ربط است. */
 export default function ReceivingSummaryCard({
@@ -45,9 +30,6 @@ export default function ReceivingSummaryCard({
     return { stillOwed, received, percent };
   }, [formData.items]);
 
-  const config = STATUS_CONFIG[formData.status] ?? DEFAULT_STATUS_CONFIG;
-  const StatusIcon = config.icon;
-
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -59,27 +41,16 @@ export default function ReceivingSummaryCard({
           <>
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">وضعیت خرید</span>
-              <Badge
-                variant="secondary"
-                className={`gap-1.5 ${config.textColor}`}
-              >
-                <StatusIcon className="h-3.5 w-3.5" />
-                {PURCHASE_STATUS_LABELS[formData.status] ?? formData.status}
-              </Badge>
+              <PurchaseStatusBadge status={formData.status} withIcon />
             </div>
 
             {/* پیشرفت دریافت */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>پیشرفت دریافت</span>
-                <span className="tabular-nums font-medium text-card-foreground">
-                  {stats.received.toLocaleString("fa-IR")} /{" "}
-                  {stats.stillOwed.toLocaleString("fa-IR")} (
-                  {stats.percent.toLocaleString("fa-IR")}٪)
-                </span>
-              </div>
-              <Progress value={stats.percent} className="h-2" />
-            </div>
+            <ProgressStat
+              label="پیشرفت دریافت"
+              done={stats.received}
+              total={stats.stillOwed}
+              percent={stats.percent}
+            />
           </>
         )}
 

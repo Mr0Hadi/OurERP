@@ -9,11 +9,10 @@ import {
 } from "@/shared/components/ui/card";
 import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
-import { Badge } from "@/shared/components/ui/badge";
-import { Progress } from "@/shared/components/ui/progress";
+import ProgressStat from "@/shared/components/feedback/ProgressStat";
 import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
-import { RETURN_STATUS_STYLES } from "@/shared/domain/returns/statuses";
+import ReturnStatusBadge from "./ReturnStatusBadge";
 
 /**
  * کارتِ کنارِ فرمِ یک دورِ کالا — قرینه‌ی `ReceivingSummaryCard` برای
@@ -47,8 +46,6 @@ export default function GoodsRoundSummaryCard({
     return { remaining, done, percent };
   }, [rounds]);
 
-  const statusStyle = RETURN_STATUS_STYLES[returnDoc.status] ?? "";
-  const statusLabel = side.statusLabels[returnDoc.status] ?? returnDoc.status;
 
   return (
     <Card>
@@ -58,23 +55,15 @@ export default function GoodsRoundSummaryCard({
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">وضعیت مرجوعی</span>
-          <Badge variant="secondary" className={`gap-1.5 ${statusStyle}`}>
-            <Undo2 className="h-3.5 w-3.5" />
-            {statusLabel}
-          </Badge>
+          <ReturnStatusBadge status={returnDoc.status} side={side} icon={Undo2} />
         </div>
 
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>{progressLabel}</span>
-            <span className="tabular-nums font-medium text-card-foreground">
-              {stats.done.toLocaleString("fa-IR")} /{" "}
-              {stats.remaining.toLocaleString("fa-IR")} (
-              {stats.percent.toLocaleString("fa-IR")}٪)
-            </span>
-          </div>
-          <Progress value={stats.percent} className="h-2" />
-        </div>
+        <ProgressStat
+          label={progressLabel}
+          done={stats.done}
+          total={stats.remaining}
+          percent={stats.percent}
+        />
 
         <div className="grid grid-cols-1 gap-2 text-sm border-t border-border pt-3">
           <div>

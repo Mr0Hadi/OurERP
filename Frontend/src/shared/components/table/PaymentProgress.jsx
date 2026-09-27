@@ -10,10 +10,10 @@ export default function PaymentProgress({ paid, total }) {
         <div
           className={`h-full rounded-full transition-all ${
             percent === 100
-              ? "bg-green-500"
+              ? "bg-success"
               : percent > 0
-                ? "bg-amber-400"
-                : "bg-red-400"
+                ? "bg-warning"
+                : "bg-destructive"
           }`}
           style={{ width: `${percent}%` }}
         />

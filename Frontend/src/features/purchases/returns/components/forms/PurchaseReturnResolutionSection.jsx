@@ -191,8 +191,8 @@ function WarehouseQueueNotice({ purchaseReturn }) {
   if (!awaitingIntake && !awaitingDispatch) return null;
 
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50/60 dark:border-amber-800 dark:bg-amber-950/20 p-2.5 space-y-2">
-      <p className="text-xs font-medium flex items-center gap-1.5 text-amber-800 dark:text-amber-300">
+    <div className="rounded-lg border border-warning/25 bg-warning/6 p-2.5 space-y-2">
+      <p className="text-xs font-medium flex items-center gap-1.5 text-warning">
         <Warehouse className="h-3.5 w-3.5 shrink-0" />
         منتظر اقدام انبار
       </p>

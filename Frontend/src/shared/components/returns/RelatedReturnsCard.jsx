@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
-import { RETURN_STATUS_STYLES } from "@/shared/domain/returns/statuses";
+import ReturnStatusBadge from "./ReturnStatusBadge";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
 
@@ -56,12 +56,7 @@ export default function RelatedReturnsCard({
                 <span className="text-sm font-medium text-card-foreground">
                   {ret.returnNumber}
                 </span>
-                <Badge
-                  variant="outline"
-                  className={`text-[10px] ${RETURN_STATUS_STYLES[ret.status] ?? ""}`}
-                >
-                  {side.statusLabels[ret.status] ?? ret.status}
-                </Badge>
+                <ReturnStatusBadge status={ret.status} side={side} size="sm" />
               </div>
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 {gregorianToPersian(ret.returnDate)} ·{" "}

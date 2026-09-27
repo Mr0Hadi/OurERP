@@ -3,11 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/shared/components/ui/button";
 import DataTable from "@/shared/components/table/DataTable";
 import PaymentProgress from "@/shared/components/table/PaymentProgress";
-import PaymentTypeBadge from "@/shared/components/table/PaymentTypeBadge";
+import PaymentTypeBadge from "@/shared/components/status/PaymentTypeBadge";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { ROUTES } from "@/shared/constants/routes";
-import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
-import SaleStatusBadge from "./SaleStatusBadge";
+import SaleStatusBadge from "@/shared/components/status/SaleStatusBadge";
 
 const SaleTable = ({
   data,
@@ -55,10 +54,7 @@ const SaleTable = ({
         accessorKey: "paymentType",
         header: "نوع پرداخت",
         cell: (info) => (
-          <PaymentTypeBadge
-            type={info.getValue()}
-            labels={PAYMENT_TYPE_LABELS}
-          />
+          <PaymentTypeBadge type={info.getValue()} />
         ),
       },
       {

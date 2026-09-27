@@ -10,7 +10,7 @@ import { Button } from "@/shared/components/ui/button";
  */
 
 const RETURN_BADGE_CLASS =
-  "gap-1 font-normal border-amber-500/40 text-amber-700 dark:text-amber-400";
+  "gap-1 font-normal border-warning/40 text-warning";
 
 /** ستونِ اول: شماره‌ی سند، و شماره‌ی مرجوعی زیرش. */
 export function QueueNumberCell({ row }) {
@@ -28,7 +28,7 @@ export function QueueNumberCell({ row }) {
     <div className="space-y-0.5">
       <span className="font-mono text-xs text-muted-foreground">{row.invoiceNumber}</span>
       {row.replacementReturnNumbers?.map((number) => (
-        <p key={number} className="font-mono text-[11px] text-amber-700 dark:text-amber-400">
+        <p key={number} className="font-mono text-[11px] text-warning">
           مرجوعی {number}
         </p>
       ))}

@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { CheckCircle } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import DataTable from "@/shared/components/table/DataTable";
-import PurchaseStatusBadge from "@/features/purchases/orders/components/table/PurchaseStatusBadge";
-import { PURCHASE_STATUS_LABELS } from "@/shared/domain/enums/purchaseStatus";
+import PurchaseStatusBadge from "@/shared/components/status/PurchaseStatusBadge";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { ROUTES } from "@/shared/constants/routes";
 import {
@@ -71,10 +70,7 @@ const ReceivingTable = ({
             <ReturnKindBadge row={info.row.original} />
           ) : (
             <div className="flex flex-col items-center">
-              <PurchaseStatusBadge
-                status={info.getValue()}
-                labels={PURCHASE_STATUS_LABELS}
-              />
+              <PurchaseStatusBadge status={info.getValue()} />
               <PendingReplacementNote row={info.row.original} />
             </div>
           ),

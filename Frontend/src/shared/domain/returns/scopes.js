@@ -1,3 +1,5 @@
+import { toneSoft } from "@/shared/lib/tone";
+
 /**
  * دامنه‌ی ادعا — مشترک بین مرجوعی فروش و مرجوعی خرید.
  *
@@ -27,10 +29,8 @@ export const OFF_SCOPE_KINDS = {
 };
 
 export const OFF_SCOPE_KIND_STYLES = {
-  [OFF_SCOPE_KINDS.EXCESS]:
-    "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/40 dark:border-sky-800 dark:text-sky-400",
-  [OFF_SCOPE_KINDS.UNLISTED]:
-    "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:border-violet-800 dark:text-violet-400",
+  [OFF_SCOPE_KINDS.EXCESS]: toneSoft("info"),
+  [OFF_SCOPE_KINDS.UNLISTED]: toneSoft("special"),
 };
 
 /** ادعای خارج از سند سهمیه‌ی هیچ خطی را مصرف نمی‌کند. */

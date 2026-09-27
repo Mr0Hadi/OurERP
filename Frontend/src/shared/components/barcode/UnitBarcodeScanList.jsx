@@ -57,9 +57,9 @@ export default function UnitBarcodeScanList({
         <span
           className={`tabular-nums font-medium ${
             isComplete
-              ? "text-[oklch(0.50_0.16_152)]"
+              ? "text-success"
               : isPartial || required
-                ? "text-amber-700 dark:text-amber-400"
+                ? "text-warning"
                 : "text-muted-foreground"
           }`}
         >
@@ -93,7 +93,7 @@ export default function UnitBarcodeScanList({
         </div>
       )}
       {isPartial && (
-        <p className="text-[11px] text-amber-700 dark:text-amber-400">
+        <p className="text-[11px] text-warning">
           یا همه‌ی دانه‌های این ردیف را اسکن کنید، یا هیچ‌کدام
           {required ? "" : " (تا سرور خودش انتخاب کند)"}.
         </p>

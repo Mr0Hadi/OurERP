@@ -376,7 +376,7 @@ export default function UnitDetailSheet({ unit, open, onOpenChange, onPrint, onA
                     )}
                   </span>
                 ) : needsLabel(unit) ? (
-                  <span className="text-xs text-amber-700 dark:text-amber-400">هنوز برچسب نخورده</span>
+                  <span className="text-xs text-warning">هنوز برچسب نخورده</span>
                 ) : (
                   <span className="text-xs text-muted-foreground">چاپی ثبت نشده</span>
                 )}

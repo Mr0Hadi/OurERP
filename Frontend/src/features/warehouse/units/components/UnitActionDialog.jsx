@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { AlertTriangle } from "lucide-react";
 
 import {
   Dialog,
@@ -30,6 +29,7 @@ import {
 } from "../domain/unitVocabulary";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { useApplyUnitActionMutation } from "../services/mutations";
+import Notice from "@/shared/components/feedback/Notice";
 
 /** چرا بخشی از انتخاب کنار گذاشته شد — به زبانِ کاری، نه «مجاز نیست». */
 function skippedReason(units) {
@@ -73,10 +73,7 @@ function ActionForm({ action, units, onDone, onCancel }) {
       </DialogHeader>
 
       {skipped.length > 0 && (
-        <p className="flex items-start gap-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          {skippedReason(skipped)}. این‌ها دست نمی‌خورند.
-        </p>
+        <Notice tone="warning">{skippedReason(skipped)}. این‌ها دست نمی‌خورند.</Notice>
       )}
 
       {purchaseQuarantine > 0 && (

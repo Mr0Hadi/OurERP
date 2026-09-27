@@ -40,7 +40,7 @@ const StockBadge = ({ stock, threshold = 10 }) => {
   if (stock <= 0) return <Badge variant="destructive">{stock} عدد</Badge>;
   if (stock <= threshold)
     return (
-      <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-100">
+      <Badge className="bg-warning/15 text-warning border-warning/30 hover:bg-warning/15">
         {stock} عدد
       </Badge>
     );
@@ -103,7 +103,7 @@ const ProductTable = ({
             {info.row.original.isIncomplete && (
               <Badge
                 variant="outline"
-                className="text-[10px] bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400"
+                className="text-[10px] bg-warning/10 text-warning border-warning/25"
               >
                 ناقص
               </Badge>
@@ -133,7 +133,7 @@ const ProductTable = ({
             />
             {/* قرنطینه جزو موجودی نیست ولی فیزیکاً در انبار است. */}
             {info.row.original.quarantinedCount > 0 && (
-              <span className="text-[11px] text-orange-700 dark:text-orange-400">
+              <span className="text-[11px] text-caution">
                 قرنطینه: {info.row.original.quarantinedCount.toLocaleString("fa-IR")}
               </span>
             )}

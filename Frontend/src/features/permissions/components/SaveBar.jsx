@@ -20,7 +20,7 @@ export default function SaveBar({
         {dirty ? (
           <>
             {added > 0 && (
-              <span className="text-emerald-600 dark:text-emerald-400">
+              <span className="text-success">
                 {formatNumber(added)} افزوده
               </span>
             )}

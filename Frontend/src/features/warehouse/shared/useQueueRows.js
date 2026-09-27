@@ -27,7 +27,7 @@ export const queueRowKey = (row) =>
 
 /** ردیف‌های مرجوعی با رنگِ ملایم از بقیه جدا می‌شوند. */
 export const queueRowClassName = (row) =>
-  isReturnRow(row.original) ? "bg-amber-500/5 hover:bg-amber-500/10" : "";
+  isReturnRow(row.original) ? "bg-warning/5 hover:bg-warning/10" : "";
 
 /**
  * کالای مرجوعی‌ای که منتظرِ این صفحه‌ی انبار است — دو نوع، با دو رفتار:
