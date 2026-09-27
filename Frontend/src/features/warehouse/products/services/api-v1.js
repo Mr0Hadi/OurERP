@@ -10,37 +10,21 @@ import { normalizeListResponse } from "@/shared/services/api/contract";
  * حذف در query.
  */
 
-/**
- * `IsLowOnStock` تنها فیلترِ موجودیِ سرور است (bool). سه‌گزینه‌ایِ
- * فرانت (`inStock`/`lowStock`/`outOfStock`) روی همین یک بولین سوار
- * می‌شود؛ فقط `lowStock` مستقیم نگاشت دارد. `outOfStock` معادلِ
- * سرور ندارد و نادیده گرفته می‌شود (سرور خطا نمی‌دهد، فقط فیلتر
- * نمی‌کند) — تا endpoint اختصاصی اضافه نشود همینه.
- */
-function toIsLowOnStock(stockStatus) {
-  if (stockStatus === "lowStock") return true;
-  if (stockStatus === "inStock") return false;
-  return undefined;
-}
-
-export const fetchProducts = async (params = {}) => {
-  const { data } = await axiosInstance.get("/Product/GetProductList", {
-    params: {
-      page: params.page,
-      take: params.limit,
-      name: params.search || undefined,
-      brand: params.brand || undefined,
-      productCategoryId: params.productCategoryId || undefined,
-      isLowOnStock: toIsLowOnStock(params.stockStatus),
-      fromPrice: params.minPrice || undefined,
-      toPrice: params.maxPrice || undefined,
-      isIncomplete: params.isIncomplete === "true" ? true : undefined,
-      // سرور مرتب‌سازی ندارد — اگر فرستاده شود بی‌صدا نادیده گرفته می‌شود.
-    },
-  });
-
-  return normalizeListResponse(data, { itemsKey: "productList" });
+/** `ProductListSortEnum`ِ بکند، بر اساسِ شناسه‌ی ستونِ جدول. */
+export const PRODUCT_SORT_COLUMNS = {
+  code: 1,
+  name: 2,
+  brand: 3,
+  categoryName: 4,
+  retailPrice: 5,
+  stock: 7,
 };
+
+/** `GET GetProductList` — پارامترها از `listQuery` با همان نام‌های `GetProductListQuery`. */
+export async function fetchProducts(params) {
+  const { data } = await axiosInstance.get("/Product/GetProductList", { params });
+  return normalizeListResponse(data, { itemsKey: "productList" });
+}
 
 export const fetchProductById = async (id) => {
   const { data } = await axiosInstance.get("/Product/GetProductDetail", {

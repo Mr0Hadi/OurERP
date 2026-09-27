@@ -17,7 +17,7 @@ import {
 } from "@/shared/components/ui/alert-dialog";
 import { useSalesReturnQuery } from "@/features/sales/returns/services/queries";
 import { useExecuteGoodsRoundMutation } from "@/features/sales/returns/services/mutations";
-import { useProductsQuery } from "@/features/warehouse/products/services/queries";
+import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import { buildGoodsLines } from "@/shared/domain/returns/resolutions";
 import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
@@ -32,9 +32,6 @@ import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 const SALES_SIDE = sideConfig(RETURN_SIDES.SALES);
 
-const ALL_FILTERS = {};
-const PAGINATION = { pageIndex: 0, pageSize: 200 };
-const SORTING = { id: "name", desc: false };
 
 /**
  * تحویل‌گرفتنِ کالای برگشتی از مشتری.
@@ -70,17 +67,13 @@ function ReceivingReturnDetailForm({ salesReturn }) {
     buildCommand,
   } = useGoodsRoundForm(lines, { withObservations: true });
 
-  const { data: productsData } = useProductsQuery(
-    ALL_FILTERS,
-    PAGINATION,
-    SORTING,
-  );
+  const { products: productOptions } = useProductsOptionsQuery();
 
   const productMap = useMemo(() => {
     const map = new Map();
-    (productsData?.items || []).forEach((p) => map.set(p.id, p));
+    productOptions.forEach((p) => map.set(p.id, p));
     return map;
-  }, [productsData]);
+  }, [productOptions]);
 
   const displayRounds = useMemo(
     () =>

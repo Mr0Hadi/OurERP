@@ -27,7 +27,7 @@ import {
   usePurchaseReceivingInfoQuery,
   usePurchaseReturnPendingEffectsQuery,
 } from "../services/queries";
-import { useProductsQuery } from "@/features/warehouse/products/services/queries";
+import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import { useReceiveShipmentMutation } from "../services/mutations";
 import { useReceivingForm } from "../hooks/useReceivingForm";
 import { useGoodsRoundForm } from "@/shared/hooks/useGoodsRoundForm";
@@ -43,9 +43,6 @@ import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
-const ALL_FILTERS = {};
-const PAGINATION = { pageIndex: 0, pageSize: 200 };
-const SORTING = { id: "name", desc: false };
 
 // سقفِ عکس‌های یک دورِ دریافت — `ReceivePurchaseCommand.Images` سقفی
 // ندارد، این فقط یک حدِ عملی برای فرم است.
@@ -77,16 +74,12 @@ function ReceivingDetailForm({ receivingInfo, replacementReturnId }) {
   const navigate = useNavigate();
   const receiveMutation = useReceiveShipmentMutation();
 
-  const { data: productsData } = useProductsQuery(
-    ALL_FILTERS,
-    PAGINATION,
-    SORTING,
-  );
+  const { products: productOptions } = useProductsOptionsQuery();
   const productMap = useMemo(() => {
     const map = new Map();
-    (productsData?.items || []).forEach((p) => map.set(p.id, p));
+    productOptions.forEach((p) => map.set(p.id, p));
     return map;
-  }, [productsData]);
+  }, [productOptions]);
 
   const {
     formData,

@@ -1,3 +1,5 @@
+import { toApiSort } from "./sorting";
+
 /**
  * قراردادِ مشترکِ لایه‌ی `api-v1` — چیزهایی که به دامنه ربط ندارند ولی
  * هر فایلِ API به آن‌ها نیاز دارد (صفحه‌بندی، کلید ایدمپوتنسی، نسخه‌ی سند)،
@@ -44,6 +46,35 @@ export function normalizeListResponse(data, { itemsKey } = {}) {
     // فهرستِ خالی صفرِ صفحه دارد، ولی شمارنده‌ی «صفحه ۱ از ۰» بی‌معناست.
     totalPages: Math.max(1, pageCount),
   };
+}
+
+const isEmptyFilter = (value) => value === "" || value == null || value === "all";
+
+/**
+ * پارامترهای استانداردِ هر `Get*ListQuery`ِ بکند، با *همان نام‌های بکند*:
+ * `page`/`take` + فیلترها + `sortBy`/`sortDirection`.
+ *
+ * فیلترها در استورِ هر فیچر از اول با نامِ پارامترِ سرور نگه داشته می‌شوند
+ * (`fullName`، `minBalance`، …)، پس هیچ لایه‌ی ترجمه‌ای بینِ فرم و درخواست
+ * نیست. مقدارِ خالی ("" / null / "all") فرستاده نمی‌شود — وگرنه سرور آن را
+ * فیلتر روی مقدارِ خالی می‌فهمد.
+ *
+ * @param {object} args
+ * @param {object} [args.filters] فیلترها با نامِ پارامترِ سرور
+ * @param {{ pageIndex: number, pageSize: number }} args.pagination
+ * @param {{ id: string, desc: boolean } | null} [args.sorting]
+ * @param {Record<string, number>} [args.sortColumns] ستونِ جدول → عددِ `*ListSortEnum`
+ */
+export function listQuery({ filters = {}, pagination, sorting, sortColumns = {} }) {
+  const params = {
+    page: pagination.pageIndex + 1,
+    take: pagination.pageSize,
+    ...filters,
+    ...toApiSort(sorting, sortColumns),
+  };
+  return Object.fromEntries(
+    Object.entries(params).filter(([, value]) => !isEmptyFilter(value)),
+  );
 }
 
 // ─── ایدمپوتنسی ─────────────────────────────────────────────────────────────

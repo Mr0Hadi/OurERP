@@ -1,10 +1,6 @@
-import { useMemo } from "react";
 import ProductPicker from "@/shared/components/products/ProductPicker";
-import { useProductsQuery } from "@/features/warehouse/products/services/queries";
+import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 
-const ALL_FILTERS = {};
-const PAGINATION = { pageIndex: 0, pageSize: 200 };
-const SORTING = { id: "name", desc: false };
 
 /**
  * انتخاب کالاهای یک محورِ کالاییِ تصمیم — چه به سمت مشتری برود و چه
@@ -21,13 +17,7 @@ const SORTING = { id: "name", desc: false };
  * می‌گذارد.
  */
 export default function GoodsItemsPicker({ items, onItemsChange }) {
-  const { data: productsData, isLoading } = useProductsQuery(
-    ALL_FILTERS,
-    PAGINATION,
-    SORTING,
-  );
-
-  const products = useMemo(() => productsData?.items ?? [], [productsData]);
+  const { products, isLoading } = useProductsOptionsQuery();
 
   return (
     <ProductPicker

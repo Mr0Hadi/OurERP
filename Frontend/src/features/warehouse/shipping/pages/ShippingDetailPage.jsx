@@ -17,7 +17,7 @@ import {
   useSaleForShippingQuery,
   useSaleReturnPendingEffectsQuery,
 } from "../services/queries";
-import { useProductsQuery } from "@/features/warehouse/products/services/queries";
+import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import { useDispatchShipmentMutation } from "../services/mutations";
 import { useShippingForm } from "../hooks/useShippingForm";
 import { useGoodsRoundForm } from "@/shared/hooks/useGoodsRoundForm";
@@ -32,9 +32,6 @@ import { isExcessAllowedFor } from "../domain/shippingVocabulary";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
-const ALL_FILTERS = {};
-const PAGINATION = { pageIndex: 0, pageSize: 200 };
-const SORTING = { id: "name", desc: false };
 
 function withProductImage(rows, productMap) {
   return rows.map((row) => {
@@ -61,16 +58,12 @@ function ShippingDetailForm({ sale, replacementReturnId }) {
   const navigate = useNavigate();
   const dispatchMutation = useDispatchShipmentMutation();
 
-  const { data: productsData } = useProductsQuery(
-    ALL_FILTERS,
-    PAGINATION,
-    SORTING,
-  );
+  const { products: productOptions } = useProductsOptionsQuery();
   const productMap = useMemo(() => {
     const map = new Map();
-    (productsData?.items || []).forEach((p) => map.set(p.id, p));
+    productOptions.forEach((p) => map.set(p.id, p));
     return map;
-  }, [productsData]);
+  }, [productOptions]);
 
   const isTracked = useCallback(
     (productId) => Boolean(productMap.get(productId)?.requiresUnitTracking),

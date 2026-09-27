@@ -9,7 +9,7 @@ import { Button } from "@/shared/components/ui/button";
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { usePurchaseFormStore } from "@/features/purchases/orders/store/purchaseFormStore";
 import { useCreatePurchaseMutation } from "@/features/purchases/orders/services/mutations";
-import { useSuppliersQuery } from "@/features/suppliers/services/queries";
+import { useSuppliersOptionsQuery } from "@/features/suppliers/services/queries";
 
 import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection";
 import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
@@ -19,18 +19,11 @@ import PurchaseStatusSection from "../components/forms/PurchaseStatusSection";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
 import { ROUTES } from "@/shared/constants/routes";
-import { useProductsQuery } from "@/features/warehouse/products/services/queries";
+import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { PurchaseStatusEnum } from "@/shared/domain/enums/purchaseStatus";
 import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
-
-const ALL_FILTERS = {};
-const PAGINATION = { pageIndex: 0, pageSize: 200 };
-const SORTING = { id: "name", desc: false };
-// مرجع ثابت برای «هنوز داده نیامده»؛ `|| []` در هر رندر آرایه‌ی تازه می‌سازد
-// و افکت‌هایی که به این لیست وابسته‌اند را بی‌دلیل دوباره اجرا می‌کند.
-const EMPTY_LIST = [];
 
 export default function PurchasesNewPage() {
   const navigate = useNavigate();
@@ -94,17 +87,9 @@ export default function PurchasesNewPage() {
 
   const createMutation = useCreatePurchaseMutation();
 
-  const { data: suppliersData, isLoading: suppliersLoading } =
-    useSuppliersQuery(ALL_FILTERS, PAGINATION, SORTING);
+  const { suppliers, isLoading: suppliersLoading } = useSuppliersOptionsQuery();
 
-  const { data: productsData, isLoading: productsLoading } = useProductsQuery(
-    ALL_FILTERS,
-    PAGINATION,
-    SORTING,
-  );
-
-  const suppliers = suppliersData?.items ?? EMPTY_LIST;
-  const products = productsData?.items ?? EMPTY_LIST;
+  const { products, isLoading: productsLoading } = useProductsOptionsQuery();
 
   useEffect(() => {
     const state = location.state;

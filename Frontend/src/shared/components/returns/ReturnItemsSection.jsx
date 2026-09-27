@@ -9,7 +9,7 @@ import {
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import ProductSearchPanel from "@/shared/components/forms/ProductSearchPanel";
-import { useProductsQuery } from "@/features/warehouse/products/services/queries";
+import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import { OFF_SCOPE_KINDS } from "@/shared/domain/returns/scopes";
 import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 import { claimLineKey } from "@/shared/hooks/useClaimsInOtherReturns";
@@ -17,9 +17,6 @@ import ClaimRow from "./ClaimRow";
 import { ReceivingReportLines } from "./ReceivingReport";
 import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
 
-const ALL_FILTERS = {};
-const PAGINATION = { pageIndex: 0, pageSize: 200 };
-const SORTING = { id: "name", desc: false };
 
 const sumQuantity = (claims) =>
   claims.reduce((sum, claim) => sum + (Number(claim.quantity) || 0), 0);
@@ -200,12 +197,7 @@ export default function ReturnItemsSection({
   unlistedHint,
 }) {
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
-  const { data: productsData, isLoading } = useProductsQuery(
-    ALL_FILTERS,
-    PAGINATION,
-    SORTING,
-  );
-  const products = productsData?.items ?? [];
+  const { products, isLoading } = useProductsOptionsQuery();
 
   const excessOf = (orderLineId) =>
     offScopeClaims.filter(

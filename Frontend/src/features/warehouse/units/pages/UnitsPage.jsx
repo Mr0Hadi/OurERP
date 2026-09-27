@@ -11,9 +11,9 @@ import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReference
 import { parseBarcode } from "@/shared/domain/barcode/productCode";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { usePermission } from "@/features/auth/hooks/usePermission";
-import { useProductsQuery } from "@/features/warehouse/products/services/queries";
-import { useSuppliersQuery } from "@/features/suppliers/services/queries";
-import { useCustomersQuery } from "@/features/customers/services/queries";
+import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
+import { useSuppliersOptionsQuery } from "@/features/suppliers/services/queries";
+import { useCustomersOptionsQuery } from "@/features/customers/services/queries";
 
 import {
   LABEL_FILTERS,
@@ -35,9 +35,6 @@ import UnitActionDialog from "../components/UnitActionDialog";
 import LabelPrintDesigner from "../components/LabelPrintDesigner";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
 
-const PICKER_PAGINATION = { pageIndex: 0, pageSize: 200 };
-const NAME_SORTING = { id: "name", desc: false };
-const NO_FILTERS = {};
 
 /** سقفِ «انتخاب همه‌ی نتایج» — بیشتر از این یعنی فیلترِ دقیق‌تر. */
 const BULK_LIMIT = 2000;
@@ -132,9 +129,9 @@ export default function UnitsPage() {
   const summaryQuery = useProductUnitSummaryQuery(store.productId);
   const summary = summaryQuery.isError ? null : summaryQuery.data;
 
-  const productsQuery = useProductsQuery(NO_FILTERS, PICKER_PAGINATION, null);
-  const suppliersQuery = useSuppliersQuery(NO_FILTERS, PICKER_PAGINATION, NAME_SORTING);
-  const customersQuery = useCustomersQuery(NO_FILTERS, PICKER_PAGINATION, NAME_SORTING);
+  const productOptions = useProductsOptionsQuery();
+  const supplierOptions = useSuppliersOptionsQuery();
+  const customerOptions = useCustomersOptionsQuery();
 
   const units = unitsQuery.data?.items ?? [];
   const totalResults = unitsQuery.data?.total ?? 0;
@@ -314,7 +311,7 @@ export default function UnitsPage() {
       store.custodyReason,
   );
 
-  const products = productsQuery.data?.items ?? [];
+  const products = productOptions.products;
   const productName = store.productId
     ? products.find((product) => String(product.id) === String(store.productId))?.name
     : null;
@@ -360,9 +357,9 @@ export default function UnitsPage() {
                 />
               }
               products={products}
-              suppliers={suppliersQuery.data?.items ?? []}
-              customers={customersQuery.data?.items ?? []}
-              isLoadingParties={suppliersQuery.isLoading || customersQuery.isLoading}
+              suppliers={supplierOptions.suppliers}
+              customers={customerOptions.customers}
+              isLoadingParties={supplierOptions.isLoading || customerOptions.isLoading}
             />
 
             {/* سربرگِ نمای جاری — همان کارتِ سربرگِ کارمند در «دسترسی کارمندان». */}

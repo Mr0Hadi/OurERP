@@ -19,7 +19,7 @@ import {
   usePurchaseForReturnQuery,
 } from "@/features/purchases/returns/services/queries";
 import { useExecuteGoodsRoundMutation } from "@/features/purchases/returns/services/mutations";
-import { useProductsQuery } from "@/features/warehouse/products/services/queries";
+import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import { buildGoodsLines } from "@/shared/domain/returns/resolutions";
 import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
 import { CLAIM_SCOPES } from "@/shared/domain/returns/scopes";
@@ -36,9 +36,6 @@ import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 const PURCHASE_SIDE = sideConfig(RETURN_SIDES.PURCHASE);
 
-const ALL_FILTERS = {};
-const PAGINATION = { pageIndex: 0, pageSize: 200 };
-const SORTING = { id: "name", desc: false };
 
 const { GOODS_OUT, GOODS_RELEASE, GOODS_SCRAP } = EFFECT_DIRECTIONS;
 const WAREHOUSE_DIRECTIONS = [GOODS_OUT, GOODS_RELEASE, GOODS_SCRAP];
@@ -101,17 +98,13 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
     [purchaseReturn],
   );
 
-  const { data: productsData } = useProductsQuery(
-    ALL_FILTERS,
-    PAGINATION,
-    SORTING,
-  );
+  const { products: productOptions } = useProductsOptionsQuery();
 
   const productMap = useMemo(() => {
     const map = new Map();
-    (productsData?.items || []).forEach((p) => map.set(p.id, p));
+    productOptions.forEach((p) => map.set(p.id, p));
     return map;
-  }, [productsData]);
+  }, [productOptions]);
 
   const { data: receivingInfo } = usePurchaseForReturnQuery(purchaseReturn.purchaseId);
   const defaultSource = useCallback(

@@ -25,11 +25,11 @@
 const SOFT = {
   neutral: "bg-muted text-muted-foreground border-border",
   primary: "bg-primary/10 text-primary border-primary/25",
-  info: "bg-info/10 text-info border-info/25",
-  success: "bg-success/10 text-success border-success/25",
-  warning: "bg-warning/10 text-warning border-warning/30",
-  caution: "bg-caution/10 text-caution border-caution/25",
-  special: "bg-special/10 text-special border-special/25",
+  info: "bg-info/12 text-info border-info/30",
+  success: "bg-success/12 text-success border-success/30",
+  warning: "bg-warning/12 text-warning border-warning/35",
+  caution: "bg-caution/12 text-caution border-caution/30",
+  special: "bg-special/12 text-special border-special/30",
   danger: "bg-destructive/10 text-destructive border-destructive/25",
 };
 

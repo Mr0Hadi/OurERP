@@ -21,7 +21,7 @@ import {
   useRemovePurchaseMutation,
   usePurchasePaymentMutations,
 } from "@/features/purchases/orders/services/mutations";
-import { useSuppliersQuery } from "@/features/suppliers/services/queries";
+import { useSuppliersOptionsQuery } from "@/features/suppliers/services/queries";
 import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection";
 import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
 import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
@@ -30,7 +30,7 @@ import PurchaseStatusSection from "../components/forms/PurchaseStatusSection";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
 import { ROUTES } from "@/shared/constants/routes";
-import { useProductsQuery } from "@/features/warehouse/products/services/queries";
+import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import {
   canDeletePurchase,
   hasLivePayments,
@@ -41,9 +41,6 @@ import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import PurchasePaymentsCard from "../components/forms/PurchasePaymentsCard";
 
-const ALL_FILTERS = {};
-const PAGINATION = { pageIndex: 0, pageSize: 200 };
-const SORTING = { id: "name", desc: false };
 
 /**
  * ویرایشِ خریدی که هنوز **پیش‌فاکتور** است — تنها وضعیتی که
@@ -74,16 +71,8 @@ export default function PurchaseDetailForm({ purchaseData }) {
     initializedForId,
   } = usePurchaseFormStore();
 
-  const { data: suppliersData, isLoading: suppliersLoading } =
-    useSuppliersQuery(ALL_FILTERS, PAGINATION, SORTING);
-  const { data: productsData, isLoading: productsLoading } = useProductsQuery(
-    ALL_FILTERS,
-    PAGINATION,
-    SORTING,
-  );
-
-  const suppliers = suppliersData?.items || [];
-  const products = productsData?.items || [];
+  const { suppliers, isLoading: suppliersLoading } = useSuppliersOptionsQuery();
+  const { products, isLoading: productsLoading } = useProductsOptionsQuery();
 
   /**
    * ضمیمه‌های همین سند. `UpdatePurchase` آرایه را *جایگزین* می‌کند نه

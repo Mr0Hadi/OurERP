@@ -81,11 +81,11 @@
     --accent-foreground: oklch(0.25 0.010 264);
     --destructive: oklch(0.57 0.22 27);
     /* وضعیت‌ها: موفق / در انتظار / نیازمند توجه (قرنطینه، ناقص) / اطلاع / خاص (مرجوعی، نسیه) */
-    --success: oklch(0.52 0.15 152);
-    --warning: oklch(0.58 0.14 75);
-    --caution: oklch(0.56 0.19 35);
-    --info: oklch(0.52 0.11 215);
-    --special: oklch(0.50 0.22 302);
+    --success: oklch(0.53 0.18 150);
+    --warning: oklch(0.57 0.17 62);
+    --caution: oklch(0.55 0.21 38);
+    --info: oklch(0.52 0.14 228);
+    --special: oklch(0.52 0.26 302);
     --border: oklch(0.88 0.006 240);
     --input: oklch(0.88 0.006 240);
     --ring: oklch(0.55 0.18 264);
@@ -122,11 +122,11 @@
     --accent: oklch(0.269 0 0);
     --accent-foreground: oklch(0.985 0 0);
     --destructive: oklch(0.70 0.19 22);
-    --success: oklch(0.76 0.15 155);
-    --warning: oklch(0.83 0.15 85);
-    --caution: oklch(0.73 0.17 42);
-    --info: oklch(0.78 0.11 210);
-    --special: oklch(0.74 0.16 305);
+    --success: oklch(0.80 0.18 152);
+    --warning: oklch(0.86 0.16 85);
+    --caution: oklch(0.77 0.18 45);
+    --info: oklch(0.82 0.12 215);
+    --special: oklch(0.78 0.18 305);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
     --ring: oklch(0.556 0 0);

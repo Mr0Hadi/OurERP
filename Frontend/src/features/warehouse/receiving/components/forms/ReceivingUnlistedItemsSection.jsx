@@ -12,15 +12,12 @@ import {
 import ProductSearchPanel from "@/shared/components/forms/ProductSearchPanel";
 import QuantityStepper from "@/shared/components/forms/QuantityStepper";
 import ObservationEditor from "@/shared/components/returns/ObservationEditor";
-import { useProductsQuery } from "@/features/warehouse/products/services/queries";
+import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 import { NO_QUANTITY_CAP } from "../../hooks/useReceivingForm";
 import QuickCreateProductDialog from "./QuickCreateProductDialog";
 import { formatNumber } from "@/shared/lib/numberFormat";
 
-const ALL_FILTERS = {};
-const PAGINATION = { pageIndex: 0, pageSize: 200 };
-const SORTING = { id: "name", desc: false };
 
 /**
  * کالایی که رسیده ولی در این خرید هیچ قلمی ندارد. تماماً به قرنطینه
@@ -38,11 +35,7 @@ export default function ReceivingUnlistedItemsSection({
 }) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const { data: productsData, isLoading } = useProductsQuery(
-    ALL_FILTERS,
-    PAGINATION,
-    SORTING,
-  );
+  const { products: productOptions, isLoading } = useProductsOptionsQuery();
 
   const add = (product) => {
     const { rejected } = onAdd(product);
@@ -140,7 +133,7 @@ export default function ReceivingUnlistedItemsSection({
               </p>
             ) : (
               <ProductSearchPanel
-                products={productsData?.items ?? []}
+                products={productOptions}
                 addedQuantityOf={(productId) =>
                   Number(rows.find((row) => row.productId === productId)?.arrivedQuantity) || 0
                 }

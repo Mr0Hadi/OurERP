@@ -7,39 +7,17 @@ import { normalizeListResponse } from "@/shared/services/api/contract";
  * مسیرها REST نیستند: کنترلر با نامِ اکشن آدرس‌دهی می‌شود
  * (`GetCustomerList`, `CreateCustomer`, …) و برای ویرایش/حذف، شناسه در
  * بدنه یا query می‌رود نه در مسیر.
- *
- * نامِ پارامترهای فیلتر با تامین‌کننده **یکی نیست** — هر دو کنترلر
- * قرارداد خودشان را دارند و نباید از روی هم حدس زده شوند:
- *
- *   مشتری:        `fullName`, `minBalance`, `maxBalance`, `balanceType`
- *   تامین‌کننده:  `companyNameOrContactName`, `fromBalance`, `toBalance`
- *
- * مرتب‌سازی را هیچ‌کدام پشتیبانی نمی‌کنند.
- *
- * `id` یک فیلترِ کاملاً جدا از `fullName` است — تطبیقِ دقیقِ عددی روی
- * شناسه‌ی ردیف، نه Contains روی نام.
  */
-export async function fetchCustomers({
-  page = 1,
-  limit = 10,
-  search = "",
-  id = "",
-  minBalance = "",
-  maxBalance = "",
-  balanceType = "",
-} = {}) {
-  const { data } = await axiosInstance.get("/Customer/GetCustomerList", {
-    params: {
-      page,
-      take: limit,
-      fullName: search || undefined,
-      id: id !== "" ? id : undefined,
-      minBalance: minBalance !== "" ? minBalance : undefined,
-      maxBalance: maxBalance !== "" ? maxBalance : undefined,
-      balanceType: balanceType !== "" ? balanceType : undefined,
-    },
-  });
 
+/** `CustomerListSortEnum`ِ بکند، بر اساسِ شناسه‌ی ستونِ جدول. */
+export const CUSTOMER_SORT_COLUMNS = {
+  id: 0,
+  fullName: 2, // LAST_NAME
+};
+
+/** `GET GetCustomerList` — پارامترها از `listQuery` با همان نام‌های `GetCustomerListQuery`. */
+export async function fetchCustomers(params) {
+  const { data } = await axiosInstance.get("/Customer/GetCustomerList", { params });
   return normalizeListResponse(data, { itemsKey: "customerList" });
 }
 
