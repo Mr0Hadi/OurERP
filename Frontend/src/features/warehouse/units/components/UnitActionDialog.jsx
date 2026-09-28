@@ -174,7 +174,7 @@ function LocationForm({ units, onDone, onCancel }) {
       <DialogHeader>
         <DialogTitle>تعیین قفسه — {formatNumber(eligible.length)} دانه</DialogTitle>
         <DialogDescription>
-          جای فیزیکیِ دانه در انبار، مثلاً «A-03-2». فقط جایگاه ثبت می‌شود و وضعیت یا موجودی عوض
+          جای فیزیکیِ دانه در انبار، مثلاً «<bdi dir="ltr">A-03-2</bdi>». فقط جایگاه ثبت می‌شود و وضعیت یا موجودی عوض
           نمی‌شود؛ وقتی دانه از انبار برود قفسه‌اش خودکار پاک می‌شود.
         </DialogDescription>
       </DialogHeader>

@@ -5,7 +5,7 @@ import {
   UNPAID_CUSTODY_REASONS,
 } from "@/shared/domain/enums/unitStatus";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
-import { gregorianToPersian } from "@/shared/lib/dateUtils";
+import { gregorianToPersian, toDateOnly } from "@/shared/lib/dateUtils";
 
 /**
  * واژگانِ صفحه‌ی «دانه‌ها و برچسب‌ها» — هر قاعده‌ای که به یک دانه‌ی فیزیکی
@@ -281,8 +281,11 @@ export const UNIT_SORT_COLUMNS = Object.freeze({
 
 // ─── نمایش ──────────────────────────────────────────────────────────────────
 
-export const formatDate = (value) =>
-  value ? gregorianToPersian(String(value).slice(0, 10)) : "—";
+/** `0001-01-01` (تاریخِ خالیِ .NET) هم «بدونِ تاریخ» است. */
+export const formatDate = (value) => {
+  const date = toDateOnly(value);
+  return date ? gregorianToPersian(date) : "—";
+};
 
 /** روزهای گذشته از یک تاریخ — «چند وقت است در قرنطینه مانده». */
 export function daysSince(value, now = Date.now()) {

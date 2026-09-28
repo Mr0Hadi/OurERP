@@ -133,11 +133,23 @@ export async function resolveScannedCode(code) {
   const { data } = await axiosInstance.get("/Product/ScanBarcode", { params: { code } });
   const product = data?.product ?? null;
 
+  // دانه‌ی پاسخِ `ScanBarcode` فیلدهای تازه‌ی `ProductUnitDto` (خرید، علتِ
+  // قرنطینه، ارزش، تاریخِ ورود) را خالی برمی‌گرداند؛ خودِ دانه از
+  // `GetProductUnitHistory` خوانده می‌شود که کامل است. درخواستِ اصلاح در
+  // `Backend-Net/docs/frontend-requests.fa.md` (بخشِ ۸).
+  let unitDto = data?.unit ?? null;
+  if (unitDto?.id) {
+    const history = await axiosInstance.get("/Product/GetProductUnitHistory", {
+      params: { productUnitId: unitDto.id },
+    });
+    unitDto = history.data?.unit ?? unitDto;
+  }
+
   return {
     kind: data?.kind ?? reference.kind,
     code,
     product,
-    unit: normalizeProductUnit(data?.unit, product),
+    unit: normalizeProductUnit(unitDto, product),
   };
 }
 
