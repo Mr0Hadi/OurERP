@@ -3,6 +3,7 @@ import {
   idempotent,
   normalizeListResponse,
   documentVersion,
+  toApiAttachments,
 } from "@/shared/services/api/contract";
 import { toDateOnly } from "@/shared/lib/dateUtils";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
@@ -170,21 +171,6 @@ export function fromApiPurchase(dto) {
   // `GetPurchaseDetail` هنوز `updatedAt` نمی‌دهد؛ بدون کلیدِ نسخه، فرم
   // بعد از بازگشت به همان خرید روی داده‌ی کهنه می‌ماند.
   return { ...purchase, updatedAt: documentVersion(purchase) };
-}
-
-/**
- * `attachments` — بند ۳ سندِ `invoice-attachment-requirements.fa.md`:
- * `{objectKey, fileName?, note?}`. همان شکلی که `useInvoiceAttachments`
- * در `filesPayload` می‌دهد، پس معمولاً بدونِ تبدیل رد می‌شود.
- */
-export function toApiAttachments(attachments = []) {
-  return attachments
-    .filter((item) => item?.objectKey)
-    .map((item) => ({
-      objectKey: item.objectKey,
-      fileName: item.fileName || undefined,
-      note: item.note || undefined,
-    }));
 }
 
 function toApiPurchasePayload(purchaseData) {

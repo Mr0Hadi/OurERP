@@ -56,9 +56,11 @@ export const UNIT_CUSTODY_REASON_LABELS = Object.freeze({
   [UnitCustodyReasonEnum.WAREHOUSE_HOLD]: "نگهداشت انبار",
 });
 
-/** قرنطینه‌ای که از دریافتِ خرید آمده و تکلیفش با مرجوعیِ خرید روشن می‌شود. */
-export const PURCHASE_CUSTODY_REASONS = Object.freeze([
-  UnitCustodyReasonEnum.ON_ORDER,
+/**
+ * قرنطینه‌ای که پولش را به تامین‌کننده نداده‌ایم: مازاد یا کالای خارج از
+ * سند که «قبولِ مازاد» نشده. آزادسازی یا اسقاطش بدونِ پرداخت است.
+ */
+export const UNPAID_CUSTODY_REASONS = Object.freeze([
   UnitCustodyReasonEnum.EXCESS,
   UnitCustodyReasonEnum.UNLISTED,
 ]);

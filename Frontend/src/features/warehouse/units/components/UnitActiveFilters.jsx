@@ -79,6 +79,11 @@ export default function UnitActiveFilters({ store, suppliers, customers, linksOn
         store.setToSerial("");
       },
     },
+    store.binLocation && {
+      key: "bin",
+      label: `قفسه ${store.binLocation}`,
+      clear: () => store.setBinLocation(""),
+    },
   ].filter((chip) => chip && (!linksOnly || chip.link));
 
   if (chips.length === 0) return null;

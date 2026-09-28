@@ -14,6 +14,10 @@ const activityFilters = {
   defaultSorting: null,
 };
 
-export const useEmployeeActivityFilterStore = createFilterStore(activityFilters);
+// رتبه‌بندیِ کارمندان می‌تواند به کارمندانِ امروزِ یک تیم/واحد محدود شود.
+export const useEmployeeActivityFilterStore = createFilterStore({
+  ...activityFilters,
+  filters: { ...activityFilters.filters, departmentId: "", teamId: "" },
+});
 export const useCustomerActivityFilterStore = createFilterStore(activityFilters);
 export const useSupplierActivityFilterStore = createFilterStore(activityFilters);

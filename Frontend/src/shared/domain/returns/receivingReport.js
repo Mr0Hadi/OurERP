@@ -7,10 +7,17 @@ import { OFF_SCOPE_KINDS } from "./scopes";
  */
 
 /**
- * چند عدد از کالای همین ادعا الان در قرنطینه است — همان دسته‌ای که سرور
- * برای آزادسازی و اسقاط از آن برمی‌دارد: ادعای روی سفارش خرابیِ سهمِ
- * سفارشِ قلمش، مازاد مازادِ همان قلم، و سفارش‌نداده همان کالا در همین
- * خرید. `null` یعنی گزارشِ دریافت هنوز نیامده.
+ * سقفِ برداشت از قرنطینه برای یک تصمیمِ تازه روی این ادعا — همان عددی که
+ * `AddClaimResolution` چک می‌کند.
+ *
+ *  - ادعای روی سفارش: `freeQuarantinedOnOrderQuantity` — قرنطینه‌ی
+ *    پرداخت‌شده‌ی قلم (خرابِ دریافت، برگشتیِ معیوبِ مشتری، نگهداشتِ انبار)
+ *    منهای آنچه تصمیم‌های مرجوعی‌های باز رزرو کرده‌اند.
+ *  - مازاد و سفارش‌نداده: خودِ ادعا از لحظه‌ی ثبت مقدارش را رزرو کرده و
+ *    تصمیم‌های زیرش از همان رزرو برمی‌دارند، پس سقف کلِ قرنطینه‌ی همان
+ *    دسته است.
+ *
+ * `null` یعنی گزارشِ دریافت هنوز نیامده.
  */
 export function claimQuarantinedQuantity(receivingInfo, claim) {
   if (!receivingInfo || !claim) return null;
@@ -27,7 +34,7 @@ export function claimQuarantinedQuantity(receivingInfo, claim) {
   );
   return claim.offScopeKind === OFF_SCOPE_KINDS.EXCESS
     ? item?.quarantinedExcessQuantity ?? 0
-    : item?.quarantinedOnOrderQuantity ?? 0;
+    : item?.freeQuarantinedOnOrderQuantity ?? 0;
 }
 
 /** گزارشِ یک قلمِ سفارش: خرابیِ سهمِ سفارش و مازادِ همان قلم. */
@@ -37,8 +44,13 @@ export function lineReceivingReport(receivingInfo, purchaseItemId) {
   );
   return {
     quarantined: [
-      { label: "در قرنطینه (خراب، سهم سفارش)", quantity: item?.quarantinedOnOrderQuantity ?? 0 },
       { label: "در قرنطینه (مازاد)", quantity: item?.quarantinedExcessQuantity ?? 0 },
+      { label: "در قرنطینه (خراب، سهم سفارش)", quantity: item?.quarantinedOnOrderQuantity ?? 0 },
+      {
+        label: "در قرنطینه (برگشتیِ معیوبِ مشتری)",
+        quantity: item?.quarantinedCustomerReturnQuantity ?? 0,
+      },
+      { label: "در قرنطینه (نگهداشتِ انبار)", quantity: item?.quarantinedWarehouseHoldQuantity ?? 0 },
     ],
     discrepancies: (receivingInfo?.discrepancies || []).filter(
       (d) => d.purchaseItemId === purchaseItemId,
@@ -72,11 +84,29 @@ export function claimReceivingReport(receivingInfo, claim) {
   const report = lineReceivingReport(receivingInfo, claim.orderLineId ?? null);
   if (claim.offScopeKind === OFF_SCOPE_KINDS.EXCESS) {
     return {
-      quarantined: report.quarantined.slice(1),
+      quarantined: report.quarantined.slice(0, 1),
       discrepancies: report.discrepancies.filter(
         (d) => d.custodyReason === UnitCustodyReasonEnum.EXCESS,
       ),
     };
   }
-  return report;
+  return { ...report, quarantined: report.quarantined.slice(1) };
+}
+
+/** جمعِ همه‌ی دانه‌های قرنطینه‌ی یک خرید، از هر علتی. */
+export function totalQuarantined(receivingInfo) {
+  const items = (receivingInfo?.items || []).reduce(
+    (sum, item) =>
+      sum +
+      (item.quarantinedOnOrderQuantity || 0) +
+      (item.quarantinedCustomerReturnQuantity || 0) +
+      (item.quarantinedWarehouseHoldQuantity || 0) +
+      (item.quarantinedExcessQuantity || 0),
+    0,
+  );
+  const unlisted = (receivingInfo?.unlistedItems || []).reduce(
+    (sum, item) => sum + (item.quarantinedQuantity || 0),
+    0,
+  );
+  return items + unlisted;
 }

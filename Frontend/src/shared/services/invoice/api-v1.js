@@ -68,3 +68,13 @@ export const getSaleInvoicePdf = (saleId) =>
 export const getSaleReturnCreditNotePdf = (saleReturnId) =>
   fetchPdf("/Invoice/GetSaleReturnCreditNotePdf", { saleReturnId });
 
+
+/**
+ * `GET api/Invoice/GetPurchaseReturnPdf` — «برگه‌ی مرجوعی به تامین‌کننده».
+ * برای هر مرجوعیِ خرید ساخته می‌شود (شرطِ اثرِ پولی ندارد) و همراهِ کالا
+ * می‌رود.
+ *
+ * @returns Blob با `application/pdf`
+ */
+export const getPurchaseReturnPdf = (purchaseReturnId) =>
+  fetchPdf("/Invoice/GetPurchaseReturnPdf", { purchaseReturnId });

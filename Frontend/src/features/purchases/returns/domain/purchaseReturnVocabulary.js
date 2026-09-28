@@ -102,27 +102,15 @@ export function hasAnythingArrived(purchase) {
 // ─── سقف‌های ادعا از `GetPurchaseReceivingInfo` ─────────────────────────────
 
 /**
- * سقف‌های ادعا و خریدِ مازاد روی `PurchaseReceivingInfoDto`.
- *
- * فیلدهای `claimableQuantity` / `freeExcessQuantity` / `freeQuantity`
- * درخواستِ ما از بکند‌اند (`Backend-Net/docs/purchase-frontend-sync-requests.fa.md`
- * بند ۱) و ممکن است هنوز نرسند. تا آن وقت از نزدیک‌ترین عددی که هست
- * استفاده می‌شود — دریافت‌شده یا کلِ قرنطینه — که ادعاهای بازِ مرجوعی‌های
- * دیگر را کم نمی‌کند؛ پس در آن فاصله حرفِ آخر را ۴۰۰ سرور می‌زند.
+ * سقف‌های ادعا و خریدِ مازاد روی `PurchaseReceivingInfoDto` — همان عددهایی
+ * که سرور هنگامِ ثبت چک می‌کند (ادعاهای بازِ مرجوعی‌های دیگر کم شده‌اند).
  */
-const firstNumber = (...values) => {
-  const found = values.find((value) => value != null);
-  return Number(found) || 0;
-};
 
 /** سقفِ ادعای روی سفارش برای یک قلم: رسیده − تسویه‌شده − ادعاهای باز. */
-export const claimableQuantityOf = (item) =>
-  firstNumber(item?.claimableQuantity, item?.receivedQuantity);
+export const claimableQuantityOf = (item) => Number(item?.claimableQuantity) || 0;
 
 /** مازادِ آزادِ قرنطینه روی یک قلم (منهای رزروِ ادعاهای باز). */
-export const freeExcessQuantityOf = (item) =>
-  firstNumber(item?.freeExcessQuantity, item?.quarantinedExcessQuantity);
+export const freeExcessQuantityOf = (item) => Number(item?.freeExcessQuantity) || 0;
 
 /** کالای سفارش‌ندادهِ آزادِ قرنطینه (منهای رزروِ ادعاهای باز). */
-export const freeUnlistedQuantityOf = (item) =>
-  firstNumber(item?.freeQuantity, item?.quarantinedQuantity);
+export const freeUnlistedQuantityOf = (item) => Number(item?.freeQuantity) || 0;

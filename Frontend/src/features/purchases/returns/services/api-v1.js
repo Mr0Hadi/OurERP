@@ -2,6 +2,7 @@ import axiosInstance from "@/shared/services/api/axios";
 import {
   idempotent,
   normalizeListResponse,
+  toApiAttachments,
 } from "@/shared/services/api/contract";
 import { toApiClaim, fromApiPurchaseReturn } from "@/shared/domain/returns/claimsApi";
 import { toApiComposition } from "@/shared/domain/returns/resolutions";
@@ -96,9 +97,8 @@ export async function fetchReturnablePurchases(search = "") {
  * اقلام یک خرید برای فرمِ مرجوعی — `PurchaseReceivingInfoDto`.
  *
  * سقف‌ها با `claimableQuantityOf` / `freeExcessQuantityOf` /
- * `freeUnlistedQuantityOf` در `purchaseReturnVocabulary` خوانده می‌شوند —
- * فیلدهای دقیقشان هنوز درخواستی از بکند است و تا آن وقت عددِ
- * نزدیکِ موجود جایشان می‌نشیند.
+ * `freeUnlistedQuantityOf` در `purchaseReturnVocabulary` خوانده می‌شوند و
+ * سقفِ برداشت از قرنطینه برای یک تصمیم با `claimQuarantinedQuantity`.
  */
 export async function fetchPurchaseForReturn(purchaseId) {
   const { data } = await axiosInstance.get("/PurchaseReturn/GetPurchaseReceivingInfo", {
@@ -175,8 +175,9 @@ export async function removeClaimResolution(returnId, claimId, resolutionId) {
  *     date, partyName, partyPhoneNumber, vehiclePlate, note
  *   }
  *
- * `source` (`ProductUnitStatusEnum`) روی عودت الزامی است — از موجودی
- * (IN_STOCK) یا از قرنطینه (QUARANTINED). `observations` فقط روی اثرِ
+ * `source` (`ProductUnitStatusEnum`) از ۲۰۲۶-۰۹-۲۷ روی خودِ تصمیم ثبت
+ * می‌شود (`AddClaimResolution`) و اینجا همان مقدار فرستاده می‌شود؛ فقط
+ * عودتِ قدیمیِ بی‌منبع آن را از انباردار می‌گیرد. `observations` فقط روی اثرِ
  * ورودی معنا دارد و مقدارِ سالم را سرور از `quantity` منهای مشاهده‌ها
  * حساب می‌کند.
  */
@@ -246,4 +247,17 @@ export async function removePurchaseReturn(returnId) {
   // پاسخِ حذف هم سند را برمی‌گرداند: لایه‌ی mutation برای پاک‌کردن کش و
   // بازگرداندن کاربر به لیست، به `id` و `purchaseId` نیاز دارد.
   return fromApiPurchaseReturn(data) ?? { id: returnId };
+}
+
+/**
+ * `PUT UpdatePurchaseReturnAttachments` — پیوست‌های مرجوعی (رسیدِ امضاشده، عکسِ
+ * کالا). جایگزینیِ کامل (فهرستِ نهایی فرستاده می‌شود) و در هر وضعیتی؛
+ * پاسخ سندِ کاملِ مرجوعی است.
+ */
+export async function updatePurchaseReturnAttachments(returnId, attachments) {
+  const { data } = await axiosInstance.put("/PurchaseReturn/UpdatePurchaseReturnAttachments", {
+    id: returnId,
+    attachments: toApiAttachments(attachments),
+  });
+  return fromApiPurchaseReturn(data);
 }

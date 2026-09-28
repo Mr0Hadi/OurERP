@@ -91,6 +91,8 @@ export const SIDE_CONFIG = {
         label: "کالا به تامین‌کننده عودت داده شود",
         hint: "کالا از انبار یا قرنطینه خارج می‌شود",
         allowPicker: false,
+        // منبع روی خودِ تصمیم ثبت می‌شود و الزامی است (`goodsOut[].source`).
+        withSource: true,
       },
       {
         slot: GOODS_IN_SLOT,
@@ -112,7 +114,9 @@ export const SIDE_CONFIG = {
         slot: "goodsScrap",
         direction: EFFECT_DIRECTIONS.GOODS_SCRAP,
         label: "کالا اسقاط شود",
-        hint: "از قرنطینه، یا از موجودی اگر عیب بعد از دریافت پیدا شده — کالا از چرخه خارج و زیان ثبت می‌شود",
+        hint: "کالا از چرخه خارج و زیان ثبت می‌شود",
+        // پیش‌فرض قرنطینه؛ «موجودی» برای عیبی که بعد از دریافت روی قفسه پیدا شده.
+        withSource: true,
       },
     ],
 

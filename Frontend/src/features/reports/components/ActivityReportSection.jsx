@@ -25,6 +25,8 @@ export default function ActivityReportSection({
   const {
     fromDate,
     toDate,
+    teamId,
+    departmentId,
     pagination,
     setFromDate,
     setToDate,
@@ -33,7 +35,7 @@ export default function ActivityReportSection({
   } = useFilterStore();
 
   const { data, isLoading, isFetching, isError, error, refetch } = useReportQuery({
-    filters: { fromDate, toDate },
+    filters: { fromDate, toDate, teamId, departmentId },
     pagination,
   });
 

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { PackageCheck } from "lucide-react";
+import { Link } from "react-router-dom";
+import { PackageCheck, ScanBarcode } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -20,6 +21,7 @@ import {
   freeUnlistedQuantityOf,
 } from "@/features/purchases/returns/domain/purchaseReturnVocabulary";
 import { formatNumber } from "@/shared/lib/numberFormat";
+import { ROUTES } from "@/shared/constants/routes";
 
 /**
  * ردیف‌های قابل‌خرید از `PurchaseReceivingInfoDto`.
@@ -78,6 +80,11 @@ function candidatesOf(info) {
  * به فاکتور اضافه می‌کند (قلمِ اصلی دست نمی‌خورد)؛ پرداختِ همین مبلغ مثل
  * هر پرداختِ دیگری از کارتِ «پرداخت‌ها» ثبت می‌شود.
  *
+ * خریدن فقط تصمیمِ مالی است (از ۲۰۲۶-۰۹-۲۷): دانه‌ها در قرنطینه می‌مانند
+ * (علتِ «سهم سفارش»، با ارزشِ قیمتِ خالص) و موجودی عوض نمی‌شود. روی قفسه
+ * بردن، اسقاط یا پس‌دادنشان قدمِ جداست — «بازگشت به موجودی» در صفحه‌ی
+ * دانه‌ها، یا مرجوعی خرید. پس بعد از ثبت، پیوندِ همان صفحه نشان داده می‌شود.
+ *
  * وقتی چیزی در قرنطینه‌ی آزاد نیست، کارت اصلاً دیده نمی‌شود.
  *
  * جایش در صفحه‌ی ثبت مرجوعی است، نه جزئیاتِ خرید: برای کالای مازاد یا
@@ -96,22 +103,48 @@ export default function PurchaseExcessSection({ purchase }) {
     allowed ? purchase.id : null,
   );
   const candidates = useMemo(() => candidatesOf(info), [info]);
+  // بیرون از فرم نگه داشته می‌شود: فرم بعد از هر ثبت با کلیدِ تازه از نو
+  // ساخته می‌شود و اگر چیزی نماند اصلاً دیده نمی‌شود.
+  const [accepted, setAccepted] = useState(false);
 
-  if (!allowed || candidates.length === 0) return null;
+  if (!allowed || (candidates.length === 0 && !accepted)) return null;
 
   // هر بار که ارقامِ سرور عوض شد (دورِ دریافتِ تازه، خریدِ قبلی)، فرم با
   // یک کلیدِ تازه از نو ساخته می‌شود.
   const version = candidates.map((c) => `${c.key}:${c.available}`).join("|");
   return (
-    <ExcessForm
-      key={version}
-      purchaseId={purchase.id}
-      candidates={candidates}
-    />
+    <div className="space-y-3">
+      {accepted && <AcceptedNotice purchaseId={purchase.id} />}
+      {candidates.length > 0 && (
+        <ExcessForm
+          key={version}
+          purchaseId={purchase.id}
+          candidates={candidates}
+          onAccepted={() => setAccepted(true)}
+        />
+      )}
+    </div>
   );
 }
 
-function ExcessForm({ purchaseId, candidates }) {
+function AcceptedNotice({ purchaseId }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-caution/30 bg-caution/5 p-3 text-xs">
+      <span className="text-card-foreground">
+        کالای خریده‌شده هنوز در قرنطینه است. کالای سالم را از صفحه‌ی دانه‌ها «به
+        موجودی برگردانید» تا قابل فروش شود.
+      </span>
+      <Button asChild size="sm" variant="outline" className="h-7 gap-1.5 text-xs">
+        <Link to={`${ROUTES.WAREHOUSE_UNITS}?purchaseId=${purchaseId}&segment=quarantine`}>
+          <ScanBarcode className="h-3.5 w-3.5" />
+          دانه‌های قرنطینه‌ی این خرید
+        </Link>
+      </Button>
+    </div>
+  );
+}
+
+function ExcessForm({ purchaseId, candidates, onAccepted }) {
   const mutation = useAcceptPurchaseExcessMutation(purchaseId);
   const [rows, setRows] = useState(() =>
     Object.fromEntries(
@@ -169,7 +202,12 @@ function ExcessForm({ purchaseId, candidates }) {
               };
         }),
       },
-      { onSuccess: () => setNote("") },
+      {
+        onSuccess: () => {
+          setNote("");
+          onAccepted();
+        },
+      },
     );
   };
 
@@ -184,7 +222,8 @@ function ExcessForm({ purchaseId, candidates }) {
           کالایی که بیش از سفارش یا بدون سفارش رسیده و در قرنطینه است. اگر نگهش
           می‌دارید، اینجا به خرید اضافه‌اش کنید (قلمِ ضمیمه روی فاکتور) و پولش
           را از کارت پرداخت‌های همان خرید ثبت کنید؛ اگر پس می‌فرستید، در «اقلام
-          و مشکلات» پایین‌تر «مازاد» یا «کالای سفارش‌نداده» ثبت کنید.
+          و مشکلات» پایین‌تر «مازاد» یا «کالای سفارش‌نداده» ثبت کنید. خریدن
+          کالا را از قرنطینه بیرون نمی‌آورد؛ بردنش به موجودی قدمِ بعدی است.
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -289,7 +328,7 @@ function ExcessForm({ purchaseId, candidates }) {
           <PackageCheck className="h-4 w-4" />
           {mutation.isPending
             ? "در حال ثبت..."
-            : "افزودن به خرید و ورود به موجودی"}
+            : "افزودن به خرید (کالا در قرنطینه می‌ماند)"}
         </Button>
       </CardContent>
     </Card>

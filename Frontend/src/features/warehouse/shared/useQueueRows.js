@@ -7,8 +7,6 @@ import {
   fetchSaleReturnPendingEffects,
   fetchSaleForShipping,
 } from "@/features/warehouse/shipping/services/api-v1";
-import { fetchPurchaseReturnById } from "@/features/purchases/returns/services/api-v1";
-import { fetchSalesReturnById } from "@/features/sales/returns/services/api-v1";
 import { fetchPurchaseById } from "@/features/purchases/orders/services/api-v1";
 import { receivingKeys } from "@/features/warehouse/receiving/services/queryKeys";
 import { shippingKeys } from "@/features/warehouse/shipping/services/queryKeys";
@@ -66,8 +64,12 @@ const QUEUES = {
 };
 
 const RETURN_ID_KEY = { purchase: "purchaseReturnId", sale: "saleReturnId" };
+const DOCUMENT_ID_KEY = { purchase: "purchaseId", sale: "saleId" };
 
-/** اثرهای معلق → یک گروه به ازای هر مرجوعی. */
+/**
+ * اثرهای معلق → یک گروه به ازای هر مرجوعی. `PendingEffectDto` سندِ اصلی،
+ * شماره‌ی فاکتورش، تاریخِ مرجوعی و نامِ طرف حساب را خودش دارد.
+ */
 function groupByReturn(effects, side, directions) {
   const groups = new Map();
   effects
@@ -77,7 +79,17 @@ function groupByReturn(effects, side, directions) {
       const returnId = effect[RETURN_ID_KEY[side]];
       const key = `return-${side}-${returnId}`;
       if (!groups.has(key)) {
-        groups.set(key, { key, side, returnId, returnNumber: effect.returnNumber, lines: [] });
+        groups.set(key, {
+          key,
+          side,
+          returnId,
+          returnNumber: effect.returnNumber,
+          documentId: effect[DOCUMENT_ID_KEY[side]] ?? null,
+          invoiceNumber: effect.invoiceNumber ?? "",
+          counterpartyName: effect.supplierName ?? effect.customerName ?? "",
+          date: effect.returnDate ?? null,
+          lines: [],
+        });
       }
       groups.get(key).lines.push(effect);
     });
@@ -97,12 +109,7 @@ function matchesFilters(row, filters) {
     return false;
   }
   if (filters.supplierId && Number(row.supplierId) !== Number(filters.supplierId)) return false;
-  if (
-    filters.customerName &&
-    !String(row.customerName ?? row.counterpartyName ?? "").includes(filters.customerName)
-  ) {
-    return false;
-  }
+  if (filters.customerId && Number(row.customerId) !== Number(filters.customerId)) return false;
   const date = dateOnly(row.date ?? row.invoiceDate);
   if (filters.fromDate && date && date < dateOnly(filters.fromDate)) return false;
   if (filters.toDate && date && date > dateOnly(filters.toDate)) return false;
@@ -119,8 +126,8 @@ function matchesFilters(row, filters) {
  *  - «مرجوعی: جایگزین»: فقط سندهایی که جایگزینِ منتظر دارند.
  *  - یک وضعیتِ عددی: صفحه‌ی سندها با علامتِ جایگزین.
  *
- * `PendingEffectDto` شناسه‌ی سند و نامِ طرف حساب را ندارد (بند ۹ سندِ فروش
- * برای بکند)؛ تا آن وقت جزئیاتِ هر مرجوعیِ معلق یک بار خوانده می‌شود.
+ * ردیفِ مرجوعی از خودِ `PendingEffectDto` ساخته می‌شود؛ فقط سندهایی که
+ * جایگزینِ منتظر دارند (برای ردیفِ سند) خوانده می‌شوند.
  *
  * @param kind `"in"` یا `"out"`.
  * @param filters فیلترهای debounce‌شده‌ی صف (شاملِ `status`).
@@ -162,27 +169,12 @@ export function useQueueRows(kind, filters, isFirstPage) {
     };
   }, [purchaseEffects, saleEffects, config]);
 
-  const allGroups = [...replacementGroups, ...separateGroups];
-  const details = useQueries({
-    queries: allGroups.map((group) => ({
-      queryKey: [...baseKey, "return-rows", group.side, "doc", String(group.returnId)],
-      queryFn: () =>
-        group.side === "purchase"
-          ? fetchPurchaseReturnById(group.returnId)
-          : fetchSalesReturnById(group.returnId),
-      staleTime: 1000 * 60,
-    })),
-  });
-  const detailOf = (group) => details[allGroups.indexOf(group)]?.data;
-
   // شماره‌ی مرجوعی‌هایی که جایگزینشان منتظرِ هر خرید/فروش است.
   const replacementsByDocument = new Map();
   replacementGroups.forEach((group) => {
-    const doc = detailOf(group);
-    const documentId = doc ? doc.purchaseId ?? doc.saleId : null;
-    if (documentId == null) return;
-    const numbers = replacementsByDocument.get(documentId) ?? [];
-    replacementsByDocument.set(documentId, [...numbers, group.returnNumber]);
+    if (group.documentId == null) return;
+    const numbers = replacementsByDocument.get(group.documentId) ?? [];
+    replacementsByDocument.set(group.documentId, [...numbers, group.returnNumber]);
   });
 
   const documentIds = [...replacementsByDocument.keys()];
@@ -212,6 +204,7 @@ export function useQueueRows(kind, filters, isFirstPage) {
         invoiceNumber: doc.invoiceNumber,
         supplierName: doc.supplierName,
         supplierId: doc.supplierId,
+        customerId: doc.customerId,
         customerName: doc.customerName,
         invoiceDate: doc.invoiceDate,
         status: doc.status,
@@ -220,22 +213,17 @@ export function useQueueRows(kind, filters, isFirstPage) {
 
   const returnRows = separateGroups
     .map((group) => {
-      const doc = detailOf(group);
       const row = {
         __return: true,
         ...group,
         sideLabel: config.separate.label,
         actionLabel: config.action,
-        counterpartyName: doc ? doc.supplierName ?? doc.customerName ?? "" : "",
-        supplierId: doc?.supplierId ?? null,
-        invoiceNumber: doc ? doc.purchaseInvoiceNumber ?? doc.saleInvoiceNumber ?? "" : "",
-        date: doc?.returnDate ?? null,
       };
       return { ...row, link: config.separate.link(row) };
     })
     // فیلترِ طرف حسابِ این صفحه (تامین‌کننده در دریافت، مشتری در ارسال) روی
     // ردیفِ مرجوعیِ سمتِ دیگر معنا ندارد؛ با آن فیلتر پنهان می‌شوند.
-    .filter(() => (kind === "in" ? !filters.supplierId : !filters.customerName))
+    .filter(() => (kind === "in" ? !filters.supplierId : !filters.customerId))
     .filter((row) => matchesFilters(row, filters));
 
   return (pageItems = []) => {

@@ -210,9 +210,9 @@ export const useReopenPurchaseItemMutation = (purchaseId) => {
 };
 
 /**
- * خریدِ کالای مازاد/سفارش‌نداده‌ی در قرنطینه. موجودی و جمعِ خرید را
- * تکان می‌دهد و قلمِ ضمیمه می‌سازد، پس مثل بقیه‌ی دستورهای تجمعی کلیدِ
- * ایدمپوتنسی می‌گیرد.
+ * خریدِ کالای مازاد/سفارش‌نداده‌ی در قرنطینه. جمعِ خرید را تکان می‌دهد و
+ * قلمِ ضمیمه می‌سازد (کالا در قرنطینه می‌ماند)، پس مثل بقیه‌ی دستورهای
+ * تجمعی کلیدِ ایدمپوتنسی می‌گیرد.
  */
 export const useAcceptPurchaseExcessMutation = (purchaseId) => {
   const queryClient = useQueryClient();
@@ -226,7 +226,7 @@ export const useAcceptPurchaseExcessMutation = (purchaseId) => {
       invalidatePurchaseEcosystem(queryClient, purchaseId);
       queryClient.invalidateQueries({ queryKey: supplierKeys.all });
       toast.success(
-        "کالای مازاد به‌صورت قلمِ ضمیمه به خرید اضافه شد و وارد موجودی شد",
+        "کالای مازاد به‌صورت قلمِ ضمیمه به خرید اضافه شد؛ کالا تا «بازگشت به موجودی» در قرنطینه می‌ماند",
       );
     },
     onError: (error) => toast.error(getErrorMessage(error, "خطا در پذیرش کالای مازاد")),

@@ -24,6 +24,7 @@
 | ۵ | سندِ چاپیِ مرجوعیِ خرید و پیوستِ مرجوعی | متوسط |
 | ۶ | داشبوردِ شخصی — گزارشِ «من / تیم من / واحد من» (`GetScopePerformance`) | **بالا** |
 | ۷ | یکدست‌کردنِ نام‌ها (سه جا که بکند یک مفهوم را دو جور نام‌گذاری کرده) و تاریخِ خالیِ `MinValue` | متوسط |
+| ۸ | دانه‌ی ناقص در پاسخِ `ScanBarcode` | متوسط |
 
 ---
 
@@ -831,6 +832,31 @@ payload و پاسخ). فقط سه جا مانده که خودِ بکند برا�
 
 ---
 
+## بخشِ ۸ — دانه‌ی ناقص در پاسخِ `ScanBarcode` (۲۰۲۶-۰۹-۲۸)
+
+`GET api/Product/ScanBarcode?code=<بارکدِ دانه>` در `data.unit` همان شکلِ `ProductUnitDto` را برمی‌گرداند، ولی
+فیلدهای تازه‌ی ۲۰۲۶-۰۹-۲۷ در آن پر نمی‌شوند. روی سرورِ تست برای دانه‌ی `14040115-0000000001-0000000108`
+(قرنطینه، مازادِ خریدِ ۱۲):
+
+| فیلد | `ScanBarcode` | `GetProductUnitList` / `GetProductUnitHistory` |
+|---|---|---|
+| `purchaseId` | `null` | `12` |
+| `custodyReason` | `null` | `2` |
+| `quarantineCost` | `null` | `0` |
+| `createdAt` | `0001-01-01T00:00:00` | `2026-09-24T01:48:13` |
+
+به نظر می‌رسد `ScanBarcode` دانه را با projectionِ دیگری (نه `ProductUnitProjection`) می‌سازد. پیشنهاد: همان
+projectionِ فهرست استفاده شود تا سه endpoint یک دانه را یک‌جور برگردانند.
+
+**تا آن وقت:** فرانت بعد از هر اسکنِ دانه، خودِ دانه را از `GetProductUnitHistory` می‌خواند
+(`features/warehouse/units/services/api-v1.js` → `resolveScannedCode`)؛ یعنی یک درخواستِ اضافه برای هر اسکن.
+
+### چک‌لیستِ این بخش
+
+- [ ] ۸ — `ScanBarcode` دانه را با همان projectionِ `GetProductUnitList` برگرداند
+
+---
+
 ## چک‌لیستِ کل
 
 - [x] ۱.۱ — کد پستیِ اختیاری (مشتری و تامین‌کننده)
@@ -843,3 +869,4 @@ payload و پاسخ). فقط سه جا مانده که خودِ بکند برا�
 - [x] ۵ — `GetPurchaseReturnPdf` و پیوستِ مرجوعی (دسترسیِ PDF `InvoicePrint` است، مثلِ بقیه‌ی `Invoice/*`)
 - [ ] ۶ — `GetScopePerformance` و فیلترِ تیم/واحد **انجام شد**؛ ۶.۳ (ذخیره‌ی چیدمان) انجام نشد
 - [ ] ۷ — یکدست‌کردنِ نام‌ها (`FirstName`، `ReferralCode`، `OrderLineId`) و تاریخِ خالیِ `MinValue`
+- [ ] ۸ — دانه‌ی کامل در پاسخِ `ScanBarcode`

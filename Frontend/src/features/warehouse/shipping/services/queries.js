@@ -15,8 +15,8 @@ import { useShippingFilterStore } from "../store/shippingFilterStore";
 /** فیلترهای فعلیِ صفِ ارسال؛ ورودی‌های متنی با تأخیر. */
 export function useShippingListFilters() {
   return useDebouncedFilters(useShippingFilterStore, {
-    text: ["invoiceNumber", "customerName"],
-    instant: ["status", "fromDate", "toDate"],
+    text: ["invoiceNumber"],
+    instant: ["customerId", "status", "fromDate", "toDate"],
   });
 }
 

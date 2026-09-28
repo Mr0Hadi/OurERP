@@ -24,6 +24,19 @@
       ],
       "cwd": "Frontend",
       "port": 5174
+    },
+    {
+      "name": "ourerp-preview",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "preview",
+        "--port",
+        "4173",
+        "--strictPort"
+      ],
+      "cwd": "Frontend",
+      "port": 4173
     }
   ]
 }

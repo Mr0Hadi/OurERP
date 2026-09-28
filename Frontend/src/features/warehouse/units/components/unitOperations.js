@@ -1,9 +1,11 @@
-import { Ban, PackageCheck, Printer, ShieldAlert, Undo2 } from "lucide-react";
+import { Ban, MapPin, PackageCheck, Printer, ShieldAlert, Undo2 } from "lucide-react";
 
 import {
   LABELABLE_STATUSES,
+  UNIT_LOCATION_ACTION,
   UnitActionEnum,
   canApply,
+  canLocate,
   purchaseReturnRouteOf,
 } from "../domain/unitVocabulary";
 
@@ -58,6 +60,20 @@ export function unitOperationsFor(units, { canManage }) {
       hint: canManage ? undefined : NO_PERMISSION_HINT,
     });
   });
+
+  const locatable = units.filter(canLocate).length;
+  if (locatable > 0) {
+    operations.push({
+      key: "location",
+      kind: "action",
+      action: UNIT_LOCATION_ACTION,
+      label: "تعیین قفسه",
+      icon: MapPin,
+      count: locatable,
+      disabled: !canManage,
+      hint: canManage ? undefined : NO_PERMISSION_HINT,
+    });
+  }
 
   // عودت فقط برای قرنطینه، و در یک مرجوعی فقط دانه‌های یک خرید.
   const quarantined = units.filter((unit) => canApply(unit, UnitActionEnum.RELEASE));

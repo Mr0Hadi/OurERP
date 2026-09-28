@@ -2,8 +2,8 @@ import { useCallback } from "react";
 import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterDateInput from "@/shared/components/filters/FilterDateInput";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
+import EntitySelect from "@/shared/components/filters/EntitySelect";
 import { Label } from "@/shared/components/ui/label";
-import { Input } from "@/shared/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -15,22 +15,23 @@ import { useShippingFilterStore } from "../../store/shippingFilterStore";
 import { SHIPPING_STATUS_OPTIONS } from "../../domain/shippingVocabulary";
 import { parseQueueFilter } from "../../../shared/queueFilters";
 
+const renderCustomerPhone = (customer) =>
+  customer.phoneNumber ? (
+    <span className="text-xs text-muted-foreground">{customer.phoneNumber}</span>
+  ) : null;
+
 /**
- * مشتری اینجا کشویی نیست: `GetSaleListQuery` فیلترِ `CustomerId` ندارد و
- * فقط روی *نامِ* مشتری جست‌وجو می‌کند، پس یک ورودیِ متنی همان چیزی است
- * که واقعاً به سرور می‌رود.
- *
- * وضعیت هم گزینه‌ی «همه» ندارد — دقیقاً به همان دلیلی که صف دریافت ندارد.
+ * وضعیت گزینه‌ی «همه» ندارد — دقیقاً به همان دلیلی که صف دریافت ندارد.
  */
-const ShippingFilters = () => {
+const ShippingFilters = ({ customers = [], isCustomersLoading = false }) => {
   const {
     invoiceNumber,
-    customerName,
+    customerId,
     status,
     fromDate,
     toDate,
     setInvoiceNumber,
-    setCustomerName,
+    setCustomerId,
     setStatus,
     setFromDate,
     setToDate,
@@ -70,17 +71,16 @@ const ShippingFilters = () => {
         onChange={handleGlobalSearch}
       />
 
-      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-        <Label className="whitespace-nowrap font-medium text-foreground text-sm">
-          مشتری
-        </Label>
-        <Input
-          placeholder="نام مشتری..."
-          value={customerName}
-          onChange={(e) => setCustomerName(e.target.value)}
-          className="flex-1 w-full input-rtl-placeholder"
-        />
-      </div>
+      <EntitySelect
+        label="مشتری"
+        placeholder="انتخاب مشتری..."
+        emptyText="مشتری‌ای یافت نشد"
+        items={customers}
+        value={customerId}
+        onSelect={setCustomerId}
+        isLoading={isCustomersLoading}
+        renderMeta={renderCustomerPhone}
+      />
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-2">
         <Label className="whitespace-nowrap font-medium text-foreground text-sm">

@@ -2,6 +2,7 @@ import axiosInstance from "@/shared/services/api/axios";
 import {
   idempotent,
   normalizeListResponse,
+  toApiAttachments,
 } from "@/shared/services/api/contract";
 import { toApiClaim, fromApiSaleReturn } from "@/shared/domain/returns/claimsApi";
 import { toApiComposition } from "@/shared/domain/returns/resolutions";
@@ -44,25 +45,24 @@ export async function fetchSalesReturnById(id) {
 }
 
 /**
- * فهرست کوتاهِ فروش‌های قابل‌مرجوع برای انتخابگر فرم. بکند `returnable`
- * ندارد؛ فروش‌هایی که `CreateSaleReturn` رد می‌کند (هنوز ارسال‌نشده، لغو یا
- * مرجوع‌شده) همین‌جا کنار گذاشته می‌شوند.
+ * فهرست کوتاهِ فروش‌های قابل‌مرجوع برای انتخابگر فرم — فقط وضعیت‌هایی که
+ * `CreateSaleReturn` می‌پذیرد (چیزی ارسال شده باشد).
  */
 export async function fetchReturnableSales(search = "") {
   const { data } = await axiosInstance.get("/Sale/GetSaleList", {
-    params: { invoiceNumber: search || undefined, take: 30 },
+    params: {
+      invoiceNumber: search || undefined,
+      statuses: RETURNABLE_SALE_STATUSES,
+      take: 30,
+    },
   });
-  return normalizeListResponse(data, { itemsKey: "saleList" }).items.filter((sale) =>
-    RETURNABLE_SALE_STATUSES.includes(Number(sale.status)),
-  );
+  return normalizeListResponse(data, { itemsKey: "saleList" }).items;
 }
 
 /**
- * ⚠️ بکند برای فروش هیچ چیزِ معادلِ «سقفِ قابل‌ادعا برای هر قلم» ندارد
- * — نه چیزی مثل `GetPurchaseReceivingInfo`. سرور این را فقط لحظه‌ی
- * `POST CreateSaleReturn` چک می‌کند. فعلاً از خودِ `GetSaleDetail`
- * استفاده می‌کنیم که `items[].shippedQuantity`/`settledQuantity` دارد؛
- * سقفِ دقیقِ ادعا را فرم باید از خطای سرور بفهمد.
+ * فروش برای فرمِ مرجوعی — `GetSaleDetail`. سقفِ هر قلم
+ * `items[].claimableQuantity` (و برای مازاد `claimableExcessQuantity`) است،
+ * همان عددی که `CreateSaleReturn` چک می‌کند.
  */
 export async function fetchSaleForReturn(saleId) {
   const { data } = await axiosInstance.get("/Sale/GetSaleDetail", {
@@ -190,4 +190,17 @@ export async function removeSalesReturn(returnId) {
   // پاسخِ حذف هم سند را برمی‌گرداند: لایه‌ی mutation برای پاک‌کردن کش و
   // بازگرداندن کاربر به لیست، به `id` و `saleId` نیاز دارد.
   return fromApiSaleReturn(data) ?? { id: returnId };
+}
+
+/**
+ * `PUT UpdateSaleReturnAttachments` — پیوست‌های مرجوعی (رسیدِ امضاشده، عکسِ
+ * کالا). جایگزینیِ کامل (فهرستِ نهایی فرستاده می‌شود) و در هر وضعیتی؛
+ * پاسخ سندِ کاملِ مرجوعی است.
+ */
+export async function updateSalesReturnAttachments(returnId, attachments) {
+  const { data } = await axiosInstance.put("/SaleReturn/UpdateSaleReturnAttachments", {
+    id: returnId,
+    attachments: toApiAttachments(attachments),
+  });
+  return fromApiSaleReturn(data);
 }

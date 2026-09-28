@@ -5,7 +5,6 @@ import {
   PackageCheck,
   PackageOpen,
   Truck,
-  Undo2,
   XCircle,
 } from "lucide-react";
 
@@ -33,5 +32,4 @@ export const SALE_STATUS_ICONS = Object.freeze({
   [SaleStatusEnum.SHIPPED]: Truck,
   [SaleStatusEnum.DELIVERED]: PackageCheck,
   [SaleStatusEnum.CANCELLED]: XCircle,
-  [SaleStatusEnum.RETURNED]: Undo2,
 });

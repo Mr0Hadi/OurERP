@@ -4,10 +4,7 @@ import FilterSelect from "@/shared/components/filters/FilterSelect";
 import FilterDateInput from "@/shared/components/filters/FilterDateInput";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import EntitySelect from "@/shared/components/filters/EntitySelect";
-import {
-  toFilterOptions,
-  getPartyName,
-} from "@/shared/components/filters/filterUtils";
+import { toFilterOptions } from "@/shared/components/filters/filterUtils";
 import { useSaleFilterStore } from "../../store/saleFilterStore";
 import { SALE_STATUS_LABELS } from "@/shared/domain/enums/saleStatus";
 import { DOCUMENT_PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
@@ -35,7 +32,6 @@ const SaleFilters = ({ customers = [], isCustomersLoading = false }) => {
     toDate,
     setInvoiceNumber,
     setCustomerId,
-    setCustomerName,
     setStatus,
     setPaymentType,
     setFromDate,
@@ -78,10 +74,7 @@ const SaleFilters = ({ customers = [], isCustomersLoading = false }) => {
         emptyText="مشتری‌ای یافت نشد"
         items={customers}
         value={customerId}
-        onSelect={(id, customer) => {
-          setCustomerId(id);
-          setCustomerName(customer ? getPartyName(customer) : "");
-        }}
+        onSelect={(id) => setCustomerId(id)}
         isLoading={isCustomersLoading}
         renderMeta={renderCustomerPhone}
       />

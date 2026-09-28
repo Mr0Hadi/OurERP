@@ -11,6 +11,7 @@ import {
   cancelPurchaseReturn,
   reopenPurchaseReturn,
   removePurchaseReturn,
+  updatePurchaseReturnAttachments,
 } from "./api-v1";
 import { purchaseReturnKeys } from "./queryKeys";
 import { invalidatePurchaseEcosystem } from "../../orders/services/sharedInvalidation";
@@ -162,5 +163,17 @@ export const useRemovePurchaseReturnMutation = () => {
       navigate(ROUTES.PURCHASES_RETURNS_LIST);
     },
     onError: (error) => toast.error(getErrorMessage(error, "خطا در حذف مرجوعی")),
+  });
+};
+/** پیوست‌ها فقط سندِ مرجوعی را عوض می‌کنند؛ پاسخ مستقیم در کش می‌نشیند. */
+export const useUpdatePurchaseReturnAttachmentsMutation = (returnId) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (attachments) => updatePurchaseReturnAttachments(returnId, attachments),
+    onSuccess: (updated) => {
+      finalizeReturnChange(queryClient, updated);
+      toast.success("پیوست‌ها ذخیره شد");
+    },
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در ذخیره‌ی پیوست‌ها")),
   });
 };

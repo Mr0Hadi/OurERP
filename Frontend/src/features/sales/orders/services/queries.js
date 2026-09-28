@@ -7,11 +7,11 @@ import { SALE_SORT_COLUMNS, fetchSales, fetchSaleById } from './api-v1';
 import { useSaleFilterStore } from '../store/saleFilterStore';
 import { saleKeys } from './queryKeys';
 
-/** فیلترهای فعلیِ لیستِ فروش؛ جست‌وجوی متنی با تأخیر. `customerId` فقط مالِ کشویی است. */
+/** فیلترهای فعلیِ لیستِ فروش؛ جست‌وجوی متنی با تأخیر. */
 export function useSaleListFilters() {
   return useDebouncedFilters(useSaleFilterStore, {
     text: ["invoiceNumber"],
-    instant: ["customerName", "status", "paymentType", "fromDate", "toDate"],
+    instant: ["customerId", "status", "paymentType", "fromDate", "toDate"],
   });
 }
 

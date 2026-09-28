@@ -162,3 +162,18 @@ export function documentVersion(doc) {
     (doc.attachments || []).length,
   ].join("|");
 }
+
+/**
+ * پیوست‌های یک سند (`DocumentAttachmentDto` در بدنه‌ی نوشتن):
+ * `{objectKey, fileName?, note?}` — همان شکلی که `useInvoiceAttachments` در
+ * `filesPayload` می‌دهد؛ فقط ردیفِ بدونِ فایل و فیلدهای خالی کنار می‌روند.
+ */
+export function toApiAttachments(attachments = []) {
+  return attachments
+    .filter((item) => item?.objectKey)
+    .map((item) => ({
+      objectKey: item.objectKey,
+      fileName: item.fileName || undefined,
+      note: item.note || undefined,
+    }));
+}

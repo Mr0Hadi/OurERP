@@ -184,6 +184,15 @@ export default function GoodsRoundItemsSection({
                 />
               </div>
 
+              {!round.sourceRequired && round.source != null && (
+                <p className="text-xs text-muted-foreground">
+                  مبدأ (طبقِ تصمیم):{" "}
+                  <span className="font-medium text-card-foreground">
+                    {SOURCE_OPTIONS.find((option) => option.value === round.source)?.label}
+                  </span>
+                </p>
+              )}
+
               {round.sourceRequired && quantity > 0 && (
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-muted-foreground">

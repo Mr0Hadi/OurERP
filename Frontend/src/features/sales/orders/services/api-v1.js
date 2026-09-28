@@ -3,6 +3,7 @@ import {
   idempotent,
   normalizeListResponse,
   documentVersion,
+  toApiAttachments,
 } from "@/shared/services/api/contract";
 import { toDateOnly } from "@/shared/lib/dateUtils";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
@@ -29,9 +30,6 @@ export {
  * `totalAmount` و `paidAmount` فرستاده نمی‌شوند. بدهی مشتری همیشه
  * `payableAmount − paidAmount` است (در فروش اقساطی `payableAmount` سودِ
  * اقساط را هم دارد).
- *
- * ⚠️ فیلترِ لیست `customerId` نمی‌گیرد، فقط `customerName`ِ متنی — پس
- * انتخابِ کاربر به نام ترجمه و فرستاده می‌شود.
  */
 
 /** `SaleListSortEnum`ِ بکند، بر اساسِ شناسه‌ی ستونِ جدول. */
@@ -158,16 +156,6 @@ export function fromApiSale(dto) {
 }
 
 /** بند ۳ سندِ `invoice-attachment-requirements.fa.md` — همان شکلِ `filesPayload`ِ هوکِ آپلود. */
-function toApiAttachments(attachments = []) {
-  return attachments
-    .filter((item) => item?.objectKey)
-    .map((item) => ({
-      objectKey: item.objectKey,
-      fileName: item.fileName || undefined,
-      note: item.note || undefined,
-    }));
-}
-
 /** بدنه‌ی مشترکِ Create/Update. شماره‌ی فاکتور را همیشه سرور می‌سازد. */
 function toApiSalePayload(saleData) {
   return {

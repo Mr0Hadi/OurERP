@@ -8,6 +8,7 @@ import { Label } from "@/shared/components/ui/label";
 import { Spinner } from "@/shared/components/ui/spinner";
 import FileUploadList from "@/shared/components/files/FileUploadList";
 import {
+  getPurchaseReturnPdf,
   getSaleInvoicePdf,
   getSaleReturnCreditNotePdf,
 } from "@/shared/services/invoice/api-v1";
@@ -26,13 +27,12 @@ import { getErrorMessage } from "@/shared/lib/errorMessage";
  * چاپ و دانلود روی سندهای *واقعی* کار می‌کنند، نه روی یک بازسازیِ محلی:
  *
  * - **خرید:** پیش‌فاکتور و فاکتور را تامین‌کننده می‌فرستد و کاربر دستی
- *   ضمیمه می‌کند؛ پس همان ضمیمه‌ها چاپ و دانلود می‌شوند. بکند
- *   `GetPurchaseInvoicePdf` دارد، ولی آن سندی است که *خودمان* از روی
- *   داده‌ی خودمان می‌سازیم — نه برگه‌ای که تامین‌کننده داده — پس اینجا
- *   استفاده نمی‌شود.
+ *   ضمیمه می‌کند؛ پس همان ضمیمه‌ها چاپ و دانلود می‌شوند (بکند PDFِ خرید
+ *   ندارد).
  * - **فروش:** فاکتور را بکند می‌سازد (`GetSaleInvoicePdf`) و کاربر هم
  *   می‌تواند نسخه‌ی دستی ضمیمه کند؛ هر دو چاپ و دانلود می‌شوند.
  * - **مرجوعی فروش:** «برگه‌ی طلبکاری» را بکند می‌سازد.
+ * - **مرجوعی خرید:** «برگه‌ی مرجوعی به تامین‌کننده» را بکند می‌سازد.
  *
  * وقتی هیچ سندی وجود ندارد دکمه‌ها غیرفعال‌اند — و نباید به‌جایش یک
  * جدولِ HTML از روی داده‌ی فرم ساخته شود: آن برگه فاکتور نیست و
@@ -41,19 +41,16 @@ import { getErrorMessage } from "@/shared/lib/errorMessage";
  * ضمیمه را *صفحه* نگه می‌دارد نه این کامپوننت، چون فقط صفحه‌ای که دستور
  * را می‌فرستد می‌تواند آن را در بدنه بگذارد و بعد از ذخیره‌ی موفق
  * `commit()` بزند. پس صفحه‌ای که `attachments` بدهد آپلودر می‌بیند و
- * صفحه‌ای که ندهد توضیح — امروز یعنی دو صفحه‌ی مرجوعی، چون
- * `CreatePurchaseReturnCommand`/`CreateSaleReturnCommand` هنوز فیلدِ
- * ضمیمه ندارند. آپلودرِ بی‌مقصد بدترین حالت است: کاربر پیام موفقیت
- * می‌گیرد و هیچ ضمیمه‌ای ذخیره نشده.
+ * صفحه‌ای که ندهد توضیح. آپلودرِ بی‌مقصد بدترین حالت است: کاربر پیام
+ * موفقیت می‌گیرد و هیچ ضمیمه‌ای ذخیره نشده.
  */
 
 /**
  * @param attachments  خروجی `useInvoiceAttachments` از سمتِ صفحه — نبودنش
  *   یعنی این نوع سند هنوز روی سرور جای ضمیمه ندارد.
- * @param documentKind `"sale"` / `"saleReturn"` — سندی که *سرور*
- *   می‌سازد و کنارِ ضمیمه‌ها چاپ/دانلود می‌شود (برای مرجوعی فروش،
- *   «برگه‌ی طلبکاری»). خرید و مرجوعی خرید آن را ندارند: سندشان فقط
- *   همان چیزی است که کاربر ضمیمه کرده.
+ * @param documentKind `"sale"` / `"saleReturn"` / `"purchaseReturn"` — سندی
+ *   که *سرور* می‌سازد و کنارِ ضمیمه‌ها چاپ/دانلود می‌شود. خرید آن را
+ *   ندارد: سندش فقط همان چیزی است که کاربر ضمیمه کرده.
  * @param documentId   شناسه‌ی همان سندِ ذخیره‌شده.
  */
 export default function InvoiceDocumentSection({
@@ -71,12 +68,13 @@ export default function InvoiceDocumentSection({
 }) {
   const [isBusy, setIsBusy] = useState(false);
 
-  /**
-   * سندی که سرور می‌سازد — فقط برای فروش و مرجوعی فروش، و فقط وقتی
-   * سفارش ذخیره شده باشد. خرید عمداً اینجا نیست (بالا توضیح داده شد).
-   */
+  /** سندی که سرور می‌سازد — فقط وقتی سند ذخیره شده باشد. */
   const serverPdfFetcher = documentId
-    ? { sale: getSaleInvoicePdf, saleReturn: getSaleReturnCreditNotePdf }[documentKind]
+    ? {
+        sale: getSaleInvoicePdf,
+        saleReturn: getSaleReturnCreditNotePdf,
+        purchaseReturn: getPurchaseReturnPdf,
+      }[documentKind]
     : null;
 
   const documents = useMemo(() => {

@@ -85,7 +85,9 @@ function quarantineClaimsOf(purchase, lines) {
   const offScopeClaims = [];
 
   (purchase.items || []).forEach((item) => {
-    const onOrder = Number(item.quarantinedOnOrderQuantity) || 0;
+    // قرنطینه‌ی پرداخت‌شده‌ی قلم که هنوز رزرو نشده: خرابِ دریافت، برگشتیِ
+    // معیوبِ مشتری و نگهداشتِ انبار — ادعای روی سفارش همه را برمی‌دارد.
+    const onOrder = Number(item.freeQuarantinedOnOrderQuantity) || 0;
     const line = lines.find((l) => l.orderLineId === item.purchaseItemId);
     if (onOrder > 0 && line) {
       lineClaims.set(item.purchaseItemId, [
@@ -188,7 +190,7 @@ export const usePurchaseReturnFormStore = create((set, get) => ({
       (purchase.items || [])
         .map(
           (item) =>
-            `${item.purchaseItemId}:${claimableQuantityOf(item)}:${item.quarantinedOnOrderQuantity}:${freeExcessQuantityOf(item)}`,
+            `${item.purchaseItemId}:${claimableQuantityOf(item)}:${item.freeQuarantinedOnOrderQuantity}:${freeExcessQuantityOf(item)}`,
         )
         .join(","),
     ].join(":");

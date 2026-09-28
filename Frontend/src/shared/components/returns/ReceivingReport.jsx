@@ -10,6 +10,7 @@ import {
 import RemoteImage from "@/shared/components/files/RemoteImage";
 import { RETURN_PROBLEM_LABELS } from "@/shared/domain/returns/problems";
 import { UNIT_CUSTODY_REASON_LABELS } from "@/shared/domain/enums/unitStatus";
+import { totalQuarantined } from "@/shared/domain/returns/receivingReport";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { formatNumber } from "@/shared/lib/numberFormat";
 
@@ -64,18 +65,7 @@ export function ReceivingReportLines({ quarantined = [], discrepancies = [] }) {
  */
 export default function ReceivingReportCard({ receivingInfo }) {
   const images = receivingInfo?.receivingImages || [];
-  const quarantinedTotal =
-    (receivingInfo?.items || []).reduce(
-      (sum, item) =>
-        sum +
-        (item.quarantinedOnOrderQuantity || 0) +
-        (item.quarantinedExcessQuantity || 0),
-      0,
-    ) +
-    (receivingInfo?.unlistedItems || []).reduce(
-      (sum, item) => sum + (item.quarantinedQuantity || 0),
-      0,
-    );
+  const quarantinedTotal = totalQuarantined(receivingInfo);
   const discrepancyCount = (receivingInfo?.discrepancies || []).length;
 
   if (images.length === 0 && quarantinedTotal === 0 && discrepancyCount === 0) {
