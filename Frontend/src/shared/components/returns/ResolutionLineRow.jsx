@@ -22,9 +22,9 @@ import {
 import EffectBadge from "./EffectBadge";
 
 const PENDING_CLASS =
-  "text-[10px] bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400";
+  "text-[10px] bg-warning/10 text-warning border-warning/25";
 const DONE_CLASS =
-  "text-[10px] bg-green-50 text-[oklch(0.50_0.16_152)] border-green-200 dark:bg-green-950/40 dark:border-green-800";
+  "text-[10px] bg-success/10 text-success border-success/25";
 
 /**
  * یک تصمیمِ ثبت‌شده روی یک ادعا، به‌همراه اثرهایش.
@@ -160,7 +160,7 @@ export default function ResolutionLineRow({
           <span
             className={
               summary.netMoney > 0
-                ? "text-[oklch(0.50_0.16_152)] font-medium"
+                ? "text-success font-medium"
                 : "text-destructive font-medium"
             }
           >

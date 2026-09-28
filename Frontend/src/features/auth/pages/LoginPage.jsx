@@ -22,6 +22,7 @@ import { ThemeToggle } from "@/shared/components/theme/ThemeToggle";
 
 import { useLoginMutation } from "../services/queries";
 import { ROUTES } from "@/shared/constants/routes";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 const FEATURES = [
   {
@@ -65,9 +66,9 @@ export default function LoginPage() {
         navigate(from, { replace: true });
       },
       onError: (error) => {
-        const message =
-          error?.response?.data?.message || "نام کاربری یا رمز عبور اشتباه است";
-        toast.error(message);
+        // پیامِ سرور (مثلاً «کاربر با این اطلاعات یافت نشد») مقدم است؛ در قطعیِ
+        // شبکه هم به‌جای «رمز اشتباه است» علتِ واقعی نشان داده می‌شود.
+        toast.error(getErrorMessage(error, "نام کاربری یا رمز عبور اشتباه است"));
       },
     });
   };

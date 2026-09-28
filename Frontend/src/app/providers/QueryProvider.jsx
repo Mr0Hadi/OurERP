@@ -12,7 +12,14 @@ export function QueryProvider({ children }) {
             // باید از سرور بخواند تا کسی داده‌ی کهنه نبیند.
             staleTime: 0,
             gcTime: 1000 * 60 * 5,     // 5 دقیقه cache نگه دار
-            retry: (failureCount, error) => !error?.isForbidden && failureCount < 1,
+            // خطای ۴xx (پیدا نشد، دسترسی نداری، ورودی نامعتبر) با تکرار درست
+            // نمی‌شود و فقط نمایشِ پیام را عقب می‌اندازد؛ فقط قطعیِ شبکه و
+            // خطای سرور یک بار دیگر امتحان می‌شوند.
+            retry: (failureCount, error) => {
+              const status = error?.response?.status;
+              if (status && status < 500) return false;
+              return failureCount < 1;
+            },
             refetchOnWindowFocus: true, // مهم برای کاربران چند ساعته
           },
           mutations: {

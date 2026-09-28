@@ -107,8 +107,8 @@ export function buildCustomerPayload(data, imageKey) {
     economicCode: textOrNull(data.economicCode),
     nationalId: textOrNull(data.nationalId),
     registrationNumber: textOrNull(data.registrationNumber),
-    // غلطِ املاییِ عمدی: ستونِ بکند `RefferalCode` است. اگر روزی آنجا
-    // اصلاح شد، فقط همین یک خط عوض می‌شود.
+    // غلطِ املاییِ بکند (`RefferalCode`)؛ درخواستِ اصلاح: بندِ ۷.۲ سندِ
+    // frontend-requests.fa.md. بعد از آن فقط همین یک خط عوض می‌شود.
     refferalCode: textOrNull(data.referralCode),
     creditLimit: data.creditLimit ? Number(data.creditLimit) : 0,
     description: textOrNull(data.description),

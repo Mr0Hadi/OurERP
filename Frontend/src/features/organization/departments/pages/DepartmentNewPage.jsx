@@ -1,9 +1,7 @@
-import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Save, X } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import { useHeaderStore } from "@/shared/store/headerStore";
 import { ROUTES } from "@/shared/constants/routes";
 import { useReturnTo } from "@/shared/hooks/useReturnTo";
 
@@ -11,12 +9,11 @@ import { useCreateDepartmentMutation } from "../services/mutations";
 import { useDepartmentForm } from "../hooks/useDepartmentForm";
 import DepartmentIdentityForm from "../components/forms/DepartmentIdentityForm";
 import OrgLeadershipForm from "../../components/OrgLeadershipForm";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 export default function DepartmentNewPage() {
   const navigate = useNavigate();
   const createMutation = useCreateDepartmentMutation();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   // اگر از فرم کارمند (یا هر فرم دیگری) به اینجا آمده باشیم، بعد از ثبت
   // باید به همان‌جا برگردیم.
@@ -26,10 +23,7 @@ export default function DepartmentNewPage() {
   // کاربر خودش آن را از فهرستِ تازه‌شده انتخاب می‌کند.
   const { hasReturnTo, goBack } = useReturnTo(ROUTES.ORG_DEPARTMENTS);
 
-  useEffect(() => {
-    setHeader({ title: "ثبت واحد جدید", showBack: true });
-    return () => clearHeader();
-  }, [setHeader, clearHeader]);
+  usePageHeader({ title: "ثبت واحد جدید", showBack: true });
 
   const { formMethods, buildPayload } = useDepartmentForm();
   const {

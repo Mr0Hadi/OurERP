@@ -15,7 +15,7 @@ import {
 import BarcodeScanField from "@/shared/components/barcode/BarcodeScanField";
 import { useProductFilterStore } from "../../store/productFilterStore";
 import { fetchProductByBarcode } from "../../services/queries";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { useProductCategoriesQuery } from "@/features/warehouse/categories/services/queries";
 
 // ─── ثابت‌ها (خارج از کامپوننت تا در هر رندر بازسازی نشوند) ─────────────────
@@ -40,10 +40,10 @@ const BRANDS = [
   "هالا",
 ];
 
+// سرور فقط `isLowOnStock` دارد: «کم‌موجود» یعنی موجودی ≤ آستانه‌ی هشدار (ناموجودها هم جزوش‌اند).
 const STOCK_OPTIONS = [
-  { value: "inStock", label: "موجود" },
-  { value: "lowStock", label: "کم‌موجود" },
-  { value: "outOfStock", label: "ناموجود" },
+  { value: "true", label: "کم‌موجود یا ناموجود" },
+  { value: "false", label: "موجودی کافی" },
 ];
 
 const COMPLETENESS_OPTIONS = [{ value: "true", label: "فقط کالاهای ناقص" }];
@@ -140,30 +140,30 @@ const ProductFilters = () => {
   }));
   const [isScanning, setIsScanning] = useState(false);
   const {
-    globalSearch,
+    name,
     brand,
     productCategoryId,
-    minPrice,
-    maxPrice,
-    stockStatus,
+    fromPrice,
+    toPrice,
+    isLowOnStock,
     isIncomplete,
-    setGlobalSearch,
+    setName,
     setBrand,
     setProductCategoryId,
     setPriceRange,
-    setStockStatus,
+    setIsLowOnStock,
     setIsIncomplete,
     resetFilters,
   } = useProductFilterStore();
 
   // جلوگیری از ساخت closure جدید در هر رندر هنگام تغییر قیمت
   const handleMinPrice = useCallback(
-    (next) => setPriceRange(next ?? "", maxPrice),
-    [maxPrice, setPriceRange]
+    (next) => setPriceRange(next ?? "", toPrice),
+    [toPrice, setPriceRange]
   );
   const handleMaxPrice = useCallback(
-    (next) => setPriceRange(minPrice, next ?? ""),
-    [minPrice, setPriceRange]
+    (next) => setPriceRange(fromPrice, next ?? ""),
+    [fromPrice, setPriceRange]
   );
 
   // اسکن یک کالا را دقیقاً شناسایی می‌کند، پس به‌جای فیلترکردن لیست،
@@ -176,7 +176,7 @@ const ProductFilters = () => {
         toast.error(`کالایی با کد «${code}» پیدا نشد`);
         return;
       }
-      navigate(ROUTES.WAREHOUSE_PRODUCTS_DETAIL.replace(":id", product.id));
+      navigate(routeWithId(ROUTES.WAREHOUSE_PRODUCTS_DETAIL, product.id));
     } catch {
       toast.error("خطا در جست‌وجوی بارکد");
     } finally {
@@ -201,9 +201,9 @@ const ProductFilters = () => {
             جستجو
           </Label>
           <Input
-            placeholder="نام، برند یا کد کالا..."
-            value={globalSearch}
-            onChange={(e) => setGlobalSearch(e.target.value)}
+            placeholder="نام فارسی یا انگلیسی کالا..."
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             className="flex-1"
           />
         </div>
@@ -227,8 +227,8 @@ const ProductFilters = () => {
 
         <FilterSelect
           label="وضعیت موجودی"
-          value={stockStatus}
-          onChange={setStockStatus}
+          value={isLowOnStock}
+          onChange={setIsLowOnStock}
           allLabel="همه"
           options={STOCK_OPTIONS}
         />
@@ -246,14 +246,14 @@ const ProductFilters = () => {
 
         <PriceRangeInput
           label="حداقل قیمت (ریال)"
-          value={minPrice === "" ? null : Number(minPrice)}
+          value={fromPrice === "" ? null : Number(fromPrice)}
           onChange={handleMinPrice}
           placeholder="از"
         />
 
         <PriceRangeInput
           label="حداکثر قیمت (ریال)"
-          value={maxPrice === "" ? null : Number(maxPrice)}
+          value={toPrice === "" ? null : Number(toPrice)}
           onChange={handleMaxPrice}
           placeholder="تا"
         />

@@ -1,51 +1,29 @@
 import { Package, ShoppingCart, Undo2, Trash2, ShieldAlert } from "lucide-react";
 
+import StatusBadge from "@/shared/components/status/StatusBadge";
 import {
   ProductUnitStatusEnum as UNIT_STATUSES,
   UNIT_STATUS_LABELS,
+  UNIT_STATUS_TONES,
 } from "@/shared/domain/enums/unitStatus";
 
 /**
- * وضعیت چرخه‌ی عمر واحد. عمداً از createRowStatus استفاده نمی‌کند —
+ * وضعیت چرخه‌ی عمر دانه. عمداً از createRowStatus استفاده نمی‌کند —
  * آن ابزار برای مقایسه‌ی «انتظار در برابر واقعیت» است، ولی اینجا یک
- * enum چهارحالته داریم نه مقایسه‌ی عددی.
+ * enum پنج‌حالته داریم نه مقایسه‌ی عددی.
  */
-const STATUS_CONFIG = {
-  [UNIT_STATUSES.IN_STOCK]: {
-    icon: Package,
-    className:
-      "bg-green-50 text-[oklch(0.50_0.16_152)] border-green-200 dark:bg-green-950/40 dark:border-green-800",
-  },
-  [UNIT_STATUSES.SOLD]: {
-    icon: ShoppingCart,
-    className:
-      "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400",
-  },
-  [UNIT_STATUSES.RETURNED_TO_SUPPLIER]: {
-    icon: Undo2,
-    className: "bg-muted text-muted-foreground border-border",
-  },
-  [UNIT_STATUSES.SCRAPPED]: {
-    icon: Trash2,
-    className: "bg-destructive/5 text-destructive border-destructive/20",
-  },
-  [UNIT_STATUSES.QUARANTINED]: {
-    icon: ShieldAlert,
-    className:
-      "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/40 dark:border-orange-800 dark:text-orange-400",
-  },
+const STATUS_ICONS = {
+  [UNIT_STATUSES.IN_STOCK]: Package,
+  [UNIT_STATUSES.SOLD]: ShoppingCart,
+  [UNIT_STATUSES.RETURNED_TO_SUPPLIER]: Undo2,
+  [UNIT_STATUSES.SCRAPPED]: Trash2,
+  [UNIT_STATUSES.QUARANTINED]: ShieldAlert,
 };
 
 export default function UnitStatusBadge({ status }) {
-  const config = STATUS_CONFIG[status] ?? STATUS_CONFIG[UNIT_STATUSES.IN_STOCK];
-  const Icon = config.icon;
-
   return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs whitespace-nowrap ${config.className}`}
-    >
-      <Icon className="w-3 h-3" />
+    <StatusBadge tone={UNIT_STATUS_TONES[status]} icon={STATUS_ICONS[status] ?? Package}>
       {UNIT_STATUS_LABELS[status] ?? status}
-    </span>
+    </StatusBadge>
   );
 }

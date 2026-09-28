@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { AlertTriangle } from "lucide-react";
 
 import {
   Dialog,
@@ -27,13 +26,14 @@ import {
   canApply,
   isPurchaseQuarantine,
   noteRequired,
-  fa,
 } from "../domain/unitVocabulary";
+import { formatNumber } from "@/shared/lib/numberFormat";
 import { useApplyUnitActionMutation } from "../services/mutations";
+import Notice from "@/shared/components/feedback/Notice";
 
 /** چرا بخشی از انتخاب کنار گذاشته شد — به زبانِ کاری، نه «مجاز نیست». */
 function skippedReason(units) {
-  return `${fa(units.length)} دانه در وضعیتی است که این کار رویش معنا ندارد`;
+  return `${formatNumber(units.length)} دانه در وضعیتی است که این کار رویش معنا ندارد`;
 }
 
 function ActionForm({ action, units, onDone, onCancel }) {
@@ -67,21 +67,18 @@ function ActionForm({ action, units, onDone, onCancel }) {
     <form onSubmit={submit} className="space-y-4">
       <DialogHeader>
         <DialogTitle>
-          {meta.label} — {fa(eligible.length)} دانه
+          {meta.label} — {formatNumber(eligible.length)} دانه
         </DialogTitle>
         <DialogDescription>{meta.description}</DialogDescription>
       </DialogHeader>
 
       {skipped.length > 0 && (
-        <p className="flex items-start gap-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          {skippedReason(skipped)}. این‌ها دست نمی‌خورند.
-        </p>
+        <Notice tone="warning">{skippedReason(skipped)}. این‌ها دست نمی‌خورند.</Notice>
       )}
 
       {purchaseQuarantine > 0 && (
         <p className="rounded-lg bg-muted/60 p-2 text-xs leading-5 text-muted-foreground">
-          {fa(purchaseQuarantine)} دانه از قرنطینه‌ی دریافتِ خرید است؛ حسابِ خریدِ آن با تامین‌کننده هم
+          {formatNumber(purchaseQuarantine)} دانه از قرنطینه‌ی دریافتِ خرید است؛ حسابِ خریدِ آن با تامین‌کننده هم
           همراهِ این کار به‌روز می‌شود.
         </p>
       )}
@@ -140,7 +137,7 @@ function ActionForm({ action, units, onDone, onCancel }) {
           variant={meta.tone === "destructive" ? "destructive" : "default"}
           disabled={eligible.length === 0 || mutation.isPending}
         >
-          {mutation.isPending ? "در حال ثبت..." : `${fa(eligible.length)} دانه ${meta.verb}`}
+          {mutation.isPending ? "در حال ثبت..." : `${formatNumber(eligible.length)} دانه ${meta.verb}`}
         </Button>
       </DialogFooter>
     </form>

@@ -5,8 +5,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import BarcodeScanField from "./BarcodeScanField";
 import { parseBarcode } from "@/shared/domain/barcode/productCode";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
-
-const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
  * فهرستِ بارکدِ دانه‌هایی که در یک جابه‌جایی اسکن شده‌اند.
@@ -39,7 +38,7 @@ export default function UnitBarcodeScanList({
       return;
     }
     if (max != null && barcodes.length >= max) {
-      toast.error(`برای این ردیف فقط ${fa(max)} دانه لازم است`);
+      toast.error(`برای این ردیف فقط ${formatNumber(max)} دانه لازم است`);
       return;
     }
     onChange([...barcodes, parsed.normalizedPayload]);
@@ -58,13 +57,13 @@ export default function UnitBarcodeScanList({
         <span
           className={`tabular-nums font-medium ${
             isComplete
-              ? "text-[oklch(0.50_0.16_152)]"
+              ? "text-success"
               : isPartial || required
-                ? "text-amber-700 dark:text-amber-400"
+                ? "text-warning"
                 : "text-muted-foreground"
           }`}
         >
-          {fa(count)} از {fa(max)}
+          {formatNumber(count)} از {formatNumber(max)}
         </span>
       </div>
       <BarcodeScanField
@@ -94,7 +93,7 @@ export default function UnitBarcodeScanList({
         </div>
       )}
       {isPartial && (
-        <p className="text-[11px] text-amber-700 dark:text-amber-400">
+        <p className="text-[11px] text-warning">
           یا همه‌ی دانه‌های این ردیف را اسکن کنید، یا هیچ‌کدام
           {required ? "" : " (تا سرور خودش انتخاب کند)"}.
         </p>

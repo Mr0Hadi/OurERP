@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Save, X } from "lucide-react";
-import { useEffect } from "react";
+
 
 import { Button } from "@/shared/components/ui/button";
 import { useCreateProductMutation } from "../services/mutations";
@@ -8,23 +8,17 @@ import { useProductForm } from "../hooks/useProductForm";
 import ProductBasicInfoForm from "../components/forms/ProductBasicInfoForm";
 import ProductPricingForm from "../components/forms/ProductPricingForm";
 import ProductImageUpload from "../components/forms/ProductImageUpload";
-import { useHeaderStore } from "@/shared/store/headerStore";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 export default function ProductNewPage() {
   const navigate = useNavigate();
   const createMutation = useCreateProductMutation();
 
-  const setHeader = useHeaderStore((state) => state.setHeader);
-  const clearHeader = useHeaderStore((state) => state.clearHeader);
 
-  useEffect(() => {
-    setHeader({
-      title: "افزودن کالا جدید",
-      showBack: true,
-    });
-
-    return () => clearHeader();
-  }, [navigate, setHeader, clearHeader]);
+  usePageHeader({
+    title: "افزودن کالا جدید",
+    showBack: true,
+  });
 
   const {
     formMethods,

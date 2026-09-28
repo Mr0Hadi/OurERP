@@ -233,3 +233,18 @@ export function numberToPersianWords(value, options) {
 
   return withSuffix(negative ? NEGATIVE_PREFIX + body : body, suffix);
 }
+
+/**
+ * مبلغِ ریالی به حروف، برای راهنمای زیرِ فیلدهای مبلغ.
+ *
+ * مبالغ در کل سیستم ریالی‌اند ولی کاربر با «تومان» راحت‌تر است؛ وقتی مبلغ
+ * بر ۱۰ بخش‌پذیر است به تومان خوانده می‌شود و در غیر این صورت به ریال —
+ * نه مثلِ تقسیمِ دستی بر ۱۰ که برای ۱۲٬۳۴۵ ریال «... ممیز پنج دهم تومان» می‌ساخت.
+ * برای مقدارِ خالی/صفر/نامعتبر رشته‌ی خالی برمی‌گرداند.
+ */
+export function rialAmountInWords(value) {
+  if (value === "" || value == null) return ""
+  const amount = Number(value)
+  if (!Number.isFinite(amount) || amount === 0) return ""
+  return numberToPersianWords(amount, { rialToToman: true })
+}

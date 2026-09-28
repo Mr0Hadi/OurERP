@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { createSupplier, updateSupplier, deleteSupplier } from "./api-v1";
 import { supplierKeys } from "./queryKeys";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 export function useCreateSupplierMutation() {
   const queryClient = useQueryClient();
@@ -13,7 +14,7 @@ export function useCreateSupplierMutation() {
       queryClient.invalidateQueries({ queryKey: supplierKeys.lists() });
     },
     onError: (error) => {
-      toast.error(error.message || "خطا در ثبت تامین کننده");
+      toast.error(getErrorMessage(error, "خطا در ثبت تامین کننده"));
     },
   });
 }
@@ -29,7 +30,7 @@ export function useUpdateSupplierMutation() {
       queryClient.invalidateQueries({ queryKey: supplierKeys.detail(variables.id) });
     },
     onError: (error) => {
-      toast.error(error.message || "خطا در ویرایش تامین کننده");
+      toast.error(getErrorMessage(error, "خطا در ویرایش تامین کننده"));
     },
   });
 }
@@ -44,7 +45,7 @@ export function useDeleteSupplierMutation() {
       toast.success("تامین‌کننده با موفقیت حذف شد.");
     },
     onError: (error) => {
-      toast.error(error?.message || "خطا در حذف تامین‌کننده.");
+      toast.error(getErrorMessage(error, "خطا در حذف تامین‌کننده."));
     },
   });
 }

@@ -167,6 +167,10 @@ function printImageBlobs(blobs) {
 
   // چاپ فقط بعد از بارگذاریِ *همه‌ی* تصویرها؛ وگرنه برگه‌های خالی
   // چاپ می‌شوند.
+  // آدرس‌های blob تا بسته‌شدنِ پنجره‌ی چاپ لازم‌اند؛ بعدش آزاد می‌شوند
+  // وگرنه هر چاپ، حافظه‌ی همه‌ی تصویرها را تا بستنِ تب نگه می‌داشت.
+  win.addEventListener("afterprint", () => urls.forEach((url) => URL.revokeObjectURL(url)));
+
   const images = [...win.document.images];
   let remaining = images.length;
   const start = () => {

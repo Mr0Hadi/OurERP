@@ -22,6 +22,15 @@ export const UNIT_STATUS_LABELS = Object.freeze({
   [ProductUnitStatusEnum.QUARANTINED]: "قرنطینه",
 });
 
+/** رنگِ معناییِ هر وضعیت برای `StatusBadge` (معناها در `shared/lib/tone.js`). */
+export const UNIT_STATUS_TONES = Object.freeze({
+  [ProductUnitStatusEnum.IN_STOCK]: "success",
+  [ProductUnitStatusEnum.SOLD]: "warning",
+  [ProductUnitStatusEnum.RETURNED_TO_SUPPLIER]: "neutral",
+  [ProductUnitStatusEnum.SCRAPPED]: "danger",
+  [ProductUnitStatusEnum.QUARANTINED]: "caution",
+});
+
 /**
  * `UnitCustodyReasonEnum` — چرا یک دانه در اختیار ماست.
  *

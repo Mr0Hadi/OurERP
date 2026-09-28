@@ -12,8 +12,7 @@ import { RETURN_PROBLEM_LABELS } from "@/shared/domain/returns/problems";
 import { UNIT_CUSTODY_REASON_LABELS } from "@/shared/domain/enums/unitStatus";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { ROUTES } from "@/shared/constants/routes";
-
-const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
  * کالای این خرید که الان در قرنطینه است، و مغایرت‌های ثبت‌شده در دورهای
@@ -36,10 +35,10 @@ export default function ReceivingQuarantineCard({ receivingInfo }) {
   const hasQuarantine = lines.length > 0 || unlisted.length > 0;
 
   return (
-    <Card className="border-orange-200 dark:border-orange-900">
+    <Card className="border-caution/25">
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <ShieldAlert className="h-4 w-4 text-orange-600" />
+          <ShieldAlert className="h-4 w-4 text-caution" />
           قرنطینه و مغایرت‌ها
         </CardTitle>
       </CardHeader>
@@ -51,12 +50,12 @@ export default function ReceivingQuarantineCard({ receivingInfo }) {
                 <span className="truncate">{item.productName}</span>
                 <span className="tabular-nums text-muted-foreground shrink-0">
                   {item.quarantinedOnOrderQuantity > 0 &&
-                    `خراب ${fa(item.quarantinedOnOrderQuantity)}`}
+                    `خراب ${formatNumber(item.quarantinedOnOrderQuantity)}`}
                   {item.quarantinedOnOrderQuantity > 0 &&
                     item.quarantinedExcessQuantity > 0 &&
                     " · "}
                   {item.quarantinedExcessQuantity > 0 &&
-                    `مازاد ${fa(item.quarantinedExcessQuantity)}`}
+                    `مازاد ${formatNumber(item.quarantinedExcessQuantity)}`}
                 </span>
               </li>
             ))}
@@ -64,7 +63,7 @@ export default function ReceivingQuarantineCard({ receivingInfo }) {
               <li key={`u-${item.productId}`} className="flex justify-between gap-2">
                 <span className="truncate">{item.productName}</span>
                 <span className="tabular-nums text-muted-foreground shrink-0">
-                  سفارش‌نداده {fa(item.quarantinedQuantity)}
+                  سفارش‌نداده {formatNumber(item.quarantinedQuantity)}
                 </span>
               </li>
             ))}
@@ -74,13 +73,13 @@ export default function ReceivingQuarantineCard({ receivingInfo }) {
         {discrepancies.length > 0 && (
           <details className="rounded-md border border-border p-2">
             <summary className="cursor-pointer text-muted-foreground">
-              سابقه‌ی مغایرت‌های دریافت ({fa(discrepancies.length)})
+              سابقه‌ی مغایرت‌های دریافت ({formatNumber(discrepancies.length)})
             </summary>
             <ul className="mt-2 space-y-1">
               {discrepancies.map((d) => (
                 <li key={d.id} className="text-muted-foreground">
                   {gregorianToPersian(d.receivedAt)} · {d.productName} ·{" "}
-                  {fa(d.quantity)} {RETURN_PROBLEM_LABELS[d.problem] ?? d.problem} (
+                  {formatNumber(d.quantity)} {RETURN_PROBLEM_LABELS[d.problem] ?? d.problem} (
                   {UNIT_CUSTODY_REASON_LABELS[d.custodyReason] ?? d.custodyReason})
                   {d.note && ` — ${d.note}`}
                 </li>

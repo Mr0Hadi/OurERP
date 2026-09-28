@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Link2, Trash2 } from "lucide-react";
 
@@ -15,7 +14,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/shared/components/ui/alert-dialog";
-import { useHeaderStore } from "@/shared/store/headerStore";
 
 import {
   usePurchaseReturnQuery,
@@ -38,7 +36,6 @@ import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
 import RelatedReturnsCard from "@/shared/components/returns/RelatedReturnsCard";
 import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
-import { PURCHASE_RETURN_STATUS_LABELS } from "../domain/purchaseReturnVocabulary";
 import PurchaseReturnResolutionSection from "../components/forms/PurchaseReturnResolutionSection";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
@@ -50,6 +47,7 @@ import {
   claimQuarantinedQuantity,
   claimReceivingReport,
 } from "@/shared/domain/returns/receivingReport";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 /**
  * جزئیات یک مرجوعی — یک ستون، به ترتیبِ کاری که کاربر انجام می‌دهد:
@@ -98,7 +96,6 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
     <div className="container max-w-3xl mx-auto px-4 space-y-3 animate-in fade-in zoom-in-95 duration-300">
       <ReturnStatusBar
         returnDoc={purchaseReturn}
-        statusLabels={PURCHASE_RETURN_STATUS_LABELS}
         side={sideConfig(RETURN_SIDES.PURCHASE)}
       />
 
@@ -203,33 +200,32 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
 export default function PurchaseReturnDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   const {
     data: purchaseReturn,
     isLoading,
     isError,
+    error: loadError,
+    refetch: retryLoad,
   } = usePurchaseReturnQuery(Number(id));
 
-  useEffect(() => {
-    setHeader({
-      title: isLoading
-        ? "در حال بارگذاری..."
-        : purchaseReturn
-          ? "جزئیات مرجوعی"
-          : "خطا",
-      showBack: true,
-    });
-    return () => clearHeader();
-  }, [navigate, setHeader, clearHeader, purchaseReturn, isLoading]);
+  usePageHeader({
+    title: isLoading
+      ? "در حال بارگذاری..."
+      : purchaseReturn
+        ? "جزئیات مرجوعی"
+        : "خطا",
+    showBack: true,
+  });
 
   if (isLoading) return <PurchaseReturnDetailLoading />;
 
   if (isError || !purchaseReturn) {
     return (
       <DetailErrorState
-        message="مرجوعی مورد نظر یافت نشد."
+        error={loadError}
+        notFoundMessage="مرجوعی مورد نظر یافت نشد."
+        onRetry={retryLoad}
         onBack={() => navigate(ROUTES.PURCHASES_RETURNS_LIST)}
       />
     );

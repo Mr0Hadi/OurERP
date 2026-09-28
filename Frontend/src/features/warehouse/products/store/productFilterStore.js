@@ -1,22 +1,23 @@
 import { createFilterStore } from "@/shared/store/createFilterStore";
 
 /**
- * مرتب‌سازیِ پیش‌فرض «تازه‌ترین اول» است، نه بر اساس نام: با مرتب‌سازی
- * بر اساس نام، کالای تازه‌ساخته‌شده وسط لیست گم می‌شد و کاربر در
- * صفحه‌ی اول پیدایش نمی‌کرد.
+ * فیلترهای لیستِ کالا — نام‌ها همان پارامترهای `GetProductListQuery`.
+ *
+ * مرتب‌سازیِ پیش‌فرض ترتیبِ خودِ سرور (تازه‌ترین اول) است، نه بر اساس نام:
+ * با مرتب‌سازی بر اساس نام، کالای تازه‌ساخته‌شده وسطِ لیست گم می‌شد.
  */
 export const useProductFilterStore = createFilterStore({
   filters: {
-    globalSearch: "",
+    name: "",
     brand: "",
     productCategoryId: "",
-    minPrice: "",
-    maxPrice: "",
-    stockStatus: "", // "" | "inStock" | "lowStock" | "outOfStock"
-    isIncomplete: "", // "" | "true" — فقط کالاهای ساخته‌شده با «ساخت سریع» که هنوز کامل نشده‌اند
+    fromPrice: "",
+    toPrice: "",
+    isLowOnStock: "", // "" | "true" | "false"
+    isIncomplete: "", // "" | "true" — فقط کالاهای «ساخت سریع» که هنوز کامل نشده‌اند
   },
+  defaultSorting: null,
   actions: ({ applyFilters }) => ({
-    setPriceRange: (min, max) =>
-      applyFilters({ minPrice: min, maxPrice: max }),
+    setPriceRange: (fromPrice, toPrice) => applyFilters({ fromPrice, toPrice }),
   }),
 });

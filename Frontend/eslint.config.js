@@ -30,4 +30,26 @@ export default defineConfig([
       "react-refresh/only-export-components": "off",
     },
   },
+  {
+    // کامپوننت‌های پایه‌ی shadcn: این فایل‌ها با CLI تولید/به‌روز می‌شوند و طبق
+    // قرارداد shadcn، `*Variants` و هوک‌ها را کنار کامپوننت export می‌کنند.
+    // جابه‌جا کردنشان با هر `shadcn add` دوباره بازنویسی می‌شود.
+    files: [
+      "src/shared/components/ui/badge.jsx",
+      "src/shared/components/ui/button.jsx",
+      "src/shared/components/ui/direction.jsx",
+      "src/shared/components/ui/sidebar.jsx",
+      "src/shared/components/ui/tabs.jsx",
+    ],
+    rules: {
+      "react-refresh/only-export-components": "off",
+    },
+  },
+  {
+    // فایل‌هایی که در Node اجرا می‌شوند، نه در مرورگر.
+    files: ["vite.config.js", "structure.js", "scripts/**/*.{js,mjs}"],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ]);

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AlertCircle, CheckCircle, AlertTriangle, X } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -14,13 +14,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import { useHeaderStore } from "@/shared/store/headerStore";
 import {
   usePurchaseReturnQuery,
   usePurchaseForReturnQuery,
 } from "@/features/purchases/returns/services/queries";
 import { useExecuteGoodsRoundMutation } from "@/features/purchases/returns/services/mutations";
-import { useProductsQuery } from "@/features/warehouse/products/services/queries";
+import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import { buildGoodsLines } from "@/shared/domain/returns/resolutions";
 import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
 import { CLAIM_SCOPES } from "@/shared/domain/returns/scopes";
@@ -32,13 +31,11 @@ import GoodsRoundItemsSection from "@/shared/components/returns/GoodsRoundItemsS
 import GoodsRoundPartySection from "@/shared/components/returns/GoodsRoundPartySection";
 import GoodsRoundSummaryCard from "@/shared/components/returns/GoodsRoundSummaryCard";
 import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 const PURCHASE_SIDE = sideConfig(RETURN_SIDES.PURCHASE);
 
-const ALL_FILTERS = {};
-const PAGINATION = { pageIndex: 0, pageSize: 200 };
-const SORTING = { id: "name", desc: false };
 
 const { GOODS_OUT, GOODS_RELEASE, GOODS_SCRAP } = EFFECT_DIRECTIONS;
 const WAREHOUSE_DIRECTIONS = [GOODS_OUT, GOODS_RELEASE, GOODS_SCRAP];
@@ -91,7 +88,7 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
   const navigate = useNavigate();
   const goodsRoundMutation = useExecuteGoodsRoundMutation(purchaseReturn.id);
   const backToReturn = () =>
-    navigate(ROUTES.PURCHASES_RETURNS_DETAIL.replace(":id", purchaseReturn.id));
+    navigate(routeWithId(ROUTES.PURCHASES_RETURNS_DETAIL, purchaseReturn.id));
 
   const lines = useMemo(
     () =>
@@ -101,17 +98,13 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
     [purchaseReturn],
   );
 
-  const { data: productsData } = useProductsQuery(
-    ALL_FILTERS,
-    PAGINATION,
-    SORTING,
-  );
+  const { products: productOptions } = useProductsOptionsQuery();
 
   const productMap = useMemo(() => {
     const map = new Map();
-    (productsData?.items || []).forEach((p) => map.set(p.id, p));
+    productOptions.forEach((p) => map.set(p.id, p));
     return map;
-  }, [productsData]);
+  }, [productOptions]);
 
   const { data: receivingInfo } = usePurchaseForReturnQuery(purchaseReturn.purchaseId);
   const defaultSource = useCallback(
@@ -179,7 +172,7 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
   if (rounds.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <CheckCircle className="h-12 w-12 text-[oklch(0.50_0.16_152)]" />
+        <CheckCircle className="h-12 w-12 text-success" />
         <p className="text-lg text-muted-foreground">
           برای این مرجوعی کاری در انبار باقی نمانده است.
         </p>
@@ -248,7 +241,7 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
           <div className="flex gap-2">
             <Button
               className={`flex-1 gap-2 ${
-                !isAllComplete ? "bg-amber-600 hover:bg-amber-700 text-white" : ""
+                !isAllComplete ? "bg-warning hover:bg-warning text-white" : ""
               }`}
               disabled={isBusy || !hasSomethingToRecord || Boolean(blockingReason)}
               onClick={() => setShowConfirmDialog(true)}
@@ -296,7 +289,7 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
             <AlertDialogAction
               disabled={isBusy}
               onClick={handleSubmit}
-              className={!isAllComplete ? "bg-amber-600 hover:bg-amber-700" : ""}
+              className={!isAllComplete ? "bg-warning hover:bg-warning" : ""}
             >
               {isBusy ? "در حال ثبت..." : "تأیید"}
             </AlertDialogAction>
@@ -310,8 +303,6 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
 export default function SupplierReturnDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   const {
     data: purchaseReturn,
@@ -319,13 +310,10 @@ export default function SupplierReturnDetailPage() {
     isError,
   } = usePurchaseReturnQuery(Number(id));
 
-  useEffect(() => {
-    setHeader({
-      title: isLoading ? "در حال بارگذاری..." : "کار انبار روی مرجوعی خرید",
-      showBack: true,
-    });
-    return () => clearHeader();
-  }, [setHeader, clearHeader, isLoading]);
+  usePageHeader({
+    title: isLoading ? "در حال بارگذاری..." : "کار انبار روی مرجوعی خرید",
+    showBack: true,
+  });
 
   if (isLoading) return <WarehouseFormSkeleton />;
 

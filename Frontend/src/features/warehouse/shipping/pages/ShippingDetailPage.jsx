@@ -13,12 +13,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import { useHeaderStore } from "@/shared/store/headerStore";
 import {
   useSaleForShippingQuery,
   useSaleReturnPendingEffectsQuery,
 } from "../services/queries";
-import { useProductsQuery } from "@/features/warehouse/products/services/queries";
+import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import { useDispatchShipmentMutation } from "../services/mutations";
 import { useShippingForm } from "../hooks/useShippingForm";
 import { useGoodsRoundForm } from "@/shared/hooks/useGoodsRoundForm";
@@ -31,10 +30,8 @@ import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSk
 import { ROUTES } from "@/shared/constants/routes";
 import { isExcessAllowedFor } from "../domain/shippingVocabulary";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
-const ALL_FILTERS = {};
-const PAGINATION = { pageIndex: 0, pageSize: 200 };
-const SORTING = { id: "name", desc: false };
 
 function withProductImage(rows, productMap) {
   return rows.map((row) => {
@@ -61,16 +58,12 @@ function ShippingDetailForm({ sale, replacementReturnId }) {
   const navigate = useNavigate();
   const dispatchMutation = useDispatchShipmentMutation();
 
-  const { data: productsData } = useProductsQuery(
-    ALL_FILTERS,
-    PAGINATION,
-    SORTING,
-  );
+  const { products: productOptions } = useProductsOptionsQuery();
   const productMap = useMemo(() => {
     const map = new Map();
-    (productsData?.items || []).forEach((p) => map.set(p.id, p));
+    productOptions.forEach((p) => map.set(p.id, p));
     return map;
-  }, [productsData]);
+  }, [productOptions]);
 
   const isTracked = useCallback(
     (productId) => Boolean(productMap.get(productId)?.requiresUnitTracking),
@@ -218,7 +211,7 @@ function ShippingDetailForm({ sale, replacementReturnId }) {
             <Button
               className={`flex-1 gap-2 ${
                 !complete && (replacementOnly || items.length > 0)
-                  ? "bg-amber-600 hover:bg-amber-700 text-white"
+                  ? "bg-warning hover:bg-warning text-white"
                   : ""
               }`}
               disabled={isBusy || !hasSomething || Boolean(blocking)}
@@ -284,24 +277,19 @@ export default function ShippingDetailPage() {
     ? Number(searchParams.get("returnId"))
     : null;
   const navigate = useNavigate();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  const { data: sale, isLoading, isError } = useSaleForShippingQuery(Number(id));
+  const { data: sale, isLoading, isError, error: loadError, refetch: retryLoad } = useSaleForShippingQuery(Number(id));
 
-  useEffect(() => {
-    setHeader({
-      title: isLoading
-        ? "در حال بارگذاری..."
-        : sale
-          ? replacementReturnId != null
-            ? "ارسال کالای جایگزین"
-            : "ارسال کالا"
-          : "خطا",
-      showBack: true,
-    });
-    return () => clearHeader();
-  }, [navigate, setHeader, clearHeader, sale, isLoading, replacementReturnId]);
+  usePageHeader({
+    title: isLoading
+      ? "در حال بارگذاری..."
+      : sale
+        ? replacementReturnId != null
+          ? "ارسال کالای جایگزین"
+          : "ارسال کالا"
+        : "خطا",
+    showBack: true,
+  });
 
   if (isLoading)
     return (
@@ -315,7 +303,9 @@ export default function ShippingDetailPage() {
   if (isError || !sale) {
     return (
       <DetailErrorState
-        message="فروش مورد نظر یافت نشد."
+        error={loadError}
+        notFoundMessage="فروش مورد نظر یافت نشد."
+        onRetry={retryLoad}
         onBack={() => navigate(ROUTES.WAREHOUSE_SHIPPING)}
       />
     );

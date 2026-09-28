@@ -4,7 +4,7 @@ import { Search } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import DataTable from "@/shared/components/table/DataTable";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import {
   SALES_RETURN_PROBLEM_LABELS,
   SALES_RETURN_PROBLEM_STYLES,
@@ -14,7 +14,10 @@ import {
   RETURN_PROBLEM_STYLES,
 } from "@/shared/domain/returns/problems";
 import { Badge } from "@/shared/components/ui/badge";
-import SalesReturnStatusBadge from "./SalesReturnStatusBadge";
+import ReturnStatusBadge from "@/shared/components/returns/ReturnStatusBadge";
+import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
+
+const RETURN_SIDE = sideConfig(RETURN_SIDES.SALES);
 
 const EMPTY_STATE = (
   <div className="flex flex-col items-center justify-center gap-2 py-16 text-center border border-dashed border-border rounded-lg">
@@ -109,7 +112,7 @@ const SalesReturnTable = ({
       {
         accessorKey: "status",
         header: "وضعیت",
-        cell: (info) => <SalesReturnStatusBadge status={info.getValue()} />,
+        cell: (info) => <ReturnStatusBadge status={info.getValue()} side={RETURN_SIDE} />,
       },
       {
         accessorKey: "totalAmount",
@@ -130,7 +133,7 @@ const SalesReturnTable = ({
             size="sm"
             onClick={() =>
               navigate(
-                ROUTES.SALES_RETURNS_DETAIL.replace(":id", row.original.id),
+                routeWithId(ROUTES.SALES_RETURNS_DETAIL, row.original.id),
               )
             }
           >

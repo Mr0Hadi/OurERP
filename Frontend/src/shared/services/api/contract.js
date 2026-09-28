@@ -1,10 +1,9 @@
+import { toApiSort } from "./sorting";
+
 /**
  * قراردادِ مشترکِ لایه‌ی `api-v1` — چیزهایی که به دامنه ربط ندارند ولی
- * هر فایلِ API به آن‌ها نیاز دارد.
- *
- * هدف این است که تفاوتِ mock و سرور فقط در «از کجا داده می‌آید» باشد،
- * نه در «داده چه شکلی است». هر چیزی که شکل را یکسان نگه می‌دارد
- * (صفحه‌بندی، کلید ایدمپوتنسی) اینجاست تا در ده فایل تکرار نشود.
+ * هر فایلِ API به آن‌ها نیاز دارد (صفحه‌بندی، کلید ایدمپوتنسی، نسخه‌ی سند)،
+ * تا در ده فایل تکرار نشوند.
  */
 
 // ─── صفحه‌بندی ──────────────────────────────────────────────────────────────
@@ -14,55 +13,76 @@
  *
  *   { items, total, page, totalPages }
  *
- * همان چیزی که `applyListQuery` در mock تولید می‌کند. سرور هم باید
- * دقیقاً همین را برگرداند تا سوییچِ mock→v1 هیچ کامپوننتی را دست
- * نزند.
- *
- * شاخه‌ی دوم برای پوششِ خانگیِ بک‌اند است — `{ XList, Page: { Page,
- * PageCount, Take, Total } }`. این شاخه یک تورِ ایمنی است، نه بخشی از
- * قرارداد: اگر بک‌اند همان سبکِ قدیمی را بفرستد، صفحه سفید نمی‌شود.
+ * بک‌اند فهرست‌ها را به‌شکلِ `{ XList, Page: { Page, PageCount, Take, Total } }`
+ * می‌فرستد؛ این تابع آن را به شکلِ استاندارد درمی‌آورد تا کامپوننت‌ها به
+ * نام‌گذاریِ هر endpoint وابسته نباشند. پاسخی که از قبل `items` دارد
+ * دست‌نخورده برمی‌گردد.
  */
 export function normalizeListResponse(data, { itemsKey } = {}) {
   if (!data) return { items: [], total: 0, page: 1, totalPages: 1 };
   if (Array.isArray(data.items)) return data;
 
-  const legacyItems =
+  const listItems =
     (itemsKey && data[itemsKey]) ||
     Object.entries(data).find(([, value]) => Array.isArray(value))?.[1] ||
     [];
-  const legacyPage = data.Page || data.page || {};
+  const pageInfo = data.Page || data.page || {};
 
-  const total = legacyPage.Total ?? legacyPage.total ?? legacyItems.length;
-  const take = legacyPage.Take ?? legacyPage.take;
+  const total = pageInfo.Total ?? pageInfo.total ?? listItems.length;
+  const take = pageInfo.Take ?? pageInfo.take;
 
   // سرور با نام‌گذاریِ پیش‌فرضِ ASP.NET (camelCase) `pageCount` می‌فرستد.
   // خواندنِ فقط `PageCount` یعنی هر فهرستی روی «صفحه ۱ از ۱» می‌ماند.
   const pageCount =
-    legacyPage.PageCount ??
-    legacyPage.pageCount ??
-    legacyPage.totalPages ??
+    pageInfo.PageCount ??
+    pageInfo.pageCount ??
+    pageInfo.totalPages ??
     (take > 0 ? Math.ceil(total / take) : 1);
 
   return {
-    items: legacyItems,
+    items: listItems,
     total,
-    page: legacyPage.Page ?? legacyPage.page ?? 1,
+    page: pageInfo.Page ?? pageInfo.page ?? 1,
     // فهرستِ خالی صفرِ صفحه دارد، ولی شمارنده‌ی «صفحه ۱ از ۰» بی‌معناست.
     totalPages: Math.max(1, pageCount),
   };
 }
 
-/** پارامترهای مشترکِ هر فهرست — نام‌ها camelCase و یکسان با mock. */
-export function listParams(params = {}) {
-  return {
-    page: params.page,
-    limit: params.limit,
-    search: params.search || undefined,
-    fromDate: params.fromDate || undefined,
-    toDate: params.toDate || undefined,
-    sortBy: params.sortBy || undefined,
-    sortOrder: params.sortOrder || undefined,
+const isEmptyFilter = (value) => value === "" || value == null || value === "all";
+
+/**
+ * پارامترهای خالی ("" / null / undefined / "all") حذف می‌شوند — سرور فیلترِ خالی
+ * را «مقدارِ صفر/خالی» می‌فهمد، نه «بدونِ فیلتر».
+ */
+export function compactParams(params) {
+  return Object.fromEntries(
+    Object.entries(params).filter(([, value]) => !isEmptyFilter(value)),
+  );
+}
+
+/**
+ * پارامترهای استانداردِ هر `Get*ListQuery`ِ بکند، با *همان نام‌های بکند*:
+ * `page`/`take` + فیلترها + `sortBy`/`sortDirection`.
+ *
+ * فیلترها در استورِ هر فیچر از اول با نامِ پارامترِ سرور نگه داشته می‌شوند
+ * (`fullName`، `minBalance`، …)، پس هیچ لایه‌ی ترجمه‌ای بینِ فرم و درخواست
+ * نیست. مقدارِ خالی ("" / null / "all") فرستاده نمی‌شود — وگرنه سرور آن را
+ * فیلتر روی مقدارِ خالی می‌فهمد.
+ *
+ * @param {object} args
+ * @param {object} [args.filters] فیلترها با نامِ پارامترِ سرور
+ * @param {{ pageIndex: number, pageSize: number }} args.pagination
+ * @param {{ id: string, desc: boolean } | null} [args.sorting]
+ * @param {Record<string, number>} [args.sortColumns] ستونِ جدول → عددِ `*ListSortEnum`
+ */
+export function listQuery({ filters = {}, pagination, sorting, sortColumns = {} }) {
+  const params = {
+    page: pagination.pageIndex + 1,
+    take: pagination.pageSize,
+    ...filters,
+    ...toApiSort(sorting, sortColumns),
   };
+  return compactParams(params);
 }
 
 // ─── ایدمپوتنسی ─────────────────────────────────────────────────────────────

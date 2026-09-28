@@ -1,9 +1,5 @@
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const IGNORE = ["node_modules", "dist", "build", ".git", "coverage", ".vscode", "structure.txt", "structure.js"];
 
@@ -31,8 +27,8 @@ function generateTree(dir = ".", prefix = "", output = []) {
         generateTree(fullPath, newPrefix, output);
       }
     });
-  } catch (error) {
-    // ignore
+  } catch {
+    // پوشه‌هایی که خواندنشان خطا می‌دهد (مثلاً دسترسی) نادیده گرفته می‌شوند.
   }
   return output;
 }

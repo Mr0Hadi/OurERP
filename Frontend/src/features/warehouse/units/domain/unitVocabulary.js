@@ -4,7 +4,7 @@ import {
   UNIT_CUSTODY_REASON_LABELS,
   PURCHASE_CUSTODY_REASONS,
 } from "@/shared/domain/enums/unitStatus";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 
 /**
@@ -246,7 +246,7 @@ export const DOCUMENT_KIND_LABELS = Object.freeze({
 });
 
 export const documentRouteOf = (kind, id) =>
-  DOCUMENT_ROUTES[kind] && id ? DOCUMENT_ROUTES[kind].replace(":id", id) : null;
+  DOCUMENT_ROUTES[kind] && id ? routeWithId(DOCUMENT_ROUTES[kind], id) : null;
 
 // ─── مرتب‌سازی ──────────────────────────────────────────────────────────────
 
@@ -262,8 +262,6 @@ export const UNIT_SORT_COLUMNS = Object.freeze({
 });
 
 // ─── نمایش ──────────────────────────────────────────────────────────────────
-
-export const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
 
 export const formatDate = (value) =>
   value ? gregorianToPersian(String(value).slice(0, 10)) : "—";

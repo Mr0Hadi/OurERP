@@ -6,6 +6,7 @@ import { teamKeys } from "./queryKeys";
 import { departmentKeys } from "../../departments/services/queryKeys";
 import { userKeys } from "@/features/employees/services/queryKeys";
 import { authKeys } from "@/features/auth/services/queryKeys";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 /**
  * تعیینِ مسئول/جانشینِ تیم کارمند را به تیم (و واحدش) منتقل می‌کند و
@@ -28,7 +29,7 @@ export function useCreateTeamMutation() {
       toast.success("تیم جدید با موفقیت ثبت شد.");
       invalidateOrgChart(queryClient);
     },
-    onError: (error) => toast.error(error?.message || "خطا در ثبت تیم"),
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در ثبت تیم")),
   });
 }
 
@@ -41,7 +42,7 @@ export function useUpdateTeamMutation() {
       toast.success("اطلاعات تیم با موفقیت ویرایش شد.");
       invalidateOrgChart(queryClient);
     },
-    onError: (error) => toast.error(error?.message || "خطا در ویرایش تیم"),
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در ویرایش تیم")),
   });
 }
 
@@ -57,6 +58,6 @@ export function useDeleteTeamMutation() {
       queryClient.invalidateQueries({ queryKey: departmentKeys.all });
       queryClient.invalidateQueries({ queryKey: userKeys.all });
     },
-    onError: (error) => toast.error(error?.message || "خطا در حذف تیم"),
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در حذف تیم")),
   });
 }

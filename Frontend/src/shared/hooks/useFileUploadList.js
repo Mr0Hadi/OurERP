@@ -10,6 +10,7 @@ import {
   validateImageFile,
 } from "@/shared/services/files/fileConstraints";
 import { useSeedImageUrl } from "@/shared/services/files/queries";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 /**
  * چند فایلِ یک *سند*، نه یک موجودیت — ضمیمه‌ی فاکتور/پیش‌فاکتور
@@ -142,7 +143,7 @@ export function useFileUploadList({
           fileName: uploaded.fileName || file.name,
         });
       } catch (uploadError) {
-        const message = uploadError?.message || `خطا در بارگذاری ${noun}.`;
+        const message = getErrorMessage(uploadError, `خطا در بارگذاری ${noun}.`);
         patchItem(id, { status: "error", progress: 0, error: message });
         if (notifyError) toast.error(message);
       }
@@ -322,5 +323,3 @@ export function useFileUploadList({
     ]
   );
 }
-
-export default useFileUploadList;

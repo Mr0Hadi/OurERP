@@ -12,6 +12,7 @@ import { userKeys } from "./queryKeys";
 import { teamKeys } from "@/features/organization/teams/services/queryKeys";
 import { departmentKeys } from "@/features/organization/departments/services/queryKeys";
 import { authKeys } from "@/features/auth/services/queryKeys";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 export function useCreateUserMutation() {
   const queryClient = useQueryClient();
@@ -26,7 +27,7 @@ export function useCreateUserMutation() {
       queryClient.invalidateQueries({ queryKey: departmentKeys.all });
     },
     onError: (error) => {
-      toast.error(error?.message || "خطا در ثبت کارمند");
+      toast.error(getErrorMessage(error, "خطا در ثبت کارمند"));
     },
   });
 }
@@ -51,7 +52,7 @@ export function useUpdateUserMutation() {
       queryClient.invalidateQueries({ queryKey: authKeys.session() });
     },
     onError: (error) => {
-      toast.error(error?.message || "خطا در ویرایش کارمند");
+      toast.error(getErrorMessage(error, "خطا در ویرایش کارمند"));
     },
   });
 }
@@ -77,7 +78,7 @@ export function useChangeUserTeamMutation() {
       queryClient.invalidateQueries({ queryKey: authKeys.session() });
     },
     onError: (error) => {
-      toast.error(error?.message || "خطا در تغییر عضویت کارمند");
+      toast.error(getErrorMessage(error, "خطا در تغییر عضویت کارمند"));
     },
   });
 }
@@ -90,7 +91,7 @@ export function useLogoutUserByIdMutation() {
       toast.success("کارمند از تمام دستگاه‌ها خارج شد.");
     },
     onError: (error) => {
-      toast.error(error?.message || "خطا در خروج اجباری کارمند");
+      toast.error(getErrorMessage(error, "خطا در خروج اجباری کارمند"));
     },
   });
 }
@@ -103,7 +104,7 @@ export function useResetUserPasswordMutation() {
       toast.success("رمز عبور کارمند با موفقیت بازنشانی شد.");
     },
     onError: (error) => {
-      toast.error(error?.message || "خطا در بازنشانی رمز عبور");
+      toast.error(getErrorMessage(error, "خطا در بازنشانی رمز عبور"));
     },
   });
 }

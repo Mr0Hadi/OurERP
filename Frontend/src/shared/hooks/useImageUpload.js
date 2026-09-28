@@ -5,6 +5,7 @@ import { deleteImages, uploadImage } from "@/shared/services/files/api-v1";
 import { objectKeyOf, toDisplayableUrl } from "@/shared/services/files/objectKey";
 import { validateImageFile } from "@/shared/services/files/fileConstraints";
 import { useImageUrlQuery, useSeedImageUrl } from "@/shared/services/files/queries";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 /**
  * تکْ‌تصویرِ یک موجودیت (محصول، مشتری، تامین‌کننده، …) — همان گردش‌کارِ
@@ -134,7 +135,7 @@ export function useImageUpload({
         if (controller.signal.aborted) return null;
         revokeLocalPreview();
         setLocalPreview(null);
-        fail(uploadError?.message || "خطا در بارگذاری تصویر.");
+        fail(getErrorMessage(uploadError, "خطا در بارگذاری تصویر."));
         return null;
       }
     },
@@ -204,7 +205,7 @@ export function useImageUpload({
   const isUploading = status === "uploading";
 
   /**
-   * موجودیت ممکن است فقط `imageKey` بدهد، یا (در mock) اصلاً کلیدِ خام
+   * موجودیت ممکن است فقط `imageKey` بدهد، یا (در داده‌ی قدیمی) کلیدِ خام
    * در `imageUrl` نشسته باشد. در هر دو حالت آدرسِ نمایشی را باید خودمان
    * بگیریم — وگرنه فرمِ ویرایش «بدون تصویر» نشان می‌دهد در حالی که
    * تصویر وجود دارد.
@@ -254,5 +255,3 @@ export function useImageUpload({
     ]
   );
 }
-
-export default useImageUpload;

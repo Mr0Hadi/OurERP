@@ -1,3 +1,4 @@
+import { lazy } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import { ROUTES } from "@/shared/constants/routes";
 
@@ -21,6 +22,12 @@ import { employeesRoutes } from "@/features/employees/routes";
 import { organizationRoutes } from "@/features/organization/routes";
 import { permissionsRoutes } from "@/features/permissions/routes";
 import { notifyNavigationStart } from "@/shared/lib/routeTransitionBus";
+
+// راهنمای استایل فقط در توسعه؛ در build تولید شاخه‌ی DEV حذف می‌شود و
+// صفحه اصلاً وارد باندل نمی‌شود.
+const devRoutes = import.meta.env.DEV
+  ? [{ path: "/dev/ui", Component: lazy(() => import("../dev/StyleGuidePage")) }]
+  : [];
 
 export const router = createBrowserRouter([
   {
@@ -49,6 +56,7 @@ export const router = createBrowserRouter([
       ...transactionsRoutes,
     ],
   },
+  ...devRoutes,
   {
     path: "*",
     element: <NotFoundPage />,

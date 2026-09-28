@@ -7,9 +7,9 @@ import { invalidateSalesEcosystem } from "@/features/sales/orders/services/share
 import { invalidatePurchaseEcosystem } from "@/features/purchases/orders/services/sharedInvalidation";
 import { salesReturnKeys } from "@/features/sales/returns/services/queryKeys";
 import { purchaseReturnKeys } from "@/features/purchases/returns/services/queryKeys";
-import { fromApiReturn as fromApiSalesReturn } from "@/features/sales/returns/services/apiMapping";
-import { fromApiReturn as fromApiPurchaseReturn } from "@/features/purchases/returns/services/apiMapping";
+import { fromApiPurchaseReturn, fromApiSaleReturn } from "@/shared/domain/returns/claimsApi";
 import { idempotencyKeyFor } from "@/shared/services/api/contract";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 /**
  * ثبتِ یک محموله‌ی خروجی (`DispatchShipment`): ارسالِ فروش و دورهای
@@ -25,7 +25,7 @@ export const useDispatchShipmentMutation = () => {
       dispatchShipment(command, { idempotencyKey: idempotencyKeyFor(command) }),
     onSuccess: (result, command) => {
       (result?.saleReturns || []).forEach((doc) => {
-        const updated = fromApiSalesReturn(doc);
+        const updated = fromApiSaleReturn(doc);
         queryClient.setQueryData(salesReturnKeys.detail(updated.id), updated);
         invalidateSalesEcosystem(queryClient, updated.saleId, {
           freshReturnId: updated.id,
@@ -43,6 +43,6 @@ export const useDispatchShipmentMutation = () => {
       queryClient.invalidateQueries({ queryKey: shippingKeys.all });
       toast.success("ارسال کالا با موفقیت ثبت شد");
     },
-    onError: (error) => toast.error(error?.message || "خطا در ثبت ارسال"),
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در ثبت ارسال")),
   });
 };

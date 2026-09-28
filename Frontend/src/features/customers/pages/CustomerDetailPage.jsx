@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Save, X, Trash2 } from "lucide-react";
 import { useCustomerQuery } from "../services/queries";
@@ -6,7 +6,6 @@ import {
   useUpdateCustomerMutation,
   useDeleteCustomerMutation,
 } from "../services/mutations";
-import { useHeaderStore } from "@/shared/store/headerStore";
 import { Button } from "@/shared/components/ui/button";
 import {
   AlertDialog,
@@ -31,6 +30,7 @@ import {
   partyBalanceOf,
 } from "@/features/partyAccount/domain/partyBalance";
 import { usePermission } from "@/features/auth/hooks/usePermission";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 function CustomerDetailForm({ customerData }) {
   const navigate = useNavigate();
@@ -188,29 +188,32 @@ function CustomerDetailForm({ customerData }) {
 export default function CustomerDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  const { data: customer, isLoading, isError } = useCustomerQuery(id);
+  const {
+    data: customer,
+    isLoading,
+    isError,
+    error: loadError,
+    refetch: retryLoad,
+  } = useCustomerQuery(id);
 
-  useEffect(() => {
-    setHeader({
-      title: isLoading
-        ? "در حال بارگذاری..."
-        : customer
-          ? `ویرایش مشتری: ${customer.firstName} ${customer.lastName}`
-          : "خطا",
-      showBack: true,
-    });
-    return () => clearHeader();
-  }, [navigate, setHeader, clearHeader, customer, isLoading]);
+  usePageHeader({
+    title: isLoading
+      ? "در حال بارگذاری..."
+      : customer
+        ? `ویرایش مشتری: ${customer.firstName} ${customer.lastName}`
+        : "خطا",
+    showBack: true,
+  });
 
   if (isLoading) return <CustomerDetailLoading />;
 
   if (isError || !customer) {
     return (
       <DetailErrorState
-        message="مشتری مورد نظر یافت نشد یا خطایی رخ داده است."
+        error={loadError}
+        notFoundMessage="مشتری مورد نظر یافت نشد."
+        onRetry={retryLoad}
         onBack={() => navigate(ROUTES.CUSTOMERS)}
       />
     );

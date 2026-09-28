@@ -1,13 +1,11 @@
 import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/shared/components/ui/button";
 import DataTable from "@/shared/components/table/DataTable";
 import PaymentProgress from "@/shared/components/table/PaymentProgress";
-import PaymentTypeBadge from "@/shared/components/table/PaymentTypeBadge";
+import PaymentTypeBadge from "@/shared/components/status/PaymentTypeBadge";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
-import { ROUTES } from "@/shared/constants/routes";
-import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
-import SaleStatusBadge from "./SaleStatusBadge";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
+import SaleStatusBadge from "@/shared/components/status/SaleStatusBadge";
+import { detailsColumn } from "@/shared/components/table/columns";
 
 const SaleTable = ({
   data,
@@ -19,7 +17,6 @@ const SaleTable = ({
   sorting,
   onSortingChange,
 }) => {
-  const navigate = useNavigate();
 
   const columns = useMemo(
     () => [
@@ -55,10 +52,7 @@ const SaleTable = ({
         accessorKey: "paymentType",
         header: "نوع پرداخت",
         cell: (info) => (
-          <PaymentTypeBadge
-            type={info.getValue()}
-            labels={PAYMENT_TYPE_LABELS}
-          />
+          <PaymentTypeBadge type={info.getValue()} />
         ),
       },
       {
@@ -73,24 +67,9 @@ const SaleTable = ({
           />
         ),
       },
-      {
-        id: "actions",
-        header: "جزئیات",
-        enableSorting: false,
-        cell: ({ row }) => (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              navigate(ROUTES.SALES_DETAIL.replace(":id", row.original.id))
-            }
-          >
-            جزئیات بیشتر
-          </Button>
-        ),
-      },
+      detailsColumn((row) => routeWithId(ROUTES.SALES_DETAIL, row.id)),
     ],
-    [navigate],
+    [],
   );
 
   return (

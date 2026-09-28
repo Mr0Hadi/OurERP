@@ -137,7 +137,7 @@ export default function PurchaseIssuedView({ purchase }) {
           />
 
           <PaymentDueDateCard
-            value={purchase.dueDate}
+            value={purchase.paymentDate}
             canEdit={canUpdate}
             isPending={dueDateMutation.isPending}
             onSave={(date) => dueDateMutation.mutate(date)}

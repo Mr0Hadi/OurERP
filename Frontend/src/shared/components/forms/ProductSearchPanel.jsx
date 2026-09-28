@@ -15,6 +15,7 @@ import {
 import BarcodeScanField from "@/shared/components/barcode/BarcodeScanField";
 import { parseBarcode } from "@/shared/domain/barcode/productCode";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
  * جست‌وجو و انتخاب کالا برای افزودن به اقلام.
@@ -160,11 +161,11 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
                       product.stock === 0
                         ? "text-destructive"
                         : product.stock <= (product.lowStockThreshold ?? 10)
-                          ? "text-[oklch(0.65_0.18_80)]"
-                          : "text-[oklch(0.50_0.16_152)]"
+                          ? "text-warning"
+                          : "text-success"
                     }`}
                   >
-                    موجودی: {product.stock} {unitLabelOf(product.unit)}
+                    موجودی: {formatNumber(product.stock)} {unitLabelOf(product.unit)}
                   </span>
                 </div>
               </div>

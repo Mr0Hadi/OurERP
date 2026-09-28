@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Link2, Trash2 } from "lucide-react";
 
@@ -15,7 +14,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/shared/components/ui/alert-dialog";
-import { useHeaderStore } from "@/shared/store/headerStore";
 
 import {
   useSalesReturnQuery,
@@ -38,12 +36,12 @@ import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
 import RelatedReturnsCard from "@/shared/components/returns/RelatedReturnsCard";
 import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
-import { SALES_RETURN_STATUS_LABELS } from "../domain/salesReturnVocabulary";
 import SalesReturnResolutionSection from "../components/forms/SalesReturnResolutionSection";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 /**
  * جزئیات یک مرجوعی — یک ستون، به ترتیبِ کاری که کاربر انجام می‌دهد:
@@ -103,7 +101,6 @@ function SalesReturnDetailContent({ salesReturn }) {
     <div className="container max-w-3xl mx-auto px-4 space-y-3 animate-in fade-in zoom-in-95 duration-300">
       <ReturnStatusBar
         returnDoc={salesReturn}
-        statusLabels={SALES_RETURN_STATUS_LABELS}
         side={sideConfig(RETURN_SIDES.SALES)}
       />
 
@@ -206,33 +203,32 @@ function SalesReturnDetailContent({ salesReturn }) {
 export default function SalesReturnDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   const {
     data: salesReturn,
     isLoading,
     isError,
+    error: loadError,
+    refetch: retryLoad,
   } = useSalesReturnQuery(Number(id));
 
-  useEffect(() => {
-    setHeader({
-      title: isLoading
-        ? "در حال بارگذاری..."
-        : salesReturn
-          ? "جزئیات مرجوعی"
-          : "خطا",
-      showBack: true,
-    });
-    return () => clearHeader();
-  }, [navigate, setHeader, clearHeader, salesReturn, isLoading]);
+  usePageHeader({
+    title: isLoading
+      ? "در حال بارگذاری..."
+      : salesReturn
+        ? "جزئیات مرجوعی"
+        : "خطا",
+    showBack: true,
+  });
 
   if (isLoading) return <SalesReturnDetailLoading />;
 
   if (isError || !salesReturn) {
     return (
       <DetailErrorState
-        message="مرجوعی مورد نظر یافت نشد."
+        error={loadError}
+        notFoundMessage="مرجوعی مورد نظر یافت نشد."
+        onRetry={retryLoad}
         onBack={() => navigate(ROUTES.SALES_RETURNS_LIST)}
       />
     );

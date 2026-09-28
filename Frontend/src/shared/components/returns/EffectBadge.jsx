@@ -18,6 +18,8 @@ import {
   RETURN_PAYMENT_METHODS,
 } from "@/shared/domain/enums/paymentType";
 import { RETURN_PROBLEM_LABELS } from "@/shared/domain/returns/problems";
+import { formatNumber } from "@/shared/lib/numberFormat";
+import { toneText } from "@/shared/lib/tone";
 
 const ICONS = {
   [EFFECT_DIRECTIONS.GOODS_IN]: PackagePlus,
@@ -28,16 +30,15 @@ const ICONS = {
   [EFFECT_DIRECTIONS.GOODS_SCRAP]: PackageX,
 };
 
+/** رنگِ هر جهتِ اثر: ورودی‌ها سبز، خروجِ پول قرمز، بقیه بی‌طرف‌تر. */
 const ACCENTS = {
-  [EFFECT_DIRECTIONS.GOODS_IN]: "text-teal-700 dark:text-teal-400",
-  [EFFECT_DIRECTIONS.GOODS_OUT]: "text-indigo-700 dark:text-indigo-400",
-  [EFFECT_DIRECTIONS.MONEY_IN]: "text-emerald-700 dark:text-emerald-400",
-  [EFFECT_DIRECTIONS.MONEY_OUT]: "text-rose-700 dark:text-rose-400",
-  [EFFECT_DIRECTIONS.GOODS_RELEASE]: "text-sky-700 dark:text-sky-400",
-  [EFFECT_DIRECTIONS.GOODS_SCRAP]: "text-stone-600 dark:text-stone-400",
+  [EFFECT_DIRECTIONS.GOODS_IN]: toneText("success"),
+  [EFFECT_DIRECTIONS.GOODS_OUT]: toneText("primary"),
+  [EFFECT_DIRECTIONS.MONEY_IN]: toneText("success"),
+  [EFFECT_DIRECTIONS.MONEY_OUT]: toneText("danger"),
+  [EFFECT_DIRECTIONS.GOODS_RELEASE]: toneText("info"),
+  [EFFECT_DIRECTIONS.GOODS_SCRAP]: toneText("neutral"),
 };
-
-const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
 
 /**
  * یک اثر پایه، به‌صورت یک سطرِ کوتاه.
@@ -55,8 +56,8 @@ export default function EffectBadge({ effect, side, showProductName = false }) {
   const done = Number(effect.appliedQuantity) || 0;
 
   const value = isGoods
-    ? `${fa(effect.quantity)} ${effect.unit || "عدد"}`
-    : `${fa(effect.amount)} ریال`;
+    ? `${formatNumber(effect.quantity)} ${effect.unit || "عدد"}`
+    : `${formatNumber(effect.amount)} ریال`;
 
   const restocked = Number(effect.restockedQuantity) || 0;
   const isIncoming = effect.direction === EFFECT_DIRECTIONS.GOODS_IN;
@@ -64,7 +65,7 @@ export default function EffectBadge({ effect, side, showProductName = false }) {
 
   const details = [
     showProductName && isGoods ? effect.productName : null,
-    hasUnitPrice ? `هر عدد ${fa(effect.unitPrice)} ریال` : null,
+    hasUnitPrice ? `هر عدد ${formatNumber(effect.unitPrice)} ریال` : null,
     // روش پرداخت enum عددی است و «نقدی» صفر — بررسیِ صریح لازم است.
     // عددی بیرون از روش‌های مرجوعی (مثلاً ۵ که در `PaymentTypeEnum` «اقساطی»
     // است) نباید با برچسبِ آن نوعِ سند خوانده شود.
@@ -73,11 +74,11 @@ export default function EffectBadge({ effect, side, showProductName = false }) {
         ? PAYMENT_TYPE_LABELS[effect.method]
         : "روش نامشخص"
       : null,
-    isGoods && done > 0 ? `${fa(done)} انجام‌شده` : null,
+    isGoods && done > 0 ? `${formatNumber(done)} انجام‌شده` : null,
     // برای کالای برگشتی، «انجام شد» و «به موجودی برگشت» یکی نیستند:
     // کالای معیوب تحویل گرفته می‌شود ولی وارد موجودی قابل‌فروش نمی‌شود.
     isIncoming && done > 0 && restocked !== done
-      ? `${fa(restocked)} به موجودی`
+      ? `${formatNumber(restocked)} به موجودی`
       : null,
     isPending ? (isGoods ? "در انتظار انبار" : "در انتظار پرداخت") : null,
   ].filter(Boolean);
@@ -109,7 +110,7 @@ export default function EffectBadge({ effect, side, showProductName = false }) {
             {observations
               .map(
                 (observation) =>
-                  `${fa(observation.quantity)} ${
+                  `${formatNumber(observation.quantity)} ${
                     RETURN_PROBLEM_LABELS[observation.problem] ??
                     observation.problem
                   }`,

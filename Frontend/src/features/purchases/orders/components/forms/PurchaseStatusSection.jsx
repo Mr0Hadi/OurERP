@@ -13,68 +13,17 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import {
-  PurchaseStatusEnum as PURCHASE_STATUSES,
   PURCHASE_STATUS_LABELS,
+  PURCHASE_STATUS_TONES,
 } from "@/shared/domain/enums/purchaseStatus";
 import {
   MANUAL_PURCHASE_STATUSES,
   isPurchaseStatusLocked,
 } from "../../domain/purchaseRules";
-import {
-  Clock,
-  Truck,
-  PackageCheck,
-  PackageOpen,
-  XCircle,
-  Activity,
-  FileText,
-} from "lucide-react";
+import { Activity } from "lucide-react";
 
-const STATUS_CONFIG = {
-  [PURCHASE_STATUSES.PROFORMA]: {
-    icon: FileText,
-    textColor: "text-slate-600 dark:text-slate-300",
-    bgColor: "bg-slate-50 dark:bg-slate-900/40",
-    borderColor: "border-slate-200 dark:border-slate-700",
-  },
-  [PURCHASE_STATUSES.PENDING]: {
-    icon: Clock,
-    textColor: "text-amber-600 dark:text-amber-400",
-    bgColor: "bg-amber-50 dark:bg-amber-950/40",
-    borderColor: "border-amber-200 dark:border-amber-800",
-  },
-  [PURCHASE_STATUSES.SHIPPED]: {
-    icon: Truck,
-    textColor: "text-blue-600 dark:text-blue-400",
-    bgColor: "bg-blue-50 dark:bg-blue-950/40",
-    borderColor: "border-blue-200 dark:border-blue-800",
-  },
-  [PURCHASE_STATUSES.PARTIALLY_RECEIVED]: {
-    icon: PackageOpen,
-    textColor: "text-orange-600 dark:text-orange-400",
-    bgColor: "bg-orange-50 dark:bg-orange-950/40",
-    borderColor: "border-orange-200 dark:border-orange-800",
-  },
-  [PURCHASE_STATUSES.RECEIVED]: {
-    icon: PackageCheck,
-    textColor: "text-[oklch(0.50_0.16_152)] dark:text-[oklch(0.70_0.16_152)]",
-    bgColor: "bg-green-50 dark:bg-green-950/40",
-    borderColor: "border-green-200 dark:border-green-800",
-  },
-  [PURCHASE_STATUSES.CANCELLED]: {
-    icon: XCircle,
-    textColor: "text-destructive",
-    bgColor: "bg-destructive/5",
-    borderColor: "border-destructive/20",
-  },
-};
-
-const DEFAULT_CONFIG = {
-  icon: Activity,
-  textColor: "text-card-foreground",
-  bgColor: "bg-muted/50",
-  borderColor: "border-border",
-};
+import StatusText from "@/shared/components/status/StatusText";
+import { PURCHASE_STATUS_ICONS } from "@/shared/components/status/statusIcons";
 
 /**
  * @param savedStatus وضعیتِ ذخیره‌شده روی سرور؛ برای خریدِ تازه خالی.
@@ -115,16 +64,14 @@ export default function PurchaseStatusSection({
               {options.map((status) => {
                 const key = String(status);
                 const label = PURCHASE_STATUS_LABELS[status];
-                const itemConfig = STATUS_CONFIG[status] ?? DEFAULT_CONFIG;
-                const ItemIcon = itemConfig.icon;
                 return (
                   <SelectItem key={key} value={key}>
-                    <span
-                      className={`flex items-center gap-2 ${itemConfig.textColor}`}
+                    <StatusText
+                      tone={PURCHASE_STATUS_TONES[status]}
+                      icon={PURCHASE_STATUS_ICONS[status] ?? Activity}
                     >
-                      <ItemIcon className="h-3.5 w-3.5" />
                       {label}
-                    </span>
+                    </StatusText>
                   </SelectItem>
                 );
               })}

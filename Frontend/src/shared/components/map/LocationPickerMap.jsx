@@ -118,6 +118,8 @@ function LocationMarker({ position, onChange }) {
 }
 
 // کامپوننت کمکی برای حرکت برنامه‌ای نقشه به یک نقطه‌ی جدید (نتیجه‌ی جستجو یا GPS)
+// هر setFlyTarget یک آبجکت تازه می‌سازد، پس حتی انتخاب دوباره‌ی همان نقطه
+// هم افکت را اجرا می‌کند؛ نیازی به کلید یکتا نیست.
 function FlyToHandler({ target }) {
   const map = useMap();
 
@@ -269,7 +271,7 @@ export default function LocationPickerMap({
     const lng = parseFloat(result.lon);
     const next = [lat, lng];
     setPosition(next);
-    setFlyTarget({ position: next, zoom: 16, key: Date.now() });
+    setFlyTarget({ position: next, zoom: 16 });
     setShowResults(false);
     setSearchQuery(result.display_name);
     setResolvedAddress(formatAddressFromNominatim(result.display_name));
@@ -295,7 +297,7 @@ export default function LocationPickerMap({
       (pos) => {
         const next = [pos.coords.latitude, pos.coords.longitude];
         setPosition(next);
-        setFlyTarget({ position: next, zoom: 16, key: Date.now() });
+        setFlyTarget({ position: next, zoom: 16 });
         setIsLocating(false);
         reverseGeocode(next[0], next[1]);
       },

@@ -39,10 +39,11 @@ import {
   formatLabelSize,
   sheetGeometryOf,
 } from "../domain/labelTemplate";
-import { fa } from "../domain/unitVocabulary";
+
 import { useLabelTemplateStore } from "../store/unitFilterStore";
 import { useMarkUnitsPrintedMutation } from "../services/mutations";
 import UnitLabel from "./UnitLabel";
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /** دکمه‌های کنارِ هم برای انتخابِ یکی از چند گزینه‌ی کوتاه. */
 function Segmented({ value, options, onChange, ariaLabel }) {
@@ -152,7 +153,7 @@ function Settings({ units, template, geometry }) {
         <p className="text-xs text-muted-foreground">
           {formatLabelSize(geometry.labelWidthMm, geometry.labelHeightMm)} میلی‌متر،{" "}
           {geometry.perPage > 1
-            ? `${fa(geometry.perPage)} برچسب در هر ورق (${fa(geometry.columns)} ستون، ${fa(geometry.rows)} ردیف)`
+            ? `${formatNumber(geometry.perPage)} برچسب در هر ورق (${formatNumber(geometry.columns)} ستون، ${formatNumber(geometry.rows)} ردیف)`
             : "هر برچسب یک صفحه (رول)"}
         </p>
       </section>
@@ -194,7 +195,7 @@ function Settings({ units, template, geometry }) {
                 </span>
                 {partial && (
                   <span className="text-[11px] text-muted-foreground">
-                    {available === 0 ? "هیچ‌کدام ندارند" : `${fa(available)} از ${fa(units.length)}`}
+                    {available === 0 ? "هیچ‌کدام ندارند" : `${formatNumber(available)} از ${formatNumber(units.length)}`}
                   </span>
                 )}
               </label>
@@ -303,7 +304,7 @@ export default function LabelPrintDesigner({ units, onClose }) {
           <div>
             <h2 className="text-base font-semibold">چاپ برچسب</h2>
             <p className="text-xs text-muted-foreground">
-              {fa(count)} برچسب، {fa(pageCount)} صفحه
+              {formatNumber(count)} برچسب، {formatNumber(pageCount)} صفحه
             </p>
           </div>
           <Button
@@ -324,7 +325,7 @@ export default function LabelPrintDesigner({ units, onClose }) {
         <div className="border-t border-border p-3">
           <Button type="button" size="lg" className="w-full gap-2" onClick={handlePrint}>
             <Printer className="h-4 w-4" />
-            چاپ {fa(count)} برچسب
+            چاپ {formatNumber(count)} برچسب
           </Button>
         </div>
       </aside>
@@ -352,7 +353,7 @@ export default function LabelPrintDesigner({ units, onClose }) {
           <AlertDialogHeader>
             <AlertDialogTitle>برچسب‌ها چاپ شدند؟</AlertDialogTitle>
             <AlertDialogDescription>
-              اگر {fa(count)} برچسب درست از پرینتر بیرون آمد، ثبتش کنید تا این دانه‌ها
+              اگر {formatNumber(count)} برچسب درست از پرینتر بیرون آمد، ثبتش کنید تا این دانه‌ها
               «برچسب‌خورده» شوند و تاریخ و دفعاتِ چاپ روی هر دانه بماند. اگر چاپ لغو
               شد یا خراب درآمد، «چاپ نشد» را بزنید و دوباره چاپ کنید.
             </AlertDialogDescription>

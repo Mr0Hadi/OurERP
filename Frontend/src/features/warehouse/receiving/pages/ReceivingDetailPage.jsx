@@ -23,12 +23,11 @@ import FileUploadList from "@/shared/components/files/FileUploadList";
 import RemoteImage from "@/shared/components/files/RemoteImage";
 import { useFileUploadList } from "@/shared/hooks/useFileUploadList";
 import { ImageFolderEnum } from "@/shared/domain/enums/imageFolder";
-import { useHeaderStore } from "@/shared/store/headerStore";
 import {
   usePurchaseReceivingInfoQuery,
   usePurchaseReturnPendingEffectsQuery,
 } from "../services/queries";
-import { useProductsQuery } from "@/features/warehouse/products/services/queries";
+import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import { useReceiveShipmentMutation } from "../services/mutations";
 import { useReceivingForm } from "../hooks/useReceivingForm";
 import { useGoodsRoundForm } from "@/shared/hooks/useGoodsRoundForm";
@@ -42,10 +41,8 @@ import GoodsRoundItemsSection from "@/shared/components/returns/GoodsRoundItemsS
 import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
-const ALL_FILTERS = {};
-const PAGINATION = { pageIndex: 0, pageSize: 200 };
-const SORTING = { id: "name", desc: false };
 
 // سقفِ عکس‌های یک دورِ دریافت — `ReceivePurchaseCommand.Images` سقفی
 // ندارد، این فقط یک حدِ عملی برای فرم است.
@@ -77,16 +74,12 @@ function ReceivingDetailForm({ receivingInfo, replacementReturnId }) {
   const navigate = useNavigate();
   const receiveMutation = useReceiveShipmentMutation();
 
-  const { data: productsData } = useProductsQuery(
-    ALL_FILTERS,
-    PAGINATION,
-    SORTING,
-  );
+  const { products: productOptions } = useProductsOptionsQuery();
   const productMap = useMemo(() => {
     const map = new Map();
-    (productsData?.items || []).forEach((p) => map.set(p.id, p));
+    productOptions.forEach((p) => map.set(p.id, p));
     return map;
-  }, [productsData]);
+  }, [productOptions]);
 
   const {
     formData,
@@ -316,7 +309,7 @@ function ReceivingDetailForm({ receivingInfo, replacementReturnId }) {
             <Button
               className={`flex-1 gap-2 ${
                 !complete && (replacementOnly || items.length > 0)
-                  ? "bg-amber-600 hover:bg-amber-700 text-white"
+                  ? "bg-warning hover:bg-warning text-white"
                   : ""
               }`}
               disabled={
@@ -389,42 +382,34 @@ export default function ReceivingDetailPage() {
     ? Number(searchParams.get("returnId"))
     : null;
   const navigate = useNavigate();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   const {
     data: receivingInfo,
     isLoading,
     isError,
+    error: loadError,
+    refetch: retryLoad,
   } = usePurchaseReceivingInfoQuery(Number(id));
 
-  useEffect(() => {
-    setHeader({
-      title: isLoading
-        ? "در حال بارگذاری..."
-        : receivingInfo
-          ? replacementReturnId != null
-            ? "دریافت کالای جایگزین"
-            : "دریافت کالا"
-          : "خطا",
-      showBack: true,
-    });
-    return () => clearHeader();
-  }, [
-    navigate,
-    setHeader,
-    clearHeader,
-    receivingInfo,
-    isLoading,
-    replacementReturnId,
-  ]);
+  usePageHeader({
+    title: isLoading
+      ? "در حال بارگذاری..."
+      : receivingInfo
+        ? replacementReturnId != null
+          ? "دریافت کالای جایگزین"
+          : "دریافت کالا"
+        : "خطا",
+    showBack: true,
+  });
 
   if (isLoading) return <WarehouseFormSkeleton />;
 
   if (isError || !receivingInfo) {
     return (
       <DetailErrorState
-        message="خرید مورد نظر یافت نشد."
+        error={loadError}
+        notFoundMessage="خرید مورد نظر یافت نشد."
+        onRetry={retryLoad}
         onBack={() => navigate(ROUTES.WAREHOUSE_RECEIVING)}
       />
     );

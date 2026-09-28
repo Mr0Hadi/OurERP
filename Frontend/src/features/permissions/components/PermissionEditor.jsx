@@ -5,8 +5,7 @@ import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { cn } from "@/shared/lib/utils";
-
-const toFa = (n) => n.toLocaleString("fa-IR");
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /** حرفِ «ی/ک» عربی و فاصله‌ی مجازی نباید جست‌وجو را خراب کنند. */
 const normalize = (text) =>
@@ -111,9 +110,9 @@ export default function PermissionEditor({
 
   const views = [
     { id: "all", label: "همه" },
-    { id: "selected", label: `داده‌شده (${toFa(selectedCount)})` },
+    { id: "selected", label: `داده‌شده (${formatNumber(selectedCount)})` },
     ...(hasTemplate
-      ? [{ id: "diff", label: `تفاوت با الگو (${toFa(diffCount)})` }]
+      ? [{ id: "diff", label: `تفاوت با الگو (${formatNumber(diffCount)})` }]
       : []),
   ];
 
@@ -221,7 +220,7 @@ export default function PermissionEditor({
                 </span>
                 {groupDiff && (
                   <span
-                    className="size-1.5 rounded-full bg-amber-500"
+                    className="size-1.5 rounded-full bg-warning"
                     title="با الگو تفاوت دارد"
                   />
                 )}
@@ -232,7 +231,7 @@ export default function PermissionEditor({
                   />
                 </div>
                 <span className="w-12 text-left text-xs text-muted-foreground tabular-nums">
-                  {toFa(count)}/{toFa(total)}
+                  {formatNumber(count)}/{formatNumber(total)}
                 </span>
                 {!filtering && (
                   <ChevronDown
@@ -295,7 +294,7 @@ function PermissionRow({
     <li
       className={cn(
         "flex h-8 items-center gap-2 rounded-md px-1.5",
-        inTemplate && !checked && "bg-amber-500/10",
+        inTemplate && !checked && "bg-warning/10",
       )}
     >
       <Checkbox
@@ -311,7 +310,7 @@ function PermissionRow({
           "flex-1 truncate text-sm",
           disabled || locked ? "cursor-not-allowed text-muted-foreground" : "cursor-pointer",
           removed && "text-muted-foreground line-through",
-          added && "font-medium text-emerald-600 dark:text-emerald-400",
+          added && "font-medium text-success",
         )}
       >
         {item.title}

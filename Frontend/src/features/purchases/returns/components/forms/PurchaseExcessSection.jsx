@@ -19,8 +19,7 @@ import {
   freeExcessQuantityOf,
   freeUnlistedQuantityOf,
 } from "@/features/purchases/returns/domain/purchaseReturnVocabulary";
-
-const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
  * ردیف‌های قابل‌خرید از `PurchaseReceivingInfoDto`.
@@ -142,7 +141,7 @@ function ExcessForm({ purchaseId, candidates }) {
     if (!row?.selected) return null;
     const quantity = Number(row.quantity) || 0;
     if (quantity <= 0) return "مقدار باید از صفر بیشتر باشد";
-    if (quantity > c.available) return `حداکثر ${fa(c.available)} عدد آزاد است`;
+    if (quantity > c.available) return `حداکثر ${formatNumber(c.available)} عدد آزاد است`;
     if (c.purchaseItemId == null) {
       if (!(Number(row.unitPrice) > 0)) return "قیمت واحد فاکتور الزامی است";
       const discount = Number(row.discount) || 0;
@@ -211,11 +210,11 @@ function ExcessForm({ purchaseId, candidates }) {
                     {c.productName}
                   </span>
                   <span className="block text-xs text-muted-foreground">
-                    {c.kindLabel} · {fa(c.available)} {c.unit || "عدد"} آزاد
+                    {c.kindLabel} · {formatNumber(c.available)} {c.unit || "عدد"} آزاد
                     {/* بخشی از قرنطینه در ادعای مرجوعیِ باز رزرو شده؛ بدون
                         این، سقفِ پذیرش بی‌دلیل کمتر از عددِ قرنطینه به نظر می‌رسید. */}
-                    {c.reserved > 0 && ` · ${fa(c.reserved)} در مرجوعیِ باز`}
-                    {!isUnlisted && ` · هر عدد ${fa(c.unitPrice)} ریال`}
+                    {c.reserved > 0 && ` · ${formatNumber(c.reserved)} در مرجوعیِ باز`}
+                    {!isUnlisted && ` · هر عدد ${formatNumber(c.unitPrice)} ریال`}
                   </span>
                 </span>
               </label>

@@ -26,7 +26,8 @@ import {
   PAYMENT_REFERENCE_FIELDS,
 } from "@/shared/domain/enums/paymentType";
 import { toDateOnly } from "@/shared/lib/dateUtils";
-import { numberToPersianWords } from "@/shared/lib/numberToPersianWords";
+import { rialAmountInWords } from "@/shared/lib/numberToPersianWords";
+import { formatRial } from "@/shared/lib/numberFormat";
 
 /**
  * روش‌هایی که یک *ردیفِ* پرداخت می‌تواند داشته باشد. «ترکیبی» و «اقساطی»
@@ -88,7 +89,7 @@ export default function PaymentFormDialog({
     : amount <= 0
       ? "مبلغ باید بیشتر از صفر باشد"
       : maxAmount != null && amount > maxAmount
-        ? `مبلغ نمی‌تواند بیشتر از ${maxAmount.toLocaleString("fa-IR")} ریال باشد`
+        ? `مبلغ نمی‌تواند بیشتر از ${formatRial(maxAmount)} باشد`
         : null;
 
   const close = () => onOpenChange(false);
@@ -170,11 +171,7 @@ export default function PaymentFormDialog({
               htmlFor="payment-amount"
               required
               error={amountError ? { message: amountError } : undefined}
-              hint={
-                amount > 0
-                  ? numberToPersianWords(amount / 10, { suffix: "تومان" })
-                  : undefined
-              }
+              hint={amount > 0 ? rialAmountInWords(amount) : undefined}
               className="space-y-1.5 sm:col-span-2"
             >
               <PriceInput

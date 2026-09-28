@@ -17,7 +17,7 @@ import {
   useSidebar,
 } from "@/shared/components/ui/sidebar";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import {
   useUserInfoQuery,
   useLogoutMutation,
@@ -78,7 +78,7 @@ export function NavUser() {
   };
 
   const openAccount = () =>
-    navigate(ROUTES.EMPLOYEES_DETAIL.replace(":id", user.id));
+    navigate(routeWithId(ROUTES.EMPLOYEES_DETAIL, user.id));
 
   return (
     <SidebarMenu>

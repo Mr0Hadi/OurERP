@@ -13,50 +13,11 @@ import {
 } from "@/shared/components/ui/select"
 import { normalizePersianDigits } from "@/shared/lib/persianDigits"
 import { cn } from "@/shared/lib/utils"
-
-/** Value used for the accessibility (wheelchair) plate option. */
-export const DISABLED_PLATE_LETTER = "معلولان"
-
-/** Every plate letter the picker offers — the same set and order AZKI uses. */
-export const PLATE_LETTERS = [
-  { value: "ا", label: "الف" },
-  { value: "ب", label: "ب" },
-  { value: "پ", label: "پ" },
-  { value: "ت", label: "ت" },
-  { value: "ث", label: "ث" },
-  { value: "ج", label: "ج" },
-  { value: "ح", label: "ح" },
-  { value: "د", label: "د" },
-  { value: "ر", label: "ر" },
-  { value: "ز", label: "ز" },
-  { value: "ژ", label: "ژ" },
-  { value: "س", label: "س" },
-  { value: "ش", label: "ش" },
-  { value: "ص", label: "ص" },
-  { value: "ض", label: "ض" },
-  { value: "ط", label: "ط" },
-  { value: "ظ", label: "ظ" },
-  { value: "ع", label: "ع" },
-  { value: "ف", label: "ف" },
-  { value: "ق", label: "ق" },
-  { value: "ک", label: "ک" },
-  { value: "گ", label: "گ" },
-  // Latin-lettered special plates (diplomatic / service types).
-  { value: "D", label: "D" },
-  { value: "S", label: "S" },
-]
-
-/**
- * The value an untouched PlateInput holds — letter defaults to الف ("ا").
- * Seed controlled state with this so external mirrors stay in sync from
- * the first render.
- */
-export const DEFAULT_PLATE_VALUE = {
-  twoDigit: "",
-  letter: "ا",
-  threeDigit: "",
-  serial: "",
-}
+import {
+  DEFAULT_PLATE_VALUE,
+  DISABLED_PLATE_LETTER,
+  PLATE_LETTERS,
+} from "@/shared/lib/plate"
 
 function mergePlate(patch) {
   return { ...DEFAULT_PLATE_VALUE, ...patch }

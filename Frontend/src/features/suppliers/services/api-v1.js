@@ -7,37 +7,18 @@ import { normalizeListResponse } from "@/shared/services/api/contract";
  * مسیرها REST نیستند: کنترلر با نامِ اکشن آدرس‌دهی می‌شود
  * (`GetSupplierList`, `CreateSupplier`, …) و برای ویرایش/حذف، شناسه در
  * بدنه یا query می‌رود نه در مسیر.
- *
- * نامِ پارامترهای فیلتر هم فرق دارد و باید همان‌ها فرستاده شود، وگرنه
- * فیلتر بی‌صدا نادیده گرفته می‌شود:
- * `companyNameOrContactName`, `fromBalance`, `toBalance`, `balanceType`.
- * مرتب‌سازی را سرور اصلاً پشتیبانی نمی‌کند.
- *
- * `id` یک فیلترِ کاملاً جدا از `companyNameOrContactName` است (نه
- * بخشی از همان جست‌وجوی متنی) — تطبیقِ دقیقِ عددی روی شناسه‌ی ردیف،
- * نه Contains روی نام.
  */
-export async function fetchSuppliers({
-  page = 1,
-  limit = 10,
-  search = "",
-  id = "",
-  minBalance = "",
-  maxBalance = "",
-  balanceType = "",
-} = {}) {
-  const { data } = await axiosInstance.get("/Supplier/GetSupplierList", {
-    params: {
-      page,
-      take: limit,
-      companyNameOrContactName: search || undefined,
-      id: id !== "" ? id : undefined,
-      minBalance: minBalance !== "" ? minBalance : undefined,
-      maxBalance: maxBalance !== "" ? maxBalance : undefined,
-      balanceType: balanceType !== "" ? balanceType : undefined,
-    },
-  });
 
+/** `SupplierListSortEnum`ِ بکند، بر اساسِ شناسه‌ی ستونِ جدول. */
+export const SUPPLIER_SORT_COLUMNS = {
+  id: 0,
+  companyName: 1,
+  fullName: 3, // LAST_NAME
+};
+
+/** `GET GetSupplierList` — پارامترها از `listQuery` با همان نام‌های `GetSupplierListQuery`. */
+export async function fetchSuppliers(params) {
+  const { data } = await axiosInstance.get("/Supplier/GetSupplierList", { params });
   return normalizeListResponse(data, { itemsKey: "supplierList" });
 }
 

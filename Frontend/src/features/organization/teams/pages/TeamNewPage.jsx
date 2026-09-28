@@ -1,9 +1,7 @@
-import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Save, X } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import { useHeaderStore } from "@/shared/store/headerStore";
 import { ROUTES } from "@/shared/constants/routes";
 import { useReturnTo } from "@/shared/hooks/useReturnTo";
 
@@ -11,13 +9,12 @@ import { useCreateTeamMutation } from "../services/mutations";
 import { useTeamForm } from "../hooks/useTeamForm";
 import TeamIdentityForm from "../components/forms/TeamIdentityForm";
 import OrgLeadershipForm from "../../components/OrgLeadershipForm";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 export default function TeamNewPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const createMutation = useCreateTeamMutation();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   const { hasReturnTo, goBack } = useReturnTo(ROUTES.ORG_TEAMS);
 
@@ -26,10 +23,7 @@ export default function TeamNewPage() {
   // آن فقط یک فرصت برای اشتباه است.
   const presetDepartmentId = location.state?.departmentId ?? null;
 
-  useEffect(() => {
-    setHeader({ title: "ثبت تیم جدید", showBack: true });
-    return () => clearHeader();
-  }, [setHeader, clearHeader]);
+  usePageHeader({ title: "ثبت تیم جدید", showBack: true });
 
   const { formMethods, buildPayload } = useTeamForm(
     null,

@@ -1,13 +1,12 @@
 import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { ChevronLeft } from "lucide-react";
 
 import DataTable from "@/shared/components/table/DataTable";
-import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { OrgRoleEnum } from "@/shared/domain/enums/orgRole";
 
 import EmployeeStatusBadge from "./EmployeeStatusBadge";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
+import { detailsColumn } from "@/shared/components/table/columns";
 
 /** کارمند غیرفعال کم‌رنگ می‌شود تا در فهرست از فعال‌ها تفکیک شود. */
 const rowClassName = (row) =>
@@ -21,7 +20,6 @@ export default function EmployeeTable({
   pageSize,
   onPaginationChange,
 }) {
-  const navigate = useNavigate();
 
   const columns = useMemo(
     () => [
@@ -89,24 +87,9 @@ export default function EmployeeTable({
         header: "وضعیت",
         cell: (info) => <EmployeeStatusBadge isActive={info.getValue()} />,
       },
-      {
-        id: "actions",
-        header: "جزئیات",
-        enableSorting: false,
-        cell: ({ row }) => (
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1"
-            onClick={() => navigate(`/employees/${row.original.id}`)}
-          >
-            جزئیات
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-        ),
-      },
+      detailsColumn((row) => routeWithId(ROUTES.EMPLOYEES_DETAIL, row.id)),
     ],
-    [navigate],
+    [],
   );
 
   return (

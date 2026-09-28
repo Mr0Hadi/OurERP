@@ -1,5 +1,7 @@
 import { CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
 
+import { toneRow, toneSoft } from "@/shared/lib/tone";
+
 /**
  * وضعیت ردیف‌های «مقدار مورد انتظار در برابر مقدار واقعی» در انبار.
  *
@@ -27,22 +29,23 @@ export function createRowStatus({
     complete: {
       label: completeLabel,
       icon: CheckCircle2,
-      badgeClass:
-        "bg-green-50 text-[oklch(0.50_0.16_152)] border-green-200 dark:bg-green-950/40 dark:border-green-800",
-      rowClass: "",
+      tone: "success",
+      badgeClass: toneSoft("success"),
+      rowClass: toneRow("success"),
     },
     partial: {
       label: partialLabel,
       icon: AlertTriangle,
-      badgeClass:
-        "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400",
-      rowClass: "bg-amber-50/40 dark:bg-amber-950/10",
+      tone: "warning",
+      badgeClass: toneSoft("warning"),
+      rowClass: toneRow("warning"),
     },
     [emptyKey]: {
       label: emptyLabel,
       icon: XCircle,
-      badgeClass: "bg-destructive/5 text-destructive border-destructive/20",
-      rowClass: "bg-destructive/[0.03]",
+      tone: "danger",
+      badgeClass: toneSoft("danger"),
+      rowClass: toneRow("danger"),
     },
   };
 

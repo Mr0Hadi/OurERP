@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { Save, X, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -22,9 +22,9 @@ import ProductImageUpload from "../components/forms/ProductImageUpload";
 import ProductBarcodeDisplay from "../components/forms/ProductBarcodeDisplay";
 import ProductDetailLoading from "../components/forms/ProductDetailLoading";
 import UnitsPageLink from "../../units/components/UnitsPageLink";
-import { useHeaderStore } from "@/shared/store/headerStore";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 function ProductDetailForm({ productData }) {
   const navigate = useNavigate();
@@ -157,23 +157,23 @@ function ProductDetailForm({ productData }) {
 export default function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const setHeader = useHeaderStore((state) => state.setHeader);
-  const clearHeader = useHeaderStore((state) => state.clearHeader);
 
-  const { data: productData, isLoading, isError } = useProductQuery(id);
+  const {
+    data: productData,
+    isLoading,
+    isError,
+    error: loadError,
+    refetch: retryLoad,
+  } = useProductQuery(id);
 
-  useEffect(() => {
-    setHeader({
-      title: isLoading
-        ? "در حال بارگذاری..."
-        : productData
-        ? "جزئیات و ویرایش کالا"
-        : "خطا",
-      showBack: true,
-    });
-
-    return () => clearHeader();
-  }, [navigate, setHeader, clearHeader, productData, isLoading]);
+  usePageHeader({
+    title: isLoading
+      ? "در حال بارگذاری..."
+      : productData
+      ? "جزئیات و ویرایش کالا"
+      : "خطا",
+    showBack: true,
+  });
 
   if (isLoading) {
     return <ProductDetailLoading />;
@@ -182,7 +182,9 @@ export default function ProductDetailPage() {
   if (isError || !productData) {
     return (
       <DetailErrorState
-        message="کالا مورد نظر یافت نشد یا خطایی رخ داده است."
+        error={loadError}
+        notFoundMessage="کالای مورد نظر یافت نشد."
+        onRetry={retryLoad}
         onBack={() => navigate(ROUTES.WAREHOUSE_PRODUCTS)}
       />
     );

@@ -24,6 +24,7 @@ import { createProduct } from "@/features/warehouse/products/services/api-v1";
 import { productKeys } from "@/features/warehouse/products/services/queryKeys";
 import { useProductCategoriesQuery } from "@/features/warehouse/categories/services/queries";
 import { PRODUCT_UNIT_LABELS, unitLabelOf } from "@/shared/domain/enums/productUnit";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 const DEFAULT_UNIT = 1;
 
@@ -63,7 +64,7 @@ export default function QuickCreateProductDialog({ open, onOpenChange, onCreated
       setProductCategoryId(null);
       onOpenChange(false);
     },
-    onError: (error) => toast.error(error?.message || "خطا در ساخت کالا"),
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در ساخت کالا")),
   });
 
   const canSubmit = name.trim().length > 0 && productCategoryId != null;

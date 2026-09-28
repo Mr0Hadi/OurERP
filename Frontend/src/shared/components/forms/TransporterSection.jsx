@@ -8,28 +8,8 @@ import {
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { MobileNumberInput } from "@/shared/components/ui/mobile-number-input";
-import {
-  DEFAULT_PLATE_VALUE,
-  PlateInput,
-} from "@/shared/components/ui/plate-input";
-
-const PLATE_STRING_SEPARATOR = "|";
-
-/** پلاک به‌صورت رشته ذخیره می‌شود (برای فرم و ارسال به سرور)، اما
- * PlateInput مقدارش را به‌صورت آبجکت می‌خواهد. این دو تابع بین آن دو
- * تبدیل می‌کنند؛ برخلاف فرمت قبلی (چهار خانه‌ی همیشه کامل)، اینجا
- * مقادیر نصفه‌کاره هم حفظ می‌شوند تا تایپ کاربر گم نشود. */
-function plateValueToString({ twoDigit, letter, threeDigit, serial }) {
-  if (!twoDigit && !threeDigit && !serial) return "";
-  return [twoDigit, letter, threeDigit, serial].join(PLATE_STRING_SEPARATOR);
-}
-
-function plateStringToValue(value) {
-  if (!value) return DEFAULT_PLATE_VALUE;
-  const [twoDigit = "", letter = "", threeDigit = "", serial = ""] =
-    value.split(PLATE_STRING_SEPARATOR);
-  return { twoDigit, letter, threeDigit, serial };
-}
+import { PlateInput } from "@/shared/components/ui/plate-input";
+import { plateStringToValue, plateValueToString } from "@/shared/lib/plate";
 
 /**
  * کارت اطلاعات فرد تحویل‌دهنده/تحویل‌گیرنده به‌همراه پلاک خودرو.

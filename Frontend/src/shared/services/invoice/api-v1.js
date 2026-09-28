@@ -1,4 +1,5 @@
 import axiosInstance from "@/shared/services/api/axios";
+import { extractServerMessage } from "@/shared/lib/errorMessage";
 
 /**
  * لایه‌ی تماس با `api/Invoice` (بخش ۱۳ سند api-guide.fa.md) — فاکتورِ
@@ -27,11 +28,13 @@ async function unwrapBlobError(error) {
   if (!(body instanceof Blob)) throw error;
 
   try {
-    const parsed = JSON.parse(await body.text());
-    const message = parsed?.Message ?? parsed?.message ?? parsed?.title;
-    if (message) error.message = message;
+    const message = extractServerMessage(JSON.parse(await body.text()));
+    if (message) {
+      error.serverMessage = message;
+      error.message = message;
+    }
   } catch {
-    // بدنه‌ی غیر JSON (مثلاً صفحه‌ی خطای پروکسی) — پیامِ خودِ axios می‌ماند.
+    // بدنه‌ی غیر JSON (مثلاً صفحه‌ی خطای پروکسی) — پیامِ عمومیِ اینترسپتور می‌ماند.
   }
 
   throw error;

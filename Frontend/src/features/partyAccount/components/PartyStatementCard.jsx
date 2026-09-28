@@ -12,13 +12,12 @@ import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
 import { Label } from "@/shared/components/ui/label";
 import { usePartyStatementQuery } from "../services/queries";
 import LedgerBalanceBadge from "./LedgerBalanceBadge";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /** `PartyLedgerEntryTypeEnum.REVERSAL` — ردیفی که ردیفِ دیگری را پس می‌گیرد. */
 const REVERSAL_ENTRY_TYPE = 7;
-
-const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
 
 /** مانده با علامتِ خوانا: مثبت بدهکار، منفی بستانکار. */
 function BalanceText({ value }) {
@@ -28,11 +27,11 @@ function BalanceText({ value }) {
     <span
       className={
         number > 0
-          ? "text-amber-700 dark:text-amber-300"
-          : "text-sky-700 dark:text-sky-300"
+          ? "text-warning"
+          : "text-info"
       }
     >
-      {fa(Math.abs(number))} {number > 0 ? "بد" : "بس"}
+      {formatNumber(Math.abs(number))} {number > 0 ? "بد" : "بس"}
     </span>
   );
 }
@@ -40,13 +39,13 @@ function BalanceText({ value }) {
 function sourceLinkOf(entry) {
   if (entry.saleId) {
     return {
-      to: ROUTES.SALES_DETAIL.replace(":id", entry.saleId),
+      to: routeWithId(ROUTES.SALES_DETAIL, entry.saleId),
       label: "فاکتور فروش",
     };
   }
   if (entry.purchaseId) {
     return {
-      to: ROUTES.PURCHASES_DETAIL.replace(":id", entry.purchaseId),
+      to: routeWithId(ROUTES.PURCHASES_DETAIL, entry.purchaseId),
       label: "فاکتور خرید",
     };
   }
@@ -199,7 +198,7 @@ export default function PartyStatementCard({
                               {isReversal && entry.reversalOfEntryId && (
                                 <>
                                   {" "}
-                                  · برگشتِ ردیف #{fa(entry.reversalOfEntryId)}
+                                  · برگشتِ ردیف #{formatNumber(entry.reversalOfEntryId)}
                                 </>
                               )}
                               {source && (
@@ -216,10 +215,10 @@ export default function PartyStatementCard({
                             </p>
                           </td>
                           <td className="px-2 py-2 text-center">
-                            {Number(entry.debit) ? fa(entry.debit) : "—"}
+                            {Number(entry.debit) ? formatNumber(entry.debit) : "—"}
                           </td>
                           <td className="px-2 py-2 text-center">
-                            {Number(entry.credit) ? fa(entry.credit) : "—"}
+                            {Number(entry.credit) ? formatNumber(entry.credit) : "—"}
                           </td>
                           <td className="px-2 py-2 text-center whitespace-nowrap">
                             <BalanceText value={entry.runningBalance} />
@@ -235,11 +234,11 @@ export default function PartyStatementCard({
             <div className="rounded-lg bg-muted/50 px-3 py-2 text-sm space-y-1">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">جمع بدهکار</span>
-                <span>{fa(data?.totalDebit)}</span>
+                <span>{formatNumber(data?.totalDebit)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">جمع بستانکار</span>
-                <span>{fa(data?.totalCredit)}</span>
+                <span>{formatNumber(data?.totalCredit)}</span>
               </div>
               <div className="flex justify-between border-t border-border pt-1 font-semibold">
                 <span className="text-muted-foreground">

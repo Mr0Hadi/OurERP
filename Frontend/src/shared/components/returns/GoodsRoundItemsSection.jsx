@@ -196,7 +196,7 @@ export default function GoodsRoundItemsSection({
                   >
                     <SelectTrigger
                       className={`h-8 w-40 text-xs ${
-                        round.source == null ? "border-amber-400" : ""
+                        round.source == null ? "border-warning/50" : ""
                       }`}
                     >
                       <SelectValue placeholder="انتخاب مبدأ" />

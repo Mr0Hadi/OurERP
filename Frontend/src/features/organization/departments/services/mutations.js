@@ -6,6 +6,7 @@ import { departmentKeys } from "./queryKeys";
 import { teamKeys } from "../../teams/services/queryKeys";
 import { userKeys } from "@/features/employees/services/queryKeys";
 import { authKeys } from "@/features/auth/services/queryKeys";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 /**
  * تعیینِ مسئول/جانشینِ واحد کارمند را جابه‌جا می‌کند: واحدش عوض می‌شود،
@@ -28,7 +29,7 @@ export function useCreateDepartmentMutation() {
       toast.success("واحد جدید با موفقیت ثبت شد.");
       invalidateOrgChart(queryClient);
     },
-    onError: (error) => toast.error(error?.message || "خطا در ثبت واحد"),
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در ثبت واحد")),
   });
 }
 
@@ -41,7 +42,7 @@ export function useUpdateDepartmentMutation() {
       toast.success("اطلاعات واحد با موفقیت ویرایش شد.");
       invalidateOrgChart(queryClient);
     },
-    onError: (error) => toast.error(error?.message || "خطا در ویرایش واحد"),
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در ویرایش واحد")),
   });
 }
 
@@ -55,6 +56,6 @@ export function useDeleteDepartmentMutation() {
       queryClient.invalidateQueries({ queryKey: departmentKeys.all });
       queryClient.invalidateQueries({ queryKey: departmentKeys.detail(id) });
     },
-    onError: (error) => toast.error(error?.message || "خطا در حذف واحد"),
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در حذف واحد")),
   });
 }

@@ -9,8 +9,8 @@ import {
   whereaboutsOf,
   documentRouteOf,
   daysSince,
-  fa,
 } from "../domain/unitVocabulary";
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
  * خانه‌های مشترکِ جدول و کارت‌های دانه — یک شکل در هر دو چیدمان.
@@ -27,7 +27,7 @@ export function UnitBarcodeCell({ unit }) {
         {unit.barcode}
       </span>
       <span className="text-[11px] tabular-nums text-muted-foreground">
-        سریال {fa(unit.serialNumber)}
+        سریال {formatNumber(unit.serialNumber)}
       </span>
     </div>
   );
@@ -88,7 +88,7 @@ export function UnitLabelStateBadge({ unit, compact = false }) {
         }
       >
         <Printer className="h-3 w-3" />
-        {fa(unit.printCount)}×، {formatDate(unit.lastPrintedAt)}
+        {formatNumber(unit.printCount)}×، {formatDate(unit.lastPrintedAt)}
       </span>
     );
   }
@@ -96,7 +96,7 @@ export function UnitLabelStateBadge({ unit, compact = false }) {
     return compact ? null : <span className="text-xs text-muted-foreground">—</span>;
   }
   return (
-    <span className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+    <span className="inline-flex items-center gap-1 rounded-md border border-warning/30 bg-warning/10 px-1.5 py-0.5 text-[11px] text-warning">
       <Tag className="h-3 w-3" />
       برچسب نخورده
     </span>
@@ -111,7 +111,7 @@ export function UnitQuarantineAge({ unit }) {
   return (
     <div className="flex flex-col">
       <span className={`text-sm tabular-nums ${stale ? "text-destructive font-medium" : ""}`}>
-        {days === 0 ? "امروز" : `${fa(days)} روز`}
+        {days === 0 ? "امروز" : `${formatNumber(days)} روز`}
       </span>
       <span className="text-[11px] text-muted-foreground">{formatDate(unit.quarantinedAt)}</span>
     </div>
@@ -139,5 +139,5 @@ export function UnitQuarantineSource({ unit }) {
 
 export function UnitValueCell({ value }) {
   if (value == null) return <span className="text-xs text-muted-foreground">—</span>;
-  return <span className="text-sm tabular-nums">{fa(value)}</span>;
+  return <span className="text-sm tabular-nums">{formatNumber(value)}</span>;
 }

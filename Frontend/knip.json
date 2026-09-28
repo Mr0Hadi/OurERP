@@ -1,0 +1,23 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/main.jsx",
+    "scripts/*.js",
+    "structure.js"
+  ],
+  "project": [
+    "src/**/*.{js,jsx}",
+    "scripts/**/*.js"
+  ],
+  "ignore": [
+    "src/shared/components/ui/**"
+  ],
+  "ignoreExportsUsedInFile": true,
+  "ignoreDependencies": [
+    "@fontsource-variable/vazirmatn",
+    "shadcn",
+    "tailwind-scrollbar-hide",
+    "tailwindcss",
+    "tw-animate-css"
+  ]
+}

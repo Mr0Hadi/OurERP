@@ -43,7 +43,7 @@ export default function ObservationEditor({
   const remaining = round.quantity - allocated;
 
   return (
-    <div className="space-y-2 rounded-lg border border-dashed border-amber-300 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/10 p-2.5">
+    <div className="space-y-2 rounded-lg border border-dashed border-warning/30 bg-warning/4 p-2.5">
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-card-foreground">
           {title ??

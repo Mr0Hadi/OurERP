@@ -20,8 +20,8 @@ import {
   useRemoveSaleMutation,
   useSalePaymentMutations,
 } from "@/features/sales/orders/services/mutations";
-import { useCustomersQuery } from "@/features/customers/services/queries";
-import { useProductsQuery } from "@/features/warehouse/products/services/queries";
+import { useCustomersOptionsQuery } from "@/features/customers/services/queries";
+import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import { ROUTES } from "@/shared/constants/routes";
 
 import SaleCustomerSection from "../components/forms/SaleCustomerSection";
@@ -35,9 +35,6 @@ import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 
-const ALL_FILTERS = {};
-const PAGINATION = { pageIndex: 0, pageSize: 200 };
-const SORTING = { id: "name", desc: false };
 
 /**
  * ویرایشِ فروشی که هنوز **پیش‌فاکتور** است — تنها وضعیتی که `UpdateSale`
@@ -64,16 +61,8 @@ export default function SaleDetailForm({ saleData }) {
     initializedForId,
   } = useSaleFormStore();
 
-  const { data: customersData, isLoading: customersLoading } =
-    useCustomersQuery(ALL_FILTERS, PAGINATION, SORTING);
-  const { data: productsData, isLoading: productsLoading } = useProductsQuery(
-    ALL_FILTERS,
-    PAGINATION,
-    SORTING,
-  );
-
-  const customers = customersData?.items || [];
-  const products = productsData?.items || [];
+  const { customers, isLoading: customersLoading } = useCustomersOptionsQuery();
+  const { products, isLoading: productsLoading } = useProductsOptionsQuery();
 
   /**
    * ضمیمه‌های همین فروش. `UpdateSale` آرایه را *جایگزین* می‌کند نه اضافه
@@ -88,9 +77,12 @@ export default function SaleDetailForm({ saleData }) {
 
   const items = formData.items || [];
 
-  // initializeFromSale باید فقط یک‌بار هنگام mount اجرا شود
+  // فرم فقط وقتی از داده‌ی سرور پر می‌شود که سند عوض شود یا نسخه‌ی تازه‌ای
+  // از آن برسد (updatedAt). وابستگی عمداً به id/updatedAt است، نه کل آبجکت،
+  // تا تغییرات در حال ویرایش کاربر فقط با تغییر واقعی سند بازنویسی شود.
   useEffect(() => {
     initializeFromSale(saleData);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saleData.id, saleData.updatedAt, initializeFromSale]);
 
   // ضمیمه‌ها هم با همان کلیدِ فرم تازه می‌شوند — وگرنه بعد از ذخیره،
@@ -126,7 +118,7 @@ export default function SaleDetailForm({ saleData }) {
     const payload = {
       customerId: formData.customerId,
       invoiceDate: formData.invoiceDate,
-      dueDate: formData.dueDate || null,
+      paymentDate: formData.paymentDate || null,
       description: formData.description || "",
       items,
       paymentType: formData.paymentType ?? PaymentTypeEnum.CASH,

@@ -7,6 +7,7 @@ import {
   deleteProductCategory,
 } from "./api-v1";
 import { productCategoryKeys } from "./queryKeys";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 export const useCreateProductCategoryMutation = () => {
   const queryClient = useQueryClient();
@@ -18,7 +19,7 @@ export const useCreateProductCategoryMutation = () => {
       toast.success("دسته‌بندی جدید اضافه شد");
     },
     onError: (error) => {
-      toast.error(error?.message || "خطا در ساخت دسته‌بندی");
+      toast.error(getErrorMessage(error, "خطا در ساخت دسته‌بندی"));
     },
   });
 };
@@ -33,7 +34,7 @@ export const useUpdateProductCategoryMutation = () => {
       toast.success("دسته‌بندی ویرایش شد");
     },
     onError: (error) => {
-      toast.error(error?.message || "خطا در ویرایش دسته‌بندی");
+      toast.error(getErrorMessage(error, "خطا در ویرایش دسته‌بندی"));
     },
   });
 };
@@ -54,7 +55,7 @@ export const useDeleteProductCategoryMutation = () => {
       toast.success("دسته‌بندی حذف شد");
     },
     onError: (error) => {
-      toast.error(error?.message || "خطا در حذف دسته‌بندی");
+      toast.error(getErrorMessage(error, "خطا در حذف دسته‌بندی"));
     },
   });
 };

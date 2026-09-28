@@ -11,8 +11,7 @@ import {
 } from "@/shared/components/ui/card";
 import { getRowStatus, ROW_STATUS_CONFIG } from "./shippingRowStatus";
 import ShippingItemCard from "./ShippingItemCard";
-
-const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
  * اقلامِ یک دورِ ارسال. کارت است نه ردیفِ جدول، چون اسکنِ دانه‌ها و
@@ -77,13 +76,13 @@ export default function ShippingItemsSection({
         </div>
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
           <Badge variant="outline" className={ROW_STATUS_CONFIG.complete.badgeClass}>
-            کامل: {fa(totals.complete)}
+            کامل: {formatNumber(totals.complete)}
           </Badge>
           <Badge variant="outline" className={ROW_STATUS_CONFIG.partial.badgeClass}>
-            ناقص: {fa(totals.partial)}
+            ناقص: {formatNumber(totals.partial)}
           </Badge>
           <Badge variant="outline" className={ROW_STATUS_CONFIG.pending.badgeClass}>
-            آماده‌نشده: {fa(totals.pending)}
+            آماده‌نشده: {formatNumber(totals.pending)}
           </Badge>
         </div>
       </CardHeader>
@@ -133,7 +132,7 @@ export default function ShippingItemsSection({
           >
             {showCompleted
               ? "پنهان‌کردن اقلامِ کامل‌ارسال‌شده"
-              : `نمایش ${fa(completedCount)} قلمِ کامل‌ارسال‌شده (برای ثبتِ ارسالِ بیش از سفارش)`}
+              : `نمایش ${formatNumber(completedCount)} قلمِ کامل‌ارسال‌شده (برای ثبتِ ارسالِ بیش از سفارش)`}
           </button>
         )}
       </CardContent>

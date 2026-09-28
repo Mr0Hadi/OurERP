@@ -151,7 +151,7 @@ export default function ClaimResolutionCard({
         ))}
 
       {remaining === 0 && (
-        <p className="text-[11px] text-[oklch(0.50_0.16_152)] flex items-center gap-1">
+        <p className="text-[11px] text-success flex items-center gap-1">
           <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
           برای کل این ادعا تصمیم گرفته شده
         </p>

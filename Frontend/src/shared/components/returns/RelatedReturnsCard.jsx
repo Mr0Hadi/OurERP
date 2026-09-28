@@ -8,10 +8,10 @@ import {
   CardTitle,
 } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
-import { RETURN_STATUS_STYLES } from "@/shared/domain/returns/statuses";
+import ReturnStatusBadge from "./ReturnStatusBadge";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
-
-const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
+import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
+import { routeWithId } from "@/shared/constants/routes";
 
 /**
  * بقیه‌ی مرجوعی‌های همین سند.
@@ -40,7 +40,7 @@ export default function RelatedReturnsCard({
           <Layers className="h-4 w-4 text-muted-foreground" />
           {title}
           <Badge variant="secondary" className="text-[10px]">
-            {fa(returns.length)}
+            {formatNumber(returns.length)}
           </Badge>
         </CardTitle>
       </CardHeader>
@@ -49,7 +49,7 @@ export default function RelatedReturnsCard({
           <button
             key={ret.id}
             type="button"
-            onClick={() => navigate(detailRoute.replace(":id", ret.id))}
+            onClick={() => navigate(routeWithId(detailRoute, ret.id))}
             className="w-full flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-right hover:bg-accent/50 transition-colors"
           >
             <div className="flex-1 min-w-0">
@@ -57,18 +57,13 @@ export default function RelatedReturnsCard({
                 <span className="text-sm font-medium text-card-foreground">
                   {ret.returnNumber}
                 </span>
-                <Badge
-                  variant="outline"
-                  className={`text-[10px] ${RETURN_STATUS_STYLES[ret.status] ?? ""}`}
-                >
-                  {side.statusLabels[ret.status] ?? ret.status}
-                </Badge>
+                <ReturnStatusBadge status={ret.status} side={side} size="sm" />
               </div>
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 {gregorianToPersian(ret.returnDate)} ·{" "}
-                {fa(ret.totalQuantity)} عدد کالا ·{" "}
+                {formatNumber(ret.totalQuantity)} عدد کالا ·{" "}
                 <span className="tabular-nums">
-                  {fa(ret.totalAmount)} ریال
+                  {formatRial(ret.totalAmount)}
                 </span>
               </p>
             </div>

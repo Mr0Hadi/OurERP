@@ -63,20 +63,11 @@ export async function uploadImage({ file, folder, onProgress, signal } = {}) {
   formData.append("file", file);
   formData.append("folder", String(folder));
 
-  // این هدر *باید* صریح باشد. فرضِ قبلی («axios برای FormData هدرِ
-  // پیش‌فرضِ instance را کنار می‌گذارد») غلط بود: در axios 1.x تابعِ
-  // `transformRequest` قبل از adapter اجرا می‌شود و اگر Content-Typeِ
-  // مؤثر `application/json` باشد — که هدرِ پیش‌فرضِ همین instance است —
-  // به‌جای فرستادنِ FormData آن را با `formDataToJSON` به JSON تبدیل
-  // می‌کند. نتیجه‌اش `{"file":{},"folder":"1"}` بود: بدنه‌ای بدون هیچ
-  // بایتی از فایل، و سرور با «فایل ارسال شده خالی است» جواب می‌داد.
-  //
-  // با ستِ صریحِ multipart، `transformRequest` خودِ FormData را دست‌نخورده
-  // رد می‌کند و بعد adapterِ مرورگر همین هدر را با boundaryِ درست
-  // بازنویسی می‌کند.
+  // Content-Type عمداً ست نمی‌شود: اینترسپتورِ درخواست در `api/axios.js` برای
+  // هر FormData هدرِ پیش‌فرضِ JSON را برمی‌دارد تا مرورگر multipart را با
+  // boundaryِ درست بگذارد (توضیحِ کامل همان‌جاست).
   const { data } = await axiosInstance.post("/File/UploadImage", formData, {
     signal,
-    headers: { "Content-Type": "multipart/form-data" },
     // آپلود می‌تواند تا ۵ مگابایت باشد؛ تایم‌اوتِ ۱۵ ثانیه‌ایِ پیش‌فرض
     // روی اینترنتِ ضعیف کوتاه است.
     timeout: 120000,

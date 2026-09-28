@@ -32,6 +32,16 @@ export const PURCHASE_STATUS_LABELS = Object.freeze({
   [PurchaseStatusEnum.CANCELLED]: "لغو شده",
 });
 
+/** رنگِ معناییِ هر وضعیت برای `StatusBadge` (معناها در `shared/lib/tone.js`). */
+export const PURCHASE_STATUS_TONES = Object.freeze({
+  [PurchaseStatusEnum.PROFORMA]: "neutral",
+  [PurchaseStatusEnum.PENDING]: "warning",
+  [PurchaseStatusEnum.SHIPPED]: "info",
+  [PurchaseStatusEnum.PARTIALLY_RECEIVED]: "caution",
+  [PurchaseStatusEnum.RECEIVED]: "success",
+  [PurchaseStatusEnum.CANCELLED]: "danger",
+});
+
 /** هنوز پیش‌فاکتور است؛ فاکتور رسمیِ تامین‌کننده نرسیده. */
 export function isPurchaseProforma(status) {
   return Number(status) === PurchaseStatusEnum.PROFORMA;

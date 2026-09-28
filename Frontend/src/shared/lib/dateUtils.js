@@ -7,7 +7,7 @@ import gregorian from "react-date-object/calendars/gregorian";
  * "2024-08-02" (ISO) → "1403/05/12" | خالی → ""
  *
  * ورودی می‌تواند timestamp کامل هم باشد ("2024-08-02T10:15:00Z") — همان
- * چیزی که سرور و داده‌های mock واقعاً می‌فرستند. بخش ساعت بریده می‌شود،
+ * چیزی که سرور واقعاً می‌فرستد. بخش ساعت بریده می‌شود،
  * وگرنه `DateObject` با فرمتِ "YYYY-MM-DD" آن را نمی‌فهمد و ستون تاریخ
  * بی‌صدا خالی می‌ماند.
  */
@@ -36,5 +36,8 @@ export function gregorianToPersian(gregorianDateStr) {
 export function toDateOnly(value) {
   if (!value) return "";
   const match = String(value).match(/^\d{4}-\d{2}-\d{2}/);
-  return match ? match[0] : "";
+  // `0001-01-01` همان `DateTime.MinValue`ِ .NET است: بکند گاهی تاریخِ خالی را به‌جای
+  // null این‌طور می‌فرستد (بندِ ۷.۴ سندِ frontend-requests.fa.md) — یعنی «تاریخ ندارد».
+  if (!match || match[0].startsWith("0001-")) return "";
+  return match[0];
 }

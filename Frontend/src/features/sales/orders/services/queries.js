@@ -1,25 +1,25 @@
 import { useQuery } from '@tanstack/react-query';
 import { keepPreviousData } from '@tanstack/react-query';
-import { fetchSales, fetchSaleById } from './api-v1';
+import { listQuery } from '@/shared/services/api/contract';
+import { useDebouncedFilters } from '@/shared/hooks/useDebouncedFilters';
+
+import { SALE_SORT_COLUMNS, fetchSales, fetchSaleById } from './api-v1';
+import { useSaleFilterStore } from '../store/saleFilterStore';
 import { saleKeys } from './queryKeys';
 
-export function useSalesQuery(filters, pagination, sorting) {
-  const queryParams = {
-    page: pagination.pageIndex + 1,
-    limit: pagination.pageSize,
-    search: filters.globalSearch || '',
-    customerId: filters.customerId || "",
-    customerName: filters.customerName || "",
-    status: filters.status ?? '',
-    paymentType: filters.paymentType ?? '',
-    fromDate: filters.fromDate || '',
-    toDate: filters.toDate || '',
-    sorting: sorting?.id ? { id: sorting.id, desc: !!sorting.desc } : null,
-  };
+/** فیلترهای فعلیِ لیستِ فروش؛ جست‌وجوی متنی با تأخیر. `customerId` فقط مالِ کشویی است. */
+export function useSaleListFilters() {
+  return useDebouncedFilters(useSaleFilterStore, {
+    text: ["invoiceNumber"],
+    instant: ["customerName", "status", "paymentType", "fromDate", "toDate"],
+  });
+}
 
+export function useSalesQuery(filters, pagination, sorting) {
+  const params = listQuery({ filters, pagination, sorting, sortColumns: SALE_SORT_COLUMNS });
   return useQuery({
-    queryKey: saleKeys.list(queryParams),
-    queryFn: () => fetchSales(queryParams),
+    queryKey: saleKeys.list(params),
+    queryFn: () => fetchSales(params),
     placeholderData: keepPreviousData,
     gcTime: 1000 * 60 * 10,
   });

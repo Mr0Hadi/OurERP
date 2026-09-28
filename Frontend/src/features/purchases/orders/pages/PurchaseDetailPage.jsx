@@ -1,7 +1,5 @@
-import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
-import { useHeaderStore } from "@/shared/store/headerStore";
 import { usePurchaseQuery } from "@/features/purchases/orders/services/queries";
 import OrderFormSkeleton from "@/shared/components/skeletons/OrderFormSkeleton";
 import PurchaseDetailForm from "./PurchaseDetailForm";
@@ -9,35 +7,39 @@ import PurchaseIssuedView from "./PurchaseIssuedView";
 import { isPurchaseProforma } from "@/features/purchases/orders/services/constants";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 export default function PurchaseDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  const { data: purchase, isLoading, isError } = usePurchaseQuery(id);
+  const {
+    data: purchase,
+    isLoading,
+    isError,
+    error: loadError,
+    refetch: retryLoad,
+  } = usePurchaseQuery(id);
 
-  useEffect(() => {
-    setHeader({
-      title: isLoading
-        ? "در حال بارگذاری..."
-        : purchase
-          ? isPurchaseProforma(purchase.status)
-            ? "ویرایش پیش‌فاکتور خرید"
-            : `فاکتور خرید ${purchase.invoiceNumber || ""}`.trim()
-          : "خطا",
-      showBack: true,
-    });
-    return () => clearHeader();
-  }, [navigate, setHeader, clearHeader, purchase, isLoading]);
+  usePageHeader({
+    title: isLoading
+      ? "در حال بارگذاری..."
+      : purchase
+        ? isPurchaseProforma(purchase.status)
+          ? "ویرایش پیش‌فاکتور خرید"
+          : `فاکتور خرید ${purchase.invoiceNumber || ""}`.trim()
+        : "خطا",
+    showBack: true,
+  });
 
   if (isLoading) return <OrderFormSkeleton />;
 
   if (isError || !purchase) {
     return (
       <DetailErrorState
-        message="خرید مورد نظر یافت نشد یا خطایی رخ داده است."
+        error={loadError}
+        notFoundMessage="خرید مورد نظر یافت نشد."
+        onRetry={retryLoad}
         onBack={() => navigate(ROUTES.PURCHASES)}
       />
     );

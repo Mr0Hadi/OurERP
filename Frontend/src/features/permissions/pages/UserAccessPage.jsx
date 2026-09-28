@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowRight, KeyRound, UserPen } from "lucide-react";
 
@@ -10,9 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import { useHeaderStore } from "@/shared/store/headerStore";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
 import {
@@ -26,9 +25,10 @@ import { initialsOf } from "../components/initialsOf";
 import UserPermissionsPanel from "../components/UserPermissionsPanel";
 import UnsavedChangesDialog from "../components/UnsavedChangesDialog";
 import { useUnsavedChangesGuard } from "../hooks/useUnsavedChangesGuard";
+import { formatNumber } from "@/shared/lib/numberFormat";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
-const toFa = (n) => Number(n ?? 0).toLocaleString("fa-IR");
-const detailPath = (id) => ROUTES.ACCESS_USERS_DETAIL.replace(":id", id);
+const detailPath = (id) => routeWithId(ROUTES.ACCESS_USERS_DETAIL, id);
 const fullNameOf = (u) =>
   `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.username;
 
@@ -80,7 +80,7 @@ function EmployeeList({ selectedId, className }) {
         to: detailPath(u.id),
       }))}
       emptyText="کارمندی پیدا نشد."
-      footerText={`${toFa(data?.page?.total ?? users.length)} کارمند فعال`}
+      footerText={`${formatNumber(data?.page?.total ?? users.length)} کارمند فعال`}
     />
   );
 }
@@ -95,7 +95,7 @@ function UserAccessDetail({ userId, onDirtyChange }) {
   const { data: employee } = useUserUpdateQuery(canEditEmployee ? userId : null);
 
   const isSelf = currentUser != null && String(currentUser.id) === String(userId);
-  const name = employee ? fullNameOf(employee) : `کارمند ${toFa(userId)}`;
+  const name = employee ? fullNameOf(employee) : `کارمند ${formatNumber(userId)}`;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
@@ -123,7 +123,7 @@ function UserAccessDetail({ userId, onDirtyChange }) {
                 employee.departmentName,
                 employee.teamName,
                 employee.roleTitle,
-                employee.personelCode && `کد ${toFa(employee.personelCode)}`,
+                employee.personelCode && `کد ${formatNumber(employee.personelCode)}`,
               ]
                 .filter(Boolean)
                 .join(" · ")}
@@ -132,7 +132,7 @@ function UserAccessDetail({ userId, onDirtyChange }) {
         </div>
         {canEditEmployee && (
           <Button asChild variant="outline" size="sm" className="gap-1.5">
-            <Link to={ROUTES.EMPLOYEES_DETAIL.replace(":id", userId)}>
+            <Link to={routeWithId(ROUTES.EMPLOYEES_DETAIL, userId)}>
               <UserPen className="size-3.5" />
               <span className="hidden sm:inline">اطلاعات کارمند</span>
             </Link>
@@ -158,16 +158,11 @@ function UserAccessDetail({ userId, onDirtyChange }) {
  */
 export default function UserAccessPage() {
   const { id } = useParams();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   const [dirty, setDirty] = useState(false);
   const blocker = useUnsavedChangesGuard(dirty);
 
-  useEffect(() => {
-    setHeader({ title: "دسترسی کارمندان" });
-    return () => clearHeader();
-  }, [setHeader, clearHeader]);
+  usePageHeader({ title: "دسترسی کارمندان" });
 
   // با عوض‌شدنِ کارمند، پنلِ قبلی unmount می‌شود و خبرِ «تمیز» شدن نمی‌دهد.
   const [dirtyFor, setDirtyFor] = useState(id);

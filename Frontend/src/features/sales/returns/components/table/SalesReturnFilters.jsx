@@ -16,13 +16,13 @@ const PROBLEM_OPTIONS = toFilterOptions(SALES_RETURN_PROBLEM_LABELS);
 
 const SalesReturnFilters = ({ customers = [], isCustomersLoading = false }) => {
   const {
-    globalSearch,
+    search,
     customerId,
     status,
     problem,
     fromDate,
     toDate,
-    setGlobalSearch,
+    setSearch,
     setCustomerId,
     setStatus,
     setProblem,
@@ -32,8 +32,8 @@ const SalesReturnFilters = ({ customers = [], isCustomersLoading = false }) => {
   } = useSalesReturnFilterStore();
 
   const handleGlobalSearch = useCallback(
-    (e) => setGlobalSearch(e.target.value),
-    [setGlobalSearch],
+    (e) => setSearch(e.target.value),
+    [setSearch],
   );
 
   return (
@@ -56,7 +56,7 @@ const SalesReturnFilters = ({ customers = [], isCustomersLoading = false }) => {
     >
       <FilterSearchInput
         placeholder="شماره مرجوعی، فاکتور، مشتری..."
-        value={globalSearch}
+        value={search}
         onChange={handleGlobalSearch}
       />
 

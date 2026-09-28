@@ -11,8 +11,7 @@ import {
 } from "@/shared/components/ui/card";
 import { getRowStatus, ROW_STATUS_CONFIG } from "./receivingRowStatus";
 import ReceivingItemCard from "./ReceivingItemCard";
-
-const fa = (value) => (Number(value) || 0).toLocaleString("fa-IR");
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
  * اقلامِ سفارشِ یک دورِ دریافت. هر قلم کارت است (نه ردیفِ جدول) چون
@@ -74,13 +73,13 @@ export default function ReceivingItemsSection({
         </div>
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
           <Badge variant="outline" className={ROW_STATUS_CONFIG.complete.badgeClass}>
-            کامل: {fa(totals.complete)}
+            کامل: {formatNumber(totals.complete)}
           </Badge>
           <Badge variant="outline" className={ROW_STATUS_CONFIG.partial.badgeClass}>
-            ناقص: {fa(totals.partial)}
+            ناقص: {formatNumber(totals.partial)}
           </Badge>
           <Badge variant="outline" className={ROW_STATUS_CONFIG.missing.badgeClass}>
-            نرسیده: {fa(totals.missing)}
+            نرسیده: {formatNumber(totals.missing)}
           </Badge>
         </div>
       </CardHeader>
@@ -124,7 +123,7 @@ export default function ReceivingItemsSection({
           >
             {showCompleted
               ? "پنهان‌کردن اقلامِ کامل‌رسیده"
-              : `نمایش ${fa(completedCount)} قلمِ کامل‌رسیده (برای ثبتِ مازادِ رسیده)`}
+              : `نمایش ${formatNumber(completedCount)} قلمِ کامل‌رسیده (برای ثبتِ مازادِ رسیده)`}
           </button>
         )}
       </CardContent>

@@ -20,6 +20,7 @@ import { invalidatePurchaseEcosystem } from "./sharedInvalidation";
 import { idempotencyKeyFor } from "@/shared/services/api/contract";
 import { ROUTES } from "@/shared/constants/routes";
 import { supplierKeys } from "@/features/suppliers/services/queryKeys";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 /**
  * هر نوشتنِ خرید سندِ کامل را برمی‌گرداند: همان در کشِ جزئیات می‌نشیند
@@ -48,7 +49,7 @@ export const useCreatePurchaseMutation = () => {
       applyPurchase(queryClient, created);
     },
     onError: (error) => {
-      toast.error(error?.message || "خطا در ثبت خرید");
+      toast.error(getErrorMessage(error, "خطا در ثبت خرید"));
     },
   });
 };
@@ -66,7 +67,7 @@ export const useUpdatePurchaseMutation = (id) => {
       toast.success("خرید با موفقیت ویرایش شد");
     },
     onError: (error) => {
-      toast.error(error?.message || "خطا در ویرایش خرید");
+      toast.error(getErrorMessage(error, "خطا در ویرایش خرید"));
     },
   });
 };
@@ -81,7 +82,7 @@ export const useChangePurchaseStatusMutation = (id) => {
       applyPurchase(queryClient, updated);
       toast.success("وضعیت خرید به‌روزرسانی شد");
     },
-    onError: (error) => toast.error(error?.message || "خطا در تغییر وضعیت"),
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در تغییر وضعیت")),
   });
 };
 
@@ -95,7 +96,7 @@ export const useUpdatePurchaseAttachmentsMutation = (id) => {
       toast.success("پیوست‌ها ذخیره شد");
     },
     onError: (error) =>
-      toast.error(error?.message || "خطا در ذخیره‌ی پیوست‌ها"),
+      toast.error(getErrorMessage(error, "خطا در ذخیره‌ی پیوست‌ها")),
   });
 };
 
@@ -109,7 +110,7 @@ export const useUpdatePurchasePaymentDateMutation = (id) => {
       toast.success("مهلت پرداخت ذخیره شد");
     },
     onError: (error) =>
-      toast.error(error?.message || "خطا در ذخیره‌ی مهلت پرداخت"),
+      toast.error(getErrorMessage(error, "خطا در ذخیره‌ی مهلت پرداخت")),
   });
 };
 
@@ -125,7 +126,7 @@ export const usePurchasePaymentMutations = (purchaseId) => {
     toast.success(message);
   };
   const onError = (fallback) => (error) =>
-    toast.error(error?.message || fallback);
+    toast.error(getErrorMessage(error, fallback));
 
   const add = useMutation({
     mutationFn: (payment) => {
@@ -172,7 +173,7 @@ export const useRemovePurchaseMutation = () => {
       navigate(ROUTES.PURCHASES_LIST);
     },
     onError: (error) => {
-      toast.error(error?.message || "خطا در حذف خرید");
+      toast.error(getErrorMessage(error, "خطا در حذف خرید"));
     },
   });
 };
@@ -191,7 +192,7 @@ export const useClosePurchaseItemMutation = (purchaseId) => {
       queryClient.invalidateQueries({ queryKey: supplierKeys.all });
       toast.success("قلم بسته شد؛ باقیمانده‌اش دیگر انتظار نمی‌رود");
     },
-    onError: (error) => toast.error(error?.message || "خطا در بستن قلم"),
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در بستن قلم")),
   });
 };
 
@@ -204,7 +205,7 @@ export const useReopenPurchaseItemMutation = (purchaseId) => {
       queryClient.invalidateQueries({ queryKey: supplierKeys.all });
       toast.success("قلم دوباره باز شد");
     },
-    onError: (error) => toast.error(error?.message || "خطا در بازگشایی قلم"),
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در بازگشایی قلم")),
   });
 };
 
@@ -228,6 +229,6 @@ export const useAcceptPurchaseExcessMutation = (purchaseId) => {
         "کالای مازاد به‌صورت قلمِ ضمیمه به خرید اضافه شد و وارد موجودی شد",
       );
     },
-    onError: (error) => toast.error(error?.message || "خطا در پذیرش کالای مازاد"),
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در پذیرش کالای مازاد")),
   });
 };

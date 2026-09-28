@@ -1,27 +1,21 @@
-import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Save, X } from "lucide-react";
 import { useCreateCustomerMutation } from "../services/mutations";
 import { useCustomerForm } from "../hooks/useCustomerForm";
-import { useHeaderStore } from "@/shared/store/headerStore";
 import { Button } from "@/shared/components/ui/button";
 import CustomerIdentityForm from "../components/forms/CustomerIdentityForm";
 import CustomerFinanceForm from "../components/forms/CustomerFinanceForm";
 import CustomerAddressForm from "../components/forms/CustomerAddressForm";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 export default function CustomerNewPage() {
   const navigate = useNavigate();
   const createMutation = useCreateCustomerMutation();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  useEffect(() => {
-    setHeader({
-      title: "اضافه کردن مشتری جدید",
-      showBack: true,
-    });
-    return () => clearHeader();
-  }, [navigate, setHeader, clearHeader]);
+  usePageHeader({
+    title: "اضافه کردن مشتری جدید",
+    showBack: true,
+  });
 
   const {
     formMethods,

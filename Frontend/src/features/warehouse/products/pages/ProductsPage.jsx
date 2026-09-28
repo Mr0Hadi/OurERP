@@ -1,69 +1,24 @@
-import { useProductsQuery } from "../services/queries";
-import { useProductFilterStore } from "../store/productFilterStore";
-import { useDebouncedProductFilters } from "../hooks/useDebouncedProductFilters";
-import ProductTable from "../components/table/ProductTable";
-import ProductFilters from "../components/table/ProductFilters";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/shared/components/ui/card";
-import { Button } from "@/shared/components/ui/button";
-
-import { Plus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import ListPageLayout from "@/shared/components/layout/ListPageLayout";
+import ServerTable from "@/shared/components/table/ServerTable";
 import { ROUTES } from "@/shared/constants/routes";
-import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
-import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
 
-const ProductsPage = () => {
-  const navigate = useNavigate();
-  const { pagination, sorting, setPagination, setSorting } =
-    useProductFilterStore();
+import ProductFilters from "../components/table/ProductFilters";
+import ProductTable from "../components/table/ProductTable";
+import { useProductListFilters, useProductsQuery } from "../services/queries";
+import { useProductFilterStore } from "../store/productFilterStore";
 
-  const debouncedFilters = useDebouncedProductFilters();
-
-  const { data, isLoading, isFetching, isError, error, refetch } =
-    useProductsQuery(debouncedFilters, pagination, sorting);
-
-  const products = data?.items ?? [];
-  const totalPages = data?.totalPages ?? 1;
-  const currentPage = data?.page ? data.page - 1 : pagination.pageIndex;
+export default function ProductsPage() {
+  const listState = useProductFilterStore();
+  const filters = useProductListFilters();
+  const query = useProductsQuery(filters, listState.pagination, listState.sorting);
 
   return (
-    <div className="container mx-auto space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>مدیریت لیست کالاها</CardTitle>
-          <Button onClick={() => navigate(ROUTES.WAREHOUSE_PRODUCTS_NEW)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            کالای جدید
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <ProductFilters />
-
-          {isError ? (
-            <QueryErrorState error={error} onRetry={() => refetch()} />
-          ) : (
-            <FetchingOverlay active={isFetching && !isLoading}>
-              <ProductTable
-                data={products}
-                isLoading={isLoading}
-                totalPages={totalPages}
-                currentPage={currentPage}
-                pageSize={pagination.pageSize}
-                onPaginationChange={setPagination}
-                sorting={sorting}
-                onSortingChange={setSorting}
-              />
-            </FetchingOverlay>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <ListPageLayout
+      title="مدیریت لیست کالاها"
+      create={{ label: "کالای جدید", to: ROUTES.WAREHOUSE_PRODUCTS_NEW }}
+    >
+      <ProductFilters />
+      <ServerTable query={query} listState={listState} table={ProductTable} />
+    </ListPageLayout>
   );
-};
-
-export default ProductsPage;
+}

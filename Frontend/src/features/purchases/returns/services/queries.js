@@ -1,32 +1,30 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useMemo } from "react";
 import {
+  PURCHASE_RETURN_SORT_COLUMNS,
   fetchPurchaseReturns,
   fetchPurchaseReturnById,
   fetchReturnablePurchases,
   fetchPurchaseForReturn,
 } from "./api-v1";
 import { purchaseReturnKeys } from "./queryKeys";
+import { listQuery } from "@/shared/services/api/contract";
+import { useDebouncedFilters } from "@/shared/hooks/useDebouncedFilters";
+import { usePurchaseReturnFilterStore } from "../store/purchaseReturnFilterStore";
+
+/** فیلترهای فعلیِ لیستِ مرجوعی؛ جست‌وجوی متنی با تأخیر. */
+export function usePurchaseReturnListFilters() {
+  return useDebouncedFilters(usePurchaseReturnFilterStore, {
+    text: ["search"],
+    instant: ["supplierId", "status", "problem", "fromDate", "toDate"],
+  });
+}
 
 export function usePurchaseReturnsQuery(filters, pagination, sorting) {
-  const queryParams = useMemo(
-    () => ({
-      page: pagination.pageIndex + 1,
-      limit: pagination.pageSize,
-      search: filters.globalSearch || "",
-      supplierId: filters.supplierId || "",
-      status: filters.status ?? "",
-      problem: filters.problem ?? "",
-      fromDate: filters.fromDate || "",
-      toDate: filters.toDate || "",
-      sorting: sorting?.id ? { id: sorting.id, desc: !!sorting.desc } : null,
-    }),
-    [filters, pagination, sorting],
-  );
-
+  const params = listQuery({ filters, pagination, sorting, sortColumns: PURCHASE_RETURN_SORT_COLUMNS });
   return useQuery({
-    queryKey: purchaseReturnKeys.list(queryParams),
-    queryFn: () => fetchPurchaseReturns(queryParams),
+    queryKey: purchaseReturnKeys.list(params),
+    queryFn: () => fetchPurchaseReturns(params),
     placeholderData: keepPreviousData,
     gcTime: 1000 * 60 * 10,
     refetchOnMount: "always",
@@ -67,7 +65,7 @@ export function usePurchaseForReturnQuery(purchaseId) {
  * دانسته، نه یک فیلدِ جداگانه روی پاسخِ خرید.
  */
 export function useRelatedPurchaseReturnsQuery(purchaseId, excludeReturnId = null) {
-  const params = useMemo(() => ({ purchaseId, limit: 50 }), [purchaseId]);
+  const params = useMemo(() => ({ purchaseId, take: 50 }), [purchaseId]);
   return useQuery({
     queryKey: purchaseReturnKeys.list(params),
     queryFn: () => fetchPurchaseReturns(params),

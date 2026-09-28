@@ -54,7 +54,8 @@ const toId = (value) => (value === "" || value == null ? null : Number(value));
 /** payload دستور `CreateUser`. */
 export function buildCreatePayload(data) {
   return {
-    // غلط املاییِ `fisrtName` عمدی است — قرارداد فعلی سرور همین است.
+    // غلطِ املاییِ بکند (`CreateUserCommand.FisrtName`)؛ درخواستِ اصلاح: بندِ ۷.۱
+    // سندِ frontend-requests.fa.md. `UpdateUser` خودش `firstName` می‌گیرد.
     fisrtName: data.firstName.trim(),
     lastName: data.lastName.trim(),
     username: data.username.trim(),

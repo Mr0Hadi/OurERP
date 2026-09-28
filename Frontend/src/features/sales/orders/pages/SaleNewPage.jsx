@@ -11,8 +11,8 @@ import {
   useCreateInPersonSaleMutation,
   useCreateSaleMutation,
 } from "@/features/sales/orders/services/mutations";
-import { useCustomersQuery } from "@/features/customers/services/queries";
-import { useProductsQuery } from "@/features/warehouse/products/services/queries";
+import { useCustomersOptionsQuery } from "@/features/customers/services/queries";
+import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import SaleCustomerSection from "@/features/sales/orders/components/forms/SaleCustomerSection";
 import SaleItemsSection from "@/features/sales/orders/components/forms/SaleItemsSection";
 import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
@@ -24,10 +24,6 @@ import { ROUTES } from "@/shared/constants/routes";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
 import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
-
-const ALL_FILTERS = {};
-const PAGINATION = { pageIndex: 0, pageSize: 200 };
-const SORTING = { id: "name", desc: false };
 
 export default function SaleNewPage() {
   const navigate = useNavigate();
@@ -92,16 +88,8 @@ export default function SaleNewPage() {
   const createMutation = useCreateSaleMutation();
   const inPersonMutation = useCreateInPersonSaleMutation();
 
-  const { data: customersData, isLoading: customersLoading } =
-    useCustomersQuery(ALL_FILTERS, PAGINATION, SORTING);
-  const { data: productsData, isLoading: productsLoading } = useProductsQuery(
-    ALL_FILTERS,
-    PAGINATION,
-    SORTING,
-  );
-
-  const customers = customersData?.items || [];
-  const products = productsData?.items || [];
+  const { customers, isLoading: customersLoading } = useCustomersOptionsQuery();
+  const { products, isLoading: productsLoading } = useProductsOptionsQuery();
   const isTracked = (productId) =>
     Boolean(products.find((product) => product.id === productId)?.requiresUnitTracking);
 
@@ -218,7 +206,7 @@ export default function SaleNewPage() {
       customerId: formData.customerId,
       customerName: formData.customerName,
       invoiceDate: formData.invoiceDate,
-      dueDate: formData.dueDate || null,
+      paymentDate: formData.paymentDate || null,
       description: formData.description || "",
       items: items.map((item) => ({
         productId: item.productId,

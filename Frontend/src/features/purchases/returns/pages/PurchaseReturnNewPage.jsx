@@ -28,6 +28,8 @@ import { OFF_SCOPE_KIND_STYLES } from "@/shared/domain/returns/scopes";
 import PurchaseReturnInfoSection from "../components/forms/PurchaseReturnInfoSection";
 import PurchaseReturnDetailLoading from "../components/forms/PurchaseReturnDetailLoading";
 import { ROUTES } from "@/shared/constants/routes";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
+import { formatRial } from "@/shared/lib/numberFormat";
 
 /**
  * ثبت مرجوعی به تامین‌کننده — دو مرحله‌ی عمودی روی یک صفحه.
@@ -154,7 +156,7 @@ export default function PurchaseReturnNewPage() {
           <div className="flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-border rounded-lg">
             <AlertCircle className="h-10 w-10 text-destructive" />
             <p className="text-sm text-muted-foreground">
-              {error?.message || "این خرید قابل مرجوع‌کردن نیست"}
+              {getErrorMessage(error, "این خرید قابل مرجوع‌کردن نیست")}
             </p>
             <Button type="button" variant="outline" onClick={handleClearPurchase}>
               انتخاب فروش دیگر
@@ -236,7 +238,7 @@ export default function PurchaseReturnNewPage() {
                   جمع مبلغ ادعای مرجوعی:{" "}
                 </span>
                 <span className="font-bold text-card-foreground">
-                  {computedTotal.toLocaleString("fa-IR")} ریال
+                  {formatRial(computedTotal)}
                 </span>
               </div>
               <div className="flex gap-2">

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AlertCircle, CheckCircle, AlertTriangle, X, Undo2 } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -15,10 +15,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import { useHeaderStore } from "@/shared/store/headerStore";
 import { useSalesReturnQuery } from "@/features/sales/returns/services/queries";
 import { useExecuteGoodsRoundMutation } from "@/features/sales/returns/services/mutations";
-import { useProductsQuery } from "@/features/warehouse/products/services/queries";
+import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import { buildGoodsLines } from "@/shared/domain/returns/resolutions";
 import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
@@ -28,13 +27,11 @@ import GoodsRoundPartySection from "@/shared/components/returns/GoodsRoundPartyS
 import GoodsRoundSummaryCard from "@/shared/components/returns/GoodsRoundSummaryCard";
 
 import ReturnDetailLoading from "../components/forms/ReturnDetailLoading";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 const SALES_SIDE = sideConfig(RETURN_SIDES.SALES);
 
-const ALL_FILTERS = {};
-const PAGINATION = { pageIndex: 0, pageSize: 200 };
-const SORTING = { id: "name", desc: false };
 
 /**
  * تحویل‌گرفتنِ کالای برگشتی از مشتری.
@@ -70,17 +67,13 @@ function ReceivingReturnDetailForm({ salesReturn }) {
     buildCommand,
   } = useGoodsRoundForm(lines, { withObservations: true });
 
-  const { data: productsData } = useProductsQuery(
-    ALL_FILTERS,
-    PAGINATION,
-    SORTING,
-  );
+  const { products: productOptions } = useProductsOptionsQuery();
 
   const productMap = useMemo(() => {
     const map = new Map();
-    (productsData?.items || []).forEach((p) => map.set(p.id, p));
+    productOptions.forEach((p) => map.set(p.id, p));
     return map;
-  }, [productsData]);
+  }, [productOptions]);
 
   const displayRounds = useMemo(
     () =>
@@ -111,7 +104,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
             "این دور ثبت شد. باقیمانده هر وقت رسید، دوباره از همین صفحه ثبت کنید.",
           );
         }
-        navigate(ROUTES.SALES_RETURNS_DETAIL.replace(":id", salesReturn.id));
+        navigate(routeWithId(ROUTES.SALES_RETURNS_DETAIL, salesReturn.id));
       },
     });
   };
@@ -119,13 +112,13 @@ function ReceivingReturnDetailForm({ salesReturn }) {
   if (rounds.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <CheckCircle className="h-12 w-12 text-[oklch(0.50_0.16_152)]" />
+        <CheckCircle className="h-12 w-12 text-success" />
         <p className="text-lg text-muted-foreground">
           برای این مرجوعی کالایی در انتظار تحویل نیست.
         </p>
         <Button
           variant="outline"
-          onClick={() => navigate(ROUTES.SALES_RETURNS_DETAIL.replace(":id", salesReturn.id))}
+          onClick={() => navigate(routeWithId(ROUTES.SALES_RETURNS_DETAIL, salesReturn.id))}
         >
           بازگشت به لیست مرجوعی‌ها
         </Button>
@@ -153,7 +146,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
             headerBadge={
               <Badge
                 variant="secondary"
-                className="gap-1.5 text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40"
+                className="gap-1.5 text-primary bg-primary/10"
               >
                 <Undo2 className="h-3.5 w-3.5" />
                 نوع دریافت: مرجوعی فروش
@@ -184,7 +177,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
           <div className="flex gap-2">
             <Button
               className={`flex-1 gap-2 ${
-                !isAllComplete ? "bg-amber-600 hover:bg-amber-700 text-white" : ""
+                !isAllComplete ? "bg-warning hover:bg-warning text-white" : ""
               }`}
               disabled={isBusy || !hasSomethingToRecord}
               onClick={() => setShowConfirmDialog(true)}
@@ -201,7 +194,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate(ROUTES.SALES_RETURNS_DETAIL.replace(":id", salesReturn.id))}
+              onClick={() => navigate(routeWithId(ROUTES.SALES_RETURNS_DETAIL, salesReturn.id))}
               disabled={isBusy}
               className="gap-2"
             >
@@ -238,7 +231,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
             <AlertDialogAction
               disabled={isBusy}
               onClick={handleSubmit}
-              className={!isAllComplete ? "bg-amber-600 hover:bg-amber-700" : ""}
+              className={!isAllComplete ? "bg-warning hover:bg-warning" : ""}
             >
               {isBusy ? "در حال ثبت..." : "تأیید"}
             </AlertDialogAction>
@@ -252,8 +245,6 @@ function ReceivingReturnDetailForm({ salesReturn }) {
 export default function ReceivingReturnDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   const {
     data: salesReturn,
@@ -261,17 +252,14 @@ export default function ReceivingReturnDetailPage() {
     isError,
   } = useSalesReturnQuery(Number(id));
 
-  useEffect(() => {
-    setHeader({
-      title: isLoading
-        ? "در حال بارگذاری..."
-        : salesReturn
-          ? "دریافت کالای مرجوعی"
-          : "خطا",
-      showBack: true,
-    });
-    return () => clearHeader();
-  }, [navigate, setHeader, clearHeader, salesReturn, isLoading]);
+  usePageHeader({
+    title: isLoading
+      ? "در حال بارگذاری..."
+      : salesReturn
+        ? "دریافت کالای مرجوعی"
+        : "خطا",
+    showBack: true,
+  });
 
   if (isLoading) return <ReturnDetailLoading />;
 

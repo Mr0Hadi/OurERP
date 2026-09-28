@@ -23,7 +23,7 @@ import {
   PAYMENT_TYPE_LABELS,
   DOCUMENT_PAYMENT_TYPES,
 } from "@/shared/domain/enums/paymentType";
-import { numberToPersianWords } from "@/shared/lib/numberToPersianWords";
+import AmountInWords from "@/shared/components/forms/AmountInWords";
 
 /**
  * بخش پرداختِ یک سند خرید یا فروش.
@@ -242,11 +242,7 @@ export default function OrderPaymentSection({
                 در وضعیت پیش‌فاکتور هیچ مبلغی پرداخت نشده است.
               </p>
             ) : (
-              formData.paidAmount !== "" && formData.paidAmount != null && Number(formData.paidAmount) !== 0 && (
-                <p className="text-xs text-muted-foreground">
-                  {numberToPersianWords(Number(formData.paidAmount) / 10, { suffix: "تومان" })}
-                </p>
-              )
+              <AmountInWords rial={formData.paidAmount} />
             )}
           </div>
         )}

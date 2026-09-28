@@ -24,13 +24,13 @@ const renderSupplierPhone = (supplier) =>
  */
 const PurchaseFilters = ({ suppliers = [], isSuppliersLoading = false }) => {
   const {
-    globalSearch,
+    invoiceNumber,
     supplierId,
     status,
     paymentType,
     fromDate,
     toDate,
-    setGlobalSearch,
+    setInvoiceNumber,
     setSupplierId,
     setStatus,
     setPaymentType,
@@ -40,8 +40,8 @@ const PurchaseFilters = ({ suppliers = [], isSuppliersLoading = false }) => {
   } = usePurchaseFilterStore();
 
   const handleGlobalSearch = useCallback(
-    (e) => setGlobalSearch(e.target.value),
-    [setGlobalSearch],
+    (e) => setInvoiceNumber(e.target.value),
+    [setInvoiceNumber],
   );
 
   return (
@@ -64,7 +64,7 @@ const PurchaseFilters = ({ suppliers = [], isSuppliersLoading = false }) => {
     >
       <FilterSearchInput
         placeholder="شماره فاکتور..."
-        value={globalSearch}
+        value={invoiceNumber}
         onChange={handleGlobalSearch}
       />
 

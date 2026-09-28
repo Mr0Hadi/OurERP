@@ -1,8 +1,5 @@
 import axiosInstance from "@/shared/services/api/axios";
-import { toApiSort } from "@/shared/services/api/sorting";
-import { SALE_SORT_COLUMNS } from "@/features/sales/orders/services/api-v1";
 import { idempotent, normalizeListResponse } from "@/shared/services/api/contract";
-import { shippingStatusesOf } from "../domain/shippingVocabulary";
 
 /**
  * ارسال انبار روی بکندِ واقعی — قرینه‌ی `warehouse/receiving/services/api-v1.js`:
@@ -22,31 +19,16 @@ import { shippingStatusesOf } from "../domain/shippingVocabulary";
  * ردیف‌ها یک بار دیگر هم با همین فهرست فیلتر می‌شوند تا پیش‌فاکتور یا
  * لغوشده هرگز در صف نیاید.
  */
-export async function fetchShippableSales(params = {}) {
-  const statuses = shippingStatusesOf(params.status);
-  const { data } = await axiosInstance.get("/Sale/GetSaleList", {
-    params: {
-      page: params.page,
-      take: params.limit,
-      invoiceNumber: params.search || undefined,
-      // `GetSaleListQuery` فیلترِ `CustomerId` ندارد — فقط `CustomerName`.
-      customerName: params.customerName || undefined,
-      statuses,
-      fromDate: params.fromDate || undefined,
-      toDate: params.toDate || undefined,
-      ...toApiSort(params.sorting, SALE_SORT_COLUMNS),
-    },
-    paramsSerializer: { indexes: null },
-  });
+export async function fetchShippableSales(params) {
+  const { data } = await axiosInstance.get("/Sale/GetSaleList", { params });
   const list = normalizeListResponse(data, { itemsKey: "saleList" });
-  const allowed = new Set(statuses);
-  return {
-    ...list,
-    items: list.items.filter((sale) => allowed.has(Number(sale.status))),
-  };
+  // `GetSaleListQuery` هنوز `Statuses` ندارد (بخشِ ۳ سندِ frontend-requests.fa.md)
+  // و فقط `status` تکی را می‌فهمد؛ تا آن وقت ردیف‌ها اینجا فیلتر می‌شوند —
+  // برای همین صفحه ممکن است کمتر از `take` ردیف نشان دهد.
+  const allowed = new Set(params.statuses);
+  return { ...list, items: list.items.filter((sale) => allowed.has(Number(sale.status))) };
 }
 
-/** `SaleDto` — اقلامش `id`/`quantity`/`shippedQuantity` دارند. */
 export async function fetchSaleForShipping(id) {
   const { data } = await axiosInstance.get("/Sale/GetSaleDetail", {
     params: { id },
