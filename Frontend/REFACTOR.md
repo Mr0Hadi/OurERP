@@ -80,7 +80,12 @@
       - `usePageHeader` جای افکتِ تکراریِ `setHeader`/`clearHeader` در ۲۴ صفحه.
       - `useSuppliersOptionsQuery`/`useCustomersOptionsQuery` برای dropdownها.
       - تست در مرورگر: لیست‌ها، صفحه‌بندی، لینک جزئیات، و `DetailErrorState` برای ۴۰۴ (پیامِ سرور، بدونِ retry).
-    - [ ] ۱.۳.۳ بقیه‌ی `shared/components` (فرم‌ها، فایل‌ها، نقشه، ...)
+    - [ ] ۱.۳.۳ بقیه‌ی `shared/components`
+      - [x] نقشه: `LocationPickerMap` (۴۷۱ خط) به `nominatim.js` (سرویس)، `MapSearchBar`، `MapCanvas` (تنها فایلِ
+        Leaflet، lazy) شکست. Leaflet (۱۶۰KB JS + ۱۵KB CSS) دیگر همراهِ فرم‌های آدرس و CSSاش در `main.jsx` بار نمی‌شود.
+        «تایید موقعیت» تا پیدا شدنِ آدرس غیرفعال است (قبلاً موقعیت بدونِ آدرس ذخیره می‌شد).
+      - [x] `CustomerAddressForm`/`SupplierAddressForm` (یکسان) → `partyAccount/PartyAddressForm`؛ اسکلتونِ جزئیاتِ
+        هر دو → `PartyDetailLoading`.
   - برای تست خطای شبکه: پیکربندی `ourerp-offline` در `.claude/launch.json` (API روی پورت بسته).
   - [ ] ۱.۴ حذف لایه‌های ترجمه‌ی نام (adapter) — فیلتر/پارامتر/فیلد با همان نامِ بکند:
     - [x] مشتری، تامین‌کننده، کالا: `listQuery` + `useDebouncedFilters`؛ `PartyListFilters` مشترک.

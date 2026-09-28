@@ -5,7 +5,7 @@ import { useCustomerForm } from "../hooks/useCustomerForm";
 import { Button } from "@/shared/components/ui/button";
 import CustomerIdentityForm from "../components/forms/CustomerIdentityForm";
 import CustomerFinanceForm from "../components/forms/CustomerFinanceForm";
-import CustomerAddressForm from "../components/forms/CustomerAddressForm";
+import PartyAddressForm from "@/features/partyAccount/components/PartyAddressForm";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 export default function CustomerNewPage() {
@@ -80,7 +80,7 @@ export default function CustomerNewPage() {
 
           {/* ستون چپ - آدرس و دکمه‌ها */}
           <div className="lg:col-span-1 space-y-4">
-            <CustomerAddressForm
+            <PartyAddressForm
               register={register}
               control={control}
               errors={errors}

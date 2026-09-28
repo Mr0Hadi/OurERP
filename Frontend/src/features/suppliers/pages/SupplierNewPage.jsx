@@ -5,7 +5,7 @@ import { useSupplierForm } from "../hooks/useSupplierForm";
 import { Button } from "@/shared/components/ui/button";
 import SupplierIdentityForm from "../components/forms/SupplierIdentityForm";
 import SupplierFinanceForm from "../components/forms/SupplierFinanceForm";
-import SupplierAddressForm from "../components/forms/SupplierAddressForm";
+import PartyAddressForm from "@/features/partyAccount/components/PartyAddressForm";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 export default function SupplierNewPage() {
@@ -77,7 +77,7 @@ const {
 
           {/* ستون چپ - آدرس و دکمه‌ها */}
           <div className="lg:col-span-1 space-y-4">
-            <SupplierAddressForm
+            <PartyAddressForm
               register={register}
               control={control}
               errors={errors}

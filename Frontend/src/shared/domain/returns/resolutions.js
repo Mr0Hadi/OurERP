@@ -12,6 +12,7 @@ import {
 } from "@/shared/domain/enums/paymentType";
 import { RETURN_STATUSES, isTerminalStatus } from "./statuses";
 import { ProductUnitStatusEnum } from "@/shared/domain/enums/unitStatus";
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
  * تصمیم‌ها: ترکیب‌شان، بسطشان به اثر، اعتبارسنجی، و ماشین وضعیت —
@@ -436,7 +437,7 @@ export function validateComposition(
     quantity > quarantineAvailable
   ) {
     errors.push(
-      `برای این ادعا فقط ${quarantineAvailable.toLocaleString("fa-IR")} عدد کالای آزاد در قرنطینه است`,
+      `برای این ادعا فقط ${formatNumber(quarantineAvailable)} عدد کالای آزاد در قرنطینه است`,
     );
   }
 

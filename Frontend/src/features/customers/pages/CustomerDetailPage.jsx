@@ -17,11 +17,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import CustomerDetailLoading from "../components/forms/CustomerDetailLoading";
+import PartyDetailLoading from "@/features/partyAccount/components/PartyDetailLoading";
 import { useCustomerForm } from "../hooks/useCustomerForm";
 import CustomerIdentityForm from "../components/forms/CustomerIdentityForm";
 import CustomerFinanceForm from "../components/forms/CustomerFinanceForm";
-import CustomerAddressForm from "../components/forms/CustomerAddressForm";
+import PartyAddressForm from "@/features/partyAccount/components/PartyAddressForm";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import PartyStatementCard from "@/features/partyAccount/components/PartyStatementCard";
@@ -108,7 +108,7 @@ function CustomerDetailForm({ customerData }) {
           </div>
 
           <div className="lg:col-span-1 space-y-4">
-            <CustomerAddressForm
+            <PartyAddressForm
               register={register}
               control={control}
               errors={errors}
@@ -206,7 +206,7 @@ export default function CustomerDetailPage() {
     showBack: true,
   });
 
-  if (isLoading) return <CustomerDetailLoading />;
+  if (isLoading) return <PartyDetailLoading />;
 
   if (isError || !customer) {
     return (

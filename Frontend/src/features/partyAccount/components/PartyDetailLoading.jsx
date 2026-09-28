@@ -1,4 +1,5 @@
-export default function CustomerDetailLoading() {
+/** اسکلتونِ صفحه‌ی جزئیاتِ مشتری/تامین‌کننده تا رسیدنِ داده. */
+export default function PartyDetailLoading() {
   return (
     <div className="container m-auto bg-background">
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-pulse">
