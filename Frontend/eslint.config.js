@@ -14,7 +14,8 @@ export default defineConfig([
       reactRefresh.configs.vite,
     ],
     languageOptions: {
-      globals: globals.browser,
+      // `__APP_BUILD__` را `define`ِ `vite.config.js` جایگزین می‌کند.
+      globals: { ...globals.browser, __APP_BUILD__: "readonly" },
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
     rules: {

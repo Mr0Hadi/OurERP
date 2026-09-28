@@ -4,8 +4,26 @@ import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
+import { execSync } from "node:child_process";
+import pkg from "./package.json" with { type: "json" };
+
+/** شناسه‌ی build — در «بروزرسانی برنامه» نشان داده می‌شود تا معلوم باشد کدام نسخه باز است. */
+function buildInfo() {
+  let commit = "";
+  try {
+    commit = execSync("git rev-parse --short HEAD", { stdio: ["ignore", "pipe", "ignore"] })
+      .toString()
+      .trim();
+  } catch {
+    // بیرون از مخزنِ git (مثلاً build در کانتینر) شناسه‌ی کامیت نداریم.
+  }
+  return { version: pkg.version, commit, builtAt: new Date().toISOString() };
+}
 
 export default defineConfig({
+  define: {
+    __APP_BUILD__: JSON.stringify(buildInfo()),
+  },
   plugins: [
     react(),
     tailwindcss(),

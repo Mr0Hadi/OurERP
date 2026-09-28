@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -23,6 +23,13 @@ import { ThemeToggle } from "@/shared/components/theme/ThemeToggle";
 import { useLoginMutation } from "../services/queries";
 import { ROUTES } from "@/shared/constants/routes";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
+import {
+  UPDATE_STATUS,
+  applyUpdate,
+  applyUpdateOnLogin,
+  checkForUpdate,
+  onUpdateAvailable,
+} from "@/shared/services/appUpdate";
 
 const FEATURES = [
   {
@@ -50,6 +57,7 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
+    getValues,
     formState: { errors },
   } = useForm({
     defaultValues: { username: "", password: "" },
@@ -58,12 +66,33 @@ export default function LoginPage() {
 
   const { mutate: login, isPending } = useLoginMutation();
 
+  // کاربر باید با آخرین نسخه وارد شود، نه اینکه بعداً منتظرِ اعلان بماند.
+  // همین که صفحه‌ی ورود باز شد نسخه‌ی تازه بررسی و دریافت می‌شود؛ اگر آماده
+  // شد و هنوز چیزی تایپ نشده، همین‌جا فعال می‌شود (بارگذاریِ دوباره چیزی را
+  // از بین نمی‌برد). وگرنه بعد از ورودِ موفق فعال می‌شود.
+  // «آماده شد» هم از بررسیِ همین‌جا می‌آید و هم از رویدادِ خودِ service
+  // worker که ممکن است دیرتر برسد؛ هر دو به یک تصمیم می‌رسند.
+  useEffect(() => {
+    const applyIfPristine = () => {
+      const { username, password } = getValues();
+      if (!username && !password) applyUpdate();
+    };
+    const unsubscribe = onUpdateAvailable(applyIfPristine);
+    checkForUpdate().then((status) => {
+      if (status === UPDATE_STATUS.AVAILABLE) applyIfPristine();
+    });
+    return unsubscribe;
+  }, [getValues]);
+
   const onSubmit = (values) => {
     login(values, {
       onSuccess: () => {
         toast.success("خوش آمدید 👋");
         const from = searchParams.get("from") || ROUTES.DASHBOARD;
         navigate(from, { replace: true });
+        // نسخه‌ی آماده همین حالا، پیش از شروعِ کار، فعال می‌شود؛ بارگذاریِ
+        // دوباره روی همان صفحه‌ی مقصد انجام می‌شود و نشست می‌ماند.
+        applyUpdateOnLogin();
       },
       onError: (error) => {
         // پیامِ سرور (مثلاً «کاربر با این اطلاعات یافت نشد») مقدم است؛ در قطعیِ
