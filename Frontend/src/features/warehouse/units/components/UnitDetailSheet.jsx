@@ -24,6 +24,7 @@ import {
   documentRouteOf,
   daysSince,
   formatDate,
+  canLocate,
   needsLabel,
   whereaboutsOf,
 } from "../domain/unitVocabulary";
@@ -308,6 +309,17 @@ export default function UnitDetailSheet({ unit, open, onOpenChange, onPrint, onA
               <Row label="کجاست">
                 <WhereaboutsValue unit={unit} />
               </Row>
+              {canLocate(unit) && (
+                <Row label="قفسه">
+                  {unit.binLocation ? (
+                    <span className="font-mono text-xs" dir="ltr">
+                      {unit.binLocation}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">ثبت نشده</span>
+                  )}
+                </Row>
+              )}
               <Row label="کد کالا">
                 <span className="font-mono text-xs">{unit.productCode ?? "—"}</span>
               </Row>

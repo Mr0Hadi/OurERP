@@ -2,7 +2,7 @@ import {
   ProductUnitStatusEnum as UNIT_STATUSES,
   UNIT_STATUS_LABELS,
   UNIT_CUSTODY_REASON_LABELS,
-  PURCHASE_CUSTODY_REASONS,
+  UNPAID_CUSTODY_REASONS,
 } from "@/shared/domain/enums/unitStatus";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
@@ -147,26 +147,29 @@ export const REASONS_BY_ACTION = Object.freeze({
   ],
 });
 
-/** اسقاط زیانِ مالی است و «سایر» هیچ نمی‌گوید؛ هر دو توضیح می‌خواهند. */
-export const noteRequired = (action, reason) =>
-  action === UnitActionEnum.SCRAP || reason === UnitActionReasonEnum.OTHER;
+/**
+ * مازاد یا کالای خارج از سندی که «قبولِ مازاد» نشده — پولش را نداده‌ایم.
+ * آزادسازی‌اش یعنی «مجانی مالِ ماست» و اسقاطش بدونِ زیانِ پرداختی.
+ */
+export const isUnpaidQuarantine = (unit) =>
+  unit.status === UNIT_STATUSES.QUARANTINED &&
+  UNPAID_CUSTODY_REASONS.includes(unit.custodyReason);
 
 /**
- * قرنطینه‌ای که از دریافتِ خرید آمده حسابِ باز با تامین‌کننده دارد (پول
- * پرداخت‌شده، مازادِ پرداخت‌نشده): تکلیفش فقط از مرجوعیِ خرید روشن می‌شود
- * تا آن حساب هم بسته شود. بقیه‌ی قرنطینه را انبار خودش تعیین تکلیف می‌کند.
+ * توضیح لازم است (همان قاعده‌ی `ApplyProductUnitAction`): هر اسقاط، علتِ
+ * «سایر موارد»، و آزادسازی یا اسقاطِ کالای پرداخت‌نشده.
  */
-export const isPurchaseQuarantine = (unit) =>
-  unit.status === UNIT_STATUSES.QUARANTINED &&
-  // بکندِ فعلی `custodyReason` را نمی‌دهد و تنها قرنطینه‌ای که امروز دارد
-  // قرنطینه‌ی دریافتِ خرید است؛ علتِ نامعلوم همان حساب می‌شود.
-  (unit.custodyReason == null || PURCHASE_CUSTODY_REASONS.includes(unit.custodyReason));
+export const noteRequired = (action, reason, units = []) =>
+  action === UnitActionEnum.SCRAP ||
+  reason === UnitActionReasonEnum.OTHER ||
+  (action === UnitActionEnum.RELEASE && units.some(isUnpaidQuarantine));
 
 /**
  * کارهایی که روی این دانه مجازند (بند ۴). هر قرنطینه‌ای — دستی، برگشتی از
  * مشتری یا دریافتِ خرید — هر سه راه را دارد: بازگشت به موجودی، اسقاط، یا
- * عودت به تامین‌کننده (`purchaseReturnRouteOf`). برای قرنطینه‌ی خرید سرور
- * حسابِ باز با تامین‌کننده را هم می‌بندد (تصمیمِ محصول ۲۰۲۶-۰۹-۲۶).
+ * عودت به تامین‌کننده (`purchaseReturnRouteOf`). کارِ دستی حسابِ تامین‌کننده
+ * را تکان نمی‌دهد؛ عودت و پول فقط از مرجوعیِ خرید است. سرور دانه‌هایی را که
+ * یک مرجوعیِ خرید رزرو کرده آزاد یا اسقاط نمی‌کند و شماره‌اش را می‌گوید.
  */
 export function allowedActionsOf(unit) {
   if (unit.status === UNIT_STATUSES.IN_STOCK) {
@@ -181,14 +184,24 @@ export function allowedActionsOf(unit) {
 export const canApply = (unit, action) => allowedActionsOf(unit).includes(action);
 
 /**
- * عودت به تامین‌کننده از مرجوعیِ خریدی که دانه با آن آمده. قرنطینه‌ی دریافت
- * با پیش‌پرشدن از گزارشِ انبار. دانه‌ی بدونِ خرید (موجودیِ اولیه) تامین‌کننده‌ای
- * ندارد که به او برگردد.
+ * «کارِ» قفسه — در کنارِ `UnitActionEnum` از همان دیالوگ می‌گذرد، ولی
+ * `ApplyProductUnitAction` نیست (`SetProductUnitLocation`، بدونِ حرکتِ دانه).
+ */
+export const UNIT_LOCATION_ACTION = "location";
+
+/** قفسه فقط برای دانه‌ای که هنوز در انبار یا قرنطینه است. */
+export const canLocate = (unit) => LABELABLE_STATUSES.includes(unit.status);
+
+export const BIN_LOCATION_MAX_LENGTH = 50;
+
+/**
+ * عودت به تامین‌کننده از مرجوعیِ خریدی که دانه با آن آمده، با پیش‌پرشدن
+ * از قرنطینه‌ی همان خرید — ادعای روی سفارش برگشتیِ مشتری و نگهداشتِ انبار
+ * را هم برمی‌دارد. دانه‌ی بدونِ خرید (موجودیِ اولیه) تامین‌کننده‌ای ندارد.
  */
 export function purchaseReturnRouteOf(unit) {
   if (unit.status !== UNIT_STATUSES.QUARANTINED || !unit.purchaseId) return null;
-  const base = `${ROUTES.PURCHASES_RETURNS_NEW}?purchaseId=${unit.purchaseId}`;
-  return isPurchaseQuarantine(unit) ? `${base}&prefill=quarantine` : base;
+  return `${ROUTES.PURCHASES_RETURNS_NEW}?purchaseId=${unit.purchaseId}&prefill=quarantine`;
 }
 
 // ─── «کجاست؟» ───────────────────────────────────────────────────────────────
@@ -200,11 +213,16 @@ export function purchaseReturnRouteOf(unit) {
 export function whereaboutsOf(unit) {
   switch (unit.status) {
     case UNIT_STATUSES.IN_STOCK:
-      return { place: "انبار", detail: "قابل فروش" };
+      return { place: "انبار", detail: unit.binLocation ? `قفسه ${unit.binLocation}` : "قابل فروش" };
     case UNIT_STATUSES.QUARANTINED:
       return {
         place: "قرنطینه",
-        detail: UNIT_CUSTODY_REASON_LABELS[unit.custodyReason] ?? "دریافت خرید",
+        detail: [
+          UNIT_CUSTODY_REASON_LABELS[unit.custodyReason] ?? "دریافت خرید",
+          unit.binLocation && `قفسه ${unit.binLocation}`,
+        ]
+          .filter(Boolean)
+          .join(" · "),
       };
     case UNIT_STATUSES.SOLD:
       return {

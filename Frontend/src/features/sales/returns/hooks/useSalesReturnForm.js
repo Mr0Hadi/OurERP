@@ -1,3 +1,4 @@
+import { toast } from "react-hot-toast";
 import { useSalesReturnFormStore } from "../store/salesReturnFormStore";
 import { SALES_RETURN_PROBLEMS } from "../domain/salesReturnVocabulary";
 import { CLAIM_SCOPES, OFF_SCOPE_KINDS } from "@/shared/domain/returns/scopes";
@@ -16,7 +17,8 @@ const DEFAULT_UNLISTED_PROBLEM = SALES_RETURN_PROBLEMS.UNLISTED_ITEM;
  *
  *  • روی فاکتور — روی یک خط فروش، سقفش مقدارِ تحویل‌شده.
  *  • مازاد      — بیش از مقدارِ یک خط ارسال شده؛ روی همان خط و با قیمت
- *                 همان خط. سقفش دانه‌های مازادِ ارسال‌شده است.
+ *                 همان خط. سقفش `claimableExcessQuantity` همان خط است
+ *                 (دانه‌های مازادِ ارسال‌شده منهای ادعاهای بازِ مازاد).
  *  • نامرتبط    — کالایی که در فاکتور نیست؛ بدون خط و با قیمت دستی.
  */
 export function useSalesReturnForm() {
@@ -26,6 +28,20 @@ export function useSalesReturnForm() {
   const lines = formData.lines || [];
   const orderLines = formData.orderLines || [];
   const offInvoiceClaims = formData.offInvoiceClaims || [];
+  const excessCaps = formData.excessCaps || {};
+
+  /** سقفِ باقی‌مانده‌ی مازادِ یک خط، با کسرِ ادعاهای دیگرِ همین فرم روی همان خط. */
+  const excessRemaining = (orderLineId, exceptId = null) => {
+    const used = offInvoiceClaims
+      .filter(
+        (c) =>
+          c.id !== exceptId &&
+          c.offScopeKind === OFF_SCOPE_KINDS.EXCESS &&
+          c.orderLineId === orderLineId,
+      )
+      .reduce((sum, c) => sum + (Number(c.quantity) || 0), 0);
+    return Math.max(0, (excessCaps[orderLineId] ?? 0) - used);
+  };
 
   const claimedQuantityOf = (line) =>
     (line.claims || []).reduce((sum, c) => sum + (Number(c.quantity) || 0), 0);
@@ -105,6 +121,10 @@ export function useSalesReturnForm() {
         ? c.orderLineId === product.orderLineId
         : c.offScopeKind === kind && c.productId === product.productId,
     );
+    if (isExcess && excessRemaining(product.orderLineId) <= 0) {
+      toast.error("برای این قلم کالای مازادی ارسال نشده یا همه‌اش در مرجوعیِ دیگری است");
+      return;
+    }
     if (existing) {
       setOffInvoiceClaims(
         offInvoiceClaims.map((c) =>
@@ -137,6 +157,11 @@ export function useSalesReturnForm() {
         // قیمتِ مازاد از خطِ فاکتور است و سرور مقدارِ دیگری را رد می‌کند.
         if (field === "unitPrice" && claim.offScopeKind === OFF_SCOPE_KINDS.EXCESS) {
           return claim;
+        }
+        if (field === "quantity" && claim.offScopeKind === OFF_SCOPE_KINDS.EXCESS) {
+          const num = Number(value);
+          const max = excessRemaining(claim.orderLineId, claim.id);
+          return { ...claim, quantity: Number.isNaN(num) || num < 0 ? 0 : Math.min(num, max) };
         }
         if (field === "quantity" || field === "unitPrice") {
           const num = Number(value);

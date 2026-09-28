@@ -40,8 +40,8 @@ import { getErrorMessage } from "@/shared/lib/errorMessage";
 const BULK_LIMIT = 2000;
 
 /** مقدارِ پارامترِ آدرس: `segment` و `labelFilter` رشته، بقیه عدد (شناسه یا enum). */
-const parseUrlValue = (key, raw) =>
-  key === "segment" || key === "labelFilter" ? raw : Number(raw) || "";
+const TEXT_URL_KEYS = ["segment", "labelFilter", "binLocation"];
+const parseUrlValue = (key, raw) => (TEXT_URL_KEYS.includes(key) ? raw : Number(raw) || "");
 
 /**
  * دانه‌ها و برچسب‌ها — مدیریتِ هر دانه‌ی فیزیکیِ کالا در یک صفحه:
@@ -65,7 +65,7 @@ const parseUrlValue = (key, raw) =>
  * می‌کند) و بارکدِ کالا فهرست را روی همان کالا می‌برد.
  *
  * پیوند از صفحه‌های دیگر با پارامترِ آدرس: `?productId=`، `?purchaseId=`،
- * `?saleId=`، `?segment=quarantine`، `?labelFilter=unprinted`، `?unit=<بارکد>`،
+ * `?saleId=`، `?segment=quarantine`، `?labelFilter=unprinted`، `?binLocation=`، `?unit=<بارکد>`،
  * و `?view=unlabeled` (قدیمی).
  */
 export default function UnitsPage() {
@@ -90,6 +90,7 @@ export default function UnitsPage() {
   const search = useDebouncedValue(store.search, 400);
   const fromSerial = useDebouncedValue(store.fromSerial, 400);
   const toSerial = useDebouncedValue(store.toSerial, 400);
+  const binLocation = useDebouncedValue(store.binLocation, 400);
 
   const listFilters = useMemo(
     () =>
@@ -107,6 +108,7 @@ export default function UnitsPage() {
         toDate: store.toDate,
         fromSerial,
         toSerial,
+        binLocation: binLocation.trim(),
       }),
     [
       store.segment,
@@ -122,6 +124,7 @@ export default function UnitsPage() {
       store.toDate,
       fromSerial,
       toSerial,
+      binLocation,
     ],
   );
 
@@ -308,6 +311,7 @@ export default function UnitsPage() {
       store.toDate ||
       store.fromSerial ||
       store.toSerial ||
+      store.binLocation ||
       store.custodyReason,
   );
 

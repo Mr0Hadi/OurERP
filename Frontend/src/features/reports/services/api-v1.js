@@ -19,8 +19,14 @@ import { normalizeListResponse } from "@/shared/services/api/contract";
  *    تاریخِ ارسال/دریافت فیزیکی.
  */
 
-/** تاریخِ خالی روی سیم نمی‌رود؛ سرور آن را «نامعتبر» می‌بیند نه «نفرستاده». */
-const rangeParams = ({ page, limit, fromDate = "", toDate = "" } = {}) => ({
+/**
+ * تاریخِ خالی روی سیم نمی‌رود؛ سرور آن را «نامعتبر» می‌بیند نه «نفرستاده».
+ * `teamId`/`departmentId` فقط روی دو گزارشِ کارمندان معنا دارند: رتبه‌بندی
+ * بینِ کسانی که **امروز** در آن تیم/واحدند.
+ */
+const rangeParams = ({ page, limit, fromDate = "", toDate = "", teamId, departmentId } = {}) => ({
+  teamId: teamId || undefined,
+  departmentId: departmentId || undefined,
   page,
   take: limit,
   fromDate: fromDate || undefined,

@@ -15,6 +15,8 @@ const EMPTY_FORM = {
   orderLines: [],
   // ادعاهای «خارج از فاکتور» — کالایی که سفارش توجیهش نمی‌کند
   offInvoiceClaims: [],
+  // سقفِ ادعای مازاد برای هر خط (`claimableExcessQuantity`)، کلید: `orderLineId`
+  excessCaps: {},
 };
 
 export const useSalesReturnFormStore = create((set, get) => ({
@@ -31,14 +33,14 @@ export const useSalesReturnFormStore = create((set, get) => ({
   /** `sale` همان `SaleDto`ِ `GetSaleDetail` است. */
   initializeForSale: (sale) => {
     // `GetSaleDetail` فیلد `updatedAt` نمی‌دهد، پس کلیدِ نسخه از محتوا
-    // ساخته می‌شود: با هر ارسال یا تسویه‌ی مرجوعی، ارقامِ خطوط عوض
+    // ساخته می‌شود: با هر ارسال، ادعا یا تسویه‌ی مرجوعی، سقف‌های خطوط عوض
     // می‌شوند و فرم باید از نو پر شود.
     const version = [
       "sale",
       sale.id,
       sale.status,
       (sale.items || [])
-        .map((item) => `${item.id}:${item.shippedQuantity}:${item.settledQuantity}`)
+        .map((item) => `${item.id}:${item.claimableQuantity}:${item.claimableExcessQuantity}`)
         .join(","),
     ].join(":");
     if (get().initializedForId === version) return;
@@ -54,15 +56,18 @@ export const useSalesReturnFormStore = create((set, get) => ({
         orderLines: (sale.items || []).map((item) => ({
           orderLineId: item.id,
           productId: item.productId,
-          productCode: "",
+          productCode: item.productCode ?? "",
           productName: item.productName,
-          unit: "",
+          unit: item.unit ?? "",
           unitPrice: item.unitPrice,
         })),
+        excessCaps: Object.fromEntries(
+          (sale.items || []).map((item) => [item.id, Number(item.claimableExcessQuantity) || 0]),
+        ),
         lines: (sale.items || [])
-          // مشتری فقط چیزی را که فرستاده‌ایم می‌تواند برگرداند؛ سقفِ ادعا
-          // در بکند `ShippedQuantity − SettledQuantity − ادعاهای باز` است.
-          .filter((item) => item.shippedQuantity > item.settledQuantity)
+          // سقفِ ادعا همان عددی است که `CreateSaleReturn` چک می‌کند:
+          // ارسال‌شده − تسویه‌شده − ادعاهای بازِ مرجوعی‌های دیگر.
+          .filter((item) => item.claimableQuantity > 0)
           .map((item) => ({
             // کلیدِ ردیف و شناسه‌ی خط هر دو از `item.id` می‌آیند، نه از
             // `productId`: یک کالا می‌تواند در دو خط فاکتور با قیمت
@@ -72,17 +77,12 @@ export const useSalesReturnFormStore = create((set, get) => ({
             orderLineId: item.id,
             scope: CLAIM_SCOPES.ON_ORDER,
             productId: item.productId,
-            // ⚠️ `SaleItemDto` کد کالا و واحد را نمی‌دهد (برخلافِ
-            // `PurchaseReceivingItemInfoDto` سمتِ خرید). تا وقتی بکند
-            // اضافه‌شان نکند، این دو ستون روی فرمِ مرجوعیِ فروش خالی‌اند.
-            productCode: "",
+            productCode: item.productCode ?? "",
             productName: item.productName,
-            unit: "",
+            unit: item.unit ?? "",
             unitPrice: item.unitPrice,
             deliveredQuantity: item.shippedQuantity,
-            // سقفی که خودِ بکند هم چک می‌کند، منهای ادعاهای بازِ
-            // مرجوعی‌های دیگر که `SaleDto` آن را برنمی‌گرداند.
-            maxReturnableQuantity: item.shippedQuantity - item.settledQuantity,
+            maxReturnableQuantity: item.claimableQuantity,
             claims: [],
           })),
       },

@@ -171,3 +171,16 @@ export async function applyProductUnitAction(payload, { idempotencyKey } = {}) {
   );
   return data;
 }
+
+/**
+ * `POST api/Product/SetProductUnitLocation` — قفسه‌ی چند دانه (متنِ آزاد،
+ * حداکثر ۵۰ نویسه). سرور یکدستش می‌کند (حروفِ بزرگ، بدونِ فاصله) و خالی
+ * قفسه را پاک می‌کند. فقط دانه‌ی در انبار یا قرنطینه؛ همه یا هیچ.
+ */
+export async function setProductUnitLocation({ productUnitIds, binLocation }) {
+  const { data } = await axiosInstance.post("/Product/SetProductUnitLocation", {
+    productUnitIds,
+    binLocation: binLocation?.trim() || null,
+  });
+  return data;
+}

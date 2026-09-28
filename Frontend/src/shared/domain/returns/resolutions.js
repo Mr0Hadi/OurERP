@@ -11,6 +11,7 @@ import {
   SPLITTABLE_PAYMENT_TYPES,
 } from "@/shared/domain/enums/paymentType";
 import { RETURN_STATUSES, isTerminalStatus } from "./statuses";
+import { ProductUnitStatusEnum } from "@/shared/domain/enums/unitStatus";
 
 /**
  * تصمیم‌ها: ترکیب‌شان، بسطشان به اثر، اعتبارسنجی، و ماشین وضعیت —
@@ -84,12 +85,34 @@ export function moneyAmountOf(money) {
  * کالا را نمی‌خواند).
  */
 function emptyGoodsSlot() {
-  return { enabled: false, items: [] };
+  return { enabled: false, items: [], source: null };
 }
 
 /** اسلاتِ خروج از قرنطینه — همیشه روی همان کالای ادعا. */
-function emptyQuarantineSlot() {
-  return { enabled: false };
+function emptyQuarantineSlot(source = null) {
+  return { enabled: false, source };
+}
+
+/**
+ * منبعِ کالای خروجی در مرجوعی خرید (`ProductUnitStatusEnum`): موجودیِ قفسه
+ * یا قرنطینه. کسی که با تامین‌کننده توافق می‌کند می‌گوید کالا از کجا
+ * برداشته می‌شود و انبار فقط اجرا می‌کند؛ قرنطینه از همان لحظه برای این
+ * تصمیم رزرو می‌شود.
+ */
+export const GOODS_SOURCES = {
+  IN_STOCK: ProductUnitStatusEnum.IN_STOCK,
+  QUARANTINED: ProductUnitStatusEnum.QUARANTINED,
+};
+
+/** اسلات‌هایی که از قرنطینه برمی‌دارند (و سقفِ قرنطینه را می‌خورند). */
+function takesFromQuarantine(composition) {
+  return (
+    (composition.goodsOut?.enabled &&
+      composition.goodsOut.source === GOODS_SOURCES.QUARANTINED) ||
+    composition.goodsRelease?.enabled ||
+    (composition.goodsScrap?.enabled &&
+      composition.goodsScrap.source !== GOODS_SOURCES.IN_STOCK)
+  );
 }
 
 /**
@@ -114,7 +137,7 @@ export function emptyComposition(quantity = 1) {
     goodsIn: emptyGoodsSlot(),
     goodsOut: emptyGoodsSlot(),
     goodsRelease: emptyQuarantineSlot(),
-    goodsScrap: emptyQuarantineSlot(),
+    goodsScrap: emptyQuarantineSlot(GOODS_SOURCES.QUARANTINED),
     moneyIn: emptyMoneyEffect(),
     moneyOut: emptyMoneyEffect(),
     writeOff: false,
@@ -252,6 +275,8 @@ export function expandComposition(composition, claim) {
  *  ۶. `unitCost` فرستاده نمی‌شود: آزادسازی، اسقاط و عودت از قرنطینه با
  *     بهای ثبت‌شده روی خودِ دانه (`QuarantineCost`) حرکت می‌کنند و بکند
  *     هر عددی را که فرانت بفرستد نادیده می‌گیرد.
+ *  ۷. `source` فقط وقتی فرستاده می‌شود که اسلات منبع دارد — عودت و اسقاطِ
+ *     مرجوعی خرید. روی مرجوعی فروش همیشه خالی است (بکند ۴۰۰ می‌دهد).
  */
 export function toApiComposition(composition, claim) {
   if (!composition) return null;
@@ -273,6 +298,7 @@ export function toApiComposition(composition, claim) {
           quantity: Number(item.quantity) || 0,
           productId,
           unitPrice: hasValue(item.unitPrice) ? Number(item.unitPrice) : undefined,
+          source: slot.source ?? undefined,
         };
       });
   };
@@ -283,6 +309,7 @@ export function toApiComposition(composition, claim) {
       {
         quantity,
         productId: claim?.productId ?? null,
+        source: slot.source ?? undefined,
       },
     ];
   };
@@ -329,8 +356,9 @@ export function toApiComposition(composition, claim) {
  * ترازی الزامی نیست.
  *
  * `allowQuarantine` فقط در مرجوعی خرید روشن است — سرور روی مرجوعی فروش
- * آزادسازی و اسقاط را رد می‌کند. `quarantineAvailable` تعدادِ کالای همین
- * ادعا در قرنطینه است (`null` یعنی نامعلوم، پس سنجیده نمی‌شود).
+ * آزادسازی و اسقاط را رد می‌کند، و همان‌جا عودت منبعِ الزامی دارد.
+ * `quarantineAvailable` سقفِ برداشت از قرنطینه برای این ادعاست
+ * (`claimQuarantinedQuantity`؛ `null` یعنی نامعلوم، پس سنجیده نمی‌شود).
  */
 export function validateComposition(
   composition,
@@ -395,15 +423,20 @@ export function validateComposition(
     }
   }
 
-  // فقط آزادسازی به قرنطینه بسته است؛ اسقاط می‌تواند از موجودی هم باشد
-  // (همان قاعده‌ی `AddClaimResolution` در بکند).
+  if (allowQuarantine && composition.goodsOut?.enabled && composition.goodsOut.source == null) {
+    errors.push("مشخص کنید کالای عودتی از موجودی برداشته می‌شود یا از قرنطینه");
+  }
+
+  // هر اثری که از قرنطینه برمی‌دارد همان لحظه با قرنطینه‌ی آزادِ این ادعا
+  // سنجیده و رزرو می‌شود (همان قاعده‌ی `AddClaimResolution`).
   if (
-    composition.goodsRelease?.enabled &&
+    allowQuarantine &&
+    takesFromQuarantine(composition) &&
     quarantineAvailable != null &&
     quantity > quarantineAvailable
   ) {
     errors.push(
-      `برای این ادعا فقط ${quarantineAvailable.toLocaleString("fa-IR")} عدد کالا در قرنطینه است`,
+      `برای این ادعا فقط ${quarantineAvailable.toLocaleString("fa-IR")} عدد کالای آزاد در قرنطینه است`,
     );
   }
 
@@ -490,6 +523,9 @@ export function buildGoodsLines(returnDoc, directions, { onlyPending = true } = 
           unit: sameProduct ? claim.unit : "",
           unitPrice: effect.unitPrice ?? claim.unitPrice,
           unitCost: effect.unitCost ?? null,
+          // منبعی که تصمیم ثبت کرده؛ `null` فقط برای عودت‌های قدیمیِ بی‌منبع
+          // (پیش از ۲۰۲۶-۰۹-۲۷) و آزادسازی.
+          source: effect.source ?? null,
           problem: claim.problem,
           scope: claim.scope,
           offScopeKind: claim.offScopeKind ?? null,

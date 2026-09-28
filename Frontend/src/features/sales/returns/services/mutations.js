@@ -11,6 +11,7 @@ import {
   cancelSalesReturn,
   reopenSalesReturn,
   removeSalesReturn,
+  updateSalesReturnAttachments,
 } from "./api-v1";
 import { salesReturnKeys } from "./queryKeys";
 import { invalidateSalesEcosystem } from "../../orders/services/sharedInvalidation";
@@ -162,5 +163,17 @@ export const useRemoveSalesReturnMutation = () => {
       navigate(ROUTES.SALES_RETURNS_LIST);
     },
     onError: (error) => toast.error(getErrorMessage(error, "خطا در حذف مرجوعی")),
+  });
+};
+/** پیوست‌ها فقط سندِ مرجوعی را عوض می‌کنند؛ پاسخ مستقیم در کش می‌نشیند. */
+export const useUpdateSalesReturnAttachmentsMutation = (returnId) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (attachments) => updateSalesReturnAttachments(returnId, attachments),
+    onSuccess: (updated) => {
+      finalizeReturnChange(queryClient, updated);
+      toast.success("پیوست‌ها ذخیره شد");
+    },
+    onError: (error) => toast.error(getErrorMessage(error, "خطا در ذخیره‌ی پیوست‌ها")),
   });
 };

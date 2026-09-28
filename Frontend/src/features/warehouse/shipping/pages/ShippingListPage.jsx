@@ -1,4 +1,5 @@
 import ListPageLayout from "@/shared/components/layout/ListPageLayout";
+import { useCustomersOptionsQuery } from "@/features/customers/services/queries";
 import ServerTable from "@/shared/components/table/ServerTable";
 
 import ShippingFilters from "../components/table/ShippingFilters";
@@ -21,13 +22,14 @@ export default function ShippingListPage() {
   const filters = useShippingListFilters();
   const query = useShippableSalesQuery(filters, listState.pagination, listState.sorting);
   const buildRows = useQueueRows("out", filters, listState.pagination.pageIndex === 0);
+  const { customers, isLoading: isCustomersLoading } = useCustomersOptionsQuery();
 
   return (
     <ListPageLayout
       title="ارسال کالاهای انبار"
       description="آماده‌سازی و ارسال سفارش‌هایی که هنوز کامل تحویل مشتری نشده‌اند"
     >
-      <ShippingFilters />
+      <ShippingFilters customers={customers} isCustomersLoading={isCustomersLoading} />
       <ServerTable
         query={query}
         listState={listState}

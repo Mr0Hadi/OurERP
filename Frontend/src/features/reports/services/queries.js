@@ -22,6 +22,8 @@ function useActivityQuery(keyFn, fetcher, { filters, pagination }) {
     limit: pagination.pageSize,
     fromDate: filters.fromDate || "",
     toDate: filters.toDate || "",
+    teamId: filters.teamId || "",
+    departmentId: filters.departmentId || "",
   };
 
   return useQuery({

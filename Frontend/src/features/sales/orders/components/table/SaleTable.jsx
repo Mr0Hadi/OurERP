@@ -5,6 +5,7 @@ import PaymentTypeBadge from "@/shared/components/status/PaymentTypeBadge";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import SaleStatusBadge from "@/shared/components/status/SaleStatusBadge";
+import StatusBadge from "@/shared/components/status/StatusBadge";
 import { detailsColumn } from "@/shared/components/table/columns";
 
 const SaleTable = ({
@@ -46,7 +47,25 @@ const SaleTable = ({
       {
         accessorKey: "status",
         header: "وضعیت",
-        cell: (info) => <SaleStatusBadge status={info.getValue()} />,
+        // وضعیت فقط مرحله‌ی ارسال است؛ مرجوعی سندِ جداست و کنارش نشان داده
+        // می‌شود (`returnCount`، و `hasOpenReturn` برای مرجوعیِ هنوز باز).
+        cell: (info) => {
+          const { returnCount, hasOpenReturn } = info.row.original;
+          return (
+            <div className="flex flex-wrap items-center gap-1">
+              <SaleStatusBadge status={info.getValue()} />
+              {returnCount > 0 && (
+                <StatusBadge
+                  size="sm"
+                  tone={hasOpenReturn ? "caution" : "neutral"}
+                  title={hasOpenReturn ? "مرجوعیِ باز دارد" : "مرجوعی دارد"}
+                >
+                  {returnCount.toLocaleString("fa-IR")} مرجوعی
+                </StatusBadge>
+              )}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "paymentType",

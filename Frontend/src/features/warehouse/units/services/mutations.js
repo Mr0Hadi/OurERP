@@ -10,6 +10,7 @@ import {
   resolveScannedCode,
   markProductUnitsPrinted,
   applyProductUnitAction,
+  setProductUnitLocation,
 } from "./api-v1";
 import { productUnitKeys } from "./queryKeys";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
@@ -48,8 +49,8 @@ export const useMarkUnitsPrintedMutation = () => {
 
 /**
  * قرنطینه / آزادسازی / اسقاطِ دستی. موجودیِ کالا عوض می‌شود، پس فهرستِ
- * کالاها و کارت‌های موجودی هم باید تازه شوند؛ برای قرنطینه‌ی دریافتِ خرید
- * حسابِ خرید و تامین‌کننده هم عوض می‌شود.
+ * کالاها و کارت‌های موجودی هم باید تازه شوند؛ گزارشِ قرنطینه‌ی خرید (سقفِ
+ * مرجوعی) هم به همین دانه‌ها بسته است.
  */
 export const useApplyUnitActionMutation = () => {
   const queryClient = useQueryClient();
@@ -65,5 +66,23 @@ export const useApplyUnitActionMutation = () => {
       queryClient.invalidateQueries({ queryKey: supplierKeys.all });
     },
     onError: (error) => toast.error(getErrorMessage(error, "انجام نشد")),
+  });
+};
+
+/** قفسه‌ی دانه‌ها — فقط جایگاه عوض می‌شود، نه وضعیت یا موجودی. */
+export const useSetUnitLocationMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: setProductUnitLocation,
+    onSuccess: (_, variables) => {
+      const count = variables.productUnitIds.length.toLocaleString("fa-IR");
+      toast.success(
+        variables.binLocation?.trim()
+          ? `قفسه‌ی ${count} دانه ثبت شد`
+          : `قفسه‌ی ${count} دانه پاک شد`,
+      );
+      queryClient.invalidateQueries({ queryKey: productUnitKeys.all });
+    },
+    onError: (error) => toast.error(getErrorMessage(error, "ثبتِ قفسه انجام نشد")),
   });
 };

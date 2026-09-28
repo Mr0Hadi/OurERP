@@ -7,8 +7,10 @@
  * و «لغو شده» در انتها. به همین دلیل ترتیبِ کلیدهای عددی همان ترتیبِ
  * نمایش است و جایی لازم نیست دستی مرتب شود.
  *
- * عیناً همان `SalesStatusEnum`ِ بکند. `RETURNED` را فقط سرور می‌گذارد —
- * وقتی هر دانه‌ی ارسال‌شده‌ی فروش از راهِ مرجوعی تسویه شده باشد.
+ * عیناً همان `SalesStatusEnum`ِ بکند. وضعیت فقط مرحله‌ی ارسال را می‌گوید؛
+ * مرجوعی سندِ جدای خودش است. `6` (`RETURNED`) از ۲۰۲۶-۰۹-۲۷ حذف شده و
+ * دوباره استفاده نمی‌شود — «این فروش مرجوعی دارد» از `returnCount` و
+ * `hasOpenReturn` خوانده می‌شود.
  */
 export const SaleStatusEnum = Object.freeze({
   PROFORMA: 0,
@@ -17,7 +19,6 @@ export const SaleStatusEnum = Object.freeze({
   SHIPPED: 3,
   DELIVERED: 4,
   CANCELLED: 5,
-  RETURNED: 6,
 });
 
 export const SALE_STATUS_LABELS = Object.freeze({
@@ -27,7 +28,6 @@ export const SALE_STATUS_LABELS = Object.freeze({
   [SaleStatusEnum.SHIPPED]: "ارسال شده",
   [SaleStatusEnum.DELIVERED]: "تحویل کامل",
   [SaleStatusEnum.CANCELLED]: "لغو شده",
-  [SaleStatusEnum.RETURNED]: "مرجوع شده",
 });
 
 /** رنگِ معناییِ هر وضعیت برای `StatusBadge` (معناها در `shared/lib/tone.js`). */
@@ -38,7 +38,6 @@ export const SALE_STATUS_TONES = Object.freeze({
   [SaleStatusEnum.SHIPPED]: "primary",
   [SaleStatusEnum.DELIVERED]: "success",
   [SaleStatusEnum.CANCELLED]: "danger",
-  [SaleStatusEnum.RETURNED]: "special",
 });
 
 /**

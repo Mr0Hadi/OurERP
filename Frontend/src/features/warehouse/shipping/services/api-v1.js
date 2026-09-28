@@ -12,21 +12,13 @@ import { idempotent, normalizeListResponse } from "@/shared/services/api/contrac
  *     خروجِ مرجوعی در یک تراکنش.
  */
 
-/** فروش‌هایی که هنوز کالایشان کامل از انبار خارج نشده. */
 /**
- * صفِ ارسال. `statuses` به شکلِ `statuses=1&statuses=2` فرستاده می‌شود
- * (درخواستِ بند ۸ در `Backend-Net/docs/frontend-requests.fa.md` بخشِ ۳)؛
- * ردیف‌ها یک بار دیگر هم با همین فهرست فیلتر می‌شوند تا پیش‌فاکتور یا
- * لغوشده هرگز در صف نیاید.
+ * صفِ ارسال: فروش‌هایی که هنوز کالایشان کامل از انبار خارج نشده.
+ * `statuses` به شکلِ `statuses=1&statuses=2` فرستاده می‌شود.
  */
 export async function fetchShippableSales(params) {
   const { data } = await axiosInstance.get("/Sale/GetSaleList", { params });
-  const list = normalizeListResponse(data, { itemsKey: "saleList" });
-  // `GetSaleListQuery` هنوز `Statuses` ندارد (بخشِ ۳ سندِ frontend-requests.fa.md)
-  // و فقط `status` تکی را می‌فهمد؛ تا آن وقت ردیف‌ها اینجا فیلتر می‌شوند —
-  // برای همین صفحه ممکن است کمتر از `take` ردیف نشان دهد.
-  const allowed = new Set(params.statuses);
-  return { ...list, items: list.items.filter((sale) => allowed.has(Number(sale.status))) };
+  return normalizeListResponse(data, { itemsKey: "saleList" });
 }
 
 export async function fetchSaleForShipping(id) {

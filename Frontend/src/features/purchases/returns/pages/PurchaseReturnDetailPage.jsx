@@ -28,7 +28,10 @@ import {
   useReopenPurchaseReturnMutation,
   useRemovePurchaseReturnMutation,
   useExecuteMoneyEffectMutation,
+  useUpdatePurchaseReturnAttachmentsMutation,
 } from "../services/mutations";
+import { usePermission } from "@/features/auth/hooks/usePermission";
+import ReturnDocumentSection from "@/shared/components/returns/ReturnDocumentSection";
 
 import PurchaseReturnDetailLoading from "../components/forms/PurchaseReturnDetailLoading";
 import ReturnStatusBar from "@/shared/components/returns/ReturnStatusBar";
@@ -39,7 +42,6 @@ import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns"
 import PurchaseReturnResolutionSection from "../components/forms/PurchaseReturnResolutionSection";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
-import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import ReceivingReportCard, {
   ReceivingReportLines,
 } from "@/shared/components/returns/ReceivingReport";
@@ -82,6 +84,8 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
   const reopenMutation = useReopenPurchaseReturnMutation(purchaseReturn.id);
   const removeMutation = useRemovePurchaseReturnMutation();
   const executeMoneyMutation = useExecuteMoneyEffectMutation();
+  const attachmentsMutation = useUpdatePurchaseReturnAttachmentsMutation(purchaseReturn.id);
+  const { can, isError: permissionsUnknown } = usePermission();
 
   const isBusy =
     executeMoneyMutation.isPending ||
@@ -130,12 +134,16 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
 
       <ReceivingReportCard receivingInfo={sale} />
 
-      <InvoiceDocumentSection
+      <ReturnDocumentSection
+        returnDoc={purchaseReturn}
+        mutation={attachmentsMutation}
+        canEdit={permissionsUnknown || can("PurchaseReturnCreate")}
         title="مرجوعی خرید"
-        invoiceNumber={purchaseReturn.returnNumber}
-        attachmentLabel="فاکتور یا رسید مرجوعی از تامین‌کننده"
-        // سندِ چاپیِ مرجوعی خرید هنوز در بکند نیست: Backend-Net/docs/frontend-requests.fa.md (بخشِ ۵)
-        emptyHint="چاپ برگه‌ی مرجوعی به تامین‌کننده هنوز در سرور آماده نشده است."
+        // «برگه‌ی مرجوعی به تامین‌کننده» — برای هر مرجوعیِ خرید، همراهِ کالا.
+        documentKind="purchaseReturn"
+        documentId={purchaseReturn.id}
+        serverDocumentName={`برگه-مرجوعی-${purchaseReturn.returnNumber}`}
+        attachmentLabel="رسیدِ امضاشده یا عکسِ کالای مرجوعی"
       />
 
       <PurchaseReturnResolutionSection

@@ -18,7 +18,7 @@ import UnitsPageLink from "@/features/warehouse/units/components/UnitsPageLink";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { usePurchaseReceivingInfoQuery } from "@/features/warehouse/receiving/services/queries";
 import { ReceivingReportLines } from "@/shared/components/returns/ReceivingReport";
-import { lineReceivingReport } from "@/shared/domain/returns/receivingReport";
+import { lineReceivingReport, totalQuarantined } from "@/shared/domain/returns/receivingReport";
 import { UnitCustodyReasonEnum } from "@/shared/domain/enums/unitStatus";
 import { ROUTES } from "@/shared/constants/routes";
 import {
@@ -72,14 +72,7 @@ export default function PurchaseItemsCard({ purchase }) {
   const unlisted = (info?.unlistedItems || []).filter(
     (entry) => (Number(entry.quarantinedQuantity) || 0) > 0,
   );
-  const hasProblems =
-    (info?.discrepancies || []).length > 0 ||
-    unlisted.length > 0 ||
-    (info?.items || []).some(
-      (entry) =>
-        (Number(entry.quarantinedOnOrderQuantity) || 0) > 0 ||
-        (Number(entry.quarantinedExcessQuantity) || 0) > 0,
-    );
+  const hasProblems = (info?.discrepancies || []).length > 0 || totalQuarantined(info) > 0;
 
   const confirmClose = () => {
     if (!closing) return;

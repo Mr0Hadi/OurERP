@@ -28,7 +28,15 @@ import {
   useReopenSalesReturnMutation,
   useRemoveSalesReturnMutation,
   useExecuteMoneyEffectMutation,
+  useUpdateSalesReturnAttachmentsMutation,
 } from "../services/mutations";
+import { usePermission } from "@/features/auth/hooks/usePermission";
+import ReturnDocumentSection from "@/shared/components/returns/ReturnDocumentSection";
+import UnitsPageLink from "@/features/warehouse/units/components/UnitsPageLink";
+import Notice from "@/shared/components/feedback/Notice";
+import { formatNumber } from "@/shared/lib/numberFormat";
+import { UnitCustodyReasonEnum } from "@/shared/domain/enums/unitStatus";
+import { UNIT_SEGMENTS } from "@/features/warehouse/units/domain/unitVocabulary";
 
 import SalesReturnDetailLoading from "../components/forms/SalesReturnDetailLoading";
 import ReturnStatusBar from "@/shared/components/returns/ReturnStatusBar";
@@ -39,7 +47,6 @@ import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns"
 import SalesReturnResolutionSection from "../components/forms/SalesReturnResolutionSection";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
-import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
@@ -87,6 +94,8 @@ function SalesReturnDetailContent({ salesReturn }) {
     ),
   );
   const executeMoneyMutation = useExecuteMoneyEffectMutation();
+  const attachmentsMutation = useUpdateSalesReturnAttachmentsMutation(salesReturn.id);
+  const { can, isError: permissionsUnknown } = usePermission();
 
   const isBusy =
     executeMoneyMutation.isPending ||
@@ -133,9 +142,30 @@ function SalesReturnDetailContent({ salesReturn }) {
         </p>
       )}
 
-      <InvoiceDocumentSection
+      {salesReturn.quarantinedQuantity > 0 && (
+        <Notice tone="warning">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span>
+              {formatNumber(salesReturn.quarantinedQuantity)} عدد از کالای معیوبِ این مرجوعی هنوز در قرنطینه است؛
+              با مرجوعیِ خرید به تامین‌کننده برمی‌گردد، یا از صفحه‌ی دانه‌ها آزاد یا اسقاط می‌شود.
+            </span>
+            <UnitsPageLink
+              params={{
+                segment: UNIT_SEGMENTS.QUARANTINE,
+                custodyReason: UnitCustodyReasonEnum.CUSTOMER_RETURN,
+                saleId: salesReturn.saleId,
+              }}
+              label="دانه‌های قرنطینه"
+            />
+          </div>
+        </Notice>
+      )}
+
+      <ReturnDocumentSection
+        returnDoc={salesReturn}
+        mutation={attachmentsMutation}
+        canEdit={permissionsUnknown || can("SaleReturnCreate")}
         title="مرجوعی فروش"
-        invoiceNumber={salesReturn.returnNumber}
         // برگه‌ی طلبکاری فقط برای مرجوعی‌ای ساخته می‌شود که پولی به مشتری
         // برگردانده؛ بدون آن سرور ۴۰۰ می‌دهد و دکمه‌ی چاپ فقط خطا می‌سازد.
         documentKind="saleReturn"

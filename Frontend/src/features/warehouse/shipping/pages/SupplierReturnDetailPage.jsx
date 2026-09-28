@@ -44,7 +44,7 @@ const SECTIONS = [
   {
     direction: GOODS_OUT,
     title: "عودت کالا به تامین‌کننده",
-    subtitle: "مبدأ هر ردیف را مشخص کنید: موجودی قابل‌فروش یا قرنطینه.",
+    subtitle: "کالا از همان جایی برداشته می‌شود که در تصمیمِ مرجوعی آمده است.",
   },
   {
     direction: GOODS_RELEASE,
@@ -54,22 +54,19 @@ const SECTIONS = [
   {
     direction: GOODS_SCRAP,
     title: "اسقاط",
-    subtitle:
-      "این کالاها از چرخه خارج و به‌عنوان زیان ثبت می‌شوند. معمولاً از قرنطینه؛ اگر عیب بعد از دریافت روی کالای موجودی پیدا شده، مبدأ را «موجودی» بگذارید.",
+    subtitle: "این کالاها از چرخه خارج و به‌عنوان زیان ثبت می‌شوند.",
   },
 ];
 
-// مبدأ را انباردار می‌گوید و سرور حدسش نمی‌زند؛ فرم فقط پیشنهاد می‌دهد:
-//  - عودت: کالای خارج از سفارش هرگز وارد موجودی نشده، پس قرنطینه. برای
-//    کالای سهمِ سفارش، اگر انبار هنگامِ دریافت همین مقدار را خراب گزارش
-//    کرده و در قرنطینه است، قرنطینه؛ وگرنه (عیبی که بعداً روی قفسه پیدا
-//    شده) انتخاب با انباردار می‌ماند.
-//  - اسقاط: پیش‌فرض قرنطینه؛ «موجودی» برای عیبی که بعد از دریافت روی قفسه
-//    پیدا شده (بکند `Source = IN_STOCK` را روی اسقاط هم می‌پذیرد).
-//  - آزادسازی همیشه از قرنطینه است و مبدأ نمی‌خواهد.
+// از ۲۰۲۶-۰۹-۲۷ مبدأ روی خودِ تصمیم ثبت می‌شود (`effects[].source`) و انبار
+// فقط اجرا می‌کند؛ فرستادنِ مقدارِ دیگر ۴۰۰ است. فقط عودتِ قدیمیِ بی‌منبع
+// هنوز از انباردار پرسیده می‌شود، با همان پیشنهادِ قبلی: کالای خارج از
+// سفارش هرگز وارد موجودی نشده، پس قرنطینه؛ سهمِ سفارش اگر همین مقدار در
+// قرنطینه است، قرنطینه، وگرنه انتخاب با انباردار. آزادسازی مبدأ ندارد.
 const sourceRequired = (line) =>
-  line.direction === GOODS_OUT || line.direction === GOODS_SCRAP;
+  line.source == null && (line.direction === GOODS_OUT || line.direction === GOODS_SCRAP);
 const suggestSource = (line, receivingInfo) => {
+  if (line.source != null) return line.source;
   if (line.direction === GOODS_SCRAP) return ProductUnitStatusEnum.QUARANTINED;
   if (line.direction !== GOODS_OUT) return null;
   if (line.scope === CLAIM_SCOPES.OFF_ORDER) return ProductUnitStatusEnum.QUARANTINED;

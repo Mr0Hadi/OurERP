@@ -9,6 +9,7 @@ import {
 
 import ActivityReportSection from "../components/ActivityReportSection";
 import ReportPageHeader from "../components/ReportPageHeader";
+import EmployeeScopeFilter from "../components/EmployeeScopeFilter";
 import { useEmployeeActivityFilterStore } from "../store/activityFilterStore";
 import {
   useSalesPerformanceByEmployeeQuery,
@@ -25,7 +26,7 @@ import {
  * دو تب و نه دو فهرستِ زیرِ هم: هر دو صفحه‌بندیِ مستقل دارند و پشتِ سرِ
  * هم که می‌آمدند، صفحه‌بندیِ دومی همیشه زیرِ خطِ دید بود.
  *
- * هر دو تب یک استورِ بازه دارند، پس تاریخی که کاربر انتخاب می‌کند با
+ * هر دو تب یک استورِ فیلتر دارند (بازه، واحد، تیم)، پس انتخابِ کاربر با
  * جابه‌جایی بین تب‌ها از دست نمی‌رود.
  */
 export default function EmployeeActivityPage() {
@@ -36,6 +37,8 @@ export default function EmployeeActivityPage() {
         title="فعالیت کارمندان"
         description="رتبه‌بندی کارمندان بر اساس اسنادی که خودشان ثبت کرده‌اند. بازه روی تاریخ فاکتور اعمال می‌شود."
       />
+
+      <EmployeeScopeFilter useFilterStore={useEmployeeActivityFilterStore} />
 
       <Tabs defaultValue="sales" className="gap-3">
         <TabsList className="w-full sm:w-fit">

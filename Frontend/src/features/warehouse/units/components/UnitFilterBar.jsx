@@ -50,6 +50,7 @@ export default function UnitFilterBar({
     store.customerId,
     store.fromDate || store.toDate,
     store.fromSerial || store.toSerial,
+    store.binLocation,
     isQuarantine && store.custodyReason,
   ].filter(Boolean).length;
 
@@ -166,6 +167,15 @@ export default function UnitFilterBar({
                 className="h-9"
               />
             </div>
+          </Field>
+          <Field label="قفسه">
+            <Input
+              placeholder="مثلاً A-03 (همه‌ی A-03-*)"
+              dir="ltr"
+              value={store.binLocation}
+              onChange={(event) => store.setBinLocation(event.target.value)}
+              className="h-9 font-mono"
+            />
           </Field>
           {isQuarantine && (
             <Field label="علت قرنطینه">
