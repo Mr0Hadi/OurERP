@@ -1,169 +1,112 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { useGoBack } from "@/shared/hooks/useGoBack";
-import { useNavigationStore } from "@/shared/store/navigationStore";
-import { Save, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
-import { Button } from "@/shared/components/ui/button";
-import { useHeaderStore } from "@/shared/store/headerStore";
 import { usePurchaseFormStore } from "@/features/purchases/orders/store/purchaseFormStore";
 import { useCreatePurchaseMutation } from "@/features/purchases/orders/services/mutations";
 import { useSuppliersOptionsQuery } from "@/features/suppliers/services/queries";
+import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
+import { PURCHASE_STATUS_CHOICES } from "@/features/purchases/orders/domain/purchaseRules";
 
 import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection";
 import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
 import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
 import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
-import PurchaseStatusSection from "../components/forms/PurchaseStatusSection";
-import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
+import StatusChoice from "@/shared/components/forms/StatusChoice";
+import DocumentFormLayout, {
+  DocumentMobileBar,
+  DocumentSummaryCard,
+} from "@/shared/components/forms/DocumentFormLayout";
+import AttachmentsCard from "@/shared/components/invoice/AttachmentsCard";
 import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
-import { ROUTES } from "@/shared/constants/routes";
-import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
+import { useReturnedNewProduct } from "@/shared/components/products/useReturnedNewProduct";
+import { useNewDocumentDraft } from "@/shared/hooks/useNewDocumentDraft";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { PurchaseStatusEnum } from "@/shared/domain/enums/purchaseStatus";
 import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
-import { useReturnedNewProduct } from "@/shared/components/products/useReturnedNewProduct";
 
+const partyName = (party) => party.companyName || `${party.firstName} ${party.lastName}`;
+
+/**
+ * ثبتِ خریدِ جدید. ترتیبِ کار: تامین‌کننده ← اقلام ← اطلاعاتِ فاکتور ←
+ * ضمیمه؛ کنارش وضعیت، پرداخت (فقط وقتی پیش‌فاکتور نیست) و جمع
+ * (`DocumentFormLayout`). بعد از ثبت، خودِ سند باز می‌شود.
+ */
 export default function PurchasesNewPage() {
   const navigate = useNavigate();
-  const goBack = useGoBack();
-  const location = useLocation();
-
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
-
-  const setReturnPath = useNavigationStore((s) => s.setReturnPath);
-  const setCurrentPath = useNavigationStore((s) => s.setCurrentPath);
-
   const { setFormData, formData, resetForm, initializeForNew, setItems } =
     usePurchaseFormStore();
 
+  // پیش‌نویس فقط وقتی می‌ماند که از «کالا/تامین‌کننده‌ی جدید» برگشته باشیم.
+  const { openSubPage, returned } = useNewDocumentDraft({
+    reset: resetForm,
+    initialize: initializeForNew,
+  });
+
+  usePageHeader({ title: "ثبت خرید جدید", showBack: true });
+
   /**
    * ضمیمه‌ی پیش‌فاکتور/فاکتورِ تامین‌کننده. `CreatePurchase` آرایه‌ی
-   * `attachments` را می‌پذیرد (بند ۳ سندِ ضمیمه)، پس همان لحظه‌ی ثبت هم
-   * می‌شود فایل را پیوست کرد، نه فقط در ویرایش.
+   * `attachments` را می‌پذیرد، پس همان لحظه‌ی ثبت هم می‌شود فایل را پیوست کرد.
    */
   const attachments = useInvoiceAttachments();
-
   const [showErrors, setShowErrors] = useState(false);
 
-  useEffect(() => {
-    const fromValidReturn =
-      location.state?.newSupplierId || location.state?.newProductId;
-
-    const currentPath = location.pathname;
-    setCurrentPath(currentPath);
-
-    const { previousPath: prevPath } = useNavigationStore.getState();
-
-    if (fromValidReturn) {
-      setReturnPath(currentPath);
-      initializeForNew();
-      return;
-    }
-
-    const isReturningFromSubPage =
-      prevPath === ROUTES.WAREHOUSE_PRODUCTS_NEW ||
-      prevPath === ROUTES.SUPPLIERS_NEW;
-
-    if (isReturningFromSubPage) {
-      setReturnPath(currentPath);
-      initializeForNew();
-      return;
-    }
-
-    resetForm();
-    setReturnPath(currentPath);
-    initializeForNew();
-  }, [
-    location.pathname,
-    location.state,
-    setCurrentPath,
-    setReturnPath,
-    resetForm,
-    initializeForNew,
-  ]);
-
   const createMutation = useCreatePurchaseMutation();
-
   const { suppliers, isLoading: suppliersLoading } = useSuppliersOptionsQuery();
-
   const { products, isLoading: productsLoading } = useProductsOptionsQuery();
 
+  // تامین‌کننده‌ای که از داخلِ همین فرم ساخته شد (تا بکند شناسه را برگرداند —
+  // بندِ ۹.۲ سندِ درخواست‌ها — این شاخه عملاً اجرا نمی‌شود).
+  const newSupplierId = returned?.newSupplierId;
   useEffect(() => {
-    const state = location.state;
-    if (state?.newSupplierId && suppliers.length > 0) {
-      const found = suppliers.find((s) => s.id === state.newSupplierId);
-      if (found) {
-        const name =
-          found.companyName || `${found.firstName} ${found.lastName}`;
-        setFormData({ supplierId: found.id, supplierName: name });
-        navigate(location.pathname, { replace: true, state: {} });
-      }
-    }
-  }, [location.state, suppliers, setFormData, navigate, location.pathname]);
+    const found = newSupplierId && suppliers.find((s) => s.id === newSupplierId);
+    if (found) setFormData({ supplierId: found.id, supplierName: partyName(found) });
+  }, [newSupplierId, suppliers, setFormData]);
 
-  // کالایی که از داخلِ همین فرم ساخته شد (صفحه‌ی «کالای جدید» با `newProductId` برمی‌گردد).
   useReturnedNewProduct({
+    productId: returned?.newProductId,
     getItems: () => usePurchaseFormStore.getState().formData.items || [],
     setItems,
     priceOf: (product) => product.purchasePrice ?? 0,
   });
 
-  useEffect(() => {
-    const { resetForm: reset } = usePurchaseFormStore.getState();
-    setHeader({
-      title: "ثبت خرید جدید",
-      showBack: true,
-      onBack: () => {
-        reset();
-        goBack();
-      },
-    });
-    return () => clearHeader();
-  }, [setHeader, clearHeader, goBack]);
-
   const items = formData.items || [];
-
   // پیش‌نمایش با قاعده‌ی سرور (تخفیف و مالیات گرد، هر قلم جدا). جمع
   // فرستاده نمی‌شود؛ سرور خودش از اقلام و مالیاتِ کالاها حساب می‌کند.
-  const computedTotal = invoiceTotals(items).totalAmount;
+  const totals = invoiceTotals(items);
 
-  const isProforma =
-    Number(formData.status ?? PurchaseStatusEnum.PROFORMA) ===
-    PurchaseStatusEnum.PROFORMA;
+  const status =
+    formData.status === "" || formData.status == null
+      ? PurchaseStatusEnum.PROFORMA
+      : Number(formData.status);
+  const isProforma = status === PurchaseStatusEnum.PROFORMA;
+
+  const paidAmountOf = () => {
+    if (isProforma || formData.paymentType === PaymentTypeEnum.CREDIT) return 0;
+    if (formData.paymentType === PaymentTypeEnum.MIXED) {
+      return (formData.mixedPayments || []).reduce(
+        (sum, part) => sum + (Number(part.amount) || 0),
+        0,
+      );
+    }
+    return Number(formData.paidAmount) || 0;
+  };
 
   const onSubmit = (e) => {
     e.preventDefault();
 
     if (!formData.supplierId) {
       setShowErrors(true);
+      toast.error("تامین‌کننده را انتخاب کنید.");
       return;
     }
-
-    // محاسبه مبلغ پرداختی بسته به نوع پرداخت
-    let finalPaidAmount;
-    let paymentDetails = {};
-
-    if (formData.paymentType === PaymentTypeEnum.CREDIT) {
-      finalPaidAmount = 0;
-    } else if (formData.paymentType === PaymentTypeEnum.MIXED) {
-      const mixedPayments = formData.mixedPayments || [];
-      finalPaidAmount = mixedPayments.reduce(
-        (sum, p) => sum + (Number(p.amount) || 0),
-        0,
-      );
-      paymentDetails.mixedPayments = mixedPayments;
-    } else {
-      finalPaidAmount = Number(formData.paidAmount) || 0;
-      if (formData.paymentType === PaymentTypeEnum.CHECK) {
-        paymentDetails.checkNumber = formData.checkNumber || null;
-      } else if (formData.paymentType === PaymentTypeEnum.TRANSFER) {
-        paymentDetails.transferRef = formData.transferRef || null;
-      }
+    if (items.length === 0) {
+      toast.error("دست‌کم یک قلم اضافه کنید.");
+      return;
     }
-
     if (attachments.isUploading) {
       toast.error("تا پایان بارگذاری ضمیمه‌ها صبر کنید.");
       return;
@@ -187,20 +130,27 @@ export default function PurchasesNewPage() {
       })),
       paymentType: formData.paymentType ?? PaymentTypeEnum.CASH,
       // فقط برای ساختنِ `paymentDetails`؛ خودِ `paidAmount` فرستاده نمی‌شود.
-      paidAmount: isProforma ? 0 : finalPaidAmount,
-      ...paymentDetails,
-      status:
-        formData.status === "" || formData.status == null
-          ? PurchaseStatusEnum.PROFORMA
-          : formData.status,
+      paidAmount: paidAmountOf(),
+      mixedPayments:
+        !isProforma && formData.paymentType === PaymentTypeEnum.MIXED
+          ? formData.mixedPayments || []
+          : [],
+      checkNumber:
+        formData.paymentType === PaymentTypeEnum.CHECK ? formData.checkNumber || null : null,
+      transferRef:
+        formData.paymentType === PaymentTypeEnum.TRANSFER ? formData.transferRef || null : null,
+      status,
       attachments: attachments.filesPayload,
     };
 
     createMutation.mutate(payload, {
-      onSuccess: () => {
+      onSuccess: (created) => {
         attachments.commit();
-        navigate(ROUTES.PURCHASES);
         resetForm();
+        navigate(
+          created?.id ? routeWithId(ROUTES.PURCHASES_DETAIL, created.id) : ROUTES.PURCHASES,
+          { replace: true },
+        );
       },
     });
   };
@@ -208,90 +158,79 @@ export default function PurchasesNewPage() {
   const handleCancel = () => {
     // فایل‌های آپلودشده‌ی این نشست هیچ سندی ندارند که به آن بچسبند.
     attachments.discard();
-    navigate(-1);
     resetForm();
+    navigate(ROUTES.PURCHASES);
   };
 
   const isBusy = createMutation.isPending || attachments.isUploading;
+  const submitLabel = isProforma ? "ثبت پیش‌فاکتور" : "ثبت خرید";
 
   return (
-    <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in zoom-in-95 duration-300">
-      <form onSubmit={onSubmit}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 space-y-4">
-            <PurchaseItemsSection
-              items={items}
-              products={products}
-              isLoadingProducts={productsLoading}
-              onItemsChange={setItems}
+    <DocumentFormLayout
+      onSubmit={onSubmit}
+      main={
+        <>
+          <PurchaseSupplierSection
+            suppliers={suppliers}
+            isLoading={suppliersLoading}
+            selectedId={formData.supplierId}
+            onSelect={(id, name) => {
+              setFormData({ supplierId: id, supplierName: name });
+              setShowErrors(false);
+            }}
+            onClear={() => setFormData({ supplierId: "", supplierName: "" })}
+            onAddNew={() => openSubPage(ROUTES.SUPPLIERS_NEW)}
+            error={
+              showErrors && !formData.supplierId ? "انتخاب تامین‌کننده الزامی است" : null
+            }
+          />
+          <PurchaseItemsSection
+            items={items}
+            products={products}
+            isLoadingProducts={productsLoading}
+            onItemsChange={setItems}
+            onAddNewProduct={() => openSubPage(ROUTES.WAREHOUSE_PRODUCTS_NEW)}
+          />
+          <OrderInfoSection formData={formData} onFormChange={setFormData} errors={{}} />
+          <AttachmentsCard
+            label="پیش‌فاکتور/فاکتورِ دریافتی از تامین‌کننده"
+            attachments={attachments}
+          />
+        </>
+      }
+      aside={
+        <>
+          <DocumentSummaryCard
+            itemCount={items.length}
+            totals={totals}
+            submitLabel={submitLabel}
+            isBusy={isBusy}
+            onCancel={handleCancel}
+          >
+            <StatusChoice
+              options={PURCHASE_STATUS_CHOICES}
+              value={status}
+              onChange={(next) => setFormData({ status: next })}
             />
-            <OrderInfoSection
-              formData={formData}
-              onFormChange={setFormData}
-              errors={{}}
-            />
-          </div>
-
-          <div className="space-y-4">
-            <PurchaseSupplierSection
-              suppliers={suppliers}
-              isLoading={suppliersLoading}
-              selectedId={formData.supplierId}
-              onSelect={(id, name) => {
-                setFormData({ supplierId: id, supplierName: name });
-                setShowErrors(false);
-              }}
-              onClear={() => setFormData({ supplierId: "", supplierName: "" })}
-              error={
-                showErrors && !formData.supplierId
-                  ? "انتخاب تامین‌کننده الزامی است"
-                  : null
-              }
-            />
+          </DocumentSummaryCard>
+          {/* پیش‌فاکتور پرداختی ندارد؛ پیش‌پرداخت بعداً از کارتِ «پرداخت‌ها»ی خودِ سند. */}
+          {!isProforma && (
             <OrderPaymentSection
               formData={formData}
               onFormChange={setFormData}
-              totalAmount={computedTotal}
+              totalAmount={totals.totalAmount}
               errors={{}}
-              isProforma={isProforma}
             />
-
-            <InvoiceDocumentSection
-              title={
-                isProforma
-                  ? "پیش‌فاکتور خرید"
-                  : "فاکتور خرید"
-              }
-              invoiceNumber={formData.invoiceNumber}
-              attachments={attachments}
-              attachmentLabel="پیش‌فاکتور/فاکتور دریافتی از تامین‌کننده"
-            />
-
-            <PurchaseStatusSection
-              status={formData.status}
-              selectedStatus={formData.status}
-              onStatusChange={(val) => setFormData({ status: val })}
-            />
-
-            <div className="flex gap-2">
-              <Button type="submit" className="flex-1 gap-2" disabled={isBusy}>
-                <Save className="h-4 w-4" />
-                {isBusy ? "در حال ذخیره..." : "ذخیره خرید"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="gap-2"
-                onClick={handleCancel}
-                disabled={isBusy}
-              >
-                <X className="h-4 w-4" />
-                انصراف
-              </Button>
-            </div>
-          </div>
-        </div>
-      </form>
-    </div>
+          )}
+        </>
+      }
+      mobileBar={
+        <DocumentMobileBar
+          total={totals.totalAmount}
+          submitLabel={submitLabel}
+          isBusy={isBusy}
+        />
+      }
+    />
   );
 }

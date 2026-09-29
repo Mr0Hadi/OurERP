@@ -41,6 +41,8 @@ export default function ReturnStatusReasonDialog({
 
   const onSubmit = (event) => {
     event.preventDefault();
+    // رویدادِ React از portal به فرمِ احتمالیِ صفحه بالا نرود.
+    event.stopPropagation();
     if (isPending) return;
     onConfirm(reason, close);
   };

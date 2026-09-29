@@ -1,15 +1,8 @@
-import { useNavigate } from "react-router-dom";
 import PartyPickerCard from "@/shared/components/forms/PartyPickerCard";
-import { ROUTES } from "@/shared/constants/routes";
 
 /**
- * props:
- *  customers  - آرایه { id, companyName, firstName, lastName, image }
- *  isLoading  - وضعیت لود لیست مشتریان
- *  selectedId - مقدار فعلی
- *  onSelect   - (id, name) => void
- *  onClear    - () => void
- *  error      - پیام خطا
+ * مشتریِ فروش. `onAddNew` را صفحه می‌دهد تا بعد از ساختِ مشتریِ تازه به
+ * *همان* صفحه (فروشِ جدید یا پیش‌فاکتورِ در حالِ ویرایش) برگردد.
  */
 export default function SaleCustomerSection({
   customers = [],
@@ -17,10 +10,9 @@ export default function SaleCustomerSection({
   selectedId,
   onSelect,
   onClear,
+  onAddNew,
   error,
 }) {
-  const navigate = useNavigate();
-
   return (
     <PartyPickerCard
       parties={customers}
@@ -30,10 +22,8 @@ export default function SaleCustomerSection({
       onClear={onClear}
       error={error}
       title="مشتری"
-      addNewLabel="افزودن مشتری جدید"
-      onAddNew={() =>
-        navigate(ROUTES.CUSTOMERS_NEW, { state: { returnTo: ROUTES.SALES_NEW } })
-      }
+      addNewLabel="مشتری جدید"
+      onAddNew={onAddNew}
       emptyListText="لیست مشتریان خالی است"
       notFoundText="مشتری‌ای یافت نشد"
     />

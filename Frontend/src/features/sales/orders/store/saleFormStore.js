@@ -14,14 +14,12 @@ const EMPTY_FORM = {
   paymentPaidAt: null,
   checkNumber: "",
   transferRef: "",
-  mixedPayments: [], // اضافه شد
+  mixedPayments: [],
   status: "",
   items: [],
   // قیمتِ پیش‌فرضِ اقلامِ تازه: فروشِ خرده (`retailPrice`) یا همکار/عمده
   // (`wholeSalePrice`). فقط فرم است؛ به سرور نمی‌رود.
   priceMode: "retail",
-  // فعلاً فقط در فرم؛ به سرور فرستاده نمی‌شود.
-  isInformalSale: false,
 };
 
 export const useSaleFormStore = create((set, get) => ({

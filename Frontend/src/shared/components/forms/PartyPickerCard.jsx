@@ -4,6 +4,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import {
   Card,
+  CardAction,
   CardContent,
   CardHeader,
   CardTitle,
@@ -64,20 +65,24 @@ export default function PartyPickerCard({
 
   return (
     <Card>
-      <CardHeader className="pb-1 flex flex-row items-center justify-between">
+      <CardHeader className="pb-0">
         <CardTitle className="text-base font-semibold text-card-foreground">
           {title}
         </CardTitle>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="gap-1.5 text-xs h-8 px-3"
-          onClick={onAddNew}
-        >
-          <UserPlus className="h-4 w-4" />
-          {addNewLabel}
-        </Button>
+        {onAddNew && (
+          <CardAction>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={onAddNew}
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              {addNewLabel}
+            </Button>
+          </CardAction>
+        )}
       </CardHeader>
 
       <CardContent className="space-y-3">

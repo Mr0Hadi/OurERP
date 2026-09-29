@@ -1,4 +1,5 @@
 import { PURCHASE_STATUSES } from "../services/constants";
+import { PURCHASE_STATUS_LABELS } from "@/shared/domain/enums/purchaseStatus";
 
 /**
  * حذف فقط برای پیش‌فاکتور است (`DeletePurchase`)؛ خریدِ صادرشده لغو
@@ -101,11 +102,23 @@ export const MANUAL_PURCHASE_STATUSES = [
 ];
 
 /**
- * آیا وضعیتِ ذخیره‌شده دیگر دستی عوض نمی‌شود؟ بعد از اولین دریافت، برگرداندن
- * به «ارسال‌شده» یا «در انتظار» یا جلو بردن به «تحویل کامل» هر دو دروغ
- * گفتن به صفِ دریافتِ انبار است؛ خریدِ لغوشده هم بسته است.
+ * گزینه‌های `StatusChoice` در فرمِ خرید (ثبت و ویرایشِ پیش‌فاکتور)، با
+ * راهنمای یک‌خطیِ هر کدام.
  */
-export function isPurchaseStatusLocked(savedStatus) {
-  if (savedStatus === "" || savedStatus == null) return false;
-  return !MANUAL_PURCHASE_STATUSES.includes(Number(savedStatus));
-}
+export const PURCHASE_STATUS_CHOICES = [
+  {
+    value: PURCHASE_STATUSES.PROFORMA,
+    label: PURCHASE_STATUS_LABELS[PURCHASE_STATUSES.PROFORMA],
+    hint: "اقلام و قیمت‌ها بعداً هم ویرایش می‌شوند. وقتی فاکتورِ رسمیِ تامین‌کننده رسید، شماره و تاریخش را وارد و وضعیت را عوض کنید.",
+  },
+  {
+    value: PURCHASE_STATUSES.PENDING,
+    label: PURCHASE_STATUS_LABELS[PURCHASE_STATUSES.PENDING],
+    hint: "فاکتور صادر می‌شود (شماره و تاریخِ فاکتورِ تامین‌کننده لازم است) و اقلام دیگر ویرایش نمی‌شوند.",
+  },
+  {
+    value: PURCHASE_STATUSES.SHIPPED,
+    label: PURCHASE_STATUS_LABELS[PURCHASE_STATUSES.SHIPPED],
+    hint: "مثلِ «در انتظار ارسال»، و کالا در راه است. «تحویل ناقص/کامل» را دریافتِ انبار تعیین می‌کند.",
+  },
+];

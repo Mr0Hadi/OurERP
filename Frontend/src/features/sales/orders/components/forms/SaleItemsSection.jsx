@@ -1,5 +1,4 @@
 import { PackagePlus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/shared/components/ui/button";
 import {
   Card,
@@ -8,7 +7,6 @@ import {
   CardContent,
 } from "@/shared/components/ui/card";
 import ProductPicker from "@/shared/components/products/ProductPicker";
-import { ROUTES } from "@/shared/constants/routes";
 
 /** دو قیمتِ فروشِ هر کالا. */
 const SALE_PRICE_MODES = {
@@ -29,10 +27,11 @@ export default function SaleItemsSection({
   items,
   onItemsChange,
   products = [],
+  isLoadingProducts,
   priceMode = "retail",
   onPriceModeChange,
+  onAddNewProduct,
 }) {
-  const navigate = useNavigate();
   const mode = SALE_PRICE_MODES[priceMode] ?? SALE_PRICE_MODES.retail;
 
   const switchMode = (nextMode) => {
@@ -51,7 +50,7 @@ export default function SaleItemsSection({
 
   return (
     <Card>
-      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 pb-2">
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 pb-0">
         <CardTitle className="text-base font-semibold text-card-foreground">
           اقلام فروش
         </CardTitle>
@@ -77,20 +76,18 @@ export default function SaleItemsSection({
               ))}
             </div>
           )}
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() =>
-              navigate(ROUTES.WAREHOUSE_PRODUCTS_NEW, {
-                state: { returnTo: ROUTES.SALES_NEW },
-              })
-            }
-            className="gap-1.5 text-xs"
-          >
-            <PackagePlus className="w-3.5 h-3.5" />
-            افزودن کالای جدید
-          </Button>
+          {onAddNewProduct && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={onAddNewProduct}
+              className="gap-1.5 text-xs"
+            >
+              <PackagePlus className="w-3.5 h-3.5" />
+              کالای جدید
+            </Button>
+          )}
         </div>
       </CardHeader>
 
@@ -99,6 +96,7 @@ export default function SaleItemsSection({
           items={items}
           onItemsChange={onItemsChange}
           products={products}
+          isLoading={isLoadingProducts}
           priceOf={mode.priceOf}
           trackUnits
           showTaxHint

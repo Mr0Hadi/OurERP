@@ -1,4 +1,4 @@
-import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
+import { SaleStatusEnum, SALE_STATUS_LABELS } from "@/shared/domain/enums/saleStatus";
 
 /**
  * قاعده‌های سندِ فروش — همان چیزی که بکند (`CreateSale`/`UpdateSale`/
@@ -70,3 +70,22 @@ export function canDeleteSale(sale) {
     !hasAnythingShipped(sale)
   );
 }
+
+/**
+ * گزینه‌های `StatusChoice` در فرمِ ثبتِ فروش. بکند `status` را از فرم
+ * نمی‌گیرد: فروش پیش‌فاکتور ثبت می‌شود و **اولین دریافت** فاکتور را صادر
+ * و وضعیت را «آماده‌سازی انبار» می‌کند. پس این انتخاب فقط تعیین می‌کند
+ * فرم پرداختی بفرستد یا نه.
+ */
+export const SALE_STATUS_CHOICES = [
+  {
+    value: SaleStatusEnum.PROFORMA,
+    label: SALE_STATUS_LABELS[SaleStatusEnum.PROFORMA],
+    hint: "بدون دریافت وجه ثبت می‌شود و اقلام بعداً هم قابل ویرایش‌اند.",
+  },
+  {
+    value: SaleStatusEnum.PROCESSING,
+    label: "فاکتور با دریافت وجه",
+    hint: "با مبلغِ دریافتی فاکتورِ رسمی صادر و به صفِ ارسالِ انبار فرستاده می‌شود. اگر مبلغی دریافت نشود، پیش‌فاکتور می‌ماند.",
+  },
+];

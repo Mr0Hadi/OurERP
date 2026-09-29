@@ -1,15 +1,9 @@
-import { useNavigate } from "react-router-dom";
 import PartyPickerCard from "@/shared/components/forms/PartyPickerCard";
-import { ROUTES } from "@/shared/constants/routes";
 
 /**
- * props:
- *  suppliers  - آرایه { id, companyName, firstName, lastName, image }
- *  isLoading  - وضعیت لود لیست تامین‌کنندگان
- *  selectedId - مقدار فعلی
- *  onSelect   - (id, name) => void
- *  onClear    - () => void
- *  error      - پیام خطا
+ * تامین‌کننده‌ی خرید. `onAddNew` را صفحه می‌دهد تا بعد از ساختِ
+ * تامین‌کننده‌ی تازه به *همان* صفحه (خریدِ جدید یا پیش‌فاکتورِ در حالِ
+ * ویرایش) برگردد.
  */
 export default function PurchaseSupplierSection({
   suppliers = [],
@@ -17,10 +11,9 @@ export default function PurchaseSupplierSection({
   selectedId,
   onSelect,
   onClear,
+  onAddNew,
   error,
 }) {
-  const navigate = useNavigate();
-
   return (
     <PartyPickerCard
       parties={suppliers}
@@ -30,12 +23,8 @@ export default function PurchaseSupplierSection({
       onClear={onClear}
       error={error}
       title="تامین‌کننده"
-      addNewLabel="افزودن تامین‌کننده جدید"
-      onAddNew={() =>
-        navigate(ROUTES.SUPPLIERS_NEW, {
-          state: { returnTo: ROUTES.PURCHASES_NEW },
-        })
-      }
+      addNewLabel="تامین‌کننده‌ی جدید"
+      onAddNew={onAddNew}
       emptyListText="لیست تامین‌کنندگان خالی است"
       notFoundText="تامین‌کننده‌ای یافت نشد"
     />

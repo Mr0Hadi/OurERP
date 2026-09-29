@@ -1,19 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Save, X, Trash2, Ban } from "lucide-react";
+import { Trash2, Ban } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/components/ui/alert-dialog";
 import { usePurchaseFormStore } from "@/features/purchases/orders/store/purchaseFormStore";
 import {
   useUpdatePurchaseMutation,
@@ -22,16 +12,26 @@ import {
   usePurchasePaymentMutations,
 } from "@/features/purchases/orders/services/mutations";
 import { useSuppliersOptionsQuery } from "@/features/suppliers/services/queries";
+import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection";
 import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
+import PurchasePaymentsCard from "../components/forms/PurchasePaymentsCard";
+import CancelPurchaseDialog from "../components/forms/CancelPurchaseDialog";
 import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
 import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
-import PurchaseStatusSection from "../components/forms/PurchaseStatusSection";
+import StatusChoice from "@/shared/components/forms/StatusChoice";
+import DocumentFormLayout, {
+  DocumentMobileBar,
+  DocumentSummaryCard,
+} from "@/shared/components/forms/DocumentFormLayout";
+import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
+import { useReturnedNewProduct } from "@/shared/components/products/useReturnedNewProduct";
+import { useSubPageNavigation } from "@/shared/hooks/useSubPageNavigation";
 import { ROUTES } from "@/shared/constants/routes";
-import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import {
+  PURCHASE_STATUS_CHOICES,
   canDeletePurchase,
   hasLivePayments,
 } from "@/features/purchases/orders/domain/purchaseRules";
@@ -39,8 +39,6 @@ import { PURCHASE_STATUSES } from "@/features/purchases/orders/services/constant
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
 import { usePermission } from "@/features/auth/hooks/usePermission";
-import PurchasePaymentsCard from "../components/forms/PurchasePaymentsCard";
-
 
 /**
  * ویرایشِ خریدی که هنوز **پیش‌فاکتور** است — تنها وضعیتی که
@@ -51,6 +49,9 @@ import PurchasePaymentsCard from "../components/forms/PurchasePaymentsCard";
  * پیش‌پرداخت به تامین‌کننده خرید را قفل نمی‌کند و جدا در کارت
  * «پرداخت‌ها» ثبت می‌شود. خروج از پیش‌فاکتور با انتخابِ «در انتظار
  * ارسال»/«ارسال‌شده» و شماره و تاریخِ فاکتورِ تامین‌کننده است.
+ *
+ * بعد از ذخیره کاربر روی همین سند می‌ماند (قبلاً به فهرست پرتاب می‌شد)؛
+ * اگر پیش‌فاکتور صادر شد، صفحه خودش نمای فاکتورِ صادرشده را نشان می‌دهد.
  */
 export default function PurchaseDetailForm({ purchaseData }) {
   const navigate = useNavigate();
@@ -71,13 +72,17 @@ export default function PurchaseDetailForm({ purchaseData }) {
     initializedForId,
   } = usePurchaseFormStore();
 
+  // ساختِ کالا/تامین‌کننده‌ی تازه از همین فرم؛ ویرایش‌های نذخیره‌شده در
+  // store می‌مانند چون نسخه‌ی سند عوض نشده است.
+  const { openSubPage, returned } = useSubPageNavigation();
+
   const { suppliers, isLoading: suppliersLoading } = useSuppliersOptionsQuery();
   const { products, isLoading: productsLoading } = useProductsOptionsQuery();
 
   /**
    * ضمیمه‌های همین سند. `UpdatePurchase` آرایه را *جایگزین* می‌کند نه
-   * اضافه (بند ۲.۲ سندِ ضمیمه)، پس همیشه فهرستِ نهایی فرستاده می‌شود؛
-   * `commit()` بعد از ذخیره‌ی موفق، کلیدهای بی‌صاحب را از باکت پاک می‌کند.
+   * اضافه، پس همیشه فهرستِ نهایی فرستاده می‌شود؛ `commit()` بعد از ذخیره‌ی
+   * موفق، کلیدهای بی‌صاحب را از باکت پاک می‌کند.
    */
   const attachments = useInvoiceAttachments(purchaseData.attachments || []);
 
@@ -86,7 +91,36 @@ export default function PurchaseDetailForm({ purchaseData }) {
   const statusMutation = useChangePurchaseStatusMutation(purchaseData.id);
   const payments = usePurchasePaymentMutations(purchaseData.id);
 
+  // فرم فقط وقتی از داده‌ی سرور پر می‌شود که سند عوض شود یا نسخه‌ی تازه‌ای
+  // از آن برسد (updatedAt). وابستگی عمداً به id/updatedAt است، نه کل آبجکت،
+  // تا تغییرات در حال ویرایش کاربر فقط با تغییر واقعی سند بازنویسی شود.
+  useEffect(() => {
+    initializeFromPurchase(purchaseData);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [purchaseData.id, purchaseData.updatedAt, initializeFromPurchase]);
+
+  // ضمیمه‌ها هم با همان کلیدِ فرم تازه می‌شوند — وگرنه بعد از ذخیره،
+  // لیست روی نسخه‌ی قبلیِ سرور می‌ماند.
+  const attachmentsReset = attachments.reset;
+  useEffect(() => {
+    attachmentsReset(purchaseData.attachments || []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [purchaseData.id, purchaseData.updatedAt, attachmentsReset]);
+
+  useReturnedNewProduct({
+    productId: returned?.newProductId,
+    getItems: () => usePurchaseFormStore.getState().formData.items || [],
+    setItems,
+    priceOf: (product) => product.purchasePrice ?? 0,
+  });
+
+  if (initializedForId !== `${purchaseData.id}:${purchaseData.updatedAt}`) {
+    return null;
+  }
+
   const items = formData.items || [];
+  // پیش‌نمایش با قاعده‌ی سرور؛ عددِ نهایی همان است که سرور پس از ذخیره برمی‌گرداند.
+  const totals = invoiceTotals(items);
 
   /**
    * انتخابِ فعلیِ وضعیت (نه وضعیتِ ذخیره‌شده) — قاعده‌های خروج از
@@ -113,49 +147,24 @@ export default function PurchaseDetailForm({ purchaseData }) {
         }
       : {};
 
-  // پیش‌نمایش با قاعده‌ی سرور؛ عددِ نهایی همان است که سرور پس از ذخیره برمی‌گرداند.
-  const computedTotal = invoiceTotals(items).totalAmount;
-
-  // فرم فقط وقتی از داده‌ی سرور پر می‌شود که سند عوض شود یا نسخه‌ی تازه‌ای
-  // از آن برسد (updatedAt). وابستگی عمداً به id/updatedAt است، نه کل آبجکت،
-  // تا تغییرات در حال ویرایش کاربر فقط با تغییر واقعی سند بازنویسی شود.
-  useEffect(() => {
-    initializeFromPurchase(purchaseData);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [purchaseData.id, purchaseData.updatedAt, initializeFromPurchase]);
-
-  // ضمیمه‌ها هم با همان کلیدِ فرم تازه می‌شوند — وگرنه بعد از ذخیره،
-  // لیست روی نسخه‌ی قبلیِ سرور می‌ماند.
-  const attachmentsReset = attachments.reset;
-  useEffect(() => {
-    attachmentsReset(purchaseData.attachments || []);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [purchaseData.id, purchaseData.updatedAt, attachmentsReset]);
-
-  if (initializedForId !== `${purchaseData.id}:${purchaseData.updatedAt}`) {
-    return null;
-  }
-
   const onSubmit = (e) => {
     e.preventDefault();
 
     if (!formData.supplierId) {
       setShowErrors(true);
+      toast.error("تامین‌کننده را انتخاب کنید.");
       return;
     }
-
     // آپلودِ نیمه‌کاره کلید ندارد و در payload نمی‌آید؛ ذخیره در این
     // لحظه یعنی ضمیمه‌ی گم‌شده.
     if (attachments.isUploading) {
       toast.error("تا پایان بارگذاری ضمیمه‌ها صبر کنید.");
       return;
     }
-
     if (items.length === 0) {
       toast.error("خرید باید دست‌کم یک قلم داشته باشد.");
       return;
     }
-
     // قاعده‌ی بکند: خروج از پیش‌فاکتور یعنی فاکتور رسمیِ تامین‌کننده
     // رسیده، پس شماره و تاریخش باید ثبت شده باشد.
     if (leavingProforma && (missingInvoiceNumber || missingInvoiceDate)) {
@@ -179,12 +188,19 @@ export default function PurchaseDetailForm({ purchaseData }) {
     };
 
     updateMutation.mutate(payload, {
-      onSuccess: () => {
+      onSuccess: (updated) => {
         attachments.commit();
+        // همین‌جا از پاسخِ سرور پر می‌شود؛ منتظرِ عوض‌شدنِ `updatedAt` نمی‌ماند.
         resetForm();
-        navigate(ROUTES.PURCHASES);
+        if (updated) initializeFromPurchase(updated);
       },
     });
+  };
+
+  const handleDiscard = () => {
+    attachments.discard();
+    resetForm();
+    navigate(ROUTES.PURCHASES);
   };
 
   const handleDelete = () => {
@@ -193,7 +209,7 @@ export default function PurchaseDetailForm({ purchaseData }) {
     });
   };
 
-  const handleCancel = () => {
+  const handleCancelPurchase = () => {
     statusMutation.mutate(PURCHASE_STATUSES.CANCELLED, {
       onSuccess: () => {
         setShowCancelDialog(false);
@@ -213,26 +229,14 @@ export default function PurchaseDetailForm({ purchaseData }) {
     deleteMutation.isPending ||
     statusMutation.isPending ||
     attachments.isUploading;
+  const submitLabel = leavingProforma ? "ذخیره و صدور فاکتور" : "ذخیره‌ی پیش‌فاکتور";
 
   return (
-    <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in zoom-in-95 duration-300">
-      <form onSubmit={onSubmit}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 space-y-4">
-            <PurchaseItemsSection
-              items={items}
-              products={products}
-              isLoadingProducts={productsLoading}
-              onItemsChange={setItems}
-            />
-            <OrderInfoSection
-              formData={formData}
-              onFormChange={setFormData}
-              errors={infoErrors}
-            />
-          </div>
-
-          <div className="space-y-4">
+    <>
+      <DocumentFormLayout
+        onSubmit={onSubmit}
+        main={
+          <>
             <PurchaseSupplierSection
               suppliers={suppliers}
               isLoading={suppliersLoading}
@@ -242,16 +246,57 @@ export default function PurchaseDetailForm({ purchaseData }) {
                 setShowErrors(false);
               }}
               onClear={() => setFormData({ supplierId: "", supplierName: "" })}
+              onAddNew={() => openSubPage(ROUTES.SUPPLIERS_NEW)}
               error={
-                showErrors && !formData.supplierId
-                  ? "انتخاب تامین‌کننده الزامی است"
-                  : null
+                showErrors && !formData.supplierId ? "انتخاب تامین‌کننده الزامی است" : null
               }
             />
+            <PurchaseItemsSection
+              items={items}
+              products={products}
+              isLoadingProducts={productsLoading}
+              onItemsChange={setItems}
+              onAddNewProduct={() => openSubPage(ROUTES.WAREHOUSE_PRODUCTS_NEW)}
+            />
+            <OrderInfoSection
+              formData={formData}
+              onFormChange={setFormData}
+              errors={infoErrors}
+            />
+            {/* در مرحله‌ی پیش‌فاکتور، فاکتور رسمی هنوز نرسیده؛ چیزی که
+                ضمیمه می‌شود پیش‌فاکتورِ تامین‌کننده است. `documentKind`
+                عمداً داده نشده: فاکتورِ خرید را سرور نمی‌سازد — همان برگه‌ای
+                است که تامین‌کننده فرستاده و چاپ/دانلود روی همان است. */}
+            <InvoiceDocumentSection
+              title="پیش‌فاکتور خرید"
+              invoiceNumber={formData.invoiceNumber}
+              attachments={attachments}
+              attachmentLabel="پیش‌فاکتور یا فاکتور دریافتی از تامین‌کننده"
+            />
+          </>
+        }
+        aside={
+          <>
+            {canUpdate && (
+              <DocumentSummaryCard
+                itemCount={items.length}
+                totals={totals}
+                submitLabel={submitLabel}
+                isBusy={isBusy}
+                onCancel={handleDiscard}
+              >
+                <StatusChoice
+                  options={PURCHASE_STATUS_CHOICES}
+                  value={selectedStatus}
+                  onChange={(next) => setFormData({ status: next })}
+                />
+              </DocumentSummaryCard>
+            )}
+
             <OrderPaymentSection
               formData={formData}
               onFormChange={setFormData}
-              totalAmount={computedTotal}
+              totalAmount={totals.totalAmount}
               errors={{}}
               termsOnly
             />
@@ -263,58 +308,11 @@ export default function PurchaseDetailForm({ purchaseData }) {
               notice="پیش‌پرداخت، خرید را از پیش‌فاکتور خارج نمی‌کند؛ همان لحظه روی حساب تامین‌کننده می‌نشیند."
             />
 
-            {/* در مرحله‌ی پیش‌فاکتور، فاکتور رسمی هنوز نرسیده؛ چیزی
-                که ضمیمه می‌شود پیش‌فاکتورِ تامین‌کننده است.
-
-                `documentKind` عمداً داده نشده: فاکتور خرید را سرور
-                نمی‌سازد — همان برگه‌ای است که تامین‌کننده فرستاده و
-                اینجا ضمیمه شده، و چاپ/دانلود روی همان انجام می‌شود. */}
-            <InvoiceDocumentSection
-              title="پیش‌فاکتور خرید"
-              invoiceNumber={formData.invoiceNumber}
-              attachments={attachments}
-              attachmentLabel="پیش‌فاکتور یا فاکتور دریافتی از تامین‌کننده"
-            />
-
-            <PurchaseStatusSection
-              selectedStatus={formData.status}
-              savedStatus={purchaseData.status}
-              onStatusChange={(val) => setFormData({ status: val })}
-            />
-
-            {canUpdate && (
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  className="flex-1 gap-2"
-                  disabled={isBusy}
-                >
-                  <Save className="h-4 w-4" />
-                  {updateMutation.isPending
-                    ? "در حال ذخیره..."
-                    : "به‌روزرسانی پیش‌فاکتور"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    attachments.discard();
-                    navigate(-1);
-                  }}
-                  disabled={isBusy}
-                  className="gap-2"
-                >
-                  <X className="h-4 w-4" />
-                  انصراف
-                </Button>
-              </div>
-            )}
-
             {deletable && allow("PurchaseDelete") && (
               <Button
                 type="button"
-                variant="destructive"
-                className="w-full gap-2"
+                variant="ghost"
+                className="w-full gap-2 text-destructive hover:bg-destructive/10"
                 onClick={() => setShowDeleteDialog(true)}
                 disabled={isBusy}
               >
@@ -324,11 +322,11 @@ export default function PurchaseDetailForm({ purchaseData }) {
             )}
 
             {livePayments && canUpdate && (
-              <>
+              <div className="space-y-1.5">
                 <Button
                   type="button"
-                  variant="destructive"
-                  className="w-full gap-2"
+                  variant="ghost"
+                  className="w-full gap-2 text-destructive hover:bg-destructive/10"
                   onClick={() => setShowCancelDialog(true)}
                   disabled={isBusy}
                 >
@@ -339,81 +337,38 @@ export default function PurchaseDetailForm({ purchaseData }) {
                   این پیش‌فاکتور پیش‌پرداخت دارد و حذف نمی‌شود؛ یا پرداخت‌ها را
                   باطل کنید یا خرید را لغو کنید.
                 </p>
-              </>
+              </div>
             )}
-          </div>
-        </div>
-      </form>
+          </>
+        }
+        mobileBar={
+          canUpdate && (
+            <DocumentMobileBar
+              total={totals.totalAmount}
+              submitLabel={submitLabel}
+              isBusy={isBusy}
+            />
+          )
+        }
+      />
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>حذف پیش‌فاکتور خرید</AlertDialogTitle>
-            <AlertDialogDescription>
-              آیا از حذف این پیش‌فاکتور اطمینان دارید؟ سندِ حذف‌شده دیگر در
-              فهرست خریدها دیده نمی‌شود.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>
-              انصراف
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteMutation.isPending ? "در حال حذف..." : "حذف"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="حذف پیش‌فاکتور خرید"
+        description="آیا از حذف این پیش‌فاکتور اطمینان دارید؟ سندِ حذف‌شده دیگر در فهرست خریدها دیده نمی‌شود."
+        confirmLabel="حذف"
+        pendingLabel="در حال حذف..."
+        isPending={deleteMutation.isPending}
+        onConfirm={handleDelete}
+      />
 
       <CancelPurchaseDialog
         open={showCancelDialog}
         onOpenChange={setShowCancelDialog}
         isPending={statusMutation.isPending}
-        onConfirm={handleCancel}
+        onConfirm={handleCancelPurchase}
       />
-    </div>
-  );
-}
-
-/** لغوِ خرید — نهایی است؛ پرداخت‌ها روی خرید می‌مانند. */
-export function CancelPurchaseDialog({
-  open,
-  onOpenChange,
-  isPending,
-  onConfirm,
-}) {
-  return (
-    <AlertDialog
-      open={open}
-      onOpenChange={(next) => !isPending && onOpenChange(next)}
-    >
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>لغو خرید</AlertDialogTitle>
-          <AlertDialogDescription>
-            لغو نهایی است و قابل بازگشت نیست. پرداخت‌های انجام‌شده روی خرید
-            می‌مانند؛ پولی که تامین‌کننده برمی‌گرداند را با «پول برگشتی» در کارت
-            پرداخت‌ها ثبت کنید.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isPending}>انصراف</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={(event) => {
-              event.preventDefault();
-              onConfirm();
-            }}
-            disabled={isPending}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          >
-            {isPending ? "در حال لغو..." : "لغو خرید"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    </>
   );
 }

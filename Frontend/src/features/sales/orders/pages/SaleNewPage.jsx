@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { useGoBack } from "@/shared/hooks/useGoBack";
-import { Save, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Button } from "@/shared/components/ui/button";
-import { useHeaderStore } from "@/shared/store/headerStore";
-import { useNavigationStore } from "@/shared/store/navigationStore";
+
 import { useSaleFormStore } from "@/features/sales/orders/store/saleFormStore";
 import {
   useCreateInPersonSaleMutation,
@@ -13,78 +9,56 @@ import {
 } from "@/features/sales/orders/services/mutations";
 import { useCustomersOptionsQuery } from "@/features/customers/services/queries";
 import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
+import { SALE_STATUS_CHOICES } from "@/features/sales/orders/domain/saleRules";
 import SaleCustomerSection from "@/features/sales/orders/components/forms/SaleCustomerSection";
 import SaleItemsSection from "@/features/sales/orders/components/forms/SaleItemsSection";
 import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
 import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
-import SaleStatusSection from "../components/forms/SaleStatusSection";
-import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
+import StatusChoice from "@/shared/components/forms/StatusChoice";
+import Notice from "@/shared/components/feedback/Notice";
+import DocumentFormLayout, {
+  DocumentMobileBar,
+  DocumentSummaryCard,
+} from "@/shared/components/forms/DocumentFormLayout";
+import AttachmentsCard from "@/shared/components/invoice/AttachmentsCard";
 import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
-import { ROUTES } from "@/shared/constants/routes";
+import { useReturnedNewProduct } from "@/shared/components/products/useReturnedNewProduct";
+import { useNewDocumentDraft } from "@/shared/hooks/useNewDocumentDraft";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
 import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
-import { useReturnedNewProduct } from "@/shared/components/products/useReturnedNewProduct";
 
+const partyName = (party) => party.companyName || `${party.firstName} ${party.lastName}`;
+
+/**
+ * ثبتِ فروشِ جدید. ترتیبِ کار: مشتری ← اقلام ← اطلاعاتِ فاکتور ← ضمیمه؛
+ * کنارش وضعیت، پرداخت (فقط وقتی پیش‌فاکتور نیست) و جمع
+ * (`DocumentFormLayout`). بعد از ثبت، خودِ سند باز می‌شود.
+ *
+ * اسکنِ دانه در اقلام یعنی کالا همین‌جا دستِ مشتری است: «فروشِ حضوری» —
+ * ثبت، خروجِ کالا با همان کدها و «تحویل کامل» در یک درخواست.
+ */
 export default function SaleNewPage() {
   const navigate = useNavigate();
-  const goBack = useGoBack();
-  const location = useLocation();
-
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
-
-  const setReturnPath = useNavigationStore((s) => s.setReturnPath);
-  const setCurrentPath = useNavigationStore((s) => s.setCurrentPath);
-
   const { formData, setFormData, resetForm, initializeForNew, setItems } =
     useSaleFormStore();
 
-  const [showErrors, setShowErrors] = useState(false);
+  // پیش‌نویس فقط وقتی می‌ماند که از «کالا/مشتریِ جدید» برگشته باشیم.
+  const { openSubPage, returned } = useNewDocumentDraft({
+    reset: resetForm,
+    initialize: initializeForNew,
+  });
+
+  usePageHeader({ title: "ثبت فروش جدید", showBack: true });
 
   /**
    * ضمیمه‌ی پیش‌فاکتور/فاکتورِ صادرشده برای مشتری. `CreateSale` آرایه‌ی
-   * `attachments` را می‌پذیرد (بند ۳ سندِ ضمیمه)، پس همان لحظه‌ی ثبت هم
-   * می‌شود فایل را پیوست کرد.
+   * `attachments` را می‌پذیرد، پس همان لحظه‌ی ثبت هم می‌شود فایل را پیوست کرد.
    */
   const attachments = useInvoiceAttachments();
-
-  useEffect(() => {
-    const fromValidReturn =
-      location.state?.newCustomerId || location.state?.newProductId;
-
-    const currentPath = location.pathname;
-    setCurrentPath(currentPath);
-
-    const { previousPath: prevPath } = useNavigationStore.getState();
-
-    if (fromValidReturn) {
-      setReturnPath(currentPath);
-      initializeForNew();
-      return;
-    }
-
-    const isReturningFromSubPage =
-      prevPath === ROUTES.WAREHOUSE_PRODUCTS_NEW ||
-      prevPath === ROUTES.CUSTOMERS_NEW;
-
-    if (isReturningFromSubPage) {
-      setReturnPath(currentPath);
-      initializeForNew();
-      return;
-    }
-
-    resetForm();
-    setReturnPath(currentPath);
-    initializeForNew();
-  }, [
-    location.pathname,
-    location.state,
-    setCurrentPath,
-    setReturnPath,
-    resetForm,
-    initializeForNew,
-  ]);
+  const [showErrors, setShowErrors] = useState(false);
 
   const createMutation = useCreateSaleMutation();
   const inPersonMutation = useCreateInPersonSaleMutation();
@@ -94,41 +68,25 @@ export default function SaleNewPage() {
   const isTracked = (productId) =>
     Boolean(products.find((product) => product.id === productId)?.requiresUnitTracking);
 
+  // مشتری‌ای که از داخلِ همین فرم ساخته شد (تا بکند شناسه را برگرداند —
+  // بندِ ۹.۲ سندِ درخواست‌ها — این شاخه عملاً اجرا نمی‌شود).
+  const newCustomerId = returned?.newCustomerId;
   useEffect(() => {
-    const state = location.state;
-    if (state?.newCustomerId && customers.length > 0) {
-      const newCustomer = customers.find((c) => c.id === state.newCustomerId);
-      if (newCustomer) {
-        const name =
-          newCustomer.companyName ||
-          `${newCustomer.firstName} ${newCustomer.lastName}`;
-        setFormData({ customerId: newCustomer.id, customerName: name });
-        navigate(location.pathname, { replace: true, state: {} });
-      }
-    }
-  }, [location.state, customers, setFormData, navigate, location.pathname]);
+    const found = newCustomerId && customers.find((c) => c.id === newCustomerId);
+    if (found) setFormData({ customerId: found.id, customerName: partyName(found) });
+  }, [newCustomerId, customers, setFormData]);
 
-  // کالایی که از داخلِ همین فرم ساخته شد (صفحه‌ی «کالای جدید» با `newProductId` برمی‌گردد).
   useReturnedNewProduct({
+    productId: returned?.newProductId,
     getItems: () => useSaleFormStore.getState().formData.items || [],
     setItems,
     priceOf: (product) => product.retailPrice ?? 0,
   });
 
-  useEffect(() => {
-    const { resetForm: reset } = useSaleFormStore.getState();
-    setHeader({
-      title: "ثبت فروش جدید",
-      showBack: true,
-      onBack: () => {
-        reset();
-        goBack();
-      },
-    });
-    return () => clearHeader();
-  }, [setHeader, clearHeader, goBack]);
-
   const items = formData.items || [];
+  // پیش‌نمایش با قاعده‌ی سرور (تخفیف و مالیات گرد، هر قلم جدا). جمع
+  // فرستاده نمی‌شود؛ سرور خودش از اقلام و مالیاتِ کالاها حساب می‌کند.
+  const totals = invoiceTotals(items);
 
   /**
    * دانه‌هایی که در «اقلام فروش» اسکن شده‌اند. اسکنِ دانه یعنی کالا همین‌جا
@@ -141,32 +99,51 @@ export default function SaleNewPage() {
   );
   const isInPerson = Object.keys(scannedBarcodes).length > 0;
 
-  // پیش‌نمایش با قاعده‌ی سرور (تخفیف و مالیات گرد، هر قلم جدا). جمع
-  // فرستاده نمی‌شود؛ سرور خودش از اقلام و مالیاتِ کالاها حساب می‌کند.
-  const computedTotal = invoiceTotals(items).totalAmount;
-
   /**
    * `status` روی سیم نمی‌رود: فروش همیشه پیش‌فاکتور ثبت می‌شود و اولین
    * ریالِ پرداخت فاکتور را صادر می‌کند. اینجا فقط تعیین می‌کند فرم
    * پرداختی بفرستد یا نه.
    */
-  const isProforma =
-    !isInPerson &&
-    Number(formData.status ?? SaleStatusEnum.PROFORMA) === SaleStatusEnum.PROFORMA;
+  const status =
+    formData.status === "" || formData.status == null
+      ? SaleStatusEnum.PROFORMA
+      : Number(formData.status);
+  const isProforma = !isInPerson && status === SaleStatusEnum.PROFORMA;
+
+  /** نخستین دلیلی که فروشِ حضوری را ناممکن می‌کند. */
+  const inPersonBlocker = () => {
+    if ((Number(formData.paidAmount) || 0) < totals.totalAmount) {
+      return "در تحویل حضوری پرداخت باید کامل باشد.";
+    }
+    for (const item of items) {
+      const quantity = Number(item.quantity) || 0;
+      const scanned = (scannedBarcodes[item.productId] || []).length;
+      if (isTracked(item.productId) && scanned !== quantity) {
+        return `«${item.productName}» ردیابی‌پذیر است؛ در تحویل حضوری همه‌ی ${quantity.toLocaleString("fa-IR")} دانه را اسکن کنید.`;
+      }
+      if (scanned > 0 && scanned !== quantity) {
+        return `${scanned.toLocaleString("fa-IR")} از ${quantity.toLocaleString("fa-IR")} دانه‌ی «${item.productName}» اسکن شده؛ یا همه را اسکن کنید یا تعداد را اصلاح کنید.`;
+      }
+    }
+    return null;
+  };
 
   const onSubmit = (e) => {
     e.preventDefault();
 
     if (!formData.customerId) {
       setShowErrors(true);
+      toast.error("مشتری را انتخاب کنید.");
       return;
     }
-
+    if (items.length === 0) {
+      toast.error("دست‌کم یک قلم اضافه کنید.");
+      return;
+    }
     if (attachments.isUploading) {
       toast.error("تا پایان بارگذاری ضمیمه‌ها صبر کنید.");
       return;
     }
-
     if (isInPerson) {
       const blocker = inPersonBlocker();
       if (blocker) {
@@ -200,136 +177,116 @@ export default function SaleNewPage() {
       attachments: attachments.filesPayload,
     };
 
-    const onSuccess = () => {
+    const onSuccess = (created) => {
       attachments.commit();
-      navigate(ROUTES.SALES);
       resetForm();
+      navigate(
+        created?.id ? routeWithId(ROUTES.SALES_DETAIL, created.id) : ROUTES.SALES,
+        { replace: true },
+      );
     };
 
     if (isInPerson) {
       inPersonMutation.mutate({ payload, scannedBarcodes }, { onSuccess });
       return;
     }
-
     createMutation.mutate(payload, { onSuccess });
-  };
-
-  /** نخستین دلیلی که فروشِ حضوری را ناممکن می‌کند. */
-  const inPersonBlocker = () => {
-    if ((Number(formData.paidAmount) || 0) < computedTotal) {
-      return "در تحویل حضوری پرداخت باید کامل باشد.";
-    }
-    for (const item of items) {
-      const quantity = Number(item.quantity) || 0;
-      const scanned = (scannedBarcodes[item.productId] || []).length;
-      if (isTracked(item.productId) && scanned !== quantity) {
-        return `«${item.productName}» ردیابی‌پذیر است؛ در تحویل حضوری همه‌ی ${quantity.toLocaleString("fa-IR")} دانه را اسکن کنید.`;
-      }
-      if (scanned > 0 && scanned !== quantity) {
-        return `${scanned.toLocaleString("fa-IR")} از ${quantity.toLocaleString("fa-IR")} دانه‌ی «${item.productName}» اسکن شده؛ یا همه را اسکن کنید یا تعداد را اصلاح کنید.`;
-      }
-    }
-    return null;
   };
 
   const handleCancel = () => {
     // فایل‌های آپلودشده‌ی این نشست هیچ سندی ندارند که به آن بچسبند.
     attachments.discard();
-    navigate(-1);
     resetForm();
+    navigate(ROUTES.SALES);
   };
 
   const isBusy =
     createMutation.isPending || inPersonMutation.isPending || attachments.isUploading;
+  const submitLabel = isInPerson
+    ? "ثبت و تحویل حضوری"
+    : isProforma
+      ? "ثبت پیش‌فاکتور"
+      : "ثبت فاکتور";
 
   return (
-    <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in zoom-in-95 duration-300">
-      <form onSubmit={onSubmit}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 space-y-4">
-            <SaleItemsSection
-              items={items}
-              onItemsChange={setItems}
-              products={products}
-              isLoadingProducts={productsLoading}
-              priceMode={formData.priceMode}
-              onPriceModeChange={(priceMode) => setFormData({ priceMode })}
-            />
-            <OrderInfoSection
-              formData={formData}
-              onFormChange={setFormData}
-              errors={{}}
-              showInformalSale
-              invoiceNumberDisabled
-            />
-          </div>
-
-          <div className="space-y-4">
-            <SaleCustomerSection
-              customers={customers}
-              isLoading={customersLoading}
-              selectedId={formData.customerId}
-              onSelect={(id, name) => {
-                setFormData({ customerId: id, customerName: name });
-                setShowErrors(false);
-              }}
-              onClear={() => setFormData({ customerId: "", customerName: "" })}
-              error={
-                showErrors && !formData.customerId
-                  ? "انتخاب مشتری الزامی است"
-                  : null
-              }
-            />
-
+    <DocumentFormLayout
+      onSubmit={onSubmit}
+      main={
+        <>
+          <SaleCustomerSection
+            customers={customers}
+            isLoading={customersLoading}
+            selectedId={formData.customerId}
+            onSelect={(id, name) => {
+              setFormData({ customerId: id, customerName: name });
+              setShowErrors(false);
+            }}
+            onClear={() => setFormData({ customerId: "", customerName: "" })}
+            onAddNew={() => openSubPage(ROUTES.CUSTOMERS_NEW)}
+            error={showErrors && !formData.customerId ? "انتخاب مشتری الزامی است" : null}
+          />
+          <SaleItemsSection
+            items={items}
+            onItemsChange={setItems}
+            products={products}
+            isLoadingProducts={productsLoading}
+            priceMode={formData.priceMode}
+            onPriceModeChange={(priceMode) => setFormData({ priceMode })}
+            onAddNewProduct={() => openSubPage(ROUTES.WAREHOUSE_PRODUCTS_NEW)}
+          />
+          <OrderInfoSection
+            formData={formData}
+            onFormChange={setFormData}
+            errors={{}}
+            invoiceNumberDisabled
+          />
+          <AttachmentsCard
+            label="پیش‌فاکتور/فاکتورِ صادرشده برای مشتری"
+            attachments={attachments}
+          />
+        </>
+      }
+      aside={
+        <>
+          <DocumentSummaryCard
+            itemCount={items.length}
+            totals={totals}
+            submitLabel={submitLabel}
+            isBusy={isBusy}
+            onCancel={handleCancel}
+          >
+            {isInPerson ? (
+              <Notice tone="info">
+                دانه اسکن شده، پس تحویل حضوری است: پرداخت باید کامل باشد و فروش
+                بعد از ثبت «تحویل کامل» می‌شود.
+              </Notice>
+            ) : (
+              <StatusChoice
+                options={SALE_STATUS_CHOICES}
+                value={status}
+                onChange={(next) => setFormData({ status: next })}
+              />
+            )}
+          </DocumentSummaryCard>
+          {/* پیش‌فاکتور پرداختی ندارد؛ قبلاً کارتِ پرداخت اینجا «پرداخت‌شده =
+              جمع» نشان می‌داد در حالی که صفر فرستاده می‌شد. */}
+          {!isProforma && (
             <OrderPaymentSection
               formData={formData}
               onFormChange={setFormData}
-              totalAmount={computedTotal}
+              totalAmount={totals.totalAmount}
               errors={{}}
             />
-
-            <InvoiceDocumentSection
-              title={
-                isProforma
-                  ? "پیش‌فاکتور فروش"
-                  : "فاکتور فروش"
-              }
-              invoiceNumber={formData.invoiceNumber}
-              attachments={attachments}
-              attachmentLabel="پیش‌فاکتور/فاکتور صادرشده برای مشتری"
-            />
-
-            {isInPerson ? (
-              <p className="rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground">
-                دانه اسکن شده، پس تحویل حضوری است: پرداخت باید کامل باشد و فروش بعد از
-                ثبت «تحویل کامل» می‌شود.
-              </p>
-            ) : (
-              <SaleStatusSection
-                selectedStatus={formData.status}
-                onStatusChange={(status) => setFormData({ status })}
-              />
-            )}
-
-            <div className="flex gap-2">
-              <Button type="submit" className="flex-1 gap-2" disabled={isBusy}>
-                <Save className="h-4 w-4" />
-                {isBusy ? "در حال ذخیره..." : "ذخیره فروش"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCancel}
-                disabled={isBusy}
-                className="gap-2"
-              >
-                <X className="h-4 w-4" />
-                انصراف
-              </Button>
-            </div>
-          </div>
-        </div>
-      </form>
-    </div>
+          )}
+        </>
+      }
+      mobileBar={
+        <DocumentMobileBar
+          total={totals.totalAmount}
+          submitLabel={submitLabel}
+          isBusy={isBusy}
+        />
+      }
+    />
   );
 }

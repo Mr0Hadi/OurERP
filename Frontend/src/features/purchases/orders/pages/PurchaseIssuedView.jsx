@@ -11,7 +11,7 @@ import {
 } from "@/features/purchases/orders/services/mutations";
 import PurchaseItemsCard from "../components/forms/PurchaseItemsCard";
 import PurchasePaymentsCard from "../components/forms/PurchasePaymentsCard";
-import { CancelPurchaseDialog } from "./PurchaseDetailForm";
+import CancelPurchaseDialog from "../components/forms/CancelPurchaseDialog";
 import OrderLogisticsSection from "@/shared/components/forms/OrderLogisticsSection";
 import StatusChangeCard from "@/shared/components/forms/StatusChangeCard";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";

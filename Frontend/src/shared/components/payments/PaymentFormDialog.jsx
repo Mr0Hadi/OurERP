@@ -97,6 +97,9 @@ export default function PaymentFormDialog({
 
   const handleSubmit = (event) => {
     event.preventDefault();
+    // دیالوگ در portal است ولی رویدادِ React در درختِ کامپوننت‌ها بالا
+    // می‌رود؛ بدونِ این، ثبتِ پرداخت فرمِ صفحه (پیش‌فاکتور) را هم ذخیره می‌کرد.
+    event.stopPropagation();
     if (isPending) return;
     if (amount <= 0 || (maxAmount != null && amount > maxAmount)) {
       setShowErrors(true);

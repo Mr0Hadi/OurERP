@@ -6,7 +6,6 @@ import {
 } from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Textarea } from "@/shared/components/ui/textarea";
 import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
 
@@ -17,8 +16,6 @@ export default function OrderInfoSection({
   formData,
   onFormChange,
   errors,
-  // تیکِ «فروش غیر رسمی» — فقط فرم فروش.
-  showInformalSale = false,
   // شماره فاکتور فروش را بکند می‌سازد؛ ورودی فقط نمایشی است.
   invoiceNumberDisabled = false,
 }) {
@@ -28,12 +25,12 @@ export default function OrderInfoSection({
 
   return (
     <Card>
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-0">
         <CardTitle className="text-base font-semibold text-card-foreground">
           اطلاعات فاکتور
         </CardTitle>
       </CardHeader>
-      <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {/* شماره فاکتور */}
         <div className="space-y-1.5">
           <Label
@@ -89,7 +86,7 @@ export default function OrderInfoSection({
             htmlFor="paymentDate"
             className="text-sm font-medium text-card-foreground"
           >
-            تاریخ سررسید
+            سررسید پرداخت
           </Label>
           <PersianDatePicker
             id="paymentDate"
@@ -99,24 +96,8 @@ export default function OrderInfoSection({
           />
         </div>
 
-        {showInformalSale && (
-          <div className="flex items-center gap-2 self-end pb-2">
-            <Checkbox
-              id="isInformalSale"
-              checked={Boolean(formData.isInformalSale)}
-              onCheckedChange={(checked) => handleChange("isInformalSale", checked === true)}
-            />
-            <Label
-              htmlFor="isInformalSale"
-              className="text-sm font-medium text-card-foreground cursor-pointer"
-            >
-              فروش غیر رسمی
-            </Label>
-          </div>
-        )}
-
         {/* توضیحات */}
-        <div className="space-y-1.5 sm:col-span-2">
+        <div className="space-y-1.5 sm:col-span-3">
           <Label
             htmlFor="description"
             className="text-sm font-medium text-card-foreground"
@@ -126,7 +107,7 @@ export default function OrderInfoSection({
           <Textarea
             id="description"
             placeholder="یادداشت یا توضیحات اضافه..."
-            rows={3}
+            rows={2}
             value={formData.description || ""}
             onChange={(e) => handleChange("description", e.target.value)}
             className="input-rtl-placeholder resize-none text-sm"
