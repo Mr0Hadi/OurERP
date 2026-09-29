@@ -8,7 +8,8 @@ import PersianDatePicker from '@/shared/components/ui/persian-date-picker';
 import SaleStatusBadge from '@/shared/components/status/SaleStatusBadge';
 import { gregorianToPersian } from '@/shared/lib/dateUtils';
 
-export default function ShippingSummaryCard({ formData, onFormChange }) {
+/** `replacementOnly`: ارسالِ کالای جایگزینِ مرجوعی، نه خودِ فروش — پیشرفتِ فروش بی‌ربط است. */
+export default function ShippingSummaryCard({ formData, onFormChange, replacementOnly = false }) {
   const handleChange = (field, value) => onFormChange({ [field]: value });
 
   const stats = useMemo(() => {
@@ -25,17 +26,21 @@ export default function ShippingSummaryCard({ formData, onFormChange }) {
         <CardTitle className="text-base font-semibold">اطلاعات ارسال</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">وضعیت فروش</span>
-          <SaleStatusBadge status={formData.status} withIcon />
-        </div>
+        {!replacementOnly && (
+          <>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">وضعیت فروش</span>
+              <SaleStatusBadge status={formData.status} withIcon />
+            </div>
 
-        <ProgressStat
-          label="مقدارِ این دور از باقیمانده"
-          done={stats.shipped}
-          total={stats.remaining}
-          percent={stats.percent}
-        />
+            <ProgressStat
+              label="مقدارِ این دور از باقیمانده"
+              done={stats.shipped}
+              total={stats.remaining}
+              percent={stats.percent}
+            />
+          </>
+        )}
 
         <div className="grid grid-cols-1 gap-2 text-sm border-t border-border pt-3">
           <div>

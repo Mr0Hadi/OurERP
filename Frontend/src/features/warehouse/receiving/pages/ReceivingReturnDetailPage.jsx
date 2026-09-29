@@ -5,21 +5,13 @@ import { toast } from "react-hot-toast";
 
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/components/ui/alert-dialog";
+import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 import { useSalesReturnQuery } from "@/features/sales/returns/services/queries";
 import { useExecuteGoodsRoundMutation } from "@/features/sales/returns/services/mutations";
 import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import { buildGoodsLines } from "@/shared/domain/returns/resolutions";
 import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
+import { CLAIM_SCOPES, OFF_SCOPE_KINDS } from "@/shared/domain/returns/scopes";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import { useGoodsRoundForm } from "@/shared/hooks/useGoodsRoundForm";
 import GoodsRoundItemsSection from "@/shared/components/returns/GoodsRoundItemsSection";
@@ -32,6 +24,17 @@ import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 const SALES_SIDE = sideConfig(RETURN_SIDES.SALES);
 
+/**
+ * فقط دانه‌های خودِ مشتری روی قلمِ فروش اسکن می‌شوند (ادعای روی فاکتور یا
+ * مازادِ همان قلم، و همان کالا)؛ کالای دیگر دانه‌ی تازه می‌سازد و بارکدی
+ * برای اسکن ندارد — همان قاعده‌ی `SaleReturn/ExecuteGoodsRound`. بی اسکن،
+ * سرور قدیمی‌ترین دانه‌های فروخته‌شده‌ی همان قلم را برمی‌گرداند؛ برای کالای
+ * ردیابی‌پذیر یعنی سریالِ دانه‌ای که واقعاً برگشته ثبت نمی‌شد.
+ */
+const restoresLineUnits = (line) =>
+  line.productId === line.claimProductId &&
+  line.orderLineId != null &&
+  (line.scope === CLAIM_SCOPES.ON_ORDER || line.offScopeKind === OFF_SCOPE_KINDS.EXCESS);
 
 /**
  * تحویل‌گرفتنِ کالای برگشتی از مشتری.
@@ -59,13 +62,19 @@ function ReceivingReturnDetailForm({ salesReturn }) {
     setHeader,
     rounds,
     handleQuantityChange,
+    handleBarcodesChange,
+    handleToggleObservationBarcode,
     handleAddObservation,
     handleUpdateObservation,
     handleRemoveObservation,
     isAllComplete,
     hasSomethingToRecord,
+    blockingReason,
     buildCommand,
-  } = useGoodsRoundForm(lines, { withObservations: true });
+  } = useGoodsRoundForm(lines, {
+    withObservations: true,
+    barcodesAllowed: restoresLineUnits,
+  });
 
   const { products: productOptions } = useProductsOptionsQuery();
 
@@ -120,7 +129,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
           variant="outline"
           onClick={() => navigate(routeWithId(ROUTES.SALES_RETURNS_DETAIL, salesReturn.id))}
         >
-          بازگشت به لیست مرجوعی‌ها
+          بازگشت به مرجوعی
         </Button>
       </div>
     );
@@ -135,7 +144,10 @@ function ReceivingReturnDetailForm({ salesReturn }) {
             title="اقلام برگشتی از مشتری"
             subtitle="کالایی که طبق تصمیمِ مرجوعی باید از مشتری تحویل گرفته شود."
             withObservations
+            withBarcodes
             onQuantityChange={handleQuantityChange}
+            onBarcodesChange={handleBarcodesChange}
+            onToggleObservationBarcode={handleToggleObservationBarcode}
             onAddObservation={handleAddObservation}
             onUpdateObservation={handleUpdateObservation}
             onRemoveObservation={handleRemoveObservation}
@@ -174,12 +186,16 @@ function ReceivingReturnDetailForm({ salesReturn }) {
             noteLabel="یادداشت دریافت"
           />
 
+          {blockingReason && hasSomethingToRecord && (
+            <p className="text-xs text-destructive px-1">{blockingReason}</p>
+          )}
+
           <div className="flex gap-2">
             <Button
               className={`flex-1 gap-2 ${
                 !isAllComplete ? "bg-warning hover:bg-warning text-white" : ""
               }`}
-              disabled={isBusy || !hasSomethingToRecord}
+              disabled={isBusy || !hasSomethingToRecord || Boolean(blockingReason)}
               onClick={() => setShowConfirmDialog(true)}
             >
               {isAllComplete ? (
@@ -210,34 +226,20 @@ function ReceivingReturnDetailForm({ salesReturn }) {
         </div>
       </div>
 
-      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {isAllComplete
-                ? "ثبت دریافت کامل مرجوعی"
-                : "ثبت این دور از دریافت"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {isAllComplete
-                ? "آیا مطمئن هستید که همه‌ی اقلام باقی‌مانده در این دور به‌طور کامل رسیده‌اند؟"
-                : "بخشی که در این دور وارد نکرده‌اید، برای دور بعدی نگه داشته می‌شود."}{" "}
-              هر مقداری که به‌عنوان معیوب ثبت کرده‌اید به قرنطینه می‌رود؛ باقیِ
-              کالا به موجودی قابل‌فروش برمی‌گردد.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isBusy}>انصراف</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isBusy}
-              onClick={handleSubmit}
-              className={!isAllComplete ? "bg-warning hover:bg-warning" : ""}
-            >
-              {isBusy ? "در حال ثبت..." : "تأیید"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+        title={isAllComplete ? "ثبت دریافت کامل مرجوعی" : "ثبت این دور از دریافت"}
+        description={`${
+          isAllComplete
+            ? "همه‌ی اقلام باقی‌مانده در این دور رسیده‌اند؟"
+            : "بخشی که در این دور وارد نکرده‌اید، برای دور بعدی نگه داشته می‌شود."
+        } هر مقداری که به‌عنوان معیوب ثبت کرده‌اید به قرنطینه می‌رود؛ باقیِ کالا به موجودی قابل‌فروش برمی‌گردد.`}
+        destructive={false}
+        pendingLabel="در حال ثبت..."
+        isPending={isBusy}
+        onConfirm={handleSubmit}
+      />
     </div>
   );
 }
@@ -272,7 +274,7 @@ export default function ReceivingReturnDetailPage() {
           variant="outline"
           onClick={() => navigate(ROUTES.SALES_RETURNS_LIST)}
         >
-          بازگشت به لیست مرجوعی‌ها
+          بازگشت به مرجوعی
         </Button>
       </div>
     );

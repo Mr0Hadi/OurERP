@@ -197,7 +197,11 @@ function ShippingDetailForm({ sale, replacementReturnId }) {
         </div>
 
         <div className="space-y-4">
-          <ShippingSummaryCard formData={formData} onFormChange={setFormData} />
+          <ShippingSummaryCard
+            formData={formData}
+            onFormChange={setFormData}
+            replacementOnly={replacementOnly}
+          />
 
           {blocking && hasSomething && (
             <p className="text-xs text-destructive px-1">{blocking}</p>
@@ -237,8 +241,7 @@ function ShippingDetailForm({ sale, replacementReturnId }) {
           </div>
 
           <p className="text-xs text-muted-foreground text-center px-2">
-            باقیمانده‌ای که این دور ارسال نکنید، برای دور بعدی در همین لیست
-            باقی می‌ماند.
+            باقیمانده‌ای که این دور ارسال نکنید، برای دور بعدی می‌ماند.
           </p>
         </div>
       </div>

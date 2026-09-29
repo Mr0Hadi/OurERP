@@ -57,6 +57,11 @@ export default function ResolutionLineRow({
 
   // `{ kind: "remove" }` یا `{ kind: "money", effect }`
   const [confirm, setConfirm] = useState(null);
+  // حذفِ موفق خودِ ردیف را می‌برد؛ ثبتِ پرداختِ موفق فقط اثر را از «معلق»
+  // بیرون می‌آورد — دیالوگ با همان بسته می‌شود.
+  const confirmOpen =
+    confirm !== null &&
+    (confirm.kind !== "money" || pendingMoney.some((effect) => effect.id === confirm.effect.id));
   const moneyLabelOf = (effect) =>
     `${side.effectLabels[effect.direction]} ${(Number(effect.amount) || 0).toLocaleString("fa-IR")} ریال`;
 
@@ -156,7 +161,7 @@ export default function ResolutionLineRow({
       )}
 
       <ConfirmDialog
-        open={confirm !== null}
+        open={confirmOpen}
         onOpenChange={(open) => !open && setConfirm(null)}
         title={confirm?.kind === "money" ? "ثبت پرداخت" : "حذف این تصمیم"}
         description={

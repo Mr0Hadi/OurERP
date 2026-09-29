@@ -9,11 +9,18 @@ import { salesReturnKeys } from "@/features/sales/returns/services/queryKeys";
 import { RETURN_STATUSES } from "@/shared/domain/returns/statuses";
 import { OFF_SCOPE_KINDS } from "@/shared/domain/returns/scopes";
 
-/** کلیدِ یک خط برای جمعِ ادعاها: قلمِ سند، یا کالای سفارش‌نداده. */
+/**
+ * کلیدِ یک خط برای جمعِ ادعاها: قلمِ سند، مازادِ همان قلم، یا کالای
+ * سفارش‌نداده. مازاد کلیدِ جدا دارد چون از سهمیه‌ی قلم برنمی‌دارد — قبلاً
+ * با ادعاهای روی قلم جمع می‌شد و «۳ عدد قبلاً ثبت شده» کنارِ سقفِ ۴ از ۶
+ * نشان داده می‌شد.
+ */
 export const claimLineKey = ({ orderLineId, offScopeKind, productId }) =>
   offScopeKind === OFF_SCOPE_KINDS.UNLISTED
     ? `p-${productId}`
-    : `l-${orderLineId}`;
+    : offScopeKind === OFF_SCOPE_KINDS.EXCESS
+      ? `x-${orderLineId}`
+      : `l-${orderLineId}`;
 
 /**
  * ادعاهای مرجوعی‌های *دیگرِ* همین خرید/فروش، برای هر خط — تا کاربر ببیند
@@ -23,7 +30,10 @@ export const claimLineKey = ({ orderLineId, offScopeKind, productId }) =>
  * پس جزئیاتِ هر مرجوعی جدا خوانده می‌شود (روی یک سند معمولاً چند تا بیشتر
  * نیست) و همان کشِ صفحه‌ی جزئیاتِ مرجوعی را پر می‌کند.
  *
- * @returns `Map<claimLineKey, { quantity, returnNumbers[] }>`
+ * `open*` فقط مرجوعی‌هایی است که هنوز تسویه نشده‌اند — جایی که مقدارِ
+ * تسویه‌شده جدا نشان داده می‌شود (`settledQuantity`ِ فروش)، همین‌ها کافی‌اند.
+ *
+ * @returns `Map<claimLineKey, { quantity, returnNumbers[], openQuantity, openReturnNumbers[] }>`
  */
 export function useClaimsInOtherReturns(
   side,
@@ -62,7 +72,7 @@ export function useClaimsInOtherReturns(
   const signature = docs
     .map(
       (doc) =>
-        `${doc.id}:${(doc.claims || []).map((c) => `${claimLineKey(c)}=${c.quantity}`).join(",")}`,
+        `${doc.id}:${doc.status}:${(doc.claims || []).map((c) => `${claimLineKey(c)}=${c.quantity}`).join(",")}`,
     )
     .join("|");
 
@@ -71,10 +81,22 @@ export function useClaimsInOtherReturns(
     docs.forEach((doc) => {
       (doc.claims || []).forEach((claim) => {
         const key = claimLineKey(claim);
-        const entry = byLine.get(key) || { quantity: 0, returnNumbers: [] };
-        entry.quantity += Number(claim.quantity) || 0;
+        const entry = byLine.get(key) || {
+          quantity: 0,
+          returnNumbers: [],
+          openQuantity: 0,
+          openReturnNumbers: [],
+        };
+        const quantity = Number(claim.quantity) || 0;
+        entry.quantity += quantity;
         if (!entry.returnNumbers.includes(doc.returnNumber)) {
           entry.returnNumbers.push(doc.returnNumber);
+        }
+        if (doc.status !== RETURN_STATUSES.SETTLED) {
+          entry.openQuantity += quantity;
+          if (!entry.openReturnNumbers.includes(doc.returnNumber)) {
+            entry.openReturnNumbers.push(doc.returnNumber);
+          }
         }
         byLine.set(key, entry);
       });

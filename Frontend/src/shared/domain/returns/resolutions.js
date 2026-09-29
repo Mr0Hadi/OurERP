@@ -520,6 +520,7 @@ export function buildGoodsLines(returnDoc, directions, { onlyPending = true } = 
           // `*ReturnEffectDto` کد و واحد ندارد؛ برای همان کالای ادعا از
           // خودِ ادعا برداشته می‌شوند.
           productId: effect.productId,
+          claimProductId: claim.productId,
           productCode: sameProduct ? claim.productCode : "",
           productName: effect.productName,
           unit: sameProduct ? claim.unit : "",

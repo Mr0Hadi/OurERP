@@ -21,6 +21,7 @@ import QuantityStepper from "@/shared/components/forms/QuantityStepper";
 import UnitBarcodeScanList from "@/shared/components/barcode/UnitBarcodeScanList";
 import { createRowStatus } from "@/shared/lib/createRowStatus";
 import { ProductUnitStatusEnum } from "@/shared/domain/enums/unitStatus";
+import { RETURN_PROBLEM_LABELS } from "@/shared/domain/returns/problems";
 import ObservationEditor from "./ObservationEditor";
 
 const { getRowStatus, ROW_STATUS_CONFIG } = createRowStatus({
@@ -41,7 +42,9 @@ const SOURCE_OPTIONS = [
  * جداگانه‌ی خودش را دارد.
  *
  * `withObservations` فقط برای اثرِ ورودی روشن می‌شود. `withBarcodes` برای
- * هر جابه‌جایی‌ای که دانه‌های موجود را برمی‌دارد (خروج، آزادسازی، اسقاط).
+ * هر جابه‌جایی‌ای که دانه‌های موجود را برمی‌دارد (خروج، آزادسازی، اسقاط)،
+ * و برای برگشتِ دانه‌های خودِ مشتری؛ ردیفی که `barcodesAllowed: false`
+ * دارد (کالایی که دانه‌ی تازه می‌سازد) اسکن نمی‌گیرد.
  * انتخابِ مبدأ روی ردیفی دیده می‌شود که `sourceRequired` دارد.
  */
 export default function GoodsRoundItemsSection({
@@ -55,6 +58,7 @@ export default function GoodsRoundItemsSection({
   onQuantityChange,
   onSourceChange,
   onBarcodesChange,
+  onToggleObservationBarcode,
   onAddObservation,
   onUpdateObservation,
   onRemoveObservation,
@@ -152,6 +156,14 @@ export default function GoodsRoundItemsSection({
                         <span>{round.reference}</span>
                       </>
                     )}
+                    {/* یک کالا می‌تواند در چند ادعا باشد (مثلاً روی فاکتور و مازاد)؛
+                        مشکلِ ادعا ردیف‌ها را از هم جدا می‌کند. */}
+                    {round.problem != null && RETURN_PROBLEM_LABELS[round.problem] && (
+                      <>
+                        <span className="text-border">|</span>
+                        <span>{RETURN_PROBLEM_LABELS[round.problem]}</span>
+                      </>
+                    )}
                     {round.unit && (
                       <>
                         <span className="text-border">|</span>
@@ -221,7 +233,7 @@ export default function GoodsRoundItemsSection({
                 </div>
               )}
 
-              {withBarcodes && quantity > 0 && (
+              {withBarcodes && round.barcodesAllowed !== false && quantity > 0 && (
                 <UnitBarcodeScanList
                   productId={round.productId}
                   barcodes={round.productUnitBarcodes}
@@ -235,6 +247,7 @@ export default function GoodsRoundItemsSection({
                 <ObservationEditor
                   round={round}
                   {...observationTexts}
+                  onToggleBarcode={withBarcodes ? onToggleObservationBarcode : undefined}
                   onAddObservation={onAddObservation}
                   onUpdateObservation={onUpdateObservation}
                   onRemoveObservation={onRemoveObservation}

@@ -13,6 +13,8 @@ import {
   OBSERVATION_PROBLEM_LABELS,
   DEFAULT_OBSERVATION_PROBLEM,
 } from "@/shared/domain/returns/observations";
+import { formatPayload } from "@/shared/domain/barcode/productCode";
+import { cn } from "@/shared/lib/utils";
 
 const PROBLEM_OPTIONS = Object.values(OBSERVATION_PROBLEMS);
 
@@ -24,6 +26,11 @@ const PROBLEM_OPTIONS = Object.values(OBSERVATION_PROBLEMS);
  * مجموعِ همین مشاهده‌ها حساب می‌کند و فقط همان بخش به موجودیِ
  * قابل‌فروش برمی‌گردد. به همین دلیل مجموعِ مشاهده‌ها هرگز از مقدارِ
  * همین دور بیشتر نمی‌شود.
+ *
+ * اگر دانه‌های ردیف اسکن شده باشند (`round.productUnitBarcodes` و
+ * `onToggleBarcode`)، هر مشاهده دانه‌های معیوبش را از میانِ همان‌ها انتخاب
+ * می‌کند و مقدارش همان تعدادِ انتخاب‌شده است — سرور بارکدِ معیوب‌ها را به
+ * همین شکل می‌خواهد.
  */
 export default function ObservationEditor({
   round,
@@ -36,8 +43,11 @@ export default function ObservationEditor({
   emptyHint = "اگر بخشی از کالای برگشتی معیوب یا آسیب‌دیده است، اینجا ثبتش کنید؛ آن بخش به قرنطینه می‌رود تا بعداً عودت، آزاد یا اسقاط شود. باقیمانده سالم فرض می‌شود و به موجودی قابل‌فروش برمی‌گردد.",
   healthySuffix = "عدد سالم به موجودی برمی‌گردد",
   addLabel = "افزودن مشاهده",
+  onToggleBarcode,
 }) {
   const observations = round.observations || [];
+  const scanned = onToggleBarcode ? round.productUnitBarcodes || [] : [];
+  const pickUnits = scanned.length > 0;
   const allocated = observations.reduce(
     (sum, observation) => sum + (Number(observation.quantity) || 0),
     0,
@@ -73,72 +83,88 @@ export default function ObservationEditor({
       {observations.map((observation) => (
         <div
           key={observation.id}
-          className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 bg-card rounded-md border border-border p-1.5"
+          className="space-y-1.5 bg-card rounded-md border border-border p-1.5"
         >
-          {/* problem از فضای عددیِ RETURN_PROBLEMS می‌آید؛ Radix رشته
-              می‌خواهد و رشته برمی‌گرداند. */}
-          <Select
-            value={observation.problem == null ? "" : String(observation.problem)}
-            onValueChange={(v) =>
-              onUpdateObservation(
-                round.effectId,
-                observation.id,
-                "problem",
-                Number(v),
-              )
-            }
-          >
-            <SelectTrigger className="h-8 text-xs sm:w-36 shrink-0">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PROBLEM_OPTIONS.map((value) => (
-                <SelectItem key={value} value={String(value)}>
-                  {OBSERVATION_PROBLEM_LABELS[value] ?? value}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5">
+            {/* problem از فضای عددیِ RETURN_PROBLEMS می‌آید؛ Radix رشته
+                می‌خواهد و رشته برمی‌گرداند. */}
+            <Select
+              value={observation.problem == null ? "" : String(observation.problem)}
+              onValueChange={(v) =>
+                onUpdateObservation(
+                  round.effectId,
+                  observation.id,
+                  "problem",
+                  Number(v),
+                )
+              }
+            >
+              <SelectTrigger className="h-8 text-xs sm:w-36 shrink-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PROBLEM_OPTIONS.map((value) => (
+                  <SelectItem key={value} value={String(value)}>
+                    {OBSERVATION_PROBLEM_LABELS[value] ?? value}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          <Input
-            type="number"
-            min={0}
-            value={observation.quantity}
-            onChange={(e) =>
-              onUpdateObservation(
-                round.effectId,
-                observation.id,
-                "quantity",
-                e.target.value,
-              )
-            }
-            className="h-8 text-center text-xs sm:w-16 shrink-0"
-          />
+            <Input
+              type="number"
+              min={0}
+              aria-label="تعدادِ مشکل‌دار"
+              // با دانه‌های اسکن‌شده، مقدار از انتخابِ دانه‌ها می‌آید.
+              disabled={pickUnits}
+              value={observation.quantity}
+              onChange={(e) =>
+                onUpdateObservation(
+                  round.effectId,
+                  observation.id,
+                  "quantity",
+                  e.target.value,
+                )
+              }
+              className="h-8 text-center text-xs sm:w-16 shrink-0"
+            />
 
-          <Input
-            placeholder="یادداشت (اختیاری)..."
-            value={observation.note || ""}
-            onChange={(e) =>
-              onUpdateObservation(
-                round.effectId,
-                observation.id,
-                "note",
-                e.target.value,
-              )
-            }
-            className="h-8 text-xs flex-1"
-          />
+            <Input
+              placeholder="یادداشت (اختیاری)..."
+              value={observation.note || ""}
+              onChange={(e) =>
+                onUpdateObservation(
+                  round.effectId,
+                  observation.id,
+                  "note",
+                  e.target.value,
+                )
+              }
+              className="h-8 text-xs flex-1"
+            />
 
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-            onClick={() => onRemoveObservation(round.effectId, observation.id)}
-            aria-label="حذف مشاهده"
-          >
-            <X className="h-3.5 w-3.5" />
-          </Button>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+              onClick={() => onRemoveObservation(round.effectId, observation.id)}
+              aria-label="حذف مشاهده"
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+
+          {pickUnits && (
+            <UnitPicker
+              scanned={scanned}
+              observation={observation}
+              takenElsewhere={observations
+                .filter((other) => other.id !== observation.id)
+                .flatMap((other) => other.productUnitBarcodes || [])}
+              onToggle={(code) => onToggleBarcode(round.effectId, observation.id, code)}
+            />
+          )}
         </div>
       ))}
 
@@ -154,6 +180,45 @@ export default function ObservationEditor({
           )}
         </p>
       )}
+    </div>
+  );
+}
+
+/** «کدام دانه‌ها؟» — دانه‌های اسکن‌شده‌ی ردیف، برای علامت‌زدنِ معیوب‌ها. */
+function UnitPicker({ scanned, observation, takenElsewhere, onToggle }) {
+  const selected = observation.productUnitBarcodes || [];
+  return (
+    <div className="space-y-1">
+      <p className="text-[11px] text-muted-foreground">
+        کدام دانه‌ها؟{" "}
+        {selected.length === 0 && (
+          <span className="text-warning">دست‌کم یکی را انتخاب کنید</span>
+        )}
+      </p>
+      <div className="flex flex-wrap gap-1">
+        {scanned.map((code) => {
+          const active = selected.includes(code);
+          const taken = !active && takenElsewhere.includes(code);
+          return (
+            <button
+              key={code}
+              type="button"
+              dir="ltr"
+              aria-pressed={active}
+              disabled={taken}
+              onClick={() => onToggle(code)}
+              className={cn(
+                "rounded border px-1.5 py-0.5 font-mono text-[10px] transition-colors disabled:opacity-40",
+                active
+                  ? "border-warning bg-warning/15 text-warning"
+                  : "border-border text-muted-foreground hover:bg-accent",
+              )}
+            >
+              {formatPayload(code)}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

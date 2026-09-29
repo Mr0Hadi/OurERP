@@ -219,6 +219,10 @@ function DeliveredCell({ item, claimsElsewhere }) {
   const ordered = orderedOf(item);
   const delivered = deliveredOf(item);
   const settled = Number(item.settledQuantity) || 0;
+  const earlierShown =
+    item.settledQuantity != null
+      ? { quantity: earlier?.openQuantity ?? 0, numbers: earlier?.openReturnNumbers ?? [] }
+      : { quantity: earlier?.quantity ?? 0, numbers: earlier?.returnNumbers ?? [] };
   const isShort = delivered < ordered;
 
   return (
@@ -231,9 +235,11 @@ function DeliveredCell({ item, claimsElsewhere }) {
           {formatNumber(settled)} تسویه‌شده در مرجوعی
         </span>
       )}
-      {earlier?.quantity > 0 && (
+      {/* تسویه‌شده‌ها بالا جدا آمده‌اند (سمتِ فروش)؛ اینجا فقط ادعاهای باز،
+          وگرنه یک مرجوعیِ تسویه‌شده دو بار دیده می‌شد. */}
+      {earlierShown.quantity > 0 && (
         <span className="block text-[10px] leading-4 mt-0.5 text-warning">
-          {formatNumber(earlier.quantity)} در {earlier.returnNumbers.join("، ")}
+          {formatNumber(earlierShown.quantity)} در {earlierShown.numbers.join("، ")}
         </span>
       )}
     </>
