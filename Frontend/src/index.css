@@ -33,6 +33,7 @@
     --color-input: var(--input);
     --color-border: var(--border);
     --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
     /* رنگ‌های معنایی وضعیت — فقط از طریق `shared/lib/tone.js` مصرف شوند. */
     --color-success: var(--success);
     --color-warning: var(--warning);
@@ -80,6 +81,7 @@
     --accent: oklch(0.93 0.010 264);             /* کمی رنگ primary */
     --accent-foreground: oklch(0.25 0.010 264);
     --destructive: oklch(0.57 0.22 27);
+    --destructive-foreground: oklch(0.985 0 0);
     /* وضعیت‌ها: موفق / در انتظار / نیازمند توجه (قرنطینه، ناقص) / اطلاع / خاص (مرجوعی، نسیه) */
     --success: oklch(0.53 0.18 150);
     --warning: oklch(0.57 0.17 62);
@@ -122,6 +124,7 @@
     --accent: oklch(0.269 0 0);
     --accent-foreground: oklch(0.985 0 0);
     --destructive: oklch(0.70 0.19 22);
+    --destructive-foreground: oklch(0.18 0.02 22);
     --success: oklch(0.80 0.18 152);
     --warning: oklch(0.86 0.16 85);
     --caution: oklch(0.77 0.18 45);
@@ -184,6 +187,7 @@
 
     /* destructive: آبی بسیار تیره به جای قرمز — ایمن برای کوررنگی */
     --destructive: oklch(0.32 0.20 255);
+    --destructive-foreground: oklch(0.98 0.005 250);
 
     /* وضعیت‌ها: تیره‌تر برای کنتراست بالا؛ تمایز همیشه با آیکن و متن هم منتقل می‌شود */
     --success: oklch(0.38 0.12 170);

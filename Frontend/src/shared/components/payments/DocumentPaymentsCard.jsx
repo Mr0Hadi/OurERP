@@ -7,19 +7,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
-import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/components/ui/alert-dialog";
+import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
+import StatusBadge from "@/shared/components/status/StatusBadge";
 import PaymentFormDialog from "./PaymentFormDialog";
+import PaymentTotals from "./PaymentTotals";
 import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
 import {
   PaymentDirectionEnum,
@@ -27,7 +19,6 @@ import {
 } from "@/shared/domain/enums/paymentDirection";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { formatRial } from "@/shared/lib/numberFormat";
-
 
 /**
  * ردیف‌های پرداختِ یک سندِ خرید یا فروش، و ثبت/اصلاح/ابطالِ آن‌ها
@@ -64,9 +55,7 @@ export default function DocumentPaymentsCard({
   const [dialog, setDialog] = useState(null);
   const [voidTarget, setVoidTarget] = useState(null);
 
-  const payable = Number(payableAmount ?? totalAmount) || 0;
   const paid = Number(paidAmount) || 0;
-  const remaining = payable - paid;
   const refundDirection =
     side.direction === PaymentDirectionEnum.IN
       ? PaymentDirectionEnum.OUT
@@ -119,31 +108,11 @@ export default function DocumentPaymentsCard({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="rounded-lg bg-muted/50 border border-border p-3 space-y-2 text-sm">
-          <SummaryRow label="جمع فاکتور" value={formatRial(totalAmount)} />
-          {payableAmount != null &&
-            Number(payableAmount) !== Number(totalAmount) && (
-              <SummaryRow
-                label="مبلغ قابل پرداخت"
-                value={formatRial(payableAmount)}
-              />
-            )}
-          <SummaryRow label="پرداخت‌شده" value={formatRial(paid)} />
-          <div className="flex justify-between items-center border-t border-border pt-2">
-            <span className="text-muted-foreground">
-              {remaining < 0 ? "اضافه پرداخت" : "مانده بدهی"}
-            </span>
-            <span
-              className={`font-semibold ${
-                remaining > 0
-                  ? "text-destructive"
-                  : "text-success"
-              }`}
-            >
-              {formatRial(Math.abs(remaining))}
-            </span>
-          </div>
-        </div>
+        <PaymentTotals
+          totalAmount={totalAmount}
+          payableAmount={payableAmount}
+          paidAmount={paid}
+        />
 
         {sorted.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-2">
@@ -214,47 +183,23 @@ export default function DocumentPaymentsCard({
         onSubmit={submitDialog}
       />
 
-      <AlertDialog
+      <ConfirmDialog
         open={voidTarget !== null}
-        onOpenChange={(open) => !open && !isPending && setVoidTarget(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>ابطال پرداخت</AlertDialogTitle>
-            <AlertDialogDescription>
-              ردیفِ {voidTarget && formatRial(voidTarget.amount)} باطل می‌شود و
-              از مبلغ پرداخت‌شده بیرون می‌رود، ولی در سابقه‌ی پرداخت‌ها می‌ماند.
-              فقط پرداختی را باطل کنید که اشتباه ثبت شده است.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>انصراف</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={(event) => {
-                // دیالوگ تا پایانِ درخواست باز می‌ماند.
-                event.preventDefault();
-                onVoid(voidTarget?.id, {
-                  onSuccess: () => setVoidTarget(null),
-                });
-              }}
-            >
-              {isPending ? "در حال ابطال..." : "باطل شود"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onOpenChange={(open) => !open && setVoidTarget(null)}
+        title="ابطال پرداخت"
+        description={
+          <>
+            ردیفِ {voidTarget && formatRial(voidTarget.amount)} باطل می‌شود و از مبلغ پرداخت‌شده
+            بیرون می‌رود، ولی در سابقه‌ی پرداخت‌ها می‌ماند. فقط پرداختی را باطل کنید که اشتباه
+            ثبت شده است.
+          </>
+        }
+        confirmLabel="باطل شود"
+        pendingLabel="در حال ابطال..."
+        isPending={isPending}
+        onConfirm={() => onVoid(voidTarget?.id, { onSuccess: () => setVoidTarget(null) })}
+      />
     </Card>
-  );
-}
-
-function SummaryRow({ label, value }) {
-  return (
-    <div className="flex justify-between items-center">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium text-card-foreground">{value}</span>
-    </div>
   );
 }
 
@@ -274,25 +219,11 @@ function PaymentRow({ payment, isRefund, editable, disabled, onEdit, onVoid }) {
           <span className="text-xs text-muted-foreground">
             {PAYMENT_TYPE_LABELS[payment.type] ?? payment.type}
           </span>
-          {isRefund && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-              برگشتی
-            </Badge>
+          {isRefund && <StatusBadge tone="info" size="sm">برگشتی</StatusBadge>}
+          {(payment.purpose ?? PaymentPurposeEnum.NORMAL) !== PaymentPurposeEnum.NORMAL && (
+            <StatusBadge tone="special" size="sm">اقساط</StatusBadge>
           )}
-          {(payment.purpose ?? PaymentPurposeEnum.NORMAL) !==
-            PaymentPurposeEnum.NORMAL && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-              اقساط
-            </Badge>
-          )}
-          {voided && (
-            <Badge
-              variant="outline"
-              className="text-[10px] px-1.5 py-0 text-destructive border-destructive/30"
-            >
-              باطل‌شده
-            </Badge>
-          )}
+          {voided && <StatusBadge tone="danger" size="sm">باطل‌شده</StatusBadge>}
         </div>
         <p className="text-xs text-muted-foreground truncate">
           {gregorianToPersian(payment.paidAt)}

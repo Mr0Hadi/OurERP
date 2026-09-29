@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import { PriceInput } from "@/shared/components/ui/price-input";
-import PaymentSummary from "@/shared/components/forms/PaymentSummary";
+import PaymentTotals from "@/shared/components/payments/PaymentTotals";
 import MixedPaymentList from "@/shared/components/forms/MixedPaymentList";
 import { useSyncedComputedValue } from "@/shared/hooks/useSyncedComputedValue";
 import {
@@ -196,10 +196,10 @@ export default function OrderPaymentSection({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <PaymentSummary
+        <PaymentTotals
           totalAmount={totalAmount}
           paidAmount={paidAmount}
-          isCredit={paymentType === PaymentTypeEnum.CREDIT}
+          showPaid={paymentType !== PaymentTypeEnum.CREDIT}
         />
 
         {paymentTypeSelect}

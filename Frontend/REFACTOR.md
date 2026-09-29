@@ -86,6 +86,11 @@
         «تایید موقعیت» تا پیدا شدنِ آدرس غیرفعال است (قبلاً موقعیت بدونِ آدرس ذخیره می‌شد).
       - [x] `CustomerAddressForm`/`SupplierAddressForm` (یکسان) → `partyAccount/PartyAddressForm`؛ اسکلتونِ جزئیاتِ
         هر دو → `PartyDetailLoading`.
+      - [x] پرداخت‌ها: `PaymentTotals` جای خلاصه‌ی تکراریِ `DocumentPaymentsCard` و `PaymentSummary` (که اضافه‌پرداخت را
+        عددِ منفی نشان می‌داد)؛ badgeهای ردیفِ پرداخت با `StatusBadge`.
+      - [x] `ConfirmDialog`: تا پایانِ درخواست باز می‌ماند و وسطش بسته نمی‌شود. ۱۹ دیالوگ از ۲۴ با کلیک بسته می‌شدند و
+        «در حال حذف...» هیچ‌وقت دیده نمی‌شد. توکنِ `--destructive-foreground` که ۱۶ دکمه‌ی قرمز به آن ارجاع می‌دادند
+        تعریف نشده بود. مهاجرتِ بقیه‌ی دیالوگ‌ها در فازِ هر فیچر.
   - برای تست خطای شبکه: پیکربندی `ourerp-offline` در `.claude/launch.json` (API روی پورت بسته).
   - [ ] ۱.۴ حذف لایه‌های ترجمه‌ی نام (adapter) — فیلتر/پارامتر/فیلد با همان نامِ بکند:
     - [x] مشتری، تامین‌کننده، کالا: `listQuery` + `useDebouncedFilters`؛ `PartyListFilters` مشترک.
