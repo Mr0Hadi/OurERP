@@ -1,8 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { Link2, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import { Badge } from "@/shared/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +34,11 @@ import ReturnDocumentSection from "@/shared/components/returns/ReturnDocumentSec
 
 import PurchaseReturnDetailLoading from "../components/forms/PurchaseReturnDetailLoading";
 import ReturnStatusBar from "@/shared/components/returns/ReturnStatusBar";
+import {
+  FollowUpReturnAction,
+  PreviousReturnBadge,
+} from "@/shared/components/returns/ReturnChain";
+import { RETURN_STATUSES } from "@/shared/domain/returns/statuses";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
 import RelatedReturnsCard from "@/shared/components/returns/RelatedReturnsCard";
@@ -103,12 +107,11 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
         side={sideConfig(RETURN_SIDES.PURCHASE)}
       />
 
-      {purchaseReturn.previousReturnId && (
-        <Badge variant="outline" className="text-xs gap-1">
-          <Link2 className="h-3 w-3" />
-          ادامه‌ی مرجوعی #{purchaseReturn.previousReturnId}
-        </Badge>
-      )}
+      <PreviousReturnBadge
+        id={purchaseReturn.previousReturnId}
+        number={purchaseReturn.previousReturnNumber}
+        detailRoute={ROUTES.PURCHASES_RETURNS_DETAIL}
+      />
 
       {sale && (
         <OrderInvoiceCard
@@ -166,6 +169,13 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
         onCancel={(reason, options) => cancelMutation.mutate(reason, options)}
         onReopen={() => reopenMutation.mutate()}
       />
+
+      {purchaseReturn.status === RETURN_STATUSES.SETTLED && (
+        <FollowUpReturnAction
+          to={`${ROUTES.PURCHASES_RETURNS_NEW}?purchaseId=${purchaseReturn.purchaseId}&previousReturnId=${purchaseReturn.id}`}
+          hint="مشکل دوباره پیش آمد — مثلاً کالای جایگزین هم خراب رسید؟ مرجوعیِ تازه‌ای برای همین خرید ثبت کنید که به این یکی وصل است."
+        />
+      )}
 
       {purchaseReturn.canDelete && (
         <AlertDialog>

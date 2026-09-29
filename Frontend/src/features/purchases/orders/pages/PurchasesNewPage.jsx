@@ -22,8 +22,8 @@ import { ROUTES } from "@/shared/constants/routes";
 import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { PurchaseStatusEnum } from "@/shared/domain/enums/purchaseStatus";
-import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
+import { useReturnedNewProduct } from "@/shared/components/products/useReturnedNewProduct";
 
 export default function PurchasesNewPage() {
   const navigate = useNavigate();
@@ -104,40 +104,12 @@ export default function PurchasesNewPage() {
     }
   }, [location.state, suppliers, setFormData, navigate, location.pathname]);
 
-  useEffect(() => {
-    if (!location.state?.newProductId || !products.length) return;
-
-    const newProductId = location.state.newProductId;
-    const product = products.find((p) => p.id === newProductId);
-
-    if (product) {
-      const items = formData.items || [];
-      const alreadyAdded = items.some((i) => i.productId === product.id);
-      if (!alreadyAdded) {
-        setItems([
-          ...items,
-          {
-            productId: product.id,
-            productName: product.name,
-            productCode: product.code,
-            unit: unitLabelOf(product.unit),
-            quantity: 1,
-            unitPrice: product.purchasePrice ?? 0,
-            discount: 0,
-          },
-        ]);
-      }
-    }
-
-    navigate(location.pathname, { replace: true, state: {} });
-  }, [
-    location.pathname,
-    location.state,
-    navigate,
-    products,
-    formData.items,
+  // کالایی که از داخلِ همین فرم ساخته شد (صفحه‌ی «کالای جدید» با `newProductId` برمی‌گردد).
+  useReturnedNewProduct({
+    getItems: () => usePurchaseFormStore.getState().formData.items || [],
     setItems,
-  ]);
+    priceOf: (product) => product.purchasePrice ?? 0,
+  });
 
   useEffect(() => {
     const { resetForm: reset } = usePurchaseFormStore.getState();

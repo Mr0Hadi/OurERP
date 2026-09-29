@@ -1,8 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { Link2, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import { Badge } from "@/shared/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +39,11 @@ import { UNIT_SEGMENTS } from "@/features/warehouse/units/domain/unitVocabulary"
 
 import SalesReturnDetailLoading from "../components/forms/SalesReturnDetailLoading";
 import ReturnStatusBar from "@/shared/components/returns/ReturnStatusBar";
+import {
+  FollowUpReturnAction,
+  PreviousReturnBadge,
+} from "@/shared/components/returns/ReturnChain";
+import { RETURN_STATUSES } from "@/shared/domain/returns/statuses";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
 import RelatedReturnsCard from "@/shared/components/returns/RelatedReturnsCard";
@@ -113,12 +117,11 @@ function SalesReturnDetailContent({ salesReturn }) {
         side={sideConfig(RETURN_SIDES.SALES)}
       />
 
-      {salesReturn.previousReturnId && (
-        <Badge variant="outline" className="text-xs gap-1">
-          <Link2 className="h-3 w-3" />
-          ادامه‌ی مرجوعی #{salesReturn.previousReturnId}
-        </Badge>
-      )}
+      <PreviousReturnBadge
+        id={salesReturn.previousReturnId}
+        number={salesReturn.previousReturnNumber}
+        detailRoute={ROUTES.SALES_RETURNS_DETAIL}
+      />
 
       {sale && (
         <OrderInvoiceCard
@@ -191,6 +194,13 @@ function SalesReturnDetailContent({ salesReturn }) {
         onCancel={(reason, options) => cancelMutation.mutate(reason, options)}
         onReopen={() => reopenMutation.mutate()}
       />
+
+      {salesReturn.status === RETURN_STATUSES.SETTLED && (
+        <FollowUpReturnAction
+          to={`${ROUTES.SALES_RETURNS_NEW}?saleId=${salesReturn.saleId}&previousReturnId=${salesReturn.id}`}
+          hint="مشتری دوباره مشکل دارد — مثلاً کالای جایگزین هم معیوب بود؟ مرجوعیِ تازه‌ای برای همین فروش ثبت کنید که به این یکی وصل است."
+        />
+      )}
 
       {salesReturn.canDelete && (
         <AlertDialog>

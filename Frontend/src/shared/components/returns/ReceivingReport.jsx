@@ -36,7 +36,7 @@ export function ReceivingReportLines({ quarantined = [], discrepancies = [] }) {
       {shownQuarantine.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {shownQuarantine.map((entry) => (
-            <Badge key={entry.label} variant="outline" className={ORANGE_BADGE}>
+            <Badge key={entry.kind} variant="outline" className={ORANGE_BADGE}>
               {entry.label}: {formatNumber(entry.quantity)}
             </Badge>
           ))}

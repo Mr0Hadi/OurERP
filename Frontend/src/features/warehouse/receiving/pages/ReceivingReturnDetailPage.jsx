@@ -169,7 +169,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
             header={header}
             onHeaderChange={setHeader}
             title="اطلاعات دریافت مرجوعی"
-            progressLabel="پیشرفت دریافت"
+            progressLabel="مقدارِ این دور از باقیمانده"
             dateLabel="تاریخ دریافت"
             noteLabel="یادداشت دریافت"
           />

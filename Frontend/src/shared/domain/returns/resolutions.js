@@ -13,6 +13,7 @@ import {
 import { RETURN_STATUSES, isTerminalStatus } from "./statuses";
 import { ProductUnitStatusEnum } from "@/shared/domain/enums/unitStatus";
 import { formatNumber } from "@/shared/lib/numberFormat";
+import { nowLocalIso } from "@/shared/lib/dateUtils";
 
 /**
  * تصمیم‌ها: ترکیب‌شان، بسطشان به اثر، اعتبارسنجی، و ماشین وضعیت —
@@ -248,7 +249,7 @@ export function expandComposition(composition, claim) {
         method: slot.method,
         reference: isMixed ? "" : slot.reference,
         parts: isMixed ? validMoneyParts(slot) : [],
-        paidAt: slot.paidNow ? new Date().toISOString() : null,
+        paidAt: slot.paidNow ? nowLocalIso() : null,
         note,
       }),
     );
@@ -325,7 +326,7 @@ export function toApiComposition(composition, claim) {
       method: slot.method,
       amount,
       reference: isMixed ? undefined : slot.reference || undefined,
-      paidAt: slot.paidNow ? new Date().toISOString() : undefined,
+      paidAt: slot.paidNow ? nowLocalIso() : undefined,
       parts: isMixed
         ? validMoneyParts(slot).map((part) => ({
             method: part.method,

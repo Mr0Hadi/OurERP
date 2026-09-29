@@ -90,6 +90,7 @@ export default function ResolutionLineRow({
               className="h-6 w-6 text-muted-foreground hover:text-destructive"
               onClick={onRemove}
               disabled={isBusy}
+              aria-label="حذف این تصمیم"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>

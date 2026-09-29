@@ -32,9 +32,9 @@ const lineTotalOf = (item) =>
     : invoiceLineAmounts({ ...item, quantity: orderedOf(item) }).totalAmount;
 
 /**
- * جزئیات فروش، به شکل خودِ فاکتور.
+ * سندِ پشتِ مرجوعی (فاکتور فروش یا خرید)، به شکل خودِ فاکتور.
  *
- * واحد فروش پیش از ثبت هر مشکلی باید همان چیزی را ببیند که مشتری در
+ * پیش از ثبت هر مشکلی، کاربر باید همان چیزی را ببیند که طرفِ حساب در
  * دست دارد. تفاوت «تعداد فاکتور» و «تحویل‌شده» عمداً کنار هم است، چون
  * خودش یکی از پرتکرارترین ریشه‌های مرجوعی است.
  *
@@ -43,7 +43,7 @@ const lineTotalOf = (item) =>
  * می‌گرفت.
  */
 export default function OrderInvoiceCard({
-  order: sale,
+  order,
   defaultOpen = true,
   quantityLabel = "تعداد فاکتور",
   deliveredLabel = "تحویل‌شده",
@@ -53,8 +53,13 @@ export default function OrderInvoiceCard({
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
-  const items = sale?.items || [];
+  const items = order?.items || [];
   const total = items.reduce((sum, item) => sum + lineTotalOf(item), 0);
+  // پاسخِ دریافتِ خرید مالیاتِ قلم را ندارد، پس جمعش بدونِ مالیات است و
+  // نباید «جمع کل سند» خوانده شود (جمعِ واقعیِ سند در صفحه‌ی خرید است).
+  const totalLabel = items.every((item) => item.totalAmount != null)
+    ? "جمع کل سند"
+    : "جمع اقلام (بدون مالیات)";
 
   return (
     <Card>
@@ -67,10 +72,10 @@ export default function OrderInvoiceCard({
           <div className="min-w-0">
             <CardTitle className="text-base font-semibold text-card-foreground flex items-center gap-2">
               <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="break-words">فاکتور {sale.invoiceNumber}</span>
+              <span className="break-words">فاکتور {order.invoiceNumber}</span>
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
-              {partyName} · {gregorianToPersian(sale.invoiceDate)} ·{" "}
+              {partyName} · {gregorianToPersian(order.invoiceDate)} ·{" "}
               <span className="tabular-nums">{formatRial(total)}</span>
             </p>
           </div>
@@ -137,7 +142,7 @@ export default function OrderInvoiceCard({
               <tfoot>
                 <tr className="border-t border-border">
                   <td colSpan={4} className="py-2 px-2 text-right font-medium">
-                    جمع کل سند
+                    {totalLabel}
                   </td>
                   <td className="py-2 px-2 text-center font-bold tabular-nums">
                     {formatRial(total)}
@@ -182,7 +187,7 @@ export default function OrderInvoiceCard({
               </div>
             ))}
             <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2 text-xs">
-              <span className="text-muted-foreground">جمع کل سند</span>
+              <span className="text-muted-foreground">{totalLabel}</span>
               <span className="font-bold tabular-nums">{formatRial(total)}</span>
             </div>
           </div>

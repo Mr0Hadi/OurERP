@@ -205,7 +205,7 @@ export default function ResolutionComposer({
 
       {!composition.writeOff && (
         <>
-          {side.goodsSlots.map(({ slot, label, hint, allowPicker, withSource }) => (
+          {side.goodsSlots.map(({ slot, label, hint, allowPicker, pickerLabel, withSource }) => (
             <div key={slot} className="space-y-2">
               <label className="flex items-start gap-2 cursor-pointer">
                 <Checkbox
@@ -251,6 +251,8 @@ export default function ResolutionComposer({
                 <GoodsItemsPicker
                   items={composition[slot].items}
                   onItemsChange={(items) => patchSlot(slot, { items })}
+                  openLabel={pickerLabel}
+                  priceOf={side.priceOf}
                 />
               )}
             </div>

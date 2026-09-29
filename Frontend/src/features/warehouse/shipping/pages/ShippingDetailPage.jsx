@@ -3,16 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { CheckCircle, AlertTriangle, X } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/components/ui/alert-dialog";
+import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 import {
   useSaleForShippingQuery,
   useSaleReturnPendingEffectsQuery,
@@ -27,11 +18,10 @@ import ShippingSummaryCard from "../components/forms/ShippingSummaryCard";
 import ShippingTransporterSection from "../components/forms/ShippingTransporterSection";
 import GoodsRoundItemsSection from "@/shared/components/returns/GoodsRoundItemsSection";
 import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { isExcessAllowedFor } from "../domain/shippingVocabulary";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
-
 
 function withProductImage(rows, productMap) {
   return rows.map((row) => {
@@ -48,10 +38,10 @@ function withProductImage(rows, productMap) {
  * یک محموله‌ی خروجی برای مشتری: اقلامِ فروش (با مازاد و اسکن)، و کالای
  * جایگزینی که مرجوعی‌های همین فروش باید برای مشتری بفرستند — همه با یک
  * `DispatchShipment` و در یک تراکنش.
- */
-/**
- * @param replacementReturnId از صفِ «مرجوعی‌های در انتظار ارسال» (`?returnId=`):
- *   فقط کالای جایگزینِ همان مرجوعی ارسال می‌شود و اقلامِ خودِ فروش پنهان‌اند.
+ *
+ * @param replacementReturnId `?returnId=` — از دکمه‌ی «ارسال کالا برای مشتری»
+ *   در صفحه‌ی مرجوعی: فقط کالای جایگزینِ همان مرجوعی ارسال می‌شود و اقلامِ
+ *   خودِ فروش پنهان‌اند.
  */
 function ShippingDetailForm({ sale, replacementReturnId }) {
   const replacementOnly = replacementReturnId != null;
@@ -140,6 +130,12 @@ function ShippingDetailForm({ sale, replacementReturnId }) {
     : (blockingReason ?? replacement.blockingReason);
   const complete = replacementOnly ? replacement.isAllComplete : isAllComplete;
 
+  // جایگزینِ تنها از صفحه‌ی همان مرجوعی باز می‌شود؛ بعد از ثبت یا لغو
+  // کاربر به همان سند برمی‌گردد، نه صفِ ارسالِ انبار.
+  const exitRoute = replacementOnly
+    ? routeWithId(ROUTES.SALES_RETURNS_DETAIL, replacementReturnId)
+    : ROUTES.WAREHOUSE_SHIPPING;
+
   const handleSubmit = () => {
     const shipmentHeader = {
       date: formData.shippedDate,
@@ -159,7 +155,7 @@ function ShippingDetailForm({ sale, replacementReturnId }) {
       onSuccess: () => {
         setShowConfirmDialog(false);
         resetForm();
-        navigate(ROUTES.WAREHOUSE_SHIPPING);
+        navigate(exitRoute);
       },
     });
   };
@@ -231,7 +227,7 @@ function ShippingDetailForm({ sale, replacementReturnId }) {
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate(ROUTES.WAREHOUSE_SHIPPING)}
+              onClick={() => navigate(exitRoute)}
               disabled={isBusy}
               className="gap-2"
             >
@@ -247,25 +243,22 @@ function ShippingDetailForm({ sale, replacementReturnId }) {
         </div>
       </div>
 
-      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>ثبت این محموله</AlertDialogTitle>
-            <AlertDialogDescription>
-              همه‌ی مقادیرِ واردشده (ارسالی، مازاد و جایگزینِ مرجوعی) همین حالا
-              از موجودی کم می‌شوند.
-              {!isAllComplete &&
-                " باقیمانده‌ی سفارش در انتظار محموله‌ی بعدی می‌ماند."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isBusy}>انصراف</AlertDialogCancel>
-            <AlertDialogAction disabled={isBusy} onClick={handleSubmit}>
-              {isBusy ? "در حال ثبت..." : "تأیید"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+        title={replacementOnly ? "ثبت ارسال جایگزین" : "ثبت این محموله"}
+        description={
+          replacementOnly
+            ? "کالای جایگزین همین حالا از موجودی کم می‌شود."
+            : `همه‌ی مقادیرِ واردشده (ارسالی، مازاد و جایگزینِ مرجوعی) همین حالا از موجودی کم می‌شوند.${
+                isAllComplete ? "" : " باقیمانده‌ی سفارش در انتظار محموله‌ی بعدی می‌ماند."
+              }`
+        }
+        destructive={false}
+        pendingLabel="در حال ثبت..."
+        isPending={isBusy}
+        onConfirm={handleSubmit}
+      />
     </div>
   );
 }

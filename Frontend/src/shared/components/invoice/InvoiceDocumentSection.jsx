@@ -180,7 +180,7 @@ export default function InvoiceDocumentSection({
             <FileUploadList
               list={attachments}
               withNotes={false}
-              emptyLabel="فایل فاکتور را اینجا اضافه کنید (تصویر یا PDF)."
+              emptyLabel={`${attachmentLabel} را اینجا اضافه کنید (تصویر یا PDF).`}
             />
           ) : (
             <p className="flex items-start gap-2 rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground leading-relaxed">

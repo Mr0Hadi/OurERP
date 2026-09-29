@@ -45,6 +45,7 @@ import { usePermission } from "@/features/auth/hooks/usePermission";
 import { useRelatedSalesReturnsQuery } from "@/features/sales/returns/services/queries";
 import RelatedReturnsCard from "@/shared/components/returns/RelatedReturnsCard";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
+import SaleStatusBadge from "@/shared/components/status/SaleStatusBadge";
 
 /** `ChangeSaleStatus` فقط «تحویل کامل» را از «ارسال شده» می‌پذیرد (لغو دکمه‌ی خودش را دارد). */
 const statusTargetsOf = (sale) =>
@@ -152,7 +153,7 @@ export default function SaleIssuedView({ sale }) {
           />
 
           <StatusChangeCard
-            statusLabel={SALE_STATUS_LABELS[sale.status] ?? "—"}
+            statusBadge={<SaleStatusBadge status={sale.status} withIcon />}
             targets={statusTargetsOf(sale)}
             labels={SALE_STATUS_LABELS}
             canEdit={canUpdate}

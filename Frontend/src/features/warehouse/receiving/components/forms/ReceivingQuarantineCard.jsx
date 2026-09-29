@@ -49,8 +49,10 @@ export default function ReceivingQuarantineCard({ receivingInfo }) {
               <li key={item.purchaseItemId} className="flex justify-between gap-2">
                 <span className="truncate">{item.productName}</span>
                 <span className="tabular-nums text-muted-foreground shrink-0">
+                  {/* سهمِ سفارش: خرابیِ دریافت، و مازادِ خریده‌شده که هنوز به
+                      موجودی برنگشته — پس «خراب» همیشه درست نیست. */}
                   {item.quarantinedOnOrderQuantity > 0 &&
-                    `خراب ${formatNumber(item.quarantinedOnOrderQuantity)}`}
+                    `سهم سفارش ${formatNumber(item.quarantinedOnOrderQuantity)}`}
                   {item.quarantinedOnOrderQuantity > 0 &&
                     item.quarantinedExcessQuantity > 0 &&
                     " · "}

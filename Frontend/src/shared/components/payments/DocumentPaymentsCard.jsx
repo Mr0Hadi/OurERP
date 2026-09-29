@@ -147,7 +147,7 @@ export default function DocumentPaymentsCard({
               <Button
                 type="button"
                 size="sm"
-                className="flex-1 gap-1.5"
+                className="sm:flex-1 gap-1.5"
                 disabled={isPending}
                 onClick={() => setDialog({ mode: "pay" })}
               >
@@ -160,7 +160,7 @@ export default function DocumentPaymentsCard({
                 type="button"
                 size="sm"
                 variant="outline"
-                className="flex-1 gap-1.5"
+                className="sm:flex-1 gap-1.5"
                 disabled={isPending}
                 onClick={() => setDialog({ mode: "refund" })}
               >

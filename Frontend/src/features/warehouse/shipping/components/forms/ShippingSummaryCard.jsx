@@ -31,7 +31,7 @@ export default function ShippingSummaryCard({ formData, onFormChange }) {
         </div>
 
         <ProgressStat
-          label="پیشرفت ارسال"
+          label="مقدارِ این دور از باقیمانده"
           done={stats.shipped}
           total={stats.remaining}
           percent={stats.percent}

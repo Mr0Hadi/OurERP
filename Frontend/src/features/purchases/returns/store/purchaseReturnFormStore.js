@@ -3,17 +3,23 @@ import { CLAIM_SCOPES, OFF_SCOPE_KINDS } from "@/shared/domain/returns/scopes";
 import { RETURN_PROBLEMS } from "@/shared/domain/returns/problems";
 import { lineReceivingReport } from "@/shared/domain/returns/receivingReport";
 import {
+  carryOverLineClaims,
+  clampClaimsToCaps,
+} from "@/shared/domain/returns/carryOverClaims";
+import {
   claimableQuantityOf,
   freeExcessQuantityOf,
   freeUnlistedQuantityOf,
 } from "../domain/purchaseReturnVocabulary";
+import { todayIso } from "@/shared/lib/dateUtils";
 
-const EMPTY_FORM = {
+// تابع است نه ثابت، تا تاریخِ پیش‌فرض همیشه «امروز»ِ لحظه‌ی ساختِ فرم باشد.
+const emptyForm = () => ({
   purchaseId: "",
   purchaseInvoiceNumber: "",
   supplierId: "",
   supplierName: "",
-  returnDate: new Date().toISOString().slice(0, 10),
+  returnDate: todayIso(),
   description: "",
   previousReturnId: null,
   // هر خط سفارش، با ادعاهای «روی سفارش»ش
@@ -24,7 +30,7 @@ const EMPTY_FORM = {
   offScopeClaims: [],
   // سقفِ سرور برای ادعاهای خارج از سفارش، کلیدخورده با `offScopeCapKey`
   offScopeCaps: {},
-};
+});
 
 /**
  * کلیدِ سقفِ یک ادعای خارج از سفارش: مازاد روی قلمش، سفارش‌نداده روی کالایش
@@ -161,7 +167,7 @@ function quarantineClaimsOf(purchase, lines) {
 }
 
 export const usePurchaseReturnFormStore = create((set, get) => ({
-  formData: { ...EMPTY_FORM },
+  formData: emptyForm(),
   initializedForId: null,
 
   setFormData: (data) =>
@@ -176,12 +182,19 @@ export const usePurchaseReturnFormStore = create((set, get) => ({
    * است — همان کوئری‌ای که صفحه‌ی دریافت انبار هم از آن می‌خواند.
    *
    * `prefillQuarantine` ادعاها را از کالای در قرنطینه پر می‌کند — مسیرِ
-   * «ثبت مغایرت» از صفحه‌ی دریافت.
+   * «ثبت مغایرت» از صفحه‌ی دریافت. فقط بارِ اول؛ اگر همین خرید وسطِ کار
+   * عوض شد (مثلاً مازاد از همین صفحه خریده شد)، ادعاهای کاربر با سقف‌های
+   * تازه نگه داشته می‌شوند — `carryOverClaims`.
+   *
+   * `previousReturnId` مرجوعیِ قبلیِ همین مشکل است (زنجیره‌ی مرجوعی‌ها).
    */
-  initializeForPurchase: (purchase, { prefillQuarantine = false } = {}) => {
+  initializeForPurchase: (
+    purchase,
+    { prefillQuarantine = false, previousReturnId = null } = {},
+  ) => {
     // این پاسخ `updatedAt` ندارد، پس کلیدِ نسخه از محتوا ساخته می‌شود:
-    // با هر دورِ دریافت یا هر مرجوعیِ تازه، ارقام عوض می‌شوند و فرم باید
-    // از نو پر شود.
+    // با هر دورِ دریافت، خریدِ مازاد یا مرجوعیِ تازه ارقام عوض می‌شوند و
+    // سقف‌های فرم باید تازه شوند.
     const version = [
       "purchase",
       purchase.purchaseId,
@@ -226,25 +239,41 @@ export const usePurchaseReturnFormStore = create((set, get) => ({
       unitPrice: item.unitPrice,
     }));
 
-    const prefilled = prefillQuarantine
-      ? quarantineClaimsOf(purchase, lines)
-      : { lines, offScopeClaims: [] };
+    const offScopeCaps = offScopeCapsOf(purchase);
+    const previous = get().formData;
+    const isResync =
+      get().initializedForId != null &&
+      previous.purchaseId === purchase.purchaseId;
+
+    const claims = isResync
+      ? {
+          lines: carryOverLineClaims(previous.lines, lines),
+          offScopeClaims: clampClaimsToCaps(
+            previous.offScopeClaims,
+            (claim) => offScopeCapKey(claim.offScopeKind, claim),
+            (key) => offScopeCaps[key] ?? 0,
+          ),
+        }
+      : prefillQuarantine
+        ? quarantineClaimsOf(purchase, lines)
+        : { lines, offScopeClaims: [] };
 
     set({
       initializedForId: version,
       formData: {
-        ...EMPTY_FORM,
+        // تاریخ و توضیحاتِ واردشده هم با تازه‌شدنِ ارقام نمی‌روند.
+        ...(isResync ? previous : { ...emptyForm(), previousReturnId }),
         purchaseId: purchase.purchaseId,
         purchaseInvoiceNumber: purchase.invoiceNumber,
         supplierId: purchase.supplierId,
         supplierName: purchase.supplierName,
         orderLines,
-        lines: prefilled.lines,
-        offScopeClaims: prefilled.offScopeClaims,
-        offScopeCaps: offScopeCapsOf(purchase),
+        lines: claims.lines,
+        offScopeClaims: claims.offScopeClaims,
+        offScopeCaps,
       },
     });
   },
 
-  resetForm: () => set({ formData: { ...EMPTY_FORM }, initializedForId: null }),
+  resetForm: () => set({ formData: emptyForm(), initializedForId: null }),
 }));

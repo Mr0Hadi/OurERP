@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { toDateOnly } from '@/shared/lib/dateUtils';
+import { toDateOnly, todayIso } from '@/shared/lib/dateUtils';
 
 // این استور در localStorage ذخیره نمی‌شود؛ فرم دریافت داده‌ای موقتی
 // و لحظه‌ای است و باید همیشه از روی آخرین داده‌ی تازه‌ی سرور بازسازی
@@ -21,7 +21,7 @@ const EMPTY_RECEIVING = {
   items: [],
   // کالایی که بدون قلم رسیده — `ReceivePurchaseCommand.UnlistedItems`.
   unlistedItems: [],
-  receivedDate: new Date().toISOString().slice(0, 10),
+  receivedDate: todayIso(),
   receivingNote: '',
   driverFullName: '',
   driverPhoneNumber: '',
@@ -105,7 +105,7 @@ export const useReceivingFormStore = create((set, get) => ({
         receivingImages: info.receivingImages || [],
         items,
         unlistedItems: [],
-        receivedDate: new Date().toISOString().slice(0, 10),
+        receivedDate: todayIso(),
       },
     });
   },

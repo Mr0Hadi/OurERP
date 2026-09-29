@@ -1,7 +1,6 @@
 import ProductPicker from "@/shared/components/products/ProductPicker";
 import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 
-
 /**
  * انتخاب کالاهای یک محورِ کالاییِ تصمیم — چه به سمت مشتری برود و چه
  * از تامین‌کننده بیاید.
@@ -16,7 +15,12 @@ import { useProductsOptionsQuery } from "@/features/warehouse/products/services/
  * هیچ کالایی انتخاب نشود، دامنه خودش کالای ادعا را با تعدادِ تصمیم
  * می‌گذارد.
  */
-export default function GoodsItemsPicker({ items, onItemsChange }) {
+export default function GoodsItemsPicker({
+  items,
+  onItemsChange,
+  openLabel = "انتخاب کالا",
+  priceOf,
+}) {
   const { products, isLoading } = useProductsOptionsQuery();
 
   return (
@@ -26,7 +30,8 @@ export default function GoodsItemsPicker({ items, onItemsChange }) {
       products={products}
       isLoading={isLoading}
       collapsible
-      openLabel="انتخاب کالا برای ارسال"
+      openLabel={openLabel}
+      priceOf={priceOf}
       closeLabel="بستن لیست کالاها"
     />
   );

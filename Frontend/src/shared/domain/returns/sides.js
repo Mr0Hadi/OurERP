@@ -28,6 +28,8 @@ export const SIDE_CONFIG = {
     counterparty: "مشتری",
     documentLabel: "مرجوعی از فروش",
     orderLabel: "فروش",
+    // قیمتِ پیش‌فرضِ کالایی که در تصمیم انتخاب می‌شود (جایگزین، سفارش‌نداده).
+    priceOf: (product) => product.retailPrice ?? 0,
 
     goodsSlots: [
       {
@@ -43,6 +45,7 @@ export const SIDE_CONFIG = {
         label: "کالای جایگزین برای مشتری ارسال شود",
         hint: "می‌تواند همان کالا باشد یا کالای دیگری، با هر تعدادی",
         allowPicker: true,
+        pickerLabel: "انتخاب کالای جایگزین برای ارسال",
       },
     ],
 
@@ -83,6 +86,8 @@ export const SIDE_CONFIG = {
     counterparty: "تامین‌کننده",
     documentLabel: "مرجوعی به تامین‌کننده",
     orderLabel: "خرید",
+    // کالای جایگزینِ ورودی با بهای خرید وارد انبار می‌شود، نه قیمتِ فروش.
+    priceOf: (product) => product.purchasePrice ?? 0,
 
     goodsSlots: [
       {
@@ -100,6 +105,7 @@ export const SIDE_CONFIG = {
         label: "کالای جایگزین از تامین‌کننده دریافت شود",
         hint: "می‌تواند همان کالا باشد یا کالای دیگری، با هر تعدادی",
         allowPicker: true,
+        pickerLabel: "انتخاب کالای جایگزینِ دریافتی",
       },
     ],
 

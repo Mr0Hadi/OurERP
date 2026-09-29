@@ -5,7 +5,7 @@ import {
   documentVersion,
   toApiAttachments,
 } from "@/shared/services/api/contract";
-import { toDateOnly } from "@/shared/lib/dateUtils";
+import { toDateOnly, nowLocalIso } from "@/shared/lib/dateUtils";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 
 /** `PurchaseListSortEnum`ِ بکند، بر اساسِ شناسه‌ی ستونِ جدول. */
@@ -82,7 +82,7 @@ export function toApiPaymentDetails({
   transferRef,
   mixedPayments,
 }) {
-  const now = new Date().toISOString();
+  const now = nowLocalIso();
 
   const rows =
     paymentType === PaymentTypeEnum.MIXED

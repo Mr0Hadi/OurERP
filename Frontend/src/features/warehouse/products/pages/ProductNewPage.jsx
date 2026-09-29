@@ -1,4 +1,5 @@
-import { useNavigate } from "react-router-dom";
+import { useReturnTo } from "@/shared/hooks/useReturnTo";
+import { ROUTES } from "@/shared/constants/routes";
 import { Save, X } from "lucide-react";
 
 
@@ -11,7 +12,10 @@ import ProductImageUpload from "../components/forms/ProductImageUpload";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 export default function ProductNewPage() {
-  const navigate = useNavigate();
+  // از فرمِ خرید/فروش آمده باشیم (`state.returnTo`) به همان‌جا برمی‌گردیم و شناسه‌ی
+  // رکوردِ تازه را می‌فرستیم تا همان‌جا انتخاب شود؛ وگرنه به لیستِ خودش. برگشتِ ساده در
+  // تاریخچه به هر صفحه‌ای که قبلاً باز بود می‌رفت و شناسه را گم می‌کرد.
+  const { goBack } = useReturnTo(ROUTES.WAREHOUSE_PRODUCTS);
   const createMutation = useCreateProductMutation();
 
 
@@ -35,10 +39,10 @@ export default function ProductNewPage() {
 
   const onSubmit = async (data) => {
     createMutation.mutate(buildProductPayload(data), {
-      onSuccess: () => {
+      onSuccess: (created) => {
         // کلید حالا مالِ یک کالای واقعی است؛ آپلودهای میانی یتیم‌اند.
         imageUpload.commit();
-        navigate(-1);
+        goBack({ newProductId: created?.id });
       },
     });
   };
@@ -46,7 +50,7 @@ export default function ProductNewPage() {
   const handleCancel = () => {
     // تصویری که آپلود شد ولی کالایی برایش ثبت نشد، فقط زباله است.
     imageUpload.discard();
-    navigate(-1);
+    goBack();
   };
 
   // تا پایانِ آپلود، کلیدی برای گذاشتن در payload وجود ندارد.

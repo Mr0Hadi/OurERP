@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { toDateOnly } from '@/shared/lib/dateUtils';
+import { toDateOnly, todayIso } from '@/shared/lib/dateUtils';
 
 // این استور در localStorage ذخیره نمی‌شود؛ فرم ارسال داده‌ای موقتی و
 // لحظه‌ای است و باید همیشه از روی آخرین داده‌ی تازه‌ی سرور بازسازی شود.
@@ -14,7 +14,7 @@ const EMPTY_SHIPPING = {
   customerId: null,
   customerName: '',
   items: [],
-  shippedDate: new Date().toISOString().slice(0, 10),
+  shippedDate: todayIso(),
   shippingNote: '',
   driverFullName: '',
   driverPhoneNumber: '',
@@ -89,7 +89,7 @@ export const useShippingFormStore = create((set, get) => ({
         customerId: sale.customerId ?? null,
         customerName: sale.customerName || '',
         items,
-        shippedDate: new Date().toISOString().slice(0, 10),
+        shippedDate: todayIso(),
       },
     });
   },

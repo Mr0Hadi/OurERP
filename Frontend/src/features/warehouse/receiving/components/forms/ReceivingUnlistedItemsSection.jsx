@@ -76,6 +76,7 @@ export default function ReceivingUnlistedItemsSection({
                   variant="ghost"
                   className="h-7 w-7 text-muted-foreground hover:text-destructive"
                   onClick={() => onRemove(row.rowKey)}
+                  aria-label={`حذف ${row.productName}`}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>

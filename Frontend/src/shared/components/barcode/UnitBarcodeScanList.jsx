@@ -85,6 +85,7 @@ export default function UnitBarcodeScanList({
                 type="button"
                 className="text-muted-foreground hover:text-destructive"
                 onClick={() => onChange(barcodes.filter((b) => b !== barcode))}
+                aria-label={`حذف ${barcode}`}
               >
                 <X className="h-3 w-3" />
               </button>

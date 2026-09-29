@@ -31,6 +31,8 @@ export default function ObservationEditor({
   onUpdateObservation,
   onRemoveObservation,
   title,
+  // در عنوانِ پیش‌فرض: «بازرسی {subject} (n عدد دریافت‌شده)».
+  subject = "کالای برگشتی",
   emptyHint = "اگر بخشی از کالای برگشتی معیوب یا آسیب‌دیده است، اینجا ثبتش کنید؛ آن بخش به قرنطینه می‌رود تا بعداً عودت، آزاد یا اسقاط شود. باقیمانده سالم فرض می‌شود و به موجودی قابل‌فروش برمی‌گردد.",
   healthySuffix = "عدد سالم به موجودی برمی‌گردد",
   addLabel = "افزودن مشاهده",
@@ -47,7 +49,7 @@ export default function ObservationEditor({
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-card-foreground">
           {title ??
-            `بازرسی کالای برگشتی (${round.quantity.toLocaleString("fa-IR")} عدد دریافت‌شده)`}
+            `بازرسی ${subject} (${round.quantity.toLocaleString("fa-IR")} عدد دریافت‌شده)`}
         </span>
         <Button
           type="button"
@@ -133,6 +135,7 @@ export default function ObservationEditor({
             variant="ghost"
             className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
             onClick={() => onRemoveObservation(round.effectId, observation.id)}
+            aria-label="حذف مشاهده"
           >
             <X className="h-3.5 w-3.5" />
           </Button>

@@ -30,12 +30,13 @@ import { rialAmountInWords } from "@/shared/lib/numberToPersianWords";
 import { formatRial } from "@/shared/lib/numberFormat";
 
 /**
- * روش‌هایی که یک *ردیفِ* پرداخت می‌تواند داشته باشد. «ترکیبی» و «اقساطی»
- * روی ردیف ۴۰۰ می‌گیرند؛ پرداختِ ترکیبی یعنی چند ردیف.
+ * روش‌هایی که یک *ردیفِ* پرداخت می‌تواند داشته باشد — هر ردیف یعنی پولی که واقعاً
+ * جابه‌جا شد. «ترکیبی» و «اقساطی» روی ردیف ۴۰۰ می‌گیرند (ترکیبی یعنی چند ردیف)، و
+ * «نسیه» شرایطِ پرداخت است نه پرداخت: ردیفِ نسیه مبلغش را «پرداخت‌شده» حساب می‌کرد
+ * در حالی که پولی نیامده بود (سرور هنوز رد نمی‌کند؛ بندِ ۹.۴ سندِ درخواست‌ها).
  */
 const PAYMENT_ROW_TYPES = [
   PaymentTypeEnum.CASH,
-  PaymentTypeEnum.CREDIT,
   PaymentTypeEnum.CHECK,
   PaymentTypeEnum.TRANSFER,
 ];

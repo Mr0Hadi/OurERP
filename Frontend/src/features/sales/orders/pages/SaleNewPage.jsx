@@ -24,6 +24,7 @@ import { ROUTES } from "@/shared/constants/routes";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
 import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
+import { useReturnedNewProduct } from "@/shared/components/products/useReturnedNewProduct";
 
 export default function SaleNewPage() {
   const navigate = useNavigate();
@@ -107,40 +108,12 @@ export default function SaleNewPage() {
     }
   }, [location.state, customers, setFormData, navigate, location.pathname]);
 
-  useEffect(() => {
-    if (!location.state?.newProductId || !products.length) return;
-
-    const newProductId = location.state.newProductId;
-    const newProduct = products.find((p) => p.id === newProductId);
-
-    if (newProduct) {
-      const items = formData.items || [];
-      const alreadyAdded = items.some((i) => i.productId === newProduct.id);
-      if (!alreadyAdded) {
-        setItems([
-          ...items,
-          {
-            productId: newProduct.id,
-            productCode: newProduct.code,
-            productName: newProduct.name,
-            unit: newProduct.unit,
-            quantity: 1,
-            unitPrice: newProduct.salePrice || 0,
-            discount: 0,
-          },
-        ]);
-      }
-    }
-
-    navigate(location.pathname, { replace: true, state: {} });
-  }, [
-    location.pathname,
-    location.state,
-    navigate,
-    products,
-    formData.items,
+  // کالایی که از داخلِ همین فرم ساخته شد (صفحه‌ی «کالای جدید» با `newProductId` برمی‌گردد).
+  useReturnedNewProduct({
+    getItems: () => useSaleFormStore.getState().formData.items || [],
     setItems,
-  ]);
+    priceOf: (product) => product.retailPrice ?? 0,
+  });
 
   useEffect(() => {
     const { resetForm: reset } = useSaleFormStore.getState();

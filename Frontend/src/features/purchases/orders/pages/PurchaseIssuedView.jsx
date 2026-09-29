@@ -37,6 +37,7 @@ import { usePermission } from "@/features/auth/hooks/usePermission";
 import { useRelatedPurchaseReturnsQuery } from "@/features/purchases/returns/services/queries";
 import RelatedReturnsCard from "@/shared/components/returns/RelatedReturnsCard";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
+import PurchaseStatusBadge from "@/shared/components/status/PurchaseStatusBadge";
 
 /**
  * خریدِ **صادرشده** (فاکتورِ تامین‌کننده ثبت شده) — فقط‌خواندنی.
@@ -121,7 +122,7 @@ export default function PurchaseIssuedView({ purchase }) {
           />
 
           <StatusChangeCard
-            statusLabel={PURCHASE_STATUS_LABELS[purchase.status]}
+            statusBadge={<PurchaseStatusBadge status={purchase.status} withIcon />}
             targets={purchaseStatusTargets(purchase)}
             labels={PURCHASE_STATUS_LABELS}
             canEdit={canUpdate}

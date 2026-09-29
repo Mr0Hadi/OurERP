@@ -7,11 +7,15 @@ import { Button } from "@/shared/components/ui/button";
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { useSalesReturnFormStore } from "../store/salesReturnFormStore";
 import { useSalesReturnForm } from "../hooks/useSalesReturnForm";
-import { useSaleForReturnQuery } from "../services/queries";
+import {
+  useRelatedSalesReturnsQuery,
+  useSaleForReturnQuery,
+} from "../services/queries";
 import { useCreateSalesReturnMutation } from "../services/mutations";
 
 import SalesReturnSaleSection from "../components/forms/SalesReturnSaleSection";
 import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
+import { PreviousReturnBadge } from "@/shared/components/returns/ReturnChain";
 import ReturnItemsSection from "@/shared/components/returns/ReturnItemsSection";
 import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
 import {
@@ -75,6 +79,17 @@ export default function SalesReturnNewPage() {
   // ادعاهای مرجوعی‌های قبلیِ همین فروش، کنارِ هر کالا.
   const claimsElsewhere = useClaimsInOtherReturns("sale", selectedSaleId);
 
+  // `?previousReturnId=` — از «ثبت مرجوعیِ بعدی» روی یک مرجوعیِ تسویه‌شده؛
+  // فقط برای همان فروشی که در آدرس آمده، نه فروشی که کاربر بعداً عوض کرد.
+  const previousReturnId =
+    selectedSaleId != null && selectedSaleId === Number(searchParams.get("saleId"))
+      ? Number(searchParams.get("previousReturnId")) || null
+      : null;
+  const { data: relatedReturns } = useRelatedSalesReturnsQuery(
+    previousReturnId ? selectedSaleId : null,
+  );
+  const previousReturn = relatedReturns?.find((ret) => ret.id === previousReturnId);
+
   useEffect(() => {
     resetForm();
     return () => resetForm();
@@ -82,8 +97,8 @@ export default function SalesReturnNewPage() {
   }, []);
 
   useEffect(() => {
-    if (saleForReturn) initializeForSale(saleForReturn);
-  }, [saleForReturn, initializeForSale]);
+    if (saleForReturn) initializeForSale(saleForReturn, { previousReturnId });
+  }, [saleForReturn, initializeForSale, previousReturnId]);
 
   useEffect(() => {
     setHeader({
@@ -152,6 +167,12 @@ export default function SalesReturnNewPage() {
         {isReady && (
           <>
             {/* ── بالا: جزئیات فروش ────────────────────────────────── */}
+            <PreviousReturnBadge
+              id={formData.previousReturnId}
+              number={previousReturn?.returnNumber}
+              detailRoute={ROUTES.SALES_RETURNS_DETAIL}
+            />
+
             <OrderInvoiceCard
               order={saleForReturn}
               partyName={saleForReturn.customerName}

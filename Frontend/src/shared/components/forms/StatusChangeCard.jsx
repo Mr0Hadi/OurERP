@@ -7,7 +7,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
-import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import {
   Select,
@@ -19,13 +18,15 @@ import {
 
 /**
  * وضعیتِ یک سندِ صادرشده و تغییرِ دستیِ آن (`Change{Purchase,Sale}Status`).
+ * `statusBadge` همان badgeِ وضعیتِ سند است (`PurchaseStatusBadge`/`SaleStatusBadge`) تا رنگ
+ * همه‌جا یکی باشد.
  *
  * فقط مقصدهایی که سرور از وضعیتِ فعلی می‌پذیرد در فهرست می‌آیند؛ بقیه‌ی
  * وضعیت‌ها را خودِ سیستم می‌گذارد (دریافت، ارسال، پرداخت). «لغو» دکمه و
  * دیالوگِ جدای خودش را دارد.
  */
 export default function StatusChangeCard({
-  statusLabel,
+  statusBadge,
   targets = [],
   labels,
   canEdit,
@@ -44,7 +45,7 @@ export default function StatusChangeCard({
             <Activity className="h-4 w-4 text-muted-foreground" />
             وضعیت
           </span>
-          <Badge variant="outline">{statusLabel}</Badge>
+          {statusBadge}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">

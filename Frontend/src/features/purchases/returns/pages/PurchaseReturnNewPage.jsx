@@ -7,11 +7,15 @@ import { Button } from "@/shared/components/ui/button";
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { usePurchaseReturnFormStore } from "../store/purchaseReturnFormStore";
 import { usePurchaseReturnForm } from "../hooks/usePurchaseReturnForm";
-import { usePurchaseForReturnQuery } from "../services/queries";
+import {
+  usePurchaseForReturnQuery,
+  useRelatedPurchaseReturnsQuery,
+} from "../services/queries";
 import { useCreatePurchaseReturnMutation } from "../services/mutations";
 
 import PurchaseReturnPurchaseSection from "../components/forms/PurchaseReturnPurchaseSection";
 import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
+import { PreviousReturnBadge } from "@/shared/components/returns/ReturnChain";
 import ReturnItemsSection from "@/shared/components/returns/ReturnItemsSection";
 import PurchaseExcessSection from "../components/forms/PurchaseExcessSection";
 import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
@@ -32,15 +36,14 @@ import { getErrorMessage } from "@/shared/lib/errorMessage";
 import { formatRial } from "@/shared/lib/numberFormat";
 
 /**
- * ثبت مرجوعی به تامین‌کننده — دو مرحله‌ی عمودی روی یک صفحه.
+ * ثبت مرجوعی به تامین‌کننده — مراحلِ عمودی روی یک صفحه.
  *
- * بالا: خودِ فاکتور فروش، همان‌طور که مشتری در دست دارد.
- * پایین: مشکل‌هایی که واحد فروش از او می‌شنود.
+ * بالا: فاکتورِ خرید و گزارشِ انبار از دریافتش (چه رسید، چه در قرنطینه است).
+ * وسط: تصمیمِ کالای مازاد — نگه‌داشتن و خریدن (`PurchaseExcessSection`).
+ * پایین: مشکل‌هایی که به تامین‌کننده برمی‌گردد.
  *
- * ترتیب عمدی است: کاربر اول باید ببیند چه چیزی فروخته و تحویل شده،
- * بعد بگوید کدام بخشش مشکل دارد. چیدمان قبلی این دو را کنار هم در دو
- * ستون می‌گذاشت و فاکتور به یک کارت خلاصه در سایدبار تقلیل پیدا
- * می‌کرد.
+ * ترتیب عمدی است: کاربر اول باید ببیند چه چیزی خریده و چه رسیده، بعد
+ * بگوید کدام بخشش مشکل دارد.
  */
 export default function PurchaseReturnNewPage() {
   const navigate = useNavigate();
@@ -49,7 +52,7 @@ export default function PurchaseReturnNewPage() {
   const setHeader = useHeaderStore((s) => s.setHeader);
   const clearHeader = useHeaderStore((s) => s.clearHeader);
 
-  const [selectedPurchaseId, setSelectedSaleId] = useState(
+  const [selectedPurchaseId, setSelectedPurchaseId] = useState(
     searchParams.get("purchaseId") ? Number(searchParams.get("purchaseId")) : null,
   );
   const [showErrors, setShowErrors] = useState(false);
@@ -85,6 +88,18 @@ export default function PurchaseReturnNewPage() {
     selectedPurchaseId,
   );
 
+  // `?previousReturnId=` — از «ثبت مرجوعیِ بعدی» روی یک مرجوعیِ تسویه‌شده؛
+  // فقط برای همان خریدی که در آدرس آمده، نه خریدی که کاربر بعداً عوض کرد.
+  const previousReturnId =
+    selectedPurchaseId != null &&
+    selectedPurchaseId === Number(searchParams.get("purchaseId"))
+      ? Number(searchParams.get("previousReturnId")) || null
+      : null;
+  const { data: relatedReturns } = useRelatedPurchaseReturnsQuery(
+    previousReturnId ? selectedPurchaseId : null,
+  );
+  const previousReturn = relatedReturns?.find((ret) => ret.id === previousReturnId);
+
   useEffect(() => {
     resetForm();
     return () => resetForm();
@@ -93,9 +108,9 @@ export default function PurchaseReturnNewPage() {
 
   useEffect(() => {
     if (purchaseForReturn) {
-      initializeForPurchase(purchaseForReturn, { prefillQuarantine });
+      initializeForPurchase(purchaseForReturn, { prefillQuarantine, previousReturnId });
     }
-  }, [purchaseForReturn, initializeForPurchase, prefillQuarantine]);
+  }, [purchaseForReturn, initializeForPurchase, prefillQuarantine, previousReturnId]);
 
   useEffect(() => {
     setHeader({
@@ -116,12 +131,12 @@ export default function PurchaseReturnNewPage() {
 
   const handleSelectPurchase = (purchaseId) => {
     resetForm();
-    setSelectedSaleId(purchaseId);
+    setSelectedPurchaseId(purchaseId);
   };
 
   const handleClearPurchase = () => {
     resetForm();
-    setSelectedSaleId(null);
+    setSelectedPurchaseId(null);
   };
 
   const onSubmit = (e) => {
@@ -159,14 +174,20 @@ export default function PurchaseReturnNewPage() {
               {getErrorMessage(error, "این خرید قابل مرجوع‌کردن نیست")}
             </p>
             <Button type="button" variant="outline" onClick={handleClearPurchase}>
-              انتخاب فروش دیگر
+              انتخاب خرید دیگر
             </Button>
           </div>
         )}
 
         {isReady && (
           <>
-            {/* ── بالا: جزئیات فروش ────────────────────────────────── */}
+            {/* ── بالا: فاکتور خرید ────────────────────────────────── */}
+            <PreviousReturnBadge
+              id={formData.previousReturnId}
+              number={previousReturn?.returnNumber}
+              detailRoute={ROUTES.PURCHASES_RETURNS_DETAIL}
+            />
+
             <OrderInvoiceCard
               order={purchaseForReturn}
               partyName={purchaseForReturn.supplierName}
@@ -181,7 +202,7 @@ export default function PurchaseReturnNewPage() {
                 className="text-xs text-muted-foreground"
                 onClick={handleClearPurchase}
               >
-                انتخاب سفارش دیگر
+                انتخاب خرید دیگر
               </Button>
             </div>
 
@@ -219,6 +240,7 @@ export default function PurchaseReturnNewPage() {
               description="برای هر کالا می‌توانید چند مشکل جدا با تعداد جداگانه ثبت کنید. سقف هر کالا مقدارِ رسیده‌ای است که هنوز در مرجوعیِ دیگری ادعا نشده. اگر بیشتر از سفارش رسیده، «مازاد» را روی همان کالا ثبت کنید. کالایی که نرسیده (کسری) مرجوعی ندارد: یا با محموله‌ی بعد می‌رسد، یا قلمش را در صفحه‌ی خرید ببندید."
               emptyText="این سفارش قلمی برای ادعا ندارد"
               unlistedHint="کالایی که سفارش داده نشده ولی رسیده؛ سقفش کالای همان نوع در قرنطینه است."
+              priceOf={(product) => product.purchasePrice ?? 0}
             />
 
             <PurchaseReturnInfoSection

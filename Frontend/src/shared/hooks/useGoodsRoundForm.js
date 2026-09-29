@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { clampQuantity } from "@/shared/lib/quantityUtils";
+import { todayIso } from "@/shared/lib/dateUtils";
 
 /**
  * فرمِ یک «دورِ کالا» روی یک مرجوعی — بدنه‌ی `ExecuteGoodsRoundCommand`.
@@ -27,7 +28,7 @@ const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
 const emptyHeader = () => ({
-  date: new Date().toISOString().slice(0, 10),
+  date: todayIso(),
   partyName: "",
   partyPhoneNumber: "",
   vehiclePlate: "",
