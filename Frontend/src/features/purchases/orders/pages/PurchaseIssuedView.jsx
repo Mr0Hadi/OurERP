@@ -45,6 +45,9 @@ import PurchaseStatusBadge from "@/shared/components/status/PurchaseStatusBadge"
  * فاکتور دیگر ویرایش نمی‌شود؛ فقط پرداخت‌ها، وضعیت، پیوست‌ها و مهلت
  * پرداخت، هر کدام با endpointِ خودش، باز می‌مانند. دریافتِ انبار، بستنِ
  * قلم و پذیرشِ مازاد هم همین‌جا دیده و انجام می‌شوند.
+ *
+ * ستونِ اصلی: مشخصاتِ فاکتور ← اقلام ← مرجوعی‌ها ← حمل. ستونِ کناری: وضعیت
+ * و کارهای سند (مرجوعی، لغو، راهنمای اصلاح) ← پرداخت‌ها ← مهلت ← سند.
  */
 export default function PurchaseIssuedView({ purchase }) {
   const navigate = useNavigate();
@@ -77,13 +80,6 @@ export default function PurchaseIssuedView({ purchase }) {
     <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in zoom-in-95 duration-300">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
-          <PurchaseItemsCard purchase={purchase} />
-          <RelatedReturnsCard
-            returns={relatedReturns}
-            side={sideConfig(RETURN_SIDES.PURCHASE)}
-            detailRoute={ROUTES.PURCHASES_RETURNS_DETAIL}
-            title="مرجوعی‌های ثبت‌شده برای این خرید"
-          />
           <InvoiceInfoCard
             rows={[
               { label: "تامین‌کننده", value: purchase.supplierName },
@@ -99,6 +95,13 @@ export default function PurchaseIssuedView({ purchase }) {
             ]}
             description={purchase.description}
           />
+          <PurchaseItemsCard purchase={purchase} />
+          <RelatedReturnsCard
+            returns={relatedReturns}
+            side={sideConfig(RETURN_SIDES.PURCHASE)}
+            detailRoute={ROUTES.PURCHASES_RETURNS_DETAIL}
+            title="مرجوعی‌های ثبت‌شده برای این خرید"
+          />
           <OrderLogisticsSection
             title="تحویل و حمل"
             drivers={purchase.drivers}
@@ -107,20 +110,7 @@ export default function PurchaseIssuedView({ purchase }) {
           />
         </div>
 
-        <div className="space-y-4">
-          <IssuedInvoiceNotice movedLabel="دریافت" />
-
-          <PurchasePaymentsCard
-            purchase={purchase}
-            payments={payments}
-            canManage={allow("PurchasePayment")}
-            notice={
-              Number(purchase.payableAmount) < Number(purchase.totalAmount)
-                ? "مبلغ قابل پرداخت، سهمِ مقدارهای بسته‌شده با کسری را از جمع فاکتور کم کرده است."
-                : undefined
-            }
-          />
-
+        <div className="space-y-4 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:p-0.5 custom-scroll">
           <StatusChangeCard
             statusBadge={<PurchaseStatusBadge status={purchase.status} withIcon />}
             targets={purchaseStatusTargets(purchase)}
@@ -134,6 +124,53 @@ export default function PurchaseIssuedView({ purchase }) {
               isCancelled
                 ? "لغو نهایی است."
                 : "«تحویل ناقص/کامل» را دریافتِ انبار تعیین می‌کند."
+            }
+          >
+            {(canReturn || (cancellable && canUpdate)) && (
+              <div className="flex flex-wrap gap-2">
+                {canReturn && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 gap-1.5"
+                    onClick={() =>
+                      navigate(`${ROUTES.PURCHASES_RETURNS_NEW}?purchaseId=${purchase.id}`)
+                    }
+                  >
+                    <Undo2 className="h-4 w-4" />
+                    ثبت مرجوعی
+                  </Button>
+                )}
+                {cancellable && canUpdate && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1 gap-1.5 text-destructive hover:bg-destructive/10"
+                    onClick={() => setShowCancelDialog(true)}
+                    disabled={statusMutation.isPending}
+                  >
+                    <Ban className="h-4 w-4" />
+                    لغو خرید
+                  </Button>
+                )}
+              </div>
+            )}
+            {lockReason && (
+              <p className="text-xs text-muted-foreground">{lockReason}</p>
+            )}
+            {!isCancelled && <IssuedInvoiceNotice movedLabel="دریافت" />}
+          </StatusChangeCard>
+
+          <PurchasePaymentsCard
+            purchase={purchase}
+            payments={payments}
+            canManage={allow("PurchasePayment")}
+            notice={
+              Number(purchase.payableAmount) < Number(purchase.totalAmount)
+                ? "مبلغ قابل پرداخت، سهمِ مقدارهای بسته‌شده با کسری را از جمع فاکتور کم کرده است."
+                : undefined
             }
           />
 
@@ -161,41 +198,6 @@ export default function PurchaseIssuedView({ purchase }) {
                 })
               }
             />
-          )}
-
-          {canReturn && (
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full gap-2"
-              onClick={() =>
-                navigate(
-                  `${ROUTES.PURCHASES_RETURNS_NEW}?purchaseId=${purchase.id}`,
-                )
-              }
-            >
-              <Undo2 className="h-4 w-4" />
-              ثبت مرجوعی برای این خرید
-            </Button>
-          )}
-
-          {cancellable && canUpdate && (
-            <Button
-              type="button"
-              variant="destructive"
-              className="w-full gap-2"
-              onClick={() => setShowCancelDialog(true)}
-              disabled={statusMutation.isPending}
-            >
-              <Ban className="h-4 w-4" />
-              لغو خرید
-            </Button>
-          )}
-
-          {lockReason && (
-            <p className="text-xs text-muted-foreground text-center px-2">
-              {lockReason}
-            </p>
           )}
         </div>
       </div>

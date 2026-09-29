@@ -3,16 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Ban, Undo2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/components/ui/alert-dialog";
+import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 import {
   useChangeSaleStatusMutation,
   useUpdateSaleAttachmentsMutation,
@@ -61,6 +52,9 @@ const canCancelSale = (sale) =>
  * فروشِ **صادرشده** — فقط‌خواندنی. اقلام، قیمت، مشتری و روش پرداخت دیگر
  * عوض نمی‌شوند؛ فقط پرداخت‌ها، وضعیت، پیوست‌ها و مهلت پرداخت، هر کدام با
  * endpointِ خودش.
+ *
+ * ستونِ اصلی: مشخصاتِ فاکتور ← اقلام ← مرجوعی‌ها ← حمل. ستونِ کناری: وضعیت
+ * و کارهای سند (مرجوعی، لغو، راهنمای اصلاح) ← پرداخت‌ها ← مهلت ← سند.
  */
 export default function SaleIssuedView({ sale }) {
   const navigate = useNavigate();
@@ -86,11 +80,27 @@ export default function SaleIssuedView({ sale }) {
   const canUpdate = allow("SaleUpdate");
   const isCancelled = sale.status === SaleStatusEnum.CANCELLED;
   const cancellable = canCancelSale(sale);
+  const returnable = RETURNABLE_SALE_STATUSES.includes(Number(sale.status));
 
   return (
     <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in zoom-in-95 duration-300">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
+          <InvoiceInfoCard
+            rows={[
+              { label: "مشتری", value: sale.customerName },
+              { label: "شماره فاکتور", value: sale.invoiceNumber },
+              {
+                label: "تاریخ فاکتور",
+                value: gregorianToPersian(sale.invoiceDate),
+              },
+              {
+                label: "روش پرداخت",
+                value: PAYMENT_TYPE_LABELS[sale.paymentType],
+              },
+            ]}
+            description={sale.description}
+          />
           <OrderItemsReadOnly
             title="اقلام فروش"
             items={sale.items}
@@ -115,21 +125,6 @@ export default function SaleIssuedView({ sale }) {
             detailRoute={ROUTES.SALES_RETURNS_DETAIL}
             title="مرجوعی‌های ثبت‌شده برای این فروش"
           />
-          <InvoiceInfoCard
-            rows={[
-              { label: "مشتری", value: sale.customerName },
-              { label: "شماره فاکتور", value: sale.invoiceNumber },
-              {
-                label: "تاریخ فاکتور",
-                value: gregorianToPersian(sale.invoiceDate),
-              },
-              {
-                label: "روش پرداخت",
-                value: PAYMENT_TYPE_LABELS[sale.paymentType],
-              },
-            ]}
-            description={sale.description}
-          />
           <OrderLogisticsSection
             title="ارسال و حمل"
             drivers={sale.drivers}
@@ -138,20 +133,7 @@ export default function SaleIssuedView({ sale }) {
           />
         </div>
 
-        <div className="space-y-4">
-          <IssuedInvoiceNotice movedLabel="ارسال" />
-
-          <SalePaymentsCard
-            sale={sale}
-            payments={payments}
-            canManage={allow("SalePayment")}
-            notice={
-              isCancelled
-                ? "فروش لغو شده است؛ پولی را که از مشتری گرفته شده با «پول برگشتی» برگردانید."
-                : undefined
-            }
-          />
-
+        <div className="space-y-4 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:p-0.5 custom-scroll">
           <StatusChangeCard
             statusBadge={<SaleStatusBadge status={sale.status} withIcon />}
             targets={statusTargetsOf(sale)}
@@ -165,6 +147,50 @@ export default function SaleIssuedView({ sale }) {
               isCancelled
                 ? "لغو نهایی است."
                 : "«ارسال ناقص» و «ارسال شده» را صفحه‌ی ارسالِ انبار تعیین می‌کند؛ «تحویل کامل» بعد از ارسالِ همه‌ی اقلام ثبت می‌شود."
+            }
+          >
+            {(returnable || (cancellable && canUpdate)) && (
+              <div className="flex flex-wrap gap-2">
+                {returnable && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 gap-1.5"
+                    onClick={() =>
+                      navigate(`${ROUTES.SALES_RETURNS_NEW}?saleId=${sale.id}`)
+                    }
+                  >
+                    <Undo2 className="h-4 w-4" />
+                    ثبت مرجوعی
+                  </Button>
+                )}
+                {cancellable && canUpdate && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1 gap-1.5 text-destructive hover:bg-destructive/10"
+                    onClick={() => setShowCancelDialog(true)}
+                    disabled={statusMutation.isPending}
+                  >
+                    <Ban className="h-4 w-4" />
+                    لغو فروش
+                  </Button>
+                )}
+              </div>
+            )}
+            {!isCancelled && <IssuedInvoiceNotice movedLabel="ارسال" />}
+          </StatusChangeCard>
+
+          <SalePaymentsCard
+            sale={sale}
+            payments={payments}
+            canManage={allow("SalePayment")}
+            notice={
+              isCancelled
+                ? "فروش لغو شده است؛ پولی را که از مشتری گرفته شده با «پول برگشتی» برگردانید."
+                : undefined
             }
           />
 
@@ -195,70 +221,23 @@ export default function SaleIssuedView({ sale }) {
               }
             />
           )}
-
-          {RETURNABLE_SALE_STATUSES.includes(Number(sale.status)) && (
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full gap-2"
-              onClick={() =>
-                navigate(`${ROUTES.SALES_RETURNS_NEW}?saleId=${sale.id}`)
-              }
-            >
-              <Undo2 className="h-4 w-4" />
-              ثبت مرجوعی از این فروش
-            </Button>
-          )}
-
-          {cancellable && canUpdate && (
-            <Button
-              type="button"
-              variant="destructive"
-              className="w-full gap-2"
-              onClick={() => setShowCancelDialog(true)}
-              disabled={statusMutation.isPending}
-            >
-              <Ban className="h-4 w-4" />
-              لغو فروش
-            </Button>
-          )}
         </div>
       </div>
 
-      <AlertDialog
+      <ConfirmDialog
         open={showCancelDialog}
-        onOpenChange={(open) =>
-          !statusMutation.isPending && setShowCancelDialog(open)
+        onOpenChange={setShowCancelDialog}
+        title="لغو فروش"
+        description="لغو نهایی است و قابل بازگشت نیست. پرداخت‌های مشتری روی فروش می‌مانند و مانده‌ی حسابش منفی می‌شود تا وقتی پولش را با «پول برگشتی» برگردانید."
+        confirmLabel="لغو فروش"
+        pendingLabel="در حال لغو..."
+        isPending={statusMutation.isPending}
+        onConfirm={() =>
+          statusMutation.mutate(SaleStatusEnum.CANCELLED, {
+            onSuccess: () => setShowCancelDialog(false),
+          })
         }
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>لغو فروش</AlertDialogTitle>
-            <AlertDialogDescription>
-              لغو نهایی است و قابل بازگشت نیست. پرداخت‌های مشتری روی فروش
-              می‌مانند و مانده‌ی حسابش منفی می‌شود تا وقتی پولش را با «پول
-              برگشتی» برگردانید.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={statusMutation.isPending}>
-              انصراف
-            </AlertDialogCancel>
-            <AlertDialogAction
-              disabled={statusMutation.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={(event) => {
-                event.preventDefault();
-                statusMutation.mutate(SaleStatusEnum.CANCELLED, {
-                  onSuccess: () => setShowCancelDialog(false),
-                });
-              }}
-            >
-              {statusMutation.isPending ? "در حال لغو..." : "لغو فروش"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      />
     </div>
   );
 }

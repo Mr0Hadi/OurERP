@@ -192,6 +192,8 @@ export default function PurchaseReturnNewPage() {
               order={purchaseForReturn}
               partyName={purchaseForReturn.supplierName}
               claimsElsewhere={claimsElsewhere}
+              // هر ادعا مقدارِ تحویل‌شده‌ی خودش را کنارش دارد؛ فاکتورِ کامل فقط مرجع است.
+              defaultOpen={false}
             />
 
             <div className="flex justify-end">
@@ -254,7 +256,8 @@ export default function PurchaseReturnNewPage() {
               </p>
             )}
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 rounded-lg border border-border bg-muted/40 p-3">
+            {/* چسبان: جمع و دکمه‌ی ثبت با اسکرولِ ادعاها از دید نمی‌روند. */}
+            <div className="sticky bottom-0 z-20 -mx-4 sm:mx-0 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 border-t sm:border border-border sm:rounded-lg bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-3">
               <div className="text-sm">
                 <span className="text-muted-foreground">
                   جمع مبلغ ادعای مرجوعی:{" "}

@@ -24,6 +24,9 @@ import {
  * فقط مقصدهایی که سرور از وضعیتِ فعلی می‌پذیرد در فهرست می‌آیند؛ بقیه‌ی
  * وضعیت‌ها را خودِ سیستم می‌گذارد (دریافت، ارسال، پرداخت). «لغو» دکمه و
  * دیالوگِ جدای خودش را دارد.
+ *
+ * `children` زیرِ راهنما می‌آید — کارهای سند (ثبت مرجوعی، لغو) و راهنمای
+ * اصلاحِ اشتباه، تا همه‌ی «با این سند چه می‌شود کرد» یک‌جا باشد.
  */
 export default function StatusChangeCard({
   statusBadge,
@@ -33,6 +36,7 @@ export default function StatusChangeCard({
   isPending,
   hint,
   onChange,
+  children,
 }) {
   const [target, setTarget] = useState("");
   const available = canEdit && targets.length > 0;
@@ -81,6 +85,7 @@ export default function StatusChangeCard({
           </div>
         )}
         {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+        {children}
       </CardContent>
     </Card>
   );

@@ -1,6 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
 
-
 import {
   usePurchaseReturnQuery,
   usePurchaseForReturnQuery,
@@ -125,18 +124,6 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
 
       <ReceivingReportCard receivingInfo={sale} />
 
-      <ReturnDocumentSection
-        returnDoc={purchaseReturn}
-        mutation={attachmentsMutation}
-        canEdit={permissionsUnknown || can("PurchaseReturnCreate")}
-        title="مرجوعی خرید"
-        // «برگه‌ی مرجوعی به تامین‌کننده» — برای هر مرجوعیِ خرید، همراهِ کالا.
-        documentKind="purchaseReturn"
-        documentId={purchaseReturn.id}
-        serverDocumentName={`برگه-مرجوعی-${purchaseReturn.returnNumber}`}
-        attachmentLabel="رسیدِ امضاشده یا عکسِ کالای مرجوعی"
-      />
-
       <PurchaseReturnResolutionSection
         purchaseReturn={purchaseReturn}
         renderClaimReport={(claim) => (
@@ -156,6 +143,19 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
         onReject={(reason, options) => rejectMutation.mutate(reason, options)}
         onCancel={(reason, options) => cancelMutation.mutate(reason, options)}
         onReopen={() => reopenMutation.mutate()}
+      />
+
+      {/* سند و پیوست بعد از کارِ اصلیِ صفحه (ادعاها و تصمیم‌ها) می‌آید. */}
+      <ReturnDocumentSection
+        returnDoc={purchaseReturn}
+        mutation={attachmentsMutation}
+        canEdit={permissionsUnknown || can("PurchaseReturnCreate")}
+        title="مرجوعی خرید"
+        // «برگه‌ی مرجوعی به تامین‌کننده» — برای هر مرجوعیِ خرید، همراهِ کالا.
+        documentKind="purchaseReturn"
+        documentId={purchaseReturn.id}
+        serverDocumentName={`برگه-مرجوعی-${purchaseReturn.returnNumber}`}
+        attachmentLabel="رسیدِ امضاشده یا عکسِ کالای مرجوعی"
       />
 
       {purchaseReturn.status === RETURN_STATUSES.SETTLED && (

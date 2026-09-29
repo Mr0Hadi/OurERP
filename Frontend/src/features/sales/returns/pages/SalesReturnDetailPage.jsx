@@ -1,6 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
 
-
 import {
   useSalesReturnQuery,
   useSaleForReturnQuery,
@@ -152,20 +151,6 @@ function SalesReturnDetailContent({ salesReturn }) {
         </Notice>
       )}
 
-      <ReturnDocumentSection
-        returnDoc={salesReturn}
-        mutation={attachmentsMutation}
-        canEdit={permissionsUnknown || can("SaleReturnCreate")}
-        title="مرجوعی فروش"
-        // برگه‌ی طلبکاری فقط برای مرجوعی‌ای ساخته می‌شود که پولی به مشتری
-        // برگردانده؛ بدون آن سرور ۴۰۰ می‌دهد و دکمه‌ی چاپ فقط خطا می‌سازد.
-        documentKind="saleReturn"
-        documentId={hasRefund ? salesReturn.id : null}
-        serverDocumentName={`برگه-طلبکاری-${salesReturn.returnNumber}`}
-        emptyHint="برگه‌ی طلبکاری (سندِ استرداد وجه) فقط برای مرجوعی‌ای ساخته می‌شود که در تصمیمش پولی به مشتری برگردانده شده باشد."
-        attachmentLabel="فاکتور یا رسید مرجوعی برای مشتری"
-      />
-
       <SalesReturnResolutionSection
         salesReturn={salesReturn}
         isBusy={isBusy}
@@ -181,6 +166,21 @@ function SalesReturnDetailContent({ salesReturn }) {
         onReject={(reason, options) => rejectMutation.mutate(reason, options)}
         onCancel={(reason, options) => cancelMutation.mutate(reason, options)}
         onReopen={() => reopenMutation.mutate()}
+      />
+
+      {/* سند و پیوست بعد از کارِ اصلیِ صفحه (ادعاها و تصمیم‌ها) می‌آید. */}
+      <ReturnDocumentSection
+        returnDoc={salesReturn}
+        mutation={attachmentsMutation}
+        canEdit={permissionsUnknown || can("SaleReturnCreate")}
+        title="مرجوعی فروش"
+        // برگه‌ی طلبکاری فقط برای مرجوعی‌ای ساخته می‌شود که پولی به مشتری
+        // برگردانده؛ بدون آن سرور ۴۰۰ می‌دهد و دکمه‌ی چاپ فقط خطا می‌سازد.
+        documentKind="saleReturn"
+        documentId={hasRefund ? salesReturn.id : null}
+        serverDocumentName={`برگه-طلبکاری-${salesReturn.returnNumber}`}
+        emptyHint="برگه‌ی طلبکاری (سندِ استرداد وجه) فقط برای مرجوعی‌ای ساخته می‌شود که در تصمیمش پولی به مشتری برگردانده شده باشد."
+        attachmentLabel="فاکتور یا رسید مرجوعی برای مشتری"
       />
 
       {salesReturn.status === RETURN_STATUSES.SETTLED && (

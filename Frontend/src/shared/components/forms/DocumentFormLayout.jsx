@@ -40,7 +40,11 @@ export default function DocumentFormLayout({ main, aside, mobileBar, onSubmit })
     >
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
         <div className="lg:col-span-2 space-y-4 min-w-0">{main}</div>
-        <div className="space-y-4 lg:sticky lg:top-4">{aside}</div>
+        {/* چسبان، ولی اگر از ارتفاعِ صفحه بلندتر شد خودش اسکرول می‌خورد — وگرنه
+            پایینِ ستون تا تهِ صفحه دست‌نیافتنی می‌ماند. */}
+        <div className="space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:p-0.5 custom-scroll">
+          {aside}
+        </div>
       </div>
       {mobileBar}
     </form>
