@@ -103,6 +103,16 @@ export default function OrderPaymentSection({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isProforma]);
 
+  // فرم‌های ثبت این کارت را فقط بیرون از پیش‌فاکتور نشان می‌دهند، پس ظاهرشدنش
+  // همان «خروج از پیش‌فاکتور» است: مبلغِ پرداختیِ خالی با جمع پر می‌شود
+  // (همگام‌سازیِ بالا فقط با *تغییرِ* جمع کار می‌کند).
+  useEffect(() => {
+    if (termsOnly || isProforma || !isSingleMethodType(paymentType)) return;
+    if (!(Number(formData.paidAmount) > 0)) handleChange("paidAmount", String(totalAmount));
+    // فقط لحظه‌ی ظاهرشدن.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useSyncedComputedValue(
     totalAmount,
     (value) =>

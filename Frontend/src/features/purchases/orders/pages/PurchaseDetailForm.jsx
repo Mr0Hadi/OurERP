@@ -34,6 +34,7 @@ import {
   PURCHASE_STATUS_CHOICES,
   canDeletePurchase,
   hasLivePayments,
+  missingInvoiceFields,
 } from "@/features/purchases/orders/domain/purchaseRules";
 import { PURCHASE_STATUSES } from "@/features/purchases/orders/services/constants";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
@@ -132,20 +133,8 @@ export default function PurchaseDetailForm({ purchaseData }) {
       : Number(formData.status);
 
   const leavingProforma = selectedStatus !== PURCHASE_STATUSES.PROFORMA;
-  const missingInvoiceNumber = !String(formData.invoiceNumber || "").trim();
-  const missingInvoiceDate = !formData.invoiceDate;
-
-  const infoErrors =
-    showErrors && leavingProforma
-      ? {
-          invoiceNumber: missingInvoiceNumber
-            ? "برای خروج از پیش‌فاکتور، شماره فاکتور تامین‌کننده الزامی است"
-            : null,
-          invoiceDate: missingInvoiceDate
-            ? "برای خروج از پیش‌فاکتور، تاریخ فاکتور الزامی است"
-            : null,
-        }
-      : {};
+  const invoiceErrors = missingInvoiceFields(formData, selectedStatus);
+  const infoErrors = showErrors ? invoiceErrors ?? {} : {};
 
   const onSubmit = (e) => {
     e.preventDefault();
@@ -167,11 +156,9 @@ export default function PurchaseDetailForm({ purchaseData }) {
     }
     // قاعده‌ی بکند: خروج از پیش‌فاکتور یعنی فاکتور رسمیِ تامین‌کننده
     // رسیده، پس شماره و تاریخش باید ثبت شده باشد.
-    if (leavingProforma && (missingInvoiceNumber || missingInvoiceDate)) {
+    if (invoiceErrors) {
       setShowErrors(true);
-      toast.error(
-        "برای خروج از پیش‌فاکتور، شماره و تاریخ فاکتور تامین‌کننده را وارد کنید.",
-      );
+      toast.error("برای صدورِ فاکتور، شماره و تاریخِ فاکتورِ تامین‌کننده را وارد کنید.");
       return;
     }
 

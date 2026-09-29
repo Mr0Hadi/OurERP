@@ -6,7 +6,10 @@ import { usePurchaseFormStore } from "@/features/purchases/orders/store/purchase
 import { useCreatePurchaseMutation } from "@/features/purchases/orders/services/mutations";
 import { useSuppliersOptionsQuery } from "@/features/suppliers/services/queries";
 import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
-import { PURCHASE_STATUS_CHOICES } from "@/features/purchases/orders/domain/purchaseRules";
+import {
+  PURCHASE_STATUS_CHOICES,
+  missingInvoiceFields,
+} from "@/features/purchases/orders/domain/purchaseRules";
 
 import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection";
 import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
@@ -83,6 +86,7 @@ export default function PurchasesNewPage() {
       ? PurchaseStatusEnum.PROFORMA
       : Number(formData.status);
   const isProforma = status === PurchaseStatusEnum.PROFORMA;
+  const invoiceErrors = missingInvoiceFields(formData, status);
 
   const paidAmountOf = () => {
     if (isProforma || formData.paymentType === PaymentTypeEnum.CREDIT) return 0;
@@ -105,6 +109,11 @@ export default function PurchasesNewPage() {
     }
     if (items.length === 0) {
       toast.error("دست‌کم یک قلم اضافه کنید.");
+      return;
+    }
+    if (invoiceErrors) {
+      setShowErrors(true);
+      toast.error("برای صدورِ فاکتور، شماره و تاریخِ فاکتورِ تامین‌کننده را وارد کنید.");
       return;
     }
     if (attachments.isUploading) {
@@ -191,7 +200,11 @@ export default function PurchasesNewPage() {
             onItemsChange={setItems}
             onAddNewProduct={() => openSubPage(ROUTES.WAREHOUSE_PRODUCTS_NEW)}
           />
-          <OrderInfoSection formData={formData} onFormChange={setFormData} errors={{}} />
+          <OrderInfoSection
+            formData={formData}
+            onFormChange={setFormData}
+            errors={showErrors ? invoiceErrors ?? {} : {}}
+          />
           <AttachmentsCard
             label="پیش‌فاکتور/فاکتورِ دریافتی از تامین‌کننده"
             attachments={attachments}

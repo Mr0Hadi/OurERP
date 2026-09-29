@@ -102,6 +102,23 @@ export const MANUAL_PURCHASE_STATUSES = [
 ];
 
 /**
+ * خروج از پیش‌فاکتور یعنی فاکتورِ رسمیِ تامین‌کننده رسیده، پس شماره و
+ * تاریخش لازم است — قاعده‌ی `CreatePurchase`/`UpdatePurchase`. خطاها به
+ * شکلِ `errors`ِ `OrderInfoSection`؛ `null` یعنی ایرادی نیست.
+ */
+export function missingInvoiceFields(formData, status) {
+  if (Number(status) === PURCHASE_STATUSES.PROFORMA) return null;
+  const errors = {};
+  if (!String(formData.invoiceNumber || "").trim()) {
+    errors.invoiceNumber = "برای صدورِ فاکتور، شماره‌ی فاکتورِ تامین‌کننده الزامی است";
+  }
+  if (!formData.invoiceDate) {
+    errors.invoiceDate = "برای صدورِ فاکتور، تاریخِ فاکتور الزامی است";
+  }
+  return Object.keys(errors).length > 0 ? errors : null;
+}
+
+/**
  * گزینه‌های `StatusChoice` در فرمِ خرید (ثبت و ویرایشِ پیش‌فاکتور)، با
  * راهنمای یک‌خطیِ هر کدام.
  */
