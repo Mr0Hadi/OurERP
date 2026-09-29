@@ -1,18 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { Trash2 } from "lucide-react";
 
-import { Button } from "@/shared/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/shared/components/ui/alert-dialog";
 
 import {
   usePurchaseReturnQuery,
@@ -34,6 +21,7 @@ import ReturnDocumentSection from "@/shared/components/returns/ReturnDocumentSec
 
 import PurchaseReturnDetailLoading from "../components/forms/PurchaseReturnDetailLoading";
 import ReturnStatusBar from "@/shared/components/returns/ReturnStatusBar";
+import DeleteReturnAction from "@/shared/components/returns/DeleteReturnAction";
 import {
   FollowUpReturnAction,
   PreviousReturnBadge,
@@ -178,38 +166,12 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
       )}
 
       {purchaseReturn.canDelete && (
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="w-full gap-2 text-destructive hover:bg-destructive/10"
-              disabled={isBusy}
-            >
-              <Trash2 className="h-4 w-4" />
-              حذف کامل این مرجوعی
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>حذف مرجوعی</AlertDialogTitle>
-              <AlertDialogDescription>
-                این عملیات قابل بازگشت نیست. مرجوعی «{purchaseReturn.returnNumber}»
-                برای همیشه حذف خواهد شد.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>انصراف</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-destructive hover:bg-destructive/90"
-                onClick={() => removeMutation.mutate(purchaseReturn.id)}
-              >
-                حذف شود
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <DeleteReturnAction
+          returnNumber={purchaseReturn.returnNumber}
+          onDelete={() => removeMutation.mutate(purchaseReturn.id)}
+          isPending={removeMutation.isPending}
+          disabled={isBusy}
+        />
       )}
     </div>
   );

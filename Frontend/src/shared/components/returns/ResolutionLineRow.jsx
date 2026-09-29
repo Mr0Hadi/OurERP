@@ -1,17 +1,8 @@
+import { useState } from "react";
 import { Banknote, Trash2 } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/shared/components/ui/alert-dialog";
+import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 import {
   EFFECT_DIRECTIONS,
   EFFECT_STATUSES,
@@ -35,6 +26,11 @@ const DONE_CLASS =
  *
  * وعده‌ی پرداخت (اثر مالیِ معلق) همین‌جا دکمه‌ی «ثبت پرداخت» دارد: کار
  * مالی است و به صف انبار نمی‌رود.
+ *
+ * هر دو تأیید می‌خواهند: حذف ممکن است پولِ جابه‌جاشده را برگرداند و ثبتِ
+ * پرداخت پولِ واقعی را در دفتر می‌نویسد؛ یک کلیکِ اشتباه نباید هیچ‌کدام را
+ * انجام دهد. دیالوگ تا پایانِ درخواست باز می‌ماند و با رفتنِ ردیف (یا اثر)
+ * بعد از موفقیت خودش بسته می‌شود.
  */
 export default function ResolutionLineRow({
   resolution,
@@ -55,6 +51,14 @@ export default function ResolutionLineRow({
   );
   const pendingMoney = effects.filter(isPendingMoneyEffect);
   const canRemove = Boolean(onRemove) && !hasMovedGoods;
+  const hasAppliedMoney = effects.some(
+    (effect) => !isGoodsEffect(effect.direction) && effect.status === EFFECT_STATUSES.APPLIED,
+  );
+
+  // `{ kind: "remove" }` یا `{ kind: "money", effect }`
+  const [confirm, setConfirm] = useState(null);
+  const moneyLabelOf = (effect) =>
+    `${side.effectLabels[effect.direction]} ${(Number(effect.amount) || 0).toLocaleString("fa-IR")} ریال`;
 
   const statusBadge = resolution.isWriteOff
     ? { label: "بخشیده شد", className: DONE_CLASS }
@@ -88,7 +92,7 @@ export default function ResolutionLineRow({
               variant="ghost"
               size="icon"
               className="h-6 w-6 text-muted-foreground hover:text-destructive"
-              onClick={onRemove}
+              onClick={() => setConfirm({ kind: "remove" })}
               disabled={isBusy}
               aria-label="حذف این تصمیم"
             >
@@ -117,43 +121,21 @@ export default function ResolutionLineRow({
         </div>
       )}
 
-      {/* ثبتِ پرداخت پولِ واقعی را در دفتر می‌نویسد و قفلِ لغو/رد را روشن
-          می‌کند؛ یک کلیکِ اشتباه نباید آن را ثبت کند. */}
       {onExecuteMoney &&
-        pendingMoney.map((effect) => {
-          const label = `${side.effectLabels[effect.direction]} ${(Number(effect.amount) || 0).toLocaleString("fa-IR")} ریال`;
-          return (
-            <AlertDialog key={effect.id}>
-              <AlertDialogTrigger asChild>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="w-full h-7 text-[11px] gap-1.5"
-                  disabled={isBusy}
-                >
-                  <Banknote className="h-3.5 w-3.5" />
-                  ثبت {label} — انجام شد
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>ثبت پرداخت</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    «{label}» همین حالا به‌عنوان انجام‌شده ثبت می‌شود. بعد از آن،
-                    لغو یا رد این مرجوعی فقط با حذفِ این تصمیم ممکن است.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>انصراف</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => onExecuteMoney(effect)}>
-                    تأیید
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          );
-        })}
+        pendingMoney.map((effect) => (
+          <Button
+            key={effect.id}
+            type="button"
+            size="sm"
+            variant="outline"
+            className="w-full h-7 text-[11px] gap-1.5"
+            disabled={isBusy}
+            onClick={() => setConfirm({ kind: "money", effect })}
+          >
+            <Banknote className="h-3.5 w-3.5" />
+            ثبت {moneyLabelOf(effect)} — انجام شد
+          </Button>
+        ))}
 
       {summary.netMoney !== 0 && (
         <p className="text-[11px] text-muted-foreground">
@@ -172,6 +154,26 @@ export default function ResolutionLineRow({
           </span>
         </p>
       )}
+
+      <ConfirmDialog
+        open={confirm !== null}
+        onOpenChange={(open) => !open && setConfirm(null)}
+        title={confirm?.kind === "money" ? "ثبت پرداخت" : "حذف این تصمیم"}
+        description={
+          confirm?.kind === "money"
+            ? `«${moneyLabelOf(confirm.effect)}» همین حالا به‌عنوان انجام‌شده ثبت می‌شود. بعد از آن، لغو یا رد این مرجوعی فقط با حذفِ این تصمیم ممکن است.`
+            : `تصمیم و اثرهای انجام‌نشده‌اش حذف می‌شوند و این ${(Number(resolution.quantity) || 0).toLocaleString("fa-IR")} عدد دوباره بی‌تصمیم می‌شود.${
+                hasAppliedMoney ? " پولی که جابه‌جا شده با یک ردیفِ معکوس در دفتر برگردانده می‌شود." : ""
+              }`
+        }
+        confirmLabel={confirm?.kind === "money" ? "ثبت شود" : "حذف شود"}
+        pendingLabel={confirm?.kind === "money" ? "در حال ثبت..." : "در حال حذف..."}
+        destructive={confirm?.kind !== "money"}
+        isPending={isBusy}
+        onConfirm={() =>
+          confirm?.kind === "money" ? onExecuteMoney(confirm.effect) : onRemove()
+        }
+      />
     </div>
   );
 }

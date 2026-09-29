@@ -9,7 +9,7 @@ function Breadcrumb({
 }) {
   return (
     <nav
-      aria-label="breadcrumb"
+      aria-label="مسیر صفحه"
       data-slot="breadcrumb"
       className={cn(className)}
       {...props} />
@@ -104,7 +104,7 @@ function BreadcrumbEllipsis({
       className={cn("flex size-5 items-center justify-center [&>svg]:size-4", className)}
       {...props}>
       <MoreHorizontalIcon />
-      <span className="sr-only">More</span>
+      <span className="sr-only">بیشتر</span>
     </span>
   );
 }

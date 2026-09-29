@@ -127,7 +127,8 @@ const DETAIL_TITLES = {
   [ROUTES.WAREHOUSE_RECEIVING]: "دریافت خرید",
   [ROUTES.WAREHOUSE_SHIPPING]: "ارسال فروش",
   "/warehouse/receiving/returns": "دریافت کالای مرجوعی",
-  "/warehouse/shipping/returns": "عودت به تامین‌کننده",
+  // عودت، آزادسازی و اسقاطِ قرنطینه — نه فقط عودت.
+  "/warehouse/shipping/returns": "کار انبار روی مرجوعی خرید",
 
   [ROUTES.INVOICE]: "جزئیات فاکتور",
 };

@@ -55,7 +55,7 @@ const QUEUES = {
     separate: {
       side: "purchase",
       directions: [GOODS_OUT, GOODS_RELEASE, GOODS_SCRAP],
-      label: "عودت به تامین‌کننده",
+      label: "مرجوعی خرید: عودت/قرنطینه",
       link: (row) => routeWithId(ROUTES.WAREHOUSE_SHIPPING_RETURN_DETAIL, row.returnId),
     },
     action: "ثبت ارسال",

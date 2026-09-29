@@ -35,10 +35,16 @@ function SourceChoice({ value, onChange, quarantineAvailable }) {
         quarantineAvailable != null
           ? `قرنطینه (آزاد: ${formatNumber(quarantineAvailable)})`
           : "قرنطینه",
+      // قرنطینه‌ی خالی را سرور رد می‌کند؛ مگر همین حالا انتخاب شده باشد.
+      disabled: quarantineAvailable === 0 && value !== GOODS_SOURCES.QUARANTINED,
     },
   ];
   return (
-    <div className="flex flex-wrap items-center gap-1.5 ps-6">
+    <div
+      role="group"
+      aria-label="مبدأ کالا"
+      className="flex flex-wrap items-center gap-1.5 ps-6"
+    >
       <span className="text-[11px] text-muted-foreground">از کجا برداشته شود؟</span>
       {options.map((option) => (
         <Button
@@ -47,6 +53,8 @@ function SourceChoice({ value, onChange, quarantineAvailable }) {
           size="sm"
           variant={value === option.value ? "default" : "outline"}
           className={`h-6 px-2 text-[11px] ${value == null ? "border-warning/50" : ""}`}
+          aria-pressed={value === option.value}
+          disabled={option.disabled}
           onClick={() => onChange(option.value)}
         >
           {option.label}
