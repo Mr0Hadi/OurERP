@@ -26,6 +26,7 @@
 | ۷ | یکدست‌کردنِ نام‌ها (سه جا که بکند یک مفهوم را دو جور نام‌گذاری کرده) و تاریخِ خالیِ `MinValue` | متوسط |
 | ۸ | دانه‌ی ناقص در پاسخِ `ScanBarcode` | متوسط |
 | ۹ | یافته‌های تستِ سرتاسریِ خرید، فروش و مرجوعی‌ها (۲۰۲۶-۰۹-۲۹) | **بالا** (۹.۱، ۹.۱۰) / متوسط |
+| ۱۰ | برچسبِ enumها از بکند (`GetEnums`) | متوسط |
 
 ---
 
@@ -993,6 +994,39 @@ claimableQuantity: 4` — دو دانه‌ی جایگزین هرگز قابلِ 
 
 ---
 
+## بخشِ ۱۰ — برچسبِ enumها از بکند (`GetEnums`) (۲۰۲۶-۱۰-۰۴)
+
+**مشکل.** شماره‌ی اعضای enumها در فرانت با بکند یکی است (بخشِ ۱۵ `api-guide.fa.md`) و فرانت به آن‌ها وابسته است
+(قاعده‌های وضعیت، جهتِ پرداخت)؛ ولی **متنی که کاربر می‌بیند** («در انتظار ارسال»، «انتقال بانکی»، …) دو جا نوشته
+شده: `[Description]`ِ بکند و `shared/domain/enums/*`ِ فرانت. هر تغییرِ متن یا عضوِ تازه باید دو جا اعمال شود و
+دیر یا زود از هم جدا می‌شوند. `PurchaseStatusEnum` و `SalesStatusEnum` اصلاً `[Description]` ندارند.
+
+**درخواست.**
+
+۱. `GET api/Enum/GetEnums` (هر کاربرِ واردشده؛ بی‌پارامتر). خروجی: برای هر enum فهرستِ اعضا با شماره، نام و
+`[Description]`:
+
+```json
+{
+  "PurchaseStatusEnum": [{ "value": 0, "name": "PROFORMA", "description": "پیش‌فاکتور" }, …],
+  "SalesStatusEnum":    [{ "value": 1, "name": "PROCESSING", "description": "آماده‌سازی انبار" }, …],
+  "PaymentTypeEnum":    [{ "value": 3, "name": "TRANSFER", "description": "انتقال بانکی" }, …],
+  "PaymentDirectionEnum": […], "PaymentPurposeEnum": […], "ProductUnitEnum": […], "TaxCategoryEnum": […]
+}
+```
+
+   پیشنهاد: یک `EnumController` با reflection روی `Domain.Enums` (یا فهرستی صریح از enumهای بالا)؛ پاسخ را می‌شود
+   cache کرد چون فقط با انتشارِ نسخه عوض می‌شود.
+
+۲. `[Description]` برای اعضای `PurchaseStatusEnum` و `SalesStatusEnum` (همان برچسب‌های فعلیِ فرانت:
+`purchaseStatus.js` و `saleStatus.js`).
+
+**فرانت (انجام شد).** `shared/services/enums/queries.js` این endpoint را یک بار می‌خواند (`staleTime: Infinity`) و
+برچسبِ سرور را روی برچسبِ محلی می‌گذارد: badgeهای وضعیت و نوعِ پرداخت، گزینه‌های وضعیت، روش‌های پرداخت و فیلترهای
+فهرستِ خرید/فروش. **تا آن وقت** درخواست ۴۰۴ می‌گیرد (بی‌تکرار و بی‌پیام) و همان برچسب‌های محلی دیده می‌شوند.
+
+---
+
 ## چک‌لیستِ کل
 
 - [x] ۱.۱ — کد پستیِ اختیاری (مشتری و تامین‌کننده)
@@ -1007,3 +1041,4 @@ claimableQuantity: 4` — دو دانه‌ی جایگزین هرگز قابلِ 
 - [ ] ۷ — یکدست‌کردنِ نام‌ها (`FirstName`، `ReferralCode`، `OrderLineId`) و تاریخِ خالیِ `MinValue`
 - [ ] ۸ — دانه‌ی کامل در پاسخِ `ScanBarcode`
 - [ ] ۹ — یافته‌های تستِ سرتاسری (۹.۱ تا ۹.۱۲)
+- [ ] ۱۰ — `GetEnums` و `[Description]`ِ وضعیت‌های خرید/فروش

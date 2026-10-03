@@ -60,13 +60,6 @@ export const DOCUMENT_PAYMENT_TYPES = Object.freeze([
   PaymentTypeEnum.MIXED,
 ]);
 
-/** فقط برچسبِ نوع‌های سطحِ سند — برای کشویی‌های «نوع پرداخت» و فیلترها. */
-export const DOCUMENT_PAYMENT_TYPE_LABELS = Object.freeze(
-  Object.fromEntries(
-    DOCUMENT_PAYMENT_TYPES.map((value) => [value, PAYMENT_TYPE_LABELS[value]]),
-  ),
-);
-
 /**
  * روش‌هایی که یک اثرِ پولیِ مرجوعی می‌تواند داشته باشد — مقادیرِ معتبرِ
  * `ReturnPaymentMethodEnum`ِ بکند منهای «اعتبار خرید بعدی» که در فرانت

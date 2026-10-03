@@ -5,7 +5,8 @@ import { Button } from "@/shared/components/ui/button";
 import SectionCard from "@/shared/components/documents/SectionCard";
 import StatusBadge from "@/shared/components/status/StatusBadge";
 import PaymentMethodEditor from "./PaymentMethodEditor";
-import { PAYMENT_TYPE_LABELS, PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+import { usePaymentTypeLabels } from "@/shared/services/enums/queries";
 import { PaymentDirectionEnum, PaymentPurposeEnum } from "@/shared/domain/enums/paymentDirection";
 import {
   ROW_PAYMENT_TYPES,
@@ -184,6 +185,7 @@ function PaymentRow({ row, isRefund, manageable, onEdit, onVoid, onUndo }) {
   const voided = Boolean(row.voidedAt) || row.pending === "void";
   const reference = row.checkNumber || row.transferRef;
   const badge = PENDING_BADGES[row.pending];
+  const typeLabels = usePaymentTypeLabels();
 
   return (
     <li className={cn("flex items-center gap-2 px-3 py-2.5 text-sm", row.pending && "bg-primary/3")}>
@@ -201,7 +203,7 @@ function PaymentRow({ row, isRefund, manageable, onEdit, onVoid, onUndo }) {
           {badge && <StatusBadge tone={badge.tone} size="sm">{badge.label}</StatusBadge>}
         </div>
         <p className="truncate text-xs text-muted-foreground">
-          {PAYMENT_TYPE_LABELS[row.type] ?? row.type}
+          {typeLabels[row.type] ?? row.type}
           {" · "}
           {row.paidAt ? gregorianToPersian(row.paidAt) : "امروز"}
           {reference && <span dir="ltr"> · {reference}</span>}

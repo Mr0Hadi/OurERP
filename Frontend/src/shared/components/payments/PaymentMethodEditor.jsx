@@ -13,10 +13,10 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import StatusChoice from "@/shared/components/forms/StatusChoice";
+import { usePaymentTypeLabels } from "@/shared/services/enums/queries";
 import AmountInWords from "@/shared/components/forms/AmountInWords";
 import {
   PAYMENT_REFERENCE_FIELDS,
-  PAYMENT_TYPE_LABELS,
   PaymentTypeEnum,
 } from "@/shared/domain/enums/paymentType";
 import {
@@ -53,6 +53,7 @@ export default function PaymentMethodEditor({
   error,
 }) {
   const fallbackMethod = PaymentTypeEnum.CASH;
+  const typeLabels = usePaymentTypeLabels();
   const method = methodOf(value, fallbackMethod);
   const rows = resolvedRows(value, payable, fallbackMethod);
   // ویرایشِ ردیف روی همان ردیف‌هایی است که دیده می‌شوند (حتی ردیفِ پیش‌فرضِ ذخیره‌نشده).
@@ -64,7 +65,7 @@ export default function PaymentMethodEditor({
       {methods.length > 1 && (
         <StatusChoice
           label="روش پرداخت"
-          options={methods.map((candidate) => ({ value: candidate, label: PAYMENT_TYPE_LABELS[candidate] }))}
+          options={methods.map((candidate) => ({ value: candidate, label: typeLabels[candidate] }))}
           value={method}
           onChange={(next) => onChange(switchMethod(value, next, payable, fallbackMethod))}
         />
@@ -150,6 +151,7 @@ function SingleRow({ row, payable, onChange }) {
 
 /** ترکیبی: هر تکه روش، مبلغ، مرجع و تاریخِ خودش؛ آخرین تکه «باقیمانده». */
 function MixedRows({ rows, payable, onChange, onAdd, onRemove }) {
+  const typeLabels = usePaymentTypeLabels();
   const total = rowsTotal(rows);
   const rest = (Number(payable) || 0) - total;
 
@@ -171,7 +173,7 @@ function MixedRows({ rows, payable, onChange, onAdd, onRemove }) {
                   <SelectContent>
                     {ROW_PAYMENT_TYPES.map((type) => (
                       <SelectItem key={type} value={String(type)}>
-                        {PAYMENT_TYPE_LABELS[type]}
+                        {typeLabels[type]}
                       </SelectItem>
                     ))}
                   </SelectContent>

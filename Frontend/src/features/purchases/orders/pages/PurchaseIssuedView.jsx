@@ -26,23 +26,21 @@ import {
   purchaseStatusTargets,
 } from "@/features/purchases/orders/domain/purchaseRules";
 import { PURCHASE_PAYMENT_SIDE } from "@/features/purchases/orders/domain/purchasePayments";
-import {
-  PURCHASE_STATUSES,
-  PURCHASE_STATUS_LABELS,
-} from "@/features/purchases/orders/services/constants";
+import { PURCHASE_STATUSES } from "@/features/purchases/orders/services/constants";
+import { usePurchaseStatusLabels } from "@/shared/services/enums/queries";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import { savedInvoiceTotals } from "@/shared/domain/invoice/lineMath";
 import { ROUTES } from "@/shared/constants/routes";
 import { formatNumber } from "@/shared/lib/numberFormat";
 
 /** گزینه‌های وضعیت: فعلی، مقصدهای مجاز، و لغو اگر ممکن است. */
-function statusOptionsOf(purchase) {
+function statusOptionsOf(purchase, labels) {
   const current = purchase.status;
   return [
-    { value: current, label: PURCHASE_STATUS_LABELS[current] },
+    { value: current, label: labels[current] },
     ...purchaseStatusTargets(purchase)
       .filter((target) => target !== current)
-      .map((target) => ({ value: target, label: PURCHASE_STATUS_LABELS[target] })),
+      .map((target) => ({ value: target, label: labels[target] })),
     ...(canCancelPurchase(purchase)
       ? [{ value: PURCHASE_STATUSES.CANCELLED, label: "لغو خرید" }]
       : []),
@@ -58,6 +56,7 @@ function statusOptionsOf(purchase) {
 export default function PurchaseIssuedView({ purchase }) {
   const navigate = useNavigate();
   const { allows } = usePermission();
+  const statusLabels = usePurchaseStatusLabels();
   const [confirmCancel, setConfirmCancel] = useState(false);
 
   const draft = useIssuedDocumentDraft(purchase, PURCHASE_PAYMENT_SIDE.direction);
@@ -137,7 +136,7 @@ export default function PurchaseIssuedView({ purchase }) {
               headerAction={!isCancelled && <IssuedInvoiceNotice movedLabel="دریافت" />}
               status={
                 canUpdate
-                  ? { value: Number(draft.status), options: statusOptionsOf(purchase), onChange: draft.setStatus }
+                  ? { value: Number(draft.status), options: statusOptionsOf(purchase, statusLabels), onChange: draft.setStatus }
                   : undefined
               }
             />

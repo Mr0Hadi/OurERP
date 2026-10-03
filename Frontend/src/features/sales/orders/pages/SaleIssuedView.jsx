@@ -23,7 +23,8 @@ import { usePermission } from "@/features/auth/hooks/usePermission";
 import { useRelatedSalesReturnsQuery } from "@/features/sales/returns/services/queries";
 import { RETURNABLE_SALE_STATUSES, hasAnythingShipped } from "../domain/saleRules";
 import { SALE_PAYMENT_SIDE } from "../domain/salePayments";
-import { SaleStatusEnum, SALE_STATUS_LABELS } from "@/shared/domain/enums/saleStatus";
+import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
+import { useSaleStatusLabels } from "@/shared/services/enums/queries";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import { savedInvoiceTotals } from "@/shared/domain/invoice/lineMath";
@@ -40,12 +41,12 @@ const canCancelSale = (sale) =>
  * گزینه‌های وضعیت. `ChangeSaleStatus` دستی فقط «ارسال شده → تحویل کامل» را
  * می‌پذیرد؛ «ارسال ناقص/ارسال شده» را ارسالِ انبار می‌گذارد.
  */
-function statusOptionsOf(sale) {
+function statusOptionsOf(sale, labels) {
   const current = sale.status;
   return [
-    { value: current, label: SALE_STATUS_LABELS[current] },
+    { value: current, label: labels[current] },
     ...(current === SaleStatusEnum.SHIPPED
-      ? [{ value: SaleStatusEnum.DELIVERED, label: SALE_STATUS_LABELS[SaleStatusEnum.DELIVERED] }]
+      ? [{ value: SaleStatusEnum.DELIVERED, label: labels[SaleStatusEnum.DELIVERED] }]
       : []),
     ...(canCancelSale(sale) ? [{ value: SaleStatusEnum.CANCELLED, label: "لغو فروش" }] : []),
   ];
@@ -59,6 +60,7 @@ function statusOptionsOf(sale) {
 export default function SaleIssuedView({ sale }) {
   const navigate = useNavigate();
   const { allows } = usePermission();
+  const statusLabels = useSaleStatusLabels();
   const [confirmCancel, setConfirmCancel] = useState(false);
 
   const draft = useIssuedDocumentDraft(sale, SALE_PAYMENT_SIDE.direction);
@@ -159,7 +161,7 @@ export default function SaleIssuedView({ sale }) {
               headerAction={!isCancelled && <IssuedInvoiceNotice movedLabel="ارسال" />}
               status={
                 canUpdate
-                  ? { value: Number(draft.status), options: statusOptionsOf(sale), onChange: draft.setStatus }
+                  ? { value: Number(draft.status), options: statusOptionsOf(sale, statusLabels), onChange: draft.setStatus }
                   : undefined
               }
             />

@@ -1,5 +1,4 @@
 import { PURCHASE_STATUSES } from "../services/constants";
-import { PURCHASE_STATUS_LABELS } from "@/shared/domain/enums/purchaseStatus";
 
 /**
  * حذف فقط برای پیش‌فاکتور است (`DeletePurchase`)؛ خریدِ صادرشده لغو
@@ -105,16 +104,8 @@ export function missingInvoiceFields(formData, status) {
   return Object.keys(errors).length > 0 ? errors : null;
 }
 
-/** وضعیتِ ارسالِ خریدِ صادرشده — تنها دو وضعیتِ دستی پس از صدور (و لغو). */
-export const PURCHASE_SHIPPING_CHOICES = [
-  {
-    value: PURCHASE_STATUSES.PENDING,
-    label: PURCHASE_STATUS_LABELS[PURCHASE_STATUSES.PENDING],
-    hint: "تامین‌کننده هنوز کالا را نفرستاده است.",
-  },
-  {
-    value: PURCHASE_STATUSES.SHIPPED,
-    label: PURCHASE_STATUS_LABELS[PURCHASE_STATUSES.SHIPPED],
-    hint: "کالا در راه است. «تحویل ناقص/کامل» را دریافتِ انبار تعیین می‌کند.",
-  },
-];
+/**
+ * وضعیت‌های ارسالِ خریدِ تازه‌صادرشده — تنها دو وضعیتِ دستی پس از صدور (و لغو).
+ * برچسب را صفحه از enumِ سرور می‌گیرد (`usePurchaseStatusLabels`).
+ */
+export const PURCHASE_SHIPPING_STATUSES = [PURCHASE_STATUSES.PENDING, PURCHASE_STATUSES.SHIPPED];

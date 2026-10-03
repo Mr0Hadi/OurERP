@@ -29,8 +29,8 @@ function stockTone(product) {
 }
 
 /**
- * جست‌وجو و افزودنِ کالا: جست‌وجو، اسکنِ بارکد (با دوربین) و دسته‌بندی در یک
- * ردیف (در عرضِ کم دو ردیف).
+ * جست‌وجو و افزودنِ کالا: جست‌وجو و اسکنِ بارکد (با دوربین) کنارِ هم، و زیرشان
+ * دسته‌بندی و «همه‌ی کالاها» — در هر عرضی دیده می‌شوند.
  *  - تایپ، فهرست را فیلتر می‌کند؛ ↑/↓ بینِ نتیجه‌ها و Enter قلمِ برجسته را
  *    اضافه می‌کند — بی موس.
  *  - اسکنرِ دستی در هر دو فیلد کار می‌کند: کد را می‌نویسد و Enter می‌زند؛ اگر
@@ -136,9 +136,9 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
 
   return (
     <div className="@container/search space-y-2">
-      {/* عرضِ کم: جست‌وجو یک ردیف، اسکن و دسته ردیفِ بعد؛ عرضِ کافی: هر سه کنارِ هم. */}
-      <div className="grid grid-cols-2 gap-2 @2xl/search:grid-cols-[minmax(0,1fr)_13rem_10rem]">
-        <div className="relative col-span-2 @2xl/search:col-span-1">
+      {/* جست‌وجو و اسکن کنارِ هم (عرضِ کم: زیرِ هم)؛ دسته‌بندی و «همه‌ی کالاها» ردیفِ بعد. */}
+      <div className="grid gap-2 @2xl/search:grid-cols-[minmax(0,1fr)_15rem]">
+        <div className="relative">
           <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             ref={inputRef}
@@ -173,11 +173,14 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
           placeholder="اسکن بارکد..."
           className="min-w-0"
         />
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <Select
           value={categoryFilter || "all"}
           onValueChange={(v) => setCategoryFilter(v === "all" ? "" : v)}
         >
-          <SelectTrigger aria-label="دسته‌بندی" className="w-full min-w-0">
+          <SelectTrigger aria-label="دسته‌بندی" size="sm" className="w-44 max-w-full">
             <SelectValue placeholder="همه دسته‌ها" />
           </SelectTrigger>
           <SelectContent>
@@ -189,25 +192,27 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
             ))}
           </SelectContent>
         </Select>
+        {browseAll && !search.trim() && !categoryFilter ? (
+          <Button type="button" size="sm" variant="ghost" className="text-xs" onClick={() => setBrowseAll(false)}>
+            بستن فهرست
+          </Button>
+        ) : (
+          !isListOpen && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="gap-1.5 text-xs"
+              onClick={() => setBrowseAll(true)}
+            >
+              <List className="size-3.5" />
+              همه‌ی کالاها ({formatNumber(products.length)})
+            </Button>
+          )
+        )}
       </div>
 
-      {!isListOpen ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-          <p className="text-xs text-muted-foreground">
-            کالا را جست‌وجو یا بارکدش را اسکن کنید؛ Enter نتیجه‌ی برجسته را اضافه می‌کند.
-          </p>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="gap-1.5 text-xs"
-            onClick={() => setBrowseAll(true)}
-          >
-            <List className="size-3.5" />
-            همه‌ی کالاها ({formatNumber(products.length)})
-          </Button>
-        </div>
-      ) : (
+      {isListOpen && (
         <div className="overflow-hidden rounded-lg border border-border">
           <ul id={listId} role="listbox" className="custom-scroll max-h-72 divide-y divide-border overflow-y-auto bg-card">
             {shown.length === 0 && (
@@ -263,15 +268,10 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
               );
             })}
           </ul>
-          {(hiddenCount > 0 || (browseAll && !search.trim() && !categoryFilter)) && (
-            <div className="flex items-center justify-between gap-2 border-t border-border bg-muted/40 px-3 py-1.5 text-[11px] text-muted-foreground">
-              <span>{hiddenCount > 0 && `${formatNumber(hiddenCount)} کالای دیگر — دقیق‌تر جست‌وجو کنید.`}</span>
-              {browseAll && !search.trim() && !categoryFilter && (
-                <button type="button" className="font-medium hover:text-foreground" onClick={() => setBrowseAll(false)}>
-                  بستن فهرست
-                </button>
-              )}
-            </div>
+          {hiddenCount > 0 && (
+            <p className="border-t border-border bg-muted/40 px-3 py-1.5 text-[11px] text-muted-foreground">
+              {formatNumber(hiddenCount)} کالای دیگر — دقیق‌تر جست‌وجو کنید.
+            </p>
           )}
         </div>
       )}
