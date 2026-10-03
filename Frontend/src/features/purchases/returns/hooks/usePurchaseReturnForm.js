@@ -28,27 +28,82 @@ const DEFAULT_UNLISTED_PROBLEM = PURCHASE_RETURN_PROBLEMS.UNLISTED_ITEM;
  * (`offScopeCaps`)؛ کالایی که در قرنطینه نیست سقفش صفر است.
  */
 export function usePurchaseReturnForm() {
-  const { formData, setFormData, setLines, setOffScopeClaims, resetForm } =
-    usePurchaseReturnFormStore();
+  const {
+    formData,
+    setFormData,
+    setLines,
+    setOffScopeClaims,
+    setExcessPurchases,
+    resetForm,
+  } = usePurchaseReturnFormStore();
 
   const lines = formData.lines || [];
   const orderLines = formData.orderLines || [];
   const offScopeClaims = formData.offScopeClaims || [];
   const offScopeCaps = formData.offScopeCaps || {};
+  const excessPurchases = formData.excessPurchases || {};
 
-  /** سقفِ باقی‌مانده برای یک ادعای خارج از سفارش، با کسرِ ادعاهای دیگرِ همین فرم روی همان گروه. */
+  /** مقدارِ ادعاهای خارج از سفارشِ یک گروه (جز یک ادعا). */
+  const claimedIn = (key, exceptId = null) =>
+    offScopeClaims
+      .filter((c) => c.id !== exceptId && offScopeCapKey(c.offScopeKind, c) === key)
+      .reduce((sum, c) => sum + (Number(c.quantity) || 0), 0);
+
+  /**
+   * سقفِ باقی‌مانده برای یک ادعای خارج از سفارش: سقفِ سرور منهای ادعاهای دیگرِ
+   * همین گروه و آنچه برای خرید کنار گذاشته شده.
+   */
   const offScopeRemaining = (kind, target, exceptId = null) => {
     const key = offScopeCapKey(kind, target);
-    const used = offScopeClaims
-      .filter(
-        (c) =>
-          c.id !== exceptId &&
-          c.offScopeKind === kind &&
-          offScopeCapKey(c.offScopeKind, c) === key,
-      )
-      .reduce((sum, c) => sum + (Number(c.quantity) || 0), 0);
-    return Math.max(0, (offScopeCaps[key] ?? 0) - used);
+    const bought = Number(excessPurchases[key]?.quantity) || 0;
+    return Math.max(0, (offScopeCaps[key] ?? 0) - claimedIn(key, exceptId) - bought);
   };
+
+  // ─── نگه‌داشتن و خرید (`AcceptPurchaseExcess`) ─────────────────────
+
+  /** سقفِ خرید برای یک گروه: سقفِ سرور منهای ادعاهای عودتِ همان گروه. */
+  const purchaseCap = (key) => Math.max(0, (offScopeCaps[key] ?? 0) - claimedIn(key));
+
+  /**
+   * مقدارِ خرید برای یک گروه (`offScopeCapKey`). `group` مشخصاتِ همان قلم/کالا
+   * است؛ مازاد با قیمتِ قلم خریده می‌شود و سفارش‌نداده قیمتِ فاکتور می‌خواهد.
+   */
+  const setPurchase = (key, group, patch) => {
+    const current = excessPurchases[key] ?? { ...group, quantity: 0, unitPrice: group.unitPrice ?? null };
+    const next = { ...current, ...patch };
+    if (patch.quantity != null) {
+      next.quantity = Math.max(0, Math.min(Number(patch.quantity) || 0, purchaseCap(key)));
+    }
+    const rest = { ...excessPurchases };
+    if (next.quantity > 0) rest[key] = next;
+    else delete rest[key];
+    setExcessPurchases(rest);
+  };
+
+  /** بدنه‌ی `AcceptPurchaseExcess`، یا `null` اگر چیزی برای خرید نیست. */
+  const buildPurchasePayload = () => {
+    const entries = Object.values(excessPurchases).filter((entry) => entry.quantity > 0);
+    if (entries.length === 0) return null;
+    return {
+      items: entries.map((entry) =>
+        entry.purchaseItemId != null
+          ? { purchaseItemId: entry.purchaseItemId, quantity: entry.quantity }
+          : {
+              productId: entry.productId,
+              quantity: entry.quantity,
+              unitPrice: entry.unitPrice,
+              discount: entry.discount || 0,
+            },
+      ),
+    };
+  };
+
+  /** نخستین ایرادِ خرید (قیمتِ کالای سفارش‌نداده الزامی است). */
+  const purchaseError = Object.values(excessPurchases).find(
+    (entry) => entry.purchaseItemId == null && !(Number(entry.unitPrice) > 0),
+  )
+    ? "برای خریدِ کالای سفارش‌نداده، قیمتِ واحدِ فاکتورِ تامین‌کننده را وارد کنید"
+    : null;
 
   const claimedQuantityOf = (line) =>
     (line.claims || []).reduce((sum, c) => sum + (Number(c.quantity) || 0), 0);
@@ -262,6 +317,12 @@ export function usePurchaseReturnForm() {
     handleRemoveOffScopeClaim,
     buildPayload,
     resetForm,
+    excessPurchases,
+    purchaseCap,
+    setPurchase,
+    buildPurchasePayload,
+    purchaseError,
+    offScopeCaps,
   };
 }
 

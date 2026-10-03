@@ -1,54 +1,34 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Ban, Undo2 } from "lucide-react";
+import { Undo2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/components/ui/alert-dialog";
-import {
-  useChangeSaleStatusMutation,
-  useUpdateSaleAttachmentsMutation,
-  useUpdateSalePaymentDateMutation,
-  useSalePaymentMutations,
-} from "@/features/sales/orders/services/mutations";
-import SalePaymentsCard from "../components/forms/SalePaymentsCard";
-import OrderLogisticsSection from "@/shared/components/forms/OrderLogisticsSection";
-import StatusChangeCard from "@/shared/components/forms/StatusChangeCard";
-import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
+import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
+import { useSaleChangesSaver } from "@/features/sales/orders/services/mutations";
+import SaleCustomerSection from "../components/forms/SaleCustomerSection";
+import DocumentFormLayout, {
+  OrderSummaryCard,
+} from "@/shared/components/forms/DocumentFormLayout";
+import OrderInfoCard from "@/shared/components/forms/OrderInfoCard";
 import OrderItemsReadOnly from "@/shared/components/forms/OrderItemsReadOnly";
-import UnitsPageLink from "@/features/warehouse/units/components/UnitsPageLink";
-import {
-  RETURNABLE_SALE_STATUSES,
-  hasAnythingShipped,
-} from "../domain/saleRules";
-import InvoiceInfoCard from "@/shared/components/invoice/InvoiceInfoCard";
+import OrderLogisticsSection from "@/shared/components/forms/OrderLogisticsSection";
+import PaymentsCard from "@/shared/components/payments/PaymentsCard";
+import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import IssuedInvoiceNotice from "@/shared/components/invoice/IssuedInvoiceNotice";
-import PaymentDueDateCard from "@/shared/components/invoice/PaymentDueDateCard";
-import InvoiceAttachmentsSaveButton from "@/shared/components/invoice/InvoiceAttachmentsSaveButton";
-import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
-import { ROUTES } from "@/shared/constants/routes";
-import {
-  SaleStatusEnum,
-  SALE_STATUS_LABELS,
-} from "@/shared/domain/enums/saleStatus";
-import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
-import { gregorianToPersian } from "@/shared/lib/dateUtils";
+import RelatedReturnsCard from "@/shared/components/returns/RelatedReturnsCard";
+import SaleStatusBadge from "@/shared/components/status/SaleStatusBadge";
+import UnitsPageLink from "@/features/warehouse/units/components/UnitsPageLink";
+import { useIssuedDocumentDraft } from "@/shared/hooks/useIssuedDocumentDraft";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { useRelatedSalesReturnsQuery } from "@/features/sales/returns/services/queries";
-import RelatedReturnsCard from "@/shared/components/returns/RelatedReturnsCard";
+import { RETURNABLE_SALE_STATUSES, hasAnythingShipped } from "../domain/saleRules";
+import { SALE_PAYMENT_SIDE } from "../domain/salePayments";
+import { SaleStatusEnum, SALE_STATUS_LABELS } from "@/shared/domain/enums/saleStatus";
+import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
-
-/** `ChangeSaleStatus` فقط «تحویل کامل» را از «ارسال شده» می‌پذیرد (لغو دکمه‌ی خودش را دارد). */
-const statusTargetsOf = (sale) =>
-  sale.status === SaleStatusEnum.SHIPPED ? [SaleStatusEnum.DELIVERED] : [];
+import { savedInvoiceTotals } from "@/shared/domain/invoice/lineMath";
+import { ROUTES } from "@/shared/constants/routes";
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /** لغو فقط پیش از هر ارسالی؛ قرارداد اقساطیِ فعال را خودِ سرور می‌سنجد. */
 const canCancelSale = (sale) =>
@@ -57,207 +37,179 @@ const canCancelSale = (sale) =>
   !hasAnythingShipped(sale);
 
 /**
- * فروشِ **صادرشده** — فقط‌خواندنی. اقلام، قیمت، مشتری و روش پرداخت دیگر
- * عوض نمی‌شوند؛ فقط پرداخت‌ها، وضعیت، پیوست‌ها و مهلت پرداخت، هر کدام با
- * endpointِ خودش.
+ * گزینه‌های وضعیت. `ChangeSaleStatus` دستی فقط «ارسال شده → تحویل کامل» را
+ * می‌پذیرد؛ «ارسال ناقص/ارسال شده» را ارسالِ انبار می‌گذارد.
+ */
+function statusOptionsOf(sale) {
+  const current = sale.status;
+  return [
+    { value: current, label: SALE_STATUS_LABELS[current] },
+    ...(current === SaleStatusEnum.SHIPPED
+      ? [{ value: SaleStatusEnum.DELIVERED, label: SALE_STATUS_LABELS[SaleStatusEnum.DELIVERED] }]
+      : []),
+    ...(canCancelSale(sale) ? [{ value: SaleStatusEnum.CANCELLED, label: "لغو فروش" }] : []),
+  ];
+}
+
+/**
+ * فروشِ **صادرشده** — همان چیدمانِ فرمِ ثبت (`SaleForm`)، با مشتری و اقلامِ
+ * فقط‌خواندنی. دریافت‌ها، وضعیت، سررسید و پیوست‌ها با یک «ثبت تغییرات» ذخیره
+ * می‌شوند (`useIssuedDocumentDraft`)؛ لغو پیش از ذخیره تأیید می‌خواهد.
  */
 export default function SaleIssuedView({ sale }) {
   const navigate = useNavigate();
-  const { can, isError: permissionsUnknown } = usePermission();
-  const allow = (permission) => permissionsUnknown || can(permission);
-  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const { allows } = usePermission();
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
-  const statusMutation = useChangeSaleStatusMutation(sale.id);
-  const attachmentsMutation = useUpdateSaleAttachmentsMutation(sale.id);
-  const dueDateMutation = useUpdateSalePaymentDateMutation(sale.id);
-  const payments = useSalePaymentMutations(sale.id);
-
-  // خلاصه‌ی مرجوعی‌های همین سند، با پیوند به جزئیاتِ هر کدام.
+  const draft = useIssuedDocumentDraft(sale, SALE_PAYMENT_SIDE.direction);
+  const saver = useSaleChangesSaver(sale.id);
   const { data: relatedReturns } = useRelatedSalesReturnsQuery(sale.id);
 
-  const attachments = useInvoiceAttachments(sale.attachments || []);
-  const attachmentsReset = attachments.reset;
-  useEffect(() => {
-    attachmentsReset(sale.attachments || []);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sale.id, sale.updatedAt, attachmentsReset]);
-
-  const canUpdate = allow("SaleUpdate");
+  const canUpdate = allows("SaleUpdate");
   const isCancelled = sale.status === SaleStatusEnum.CANCELLED;
-  const cancellable = canCancelSale(sale);
+  const isInstallment = sale.paymentType === PaymentTypeEnum.INSTALLMENT;
+  const isSaving = saver.isPending || draft.attachments.isUploading;
+
+  const save = () => {
+    if (draft.attachments.isUploading) return;
+    saver.mutate(draft.changes(), {
+      onSuccess: () => {
+        draft.attachments.commit();
+        setConfirmCancel(false);
+      },
+    });
+  };
+
+  const onSubmit = (e) => {
+    e.preventDefault();
+    if (!draft.count) return;
+    if (Number(draft.status) === SaleStatusEnum.CANCELLED) setConfirmCancel(true);
+    else save();
+  };
+
+  const submitLabel = draft.count
+    ? `ثبت تغییرات (${formatNumber(draft.count)})`
+    : "ثبت تغییرات";
 
   return (
-    <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in zoom-in-95 duration-300">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 space-y-4">
-          <OrderItemsReadOnly
-            title="اقلام فروش"
-            items={sale.items}
-            totalAmount={sale.totalAmount}
-            description="فاکتور صادر شده؛ اقلام فقط در مرحله‌ی پیش‌فاکتور قابل ویرایش‌اند."
-            headerAction={
-              hasAnythingShipped(sale) && (
-                <UnitsPageLink params={{ saleId: sale.id }} label="دانه‌های ارسال‌شده" />
-              )
-            }
-            columns={[
-              {
-                key: "shipped",
-                label: "ارسال‌شده",
-                render: (item) => (Number(item.shippedQuantity) || 0).toLocaleString("fa-IR"),
-              },
-            ]}
-          />
-          <RelatedReturnsCard
-            returns={relatedReturns}
-            side={sideConfig(RETURN_SIDES.SALES)}
-            detailRoute={ROUTES.SALES_RETURNS_DETAIL}
-            title="مرجوعی‌های ثبت‌شده برای این فروش"
-          />
-          <InvoiceInfoCard
-            rows={[
-              { label: "مشتری", value: sale.customerName },
-              { label: "شماره فاکتور", value: sale.invoiceNumber },
-              {
-                label: "تاریخ فاکتور",
-                value: gregorianToPersian(sale.invoiceDate),
-              },
-              {
-                label: "روش پرداخت",
-                value: PAYMENT_TYPE_LABELS[sale.paymentType],
-              },
-            ]}
-            description={sale.description}
-          />
-          <OrderLogisticsSection
-            title="ارسال و حمل"
-            drivers={sale.drivers}
-            notes={sale.shippingNotes}
-            notesLabel="یادداشت‌های ارسال"
-          />
-        </div>
-
-        <div className="space-y-4">
-          <IssuedInvoiceNotice movedLabel="ارسال" />
-
-          <SalePaymentsCard
-            sale={sale}
-            payments={payments}
-            canManage={allow("SalePayment")}
-            notice={
-              isCancelled
-                ? "فروش لغو شده است؛ پولی را که از مشتری گرفته شده با «پول برگشتی» برگردانید."
-                : undefined
-            }
-          />
-
-          <StatusChangeCard
-            statusLabel={SALE_STATUS_LABELS[sale.status] ?? "—"}
-            targets={statusTargetsOf(sale)}
-            labels={SALE_STATUS_LABELS}
-            canEdit={canUpdate}
-            isPending={statusMutation.isPending}
-            onChange={(status, options) =>
-              statusMutation.mutate(status, options)
-            }
-            hint={
-              isCancelled
-                ? "لغو نهایی است."
-                : "«ارسال ناقص» و «ارسال شده» را صفحه‌ی ارسالِ انبار تعیین می‌کند؛ «تحویل کامل» بعد از ارسالِ همه‌ی اقلام ثبت می‌شود."
-            }
-          />
-
-          <PaymentDueDateCard
-            value={sale.paymentDate}
-            canEdit={canUpdate}
-            isPending={dueDateMutation.isPending}
-            onSave={(date) => dueDateMutation.mutate(date)}
-          />
-
-          <InvoiceDocumentSection
-            title="فاکتور فروش"
-            invoiceNumber={sale.invoiceNumber}
-            attachments={attachments}
-            documentKind="sale"
-            documentId={sale.id}
-            attachmentLabel="فاکتور صادرشده برای مشتری"
-          />
-          {canUpdate && (
-            <InvoiceAttachmentsSaveButton
-              attachments={attachments}
-              saved={sale.attachments}
-              isPending={attachmentsMutation.isPending}
-              onSave={(list) =>
-                attachmentsMutation.mutate(list, {
-                  onSuccess: () => attachments.commit(),
-                })
+    <>
+      <DocumentFormLayout
+        onSubmit={onSubmit}
+        main={
+          <>
+            <SaleCustomerSection
+              selectedId={sale.customerId}
+              selectedName={sale.customerName}
+              readOnly
+            />
+            <OrderItemsReadOnly
+              title="اقلام فروش"
+              items={sale.items}
+              totalAmount={sale.totalAmount}
+              headerAction={
+                hasAnythingShipped(sale) && (
+                  <UnitsPageLink params={{ saleId: sale.id }} label="دانه‌های ارسال‌شده" />
+                )
+              }
+              columns={[
+                {
+                  key: "shipped",
+                  label: "ارسال‌شده",
+                  render: (item) => formatNumber(Number(item.shippedQuantity) || 0),
+                },
+              ]}
+            />
+            <PaymentsCard
+              title="دریافت‌ها"
+              draft={draft.payments}
+              side={SALE_PAYMENT_SIDE}
+              total={sale.totalAmount}
+              payable={sale.payableAmount}
+              canManage={allows("SalePayment") && !isInstallment}
+              refundOnly={isCancelled}
+              notice={
+                isInstallment
+                  ? "پرداخت‌های فروشِ اقساطی از قرارداد اقساط ثبت می‌شوند."
+                  : isCancelled
+                    ? "فروش لغو شده است؛ پولِ مشتری را با «پول برگشتی» برگردانید."
+                    : undefined
               }
             />
-          )}
-
-          {RETURNABLE_SALE_STATUSES.includes(Number(sale.status)) && (
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full gap-2"
-              onClick={() =>
-                navigate(`${ROUTES.SALES_RETURNS_NEW}?saleId=${sale.id}`)
-              }
-            >
-              <Undo2 className="h-4 w-4" />
-              ثبت مرجوعی از این فروش
-            </Button>
-          )}
-
-          {cancellable && canUpdate && (
-            <Button
-              type="button"
-              variant="destructive"
-              className="w-full gap-2"
-              onClick={() => setShowCancelDialog(true)}
-              disabled={statusMutation.isPending}
-            >
-              <Ban className="h-4 w-4" />
-              لغو فروش
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <AlertDialog
-        open={showCancelDialog}
-        onOpenChange={(open) =>
-          !statusMutation.isPending && setShowCancelDialog(open)
+            <RelatedReturnsCard
+              returns={relatedReturns}
+              side={sideConfig(RETURN_SIDES.SALES)}
+              detailRoute={ROUTES.SALES_RETURNS_DETAIL}
+              title="مرجوعی‌های این فروش"
+            />
+            <OrderLogisticsSection
+              title="ارسال و حمل"
+              drivers={sale.drivers}
+              notes={sale.shippingNotes}
+              notesLabel="یادداشت‌های ارسال"
+            />
+          </>
         }
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>لغو فروش</AlertDialogTitle>
-            <AlertDialogDescription>
-              لغو نهایی است و قابل بازگشت نیست. پرداخت‌های مشتری روی فروش
-              می‌مانند و مانده‌ی حسابش منفی می‌شود تا وقتی پولش را با «پول
-              برگشتی» برگردانید.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={statusMutation.isPending}>
-              انصراف
-            </AlertDialogCancel>
-            <AlertDialogAction
-              disabled={statusMutation.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={(event) => {
-                event.preventDefault();
-                statusMutation.mutate(SaleStatusEnum.CANCELLED, {
-                  onSuccess: () => setShowCancelDialog(false),
-                });
-              }}
-            >
-              {statusMutation.isPending ? "در حال لغو..." : "لغو فروش"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        aside={
+          <>
+
+            <OrderInfoCard
+              issued
+              formData={{ ...sale, paymentDate: draft.dueDate }}
+              onFormChange={({ paymentDate }) => draft.setDueDate(paymentDate)}
+              headerAction={!isCancelled && <IssuedInvoiceNotice movedLabel="ارسال" />}
+              status={
+                canUpdate
+                  ? { value: Number(draft.status), options: statusOptionsOf(sale), onChange: draft.setStatus }
+                  : undefined
+              }
+            />
+            <InvoiceDocumentSection
+              title="فاکتور"
+              invoiceNumber={sale.invoiceNumber}
+              attachments={draft.attachments}
+              documentKind="sale"
+              documentId={sale.id}
+              attachmentLabel="نسخه‌ی امضاشده‌ی فاکتور"
+            />
+            <OrderSummaryCard
+              title="فاکتور فروش"
+              badge={<SaleStatusBadge status={sale.status} withIcon />}
+              itemCount={sale.items?.length ?? 0}
+              totals={savedInvoiceTotals(sale)}
+              submitLabel={submitLabel}
+              submitDisabled={!draft.count}
+              isBusy={isSaving}
+              onCancel={draft.count ? draft.discard : undefined}
+              cancelLabel="بازگردانی"
+              footer={
+                RETURNABLE_SALE_STATUSES.includes(Number(sale.status)) && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="w-full gap-1.5"
+                    onClick={() => navigate(`${ROUTES.SALES_RETURNS_NEW}?saleId=${sale.id}`)}
+                  >
+                    <Undo2 className="size-3.5" />
+                    ثبت مرجوعی از این فروش
+                  </Button>
+                )
+              }
+            />
+          </>
+        }
+      />
+
+      <ConfirmDialog
+        open={confirmCancel}
+        onOpenChange={setConfirmCancel}
+        title="لغو فروش"
+        description="لغو نهایی است و قابل بازگشت نیست. پرداخت‌های مشتری روی فروش می‌مانند تا با «پول برگشتی» برگردانده شوند."
+        confirmLabel="لغو فروش و ذخیره"
+        pendingLabel="در حال ذخیره..."
+        isPending={saver.isPending}
+        onConfirm={save}
+      />
+    </>
   );
 }

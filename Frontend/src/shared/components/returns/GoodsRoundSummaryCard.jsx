@@ -46,7 +46,6 @@ export default function GoodsRoundSummaryCard({
     return { remaining, done, percent };
   }, [rounds]);
 
-
   return (
     <Card>
       <CardHeader className="pb-2">

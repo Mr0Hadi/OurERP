@@ -8,10 +8,8 @@ import {
   SidebarTrigger,
 } from "@/shared/components/ui/sidebar";
 import { ThemeToggle } from "@/shared/components/theme/ThemeToggle";
-import { useNavigationStore } from "@/shared/store/navigationStore";
 
 import { AppBreadcrumb } from "@/shared/components/layout/AppBreadcrumb";
-import { useEffect } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { useHeaderStore } from "@/shared/store/headerStore";
@@ -33,7 +31,6 @@ export default function AppLayout() {
   const goBack = useGoBack();
 
   const location = useLocation();
-  const setCurrentPath = useNavigationStore((s) => s.setCurrentPath);
 
   // `protectedLoader` فقط یک flagِ پرسیست‌شده در localStorage را چک می‌کند،
   // نه اعتبار واقعی توکن نزد سرور — flag می‌تواند از یک نشستِ قبلیِ منقضی‌شده
@@ -50,10 +47,6 @@ export default function AppLayout() {
   } = useUserInfoQuery();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const logout = useAuthStore((s) => s.logout);
-
-  useEffect(() => {
-    setCurrentPath(location.pathname);
-  }, [location.pathname, setCurrentPath]);
 
   // نشست از دست رفته (interceptor رفرش را ناموفق دید و خارج کرد، یا سرور
   // هنوز ۴۰۱ می‌دهد): به ورود، نه صفحه‌ی سفید. `protectedLoader` فقط هنگامِ

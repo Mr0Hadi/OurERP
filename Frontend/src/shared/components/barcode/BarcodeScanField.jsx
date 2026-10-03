@@ -1,18 +1,7 @@
-import { lazy, Suspense, useCallback, useRef, useState } from "react";
-import { ScanBarcode } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
 
-import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/shared/components/ui/dialog";
-
-const CameraScanner = lazy(
-  () => import("@/features/warehouse/products/components/forms/CameraScanner"),
-);
+import CameraScanButton from "./CameraScanButton";
 
 /**
  * فیلد اسکن بارکد — قابل‌جاسازی در هر فرمی که باید با یک اسکن، خودکار
@@ -41,7 +30,6 @@ export default function BarcodeScanField({
   inputClassName = "",
 }) {
   const [value, setValue] = useState("");
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const inputRef = useRef(null);
 
   const submit = useCallback(
@@ -53,16 +41,6 @@ export default function BarcodeScanField({
       inputRef.current?.focus();
     },
     [onScan],
-  );
-
-  // پایدار نگه‌داشتنِ این callback شرطِ سرعتِ اسکنر است: `CameraScanner`
-  // با عوض شدنِ identityِ آن دوربین را از نو باز می‌کند.
-  const handleDetected = useCallback(
-    (text) => {
-      setIsCameraOpen(false);
-      submit(text);
-    },
-    [submit],
   );
 
   const handleKeyDown = (event) => {
@@ -79,40 +57,11 @@ export default function BarcodeScanField({
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        className={`flex-1 font-mono input-rtl-placeholder ${inputClassName}`}
+        className={`flex-1 font-mono placeholder:font-sans input-rtl-placeholder ${inputClassName}`}
         autoComplete="off"
         spellCheck={false}
       />
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        className="shrink-0"
-        onClick={() => setIsCameraOpen(true)}
-        title="اسکن با دوربین"
-      >
-        <ScanBarcode className="h-4 w-4" />
-      </Button>
-
-      <Dialog open={isCameraOpen} onOpenChange={setIsCameraOpen}>
-        <DialogContent dir="rtl" className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>اسکن بارکد یا کد QR</DialogTitle>
-          </DialogHeader>
-
-          {isCameraOpen ? (
-            <Suspense
-              fallback={
-                <div className="flex aspect-video w-full items-center justify-center rounded-md bg-black text-sm text-white">
-                  در حال آماده‌سازی دوربین...
-                </div>
-              }
-            >
-              <CameraScanner onDetected={handleDetected} />
-            </Suspense>
-          ) : null}
-        </DialogContent>
-      </Dialog>
+      <CameraScanButton className="shrink-0" onDetected={submit} />
     </div>
   );
 }

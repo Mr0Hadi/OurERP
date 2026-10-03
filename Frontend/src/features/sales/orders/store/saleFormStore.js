@@ -1,5 +1,5 @@
-import { create } from "zustand";
-import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+import { createDocumentFormStore } from "@/shared/store/createDocumentFormStore";
+import { EMPTY_PAYMENT_DRAFT } from "@/shared/domain/payments/paymentRows";
 import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 
 const EMPTY_FORM = {
@@ -9,57 +9,35 @@ const EMPTY_FORM = {
   invoiceDate: "",
   paymentDate: "",
   description: "",
-  paymentType: PaymentTypeEnum.CASH,
-  paidAmount: "",
-  paymentPaidAt: null,
-  checkNumber: "",
-  transferRef: "",
-  mixedPayments: [], // اضافه شد
   status: "",
   items: [],
-  // قیمتِ پیش‌فرضِ اقلامِ تازه: فروشِ خرده (`retailPrice`) یا همکار/عمده
+  // دریافت‌های ثبت‌نشده (`usePaymentDraft`).
+  paymentDraft: EMPTY_PAYMENT_DRAFT,
+  // قیمتِ پیش‌فرضِ اقلامِ تازه: خرده (`retailPrice`) یا همکار/عمده
   // (`wholeSalePrice`). فقط فرم است؛ به سرور نمی‌رود.
   priceMode: "retail",
-  // فعلاً فقط در فرم؛ به سرور فرستاده نمی‌شود.
-  isInformalSale: false,
 };
 
-export const useSaleFormStore = create((set, get) => ({
-  formData: { ...EMPTY_FORM },
-  initializedForId: null,
-
-  setFormData: (data) =>
-    set((state) => ({
-      formData: { ...state.formData, ...data },
-    })),
-
-  setItems: (items) =>
-    set((state) => ({
-      formData: { ...state.formData, items },
-    })),
-
-  initializeForNew: () => {
-    const { initializedForId } = get();
-    if (initializedForId === "new") return;
-
-    set({ initializedForId: "new" });
-  },
-
-  initializeFromSale: (sale) => {
-    const { initializedForId } = get();
-    const version = `${sale.id}:${sale.updatedAt}`;
-    if (initializedForId === version) return;
-
-    // `id` نگه داشته می‌شود چون `UpdateSale` ردیف‌ها را با همان تشخیص
-    // می‌دهد (`id: 0` یعنی ردیف تازه)؛ بدون آن هر ذخیره، اقلامِ سند را
-    // پاک و از نو می‌ساخت.
-    const formattedItems = (sale.items || []).map((item) => ({
+/**
+ * `id`ِ هر قلم نگه داشته می‌شود چون `UpdateSale` ردیف‌ها را با همان تشخیص
+ * می‌دهد (`id: 0` یعنی ردیف تازه)؛ بدون آن هر ذخیره اقلام را از نو می‌ساخت.
+ */
+function formFromSale(sale) {
+  return {
+    customerId: sale.customerId || "",
+    customerName: sale.customerName || "",
+    invoiceNumber: sale.invoiceNumber || "",
+    invoiceDate: sale.invoiceDate || "",
+    paymentDate: sale.paymentDate || "",
+    description: sale.description || "",
+    status: sale.status ?? "",
+    items: (sale.items || []).map((item) => ({
       id: item.id,
       productId: item.productId || "",
       productCode: item.productCode || "",
       productName: item.productName || "",
       unit: unitLabelOf(item.unit),
-      quantity: Number(item.quantity ?? item.quantity) || 1,
+      quantity: Number(item.quantity) || 1,
       unitPrice: Number(item.unitPrice) || 0,
       discount: item.discount || 0,
       // نرخ مالیاتی که سرور برای این قلم نگه داشته — پیش‌نمایشِ جمع با آن حساب می‌شود.
@@ -67,29 +45,11 @@ export const useSaleFormStore = create((set, get) => ({
       taxCategory: item.taxCategory,
       shippedQuantity: item.shippedQuantity ?? 0,
       settledQuantity: item.settledQuantity ?? 0,
-    }));
+    })),
+  };
+}
 
-    set({
-      initializedForId: version,
-      formData: {
-        ...EMPTY_FORM,
-        customerId: sale.customerId || "",
-        customerName: sale.customerName || "",
-        invoiceNumber: sale.invoiceNumber || "",
-        invoiceDate: sale.invoiceDate || "",
-        paymentDate: sale.paymentDate || "",
-        description: sale.description || "",
-        paymentType: sale.paymentType ?? PaymentTypeEnum.CASH,
-        paidAmount: sale.paidAmount?.toString() || "",
-        paymentPaidAt: sale.paymentPaidAt || null,
-        checkNumber: sale.checkNumber || "",
-        transferRef: sale.transferRef || "",
-        mixedPayments: sale.mixedPayments || [],
-        status: sale.status ?? "",
-        items: formattedItems,
-      },
-    });
-  },
-
-  resetForm: () => set({ formData: { ...EMPTY_FORM }, initializedForId: null }),
-}));
+export const useSaleFormStore = createDocumentFormStore({
+  emptyForm: EMPTY_FORM,
+  formFromDocument: formFromSale,
+});

@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { clampQuantity } from "@/shared/lib/quantityUtils";
+import { todayIso } from "@/shared/lib/dateUtils";
 
 /**
  * فرمِ یک «دورِ کالا» روی یک مرجوعی — بدنه‌ی `ExecuteGoodsRoundCommand`.
@@ -27,7 +28,7 @@ const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
 const emptyHeader = () => ({
-  date: new Date().toISOString().slice(0, 10),
+  date: todayIso(),
   partyName: "",
   partyPhoneNumber: "",
   vehiclePlate: "",
@@ -35,7 +36,16 @@ const emptyHeader = () => ({
 });
 
 const never = () => false;
+const always = () => true;
 const none = () => null;
+
+/** کدهای مشاهده‌ها را به دانه‌هایی که هنوز در فهرستِ اسکنِ ردیف‌اند هرس می‌کند. */
+const pruneObservationCodes = (observations, scanned) =>
+  observations.map((observation) => {
+    if (!observation.productUnitBarcodes) return observation;
+    const kept = observation.productUnitBarcodes.filter((code) => scanned.includes(code));
+    return { ...observation, productUnitBarcodes: kept, quantity: kept.length };
+  });
 
 export function useGoodsRoundForm(
   lines,
@@ -44,6 +54,8 @@ export function useGoodsRoundForm(
     sourceRequired = never,
     defaultSource = none,
     barcodesRequired = never,
+    // آیا این ردیف اصلاً اسکنِ دانه می‌پذیرد (`withBarcodes` در بخشِ اقلام)؟
+    barcodesAllowed = always,
     // صفحه‌ی محموله: اثرهای مرجوعی کنارِ اقلامِ خودِ سند نشان داده می‌شوند
     // و نباید بی‌آنکه انباردار دست بزند همراهِ آن‌ها ثبت شوند.
     startEmpty = false,
@@ -56,6 +68,7 @@ export function useGoodsRoundForm(
       // فقط وقتی ردیف‌های چند مرجوعی کنار هم‌اند (صفحه‌ی محموله).
       returnId: line.returnId ?? null,
       reference: line.reference ?? "",
+      problem: line.problem ?? null,
       productId: line.productId,
       productCode: line.productCode,
       productName: line.productName,
@@ -68,9 +81,10 @@ export function useGoodsRoundForm(
       sourceRequired: sourceRequired(line),
       source: defaultSource(line),
       barcodesRequired: barcodesRequired(line, defaultSource(line)),
+      barcodesAllowed: barcodesAllowed(line),
       productUnitBarcodes: [],
     }),
-    [sourceRequired, defaultSource, barcodesRequired, startEmpty],
+    [sourceRequired, defaultSource, barcodesRequired, barcodesAllowed, startEmpty],
   );
 
   const [header, setHeaderState] = useState(emptyHeader);
@@ -120,10 +134,11 @@ export function useGoodsRoundForm(
             budget -= trimmed;
           }
         }
+        const productUnitBarcodes = round.productUnitBarcodes.slice(0, quantity);
         return {
           quantity,
-          observations,
-          productUnitBarcodes: round.productUnitBarcodes.slice(0, quantity),
+          observations: pruneObservationCodes(observations, productUnitBarcodes),
+          productUnitBarcodes,
         };
       });
     },
@@ -141,7 +156,36 @@ export function useGoodsRoundForm(
 
   const handleBarcodesChange = useCallback(
     (effectId, productUnitBarcodes) =>
-      patchRound(effectId, () => ({ productUnitBarcodes })),
+      patchRound(effectId, (round) => ({
+        productUnitBarcodes,
+        observations: pruneObservationCodes(round.observations, productUnitBarcodes),
+      })),
+    [patchRound],
+  );
+
+  /**
+   * وقتی دانه‌های ردیف اسکن شده‌اند، هر مشاهده باید بگوید *کدام* دانه‌ها
+   * معیوب‌اند (سرور دقیقاً همین را می‌خواهد: بارکدهای معیوب زیرمجموعه‌ی
+   * بارکدهای ردیف و به تعدادِ مشاهده). مقدارِ مشاهده همان تعدادِ انتخاب‌شده است.
+   */
+  const handleToggleObservationBarcode = useCallback(
+    (effectId, observationId, code) => {
+      patchRound(effectId, (round) => ({
+        observations: round.observations.map((observation) => {
+          const codes = observation.productUnitBarcodes || [];
+          if (observation.id !== observationId) {
+            // یک دانه فقط در یک مشاهده.
+            if (!codes.includes(code)) return observation;
+            const kept = codes.filter((candidate) => candidate !== code);
+            return { ...observation, productUnitBarcodes: kept, quantity: kept.length };
+          }
+          const next = codes.includes(code)
+            ? codes.filter((candidate) => candidate !== code)
+            : [...codes, code];
+          return { ...observation, productUnitBarcodes: next, quantity: next.length };
+        }),
+      }));
+    },
     [patchRound],
   );
 
@@ -156,10 +200,18 @@ export function useGoodsRoundForm(
       patchRound(effectId, (round) => {
         const remaining = round.quantity - allocatedOf(round);
         if (remaining <= 0) return {};
+        // با دانه‌های اسکن‌شده، مقدار از انتخابِ دانه‌های معیوب می‌آید.
+        const scanned = round.productUnitBarcodes.length > 0;
         return {
           observations: [
             ...round.observations,
-            { id: generateId(), problem, quantity: remaining, note: "" },
+            {
+              id: generateId(),
+              problem,
+              quantity: scanned ? 0 : remaining,
+              note: "",
+              ...(scanned && { productUnitBarcodes: [] }),
+            },
           ],
         };
       });
@@ -225,6 +277,16 @@ export function useGoodsRoundForm(
       if (scanned > 0 && scanned !== quantity) {
         return `تعداد دانه‌های اسکن‌شده‌ی «${round.productName}» با مقدار ردیف برابر نیست`;
       }
+      if (
+        scanned > 0 &&
+        round.observations.some(
+          (observation) =>
+            (Number(observation.quantity) || 0) > 0 &&
+            (observation.productUnitBarcodes || []).length !== Number(observation.quantity),
+        )
+      ) {
+        return `برای مشاهده‌های «${round.productName}» مشخص کنید کدام دانه‌های اسکن‌شده معیوب‌اند`;
+      }
     }
     return null;
   }, [rounds]);
@@ -248,6 +310,9 @@ export function useGoodsRoundForm(
               problem: observation.problem,
               quantity: Number(observation.quantity) || 0,
               note: observation.note || undefined,
+              productUnitBarcodes: observation.productUnitBarcodes?.length
+                ? observation.productUnitBarcodes
+                : undefined,
             }))
         : [],
     }),
@@ -295,6 +360,7 @@ export function useGoodsRoundForm(
     handleQuantityChange,
     handleSourceChange,
     handleBarcodesChange,
+    handleToggleObservationBarcode,
     handleAddObservation,
     handleUpdateObservation,
     handleRemoveObservation,

@@ -41,3 +41,25 @@ export function toDateOnly(value) {
   if (!match || match[0].startsWith("0001-")) return "";
   return match[0];
 }
+
+const pad = (n) => String(n).padStart(2, "0");
+
+/**
+ * امروز به وقتِ محلی، "YYYY-MM-DD" — پیش‌فرضِ فیلدهای تاریخِ فرم.
+ *
+ * `new Date().toISOString()` وقتِ UTC است: بینِ نیمه‌شب تا ۳:۳۰ بامدادِ
+ * تهران تاریخِ دیروز را می‌داد.
+ */
+export function todayIso(date = new Date()) {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/**
+ * «همین حالا» برای فیلدهای زمان‌دارِ سرور (مثلِ `paidAt`)، به وقتِ محلی و
+ * بدونِ منطقه‌ی زمانی — همان شکلی که سرور خودش زمان‌ها را ذخیره می‌کند
+ * (`DateTime.Now`). با `toISOString()` سرور «Z» را دور می‌ریخت و ساعتِ UTC
+ * می‌ماند؛ پرداختِ ساعتِ ۱ بامداد به تاریخِ دیروز ثبت می‌شد.
+ */
+export function nowLocalIso(date = new Date()) {
+  return `${todayIso(date)}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}

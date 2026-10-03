@@ -1,15 +1,19 @@
-import { useNavigate } from "react-router-dom";
+import { useReturnTo } from "@/shared/hooks/useReturnTo";
+import { ROUTES } from "@/shared/constants/routes";
 import { Save, X } from "lucide-react";
 import { useCreateCustomerMutation } from "../services/mutations";
 import { useCustomerForm } from "../hooks/useCustomerForm";
 import { Button } from "@/shared/components/ui/button";
 import CustomerIdentityForm from "../components/forms/CustomerIdentityForm";
 import CustomerFinanceForm from "../components/forms/CustomerFinanceForm";
-import CustomerAddressForm from "../components/forms/CustomerAddressForm";
+import PartyAddressForm from "@/features/partyAccount/components/PartyAddressForm";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 export default function CustomerNewPage() {
-  const navigate = useNavigate();
+  // از فرمِ خرید/فروش آمده باشیم (`state.returnTo`) به همان‌جا برمی‌گردیم و شناسه‌ی
+  // رکوردِ تازه را می‌فرستیم تا همان‌جا انتخاب شود؛ وگرنه به لیستِ خودش. برگشتِ ساده در
+  // تاریخچه به هر صفحه‌ای که قبلاً باز بود می‌رفت و شناسه را گم می‌کرد.
+  const { goBack } = useReturnTo(ROUTES.CUSTOMERS);
   const createMutation = useCreateCustomerMutation();
 
   usePageHeader({
@@ -36,11 +40,12 @@ export default function CustomerNewPage() {
 
   const onSubmit = (data) => {
     createMutation.mutate(buildCustomerPayload(data), {
-      onSuccess: () => {
+      onSuccess: (created) => {
         // از این لحظه کلیدِ تصویر مالِ یک مشتریِ واقعی است؛ آپلودهای
         // میانی (اگر کاربر چندبار تصویر عوض کرده) دیگر یتیم‌اند.
         imageUpload.commit();
-        navigate(-1);
+        // TODO(بکند): `Create...` هنوز شناسه برنمی‌گرداند (بندِ ۹.۲)؛ فرمِ مبدأ حفظ می‌شود ولی خودکار انتخاب نمی‌شود.
+        goBack({ newCustomerId: created?.id });
       },
     });
   };
@@ -48,7 +53,7 @@ export default function CustomerNewPage() {
   const handleCancel = () => {
     // تصویری که آپلود شد ولی هیچ مشتری‌ای برایش ساخته نشد، فقط زباله است.
     imageUpload.discard();
-    navigate(-1);
+    goBack();
   };
 
   // تا وقتی آپلود تمام نشده کلیدی وجود ندارد که در payload برود.
@@ -80,7 +85,7 @@ export default function CustomerNewPage() {
 
           {/* ستون چپ - آدرس و دکمه‌ها */}
           <div className="lg:col-span-1 space-y-4">
-            <CustomerAddressForm
+            <PartyAddressForm
               register={register}
               control={control}
               errors={errors}

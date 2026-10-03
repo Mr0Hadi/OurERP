@@ -15,8 +15,8 @@ import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 import { claimLineKey } from "@/shared/hooks/useClaimsInOtherReturns";
 import ClaimRow from "./ClaimRow";
 import { ReceivingReportLines } from "./ReceivingReport";
+import { withoutExcess } from "@/shared/domain/returns/receivingReport";
 import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
-
 
 const sumQuantity = (claims) =>
   claims.reduce((sum, claim) => sum + (Number(claim.quantity) || 0), 0);
@@ -54,6 +54,7 @@ function LineCard({
   onUpdateOffScope,
   onRemoveOffScope,
   renderExcessReport,
+  excessPanel,
 }) {
   const claims = line.claims || [];
   const allocated = sumQuantity(claims);
@@ -87,9 +88,14 @@ function LineCard({
 
       <EarlierClaims entry={earlier} />
 
-      {/* فقط مرجوعیِ خرید گزارشِ دریافت دارد؛ خطِ فروش آن را ندارد. */}
+      {/* فقط مرجوعیِ خرید گزارشِ دریافت دارد؛ خطِ فروش آن را ندارد. بخشِ
+          مازاد وقتی ادعای مازاد هست زیرِ همان ادعا می‌آید، نه دوبار. */}
       {line.receivingReport && (
-        <ReceivingReportLines {...line.receivingReport} />
+        <ReceivingReportLines
+          {...(excessClaims.length > 0
+            ? withoutExcess(line.receivingReport)
+            : line.receivingReport)}
+        />
       )}
 
       {claims.length > 0 && (
@@ -131,6 +137,8 @@ function LineCard({
         </div>
       ))}
 
+      {excessPanel}
+
       <div className="flex flex-col sm:flex-row gap-2">
         <Button
           type="button"
@@ -143,7 +151,8 @@ function LineCard({
           <Plus className="h-3.5 w-3.5" />
           {remaining > 0 ? "افزودن مشکل" : "کل مقدار تحویل‌شده ثبت شده"}
         </Button>
-        {canAddExcess && (
+        {/* صفحه‌ای که پنلِ مازادِ خودش را دارد (`renderExcessPanel`) دکمه‌ی پیش‌فرض نمی‌خواهد. */}
+        {canAddExcess && excessPanel === undefined && (
           <Button
             type="button"
             size="sm"
@@ -195,6 +204,12 @@ export default function ReturnItemsSection({
   emptyText = "این سند قلمی برای ادعا ندارد",
   deliveredLabel = "تحویل‌شده",
   unlistedHint,
+  // قیمتِ پیش‌فرضِ کالای سفارش‌نداده: فروش قیمتِ فروش، خرید بهای خرید.
+  priceOf = (product) => product.retailPrice ?? 0,
+  // مرجوعی خرید: تصمیمِ «عودت یا خرید» برای مازادِ هر قلم (`ExcessDecisionPanel`)
+  // و برای کالای سفارش‌ندادهِ قرنطینه؛ جای دکمه‌ی پیش‌فرضِ «مازاد».
+  renderExcessPanel,
+  unlistedPanel,
 }) {
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
   const { products, isLoading } = useProductsOptionsQuery();
@@ -266,6 +281,7 @@ export default function ReturnItemsSection({
                 onUpdateOffScope={onUpdateOffScope}
                 onRemoveOffScope={onRemoveOffScope}
                 renderExcessReport={renderOffScopeReport}
+                excessPanel={renderExcessPanel?.(line, orderLine)}
               />
             );
           })
@@ -273,6 +289,7 @@ export default function ReturnItemsSection({
 
         {/* کالای سفارش‌نداده */}
         <div className="rounded-lg border border-dashed border-border p-2.5 space-y-2">
+          {unlistedPanel}
           <Button
             type="button"
             size="sm"
@@ -313,8 +330,7 @@ export default function ReturnItemsSection({
                       productCode: product.code,
                       productName: product.name,
                       unit: unitLabelOf(product.unit),
-                      unitPrice:
-                        product.retailPrice ?? product.purchasePrice ?? 0,
+                      unitPrice: priceOf(product),
                     },
                     OFF_SCOPE_KINDS.UNLISTED,
                   )

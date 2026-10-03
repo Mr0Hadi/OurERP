@@ -3,7 +3,7 @@ import { toast } from "react-hot-toast";
 
 import { Badge } from "@/shared/components/ui/badge";
 import BarcodeScanField from "./BarcodeScanField";
-import { parseBarcode } from "@/shared/domain/barcode/productCode";
+import { formatPayload, parseBarcode } from "@/shared/domain/barcode/productCode";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
 import { formatNumber } from "@/shared/lib/numberFormat";
 
@@ -80,11 +80,13 @@ export default function UnitBarcodeScanList({
               className="gap-1 font-mono text-[10px]"
               dir="ltr"
             >
-              {barcode}
+              {/* مقدار payloadِ رقمی است (همان که سرور مقایسه می‌کند)؛ نمایش خوانا با خط‌تیره. */}
+              {formatPayload(barcode)}
               <button
                 type="button"
                 className="text-muted-foreground hover:text-destructive"
                 onClick={() => onChange(barcodes.filter((b) => b !== barcode))}
+                aria-label={`حذف ${formatPayload(barcode)}`}
               >
                 <X className="h-3 w-3" />
               </button>
@@ -94,8 +96,9 @@ export default function UnitBarcodeScanList({
       )}
       {isPartial && (
         <p className="text-[11px] text-warning">
-          یا همه‌ی دانه‌های این ردیف را اسکن کنید، یا هیچ‌کدام
-          {required ? "" : " (تا سرور خودش انتخاب کند)"}.
+          {required
+            ? "همه‌ی دانه‌های این ردیف را اسکن کنید."
+            : "یا همه‌ی دانه‌های این ردیف را اسکن کنید، یا هیچ‌کدام (تا سرور خودش انتخاب کند)."}
         </p>
       )}
     </div>

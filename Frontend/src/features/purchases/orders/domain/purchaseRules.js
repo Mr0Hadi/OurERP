@@ -1,4 +1,5 @@
 import { PURCHASE_STATUSES } from "../services/constants";
+import { PURCHASE_STATUS_LABELS } from "@/shared/domain/enums/purchaseStatus";
 
 /**
  * حذف فقط برای پیش‌فاکتور است (`DeletePurchase`)؛ خریدِ صادرشده لغو
@@ -10,11 +11,6 @@ export function canDeletePurchase(purchase) {
   return purchase.status === PURCHASE_STATUSES.PROFORMA;
 }
 
-/** پیش‌پرداختِ باطل‌نشده‌ای که جلوی حذفِ پیش‌فاکتور را می‌گیرد. */
-export function hasLivePayments(doc) {
-  return (doc?.paymentDetails || []).some((payment) => !payment.voidedAt);
-}
-
 /**
  * لغو (`ChangePurchaseStatus` → `CANCELLED`) از پیش‌فاکتور، «در انتظار
  * ارسال» و «ارسال‌شده»، تا وقتی هیچ کالایی دریافت نشده. لغو نهایی است و
@@ -24,14 +20,6 @@ export function canCancelPurchase(purchase) {
   if (!purchase) return false;
   if (!MANUAL_PURCHASE_STATUSES.includes(purchase.status)) return false;
   return (purchase.items || []).every((item) => !(item.receivedQuantity > 0));
-}
-
-/** برای نمایش پیام راهنما وقتی نه حذف و نه لغو ممکن است. */
-export function getPurchaseLockReason(purchase) {
-  if (!purchase) return null;
-  if (canDeletePurchase(purchase) || canCancelPurchase(purchase)) return null;
-  if (purchase.status === PURCHASE_STATUSES.CANCELLED) return null;
-  return "کالای این خرید در انبار دریافت شده و دیگر قابل لغو نیست؛ برای اصلاح از مسیر مرجوعی اقدام کنید.";
 }
 
 /**
@@ -101,11 +89,32 @@ export const MANUAL_PURCHASE_STATUSES = [
 ];
 
 /**
- * آیا وضعیتِ ذخیره‌شده دیگر دستی عوض نمی‌شود؟ بعد از اولین دریافت، برگرداندن
- * به «ارسال‌شده» یا «در انتظار» یا جلو بردن به «تحویل کامل» هر دو دروغ
- * گفتن به صفِ دریافتِ انبار است؛ خریدِ لغوشده هم بسته است.
+ * خروج از پیش‌فاکتور یعنی فاکتورِ رسمیِ تامین‌کننده رسیده، پس شماره و
+ * تاریخش لازم است — قاعده‌ی `CreatePurchase`/`UpdatePurchase`. خطاها به
+ * شکلِ `errors`ِ `OrderInfoCard`؛ `null` یعنی ایرادی نیست.
  */
-export function isPurchaseStatusLocked(savedStatus) {
-  if (savedStatus === "" || savedStatus == null) return false;
-  return !MANUAL_PURCHASE_STATUSES.includes(Number(savedStatus));
+export function missingInvoiceFields(formData, status) {
+  if (Number(status) === PURCHASE_STATUSES.PROFORMA) return null;
+  const errors = {};
+  if (!String(formData.invoiceNumber || "").trim()) {
+    errors.invoiceNumber = "برای صدورِ فاکتور، شماره‌ی فاکتورِ تامین‌کننده الزامی است";
+  }
+  if (!formData.invoiceDate) {
+    errors.invoiceDate = "برای صدورِ فاکتور، تاریخِ فاکتور الزامی است";
+  }
+  return Object.keys(errors).length > 0 ? errors : null;
 }
+
+/** وضعیتِ ارسالِ خریدِ صادرشده — تنها دو وضعیتِ دستی پس از صدور (و لغو). */
+export const PURCHASE_SHIPPING_CHOICES = [
+  {
+    value: PURCHASE_STATUSES.PENDING,
+    label: PURCHASE_STATUS_LABELS[PURCHASE_STATUSES.PENDING],
+    hint: "تامین‌کننده هنوز کالا را نفرستاده است.",
+  },
+  {
+    value: PURCHASE_STATUSES.SHIPPED,
+    label: PURCHASE_STATUS_LABELS[PURCHASE_STATUSES.SHIPPED],
+    hint: "کالا در راه است. «تحویل ناقص/کامل» را دریافتِ انبار تعیین می‌کند.",
+  },
+];

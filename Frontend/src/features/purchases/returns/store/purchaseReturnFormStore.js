@@ -3,17 +3,23 @@ import { CLAIM_SCOPES, OFF_SCOPE_KINDS } from "@/shared/domain/returns/scopes";
 import { RETURN_PROBLEMS } from "@/shared/domain/returns/problems";
 import { lineReceivingReport } from "@/shared/domain/returns/receivingReport";
 import {
+  carryOverLineClaims,
+  clampClaimsToCaps,
+} from "@/shared/domain/returns/carryOverClaims";
+import {
   claimableQuantityOf,
   freeExcessQuantityOf,
   freeUnlistedQuantityOf,
 } from "../domain/purchaseReturnVocabulary";
+import { todayIso } from "@/shared/lib/dateUtils";
 
-const EMPTY_FORM = {
+// تابع است نه ثابت، تا تاریخِ پیش‌فرض همیشه «امروز»ِ لحظه‌ی ساختِ فرم باشد.
+const emptyForm = () => ({
   purchaseId: "",
   purchaseInvoiceNumber: "",
   supplierId: "",
   supplierName: "",
-  returnDate: new Date().toISOString().slice(0, 10),
+  returnDate: todayIso(),
   description: "",
   previousReturnId: null,
   // هر خط سفارش، با ادعاهای «روی سفارش»ش
@@ -24,7 +30,39 @@ const EMPTY_FORM = {
   offScopeClaims: [],
   // سقفِ سرور برای ادعاهای خارج از سفارش، کلیدخورده با `offScopeCapKey`
   offScopeCaps: {},
-};
+  // مازاد/سفارش‌نداده‌ای که نگه داشته و خریده می‌شود (`AcceptPurchaseExcess`)،
+  // کلیدخورده با همان `offScopeCapKey`: { quantity, unitPrice, … }. همان سقفِ
+  // ادعای مازاد را می‌خورد — یک دانه یا پس می‌رود یا خریده می‌شود.
+  excessPurchases: {},
+  // کالای سفارش‌ندادهِ آزادِ قرنطینه، برای انتخابِ «عودت» یا «خرید».
+  unlistedStock: [],
+});
+
+/**
+ * خریدهای قبلی روی سقف‌های تازه: هر گروه تا «سقف − ادعاهای همان گروه» بریده
+ * می‌شود؛ گروهی که جایی برایش نماند حذف می‌شود.
+ */
+function clampPurchases(purchases, offScopeClaims, caps) {
+  const claimed = {};
+  offScopeClaims.forEach((claim) => {
+    const key = offScopeCapKey(claim.offScopeKind, claim);
+    claimed[key] = (claimed[key] || 0) + (Number(claim.quantity) || 0);
+  });
+  return Object.fromEntries(
+    Object.entries(purchases)
+      .map(([key, entry]) => [
+        key,
+        {
+          ...entry,
+          quantity: Math.min(
+            Number(entry.quantity) || 0,
+            Math.max(0, (caps[key] ?? 0) - (claimed[key] || 0)),
+          ),
+        },
+      ])
+      .filter(([, entry]) => entry.quantity > 0),
+  );
+}
 
 /**
  * کلیدِ سقفِ یک ادعای خارج از سفارش: مازاد روی قلمش، سفارش‌نداده روی کالایش
@@ -161,7 +199,7 @@ function quarantineClaimsOf(purchase, lines) {
 }
 
 export const usePurchaseReturnFormStore = create((set, get) => ({
-  formData: { ...EMPTY_FORM },
+  formData: emptyForm(),
   initializedForId: null,
 
   setFormData: (data) =>
@@ -170,18 +208,27 @@ export const usePurchaseReturnFormStore = create((set, get) => ({
     set((state) => ({ formData: { ...state.formData, lines } })),
   setOffScopeClaims: (offScopeClaims) =>
     set((state) => ({ formData: { ...state.formData, offScopeClaims } })),
+  setExcessPurchases: (excessPurchases) =>
+    set((state) => ({ formData: { ...state.formData, excessPurchases } })),
 
   /**
    * `purchase` همان `PurchaseReceivingInfoDto`ِ `GetPurchaseReceivingInfo`
    * است — همان کوئری‌ای که صفحه‌ی دریافت انبار هم از آن می‌خواند.
    *
    * `prefillQuarantine` ادعاها را از کالای در قرنطینه پر می‌کند — مسیرِ
-   * «ثبت مغایرت» از صفحه‌ی دریافت.
+   * «ثبت مغایرت» از صفحه‌ی دریافت. فقط بارِ اول؛ اگر همین خرید وسطِ کار
+   * عوض شد (مثلاً مازاد از همین صفحه خریده شد)، ادعاهای کاربر با سقف‌های
+   * تازه نگه داشته می‌شوند — `carryOverClaims`.
+   *
+   * `previousReturnId` مرجوعیِ قبلیِ همین مشکل است (زنجیره‌ی مرجوعی‌ها).
    */
-  initializeForPurchase: (purchase, { prefillQuarantine = false } = {}) => {
+  initializeForPurchase: (
+    purchase,
+    { prefillQuarantine = false, previousReturnId = null } = {},
+  ) => {
     // این پاسخ `updatedAt` ندارد، پس کلیدِ نسخه از محتوا ساخته می‌شود:
-    // با هر دورِ دریافت یا هر مرجوعیِ تازه، ارقام عوض می‌شوند و فرم باید
-    // از نو پر شود.
+    // با هر دورِ دریافت، خریدِ مازاد یا مرجوعیِ تازه ارقام عوض می‌شوند و
+    // سقف‌های فرم باید تازه شوند.
     const version = [
       "purchase",
       purchase.purchaseId,
@@ -199,7 +246,8 @@ export const usePurchaseReturnFormStore = create((set, get) => ({
     const lines = (purchase.items || [])
       // فقط قلمی که هنوز جا برای ادعا دارد: `claimableQuantity` همان سقفِ
       // بکند است (`ReceivedQuantity − Settled − ادعاهای بازِ دیگر`).
-      .filter((item) => claimableQuantityOf(item) > 0)
+      // قلمی که فقط مازادِ آزاد دارد هم می‌ماند تا برای آن مازاد تصمیم گرفته شود.
+      .filter((item) => claimableQuantityOf(item) > 0 || freeExcessQuantityOf(item) > 0)
       .map((item) => ({
         lineKey: `${purchase.purchaseId}-${item.purchaseItemId}`,
         // `CreateReturnClaimDto.OrderLineId` — سمتِ خرید یعنی `PurchaseItemId`.
@@ -226,25 +274,52 @@ export const usePurchaseReturnFormStore = create((set, get) => ({
       unitPrice: item.unitPrice,
     }));
 
-    const prefilled = prefillQuarantine
-      ? quarantineClaimsOf(purchase, lines)
-      : { lines, offScopeClaims: [] };
+    const offScopeCaps = offScopeCapsOf(purchase);
+    const previous = get().formData;
+    const isResync =
+      get().initializedForId != null &&
+      previous.purchaseId === purchase.purchaseId;
+
+    const claims = isResync
+      ? {
+          lines: carryOverLineClaims(previous.lines, lines),
+          offScopeClaims: clampClaimsToCaps(
+            previous.offScopeClaims,
+            (claim) => offScopeCapKey(claim.offScopeKind, claim),
+            (key) => offScopeCaps[key] ?? 0,
+          ),
+        }
+      : prefillQuarantine
+        ? quarantineClaimsOf(purchase, lines)
+        : { lines, offScopeClaims: [] };
 
     set({
       initializedForId: version,
       formData: {
-        ...EMPTY_FORM,
+        // تاریخ و توضیحاتِ واردشده هم با تازه‌شدنِ ارقام نمی‌روند.
+        ...(isResync ? previous : { ...emptyForm(), previousReturnId }),
         purchaseId: purchase.purchaseId,
         purchaseInvoiceNumber: purchase.invoiceNumber,
         supplierId: purchase.supplierId,
         supplierName: purchase.supplierName,
         orderLines,
-        lines: prefilled.lines,
-        offScopeClaims: prefilled.offScopeClaims,
-        offScopeCaps: offScopeCapsOf(purchase),
+        lines: claims.lines,
+        offScopeClaims: claims.offScopeClaims,
+        offScopeCaps,
+        excessPurchases: isResync
+          ? clampPurchases(previous.excessPurchases || {}, claims.offScopeClaims, offScopeCaps)
+          : {},
+        unlistedStock: (purchase.unlistedItems || [])
+          .filter((item) => freeUnlistedQuantityOf(item) > 0)
+          .map((item) => ({
+            productId: item.productId,
+            productCode: item.productCode,
+            productName: item.productName,
+            unit: item.unit,
+          })),
       },
     });
   },
 
-  resetForm: () => set({ formData: { ...EMPTY_FORM }, initializedForId: null }),
+  resetForm: () => set({ formData: emptyForm(), initializedForId: null }),
 }));

@@ -14,6 +14,7 @@ import {
 } from "./api-v1";
 import { productUnitKeys } from "./queryKeys";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
  * تشخیص کد اسکن‌شده (دانه، کالا، یا هیچ‌کدام).
@@ -58,7 +59,7 @@ export const useApplyUnitActionMutation = () => {
     mutationFn: (variables) =>
       applyProductUnitAction(variables, { idempotencyKey: idempotencyKeyFor(variables) }),
     onSuccess: (_, variables) => {
-      const count = variables.productUnitIds.length.toLocaleString("fa-IR");
+      const count = formatNumber(variables.productUnitIds.length);
       toast.success(`${UNIT_ACTION_META[variables.action].label}: ${count} دانه`);
       queryClient.invalidateQueries({ queryKey: productUnitKeys.all });
       queryClient.invalidateQueries({ queryKey: productKeys.all });
@@ -75,7 +76,7 @@ export const useSetUnitLocationMutation = () => {
   return useMutation({
     mutationFn: setProductUnitLocation,
     onSuccess: (_, variables) => {
-      const count = variables.productUnitIds.length.toLocaleString("fa-IR");
+      const count = formatNumber(variables.productUnitIds.length);
       toast.success(
         variables.binLocation?.trim()
           ? `قفسه‌ی ${count} دانه ثبت شد`

@@ -44,9 +44,9 @@ export default function ReceivingSummaryCard({
               <PurchaseStatusBadge status={formData.status} withIcon />
             </div>
 
-            {/* پیشرفت دریافت */}
+            {/* چقدر از باقیمانده‌ی سفارش در همین دور می‌رسد — نه پیشرفتِ کلِ خرید. */}
             <ProgressStat
-              label="پیشرفت دریافت"
+              label="مقدارِ این دور از باقیمانده"
               done={stats.received}
               total={stats.stillOwed}
               percent={stats.percent}

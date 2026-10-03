@@ -54,7 +54,7 @@ export const SHIPPING_STATUS_OPTIONS = [
     value: status,
     label: SALE_STATUS_LABELS[status],
   })),
-  { value: QUEUE_FILTER.RETURNS, label: "مرجوعی: عودت به تامین‌کننده" },
+  { value: QUEUE_FILTER.RETURNS, label: "مرجوعی خرید: عودت و قرنطینه" },
   { value: QUEUE_FILTER.REPLACEMENTS, label: "مرجوعی: جایگزین برای مشتری" },
 ];
 

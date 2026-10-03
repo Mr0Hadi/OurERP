@@ -25,7 +25,12 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 
-export default function CustomerAddressForm({
+/**
+ * بخشِ «آدرس» فرمِ مشتری و تامین‌کننده — استان/شهر، آدرس، کد پستی و مختصات از نقشه.
+ * هر دو کنترلر همین نام‌ها را دارند (`province`، `city`، `address`، `postalCode`،
+ * `latitude`، `longitude`)، پس یک فرم برای هر دو کافی است.
+ */
+export default function PartyAddressForm({
   register,
   control,
   errors,
@@ -37,7 +42,7 @@ export default function CustomerAddressForm({
   const [pendingAddress, setPendingAddress] = useState(null);
 
   // نامِ فیلدها عمداً `latitude`/`longitude` است، همان چیزی که
-  // `CreateCustomerCommand` می‌خواند؛ با `lat`/`lng` مختصات بی‌صدا دور
+  // `CreateCustomerCommand`/`CreateSupplierCommand` می‌خوانند؛ با `lat`/`lng` مختصات بی‌صدا دور
   // ریخته می‌شد.
   const lat = watch ? watch("latitude") : "";
   const lng = watch ? watch("longitude") : "";

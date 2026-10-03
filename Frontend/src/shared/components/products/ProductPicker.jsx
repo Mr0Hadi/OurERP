@@ -1,11 +1,13 @@
-import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown, PackageOpen } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import ProductSearchPanel from "@/shared/components/forms/ProductSearchPanel";
 import SelectedItemsTable from "@/shared/components/forms/SelectedItemsTable";
 import SelectedItemsCards from "@/shared/components/forms/SelectedItemsCards";
 import toast from "react-hot-toast";
-import { unitLabelOf } from "@/shared/domain/enums/productUnit";
+import { lineFromProduct } from "@/shared/domain/invoice/lineFromProduct";
+import { useProductDetailLoader } from "@/features/warehouse/products/services/queries";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
 import {
   invoiceLineAmounts,
@@ -36,12 +38,6 @@ import {
  */
 const lineTotalOf = (item) => invoiceLineAmounts(item).totalAmount;
 
-/** نرخ مالیاتِ کالا، اگر شیءِ کالا آن را دارد — روی قلم نگه داشته می‌شود. */
-const taxFieldsOf = (product) =>
-  product?.tax != null
-    ? { taxPercent: Number(product.tax) || 0, taxCategory: product.taxCategory }
-    : {};
-
 export default function ProductPicker({
   items,
   onItemsChange,
@@ -60,6 +56,16 @@ export default function ProductPicker({
   // در حالت تاشو، اگر هنوز چیزی انتخاب نشده باز باشد بهتر است — کاربر
   // برای همین آمده.
   const [isPickerOpen, setIsPickerOpen] = useState(items.length === 0);
+
+  const loadProductDetail = useProductDetailLoader();
+  // آخرین فهرستِ اقلام، برای افزودنی که بعد از رسیدنِ جزئیاتِ کالا انجام می‌شود —
+  // تا تغییرهایی که کاربر در همین فاصله داده گم نشوند.
+  const itemsRef = useRef(items);
+  useEffect(() => {
+    itemsRef.current = items;
+  });
+  // کالاهایی که جزئیاتشان در راه است: کلیکِ دوباره تعداد را زیاد می‌کند، نه قلمِ تکراری.
+  const pendingRef = useRef(new Map());
 
   const addedQuantityOf = (productId) =>
     Number(items.find((item) => item.productId === productId)?.quantity) || 0;
@@ -96,20 +102,31 @@ export default function ProductPicker({
       );
       return true;
     }
-    onItemsChange([
-      ...items,
-      {
-        productId: product.id,
-        productName: product.name,
-        productCode: product.code,
-        unit: unitLabelOf(product.unit),
-        quantity: 1,
-        unitPrice: priceOf(product),
-        discount: 0,
-        ...taxFieldsOf(product),
-        ...(unitCode && { productUnitBarcodes: [unitCode] }),
-      },
-    ]);
+    if (pendingRef.current.has(product.id)) {
+      pendingRef.current.get(product.id).quantity += 1;
+      return true;
+    }
+
+    // قلمِ تازه: قیمت، واحد و مالیات فقط در جزئیاتِ کالا هست، نه در ردیفِ لیست.
+    const pending = { quantity: 1 };
+    pendingRef.current.set(product.id, pending);
+    loadProductDetail(product.id)
+      .catch((error) => {
+        toast.error(getErrorMessage(error, "دریافت اطلاعات کالا انجام نشد."));
+        return product;
+      })
+      .then((detail) => {
+        pendingRef.current.delete(product.id);
+        const source = { ...product, ...detail };
+        onItemsChange([
+          ...itemsRef.current,
+          lineFromProduct(source, {
+            unitPrice: priceOf(source),
+            quantity: pending.quantity,
+            productUnitBarcodes: unitCode ? [unitCode] : undefined,
+          }),
+        ]);
+      });
     return true;
   };
 
@@ -147,24 +164,18 @@ export default function ProductPicker({
   const grandTotal = totals.totalAmount;
 
   /**
-   * جزئیاتِ خرید/فروش که از سرور می‌آید نام و واحدِ کالا را کامل ندارد
-   * (`PurchaseItemDto` واحد نمی‌فرستد و `GetSaleDetail` حتی نام کالا را
-   * هم نمی‌دهد). چون فهرستِ کالاها همین‌جا در دسترس است، جای خالی از
-   * روی `productId` پر می‌شود — فقط برای نمایش؛ چیزی به state اضافه
-   * نمی‌شود.
+   * قلم‌هایی که از سرور آمده‌اند گاهی نام/کدِ کالا را ندارند؛ از فهرستِ کالاها
+   * (که همین‌جا در دسترس است) پر می‌شوند — فقط برای نمایش، چیزی به state اضافه
+   * نمی‌شود. (واحد و مالیات در ردیفِ لیست نیستند، پس از این راه پر نمی‌شوند.)
    */
   const displayItems = items.map((item) => {
-    if (item.productName && item.unit && item.taxPercent != null) return item;
-    const product = products.find(
-      (candidate) => candidate.id === item.productId,
-    );
+    if (item.productName && item.productCode) return item;
+    const product = products.find((candidate) => candidate.id === item.productId);
     if (!product) return item;
     return {
-      ...taxFieldsOf(product),
       ...item,
       productName: item.productName || product.name,
       productCode: item.productCode || product.code,
-      unit: item.unit || unitLabelOf(product.unit),
     };
   });
 
@@ -179,7 +190,7 @@ export default function ProductPicker({
         onRemoveUnit={trackUnits ? handleRemoveUnit : undefined}
         lineTotal={lineTotalOf}
         grandTotal={grandTotal}
-        byContainer={collapsible}
+        showFooter={collapsible}
       />
       <SelectedItemsCards
         items={displayItems}
@@ -190,7 +201,7 @@ export default function ProductPicker({
         onRemoveUnit={trackUnits ? handleRemoveUnit : undefined}
         lineTotal={lineTotalOf}
         grandTotal={grandTotal}
-        byContainer={collapsible}
+        showFooter={collapsible}
       />
     </>
   );
@@ -208,8 +219,7 @@ export default function ProductPicker({
   );
 
   if (collapsible) {
-    // تاشو یعنی داخلِ کارتِ یک تصمیمِ مرجوعی: عرضِ واقعی را همین ظرف
-    // تعیین می‌کند نه صفحه، پس جدول/کارت با container query عوض می‌شود.
+    // تاشو یعنی داخلِ کارتِ یک تصمیمِ مرجوعی، با اقلام بالای انتخابگر.
     return (
       <div className="@container/picker space-y-2 rounded-md border border-border bg-card/60 p-2.5">
         {selectedItems}
@@ -235,13 +245,14 @@ export default function ProductPicker({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="@container/picker space-y-3">
       {searchPanel}
       {selectedItems}
       {items.length === 0 && (
-        <p className="text-center text-sm text-muted-foreground py-3 border border-dashed border-border rounded-lg">
-          {emptyText}
-        </p>
+        <div className="flex flex-col items-center gap-1.5 rounded-lg border border-dashed border-border py-8 text-center">
+          <PackageOpen className="size-6 text-muted-foreground/60" aria-hidden />
+          <p className="text-sm text-muted-foreground">{emptyText}</p>
+        </div>
       )}
     </div>
   );

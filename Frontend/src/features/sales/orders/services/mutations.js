@@ -14,6 +14,7 @@ import {
 } from "./api-v1";
 import { saleKeys } from "./queryKeys";
 import { invalidateSalesEcosystem } from "./sharedInvalidation";
+import { runDocumentChanges } from "@/shared/services/documentChanges";
 import { shippingKeys } from "@/features/warehouse/shipping/services/queryKeys";
 import { customerKeys } from "@/features/customers/services/queryKeys";
 import { idempotencyKeyFor } from "@/shared/services/api/contract";
@@ -76,103 +77,6 @@ export const useCreateInPersonSaleMutation = () => {
 };
 
 /** فقط پیش‌فاکتور. */
-export const useUpdateSaleMutation = (id) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (saleData) => updateSale(id, saleData),
-    onSuccess: (updated) => {
-      applySale(queryClient, updated);
-      toast.success("پیش‌فاکتور فروش ویرایش شد");
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, 'خطا در ویرایش فروش'));
-    },
-  });
-};
-
-export const useChangeSaleStatusMutation = (id) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (status) => changeSaleStatus(id, status),
-    onSuccess: (updated) => {
-      // تغییر وضعیت واجدشرایط‌بودنِ فروش برای «ارسال انبار» و «مرجوعی» را هم عوض می‌کند.
-      applySale(queryClient, updated);
-      toast.success("وضعیت فروش به‌روزرسانی شد");
-    },
-    onError: (error) => toast.error(getErrorMessage(error, "خطا در تغییر وضعیت")),
-  });
-};
-
-export const useUpdateSaleAttachmentsMutation = (id) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (attachments) => updateSaleAttachments(id, attachments),
-    onSuccess: (updated) => {
-      applySale(queryClient, updated);
-      toast.success("پیوست‌ها ذخیره شد");
-    },
-    onError: (error) =>
-      toast.error(getErrorMessage(error, "خطا در ذخیره‌ی پیوست‌ها")),
-  });
-};
-
-export const useUpdateSalePaymentDateMutation = (id) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (paymentDate) => updateSalePaymentDate(id, paymentDate),
-    onSuccess: (updated) => {
-      applySale(queryClient, updated);
-      toast.success("مهلت پرداخت ذخیره شد");
-    },
-    onError: (error) =>
-      toast.error(getErrorMessage(error, "خطا در ذخیره‌ی مهلت پرداخت")),
-  });
-};
-
-/**
- * ثبت و اصلاحِ پرداخت تجمعی‌اند، پس کلیدِ ایدمپوتنسی می‌گیرند. اولین
- * پرداخت روی پیش‌فاکتور فاکتور را صادر می‌کند؛ پاسخ همان سندِ صادرشده است.
- */
-export const useSalePaymentMutations = (saleId) => {
-  const queryClient = useQueryClient();
-  const onSuccess = (message) => (updated) => {
-    applySale(queryClient, updated);
-    toast.success(message);
-  };
-  const onError = (fallback) => (error) =>
-    toast.error(getErrorMessage(error, fallback));
-
-  const add = useMutation({
-    mutationFn: (payment) =>
-      addSalePayment(
-        { ...payment, saleId },
-        { idempotencyKey: idempotencyKeyFor(payment) },
-      ),
-    onSuccess: onSuccess("پرداخت ثبت شد"),
-    onError: onError("خطا در ثبت پرداخت"),
-  });
-
-  const edit = useMutation({
-    mutationFn: (payment) =>
-      editSalePayment(payment, { idempotencyKey: idempotencyKeyFor(payment) }),
-    onSuccess: onSuccess("پرداخت اصلاح شد"),
-    onError: onError("خطا در اصلاح پرداخت"),
-  });
-
-  const voidPayment = useMutation({
-    mutationFn: voidSalePayment,
-    onSuccess: onSuccess("پرداخت باطل شد"),
-    onError: onError("خطا در ابطال پرداخت"),
-  });
-
-  return { add, edit, void: voidPayment };
-};
-
-/** فقط پیش‌فاکتور. */
 export const useRemoveSaleMutation = () => {
   const queryClient = useQueryClient();
 
@@ -187,6 +91,39 @@ export const useRemoveSaleMutation = () => {
     },
     onError: (error) => {
       toast.error(getErrorMessage(error, "خطا در حذف فروش"));
+    },
+  });
+};
+
+const SALE_CHANGES_API = {
+  idField: "saleId",
+  update: updateSale,
+  addPayment: addSalePayment,
+  editPayment: editSalePayment,
+  voidPayment: voidSalePayment,
+  paymentDate: updateSalePaymentDate,
+  attachments: updateSaleAttachments,
+  status: changeSaleStatus,
+};
+
+/**
+ * «ثبت تغییرات»ِ صفحه‌ی فروش (پیش‌فاکتور یا صادرشده): سند، پرداخت‌ها (اولین
+ * دریافت فاکتور را صادر می‌کند)، سررسید، پیوست‌ها و وضعیت با یک دکمه و یک پیام
+ * (`runDocumentChanges`).
+ */
+export const useSaleChangesSaver = (saleId) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (changes) => runDocumentChanges(SALE_CHANGES_API, saleId, changes),
+    onSuccess: (latest) => {
+      if (latest) applySale(queryClient, latest);
+      toast.success(
+        latest?.invoiceNumber ? `فاکتور ${latest.invoiceNumber} ذخیره شد` : "تغییرات فروش ذخیره شد",
+      );
+    },
+    onError: (error) => {
+      invalidateSalesEcosystem(queryClient, saleId);
+      toast.error(getErrorMessage(error, "ذخیره‌ی تغییرات ناتمام ماند"));
     },
   });
 };

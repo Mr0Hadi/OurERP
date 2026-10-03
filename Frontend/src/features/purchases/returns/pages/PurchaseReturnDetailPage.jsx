@@ -1,19 +1,4 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { Link2, Trash2 } from "lucide-react";
-
-import { Button } from "@/shared/components/ui/button";
-import { Badge } from "@/shared/components/ui/badge";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/shared/components/ui/alert-dialog";
 
 import {
   usePurchaseReturnQuery,
@@ -35,6 +20,12 @@ import ReturnDocumentSection from "@/shared/components/returns/ReturnDocumentSec
 
 import PurchaseReturnDetailLoading from "../components/forms/PurchaseReturnDetailLoading";
 import ReturnStatusBar from "@/shared/components/returns/ReturnStatusBar";
+import DeleteReturnAction from "@/shared/components/returns/DeleteReturnAction";
+import {
+  FollowUpReturnAction,
+  PreviousReturnBadge,
+} from "@/shared/components/returns/ReturnChain";
+import { RETURN_STATUSES } from "@/shared/domain/returns/statuses";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
 import RelatedReturnsCard from "@/shared/components/returns/RelatedReturnsCard";
@@ -103,12 +94,11 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
         side={sideConfig(RETURN_SIDES.PURCHASE)}
       />
 
-      {purchaseReturn.previousReturnId && (
-        <Badge variant="outline" className="text-xs gap-1">
-          <Link2 className="h-3 w-3" />
-          ادامه‌ی مرجوعی #{purchaseReturn.previousReturnId}
-        </Badge>
-      )}
+      <PreviousReturnBadge
+        id={purchaseReturn.previousReturnId}
+        number={purchaseReturn.previousReturnNumber}
+        detailRoute={ROUTES.PURCHASES_RETURNS_DETAIL}
+      />
 
       {sale && (
         <OrderInvoiceCard
@@ -134,18 +124,6 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
 
       <ReceivingReportCard receivingInfo={sale} />
 
-      <ReturnDocumentSection
-        returnDoc={purchaseReturn}
-        mutation={attachmentsMutation}
-        canEdit={permissionsUnknown || can("PurchaseReturnCreate")}
-        title="مرجوعی خرید"
-        // «برگه‌ی مرجوعی به تامین‌کننده» — برای هر مرجوعیِ خرید، همراهِ کالا.
-        documentKind="purchaseReturn"
-        documentId={purchaseReturn.id}
-        serverDocumentName={`برگه-مرجوعی-${purchaseReturn.returnNumber}`}
-        attachmentLabel="رسیدِ امضاشده یا عکسِ کالای مرجوعی"
-      />
-
       <PurchaseReturnResolutionSection
         purchaseReturn={purchaseReturn}
         renderClaimReport={(claim) => (
@@ -167,39 +145,33 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
         onReopen={() => reopenMutation.mutate()}
       />
 
+      {/* سند و پیوست بعد از کارِ اصلیِ صفحه (ادعاها و تصمیم‌ها) می‌آید. */}
+      <ReturnDocumentSection
+        returnDoc={purchaseReturn}
+        mutation={attachmentsMutation}
+        canEdit={permissionsUnknown || can("PurchaseReturnCreate")}
+        title="مرجوعی خرید"
+        // «برگه‌ی مرجوعی به تامین‌کننده» — برای هر مرجوعیِ خرید، همراهِ کالا.
+        documentKind="purchaseReturn"
+        documentId={purchaseReturn.id}
+        serverDocumentName={`برگه-مرجوعی-${purchaseReturn.returnNumber}`}
+        attachmentLabel="رسیدِ امضاشده یا عکسِ کالای مرجوعی"
+      />
+
+      {purchaseReturn.status === RETURN_STATUSES.SETTLED && (
+        <FollowUpReturnAction
+          to={`${ROUTES.PURCHASES_RETURNS_NEW}?purchaseId=${purchaseReturn.purchaseId}&previousReturnId=${purchaseReturn.id}`}
+          hint="مشکل دوباره پیش آمد — مثلاً کالای جایگزین هم خراب رسید؟ مرجوعیِ تازه‌ای برای همین خرید ثبت کنید که به این یکی وصل است."
+        />
+      )}
+
       {purchaseReturn.canDelete && (
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="w-full gap-2 text-destructive hover:bg-destructive/10"
-              disabled={isBusy}
-            >
-              <Trash2 className="h-4 w-4" />
-              حذف کامل این مرجوعی
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>حذف مرجوعی</AlertDialogTitle>
-              <AlertDialogDescription>
-                این عملیات قابل بازگشت نیست. مرجوعی «{purchaseReturn.returnNumber}»
-                برای همیشه حذف خواهد شد.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>انصراف</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-destructive hover:bg-destructive/90"
-                onClick={() => removeMutation.mutate(purchaseReturn.id)}
-              >
-                حذف شود
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <DeleteReturnAction
+          returnNumber={purchaseReturn.returnNumber}
+          onDelete={() => removeMutation.mutate(purchaseReturn.id)}
+          isPending={removeMutation.isPending}
+          disabled={isBusy}
+        />
       )}
     </div>
   );

@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 
 import {
   SALES_RETURN_PROBLEM_LABELS,
@@ -197,12 +197,7 @@ function WarehouseQueueNotice({ salesReturn }) {
             variant="outline"
             className="flex-1 h-8 text-xs"
             onClick={() =>
-              navigate(
-                ROUTES.WAREHOUSE_RECEIVING_RETURN_DETAIL.replace(
-                  ":id",
-                  salesReturn.id,
-                ),
-              )
+              navigate(routeWithId(ROUTES.WAREHOUSE_RECEIVING_RETURN_DETAIL, salesReturn.id))
             }
           >
             دریافت کالا از مشتری
@@ -214,12 +209,11 @@ function WarehouseQueueNotice({ salesReturn }) {
             size="sm"
             variant="outline"
             className="flex-1 h-8 text-xs"
+            // فقط جایگزینِ همین مرجوعی؛ بی `returnId` فرمِ کاملِ ارسالِ فروش
+            // باز می‌شد و باقیمانده‌ی فاکتور هم برای ارسال پیش‌پر بود.
             onClick={() =>
               navigate(
-                ROUTES.WAREHOUSE_SHIPPING_DETAIL.replace(
-                  ":id",
-                  salesReturn.saleId,
-                ),
+                `${routeWithId(ROUTES.WAREHOUSE_SHIPPING_DETAIL, salesReturn.saleId)}?returnId=${salesReturn.id}`,
               )
             }
           >

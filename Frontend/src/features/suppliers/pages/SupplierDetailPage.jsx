@@ -20,8 +20,8 @@ import {
 } from "@/shared/components/ui/alert-dialog";
 import SupplierIdentityForm from "../components/forms/SupplierIdentityForm";
 import SupplierFinanceForm from "../components/forms/SupplierFinanceForm";
-import SupplierAddressForm from "../components/forms/SupplierAddressForm";
-import SupplierDetailLoading from "../components/forms/SupplierDetailLoading";
+import PartyAddressForm from "@/features/partyAccount/components/PartyAddressForm";
+import PartyDetailLoading from "@/features/partyAccount/components/PartyDetailLoading";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import PartyStatementCard from "@/features/partyAccount/components/PartyStatementCard";
@@ -111,7 +111,7 @@ const {
           </div>
 
           <div className="lg:col-span-1 space-y-4">
-            <SupplierAddressForm
+            <PartyAddressForm
               register={register}
               control={control}
               errors={errors}
@@ -211,7 +211,7 @@ export default function SupplierDetailPage() {
     showBack: true,
   });
 
-  if (isLoading) return <SupplierDetailLoading />;
+  if (isLoading) return <PartyDetailLoading />;
 
   if (isError || !supplier) {
     return (

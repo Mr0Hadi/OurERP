@@ -1,11 +1,5 @@
-import { Fragment } from "react";
 import { Lock } from "lucide-react";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from "@/shared/components/ui/card";
+import SectionCard from "@/shared/components/forms/SectionCard";
 import { Badge } from "@/shared/components/ui/badge";
 import { TaxCategoryEnum } from "@/shared/domain/enums/taxCategory";
 import { invoiceLineAmounts } from "@/shared/domain/invoice/lineMath";
@@ -55,7 +49,8 @@ function LineBadges({ item }) {
  *   `{ key, label, render(item) }` (مثلاً «ارسال‌شده» در فروش، «رسیده» و
  *   «مانده» در خرید). `render` می‌تواند متن یا یک المان برگرداند.
  * @param renderActions اختیاری — `(item) => node` برای دکمه‌های هر قلم.
- * @param description متنِ زیرِ عنوان؛ پیش‌فرض یادآوریِ «فقط در پیش‌فاکتور».
+ * @param description متنِ کوتاهِ زیرِ عنوان (اختیاری). قفلِ کنارِ عنوان یعنی
+ *   اقلام فقط در پیش‌فاکتور ویرایش می‌شوند.
  * @param headerAction اختیاری — دکمه/پیوندی کنارِ عنوان (مثلاً «دانه‌ها و برچسب‌ها»).
  * @param renderDetails اختیاری — `(item) => node` زیرِ نامِ هر قلم (مثلاً
  *   گزارشِ انبار از دریافت).
@@ -67,7 +62,7 @@ export default function OrderItemsReadOnly({
   items = [],
   columns = [],
   renderActions,
-  description = "اقلام فقط در مرحله‌ی پیش‌فاکتور قابل ویرایش‌اند.",
+  description,
   headerAction = null,
   renderDetails,
   totalAmount,
@@ -78,78 +73,85 @@ export default function OrderItemsReadOnly({
   const total = totalAmount != null ? Number(totalAmount) || 0 : lineSum;
 
   return (
-    <Card className="@container/items">
-      <CardHeader className="pb-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="text-base font-semibold text-card-foreground flex items-center gap-2">
-            {title}
-            <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-          </CardTitle>
-          {headerAction}
-        </div>
-        <p className="text-xs text-muted-foreground">{description}</p>
-      </CardHeader>
-
-      <CardContent className="space-y-3">
+    <SectionCard
+      title={
+        <span className="inline-flex items-center gap-1.5">
+          {title}
+          <Lock className="size-3 text-muted-foreground" aria-label="قفل" />
+        </span>
+      }
+      description={description}
+      action={headerAction}
+      className="@container/items"
+    >
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6">قلمی ثبت نشده است.</p>
         ) : (
           <>
-            {/* عرضِ کم: کارت برای هر قلم */}
-            <ul className="space-y-2 @3xl/items:hidden">
-              {items.map((item) => (
-                <li
-                  key={item.id ?? item.productId}
-                  className="rounded-lg border border-border p-3 space-y-2"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium break-words">
-                      {item.productName}
-                      <LineBadges item={item} />
-                    </p>
-                    {item.productCode && (
-                      <p className="font-mono text-xs text-muted-foreground">{item.productCode}</p>
-                    )}
-                  </div>
-                  {renderDetails?.(item)}
-                  <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                    <dt className="text-muted-foreground">تعداد</dt>
-                    <dd className="text-left tabular-nums">{formatNumber(item.quantity)}</dd>
-                    {columns.map((column) => (
-                      <Fragment key={column.key}>
-                        <dt className="text-muted-foreground">{column.label}</dt>
-                        <dd className="text-left tabular-nums">{column.render(item)}</dd>
-                      </Fragment>
-                    ))}
-                    <dt className="text-muted-foreground">قیمت واحد</dt>
-                    <dd className="text-left tabular-nums">{formatNumber(item.unitPrice)}</dd>
-                    {Number(item.discount) > 0 && (
-                      <>
-                        <dt className="text-muted-foreground">تخفیف</dt>
-                        <dd className="text-left tabular-nums">{formatNumber(item.discount)}٪</dd>
-                      </>
-                    )}
-                    {amountsOf(item).taxAmount > 0 && (
-                      <>
-                        <dt className="text-muted-foreground">
-                          مالیات {formatNumber(item.taxPercent)}٪
-                        </dt>
-                        <dd className="text-left tabular-nums">{formatNumber(amountsOf(item).taxAmount)}</dd>
-                      </>
-                    )}
-                    <dt className="text-muted-foreground">جمع</dt>
-                    <dd className="text-left tabular-nums font-medium">
-                      {formatNumber(amountsOf(item).totalAmount)}
-                    </dd>
-                  </dl>
-                  {renderActions && (
-                    <div className="flex flex-wrap justify-end gap-2 empty:hidden">
-                      {renderActions(item)}
+            {/* عرضِ کم: کارت برای هر قلم — نام و جمع بالا، شمارنده‌ها به‌شکلِ
+                کاشی، و قیمت به‌شکلِ یک خطِ محاسبه. */}
+            <ol className="space-y-2 @3xl/items:hidden">
+              {items.map((item, index) => {
+                const amounts = amountsOf(item);
+                return (
+                  <li
+                    key={item.id ?? item.productId}
+                    className="rounded-lg border border-border bg-card pb-3 shadow-xs"
+                  >
+                    <div className="flex items-start gap-2.5 p-3 pb-2">
+                      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-medium tabular-nums text-muted-foreground">
+                        {formatNumber(index + 1)}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium leading-snug break-words">
+                          {item.productName}
+                          <LineBadges item={item} />
+                        </p>
+                        {item.productCode && (
+                          <p className="font-mono text-xs text-muted-foreground">{item.productCode}</p>
+                        )}
+                      </div>
+                      <p className="shrink-0 text-left">
+                        <span className="block text-[10px] text-muted-foreground">جمع</span>
+                        <span className="text-sm font-bold tabular-nums">
+                          {formatNumber(amounts.totalAmount)}
+                        </span>
+                      </p>
                     </div>
-                  )}
-                </li>
-              ))}
-            </ul>
+
+                    <dl className="grid grid-cols-3 gap-1.5 px-3">
+                      {[
+                        { key: "quantity", label: "تعداد", render: (line) => formatNumber(line.quantity) },
+                        ...columns,
+                      ].map((column) => (
+                        <div
+                          key={column.key}
+                          className="rounded-md bg-muted/50 px-2 py-1.5 text-center"
+                        >
+                          <dt className="text-[10px] text-muted-foreground">{column.label}</dt>
+                          <dd className="text-sm font-medium tabular-nums">{column.render(item)}</dd>
+                        </div>
+                      ))}
+                    </dl>
+
+                    <p className="px-3 pt-2 text-[11px] text-muted-foreground tabular-nums">
+                      {formatNumber(item.quantity)} × {formatNumber(item.unitPrice)}
+                      {Number(item.discount) > 0 && ` − تخفیف ${formatNumber(item.discount)}٪`}
+                      {amounts.taxAmount > 0 &&
+                        ` + مالیات ${formatNumber(item.taxPercent)}٪ (${formatNumber(amounts.taxAmount)})`}
+                    </p>
+
+                    {renderDetails && <div className="px-3 pt-2 empty:hidden">{renderDetails(item)}</div>}
+
+                    {renderActions && (
+                      <div className="mt-2 flex flex-wrap justify-end gap-2 border-t border-border px-3 pt-2 empty:hidden">
+                        {renderActions(item)}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
 
             {/* عرضِ کافی: جدول */}
             <div className="hidden @3xl/items:block border border-border rounded-lg overflow-hidden">
@@ -226,7 +228,6 @@ export default function OrderItemsReadOnly({
         </div>
 
         {footer}
-      </CardContent>
-    </Card>
+    </SectionCard>
   );
 }

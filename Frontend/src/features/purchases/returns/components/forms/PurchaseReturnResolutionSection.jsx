@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 
 import {
   PURCHASE_RETURN_PROBLEM_LABELS,
@@ -203,12 +203,11 @@ function WarehouseQueueNotice({ purchaseReturn }) {
             size="sm"
             variant="outline"
             className="flex-1 h-8 text-xs"
+            // فقط جایگزینِ همین مرجوعی؛ بی `returnId` فرمِ کاملِ دریافتِ خرید
+            // باز می‌شد و باقیمانده‌ی سفارش هم «رسیده» پیش‌پر بود.
             onClick={() =>
               navigate(
-                ROUTES.WAREHOUSE_RECEIVING_DETAIL.replace(
-                  ":id",
-                  purchaseReturn.purchaseId,
-                ),
+                `${routeWithId(ROUTES.WAREHOUSE_RECEIVING_DETAIL, purchaseReturn.purchaseId)}?returnId=${purchaseReturn.id}`,
               )
             }
           >
@@ -222,12 +221,7 @@ function WarehouseQueueNotice({ purchaseReturn }) {
             variant="outline"
             className="flex-1 h-8 text-xs"
             onClick={() =>
-              navigate(
-                ROUTES.WAREHOUSE_SHIPPING_RETURN_DETAIL.replace(
-                  ":id",
-                  purchaseReturn.id,
-                ),
-              )
+              navigate(routeWithId(ROUTES.WAREHOUSE_SHIPPING_RETURN_DETAIL, purchaseReturn.id))
             }
           >
             عودت / تعیین تکلیف قرنطینه

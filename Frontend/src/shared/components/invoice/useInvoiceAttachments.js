@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 import { useFileUploadList } from "@/shared/hooks/useFileUploadList";
 import { ImageFolderEnum } from "@/shared/domain/enums/imageFolder";
 
@@ -31,4 +33,20 @@ export function useInvoiceAttachments(initialItems = []) {
     allowDocuments: true,
     initialItems,
   });
+}
+
+/**
+ * ضمیمه‌های یک سندِ ذخیره‌شده (یا سندِ تازه، `doc` خالی): با رسیدنِ نسخه‌ی تازه‌ی
+ * سند از سرور (`updatedAt`) فهرست از نو پر می‌شود — وگرنه بعد از ذخیره روی
+ * نسخه‌ی قبلی می‌ماند.
+ */
+export function useDocumentAttachments(doc) {
+  const list = useInvoiceAttachments(doc?.attachments || []);
+  const { reset } = list;
+  useEffect(() => {
+    if (doc) reset(doc.attachments || []);
+    // فقط با عوض شدنِ سند یا نسخه‌اش.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doc?.id, doc?.updatedAt, reset]);
+  return list;
 }

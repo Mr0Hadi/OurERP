@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { keepPreviousData } from "@tanstack/react-query";
 import { listQuery } from "@/shared/services/api/contract";
 import { useDebouncedFilters } from "@/shared/hooks/useDebouncedFilters";
@@ -28,6 +28,22 @@ export function useProductsQuery(filters, pagination, sorting) {
     placeholderData: keepPreviousData,
     gcTime: 1000 * 60 * 10,
   });
+}
+
+/**
+ * جزئیاتِ کامل یک کالا، از کش یا سرور — برای افزودنِ قلم به فاکتور.
+ *
+ * `GetProductList` قیمتِ خرید، واحد و نرخِ مالیات را ندارد (سندِ frontend-requests.fa.md،
+ * بندِ ۹.۳)؛ بدونِ این، قلمِ خرید با قیمتِ صفر و جمعِ بی‌مالیات اضافه می‌شد.
+ */
+export function useProductDetailLoader() {
+  const queryClient = useQueryClient();
+  return (id) =>
+    queryClient.ensureQueryData({
+      queryKey: productKeys.detail(id),
+      queryFn: () => fetchProductById(id),
+      staleTime: 60_000,
+    });
 }
 
 export function useProductQuery(id) {

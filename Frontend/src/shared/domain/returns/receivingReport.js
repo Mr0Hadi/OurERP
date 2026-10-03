@@ -37,20 +37,38 @@ export function claimQuarantinedQuantity(receivingInfo, claim) {
     : item?.freeQuarantinedOnOrderQuantity ?? 0;
 }
 
-/** گزارشِ یک قلمِ سفارش: خرابیِ سهمِ سفارش و مازادِ همان قلم. */
+/**
+ * گزارشِ یک قلمِ سفارش: خرابیِ سهمِ سفارش و مازادِ همان قلم. هر ردیفِ
+ * قرنطینه `kind` دارد تا بخشِ مازاد جدا شود (`withoutExcess`/`onlyExcess`).
+ */
 export function lineReceivingReport(receivingInfo, purchaseItemId) {
   const item = (receivingInfo?.items || []).find(
     (entry) => entry.purchaseItemId === purchaseItemId,
   );
   return {
     quarantined: [
-      { label: "در قرنطینه (مازاد)", quantity: item?.quarantinedExcessQuantity ?? 0 },
-      { label: "در قرنطینه (خراب، سهم سفارش)", quantity: item?.quarantinedOnOrderQuantity ?? 0 },
       {
+        kind: "excess",
+        label: "در قرنطینه (مازاد)",
+        quantity: item?.quarantinedExcessQuantity ?? 0,
+      },
+      {
+        // خرابیِ دریافت، و از ۲۰۲۶-۰۹-۲۷ مازادِ خریده‌شده هم (که تا «بازگشت
+        // به موجودی» در قرنطینه می‌ماند) — پس «خراب» همیشه درست نیست.
+        kind: "onOrder",
+        label: "در قرنطینه (سهم سفارش)",
+        quantity: item?.quarantinedOnOrderQuantity ?? 0,
+      },
+      {
+        kind: "customerReturn",
         label: "در قرنطینه (برگشتیِ معیوبِ مشتری)",
         quantity: item?.quarantinedCustomerReturnQuantity ?? 0,
       },
-      { label: "در قرنطینه (نگهداشتِ انبار)", quantity: item?.quarantinedWarehouseHoldQuantity ?? 0 },
+      {
+        kind: "warehouseHold",
+        label: "در قرنطینه (نگهداشتِ انبار)",
+        quantity: item?.quarantinedWarehouseHoldQuantity ?? 0,
+      },
     ],
     discrepancies: (receivingInfo?.discrepancies || []).filter(
       (d) => d.purchaseItemId === purchaseItemId,
@@ -58,9 +76,28 @@ export function lineReceivingReport(receivingInfo, purchaseItemId) {
   };
 }
 
+const isExcessDiscrepancy = (d) => d.custodyReason === UnitCustodyReasonEnum.EXCESS;
+
+/** گزارشِ قلم بدونِ بخشِ مازادش — وقتی مازاد ادعای جدا و گزارشِ خودش را دارد. */
+export function withoutExcess(report) {
+  return {
+    quarantined: report.quarantined.filter((entry) => entry.kind !== "excess"),
+    discrepancies: report.discrepancies.filter((d) => !isExcessDiscrepancy(d)),
+  };
+}
+
+/** فقط بخشِ مازادِ گزارشِ قلم. */
+function onlyExcess(report) {
+  return {
+    quarantined: report.quarantined.filter((entry) => entry.kind === "excess"),
+    discrepancies: report.discrepancies.filter(isExcessDiscrepancy),
+  };
+}
+
 /**
- * گزارشِ مرتبط با یک ادعا. ادعای روی سفارش همه‌ی گزارشِ قلمش را می‌بیند؛
- * مازاد فقط بخشِ مازادِ قلم؛ نامرتبط فقط کالای سفارش‌ندادهِ همان محصول.
+ * گزارشِ مرتبط با یک ادعا: ادعای روی سفارش بخشِ سهمِ سفارشِ قلمش را
+ * می‌بیند، مازاد فقط بخشِ مازادِ قلم، و نامرتبط فقط کالای سفارش‌ندادهِ
+ * همان محصول.
  */
 export function claimReceivingReport(receivingInfo, claim) {
   if (!receivingInfo || !claim) return { quarantined: [], discrepancies: [] };
@@ -71,7 +108,11 @@ export function claimReceivingReport(receivingInfo, claim) {
     );
     return {
       quarantined: [
-        { label: "در قرنطینه (سفارش‌نداده)", quantity: unlisted?.quarantinedQuantity ?? 0 },
+        {
+          kind: "unlisted",
+          label: "در قرنطینه (سفارش‌نداده)",
+          quantity: unlisted?.quarantinedQuantity ?? 0,
+        },
       ],
       discrepancies: (receivingInfo.discrepancies || []).filter(
         (d) =>
@@ -82,15 +123,9 @@ export function claimReceivingReport(receivingInfo, claim) {
   }
 
   const report = lineReceivingReport(receivingInfo, claim.orderLineId ?? null);
-  if (claim.offScopeKind === OFF_SCOPE_KINDS.EXCESS) {
-    return {
-      quarantined: report.quarantined.slice(0, 1),
-      discrepancies: report.discrepancies.filter(
-        (d) => d.custodyReason === UnitCustodyReasonEnum.EXCESS,
-      ),
-    };
-  }
-  return { ...report, quarantined: report.quarantined.slice(1) };
+  return claim.offScopeKind === OFF_SCOPE_KINDS.EXCESS
+    ? onlyExcess(report)
+    : withoutExcess(report);
 }
 
 /** جمعِ همه‌ی دانه‌های قرنطینه‌ی یک خرید، از هر علتی. */

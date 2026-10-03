@@ -9,16 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/components/ui/alert-dialog";
+import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 import FileUploadList from "@/shared/components/files/FileUploadList";
 import RemoteImage from "@/shared/components/files/RemoteImage";
 import { useFileUploadList } from "@/shared/hooks/useFileUploadList";
@@ -39,10 +30,9 @@ import ReceivingSummaryCard from "../components/forms/ReceivingSummaryCard";
 import ReceivingTransporterSection from "../components/forms/ReceivingTransporterSection";
 import GoodsRoundItemsSection from "@/shared/components/returns/GoodsRoundItemsSection";
 import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
-import { ROUTES } from "@/shared/constants/routes";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
-
 
 // سقفِ عکس‌های یک دورِ دریافت — `ReceivePurchaseCommand.Images` سقفی
 // ندارد، این فقط یک حدِ عملی برای فرم است.
@@ -65,7 +55,7 @@ function withProductImage(rows, productMap) {
  * کالای سفارش‌نداده، و کالای جایگزینی که مرجوعی‌های همین خرید منتظرش‌اند
  * — همه با یک `ReceiveShipment` و در یک تراکنش.
  *
- * `replacementReturnId` (از صفِ «مرجوعی‌های در انتظار دریافت»، `?returnId=`):
+ * `replacementReturnId` (`?returnId=`، از دکمه‌ی «دریافت کالای جایگزین» در صفحه‌ی مرجوعی):
  * فقط کالای جایگزینِ همان مرجوعی ثبت می‌شود؛ اقلامِ خرید، کالای
  * سفارش‌نداده، عکس‌ها و کارتِ قرنطینه که مالِ دریافتِ خودِ خریدند پنهان‌اند.
  */
@@ -159,6 +149,12 @@ function ReceivingDetailForm({ receivingInfo, replacementReturnId }) {
     : hasSomethingToReceive || replacement.hasSomethingToRecord;
   const complete = replacementOnly ? replacement.isAllComplete : isAllComplete;
 
+  // جایگزینِ تنها از صفحه‌ی همان مرجوعی باز می‌شود؛ کار که تمام شد (یا
+  // لغو شد) کاربر به همان سند برمی‌گردد، نه صفِ دریافتِ انبار.
+  const exitRoute = replacementOnly
+    ? routeWithId(ROUTES.PURCHASES_RETURNS_DETAIL, replacementReturnId)
+    : ROUTES.WAREHOUSE_RECEIVING;
+
   const handleSubmit = () => {
     // سربرگِ دورهای مرجوعی همان مشخصاتِ خودِ محموله است.
     const shipmentHeader = {
@@ -180,14 +176,14 @@ function ReceivingDetailForm({ receivingInfo, replacementReturnId }) {
         setShowConfirmDialog(false);
         images.commit();
         resetForm();
-        navigate(ROUTES.WAREHOUSE_RECEIVING);
+        navigate(exitRoute);
       },
     });
   };
 
   const handleCancel = () => {
     images.discard();
-    navigate(ROUTES.WAREHOUSE_RECEIVING);
+    navigate(exitRoute);
   };
 
   return (
@@ -228,6 +224,7 @@ function ReceivingDetailForm({ receivingInfo, replacementReturnId }) {
               }
               withObservations
               observationTexts={{
+                subject: "کالای جایگزین",
                 emptyHint:
                   "اگر بخشی از کالای جایگزین خراب رسیده، ثبتش کنید. کالای خراب به قرنطینه می‌رود، نه موجودی.",
                 healthySuffix: "عدد سالم به موجودی",
@@ -352,25 +349,22 @@ function ReceivingDetailForm({ receivingInfo, replacementReturnId }) {
         </div>
       </div>
 
-      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>ثبت این محموله</AlertDialogTitle>
-            <AlertDialogDescription>
-              کالای سالمِ سهمِ سفارش به موجودی اضافه می‌شود؛ خرابی‌ها، مازاد و
-              کالای سفارش‌نداده به قرنطینه می‌روند.
-              {!isAllComplete &&
-                " باقیمانده‌ی نرسیده در انتظار محموله‌ی بعدی می‌ماند."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isBusy}>انصراف</AlertDialogCancel>
-            <AlertDialogAction disabled={isBusy} onClick={handleSubmit}>
-              {isBusy ? "در حال ثبت..." : "تأیید"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+        title={replacementOnly ? "ثبت دریافت جایگزین" : "ثبت این محموله"}
+        description={
+          replacementOnly
+            ? "کالای جایگزینِ سالم به موجودی اضافه می‌شود و بخشِ خراب به قرنطینه می‌رود."
+            : `کالای سالمِ سهمِ سفارش به موجودی اضافه می‌شود؛ خرابی‌ها، مازاد و کالای سفارش‌نداده به قرنطینه می‌روند.${
+                isAllComplete ? "" : " باقیمانده‌ی نرسیده در انتظار محموله‌ی بعدی می‌ماند."
+              }`
+        }
+        destructive={false}
+        pendingLabel="در حال ثبت..."
+        isPending={isBusy}
+        onConfirm={handleSubmit}
+      />
     </div>
   );
 }

@@ -6,7 +6,7 @@ import {
   toApiAttachments,
 } from "@/shared/services/api/contract";
 import { toDateOnly } from "@/shared/lib/dateUtils";
-import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+import { toApiPaymentRows } from "@/shared/domain/payments/paymentRows";
 
 /** `PurchaseListSortEnum`ِ بکند، بر اساسِ شناسه‌ی ستونِ جدول. */
 export const PURCHASE_SORT_COLUMNS = {
@@ -63,88 +63,6 @@ function toApiItems(items = []) {
 }
 
 /**
- * فرم → `paymentDetails`ِ `CreatePurchase`: پولی که همان لحظه‌ی ثبت
- * داده شده (مثلاً پیش‌پرداخت). بعد از ثبت، پرداخت‌ها فقط با
- * `Add/Edit/VoidPurchasePayment` تغییر می‌کنند.
- *
- * فرم پرداخت را با چهار فیلدِ جدا نگه می‌دارد
- * (`paymentType`/`checkNumber`/`transferRef`/`mixedPayments`)؛ بکند یک
- * آرایه‌ی `{type, amount, paidAt?, checkNumber?, transferRef?}[]` می‌خواهد.
- * هر ردیف یک جابه‌جاییِ واقعیِ پول است، پس ردیفِ بی‌مبلغ فرستاده نمی‌شود
- * (سرور `amount > 0` می‌خواهد) و «نسیه» — که شرایط پرداخت است نه
- * پرداخت — ردیفی ندارد مگر مبلغی واقعاً داده شده باشد.
- */
-export function toApiPaymentDetails({
-  paymentType,
-  paidAmount,
-  paymentPaidAt,
-  checkNumber,
-  transferRef,
-  mixedPayments,
-}) {
-  const now = new Date().toISOString();
-
-  const rows =
-    paymentType === PaymentTypeEnum.MIXED
-      ? (mixedPayments || []).map((part) => ({
-          type: part.type,
-          amount: Number(part.amount) || 0,
-          paidAt: part.paidAt || now,
-          checkNumber: part.checkNumber || undefined,
-          transferRef: part.transferRef || undefined,
-        }))
-      : [
-          {
-            type: paymentType,
-            amount: Number(paidAmount) || 0,
-            paidAt: paymentPaidAt || now,
-            checkNumber:
-              paymentType === PaymentTypeEnum.CHECK
-                ? checkNumber || undefined
-                : undefined,
-            transferRef:
-              paymentType === PaymentTypeEnum.TRANSFER
-                ? transferRef || undefined
-                : undefined,
-          },
-        ];
-  return rows.filter((row) => row.amount > 0);
-}
-
-/**
- * `paymentDetails`ِ سرور → فیلدهای فرم.
- *
- * برعکسِ تابعِ بالا. بدون این، سندی که با پرداختِ ترکیبی ثبت شده بود
- * هنگام باز شدن هیچ ردیفی نشان نمی‌داد (فرم دنبال `mixedPayments`
- * می‌گشت و سرور `paymentDetails` فرستاده بود)، و شماره‌ی چک/پیگیریِ
- * سندهای تک‌روشی هم خالی می‌ماند.
- */
-function fromApiPaymentDetails(paymentDetails = [], paymentType) {
-  const rows = paymentDetails.map((detail) => ({
-    id: detail.id,
-    type: detail.type,
-    amount: Number(detail.amount) || 0,
-    paidAt: detail.paidAt || null,
-    checkNumber: detail.checkNumber || "",
-    transferRef: detail.transferRef || "",
-  }));
-
-  if (paymentType === PaymentTypeEnum.MIXED) {
-    return { mixedPayments: rows, checkNumber: "", transferRef: "", paymentPaidAt: null };
-  }
-
-  // روش‌های تک‌مرحله‌ای یک ردیف بیشتر ندارند؛ شماره‌ی چک/پیگیری از همان
-  // ردیف به فیلدهای مسطحِ فرم برمی‌گردد.
-  const single = rows.find((row) => row.checkNumber || row.transferRef) || rows[0];
-  return {
-    mixedPayments: [],
-    checkNumber: single?.checkNumber || "",
-    transferRef: single?.transferRef || "",
-    paymentPaidAt: single?.paidAt || null,
-  };
-}
-
-/**
  * سرور → فرم، برای کلِ سندِ خرید.
  *
  * از وقتی نام‌های فرانت با `PurchaseItemDto` یکی شد، اقلام هیچ ترجمه‌ای
@@ -162,7 +80,6 @@ export function fromApiPurchase(dto) {
     paymentDate: toDateOnly(dto.paymentDate),
     items: dto.items || [],
     paymentDetails: dto.paymentDetails || [],
-    ...fromApiPaymentDetails(dto.paymentDetails, dto.paymentType),
     drivers: dto.drivers || [],
     receivingNotes: dto.receivingNotes || [],
     attachments: dto.attachments || [],
@@ -205,7 +122,7 @@ export async function createPurchase(purchaseData, { idempotencyKey } = {}) {
     "/Purchase/CreatePurchase",
     {
       ...toApiPurchasePayload(purchaseData),
-      paymentDetails: toApiPaymentDetails(purchaseData),
+      paymentDetails: toApiPaymentRows(purchaseData.paymentRows),
       productItemList: toApiItems(purchaseData.items),
     },
     idempotent(idempotencyKey),

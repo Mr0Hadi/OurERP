@@ -7,6 +7,7 @@ import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import SaleStatusBadge from "@/shared/components/status/SaleStatusBadge";
 import StatusBadge from "@/shared/components/status/StatusBadge";
 import { detailsColumn } from "@/shared/components/table/columns";
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 const SaleTable = ({
   data,
@@ -60,7 +61,7 @@ const SaleTable = ({
                   tone={hasOpenReturn ? "caution" : "neutral"}
                   title={hasOpenReturn ? "مرجوعیِ باز دارد" : "مرجوعی دارد"}
                 >
-                  {returnCount.toLocaleString("fa-IR")} مرجوعی
+                  {formatNumber(returnCount)} مرجوعی
                 </StatusBadge>
               )}
             </div>

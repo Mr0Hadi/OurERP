@@ -226,7 +226,7 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
             header={header}
             onHeaderChange={setHeader}
             title="اطلاعات این دور"
-            progressLabel="پیشرفت کار انبار"
+            progressLabel="مقدارِ این دور از باقیمانده"
             dateLabel="تاریخ"
             noteLabel="یادداشت"
           />

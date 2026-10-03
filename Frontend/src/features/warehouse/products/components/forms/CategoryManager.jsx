@@ -83,7 +83,13 @@ export default function CategoryManager({ value, onChange }) {
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogTrigger asChild>
-          <Button type="button" variant="outline" size="icon" className="shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="shrink-0"
+            aria-label="افزودن دسته‌بندی جدید"
+          >
             <Plus className="w-4 h-4" />
           </Button>
         </DialogTrigger>

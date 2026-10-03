@@ -56,3 +56,18 @@ export function invoiceTotals(items = []) {
     { netAmount: 0, taxAmount: 0, totalAmount: 0, taxUnknown: false },
   );
 }
+
+/**
+ * جمع‌های فاکتورِ صادرشده از مبالغِ ذخیره‌شده‌ی سرور (هم‌شکلِ `invoiceTotals`).
+ * سند فقط `totalAmount` دارد؛ مالیات جمعِ `taxAmount`ِ قلم‌هاست (و اگر قلمی آن
+ * را نداشت، پیش‌نمایش با قاعده‌ی سرور).
+ */
+export function savedInvoiceTotals(doc) {
+  const totalAmount = Number(doc?.totalAmount) || 0;
+  const taxAmount = (doc?.items || []).reduce(
+    (sum, item) =>
+      sum + (item.taxAmount != null ? Number(item.taxAmount) || 0 : invoiceLineAmounts(item).taxAmount),
+    0,
+  );
+  return { netAmount: totalAmount - taxAmount, taxAmount, totalAmount, taxUnknown: false };
+}

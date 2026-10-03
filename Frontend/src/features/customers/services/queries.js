@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { listQuery } from "@/shared/services/api/contract";
 import { useDebouncedFilters } from "@/shared/hooks/useDebouncedFilters";
+import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 
 import { CUSTOMER_SORT_COLUMNS, fetchCustomers, getCustomerById } from "./api-v1";
 import { customerKeys } from "./queryKeys";
@@ -15,12 +17,13 @@ export function useCustomerListFilters() {
   });
 }
 
-export function useCustomersQuery(filters, pagination, sorting) {
+export function useCustomersQuery(filters, pagination, sorting, { enabled = true } = {}) {
   const params = listQuery({ filters, pagination, sorting, sortColumns: CUSTOMER_SORT_COLUMNS });
   return useQuery({
     queryKey: customerKeys.list(params),
     queryFn: () => fetchCustomers(params),
     placeholderData: keepPreviousData,
+    enabled,
   });
 }
 
@@ -48,4 +51,33 @@ const NO_CUSTOMERS = [];
 export function useCustomersOptionsQuery() {
   const { data, isLoading } = useCustomersQuery(NO_FILTERS, OPTIONS_PAGINATION, OPTIONS_SORTING);
   return { customers: data?.items ?? NO_CUSTOMERS, isLoading };
+}
+
+const SEARCH_PAGINATION = { pageIndex: 0, pageSize: 20 };
+
+/**
+ * جست‌وجوی سمتِ سرور برای انتخابگرِ مشتری. `fullName`ِ سرور فقط نام *یا*
+ * نام خانوادگی را جدا می‌گردد، پس «علی رضایی» هیچ‌چیز نمی‌آورد؛ کلمه‌ی اول
+ * به سرور می‌رود و بقیه‌ی کلمه‌ها همین‌جا روی نتیجه اعمال می‌شوند
+ * (frontend-requests.fa.md، بندِ ۹.۱۲).
+ */
+/** `enabled: false` برای نمایشِ فقط‌خواندنی (فاکتورِ صادرشده) که جست‌وجو ندارد. */
+export function useCustomerSearchQuery(term, { enabled = true } = {}) {
+  const search = useDebouncedValue(term.trim());
+  const words = search.split(/\s+/).filter(Boolean);
+  const filters = useMemo(() => (search ? { fullName: search.split(/\s+/)[0] } : NO_FILTERS), [search]);
+  const { data, isFetching } = useCustomersQuery(filters, SEARCH_PAGINATION, OPTIONS_SORTING, { enabled });
+  const items = data?.items ?? NO_CUSTOMERS;
+  const results =
+    words.length > 1
+      ? items.filter((customer) => {
+          const name = `${customer.firstName} ${customer.lastName}`;
+          return words.every((word) => name.includes(word));
+        })
+      : items;
+  return {
+    results,
+    total: words.length > 1 ? results.length : (data?.total ?? 0),
+    isSearching: isFetching || search !== term.trim(),
+  };
 }

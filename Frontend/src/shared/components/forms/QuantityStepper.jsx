@@ -30,6 +30,7 @@ export default function QuantityStepper({ value, max, onChange, size = "md" }) {
         className={`${dims} shrink-0`}
         disabled={current <= 0}
         onClick={() => handleStep(-1)}
+        aria-label="یکی کمتر"
       >
         <Minus className="h-3.5 w-3.5" />
       </Button>
@@ -39,6 +40,7 @@ export default function QuantityStepper({ value, max, onChange, size = "md" }) {
         max={max}
         value={current}
         onChange={(e) => onChange(clampQuantity(e.target.value, max))}
+        aria-label="تعداد"
         className={`${dims.split(" ")[0]} ${inputWidth} text-center text-sm px-1`}
       />
       <Button
@@ -48,6 +50,7 @@ export default function QuantityStepper({ value, max, onChange, size = "md" }) {
         className={`${dims} shrink-0`}
         disabled={current >= max}
         onClick={() => handleStep(1)}
+        aria-label="یکی بیشتر"
       >
         <Plus className="h-3.5 w-3.5" />
       </Button>

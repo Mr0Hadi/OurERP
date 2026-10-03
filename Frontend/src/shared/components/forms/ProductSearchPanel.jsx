@@ -1,10 +1,9 @@
-import { useState, useMemo } from "react";
-import { Plus, Search } from "lucide-react";
+import { useId, useMemo, useRef, useState } from "react";
+import { List, Plus, Search, X } from "lucide-react";
 import toast from "react-hot-toast";
+
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
-import { unitLabelOf } from "@/shared/domain/enums/productUnit";
-import RemoteImage from "@/shared/components/files/RemoteImage";
 import {
   Select,
   SelectContent,
@@ -12,62 +11,54 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import BarcodeScanField from "@/shared/components/barcode/BarcodeScanField";
+import RemoteImage from "@/shared/components/files/RemoteImage";
+import CameraScanButton from "@/shared/components/barcode/CameraScanButton";
+import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 import { parseBarcode } from "@/shared/domain/barcode/productCode";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
 import { formatNumber } from "@/shared/lib/numberFormat";
+import { toneText } from "@/shared/lib/tone";
+import { cn } from "@/shared/lib/utils";
+
+const MAX_RESULTS = 30;
+
+function stockTone(product) {
+  if (product.stock === 0) return "danger";
+  if (product.stock <= (product.lowStockThreshold ?? 10)) return "warning";
+  return "success";
+}
 
 /**
- * جست‌وجو و انتخاب کالا برای افزودن به اقلام.
- * قیمت اولیه‌ی هر قلم را خودِ فراخوان در onAdd تعیین می‌کند،
- * چون در خرید و فروش از دو فیلد قیمت متفاوت خوانده می‌شود.
+ * جست‌وجو و افزودنِ کالا: یک فیلد برای نام/کد/برند و بارکدِ اسکنر، دکمه‌ی دوربین
+ * کنارش، و زیرشان دسته‌بندی و «همه‌ی کالاها» — در هر عرضی دیده می‌شوند.
+ *  - تایپ، فهرست را فیلتر می‌کند؛ ↑/↓ بینِ نتیجه‌ها و Enter قلمِ برجسته را
+ *    اضافه می‌کند — بی موس.
+ *  - اسکنرِ دستی در هر دو فیلد کار می‌کند: کد را می‌نویسد و Enter می‌زند؛ اگر
+ *    متن بارکدِ کالا (یا دانه) باشد، همان کالا اضافه می‌شود.
+ *  - کالای بی‌تصویر جای خالی نمی‌گذارد؛ کادرش «تصویر» نوشته دارد.
  *
- * اسکن بارکد همان مسیرِ افزودنِ دستی را طی می‌کند: کالای منطبق پیدا و
- * مستقیم به onAdd داده می‌شود — بدون نیاز به کلیک روی دکمه‌ی افزودن.
+ * فهرست تا جست‌وجو یا «نمایش همه» بسته است و بیش از `MAX_RESULTS` ردیف
+ * نشان نمی‌دهد.
  *
- * `addedQuantityOf(productId)` تعدادِ فعلیِ همان کالا در لیست است (صفر
- * یعنی هنوز اضافه نشده). عمداً «تعداد» است نه بولین: دکمه‌ی افزودن بعد
- * از اولین کلیک هم فعال می‌ماند تا بشود تعداد را از روی همین لیست
- * زیاد کرد، و باید نشان دهد الان چندتاست.
+ * `onAdd(product, reference?)` قلم را اضافه می‌کند؛ `false` یعنی رد شد (پیامش
+ * را خودش داده). `addedQuantityOf(productId)` تعدادِ فعلیِ کالا در فهرست است
+ * تا دکمه‌ی + نشان دهد الان چندتاست.
  */
 export default function ProductSearchPanel({ products, addedQuantityOf, onAdd }) {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [browseAll, setBrowseAll] = useState(false);
+  const [active, setActive] = useState(0);
+  const inputRef = useRef(null);
+  const listId = useId();
 
-  const handleScan = (code) => {
-    // تطبیق روی payload، نه رشته‌ی خام: اسکنر ممکن است کدِ خوانا بدهد یا
-    // فقط رقم‌ها، و بارکدِ یک دانه هم باید به کالای خودش برسد.
-    const reference = parseBarcode(code);
-    const product =
-      reference.kind === BarcodeReferenceKindEnum.UNKNOWN
-        ? null
-        : products.find((p) => Number(p.id) === reference.productId);
-    if (!product) {
-      toast.error(`کالایی با کد «${code}» پیدا نشد`);
-      return;
-    }
-    const previousQuantity = addedQuantityOf(product.id);
-    // مرجعِ بارکد هم داده می‌شود تا فراخوان اگر بخواهد کدِ دانه را نگه دارد؛
-    // `false` یعنی افزودن رد شد (مثلاً دانه‌ی تکراری) و پیامش را خودش داده.
-    if (onAdd(product, reference) === false) return;
-    if (reference.kind === BarcodeReferenceKindEnum.UNIT) {
-      toast.success(`یک دانه از «${product.name}» اسکن شد`);
-      return;
-    }
-    toast.success(
-      previousQuantity > 0
-        ? `«${product.name}» شد ${(previousQuantity + 1).toLocaleString("fa-IR")} عدد`
-        : `«${product.name}» اضافه شد`,
-    );
-  };
+  const categories = useMemo(
+    () => [...new Set(products.map((p) => p.categoryName).filter(Boolean))].sort(),
+    [products],
+  );
 
-  const categories = useMemo(() => {
-    const cats = [...new Set(products.map((p) => p.categoryName).filter(Boolean))];
-    return cats.sort();
-  }, [products]);
-
-  const filteredProducts = useMemo(() => {
-    const term = search.toLowerCase();
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase();
     return products.filter((p) => {
       const matchSearch =
         !term ||
@@ -75,31 +66,121 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
         p.code?.toLowerCase().includes(term) ||
         p.brand?.toLowerCase().includes(term) ||
         p.barcode?.toLowerCase().includes(term);
-      const matchCategory = !categoryFilter || p.categoryName === categoryFilter;
-      return matchSearch && matchCategory;
+      return matchSearch && (!categoryFilter || p.categoryName === categoryFilter);
     });
   }, [products, search, categoryFilter]);
 
-  return (
-    <div className="space-y-3">
-      <BarcodeScanField onScan={handleScan} />
+  const isListOpen = Boolean(search.trim() || categoryFilter || browseAll);
+  const shown = filtered.slice(0, MAX_RESULTS);
+  const hiddenCount = filtered.length - shown.length;
+  const activeIndex = Math.min(active, Math.max(shown.length - 1, 0));
 
-      {/* سطر جست‌وجو + فیلتر دسته‌بندی */}
-      <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+  const add = (product, reference) => {
+    const before = addedQuantityOf(product.id);
+    if (onAdd(product, reference) === false) return false;
+    if (reference?.kind === BarcodeReferenceKindEnum.UNIT) {
+      toast.success(`یک دانه از «${product.name}» اسکن شد`);
+    } else if (before > 0) {
+      toast.success(`«${product.name}» شد ${formatNumber(before + 1)} عدد`);
+    }
+    return true;
+  };
+
+  /** متنِ کامل یک بارکد است؟ تطبیق روی payload، نه رشته‌ی خام. */
+  const scan = (code) => {
+    const reference = parseBarcode(code);
+    if (reference.kind === BarcodeReferenceKindEnum.UNKNOWN) return false;
+    const product = products.find((p) => Number(p.id) === reference.productId);
+    if (!product) {
+      toast.error(`کالایی با کد «${code}» پیدا نشد`);
+      return true;
+    }
+    if (add(product, reference) && addedQuantityOf(product.id) === 0) {
+      toast.success(`«${product.name}» اضافه شد`);
+    }
+    return true;
+  };
+
+  const resetSearch = () => {
+    setSearch("");
+    setActive(0);
+    inputRef.current?.focus();
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!shown.length) return;
+      const step = e.key === "ArrowDown" ? 1 : -1;
+      const next = (activeIndex + step + shown.length) % shown.length;
+      setActive(next);
+      document.getElementById(`${listId}-${next}`)?.scrollIntoView({ block: "nearest" });
+    } else if (e.key === "Enter") {
+      // Enter نباید فرمِ کل صفحه را بفرستد.
+      e.preventDefault();
+      const term = search.trim();
+      if (!term) return;
+      if (scan(term)) return resetSearch();
+      const product = shown[activeIndex];
+      if (product) {
+        add(product);
+        resetSearch();
+      } else {
+        toast.error(`کالایی با «${term}» پیدا نشد`);
+      }
+    } else if (e.key === "Escape" && search) {
+      e.preventDefault();
+      resetSearch();
+    }
+  };
+
+  return (
+    <div className="@container/search space-y-2">
+      {/* یک فیلد برای جست‌وجو و اسکنرِ دستی (Enter)، دکمه‌ی دوربین کنارش؛ دسته‌بندی و
+          «همه‌ی کالاها» ردیفِ بعد. */}
+      <div className="flex gap-2">
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="جست‌وجو بر اساس نام، کد یا برند..."
+            ref={inputRef}
+            role="combobox"
+            aria-expanded={isListOpen}
+            aria-controls={listId}
+            aria-activedescendant={isListOpen && shown.length ? `${listId}-${activeIndex}` : undefined}
+            placeholder="جست‌وجوی نام، کد، برند یا اسکنِ بارکد..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pr-8 text-sm h-9 input-rtl-placeholder"
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setActive(0);
+            }}
+            onKeyDown={handleKeyDown}
+            autoComplete="off"
+            spellCheck={false}
+            className="input-rtl-placeholder pr-9 pl-8"
           />
+          {search && (
+            <button
+              type="button"
+              className="absolute left-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:text-foreground"
+              onClick={resetSearch}
+              aria-label="پاک‌کردنِ جست‌وجو"
+            >
+              <X className="size-4" />
+            </button>
+          )}
         </div>
+        <CameraScanButton
+          className="shrink-0"
+          onDetected={(code) => scan(code) || toast.error(`کد «${code}» شناخته نشد`)}
+        />
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <Select
           value={categoryFilter || "all"}
           onValueChange={(v) => setCategoryFilter(v === "all" ? "" : v)}
         >
-          <SelectTrigger className="h-9 w-full sm:w-40 rounded-md border border-input bg-card text-card-foreground text-sm focus:ring-2 focus:ring-ring transition-colors">
+          <SelectTrigger aria-label="دسته‌بندی" size="sm" className="w-44 max-w-full">
             <SelectValue placeholder="همه دسته‌ها" />
           </SelectTrigger>
           <SelectContent>
@@ -111,93 +192,89 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
             ))}
           </SelectContent>
         </Select>
-      </div>
-
-      {/* لیست محصولات */}
-      <div className="lg:max-h-64 max-h-100 overflow-y-auto custom-scroll border border-border rounded-lg p-2 space-y-1 bg-muted/30">
-        {filteredProducts.length === 0 ? (
-          <p className="text-center text-sm text-muted-foreground py-6">
-            کالایی یافت نشد
-          </p>
+        {browseAll && !search.trim() && !categoryFilter ? (
+          <Button type="button" size="sm" variant="ghost" className="text-xs" onClick={() => setBrowseAll(false)}>
+            بستن فهرست
+          </Button>
         ) : (
-          filteredProducts.map((product) => {
-            const addedQuantity = addedQuantityOf(product.id);
-            return (
-            <div
-              key={product.id}
-              className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 rounded-md border border-border bg-card px-3 py-2 hover:bg-accent/50 transition-colors"
+          !isListOpen && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="gap-1.5 text-xs"
+              onClick={() => setBrowseAll(true)}
             >
-              {/* تصویر — اگر پاسخ فقط کلید داشته باشد، آدرس خودش گرفته می‌شود */}
-              <RemoteImage
-                imageKey={product.imageKey}
-                imageUrl={product.imageUrl ?? product.image}
-                alt={product.name}
-                className="w-10 h-10 rounded-md object-cover shrink-0 border border-border"
-                fallback={
-                  <div className="w-10 h-10 rounded-md bg-muted border border-border flex items-center justify-center shrink-0">
-                    <span className="text-xs text-muted-foreground">تصویر</span>
-                  </div>
-                }
-              />
-
-              {/* اطلاعات */}
-              <div className="flex-1 min-w-0 w-full sm:w-auto">
-                <p className="text-sm font-medium text-card-foreground truncate">
-                  {product.name}
-                </p>
-                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-                  {product.brand && (
-                    <span className="text-xs text-muted-foreground">
-                      برند: {product.brand}
-                    </span>
-                  )}
-                  {product.categoryName && (
-                    <span className="text-xs text-muted-foreground">
-                      دسته: {product.categoryName}
-                    </span>
-                  )}
-                  <span
-                    className={`text-xs font-medium ${
-                      product.stock === 0
-                        ? "text-destructive"
-                        : product.stock <= (product.lowStockThreshold ?? 10)
-                          ? "text-warning"
-                          : "text-success"
-                    }`}
-                  >
-                    موجودی: {formatNumber(product.stock)} {unitLabelOf(product.unit)}
-                  </span>
-                </div>
-              </div>
-
-              {/* دکمه افزودن — بعد از افزوده‌شدن هم فعال می‌ماند تا با هر
-                  کلیک یکی به تعداد اضافه شود؛ عدد روی دکمه، تعداد فعلی است. */}
-              <Button
-                type="button"
-                size="sm"
-                variant={addedQuantity > 0 ? "secondary" : "default"}
-                onClick={() => onAdd(product)}
-                title={
-                  addedQuantity > 0
-                    ? `یکی دیگر اضافه کن (اکنون ${addedQuantity.toLocaleString("fa-IR")} عدد)`
-                    : "افزودن به اقلام"
-                }
-                className="shrink-0 text-xs h-7 px-2 min-w-[3rem] w-full sm:w-auto gap-1"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                {addedQuantity > 0 ? (
-                  <span className="tabular-nums">
-                    {addedQuantity.toLocaleString("fa-IR")}
-                  </span>
-                ) : (
-                  <span className="sm:hidden">افزودن</span>
-                )}
-              </Button>
-            </div>
-            );
-          })
+              <List className="size-3.5" />
+              همه‌ی کالاها ({formatNumber(products.length)})
+            </Button>
+          )
         )}
       </div>
+
+      {isListOpen && (
+        <div className="overflow-hidden rounded-lg border border-border">
+          <ul id={listId} role="listbox" className="custom-scroll max-h-72 divide-y divide-border overflow-y-auto bg-card">
+            {shown.length === 0 && (
+              <li className="py-6 text-center text-sm text-muted-foreground">کالایی یافت نشد</li>
+            )}
+            {shown.map((product, index) => {
+              const added = addedQuantityOf(product.id);
+              return (
+                <li
+                  key={product.id}
+                  id={`${listId}-${index}`}
+                  role="option"
+                  aria-selected={index === activeIndex}
+                  onMouseEnter={() => setActive(index)}
+                  onClick={() => add(product)}
+                  className={cn(
+                    "flex cursor-pointer items-center gap-2.5 px-3 py-2 transition-colors",
+                    index === activeIndex && "bg-accent",
+                  )}
+                >
+                  <RemoteImage
+                    imageKey={product.imageKey}
+                    imageUrl={product.imageUrl ?? product.image}
+                    alt=""
+                    className="size-10 shrink-0 rounded-md border border-border object-cover"
+                    fallback={
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-border bg-muted">
+                        <span className="text-[10px] text-muted-foreground">تصویر</span>
+                      </div>
+                    }
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{product.name}</p>
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      {[product.code, product.brand].filter(Boolean).join(" · ")}
+                      {" · "}
+                      <span className={toneText(stockTone(product))}>
+                        موجودی {formatNumber(product.stock)} {unitLabelOf(product.unit)}
+                      </span>
+                    </p>
+                  </div>
+                  <span
+                    className={cn(
+                      "flex h-7 min-w-9 shrink-0 items-center justify-center gap-1 rounded-md px-2 text-xs font-medium",
+                      added > 0 ? "bg-primary/10 text-primary" : "bg-primary text-primary-foreground",
+                    )}
+                    aria-label={added > 0 ? `یکی دیگر (اکنون ${formatNumber(added)})` : "افزودن"}
+                  >
+                    <Plus className="size-3.5" />
+                    {added > 0 && <span className="tabular-nums">{formatNumber(added)}</span>}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          {hiddenCount > 0 && (
+            <p className="border-t border-border bg-muted/40 px-3 py-1.5 text-[11px] text-muted-foreground">
+              {formatNumber(hiddenCount)} کالای دیگر — دقیق‌تر جست‌وجو کنید.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

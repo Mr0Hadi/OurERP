@@ -21,6 +21,7 @@ import { idempotencyKeyFor } from "@/shared/services/api/contract";
 import { ROUTES } from "@/shared/constants/routes";
 import { supplierKeys } from "@/features/suppliers/services/queryKeys";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
+import { runDocumentChanges } from "@/shared/services/documentChanges";
 
 /**
  * هر نوشتنِ خرید سندِ کامل را برمی‌گرداند: همان در کشِ جزئیات می‌نشیند
@@ -54,24 +55,6 @@ export const useCreatePurchaseMutation = () => {
   });
 };
 
-/** فقط پیش‌فاکتور. */
-export const useUpdatePurchaseMutation = (id) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (purchaseData) => updatePurchase(id, purchaseData),
-    onSuccess: (updated) => {
-      // ویرایش خرید تعداد اقلام را عوض می‌کند، پس «چقدر قابل دریافت
-      // است» و در نتیجه صف دریافت هم عوض می‌شود — نه فقط خودِ خرید.
-      applyPurchase(queryClient, updated);
-      toast.success("خرید با موفقیت ویرایش شد");
-    },
-    onError: (error) => {
-      toast.error(getErrorMessage(error, "خطا در ویرایش خرید"));
-    },
-  });
-};
-
 export const useChangePurchaseStatusMutation = (id) => {
   const queryClient = useQueryClient();
 
@@ -84,77 +67,6 @@ export const useChangePurchaseStatusMutation = (id) => {
     },
     onError: (error) => toast.error(getErrorMessage(error, "خطا در تغییر وضعیت")),
   });
-};
-
-export const useUpdatePurchaseAttachmentsMutation = (id) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (attachments) => updatePurchaseAttachments(id, attachments),
-    onSuccess: (updated) => {
-      applyPurchase(queryClient, updated);
-      toast.success("پیوست‌ها ذخیره شد");
-    },
-    onError: (error) =>
-      toast.error(getErrorMessage(error, "خطا در ذخیره‌ی پیوست‌ها")),
-  });
-};
-
-export const useUpdatePurchasePaymentDateMutation = (id) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (paymentDate) => updatePurchasePaymentDate(id, paymentDate),
-    onSuccess: (updated) => {
-      applyPurchase(queryClient, updated);
-      toast.success("مهلت پرداخت ذخیره شد");
-    },
-    onError: (error) =>
-      toast.error(getErrorMessage(error, "خطا در ذخیره‌ی مهلت پرداخت")),
-  });
-};
-
-/**
- * ثبت و اصلاحِ پرداخت تجمعی‌اند (retry یعنی پرداختِ دوم، هم در سند و هم
- * در حسابِ تامین‌کننده)، پس کلیدِ ایدمپوتنسی می‌گیرند. ابطالِ دوباره را
- * خودِ سرور با ۴۰۰ رد می‌کند.
- */
-export const usePurchasePaymentMutations = (purchaseId) => {
-  const queryClient = useQueryClient();
-  const onSuccess = (message) => (updated) => {
-    applyPurchase(queryClient, updated);
-    toast.success(message);
-  };
-  const onError = (fallback) => (error) =>
-    toast.error(getErrorMessage(error, fallback));
-
-  const add = useMutation({
-    mutationFn: (payment) => {
-      const payload = { ...payment, purchaseId };
-      return addPurchasePayment(payload, {
-        idempotencyKey: idempotencyKeyFor(payment),
-      });
-    },
-    onSuccess: onSuccess("پرداخت ثبت شد"),
-    onError: onError("خطا در ثبت پرداخت"),
-  });
-
-  const edit = useMutation({
-    mutationFn: (payment) =>
-      editPurchasePayment(payment, {
-        idempotencyKey: idempotencyKeyFor(payment),
-      }),
-    onSuccess: onSuccess("پرداخت اصلاح شد"),
-    onError: onError("خطا در اصلاح پرداخت"),
-  });
-
-  const voidPayment = useMutation({
-    mutationFn: voidPurchasePayment,
-    onSuccess: onSuccess("پرداخت باطل شد"),
-    onError: onError("خطا در ابطال پرداخت"),
-  });
-
-  return { add, edit, void: voidPayment };
 };
 
 export const useRemovePurchaseMutation = () => {
@@ -230,5 +142,36 @@ export const useAcceptPurchaseExcessMutation = (purchaseId) => {
       );
     },
     onError: (error) => toast.error(getErrorMessage(error, "خطا در پذیرش کالای مازاد")),
+  });
+};
+
+const PURCHASE_CHANGES_API = {
+  idField: "purchaseId",
+  update: updatePurchase,
+  addPayment: addPurchasePayment,
+  editPayment: editPurchasePayment,
+  voidPayment: voidPurchasePayment,
+  paymentDate: updatePurchasePaymentDate,
+  attachments: updatePurchaseAttachments,
+  status: changePurchaseStatus,
+};
+
+/**
+ * «ثبت تغییرات»ِ صفحه‌ی خرید (پیش‌فاکتور یا صادرشده): سند، پرداخت‌ها، سررسید،
+ * پیوست‌ها و وضعیت با یک دکمه و یک پیام (`runDocumentChanges`). اگر وسطِ کار
+ * خطا رخ دهد، آنچه انجام شده در کش می‌نشیند و بقیه در صفحه می‌ماند.
+ */
+export const usePurchaseChangesSaver = (purchaseId) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (changes) => runDocumentChanges(PURCHASE_CHANGES_API, purchaseId, changes),
+    onSuccess: (latest) => {
+      if (latest) applyPurchase(queryClient, latest);
+      toast.success("تغییرات خرید ذخیره شد");
+    },
+    onError: (error) => {
+      invalidatePurchaseEcosystem(queryClient, purchaseId);
+      toast.error(getErrorMessage(error, "ذخیره‌ی تغییرات ناتمام ماند"));
+    },
   });
 };

@@ -3,16 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FilePlus2, Lock, LockOpen } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/components/ui/alert-dialog";
+import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 import OrderItemsReadOnly from "@/shared/components/forms/OrderItemsReadOnly";
 import UnitsPageLink from "@/features/warehouse/units/components/UnitsPageLink";
 import { usePermission } from "@/features/auth/hooks/usePermission";
@@ -167,7 +158,7 @@ export default function PurchaseItemsCard({ purchase }) {
             )}
           </>
         }
-        description="اقلام فقط در مرحله‌ی پیش‌فاکتور قابل ویرایش‌اند. قلمی را که تامین‌کننده بقیه‌اش را نمی‌فرستد می‌توانید ببندید."
+        description={purchase.items?.some((item) => canClosePurchaseItem(purchase, item)) ? "قلمی را که تامین‌کننده بقیه‌اش را نمی‌فرستد می‌توانید ببندید." : undefined}
         columns={[
           { key: "received", label: "رسیده", render: (item) => formatNumber(item.receivedQuantity) },
           { key: "remaining", label: "مانده", render: (item) => <RemainingCell item={item} /> },
@@ -175,27 +166,17 @@ export default function PurchaseItemsCard({ purchase }) {
         renderActions={canManageLines ? renderActions : undefined}
       />
 
-      <AlertDialog open={!!closing} onOpenChange={(open) => !open && setClosing(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>بستن قلم «{closing?.productName}»</AlertDialogTitle>
-            <AlertDialogDescription>
-              {formatNumber(closing ? stillOwedOf(closing) : 0)} عدد باقیمانده‌ی این قلم دیگر
-              انتظار نمی‌رود و وضعیت خرید از نو حساب می‌شود. فاکتور ویرایش
-              نمی‌شود، ولی سهمِ این مقدار از «مبلغ قابل پرداخت» و از بدهی ما به
-              تامین‌کننده کم می‌شود. پولی خودکار برنمی‌گردد؛ اگر بابت این مقدار
-              پرداخت شده، بازگشتش را در کارت پرداخت‌ها با «پول برگشتی» ثبت کنید.
-              بعداً می‌توانید قلم را دوباره باز کنید.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={closeMutation.isPending}>انصراف</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmClose} disabled={closeMutation.isPending}>
-              {closeMutation.isPending ? "در حال بستن..." : "بستن قلم"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!closing}
+        onOpenChange={(open) => !open && setClosing(null)}
+        title={`بستن قلم «${closing?.productName ?? ""}»`}
+        description={`${formatNumber(closing ? stillOwedOf(closing) : 0)} عدد باقیمانده‌ی این قلم دیگر انتظار نمی‌رود و وضعیت خرید از نو حساب می‌شود. فاکتور ویرایش نمی‌شود، ولی سهمِ این مقدار از «مبلغ قابل پرداخت» کم می‌شود. اگر بابتش پول پرداخت شده، بازگشتش را در کارتِ پرداخت‌ها با «پول برگشتی» ثبت کنید. بعداً می‌توانید قلم را دوباره باز کنید.`}
+        confirmLabel="بستن قلم"
+        pendingLabel="در حال بستن..."
+        destructive={false}
+        isPending={closeMutation.isPending}
+        onConfirm={confirmClose}
+      />
     </>
   );
 }

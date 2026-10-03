@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useSaleQuery } from "@/features/sales/orders/services/queries";
 import OrderFormSkeleton from "@/shared/components/skeletons/OrderFormSkeleton";
 import { ROUTES } from "@/shared/constants/routes";
-import SaleDetailForm from "./SaleDetailForm";
+import SaleForm from "./SaleForm";
 import SaleIssuedView from "./SaleIssuedView";
 import { isSaleProforma } from "@/shared/domain/enums/saleStatus";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
@@ -50,5 +50,5 @@ export default function SaleDetailPage() {
   if (!isSaleProforma(sale.status)) {
     return <SaleIssuedView key={sale.id} sale={sale} />;
   }
-  return <SaleDetailForm key={sale.id} saleData={sale} />;
+  return <SaleForm key={sale.id} sale={sale} />;
 }

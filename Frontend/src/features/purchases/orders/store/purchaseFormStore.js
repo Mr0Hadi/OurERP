@@ -1,5 +1,5 @@
-import { create } from "zustand";
-import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+import { createDocumentFormStore } from "@/shared/store/createDocumentFormStore";
+import { EMPTY_PAYMENT_DRAFT } from "@/shared/domain/payments/paymentRows";
 import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 
 const EMPTY_FORM = {
@@ -9,51 +9,32 @@ const EMPTY_FORM = {
   invoiceDate: "",
   paymentDate: "",
   description: "",
-  paymentType: PaymentTypeEnum.CASH,
-  paidAmount: "",
-  paymentPaidAt: null,
-  checkNumber: "",
-  transferRef: "",
-  mixedPayments: [],
   status: "",
   items: [],
+  // پرداخت‌های ثبت‌نشده (`usePaymentDraft`).
+  paymentDraft: EMPTY_PAYMENT_DRAFT,
 };
 
-export const usePurchaseFormStore = create((set, get) => ({
-  formData: { ...EMPTY_FORM },
-  initializedForId: null,
-
-  setFormData: (data) =>
-    set((state) => ({
-      formData: { ...state.formData, ...data },
-    })),
-
-  setItems: (items) =>
-    set((state) => ({
-      formData: { ...state.formData, items },
-    })),
-
-  initializeForNew: () => {
-    const { initializedForId } = get();
-    if (initializedForId === "new") return;
-    set({ initializedForId: "new", formData: { ...EMPTY_FORM } });
-  },
-
-  initializeFromPurchase: (purchaseData) => {
-    const { initializedForId } = get();
-    const version = `${purchaseData.id}:${purchaseData.updatedAt}`;
-    if (initializedForId === version) return;
-
-    // `id` و مقدارِ رسیده/تسویه‌شده هم نگه داشته می‌شوند: بدون آن‌ها هر
-    // ذخیره‌ی فرم، ردیف‌های سرور را ناشناس می‌کرد و ستون «رسیده» بعد از
-    // اولین ویرایش خالی می‌شد.
-    const formattedItems = (purchaseData.items || []).map((item) => ({
+/**
+ * `id` و مقدارِ رسیده/تسویه‌شده‌ی هر قلم هم نگه داشته می‌شوند: بدون آن‌ها هر
+ * ذخیره‌ی فرم، ردیف‌های سرور را ناشناس می‌کرد و ستون «رسیده» خالی می‌شد.
+ */
+function formFromPurchase(purchase) {
+  return {
+    supplierId: purchase.supplierId || "",
+    supplierName: purchase.supplierName || "",
+    invoiceNumber: purchase.invoiceNumber || "",
+    invoiceDate: purchase.invoiceDate || "",
+    paymentDate: purchase.paymentDate || "",
+    description: purchase.description || "",
+    status: purchase.status ?? "",
+    items: (purchase.items || []).map((item) => ({
       id: item.id,
       productId: item.productId,
       productName: item.productName,
       productCode: item.productCode,
       unit: unitLabelOf(item.unit),
-      quantity: Number(item.quantity ?? item.quantity) || 0,
+      quantity: Number(item.quantity) || 0,
       unitPrice: Number(item.unitPrice) || 0,
       discount: item.discount || 0,
       // نرخ مالیاتی که سرور برای این قلم نگه داشته — پیش‌نمایشِ جمع با آن حساب می‌شود.
@@ -61,29 +42,11 @@ export const usePurchaseFormStore = create((set, get) => ({
       taxCategory: item.taxCategory,
       receivedQuantity: item.receivedQuantity ?? 0,
       settledQuantity: item.settledQuantity ?? 0,
-    }));
+    })),
+  };
+}
 
-    set({
-      initializedForId: version,
-      formData: {
-        ...EMPTY_FORM,
-        supplierId: purchaseData.supplierId || "",
-        supplierName: purchaseData.supplierName || "",
-        invoiceNumber: purchaseData.invoiceNumber || "",
-        invoiceDate: purchaseData.invoiceDate || "",
-        paymentDate: purchaseData.paymentDate || "",
-        description: purchaseData.description || "",
-        paymentType: purchaseData.paymentType ?? PaymentTypeEnum.CASH,
-        paidAmount: purchaseData.paidAmount?.toString() || "",
-        paymentPaidAt: purchaseData.paymentPaidAt || null,
-        checkNumber: purchaseData.checkNumber || "",
-        transferRef: purchaseData.transferRef || "",
-        mixedPayments: purchaseData.mixedPayments || [],
-        status: purchaseData.status ?? "",
-        items: formattedItems,
-      },
-    });
-  },
-
-  resetForm: () => set({ formData: { ...EMPTY_FORM }, initializedForId: null }),
-}));
+export const usePurchaseFormStore = createDocumentFormStore({
+  emptyForm: EMPTY_FORM,
+  formFromDocument: formFromPurchase,
+});
