@@ -12,17 +12,17 @@ import { useCustomerQuery, useCustomerSearchQuery } from "@/features/customers/s
  * ردیفِ جست‌وجو یا نامِ ذخیره‌شده در فرم.
  */
 export default function SaleCustomerSection({
-  step,
   selectedId,
   selectedName,
   onSelect,
   onClear,
   onAddNew,
   error,
+  readOnly = false,
 }) {
   const [search, setSearch] = useState("");
   const [picked, setPicked] = useState(null);
-  const { results, total, isSearching } = useCustomerSearchQuery(search);
+  const { results, total, isSearching } = useCustomerSearchQuery(search, { enabled: !readOnly });
   const { data: detail } = useCustomerQuery(selectedId || null);
 
   const selected = !selectedId
@@ -32,7 +32,6 @@ export default function SaleCustomerSection({
 
   return (
     <PartyPickerCard
-      step={step}
       title="مشتری"
       addNewLabel="مشتری جدید"
       onAddNew={onAddNew}
@@ -48,6 +47,7 @@ export default function SaleCustomerSection({
         onSelect(party.id, partyDisplayName(party));
       }}
       onClear={onClear}
+      readOnly={readOnly}
       searchPlaceholder="جست‌وجوی نام یا نام خانوادگی..."
       emptyListText="لیست مشتریان خالی است"
       notFoundText="مشتری‌ای یافت نشد"

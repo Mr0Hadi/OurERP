@@ -1,9 +1,7 @@
 import { useState } from "react";
-import { Ban, CalendarClock, Pencil, Plus, RotateCcw, Undo2, Wallet } from "lucide-react";
+import { Ban, Pencil, Plus, RotateCcw, Undo2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import { Label } from "@/shared/components/ui/label";
-import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
 import SectionCard from "@/shared/components/documents/SectionCard";
 import StatusBadge from "@/shared/components/status/StatusBadge";
 import PaymentMethodEditor from "./PaymentMethodEditor";
@@ -18,6 +16,7 @@ import {
 } from "@/shared/domain/payments/settlement";
 import { gregorianToPersian, toDateOnly } from "@/shared/lib/dateUtils";
 import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
+import { toneText } from "@/shared/lib/tone";
 import { cn } from "@/shared/lib/utils";
 
 const PENDING_BADGES = {
@@ -27,33 +26,40 @@ const PENDING_BADGES = {
 };
 
 /**
- * پرداخت‌های فاکتورِ صادرشده: فهرست، ثبتِ پرداختِ تازه (با هر روش، از جمله
- * ترکیبی)، اصلاح، ابطال، پولِ برگشتی و سررسید.
+ * پرداخت‌های یک سندِ خرید/فروش — یک کارت برای فاکتورِ تازه، پیش‌فاکتوری که
+ * صادر می‌شود و فاکتورِ صادرشده.
  *
- * هیچ چیز همان لحظه ذخیره نمی‌شود: هر کار در پیش‌نویس (`usePaymentDraft`)
- * می‌ماند و با «ثبت تغییرات»ِ صفحه اعمال می‌شود. ردیفِ در انتظار برچسب دارد و
- * برگشت‌پذیر است. جمع و مانده در سرِ صفحه (`DocumentHero`) است، نه اینجا.
+ * هیچ چیز همان لحظه ذخیره نمی‌شود: ثبت، اصلاح، ابطال و پول برگشتی در پیش‌نویس
+ * (`usePaymentDraft`) می‌مانند و با دکمه‌ی اصلیِ صفحه اعمال می‌شوند. ردیفِ در
+ * انتظار برچسب دارد و برگشت‌پذیر است.
  *
- * @param draft          خروجیِ `usePaymentDraft`
- * @param side           `{ direction, payLabel, refundLabel }`
- * @param payable        بدهیِ واقعیِ طرف (برای پیش‌پرکردنِ مبلغ با باقیمانده)
- * @param refundOnly     سندِ لغوشده: فقط پولِ برگشتی
+ * مبلغِ پرداختِ تازه با مانده پر می‌شود؛ «ترکیبی» مبلغ را بینِ چند روش تقسیم
+ * می‌کند. بدونِ پرداخت یعنی نسیه.
+ *
+ * @param draft     خروجیِ `usePaymentDraft`
+ * @param side      `{ direction, payLabel, refundLabel }`
+ * @param total     جمعِ فاکتور
+ * @param payable   بدهیِ واقعیِ طرف (اگر با جمع فرق دارد؛ مثلاً قلمِ بسته‌شده)
+ * @param allowRefund `false` برای سندِ تازه
+ * @param refundOnly  سندِ لغوشده: فقط پولِ برگشتی
  */
-export default function PaymentsLedgerCard({
+export default function PaymentsCard({
+  title = "پرداخت‌ها",
   draft,
   side,
+  total,
   payable,
-  dueDate,
-  onDueDateChange,
   canManage = true,
+  allowRefund = true,
   refundOnly = false,
   notice,
 }) {
   // { mode: "pay" | "refund" | "edit", row? }
   const [form, setForm] = useState(null);
 
+  const due = Number(payable ?? total) || 0;
   const paid = draft.netPaid;
-  const remaining = (Number(payable) || 0) - paid;
+  const remaining = due - paid;
   const refundDirection =
     side.direction === PaymentDirectionEnum.IN ? PaymentDirectionEnum.OUT : PaymentDirectionEnum.IN;
 
@@ -81,8 +87,7 @@ export default function PaymentsLedgerCard({
 
   return (
     <SectionCard
-      icon={Wallet}
-      title="پرداخت‌ها"
+      title={title}
       action={
         <>
           {draft.hasChanges && (
@@ -91,7 +96,7 @@ export default function PaymentsLedgerCard({
             </StatusBadge>
           )}
           {canAdd && !refundOnly && (
-            <Button type="button" size="sm" className="gap-1.5" onClick={() => setForm({ mode: "pay" })}>
+            <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={() => setForm({ mode: "pay" })}>
               <Plus className="size-3.5" />
               {side.payLabel}
             </Button>
@@ -99,80 +104,79 @@ export default function PaymentsLedgerCard({
         </>
       }
     >
-      <div className="space-y-3">
-        {form && (
-          <PaymentForm
-            key={form.row?.id ?? form.mode}
-            mode={form.mode}
-            title={formTitle}
-            row={form.row}
-            remaining={remaining}
-            paid={paid}
-            onCancel={() => setForm(null)}
-            onSubmit={(moneyRows) => submit(form, moneyRows)}
-          />
-        )}
+      <dl className="grid grid-cols-3 divide-x divide-x-reverse divide-border rounded-lg border border-border text-center">
+        <Stat label={payable != null && Number(payable) !== Number(total) ? "قابل پرداخت" : "مبلغ فاکتور"} value={formatNumber(due)} />
+        <Stat label="پرداخت‌شده" value={formatNumber(paid)} />
+        <Stat
+          label={remaining < 0 ? "اضافه‌پرداخت" : "مانده"}
+          value={remaining === 0 ? "تسویه" : formatNumber(Math.abs(remaining))}
+          className={toneText(remaining > 0 ? "warning" : remaining < 0 ? "info" : "success")}
+        />
+      </dl>
 
-        {rows.length > 0 ? (
-          <ul className="divide-y divide-border rounded-lg border border-border">
-            {rows.map((row) => (
-              <PaymentRow
-                key={row.id}
-                row={row}
-                isRefund={row.direction === refundDirection}
-                manageable={
-                  canManage &&
-                  !row.voidedAt &&
-                  (row.purpose ?? PaymentPurposeEnum.NORMAL) === PaymentPurposeEnum.NORMAL
-                }
-                onEdit={() => setForm({ mode: "edit", row })}
-                onVoid={() => draft.void(row.id)}
-                onUndo={() => draft.undo(row.id)}
-              />
-            ))}
-          </ul>
-        ) : (
-          !form && (
-            <p className="rounded-lg border border-dashed border-border py-5 text-center text-xs text-muted-foreground">
-              هنوز پرداختی ثبت نشده است.
-            </p>
-          )
-        )}
+      {form && (
+        <PaymentForm
+          key={form.row?.id ?? form.mode}
+          mode={form.mode}
+          title={formTitle}
+          row={form.row}
+          remaining={remaining}
+          paid={paid}
+          onCancel={() => setForm(null)}
+          onSubmit={(moneyRows) => submit(form, moneyRows)}
+        />
+      )}
 
-        {notice && <p className="text-xs leading-5 text-muted-foreground">{notice}</p>}
+      {rows.length > 0 ? (
+        <ul className="divide-y divide-border rounded-lg border border-border">
+          {rows.map((row) => (
+            <PaymentRow
+              key={row.id}
+              row={row}
+              isRefund={row.direction === refundDirection}
+              manageable={
+                canManage &&
+                !row.voidedAt &&
+                (row.purpose ?? PaymentPurposeEnum.NORMAL) === PaymentPurposeEnum.NORMAL
+              }
+              onEdit={() => setForm({ mode: "edit", row })}
+              onVoid={() => draft.void(row.id)}
+              onUndo={() => draft.undo(row.id)}
+            />
+          ))}
+        </ul>
+      ) : (
+        !form && (
+          <p className="text-center text-xs text-muted-foreground py-2">
+            پرداختی ثبت نشده؛ مانده به‌صورت نسیه می‌ماند.
+          </p>
+        )
+      )}
 
-        {onDueDateChange && (remaining > 0 || dueDate) && (
-          <div className="flex flex-wrap items-center gap-2">
-            <Label htmlFor="ledger-due" className="flex flex-1 items-center gap-1.5 text-xs text-muted-foreground">
-              <CalendarClock className="size-3.5" aria-hidden />
-              سررسیدِ مانده
-            </Label>
-            <div className="w-40">
-              <PersianDatePicker
-                id="ledger-due"
-                value={dueDate || ""}
-                onChange={(isoDate) => onDueDateChange(isoDate || null)}
-                placeholder="بدون سررسید"
-                disabled={!canManage}
-              />
-            </div>
-          </div>
-        )}
+      {notice && <p className="text-xs leading-5 text-muted-foreground">{notice}</p>}
 
-        {canAdd && paid > 0 && (
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="w-full gap-1.5 text-muted-foreground"
-            onClick={() => setForm({ mode: "refund" })}
-          >
-            <Undo2 className="size-3.5" />
-            {side.refundLabel}
-          </Button>
-        )}
-      </div>
+      {canAdd && allowRefund && paid > 0 && (
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="w-full gap-1.5 text-muted-foreground"
+          onClick={() => setForm({ mode: "refund" })}
+        >
+          <Undo2 className="size-3.5" />
+          {side.refundLabel}
+        </Button>
+      )}
     </SectionCard>
+  );
+}
+
+function Stat({ label, value, className }) {
+  return (
+    <div className="px-2 py-2">
+      <dt className="text-[11px] text-muted-foreground">{label}</dt>
+      <dd className={cn("text-sm font-semibold tabular-nums", className)}>{value}</dd>
+    </div>
   );
 }
 
@@ -280,7 +284,16 @@ function PaymentForm({ mode, title, row, remaining, paid, onCancel, onSubmit }) 
   };
 
   return (
-    <div className="space-y-3 rounded-lg border border-primary/30 bg-primary/3 p-3">
+    <div
+      className="space-y-3 rounded-lg border border-border bg-muted/30 p-3"
+      // Enter در فیلدهای همین فرم پرداخت را اضافه می‌کند، نه کلِ سند را ذخیره.
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && e.target.tagName === "INPUT") {
+          e.preventDefault();
+          confirm();
+        }
+      }}
+    >
       <p className="text-sm font-medium">{title}</p>
       <PaymentMethodEditor
         value={value}
@@ -289,13 +302,12 @@ function PaymentForm({ mode, title, row, remaining, paid, onCancel, onSubmit }) 
           setError(null);
         }}
         payable={payable}
-        fallbackMethod={PaymentTypeEnum.CASH}
         methods={isEdit || isRefund ? ROW_PAYMENT_TYPES : [...ROW_PAYMENT_TYPES, PaymentTypeEnum.MIXED]}
         error={error}
       />
       <div className="flex gap-2">
         <Button type="button" size="sm" className="flex-1" onClick={confirm}>
-          {isEdit ? "اعمالِ اصلاح" : "افزودن به پرداخت‌ها"}
+          {isEdit ? "اعمالِ اصلاح" : "افزودن"}
         </Button>
         <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
           انصراف

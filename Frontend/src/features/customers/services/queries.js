@@ -17,12 +17,13 @@ export function useCustomerListFilters() {
   });
 }
 
-export function useCustomersQuery(filters, pagination, sorting) {
+export function useCustomersQuery(filters, pagination, sorting, { enabled = true } = {}) {
   const params = listQuery({ filters, pagination, sorting, sortColumns: CUSTOMER_SORT_COLUMNS });
   return useQuery({
     queryKey: customerKeys.list(params),
     queryFn: () => fetchCustomers(params),
     placeholderData: keepPreviousData,
+    enabled,
   });
 }
 
@@ -60,11 +61,12 @@ const SEARCH_PAGINATION = { pageIndex: 0, pageSize: 20 };
  * به سرور می‌رود و بقیه‌ی کلمه‌ها همین‌جا روی نتیجه اعمال می‌شوند
  * (frontend-requests.fa.md، بندِ ۹.۱۲).
  */
-export function useCustomerSearchQuery(term) {
+/** `enabled: false` برای نمایشِ فقط‌خواندنی (فاکتورِ صادرشده) که جست‌وجو ندارد. */
+export function useCustomerSearchQuery(term, { enabled = true } = {}) {
   const search = useDebouncedValue(term.trim());
   const words = search.split(/\s+/).filter(Boolean);
   const filters = useMemo(() => (search ? { fullName: search.split(/\s+/)[0] } : NO_FILTERS), [search]);
-  const { data, isFetching } = useCustomersQuery(filters, SEARCH_PAGINATION, OPTIONS_SORTING);
+  const { data, isFetching } = useCustomersQuery(filters, SEARCH_PAGINATION, OPTIONS_SORTING, { enabled });
   const items = data?.items ?? NO_CUSTOMERS;
   const results =
     words.length > 1

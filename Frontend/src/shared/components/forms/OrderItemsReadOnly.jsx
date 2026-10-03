@@ -1,4 +1,4 @@
-import { Lock, Package } from "lucide-react";
+import { Lock } from "lucide-react";
 import SectionCard from "@/shared/components/documents/SectionCard";
 import { Badge } from "@/shared/components/ui/badge";
 import { TaxCategoryEnum } from "@/shared/domain/enums/taxCategory";
@@ -74,7 +74,6 @@ export default function OrderItemsReadOnly({
 
   return (
     <SectionCard
-      icon={Package}
       title={
         <span className="inline-flex items-center gap-1.5">
           {title}
@@ -84,7 +83,6 @@ export default function OrderItemsReadOnly({
       description={description}
       action={headerAction}
       className="@container/items"
-      contentClassName="space-y-3"
     >
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6">قلمی ثبت نشده است.</p>

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { EMPTY_SETTLEMENT } from "@/shared/domain/payments/settlement";
+import { EMPTY_PAYMENT_DRAFT } from "@/shared/components/payments/usePaymentDraft";
 import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 
 const EMPTY_FORM = {
@@ -11,9 +11,8 @@ const EMPTY_FORM = {
   description: "",
   status: "",
   items: [],
-  // روش و مبلغ‌های پرداختِ همراهِ ثبت (`settlement.js`) — در store تا رفتن به
-  // «کالای جدید» پاکش نکند.
-  settlement: EMPTY_SETTLEMENT,
+  // پرداخت‌های ثبت‌نشده (`usePaymentDraft`) — در store تا رفتن به «کالای جدید» پاکش نکند.
+  paymentDraft: EMPTY_PAYMENT_DRAFT,
 };
 
 export const usePurchaseFormStore = create((set, get) => ({
@@ -26,11 +25,11 @@ export const usePurchaseFormStore = create((set, get) => ({
     })),
 
   /** مثلِ `setState`: مقدار یا تابعِ به‌روزرسان. */
-  setSettlement: (next) =>
+  setPaymentDraft: (next) =>
     set((state) => ({
       formData: {
         ...state.formData,
-        settlement: typeof next === "function" ? next(state.formData.settlement) : next,
+        paymentDraft: typeof next === "function" ? next(state.formData.paymentDraft) : next,
       },
     })),
 

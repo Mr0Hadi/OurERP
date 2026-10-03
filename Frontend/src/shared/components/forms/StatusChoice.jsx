@@ -12,7 +12,7 @@ export default function StatusChoice({ label = "وضعیت هنگام ثبت", o
 
   return (
     <div className="space-y-1.5">
-      <p className="text-sm font-medium text-card-foreground">{label}</p>
+      <p className="text-xs font-medium text-card-foreground">{label}</p>
       <div
         role="radiogroup"
         aria-label={label}

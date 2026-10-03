@@ -18,11 +18,15 @@ const tempId = () => `new-${Date.now().toString(36)}-${Math.random().toString(36
  *
  * @param saved      `paymentDetails`ِ سند
  * @param direction  جهتِ عادیِ پرداخت روی این سند (`PaymentDirectionEnum`)
+ * @param external   `[state, setState]` اختیاری — پیش‌نویس در storeِ فرم، تا رفتن به
+ *                   «کالای جدید» و برگشتن پاکش نکند. `setState` مثلِ `useState`
+ *                   تابعِ به‌روزرسان می‌پذیرد.
  */
-const EMPTY_PAYMENT_DRAFT = Object.freeze({ changes: {}, added: [] });
+export const EMPTY_PAYMENT_DRAFT = Object.freeze({ changes: {}, added: [] });
 
-export function usePaymentDraft(saved = [], direction) {
-  const [state, setState] = useState(EMPTY_PAYMENT_DRAFT);
+export function usePaymentDraft(saved = [], direction, external) {
+  const internal = useState(EMPTY_PAYMENT_DRAFT);
+  const [state, setState] = external ?? internal;
   // { [paymentId]: { kind: "void" } | { kind: "edit", values } }
   const changes = useMemo(() => state?.changes ?? {}, [state]);
   // ردیف‌های تازه: { id, values }

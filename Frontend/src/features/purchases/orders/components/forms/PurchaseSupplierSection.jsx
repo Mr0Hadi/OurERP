@@ -12,17 +12,17 @@ import { useSupplierQuery, useSupplierSearchQuery } from "@/features/suppliers/s
  * ردیفِ جست‌وجو یا نامِ ذخیره‌شده در فرم.
  */
 export default function PurchaseSupplierSection({
-  step,
   selectedId,
   selectedName,
   onSelect,
   onClear,
   onAddNew,
   error,
+  readOnly = false,
 }) {
   const [search, setSearch] = useState("");
   const [picked, setPicked] = useState(null);
-  const { results, total, isSearching } = useSupplierSearchQuery(search);
+  const { results, total, isSearching } = useSupplierSearchQuery(search, { enabled: !readOnly });
   const { data: detail } = useSupplierQuery(selectedId || null);
 
   const selected = !selectedId
@@ -32,7 +32,6 @@ export default function PurchaseSupplierSection({
 
   return (
     <PartyPickerCard
-      step={step}
       title="تامین‌کننده"
       addNewLabel="تامین‌کننده‌ی جدید"
       onAddNew={onAddNew}
@@ -48,6 +47,7 @@ export default function PurchaseSupplierSection({
         onSelect(party.id, partyDisplayName(party));
       }}
       onClear={onClear}
+      readOnly={readOnly}
       searchPlaceholder="جست‌وجوی نام شرکت یا مسئول..."
       emptyListText="لیست تامین‌کنندگان خالی است"
       notFoundText="تامین‌کننده‌ای یافت نشد"

@@ -13,7 +13,6 @@ import {
 } from "@/features/purchases/orders/services/mutations";
 import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import {
-  PURCHASE_KIND_DESCRIPTIONS,
   PURCHASE_SHIPPING_CHOICES,
   canDeletePurchase,
   missingInvoiceFields,
@@ -23,45 +22,35 @@ import { PURCHASE_STATUSES } from "@/features/purchases/orders/services/constant
 import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection";
 import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
 import CancelPurchaseDialog from "../components/forms/CancelPurchaseDialog";
-import DocumentKindPicker from "@/shared/components/documents/DocumentKindPicker";
 import DocumentFormLayout, {
   DocumentMobileBar,
   FormSection,
   OrderSummaryCard,
 } from "@/shared/components/forms/DocumentFormLayout";
-import { scrollToSection } from "@/shared/lib/scrollToSection";
-import OrderDetailsCard from "@/shared/components/forms/OrderDetailsCard";
-import StatusChoice from "@/shared/components/forms/StatusChoice";
-import SettlementCard from "@/shared/components/payments/SettlementCard";
+import OrderInfoCard from "@/shared/components/forms/OrderInfoCard";
+import PaymentsCard from "@/shared/components/payments/PaymentsCard";
+import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
-import { paymentTypeOf } from "@/shared/components/payments/usePaymentDraft";
+import { paymentTypeOf, usePaymentDraft } from "@/shared/components/payments/usePaymentDraft";
 import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
 import { useReturnedNewProduct } from "@/shared/components/products/useReturnedNewProduct";
 import { useDocumentFormDraft } from "@/shared/hooks/useDocumentFormDraft";
 import { usePermission } from "@/features/auth/hooks/usePermission";
+import { scrollToSection } from "@/shared/lib/scrollToSection";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
-import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
-import {
-  liveRows,
-  netPaidOf,
-  resolvedRows,
-  rowsTotal,
-  settlementChanges,
-  settlementProblem,
-} from "@/shared/domain/payments/settlement";
 
 /**
  * فرمِ خرید — ثبتِ تازه (`purchase` خالی) و ویرایشِ پیش‌فاکتور (تنها وضعیتی
  * که `UpdatePurchase` می‌پذیرد). خریدِ صادرشده در `PurchaseIssuedView` باز
  * می‌شود.
  *
- * ترتیبِ صفحه همان ترتیبِ کار است: نوعِ سند ← تامین‌کننده ← اقلام ← مشخصات و
- * پیوست ← پرداخت؛ کنارش خلاصه، آنچه کم است و دکمه‌ی ثبت.
+ * چیدمان همان نمای فاکتورِ صادرشده است: تامین‌کننده ← اقلام ← پرداخت‌ها در ستونِ
+ * اصلی؛ جمع و دکمه‌ی ثبت ← اطلاعاتِ فاکتور ← سند و پیوست در ستونِ کناری.
  *
  *  - پیش‌فاکتور: شماره، تاریخ، سررسید و پرداخت ندارد؛ اقلام بعداً هم عوض می‌شوند.
  *  - فاکتور: شماره و تاریخِ فاکتورِ تامین‌کننده الزامی؛ «در انتظار ارسال» یا
- *    «ارسال شده»؛ پرداخت (نسیه، نقدی، انتقال، چک یا ترکیبی) همراهِ همان ثبت.
+ *    «ارسال شده»؛ پرداخت‌ها (نقدی، انتقال، چک یا ترکیبی) همراهِ همان ثبت.
  *
  * بعد از ثبت، خودِ سند باز می‌شود؛ ذخیره‌ی پیش‌فاکتور روی همان سند می‌ماند.
  */
@@ -73,7 +62,7 @@ export default function PurchaseForm({ purchase }) {
   const [dialog, setDialog] = useState(null); // "delete" | "cancel"
 
   const store = usePurchaseFormStore();
-  const { formData, setFormData, setItems, setSettlement, resetForm } = store;
+  const { formData, setFormData, setItems, setPaymentDraft, resetForm } = store;
   const { openSubPage, returned, ready } = useDocumentFormDraft({
     doc: purchase,
     initializedForId: store.initializedForId,
@@ -93,6 +82,13 @@ export default function PurchaseForm({ purchase }) {
     // با همان کلیدِ فرم تازه می‌شود.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [purchase?.id, purchase?.updatedAt, attachmentsReset]);
+
+  // پرداخت‌ها تا دکمه‌ی ثبت در پیش‌نویس می‌مانند؛ در store، تا رفتن به «کالای
+  // جدید» پاکشان نکند.
+  const payments = usePaymentDraft(purchase?.paymentDetails || [], PURCHASE_PAYMENT_SIDE.direction, [
+    formData.paymentDraft,
+    setPaymentDraft,
+  ]);
 
   const createMutation = useCreatePurchaseMutation();
   const saver = usePurchaseChangesSaver(purchase?.id);
@@ -125,35 +121,25 @@ export default function PurchaseForm({ purchase }) {
       ? PURCHASE_STATUSES.PROFORMA
       : Number(formData.status);
   const isInvoice = status !== PURCHASE_STATUSES.PROFORMA;
-
-  // پیش‌پرداختِ قدیمی روی پیش‌فاکتور (پیش از قفلِ پیش‌فاکتور ممکن بود).
-  const prepayments = (purchase?.paymentDetails || []).filter((payment) => !payment.voidedAt);
-  const prepaid = netPaidOf(prepayments, PURCHASE_PAYMENT_SIDE.direction);
-  const payable = Math.max(0, totals.totalAmount - prepaid);
-  const rows = isInvoice
-    ? liveRows(resolvedRows(formData.settlement, payable, PaymentTypeEnum.CREDIT))
-    : [];
-  const paid = prepaid + rowsTotal(rows);
-  const settlementError = isInvoice ? settlementProblem(rows, payable) : null;
   const invoiceErrors = missingInvoiceFields(formData, status);
-
-  const checks = [
-    { key: "party", section: "party", label: "تامین‌کننده را انتخاب کنید", done: Boolean(formData.supplierId) },
-    { key: "items", section: "items", label: "دست‌کم یک کالا اضافه کنید", done: items.length > 0 },
-    ...(isInvoice
-      ? [{ key: "invoice", section: "details", label: "شماره و تاریخِ فاکتور را وارد کنید", done: !invoiceErrors }]
-      : []),
-    ...(settlementError ? [{ key: "payment", section: "payment", label: settlementError, done: false }] : []),
-  ];
+  // پیش‌پرداختِ قدیمی روی پیش‌فاکتور (پیش از قفلِ پیش‌فاکتور ممکن بود).
+  const hasPrepayments = (purchase?.paymentDetails || []).some((payment) => !payment.voidedAt);
 
   const onSubmit = (e) => {
     e.preventDefault();
-    const missing = checks.find((check) => !check.done);
-    if (missing) {
+    if (!formData.supplierId) {
       setShowErrors(true);
-      toast.error(missing.label);
-      scrollToSection(missing.section);
-      return;
+      toast.error("تامین‌کننده را انتخاب کنید.");
+      return scrollToSection("party");
+    }
+    if (items.length === 0) {
+      toast.error("دست‌کم یک کالا اضافه کنید.");
+      return scrollToSection("items");
+    }
+    if (invoiceErrors) {
+      setShowErrors(true);
+      toast.error("برای فاکتور، شماره و تاریخِ فاکتور را وارد کنید.");
+      return scrollToSection("info");
     }
     // آپلودِ نیمه‌کاره کلید ندارد و در payload نمی‌آید.
     if (attachments.isUploading) {
@@ -167,17 +153,17 @@ export default function PurchaseForm({ purchase }) {
       // پیش‌فاکتور شماره، تاریخ و سررسید ندارد.
       invoiceNumber: isInvoice ? formData.invoiceNumber : "",
       invoiceDate: isInvoice ? formData.invoiceDate : null,
-      paymentDate: isInvoice && paid < totals.totalAmount ? formData.paymentDate || null : null,
+      paymentDate: isInvoice ? formData.paymentDate || null : null,
       description: formData.description || "",
       items,
-      paymentType: paymentTypeOf([...prepayments, ...rows]),
+      paymentType: paymentTypeOf(isInvoice ? payments.rows : []),
       status,
       attachments: attachments.filesPayload,
     };
 
     if (isNew) {
       createMutation.mutate(
-        { ...payload, paymentRows: rows },
+        { ...payload, paymentRows: isInvoice ? payments.rows : [] },
         {
           onSuccess: (created) => {
             attachments.commit();
@@ -194,10 +180,7 @@ export default function PurchaseForm({ purchase }) {
 
     // اول خودِ سند (صدور هم با همین است)، بعد پرداخت‌ها.
     saver.mutate(
-      {
-        update: payload,
-        paymentDraft: settlementChanges(rows, PURCHASE_PAYMENT_SIDE.direction),
-      },
+      { update: payload, paymentDraft: isInvoice ? payments : null },
       {
         onSuccess: (latest) => {
           attachments.commit();
@@ -218,8 +201,8 @@ export default function PurchaseForm({ purchase }) {
 
   const canEdit = isNew || allows("PurchaseUpdate");
   // پیش‌فاکتوری که پیش‌پرداختِ زنده دارد حذف نمی‌شود (سرور ۴۰۰ می‌دهد)؛ لغو می‌شود.
-  const deletable = !isNew && canDeletePurchase(purchase) && prepayments.length === 0;
-  const cancellable = !isNew && prepayments.length > 0;
+  const deletable = !isNew && canDeletePurchase(purchase) && !hasPrepayments && allows("PurchaseDelete");
+  const cancellable = !isNew && hasPrepayments && canEdit;
 
   const isBusy =
     createMutation.isPending ||
@@ -241,18 +224,8 @@ export default function PurchaseForm({ purchase }) {
         onSubmit={onSubmit}
         main={
           <>
-            <DocumentKindPicker
-              value={isInvoice ? "invoice" : "proforma"}
-              onChange={(kind) =>
-                setFormData({
-                  status: kind === "proforma" ? PURCHASE_STATUSES.PROFORMA : PURCHASE_STATUSES.PENDING,
-                })
-              }
-              descriptions={PURCHASE_KIND_DESCRIPTIONS}
-            />
             <FormSection name="party">
               <PurchaseSupplierSection
-                step={1}
                 selectedId={formData.supplierId}
                 selectedName={formData.supplierName}
                 onSelect={(id, name) => setFormData({ supplierId: id, supplierName: name })}
@@ -263,7 +236,6 @@ export default function PurchaseForm({ purchase }) {
             </FormSection>
             <FormSection name="items">
               <PurchaseItemsSection
-                step={2}
                 items={items}
                 products={products}
                 isLoadingProducts={productsLoading}
@@ -271,96 +243,72 @@ export default function PurchaseForm({ purchase }) {
                 onAddNewProduct={() => openSubPage(ROUTES.WAREHOUSE_PRODUCTS_NEW)}
               />
             </FormSection>
-            <FormSection name="details">
-              <OrderDetailsCard
-                step={3}
-                isInvoice={isInvoice}
-                withNumber
-                formData={formData}
-                onFormChange={setFormData}
-                errors={showErrors ? invoiceErrors ?? {} : {}}
-                attachments={attachments}
-                attachmentsLabel={isInvoice ? "تصویرِ فاکتورِ تامین‌کننده" : "تصویرِ پیش‌فاکتورِ تامین‌کننده"}
-                extra={
-                  <StatusChoice
-                    label="وضعیتِ ارسال"
-                    options={PURCHASE_SHIPPING_CHOICES}
-                    value={status}
-                    onChange={(next) => setFormData({ status: next })}
-                  />
+            {(isInvoice || hasPrepayments) && (
+              <PaymentsCard
+                draft={payments}
+                side={PURCHASE_PAYMENT_SIDE}
+                total={totals.totalAmount}
+                canManage={isInvoice && (isNew || allows("PurchasePayment"))}
+                allowRefund={false}
+                notice={
+                  isInvoice ? undefined : "این پیش‌فاکتور پیش‌پرداخت دارد؛ با صدورِ فاکتور قابل اصلاح است."
                 }
               />
-            </FormSection>
-            {isInvoice && (
-              <FormSection name="payment">
-                <SettlementCard
-                  step={4}
-                  title="پرداخت به تامین‌کننده"
-                  settlement={formData.settlement}
-                  onSettlementChange={setSettlement}
-                  payable={payable}
-                  remaining={totals.totalAmount - paid}
-                  fallbackMethod={PaymentTypeEnum.CREDIT}
-                  creditHint="کلِ مبلغ بدهیِ ما به تامین‌کننده می‌ماند و بعداً از صفحه‌ی همین فاکتور پرداخت می‌شود."
-                  dueDate={formData.paymentDate}
-                  onDueDateChange={(paymentDate) => setFormData({ paymentDate })}
-                  prepayments={prepayments}
-                  error={showErrors ? settlementError : null}
-                />
-              </FormSection>
             )}
           </>
         }
         aside={
-          <OrderSummaryCard
-            title={isInvoice ? "فاکتور خرید" : "پیش‌فاکتور خرید"}
-            itemCount={items.length}
-            totals={totals}
-            payment={
-              isInvoice
-                ? { paid, remaining: totals.totalAmount - paid, remainingLabel: "بدهی به تامین‌کننده" }
-                : null
-            }
-            checklist={checks}
-            canSubmit={canEdit}
-            submitLabel={submitLabel}
-            isBusy={isBusy}
-            onCancel={leave}
-            cancelLabel={isNew ? "انصراف" : "بستن بدونِ ذخیره"}
-            footer={
-              (deletable && allows("PurchaseDelete")) || (cancellable && canEdit) ? (
-                <>
-                  {deletable && allows("PurchaseDelete") && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="w-full gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => setDialog("delete")}
-                      disabled={isBusy}
-                    >
-                      <Trash2 className="size-3.5" />
-                      حذف پیش‌فاکتور
-                    </Button>
-                  )}
-                  {cancellable && canEdit && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="w-full gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      title="پیش‌فاکتوری که پیش‌پرداخت دارد حذف نمی‌شود؛ لغو می‌شود."
-                      onClick={() => setDialog("cancel")}
-                      disabled={isBusy}
-                    >
-                      <Ban className="size-3.5" />
-                      لغو خرید
-                    </Button>
-                  )}
-                </>
-              ) : null
-            }
-          />
+          <>
+            <OrderSummaryCard
+              title={isInvoice ? "فاکتور خرید" : "پیش‌فاکتور خرید"}
+              itemCount={items.length}
+              totals={totals}
+              canSubmit={canEdit}
+              submitLabel={submitLabel}
+              isBusy={isBusy}
+              onCancel={leave}
+              footer={
+                (deletable || cancellable) && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="w-full gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => setDialog(deletable ? "delete" : "cancel")}
+                    disabled={isBusy}
+                  >
+                    {deletable ? <Trash2 className="size-3.5" /> : <Ban className="size-3.5" />}
+                    {deletable ? "حذف پیش‌فاکتور" : "لغو خرید"}
+                  </Button>
+                )
+              }
+            />
+            <FormSection name="info">
+              <OrderInfoCard
+                kind={isInvoice ? "invoice" : "proforma"}
+                onKindChange={(kind) =>
+                  setFormData({
+                    status: kind === "proforma" ? PURCHASE_STATUSES.PROFORMA : PURCHASE_STATUSES.PENDING,
+                  })
+                }
+                withNumber
+                formData={formData}
+                onFormChange={setFormData}
+                errors={showErrors ? invoiceErrors ?? {} : {}}
+                status={{
+                  value: status,
+                  options: PURCHASE_SHIPPING_CHOICES,
+                  onChange: (next) => setFormData({ status: next }),
+                }}
+              />
+            </FormSection>
+            <InvoiceDocumentSection
+              title={isInvoice ? "فاکتور" : "پیش‌فاکتور"}
+              invoiceNumber={formData.invoiceNumber}
+              attachments={attachments}
+              attachmentLabel="تصویر یا PDFِ برگه‌ی تامین‌کننده"
+            />
+          </>
         }
         mobileBar={
           canEdit && (

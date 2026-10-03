@@ -67,7 +67,6 @@ function PartyAvatar({ party, size = "h-9 w-9" }) {
  * @param onSelect   `(party) => void`
  */
 export default function PartyPickerCard({
-  step,
   title,
   addNewLabel,
   onAddNew,
@@ -83,6 +82,8 @@ export default function PartyPickerCard({
   searchPlaceholder = "جست‌وجوی نام یا شرکت...",
   emptyListText,
   notFoundText,
+  // فاکتورِ صادرشده: طرف حساب فقط نمایش داده می‌شود.
+  readOnly = false,
 }) {
   const [changing, setChanging] = useState(false);
   const [active, setActive] = useState(0);
@@ -90,7 +91,7 @@ export default function PartyPickerCard({
   const listId = useId();
 
   const words = search.trim().split(/\s+/).filter(Boolean);
-  const showSearch = !selected || changing;
+  const showSearch = !readOnly && (!selected || changing);
   const activeIndex = Math.min(active, Math.max(results.length - 1, 0));
 
   const choose = (party) => {
@@ -120,11 +121,10 @@ export default function PartyPickerCard({
 
   return (
     <SectionCard
-      step={step}
       title={title}
       className="@container/party"
       action={
-        onAddNew && (
+        onAddNew && !readOnly && (
           <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={onAddNew}>
             <UserPlus className="size-3.5" />
             {addNewLabel}
@@ -136,7 +136,7 @@ export default function PartyPickerCard({
         {selected && (
           <div
             className={`flex flex-wrap items-center gap-3 rounded-lg border px-3 py-2.5 ${
-              changing ? "border-dashed border-border opacity-60" : "border-primary/30 bg-primary/5"
+              changing ? "border-dashed border-border opacity-60" : "border-border bg-muted/30"
             }`}
           >
             <PartyAvatar party={selected} size="h-10 w-10" />
@@ -163,6 +163,7 @@ export default function PartyPickerCard({
               ) : (
                 <span />
               )}
+              {!readOnly && (
               <div className="flex items-center gap-1">
                 {!changing && (
                   <Button
@@ -194,6 +195,7 @@ export default function PartyPickerCard({
                   <X className="h-4 w-4" />
                 </Button>
               </div>
+              )}
             </div>
           </div>
         )}

@@ -17,12 +17,13 @@ export function useSupplierListFilters() {
   });
 }
 
-export function useSuppliersQuery(filters, pagination, sorting) {
+export function useSuppliersQuery(filters, pagination, sorting, { enabled = true } = {}) {
   const params = listQuery({ filters, pagination, sorting, sortColumns: SUPPLIER_SORT_COLUMNS });
   return useQuery({
     queryKey: supplierKeys.list(params),
     queryFn: () => fetchSuppliers(params),
     placeholderData: keepPreviousData,
+    enabled,
   });
 }
 
@@ -58,10 +59,11 @@ const SEARCH_PAGINATION = { pageIndex: 0, pageSize: 20 };
  * جست‌وجوی سمتِ سرور برای انتخابگرِ تامین‌کننده (`companyNameOrContactName`:
  * نام شرکت، نام یا نام خانوادگی). بی‌جست‌وجو، ۲۰ تامینِ اول به ترتیبِ نام.
  */
-export function useSupplierSearchQuery(term) {
+/** `enabled: false` برای نمایشِ فقط‌خواندنی (فاکتورِ صادرشده) که جست‌وجو ندارد. */
+export function useSupplierSearchQuery(term, { enabled = true } = {}) {
   const search = useDebouncedValue(term.trim());
   const filters = useMemo(() => (search ? { companyNameOrContactName: search } : NO_FILTERS), [search]);
-  const { data, isFetching } = useSuppliersQuery(filters, SEARCH_PAGINATION, OPTIONS_SORTING);
+  const { data, isFetching } = useSuppliersQuery(filters, SEARCH_PAGINATION, OPTIONS_SORTING, { enabled });
   return {
     results: data?.items ?? NO_SUPPLIERS,
     total: data?.total ?? 0,

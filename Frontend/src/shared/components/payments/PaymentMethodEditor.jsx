@@ -1,4 +1,4 @@
-import { Banknote, Clock, Landmark, Plus, ReceiptText, Split, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import ChoiceCards from "@/shared/components/documents/ChoiceCards";
+import StatusChoice from "@/shared/components/forms/StatusChoice";
 import AmountInWords from "@/shared/components/forms/AmountInWords";
 import {
   PAYMENT_REFERENCE_FIELDS,
@@ -21,7 +21,6 @@ import {
 } from "@/shared/domain/enums/paymentType";
 import {
   ROW_PAYMENT_TYPES,
-  SETTLEMENT_METHODS,
   addMixedRow,
   methodOf,
   removeMixedRow,
@@ -34,72 +33,44 @@ import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
 import { toneText } from "@/shared/lib/tone";
 import { cn } from "@/shared/lib/utils";
 
-const METHOD_ICONS = {
-  [PaymentTypeEnum.CREDIT]: Clock,
-  [PaymentTypeEnum.CASH]: Banknote,
-  [PaymentTypeEnum.TRANSFER]: Landmark,
-  [PaymentTypeEnum.CHECK]: ReceiptText,
-  [PaymentTypeEnum.MIXED]: Split,
-};
-
 /**
- * انتخابِ روشِ پرداخت و مبلغ‌ها — یک ویرایشگر برای هر جا که پول جابه‌جا
- * می‌شود: تسویه‌ی فاکتورِ تازه (`SettlementCard`) و ثبتِ پرداختِ بعدی روی
- * فاکتورِ صادرشده (`PaymentsLedgerCard`).
+ * روش و مبلغِ یک پرداخت (فرمِ «ثبت پرداخت»ِ `PaymentsCard`): نقدی، انتقال بانکی،
+ * چک یا **ترکیبی** — یعنی مبلغ بینِ چند روش تقسیم شود و هر تکه مرجعِ خودش را
+ * داشته باشد.
  *
- * روش‌ها کارت‌های کنارِ هم‌اند (نسیه، نقدی، انتقال بانکی، چک، ترکیبی)؛ ترکیبی
- * یعنی مبلغ بینِ چند روش تقسیم شود و هر تکه مرجعِ خودش را دارد. آخرین تکه
- * خودکار «باقیمانده» را می‌گیرد.
+ * مبلغ با باقیمانده پیش‌پر است (`payable`)؛ در ترکیبی آخرین تکه خودکار
+ * «باقیمانده» را می‌گیرد.
  *
  * کنترل‌شده: `value` شکلِ `{ method, rows }` (`shared/domain/payments/settlement`).
  *
- * @param payable        مبلغی که این پرداخت‌ها رویش حساب می‌شوند
- * @param fallbackMethod روشِ پیش‌فرض وقتی `value.method` خالی است
- * @param methods        روش‌های قابل‌انتخاب (پیش‌فرض همه)
- * @param disabledMethods `{ [method]: reason }` — دیده می‌شود ولی انتخاب نمی‌شود
- * @param creditHint     متنِ زیرِ «نسیه»
+ * @param methods روش‌های قابل‌انتخاب (اصلاح و پول برگشتی: بدونِ ترکیبی)
  */
 export default function PaymentMethodEditor({
   value,
   onChange,
   payable,
-  fallbackMethod = PaymentTypeEnum.CREDIT,
-  methods = SETTLEMENT_METHODS,
-  disabledMethods = {},
-  creditHint,
+  methods = [...ROW_PAYMENT_TYPES, PaymentTypeEnum.MIXED],
   error,
 }) {
+  const fallbackMethod = PaymentTypeEnum.CASH;
   const method = methodOf(value, fallbackMethod);
   const rows = resolvedRows(value, payable, fallbackMethod);
   // ویرایشِ ردیف روی همان ردیف‌هایی است که دیده می‌شوند (حتی ردیفِ پیش‌فرضِ ذخیره‌نشده).
   const editable = { method, rows: value?.rows?.length ? value.rows : rows.map(stripAuto) };
   const change = (id, patch) => onChange(updateRow(editable, id, patch));
 
-  const options = methods.map((candidate) => ({
-    value: candidate,
-    label: PAYMENT_TYPE_LABELS[candidate],
-    icon: METHOD_ICONS[candidate],
-    disabled: Boolean(disabledMethods[candidate]),
-    disabledReason: disabledMethods[candidate],
-  }));
-
   return (
     <div className="@container/pay space-y-3">
-      <ChoiceCards
-        compact
-        label="روش پرداخت"
-        options={options}
-        value={method}
-        onChange={(next) => onChange(switchMethod(value, next, payable, fallbackMethod))}
-      />
+      {methods.length > 1 && (
+        <StatusChoice
+          label="روش پرداخت"
+          options={methods.map((candidate) => ({ value: candidate, label: PAYMENT_TYPE_LABELS[candidate] }))}
+          value={method}
+          onChange={(next) => onChange(switchMethod(value, next, payable, fallbackMethod))}
+        />
+      )}
 
-      {method === PaymentTypeEnum.CREDIT ? (
-        creditHint && (
-          <p className="rounded-lg bg-muted/50 px-3 py-2.5 text-xs leading-5 text-muted-foreground">
-            {creditHint}
-          </p>
-        )
-      ) : method === PaymentTypeEnum.MIXED ? (
+      {method === PaymentTypeEnum.MIXED ? (
         <MixedRows
           rows={rows}
           payable={payable}
@@ -108,20 +79,9 @@ export default function PaymentMethodEditor({
           onRemove={(id) => onChange(removeMixedRow(editable, id))}
         />
       ) : (
-        <SingleRow
-          row={rows[0]}
-          payable={payable}
-          onChange={(patch) => change(rows[0].id, patch)}
-        />
+        <SingleRow row={rows[0]} payable={payable} onChange={(patch) => change(rows[0].id, patch)} />
       )}
 
-      {Object.values(disabledMethods)
-        .filter(Boolean)
-        .map((reason) => (
-          <p key={reason} className="text-xs text-muted-foreground">
-            {reason}
-          </p>
-        ))}
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
@@ -144,7 +104,7 @@ function SingleRow({ row, payable, onChange }) {
         <div className="flex items-center justify-between gap-2">
           <Label className="text-xs">مبلغ (ریال)</Label>
           {row.auto ? (
-            <span className="text-[11px] text-muted-foreground">کلِ مبلغ</span>
+            <span className="text-[11px] text-muted-foreground">کلِ مانده</span>
           ) : (
             row.amount !== full && (
               <button
@@ -152,7 +112,7 @@ function SingleRow({ row, payable, onChange }) {
                 className="text-[11px] font-medium text-primary hover:underline"
                 onClick={() => onChange({ amount: null })}
               >
-                پرداختِ کامل ({formatNumber(full)})
+                کلِ مانده ({formatNumber(full)})
               </button>
             )
           )}
@@ -161,7 +121,7 @@ function SingleRow({ row, payable, onChange }) {
           min={0}
           value={row.amount}
           onValueChange={(next) => onChange({ amount: next ?? 0 })}
-          className="h-10 text-base font-semibold tabular-nums"
+          className="h-9 tabular-nums"
         />
         <AmountInWords rial={row.amount} />
       </div>

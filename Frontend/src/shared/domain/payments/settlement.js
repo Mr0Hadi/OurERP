@@ -1,28 +1,19 @@
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 
 /**
- * «تسویه»ی یک سندِ تازه: کاربر اول *روش* را انتخاب می‌کند (نسیه، نقدی،
- * انتقال بانکی، چک یا ترکیبی) و بعد مبلغ‌ها را — همان چیزی که روی کاغذِ
- * فاکتور هم نوشته می‌شود.
+ * فرمِ «ثبت پرداخت»: کاربر اول *روش* را انتخاب می‌کند (نقدی، انتقال بانکی،
+ * چک یا ترکیبی) و بعد مبلغ‌ها را (`PaymentMethodEditor`).
  *
  * شکل: `{ method, rows }`
  *   - `method`: یکی از `SETTLEMENT_METHODS`.
  *   - `rows`: پولی که همین حالا جابه‌جا می‌شود؛ هر ردیف
  *     `{ id, type, amount, paidAt, checkNumber, transferRef }`.
- *     نسیه ردیف ندارد، روشِ تکی یک ردیف دارد و ترکیبی چند ردیف.
+ *     روشِ تکی یک ردیف دارد و ترکیبی چند ردیف.
  *
  * مبلغِ `null` یعنی «باقیمانده»: در روشِ تکی کلِ مبلغ، در ترکیبی هر چه از
  * تکه‌های دیگر مانده. با تغییرِ اقلام خودش به‌روز می‌ماند و کاربر لازم نیست
  * بعد از هر تغییرِ قیمت دوباره عدد بنویسد. فقط یک ردیف (آخری) خودکار است.
  */
-
-export const SETTLEMENT_METHODS = Object.freeze([
-  PaymentTypeEnum.CREDIT,
-  PaymentTypeEnum.CASH,
-  PaymentTypeEnum.TRANSFER,
-  PaymentTypeEnum.CHECK,
-  PaymentTypeEnum.MIXED,
-]);
 
 /** روش‌هایی که یک *ردیفِ* پرداخت می‌تواند داشته باشد. */
 export const ROW_PAYMENT_TYPES = Object.freeze([
@@ -30,8 +21,6 @@ export const ROW_PAYMENT_TYPES = Object.freeze([
   PaymentTypeEnum.TRANSFER,
   PaymentTypeEnum.CHECK,
 ]);
-
-export const EMPTY_SETTLEMENT = Object.freeze({ method: null, rows: [] });
 
 const rowId = () => `row-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
@@ -130,37 +119,7 @@ export function updateRow(settlement, id, patch) {
   return { ...settlement, rows: settlement.rows.map((row) => (row.id === id ? { ...row, ...patch } : row)) };
 }
 
-/** ایرادِ تسویه (پیش از ثبت)، یا `null`. */
-export function settlementProblem(rows, payable) {
-  if (rowsTotal(rows) > Math.max(0, Number(payable) || 0)) {
-    return "جمعِ پرداخت از مبلغِ فاکتور بیشتر است";
-  }
-  return null;
-}
-
 /** ردیف‌هایی که واقعاً پول جابه‌جا می‌کنند (تکه‌ی صفر فرستاده نمی‌شود). */
 export function liveRows(rows) {
   return rows.filter((row) => (Number(row.amount) || 0) > 0);
-}
-
-/** پرداخت‌شده‌ی خالصِ ردیف‌های ذخیره‌شده (باطل‌شده‌ها نه؛ پولِ برگشتی کم می‌شود). */
-export function netPaidOf(payments = [], direction) {
-  return payments.reduce((sum, payment) => {
-    if (payment.voidedAt) return sum;
-    const amount = Number(payment.amount) || 0;
-    return sum + (payment.direction === direction ? amount : -amount);
-  }, 0);
-}
-
-/**
- * ردیف‌های تسویه به شکلِ پیش‌نویسِ پرداختی که `runDocumentChanges` می‌خواهد
- * (ثبتِ پیش‌فاکتور به‌عنوانِ فاکتور: اول سند، بعد پرداخت‌ها).
- */
-export function settlementChanges(rows, direction) {
-  return {
-    operations: rows.map((row) => ({ kind: "add", id: row.id, values: { ...row, direction } })),
-    // اگر وسطِ کار خطا شود، سند از سرور دوباره خوانده و فرم از نو پر می‌شود؛
-    // چیزی در این پیش‌نویس نمی‌ماند که لازم باشد برداشته شود.
-    settle: () => {},
-  };
 }

@@ -21,7 +21,6 @@ const SALE_PRICE_MODES = {
  * مانده‌اند به‌روز می‌کند؛ قیمتی که کاربر دستی عوض کرده دست نمی‌خورد.
  */
 export default function SaleItemsSection({
-  step,
   items,
   onItemsChange,
   products = [],
@@ -48,7 +47,6 @@ export default function SaleItemsSection({
 
   return (
     <SectionCard
-      step={step}
       title="اقلام فروش"
       action={
         <>

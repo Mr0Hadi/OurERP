@@ -4,7 +4,6 @@ import toast from "react-hot-toast";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
-import { Label } from "@/shared/components/ui/label";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Spinner } from "@/shared/components/ui/spinner";
 import FileUploadList from "@/shared/components/files/FileUploadList";
@@ -60,7 +59,6 @@ import { getErrorMessage } from "@/shared/lib/errorMessage";
 export default function InvoiceDocumentSection({
   title,
   invoiceNumber,
-  attachmentRequired = false,
   attachmentLabel = "فایل فاکتور",
   attachments,
   documentKind,
@@ -132,98 +130,83 @@ export default function InvoiceDocumentSection({
 
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-0">
         <CardTitle className="text-base font-semibold text-card-foreground">
           سند {title}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* کاربر باید بداند و انتخاب کند دقیقاً چه چیزی چاپ می‌شود —
-            مخصوصاً در فروش که سندِ ساختِ سرور و ضمیمه‌ی دستی هر دو هستند. */}
-        {hasDocuments ? (
-          <fieldset className="space-y-1">
-            <legend className="mb-1 text-xs text-muted-foreground">
-              سندهای چاپ و دانلود:
-            </legend>
-            {documents.map((document_) => (
-              <label
-                key={document_.id}
-                className="flex min-h-9 cursor-pointer items-center gap-2 rounded-md border border-border px-2.5 py-1.5 text-sm transition-colors hover:bg-muted/50 has-[[data-state=checked]]:border-primary/40 has-[[data-state=checked]]:bg-primary/5"
-              >
-                <Checkbox
-                  checked={!excluded.has(document_.id)}
-                  onCheckedChange={(checked) => toggle(document_.id, checked === true)}
-                />
-                <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                <span className="min-w-0 flex-1 truncate" dir="auto" title={document_.name}>
-                  {document_.name}
-                </span>
-                {document_.id === "server-pdf" && (
-                  <Badge variant="secondary" className="shrink-0 text-[10px]">
-                    ساختِ سیستم
-                  </Badge>
-                )}
-              </label>
-            ))}
-          </fieldset>
+        {attachments ? (
+          <FileUploadList
+            list={attachments}
+            title={attachmentLabel}
+            withNotes={false}
+            emptyLabel="تصویر یا PDFِ برگه را اینجا اضافه کنید."
+          />
         ) : (
-          <p className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
-            <FileText className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-            <span>
-              {emptyHint ??
-                "هنوز سندی برای این سفارش وجود ندارد؛ تا وقتی فایلی اضافه نشود، چاپ و دانلود غیرفعال است."}
-            </span>
+          <p className="flex items-start gap-2 rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground leading-relaxed">
+            <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+            ضمیمه‌کردن فاکتور برای این سند هنوز روی سرور پشتیبانی نمی‌شود.
           </p>
         )}
 
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            className="min-w-24 flex-1 gap-2"
-            onClick={() => run(printDocuments)}
-            disabled={!canRun}
-          >
-            {isBusy ? <Spinner /> : <Printer className="h-4 w-4" />}
-            چاپ{selected.length > 1 && ` (${selected.length.toLocaleString("fa-IR")})`}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="min-w-24 flex-1 gap-2"
-            onClick={() => run(downloadDocuments)}
-            disabled={!canRun}
-          >
-            {isBusy ? <Spinner /> : <Download className="h-4 w-4" />}
-            دانلود{selected.length > 1 && ` (${selected.length.toLocaleString("fa-IR")})`}
-          </Button>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <Label className="text-card-foreground text-sm font-medium leading-relaxed">
-              {attachmentLabel}
-            </Label>
-            {attachmentRequired && (
-              <Badge variant="destructive" className="text-[10px]">
-                ضروری
-              </Badge>
-            )}
+        {/* کاربر انتخاب می‌کند دقیقاً چه چیزی چاپ/دانلود شود — مخصوصاً در
+            فروش که سندِ ساختِ سرور و ضمیمه‌ی دستی هر دو هستند. */}
+        {hasDocuments ? (
+          <div className="space-y-2 border-t border-border pt-3">
+            <fieldset className="space-y-1">
+              <legend className="mb-1 text-xs text-muted-foreground">سندهای چاپ و دانلود</legend>
+              {documents.map((document_) => (
+                <label
+                  key={document_.id}
+                  className="flex min-h-9 cursor-pointer items-center gap-2 rounded-md border border-border px-2.5 py-1.5 text-sm transition-colors hover:bg-muted/50 has-[[data-state=checked]]:border-primary/40 has-[[data-state=checked]]:bg-primary/5"
+                >
+                  <Checkbox
+                    checked={!excluded.has(document_.id)}
+                    onCheckedChange={(checked) => toggle(document_.id, checked === true)}
+                  />
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate" dir="auto" title={document_.name}>
+                    {document_.name}
+                  </span>
+                  {document_.id === "server-pdf" && (
+                    <Badge variant="secondary" className="shrink-0 text-[10px]">
+                      ساختِ سیستم
+                    </Badge>
+                  )}
+                </label>
+              ))}
+            </fieldset>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="flex-1 gap-1.5"
+                onClick={() => run(printDocuments)}
+                disabled={!canRun}
+              >
+                {isBusy ? <Spinner /> : <Printer className="h-4 w-4" />}
+                چاپ{selected.length > 1 && ` (${selected.length.toLocaleString("fa-IR")})`}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="flex-1 gap-1.5"
+                onClick={() => run(downloadDocuments)}
+                disabled={!canRun}
+              >
+                {isBusy ? <Spinner /> : <Download className="h-4 w-4" />}
+                دانلود{selected.length > 1 && ` (${selected.length.toLocaleString("fa-IR")})`}
+              </Button>
+            </div>
           </div>
-
-          {attachments ? (
-            <FileUploadList
-              list={attachments}
-              withNotes={false}
-              emptyLabel={`${attachmentLabel} را اینجا اضافه کنید (تصویر یا PDF).`}
-            />
-          ) : (
-            <p className="flex items-start gap-2 rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground leading-relaxed">
-              <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-              ضمیمه‌کردن فاکتور برای این سند هنوز روی سرور پشتیبانی نمی‌شود.
-            </p>
-          )}
-        </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            {emptyHint ?? "با افزودنِ فایل، چاپ و دانلود فعال می‌شود."}
+          </p>
+        )}
       </CardContent>
     </Card>
   );

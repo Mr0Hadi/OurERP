@@ -5,30 +5,30 @@ import { Undo2 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 import { useSaleChangesSaver } from "@/features/sales/orders/services/mutations";
-import DocumentFormLayout from "@/shared/components/forms/DocumentFormLayout";
-import DocumentHero from "@/shared/components/documents/DocumentHero";
-import IssuedStatusMenu from "@/shared/components/documents/IssuedStatusMenu";
+import SaleCustomerSection from "../components/forms/SaleCustomerSection";
+import DocumentFormLayout, {
+  DocumentMobileBar,
+  OrderSummaryCard,
+} from "@/shared/components/forms/DocumentFormLayout";
+import OrderInfoCard from "@/shared/components/forms/OrderInfoCard";
 import OrderItemsReadOnly from "@/shared/components/forms/OrderItemsReadOnly";
 import OrderLogisticsSection from "@/shared/components/forms/OrderLogisticsSection";
-import PendingChangesBar from "@/shared/components/forms/PendingChangesBar";
-import PaymentsLedgerCard from "@/shared/components/payments/PaymentsLedgerCard";
-import AttachmentsCard from "@/shared/components/invoice/AttachmentsCard";
-import DocumentOutputMenu from "@/shared/components/invoice/DocumentOutputMenu";
+import PaymentsCard from "@/shared/components/payments/PaymentsCard";
+import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import IssuedInvoiceNotice from "@/shared/components/invoice/IssuedInvoiceNotice";
 import RelatedReturnsCard from "@/shared/components/returns/RelatedReturnsCard";
 import SaleStatusBadge from "@/shared/components/status/SaleStatusBadge";
-import PaymentTypeBadge from "@/shared/components/status/PaymentTypeBadge";
 import UnitsPageLink from "@/features/warehouse/units/components/UnitsPageLink";
 import { useIssuedDocumentDraft } from "@/shared/hooks/useIssuedDocumentDraft";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { useRelatedSalesReturnsQuery } from "@/features/sales/returns/services/queries";
-import { getSaleInvoicePdf } from "@/shared/services/invoice/api-v1";
 import { RETURNABLE_SALE_STATUSES, hasAnythingShipped } from "../domain/saleRules";
 import { SALE_PAYMENT_SIDE } from "../domain/salePayments";
 import { SaleStatusEnum, SALE_STATUS_LABELS } from "@/shared/domain/enums/saleStatus";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
-import { ROUTES, routeWithId } from "@/shared/constants/routes";
+import { savedInvoiceTotals } from "@/shared/domain/invoice/lineMath";
+import { ROUTES } from "@/shared/constants/routes";
 import { formatNumber } from "@/shared/lib/numberFormat";
 
 /** لغو فقط پیش از هر ارسالی؛ قرارداد اقساطیِ فعال را خودِ سرور می‌سنجد. */
@@ -38,14 +38,24 @@ const canCancelSale = (sale) =>
   !hasAnythingShipped(sale);
 
 /**
- * فروشِ **صادرشده** — اقلام، قیمت و مشتری دیگر عوض نمی‌شوند؛ پرداخت‌ها،
- * سررسید، پیوست‌ها و وضعیت با یک «ثبت تغییرات» (`useIssuedDocumentDraft`)،
- * به‌جز لغو که تأیید می‌خواهد و همان لحظه ذخیره می‌شود.
- *
- * `ChangeSaleStatus` دستی فقط «ارسال شده → تحویل کامل» را می‌پذیرد؛ «ارسال
- * ناقص/ارسال شده» را ارسالِ انبار می‌گذارد.
- *
- * بالا: سرِ فاکتور. ستونِ اصلی: اقلام ← مرجوعی‌ها ← حمل. کنار: دریافت‌ها ← پیوست‌ها.
+ * گزینه‌های وضعیت. `ChangeSaleStatus` دستی فقط «ارسال شده → تحویل کامل» را
+ * می‌پذیرد؛ «ارسال ناقص/ارسال شده» را ارسالِ انبار می‌گذارد.
+ */
+function statusOptionsOf(sale) {
+  const current = sale.status;
+  return [
+    { value: current, label: SALE_STATUS_LABELS[current] },
+    ...(current === SaleStatusEnum.SHIPPED
+      ? [{ value: SaleStatusEnum.DELIVERED, label: SALE_STATUS_LABELS[SaleStatusEnum.DELIVERED] }]
+      : []),
+    ...(canCancelSale(sale) ? [{ value: SaleStatusEnum.CANCELLED, label: "لغو فروش" }] : []),
+  ];
+}
+
+/**
+ * فروشِ **صادرشده** — همان چیدمانِ فرمِ ثبت (`SaleForm`)، با مشتری و اقلامِ
+ * فقط‌خواندنی. دریافت‌ها، وضعیت، سررسید و پیوست‌ها با یک «ثبت تغییرات» ذخیره
+ * می‌شوند (`useIssuedDocumentDraft`)؛ لغو پیش از ذخیره تأیید می‌خواهد.
  */
 export default function SaleIssuedView({ sale }) {
   const navigate = useNavigate();
@@ -59,89 +69,40 @@ export default function SaleIssuedView({ sale }) {
   const canUpdate = allows("SaleUpdate");
   const isCancelled = sale.status === SaleStatusEnum.CANCELLED;
   const isInstallment = sale.paymentType === PaymentTypeEnum.INSTALLMENT;
-  const payable = sale.payableAmount ?? sale.totalAmount;
+  const isSaving = saver.isPending || draft.attachments.isUploading;
 
-  const save = (overrides = {}) => {
+  const save = () => {
     if (draft.attachments.isUploading) return;
-    saver.mutate(
-      { ...draft.changes(), ...overrides },
-      {
-        onSuccess: () => {
-          draft.attachments.commit();
-          setConfirmCancel(false);
-        },
+    saver.mutate(draft.changes(), {
+      onSuccess: () => {
+        draft.attachments.commit();
+        setConfirmCancel(false);
       },
-    );
+    });
   };
 
-  const transitions =
-    canUpdate && sale.status === SaleStatusEnum.SHIPPED && Number(draft.status) !== SaleStatusEnum.DELIVERED
-      ? [
-          {
-            value: SaleStatusEnum.DELIVERED,
-            label: SALE_STATUS_LABELS[SaleStatusEnum.DELIVERED],
-            hint: "مشتری همه‌ی کالا را تحویل گرفت.",
-          },
-        ]
-      : [];
+  const onSubmit = (e) => {
+    e.preventDefault();
+    if (!draft.count) return;
+    if (Number(draft.status) === SaleStatusEnum.CANCELLED) setConfirmCancel(true);
+    else save();
+  };
+
+  const submitLabel = draft.count
+    ? `ثبت تغییرات (${formatNumber(draft.count)})`
+    : "ثبت تغییرات";
 
   return (
     <>
       <DocumentFormLayout
-        top={
-          <DocumentHero
-            kindLabel="فاکتور فروش"
-            number={sale.invoiceNumber}
-            statusBadge={<SaleStatusBadge status={sale.status} withIcon />}
-            nextStatusBadge={draft.statusDirty && <SaleStatusBadge status={Number(draft.status)} />}
-            onUndoStatus={() => draft.setStatus(sale.status)}
-            help={!isCancelled && <IssuedInvoiceNotice movedLabel="ارسال" />}
-            party={{
-              label: "مشتری",
-              name: sale.customerName,
-              href: sale.customerId ? routeWithId(ROUTES.CUSTOMERS_DETAIL, sale.customerId) : null,
-            }}
-            date={sale.invoiceDate}
-            paymentTypeBadge={<PaymentTypeBadge type={sale.paymentType} />}
-            money={{
-              total: sale.totalAmount,
-              payable,
-              paid: draft.payments.netPaid,
-              dueDate: draft.dueDate,
-            }}
-            description={sale.description}
-            actions={
-              <>
-                {RETURNABLE_SALE_STATUSES.includes(Number(sale.status)) && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="gap-1.5"
-                    onClick={() => navigate(`${ROUTES.SALES_RETURNS_NEW}?saleId=${sale.id}`)}
-                  >
-                    <Undo2 className="size-4" />
-                    ثبت مرجوعی
-                  </Button>
-                )}
-                <DocumentOutputMenu
-                  serverPdf={{
-                    name: sale.invoiceNumber || `sale-${sale.id}`,
-                    fetchPdf: () => getSaleInvoicePdf(sale.id),
-                  }}
-                  attachments={draft.attachments}
-                />
-                <IssuedStatusMenu
-                  transitions={transitions}
-                  onTransition={draft.setStatus}
-                  onCancel={canUpdate && canCancelSale(sale) ? () => setConfirmCancel(true) : undefined}
-                  cancelLabel="لغو فروش"
-                />
-              </>
-            }
-          />
-        }
+        onSubmit={onSubmit}
         main={
           <>
+            <SaleCustomerSection
+              selectedId={sale.customerId}
+              selectedName={sale.customerName}
+              readOnly
+            />
             <OrderItemsReadOnly
               title="اقلام فروش"
               items={sale.items}
@@ -159,6 +120,22 @@ export default function SaleIssuedView({ sale }) {
                 },
               ]}
             />
+            <PaymentsCard
+              title="دریافت‌ها"
+              draft={draft.payments}
+              side={SALE_PAYMENT_SIDE}
+              total={sale.totalAmount}
+              payable={sale.payableAmount}
+              canManage={allows("SalePayment") && !isInstallment}
+              refundOnly={isCancelled}
+              notice={
+                isInstallment
+                  ? "پرداخت‌های فروشِ اقساطی از قرارداد اقساط ثبت می‌شوند."
+                  : isCancelled
+                    ? "فروش لغو شده است؛ پولِ مشتری را با «پول برگشتی» برگردانید."
+                    : undefined
+              }
+            />
             <RelatedReturnsCard
               returns={relatedReturns}
               side={sideConfig(RETURN_SIDES.SALES)}
@@ -175,32 +152,56 @@ export default function SaleIssuedView({ sale }) {
         }
         aside={
           <>
-            <PaymentsLedgerCard
-              draft={draft.payments}
-              side={SALE_PAYMENT_SIDE}
-              payable={payable}
-              dueDate={draft.dueDate}
-              onDueDateChange={draft.setDueDate}
-              canManage={allows("SalePayment") && !isInstallment}
-              refundOnly={isCancelled}
-              notice={
-                isInstallment
-                  ? "پرداخت‌های فروشِ اقساطی از قرارداد اقساط ثبت می‌شوند."
-                  : isCancelled
-                    ? "فروش لغو شده است؛ پولِ مشتری را با «پول برگشتی» برگردانید."
-                    : undefined
+            <OrderSummaryCard
+              title="فاکتور فروش"
+              badge={<SaleStatusBadge status={sale.status} withIcon />}
+              itemCount={sale.items?.length ?? 0}
+              totals={savedInvoiceTotals(sale)}
+              submitLabel={submitLabel}
+              submitDisabled={!draft.count}
+              isBusy={isSaving}
+              onCancel={draft.count ? draft.discard : undefined}
+              cancelLabel="بازگردانی"
+              footer={
+                RETURNABLE_SALE_STATUSES.includes(Number(sale.status)) && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="w-full gap-1.5"
+                    onClick={() => navigate(`${ROUTES.SALES_RETURNS_NEW}?saleId=${sale.id}`)}
+                  >
+                    <Undo2 className="size-3.5" />
+                    ثبت مرجوعی از این فروش
+                  </Button>
+                )
               }
             />
-            <AttachmentsCard label="نسخه‌ی امضاشده‌ی فاکتور" attachments={draft.attachments} />
+            <OrderInfoCard
+              issued
+              formData={{ ...sale, paymentDate: draft.dueDate }}
+              onFormChange={({ paymentDate }) => draft.setDueDate(paymentDate)}
+              headerAction={!isCancelled && <IssuedInvoiceNotice movedLabel="ارسال" />}
+              status={
+                canUpdate
+                  ? { value: Number(draft.status), options: statusOptionsOf(sale), onChange: draft.setStatus }
+                  : undefined
+              }
+            />
+            <InvoiceDocumentSection
+              title="فاکتور"
+              invoiceNumber={sale.invoiceNumber}
+              attachments={draft.attachments}
+              documentKind="sale"
+              documentId={sale.id}
+              attachmentLabel="نسخه‌ی امضاشده‌ی فاکتور"
+            />
           </>
         }
-        footer={
-          <PendingChangesBar
-            count={draft.count}
-            isSaving={saver.isPending || draft.attachments.isUploading}
-            onDiscard={draft.discard}
-            onSave={() => save()}
-          />
+        mobileBar={
+          draft.count > 0 && (
+            <DocumentMobileBar total={sale.totalAmount} submitLabel={submitLabel} isBusy={isSaving} />
+          )
         }
       />
 
@@ -208,11 +209,11 @@ export default function SaleIssuedView({ sale }) {
         open={confirmCancel}
         onOpenChange={setConfirmCancel}
         title="لغو فروش"
-        description="لغو نهایی است و قابل بازگشت نیست. پرداخت‌های مشتری روی فروش می‌مانند تا با «پول برگشتی» برگردانده شوند. تغییرهای ثبت‌نشده‌ی دیگرِ این صفحه هم همراهش ذخیره می‌شوند."
-        confirmLabel="لغو فروش"
-        pendingLabel="در حال لغو..."
+        description="لغو نهایی است و قابل بازگشت نیست. پرداخت‌های مشتری روی فروش می‌مانند تا با «پول برگشتی» برگردانده شوند."
+        confirmLabel="لغو فروش و ذخیره"
+        pendingLabel="در حال ذخیره..."
         isPending={saver.isPending}
-        onConfirm={() => save({ status: SaleStatusEnum.CANCELLED })}
+        onConfirm={save}
       />
     </>
   );

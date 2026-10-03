@@ -6,7 +6,6 @@ import ProductPicker from "@/shared/components/products/ProductPicker";
 
 /** اقلامِ خرید، با قیمتِ خریدِ کالا به‌عنوانِ قیمتِ پیش‌فرض. */
 export default function PurchaseItemsSection({
-  step,
   items,
   onItemsChange,
   products = [],
@@ -15,7 +14,6 @@ export default function PurchaseItemsSection({
 }) {
   return (
     <SectionCard
-      step={step}
       title="اقلام خرید"
       action={
         onAddNewProduct && (

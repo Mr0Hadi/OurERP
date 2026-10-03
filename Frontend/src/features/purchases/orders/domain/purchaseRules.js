@@ -105,12 +105,6 @@ export function missingInvoiceFields(formData, status) {
   return Object.keys(errors).length > 0 ? errors : null;
 }
 
-/** توضیحِ «پیش‌فاکتور / فاکتور» در فرمِ خرید (`DocumentKindPicker`). */
-export const PURCHASE_KIND_DESCRIPTIONS = {
-  proforma: "قیمت‌ها و اقلام بعداً هم ویرایش می‌شوند؛ شماره و پرداخت ندارد.",
-  invoice: "فاکتورِ قطعیِ تامین‌کننده با شماره و تاریخ؛ پرداخت همین‌جا ثبت می‌شود.",
-};
-
 /** وضعیتِ ارسالِ خریدِ صادرشده — تنها دو وضعیتِ دستی پس از صدور (و لغو). */
 export const PURCHASE_SHIPPING_CHOICES = [
   {

@@ -1,9 +1,14 @@
-import { Circle, CircleCheck, Save } from "lucide-react";
+import { Save } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import { Card } from "@/shared/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/ui/card";
 import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
-import { toneText } from "@/shared/lib/tone";
 import { cn } from "@/shared/lib/utils";
 
 /**
@@ -62,110 +67,70 @@ export function FormSection({ name, children }) {
 }
 
 /**
- * خلاصه و ثبتِ سند در ستونِ کناری: مبالغ، وضعیتِ پرداخت، آنچه پیش از ثبت
- * کم است، و دکمه‌ها. چک‌لیست فقط وقتی چیزی کم است دیده می‌شود — کاربر قبل
- * از کلیک می‌داند چرا ثبت نمی‌شود.
+ * جمع و دکمه‌ی اصلیِ صفحه («ثبت» یا «ثبت تغییرات») — بالای ستونِ کناری تا با
+ * اسکرول از دید نرود. هر تغییری (اقلام، پرداخت، وضعیت، پیوست) فقط با همین
+ * دکمه ذخیره می‌شود.
  *
- * @param totals    خروجیِ `invoiceTotals`
- * @param payment   `{ paid, remaining, remainingLabel }` یا `null` (پیش‌فاکتور)
- * @param checklist `[{ key, label, done, section }]`
- * @param footer    کارِ ثانویه (مثلاً حذفِ پیش‌فاکتور)
+ * @param totals `{ netAmount, taxAmount, totalAmount, taxUnknown }`
+ * @param footer کارِ ثانویه (حذفِ پیش‌فاکتور، ثبتِ مرجوعی)
  */
 export function OrderSummaryCard({
   title,
   badge,
   itemCount,
   totals,
-  payment,
-  checklist = [],
   submitLabel,
-  pendingLabel = "در حال ثبت...",
+  pendingLabel = "در حال ذخیره...",
   isBusy,
+  submitDisabled = false,
   onCancel,
   cancelLabel = "انصراف",
   footer,
   canSubmit = true,
 }) {
-  const missing = checklist.filter((entry) => !entry.done);
-
   return (
-    <Card className="gap-0 py-0">
-      <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-3">
-        <h2 className="text-sm font-semibold">{title}</h2>
-        {badge}
-      </div>
+    <Card>
+      <CardHeader className="pb-0">
+        <CardTitle className="text-base font-semibold">{title}</CardTitle>
+        {badge && <CardAction>{badge}</CardAction>}
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <dl className="space-y-2 text-sm">
+          <Row label={`اقلام (${formatNumber(itemCount)})`} value={formatNumber(totals.netAmount)} />
+          {totals.taxAmount > 0 && <Row label="مالیات" value={formatNumber(totals.taxAmount)} />}
+          <div className="flex items-baseline justify-between gap-2 border-t border-border pt-2">
+            <dt className="font-medium">جمع کل</dt>
+            <dd className="text-base font-bold tabular-nums">{formatRial(totals.totalAmount)}</dd>
+          </div>
+          {totals.taxUnknown && (
+            <p className="text-[11px] leading-5 text-muted-foreground">
+              مالیاتِ کالاهای تازه را سرور هنگامِ ثبت حساب می‌کند.
+            </p>
+          )}
+        </dl>
 
-      <dl className="space-y-2 px-4 pb-4 text-sm">
-        <Row label={`اقلام (${formatNumber(itemCount)})`} value={formatNumber(totals.netAmount)} />
-        {totals.taxAmount > 0 && <Row label="مالیات" value={formatNumber(totals.taxAmount)} />}
-        <div className="flex items-baseline justify-between gap-2 border-t border-border pt-3">
-          <dt className="font-medium">مبلغ کل</dt>
-          <dd className="text-lg font-bold tabular-nums">{formatRial(totals.totalAmount)}</dd>
-        </div>
-        {totals.taxUnknown && (
-          <p className="text-[11px] leading-5 text-muted-foreground">
-            مالیاتِ کالاهای تازه را سرور هنگامِ ثبت حساب می‌کند.
-          </p>
-        )}
-        {payment && totals.totalAmount > 0 && (
-          <div className="space-y-2 rounded-lg bg-muted/50 px-3 py-2.5">
-            <Row label="پرداخت" value={formatNumber(payment.paid)} />
-            <div className="flex items-baseline justify-between gap-2">
-              <dt className="text-muted-foreground">{payment.remainingLabel ?? "مانده"}</dt>
-              <dd
-                className={cn(
-                  "font-semibold tabular-nums",
-                  toneText(payment.remaining > 0 ? "warning" : "success"),
-                )}
+        {canSubmit && (
+          <div className="flex gap-2">
+            {/* روی موبایل دکمه‌ی ثبت در نوارِ پایین است. */}
+            <Button type="submit" className="hidden flex-1 gap-2 lg:flex" disabled={isBusy || submitDisabled}>
+              <Save className="size-4" />
+              {isBusy ? pendingLabel : submitLabel}
+            </Button>
+            {onCancel && (
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 lg:flex-none"
+                onClick={onCancel}
+                disabled={isBusy}
               >
-                {payment.remaining > 0 ? formatNumber(payment.remaining) : "تسویه"}
-              </dd>
-            </div>
+                {cancelLabel}
+              </Button>
+            )}
           </div>
         )}
-      </dl>
-
-      {canSubmit && (
-        <div className="space-y-3 border-t border-border bg-muted/20 px-4 py-4">
-          {missing.length > 0 && (
-            <ul className="space-y-1.5" aria-label="پیش از ثبت">
-              {checklist.map((entry) => (
-                <li
-                  key={entry.key}
-                  className={cn(
-                    "flex items-start gap-2 text-xs leading-5",
-                    entry.done ? "text-muted-foreground" : "text-card-foreground",
-                  )}
-                >
-                  {entry.done ? (
-                    <CircleCheck className={cn("mt-0.5 size-3.5 shrink-0", toneText("success"))} />
-                  ) : (
-                    <Circle className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-                  )}
-                  {entry.label}
-                </li>
-              ))}
-            </ul>
-          )}
-          {/* روی موبایل دکمه‌ی ثبت در نوارِ پایین است. */}
-          <Button type="submit" size="lg" className="hidden lg:flex w-full gap-2" disabled={isBusy}>
-            <Save className="size-4" />
-            {isBusy ? pendingLabel : submitLabel}
-          </Button>
-          {onCancel && (
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full text-muted-foreground"
-              onClick={onCancel}
-              disabled={isBusy}
-            >
-              {cancelLabel}
-            </Button>
-          )}
-        </div>
-      )}
-      {footer && <div className="border-t border-border px-4 py-2">{footer}</div>}
+        {footer && <div className="space-y-1 border-t border-border pt-3">{footer}</div>}
+      </CardContent>
     </Card>
   );
 }
@@ -180,15 +145,15 @@ function Row({ label, value }) {
 }
 
 /** نوارِ ثابتِ پایینِ موبایل: جمع و ثبت، همیشه در دسترس. */
-export function DocumentMobileBar({ total, submitLabel, pendingLabel = "در حال ثبت...", isBusy }) {
+export function DocumentMobileBar({ total, submitLabel, pendingLabel = "در حال ذخیره...", isBusy, submitDisabled = false }) {
   return (
     <div className="lg:hidden fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 px-4 py-3">
       <div className="flex items-center gap-3 max-w-3xl mx-auto">
         <div className="flex-1 min-w-0">
-          <p className="text-[11px] text-muted-foreground">مبلغ کل</p>
+          <p className="text-[11px] text-muted-foreground">جمع کل</p>
           <p className="text-sm font-semibold tabular-nums truncate">{formatRial(total)}</p>
         </div>
-        <Button type="submit" size="lg" className="gap-2" disabled={isBusy}>
+        <Button type="submit" className="gap-2" disabled={isBusy || submitDisabled}>
           <Save className="size-4" />
           {isBusy ? pendingLabel : submitLabel}
         </Button>
