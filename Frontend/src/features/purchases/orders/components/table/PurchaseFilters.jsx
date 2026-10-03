@@ -6,9 +6,11 @@ import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import EntitySelect from "@/shared/components/filters/EntitySelect";
 import { toFilterOptions } from "@/shared/components/filters/filterUtils";
 import { usePurchaseFilterStore } from "../../store/purchaseFilterStore";
-import { DOCUMENT_PAYMENT_TYPES } from "@/shared/domain/enums/paymentType";
-import { usePurchaseStatusLabels, usePaymentTypeLabels } from "@/shared/services/enums/queries";
+import { PURCHASE_STATUS_LABELS } from "@/shared/domain/enums/purchaseStatus";
+import { DOCUMENT_PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
 
+const STATUS_OPTIONS = toFilterOptions(PURCHASE_STATUS_LABELS);
+const PAYMENT_TYPE_OPTIONS = toFilterOptions(DOCUMENT_PAYMENT_TYPE_LABELS);
 
 const renderSupplierPhone = (supplier) =>
   supplier.phone ? (
@@ -36,14 +38,6 @@ const PurchaseFilters = ({ suppliers = [], isSuppliersLoading = false }) => {
     setToDate,
     resetFilters,
   } = usePurchaseFilterStore();
-
-  // برچسب‌ها از enumِ سرور (`GetEnums`)؛ نوع‌های پرداختِ سند همان فهرستِ محلی‌اند.
-  const statusLabels = usePurchaseStatusLabels();
-  const paymentTypeLabels = usePaymentTypeLabels();
-  const statusOptions = toFilterOptions(statusLabels);
-  const paymentTypeOptions = toFilterOptions(
-    Object.fromEntries(DOCUMENT_PAYMENT_TYPES.map((value) => [value, paymentTypeLabels[value]])),
-  );
 
   const handleGlobalSearch = useCallback(
     (e) => setInvoiceNumber(e.target.value),
@@ -90,7 +84,7 @@ const PurchaseFilters = ({ suppliers = [], isSuppliersLoading = false }) => {
         value={status}
         onChange={setStatus}
         allLabel="همه وضعیت‌ها"
-        options={statusOptions}
+        options={STATUS_OPTIONS}
         numeric
       />
 
@@ -99,7 +93,7 @@ const PurchaseFilters = ({ suppliers = [], isSuppliersLoading = false }) => {
         value={paymentType}
         onChange={setPaymentType}
         allLabel="همه"
-        options={paymentTypeOptions}
+        options={PAYMENT_TYPE_OPTIONS}
         numeric
       />
     </FilterPanel>

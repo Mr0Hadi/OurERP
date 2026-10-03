@@ -6,9 +6,11 @@ import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import EntitySelect from "@/shared/components/filters/EntitySelect";
 import { toFilterOptions } from "@/shared/components/filters/filterUtils";
 import { useSaleFilterStore } from "../../store/saleFilterStore";
-import { DOCUMENT_PAYMENT_TYPES } from "@/shared/domain/enums/paymentType";
-import { useSaleStatusLabels, usePaymentTypeLabels } from "@/shared/services/enums/queries";
+import { SALE_STATUS_LABELS } from "@/shared/domain/enums/saleStatus";
+import { DOCUMENT_PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
 
+const STATUS_OPTIONS = toFilterOptions(SALE_STATUS_LABELS);
+const PAYMENT_TYPE_OPTIONS = toFilterOptions(DOCUMENT_PAYMENT_TYPE_LABELS);
 
 const renderCustomerPhone = (customer) =>
   customer.phoneNumber ? (
@@ -36,14 +38,6 @@ const SaleFilters = ({ customers = [], isCustomersLoading = false }) => {
     setToDate,
     resetFilters,
   } = useSaleFilterStore();
-
-  // برچسب‌ها از enumِ سرور (`GetEnums`)؛ نوع‌های پرداختِ سند همان فهرستِ محلی‌اند.
-  const statusLabels = useSaleStatusLabels();
-  const paymentTypeLabels = usePaymentTypeLabels();
-  const statusOptions = toFilterOptions(statusLabels);
-  const paymentTypeOptions = toFilterOptions(
-    Object.fromEntries(DOCUMENT_PAYMENT_TYPES.map((value) => [value, paymentTypeLabels[value]])),
-  );
 
   const handleGlobalSearch = useCallback(
     (e) => setInvoiceNumber(e.target.value),
@@ -90,7 +84,7 @@ const SaleFilters = ({ customers = [], isCustomersLoading = false }) => {
         value={status}
         onChange={setStatus}
         allLabel="همه وضعیت‌ها"
-        options={statusOptions}
+        options={STATUS_OPTIONS}
         numeric
       />
 
@@ -99,7 +93,7 @@ const SaleFilters = ({ customers = [], isCustomersLoading = false }) => {
         value={paymentType}
         onChange={setPaymentType}
         allLabel="همه"
-        options={paymentTypeOptions}
+        options={PAYMENT_TYPE_OPTIONS}
         numeric
       />
     </FilterPanel>

@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import RemoteImage from "@/shared/components/files/RemoteImage";
-import BarcodeScanField from "@/shared/components/barcode/BarcodeScanField";
+import CameraScanButton from "@/shared/components/barcode/CameraScanButton";
 import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 import { parseBarcode } from "@/shared/domain/barcode/productCode";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
@@ -29,8 +29,8 @@ function stockTone(product) {
 }
 
 /**
- * جست‌وجو و افزودنِ کالا: جست‌وجو و اسکنِ بارکد (با دوربین) کنارِ هم، و زیرشان
- * دسته‌بندی و «همه‌ی کالاها» — در هر عرضی دیده می‌شوند.
+ * جست‌وجو و افزودنِ کالا: یک فیلد برای نام/کد/برند و بارکدِ اسکنر، دکمه‌ی دوربین
+ * کنارش، و زیرشان دسته‌بندی و «همه‌ی کالاها» — در هر عرضی دیده می‌شوند.
  *  - تایپ، فهرست را فیلتر می‌کند؛ ↑/↓ بینِ نتیجه‌ها و Enter قلمِ برجسته را
  *    اضافه می‌کند — بی موس.
  *  - اسکنرِ دستی در هر دو فیلد کار می‌کند: کد را می‌نویسد و Enter می‌زند؛ اگر
@@ -136,9 +136,10 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
 
   return (
     <div className="@container/search space-y-2">
-      {/* جست‌وجو و اسکن کنارِ هم (عرضِ کم: زیرِ هم)؛ دسته‌بندی و «همه‌ی کالاها» ردیفِ بعد. */}
-      <div className="grid gap-2 @2xl/search:grid-cols-[minmax(0,1fr)_15rem]">
-        <div className="relative">
+      {/* یک فیلد برای جست‌وجو و اسکنرِ دستی (Enter)، دکمه‌ی دوربین کنارش؛ دسته‌بندی و
+          «همه‌ی کالاها» ردیفِ بعد. */}
+      <div className="flex gap-2">
+        <div className="relative min-w-0 flex-1">
           <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             ref={inputRef}
@@ -146,7 +147,7 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
             aria-expanded={isListOpen}
             aria-controls={listId}
             aria-activedescendant={isListOpen && shown.length ? `${listId}-${activeIndex}` : undefined}
-            placeholder="جست‌وجوی نام، کد یا برند..."
+            placeholder="جست‌وجوی نام، کد، برند یا اسکنِ بارکد..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -168,10 +169,9 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
             </button>
           )}
         </div>
-        <BarcodeScanField
-          onScan={(code) => scan(code) || toast.error(`کد «${code}» شناخته نشد`)}
-          placeholder="اسکن بارکد..."
-          className="min-w-0"
+        <CameraScanButton
+          className="shrink-0"
+          onDetected={(code) => scan(code) || toast.error(`کد «${code}» شناخته نشد`)}
         />
       </div>
 

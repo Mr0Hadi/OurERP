@@ -13,7 +13,7 @@ import {
 } from "@/features/purchases/orders/services/mutations";
 import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import {
-  PURCHASE_SHIPPING_STATUSES,
+  PURCHASE_SHIPPING_CHOICES,
   canDeletePurchase,
   missingInvoiceFields,
 } from "@/features/purchases/orders/domain/purchaseRules";
@@ -35,7 +35,6 @@ import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAtt
 import { useReturnedNewProduct } from "@/shared/components/products/useReturnedNewProduct";
 import { useDocumentFormDraft } from "@/shared/hooks/useDocumentFormDraft";
 import { usePermission } from "@/features/auth/hooks/usePermission";
-import { usePurchaseStatusLabels } from "@/shared/services/enums/queries";
 import { scrollToSection } from "@/shared/lib/scrollToSection";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
@@ -58,7 +57,6 @@ export default function PurchaseForm({ purchase }) {
   const isNew = !purchase;
   const navigate = useNavigate();
   const { allows } = usePermission();
-  const statusLabels = usePurchaseStatusLabels();
   const [showErrors, setShowErrors] = useState(false);
   const [dialog, setDialog] = useState(null); // "delete" | "cancel"
 
@@ -274,7 +272,7 @@ export default function PurchaseForm({ purchase }) {
                 errors={showErrors ? invoiceErrors ?? {} : {}}
                 status={{
                   value: status,
-                  options: PURCHASE_SHIPPING_STATUSES.map((value) => ({ value, label: statusLabels[value] })),
+                  options: PURCHASE_SHIPPING_CHOICES,
                   onChange: (next) => setFormData({ status: next }),
                 }}
               />

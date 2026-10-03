@@ -12,10 +12,8 @@ import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
 
 /**
  * چیدمانِ صفحه‌ی سندِ خرید/فروش: ستونِ اصلی (کارِ کاربر، به ترتیب) و ستونِ
- * کناری (اطلاعاتِ فاکتور، سند، جمع و ثبت). فقط یک اسکرول — خودِ صفحه؛ ستونِ
- * کناری اسکرولِ جدا ندارد. کارتِ جمع و ثبت آخرِ ستونِ کناری است و از xl به
- * پایینِ صفحه می‌چسبد (`sticky bottom`) تا دکمه‌ی ثبت همیشه دیده شود. در عرضِ
- * کم همه زیرِ هم‌اند و همان کارت آخرِ صفحه است (دکمه‌ی شناور ندارد).
+ * کناری (اطلاعاتِ فاکتور، سند، جمع و ثبت). فقط یک اسکرول — خودِ صفحه. در عرضِ
+ * کم همه زیرِ هم‌اند و کارتِ جمع و ثبت آخرِ صفحه است.
  *
  * بی `onSubmit` فقط چیدمان است (نمای فاکتورِ صادرشده)؛ با آن یک `<form>`.
  *
@@ -41,8 +39,8 @@ export default function DocumentFormLayout({ top, main, aside, footer, onSubmit 
       {/* دو ستون فقط از xl: کمتر از آن ستونِ اصلی برای جدولِ اقلام جا ندارد. */}
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_23rem] gap-4 items-start">
         <div className="space-y-4 min-w-0">{main}</div>
-        {/* هم‌قدِ ستونِ اصلی (`self-stretch`) تا کارتِ جمع تا پایینِ صفحه بچسبد. */}
-        <aside className="flex min-w-0 flex-col gap-4 xl:self-stretch">
+        {/* بی اسکرولِ جدا: فقط خودِ صفحه اسکرول می‌خورد. کارتِ جمع و ثبت آخرِ ستون است. */}
+        <aside className="flex min-w-0 flex-col gap-4">
           {aside}
         </aside>
       </div>
@@ -64,8 +62,8 @@ export function FormSection({ name, children }) {
 }
 
 /**
- * جمع و دکمه‌ی اصلیِ صفحه («ثبت» یا «ثبت تغییرات») — آخرِ ستونِ کناری، و از xl
- * چسبیده به پایینِ صفحه تا با اسکرول از دید نرود. هر تغییری (اقلام، پرداخت، وضعیت، پیوست) فقط با همین
+ * جمع و دکمه‌ی اصلیِ صفحه («ثبت» یا «ثبت تغییرات») — بالای ستونِ کناری تا با
+ * اسکرول از دید نرود. هر تغییری (اقلام، پرداخت، وضعیت، پیوست) فقط با همین
  * دکمه ذخیره می‌شود.
  *
  * @param totals `{ netAmount, taxAmount, totalAmount, taxUnknown }`
@@ -86,7 +84,7 @@ export function OrderSummaryCard({
   canSubmit = true,
 }) {
   return (
-    <Card className="xl:sticky xl:bottom-4 xl:z-10 xl:shadow-lg">
+    <Card>
       <CardHeader className="pb-0">
         <CardTitle className="text-base font-semibold">{title}</CardTitle>
         {badge && <CardAction>{badge}</CardAction>}
