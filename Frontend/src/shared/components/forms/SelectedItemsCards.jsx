@@ -114,7 +114,7 @@ export default function SelectedItemsCards({
                     min={0}
                     value={item.unitPrice === "" || item.unitPrice == null ? null : Number(item.unitPrice)}
                     onValueChange={(next) => onFieldChange(item.productId, "unitPrice", next ?? "")}
-                    className="h-9 w-full text-center text-sm tabular-nums"
+                    className="h-9 w-full text-right text-sm tabular-nums"
                   />
                 </label>
                 <label className="space-y-1">
@@ -125,7 +125,7 @@ export default function SelectedItemsCards({
                     max={100}
                     value={item.discount}
                     onChange={(e) => onFieldChange(item.productId, "discount", e.target.value)}
-                    className="h-9 w-full text-center text-sm tabular-nums"
+                    className="h-9 w-full text-right text-sm tabular-nums"
                   />
                 </label>
               </div>

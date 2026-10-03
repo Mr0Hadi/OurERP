@@ -17,7 +17,6 @@ import { SALE_PAYMENT_SIDE } from "@/features/sales/orders/domain/salePayments";
 import SaleCustomerSection from "../components/forms/SaleCustomerSection";
 import SaleItemsSection from "../components/forms/SaleItemsSection";
 import DocumentFormLayout, {
-  DocumentMobileBar,
   FormSection,
   OrderSummaryCard,
 } from "@/shared/components/forms/DocumentFormLayout";
@@ -287,6 +286,28 @@ export default function SaleForm({ sale }) {
         }
         aside={
           <>
+            <FormSection name="info">
+              <OrderInfoCard
+                kind={isInvoice ? "invoice" : "proforma"}
+                onKindChange={(kind) =>
+                  setFormData({
+                    status: kind === "proforma" ? SaleStatusEnum.PROFORMA : SaleStatusEnum.PROCESSING,
+                  })
+                }
+                kindNote={isInPerson ? "دانه اسکن شده؛ فروش حضوری است و فاکتور همین حالا تحویل می‌شود." : undefined}
+                formData={formData}
+                onFormChange={setFormData}
+                errors={showErrors ? invoiceErrors ?? {} : {}}
+              />
+            </FormSection>
+            <InvoiceDocumentSection
+              title={isInvoice ? "فاکتور" : "پیش‌فاکتور"}
+              invoiceNumber={formData.invoiceNumber}
+              attachments={attachments}
+              documentKind={isNew ? undefined : "sale"}
+              documentId={sale?.id}
+              attachmentLabel="تصویر یا PDFِ برگه"
+            />
             <OrderSummaryCard
               title={isInvoice ? "فاکتور فروش" : "پیش‌فاکتور فروش"}
               badge={isInPerson && <StatusBadge tone="info">تحویل حضوری</StatusBadge>}
@@ -313,34 +334,7 @@ export default function SaleForm({ sale }) {
                 )
               }
             />
-            <FormSection name="info">
-              <OrderInfoCard
-                kind={isInvoice ? "invoice" : "proforma"}
-                onKindChange={(kind) =>
-                  setFormData({
-                    status: kind === "proforma" ? SaleStatusEnum.PROFORMA : SaleStatusEnum.PROCESSING,
-                  })
-                }
-                kindNote={isInPerson ? "دانه اسکن شده؛ فروش حضوری است و فاکتور همین حالا تحویل می‌شود." : undefined}
-                formData={formData}
-                onFormChange={setFormData}
-                errors={showErrors ? invoiceErrors ?? {} : {}}
-              />
-            </FormSection>
-            <InvoiceDocumentSection
-              title={isInvoice ? "فاکتور" : "پیش‌فاکتور"}
-              invoiceNumber={formData.invoiceNumber}
-              attachments={attachments}
-              documentKind={isNew ? undefined : "sale"}
-              documentId={sale?.id}
-              attachmentLabel="تصویر یا PDFِ برگه"
-            />
           </>
-        }
-        mobileBar={
-          canEdit && (
-            <DocumentMobileBar total={totals.totalAmount} submitLabel={submitLabel} isBusy={isBusy} />
-          )
         }
       />
 

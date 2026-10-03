@@ -57,7 +57,7 @@ export default function BarcodeScanField({
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        className={`flex-1 font-mono input-rtl-placeholder ${inputClassName}`}
+        className={`flex-1 font-mono placeholder:font-sans input-rtl-placeholder ${inputClassName}`}
         autoComplete="off"
         spellCheck={false}
       />

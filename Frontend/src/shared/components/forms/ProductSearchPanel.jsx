@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import RemoteImage from "@/shared/components/files/RemoteImage";
-import CameraScanButton from "@/shared/components/barcode/CameraScanButton";
+import BarcodeScanField from "@/shared/components/barcode/BarcodeScanField";
 import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 import { parseBarcode } from "@/shared/domain/barcode/productCode";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
@@ -29,14 +29,13 @@ function stockTone(product) {
 }
 
 /**
- * جست‌وجو و افزودنِ کالا — یک فیلد برای نام، کد، برند *و* بارکد.
- *
- * قبلاً سه ورودیِ جدا بود (اسکن، جست‌وجو، دسته). حالا:
+ * جست‌وجو و افزودنِ کالا: جست‌وجو، اسکنِ بارکد (با دوربین) و دسته‌بندی در یک
+ * ردیف (در عرضِ کم دو ردیف).
  *  - تایپ، فهرست را فیلتر می‌کند؛ ↑/↓ بینِ نتیجه‌ها و Enter قلمِ برجسته را
  *    اضافه می‌کند — بی موس.
- *  - اسکنرِ دستی مثلِ صفحه‌کلید کد را می‌نویسد و Enter می‌زند: اگر متن بارکدِ
- *    کالا (یا دانه) باشد، همان کالا اضافه می‌شود.
- *  - دکمه‌ی دوربین برای دستگاه‌های بی‌اسکنر.
+ *  - اسکنرِ دستی در هر دو فیلد کار می‌کند: کد را می‌نویسد و Enter می‌زند؛ اگر
+ *    متن بارکدِ کالا (یا دانه) باشد، همان کالا اضافه می‌شود.
+ *  - کالای بی‌تصویر جای خالی نمی‌گذارد؛ کادرش «تصویر» نوشته دارد.
  *
  * فهرست تا جست‌وجو یا «نمایش همه» بسته است و بیش از `MAX_RESULTS` ردیف
  * نشان نمی‌دهد.
@@ -136,9 +135,10 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
   };
 
   return (
-    <div className="space-y-2">
-      <div className="flex gap-2">
-        <div className="relative flex-1">
+    <div className="@container/search space-y-2">
+      {/* عرضِ کم: جست‌وجو یک ردیف، اسکن و دسته ردیفِ بعد؛ عرضِ کافی: هر سه کنارِ هم. */}
+      <div className="grid grid-cols-2 gap-2 @2xl/search:grid-cols-[minmax(0,1fr)_13rem_10rem]">
+        <div className="relative col-span-2 @2xl/search:col-span-1">
           <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             ref={inputRef}
@@ -146,7 +146,7 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
             aria-expanded={isListOpen}
             aria-controls={listId}
             aria-activedescendant={isListOpen && shown.length ? `${listId}-${activeIndex}` : undefined}
-            placeholder="نام، کد یا بارکدِ کالا..."
+            placeholder="جست‌وجوی نام، کد یا برند..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -155,7 +155,7 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
             onKeyDown={handleKeyDown}
             autoComplete="off"
             spellCheck={false}
-            className="input-rtl-placeholder h-10 pr-9 pl-8"
+            className="input-rtl-placeholder pr-9 pl-8"
           />
           {search && (
             <button
@@ -168,31 +168,33 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
             </button>
           )}
         </div>
-        {categories.length > 0 && (
-          <Select
-            value={categoryFilter || "all"}
-            onValueChange={(v) => setCategoryFilter(v === "all" ? "" : v)}
-          >
-            <SelectTrigger aria-label="دسته‌بندی" className="hidden h-10! w-36 shrink-0 sm:flex">
-              <SelectValue placeholder="همه دسته‌ها" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">همه دسته‌ها</SelectItem>
-              {categories.map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-        <CameraScanButton className="size-10 shrink-0" onDetected={(code) => scan(code) || toast.error(`کد «${code}» شناخته نشد`)} />
+        <BarcodeScanField
+          onScan={(code) => scan(code) || toast.error(`کد «${code}» شناخته نشد`)}
+          placeholder="اسکن بارکد..."
+          className="min-w-0"
+        />
+        <Select
+          value={categoryFilter || "all"}
+          onValueChange={(v) => setCategoryFilter(v === "all" ? "" : v)}
+        >
+          <SelectTrigger aria-label="دسته‌بندی" className="w-full min-w-0">
+            <SelectValue placeholder="همه دسته‌ها" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">همه دسته‌ها</SelectItem>
+            {categories.map((cat) => (
+              <SelectItem key={cat} value={cat}>
+                {cat}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {!isListOpen ? (
         <div className="flex flex-wrap items-center justify-between gap-2 px-1">
           <p className="text-xs text-muted-foreground">
-            جست‌وجو کنید یا بارکد را اسکن کنید؛ Enter اولین نتیجه را اضافه می‌کند.
+            کالا را جست‌وجو یا بارکدش را اسکن کنید؛ Enter نتیجه‌ی برجسته را اضافه می‌کند.
           </p>
           <Button
             type="button"
@@ -230,8 +232,12 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
                     imageKey={product.imageKey}
                     imageUrl={product.imageUrl ?? product.image}
                     alt=""
-                    className="hidden size-9 shrink-0 rounded-md border border-border object-cover min-[420px]:block"
-                    fallback={<div className="hidden size-9 shrink-0 rounded-md bg-muted min-[420px]:block" />}
+                    className="size-10 shrink-0 rounded-md border border-border object-cover"
+                    fallback={
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-border bg-muted">
+                        <span className="text-[10px] text-muted-foreground">تصویر</span>
+                      </div>
+                    }
                   />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{product.name}</p>

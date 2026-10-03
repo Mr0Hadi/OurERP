@@ -7,7 +7,6 @@ import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 import { useSaleChangesSaver } from "@/features/sales/orders/services/mutations";
 import SaleCustomerSection from "../components/forms/SaleCustomerSection";
 import DocumentFormLayout, {
-  DocumentMobileBar,
   OrderSummaryCard,
 } from "@/shared/components/forms/DocumentFormLayout";
 import OrderInfoCard from "@/shared/components/forms/OrderInfoCard";
@@ -152,6 +151,26 @@ export default function SaleIssuedView({ sale }) {
         }
         aside={
           <>
+
+            <OrderInfoCard
+              issued
+              formData={{ ...sale, paymentDate: draft.dueDate }}
+              onFormChange={({ paymentDate }) => draft.setDueDate(paymentDate)}
+              headerAction={!isCancelled && <IssuedInvoiceNotice movedLabel="ارسال" />}
+              status={
+                canUpdate
+                  ? { value: Number(draft.status), options: statusOptionsOf(sale), onChange: draft.setStatus }
+                  : undefined
+              }
+            />
+            <InvoiceDocumentSection
+              title="فاکتور"
+              invoiceNumber={sale.invoiceNumber}
+              attachments={draft.attachments}
+              documentKind="sale"
+              documentId={sale.id}
+              attachmentLabel="نسخه‌ی امضاشده‌ی فاکتور"
+            />
             <OrderSummaryCard
               title="فاکتور فروش"
               badge={<SaleStatusBadge status={sale.status} withIcon />}
@@ -177,31 +196,7 @@ export default function SaleIssuedView({ sale }) {
                 )
               }
             />
-            <OrderInfoCard
-              issued
-              formData={{ ...sale, paymentDate: draft.dueDate }}
-              onFormChange={({ paymentDate }) => draft.setDueDate(paymentDate)}
-              headerAction={!isCancelled && <IssuedInvoiceNotice movedLabel="ارسال" />}
-              status={
-                canUpdate
-                  ? { value: Number(draft.status), options: statusOptionsOf(sale), onChange: draft.setStatus }
-                  : undefined
-              }
-            />
-            <InvoiceDocumentSection
-              title="فاکتور"
-              invoiceNumber={sale.invoiceNumber}
-              attachments={draft.attachments}
-              documentKind="sale"
-              documentId={sale.id}
-              attachmentLabel="نسخه‌ی امضاشده‌ی فاکتور"
-            />
           </>
-        }
-        mobileBar={
-          draft.count > 0 && (
-            <DocumentMobileBar total={sale.totalAmount} submitLabel={submitLabel} isBusy={isSaving} />
-          )
         }
       />
 

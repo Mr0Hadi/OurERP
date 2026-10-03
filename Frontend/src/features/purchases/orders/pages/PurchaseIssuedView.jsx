@@ -8,7 +8,6 @@ import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection
 import PurchaseItemsCard from "../components/forms/PurchaseItemsCard";
 import CancelPurchaseDialog from "../components/forms/CancelPurchaseDialog";
 import DocumentFormLayout, {
-  DocumentMobileBar,
   OrderSummaryCard,
 } from "@/shared/components/forms/DocumentFormLayout";
 import OrderInfoCard from "@/shared/components/forms/OrderInfoCard";
@@ -131,6 +130,23 @@ export default function PurchaseIssuedView({ purchase }) {
         }
         aside={
           <>
+            <OrderInfoCard
+              issued
+              formData={{ ...purchase, paymentDate: draft.dueDate }}
+              onFormChange={({ paymentDate }) => draft.setDueDate(paymentDate)}
+              headerAction={!isCancelled && <IssuedInvoiceNotice movedLabel="دریافت" />}
+              status={
+                canUpdate
+                  ? { value: Number(draft.status), options: statusOptionsOf(purchase), onChange: draft.setStatus }
+                  : undefined
+              }
+            />
+            <InvoiceDocumentSection
+              title="فاکتور"
+              invoiceNumber={purchase.invoiceNumber}
+              attachments={draft.attachments}
+              attachmentLabel="تصویر یا PDFِ فاکتورِ تامین‌کننده"
+            />
             <OrderSummaryCard
               title="فاکتور خرید"
               badge={<PurchaseStatusBadge status={purchase.status} withIcon />}
@@ -156,29 +172,7 @@ export default function PurchaseIssuedView({ purchase }) {
                 )
               }
             />
-            <OrderInfoCard
-              issued
-              formData={{ ...purchase, paymentDate: draft.dueDate }}
-              onFormChange={({ paymentDate }) => draft.setDueDate(paymentDate)}
-              headerAction={!isCancelled && <IssuedInvoiceNotice movedLabel="دریافت" />}
-              status={
-                canUpdate
-                  ? { value: Number(draft.status), options: statusOptionsOf(purchase), onChange: draft.setStatus }
-                  : undefined
-              }
-            />
-            <InvoiceDocumentSection
-              title="فاکتور"
-              invoiceNumber={purchase.invoiceNumber}
-              attachments={draft.attachments}
-              attachmentLabel="تصویر یا PDFِ فاکتورِ تامین‌کننده"
-            />
           </>
-        }
-        mobileBar={
-          draft.count > 0 && (
-            <DocumentMobileBar total={purchase.totalAmount} submitLabel={submitLabel} isBusy={isSaving} />
-          )
         }
       />
 
@@ -188,6 +182,7 @@ export default function PurchaseIssuedView({ purchase }) {
         isPending={saver.isPending}
         onConfirm={save}
       />
+      
     </>
   );
 }

@@ -23,7 +23,6 @@ import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection
 import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
 import CancelPurchaseDialog from "../components/forms/CancelPurchaseDialog";
 import DocumentFormLayout, {
-  DocumentMobileBar,
   FormSection,
   OrderSummaryCard,
 } from "@/shared/components/forms/DocumentFormLayout";
@@ -259,30 +258,6 @@ export default function PurchaseForm({ purchase }) {
         }
         aside={
           <>
-            <OrderSummaryCard
-              title={isInvoice ? "فاکتور خرید" : "پیش‌فاکتور خرید"}
-              itemCount={items.length}
-              totals={totals}
-              canSubmit={canEdit}
-              submitLabel={submitLabel}
-              isBusy={isBusy}
-              onCancel={leave}
-              footer={
-                (deletable || cancellable) && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="w-full gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => setDialog(deletable ? "delete" : "cancel")}
-                    disabled={isBusy}
-                  >
-                    {deletable ? <Trash2 className="size-3.5" /> : <Ban className="size-3.5" />}
-                    {deletable ? "حذف پیش‌فاکتور" : "لغو خرید"}
-                  </Button>
-                )
-              }
-            />
             <FormSection name="info">
               <OrderInfoCard
                 kind={isInvoice ? "invoice" : "proforma"}
@@ -308,12 +283,31 @@ export default function PurchaseForm({ purchase }) {
               attachments={attachments}
               attachmentLabel="تصویر یا PDFِ برگه‌ی تامین‌کننده"
             />
+            <OrderSummaryCard
+              title={isInvoice ? "فاکتور خرید" : "پیش‌فاکتور خرید"}
+              itemCount={items.length}
+              totals={totals}
+              canSubmit={canEdit}
+              submitLabel={submitLabel}
+              isBusy={isBusy}
+              onCancel={leave}
+              footer={
+                (deletable || cancellable) && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="w-full gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => setDialog(deletable ? "delete" : "cancel")}
+                    disabled={isBusy}
+                  >
+                    {deletable ? <Trash2 className="size-3.5" /> : <Ban className="size-3.5" />}
+                    {deletable ? "حذف پیش‌فاکتور" : "لغو خرید"}
+                  </Button>
+                )
+              }
+            />
           </>
-        }
-        mobileBar={
-          canEdit && (
-            <DocumentMobileBar total={totals.totalAmount} submitLabel={submitLabel} isBusy={isBusy} />
-          )
         }
       />
 

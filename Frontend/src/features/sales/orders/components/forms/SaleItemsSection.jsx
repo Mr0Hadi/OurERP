@@ -3,7 +3,6 @@ import { PackagePlus } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import SectionCard from "@/shared/components/documents/SectionCard";
 import ProductPicker from "@/shared/components/products/ProductPicker";
-import { cn } from "@/shared/lib/utils";
 
 /** دو قیمتِ فروشِ هر کالا. */
 const SALE_PRICE_MODES = {
@@ -52,26 +51,22 @@ export default function SaleItemsSection({
         <>
           {onPriceModeChange && (
             <div
-              role="radiogroup"
+              role="group"
               aria-label="قیمت پیش‌فرض"
-              className="inline-flex rounded-lg bg-muted p-0.5"
+              className="inline-flex rounded-md border border-border p-0.5"
             >
               {Object.entries(SALE_PRICE_MODES).map(([key, { label }]) => (
-                <button
+                <Button
                   key={key}
                   type="button"
-                  role="radio"
-                  aria-checked={priceMode === key}
+                  size="sm"
+                  variant={priceMode === key ? "default" : "ghost"}
+                  className="h-7 px-2.5 text-xs"
+                  aria-pressed={priceMode === key}
                   onClick={() => switchMode(key)}
-                  className={cn(
-                    "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-                    priceMode === key
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
                 >
                   قیمت {label}
-                </button>
+                </Button>
               ))}
             </div>
           )}

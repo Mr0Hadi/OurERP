@@ -9,20 +9,18 @@ import {
   CardTitle,
 } from "@/shared/components/ui/card";
 import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
-import { cn } from "@/shared/lib/utils";
 
 /**
  * چیدمانِ صفحه‌ی سندِ خرید/فروش: ستونِ اصلی (کارِ کاربر، به ترتیب) و ستونِ
- * کناریِ چسبان (خلاصه و دکمه‌ی ثبت). روی موبایل همه زیرِ هم و یک نوارِ
- * ثابتِ پایین (جمع + ثبت) همیشه در دسترس است.
+ * کناریِ چسبان (خلاصه و دکمه‌ی ثبت). در عرضِ کم همه زیرِ هم‌اند و کارتِ جمع و
+ * ثبت آخرِ صفحه است.
  *
  * بی `onSubmit` فقط چیدمان است (نمای فاکتورِ صادرشده)؛ با آن یک `<form>`.
  *
  * @param top       بالای هر دو ستون، تمام‌عرض (سرِ فاکتورِ صادرشده)
- * @param mobileBar نوارِ ثابتِ پایینِ موبایل (`DocumentMobileBar`)
  * @param footer    زیرِ ستون‌ها (مثلاً `PendingChangesBar`ِ چسبان)
  */
-export default function DocumentFormLayout({ top, main, aside, mobileBar, footer, onSubmit }) {
+export default function DocumentFormLayout({ top, main, aside, footer, onSubmit }) {
   // submitِ فرمِ یک دیالوگ از portal در درختِ React تا اینجا بالا می‌آید؛
   // فقط submitِ خودِ همین فرم سند را ذخیره می‌کند.
   const handleSubmit = (event) => {
@@ -35,21 +33,20 @@ export default function DocumentFormLayout({ top, main, aside, mobileBar, footer
     <Root
       onSubmit={onSubmit ? handleSubmit : undefined}
       noValidate={onSubmit ? true : undefined}
-      className={cn(
-        "container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 animate-in fade-in duration-300",
-        mobileBar ? "pb-28 lg:pb-6" : "pb-6",
-      )}
+      className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 space-y-4 animate-in fade-in duration-300"
     >
       {top}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_24rem] gap-4 items-start">
+      {/* دو ستون فقط از xl: کمتر از آن ستونِ اصلی برای جدولِ اقلام جا ندارد. */}
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_23rem] gap-4 items-start">
         <div className="space-y-4 min-w-0">{main}</div>
         {/* چسبان، ولی اگر بلندتر از صفحه شد خودش اسکرول می‌خورد. */}
-        <aside className="space-y-4 min-w-0 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:p-0.5 custom-scroll">
+        {/* زیرِ هم (کمتر از xl): کارتِ جمع و ثبت آخرِ صفحه می‌آید (`order-last`)، بعد از
+            همه‌ی فیلدها؛ کنارِ هم: بالای ستون و چسبان. */}
+        <aside className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto xl:p-0.5 custom-scroll">
           {aside}
         </aside>
       </div>
       {footer}
-      {mobileBar}
     </Root>
   );
 }
@@ -89,7 +86,7 @@ export function OrderSummaryCard({
   canSubmit = true,
 }) {
   return (
-    <Card>
+    <Card className="order-last xl:order-first">
       <CardHeader className="pb-0">
         <CardTitle className="text-base font-semibold">{title}</CardTitle>
         {badge && <CardAction>{badge}</CardAction>}
@@ -111,8 +108,7 @@ export function OrderSummaryCard({
 
         {canSubmit && (
           <div className="flex gap-2">
-            {/* روی موبایل دکمه‌ی ثبت در نوارِ پایین است. */}
-            <Button type="submit" className="hidden flex-1 gap-2 lg:flex" disabled={isBusy || submitDisabled}>
+            <Button type="submit" className="flex-1 gap-2" disabled={isBusy || submitDisabled}>
               <Save className="size-4" />
               {isBusy ? pendingLabel : submitLabel}
             </Button>
@@ -120,7 +116,7 @@ export function OrderSummaryCard({
               <Button
                 type="button"
                 variant="outline"
-                className="flex-1 lg:flex-none"
+                className="shrink-0"
                 onClick={onCancel}
                 disabled={isBusy}
               >
@@ -140,24 +136,6 @@ function Row({ label, value }) {
     <div className="flex items-baseline justify-between gap-2">
       <dt className="text-muted-foreground">{label}</dt>
       <dd className="tabular-nums">{value}</dd>
-    </div>
-  );
-}
-
-/** نوارِ ثابتِ پایینِ موبایل: جمع و ثبت، همیشه در دسترس. */
-export function DocumentMobileBar({ total, submitLabel, pendingLabel = "در حال ذخیره...", isBusy, submitDisabled = false }) {
-  return (
-    <div className="lg:hidden fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 px-4 py-3">
-      <div className="flex items-center gap-3 max-w-3xl mx-auto">
-        <div className="flex-1 min-w-0">
-          <p className="text-[11px] text-muted-foreground">جمع کل</p>
-          <p className="text-sm font-semibold tabular-nums truncate">{formatRial(total)}</p>
-        </div>
-        <Button type="submit" className="gap-2" disabled={isBusy || submitDisabled}>
-          <Save className="size-4" />
-          {isBusy ? pendingLabel : submitLabel}
-        </Button>
-      </div>
     </div>
   );
 }
