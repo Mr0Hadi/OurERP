@@ -178,6 +178,15 @@
     مبلغ با مانده پیش‌پر، روش: نقدی/انتقال/چک/ترکیبی). کارت‌های بزرگِ انتخاب، سرِ صفحه، منوها و چک‌لیستِ UX ۴ حذف شدند.
   - [x] UX ۷: یک فیلد برای جست‌وجو و اسکنرِ دستی با دکمه‌ی دوربین کنارش، دسته‌بندی ردیفِ بعد (در موبایل هم)؛ یک
     اسکرول — ستونِ کناری نه چسبان است نه اسکرولِ جدا دارد؛ بی دکمه‌ی شناور در موبایل.
+  - [x] تمیزکاریِ معماریِ خرید/فروش:
+    - لایه‌ها: تبدیل‌های خالصِ پرداخت (`toPaymentPayload`، `toApiPaymentRows`، `paymentTypeOf`، `EMPTY_PAYMENT_DRAFT`) از
+      فایلِ کامپوننت به `shared/domain/payments/paymentRows.js` رفت (سرویس‌ها و storeها دیگر از `components` نمی‌خوانند)؛
+      `usePaymentDraft` به `shared/hooks`؛ `settlement.js` → `paymentSplit.js` بی شاخه‌ی مرده‌ی «نسیه»؛ `SectionCard` به
+      `shared/components/forms`.
+    - storeِ فرمِ خرید و فروش یک factory (`shared/store/createDocumentFormStore.js`)؛ فقط فیلدهای خالی و «سند → فرم»
+      در هر فیچر. `useDocumentFormDraft(doc, store)`. همگام‌سازیِ پیوست با نسخه‌ی سند یک هوک (`useDocumentAttachments`)
+      به‌جای سه افکتِ تکراری. `DocumentFormLayout` بی propهای بی‌استفاده و همیشه `<form>`.
+    - دیالوگِ «بستن قلم» → `ConfirmDialog` (قبلاً پیش از پایانِ درخواست بسته می‌شد).
   - یافته‌های بکند → بخشِ ۹ سندِ درخواست‌ها.
 - [ ] **۲. فیچرها** (هر کدام: کد مرده، شکستن فایل بزرگ، کامپوننت مشترک، کامنت، متن پیام‌ها، موارد بکند)
   - [ ] auth

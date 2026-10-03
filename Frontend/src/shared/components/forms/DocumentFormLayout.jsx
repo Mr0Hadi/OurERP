@@ -15,27 +15,22 @@ import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
  * کناری (اطلاعاتِ فاکتور، سند، جمع و ثبت). فقط یک اسکرول — خودِ صفحه. در عرضِ
  * کم همه زیرِ هم‌اند و کارتِ جمع و ثبت آخرِ صفحه است.
  *
- * بی `onSubmit` فقط چیدمان است (نمای فاکتورِ صادرشده)؛ با آن یک `<form>`.
- *
- * @param top       بالای هر دو ستون، تمام‌عرض (سرِ فاکتورِ صادرشده)
- * @param footer    زیرِ ستون‌ها (مثلاً `PendingChangesBar`ِ چسبان)
+ * کلِ صفحه یک `<form>` است؛ دکمه‌ی اصلیِ `OrderSummaryCard` آن را می‌فرستد.
  */
-export default function DocumentFormLayout({ top, main, aside, footer, onSubmit }) {
+export default function DocumentFormLayout({ main, aside, onSubmit }) {
   // submitِ فرمِ یک دیالوگ از portal در درختِ React تا اینجا بالا می‌آید؛
   // فقط submitِ خودِ همین فرم سند را ذخیره می‌کند.
   const handleSubmit = (event) => {
     if (event.target !== event.currentTarget) return;
     onSubmit(event);
   };
-  const Root = onSubmit ? "form" : "div";
 
   return (
-    <Root
-      onSubmit={onSubmit ? handleSubmit : undefined}
-      noValidate={onSubmit ? true : undefined}
+    <form
+      onSubmit={handleSubmit}
+      noValidate
       className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 space-y-4 animate-in fade-in duration-300"
     >
-      {top}
       {/* دو ستون فقط از xl: کمتر از آن ستونِ اصلی برای جدولِ اقلام جا ندارد. */}
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_23rem] gap-4 items-start">
         <div className="space-y-4 min-w-0">{main}</div>
@@ -44,8 +39,7 @@ export default function DocumentFormLayout({ top, main, aside, footer, onSubmit 
           {aside}
         </aside>
       </div>
-      {footer}
-    </Root>
+    </form>
   );
 }
 
@@ -62,8 +56,7 @@ export function FormSection({ name, children }) {
 }
 
 /**
- * جمع و دکمه‌ی اصلیِ صفحه («ثبت» یا «ثبت تغییرات») — بالای ستونِ کناری تا با
- * اسکرول از دید نرود. هر تغییری (اقلام، پرداخت، وضعیت، پیوست) فقط با همین
+ * جمع و دکمه‌ی اصلیِ صفحه («ثبت» یا «ثبت تغییرات») — آخرین کارتِ ستونِ کناری. هر تغییری (اقلام، پرداخت، وضعیت، پیوست) فقط با همین
  * دکمه ذخیره می‌شود.
  *
  * @param totals `{ netAmount, taxAmount, totalAmount, taxUnknown }`

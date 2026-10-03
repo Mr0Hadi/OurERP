@@ -1,7 +1,7 @@
 import { PackagePlus } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import SectionCard from "@/shared/components/documents/SectionCard";
+import SectionCard from "@/shared/components/forms/SectionCard";
 import ProductPicker from "@/shared/components/products/ProductPicker";
 
 /** اقلامِ خرید، با قیمتِ خریدِ کالا به‌عنوانِ قیمتِ پیش‌فرض. */

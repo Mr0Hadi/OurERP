@@ -1,5 +1,5 @@
 import { idempotencyKeyFor } from "@/shared/services/api/contract";
-import { toPaymentPayload } from "@/shared/components/payments/usePaymentDraft";
+import { toPaymentPayload } from "@/shared/domain/payments/paymentRows";
 
 /**
  * اعمالِ «ثبت تغییرات»ِ یک سندِ خرید/فروش — همه‌ی تغییرهایی که کاربر روی

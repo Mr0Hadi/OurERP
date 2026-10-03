@@ -91,7 +91,7 @@ export const MANUAL_PURCHASE_STATUSES = [
 /**
  * خروج از پیش‌فاکتور یعنی فاکتورِ رسمیِ تامین‌کننده رسیده، پس شماره و
  * تاریخش لازم است — قاعده‌ی `CreatePurchase`/`UpdatePurchase`. خطاها به
- * شکلِ `errors`ِ `OrderDetailsCard`؛ `null` یعنی ایرادی نیست.
+ * شکلِ `errors`ِ `OrderInfoCard`؛ `null` یعنی ایرادی نیست.
  */
 export function missingInvoiceFields(formData, status) {
   if (Number(status) === PURCHASE_STATUSES.PROFORMA) return null;

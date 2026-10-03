@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import SectionCard from "@/shared/components/documents/SectionCard";
+import SectionCard from "@/shared/components/forms/SectionCard";
 import StatusChoice from "./StatusChoice";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 

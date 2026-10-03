@@ -2,7 +2,7 @@ import { useId, useRef, useState } from "react";
 import { Loader2, Pencil, Phone, Search, UserPlus, X } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
-import SectionCard from "@/shared/components/documents/SectionCard";
+import SectionCard from "@/shared/components/forms/SectionCard";
 import RemoteImage from "@/shared/components/files/RemoteImage";
 import LedgerBalanceBadge from "@/features/partyAccount/components/LedgerBalanceBadge";
 import { partyBalanceOf } from "@/features/partyAccount/domain/partyBalance";

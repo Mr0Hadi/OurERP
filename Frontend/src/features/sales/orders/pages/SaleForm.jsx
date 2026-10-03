@@ -25,8 +25,9 @@ import PaymentsCard from "@/shared/components/payments/PaymentsCard";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 import StatusBadge from "@/shared/components/status/StatusBadge";
-import { paymentTypeOf, usePaymentDraft } from "@/shared/components/payments/usePaymentDraft";
-import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
+import { usePaymentDraft } from "@/shared/hooks/usePaymentDraft";
+import { paymentTypeOf } from "@/shared/domain/payments/paymentRows";
+import { useDocumentAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
 import { useReturnedNewProduct } from "@/shared/components/products/useReturnedNewProduct";
 import { useDocumentFormDraft } from "@/shared/hooks/useDocumentFormDraft";
 import { usePermission } from "@/features/auth/hooks/usePermission";
@@ -85,22 +86,10 @@ export default function SaleForm({ sale }) {
 
   const store = useSaleFormStore();
   const { formData, setFormData, setItems, setPaymentDraft, resetForm } = store;
-  const { openSubPage, returned, ready } = useDocumentFormDraft({
-    doc: sale,
-    initializedForId: store.initializedForId,
-    reset: resetForm,
-    initializeNew: store.initializeForNew,
-    initializeFrom: store.initializeFromSale,
-  });
+  const { openSubPage, returned, ready } = useDocumentFormDraft(sale, store);
 
   /** ضمیمه‌ها؛ `UpdateSale` آرایه را *جایگزین* می‌کند، پس همیشه فهرستِ نهایی. */
-  const attachments = useInvoiceAttachments(sale?.attachments || []);
-  const attachmentsReset = attachments.reset;
-  useEffect(() => {
-    if (sale) attachmentsReset(sale.attachments || []);
-    // با همان کلیدِ فرم تازه می‌شود.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sale?.id, sale?.updatedAt, attachmentsReset]);
+  const attachments = useDocumentAttachments(sale);
 
   // دریافت‌ها تا دکمه‌ی ثبت در پیش‌نویس (store) می‌مانند؛ اولینش فاکتور را صادر می‌کند.
   const payments = usePaymentDraft(sale?.paymentDetails || [], SALE_PAYMENT_SIDE.direction, [
@@ -196,7 +185,7 @@ export default function SaleForm({ sale }) {
           onSuccess: (latest) => {
             attachments.commit();
             resetForm();
-            if (latest) store.initializeFromSale(latest);
+            if (latest) store.initializeFrom(latest);
           },
         },
       );

@@ -12,11 +12,12 @@ import { useSubPageNavigation } from "./useSubPageNavigation";
  *  - پیش‌فاکتور: فرم وقتی از سرور پر می‌شود که سند یا نسخه‌اش (`updatedAt`)
  *    عوض شود — ویرایش‌های نذخیره‌شده با برگشت از صفحه‌ی فرعی می‌مانند.
  *
- * @param doc              سندِ ذخیره‌شده، یا `undefined` برای ثبتِ تازه
- * @param initializedForId همان فیلدِ store (`"new"` یا `"id:updatedAt"`)
+ * @param doc   سندِ ذخیره‌شده، یا `undefined` برای ثبتِ تازه
+ * @param store state و کارهای `createDocumentFormStore`
  * @returns `{ openSubPage, returned, ready }` — تا `ready` نشده فرم رندر نشود.
  */
-export function useDocumentFormDraft({ doc, initializedForId, reset, initializeNew, initializeFrom }) {
+export function useDocumentFormDraft(doc, store) {
+  const { initializedForId, resetForm, initializeForNew, initializeFrom } = store;
   const { openSubPage, returned, cameBack } = useSubPageNavigation();
   const [keepDraft] = useState(cameBack);
   const version = doc ? `${doc.id}:${doc.updatedAt}` : "new";
@@ -26,8 +27,8 @@ export function useDocumentFormDraft({ doc, initializedForId, reset, initializeN
       initializeFrom(doc);
       return;
     }
-    if (!keepDraft) reset();
-    initializeNew();
+    if (!keepDraft) resetForm();
+    initializeForNew();
     // فقط با عوض شدنِ سند/نسخه؛ نه با هر رندر.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [version]);

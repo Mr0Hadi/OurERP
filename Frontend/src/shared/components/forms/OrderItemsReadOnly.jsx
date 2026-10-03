@@ -1,5 +1,5 @@
 import { Lock } from "lucide-react";
-import SectionCard from "@/shared/components/documents/SectionCard";
+import SectionCard from "@/shared/components/forms/SectionCard";
 import { Badge } from "@/shared/components/ui/badge";
 import { TaxCategoryEnum } from "@/shared/domain/enums/taxCategory";
 import { invoiceLineAmounts } from "@/shared/domain/invoice/lineMath";

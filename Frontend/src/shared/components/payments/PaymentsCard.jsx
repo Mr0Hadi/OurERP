@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Ban, Pencil, Plus, RotateCcw, Undo2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import SectionCard from "@/shared/components/documents/SectionCard";
+import SectionCard from "@/shared/components/forms/SectionCard";
 import StatusBadge from "@/shared/components/status/StatusBadge";
 import PaymentMethodEditor from "./PaymentMethodEditor";
 import { PAYMENT_TYPE_LABELS, PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
@@ -13,7 +13,7 @@ import {
   newPaymentRow,
   resolvedRows,
   rowsTotal,
-} from "@/shared/domain/payments/settlement";
+} from "@/shared/domain/payments/paymentSplit";
 import { gregorianToPersian, toDateOnly } from "@/shared/lib/dateUtils";
 import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
 import { toneText } from "@/shared/lib/tone";
@@ -269,7 +269,7 @@ function PaymentForm({ mode, title, row, remaining, paid, onCancel, onSubmit }) 
   const [error, setError] = useState(null);
 
   const confirm = () => {
-    const moneyRows = liveRows(resolvedRows(value, payable, PaymentTypeEnum.CASH)).map((entry) => ({
+    const moneyRows = liveRows(resolvedRows(value, payable)).map((entry) => ({
       type: entry.type,
       amount: entry.amount,
       paidAt: entry.paidAt || undefined,

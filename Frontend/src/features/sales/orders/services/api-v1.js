@@ -6,7 +6,7 @@ import {
   toApiAttachments,
 } from "@/shared/services/api/contract";
 import { toDateOnly } from "@/shared/lib/dateUtils";
-import { toApiPaymentRows } from "@/shared/components/payments/usePaymentDraft";
+import { toApiPaymentRows } from "@/shared/domain/payments/paymentRows";
 
 export {
   SaleStatusEnum as SALE_STATUSES,

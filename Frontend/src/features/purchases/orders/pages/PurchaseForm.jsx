@@ -30,8 +30,9 @@ import OrderInfoCard from "@/shared/components/forms/OrderInfoCard";
 import PaymentsCard from "@/shared/components/payments/PaymentsCard";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
-import { paymentTypeOf, usePaymentDraft } from "@/shared/components/payments/usePaymentDraft";
-import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
+import { usePaymentDraft } from "@/shared/hooks/usePaymentDraft";
+import { paymentTypeOf } from "@/shared/domain/payments/paymentRows";
+import { useDocumentAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
 import { useReturnedNewProduct } from "@/shared/components/products/useReturnedNewProduct";
 import { useDocumentFormDraft } from "@/shared/hooks/useDocumentFormDraft";
 import { usePermission } from "@/features/auth/hooks/usePermission";
@@ -62,25 +63,13 @@ export default function PurchaseForm({ purchase }) {
 
   const store = usePurchaseFormStore();
   const { formData, setFormData, setItems, setPaymentDraft, resetForm } = store;
-  const { openSubPage, returned, ready } = useDocumentFormDraft({
-    doc: purchase,
-    initializedForId: store.initializedForId,
-    reset: resetForm,
-    initializeNew: store.initializeForNew,
-    initializeFrom: store.initializeFromPurchase,
-  });
+  const { openSubPage, returned, ready } = useDocumentFormDraft(purchase, store);
 
   /**
    * ضمیمه‌ی پیش‌فاکتور/فاکتورِ تامین‌کننده. `UpdatePurchase` آرایه را *جایگزین*
    * می‌کند، پس همیشه فهرستِ نهایی فرستاده می‌شود.
    */
-  const attachments = useInvoiceAttachments(purchase?.attachments || []);
-  const attachmentsReset = attachments.reset;
-  useEffect(() => {
-    if (purchase) attachmentsReset(purchase.attachments || []);
-    // با همان کلیدِ فرم تازه می‌شود.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [purchase?.id, purchase?.updatedAt, attachmentsReset]);
+  const attachments = useDocumentAttachments(purchase);
 
   // پرداخت‌ها تا دکمه‌ی ثبت در پیش‌نویس می‌مانند؛ در store، تا رفتن به «کالای
   // جدید» پاکشان نکند.
@@ -185,7 +174,7 @@ export default function PurchaseForm({ purchase }) {
           attachments.commit();
           // همین‌جا از پاسخِ سرور پر می‌شود؛ منتظرِ عوض‌شدنِ `updatedAt` نمی‌ماند.
           resetForm();
-          if (latest) store.initializeFromPurchase(latest);
+          if (latest) store.initializeFrom(latest);
         },
       },
     );

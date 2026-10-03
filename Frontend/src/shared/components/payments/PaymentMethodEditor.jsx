@@ -28,7 +28,7 @@ import {
   rowsTotal,
   switchMethod,
   updateRow,
-} from "@/shared/domain/payments/settlement";
+} from "@/shared/domain/payments/paymentSplit";
 import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
 import { toneText } from "@/shared/lib/tone";
 import { cn } from "@/shared/lib/utils";
@@ -41,7 +41,7 @@ import { cn } from "@/shared/lib/utils";
  * مبلغ با باقیمانده پیش‌پر است (`payable`)؛ در ترکیبی آخرین تکه خودکار
  * «باقیمانده» را می‌گیرد.
  *
- * کنترل‌شده: `value` شکلِ `{ method, rows }` (`shared/domain/payments/settlement`).
+ * کنترل‌شده: `value` شکلِ `{ method, rows }` (`shared/domain/payments/paymentSplit`).
  *
  * @param methods روش‌های قابل‌انتخاب (اصلاح و پول برگشتی: بدونِ ترکیبی)
  */
@@ -52,9 +52,8 @@ export default function PaymentMethodEditor({
   methods = [...ROW_PAYMENT_TYPES, PaymentTypeEnum.MIXED],
   error,
 }) {
-  const fallbackMethod = PaymentTypeEnum.CASH;
-  const method = methodOf(value, fallbackMethod);
-  const rows = resolvedRows(value, payable, fallbackMethod);
+  const method = methodOf(value);
+  const rows = resolvedRows(value, payable);
   // ویرایشِ ردیف روی همان ردیف‌هایی است که دیده می‌شوند (حتی ردیفِ پیش‌فرضِ ذخیره‌نشده).
   const editable = { method, rows: value?.rows?.length ? value.rows : rows.map(stripAuto) };
   const change = (id, patch) => onChange(updateRow(editable, id, patch));
@@ -66,7 +65,7 @@ export default function PaymentMethodEditor({
           label="روش پرداخت"
           options={methods.map((candidate) => ({ value: candidate, label: PAYMENT_TYPE_LABELS[candidate] }))}
           value={method}
-          onChange={(next) => onChange(switchMethod(value, next, payable, fallbackMethod))}
+          onChange={(next) => onChange(switchMethod(value, next))}
         />
       )}
 

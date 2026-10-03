@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import { usePaymentDraft } from "@/shared/components/payments/usePaymentDraft";
-import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
+import { usePaymentDraft } from "./usePaymentDraft";
+import { useDocumentAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
 
 const keysOf = (list = []) =>
   list
@@ -26,7 +26,7 @@ export function useIssuedDocumentDraft(doc, direction) {
   const payments = usePaymentDraft(doc.paymentDetails, direction);
   const [dueDate, setDueDate] = useState(doc.paymentDate || null);
   const [status, setStatus] = useState(doc.status);
-  const attachments = useInvoiceAttachments(doc.attachments || []);
+  const attachments = useDocumentAttachments(doc);
 
   // ریست در همان رندر — الگوی «ریستِ state با تغییرِ prop».
   const [version, setVersion] = useState(doc.updatedAt);
@@ -35,11 +35,6 @@ export function useIssuedDocumentDraft(doc, direction) {
     setDueDate(doc.paymentDate || null);
     setStatus(doc.status);
   }
-  const attachmentsReset = attachments.reset;
-  useEffect(() => {
-    attachmentsReset(doc.attachments || []);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc.id, doc.updatedAt, attachmentsReset]);
 
   const dueDirty = (dueDate || null) !== (doc.paymentDate || null);
   const statusDirty = Number(status) !== Number(doc.status);
