@@ -1,16 +1,12 @@
 import { PackagePlus } from "lucide-react";
+
 import { Button } from "@/shared/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from "@/shared/components/ui/card";
+import SectionCard from "@/shared/components/documents/SectionCard";
 import ProductPicker from "@/shared/components/products/ProductPicker";
 
 /** اقلامِ خرید، با قیمتِ خریدِ کالا به‌عنوانِ قیمتِ پیش‌فرض. */
 export default function PurchaseItemsSection({
+  step,
   items,
   onItemsChange,
   products = [],
@@ -18,37 +14,26 @@ export default function PurchaseItemsSection({
   onAddNewProduct,
 }) {
   return (
-    <Card>
-      <CardHeader className="pb-0">
-        <CardTitle className="text-base font-semibold text-card-foreground">
-          اقلام خرید
-        </CardTitle>
-        {onAddNewProduct && (
-          <CardAction>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={onAddNewProduct}
-              className="gap-1.5 text-xs"
-            >
-              <PackagePlus className="w-3.5 h-3.5" />
-              کالای جدید
-            </Button>
-          </CardAction>
-        )}
-      </CardHeader>
-
-      <CardContent>
-        <ProductPicker
-          items={items}
-          onItemsChange={onItemsChange}
-          products={products}
-          isLoading={isLoadingProducts}
-          priceOf={(product) => product.purchasePrice ?? 0}
-          showTaxHint
-        />
-      </CardContent>
-    </Card>
+    <SectionCard
+      step={step}
+      title="اقلام خرید"
+      action={
+        onAddNewProduct && (
+          <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={onAddNewProduct}>
+            <PackagePlus className="size-3.5" />
+            کالای جدید
+          </Button>
+        )
+      }
+    >
+      <ProductPicker
+        items={items}
+        onItemsChange={onItemsChange}
+        products={products}
+        isLoading={isLoadingProducts}
+        priceOf={(product) => product.purchasePrice ?? 0}
+        showTaxHint
+      />
+    </SectionCard>
   );
 }

@@ -2,7 +2,7 @@ import { useId, useRef, useState } from "react";
 import { Loader2, Pencil, Phone, Search, UserPlus, X } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import SectionCard from "@/shared/components/documents/SectionCard";
 import RemoteImage from "@/shared/components/files/RemoteImage";
 import LedgerBalanceBadge from "@/features/partyAccount/components/LedgerBalanceBadge";
 import { partyBalanceOf } from "@/features/partyAccount/domain/partyBalance";
@@ -67,6 +67,7 @@ function PartyAvatar({ party, size = "h-9 w-9" }) {
  * @param onSelect   `(party) => void`
  */
 export default function PartyPickerCard({
+  step,
   title,
   addNewLabel,
   onAddNew,
@@ -118,26 +119,20 @@ export default function PartyPickerCard({
   };
 
   return (
-    <Card className="@container/party">
-      <CardHeader className="pb-0">
-        <CardTitle className="text-base font-semibold text-card-foreground">{title}</CardTitle>
-        {onAddNew && (
-          <CardAction>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-1.5 text-xs"
-              onClick={onAddNew}
-            >
-              <UserPlus className="h-3.5 w-3.5" />
-              {addNewLabel}
-            </Button>
-          </CardAction>
-        )}
-      </CardHeader>
-
-      <CardContent className="space-y-3">
+    <SectionCard
+      step={step}
+      title={title}
+      className="@container/party"
+      action={
+        onAddNew && (
+          <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={onAddNew}>
+            <UserPlus className="size-3.5" />
+            {addNewLabel}
+          </Button>
+        )
+      }
+    >
+      <div className="space-y-3">
         {selected && (
           <div
             className={`flex flex-wrap items-center gap-3 rounded-lg border px-3 py-2.5 ${
@@ -316,7 +311,7 @@ export default function PartyPickerCard({
         )}
 
         {error && !selected && <p className="text-xs text-destructive">{error}</p>}
-      </CardContent>
-    </Card>
+      </div>
+    </SectionCard>
   );
 }

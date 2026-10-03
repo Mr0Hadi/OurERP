@@ -167,7 +167,7 @@ export default function PurchaseItemsCard({ purchase }) {
             )}
           </>
         }
-        description="اقلام فقط در مرحله‌ی پیش‌فاکتور قابل ویرایش‌اند. قلمی را که تامین‌کننده بقیه‌اش را نمی‌فرستد می‌توانید ببندید."
+        description={purchase.items?.some((item) => canClosePurchaseItem(purchase, item)) ? "قلمی را که تامین‌کننده بقیه‌اش را نمی‌فرستد می‌توانید ببندید." : undefined}
         columns={[
           { key: "received", label: "رسیده", render: (item) => formatNumber(item.receivedQuantity) },
           { key: "remaining", label: "مانده", render: (item) => <RemainingCell item={item} /> },

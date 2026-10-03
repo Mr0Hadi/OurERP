@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, PackageOpen } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import ProductSearchPanel from "@/shared/components/forms/ProductSearchPanel";
 import SelectedItemsTable from "@/shared/components/forms/SelectedItemsTable";
@@ -190,6 +190,7 @@ export default function ProductPicker({
         onRemoveUnit={trackUnits ? handleRemoveUnit : undefined}
         lineTotal={lineTotalOf}
         grandTotal={grandTotal}
+        showFooter={collapsible}
       />
       <SelectedItemsCards
         items={displayItems}
@@ -200,6 +201,7 @@ export default function ProductPicker({
         onRemoveUnit={trackUnits ? handleRemoveUnit : undefined}
         lineTotal={lineTotalOf}
         grandTotal={grandTotal}
+        showFooter={collapsible}
       />
     </>
   );
@@ -243,13 +245,14 @@ export default function ProductPicker({
   }
 
   return (
-    <div className="@container/picker space-y-4">
+    <div className="@container/picker space-y-3">
       {searchPanel}
       {selectedItems}
       {items.length === 0 && (
-        <p className="text-center text-sm text-muted-foreground py-3 border border-dashed border-border rounded-lg">
-          {emptyText}
-        </p>
+        <div className="flex flex-col items-center gap-1.5 rounded-lg border border-dashed border-border py-8 text-center">
+          <PackageOpen className="size-6 text-muted-foreground/60" aria-hidden />
+          <p className="text-sm text-muted-foreground">{emptyText}</p>
+        </div>
       )}
     </div>
   );

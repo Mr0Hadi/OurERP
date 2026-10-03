@@ -42,5 +42,11 @@ export function usePermission() {
     names,
     can: (required) => satisfies(names, required),
     canAny: (...permissions) => permissions.some((p) => names.has(p)),
+    /**
+     * برای دکمه‌های داخلِ صفحه: اگر فهرستِ دسترسی نیامد (`isError`) دکمه
+     * می‌ماند و خودِ سرور ۴۰۳ می‌دهد — بهتر از پنهان‌کردنِ کار از کسی که
+     * دسترسی دارد.
+     */
+    allows: (required) => isError || satisfies(names, required),
   };
 }

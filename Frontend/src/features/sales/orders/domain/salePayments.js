@@ -1,6 +1,6 @@
 import { PaymentDirectionEnum } from "@/shared/domain/enums/paymentDirection";
 
-/** جهت و متن‌های پرداخت روی فروش (`DocumentPaymentsEditor`). */
+/** جهت و متن‌های پرداخت روی فروش (`PaymentsLedgerCard`). */
 export const SALE_PAYMENT_SIDE = {
   // در فروش، پرداختِ مشتری `IN` است و پولی که به او برمی‌گردد `OUT`.
   direction: PaymentDirectionEnum.IN,

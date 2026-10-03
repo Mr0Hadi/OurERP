@@ -153,6 +153,23 @@
     مشخصاتِ فاکتور با container query؛ انتخابگرِ تامین‌کننده/مشتری با جست‌وجوی سمتِ سرور و کیبورد؛ خریدِ مازاد
     داخلِ «اقلام و مشکلات» (`ExcessDecisionPanel`)؛ عودت/اسقاط همیشه همان کالای معیوب (منبع خودکار:
     قرنطینه‌ی آزادِ ادعا، بعد قفسه — `resolveSources`). بکند: بندهای ۹.۱۱ و ۹.۱۲.
+  - [x] UX ۴ (بازخوردِ کاربر: «شلوغ و گیج‌کننده، پرداخت ترکیبی نیست»): بازطراحیِ فرم و نمای فاکتورِ خرید/فروش.
+    - فرم: ثبت و ویرایشِ پیش‌فاکتور یک کامپوننت برای هر سمت (`PurchaseForm`، `SaleForm`؛ `*DetailForm` حذف شد،
+      `useDocumentFormDraft` جای `useNewDocumentDraft`). «پیش‌فاکتور / فاکتور» کارتِ انتخابی بالای صفحه
+      (`DocumentKindPicker`)؛ بخش‌ها شماره‌دار (`SectionCard`)؛ فیلدِ بی‌معنا پنهان، نه غیرفعال (`OrderDetailsCard`
+      جای «اطلاعات فاکتور» + «ضمیمه»)؛ ستونِ کناری فقط خلاصه، چک‌لیستِ «پیش از ثبت» و دکمه (`OrderSummaryCard`)؛
+      خطای ثبت به همان بخش اسکرول می‌کند.
+    - پرداخت: روش اول انتخاب می‌شود — نسیه، نقدی، انتقال بانکی، چک، **ترکیبی** (`PaymentMethodEditor`،
+      `shared/domain/payments/settlement.js`)؛ تکه‌ی آخرِ ترکیبی خودکار «باقیمانده» است؛ سررسید فقط وقتی چیزی
+      مانده. در فروش «نسیه» تا بندِ ۹.۱۱ بسته است.
+    - جست‌وجوی کالا: یک فیلد برای نام/کد/بارکد، ↑/↓ و Enter، دوربین (`CameraScanButton`).
+    - نمای فاکتورِ صادرشده: سرِ صفحه (`DocumentHero`: شماره، طرف‌حساب با پیوند، وضعیت و تغییرِ در انتظار، جمع/
+      پرداخت‌شده/مانده با نوار، کارها)؛ چاپ/دانلود یک منو (`DocumentOutputMenu`)؛ تغییرِ وضعیت و لغو در منوی ⋯
+      (`IssuedStatusMenu`؛ لغو با تأیید همان لحظه)؛ پرداخت‌ها با همان ویرایشگر و ترکیبی (`PaymentsLedgerCard`).
+    - حذف: `DocumentPaymentsEditor`، `StatusChangeCard`، `InvoiceInfoCard`، `OrderInfoSection` و قاعده‌های مرده‌ی
+      `hasLivePayments`، `getPurchaseLockReason`، `manualSaleStatusOptions`، `saleStatusHint`، `canDeleteSale`.
+    - با سرورِ تست: فاکتورِ خرید با پرداختِ ترکیبی (نقدی + انتقال با شماره‌ی پیگیری)، تغییرِ وضعیت، پرداختِ
+      ترکیبی روی فاکتورِ صادرشده، پیش‌فاکتورِ فروش.
   - یافته‌های بکند → بخشِ ۹ سندِ درخواست‌ها.
 - [ ] **۲. فیچرها** (هر کدام: کد مرده، شکستن فایل بزرگ، کامپوننت مشترک، کامنت، متن پیام‌ها، موارد بکند)
   - [ ] auth
@@ -172,7 +189,6 @@
 ### export های بی‌استفاده (خروجی `pnpm knip`)
 هر کدام در مرحله‌ی فیچر خودش بررسی شود: یا کد مرده است، یا قرار بوده جایی استفاده شود و نشده (باگ احتمالی).
 
-- sales: `manualSaleStatusOptions`، `saleStatusHint`، `canDeleteSale` (بررسی شود حذف فروش بدون این قاعده محافظت می‌شود یا نه)
 - returns: `CLAIM_SCOPE_LABELS` (خرید و فروش)، `isQuarantineEffect`، `deriveReturnStatus`، `isOffScope`
 - units: `UnitBarcodeCell`، `UnitProductCell`، `UnitQuarantineSource`، `UnitValueCell`،
   `UNIT_LABEL_STATE_LABELS`، `DOCUMENT_KIND_LABELS`، `LABEL_FILTER_OPTIONS`
@@ -191,13 +207,11 @@
 - mutationهای مرجوعی خرید و فروش (`purchases/returns/services/mutations.js` و `sales/returns/...`) تقریباً یکسان‌اند.
 - `CustomerTable` / `SupplierTable` (~۵۷ خط تفاوت از ۳۰۹) و `ProductTable` هر کدام `useReactTable`
   خودشان را دارند در حالی که `shared/components/table/DataTable.jsx` وجود دارد.
-- `PurchasesNewPage` / `SaleNewPage` ساختار تقریباً یکسان دارند.
-- `PurchaseDetailForm` / `SaleDetailForm` هم الگوی یکسان دارند.
 
 ### معماری
 - کارمندان/تیم‌ها/واحدها پاسخِ لیست را نرمال نمی‌کنند (`data.page.page`، `userList`)؛ باید از
   `normalizeListResponse` رد شوند تا روی `ServerTable` بیایند.
-- `PurchasesNewPage`/`SaleNewPage`/`*ReturnNewPage` هنوز `setHeader` دستی با `onBack` پیچیده دارند (فاز purchases/sales).
+- `*ReturnNewPage` هنوز `setHeader` دستی با `onBack` پیچیده دارند.
 - جدول‌های دیگر (`PurchaseTable`، `SaleTable`، ...) هنوز `useMemo(() => [...], [])` دارند؛ ستون‌ها می‌توانند ثابتِ ماژول باشند.
 
 ### پرفرمنس

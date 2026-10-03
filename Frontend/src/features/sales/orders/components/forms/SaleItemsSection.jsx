@@ -1,12 +1,9 @@
 import { PackagePlus } from "lucide-react";
+
 import { Button } from "@/shared/components/ui/button";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from "@/shared/components/ui/card";
+import SectionCard from "@/shared/components/documents/SectionCard";
 import ProductPicker from "@/shared/components/products/ProductPicker";
+import { cn } from "@/shared/lib/utils";
 
 /** دو قیمتِ فروشِ هر کالا. */
 const SALE_PRICE_MODES = {
@@ -24,6 +21,7 @@ const SALE_PRICE_MODES = {
  * مانده‌اند به‌روز می‌کند؛ قیمتی که کاربر دستی عوض کرده دست نمی‌خورد.
  */
 export default function SaleItemsSection({
+  step,
   items,
   onItemsChange,
   products = [],
@@ -49,59 +47,54 @@ export default function SaleItemsSection({
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 pb-0">
-        <CardTitle className="text-base font-semibold text-card-foreground">
-          اقلام فروش
-        </CardTitle>
-        <div className="flex flex-wrap items-center gap-2">
+    <SectionCard
+      step={step}
+      title="اقلام فروش"
+      action={
+        <>
           {onPriceModeChange && (
             <div
-              role="group"
+              role="radiogroup"
               aria-label="قیمت پیش‌فرض"
-              className="inline-flex rounded-md border border-border p-0.5"
+              className="inline-flex rounded-lg bg-muted p-0.5"
             >
               {Object.entries(SALE_PRICE_MODES).map(([key, { label }]) => (
-                <Button
+                <button
                   key={key}
                   type="button"
-                  size="sm"
-                  variant={priceMode === key ? "default" : "ghost"}
-                  className="h-7 px-2.5 text-xs"
-                  aria-pressed={priceMode === key}
+                  role="radio"
+                  aria-checked={priceMode === key}
                   onClick={() => switchMode(key)}
+                  className={cn(
+                    "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                    priceMode === key
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
                 >
                   قیمت {label}
-                </Button>
+                </button>
               ))}
             </div>
           )}
           {onAddNewProduct && (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={onAddNewProduct}
-              className="gap-1.5 text-xs"
-            >
-              <PackagePlus className="w-3.5 h-3.5" />
+            <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={onAddNewProduct}>
+              <PackagePlus className="size-3.5" />
               کالای جدید
             </Button>
           )}
-        </div>
-      </CardHeader>
-
-      <CardContent>
-        <ProductPicker
-          items={items}
-          onItemsChange={onItemsChange}
-          products={products}
-          isLoading={isLoadingProducts}
-          priceOf={mode.priceOf}
-          trackUnits
-          showTaxHint
-        />
-      </CardContent>
-    </Card>
+        </>
+      }
+    >
+      <ProductPicker
+        items={items}
+        onItemsChange={onItemsChange}
+        products={products}
+        isLoading={isLoadingProducts}
+        priceOf={mode.priceOf}
+        trackUnits
+        showTaxHint
+      />
+    </SectionCard>
   );
 }

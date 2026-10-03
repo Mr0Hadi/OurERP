@@ -12,6 +12,7 @@ import { useSupplierQuery, useSupplierSearchQuery } from "@/features/suppliers/s
  * ردیفِ جست‌وجو یا نامِ ذخیره‌شده در فرم.
  */
 export default function PurchaseSupplierSection({
+  step,
   selectedId,
   selectedName,
   onSelect,
@@ -31,6 +32,7 @@ export default function PurchaseSupplierSection({
 
   return (
     <PartyPickerCard
+      step={step}
       title="تامین‌کننده"
       addNewLabel="تامین‌کننده‌ی جدید"
       onAddNew={onAddNew}

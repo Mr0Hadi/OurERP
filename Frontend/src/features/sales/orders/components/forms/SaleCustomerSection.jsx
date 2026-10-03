@@ -12,6 +12,7 @@ import { useCustomerQuery, useCustomerSearchQuery } from "@/features/customers/s
  * ردیفِ جست‌وجو یا نامِ ذخیره‌شده در فرم.
  */
 export default function SaleCustomerSection({
+  step,
   selectedId,
   selectedName,
   onSelect,
@@ -31,6 +32,7 @@ export default function SaleCustomerSection({
 
   return (
     <PartyPickerCard
+      step={step}
       title="مشتری"
       addNewLabel="مشتری جدید"
       onAddNew={onAddNew}

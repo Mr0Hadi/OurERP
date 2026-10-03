@@ -1,134 +1,195 @@
-import { Save, X } from "lucide-react";
+import { Circle, CircleCheck, Save } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/shared/components/ui/card";
+import { Card } from "@/shared/components/ui/card";
 import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
+import { toneText } from "@/shared/lib/tone";
+import { cn } from "@/shared/lib/utils";
 
 /**
- * چیدمانِ مشترکِ فرمِ ثبت/ویرایشِ سندِ خرید و فروش.
+ * چیدمانِ صفحه‌ی سندِ خرید/فروش: ستونِ اصلی (کارِ کاربر، به ترتیب) و ستونِ
+ * کناریِ چسبان (خلاصه و دکمه‌ی ثبت). روی موبایل همه زیرِ هم و یک نوارِ
+ * ثابتِ پایین (جمع + ثبت) همیشه در دسترس است.
  *
- * ترتیب همان ترتیبِ کار است: طرف‌حساب ← اقلام ← اطلاعات فاکتور ← ضمیمه
- * در ستونِ اصلی، و وضعیت/پرداخت/جمع/ثبت در ستونِ کناری. روی موبایل
- * همه زیرِ هم با همین ترتیب می‌آیند و یک نوارِ ثابتِ پایین (جمع + ذخیره)
- * همیشه در دسترس است؛ قبلاً طرف‌حساب و دکمه‌ی ذخیره زیرِ کلِ کاتالوگِ
- * کالا گم می‌شدند.
+ * بی `onSubmit` فقط چیدمان است (نمای فاکتورِ صادرشده)؛ با آن یک `<form>`.
  *
- * ستونِ کناری روی دسکتاپ چسبان است تا جمع و دکمه‌ی ذخیره با اسکرولِ
- * اقلام از دید نروند.
- *
- * @param main      کارت‌های ستونِ اصلی
- * @param aside     کارت‌های ستونِ کناری (معمولاً `DocumentSummaryCard` + پرداخت)
- * @param mobileBar نوارِ پایینِ موبایل (`DocumentMobileBar`)
+ * @param top       بالای هر دو ستون، تمام‌عرض (سرِ فاکتورِ صادرشده)
+ * @param mobileBar نوارِ ثابتِ پایینِ موبایل (`DocumentMobileBar`)
+ * @param footer    زیرِ ستون‌ها (مثلاً `PendingChangesBar`ِ چسبان)
  */
-export default function DocumentFormLayout({ main, aside, mobileBar, onSubmit }) {
-  // submitِ فرمِ یک دیالوگ (مثلاً ثبتِ پرداخت) از portal در درختِ React تا
-  // اینجا بالا می‌آید؛ فقط submitِ خودِ همین فرم سند را ذخیره می‌کند.
+export default function DocumentFormLayout({ top, main, aside, mobileBar, footer, onSubmit }) {
+  // submitِ فرمِ یک دیالوگ از portal در درختِ React تا اینجا بالا می‌آید؛
+  // فقط submitِ خودِ همین فرم سند را ذخیره می‌کند.
   const handleSubmit = (event) => {
     if (event.target !== event.currentTarget) return;
     onSubmit(event);
   };
+  const Root = onSubmit ? "form" : "div";
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 lg:pb-6 animate-in fade-in duration-300"
+    <Root
+      onSubmit={onSubmit ? handleSubmit : undefined}
+      noValidate={onSubmit ? true : undefined}
+      className={cn(
+        "container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 animate-in fade-in duration-300",
+        mobileBar ? "pb-28 lg:pb-6" : "pb-6",
+      )}
     >
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-        <div className="lg:col-span-2 space-y-4 min-w-0">{main}</div>
-        {/* چسبان، ولی اگر از ارتفاعِ صفحه بلندتر شد خودش اسکرول می‌خورد — وگرنه
-            پایینِ ستون تا تهِ صفحه دست‌نیافتنی می‌ماند. */}
-        <div className="space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:p-0.5 custom-scroll">
+      {top}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_24rem] gap-4 items-start">
+        <div className="space-y-4 min-w-0">{main}</div>
+        {/* چسبان، ولی اگر بلندتر از صفحه شد خودش اسکرول می‌خورد. */}
+        <aside className="space-y-4 min-w-0 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:p-0.5 custom-scroll">
           {aside}
-        </div>
+        </aside>
       </div>
+      {footer}
       {mobileBar}
-    </form>
+    </Root>
   );
 }
 
 /**
- * جمع و دکمه‌های ثبت در ستونِ کناری. `children` بالای جمع می‌نشیند
- * (انتخابِ وضعیت).
+ * بخشِ ستونِ اصلی با شناسه، تا خطای ثبت به همان بخش اسکرول کند
+ * (`scrollToSection` در `shared/lib/scrollToSection.js`).
  */
-export function DocumentSummaryCard({
-  title = "خلاصه و ثبت",
-  children,
+export function FormSection({ name, children }) {
+  return (
+    <section id={`section-${name}`} className="scroll-mt-20">
+      {children}
+    </section>
+  );
+}
+
+/**
+ * خلاصه و ثبتِ سند در ستونِ کناری: مبالغ، وضعیتِ پرداخت، آنچه پیش از ثبت
+ * کم است، و دکمه‌ها. چک‌لیست فقط وقتی چیزی کم است دیده می‌شود — کاربر قبل
+ * از کلیک می‌داند چرا ثبت نمی‌شود.
+ *
+ * @param totals    خروجیِ `invoiceTotals`
+ * @param payment   `{ paid, remaining, remainingLabel }` یا `null` (پیش‌فاکتور)
+ * @param checklist `[{ key, label, done, section }]`
+ * @param footer    کارِ ثانویه (مثلاً حذفِ پیش‌فاکتور)
+ */
+export function OrderSummaryCard({
+  title,
+  badge,
   itemCount,
   totals,
-  totalLabel = "جمع کل",
+  payment,
+  checklist = [],
   submitLabel,
-  pendingLabel = "در حال ذخیره...",
+  pendingLabel = "در حال ثبت...",
   isBusy,
   onCancel,
+  cancelLabel = "انصراف",
+  footer,
+  canSubmit = true,
 }) {
+  const missing = checklist.filter((entry) => !entry.done);
+
   return (
-    <Card>
-      <CardHeader className="pb-0">
-        <CardTitle className="text-base font-semibold">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {children}
+    <Card className="gap-0 py-0">
+      <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-3">
+        <h2 className="text-sm font-semibold">{title}</h2>
+        {badge}
+      </div>
 
-        <dl className="space-y-1.5 text-sm border-t border-border pt-3">
-          <div className="flex justify-between gap-2 text-muted-foreground">
-            <dt>تعداد اقلام</dt>
-            <dd className="tabular-nums">{formatNumber(itemCount)}</dd>
-          </div>
-          {totals.taxAmount > 0 && (
-            <div className="flex justify-between gap-2 text-muted-foreground">
-              <dt>مالیات</dt>
-              <dd className="tabular-nums">{formatRial(totals.taxAmount)}</dd>
+      <dl className="space-y-2 px-4 pb-4 text-sm">
+        <Row label={`اقلام (${formatNumber(itemCount)})`} value={formatNumber(totals.netAmount)} />
+        {totals.taxAmount > 0 && <Row label="مالیات" value={formatNumber(totals.taxAmount)} />}
+        <div className="flex items-baseline justify-between gap-2 border-t border-border pt-3">
+          <dt className="font-medium">مبلغ کل</dt>
+          <dd className="text-lg font-bold tabular-nums">{formatRial(totals.totalAmount)}</dd>
+        </div>
+        {totals.taxUnknown && (
+          <p className="text-[11px] leading-5 text-muted-foreground">
+            مالیاتِ کالاهای تازه را سرور هنگامِ ثبت حساب می‌کند.
+          </p>
+        )}
+        {payment && totals.totalAmount > 0 && (
+          <div className="space-y-2 rounded-lg bg-muted/50 px-3 py-2.5">
+            <Row label="پرداخت" value={formatNumber(payment.paid)} />
+            <div className="flex items-baseline justify-between gap-2">
+              <dt className="text-muted-foreground">{payment.remainingLabel ?? "مانده"}</dt>
+              <dd
+                className={cn(
+                  "font-semibold tabular-nums",
+                  toneText(payment.remaining > 0 ? "warning" : "success"),
+                )}
+              >
+                {payment.remaining > 0 ? formatNumber(payment.remaining) : "تسویه"}
+              </dd>
             </div>
-          )}
-          <div className="flex justify-between gap-2 font-semibold text-card-foreground">
-            <dt>{totalLabel}</dt>
-            <dd className="tabular-nums">{formatRial(totals.totalAmount)}</dd>
           </div>
-          {totals.taxUnknown && (
-            <p className="text-[11px] text-muted-foreground">
-              مالیاتِ بعضی اقلام هنوز معلوم نیست؛ جمعِ نهایی را سرور حساب می‌کند.
-            </p>
-          )}
-        </dl>
+        )}
+      </dl>
 
-        {/* روی موبایل همین دکمه‌ها در نوارِ پایین‌اند. */}
-        <div className="hidden lg:flex gap-2">
-          <Button type="submit" className="flex-1 gap-2" disabled={isBusy}>
-            <Save className="h-4 w-4" />
+      {canSubmit && (
+        <div className="space-y-3 border-t border-border bg-muted/20 px-4 py-4">
+          {missing.length > 0 && (
+            <ul className="space-y-1.5" aria-label="پیش از ثبت">
+              {checklist.map((entry) => (
+                <li
+                  key={entry.key}
+                  className={cn(
+                    "flex items-start gap-2 text-xs leading-5",
+                    entry.done ? "text-muted-foreground" : "text-card-foreground",
+                  )}
+                >
+                  {entry.done ? (
+                    <CircleCheck className={cn("mt-0.5 size-3.5 shrink-0", toneText("success"))} />
+                  ) : (
+                    <Circle className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+                  )}
+                  {entry.label}
+                </li>
+              ))}
+            </ul>
+          )}
+          {/* روی موبایل دکمه‌ی ثبت در نوارِ پایین است. */}
+          <Button type="submit" size="lg" className="hidden lg:flex w-full gap-2" disabled={isBusy}>
+            <Save className="size-4" />
             {isBusy ? pendingLabel : submitLabel}
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="gap-2"
-            onClick={onCancel}
-            disabled={isBusy}
-          >
-            <X className="h-4 w-4" />
-            انصراف
-          </Button>
+          {onCancel && (
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full text-muted-foreground"
+              onClick={onCancel}
+              disabled={isBusy}
+            >
+              {cancelLabel}
+            </Button>
+          )}
         </div>
-      </CardContent>
+      )}
+      {footer && <div className="border-t border-border px-4 py-2">{footer}</div>}
     </Card>
   );
 }
 
-/** نوارِ ثابتِ پایینِ موبایل: جمع و ذخیره، همیشه در دسترس. */
-export function DocumentMobileBar({ total, submitLabel, pendingLabel = "در حال ذخیره...", isBusy }) {
+function Row({ label, value }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="tabular-nums">{value}</dd>
+    </div>
+  );
+}
+
+/** نوارِ ثابتِ پایینِ موبایل: جمع و ثبت، همیشه در دسترس. */
+export function DocumentMobileBar({ total, submitLabel, pendingLabel = "در حال ثبت...", isBusy }) {
   return (
     <div className="lg:hidden fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 px-4 py-3">
       <div className="flex items-center gap-3 max-w-3xl mx-auto">
         <div className="flex-1 min-w-0">
-          <p className="text-[11px] text-muted-foreground">جمع کل</p>
+          <p className="text-[11px] text-muted-foreground">مبلغ کل</p>
           <p className="text-sm font-semibold tabular-nums truncate">{formatRial(total)}</p>
         </div>
-        <Button type="submit" className="gap-2" disabled={isBusy}>
-          <Save className="h-4 w-4" />
+        <Button type="submit" size="lg" className="gap-2" disabled={isBusy}>
+          <Save className="size-4" />
           {isBusy ? pendingLabel : submitLabel}
         </Button>
       </div>

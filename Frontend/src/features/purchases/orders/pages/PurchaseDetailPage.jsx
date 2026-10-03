@@ -2,7 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 
 import { usePurchaseQuery } from "@/features/purchases/orders/services/queries";
 import OrderFormSkeleton from "@/shared/components/skeletons/OrderFormSkeleton";
-import PurchaseDetailForm from "./PurchaseDetailForm";
+import PurchaseForm from "./PurchaseForm";
 import PurchaseIssuedView from "./PurchaseIssuedView";
 import { isPurchaseProforma } from "@/features/purchases/orders/services/constants";
 import { ROUTES } from "@/shared/constants/routes";
@@ -49,5 +49,5 @@ export default function PurchaseDetailPage() {
   if (!isPurchaseProforma(purchase.status)) {
     return <PurchaseIssuedView key={purchase.id} purchase={purchase} />;
   }
-  return <PurchaseDetailForm key={purchase.id} purchaseData={purchase} />;
+  return <PurchaseForm key={purchase.id} purchase={purchase} />;
 }

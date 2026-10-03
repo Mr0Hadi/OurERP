@@ -11,11 +11,6 @@ export function canDeletePurchase(purchase) {
   return purchase.status === PURCHASE_STATUSES.PROFORMA;
 }
 
-/** پیش‌پرداختِ باطل‌نشده‌ای که جلوی حذفِ پیش‌فاکتور را می‌گیرد. */
-export function hasLivePayments(doc) {
-  return (doc?.paymentDetails || []).some((payment) => !payment.voidedAt);
-}
-
 /**
  * لغو (`ChangePurchaseStatus` → `CANCELLED`) از پیش‌فاکتور، «در انتظار
  * ارسال» و «ارسال‌شده»، تا وقتی هیچ کالایی دریافت نشده. لغو نهایی است و
@@ -25,14 +20,6 @@ export function canCancelPurchase(purchase) {
   if (!purchase) return false;
   if (!MANUAL_PURCHASE_STATUSES.includes(purchase.status)) return false;
   return (purchase.items || []).every((item) => !(item.receivedQuantity > 0));
-}
-
-/** برای نمایش پیام راهنما وقتی نه حذف و نه لغو ممکن است. */
-export function getPurchaseLockReason(purchase) {
-  if (!purchase) return null;
-  if (canDeletePurchase(purchase) || canCancelPurchase(purchase)) return null;
-  if (purchase.status === PURCHASE_STATUSES.CANCELLED) return null;
-  return "کالای این خرید در انبار دریافت شده و دیگر قابل لغو نیست؛ برای اصلاح از مسیر مرجوعی اقدام کنید.";
 }
 
 /**
@@ -104,7 +91,7 @@ export const MANUAL_PURCHASE_STATUSES = [
 /**
  * خروج از پیش‌فاکتور یعنی فاکتورِ رسمیِ تامین‌کننده رسیده، پس شماره و
  * تاریخش لازم است — قاعده‌ی `CreatePurchase`/`UpdatePurchase`. خطاها به
- * شکلِ `errors`ِ `OrderInfoSection`؛ `null` یعنی ایرادی نیست.
+ * شکلِ `errors`ِ `OrderDetailsCard`؛ `null` یعنی ایرادی نیست.
  */
 export function missingInvoiceFields(formData, status) {
   if (Number(status) === PURCHASE_STATUSES.PROFORMA) return null;
@@ -118,19 +105,11 @@ export function missingInvoiceFields(formData, status) {
   return Object.keys(errors).length > 0 ? errors : null;
 }
 
-/** «پیش‌فاکتور / فاکتور» در فرمِ خرید (`StatusChoice`). */
-export const PURCHASE_STAGE_CHOICES = [
-  {
-    value: "proforma",
-    label: "پیش‌فاکتور",
-    hint: "اقلام و قیمت‌ها بعداً هم ویرایش می‌شوند؛ شماره، تاریخ و پرداخت ندارد.",
-  },
-  {
-    value: "invoice",
-    label: "فاکتور",
-    hint: "شماره و تاریخِ فاکتورِ تامین‌کننده لازم است؛ بعد از ثبت، اقلام ویرایش نمی‌شوند.",
-  },
-];
+/** توضیحِ «پیش‌فاکتور / فاکتور» در فرمِ خرید (`DocumentKindPicker`). */
+export const PURCHASE_KIND_DESCRIPTIONS = {
+  proforma: "قیمت‌ها و اقلام بعداً هم ویرایش می‌شوند؛ شماره و پرداخت ندارد.",
+  invoice: "فاکتورِ قطعیِ تامین‌کننده با شماره و تاریخ؛ پرداخت همین‌جا ثبت می‌شود.",
+};
 
 /** وضعیتِ ارسالِ خریدِ صادرشده — تنها دو وضعیتِ دستی پس از صدور (و لغو). */
 export const PURCHASE_SHIPPING_CHOICES = [

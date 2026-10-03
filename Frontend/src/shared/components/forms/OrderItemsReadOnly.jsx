@@ -1,10 +1,5 @@
-import { Lock } from "lucide-react";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from "@/shared/components/ui/card";
+import { Lock, Package } from "lucide-react";
+import SectionCard from "@/shared/components/documents/SectionCard";
 import { Badge } from "@/shared/components/ui/badge";
 import { TaxCategoryEnum } from "@/shared/domain/enums/taxCategory";
 import { invoiceLineAmounts } from "@/shared/domain/invoice/lineMath";
@@ -54,7 +49,8 @@ function LineBadges({ item }) {
  *   `{ key, label, render(item) }` (مثلاً «ارسال‌شده» در فروش، «رسیده» و
  *   «مانده» در خرید). `render` می‌تواند متن یا یک المان برگرداند.
  * @param renderActions اختیاری — `(item) => node` برای دکمه‌های هر قلم.
- * @param description متنِ زیرِ عنوان؛ پیش‌فرض یادآوریِ «فقط در پیش‌فاکتور».
+ * @param description متنِ کوتاهِ زیرِ عنوان (اختیاری). قفلِ کنارِ عنوان یعنی
+ *   اقلام فقط در پیش‌فاکتور ویرایش می‌شوند.
  * @param headerAction اختیاری — دکمه/پیوندی کنارِ عنوان (مثلاً «دانه‌ها و برچسب‌ها»).
  * @param renderDetails اختیاری — `(item) => node` زیرِ نامِ هر قلم (مثلاً
  *   گزارشِ انبار از دریافت).
@@ -66,7 +62,7 @@ export default function OrderItemsReadOnly({
   items = [],
   columns = [],
   renderActions,
-  description = "اقلام فقط در مرحله‌ی پیش‌فاکتور قابل ویرایش‌اند.",
+  description,
   headerAction = null,
   renderDetails,
   totalAmount,
@@ -77,19 +73,19 @@ export default function OrderItemsReadOnly({
   const total = totalAmount != null ? Number(totalAmount) || 0 : lineSum;
 
   return (
-    <Card className="@container/items">
-      <CardHeader className="pb-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="text-base font-semibold text-card-foreground flex items-center gap-2">
-            {title}
-            <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-          </CardTitle>
-          {headerAction}
-        </div>
-        <p className="text-xs text-muted-foreground">{description}</p>
-      </CardHeader>
-
-      <CardContent className="space-y-3">
+    <SectionCard
+      icon={Package}
+      title={
+        <span className="inline-flex items-center gap-1.5">
+          {title}
+          <Lock className="size-3 text-muted-foreground" aria-label="قفل" />
+        </span>
+      }
+      description={description}
+      action={headerAction}
+      className="@container/items"
+      contentClassName="space-y-3"
+    >
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6">قلمی ثبت نشده است.</p>
         ) : (
@@ -234,7 +230,6 @@ export default function OrderItemsReadOnly({
         </div>
 
         {footer}
-      </CardContent>
-    </Card>
+    </SectionCard>
   );
 }

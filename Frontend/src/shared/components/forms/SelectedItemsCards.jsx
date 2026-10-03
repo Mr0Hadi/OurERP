@@ -61,6 +61,7 @@ export default function SelectedItemsCards({
   grandTotal,
   taxAmount = 0,
   taxUnknown = false,
+  showFooter = true,
 }) {
   return (
     <div className="space-y-2 @2xl/picker:hidden">
@@ -165,6 +166,7 @@ export default function SelectedItemsCards({
         })}
       </ol>
 
+      {showFooter && (
       <div className="space-y-1 rounded-lg border border-border bg-muted px-3 py-2.5">
         {taxAmount > 0 && (
           <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -186,6 +188,7 @@ export default function SelectedItemsCards({
           </p>
         )}
       </div>
+      )}
     </div>
   );
 }

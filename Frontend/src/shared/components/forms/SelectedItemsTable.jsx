@@ -13,6 +13,7 @@ export default function SelectedItemsTable({
   grandTotal,
   taxAmount = 0,
   taxUnknown = false,
+  showFooter = true,
 }) {
   // جدول به عرضِ ظرفِ انتخابگر (`@container/picker`) واکنش نشان می‌دهد، نه
   // صفحه — انتخابگر هم در ستونِ فرم است و هم داخلِ کارتِ باریکِ مرجوعی.
@@ -35,7 +36,7 @@ export default function SelectedItemsTable({
             <th className="text-center px-2 py-2.5 font-medium w-36">
               جمع
             </th>
-            <th className="w-8 px-2 py-2.5" />
+            <th className="w-10 px-2 py-2.5" />
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -62,7 +63,7 @@ export default function SelectedItemsTable({
                   onChange={(e) =>
                     onFieldChange(item.productId, "quantity", e.target.value)
                   }
-                  className="h-7 text-center text-xs w-full"
+                  className="h-8 text-center text-sm tabular-nums w-full"
                 />
               </td>
               <td className="px-2 py-2">
@@ -84,20 +85,20 @@ export default function SelectedItemsTable({
                   onChange={(e) =>
                     onFieldChange(item.productId, "discount", e.target.value)
                   }
-                  className="h-7 text-center text-xs w-full"
+                  className="h-8 text-center text-sm tabular-nums w-full"
                 />
               </td>
-              <td className="px-2 py-2 text-center text-xs font-medium text-card-foreground">
+              <td className="px-2 py-2 text-center text-sm font-medium tabular-nums text-card-foreground">
                 {lineTotal(item).toLocaleString("fa-IR")}
               </td>
               <td className="px-2 py-2 text-center">
                 <button
                   type="button"
                   onClick={() => onRemove(item.productId)}
-                  className="text-muted-foreground hover:text-destructive transition-colors p-0.5 rounded"
-                  aria-label="حذف کالا"
+                  className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                  aria-label={`حذف ${item.productName}`}
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="size-4" />
                 </button>
               </td>
             </tr>
@@ -118,6 +119,7 @@ export default function SelectedItemsTable({
             </Fragment>
           ))}
         </tbody>
+        {showFooter && (
         <tfoot className="bg-muted border-t border-border">
           {taxAmount > 0 && (
             <tr>
@@ -153,6 +155,7 @@ export default function SelectedItemsTable({
             </tr>
           )}
         </tfoot>
+        )}
       </table>
     </div>
   );
