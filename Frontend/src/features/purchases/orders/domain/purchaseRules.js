@@ -118,24 +118,30 @@ export function missingInvoiceFields(formData, status) {
   return Object.keys(errors).length > 0 ? errors : null;
 }
 
-/**
- * گزینه‌های `StatusChoice` در فرمِ خرید (ثبت و ویرایشِ پیش‌فاکتور)، با
- * راهنمای یک‌خطیِ هر کدام.
- */
-export const PURCHASE_STATUS_CHOICES = [
+/** «پیش‌فاکتور / فاکتور» در فرمِ خرید (`StatusChoice`). */
+export const PURCHASE_STAGE_CHOICES = [
   {
-    value: PURCHASE_STATUSES.PROFORMA,
-    label: PURCHASE_STATUS_LABELS[PURCHASE_STATUSES.PROFORMA],
-    hint: "اقلام و قیمت‌ها بعداً هم ویرایش می‌شوند. وقتی فاکتورِ رسمیِ تامین‌کننده رسید، شماره و تاریخش را وارد و وضعیت را عوض کنید.",
+    value: "proforma",
+    label: "پیش‌فاکتور",
+    hint: "اقلام و قیمت‌ها بعداً هم ویرایش می‌شوند؛ شماره، تاریخ و پرداخت ندارد.",
   },
+  {
+    value: "invoice",
+    label: "فاکتور",
+    hint: "شماره و تاریخِ فاکتورِ تامین‌کننده لازم است؛ بعد از ثبت، اقلام ویرایش نمی‌شوند.",
+  },
+];
+
+/** وضعیتِ ارسالِ خریدِ صادرشده — تنها دو وضعیتِ دستی پس از صدور (و لغو). */
+export const PURCHASE_SHIPPING_CHOICES = [
   {
     value: PURCHASE_STATUSES.PENDING,
     label: PURCHASE_STATUS_LABELS[PURCHASE_STATUSES.PENDING],
-    hint: "فاکتور صادر می‌شود (شماره و تاریخِ فاکتورِ تامین‌کننده لازم است) و اقلام دیگر ویرایش نمی‌شوند.",
+    hint: "تامین‌کننده هنوز کالا را نفرستاده است.",
   },
   {
     value: PURCHASE_STATUSES.SHIPPED,
     label: PURCHASE_STATUS_LABELS[PURCHASE_STATUSES.SHIPPED],
-    hint: "مثلِ «در انتظار ارسال»، و کالا در راه است. «تحویل ناقص/کامل» را دریافتِ انبار تعیین می‌کند.",
+    hint: "کالا در راه است. «تحویل ناقص/کامل» را دریافتِ انبار تعیین می‌کند.",
   },
 ];

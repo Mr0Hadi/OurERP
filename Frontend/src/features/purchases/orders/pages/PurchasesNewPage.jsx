@@ -4,43 +4,56 @@ import toast from "react-hot-toast";
 
 import { usePurchaseFormStore } from "@/features/purchases/orders/store/purchaseFormStore";
 import { useCreatePurchaseMutation } from "@/features/purchases/orders/services/mutations";
-import { useSuppliersOptionsQuery } from "@/features/suppliers/services/queries";
 import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import {
-  PURCHASE_STATUS_CHOICES,
+  PURCHASE_SHIPPING_CHOICES,
+  PURCHASE_STAGE_CHOICES,
   missingInvoiceFields,
 } from "@/features/purchases/orders/domain/purchaseRules";
+import { PURCHASE_PAYMENT_SIDE } from "@/features/purchases/orders/domain/purchasePayments";
 
 import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection";
 import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
 import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
-import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
 import StatusChoice from "@/shared/components/forms/StatusChoice";
 import DocumentFormLayout, {
   DocumentMobileBar,
   DocumentSummaryCard,
 } from "@/shared/components/forms/DocumentFormLayout";
+import DocumentPaymentsEditor from "@/shared/components/payments/DocumentPaymentsEditor";
+import {
+  paymentTypeOf,
+  usePaymentDraft,
+} from "@/shared/components/payments/usePaymentDraft";
 import AttachmentsCard from "@/shared/components/invoice/AttachmentsCard";
 import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
 import { useReturnedNewProduct } from "@/shared/components/products/useReturnedNewProduct";
 import { useNewDocumentDraft } from "@/shared/hooks/useNewDocumentDraft";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
-import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { PurchaseStatusEnum } from "@/shared/domain/enums/purchaseStatus";
 import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
 
-const partyName = (party) => party.companyName || `${party.firstName} ${party.lastName}`;
-
 /**
  * ثبتِ خریدِ جدید. ترتیبِ کار: تامین‌کننده ← اقلام ← اطلاعاتِ فاکتور ←
- * ضمیمه؛ کنارش وضعیت، پرداخت (فقط وقتی پیش‌فاکتور نیست) و جمع
- * (`DocumentFormLayout`). بعد از ثبت، خودِ سند باز می‌شود.
+ * ضمیمه؛ کنارش نوعِ سند، پرداخت‌ها و جمع (`DocumentFormLayout`).
+ *
+ *  - پیش‌فاکتور: شماره، تاریخ، سررسید و پرداخت ندارد.
+ *  - فاکتور: شماره و تاریخِ فاکتورِ تامین‌کننده الزامی؛ «در انتظار ارسال» یا
+ *    «ارسال شده»؛ پرداخت‌ها (اختیاری) همراهِ همان ثبت.
+ *
+ * بعد از ثبت، خودِ سند باز می‌شود.
  */
 export default function PurchasesNewPage() {
   const navigate = useNavigate();
-  const { setFormData, formData, resetForm, initializeForNew, setItems } =
-    usePurchaseFormStore();
+  const {
+    setFormData,
+    formData,
+    resetForm,
+    initializeForNew,
+    setItems,
+    setPaymentDraft,
+  } = usePurchaseFormStore();
 
   // پیش‌نویس فقط وقتی می‌ماند که از «کالا/تامین‌کننده‌ی جدید» برگشته باشیم.
   const { openSubPage, returned } = useNewDocumentDraft({
@@ -58,16 +71,20 @@ export default function PurchasesNewPage() {
   const [showErrors, setShowErrors] = useState(false);
 
   const createMutation = useCreatePurchaseMutation();
-  const { suppliers, isLoading: suppliersLoading } = useSuppliersOptionsQuery();
   const { products, isLoading: productsLoading } = useProductsOptionsQuery();
+
+  const payments = usePaymentDraft([], PURCHASE_PAYMENT_SIDE.direction, [
+    formData.paymentDraft,
+    setPaymentDraft,
+  ]);
 
   // تامین‌کننده‌ای که از داخلِ همین فرم ساخته شد (تا بکند شناسه را برگرداند —
   // بندِ ۹.۲ سندِ درخواست‌ها — این شاخه عملاً اجرا نمی‌شود).
   const newSupplierId = returned?.newSupplierId;
   useEffect(() => {
-    const found = newSupplierId && suppliers.find((s) => s.id === newSupplierId);
-    if (found) setFormData({ supplierId: found.id, supplierName: partyName(found) });
-  }, [newSupplierId, suppliers, setFormData]);
+    // نام را بخشِ انتخابگر از جزئیاتِ سرور می‌خواند.
+    if (newSupplierId) setFormData({ supplierId: newSupplierId, supplierName: "" });
+  }, [newSupplierId, setFormData]);
 
   useReturnedNewProduct({
     productId: returned?.newProductId,
@@ -88,16 +105,10 @@ export default function PurchasesNewPage() {
   const isProforma = status === PurchaseStatusEnum.PROFORMA;
   const invoiceErrors = missingInvoiceFields(formData, status);
 
-  const paidAmountOf = () => {
-    if (isProforma || formData.paymentType === PaymentTypeEnum.CREDIT) return 0;
-    if (formData.paymentType === PaymentTypeEnum.MIXED) {
-      return (formData.mixedPayments || []).reduce(
-        (sum, part) => sum + (Number(part.amount) || 0),
-        0,
-      );
-    }
-    return Number(formData.paidAmount) || 0;
-  };
+  const setStage = (stage) =>
+    setFormData({
+      status: stage === "proforma" ? PurchaseStatusEnum.PROFORMA : PurchaseStatusEnum.PENDING,
+    });
 
   const onSubmit = (e) => {
     e.preventDefault();
@@ -113,7 +124,7 @@ export default function PurchasesNewPage() {
     }
     if (invoiceErrors) {
       setShowErrors(true);
-      toast.error("برای صدورِ فاکتور، شماره و تاریخِ فاکتورِ تامین‌کننده را وارد کنید.");
+      toast.error("برای فاکتور، شماره و تاریخِ فاکتورِ تامین‌کننده را وارد کنید.");
       return;
     }
     if (attachments.isUploading) {
@@ -121,12 +132,14 @@ export default function PurchasesNewPage() {
       return;
     }
 
+    const paymentRows = isProforma ? [] : payments.rows;
     const payload = {
       supplierId: formData.supplierId,
       supplierName: formData.supplierName,
-      invoiceNumber: formData.invoiceNumber,
-      invoiceDate: formData.invoiceDate,
-      paymentDate: formData.paymentDate || null,
+      // پیش‌فاکتور شماره، تاریخ و سررسید ندارد.
+      invoiceNumber: isProforma ? "" : formData.invoiceNumber,
+      invoiceDate: isProforma ? null : formData.invoiceDate,
+      paymentDate: isProforma ? null : formData.paymentDate || null,
       description: formData.description || "",
       items: items.map((item) => ({
         productId: item.productId,
@@ -137,17 +150,8 @@ export default function PurchasesNewPage() {
         unitPrice: item.unitPrice,
         discount: item.discount || 0,
       })),
-      paymentType: formData.paymentType ?? PaymentTypeEnum.CASH,
-      // فقط برای ساختنِ `paymentDetails`؛ خودِ `paidAmount` فرستاده نمی‌شود.
-      paidAmount: paidAmountOf(),
-      mixedPayments:
-        !isProforma && formData.paymentType === PaymentTypeEnum.MIXED
-          ? formData.mixedPayments || []
-          : [],
-      checkNumber:
-        formData.paymentType === PaymentTypeEnum.CHECK ? formData.checkNumber || null : null,
-      transferRef:
-        formData.paymentType === PaymentTypeEnum.TRANSFER ? formData.transferRef || null : null,
+      paymentType: paymentTypeOf(paymentRows),
+      paymentRows,
       status,
       attachments: attachments.filesPayload,
     };
@@ -172,7 +176,7 @@ export default function PurchasesNewPage() {
   };
 
   const isBusy = createMutation.isPending || attachments.isUploading;
-  const submitLabel = isProforma ? "ثبت پیش‌فاکتور" : "ثبت خرید";
+  const submitLabel = isProforma ? "ثبت پیش‌فاکتور" : "ثبت فاکتور";
 
   return (
     <DocumentFormLayout
@@ -180,9 +184,8 @@ export default function PurchasesNewPage() {
       main={
         <>
           <PurchaseSupplierSection
-            suppliers={suppliers}
-            isLoading={suppliersLoading}
             selectedId={formData.supplierId}
+            selectedName={formData.supplierName}
             onSelect={(id, name) => {
               setFormData({ supplierId: id, supplierName: name });
               setShowErrors(false);
@@ -203,6 +206,7 @@ export default function PurchasesNewPage() {
           <OrderInfoSection
             formData={formData}
             onFormChange={setFormData}
+            proforma={isProforma}
             errors={showErrors ? invoiceErrors ?? {} : {}}
           />
           <AttachmentsCard
@@ -221,18 +225,30 @@ export default function PurchasesNewPage() {
             onCancel={handleCancel}
           >
             <StatusChoice
-              options={PURCHASE_STATUS_CHOICES}
-              value={status}
-              onChange={(next) => setFormData({ status: next })}
+              label="نوعِ سند"
+              options={PURCHASE_STAGE_CHOICES}
+              value={isProforma ? "proforma" : "invoice"}
+              onChange={setStage}
             />
+            {!isProforma && (
+              <StatusChoice
+                label="وضعیتِ ارسال"
+                options={PURCHASE_SHIPPING_CHOICES}
+                value={status}
+                onChange={(next) => setFormData({ status: next })}
+              />
+            )}
           </DocumentSummaryCard>
-          {/* پیش‌فاکتور پرداختی ندارد؛ پیش‌پرداخت بعداً از کارتِ «پرداخت‌ها»ی خودِ سند. */}
+
           {!isProforma && (
-            <OrderPaymentSection
-              formData={formData}
-              onFormChange={setFormData}
+            <DocumentPaymentsEditor
+              draft={payments}
+              side={PURCHASE_PAYMENT_SIDE}
               totalAmount={totals.totalAmount}
-              errors={{}}
+              dueDate={formData.paymentDate}
+              onDueDateChange={(paymentDate) => setFormData({ paymentDate })}
+              allowRefund={false}
+              notice="بدونِ پرداخت یعنی نسیه."
             />
           )}
         </>

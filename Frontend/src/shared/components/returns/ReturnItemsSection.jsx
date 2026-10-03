@@ -54,6 +54,7 @@ function LineCard({
   onUpdateOffScope,
   onRemoveOffScope,
   renderExcessReport,
+  excessPanel,
 }) {
   const claims = line.claims || [];
   const allocated = sumQuantity(claims);
@@ -136,6 +137,8 @@ function LineCard({
         </div>
       ))}
 
+      {excessPanel}
+
       <div className="flex flex-col sm:flex-row gap-2">
         <Button
           type="button"
@@ -148,7 +151,8 @@ function LineCard({
           <Plus className="h-3.5 w-3.5" />
           {remaining > 0 ? "افزودن مشکل" : "کل مقدار تحویل‌شده ثبت شده"}
         </Button>
-        {canAddExcess && (
+        {/* صفحه‌ای که پنلِ مازادِ خودش را دارد (`renderExcessPanel`) دکمه‌ی پیش‌فرض نمی‌خواهد. */}
+        {canAddExcess && excessPanel === undefined && (
           <Button
             type="button"
             size="sm"
@@ -202,6 +206,10 @@ export default function ReturnItemsSection({
   unlistedHint,
   // قیمتِ پیش‌فرضِ کالای سفارش‌نداده: فروش قیمتِ فروش، خرید بهای خرید.
   priceOf = (product) => product.retailPrice ?? 0,
+  // مرجوعی خرید: تصمیمِ «عودت یا خرید» برای مازادِ هر قلم (`ExcessDecisionPanel`)
+  // و برای کالای سفارش‌ندادهِ قرنطینه؛ جای دکمه‌ی پیش‌فرضِ «مازاد».
+  renderExcessPanel,
+  unlistedPanel,
 }) {
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
   const { products, isLoading } = useProductsOptionsQuery();
@@ -273,6 +281,7 @@ export default function ReturnItemsSection({
                 onUpdateOffScope={onUpdateOffScope}
                 onRemoveOffScope={onRemoveOffScope}
                 renderExcessReport={renderOffScopeReport}
+                excessPanel={renderExcessPanel?.(line, orderLine)}
               />
             );
           })
@@ -280,6 +289,7 @@ export default function ReturnItemsSection({
 
         {/* کالای سفارش‌نداده */}
         <div className="rounded-lg border border-dashed border-border p-2.5 space-y-2">
+          {unlistedPanel}
           <Button
             type="button"
             size="sm"

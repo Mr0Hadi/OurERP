@@ -13,16 +13,11 @@ export default function SelectedItemsTable({
   grandTotal,
   taxAmount = 0,
   taxUnknown = false,
-  // `true` یعنی جدول به عرضِ ظرفِ خودش (`@container/picker`) واکنش نشان
-  // دهد، نه به عرضِ صفحه — برای جاهایی که انتخابگر داخلِ یک کارتِ باریک است.
-  byContainer = false,
 }) {
+  // جدول به عرضِ ظرفِ انتخابگر (`@container/picker`) واکنش نشان می‌دهد، نه
+  // صفحه — انتخابگر هم در ستونِ فرم است و هم داخلِ کارتِ باریکِ مرجوعی.
   return (
-    <div
-      className={`${
-        byContainer ? "hidden @2xl/picker:block" : "hidden xl:block"
-      } border border-border rounded-lg overflow-hidden`}
-    >
+    <div className="hidden @2xl/picker:block border border-border rounded-lg overflow-hidden">
       <table className="w-full text-sm table-fixed">
         <thead className="bg-muted text-muted-foreground text-xs">
           <tr>

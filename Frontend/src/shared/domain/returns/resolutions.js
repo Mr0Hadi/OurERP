@@ -97,24 +97,53 @@ function emptyQuarantineSlot(source = null) {
 
 /**
  * منبعِ کالای خروجی در مرجوعی خرید (`ProductUnitStatusEnum`): موجودیِ قفسه
- * یا قرنطینه. کسی که با تامین‌کننده توافق می‌کند می‌گوید کالا از کجا
- * برداشته می‌شود و انبار فقط اجرا می‌کند؛ قرنطینه از همان لحظه برای این
- * تصمیم رزرو می‌شود.
+ * یا قرنطینه. از کاربر پرسیده نمی‌شود: عودت و اسقاط یعنی *همان* کالای
+ * معیوب، پس `resolveSources` اول قرنطینه‌ی آزادِ همین ادعا را برمی‌دارد و فقط
+ * باقی را از قفسه (عیبی که بعد از دریافت روی قفسه پیدا شده).
  */
 export const GOODS_SOURCES = {
   IN_STOCK: ProductUnitStatusEnum.IN_STOCK,
   QUARANTINED: ProductUnitStatusEnum.QUARANTINED,
 };
 
-/** اسلات‌هایی که از قرنطینه برمی‌دارند (و سقفِ قرنطینه را می‌خورند). */
+/** اسلاتی که از قرنطینه برمی‌دارد و سقفش را می‌خورد: فقط آزادسازی (عودت و اسقاط خودشان تقسیم می‌شوند). */
 function takesFromQuarantine(composition) {
-  return (
-    (composition.goodsOut?.enabled &&
-      composition.goodsOut.source === GOODS_SOURCES.QUARANTINED) ||
-    composition.goodsRelease?.enabled ||
-    (composition.goodsScrap?.enabled &&
-      composition.goodsScrap.source !== GOODS_SOURCES.IN_STOCK)
-  );
+  return Boolean(composition.goodsRelease?.enabled);
+}
+
+/**
+ * سهمِ قرنطینه و قفسه برای عودت/اسقاطِ همان کالای ادعا: قرنطینه‌ی آزادِ ادعا
+ * اول، باقی از قفسه. کالای خارج از سفارش هرگز روی قفسه نبوده.
+ */
+export function sourceSplit(quantity, { quarantineAvailable, offScope }) {
+  const total = Math.max(0, Number(quantity) || 0);
+  const fromQuarantine = offScope ? total : Math.min(total, Math.max(0, quarantineAvailable ?? 0));
+  return { fromQuarantine, fromStock: total - fromQuarantine };
+}
+
+/**
+ * پیش از ارسال: سهمِ قرنطینه‌ی عودت و اسقاط روی خودِ اسلات نوشته می‌شود
+ * (`fromQuarantine`) تا `toApiComposition` آن را به دو ردیف با `source` جدا بشکند.
+ */
+export function resolveSources(composition, { quarantineAvailable, offScope }) {
+  const quantity = Number(composition.quantity) || 0;
+  const { fromQuarantine } = sourceSplit(quantity, { quarantineAvailable, offScope });
+  const withSplit = (slot) => (slot?.enabled ? { ...slot, fromQuarantine } : slot);
+  return {
+    ...composition,
+    goodsOut: withSplit(composition.goodsOut),
+    goodsScrap: withSplit(composition.goodsScrap),
+  };
+}
+
+/** یک ردیفِ کالا → یک یا دو ردیف با `source` (قرنطینه، قفسه). */
+function splitBySource(entry, fromQuarantine) {
+  if (fromQuarantine == null) return [entry];
+  const fromQ = Math.min(entry.quantity, fromQuarantine);
+  return [
+    { ...entry, quantity: fromQ, source: GOODS_SOURCES.QUARANTINED },
+    { ...entry, quantity: entry.quantity - fromQ, source: GOODS_SOURCES.IN_STOCK },
+  ].filter((part) => part.quantity > 0);
 }
 
 /**
@@ -139,7 +168,7 @@ export function emptyComposition(quantity = 1) {
     goodsIn: emptyGoodsSlot(),
     goodsOut: emptyGoodsSlot(),
     goodsRelease: emptyQuarantineSlot(),
-    goodsScrap: emptyQuarantineSlot(GOODS_SOURCES.QUARANTINED),
+    goodsScrap: emptyQuarantineSlot(),
     moneyIn: emptyMoneyEffect(),
     moneyOut: emptyMoneyEffect(),
     writeOff: false,
@@ -277,8 +306,9 @@ export function expandComposition(composition, claim) {
  *  ۶. `unitCost` فرستاده نمی‌شود: آزادسازی، اسقاط و عودت از قرنطینه با
  *     بهای ثبت‌شده روی خودِ دانه (`QuarantineCost`) حرکت می‌کنند و بکند
  *     هر عددی را که فرانت بفرستد نادیده می‌گیرد.
- *  ۷. `source` فقط وقتی فرستاده می‌شود که اسلات منبع دارد — عودت و اسقاطِ
- *     مرجوعی خرید. روی مرجوعی فروش همیشه خالی است (بکند ۴۰۰ می‌دهد).
+ *  ۷. `source` فقط برای عودت و اسقاطِ مرجوعی خرید، از `resolveSources`:
+ *     قرنطینه‌ی آزادِ ادعا اول و باقی از قفسه (در صورت لزوم دو ردیف). روی
+ *     مرجوعی فروش همیشه خالی است (بکند ۴۰۰ می‌دهد).
  */
 export function toApiComposition(composition, claim) {
   if (!composition) return null;
@@ -294,26 +324,30 @@ export function toApiComposition(composition, claim) {
     if (!slot?.enabled) return undefined;
     return goodsItemsOf(slot, claim, quantity)
       .filter((item) => (Number(item.quantity) || 0) > 0)
-      .map((item) => {
+      .flatMap((item) => {
         const productId = item.productId ?? claim?.productId ?? null;
-        return {
-          quantity: Number(item.quantity) || 0,
-          productId,
-          unitPrice: hasValue(item.unitPrice) ? Number(item.unitPrice) : undefined,
-          source: slot.source ?? undefined,
-        };
+        return splitBySource(
+          {
+            quantity: Number(item.quantity) || 0,
+            productId,
+            unitPrice: hasValue(item.unitPrice) ? Number(item.unitPrice) : undefined,
+            source: slot.source ?? undefined,
+          },
+          slot.fromQuarantine,
+        );
       });
   };
 
   const quarantineOf = (slot) => {
     if (!slot?.enabled || quantity <= 0) return undefined;
-    return [
+    return splitBySource(
       {
         quantity,
         productId: claim?.productId ?? null,
         source: slot.source ?? undefined,
       },
-    ];
+      slot.fromQuarantine,
+    );
   };
 
   const moneyOf = (slot) => {
@@ -423,10 +457,6 @@ export function validateComposition(
         "عودت، آزادسازی و اسقاط را در یک تصمیم ترکیب نکنید؛ برای تقسیم، چند تصمیم با تعداد جدا ثبت کنید",
       );
     }
-  }
-
-  if (allowQuarantine && composition.goodsOut?.enabled && composition.goodsOut.source == null) {
-    errors.push("مشخص کنید کالای عودتی از موجودی برداشته می‌شود یا از قرنطینه");
   }
 
   // هر اثری که از قرنطینه برمی‌دارد همان لحظه با قرنطینه‌ی آزادِ این ادعا

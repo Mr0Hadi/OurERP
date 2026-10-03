@@ -1,4 +1,4 @@
-import { SaleStatusEnum, SALE_STATUS_LABELS } from "@/shared/domain/enums/saleStatus";
+import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
 
 /**
  * قاعده‌های سندِ فروش — همان چیزی که بکند (`CreateSale`/`UpdateSale`/
@@ -72,20 +72,26 @@ export function canDeleteSale(sale) {
 }
 
 /**
- * گزینه‌های `StatusChoice` در فرمِ ثبتِ فروش. بکند `status` را از فرم
- * نمی‌گیرد: فروش پیش‌فاکتور ثبت می‌شود و **اولین دریافت** فاکتور را صادر
- * و وضعیت را «آماده‌سازی انبار» می‌کند. پس این انتخاب فقط تعیین می‌کند
- * فرم پرداختی بفرستد یا نه.
+ * «پیش‌فاکتور / فاکتور» در فرمِ فروش (`StatusChoice`). بکند `status` را از فرم
+ * نمی‌گیرد: فروش با **اولین دریافت** فاکتور می‌شود (شماره را خودش می‌سازد) و
+ * به صفِ ارسال می‌رود؛ وضعیتِ ارسال را انبار تعیین می‌کند. پس «فاکتور» یعنی
+ * «با دریافتِ وجه ثبت کن».
  */
-export const SALE_STATUS_CHOICES = [
+export const SALE_STAGE_CHOICES = [
   {
-    value: SaleStatusEnum.PROFORMA,
-    label: SALE_STATUS_LABELS[SaleStatusEnum.PROFORMA],
-    hint: "بدون دریافت وجه ثبت می‌شود و اقلام بعداً هم قابل ویرایش‌اند.",
+    value: "proforma",
+    label: "پیش‌فاکتور",
+    hint: "اقلام و قیمت‌ها بعداً هم ویرایش می‌شوند؛ تاریخ و پرداخت ندارد.",
   },
   {
-    value: SaleStatusEnum.PROCESSING,
-    label: "فاکتور با دریافت وجه",
-    hint: "با مبلغِ دریافتی فاکتورِ رسمی صادر و به صفِ ارسالِ انبار فرستاده می‌شود. اگر مبلغی دریافت نشود، پیش‌فاکتور می‌ماند.",
+    value: "invoice",
+    label: "فاکتور",
+    hint: "با اولین دریافت صادر و به صفِ ارسالِ انبار فرستاده می‌شود؛ وضعیتِ ارسال را انبار تعیین می‌کند.",
   },
 ];
+
+/** تاریخِ فاکتور برای صدور الزامی است (شماره را بکند می‌سازد). */
+export function missingSaleInvoiceFields(formData, isInvoice) {
+  if (!isInvoice || formData.invoiceDate) return null;
+  return { invoiceDate: "برای صدورِ فاکتور، تاریخ الزامی است" };
+}

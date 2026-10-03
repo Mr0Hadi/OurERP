@@ -1,18 +1,14 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Ban, Undo2 } from "lucide-react";
+import { Undo2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
-import {
-  useChangeSaleStatusMutation,
-  useUpdateSaleAttachmentsMutation,
-  useUpdateSalePaymentDateMutation,
-  useSalePaymentMutations,
-} from "@/features/sales/orders/services/mutations";
-import SalePaymentsCard from "../components/forms/SalePaymentsCard";
+import { useSaleChangesSaver } from "@/features/sales/orders/services/mutations";
 import OrderLogisticsSection from "@/shared/components/forms/OrderLogisticsSection";
 import StatusChangeCard from "@/shared/components/forms/StatusChangeCard";
+import PendingChangesBar from "@/shared/components/forms/PendingChangesBar";
+import DocumentPaymentsEditor from "@/shared/components/payments/DocumentPaymentsEditor";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import OrderItemsReadOnly from "@/shared/components/forms/OrderItemsReadOnly";
 import UnitsPageLink from "@/features/warehouse/units/components/UnitsPageLink";
@@ -20,27 +16,23 @@ import {
   RETURNABLE_SALE_STATUSES,
   hasAnythingShipped,
 } from "../domain/saleRules";
+import { SALE_PAYMENT_SIDE } from "../domain/salePayments";
 import InvoiceInfoCard from "@/shared/components/invoice/InvoiceInfoCard";
 import IssuedInvoiceNotice from "@/shared/components/invoice/IssuedInvoiceNotice";
-import PaymentDueDateCard from "@/shared/components/invoice/PaymentDueDateCard";
-import InvoiceAttachmentsSaveButton from "@/shared/components/invoice/InvoiceAttachmentsSaveButton";
-import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
+import { useIssuedDocumentDraft } from "@/shared/hooks/useIssuedDocumentDraft";
 import { ROUTES } from "@/shared/constants/routes";
 import {
   SaleStatusEnum,
   SALE_STATUS_LABELS,
 } from "@/shared/domain/enums/saleStatus";
-import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
+import { PAYMENT_TYPE_LABELS, PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
+import { formatRial } from "@/shared/lib/numberFormat";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { useRelatedSalesReturnsQuery } from "@/features/sales/returns/services/queries";
 import RelatedReturnsCard from "@/shared/components/returns/RelatedReturnsCard";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import SaleStatusBadge from "@/shared/components/status/SaleStatusBadge";
-
-/** `ChangeSaleStatus` فقط «تحویل کامل» را از «ارسال شده» می‌پذیرد (لغو دکمه‌ی خودش را دارد). */
-const statusTargetsOf = (sale) =>
-  sale.status === SaleStatusEnum.SHIPPED ? [SaleStatusEnum.DELIVERED] : [];
 
 /** لغو فقط پیش از هر ارسالی؛ قرارداد اقساطیِ فعال را خودِ سرور می‌سنجد. */
 const canCancelSale = (sale) =>
@@ -49,55 +41,81 @@ const canCancelSale = (sale) =>
   !hasAnythingShipped(sale);
 
 /**
- * فروشِ **صادرشده** — فقط‌خواندنی. اقلام، قیمت، مشتری و روش پرداخت دیگر
- * عوض نمی‌شوند؛ فقط پرداخت‌ها، وضعیت، پیوست‌ها و مهلت پرداخت، هر کدام با
- * endpointِ خودش.
+ * گزینه‌های وضعیت. `ChangeSaleStatus` فقط «تحویل کامل» را از «ارسال شده»
+ * می‌پذیرد؛ «ارسال ناقص/ارسال شده» را صفحه‌ی ارسالِ انبار می‌گذارد.
+ */
+function statusOptionsOf(sale) {
+  const current = sale.status;
+  return [
+    { value: current, label: SALE_STATUS_LABELS[current], hint: "بدونِ تغییرِ وضعیت." },
+    ...(current === SaleStatusEnum.SHIPPED
+      ? [
+          {
+            value: SaleStatusEnum.DELIVERED,
+            label: SALE_STATUS_LABELS[SaleStatusEnum.DELIVERED],
+            hint: "مشتری همه‌ی کالا را تحویل گرفت.",
+          },
+        ]
+      : []),
+    ...(canCancelSale(sale)
+      ? [
+          {
+            value: SaleStatusEnum.CANCELLED,
+            label: "لغو",
+            hint: "لغو نهایی است؛ پولِ مشتری روی فروش می‌ماند و با «پول برگشتی» برمی‌گردد.",
+          },
+        ]
+      : []),
+  ];
+}
+
+/**
+ * فروشِ **صادرشده** — اقلام، قیمت و مشتری دیگر عوض نمی‌شوند؛ وضعیت،
+ * پرداخت‌ها، سررسید و پیوست‌ها با یک «ثبت تغییرات» (`useIssuedDocumentDraft`
+ * + `useSaleChangesSaver`).
  *
  * ستونِ اصلی: مشخصاتِ فاکتور ← اقلام ← مرجوعی‌ها ← حمل. ستونِ کناری: وضعیت
- * و کارهای سند (مرجوعی، لغو، راهنمای اصلاح) ← پرداخت‌ها ← مهلت ← سند.
+ * و کارهای سند ← پرداخت‌ها و سررسید ← سند و پیوست.
  */
 export default function SaleIssuedView({ sale }) {
   const navigate = useNavigate();
   const { can, isError: permissionsUnknown } = usePermission();
   const allow = (permission) => permissionsUnknown || can(permission);
-  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
-  const statusMutation = useChangeSaleStatusMutation(sale.id);
-  const attachmentsMutation = useUpdateSaleAttachmentsMutation(sale.id);
-  const dueDateMutation = useUpdateSalePaymentDateMutation(sale.id);
-  const payments = useSalePaymentMutations(sale.id);
+  const draft = useIssuedDocumentDraft(sale, SALE_PAYMENT_SIDE.direction);
+  const saver = useSaleChangesSaver(sale.id);
 
   // خلاصه‌ی مرجوعی‌های همین سند، با پیوند به جزئیاتِ هر کدام.
   const { data: relatedReturns } = useRelatedSalesReturnsQuery(sale.id);
 
-  const attachments = useInvoiceAttachments(sale.attachments || []);
-  const attachmentsReset = attachments.reset;
-  useEffect(() => {
-    attachmentsReset(sale.attachments || []);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sale.id, sale.updatedAt, attachmentsReset]);
-
   const canUpdate = allow("SaleUpdate");
   const isCancelled = sale.status === SaleStatusEnum.CANCELLED;
-  const cancellable = canCancelSale(sale);
+  const isInstallment = sale.paymentType === PaymentTypeEnum.INSTALLMENT;
   const returnable = RETURNABLE_SALE_STATUSES.includes(Number(sale.status));
+  const cancelStaged = Number(draft.status) === SaleStatusEnum.CANCELLED;
+
+  const save = () => {
+    if (draft.attachments.isUploading) return;
+    saver.mutate(draft.changes(), {
+      onSuccess: () => {
+        draft.attachments.commit();
+        setConfirmCancel(false);
+      },
+    });
+  };
 
   return (
-    <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in zoom-in-95 duration-300">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 space-y-4">
+    <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in duration-300">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+        <div className="lg:col-span-2 space-y-4 min-w-0">
           <InvoiceInfoCard
             rows={[
-              { label: "مشتری", value: sale.customerName },
+              { label: "مشتری", value: sale.customerName, wide: true },
               { label: "شماره فاکتور", value: sale.invoiceNumber },
-              {
-                label: "تاریخ فاکتور",
-                value: gregorianToPersian(sale.invoiceDate),
-              },
-              {
-                label: "روش پرداخت",
-                value: PAYMENT_TYPE_LABELS[sale.paymentType],
-              },
+              { label: "تاریخ فاکتور", value: gregorianToPersian(sale.invoiceDate) },
+              { label: "روش پرداخت", value: PAYMENT_TYPE_LABELS[sale.paymentType] },
+              { label: "جمع فاکتور", value: formatRial(sale.totalAmount), emphasis: true },
             ]}
             description={sale.description}
           />
@@ -105,7 +123,6 @@ export default function SaleIssuedView({ sale }) {
             title="اقلام فروش"
             items={sale.items}
             totalAmount={sale.totalAmount}
-            description="فاکتور صادر شده؛ اقلام فقط در مرحله‌ی پیش‌فاکتور قابل ویرایش‌اند."
             headerAction={
               hasAnythingShipped(sale) && (
                 <UnitsPageLink params={{ saleId: sale.id }} label="دانه‌های ارسال‌شده" />
@@ -133,110 +150,79 @@ export default function SaleIssuedView({ sale }) {
           />
         </div>
 
-        <div className="space-y-4 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:p-0.5 custom-scroll">
+        <div className="space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:p-0.5 custom-scroll">
           <StatusChangeCard
             statusBadge={<SaleStatusBadge status={sale.status} withIcon />}
-            targets={statusTargetsOf(sale)}
-            labels={SALE_STATUS_LABELS}
+            options={statusOptionsOf(sale)}
+            value={Number(draft.status)}
+            onChange={draft.setStatus}
             canEdit={canUpdate}
-            isPending={statusMutation.isPending}
-            onChange={(status, options) =>
-              statusMutation.mutate(status, options)
-            }
+            headerAction={!isCancelled && <IssuedInvoiceNotice movedLabel="ارسال" />}
             hint={
               isCancelled
                 ? "لغو نهایی است."
-                : "«ارسال ناقص» و «ارسال شده» را صفحه‌ی ارسالِ انبار تعیین می‌کند؛ «تحویل کامل» بعد از ارسالِ همه‌ی اقلام ثبت می‌شود."
+                : "«ارسال ناقص» و «ارسال شده» را صفحه‌ی ارسالِ انبار تعیین می‌کند."
             }
           >
-            {(returnable || (cancellable && canUpdate)) && (
-              <div className="flex flex-wrap gap-2">
-                {returnable && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 gap-1.5"
-                    onClick={() =>
-                      navigate(`${ROUTES.SALES_RETURNS_NEW}?saleId=${sale.id}`)
-                    }
-                  >
-                    <Undo2 className="h-4 w-4" />
-                    ثبت مرجوعی
-                  </Button>
-                )}
-                {cancellable && canUpdate && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="flex-1 gap-1.5 text-destructive hover:bg-destructive/10"
-                    onClick={() => setShowCancelDialog(true)}
-                    disabled={statusMutation.isPending}
-                  >
-                    <Ban className="h-4 w-4" />
-                    لغو فروش
-                  </Button>
-                )}
-              </div>
+            {returnable && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full gap-1.5"
+                onClick={() => navigate(`${ROUTES.SALES_RETURNS_NEW}?saleId=${sale.id}`)}
+              >
+                <Undo2 className="h-4 w-4" />
+                ثبت مرجوعی از این فروش
+              </Button>
             )}
-            {!isCancelled && <IssuedInvoiceNotice movedLabel="ارسال" />}
           </StatusChangeCard>
 
-          <SalePaymentsCard
-            sale={sale}
-            payments={payments}
-            canManage={allow("SalePayment")}
+          <DocumentPaymentsEditor
+            draft={draft.payments}
+            side={SALE_PAYMENT_SIDE}
+            totalAmount={sale.totalAmount}
+            payableAmount={sale.payableAmount}
+            dueDate={draft.dueDate}
+            onDueDateChange={draft.setDueDate}
+            canManage={allow("SalePayment") && !isInstallment}
+            refundOnly={isCancelled}
             notice={
-              isCancelled
-                ? "فروش لغو شده است؛ پولی را که از مشتری گرفته شده با «پول برگشتی» برگردانید."
-                : undefined
+              isInstallment
+                ? "پرداخت‌های فروشِ اقساطی از قرارداد اقساط ثبت می‌شوند."
+                : isCancelled
+                  ? "فروش لغو شده است؛ پولِ مشتری را با «پول برگشتی» برگردانید."
+                  : undefined
             }
-          />
-
-          <PaymentDueDateCard
-            value={sale.paymentDate}
-            canEdit={canUpdate}
-            isPending={dueDateMutation.isPending}
-            onSave={(date) => dueDateMutation.mutate(date)}
           />
 
           <InvoiceDocumentSection
             title="فاکتور فروش"
             invoiceNumber={sale.invoiceNumber}
-            attachments={attachments}
+            attachments={draft.attachments}
             documentKind="sale"
             documentId={sale.id}
             attachmentLabel="فاکتور صادرشده برای مشتری"
           />
-          {canUpdate && (
-            <InvoiceAttachmentsSaveButton
-              attachments={attachments}
-              saved={sale.attachments}
-              isPending={attachmentsMutation.isPending}
-              onSave={(list) =>
-                attachmentsMutation.mutate(list, {
-                  onSuccess: () => attachments.commit(),
-                })
-              }
-            />
-          )}
         </div>
       </div>
 
+      <PendingChangesBar
+        count={draft.count}
+        isSaving={saver.isPending || draft.attachments.isUploading}
+        onDiscard={draft.discard}
+        onSave={() => (cancelStaged ? setConfirmCancel(true) : save())}
+      />
+
       <ConfirmDialog
-        open={showCancelDialog}
-        onOpenChange={setShowCancelDialog}
+        open={confirmCancel}
+        onOpenChange={setConfirmCancel}
         title="لغو فروش"
         description="لغو نهایی است و قابل بازگشت نیست. پرداخت‌های مشتری روی فروش می‌مانند و مانده‌ی حسابش منفی می‌شود تا وقتی پولش را با «پول برگشتی» برگردانید."
-        confirmLabel="لغو فروش"
-        pendingLabel="در حال لغو..."
-        isPending={statusMutation.isPending}
-        onConfirm={() =>
-          statusMutation.mutate(SaleStatusEnum.CANCELLED, {
-            onSuccess: () => setShowCancelDialog(false),
-          })
-        }
+        confirmLabel="لغو فروش و ذخیره"
+        pendingLabel="در حال ذخیره..."
+        isPending={saver.isPending}
+        onConfirm={save}
       />
     </div>
   );

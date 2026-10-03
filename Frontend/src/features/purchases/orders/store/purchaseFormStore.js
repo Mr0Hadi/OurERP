@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+import { EMPTY_PAYMENT_DRAFT } from "@/shared/components/payments/usePaymentDraft";
 import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 
 const EMPTY_FORM = {
@@ -9,14 +9,10 @@ const EMPTY_FORM = {
   invoiceDate: "",
   paymentDate: "",
   description: "",
-  paymentType: PaymentTypeEnum.CASH,
-  paidAmount: "",
-  paymentPaidAt: null,
-  checkNumber: "",
-  transferRef: "",
-  mixedPayments: [],
   status: "",
   items: [],
+  // پرداخت‌های ثبت‌نشده (`usePaymentDraft`) — در store تا رفتن به «کالای جدید» پاکش نکند.
+  paymentDraft: EMPTY_PAYMENT_DRAFT,
 };
 
 export const usePurchaseFormStore = create((set, get) => ({
@@ -26,6 +22,16 @@ export const usePurchaseFormStore = create((set, get) => ({
   setFormData: (data) =>
     set((state) => ({
       formData: { ...state.formData, ...data },
+    })),
+
+  /** مثلِ `setState`: مقدار یا تابعِ به‌روزرسان (`usePaymentDraft`). */
+  setPaymentDraft: (next) =>
+    set((state) => ({
+      formData: {
+        ...state.formData,
+        paymentDraft:
+          typeof next === "function" ? next(state.formData.paymentDraft) : next,
+      },
     })),
 
   setItems: (items) =>
@@ -73,12 +79,6 @@ export const usePurchaseFormStore = create((set, get) => ({
         invoiceDate: purchaseData.invoiceDate || "",
         paymentDate: purchaseData.paymentDate || "",
         description: purchaseData.description || "",
-        paymentType: purchaseData.paymentType ?? PaymentTypeEnum.CASH,
-        paidAmount: purchaseData.paidAmount?.toString() || "",
-        paymentPaidAt: purchaseData.paymentPaidAt || null,
-        checkNumber: purchaseData.checkNumber || "",
-        transferRef: purchaseData.transferRef || "",
-        mixedPayments: purchaseData.mixedPayments || [],
         status: purchaseData.status ?? "",
         items: formattedItems,
       },

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useGoBack } from "@/shared/hooks/useGoBack";
 import { Save, X, AlertCircle } from "lucide-react";
 
+import toast from "react-hot-toast";
 import { Button } from "@/shared/components/ui/button";
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { usePurchaseReturnFormStore } from "../store/purchaseReturnFormStore";
@@ -17,7 +18,9 @@ import PurchaseReturnPurchaseSection from "../components/forms/PurchaseReturnPur
 import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
 import { PreviousReturnBadge } from "@/shared/components/returns/ReturnChain";
 import ReturnItemsSection from "@/shared/components/returns/ReturnItemsSection";
-import PurchaseExcessSection from "../components/forms/PurchaseExcessSection";
+import ExcessDecisionPanel from "../components/forms/ExcessDecisionPanel";
+import { offScopeCapKey } from "../store/purchaseReturnFormStore";
+import { useAcceptPurchaseExcessMutation } from "@/features/purchases/orders/services/mutations";
 import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
 import ReceivingReportCard, {
   ReceivingReportLines,
@@ -28,7 +31,7 @@ import {
   PURCHASE_OFF_ORDER_PROBLEM_LABELS,
   OFF_SCOPE_KIND_LABELS,
 } from "../domain/purchaseReturnVocabulary";
-import { OFF_SCOPE_KIND_STYLES } from "@/shared/domain/returns/scopes";
+import { OFF_SCOPE_KINDS, OFF_SCOPE_KIND_STYLES } from "@/shared/domain/returns/scopes";
 import PurchaseReturnInfoSection from "../components/forms/PurchaseReturnInfoSection";
 import PurchaseReturnDetailLoading from "../components/forms/PurchaseReturnDetailLoading";
 import { ROUTES } from "@/shared/constants/routes";
@@ -39,7 +42,8 @@ import { formatRial } from "@/shared/lib/numberFormat";
  * ثبت مرجوعی به تامین‌کننده — مراحلِ عمودی روی یک صفحه.
  *
  * بالا: فاکتورِ خرید و گزارشِ انبار از دریافتش (چه رسید، چه در قرنطینه است).
- * وسط: تصمیمِ کالای مازاد — نگه‌داشتن و خریدن (`PurchaseExcessSection`).
+ * پایین: مشکل‌هایی که به تامین‌کننده برمی‌گردد، و کنارِ هر کالا تصمیمِ
+ *        مازادش — عودت یا نگه‌داشتن و خرید (`ExcessDecisionPanel`).
  * پایین: مشکل‌هایی که به تامین‌کننده برمی‌گردد.
  *
  * ترتیب عمدی است: کاربر اول باید ببیند چه چیزی خریده و چه رسیده، بعد
@@ -74,6 +78,11 @@ export default function PurchaseReturnNewPage() {
     handleRemoveOffScopeClaim,
     computedTotal,
     buildPayload,
+    excessPurchases,
+    setPurchase,
+    buildPurchasePayload,
+    purchaseError,
+    offScopeCaps,
   } = usePurchaseReturnForm();
 
   const {
@@ -126,8 +135,16 @@ export default function PurchaseReturnNewPage() {
   }, [setHeader, clearHeader, goBack]);
 
   const createMutation = useCreatePurchaseReturnMutation();
-  const isBusy = createMutation.isPending;
+  const acceptMutation = useAcceptPurchaseExcessMutation(selectedPurchaseId);
+  const isBusy = createMutation.isPending || acceptMutation.isPending;
   const hasClaims = allClaims.length > 0;
+  const hasPurchases = Object.keys(excessPurchases).length > 0;
+
+  /** مقدارِ ادعاهای عودتِ یک گروهِ مازاد/سفارش‌نداده. */
+  const returnedIn = (key) =>
+    offScopeClaims
+      .filter((claim) => offScopeCapKey(claim.offScopeKind, claim) === key)
+      .reduce((sum, claim) => sum + (Number(claim.quantity) || 0), 0);
 
   const handleSelectPurchase = (purchaseId) => {
     resetForm();
@@ -139,13 +156,34 @@ export default function PurchaseReturnNewPage() {
     setSelectedPurchaseId(null);
   };
 
+  /**
+   * اول خرید (`AcceptPurchaseExcess`)، بعد مرجوعی — هر کدام اگر چیزی دارد.
+   * خریدِ تنها مرجوعی نمی‌سازد و کاربر روی همین صفحه می‌ماند.
+   */
   const onSubmit = (e) => {
     e.preventDefault();
-    if (!hasClaims) {
+    if (!hasClaims && !hasPurchases) {
       setShowErrors(true);
       return;
     }
-    createMutation.mutate(buildPayload());
+    if (purchaseError) {
+      toast.error(purchaseError);
+      return;
+    }
+    const createReturn = () => {
+      if (hasClaims) createMutation.mutate(buildPayload());
+    };
+    const purchasePayload = buildPurchasePayload();
+    if (purchasePayload) {
+      acceptMutation.mutate(purchasePayload, {
+        onSuccess: () => {
+          setFormData({ excessPurchases: {} });
+          createReturn();
+        },
+      });
+      return;
+    }
+    createReturn();
   };
 
   const handleCancel = () => {
@@ -210,14 +248,6 @@ export default function PurchaseReturnNewPage() {
 
             <ReceivingReportCard receivingInfo={purchaseForReturn} />
 
-            {/* کالای مازاد/سفارش‌نداده‌ی قرنطینه را می‌شود به‌جای پس‌فرستادن، خرید. */}
-            <PurchaseExcessSection
-              purchase={{
-                id: selectedPurchaseId,
-                status: purchaseForReturn.status,
-              }}
-            />
-
             {/* ── پایین: ثبت مشکلات ────────────────────────────────── */}
             <ReturnItemsSection
               lines={lines}
@@ -243,6 +273,55 @@ export default function PurchaseReturnNewPage() {
               emptyText="این سفارش قلمی برای ادعا ندارد"
               unlistedHint="کالایی که سفارش داده نشده ولی رسیده؛ سقفش کالای همان نوع در قرنطینه است."
               priceOf={(product) => product.purchasePrice ?? 0}
+              renderExcessPanel={(line, orderLine) => {
+                const key = offScopeCapKey(OFF_SCOPE_KINDS.EXCESS, line);
+                const free = offScopeCaps[key] ?? 0;
+                if (free <= 0) return null;
+                return (
+                  <ExcessDecisionPanel
+                    title="بیش از سفارش رسیده."
+                    free={free}
+                    returned={returnedIn(key)}
+                    bought={excessPurchases[key]?.quantity ?? 0}
+                    unitPrice={line.unitPrice}
+                    unit={line.unit || "عدد"}
+                    onReturn={() => handleAddOffScopeClaim(orderLine, OFF_SCOPE_KINDS.EXCESS)}
+                    onBuyChange={(quantity) =>
+                      setPurchase(
+                        key,
+                        {
+                          purchaseItemId: line.orderLineId,
+                          productId: line.productId,
+                          productName: line.productName,
+                          unitPrice: line.unitPrice,
+                        },
+                        { quantity },
+                      )
+                    }
+                  />
+                );
+              }}
+              unlistedPanel={(formData.unlistedStock || []).map((product) => {
+                const key = offScopeCapKey(OFF_SCOPE_KINDS.UNLISTED, product);
+                const group = { ...product, purchaseItemId: null, unitPrice: null };
+                return (
+                  <ExcessDecisionPanel
+                    key={key}
+                    title={`${product.productName} (سفارش‌نداده).`}
+                    free={offScopeCaps[key] ?? 0}
+                    returned={returnedIn(key)}
+                    bought={excessPurchases[key]?.quantity ?? 0}
+                    unitPrice={excessPurchases[key]?.unitPrice ?? null}
+                    priceEditable
+                    unit={product.unit || "عدد"}
+                    onReturn={() =>
+                      handleAddOffScopeClaim({ ...product, unitPrice: 0 }, OFF_SCOPE_KINDS.UNLISTED)
+                    }
+                    onBuyChange={(quantity) => setPurchase(key, group, { quantity })}
+                    onPriceChange={(unitPrice) => setPurchase(key, group, { unitPrice })}
+                  />
+                );
+              })}
             />
 
             <PurchaseReturnInfoSection
@@ -250,9 +329,9 @@ export default function PurchaseReturnNewPage() {
               onFormChange={setFormData}
             />
 
-            {showErrors && !hasClaims && (
+            {showErrors && !hasClaims && !hasPurchases && (
               <p className="text-xs text-destructive px-1">
-                حداقل یک مشکل با تعداد بیشتر از صفر باید ثبت شود
+                حداقل یک مشکل یا یک خریدِ مازاد با تعداد بیشتر از صفر لازم است
               </p>
             )}
 
@@ -269,7 +348,11 @@ export default function PurchaseReturnNewPage() {
               <div className="flex gap-2">
                 <Button type="submit" className="gap-2" disabled={isBusy}>
                   <Save className="h-4 w-4" />
-                  {isBusy ? "در حال ثبت..." : "ثبت مرجوعی به تامین‌کننده"}
+                  {isBusy
+                    ? "در حال ثبت..."
+                    : hasClaims
+                      ? "ثبت مرجوعی به تامین‌کننده"
+                      : "ثبتِ خریدِ مازاد"}
                 </Button>
                 <Button
                   type="button"

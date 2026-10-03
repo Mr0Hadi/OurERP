@@ -6,8 +6,9 @@ import { Label } from "@/shared/components/ui/label";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 
 import {
-  GOODS_SOURCES,
   MONEY_DIRECTIONS,
+  resolveSources,
+  sourceSplit,
   emptyComposition,
   expandComposition,
   moneyDirectionOf,
@@ -23,44 +24,21 @@ import { formatNumber } from "@/shared/lib/numberFormat";
 import { CLAIM_SCOPES } from "@/shared/domain/returns/scopes";
 
 /**
- * «از کجا برداشته شود؟» — منبعِ عودت یا اسقاط در مرجوعی خرید. انتخاب همین‌جا
- * ثبت می‌شود و انبار فقط اجرا می‌کند؛ قرنطینه از همین لحظه رزرو می‌شود.
+ * «همان کالای معیوب»: سهمِ قرنطینه و قفسه‌ی عودت/اسقاط، فقط برای نمایش —
+ * انتخابی از کاربر خواسته نمی‌شود (`sourceSplit`).
  */
-function SourceChoice({ value, onChange, quarantineAvailable }) {
-  const options = [
-    { value: GOODS_SOURCES.IN_STOCK, label: "موجودی قفسه" },
-    {
-      value: GOODS_SOURCES.QUARANTINED,
-      label:
-        quarantineAvailable != null
-          ? `قرنطینه (آزاد: ${formatNumber(quarantineAvailable)})`
-          : "قرنطینه",
-      // قرنطینه‌ی خالی را سرور رد می‌کند؛ مگر همین حالا انتخاب شده باشد.
-      disabled: quarantineAvailable === 0 && value !== GOODS_SOURCES.QUARANTINED,
-    },
-  ];
+function SourceNote({ quantity, quarantineAvailable, offScope }) {
+  const { fromQuarantine, fromStock } = sourceSplit(quantity, { quarantineAvailable, offScope });
+  if (quantity <= 0) return null;
+  const parts = [
+    fromQuarantine > 0 && `${formatNumber(fromQuarantine)} عدد از قرنطینه`,
+    fromStock > 0 && `${formatNumber(fromStock)} عدد از موجودیِ قفسه`,
+  ].filter(Boolean);
   return (
-    <div
-      role="group"
-      aria-label="مبدأ کالا"
-      className="flex flex-wrap items-center gap-1.5 ps-6"
-    >
-      <span className="text-[11px] text-muted-foreground">از کجا برداشته شود؟</span>
-      {options.map((option) => (
-        <Button
-          key={option.value}
-          type="button"
-          size="sm"
-          variant={value === option.value ? "default" : "outline"}
-          className={`h-6 px-2 text-[11px] ${value == null ? "border-warning/50" : ""}`}
-          aria-pressed={value === option.value}
-          disabled={option.disabled}
-          onClick={() => onChange(option.value)}
-        >
-          {option.label}
-        </Button>
-      ))}
-    </div>
+    <p className="ps-6 text-[11px] text-muted-foreground">
+      همان کالای معیوب: {parts.join("، ")}
+      {fromStock > 0 && !offScope && " (عیبی که بعد از دریافت روی قفسه پیدا شده)"}
+    </p>
   );
 }
 
@@ -182,9 +160,11 @@ export default function ResolutionComposer({
     [composition, claim, remaining, allowQuarantine, quarantineAvailable],
   );
 
+  const offScope = claim.scope === CLAIM_SCOPES.OFF_ORDER;
+
   const handleSubmit = () => {
     if (errors.length > 0) return;
-    onAdd(composition);
+    onAdd(allowQuarantine ? resolveSources(composition, { quarantineAvailable, offScope }) : composition);
     setComposition(emptyComposition(remaining));
   };
 
@@ -227,12 +207,6 @@ export default function ResolutionComposer({
                             ? [defaultClaimItem(quantity)]
                             : composition[slot].items
                           : [],
-                      // کالای خارج از سفارش هرگز روی قفسه نرفته؛ بقیه را
-                      // کاربر صریحاً انتخاب می‌کند.
-                      source:
-                        checked === true && withSource && claim.scope === CLAIM_SCOPES.OFF_ORDER
-                          ? GOODS_SOURCES.QUARANTINED
-                          : composition[slot].source,
                     })
                   }
                   className="mt-0.5"
@@ -248,10 +222,10 @@ export default function ResolutionComposer({
               </label>
 
               {composition[slot].enabled && withSource && (
-                <SourceChoice
-                  value={composition[slot].source}
-                  onChange={(source) => patchSlot(slot, { source })}
+                <SourceNote
+                  quantity={quantity}
                   quarantineAvailable={quarantineAvailable}
+                  offScope={offScope}
                 />
               )}
 
@@ -286,10 +260,10 @@ export default function ResolutionComposer({
                   </span>
                 </label>
                 {composition[slot].enabled && withSource && (
-                  <SourceChoice
-                    value={composition[slot].source}
-                    onChange={(source) => patchSlot(slot, { source })}
+                  <SourceNote
+                    quantity={quantity}
                     quarantineAvailable={quarantineAvailable}
+                    offScope={offScope}
                   />
                 )}
               </div>

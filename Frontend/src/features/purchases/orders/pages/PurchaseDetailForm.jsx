@@ -6,19 +6,20 @@ import { Trash2, Ban } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { usePurchaseFormStore } from "@/features/purchases/orders/store/purchaseFormStore";
 import {
-  useUpdatePurchaseMutation,
+  usePurchaseChangesSaver,
   useChangePurchaseStatusMutation,
   useRemovePurchaseMutation,
-  usePurchasePaymentMutations,
 } from "@/features/purchases/orders/services/mutations";
-import { useSuppliersOptionsQuery } from "@/features/suppliers/services/queries";
 import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection";
 import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
-import PurchasePaymentsCard from "../components/forms/PurchasePaymentsCard";
 import CancelPurchaseDialog from "../components/forms/CancelPurchaseDialog";
 import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
-import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
+import DocumentPaymentsEditor from "@/shared/components/payments/DocumentPaymentsEditor";
+import {
+  paymentTypeOf,
+  usePaymentDraft,
+} from "@/shared/components/payments/usePaymentDraft";
 import StatusChoice from "@/shared/components/forms/StatusChoice";
 import DocumentFormLayout, {
   DocumentMobileBar,
@@ -31,13 +32,14 @@ import { useReturnedNewProduct } from "@/shared/components/products/useReturnedN
 import { useSubPageNavigation } from "@/shared/hooks/useSubPageNavigation";
 import { ROUTES } from "@/shared/constants/routes";
 import {
-  PURCHASE_STATUS_CHOICES,
+  PURCHASE_SHIPPING_CHOICES,
+  PURCHASE_STAGE_CHOICES,
   canDeletePurchase,
   hasLivePayments,
   missingInvoiceFields,
 } from "@/features/purchases/orders/domain/purchaseRules";
 import { PURCHASE_STATUSES } from "@/features/purchases/orders/services/constants";
-import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+import { PURCHASE_PAYMENT_SIDE } from "@/features/purchases/orders/domain/purchasePayments";
 import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 
@@ -71,13 +73,13 @@ export default function PurchaseDetailForm({ purchaseData }) {
     formData,
     initializeFromPurchase,
     initializedForId,
+    setPaymentDraft,
   } = usePurchaseFormStore();
 
   // ساختِ کالا/تامین‌کننده‌ی تازه از همین فرم؛ ویرایش‌های نذخیره‌شده در
   // store می‌مانند چون نسخه‌ی سند عوض نشده است.
   const { openSubPage, returned } = useSubPageNavigation();
 
-  const { suppliers, isLoading: suppliersLoading } = useSuppliersOptionsQuery();
   const { products, isLoading: productsLoading } = useProductsOptionsQuery();
 
   /**
@@ -87,10 +89,15 @@ export default function PurchaseDetailForm({ purchaseData }) {
    */
   const attachments = useInvoiceAttachments(purchaseData.attachments || []);
 
-  const updateMutation = useUpdatePurchaseMutation(purchaseData.id);
+  const saver = usePurchaseChangesSaver(purchaseData.id);
   const deleteMutation = useRemovePurchaseMutation();
   const statusMutation = useChangePurchaseStatusMutation(purchaseData.id);
-  const payments = usePurchasePaymentMutations(purchaseData.id);
+  // پرداخت‌ها هم تا «ذخیره» در پیش‌نویس می‌مانند؛ در store، تا رفتن به
+  // «کالای جدید» پاکشان نکند.
+  const payments = usePaymentDraft(purchaseData.paymentDetails, PURCHASE_PAYMENT_SIDE.direction, [
+    formData.paymentDraft,
+    setPaymentDraft,
+  ]);
 
   // فرم فقط وقتی از داده‌ی سرور پر می‌شود که سند عوض شود یا نسخه‌ی تازه‌ای
   // از آن برسد (updatedAt). وابستگی عمداً به id/updatedAt است، نه کل آبجکت،
@@ -164,24 +171,29 @@ export default function PurchaseDetailForm({ purchaseData }) {
 
     const payload = {
       supplierId: formData.supplierId,
-      invoiceNumber: formData.invoiceNumber,
-      invoiceDate: formData.invoiceDate,
-      paymentDate: formData.paymentDate || null,
+      // پیش‌فاکتور شماره، تاریخ و سررسید ندارد.
+      invoiceNumber: leavingProforma ? formData.invoiceNumber : "",
+      invoiceDate: leavingProforma ? formData.invoiceDate : null,
+      paymentDate: leavingProforma ? formData.paymentDate || null : null,
       description: formData.description || "",
       items,
-      paymentType: formData.paymentType ?? PaymentTypeEnum.CASH,
+      paymentType: paymentTypeOf(payments.rows),
       status: selectedStatus,
       attachments: attachments.filesPayload,
     };
 
-    updateMutation.mutate(payload, {
-      onSuccess: (updated) => {
-        attachments.commit();
-        // همین‌جا از پاسخِ سرور پر می‌شود؛ منتظرِ عوض‌شدنِ `updatedAt` نمی‌ماند.
-        resetForm();
-        if (updated) initializeFromPurchase(updated);
+    // اول خودِ سند (صدور هم با همین است)، بعد پرداخت‌ها.
+    saver.mutate(
+      { update: payload, paymentDraft: leavingProforma ? payments : null },
+      {
+        onSuccess: (latest) => {
+          attachments.commit();
+          // همین‌جا از پاسخِ سرور پر می‌شود؛ منتظرِ عوض‌شدنِ `updatedAt` نمی‌ماند.
+          resetForm();
+          if (latest) initializeFromPurchase(latest);
+        },
       },
-    });
+    );
   };
 
   const handleDiscard = () => {
@@ -212,7 +224,7 @@ export default function PurchaseDetailForm({ purchaseData }) {
   const canUpdate = allow("PurchaseUpdate");
 
   const isBusy =
-    updateMutation.isPending ||
+    saver.isPending ||
     deleteMutation.isPending ||
     statusMutation.isPending ||
     attachments.isUploading;
@@ -225,9 +237,8 @@ export default function PurchaseDetailForm({ purchaseData }) {
         main={
           <>
             <PurchaseSupplierSection
-              suppliers={suppliers}
-              isLoading={suppliersLoading}
               selectedId={formData.supplierId}
+              selectedName={formData.supplierName}
               onSelect={(id, name) => {
                 setFormData({ supplierId: id, supplierName: name });
                 setShowErrors(false);
@@ -248,6 +259,7 @@ export default function PurchaseDetailForm({ purchaseData }) {
             <OrderInfoSection
               formData={formData}
               onFormChange={setFormData}
+              proforma={!leavingProforma}
               errors={infoErrors}
             />
             {/* در مرحله‌ی پیش‌فاکتور، فاکتور رسمی هنوز نرسیده؛ چیزی که
@@ -273,27 +285,45 @@ export default function PurchaseDetailForm({ purchaseData }) {
                 onCancel={handleDiscard}
               >
                 <StatusChoice
-                  options={PURCHASE_STATUS_CHOICES}
-                  value={selectedStatus}
-                  onChange={(next) => setFormData({ status: next })}
+                  label="نوعِ سند"
+                  options={PURCHASE_STAGE_CHOICES}
+                  value={leavingProforma ? "invoice" : "proforma"}
+                  onChange={(stage) =>
+                    setFormData({
+                      status:
+                        stage === "proforma" ? PURCHASE_STATUSES.PROFORMA : PURCHASE_STATUSES.PENDING,
+                    })
+                  }
                 />
+                {leavingProforma && (
+                  <StatusChoice
+                    label="وضعیتِ ارسال"
+                    options={PURCHASE_SHIPPING_CHOICES}
+                    value={selectedStatus}
+                    onChange={(next) => setFormData({ status: next })}
+                  />
+                )}
               </DocumentSummaryCard>
             )}
 
-            <OrderPaymentSection
-              formData={formData}
-              onFormChange={setFormData}
-              totalAmount={totals.totalAmount}
-              errors={{}}
-              termsOnly
-            />
-
-            <PurchasePaymentsCard
-              purchase={purchaseData}
-              payments={payments}
-              canManage={allow("PurchasePayment")}
-              notice="پیش‌پرداخت، خرید را از پیش‌فاکتور خارج نمی‌کند؛ همان لحظه روی حساب تامین‌کننده می‌نشیند."
-            />
+            {/* پیش‌فاکتور پرداخت ندارد؛ پیش‌پرداخت‌های قدیمی فقط دیده می‌شوند. */}
+            {(leavingProforma || livePayments) && (
+              <DocumentPaymentsEditor
+                draft={payments}
+                side={PURCHASE_PAYMENT_SIDE}
+                totalAmount={totals.totalAmount}
+                dueDate={formData.paymentDate}
+                onDueDateChange={
+                  leavingProforma ? (paymentDate) => setFormData({ paymentDate }) : undefined
+                }
+                canManage={leavingProforma && allow("PurchasePayment")}
+                notice={
+                  leavingProforma
+                    ? "پرداخت‌ها همراهِ «ذخیره» ثبت می‌شوند؛ بدونِ پرداخت یعنی نسیه."
+                    : "این پیش‌فاکتور پیش‌پرداخت دارد؛ با صدورِ فاکتور می‌توانید اصلاحش کنید."
+                }
+              />
+            )}
 
             {deletable && allow("PurchaseDelete") && (
               <Button

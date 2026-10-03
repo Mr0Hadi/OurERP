@@ -1,45 +1,43 @@
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/shared/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 
 /**
- * مشخصاتِ فاکتورِ صادرشده، فقط‌خواندنی.
+ * مشخصاتِ فاکتورِ صادرشده، فقط‌خواندنی — هر ردیف یک کاشی؛ عرضِ کم دو ستون،
+ * عرضِ کافی چهار ستون (container query روی همین کارت).
  *
- * @param rows `{ label, value }[]`؛ ردیفِ بی‌مقدار نشان داده نمی‌شود.
+ * @param rows `{ label, value, wide?, emphasis? }[]`؛ ردیفِ بی‌مقدار نشان داده
+ *   نمی‌شود. `wide` کاشی را دو ستونه می‌کند (مثلاً نامِ طرفِ حساب) و `emphasis`
+ *   مقدار را درشت‌تر (مثلاً جمعِ فاکتور).
  */
-export default function InvoiceInfoCard({
-  title = "اطلاعات فاکتور",
-  rows = [],
-  description,
-}) {
+export default function InvoiceInfoCard({ title = "اطلاعات فاکتور", rows = [], description }) {
   return (
-    <Card>
+    <Card className="@container/info">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold text-card-foreground">
-          {title}
-        </CardTitle>
+        <CardTitle className="text-base font-semibold text-card-foreground">{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+        <dl className="grid grid-cols-2 gap-2 @xl/info:grid-cols-4">
           {rows
             .filter((row) => row.value)
             .map((row) => (
               <div
                 key={row.label}
-                className="flex justify-between gap-2 sm:block"
+                className={`min-w-0 rounded-lg border border-border bg-muted/30 px-3 py-2 ${
+                  row.wide ? "col-span-2" : ""
+                }`}
               >
-                <dt className="text-muted-foreground text-xs">{row.label}</dt>
-                <dd className="font-medium text-card-foreground">
+                <dt className="text-[11px] text-muted-foreground">{row.label}</dt>
+                <dd
+                  className={`mt-0.5 break-words text-card-foreground ${
+                    row.emphasis ? "text-base font-bold tabular-nums" : "text-sm font-medium"
+                  }`}
+                >
                   {row.value}
                 </dd>
               </div>
             ))}
         </dl>
         {description && (
-          <p className="text-sm text-muted-foreground whitespace-pre-line rounded-lg border border-border bg-muted/40 p-3">
+          <p className="whitespace-pre-line rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">
             {description}
           </p>
         )}

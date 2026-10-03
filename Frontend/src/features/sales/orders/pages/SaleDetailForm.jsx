@@ -6,19 +6,27 @@ import { Trash2 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { useSaleFormStore } from "@/features/sales/orders/store/saleFormStore";
 import {
-  useUpdateSaleMutation,
+  useSaleChangesSaver,
   useRemoveSaleMutation,
-  useSalePaymentMutations,
 } from "@/features/sales/orders/services/mutations";
-import { useCustomersOptionsQuery } from "@/features/customers/services/queries";
 import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import { ROUTES } from "@/shared/constants/routes";
 
 import SaleCustomerSection from "../components/forms/SaleCustomerSection";
 import SaleItemsSection from "../components/forms/SaleItemsSection";
-import SalePaymentsCard from "../components/forms/SalePaymentsCard";
 import OrderInfoSection from "@/shared/components/forms/OrderInfoSection";
-import OrderPaymentSection from "@/shared/components/forms/OrderPaymentSection";
+import StatusChoice from "@/shared/components/forms/StatusChoice";
+import DocumentPaymentsEditor from "@/shared/components/payments/DocumentPaymentsEditor";
+import {
+  paymentTypeOf,
+  usePaymentDraft,
+} from "@/shared/components/payments/usePaymentDraft";
+import {
+  SALE_STAGE_CHOICES,
+  missingSaleInvoiceFields,
+} from "@/features/sales/orders/domain/saleRules";
+import { SALE_PAYMENT_SIDE } from "@/features/sales/orders/domain/salePayments";
+import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
 import DocumentFormLayout, {
   DocumentMobileBar,
   DocumentSummaryCard,
@@ -28,7 +36,6 @@ import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentS
 import { useInvoiceAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
 import { useReturnedNewProduct } from "@/shared/components/products/useReturnedNewProduct";
 import { useSubPageNavigation } from "@/shared/hooks/useSubPageNavigation";
-import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 
@@ -57,13 +64,13 @@ export default function SaleDetailForm({ saleData }) {
     formData,
     initializeFromSale,
     initializedForId,
+    setPaymentDraft,
   } = useSaleFormStore();
 
   // ساختِ کالا/مشتریِ تازه از همین فرم؛ ویرایش‌های نذخیره‌شده در store
   // می‌مانند چون نسخه‌ی سند عوض نشده است.
   const { openSubPage, returned } = useSubPageNavigation();
 
-  const { customers, isLoading: customersLoading } = useCustomersOptionsQuery();
   const { products, isLoading: productsLoading } = useProductsOptionsQuery();
 
   /**
@@ -73,9 +80,13 @@ export default function SaleDetailForm({ saleData }) {
    */
   const attachments = useInvoiceAttachments(saleData.attachments || []);
 
-  const updateMutation = useUpdateSaleMutation(saleData.id);
+  const saver = useSaleChangesSaver(saleData.id);
   const deleteMutation = useRemoveSaleMutation();
-  const payments = useSalePaymentMutations(saleData.id);
+  // اولین دریافت فاکتور را صادر می‌کند؛ تا «ذخیره» در پیش‌نویس (store) می‌ماند.
+  const payments = usePaymentDraft(saleData.paymentDetails, SALE_PAYMENT_SIDE.direction, [
+    formData.paymentDraft,
+    setPaymentDraft,
+  ]);
 
   // فرم فقط وقتی از داده‌ی سرور پر می‌شود که سند عوض شود یا نسخه‌ی تازه‌ای
   // از آن برسد (updatedAt). وابستگی عمداً به id/updatedAt است، نه کل آبجکت،
@@ -108,6 +119,10 @@ export default function SaleDetailForm({ saleData }) {
   // پیش‌نمایش با قاعده‌ی سرور؛ عددِ نهایی همان است که سرور پس از ذخیره برمی‌گرداند.
   const totals = invoiceTotals(items);
 
+  // «فاکتور» یعنی همین ذخیره با دریافتِ وجه فاکتور را صادر کند.
+  const issuing = Number(formData.status) === SaleStatusEnum.PROCESSING;
+  const invoiceErrors = missingSaleInvoiceFields(formData, issuing);
+
   const onSubmit = (e) => {
     e.preventDefault();
 
@@ -126,25 +141,39 @@ export default function SaleDetailForm({ saleData }) {
       toast.error("فروش باید دست‌کم یک قلم داشته باشد.");
       return;
     }
+    if (invoiceErrors) {
+      setShowErrors(true);
+      toast.error("برای فاکتور، تاریخ را وارد کنید.");
+      return;
+    }
+    if (issuing && payments.netPaid <= 0) {
+      toast.error("فاکتورِ فروش با اولین دریافت صادر می‌شود؛ مبلغِ دریافتی را وارد کنید.");
+      return;
+    }
 
     const payload = {
       customerId: formData.customerId,
-      invoiceDate: formData.invoiceDate,
-      paymentDate: formData.paymentDate || null,
+      invoiceDate: issuing ? formData.invoiceDate : null,
+      paymentDate: issuing ? formData.paymentDate || null : null,
       description: formData.description || "",
       items,
-      paymentType: formData.paymentType ?? PaymentTypeEnum.CASH,
+      paymentType: paymentTypeOf(payments.rows),
       attachments: attachments.filesPayload,
     };
 
-    updateMutation.mutate(payload, {
-      onSuccess: (updated) => {
-        attachments.commit();
-        // همین‌جا از پاسخِ سرور پر می‌شود؛ منتظرِ عوض‌شدنِ `updatedAt` نمی‌ماند.
-        resetForm();
-        if (updated) initializeFromSale(updated);
+    // اول خودِ پیش‌فاکتور، بعد دریافت‌ها — اولینش فاکتور را صادر می‌کند و
+    // صفحه خودش به نمای فاکتورِ صادرشده می‌رود.
+    saver.mutate(
+      { update: payload, paymentDraft: issuing ? payments : null },
+      {
+        onSuccess: (latest) => {
+          attachments.commit();
+          // همین‌جا از پاسخِ سرور پر می‌شود؛ منتظرِ عوض‌شدنِ `updatedAt` نمی‌ماند.
+          resetForm();
+          if (latest) initializeFromSale(latest);
+        },
       },
-    });
+    );
   };
 
   const handleDiscard = () => {
@@ -164,8 +193,8 @@ export default function SaleDetailForm({ saleData }) {
 
   const canUpdate = allow("SaleUpdate");
   const isBusy =
-    updateMutation.isPending || deleteMutation.isPending || attachments.isUploading;
-  const submitLabel = "ذخیره‌ی پیش‌فاکتور";
+    saver.isPending || deleteMutation.isPending || attachments.isUploading;
+  const submitLabel = issuing ? "ذخیره و صدور فاکتور" : "ذخیره‌ی پیش‌فاکتور";
 
   return (
     <>
@@ -174,9 +203,8 @@ export default function SaleDetailForm({ saleData }) {
         main={
           <>
             <SaleCustomerSection
-              customers={customers}
-              isLoading={customersLoading}
               selectedId={formData.customerId}
+              selectedName={formData.customerName}
               onSelect={(id, name) => {
                 setFormData({ customerId: id, customerName: name });
                 setShowErrors(false);
@@ -195,8 +223,9 @@ export default function SaleDetailForm({ saleData }) {
             <OrderInfoSection
               formData={formData}
               onFormChange={setFormData}
-              errors={{}}
+              proforma={!issuing}
               invoiceNumberDisabled
+              errors={showErrors ? invoiceErrors ?? {} : {}}
             />
             <InvoiceDocumentSection
               title="پیش‌فاکتور فروش"
@@ -217,23 +246,33 @@ export default function SaleDetailForm({ saleData }) {
                 submitLabel={submitLabel}
                 isBusy={isBusy}
                 onCancel={handleDiscard}
-              />
+              >
+                <StatusChoice
+                  label="نوعِ سند"
+                  options={SALE_STAGE_CHOICES}
+                  value={issuing ? "invoice" : "proforma"}
+                  onChange={(stage) =>
+                    setFormData({
+                      status:
+                        stage === "proforma" ? SaleStatusEnum.PROFORMA : SaleStatusEnum.PROCESSING,
+                    })
+                  }
+                />
+              </DocumentSummaryCard>
             )}
 
-            <SalePaymentsCard
-              sale={saleData}
-              payments={payments}
-              canManage={allow("SalePayment")}
-              notice="اولین دریافت فاکتور رسمی را صادر می‌کند و فروش دیگر ویرایش نمی‌شود؛ تغییرهای اقلام را پیش از آن ذخیره کنید."
-            />
-
-            <OrderPaymentSection
-              formData={formData}
-              onFormChange={setFormData}
-              totalAmount={totals.totalAmount}
-              errors={{}}
-              termsOnly
-            />
+            {issuing && (
+              <DocumentPaymentsEditor
+                draft={payments}
+                side={SALE_PAYMENT_SIDE}
+                totalAmount={totals.totalAmount}
+                dueDate={formData.paymentDate}
+                onDueDateChange={(paymentDate) => setFormData({ paymentDate })}
+                canManage={allow("SalePayment")}
+                allowRefund={false}
+                notice="فاکتور با اولین دریافت صادر می‌شود؛ باقی‌مانده بدهیِ مشتری است."
+              />
+            )}
 
             {allow("SaleDelete") && (
               <Button

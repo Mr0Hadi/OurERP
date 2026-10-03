@@ -190,7 +190,6 @@ export default function ProductPicker({
         onRemoveUnit={trackUnits ? handleRemoveUnit : undefined}
         lineTotal={lineTotalOf}
         grandTotal={grandTotal}
-        byContainer={collapsible}
       />
       <SelectedItemsCards
         items={displayItems}
@@ -201,7 +200,6 @@ export default function ProductPicker({
         onRemoveUnit={trackUnits ? handleRemoveUnit : undefined}
         lineTotal={lineTotalOf}
         grandTotal={grandTotal}
-        byContainer={collapsible}
       />
     </>
   );
@@ -219,8 +217,7 @@ export default function ProductPicker({
   );
 
   if (collapsible) {
-    // تاشو یعنی داخلِ کارتِ یک تصمیمِ مرجوعی: عرضِ واقعی را همین ظرف
-    // تعیین می‌کند نه صفحه، پس جدول/کارت با container query عوض می‌شود.
+    // تاشو یعنی داخلِ کارتِ یک تصمیمِ مرجوعی، با اقلام بالای انتخابگر.
     return (
       <div className="@container/picker space-y-2 rounded-md border border-border bg-card/60 p-2.5">
         {selectedItems}
@@ -246,7 +243,7 @@ export default function ProductPicker({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="@container/picker space-y-4">
       {searchPanel}
       {selectedItems}
       {items.length === 0 && (

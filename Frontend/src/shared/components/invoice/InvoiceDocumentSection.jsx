@@ -5,6 +5,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
 import { Label } from "@/shared/components/ui/label";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Spinner } from "@/shared/components/ui/spinner";
 import FileUploadList from "@/shared/components/files/FileUploadList";
 import {
@@ -33,6 +34,9 @@ import { getErrorMessage } from "@/shared/lib/errorMessage";
  *   می‌تواند نسخه‌ی دستی ضمیمه کند؛ هر دو چاپ و دانلود می‌شوند.
  * - **مرجوعی فروش:** «برگه‌ی طلبکاری» را بکند می‌سازد.
  * - **مرجوعی خرید:** «برگه‌ی مرجوعی به تامین‌کننده» را بکند می‌سازد.
+ *
+ * کاربر انتخاب می‌کند کدام سندها چاپ/دانلود شوند؛ سندِ تازه پیش‌فرض
+ * انتخاب‌شده است (فقط کنارگذاشته‌ها نگه داشته می‌شوند).
  *
  * وقتی هیچ سندی وجود ندارد دکمه‌ها غیرفعال‌اند — و نباید به‌جایش یک
  * جدولِ HTML از روی داده‌ی فرم ساخته شود: آن برگه فاکتور نیست و
@@ -67,6 +71,7 @@ export default function InvoiceDocumentSection({
   serverDocumentName,
 }) {
   const [isBusy, setIsBusy] = useState(false);
+  const [excluded, setExcluded] = useState(() => new Set());
 
   /** سندی که سرور می‌سازد — فقط وقتی سند ذخیره شده باشد. */
   const serverPdfFetcher = documentId
@@ -102,7 +107,7 @@ export default function InvoiceDocumentSection({
   const run = async (action) => {
     setIsBusy(true);
     try {
-      reportFailures(await action(documents));
+      reportFailures(await action(selected));
     } catch (error) {
       // مثلاً وقتی مرورگر پنجره‌ی چاپ را بلوکه می‌کند — بدون این، خطا
       // بی‌صدا رد می‌شد و دکمه انگار هیچ کاری نمی‌کرد.
@@ -112,8 +117,18 @@ export default function InvoiceDocumentSection({
     }
   };
 
-  // بدون سند، دکمه‌ها کاری ندارند که انجام دهند.
+  const selected = documents.filter((document_) => !excluded.has(document_.id));
   const hasDocuments = documents.length > 0;
+  // بدون سندِ انتخاب‌شده، دکمه‌ها کاری ندارند که انجام دهند.
+  const canRun = !isBusy && selected.length > 0;
+
+  const toggle = (id, include) =>
+    setExcluded((previous) => {
+      const next = new Set(previous);
+      if (include) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   return (
     <Card>
@@ -123,46 +138,66 @@ export default function InvoiceDocumentSection({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* کاربر باید بداند و انتخاب کند دقیقاً چه چیزی چاپ می‌شود —
+            مخصوصاً در فروش که سندِ ساختِ سرور و ضمیمه‌ی دستی هر دو هستند. */}
+        {hasDocuments ? (
+          <fieldset className="space-y-1">
+            <legend className="mb-1 text-xs text-muted-foreground">
+              سندهای چاپ و دانلود:
+            </legend>
+            {documents.map((document_) => (
+              <label
+                key={document_.id}
+                className="flex min-h-9 cursor-pointer items-center gap-2 rounded-md border border-border px-2.5 py-1.5 text-sm transition-colors hover:bg-muted/50 has-[[data-state=checked]]:border-primary/40 has-[[data-state=checked]]:bg-primary/5"
+              >
+                <Checkbox
+                  checked={!excluded.has(document_.id)}
+                  onCheckedChange={(checked) => toggle(document_.id, checked === true)}
+                />
+                <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <span className="min-w-0 flex-1 truncate" dir="auto" title={document_.name}>
+                  {document_.name}
+                </span>
+                {document_.id === "server-pdf" && (
+                  <Badge variant="secondary" className="shrink-0 text-[10px]">
+                    ساختِ سیستم
+                  </Badge>
+                )}
+              </label>
+            ))}
+          </fieldset>
+        ) : (
+          <p className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
+            <FileText className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+            <span>
+              {emptyHint ??
+                "هنوز سندی برای این سفارش وجود ندارد؛ تا وقتی فایلی اضافه نشود، چاپ و دانلود غیرفعال است."}
+            </span>
+          </p>
+        )}
+
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
             variant="outline"
             className="min-w-24 flex-1 gap-2"
             onClick={() => run(printDocuments)}
-            disabled={isBusy || !hasDocuments}
+            disabled={!canRun}
           >
             {isBusy ? <Spinner /> : <Printer className="h-4 w-4" />}
-            چاپ سند
+            چاپ{selected.length > 1 && ` (${selected.length.toLocaleString("fa-IR")})`}
           </Button>
           <Button
             type="button"
             variant="outline"
             className="min-w-24 flex-1 gap-2"
             onClick={() => run(downloadDocuments)}
-            disabled={isBusy || !hasDocuments}
+            disabled={!canRun}
           >
             {isBusy ? <Spinner /> : <Download className="h-4 w-4" />}
-            دانلود سند
+            دانلود{selected.length > 1 && ` (${selected.length.toLocaleString("fa-IR")})`}
           </Button>
         </div>
-
-        {/* بدون این خط، کاربر نمی‌داند دکمه دقیقاً چه چیزی را چاپ
-            می‌کند — مخصوصاً در فروش که سندِ ساختِ سرور و ضمیمه‌ی دستی
-            هر دو ممکن است باشند. */}
-        <p className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
-          <FileText className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-          {hasDocuments ? (
-            <span>
-              {`چاپ و دانلود روی ${documents.length} سند انجام می‌شود: `}
-              {documents.map((document_) => document_.name).join("، ")}
-            </span>
-          ) : (
-            <span>
-              {emptyHint ??
-                "هنوز سندی برای این سفارش وجود ندارد؛ تا وقتی فایلی اضافه نشود، چاپ و دانلود غیرفعال است."}
-            </span>
-          )}
-        </p>
 
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
