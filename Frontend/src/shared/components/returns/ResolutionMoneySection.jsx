@@ -12,13 +12,15 @@ import {
 import MixedPaymentList from "@/shared/components/forms/MixedPaymentList";
 import {
   MONEY_DIRECTIONS,
-  methodsForDirection,
+  activeMoneySlotOf,
   emptyMoneyEffect,
+  moneyDirectionOf,
 } from "@/shared/domain/returns/resolutions";
 import {
   PaymentTypeEnum,
   PAYMENT_TYPE_LABELS,
   PAYMENT_REFERENCE_FIELDS,
+  RETURN_PAYMENT_METHODS,
 } from "@/shared/domain/enums/paymentType";
 
 const EMPTY_PART = {
@@ -38,8 +40,8 @@ const EMPTY_PART = {
  * این‌که کدام اسلات `enabled` است مشتق می‌شود (`moneyIn`/`moneyOut`
  * هرگز هم‌زمان فعال نیستند).
  *
- * روش‌ها همان‌هایی هستند که فرم ثبت فروش دارد (نقدی / چک / انتقال /
- * نسیه / ترکیبی) و برای هر دو جهت یکی‌اند.
+ * روش‌ها `RETURN_PAYMENT_METHODS` است (نقدی / چک / انتقال / ترکیبی) و
+ * برای هر دو جهت یکی است.
  *
  * برچسبِ جهت‌ها از side می‌آید («... از مشتری» یا «... از تامین‌کننده»)
  * تا همین کامپوننت هر دو سمت را بدهد.
@@ -51,33 +53,24 @@ export default function ResolutionMoneySection({
   side,
   defaultAmount,
 }) {
-  const direction = moneyIn?.enabled
-    ? MONEY_DIRECTIONS.RECEIVE
-    : moneyOut?.enabled
-      ? MONEY_DIRECTIONS.PAY
-      : MONEY_DIRECTIONS.NONE;
-  const active =
-    direction === MONEY_DIRECTIONS.RECEIVE
-      ? moneyIn
-      : direction === MONEY_DIRECTIONS.PAY
-        ? moneyOut
-        : null;
+  const slots = { moneyIn, moneyOut };
+  const direction = moneyDirectionOf(slots);
+  const activeSlot = activeMoneySlotOf(slots);
+  const active = activeSlot ? slots[activeSlot] : null;
 
   const directionOptions = Object.entries(side.money);
 
   /**
    * جهت را عوض می‌کند: اسلاتِ تازه را فعال می‌کند و آن یکی را خالی —
-   * هرگز هر دو هم‌زمان فعال نیستند. روشی که برای جهتِ تازه مجاز نیست
-   * کنار می‌رود و «نقدی» جایش می‌نشیند.
+   * هرگز هر دو هم‌زمان فعال نیستند. روش، مبلغ و «همین حالا» از جهتِ قبلی
+   * می‌مانند.
    */
   const handleDirectionChange = (nextDirection) => {
     if (nextDirection === MONEY_DIRECTIONS.NONE) {
       onChange({ moneyIn: emptyMoneyEffect(), moneyOut: emptyMoneyEffect() });
       return;
     }
-    const allowed = methodsForDirection(nextDirection);
-    const method =
-      active && allowed.includes(active.method) ? active.method : PaymentTypeEnum.CASH;
+    const method = active?.method ?? PaymentTypeEnum.CASH;
     // با انتخاب یک جهتِ واقعی، مبلغ پیش‌فرض همان ارزشِ این تصمیم است؛
     // کاربر می‌تواند دستی تغییرش دهد.
     const amount =
@@ -98,11 +91,7 @@ export default function ResolutionMoneySection({
 
   const patchActive = (changes) => {
     if (!active) return;
-    onChange(
-      direction === MONEY_DIRECTIONS.RECEIVE
-        ? { moneyIn: { ...moneyIn, ...changes } }
-        : { moneyOut: { ...moneyOut, ...changes } },
-    );
+    onChange({ [activeSlot]: { ...active, ...changes } });
   };
 
   if (direction === MONEY_DIRECTIONS.NONE) {
@@ -117,7 +106,6 @@ export default function ResolutionMoneySection({
 
   const isMixed = active.method === PaymentTypeEnum.MIXED;
   const referenceLabel = PAYMENT_REFERENCE_FIELDS[active.method]?.label;
-  const methodOptions = methodsForDirection(direction);
   const parts = active.parts ?? [];
 
   return (
@@ -150,7 +138,7 @@ export default function ResolutionMoneySection({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {methodOptions.map((value) => (
+              {RETURN_PAYMENT_METHODS.map((value) => (
                 <SelectItem key={value} value={String(value)}>
                   {PAYMENT_TYPE_LABELS[value]}
                 </SelectItem>

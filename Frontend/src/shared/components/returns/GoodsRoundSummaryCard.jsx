@@ -33,17 +33,12 @@ export default function GoodsRoundSummaryCard({
   dateLabel,
   noteLabel,
 }) {
+  // «انجام‌شده در این دور» از «آنچه هنوز مانده» — نه از کلِ اثر.
   const stats = useMemo(() => {
-    const remaining = rounds.reduce(
-      (sum, round) => sum + (round.remainingQuantity || 0),
-      0,
-    );
-    const done = rounds.reduce(
-      (sum, round) => sum + (Number(round.quantity) || 0),
-      0,
-    );
-    const percent = remaining > 0 ? Math.round((done / remaining) * 100) : 0;
-    return { remaining, done, percent };
+    const total = rounds.reduce((sum, round) => sum + (round.remainingQuantity || 0), 0);
+    const done = rounds.reduce((sum, round) => sum + (Number(round.quantity) || 0), 0);
+    const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+    return { total, done, percent };
   }, [rounds]);
 
   return (
@@ -60,7 +55,7 @@ export default function GoodsRoundSummaryCard({
         <ProgressStat
           label={progressLabel}
           done={stats.done}
-          total={stats.remaining}
+          total={stats.total}
           percent={stats.percent}
         />
 

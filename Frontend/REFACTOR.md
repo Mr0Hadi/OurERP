@@ -264,7 +264,23 @@
   - [ ] warehouse: products، categories، units، receiving، shipping
   - [ ] purchases
   - [ ] sales
-  - [ ] returns (`shared/domain/returns` + مرجوعی خرید/فروش)
+  - **مرجوعی‌ها — خرید و فروش (۲۰۲۶-۱۰-۰۵)** (`shared/domain/returns`، `shared/components/returns`، `features/*/returns`)
+    — شش گام، هر کدام یک commit:
+    - [x] ۳.۱ کدِ مرده و اشتباه:
+      - `methodsForDirection(direction)` آرگومانش را نادیده می‌گرفت و همیشه همان فهرست را می‌داد؛ حالا
+        `RETURN_PAYMENT_METHODS` مستقیم. محاسبه‌ی «اسلاتِ پولِ فعال» در سه جا تکرار شده بود → `activeMoneySlotOf`.
+      - فیلدهای بی‌مصرفِ پیکربندیِ دو سمت (`key`، `documentLabel`، `orderLabel`، `warehouse`، `direction`ِ اسلات‌ها)،
+        propِ `offScopeValue` (همیشه `OFF_ORDER`)، کلیدِ تکراریِ `purchaseForReturnAll`، کپیِ محلیِ
+        `UnitCustodyReasonEnum` در storeِ مرجوعیِ خرید، و exportهای فقط‌داخلی (`isMoneyEffect`، `moneyAmountOf`،
+        `GOODS_SOURCES`، `RETURN_STATUS_REASON_MAX_LENGTH`).
+      - نام‌های گمراه‌کننده: `ReturnStatusBar` سندِ خرید را هم `salesReturn` می‌نامید؛ «remaining» در کارتِ دورِ کالا
+        در واقع کل بود. کامنت‌های کهنه («منبع الزامی است»، خطِ تکراری در توضیحِ صفحه‌ی ثبت).
+    - [ ] ۳.۲ معماری: منطقِ مشترکِ پیش‌نویسِ ادعا (`claimDrafts`) و یکی‌کردنِ نام‌های دو سمت.
+    - [ ] ۳.۳ کامپوننت‌های مشترک به‌جای جفت‌های خط‌به‌خط یکسان (بخشِ تصمیم‌ها، انتخابِ سندِ مبدا،
+      اطلاعاتِ مرجوعی، فیلترها، اسکلتون، نوارِ ثبت، کوئری‌ها) + کامنت.
+    - [ ] ۳.۴ متنِ پیام‌ها و دیالوگ‌ها، اعداد با `formatNumber`/`formatRial`، badgeها با `StatusBadge`، لینکِ واقعی.
+    - [ ] ۳.۵ سندِ بکند: بخشِ ۱۴ (منطقِ مرجوعی که در فرانت تکرار شده).
+    - [ ] ۳.۶ پرفرمنس: درخواست‌های اضافه هنگامِ بازشدنِ صفحه‌ها، جست‌وجوی انتخابگر.
   - [ ] partyAccount + invoice + transactions
   - [ ] dashboard + reports + settings
 - [ ] **۳. سند بکند** — هم‌زمان با مرحله‌ی ۲؛ به‌روزرسانی داکیومنت‌های قدیمی `Backend-Net/docs`.

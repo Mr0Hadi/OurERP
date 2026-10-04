@@ -15,7 +15,6 @@ import {
   SALES_RETURN_PROBLEM_STYLES,
   OFF_SCOPE_KIND_LABELS,
 } from "../../domain/salesReturnVocabulary";
-import { CLAIM_SCOPES } from "@/shared/domain/returns/scopes";
 import {
   RETURN_STATUSES,
   isTerminalStatus,
@@ -108,7 +107,6 @@ export default function SalesReturnResolutionSection({
             problemLabels={SALES_RETURN_PROBLEM_LABELS}
             problemStyles={SALES_RETURN_PROBLEM_STYLES}
             offScopeLabels={OFF_SCOPE_KIND_LABELS}
-            offScopeValue={CLAIM_SCOPES.OFF_ORDER}
           />
         ))}
 

@@ -24,24 +24,19 @@ const GOODS_OUT_SLOT = "goodsOut";
 
 export const SIDE_CONFIG = {
   [RETURN_SIDES.SALES]: {
-    key: RETURN_SIDES.SALES,
     counterparty: "مشتری",
-    documentLabel: "مرجوعی از فروش",
-    orderLabel: "فروش",
     // قیمتِ پیش‌فرضِ کالایی که در تصمیم انتخاب می‌شود (جایگزین، سفارش‌نداده).
     priceOf: (product) => product.retailPrice ?? 0,
 
     goodsSlots: [
       {
         slot: GOODS_IN_SLOT,
-        direction: EFFECT_DIRECTIONS.GOODS_IN,
         label: "کالا از مشتری پس گرفته شود",
         hint: "کالای برگشتی وارد انبار می‌شود",
         allowPicker: false,
       },
       {
         slot: GOODS_OUT_SLOT,
-        direction: EFFECT_DIRECTIONS.GOODS_OUT,
         label: "کالای جایگزین برای مشتری ارسال شود",
         hint: "می‌تواند همان کالا باشد یا کالای دیگری، با هر تعدادی",
         allowPicker: true,
@@ -74,34 +69,24 @@ export const SIDE_CONFIG = {
       [RETURN_STATUSES.REJECTED]: "رد شده",
       [RETURN_STATUSES.CANCELLED]: "لغو شده",
     },
-
-    warehouse: {
-      [EFFECT_DIRECTIONS.GOODS_IN]: "دریافت کالا از مشتری",
-      [EFFECT_DIRECTIONS.GOODS_OUT]: "ارسال کالا برای مشتری",
-    },
   },
 
   [RETURN_SIDES.PURCHASE]: {
-    key: RETURN_SIDES.PURCHASE,
     counterparty: "تامین‌کننده",
-    documentLabel: "مرجوعی به تامین‌کننده",
-    orderLabel: "خرید",
     // کالای جایگزینِ ورودی با بهای خرید وارد انبار می‌شود، نه قیمتِ فروش.
     priceOf: (product) => product.purchasePrice ?? 0,
 
     goodsSlots: [
       {
         slot: GOODS_OUT_SLOT,
-        direction: EFFECT_DIRECTIONS.GOODS_OUT,
         label: "کالا به تامین‌کننده عودت داده شود",
         hint: "کالا از انبار یا قرنطینه خارج می‌شود",
         allowPicker: false,
-        // منبع روی خودِ تصمیم ثبت می‌شود و الزامی است (`goodsOut[].source`).
+        // سهمِ قرنطینه و قفسه زیرِ گزینه نشان داده می‌شود (`resolveSources`).
         withSource: true,
       },
       {
         slot: GOODS_IN_SLOT,
-        direction: EFFECT_DIRECTIONS.GOODS_IN,
         label: "کالای جایگزین از تامین‌کننده دریافت شود",
         hint: "می‌تواند همان کالا باشد یا کالای دیگری، با هر تعدادی",
         allowPicker: true,
@@ -112,16 +97,13 @@ export const SIDE_CONFIG = {
     quarantineSlots: [
       {
         slot: "goodsRelease",
-        direction: EFFECT_DIRECTIONS.GOODS_RELEASE,
         label: "کالای قرنطینه به موجودی قابل فروش برگردد",
         hint: "نگه‌داشتنِ کالا — مثلاً با تخفیف یا پرداختِ مازاد",
       },
       {
         slot: "goodsScrap",
-        direction: EFFECT_DIRECTIONS.GOODS_SCRAP,
         label: "کالا اسقاط شود",
         hint: "کالا از چرخه خارج و زیان ثبت می‌شود",
-        // پیش‌فرض قرنطینه؛ «موجودی» برای عیبی که بعد از دریافت روی قفسه پیدا شده.
         withSource: true,
       },
     ],
@@ -147,13 +129,6 @@ export const SIDE_CONFIG = {
       [RETURN_STATUSES.SETTLED]: "تسویه شده",
       [RETURN_STATUSES.REJECTED]: "رد شده توسط تامین‌کننده",
       [RETURN_STATUSES.CANCELLED]: "لغو شده",
-    },
-
-    warehouse: {
-      [EFFECT_DIRECTIONS.GOODS_IN]: "دریافت کالای جایگزین",
-      [EFFECT_DIRECTIONS.GOODS_OUT]: "عودت کالا به تامین‌کننده",
-      [EFFECT_DIRECTIONS.GOODS_RELEASE]: "آزادسازی از قرنطینه",
-      [EFFECT_DIRECTIONS.GOODS_SCRAP]: "اسقاط",
     },
   },
 };

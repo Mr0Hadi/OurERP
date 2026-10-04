@@ -48,7 +48,7 @@ export function isGoodsEffect(direction) {
   return GOODS_EFFECT_DIRECTIONS.includes(direction);
 }
 
-export function isMoneyEffect(direction) {
+function isMoneyEffect(direction) {
   return (
     direction === EFFECT_DIRECTIONS.MONEY_IN ||
     direction === EFFECT_DIRECTIONS.MONEY_OUT

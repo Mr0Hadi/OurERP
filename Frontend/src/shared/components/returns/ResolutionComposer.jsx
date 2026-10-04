@@ -6,12 +6,11 @@ import { Label } from "@/shared/components/ui/label";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 
 import {
-  MONEY_DIRECTIONS,
+  activeMoneySlotOf,
   resolveSources,
   sourceSplit,
   emptyComposition,
   expandComposition,
-  moneyDirectionOf,
   suggestedMoneyAmount,
   validateComposition,
 } from "@/shared/domain/returns/resolutions";
@@ -112,13 +111,7 @@ export default function ResolutionComposer({
     discount: 0,
   });
 
-  const direction = moneyDirectionOf(composition);
-  const activeMoneySlotName =
-    direction === MONEY_DIRECTIONS.RECEIVE
-      ? "moneyIn"
-      : direction === MONEY_DIRECTIONS.PAY
-        ? "moneyOut"
-        : null;
+  const activeMoneySlotName = activeMoneySlotOf(composition);
   const activeMoney = activeMoneySlotName ? composition[activeMoneySlotName] : null;
 
   // فقط پیشنهاد: وقتی کاربر جهتِ پول را باز می‌کند، مبلغ با همین پر می‌شود

@@ -15,7 +15,6 @@ import {
   PURCHASE_RETURN_PROBLEM_STYLES,
   OFF_SCOPE_KIND_LABELS,
 } from "../../domain/purchaseReturnVocabulary";
-import { CLAIM_SCOPES } from "@/shared/domain/returns/scopes";
 import {
   RETURN_STATUSES,
   isTerminalStatus,
@@ -113,7 +112,6 @@ export default function PurchaseReturnResolutionSection({
             problemLabels={PURCHASE_RETURN_PROBLEM_LABELS}
             problemStyles={PURCHASE_RETURN_PROBLEM_STYLES}
             offScopeLabels={OFF_SCOPE_KIND_LABELS}
-            offScopeValue={CLAIM_SCOPES.OFF_ORDER}
           />
         ))}
 

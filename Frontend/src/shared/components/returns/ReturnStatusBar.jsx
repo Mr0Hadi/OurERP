@@ -15,26 +15,26 @@ import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
  * موبایل سایدبار به ته صفحه می‌افتد، و خلاصه‌ی مرجوعی باید بالا و در
  * دسترس بماند.
  */
-export default function ReturnStatusBar({ returnDoc: salesReturn, side }) {
-  const claims = salesReturn.claims || [];
+export default function ReturnStatusBar({ returnDoc, side }) {
+  const claims = returnDoc.claims || [];
   const totalClaimed = claims.reduce((s, c) => s + (Number(c.quantity) || 0), 0);
   const totalDecided = claims.reduce((s, c) => s + claimDecidedQuantity(c), 0);
   const progress = totalClaimed > 0 ? (totalDecided / totalClaimed) * 100 : 0;
 
-  const money = summarizeReturn(salesReturn);
-  const showProgress = !isTerminalStatus(salesReturn.status) && totalClaimed > 0;
+  const money = summarizeReturn(returnDoc);
+  const showProgress = !isTerminalStatus(returnDoc.status) && totalClaimed > 0;
 
   return (
     <div className="rounded-lg border border-border bg-card p-3 space-y-2.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <span className="font-mono text-sm font-medium text-card-foreground">
-            {salesReturn.returnNumber}
+            {returnDoc.returnNumber}
           </span>
-          <ReturnStatusBadge status={salesReturn.status} side={side} />
+          <ReturnStatusBadge status={returnDoc.status} side={side} />
         </div>
         <span className="text-xs text-muted-foreground tabular-nums">
-          ادعا: {formatRial(salesReturn.totalAmount)}
+          ادعا: {formatRial(returnDoc.totalAmount)}
         </span>
       </div>
 

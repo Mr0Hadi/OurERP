@@ -13,7 +13,7 @@ import { Textarea } from "@/shared/components/ui/textarea";
 import { Button } from "@/shared/components/ui/button";
 
 /** همان سقفی که سرور روی `reason` چک می‌کند (`ReturnStatusReason.MaxLength`). */
-export const RETURN_STATUS_REASON_MAX_LENGTH = 500;
+const RETURN_STATUS_REASON_MAX_LENGTH = 500;
 
 /**
  * تأییدِ رد یا لغوِ مرجوعی، با دلیلِ اختیاری.

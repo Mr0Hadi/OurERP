@@ -12,6 +12,7 @@ import {
   freeUnlistedQuantityOf,
 } from "../domain/purchaseReturnVocabulary";
 import { todayIso } from "@/shared/lib/dateUtils";
+import { UnitCustodyReasonEnum } from "@/shared/domain/enums/unitStatus";
 
 // تابع است نه ثابت، تا تاریخِ پیش‌فرض همیشه «امروز»ِ لحظه‌ی ساختِ فرم باشد.
 const emptyForm = () => ({
@@ -85,9 +86,6 @@ function offScopeCapsOf(purchase) {
   return caps;
 }
 
-// `UnitCustodyReasonEnum` بکند — فقط برای خواندنِ مغایرت‌های دریافت.
-const CUSTODY_REASONS = { ON_ORDER: 1, EXCESS: 2, UNLISTED: 3 };
-
 const generateId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
@@ -135,7 +133,7 @@ function quarantineClaimsOf(purchase, lines) {
             discrepancies,
             (d) =>
               d.purchaseItemId === item.purchaseItemId &&
-              d.custodyReason === CUSTODY_REASONS.ON_ORDER,
+              d.custodyReason === UnitCustodyReasonEnum.ON_ORDER,
             RETURN_PROBLEMS.DEFECTIVE,
           ),
           quantity: Math.min(onOrder, line.maxReturnableQuantity),
@@ -153,7 +151,7 @@ function quarantineClaimsOf(purchase, lines) {
           discrepancies,
           (d) =>
             d.purchaseItemId === item.purchaseItemId &&
-            d.custodyReason === CUSTODY_REASONS.EXCESS,
+            d.custodyReason === UnitCustodyReasonEnum.EXCESS,
           RETURN_PROBLEMS.OVER_SHIPPED,
         ),
         quantity: excess,

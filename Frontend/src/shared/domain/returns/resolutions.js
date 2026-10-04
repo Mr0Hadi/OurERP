@@ -56,17 +56,12 @@ export const MONEY_DIRECTIONS = {
   PAY: 2,
 };
 
-/** روش‌هایی که یک جابه‌جاییِ پولِ مرجوعی می‌تواند داشته باشد — برای هر دو جهت یکی است. */
-export function methodsForDirection() {
-  return RETURN_PAYMENT_METHODS;
-}
-
 function validMoneyParts(money) {
   return (money?.parts || []).filter((part) => (Number(part.amount) || 0) > 0);
 }
 
 /** مبلغِ مؤثرِ یک جابه‌جایی پول؛ برای روشِ ترکیبی، مجموعِ تکه‌هاست. */
-export function moneyAmountOf(money) {
+function moneyAmountOf(money) {
   if (!money) return 0;
   if (money.method === PaymentTypeEnum.MIXED) {
     return validMoneyParts(money).reduce(
@@ -100,7 +95,7 @@ function emptyQuarantineSlot(source = null) {
  * معیوب، پس `resolveSources` اول قرنطینه‌ی آزادِ همین ادعا را برمی‌دارد و فقط
  * باقی را از قفسه (عیبی که بعد از دریافت روی قفسه پیدا شده).
  */
-export const GOODS_SOURCES = {
+const GOODS_SOURCES = {
   IN_STOCK: ProductUnitStatusEnum.IN_STOCK,
   QUARANTINED: ProductUnitStatusEnum.QUARANTINED,
 };
@@ -180,6 +175,14 @@ export function moneyDirectionOf(composition) {
   if (composition?.moneyIn?.enabled) return MONEY_DIRECTIONS.RECEIVE;
   if (composition?.moneyOut?.enabled) return MONEY_DIRECTIONS.PAY;
   return MONEY_DIRECTIONS.NONE;
+}
+
+/** نامِ اسلاتِ پولِ فعال (`"moneyIn"`/`"moneyOut"`) یا `null`. */
+export function activeMoneySlotOf(composition) {
+  const direction = moneyDirectionOf(composition);
+  if (direction === MONEY_DIRECTIONS.RECEIVE) return "moneyIn";
+  if (direction === MONEY_DIRECTIONS.PAY) return "moneyOut";
+  return null;
 }
 
 // ─── بسط ترکیب به اثر ───────────────────────────────────────────────────────
@@ -412,13 +415,8 @@ export function validateComposition(
     );
   }
 
-  const direction = moneyDirectionOf(composition);
-  const activeMoney =
-    direction === MONEY_DIRECTIONS.RECEIVE
-      ? composition.moneyIn
-      : direction === MONEY_DIRECTIONS.PAY
-        ? composition.moneyOut
-        : null;
+  const activeSlot = activeMoneySlotOf(composition);
+  const activeMoney = activeSlot ? composition[activeSlot] : null;
 
   const hasGoods = composition.goodsIn?.enabled || composition.goodsOut?.enabled;
   const hasQuarantine =
@@ -472,8 +470,9 @@ export function validateComposition(
   }
 
   if (activeMoney) {
-    if (!methodsForDirection(direction).includes(activeMoney.method)) {
-      errors.push("روش پرداخت برای این جهت مجاز نیست");
+    // روش‌های مجاز برای هر دو جهتِ پول یکی‌اند (`ReturnPaymentMethodEnum`).
+    if (!RETURN_PAYMENT_METHODS.includes(activeMoney.method)) {
+      errors.push("روش پرداخت برای مرجوعی مجاز نیست");
     } else if (activeMoney.method === PaymentTypeEnum.MIXED) {
       if (validMoneyParts(activeMoney).length === 0) {
         errors.push("برای پرداخت ترکیبی، حداقل یک ردیف با مبلغ بیشتر از صفر لازم است");

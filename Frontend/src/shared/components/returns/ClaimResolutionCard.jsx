@@ -12,6 +12,7 @@ import {
   RETURN_PROBLEM_LABELS,
   RETURN_PROBLEM_STYLES,
 } from "@/shared/domain/returns/problems";
+import { CLAIM_SCOPES } from "@/shared/domain/returns/scopes";
 
 
 /**
@@ -36,7 +37,6 @@ export default function ClaimResolutionCard({
   problemLabels,
   problemStyles,
   offScopeLabels,
-  offScopeValue,
 }) {
   const [isComposerOpen, setIsComposerOpen] = useState(false);
 
@@ -44,7 +44,7 @@ export default function ClaimResolutionCard({
   const decided = claimDecidedQuantity(claim);
   const remaining = claimRemainingQuantity(claim);
   const total = Number(claim.quantity) || 0;
-  const isOffScope = claim.scope === offScopeValue;
+  const isOffScope = claim.scope === CLAIM_SCOPES.OFF_ORDER;
   const canDecide = !readOnly && remaining > 0;
 
   return (
