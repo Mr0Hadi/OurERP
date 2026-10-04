@@ -22,7 +22,7 @@ namespace WMS.Tests.Unit
         public void RenderCode128Svg_ProducesNonEmptySvg()
         {
             var renderer = new ZXingBarcodeRenderer();
-            var svg = renderer.RenderCode128Svg("14050512000123000002", "14050512-000123-000002", new BarcodeRenderOptions());
+            var svg = renderer.RenderCode128Svg("14050512-123-2", "14050512-123-2", new BarcodeRenderOptions());
 
             Assert.StartsWith("<svg", svg);
             Assert.Contains("<rect", svg);
@@ -111,8 +111,8 @@ namespace WMS.Tests.Unit
             {
                 Labels = new()
                 {
-                    new BarcodeLabelModel { ProductName = "کالای تست", BarcodePayload = "14050512000123000001", HumanReadable = "14050512-000123-000001" },
-                    new BarcodeLabelModel { ProductName = "کالای تست", BarcodePayload = "14050512000123000002", HumanReadable = "14050512-000123-000002" },
+                    new BarcodeLabelModel { ProductName = "کالای تست", BarcodePayload = "14050512-123-1", HumanReadable = "14050512-123-1" },
+                    new BarcodeLabelModel { ProductName = "کالای تست", BarcodePayload = "14050512-123-2", HumanReadable = "14050512-123-2" },
                 },
             };
 
