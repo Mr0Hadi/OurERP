@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { Trash2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
+import { newPosReference } from "@/shared/domain/pos/posSession";
 import { useSaleFormStore } from "@/features/sales/orders/store/saleFormStore";
 import {
   useCreateInPersonSaleMutation,
@@ -231,7 +232,7 @@ export default function SaleForm({ sale }) {
             posRef.current.outcome = created;
             return created;
           },
-          reference: () => `sale-new-${Date.now().toString(36)}`,
+          reference: () => newPosReference("sale-new"),
           onDone: () => openSaved(posRef.current.outcome.id),
           onLockChange: setPosLocked,
           doneLabel: "مشاهده‌ی فاکتور",
@@ -254,7 +255,7 @@ export default function SaleForm({ sale }) {
             posActions.apply(posRef.current.outcome);
           },
           onLockChange: setPosLocked,
-          reference: `sale-${sale.id}`,
+          reference: () => newPosReference(`sale-${sale.id}`),
           doneLabel: "مشاهده‌ی فاکتور",
           blockedReason: payments.hasChanges
             ? "دریافت‌های ثبت‌نشده را اول ذخیره کنید؛ بعد از صفحه‌ی فاکتور با کارتخوان دریافت کنید."

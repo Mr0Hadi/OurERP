@@ -14,11 +14,12 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import AmountInWords from "@/shared/components/forms/AmountInWords";
-import { PosStatus, canStartPos } from "@/shared/domain/pos/posSession";
+import Notice from "@/shared/components/feedback/Notice";
+import { PosStatus, canStartPos, normalizeRrn } from "@/shared/domain/pos/posSession";
 import { usePosTerminalsQuery } from "@/shared/services/pos/queries";
 import { getIranianBankByCardNumber } from "@/shared/lib/iranian-bank";
 import { formatRial } from "@/shared/lib/numberFormat";
-import { toneRow, toneSoft, toneText } from "@/shared/lib/tone";
+import { toneRow } from "@/shared/lib/tone";
 import { cn } from "@/shared/lib/utils";
 
 const TERMINAL_KEY = "pos.terminalId";
@@ -120,7 +121,7 @@ const OUTCOME_TITLES = {
 function Outcome({ state }) {
   const cancelled = state.status === PosStatus.CANCELLED;
   return (
-    <Notice tone={cancelled ? "neutral" : "danger"} icon={cancelled ? CircleAlert : CircleX}>
+    <Notice className="py-2.5 text-sm" tone={cancelled ? "neutral" : "danger"} icon={cancelled ? CircleAlert : CircleX}>
       <p className="font-medium">{OUTCOME_TITLES[state.status]}</p>
       <p className="text-xs leading-5">{state.message} از کارت مشتری مبلغی کم نشده است.</p>
     </Notice>
@@ -229,7 +230,7 @@ function Busy({ children }) {
 function Recorded({ state, doneLabel = "بستن", onDone }) {
   return (
     <div className="space-y-3">
-      <Notice tone="success" icon={CircleCheck}>
+      <Notice className="py-2.5 text-sm" tone="success" icon={CircleCheck}>
         <p className="font-medium">پرداخت دریافت و روی سند ثبت شد</p>
         <p className="text-sm font-semibold tabular-nums">{formatRial(state.amount)}</p>
       </Notice>
@@ -245,7 +246,7 @@ function RecordFailed({ state, onRetry, onManual }) {
   const [confirmManual, setConfirmManual] = useState(false);
   return (
     <div className="space-y-3">
-      <Notice tone="danger" icon={TriangleAlert}>
+      <Notice className="py-2.5 text-sm" tone="danger" icon={TriangleAlert}>
         <p className="font-medium">پول از مشتری کم شد، ولی روی سند ثبت نشد</p>
         <p className="text-xs leading-5">{state.message} صفحه را نبندید و دوباره ثبت را بزنید.</p>
       </Notice>
@@ -283,6 +284,7 @@ function Unknown({ state, onCheck, onReceipt, onNotCharged }) {
   const [mode, setMode] = useState(null); // null | "receipt" | "notCharged"
   const [rrn, setRrn] = useState("");
   const [checking, setChecking] = useState(false);
+  const validRrn = normalizeRrn(rrn);
 
   const check = async () => {
     setChecking(true);
@@ -295,7 +297,7 @@ function Unknown({ state, onCheck, onReceipt, onNotCharged }) {
 
   return (
     <div className="space-y-3">
-      <Notice tone="warning" icon={TriangleAlert}>
+      <Notice className="py-2.5 text-sm" tone="warning" icon={TriangleAlert}>
         <p className="font-medium">نتیجه‌ی تراکنش نامشخص است</p>
         <p className="text-xs leading-5">
           {state.message} ممکن است از کارت مشتری مبلغ کم شده باشد؛ تا روشن‌شدن، دوباره مبلغ نزنید.
@@ -309,10 +311,25 @@ function Unknown({ state, onCheck, onReceipt, onNotCharged }) {
 
       {mode === "receipt" ? (
         <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-2.5">
-          <Label className="text-xs">شماره‌ی پیگیری (RRN) روی رسیدِ دستگاه</Label>
-          <Input dir="ltr" inputMode="numeric" value={rrn} onChange={(e) => setRrn(e.target.value)} className="h-9" />
+          <Label htmlFor="pos-receipt-rrn" className="text-xs">
+            شماره‌ی مرجع (RRN) روی رسیدِ دستگاه
+          </Label>
+          <Input
+            id="pos-receipt-rrn"
+            dir="ltr"
+            inputMode="numeric"
+            autoComplete="off"
+            maxLength={24}
+            value={rrn}
+            onChange={(e) => setRrn(e.target.value)}
+            aria-invalid={Boolean(rrn.trim()) && !validRrn}
+            className="h-9"
+          />
+          <p className="text-[11px] leading-5 text-muted-foreground">
+            فقط وقتی رسیدِ «تراکنش موفق» در دست دارید. شماره‌ی مرجع ۶ تا ۲۰ رقم است.
+          </p>
           <div className="flex gap-2">
-            <Button type="button" size="sm" className="flex-1" disabled={!rrn.trim()} onClick={() => onReceipt({ rrn })}>
+            <Button type="button" size="sm" className="flex-1" disabled={!validRrn} onClick={() => onReceipt({ rrn })}>
               ثبت با رسید
             </Button>
             <Button type="button" size="sm" variant="ghost" onClick={() => setMode(null)}>
@@ -376,14 +393,5 @@ function ReceiptDetails({ result }) {
         </div>
       ))}
     </dl>
-  );
-}
-
-function Notice({ tone, icon: Icon, children }) {
-  return (
-    <div className={cn("flex items-start gap-2 rounded-lg border px-3 py-2.5 text-sm", toneSoft(tone))}>
-      <Icon className={cn("mt-0.5 size-4 shrink-0", toneText(tone))} aria-hidden="true" />
-      <div className="min-w-0 space-y-0.5">{children}</div>
-    </div>
   );
 }

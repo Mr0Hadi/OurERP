@@ -4,6 +4,7 @@ import { Undo2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
+import { newPosReference } from "@/shared/domain/pos/posSession";
 import { useSaleChangesSaver, useSalePosActions } from "@/features/sales/orders/services/mutations";
 import SaleCustomerSection from "../components/forms/SaleCustomerSection";
 import DocumentFormLayout, {
@@ -136,7 +137,7 @@ export default function SaleIssuedView({ sale }) {
                       record: (_result, context) => posActions.recordPayment(sale.id, context),
                       onRecorded: posActions.apply,
                       onLockChange: setPosLocked,
-                      reference: `sale-${sale.id}`,
+                      reference: () => newPosReference(`sale-${sale.id}`),
                     }
                   : undefined
               }

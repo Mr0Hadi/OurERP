@@ -36,7 +36,10 @@ export async function runDocumentChanges(api, documentId, changes) {
       latest = await api.editPayment(payload, { idempotencyKey: idempotencyKeyFor(payload) });
     } else {
       const payload = { ...toPaymentPayload(operation.values), [api.idField]: documentId };
-      latest = await api.addPayment(payload, { idempotencyKey: idempotencyKeyFor(payload) });
+      // دو دریافتِ هم‌مبلغ در یک ذخیره دو قصدِ جدایند؛ شناسه‌ی ردیفِ پیش‌نویس جدایشان می‌کند.
+      latest = await api.addPayment(payload, {
+        idempotencyKey: idempotencyKeyFor(payload, operation.id),
+      });
     }
     paymentDraft.settle(operation);
   }

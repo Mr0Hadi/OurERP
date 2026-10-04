@@ -1,7 +1,17 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
+import toast from "react-hot-toast";
 
-import { canStartPos, holdsMoney, initialPosSession, posSessionReducer, PosStatus } from "@/shared/domain/pos/posSession";
+import {
+  canStartPos,
+  holdsMoney,
+  initialPosSession,
+  isPosBusy,
+  normalizeRrn,
+  posSessionReducer,
+  PosStatus,
+} from "@/shared/domain/pos/posSession";
 import { PosTransportError, getPosTransport } from "@/shared/services/pos/posTransport";
+import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
 import { nowLocalIso } from "@/shared/lib/dateUtils";
 
@@ -25,9 +35,12 @@ const CANCEL_GRACE_MS = 10_000;
  *  - **لغو هم‌زمان با کارت‌کشیدن:** «لغو» فقط درخواست است؛ نتیجه‌ی نهایی را خودِ `sale` می‌دهد.
  *  - **تأیید شد ولی ثبت نشد:** `retryRecord` همان نتیجه را دوباره می‌فرستد؛ `record` باید
  *    ایدمپوتنت باشد. اگر ثبت ممکن نیست، صفحه نتیجه را به ثبتِ دستی می‌سپارد و `reset` می‌کند.
- *  - تا وقتی پول در راه است بستنِ برگه هشدار می‌دهد.
+ *  - از ارسالِ مبلغ تا ثبت، بستنِ برگه هشدار می‌دهد و ناوبریِ داخلِ برنامه بسته است؛
+ *    وگرنه کارت کشیده می‌شود و کسی نیست که نتیجه را ثبت کند.
+ *  - نتیجه‌ی «تأیید»ی که مبلغش با مبلغِ ارسالی نمی‌خواند (مثلاً آخرین تراکنشِ دستگاه مالِ
+ *    خریدِ دیگری است) ثبت نمی‌شود و «نامشخص» می‌ماند.
  *
- * @param record     `(result, { terminal, amount }) => Promise` — ثبتِ پرداخت روی سند
+ * @param record     `(result, { terminal, amount, reference }) => Promise` — ثبتِ پرداخت روی سند
  * @param onRecorded با خروجیِ `record` بعد از ثبتِ موفق
  */
 export function usePosPayment({ record, onRecorded }) {
@@ -45,10 +58,10 @@ export function usePosPayment({ record, onRecorded }) {
   }, []);
 
   const runRecord = useCallback(async (result) => {
-    const { terminal, amount } = runRef.current;
+    const { terminal, amount, reference } = runRef.current;
     dispatch({ type: "recording" });
     try {
-      const saved = await callbacksRef.current.record(result, { terminal, amount });
+      const saved = await callbacksRef.current.record(result, { terminal, amount, reference });
       dispatch({ type: "recorded" });
       callbacksRef.current.onRecorded?.(saved);
     } catch (error) {
@@ -60,6 +73,11 @@ export function usePosPayment({ record, onRecorded }) {
   const settle = useCallback(
     (result) => {
       clearTimers();
+      const expected = runRef.current?.amount;
+      if (result.outcome === "approved" && result.amount != null && Number(result.amount) !== expected) {
+        dispatch({ type: "lost", message: "مبلغِ تراکنشِ دستگاه با مبلغِ ارسالی یکی نیست." });
+        return;
+      }
       dispatch({ type: "result", result });
       if (result.outcome === "approved") runRecord(result);
     },
@@ -125,9 +143,16 @@ export function usePosPayment({ record, onRecorded }) {
     }
   }, [settle]);
 
-  /** از «نامشخص»: پرداخت از رویِ رسیدِ دستگاه ثبت می‌شود. */
+  /**
+   * از «نامشخص»: پرداخت از رویِ رسیدِ دستگاه ثبت می‌شود. شماره‌ی پیگیری باید شکلِ
+   * درست داشته باشد (`normalizeRrn`)؛ پنل پیش از صدا زدن همین را چک می‌کند.
+   */
   const confirmByReceipt = useCallback(
-    ({ rrn }) => settle({ outcome: "approved", rrn: rrn.trim(), transactionDate: nowLocalIso(), manual: true }),
+    ({ rrn }) => {
+      const normalized = normalizeRrn(rrn);
+      if (!normalized) return;
+      settle({ outcome: "approved", rrn: normalized, transactionDate: nowLocalIso(), manual: true });
+    },
     [settle],
   );
 
@@ -142,16 +167,14 @@ export function usePosPayment({ record, onRecorded }) {
     dispatch({ type: "reset" });
   }, [clearTimers]);
 
-  const inFlight = holdsMoney(state.status);
+  // از ارسالِ مبلغ تا ثبت: نه بستنِ برگه، نه رفتن به صفحه‌ی دیگرِ برنامه.
+  const inFlight = isPosBusy(state.status) || holdsMoney(state.status);
+  const blocker = useUnsavedChangesGuard(inFlight);
   useEffect(() => {
-    if (!inFlight) return undefined;
-    const warn = (event) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [inFlight]);
+    if (blocker.state !== "blocked") return;
+    toast.error("تا پایانِ کارِ کارتخوان و ثبتِ پرداخت نمی‌توانید از این صفحه بروید.");
+    blocker.reset();
+  }, [blocker]);
 
   useEffect(() => clearTimers, [clearTimers]);
 

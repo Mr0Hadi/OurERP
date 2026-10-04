@@ -140,7 +140,9 @@ export const useSaleChangesSaver = (saleId) => {
  *
  *  - `saveProforma`: ذخیره‌ی تغییراتِ پیش‌فاکتور پیش از کارت‌کشیدن.
  *  - `recordPayment`: `AddSalePayment`ِ معمولی (انتقال بانکی، `transferRef` = شماره‌ی پیگیری)؛
- *    کلیدِ ایدمپوتنسی از دستگاه و شماره‌ی پیگیری است تا «ثبتِ دوباره» ردیفِ دوم نسازد.
+ *    کلیدِ ایدمپوتنسی از دستگاه و شماره‌ی پیگیری است تا «ثبتِ دوباره» ردیفِ دوم نسازد. اگر
+ *    دستگاه شماره‌ی پیگیری نداد، شناسه‌ی همین ارسال (`reference`) جایش می‌نشیند — کلیدِ
+ *    `pos-1-undefined` همه‌ی چنین پرداخت‌هایی را یکی می‌کرد.
  */
 export const useSalePosActions = () => {
   const queryClient = useQueryClient();
@@ -149,16 +151,17 @@ export const useSalePosActions = () => {
     onError: (error) => toast.error(getErrorMessage(error, "ذخیره‌ی پیش‌فاکتور انجام نشد")),
   });
   const record = useMutation({
-    mutationFn: ({ saleId, terminal, row }) =>
+    mutationFn: ({ saleId, terminal, row, reference }) =>
       addSalePayment(
         { saleId, ...toPaymentPayload({ ...row, direction: SALE_PAYMENT_SIDE.direction }) },
-        { idempotencyKey: `pos-${terminal.id}-${row.transferRef}` },
+        { idempotencyKey: `pos-${terminal.id}-${row.transferRef || reference}` },
       ),
   });
 
   return {
     saveProforma: (saleId, update) => save.mutateAsync({ saleId, update }),
-    recordPayment: (saleId, { terminal, row }) => record.mutateAsync({ saleId, terminal, row }),
+    recordPayment: (saleId, { terminal, row, reference }) =>
+      record.mutateAsync({ saleId, terminal, row, reference }),
     apply: (sale) => applySale(queryClient, sale),
   };
 };
