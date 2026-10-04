@@ -56,14 +56,14 @@ export default function SalesReturnNewPage() {
     setFormData,
     lines,
     orderLines,
-    offInvoiceClaims,
+    offScopeClaims,
     allClaims,
     handleAddClaim,
     handleUpdateClaim,
     handleRemoveClaim,
-    handleAddOffInvoiceClaim,
-    handleUpdateOffInvoiceClaim,
-    handleRemoveOffInvoiceClaim,
+    handleAddOffScopeClaim,
+    handleUpdateOffScopeClaim,
+    handleRemoveOffScopeClaim,
     computedTotal,
     buildPayload,
   } = useSalesReturnForm();
@@ -191,15 +191,15 @@ export default function SalesReturnNewPage() {
             {/* ── پایین: ثبت مشکلات ────────────────────────────────── */}
             <ReturnItemsSection
               lines={lines}
-              offScopeClaims={offInvoiceClaims}
+              offScopeClaims={offScopeClaims}
               orderLines={orderLines}
               claimsElsewhere={claimsElsewhere}
               onAddClaim={handleAddClaim}
               onUpdateClaim={handleUpdateClaim}
               onRemoveClaim={handleRemoveClaim}
-              onAddOffScope={handleAddOffInvoiceClaim}
-              onUpdateOffScope={handleUpdateOffInvoiceClaim}
-              onRemoveOffScope={handleRemoveOffInvoiceClaim}
+              onAddOffScope={handleAddOffScopeClaim}
+              onUpdateOffScope={handleUpdateOffScopeClaim}
+              onRemoveOffScope={handleRemoveOffScopeClaim}
               problemLabels={SALES_ON_ORDER_PROBLEM_LABELS}
               offScopeProblemLabels={SALES_OFF_ORDER_PROBLEM_LABELS}
               kindLabels={OFF_SCOPE_KIND_LABELS}

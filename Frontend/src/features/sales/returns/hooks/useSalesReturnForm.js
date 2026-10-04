@@ -1,230 +1,95 @@
 import { toast } from "react-hot-toast";
 import { useSalesReturnFormStore } from "../store/salesReturnFormStore";
 import { SALES_RETURN_PROBLEMS } from "../domain/salesReturnVocabulary";
-import { CLAIM_SCOPES, OFF_SCOPE_KINDS } from "@/shared/domain/returns/scopes";
-
-const generateId = () =>
-  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+import { OFF_SCOPE_KINDS } from "@/shared/domain/returns/scopes";
+import {
+  addLineClaim,
+  addOffScopeClaim,
+  claimsAmountOf,
+  claimsPayloadOf,
+  removeLineClaim,
+  removeOffScopeClaim,
+  sumClaimQuantity,
+  updateLineClaim,
+  updateOffScopeClaim,
+} from "@/shared/domain/returns/claimDrafts";
 
 const DEFAULT_ON_INVOICE_PROBLEM = SALES_RETURN_PROBLEMS.DEFECTIVE;
 const DEFAULT_EXCESS_PROBLEM = SALES_RETURN_PROBLEMS.OVER_SHIPPED;
 const DEFAULT_UNLISTED_PROBLEM = SALES_RETURN_PROBLEMS.UNLISTED_ITEM;
 
 /**
- * فرم ثبت ادعای مرجوعی.
+ * فرمِ ثبتِ مرجوعی از فروش.
  *
- * سه دسته ادعا با قواعد متفاوت:
+ * سه دسته ادعا (منطقِ مشترکشان در `claimDrafts`):
  *
- *  • روی فاکتور — روی یک خط فروش، سقفش مقدارِ تحویل‌شده.
- *  • مازاد      — بیش از مقدارِ یک خط ارسال شده؛ روی همان خط و با قیمت
- *                 همان خط. سقفش `claimableExcessQuantity` همان خط است
- *                 (دانه‌های مازادِ ارسال‌شده منهای ادعاهای بازِ مازاد).
- *  • نامرتبط    — کالایی که در فاکتور نیست؛ بدون خط و با قیمت دستی.
+ *  • روی فاکتور — روی یک قلمِ فروش، سقفش مقدارِ ارسال‌شده‌ی هنوز ادعانشده.
+ *  • مازاد      — بیش از فاکتور ارسال شده؛ روی همان قلم و با قیمتِ آن. سقفش
+ *                 `claimableExcessQuantity`ِ همان قلم است.
+ *  • خارج از فاکتور — کالایی که در فاکتور نیست؛ بی‌قلم و با قیمتِ دستی، بی سقفِ فرم.
  */
 export function useSalesReturnForm() {
-  const { formData, setFormData, setLines, setOffInvoiceClaims, resetForm } =
-    useSalesReturnFormStore();
+  const { formData, setFormData, setLines, setOffScopeClaims } = useSalesReturnFormStore();
 
   const lines = formData.lines || [];
   const orderLines = formData.orderLines || [];
-  const offInvoiceClaims = formData.offInvoiceClaims || [];
+  const offScopeClaims = formData.offScopeClaims || [];
   const excessCaps = formData.excessCaps || {};
 
-  /** سقفِ باقی‌مانده‌ی مازادِ یک خط، با کسرِ ادعاهای دیگرِ همین فرم روی همان خط. */
-  const excessRemaining = (orderLineId, exceptId = null) => {
-    const used = offInvoiceClaims
-      .filter(
-        (c) =>
-          c.id !== exceptId &&
-          c.offScopeKind === OFF_SCOPE_KINDS.EXCESS &&
-          c.orderLineId === orderLineId,
-      )
-      .reduce((sum, c) => sum + (Number(c.quantity) || 0), 0);
+  /** جای خالیِ مازادِ یک قلم، با کسرِ ادعاهای دیگرِ همین فرم روی همان قلم. */
+  const excessRoom = (orderLineId, exceptId = null) => {
+    const used = sumClaimQuantity(
+      offScopeClaims.filter(
+        (claim) =>
+          claim.id !== exceptId &&
+          claim.offScopeKind === OFF_SCOPE_KINDS.EXCESS &&
+          claim.orderLineId === orderLineId,
+      ),
+    );
     return Math.max(0, (excessCaps[orderLineId] ?? 0) - used);
   };
 
-  const claimedQuantityOf = (line) =>
-    (line.claims || []).reduce((sum, c) => sum + (Number(c.quantity) || 0), 0);
+  const handleAddClaim = (lineKey) =>
+    setLines(addLineClaim(lines, lineKey, DEFAULT_ON_INVOICE_PROBLEM));
 
-  const newClaim = (problem, quantity) => ({
-    id: generateId(),
-    problem,
-    quantity,
-    note: "",
-  });
+  const handleUpdateClaim = (lineKey, claimId, field, value) =>
+    setLines(updateLineClaim(lines, lineKey, claimId, field, value));
 
-  // ─── ادعاهای روی فاکتور ───────────────────────────────────────────
+  const handleRemoveClaim = (lineKey, claimId) =>
+    setLines(removeLineClaim(lines, lineKey, claimId));
 
-  const handleAddClaim = (lineKey) => {
-    setLines(
-      lines.map((line) => {
-        if (line.lineKey !== lineKey) return line;
-        const remaining = Math.max(
-          0,
-          line.maxReturnableQuantity - claimedQuantityOf(line),
-        );
-        if (remaining <= 0) return line;
-        return {
-          ...line,
-          claims: [
-            ...(line.claims || []),
-            newClaim(DEFAULT_ON_INVOICE_PROBLEM, remaining),
-          ],
-        };
-      }),
-    );
-  };
-
-  const handleUpdateClaim = (lineKey, claimId, field, value) => {
-    setLines(
-      lines.map((line) => {
-        if (line.lineKey !== lineKey) return line;
-        return {
-          ...line,
-          claims: (line.claims || []).map((claim) => {
-            if (claim.id !== claimId) return claim;
-            if (field === "quantity") {
-              const others = (line.claims || [])
-                .filter((c) => c.id !== claimId)
-                .reduce((s, c) => s + (Number(c.quantity) || 0), 0);
-              const maxAllowed = Math.max(0, line.maxReturnableQuantity - others);
-              const num = Number(value);
-              return {
-                ...claim,
-                quantity: Number.isNaN(num) || num < 0 ? 0 : Math.min(num, maxAllowed),
-              };
-            }
-            return { ...claim, [field]: value };
-          }),
-        };
-      }),
-    );
-  };
-
-  const handleRemoveClaim = (lineKey, claimId) => {
-    setLines(
-      lines.map((line) =>
-        line.lineKey === lineKey
-          ? { ...line, claims: (line.claims || []).filter((c) => c.id !== claimId) }
-          : line,
+  const handleAddOffScopeClaim = (target, kind) => {
+    const isExcess = kind === OFF_SCOPE_KINDS.EXCESS;
+    if (isExcess && excessRoom(target.orderLineId) <= 0) {
+      toast.error("از این قلم کالای مازادی ارسال نشده، یا همه‌اش در مرجوعیِ دیگری ثبت شده است");
+      return;
+    }
+    setOffScopeClaims(
+      addOffScopeClaim(
+        offScopeClaims,
+        target,
+        kind,
+        isExcess ? DEFAULT_EXCESS_PROBLEM : DEFAULT_UNLISTED_PROBLEM,
       ),
     );
   };
 
-  // ─── ادعاهای خارج از فاکتور ───────────────────────────────────────
-
-  /** مازاد روی یک خطِ فاکتور و با قیمتِ آن؛ نامرتبط بدون خط و با قیمتِ دستی. */
-  const handleAddOffInvoiceClaim = (product, kind) => {
-    const isExcess = kind === OFF_SCOPE_KINDS.EXCESS;
-    const existing = offInvoiceClaims.find((c) =>
-      c.offScopeKind === kind && isExcess
-        ? c.orderLineId === product.orderLineId
-        : c.offScopeKind === kind && c.productId === product.productId,
+  const handleUpdateOffScopeClaim = (claimId, field, value) =>
+    setOffScopeClaims(
+      updateOffScopeClaim(offScopeClaims, claimId, field, value, (claim) =>
+        claim.offScopeKind === OFF_SCOPE_KINDS.EXCESS
+          ? excessRoom(claim.orderLineId, claim.id)
+          : Infinity,
+      ),
     );
-    if (isExcess && excessRemaining(product.orderLineId) <= 0) {
-      toast.error("برای این قلم کالای مازادی ارسال نشده یا همه‌اش در مرجوعیِ دیگری است");
-      return;
-    }
-    if (existing) {
-      setOffInvoiceClaims(
-        offInvoiceClaims.map((c) =>
-          c.id === existing.id
-            ? { ...c, quantity: (Number(c.quantity) || 0) + 1 }
-            : c,
-        ),
-      );
-      return;
-    }
-    setOffInvoiceClaims([
-      ...offInvoiceClaims,
-      {
-        ...newClaim(isExcess ? DEFAULT_EXCESS_PROBLEM : DEFAULT_UNLISTED_PROBLEM, 1),
-        offScopeKind: kind,
-        orderLineId: isExcess ? product.orderLineId : null,
-        productId: product.productId,
-        productCode: product.productCode,
-        productName: product.productName,
-        unit: product.unit,
-        unitPrice: product.unitPrice,
-      },
-    ]);
-  };
 
-  const handleUpdateOffInvoiceClaim = (claimId, field, value) => {
-    setOffInvoiceClaims(
-      offInvoiceClaims.map((claim) => {
-        if (claim.id !== claimId) return claim;
-        // قیمتِ مازاد از خطِ فاکتور است و سرور مقدارِ دیگری را رد می‌کند.
-        if (field === "unitPrice" && claim.offScopeKind === OFF_SCOPE_KINDS.EXCESS) {
-          return claim;
-        }
-        if (field === "quantity" && claim.offScopeKind === OFF_SCOPE_KINDS.EXCESS) {
-          const num = Number(value);
-          const max = excessRemaining(claim.orderLineId, claim.id);
-          return { ...claim, quantity: Number.isNaN(num) || num < 0 ? 0 : Math.min(num, max) };
-        }
-        if (field === "quantity" || field === "unitPrice") {
-          const num = Number(value);
-          return { ...claim, [field]: Number.isNaN(num) || num < 0 ? 0 : num };
-        }
-        return { ...claim, [field]: value };
-      }),
-    );
-  };
+  const handleRemoveOffScopeClaim = (claimId) =>
+    setOffScopeClaims(removeOffScopeClaim(offScopeClaims, claimId));
 
-  const handleRemoveOffInvoiceClaim = (claimId) => {
-    setOffInvoiceClaims(offInvoiceClaims.filter((c) => c.id !== claimId));
-  };
-
-  // ─── خروجی ─────────────────────────────────────────────────────────
-
-  const onInvoiceClaims = lines.flatMap((line) =>
-    (line.claims || [])
-      .filter((claim) => (Number(claim.quantity) || 0) > 0)
-      .map((claim) => ({
-        scope: CLAIM_SCOPES.ON_ORDER,
-        offScopeKind: null,
-        orderLineId: line.orderLineId,
-        productId: line.productId,
-        productCode: line.productCode,
-        productName: line.productName,
-        unit: line.unit,
-        unitPrice: line.unitPrice,
-        quantity: Number(claim.quantity) || 0,
-        problem: claim.problem,
-        note: claim.note || "",
-      })),
-  );
-
-  const preparedOffInvoiceClaims = offInvoiceClaims
-    .filter((claim) => (Number(claim.quantity) || 0) > 0)
-    .map((claim) => ({
-      scope: CLAIM_SCOPES.OFF_ORDER,
-      offScopeKind: claim.offScopeKind,
-      orderLineId:
-        claim.offScopeKind === OFF_SCOPE_KINDS.EXCESS ? claim.orderLineId : null,
-      productId: claim.productId,
-      productCode: claim.productCode,
-      productName: claim.productName,
-      unit: claim.unit,
-      unitPrice: Number(claim.unitPrice) || 0,
-      quantity: Number(claim.quantity) || 0,
-      problem: claim.problem,
-      note: claim.note || "",
-    }));
-
-  const allClaims = [...onInvoiceClaims, ...preparedOffInvoiceClaims];
-
-  const computedTotal = allClaims.reduce(
-    (sum, claim) => sum + claim.quantity * claim.unitPrice,
-    0,
-  );
+  const allClaims = claimsPayloadOf(lines, offScopeClaims);
 
   const buildPayload = () => ({
     saleId: formData.saleId,
-    saleInvoiceNumber: formData.saleInvoiceNumber,
-    customerId: formData.customerId,
-    customerName: formData.customerName,
     returnDate: formData.returnDate,
     description: formData.description || "",
     previousReturnId: formData.previousReturnId ?? null,
@@ -236,17 +101,15 @@ export function useSalesReturnForm() {
     setFormData,
     lines,
     orderLines,
-    offInvoiceClaims,
+    offScopeClaims,
     allClaims,
-    computedTotal,
+    computedTotal: claimsAmountOf(allClaims),
     handleAddClaim,
     handleUpdateClaim,
     handleRemoveClaim,
-    handleAddOffInvoiceClaim,
-    handleUpdateOffInvoiceClaim,
-    handleRemoveOffInvoiceClaim,
+    handleAddOffScopeClaim,
+    handleUpdateOffScopeClaim,
+    handleRemoveOffScopeClaim,
     buildPayload,
-    resetForm,
   };
 }
-

@@ -80,6 +80,7 @@ export default function PurchaseReturnNewPage() {
     buildPurchasePayload,
     purchaseError,
     offScopeCaps,
+    returnedIn,
   } = usePurchaseReturnForm();
 
   const {
@@ -133,12 +134,6 @@ export default function PurchaseReturnNewPage() {
   const isBusy = createMutation.isPending || acceptMutation.isPending;
   const hasClaims = allClaims.length > 0;
   const hasPurchases = Object.keys(excessPurchases).length > 0;
-
-  /** مقدارِ ادعاهای عودتِ یک گروهِ مازاد/سفارش‌نداده. */
-  const returnedIn = (key) =>
-    offScopeClaims
-      .filter((claim) => offScopeCapKey(claim.offScopeKind, claim) === key)
-      .reduce((sum, claim) => sum + (Number(claim.quantity) || 0), 0);
 
   const handleSelectPurchase = (purchaseId) => {
     resetForm();

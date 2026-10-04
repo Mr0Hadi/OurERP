@@ -6,6 +6,7 @@ import {
   carryOverLineClaims,
   clampClaimsToCaps,
 } from "@/shared/domain/returns/carryOverClaims";
+import { newClaimDraft } from "@/shared/domain/returns/claimDrafts";
 import {
   claimableQuantityOf,
   freeExcessQuantityOf,
@@ -17,9 +18,6 @@ import { UnitCustodyReasonEnum } from "@/shared/domain/enums/unitStatus";
 // تابع است نه ثابت، تا تاریخِ پیش‌فرض همیشه «امروز»ِ لحظه‌ی ساختِ فرم باشد.
 const emptyForm = () => ({
   purchaseId: "",
-  purchaseInvoiceNumber: "",
-  supplierId: "",
-  supplierName: "",
   returnDate: todayIso(),
   description: "",
   previousReturnId: null,
@@ -86,9 +84,6 @@ function offScopeCapsOf(purchase) {
   return caps;
 }
 
-const generateId = () =>
-  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-
 /**
  * پرتکرارترین مشکلی که انبار برای این دسته ثبت کرده — فقط پیشنهادِ فرم؛
  * کاربر می‌تواند عوضش کند.
@@ -127,18 +122,16 @@ function quarantineClaimsOf(purchase, lines) {
     const line = lines.find((l) => l.orderLineId === item.purchaseItemId);
     if (onOrder > 0 && line) {
       lineClaims.set(item.purchaseItemId, [
-        {
-          id: generateId(),
-          problem: dominantProblem(
+        newClaimDraft(
+          dominantProblem(
             discrepancies,
             (d) =>
               d.purchaseItemId === item.purchaseItemId &&
               d.custodyReason === UnitCustodyReasonEnum.ON_ORDER,
             RETURN_PROBLEMS.DEFECTIVE,
           ),
-          quantity: Math.min(onOrder, line.maxReturnableQuantity),
-          note: "",
-        },
+          Math.min(onOrder, line.maxReturnableQuantity),
+        ),
       ]);
     }
 
@@ -146,16 +139,16 @@ function quarantineClaimsOf(purchase, lines) {
     const excess = freeExcessQuantityOf(item);
     if (excess > 0) {
       offScopeClaims.push({
-        id: generateId(),
-        problem: dominantProblem(
-          discrepancies,
-          (d) =>
-            d.purchaseItemId === item.purchaseItemId &&
-            d.custodyReason === UnitCustodyReasonEnum.EXCESS,
-          RETURN_PROBLEMS.OVER_SHIPPED,
+        ...newClaimDraft(
+          dominantProblem(
+            discrepancies,
+            (d) =>
+              d.purchaseItemId === item.purchaseItemId &&
+              d.custodyReason === UnitCustodyReasonEnum.EXCESS,
+            RETURN_PROBLEMS.OVER_SHIPPED,
+          ),
+          excess,
         ),
-        quantity: excess,
-        note: "",
         offScopeKind: OFF_SCOPE_KINDS.EXCESS,
         orderLineId: item.purchaseItemId,
         productId: item.productId,
@@ -171,10 +164,7 @@ function quarantineClaimsOf(purchase, lines) {
     const free = freeUnlistedQuantityOf(item);
     if (free <= 0) return;
     offScopeClaims.push({
-      id: generateId(),
-      problem: RETURN_PROBLEMS.UNLISTED_ITEM,
-      quantity: free,
-      note: "",
+      ...newClaimDraft(RETURN_PROBLEMS.UNLISTED_ITEM, free),
       offScopeKind: OFF_SCOPE_KINDS.UNLISTED,
       orderLineId: null,
       productId: item.productId,
@@ -297,9 +287,6 @@ export const usePurchaseReturnFormStore = create((set, get) => ({
         // تاریخ و توضیحاتِ واردشده هم با تازه‌شدنِ ارقام نمی‌روند.
         ...(isResync ? previous : { ...emptyForm(), previousReturnId }),
         purchaseId: purchase.purchaseId,
-        purchaseInvoiceNumber: purchase.invoiceNumber,
-        supplierId: purchase.supplierId,
-        supplierName: purchase.supplierName,
         orderLines,
         lines: claims.lines,
         offScopeClaims: claims.offScopeClaims,

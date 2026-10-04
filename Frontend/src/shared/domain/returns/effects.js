@@ -23,6 +23,8 @@
  * تفاوت دو سمت فقط در *برچسب*هاست، نه در مدل؛ برچسب‌ها در sides.js.
  */
 
+import { draftId } from "@/shared/lib/draftId";
+
 // ─── جهتِ اثر ────────────────────────────────────────────────────────────────
 
 // همان اعضا و همان اعداد `ReturnEffectDirectionEnum`ِ بکند — یک اثرِ
@@ -99,8 +101,6 @@ function initialStatusFor(direction, paidAt) {
 
 // ─── ساخت اثر ───────────────────────────────────────────────────────────────
 
-const generateId = () =>
-  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
 /**
  * یک اثر تازه — فقط برای پیش‌نمایشِ فرم؛ اثرِ واقعی را سرور می‌سازد.
@@ -129,7 +129,7 @@ export function createEffect({
   const isGoods = isGoodsEffect(direction);
   const status = initialStatusFor(direction, paidAt);
   return {
-    id: generateId(),
+    id: draftId(),
     direction,
     quantity: isGoods ? Number(quantity) || 0 : 0,
     appliedQuantity: 0,
