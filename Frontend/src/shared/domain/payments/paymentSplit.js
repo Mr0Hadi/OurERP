@@ -47,6 +47,17 @@ export function resolvedRows(split, payable) {
   }));
 }
 
+/**
+ * همان ردیف‌هایی که کاربر می‌بیند، ذخیره‌شده در `rows` تا بشود ویرایششان کرد — حتی
+ * ردیفِ پیش‌فرضِ روشِ تکی که هنوز در `split` نیست. ردیفِ خودکار («باقیمانده») خودکار
+ * می‌ماند. بدونِ این، `updateRow` روی ردیفِ پیش‌فرض کاری نمی‌کرد.
+ */
+export function materializeRows(split, payable) {
+  if (split?.rows?.length) return { method: methodOf(split), rows: split.rows };
+  const rows = resolvedRows(split, payable).map(({ auto, ...row }) => (auto ? { ...row, amount: null } : row));
+  return { method: methodOf(split), rows };
+}
+
 export function rowsTotal(rows) {
   return rows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
 }

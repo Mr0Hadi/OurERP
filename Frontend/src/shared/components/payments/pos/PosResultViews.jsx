@@ -1,115 +1,20 @@
 import { useState } from "react";
-import { CircleAlert, CircleCheck, CircleX, CreditCard, RotateCcw, ScanLine, TriangleAlert } from "lucide-react";
+import { CircleAlert, CircleCheck, CircleX, RotateCcw, ScanLine, TriangleAlert } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { BankLogo } from "@/shared/components/ui/bank-input";
 import { Spinner } from "@/shared/components/ui/spinner";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
-import AmountInWords from "@/shared/components/forms/AmountInWords";
 import Notice from "@/shared/components/feedback/Notice";
-import { PosStatus, canStartPos, normalizeRrn } from "@/shared/domain/pos/posSession";
-import { usePosTerminalsQuery } from "@/shared/services/pos/queries";
+import { PosStatus, normalizeRrn } from "@/shared/domain/pos/posSession";
 import { getIranianBankByCardNumber } from "@/shared/lib/iranian-bank";
 import { formatRial } from "@/shared/lib/numberFormat";
-import { toneRow } from "@/shared/lib/tone";
-import { cn } from "@/shared/lib/utils";
-
-const TERMINAL_KEY = "pos.terminalId";
 
 /**
- * «دریافت با کارتخوان» — زیرِ ردیفِ «انتقال بانکی»ِ فرمِ پرداخت.
- *
- * وضعیت از `usePosPayment` می‌آید و کارها با callbackها برمی‌گردند؛ پنل فقط
- * انتخابِ دستگاه را خودش نگه می‌دارد. بخش‌ها: آماده (دستگاه + ارسال)، در جریان
- * (منتظرِ کارت / ثبت)، نتیجه (موفق / رد / لغو / خطا) و دو حالتی که پول ممکن است
- * رفته باشد (نامشخص / ثبت‌نشده).
- *
- * @param pos           خروجیِ `usePosPayment`
- * @param amount        مبلغی که روی دستگاه می‌آید (ریال)
- * @param blockedReason اگر پر باشد ارسال بسته است و این متن دلیلش را می‌گوید
- * @param hint          توضیحِ کوتاه زیرِ دکمه‌ی ارسال
- * @param preparing     `onStart` هنوز سند را آماده می‌کند (دکمه بسته)
- * @param onStart       `(terminal) => void`
- * @param onDone        «بستن»ِ رسیدِ موفق
- * @param onManual      ثبتِ ناموفق: نتیجه به فرمِ دریافت برود تا دستی ثبت شود
+ * نمای نتیجه‌های پنلِ کارتخوان: تلاشِ ناموفق (رد/لغو/خطا)، ثبت‌شده، ثبت‌نشده با پولِ
+ * کشیده‌شده، و نامشخص. هر کدام فقط state را می‌خوانند و کار را با callback برمی‌گردانند.
  */
-export default function PosPaymentPanel({
-  pos,
-  amount,
-  blockedReason,
-  hint,
-  doneLabel,
-  preparing,
-  onStart,
-  onDone,
-  onManual,
-}) {
-  const { state } = pos;
-  const { status } = state;
-
-  return (
-    <section
-      aria-live="polite"
-      className={cn("space-y-3 rounded-lg border border-border bg-card p-3", boxTone(status))}
-    >
-      <header className="flex items-center gap-2 text-sm font-medium">
-        <CreditCard className="size-4 text-muted-foreground" aria-hidden="true" />
-        دریافت با کارتخوان
-      </header>
-
-      {canStartPos(status) && status !== PosStatus.IDLE && <Outcome state={state} />}
-
-      {canStartPos(status) && (
-        <ReadyForm
-          retry={status !== PosStatus.IDLE}
-          amount={amount}
-          blockedReason={blockedReason}
-          hint={hint}
-          preparing={preparing}
-          onStart={onStart}
-        />
-      )}
-
-      {(status === PosStatus.STARTING || status === PosStatus.WAITING_CARD) && (
-        <Waiting state={state} onCancel={pos.cancel} />
-      )}
-
-      {(status === PosStatus.APPROVED || status === PosStatus.RECORDING) && (
-        <Busy>در حال ثبتِ پرداخت روی سند… صفحه را نبندید.</Busy>
-      )}
-
-      {status === PosStatus.RECORDED && <Recorded state={state} doneLabel={doneLabel} onDone={onDone} />}
-
-      {status === PosStatus.RECORD_FAILED && <RecordFailed state={state} onRetry={pos.retryRecord} onManual={onManual} />}
-
-      {status === PosStatus.UNKNOWN && (
-        <Unknown
-          state={state}
-          onCheck={pos.checkLast}
-          onReceipt={pos.confirmByReceipt}
-          onNotCharged={pos.reset}
-        />
-      )}
-    </section>
-  );
-}
-
-const BOX_TONES = {
-  [PosStatus.RECORDED]: "success",
-  [PosStatus.DECLINED]: "danger",
-  [PosStatus.FAILED]: "danger",
-  [PosStatus.UNKNOWN]: "warning",
-  [PosStatus.RECORD_FAILED]: "danger",
-};
-const boxTone = (status) => toneRow(BOX_TONES[status] ?? "neutral");
 
 const OUTCOME_TITLES = {
   [PosStatus.DECLINED]: "تراکنش انجام نشد",
@@ -118,7 +23,7 @@ const OUTCOME_TITLES = {
 };
 
 /** نتیجه‌ی تلاشِ قبلی (رد، لغو، خطا) بالای فرمِ تلاشِ دوباره؛ در هر سه، از کارت چیزی کم نشده. */
-function Outcome({ state }) {
+export function Outcome({ state }) {
   const cancelled = state.status === PosStatus.CANCELLED;
   return (
     <Notice className="py-2.5 text-sm" tone={cancelled ? "neutral" : "danger"} icon={cancelled ? CircleAlert : CircleX}>
@@ -128,106 +33,7 @@ function Outcome({ state }) {
   );
 }
 
-/**
- * دستگاهِ این کاربر روی این مرورگر: دستگاه‌ها مشترک‌اند و هر کاربر خودش انتخاب می‌کند؛
- * آخرین انتخاب یادآوری می‌شود و اگر فقط یک دستگاه فعال هست همان انتخاب است.
- */
-function useTerminalChoice(terminals) {
-  const [chosen, setChosen] = useState(() => {
-    try {
-      return localStorage.getItem(TERMINAL_KEY);
-    } catch {
-      return null;
-    }
-  });
-  const terminal =
-    terminals.find((candidate) => String(candidate.id) === chosen) ??
-    (terminals.length === 1 ? terminals[0] : undefined);
-
-  const choose = (id) => {
-    setChosen(id);
-    try {
-      localStorage.setItem(TERMINAL_KEY, id);
-    } catch {
-      // حالتِ خصوصی/مسدود: فقط برای همین بار.
-    }
-  };
-  return [terminal, choose];
-}
-
-function ReadyForm({ retry, amount, blockedReason, hint, preparing, onStart }) {
-  const { data: items = [], isLoading } = usePosTerminalsQuery();
-  const [terminal, choose] = useTerminalChoice(items);
-  const noTerminal = !isLoading && items.length === 0;
-  const disabled = !terminal || !(amount > 0) || Boolean(blockedReason) || preparing;
-
-  return (
-    <div className="space-y-3">
-      <div className="space-y-1.5">
-        <Label className="text-xs">دستگاه کارتخوان</Label>
-        <Select value={terminal ? String(terminal.id) : ""} onValueChange={choose} disabled={isLoading || noTerminal}>
-          <SelectTrigger className="h-9! w-full" aria-label="دستگاه کارتخوان">
-            <SelectValue
-              placeholder={isLoading ? "در حال بارگذاری…" : noTerminal ? "دستگاهی تعریف نشده" : "دستگاه را انتخاب کنید"}
-            />
-          </SelectTrigger>
-          <SelectContent>
-            {items.map((terminal) => (
-              <SelectItem key={terminal.id} value={String(terminal.id)}>
-                {terminal.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="rounded-lg bg-muted/40 px-3 py-2 text-center">
-        <p className="text-[11px] text-muted-foreground">مبلغی که روی دستگاه می‌آید</p>
-        <p className="text-lg font-semibold tabular-nums">{formatRial(amount)}</p>
-        <AmountInWords rial={amount} />
-      </div>
-
-      {blockedReason && <p className="text-xs leading-5 text-destructive">{blockedReason}</p>}
-      {hint && <p className="text-xs leading-5 text-muted-foreground">{hint}</p>}
-
-      <Button type="button" className="w-full gap-1.5" disabled={disabled} onClick={() => onStart(terminal)}>
-        {preparing ? <Spinner /> : retry ? <RotateCcw className="size-4" /> : <ScanLine className="size-4" />}
-        {retry ? "تلاشِ دوباره" : "ارسال به کارتخوان"}
-      </Button>
-    </div>
-  );
-}
-
-function Waiting({ state, onCancel }) {
-  const connecting = state.status === PosStatus.STARTING;
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-col items-center gap-2 rounded-lg bg-muted/40 px-3 py-4 text-center">
-        <Spinner className="size-6 text-primary" />
-        <p className="text-lg font-semibold tabular-nums">{formatRial(state.amount)}</p>
-        <p className="text-xs leading-5 text-muted-foreground">
-          {connecting
-            ? "در حال ارسالِ مبلغ به کارتخوان…"
-            : "مبلغ روی دستگاه آمد. از مشتری بخواهید کارت را بکشد و رمز را وارد کند."}
-        </p>
-      </div>
-      <Button type="button" variant="outline" className="w-full" onClick={onCancel}>
-        لغوِ تراکنش
-      </Button>
-    </div>
-  );
-}
-
-function Busy({ children }) {
-  return (
-    <div className="flex items-center justify-center gap-2 rounded-lg bg-muted/40 px-3 py-4 text-xs text-muted-foreground">
-      <Spinner />
-      {children}
-    </div>
-  );
-}
-
-function Recorded({ state, doneLabel = "بستن", onDone }) {
+export function Recorded({ state, doneLabel = "بستن", onDone }) {
   return (
     <div className="space-y-3">
       <Notice className="py-2.5 text-sm" tone="success" icon={CircleCheck}>
@@ -242,7 +48,7 @@ function Recorded({ state, doneLabel = "بستن", onDone }) {
   );
 }
 
-function RecordFailed({ state, onRetry, onManual }) {
+export function RecordFailed({ state, onRetry, onManual }) {
   const [confirmManual, setConfirmManual] = useState(false);
   return (
     <div className="space-y-3">
@@ -280,7 +86,7 @@ function RecordFailed({ state, onRetry, onManual }) {
 }
 
 /** پول ممکن است رفته باشد؛ هیچ تلاشِ دوباره‌ای تا روشن‌شدنِ وضعیت. */
-function Unknown({ state, onCheck, onReceipt, onNotCharged }) {
+export function Unknown({ state, onCheck, onReceipt, onNotCharged }) {
   const [mode, setMode] = useState(null); // null | "receipt" | "notCharged"
   const [rrn, setRrn] = useState("");
   const [checking, setChecking] = useState(false);
