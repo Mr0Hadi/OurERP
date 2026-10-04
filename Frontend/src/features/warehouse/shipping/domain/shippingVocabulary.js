@@ -11,8 +11,7 @@ import { QUEUE_FILTER } from "../../shared/queueFilters";
  * می‌ماند چون باقیمانده با محموله‌ی بعدی می‌رود و `ShipSale` چند دور
  * پشتِ‌سرِهم را می‌پذیرد.
  *
- * `GetSaleListQuery` فقط یک `status` می‌گیرد، پس صف همیشه روی یکی از
- * این دو وضعیت است و کاربر با فیلترِ وضعیت بینشان جابه‌جا می‌شود.
+ * صف با `statuses` چند وضعیت را با هم می‌خواهد (`shippingStatusesOf`).
  */
 export const SHIPPING_ELIGIBLE_STATUSES = [
   SaleStatusEnum.PROCESSING,

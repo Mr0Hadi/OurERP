@@ -55,10 +55,8 @@ const parseUrlValue = (key, raw) => (TEXT_URL_KEYS.includes(key) ? raw : Number(
  *  - **کارها:** هر کار (چاپ، قرنطینه، بازگشت به موجودی، اسقاط، عودت) هم تکی
  *    از «جزئیات» و هم دسته‌ای با انتخاب و نوارِ پایینِ صفحه.
  *
- * چیدمان مثلِ «دسترسی کارمندان»: ستونِ کناری (کالا + نماهای جایگاه و برچسب،
- * با شمارش) و کنارش سربرگِ نمای جاری و فهرست. شکستن با عرضِ پنجره است نه
- * عرضِ محتوا، تا با باز شدنِ منوی اصلیِ سایت ستون بسته نشود؛ در عرضِ کم
- * نماها دو انتخاب‌گرند.
+ * چیدمان: یک کارت با فیلترها (جست‌وجو/اسکن، کالا، «فیلترهای بیشتر») و
+ * انتخاب‌گرهای نما (جایگاه با شمارش، وضعیتِ برچسب)، و زیرش فهرست.
  *
  * یک فیلدِ اسکن/جست‌وجو: تایپ فهرست را فیلتر می‌کند؛ اسکن یا Enter روی
  * بارکدِ دانه جزئیاتش را باز می‌کند (یا در «اسکنِ پیاپی» به انتخاب اضافه‌اش
@@ -66,7 +64,7 @@ const parseUrlValue = (key, raw) => (TEXT_URL_KEYS.includes(key) ? raw : Number(
  *
  * پیوند از صفحه‌های دیگر با پارامترِ آدرس: `?productId=`، `?purchaseId=`،
  * `?saleId=`، `?segment=quarantine`، `?labelFilter=unprinted`، `?binLocation=`، `?unit=<بارکد>`،
- * و `?view=unlabeled` (قدیمی).
+ * و `?view=unlabeled` / `?view=quarantine` (نشانیِ قدیمی، برای بوکمارک‌ها).
  */
 export default function UnitsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -290,14 +288,6 @@ export default function UnitsPage() {
     store.setSearch("");
   };
 
-  const viewNavProps = {
-    segment: store.segment,
-    labelFilter: store.labelFilter,
-    summary,
-    onSegmentChange: changeSegment,
-    onLabelFilterChange: changeLabelFilter,
-  };
-
   const currentPage = unitsQuery.data?.page ? unitsQuery.data.page - 1 : pagination.pageIndex;
   const isPrintQueue = store.labelFilter === LABEL_FILTERS.UNPRINTED;
   const hasFilters = Boolean(
@@ -323,26 +313,6 @@ export default function UnitsPage() {
 
   return (
     <div className="w-full">
-      {/* <UnitViewNav
-        variant="pane"
-        className="hidden lg:sticky lg:top-4 lg:flex lg:max-h-[calc(100svh-6.5rem)]"
-        header={
-          <div className="[&_label]:sr-only">
-            <EntitySelect
-              label="کالا"
-              placeholder="همه‌ی کالاها"
-              emptyText="کالایی یافت نشد"
-              items={products}
-              value={store.productId}
-              onSelect={(id) => store.setProductId(id)}
-              renderMeta={(product) => product.code}
-            />
-          </div>
-        }
-        footerText={`${resultsText} در این نما`}
-        {...viewNavProps}
-      /> */}
-
       <main className="flex min-w-0 flex-col gap-3">
         {/* کارت اصلی: ناحیه فیلتر/سربرگ + بدنه لیست */}
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
@@ -366,9 +336,16 @@ export default function UnitsPage() {
               isLoadingParties={supplierOptions.isLoading || customerOptions.isLoading}
             />
 
-            {/* سربرگِ نمای جاری — همان کارتِ سربرگِ کارمند در «دسترسی کارمندان». */}
+            {/* سربرگِ نمای جاری: جایگاه، برچسب و شمارِ نتیجه. */}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border pt-3">
-              <UnitViewNav variant="select" className="w-full" {...viewNavProps} />
+              <UnitViewNav
+                className="w-full"
+                segment={store.segment}
+                labelFilter={store.labelFilter}
+                summary={summary}
+                onSegmentChange={changeSegment}
+                onLabelFilterChange={changeLabelFilter}
+              />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs text-muted-foreground">
                   {[productName && `کالا: ${productName}`, resultsText]

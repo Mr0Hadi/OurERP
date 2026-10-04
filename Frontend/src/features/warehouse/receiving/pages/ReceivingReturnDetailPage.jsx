@@ -18,7 +18,7 @@ import GoodsRoundItemsSection from "@/shared/components/returns/GoodsRoundItemsS
 import GoodsRoundPartySection from "@/shared/components/returns/GoodsRoundPartySection";
 import GoodsRoundSummaryCard from "@/shared/components/returns/GoodsRoundSummaryCard";
 
-import ReturnDetailLoading from "../components/forms/ReturnDetailLoading";
+import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
@@ -90,10 +90,8 @@ function ReceivingReturnDetailForm({ salesReturn }) {
         const product = productMap.get(round.productId);
         return {
           ...round,
-          // کلیدِ پایدار هم کنارِ URLِ امضاشده می‌آید تا اگر صفحه دیر باز
-          // بماند، بندانگشتی بتواند خودش امضا را تازه کند.
           imageKey: product?.imageKey ?? null,
-          imageUrl: product?.imageUrl ?? product?.image ?? null,
+          imageUrl: product?.imageUrl ?? null,
         };
       }),
     [rounds, productMap],
@@ -263,7 +261,7 @@ export default function ReceivingReturnDetailPage() {
     showBack: true,
   });
 
-  if (isLoading) return <ReturnDetailLoading />;
+  if (isLoading) return <WarehouseFormSkeleton />;
 
   if (isError || !salesReturn) {
     return (

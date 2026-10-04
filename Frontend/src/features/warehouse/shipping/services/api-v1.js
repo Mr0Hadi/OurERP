@@ -4,8 +4,8 @@ import { idempotent, normalizeListResponse } from "@/shared/services/api/contrac
 /**
  * ارسال انبار روی بکندِ واقعی — قرینه‌ی `warehouse/receiving/services/api-v1.js`:
  *
- *  ۱. صفِ ارسال = `GET api/Sale/GetSaleList` فیلترشده روی وضعیت‌های
- *     قابلِ ارسال (`SHIPPING_ELIGIBLE_STATUSES`).
+ *  ۱. صفِ ارسال = `GET api/Sale/GetSaleList` فیلترشده با `statuses`
+ *     روی وضعیت‌های قابلِ ارسال (`shippingStatusesOf`).
  *  ۲. جزئیاتِ یک فروش = `GET api/Sale/GetSaleDetail`.
  *  ۳. کالای جایگزینِ منتظرِ ارسال = `GET api/SaleReturn/GetSaleReturnPendingEffects`.
  *  ۴. ثبت = `POST api/Shipment/DispatchShipment` — ارسالِ فروش و دورهای
@@ -13,8 +13,8 @@ import { idempotent, normalizeListResponse } from "@/shared/services/api/contrac
  */
 
 /**
- * صفِ ارسال: فروش‌هایی که هنوز کالایشان کامل از انبار خارج نشده.
- * `statuses` به شکلِ `statuses=1&statuses=2` فرستاده می‌شود.
+ * صفِ ارسال: فروش‌هایی که هنوز کالایشان کامل از انبار خارج نشده
+ * (`GetSaleList` با `statuses`؛ پارامترها از `listQuery`).
  */
 export async function fetchShippableSales(params) {
   const { data } = await axiosInstance.get("/Sale/GetSaleList", { params });
@@ -44,8 +44,6 @@ export async function dispatchShipment(command, { idempotencyKey } = {}) {
   const { data } = await axiosInstance.post(
     "/Shipment/DispatchShipment",
     command,
-    // ⚠️ بکند این هدر را هنوز نمی‌خواند؛ retry شبکه می‌تواند یک ارسال را
-    // دوبار از موجودی کم کند.
     idempotent(idempotencyKey),
   );
   return data;

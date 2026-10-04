@@ -7,7 +7,7 @@ import { usePermission } from "@/features/auth/hooks/usePermission";
 
 /**
  * پیوند از یک سند یا کالا به «دانه‌ها و برچسب‌ها»، با فیلترِ همان‌جا
- * (مثلاً `{ purchaseId, view: "unlabeled" }` برای برچسب‌های یک خرید).
+ * (مثلاً `{ purchaseId, labelFilter: LABEL_FILTERS.UNPRINTED }` برای برچسب‌های یک خرید).
  * بدونِ دسترسیِ دیدنِ دانه‌ها نمایش داده نمی‌شود.
  */
 export default function UnitsPageLink({ params, label = "دانه‌ها و برچسب‌ها", className = "" }) {

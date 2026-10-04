@@ -39,12 +39,7 @@ export const useMarkUnitsPrintedMutation = () => {
       queryClient.invalidateQueries({ queryKey: productUnitKeys.lists() });
       queryClient.invalidateQueries({ queryKey: productUnitKeys.summaries() });
     },
-    onError: (error) =>
-      toast.error(
-        error?.response?.status === 404
-          ? "برچسب‌ها چاپ شدند، ولی ثبتِ چاپ هنوز روی سرور پیاده نشده است."
-          : getErrorMessage(error, "ثبتِ چاپ انجام نشد"),
-      ),
+    onError: (error) => toast.error(getErrorMessage(error, "ثبتِ چاپ انجام نشد")),
   });
 };
 

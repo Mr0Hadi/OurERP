@@ -9,7 +9,7 @@ import FilterSelect from "@/shared/components/filters/FilterSelect";
 import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
 import { UNIT_CUSTODY_REASON_LABELS } from "@/shared/domain/enums/unitStatus";
 
-import { UNIT_SEGMENTS} from "../domain/unitVocabulary";
+import { UNIT_SEGMENTS } from "../domain/unitVocabulary";
 import UnitActiveFilters from "./UnitActiveFilters";
 import { formatNumber } from "@/shared/lib/numberFormat";
 
@@ -30,8 +30,8 @@ function Field({ label, children, className = "" }) {
 
 /**
  * فیلترهای فهرستِ دانه‌ها (جایگاه و برچسب در `UnitViewNav` است). ردیفِ اول
- * فیلدِ جست‌وجو/اسکن (`search`)، انتخابِ کالا و دکمه‌ی فیلترهاست. بقیه (طرفِ حساب، تاریخ، سریال، علتِ قرنطینه)
- * پشتِ «فیلترهای بیشتر»؛ وقتی بسته است، فیلترهای فعالش به شکلِ برچسبِ
+ * فیلدِ جست‌وجو/اسکن (`search`)، انتخابِ کالا و دکمه‌ی فیلترهاست. بقیه (طرفِ
+ * حساب، تاریخ، سریال، قفسه، علتِ قرنطینه) پشتِ «فیلترهای بیشتر»؛ وقتی بسته است، فیلترهای فعالش به شکلِ برچسبِ
  * قابلِ حذف زیرِ ردیف دیده می‌شوند تا کاربر بداند چرا فهرست کوتاه شده.
  */
 export default function UnitFilterBar({
@@ -66,7 +66,7 @@ export default function UnitFilterBar({
       <div className="flex flex-wrap items-start gap-2">
         <div className="min-w-0 basis-full flex-1">{search}</div>
 
-        {/* در عرضِ کافی کالا در ستونِ کناری است. برچسبِ داخلیِ EntitySelect اینجا جا نمی‌شود. */}
+        {/* برچسبِ داخلیِ EntitySelect در این ردیف جا نمی‌شود. */}
         <div className="min-w-0 flex-1 [&_label]:sr-only">
           <EntitySelect
             label="کالا"
@@ -193,7 +193,6 @@ export default function UnitFilterBar({
 
       <UnitActiveFilters
         store={store}
-        products={products}
         suppliers={suppliers}
         customers={customers}
         linksOnly={showMore}

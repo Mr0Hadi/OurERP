@@ -42,12 +42,7 @@ export default function ShippingItemsSection({
     const visible =
       showCompleted || term
         ? items
-        : items.filter(
-            (item) =>
-              item.remainingQuantity > 0 ||
-              (Number(item.excessQuantity) || 0) > 0 ||
-              item.productUnitBarcodes.length > 0,
-          );
+        : items.filter(isPendingOrTouched);
     if (!term) return visible;
     return visible.filter((item) => item.productName?.toLowerCase().includes(term));
   }, [items, search, showCompleted]);

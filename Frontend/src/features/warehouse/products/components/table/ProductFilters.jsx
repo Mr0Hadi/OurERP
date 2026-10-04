@@ -14,7 +14,8 @@ import {
 } from "@/shared/components/ui/select";
 import BarcodeScanField from "@/shared/components/barcode/BarcodeScanField";
 import { useProductFilterStore } from "../../store/productFilterStore";
-import { fetchProductByBarcode } from "../../services/queries";
+// اسکن یک کارِ لحظه‌ای است، نه داده‌ای که در کش بماند؛ پس خودِ تابعِ API.
+import { fetchProductByBarcode } from "../../services/api-v1";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { useProductCategoriesQuery } from "@/features/warehouse/categories/services/queries";
 

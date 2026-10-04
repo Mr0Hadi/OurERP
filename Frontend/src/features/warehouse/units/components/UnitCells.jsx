@@ -16,32 +16,6 @@ import { formatNumber } from "@/shared/lib/numberFormat";
  * خانه‌های مشترکِ جدول و کارت‌های دانه — یک شکل در هر دو چیدمان.
  */
 
-/**
- * بارکد به شکلِ خوانا (با خط‌تیره) — همان چیزی که زیرِ میله‌ها روی برچسب
- * چاپ شده، تا ردیف با برچسبِ توی دست تطبیق داده شود.
- */
-export function UnitBarcodeCell({ unit }) {
-  return (
-    <div className="flex flex-col items-start">
-      <span className="font-mono text-xs" dir="ltr">
-        {unit.barcode}
-      </span>
-      <span className="text-[11px] tabular-nums text-muted-foreground">
-        سریال {formatNumber(unit.serialNumber)}
-      </span>
-    </div>
-  );
-}
-
-export function UnitProductCell({ unit }) {
-  return (
-    <div className="flex min-w-0 flex-col">
-      <span className="truncate font-light">{unit.productName ?? "—"}</span>
-      <span className="font-mono text-[11px] text-muted-foreground">{unit.productCode}</span>
-    </div>
-  );
-}
-
 /** «کجاست؟» — جای فعلی و طرفِ حساب، با پیوند به سندِ فروش اگر هست. */
 export function UnitWhereabouts({ unit, detailOnly = false }) {
   const where = whereaboutsOf(unit);
@@ -116,28 +90,4 @@ export function UnitQuarantineAge({ unit }) {
       <span className="text-[11px] text-muted-foreground">{formatDate(unit.quarantinedAt)}</span>
     </div>
   );
-}
-
-/** سندی که دانه را به قرنطینه برد (دریافتِ خرید، مرجوعیِ فروش، یا دستی). */
-export function UnitQuarantineSource({ unit }) {
-  const link = documentRouteOf(unit.quarantineDocumentKind, unit.quarantineDocumentId);
-  if (!unit.quarantineDocumentNumber) {
-    return (
-      <span className="text-xs text-muted-foreground">
-        {unit.quarantineDocumentKind ? "—" : "انبار (دستی)"}
-      </span>
-    );
-  }
-  return link ? (
-    <Link to={link} className="font-mono text-xs underline-offset-2 hover:underline">
-      {unit.quarantineDocumentNumber}
-    </Link>
-  ) : (
-    <span className="font-mono text-xs">{unit.quarantineDocumentNumber}</span>
-  );
-}
-
-export function UnitValueCell({ value }) {
-  if (value == null) return <span className="text-xs text-muted-foreground">—</span>;
-  return <span className="text-sm tabular-nums">{formatNumber(value)}</span>;
 }

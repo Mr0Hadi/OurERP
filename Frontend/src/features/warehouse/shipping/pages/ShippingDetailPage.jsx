@@ -29,7 +29,7 @@ function withProductImage(rows, productMap) {
     return {
       ...row,
       imageKey: product?.imageKey ?? null,
-      imageUrl: product?.imageUrl ?? product?.image ?? null,
+      imageUrl: product?.imageUrl ?? null,
     };
   });
 }

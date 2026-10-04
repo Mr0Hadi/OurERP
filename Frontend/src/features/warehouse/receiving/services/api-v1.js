@@ -48,8 +48,6 @@ export async function receiveShipment(command, { idempotencyKey } = {}) {
   const { data } = await axiosInstance.post(
     "/Shipment/ReceiveShipment",
     command,
-    // ⚠️ بکند این هدر را هنوز نمی‌خواند؛ retry شبکه می‌تواند یک دریافت را
-    // دوبار به موجودی اضافه کند.
     idempotent(idempotencyKey),
   );
   return data;

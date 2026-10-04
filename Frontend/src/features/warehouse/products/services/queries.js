@@ -7,7 +7,6 @@ import {
   PRODUCT_SORT_COLUMNS,
   fetchProducts,
   fetchProductById,
-  fetchProductByBarcode,
 } from "./api-v1";
 import { useProductFilterStore } from "../store/productFilterStore";
 import { productKeys } from "./queryKeys";
@@ -54,10 +53,6 @@ export function useProductQuery(id) {
     enabled: !!id,
   });
 }
-
-// اسکن یک اقدامِ لحظه‌ای است، نه چیزی که باید در کش بماند — برای همین
-// خودِ تابع را مستقیم صادر می‌کنیم، نه یک هوکِ کوئری.
-export { fetchProductByBarcode };
 
 // ─── گزینه‌های انتخاب ───────────────────────────────────────────────────────
 

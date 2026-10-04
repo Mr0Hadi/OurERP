@@ -261,7 +261,7 @@
   - [ ] auth
   - [ ] customers + suppliers
   - [ ] employees + organization + permissions
-  - [ ] warehouse: products، categories، units، receiving، shipping
+  - [ ] warehouse: products، categories، units، receiving، shipping — بخشِ «انبار» پایین‌تر
   - [ ] purchases
   - [ ] sales
   - **مرجوعی‌ها — خرید و فروش (۲۰۲۶-۱۰-۰۵)** (`shared/domain/returns`، `shared/components/returns`، `features/*/returns`)
@@ -317,6 +317,24 @@
       - فرمِ تصمیم (`ResolutionComposer` با انتخابگرِ کالا و بخشِ پول) `lazy`: فقط با کلیکِ «تصمیم» بار می‌شود. JSِ مخصوصِ
         صفحه‌ی جزئیاتِ مرجوعی (gzip، بیرون از پوسته‌ی مشترک): ۷۸ → ۶۰KB (هر دو سمت). صفحه‌های ثبت و فهرست بی‌تغییر
         (۵۶/۴۷/۲۳KB).
+  - **انبار (۲۰۲۶-۱۰-۰۵)** (`features/warehouse/*`: کالا، دسته‌بندی، دانه‌ها، دریافت، ارسال) — شش گام، هر کدام یک
+    commit:
+    - [x] ۴.۱ کدِ مرده و اشتباه:
+      - نسخه‌ی «ستونِ کناری»ِ `UnitViewNav` (~۱۰۰ خط، `NavItem`/`GroupTitle`/`header`/`footerText`) فقط در یک بلوکِ
+        کامنت‌شده‌ی `UnitsPage` استفاده می‌شد و توضیحِ صفحه هنوز همان چیدمانِ قدیمی را شرح می‌داد؛ هر دو حذف شد و
+        `UnitViewNav` فقط همان دو انتخاب‌گر است. `hint`ِ نماها (فقط آن ستون می‌خواند) هم رفت.
+      - exportهای بی‌مصرف (خروجیِ knip): `UnitBarcodeCell`، `UnitProductCell`، `UnitQuarantineSource`، `UnitValueCell`،
+        `UNIT_LABEL_STATE_LABELS`، `DOCUMENT_KIND_LABELS`، `LABEL_FILTER_OPTIONS`، `SHEET_PRESET_OPTIONS`، کلِ
+        `LABEL_CODE_KINDS` (قالبِ برچسب `LABEL_CODE_TYPES`ِ خودش را دارد)؛ اکشن‌های `openPrintQueue`/`clearAll`ِ
+        storeِ دانه‌ها؛ propِ خوانده‌نشده‌ی `products` در `UnitActiveFilters`.
+      - کامنت‌های غلط: «بکند هدرِ `Idempotency-Key` را هنوز نمی‌خواند» در دریافت و ارسال (میان‌افزارِ بکند همه‌ی
+        نوشتن‌ها را پوشش می‌دهد)؛ «`GetSaleList` فقط یک `status` می‌گیرد» (صف `statuses` می‌فرستد)؛ «URLِ امضاشده‌ی
+        تصویر» (آدرس‌ها ثابت‌اند). پیامِ «ثبتِ چاپ هنوز روی سرور پیاده نشده» برای ۴۰۴ (endpoint مدت‌هاست هست).
+      - `ReturnDetailLoading` کپیِ `WarehouseFormSkeleton` بود → حذف. پنجمین کپیِ `generateId` → `draftId`. شرطِ
+        «قلمِ منتظر یا دست‌خورده» در `ShippingItemsSection` دو بار نوشته شده بود. re-exportِ `fetchProductByBarcode` از
+        `queries.js`. فیلدِ ناموجودِ `product.image`.
+      - پیوندهای داخلی به صفحه‌ی دانه‌ها با پارامترِ قدیمیِ `?view=unlabeled` → `labelFilter` (نشانیِ قدیمی برای
+        بوکمارک‌ها همچنان کار می‌کند).
   - [ ] partyAccount + invoice + transactions
   - [ ] dashboard + reports + settings
 - [ ] **۳. سند بکند** — هم‌زمان با مرحله‌ی ۲؛ به‌روزرسانی داکیومنت‌های قدیمی `Backend-Net/docs`.
@@ -328,9 +346,8 @@
 هر کدام در مرحله‌ی فیچر خودش بررسی شود: یا کد مرده است، یا قرار بوده جایی استفاده شود و نشده (باگ احتمالی).
 
 - returns: `CLAIM_SCOPE_LABELS` (خرید و فروش)، `isQuarantineEffect`، `deriveReturnStatus`، `isOffScope`
-- units: `UnitBarcodeCell`، `UnitProductCell`، `UnitQuarantineSource`، `UnitValueCell`،
-  `UNIT_LABEL_STATE_LABELS`، `DOCUMENT_KIND_LABELS`، `LABEL_FILTER_OPTIONS`
-- shared: `SHEET_PRESET_OPTIONS`، `DEFAULT_LABEL_CODE_KIND`، `LABEL_CODE_KIND_OPTIONS`،
+- ~~units~~ (گامِ ۴.۱)
+- shared: ~~`SHEET_PRESET_OPTIONS`، `DEFAULT_LABEL_CODE_KIND`، `LABEL_CODE_KIND_OPTIONS`~~ (۴.۱)،
   `DOCUMENT_PAYMENT_DIRECTION`، `TAX_CATEGORY_LABELS`، `listParams`
 
 ### متن پیام‌ها برای مرور در فاز هر فیچر

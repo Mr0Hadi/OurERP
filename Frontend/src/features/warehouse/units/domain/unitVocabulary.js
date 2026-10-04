@@ -57,11 +57,6 @@ export const UnitLabelStateEnum = Object.freeze({
   PRINTED: 2,
 });
 
-export const UNIT_LABEL_STATE_LABELS = Object.freeze({
-  [UnitLabelStateEnum.UNPRINTED]: "برچسب نخورده",
-  [UnitLabelStateEnum.PRINTED]: "برچسب خورده",
-});
-
 /**
  * دانه‌ای که هنوز در انبار است برچسب لازم دارد — در قفسه یا قرنطینه.
  * فروخته، عودت‌شده یا اسقاط‌شده دیگر در دسترس نیست که برچسب بخورد.
@@ -256,13 +251,6 @@ const DOCUMENT_ROUTES = {
   [DocumentKindEnum.SALE_RETURN]: ROUTES.SALES_RETURNS_DETAIL,
 };
 
-export const DOCUMENT_KIND_LABELS = Object.freeze({
-  [DocumentKindEnum.PURCHASE]: "خرید",
-  [DocumentKindEnum.SALE]: "فروش",
-  [DocumentKindEnum.PURCHASE_RETURN]: "مرجوعی خرید",
-  [DocumentKindEnum.SALE_RETURN]: "مرجوعی فروش",
-});
-
 export const documentRouteOf = (kind, id) =>
   DOCUMENT_ROUTES[kind] && id ? routeWithId(DOCUMENT_ROUTES[kind], id) : null;
 
@@ -299,11 +287,6 @@ export function daysSince(value, now = Date.now()) {
 
 /** فیلترِ «وضعیت برچسب». */
 export const LABEL_FILTERS = Object.freeze({ UNPRINTED: "unprinted", PRINTED: "printed" });
-
-export const LABEL_FILTER_OPTIONS = Object.freeze([
-  { value: LABEL_FILTERS.UNPRINTED, label: "برچسب نخورده" },
-  { value: LABEL_FILTERS.PRINTED, label: "برچسب خورده" },
-]);
 
 /**
  * جایگاهی که برچسب برایش معنا دارد: دانه‌ای که هنوز در انبار است (قفسه یا
