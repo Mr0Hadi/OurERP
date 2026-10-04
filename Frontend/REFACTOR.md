@@ -206,7 +206,17 @@
       `Notice`ِ مشترک به‌جای کپیِ محلی. `materializeRows` (دامنه) جای `stripAuto`ِ ویرایشگر. باگ: «ثبتِ دستی» بعد از
       ثبتِ ناموفقِ کارتخوان روی روشِ تکیِ دست‌نخورده مبلغ و شماره‌ی پیگیری را در فرم نمی‌نشاند (ردیفِ پیش‌فرض در
       `value` نبود). `isNormalPayment` به `paymentRows.js`.
-    - [ ] ۲.۳ خرید
+    - [x] ۲.۳ خرید:
+      - `PartySection` (مشترک) جای `PurchaseSupplierSection`/`SaleCustomerSection` که جز نام و هوک‌ها یکسان بودند؛
+        `DocumentItemsSection` جای `PurchaseItemsSection` و پوسته‌ی `SaleItemsSection`.
+      - `purchaseFormProblem` (قاعده) + `reportFormProblem` (پیام و اسکرول) جای سه بلوکِ تکراریِ toast/scroll.
+      - لایه‌ی تغییرِ نامِ `orders/services/constants.js` و re-exportهای `api-v1` حذف شد؛ `PurchaseStatusEnum` مستقیم.
+      - کد مرده: `canDeletePurchase` (فرم فقط پیش‌فاکتور را باز می‌کند)، پنج صفحه‌ی خالیِ قابلِ‌دسترس با URL که فقط
+        نامِ کامپوننت را نشان می‌دادند (`/purchases/invoices`، `/purchases/invoices/:id`، `/sales/orders`،
+        `/sales/invoices/new`، `/sales/proforma-invoice`) با routeها و breadcrumbها.
+      - باگ: بعد از حذفِ پیش‌فاکتورِ خرید به `ROUTES.PURCHASES_LIST`ِ ناموجود می‌رفت (روی سندِ حذف‌شده می‌ماند)؛ ناوبری
+        به صفحه منتقل شد. پیام‌ها: «پیش‌فاکتور خرید ثبت/حذف شد» و «فاکتور خرید N ثبت شد» به‌جای «خرید با موفقیت …».
+      - ستون‌های `PurchaseTable` ثابتِ ماژول.
     - [ ] ۲.۴ فروش
     - [ ] ۲.۵ مرجوعی‌ها (خرید و فروش)
     - [ ] ۲.۶ متن پیام‌ها و دیالوگ‌ها

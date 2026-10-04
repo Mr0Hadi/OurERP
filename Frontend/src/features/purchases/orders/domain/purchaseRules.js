@@ -1,15 +1,4 @@
-import { PURCHASE_STATUSES } from "../services/constants";
-import { PURCHASE_STATUS_LABELS } from "@/shared/domain/enums/purchaseStatus";
-
-/**
- * حذف فقط برای پیش‌فاکتور است (`DeletePurchase`)؛ خریدِ صادرشده لغو
- * می‌شود، نه حذف. پیش‌فاکتوری که پیش‌پرداختِ باطل‌نشده دارد را سرور رد
- * می‌کند تا پرداخت‌ها اول ابطال شوند.
- */
-export function canDeletePurchase(purchase) {
-  if (!purchase) return false;
-  return purchase.status === PURCHASE_STATUSES.PROFORMA;
-}
+import { PURCHASE_STATUS_LABELS, PurchaseStatusEnum } from "@/shared/domain/enums/purchaseStatus";
 
 /**
  * لغو (`ChangePurchaseStatus` → `CANCELLED`) از پیش‌فاکتور، «در انتظار
@@ -18,7 +7,7 @@ export function canDeletePurchase(purchase) {
  */
 export function canCancelPurchase(purchase) {
   if (!purchase) return false;
-  if (!MANUAL_PURCHASE_STATUSES.includes(purchase.status)) return false;
+  if (!MANUAL_PurchaseStatusEnum.includes(purchase.status)) return false;
   return (purchase.items || []).every((item) => !(item.receivedQuantity > 0));
 }
 
@@ -29,14 +18,14 @@ export function canCancelPurchase(purchase) {
  */
 export function purchaseStatusTargets(purchase) {
   switch (purchase?.status) {
-    case PURCHASE_STATUSES.PROFORMA:
+    case PurchaseStatusEnum.PROFORMA:
       return purchase.invoiceNumber && purchase.invoiceDate
-        ? [PURCHASE_STATUSES.PENDING, PURCHASE_STATUSES.SHIPPED]
+        ? [PurchaseStatusEnum.PENDING, PurchaseStatusEnum.SHIPPED]
         : [];
-    case PURCHASE_STATUSES.PENDING:
-      return [PURCHASE_STATUSES.SHIPPED];
-    case PURCHASE_STATUSES.SHIPPED:
-      return [PURCHASE_STATUSES.PENDING];
+    case PurchaseStatusEnum.PENDING:
+      return [PurchaseStatusEnum.SHIPPED];
+    case PurchaseStatusEnum.SHIPPED:
+      return [PurchaseStatusEnum.PENDING];
     default:
       return [];
   }
@@ -58,7 +47,7 @@ export function stillOwedOf(item) {
  */
 export function canClosePurchaseItem(purchase, item) {
   if (!purchase || !item) return false;
-  if (purchase.status === PURCHASE_STATUSES.CANCELLED) return false;
+  if (purchase.status === PurchaseStatusEnum.CANCELLED) return false;
   const anythingArrived = (purchase.items || []).some(
     (line) => (Number(line.receivedQuantity) || 0) > 0,
   );
@@ -70,7 +59,7 @@ export function canClosePurchaseItem(purchase, item) {
 /** بازگشاییِ قلم (`ReopenPurchaseItem`) — فقط قلمِ بسته‌شده‌ی خریدِ لغونشده. */
 export function canReopenPurchaseItem(purchase, item) {
   if (!purchase || !item) return false;
-  if (purchase.status === PURCHASE_STATUSES.CANCELLED) return false;
+  if (purchase.status === PurchaseStatusEnum.CANCELLED) return false;
   return (Number(item.shortClosedQuantity) || 0) > 0;
 }
 
@@ -82,10 +71,10 @@ export function canReopenPurchaseItem(purchase, item) {
  * «تحویل ناقص/کامل» را فقط دریافتِ انبار تعیین می‌کند (سرور بعد از هر دورِ
  * دریافت از نو حسابش می‌کند) و «لغو» دکمه و دیالوگِ خودش را دارد.
  */
-export const MANUAL_PURCHASE_STATUSES = [
-  PURCHASE_STATUSES.PROFORMA,
-  PURCHASE_STATUSES.PENDING,
-  PURCHASE_STATUSES.SHIPPED,
+export const MANUAL_PurchaseStatusEnum = [
+  PurchaseStatusEnum.PROFORMA,
+  PurchaseStatusEnum.PENDING,
+  PurchaseStatusEnum.SHIPPED,
 ];
 
 /**
@@ -94,7 +83,7 @@ export const MANUAL_PURCHASE_STATUSES = [
  * شکلِ `errors`ِ `OrderInfoCard`؛ `null` یعنی ایرادی نیست.
  */
 export function missingInvoiceFields(formData, status) {
-  if (Number(status) === PURCHASE_STATUSES.PROFORMA) return null;
+  if (Number(status) === PurchaseStatusEnum.PROFORMA) return null;
   const errors = {};
   if (!String(formData.invoiceNumber || "").trim()) {
     errors.invoiceNumber = "برای صدورِ فاکتور، شماره‌ی فاکتورِ تامین‌کننده الزامی است";
@@ -105,16 +94,27 @@ export function missingInvoiceFields(formData, status) {
   return Object.keys(errors).length > 0 ? errors : null;
 }
 
+/**
+ * نخستین دلیلی که ثبتِ فرمِ خرید را ناممکن می‌کند: `[پیام، بخشِ فرم]` یا `null`
+ * (`reportFormProblem`).
+ */
+export function purchaseFormProblem({ formData, items, invoiceErrors }) {
+  if (!formData.supplierId) return ["تامین‌کننده را انتخاب کنید.", "party"];
+  if (items.length === 0) return ["دست‌کم یک کالا اضافه کنید.", "items"];
+  if (invoiceErrors) return ["برای فاکتور، شماره و تاریخِ فاکتور را وارد کنید.", "info"];
+  return null;
+}
+
 /** وضعیتِ ارسالِ خریدِ صادرشده — تنها دو وضعیتِ دستی پس از صدور (و لغو). */
 export const PURCHASE_SHIPPING_CHOICES = [
   {
-    value: PURCHASE_STATUSES.PENDING,
-    label: PURCHASE_STATUS_LABELS[PURCHASE_STATUSES.PENDING],
+    value: PurchaseStatusEnum.PENDING,
+    label: PURCHASE_STATUS_LABELS[PurchaseStatusEnum.PENDING],
     hint: "تامین‌کننده هنوز کالا را نفرستاده است.",
   },
   {
-    value: PURCHASE_STATUSES.SHIPPED,
-    label: PURCHASE_STATUS_LABELS[PURCHASE_STATUSES.SHIPPED],
+    value: PurchaseStatusEnum.SHIPPED,
+    label: PURCHASE_STATUS_LABELS[PurchaseStatusEnum.SHIPPED],
     hint: "کالا در راه است. «تحویل ناقص/کامل» را دریافتِ انبار تعیین می‌کند.",
   },
 ];

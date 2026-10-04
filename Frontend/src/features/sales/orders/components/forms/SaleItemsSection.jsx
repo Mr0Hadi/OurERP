@@ -1,8 +1,5 @@
-import { PackagePlus } from "lucide-react";
-
 import { Button } from "@/shared/components/ui/button";
-import SectionCard from "@/shared/components/forms/SectionCard";
-import ProductPicker from "@/shared/components/products/ProductPicker";
+import DocumentItemsSection from "@/shared/components/products/DocumentItemsSection";
 
 /** دو قیمتِ فروشِ هر کالا. */
 const SALE_PRICE_MODES = {
@@ -45,49 +42,34 @@ export default function SaleItemsSection({
   };
 
   return (
-    <SectionCard
+    <DocumentItemsSection
       title="اقلام فروش"
-      action={
-        <>
-          {onPriceModeChange && (
-            <div
-              role="group"
-              aria-label="قیمت پیش‌فرض"
-              className="inline-flex rounded-md border border-border p-0.5"
-            >
-              {Object.entries(SALE_PRICE_MODES).map(([key, { label }]) => (
-                <Button
-                  key={key}
-                  type="button"
-                  size="sm"
-                  variant={priceMode === key ? "default" : "ghost"}
-                  className="h-7 px-2.5 text-xs"
-                  aria-pressed={priceMode === key}
-                  onClick={() => switchMode(key)}
-                >
-                  قیمت {label}
-                </Button>
-              ))}
-            </div>
-          )}
-          {onAddNewProduct && (
-            <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={onAddNewProduct}>
-              <PackagePlus className="size-3.5" />
-              کالای جدید
-            </Button>
-          )}
-        </>
+      items={items}
+      onItemsChange={onItemsChange}
+      products={products}
+      isLoadingProducts={isLoadingProducts}
+      priceOf={mode.priceOf}
+      trackUnits
+      onAddNewProduct={onAddNewProduct}
+      actions={
+        onPriceModeChange && (
+          <div role="group" aria-label="قیمت پیش‌فرض" className="inline-flex rounded-md border border-border p-0.5">
+            {Object.entries(SALE_PRICE_MODES).map(([key, { label }]) => (
+              <Button
+                key={key}
+                type="button"
+                size="sm"
+                variant={priceMode === key ? "default" : "ghost"}
+                className="h-7 px-2.5 text-xs"
+                aria-pressed={priceMode === key}
+                onClick={() => switchMode(key)}
+              >
+                قیمت {label}
+              </Button>
+            ))}
+          </div>
+        )
       }
-    >
-      <ProductPicker
-        items={items}
-        onItemsChange={onItemsChange}
-        products={products}
-        isLoading={isLoadingProducts}
-        priceOf={mode.priceOf}
-        trackUnits
-        showTaxHint
-      />
-    </SectionCard>
+    />
   );
 }

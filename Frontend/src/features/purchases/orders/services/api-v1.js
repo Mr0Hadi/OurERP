@@ -20,14 +20,6 @@ export const PURCHASE_SORT_COLUMNS = {
   paidAmount: 8,
 };
 
-export {
-  PURCHASE_STATUSES,
-  PURCHASE_STATUS_LABELS,
-  isPurchaseProforma,
-  PAYMENT_TYPES,
-  PAYMENT_TYPE_LABELS,
-} from "./constants";
-
 /**
  * نسخه‌ی هماهنگ‌شده با بکندِ واقعی — کنترلر `api/Purchase`
  * (`Backend-Net/docs/api-guide.fa.md`، بخش ۹). بکند از الگوی

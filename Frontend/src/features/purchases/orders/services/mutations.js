@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import {
   createPurchase,
@@ -18,7 +17,7 @@ import {
 import { purchaseKeys } from "./queryKeys";
 import { invalidatePurchaseEcosystem } from "./sharedInvalidation";
 import { idempotencyKeyFor } from "@/shared/services/api/contract";
-import { ROUTES } from "@/shared/constants/routes";
+import { isPurchaseProforma } from "@/shared/domain/enums/purchaseStatus";
 import { supplierKeys } from "@/features/suppliers/services/queryKeys";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
 import { runDocumentChanges } from "@/shared/services/documentChanges";
@@ -46,7 +45,14 @@ export const useCreatePurchaseMutation = () => {
     mutationFn: (payload) =>
       createPurchase(payload, { idempotencyKey: idempotencyKeyFor(payload) }),
     onSuccess: (created) => {
-      toast.success("خرید با موفقیت ثبت شد");
+      const number = created?.invoiceNumber;
+      toast.success(
+        isPurchaseProforma(created?.status)
+          ? "پیش‌فاکتور خرید ثبت شد"
+          : number
+            ? `فاکتور خرید ${number} ثبت شد`
+            : "فاکتور خرید ثبت شد",
+      );
       applyPurchase(queryClient, created);
     },
     onError: (error) => {
@@ -69,9 +75,9 @@ export const useChangePurchaseStatusMutation = (id) => {
   });
 };
 
+/** فقط پیش‌فاکتور؛ رفتن به فهرست با خودِ صفحه است. */
 export const useRemovePurchaseMutation = () => {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
 
   return useMutation({
     mutationFn: removePurchase,
@@ -81,11 +87,10 @@ export const useRemovePurchaseMutation = () => {
       // مرجوع‌کردن» هم بیرون برود.
       invalidatePurchaseEcosystem(queryClient);
       queryClient.invalidateQueries({ queryKey: supplierKeys.all });
-      toast.success("خرید با موفقیت حذف شد");
-      navigate(ROUTES.PURCHASES_LIST);
+      toast.success("پیش‌فاکتور خرید حذف شد");
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, "خطا در حذف خرید"));
+      toast.error(getErrorMessage(error, "حذف پیش‌فاکتور خرید انجام نشد"));
     },
   });
 };
