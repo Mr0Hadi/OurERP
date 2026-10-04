@@ -1,45 +1,47 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useGoBack } from "@/shared/hooks/useGoBack";
-import { Save, X, AlertCircle } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
+import { useGoBack } from "@/shared/hooks/useGoBack";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
+import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
+import { ROUTES } from "@/shared/constants/routes";
+import { SALE_STATUS_LABELS } from "@/shared/domain/enums/saleStatus";
+import { OFF_SCOPE_KIND_STYLES } from "@/shared/domain/returns/scopes";
+import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
+import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
+import ReturnItemsSection from "@/shared/components/returns/ReturnItemsSection";
+import ReturnInfoSection from "@/shared/components/returns/ReturnInfoSection";
+import ReturnPageSkeleton from "@/shared/components/returns/ReturnPageSkeleton";
+import ReturnSourceError from "@/shared/components/returns/ReturnSourceError";
+import ReturnSourcePicker from "@/shared/components/returns/ReturnSourcePicker";
+import ReturnSubmitBar from "@/shared/components/returns/ReturnSubmitBar";
+import { PreviousReturnBadge } from "@/shared/components/returns/ReturnChain";
+
 import { useSalesReturnFormStore } from "../store/salesReturnFormStore";
 import { useSalesReturnForm } from "../hooks/useSalesReturnForm";
 import {
   useRelatedSalesReturnsQuery,
+  useReturnableSalesQuery,
   useSaleForReturnQuery,
 } from "../services/queries";
 import { useCreateSalesReturnMutation } from "../services/mutations";
-
-import SalesReturnSaleSection from "../components/forms/SalesReturnSaleSection";
-import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
-import { PreviousReturnBadge } from "@/shared/components/returns/ReturnChain";
-import ReturnItemsSection from "@/shared/components/returns/ReturnItemsSection";
-import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
 import {
   SALES_ON_ORDER_PROBLEM_LABELS,
   SALES_OFF_ORDER_PROBLEM_LABELS,
   OFF_SCOPE_KIND_LABELS,
 } from "../domain/salesReturnVocabulary";
-import { OFF_SCOPE_KIND_STYLES } from "@/shared/domain/returns/scopes";
-import SalesReturnInfoSection from "../components/forms/SalesReturnInfoSection";
-import SalesReturnDetailLoading from "../components/forms/SalesReturnDetailLoading";
-import { ROUTES } from "@/shared/constants/routes";
-import { getErrorMessage } from "@/shared/lib/errorMessage";
-import { formatRial } from "@/shared/lib/numberFormat";
+
+const SALES_SIDE = sideConfig(RETURN_SIDES.SALES);
 
 /**
- * ثبت درخواست مرجوعی — دو مرحله‌ی عمودی روی یک صفحه.
+ * ثبتِ مرجوعی از فروش — مراحلِ عمودی روی یک صفحه.
  *
- * بالا: خودِ فاکتور فروش، همان‌طور که مشتری در دست دارد.
- * پایین: مشکل‌هایی که واحد فروش از او می‌شنود.
+ * بالا: خودِ فاکتورِ فروش، همان‌طور که مشتری در دست دارد (بسته).
+ * پایین: مشکل‌هایی که واحدِ فروش از مشتری می‌شنود، کنارِ هر کالا.
  *
- * ترتیب عمدی است: کاربر اول باید ببیند چه چیزی فروخته و تحویل شده،
- * بعد بگوید کدام بخشش مشکل دارد. چیدمان قبلی این دو را کنار هم در دو
- * ستون می‌گذاشت و فاکتور به یک کارت خلاصه در سایدبار تقلیل پیدا
- * می‌کرد.
+ * ترتیب عمدی است: کاربر اول می‌بیند چه فروخته و تحویل شده، بعد می‌گوید
+ * کدام بخشش مشکل دارد.
  */
 export default function SalesReturnNewPage() {
   const navigate = useNavigate();
@@ -52,28 +54,9 @@ export default function SalesReturnNewPage() {
   const [showErrors, setShowErrors] = useState(false);
 
   const { formData, resetForm, initializeForSale } = useSalesReturnFormStore();
-  const {
-    setFormData,
-    lines,
-    orderLines,
-    offScopeClaims,
-    allClaims,
-    handleAddClaim,
-    handleUpdateClaim,
-    handleRemoveClaim,
-    handleAddOffScopeClaim,
-    handleUpdateOffScopeClaim,
-    handleRemoveOffScopeClaim,
-    computedTotal,
-    buildPayload,
-  } = useSalesReturnForm();
+  const form = useSalesReturnForm();
 
-  const {
-    data: saleForReturn,
-    isLoading,
-    isError,
-    error,
-  } = useSaleForReturnQuery(selectedSaleId);
+  const { data: saleForReturn, isLoading, isError, error } = useSaleForReturnQuery(selectedSaleId);
   // ادعاهای مرجوعی‌های قبلیِ همین فروش، کنارِ هر کالا.
   const claimsElsewhere = useClaimsInOtherReturns("sale", selectedSaleId);
 
@@ -83,9 +66,7 @@ export default function SalesReturnNewPage() {
     selectedSaleId != null && selectedSaleId === Number(searchParams.get("saleId"))
       ? Number(searchParams.get("previousReturnId")) || null
       : null;
-  const { data: relatedReturns } = useRelatedSalesReturnsQuery(
-    previousReturnId ? selectedSaleId : null,
-  );
+  const { data: relatedReturns } = useRelatedSalesReturnsQuery(previousReturnId ? selectedSaleId : null);
   const previousReturn = relatedReturns?.find((ret) => ret.id === previousReturnId);
 
   useEffect(() => {
@@ -100,7 +81,7 @@ export default function SalesReturnNewPage() {
 
   // «بازگشت» پیش‌نویسِ فرم را هم پاک می‌کند.
   usePageHeader({
-    title: "ثبت درخواست مرجوعی",
+    title: "ثبت مرجوعی از فروش",
     showBack: true,
     onBack: () => {
       resetForm();
@@ -109,17 +90,12 @@ export default function SalesReturnNewPage() {
   });
 
   const createMutation = useCreateSalesReturnMutation();
-  const isBusy = createMutation.isPending;
-  const hasClaims = allClaims.length > 0;
+  const hasClaims = form.allClaims.length > 0;
 
-  const handleSelectSale = (saleId) => {
+  const changeSale = (saleId) => {
     resetForm();
+    setShowErrors(false);
     setSelectedSaleId(saleId);
-  };
-
-  const handleClearSale = () => {
-    resetForm();
-    setSelectedSaleId(null);
   };
 
   const onSubmit = (e) => {
@@ -128,7 +104,7 @@ export default function SalesReturnNewPage() {
       setShowErrors(true);
       return;
     }
-    createMutation.mutate(buildPayload());
+    createMutation.mutate(form.buildPayload());
   };
 
   const handleCancel = () => {
@@ -142,26 +118,30 @@ export default function SalesReturnNewPage() {
     <div className="container max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in zoom-in-95 duration-300">
       <form onSubmit={onSubmit} className="space-y-4">
         {!selectedSaleId && (
-          <SalesReturnSaleSection selectedSale={null} onSelect={handleSelectSale} />
+          <ReturnSourcePicker
+            title="انتخاب فاکتور فروش"
+            hint="فقط فروش‌هایی که چیزی از آن‌ها به مشتری ارسال شده، مرجوعی می‌پذیرند."
+            useReturnableQuery={useReturnableSalesQuery}
+            partyKey="customerName"
+            statusLabels={SALE_STATUS_LABELS}
+            emptyText="فروشِ ارسال‌شده‌ای برای ثبتِ مرجوعی نیست"
+            onSelect={changeSale}
+          />
         )}
 
-        {selectedSaleId && isLoading && <SalesReturnDetailLoading />}
+        {selectedSaleId && isLoading && <ReturnPageSkeleton />}
 
         {selectedSaleId && isError && (
-          <div className="flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-border rounded-lg">
-            <AlertCircle className="h-10 w-10 text-destructive" />
-            <p className="text-sm text-muted-foreground">
-              {getErrorMessage(error, "این فروش قابل مرجوع‌کردن نیست")}
-            </p>
-            <Button type="button" variant="outline" onClick={handleClearSale}>
-              انتخاب فروش دیگر
-            </Button>
-          </div>
+          <ReturnSourceError
+            error={error}
+            fallback="اطلاعاتِ این فروش خوانده نشد"
+            retryLabel="انتخاب فاکتور دیگر"
+            onReset={() => changeSale(null)}
+          />
         )}
 
         {isReady && (
           <>
-            {/* ── بالا: جزئیات فروش ────────────────────────────────── */}
             <PreviousReturnBadge
               id={formData.previousReturnId}
               number={previousReturn?.returnNumber}
@@ -182,71 +162,51 @@ export default function SalesReturnNewPage() {
                 variant="ghost"
                 size="sm"
                 className="text-xs text-muted-foreground"
-                onClick={handleClearSale}
+                onClick={() => changeSale(null)}
               >
                 انتخاب فاکتور دیگر
               </Button>
             </div>
 
-            {/* ── پایین: ثبت مشکلات ────────────────────────────────── */}
             <ReturnItemsSection
-              lines={lines}
-              offScopeClaims={offScopeClaims}
-              orderLines={orderLines}
+              lines={form.lines}
+              offScopeClaims={form.offScopeClaims}
+              orderLines={form.orderLines}
               claimsElsewhere={claimsElsewhere}
-              onAddClaim={handleAddClaim}
-              onUpdateClaim={handleUpdateClaim}
-              onRemoveClaim={handleRemoveClaim}
-              onAddOffScope={handleAddOffScopeClaim}
-              onUpdateOffScope={handleUpdateOffScopeClaim}
-              onRemoveOffScope={handleRemoveOffScopeClaim}
+              onAddClaim={form.handleAddClaim}
+              onUpdateClaim={form.handleUpdateClaim}
+              onRemoveClaim={form.handleRemoveClaim}
+              onAddOffScope={form.handleAddOffScopeClaim}
+              onUpdateOffScope={form.handleUpdateOffScopeClaim}
+              onRemoveOffScope={form.handleRemoveOffScopeClaim}
               problemLabels={SALES_ON_ORDER_PROBLEM_LABELS}
               offScopeProblemLabels={SALES_OFF_ORDER_PROBLEM_LABELS}
               kindLabels={OFF_SCOPE_KIND_LABELS}
               kindStyles={OFF_SCOPE_KIND_STYLES}
-              description="برای هر کالا می‌توانید چند مشکل جدا با تعداد جداگانه ثبت کنید. سقف هر کالا همان مقداری است که به مشتری تحویل شده؛ اگر بیشتر از فاکتور ارسال شده، «مازاد» را روی همان کالا ثبت کنید (با قیمت همان خط)."
-              emptyText="این فاکتور قلمی برای ادعا ندارد"
-              unlistedHint="کالایی که اصلاً در فاکتور نیست؛ قیمتش دستی وارد می‌شود."
+              priceOf={SALES_SIDE.priceOf}
+              description="برای هر کالا می‌توانید چند مشکل جدا با تعدادِ جداگانه ثبت کنید. سقفِ هر کالا مقدارِ ارسال‌شده‌ای است که هنوز در مرجوعیِ دیگری ادعا نشده. اگر بیشتر از فاکتور ارسال شده، «مازاد» را روی همان کالا ثبت کنید (با قیمتِ همان قلم)."
+              emptyText="همه‌ی اقلامِ این فاکتور یا ارسال نشده‌اند یا قبلاً کامل در مرجوعی ادعا شده‌اند"
+              unlistedHint="کالایی که اصلاً در فاکتور نیست ولی مشتری برگردانده؛ قیمتش دستی وارد می‌شود."
             />
 
-            <SalesReturnInfoSection
+            <ReturnInfoSection
               formData={formData}
-              onFormChange={setFormData}
+              onFormChange={form.setFormData}
+              counterparty={SALES_SIDE.counterparty}
             />
 
             {showErrors && !hasClaims && (
               <p className="text-xs text-destructive px-1">
-                حداقل یک مشکل با تعداد بیشتر از صفر باید ثبت شود
+                دست‌کم یک مشکل با تعدادِ بیشتر از صفر ثبت کنید
               </p>
             )}
 
-            {/* چسبان: جمع و دکمه‌ی ثبت با اسکرولِ ادعاها از دید نمی‌روند. */}
-            <div className="sticky bottom-0 z-20 -mx-4 sm:mx-0 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 border-t sm:border border-border sm:rounded-lg bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-3">
-              <div className="text-sm">
-                <span className="text-muted-foreground">
-                  جمع مبلغ ادعای مرجوعی:{" "}
-                </span>
-                <span className="font-bold text-card-foreground">
-                  {formatRial(computedTotal)}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <Button type="submit" className="gap-2" disabled={isBusy}>
-                  <Save className="h-4 w-4" />
-                  {isBusy ? "در حال ثبت..." : "ثبت درخواست مرجوعی"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="gap-2"
-                  onClick={handleCancel}
-                  disabled={isBusy}
-                >
-                  <X className="h-4 w-4" />
-                  انصراف
-                </Button>
-              </div>
-            </div>
+            <ReturnSubmitBar
+              total={form.computedTotal}
+              submitLabel="ثبت مرجوعی"
+              isBusy={createMutation.isPending}
+              onCancel={handleCancel}
+            />
           </>
         )}
       </form>

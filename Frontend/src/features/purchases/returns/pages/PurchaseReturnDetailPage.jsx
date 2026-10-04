@@ -6,49 +6,74 @@ import {
   useRelatedPurchaseReturnsQuery,
 } from "../services/queries";
 import {
-  useAddClaimResolutionMutation,
-  useRemoveClaimResolutionMutation,
-  useRejectPurchaseReturnMutation,
-  useCancelPurchaseReturnMutation,
-  useReopenPurchaseReturnMutation,
-  useRemovePurchaseReturnMutation,
-  useExecuteMoneyEffectMutation,
+  usePurchaseReturnActions,
   useUpdatePurchaseReturnAttachmentsMutation,
 } from "../services/mutations";
-import { usePermission } from "@/features/auth/hooks/usePermission";
-import ReturnDocumentSection from "@/shared/components/returns/ReturnDocumentSection";
-
-import PurchaseReturnDetailLoading from "../components/forms/PurchaseReturnDetailLoading";
-import ReturnStatusBar from "@/shared/components/returns/ReturnStatusBar";
-import DeleteReturnAction from "@/shared/components/returns/DeleteReturnAction";
 import {
-  FollowUpReturnAction,
-  PreviousReturnBadge,
-} from "@/shared/components/returns/ReturnChain";
+  OFF_SCOPE_KIND_LABELS,
+  PURCHASE_RETURN_PROBLEM_LABELS,
+  PURCHASE_RETURN_PROBLEM_STYLES,
+} from "../domain/purchaseReturnVocabulary";
+import { usePermission } from "@/features/auth/hooks/usePermission";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
+import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { RETURN_STATUSES } from "@/shared/domain/returns/statuses";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
-import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
-import RelatedReturnsCard from "@/shared/components/returns/RelatedReturnsCard";
-import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
-import PurchaseReturnResolutionSection from "../components/forms/PurchaseReturnResolutionSection";
-import { ROUTES } from "@/shared/constants/routes";
-import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
-import ReceivingReportCard, {
-  ReceivingReportLines,
-} from "@/shared/components/returns/ReceivingReport";
+import {
+  hasPendingGoodsIn,
+  hasPendingGoodsOut,
+  hasPendingQuarantineExit,
+} from "@/shared/domain/returns/resolutions";
 import {
   claimQuarantinedQuantity,
   claimReceivingReport,
 } from "@/shared/domain/returns/receivingReport";
-import { usePageHeader } from "@/shared/hooks/usePageHeader";
+import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
+import ReturnPageSkeleton from "@/shared/components/returns/ReturnPageSkeleton";
+import ReturnStatusBar from "@/shared/components/returns/ReturnStatusBar";
+import ReturnResolutionSection from "@/shared/components/returns/ReturnResolutionSection";
+import ReturnDocumentSection from "@/shared/components/returns/ReturnDocumentSection";
+import DeleteReturnAction from "@/shared/components/returns/DeleteReturnAction";
+import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
+import RelatedReturnsCard from "@/shared/components/returns/RelatedReturnsCard";
+import ReceivingReportCard, { ReceivingReportLines } from "@/shared/components/returns/ReceivingReport";
+import { FollowUpReturnAction, PreviousReturnBadge } from "@/shared/components/returns/ReturnChain";
+
+const PURCHASE_SIDE = sideConfig(RETURN_SIDES.PURCHASE);
+
+const VOCABULARY = {
+  problemLabels: PURCHASE_RETURN_PROBLEM_LABELS,
+  problemStyles: PURCHASE_RETURN_PROBLEM_STYLES,
+  offScopeLabels: OFF_SCOPE_KIND_LABELS,
+  // «رد» در مرجوعیِ خرید یعنی تامین‌کننده ادعا را نپذیرفت؛ ما فقط ثبتش می‌کنیم.
+  rejectLabel: "ثبتِ ردِ تامین‌کننده",
+};
+
+/** کارِ انبارِ مانده روی این مرجوعی: دریافتِ جایگزین، و عودت/آزادسازی/اسقاط. */
+function warehouseLinksOf(purchaseReturn) {
+  const links = [];
+  if (hasPendingGoodsIn(purchaseReturn)) {
+    // فقط جایگزینِ همین مرجوعی (`?returnId=`)؛ بی آن فرمِ کاملِ دریافتِ خرید باز
+    // می‌شد و باقیمانده‌ی سفارش هم «رسیده» پیش‌پر بود.
+    links.push({
+      to: `${routeWithId(ROUTES.WAREHOUSE_RECEIVING_DETAIL, purchaseReturn.purchaseId)}?returnId=${purchaseReturn.id}`,
+      label: "دریافتِ کالای جایگزین",
+    });
+  }
+  // عودت و خروج از قرنطینه هر دو در صفحه‌ی انبارِ همین مرجوعی اجرا می‌شوند.
+  if (hasPendingGoodsOut(purchaseReturn) || hasPendingQuarantineExit(purchaseReturn)) {
+    links.push({
+      to: routeWithId(ROUTES.WAREHOUSE_SHIPPING_RETURN_DETAIL, purchaseReturn.id),
+      label: "عودت / تعیین تکلیفِ قرنطینه",
+    });
+  }
+  return links;
+}
 
 /**
- * جزئیات یک مرجوعی — یک ستون، به ترتیبِ کاری که کاربر انجام می‌دهد:
- * خلاصه‌ی وضعیت، فاکتورِ مرجع (بسته)، و بعد ادعاها و تصمیم‌ها.
- *
- * چیدمان قبلی دو ستونه بود و روی موبایل سایدبار به ته صفحه می‌افتاد،
- * پس خلاصه‌ی مالی عملاً دیده نمی‌شد. حالا آن اطلاعات در نوار بالا و
- * کنارِ وضعیت است و ستون دوم اصلاً لازم نیست.
+ * جزئیاتِ مرجوعی به تامین‌کننده — یک ستون، به ترتیبِ کار: خلاصه‌ی وضعیت،
+ * فاکتورِ مرجع (بسته)، گزارشِ انبار از دریافت، و بعد ادعاها و تصمیم‌ها.
  */
 function PurchaseReturnDetailContent({ purchaseReturn }) {
   const { data: purchase } = usePurchaseForReturnQuery(purchaseReturn.purchaseId);
@@ -56,43 +81,16 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
     purchaseReturn.purchaseId,
     purchaseReturn.id,
   );
+  // روی هر کالا، چقدر در مرجوعی‌های دیگرِ همین خرید ثبت شده.
+  const claimsElsewhere = useClaimsInOtherReturns("purchase", purchaseReturn.purchaseId, purchaseReturn.id);
 
-  // روی هر کالا، چقدر در مرجوعی‌های دیگرِ همین سند ثبت شده.
-  const claimsElsewhere = useClaimsInOtherReturns(
-    "purchase",
-    purchaseReturn.purchaseId,
-    purchaseReturn.id,
-  );
-
-  const addResolutionMutation = useAddClaimResolutionMutation(
-    purchaseReturn.id,
-  );
-  const removeResolutionMutation = useRemoveClaimResolutionMutation(
-    purchaseReturn.id,
-  );
-  const rejectMutation = useRejectPurchaseReturnMutation(purchaseReturn.id);
-  const cancelMutation = useCancelPurchaseReturnMutation(purchaseReturn.id);
-  const reopenMutation = useReopenPurchaseReturnMutation(purchaseReturn.id);
-  const removeMutation = useRemovePurchaseReturnMutation();
-  const executeMoneyMutation = useExecuteMoneyEffectMutation();
+  const actions = usePurchaseReturnActions(purchaseReturn.id);
   const attachmentsMutation = useUpdatePurchaseReturnAttachmentsMutation(purchaseReturn.id);
   const { can, isError: permissionsUnknown } = usePermission();
 
-  const isBusy =
-    executeMoneyMutation.isPending ||
-    addResolutionMutation.isPending ||
-    removeResolutionMutation.isPending ||
-    rejectMutation.isPending ||
-    cancelMutation.isPending ||
-    reopenMutation.isPending ||
-    removeMutation.isPending;
-
   return (
     <div className="container max-w-3xl mx-auto px-4 space-y-3 animate-in fade-in zoom-in-95 duration-300">
-      <ReturnStatusBar
-        returnDoc={purchaseReturn}
-        side={sideConfig(RETURN_SIDES.PURCHASE)}
-      />
+      <ReturnStatusBar returnDoc={purchaseReturn} side={PURCHASE_SIDE} />
 
       <PreviousReturnBadge
         id={purchaseReturn.previousReturnId}
@@ -111,9 +109,9 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
 
       <RelatedReturnsCard
         returns={relatedReturns}
-        side={sideConfig(RETURN_SIDES.PURCHASE)}
+        side={PURCHASE_SIDE}
         detailRoute={ROUTES.PURCHASES_RETURNS_DETAIL}
-        title="مرجوعی‌های دیگر همین خرید"
+        title="مرجوعی‌های دیگرِ همین خرید"
       />
 
       {purchaseReturn.description && (
@@ -124,25 +122,14 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
 
       <ReceivingReportCard receivingInfo={purchase} />
 
-      <PurchaseReturnResolutionSection
-        purchaseReturn={purchaseReturn}
-        renderClaimReport={(claim) => (
-          <ReceivingReportLines {...claimReceivingReport(purchase, claim)} />
-        )}
+      <ReturnResolutionSection
+        returnDoc={purchaseReturn}
+        side={PURCHASE_SIDE}
+        actions={actions}
+        vocabulary={VOCABULARY}
+        warehouseLinks={warehouseLinksOf(purchaseReturn)}
+        renderClaimReport={(claim) => <ReceivingReportLines {...claimReceivingReport(purchase, claim)} />}
         quarantineOf={(claim) => claimQuarantinedQuantity(purchase, claim)}
-        isBusy={isBusy}
-        onAddResolution={(claim, composition) =>
-          addResolutionMutation.mutate({ claim, composition })
-        }
-        onRemoveResolution={(claimId, resolutionId) =>
-          removeResolutionMutation.mutate({ claimId, resolutionId })
-        }
-        onExecuteMoney={(effect) =>
-          executeMoneyMutation.mutate({ effectId: effect.id })
-        }
-        onReject={(reason, options) => rejectMutation.mutate(reason, options)}
-        onCancel={(reason, options) => cancelMutation.mutate(reason, options)}
-        onReopen={() => reopenMutation.mutate()}
       />
 
       {/* سند و پیوست بعد از کارِ اصلیِ صفحه (ادعاها و تصمیم‌ها) می‌آید. */}
@@ -168,9 +155,9 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
       {purchaseReturn.canDelete && (
         <DeleteReturnAction
           returnNumber={purchaseReturn.returnNumber}
-          onDelete={() => removeMutation.mutate(purchaseReturn.id)}
-          isPending={removeMutation.isPending}
-          disabled={isBusy}
+          onDelete={actions.onDelete}
+          isPending={actions.isDeleting}
+          disabled={actions.isBusy}
         />
       )}
     </div>
@@ -180,7 +167,6 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
 export default function PurchaseReturnDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-
   const {
     data: purchaseReturn,
     isLoading,
@@ -190,15 +176,11 @@ export default function PurchaseReturnDetailPage() {
   } = usePurchaseReturnQuery(Number(id));
 
   usePageHeader({
-    title: isLoading
-      ? "در حال بارگذاری..."
-      : purchaseReturn
-        ? "جزئیات مرجوعی"
-        : "خطا",
+    title: isLoading ? "در حال بارگذاری..." : purchaseReturn ? "جزئیات مرجوعی خرید" : "خطا",
     showBack: true,
   });
 
-  if (isLoading) return <PurchaseReturnDetailLoading />;
+  if (isLoading) return <ReturnPageSkeleton />;
 
   if (isError || !purchaseReturn) {
     return (
@@ -211,7 +193,5 @@ export default function PurchaseReturnDetailPage() {
     );
   }
 
-  return (
-    <PurchaseReturnDetailContent key={purchaseReturn.id} purchaseReturn={purchaseReturn} />
-  );
+  return <PurchaseReturnDetailContent key={purchaseReturn.id} purchaseReturn={purchaseReturn} />;
 }

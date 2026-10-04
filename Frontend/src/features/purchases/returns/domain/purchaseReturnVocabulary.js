@@ -1,4 +1,3 @@
-import { RETURN_SIDES, SIDE_CONFIG } from "@/shared/domain/returns/sides";
 import {
   PURCHASE_CLAIM_PROBLEMS,
   PURCHASE_ON_ORDER_CLAIM_PROBLEMS,
@@ -63,11 +62,6 @@ export const OFF_SCOPE_KIND_LABELS = {
   [OFF_SCOPE_KINDS.UNLISTED]: "کالای خارج از سفارش",
 };
 
-// ─── وضعیت ──────────────────────────────────────────────────────────────────
-
-/** خودِ وضعیت‌ها مشترک‌اند (`shared/domain/returns/statuses.js`)؛ فقط برچسبشان سمت‌به‌سمت فرق می‌کند. */
-export const PURCHASE_RETURN_STATUS_LABELS =
-  SIDE_CONFIG[RETURN_SIDES.PURCHASE].statusLabels;
 
 // ─── واجد شرایط بودنِ یک خرید برای ادعا ─────────────────────────────────────
 

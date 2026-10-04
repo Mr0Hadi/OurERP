@@ -1,22 +1,17 @@
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/shared/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
 import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
 
 /**
- * تاریخ و توضیحات مرجوعی.
+ * تاریخ و توضیحاتِ مرجوعی در صفحه‌ی ثبت — مشترکِ خرید و فروش.
  *
- * برخلاف مرجوعی خرید، اینجا «دلیل اصلی سند» وجود ندارد. دلیل روی خودِ
- * ادعا می‌نشیند، چون یک مرجوعی می‌تواند چند ادعا با مشکل‌ها و مقصرهای
- * کاملاً متفاوت داشته باشد و یک دلیلِ سراسری برای سند، یا تکراری است
- * یا دروغ.
+ * «دلیلِ اصلیِ سند» عمداً نیست: دلیل روی خودِ ادعاست، چون یک مرجوعی
+ * می‌تواند چند ادعا با مشکل‌ها و مقصرهای متفاوت داشته باشد.
+ *
+ * @param counterparty «تامین‌کننده» یا «مشتری» (`side.counterparty`)
  */
-export default function SalesReturnInfoSection({ formData, onFormChange }) {
+export default function ReturnInfoSection({ formData, onFormChange, counterparty }) {
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -34,13 +29,14 @@ export default function SalesReturnInfoSection({ formData, onFormChange }) {
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground">
+          <Label htmlFor="return-description" className="text-xs text-muted-foreground">
             توضیحات (اختیاری)
           </Label>
           <Textarea
+            id="return-description"
             value={formData.description || ""}
             onChange={(e) => onFormChange({ description: e.target.value })}
-            placeholder="خلاصه‌ی گفت‌وگو با مشتری، توافق‌ها، یا هر چیزی که بعداً لازم می‌شود..."
+            placeholder={`خلاصه‌ی گفت‌وگو با ${counterparty}، توافق‌ها، یا هر چیزی که بعداً لازم می‌شود...`}
             rows={3}
             className="text-sm"
           />

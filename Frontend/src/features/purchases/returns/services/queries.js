@@ -1,5 +1,3 @@
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { useMemo } from "react";
 import {
   PURCHASE_RETURN_SORT_COLUMNS,
   fetchPurchaseReturns,
@@ -8,69 +6,33 @@ import {
   fetchPurchaseForReturn,
 } from "./api-v1";
 import { purchaseReturnKeys } from "./queryKeys";
-import { listQuery } from "@/shared/services/api/contract";
-import { useDebouncedFilters } from "@/shared/hooks/useDebouncedFilters";
 import { usePurchaseReturnFilterStore } from "../store/purchaseReturnFilterStore";
+import { createReturnQueries } from "@/shared/services/returns/createReturnQueries";
 
-/** فیلترهای فعلیِ لیستِ مرجوعی؛ جست‌وجوی متنی با تأخیر. */
-export function usePurchaseReturnListFilters() {
-  return useDebouncedFilters(usePurchaseReturnFilterStore, {
-    text: ["search"],
-    instant: ["supplierId", "status", "problem", "fromDate", "toDate"],
-  });
-}
+/** کوئری‌های مرجوعیِ خرید (`createReturnQueries`). */
+const queries = createReturnQueries({
+  api: {
+    list: fetchPurchaseReturns,
+    detail: fetchPurchaseReturnById,
+    returnable: fetchReturnablePurchases,
+    // `GetPurchaseReceivingInfo`: اقلام با رسیده/قرنطینه/سقفِ ادعا، و گزارشِ دریافت.
+    source: fetchPurchaseForReturn,
+  },
+  keys: {
+    list: purchaseReturnKeys.list,
+    detail: purchaseReturnKeys.detail,
+    returnable: purchaseReturnKeys.returnablePurchasesSearch,
+    source: purchaseReturnKeys.purchaseForReturn,
+  },
+  filterStore: usePurchaseReturnFilterStore,
+  partyFilter: "supplierId",
+  sortColumns: PURCHASE_RETURN_SORT_COLUMNS,
+  documentParam: "purchaseId",
+});
 
-export function usePurchaseReturnsQuery(filters, pagination, sorting) {
-  const params = listQuery({ filters, pagination, sorting, sortColumns: PURCHASE_RETURN_SORT_COLUMNS });
-  return useQuery({
-    queryKey: purchaseReturnKeys.list(params),
-    queryFn: () => fetchPurchaseReturns(params),
-    placeholderData: keepPreviousData,
-    gcTime: 1000 * 60 * 10,
-    refetchOnMount: "always",
-  });
-}
-
-export function usePurchaseReturnQuery(id) {
-  return useQuery({
-    queryKey: purchaseReturnKeys.detail(id),
-    queryFn: () => fetchPurchaseReturnById(id),
-    enabled: !!id,
-    refetchOnMount: "always",
-  });
-}
-
-// برای پیکر انتخاب خرید هنگام ثبت مرجوعی جدید
-export function useReturnablePurchasesQuery(search) {
-  return useQuery({
-    queryKey: purchaseReturnKeys.returnablePurchasesSearch(search || ""),
-    queryFn: () => fetchReturnablePurchases(search),
-  });
-}
-
-export function usePurchaseForReturnQuery(purchaseId) {
-  return useQuery({
-    queryKey: purchaseReturnKeys.purchaseForReturn(purchaseId),
-    queryFn: () => fetchPurchaseForReturn(purchaseId),
-    enabled: !!purchaseId,
-    refetchOnMount: "always",
-  });
-}
-
-/**
- * بقیه‌ی مرجوعی‌های همین خرید — برای کارتِ «مرجوعی‌های دیگر همین
- * خرید» در صفحه‌ی جزئیات. `GetPurchaseReceivingInfo` (که
- * `usePurchaseForReturnQuery` از آن می‌خواند) چنین فهرستی ندارد؛
- * بک‌اند عمداً همین فیلترِ `purchaseId` روی لیستِ عادی را راه‌حل
- * دانسته، نه یک فیلدِ جداگانه روی پاسخِ خرید.
- */
-export function useRelatedPurchaseReturnsQuery(purchaseId, excludeReturnId = null) {
-  const params = useMemo(() => ({ purchaseId, take: 50 }), [purchaseId]);
-  return useQuery({
-    queryKey: purchaseReturnKeys.list(params),
-    queryFn: () => fetchPurchaseReturns(params),
-    enabled: !!purchaseId,
-    select: (data) =>
-      (data.items || []).filter((item) => item.id !== excludeReturnId),
-  });
-}
+export const usePurchaseReturnListFilters = queries.useListFilters;
+export const usePurchaseReturnsQuery = queries.useList;
+export const usePurchaseReturnQuery = queries.useDetail;
+export const useReturnablePurchasesQuery = queries.useReturnable;
+export const usePurchaseForReturnQuery = queries.useSource;
+export const useRelatedPurchaseReturnsQuery = queries.useRelated;

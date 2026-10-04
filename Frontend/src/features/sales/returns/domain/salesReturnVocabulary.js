@@ -1,4 +1,3 @@
-import { RETURN_SIDES, SIDE_CONFIG } from "@/shared/domain/returns/sides";
 import {
   SALES_CLAIM_PROBLEMS,
   problemLabels,
@@ -81,8 +80,3 @@ export const OFF_SCOPE_KIND_LABELS = {
   [OFF_SCOPE_KINDS.UNLISTED]: "کالای خارج از فاکتور",
 };
 
-// ─── وضعیت ──────────────────────────────────────────────────────────────────
-
-/** خودِ وضعیت‌ها مشترک‌اند (`shared/domain/returns/statuses.js`)؛ فقط برچسبشان سمت‌به‌سمت فرق می‌کند. */
-export const SALES_RETURN_STATUS_LABELS =
-  SIDE_CONFIG[RETURN_SIDES.SALES].statusLabels;

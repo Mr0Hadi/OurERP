@@ -36,12 +36,7 @@ const mutations = createReturnMutations({
 });
 
 export const useCreateSalesReturnMutation = mutations.useCreate;
-export const useAddClaimResolutionMutation = mutations.useAddResolution;
-export const useRemoveClaimResolutionMutation = mutations.useRemoveResolution;
 export const useExecuteGoodsRoundMutation = mutations.useExecuteGoodsRound;
-export const useExecuteMoneyEffectMutation = mutations.useExecuteMoneyEffect;
-export const useRejectSalesReturnMutation = mutations.useReject;
-export const useCancelSalesReturnMutation = mutations.useCancel;
-export const useReopenSalesReturnMutation = mutations.useReopen;
-export const useRemoveSalesReturnMutation = mutations.useRemove;
 export const useUpdateSalesReturnAttachmentsMutation = mutations.useUpdateAttachments;
+/** همه‌ی کارهای صفحه‌ی جزئیات + `isBusy`. */
+export const useSalesReturnActions = mutations.useDetailActions;

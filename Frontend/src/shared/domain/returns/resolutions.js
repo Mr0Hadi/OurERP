@@ -577,6 +577,11 @@ export function buildGoodsLines(returnDoc, directions, { onlyPending = true } = 
   return lines;
 }
 
+/** آیا تصمیمی روی این مرجوعی اثری با این جهت دارد (معلق یا اجراشده)؟ */
+export function hasEffect(returnDoc, direction) {
+  return allEffectsOf(returnDoc).some((effect) => effect.direction === direction);
+}
+
 export function hasPendingGoodsIn(returnDoc) {
   return hasPendingEffect(returnDoc, [GOODS_IN]);
 }
