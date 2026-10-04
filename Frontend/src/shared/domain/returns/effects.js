@@ -67,13 +67,6 @@ export function isTradedGoodsEffect(direction) {
   );
 }
 
-export function isQuarantineEffect(direction) {
-  return (
-    direction === EFFECT_DIRECTIONS.GOODS_RELEASE ||
-    direction === EFFECT_DIRECTIONS.GOODS_SCRAP
-  );
-}
-
 // ─── وضعیت اجرای اثر ────────────────────────────────────────────────────────
 
 /**

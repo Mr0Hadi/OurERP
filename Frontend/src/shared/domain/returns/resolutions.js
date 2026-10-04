@@ -10,7 +10,6 @@ import {
   RETURN_PAYMENT_METHODS,
   SPLITTABLE_PAYMENT_TYPES,
 } from "@/shared/domain/enums/paymentType";
-import { RETURN_STATUSES, isTerminalStatus } from "./statuses";
 import { ProductUnitStatusEnum } from "@/shared/domain/enums/unitStatus";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { nowLocalIso } from "@/shared/lib/dateUtils";
@@ -594,34 +593,4 @@ export function hasPendingQuarantineExit(returnDoc) {
 
 export function summarizeReturn(returnDoc, options) {
   return summarizeEffects(allEffectsOf(returnDoc), options);
-}
-
-// ─── ماشین وضعیت ────────────────────────────────────────────────────────────
-
-/**
- * وضعیت را از روی داده مشتق می‌کند — همان قاعده‌ی `RecomputeReturnStatus`.
- * REJECTED/CANCELLED مشتق نمی‌شوند؛ اکشن صریح‌اند.
- *
- * نگهبان‌های چرخه‌ی عمر (لغو/رد/حذف/بازگشایی) اینجا نیستند: سند پرچم‌های
- * `canCancel`/`canReject`/`canDelete`/`canReopen` را از همان قاعده‌ای
- * می‌آورد که سرور هنگام اجرا اعمال می‌کند، و نسخه‌ی محلی روزی از آن جدا
- * می‌افتاد.
- */
-export function deriveReturnStatus(returnDoc) {
-  if (isTerminalStatus(returnDoc?.status)) return returnDoc.status;
-
-  const claims = returnDoc?.claims || [];
-  const totalClaimed = claims.reduce((sum, c) => sum + (Number(c.quantity) || 0), 0);
-  const totalDecided = claims.reduce((sum, c) => sum + claimDecidedQuantity(c), 0);
-
-  if (totalDecided === 0) return RETURN_STATUSES.OPEN;
-
-  const hasPending = allEffectsOf(returnDoc).some(
-    (effect) => effect.status === EFFECT_STATUSES.PENDING,
-  );
-
-  if (totalDecided >= totalClaimed && !hasPending) {
-    return RETURN_STATUSES.SETTLED;
-  }
-  return RETURN_STATUSES.IN_PROGRESS;
 }

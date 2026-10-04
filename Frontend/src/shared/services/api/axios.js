@@ -2,6 +2,7 @@ import axios from "axios";
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { ROUTES } from "@/shared/constants/routes";
 import { extractServerMessage, getErrorMessage } from "@/shared/lib/errorMessage";
+import { releaseIdempotencyKey } from "./contract";
 
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5083/api",
@@ -104,6 +105,18 @@ function unwrapEnvelope(body) {
  * مستقیم `error.message` را نشان می‌دهد متنِ انگلیسیِ axios را به کاربر
  * نشان ندهد. برای انتخابِ پیام در UI از `getErrorMessage` استفاده کنید.
  */
+/**
+ * کلیدِ ایدمپوتنسی فقط تا پاسخِ قطعیِ سرور نگه داشته می‌شود (`idempotencyKeyFor`).
+ * بی‌پاسخ (تایم‌اوت، قطعِ شبکه)، ۵xx و ۴۰۹ («درخواستِ اول هنوز در جریان است»)
+ * یعنی شاید سرور ثبت کرده باشد؛ تکرارِ همان محتوا باید همان کلید را ببرد.
+ */
+function releaseKeyIfSettled(config, status) {
+  const headers = config?.headers;
+  const key = headers?.get?.("Idempotency-Key") ?? headers?.["Idempotency-Key"];
+  if (!key || !status || status >= 500 || status === 409) return;
+  releaseIdempotencyKey(key);
+}
+
 function attachUserMessage(error) {
   error.serverMessage = extractServerMessage(error?.response?.data);
   error.message = getErrorMessage(error);
@@ -112,6 +125,7 @@ function attachUserMessage(error) {
 
 axiosInstance.interceptors.response.use(
   (response) => {
+    releaseKeyIfSettled(response.config, response.status);
     if (isEnvelope(response.data)) {
       response.data = unwrapEnvelope(response.data);
     }
@@ -120,6 +134,7 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     const status = error.response?.status;
+    releaseKeyIfSettled(originalRequest, status === 401 ? null : status);
 
     // اگر خود ریکوئست refresh بود، دیگه دوباره تلاش نکن
     const isRefreshCall = originalRequest?.url?.includes("/Account/RefreshToken");

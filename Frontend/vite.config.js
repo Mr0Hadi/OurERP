@@ -77,17 +77,10 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api\//], // آدرس API آینده رو از fallback مستثنی کن
 
         runtimeCaching: [
-          // API — وقتی بکند اضافه شد، این‌ها فعال می‌شن
-          {
-            urlPattern: ({ url }) => url.pathname.startsWith("/api/"),
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "api-cache",
-              networkTimeoutSeconds: 8,
-              cacheableResponse: { statuses: [0, 200] },
-              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 }, // ۱ ساعت
-            },
-          },
+          // پاسخِ API عمداً کش نمی‌شود: داده‌ی مالی و شخصی است، کلیدِ کش توکن را
+          // نمی‌شناسد (کاربرِ بعدیِ همان دستگاه پاسخِ کاربرِ قبلی را می‌گرفت)، بعد از
+          // خروج می‌ماند، و در کندیِ شبکه مانده/وضعیتِ کهنه‌ی فاکتور را نشان می‌داد.
+          // کشِ قدیمیِ `api-cache` را `purgeLegacyApiCache` پاک می‌کند.
           // نقشه (Leaflet / OpenStreetMap tiles)
           {
             urlPattern: ({ url }) =>
@@ -126,6 +119,10 @@ export default defineConfig({
       },
     }),
   ],
+  // `PORT` را پیش‌نمایشِ Claude می‌دهد وقتی ۵۱۷۳ دستِ سرورِ دیگری است.
+  server: {
+    port: Number(process.env.PORT) || 5173,
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),

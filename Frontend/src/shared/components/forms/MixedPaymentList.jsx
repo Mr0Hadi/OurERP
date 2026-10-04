@@ -15,13 +15,9 @@ import {
   PAYMENT_REFERENCE_FIELDS,
   SPLITTABLE_PAYMENT_TYPES,
 } from "@/shared/domain/enums/paymentType";
-import { formatRial } from "@/shared/lib/numberFormat";
+import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
 
-/**
- * یکی برای همه‌ی مصرف‌کننده‌ها: هم فرمِ خرید/فروش و هم بخشِ پولِ تصمیمِ
- * مرجوعی با `PaymentTypeEnum` می‌شمارند، پس هیچ‌کدام لازم نیست فهرستِ
- * خودش را بدهد.
- */
+/** روش‌هایی که یک تکه از پرداختِ ترکیبی می‌تواند داشته باشد. */
 const TYPES = SPLITTABLE_PAYMENT_TYPES.map((value) => ({
   value,
   label: PAYMENT_TYPE_LABELS[value],
@@ -29,10 +25,10 @@ const TYPES = SPLITTABLE_PAYMENT_TYPES.map((value) => ({
 }));
 
 /**
- * تقسیم یک مبلغ بین چند روش پرداخت.
- *
- * مشترکِ فرمِ ثبت فروش و بخشِ پولِ تصمیمِ مرجوعی. ردیف‌ها با اندیسِ
- * آرایه شناخته می‌شوند، پس مصرف‌کننده لازم نیست id تولید کند.
+ * تقسیم یک مبلغ بین چند روش پرداخت — بخشِ پولِ تصمیمِ مرجوعی
+ * (`ResolutionMoneySection`). فرمِ خرید/فروش `PaymentMethodEditor` را دارد که
+ * «باقیمانده»ی خودکار و تاریخِ هر تکه را هم دارد. ردیف‌ها با اندیسِ آرایه شناخته
+ * می‌شوند، پس مصرف‌کننده لازم نیست id تولید کند.
  *
  * dense برای جایی است که این لیست داخل یک فرمِ فشرده می‌نشیند (مثل
  * کامپوزرِ تصمیم) و باید ارتفاع کمتری بگیرد.
@@ -85,7 +81,7 @@ export default function MixedPaymentList({
           >
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-medium text-card-foreground">
-                پرداخت {(idx + 1).toLocaleString("fa-IR")}
+                پرداخت {formatNumber(idx + 1)}
               </span>
               {payments.length > 1 && (
                 <Button
@@ -93,6 +89,7 @@ export default function MixedPaymentList({
                   variant="ghost"
                   size="sm"
                   onClick={() => onRemove(idx)}
+                  aria-label="حذفِ این پرداخت"
                   className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                 >
                   <Trash2 className="h-3.5 w-3.5" />

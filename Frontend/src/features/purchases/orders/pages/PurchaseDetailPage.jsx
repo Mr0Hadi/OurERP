@@ -4,7 +4,7 @@ import { usePurchaseQuery } from "@/features/purchases/orders/services/queries";
 import OrderFormSkeleton from "@/shared/components/skeletons/OrderFormSkeleton";
 import PurchaseForm from "./PurchaseForm";
 import PurchaseIssuedView from "./PurchaseIssuedView";
-import { isPurchaseProforma } from "@/features/purchases/orders/services/constants";
+import { isPurchaseProforma } from "@/shared/domain/enums/purchaseStatus";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";

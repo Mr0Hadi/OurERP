@@ -10,12 +10,6 @@ export const PaymentDirectionEnum = Object.freeze({
   OUT: 2,
 });
 
-/** جهتِ «عادیِ» پرداخت روی هر نوع سند؛ جهتِ مخالف یعنی پولِ برگشتی. */
-export const DOCUMENT_PAYMENT_DIRECTION = Object.freeze({
-  sale: PaymentDirectionEnum.IN,
-  purchase: PaymentDirectionEnum.OUT,
-});
-
 /**
  * `PaymentPurposeEnum` — این پرداخت چیست. فقط `NORMAL` از مسیرِ
  * `Add/Edit/Void...Payment` تغییر می‌کند؛ بقیه مالِ قرارداد اقساطی‌اند.

@@ -26,10 +26,7 @@ import {
   purchaseStatusTargets,
 } from "@/features/purchases/orders/domain/purchaseRules";
 import { PURCHASE_PAYMENT_SIDE } from "@/features/purchases/orders/domain/purchasePayments";
-import {
-  PURCHASE_STATUSES,
-  PURCHASE_STATUS_LABELS,
-} from "@/features/purchases/orders/services/constants";
+import { PURCHASE_STATUS_LABELS, PurchaseStatusEnum } from "@/shared/domain/enums/purchaseStatus";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import { savedInvoiceTotals } from "@/shared/domain/invoice/lineMath";
 import { ROUTES } from "@/shared/constants/routes";
@@ -44,7 +41,7 @@ function statusOptionsOf(purchase) {
       .filter((target) => target !== current)
       .map((target) => ({ value: target, label: PURCHASE_STATUS_LABELS[target] })),
     ...(canCancelPurchase(purchase)
-      ? [{ value: PURCHASE_STATUSES.CANCELLED, label: "لغو خرید" }]
+      ? [{ value: PurchaseStatusEnum.CANCELLED, label: "لغو خرید" }]
       : []),
   ];
 }
@@ -65,7 +62,7 @@ export default function PurchaseIssuedView({ purchase }) {
   const { data: relatedReturns } = useRelatedPurchaseReturnsQuery(purchase.id);
 
   const canUpdate = allows("PurchaseUpdate");
-  const isCancelled = purchase.status === PURCHASE_STATUSES.CANCELLED;
+  const isCancelled = purchase.status === PurchaseStatusEnum.CANCELLED;
   const isSaving = saver.isPending || draft.attachments.isUploading;
 
   const save = () => {
@@ -81,7 +78,7 @@ export default function PurchaseIssuedView({ purchase }) {
   const onSubmit = (e) => {
     e.preventDefault();
     if (!draft.count) return;
-    if (Number(draft.status) === PURCHASE_STATUSES.CANCELLED) setConfirmCancel(true);
+    if (Number(draft.status) === PurchaseStatusEnum.CANCELLED) setConfirmCancel(true);
     else save();
   };
 
@@ -156,7 +153,7 @@ export default function PurchaseIssuedView({ purchase }) {
               submitDisabled={!draft.count}
               isBusy={isSaving}
               onCancel={draft.count ? draft.discard : undefined}
-              cancelLabel="بازگردانی"
+              cancelLabel="برگرداندنِ تغییرات"
               footer={
                 hasAnythingArrived(purchase) && (
                   <Button
@@ -180,9 +177,9 @@ export default function PurchaseIssuedView({ purchase }) {
         open={confirmCancel}
         onOpenChange={setConfirmCancel}
         isPending={saver.isPending}
+        confirmLabel="لغو خرید و ذخیره"
         onConfirm={save}
       />
-      
     </>
   );
 }

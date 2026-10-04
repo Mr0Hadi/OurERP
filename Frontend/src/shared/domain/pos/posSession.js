@@ -1,3 +1,5 @@
+import { normalizePersianDigits } from "@/shared/lib/persianDigits";
+
 /**
  * یک «پرداخت با کارتخوان» از لحظه‌ی ارسال مبلغ تا ثبتِ پرداخت روی سند — ماشینِ
  * وضعیتِ خالص (بی React و بی شبکه)، تا هوکِ `usePosPayment` فقط رویدادها را
@@ -40,6 +42,7 @@ export const PosStatus = Object.freeze({
  * @property {string} [approvalCode]
  * @property {string} [maskedCardNumber]  مثلاً `603770******1234`
  * @property {string} [transactionDate]
+ * @property {number} [amount]            مبلغی که دستگاه واقعاً کشید (اگر دستگاه بدهد)
  * @property {string} [message]           پیامِ بانک برای ردشده
  * @property {boolean} [manual]           از رسیدِ کاغذی وارد شده، نه از دستگاه
  */
@@ -50,6 +53,26 @@ export const initialPosSession = Object.freeze({
   result: null,
   message: "",
 });
+
+/**
+ * شماره‌ی پیگیری (RRN) که کاربر از روی رسید تایپ می‌کند: رقم‌های فارسی به لاتین،
+ * بی فاصله و خط‌تیره، ۶ تا ۲۰ رقم. نامعتبر → `null`. شماره‌ی دستیِ اشتباه یعنی
+ * پرداختی که با صورت‌حسابِ بانک تطبیق نمی‌خورد.
+ */
+export function normalizeRrn(value) {
+  const digits = normalizePersianDigits(String(value ?? "")).replace(/[\s-]/g, "");
+  return /^\d{6,20}$/.test(digits) ? digits : null;
+}
+
+/**
+ * شناسه‌ی سفارش برای دستگاه — برای *هر* بار ارسال تازه. با شناسه‌ی ثابت (مثلاً فقط
+ * شماره‌ی فروش) «بررسیِ آخرین تراکنش» در دومین دریافتِ همان فاکتور تراکنشِ قبلی را
+ * پیدا می‌کرد و آن را پرداختِ تازه می‌پنداشت.
+ */
+export function newPosReference(prefix) {
+  const random = Math.random().toString(36).slice(2, 6);
+  return `${prefix}-${Date.now().toString(36)}${random}`;
+}
 
 /** تا پایانِ کار منتظرِ دستگاه یا سرور هستیم؛ دکمه‌ها باید قفل باشند. */
 export const isPosBusy = (status) =>

@@ -17,6 +17,7 @@ import {
   useSidebar,
 } from "@/shared/components/ui/sidebar";
 import { Skeleton } from "@/shared/components/ui/skeleton";
+import { leaveSession } from "@/shared/services/sessionCleanup";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import {
   useUserInfoQuery,
@@ -86,13 +87,11 @@ export function NavUser() {
 
   if (isError || !user) return null;
 
+  // بارگذاریِ کاملِ صفحه‌ی ورود (`leaveSession`)، نه `navigate`: پیش‌نویس‌های
+  // درونِ حافظه (فاکتورِ نیمه‌کاره، پرداخت‌های ثبت‌نشده) نباید به کاربرِ بعدیِ
+  // همین دستگاه برسند.
   const handleLogout = () => {
-    // ناوبری در `onSettled` نیست چون همان‌جا `queryClient.clear()` صدا
-    // زده می‌شود؛ رفتنِ فوری به صفحه‌ی ورود باعث می‌شود کاربر لحظه‌ای
-    // صفحه‌ی خالیِ در حال پاک‌شدن را نبیند.
-    logoutMutation.mutate(undefined, {
-      onSettled: () => navigate(ROUTES.LOGIN, { replace: true }),
-    });
+    logoutMutation.mutate(undefined, { onSettled: leaveSession });
   };
 
   const openAccount = () =>

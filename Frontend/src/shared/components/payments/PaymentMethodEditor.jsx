@@ -22,6 +22,7 @@ import {
 import {
   ROW_PAYMENT_TYPES,
   addMixedRow,
+  materializeRows,
   methodOf,
   removeMixedRow,
   resolvedRows,
@@ -55,7 +56,7 @@ export default function PaymentMethodEditor({
   const method = methodOf(value);
   const rows = resolvedRows(value, payable);
   // ویرایشِ ردیف روی همان ردیف‌هایی است که دیده می‌شوند (حتی ردیفِ پیش‌فرضِ ذخیره‌نشده).
-  const editable = { method, rows: value?.rows?.length ? value.rows : rows.map(stripAuto) };
+  const editable = materializeRows(value, payable);
   const change = (id, patch) => onChange(updateRow(editable, id, patch));
 
   return (
@@ -84,13 +85,6 @@ export default function PaymentMethodEditor({
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
-}
-
-function stripAuto(row) {
-  const next = { ...row };
-  if (next.auto) next.amount = null;
-  delete next.auto;
-  return next;
 }
 
 /** روشِ تکی: مبلغ، تاریخ و (برای چک/انتقال) شماره‌ی پیگیری. */

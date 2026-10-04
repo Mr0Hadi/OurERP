@@ -8,12 +8,6 @@ import {
 import { toDateOnly } from "@/shared/lib/dateUtils";
 import { toApiPaymentRows } from "@/shared/domain/payments/paymentRows";
 
-export {
-  SaleStatusEnum as SALE_STATUSES,
-  SALE_STATUS_LABELS,
-  isSaleProforma,
-} from "@/shared/domain/enums/saleStatus";
-
 /**
  * کنترلر `api/Sale` (`Backend-Net/docs/api-guide.fa.md`، بخش ۱۱). بکند از
  * الگوی `api/{Controller}/{Action}` استفاده می‌کند، نه REST.
@@ -90,7 +84,6 @@ export function fromApiSale(dto) {
   return { ...sale, updatedAt: sale.updatedAt || documentVersion(sale) };
 }
 
-/** بند ۳ سندِ `invoice-attachment-requirements.fa.md` — همان شکلِ `filesPayload`ِ هوکِ آپلود. */
 /** بدنه‌ی مشترکِ Create/Update. شماره‌ی فاکتور را همیشه سرور می‌سازد. */
 function toApiSalePayload(saleData) {
   return {

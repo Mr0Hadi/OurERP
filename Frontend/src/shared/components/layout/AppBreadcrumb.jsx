@@ -41,15 +41,11 @@ const ROUTE_TITLES = {
 
   [ROUTES.PURCHASES]: "خرید",
   [ROUTES.PURCHASES_NEW]: "ثبت خرید جدید",
-  [ROUTES.PURCHASES_INVOICES]: "فاکتورهای خرید",
   [ROUTES.PURCHASES_RETURNS_LIST]: "مرجوعی‌های خرید",
   "/purchases/returns/new": "ثبت مرجوعی خرید",
 
   [ROUTES.SALES]: "فروش",
   [ROUTES.SALES_NEW]: "ثبت فروش جدید",
-  [ROUTES.SALES_ORDERS]: "سفارشات فروش",
-  [ROUTES.SALES_INVOICES_NEW]: "صدور فاکتور فروش",
-  [ROUTES.SALES_PROFORMA]: "پیش فاکتور",
   [ROUTES.SALES_RETURNS_LIST]: "مرجوعی‌های فروش",
   [ROUTES.SALES_RETURNS_NEW]: "ثبت مرجوعی فروش",
 
@@ -116,11 +112,9 @@ const DETAIL_TITLES = {
   [ROUTES.ACCESS_TEMPLATES]: "واحد",
 
   [ROUTES.PURCHASES]: "جزئیات خرید",
-  [ROUTES.PURCHASES_INVOICES]: "جزئیات فاکتور خرید",
   [ROUTES.PURCHASES_RETURNS_LIST]: "جزئیات مرجوعی خرید",
 
   [ROUTES.SALES]: "جزئیات فروش",
-  [ROUTES.SALES_ORDERS]: "جزئیات سفارش فروش",
   [ROUTES.SALES_RETURNS_LIST]: "جزئیات مرجوعی فروش",
 
   [ROUTES.WAREHOUSE_PRODUCTS]: "جزئیات کالا",

@@ -1,164 +1,21 @@
-import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { Search } from "lucide-react";
-import { Button } from "@/shared/components/ui/button";
-import DataTable from "@/shared/components/table/DataTable";
-import { gregorianToPersian } from "@/shared/lib/dateUtils";
-import { ROUTES, routeWithId } from "@/shared/constants/routes";
+import ReturnTable from "@/shared/components/returns/ReturnTable";
+import { ROUTES } from "@/shared/constants/routes";
+import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import {
   PURCHASE_RETURN_PROBLEM_LABELS,
   PURCHASE_RETURN_PROBLEM_STYLES,
 } from "../../domain/purchaseReturnVocabulary";
-import {
-  RETURN_PROBLEM_LABELS,
-  RETURN_PROBLEM_STYLES,
-} from "@/shared/domain/returns/problems";
-import { Badge } from "@/shared/components/ui/badge";
-import ReturnStatusBadge from "@/shared/components/returns/ReturnStatusBadge";
-import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 
-const RETURN_SIDE = sideConfig(RETURN_SIDES.PURCHASE);
-
-const EMPTY_STATE = (
-  <div className="flex flex-col items-center justify-center gap-2 py-16 text-center border border-dashed border-border rounded-lg">
-    <Search className="h-8 w-8 text-muted-foreground" />
-    <p className="text-sm text-muted-foreground">موردی یافت نشد.</p>
-  </div>
-);
-
-const PurchaseReturnTable = ({
-  data,
-  isLoading,
-  totalPages,
-  currentPage,
-  pageSize,
-  onPaginationChange,
-  sorting,
-  onSortingChange,
-}) => {
-  const navigate = useNavigate();
-
-  const columns = useMemo(
-    () => [
-      {
-        accessorKey: "returnNumber",
-        header: "شماره مرجوعی",
-        cell: (info) => (
-          <span className="font-mono text-xs text-muted-foreground">
-            {info.getValue()}
-          </span>
-        ),
-      },
-      {
-        accessorKey: "purchaseInvoiceNumber",
-        header: "فاکتور خرید",
-        cell: (info) => (
-          <span className="font-mono text-xs text-muted-foreground">
-            {info.getValue()}
-          </span>
-        ),
-      },
-      {
-        accessorKey: "supplierName",
-        header: "تامین‌کننده",
-        cell: (info) => <span className="font-light">{info.getValue()}</span>,
-      },
-      {
-        accessorKey: "returnDate",
-        header: "تاریخ",
-        cell: (info) => (
-          <span className="tabular-nums text-sm">
-            {gregorianToPersian(info.getValue())}
-          </span>
-        ),
-      },
-      {
-        // یک مرجوعی می‌تواند چند ادعا با مشکل‌های متفاوت داشته باشد؛
-        // ستون همه‌شان را نشان می‌دهد، نه یک «دلیل اصلی» ساختگی.
-        id: "problems",
-        header: "مشکل‌ها",
-        enableSorting: false,
-        cell: ({ row }) => {
-          const problems = row.original.problems || [];
-          if (problems.length === 0) {
-            return <span className="text-xs text-muted-foreground">—</span>;
-          }
-          return (
-            <div className="flex flex-wrap gap-1">
-              {problems.slice(0, 2).map((problem) => (
-                <Badge
-                  key={problem}
-                  variant="outline"
-                  className={`text-[10px] ${
-                    PURCHASE_RETURN_PROBLEM_STYLES[problem] ??
-                    RETURN_PROBLEM_STYLES[problem] ??
-                    ""
-                  }`}
-                >
-                  {PURCHASE_RETURN_PROBLEM_LABELS[problem] ??
-                    RETURN_PROBLEM_LABELS[problem] ??
-                    problem}
-                </Badge>
-              ))}
-              {problems.length > 2 && (
-                <Badge variant="outline" className="text-[10px]">
-                  +{(problems.length - 2).toLocaleString("fa-IR")}
-                </Badge>
-              )}
-            </div>
-          );
-        },
-      },
-      {
-        accessorKey: "status",
-        header: "وضعیت",
-        cell: (info) => <ReturnStatusBadge status={info.getValue()} side={RETURN_SIDE} />,
-      },
-      {
-        accessorKey: "totalAmount",
-        header: "مبلغ ادعا (ریال)",
-        cell: (info) => (
-          <span className="tabular-nums text-sm">
-            {info.getValue().toLocaleString("fa-IR")}
-          </span>
-        ),
-      },
-      {
-        id: "actions",
-        header: "اقدام",
-        enableSorting: false,
-        cell: ({ row }) => (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              navigate(
-                routeWithId(ROUTES.PURCHASES_RETURNS_DETAIL, row.original.id),
-              )
-            }
-          >
-            جزئیات
-          </Button>
-        ),
-      },
-    ],
-    [navigate],
-  );
-
-  return (
-    <DataTable
-      data={data}
-      columns={columns}
-      isLoading={isLoading}
-      totalPages={totalPages}
-      currentPage={currentPage}
-      pageSize={pageSize}
-      onPaginationChange={onPaginationChange}
-      sorting={sorting}
-      onSortingChange={onSortingChange}
-      emptyState={EMPTY_STATE}
-    />
-  );
+const CONFIG = {
+  side: sideConfig(RETURN_SIDES.PURCHASE),
+  invoice: { key: "purchaseInvoiceNumber", header: "فاکتور خرید" },
+  party: { key: "supplierName", header: "تامین‌کننده" },
+  problemLabels: PURCHASE_RETURN_PROBLEM_LABELS,
+  problemStyles: PURCHASE_RETURN_PROBLEM_STYLES,
+  detailRoute: ROUTES.PURCHASES_RETURNS_DETAIL,
 };
 
-export default PurchaseReturnTable;
+/** فهرستِ مرجوعی‌های خرید (`ReturnTable`). */
+export default function PurchaseReturnTable(props) {
+  return <ReturnTable config={CONFIG} {...props} />;
+}
