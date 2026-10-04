@@ -45,7 +45,7 @@ export default function SaleItemsSection({
       actions={
         onPriceModeChange && (
           <div role="group" aria-label="قیمت پیش‌فرض" className="inline-flex rounded-md border border-border p-0.5">
-            {Object.entries(SALE_PRICE_MODES).map(([key, { label }]) => (
+            {Object.entries(SALE_PRICE_MODES).map(([key, { label, fullLabel }]) => (
               <Button
                 key={key}
                 type="button"
@@ -53,9 +53,13 @@ export default function SaleItemsSection({
                 variant={priceMode === key ? "default" : "ghost"}
                 className="h-7 px-2.5 text-xs"
                 aria-pressed={priceMode === key}
+                aria-label={fullLabel}
+                title={fullLabel}
                 onClick={() => switchMode(key)}
               >
-                قیمت {label}
+                {/* در موبایل کنارِ «کالای جدید» جا نمی‌شد؛ «قیمت» فقط از sm به بالا. */}
+                <span className="hidden sm:inline">قیمت&nbsp;</span>
+                {label}
               </Button>
             ))}
           </div>

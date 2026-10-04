@@ -119,6 +119,10 @@ export default defineConfig({
       },
     }),
   ],
+  // `PORT` را پیش‌نمایشِ Claude می‌دهد وقتی ۵۱۷۳ دستِ سرورِ دیگری است.
+  server: {
+    port: Number(process.env.PORT) || 5173,
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),

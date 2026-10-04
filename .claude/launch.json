@@ -5,12 +5,11 @@
       "name": "ourerp-dev",
       "runtimeExecutable": "npx",
       "runtimeArgs": [
-        "vite",
-        "--port",
-        "5173"
+        "vite"
       ],
       "cwd": "Frontend",
-      "port": 5173
+      "port": 5173,
+      "autoPort": true
     },
     {
       "name": "ourerp-offline",

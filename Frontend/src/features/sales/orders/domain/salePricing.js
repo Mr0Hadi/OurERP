@@ -3,9 +3,10 @@
  * حالت فقط در فرم است (`priceMode`) و به سرور نمی‌رود؛ قیمتِ هر قلم جدا فرستاده می‌شود.
  */
 export const SALE_PRICE_MODES = {
-  retail: { label: "خرده", priceOf: (product) => product.retailPrice ?? 0 },
+  retail: { label: "خرده", fullLabel: "قیمت خرده", priceOf: (product) => product.retailPrice ?? 0 },
   wholesale: {
-    label: "همکار / عمده",
+    label: "همکار",
+    fullLabel: "قیمت همکار / عمده",
     priceOf: (product) => product.wholeSalePrice ?? product.retailPrice ?? 0,
   },
 };

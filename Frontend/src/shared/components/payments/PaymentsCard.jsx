@@ -172,9 +172,12 @@ export default function PaymentsCard({
 
 function Stat({ label, value, className }) {
   return (
-    <div className="px-2 py-2">
+    <div className="min-w-0 px-1.5 py-2 sm:px-2">
       <dt className="text-[11px] text-muted-foreground">{label}</dt>
-      <dd className={cn("text-sm font-semibold tabular-nums", className)}>{value}</dd>
+      {/* مبلغِ میلیاردی در ستونِ یک‌سومِ موبایل جا نمی‌شد و از کادر بیرون می‌زد. */}
+      <dd className={cn("text-[13px] font-semibold tabular-nums [overflow-wrap:anywhere] sm:text-sm", className)}>
+        {value}
+      </dd>
     </div>
   );
 }
