@@ -19,7 +19,6 @@ import {
 } from "@/shared/components/ui/select";
 
 import CategoryManager from "./CategoryManager";
-import { formatPayload } from "@/shared/domain/barcode/productCode";
 import { PRODUCT_UNIT_LABELS } from "@/shared/domain/enums/productUnit";
 
 /**
@@ -118,7 +117,7 @@ export default function ProductBasicInfoForm({
             <ReadOnlyCodeField
               id="barcode"
               label="بارکد"
-              value={formatPayload(barcode)}
+              value={barcode}
               emptyHint="پس از ثبت کالا ساخته می‌شود"
             />
           </>

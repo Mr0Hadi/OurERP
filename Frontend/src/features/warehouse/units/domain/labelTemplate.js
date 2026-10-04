@@ -104,7 +104,7 @@ export function sheetGeometryOf(template) {
 
 // ─── نماد ───────────────────────────────────────────────────────────────────
 
-/** هر دو همان `barcodePayload` را حمل می‌کنند؛ فقط شکلِ نماد فرق دارد. */
+/** هر دو همان `barcode` را حمل می‌کنند؛ فقط شکلِ نماد فرق دارد. */
 export const LABEL_CODE_TYPES = Object.freeze({ BARCODE: "barcode", QR: "qr" });
 
 export const LABEL_CODE_TYPE_LABELS = Object.freeze({

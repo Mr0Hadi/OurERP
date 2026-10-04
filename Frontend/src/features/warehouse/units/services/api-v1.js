@@ -1,10 +1,6 @@
 import axiosInstance from "@/shared/services/api/axios";
 import { idempotent, listQuery, normalizeListResponse } from "@/shared/services/api/contract";
-import {
-  parseBarcode,
-  productCodeOf,
-  toPayload,
-} from "@/shared/domain/barcode/productCode";
+import { parseBarcode, productCodeOf } from "@/shared/domain/barcode/productCode";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
 import { UNIT_SORT_COLUMNS } from "../domain/unitVocabulary";
 
@@ -23,7 +19,6 @@ import { UNIT_SORT_COLUMNS } from "../domain/unitVocabulary";
 /**
  * `ProductUnitDto`ِ سرور با همان نام‌ها، به‌علاوه‌ی چند فیلدِ مشتق:
  *
- *  - `barcodePayload`: payloadِ رندرِ میله‌ها، اگر سرور نفرستاده باشد از بارکدِ خوانا.
  *  - `productCode`/`productName`/`requiresUnitTracking`: `product` (پاسخِ `ScanBarcode`)
  *    تازه‌تر از فیلدهای خودِ دانه است و اولویت دارد؛ کدِ کالا در نبودِ هر دو
  *    از دو بخشِ اولِ بارکدِ دانه خوانده می‌شود.
@@ -33,7 +28,6 @@ export function normalizeProductUnit(dto, product = null) {
   return {
     ...dto,
     barcode: dto.barcode ?? "",
-    barcodePayload: dto.barcodePayload ?? toPayload(dto.barcode),
     productCode: product?.code ?? dto.productCode ?? productCodeOf(dto.barcode),
     productName: product?.name ?? dto.productName ?? null,
     requiresUnitTracking: Boolean(product?.requiresUnitTracking ?? dto.requiresUnitTracking),
@@ -130,7 +124,9 @@ export async function resolveScannedCode(code) {
     return { kind: BarcodeReferenceKindEnum.UNKNOWN, code, product: null, unit: null };
   }
 
-  const { data } = await axiosInstance.get("/Product/ScanBarcode", { params: { code } });
+  const { data } = await axiosInstance.get("/Product/ScanBarcode", {
+    params: { code: reference.normalizedPayload },
+  });
   const product = data?.product ?? null;
 
   // دانه‌ی پاسخِ `ScanBarcode` فیلدهای تازه‌ی `ProductUnitDto` (خرید، علتِ

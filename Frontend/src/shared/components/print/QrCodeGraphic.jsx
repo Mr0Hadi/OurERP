@@ -8,14 +8,13 @@ import EncodeHintType from "@zxing/library/esm/core/EncodeHintType";
 import QRCodeWriter from "@zxing/library/esm/core/qrcode/QRCodeWriter";
 
 import { QR_PRESETS, QR_ERROR_CORRECTION } from "@/shared/domain/barcode/barcodeConfig";
-import { formatPayload, toPayload } from "@/shared/domain/barcode/productCode";
 import { cn } from "@/shared/lib/utils";
 
 /**
  * همان شناسه‌ی بارکد، این‌بار به شکل QR — قرینه‌ی `BarcodeGraphic`.
  *
- * محتوای QR دقیقاً همان `payload`ِ رقمیِ داخلِ میله‌هاست، نه شکلِ
- * خط‌تیره‌دار: هر دو نماد باید موقعِ اسکن یک رشته‌ی یکسان بدهند، وگرنه
+ * محتوای QR دقیقاً همان محتوای میله‌هاست (خودِ کد با خط‌تیره‌هایش): هر
+ * دو نماد باید موقعِ اسکن یک رشته‌ی یکسان بدهند، وگرنه
  * `parseBarcode`/`ScanBarcode` سرور برای QR جواب متفاوتی می‌داد. متنِ
  * خوانا هم مثل بارکد زیرش نوشته می‌شود.
  *
@@ -31,13 +30,13 @@ export default function QrCodeGraphic({
   displayValue = true,
   className = "",
 }) {
-  const payload = toPayload(value);
+  const content = String(value ?? "").trim();
   const options = QR_PRESETS[preset] ?? QR_PRESETS.display;
 
   // ماتریسِ QR فقط با عوض‌شدنِ محتوا یا حاشیه تغییر می‌کند؛ رمزگذاری
   // در هر رندر تکرار نشود.
   const matrix = useMemo(() => {
-    if (!payload) return null;
+    if (!content) return null;
 
     const hints = new Map();
     hints.set(EncodeHintType.ERROR_CORRECTION, QR_ERROR_CORRECTION);
@@ -46,11 +45,11 @@ export default function QrCodeGraphic({
     try {
       // عرض/ارتفاعِ صفر یعنی «هر ماژول یک واحد»: مقیاس را خودِ SVG با
       // viewBox می‌دهد، پس اینجا لازم نیست پیکسل حساب کنیم.
-      return new QRCodeWriter().encode(payload, BarcodeFormat.QR_CODE, 0, 0, hints);
+      return new QRCodeWriter().encode(content, BarcodeFormat.QR_CODE, 0, 0, hints);
     } catch {
       return null;
     }
-  }, [payload, options.margin]);
+  }, [content, options.margin]);
 
   if (!matrix) return null;
 
@@ -95,7 +94,7 @@ export default function QrCodeGraphic({
         shapeRendering="crispEdges"
         className="h-auto max-w-full"
         role="img"
-        aria-label={`کد QR ${formatPayload(payload)}`}
+        aria-label={`کد QR ${content}`}
       >
         <g fill="#000000">{rects}</g>
       </svg>
@@ -105,7 +104,7 @@ export default function QrCodeGraphic({
           className="font-mono text-black"
           style={{ fontSize: `${options.fontSize}px` }}
         >
-          {text || formatPayload(payload)}
+          {text || content}
         </span>
       ) : null}
     </div>

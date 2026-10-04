@@ -2,7 +2,7 @@ import Barcode from "react-barcode";
 
 import QrCodeGraphic from "@/shared/components/print/QrCodeGraphic";
 import { DEFAULT_SYMBOLOGY } from "@/shared/domain/barcode/barcodeConfig";
-import { barcodeSegments, toPayload } from "@/shared/domain/barcode/productCode";
+import { barcodeSegments } from "@/shared/domain/barcode/productCode";
 import {
   CODE_SHARE,
   DEFAULT_LABEL_TEMPLATE,
@@ -16,11 +16,19 @@ import { formatNumber } from "@/shared/lib/numberFormat";
 const PADDING_MM = 1.5;
 
 /**
- * تعدادِ ماژول‌های CODE128 برای payloadِ رقمی (زیرمجموعه‌ی C: دو رقم در هر
- * کاراکتر) — برای اینکه نسبتِ ابعادِ SVG با جعبه‌ی برچسب یکی شود و بارکد
- * کلِ ارتفاعِ سهمش را بگیرد، نه فقط عرض را.
+ * تعدادِ تقریبیِ ماژول‌های CODE128 — برای اینکه نسبتِ ابعادِ SVG با جعبه‌ی
+ * برچسب یکی شود و بارکد کلِ ارتفاعِ سهمش را بگیرد، نه فقط عرض را.
+ * رشته‌ی چهار رقم به بالا در زیرمجموعه‌ی C دوتا‌دوتا می‌رود (به‌علاوه‌ی
+ * یک نویسه‌ی تعویض)، بقیه (خط‌تیره، رقم‌های تک) هر کدام یک نویسه.
  */
-const code128Modules = (payload) => (Math.ceil(payload.length / 2) + 3) * 11 + 2;
+const code128Modules = (content) => {
+  const runs = content.match(/\d{4,}|\D|\d{1,3}/g) ?? [];
+  const symbols = runs.reduce(
+    (sum, run) => sum + (/^\d{4,}$/.test(run) ? Math.ceil(run.length / 2) + 1 : run.length),
+    0,
+  );
+  return (symbols + 3) * 11 + 2;
+};
 
 /** متن‌هایی که قالب خواسته و این دانه واقعاً دارد. */
 function textLinesOf(unit, fields, party) {
@@ -80,7 +88,7 @@ function Texts({ lines, fontPt, align = "center" }) {
  * بارکد: متن‌ها بالا و پایینِ میله‌ها. QR: نماد کنارِ متن، چون برچسب‌ها
  * پهن‌اند و کوتاه و QRِ مربعی بالای متن جا نمی‌شود.
  *
- * هر دو نماد همان `barcodePayload` را حمل می‌کنند، پس اسکنِ برچسبِ QR و
+ * هر دو نماد خودِ `unit.barcode` را حمل می‌کنند، پس اسکنِ برچسبِ QR و
  * خطیِ یک دانه یک رشته می‌دهد.
  *
  * @param party اختیاری — طرفِ حسابی که روی برچسب می‌رود وقتی دانه خودش آن
@@ -93,7 +101,7 @@ export default function UnitLabel({
   heightMm,
   party,
 }) {
-  const payload = toPayload(unit.barcodePayload || unit.barcode);
+  const content = unit.barcode ?? "";
   const fontPt = FONT_SIZES_PT[template.fontScale] ?? FONT_SIZES_PT.medium;
   const share = CODE_SHARE[template.codeScale] ?? CODE_SHARE.medium;
   const lines = textLinesOf(unit, template.fields, party);
@@ -111,7 +119,7 @@ export default function UnitLabel({
           className="shrink-0 [&_svg]:h-full [&_svg]:w-full"
           style={{ width: `${side}mm`, height: `${side}mm` }}
         >
-          <QrCodeGraphic value={payload} preset="compact" displayValue={false} className="h-full" />
+          <QrCodeGraphic value={content} preset="compact" displayValue={false} className="h-full" />
         </div>
         <div className="flex min-w-0 flex-1 flex-col justify-center gap-[0.6mm]">
           <Texts lines={lines} fontPt={fontPt} align="right" />
@@ -130,7 +138,7 @@ export default function UnitLabel({
   }
 
   const barHeightMm = innerH * share;
-  const modules = payload ? code128Modules(payload) : 1;
+  const modules = content ? code128Modules(content) : 1;
   const svgHeight = Math.max(10, Math.round((modules * barHeightMm) / innerW));
 
   return (
@@ -139,13 +147,13 @@ export default function UnitLabel({
       style={{ padding: `${PADDING_MM}mm` }}
     >
       {lines.title && <Texts lines={{ ...lines, party: [], meta: [] }} fontPt={fontPt} />}
-      {payload && (
+      {content && (
         <div
           className="flex w-full justify-center [&_svg]:h-full [&_svg]:w-full"
           style={{ height: `${barHeightMm}mm` }}
         >
           <Barcode
-            value={payload}
+            value={content}
             format={DEFAULT_SYMBOLOGY}
             renderer="svg"
             width={1}

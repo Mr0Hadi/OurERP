@@ -292,9 +292,9 @@ export default function UnitDetailSheet({ unit, open, onOpenChange, onPrint, onA
             </SectionTitle>
             <div className="flex justify-center rounded-xl border border-border bg-white p-3">
               {showQr ? (
-                <QrCodeGraphic value={unit.barcodePayload} text={unit.barcode} preset="display" />
+                <QrCodeGraphic value={unit.barcode} text={unit.barcode} preset="display" />
               ) : (
-                <BarcodeGraphic value={unit.barcodePayload} text={unit.barcode} preset="display" />
+                <BarcodeGraphic value={unit.barcode} text={unit.barcode} preset="display" />
               )}
             </div>
           </section>

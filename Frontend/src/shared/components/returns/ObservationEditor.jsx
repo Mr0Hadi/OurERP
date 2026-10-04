@@ -13,7 +13,6 @@ import {
   OBSERVATION_PROBLEM_LABELS,
   DEFAULT_OBSERVATION_PROBLEM,
 } from "@/shared/domain/returns/observations";
-import { formatPayload } from "@/shared/domain/barcode/productCode";
 import { cn } from "@/shared/lib/utils";
 
 const PROBLEM_OPTIONS = Object.values(OBSERVATION_PROBLEMS);
@@ -214,7 +213,7 @@ function UnitPicker({ scanned, observation, takenElsewhere, onToggle }) {
                   : "border-border text-muted-foreground hover:bg-accent",
               )}
             >
-              {formatPayload(code)}
+              {code}
             </button>
           );
         })}

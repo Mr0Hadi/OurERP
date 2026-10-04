@@ -3,7 +3,7 @@ import { toast } from "react-hot-toast";
 
 import { Badge } from "@/shared/components/ui/badge";
 import BarcodeScanField from "./BarcodeScanField";
-import { formatPayload, parseBarcode } from "@/shared/domain/barcode/productCode";
+import { parseBarcode } from "@/shared/domain/barcode/productCode";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
 import { formatNumber } from "@/shared/lib/numberFormat";
 
@@ -14,7 +14,7 @@ import { formatNumber } from "@/shared/lib/numberFormat";
  * این‌جا فقط خطاهای قابلِ تشخیص بدون سرور زودتر گفته می‌شوند: بارکدِ کالا
  * به‌جای دانه، دانه‌ی کالای دیگر، اسکنِ تکراری، و بیشتر از تعداد.
  *
- * مقدار همان payloadِ رقمیِ نرمال‌شده است — همان چیزی که سرور مقایسه می‌کند.
+ * مقدار همان `normalizedPayload` است — همان چیزی که سرور مقایسه می‌کند.
  */
 export default function UnitBarcodeScanList({
   productId,
@@ -80,13 +80,12 @@ export default function UnitBarcodeScanList({
               className="gap-1 font-mono text-[10px]"
               dir="ltr"
             >
-              {/* مقدار payloadِ رقمی است (همان که سرور مقایسه می‌کند)؛ نمایش خوانا با خط‌تیره. */}
-              {formatPayload(barcode)}
+              {barcode}
               <button
                 type="button"
                 className="text-muted-foreground hover:text-destructive"
                 onClick={() => onChange(barcodes.filter((b) => b !== barcode))}
-                aria-label={`حذف ${formatPayload(barcode)}`}
+                aria-label={`حذف ${barcode}`}
               >
                 <X className="h-3 w-3" />
               </button>

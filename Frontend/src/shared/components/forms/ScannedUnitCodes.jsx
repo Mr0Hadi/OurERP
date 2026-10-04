@@ -1,5 +1,5 @@
 import { ScanBarcode, X } from "lucide-react";
-import { barcodeSegments, formatPayload } from "@/shared/domain/barcode/productCode";
+import { barcodeSegments } from "@/shared/domain/barcode/productCode";
 import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
@@ -38,7 +38,7 @@ export default function ScannedUnitCodes({ codes = [], quantity, onRemove, class
           return (
             <div
               key={code}
-              title={formatPayload(code)}
+              title={code}
               className="flex min-w-0 items-center justify-between gap-1 rounded-md border border-border bg-card px-2 py-1"
             >
               <span dir="ltr" className="min-w-0 font-mono leading-tight">
@@ -56,7 +56,7 @@ export default function ScannedUnitCodes({ codes = [], quantity, onRemove, class
                   type="button"
                   onClick={() => onRemove(code)}
                   className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                  aria-label={`حذف دانه ${formatPayload(code)}`}
+                  aria-label={`حذف دانه ${code}`}
                 >
                   <X className="h-3 w-3" />
                 </button>
