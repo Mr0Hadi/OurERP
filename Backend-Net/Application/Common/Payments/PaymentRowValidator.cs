@@ -1,4 +1,4 @@
-using Application.Common.Dtos;
+﻿using Application.Common.Dtos;
 using FluentValidation;
 
 namespace Application.Common.Payments
@@ -11,6 +11,7 @@ namespace Application.Common.Payments
             RuleFor(x => x.Amount).GreaterThan(0).WithMessage("مبلغ هر پرداخت باید از صفر بیشتر باشد.");
             RuleFor(x => x.Type).Must(DocumentPayments.IsRowMethod)
                 .WithMessage("روش هر پرداخت باید نقدی، نسیه، چک یا انتقال بانکی باشد.");
+            Include(new PosPaymentFieldsValidator());
         }
     }
 }

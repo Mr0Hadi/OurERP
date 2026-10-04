@@ -2,6 +2,7 @@
 using Application.Ioc;
 using Infrastructure.Ioc;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.IdentityModel.Tokens;
@@ -55,7 +56,7 @@ namespace WMS
                 });
             });
 
-            builder.Services.AddEndPointServiceRegistration();
+            builder.Services.AddEndPointServiceRegistration(builder.Configuration);
             builder.Services.AddApplicationServices();
             builder.Services.AddInfrastructureServices(builder.Configuration.GetConnectionString("SqlServer"), builder.Configuration);
 
@@ -92,6 +93,18 @@ namespace WMS
             // One policy per PermissionEnum member; what a user holds is read from the
             // UserPermissions table on each request, never from claims in the token.
             builder.Services.AddPermissionAuthorization();
+
+            builder.Services.AddLoginRateLimiting(builder.Configuration);
+
+            // Every request body is capped at the same size, uploads included (an image is at most
+            // ObjectStorage:MaxImageSizeBytes, 5 MB, so this leaves room for the multipart framing).
+            // Down from the 30 MB default: a JSON request of this API is a few KB, and nothing larger
+            // has a reason to be held in memory. IIS's own requestLimits in web.config still apply on
+            // top - whichever is smaller wins.
+            var maxRequestBodyBytes = builder.Configuration.GetValue<long?>("RequestLimits:MaxBodyBytes") ?? 10L * 1024 * 1024;
+            builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = maxRequestBodyBytes);
+            builder.Services.Configure<IISServerOptions>(options => options.MaxRequestBodySize = maxRequestBodyBytes);
+            builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = maxRequestBodyBytes);
 
             var allowedOrigins = builder.Configuration.GetSection("CorsSettings:AllowedOrigins").Get<string[]>();
 
@@ -137,11 +150,22 @@ namespace WMS
                 });
             }
 
+            app.UseMiddleware<SecurityHeadersMiddleware>();
+
+            // HTTPS-only from the browser's side too. Not in Development, where the API runs on plain
+            // http://localhost and a remembered HSTS entry for localhost breaks every other local app.
+            if (!app.Environment.IsDevelopment())
+            {
+                app.UseHsts();
+            }
+
             app.UseCors("AllowAll");
 
             app.UseHttpsRedirection();
 
             app.UseRouting();
+
+            app.UseRateLimiter();
 
             app.UseAuthentication();
             app.UseAuthorization();
@@ -151,6 +175,9 @@ namespace WMS
             app.UseMiddleware<ExceptionHandlingMiddleware>();
 
             app.UseMiddleware<CachingMiddleware>();
+
+            // After the session check, so a revoked token gets 401 rather than this 403.
+            app.UseMiddleware<PasswordChangeRequiredMiddleware>();
 
             // Inside the exception handler (a failed write releases its key) and after the token check.
             app.UseMiddleware<IdempotencyMiddleware>();

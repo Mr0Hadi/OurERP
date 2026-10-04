@@ -1,3 +1,4 @@
+﻿using Application.Common.Contracts.Pos;
 using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Storage;
@@ -71,13 +72,15 @@ namespace Application.Features.Sale.Commands
     {
         private readonly IMapper _mapper;
         private readonly IWMSDbContext _context;
+        private readonly IPosPaymentGuard _posPaymentGuard;
         private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUserContextService _userContextService;
 
-        public CreateSaleCommandHandler(IWMSDbContext context, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService)
+        public CreateSaleCommandHandler(IWMSDbContext context, IPosPaymentGuard posPaymentGuard, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService)
         {
             _context = context;
+            _posPaymentGuard = posPaymentGuard;
             _objectStorageService = objectStorageService;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -87,6 +90,8 @@ namespace Application.Features.Sale.Commands
         public async Task<ResponseDto> Handle(CreateSaleCommand request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
+
+            await _posPaymentGuard.CheckAsync(request.PaymentDetails ?? new(), cancellationToken);
 
             var sale = _mapper.Map<Domain.Entities.Sale>(request);
 

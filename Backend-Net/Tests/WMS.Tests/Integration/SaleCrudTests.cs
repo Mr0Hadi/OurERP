@@ -1,4 +1,4 @@
-using Application.Common.Dtos;
+﻿using Application.Common.Dtos;
 using Application.Features.Sale.Commands;
 using Application.Features.Sale.Dtos;
 using Application.Features.Sale.Queries;
@@ -12,12 +12,12 @@ namespace WMS.Tests.Integration
     public class SaleCrudTests
     {
         private static CreateSaleCommandHandler CreateHandler(TestScope scope, int userId) =>
-            new(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance, FakeUserContext.WithUserId(userId));
+            new(scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance, FakeUserContext.WithUserId(userId));
 
         private static UpdateSaleCommandHandler UpdateHandler(TestScope scope) =>
             new(scope.Db, FakeObjectStorage.Instance, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, TestMapper.Instance, scope.SaleReturnCalculation);
 
-        private static AddSalePaymentCommandHandler AddPayment(TestScope scope) => new(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation);
+        private static AddSalePaymentCommandHandler AddPayment(TestScope scope) => new(scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation);
 
         private static ChangeSaleStatusCommandHandler StatusHandler(TestScope scope) => new(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation);
 
@@ -432,7 +432,7 @@ namespace WMS.Tests.Integration
             var first = Assert.IsType<SaleDto>((await AddPayment(scope).Handle(
                 new AddSalePaymentCommand { SaleId = scenario.Sale.Id, Type = PaymentTypeEnum.CASH, Amount = 3000 }, CancellationToken.None)).Data).PaymentDetails.Single();
 
-            var afterEdit = Assert.IsType<SaleDto>((await new EditSalePaymentCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation)
+            var afterEdit = Assert.IsType<SaleDto>((await new EditSalePaymentCommandHandler(scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation)
                 .Handle(new EditSalePaymentCommand { PaymentId = first.Id, Type = PaymentTypeEnum.TRANSFER, Amount = 2500, TransferRef = "TR-1" }, CancellationToken.None)).Data);
             Assert.Equal(2500UL, afterEdit.PaidAmount);
             Assert.Equal(2, afterEdit.PaymentDetails.Count);

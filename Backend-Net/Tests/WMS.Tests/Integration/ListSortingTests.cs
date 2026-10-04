@@ -1,3 +1,4 @@
+﻿using Application.Features.Pos.Queries;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.Customer.Dtos;
@@ -56,6 +57,7 @@ namespace WMS.Tests.Integration
             await RunAll<DepartmentListSortEnum>((s, d) => new GetDepartmentListQueryHandler(scope.Db).Handle(new GetDepartmentListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<TeamListSortEnum>((s, d) => new GetTeamListQueryHandler(scope.Db).Handle(new GetTeamListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<PosTerminalListSortEnum>((s, d) => new GetPosTerminalListQueryHandler(scope.Db).Handle(new GetPosTerminalListQuery { SortBy = s, SortDirection = d }, ct));
+            await RunAll<PosPaymentListSortEnum>((s, d) => new GetPosPaymentListQueryHandler(scope.Db).Handle(new GetPosPaymentListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<CustomerPurchaseStatisticsSortEnum>((s, d) => new GetCustomerPurchaseStatisticsQueryHandler(scope.Db).Handle(new GetCustomerPurchaseStatisticsQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<SupplierSalesStatisticsSortEnum>((s, d) => new GetSupplierSalesStatisticsQueryHandler(scope.Db).Handle(new GetSupplierSalesStatisticsQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<SalesPerformanceByEmployeeSortEnum>((s, d) => new GetSalesPerformanceByEmployeeQueryHandler(scope.Db).Handle(new GetSalesPerformanceByEmployeeQuery { SortBy = s, SortDirection = d }, ct));

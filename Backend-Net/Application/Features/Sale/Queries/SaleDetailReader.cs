@@ -1,4 +1,4 @@
-using Application.Common.Documents;
+﻿using Application.Common.Documents;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Queries;
@@ -49,6 +49,14 @@ namespace Application.Features.Sale.Queries
                         VoidedAt = p.VoidedAt,
                         CheckNumber = p.CheckNumber,
                         TransferRef = p.TransferRef,
+                        PosTerminalId = p.PosTerminalId,
+                        MaskedCardNumber = p.MaskedCardNumber,
+                        ApprovalCode = p.ApprovalCode,
+                        TraceNumber = p.TraceNumber,
+                        Source = p.Source,
+                        RecordedAt = p.RecordedAt,
+                        RecordedByUserId = p.RecordedByUserId,
+                        RecordedByName = p.RecordedByUser != null ? p.RecordedByUser.FirstName + " " + p.RecordedByUser.LastName : null,
                     }).ToList(),
                     Description = x.Description,
                     CustomerId = x.CustomerId,

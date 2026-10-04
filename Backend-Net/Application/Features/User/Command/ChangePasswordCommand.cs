@@ -1,4 +1,5 @@
 ﻿using Application.Common.Contracts.Repositories;
+using Application.Common.Contracts.Token;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Contracts.UserContextService;
 using Application.Common.Dtos;
@@ -27,7 +28,8 @@ namespace Application.Features.User.Command
 
 			RuleFor(x => x.Password)
 				 .Must(Validation.IsNotNullOrEmpty).WithMessage(Validation.RequiredMessage("رمز عبور جدید"))
-				 .Must(Validation.IsValidPassword).WithMessage("رمز عبور جدید باید حداقل 8 کاراکتر باشد و شامل حرف انگلیسی، عدد و یک کاراکتر خاص باشد");
+				 .Must(Validation.IsValidPassword).WithMessage("رمز عبور جدید باید حداقل 8 کاراکتر باشد و شامل حرف انگلیسی، عدد و یک کاراکتر خاص باشد")
+				 .NotEqual(x => x.OldPassword).WithMessage("رمز عبور جدید باید با رمز عبور فعلی متفاوت باشد.");
 
 			RuleFor(x => x.RePassword)
 				.Must(Validation.IsNotNullOrEmpty).WithMessage(Validation.RequiredMessage("تکرار رمز عبور جدید"))
@@ -39,12 +41,15 @@ namespace Application.Features.User.Command
 	{
 		private readonly IUserRepository _userRepository;
 		private readonly IUserContextService _userContextService;
+		private readonly IUserSessionService _userSessionService;
 		private readonly IUnitOfWork _unitOfWork;
 
-		public ChangePasswordCommandHandler(IUserRepository userRepository, IUserContextService userContextService, IUnitOfWork unitOfWork)
+		public ChangePasswordCommandHandler(IUserRepository userRepository, IUserContextService userContextService,
+			IUserSessionService userSessionService, IUnitOfWork unitOfWork)
 		{
 			_userRepository = userRepository;
 			_userContextService = userContextService;
+			_userSessionService = userSessionService;
 			_unitOfWork = unitOfWork;
 		}
 
@@ -67,11 +72,19 @@ namespace Application.Features.User.Command
 			}
 
 			user.PasswordHash = request.Password.ToHashSHA256();
+			user.MustChangePassword = false;
+			user.UpdatedAt = DateTime.Now;
+
+			// A new password ends every old session, including the one making this request; the
+			// caller gets a fresh token pair back so it can carry on without logging in again.
+			_userSessionService.RevokeAll(user);
+			var tokens = await _userSessionService.IssueAsync(user);
 
 			_userRepository.Update(user);
 
-			await _unitOfWork.SaveChangesAsync();
+			await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+			res.Data = tokens;
 			res.Message = "رمز‌عبور با موفقیت به‌روزرسانی شد";
 			res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
 

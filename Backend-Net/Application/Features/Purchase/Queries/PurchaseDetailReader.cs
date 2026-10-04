@@ -1,4 +1,4 @@
-using Application.Common.Documents;
+﻿using Application.Common.Documents;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
@@ -65,7 +65,15 @@ namespace Application.Features.Purchase.Queries
                         PaidAt = p.PaidAt,
                         VoidedAt = p.VoidedAt,
                         CheckNumber = p.CheckNumber,
-                        TransferRef = p.TransferRef
+                        TransferRef = p.TransferRef,
+                        PosTerminalId = p.PosTerminalId,
+                        MaskedCardNumber = p.MaskedCardNumber,
+                        ApprovalCode = p.ApprovalCode,
+                        TraceNumber = p.TraceNumber,
+                        Source = p.Source,
+                        RecordedAt = p.RecordedAt,
+                        RecordedByUserId = p.RecordedByUserId,
+                        RecordedByName = p.RecordedByUser != null ? p.RecordedByUser.FirstName + " " + p.RecordedByUser.LastName : null,
                     }).ToList(),
                     Drivers = x.Drivers.Select(d => new PurchaseDriverDto
                     {

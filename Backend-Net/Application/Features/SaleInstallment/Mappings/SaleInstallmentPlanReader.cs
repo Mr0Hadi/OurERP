@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Features.SaleInstallment.Dtos;
 using Common.Exceptions;
@@ -34,6 +34,14 @@ namespace Application.Features.SaleInstallment.Mappings
                     PaidAt = x.PaidAt,
                     CheckNumber = x.CheckNumber,
                     TransferRef = x.TransferRef,
+                    PosTerminalId = x.PosTerminalId,
+                    MaskedCardNumber = x.MaskedCardNumber,
+                    ApprovalCode = x.ApprovalCode,
+                    TraceNumber = x.TraceNumber,
+                    Source = x.Source,
+                    RecordedAt = x.RecordedAt,
+                    RecordedByUserId = x.RecordedByUserId,
+                    RecordedByName = x.RecordedByUser != null ? x.RecordedByUser.FirstName + " " + x.RecordedByUser.LastName : null,
                 })
                 .ToListAsync(cancellationToken);
 

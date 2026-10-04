@@ -20,14 +20,15 @@ namespace WMS.Controllers
             _mediator = mediator;
         }
 
-        [HasPermission(PermissionEnum.PosTerminalView)]
+        // A cashier holding only PosCharge has to pick the device to charge on.
+        [HasPermission(PermissionEnum.PosTerminalView, PermissionEnum.PosCharge)]
         [HttpGet("GetPosTerminalList")]
         public async Task<ActionResult<ResponseDto>> GetPosTerminalList([FromQuery] GetPosTerminalListQuery request)
         {
             return await _mediator.Send(request);
         }
 
-        [HasPermission(PermissionEnum.PosTerminalView)]
+        [HasPermission(PermissionEnum.PosTerminalView, PermissionEnum.PosCharge)]
         [HttpGet("GetPosTerminalDetail")]
         public async Task<ActionResult<ResponseDto>> GetPosTerminalDetail([FromQuery] GetPosTerminalDetailQuery request)
         {

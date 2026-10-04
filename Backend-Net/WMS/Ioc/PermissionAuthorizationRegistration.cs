@@ -1,4 +1,4 @@
-using Common.Extensions;
+﻿using Common.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
 using WMS.Authorization;
@@ -27,6 +27,25 @@ namespace WMS.Ioc
                     {
                         policy.RequireAuthenticatedUser();
                         policy.AddRequirements(new PermissionRequirement(permission));
+                    });
+                }
+
+                // "Any of" guards get a policy each, found on the controllers themselves - again no
+                // second list to keep in step with the attributes.
+                var anyOfGuards = typeof(PermissionAuthorizationRegistration).Assembly.GetTypes()
+                    .Where(type => typeof(Microsoft.AspNetCore.Mvc.ControllerBase).IsAssignableFrom(type))
+                    .SelectMany(type => type.GetMethods().Cast<System.Reflection.MemberInfo>().Append(type))
+                    .SelectMany(member => member.GetCustomAttributes(typeof(HasPermissionAttribute), false).Cast<HasPermissionAttribute>())
+                    .Where(attribute => attribute.Permissions.Count > 1)
+                    .GroupBy(attribute => attribute.Policy!);
+
+                foreach (var guard in anyOfGuards)
+                {
+                    var permissions = guard.First().Permissions.ToArray();
+                    options.AddPolicy(guard.Key, policy =>
+                    {
+                        policy.RequireAuthenticatedUser();
+                        policy.AddRequirements(new PermissionRequirement(permissions));
                     });
                 }
             });

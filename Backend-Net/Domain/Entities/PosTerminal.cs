@@ -1,4 +1,4 @@
-using Domain.Enums;
+﻿using Domain.Enums;
 
 namespace Domain.Entities
 {
@@ -13,5 +13,8 @@ namespace Domain.Entities
         public string? ComPort { get; set; }
         public string? TerminalId { get; set; }
         public string? MerchantId { get; set; }
+
+        /// <summary>Display only - which bank's name and logo the frontend shows (e.g. keshavarzi, refah).</summary>
+        public string? BankCode { get; set; }
     }
 }

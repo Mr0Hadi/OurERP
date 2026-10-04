@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Pos;
+﻿using Application.Common.Contracts.Pos;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Dtos.Pos;
 using Common.Exceptions;
@@ -36,6 +36,13 @@ namespace Infrastructure.Services
             // standalone class library with no reference to Domain - doesn't need its own copy
             // reconciled by hand; PosDeviceClientFactoryTests (if added) should assert this parity.
             var vendor = (PosVendor)(int)terminal.Vendor;
+
+            // The server only speaks to the first three vendors; the newer ones (and Other) are
+            // charged by the frontend's local bridge program, never through this endpoint.
+            if (!Enum.IsDefined(vendor) || (int)vendor > (int)PosVendor.Samankish)
+            {
+                throw new ValidationCustomException("اتصال مستقیم سرور به این نوع دستگاه پشتیبانی نمی‌شود.");
+            }
 
             var client = _clientFactory.GetClient(vendor);
 
