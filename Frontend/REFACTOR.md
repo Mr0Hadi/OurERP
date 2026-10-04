@@ -224,7 +224,18 @@
       - `domain/salePricing.js` (خرده/همکار). باگ: کالای تازه‌ای که از «کالای جدید» برمی‌گشت در حالتِ «همکار» هم با
         قیمتِ خرده اضافه می‌شد.
       - re-exportهای تغییرِ نامِ `api-v1` و کامنتِ تکراری حذف شد؛ ستون‌های `SaleTable` ثابتِ ماژول.
-    - [ ] ۲.۵ مرجوعی‌ها (خرید و فروش)
+    - [x] ۲.۵ مرجوعی‌ها (خرید و فروش):
+      - `shared/services/returns/createReturnMutations.js`: یک تعریف برای mutationهای هر دو سمت (دو فایلِ ۱۷۹ خطیِ
+        خط‌به‌خط یکسان → دو پیکربندیِ ~۴۰ خطی، با همان نامِ exportها).
+      - `shared/components/returns/ReturnTable.jsx` جای دو جدولِ ۱۶۴ خطیِ یکسان؛ ستونِ «جزئیات» حالا لینکِ واقعی است
+        (`detailsColumn`؛ باز کردن در تبِ تازه)، اعداد با `formatNumber`.
+      - باگ: انتخابگرِ «خریدِ قابلِ مرجوع» ۳۰ خریدِ آخر را می‌گرفت و بعد وضعیت را در مرورگر فیلتر می‌کرد؛ وقتی خریدهای
+        اخیر پیش‌فاکتور/در انتظار بودند فهرست کوتاه یا خالی بود. حالا `statuses` به سرور می‌رود
+        (`RETURNABLE_PURCHASE_STATUSES`، قرینه‌ی فروش).
+      - کد مرده: `excludeReturnId`ِ `useSaleForReturnQuery` (API نادیده‌اش می‌گرفت و کامنتِ صفحه ادعای کاری را داشت که
+        انجام نمی‌شد)، `deriveReturnStatus` (کپیِ منطقِ سرور)، `isQuarantineEffect`، `isOffScope`، `CLAIM_SCOPE_LABELS`،
+        `DOCUMENT_PAYMENT_DIRECTION`. متغیرِ `sale` در جزئیاتِ مرجوعیِ *خرید* → `purchase`.
+      - `*ReturnNewPage`: `usePageHeader` جای `setHeader`/`clearHeader`ِ دستی.
     - [ ] ۲.۶ متن پیام‌ها و دیالوگ‌ها
     - [ ] ۲.۷ سندِ بکند
     - [ ] ۲.۸ پرفرمنس

@@ -1,6 +1,3 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import { toast } from "react-hot-toast";
 import {
   createPurchaseReturn,
   addClaimResolution,
@@ -15,165 +12,36 @@ import {
 } from "./api-v1";
 import { purchaseReturnKeys } from "./queryKeys";
 import { invalidatePurchaseEcosystem } from "../../orders/services/sharedInvalidation";
-import { ROUTES, routeWithId } from "@/shared/constants/routes";
-import { idempotencyKeyFor } from "@/shared/services/api/contract";
-import { getErrorMessage } from "@/shared/lib/errorMessage";
+import { createReturnMutations } from "@/shared/services/returns/createReturnMutations";
+import { ROUTES } from "@/shared/constants/routes";
 
-const finalizeReturnChange = (queryClient, updated) => {
-  // پاسخِ هر عملیاتِ نوشتن، سندِ کاملِ به‌روزشده است؛ پس مستقیم می‌نشیند
-  // و با freshReturnId از باطل‌شدنِ دوباره‌اش جلوگیری می‌شود.
-  queryClient.setQueryData(purchaseReturnKeys.detail(updated.id), updated);
-  invalidatePurchaseEcosystem(queryClient, updated.purchaseId, {
-    freshReturnId: updated.id,
-  });
-};
+/** mutationهای مرجوعیِ خرید (`createReturnMutations`). */
+const mutations = createReturnMutations({
+  api: {
+    create: createPurchaseReturn,
+    addResolution: addClaimResolution,
+    removeResolution: removeClaimResolution,
+    executeGoodsRound,
+    executeMoneyEffect,
+    reject: rejectPurchaseReturn,
+    cancel: cancelPurchaseReturn,
+    reopen: reopenPurchaseReturn,
+    remove: removePurchaseReturn,
+    updateAttachments: updatePurchaseReturnAttachments,
+  },
+  detailKey: purchaseReturnKeys.detail,
+  invalidate: invalidatePurchaseEcosystem,
+  documentIdOf: (doc) => doc.purchaseId,
+  routes: { detail: ROUTES.PURCHASES_RETURNS_DETAIL, list: ROUTES.PURCHASES_RETURNS_LIST },
+});
 
-export const useCreatePurchaseReturnMutation = () => {
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
-  return useMutation({
-    // کلید ایدمپوتنسی برای هر «قصدِ کاربر» یکتا ساخته می‌شود: اگر
-    // درخواست به‌خاطر شبکه دوباره فرستاده شود، سرور همان مرجوعی را
-    // برمی‌گرداند نه یک مرجوعیِ تکراری.
-    mutationFn: (payload) =>
-      createPurchaseReturn(payload, { idempotencyKey: idempotencyKeyFor(payload) }),
-    onSuccess: (created) => {
-      toast.success("درخواست مرجوعی ثبت شد؛ حالا می‌توانید برایش تصمیم بگیرید");
-      invalidatePurchaseEcosystem(queryClient, created.purchaseId);
-      navigate(routeWithId(ROUTES.PURCHASES_RETURNS_DETAIL, created.id));
-    },
-    onError: (error) => toast.error(getErrorMessage(error, "خطا در ثبت مرجوعی")),
-  });
-};
-
-export const useAddClaimResolutionMutation = (returnId) => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    // ثبت تصمیم یک اثر مالیِ فوری دارد؛ بدون کلید ایدمپوتنسی، یک
-    // دوبار-کلیک یعنی دو بار جابه‌جایی پول.
-    mutationFn: (variables) =>
-      addClaimResolution(
-        returnId,
-        variables.claim,
-        variables.composition,
-        { idempotencyKey: idempotencyKeyFor(variables) },
-      ),
-    onSuccess: (updated) => {
-      finalizeReturnChange(queryClient, updated);
-      toast.success("تصمیم ثبت شد");
-    },
-    onError: (error) => toast.error(getErrorMessage(error, "خطا در ثبت تصمیم")),
-  });
-};
-
-export const useRemoveClaimResolutionMutation = (returnId) => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ claimId, resolutionId }) =>
-      removeClaimResolution(returnId, claimId, resolutionId),
-    onSuccess: (updated) => {
-      finalizeReturnChange(queryClient, updated);
-      toast.success("تصمیم حذف شد");
-    },
-    onError: (error) => toast.error(getErrorMessage(error, "خطا در حذف تصمیم")),
-  });
-};
-
-/**
- * ثبت یک دور جابه‌جایی فیزیکی کالا. هم صفحه‌ی «دریافت» انبار از آن
- * استفاده می‌کند و هم صفحه‌ی «ارسال» — چون در مدل جدید هر دو یک
- * عملیات‌اند با جهت مخالف.
- */
-export const useExecuteGoodsRoundMutation = (returnId) => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    // دورِ کالا تجمعی است (`appliedQuantity` جمع می‌شود)، پس تکرارِ یک
-    // درخواست موجودی را دوبار جابه‌جا می‌کند.
-    mutationFn: (payload) =>
-      executeGoodsRound(returnId, payload, {
-        idempotencyKey: idempotencyKeyFor(payload),
-      }),
-    onSuccess: (updated) => {
-      finalizeReturnChange(queryClient, updated);
-      toast.success("جابه‌جایی کالا ثبت شد");
-    },
-    onError: (error) => toast.error(getErrorMessage(error, "خطا در ثبت جابه‌جایی کالا")),
-  });
-};
-
-/** ثبتِ پرداختِ یک وعده‌ی مالی — اثر `PENDING` را `APPLIED` می‌کند. */
-export const useExecuteMoneyEffectMutation = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (payload) =>
-      executeMoneyEffect(payload, { idempotencyKey: idempotencyKeyFor(payload) }),
-    onSuccess: (updated) => {
-      finalizeReturnChange(queryClient, updated);
-      toast.success("پرداخت ثبت شد");
-    },
-    onError: (error) => toast.error(getErrorMessage(error, "خطا در ثبت پرداخت")),
-  });
-};
-
-export const useRejectPurchaseReturnMutation = (returnId) => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (reason) => rejectPurchaseReturn(returnId, reason),
-    onSuccess: (updated) => {
-      finalizeReturnChange(queryClient, updated);
-      toast.success("درخواست به‌عنوان رد‌شده ثبت شد");
-    },
-    onError: (error) => toast.error(getErrorMessage(error, "خطا در ثبت رد درخواست")),
-  });
-};
-
-export const useCancelPurchaseReturnMutation = (returnId) => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (reason) => cancelPurchaseReturn(returnId, reason),
-    onSuccess: (updated) => {
-      finalizeReturnChange(queryClient, updated);
-      toast.success("مرجوعی لغو شد");
-    },
-    onError: (error) => toast.error(getErrorMessage(error, "خطا در لغو مرجوعی")),
-  });
-};
-
-export const useReopenPurchaseReturnMutation = (returnId) => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: () => reopenPurchaseReturn(returnId),
-    onSuccess: (updated) => {
-      finalizeReturnChange(queryClient, updated);
-      toast.success("مرجوعی دوباره برای بررسی باز شد");
-    },
-    onError: (error) => toast.error(getErrorMessage(error, "خطا در بازگشایی مرجوعی")),
-  });
-};
-
-export const useRemovePurchaseReturnMutation = () => {
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
-  return useMutation({
-    mutationFn: removePurchaseReturn,
-    onSuccess: (removed) => {
-      queryClient.removeQueries({ queryKey: purchaseReturnKeys.detail(removed.id) });
-      invalidatePurchaseEcosystem(queryClient, removed.purchaseId);
-      toast.success("مرجوعی حذف شد");
-      navigate(ROUTES.PURCHASES_RETURNS_LIST);
-    },
-    onError: (error) => toast.error(getErrorMessage(error, "خطا در حذف مرجوعی")),
-  });
-};
-/** پیوست‌ها فقط سندِ مرجوعی را عوض می‌کنند؛ پاسخ مستقیم در کش می‌نشیند. */
-export const useUpdatePurchaseReturnAttachmentsMutation = (returnId) => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (attachments) => updatePurchaseReturnAttachments(returnId, attachments),
-    onSuccess: (updated) => {
-      finalizeReturnChange(queryClient, updated);
-      toast.success("پیوست‌ها ذخیره شد");
-    },
-    onError: (error) => toast.error(getErrorMessage(error, "خطا در ذخیره‌ی پیوست‌ها")),
-  });
-};
+export const useCreatePurchaseReturnMutation = mutations.useCreate;
+export const useAddClaimResolutionMutation = mutations.useAddResolution;
+export const useRemoveClaimResolutionMutation = mutations.useRemoveResolution;
+export const useExecuteGoodsRoundMutation = mutations.useExecuteGoodsRound;
+export const useExecuteMoneyEffectMutation = mutations.useExecuteMoneyEffect;
+export const useRejectPurchaseReturnMutation = mutations.useReject;
+export const useCancelPurchaseReturnMutation = mutations.useCancel;
+export const useReopenPurchaseReturnMutation = mutations.useReopen;
+export const useRemovePurchaseReturnMutation = mutations.useRemove;
+export const useUpdatePurchaseReturnAttachmentsMutation = mutations.useUpdateAttachments;

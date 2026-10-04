@@ -31,6 +31,16 @@ export function purchaseStatusTargets(purchase) {
   }
 }
 
+/**
+ * وضعیت‌هایی که مرجوعی رویشان معنا دارد (`CreatePurchaseReturn`): پیش‌فاکتور، «در
+ * انتظار ارسال» و لغوشده چیزی برای ادعا ندارند.
+ */
+export const RETURNABLE_PURCHASE_STATUSES = [
+  PurchaseStatusEnum.SHIPPED,
+  PurchaseStatusEnum.PARTIALLY_RECEIVED,
+  PurchaseStatusEnum.RECEIVED,
+];
+
 // ─── قلم‌های خرید پس از ثبت ─────────────────────────────────────────────────
 
 /** همان `PurchaseItem.StillOwedQuantity`ِ بکند: سفارش − رسیده − بسته‌شده. */

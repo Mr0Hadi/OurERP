@@ -48,10 +48,10 @@ export function useReturnableSalesQuery(search) {
   });
 }
 
-export function useSaleForReturnQuery(saleId, excludeReturnId = null) {
+export function useSaleForReturnQuery(saleId) {
   return useQuery({
-    queryKey: salesReturnKeys.saleForReturn(saleId, excludeReturnId),
-    queryFn: () => fetchSaleForReturn(saleId, excludeReturnId),
+    queryKey: salesReturnKeys.saleForReturn(saleId),
+    queryFn: () => fetchSaleForReturn(saleId),
     enabled: !!saleId,
     refetchOnMount: "always",
   });

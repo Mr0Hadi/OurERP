@@ -36,7 +36,7 @@ export function invalidateSalesEcosystem(
       queryClient.invalidateQueries({ queryKey: saleKeys.detail(saleId) });
     }
     queryClient.invalidateQueries({ queryKey: shippingKeys.detail(saleId) });
-    queryClient.invalidateQueries({ queryKey: salesReturnKeys.saleForReturnAll(saleId) });
+    queryClient.invalidateQueries({ queryKey: salesReturnKeys.saleForReturn(saleId) });
   }
   queryClient.invalidateQueries({ queryKey: saleKeys.lists() });
   queryClient.invalidateQueries({ queryKey: shippingKeys.lists() });

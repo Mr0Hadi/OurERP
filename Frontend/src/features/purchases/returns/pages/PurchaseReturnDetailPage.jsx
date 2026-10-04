@@ -51,7 +51,7 @@ import { usePageHeader } from "@/shared/hooks/usePageHeader";
  * کنارِ وضعیت است و ستون دوم اصلاً لازم نیست.
  */
 function PurchaseReturnDetailContent({ purchaseReturn }) {
-  const { data: sale } = usePurchaseForReturnQuery(purchaseReturn.purchaseId);
+  const { data: purchase } = usePurchaseForReturnQuery(purchaseReturn.purchaseId);
   const { data: relatedReturns } = useRelatedPurchaseReturnsQuery(
     purchaseReturn.purchaseId,
     purchaseReturn.id,
@@ -100,9 +100,9 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
         detailRoute={ROUTES.PURCHASES_RETURNS_DETAIL}
       />
 
-      {sale && (
+      {purchase && (
         <OrderInvoiceCard
-          order={sale}
+          order={purchase}
           partyName={purchaseReturn.supplierName}
           defaultOpen={false}
           claimsElsewhere={claimsElsewhere}
@@ -122,14 +122,14 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
         </p>
       )}
 
-      <ReceivingReportCard receivingInfo={sale} />
+      <ReceivingReportCard receivingInfo={purchase} />
 
       <PurchaseReturnResolutionSection
         purchaseReturn={purchaseReturn}
         renderClaimReport={(claim) => (
-          <ReceivingReportLines {...claimReceivingReport(sale, claim)} />
+          <ReceivingReportLines {...claimReceivingReport(purchase, claim)} />
         )}
-        quarantineOf={(claim) => claimQuarantinedQuantity(sale, claim)}
+        quarantineOf={(claim) => claimQuarantinedQuantity(purchase, claim)}
         isBusy={isBusy}
         onAddResolution={(claim, composition) =>
           addResolutionMutation.mutate({ claim, composition })
