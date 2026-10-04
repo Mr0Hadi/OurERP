@@ -14,6 +14,7 @@ import {
   DEFAULT_OBSERVATION_PROBLEM,
 } from "@/shared/domain/returns/observations";
 import { cn } from "@/shared/lib/utils";
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 const PROBLEM_OPTIONS = Object.values(OBSERVATION_PROBLEMS);
 
@@ -58,7 +59,7 @@ export default function ObservationEditor({
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-card-foreground">
           {title ??
-            `بازرسی ${subject} (${round.quantity.toLocaleString("fa-IR")} عدد دریافت‌شده)`}
+            `بازرسی ${subject} (${formatNumber(round.quantity)} عدد دریافت‌شده)`}
         </span>
         <Button
           type="button"
@@ -169,12 +170,12 @@ export default function ObservationEditor({
 
       {observations.length > 0 && (
         <p className="text-[11px] text-muted-foreground">
-          مشکل‌دار: {allocated.toLocaleString("fa-IR")} از{" "}
-          {round.quantity.toLocaleString("fa-IR")}
+          مشکل‌دار: {formatNumber(allocated)} از{" "}
+          {formatNumber(round.quantity)}
           {remaining > 0 && (
             <>
               {" "}
-              — {remaining.toLocaleString("fa-IR")} {healthySuffix}
+              — {formatNumber(remaining)} {healthySuffix}
             </>
           )}
         </p>

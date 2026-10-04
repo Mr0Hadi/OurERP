@@ -23,6 +23,7 @@ import { createRowStatus } from "@/shared/lib/createRowStatus";
 import { ProductUnitStatusEnum } from "@/shared/domain/enums/unitStatus";
 import { RETURN_PROBLEM_LABELS } from "@/shared/domain/returns/problems";
 import ObservationEditor from "./ObservationEditor";
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 const { getRowStatus, ROW_STATUS_CONFIG } = createRowStatus({
   completeLabel: "کامل",
@@ -98,8 +99,8 @@ export default function GoodsRoundItemsSection({
           )}
         </div>
         <Badge variant="outline" className="text-xs tabular-nums">
-          {totals.quantity.toLocaleString("fa-IR")} از{" "}
-          {totals.remaining.toLocaleString("fa-IR")}
+          {formatNumber(totals.quantity)} از{" "}
+          {formatNumber(totals.remaining)}
         </Badge>
       </CardHeader>
 
@@ -185,7 +186,7 @@ export default function GoodsRoundItemsSection({
                 <span className="text-xs text-muted-foreground">
                   باقیمانده‌ی این اثر:{" "}
                   <span className="tabular-nums font-medium text-card-foreground">
-                    {round.remainingQuantity.toLocaleString("fa-IR")}
+                    {formatNumber(round.remainingQuantity)}
                   </span>
                 </span>
                 <QuantityStepper

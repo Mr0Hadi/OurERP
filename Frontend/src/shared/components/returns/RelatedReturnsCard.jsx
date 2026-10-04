@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Layers, ChevronLeft } from "lucide-react";
 
 import {
@@ -29,8 +29,6 @@ export default function RelatedReturnsCard({
   detailRoute,
   title = "مرجوعی‌های دیگر همین سند",
 }) {
-  const navigate = useNavigate();
-
   if (returns.length === 0) return null;
 
   return (
@@ -46,10 +44,9 @@ export default function RelatedReturnsCard({
       </CardHeader>
       <CardContent className="space-y-1.5">
         {returns.map((ret) => (
-          <button
+          <Link
             key={ret.id}
-            type="button"
-            onClick={() => navigate(routeWithId(detailRoute, ret.id))}
+            to={routeWithId(detailRoute, ret.id)}
             className="w-full flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-right hover:bg-accent/50 transition-colors"
           >
             <div className="flex-1 min-w-0">
@@ -68,7 +65,7 @@ export default function RelatedReturnsCard({
               </p>
             </div>
             <ChevronLeft className="h-4 w-4 shrink-0 text-muted-foreground" />
-          </button>
+          </Link>
         ))}
       </CardContent>
     </Card>

@@ -58,8 +58,9 @@ export const PURCHASE_RETURN_PROBLEM_STYLES = problemStyles(
 // ─── دامنه‌ی ادعا ───────────────────────────────────────────────────────────
 
 export const OFF_SCOPE_KIND_LABELS = {
-  [OFF_SCOPE_KINDS.EXCESS]: "بیش از مقدار سفارش",
-  [OFF_SCOPE_KINDS.UNLISTED]: "کالای خارج از سفارش",
+  [OFF_SCOPE_KINDS.EXCESS]: "مازاد بر سفارش",
+  // همان واژه‌ی برچسبِ مشکل (`UNLISTED_ITEM`) و گزارشِ انبار.
+  [OFF_SCOPE_KINDS.UNLISTED]: "کالای سفارش‌نداده",
 };
 
 

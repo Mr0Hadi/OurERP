@@ -76,7 +76,8 @@ export const SALES_OFF_ORDER_PROBLEM_LABELS = Object.fromEntries(
 // ─── دامنه‌ی ادعا ───────────────────────────────────────────────────────────
 
 export const OFF_SCOPE_KIND_LABELS = {
-  [OFF_SCOPE_KINDS.EXCESS]: "بیش از مقدار ارسال‌شده",
+  // کالایی که بیش از تعدادِ فاکتور برای مشتری ارسال شده.
+  [OFF_SCOPE_KINDS.EXCESS]: "مازاد بر فاکتور",
   [OFF_SCOPE_KINDS.UNLISTED]: "کالای خارج از فاکتور",
 };
 

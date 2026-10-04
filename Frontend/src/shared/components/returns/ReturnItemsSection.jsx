@@ -78,7 +78,7 @@ function LineCard({
         </div>
         <div className="text-xs text-muted-foreground tabular-nums shrink-0 text-left">
           <div>
-            {formatNumber(allocated)} از {formatNumber(line.maxReturnableQuantity)} ثبت‌شده
+            ادعا: {formatNumber(allocated)} از {formatNumber(line.maxReturnableQuantity)}
           </div>
           <div className="text-[11px] opacity-70">
             {deliveredLabel}: {formatNumber(line.deliveredQuantity ?? 0)}
@@ -149,7 +149,7 @@ function LineCard({
           disabled={remaining <= 0}
         >
           <Plus className="h-3.5 w-3.5" />
-          {remaining > 0 ? "افزودن مشکل" : "کل مقدار تحویل‌شده ثبت شده"}
+          {remaining > 0 ? "افزودن مشکل" : "همه‌ی مقدارِ قابلِ ادعا ثبت شد"}
         </Button>
         {/* صفحه‌ای که پنلِ مازادِ خودش را دارد (`renderExcessPanel`) دکمه‌ی پیش‌فرض نمی‌خواهد. */}
         {canAddExcess && excessPanel === undefined && (
@@ -161,7 +161,7 @@ function LineCard({
             onClick={onAddExcess}
           >
             <Plus className="h-3.5 w-3.5" />
-            {kindLabels[OFF_SCOPE_KINDS.EXCESS] ?? "مازاد"} روی این کالا
+            ثبتِ {kindLabels[OFF_SCOPE_KINDS.EXCESS] ?? "مازاد"} روی این کالا
           </Button>
         )}
       </div>

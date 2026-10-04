@@ -13,6 +13,7 @@ import {
   RETURN_PROBLEM_STYLES,
 } from "@/shared/domain/returns/problems";
 import { CLAIM_SCOPES } from "@/shared/domain/returns/scopes";
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 
 /**
@@ -59,7 +60,7 @@ export default function ClaimResolutionCard({
           </p>
         </div>
         <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">
-          {decided.toLocaleString("fa-IR")} / {total.toLocaleString("fa-IR")}
+          تصمیم‌گرفته: {formatNumber(decided)} از {formatNumber(total)}
         </span>
       </div>
 
@@ -146,7 +147,7 @@ export default function ClaimResolutionCard({
             disabled={isBusy}
           >
             <Plus className="h-3.5 w-3.5" />
-            ثبت تصمیم برای {remaining.toLocaleString("fa-IR")} عدد باقیمانده
+            تصمیم برای {formatNumber(remaining)} عددِ باقیمانده
           </Button>
         ))}
 

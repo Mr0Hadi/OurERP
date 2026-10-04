@@ -34,14 +34,14 @@ export default function ReturnStatusBar({ returnDoc, side }) {
           <ReturnStatusBadge status={returnDoc.status} side={side} />
         </div>
         <span className="text-xs text-muted-foreground tabular-nums">
-          ادعا: {formatRial(returnDoc.totalAmount)}
+          مبلغ ادعا: {formatRial(returnDoc.totalAmount)}
         </span>
       </div>
 
       {showProgress && (
         <div className="space-y-1">
           <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-            <span>پیشرفت تصمیم‌گیری</span>
+            <span>تصمیم‌گرفته</span>
             <span className="tabular-nums font-medium text-card-foreground">
               {formatNumber(totalDecided)} / {formatNumber(totalClaimed)} عدد
             </span>
