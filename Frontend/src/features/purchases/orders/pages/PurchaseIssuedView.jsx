@@ -179,7 +179,6 @@ export default function PurchaseIssuedView({ purchase }) {
         isPending={saver.isPending}
         onConfirm={save}
       />
-      
     </>
   );
 }

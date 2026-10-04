@@ -78,7 +78,7 @@ export const useCreateInPersonSaleMutation = () => {
   });
 };
 
-/** فقط پیش‌فاکتور. */
+/** فقط پیش‌فاکتور؛ رفتن به فهرست با خودِ صفحه است. */
 export const useRemoveSaleMutation = () => {
   const queryClient = useQueryClient();
 
@@ -92,7 +92,7 @@ export const useRemoveSaleMutation = () => {
       toast.success("پیش‌فاکتور فروش حذف شد");
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, "خطا در حذف فروش"));
+      toast.error(getErrorMessage(error, "حذف پیش‌فاکتور فروش انجام نشد"));
     },
   });
 };

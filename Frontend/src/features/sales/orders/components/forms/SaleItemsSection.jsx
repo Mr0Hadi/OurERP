@@ -1,14 +1,7 @@
 import { Button } from "@/shared/components/ui/button";
 import DocumentItemsSection from "@/shared/components/products/DocumentItemsSection";
+import { SALE_PRICE_MODES, salePriceOf } from "../../domain/salePricing";
 
-/** دو قیمتِ فروشِ هر کالا. */
-const SALE_PRICE_MODES = {
-  retail: { label: "خرده", priceOf: (product) => product.retailPrice ?? 0 },
-  wholesale: {
-    label: "همکار / عمده",
-    priceOf: (product) => product.wholeSalePrice ?? product.retailPrice ?? 0,
-  },
-};
 
 /**
  * اقلامِ فروش، با کلیدِ «خرده / همکار» برای قیمتِ پیش‌فرض.
@@ -25,12 +18,10 @@ export default function SaleItemsSection({
   onPriceModeChange,
   onAddNewProduct,
 }) {
-  const mode = SALE_PRICE_MODES[priceMode] ?? SALE_PRICE_MODES.retail;
-
   const switchMode = (nextMode) => {
     if (nextMode === priceMode || !onPriceModeChange) return;
-    const previous = mode.priceOf;
-    const next = SALE_PRICE_MODES[nextMode].priceOf;
+    const previous = salePriceOf(priceMode);
+    const next = salePriceOf(nextMode);
     onItemsChange(
       items.map((item) => {
         const product = products.find((candidate) => candidate.id === item.productId);
@@ -48,7 +39,7 @@ export default function SaleItemsSection({
       onItemsChange={onItemsChange}
       products={products}
       isLoadingProducts={isLoadingProducts}
-      priceOf={mode.priceOf}
+      priceOf={salePriceOf(priceMode)}
       trackUnits
       onAddNewProduct={onAddNewProduct}
       actions={

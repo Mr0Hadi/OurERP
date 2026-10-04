@@ -13,7 +13,6 @@ export default function SaleDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-
   const {
     data: sale,
     isLoading: saleLoading,
