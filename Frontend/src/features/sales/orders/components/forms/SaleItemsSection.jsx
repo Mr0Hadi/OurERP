@@ -1,17 +1,7 @@
-import { PackagePlus } from "lucide-react";
-
 import { Button } from "@/shared/components/ui/button";
-import SectionCard from "@/shared/components/forms/SectionCard";
-import ProductPicker from "@/shared/components/products/ProductPicker";
+import DocumentItemsSection from "@/shared/components/products/DocumentItemsSection";
+import { SALE_PRICE_MODES, salePriceOf } from "../../domain/salePricing";
 
-/** دو قیمتِ فروشِ هر کالا. */
-const SALE_PRICE_MODES = {
-  retail: { label: "خرده", priceOf: (product) => product.retailPrice ?? 0 },
-  wholesale: {
-    label: "همکار / عمده",
-    priceOf: (product) => product.wholeSalePrice ?? product.retailPrice ?? 0,
-  },
-};
 
 /**
  * اقلامِ فروش، با کلیدِ «خرده / همکار» برای قیمتِ پیش‌فرض.
@@ -28,12 +18,10 @@ export default function SaleItemsSection({
   onPriceModeChange,
   onAddNewProduct,
 }) {
-  const mode = SALE_PRICE_MODES[priceMode] ?? SALE_PRICE_MODES.retail;
-
   const switchMode = (nextMode) => {
     if (nextMode === priceMode || !onPriceModeChange) return;
-    const previous = mode.priceOf;
-    const next = SALE_PRICE_MODES[nextMode].priceOf;
+    const previous = salePriceOf(priceMode);
+    const next = salePriceOf(nextMode);
     onItemsChange(
       items.map((item) => {
         const product = products.find((candidate) => candidate.id === item.productId);
@@ -45,49 +33,38 @@ export default function SaleItemsSection({
   };
 
   return (
-    <SectionCard
+    <DocumentItemsSection
       title="اقلام فروش"
-      action={
-        <>
-          {onPriceModeChange && (
-            <div
-              role="group"
-              aria-label="قیمت پیش‌فرض"
-              className="inline-flex rounded-md border border-border p-0.5"
-            >
-              {Object.entries(SALE_PRICE_MODES).map(([key, { label }]) => (
-                <Button
-                  key={key}
-                  type="button"
-                  size="sm"
-                  variant={priceMode === key ? "default" : "ghost"}
-                  className="h-7 px-2.5 text-xs"
-                  aria-pressed={priceMode === key}
-                  onClick={() => switchMode(key)}
-                >
-                  قیمت {label}
-                </Button>
-              ))}
-            </div>
-          )}
-          {onAddNewProduct && (
-            <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={onAddNewProduct}>
-              <PackagePlus className="size-3.5" />
-              کالای جدید
-            </Button>
-          )}
-        </>
+      items={items}
+      onItemsChange={onItemsChange}
+      products={products}
+      isLoadingProducts={isLoadingProducts}
+      priceOf={salePriceOf(priceMode)}
+      trackUnits
+      onAddNewProduct={onAddNewProduct}
+      actions={
+        onPriceModeChange && (
+          <div role="group" aria-label="قیمت پیش‌فرض" className="inline-flex rounded-md border border-border p-0.5">
+            {Object.entries(SALE_PRICE_MODES).map(([key, { label, fullLabel }]) => (
+              <Button
+                key={key}
+                type="button"
+                size="sm"
+                variant={priceMode === key ? "default" : "ghost"}
+                className="h-7 px-2.5 text-xs"
+                aria-pressed={priceMode === key}
+                aria-label={fullLabel}
+                title={fullLabel}
+                onClick={() => switchMode(key)}
+              >
+                {/* در موبایل کنارِ «کالای جدید» جا نمی‌شد؛ «قیمت» فقط از sm به بالا. */}
+                <span className="hidden sm:inline">قیمت&nbsp;</span>
+                {label}
+              </Button>
+            ))}
+          </div>
+        )
       }
-    >
-      <ProductPicker
-        items={items}
-        onItemsChange={onItemsChange}
-        products={products}
-        isLoading={isLoadingProducts}
-        priceOf={mode.priceOf}
-        trackUnits
-        showTaxHint
-      />
-    </SectionCard>
+    />
   );
 }

@@ -4,7 +4,8 @@ import { Undo2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
-import { useSaleChangesSaver } from "@/features/sales/orders/services/mutations";
+import { newPosReference } from "@/shared/domain/pos/posSession";
+import { useSaleChangesSaver, useSalePosActions } from "@/features/sales/orders/services/mutations";
 import SaleCustomerSection from "../components/forms/SaleCustomerSection";
 import DocumentFormLayout, {
   OrderSummaryCard,
@@ -21,35 +22,14 @@ import UnitsPageLink from "@/features/warehouse/units/components/UnitsPageLink";
 import { useIssuedDocumentDraft } from "@/shared/hooks/useIssuedDocumentDraft";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { useRelatedSalesReturnsQuery } from "@/features/sales/returns/services/queries";
-import { RETURNABLE_SALE_STATUSES, hasAnythingShipped } from "../domain/saleRules";
+import { RETURNABLE_SALE_STATUSES, hasAnythingShipped, saleStatusOptions } from "../domain/saleRules";
 import { SALE_PAYMENT_SIDE } from "../domain/salePayments";
-import { SaleStatusEnum, SALE_STATUS_LABELS } from "@/shared/domain/enums/saleStatus";
+import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import { savedInvoiceTotals } from "@/shared/domain/invoice/lineMath";
 import { ROUTES } from "@/shared/constants/routes";
 import { formatNumber } from "@/shared/lib/numberFormat";
-
-/** لغو فقط پیش از هر ارسالی؛ قرارداد اقساطیِ فعال را خودِ سرور می‌سنجد. */
-const canCancelSale = (sale) =>
-  sale.status !== SaleStatusEnum.CANCELLED &&
-  sale.status !== SaleStatusEnum.DELIVERED &&
-  !hasAnythingShipped(sale);
-
-/**
- * گزینه‌های وضعیت. `ChangeSaleStatus` دستی فقط «ارسال شده → تحویل کامل» را
- * می‌پذیرد؛ «ارسال ناقص/ارسال شده» را ارسالِ انبار می‌گذارد.
- */
-function statusOptionsOf(sale) {
-  const current = sale.status;
-  return [
-    { value: current, label: SALE_STATUS_LABELS[current] },
-    ...(current === SaleStatusEnum.SHIPPED
-      ? [{ value: SaleStatusEnum.DELIVERED, label: SALE_STATUS_LABELS[SaleStatusEnum.DELIVERED] }]
-      : []),
-    ...(canCancelSale(sale) ? [{ value: SaleStatusEnum.CANCELLED, label: "لغو فروش" }] : []),
-  ];
-}
 
 /**
  * فروشِ **صادرشده** — همان چیدمانِ فرمِ ثبت (`SaleForm`)، با مشتری و اقلامِ
@@ -62,13 +42,16 @@ export default function SaleIssuedView({ sale }) {
   const [confirmCancel, setConfirmCancel] = useState(false);
 
   const draft = useIssuedDocumentDraft(sale, SALE_PAYMENT_SIDE.direction);
+  const posActions = useSalePosActions();
+  // تا پایانِ کارتخوان «ثبت تغییرات» بسته است.
+  const [posLocked, setPosLocked] = useState(false);
   const saver = useSaleChangesSaver(sale.id);
   const { data: relatedReturns } = useRelatedSalesReturnsQuery(sale.id);
 
   const canUpdate = allows("SaleUpdate");
   const isCancelled = sale.status === SaleStatusEnum.CANCELLED;
   const isInstallment = sale.paymentType === PaymentTypeEnum.INSTALLMENT;
-  const isSaving = saver.isPending || draft.attachments.isUploading;
+  const isSaving = saver.isPending || draft.attachments.isUploading || posLocked;
 
   const save = () => {
     if (draft.attachments.isUploading) return;
@@ -82,7 +65,7 @@ export default function SaleIssuedView({ sale }) {
 
   const onSubmit = (e) => {
     e.preventDefault();
-    if (!draft.count) return;
+    if (!draft.count || posLocked) return;
     if (Number(draft.status) === SaleStatusEnum.CANCELLED) setConfirmCancel(true);
     else save();
   };
@@ -127,6 +110,16 @@ export default function SaleIssuedView({ sale }) {
               payable={sale.payableAmount}
               canManage={allows("SalePayment") && !isInstallment}
               refundOnly={isCancelled}
+              posPayment={
+                allows("PosCharge") && !isInstallment && !isCancelled
+                  ? {
+                      record: (_result, context) => posActions.recordPayment(sale.id, context),
+                      onRecorded: posActions.apply,
+                      onLockChange: setPosLocked,
+                      reference: () => newPosReference(`sale-${sale.id}`),
+                    }
+                  : undefined
+              }
               notice={
                 isInstallment
                   ? "پرداخت‌های فروشِ اقساطی از قرارداد اقساط ثبت می‌شوند."
@@ -151,7 +144,6 @@ export default function SaleIssuedView({ sale }) {
         }
         aside={
           <>
-
             <OrderInfoCard
               issued
               formData={{ ...sale, paymentDate: draft.dueDate }}
@@ -159,7 +151,7 @@ export default function SaleIssuedView({ sale }) {
               headerAction={!isCancelled && <IssuedInvoiceNotice movedLabel="ارسال" />}
               status={
                 canUpdate
-                  ? { value: Number(draft.status), options: statusOptionsOf(sale), onChange: draft.setStatus }
+                  ? { value: Number(draft.status), options: saleStatusOptions(sale), onChange: draft.setStatus }
                   : undefined
               }
             />
@@ -180,7 +172,7 @@ export default function SaleIssuedView({ sale }) {
               submitDisabled={!draft.count}
               isBusy={isSaving}
               onCancel={draft.count ? draft.discard : undefined}
-              cancelLabel="بازگردانی"
+              cancelLabel="برگرداندنِ تغییرات"
               footer={
                 RETURNABLE_SALE_STATUSES.includes(Number(sale.status)) && (
                   <Button

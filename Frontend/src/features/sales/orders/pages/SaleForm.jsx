@@ -12,8 +12,14 @@ import {
   useSaleChangesSaver,
 } from "@/features/sales/orders/services/mutations";
 import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
-import { missingSaleInvoiceFields } from "@/features/sales/orders/domain/saleRules";
+import {
+  missingSaleInvoiceFields,
+  saleFormProblem,
+  scannedBarcodesOf,
+} from "@/features/sales/orders/domain/saleRules";
 import { SALE_PAYMENT_SIDE } from "@/features/sales/orders/domain/salePayments";
+import { salePriceOf } from "@/features/sales/orders/domain/salePricing";
+import { useSaleFormPos } from "../hooks/useSaleFormPos";
 import SaleCustomerSection from "../components/forms/SaleCustomerSection";
 import SaleItemsSection from "../components/forms/SaleItemsSection";
 import DocumentFormLayout, {
@@ -31,38 +37,12 @@ import { useDocumentAttachments } from "@/shared/components/invoice/useInvoiceAt
 import { useReturnedNewProduct } from "@/shared/components/products/useReturnedNewProduct";
 import { useDocumentFormDraft } from "@/shared/hooks/useDocumentFormDraft";
 import { usePermission } from "@/features/auth/hooks/usePermission";
-import { scrollToSection } from "@/shared/lib/scrollToSection";
+import { reportFormProblem } from "@/shared/lib/scrollToSection";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
 import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
-import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
 
-/**
- * دانه‌هایی که در اقلام اسکن شده‌اند (`{ [productId]: string[] }`). اسکنِ دانه
- * یعنی کالا همین‌جا دستِ مشتری است: «فروشِ حضوری».
- */
-function scannedBarcodesOf(items) {
-  return Object.fromEntries(
-    items
-      .filter((item) => item.productUnitBarcodes?.length)
-      .map((item) => [item.productId, item.productUnitBarcodes]),
-  );
-}
-
-/** قلم‌هایی که در فروشِ حضوری اسکنشان کامل نیست (پیامِ اولی). */
-function inPersonScanProblem(items, scanned, isTracked) {
-  for (const item of items) {
-    const quantity = Number(item.quantity) || 0;
-    const count = (scanned[item.productId] || []).length;
-    if (isTracked(item.productId) && count !== quantity) {
-      return `«${item.productName}» ردیابی‌پذیر است؛ همه‌ی ${formatNumber(quantity)} دانه را اسکن کنید`;
-    }
-    if (count > 0 && count !== quantity) {
-      return `${formatNumber(count)} از ${formatNumber(quantity)} دانه‌ی «${item.productName}» اسکن شده؛ همه را اسکن یا تعداد را اصلاح کنید`;
-    }
-  }
-  return null;
-}
+const UPLOADING_MESSAGE = "تا پایان بارگذاری پیوست‌ها صبر کنید.";
 
 /**
  * فرمِ فروش — ثبتِ تازه (`sale` خالی) و ویرایشِ پیش‌فاکتور (تنها وضعیتی که
@@ -76,6 +56,9 @@ function inPersonScanProblem(items, scanned, isTracked) {
  *    دریافت فاکتور می‌کند، پس «نسیه»ی کامل فعلاً بسته است (بندِ ۹.۱۱).
  *  - اسکنِ دانه در اقلام یعنی «فروشِ حضوری»: ثبت، خروجِ کالا با همان کدها و
  *    «تحویل کامل» در یک درخواست؛ دریافت باید کامل باشد.
+ *  - کارتخوان: `useSaleFormPos`.
+ *
+ * قاعده‌ها (پیش از ثبت چه کم است، فروشِ حضوری) در `domain/saleRules.js`.
  */
 export default function SaleForm({ sale }) {
   const isNew = !sale;
@@ -110,72 +93,103 @@ export default function SaleForm({ sale }) {
     if (newCustomerId) setFormData({ customerId: newCustomerId, customerName: "" });
   }, [newCustomerId, setFormData]);
 
+  // کالای تازه با قیمتِ حالتِ فعلی (خرده/همکار)، نه همیشه خرده.
   useReturnedNewProduct({
     productId: returned?.newProductId,
     getItems: () => useSaleFormStore.getState().formData.items || [],
     setItems,
-    priceOf: (product) => product.retailPrice ?? 0,
+    priceOf: (product) => salePriceOf(useSaleFormStore.getState().formData.priceMode)(product),
   });
-
-  if (!ready) return null;
 
   const items = formData.items || [];
   // پیش‌نمایش با قاعده‌ی سرور؛ جمع فرستاده نمی‌شود.
   const totals = invoiceTotals(items);
-
   const scannedBarcodes = scannedBarcodesOf(items);
   const isInPerson = isNew && Object.keys(scannedBarcodes).length > 0;
   const isTracked = (productId) =>
     Boolean(products.find((product) => product.id === productId)?.requiresUnitTracking);
-
-  // `status` روی سیم نمی‌رود؛ فقط شکلِ فرم را تعیین می‌کند.
-  const isInvoice =
-    isInPerson || Number(formData.status || SaleStatusEnum.PROFORMA) !== SaleStatusEnum.PROFORMA;
-  const invoiceErrors = missingSaleInvoiceFields(formData, isInvoice);
   const paid = payments.netPaid;
+  // ورودیِ `saleFormProblem` جز نوعِ سند (فاکتور/پیش‌فاکتور) که به کارتخوان هم بسته است.
+  const problemBase = { formData, items, isInPerson, scannedBarcodes, isTracked, paid, total: totals.totalAmount };
 
-  /** نخستین دلیلی که ثبت را ناممکن می‌کند: `[پیام، بخش]`. */
-  const blocker = () => {
-    if (!formData.customerId) return ["مشتری را انتخاب کنید.", "party"];
-    if (items.length === 0) return ["دست‌کم یک کالا اضافه کنید.", "items"];
-    if (invoiceErrors) return ["برای فاکتور، تاریخ را وارد کنید.", "info"];
-    if (isInPerson) {
-      const scanProblem = inPersonScanProblem(items, scannedBarcodes, isTracked);
-      if (scanProblem) return [scanProblem, "items"];
-      if (paid < totals.totalAmount) {
-        return [`در تحویلِ حضوری کلِ ${formatRial(totals.totalAmount)} باید دریافت شود.`, "payment"];
-      }
-    }
-    if (isInvoice && paid <= 0) {
-      return ["فاکتورِ فروش با اولین دریافت صادر می‌شود؛ دریافت را ثبت کنید یا پیش‌فاکتور ثبت کنید.", "payment"];
-    }
-    return null;
+  /** فرم → بدنه‌ی `CreateSale`/`UpdateSale` (بی ردیف‌های پرداخت). */
+  const buildPayload = (isInvoice) => ({
+    customerId: formData.customerId,
+    customerName: formData.customerName,
+    invoiceDate: isInvoice ? formData.invoiceDate : null,
+    paymentDate: isInvoice ? formData.paymentDate || null : null,
+    description: formData.description || "",
+    items,
+    paymentType: paymentTypeOf(isInvoice ? payments.rows : []),
+    attachments: attachments.filesPayload,
+  });
+
+  const openSaved = (id) => {
+    attachments.commit();
+    resetForm();
+    navigate(id ? routeWithId(ROUTES.SALES_DETAIL, id) : ROUTES.SALES, { replace: true });
   };
+
+  const { posPayment, posLocked } = useSaleFormPos({
+    enabled: allows("PosCharge"),
+    sale,
+    isInPerson,
+    hasDraftPayments: payments.hasChanges,
+    // پیش از کارت‌کشیدن: اگر فرم را نمی‌شود ثبت کرد، به دستگاه چیزی نمی‌رود.
+    takeSnapshot: () => {
+      // کارتخوان فقط روی فاکتور است (کارتِ دریافت در پیش‌فاکتور نیست).
+      const problem = saleFormProblem({
+        ...problemBase,
+        isInvoice: true,
+        invoiceErrors: missingSaleInvoiceFields(formData, true),
+        forPos: true,
+      });
+      if (problem) {
+        setShowErrors(true);
+        reportFormProblem(problem);
+        throw new Error(problem[0]);
+      }
+      if (attachments.isUploading) {
+        toast.error(UPLOADING_MESSAGE);
+        throw new Error(UPLOADING_MESSAGE);
+      }
+      return {
+        payload: buildPayload(true),
+        draftRows: payments.rows,
+        inPerson: isInPerson,
+        scannedBarcodes,
+        total: totals.totalAmount,
+      };
+    },
+    onPersisted: attachments.commit,
+    onCreated: (created) => openSaved(created?.id),
+    onIssued: () => {
+      attachments.commit();
+      resetForm();
+    },
+  });
+
+  // `status` روی سیم نمی‌رود؛ فقط شکلِ فرم را تعیین می‌کند. وسطِ کارتخوان کارتِ
+  // دریافت‌ها نباید با تغییرِ نوع به پیش‌فاکتور از صفحه برود.
+  const isInvoice =
+    posLocked ||
+    isInPerson ||
+    Number(formData.status || SaleStatusEnum.PROFORMA) !== SaleStatusEnum.PROFORMA;
+  const invoiceErrors = missingSaleInvoiceFields(formData, isInvoice);
+
+  if (!ready) return null;
 
   const onSubmit = (e) => {
     e.preventDefault();
-    const problem = blocker();
+    if (posLocked) return;
+    const problem = saleFormProblem({ ...problemBase, isInvoice, invoiceErrors });
     if (problem) {
       setShowErrors(true);
-      toast.error(problem[0]);
-      return scrollToSection(problem[1]);
+      return reportFormProblem(problem);
     }
-    if (attachments.isUploading) {
-      toast.error("تا پایان بارگذاری پیوست‌ها صبر کنید.");
-      return;
-    }
+    if (attachments.isUploading) return toast.error(UPLOADING_MESSAGE);
 
-    const payload = {
-      customerId: formData.customerId,
-      customerName: formData.customerName,
-      invoiceDate: isInvoice ? formData.invoiceDate : null,
-      paymentDate: isInvoice ? formData.paymentDate || null : null,
-      description: formData.description || "",
-      items,
-      paymentType: paymentTypeOf(isInvoice ? payments.rows : []),
-      attachments: attachments.filesPayload,
-    };
-
+    const payload = buildPayload(isInvoice);
     if (!isNew) {
       // اول خودِ پیش‌فاکتور، بعد دریافت‌ها — اولینش فاکتور را صادر می‌کند و
       // صفحه خودش به نمای فاکتورِ صادرشده می‌رود.
@@ -192,13 +206,7 @@ export default function SaleForm({ sale }) {
       return;
     }
 
-    const onSuccess = (created) => {
-      attachments.commit();
-      resetForm();
-      navigate(created?.id ? routeWithId(ROUTES.SALES_DETAIL, created.id) : ROUTES.SALES, {
-        replace: true,
-      });
-    };
+    const onSuccess = (created) => openSaved(created?.id);
     const body = { ...payload, paymentRows: payments.rows };
     if (isInPerson) inPersonMutation.mutate({ payload: body, scannedBarcodes }, { onSuccess });
     else createMutation.mutate(body, { onSuccess });
@@ -216,7 +224,8 @@ export default function SaleForm({ sale }) {
     inPersonMutation.isPending ||
     saver.isPending ||
     deleteMutation.isPending ||
-    attachments.isUploading;
+    attachments.isUploading ||
+    posLocked;
   const submitLabel = isInPerson
     ? "ثبت و تحویل حضوری"
     : isNew
@@ -263,6 +272,8 @@ export default function SaleForm({ sale }) {
                   total={totals.totalAmount}
                   canManage={isNew || allows("SalePayment")}
                   allowRefund={false}
+                  posPayment={posPayment}
+                  emptyText="هنوز دریافتی ثبت نشده است."
                   notice={
                     isInPerson
                       ? "تحویلِ حضوری: کلِ مبلغ باید دریافت شود."
@@ -332,7 +343,7 @@ export default function SaleForm({ sale }) {
           open={confirmDelete}
           onOpenChange={setConfirmDelete}
           title="حذف پیش‌فاکتور فروش"
-          description="سندِ حذف‌شده دیگر در فهرست فروش‌ها دیده نمی‌شود."
+          description="این پیش‌فاکتور حذف می‌شود و دیگر در فهرست فروش‌ها نیست. این کار برگشت‌پذیر نیست."
           confirmLabel="حذف"
           pendingLabel="در حال حذف..."
           isPending={deleteMutation.isPending}

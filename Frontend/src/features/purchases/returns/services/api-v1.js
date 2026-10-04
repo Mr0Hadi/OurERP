@@ -6,7 +6,7 @@ import {
 } from "@/shared/services/api/contract";
 import { toApiClaim, fromApiPurchaseReturn } from "@/shared/domain/returns/claimsApi";
 import { toApiComposition } from "@/shared/domain/returns/resolutions";
-import { PurchaseStatusEnum } from "@/shared/domain/enums/purchaseStatus";
+import { RETURNABLE_PURCHASE_STATUSES } from "@/features/purchases/orders/domain/purchaseRules";
 
 /** `PurchaseReturnListSortEnum`ِ بکند، بر اساسِ شناسه‌ی ستونِ جدول. */
 export const PURCHASE_RETURN_SORT_COLUMNS = {
@@ -68,29 +68,20 @@ export async function fetchPurchaseReturnById(id) {
 }
 
 /**
- * وضعیت‌هایی که هیچ کالایی در آن‌ها نرسیده (یا خرید لغو شده) و بکند
- * روی آن‌ها مرجوعی نمی‌پذیرد یا چیزی برای ادعا ندارد.
- */
-const NON_RETURNABLE_STATUSES = new Set([
-  PurchaseStatusEnum.PROFORMA,
-  PurchaseStatusEnum.PENDING,
-  PurchaseStatusEnum.CANCELLED,
-]);
-
-/**
- * فهرست کوتاهِ خریدهای قابل‌مرجوع برای انتخابگر فرم.
- *
- * بکند پارامترِ `returnable` ندارد و `GetPurchaseList` فقط روی
- * `invoiceNumber` جست‌وجو می‌کند؛ پس لیستِ عادی گرفته و خریدهایی که
- * هنوز چیزی از آن‌ها نرسیده یا لغو شده‌اند همین‌جا کنار گذاشته می‌شوند.
+ * فهرست کوتاهِ خریدهای قابل‌مرجوع برای انتخابگر فرم — قرینه‌ی سمتِ فروش.
+ * فیلترِ وضعیت با `statuses` در خودِ سرور است؛ قبلاً ۳۰ خریدِ آخر گرفته و بعد
+ * فیلتر می‌شد، پس وقتی خریدهای اخیر پیش‌فاکتور/در انتظار بودند فهرست کوتاه یا
+ * خالی می‌ماند.
  */
 export async function fetchReturnablePurchases(search = "") {
   const { data } = await axiosInstance.get("/Purchase/GetPurchaseList", {
-    params: { invoiceNumber: search || undefined, take: 30 },
+    params: {
+      invoiceNumber: search || undefined,
+      statuses: RETURNABLE_PURCHASE_STATUSES,
+      take: 30,
+    },
   });
-  return normalizeListResponse(data, { itemsKey: "purchaseList" }).items.filter(
-    (purchase) => !NON_RETURNABLE_STATUSES.has(Number(purchase.status)),
-  );
+  return normalizeListResponse(data, { itemsKey: "purchaseList" }).items;
 }
 
 /**

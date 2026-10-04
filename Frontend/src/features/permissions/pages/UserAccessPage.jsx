@@ -24,7 +24,7 @@ import AccessListPane from "../components/AccessListPane";
 import { initialsOf } from "../components/initialsOf";
 import UserPermissionsPanel from "../components/UserPermissionsPanel";
 import UnsavedChangesDialog from "../components/UnsavedChangesDialog";
-import { useUnsavedChangesGuard } from "../hooks/useUnsavedChangesGuard";
+import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 

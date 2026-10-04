@@ -11,7 +11,7 @@ import { useDepartmentUserCountQuery } from "@/features/employees/services/queri
 import AccessListPane from "../components/AccessListPane";
 import DepartmentTemplatePanel from "../components/DepartmentTemplatePanel";
 import UnsavedChangesDialog from "../components/UnsavedChangesDialog";
-import { useUnsavedChangesGuard } from "../hooks/useUnsavedChangesGuard";
+import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 

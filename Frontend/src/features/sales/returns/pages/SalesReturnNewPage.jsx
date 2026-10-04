@@ -4,7 +4,7 @@ import { useGoBack } from "@/shared/hooks/useGoBack";
 import { Save, X, AlertCircle } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import { useHeaderStore } from "@/shared/store/headerStore";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import { useSalesReturnFormStore } from "../store/salesReturnFormStore";
 import { useSalesReturnForm } from "../hooks/useSalesReturnForm";
 import {
@@ -45,8 +45,6 @@ export default function SalesReturnNewPage() {
   const navigate = useNavigate();
   const goBack = useGoBack();
   const [searchParams] = useSearchParams();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   const [selectedSaleId, setSelectedSaleId] = useState(
     searchParams.get("saleId") ? Number(searchParams.get("saleId")) : null,
@@ -100,18 +98,15 @@ export default function SalesReturnNewPage() {
     if (saleForReturn) initializeForSale(saleForReturn, { previousReturnId });
   }, [saleForReturn, initializeForSale, previousReturnId]);
 
-  useEffect(() => {
-    setHeader({
-      title: "ثبت درخواست مرجوعی",
-      showBack: true,
-      onBack: () => {
-        resetForm();
-        goBack();
-      },
-    });
-    return () => clearHeader();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setHeader, clearHeader, goBack]);
+  // «بازگشت» پیش‌نویسِ فرم را هم پاک می‌کند.
+  usePageHeader({
+    title: "ثبت درخواست مرجوعی",
+    showBack: true,
+    onBack: () => {
+      resetForm();
+      goBack();
+    },
+  });
 
   const createMutation = useCreateSalesReturnMutation();
   const isBusy = createMutation.isPending;

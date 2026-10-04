@@ -88,7 +88,7 @@ export function listQuery({ filters = {}, pagination, sorting, sortColumns = {} 
 // ─── ایدمپوتنسی ─────────────────────────────────────────────────────────────
 
 /**
- * چرا لازم است: عملیاتِ نوشتنِ مرجوعی *تجمعی* است — «۳ عدد دریافت شد»
+ * چرا لازم است: عملیاتِ نوشتنِ پرداخت، ثبتِ سند و مرجوعی *تجمعی* است — «۳ عدد دریافت شد»
  * روی `appliedQuantity` اضافه می‌شود و «این تصمیم را ثبت کن» یک اثر مالی
  * می‌سازد. اگر یک درخواست به‌خاطر قطعی شبکه دوباره فرستاده شود (یا
  * کاربر دوبار کلیک کند)، بدون کلید ایدمپوتنسی همان عملیات دوبار
@@ -107,26 +107,42 @@ function newIdempotencyKey() {
 /**
  * کلیدِ پایدار برای یک «قصدِ کاربر».
  *
- * ساختنِ کلید داخل `mutationFn` کافی نیست: React Query در هر retry
- * دوباره همان تابع را صدا می‌زند و کلیدِ تازه یعنی سرور آن را یک
- * عملیاتِ جدید می‌بیند — دقیقاً همان چیزی که می‌خواستیم جلویش را
- * بگیریم.
+ * کلید به *محتوای* درخواست گره می‌خورد، نه به شیءِ variables: اگر درخواست
+ * بی‌پاسخ بماند (تایم‌اوت، قطعِ شبکه، ۵۰۰) و کاربر دوباره همان را بفرستد —
+ * با retryِ React Query یا با کلیکِ دوباره روی «ثبت» — همان کلید می‌رود و
+ * سرور اگر بارِ اول ثبت کرده بود همان پاسخ را برمی‌گرداند. پیش‌تر کلید به
+ * شیءِ variables بسته بود و هر کلیک شیءِ تازه می‌ساخت؛ تایم‌اوت بعد از ثبتِ
+ * سرور و کلیکِ دوباره یعنی فاکتور یا پرداختِ دوم (برای کارتخوان یعنی پولی
+ * که یک بار کشیده شده و دو بار ثبت شده).
  *
- * پس کلید به *شیءِ variables* گره می‌خورد: هر بار که کاربر دکمه را
- * می‌زند یک شیء تازه ساخته می‌شود (کلید تازه)، ولی retryهای همان
- * فراخوانی همان شیء را می‌گیرند (کلید ثابت). WeakMap استفاده شده تا
- * نگه‌داشتنِ کلید مانع جمع‌آوریِ حافظه نشود.
+ * کلید وقتی آزاد می‌شود که سرور پاسخِ قطعی داد (`releaseIdempotencyKey` در
+ * اینترسپتورِ axios): بعد از موفقیت، دو سندِ عیناً یکسانِ پشتِ‌سرِهم هم
+ * دو سند می‌شوند.
+ *
+ * @param variables  بدنه‌ی درخواست (یا هر چیزی که قصد را یکتا می‌کند)
+ * @param scope      وقتی دو قصدِ جدا ممکن است محتوای یکسان داشته باشند
+ *                   (دو پرداختِ نقدیِ هم‌مبلغ در یک «ثبت تغییرات»)، شناسه‌ی
+ *                   هر کدام — مثلاً شناسه‌ی ردیفِ پیش‌نویس
  */
-const keysByVariables = new WeakMap();
+const keysByContent = new Map();
 
-export function idempotencyKeyFor(variables) {
+export function idempotencyKeyFor(variables, scope = "") {
   if (variables == null || typeof variables !== "object") {
     return newIdempotencyKey();
   }
-  if (!keysByVariables.has(variables)) {
-    keysByVariables.set(variables, newIdempotencyKey());
+  const content = `${scope}|${JSON.stringify(variables)}`;
+  if (!keysByContent.has(content)) {
+    keysByContent.set(content, newIdempotencyKey());
   }
-  return keysByVariables.get(variables);
+  return keysByContent.get(content);
+}
+
+/** سرور پاسخِ قطعی داد؛ همین محتوا از این به بعد قصدِ تازه است. */
+export function releaseIdempotencyKey(key) {
+  if (!key) return;
+  for (const [content, value] of keysByContent) {
+    if (value === key) keysByContent.delete(content);
+  }
 }
 
 /** پیکربندیِ درخواست برای یک عملیاتِ نوشتنِ ایدمپوتنت. */

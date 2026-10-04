@@ -14,10 +14,12 @@ import {
 } from "./api-v1";
 import { saleKeys } from "./queryKeys";
 import { invalidateSalesEcosystem } from "./sharedInvalidation";
-import { runDocumentChanges } from "@/shared/services/documentChanges";
+import { partialSaveMessage, runDocumentChanges } from "@/shared/services/documentChanges";
 import { shippingKeys } from "@/features/warehouse/shipping/services/queryKeys";
 import { customerKeys } from "@/features/customers/services/queryKeys";
 import { idempotencyKeyFor } from "@/shared/services/api/contract";
+import { SALE_PAYMENT_SIDE } from "../domain/salePayments";
+import { toPaymentPayload } from "@/shared/domain/payments/paymentRows";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 /**
@@ -50,7 +52,7 @@ export const useCreateSaleMutation = () => {
       queryClient.invalidateQueries({ queryKey: customerKeys.all });
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, 'خطا در ثبت فروش'));
+      toast.error(getErrorMessage(error, 'ثبت فروش انجام نشد'));
     },
   });
 };
@@ -71,12 +73,12 @@ export const useCreateInPersonSaleMutation = () => {
       queryClient.invalidateQueries({ queryKey: customerKeys.all });
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, 'خطا در ثبت فروش حضوری'));
+      toast.error(getErrorMessage(error, 'ثبت فروش حضوری انجام نشد'));
     },
   });
 };
 
-/** فقط پیش‌فاکتور. */
+/** فقط پیش‌فاکتور؛ رفتن به فهرست با خودِ صفحه است. */
 export const useRemoveSaleMutation = () => {
   const queryClient = useQueryClient();
 
@@ -90,7 +92,7 @@ export const useRemoveSaleMutation = () => {
       toast.success("پیش‌فاکتور فروش حذف شد");
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, "خطا در حذف فروش"));
+      toast.error(getErrorMessage(error, "حذف پیش‌فاکتور فروش انجام نشد"));
     },
   });
 };
@@ -123,7 +125,43 @@ export const useSaleChangesSaver = (saleId) => {
     },
     onError: (error) => {
       invalidateSalesEcosystem(queryClient, saleId);
-      toast.error(getErrorMessage(error, "ذخیره‌ی تغییرات ناتمام ماند"));
+      toast.error(partialSaveMessage(error, getErrorMessage(error, "ذخیره‌ی تغییرات انجام نشد")));
     },
   });
+};
+
+/**
+ * کارهای سرورِ «دریافت با کارتخوان» روی فروش. برخلافِ بقیه‌ی دریافت‌ها همان لحظه روی سرور
+ * می‌نشیند، نه در پیش‌نویسِ صفحه، چون کارت‌کشیدن برگشت‌ناپذیر است.
+ *
+ * هیچ‌کدام سندِ برگشتی را در کش نمی‌گذارند: کش که عوض شود فرمِ پیش‌فاکتور از نو پر
+ * می‌شود (یا صفحه به فاکتورِ صادرشده می‌رود) و پنلِ کارتخوان وسطِ کار از بین می‌رود. صفحه
+ * بعد از «بستن»ِ رسید خودش `apply` را صدا می‌زند.
+ *
+ *  - `saveProforma`: ذخیره‌ی تغییراتِ پیش‌فاکتور پیش از کارت‌کشیدن.
+ *  - `recordPayment`: `AddSalePayment`ِ معمولی (انتقال بانکی، `transferRef` = شماره‌ی پیگیری)؛
+ *    کلیدِ ایدمپوتنسی از دستگاه و شماره‌ی پیگیری است تا «ثبتِ دوباره» ردیفِ دوم نسازد. اگر
+ *    دستگاه شماره‌ی پیگیری نداد، شناسه‌ی همین ارسال (`reference`) جایش می‌نشیند — کلیدِ
+ *    `pos-1-undefined` همه‌ی چنین پرداخت‌هایی را یکی می‌کرد.
+ */
+export const useSalePosActions = () => {
+  const queryClient = useQueryClient();
+  const save = useMutation({
+    mutationFn: ({ saleId, update }) => updateSale(saleId, update),
+    onError: (error) => toast.error(getErrorMessage(error, "ذخیره‌ی پیش‌فاکتور انجام نشد")),
+  });
+  const record = useMutation({
+    mutationFn: ({ saleId, terminal, row, reference }) =>
+      addSalePayment(
+        { saleId, ...toPaymentPayload({ ...row, direction: SALE_PAYMENT_SIDE.direction }) },
+        { idempotencyKey: `pos-${terminal.id}-${row.transferRef || reference}` },
+      ),
+  });
+
+  return {
+    saveProforma: (saleId, update) => save.mutateAsync({ saleId, update }),
+    recordPayment: (saleId, { terminal, row, reference }) =>
+      record.mutateAsync({ saleId, terminal, row, reference }),
+    apply: (sale) => applySale(queryClient, sale),
+  };
 };

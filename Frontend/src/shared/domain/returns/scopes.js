@@ -32,8 +32,3 @@ export const OFF_SCOPE_KIND_STYLES = {
   [OFF_SCOPE_KINDS.EXCESS]: toneSoft("info"),
   [OFF_SCOPE_KINDS.UNLISTED]: toneSoft("special"),
 };
-
-/** ادعای خارج از سند سهمیه‌ی هیچ خطی را مصرف نمی‌کند. */
-export function isOffScope(claim) {
-  return claim?.scope === CLAIM_SCOPES.OFF_ORDER;
-}

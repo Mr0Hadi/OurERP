@@ -7,10 +7,7 @@ import {
   problemStyles,
   problemSubset,
 } from "@/shared/domain/returns/problems";
-import {
-  CLAIM_SCOPES,
-  OFF_SCOPE_KINDS,
-} from "@/shared/domain/returns/scopes";
+import { OFF_SCOPE_KINDS } from "@/shared/domain/returns/scopes";
 
 /**
  * واژگانِ مرجوعی خرید — قرینه‌ی `salesReturnVocabulary`.
@@ -60,16 +57,6 @@ export const PURCHASE_RETURN_PROBLEM_STYLES = problemStyles(
 );
 
 // ─── دامنه‌ی ادعا ───────────────────────────────────────────────────────────
-
-/**
- * ادعا یا روی یک خط سفارش می‌نشیند (سقفش مقدار سفارش‌شده)، یا بیرون
- * از سفارش است — کالایی که تامین‌کننده فرستاده ولی سفارش توجیهش
- * نمی‌کند.
- */
-export const CLAIM_SCOPE_LABELS = {
-  [CLAIM_SCOPES.ON_ORDER]: "روی سفارش",
-  [CLAIM_SCOPES.OFF_ORDER]: "خارج از سفارش",
-};
 
 export const OFF_SCOPE_KIND_LABELS = {
   [OFF_SCOPE_KINDS.EXCESS]: "بیش از مقدار سفارش",

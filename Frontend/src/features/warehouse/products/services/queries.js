@@ -69,8 +69,8 @@ const NO_PRODUCTS = [];
  * فهرستِ کالاها برای انتخابگرها و نگاشتِ شناسه به کالا در فرم‌ها
  * (حداکثر ۲۰۰ ردیف، مرتب بر اساس نام).
  *
- * TODO(بکند): با رشدِ داده، ۲۰۰ ردیفِ اول کافی نیست؛ جست‌وجوی سمتِ سرور لازم است
- * (سندِ frontend-requests.fa.md).
+ * TODO(بکند): با بیش از ۲۰۰ کالا، بقیه در فرمِ خرید/فروش پیدا نمی‌شوند؛ جست‌وجوی سمتِ
+ * سرور لازم است (بندِ ۱۳.۵ سندِ frontend-requests.fa.md).
  */
 export function useProductsOptionsQuery() {
   const { data, isLoading } = useProductsQuery(NO_FILTERS, OPTIONS_PAGINATION, OPTIONS_SORTING);

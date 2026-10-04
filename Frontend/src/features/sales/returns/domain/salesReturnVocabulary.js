@@ -5,10 +5,7 @@ import {
   problemStyles,
   problemSubset,
 } from "@/shared/domain/returns/problems";
-import {
-  CLAIM_SCOPES,
-  OFF_SCOPE_KINDS,
-} from "@/shared/domain/returns/scopes";
+import { OFF_SCOPE_KINDS } from "@/shared/domain/returns/scopes";
 
 /**
  * واژگانِ مرجوعی فروش — فقط چیزهایی که واقعاً *مخصوصِ فروش*اند.
@@ -78,21 +75,6 @@ export const SALES_OFF_ORDER_PROBLEM_LABELS = Object.fromEntries(
 );
 
 // ─── دامنه‌ی ادعا ───────────────────────────────────────────────────────────
-
-/**
- * ادعا یا روی یک خط فاکتور می‌نشیند (و سقفش مقداری است که واقعاً به
- * مشتری ارسال شده)، یا اصلاً بیرون از فاکتور است.
- *
- * قرینه‌ی «مازاد» در مرجوعی خرید. بدون این، خطای انباردار در ارسالِ
- * کالای اضافه یا کالایی که در فاکتور نیست، هیچ راه ثبتی ندارد.
- *
- * برخلاف خرید، اینجا کالای «ناشناس» نداریم: هرچه دست مشتری است از
- * انبار ما بیرون رفته، پس همیشه یک productId واقعی دارد.
- */
-export const CLAIM_SCOPE_LABELS = {
-  [CLAIM_SCOPES.ON_ORDER]: "روی فاکتور",
-  [CLAIM_SCOPES.OFF_ORDER]: "خارج از فاکتور",
-};
 
 export const OFF_SCOPE_KIND_LABELS = {
   [OFF_SCOPE_KINDS.EXCESS]: "بیش از مقدار ارسال‌شده",

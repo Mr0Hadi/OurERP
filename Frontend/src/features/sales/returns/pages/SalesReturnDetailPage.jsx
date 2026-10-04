@@ -50,13 +50,7 @@ import { usePageHeader } from "@/shared/hooks/usePageHeader";
  * کنارِ وضعیت است و ستون دوم اصلاً لازم نیست.
  */
 function SalesReturnDetailContent({ salesReturn }) {
-  // مرجوعیِ خودش از سقف مستثنا می‌شود تا کارت فاکتور، «ادعاشده در
-  // مرجوعی دیگر» را درست نشان دهد — نه ادعاهای همین سند را دوباره
-  // به‌عنوان «مرجوعیِ دیگر» بشمارد.
-  const { data: sale } = useSaleForReturnQuery(
-    salesReturn.saleId,
-    salesReturn.id,
-  );
+  const { data: sale } = useSaleForReturnQuery(salesReturn.saleId);
   const { data: relatedReturns } = useRelatedSalesReturnsQuery(
     salesReturn.saleId,
     salesReturn.id,

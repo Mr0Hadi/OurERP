@@ -5,7 +5,7 @@ import { Save, X, AlertCircle } from "lucide-react";
 
 import toast from "react-hot-toast";
 import { Button } from "@/shared/components/ui/button";
-import { useHeaderStore } from "@/shared/store/headerStore";
+import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import { usePurchaseReturnFormStore } from "../store/purchaseReturnFormStore";
 import { usePurchaseReturnForm } from "../hooks/usePurchaseReturnForm";
 import {
@@ -53,8 +53,6 @@ export default function PurchaseReturnNewPage() {
   const navigate = useNavigate();
   const goBack = useGoBack();
   const [searchParams] = useSearchParams();
-  const setHeader = useHeaderStore((s) => s.setHeader);
-  const clearHeader = useHeaderStore((s) => s.clearHeader);
 
   const [selectedPurchaseId, setSelectedPurchaseId] = useState(
     searchParams.get("purchaseId") ? Number(searchParams.get("purchaseId")) : null,
@@ -121,18 +119,15 @@ export default function PurchaseReturnNewPage() {
     }
   }, [purchaseForReturn, initializeForPurchase, prefillQuarantine, previousReturnId]);
 
-  useEffect(() => {
-    setHeader({
-      title: "ثبت مرجوعی به تامین‌کننده",
-      showBack: true,
-      onBack: () => {
-        resetForm();
-        goBack();
-      },
-    });
-    return () => clearHeader();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setHeader, clearHeader, goBack]);
+  // «بازگشت» پیش‌نویسِ فرم را هم پاک می‌کند.
+  usePageHeader({
+    title: "ثبت مرجوعی به تامین‌کننده",
+    showBack: true,
+    onBack: () => {
+      resetForm();
+      goBack();
+    },
+  });
 
   const createMutation = useCreatePurchaseReturnMutation();
   const acceptMutation = useAcceptPurchaseExcessMutation(selectedPurchaseId);

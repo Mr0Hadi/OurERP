@@ -1,4 +1,5 @@
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+import { PaymentPurposeEnum } from "@/shared/domain/enums/paymentDirection";
 import { nowLocalIso } from "@/shared/lib/dateUtils";
 
 /**
@@ -52,3 +53,7 @@ export function paymentTypeOf(rows) {
   if (types.length === 1) return types[0];
   return PaymentTypeEnum.MIXED;
 }
+
+/** پرداختِ عادی (نه قسط و نه اثرِ مرجوعی) — فقط این‌ها از کارتِ پرداخت‌ها اصلاح/ابطال می‌شوند. */
+export const isNormalPayment = (row) =>
+  (row.purpose ?? PaymentPurposeEnum.NORMAL) === PaymentPurposeEnum.NORMAL;

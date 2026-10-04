@@ -14,13 +14,13 @@ import {
 import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import {
   PURCHASE_SHIPPING_CHOICES,
-  canDeletePurchase,
   missingInvoiceFields,
+  purchaseFormProblem,
 } from "@/features/purchases/orders/domain/purchaseRules";
 import { PURCHASE_PAYMENT_SIDE } from "@/features/purchases/orders/domain/purchasePayments";
-import { PURCHASE_STATUSES } from "@/features/purchases/orders/services/constants";
+import { PurchaseStatusEnum } from "@/shared/domain/enums/purchaseStatus";
 import PurchaseSupplierSection from "../components/forms/PurchaseSupplierSection";
-import PurchaseItemsSection from "../components/forms/PurchaseItemsSection";
+import DocumentItemsSection from "@/shared/components/products/DocumentItemsSection";
 import CancelPurchaseDialog from "../components/forms/CancelPurchaseDialog";
 import DocumentFormLayout, {
   FormSection,
@@ -36,9 +36,12 @@ import { useDocumentAttachments } from "@/shared/components/invoice/useInvoiceAt
 import { useReturnedNewProduct } from "@/shared/components/products/useReturnedNewProduct";
 import { useDocumentFormDraft } from "@/shared/hooks/useDocumentFormDraft";
 import { usePermission } from "@/features/auth/hooks/usePermission";
-import { scrollToSection } from "@/shared/lib/scrollToSection";
+import { reportFormProblem } from "@/shared/lib/scrollToSection";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
+
+/** قیمتِ پیش‌فرضِ قلمِ تازه‌ی خرید. */
+const purchasePriceOf = (product) => product.purchasePrice ?? 0;
 
 /**
  * فرمِ خرید — ثبتِ تازه (`purchase` خالی) و ویرایشِ پیش‌فاکتور (تنها وضعیتی
@@ -95,7 +98,7 @@ export default function PurchaseForm({ purchase }) {
     productId: returned?.newProductId,
     getItems: () => usePurchaseFormStore.getState().formData.items || [],
     setItems,
-    priceOf: (product) => product.purchasePrice ?? 0,
+    priceOf: purchasePriceOf,
   });
 
   if (!ready) return null;
@@ -106,28 +109,19 @@ export default function PurchaseForm({ purchase }) {
 
   const status =
     formData.status === "" || formData.status == null
-      ? PURCHASE_STATUSES.PROFORMA
+      ? PurchaseStatusEnum.PROFORMA
       : Number(formData.status);
-  const isInvoice = status !== PURCHASE_STATUSES.PROFORMA;
+  const isInvoice = status !== PurchaseStatusEnum.PROFORMA;
   const invoiceErrors = missingInvoiceFields(formData, status);
   // پیش‌پرداختِ قدیمی روی پیش‌فاکتور (پیش از قفلِ پیش‌فاکتور ممکن بود).
   const hasPrepayments = (purchase?.paymentDetails || []).some((payment) => !payment.voidedAt);
 
   const onSubmit = (e) => {
     e.preventDefault();
-    if (!formData.supplierId) {
+    const problem = purchaseFormProblem({ formData, items, invoiceErrors });
+    if (problem) {
       setShowErrors(true);
-      toast.error("تامین‌کننده را انتخاب کنید.");
-      return scrollToSection("party");
-    }
-    if (items.length === 0) {
-      toast.error("دست‌کم یک کالا اضافه کنید.");
-      return scrollToSection("items");
-    }
-    if (invoiceErrors) {
-      setShowErrors(true);
-      toast.error("برای فاکتور، شماره و تاریخِ فاکتور را وارد کنید.");
-      return scrollToSection("info");
+      return reportFormProblem(problem);
     }
     // آپلودِ نیمه‌کاره کلید ندارد و در payload نمی‌آید.
     if (attachments.isUploading) {
@@ -188,8 +182,9 @@ export default function PurchaseForm({ purchase }) {
   };
 
   const canEdit = isNew || allows("PurchaseUpdate");
-  // پیش‌فاکتوری که پیش‌پرداختِ زنده دارد حذف نمی‌شود (سرور ۴۰۰ می‌دهد)؛ لغو می‌شود.
-  const deletable = !isNew && canDeletePurchase(purchase) && !hasPrepayments && allows("PurchaseDelete");
+  // این فرم فقط پیش‌فاکتور را باز می‌کند و حذف فقط برای پیش‌فاکتور است. پیش‌فاکتوری که
+  // پیش‌پرداختِ زنده دارد حذف نمی‌شود (سرور ۴۰۰ می‌دهد)؛ لغو می‌شود.
+  const deletable = !isNew && !hasPrepayments && allows("PurchaseDelete");
   const cancellable = !isNew && hasPrepayments && canEdit;
 
   const isBusy =
@@ -223,11 +218,13 @@ export default function PurchaseForm({ purchase }) {
               />
             </FormSection>
             <FormSection name="items">
-              <PurchaseItemsSection
+              <DocumentItemsSection
+                title="اقلام خرید"
                 items={items}
                 products={products}
                 isLoadingProducts={productsLoading}
                 onItemsChange={setItems}
+                priceOf={purchasePriceOf}
                 onAddNewProduct={() => openSubPage(ROUTES.WAREHOUSE_PRODUCTS_NEW)}
               />
             </FormSection>
@@ -252,7 +249,7 @@ export default function PurchaseForm({ purchase }) {
                 kind={isInvoice ? "invoice" : "proforma"}
                 onKindChange={(kind) =>
                   setFormData({
-                    status: kind === "proforma" ? PURCHASE_STATUSES.PROFORMA : PURCHASE_STATUSES.PENDING,
+                    status: kind === "proforma" ? PurchaseStatusEnum.PROFORMA : PurchaseStatusEnum.PENDING,
                   })
                 }
                 withNumber
@@ -306,18 +303,25 @@ export default function PurchaseForm({ purchase }) {
             open={dialog === "delete"}
             onOpenChange={(open) => !open && setDialog(null)}
             title="حذف پیش‌فاکتور خرید"
-            description="سندِ حذف‌شده دیگر در فهرست خریدها دیده نمی‌شود."
+            description="این پیش‌فاکتور حذف می‌شود و دیگر در فهرست خریدها نیست. این کار برگشت‌پذیر نیست."
             confirmLabel="حذف"
             pendingLabel="در حال حذف..."
             isPending={deleteMutation.isPending}
-            onConfirm={() => deleteMutation.mutate(purchase.id, { onSuccess: () => resetForm() })}
+            onConfirm={() =>
+              deleteMutation.mutate(purchase.id, {
+                onSuccess: () => {
+                  resetForm();
+                  navigate(ROUTES.PURCHASES);
+                },
+              })
+            }
           />
           <CancelPurchaseDialog
             open={dialog === "cancel"}
             onOpenChange={(open) => !open && setDialog(null)}
             isPending={statusMutation.isPending}
             onConfirm={() =>
-              statusMutation.mutate(PURCHASE_STATUSES.CANCELLED, {
+              statusMutation.mutate(PurchaseStatusEnum.CANCELLED, {
                 onSuccess: () => {
                   setDialog(null);
                   resetForm();

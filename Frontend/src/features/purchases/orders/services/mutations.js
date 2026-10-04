@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import {
   createPurchase,
@@ -18,10 +17,10 @@ import {
 import { purchaseKeys } from "./queryKeys";
 import { invalidatePurchaseEcosystem } from "./sharedInvalidation";
 import { idempotencyKeyFor } from "@/shared/services/api/contract";
-import { ROUTES } from "@/shared/constants/routes";
+import { PurchaseStatusEnum, isPurchaseProforma } from "@/shared/domain/enums/purchaseStatus";
 import { supplierKeys } from "@/features/suppliers/services/queryKeys";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
-import { runDocumentChanges } from "@/shared/services/documentChanges";
+import { partialSaveMessage, runDocumentChanges } from "@/shared/services/documentChanges";
 
 /**
  * هر نوشتنِ خرید سندِ کامل را برمی‌گرداند: همان در کشِ جزئیات می‌نشیند
@@ -46,11 +45,18 @@ export const useCreatePurchaseMutation = () => {
     mutationFn: (payload) =>
       createPurchase(payload, { idempotencyKey: idempotencyKeyFor(payload) }),
     onSuccess: (created) => {
-      toast.success("خرید با موفقیت ثبت شد");
+      const number = created?.invoiceNumber;
+      toast.success(
+        isPurchaseProforma(created?.status)
+          ? "پیش‌فاکتور خرید ثبت شد"
+          : number
+            ? `فاکتور خرید ${number} ثبت شد`
+            : "فاکتور خرید ثبت شد",
+      );
       applyPurchase(queryClient, created);
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, "خطا در ثبت خرید"));
+      toast.error(getErrorMessage(error, "ثبت خرید انجام نشد"));
     },
   });
 };
@@ -63,15 +69,17 @@ export const useChangePurchaseStatusMutation = (id) => {
     onSuccess: (updated) => {
       // «ارسال‌شده» خرید را وارد صف دریافت انبار می‌کند و «لغو» بیرون می‌برد.
       applyPurchase(queryClient, updated);
-      toast.success("وضعیت خرید به‌روزرسانی شد");
+      toast.success(
+        updated?.status === PurchaseStatusEnum.CANCELLED ? "خرید لغو شد" : "وضعیت خرید به‌روزرسانی شد",
+      );
     },
-    onError: (error) => toast.error(getErrorMessage(error, "خطا در تغییر وضعیت")),
+    onError: (error) => toast.error(getErrorMessage(error, "تغییر وضعیت خرید انجام نشد")),
   });
 };
 
+/** فقط پیش‌فاکتور؛ رفتن به فهرست با خودِ صفحه است. */
 export const useRemovePurchaseMutation = () => {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
 
   return useMutation({
     mutationFn: removePurchase,
@@ -81,11 +89,10 @@ export const useRemovePurchaseMutation = () => {
       // مرجوع‌کردن» هم بیرون برود.
       invalidatePurchaseEcosystem(queryClient);
       queryClient.invalidateQueries({ queryKey: supplierKeys.all });
-      toast.success("خرید با موفقیت حذف شد");
-      navigate(ROUTES.PURCHASES_LIST);
+      toast.success("پیش‌فاکتور خرید حذف شد");
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, "خطا در حذف خرید"));
+      toast.error(getErrorMessage(error, "حذف پیش‌فاکتور خرید انجام نشد"));
     },
   });
 };
@@ -104,7 +111,7 @@ export const useClosePurchaseItemMutation = (purchaseId) => {
       queryClient.invalidateQueries({ queryKey: supplierKeys.all });
       toast.success("قلم بسته شد؛ باقیمانده‌اش دیگر انتظار نمی‌رود");
     },
-    onError: (error) => toast.error(getErrorMessage(error, "خطا در بستن قلم")),
+    onError: (error) => toast.error(getErrorMessage(error, "بستن قلم انجام نشد")),
   });
 };
 
@@ -117,7 +124,7 @@ export const useReopenPurchaseItemMutation = (purchaseId) => {
       queryClient.invalidateQueries({ queryKey: supplierKeys.all });
       toast.success("قلم دوباره باز شد");
     },
-    onError: (error) => toast.error(getErrorMessage(error, "خطا در بازگشایی قلم")),
+    onError: (error) => toast.error(getErrorMessage(error, "بازگشایی قلم انجام نشد")),
   });
 };
 
@@ -141,7 +148,7 @@ export const useAcceptPurchaseExcessMutation = (purchaseId) => {
         "کالای مازاد به‌صورت قلمِ ضمیمه به خرید اضافه شد؛ کالا تا «بازگشت به موجودی» در قرنطینه می‌ماند",
       );
     },
-    onError: (error) => toast.error(getErrorMessage(error, "خطا در پذیرش کالای مازاد")),
+    onError: (error) => toast.error(getErrorMessage(error, "خرید کالای مازاد انجام نشد")),
   });
 };
 
@@ -171,7 +178,7 @@ export const usePurchaseChangesSaver = (purchaseId) => {
     },
     onError: (error) => {
       invalidatePurchaseEcosystem(queryClient, purchaseId);
-      toast.error(getErrorMessage(error, "ذخیره‌ی تغییرات ناتمام ماند"));
+      toast.error(partialSaveMessage(error, getErrorMessage(error, "ذخیره‌ی تغییرات انجام نشد")));
     },
   });
 };
