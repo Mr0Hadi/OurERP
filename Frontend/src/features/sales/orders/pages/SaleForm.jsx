@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Trash2 } from "lucide-react";
@@ -10,6 +10,7 @@ import {
   useCreateSaleMutation,
   useRemoveSaleMutation,
   useSaleChangesSaver,
+  useSalePosActions,
 } from "@/features/sales/orders/services/mutations";
 import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import { missingSaleInvoiceFields } from "@/features/sales/orders/domain/saleRules";
@@ -27,6 +28,7 @@ import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 import StatusBadge from "@/shared/components/status/StatusBadge";
 import { usePaymentDraft } from "@/shared/hooks/usePaymentDraft";
 import { paymentTypeOf } from "@/shared/domain/payments/paymentRows";
+import { rowsTotal } from "@/shared/domain/payments/paymentSplit";
 import { useDocumentAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
 import { useReturnedNewProduct } from "@/shared/components/products/useReturnedNewProduct";
 import { useDocumentFormDraft } from "@/shared/hooks/useDocumentFormDraft";
@@ -83,6 +85,11 @@ export default function SaleForm({ sale }) {
   const { allows } = usePermission();
   const [showErrors, setShowErrors] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // کارتخوان: تا پایانش دکمه‌ی اصلی بسته است. `snapshot` سندی است که پیش از کارت‌کشیدن
+  // اعتبارسنجی شد (ثبت از روی همان است، نه فرمی که شاید وسطِ کار عوض شده)؛ `outcome` سندِ
+  // ساخته/صادرشده تا «بستن»ِ رسید.
+  const [posLocked, setPosLocked] = useState(false);
+  const posRef = useRef({ snapshot: null, outcome: null });
 
   const store = useSaleFormStore();
   const { formData, setFormData, setItems, setPaymentDraft, resetForm } = store;
@@ -98,6 +105,7 @@ export default function SaleForm({ sale }) {
   ]);
 
   const createMutation = useCreateSaleMutation();
+  const posActions = useSalePosActions();
   const inPersonMutation = useCreateInPersonSaleMutation();
   const saver = useSaleChangesSaver(sale?.id);
   const deleteMutation = useRemoveSaleMutation();
@@ -129,31 +137,134 @@ export default function SaleForm({ sale }) {
     Boolean(products.find((product) => product.id === productId)?.requiresUnitTracking);
 
   // `status` روی سیم نمی‌رود؛ فقط شکلِ فرم را تعیین می‌کند.
+  // وسطِ کارتخوان کارتِ دریافت‌ها نباید با تغییرِ نوع به پیش‌فاکتور از صفحه برود.
   const isInvoice =
-    isInPerson || Number(formData.status || SaleStatusEnum.PROFORMA) !== SaleStatusEnum.PROFORMA;
+    posLocked ||
+    isInPerson ||
+    Number(formData.status || SaleStatusEnum.PROFORMA) !== SaleStatusEnum.PROFORMA;
   const invoiceErrors = missingSaleInvoiceFields(formData, isInvoice);
   const paid = payments.netPaid;
 
-  /** نخستین دلیلی که ثبت را ناممکن می‌کند: `[پیام، بخش]`. */
-  const blocker = () => {
+  /**
+   * نخستین دلیلی که ثبت را ناممکن می‌کند: `[پیام، بخش]`. `forPos`: پیش از کارت‌کشیدن،
+   * وقتی دریافت هنوز نیامده؛ قاعده‌های دریافت برقرار نیستند.
+   */
+  const blocker = ({ forPos = false } = {}) => {
     if (!formData.customerId) return ["مشتری را انتخاب کنید.", "party"];
     if (items.length === 0) return ["دست‌کم یک کالا اضافه کنید.", "items"];
     if (invoiceErrors) return ["برای فاکتور، تاریخ را وارد کنید.", "info"];
     if (isInPerson) {
       const scanProblem = inPersonScanProblem(items, scannedBarcodes, isTracked);
       if (scanProblem) return [scanProblem, "items"];
-      if (paid < totals.totalAmount) {
+      if (paid < totals.totalAmount && !forPos) {
         return [`در تحویلِ حضوری کلِ ${formatRial(totals.totalAmount)} باید دریافت شود.`, "payment"];
       }
     }
-    if (isInvoice && paid <= 0) {
+    if (isInvoice && paid <= 0 && !forPos) {
       return ["فاکتورِ فروش با اولین دریافت صادر می‌شود؛ دریافت را ثبت کنید یا پیش‌فاکتور ثبت کنید.", "payment"];
     }
     return null;
   };
 
+  const buildPayload = () => ({
+    customerId: formData.customerId,
+    customerName: formData.customerName,
+    invoiceDate: isInvoice ? formData.invoiceDate : null,
+    paymentDate: isInvoice ? formData.paymentDate || null : null,
+    description: formData.description || "",
+    items,
+    paymentType: paymentTypeOf(isInvoice ? payments.rows : []),
+    attachments: attachments.filesPayload,
+  });
+
+  const openSaved = (id) => {
+    resetForm();
+    navigate(routeWithId(ROUTES.SALES_DETAIL, id), { replace: true });
+  };
+
+  /** پیش از کارت‌کشیدن: اگر فرم را نمی‌شود ثبت کرد، به دستگاه چیزی نمی‌رود؛ وگرنه نسخه‌ای از آن نگه داشته می‌شود. */
+  const prepareForPos = () => {
+    const problem = blocker({ forPos: true });
+    if (problem) {
+      setShowErrors(true);
+      toast.error(problem[0]);
+      scrollToSection(problem[1]);
+      throw new Error(problem[0]);
+    }
+    if (attachments.isUploading) {
+      toast.error("تا پایان بارگذاری پیوست‌ها صبر کنید.");
+      throw new Error("uploading");
+    }
+    const snapshot = {
+      payload: buildPayload(),
+      draftRows: payments.rows,
+      inPerson: isInPerson,
+      scannedBarcodes,
+      total: totals.totalAmount,
+    };
+    posRef.current = { snapshot, outcome: null };
+    return snapshot;
+  };
+
+  /**
+   * کارتخوان. رسید تا «بستن» می‌ماند و بعد صفحه‌ی فروشِ صادرشده باز می‌شود.
+   *  - فاکتورِ تازه: خودِ تأیید «ثبتِ فاکتور» است؛ فروش با دریافت‌های فرم به‌اضافه‌ی تکه‌ی
+   *    کارتخوان ساخته می‌شود. حضوری فقط با دریافتِ کامل تحویل می‌شود؛ ناقص، فاکتورِ معمولی
+   *    («در حال آماده‌سازی») بدونِ دانه‌های اسکن‌شده است (بند ۱۱.۴ درخواست‌های بکند).
+   *  - پیش‌فاکتورِ ثبت‌شده: تغییراتش پیش از کارت‌کشیدن ذخیره می‌شود و دریافت آن را فاکتور
+   *    می‌کند. دریافت‌های ثبت‌نشده‌ی دیگر باید اول ذخیره شوند (وگرنه با رفتن به فاکتور گم می‌شوند).
+   */
+  const posPayment = !allows("PosCharge")
+    ? undefined
+    : isNew
+      ? {
+          prepare: prepareForPos,
+          record: async (_result, { rows }) => {
+            const { payload, draftRows, inPerson, scannedBarcodes: scanned, total } = posRef.current.snapshot;
+            const paymentRows = [...draftRows, ...rows];
+            const body = { ...payload, paymentType: paymentTypeOf(paymentRows), paymentRows };
+            const created =
+              inPerson && rowsTotal(paymentRows) >= total
+                ? await inPersonMutation.mutateAsync({ payload: body, scannedBarcodes: scanned })
+                : await createMutation.mutateAsync(body);
+            attachments.commit();
+            posRef.current.outcome = created;
+            return created;
+          },
+          reference: () => `sale-new-${Date.now().toString(36)}`,
+          onDone: () => openSaved(posRef.current.outcome.id),
+          onLockChange: setPosLocked,
+          doneLabel: "مشاهده‌ی فاکتور",
+          hint: isInPerson
+            ? "فروشِ حضوری فقط با دریافتِ کلِ مبلغ تحویل می‌شود؛ وگرنه فاکتور «در حال آماده‌سازی» ثبت می‌شود."
+            : "با تأییدِ کارتخوان، فاکتور همین‌جا ثبت می‌شود.",
+        }
+      : {
+          prepare: async () => {
+            const { payload } = prepareForPos();
+            await posActions.saveProforma(sale.id, payload);
+          },
+          record: (_result, context) => posActions.recordPayment(sale.id, context),
+          onRecorded: (latest) => {
+            posRef.current.outcome = latest;
+          },
+          onDone: () => {
+            attachments.commit();
+            resetForm();
+            posActions.apply(posRef.current.outcome);
+          },
+          onLockChange: setPosLocked,
+          reference: `sale-${sale.id}`,
+          doneLabel: "مشاهده‌ی فاکتور",
+          blockedReason: payments.hasChanges
+            ? "دریافت‌های ثبت‌نشده را اول ذخیره کنید؛ بعد از صفحه‌ی فاکتور با کارتخوان دریافت کنید."
+            : undefined,
+          hint: "تغییراتِ پیش‌فاکتور ذخیره می‌شود و با تأییدِ کارتخوان فاکتور صادر می‌شود.",
+        };
+
   const onSubmit = (e) => {
     e.preventDefault();
+    if (posLocked) return;
     const problem = blocker();
     if (problem) {
       setShowErrors(true);
@@ -165,17 +276,7 @@ export default function SaleForm({ sale }) {
       return;
     }
 
-    const payload = {
-      customerId: formData.customerId,
-      customerName: formData.customerName,
-      invoiceDate: isInvoice ? formData.invoiceDate : null,
-      paymentDate: isInvoice ? formData.paymentDate || null : null,
-      description: formData.description || "",
-      items,
-      paymentType: paymentTypeOf(isInvoice ? payments.rows : []),
-      attachments: attachments.filesPayload,
-    };
-
+    const payload = buildPayload();
     if (!isNew) {
       // اول خودِ پیش‌فاکتور، بعد دریافت‌ها — اولینش فاکتور را صادر می‌کند و
       // صفحه خودش به نمای فاکتورِ صادرشده می‌رود.
@@ -216,7 +317,8 @@ export default function SaleForm({ sale }) {
     inPersonMutation.isPending ||
     saver.isPending ||
     deleteMutation.isPending ||
-    attachments.isUploading;
+    attachments.isUploading ||
+    posLocked;
   const submitLabel = isInPerson
     ? "ثبت و تحویل حضوری"
     : isNew
@@ -263,6 +365,7 @@ export default function SaleForm({ sale }) {
                   total={totals.totalAmount}
                   canManage={isNew || allows("SalePayment")}
                   allowRefund={false}
+                  posPayment={posPayment}
                   notice={
                     isInPerson
                       ? "تحویلِ حضوری: کلِ مبلغ باید دریافت شود."

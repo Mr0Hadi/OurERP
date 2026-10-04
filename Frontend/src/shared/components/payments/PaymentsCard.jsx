@@ -1,18 +1,24 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Ban, Pencil, Plus, RotateCcw, Undo2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import SectionCard from "@/shared/components/forms/SectionCard";
 import StatusBadge from "@/shared/components/status/StatusBadge";
 import PaymentMethodEditor from "./PaymentMethodEditor";
+import PosPaymentPanel from "./PosPaymentPanel";
+import { usePosPayment } from "@/shared/hooks/usePosPayment";
+import { PosStatus, canStartPos, holdsMoney, isPosBusy } from "@/shared/domain/pos/posSession";
 import { PAYMENT_TYPE_LABELS, PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { PaymentDirectionEnum, PaymentPurposeEnum } from "@/shared/domain/enums/paymentDirection";
 import {
   ROW_PAYMENT_TYPES,
   liveRows,
+  methodOf,
+  removeMixedRow,
   newPaymentRow,
   resolvedRows,
   rowsTotal,
+  updateRow,
 } from "@/shared/domain/payments/paymentSplit";
 import { gregorianToPersian, toDateOnly } from "@/shared/lib/dateUtils";
 import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
@@ -42,6 +48,15 @@ const PENDING_BADGES = {
  * @param payable   بدهیِ واقعیِ طرف (اگر با جمع فرق دارد؛ مثلاً قلمِ بسته‌شده)
  * @param allowRefund `false` برای سندِ تازه
  * @param refundOnly  سندِ لغوشده: فقط پولِ برگشتی
+ * @param posPayment  دریافت با کارتخوان روی ردیفِ «انتقال بانکی»؛ بدونِ آن پنلی نیست. برخلافِ بقیه‌ی
+ *                    دریافت‌ها همان لحظه روی سرور ثبت می‌شود، نه در پیش‌نویس (کارت‌کشیدن برگشت‌ناپذیر است):
+ *   - `record(result, { terminal, amount, row, rows })` ثبتِ پرداخت؛ `row` تکه‌ی کارتخوان با
+ *     `transferRef` و `rows` همه‌ی تکه‌های فرم (برای ثبتِ فاکتورِ تازه). باید ایدمپوتنت باشد.
+ *   - `prepare()` پیش از دستور به دستگاه؛ خطا یعنی کارت نمی‌خورد.
+ *   - `reference` شناسه‌ی سفارش برای دستگاه (مقدار یا تابع).
+ *   - `onRecorded(saved)`، `onDone()` (با «بستن»ِ رسید؛ پیش‌فرض: بستنِ فرم یا برداشتنِ تکه‌ی ترکیبی)،
+ *     `onLockChange(locked)` (تا پایانِ کار، صفحه دکمه‌ی اصلی‌اش را ببندد).
+ *   - `blockedReason`، `hint`، `doneLabel` برای پنل.
  */
 export default function PaymentsCard({
   title = "پرداخت‌ها",
@@ -52,6 +67,7 @@ export default function PaymentsCard({
   canManage = true,
   allowRefund = true,
   refundOnly = false,
+  posPayment,
   notice,
 }) {
   // { mode: "pay" | "refund" | "edit", row? }
@@ -122,6 +138,7 @@ export default function PaymentsCard({
           row={form.row}
           remaining={remaining}
           paid={paid}
+          posPayment={posPayment}
           onCancel={() => setForm(null)}
           onSubmit={(moneyRows) => submit(form, moneyRows)}
         />
@@ -241,7 +258,7 @@ function PaymentRow({ row, isRefund, manageable, onEdit, onVoid, onUndo }) {
  * فرمِ درجای پرداخت. ثبتِ تازه همه‌ی روش‌ها (از جمله ترکیبی) را دارد و با
  * باقیمانده پیش‌پر است؛ اصلاح و پولِ برگشتی یک روش.
  */
-function PaymentForm({ mode, title, row, remaining, paid, onCancel, onSubmit }) {
+function PaymentForm({ mode, title, row, remaining, paid, posPayment, onCancel, onSubmit }) {
   const isEdit = mode === "edit";
   const isRefund = mode === "refund";
   // سقفی که «پرداخت کامل» پر می‌کند.
@@ -268,14 +285,44 @@ function PaymentForm({ mode, title, row, remaining, paid, onCancel, onSubmit }) 
   );
   const [error, setError] = useState(null);
 
+  // ردیف‌های پرداختیِ فرم با مبلغِ نهایی (`null` = باقیمانده حل‌شده)، بی‌ردیفِ صفر.
+  const pieces = liveRows(resolvedRows(value, payable));
+  const toMoneyRow = (entry) => ({
+    type: entry.type,
+    amount: entry.amount,
+    paidAt: entry.paidAt || undefined,
+    checkNumber: entry.checkNumber,
+    transferRef: entry.transferRef,
+  });
+
+  // کارتخوان: فقط برای دریافتِ تازه، روی ردیفِ «انتقال بانکی» (در ترکیبی اولین ردیفِ انتقال).
+  const posRow = pieces.find((entry) => entry.type === PaymentTypeEnum.TRANSFER);
+  const [posRowId, setPosRowId] = useState(null); // ردیفی که به دستگاه رفت
+  const [preparing, setPreparing] = useState(false);
+  const pos = usePosPayment({
+    record: (result, context) => {
+      const transferRef = result.rrn || result.traceNumber;
+      const withRef = pieces.map((entry) => (entry.id === posRowId ? { ...entry, transferRef } : entry));
+      const row = withRef.find((entry) => entry.id === posRowId);
+      return posPayment.record(result, { ...context, row: toMoneyRow(row), rows: withRef.map(toMoneyRow) });
+    },
+    onRecorded: (saved) => posPayment.onRecorded?.(saved),
+  });
+  const posStatus = pos.state.status;
+  const posShown = Boolean(posPayment) && mode === "pay" && (Boolean(posRow) || posStatus !== PosStatus.IDLE);
+  const posAmount = canStartPos(posStatus) ? (posRow?.amount ?? 0) : pos.state.amount;
+  const posBlocked = posAmount > payable ? "مبلغ از مانده‌ی فاکتور بیشتر است." : posPayment?.blockedReason;
+  // وسطِ کارتخوان، با پولِ ثبت‌نشده یا رسیدِ باز: فرم و دکمه‌ی اصلیِ صفحه بسته‌اند.
+  const posLocked = isPosBusy(posStatus) || holdsMoney(posStatus) || posStatus === PosStatus.RECORDED;
+  const onLockChange = posPayment?.onLockChange;
+  useEffect(() => {
+    onLockChange?.(posLocked);
+    return () => onLockChange?.(false);
+  }, [posLocked, onLockChange]);
+
   const confirm = () => {
-    const moneyRows = liveRows(resolvedRows(value, payable)).map((entry) => ({
-      type: entry.type,
-      amount: entry.amount,
-      paidAt: entry.paidAt || undefined,
-      checkNumber: entry.checkNumber,
-      transferRef: entry.transferRef,
-    }));
+    if (posLocked) return;
+    const moneyRows = pieces.map(toMoneyRow);
     if (moneyRows.length === 0) return setError("مبلغ باید بیشتر از صفر باشد");
     if (isRefund && rowsTotal(moneyRows) > paid) {
       return setError(`پول برگشتی نمی‌تواند بیشتر از ${formatRial(paid)} باشد`);
@@ -295,24 +342,70 @@ function PaymentForm({ mode, title, row, remaining, paid, onCancel, onSubmit }) 
       }}
     >
       <p className="text-sm font-medium">{title}</p>
-      <PaymentMethodEditor
-        value={value}
-        onChange={(next) => {
-          setValue(next);
-          setError(null);
-        }}
-        payable={payable}
-        methods={isEdit || isRefund ? ROW_PAYMENT_TYPES : [...ROW_PAYMENT_TYPES, PaymentTypeEnum.MIXED]}
-        error={error}
-      />
-      <div className="flex gap-2">
-        <Button type="button" size="sm" className="flex-1" onClick={confirm}>
-          {isEdit ? "اعمالِ اصلاح" : "افزودن"}
-        </Button>
-        <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
-          انصراف
-        </Button>
-      </div>
+      {/* وسطِ کارتخوان، مبلغ و روش نباید عوض شوند. */}
+      <fieldset disabled={posLocked} className="min-w-0 disabled:opacity-60">
+        <PaymentMethodEditor
+          value={value}
+          onChange={(next) => {
+            setValue(next);
+            setError(null);
+          }}
+          payable={payable}
+          methods={isEdit || isRefund ? ROW_PAYMENT_TYPES : [...ROW_PAYMENT_TYPES, PaymentTypeEnum.MIXED]}
+          error={error}
+        />
+      </fieldset>
+      {posShown && (
+        <PosPaymentPanel
+          pos={pos}
+          amount={posAmount}
+          blockedReason={posBlocked}
+          hint={posPayment.hint}
+          doneLabel={posPayment.doneLabel}
+          preparing={preparing}
+          onStart={async (terminal) => {
+            if (preparing) return;
+            setPreparing(true);
+            try {
+              await posPayment.prepare?.();
+            } catch {
+              return;
+            } finally {
+              setPreparing(false);
+            }
+            setPosRowId(posRow.id);
+            const { reference } = posPayment;
+            pos.start({
+              terminal,
+              amount: posAmount,
+              reference: typeof reference === "function" ? reference() : reference,
+            });
+          }}
+          onDone={() => {
+            pos.reset();
+            if (posPayment.onDone) return posPayment.onDone();
+            // ترکیبی: تکه‌ی کارتخوان ثبت شد و از فرم برداشته می‌شود؛ بقیه می‌مانند.
+            if (methodOf(value) === PaymentTypeEnum.MIXED) return setValue(removeMixedRow(value, posRowId));
+            onCancel();
+          }}
+          onManual={() => {
+            // پول رفته ولی ثبت نشد: مبلغ و شماره‌ی پیگیری در همان ردیف می‌ماند تا با «افزودن» ثبت شود.
+            const { amount, result } = pos.state;
+            setValue(updateRow(value, posRowId, { amount, transferRef: result.rrn || result.traceNumber }));
+            pos.reset();
+          }}
+        />
+      )}
+      {!posLocked && (
+        <div className="flex gap-2">
+          <Button type="button" size="sm" className="flex-1" onClick={confirm}>
+            {isEdit ? "اعمالِ اصلاح" : "افزودن"}
+          </Button>
+          <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+            انصراف
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

@@ -18,6 +18,8 @@ import { runDocumentChanges } from "@/shared/services/documentChanges";
 import { shippingKeys } from "@/features/warehouse/shipping/services/queryKeys";
 import { customerKeys } from "@/features/customers/services/queryKeys";
 import { idempotencyKeyFor } from "@/shared/services/api/contract";
+import { SALE_PAYMENT_SIDE } from "../domain/salePayments";
+import { toPaymentPayload } from "@/shared/domain/payments/paymentRows";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
 
 /**
@@ -126,4 +128,37 @@ export const useSaleChangesSaver = (saleId) => {
       toast.error(getErrorMessage(error, "ذخیره‌ی تغییرات ناتمام ماند"));
     },
   });
+};
+
+/**
+ * کارهای سرورِ «دریافت با کارتخوان» روی فروش. برخلافِ بقیه‌ی دریافت‌ها همان لحظه روی سرور
+ * می‌نشیند، نه در پیش‌نویسِ صفحه، چون کارت‌کشیدن برگشت‌ناپذیر است.
+ *
+ * هیچ‌کدام سندِ برگشتی را در کش نمی‌گذارند: کش که عوض شود فرمِ پیش‌فاکتور از نو پر
+ * می‌شود (یا صفحه به فاکتورِ صادرشده می‌رود) و پنلِ کارتخوان وسطِ کار از بین می‌رود. صفحه
+ * بعد از «بستن»ِ رسید خودش `apply` را صدا می‌زند.
+ *
+ *  - `saveProforma`: ذخیره‌ی تغییراتِ پیش‌فاکتور پیش از کارت‌کشیدن.
+ *  - `recordPayment`: `AddSalePayment`ِ معمولی (انتقال بانکی، `transferRef` = شماره‌ی پیگیری)؛
+ *    کلیدِ ایدمپوتنسی از دستگاه و شماره‌ی پیگیری است تا «ثبتِ دوباره» ردیفِ دوم نسازد.
+ */
+export const useSalePosActions = () => {
+  const queryClient = useQueryClient();
+  const save = useMutation({
+    mutationFn: ({ saleId, update }) => updateSale(saleId, update),
+    onError: (error) => toast.error(getErrorMessage(error, "ذخیره‌ی پیش‌فاکتور انجام نشد")),
+  });
+  const record = useMutation({
+    mutationFn: ({ saleId, terminal, row }) =>
+      addSalePayment(
+        { saleId, ...toPaymentPayload({ ...row, direction: SALE_PAYMENT_SIDE.direction }) },
+        { idempotencyKey: `pos-${terminal.id}-${row.transferRef}` },
+      ),
+  });
+
+  return {
+    saveProforma: (saleId, update) => save.mutateAsync({ saleId, update }),
+    recordPayment: (saleId, { terminal, row }) => record.mutateAsync({ saleId, terminal, row }),
+    apply: (sale) => applySale(queryClient, sale),
+  };
 };

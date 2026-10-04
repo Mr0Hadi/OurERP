@@ -4,7 +4,7 @@ import { Undo2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
-import { useSaleChangesSaver } from "@/features/sales/orders/services/mutations";
+import { useSaleChangesSaver, useSalePosActions } from "@/features/sales/orders/services/mutations";
 import SaleCustomerSection from "../components/forms/SaleCustomerSection";
 import DocumentFormLayout, {
   OrderSummaryCard,
@@ -62,13 +62,16 @@ export default function SaleIssuedView({ sale }) {
   const [confirmCancel, setConfirmCancel] = useState(false);
 
   const draft = useIssuedDocumentDraft(sale, SALE_PAYMENT_SIDE.direction);
+  const posActions = useSalePosActions();
+  // تا پایانِ کارتخوان «ثبت تغییرات» بسته است.
+  const [posLocked, setPosLocked] = useState(false);
   const saver = useSaleChangesSaver(sale.id);
   const { data: relatedReturns } = useRelatedSalesReturnsQuery(sale.id);
 
   const canUpdate = allows("SaleUpdate");
   const isCancelled = sale.status === SaleStatusEnum.CANCELLED;
   const isInstallment = sale.paymentType === PaymentTypeEnum.INSTALLMENT;
-  const isSaving = saver.isPending || draft.attachments.isUploading;
+  const isSaving = saver.isPending || draft.attachments.isUploading || posLocked;
 
   const save = () => {
     if (draft.attachments.isUploading) return;
@@ -82,7 +85,7 @@ export default function SaleIssuedView({ sale }) {
 
   const onSubmit = (e) => {
     e.preventDefault();
-    if (!draft.count) return;
+    if (!draft.count || posLocked) return;
     if (Number(draft.status) === SaleStatusEnum.CANCELLED) setConfirmCancel(true);
     else save();
   };
@@ -127,6 +130,16 @@ export default function SaleIssuedView({ sale }) {
               payable={sale.payableAmount}
               canManage={allows("SalePayment") && !isInstallment}
               refundOnly={isCancelled}
+              posPayment={
+                allows("PosCharge") && !isInstallment && !isCancelled
+                  ? {
+                      record: (_result, context) => posActions.recordPayment(sale.id, context),
+                      onRecorded: posActions.apply,
+                      onLockChange: setPosLocked,
+                      reference: `sale-${sale.id}`,
+                    }
+                  : undefined
+              }
               notice={
                 isInstallment
                   ? "پرداخت‌های فروشِ اقساطی از قرارداد اقساط ثبت می‌شوند."
