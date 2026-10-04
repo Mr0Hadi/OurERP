@@ -1,4 +1,4 @@
-using Domain.Enums;
+﻿using Domain.Enums;
 
 namespace Domain.Entities
 {
@@ -40,5 +40,25 @@ namespace Domain.Entities
 
         public string? CheckNumber { get; set; }
         public string? TransferRef { get; set; }
+
+        /// <summary>The card reader the money was taken on (TRANSFER rows only). Restrict: a device is only ever deactivated.</summary>
+        public int? PosTerminalId { get; set; }
+        public PosTerminal? PosTerminal { get; set; }
+
+        /// <summary>Masked as the device prints it (first six and last four digits at most) - never the full card number.</summary>
+        public string? MaskedCardNumber { get; set; }
+        public string? ApprovalCode { get; set; }
+        public string? TraceNumber { get; set; }
+
+        /// <summary>Card-reader rows only (null otherwise): from the device, or typed in from the receipt. Set by the server.</summary>
+        public PaymentSourceEnum? Source { get; set; }
+
+        /// <summary>
+        /// When the row was written and by whom - stamped by WMSDbContext on insert, for every payment row
+        /// (installments included). Null on rows recorded before 2026-10-05, and on rows written outside a request.
+        /// </summary>
+        public DateTime? RecordedAt { get; set; }
+        public int? RecordedByUserId { get; set; }
+        public User? RecordedByUser { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-using Application.Common.Dtos;
+﻿using Application.Common.Dtos;
 using Application.Features.Purchase.Commands;
 using Application.Features.Purchase.Dtos;
 using Application.Features.Sale.Commands;
@@ -19,7 +19,7 @@ namespace WMS.Tests.Integration
     public class InvoiceAmountsTests
     {
         private static CreateSaleCommandHandler CreateSale(TestScope scope, int userId) =>
-            new(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance, FakeUserContext.WithUserId(userId));
+            new(scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance, FakeUserContext.WithUserId(userId));
 
         private static UpdateSaleCommandHandler UpdateSale(TestScope scope) =>
             new(scope.Db, FakeObjectStorage.Instance, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, TestMapper.Instance, scope.SaleReturnCalculation);
@@ -96,7 +96,7 @@ namespace WMS.Tests.Integration
             Assert.Equal(1_090UL, (await DetailAsync(db, scenario.Sale.Id)).TotalAmount);
 
             // Issued: the rate changing again does nothing to it.
-            await new AddSalePaymentCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation)
+            await new AddSalePaymentCommandHandler(scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation)
                 .Handle(new AddSalePaymentCommand { SaleId = scenario.Sale.Id, Type = PaymentTypeEnum.CASH, Amount = 100 }, CancellationToken.None);
             scenario.Product.Tax = 20;
             scope.Context.SaveChanges();
@@ -116,7 +116,7 @@ namespace WMS.Tests.Integration
             scope.Context.SaveChanges();
             var user = Seed.PersistedUser(scope.Context);
 
-            var res = await new CreatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, TestMapper.Instance, scope.UnitOfWork, FakeUserContext.WithUserId(user.Id))
+            var res = await new CreatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, TestMapper.Instance, scope.UnitOfWork, FakeUserContext.WithUserId(user.Id))
                 .Handle(new CreatePurchaseCommand
                 {
                     SupplierId = scenario.Supplier.Id,

@@ -338,14 +338,25 @@ namespace Infrastructure.Migrations
                         .HasPrecision(20)
                         .HasColumnType("decimal(20,0)");
 
+                    b.Property<string>("ApprovalCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
                     b.Property<string>("CheckNumber")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Direction")
                         .HasColumnType("int");
 
+                    b.Property<string>("MaskedCardNumber")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
                     b.Property<DateTime>("PaidAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<int?>("PosTerminalId")
+                        .HasColumnType("int");
 
                     b.Property<int?>("PurchaseId")
                         .HasColumnType("int");
@@ -353,11 +364,25 @@ namespace Infrastructure.Migrations
                     b.Property<int>("Purpose")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("RecordedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("RecordedByUserId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("SaleId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("Source")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TraceNumber")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
                     b.Property<string>("TransferRef")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<int>("Type")
                         .HasColumnType("int");
@@ -369,7 +394,13 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("PurchaseId");
 
+                    b.HasIndex("RecordedByUserId");
+
                     b.HasIndex("SaleId");
+
+                    b.HasIndex("PosTerminalId", "TransferRef")
+                        .IsUnique()
+                        .HasFilter("[PosTerminalId] IS NOT NULL AND [TransferRef] IS NOT NULL");
 
                     b.ToTable("PaymentDetails");
                 });
@@ -381,6 +412,10 @@ namespace Infrastructure.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BankCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
 
                     b.Property<string>("ComPort")
                         .HasColumnType("nvarchar(max)");
@@ -1952,6 +1987,9 @@ namespace Infrastructure.Migrations
                     b.Property<DateTime?>("ExpireRefreshToken")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("FailedLoginCount")
+                        .HasColumnType("int");
+
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -1962,6 +2000,12 @@ namespace Infrastructure.Migrations
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("LockoutEnd")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("bit");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
@@ -2104,17 +2148,31 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.PaymentDetail", b =>
                 {
+                    b.HasOne("Domain.Entities.PosTerminal", "PosTerminal")
+                        .WithMany()
+                        .HasForeignKey("PosTerminalId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Domain.Entities.Purchase", "Purchase")
                         .WithMany("PaymentDetails")
                         .HasForeignKey("PurchaseId")
                         .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Domain.Entities.User", "RecordedByUser")
+                        .WithMany()
+                        .HasForeignKey("RecordedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Domain.Entities.Sale", "Sale")
                         .WithMany("PaymentDetails")
                         .HasForeignKey("SaleId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.Navigation("PosTerminal");
+
                     b.Navigation("Purchase");
+
+                    b.Navigation("RecordedByUser");
 
                     b.Navigation("Sale");
                 });

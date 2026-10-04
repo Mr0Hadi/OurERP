@@ -1,16 +1,16 @@
-using Domain.Enums;
+﻿using Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 
 namespace WMS.Authorization
 {
-    /// <summary>The permission an endpoint's policy demands.</summary>
+    /// <summary>The permissions an endpoint's policy accepts - holding any one of them is enough.</summary>
     public class PermissionRequirement : IAuthorizationRequirement
     {
-        public PermissionRequirement(PermissionEnum permission)
+        public PermissionRequirement(params PermissionEnum[] permissions)
         {
-            Permission = permission;
+            Permissions = permissions;
         }
 
-        public PermissionEnum Permission { get; }
+        public IReadOnlyList<PermissionEnum> Permissions { get; }
     }
 }

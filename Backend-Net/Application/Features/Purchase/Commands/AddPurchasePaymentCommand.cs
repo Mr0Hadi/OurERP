@@ -1,3 +1,4 @@
+﻿using Application.Common.Contracts.Pos;
 using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Storage;
@@ -40,12 +41,14 @@ namespace Application.Features.Purchase.Commands
     public class AddPurchasePaymentCommandHandler : IRequestHandler<AddPurchasePaymentCommand, ResponseDto>
     {
         private readonly IWMSDbContext _context;
+        private readonly IPosPaymentGuard _posPaymentGuard;
         private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public AddPurchasePaymentCommandHandler(IWMSDbContext context, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
+        public AddPurchasePaymentCommandHandler(IWMSDbContext context, IPosPaymentGuard posPaymentGuard, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
         {
             _context = context;
+            _posPaymentGuard = posPaymentGuard;
             _objectStorageService = objectStorageService;
             _unitOfWork = unitOfWork;
         }
@@ -53,6 +56,8 @@ namespace Application.Features.Purchase.Commands
         public async Task<ResponseDto> Handle(AddPurchasePaymentCommand request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
+
+            await _posPaymentGuard.CheckAsync(new[] { request }, cancellationToken);
 
             var purchase = await _context.Purchases
                 .Include(x => x.PaymentDetails)

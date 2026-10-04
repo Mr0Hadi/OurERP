@@ -1,3 +1,4 @@
+﻿using Application.Common.Contracts.Pos;
 using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Repositories;
@@ -76,6 +77,7 @@ namespace Application.Features.Purchase.Commands
     {
         private readonly IPurchaseRepository _purchaseRepository;
         private readonly IWMSDbContext _context;
+        private readonly IPosPaymentGuard _posPaymentGuard;
         private readonly IObjectStorageService _objectStorageService;
         private readonly IMapper _mapper;
         private readonly IUnitOfWork _unitOfWork;
@@ -83,7 +85,7 @@ namespace Application.Features.Purchase.Commands
 
         public CreatePurchaseCommandHandler(
             IPurchaseRepository purchaseRepository,
-            IWMSDbContext context,
+            IWMSDbContext context, IPosPaymentGuard posPaymentGuard,
             IObjectStorageService objectStorageService,
             IMapper mapper,
             IUnitOfWork unitOfWork,
@@ -91,6 +93,7 @@ namespace Application.Features.Purchase.Commands
         {
             _purchaseRepository = purchaseRepository;
             _context = context;
+            _posPaymentGuard = posPaymentGuard;
             _objectStorageService = objectStorageService;
             _mapper = mapper;
             _unitOfWork = unitOfWork;
@@ -100,6 +103,8 @@ namespace Application.Features.Purchase.Commands
         public async Task<ResponseDto> Handle(CreatePurchaseCommand request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
+
+            await _posPaymentGuard.CheckAsync(request.PaymentDetails ?? new(), cancellationToken);
 
             var purchase = _mapper.Map<Domain.Entities.Purchase>(request);
             // شماره فاکتور در مرحله‌ی پیش‌فاکتور می‌تواند خالی باشد، ولی ستون NOT NULL است.

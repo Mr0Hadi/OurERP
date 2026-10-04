@@ -1,4 +1,4 @@
-# CLAUDE.md
+﻿# CLAUDE.md
 
 Guidance for coding agents working in the WMS (Warehouse Management System) .NET backend.
 This project was scaffolded from the smshub2 reference project (`E:\Programming\smshub2`) and follows its conventions closely, with the entity naming made project-specific.
@@ -135,7 +135,7 @@ Backend-Net/
 │   │   ├── Enums/       # ResponseMessageTypeEnum
 │   │   └── Mapping/     # MappingProfile
 │   ├── Features/
-│   │   ├── Account/     # Command/ (login, logout, refresh, otp, forget-password)
+│   │   ├── Account/     # Command/ (login, logout, refresh, logout-by-id; forget-password/otp removed 2026-10-04)
 │   │   ├── Customer/    # Commands/, Queries/, Dtos/
 │   │   ├── FileStorage/ # Commands/ (UploadImage, DeleteImage), Queries/ (GetImageUrl)
 │   │   │                # (named FileStorage, not File, to avoid System.IO.File shadowing;
@@ -181,7 +181,7 @@ Backend-Net/
 
 ## 6. Current state
 
-**Implemented**: JWT auth + account flows (login, logout, refresh token, OTP, forget password); full CRUD for Customer, Product, ProductCategory, Supplier; create/update + list/detail for Purchase and Sale; user create/update/info; purchase receiving + returns (below). OpenAPI via Scalar (`/scalar`). **IsActive** exists on every entity and each entity feature folder has a soft-delete command (`DeleteCustomerCommand`, `DeleteProductCommand`, `DeleteProductCategoryCommand`, `DeletePurchaseCommand`, `DeleteSaleCommand`, `DeleteSupplierCommand`, `DeleteUserCommand`), all setting `IsActive = false` and throwing `NotFoundCustomException` when the row is missing. Each controller exposes a matching `[HttpDelete("DeleteX")]` action that `Send`s the command (`DeleteCustomer`, `DeleteProduct`, `DeleteProductCategory`, `DeletePurchase`, `DeleteSale`, `DeleteSupplier`, `DeleteUser`), taking the command via `[FromQuery]`. Create mappings default `IsActive = true` (existing rows default to active via the migration's column default). Schema change shipped as EF migration `20260802123347_add-isactive` (see `Infrastructure/Migrations`).
+**Implemented**: JWT auth + account flows (login with lockout, single-session logout, refresh token; forget password removed 2026-10-04 in favour of manager reset + forced change); full CRUD for Customer, Product, ProductCategory, Supplier; create/update + list/detail for Purchase and Sale; user create/update/info; purchase receiving + returns (below). OpenAPI via Scalar (`/scalar`). **IsActive** exists on every entity and each entity feature folder has a soft-delete command (`DeleteCustomerCommand`, `DeleteProductCommand`, `DeleteProductCategoryCommand`, `DeletePurchaseCommand`, `DeleteSaleCommand`, `DeleteSupplierCommand`, `DeleteUserCommand`), all setting `IsActive = false` and throwing `NotFoundCustomException` when the row is missing. Each controller exposes a matching `[HttpDelete("DeleteX")]` action that `Send`s the command (`DeleteCustomer`, `DeleteProduct`, `DeleteProductCategory`, `DeletePurchase`, `DeleteSale`, `DeleteSupplier`, `DeleteUser`), taking the command via `[FromQuery]`. Create mappings default `IsActive = true` (existing rows default to active via the migration's column default). Schema change shipped as EF migration `20260802123347_add-isactive` (see `Infrastructure/Migrations`).
 
 > **SUPERSEDED — historical.** This entry and "Sale shipping & sale returns (2026-08-10)" below describe the return model that
 > was replaced on 2026-08-28 (`…ReturnItem`/`…ReturnDecision`, closed `DecisionType`, `ConfirmReturnInspection`/`ConfirmReplacementShipment`,
@@ -1848,6 +1848,85 @@ return only: counterparty and money), onto the shelf (release), or scrap - and, 
 - **Verified:** all migrations from scratch apply to a throwaway local database (dropped afterwards). Tests:
   `QuarantineReservationTests` (4), `ApplyProductUnitActionTests` (7), `ProductUnitPageTests` (3), `PurchaseExcessAcceptedTests`
   rewritten to the new behaviour, the off-order customer-return test now scraps its unit. **None of the new migrations is applied.**
+
+**Account security pass (2026-10-04).** From a security audit, every decision agreed with the user. API:
+`docs/api-guide.fa.md` section 1 (single session, forced change), section 2 (Login errors table, ForgetPassword marked
+removed but kept as history), section 3 (`ResetUserPassword`, the subset rule) and the 2026-10-04 table in section 16.
+
+- **`ForgetPassword` and the commented-out `SendOtpSmsCommand` are deleted.** Its OTP check was commented out, so any
+  anonymous caller could set any account's password from a username. Forgotten passwords now go through a manager:
+  `ResetUserPassword` sets a temporary password and `User.MustChangePassword = true`.
+- **Forced change is enforced server-side.** The flag rides in the access token as claim `MustChangePassword`
+  (`Application/Common/Contracts/Token/TokenClaims`); `WMS/Middlewares/PasswordChangeRequiredMiddleware` answers 403 with
+  `data.mustChangePassword = true` for every authenticated action except anonymous ones and those marked
+  `[AllowWhilePasswordChangeRequired]` (`ChangePassword`, `GetUserInfo`, `GetMyPermissions`, `Logout`). Trusting the claim
+  is safe because a reset revokes every session and `ChangePassword` issues a new token without it.
+- **Single session, one string per user.** `IUserSessionService` (`Infrastructure/Services/UserSessionService`, Scoped,
+  over the shared `IMemoryCache`, key `UserSession:{id}`) replaces the old `UserTokens:{id}` `HashSet<string>`, which was
+  mutated concurrently by login/refresh/logout and was not thread-safe. `IssueAsync` (Login, RefreshToken, ChangePassword)
+  issues tokens, overwrites the current token and stages the refresh token; `RevokeAll` removes it and nulls the refresh
+  token. A second login therefore logs the first out at once (before, only when its token expired). `CachingMiddleware`
+  checks `IsCurrent` and now skips anonymous endpoints, so a stale token sent to `RefreshToken` after a restart is not 401'd.
+- **Revocation points:** logout, `LogoutUserById`, `ChangePassword` (then reissues), `ResetUserPassword`, deactivation via
+  `UpdateUser` and `DeleteUser`.
+- **Brute force, two layers.** Per account in `LoginUserCommand`: `FailedLoginCount`/`LockoutEnd` on `User`, 10 wrong in a row
+  ⇒ 5-minute lock (`TooManyRequestsCustomException`, 429, `data.remainingSeconds`), checked before the password, warning in the
+  last 3 attempts, reset on success; a manager reset also unlocks. Per IP: ASP.NET rate limiter policy `Login`
+  (`WMS/Ioc/LoginRateLimitRegistration`, `[EnableRateLimiting]` on Login only - refresh tokens are 32 random bytes, and a
+  shared office IP refreshing every minute would trip it), 60/min fixed window, Persian 429 + `Retry-After`. Partitioned on
+  `Connection.RemoteIpAddress`, never X-Forwarded-For: behind IIS (the production host) that is the real client; if IIS is ever
+  put behind a CDN/proxy, configure ForwardedHeaders with KnownProxies first. All numbers in `appsettings.json` → `LoginSecurity`.
+- **Subset rule** (`IPermissionService.EnsureCanManageUserAsync`): acting on another account requires holding every permission
+  it holds (deactivated targets' rows count). Applied to `ResetUserPassword`, `UpdateUser`, `DeleteUser`, `ChangeUserTeam`,
+  `LogoutUserById`. **Deliberately not** to `UpdateUserPermissions`: `PermissionManage` is self-escalating by design (see the
+  2026-09-22 entry), so the rule held nothing there and broke three `PermissionTests` that encode that design. A user cannot
+  deactivate or delete themselves.
+- **Request log** (`WMS/Middlewares/RequestLoggingMiddleware` + `WMS/Logging/LogRedactor`, OWASP Logging Cheat Sheet): secrets
+  (password/token/key fields) and address/postal code/vehicle plate are removed; national id, economic code and phone numbers
+  become `hmac:` + 16 hex of HMAC-SHA256 with `LogRedaction:HashKey` (blank ⇒ removed instead - an unkeyed hash of a 10-digit
+  number is reversible); strings over 512 chars are cut; matching is case-insensitive substring at any depth, query string
+  included. Only JSON bodies up to 32 KB are read - multipart/file bytes never. The old reversible `Encryption.Encrypt` of
+  passwords is gone (it read a config key that did not exist, so it always threw and dropped the body anyway).
+- **Hardening:** `SecurityHeadersMiddleware` (nosniff, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`; no CSP on
+  purpose - Scalar needs scripts), `UseHsts` outside Development, request bodies capped at 10 MB (`RequestLimits:MaxBodyBytes`,
+  Kestrel + IIS + multipart), `IdempotencyStore` on its own `MemoryCache` with a 64 MB `SizeLimit` and 512 KB per response.
+- Migration `20261004190624_user-lockout-and-forced-password-change` (three columns on `Users`). **Generated, not applied.**
+- **Not done, by the user's choice:** password hashing stays unsalted SHA-256; `GetImage` stays anonymous (to be fixed with
+  bucket settings); OpenAPI stays enabled; `TrustServerCertificate`; secrets in `appsettings.json` are the user's to move.
+- Tests: `Integration/AccountHandlerTests` (rewritten: lockout, single session, refresh), `Integration/UserSecurityTests`,
+  `Unit/LogRedactorTests`, `Functional/SecurityFunctionalTests` (forced change through the pipeline, single session, headers,
+  429). Suite 798/802; the 4 failures are 3 documented environmental ones plus `ProductUnitPageTests.List_FiltersBySearch...`,
+  which fails identically on a clean `HEAD` (`31dfeae`) - barcode search `-1` also matches `-10`/`-11` after the dash format.
+  **Fixed 2026-10-05:** `GetProductUnitList.Search` and `GetProductList.Code`/`BarCode` now return only the exact match when the
+  input is a whole barcode/code (one `AnyAsync` probe), and fall back to `Contains` otherwise (`Integration/CodeSearchTests`).
+
+**Card-reader requests 11.1/11.3 (2026-10-05).** From `docs/frontend-requests.fa.md` section 11 (on `main`, merged here), whose
+architecture is: the backend never talks to a device - a local bridge program on the cashier's PC does, and the payment is an
+ordinary TRANSFER row through the existing payment endpoints. Answers to 11.x/12.5/12.6 are written under each item in that doc.
+- `[HasPermission(a, b, ...)]` now means ANY of them. `PermissionRequirement` holds a list; `AddPermissionAuthorization` registers
+  the combined policies it finds on the controllers by reflection (name = member names joined by `|`). Used once:
+  `GetPosTerminalList`/`Detail` accept `PosTerminalView` or `PosCharge`.
+- `PosVendorEnum` and `PosIntegration.Models.PosVendor` gained `AsanPardakht = 4`, `Fanava = 5`, `Other = 99`; `PosPaymentGateway`
+  (`Pos/Charge`) refuses them with 400. `PosTerminal.BankCode` (display only, 32 chars).
+- `PaymentDetail.PosTerminalId` (FK Restrict) + `MaskedCardNumber`/`ApprovalCode`/`TraceNumber` (32 chars), on `PaymentInput` and
+  `PaymentDetailDto` through `IPosPaymentFields` + `PosPaymentFieldsValidator` (TRANSFER only; at most 10 card digits - a full
+  PAN is refused, never stored). `PosPaymentTerminals.EnsureUsableAsync` (active device) runs in the six payment-writing handlers.
+- Decided: 11.4 stays option 1 (no unit reservation); 11.5 keeps 422 for a reused key, not 409 - the frontend's axios keeps the key
+  and retries on 409. Not built: 11.6.
+- **12.2/12.3 (same day).** A card-reader row = a payment row with `PosTerminalId`. `IPosPaymentGuard`
+  (`Application/Common/Contracts/Pos`, `Infrastructure/Services/PosPaymentGuard`, Scoped) runs in the six payment-writing handlers:
+  active device; caller holds **`PosManualRecord = 233`**; the RRN (`TransferRef`, now `nvarchar(64)`, required on card rows) is new
+  on that device - voided rows included, filtered unique index `(PosTerminalId, TransferRef)` as the race backstop; refusal is 400,
+  never 409. **Every card row is MANUAL_RECEIPT for now** (`PaymentSourceEnum`, set by `PaymentWriter.SourceOf`/the mapping, never by
+  the client): DEVICE needs the signed device result of 12.1, deferred until devices are installed - then signed ⇒ DEVICE without
+  the permission, unsigned ⇒ manual. Card rows are void-only (`PaymentWriter.EnsureEditable`): edit = void + new row would reuse the RRN.
+- **Every payment row** (installments too) gets `RecordedAt`/`RecordedByUserId` in `WMSDbContext.SaveChangesAsync`, which now takes an
+  optional `IUserContextService` (null in hand-built test contexts ⇒ time only). Read DTOs add `source`, `recordedAt`,
+  `recordedByUserId`, `recordedByName`. Manager report `GET api/Pos/GetPosPaymentList` (`PosPaymentReportView = 234`).
+- 12.4 (HttpOnly cookie, reuse detection, sessions outside memory) and 12.7's `no-store`: declined by the user; reasons written in
+  the frontend doc. 12.6: kept as is (allow-list + nosniff), reasons written there too.
+- Migrations `pos-payment-fields`, then `pos-rrn-unique-and-payment-recorder` (shrinks `TransferRef` to 64 - fails loudly if a longer
+  value exists). **Generated, not applied.** Tests: `Integration/PosPaymentTests`, two functional tests in `SecurityFunctionalTests`.
 
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.

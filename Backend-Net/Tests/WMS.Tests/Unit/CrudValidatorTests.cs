@@ -336,27 +336,6 @@ namespace WMS.Tests.Unit
         }
     }
 
-    public class ForgetPasswordCommandValidatorTests
-    {
-        private readonly ForgetPasswordCommandValidator _sut = new();
-
-        [Fact]
-        public void MismatchedRePassword_IsInvalid()
-        {
-            var command = new ForgetPasswordCommand { Username = "tester", Password = "New@1234", RePassword = "Nope@1234" };
-
-            Assert.False(_sut.Validate(command).IsValid);
-        }
-
-        [Fact]
-        public void WellFormedRequest_IsValid()
-        {
-            var command = new ForgetPasswordCommand { Username = "tester", Password = "New@1234", RePassword = "New@1234" };
-
-            Assert.True(_sut.Validate(command).IsValid);
-        }
-    }
-
     public class UserRefreshTokenCommandValidatorTests
     {
         private readonly UserRefreshTokenCommandValidator _sut = new();

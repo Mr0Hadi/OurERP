@@ -1,5 +1,6 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Permissions;
+using Common.Exceptions;
 using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -49,6 +50,23 @@ namespace Infrastructure.Services
         }
 
         public void Invalidate(int userId) => _memoryCache.Remove(CacheKey(userId));
+
+        public async Task EnsureCanManageUserAsync(int actorUserId, int targetUserId, CancellationToken cancellationToken = default)
+        {
+            if (actorUserId == targetUserId)
+                return;
+
+            var actorPermissions = await GetUserPermissionsAsync(actorUserId, cancellationToken);
+
+            var targetPermissions = await _context.UserPermissions
+                .AsNoTracking()
+                .Where(x => x.UserId == targetUserId)
+                .Select(x => x.Permission)
+                .ToListAsync(cancellationToken);
+
+            if (targetPermissions.Any(permission => !actorPermissions.Contains(permission)))
+                throw new ForbiddenCustomException("این کاربر دسترسی‌هایی دارد که شما ندارید؛ به همین دلیل امکان انجام این عملیات روی حساب او را ندارید.");
+        }
 
         private static string CacheKey(int userId) => $"UserPermissions:{userId}";
     }

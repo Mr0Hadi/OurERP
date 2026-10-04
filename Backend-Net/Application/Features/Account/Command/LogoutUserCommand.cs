@@ -5,7 +5,8 @@ using Application.Common.Dtos;
 using Application.Common.Enums;
 using FluentValidation;
 using MediatR;
-using Microsoft.Extensions.Caching.Memory;
+using Application.Common.Contracts.Token;
+using Common.Exceptions;
 
 namespace Application.Features.Account.Command
 {
@@ -24,14 +25,14 @@ namespace Application.Features.Account.Command
 
     public class LogoutUserCommandHandler : IRequestHandler<LogoutUserCommand, ResponseDto>
     {
-        private readonly IMemoryCache _memoryCache;
+        private readonly IUserSessionService _userSessionService;
         private readonly IUserContextService _userContextService;
         private readonly IUserRepository _userRepository;
         private readonly IUnitOfWork _unitOfWork;
-        public LogoutUserCommandHandler(IMemoryCache memoryCache, IUserContextService userContextService, IUserRepository userRepository,
+        public LogoutUserCommandHandler(IUserSessionService userSessionService, IUserContextService userContextService, IUserRepository userRepository,
             IUnitOfWork unitOfWork)
         {
-            _memoryCache = memoryCache;
+            _userSessionService = userSessionService;
             _userContextService = userContextService;
             _userRepository = userRepository;
             _unitOfWork = unitOfWork;
@@ -41,31 +42,17 @@ namespace Application.Features.Account.Command
         {
             var res = new ResponseDto();
 
-            var accessToken = _userContextService.GetAccessToken();
-
             var userId = Convert.ToInt32(_userContextService.GetUserId());
 
-            var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+            var user = await _userRepository.GetByIdAsync(userId, cancellationToken)
+                ?? throw new NotFoundCustomException("کاربر با این اطلاعات یافت نشد");
 
-            var cacheKey = $"UserTokens:{userId}";
-
-            if (_memoryCache.TryGetValue(cacheKey, out var userData))
-            {
-                var userTokens = userData as HashSet<string>;
-                userTokens?.Remove(accessToken);
-
-                if (userTokens != null && userTokens.Count > 0)
-                    _memoryCache.Set(cacheKey, userTokens);
-                else
-                    _memoryCache.Remove(cacheKey);
-            }
-
-            user.RefreshToken = null;
-            user.ExpireRefreshToken = null;
+            // Single session, so ending "this" session ends the user's only one.
+            _userSessionService.RevokeAll(user);
 
             _userRepository.Update(user);
 
-            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             res.Message = "کاربر با موفقیت از سامانه خارج شد";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();

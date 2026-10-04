@@ -38,6 +38,7 @@ namespace WMS.Tests.Integration
             services.AddSingleton(scope.ProductCodeService);
             services.AddSingleton<IObjectStorageService>(FakeObjectStorage.Instance);
             services.AddSingleton(FakeUserContext.WithUserId());
+            services.AddSingleton(scope.PosPaymentGuard);
             return services.BuildServiceProvider().GetRequiredService<IMediator>();
         }
 

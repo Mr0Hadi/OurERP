@@ -1,4 +1,5 @@
 ﻿using Application.Common.Contracts.Context;
+using Application.Common.Contracts.UserContextService;
 using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,10 +7,37 @@ namespace Infrastructure.Persistence
 {
     public class WMSDbContext : DbContext, IWMSDbContext
     {
-        public WMSDbContext(DbContextOptions<WMSDbContext> options)
+        private readonly IUserContextService? _userContextService;
+
+        /// <param name="userContextService">
+        /// Who is signed in, for stamping payment rows (see SaveChangesAsync). Optional: null outside a request
+        /// (design-time tooling, tests building the context by hand), and then the rows are stamped with the time only.
+        /// </param>
+        public WMSDbContext(DbContextOptions<WMSDbContext> options, IUserContextService? userContextService = null)
             :base(options)
         {
-            
+            _userContextService = userContextService;
+        }
+
+        /// <summary>
+        /// Every new payment row gets RecordedAt and RecordedByUserId here, in one place, instead of in each of the
+        /// dozen handlers that write payments (documents, payments, installments) - none of them can forget it.
+        /// </summary>
+        public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        {
+            var added = ChangeTracker.Entries<PaymentDetail>().Where(x => x.State == EntityState.Added).ToList();
+            if (added.Count > 0)
+            {
+                var now = DateTime.Now;
+                var userId = int.TryParse(_userContextService?.GetUserId(), out var id) && id > 0 ? id : (int?)null;
+                foreach (var entry in added)
+                {
+                    entry.Entity.RecordedAt ??= now;
+                    entry.Entity.RecordedByUserId ??= userId;
+                }
+            }
+
+            return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
         }
 
         public DbSet<User> Users => Set<User>();
@@ -526,6 +554,34 @@ namespace Infrastructure.Persistence
 
             modelBuilder.Entity<PaymentDetail>()
                 .HasIndex(x => x.SaleId);
+
+            // Restrict: a device is deactivated, never deleted, and its old payment rows must survive.
+            modelBuilder.Entity<PaymentDetail>()
+                .HasOne(x => x.PosTerminal)
+                .WithMany()
+                .HasForeignKey(x => x.PosTerminalId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<PaymentDetail>().Property(x => x.MaskedCardNumber).HasMaxLength(32);
+            modelBuilder.Entity<PaymentDetail>().Property(x => x.TransferRef).HasMaxLength(64);
+
+            // One card transaction is recorded once per device, ever (frontend-requests 12.2). Voided rows count:
+            // voiding refunds the money, it does not free the transaction. The guard checks first for a readable
+            // message; this index is what holds under a race.
+            modelBuilder.Entity<PaymentDetail>()
+                .HasIndex(x => new { x.PosTerminalId, x.TransferRef })
+                .IsUnique()
+                .HasFilter("[PosTerminalId] IS NOT NULL AND [TransferRef] IS NOT NULL");
+
+            // Restrict: a user is only ever deactivated; two FKs into Users would otherwise give SQL Server two cascade paths.
+            modelBuilder.Entity<PaymentDetail>()
+                .HasOne(x => x.RecordedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.RecordedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<PaymentDetail>().Property(x => x.ApprovalCode).HasMaxLength(32);
+            modelBuilder.Entity<PaymentDetail>().Property(x => x.TraceNumber).HasMaxLength(32);
+            modelBuilder.Entity<PosTerminal>().Property(x => x.BankCode).HasMaxLength(32);
 
             modelBuilder.Entity<PaymentDetail>()
                 .Property(x => x.Amount)

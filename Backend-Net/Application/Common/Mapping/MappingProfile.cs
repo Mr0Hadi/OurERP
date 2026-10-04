@@ -1,4 +1,5 @@
-﻿using Application.Common.Dtos;
+﻿using Application.Common.Payments;
+using Application.Common.Dtos;
 using Application.Features.Customer.Commands;
 using Application.Features.Customer.Dtos;
 using Application.Features.Department.Commands;
@@ -36,7 +37,13 @@ namespace Application.Common.Mapping
 				.ForMember(dest => dest.Sale, opt => opt.Ignore())
 				// Direction is the document's own (the handler sets it); a row is never born voided.
 				.ForMember(dest => dest.Direction, opt => opt.Ignore())
-				.ForMember(dest => dest.VoidedAt, opt => opt.Ignore());
+				.ForMember(dest => dest.VoidedAt, opt => opt.Ignore())
+				.ForMember(dest => dest.PosTerminal, opt => opt.Ignore())
+				.ForMember(dest => dest.TransferRef, opt => opt.MapFrom(src => src.TransferRef == null ? null : src.TransferRef.Trim()))
+				.ForMember(dest => dest.Source, opt => opt.MapFrom(src => PaymentWriter.SourceOf(src)))
+				.ForMember(dest => dest.RecordedAt, opt => opt.Ignore())
+				.ForMember(dest => dest.RecordedByUserId, opt => opt.Ignore())
+				.ForMember(dest => dest.RecordedByUser, opt => opt.Ignore());
 
 			CreateMap<PaymentDetail, PaymentDetailDto>();
 

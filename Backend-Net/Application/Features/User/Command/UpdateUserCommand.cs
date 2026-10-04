@@ -1,4 +1,7 @@
 ﻿using Application.Common.Contracts.OrgStructure;
+using Application.Common.Contracts.Permissions;
+using Application.Common.Contracts.Token;
+using Application.Common.Contracts.UserContextService;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
@@ -66,11 +69,18 @@ namespace Application.Features.User.Command
     {
         private readonly IUserRepository _userRepository;
         private readonly IOrgRoleService _orgRoleService;
+        private readonly IPermissionService _permissionService;
+        private readonly IUserContextService _userContextService;
+        private readonly IUserSessionService _userSessionService;
         private readonly IUnitOfWork _unitOfWork;
-        public UpdateUserCommandHandler(IUserRepository userRepository, IOrgRoleService orgRoleService, IUnitOfWork unitOfWork)
+        public UpdateUserCommandHandler(IUserRepository userRepository, IOrgRoleService orgRoleService, IPermissionService permissionService,
+            IUserContextService userContextService, IUserSessionService userSessionService, IUnitOfWork unitOfWork)
         {
             _userRepository = userRepository;
             _orgRoleService = orgRoleService;
+            _permissionService = permissionService;
+            _userContextService = userContextService;
+            _userSessionService = userSessionService;
             _unitOfWork = unitOfWork;
         }
 
@@ -83,6 +93,17 @@ namespace Application.Features.User.Command
             if (user == null)
             {
                 throw new ValidationCustomException("کاربر با این اطلاعات یافت نشد");
+            }
+
+            var actorId = _userContextService.GetUserId().ToInt();
+
+            await _permissionService.EnsureCanManageUserAsync(actorId, user.Id, cancellationToken);
+
+            // Deactivating an account is a manager's decision; a user switching themselves off would
+            // also be the one mistake they could not undo.
+            if (!request.IsActive && user.IsActive && user.Id == actorId)
+            {
+                throw new ValidationCustomException("نمی‌توانید حساب کاربری خودتان را غیرفعال کنید؛ این کار باید توسط مدیر انجام شود.");
             }
 
             var userByUsername = await _userRepository.GetByUsernameAsync(request.Username, cancellationToken);
@@ -98,9 +119,17 @@ namespace Application.Features.User.Command
 
             // Deactivating from here is the same thing DeleteUserCommand does, so it frees the slot
             // the same way - an inactive user must not stay named as anyone's head.
+            var deactivating = !request.IsActive && user.IsActive;
+
             if (!request.IsActive)
             {
                 await _orgRoleService.ReleaseAllRolesAsync(user.Id, cancellationToken);
+            }
+
+            // A deactivated user is logged out at once instead of when their token expires.
+            if (deactivating)
+            {
+                _userSessionService.RevokeAll(user);
             }
 
             user.Username = request.Username;
@@ -112,6 +141,11 @@ namespace Application.Features.User.Command
             _userRepository.Update(user);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            if (deactivating)
+            {
+                _permissionService.Invalidate(user.Id);
+            }
 
             res.Message = "اطلاعات کاربر با موفقیت بروزرسانی شد";
             res.ResponseMessageType = ResponseMessageTypeEnum.Warning.ToString();

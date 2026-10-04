@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 
 namespace Domain.Enums
 {
@@ -287,6 +287,18 @@ namespace Domain.Enums
         [PermissionGroup(PermissionGroupEnum.Pos)]
         [Description("مدیریت کارت‌خوان‌ها")]
         PosTerminalManage = 232,
+
+        /// <summary>
+        /// Recording a card payment from the printed receipt. Until signed device results exist every
+        /// card-reader row is recorded this way, so a cashier needs it alongside PosCharge.
+        /// </summary>
+        [PermissionGroup(PermissionGroupEnum.Pos)]
+        [Description("ثبت دستی پرداخت کارتخوان از روی رسید")]
+        PosManualRecord = 233,
+
+        [PermissionGroup(PermissionGroupEnum.Pos)]
+        [Description("مشاهده گزارش پرداخت‌های کارتخوان")]
+        PosPaymentReportView = 234,
 
         // --- حساب اشخاص ---
         [PermissionGroup(PermissionGroupEnum.PartyAccounts)]

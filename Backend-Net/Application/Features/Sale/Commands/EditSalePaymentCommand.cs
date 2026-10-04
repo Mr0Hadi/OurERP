@@ -1,3 +1,4 @@
+﻿using Application.Common.Contracts.Pos;
 using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.SaleReturn;
@@ -35,13 +36,15 @@ namespace Application.Features.Sale.Commands
     public class EditSalePaymentCommandHandler : IRequestHandler<EditSalePaymentCommand, ResponseDto>
     {
         private readonly IWMSDbContext _context;
+        private readonly IPosPaymentGuard _posPaymentGuard;
         private readonly IObjectStorageService _objectStorageService;
         private readonly ISaleReturnCalculationService _saleReturnCalculationService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public EditSalePaymentCommandHandler(IWMSDbContext context, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, ISaleReturnCalculationService saleReturnCalculationService)
+        public EditSalePaymentCommandHandler(IWMSDbContext context, IPosPaymentGuard posPaymentGuard, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, ISaleReturnCalculationService saleReturnCalculationService)
         {
             _context = context;
+            _posPaymentGuard = posPaymentGuard;
             _objectStorageService = objectStorageService;
             _saleReturnCalculationService = saleReturnCalculationService;
             _unitOfWork = unitOfWork;
@@ -51,12 +54,16 @@ namespace Application.Features.Sale.Commands
         {
             var res = new ResponseDto();
 
+            await _posPaymentGuard.CheckAsync(new[] { request }, cancellationToken);
+
             var sale = await _context.Sales
                 .Include(x => x.PaymentDetails)
                 .FirstOrDefaultAsync(x => x.IsActive && x.PaymentDetails.Any(p => p.Id == request.PaymentId), cancellationToken)
                 ?? throw new NotFoundCustomException("پرداخت مورد نظر یافت نشد.");
 
             var old = sale.PaymentDetails.First(p => p.Id == request.PaymentId);
+
+            PaymentWriter.EnsureEditable(old);
             PaymentWriter.Void(old);
             await PartyLedger.PaymentVoidedAsync(_context, old, old.VoidedAt!.Value, cancellationToken);
             var replacement = PaymentWriter.NewRow(request, old.Direction);

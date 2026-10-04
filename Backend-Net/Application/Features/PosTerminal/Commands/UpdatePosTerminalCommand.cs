@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Repositories;
+﻿using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -20,6 +20,7 @@ namespace Application.Features.PosTerminal.Commands
         public string? ComPort { get; set; }
         public string? TerminalId { get; set; }
         public string? MerchantId { get; set; }
+        public string? BankCode { get; set; }
     }
 
     public class UpdatePosTerminalCommandValidator : AbstractValidator<UpdatePosTerminalCommand>
@@ -30,6 +31,7 @@ namespace Application.Features.PosTerminal.Commands
             RuleFor(x => x.Vendor).IsInEnum().WithMessage(Validation.RequiredMessage("سازنده دستگاه"));
             RuleFor(x => x.Host).NotEmpty().WithMessage(Validation.RequiredMessage("آدرس دستگاه"));
             RuleFor(x => x.Port).GreaterThan(0).WithMessage(Validation.RequiredMessage("پورت دستگاه"));
+            RuleFor(x => x.BankCode).MaximumLength(32).WithMessage("کد بانک بیش از حد طولانی است.");
         }
     }
 
@@ -58,6 +60,7 @@ namespace Application.Features.PosTerminal.Commands
             posTerminal.ComPort = request.ComPort;
             posTerminal.TerminalId = request.TerminalId;
             posTerminal.MerchantId = request.MerchantId;
+            posTerminal.BankCode = request.BankCode;
 
             _posTerminalRepository.Update(posTerminal);
             await _unitOfWork.SaveChangesAsync();

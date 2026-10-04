@@ -1,4 +1,4 @@
-using Domain.Enums;
+﻿using Domain.Enums;
 
 namespace Application.Features.PosTerminal.Dtos
 {
@@ -12,5 +12,6 @@ namespace Application.Features.PosTerminal.Dtos
         public string? ComPort { get; set; }
         public string? TerminalId { get; set; }
         public string? MerchantId { get; set; }
+        public string? BankCode { get; set; }
     }
 }

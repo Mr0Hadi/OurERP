@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
@@ -23,7 +23,6 @@ namespace WMS.Tests.Unit
         {
             "AccountController.Login",              // there is no identity yet
             "AccountController.RefreshToken",       // authenticated by the refresh token itself
-            "AccountController.ForgetPassword",     // by definition cannot require a session
             "FileController.GetImage",              // an <img src> cannot send a bearer token
         };
 
@@ -99,7 +98,7 @@ namespace WMS.Tests.Unit
         {
             foreach (var (_, action, key) in AllActions())
             foreach (var attribute in action.GetCustomAttributes<HasPermissionAttribute>())
-                Assert.True(Enum.IsDefined(attribute.Permission), key);
+                Assert.All(attribute.Permissions, permission => Assert.True(Enum.IsDefined(permission), key));
         }
 
         /// <summary>

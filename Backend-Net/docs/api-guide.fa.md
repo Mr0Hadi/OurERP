@@ -1,4 +1,4 @@
-# راهنمای کامل API بک‌اند WMS برای توسعه‌دهنده فرانت‌اند
+﻿# راهنمای کامل API بک‌اند WMS برای توسعه‌دهنده فرانت‌اند
 
 این سند تمام endpoint های موجود در بک‌اند را با ورودی، خروجی، کاربرد و در صورت نیاز، ترتیب فراخوانی آن‌ها توضیح می‌دهد. جزئیات پیاده‌سازی و منطق داخلی سرور در این سند نیامده و فقط چیزی که برای اتصال فرانت به بک لازم است آورده شده.
 
@@ -70,7 +70,9 @@ Authorization: Bearer {accessToken}
 - **مخفی‌کردن دکمه فقط UX است.** بررسی واقعی سمت سرور انجام می‌شود؛ هیچ‌وقت به پنهان‌بودن دکمه به‌عنوان محافظت تکیه نکنید.
 - **۴۰۱ در برابر ۴۰۳:** ۴۰۱ یعنی توکن نداری یا نامعتبر است (باید Refresh یا Login کنی)؛ ۴۰۳ یعنی توکنت درست است ولی این کار اجازه ندارد (Refresh کمکی نمی‌کند).
 - کاربر غیرفعال‌شده هیچ دسترسی‌ای ندارد، حتی اگر توکنش هنوز منقضی نشده باشد.
-- تعداد کمی endpoint عمداً بدون دسترسی‌اند چون کار شخصیِ خود کاربرند: `Account/Logout`، `User/GetUserInfo`، `User/UpdateUserInfo`، `User/ChangePassword`، `File/GetImageUrl` و `Permission/GetMyPermissions`. بدون توکن هم فقط `Account/Login`، `Account/RefreshToken`، `Account/ForgetPassword` و `File/GetImage` کار می‌کنند.
+- تعداد کمی endpoint عمداً بدون دسترسی‌اند چون کار شخصیِ خود کاربرند: `Account/Logout`، `User/GetUserInfo`، `User/UpdateUserInfo`، `User/ChangePassword`، `File/GetImageUrl` و `Permission/GetMyPermissions`. بدون توکن هم فقط `Account/Login`، `Account/RefreshToken` و `File/GetImage` کار می‌کنند (`Account/ForgetPassword` از ۲۰۲۶-۱۰-۰۴ حذف شده — بخش ۲).
+- **ورود تک‌نشستی است.** هر کاربر در هر لحظه فقط یک نشست فعال دارد: ورود دوباره (از دستگاه یا مرورگر دیگر) نشست قبلی را می‌بندد و درخواست بعدیِ آن نشست ۴۰۱ می‌گیرد. خروج، تغییر رمز، بازنشانی رمز توسط مدیر و غیرفعال‌شدن کاربر هم نشست را فوراً می‌بندند.
+- **تغییر رمز اجباری:** بعد از اینکه مدیر رمز کاربری را بازنشانی کرد (`ResetUserPassword`)، آن کاربر بعد از ورود فقط این‌ها را می‌تواند صدا بزند: `User/ChangePassword`، `User/GetUserInfo`، `Permission/GetMyPermissions` و `Account/Logout`. هر درخواست دیگری ۴۰۳ با `data.mustChangePassword = true` می‌گیرد (جزئیات در بخش ۲، `Login`).
 
 جدول کامل «کدام endpoint چه دسترسی‌ای می‌خواهد» در بخش ۳د آمده است.
 
@@ -179,6 +181,7 @@ Authorization: Bearer {accessToken}
 | `Department/GetDepartmentList` | `DepartmentListSortEnum`: `ID=0, NAME=1, HEAD_NAME=2, TEAM_COUNT=3, USER_COUNT=4` | `NAME` صعودی |
 | `Team/GetTeamList` | `TeamListSortEnum`: `ID=0, NAME=1, DEPARTMENT_NAME=2, HEAD_NAME=3, USER_COUNT=4` | `NAME` صعودی |
 | `PosTerminal/GetPosTerminalList` | `PosTerminalListSortEnum`: `ID=0, NAME=1, VENDOR=2` | `NAME` صعودی |
+| `Pos/GetPosPaymentList` | `PosPaymentListSortEnum`: `PAID_AT=0, RECORDED_AT=1, AMOUNT=2` | `PAID_AT` نزولی |
 | `Report/GetCustomerPurchaseStatistics` | `CustomerPurchaseStatisticsSortEnum`: `TOTAL_INVOICE_AMOUNT=0, FULL_NAME=1, SALES_COUNT=2, TOTAL_PAID_AMOUNT=3` | `TOTAL_INVOICE_AMOUNT` نزولی |
 | `Report/GetSupplierSalesStatistics` | `SupplierSalesStatisticsSortEnum`: `TOTAL_INVOICE_AMOUNT=0, COMPANY_NAME=1, PURCHASES_COUNT=2, TOTAL_PAID_AMOUNT=3` | `TOTAL_INVOICE_AMOUNT` نزولی |
 | `Report/GetSalesPerformanceByEmployee` | `SalesPerformanceByEmployeeSortEnum`: `TOTAL_INVOICE_AMOUNT=0, FULL_NAME=1, SALES_COUNT=2` | `TOTAL_INVOICE_AMOUNT` نزولی |
@@ -222,14 +225,30 @@ Authorization: Bearer {accessToken}
 
 **data خروجی:**
 ```json
-{ "accessToken": "eyJ...", "refreshToken": "a1b2c3..." }
+{ "accessToken": "eyJ...", "refreshToken": "a1b2c3...", "mustChangePassword": false }
 ```
 
 نکات:
 - `accessToken` را در هدر `Authorization: Bearer` برای همه‌ی درخواست‌های بعدی بگذارید.
 - `refreshToken` را برای تمدید توکن نگه دارید (بخش بعد).
 - این API اطلاعات کامل کاربر (نام، نقش و ...) را برنمی‌گرداند؛ برای آن باید بعد از لاگین، `GET api/User/GetUserInfo` را صدا بزنید.
-- خطاهای رایج: نام‌کاربری یا رمز اشتباه → ۴۰۴ "کاربر با این اطلاعات یافت نشد"، کاربر غیرفعال → ۴۰۰.
+- **تک‌نشستی:** هر ورود موفق، نشست قبلیِ همین کاربر را می‌بندد (بخش ۱، مجوز دسترسی).
+- **`mustChangePassword = true`** (از ۲۰۲۶-۱۰-۰۴) یعنی مدیر رمز این کاربر را بازنشانی کرده است. فرانت باید کاربر را مستقیم به صفحه‌ی تغییر رمز ببرد. تا وقتی رمز عوض نشده، سرور هر درخواستی جز `User/ChangePassword`، `User/GetUserInfo`، `Permission/GetMyPermissions` و `Account/Logout` را با این پاسخ رد می‌کند (این را هم می‌شود در interceptor تشخیص داد):
+  ```json
+  { "data": { "mustChangePassword": true }, "message": "رمز عبور شما توسط مدیر بازنشانی شده است. برای ادامه‌ی کار، ابتدا از صفحه‌ی پروفایل رمز عبور جدیدی برای خود انتخاب کنید.", "responseMessageType": "Danger" }
+  ```
+  کد وضعیت ۴۰۳ است؛ Refresh کمکی نمی‌کند (توکن تازه هم همین وضعیت را دارد).
+
+**خطاها:**
+
+| وضعیت | کد | پیام / data |
+|---|---|---|
+| نام کاربری یا رمز اشتباه | ۴۰۴ | `"نام کاربری یا رمز عبور اشتباه است."` — وقتی ۳ تلاش یا کمتر تا قفل مانده، پیام تعداد تلاش‌های باقی‌مانده را هم می‌گوید |
+| حساب موقتاً قفل است (۱۰ رمز اشتباه پشت سر هم ⇒ ۵ دقیقه قفل) | **۴۲۹** | پیام فارسی با دقیقه‌های باقی‌مانده؛ `data: { "remainingSeconds": 240 }`. در این مدت حتی رمز درست هم پذیرفته نمی‌شود. بازنشانی رمز توسط مدیر قفل را باز می‌کند |
+| تلاش‌های ورود زیاد از یک IP (بیش از ۶۰ در دقیقه) | **۴۲۹** | پیام فارسی + هدر `Retry-After` (ثانیه)؛ `data: { "remainingSeconds": 30 }` |
+| کاربر غیرفعال | ۴۰۰ | `"کاربر مورد نظر فعال نمی باشد"` |
+
+عددهای قفل و سقف هر IP در `appsettings.json` → `LoginSecurity` قابل تنظیم‌اند.
 
 ### `POST api/Account/RefreshToken`
 
@@ -246,6 +265,8 @@ Authorization: Bearer {accessToken}
 
 نکته: این API فقط زمانی موفق است که accessToken قبلی واقعاً **منقضی شده** باشد (سرور صراحتاً چک می‌کند `IsExpired == true`، وگرنه خطا می‌دهد)، و refreshToken هم نباید منقضی شده باشد.
 
+از ۲۰۲۶-۱۰-۰۴: اگر نشست با ورودی دیگر، خروج، تغییر/بازنشانی رمز یا غیرفعال‌شدن بسته شده باشد، refreshToken هم باطل شده و این API ۴۰۰ می‌دهد — کاربر باید دوباره وارد شود. پاسخ موفق هم مثل `Login` فیلد `mustChangePassword` را دارد.
+
 ### `POST api/Account/Logout`
 
 خروج کاربر جاری (بر اساس توکنی که در هدر Authorization فرستاده شده). بدنه ندارد (Body خالی `{}`).
@@ -260,7 +281,16 @@ Authorization: Bearer {accessToken}
 
 **کاربرد:** مثلاً صفحه‌ی مدیریت کاربران که ادمین می‌خواهد یک کاربر مشخص را از تمام سشن‌هایش خارج کند.
 
-### `POST api/Account/ForgetPassword`
+مشمول **قاعده‌ی زیرمجموعه** است (بخش ۳، «کار روی حساب کاربر دیگر»): روی کاربری که دسترسی‌ای دارد که شما ندارید، ۴۰۳ برمی‌گردد.
+
+### ~~`POST api/Account/ForgetPassword`~~ — حذف شد (۲۰۲۶-۱۰-۰۴)
+
+> **این endpoint دیگر وجود ندارد.** چون مرحله‌ی تایید OTP غیرفعال بود، هر کسی بدون ورود می‌توانست فقط با دانستن نام کاربری، رمز هر حسابی (از جمله مدیر) را عوض کند. فرایند جایگزین:
+> ۱. کارمندی که رمزش را فراموش کرده به مدیرش اطلاع می‌دهد.
+> ۲. مدیر از صفحه‌ی کاربران با `PUT api/User/ResetUserPassword` یک رمز موقت تعریف می‌کند.
+> ۳. کارمند با همان رمز وارد می‌شود؛ پاسخ ورود `mustChangePassword = true` دارد و تا رمز را با `PUT api/User/ChangePassword` عوض نکند، کار دیگری نمی‌تواند بکند.
+>
+> فرانت باید لینک/صفحه‌ی «فراموشی رمز عبور» را بردارد (یا متن «با مدیر خود تماس بگیرید» نشان دهد). متن پایین فقط برای سابقه نگه داشته شده است.
 
 بازیابی/تغییر رمز عبور بدون لاگین (بر اساس نام کاربری).
 
@@ -421,6 +451,36 @@ Authorization: Bearer {accessToken}
 ```
 
 **کاربرد:** فرم "تغییر رمز عبور" در پروفایل کاربر (نه توسط ادمین برای کاربر دیگر).
+
+از ۲۰۲۶-۱۰-۰۴:
+- رمز جدید نباید با رمز فعلی یکسان باشد (۴۰۰).
+- تغییر رمز همه‌ی نشست‌های قبلی را می‌بندد، **از جمله توکنی که با آن همین درخواست فرستاده شده**. به‌جایش `data` یک جفت توکن تازه برمی‌گرداند (همان شکل `Login`) که فرانت باید جایگزین توکن‌های ذخیره‌شده کند؛ اگر نکند، درخواست بعدی ۴۰۱ می‌گیرد و کاربر باید دوباره وارد شود.
+- اگر کاربر در حالت «تغییر رمز اجباری» بود، از آن خارج می‌شود و توکن تازه دیگر محدودیتی ندارد.
+
+### `PUT api/User/ResetUserPassword`
+
+بازنشانی رمز عبور یک کارمند **توسط مدیر** (دسترسی `UserUpdate`). رمز قبلی لازم نیست.
+
+**Body:**
+```json
+{ "userId": 5, "password": "Temp1234!", "rePassword": "Temp1234!" }
+```
+
+اثرها (از ۲۰۲۶-۱۰-۰۴):
+- کارمند در اولین ورود با رمز جدید **مجبور به تغییر رمز** می‌شود (`mustChangePassword`، بخش ۲).
+- هر نشست باز کارمند فوراً بسته می‌شود.
+- اگر حساب به‌خاطر رمزهای اشتباه قفل شده بود، قفل باز می‌شود.
+- مشمول **قاعده‌ی زیرمجموعه** است (پایین‌تر).
+
+### کار روی حساب کاربر دیگر: قاعده‌ی زیرمجموعه (از ۲۰۲۶-۱۰-۰۴)
+
+روی حساب کسی که **دسترسی‌ای دارد که شما ندارید** نمی‌توانید کار کنید؛ پاسخ ۴۰۳ با پیام «این کاربر دسترسی‌هایی دارد که شما ندارید؛ به همین دلیل امکان انجام این عملیات روی حساب او را ندارید.» است. این قاعده روی `ResetUserPassword`، `UpdateUser`، `DeleteUser`، `ChangeUserTeam` و `Account/LogoutUserById` اعمال می‌شود. بدون آن، کسی که فقط `UserUpdate` داشت می‌توانست رمز مدیر کل را بازنشانی کند و با حساب او وارد شود.
+
+- مدیری که همه‌ی دسترسی‌ها را دارد روی همه کار می‌کند؛ کاربر روی خودش همیشه مجاز است.
+- دسترسی‌های کاربرِ غیرفعال هم حساب می‌شوند (غیرفعال کردن یک مدیر راهی برای دور زدن قاعده نیست).
+- `UpdateUserPermissions` عمداً مشمول نیست: دارنده‌ی `PermissionManage` در هر حال هر دسترسی معمولی را (حتی به خودش) می‌تواند بدهد.
+
+**کاربر نمی‌تواند خودش را غیرفعال یا حذف کند** (`UpdateUser` با `isActive = false` روی خود، یا `DeleteUser` روی خود ⇒ ۴۰۰). این کار مدیر است. غیرفعال/حذف شدن کاربر نشست او را فوراً می‌بندد.
 
 ### `DELETE api/User/DeleteUser?id=5`
 
@@ -620,7 +680,7 @@ Authorization: Bearer {accessToken}
 | گزارش | تمام `Report/*` به‌جز `GetScopePerformance` | `ReportView` |
 | | `Report/GetScopePerformance` | بدون دسترسی؛ `ME` برای همه، `TEAM`/`DEPARTMENT` فقط مسئول/جانشین (از چارتِ سازمانی) |
 | کارت‌خوان | `Pos/Charge` | `PosCharge` |
-| | `GetPosTerminalList/Detail` / بقیه | `PosTerminalView` / `PosTerminalManage` |
+| | `GetPosTerminalList/Detail` / بقیه | `PosTerminalView` **یا** `PosCharge` (از ۲۰۲۶-۱۰-۰۵، تا صندوق‌دار بتواند دستگاه را انتخاب کند) / `PosTerminalManage` |
 | حساب اشخاص | `PartyAccount/GetPartyStatement` | `PartyStatementView` |
 
 `CreateInPersonSale` و `Shipment/*` داخل خودشان چند کامند دیگر را اجرا می‌کنند؛ فقط همان یک دسترسیِ بالا لازم است، نه دسترسی‌های کامندهای داخلی.
@@ -891,7 +951,11 @@ append-only است: ردیفی ویرایش یا حذف نمی‌شود، و ه�
 
 ### `GET api/Product/GetProductList`
 
-**Query:** `page`, `take`, `name` (هم روی نام فارسی و هم روی `englishName` جستجو می‌کند), `code`, `brand`, `productCategoryId`, `isLowOnStock` (true/false — فیلتر محصولات با موجودی زیر آستانه), `fromPrice`, `toPrice`, `isIncomplete` (true: فقط کالاهای ساخت سریع که هنوز تکمیل نشده‌اند).
+**Query:** `page`, `take`, `name` (هم روی نام فارسی و هم روی `englishName` جستجو می‌کند), `code`, `barCode`, `brand`, `productCategoryId`, `isLowOnStock` (true/false — فیلتر محصولات با موجودی زیر آستانه), `fromPrice`, `toPrice`, `isIncomplete` (true: فقط کالاهای ساخت سریع که هنوز تکمیل نشده‌اند).
+
+**`code` و `barCode` (از ۲۰۲۶-۱۰-۰۵):** اگر مقدار دقیقاً کد/بارکدِ کاملِ یک کالا باشد، **فقط همان کالا** برمی‌گردد؛ وگرنه جستجوی جزئی است
+(هر کالایی که کدش این متن را دارد). دلیل: کدها خط‌تیره دارند و صفرِ چپ ندارند، پس `14050512-12` بخشی از `14050512-123` هم هست و
+قبلاً هر دو برمی‌گشتند.
 
 هر ردیف علاوه بر فیلدهای زیر `requiresUnitTracking`، `isIncomplete` و `quarantinedCount` (دانه‌های قرنطینه — فیزیکاً در انبار، غیرقابل فروش، **جزو `stock` نیستند**) دارد؛ `GetProductDetail` هم همین سه فیلد را دارد.
 
@@ -1032,7 +1096,7 @@ append-only است: ردیفی ویرایش یا حذف نمی‌شود، و ه�
 
 | پارامتر | معنا |
 |---|---|
-| `search` | بارکد (با هر قالبی که اسکنر بدهد؛ ارقام ملاک است)، سریال، یا بخشی از نام یا کدِ کالا |
+| `search` | بارکد (با هر قالبی که اسکنر بدهد)، سریال، یا بخشی از نام یا کدِ کالا. **از ۲۰۲۶-۱۰-۰۵:** اگر مقدار دقیقاً بارکدِ کاملِ یک دانه باشد، فقط همان دانه برمی‌گردد (قبلاً `…-1` دانه‌های `…-10` و `…-11` را هم می‌آورد)؛ هر چیزِ دیگر جستجوی جزئی است |
 | `statuses` | چند وضعیت با هم (`?statuses=1&statuses=9`)؛ با `status` AND می‌شود |
 | `custodyReason` | علت نگهداری (`UnitCustodyReasonEnum`) |
 | `labelState` | `1` بدون برچسب (`IN_STOCK`/`QUARANTINED` با `printCount = 0` — صفِ چاپ)، `2` برچسب‌خورده |
@@ -2163,6 +2227,56 @@ data: سند کامل. دسترسی: `SaleUpdate`.
   می‌آید. ردیف‌های اقساطی (`purpose ≠ 0`) با `Edit`/`Void` تغییر نمی‌کنند (۴۰۰).
 - روی فروش لغوشده فقط `OUT`.
 
+**اطلاعات کارتخوان روی ردیف پرداخت (از ۲۰۲۶-۱۰-۰۵، همه اختیاری).** ردیف «انتقال بانکی» (`type = 3`) می‌تواند این‌ها را هم داشته باشد،
+هم در بدنه‌ی `AddSalePayment`/`EditSalePayment` (و نسخه‌های خرید)، هم در `paymentDetails[]`ِ `CreateSale`/`CreateInPersonSale`/`CreatePurchase`،
+و همه در `paymentDetails[]`ِ پاسخ برمی‌گردند:
+
+```json
+{ "saleId": 41, "type": 3, "amount": 5000000, "transferRef": "412345678901",
+  "posTerminalId": 2, "maskedCardNumber": "603770******1234", "approvalCode": "A1B2C3", "traceNumber": "004512" }
+```
+
+- `transferRef` همان RRN است؛ طول آزاد و بدون قید قالب.
+- `posTerminalId` باید دستگاهی **فعال** باشد (وگرنه ۴۰۰). ردیف‌های قدیمیِ دستگاهی که بعداً غیرفعال شد دست نمی‌خورند.
+- `maskedCardNumber` حداکثر ۱۰ رقم (۶ رقم اول + ۴ رقم آخر) — شماره‌ی کامل کارت ۴۰۰ می‌گیرد و هرگز ذخیره نمی‌شود.
+- `approvalCode`/`traceNumber` حداکثر ۳۲ نویسه.
+- روی هر `type` جز `3` این فیلدها ۴۰۰ می‌گیرند.
+
+**ثبت پرداخت کارتخوان: قواعد (از ۲۰۲۶-۱۰-۰۵).** «پرداخت کارتخوان» یعنی ردیفی که `posTerminalId` دارد. بقیه‌ی پرداخت‌ها (نقد، چک،
+انتقال بانکی معمولی، اقساط، پرداخت آنلاین) **هیچ‌کدام از این قواعد را ندارند**.
+- **فعلاً همه‌ی پرداخت‌های کارتخوان «دستی» هستند** و دسترسی **`PosManualRecord` (233)** می‌خواهند (بدون آن ۴۰۳). سرور هنوز راهی برای
+  تأیید نتیجه‌ی خود دستگاه ندارد؛ وقتی دستگاه‌ها نصب شدند و نتیجه‌ی امضاشده‌ی دستگاه آمد، همان ردیف با `source = 1` (از دستگاه)
+  و بدون این دسترسی ثبت می‌شود.
+- **`transferRef` (همان RRN) روی پرداخت کارتخوان الزامی است** و حداکثر ۶۴ نویسه (برای همه‌ی ردیف‌ها).
+- **یک RRN روی یک دستگاه فقط یک بار ثبت می‌شود — برای همیشه.** ردیف ابطال‌شده هم حساب است (ابطال یعنی برگشت پول، نه آزاد شدن
+  تراکنش). تکرار ⇒ **۴۰۰** با پیام «این تراکنش کارتخوان (شماره‌ی مرجع …) قبلاً روی فاکتور … ثبت شده است.» همین RRN روی دستگاه دیگر مجاز است.
+  (۴۰۰ و نه ۴۰۹: ۴۰۹ در این API یعنی «درخواست قبلی با همین Idempotency-Key هنوز در جریان است».)
+- **پرداخت کارتخوان ویرایش نمی‌شود، فقط ابطال** (`EditSalePayment`/`EditPurchasePayment` روی آن ⇒ ۴۰۰). مبلغی که از کارت کشیده شده
+  واقعیتی در بانک است؛ اگر اشتباه ثبت شده، ابطال و ثبت دوباره با RRN درست.
+- **هر ردیف پرداخت** (همه‌ی انواع، از جمله اقساط) در پاسخ این‌ها را هم دارد: `source` (`PaymentSourceEnum`؛ فقط پرداخت کارتخوان، بقیه `null`)،
+  `recordedAt` و `recordedByUserId`/`recordedByName` (چه کسی و کِی ثبت کرد). هیچ‌کدام از کلاینت گرفته نمی‌شوند. ردیف‌های قبل از
+  ۲۰۲۶-۱۰-۰۵ این سه را `null` دارند.
+
+### `GET api/Pos/GetPosPaymentList` (از ۲۰۲۶-۱۰-۰۵)
+
+گزارش پرداخت‌های کارتخوان برای مدیر. دسترسی: **`PosPaymentReportView` (234)**. فقط ردیف‌هایی که `posTerminalId` دارند؛ ابطال‌شده‌ها هم
+می‌آیند (با `voidedAt`).
+
+پارامترها: `page`، `take`، `posTerminalId`، `source` (مثلاً `2` = فقط ثبت‌های دستی)، `recordedByUserId`، `fromDate`/`toDate` (روی `paidAt`)،
+`search` (RRN یا شماره‌ی فاکتور)، `sortBy`/`sortDirection` (بخش ۱).
+
+**data خروجی:** `{ "posPaymentList": [...], "page": { ... } }` — هر سطر:
+```json
+{
+  "id": 91, "paidAt": "2026-10-05T10:21:05", "recordedAt": "2026-10-05T10:21:40",
+  "amount": 5000000, "direction": 1, "voidedAt": null, "source": 2,
+  "posTerminalId": 2, "posTerminalName": "صندوق ۱ - کشاورزی",
+  "transferRef": "412345678901", "maskedCardNumber": "603770******1234", "approvalCode": "A1B2C3", "traceNumber": "004512",
+  "saleId": 41, "purchaseId": null, "invoiceNumber": "INV-2026-0041", "partyName": "علی رضایی",
+  "recordedByUserId": 7, "recordedByName": "سارا محمدی"
+}
+```
+
 دسترسی: `SalePayment`.
 
 ### `POST api/Sale/CreateInPersonSale`
@@ -2914,9 +3028,11 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 192 | InvoicePrint | چاپ فاکتور |
 | 193 | BarcodePrint | چاپ بارکد و برچسب |
 | 210 | ReportView | مشاهده گزارش‌ها |
-| 230 | PosCharge | دریافت وجه با کارت‌خوان |
+| 230 | PosCharge | دریافت وجه با کارت‌خوان (فهرست/جزئیات دستگاه‌ها را هم باز می‌کند) |
 | 231 | PosTerminalView | مشاهده کارت‌خوان‌ها |
 | 232 | PosTerminalManage | مدیریت کارت‌خوان‌ها |
+| 233 | PosManualRecord | ثبت دستی پرداخت کارتخوان از روی رسید (فعلاً لازمه‌ی هر پرداخت کارتخوان) |
+| 234 | PosPaymentReportView | مشاهده گزارش پرداخت‌های کارتخوان (`Pos/GetPosPaymentList`) |
 | 250 | PartyStatementView | مشاهده گردش حساب مشتریان و تامین‌کنندگان |
 
 ### `OrgRoleEnum` (نقش کاربر در چارت سازمانی)
@@ -2983,6 +3099,14 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 6 | تسویه‌ی مرجوعی در حساب (RETURN_SETTLEMENT) |
 | 7 | برگشت (REVERSAL) — `reversalOfEntryId` ردیف اصلی را نشان می‌دهد |
 | 8 | بستن قلم خرید با کسری (PURCHASE_SHORT_CLOSE) |
+
+### `PaymentSourceEnum` (منبع پرداخت کارتخوان — روی `paymentDetails[]`، از ۲۰۲۶-۱۰-۰۵)
+| مقدار | معنی |
+|---|---|
+| 1 | از دستگاه (DEVICE) — نتیجه‌ی تأییدشده‌ی خود دستگاه. **هنوز هیچ ردیفی این مقدار را نمی‌گیرد** (تا نصب دستگاه‌ها) |
+| 2 | ثبت دستی از روی رسید (MANUAL_RECEIPT) — دسترسی `PosManualRecord` لازم دارد |
+
+فقط روی پرداخت کارتخوان؛ بقیه‌ی پرداخت‌ها `null`. سرور می‌گذارد، کلاینت نمی‌فرستد.
 
 ### `PaymentDirectionEnum` (جهت پول — روی `paymentDetails[]`، از ۲۰۲۶-۰۹-۲۴)
 | مقدار | معنی |
@@ -3258,6 +3382,46 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 ## 16. نکات و محدودیت‌های شناخته‌شده
 
 این نکات برای جلوگیری از سردرگمی هنگام توسعه فرانت مهم هستند:
+
+### تغییرات قرارداد — ۲۰۲۶-۱۰-۰۵ (جستجوی کد و بارکد) — تغییر رفتار، بدون تغییرِ شکل
+
+| کجا | قبل | بعد |
+|---|---|---|
+| `GetProductUnitList` → `search` | «شامل بودن»: بارکدِ کاملِ `…-1` دانه‌های `…-10`، `…-11`، … را هم برمی‌گرداند | بارکدِ کامل ⇒ فقط همان دانه؛ بقیه‌ی ورودی‌ها مثل قبل جزئی |
+| `GetProductList` → `code`، `barCode` | `14050512-12` کالای `14050512-123` را هم برمی‌گرداند | کد/بارکدِ کامل ⇒ فقط همان کالا؛ بقیه مثل قبل جزئی |
+
+### تغییرات قرارداد — ۲۰۲۶-۱۰-۰۵ (کارتخوان، بندهای ۱۱.۱ و ۱۱.۳ سند درخواست‌های فرانت) — افزودنی
+
+| کجا | قبل | بعد |
+|---|---|---|
+| `GetPosTerminalList`/`GetPosTerminalDetail` | فقط `PosTerminalView` | `PosTerminalView` **یا** `PosCharge` |
+| `PosVendorEnum` | `1..3` | + `AsanPardakht = 4`، `Fanava = 5`، `Other = 99` (اتصال مستقیم سرور، `Pos/Charge`، فقط برای ۱ تا ۳؛ بقیه ۴۰۰) |
+| `PosTerminal` | — | `bankCode` اختیاری (حداکثر ۳۲ نویسه، فقط برای نمایش نام و لوگوی بانک) در ساخت/ویرایش، فهرست و جزئیات |
+| ردیف پرداخت (ورودی و خروجی) | — | `posTerminalId`، `maskedCardNumber`، `approvalCode`، `traceNumber` — اختیاری، فقط روی `type = 3` (بخش ۱۱) |
+| پرداخت کارتخوان (ردیف با `posTerminalId`) | بدون قید | **شکننده:** دسترسی `PosManualRecord` لازم است (۴۰۳)؛ `transferRef` الزامی؛ همان RRN روی همان دستگاه دوباره ⇒ ۴۰۰ (حتی بعد از ابطال)؛ ویرایش ⇒ ۴۰۰ (فقط ابطال) |
+| `transferRef` (همه‌ی ردیف‌ها) | بی‌سقف | حداکثر ۶۴ نویسه |
+| `paymentDetails[]` در پاسخ | — | + `source`، `recordedAt`، `recordedByUserId`، `recordedByName` |
+| — | — | `GET api/Pos/GetPosPaymentList` (دسترسی تازه‌ی `PosPaymentReportView = 234`) |
+
+### تغییرات قرارداد — ۲۰۲۶-۱۰-۰۴ (امنیت حساب‌ها) — **شکننده**
+
+کارهایی که فرانت باید بکند، قدم‌به‌قدم: `account-security-frontend-guide.fa.md`.
+
+| کجا | قبل | بعد | چرا |
+|---|---|---|---|
+| `POST api/Account/ForgetPassword` | تغییر رمز هر حساب فقط با نام کاربری، بدون ورود | **حذف شد (۴۰۴)** | هر کسی می‌توانست حساب مدیر را بگیرد. جایگزین: مدیر با `ResetUserPassword` رمز موقت می‌دهد |
+| `Login`/`RefreshToken` → `data` | `accessToken`, `refreshToken` | + `mustChangePassword` | بعد از بازنشانی رمز، کاربر را به صفحه‌ی تغییر رمز ببرید |
+| همه‌ی endpointها | — | ۴۰۳ با `data.mustChangePassword = true` تا وقتی رمز بازنشانی‌شده عوض نشده (به‌جز `ChangePassword`، `GetUserInfo`، `GetMyPermissions`، `Logout`) | رمز موقتی که مدیر می‌داند نباید رمز دائمی بماند |
+| `Login` | رمز اشتباه نامحدود | ۱۰ اشتباه ⇒ ۵ دقیقه قفل (۴۲۹)؛ بیش از ۶۰ تلاش در دقیقه از یک IP ⇒ ۴۲۹ + `Retry-After` | جلوگیری از حدس رمز |
+| `Login` → پیام رمز اشتباه | `"کاربر با این اطلاعات یافت نشد"` | `"نام کاربری یا رمز عبور اشتباه است."` (+ تعداد تلاش‌های باقی‌مانده در ۳ تلاش آخر) | پیام روشن‌تر؛ کد همچنان ۴۰۴ |
+| نشست | ورود دوم نشست اول را فقط بعد از انقضای توکنش می‌بست | ورود دوم نشست اول را **فوراً** می‌بندد (۴۰۱) | تک‌نشستی واقعی |
+| `ChangePassword` → `data` | `null` | جفت توکن تازه؛ توکن‌های قبلی (حتی همین درخواست) باطل‌اند | تغییر رمز همه‌ی نشست‌های قدیمی را می‌بندد |
+| `ChangePassword` | رمز جدید می‌توانست همان قبلی باشد | ۴۰۰ | تغییر اجباری نباید با تکرار همان رمز دور زده شود |
+| `ResetUserPassword` | فقط رمز را عوض می‌کرد | + تغییر اجباری، بستن نشست‌ها، باز کردن قفل | — |
+| `ResetUserPassword`، `UpdateUser`، `DeleteUser`، `ChangeUserTeam`، `LogoutUserById` | روی هر کاربری | ۴۰۳ روی کسی که دسترسی‌ای دارد که شما ندارید | دارنده‌ی `UserUpdate` می‌توانست رمز مدیر کل را بازنشانی کند |
+| `UpdateUser` (`isActive = false`) / `DeleteUser` روی خود | مجاز | ۴۰۰ | غیرفعال کردن کار مدیر است |
+| همه‌ی پاسخ‌ها | — | هدرهای `X-Content-Type-Options: nosniff`، `X-Frame-Options: DENY`، `Referrer-Policy: no-referrer`؛ در production هم HSTS | سخت‌کردن مرورگر؛ روی فرانت اثری ندارد |
+| همه‌ی درخواست‌ها | سقف بدنه ۳۰ مگابایت | ۱۰ مگابایت (`RequestLimits:MaxBodyBytes`) | آپلود تصویر همچنان تا ۵ مگابایت |
 
 ### تغییرات قرارداد — ۲۰۲۶-۰۹-۲۷ (`frontend-requests.fa.md`) — یک تغییرِ نام، بقیه افزودنی یا آسان‌گیرانه
 
