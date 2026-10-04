@@ -33,6 +33,9 @@ export const claimLineKey = ({ orderLineId, offScopeKind, productId }) =>
  * `open*` فقط مرجوعی‌هایی است که هنوز تسویه نشده‌اند — جایی که مقدارِ
  * تسویه‌شده جدا نشان داده می‌شود (`settledQuantity`ِ فروش)، همین‌ها کافی‌اند.
  *
+ * TODO(بکند): یک درخواست به‌ازای هر مرجوعی؛ با `otherReturnClaims` روی اقلامِ سندِ مبدا
+ * (بندِ ۱۴.۱ سندِ frontend-requests.fa.md) این هوک حذف می‌شود.
+ *
  * @returns `Map<claimLineKey, { quantity, returnNumbers[], openQuantity, openReturnNumbers[] }>`
  */
 export function useClaimsInOtherReturns(

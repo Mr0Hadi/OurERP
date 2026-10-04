@@ -18,6 +18,8 @@ import { OFF_SCOPE_KINDS } from "./scopes";
  *    دسته است.
  *
  * `null` یعنی گزارشِ دریافت هنوز نیامده.
+ *
+ * TODO(بکند): `freeQuarantinedQuantity` روی خودِ ادعا (بندِ ۱۴.۴).
  */
 export function claimQuarantinedQuantity(receivingInfo, claim) {
   if (!receivingInfo || !claim) return null;
