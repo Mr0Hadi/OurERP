@@ -29,7 +29,7 @@ namespace Application.Features.Product.Commands
 
     public class EnsureProductCodesCommandHandler : IRequestHandler<EnsureProductCodesCommand, ResponseDto>
     {
-        private static readonly Regex GeneratedCodePattern = new(@"^\d{8}-\d{10}$", RegexOptions.Compiled);
+        private static readonly Regex GeneratedCodePattern = new(@"^\d{8}-[1-9]\d{0,9}$", RegexOptions.Compiled);
 
         private readonly IWMSDbContext _context;
         private readonly IProductCodeService _productCodeService;

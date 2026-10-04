@@ -236,13 +236,13 @@ namespace WMS.Tests.Support
             for (var i = 0; i < count; i++)
             {
                 var serial = nextSerial + i;
-                var barcode = $"{product.Code}-{serial:D10}";
+                var barcode = $"{product.Code}-{serial}";
                 context.ProductUnits.Add(new ProductUnit
                 {
                     ProductId = product.Id,
                     SerialNumber = serial,
                     Barcode = barcode,
-                    BarcodePayload = barcode.Replace("-", ""),
+                    BarcodePayload = barcode,
                     Status = status,
                     SaleItemId = saleItemId,
                     SoldAt = status == ProductUnitStatusEnum.SOLD ? DateTime.Now : null,
