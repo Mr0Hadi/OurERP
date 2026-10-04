@@ -153,7 +153,7 @@ export default function PurchaseIssuedView({ purchase }) {
               submitDisabled={!draft.count}
               isBusy={isSaving}
               onCancel={draft.count ? draft.discard : undefined}
-              cancelLabel="بازگردانی"
+              cancelLabel="برگرداندنِ تغییرات"
               footer={
                 hasAnythingArrived(purchase) && (
                   <Button
@@ -177,6 +177,7 @@ export default function PurchaseIssuedView({ purchase }) {
         open={confirmCancel}
         onOpenChange={setConfirmCancel}
         isPending={saver.isPending}
+        confirmLabel="لغو خرید و ذخیره"
         onConfirm={save}
       />
     </>

@@ -172,7 +172,7 @@ export default function SaleIssuedView({ sale }) {
               submitDisabled={!draft.count}
               isBusy={isSaving}
               onCancel={draft.count ? draft.discard : undefined}
-              cancelLabel="بازگردانی"
+              cancelLabel="برگرداندنِ تغییرات"
               footer={
                 RETURNABLE_SALE_STATUSES.includes(Number(sale.status)) && (
                   <Button

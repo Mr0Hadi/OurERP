@@ -30,6 +30,7 @@ import { cn } from "@/shared/lib/utils";
  * @param payable   بدهیِ واقعیِ طرف (اگر با جمع فرق دارد؛ مثلاً قلمِ بسته‌شده)
  * @param allowRefund `false` برای سندِ تازه
  * @param refundOnly  سندِ لغوشده: فقط پولِ برگشتی
+ * @param emptyText   متنِ «هنوز پرداختی نیست» (پیش‌فرض: مانده نسیه می‌ماند)
  * @param posPayment  دریافت با کارتخوان روی ردیفِ «انتقال بانکی»؛ بدونِ آن پنلی نیست. برخلافِ بقیه‌ی
  *                    دریافت‌ها همان لحظه روی سرور ثبت می‌شود، نه در پیش‌نویس (کارت‌کشیدن برگشت‌ناپذیر است):
  *   - `record(result, { terminal, amount, reference, row, rows })` ثبتِ پرداخت؛ `row` تکه‌ی
@@ -52,6 +53,7 @@ export default function PaymentsCard({
   refundOnly = false,
   posPayment,
   notice,
+  emptyText = "پرداختی ثبت نشده؛ مانده به‌صورت نسیه می‌ماند.",
 }) {
   // { mode: "pay" | "refund" | "edit", row? }
   const [form, setForm] = useState(null);
@@ -108,7 +110,8 @@ export default function PaymentsCard({
         <Stat label="پرداخت‌شده" value={formatNumber(paid)} />
         <Stat
           label={remaining < 0 ? "اضافه‌پرداخت" : "مانده"}
-          value={remaining === 0 ? "تسویه" : formatNumber(Math.abs(remaining))}
+          // سندِ بی‌مبلغ (هنوز کالایی نیست) «تسویه» نیست.
+          value={due === 0 && paid === 0 ? "—" : remaining === 0 ? "تسویه" : formatNumber(Math.abs(remaining))}
           className={toneText(remaining > 0 ? "warning" : remaining < 0 ? "info" : "success")}
         />
       </dl>
@@ -143,8 +146,8 @@ export default function PaymentsCard({
         </ul>
       ) : (
         !form && (
-          <p className="text-center text-xs text-muted-foreground py-2">
-            پرداختی ثبت نشده؛ مانده به‌صورت نسیه می‌ماند.
+          <p className="py-2 text-center text-xs text-muted-foreground">
+            {refundOnly ? "پرداختی ثبت نشده است." : emptyText}
           </p>
         )
       )}

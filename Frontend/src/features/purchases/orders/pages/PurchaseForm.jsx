@@ -303,7 +303,7 @@ export default function PurchaseForm({ purchase }) {
             open={dialog === "delete"}
             onOpenChange={(open) => !open && setDialog(null)}
             title="حذف پیش‌فاکتور خرید"
-            description="سندِ حذف‌شده دیگر در فهرست خریدها دیده نمی‌شود."
+            description="این پیش‌فاکتور حذف می‌شود و دیگر در فهرست خریدها نیست. این کار برگشت‌پذیر نیست."
             confirmLabel="حذف"
             pendingLabel="در حال حذف..."
             isPending={deleteMutation.isPending}

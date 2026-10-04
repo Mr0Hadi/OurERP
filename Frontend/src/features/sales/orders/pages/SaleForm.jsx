@@ -273,6 +273,7 @@ export default function SaleForm({ sale }) {
                   canManage={isNew || allows("SalePayment")}
                   allowRefund={false}
                   posPayment={posPayment}
+                  emptyText="هنوز دریافتی ثبت نشده است."
                   notice={
                     isInPerson
                       ? "تحویلِ حضوری: کلِ مبلغ باید دریافت شود."
@@ -342,7 +343,7 @@ export default function SaleForm({ sale }) {
           open={confirmDelete}
           onOpenChange={setConfirmDelete}
           title="حذف پیش‌فاکتور فروش"
-          description="سندِ حذف‌شده دیگر در فهرست فروش‌ها دیده نمی‌شود."
+          description="این پیش‌فاکتور حذف می‌شود و دیگر در فهرست فروش‌ها نیست. این کار برگشت‌پذیر نیست."
           confirmLabel="حذف"
           pendingLabel="در حال حذف..."
           isPending={deleteMutation.isPending}

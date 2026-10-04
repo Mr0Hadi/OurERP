@@ -14,7 +14,7 @@ import {
 } from "./api-v1";
 import { saleKeys } from "./queryKeys";
 import { invalidateSalesEcosystem } from "./sharedInvalidation";
-import { runDocumentChanges } from "@/shared/services/documentChanges";
+import { partialSaveMessage, runDocumentChanges } from "@/shared/services/documentChanges";
 import { shippingKeys } from "@/features/warehouse/shipping/services/queryKeys";
 import { customerKeys } from "@/features/customers/services/queryKeys";
 import { idempotencyKeyFor } from "@/shared/services/api/contract";
@@ -52,7 +52,7 @@ export const useCreateSaleMutation = () => {
       queryClient.invalidateQueries({ queryKey: customerKeys.all });
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, 'خطا در ثبت فروش'));
+      toast.error(getErrorMessage(error, 'ثبت فروش انجام نشد'));
     },
   });
 };
@@ -73,7 +73,7 @@ export const useCreateInPersonSaleMutation = () => {
       queryClient.invalidateQueries({ queryKey: customerKeys.all });
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, 'خطا در ثبت فروش حضوری'));
+      toast.error(getErrorMessage(error, 'ثبت فروش حضوری انجام نشد'));
     },
   });
 };
@@ -125,7 +125,7 @@ export const useSaleChangesSaver = (saleId) => {
     },
     onError: (error) => {
       invalidateSalesEcosystem(queryClient, saleId);
-      toast.error(getErrorMessage(error, "ذخیره‌ی تغییرات ناتمام ماند"));
+      toast.error(partialSaveMessage(error, getErrorMessage(error, "ذخیره‌ی تغییرات انجام نشد")));
     },
   });
 };
