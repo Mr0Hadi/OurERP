@@ -20,13 +20,14 @@ export function useProductListFilters() {
   });
 }
 
-export function useProductsQuery(filters, pagination, sorting) {
+export function useProductsQuery(filters, pagination, sorting, { enabled = true } = {}) {
   const params = listQuery({ filters, pagination, sorting, sortColumns: PRODUCT_SORT_COLUMNS });
   return useQuery({
     queryKey: productKeys.list(params),
     queryFn: () => fetchProducts(params),
     placeholderData: keepPreviousData,
     gcTime: 1000 * 60 * 10,
+    enabled,
   });
 }
 
@@ -71,8 +72,10 @@ const NO_PRODUCTS = [];
  *
  * TODO(بکند): با بیش از ۲۰۰ کالا، بقیه در فرمِ خرید/فروش پیدا نمی‌شوند؛ جست‌وجوی سمتِ
  * سرور لازم است (بندِ ۱۳.۵ سندِ frontend-requests.fa.md).
+ *
+ * `enabled: false` برای انتخابگرِ تاشو: تا باز نشده، ۲۰۰ ردیف دانلود نمی‌شود.
  */
-export function useProductsOptionsQuery() {
-  const { data, isLoading } = useProductsQuery(NO_FILTERS, OPTIONS_PAGINATION, OPTIONS_SORTING);
+export function useProductsOptionsQuery({ enabled = true } = {}) {
+  const { data, isLoading } = useProductsQuery(NO_FILTERS, OPTIONS_PAGINATION, OPTIONS_SORTING, { enabled });
   return { products: data?.items ?? NO_PRODUCTS, isLoading };
 }

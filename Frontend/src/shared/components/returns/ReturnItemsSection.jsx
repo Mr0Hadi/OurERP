@@ -212,7 +212,9 @@ export default function ReturnItemsSection({
   unlistedPanel,
 }) {
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
-  const { products, isLoading } = useProductsOptionsQuery();
+  // فهرستِ کالاها (۲۰۰ ردیف) فقط برای «کالای سفارش‌نداده» لازم است؛ قبلاً با هر بار
+  // باز شدنِ صفحه گرفته می‌شد، حتی وقتی کاربر هیچ‌وقت این بخش را باز نمی‌کرد.
+  const { products, isLoading } = useProductsOptionsQuery({ enabled: isCatalogOpen });
 
   const excessOf = (orderLineId) =>
     offScopeClaims.filter(

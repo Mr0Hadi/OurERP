@@ -16,7 +16,6 @@ import {
 } from "../domain/purchaseReturnVocabulary";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
-import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { RETURN_STATUSES } from "@/shared/domain/returns/statuses";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
@@ -81,8 +80,6 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
     purchaseReturn.purchaseId,
     purchaseReturn.id,
   );
-  // روی هر کالا، چقدر در مرجوعی‌های دیگرِ همین خرید ثبت شده.
-  const claimsElsewhere = useClaimsInOtherReturns("purchase", purchaseReturn.purchaseId, purchaseReturn.id);
 
   const actions = usePurchaseReturnActions(purchaseReturn.id);
   const attachmentsMutation = useUpdatePurchaseReturnAttachmentsMutation(purchaseReturn.id);
@@ -103,7 +100,8 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
           order={purchase}
           partyName={purchaseReturn.supplierName}
           defaultOpen={false}
-          claimsElsewhere={claimsElsewhere}
+          // روی هر کالا، چقدر در مرجوعی‌های دیگرِ همین خرید ثبت شده (فقط با بازکردنِ کارت).
+          claimsSource={{ side: "purchase", documentId: purchaseReturn.purchaseId, excludeReturnId: purchaseReturn.id }}
         />
       )}
 

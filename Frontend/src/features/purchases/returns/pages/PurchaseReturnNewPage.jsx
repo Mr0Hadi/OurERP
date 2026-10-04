@@ -244,7 +244,7 @@ export default function PurchaseReturnNewPage() {
             <OrderInvoiceCard
               order={purchaseForReturn}
               partyName={purchaseForReturn.supplierName}
-              claimsElsewhere={claimsElsewhere}
+              claimsSource={{ side: "purchase", documentId: selectedPurchaseId }}
               // هر ادعا مقدارِ تحویل‌شده‌ی خودش را کنارش دارد؛ فاکتورِ کامل فقط مرجع است.
               defaultOpen={false}
             />

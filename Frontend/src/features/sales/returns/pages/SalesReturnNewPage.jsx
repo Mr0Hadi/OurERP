@@ -151,7 +151,7 @@ export default function SalesReturnNewPage() {
             <OrderInvoiceCard
               order={saleForReturn}
               partyName={saleForReturn.customerName}
-              claimsElsewhere={claimsElsewhere}
+              claimsSource={{ side: "sale", documentId: selectedSaleId }}
               // هر ادعا مقدارِ تحویل‌شده‌ی خودش را کنارش دارد؛ فاکتورِ کامل فقط مرجع است.
               defaultOpen={false}
             />

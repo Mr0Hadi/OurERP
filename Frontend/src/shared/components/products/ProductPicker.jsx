@@ -48,6 +48,8 @@ export default function ProductPicker({
   collapsible = false,
   openLabel = "انتخاب کالا",
   closeLabel = "بستن لیست کالاها",
+  // حالتِ تاشو: باز/بسته شدنِ فهرست، تا فراخوان کالاها را فقط وقتِ باز بودن بگیرد.
+  onPickerOpenChange,
   // اسکنِ بارکدِ دانه، کدش را روی همان قلم نگه می‌دارد (`productUnitBarcodes`).
   trackUnits = false,
   // فرم خرید/فروش: جمع با مالیات است و سرور مالیاتِ قلم‌های تازه را حساب می‌کند.
@@ -229,7 +231,10 @@ export default function ProductPicker({
           size="sm"
           variant="outline"
           className="w-full h-8 text-xs gap-1.5"
-          onClick={() => setIsPickerOpen((open) => !open)}
+          onClick={() => {
+            setIsPickerOpen(!isPickerOpen);
+            onPickerOpenChange?.(!isPickerOpen);
+          }}
         >
           <ChevronDown
             className={`h-3.5 w-3.5 transition-transform ${

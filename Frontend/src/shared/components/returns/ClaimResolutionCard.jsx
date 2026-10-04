@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { CheckCircle2, Plus, X } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import ResolutionLineRow from "./ResolutionLineRow";
-import ResolutionComposer from "./ResolutionComposer";
 import {
   claimDecidedQuantity,
   claimRemainingQuantity,
@@ -14,6 +13,10 @@ import {
 } from "@/shared/domain/returns/problems";
 import { CLAIM_SCOPES } from "@/shared/domain/returns/scopes";
 import { formatNumber } from "@/shared/lib/numberFormat";
+
+// فرمِ تصمیم (با انتخابگرِ کالا و بخشِ پول) فقط با کلیکِ «تصمیم» لازم می‌شود و در
+// مرجوعیِ بسته هرگز؛ پس جدا بار می‌شود و صفحه‌ی جزئیات سبک‌تر باز می‌شود.
+const ResolutionComposer = lazy(() => import("./ResolutionComposer"));
 
 
 /**
@@ -113,19 +116,23 @@ export default function ClaimResolutionCard({
       {canDecide &&
         (isComposerOpen ? (
           <div className="space-y-2">
-            <ResolutionComposer
-              claim={claim}
-              remaining={remaining}
-              isBusy={isBusy}
-              side={side}
-              quarantineAvailable={quarantineOf ? quarantineOf(claim) : null}
-              onAdd={(composition) => {
-                // خودِ ادعا می‌رود، نه فقط شناسه‌اش: لایه‌ی api برای باز
-                // کردنِ پیش‌فرضِ «همان کالای ادعا» به کالا و قیمتش نیاز دارد.
-                onAddResolution(claim, composition);
-                setIsComposerOpen(false);
-              }}
-            />
+            <Suspense
+              fallback={<p className="py-4 text-center text-xs text-muted-foreground">در حال بارگذاری...</p>}
+            >
+              <ResolutionComposer
+                claim={claim}
+                remaining={remaining}
+                isBusy={isBusy}
+                side={side}
+                quarantineAvailable={quarantineOf ? quarantineOf(claim) : null}
+                onAdd={(composition) => {
+                  // خودِ ادعا می‌رود، نه فقط شناسه‌اش: لایه‌ی api برای باز
+                  // کردنِ پیش‌فرضِ «همان کالای ادعا» به کالا و قیمتش نیاز دارد.
+                  onAddResolution(claim, composition);
+                  setIsComposerOpen(false);
+                }}
+              />
+            </Suspense>
             <Button
               type="button"
               size="sm"

@@ -18,7 +18,6 @@ import { usePermission } from "@/features/auth/hooks/usePermission";
 import UnitsPageLink from "@/features/warehouse/units/components/UnitsPageLink";
 import { UNIT_SEGMENTS } from "@/features/warehouse/units/domain/unitVocabulary";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
-import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { UnitCustodyReasonEnum } from "@/shared/domain/enums/unitStatus";
 import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
@@ -77,8 +76,6 @@ function warehouseLinksOf(salesReturn) {
 function SalesReturnDetailContent({ salesReturn }) {
   const { data: sale } = useSaleForReturnQuery(salesReturn.saleId);
   const { data: relatedReturns } = useRelatedSalesReturnsQuery(salesReturn.saleId, salesReturn.id);
-  // روی هر کالا، چقدر در مرجوعی‌های دیگرِ همین فروش ثبت شده.
-  const claimsElsewhere = useClaimsInOtherReturns("sale", salesReturn.saleId, salesReturn.id);
 
   const actions = useSalesReturnActions(salesReturn.id);
   const attachmentsMutation = useUpdateSalesReturnAttachmentsMutation(salesReturn.id);
@@ -102,7 +99,8 @@ function SalesReturnDetailContent({ salesReturn }) {
           order={sale}
           partyName={salesReturn.customerName}
           defaultOpen={false}
-          claimsElsewhere={claimsElsewhere}
+          // روی هر کالا، چقدر در مرجوعی‌های دیگرِ همین فروش ثبت شده (فقط با بازکردنِ کارت).
+          claimsSource={{ side: "sale", documentId: salesReturn.saleId, excludeReturnId: salesReturn.id }}
         />
       )}
 
