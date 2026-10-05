@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { CheckCircle, AlertTriangle, X } from "lucide-react";
 
-import { Button } from "@/shared/components/ui/button";
 import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 import {
   useSaleForShippingQuery,
   useSaleReturnPendingEffectsQuery,
 } from "../services/queries";
-import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
+import { useDocumentProducts } from "@/features/warehouse/products/services/queries";
 import { useDispatchShipmentMutation } from "../services/mutations";
 import { useShippingForm } from "../hooks/useShippingForm";
 import { useGoodsRoundForm } from "@/shared/hooks/useGoodsRoundForm";
@@ -22,17 +20,8 @@ import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { isExcessAllowedFor } from "../domain/shippingVocabulary";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
-
-function withProductImage(rows, productMap) {
-  return rows.map((row) => {
-    const product = productMap.get(row.productId);
-    return {
-      ...row,
-      imageKey: product?.imageKey ?? null,
-      imageUrl: product?.imageUrl ?? null,
-    };
-  });
-}
+import { trackedLookup, withProductInfo } from "../../shared/productInfo";
+import WarehouseSubmitBar from "../../shared/WarehouseSubmitBar";
 
 /**
  * یک محموله‌ی خروجی برای مشتری: اقلامِ فروش (با مازاد و اسکن)، و کالای
@@ -48,17 +37,15 @@ function ShippingDetailForm({ sale, replacementReturnId }) {
   const navigate = useNavigate();
   const dispatchMutation = useDispatchShipmentMutation();
 
-  const { products: productOptions } = useProductsOptionsQuery();
-  const productMap = useMemo(() => {
-    const map = new Map();
-    productOptions.forEach((p) => map.set(p.id, p));
-    return map;
-  }, [productOptions]);
-
-  const isTracked = useCallback(
-    (productId) => Boolean(productMap.get(productId)?.requiresUnitTracking),
-    [productMap],
-  );
+  // کالاهای همین فروش (و جایگزین‌های مرجوعی‌اش): تصویر، و اینکه اسکنِ دانه
+  // الزامی است. تا نیامده‌اند، ثبت بسته است — وگرنه کالای ردیابی‌پذیر بی‌اسکن
+  // فرستاده و سرور ردش می‌کرد.
+  const { data: pendingEffects = [] } = useSaleReturnPendingEffectsQuery(sale.id);
+  const { productMap, isLoading: productsLoading } = useDocumentProducts([
+    ...(sale.items || []).map((item) => item.productId),
+    ...pendingEffects.map((effect) => effect.productId),
+  ]);
+  const isTracked = useMemo(() => trackedLookup(productMap), [productMap]);
 
   const {
     formData,
@@ -75,7 +62,6 @@ function ShippingDetailForm({ sale, replacementReturnId }) {
   } = useShippingForm(sale, { isTracked });
 
   // کالای جایگزینِ مرجوعی‌های همین فروش که هنوز برای مشتری نرفته.
-  const { data: pendingEffects = [] } = useSaleReturnPendingEffectsQuery(sale.id);
   const replacementLines = useMemo(
     () =>
       pendingEffects
@@ -115,9 +101,9 @@ function ShippingDetailForm({ sale, replacementReturnId }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const displayItems = useMemo(() => withProductImage(items, productMap), [items, productMap]);
+  const displayItems = useMemo(() => withProductInfo(items, productMap), [items, productMap]);
   const displayReplacementRounds = useMemo(
-    () => withProductImage(replacement.rounds, productMap),
+    () => withProductInfo(replacement.rounds, productMap),
     [replacement.rounds, productMap],
   );
 
@@ -203,46 +189,23 @@ function ShippingDetailForm({ sale, replacementReturnId }) {
             replacementOnly={replacementOnly}
           />
 
-          {blocking && hasSomething && (
-            <p className="text-xs text-destructive px-1">{blocking}</p>
-          )}
-
-          <div className="flex gap-2">
-            <Button
-              className={`flex-1 gap-2 ${
-                !complete && (replacementOnly || items.length > 0)
-                  ? "bg-warning hover:bg-warning text-white"
-                  : ""
-              }`}
-              disabled={isBusy || !hasSomething || Boolean(blocking)}
-              onClick={() => setShowConfirmDialog(true)}
-            >
-              {complete ? (
-                <CheckCircle className="h-4 w-4" />
-              ) : (
-                <AlertTriangle className="h-4 w-4" />
-              )}
-              {replacementOnly
+          <WarehouseSubmitBar
+            label={
+              replacementOnly
                 ? "ثبت ارسال جایگزین"
                 : isAllComplete
                   ? "تأیید ارسال"
-                  : "ثبت ارسال (ناقص)"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate(exitRoute)}
-              disabled={isBusy}
-              className="gap-2"
-            >
-              <X className="h-4 w-4" />
-              انصراف
-            </Button>
-          </div>
-
-          <p className="text-xs text-muted-foreground text-center px-2">
-            باقیمانده‌ای که این دور ارسال نکنید، برای دور بعدی می‌ماند.
-          </p>
+                  : "ثبت ارسال (ناقص)"
+            }
+            complete={complete}
+            warnIncomplete={replacementOnly || items.length > 0}
+            canSubmit={hasSomething && !productsLoading}
+            blockingReason={blocking}
+            isBusy={isBusy}
+            onSubmit={() => setShowConfirmDialog(true)}
+            onCancel={() => navigate(exitRoute)}
+            hint="باقیمانده‌ای که این دور ارسال نکنید، برای دور بعدی می‌ماند."
+          />
         </div>
       </div>
 

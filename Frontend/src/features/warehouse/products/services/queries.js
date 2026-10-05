@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { keepPreviousData } from "@tanstack/react-query";
 import { listQuery } from "@/shared/services/api/contract";
 import { useDebouncedFilters } from "@/shared/hooks/useDebouncedFilters";
@@ -73,4 +73,40 @@ const NO_PRODUCTS = [];
 export function useProductsOptionsQuery({ enabled = true } = {}) {
   const { data, isLoading } = useProductsQuery(NO_FILTERS, OPTIONS_PAGINATION, OPTIONS_SORTING, { enabled });
   return { products: data?.items ?? NO_PRODUCTS, isLoading };
+}
+
+// ─── کالاهای یک سند ─────────────────────────────────────────────────────────
+
+const NO_PRODUCT_MAP = new Map();
+
+/**
+ * جزئیاتِ کالاهای یک سند (تصویر، برند، `requiresUnitTracking`) — فقط همان
+ * کالاهایی که در سند هستند، هر کدام با کشِ جزئیاتِ خودش.
+ *
+ * جای `useProductsOptionsQuery` در صفحه‌های انبار: آن فهرست ۲۰۰ کالای اول را
+ * می‌گرفت، پس برای کالای ۲۰۱ام «ردیابی‌پذیر» بودن معلوم نمی‌شد — فرمِ ارسال
+ * اسکنِ دانه را نمی‌خواست و سرور هنگامِ ثبت رد می‌کرد.
+ *
+ * TODO(بکند): با `requiresUnitTracking` و تصویر روی اقلامِ خودِ سند (بندِ ۱۵.۱)
+ * این درخواست‌ها لازم نیستند.
+ *
+ * @returns `{ productMap: Map<id, ProductDto>, isLoading }`
+ */
+export function useDocumentProducts(productIds) {
+  const ids = [...new Set(productIds.filter((id) => id != null).map(Number))].sort((a, b) => a - b);
+  return useQueries({
+    queries: ids.map((id) => ({
+      queryKey: productKeys.detail(id),
+      queryFn: () => fetchProductById(id),
+      staleTime: 60_000,
+    })),
+    combine: (results) => {
+      if (results.length === 0) return { productMap: NO_PRODUCT_MAP, isLoading: false };
+      const productMap = new Map();
+      results.forEach((result, index) => {
+        if (result.data) productMap.set(ids[index], result.data);
+      });
+      return { productMap, isLoading: results.some((result) => result.isLoading) };
+    },
+  });
 }

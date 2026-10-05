@@ -196,8 +196,12 @@ export const BIN_LOCATION_MAX_LENGTH = 50;
  */
 export function purchaseReturnRouteOf(unit) {
   if (unit.status !== UNIT_STATUSES.QUARANTINED || !unit.purchaseId) return null;
-  return `${ROUTES.PURCHASES_RETURNS_NEW}?purchaseId=${unit.purchaseId}&prefill=quarantine`;
+  return quarantineReturnRoute(unit.purchaseId);
 }
+
+/** فرمِ مرجوعیِ خرید، پیش‌پرشده از قرنطینه‌ی همان خرید. */
+export const quarantineReturnRoute = (purchaseId) =>
+  `${ROUTES.PURCHASES_RETURNS_NEW}?purchaseId=${purchaseId}&prefill=quarantine`;
 
 // ─── «کجاست؟» ───────────────────────────────────────────────────────────────
 

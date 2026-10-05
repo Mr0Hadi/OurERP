@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Undo2 } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
@@ -57,17 +58,22 @@ export function PendingReplacementNote({ row }) {
   );
 }
 
-export function ReturnActionCell({ row, navigate }) {
+/** دکمه‌ی ردیفِ مرجوعی — پیوندِ واقعی به صفحه‌ی کارِ انبار روی همان مرجوعی. */
+export function ReturnActionCell({ row }) {
+  if (!row.link) {
+    return (
+      <Button variant="outline" size="sm" className="gap-1" disabled>
+        <Undo2 className="h-4 w-4" />
+        {row.actionLabel}
+      </Button>
+    );
+  }
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      className="gap-1"
-      disabled={!row.link}
-      onClick={() => navigate(row.link)}
-    >
-      <Undo2 className="h-4 w-4" />
-      {row.actionLabel}
+    <Button asChild variant="outline" size="sm" className="gap-1">
+      <Link to={row.link}>
+        <Undo2 className="h-4 w-4" />
+        {row.actionLabel}
+      </Link>
     </Button>
   );
 }
