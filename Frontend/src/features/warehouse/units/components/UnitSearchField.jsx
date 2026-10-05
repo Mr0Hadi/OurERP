@@ -5,7 +5,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 
 const CameraScanner = lazy(
-  () => import("@/features/warehouse/products/components/forms/CameraScanner"),
+  () => import("@/shared/components/barcode/CameraScanner"),
 );
 
 /** دو رفتارِ اسکن — کنارِ خودِ فیلد، تا کاربر همیشه بداند اسکن چه می‌کند. */

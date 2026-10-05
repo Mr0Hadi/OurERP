@@ -11,13 +11,25 @@ export const fetchProductCategories = async (params = {}) => {
   return normalizeListResponse(data, { itemsKey: "productCategoryList" });
 };
 
-/** `POST api/ProductCategory/CreateProductCategory` — بدنه فقط `name`. */
+/**
+ * `POST api/ProductCategory/CreateProductCategory` — بدنه فقط `name`.
+ *
+ * سرور دسته‌ی ساخته‌شده را برنمی‌گرداند (`Data` خالی)، پس فرمِ کالا نمی‌توانست
+ * دسته‌ی تازه را خودکار انتخاب کند. تا وقتی `{ id, name }` برگردد (بندِ ۱۵.۴
+ * سندِ درخواست‌ها)، دسته با همان نام از فهرست خوانده می‌شود.
+ */
 export const createProductCategory = async ({ name }) => {
   const { data } = await axiosInstance.post(
     "/ProductCategory/CreateProductCategory",
     { name },
   );
-  return data;
+  if (data?.id) return data;
+  const { items } = await fetchProductCategories({ name, limit: 100 });
+  // اگر چند دسته هم‌نام باشند، تازه‌ترین (بزرگ‌ترین شناسه).
+  const [created] = items
+    .filter((category) => category.name === name)
+    .sort((a, b) => b.id - a.id);
+  return created ?? null;
 };
 
 /** `PUT api/ProductCategory/UpdateProductCategory` — `id` در بدنه است، نه در مسیر. */

@@ -2,7 +2,6 @@ import { Controller, useWatch } from "react-hook-form";
 
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import { Badge } from "@/shared/components/ui/badge";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import {
   Card,
@@ -18,6 +17,7 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 
+import StatusBadge from "@/shared/components/status/StatusBadge";
 import CategoryManager from "./CategoryManager";
 import { PRODUCT_UNIT_LABELS } from "@/shared/domain/enums/productUnit";
 
@@ -59,23 +59,21 @@ export default function ProductBasicInfoForm({
   isIncomplete = false,
 }) {
   const code = useWatch({ control, name: "code" });
-  const barcode = useWatch({ control, name: "barcode" });
+  const barCode = useWatch({ control, name: "barCode" });
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-2">
         <CardTitle className="text-lg">اطلاعات پایه</CardTitle>
         {isIncomplete && (
-          <Badge
-            variant="outline"
-            className="bg-warning/10 text-warning border-warning/25"
-          >
-            ناقص — برند و قیمت‌ها را کامل کنید
-          </Badge>
+          <StatusBadge tone="warning">ناقص — برند و قیمت‌ها را کامل کنید</StatusBadge>
         )}
       </CardHeader>
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="name">
+            نام کالا <span className="text-destructive">*</span>
+          </Label>
           <Input
             id="name"
             placeholder="مثال: لنت ترمز جلو پراید"
@@ -115,9 +113,9 @@ export default function ProductBasicInfoForm({
             />
 
             <ReadOnlyCodeField
-              id="barcode"
+              id="barCode"
               label="بارکد"
-              value={barcode}
+              value={barCode}
               emptyHint="پس از ثبت کالا ساخته می‌شود"
             />
           </>

@@ -11,11 +11,11 @@ import {
 import { useProductFilterStore } from "../store/productFilterStore";
 import { productKeys } from "./queryKeys";
 
-/** فیلترهای فعلیِ لیستِ کالا؛ ورودی‌های متنی و قیمت با تأخیر. */
+/** فیلترهای فعلیِ لیستِ کالا؛ نام، برند و قیمت با تأخیر. */
 export function useProductListFilters() {
   return useDebouncedFilters(useProductFilterStore, {
-    text: ["name", "fromPrice", "toPrice"],
-    instant: ["brand", "productCategoryId", "isLowOnStock", "isIncomplete"],
+    text: ["name", "brand", "fromPrice", "toPrice"],
+    instant: ["productCategoryId", "isLowOnStock", "isIncomplete"],
   });
 }
 

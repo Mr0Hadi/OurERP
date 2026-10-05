@@ -10,6 +10,7 @@ import {
 } from "@/shared/components/ui/table";
 import { Button } from "@/shared/components/ui/button";
 import TableLoadingSkeleton from "@/shared/components/table/TableLoadingSkeleton";
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
  * جدولِ ساده — نه `DataTable` — چون این فهرست صفحه‌بندیِ سرور ندارد
@@ -45,7 +46,7 @@ export default function CategoryTable({ data, isLoading, onEdit, onDelete }) {
                 {category.name}
               </TableCell>
               <TableCell className="text-center tabular-nums text-muted-foreground">
-                {category.productCount ?? 0}
+                {formatNumber(category.productCount)}
               </TableCell>
               <TableCell>
                 <div className="flex items-center justify-center gap-1">

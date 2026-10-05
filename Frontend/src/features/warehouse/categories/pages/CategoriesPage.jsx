@@ -1,32 +1,20 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/components/ui/alert-dialog";
+import ListPageLayout from "@/shared/components/layout/ListPageLayout";
+import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 import { useProductCategoriesQuery } from "../services/queries";
 import { useDeleteProductCategoryMutation } from "../services/mutations";
 import CategoryTable from "../components/CategoryTable";
 import CategoryFormDialog from "../components/CategoryFormDialog";
 
+/** دسته‌بندی‌های کالا: فهرست با جست‌وجو، و افزودن/ویرایش/حذف با دیالوگ. */
 export default function CategoriesPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 400);
@@ -37,88 +25,59 @@ export default function CategoriesPage() {
   const categoriesQuery = useProductCategoriesQuery(debouncedSearch);
   const deleteMutation = useDeleteProductCategoryMutation();
 
-  const categories = categoriesQuery.data ?? [];
-
-  const openCreateDialog = () => setFormState({ open: true, category: null });
-  const openEditDialog = (category) => setFormState({ open: true, category });
-  const closeFormDialog = (open) =>
-    setFormState((prev) => ({ ...prev, open }));
-
   const handleDelete = () => {
-    if (!deleteTarget) return;
     deleteMutation.mutate(deleteTarget.id, {
       onSuccess: () => setDeleteTarget(null),
     });
   };
 
   return (
-    <div className="container mx-auto space-y-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>مدیریت دسته‌بندی کالاها</CardTitle>
-          <Button onClick={openCreateDialog} className="gap-2">
-            <Plus className="h-4 w-4" />
-            دسته‌بندی جدید
-          </Button>
-        </CardHeader>
+    <ListPageLayout
+      title="مدیریت دسته‌بندی کالاها"
+      actions={
+        <Button onClick={() => setFormState({ open: true, category: null })} className="gap-2">
+          <Plus className="h-4 w-4" />
+          دسته‌بندی جدید
+        </Button>
+      }
+    >
+      <FilterSearchInput
+        placeholder="نام دسته‌بندی..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
 
-        <CardContent className="space-y-3">
-          <FilterSearchInput
-            label="جستجو"
-            placeholder="نام دسته‌بندی..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-
-          {categoriesQuery.isError ? (
-            <QueryErrorState
-              error={categoriesQuery.error}
-              onRetry={() => categoriesQuery.refetch()}
-            />
-          ) : (
-            <CategoryTable
-              data={categories}
-              isLoading={categoriesQuery.isLoading}
-              onEdit={openEditDialog}
-              onDelete={setDeleteTarget}
-            />
-          )}
-        </CardContent>
-      </Card>
+      {categoriesQuery.isError ? (
+        <QueryErrorState error={categoriesQuery.error} onRetry={() => categoriesQuery.refetch()} />
+      ) : (
+        <CategoryTable
+          data={categoriesQuery.data ?? []}
+          isLoading={categoriesQuery.isLoading}
+          onEdit={(category) => setFormState({ open: true, category })}
+          onDelete={setDeleteTarget}
+        />
+      )}
 
       <CategoryFormDialog
         open={formState.open}
-        onOpenChange={closeFormDialog}
+        onOpenChange={(open) => setFormState((prev) => ({ ...prev, open }))}
         category={formState.category}
       />
 
-      <AlertDialog
+      <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>حذف دسته‌بندی</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteTarget?.productCount > 0
-                ? `این دسته‌بندی روی ${deleteTarget.productCount} کالا نشسته است. حذفش کالاها را پاک نمی‌کند، فقط خودِ دسته‌بندی از فهرست‌های بعدی حذف می‌شود.`
-                : "آیا از حذف این دسته‌بندی اطمینان دارید؟"}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>
-              انصراف
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteMutation.isPending ? "در حال حذف..." : "حذف"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        title={`حذف دسته‌بندی «${deleteTarget?.name ?? ""}»`}
+        description={
+          deleteTarget?.productCount > 0
+            ? `${formatNumber(deleteTarget.productCount)} کالا در این دسته است. کالاها پاک نمی‌شوند و دسته‌شان روی آن‌ها می‌ماند؛ فقط این دسته دیگر در فهرست‌ها و انتخاب‌گرها نمی‌آید.`
+            : "این دسته دیگر در فهرست‌ها و انتخاب‌گرها نمی‌آید."
+        }
+        confirmLabel="حذف"
+        pendingLabel="در حال حذف..."
+        isPending={deleteMutation.isPending}
+        onConfirm={handleDelete}
+      />
+    </ListPageLayout>
   );
 }

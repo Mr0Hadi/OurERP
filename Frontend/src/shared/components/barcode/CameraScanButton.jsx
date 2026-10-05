@@ -10,7 +10,7 @@ import {
 } from "@/shared/components/ui/dialog";
 
 const CameraScanner = lazy(
-  () => import("@/features/warehouse/products/components/forms/CameraScanner"),
+  () => import("./CameraScanner"),
 );
 
 /**

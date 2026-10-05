@@ -170,9 +170,7 @@ export default function CameraScanner({ onDetected }) {
             setHitBox(boxOf(hit, video.videoWidth, video.videoHeight));
             onDetectedRef.current(hit.rawValue);
             toast.success(
-              hit.format === "qr_code"
-                ? "کد QR با موفقیت اسکن شد"
-                : "بارکد با موفقیت اسکن شد",
+              hit.format === "qr_code" ? "کد QR خوانده شد" : "بارکد خوانده شد",
             );
             return;
           }
@@ -190,12 +188,12 @@ export default function CameraScanner({ onDetected }) {
     start().catch((err) => {
       if (cancelled) return;
       if (err?.name === "NotAllowedError") {
-        toast.error("دسترسی به دوربین رد شد. لطفاً مجوز دوربین را فعال کنید");
+        toast.error("اجازه‌ی دوربین داده نشده؛ از تنظیماتِ مرورگر دسترسی به دوربین را باز کنید");
       } else if (err?.name === "NotFoundError" || err?.name === "OverconstrainedError") {
         toast.error("دوربینی برای اسکن پیدا نشد");
       } else {
         console.error(err);
-        toast.error("خطا در دسترسی به دوربین");
+        toast.error("دوربین باز نشد؛ دوباره تلاش کنید");
       }
     });
 

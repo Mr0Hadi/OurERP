@@ -80,7 +80,7 @@ export const updateProduct = async (id, productData) => {
   return data;
 };
 
-/** `DELETE api/Product/DeleteProduct` — `id` به‌صورت query است نه بخشی از مسیر. */
+/** `DELETE api/Product/DeleteProduct` — حذفِ نرم (`IsActive = false`)؛ `id` در query است. */
 export const deleteProduct = async (id) => {
   await axiosInstance.delete("/Product/DeleteProduct", { params: { id } });
   return { success: true, id };
