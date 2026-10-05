@@ -14,7 +14,7 @@ import {
   UNIT_SEGMENTS,
   documentRouteOf,
 } from "../domain/unitVocabulary";
-import { formatNumber } from "@/shared/lib/numberFormat";
+import { formatDigits } from "@/shared/lib/numberFormat";
 import UnitStatusBadge from "./UnitStatusBadge";
 import UnitSelectCheckbox from "./UnitSelectCheckbox";
 import { UnitLabelStateBadge, UnitQuarantineAge, UnitWhereabouts } from "./UnitCells";
@@ -33,7 +33,7 @@ function UnitIdentity({ unit, onOpen }) {
       <span className="max-w-full truncate font-mono text-xs text-muted-foreground" dir="ltr">
         {unit.barcode}
       </span>
-      <span className="text-[11px] text-muted-foreground tabular-nums">سریال {formatNumber(unit.serialNumber)}</span>
+      <span className="text-[11px] text-muted-foreground tabular-nums">سریال {formatDigits(unit.serialNumber)}</span>
     </button>
   );
 }

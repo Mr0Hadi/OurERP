@@ -20,8 +20,16 @@ const CameraScanner = lazy(
  *
  * callbackِ داده‌شده به `CameraScanner` پایدار است (با ref): آن کامپوننت با
  * عوض شدنِ identityِ آن دوربین را از نو باز می‌کند.
+ *
+ * `children` متنِ کنارِ آیکن است (مثلاً «دوربین» داخلِ فیلدِ جست‌وجو).
  */
-export default function CameraScanButton({ onDetected, className, size = "icon" }) {
+export default function CameraScanButton({
+  onDetected,
+  className,
+  size = "icon",
+  variant = "outline",
+  children,
+}) {
   const [open, setOpen] = useState(false);
   const onDetectedRef = useRef(onDetected);
   useLayoutEffect(() => {
@@ -36,7 +44,7 @@ export default function CameraScanButton({ onDetected, className, size = "icon" 
     <>
       <Button
         type="button"
-        variant="outline"
+        variant={variant}
         size={size}
         className={className}
         onClick={() => setOpen(true)}
@@ -44,6 +52,7 @@ export default function CameraScanButton({ onDetected, className, size = "icon" 
         aria-label="اسکن با دوربین"
       >
         <ScanBarcode className="size-4" />
+        {children}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>

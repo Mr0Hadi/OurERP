@@ -20,7 +20,7 @@ import {
   effectiveUnitFilters,
   segmentFromLegacyView,
 } from "../domain/unitVocabulary";
-import { formatNumber } from "@/shared/lib/numberFormat";
+import { formatDigits, formatNumber } from "@/shared/lib/numberFormat";
 import { fetchAllProductUnits } from "../services/api-v1";
 import { useProductUnitsQuery, useProductUnitSummaryQuery } from "../services/queries";
 import { useResolveScannedCodeMutation } from "../services/mutations";
@@ -233,11 +233,11 @@ export default function UnitsPage() {
           return;
         }
         if (selectedById.has(result.unit.id)) {
-          toast(`سریال ${formatNumber(result.unit.serialNumber)} قبلاً انتخاب شده`);
+          toast(`سریال ${formatDigits(result.unit.serialNumber)} قبلاً انتخاب شده`);
           return;
         }
         toggleSelect(result.unit);
-        toast.success(`${result.unit.productName ?? ""}، سریال ${formatNumber(result.unit.serialNumber)} اضافه شد`);
+        toast.success(`${result.unit.productName ?? ""}، سریال ${formatDigits(result.unit.serialNumber)} اضافه شد`);
       },
     });
   };

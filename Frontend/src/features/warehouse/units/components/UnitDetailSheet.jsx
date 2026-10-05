@@ -26,10 +26,10 @@ import {
   formatDate,
   canLocate,
   needsLabel,
-  whereaboutsOf,
 } from "../domain/unitVocabulary";
-import { formatNumber } from "@/shared/lib/numberFormat";
+import { formatDigits, formatNumber, formatRial } from "@/shared/lib/numberFormat";
 import UnitStatusBadge from "./UnitStatusBadge";
+import { UnitWhereabouts } from "./UnitCells";
 import { unitOperationsFor } from "./unitOperations";
 import { useProductUnitHistoryQuery } from "../services/queries";
 
@@ -222,27 +222,6 @@ function SectionTitle({ icon: Icon, children, action }) {
   );
 }
 
-/** «کجاست؟» — جایگاه، طرفِ حساب یا علت، و سندِ مرتبط؛ یک ردیف مثلِ بقیه. */
-function WhereaboutsValue({ unit }) {
-  const where = whereaboutsOf(unit);
-  const saleLink =
-    unit.status === UNIT_STATUSES.SOLD ? documentRouteOf(DocumentKindEnum.SALE, unit.saleId) : null;
-  return (
-    <>
-      <span className="font-medium">{where.place}</span>
-      {where.detail && <span className="block text-[11px] text-muted-foreground">{where.detail}</span>}
-      {where.document &&
-        (saleLink ? (
-          <Link to={saleLink} className="block font-mono text-[11px] underline-offset-2 hover:underline">
-            {where.document}
-          </Link>
-        ) : (
-          <span className="block font-mono text-[11px] text-muted-foreground">{where.document}</span>
-        ))}
-    </>
-  );
-}
-
 /**
  * مقصد مشترکِ کارهای سطحِ دانه — از اسکن یا «جزئیات» در فهرست. از بالا:
  * کدِ دانه (برای تطبیق با برچسبِ توی دست)، کارهای مجاز، مشخصات (کجاست، منشأ،
@@ -265,7 +244,7 @@ export default function UnitDetailSheet({ unit, open, onOpenChange, onPrint, onA
           <SheetTitle className="pe-8 text-base">{unit.productName ?? "دانه‌ی کالا"}</SheetTitle>
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <UnitStatusBadge status={unit.status} />
-            <span className="tabular-nums">سریال {formatNumber(unit.serialNumber)}</span>
+            <span className="tabular-nums">سریال {formatDigits(unit.serialNumber)}</span>
           </div>
         </SheetHeader>
 
@@ -307,7 +286,7 @@ export default function UnitDetailSheet({ unit, open, onOpenChange, onPrint, onA
             <SectionTitle icon={Info}>مشخصات</SectionTitle>
             <div className="divide-y divide-border">
               <Row label="کجاست">
-                <WhereaboutsValue unit={unit} />
+                <UnitWhereabouts unit={unit} stacked />
               </Row>
               {canLocate(unit) && (
                 <Row label="قفسه">
@@ -374,7 +353,7 @@ export default function UnitDetailSheet({ unit, open, onOpenChange, onPrint, onA
               )}
               {unit.quarantineCost != null && (
                 <Row label="ارزشِ نگه‌داشته">
-                  <span className="tabular-nums">{formatNumber(unit.quarantineCost)} ریال</span>
+                  <span className="tabular-nums">{formatRial(unit.quarantineCost)}</span>
                 </Row>
               )}
               <Row label="برچسب">

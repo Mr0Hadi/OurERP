@@ -9,3 +9,10 @@ export const formatNumber = (value) => (Number(value) || 0).toLocaleString("fa-I
 
 /** مبلغِ ریالی با واحد: «۱۲٬۵۰۰ ریال». */
 export const formatRial = (value) => `${formatNumber(value)} ریال`;
+
+/**
+ * شماره‌ای که مقدار نیست — سریالِ دانه، شناسه‌ی سند: رقمِ فارسی بی جداکننده
+ * («۱۲۳۴۵»، نه «۱۲٬۳۴۵» که روی برچسب و در جست‌وجو با سریالِ واقعی نمی‌خواند).
+ */
+export const formatDigits = (value) =>
+  value == null || value === "" ? "" : Number(value).toLocaleString("fa-IR", { useGrouping: false });

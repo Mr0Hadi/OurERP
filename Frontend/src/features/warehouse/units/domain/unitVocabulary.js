@@ -206,8 +206,9 @@ export const quarantineReturnRoute = (purchaseId) =>
 // ─── «کجاست؟» ───────────────────────────────────────────────────────────────
 
 /**
- * جای فعلیِ دانه به زبانِ انباردار — ستونِ «کجاست» و سربرگِ جزئیات:
- * `place` جا، `detail` طرفِ حساب یا علت، `document` شماره‌ی سندِ مرتبط.
+ * جای فعلیِ دانه به زبانِ انباردار — ستونِ «کجاست» و ردیفِ «کجاست»ِ جزئیات:
+ * `place` جا، `detail` طرفِ حساب یا علت، `document` شماره‌ی سندِ مرتبط و
+ * `documentRoute` پیوندش (اگر هست).
  */
 export function whereaboutsOf(unit) {
   switch (unit.status) {
@@ -228,6 +229,7 @@ export function whereaboutsOf(unit) {
         place: "نزد مشتری",
         detail: unit.customerName ?? "",
         document: unit.saleInvoiceNumber,
+        documentRoute: documentRouteOf(DocumentKindEnum.SALE, unit.saleId),
       };
     case UNIT_STATUSES.RETURNED_TO_SUPPLIER:
       return { place: "نزد تامین‌کننده", detail: unit.supplierName ?? "" };
