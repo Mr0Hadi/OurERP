@@ -62,14 +62,22 @@ namespace Application.Features.Product.Queries
                 query = query.Where(p => p.Name.Contains(request.Name) || (p.EnglishName != null && p.EnglishName.Contains(request.Name)));
             }
 
+            // A whole code means that product only: codes have dashes and no zero padding, so "14050512-12" is also a
+            // substring of "14050512-123". Anything that matches no code exactly is still a partial search.
             if (!string.IsNullOrEmpty(request.Code))
             {
-                query = query.Where(p => p.Code.Contains(request.Code));
+                var code = request.Code.Trim();
+                query = await query.AnyAsync(p => p.Code == code, cancellationToken)
+                    ? query.Where(p => p.Code == code)
+                    : query.Where(p => p.Code.Contains(code));
             }
 
             if (!string.IsNullOrEmpty(request.BarCode))
             {
-                query = query.Where(p => p.BarCode.Contains(request.BarCode));
+                var barCode = request.BarCode.Trim();
+                query = await query.AnyAsync(p => p.BarCode == barCode, cancellationToken)
+                    ? query.Where(p => p.BarCode == barCode)
+                    : query.Where(p => p.BarCode.Contains(barCode));
             }
 
             if (!string.IsNullOrEmpty(request.Brand))

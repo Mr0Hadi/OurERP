@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 using Domain.Enums;
 using WMS.Authorization;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
+using WMS.Ioc;
 
 namespace WMS.Controllers
 {
@@ -19,6 +21,7 @@ namespace WMS.Controllers
         }
 
         [AllowAnonymous]
+        [EnableRateLimiting(LoginRateLimitRegistration.PolicyName)]
         [HttpPost("Login")]
         public async Task<ActionResult<ResponseDto>> Login([FromBody] LoginUserCommand request)
         {
@@ -33,6 +36,7 @@ namespace WMS.Controllers
         }
 
         [Authorize]
+        [AllowWhilePasswordChangeRequired]
         [HttpPost("Logout")]
         public async Task<ActionResult<ResponseDto>> Logout([FromBody] LogoutUserCommand request)
         {
@@ -42,13 +46,6 @@ namespace WMS.Controllers
         [HasPermission(PermissionEnum.UserUpdate)]
         [HttpPost("LogoutUserById")]
         public async Task<ActionResult<ResponseDto>> LogoutUserById([FromBody] LogoutUserByIdCommand request)
-        {
-            return await _mediator.Send(request);
-        }
-
-        [AllowAnonymous]
-        [HttpPost("ForgetPassword")]
-        public async Task<ActionResult<ResponseDto>> ForgetPassword([FromBody] ForgetPasswordCommand request)
         {
             return await _mediator.Send(request);
         }

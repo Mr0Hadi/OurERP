@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Permissions;
+﻿using Application.Common.Contracts.Permissions;
 using Microsoft.AspNetCore.Authorization;
 
 namespace WMS.Authorization
@@ -40,7 +40,9 @@ namespace WMS.Authorization
 
             var cancellationToken = _httpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None;
 
-            if (await _permissionService.HasPermissionAsync(userId, requirement.Permission, cancellationToken))
+            var held = await _permissionService.GetUserPermissionsAsync(userId, cancellationToken);
+
+            if (requirement.Permissions.Any(held.Contains))
                 context.Succeed(requirement);
             else
                 context.Fail();

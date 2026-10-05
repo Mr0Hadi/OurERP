@@ -11,6 +11,9 @@ namespace WMS.Tests.Integration
 {
     public class UserHandlerTests
     {
+        // A manager with no permission rows acting on users with none: the subset rule passes.
+        private const int OtherActorId = 999999;
+
         [Fact]
         public async Task CreateUser_UnknownDepartment_ThrowsNotFound()
         {
@@ -183,7 +186,7 @@ namespace WMS.Tests.Integration
             scope.Context.Users.AddRange(user1, user2);
             scope.Context.SaveChanges();
 
-            var handler = new UpdateUserCommandHandler(scope.UserRepository, scope.OrgRoleService, scope.UnitOfWork);
+            var handler = new UpdateUserCommandHandler(scope.UserRepository, scope.OrgRoleService, scope.PermissionService, FakeUserContext.WithUserId(OtherActorId), TestSessions.Create(), scope.UnitOfWork);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(new UpdateUserCommand
             {
@@ -208,7 +211,7 @@ namespace WMS.Tests.Integration
             scope.Context.Users.Add(user);
             scope.Context.SaveChanges();
 
-            var handler = new UpdateUserCommandHandler(scope.UserRepository, scope.OrgRoleService, scope.UnitOfWork);
+            var handler = new UpdateUserCommandHandler(scope.UserRepository, scope.OrgRoleService, scope.PermissionService, FakeUserContext.WithUserId(OtherActorId), TestSessions.Create(), scope.UnitOfWork);
             await handler.Handle(new UpdateUserCommand
             {
                 Id = user.Id,
@@ -237,7 +240,7 @@ namespace WMS.Tests.Integration
             scope.Context.Users.Add(user);
             scope.Context.SaveChanges();
 
-            var handler = new DeleteUserCommandHandler(scope.UserRepository, scope.OrgRoleService, scope.PermissionService, scope.UnitOfWork);
+            var handler = new DeleteUserCommandHandler(scope.UserRepository, scope.OrgRoleService, scope.PermissionService, FakeUserContext.WithUserId(OtherActorId), TestSessions.Create(), scope.UnitOfWork);
             await handler.Handle(new DeleteUserCommand { Id = user.Id }, CancellationToken.None);
 
             using var verify = db.NewContext();
@@ -258,7 +261,7 @@ namespace WMS.Tests.Integration
             var userContext = Substitute.For<IUserContextService>();
             userContext.GetUserId().Returns(user.Id.ToString());
 
-            var handler = new ChangePasswordCommandHandler(scope.UserRepository, userContext, scope.UnitOfWork);
+            var handler = new ChangePasswordCommandHandler(scope.UserRepository, userContext, TestSessions.Create(), scope.UnitOfWork);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(new ChangePasswordCommand
             {
@@ -282,7 +285,7 @@ namespace WMS.Tests.Integration
             var userContext = Substitute.For<IUserContextService>();
             userContext.GetUserId().Returns(user.Id.ToString());
 
-            var handler = new ChangePasswordCommandHandler(scope.UserRepository, userContext, scope.UnitOfWork);
+            var handler = new ChangePasswordCommandHandler(scope.UserRepository, userContext, TestSessions.Create(), scope.UnitOfWork);
             await handler.Handle(new ChangePasswordCommand
             {
                 OldPassword = "Correct@1234",
@@ -361,7 +364,7 @@ namespace WMS.Tests.Integration
             scope.Context.Users.Add(user);
             scope.Context.SaveChanges();
 
-            var handler = new ChangeUserTeamCommandHandler(scope.UserRepository, scope.OrgRoleService, scope.UnitOfWork);
+            var handler = new ChangeUserTeamCommandHandler(scope.UserRepository, scope.OrgRoleService, scope.PermissionService, FakeUserContext.WithUserId(OtherActorId), scope.UnitOfWork);
             await handler.Handle(new ChangeUserTeamCommand
             {
                 UserId = user.Id,
@@ -394,7 +397,7 @@ namespace WMS.Tests.Integration
             oldTeam.HeadId = user.Id;
             scope.Context.SaveChanges();
 
-            var handler = new ChangeUserTeamCommandHandler(scope.UserRepository, scope.OrgRoleService, scope.UnitOfWork);
+            var handler = new ChangeUserTeamCommandHandler(scope.UserRepository, scope.OrgRoleService, scope.PermissionService, FakeUserContext.WithUserId(OtherActorId), scope.UnitOfWork);
             await handler.Handle(new ChangeUserTeamCommand
             {
                 UserId = user.Id,
@@ -421,7 +424,7 @@ namespace WMS.Tests.Integration
             scope.Context.Users.Add(user);
             scope.Context.SaveChanges();
 
-            var handler = new ChangeUserTeamCommandHandler(scope.UserRepository, scope.OrgRoleService, scope.UnitOfWork);
+            var handler = new ChangeUserTeamCommandHandler(scope.UserRepository, scope.OrgRoleService, scope.PermissionService, FakeUserContext.WithUserId(OtherActorId), scope.UnitOfWork);
 
             await Assert.ThrowsAsync<NotFoundCustomException>(() => handler.Handle(new ChangeUserTeamCommand
             {

@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Caching.Memory;
+﻿using Microsoft.Extensions.Caching.Memory;
 
 namespace WMS.Idempotency
 {
@@ -37,7 +37,17 @@ namespace WMS.Idempotency
         public static readonly TimeSpan InFlightTimeout = TimeSpan.FromMinutes(5);
 
         /// <summary>Responses larger than this are not stored; the key is released instead.</summary>
-        public const int MaxStoredBodyBytes = 2 * 1024 * 1024;
+        public const int MaxStoredBodyBytes = 512 * 1024;
+
+        /// <summary>
+        /// Budget for everything the store holds, in bytes (the SizeLimit of its own cache). When it
+        /// is spent the cache evicts the oldest entries; a request whose key could not be kept simply
+        /// is not deduplicated, it still runs.
+        /// </summary>
+        public const long MaxTotalBytes = 64L * 1024 * 1024;
+
+        /// <summary>What an entry counts against <see cref="MaxTotalBytes"/> besides its body: key, fingerprint, bookkeeping.</summary>
+        private const long EntryOverheadBytes = 1024;
 
         private sealed class Entry
         {
@@ -65,7 +75,11 @@ namespace WMS.Idempotency
                     return entry.Response == null ? IdempotencyBeginResultEnum.IN_PROGRESS : IdempotencyBeginResultEnum.REPLAY;
                 }
 
-                _cache.Set(CacheKey(key), new Entry { Fingerprint = fingerprint }, InFlightTimeout);
+                _cache.Set(CacheKey(key), new Entry { Fingerprint = fingerprint }, new MemoryCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = InFlightTimeout,
+                    Size = EntryOverheadBytes,
+                });
                 stored = null;
                 return IdempotencyBeginResultEnum.STARTED;
             }
@@ -74,7 +88,11 @@ namespace WMS.Idempotency
         public void Complete(string key, string fingerprint, IdempotentResponse response)
         {
             lock (_gate)
-                _cache.Set(CacheKey(key), new Entry { Fingerprint = fingerprint, Response = response }, Retention);
+                _cache.Set(CacheKey(key), new Entry { Fingerprint = fingerprint, Response = response }, new MemoryCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = Retention,
+                    Size = EntryOverheadBytes + response.Body.Length,
+                });
         }
 
         public void Abandon(string key)

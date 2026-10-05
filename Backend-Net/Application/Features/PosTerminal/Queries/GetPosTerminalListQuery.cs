@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Common.Queries;
@@ -56,7 +56,8 @@ namespace Application.Features.PosTerminal.Queries
                 Name = x.Name,
                 Vendor = x.Vendor,
                 Host = x.Host,
-                Port = x.Port
+                Port = x.Port,
+                BankCode = x.BankCode
             }).ToPagedAsync(request.Page, request.Take, cancellationToken);
 
             res.Data = new

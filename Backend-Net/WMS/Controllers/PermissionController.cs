@@ -32,6 +32,7 @@ namespace WMS.Controllers
         /// The signed-in user's own permissions. No permission required - this is what the
         /// frontend builds its menu from.
         /// </summary>
+        [AllowWhilePasswordChangeRequired]
         [HttpGet("GetMyPermissions")]
         public async Task<ActionResult<ResponseDto>> GetMyPermissions([FromQuery] GetMyPermissionsQuery request)
         {

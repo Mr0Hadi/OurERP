@@ -58,6 +58,7 @@ namespace Infrastructure.Ioc
             services.AddScoped<IUnitOfWork, UnitOfWork.UnitOfWork>();
 
             services.AddScoped<ITokenService, TokenService>();
+            services.AddScoped<IUserSessionService, UserSessionService>();
 
             services.AddScoped<IOrgRoleService, OrgRoleService>();
             services.AddScoped<IPermissionService, PermissionService>();
@@ -152,6 +153,7 @@ namespace Infrastructure.Ioc
             services.AddScoped<IPosDeviceClientFactory, PosDeviceClientFactory>();
 
             services.AddScoped<IPosPaymentGateway, PosPaymentGateway>();
+            services.AddScoped<IPosPaymentGuard, PosPaymentGuard>();
 
             return services;
         }

@@ -20,6 +20,7 @@ namespace WMS.Controllers
             _mediator = mediator;
         }
 
+        [AllowWhilePasswordChangeRequired]
         [HttpGet("GetUserInfo")]
         public async Task<ActionResult<ResponseDto>> GetUserInfo([FromQuery] GetUserInfoQuery request)
         {
@@ -60,6 +61,7 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
+        [AllowWhilePasswordChangeRequired]
         [HttpPut("ChangePassword")]
         public async Task<ActionResult<ResponseDto>> ChangePassword([FromBody] ChangePasswordCommand request)
         {

@@ -1,4 +1,7 @@
+﻿using Application.Common.Contracts.Permissions;
 using Application.Common.Contracts.Repositories;
+using Application.Common.Contracts.Token;
+using Application.Common.Contracts.UserContextService;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -41,11 +44,18 @@ namespace Application.Features.User.Command
 	public class ResetUserPasswordCommandHandler : IRequestHandler<ResetUserPasswordCommand, ResponseDto>
 	{
 		private readonly IUserRepository _userRepository;
+		private readonly IPermissionService _permissionService;
+		private readonly IUserContextService _userContextService;
+		private readonly IUserSessionService _userSessionService;
 		private readonly IUnitOfWork _unitOfWork;
 
-		public ResetUserPasswordCommandHandler(IUserRepository userRepository, IUnitOfWork unitOfWork)
+		public ResetUserPasswordCommandHandler(IUserRepository userRepository, IPermissionService permissionService,
+			IUserContextService userContextService, IUserSessionService userSessionService, IUnitOfWork unitOfWork)
 		{
 			_userRepository = userRepository;
+			_permissionService = permissionService;
+			_userContextService = userContextService;
+			_userSessionService = userSessionService;
 			_unitOfWork = unitOfWork;
 		}
 
@@ -60,13 +70,28 @@ namespace Application.Features.User.Command
 				throw new NotFoundCustomException("کاربر با این شناسه پیدا نشد.");
 			}
 
+			// Without this, anyone with UserUpdate could reset an administrator's password and log
+			// in as them.
+			await _permissionService.EnsureCanManageUserAsync(_userContextService.GetUserId().ToInt(), user.Id, cancellationToken);
+
 			user.PasswordHash = request.Password.ToHashSHA256();
+
+			// The manager now knows this password, so the user must replace it on their next login.
+			user.MustChangePassword = true;
+
+			// Resetting is how a locked-out user gets back in, and whoever was using the old
+			// password is logged out.
+			user.FailedLoginCount = 0;
+			user.LockoutEnd = null;
+			_userSessionService.RevokeAll(user);
+
+			user.UpdatedAt = DateTime.Now;
 
 			_userRepository.Update(user);
 
-			await _unitOfWork.SaveChangesAsync();
+			await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-			res.Message = "رمز‌عبور کارمند با موفقیت بازنشانی شد";
+			res.Message = "رمز‌عبور کارمند با موفقیت بازنشانی شد؛ کارمند در اولین ورود باید رمز عبور جدیدی برای خود انتخاب کند.";
 			res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
 
 			return res;

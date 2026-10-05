@@ -1,4 +1,4 @@
-using Domain.Enums;
+﻿using Domain.Enums;
 
 namespace Application.Features.PosTerminal.Dtos
 {
@@ -9,5 +9,6 @@ namespace Application.Features.PosTerminal.Dtos
         public PosVendorEnum Vendor { get; set; }
         public string Host { get; set; }
         public int Port { get; set; }
+        public string? BankCode { get; set; }
     }
 }

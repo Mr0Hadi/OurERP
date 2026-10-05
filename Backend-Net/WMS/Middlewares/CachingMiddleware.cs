@@ -1,22 +1,29 @@
-﻿using Common.Exceptions;
-using Microsoft.Extensions.Caching.Memory;
+﻿using Application.Common.Contracts.Token;
+using Common.Exceptions;
+using Microsoft.AspNetCore.Authorization;
 
 namespace WMS.Middlewares
 {
+	/// <summary>
+	/// Accepts a signed-in request only when its token is the user's current session (see
+	/// <see cref="IUserSessionService"/>): a token replaced by a newer login, or revoked by logout,
+	/// a password change/reset or deactivation, is answered 401 even though it is still valid.
+	/// </summary>
 	public class CachingMiddleware
 	{
 		private readonly RequestDelegate _next;
-		private readonly IMemoryCache _memoryCache;
 
-		public CachingMiddleware(RequestDelegate next, IMemoryCache memoryCache)
+		public CachingMiddleware(RequestDelegate next)
 		{
 			_next = next;
-			_memoryCache = memoryCache;
 		}
 
-		public async Task InvokeAsync(HttpContext context)
+		public async Task InvokeAsync(HttpContext context, IUserSessionService userSessionService)
 		{
-			if (!context.User.Identity.IsAuthenticated)
+			// Anonymous actions (Login, RefreshToken) need no session - a client that still sends its
+			// old token to RefreshToken after a restart must reach it, not be turned away here.
+			if (context.User.Identity?.IsAuthenticated != true
+				|| context.GetEndpoint()?.Metadata.GetMetadata<IAllowAnonymous>() != null)
 			{
 				await _next(context);
 				return;
@@ -25,18 +32,13 @@ namespace WMS.Middlewares
 			var token = context.Request.Headers.Authorization.ToString().Replace("Bearer ", "");
 			var userId = Convert.ToInt32(context.User.FindFirst("Id")?.Value);
 
-			var cacheKey = $"UserTokens:{userId}";
-			var userTokens = _memoryCache.GetOrCreate(cacheKey, entry => new HashSet<string>());
-
-			if (userTokens.Contains(token))
+			if (userSessionService.IsCurrent(userId, token))
 			{
 				await _next(context);
 				return;
 			}
-			else
-			{
-				throw new UnauthorizedCustomException(message: "توکن معتبر نمیباشد");
-			}
+
+			throw new UnauthorizedCustomException(message: "توکن معتبر نمیباشد");
 		}
 	}
 }

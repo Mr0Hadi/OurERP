@@ -6,7 +6,9 @@ using Common.Exceptions;
 using Common.Extensions;
 using FluentValidation;
 using MediatR;
-using Microsoft.Extensions.Caching.Memory;
+using Application.Common.Contracts.Permissions;
+using Application.Common.Contracts.Token;
+using Application.Common.Contracts.UserContextService;
 
 namespace Application.Features.Account.Command
 {
@@ -27,12 +29,17 @@ namespace Application.Features.Account.Command
 
 	public class LogoutUserByIdCommandHandler : IRequestHandler<LogoutUserByIdCommand, ResponseDto>
 	{
-		private readonly IMemoryCache _memoryCache;
+		private readonly IUserSessionService _userSessionService;
+		private readonly IPermissionService _permissionService;
+		private readonly IUserContextService _userContextService;
 		private readonly IUserRepository _userRepository;
 		private readonly IUnitOfWork _unitOfWork;
-		public LogoutUserByIdCommandHandler(IMemoryCache memoryCache, IUserRepository userRepository, IUnitOfWork unitOfWork)
+		public LogoutUserByIdCommandHandler(IUserSessionService userSessionService, IPermissionService permissionService,
+			IUserContextService userContextService, IUserRepository userRepository, IUnitOfWork unitOfWork)
 		{
-			_memoryCache = memoryCache;
+			_userSessionService = userSessionService;
+			_permissionService = permissionService;
+			_userContextService = userContextService;
 			_userRepository = userRepository;
 			_unitOfWork = unitOfWork;
 		}
@@ -43,11 +50,9 @@ namespace Application.Features.Account.Command
 			var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken);
 			if (user == null) throw new NotFoundCustomException("کاربر با این شناسه یافت نشد.");
 
-			var cacheKey = $"UserTokens:{request.UserId}";
-			_memoryCache.Remove(cacheKey);
+			await _permissionService.EnsureCanManageUserAsync(_userContextService.GetUserId().ToInt(), user.Id, cancellationToken);
 
-			user.RefreshToken = null;
-			user.ExpireRefreshToken = null;
+			_userSessionService.RevokeAll(user);
 
 			_userRepository.Update(user);
 			await _unitOfWork.SaveChangesAsync(cancellationToken);

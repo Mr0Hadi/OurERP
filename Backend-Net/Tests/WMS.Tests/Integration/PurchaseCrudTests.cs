@@ -1,4 +1,4 @@
-using Application.Common.Dtos;
+﻿using Application.Common.Dtos;
 using Application.Features.Purchase.Commands;
 using Application.Features.Purchase.Dtos;
 using Application.Features.Purchase.Queries;
@@ -12,7 +12,7 @@ namespace WMS.Tests.Integration
     public class PurchaseCrudTests
     {
         private static CreatePurchaseCommandHandler CreateHandler(TestScope scope, int userId) =>
-            new(scope.PurchaseRepository, scope.Db, FakeObjectStorage.Instance, TestMapper.Instance, scope.UnitOfWork, FakeUserContext.WithUserId(userId));
+            new(scope.PurchaseRepository, scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, TestMapper.Instance, scope.UnitOfWork, FakeUserContext.WithUserId(userId));
 
         private static UpdatePurchaseCommandHandler UpdateHandler(TestScope scope) =>
             new(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork);
@@ -291,7 +291,7 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
             var scenario = ProformaPurchase(scope, orderedQuantity: 1);
-            await new AddPurchasePaymentCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork)
+            await new AddPurchasePaymentCommandHandler(scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, scope.UnitOfWork)
                 .Handle(new AddPurchasePaymentCommand { PurchaseId = scenario.Purchase.Id, Type = PaymentTypeEnum.TRANSFER, Amount = 500 }, CancellationToken.None);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => new DeletePurchaseCommandHandler(scope.Db, scope.UnitOfWork)
@@ -640,7 +640,7 @@ namespace WMS.Tests.Integration
 
         // ---- payments ----
 
-        private static AddPurchasePaymentCommandHandler AddPayment(TestScope scope) => new(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork);
+        private static AddPurchasePaymentCommandHandler AddPayment(TestScope scope) => new(scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, scope.UnitOfWork);
 
         [Fact]
         public async Task AddPurchasePayment_PrepaymentOnAProforma_DoesNotIssueTheInvoice()
@@ -671,7 +671,7 @@ namespace WMS.Tests.Integration
             var first = afterFirst.PaymentDetails.Single();
 
             // Edit: the 3000 row is voided and a 2000 row takes its place.
-            var afterEdit = Assert.IsType<PurchaseDto>((await new EditPurchasePaymentCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork)
+            var afterEdit = Assert.IsType<PurchaseDto>((await new EditPurchasePaymentCommandHandler(scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, scope.UnitOfWork)
                 .Handle(new EditPurchasePaymentCommand { PaymentId = first.Id, Type = PaymentTypeEnum.CHECK, Amount = 2000, CheckNumber = "C-9" }, CancellationToken.None)).Data);
             Assert.Equal(2000UL, afterEdit.PaidAmount);
             Assert.Equal(2, afterEdit.PaymentDetails.Count);

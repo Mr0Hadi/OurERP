@@ -1,4 +1,4 @@
-using Application.Common.Dtos.Returns;
+﻿using Application.Common.Dtos.Returns;
 using Application.Features.Customer.Dtos;
 using Application.Features.Customer.Queries;
 using Application.Features.PartyAccount.Dtos;
@@ -41,7 +41,7 @@ namespace WMS.Tests.Integration
             return scenario;
         }
 
-        private static AddSalePaymentCommandHandler AddSalePayment(TestScope scope) => new(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation);
+        private static AddSalePaymentCommandHandler AddSalePayment(TestScope scope) => new(scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation);
 
         [Fact]
         public async Task ProformaSale_IsNotOnTheAccount_UntilItsFirstPaymentIssuesIt()
@@ -130,7 +130,7 @@ namespace WMS.Tests.Integration
             p.Purchase.Status = PurchaseStatusEnum.PROFORMA;
             p.Purchase.TotalAmount = 9_000;
             scope.Context.SaveChanges();
-            var pay = new AddPurchasePaymentCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var pay = new AddPurchasePaymentCommandHandler(scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, scope.UnitOfWork);
 
             // A prepayment on a proforma: the supplier owes us until its invoice arrives.
             await pay.Handle(new AddPurchasePaymentCommand { PurchaseId = p.Purchase.Id, Type = PaymentTypeEnum.TRANSFER, Amount = 3_000 }, CancellationToken.None);
@@ -258,7 +258,7 @@ namespace WMS.Tests.Integration
             p.Purchase.Status = PurchaseStatusEnum.PROFORMA;
             scope.Context.SaveChanges();
             var status = new ChangePurchaseStatusCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork);
-            var pay = new AddPurchasePaymentCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var pay = new AddPurchasePaymentCommandHandler(scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, scope.UnitOfWork);
 
             await status.Handle(new ChangePurchaseStatusCommand { Id = p.Purchase.Id, Status = PurchaseStatusEnum.SHIPPED }, CancellationToken.None);
             await pay.Handle(new AddPurchasePaymentCommand { PurchaseId = p.Purchase.Id, Type = PaymentTypeEnum.TRANSFER, Amount = 10_000 }, CancellationToken.None);

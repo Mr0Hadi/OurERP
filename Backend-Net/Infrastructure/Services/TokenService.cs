@@ -32,6 +32,9 @@ namespace Infrastructure.Services
                 new Claim("Username", userInfo.Username),
             };
 
+            if (userInfo.MustChangePassword)
+                claimsList.Add(new Claim(TokenClaims.MustChangePassword, "true"));
+
             var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JwtSettings:SigningKey"]));
             var signingCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
 

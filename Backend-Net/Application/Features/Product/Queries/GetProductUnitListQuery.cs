@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.ProductCode;
 using Application.Common.Contracts.ProductUnit;
 using Application.Common.Dtos;
@@ -110,12 +110,24 @@ namespace Application.Features.Product.Queries
             {
                 var search = request.Search.Trim();
                 var payload = _productCodeService.ToPayload(search);
-                int? serial = int.TryParse(search, out var n) ? n : null;
-                query = query.Where(x => x.Barcode.Contains(search)
-                    || (payload != string.Empty && x.BarcodePayload == payload)
-                    || (serial != null && x.SerialNumber == serial)
-                    || x.Product.Name.Contains(search)
-                    || x.Product.Code.Contains(search));
+
+                // A whole barcode (typed or scanned) means that unit and nothing else. Since barcodes have dashes and no zero
+                // padding, "...-1" is also a substring of "...-10" and "...-11", so a Contains search alone would list them too.
+                var exact = query.Where(x => x.Barcode == search || (payload != string.Empty && x.BarcodePayload == payload));
+
+                if (await exact.AnyAsync(cancellationToken))
+                {
+                    query = exact;
+                }
+                else
+                {
+                    // Anything else is a partial search: part of a barcode, a serial, or the product's name/code.
+                    int? serial = int.TryParse(search, out var n) ? n : null;
+                    query = query.Where(x => x.Barcode.Contains(search)
+                        || (serial != null && x.SerialNumber == serial)
+                        || x.Product.Name.Contains(search)
+                        || x.Product.Code.Contains(search));
+                }
             }
 
             if (request.CustodyReason.HasValue)

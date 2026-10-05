@@ -1,8 +1,8 @@
-using Domain.Enums;
+﻿using Domain.Enums;
 
 namespace Application.Common.Dtos
 {
-    public class PaymentDetailDto
+    public class PaymentDetailDto : Application.Common.Payments.IPosPaymentFields
     {
         /// <summary>
         /// از <c>Guid</c> به <c>int</c> تغییر کرده (۱۴۰۵/۰۶/۲۹) - همه‌ی شناسه‌های این پروژه int هستند.
@@ -33,5 +33,19 @@ namespace Application.Common.Dtos
 
         public string? CheckNumber { get; set; }
         public string? TransferRef { get; set; }
+
+        /// <summary>Card-reader details, TRANSFER rows only (see IPosPaymentFields).</summary>
+        public int? PosTerminalId { get; set; }
+        public string? MaskedCardNumber { get; set; }
+        public string? ApprovalCode { get; set; }
+        public string? TraceNumber { get; set; }
+
+        /// <summary>Read only. Card-reader rows: DEVICE or MANUAL_RECEIPT; null otherwise.</summary>
+        public PaymentSourceEnum? Source { get; set; }
+
+        /// <summary>Read only: when and by whom the row was recorded (null on rows older than 2026-10-05).</summary>
+        public DateTime? RecordedAt { get; set; }
+        public int? RecordedByUserId { get; set; }
+        public string? RecordedByName { get; set; }
     }
 }

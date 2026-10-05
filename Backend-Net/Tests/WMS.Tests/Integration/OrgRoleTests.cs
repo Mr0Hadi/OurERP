@@ -16,7 +16,7 @@ namespace WMS.Tests.Integration
     public class OrgRoleTests
     {
         private static UpdateUserCommandHandler UpdateUser(TestScope scope)
-            => new(scope.UserRepository, scope.OrgRoleService, scope.UnitOfWork);
+            => new(scope.UserRepository, scope.OrgRoleService, scope.PermissionService, FakeUserContext.WithUserId(999999), TestSessions.Create(), scope.UnitOfWork);
 
         private static UpdateUserCommand UpdateUserRequest(Domain.Entities.User user, int departmentId, int? teamId, OrgRoleEnum? role = null)
             => new()

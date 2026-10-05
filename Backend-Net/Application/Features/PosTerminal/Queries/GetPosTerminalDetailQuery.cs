@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.PosTerminal.Dtos;
@@ -35,7 +35,8 @@ namespace Application.Features.PosTerminal.Queries
                     Port = x.Port,
                     ComPort = x.ComPort,
                     TerminalId = x.TerminalId,
-                    MerchantId = x.MerchantId
+                    MerchantId = x.MerchantId,
+                    BankCode = x.BankCode
                 })
                 .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("دستگاه کارتخوان مورد نظر یافت نشد.");
 

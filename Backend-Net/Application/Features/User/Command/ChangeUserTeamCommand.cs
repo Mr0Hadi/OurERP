@@ -1,4 +1,6 @@
-using Application.Common.Contracts.OrgStructure;
+﻿using Application.Common.Contracts.OrgStructure;
+using Application.Common.Contracts.Permissions;
+using Application.Common.Contracts.UserContextService;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
@@ -48,12 +50,17 @@ namespace Application.Features.User.Command
     {
         private readonly IUserRepository _userRepository;
         private readonly IOrgRoleService _orgRoleService;
+        private readonly IPermissionService _permissionService;
+        private readonly IUserContextService _userContextService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public ChangeUserTeamCommandHandler(IUserRepository userRepository, IOrgRoleService orgRoleService, IUnitOfWork unitOfWork)
+        public ChangeUserTeamCommandHandler(IUserRepository userRepository, IOrgRoleService orgRoleService,
+            IPermissionService permissionService, IUserContextService userContextService, IUnitOfWork unitOfWork)
         {
             _userRepository = userRepository;
             _orgRoleService = orgRoleService;
+            _permissionService = permissionService;
+            _userContextService = userContextService;
             _unitOfWork = unitOfWork;
         }
 
@@ -62,6 +69,8 @@ namespace Application.Features.User.Command
             var res = new ResponseDto();
 
             var user = await _userRepository.GetByIdAsync(request.UserId, cancellationToken) ?? throw new NotFoundCustomException("کاربر مورد نظر یافت نشد");
+
+            await _permissionService.EnsureCanManageUserAsync(_userContextService.GetUserId().ToInt(), user.Id, cancellationToken);
 
             var role = request.TeamId.HasValue
                 ? (request.IsHead ? OrgRoleEnum.TEAM_HEAD : request.IsDeputy ? OrgRoleEnum.TEAM_DEPUTY : OrgRoleEnum.MEMBER)

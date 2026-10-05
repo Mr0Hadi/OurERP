@@ -1,4 +1,4 @@
-using Domain.Enums;
+﻿using Domain.Enums;
 
 namespace Application.Common.Contracts.Permissions
 {
@@ -24,5 +24,18 @@ namespace Application.Common.Contracts.Permissions
         /// anything that changes what a user holds - granting, revoking, deactivating.
         /// </summary>
         void Invalidate(int userId);
+
+        /// <summary>
+        /// Throws <c>ForbiddenCustomException</c> unless the actor holds every permission the target
+        /// holds. Guards everything one user does to another's account (reset password, edit,
+        /// deactivate, move, force logout), so nobody can take over - or lock out - an account that
+        /// can do more than they can. Acting on yourself always passes.
+        /// Not applied to UpdateUserPermissions on purpose: a PermissionManage holder may grant any
+        /// ordinary permission, themselves included, so the rule would hold nothing there - and it
+        /// would stop a permission manager from editing anyone holding a permission they never needed.
+        /// The target's rows count even while they are deactivated: otherwise deactivating an
+        /// administrator would let anyone edit them back into use.
+        /// </summary>
+        Task EnsureCanManageUserAsync(int actorUserId, int targetUserId, CancellationToken cancellationToken = default);
     }
 }
