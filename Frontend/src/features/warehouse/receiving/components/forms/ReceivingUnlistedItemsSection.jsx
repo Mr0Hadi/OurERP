@@ -35,7 +35,8 @@ export default function ReceivingUnlistedItemsSection({
 }) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const { products: productOptions, isLoading } = useProductsOptionsQuery();
+  // فهرستِ کالاها فقط وقتی انتخاب‌گر باز است؛ بیشترِ محموله‌ها کالای سفارش‌نداده ندارند.
+  const { products: productOptions, isLoading } = useProductsOptionsQuery({ enabled: isPickerOpen });
 
   const add = (product) => {
     const { rejected } = onAdd(product);

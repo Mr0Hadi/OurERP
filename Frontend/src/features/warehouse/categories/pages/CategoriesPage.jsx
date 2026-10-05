@@ -25,8 +25,10 @@ export default function CategoriesPage() {
   const categoriesQuery = useProductCategoriesQuery(debouncedSearch);
   const deleteMutation = useDeleteProductCategoryMutation();
 
+  // `?.`: React Compiler این فیلد را هنگامِ رندر هم می‌خواند، وقتی دیالوگ بسته و
+  // `deleteTarget` خالی است.
   const handleDelete = () => {
-    deleteMutation.mutate(deleteTarget.id, {
+    deleteMutation.mutate(deleteTarget?.id, {
       onSuccess: () => setDeleteTarget(null),
     });
   };

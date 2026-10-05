@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
 
@@ -12,8 +12,6 @@ import { parseBarcode } from "@/shared/domain/barcode/productCode";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
-import { useSuppliersOptionsQuery } from "@/features/suppliers/services/queries";
-import { useCustomersOptionsQuery } from "@/features/customers/services/queries";
 
 import {
   LABEL_FILTERS,
@@ -30,11 +28,15 @@ import UnitFilterBar from "../components/UnitFilterBar";
 import UnitViewNav from "../components/UnitViewNav";
 import UnitBulkBar from "../components/UnitBulkBar";
 import UnitsList from "../components/UnitsList";
-import UnitDetailSheet from "../components/UnitDetailSheet";
 import UnitActionDialog from "../components/UnitActionDialog";
-import LabelPrintDesigner from "../components/LabelPrintDesigner";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
 
+/**
+ * برگه‌ی جزئیات (بارکد/QR و تاریخچه) و طراحِ چاپ (`react-barcode`، QR، CSSِ چاپ)
+ * فقط با بازشدن بار می‌شوند؛ بیشترِ بازدیدها فقط فهرست را می‌بینند.
+ */
+const UnitDetailSheet = lazy(() => import("../components/UnitDetailSheet"));
+const LabelPrintDesigner = lazy(() => import("../components/LabelPrintDesigner"));
 
 /** سقفِ «انتخاب همه‌ی نتایج» — بیشتر از این یعنی فیلترِ دقیق‌تر. */
 const BULK_LIMIT = 2000;
@@ -131,8 +133,6 @@ export default function UnitsPage() {
   const summary = summaryQuery.isError ? null : summaryQuery.data;
 
   const productOptions = useProductsOptionsQuery();
-  const supplierOptions = useSuppliersOptionsQuery();
-  const customerOptions = useCustomersOptionsQuery();
 
   const units = unitsQuery.data?.items ?? [];
   const totalResults = unitsQuery.data?.total ?? 0;
@@ -331,9 +331,6 @@ export default function UnitsPage() {
                 />
               }
               products={products}
-              suppliers={supplierOptions.suppliers}
-              customers={customerOptions.customers}
-              isLoadingParties={supplierOptions.isLoading || customerOptions.isLoading}
             />
 
             {/* سربرگِ نمای جاری: جایگاه، برچسب و شمارِ نتیجه. */}
@@ -412,14 +409,19 @@ export default function UnitsPage() {
         />
       </main>
 
-      <UnitDetailSheet
-        unit={activeUnit}
-        open={Boolean(activeUnit)}
-        onOpenChange={(open) => !open && setActiveUnit(null)}
-        onPrint={(unit) => openPrint([unit])}
-        onAction={requestAction}
-        canManage={canManage}
-      />
+      <Suspense fallback={null}>
+        {activeUnit && (
+          <UnitDetailSheet
+            unit={activeUnit}
+            open
+            onOpenChange={(open) => !open && setActiveUnit(null)}
+            onPrint={(unit) => openPrint([unit])}
+            onAction={requestAction}
+            canManage={canManage}
+          />
+        )}
+        {printUnits?.length > 0 && <LabelPrintDesigner units={printUnits} onClose={closePrint} />}
+      </Suspense>
 
       <UnitActionDialog
         request={actionRequest}
@@ -427,7 +429,6 @@ export default function UnitsPage() {
         onDone={handleActionDone}
       />
 
-      <LabelPrintDesigner units={printUnits} onClose={closePrint} />
     </div>
   );
 }

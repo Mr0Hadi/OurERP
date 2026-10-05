@@ -48,8 +48,11 @@ const NO_CUSTOMERS = [];
  * TODO(بکند): با رشدِ داده، ۲۰۰ ردیفِ اول کافی نیست؛ جست‌وجوی سمتِ سرور لازم است
  * (سندِ frontend-requests.fa.md).
  */
-export function useCustomersOptionsQuery() {
-  const { data, isLoading } = useCustomersQuery(NO_FILTERS, OPTIONS_PAGINATION, OPTIONS_SORTING);
+/** `enabled: false` تا وقتی انتخاب‌گر واقعاً دیده نمی‌شود. */
+export function useCustomersOptionsQuery({ enabled = true } = {}) {
+  const { data, isLoading } = useCustomersQuery(NO_FILTERS, OPTIONS_PAGINATION, OPTIONS_SORTING, {
+    enabled,
+  });
   return { customers: data?.items ?? NO_CUSTOMERS, isLoading };
 }
 
