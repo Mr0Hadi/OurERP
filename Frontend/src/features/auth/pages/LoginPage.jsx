@@ -49,7 +49,11 @@ const FEATURES = [
   },
 ];
 
-export default function LoginPage() {
+/**
+ * `checking`: توکنِ ذخیره‌شده در حالِ تأیید نزد سرور است (`AppLayout`)؛ فرم
+ * قفل و رویش اسپینر است تا تأیید شود (وارد می‌شود) یا رد شود (فرم باز می‌شود).
+ */
+export default function LoginPage({ checking = false }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [showPassword, setShowPassword] = useState(false);
@@ -218,7 +222,16 @@ export default function LoginPage() {
           </div>
 
           {/* کارت فرم شیشه‌ای */}
-          <div className="rounded-3xl border border-border/60 bg-card/80 p-8 shadow-xl shadow-black/[0.03] backdrop-blur-sm">
+          <div
+            className="relative rounded-3xl border border-border/60 bg-card/80 p-8 shadow-xl shadow-black/[0.03] backdrop-blur-sm"
+            aria-busy={checking}
+          >
+            {checking && (
+              <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-3xl bg-card/80 backdrop-blur-sm animate-in fade-in duration-150">
+                <Loader2 className="size-9 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">در حال بررسی نشست…</p>
+              </div>
+            )}
             <div className="mb-7 space-y-1.5 text-center">
               <h2 className="text-2xl font-bold text-foreground">
                 ورود به سامانه
@@ -232,6 +245,7 @@ export default function LoginPage() {
               onSubmit={handleSubmit(onSubmit)}
               className="space-y-5"
               noValidate
+              inert={checking || undefined}
             >
               {/* نام کاربری */}
               <div className="space-y-2">

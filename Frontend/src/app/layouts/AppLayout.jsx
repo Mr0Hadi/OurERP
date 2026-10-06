@@ -1,30 +1,28 @@
-import { Suspense } from "react";
-import { Spinner } from "@/shared/components/ui/spinner";
-import { TooltipProvider } from "@/shared/components/ui/tooltip";
+import { Suspense, lazy } from "react";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { ArrowRight, WifiOff } from "lucide-react";
 
-import { AppSidebar } from "@/shared/components/layout/AppSidebar";
-import {} from "@/shared/components/ui/breadcrumb";
+import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/shared/components/ui/sidebar";
-import { ThemeToggle } from "@/shared/components/theme/ThemeToggle";
-
+import { Button } from "@/shared/components/ui/button";
+import { Spinner } from "@/shared/components/ui/spinner";
+import { AppSidebar } from "@/shared/components/layout/AppSidebar";
 import { AppBreadcrumb } from "@/shared/components/layout/AppBreadcrumb";
-import { Navigate, Outlet, useLocation } from "react-router-dom";
-
+import RouteLoadingOverlay from "@/shared/components/layout/RouteLoadingOverlay";
+import { ThemeToggle } from "@/shared/components/theme/ThemeToggle";
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { useGoBack } from "@/shared/hooks/useGoBack";
-import { Button } from "@/shared/components/ui/button";
-import { ArrowRight, WifiOff } from "lucide-react";
-import { useAuthStore } from "@/features/auth/store/authStore";
 import { ROUTES } from "@/shared/constants/routes";
+import { useAuthStore } from "@/features/auth/store/authStore";
 import { useUserInfoQuery } from "@/features/auth/services/queries";
-import RouteLoadingOverlay from "@/shared/components/layout/RouteLoadingOverlay";
 import PermissionGate from "../routes/PermissionGate";
 
-
+// فرمِ ورود هنگامِ تأییدِ توکن (`checking`) از همین chunkِ صفحه‌ی ورود می‌آید.
+const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"));
 
 function ContentSpinner() {
   return (
@@ -96,14 +94,16 @@ export default function AppLayout() {
     );
   }
 
-  // توکنِ ذخیره‌شده هنوز نزد سرور تأیید نشده: قاب (سایدبار و هدر) همین حالا
-  // نشان داده می‌شود و فقط محتوا منتظر می‌ماند — رد شدنِ نشست بالاتر به ورود
-  // می‌رود پیش از آنکه محتوای محافظت‌شده یا داده‌ای رندر شود.
-  const content = sessionConfirmed ? (
-    <PermissionGate>
-      <Outlet />
-    </PermissionGate>
-  ) : null;
+  // توکنِ ذخیره‌شده هنوز نزد سرور تأیید نشده: همان فرم ورود با حالتِ اسپینر
+  // نشان داده می‌شود. اگر تأیید شد وارد می‌شود، وگرنه (بالا) به ورود می‌رود و
+  // اسپینر برداشته می‌شود تا کاربر خودش وارد شود.
+  if (!sessionConfirmed) {
+    return (
+      <Suspense fallback={null}>
+        <LoginPage checking />
+      </Suspense>
+    );
+  }
 
   return (
     <TooltipProvider>
@@ -135,7 +135,9 @@ export default function AppLayout() {
           <div className="relative flex min-h-[calc(100svh-4rem)] p-4">
             <RouteLoadingOverlay contained />
             <Suspense fallback={<ContentSpinner />}>
-              {content ?? <ContentSpinner />}
+              <PermissionGate>
+                <Outlet />
+              </PermissionGate>
             </Suspense>
           </div>
         </SidebarInset>
