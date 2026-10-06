@@ -30,6 +30,7 @@
 16. [نکات و محدودیت‌های شناخته‌شده](#16-نکات-و-محدودیت‌های-شناخته‌شده)
 17. [بارگذاری تصاویر (File)](#17-بارگذاری-تصاویر-file)
 18. [گزارش‌ها و سود خالص (Report)](#18-گزارش‌ها-و-سود-خالص-report)
+19. [ورود و خروجِ اطلاعات با CSV/Excel (DataTransfer)](#19-ورود-و-خروجِ-اطلاعات-با-csvexcel-datatransfer)
 
 ---
 
@@ -2992,6 +2993,12 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 51 | SupplierCreate | ایجاد تأمین‌کننده |
 | 52 | SupplierUpdate | ویرایش تأمین‌کننده |
 | 53 | SupplierDelete | حذف تأمین‌کننده |
+| 54 | ProductExport | خروجی گرفتن از کالاها |
+| 55 | ProductImport | ورود گروهی کالا از فایل |
+| 56 | CustomerExport | خروجی گرفتن از مشتریان |
+| 57 | CustomerImport | ورود گروهی مشتری از فایل |
+| 58 | SupplierExport | خروجی گرفتن از تأمین‌کنندگان |
+| 59 | SupplierImport | ورود گروهی تأمین‌کننده از فایل |
 | 70 | PurchaseView | مشاهده خریدها |
 | 71 | PurchaseCreate | ثبت خرید |
 | 72 | PurchaseUpdate | ویرایش خرید |
@@ -3961,3 +3968,38 @@ migration: `quarantine-unit-cost` (ستون `ProductUnits.QuarantineCost`، `dec
 ### فیلترِ تیم/واحد روی `GetSalesPerformanceByEmployee` و `GetSupplyPerformanceByEmployee` (از ۲۰۲۶-۰۹-۲۷)
 
 `teamId` و `departmentId` (اختیاری): رتبه‌بندی فقط بینِ کارمندانی که **امروز** در آن تیم/واحدند. دسترسی مثلِ قبل `ReportView`.
+
+---
+
+## 19. ورود و خروجِ اطلاعات با CSV/Excel (DataTransfer)
+
+> از ۲۰۲۶-۱۰-۰۶، شاخه‌ی `feat/import-export`. راهنمای توسعه (افزودنِ جدولِ تازه، معماری): `import-export-guide.md`.
+
+یک کنترلر برای همه‌ی جدول‌ها؛ جدول با `resource` مشخص می‌شود. امروز: `products`، `customers`، `suppliers`
+(هر سه هم ورود هم خروج). قالبِ فایل (`DataTransferFormatEnum`): `1` = CSV، `2` = Excel (.xlsx).
+
+**دسترسی:** هر جدول دو دسترسیِ جدا دارد (`ProductExport`/`ProductImport`، `CustomerExport`/`CustomerImport`،
+`SupplierExport`/`SupplierImport` — بخش ۱۵). کنترلر `[HasPermission]` ندارد چون دسترسی به `resource` بستگی دارد؛
+هندلر بررسی می‌کند و بدونِ دسترسی **۴۰۳** می‌دهد، پیش از خواندنِ فایل. جدولِ ناشناخته یا جهتِ غیرفعال: ۴۰۴.
+
+| Endpoint | توضیح |
+|---|---|
+| `GET api/DataTransfer/GetResources` | فهرستِ جدول‌ها: `resource`، `title`، `exportEnabled`، `importEnabled`، **`canExport`، `canImport`** (برای کاربرِ فعلی)، `importColumns[]` (`key`، `header`، `type`، `required`، `hint`، `allowedValues`) |
+| `GET api/DataTransfer/Export?resource=&format=&...` | فایل (نه `ResponseDto`). بقیه‌ی پارامترها **همان فیلترهای لیستِ جدول با همان نام‌ها**اند (`GetProductList`، `GetCustomerList`، `GetSupplierList`)؛ صفحه‌بندی نادیده گرفته می‌شود و ترتیب بر اساسِ شناسه است. بیش از `DataTransfer:MaxExportRows` (پیش‌فرض ۵۰٬۰۰۰) ردیف: ۴۰۰. نامِ فایل در `Content-Disposition` |
+| `GET api/DataTransfer/GetImportTemplate?resource=&format=` | فایلِ خالی با سرستون‌ها. دسترسیِ ورود لازم است |
+| `POST api/DataTransfer/PreviewImport` | `multipart/form-data`: `file`، `resource`، `format` (اختیاری؛ از پسوند). فقط بررسی، چیزی ثبت نمی‌شود. پاسخ: `ImportResultDto` |
+| `POST api/DataTransfer/CommitImport` | همان فیلدها + `skipInvalidRows`. **همان فایل دوباره** فرستاده می‌شود و از نو بررسی می‌شود؛ ردیف‌های معتبر در **یک تراکنش** ثبت می‌شوند. اگر ردیفِ نامعتبر باشد و `skipInvalidRows` نباشد: ۴۰۰ و هیچ چیز ثبت نمی‌شود. `Idempotency-Key` پشتیبانی می‌شود |
+
+**`ImportResultDto`:** `totalRows`، `validRows`، `invalidRows`، `duplicateRows`، `importedRows`، `skippedRows`،
+`errorCount`، `warningCount`، `committed`، `columns[]` (`key`، `header`، `required`، `present`)، `issues[]`
+(`rowNumber`، `column`، `value`، `message`، `errorCode`، `severity`: ۱ خطا / ۲ هشدار)، `issuesTruncated`،
+`previewRows[]` (`rowNumber`، `status`: ۱ معتبر / ۲ نامعتبر / ۳ تکراری، `values`).
+
+`errorCode`: `EMPTY_FILE`، `MISSING_COLUMN`، `DUPLICATE_COLUMN`، `UNKNOWN_COLUMN` (هشدار)، `REQUIRED`، `INVALID_VALUE`،
+`REFERENCE_NOT_FOUND`، `REFERENCE_WILL_BE_CREATED` (هشدار)، `VALIDATION` (پیامِ همان validatorِ فرمِ ایجاد)،
+`DUPLICATE_IN_FILE`، `DUPLICATE_EXISTS`، `INVALID_ROW`.
+
+**قواعد:** هر ردیف به `Create*Command` همان جدول تبدیل و با validatorِ همان فرم بررسی می‌شود. دسته‌بندیِ کالا با **نام**
+پیدا می‌شود و هرگز ساخته نمی‌شود. تکراری: کالا = نام + برند؛ مشتری = شماره تماس یا کد ملی؛ تامین‌کننده = نام شرکت، کد
+اقتصادی یا شناسه ملی — ردیفِ تکراری وارد نمی‌شود (رکوردِ موجود دست نمی‌خورد). موجودیِ کالا از فایل وارد نمی‌شود (موجودی
+از دریافت می‌آید). سقف‌ها: ۵ مگابایت، ۵۰۰۰ ردیف. فایلِ CSV باید UTF-8 باشد؛ Excelِ فرمول‌دار یا ماکرودار رد می‌شود.
