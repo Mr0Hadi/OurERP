@@ -92,7 +92,6 @@ export default function AppLayout() {
 
   return (
     <TooltipProvider>
-      <RouteLoadingOverlay />
       <SidebarProvider>
         <AppSidebar side="right" />
         <SidebarInset>
@@ -118,7 +117,8 @@ export default function AppLayout() {
             </div>
             <AppBreadcrumb />
           </header>
-          <div className="flex p-4">
+          <div className="relative flex min-h-[calc(100svh-4rem)] p-4">
+            <RouteLoadingOverlay contained />
             <PermissionGate>
               <Outlet />
             </PermissionGate>

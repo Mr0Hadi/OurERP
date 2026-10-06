@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { useIsFetching } from "@tanstack/react-query";
 
 import { Spinner } from "@/shared/components/ui/spinner";
+import { cn } from "@/shared/lib/utils";
 import { onNavigationStart } from "@/shared/lib/routeTransitionBus";
 
 /**
@@ -28,7 +29,11 @@ const SETTLE_DELAY_MS = 150;
 
 const isInitialLoad = (query) => query.state.data === undefined;
 
-export default function RouteLoadingOverlay() {
+/**
+ * `contained`: اسپینر فقط روی نزدیک‌ترین والدِ `relative` می‌افتد (ناحیه‌ی اصلیِ
+ * سایت، نه سایدبار)؛ وگرنه کلِ پنجره را می‌پوشاند (صفحه‌های ورود).
+ */
+export default function RouteLoadingOverlay({ contained = false }) {
   const location = useLocation();
   // مسیری که ناوبری از آن شروع شد؛ `null` یعنی اسپینر خاموش است.
   const [startPathname, setStartPathname] = useState(null);
@@ -60,8 +65,19 @@ export default function RouteLoadingOverlay() {
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md animate-in fade-in duration-150">
-      <Spinner className="size-10 text-primary drop-shadow-md" />
+    <div
+      className={cn(
+        "z-50 backdrop-blur-md animate-in fade-in duration-150",
+        contained ? "absolute inset-0" : "fixed inset-0 flex items-center justify-center",
+      )}
+    >
+      {contained ? (
+        <div className="sticky top-[45svh] flex justify-center">
+          <Spinner className="size-10 text-primary drop-shadow-md" />
+        </div>
+      ) : (
+        <Spinner className="size-10 text-primary drop-shadow-md" />
+      )}
     </div>
   );
 }

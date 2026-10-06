@@ -64,7 +64,7 @@ export default function QuickCreateProductDialog({ open, onOpenChange, onCreated
       setProductCategoryId(null);
       onOpenChange(false);
     },
-    onError: (error) => toast.error(getErrorMessage(error, "خطا در ساخت کالا")),
+    onError: (error) => toast.error(getErrorMessage(error, "ساخت کالا انجام نشد")),
   });
 
   const canSubmit = name.trim().length > 0 && productCategoryId != null;

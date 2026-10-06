@@ -6,6 +6,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 import OrderItemsReadOnly from "@/shared/components/forms/OrderItemsReadOnly";
 import UnitsPageLink from "@/features/warehouse/units/components/UnitsPageLink";
+import { LABEL_FILTERS } from "@/features/warehouse/units/domain/unitVocabulary";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { usePurchaseReceivingInfoQuery } from "@/features/warehouse/receiving/services/queries";
 import { ReceivingReportLines } from "@/shared/components/returns/ReceivingReport";
@@ -108,7 +109,7 @@ export default function PurchaseItemsCard({ purchase }) {
         headerAction={
           hasReceived && (
             <UnitsPageLink
-              params={{ view: "unlabeled", purchaseId: purchase.id }}
+              params={{ labelFilter: LABEL_FILTERS.UNPRINTED, purchaseId: purchase.id }}
               label="برچسب دانه‌های این خرید"
             />
           )

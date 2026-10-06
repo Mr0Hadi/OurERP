@@ -1,18 +1,9 @@
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Save, X, Trash2 } from "lucide-react";
-import { useState } from "react";
 
 import { Button } from "@/shared/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/components/ui/alert-dialog";
+import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 import { useProductQuery } from "../services/queries";
 import { useUpdateProductMutation, useDeleteProductMutation } from "../services/mutations";
 import { useProductForm } from "../hooks/useProductForm";
@@ -21,7 +12,7 @@ import ProductPricingForm from "../components/forms/ProductPricingForm";
 import ProductImageUpload from "../components/forms/ProductImageUpload";
 import ProductBarcodeDisplay from "../components/forms/ProductBarcodeDisplay";
 import ProductDetailLoading from "../components/forms/ProductDetailLoading";
-import UnitsPageLink from "../../units/components/UnitsPageLink";
+import UnitsPageLink from "@/features/warehouse/units/components/UnitsPageLink";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
@@ -29,16 +20,11 @@ import { usePageHeader } from "@/shared/hooks/usePageHeader";
 function ProductDetailForm({ productData }) {
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  
+
   const updateMutation = useUpdateProductMutation(productData.id);
   const deleteMutation = useDeleteProductMutation();
 
-  const {
-    formMethods,
-    imageUpload,
-    barcodeValue,
-    buildProductPayload,
-  } = useProductForm(productData);
+  const { formMethods, imageUpload, buildProductPayload } = useProductForm(productData);
 
   const {
     register,
@@ -51,7 +37,12 @@ function ProductDetailForm({ productData }) {
     const payload = buildProductPayload(data);
     // سرور تصویرِ قبلی را خودکار پاک نمی‌کند (بخش ۱۷ سند)؛ بعد از ثبتِ
     // موفقِ ویرایش، پاک‌کردنش امن است.
-    updateMutation.mutate(payload, { onSuccess: () => imageUpload.commit() });
+    updateMutation.mutate(payload, {
+      onSuccess: () => {
+        imageUpload.commit();
+        navigate(ROUTES.WAREHOUSE_PRODUCTS);
+      },
+    });
   };
 
   const handleCancel = () => {
@@ -84,15 +75,12 @@ function ProductDetailForm({ productData }) {
               errors={errors}
               isIncomplete={Boolean(productData?.isIncomplete)}
             />
-            <ProductPricingForm
-              register={register}
-              control={control}
-              errors={errors}
-            />
+            <ProductPricingForm register={register} control={control} errors={errors} />
           </div>
           <div className="flex flex-col gap-4 md:gap-3">
             <ProductImageUpload imageUpload={imageUpload} />
-            <ProductBarcodeDisplay value={barcodeValue} />
+            {/* بارکد را سرور می‌سازد و در فرم عوض نمی‌شود. */}
+            <ProductBarcodeDisplay value={productData.barCode ?? ""} />
             <UnitsPageLink
               params={{ productId: productData.id }}
               label="دانه‌ها، قرنطینه و برچسب‌های این کالا"
@@ -111,7 +99,7 @@ function ProductDetailForm({ productData }) {
               </Button>
               <Button type="submit" disabled={isBusy} className="flex-1 gap-2">
                 <Save className="h-4 w-4" />
-                {isBusy ? "در حال ذخیره..." : "ویرایش کالا"}
+                {isBusy ? "در حال ذخیره..." : "ذخیره‌ی تغییرات"}
               </Button>
             </div>
             <Button
@@ -128,28 +116,16 @@ function ProductDetailForm({ productData }) {
         </div>
       </form>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>حذف کالا</AlertDialogTitle>
-            <AlertDialogDescription>
-              آیا از حذف این کالا اطمینان دارید؟ این عملیات غیرقابل بازگشت است.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>
-              انصراف
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteMutation.isPending ? "در حال حذف..." : "حذف"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="حذف کالا"
+        description="کالا از فهرست‌ها و انتخاب‌گرها کنار می‌رود و از داخلِ برنامه برنمی‌گردد. سابقه‌ی خرید، فروش و دانه‌هایش پاک نمی‌شود."
+        confirmLabel="حذف"
+        pendingLabel="در حال حذف..."
+        isPending={deleteMutation.isPending}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

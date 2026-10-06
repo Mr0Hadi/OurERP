@@ -48,8 +48,11 @@ const NO_SUPPLIERS = [];
  * TODO(بکند): با رشدِ داده، ۲۰۰ ردیفِ اول کافی نیست؛ جست‌وجوی سمتِ سرور لازم است
  * (سندِ frontend-requests.fa.md).
  */
-export function useSuppliersOptionsQuery() {
-  const { data, isLoading } = useSuppliersQuery(NO_FILTERS, OPTIONS_PAGINATION, OPTIONS_SORTING);
+/** `enabled: false` تا وقتی انتخاب‌گر واقعاً دیده نمی‌شود. */
+export function useSuppliersOptionsQuery({ enabled = true } = {}) {
+  const { data, isLoading } = useSuppliersQuery(NO_FILTERS, OPTIONS_PAGINATION, OPTIONS_SORTING, {
+    enabled,
+  });
   return { suppliers: data?.items ?? NO_SUPPLIERS, isLoading };
 }
 

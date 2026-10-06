@@ -18,7 +18,7 @@ import {
   RETURN_PAYMENT_METHODS,
 } from "@/shared/domain/enums/paymentType";
 import { RETURN_PROBLEM_LABELS } from "@/shared/domain/returns/problems";
-import { formatNumber } from "@/shared/lib/numberFormat";
+import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
 import { toneText } from "@/shared/lib/tone";
 
 const ICONS = {
@@ -57,7 +57,7 @@ export default function EffectBadge({ effect, side, showProductName = false }) {
 
   const value = isGoods
     ? `${formatNumber(effect.quantity)} ${effect.unit || "عدد"}`
-    : `${formatNumber(effect.amount)} ریال`;
+    : formatRial(effect.amount);
 
   const restocked = Number(effect.restockedQuantity) || 0;
   const isIncoming = effect.direction === EFFECT_DIRECTIONS.GOODS_IN;
@@ -65,7 +65,7 @@ export default function EffectBadge({ effect, side, showProductName = false }) {
 
   const details = [
     showProductName && isGoods ? effect.productName : null,
-    hasUnitPrice ? `هر عدد ${formatNumber(effect.unitPrice)} ریال` : null,
+    hasUnitPrice ? `هر عدد ${formatRial(effect.unitPrice)}` : null,
     // روش پرداخت enum عددی است و «نقدی» صفر — بررسیِ صریح لازم است.
     // عددی بیرون از روش‌های مرجوعی (مثلاً ۵ که در `PaymentTypeEnum` «اقساطی»
     // است) نباید با برچسبِ آن نوعِ سند خوانده شود.

@@ -1,8 +1,7 @@
-import { useReturnTo } from "@/shared/hooks/useReturnTo";
-import { ROUTES } from "@/shared/constants/routes";
 import { Save, X } from "lucide-react";
 
-
+import { useReturnTo } from "@/shared/hooks/useReturnTo";
+import { ROUTES } from "@/shared/constants/routes";
 import { Button } from "@/shared/components/ui/button";
 import { useCreateProductMutation } from "../services/mutations";
 import { useProductForm } from "../hooks/useProductForm";
@@ -18,9 +17,8 @@ export default function ProductNewPage() {
   const { goBack } = useReturnTo(ROUTES.WAREHOUSE_PRODUCTS);
   const createMutation = useCreateProductMutation();
 
-
   usePageHeader({
-    title: "افزودن کالا جدید",
+    title: "افزودن کالای جدید",
     showBack: true,
   });
 
@@ -37,7 +35,7 @@ export default function ProductNewPage() {
     formState: { errors, isSubmitting },
   } = formMethods;
 
-  const onSubmit = async (data) => {
+  const onSubmit = (data) => {
     createMutation.mutate(buildProductPayload(data), {
       onSuccess: (created) => {
         // کلید حالا مالِ یک کالای واقعی است؛ آپلودهای میانی یتیم‌اند.
@@ -71,6 +69,8 @@ export default function ProductNewPage() {
               register={register}
               control={control}
               errors={errors}
+              isNew
+              requirePrices
             />
           </div>
           <div className="flex flex-col gap-4 md:gap-3">

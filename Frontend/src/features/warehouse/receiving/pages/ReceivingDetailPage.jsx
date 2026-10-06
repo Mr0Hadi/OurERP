@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { CheckCircle, AlertTriangle, X } from "lucide-react";
 
-import { Button } from "@/shared/components/ui/button";
 import {
   Card,
   CardContent,
@@ -18,7 +16,7 @@ import {
   usePurchaseReceivingInfoQuery,
   usePurchaseReturnPendingEffectsQuery,
 } from "../services/queries";
-import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
+import { useDocumentProducts } from "@/features/warehouse/products/services/queries";
 import { useReceiveShipmentMutation } from "../services/mutations";
 import { useReceivingForm } from "../hooks/useReceivingForm";
 import { useGoodsRoundForm } from "@/shared/hooks/useGoodsRoundForm";
@@ -33,22 +31,12 @@ import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSk
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
+import { withProductInfo } from "../../shared/productInfo";
+import WarehouseSubmitBar from "../../shared/WarehouseSubmitBar";
 
 // سقفِ عکس‌های یک دورِ دریافت — `ReceivePurchaseCommand.Images` سقفی
 // ندارد، این فقط یک حدِ عملی برای فرم است.
 const MAX_RECEIVING_IMAGES = 10;
-
-function withProductImage(rows, productMap) {
-  return rows.map((row) => {
-    const product = productMap.get(row.productId);
-    return {
-      ...row,
-      imageKey: product?.imageKey ?? null,
-      imageUrl: product?.imageUrl ?? product?.image ?? null,
-      brand: product?.brand || "",
-    };
-  });
-}
 
 /**
  * یک محموله‌ی ورودی از تامین‌کننده: اقلامِ خرید (با شمارش و خرابی)،
@@ -63,13 +51,6 @@ function ReceivingDetailForm({ receivingInfo, replacementReturnId }) {
   const replacementOnly = replacementReturnId != null;
   const navigate = useNavigate();
   const receiveMutation = useReceiveShipmentMutation();
-
-  const { products: productOptions } = useProductsOptionsQuery();
-  const productMap = useMemo(() => {
-    const map = new Map();
-    productOptions.forEach((p) => map.set(p.id, p));
-    return map;
-  }, [productOptions]);
 
   const {
     formData,
@@ -120,6 +101,11 @@ function ReceivingDetailForm({ receivingInfo, replacementReturnId }) {
     startEmpty: !replacementOnly,
   });
 
+  const { productMap } = useDocumentProducts([
+    ...items.map((item) => item.productId),
+    ...replacementLines.map((line) => line.productId),
+  ]);
+
   // عکس‌های همین دور. `filesPayload` دقیقاً شکلِ
   // `ReceivePurchaseImageDto` است (`{objectKey, fileName?, note?}`).
   const images = useFileUploadList({
@@ -135,11 +121,11 @@ function ReceivingDetailForm({ receivingInfo, replacementReturnId }) {
   }, []);
 
   const displayItems = useMemo(
-    () => withProductImage(items, productMap),
+    () => withProductInfo(items, productMap),
     [items, productMap],
   );
   const displayReplacementRounds = useMemo(
-    () => withProductImage(replacement.rounds, productMap),
+    () => withProductInfo(replacement.rounds, productMap),
     [replacement.rounds, productMap],
   );
 
@@ -302,50 +288,26 @@ function ReceivingDetailForm({ receivingInfo, replacementReturnId }) {
             <ReceivingQuarantineCard receivingInfo={receivingInfo} />
           )}
 
-          <div className="flex gap-2">
-            <Button
-              className={`flex-1 gap-2 ${
-                !complete && (replacementOnly || items.length > 0)
-                  ? "bg-warning hover:bg-warning text-white"
-                  : ""
-              }`}
-              disabled={
-                isBusy ||
-                !hasSomething ||
-                Boolean(replacementOnly && replacement.blockingReason)
-              }
-              onClick={() => setShowConfirmDialog(true)}
-            >
-              {complete ? (
-                <CheckCircle className="h-4 w-4" />
-              ) : (
-                <AlertTriangle className="h-4 w-4" />
-              )}
-              {replacementOnly
+          <WarehouseSubmitBar
+            label={
+              replacementOnly
                 ? "ثبت دریافت جایگزین"
                 : isAllComplete
                   ? "تأیید دریافت"
-                  : "ثبت دریافت (با کسری)"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCancel}
-              disabled={isBusy}
-              className="gap-2"
-            >
-              <X className="h-4 w-4" />
-              انصراف
-            </Button>
-          </div>
-
-          {!replacementOnly && (
-            <p className="text-xs text-muted-foreground text-center px-2">
-              باقیمانده‌ای که این دور نرسیده برای محموله‌ی بعدی می‌ماند. کالای
-              خراب، مازاد و سفارش‌نداده به قرنطینه می‌رود و با «ثبت مغایرت»
-              تکلیفش روشن می‌شود.
-            </p>
-          )}
+                  : "ثبت دریافت (با کسری)"
+            }
+            complete={complete}
+            warnIncomplete={replacementOnly || items.length > 0}
+            canSubmit={hasSomething}
+            blockingReason={replacementOnly ? replacement.blockingReason : null}
+            isBusy={isBusy}
+            onSubmit={() => setShowConfirmDialog(true)}
+            onCancel={handleCancel}
+            hint={
+              !replacementOnly &&
+              "باقیمانده‌ای که این دور نرسیده برای محموله‌ی بعدی می‌ماند. کالای خراب، مازاد و سفارش‌نداده به قرنطینه می‌رود و با «ثبت مغایرت» تکلیفش روشن می‌شود."
+            }
+          />
         </div>
       </div>
 

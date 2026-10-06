@@ -3,11 +3,11 @@ import { X } from "lucide-react";
 import { getPartyName } from "@/shared/components/filters/filterUtils";
 import { UNIT_CUSTODY_REASON_LABELS } from "@/shared/domain/enums/unitStatus";
 import { UNIT_SEGMENTS, formatDate } from "../domain/unitVocabulary";
-import { formatNumber } from "@/shared/lib/numberFormat";
+import { formatDigits } from "@/shared/lib/numberFormat";
 
 const findName = (items, id, getName = getPartyName) => {
   const item = items.find((candidate) => String(candidate.id) === String(id));
-  return item ? getName(item) : `#${formatNumber(id)}`;
+  return item ? getName(item) : `#${formatDigits(id)}`;
 };
 
 function Chip({ children, onRemove }) {
@@ -32,19 +32,19 @@ function Chip({ children, onRemove }) {
  * اینجاست. `linksOnly` وقتی پنلِ فیلترها باز است و بقیه همان‌جا دیده می‌شوند.
  */
 export default function UnitActiveFilters({ store, suppliers, customers, linksOnly = false }) {
-  const range = (from, to, format = formatNumber) => `${from ? format(from) : "…"} تا ${to ? format(to) : "…"}`;
+  const range = (from, to, format = formatDigits) => `${from ? format(from) : "…"} تا ${to ? format(to) : "…"}`;
 
   const chips = [
     store.purchaseId && {
       key: "purchase",
       link: true,
-      label: `دانه‌های خرید #${formatNumber(store.purchaseId)}`,
+      label: `دانه‌های خرید #${formatDigits(store.purchaseId)}`,
       clear: () => store.setPurchaseId(""),
     },
     store.saleId && {
       key: "sale",
       link: true,
-      label: `دانه‌های فروش #${formatNumber(store.saleId)}`,
+      label: `دانه‌های فروش #${formatDigits(store.saleId)}`,
       clear: () => store.setSaleId(""),
     },
     store.supplierId && {

@@ -10,10 +10,9 @@ import { REPORT_PERIOD_OPTIONS } from "@/shared/domain/enums/reportPeriod";
  * نوعِ بازه به‌جای `Select` یک ردیفِ دکمه است: شش گزینه‌ی ثابت که کاربر
  * مدام بینشان جابه‌جا می‌شود؛ با `Select` هر تغییر دو کلیک می‌شد.
  *
- * روی موبایل این شش دکمه در یک ردیف جا نمی‌شوند. `flex-wrap` امتحان شد و
- * نتیجه‌اش یک «سالانه»ی تنها در سطرِ دوم بود که شکسته به نظر می‌رسید؛ پس
- * ردیف یکی می‌ماند و افقی اسکرول می‌شود — الگویی که کاربرِ موبایل از
- * تب‌بارها می‌شناسد.
+ * روی موبایل شش دکمه یک گریدِ شش‌ستونه‌ی هم‌اندازه می‌سازند که کلِ عرض را
+ * پر می‌کند — نه اسکرولِ افقی (جای ثابت ندارد) و نه `flex-wrap` (یک
+ * «سالانه»ی تنها در سطرِ دوم می‌افتاد). از lg به بالا اندازه‌ی طبیعی دارند.
  *
  * برچسبِ «از تاریخ / تا تاریخ» هم حذف شده و جایش را placeholder گرفته:
  * تاریخِ خالی یعنی پیش‌فرضِ سرور (۱۲ ماه اخیر) و همین را خودِ فیلد
@@ -30,8 +29,8 @@ export default function DashboardToolbar({
 }) {
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-2 lg:flex-row lg:items-center lg:justify-between lg:gap-3">
-      <div className="-mx-1 overflow-x-auto px-1 scrollbar-hide lg:mx-0 lg:overflow-visible lg:px-0">
-        <div className="flex w-max gap-1 rounded-lg bg-muted/60 p-1">
+      <div>
+        <div className="grid grid-cols-6 gap-1 rounded-lg bg-muted/60 p-1 lg:flex lg:w-max">
           {REPORT_PERIOD_OPTIONS.map((option) => (
             <Button
               key={option.value}
@@ -40,7 +39,7 @@ export default function DashboardToolbar({
               variant={periodType === option.value ? "default" : "ghost"}
               onClick={() => onPeriodTypeChange(option.value)}
               className={cn(
-                "h-8 shrink-0 px-3 text-xs",
+                "h-8 min-w-0 px-1 text-xs lg:px-3",
                 periodType !== option.value && "text-muted-foreground",
               )}
             >

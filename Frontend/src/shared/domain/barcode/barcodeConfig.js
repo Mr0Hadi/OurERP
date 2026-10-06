@@ -60,26 +60,3 @@ export const QR_PRESETS = {
  * می‌شود و کد هم آن‌قدر بزرگ نمی‌شود که روی برچسبِ انبار جا نشود.
  */
 export const QR_ERROR_CORRECTION = "M";
-
-/**
- * روی برچسب کدام نماد چاپ شود.
- *
- * این یک enum بکندی نیست و عمداً هم نباید بشود: سرور فقط محتوای کد را
- * می‌شناسد و هر دو نماد همان را حمل می‌کنند، پس این صرفاً یک ترجیحِ
- * چاپِ سمتِ مرورگر است — مثل انتخابِ اندازه‌ی ورق.
- *
- * انتخاب بین این دو به دستگاهِ انبار برمی‌گردد نه سلیقه: اسکنرِ لیزریِ
- * دستی فقط بارکدِ خطی می‌خواند، ولی دوربینِ موبایل QR را از زاویه و
- * فاصله‌ی بازتری می‌گیرد.
- */
-export const LABEL_CODE_KINDS = Object.freeze({
-  BARCODE: "barcode",
-  QR: "qr",
-});
-
-export const DEFAULT_LABEL_CODE_KIND = LABEL_CODE_KINDS.BARCODE;
-
-export const LABEL_CODE_KIND_OPTIONS = Object.freeze([
-  { value: LABEL_CODE_KINDS.BARCODE, label: "بارکد خطی (CODE128)" },
-  { value: LABEL_CODE_KINDS.QR, label: "کد QR" },
-]);

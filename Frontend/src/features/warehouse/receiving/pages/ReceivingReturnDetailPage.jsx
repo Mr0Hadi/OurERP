@@ -1,14 +1,13 @@
 import { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { AlertCircle, CheckCircle, AlertTriangle, X, Undo2 } from "lucide-react";
+import { Undo2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 import { Badge } from "@/shared/components/ui/badge";
-import { Button } from "@/shared/components/ui/button";
 import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 import { useSalesReturnQuery } from "@/features/sales/returns/services/queries";
 import { useExecuteGoodsRoundMutation } from "@/features/sales/returns/services/mutations";
-import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
+import { useDocumentProducts } from "@/features/warehouse/products/services/queries";
 import { buildGoodsLines } from "@/shared/domain/returns/resolutions";
 import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
 import { CLAIM_SCOPES, OFF_SCOPE_KINDS } from "@/shared/domain/returns/scopes";
@@ -18,9 +17,13 @@ import GoodsRoundItemsSection from "@/shared/components/returns/GoodsRoundItemsS
 import GoodsRoundPartySection from "@/shared/components/returns/GoodsRoundPartySection";
 import GoodsRoundSummaryCard from "@/shared/components/returns/GoodsRoundSummaryCard";
 
-import ReturnDetailLoading from "../components/forms/ReturnDetailLoading";
+import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
+import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
+import { withProductInfo } from "../../shared/productInfo";
+import WarehouseSubmitBar from "../../shared/WarehouseSubmitBar";
+import NothingPending from "../../shared/NothingPending";
 
 const SALES_SIDE = sideConfig(RETURN_SIDES.SALES);
 
@@ -76,32 +79,13 @@ function ReceivingReturnDetailForm({ salesReturn }) {
     barcodesAllowed: restoresLineUnits,
   });
 
-  const { products: productOptions } = useProductsOptionsQuery();
-
-  const productMap = useMemo(() => {
-    const map = new Map();
-    productOptions.forEach((p) => map.set(p.id, p));
-    return map;
-  }, [productOptions]);
-
-  const displayRounds = useMemo(
-    () =>
-      rounds.map((round) => {
-        const product = productMap.get(round.productId);
-        return {
-          ...round,
-          // کلیدِ پایدار هم کنارِ URLِ امضاشده می‌آید تا اگر صفحه دیر باز
-          // بماند، بندانگشتی بتواند خودش امضا را تازه کند.
-          imageKey: product?.imageKey ?? null,
-          imageUrl: product?.imageUrl ?? product?.image ?? null,
-        };
-      }),
-    [rounds, productMap],
-  );
+  const { productMap } = useDocumentProducts(lines.map((line) => line.productId));
+  const displayRounds = useMemo(() => withProductInfo(rounds, productMap), [rounds, productMap]);
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const isBusy = goodsRoundMutation.isPending;
+  const backToReturn = () => navigate(routeWithId(ROUTES.SALES_RETURNS_DETAIL, salesReturn.id));
 
   const handleSubmit = () => {
     const willStayPending = !isAllComplete;
@@ -113,25 +97,17 @@ function ReceivingReturnDetailForm({ salesReturn }) {
             "این دور ثبت شد. باقیمانده هر وقت رسید، دوباره از همین صفحه ثبت کنید.",
           );
         }
-        navigate(routeWithId(ROUTES.SALES_RETURNS_DETAIL, salesReturn.id));
+        backToReturn();
       },
     });
   };
 
   if (rounds.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <CheckCircle className="h-12 w-12 text-success" />
-        <p className="text-lg text-muted-foreground">
-          برای این مرجوعی کالایی در انتظار تحویل نیست.
-        </p>
-        <Button
-          variant="outline"
-          onClick={() => navigate(routeWithId(ROUTES.SALES_RETURNS_DETAIL, salesReturn.id))}
-        >
-          بازگشت به مرجوعی
-        </Button>
-      </div>
+      <NothingPending
+        message="برای این مرجوعی کالایی در انتظار تحویل نیست."
+        onBack={backToReturn}
+      />
     );
   }
 
@@ -186,43 +162,16 @@ function ReceivingReturnDetailForm({ salesReturn }) {
             noteLabel="یادداشت دریافت"
           />
 
-          {blockingReason && hasSomethingToRecord && (
-            <p className="text-xs text-destructive px-1">{blockingReason}</p>
-          )}
-
-          <div className="flex gap-2">
-            <Button
-              className={`flex-1 gap-2 ${
-                !isAllComplete ? "bg-warning hover:bg-warning text-white" : ""
-              }`}
-              disabled={isBusy || !hasSomethingToRecord || Boolean(blockingReason)}
-              onClick={() => setShowConfirmDialog(true)}
-            >
-              {isAllComplete ? (
-                <CheckCircle className="h-4 w-4" />
-              ) : (
-                <AlertTriangle className="h-4 w-4" />
-              )}
-              {isAllComplete
-                ? "تأیید دریافت کامل"
-                : "ثبت این دور (باقیمانده هنوز نرسیده)"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate(routeWithId(ROUTES.SALES_RETURNS_DETAIL, salesReturn.id))}
-              disabled={isBusy}
-              className="gap-2"
-            >
-              <X className="h-4 w-4" />
-              انصراف
-            </Button>
-          </div>
-
-          <p className="text-xs text-muted-foreground text-center px-2">
-            این صفحه چند بار قابل استفاده است — هر بار که بخشی از مرجوعی رسید،
-            همین‌جا ثبتش کنید.
-          </p>
+          <WarehouseSubmitBar
+            label={isAllComplete ? "تأیید دریافت کامل" : "ثبت این دور (باقیمانده هنوز نرسیده)"}
+            complete={isAllComplete}
+            canSubmit={hasSomethingToRecord}
+            blockingReason={blockingReason}
+            isBusy={isBusy}
+            onSubmit={() => setShowConfirmDialog(true)}
+            onCancel={backToReturn}
+            hint="این صفحه چند بار قابل استفاده است — هر بار که بخشی از مرجوعی رسید، همین‌جا ثبتش کنید."
+          />
         </div>
       </div>
 
@@ -252,6 +201,8 @@ export default function ReceivingReturnDetailPage() {
     data: salesReturn,
     isLoading,
     isError,
+    error,
+    refetch,
   } = useSalesReturnQuery(Number(id));
 
   usePageHeader({
@@ -263,20 +214,16 @@ export default function ReceivingReturnDetailPage() {
     showBack: true,
   });
 
-  if (isLoading) return <ReturnDetailLoading />;
+  if (isLoading) return <WarehouseFormSkeleton />;
 
   if (isError || !salesReturn) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-lg text-muted-foreground">مرجوعی مورد نظر یافت نشد.</p>
-        <Button
-          variant="outline"
-          onClick={() => navigate(ROUTES.SALES_RETURNS_LIST)}
-        >
-          بازگشت به مرجوعی
-        </Button>
-      </div>
+      <DetailErrorState
+        error={error}
+        notFoundMessage="مرجوعی مورد نظر یافت نشد."
+        onRetry={refetch}
+        onBack={() => navigate(ROUTES.SALES_RETURNS_LIST)}
+      />
     );
   }
 

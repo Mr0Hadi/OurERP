@@ -5,41 +5,41 @@ import { ImageFolderEnum } from "@/shared/domain/enums/imageFolder";
 import { TaxCategoryEnum } from "@/shared/domain/enums/taxCategory";
 import { useImageUpload } from "@/shared/hooks/useImageUpload";
 
-function buildDefaultValues(data) {
-  if (!data) {
-    return {
-      name: "",
-      englishName: "",
-      code: "",
-      barcode: "",
-      productCategoryId: "",
-      brand: "",
-      unit: "",
-      initialStock: "",
-      lowStockThreshold: 10,
-      purchasePrice: 0,
-      sellPrice1: 0,
-      sellPrice2: 0,
-      vat: "",
-      requiresUnitTracking: false,
-    };
-  }
+/**
+ * فیلدهای فرم با *همان نام‌های* `ProductDto`/`UpdateProductCommand`. فقط
+ * `taxExempt` مالِ فرم است (چک‌باکس به‌جای `taxCategory`)؛ `code`/`barCode`
+ * فقط نمایشی‌اند و فرستاده نمی‌شوند.
+ */
+const EMPTY_PRODUCT = {
+  name: "",
+  englishName: "",
+  code: "",
+  barCode: "",
+  productCategoryId: "",
+  brand: "",
+  unit: "",
+  stock: "",
+  lowStockThreshold: 10,
+  purchasePrice: 0,
+  retailPrice: 0,
+  wholeSalePrice: 0,
+  tax: "",
+  taxExempt: false,
+  requiresUnitTracking: false,
+};
+
+function buildDefaultValues(product) {
+  if (!product) return EMPTY_PRODUCT;
+  const values = Object.fromEntries(
+    Object.keys(EMPTY_PRODUCT).map((key) => [key, product[key] ?? EMPTY_PRODUCT[key]]),
+  );
   return {
-    name: data.name || "",
-    englishName: data.englishName || "",
-    code: data.code || "",
-    barcode: data.barCode || data.barcode || "",
-    productCategoryId: data.productCategoryId ?? "",
-    brand: data.brand || "",
-    unit: data.unit ?? "",
-    initialStock: (data.stock ?? data.initialStock) || "",
-    lowStockThreshold: data.lowStockThreshold ?? 10,
-    purchasePrice: data.purchasePrice || 0,
-    sellPrice1: data.retailPrice ?? data.sellPrice1 ?? 0,
-    sellPrice2: data.wholeSalePrice ?? data.sellPrice2 ?? 0,
-    vat: (data.tax ?? data.vat) || "",
-    taxExempt: data.taxCategory === TaxCategoryEnum.EXEMPT,
-    requiresUnitTracking: Boolean(data.requiresUnitTracking),
+    ...values,
+    // صفر در این دو فیلد با جای خالی نشان داده می‌شود.
+    stock: product.stock || "",
+    tax: product.tax || "",
+    taxExempt: product.taxCategory === TaxCategoryEnum.EXEMPT,
+    requiresUnitTracking: Boolean(product.requiresUnitTracking),
   };
 }
 
@@ -56,24 +56,16 @@ export function useProductForm(initialData = null) {
     defaultValues: buildDefaultValues(initialData),
   });
 
-  // بارکد دیگر ورودی کاربر نیست؛ فقط همان چیزی است که سرور ساخته و در
-  // فرم نشسته — پس مستقیم از فرم خوانده می‌شود، بدون stateِ موازی.
-  const barcodeValue = formMethods.watch("barcode")?.trim() || "";
-
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
   /**
-   * پیلود دقیقاً همان فیلدهای `CreateProductCommand`/`UpdateProductCommand`
-   * است — نه بیشتر، نه با نام دیگر:
+   * بدنه‌ی `CreateProductCommand`/`UpdateProductCommand` — همان نام‌ها، فقط
+   * تبدیلِ عددی:
    *
-   * - `code`/`barcode` اصلاً وجود ندارند؛ سرور خودش می‌سازدشان.
-   * - `productCategoryId` عدد است، نه نامِ دسته‌بندی. اعتبارسنجیِ سرور
-   *   روی `> 0` است، پس رشته‌ی خالی رد می‌شود.
-   * - `wholeSalePrice` با همین حروفِ بزرگ‌وکوچک (قبلاً `wholesalePrice`
-   *   فرستاده می‌شد و بی‌صدا کنار گذاشته می‌شد — یعنی قیمت عمده هرگز
-   *   ذخیره نمی‌شد).
+   * - `code`/`barCode` فرستاده نمی‌شوند؛ سرور خودش می‌سازدشان.
+   * - `productCategoryId` عدد است؛ اعتبارسنجیِ سرور روی `> 0` است.
    * - کلیدِ تصویر در `imageKey` می‌رود؛ `null` یعنی «تصویر را پاک کن».
    * - `isIncomplete` فرستاده نمی‌شود: فقط ساختِ سریع در انبار آن را روشن
    *   می‌کند و سرور وقتی برند و سه قیمت پر شد خودش خاموشش می‌کند.
@@ -84,23 +76,16 @@ export function useProductForm(initialData = null) {
     brand: formData.brand,
     unit: Number(formData.unit),
     productCategoryId: Number(formData.productCategoryId) || 0,
-    stock: Number(formData.initialStock) || 0,
+    stock: Number(formData.stock) || 0,
     lowStockThreshold: Number(formData.lowStockThreshold) || 0,
     purchasePrice: Number(formData.purchasePrice) || 0,
-    retailPrice: Number(formData.sellPrice1) || 0,
-    wholeSalePrice: Number(formData.sellPrice2) || 0,
-    tax: Number(formData.vat) || 0,
-    taxCategory: formData.taxExempt
-      ? TaxCategoryEnum.EXEMPT
-      : TaxCategoryEnum.TAXABLE,
+    retailPrice: Number(formData.retailPrice) || 0,
+    wholeSalePrice: Number(formData.wholeSalePrice) || 0,
+    tax: Number(formData.tax) || 0,
+    taxCategory: formData.taxExempt ? TaxCategoryEnum.EXEMPT : TaxCategoryEnum.TAXABLE,
     requiresUnitTracking: Boolean(formData.requiresUnitTracking),
     imageKey: imageUpload.imageKeyPayload,
   });
 
-  return {
-    formMethods,
-    imageUpload,
-    barcodeValue,
-    buildProductPayload,
-  };
+  return { formMethods, imageUpload, buildProductPayload };
 }

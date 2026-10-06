@@ -62,10 +62,6 @@ const SHEET_PRESETS = {
 
 export const DEFAULT_SHEET_PRESET = "a4-3x8";
 
-export const SHEET_PRESET_OPTIONS = Object.entries(SHEET_PRESETS).map(
-  ([value, preset]) => ({ value, label: preset.label }),
-);
-
 export const getSheetPreset = (key) =>
   SHEET_PRESETS[key] ?? SHEET_PRESETS[DEFAULT_SHEET_PRESET];
 

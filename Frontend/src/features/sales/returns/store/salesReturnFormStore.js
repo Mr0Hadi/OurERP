@@ -9,9 +9,6 @@ import { todayIso } from "@/shared/lib/dateUtils";
 // تابع است نه ثابت، تا تاریخِ پیش‌فرض همیشه «امروز»ِ لحظه‌ی ساختِ فرم باشد.
 const emptyForm = () => ({
   saleId: "",
-  saleInvoiceNumber: "",
-  customerId: "",
-  customerName: "",
   returnDate: todayIso(),
   description: "",
   previousReturnId: null,
@@ -19,8 +16,8 @@ const emptyForm = () => ({
   lines: [],
   // همه‌ی خطوط فاکتور — مبنای انتخابِ ادعای «مازاد» (حتی خطِ کامل‌تسویه‌شده)
   orderLines: [],
-  // ادعاهای «خارج از فاکتور» — کالایی که سفارش توجیهش نمی‌کند
-  offInvoiceClaims: [],
+  // ادعاهای «خارج از فاکتور»: مازادِ یک قلم یا کالای بیرون از فاکتور
+  offScopeClaims: [],
   // سقفِ ادعای مازاد برای هر خط (`claimableExcessQuantity`)، کلید: `orderLineId`
   excessCaps: {},
 });
@@ -33,8 +30,8 @@ export const useSalesReturnFormStore = create((set, get) => ({
     set((state) => ({ formData: { ...state.formData, ...data } })),
   setLines: (lines) =>
     set((state) => ({ formData: { ...state.formData, lines } })),
-  setOffInvoiceClaims: (offInvoiceClaims) =>
-    set((state) => ({ formData: { ...state.formData, offInvoiceClaims } })),
+  setOffScopeClaims: (offScopeClaims) =>
+    set((state) => ({ formData: { ...state.formData, offScopeClaims } })),
 
   /**
    * `sale` همان `SaleDto`ِ `GetSaleDetail` است؛ `previousReturnId` مرجوعیِ
@@ -89,9 +86,6 @@ export const useSalesReturnFormStore = create((set, get) => ({
         // تاریخ و توضیحاتِ واردشده هم با تازه‌شدنِ ارقام نمی‌روند.
         ...(isResync ? previous : { ...emptyForm(), previousReturnId }),
         saleId: sale.id,
-        saleInvoiceNumber: sale.invoiceNumber,
-        customerId: sale.customerId,
-        customerName: sale.customerName,
         orderLines: (sale.items || []).map((item) => ({
           orderLineId: item.id,
           productId: item.productId,
@@ -103,9 +97,9 @@ export const useSalesReturnFormStore = create((set, get) => ({
         excessCaps,
         lines: isResync ? carryOverLineClaims(previous.lines, lines) : lines,
         // سقف فقط برای مازاد است؛ کالای سفارش‌نداده سقفی سمتِ فرم ندارد.
-        offInvoiceClaims: isResync
+        offScopeClaims: isResync
           ? clampClaimsToCaps(
-              previous.offInvoiceClaims,
+              previous.offScopeClaims,
               (claim) =>
                 claim.offScopeKind === OFF_SCOPE_KINDS.EXCESS ? claim.orderLineId : claim.id,
               (key) => excessCaps[key] ?? Infinity,

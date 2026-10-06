@@ -1,21 +1,37 @@
-import ListPageLayout from "@/shared/components/layout/ListPageLayout";
-import { useCustomersOptionsQuery } from "@/features/customers/services/queries";
-import ServerTable from "@/shared/components/table/ServerTable";
+import { Truck } from "lucide-react";
 
-import ShippingFilters from "../components/table/ShippingFilters";
-import ShippingTable from "../components/table/ShippingTable";
+import ListPageLayout from "@/shared/components/layout/ListPageLayout";
+import ServerTable from "@/shared/components/table/ServerTable";
+import SaleStatusBadge from "@/shared/components/status/SaleStatusBadge";
+import { ROUTES } from "@/shared/constants/routes";
+import { useCustomersOptionsQuery } from "@/features/customers/services/queries";
+
 import { useShippableSalesQuery, useShippingListFilters } from "../services/queries";
 import { useShippingFilterStore } from "../store/shippingFilterStore";
+import { SHIPPING_STATUS_OPTIONS } from "../domain/shippingVocabulary";
 import { useQueueRows } from "../../shared/useQueueRows";
 import { needsDocumentList } from "../../shared/queueFilters";
+import QueueFilters from "../../shared/QueueFilters";
+import QueueTable from "../../shared/QueueTable";
+
+function ShippingTable(props) {
+  return (
+    <QueueTable
+      {...props}
+      party={{ key: "customerName", header: "مشتری / تامین‌کننده" }}
+      StatusBadge={SaleStatusBadge}
+      action={{ label: "آماده‌سازی و ارسال", icon: Truck, route: ROUTES.WAREHOUSE_SHIPPING_DETAIL }}
+      emptyMessage="فروشی در انتظار ارسال نیست."
+    />
+  );
+}
 
 /**
  * صفِ ارسال = `GetSaleList` فیلترشده روی وضعیت‌های قابلِ ارسال.
  *
- * عودتِ مازاد به تامین‌کننده در این صف نیست: بکند لیستِ ترکیبی ندارد و
- * آن کار یک دورِ اثرِ `GOODS_OUT` روی خودِ مرجوعیِ خرید است — از صفحه‌ی
- * همان مرجوعی باز می‌شود. کالای مرجوعیِ منتظر مثلِ صفِ دریافت از
- * `useQueueRows` می‌آید.
+ * کالای مرجوعیِ منتظر (`useQueueRows`): جایگزینِ مشتری روی ردیفِ همان فروش
+ * علامت می‌خورد؛ عودت به تامین‌کننده و تعیین تکلیفِ قرنطینه‌ی مرجوعی‌های خرید
+ * ردیفِ خودشان را دارند و به صفحه‌ی همان مرجوعی می‌روند.
  */
 export default function ShippingListPage() {
   const listState = useShippingFilterStore();
@@ -29,7 +45,19 @@ export default function ShippingListPage() {
       title="ارسال کالاهای انبار"
       description="آماده‌سازی و ارسال سفارش‌هایی که هنوز کامل تحویل مشتری نشده‌اند"
     >
-      <ShippingFilters customers={customers} isCustomersLoading={isCustomersLoading} />
+      <QueueFilters
+        useStore={useShippingFilterStore}
+        party={{
+          key: "customerId",
+          label: "مشتری",
+          emptyText: "مشتری‌ای یافت نشد",
+          items: customers,
+          isLoading: isCustomersLoading,
+          phoneOf: (customer) => customer.phoneNumber,
+        }}
+        statusOptions={SHIPPING_STATUS_OPTIONS}
+        searchPlaceholder="شماره فاکتور فروش..."
+      />
       <ServerTable
         query={query}
         listState={listState}

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import ProductPicker from "@/shared/components/products/ProductPicker";
 import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 
@@ -14,6 +15,9 @@ import { useProductsOptionsQuery } from "@/features/warehouse/products/services/
  * «تعویض با کالای دیگر» و «چند کالا به‌جای یکی» را ممکن می‌کند. اگر
  * هیچ کالایی انتخاب نشود، دامنه خودش کالای ادعا را با تعدادِ تصمیم
  * می‌گذارد.
+ *
+ * فهرستِ کالاها (۲۰۰ ردیف) فقط وقتی گرفته می‌شود که انتخابگر باز است؛ حالتِ رایج
+ * «همان کالا» هیچ‌وقت بازش نمی‌کند.
  */
 export default function GoodsItemsPicker({
   items,
@@ -21,7 +25,9 @@ export default function GoodsItemsPicker({
   openLabel = "انتخاب کالا",
   priceOf,
 }) {
-  const { products, isLoading } = useProductsOptionsQuery();
+  // همان مقدارِ اولیه‌ی `ProductPicker`: بی قلمِ انتخاب‌شده باز است.
+  const [isOpen, setIsOpen] = useState(items.length === 0);
+  const { products, isLoading } = useProductsOptionsQuery({ enabled: isOpen });
 
   return (
     <ProductPicker
@@ -33,6 +39,7 @@ export default function GoodsItemsPicker({
       openLabel={openLabel}
       priceOf={priceOf}
       closeLabel="بستن لیست کالاها"
+      onPickerOpenChange={setIsOpen}
     />
   );
 }

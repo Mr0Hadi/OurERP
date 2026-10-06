@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { draftId } from '@/shared/lib/draftId';
 import {
   receivingInfoVersion,
   useReceivingFormStore,
@@ -8,8 +9,6 @@ import {
 // حدِ عملیِ ورودیِ شمارنده است.
 export const NO_QUANTITY_CAP = 99999;
 
-const generateId = () =>
-  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
 const toCount = (value) => {
   const num = Math.floor(Number(value));
@@ -109,7 +108,7 @@ export function useReceivingForm(receivingInfo) {
       const remaining = row.arrivedQuantity - defectTotalOf(row);
       if (remaining <= 0) return {};
       return {
-        defects: [...row.defects, { id: generateId(), problem, quantity: 1, note: '' }],
+        defects: [...row.defects, { id: draftId(), problem, quantity: 1, note: '' }],
       };
     });
 

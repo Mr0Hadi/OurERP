@@ -48,6 +48,8 @@ export default function ProductPicker({
   collapsible = false,
   openLabel = "انتخاب کالا",
   closeLabel = "بستن لیست کالاها",
+  // حالتِ تاشو: باز/بسته شدنِ فهرست، تا فراخوان کالاها را فقط وقتِ باز بودن بگیرد.
+  onPickerOpenChange,
   // اسکنِ بارکدِ دانه، کدش را روی همان قلم نگه می‌دارد (`productUnitBarcodes`).
   trackUnits = false,
   // فرم خرید/فروش: جمع با مالیات است و سرور مالیاتِ قلم‌های تازه را حساب می‌کند.
@@ -66,6 +68,15 @@ export default function ProductPicker({
   });
   // کالاهایی که جزئیاتشان در راه است: کلیکِ دوباره تعداد را زیاد می‌کند، نه قلمِ تکراری.
   const pendingRef = useRef(new Map());
+  // همان کالاها به‌صورتِ state، برای چرخانِ دکمه‌ی + تا کاربر بداند افزودن در جریان است.
+  const [pendingIds, setPendingIds] = useState([]);
+  const setPending = (productId, on) =>
+    setPendingIds((ids) => (on ? [...ids, productId] : ids.filter((id) => id !== productId)));
+
+  // جزئیات را پیش از کلیک می‌گیرد (hover/لمس)؛ ensureQueryData کش می‌کند، پس اولین افزودن فوری است.
+  const prefetchDetail = (product) => {
+    loadProductDetail(product.id).catch(() => {});
+  };
 
   const addedQuantityOf = (productId) =>
     Number(items.find((item) => item.productId === productId)?.quantity) || 0;
@@ -110,6 +121,7 @@ export default function ProductPicker({
     // قلمِ تازه: قیمت، واحد و مالیات فقط در جزئیاتِ کالا هست، نه در ردیفِ لیست.
     const pending = { quantity: 1 };
     pendingRef.current.set(product.id, pending);
+    setPending(product.id, true);
     loadProductDetail(product.id)
       .catch((error) => {
         toast.error(getErrorMessage(error, "دریافت اطلاعات کالا انجام نشد."));
@@ -117,6 +129,7 @@ export default function ProductPicker({
       })
       .then((detail) => {
         pendingRef.current.delete(product.id);
+        setPending(product.id, false);
         const source = { ...product, ...detail };
         onItemsChange([
           ...itemsRef.current,
@@ -214,6 +227,8 @@ export default function ProductPicker({
     <ProductSearchPanel
       products={products}
       addedQuantityOf={addedQuantityOf}
+      isPending={(productId) => pendingIds.includes(productId)}
+      onPrefetch={prefetchDetail}
       onAdd={handleAdd}
     />
   );
@@ -229,7 +244,10 @@ export default function ProductPicker({
           size="sm"
           variant="outline"
           className="w-full h-8 text-xs gap-1.5"
-          onClick={() => setIsPickerOpen((open) => !open)}
+          onClick={() => {
+            setIsPickerOpen(!isPickerOpen);
+            onPickerOpenChange?.(!isPickerOpen);
+          }}
         >
           <ChevronDown
             className={`h-3.5 w-3.5 transition-transform ${

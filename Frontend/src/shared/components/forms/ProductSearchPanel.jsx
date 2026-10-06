@@ -1,5 +1,5 @@
 import { useId, useMemo, useRef, useState } from "react";
-import { List, Plus, Search, X } from "lucide-react";
+import { List, Loader2, Plus, Search, X } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { Button } from "@/shared/components/ui/button";
@@ -42,9 +42,11 @@ function stockTone(product) {
  *
  * `onAdd(product, reference?)` قلم را اضافه می‌کند؛ `false` یعنی رد شد (پیامش
  * را خودش داده). `addedQuantityOf(productId)` تعدادِ فعلیِ کالا در فهرست است
- * تا دکمه‌ی + نشان دهد الان چندتاست.
+ * تا دکمه‌ی + نشان دهد الان چندتاست. `isPending(productId)` یعنی جزئیاتِ کالا
+ * هنوز در راه است (دکمه چرخان می‌شود) و `onPrefetch(product)` جزئیات را پیش از
+ * کلیک می‌گیرد تا اولین افزودن هم فوری باشد.
  */
-export default function ProductSearchPanel({ products, addedQuantityOf, onAdd }) {
+export default function ProductSearchPanel({ products, addedQuantityOf, isPending, onPrefetch, onAdd }) {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [browseAll, setBrowseAll] = useState(false);
@@ -81,7 +83,9 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
     if (reference?.kind === BarcodeReferenceKindEnum.UNIT) {
       toast.success(`یک دانه از «${product.name}» اسکن شد`);
     } else if (before > 0) {
-      toast.success(`«${product.name}» شد ${formatNumber(before + 1)} عدد`);
+      toast.success(`«${product.name}» شد ${formatNumber(before + 1)} عدد`, { id: `add-${product.id}` });
+    } else {
+      toast.success(`«${product.name}» اضافه شد`, { id: `add-${product.id}` });
     }
     return true;
   };
@@ -95,9 +99,7 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
       toast.error(`کالایی با کد «${code}» پیدا نشد`);
       return true;
     }
-    if (add(product, reference) && addedQuantityOf(product.id) === 0) {
-      toast.success(`«${product.name}» اضافه شد`);
-    }
+    add(product, reference);
     return true;
   };
 
@@ -175,12 +177,12 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
         />
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2">
         <Select
           value={categoryFilter || "all"}
           onValueChange={(v) => setCategoryFilter(v === "all" ? "" : v)}
         >
-          <SelectTrigger aria-label="دسته‌بندی" size="sm" className="w-44 max-w-full">
+          <SelectTrigger aria-label="دسته‌بندی" size="sm" className="min-w-0 flex-1 sm:w-44 sm:flex-none">
             <SelectValue placeholder="همه دسته‌ها" />
           </SelectTrigger>
           <SelectContent>
@@ -193,7 +195,7 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
           </SelectContent>
         </Select>
         {browseAll && !search.trim() && !categoryFilter ? (
-          <Button type="button" size="sm" variant="ghost" className="text-xs" onClick={() => setBrowseAll(false)}>
+          <Button type="button" size="sm" variant="ghost" className="shrink-0 whitespace-nowrap text-xs" onClick={() => setBrowseAll(false)}>
             بستن فهرست
           </Button>
         ) : (
@@ -202,7 +204,7 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
               type="button"
               size="sm"
               variant="ghost"
-              className="gap-1.5 text-xs"
+              className="shrink-0 gap-1.5 whitespace-nowrap text-xs"
               onClick={() => setBrowseAll(true)}
             >
               <List className="size-3.5" />
@@ -220,13 +222,18 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
             )}
             {shown.map((product, index) => {
               const added = addedQuantityOf(product.id);
+              const pending = isPending?.(product.id);
               return (
                 <li
                   key={product.id}
                   id={`${listId}-${index}`}
                   role="option"
                   aria-selected={index === activeIndex}
-                  onMouseEnter={() => setActive(index)}
+                  onMouseEnter={() => {
+                    setActive(index);
+                    onPrefetch?.(product);
+                  }}
+                  onPointerDown={() => onPrefetch?.(product)}
                   onClick={() => add(product)}
                   className={cn(
                     "flex cursor-pointer items-center gap-2.5 px-3 py-2 transition-colors",
@@ -261,7 +268,7 @@ export default function ProductSearchPanel({ products, addedQuantityOf, onAdd })
                     )}
                     aria-label={added > 0 ? `یکی دیگر (اکنون ${formatNumber(added)})` : "افزودن"}
                   >
-                    <Plus className="size-3.5" />
+                    {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
                     {added > 0 && <span className="tabular-nums">{formatNumber(added)}</span>}
                   </span>
                 </li>

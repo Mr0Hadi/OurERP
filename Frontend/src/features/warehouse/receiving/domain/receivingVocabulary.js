@@ -20,8 +20,7 @@ import { QUEUE_FILTER } from "../../shared/queueFilters";
  * چون باقیمانده با محموله‌ی بعدی می‌آید و `ReceivePurchase` چند دور
  * پشتِ‌سرِهم را می‌پذیرد.
  *
- * صف با `statuses` چند وضعیت را با هم می‌خواهد
- * (`Backend-Net/docs/purchase-frontend-sync-requests.fa.md` بند ۱۲).
+ * صف با `statuses` چند وضعیت را با هم می‌خواهد (`receivingStatusesOf`).
  */
 export const RECEIVING_ELIGIBLE_STATUSES = [
   PurchaseStatusEnum.SHIPPED,

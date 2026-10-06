@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Banknote, Trash2 } from "lucide-react";
-import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
+import StatusBadge from "@/shared/components/status/StatusBadge";
+import StatusText from "@/shared/components/status/StatusText";
+import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
 import {
   EFFECT_DIRECTIONS,
   EFFECT_STATUSES,
@@ -12,16 +14,11 @@ import {
 } from "@/shared/domain/returns/effects";
 import EffectBadge from "./EffectBadge";
 
-const PENDING_CLASS =
-  "text-[10px] bg-warning/10 text-warning border-warning/25";
-const DONE_CLASS =
-  "text-[10px] bg-success/10 text-success border-success/25";
-
 /**
  * یک تصمیمِ ثبت‌شده روی یک ادعا، به‌همراه اثرهایش.
  *
  * حذف فقط تا وقتی مجاز است که هیچ کالایی جابه‌جا نشده باشد — همان قاعده‌ی
- * `RemoveClaimResolution`. اثر مالیِ اجراشده مانع نیست؛ سرور ردیفِ معکوسش
+ * `RemoveClaimResolution` (TODO(بکند): `canRemove` روی تصمیم، بندِ ۱۴.۳). اثر مالیِ اجراشده مانع نیست؛ سرور ردیفِ معکوسش
  * را می‌نویسد.
  *
  * وعده‌ی پرداخت (اثر مالیِ معلق) همین‌جا دکمه‌ی «ثبت پرداخت» دارد: کار
@@ -63,22 +60,23 @@ export default function ResolutionLineRow({
     confirm !== null &&
     (confirm.kind !== "money" || pendingMoney.some((effect) => effect.id === confirm.effect.id));
   const moneyLabelOf = (effect) =>
-    `${side.effectLabels[effect.direction]} ${(Number(effect.amount) || 0).toLocaleString("fa-IR")} ریال`;
+    `${side.effectLabels[effect.direction]} ${formatRial(effect.amount)}`;
+  const quantityText = `${formatNumber(resolution.quantity)} عدد`;
 
   const statusBadge = resolution.isWriteOff
-    ? { label: "بخشیده شد", className: DONE_CLASS }
+    ? { label: "بخشیده شد", tone: "success" }
     : awaitsWarehouse
-      ? { label: "در انتظار انبار", className: PENDING_CLASS }
+      ? { label: "در انتظار انبار", tone: "warning" }
       : pendingMoney.length > 0
-        ? { label: "در انتظار پرداخت", className: PENDING_CLASS }
-        : { label: "انجام شد", className: DONE_CLASS };
+        ? { label: "در انتظار پرداخت", tone: "warning" }
+        : { label: "انجام شد", tone: "success" };
 
   return (
     <div className="rounded-md border border-border bg-card px-2.5 py-2 space-y-1.5">
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2 min-w-0">
           <span className="text-xs font-medium text-card-foreground tabular-nums shrink-0">
-            {(Number(resolution.quantity) || 0).toLocaleString("fa-IR")} عدد
+            {quantityText}
           </span>
           {resolution.note && (
             <span className="text-xs text-muted-foreground truncate max-w-full">
@@ -88,9 +86,9 @@ export default function ResolutionLineRow({
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          <Badge variant="outline" className={statusBadge.className}>
+          <StatusBadge tone={statusBadge.tone} size="sm">
             {statusBadge.label}
-          </Badge>
+          </StatusBadge>
           {canRemove && (
             <Button
               type="button"
@@ -138,36 +136,31 @@ export default function ResolutionLineRow({
             onClick={() => setConfirm({ kind: "money", effect })}
           >
             <Banknote className="h-3.5 w-3.5" />
-            ثبت {moneyLabelOf(effect)} — انجام شد
+            {moneyLabelOf(effect)} انجام شد؛ ثبت شود
           </Button>
         ))}
 
-      {summary.netMoney !== 0 && (
+      {/* فقط وقتی هر دو جهتِ پول در یک تصمیم هست جمعِ خالص چیزی بیش از خودِ اثرها می‌گوید. */}
+      {summary.moneyIn > 0 && summary.moneyOut > 0 && (
         <p className="text-[11px] text-muted-foreground">
-          خالص مالی:{" "}
-          <span
-            className={
-              summary.netMoney > 0
-                ? "text-success font-medium"
-                : "text-destructive font-medium"
-            }
-          >
-            {Math.abs(summary.netMoney).toLocaleString("fa-IR")} ریال{" "}
+          خالص:{" "}
+          <StatusText tone={summary.netMoney > 0 ? "success" : "danger"} className="inline-flex font-medium">
+            {formatRial(Math.abs(summary.netMoney))}{" "}
             {summary.netMoney > 0
               ? side.effectLabels[EFFECT_DIRECTIONS.MONEY_IN]
               : side.effectLabels[EFFECT_DIRECTIONS.MONEY_OUT]}
-          </span>
+          </StatusText>
         </p>
       )}
 
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={(open) => !open && setConfirm(null)}
-        title={confirm?.kind === "money" ? "ثبت پرداخت" : "حذف این تصمیم"}
+        title={confirm?.kind === "money" ? "ثبتِ جابه‌جاییِ پول" : "حذف این تصمیم"}
         description={
           confirm?.kind === "money"
-            ? `«${moneyLabelOf(confirm.effect)}» همین حالا به‌عنوان انجام‌شده ثبت می‌شود. بعد از آن، لغو یا رد این مرجوعی فقط با حذفِ این تصمیم ممکن است.`
-            : `تصمیم و اثرهای انجام‌نشده‌اش حذف می‌شوند و این ${(Number(resolution.quantity) || 0).toLocaleString("fa-IR")} عدد دوباره بی‌تصمیم می‌شود.${
+            ? `«${moneyLabelOf(confirm.effect)}» با تاریخِ امروز در دفترِ حساب ثبت می‌شود. بعد از آن، لغو یا ردِ این مرجوعی فقط با حذفِ همین تصمیم ممکن است.`
+            : `تصمیم و اثرهای انجام‌نشده‌اش حذف می‌شوند و این ${quantityText} دوباره بی‌تصمیم می‌شود.${
                 hasAppliedMoney ? " پولی که جابه‌جا شده با یک ردیفِ معکوس در دفتر برگردانده می‌شود." : ""
               }`
         }

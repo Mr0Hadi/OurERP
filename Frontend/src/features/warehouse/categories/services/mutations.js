@@ -16,10 +16,10 @@ export const useCreateProductCategoryMutation = () => {
     mutationFn: createProductCategory,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: productCategoryKeys.lists() });
-      toast.success("دسته‌بندی جدید اضافه شد");
+      toast.success("دسته‌بندی اضافه شد");
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, "خطا در ساخت دسته‌بندی"));
+      toast.error(getErrorMessage(error, "افزودن دسته‌بندی انجام نشد"));
     },
   });
 };
@@ -34,7 +34,7 @@ export const useUpdateProductCategoryMutation = () => {
       toast.success("دسته‌بندی ویرایش شد");
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, "خطا در ویرایش دسته‌بندی"));
+      toast.error(getErrorMessage(error, "ویرایش دسته‌بندی انجام نشد"));
     },
   });
 };
@@ -55,7 +55,7 @@ export const useDeleteProductCategoryMutation = () => {
       toast.success("دسته‌بندی حذف شد");
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, "خطا در حذف دسته‌بندی"));
+      toast.error(getErrorMessage(error, "حذف دسته‌بندی انجام نشد"));
     },
   });
 };

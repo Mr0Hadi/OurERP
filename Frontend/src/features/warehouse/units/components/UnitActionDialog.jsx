@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useIsMutating } from "@tanstack/react-query";
 
 import {
   Dialog,
@@ -35,6 +36,7 @@ import {
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { useApplyUnitActionMutation, useSetUnitLocationMutation } from "../services/mutations";
 import Notice from "@/shared/components/feedback/Notice";
+import { productUnitKeys } from "../services/queryKeys";
 
 /** چرا بخشی از انتخاب کنار گذاشته شد — به زبانِ کاری، نه «مجاز نیست». */
 function skippedReason(units) {
@@ -221,10 +223,20 @@ function LocationForm({ units, onDone, onCancel }) {
  *
  * فرم با `key` از نو ساخته می‌شود تا هر بار با علتِ پیش‌فرضِ همان کار و
  * توضیحِ خالی باز شود.
+ *
+ * وسطِ درخواست با Esc یا کلیک بیرون بسته نمی‌شود (مثلِ `ConfirmDialog`)؛ وگرنه
+ * کاربر نمی‌فهمید کار ثبت شد یا نه و دوباره انجامش می‌داد.
  */
 export default function UnitActionDialog({ request, onOpenChange, onDone }) {
+  const isSaving = useIsMutating({ mutationKey: productUnitKeys.unitWrites() }) > 0;
   return (
-    <Dialog open={!!request} onOpenChange={onOpenChange}>
+    <Dialog
+      open={!!request}
+      onOpenChange={(open) => {
+        if (!open && isSaving) return;
+        onOpenChange(open);
+      }}
+    >
       <DialogContent dir="rtl" className="sm:max-w-lg">
         {request &&
           (request.action === UNIT_LOCATION_ACTION ? (

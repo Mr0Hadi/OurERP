@@ -7,12 +7,13 @@ import { usePermission } from "@/features/auth/hooks/usePermission";
 
 /**
  * پیوند از یک سند یا کالا به «دانه‌ها و برچسب‌ها»، با فیلترِ همان‌جا
- * (مثلاً `{ purchaseId, view: "unlabeled" }` برای برچسب‌های یک خرید).
- * بدونِ دسترسیِ دیدنِ دانه‌ها نمایش داده نمی‌شود.
+ * (مثلاً `{ purchaseId, labelFilter: LABEL_FILTERS.UNPRINTED }` برای برچسب‌های یک خرید).
+ * بدونِ دسترسیِ دیدنِ دانه‌ها نمایش داده نمی‌شود (اگر فهرستِ دسترسی نیامد، دیده
+ * می‌شود و خودِ صفحه تصمیم می‌گیرد).
  */
 export default function UnitsPageLink({ params, label = "دانه‌ها و برچسب‌ها", className = "" }) {
-  const { can } = usePermission();
-  if (!can("ProductUnitView")) return null;
+  const { allows } = usePermission();
+  if (!allows("ProductUnitView")) return null;
 
   const query = new URLSearchParams(
     Object.entries(params).filter(([, value]) => value != null && value !== ""),

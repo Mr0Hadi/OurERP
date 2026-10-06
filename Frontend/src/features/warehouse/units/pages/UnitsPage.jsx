@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
 
@@ -12,15 +12,13 @@ import { parseBarcode } from "@/shared/domain/barcode/productCode";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
-import { useSuppliersOptionsQuery } from "@/features/suppliers/services/queries";
-import { useCustomersOptionsQuery } from "@/features/customers/services/queries";
 
 import {
   LABEL_FILTERS,
   effectiveUnitFilters,
   segmentFromLegacyView,
 } from "../domain/unitVocabulary";
-import { formatNumber } from "@/shared/lib/numberFormat";
+import { formatDigits, formatNumber } from "@/shared/lib/numberFormat";
 import { fetchAllProductUnits } from "../services/api-v1";
 import { useProductUnitsQuery, useProductUnitSummaryQuery } from "../services/queries";
 import { useResolveScannedCodeMutation } from "../services/mutations";
@@ -30,11 +28,15 @@ import UnitFilterBar from "../components/UnitFilterBar";
 import UnitViewNav from "../components/UnitViewNav";
 import UnitBulkBar from "../components/UnitBulkBar";
 import UnitsList from "../components/UnitsList";
-import UnitDetailSheet from "../components/UnitDetailSheet";
 import UnitActionDialog from "../components/UnitActionDialog";
-import LabelPrintDesigner from "../components/LabelPrintDesigner";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
 
+/**
+ * برگه‌ی جزئیات (بارکد/QR و تاریخچه) و طراحِ چاپ (`react-barcode`، QR، CSSِ چاپ)
+ * فقط با بازشدن بار می‌شوند؛ بیشترِ بازدیدها فقط فهرست را می‌بینند.
+ */
+const UnitDetailSheet = lazy(() => import("../components/UnitDetailSheet"));
+const LabelPrintDesigner = lazy(() => import("../components/LabelPrintDesigner"));
 
 /** سقفِ «انتخاب همه‌ی نتایج» — بیشتر از این یعنی فیلترِ دقیق‌تر. */
 const BULK_LIMIT = 2000;
@@ -55,10 +57,8 @@ const parseUrlValue = (key, raw) => (TEXT_URL_KEYS.includes(key) ? raw : Number(
  *  - **کارها:** هر کار (چاپ، قرنطینه، بازگشت به موجودی، اسقاط، عودت) هم تکی
  *    از «جزئیات» و هم دسته‌ای با انتخاب و نوارِ پایینِ صفحه.
  *
- * چیدمان مثلِ «دسترسی کارمندان»: ستونِ کناری (کالا + نماهای جایگاه و برچسب،
- * با شمارش) و کنارش سربرگِ نمای جاری و فهرست. شکستن با عرضِ پنجره است نه
- * عرضِ محتوا، تا با باز شدنِ منوی اصلیِ سایت ستون بسته نشود؛ در عرضِ کم
- * نماها دو انتخاب‌گرند.
+ * چیدمان: یک کارت با فیلترها (جست‌وجو/اسکن، کالا، «فیلترهای بیشتر») و
+ * انتخاب‌گرهای نما (جایگاه با شمارش، وضعیتِ برچسب)، و زیرش فهرست.
  *
  * یک فیلدِ اسکن/جست‌وجو: تایپ فهرست را فیلتر می‌کند؛ اسکن یا Enter روی
  * بارکدِ دانه جزئیاتش را باز می‌کند (یا در «اسکنِ پیاپی» به انتخاب اضافه‌اش
@@ -66,7 +66,7 @@ const parseUrlValue = (key, raw) => (TEXT_URL_KEYS.includes(key) ? raw : Number(
  *
  * پیوند از صفحه‌های دیگر با پارامترِ آدرس: `?productId=`، `?purchaseId=`،
  * `?saleId=`، `?segment=quarantine`، `?labelFilter=unprinted`، `?binLocation=`، `?unit=<بارکد>`،
- * و `?view=unlabeled` (قدیمی).
+ * و `?view=unlabeled` / `?view=quarantine` (نشانیِ قدیمی، برای بوکمارک‌ها).
  */
 export default function UnitsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -133,8 +133,6 @@ export default function UnitsPage() {
   const summary = summaryQuery.isError ? null : summaryQuery.data;
 
   const productOptions = useProductsOptionsQuery();
-  const supplierOptions = useSuppliersOptionsQuery();
-  const customerOptions = useCustomersOptionsQuery();
 
   const units = unitsQuery.data?.items ?? [];
   const totalResults = unitsQuery.data?.total ?? 0;
@@ -235,11 +233,11 @@ export default function UnitsPage() {
           return;
         }
         if (selectedById.has(result.unit.id)) {
-          toast(`سریال ${formatNumber(result.unit.serialNumber)} قبلاً انتخاب شده`);
+          toast(`سریال ${formatDigits(result.unit.serialNumber)} قبلاً انتخاب شده`);
           return;
         }
         toggleSelect(result.unit);
-        toast.success(`${result.unit.productName ?? ""}، سریال ${formatNumber(result.unit.serialNumber)} اضافه شد`);
+        toast.success(`${result.unit.productName ?? ""}، سریال ${formatDigits(result.unit.serialNumber)} اضافه شد`);
       },
     });
   };
@@ -290,14 +288,6 @@ export default function UnitsPage() {
     store.setSearch("");
   };
 
-  const viewNavProps = {
-    segment: store.segment,
-    labelFilter: store.labelFilter,
-    summary,
-    onSegmentChange: changeSegment,
-    onLabelFilterChange: changeLabelFilter,
-  };
-
   const currentPage = unitsQuery.data?.page ? unitsQuery.data.page - 1 : pagination.pageIndex;
   const isPrintQueue = store.labelFilter === LABEL_FILTERS.UNPRINTED;
   const hasFilters = Boolean(
@@ -323,26 +313,6 @@ export default function UnitsPage() {
 
   return (
     <div className="w-full">
-      {/* <UnitViewNav
-        variant="pane"
-        className="hidden lg:sticky lg:top-4 lg:flex lg:max-h-[calc(100svh-6.5rem)]"
-        header={
-          <div className="[&_label]:sr-only">
-            <EntitySelect
-              label="کالا"
-              placeholder="همه‌ی کالاها"
-              emptyText="کالایی یافت نشد"
-              items={products}
-              value={store.productId}
-              onSelect={(id) => store.setProductId(id)}
-              renderMeta={(product) => product.code}
-            />
-          </div>
-        }
-        footerText={`${resultsText} در این نما`}
-        {...viewNavProps}
-      /> */}
-
       <main className="flex min-w-0 flex-col gap-3">
         {/* کارت اصلی: ناحیه فیلتر/سربرگ + بدنه لیست */}
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
@@ -361,14 +331,18 @@ export default function UnitsPage() {
                 />
               }
               products={products}
-              suppliers={supplierOptions.suppliers}
-              customers={customerOptions.customers}
-              isLoadingParties={supplierOptions.isLoading || customerOptions.isLoading}
             />
 
-            {/* سربرگِ نمای جاری — همان کارتِ سربرگِ کارمند در «دسترسی کارمندان». */}
+            {/* سربرگِ نمای جاری: جایگاه، برچسب و شمارِ نتیجه. */}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border pt-3">
-              <UnitViewNav variant="select" className="w-full" {...viewNavProps} />
+              <UnitViewNav
+                className="w-full"
+                segment={store.segment}
+                labelFilter={store.labelFilter}
+                summary={summary}
+                onSegmentChange={changeSegment}
+                onLabelFilterChange={changeLabelFilter}
+              />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs text-muted-foreground">
                   {[productName && `کالا: ${productName}`, resultsText]
@@ -435,14 +409,19 @@ export default function UnitsPage() {
         />
       </main>
 
-      <UnitDetailSheet
-        unit={activeUnit}
-        open={Boolean(activeUnit)}
-        onOpenChange={(open) => !open && setActiveUnit(null)}
-        onPrint={(unit) => openPrint([unit])}
-        onAction={requestAction}
-        canManage={canManage}
-      />
+      <Suspense fallback={null}>
+        {activeUnit && (
+          <UnitDetailSheet
+            unit={activeUnit}
+            open
+            onOpenChange={(open) => !open && setActiveUnit(null)}
+            onPrint={(unit) => openPrint([unit])}
+            onAction={requestAction}
+            canManage={canManage}
+          />
+        )}
+        {printUnits?.length > 0 && <LabelPrintDesigner units={printUnits} onClose={closePrint} />}
+      </Suspense>
 
       <UnitActionDialog
         request={actionRequest}
@@ -450,7 +429,6 @@ export default function UnitsPage() {
         onDone={handleActionDone}
       />
 
-      <LabelPrintDesigner units={printUnits} onClose={closePrint} />
     </div>
   );
 }

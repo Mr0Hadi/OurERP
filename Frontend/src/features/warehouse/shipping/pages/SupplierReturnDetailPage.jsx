@@ -1,25 +1,15 @@
 import { useCallback, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { AlertCircle, CheckCircle, AlertTriangle, X } from "lucide-react";
 import { toast } from "react-hot-toast";
 
-import { Button } from "@/shared/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/components/ui/alert-dialog";
+import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
+import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import {
   usePurchaseReturnQuery,
   usePurchaseForReturnQuery,
 } from "@/features/purchases/returns/services/queries";
 import { useExecuteGoodsRoundMutation } from "@/features/purchases/returns/services/mutations";
-import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
+import { useDocumentProducts } from "@/features/warehouse/products/services/queries";
 import { buildGoodsLines } from "@/shared/domain/returns/resolutions";
 import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
 import { CLAIM_SCOPES } from "@/shared/domain/returns/scopes";
@@ -33,9 +23,11 @@ import GoodsRoundSummaryCard from "@/shared/components/returns/GoodsRoundSummary
 import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
+import { trackedLookup, withProductInfo } from "../../shared/productInfo";
+import WarehouseSubmitBar from "../../shared/WarehouseSubmitBar";
+import NothingPending from "../../shared/NothingPending";
 
 const PURCHASE_SIDE = sideConfig(RETURN_SIDES.PURCHASE);
-
 
 const { GOODS_OUT, GOODS_RELEASE, GOODS_SCRAP } = EFFECT_DIRECTIONS;
 const WAREHOUSE_DIRECTIONS = [GOODS_OUT, GOODS_RELEASE, GOODS_SCRAP];
@@ -95,13 +87,10 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
     [purchaseReturn],
   );
 
-  const { products: productOptions } = useProductsOptionsQuery();
-
-  const productMap = useMemo(() => {
-    const map = new Map();
-    productOptions.forEach((p) => map.set(p.id, p));
-    return map;
-  }, [productOptions]);
+  const { productMap, isLoading: productsLoading } = useDocumentProducts(
+    lines.map((line) => line.productId),
+  );
+  const isTracked = useMemo(() => trackedLookup(productMap), [productMap]);
 
   const { data: receivingInfo } = usePurchaseForReturnQuery(purchaseReturn.purchaseId);
   const defaultSource = useCallback(
@@ -117,8 +106,8 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
     (line, source) =>
       line.direction === GOODS_OUT &&
       source === ProductUnitStatusEnum.IN_STOCK &&
-      Boolean(productMap.get(line.productId)?.requiresUnitTracking),
-    [productMap],
+      isTracked(line.productId),
+    [isTracked],
   );
 
   const {
@@ -134,18 +123,7 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
     buildCommand,
   } = useGoodsRoundForm(lines, { sourceRequired, defaultSource, barcodesRequired });
 
-  const displayRounds = useMemo(
-    () =>
-      rounds.map((round) => {
-        const product = productMap.get(round.productId);
-        return {
-          ...round,
-          imageKey: product?.imageKey ?? null,
-          imageUrl: product?.imageUrl ?? product?.image ?? null,
-        };
-      }),
-    [rounds, productMap],
-  );
+  const displayRounds = useMemo(() => withProductInfo(rounds, productMap), [rounds, productMap]);
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
@@ -168,15 +146,7 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
 
   if (rounds.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <CheckCircle className="h-12 w-12 text-success" />
-        <p className="text-lg text-muted-foreground">
-          برای این مرجوعی کاری در انبار باقی نمانده است.
-        </p>
-        <Button variant="outline" onClick={backToReturn}>
-          بازگشت به مرجوعی
-        </Button>
-      </div>
+      <NothingPending message="برای این مرجوعی کاری در انبار باقی نمانده است." onBack={backToReturn} />
     );
   }
 
@@ -231,68 +201,33 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
             noteLabel="یادداشت"
           />
 
-          {blockingReason && hasSomethingToRecord && (
-            <p className="text-xs text-destructive px-1">{blockingReason}</p>
-          )}
-
-          <div className="flex gap-2">
-            <Button
-              className={`flex-1 gap-2 ${
-                !isAllComplete ? "bg-warning hover:bg-warning text-white" : ""
-              }`}
-              disabled={isBusy || !hasSomethingToRecord || Boolean(blockingReason)}
-              onClick={() => setShowConfirmDialog(true)}
-            >
-              {isAllComplete ? (
-                <CheckCircle className="h-4 w-4" />
-              ) : (
-                <AlertTriangle className="h-4 w-4" />
-              )}
-              {isAllComplete ? "تأیید انجام کامل" : "ثبت این دور"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={backToReturn}
-              disabled={isBusy}
-              className="gap-2"
-            >
-              <X className="h-4 w-4" />
-              انصراف
-            </Button>
-          </div>
-
-          <p className="text-xs text-muted-foreground text-center px-2">
-            باقیمانده برای دور بعدی نگه داشته می‌شود و دوباره در همین صفحه ظاهر
-            می‌شود.
-          </p>
+          <WarehouseSubmitBar
+            label={isAllComplete ? "تأیید انجام کامل" : "ثبت این دور"}
+            complete={isAllComplete}
+            canSubmit={hasSomethingToRecord && !productsLoading}
+            blockingReason={blockingReason}
+            isBusy={isBusy}
+            onSubmit={() => setShowConfirmDialog(true)}
+            onCancel={backToReturn}
+            hint="باقیمانده برای دور بعدی نگه داشته می‌شود و دوباره در همین صفحه ظاهر می‌شود."
+          />
         </div>
       </div>
 
-      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {isAllComplete ? "ثبت انجام کامل" : "ثبت این دور"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {isAllComplete
-                ? "همه‌ی ردیف‌ها کامل انجام شده‌اند؟ موجودی و قرنطینه همین حالا به‌روز می‌شوند."
-                : "فقط مقادیری که وارد کرده‌اید ثبت می‌شود؛ بقیه برای دور بعدی می‌ماند."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isBusy}>انصراف</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isBusy}
-              onClick={handleSubmit}
-              className={!isAllComplete ? "bg-warning hover:bg-warning" : ""}
-            >
-              {isBusy ? "در حال ثبت..." : "تأیید"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+        title={isAllComplete ? "ثبت انجام کامل" : "ثبت این دور"}
+        description={
+          isAllComplete
+            ? "همه‌ی ردیف‌ها کامل انجام شده‌اند؟ موجودی و قرنطینه همین حالا به‌روز می‌شوند."
+            : "فقط مقادیری که وارد کرده‌اید ثبت می‌شود؛ بقیه برای دور بعدی می‌ماند."
+        }
+        destructive={false}
+        pendingLabel="در حال ثبت..."
+        isPending={isBusy}
+        onConfirm={handleSubmit}
+      />
     </div>
   );
 }
@@ -305,6 +240,8 @@ export default function SupplierReturnDetailPage() {
     data: purchaseReturn,
     isLoading,
     isError,
+    error,
+    refetch,
   } = usePurchaseReturnQuery(Number(id));
 
   usePageHeader({
@@ -316,16 +253,12 @@ export default function SupplierReturnDetailPage() {
 
   if (isError || !purchaseReturn) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-lg text-muted-foreground">مرجوعی مورد نظر یافت نشد.</p>
-        <Button
-          variant="outline"
-          onClick={() => navigate(ROUTES.PURCHASES_RETURNS_LIST)}
-        >
-          بازگشت به لیست مرجوعی‌ها
-        </Button>
-      </div>
+      <DetailErrorState
+        error={error}
+        notFoundMessage="مرجوعی مورد نظر یافت نشد."
+        onRetry={refetch}
+        onBack={() => navigate(ROUTES.PURCHASES_RETURNS_LIST)}
+      />
     );
   }
 

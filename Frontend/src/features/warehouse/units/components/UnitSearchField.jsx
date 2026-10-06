@@ -1,12 +1,8 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { Loader2, ScanBarcode, Search, X } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { Loader2, Search, X } from "lucide-react";
 
 import { Input } from "@/shared/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
-
-const CameraScanner = lazy(
-  () => import("@/features/warehouse/products/components/forms/CameraScanner"),
-);
+import CameraScanButton from "@/shared/components/barcode/CameraScanButton";
 
 /** دو رفتارِ اسکن — کنارِ خودِ فیلد، تا کاربر همیشه بداند اسکن چه می‌کند. */
 const SCAN_MODES = [
@@ -17,33 +13,20 @@ const SCAN_MODES = [
 /**
  * جست‌وجو و اسکن در یک فیلد. تایپ فهرست را فیلتر می‌کند (والد debounce
  * می‌کند)؛ Enter یا اسکنر (که مثلِ صفحه‌کلید می‌نویسد و Enter می‌زند) کد
- * را به `onScan` می‌دهد. دوربین برای تبلتِ بی‌اسکنر.
+ * را به `onScan` می‌دهد. دوربین برای تبلتِ بی‌اسکنر (`CameraScanButton`).
  */
 export default function UnitSearchField({ value, onChange, onScan, isBusy, scanToSelect, onScanModeChange }) {
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, [scanToSelect]);
 
-  const submit = useCallback(
-    (code) => {
-      const trimmed = String(code ?? "").trim();
-      if (trimmed) onScan(trimmed);
-      inputRef.current?.focus();
-    },
-    [onScan],
-  );
-
-  // identityِ پایدار: `CameraScanner` با عوض شدنش دوربین را از نو باز می‌کند.
-  const handleDetected = useCallback(
-    (text) => {
-      setIsCameraOpen(false);
-      submit(text);
-    },
-    [submit],
-  );
+  const submit = (code) => {
+    const trimmed = String(code ?? "").trim();
+    if (trimmed) onScan(trimmed);
+    inputRef.current?.focus();
+  };
 
   const mode = SCAN_MODES.find((option) => option.value === scanToSelect);
 
@@ -82,15 +65,14 @@ export default function UnitSearchField({ value, onChange, onScan, isBusy, scanT
               <X className="h-4 w-4" />
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => setIsCameraOpen(true)}
-            className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
-            title="اسکن با دوربین"
+          <CameraScanButton
+            onDetected={submit}
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1 px-2 text-xs text-muted-foreground"
           >
-            <ScanBarcode className="h-4 w-4" />
             <span className="hidden sm:inline">دوربین</span>
-          </button>
+          </CameraScanButton>
         </div>
       </form>
 
@@ -117,25 +99,6 @@ export default function UnitSearchField({ value, onChange, onScan, isBusy, scanT
         </div>
         <span className="hidden sm:inline">{mode?.hint}</span>
       </div>
-
-      <Dialog open={isCameraOpen} onOpenChange={setIsCameraOpen}>
-        <DialogContent dir="rtl" className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>اسکن بارکد یا کد QR</DialogTitle>
-          </DialogHeader>
-          {isCameraOpen && (
-            <Suspense
-              fallback={
-                <div className="flex aspect-video w-full items-center justify-center rounded-md bg-black text-sm text-white">
-                  در حال آماده‌سازی دوربین…
-                </div>
-              }
-            >
-              <CameraScanner onDetected={handleDetected} />
-            </Suspense>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

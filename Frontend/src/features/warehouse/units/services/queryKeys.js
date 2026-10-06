@@ -5,4 +5,6 @@ export const productUnitKeys = {
   summaries: () => [...productUnitKeys.all, "summary"],
   summary: (productId) => [...productUnitKeys.summaries(), String(productId ?? "")],
   history: (productUnitId) => [...productUnitKeys.all, "history", String(productUnitId)],
+  /** کلیدِ mutationهای دیالوگِ کار (کار/قفسه) — دیالوگ تا پایانشان بسته نمی‌شود. */
+  unitWrites: () => [...productUnitKeys.all, "write"],
 };

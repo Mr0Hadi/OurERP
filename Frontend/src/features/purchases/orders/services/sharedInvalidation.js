@@ -29,7 +29,7 @@ export function invalidatePurchaseEcosystem(
       queryKey: receivingKeys.detail(purchaseId),
     });
     queryClient.invalidateQueries({
-      queryKey: purchaseReturnKeys.purchaseForReturnAll(purchaseId),
+      queryKey: purchaseReturnKeys.purchaseForReturn(purchaseId),
     });
   }
   queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });

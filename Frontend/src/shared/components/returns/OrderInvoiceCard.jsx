@@ -8,7 +8,7 @@ import {
 } from "@/shared/components/ui/card";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { invoiceLineAmounts } from "@/shared/domain/invoice/lineMath";
-import { claimLineKey } from "@/shared/hooks/useClaimsInOtherReturns";
+import { claimLineKey, useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
 import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
 
 /**
@@ -41,6 +41,11 @@ const lineTotalOf = (item) =>
  * defaultOpen=false برای صفحه‌ی جزئیات مرجوعی است، که کارِ اصلی‌اش
  * تصمیم‌گیری است و فاکتور فقط مرجع است — باز بودنش نصف صفحه را
  * می‌گرفت.
+ *
+ * `claimsSource` (`{ side, documentId, excludeReturnId }`) ادعاهای مرجوعی‌های
+ * دیگرِ همین سند را کنارِ «تحویل‌شده» می‌آورد. خودِ کارت آن را می‌خواند و فقط
+ * وقتی باز است: این کار یک درخواست به‌ازای هر مرجوعیِ دیگر است و در صفحه‌ی
+ * جزئیات (که کارت بسته است) پیش از این همیشه انجام می‌شد.
  */
 export default function OrderInvoiceCard({
   order,
@@ -48,8 +53,7 @@ export default function OrderInvoiceCard({
   quantityLabel = "تعداد فاکتور",
   deliveredLabel = "تحویل‌شده",
   partyName,
-  // خروجیِ `useClaimsInOtherReturns`: مقدارِ ادعاشده‌ی هر خط در مرجوعی‌های دیگرِ همین سند.
-  claimsElsewhere,
+  claimsSource,
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
@@ -88,112 +92,132 @@ export default function OrderInvoiceCard({
       </CardHeader>
 
       {isOpen && (
-        <CardContent>
-          {/* دسکتاپ: جدول */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-border text-muted-foreground">
-                  <th className="py-2 px-2 text-right font-medium">کالا</th>
-                  <th className="py-2 px-2 text-center font-medium">
-                    {quantityLabel}
-                  </th>
-                  <th className="py-2 px-2 text-center font-medium">
-                    {deliveredLabel}
-                  </th>
-                  <th className="py-2 px-2 text-center font-medium">
-                    قیمت واحد
-                  </th>
-                  <th className="py-2 px-2 text-center font-medium">جمع خط</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr
-                    key={item.purchaseItemId ?? item.id}
-                    className="border-b border-border/50 last:border-0"
-                  >
-                    <td className="py-2 px-2">
-                      <div className="font-medium text-card-foreground">
-                        {item.productName}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground">
-                        {item.productCode}
-                      </div>
-                    </td>
-                    <td className="py-2 px-2 text-center tabular-nums">
-                      {formatNumber(orderedOf(item))} {item.unit || "عدد"}
-                    </td>
-                    <td className="py-2 px-2 text-center tabular-nums">
-                      <DeliveredCell
-                        item={item}
-                        claimsElsewhere={claimsElsewhere}
-                      />
-                    </td>
-                    <td className="py-2 px-2 text-center tabular-nums">
-                      {formatNumber(item.unitPrice)}
-                    </td>
-                    <td className="py-2 px-2 text-center tabular-nums font-medium">
-                      {formatNumber(lineTotalOf(item))}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t border-border">
-                  <td colSpan={4} className="py-2 px-2 text-right font-medium">
-                    {totalLabel}
-                  </td>
-                  <td className="py-2 px-2 text-center font-bold tabular-nums">
-                    {formatRial(total)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-
-          {/* موبایل: کارت به‌ازای هر قلم */}
-          <div className="md:hidden space-y-2">
-            {items.map((item) => (
-              <div
-                key={item.purchaseItemId ?? item.id}
-                className="rounded-lg border border-border p-2.5 space-y-1.5"
-              >
-                <div>
-                  <p className="text-sm font-medium text-card-foreground break-words">
-                    {item.productName}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {item.productCode}
-                  </p>
-                </div>
-                <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
-                  <Row label={quantityLabel}>
-                    {formatNumber(orderedOf(item))} {item.unit || "عدد"}
-                  </Row>
-                  <Row label={deliveredLabel}>
-                    <DeliveredCell
-                      item={item}
-                      claimsElsewhere={claimsElsewhere}
-                    />
-                  </Row>
-                  <Row label="قیمت واحد">{formatNumber(item.unitPrice)}</Row>
-                  <Row label="جمع خط">
-                    <span className="font-medium text-card-foreground">
-                      {formatNumber(lineTotalOf(item))}
-                    </span>
-                  </Row>
-                </div>
-              </div>
-            ))}
-            <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2 text-xs">
-              <span className="text-muted-foreground">{totalLabel}</span>
-              <span className="font-bold tabular-nums">{formatRial(total)}</span>
-            </div>
-          </div>
-        </CardContent>
+        <InvoiceItems
+          items={items}
+          total={total}
+          totalLabel={totalLabel}
+          quantityLabel={quantityLabel}
+          deliveredLabel={deliveredLabel}
+          claimsSource={claimsSource}
+        />
       )}
     </Card>
+  );
+}
+
+/** اقلامِ فاکتور — فقط وقتی کارت باز است mount می‌شود (و ادعاهای دیگر را می‌خواند). */
+function InvoiceItems({ items, total, totalLabel, quantityLabel, deliveredLabel, claimsSource }) {
+  const claimsElsewhere = useClaimsInOtherReturns(
+    claimsSource?.side,
+    claimsSource?.documentId ?? null,
+    claimsSource?.excludeReturnId ?? null,
+  );
+
+  return (
+    <CardContent>
+      {/* دسکتاپ: جدول */}
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-border text-muted-foreground">
+              <th className="py-2 px-2 text-right font-medium">کالا</th>
+              <th className="py-2 px-2 text-center font-medium">
+                {quantityLabel}
+              </th>
+              <th className="py-2 px-2 text-center font-medium">
+                {deliveredLabel}
+              </th>
+              <th className="py-2 px-2 text-center font-medium">
+                قیمت واحد
+              </th>
+              <th className="py-2 px-2 text-center font-medium">جمع خط</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr
+                key={item.purchaseItemId ?? item.id}
+                className="border-b border-border/50 last:border-0"
+              >
+                <td className="py-2 px-2">
+                  <div className="font-medium text-card-foreground">
+                    {item.productName}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {item.productCode}
+                  </div>
+                </td>
+                <td className="py-2 px-2 text-center tabular-nums">
+                  {formatNumber(orderedOf(item))} {item.unit || "عدد"}
+                </td>
+                <td className="py-2 px-2 text-center tabular-nums">
+                  <DeliveredCell
+                    item={item}
+                    claimsElsewhere={claimsElsewhere}
+                  />
+                </td>
+                <td className="py-2 px-2 text-center tabular-nums">
+                  {formatNumber(item.unitPrice)}
+                </td>
+                <td className="py-2 px-2 text-center tabular-nums font-medium">
+                  {formatNumber(lineTotalOf(item))}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="border-t border-border">
+              <td colSpan={4} className="py-2 px-2 text-right font-medium">
+                {totalLabel}
+              </td>
+              <td className="py-2 px-2 text-center font-bold tabular-nums">
+                {formatRial(total)}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      {/* موبایل: کارت به‌ازای هر قلم */}
+      <div className="md:hidden space-y-2">
+        {items.map((item) => (
+          <div
+            key={item.purchaseItemId ?? item.id}
+            className="rounded-lg border border-border p-2.5 space-y-1.5"
+          >
+            <div>
+              <p className="text-sm font-medium text-card-foreground break-words">
+                {item.productName}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {item.productCode}
+              </p>
+            </div>
+            <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+              <Row label={quantityLabel}>
+                {formatNumber(orderedOf(item))} {item.unit || "عدد"}
+              </Row>
+              <Row label={deliveredLabel}>
+                <DeliveredCell
+                  item={item}
+                  claimsElsewhere={claimsElsewhere}
+                />
+              </Row>
+              <Row label="قیمت واحد">{formatNumber(item.unitPrice)}</Row>
+              <Row label="جمع خط">
+                <span className="font-medium text-card-foreground">
+                  {formatNumber(lineTotalOf(item))}
+                </span>
+              </Row>
+            </div>
+          </div>
+        ))}
+        <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2 text-xs">
+          <span className="text-muted-foreground">{totalLabel}</span>
+          <span className="font-bold tabular-nums">{formatRial(total)}</span>
+        </div>
+      </div>
+    </CardContent>
   );
 }
 

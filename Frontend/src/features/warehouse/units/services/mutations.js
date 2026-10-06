@@ -26,7 +26,7 @@ export const useResolveScannedCodeMutation = ({ silent = false } = {}) =>
   useMutation({
     mutationFn: resolveScannedCode,
     onError: (error) => {
-      if (!silent) toast.error(getErrorMessage(error, "خطا در جست‌وجوی کد"));
+      if (!silent) toast.error(getErrorMessage(error, "جست‌وجوی کد انجام نشد"));
     },
   });
 
@@ -35,16 +35,11 @@ export const useMarkUnitsPrintedMutation = () => {
   return useMutation({
     mutationFn: (units) => markProductUnitsPrinted(units.map((unit) => unit.id)),
     onSuccess: (_, units) => {
-      toast.success(`چاپِ ${units.length.toLocaleString("fa-IR")} برچسب ثبت شد`);
+      toast.success(`چاپِ ${formatNumber(units.length)} برچسب ثبت شد`);
       queryClient.invalidateQueries({ queryKey: productUnitKeys.lists() });
       queryClient.invalidateQueries({ queryKey: productUnitKeys.summaries() });
     },
-    onError: (error) =>
-      toast.error(
-        error?.response?.status === 404
-          ? "برچسب‌ها چاپ شدند، ولی ثبتِ چاپ هنوز روی سرور پیاده نشده است."
-          : getErrorMessage(error, "ثبتِ چاپ انجام نشد"),
-      ),
+    onError: (error) => toast.error(getErrorMessage(error, "ثبتِ چاپ انجام نشد")),
   });
 };
 
@@ -56,6 +51,7 @@ export const useMarkUnitsPrintedMutation = () => {
 export const useApplyUnitActionMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
+    mutationKey: productUnitKeys.unitWrites(),
     mutationFn: (variables) =>
       applyProductUnitAction(variables, { idempotencyKey: idempotencyKeyFor(variables) }),
     onSuccess: (_, variables) => {
@@ -66,7 +62,10 @@ export const useApplyUnitActionMutation = () => {
       queryClient.invalidateQueries({ queryKey: purchaseKeys.all });
       queryClient.invalidateQueries({ queryKey: supplierKeys.all });
     },
-    onError: (error) => toast.error(getErrorMessage(error, "انجام نشد")),
+    onError: (error, variables) =>
+      toast.error(
+        getErrorMessage(error, `${UNIT_ACTION_META[variables.action].label} انجام نشد`),
+      ),
   });
 };
 
@@ -74,6 +73,7 @@ export const useApplyUnitActionMutation = () => {
 export const useSetUnitLocationMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
+    mutationKey: productUnitKeys.unitWrites(),
     mutationFn: setProductUnitLocation,
     onSuccess: (_, variables) => {
       const count = formatNumber(variables.productUnitIds.length);

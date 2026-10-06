@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { ShieldAlert, FilePlus2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
@@ -11,7 +11,7 @@ import {
 import { RETURN_PROBLEM_LABELS } from "@/shared/domain/returns/problems";
 import { UNIT_CUSTODY_REASON_LABELS } from "@/shared/domain/enums/unitStatus";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
-import { ROUTES } from "@/shared/constants/routes";
+import { quarantineReturnRoute } from "@/features/warehouse/units/domain/unitVocabulary";
 import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
@@ -19,7 +19,6 @@ import { formatNumber } from "@/shared/lib/numberFormat";
  * قبل. «ثبت مغایرت» فرمِ مرجوعیِ خرید را از همین کالاها پیش‌پر می‌کند.
  */
 export default function ReceivingQuarantineCard({ receivingInfo }) {
-  const navigate = useNavigate();
   const lines = (receivingInfo.items || []).filter(
     (item) => item.quarantinedOnOrderQuantity > 0 || item.quarantinedExcessQuantity > 0,
   );
@@ -91,19 +90,11 @@ export default function ReceivingQuarantineCard({ receivingInfo }) {
         )}
 
         {hasQuarantine && (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="w-full gap-1.5"
-            onClick={() =>
-              navigate(
-                `${ROUTES.PURCHASES_RETURNS_NEW}?purchaseId=${receivingInfo.purchaseId}&prefill=quarantine`,
-              )
-            }
-          >
-            <FilePlus2 className="h-4 w-4" />
-            ثبت مغایرت برای کالای قرنطینه
+          <Button asChild size="sm" variant="outline" className="w-full gap-1.5">
+            <Link to={quarantineReturnRoute(receivingInfo.purchaseId)}>
+              <FilePlus2 className="h-4 w-4" />
+              ثبت مغایرت برای کالای قرنطینه
+            </Link>
           </Button>
         )}
       </CardContent>

@@ -3,7 +3,7 @@ import { persist } from "zustand/middleware";
 
 import { createFilterStore } from "@/shared/store/createFilterStore";
 import { DEFAULT_LABEL_TEMPLATE } from "../domain/labelTemplate";
-import { LABEL_FILTERS, UNIT_SEGMENTS, segmentNeedsLabels } from "../domain/unitVocabulary";
+import { UNIT_SEGMENTS, segmentNeedsLabels } from "../domain/unitVocabulary";
 
 /**
  * قالبِ برچسب به پرینتر و اسکنرِ انبار بستگی دارد، نه به این دسته‌ی خاص؛
@@ -97,9 +97,6 @@ export const useProductUnitFilterStore = createFilterStore({
         ...(segment === UNIT_SEGMENTS.QUARANTINE ? {} : { custodyReason: "" }),
         ...(segmentNeedsLabels(segment) ? {} : { labelFilter: "" }),
       }),
-    /** صفِ چاپ: همه‌ی دانه‌های هنوز در انبار که برچسب نخورده‌اند. */
-    openPrintQueue: () =>
-      applyFilters({ segment: UNIT_SEGMENTS.ALL, labelFilter: LABEL_FILTERS.UNPRINTED }),
     /** فیلترهای جزئی — جایگاه، جست‌وجو و برچسب می‌مانند. */
     clearAdvanced: () =>
       applyFilters({
@@ -117,6 +114,5 @@ export const useProductUnitFilterStore = createFilterStore({
       }),
     /** پیوندِ ورودی: همه‌ی فیلترها از نو، فقط با همین مقادیر. */
     openWith: (values) => applyFilters({ ...EMPTY_UNIT_FILTERS, ...values }),
-    clearAll: () => applyFilters({ ...EMPTY_UNIT_FILTERS }),
   }),
 });

@@ -5,8 +5,9 @@ import { Button } from "@/shared/components/ui/button";
 import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 
 /**
- * «حذف کامل این مرجوعی» — مشترکِ خرید و فروش. سرور فقط مرجوعیِ بی‌تصمیم را
- * حذف می‌کند (`canDelete`)؛ صفحه این دکمه را فقط همان وقت نشان می‌دهد.
+ * «حذف کامل این مرجوعی» — مشترکِ خرید و فروش. سرور فقط مرجوعیِ باز یا در جریانی
+ * را حذف می‌کند که هنوز نه کالایی جابه‌جا شده و نه پولی ثبت شده (`canDelete`)؛
+ * صفحه دکمه را فقط همان وقت نشان می‌دهد.
  *
  * دیالوگ تا پایانِ درخواست باز می‌ماند؛ موفقیت کاربر را به فهرست می‌برد
  * (mutation) و شکست او را همین‌جا نگه می‌دارد تا دوباره تلاش کند.
@@ -31,7 +32,7 @@ export default function DeleteReturnAction({ returnNumber, onDelete, isPending, 
         open={open}
         onOpenChange={setOpen}
         title="حذف مرجوعی"
-        description={`این عملیات قابل بازگشت نیست. مرجوعی «${returnNumber}» برای همیشه حذف خواهد شد.`}
+        description={`مرجوعی «${returnNumber}» با همه‌ی ادعاها و تصمیم‌هایش برای همیشه پاک می‌شود و برگشت‌پذیر نیست. اگر می‌خواهید سابقه‌اش بماند، به‌جای حذف «لغو» کنید.`}
         confirmLabel="حذف شود"
         pendingLabel="در حال حذف..."
         isPending={isPending}

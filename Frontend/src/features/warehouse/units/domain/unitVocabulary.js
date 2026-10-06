@@ -57,11 +57,6 @@ export const UnitLabelStateEnum = Object.freeze({
   PRINTED: 2,
 });
 
-export const UNIT_LABEL_STATE_LABELS = Object.freeze({
-  [UnitLabelStateEnum.UNPRINTED]: "برچسب نخورده",
-  [UnitLabelStateEnum.PRINTED]: "برچسب خورده",
-});
-
 /**
  * دانه‌ای که هنوز در انبار است برچسب لازم دارد — در قفسه یا قرنطینه.
  * فروخته، عودت‌شده یا اسقاط‌شده دیگر در دسترس نیست که برچسب بخورد.
@@ -201,14 +196,19 @@ export const BIN_LOCATION_MAX_LENGTH = 50;
  */
 export function purchaseReturnRouteOf(unit) {
   if (unit.status !== UNIT_STATUSES.QUARANTINED || !unit.purchaseId) return null;
-  return `${ROUTES.PURCHASES_RETURNS_NEW}?purchaseId=${unit.purchaseId}&prefill=quarantine`;
+  return quarantineReturnRoute(unit.purchaseId);
 }
+
+/** فرمِ مرجوعیِ خرید، پیش‌پرشده از قرنطینه‌ی همان خرید. */
+export const quarantineReturnRoute = (purchaseId) =>
+  `${ROUTES.PURCHASES_RETURNS_NEW}?purchaseId=${purchaseId}&prefill=quarantine`;
 
 // ─── «کجاست؟» ───────────────────────────────────────────────────────────────
 
 /**
- * جای فعلیِ دانه به زبانِ انباردار — ستونِ «کجاست» و سربرگِ جزئیات:
- * `place` جا، `detail` طرفِ حساب یا علت، `document` شماره‌ی سندِ مرتبط.
+ * جای فعلیِ دانه به زبانِ انباردار — ستونِ «کجاست» و ردیفِ «کجاست»ِ جزئیات:
+ * `place` جا، `detail` طرفِ حساب یا علت، `document` شماره‌ی سندِ مرتبط و
+ * `documentRoute` پیوندش (اگر هست).
  */
 export function whereaboutsOf(unit) {
   switch (unit.status) {
@@ -229,6 +229,7 @@ export function whereaboutsOf(unit) {
         place: "نزد مشتری",
         detail: unit.customerName ?? "",
         document: unit.saleInvoiceNumber,
+        documentRoute: documentRouteOf(DocumentKindEnum.SALE, unit.saleId),
       };
     case UNIT_STATUSES.RETURNED_TO_SUPPLIER:
       return { place: "نزد تامین‌کننده", detail: unit.supplierName ?? "" };
@@ -255,13 +256,6 @@ const DOCUMENT_ROUTES = {
   [DocumentKindEnum.PURCHASE_RETURN]: ROUTES.PURCHASES_RETURNS_DETAIL,
   [DocumentKindEnum.SALE_RETURN]: ROUTES.SALES_RETURNS_DETAIL,
 };
-
-export const DOCUMENT_KIND_LABELS = Object.freeze({
-  [DocumentKindEnum.PURCHASE]: "خرید",
-  [DocumentKindEnum.SALE]: "فروش",
-  [DocumentKindEnum.PURCHASE_RETURN]: "مرجوعی خرید",
-  [DocumentKindEnum.SALE_RETURN]: "مرجوعی فروش",
-});
 
 export const documentRouteOf = (kind, id) =>
   DOCUMENT_ROUTES[kind] && id ? routeWithId(DOCUMENT_ROUTES[kind], id) : null;
@@ -299,11 +293,6 @@ export function daysSince(value, now = Date.now()) {
 
 /** فیلترِ «وضعیت برچسب». */
 export const LABEL_FILTERS = Object.freeze({ UNPRINTED: "unprinted", PRINTED: "printed" });
-
-export const LABEL_FILTER_OPTIONS = Object.freeze([
-  { value: LABEL_FILTERS.UNPRINTED, label: "برچسب نخورده" },
-  { value: LABEL_FILTERS.PRINTED, label: "برچسب خورده" },
-]);
 
 /**
  * جایگاهی که برچسب برایش معنا دارد: دانه‌ای که هنوز در انبار است (قفسه یا

@@ -8,8 +8,10 @@ import EntitySelect from "@/shared/components/filters/EntitySelect";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
 import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
 import { UNIT_CUSTODY_REASON_LABELS } from "@/shared/domain/enums/unitStatus";
+import { useSuppliersOptionsQuery } from "@/features/suppliers/services/queries";
+import { useCustomersOptionsQuery } from "@/features/customers/services/queries";
 
-import { UNIT_SEGMENTS} from "../domain/unitVocabulary";
+import { UNIT_SEGMENTS } from "../domain/unitVocabulary";
 import UnitActiveFilters from "./UnitActiveFilters";
 import { formatNumber } from "@/shared/lib/numberFormat";
 
@@ -30,19 +32,20 @@ function Field({ label, children, className = "" }) {
 
 /**
  * فیلترهای فهرستِ دانه‌ها (جایگاه و برچسب در `UnitViewNav` است). ردیفِ اول
- * فیلدِ جست‌وجو/اسکن (`search`)، انتخابِ کالا و دکمه‌ی فیلترهاست. بقیه (طرفِ حساب، تاریخ، سریال، علتِ قرنطینه)
- * پشتِ «فیلترهای بیشتر»؛ وقتی بسته است، فیلترهای فعالش به شکلِ برچسبِ
+ * فیلدِ جست‌وجو/اسکن (`search`)، انتخابِ کالا و دکمه‌ی فیلترهاست. بقیه (طرفِ
+ * حساب، تاریخ، سریال، قفسه، علتِ قرنطینه) پشتِ «فیلترهای بیشتر»؛ وقتی بسته است، فیلترهای فعالش به شکلِ برچسبِ
  * قابلِ حذف زیرِ ردیف دیده می‌شوند تا کاربر بداند چرا فهرست کوتاه شده.
+ *
+ * فهرستِ تامین‌کننده‌ها و مشتری‌ها (هر کدام تا ۲۰۰ ردیف) فقط وقتی گرفته می‌شود که
+ * پنل باز است یا برچسبِ فیلترِ فعال نامشان را لازم دارد — نه با هر بازشدنِ صفحه.
  */
-export default function UnitFilterBar({
-  store,
-  search,
-  products,
-  suppliers,
-  customers,
-  isLoadingParties,
-}) {
+export default function UnitFilterBar({ store, search, products }) {
   const [showMore, setShowMore] = useState(false);
+  const supplierOptions = useSuppliersOptionsQuery({ enabled: showMore || Boolean(store.supplierId) });
+  const customerOptions = useCustomersOptionsQuery({ enabled: showMore || Boolean(store.customerId) });
+  const suppliers = supplierOptions.suppliers;
+  const customers = customerOptions.customers;
+  const isLoadingParties = supplierOptions.isLoading || customerOptions.isLoading;
   const isQuarantine = store.segment === UNIT_SEGMENTS.QUARANTINE;
 
   const advancedActive = [
@@ -66,7 +69,7 @@ export default function UnitFilterBar({
       <div className="flex flex-wrap items-start gap-2">
         <div className="min-w-0 basis-full flex-1">{search}</div>
 
-        {/* در عرضِ کافی کالا در ستونِ کناری است. برچسبِ داخلیِ EntitySelect اینجا جا نمی‌شود. */}
+        {/* برچسبِ داخلیِ EntitySelect در این ردیف جا نمی‌شود. */}
         <div className="min-w-0 flex-1 [&_label]:sr-only">
           <EntitySelect
             label="کالا"
@@ -193,7 +196,6 @@ export default function UnitFilterBar({
 
       <UnitActiveFilters
         store={store}
-        products={products}
         suppliers={suppliers}
         customers={customers}
         linksOnly={showMore}

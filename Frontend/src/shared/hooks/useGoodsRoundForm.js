@@ -1,6 +1,28 @@
 import { useCallback, useMemo, useState } from "react";
 import { clampQuantity } from "@/shared/lib/quantityUtils";
 import { todayIso } from "@/shared/lib/dateUtils";
+import { draftId } from "@/shared/lib/draftId";
+import { formatNumber } from "@/shared/lib/numberFormat";
+
+const emptyHeader = () => ({
+  date: todayIso(),
+  partyName: "",
+  partyPhoneNumber: "",
+  vehiclePlate: "",
+  note: "",
+});
+
+const never = () => false;
+const always = () => true;
+const none = () => null;
+
+/** کدهای مشاهده‌ها را به دانه‌هایی که هنوز در فهرستِ اسکنِ ردیف‌اند هرس می‌کند. */
+const pruneObservationCodes = (observations, scanned) =>
+  observations.map((observation) => {
+    if (!observation.productUnitBarcodes) return observation;
+    const kept = observation.productUnitBarcodes.filter((code) => scanned.includes(code));
+    return { ...observation, productUnitBarcodes: kept, quantity: kept.length };
+  });
 
 /**
  * فرمِ یک «دورِ کالا» روی یک مرجوعی — بدنه‌ی `ExecuteGoodsRoundCommand`.
@@ -24,29 +46,6 @@ import { todayIso } from "@/shared/lib/dateUtils";
  *
  * @param lines خروجیِ `buildGoodsLines` (فیلترشده روی `remainingQuantity > 0`).
  */
-const generateId = () =>
-  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-
-const emptyHeader = () => ({
-  date: todayIso(),
-  partyName: "",
-  partyPhoneNumber: "",
-  vehiclePlate: "",
-  note: "",
-});
-
-const never = () => false;
-const always = () => true;
-const none = () => null;
-
-/** کدهای مشاهده‌ها را به دانه‌هایی که هنوز در فهرستِ اسکنِ ردیف‌اند هرس می‌کند. */
-const pruneObservationCodes = (observations, scanned) =>
-  observations.map((observation) => {
-    if (!observation.productUnitBarcodes) return observation;
-    const kept = observation.productUnitBarcodes.filter((code) => scanned.includes(code));
-    return { ...observation, productUnitBarcodes: kept, quantity: kept.length };
-  });
-
 export function useGoodsRoundForm(
   lines,
   {
@@ -206,7 +205,7 @@ export function useGoodsRoundForm(
           observations: [
             ...round.observations,
             {
-              id: generateId(),
+              id: draftId(),
               problem,
               quantity: scanned ? 0 : remaining,
               note: "",
@@ -272,7 +271,7 @@ export function useGoodsRoundForm(
       }
       const scanned = round.productUnitBarcodes.length;
       if (round.barcodesRequired && scanned !== quantity) {
-        return `«${round.productName}» ردیابی‌پذیر است؛ همه‌ی ${quantity.toLocaleString("fa-IR")} دانه را اسکن کنید`;
+        return `«${round.productName}» ردیابی‌پذیر است؛ همه‌ی ${formatNumber(quantity)} دانه را اسکن کنید`;
       }
       if (scanned > 0 && scanned !== quantity) {
         return `تعداد دانه‌های اسکن‌شده‌ی «${round.productName}» با مقدار ردیف برابر نیست`;

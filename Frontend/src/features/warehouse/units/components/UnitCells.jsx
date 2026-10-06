@@ -1,71 +1,51 @@
 import { Link } from "react-router-dom";
 import { Printer, Tag } from "lucide-react";
 
-import { ProductUnitStatusEnum as UNIT_STATUSES } from "@/shared/domain/enums/unitStatus";
-import {
-  DocumentKindEnum,
-  LABELABLE_STATUSES,
-  formatDate,
-  whereaboutsOf,
-  documentRouteOf,
-  daysSince,
-} from "../domain/unitVocabulary";
+import StatusBadge from "@/shared/components/status/StatusBadge";
+import { LABELABLE_STATUSES, formatDate, whereaboutsOf, daysSince } from "../domain/unitVocabulary";
 import { formatNumber } from "@/shared/lib/numberFormat";
+import { cn } from "@/shared/lib/utils";
 
 /**
- * خانه‌های مشترکِ جدول و کارت‌های دانه — یک شکل در هر دو چیدمان.
+ * خانه‌های مشترکِ جدول، کارت‌ها و برگه‌ی جزئیاتِ دانه — یک شکل در همه‌جا.
  */
 
 /**
- * بارکد به شکلِ خوانا (با خط‌تیره) — همان چیزی که زیرِ میله‌ها روی برچسب
- * چاپ شده، تا ردیف با برچسبِ توی دست تطبیق داده شود.
+ * «کجاست؟» — جای فعلی، طرفِ حساب یا علت، و سندِ مرتبط (با پیوند اگر هست).
+ *
+ * `detailOnly`: کنارِ نشانِ وضعیت، خودِ جایگاه تکراری است؛ فقط جزئیات می‌آید.
+ * `stacked`: هر بخش یک خط (ردیفِ «کجاست»ِ برگه‌ی جزئیات)؛ پیش‌فرض یک خطِ فشرده.
  */
-export function UnitBarcodeCell({ unit }) {
-  return (
-    <div className="flex flex-col items-start">
-      <span className="font-mono text-xs" dir="ltr">
-        {unit.barcode}
-      </span>
-      <span className="text-[11px] tabular-nums text-muted-foreground">
-        سریال {formatNumber(unit.serialNumber)}
-      </span>
-    </div>
-  );
-}
-
-export function UnitProductCell({ unit }) {
-  return (
-    <div className="flex min-w-0 flex-col">
-      <span className="truncate font-light">{unit.productName ?? "—"}</span>
-      <span className="font-mono text-[11px] text-muted-foreground">{unit.productCode}</span>
-    </div>
-  );
-}
-
-/** «کجاست؟» — جای فعلی و طرفِ حساب، با پیوند به سندِ فروش اگر هست. */
-export function UnitWhereabouts({ unit, detailOnly = false }) {
+export function UnitWhereabouts({ unit, detailOnly = false, stacked = false }) {
   const where = whereaboutsOf(unit);
-  const saleLink =
-    unit.status === UNIT_STATUSES.SOLD ? documentRouteOf(DocumentKindEnum.SALE, unit.saleId) : null;
+  const documentText = where.document && (
+    where.documentRoute ? (
+      <Link to={where.documentRoute} className="font-mono underline-offset-2 hover:underline">
+        {where.document}
+      </Link>
+    ) : (
+      <span className="font-mono">{where.document}</span>
+    )
+  );
+
+  if (stacked) {
+    return (
+      <>
+        <span className="font-medium">{where.place}</span>
+        {where.detail && <span className="block text-[11px] text-muted-foreground">{where.detail}</span>}
+        {documentText && <span className="block text-[11px] text-muted-foreground">{documentText}</span>}
+      </>
+    );
+  }
 
   return (
     <div className="flex min-w-0 flex-col">
-      {/* کنارِ نشانِ وضعیت، خودِ جایگاه تکراری است؛ فقط جزئیات می‌آید. */}
       {!detailOnly && <span className="text-sm">{where.place}</span>}
-      {(where.detail || where.document) && (
+      {(where.detail || documentText) && (
         <span className="truncate text-[11px] text-muted-foreground">
           {where.detail}
-          {where.document &&
-            (saleLink ? (
-              <>
-                {"، "}
-                <Link to={saleLink} className="font-mono underline-offset-2 hover:underline">
-                  {where.document}
-                </Link>
-              </>
-            ) : (
-              `، ${where.document}`
-            ))}
+          {where.detail && documentText && "، "}
+          {documentText}
         </span>
       )}
     </div>
@@ -81,11 +61,7 @@ export function UnitLabelStateBadge({ unit, compact = false }) {
     return (
       <span
         className="inline-flex items-center gap-1 text-xs text-muted-foreground"
-        title={
-          unit.lastPrintedByName
-            ? `آخرین چاپ توسط ${unit.lastPrintedByName}`
-            : undefined
-        }
+        title={unit.lastPrintedByName ? `آخرین چاپ توسط ${unit.lastPrintedByName}` : undefined}
       >
         <Printer className="h-3 w-3" />
         {formatNumber(unit.printCount)}×، {formatDate(unit.lastPrintedAt)}
@@ -96,48 +72,30 @@ export function UnitLabelStateBadge({ unit, compact = false }) {
     return compact ? null : <span className="text-xs text-muted-foreground">—</span>;
   }
   return (
-    <span className="inline-flex items-center gap-1 rounded-md border border-warning/30 bg-warning/10 px-1.5 py-0.5 text-[11px] text-warning">
-      <Tag className="h-3 w-3" />
+    <StatusBadge tone="warning" size="sm" icon={Tag}>
       برچسب نخورده
-    </span>
+    </StatusBadge>
   );
 }
 
-/** چند روز است در قرنطینه مانده — بیش از ۳۰ روز یعنی تصمیمی عقب افتاده. */
+/** روزهایی که دانه در قرنطینه مانده و بیش از آن تصمیمی عقب افتاده است. */
+const STALE_QUARANTINE_DAYS = 30;
+
+/** چند روز است در قرنطینه مانده. */
 export function UnitQuarantineAge({ unit }) {
   const days = daysSince(unit.quarantinedAt);
   if (days == null) return <span className="text-xs text-muted-foreground">—</span>;
-  const stale = days > 30;
   return (
     <div className="flex flex-col">
-      <span className={`text-sm tabular-nums ${stale ? "text-destructive font-medium" : ""}`}>
+      <span
+        className={cn(
+          "text-sm tabular-nums",
+          days > STALE_QUARANTINE_DAYS && "text-destructive font-medium",
+        )}
+      >
         {days === 0 ? "امروز" : `${formatNumber(days)} روز`}
       </span>
       <span className="text-[11px] text-muted-foreground">{formatDate(unit.quarantinedAt)}</span>
     </div>
   );
-}
-
-/** سندی که دانه را به قرنطینه برد (دریافتِ خرید، مرجوعیِ فروش، یا دستی). */
-export function UnitQuarantineSource({ unit }) {
-  const link = documentRouteOf(unit.quarantineDocumentKind, unit.quarantineDocumentId);
-  if (!unit.quarantineDocumentNumber) {
-    return (
-      <span className="text-xs text-muted-foreground">
-        {unit.quarantineDocumentKind ? "—" : "انبار (دستی)"}
-      </span>
-    );
-  }
-  return link ? (
-    <Link to={link} className="font-mono text-xs underline-offset-2 hover:underline">
-      {unit.quarantineDocumentNumber}
-    </Link>
-  ) : (
-    <span className="font-mono text-xs">{unit.quarantineDocumentNumber}</span>
-  );
-}
-
-export function UnitValueCell({ value }) {
-  if (value == null) return <span className="text-xs text-muted-foreground">—</span>;
-  return <span className="text-sm tabular-nums">{formatNumber(value)}</span>;
 }

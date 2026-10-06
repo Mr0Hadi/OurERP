@@ -1,12 +1,7 @@
+/** چیدمانِ صفحه‌ی جزئیاتِ کالا تا رسیدنِ داده؛ عنوان و «بازگشت» را خودِ هدرِ برنامه دارد. */
 export default function ProductDetailLoading() {
   return (
     <div className="container mx-auto space-y-6 animate-pulse">
-      {/* هدر با دکمه برگشت و عنوان */}
-      <div className="flex items-center gap-4">
-        <div className="h-9 w-9 bg-muted rounded-full" />
-        <div className="h-7 w-64 bg-muted rounded-lg" />
-      </div>
-
       {/* گرید اصلی فرم */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* ستون سمت چپ (اطلاعات پایه و قیمت‌گذاری) */}
@@ -69,11 +64,14 @@ export default function ProductDetailLoading() {
               <div className="h-4 w-24 bg-muted rounded" />
             </div>
           </div>
+
+          {/* انصراف / ذخیره */}
+          <div className="flex gap-2">
+            <div className="h-9 flex-1 bg-muted rounded-md" />
+            <div className="h-9 flex-1 bg-muted rounded-md" />
+          </div>
         </div>
       </div>
-
-      {/* دکمه ذخیره */}
-      <div className="h-12 bg-muted rounded-lg w-full mt-6" />
     </div>
   );
 }

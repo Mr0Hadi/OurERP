@@ -1,6 +1,5 @@
 import { ClipboardList, ShieldAlert } from "lucide-react";
 
-import { Badge } from "@/shared/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -8,14 +7,12 @@ import {
   CardTitle,
 } from "@/shared/components/ui/card";
 import RemoteImage from "@/shared/components/files/RemoteImage";
+import StatusBadge from "@/shared/components/status/StatusBadge";
 import { RETURN_PROBLEM_LABELS } from "@/shared/domain/returns/problems";
 import { UNIT_CUSTODY_REASON_LABELS } from "@/shared/domain/enums/unitStatus";
 import { totalQuarantined } from "@/shared/domain/returns/receivingReport";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { formatNumber } from "@/shared/lib/numberFormat";
-
-const ORANGE_BADGE =
-  "text-[10px] bg-caution/10 text-caution border-caution/25";
 
 /**
  * گزارشِ انبار برای *یک* بخشِ فرم — یک قلمِ سفارش، یا ادعای مازاد/نامرتبطِ
@@ -36,9 +33,9 @@ export function ReceivingReportLines({ quarantined = [], discrepancies = [] }) {
       {shownQuarantine.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {shownQuarantine.map((entry) => (
-            <Badge key={entry.kind} variant="outline" className={ORANGE_BADGE}>
+            <StatusBadge key={entry.kind} tone="caution" size="sm">
               {entry.label}: {formatNumber(entry.quantity)}
-            </Badge>
+            </StatusBadge>
           ))}
         </div>
       )}
