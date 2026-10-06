@@ -30,6 +30,13 @@ namespace WMS.Tests.Unit
         private static readonly HashSet<string> AuthenticatedOnly = new()
         {
             "AccountController.Logout",                 // ending your own session
+            // Import/export: one controller for every resource, so the permission (ProductExport, CustomerImport, ...)
+            // depends on the request and is checked in the handlers through DataTransferAccess (403 without it).
+            "DataTransferController.GetResources",      // lists only what the caller may do; grants nothing
+            "DataTransferController.Export",
+            "DataTransferController.GetImportTemplate",
+            "DataTransferController.PreviewImport",
+            "DataTransferController.CommitImport",
             "FileController.GetImageUrl",               // re-signs a key the caller already has
             "PermissionController.GetMyPermissions",    // asking what you yourself may do
             "ReportController.GetScopePerformance",     // your own numbers; TEAM/DEPARTMENT gated by org role in the handler
