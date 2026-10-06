@@ -98,37 +98,12 @@ namespace Application.Features.Product.Commands
         {
             var res = new ResponseDto();
 
-            var product = _mapper.Map<Domain.Entities.Product>(request);
-            // Brand is a required column; a quick-created product has none yet.
-            product.Brand ??= string.Empty;
-            product.CreatedAt = DateTime.Now;
-            product.UpdatedAt = DateTime.Now;
-
-            // The column stores the bucket object key, never a URL - a browser-facing image URL
-            // echoed back by the frontend is stripped down rather than persisted verbatim.
-            product.ImageUrl = _objectStorageService.NormalizeKey(request.ImageKey);
-
-            // Code/BarCode are NOT NULL and only computable once the row has an Id, so the first
-            // save needs a placeholder. A Guid rather than "" so a concurrent create can't collide
-            // on the unique Code index during the window between the two saves.
-            var placeholder = Guid.NewGuid().ToString("N");
-            product.Code = placeholder;
-            product.BarCode = placeholder;
+            var product = BuildEntity(request, _mapper, _objectStorageService);
 
             await _productRepository.AddAsync(product, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // Code needs the row's Id, which only exists after the first SaveChanges - see
-            // docs/product-code-barcode-invoice-design.fa.md 1.4.
-            product.Code = _productCodeService.BuildProductCode(product.Id, product.CreatedAt);
-            product.BarCode = _productCodeService.ToPayload(product.Code);
-
-            if (product.Stock > 0)
-            {
-                await _productUnitService.MintAsync(product, product.Stock, UnitOrigin.None,
-                    new UnitMovementContext(Domain.Enums.ProductUnitMovementReasonEnum.OPENING_BALANCE, product.CreatedAt), cancellationToken);
-                await _inventoryCostingService.RecordOpeningBalanceAsync(product, product.Stock, product.PurchasePrice, product.CreatedAt, cancellationToken);
-            }
+            await CompleteAfterInsertAsync(product, _productCodeService, _productUnitService, _inventoryCostingService, cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -136,6 +111,50 @@ namespace Application.Features.Product.Commands
             res.Message = "محصول با موفقیت ایجاد شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;
+        }
+
+        /// <summary>
+        /// Step 1 of creating a product: the entity, before its first save. Code/BarCode are NOT NULL and only computable
+        /// once the row has an Id, so they hold a placeholder until <see cref="CompleteAfterInsertAsync"/>. Shared with the
+        /// bulk import (ProductDataTransferDefinition), which saves a whole batch between the two steps.
+        /// </summary>
+        public static Domain.Entities.Product BuildEntity(CreateProductCommand request, IMapper mapper, IObjectStorageService objectStorageService)
+        {
+            var product = mapper.Map<Domain.Entities.Product>(request);
+            // Brand is a required column; a quick-created product has none yet.
+            product.Brand ??= string.Empty;
+            product.CreatedAt = DateTime.Now;
+            product.UpdatedAt = DateTime.Now;
+
+            // The column stores the bucket object key, never a URL - a browser-facing image URL
+            // echoed back by the frontend is stripped down rather than persisted verbatim.
+            product.ImageUrl = objectStorageService.NormalizeKey(request.ImageKey);
+
+            // A Guid rather than "" so a concurrent create can't collide on the unique Code index during the window
+            // between the two saves.
+            var placeholder = Guid.NewGuid().ToString("N");
+            product.Code = placeholder;
+            product.BarCode = placeholder;
+            return product;
+        }
+
+        /// <summary>
+        /// Step 2, after the first SaveChanges gave the row an Id: the real code and barcode, and the opening stock's units
+        /// and cost row. Stages changes only; the caller saves.
+        /// </summary>
+        public static async Task CompleteAfterInsertAsync(Domain.Entities.Product product, IProductCodeService productCodeService,
+            IProductUnitService productUnitService, IInventoryCostingService inventoryCostingService, CancellationToken cancellationToken)
+        {
+            // Code needs the row's Id - see docs/product-code-barcode-invoice-design.fa.md 1.4.
+            product.Code = productCodeService.BuildProductCode(product.Id, product.CreatedAt);
+            product.BarCode = productCodeService.ToPayload(product.Code);
+
+            if (product.Stock > 0)
+            {
+                await productUnitService.MintAsync(product, product.Stock, UnitOrigin.None,
+                    new UnitMovementContext(Domain.Enums.ProductUnitMovementReasonEnum.OPENING_BALANCE, product.CreatedAt), cancellationToken);
+                await inventoryCostingService.RecordOpeningBalanceAsync(product, product.Stock, product.PurchasePrice, product.CreatedAt, cancellationToken);
+            }
         }
     }
 }

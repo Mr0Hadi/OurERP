@@ -1928,6 +1928,32 @@ ordinary TRANSFER row through the existing payment endpoints. Answers to 11.x/12
 - Migrations `pos-payment-fields`, then `pos-rrn-unique-and-payment-recorder` (shrinks `TransferRef` to 64 - fails loudly if a longer
   value exists). **Generated, not applied.** Tests: `Integration/PosPaymentTests`, two functional tests in `SecurityFunctionalTests`.
 
+**Import/export with CSV and XLSX (2026-10-06, branch `feat/import-export`).** Full developer guide:
+`docs/import-export-guide.md`; API: `docs/api-guide.fa.md` section 19.
+
+- **Core is `Application/Common/DataTransfer`**, independent of HTTP and the UI so a backup/restore job can reuse it.
+  A resource is one `IDataTransferDefinition` (picked up by assembly scan in `ApplicationServiceRegistration`, Scoped)
+  with an optional `ExportSpec<TFilter, TRow>` and an optional `ImportSpec<TCommand>`; null turns that direction off.
+  Today: `products`, `customers`, `suppliers`, each in `Application/Features/<Feature>/DataTransfer/`.
+- **No rule is duplicated.** Export filters through the list handler's `ApplyFilters`/`ApplyFiltersAsync` (extracted from
+  `Handle`, no behaviour change) and projects to a hand-written `*ExportRow` (whitelist). Import maps each row to the
+  existing `Create*Command`, runs that command's own validator (`ImportRunner` resolves `IValidator<TCommand>`), and builds
+  entities through `Create*CommandHandler.BuildEntity` (+ `CreateProductCommandHandler.CompleteAfterInsertAsync`).
+  Batches are written per SaveChanges inside one `IUnitOfWork.ExecuteInTransactionAsync`, not one MediatR call per row.
+- **Formats**: `ITabularFileFormat` (Application contracts) implemented by `CsvTabularFormat` (RFC 4180, UTF-8 BOM,
+  formula neutralization) and `XlsxTabularFormat` (ClosedXML, typed cells; refuses non-zip/non-workbook content, VBA,
+  zip bombs and formula cells). Limits in `DataTransfer` config (`DataTransferOptions`).
+- **Permissions** `ProductExport/Import = 54/55`, `CustomerExport/Import = 56/57`, `SupplierExport/Import = 58/59`, checked
+  in the handlers by `DataTransferAccess` because `DataTransferController` is generic; its five actions sit in
+  `EndpointPermissionCoverageTests.AuthenticatedOnly` with that reason.
+- **Audit** is a structured log event (`IDataTransferAuditLog` → `DataTransferAuditLog`); there is no audit table.
+  Uploads are never stored: preview and commit each receive the file and commit re-validates from scratch.
+- Not importable on purpose: product `Stock` (an inventory event), codes/barcodes, images, any transactional table.
+  Duplicates are skipped, never updated (no upsert). Category lookup by name never creates categories.
+- No schema change, no migration. Tests: `Unit/DataTransferFormatTests`, `DataValuesTests`, `ImportRunnerTests`,
+  `DataTransferDefinitionTests` (run without SQL Server: 94 pass); `Integration/DataTransferTests` and
+  `Functional/DataTransferFunctionalTests` need SQL Server and were not run on the machine that wrote them.
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
 - ~~`PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK.~~ **Fixed 2026-09-20** - see the installment-sales entry above: both ids are `int`, both relationships are configured explicitly, and the shadow FK is gone.

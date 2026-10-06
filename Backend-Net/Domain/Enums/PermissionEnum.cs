@@ -121,6 +121,33 @@ namespace Domain.Enums
         [Description("حذف تأمین‌کننده")]
         SupplierDelete = 53,
 
+        // Import/export (Application/Common/DataTransfer). One pair per resource, separate from View/Create:
+        // seeing a table is not the same decision as taking all of it away in a file, and typing one record is not
+        // the same as loading five thousand.
+        [PermissionGroup(PermissionGroupEnum.BasicData)]
+        [Description("خروجی گرفتن از کالاها")]
+        ProductExport = 54,
+
+        [PermissionGroup(PermissionGroupEnum.BasicData)]
+        [Description("ورود گروهی کالا از فایل")]
+        ProductImport = 55,
+
+        [PermissionGroup(PermissionGroupEnum.BasicData)]
+        [Description("خروجی گرفتن از مشتریان")]
+        CustomerExport = 56,
+
+        [PermissionGroup(PermissionGroupEnum.BasicData)]
+        [Description("ورود گروهی مشتری از فایل")]
+        CustomerImport = 57,
+
+        [PermissionGroup(PermissionGroupEnum.BasicData)]
+        [Description("خروجی گرفتن از تأمین‌کنندگان")]
+        SupplierExport = 58,
+
+        [PermissionGroup(PermissionGroupEnum.BasicData)]
+        [Description("ورود گروهی تأمین‌کننده از فایل")]
+        SupplierImport = 59,
+
         // --- خرید ---
         [PermissionGroup(PermissionGroupEnum.Purchase)]
         [Description("مشاهده خریدها")]

@@ -1,3 +1,4 @@
+import { saveBlobAs } from "@/shared/lib/saveBlob";
 import { isPdfName } from "@/shared/services/files/fileConstraints";
 
 /**
@@ -72,21 +73,6 @@ export function serverDocument({ name, fetchPdf }) {
     isPdf: true,
     getBlob: fetchPdf,
   };
-}
-
-/** ذخیره‌ی یک Blob با نامِ دلخواه. */
-function saveBlobAs(blob, fileName) {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = fileName;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-
-  // آزادکردنِ فوری در بعضی مرورگرها (فایرفاکس) دانلودِ فایلِ بزرگ را
-  // نصفه رها می‌کند، چون دانلود هنوز از همین URL می‌خواند.
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 /** دانلودِ همه‌ی سندها. خطای یک سند بقیه را متوقف نمی‌کند. */

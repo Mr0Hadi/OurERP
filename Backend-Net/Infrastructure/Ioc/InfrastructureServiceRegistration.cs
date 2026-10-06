@@ -1,5 +1,6 @@
 ﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Barcode;
+using Application.Common.Contracts.DataTransfer;
 using Application.Common.Contracts.Documents;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductCode;
@@ -98,6 +99,13 @@ namespace Infrastructure.Ioc
                     ? provider.GetRequiredService<QuestPdfInvoiceDocumentService>()
                     : provider.GetRequiredService<ExcelInvoiceDocumentService>();
             });
+
+            // Import/export file formats (Application/Common/DataTransfer). Stateless, so one instance each.
+            services.Configure<Application.Common.DataTransfer.DataTransferOptions>(configuration.GetSection(Application.Common.DataTransfer.DataTransferOptions.SectionName));
+            services.AddSingleton<ITabularFileFormat, Services.DataTransfer.CsvTabularFormat>();
+            services.AddSingleton<ITabularFileFormat, Services.DataTransfer.XlsxTabularFormat>();
+            services.AddSingleton<ITabularFileFormatProvider, Services.DataTransfer.TabularFileFormatProvider>();
+            services.AddSingleton<IDataTransferAuditLog, Services.DataTransfer.DataTransferAuditLog>();
 
             // فضای ذخیره‌سازی ابری (Liara Object Storage - سازگار با S3)
             services.Configure<ObjectStorageOptions>(configuration.GetSection(ObjectStorageOptions.SectionName));
