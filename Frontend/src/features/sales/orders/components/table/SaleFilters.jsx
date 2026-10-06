@@ -7,10 +7,10 @@ import EntitySelect from "@/shared/components/filters/EntitySelect";
 import { toFilterOptions } from "@/shared/components/filters/filterUtils";
 import { useSaleFilterStore } from "../../store/saleFilterStore";
 import { SALE_STATUS_LABELS } from "@/shared/domain/enums/saleStatus";
-import { DOCUMENT_PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
+import { SALE_PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
 
 const STATUS_OPTIONS = toFilterOptions(SALE_STATUS_LABELS);
-const PAYMENT_TYPE_OPTIONS = toFilterOptions(DOCUMENT_PAYMENT_TYPE_LABELS);
+const PAYMENT_TYPE_OPTIONS = toFilterOptions(SALE_PAYMENT_TYPE_LABELS);
 
 const renderCustomerPhone = (customer) =>
   customer.phoneNumber ? (

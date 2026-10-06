@@ -3,6 +3,7 @@ import { Ban, Pencil, RotateCcw } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import StatusBadge from "@/shared/components/status/StatusBadge";
 import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
+import { PAYMENT_PURPOSE_LABELS } from "@/shared/domain/enums/paymentDirection";
 import { isNormalPayment } from "@/shared/domain/payments/paymentRows";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { formatRial } from "@/shared/lib/numberFormat";
@@ -38,7 +39,9 @@ export default function PaymentRow({ row, isRefund, manageable, onEdit, onVoid, 
             {formatRial(row.amount)}
           </span>
           {isRefund && <StatusBadge tone="info" size="sm">برگشتی</StatusBadge>}
-          {!isNormalPayment(row) && <StatusBadge tone="special" size="sm">اقساط</StatusBadge>}
+          {!isNormalPayment(row) && (
+            <StatusBadge tone="special" size="sm">{PAYMENT_PURPOSE_LABELS[row.purpose] ?? "اقساط"}</StatusBadge>
+          )}
           {row.voidedAt && <StatusBadge tone="danger" size="sm">باطل‌شده</StatusBadge>}
           {badge && <StatusBadge tone={badge.tone} size="sm">{badge.label}</StatusBadge>}
         </div>

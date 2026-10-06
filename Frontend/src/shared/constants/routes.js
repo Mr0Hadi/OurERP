@@ -52,6 +52,7 @@ export const ROUTES = {
   SALES: "/sales",
   SALES_NEW: "/sales/new",
   SALES_DETAIL: "/sales/:id",
+  SALES_INSTALLMENTS: "/sales/installments",
   SALES_RETURNS_NEW: "/sales/returns/new",
   SALES_RETURNS_LIST: "/sales/returns",
   SALES_RETURNS_DETAIL: "/sales/returns/:id",

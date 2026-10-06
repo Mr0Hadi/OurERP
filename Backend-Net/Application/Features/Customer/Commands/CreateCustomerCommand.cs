@@ -83,14 +83,9 @@ namespace Application.Features.Customer.Commands
         }
         public async Task<ResponseDto> Handle(CreateCustomerCommand request, CancellationToken cancellationToken)
         {
-            // The columns are NOT NULL; an explicit JSON null for an optional field becomes "".
-            request.PostalCode ??= string.Empty;
             var res = new ResponseDto();
 
-            var newCustomer = _mapper.Map<Domain.Entities.Customer>(request);
-
-            // The column stores the bucket object key, never a URL - signed URLs expire.
-            newCustomer.ImageUrl = _objectStorageService.NormalizeKey(request.ImageKey);
+            var newCustomer = BuildEntity(request, _mapper, _objectStorageService);
 
             await _customerRepository.AddAsync(newCustomer, cancellationToken);
             await _unitOfWork.SaveChangesAsync();
@@ -98,6 +93,22 @@ namespace Application.Features.Customer.Commands
             res.Message = "مشتری جدید با موفقیت ایجاد شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;
+        }
+
+        /// <summary>
+        /// The entity a validated command creates. Shared with the bulk import (CustomerDataTransferDefinition), so a
+        /// customer loaded from a file is built by exactly the code that builds one typed into the form.
+        /// </summary>
+        public static Domain.Entities.Customer BuildEntity(CreateCustomerCommand request, IMapper mapper, IObjectStorageService objectStorageService)
+        {
+            // The columns are NOT NULL; an explicit JSON null for an optional field becomes "".
+            request.PostalCode ??= string.Empty;
+
+            var customer = mapper.Map<Domain.Entities.Customer>(request);
+
+            // The column stores the bucket object key, never a URL - signed URLs expire.
+            customer.ImageUrl = objectStorageService.NormalizeKey(request.ImageKey);
+            return customer;
         }
     }
 }

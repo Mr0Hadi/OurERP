@@ -1,7 +1,8 @@
 import DataTable from "@/shared/components/table/DataTable";
 import PaymentProgress from "@/shared/components/table/PaymentProgress";
 import PaymentTypeBadge from "@/shared/components/status/PaymentTypeBadge";
-import { gregorianToPersian } from "@/shared/lib/dateUtils";
+import { gregorianToPersian, todayIso } from "@/shared/lib/dateUtils";
+import { SaleInstallmentPlanStatusEnum } from "@/shared/domain/enums/saleInstallment";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import SaleStatusBadge from "@/shared/components/status/SaleStatusBadge";
 import StatusBadge from "@/shared/components/status/StatusBadge";
@@ -59,9 +60,25 @@ const COLUMNS = [
   {
     accessorKey: "paymentType",
     header: "نوع پرداخت",
-    cell: (info) => (
-      <PaymentTypeBadge type={info.getValue()} />
-    ),
+    // فروشِ اقساطی با قسطِ سررسیدگذشته از همین فهرست پیدا شود (`installmentSummary.nextDueDate`
+    // کمترین سررسیدِ پرداخت‌نشده است).
+    cell: (info) => {
+      const plan = info.row.original.installmentSummary;
+      const late =
+        plan?.status === SaleInstallmentPlanStatusEnum.ACTIVE &&
+        plan.nextDueDate &&
+        String(plan.nextDueDate).slice(0, 10) < todayIso();
+      return (
+        <div className="flex flex-wrap items-center justify-center gap-1">
+          <PaymentTypeBadge type={info.getValue()} />
+          {late && (
+            <StatusBadge size="sm" tone="danger" title={`سررسید: ${gregorianToPersian(plan.nextDueDate)}`}>
+              قسط معوق
+            </StatusBadge>
+          )}
+        </div>
+      );
+    },
   },
   {
     accessorKey: "totalAmount",

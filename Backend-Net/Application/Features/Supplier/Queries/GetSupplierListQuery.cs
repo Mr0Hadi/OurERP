@@ -48,36 +48,7 @@ namespace Application.Features.Supplier.Queries
         {
             var res = new ResponseDto();
 
-            var query = _context.Suppliers.Where(x => x.IsActive).AsQueryable();
-
-            if (!string.IsNullOrEmpty(request.CompanyNameOrContactName))
-            {
-                query = query
-                    .Where(x => 
-                    x.CompanyName.Contains(request.CompanyNameOrContactName) 
-                    || x.FirstName.Contains(request.CompanyNameOrContactName)
-                    || x.LastName.Contains(request.CompanyNameOrContactName));
-            }
-
-            if (request.Id.HasValue)
-            {
-                query = query.Where(x => x.Id == request.Id);
-            }
-
-            if (request.MinBalance.HasValue)
-            {
-                query = query.Where(x => x.Balance >= request.MinBalance.Value);
-            }
-
-            if (request.MaxBalance.HasValue)
-            {
-                query = query.Where(x => x.Balance <= request.MaxBalance.Value);
-            }
-
-            if (request.BalanceType.HasValue)
-            {
-                query = query.Where(x => x.BalanceType == request.BalanceType.Value);
-            }
+            var query = ApplyFilters(_context.Suppliers.Where(x => x.IsActive).AsQueryable(), request);
 
             // Default: newest first.
             var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
@@ -137,6 +108,44 @@ namespace Application.Features.Supplier.Queries
             res.Message = "لیست تامین کنندگان با موفقیت ارسال شد";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;
+        }
+
+        /// <summary>
+        /// The list's filters, on their own so the table export (SupplierDataTransferDefinition) filters with exactly this code
+        /// instead of a copy of it.
+        /// </summary>
+        public static IQueryable<Domain.Entities.Supplier> ApplyFilters(IQueryable<Domain.Entities.Supplier> query, GetSupplierListQuery request)
+        {
+            if (!string.IsNullOrEmpty(request.CompanyNameOrContactName))
+            {
+                query = query
+                    .Where(x => 
+                    x.CompanyName.Contains(request.CompanyNameOrContactName) 
+                    || x.FirstName.Contains(request.CompanyNameOrContactName)
+                    || x.LastName.Contains(request.CompanyNameOrContactName));
+            }
+
+            if (request.Id.HasValue)
+            {
+                query = query.Where(x => x.Id == request.Id);
+            }
+
+            if (request.MinBalance.HasValue)
+            {
+                query = query.Where(x => x.Balance >= request.MinBalance.Value);
+            }
+
+            if (request.MaxBalance.HasValue)
+            {
+                query = query.Where(x => x.Balance <= request.MaxBalance.Value);
+            }
+
+            if (request.BalanceType.HasValue)
+            {
+                query = query.Where(x => x.BalanceType == request.BalanceType.Value);
+            }
+
+            return query;
         }
     }
 }

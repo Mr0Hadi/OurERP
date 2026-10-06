@@ -47,10 +47,10 @@ export const PAYMENT_TYPE_TONES = Object.freeze({
 });
 
 /**
- * نوع‌هایی که یک *سندِ* خرید/فروش می‌تواند داشته باشد.
+ * نوع‌هایی که یک *سندِ* خرید می‌تواند داشته باشد (و فروش، جز «اقساطی»).
  *
- * `INSTALLMENT` عمداً بیرون است: خرید اقساطی در بکند وجود ندارد و فروشِ
- * اقساطی برنامه‌ی اقساط می‌خواهد که این فرم نمی‌سازد.
+ * `INSTALLMENT` اینجا نیست چون خرید اقساطی در بکند وجود ندارد؛ فروش آن را
+ * جدا دارد (`SALE_PAYMENT_TYPE_LABELS`) و با قرارداد اقساط ثبت می‌شود.
  */
 export const DOCUMENT_PAYMENT_TYPES = Object.freeze([
   PaymentTypeEnum.CASH,
@@ -66,6 +66,12 @@ export const DOCUMENT_PAYMENT_TYPE_LABELS = Object.freeze(
     DOCUMENT_PAYMENT_TYPES.map((value) => [value, PAYMENT_TYPE_LABELS[value]]),
   ),
 );
+
+/** برچسبِ نوع‌های سطحِ سندِ فروش — همان سند به‌اضافه‌ی «اقساطی» (فیلترِ فهرستِ فروش). */
+export const SALE_PAYMENT_TYPE_LABELS = Object.freeze({
+  ...DOCUMENT_PAYMENT_TYPE_LABELS,
+  [PaymentTypeEnum.INSTALLMENT]: PAYMENT_TYPE_LABELS[PaymentTypeEnum.INSTALLMENT],
+});
 
 /**
  * روش‌هایی که یک اثرِ پولیِ مرجوعی می‌تواند داشته باشد — مقادیرِ معتبرِ

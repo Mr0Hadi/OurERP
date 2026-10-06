@@ -47,35 +47,7 @@ namespace Application.Features.Customer.Queries
         {
             var res = new ResponseDto();
 
-            var query = _context.Customers.Where(x => x.IsActive).AsQueryable().AsNoTracking();
-
-            if (request.Id.HasValue)
-            {
-                query = query.Where(x => x.Id == request.Id);
-            }
-
-            if (!string.IsNullOrEmpty(request.FullName))
-            {
-                query = query
-                    .Where(x =>
-                    x.FirstName.Contains(request.FullName)
-                    || x.LastName.Contains(request.FullName));
-            }
-
-            if (request.MinBalance.HasValue)
-            {
-                query = query.Where(x => x.Balance >= request.MinBalance.Value);
-            }
-
-            if (request.MaxBalance.HasValue)
-            {
-                query = query.Where(x => x.Balance <= request.MaxBalance.Value);
-            }
-
-            if (request.BalanceType.HasValue)
-            {
-                query = query.Where(x => x.BalanceType == request.BalanceType.Value);
-            }
+            var query = ApplyFilters(_context.Customers.Where(x => x.IsActive).AsQueryable().AsNoTracking(), request);
 
             // Default: newest first.
             var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
@@ -117,6 +89,43 @@ namespace Application.Features.Customer.Queries
             res.Message = "لیست مشتریان با موفقیت ارسال شد";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;
+        }
+
+        /// <summary>
+        /// The list's filters, on their own so the table export (CustomerDataTransferDefinition) filters with exactly this code
+        /// instead of a copy of it.
+        /// </summary>
+        public static IQueryable<Domain.Entities.Customer> ApplyFilters(IQueryable<Domain.Entities.Customer> query, GetCustomerListQuery request)
+        {
+            if (request.Id.HasValue)
+            {
+                query = query.Where(x => x.Id == request.Id);
+            }
+
+            if (!string.IsNullOrEmpty(request.FullName))
+            {
+                query = query
+                    .Where(x =>
+                    x.FirstName.Contains(request.FullName)
+                    || x.LastName.Contains(request.FullName));
+            }
+
+            if (request.MinBalance.HasValue)
+            {
+                query = query.Where(x => x.Balance >= request.MinBalance.Value);
+            }
+
+            if (request.MaxBalance.HasValue)
+            {
+                query = query.Where(x => x.Balance <= request.MaxBalance.Value);
+            }
+
+            if (request.BalanceType.HasValue)
+            {
+                query = query.Where(x => x.BalanceType == request.BalanceType.Value);
+            }
+
+            return query;
         }
     }
 }

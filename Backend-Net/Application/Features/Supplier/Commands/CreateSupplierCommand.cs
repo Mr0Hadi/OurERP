@@ -92,15 +92,9 @@ namespace Application.Features.Supplier.Commands
         }
         public async Task<ResponseDto> Handle(CreateSupplierCommand request, CancellationToken cancellationToken)
         {
-            // The columns are NOT NULL; an explicit JSON null for an optional field becomes "".
-            request.PostalCode ??= string.Empty;
-            request.FirstName ??= string.Empty;
-            request.LastName ??= string.Empty;
             var res = new ResponseDto();
 
-            var newSupplier = _mapper.Map<Domain.Entities.Supplier>(request);
-
-            newSupplier.ImageUrl = _objectStorageService.NormalizeKey(request.ImageKey);
+            var newSupplier = BuildEntity(request, _mapper, _objectStorageService);
 
             await _supplierRepository.AddAsync(newSupplier, cancellationToken);
             await _unitOfWork.SaveChangesAsync();
@@ -108,6 +102,22 @@ namespace Application.Features.Supplier.Commands
             res.Message = "تامین کننده جدید با موفقیت ایجاد شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;
+        }
+
+        /// <summary>
+        /// The entity a validated command creates. Shared with the bulk import (SupplierDataTransferDefinition), so a
+        /// supplier loaded from a file is built by exactly the code that builds one typed into the form.
+        /// </summary>
+        public static Domain.Entities.Supplier BuildEntity(CreateSupplierCommand request, IMapper mapper, IObjectStorageService objectStorageService)
+        {
+            // The columns are NOT NULL; an explicit JSON null for an optional field becomes "".
+            request.PostalCode ??= string.Empty;
+            request.FirstName ??= string.Empty;
+            request.LastName ??= string.Empty;
+
+            var supplier = mapper.Map<Domain.Entities.Supplier>(request);
+            supplier.ImageUrl = objectStorageService.NormalizeKey(request.ImageKey);
+            return supplier;
         }
     }
 }

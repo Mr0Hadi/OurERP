@@ -6,6 +6,7 @@ import {
   BookOpen,
   Box,
   Building2,
+  CalendarClock,
   ClipboardList,
   FilePlus,
   FileText,
@@ -260,6 +261,13 @@ export const navigationData = {
           permission: ["SaleCreate", "SaleInPerson"],
           icon: FilePlus,
           description: "ثبت فاکتور فروش جدید",
+        },
+        {
+          title: "اقساط",
+          url: ROUTES.SALES_INSTALLMENTS,
+          permission: "SaleInstallmentView",
+          icon: CalendarClock,
+          description: "اقساطِ فروش‌های اقساطی، سررسیدها و دریافت",
         },
         {
           title: "ثبت مرجوعی از مشتری",

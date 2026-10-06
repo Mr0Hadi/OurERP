@@ -115,7 +115,8 @@ namespace WMS
                     policy.WithOrigins(allowedOrigins)
                           .AllowAnyHeader()
                           .AllowAnyMethod()
-                          .WithExposedHeaders(IdempotencyMiddleware.ReplayedHeaderName)
+                          // Content-Disposition: the import/export download names its file (DataTransferController).
+                          .WithExposedHeaders(IdempotencyMiddleware.ReplayedHeaderName, "Content-Disposition")
                           .AllowCredentials();
                 });
             });

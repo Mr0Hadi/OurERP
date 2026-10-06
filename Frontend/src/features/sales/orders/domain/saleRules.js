@@ -1,4 +1,5 @@
 import { SaleStatusEnum, SALE_STATUS_LABELS } from "@/shared/domain/enums/saleStatus";
+import { SaleInstallmentPlanStatusEnum } from "@/shared/domain/enums/saleInstallment";
 import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
 
 /**
@@ -19,10 +20,14 @@ export const RETURNABLE_SALE_STATUSES = [
   SaleStatusEnum.DELIVERED,
 ];
 
-/** لغو فقط پیش از هر ارسالی؛ قرارداد اقساطیِ فعال را خودِ سرور می‌سنجد. */
+/**
+ * لغو فقط پیش از هر ارسالی و بی قرارداد اقساطیِ جاری (`ChangeSaleStatus` آن را ۴۰۰ می‌دهد؛
+ * اول قرارداد ابطال شود).
+ */
 export const canCancelSale = (sale) =>
   sale.status !== SaleStatusEnum.CANCELLED &&
   sale.status !== SaleStatusEnum.DELIVERED &&
+  sale.installmentSummary?.status !== SaleInstallmentPlanStatusEnum.ACTIVE &&
   !hasAnythingShipped(sale);
 
 /**
@@ -85,6 +90,10 @@ function inPersonScanProblem(items, scanned, isTracked) {
  * `forPos`: پیش از کارت‌کشیدن، وقتی دریافت هنوز نیامده؛ قاعده‌های دریافت (دریافتِ
  * کاملِ حضوری، «فاکتور با اولین دریافت») هنوز برقرار نیستند.
  *
+ * فروشِ اقساطی (`planErrors` پُر یا خالی، نه `undefined`): فاکتور با پیش‌پرداختِ قرارداد صادر
+ * می‌شود و تحویلِ حضوری هم با همان، پس قاعده‌های «دریافت» جایشان را به خطاهای قرارداد
+ * (`planDraftErrors`) می‌دهند.
+ *
  * @param isTracked `(productId) => boolean` — کالا ردیابیِ دانه دارد
  */
 export function saleFormProblem({
@@ -97,6 +106,7 @@ export function saleFormProblem({
   isTracked,
   paid,
   total,
+  planErrors,
   forPos = false,
 }) {
   if (!formData.customerId) return ["مشتری را انتخاب کنید.", "party"];
@@ -105,6 +115,12 @@ export function saleFormProblem({
   if (isInPerson) {
     const scanProblem = inPersonScanProblem(items, scannedBarcodes, isTracked);
     if (scanProblem) return [scanProblem, "items"];
+  }
+  if (planErrors) {
+    const [first] = Object.values(planErrors);
+    return isInvoice && first ? [`قرارداد اقساط: ${first}.`, "payment"] : null;
+  }
+  if (isInPerson) {
     if (paid < total && !forPos) {
       return [`در تحویلِ حضوری کلِ ${formatRial(total)} باید دریافت شود.`, "payment"];
     }

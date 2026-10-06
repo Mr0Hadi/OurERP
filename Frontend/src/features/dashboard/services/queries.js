@@ -87,10 +87,13 @@ export function useQueueCountsQuery(queues) {
   );
 
   const results = useQueries({
-    queries: parts.map(({ queue, part }) => ({
-      queryKey: dashboardKeys.queue(queue.source, part.status),
-      queryFn: () => fetchQueueCount(queue.source, part.status),
-    })),
+    queries: parts.map(({ queue, part }) => {
+      const params = part.params?.();
+      return {
+        queryKey: dashboardKeys.queue(queue.source, part.status, params),
+        queryFn: () => fetchQueueCount(queue.source, part.status, params),
+      };
+    }),
   });
 
   return queues.map((queue) => {

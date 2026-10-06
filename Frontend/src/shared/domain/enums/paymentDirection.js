@@ -16,4 +16,12 @@ export const PaymentDirectionEnum = Object.freeze({
  */
 export const PaymentPurposeEnum = Object.freeze({
   NORMAL: 0,
+  INSTALLMENT_DOWN_PAYMENT: 1,
+  INSTALLMENT: 2,
+});
+
+/** برچسبِ ردیف‌های پرداختِ قرارداد اقساطی (پرداختِ عادی برچسب ندارد). */
+export const PAYMENT_PURPOSE_LABELS = Object.freeze({
+  [PaymentPurposeEnum.INSTALLMENT_DOWN_PAYMENT]: "پیش‌پرداخت",
+  [PaymentPurposeEnum.INSTALLMENT]: "قسط",
 });
