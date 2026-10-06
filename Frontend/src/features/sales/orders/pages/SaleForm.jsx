@@ -7,7 +7,9 @@ import { Button } from "@/shared/components/ui/button";
 import { useSaleFormStore } from "@/features/sales/orders/store/saleFormStore";
 import {
   useCreateInPersonSaleMutation,
+  useCreateInstallmentSaleMutation,
   useCreateSaleMutation,
+  useIssueInstallmentSaleMutation,
   useRemoveSaleMutation,
   useSaleChangesSaver,
 } from "@/features/sales/orders/services/mutations";
@@ -41,6 +43,28 @@ import { reportFormProblem } from "@/shared/lib/scrollToSection";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
 import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
+import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+import StatusChoice from "@/shared/components/forms/StatusChoice";
+import InstallmentPlanDraftCard from "@/features/sales/installments/components/InstallmentPlanDraftCard";
+import ProformaPlanNotice from "@/features/sales/installments/components/ProformaPlanNotice";
+import {
+  addMonthsIso,
+  planDraftErrors,
+  previewInstallmentPlan,
+  toApiCreatePlan,
+} from "@/features/sales/installments/domain/installmentPlan";
+import { todayIso } from "@/shared/lib/dateUtils";
+import { SaleInstallmentPlanStatusEnum } from "@/shared/domain/enums/saleInstallment";
+
+/** «شیوه‌ی پرداخت»ِ فروش: یکجا (نقد/نسیه، از روی دریافت‌ها) یا اقساطی (با قرارداد). */
+const PAYMENT_TERMS_OPTIONS = [
+  { value: false, label: "نقد / نسیه" },
+  {
+    value: true,
+    label: "اقساطی",
+    hint: "پیش‌پرداخت و قرارداد اقساط با صدورِ فاکتور ثبت می‌شوند.",
+  },
+];
 
 const UPLOADING_MESSAGE = "تا پایان بارگذاری پیوست‌ها صبر کنید.";
 
@@ -57,6 +81,9 @@ const UPLOADING_MESSAGE = "تا پایان بارگذاری پیوست‌ها ص
  *  - اسکنِ دانه در اقلام یعنی «فروشِ حضوری»: ثبت، خروجِ کالا با همان کدها و
  *    «تحویل کامل» در یک درخواست؛ دریافت باید کامل باشد.
  *  - کارتخوان: `useSaleFormPos`.
+ *  - اقساطی: به‌جای دریافت‌ها قرارداد اقساط (`InstallmentPlanDraftCard`)؛ فاکتور با
+ *    پیش‌پرداختِ قرارداد صادر می‌شود. فروشِ تازه دو درخواست است (فروش، بعد قرارداد)
+ *    و فروشِ حضوری یکی (`installmentPlan`ِ `CreateInPersonSale`).
  *
  * قاعده‌ها (پیش از ثبت چه کم است، فروشِ حضوری) در `domain/saleRules.js`.
  */
@@ -81,6 +108,8 @@ export default function SaleForm({ sale }) {
   ]);
 
   const createMutation = useCreateSaleMutation();
+  const installmentCreateMutation = useCreateInstallmentSaleMutation();
+  const installmentIssueMutation = useIssueInstallmentSaleMutation(sale?.id);
   const inPersonMutation = useCreateInPersonSaleMutation();
   const saver = useSaleChangesSaver(sale?.id);
   const deleteMutation = useRemoveSaleMutation();
@@ -109,8 +138,55 @@ export default function SaleForm({ sale }) {
   const isTracked = (productId) =>
     Boolean(products.find((product) => product.id === productId)?.requiresUnitTracking);
   const paid = payments.netPaid;
+
+  const isInstallment = Boolean(formData.installment);
+  const planDraft = formData.installmentPlan;
+  // پیش‌نمایش با جمعِ فرم؛ عددِ نهایی را سرور از جمعِ واقعیِ فاکتور حساب می‌کند.
+  const planPreview = isInstallment ? previewInstallmentPlan(totals.totalAmount, planDraft) : null;
+  const planErrors = isInstallment
+    ? planDraftErrors(planDraft, { payable: planPreview?.totalAmount, withDownPayment: true })
+    : undefined;
+  // پیش‌فاکتوری که قراردادِ بی‌پیش‌پرداخت دارد (از راهِ دیگری ساخته شده)؛ تا ابطالش،
+  // صدور با قراردادِ تازه ممکن نیست و فروش باید اقساطی بماند.
+  const existingPlan =
+    sale?.installmentSummary?.status === SaleInstallmentPlanStatusEnum.ACTIVE ? sale.installmentSummary : null;
+  // چرا قراردادِ تازه را نمی‌شود از این فرم ثبت کرد (کارت جایش پیام نشان می‌دهد):
+  //  - دسترسیِ ثبتِ قرارداد نیست — وگرنه پیش‌فاکتور ذخیره و بعد ۴۰۳ می‌گرفت؛
+  //  - پیش‌فاکتور از قراردادِ ابطال‌شده‌ی قبلی پول گرفته؛ سرور قراردادِ تازه را با کلِ جمعِ
+  //    فاکتور می‌سازد و پولِ گرفته‌شده را حساب نمی‌کند (`frontend-requests.fa.md` ۱۷.۷).
+  const planBlockedReason = !isInstallment
+    ? null
+    : !allows("SaleInstallmentManage")
+      ? "ثبتِ قرارداد اقساط دسترسیِ «مدیریت قرارداد اقساطی» می‌خواهد."
+      : Number(sale?.paidAmount) > 0
+        ? "از این پیش‌فاکتور قبلاً با قراردادِ اقساطِ دیگری پول گرفته شده است و قراردادِ تازه کلِ جمعِ فاکتور را دوباره از مشتری می‌خواهد (محدودیتِ فعلیِ سرور). شیوه‌ی پرداخت را «نقد / نسیه» کنید و مانده را با دریافتِ عادی بگیرید."
+        : null;
+  const setPlanDraft = (patch) => setFormData({ installmentPlan: { ...planDraft, ...patch } });
+  const setInstallment = (installment) =>
+    setFormData({
+      installment,
+      // پیش‌فرضِ اولین سررسید: یک ماه بعد.
+      installmentPlan:
+        installment && !planDraft.firstDueDate
+          ? { ...planDraft, firstDueDate: addMonthsIso(todayIso(), 1) }
+          : planDraft,
+    });
+
   // ورودیِ `saleFormProblem` جز نوعِ سند (فاکتور/پیش‌فاکتور) که به کارتخوان هم بسته است.
-  const problemBase = { formData, items, isInPerson, scannedBarcodes, isTracked, paid, total: totals.totalAmount };
+  const problemBase = {
+    formData,
+    items,
+    isInPerson,
+    scannedBarcodes,
+    isTracked,
+    paid,
+    total: totals.totalAmount,
+    planErrors: existingPlan
+      ? { plan: "قراردادِ قبلیِ این پیش‌فاکتور را ابطال کنید" }
+      : planBlockedReason
+        ? { plan: planBlockedReason }
+        : planErrors,
+  };
 
   /** فرم → بدنه‌ی `CreateSale`/`UpdateSale` (بی ردیف‌های پرداخت). */
   const buildPayload = (isInvoice) => ({
@@ -120,7 +196,9 @@ export default function SaleForm({ sale }) {
     paymentDate: isInvoice ? formData.paymentDate || null : null,
     description: formData.description || "",
     items,
-    paymentType: paymentTypeOf(isInvoice ? payments.rows : []),
+    paymentType: isInstallment
+      ? PaymentTypeEnum.INSTALLMENT
+      : paymentTypeOf(isInvoice ? payments.rows : []),
     attachments: attachments.filesPayload,
   });
 
@@ -131,7 +209,8 @@ export default function SaleForm({ sale }) {
   };
 
   const { posPayment, posLocked } = useSaleFormPos({
-    enabled: allows("PosCharge"),
+    // پولِ فروشِ اقساطی فقط از قرارداد می‌آید؛ کارتخوان روی دریافت‌های عادی است.
+    enabled: allows("PosCharge") && !isInstallment,
     sale,
     isInPerson,
     hasDraftPayments: payments.hasChanges,
@@ -190,6 +269,7 @@ export default function SaleForm({ sale }) {
     if (attachments.isUploading) return toast.error(UPLOADING_MESSAGE);
 
     const payload = buildPayload(isInvoice);
+    if (isInstallment && isInvoice) return submitInstallment(payload);
     if (!isNew) {
       // اول خودِ پیش‌فاکتور، بعد دریافت‌ها — اولینش فاکتور را صادر می‌کند و
       // صفحه خودش به نمای فاکتورِ صادرشده می‌رود.
@@ -207,9 +287,37 @@ export default function SaleForm({ sale }) {
     }
 
     const onSuccess = (created) => openSaved(created?.id);
-    const body = { ...payload, paymentRows: payments.rows };
+    // دریافت‌ها فقط با فاکتورِ غیراقساطی؛ ردیف‌هایی که پیش از رفتن به پیش‌فاکتور/اقساطی
+    // اضافه شده بودند پنهان‌اند و نباید بی‌صدا فرستاده شوند (فروشِ اقساطی با ردیف ۴۰۰ می‌گیرد).
+    const body = { ...payload, paymentRows: isInvoice && !isInstallment ? payments.rows : [] };
     if (isInPerson) inPersonMutation.mutate({ payload: body, scannedBarcodes }, { onSuccess });
     else createMutation.mutate(body, { onSuccess });
+  };
+
+  /** فاکتورِ اقساطی: پیش‌پرداختِ قرارداد آن را صادر می‌کند؛ دریافتِ عادی ندارد. */
+  const submitInstallment = (payload) => {
+    const plan = toApiCreatePlan(planDraft);
+    const body = { ...payload, paymentRows: [] };
+    const onSuccess = (created) => openSaved(created?.saleId ?? created?.id);
+    if (isInPerson) {
+      inPersonMutation.mutate({ payload: body, scannedBarcodes, installmentPlan: plan }, { onSuccess });
+    } else if (isNew) {
+      installmentCreateMutation.mutate(
+        { payload: body, plan },
+        // فروش ثبت شد ولی قرارداد نه: به همان پیش‌فاکتور برو تا قرارداد از آن‌جا ثبت شود.
+        { onSuccess, onError: (error) => error?.partiallySaved && openSaved(error.saleId) },
+      );
+    } else {
+      installmentIssueMutation.mutate(
+        { update: payload, plan },
+        {
+          onSuccess: () => {
+            attachments.commit();
+            resetForm();
+          },
+        },
+      );
+    }
   };
 
   const leave = () => {
@@ -221,6 +329,8 @@ export default function SaleForm({ sale }) {
   const canEdit = isNew || allows("SaleUpdate");
   const isBusy =
     createMutation.isPending ||
+    installmentCreateMutation.isPending ||
+    installmentIssueMutation.isPending ||
     inPersonMutation.isPending ||
     saver.isPending ||
     deleteMutation.isPending ||
@@ -228,7 +338,11 @@ export default function SaleForm({ sale }) {
     posLocked;
   const submitLabel = isInPerson
     ? "ثبت و تحویل حضوری"
-    : isNew
+    : isInstallment && isInvoice
+      ? isNew
+        ? "ثبت فاکتور اقساطی"
+        : "صدور فاکتور اقساطی"
+      : isNew
       ? isInvoice
         ? "ثبت فاکتور"
         : "ثبت پیش‌فاکتور"
@@ -263,7 +377,23 @@ export default function SaleForm({ sale }) {
                 onAddNewProduct={() => openSubPage(ROUTES.WAREHOUSE_PRODUCTS_NEW)}
               />
             </FormSection>
-            {isInvoice && (
+            {isInvoice && isInstallment && (
+              <FormSection name="payment">
+                {existingPlan ? (
+                  <ProformaPlanNotice plan={existingPlan} />
+                ) : (
+                  <InstallmentPlanDraftCard
+                    draft={planDraft}
+                    onChange={setPlanDraft}
+                    preview={planPreview}
+                    errors={showErrors ? planErrors : {}}
+                    taxUnknown={totals.taxUnknown}
+                    blockedReason={planBlockedReason}
+                  />
+                )}
+              </FormSection>
+            )}
+            {isInvoice && !isInstallment && (
               <FormSection name="payment">
                 <PaymentsCard
                   title="دریافت‌ها"
@@ -298,7 +428,18 @@ export default function SaleForm({ sale }) {
                 formData={formData}
                 onFormChange={setFormData}
                 errors={showErrors ? invoiceErrors ?? {} : {}}
-              />
+              >
+                {(isInstallment || allows("SaleInstallmentManage")) && (
+                  <StatusChoice
+                    label="شیوه‌ی پرداخت"
+                    options={PAYMENT_TERMS_OPTIONS}
+                    value={isInstallment}
+                    onChange={setInstallment}
+                    // قراردادِ موجود و دریافتِ کارتخوانِ در جریان شیوه را قفل می‌کنند.
+                    disabled={Boolean(existingPlan) || posLocked}
+                  />
+                )}
+              </OrderInfoCard>
             </FormSection>
             <InvoiceDocumentSection
               title={isInvoice ? "فاکتور" : "پیش‌فاکتور"}

@@ -48,6 +48,7 @@ function ReadOnlyValue({ children }) {
  * @param kind/onKindChange «پیش‌فاکتور / فاکتور» (فقط پیش از صدور)
  * @param status `{ value, options: [{ value, label }], onChange }` — با یک گزینه
  *   (فقط وضعیتِ فعلی) فیلد دیده نمی‌شود.
+ * @param children انتخاب‌های اضافه‌ی هر سمت زیرِ «نوع سند» (فروش: شیوه‌ی پرداخت)
  */
 export default function OrderInfoCard({
   issued = false,
@@ -60,6 +61,7 @@ export default function OrderInfoCard({
   errors = {},
   status,
   headerAction,
+  children,
 }) {
   const isInvoice = issued || kind === "invoice";
   const showStatus = status && status.options.length > 1;
@@ -72,6 +74,7 @@ export default function OrderInfoCard({
           {kindNote && <p className="text-xs text-muted-foreground">{kindNote}</p>}
         </div>
       )}
+      {children}
 
       {isInvoice && (
         <div className="grid grid-cols-2 gap-3">

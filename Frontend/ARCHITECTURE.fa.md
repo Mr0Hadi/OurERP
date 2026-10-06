@@ -725,7 +725,7 @@ const query = usePurchasesQuery(filters, pagination, sorting);   // listQuery + 
 | **organization** | 33 | `/organization/{departments,teams}` | `Department/Team View/Manage` | واحدها و تیم‌ها، تعیین مدیر/جانشین |
 | **permissions** | 20 | `/access/{users,templates}` | `PermissionView` | ویرایش دسترسی کارمند، الگوی هر واحد |
 | **purchases** | 33 | `/purchases…` | `Purchase*`, `PurchaseReturn*` | `orders` + `returns` |
-| **sales** | 33 | `/sales…` | `Sale*`, `SaleReturn*` | `orders` + `returns` (قرینه‌ی خرید) |
+| **sales** | 33 | `/sales…` | `Sale*`, `SaleReturn*`, `SaleInstallment*` | `orders` + `returns` (قرینه‌ی خرید) + `installments` |
 | **warehouse** | 93 | `/warehouse…` | `Product*`, `PurchaseReceive`, `SaleShip`, `ProductUnitView`, … | کالا، دسته، دانه‌ها، دریافت، ارسال |
 | **reports** | 21 | `/reports…` | `ReportView` | فعالیت کارمند/مشتری/تامین‌کننده، فروش، خرید، مالی، سود و زیان، انبار |
 | **settings** | 10 | `/settings…` | — | **placeholder** (هر صفحه ~۶ خط) |
@@ -736,6 +736,10 @@ const query = usePurchasesQuery(filters, pagination, sorting);   // listQuery + 
 دو سمتِ قرینه (تامین‌کننده ↔ مشتری). `orders`: لیست، ثبت جدید، جزئیات، `…Form` (پیش‌فاکتور)، `…IssuedView` (صادرشده)، `domain/…Rules|…Payments|…Pricing`.
 `returns`: لیست/ثبت/جزئیات؛ بدنه‌ی منطق در `shared/domain/returns` و `shared/components/returns`، و هر سمت فقط **vocabulary**، store و سرویس خودش را دارد.
 فروش علاوه بر خرید: `useSaleFormPos` (کارتخوان در فرم)، `salePricing`، صدور خودکار فاکتور با اولین دریافت.
+`sales/installments`: فروشِ اقساطی روی `api/SaleInstallment` — قرارداد با پیش‌پرداخت هنگامِ صدورِ فاکتور (`InstallmentPlanDraftCard` در `SaleForm`)،
+`InstallmentPlanCard` در فاکتورِ صادرشده (جدولِ اقساط، دریافتِ قسط، تسویه، ویرایش، ابطال)، صفحه‌ی `/sales/installments`، `CustomerInstallmentsCard`
+و کاشیِ «اقساطِ سررسیدگذشته»ی داشبورد. مبالغ از سرور؛ `domain/installmentPlan.js` فقط پیش‌نمایشِ فرم است و دیرکرد از `dueDate` تشخیص داده می‌شود
+(سرور `OVERDUE` نمی‌نویسد). کمبودهای بکند: بخش ۱۷ سندِ درخواست‌ها.
 
 ### 17.2 warehouse
 - **products**: لیست/جزئیات/جدید، `useProductForm` (RHF، با **همان نام‌های بکند**: `retailPrice`، `wholeSalePrice`، `tax`، `stock`، `barCode`)، تصویر، بارکد/QR محصول، `CategoryManager` (با همان `CategoryFormDialog`ِ صفحه‌ی دسته‌ها). در ویرایش، تغییرِ «موجودی» اصلاحِ دستی است و دانه می‌سازد/کم می‌کند.

@@ -21,6 +21,9 @@ import { idempotencyKeyFor } from "@/shared/services/api/contract";
 import { SALE_PAYMENT_SIDE } from "../domain/salePayments";
 import { toPaymentPayload } from "@/shared/domain/payments/paymentRows";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
+import { createInstallmentPlan } from "@/features/sales/installments/services/api-v1";
+import { installmentKeys } from "@/features/sales/installments/services/queryKeys";
+import { applyInstallmentPlan } from "@/features/sales/installments/services/mutations";
 
 /**
  * هر نوشتنِ فروش (به‌جز Create) سندِ کامل را برمی‌گرداند: همان در کشِ
@@ -57,7 +60,10 @@ export const useCreateSaleMutation = () => {
   });
 };
 
-/** فروشِ حضوری: یک درخواستِ اتمی که ثبت، خروجِ کالا و «تحویل کامل» را انجام می‌دهد. */
+/**
+ * فروشِ حضوری: یک درخواستِ اتمی که ثبت، خروجِ کالا و «تحویل کامل» را انجام می‌دهد.
+ * `variables.installmentPlan` برای فروشِ حضوریِ اقساطی (همان تراکنش).
+ */
 export const useCreateInPersonSaleMutation = () => {
   const queryClient = useQueryClient();
 
@@ -65,15 +71,102 @@ export const useCreateInPersonSaleMutation = () => {
     mutationFn: (variables) =>
       createInPersonSale(variables.payload, variables.scannedBarcodes, {
         idempotencyKey: idempotencyKeyFor(variables),
+        installmentPlan: variables.installmentPlan,
       }),
-    onSuccess: (created) => {
+    onSuccess: (created, variables) => {
       toast.success('فروش حضوری ثبت و تحویل شد');
       invalidateSalesEcosystem(queryClient, created.id);
       queryClient.invalidateQueries({ queryKey: shippingKeys.all });
       queryClient.invalidateQueries({ queryKey: customerKeys.all });
+      if (variables.installmentPlan) {
+        queryClient.invalidateQueries({ queryKey: installmentKeys.all });
+      }
     },
     onError: (error) => {
       toast.error(getErrorMessage(error, 'ثبت فروش حضوری انجام نشد'));
+    },
+  });
+};
+
+/**
+ * پیامِ خطای ثبتِ فروشِ اقساطی که فروشش ذخیره شد ولی قراردادش نه (`error.partiallySaved`):
+ * فروش پیش‌فاکتورِ اقساطی مانده و قرارداد از صفحه‌ی همان پیش‌فاکتور دوباره ثبت می‌شود.
+ */
+function installmentSaleError(error, fallback) {
+  const reason = getErrorMessage(error, fallback);
+  if (!error?.partiallySaved) return reason;
+  // بی‌پاسخ (تایم‌اوت، قطعِ شبکه): شاید سرور قرارداد را ثبت کرده باشد. صفحه‌ی فروش وضعیتِ
+  // واقعی را نشان می‌دهد؛ ثبتِ دوباره قراردادِ دوم نمی‌سازد (یک قراردادِ جاری برای هر فروش،
+  // و همان `Idempotency-Key` برای همان محتوا).
+  if (!error.response) {
+    return `${reason} — فروش ذخیره شد ولی پاسخِ ثبتِ قرارداد نرسید. در صفحه‌ی فروش ببینید: اگر هنوز پیش‌فاکتور است، قرارداد ثبت نشده و می‌توانید دوباره ثبت کنید.`;
+  }
+  return `${reason} — فروش به‌صورتِ پیش‌فاکتور ذخیره شد؛ قرارداد اقساط را از صفحه‌ی همان پیش‌فاکتور دوباره ثبت کنید.`;
+}
+
+/**
+ * ثبتِ قرارداد روی فروشی که همین حالا ذخیره شد. خطا یعنی فروش هست و قرارداد نه؛
+ * `partiallySaved` و `saleId` روی خطا می‌نشینند تا صفحه به همان پیش‌فاکتور برود.
+ */
+async function createPlanForSale(saleId, plan) {
+  const body = { saleId, ...plan };
+  try {
+    return await createInstallmentPlan(body, { idempotencyKey: idempotencyKeyFor(body) });
+  } catch (error) {
+    error.partiallySaved = true;
+    error.saleId = saleId;
+    throw error;
+  }
+}
+
+/**
+ * فروشِ اقساطیِ تازه (غیرحضوری). بکند دو قدمِ جدا دارد و دستورِ اتمی‌ای برایشان نیست
+ * (`frontend-requests.fa.md` بخش ۱۷): فروش به‌شکلِ پیش‌فاکتورِ اقساطی ثبت می‌شود و
+ * بعد قرارداد با پیش‌پرداخت، که فاکتور را صادر می‌کند.
+ *
+ * `{ payload, plan }` — `plan` بدنه‌ی `CreateSaleInstallmentPlan` بی `saleId`.
+ * @returns سندِ کاملِ قرارداد
+ */
+export const useCreateInstallmentSaleMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ payload, plan }) => {
+      const created = await createSale(payload, { idempotencyKey: idempotencyKeyFor(payload) });
+      return createPlanForSale(created.id, plan);
+    },
+    onSuccess: (plan) => {
+      toast.success(`فاکتور ${plan.invoiceNumber || ""} صادر و قرارداد اقساط ثبت شد`);
+      applyInstallmentPlan(queryClient, plan);
+      invalidateSalesEcosystem(queryClient, plan.saleId);
+    },
+    onError: (error) => {
+      if (error?.partiallySaved) invalidateSalesEcosystem(queryClient, error.saleId);
+      toast.error(installmentSaleError(error, "ثبت فروش اقساطی انجام نشد"));
+    },
+  });
+};
+
+/**
+ * صدورِ پیش‌فاکتورِ اقساطی: ذخیره‌ی خودِ پیش‌فاکتور (`UpdateSale`) و بعد ثبتِ قرارداد با
+ * پیش‌پرداخت. `{ update, plan }`.
+ */
+export const useIssueInstallmentSaleMutation = (saleId) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ update, plan }) => {
+      await updateSale(saleId, update);
+      return createPlanForSale(saleId, plan);
+    },
+    onSuccess: (plan) => {
+      toast.success(`فاکتور ${plan.invoiceNumber || ""} صادر و قرارداد اقساط ثبت شد`);
+      applyInstallmentPlan(queryClient, plan);
+      invalidateSalesEcosystem(queryClient, saleId);
+    },
+    onError: (error) => {
+      invalidateSalesEcosystem(queryClient, saleId);
+      toast.error(installmentSaleError(error, "صدورِ فاکتورِ اقساطی انجام نشد"));
     },
   });
 };

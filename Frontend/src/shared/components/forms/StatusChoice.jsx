@@ -6,8 +6,10 @@ import { cn } from "@/shared/lib/utils";
  * انتخاب‌شده زیرش می‌آید (یک خط، نه یک پاراگرافِ ثابت برای همه).
  *
  * @param options `[{ value, label, hint }]`
+ * @param wrap    گزینه‌های زیاد (مثلِ نماهای یک فهرست): در عرضِ کم به سطرِ بعد می‌روند به‌جای
+ *                فشرده‌شدن در یک ردیف
  */
-export default function StatusChoice({ label = "وضعیت هنگام ثبت", options, value, onChange, disabled }) {
+export default function StatusChoice({ label = "وضعیت هنگام ثبت", options, value, onChange, disabled, wrap = false }) {
   const selected = options.find((option) => option.value === value) ?? options[0];
 
   return (
@@ -16,8 +18,8 @@ export default function StatusChoice({ label = "وضعیت هنگام ثبت", o
       <div
         role="radiogroup"
         aria-label={label}
-        className="grid gap-1 rounded-lg border border-border p-1"
-        style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
+        className={cn("gap-1 rounded-lg border border-border p-1", wrap ? "flex flex-wrap" : "grid")}
+        style={wrap ? undefined : { gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
       >
         {options.map((option) => {
           const active = option.value === selected.value;
@@ -31,6 +33,7 @@ export default function StatusChoice({ label = "وضعیت هنگام ثبت", o
               onClick={() => onChange(option.value)}
               className={cn(
                 "rounded-md px-2 py-1.5 text-xs font-medium transition-colors disabled:opacity-50",
+                wrap && "flex-1 basis-24 whitespace-nowrap",
                 active
                   ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",

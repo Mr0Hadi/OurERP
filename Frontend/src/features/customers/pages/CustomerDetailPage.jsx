@@ -31,11 +31,13 @@ import {
 } from "@/features/partyAccount/domain/partyBalance";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
+import CustomerInstallmentsCard from "@/features/sales/installments/components/CustomerInstallmentsCard";
 
 function CustomerDetailForm({ customerData }) {
   const navigate = useNavigate();
   const { can } = usePermission();
   const canViewStatement = can("PartyStatementView");
+  const canViewInstallments = can("SaleInstallmentView");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const updateMutation = useUpdateCustomerMutation();
@@ -155,6 +157,12 @@ function CustomerDetailForm({ customerData }) {
             totalBalance={partyBalanceOf(customerData)}
             openingBalance={openingBalanceOf(customerData)}
           />
+        </div>
+      )}
+
+      {canViewInstallments && (
+        <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+          <CustomerInstallmentsCard customerId={customerData.id} />
         </div>
       )}
 

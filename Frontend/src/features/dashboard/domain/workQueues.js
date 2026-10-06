@@ -1,4 +1,5 @@
 import {
+  CalendarClock,
   ArrowDownToLine,
   ArrowUpFromLine,
   FileClock,
@@ -18,6 +19,7 @@ import {
 import { RETURN_STATUSES } from "@/shared/domain/returns/statuses";
 import { RECEIVING_AWAITING_STATUSES } from "@/features/warehouse/receiving/domain/receivingVocabulary";
 import { SHIPPING_AWAITING_STATUSES } from "@/features/warehouse/shipping/domain/shippingVocabulary";
+import { installmentListParams } from "@/features/sales/installments/domain/installmentViews";
 
 /**
  * صف‌های کاری — «چند چیز منتظرِ من است؟».
@@ -30,6 +32,9 @@ import { SHIPPING_AWAITING_STATUSES } from "@/features/warehouse/shipping/domain
  * فیلترِ چندوضعیتی ندارد (`frontend-requests.fa.md` بخشِ ۳ بند ۸) و
  * سرورِ قدیمی آن پارامتر را نادیده می‌گیرد — یعنی `total`ِ *کلِ*
  * فروش‌ها، که عددِ غلطی است. `status`ِ تکی را هر دو فهرست می‌شناسند.
+ *
+ * بخشی که `params` (تابع) دارد به‌جای `status` همان پارامترها را می‌فرستد — صفِ
+ * اقساط به بازه‌ی سررسید بسته است، نه فقط وضعیت.
  *
  * `permissions` همه‌اش لازم است: صفِ دریافت هم به دسترسیِ صفحه
  * (`PurchaseReceive`) نیاز دارد و هم به دسترسیِ فهرستی که عدد از آن
@@ -105,6 +110,18 @@ export const WORK_QUEUES = [
       (status) => ({ status, label: PURCHASE_STATUS_LABELS[status] }),
     ),
     tone: "amber",
+  },
+  {
+    id: "installmentsOverdue",
+    title: "اقساطِ سررسیدگذشته",
+    hint: "اقساطِ پرداخت‌نشده‌ای که سررسیدشان گذشته است",
+    icon: CalendarClock,
+    url: `${ROUTES.SALES_INSTALLMENTS}?view=overdue`,
+    permissions: ["SaleInstallmentView"],
+    source: "saleInstallment",
+    // «امروز» هنگامِ شمارش حساب می‌شود، نه هنگامِ بارِ ماژول (صفحه‌ای که از دیروز باز مانده).
+    parts: [{ label: "سررسیدگذشته", params: () => installmentListParams({ view: "overdue" }) }],
+    tone: "rose",
   },
   {
     id: "saleReturns",

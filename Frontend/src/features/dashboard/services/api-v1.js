@@ -1,6 +1,6 @@
 import axiosInstance from "@/shared/services/api/axios";
 import { DEFAULT_REPORT_PERIOD } from "@/shared/domain/enums/reportPeriod";
-import { normalizeListResponse } from "@/shared/services/api/contract";
+import { compactParams, normalizeListResponse } from "@/shared/services/api/contract";
 
 /**
  * نسخه‌ی سرورِ گزارش‌های داشبورد — نگاشتِ مستقیم روی `api/Report`
@@ -83,15 +83,16 @@ const QUEUE_ENDPOINTS = {
   purchase: "/Purchase/GetPurchaseList",
   saleReturn: "/SaleReturn/GetSaleReturnList",
   purchaseReturn: "/PurchaseReturn/GetPurchaseReturnList",
+  saleInstallment: "/SaleInstallment/GetSaleInstallmentList",
 };
 
 /**
- * تعدادِ سندهای یک وضعیت در یکی از چهار فهرست — `total`ِ فهرست با
- * `take=1`. سطرِ برگشتی دور ریخته می‌شود؛ فقط شمارنده لازم است.
+ * تعدادِ ردیف‌های یک وضعیت (یا پارامترهای دلخواهِ `params`) در یکی از فهرست‌ها —
+ * `total`ِ فهرست با `take=1`. سطرِ برگشتی دور ریخته می‌شود؛ فقط شمارنده لازم است.
  */
-export async function fetchQueueCount(source, status) {
+export async function fetchQueueCount(source, status, params) {
   const { data } = await axiosInstance.get(QUEUE_ENDPOINTS[source], {
-    params: { page: 1, take: 1, status },
+    params: compactParams({ page: 1, take: 1, status, ...params }),
   });
   return normalizeListResponse(data).total ?? 0;
 }

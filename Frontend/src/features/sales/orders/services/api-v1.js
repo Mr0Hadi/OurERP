@@ -136,13 +136,17 @@ export async function createSale(saleData, { idempotencyKey } = {}) {
  * را مستقیم «تحویل کامل» می‌کند؛ اگر قدمی شکست بخورد هیچ‌چیز ثبت نمی‌شود.
  * retry بدون کلید یعنی کالا دوبار از انبار کم می‌شد.
  *
+ * فروشِ حضوریِ اقساطی: `installmentPlan` (بدنه‌ی `CreateSaleInstallmentPlan` بی `saleId`)
+ * در همان تراکنش و پیش از خروجِ کالا ثبت می‌شود؛ پیش‌پرداخت باید بیشتر از صفر باشد و
+ * `paymentDetails` خالی.
+ *
  * @param scannedBarcodes `{ [productId]: string[] }`
  * @returns `{ id, invoiceNumber, status }`
  */
 export async function createInPersonSale(
   saleData,
   scannedBarcodes = {},
-  { idempotencyKey } = {},
+  { idempotencyKey, installmentPlan } = {},
 ) {
   const { data } = await axiosInstance.post(
     "/Sale/CreateInPersonSale",
@@ -158,6 +162,7 @@ export async function createInPersonSale(
           productUnitBarcodes: barcodes,
         }),
       ),
+      ...(installmentPlan && { installmentPlan }),
     },
     idempotent(idempotencyKey),
   );

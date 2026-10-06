@@ -26,6 +26,8 @@ import { RETURNABLE_SALE_STATUSES, hasAnythingShipped, saleStatusOptions } from 
 import { SALE_PAYMENT_SIDE } from "../domain/salePayments";
 import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+import { SaleInstallmentPlanStatusEnum } from "@/shared/domain/enums/saleInstallment";
+import InstallmentPlanCard from "@/features/sales/installments/components/InstallmentPlanCard";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import { savedInvoiceTotals } from "@/shared/domain/invoice/lineMath";
 import { ROUTES } from "@/shared/constants/routes";
@@ -50,7 +52,11 @@ export default function SaleIssuedView({ sale }) {
 
   const canUpdate = allows("SaleUpdate");
   const isCancelled = sale.status === SaleStatusEnum.CANCELLED;
-  const isInstallment = sale.paymentType === PaymentTypeEnum.INSTALLMENT;
+  // تا وقتی قرارداد اقساطی ابطال نشده، پولِ فروش فقط از خودِ قرارداد جابه‌جا می‌شود
+  // (`AddSalePayment` ۴۰۰ می‌دهد)؛ بعد از ابطال، مانده با دریافتِ عادی گرفته می‌شود.
+  const plan = sale.installmentSummary;
+  const isInstallment =
+    sale.paymentType === PaymentTypeEnum.INSTALLMENT && plan?.status !== SaleInstallmentPlanStatusEnum.CANCELLED;
   const isSaving = saver.isPending || draft.attachments.isUploading || posLocked;
 
   const save = () => {
@@ -102,6 +108,7 @@ export default function SaleIssuedView({ sale }) {
                 },
               ]}
             />
+            {plan && allows("SaleInstallmentView") && <InstallmentPlanCard saleId={sale.id} />}
             <PaymentsCard
               title="دریافت‌ها"
               draft={draft.payments}
@@ -122,7 +129,7 @@ export default function SaleIssuedView({ sale }) {
               }
               notice={
                 isInstallment
-                  ? "پرداخت‌های فروشِ اقساطی از قرارداد اقساط ثبت می‌شوند."
+                  ? "پیش‌پرداخت و اقساط از کارتِ «قرارداد اقساط» دریافت می‌شوند."
                   : isCancelled
                     ? "فروش لغو شده است؛ پولِ مشتری را با «پول برگشتی» برگردانید."
                     : undefined
