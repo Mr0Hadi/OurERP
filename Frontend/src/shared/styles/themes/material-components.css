@@ -410,3 +410,38 @@
     opacity: 0.38;
   }
 }
+
+/* ════════════════ DatePicker (react-multi-date-picker) ════════════════
+   `persian-date-picker.css` بدونِ لایه است؛ پس این بخش هم باید بدونِ لایه
+   و با specificityِ بالاتر باشد. فقط ظاهر؛ منطقِ تقویم دست‌نخورده است. */
+.theme-material .rmdp-app-calendar .rmdp-calendar {
+  background: var(--md-surface-container-high);
+  border-color: transparent;
+  border-radius: var(--md-shape-xl);
+}
+.theme-material .rmdp-app-calendar .rmdp-shadow {
+  box-shadow: var(--md-elev-3);
+}
+.theme-material .rmdp-app-calendar .rmdp-day span {
+  border-radius: var(--md-shape-full);
+}
+.theme-material .rmdp-app-calendar .rmdp-day.rmdp-today span {
+  background: transparent;
+  color: var(--md-primary);
+  box-shadow: inset 0 0 0 1px var(--md-primary);
+}
+.theme-material .rmdp-app-calendar .rmdp-day.rmdp-selected span:not(.highlight) {
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+}
+.theme-material .rmdp-app-calendar .rmdp-day:not(.rmdp-disabled):not(.rmdp-day-hidden) span:hover {
+  background: color-mix(in oklch, transparent, var(--md-on-surface) var(--md-state-hover));
+  color: var(--md-on-surface);
+}
+.theme-material .rmdp-app-calendar .rmdp-day.rmdp-selected:not(.rmdp-disabled):not(.rmdp-day-hidden) span:not(.highlight):hover {
+  background: color-mix(in oklch, var(--md-primary), var(--md-on-primary) var(--md-state-hover));
+  color: var(--md-on-primary);
+}
+.theme-material .rmdp-app-calendar .rmdp-arrow-container {
+  border-radius: var(--md-shape-full);
+}

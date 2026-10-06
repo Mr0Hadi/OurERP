@@ -70,6 +70,13 @@ html.theme-material {
   --chart-4: oklch(0.70 0.15 80);
   --chart-5: oklch(0.58 0.18 35);
 
+  /* ── Snackbar (react-hot-toast) ── سطحِ inverse؛ آیکن‌ها روی آن روشن‌اند */
+  --toast-bg: var(--md-inverse-surface);
+  --toast-fg: var(--md-inverse-on-surface);
+  --toast-icon-fg: var(--md-inverse-surface);
+  --toast-success: oklch(0.80 0.16 152);
+  --toast-error: oklch(0.78 0.13 25);
+
   /* ── نگاشت نقش‌های Material به توکن‌های shadcn ── */
   --background: var(--md-surface);
   --foreground: var(--md-on-surface);
@@ -154,6 +161,13 @@ html.theme-material.dark {
   --chart-3: oklch(0.76 0.10 195);
   --chart-4: oklch(0.82 0.13 85);
   --chart-5: oklch(0.74 0.14 35);
+
+  /* ── Snackbar (react-hot-toast) ── سطحِ inverse؛ آیکن‌ها روی آن روشن‌اند */
+  --toast-bg: var(--md-inverse-surface);
+  --toast-fg: var(--md-inverse-on-surface);
+  --toast-icon-fg: var(--md-inverse-surface);
+  --toast-success: oklch(0.50 0.15 150);
+  --toast-error: oklch(0.52 0.20 27);
 
   /* ── نگاشت نقش‌های Material به توکن‌های shadcn ── */
   --background: var(--md-surface);

@@ -11,23 +11,25 @@ export function ToastProvider() {
       toastOptions={{
         duration: 4000,
         style: {
-          background: "#363636",
-          color: "#fff",
+          // توکن‌های `--toast-*` فقط در تمِ Material تعریف شده‌اند (material.css)؛
+          // در بقیه‌ی تم‌ها مقدارِ پیش‌فرضِ قبلی (fallback) اعمال می‌شود.
+          background: "var(--toast-bg, #363636)",
+          color: "var(--toast-fg, #fff)",
           direction: "rtl", // پشتیبانی از متن فارسی
           fontFamily: "inherit",
         },
         success: {
           duration: 3000,
           iconTheme: {
-            primary: "#10b981",
-            secondary: "#fff",
+            primary: "var(--toast-success, #10b981)",
+            secondary: "var(--toast-icon-fg, #fff)",
           },
         },
         error: {
           duration: 4000,
           iconTheme: {
-            primary: "#ef4444",
-            secondary: "#fff",
+            primary: "var(--toast-error, #ef4444)",
+            secondary: "var(--toast-icon-fg, #fff)",
           },
         },
       }}
