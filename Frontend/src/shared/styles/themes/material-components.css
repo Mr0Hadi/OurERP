@@ -28,6 +28,14 @@
     outline-offset: 2px;
   }
 
+  /* ── Elevation ── کلاس‌های shadow-* با سطح‌های Material جایگزین می‌شوند:
+     xs/sm=۱ (کارت‌ها)، md=۲ (منو)، lg=۳ (دیالوگ/بخش شناور). shadow-xl/2xl و
+     سایه‌های رنگی (مثل `shadow-black/..` در صفحه‌ی ورود) عمداً دست‌نخورده‌اند. */
+  .theme-material .shadow-xs { --tw-shadow: 0 1px 1px 0 oklch(0 0 0 / 0.14); }
+  .theme-material .shadow-sm { --tw-shadow: var(--md-elev-1); }
+  .theme-material .shadow-md { --tw-shadow: var(--md-elev-2); }
+  .theme-material .shadow-lg { --tw-shadow: var(--md-elev-3); }
+
   /* ════════════════ Button ════════════════ */
   .theme-material .group\/button {
     transition-property: background-color, border-color, color, box-shadow;
