@@ -57,7 +57,10 @@
           if (t === "system") {
             t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
           }
-          document.documentElement.classList.add(t);
+          // منطقِ کامل: shared/components/theme/themeClasses.js
+          var c = t === "material-light" ? ["theme-material", "light"]
+            : t === "material-dark" ? ["theme-material", "dark"] : [t];
+          document.documentElement.classList.add.apply(document.documentElement.classList, c);
         } catch (e) {}
       })();
     </script>

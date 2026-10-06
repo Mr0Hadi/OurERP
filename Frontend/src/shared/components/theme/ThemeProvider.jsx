@@ -1,15 +1,7 @@
 import { useEffect, useState } from "react"
 import { syncThemeColor } from "@/shared/lib/syncThemeColor"
 import { ThemeProviderContext } from "@/shared/components/theme/themeContext"
-
-// کلاس‌هایی که باید هنگام تغییر تم پاک بشن
-const THEME_CLASSES = [
-  "light",
-  "dark",
-  "theme-accessible",
-  "theme-rose",
-  "theme-forest",
-]
+import { THEME_CLASSES, resolveThemeClasses } from "@/shared/components/theme/themeClasses"
 
 export function ThemeProvider({
   children,
@@ -27,17 +19,8 @@ export function ThemeProvider({
     // پاک کردن همه کلاس‌های تم
     root.classList.remove(...THEME_CLASSES)
 
-    if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
-        ? "dark"
-        : "light"
-      root.classList.add(systemTheme)
-      syncThemeColor()
-      return
-    }
-
-    root.classList.add(theme)
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
+    root.classList.add(...resolveThemeClasses(theme, prefersDark))
     syncThemeColor()
   }, [theme])
 

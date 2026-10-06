@@ -1,3 +1,4 @@
+import ComponentShowcase from "./ComponentShowcase";
 import { Undo2 } from "lucide-react";
 
 import Notice from "@/shared/components/feedback/Notice";
@@ -9,6 +10,7 @@ import StatusBadge from "@/shared/components/status/StatusBadge";
 import StatusText from "@/shared/components/status/StatusText";
 import AmountInWords from "@/shared/components/forms/AmountInWords";
 import { useTheme } from "@/shared/components/theme/themeContext";
+import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { PurchaseStatusEnum } from "@/shared/domain/enums/purchaseStatus";
@@ -16,7 +18,7 @@ import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { TONES, toneRow } from "@/shared/lib/tone";
 
-const THEMES = ["light", "dark", "theme-accessible", "theme-rose", "theme-forest"];
+const THEMES = ["light", "dark", "material-light", "material-dark", "theme-accessible", "theme-rose", "theme-forest"];
 
 function Section({ title, children }) {
   return (
@@ -40,6 +42,7 @@ export default function StyleGuidePage() {
   const { theme, setTheme } = useTheme();
 
   return (
+    <TooltipProvider>
     <div dir="rtl" className="min-h-svh bg-background p-6 text-foreground">
       <div className="mx-auto max-w-4xl space-y-4">
         <div className="flex flex-wrap items-center gap-2">
@@ -55,6 +58,8 @@ export default function StyleGuidePage() {
             </Button>
           ))}
         </div>
+
+        <ComponentShowcase />
 
         <Section title="tone ها — StatusBadge">
           {TONES.map((tone) => (
@@ -120,5 +125,6 @@ export default function StyleGuidePage() {
         </Card>
       </div>
     </div>
+    </TooltipProvider>
   );
 }
