@@ -33,6 +33,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/components/ui/tooltip";
+import {
+  Sidebar, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton,
+  SidebarMenuItem, SidebarProvider,
+} from "@/shared/components/ui/sidebar";
 import DataTablePagination from "@/shared/components/table/DataTablePagination";
 
 const FRUITS = ["لنت ترمز", "روغن موتور", "فیلتر هوا", "شمع", "تسمه تایم"];
@@ -190,6 +194,32 @@ export default function ComponentShowcase() {
           </TabsList>
         </Tabs>
       </Section>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Sidebar (Navigation)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-48 overflow-hidden rounded-lg border">
+            <SidebarProvider className="min-h-0 h-full">
+              <Sidebar collapsible="none" className="h-full w-full">
+                <SidebarContent>
+                  <SidebarGroup>
+                    <SidebarGroupLabel>امکانات</SidebarGroupLabel>
+                    <SidebarMenu>
+                      {["داشبورد", "فروش", "خرید"].map((t, i) => (
+                        <SidebarMenuItem key={t}>
+                          <SidebarMenuButton isActive={i === 1}>{t}</SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroup>
+                </SidebarContent>
+              </Sidebar>
+            </SidebarProvider>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="pb-2">

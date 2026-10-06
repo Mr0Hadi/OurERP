@@ -201,4 +201,78 @@
     border-top-right-radius: var(--md-shape-xl);
     border-bottom-right-radius: var(--md-shape-xl);
   }
+
+  /* ════════════════ Table ════════════════ (فقط ظاهر؛ ستون، مرتب‌سازی و
+     رفتارِ ردیف‌ها در DataTable/ServerTable دست‌نخورده‌اند.) */
+  .theme-material [data-slot="table-head"] {
+    background-color: var(--md-surface-container);
+    color: var(--md-on-surface-variant);
+    font-weight: 600;
+  }
+  .theme-material [data-slot="table-header"] [data-slot="table-row"] {
+    border-color: var(--md-outline-variant);
+  }
+  .theme-material [data-slot="table-row"][data-state="selected"] {
+    background-color: var(--md-secondary-container);
+  }
+  /* قابِ جدول (div.rounded-md.border که Table را در بر می‌گیرد) */
+  .theme-material .rounded-md:has(> [data-slot="table-container"]) {
+    border-radius: var(--md-shape-lg);
+    border-color: var(--md-outline-variant);
+  }
+
+  /* ════════════════ Tabs ════════════════ */
+  .theme-material [data-slot="tabs-trigger"] {
+    font-weight: 500;
+    transition-property: background-color, color;
+    transition-duration: var(--md-duration-short);
+    transition-timing-function: var(--md-ease-standard);
+  }
+  .theme-material [data-slot="tabs-trigger"]:not(:is([data-state="active"], [data-active]:not([data-active="false"]))):hover:not(:disabled) {
+    background-color: color-mix(in oklch, transparent, var(--md-on-surface) var(--md-state-hover));
+  }
+  /* پیش‌فرض: segmented (pill) */
+  .theme-material [data-slot="tabs-list"][data-variant="default"] {
+    background-color: var(--md-surface-container-high);
+    border-radius: var(--md-shape-full);
+  }
+  .theme-material [data-slot="tabs-list"][data-variant="default"] [data-slot="tabs-trigger"] {
+    border-radius: var(--md-shape-full);
+    border-color: transparent;
+  }
+  .theme-material [data-slot="tabs-list"][data-variant="default"] [data-slot="tabs-trigger"]:is([data-state="active"], [data-active]:not([data-active="false"])) {
+    background-color: var(--md-secondary-container);
+    color: var(--md-on-secondary-container);
+    box-shadow: none;
+  }
+  /* line: primary tabs — نشانگرِ ۳px با گوشه‌های گرد */
+  .theme-material [data-slot="tabs-list"][data-variant="line"] [data-slot="tabs-trigger"] {
+    border-radius: var(--md-shape-sm);
+  }
+  .theme-material [data-slot="tabs-list"][data-variant="line"] [data-slot="tabs-trigger"]:is([data-state="active"], [data-active]:not([data-active="false"])) {
+    color: var(--md-primary);
+  }
+  .theme-material [data-slot="tabs-list"][data-variant="line"] [data-slot="tabs-trigger"]::after {
+    background-color: var(--md-primary);
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+  }
+
+  /* ════════════════ Sidebar — Navigation drawer ════════════════
+     با data-sidebar انتخاب می‌شود (data-slot زیرِ TooltipTrigger asChild عوض می‌شود). */
+  .theme-material [data-sidebar="menu-button"] {
+    border-radius: var(--md-shape-full);
+  }
+  .theme-material [data-sidebar="menu-sub-button"] {
+    border-radius: var(--md-shape-md);
+  }
+  .theme-material :is([data-sidebar="menu-button"], [data-sidebar="menu-sub-button"]):hover:not([data-active="true"]) {
+    background-color: color-mix(in oklch, transparent, var(--md-on-surface) var(--md-state-hover));
+    color: var(--md-on-surface);
+  }
+  .theme-material :is([data-sidebar="menu-button"], [data-sidebar="menu-sub-button"])[data-active="true"] {
+    background-color: var(--md-secondary-container);
+    color: var(--md-on-secondary-container);
+    font-weight: 600;
+  }
 }
