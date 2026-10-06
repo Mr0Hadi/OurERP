@@ -22,6 +22,12 @@
 }
 
 @media print {
+  html:has(body.printing),
+  body.printing {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
   body.printing {
     overflow: visible !important;
     background: #fff !important;
@@ -58,9 +64,17 @@
     transform: none !important;
   }
 
+  /*
+   * ورق‌ها به گوشه‌ی بالا-چپِ کاغذ می‌چسبند، نه به راست. پورتال rtl است و
+   * بلوکِ rtl به لبه‌ی راست می‌رود؛ اگر کاغذی که درایور انتخاب کرده بزرگ‌تر
+   * از برچسب باشد (اندازه‌ی @page پذیرفته نشده)، برچسب جایی می‌افتد که
+   * پرینترِ برچسب اصلاً رولی زیرش ندارد و صفحه‌ی سفید بیرون می‌آید. مبدأِ
+   * پرینترهای برچسب بالا-چپ است. جهتِ متنِ داخلِ ورق دوباره rtl می‌شود.
+   */
   body.printing [data-print-root] {
     display: block !important;
     gap: 0 !important;
+    direction: ltr !important;
   }
 
   .print-page {
@@ -68,6 +82,7 @@
     page-break-after: always;
     box-shadow: none !important;
     margin: 0 !important;
+    direction: rtl;
   }
 
   .print-page:last-child {
