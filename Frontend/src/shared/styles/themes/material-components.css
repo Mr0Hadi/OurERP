@@ -1,0 +1,10 @@
+/*
+ * تم Material 3 — نمای کامپوننت‌ها.
+ *
+ * فقط CSS و `data-slot`؛ ساختار JSX و رفتارِ Radix/Base UI دست‌نخورده می‌ماند.
+ * همه‌ی قانون‌ها داخل `@layer material` (بعد از utilities) و زیر
+ * `.theme-material` هستند، پس بیرون از این تم اثری ندارند.
+ */
+
+@layer material {
+}

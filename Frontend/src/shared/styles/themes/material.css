@@ -1,0 +1,186 @@
+/*
+ * تم Material 3 — رنگ‌ها.
+ *
+ * فعال‌شدن: کلاس `theme-material` (+ `light` یا `dark`) روی <html>
+ * (`shared/components/theme/themeClasses.js`).
+ *
+ * قانون: فقط نقش‌های `--md-*` رنگ واقعی دارند؛ توکن‌های shadcn
+ * (`--background`، `--primary`، …) فقط به آن‌ها اشاره می‌کنند تا کامپوننت‌های
+ * موجود بدون تغییر رنگ بگیرند. مقادیر با ابزار contrast بررسی شده‌اند
+ * (متن عادی ≥ ۴٫۵:۱، غیرمتنی ≥ ۳:۱).
+ *
+ * این فایل عمداً بیرون از `@layer` است: توکن‌های `:root` و `.dark` در
+ * `index.css` هم بدون لایه‌اند و باید با specificityِ `html.theme-material`
+ * از آن‌ها پیشی بگیرد.
+ */
+
+/* ─── Material Light ─── */
+html.theme-material {
+  /* ── نقش‌های Material 3 ── */
+  --md-primary: oklch(0.48 0.20 268);
+  --md-on-primary: oklch(1 0 0);
+  --md-primary-container: oklch(0.92 0.045 275);
+  --md-on-primary-container: oklch(0.26 0.13 270);
+  --md-secondary: oklch(0.50 0.04 270);
+  --md-on-secondary: oklch(1 0 0);
+  --md-secondary-container: oklch(0.92 0.025 275);
+  --md-on-secondary-container: oklch(0.28 0.04 270);
+  --md-tertiary: oklch(0.50 0.12 350);
+  --md-on-tertiary: oklch(1 0 0);
+  --md-tertiary-container: oklch(0.93 0.04 350);
+  --md-on-tertiary-container: oklch(0.28 0.10 350);
+  --md-error: oklch(0.52 0.20 27);
+  --md-on-error: oklch(1 0 0);
+  --md-error-container: oklch(0.93 0.04 25);
+  --md-on-error-container: oklch(0.32 0.14 27);
+  --md-surface: oklch(0.985 0.004 285);
+  --md-surface-container-lowest: oklch(1 0 0);
+  --md-surface-container-low: oklch(0.972 0.005 285);
+  --md-surface-container: oklch(0.955 0.007 285);
+  --md-surface-container-high: oklch(0.94 0.009 285);
+  --md-surface-container-highest: oklch(0.925 0.011 285);
+  --md-on-surface: oklch(0.20 0.012 285);
+  --md-on-surface-variant: oklch(0.44 0.016 285);
+  --md-outline: oklch(0.55 0.016 285);
+  --md-outline-variant: oklch(0.83 0.012 285);
+  --md-inverse-surface: oklch(0.30 0.012 285);
+  --md-inverse-on-surface: oklch(0.96 0.005 285);
+  --md-inverse-primary: oklch(0.80 0.10 275);
+  --md-scrim: oklch(0 0 0);
+  --md-shadow: oklch(0 0 0);
+  /* ── رنگ‌های معنایی (برای tone.js) و container هرکدام ── */
+  --success: oklch(0.50 0.15 150);
+  --warning: oklch(0.52 0.14 70);
+  --caution: oklch(0.52 0.18 40);
+  --info: oklch(0.50 0.12 235);
+  --special: oklch(0.50 0.20 305);
+  --success-container: oklch(0.93 0.05 150);
+  --on-success-container: oklch(0.30 0.09 150);
+  --warning-container: oklch(0.94 0.06 85);
+  --on-warning-container: oklch(0.32 0.08 70);
+  --caution-container: oklch(0.93 0.05 40);
+  --on-caution-container: oklch(0.32 0.10 40);
+  --info-container: oklch(0.93 0.04 235);
+  --on-info-container: oklch(0.30 0.08 235);
+  --special-container: oklch(0.93 0.05 305);
+  --on-special-container: oklch(0.30 0.12 305);
+  --chart-1: oklch(0.55 0.19 268);
+  --chart-2: oklch(0.55 0.16 350);
+  --chart-3: oklch(0.58 0.12 195);
+  --chart-4: oklch(0.70 0.15 80);
+  --chart-5: oklch(0.58 0.18 35);
+
+  /* ── نگاشت نقش‌های Material به توکن‌های shadcn ── */
+  --background: var(--md-surface);
+  --foreground: var(--md-on-surface);
+  --card: var(--md-surface-container-low);
+  --card-foreground: var(--md-on-surface);
+  --popover: var(--md-surface-container);
+  --popover-foreground: var(--md-on-surface);
+  --primary: var(--md-primary);
+  --primary-foreground: var(--md-on-primary);
+  --secondary: var(--md-secondary-container);
+  --secondary-foreground: var(--md-on-secondary-container);
+  --muted: var(--md-surface-container-high);
+  --muted-foreground: var(--md-on-surface-variant);
+  --accent: var(--md-surface-container-highest);
+  --accent-foreground: var(--md-on-surface);
+  --destructive: var(--md-error);
+  --destructive-foreground: var(--md-on-error);
+  --border: var(--md-outline-variant);
+  --input: var(--md-outline);
+  --ring: var(--md-primary);
+  --sidebar: var(--md-surface-container-low);
+  --sidebar-foreground: var(--md-on-surface);
+  --sidebar-primary: var(--md-primary);
+  --sidebar-primary-foreground: var(--md-on-primary);
+  --sidebar-accent: var(--md-secondary-container);
+  --sidebar-accent-foreground: var(--md-on-secondary-container);
+  --sidebar-border: var(--md-outline-variant);
+  --sidebar-ring: var(--md-primary);
+}
+/* ─── Material Dark ─── */
+html.theme-material.dark {
+  /* ── نقش‌های Material 3 ── */
+  --md-primary: oklch(0.80 0.10 275);
+  --md-on-primary: oklch(0.30 0.14 270);
+  --md-primary-container: oklch(0.38 0.15 270);
+  --md-on-primary-container: oklch(0.92 0.045 275);
+  --md-secondary: oklch(0.80 0.03 270);
+  --md-on-secondary: oklch(0.30 0.03 270);
+  --md-secondary-container: oklch(0.36 0.035 270);
+  --md-on-secondary-container: oklch(0.92 0.025 275);
+  --md-tertiary: oklch(0.82 0.09 350);
+  --md-on-tertiary: oklch(0.32 0.10 350);
+  --md-tertiary-container: oklch(0.40 0.11 350);
+  --md-on-tertiary-container: oklch(0.93 0.04 350);
+  --md-error: oklch(0.78 0.13 25);
+  --md-on-error: oklch(0.30 0.12 25);
+  --md-error-container: oklch(0.40 0.14 27);
+  --md-on-error-container: oklch(0.93 0.04 25);
+  --md-surface: oklch(0.18 0.008 285);
+  --md-surface-container-lowest: oklch(0.15 0.008 285);
+  --md-surface-container-low: oklch(0.21 0.009 285);
+  --md-surface-container: oklch(0.235 0.01 285);
+  --md-surface-container-high: oklch(0.265 0.011 285);
+  --md-surface-container-highest: oklch(0.295 0.012 285);
+  --md-on-surface: oklch(0.93 0.006 285);
+  --md-on-surface-variant: oklch(0.78 0.014 285);
+  --md-outline: oklch(0.62 0.016 285);
+  --md-outline-variant: oklch(0.40 0.012 285);
+  --md-inverse-surface: oklch(0.93 0.006 285);
+  --md-inverse-on-surface: oklch(0.28 0.01 285);
+  --md-inverse-primary: oklch(0.48 0.20 268);
+  --md-scrim: oklch(0 0 0);
+  --md-shadow: oklch(0 0 0);
+  /* ── رنگ‌های معنایی (برای tone.js) و container هرکدام ── */
+  --success: oklch(0.80 0.16 152);
+  --warning: oklch(0.84 0.14 85);
+  --caution: oklch(0.81 0.15 45);
+  --info: oklch(0.80 0.11 220);
+  --special: oklch(0.80 0.15 305);
+  --success-container: oklch(0.36 0.07 150);
+  --on-success-container: oklch(0.92 0.05 150);
+  --warning-container: oklch(0.36 0.07 85);
+  --on-warning-container: oklch(0.92 0.05 85);
+  --caution-container: oklch(0.36 0.07 40);
+  --on-caution-container: oklch(0.92 0.05 40);
+  --info-container: oklch(0.36 0.07 235);
+  --on-info-container: oklch(0.92 0.05 235);
+  --special-container: oklch(0.36 0.07 305);
+  --on-special-container: oklch(0.92 0.05 305);
+  --chart-1: oklch(0.74 0.13 272);
+  --chart-2: oklch(0.76 0.11 350);
+  --chart-3: oklch(0.76 0.10 195);
+  --chart-4: oklch(0.82 0.13 85);
+  --chart-5: oklch(0.74 0.14 35);
+
+  /* ── نگاشت نقش‌های Material به توکن‌های shadcn ── */
+  --background: var(--md-surface);
+  --foreground: var(--md-on-surface);
+  --card: var(--md-surface-container-low);
+  --card-foreground: var(--md-on-surface);
+  --popover: var(--md-surface-container);
+  --popover-foreground: var(--md-on-surface);
+  --primary: var(--md-primary);
+  --primary-foreground: var(--md-on-primary);
+  --secondary: var(--md-secondary-container);
+  --secondary-foreground: var(--md-on-secondary-container);
+  --muted: var(--md-surface-container-high);
+  --muted-foreground: var(--md-on-surface-variant);
+  --accent: var(--md-surface-container-highest);
+  --accent-foreground: var(--md-on-surface);
+  --destructive: var(--md-error);
+  --destructive-foreground: var(--md-on-error);
+  --border: var(--md-outline-variant);
+  --input: var(--md-outline);
+  --ring: var(--md-primary);
+  --sidebar: var(--md-surface-container-low);
+  --sidebar-foreground: var(--md-on-surface);
+  --sidebar-primary: var(--md-primary);
+  --sidebar-primary-foreground: var(--md-on-primary);
+  --sidebar-accent: var(--md-secondary-container);
+  --sidebar-accent-foreground: var(--md-on-secondary-container);
+  --sidebar-border: var(--md-outline-variant);
+  --sidebar-ring: var(--md-primary);
+}

@@ -1,3 +1,8 @@
+  /* ترتیبِ لایه‌ها باید پیش از هر @import بیاید. لایه‌ی `material` بعد از
+     utilities است تا بتواند کلاس‌های cvaی کامپوننت‌ها (مثل rounded-lg) را
+     فقط در تمِ Material بازنویسی کند؛ بیرون از `.theme-material` اثری ندارد. */
+  @layer theme, base, components, utilities, material;
+
   @import "tailwindcss";
   @import "tw-animate-css";
   @import "shadcn/tailwind.css";
@@ -8,15 +13,15 @@
 
   @import "@fontsource-variable/vazirmatn";
 
+  /* تم Material 3 — توکن‌ها و نمای کامپوننت‌ها (جزئیات در خود فایل‌ها). */
+  @import "./shared/styles/themes/material.css";
+  @import "./shared/styles/themes/material-tokens.css";
+  @import "./shared/styles/themes/material-components.css";
+
   @custom-variant dark (&:is(.dark *));
   /* تم Material: روی <html> کلاس `theme-material` (+ `light|dark`) می‌نشیند.
      `material:` فقط برای جایی‌ست که با CSS و data-slot نمی‌شود (ساختار فرق دارد). */
   @custom-variant material (&:where(.theme-material, .theme-material *));
-
-  /* لایه‌ی `material` بعد از utilities می‌آید تا بتواند کلاس‌های cvaی
-     کامپوننت‌ها (مثل rounded-lg) را در تمِ Material بازنویسی کند؛ بیرون از
-     `.theme-material` هیچ اثری ندارد. */
-  @layer theme, base, components, utilities, material;
 
   @theme inline {
     --font-sans: "Vazirmatn Variable", system-ui, sans-serif;
@@ -48,6 +53,43 @@
     --color-caution: var(--caution);
     --color-info: var(--info);
     --color-special: var(--special);
+    /* نقش‌های Material که معادلِ shadcn ندارند (`bg-m3-surface-container` و …)
+       و container هر رنگِ وضعیت. فقط در تمِ Material مقدار دارند؛ بیرون از آن
+       تعریف‌نشده‌اند و نباید در کدِ مشترک استفاده شوند. */
+    --color-m3-primary-container: var(--md-primary-container);
+    --color-m3-on-primary-container: var(--md-on-primary-container);
+    --color-m3-secondary-container: var(--md-secondary-container);
+    --color-m3-on-secondary-container: var(--md-on-secondary-container);
+    --color-m3-tertiary: var(--md-tertiary);
+    --color-m3-on-tertiary: var(--md-on-tertiary);
+    --color-m3-tertiary-container: var(--md-tertiary-container);
+    --color-m3-on-tertiary-container: var(--md-on-tertiary-container);
+    --color-m3-error-container: var(--md-error-container);
+    --color-m3-on-error-container: var(--md-on-error-container);
+    --color-m3-surface: var(--md-surface);
+    --color-m3-surface-container-lowest: var(--md-surface-container-lowest);
+    --color-m3-surface-container-low: var(--md-surface-container-low);
+    --color-m3-surface-container: var(--md-surface-container);
+    --color-m3-surface-container-high: var(--md-surface-container-high);
+    --color-m3-surface-container-highest: var(--md-surface-container-highest);
+    --color-m3-on-surface: var(--md-on-surface);
+    --color-m3-on-surface-variant: var(--md-on-surface-variant);
+    --color-m3-outline: var(--md-outline);
+    --color-m3-outline-variant: var(--md-outline-variant);
+    --color-m3-inverse-surface: var(--md-inverse-surface);
+    --color-m3-inverse-on-surface: var(--md-inverse-on-surface);
+    --color-m3-inverse-primary: var(--md-inverse-primary);
+    --color-m3-scrim: var(--md-scrim);
+    --color-success-container: var(--success-container);
+    --color-on-success-container: var(--on-success-container);
+    --color-warning-container: var(--warning-container);
+    --color-on-warning-container: var(--on-warning-container);
+    --color-caution-container: var(--caution-container);
+    --color-on-caution-container: var(--on-caution-container);
+    --color-info-container: var(--info-container);
+    --color-on-info-container: var(--on-info-container);
+    --color-special-container: var(--special-container);
+    --color-on-special-container: var(--on-special-container);
     --color-accent-foreground: var(--accent-foreground);
     --color-accent: var(--accent);
     --color-muted-foreground: var(--muted-foreground);
