@@ -1,5 +1,5 @@
 import axiosInstance from "@/shared/services/api/axios";
-import { extractServerMessage } from "@/shared/lib/errorMessage";
+import { unwrapBlobError } from "@/shared/services/api/blob";
 
 /**
  * لایه‌ی تماس با `api/Invoice` (بخش ۱۳ سند api-guide.fa.md) — فاکتورِ
@@ -22,23 +22,6 @@ import { extractServerMessage } from "@/shared/lib/errorMessage";
  * سندِ فعلی را با هر وضعیتی (از جمله `PROFORMA`) رندر می‌کنند. تفاوت
  * فقط در این است که سندِ پیش‌فاکتور هنوز شماره‌ی فاکتور ندارد.
  */
-
-async function unwrapBlobError(error) {
-  const body = error?.response?.data;
-  if (!(body instanceof Blob)) throw error;
-
-  try {
-    const message = extractServerMessage(JSON.parse(await body.text()));
-    if (message) {
-      error.serverMessage = message;
-      error.message = message;
-    }
-  } catch {
-    // بدنه‌ی غیر JSON (مثلاً صفحه‌ی خطای پروکسی) — پیامِ عمومیِ اینترسپتور می‌ماند.
-  }
-
-  throw error;
-}
 
 async function fetchPdf(url, params) {
   try {

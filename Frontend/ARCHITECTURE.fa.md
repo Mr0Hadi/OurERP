@@ -654,6 +654,7 @@ const query = usePurchasesQuery(filters, pagination, sorting);   // listQuery + 
 | `returns/` | ~۲۹ کامپوننت مرجوعی مشترک خرید/فروش (`ReturnTable`, `ReturnItemsSection`, `ResolutionComposer`, `ClaimRow`, `ReturnStatusBar`, `ReturnChain`, …) |
 | `invoice/` | سند و پیوست فاکتور (`InvoiceDocumentSection`, `useInvoiceAttachments`, `IssuedInvoiceNotice`) |
 | `files/` | `FileUploadList`, `ImageUploadField`, `ImageLightbox`, `RemoteImage` |
+| `dataTransfer/` | `DataTransferActions` (دکمه‌های «ورود از فایل»/«خروجی» برای سرتیترِ لیست)، `ImportDialog`، `ImportResultView` — بخش ۱۹.۵ |
 | `barcode/` | `BarcodeScanField`, `CameraScanButton`, `CameraScanner`, `UnitBarcodeScanList` |
 | `print/` | `usePrint`, `LabelSheet`, `BarcodeGraphic`, `QrCodeGraphic`, `sheetPresets`, `print.css` |
 | `map/` | `LocationPickerMap` (lazy) ← `MapCanvas` (**تنها فایل Leaflet**) + `MapSearchBar` + `nominatim.js` |
@@ -796,6 +797,24 @@ const query = usePurchasesQuery(filters, pagination, sorting);   // listQuery + 
 
 ### 19.4 نقشه
 `LocationPickerMap` lazy است؛ Leaflet فقط در `MapCanvas`. جست‌وجو/معکوس‌یابی با Nominatim (`nominatim.js`). «تأیید موقعیت» تا پیدا شدن آدرس غیرفعال است. فرم آدرس مشتری/تامین‌کننده = `PartyAddressForm`.
+
+### 19.5 ورود و خروجِ اطلاعات (CSV / Excel)
+
+سرور همه‌ی کار را می‌کند (اعتبارسنجی، تبدیل، تکراری‌ها، تراکنش، دسترسی؛ `Backend-Net/docs/import-export-guide.md`).
+فرانت فقط فایل می‌فرستد و نتیجه را نشان می‌دهد. فعال‌کردن روی یک صفحه‌ی لیست، یک خط:
+
+```jsx
+<ListPageLayout actions={<DataTransferActions resource="customers" filters={filters} invalidateKey={customerKeys.all} />}>
+```
+
+- `filters` همان فیلترهای سرور‌نامِ لیست است؛ خروجی همان ردیف‌های فیلترشده را می‌دهد.
+- اینکه جدول ورود/خروج دارد و کاربر مجاز است از `GET DataTransfer/GetResources` (`canExport`/`canImport`) می‌آید؛ نامِ
+  دسترسی در فرانت نوشته نمی‌شود. پنهان‌کردن فقط تجربه‌ی کاربری است — سرور خودش ۴۰۳ می‌دهد.
+- `ImportDialog`: انتخابِ فایل ← پیش‌نمایشِ سرور (خطا با ردیف/ستون، تکراری، هشدار، چند ردیفِ نمونه) ← تیکِ «ردیف‌های
+  نامعتبر کنار گذاشته شوند» اگر لازم است ← ثبت (همان فایل دوباره، با `Idempotency-Key`) ← نتیجه.
+- سرویس: `shared/services/dataTransfer/` (`api-v1`, `queryKeys`, `queries`, `mutations`). دانلودها با
+  `shared/lib/saveBlob.js` و خطای پاسخِ Blob با `shared/services/api/blob.js` (همان که فاکتور PDF استفاده می‌کند).
+- امروز روی کالاها، مشتریان و تامین‌کنندگان.
 
 ---
 
