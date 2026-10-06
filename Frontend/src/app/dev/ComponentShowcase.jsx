@@ -7,7 +7,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import {
-  Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList,
+  Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxInputGroup, ComboboxItem, ComboboxList,
 } from "@/shared/components/ui/combobox";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -100,7 +100,7 @@ export default function ComponentShowcase() {
           </SelectContent>
         </Select>
         <Combobox items={FRUITS}>
-          <ComboboxInput className="w-48" placeholder="جستجوی کالا" />
+          <ComboboxInputGroup className="w-48"><ComboboxInput placeholder="جستجوی کالا" /></ComboboxInputGroup>
           <ComboboxContent>
             <ComboboxEmpty>موردی نیست</ComboboxEmpty>
             <ComboboxList>

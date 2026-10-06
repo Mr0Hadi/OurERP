@@ -275,4 +275,138 @@
     color: var(--md-on-secondary-container);
     font-weight: 600;
   }
+
+  /* ════════════════ Select / Combobox trigger — Outlined field ════════════════
+     (Radix: data-state؛ Base UI: data-open / data-highlighted / data-selected) */
+  .theme-material :is([data-slot="select-trigger"], [data-slot="combobox-input-group"], [data-slot="combobox-chips"]) {
+    background-color: transparent;
+    border-color: var(--md-outline);
+    border-radius: var(--md-shape-md);
+    transition-property: border-color, box-shadow;
+    transition-duration: var(--md-duration-short);
+    transition-timing-function: var(--md-ease-standard);
+  }
+  .theme-material [data-slot="select-trigger"]:hover:not(:disabled):not([aria-invalid="true"]),
+  .theme-material [data-slot="combobox-input-group"]:hover:not(:focus-within):not(:has(input:disabled)) {
+    border-color: var(--md-on-surface);
+  }
+  .theme-material [data-slot="select-trigger"]:is(:focus-visible, [data-state="open"]),
+  .theme-material :is([data-slot="combobox-input-group"], [data-slot="combobox-chips"]):focus-within {
+    --tw-ring-shadow: 0 0 #0000;
+    border-color: var(--md-primary);
+    box-shadow: inset 0 0 0 1px var(--md-primary);
+    outline: none;
+  }
+  .theme-material [data-slot="select-trigger"]:disabled,
+  .theme-material [data-slot="combobox-input-group"]:has(input:disabled) {
+    opacity: 1;
+    background-color: color-mix(in oklch, transparent, var(--md-on-surface) 4%);
+    border-color: color-mix(in oklch, transparent, var(--md-on-surface) var(--md-disabled-container));
+    color: color-mix(in oklch, transparent, var(--md-on-surface) var(--md-disabled-content));
+  }
+
+  /* ════════════════ Menus: Select / Dropdown / Combobox / Popover ════════════════ */
+  .theme-material :is(
+      [data-slot="select-content"],
+      [data-slot="dropdown-menu-content"],
+      [data-slot="dropdown-menu-sub-content"],
+      [data-slot="combobox-content"],
+      [data-slot="popover-content"]
+    ) {
+    background-color: var(--md-surface-container);
+    border-color: transparent;
+    border-radius: var(--md-shape-md);
+    box-shadow: var(--md-elev-2);
+  }
+
+  /* آیتم‌ها: highlight = state layerِ ۱۰٪؛ انتخاب‌شده = secondary-container */
+  .theme-material :is(
+      [data-slot="select-item"],
+      [data-slot="dropdown-menu-item"],
+      [data-slot="dropdown-menu-checkbox-item"],
+      [data-slot="dropdown-menu-radio-item"],
+      [data-slot="dropdown-menu-sub-trigger"],
+      [data-slot="combobox-item"]
+    )[data-highlighted] {
+    background-color: color-mix(in oklch, transparent, var(--md-on-surface) var(--md-state-focus));
+    color: var(--md-on-surface);
+  }
+  .theme-material [data-slot="dropdown-menu-item"][data-variant="destructive"][data-highlighted] {
+    background-color: color-mix(in oklch, transparent, var(--md-error) var(--md-state-focus));
+    color: var(--md-error);
+  }
+  .theme-material [data-slot="select-item"][data-state="checked"],
+  .theme-material [data-slot="combobox-item"][data-selected] {
+    background-color: var(--md-secondary-container);
+    color: var(--md-on-secondary-container);
+  }
+  .theme-material :is([data-slot="select-item"][data-state="checked"], [data-slot="combobox-item"][data-selected])[data-highlighted] {
+    background-color: color-mix(in oklch, var(--md-secondary-container), var(--md-on-secondary-container) var(--md-state-hover));
+    color: var(--md-on-secondary-container);
+  }
+
+  /* ════════════════ Tooltip — Plain tooltip ════════════════ */
+  .theme-material [data-slot="tooltip-content"] {
+    background-color: var(--md-inverse-surface);
+    color: var(--md-inverse-on-surface);
+    border-radius: var(--md-shape-sm);
+  }
+  .theme-material [data-slot="tooltip-content"] > svg {
+    background-color: var(--md-inverse-surface);
+    fill: var(--md-inverse-surface);
+  }
+
+  /* ════════════════ Checkbox ════════════════ */
+  .theme-material [data-slot="checkbox"] {
+    border-color: var(--md-on-surface-variant);
+  }
+  .theme-material [data-slot="checkbox"][data-state="unchecked"] {
+    background-color: transparent;
+  }
+  .theme-material [data-slot="checkbox"]:is([data-state="checked"], [data-state="indeterminate"]) {
+    background-color: var(--md-primary);
+    border-color: var(--md-primary);
+    color: var(--md-on-primary);
+  }
+  .theme-material [data-slot="checkbox"]:focus-visible {
+    --tw-ring-shadow: 0 0 #0000;
+    outline: 2px solid var(--md-primary);
+    outline-offset: 2px;
+  }
+  .theme-material [data-slot="checkbox"]:disabled {
+    opacity: 1;
+    border-color: color-mix(in oklch, transparent, var(--md-on-surface) var(--md-disabled-content));
+  }
+  .theme-material [data-slot="checkbox"]:disabled:is([data-state="checked"], [data-state="indeterminate"]) {
+    background-color: color-mix(in oklch, transparent, var(--md-on-surface) var(--md-disabled-content));
+    border-color: transparent;
+  }
+
+  /* ════════════════ Switch ════════════════ (اندازه ۳۶×۲۰ برای ERP حفظ می‌شود) */
+  .theme-material [data-slot="switch"] {
+    box-shadow: none;
+  }
+  .theme-material [data-slot="switch"][data-state="unchecked"] {
+    background-color: var(--md-surface-container-highest);
+    border-color: var(--md-outline);
+  }
+  .theme-material [data-slot="switch"][data-state="unchecked"] [data-slot="switch-thumb"] {
+    background-color: var(--md-outline);
+    scale: 0.75;
+  }
+  .theme-material [data-slot="switch"][data-state="checked"] {
+    background-color: var(--md-primary);
+    border-color: transparent;
+  }
+  .theme-material [data-slot="switch"][data-state="checked"] [data-slot="switch-thumb"] {
+    background-color: var(--md-on-primary);
+  }
+  .theme-material [data-slot="switch"]:focus-visible {
+    --tw-ring-shadow: 0 0 #0000;
+    outline: 2px solid var(--md-primary);
+    outline-offset: 2px;
+  }
+  .theme-material [data-slot="switch"]:disabled {
+    opacity: 0.38;
+  }
 }
