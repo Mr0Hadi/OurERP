@@ -20,11 +20,26 @@ function buildInfo() {
   return { version: pkg.version, commit, builtAt: new Date().toISOString() };
 }
 
+const build = buildInfo();
+
+/**
+ * `version.json` کنارِ build — بررسیِ بروزرسانی نسخه‌ی در حالِ اجرا را با این
+ * فایل (بدونِ کش) مقایسه می‌کند؛ مستقل از اینکه مرورگر `sw.js` را چطور
+ * بازیابی کرده یا پروکسی آن را کش کرده باشد.
+ */
+const emitVersionFile = () => ({
+  name: "emit-version-file",
+  generateBundle() {
+    this.emitFile({ type: "asset", fileName: "version.json", source: JSON.stringify(build) });
+  },
+});
+
 export default defineConfig({
   define: {
-    __APP_BUILD__: JSON.stringify(buildInfo()),
+    __APP_BUILD__: JSON.stringify(build),
   },
   plugins: [
+    emitVersionFile(),
     react(),
     tailwindcss(),
     babel({ presets: [reactCompilerPreset()] }),

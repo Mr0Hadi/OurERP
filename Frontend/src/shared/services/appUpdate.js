@@ -90,9 +90,35 @@ function waitForInstall(worker) {
   });
 }
 
+/** شناسه‌ی build منتشرشده روی سرور؛ null اگر در دسترس نبود (آفلاین/توسعه). */
+async function fetchRemoteBuild() {
+  try {
+    const res = await fetch(`/version.json?t=${Date.now()}`, { cache: "no-store" });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return typeof data?.builtAt === "string" ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+/** منتظرِ پیدایشِ worker در حالِ نصب یا منتظر (تا سقفِ زمان). */
+async function waitForWorker() {
+  const deadline = Date.now() + INSTALL_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    if (registration.waiting) return;
+    if (registration.installing) await waitForInstall(registration.installing);
+    else await new Promise((r) => setTimeout(r, 500));
+  }
+}
+
 /**
  * از سرور می‌پرسد نسخه‌ی تازه‌ای هست یا نه، و اگر هست تا آماده‌شدنش صبر
  * می‌کند. بررسی‌های هم‌زمان یکی می‌شوند. وضعیتِ نهایی را برمی‌گرداند.
+ *
+ * مرجعِ تصمیم `version.json` است نه فقط service worker: `update()` گاهی
+ * پیش از شروعِ نصب تمام می‌شود یا فایلِ `sw.js` از کشِ میانی می‌آید و آنوقت
+ * «آخرین نسخه را دارید» غلط گزارش می‌شد.
  */
 export function checkForUpdate() {
   if (getState().status === UPDATE_STATUS.AVAILABLE) return Promise.resolve(UPDATE_STATUS.AVAILABLE);
@@ -108,9 +134,16 @@ export function checkForUpdate() {
     }
     setState({ status: UPDATE_STATUS.CHECKING });
     try {
+      const remote = await fetchRemoteBuild();
+      const outdated = remote !== null && remote.builtAt !== APP_BUILD.builtAt;
       await registration.update();
       if (registration.installing) await waitForInstall(registration.installing);
+      if (outdated && !registration.waiting) await waitForWorker();
       if (registration.waiting) {
+        markAvailable();
+      } else if (outdated) {
+        // service worker نسخه‌ی تازه را نشان نداد (کشِ میانی)؛ بروزرسانیِ کامل
+        // با پاک‌کردنِ worker و کش انجام می‌شود.
         markAvailable();
       } else {
         setState({ status: UPDATE_STATUS.UP_TO_DATE, lastCheckedAt: new Date() });
@@ -126,6 +159,18 @@ export function checkForUpdate() {
   return pendingCheck;
 }
 
+/** worker و کش‌ها را پاک می‌کند و از نو بارگذاری می‌شود (نشست در localStorage می‌ماند). */
+async function hardReload() {
+  try {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map((r) => r.unregister()));
+    const keys = await caches.keys();
+    await Promise.all(keys.map((k) => caches.delete(k)));
+  } finally {
+    window.location.reload();
+  }
+}
+
 /**
  * نسخه‌ی آماده را فعال می‌کند؛ صفحه روی همان نشانی از نو بارگذاری می‌شود.
  *
@@ -136,9 +181,13 @@ export function checkForUpdate() {
  * می‌ماند.
  */
 export function applyUpdate() {
-  const waiting = registration?.waiting;
-  if (!waiting || getState().status !== UPDATE_STATUS.AVAILABLE) return false;
+  if (getState().status !== UPDATE_STATUS.AVAILABLE) return false;
   setState({ status: UPDATE_STATUS.UPDATING });
+  const waiting = registration?.waiting;
+  if (!waiting) {
+    hardReload();
+    return true;
+  }
   let reloading = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (reloading) return;

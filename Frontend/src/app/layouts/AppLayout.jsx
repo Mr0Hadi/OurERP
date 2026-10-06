@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { Spinner } from "@/shared/components/ui/spinner";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
 
 import { AppSidebar } from "@/shared/components/layout/AppSidebar";
@@ -23,6 +25,14 @@ import RouteLoadingOverlay from "@/shared/components/layout/RouteLoadingOverlay"
 import PermissionGate from "../routes/PermissionGate";
 
 
+
+function ContentSpinner() {
+  return (
+    <div className="flex flex-1 items-center justify-center">
+      <Spinner className="size-8 text-primary" />
+    </div>
+  );
+}
 
 export default function AppLayout() {
   const { title, showBack, onBack } = useHeaderStore();
@@ -86,9 +96,14 @@ export default function AppLayout() {
     );
   }
 
-  if (!sessionConfirmed) {
-    return null;
-  }
+  // توکنِ ذخیره‌شده هنوز نزد سرور تأیید نشده: قاب (سایدبار و هدر) همین حالا
+  // نشان داده می‌شود و فقط محتوا منتظر می‌ماند — رد شدنِ نشست بالاتر به ورود
+  // می‌رود پیش از آنکه محتوای محافظت‌شده یا داده‌ای رندر شود.
+  const content = sessionConfirmed ? (
+    <PermissionGate>
+      <Outlet />
+    </PermissionGate>
+  ) : null;
 
   return (
     <TooltipProvider>
@@ -119,9 +134,9 @@ export default function AppLayout() {
           </header>
           <div className="relative flex min-h-[calc(100svh-4rem)] p-4">
             <RouteLoadingOverlay contained />
-            <PermissionGate>
-              <Outlet />
-            </PermissionGate>
+            <Suspense fallback={<ContentSpinner />}>
+              {content ?? <ContentSpinner />}
+            </Suspense>
           </div>
         </SidebarInset>
       </SidebarProvider>

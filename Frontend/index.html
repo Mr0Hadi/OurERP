@@ -47,8 +47,46 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="OurERP" />
     <title>OurERP</title>
+    <script>
+      // تم را پیش از اولین رنگ‌آمیزی اعمال می‌کند تا بین بارگذاریِ صفحه و
+      // سوار شدنِ React پس‌زمینه‌ی اشتباه (سیاه) دیده نشود. منطقِ اصلی در
+      // ThemeProvider است؛ پیش‌فرض و کلید باید با آنجا یکی بماند.
+      (function () {
+        try {
+          var t = localStorage.getItem("vite-ui-theme") || "dark";
+          if (t === "system") {
+            t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          }
+          document.documentElement.classList.add(t);
+        } catch (e) {}
+      })();
+    </script>
+    <style>
+      #app-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fafaf8;
+        transition: opacity 0.2s;
+      }
+      html.dark #app-splash { background: #0a0a0a; }
+      #app-splash.hide { opacity: 0; pointer-events: none; }
+      #app-splash i {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: 3px solid rgba(79, 70, 229, 0.25);
+        border-top-color: #4f46e5;
+        animation: app-splash-spin 0.8s linear infinite;
+      }
+      @keyframes app-splash-spin { to { transform: rotate(360deg); } }
+    </style>
   </head>
   <body>
+    <div id="app-splash"><i></i></div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

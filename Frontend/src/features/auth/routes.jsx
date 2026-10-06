@@ -1,8 +1,14 @@
-import LoginPage from "./pages/LoginPage";
+import { lazy, Suspense } from "react";
+
+const LoginPage = lazy(() => import("./pages/LoginPage"));
 
 export const authRoutes = [
   {
     path: "login",
-    element: <LoginPage />,
+    element: (
+      <Suspense fallback={null}>
+        <LoginPage />
+      </Suspense>
+    ),
   },
 ];
