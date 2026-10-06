@@ -35,7 +35,7 @@ namespace Application.Features.ProductCategory.Queries
         public async Task<ResponseDto> Handle(GetProductCategoryListQuery request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
-            var query = _context.ProductCategories.AsQueryable();
+            var query = _context.ProductCategories.Where(x => x.IsActive).AsQueryable();
 
             if (!string.IsNullOrEmpty(request.Name))
             {
