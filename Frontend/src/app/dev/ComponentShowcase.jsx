@@ -81,6 +81,17 @@ export default function ComponentShowcase() {
         <Button size="icon-sm" variant="ghost" aria-label="حذف"><Trash2 /></Button>
       </Section>
 
+      {/* className های مصرف‌کننده نباید زیرِ تمِ Material بازنویسی شوند (به‌ویژه در تمِ Material).
+          همه‌ی این نمونه‌ها از کدِ واقعی برنامه الگو گرفته‌اند. */}
+      <Section title="className مصرف‌کننده (باید حفظ شود)">
+        <Button data-testid="co-ghost" variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-destructive" aria-label="حذف"><Trash2 /></Button>
+        <Button data-testid="co-ghost-danger" variant="ghost" className="text-destructive hover:bg-destructive/10">حذف مورد</Button>
+        <Button data-testid="co-none" className="rounded-none">بدون گوشه</Button>
+        <Button data-testid="co-rounded-lg-e" className="rounded-e-none">نیمه‌گرد</Button>
+        <Input data-testid="co-readonly" readOnly className="w-48 rounded-lg bg-muted/50 text-muted-foreground" defaultValue="فقط خواندنی" />
+        <Card data-testid="co-card" className="rounded-2xl shadow-md"><CardContent>Card rounded-2xl</CardContent></Card>
+      </Section>
+
       <Section title="Input / Textarea / DatePicker">
         <Input className="w-48" placeholder="نام کالا" />
         <Input className="w-48" defaultValue="مقدار پر" />

@@ -5,13 +5,32 @@
  * همه‌ی قانون‌ها داخل `@layer material` (بعد از utilities) و زیر
  * `.theme-material` هستند، پس بیرون از این تم اثری ندارند.
  *
- * تراکم: ارتفاع و paddingِ کنترل‌ها (۳۲px) عمداً دست نمی‌خورد.
+ * ⚠ قاعده‌ی مهم: چون این لایه از utilities قوی‌تر است، هر ویژگی که اینجا
+ * بنویسیم، `className`ِ کدِ مصرف‌کننده را هم بازنویسی می‌کند
+ * (مثلاً `<Button variant="ghost" className="text-muted-foreground
+ * hover:text-destructive">` یا `<Input className="bg-muted/50">`). پس:
+ *   • رنگ و شکلِ عمومی از طریق «توکن‌ها» می‌آید (material.css، `--radius`)،
+ *     نه از اینجا؛ کلاس‌های cva با آن‌ها خودکار Material می‌شوند.
+ *   • اینجا فقط چیزهایی می‌آید که هیچ utility ای برایش نیست یا تغییرِ
+ *     کدِ مصرف‌کننده روی آن‌ها نادر است (focus، state layer، disabled، حالت‌های
+ *     data-state، سطحِ انتخاب‌شده).
+ *   • state layer با `background-image` و `currentColor` ساخته می‌شود، نه با
+ *     `background-color`، تا با رنگِ زمینه‌ی دلخواهِ مصرف‌کننده هم‌زیستی کند.
+ *   • قوانینِ شکل (pill، radius) فقط وقتی اعمال می‌شوند که کدِ مصرف‌کننده
+ *     radius دیگری ندارد (`[class~="rounded-lg"]` یعنی فقط radius پیش‌فرضِ cva).
  *
- * state layer: رنگِ محتوا با درصدِ `--md-state-*` روی container
- * (`color-mix`)، نه شفافیتِ رنگِ زمینه.
+ * تراکم: ارتفاع و paddingِ کنترل‌ها (۳۲px) عمداً دست نمی‌خورد.
  */
 
 @layer material {
+  /* ── Elevation ── کلاس‌های shadow-* با سطح‌های Material جایگزین می‌شوند:
+     xs/sm=۱ (کارت‌ها)، md=۲ (منو)، lg=۳ (دیالوگ/بخش شناور). shadow-xl/2xl و
+     سایه‌های رنگی (مثل `shadow-black/..` در صفحه‌ی ورود) عمداً دست‌نخورده‌اند. */
+  .theme-material .shadow-xs { --tw-shadow: 0 1px 1px 0 oklch(0 0 0 / 0.14); }
+  .theme-material .shadow-sm { --tw-shadow: var(--md-elev-1); }
+  .theme-material .shadow-md { --tw-shadow: var(--md-elev-2); }
+  .theme-material .shadow-lg { --tw-shadow: var(--md-elev-3); }
+
   /* دکمه‌ها با کلاسِ `group/button` شناخته می‌شوند، نه `data-slot="button"`:
      وقتی Button داخلِ `Trigger asChild` می‌آید (DropdownMenuTrigger، DialogTrigger
      و …) Radix مقدارِ data-slot را با نامِ trigger عوض می‌کند. */
@@ -28,14 +47,6 @@
     outline-offset: 2px;
   }
 
-  /* ── Elevation ── کلاس‌های shadow-* با سطح‌های Material جایگزین می‌شوند:
-     xs/sm=۱ (کارت‌ها)، md=۲ (منو)، lg=۳ (دیالوگ/بخش شناور). shadow-xl/2xl و
-     سایه‌های رنگی (مثل `shadow-black/..` در صفحه‌ی ورود) عمداً دست‌نخورده‌اند. */
-  .theme-material .shadow-xs { --tw-shadow: 0 1px 1px 0 oklch(0 0 0 / 0.14); }
-  .theme-material .shadow-sm { --tw-shadow: var(--md-elev-1); }
-  .theme-material .shadow-md { --tw-shadow: var(--md-elev-2); }
-  .theme-material .shadow-lg { --tw-shadow: var(--md-elev-3); }
-
   /* ════════════════ Button ════════════════ */
   .theme-material .group\/button {
     transition-property: background-color, border-color, color, box-shadow;
@@ -44,82 +55,22 @@
     translate: none; /* بدون «فشردنِ» translate-y-px؛ حالتِ pressed با state layer */
   }
 
-  /* Filled (default) */
-  .theme-material .group\/button[data-variant="default"] {
-    background-color: var(--md-primary);
-    color: var(--md-on-primary);
+  /* State layer (hover/pressed) برای دکمه‌های پُر: رنگِ محتوا (currentColor)
+     روی هر رنگِ زمینه. outline/ghost/… hover زمینه‌ی خودشان را دارند. */
+  .theme-material .group\/button:is([data-variant="default"], [data-variant="secondary"], [data-variant="destructive"]):hover:not(:disabled) {
+    background-image: linear-gradient(
+      color-mix(in oklch, transparent, currentColor var(--md-state-hover)),
+      color-mix(in oklch, transparent, currentColor var(--md-state-hover))
+    );
+  }
+  .theme-material .group\/button:is([data-variant="default"], [data-variant="secondary"], [data-variant="destructive"]):active:not(:disabled) {
+    background-image: linear-gradient(
+      color-mix(in oklch, transparent, currentColor var(--md-state-pressed)),
+      color-mix(in oklch, transparent, currentColor var(--md-state-pressed))
+    );
   }
   .theme-material .group\/button[data-variant="default"]:hover:not(:disabled) {
-    background-color: color-mix(in oklch, var(--md-primary), var(--md-on-primary) var(--md-state-hover));
     box-shadow: var(--md-elev-1);
-  }
-  .theme-material .group\/button[data-variant="default"]:active:not(:disabled) {
-    background-color: color-mix(in oklch, var(--md-primary), var(--md-on-primary) var(--md-state-pressed));
-    box-shadow: none;
-  }
-
-  /* Filled tonal (secondary) */
-  .theme-material .group\/button[data-variant="secondary"] {
-    background-color: var(--md-secondary-container);
-    color: var(--md-on-secondary-container);
-  }
-  .theme-material .group\/button[data-variant="secondary"]:hover:not(:disabled) {
-    background-color: color-mix(in oklch, var(--md-secondary-container), var(--md-on-secondary-container) var(--md-state-hover));
-    box-shadow: var(--md-elev-1);
-  }
-  .theme-material .group\/button[data-variant="secondary"]:active:not(:disabled) {
-    background-color: color-mix(in oklch, var(--md-secondary-container), var(--md-on-secondary-container) var(--md-state-pressed));
-    box-shadow: none;
-  }
-
-  /* Tonal error (destructive) */
-  .theme-material .group\/button[data-variant="destructive"] {
-    background-color: var(--md-error-container);
-    color: var(--md-on-error-container);
-  }
-  .theme-material .group\/button[data-variant="destructive"]:hover:not(:disabled) {
-    background-color: color-mix(in oklch, var(--md-error-container), var(--md-on-error-container) var(--md-state-hover));
-  }
-  .theme-material .group\/button[data-variant="destructive"]:active:not(:disabled) {
-    background-color: color-mix(in oklch, var(--md-error-container), var(--md-on-error-container) var(--md-state-pressed));
-  }
-
-  /* Outlined */
-  .theme-material .group\/button[data-variant="outline"] {
-    background-color: transparent;
-    border-color: var(--md-outline);
-    color: var(--md-primary);
-  }
-  .theme-material .group\/button[data-variant="outline"]:hover:not(:disabled),
-  .theme-material .group\/button[data-variant="outline"][aria-expanded="true"] {
-    background-color: color-mix(in oklch, transparent, var(--md-primary) var(--md-state-hover));
-    border-color: var(--md-outline);
-    color: var(--md-primary);
-  }
-  .theme-material .group\/button[data-variant="outline"]:active:not(:disabled) {
-    background-color: color-mix(in oklch, transparent, var(--md-primary) var(--md-state-pressed));
-  }
-
-  /* Text (ghost) */
-  .theme-material .group\/button[data-variant="ghost"] {
-    color: var(--md-primary);
-  }
-  .theme-material .group\/button[data-variant="ghost"]:hover:not(:disabled),
-  .theme-material .group\/button[data-variant="ghost"][aria-expanded="true"] {
-    background-color: color-mix(in oklch, transparent, var(--md-primary) var(--md-state-hover));
-    color: var(--md-primary);
-  }
-  .theme-material .group\/button[data-variant="ghost"]:active:not(:disabled) {
-    background-color: color-mix(in oklch, transparent, var(--md-primary) var(--md-state-pressed));
-  }
-
-  /* دکمه‌های آیکونی: رنگِ خنثی (on-surface-variant) و state layerِ خنثی */
-  .theme-material .group\/button[data-size^="icon"]:is([data-variant="ghost"], [data-variant="outline"]) {
-    color: var(--md-on-surface-variant);
-  }
-  .theme-material .group\/button[data-size^="icon"]:is([data-variant="ghost"], [data-variant="outline"]):hover:not(:disabled) {
-    background-color: color-mix(in oklch, transparent, var(--md-on-surface) var(--md-state-hover));
-    color: var(--md-on-surface);
   }
 
   /* Disabled: محتوا ۳۸٪ و container ۱۲٪ (به‌جای opacity کلِ دکمه) */
@@ -134,38 +85,26 @@
   }
   .theme-material .group\/button[data-variant="outline"]:disabled {
     border-color: color-mix(in oklch, transparent, var(--md-on-surface) var(--md-disabled-container));
-    background-color: transparent;
   }
 
-  /* شکل: actionهای اصلی (پُر/tonal در اندازه‌ی معمولی) pill؛ دکمه‌های
-     toolbar و جدول و فرم (xs/sm/icon و outline/ghost) radius متوسطِ خودشان
-     را نگه می‌دارند تا UI شبیه اپ موبایل نشود. */
-  .theme-material .group\/button:is([data-variant="default"], [data-variant="secondary"], [data-variant="destructive"]):is([data-size="default"], [data-size="lg"]) {
+  /* شکل: actionهای اصلی (پُر/tonal در اندازه‌ی default/sm) pill؛ دکمه‌های
+     toolbar و جدول (xs، icon، outline، ghost) و هر دکمه‌ای که کدِ مصرف‌کننده
+     radiusِ دیگری برایش گذاشته (rounded-none، rounded-e-none، …) دست‌نخورده
+     می‌مانند. */
+  .theme-material .group\/button[class~="rounded-lg"]:is([data-variant="default"], [data-variant="secondary"], [data-variant="destructive"]):is([data-size="default"], [data-size="sm"]):not([class*="rounded-none"], [class*="rounded-s"], [class*="rounded-e"], [class*="rounded-t"], [class*="rounded-b"], [class*="rounded-l-"], [class*="rounded-r-"]) {
     border-radius: var(--md-shape-full);
-    padding-inline: 0.875rem;
   }
 
-  /* ════════════════ Input / Textarea — Outlined field ════════════════ */
-  .theme-material :is([data-slot="input"], [data-slot="textarea"]) {
-    background-color: transparent;
-    border-color: var(--md-outline);
-    border-radius: var(--md-shape-md);
-    color: var(--md-on-surface);
-    transition-property: border-color, box-shadow, background-color;
-    transition-duration: var(--md-duration-short);
-    transition-timing-function: var(--md-ease-standard);
-  }
-  .theme-material :is([data-slot="input"], [data-slot="textarea"]):hover:not(:focus-visible):not(:disabled):not([aria-invalid="true"]) {
-    border-color: var(--md-on-surface);
-  }
-  /* ضخامتِ ۲px با inset shadow تا layout جابه‌جا نشود */
+  /* ════════════════ Input / Textarea ════════════════
+     رنگ و radius از توکن‌ها می‌آید (border-input = outline، radius = --radius).
+     اینجا فقط تعاملِ M3: ضخامتِ ۲px با inset shadow (بدونِ جابه‌جاییِ layout)،
+     و حالتِ disabled. زمینه/رنگِ مصرف‌کننده (bg-muted/50 برای فیلدِ فقط‌خواندنی) دست‌نخورده. */
   .theme-material :is([data-slot="input"], [data-slot="textarea"]):focus-visible {
     border-color: var(--md-primary);
     box-shadow: inset 0 0 0 1px var(--md-primary);
     outline: none;
   }
   .theme-material :is([data-slot="input"], [data-slot="textarea"])[aria-invalid="true"] {
-    border-color: var(--md-error);
     box-shadow: inset 0 0 0 1px var(--md-error);
   }
   .theme-material :is([data-slot="input"], [data-slot="textarea"]):disabled {
@@ -174,34 +113,23 @@
     border-color: color-mix(in oklch, transparent, var(--md-on-surface) var(--md-disabled-container));
     color: color-mix(in oklch, transparent, var(--md-on-surface) var(--md-disabled-content));
   }
-
-  /* ════════════════ Card — Outlined/filled tonal ════════════════ */
-  .theme-material [data-slot="card"] {
-    border-radius: var(--md-shape-lg);
-    --tw-ring-color: var(--md-outline-variant);
-    background-color: var(--md-surface-container-low);
-  }
-  .theme-material [data-slot="card-footer"] {
-    background-color: var(--md-surface-container);
-    border-color: var(--md-outline-variant);
+  /* تیره: cva زمینه‌ی `dark:bg-input/30` (یک خاکستریِ پُر) می‌دهد؛ outlined بودنِ
+     M3 یعنی بی‌زمینه. فقط وقتی مصرف‌کننده زمینه‌ی خودش را نگذاشته. */
+  .theme-material.dark :is([data-slot="input"], [data-slot="textarea"]):not([class*="bg-muted"], [class*="bg-background"], [class*="bg-card"], :disabled) {
+    background-color: transparent;
   }
 
   /* ════════════════ Dialog / AlertDialog / Sheet ════════════════ */
   .theme-material :is([data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"], [data-slot="sheet-overlay"]) {
     background-color: color-mix(in oklch, transparent, var(--md-scrim) 32%);
   }
-  .theme-material :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) {
+  /* radius ۲۸px فقط برای دیالوگ‌هایی که radius پیش‌فرض (rounded-xl) را دارند */
+  .theme-material :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"])[class~="rounded-xl"] {
     border-radius: var(--md-shape-xl);
-    background-color: var(--md-surface-container-high);
-    --tw-ring-color: transparent;
     box-shadow: var(--md-elev-3);
-  }
-  .theme-material [data-slot="sheet-content"] {
-    background-color: var(--md-surface-container-low);
-    box-shadow: var(--md-elev-3);
-    border-color: transparent;
   }
   .theme-material [data-slot="sheet-content"][data-side="right"] {
+    /* data-side فیزیکی است (`right-0`)، نه منطقی؛ پس گوشه‌ها هم فیزیکی‌اند. */
     border-top-left-radius: var(--md-shape-xl);
     border-bottom-left-radius: var(--md-shape-xl);
   }
@@ -214,7 +142,6 @@
      رفتارِ ردیف‌ها در DataTable/ServerTable دست‌نخورده‌اند.) */
   .theme-material [data-slot="table-head"] {
     background-color: var(--md-surface-container);
-    color: var(--md-on-surface-variant);
     font-weight: 600;
   }
   .theme-material [data-slot="table-header"] [data-slot="table-row"] {
@@ -231,6 +158,7 @@
 
   /* ════════════════ Tabs ════════════════ */
   .theme-material [data-slot="tabs-trigger"] {
+    color: var(--md-on-surface-variant); /* غیرفعال: ≥ ۴٫۵:۱ (پیش‌فرض text-foreground/60 کمتر بود) */
     font-weight: 500;
     transition-property: background-color, color;
     transition-duration: var(--md-duration-short);
@@ -254,9 +182,6 @@
     box-shadow: none;
   }
   /* line: primary tabs — نشانگرِ ۳px با گوشه‌های گرد */
-  .theme-material [data-slot="tabs-list"][data-variant="line"] [data-slot="tabs-trigger"] {
-    border-radius: var(--md-shape-sm);
-  }
   .theme-material [data-slot="tabs-list"][data-variant="line"] [data-slot="tabs-trigger"]:is([data-state="active"], [data-active]:not([data-active="false"])) {
     color: var(--md-primary);
   }
@@ -267,8 +192,9 @@
   }
 
   /* ════════════════ Sidebar — Navigation drawer ════════════════
-     با data-sidebar انتخاب می‌شود (data-slot زیرِ TooltipTrigger asChild عوض می‌شود). */
-  .theme-material [data-sidebar="menu-button"] {
+     با data-sidebar انتخاب می‌شود (data-slot زیرِ TooltipTrigger asChild عوض می‌شود).
+     اندازه‌ی lg (هدرِ فضای کار/کاربر) pill نمی‌شود. */
+  .theme-material [data-sidebar="menu-button"]:is([data-size="default"], [data-size="sm"]) {
     border-radius: var(--md-shape-full);
   }
   .theme-material [data-sidebar="menu-sub-button"] {
@@ -284,20 +210,9 @@
     font-weight: 600;
   }
 
-  /* ════════════════ Select / Combobox trigger — Outlined field ════════════════
+  /* ════════════════ Select / Combobox trigger ════════════════
+     رنگ، border و radius از توکن‌ها؛ اینجا فقط حالتِ باز/فوکوس و disabled.
      (Radix: data-state؛ Base UI: data-open / data-highlighted / data-selected) */
-  .theme-material :is([data-slot="select-trigger"], [data-slot="combobox-input-group"], [data-slot="combobox-chips"]) {
-    background-color: transparent;
-    border-color: var(--md-outline);
-    border-radius: var(--md-shape-md);
-    transition-property: border-color, box-shadow;
-    transition-duration: var(--md-duration-short);
-    transition-timing-function: var(--md-ease-standard);
-  }
-  .theme-material [data-slot="select-trigger"]:hover:not(:disabled):not([aria-invalid="true"]),
-  .theme-material [data-slot="combobox-input-group"]:hover:not(:focus-within):not(:has(input:disabled)) {
-    border-color: var(--md-on-surface);
-  }
   .theme-material [data-slot="select-trigger"]:is(:focus-visible, [data-state="open"]),
   .theme-material :is([data-slot="combobox-input-group"], [data-slot="combobox-chips"]):focus-within {
     --tw-ring-shadow: 0 0 #0000;
@@ -312,74 +227,27 @@
     border-color: color-mix(in oklch, transparent, var(--md-on-surface) var(--md-disabled-container));
     color: color-mix(in oklch, transparent, var(--md-on-surface) var(--md-disabled-content));
   }
-
-  /* ════════════════ Menus: Select / Dropdown / Combobox / Popover ════════════════ */
-  .theme-material :is(
-      [data-slot="select-content"],
-      [data-slot="dropdown-menu-content"],
-      [data-slot="dropdown-menu-sub-content"],
-      [data-slot="combobox-content"],
-      [data-slot="popover-content"]
-    ) {
-    background-color: var(--md-surface-container);
-    border-color: transparent;
-    border-radius: var(--md-shape-md);
-    box-shadow: var(--md-elev-2);
+  .theme-material.dark :is([data-slot="select-trigger"], [data-slot="combobox-input-group"]):not([class*="bg-muted"], [class*="bg-background"], [class*="bg-card"], :disabled) {
+    background-color: transparent;
   }
 
-  /* آیتم‌ها: highlight = state layerِ ۱۰٪؛ انتخاب‌شده = secondary-container */
-  .theme-material :is(
-      [data-slot="select-item"],
-      [data-slot="dropdown-menu-item"],
-      [data-slot="dropdown-menu-checkbox-item"],
-      [data-slot="dropdown-menu-radio-item"],
-      [data-slot="dropdown-menu-sub-trigger"],
-      [data-slot="combobox-item"]
-    )[data-highlighted] {
-    background-color: color-mix(in oklch, transparent, var(--md-on-surface) var(--md-state-focus));
-    color: var(--md-on-surface);
-  }
-  .theme-material [data-slot="dropdown-menu-item"][data-variant="destructive"][data-highlighted] {
-    background-color: color-mix(in oklch, transparent, var(--md-error) var(--md-state-focus));
-    color: var(--md-error);
-  }
+  /* ════════════════ Menus ════════════════ (سطح/سایه از توکن‌ها و
+     `shadow-md`؛ رنگِ آیتمِ highlight از `accent`). فقط حالتِ انتخاب‌شده: */
   .theme-material [data-slot="select-item"][data-state="checked"],
   .theme-material [data-slot="combobox-item"][data-selected] {
     background-color: var(--md-secondary-container);
     color: var(--md-on-secondary-container);
   }
-  .theme-material :is([data-slot="select-item"][data-state="checked"], [data-slot="combobox-item"][data-selected])[data-highlighted] {
-    background-color: color-mix(in oklch, var(--md-secondary-container), var(--md-on-secondary-container) var(--md-state-hover));
-    color: var(--md-on-secondary-container);
-  }
-
-  /* ════════════════ Tooltip — Plain tooltip ════════════════ */
-  .theme-material [data-slot="tooltip-content"] {
-    background-color: var(--md-inverse-surface);
-    color: var(--md-inverse-on-surface);
-    border-radius: var(--md-shape-sm);
-  }
-  .theme-material [data-slot="tooltip-content"] > svg {
-    background-color: var(--md-inverse-surface);
-    fill: var(--md-inverse-surface);
-  }
 
   /* ════════════════ Checkbox ════════════════ */
-  .theme-material [data-slot="checkbox"] {
-    border-color: var(--md-on-surface-variant);
-  }
-  .theme-material [data-slot="checkbox"][data-state="unchecked"] {
-    background-color: transparent;
-  }
-  .theme-material [data-slot="checkbox"]:is([data-state="checked"], [data-state="indeterminate"]) {
-    background-color: var(--md-primary);
-    border-color: var(--md-primary);
-    color: var(--md-on-primary);
-  }
-  .theme-material [data-slot="checkbox"]:focus-visible {
+  .theme-material [data-slot="checkbox"]:focus-visible,
+  .theme-material [data-slot="switch"]:focus-visible {
     --tw-ring-shadow: 0 0 #0000;
     outline: 2px solid var(--md-primary);
     outline-offset: 2px;
+  }
+  .theme-material.dark [data-slot="checkbox"][data-state="unchecked"] {
+    background-color: transparent;
   }
   .theme-material [data-slot="checkbox"]:disabled {
     opacity: 1;
@@ -402,17 +270,8 @@
     background-color: var(--md-outline);
     scale: 0.75;
   }
-  .theme-material [data-slot="switch"][data-state="checked"] {
-    background-color: var(--md-primary);
-    border-color: transparent;
-  }
   .theme-material [data-slot="switch"][data-state="checked"] [data-slot="switch-thumb"] {
     background-color: var(--md-on-primary);
-  }
-  .theme-material [data-slot="switch"]:focus-visible {
-    --tw-ring-shadow: 0 0 #0000;
-    outline: 2px solid var(--md-primary);
-    outline-offset: 2px;
   }
   .theme-material [data-slot="switch"]:disabled {
     opacity: 0.38;

@@ -125,12 +125,12 @@ html.theme-material.dark {
   --md-on-error: oklch(0.30 0.12 25);
   --md-error-container: oklch(0.40 0.14 27);
   --md-on-error-container: oklch(0.93 0.04 25);
-  --md-surface: oklch(0.18 0.008 285);
-  --md-surface-container-lowest: oklch(0.15 0.008 285);
-  --md-surface-container-low: oklch(0.21 0.009 285);
-  --md-surface-container: oklch(0.235 0.01 285);
-  --md-surface-container-high: oklch(0.265 0.011 285);
-  --md-surface-container-highest: oklch(0.295 0.012 285);
+  --md-surface: oklch(0.17 0.008 285);
+  --md-surface-container-lowest: oklch(0.14 0.008 285);
+  --md-surface-container-low: oklch(0.21 0.010 285);
+  --md-surface-container: oklch(0.24 0.011 285);
+  --md-surface-container-high: oklch(0.27 0.012 285);
+  --md-surface-container-highest: oklch(0.30 0.013 285);
   --md-on-surface: oklch(0.93 0.006 285);
   --md-on-surface-variant: oklch(0.78 0.014 285);
   --md-outline: oklch(0.62 0.016 285);
@@ -141,11 +141,11 @@ html.theme-material.dark {
   --md-scrim: oklch(0 0 0);
   --md-shadow: oklch(0 0 0);
   /* ── رنگ‌های معنایی (برای tone.js) و container هرکدام ── */
-  --success: oklch(0.84 0.16 152);
-  --warning: oklch(0.86 0.14 85);
+  --success: oklch(0.85 0.16 152);
+  --warning: oklch(0.88 0.14 85);
   --caution: oklch(0.91 0.14 45);
-  --info: oklch(0.85 0.11 220);
-  --special: oklch(0.89 0.15 305);
+  --info: oklch(0.87 0.11 220);
+  --special: oklch(0.90 0.15 305);
   --success-container: oklch(0.36 0.07 150);
   --on-success-container: oklch(0.92 0.05 150);
   --warning-container: oklch(0.36 0.07 85);

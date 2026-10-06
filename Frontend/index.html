@@ -76,6 +76,9 @@
         transition: opacity 0.2s;
       }
       html.dark #app-splash { background: #0a0a0a; }
+      /* هم‌رنگ با --background تمِ Material (material.css) */
+      html.theme-material #app-splash { background: #fafafd; }
+      html.theme-material.dark #app-splash { background: #0f0f13; }
       #app-splash.hide { opacity: 0; pointer-events: none; }
       #app-splash i {
         width: 36px;
