@@ -55,8 +55,70 @@ namespace Application.Features.Product.Queries
         public async Task<ResponseDto> Handle(GetProductListQuery request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
-            var query = _context.Products.Where(x => x.IsActive).AsQueryable().AsNoTracking();
+            var query = await ApplyFiltersAsync(_context.Products.Where(x => x.IsActive).AsNoTracking(), request, cancellationToken);
 
+            var projected = query.Select(x => new ProductListDto
+            {
+                RequiresUnitTracking = x.RequiresUnitTracking,
+                IsIncomplete = x.IsIncomplete,
+                QuarantinedCount = _context.ProductUnits.Count(u => u.ProductId == x.Id && u.Status == Domain.Enums.ProductUnitStatusEnum.QUARANTINED),
+                Id = x.Id,
+                Brand = x.Brand,
+                Code = x.Code,
+                Name = x.Name,
+                EnglishName = x.EnglishName,
+                CategoryName = x.ProductCategory.Name,
+                Stock = x.Stock,
+                LowStockThreshold = x.LowStockThreshold,
+                RetailPrice = x.RetailPrice,
+                WholeSalePrice = x.WholeSalePrice,
+                ImageKey = x.ImageUrl
+            });
+
+            // Sorted on the projection so the computed QuarantinedCount is sortable too. Default: newest first.
+            var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
+            var sorted = request.SortBy switch
+            {
+                ProductListSortEnum.CODE => projected.SortBy(x => x.Code, direction),
+                ProductListSortEnum.NAME => projected.SortBy(x => x.Name, direction),
+                ProductListSortEnum.BRAND => projected.SortBy(x => x.Brand, direction),
+                ProductListSortEnum.CATEGORY_NAME => projected.SortBy(x => x.CategoryName, direction),
+                ProductListSortEnum.RETAIL_PRICE => projected.SortBy(x => x.RetailPrice, direction),
+                ProductListSortEnum.WHOLESALE_PRICE => projected.SortBy(x => x.WholeSalePrice, direction),
+                ProductListSortEnum.STOCK => projected.SortBy(x => x.Stock, direction),
+                ProductListSortEnum.QUARANTINED_COUNT => projected.SortBy(x => x.QuarantinedCount, direction),
+                _ => projected.SortBy(x => x.Id, direction),
+            };
+
+            var paged = await sorted.ThenSortBy(x => x.Id, direction).ToPagedAsync(request.Page, request.Take, cancellationToken);
+
+            // Signing happens after materialization - GetPresignedUrl is a local method call and
+            // could not be translated into the SQL projection above.
+            foreach (var item in paged.Items)
+                item.ImageUrl = _objectStorageService.GetFixedUrl(item.ImageKey);
+
+            res.Data = new
+            {
+                ProductList = paged.Items,
+                Page = new ResponsePageDto
+                {
+                    Page = request.Page,
+                    PageCount = paged.PageCount,
+                    Take = request.Take,
+                    Total = paged.TotalCount
+                }
+            };
+            res.Message = "اطلاعات محصول با موفقیت ارسال شد.";
+            res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
+            return res;
+        }
+
+        /// <summary>
+        /// The list's filters, on their own so the table export (ProductDataTransferDefinition) filters with exactly
+        /// this code instead of a copy of it. Async because a whole code/barcode probes for an exact match first.
+        /// </summary>
+        public static async Task<IQueryable<Domain.Entities.Product>> ApplyFiltersAsync(IQueryable<Domain.Entities.Product> query, GetProductListQuery request, CancellationToken cancellationToken)
+        {
             if (!string.IsNullOrEmpty(request.Name))
             {
                 query = query.Where(p => p.Name.Contains(request.Name) || (p.EnglishName != null && p.EnglishName.Contains(request.Name)));
@@ -115,60 +177,7 @@ namespace Application.Features.Product.Queries
                 query = query.Where(p => p.IsIncomplete == request.IsIncomplete.Value);
             }
 
-            var projected = query.Select(x => new ProductListDto
-            {
-                RequiresUnitTracking = x.RequiresUnitTracking,
-                IsIncomplete = x.IsIncomplete,
-                QuarantinedCount = _context.ProductUnits.Count(u => u.ProductId == x.Id && u.Status == Domain.Enums.ProductUnitStatusEnum.QUARANTINED),
-                Id = x.Id,
-                Brand = x.Brand,
-                Code = x.Code,
-                Name = x.Name,
-                EnglishName = x.EnglishName,
-                CategoryName = x.ProductCategory.Name,
-                Stock = x.Stock,
-                LowStockThreshold = x.LowStockThreshold,
-                RetailPrice = x.RetailPrice,
-                WholeSalePrice = x.WholeSalePrice,
-                ImageKey = x.ImageUrl
-            });
-
-            // Sorted on the projection so the computed QuarantinedCount is sortable too. Default: newest first.
-            var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
-            var sorted = request.SortBy switch
-            {
-                ProductListSortEnum.CODE => projected.SortBy(x => x.Code, direction),
-                ProductListSortEnum.NAME => projected.SortBy(x => x.Name, direction),
-                ProductListSortEnum.BRAND => projected.SortBy(x => x.Brand, direction),
-                ProductListSortEnum.CATEGORY_NAME => projected.SortBy(x => x.CategoryName, direction),
-                ProductListSortEnum.RETAIL_PRICE => projected.SortBy(x => x.RetailPrice, direction),
-                ProductListSortEnum.WHOLESALE_PRICE => projected.SortBy(x => x.WholeSalePrice, direction),
-                ProductListSortEnum.STOCK => projected.SortBy(x => x.Stock, direction),
-                ProductListSortEnum.QUARANTINED_COUNT => projected.SortBy(x => x.QuarantinedCount, direction),
-                _ => projected.SortBy(x => x.Id, direction),
-            };
-
-            var paged = await sorted.ThenSortBy(x => x.Id, direction).ToPagedAsync(request.Page, request.Take, cancellationToken);
-
-            // Signing happens after materialization - GetPresignedUrl is a local method call and
-            // could not be translated into the SQL projection above.
-            foreach (var item in paged.Items)
-                item.ImageUrl = _objectStorageService.GetFixedUrl(item.ImageKey);
-
-            res.Data = new
-            {
-                ProductList = paged.Items,
-                Page = new ResponsePageDto
-                {
-                    Page = request.Page,
-                    PageCount = paged.PageCount,
-                    Take = request.Take,
-                    Total = paged.TotalCount
-                }
-            };
-            res.Message = "اطلاعات محصول با موفقیت ارسال شد.";
-            res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
-            return res;
+            return query;
         }
     }
 }
