@@ -4,6 +4,7 @@ import DataTablePagination from "@/shared/components/table/DataTablePagination";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { formatNumber, formatPercent } from "@/shared/components/charts/chartUtils";
 import { cn } from "@/shared/lib/utils";
+import { toneSolid, toneText } from "@/shared/lib/tone";
 
 /**
  * رتبه‌بندیِ گزارش‌های فعالیت — به‌جای جدول، فهرستِ نواری.
@@ -24,6 +25,7 @@ import { cn } from "@/shared/lib/utils";
  * بقیه‌ی فهرست‌های برنامه یکی بماند.
  */
 
+// مدال‌های طلا/نقره/برنز: استعاره‌ی تزئینی‌اند، نه tone معنایی؛ عمداً از پالت.
 const RANK_STYLES = [
   "bg-amber-400/15 text-amber-600 dark:text-amber-400 ring-1 ring-amber-400/30",
   "bg-slate-400/15 text-slate-600 dark:text-slate-300 ring-1 ring-slate-400/30",
@@ -130,7 +132,7 @@ export default function ActivityRankList({
                     {showPayment && (
                       <>
                         {" · "}
-                        <span className={cn(settled && "text-emerald-600 dark:text-emerald-400")}>
+                        <span className={cn(settled && toneText("success"))}>
                           {settled
                             ? "تسویه کامل"
                             : `مانده ${formatNumber(remaining)} ریال`}
@@ -158,9 +160,9 @@ export default function ActivityRankList({
                     "h-full rounded-full transition-all",
                     showPayment
                       ? settled
-                        ? "bg-emerald-500"
+                        ? toneSolid("success")
                         : ratio > 0
-                          ? "bg-amber-400"
+                          ? toneSolid("warning")
                           : "bg-destructive/60"
                       : "bg-primary",
                   )}

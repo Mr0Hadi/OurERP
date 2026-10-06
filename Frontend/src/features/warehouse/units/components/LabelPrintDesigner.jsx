@@ -159,7 +159,7 @@ function Settings({ units, template, geometry }) {
         </p>
 
         {geometry.layout === LABEL_LAYOUTS.ROLL && (
-          <div className="space-y-1 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs leading-relaxed text-foreground">
+          <div className="space-y-1 rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs leading-relaxed text-foreground">
             <p className="font-medium">پیش از چاپِ رول</p>
             <p>
               مرورگر اندازه‌ی کاغذِ پرینتر را عوض نمی‌کند؛ فقط اگر پرینتر کاغذی به همین اندازه

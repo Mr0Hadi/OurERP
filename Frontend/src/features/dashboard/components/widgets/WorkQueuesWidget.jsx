@@ -4,14 +4,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { formatNumber } from "@/shared/components/charts/chartUtils";
 import { cn } from "@/shared/lib/utils";
+import { toneText } from "@/shared/lib/tone";
 import { workQueuesFor } from "../../domain/workQueues";
 import { useQueueCountsQuery } from "../../services/queries";
 
+// `queue.tone` در domain/workQueues.js نامِ رنگ است؛ اینجا به توکن‌های معنایی
+// نگاشت می‌شود (همان معناهای `shared/lib/tone.js`):
+//   sky → info (در جریان: دریافتِ خرید)      violet → primary (ارسالِ فروش)
+//   amber → warning (در انتظار اقدام)        rose → special (گردشِ مرجوعی)
 const TONES = {
-  sky: "bg-sky-500/10 text-sky-600 dark:text-sky-400",
-  violet: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
-  amber: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  rose: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
+  sky: "bg-info/10 text-info",
+  violet: "bg-primary/10 text-primary",
+  amber: "bg-warning/10 text-warning",
+  rose: "bg-special/10 text-special",
 };
 
 function QueueTile({ entry }) {
@@ -86,7 +91,7 @@ export default function WorkQueuesWidget({ context }) {
       <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
         <CardTitle>کارهای منتظر</CardTitle>
         {settled && (
-          <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+          <span className={cn("flex items-center gap-1 text-xs", toneText("success"))}>
             <CheckCircle2 className="size-3.5" />
             همه‌چیز انجام شده
           </span>

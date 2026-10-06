@@ -74,7 +74,7 @@ export default function KpiCard({ kpi, isLoading }) {
                   className={cn(
                     "flex shrink-0 cursor-help items-center gap-0.5 rounded-md px-1 py-0.5 text-[11px] font-medium tabular-nums",
                     isGood
-                      ? "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400"
+                      ? "bg-success/12 text-success"
                       : "bg-destructive/12 text-destructive",
                   )}
                 >
