@@ -31,6 +31,52 @@
   .theme-material .shadow-md { --tw-shadow: var(--md-elev-2); }
   .theme-material .shadow-lg { --tw-shadow: var(--md-elev-3); }
 
+  /* ── Motion ── (فقط easing؛ مدت‌ها همان مقدارِ کوتاهِ utilityهاست)
+     ورود با decelerate و خروج با accelerate. Radix: data-state؛ Base UI: data-open/data-closed. */
+  .theme-material :is(
+      [data-slot="dialog-content"],
+      [data-slot="alert-dialog-content"],
+      [data-slot="sheet-content"],
+      [data-slot="select-content"],
+      [data-slot="dropdown-menu-content"],
+      [data-slot="dropdown-menu-sub-content"],
+      [data-slot="popover-content"],
+      [data-slot="combobox-content"]
+    ):is([data-state="open"], [data-open]:not([data-open="false"])) {
+    animation-timing-function: var(--md-ease-decelerate);
+  }
+  .theme-material :is(
+      [data-slot="dialog-content"],
+      [data-slot="alert-dialog-content"],
+      [data-slot="sheet-content"],
+      [data-slot="select-content"],
+      [data-slot="dropdown-menu-content"],
+      [data-slot="dropdown-menu-sub-content"],
+      [data-slot="popover-content"],
+      [data-slot="combobox-content"]
+    ):is([data-state="closed"], [data-closed]:not([data-closed="false"])) {
+    animation-timing-function: var(--md-ease-accelerate);
+  }
+
+  /* scrim ساده است؛ Material بلور (backdrop-filter) ندارد. */
+  .theme-material :is([data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"], [data-slot="sheet-overlay"]) {
+    backdrop-filter: none;
+  }
+
+  /* ── کاهشِ حرکت ── اگر کاربر prefers-reduced-motion گذاشته: انیمیشن‌ها و
+     transitionها عملاً فوری می‌شوند ولی حالت‌ها (hover، focus، باز/بسته) سرِ جایشان
+     می‌مانند. spinnerها (`animate-spin`) نشانگرِ «در حال بارگذاری»‌اند و می‌چرخند. */
+  @media (prefers-reduced-motion: reduce) {
+    .theme-material *:not(.animate-spin),
+    .theme-material *:not(.animate-spin)::before,
+    .theme-material *:not(.animate-spin)::after {
+      animation-duration: 0.01ms;
+      animation-iteration-count: 1;
+      transition-duration: 0.01ms;
+      scroll-behavior: auto;
+    }
+  }
+
   /* دکمه‌ها با کلاسِ `group/button` شناخته می‌شوند، نه `data-slot="button"`:
      وقتی Button داخلِ `Trigger asChild` می‌آید (DropdownMenuTrigger، DialogTrigger
      و …) Radix مقدارِ data-slot را با نامِ trigger عوض می‌کند. */

@@ -33,8 +33,12 @@ html.theme-material {
   --md-disabled-container: 12%;
 
   /* ── Motion ── */
+  /* easing: standard = تغییرِ حالتِ عمومی؛ decelerate = ورود؛ accelerate = خروج */
   --md-ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --md-ease-emphasized: cubic-bezier(0.3, 0, 0, 1);
+  --md-ease-decelerate: cubic-bezier(0, 0, 0, 1);
+  --md-ease-accelerate: cubic-bezier(0.3, 0, 1, 1);
+  /* مدت‌ها عمداً کوتاه‌اند (ERP): short = تغییرِ حالتِ کنترل‌ها */
   --md-duration-short: 100ms;
   --md-duration-medium: 200ms;
   --md-duration-long: 300ms;
@@ -55,4 +59,14 @@ html.theme-material.dark {
   --md-elev-2: 0 1px 2px 0 oklch(0 0 0 / 0.40), 0 2px 6px 2px oklch(0 0 0 / 0.20);
   --md-elev-3: 0 1px 3px 0 oklch(0 0 0 / 0.40), 0 4px 8px 3px oklch(0 0 0 / 0.20);
   --md-elev-4: 0 2px 3px 0 oklch(0 0 0 / 0.40), 0 6px 10px 4px oklch(0 0 0 / 0.20);
+}
+
+/* کاهشِ حرکت: توکن‌های مدت صفر می‌شوند؛ قانون‌های کلیِ animation/transition در
+   material-components.css هم همین را برای باقیِ عناصر اعمال می‌کنند. */
+@media (prefers-reduced-motion: reduce) {
+  html.theme-material {
+    --md-duration-short: 0.01ms;
+    --md-duration-medium: 0.01ms;
+    --md-duration-long: 0.01ms;
+  }
 }

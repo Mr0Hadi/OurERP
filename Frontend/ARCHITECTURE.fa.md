@@ -137,7 +137,7 @@ Frontend/
 └─ src/
    ├─ main.jsx             نقطه‌ی ورود: SW، DirectionProvider(rtl)، render
    ├─ App.jsx              منتظر hydrate شدن auth، سپس Providers + Router
-   ├─ index.css            Tailwind + توکن‌های تم (۳۶۰ خط)
+   ├─ index.css            Tailwind + توکن‌های تمِ پیش‌فرض و تم‌های رنگی؛ importِ تمِ Material
    ├─ app/                 «پوسته‌ی» برنامه — مستقل از فیچرها
    │  ├─ providers/        QueryProvider، ToastProvider، AppProviders (+Theme)
    │  ├─ routes/           routers.jsx، protectedLoader، PermissionGate
@@ -149,6 +149,7 @@ Frontend/
       ├─ domain/           enumها و قواعدِ خالصِ دامنه (بی React)
       ├─ hooks/            هوک‌های مشترک
       ├─ lib/              توابع خالص و کمکی
+      ├─ styles/themes/    تمِ Material: material.css (رنگ)، material-tokens.css (شکل/سطح/حالت/حرکت)، material-components.css (نمای کامپوننت‌ها) — بخش ۱۶.۵
       ├─ services/         axios، قرارداد API، فایل، POS، بروزرسانی
       ├─ store/            factoryهای Zustand + استورهای سراسری
       └─ constants/        routes.js و navigationData.js
@@ -191,7 +192,7 @@ main.jsx
 
 - `App` تا وقتی `auth-storage` از `localStorage` rehydrate نشده چیزی رندر نمی‌کند؛ وگرنه
   `protectedLoader` نمی‌تواند تشخیص دهد کاربر واردشده است یا نه.
-- تم پیش‌فرض **dark** است (`ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme"`).
+- تم پیش‌فرض **dark** است (`ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme"`)؛ مقدارهای ممکن و منطقِ اعمال: بخش ۱۶.۲.
 - `ReactQueryDevtools` در `QueryProvider` همیشه mount است (در build تولید tree-shake می‌شود).
 
 ---
@@ -659,7 +660,7 @@ const query = usePurchasesQuery(filters, pagination, sorting);   // listQuery + 
 | `print/` | `usePrint`, `LabelSheet`, `BarcodeGraphic`, `QrCodeGraphic`, `sheetPresets`, `print.css` |
 | `map/` | `LocationPickerMap` (lazy) ← `MapCanvas` (**تنها فایل Leaflet**) + `MapSearchBar` + `nominatim.js` |
 | `charts/` | `TrendChart`, `DonutChart`, `GroupedBarChart`, `Sparkline`, `ChartCard`, … (SVG اختصاصی، بدون کتابخانه‌ی چارت) |
-| `theme/` | `ThemeProvider`, `ThemeToggle`, `themeContext` |
+| `theme/` | `ThemeProvider`, `ThemeToggle`, `themeContext`, `themeClasses` (نگاشتِ مقدارِ تم به کلاس‌های `<html>`) |
 | `app-update/` | `AppUpdateDialog`, `UpdateAvailableToast` |
 | `skeletons/` | `OrderFormSkeleton`, `WarehouseFormSkeleton` |
 
@@ -683,9 +684,28 @@ const query = usePurchasesQuery(filters, pagination, sorting);   // listQuery + 
 `DirectionProvider direction="rtl"` در ریشه؛ فونت Vazirmatn؛ سایدبار سمت راست (`side="right"`)؛ ارقام فارسی با `formatNumber`/`toLocaleString("fa-IR")`.
 برای متن‌های دوجهته (مثل `۳۳×۶۲`) از جداکننده‌های LRI/PDI استفاده می‌شود (`formatLabelSize`).
 
-### 16.2 تم‌ها (`index.css`)
-چهار+ تم با **کلاس روی `<html>`**: `light`، `dark` (پیش‌فرض)، `theme-accessible`، `theme-rose`، `theme-forest`؛ هرکدام همه‌ی توکن‌ها را تعریف می‌کنند
-(رنگ‌ها `oklch`). `@custom-variant dark (&:is(.dark *))`. `syncThemeColor` رنگ `<meta theme-color>` را همگام می‌کند.
+### 16.2 تم‌ها و سوئیچ
+
+مقدارِ تم در `localStorage["vite-ui-theme"]` نگه داشته می‌شود و `ThemeProvider` (`shared/components/theme/`) آن را به **کلاس‌های `<html>`** تبدیل می‌کند.
+نگاشت در `themeClasses.js` (`resolveThemeClasses`) است:
+
+| مقدار ذخیره‌شده | کلاس‌های `<html>` |
+|---|---|
+| `light` / `dark` | همان یک کلاس |
+| `system` | `light` یا `dark` بر اساس `prefers-color-scheme` (فقط تمِ پایه؛ برای Material معادل ندارد) |
+| `theme-accessible` / `theme-rose` / `theme-forest` | همان یک کلاس (فقط حالتِ روشن دارند) |
+| `material-light` | `theme-material` **و** `light` |
+| `material-dark` | `theme-material` **و** `dark` |
+
+نکته‌ی کلیدی: تمِ Material **دو کلاسِ هم‌زمان** می‌گیرد. کلاسِ `theme-material` توکن‌های Material را فعال می‌کند و `light|dark` باعث می‌شود
+`@custom-variant dark (&:is(.dark *))` و همه‌ی `dark:`های موجود مثل قبل کار کنند.
+
+- **منطق در دو جا تکرار شده**: `themeClasses.js` و اسکریپتِ inlineِ `index.html` (که پیش از اولین رنگ‌آمیزی اجرا می‌شود تا فلشِ تمِ اشتباه نباشد). هر تغییر باید در هر دو اعمال شود
+  (یک آزمونِ سریع: برای هر مقدارِ ممکن خروجیِ دو منطق را مقایسه کنید).
+- **`<meta name="theme-color">`**: `syncThemeColor()` پس از هر تغییرِ تم `--background` را می‌خواند و با یک پیکسلِ canvas به `rgb()` تبدیل می‌کند
+  (`getComputedStyle` در مرورگرهای جدید `oklch()` برمی‌گرداند که `theme-color` آن را نمی‌پذیرد). رنگِ اولیه‌ی `index.html` و `theme_color` مانیفست ثابت‌اند (`#4F46E5`) تا React بالا بیاید.
+- splash‌ی `index.html` برای `html.dark` و `html.theme-material(.dark)` رنگِ پس‌زمینه‌ی خودش را دارد.
+- `ThemeToggle` فهرستِ «تم پایه / متریال / تم‌های رنگی» را نشان می‌دهد.
 
 ### 16.3 سیستم tone (قانون سخت‌گیرانه)
 
@@ -710,6 +730,72 @@ const query = usePurchasesQuery(filters, pagination, sorting);   // listQuery + 
 
 ### 16.4 تایپوگرافی و `cn`
 `cn()` (`clsx` + `tailwind-merge`) در `shared/lib/utils`. واریانت‌ها با `cva`.
+
+### 16.5 تمِ Material (الهام‌گرفته از Material 3)
+
+Material **مهاجرت به MUI نیست**؛ همان کامپوننت‌های shadcn/Radix/Base UI می‌مانند و فقط «زبان بصری» عوض می‌شود:
+
+```
+React
+  ↓
+shadcn / Radix / Base UI          (JSX و APIِ کامپوننت‌ها دست‌نخورده)
+  ↓
+توکن‌های معنایی CSS (--background, --primary, …)
+  ↓
+تمِ فعال: پیش‌فرض/رنگی  یا  Material (--md-*)
+```
+
+**فایل‌ها** (`src/shared/styles/themes/`، import‌شده در `index.css`):
+
+| فایل | محتوا |
+|---|---|
+| `material.css` | نقش‌های رنگ برای `html.theme-material` (روشن) و `html.theme-material.dark`، نگاشت به توکن‌های shadcn، رنگ‌های معنایی، توکن‌های Toast |
+| `material-tokens.css` | غیررنگی‌ها: shape، elevation، state layer، motion، تایپوگرافی، `--radius` |
+| `material-components.css` | نمای کامپوننت‌ها داخل `@layer material` + بخشِ DatePicker (بدونِ لایه) |
+
+**توکن‌ها.** رنگِ واقعی فقط در نقش‌های `--md-*` است (`--md-primary`، `--md-on-primary`، `--md-primary-container`، `--md-secondary-container`، `--md-tertiary*`، `--md-error*`،
+`--md-surface` و `--md-surface-container-lowest…highest`، `--md-on-surface(-variant)`، `--md-outline(-variant)`، `--md-inverse-*`، `--md-scrim`). توکن‌های shadcn
+(`--background`، `--card`، `--primary`، `--muted`، `--border`، `--input`، `--sidebar-*` …) فقط به آن‌ها اشاره می‌کنند؛ پس کامپوننت‌های موجود بدونِ تغییر رنگ می‌گیرند.
+گروه‌های غیررنگی: `--md-shape-*`، `--md-elev-0…4`، `--md-state-*` (hover ۸٪، focus/pressed ۱۰٪، dragged ۱۶٪، disabled ۳۸٪/۱۲٪)، `--md-ease-*`، `--md-duration-*`، `--md-type-*`.
+نقش‌های Material که معادلِ shadcn ندارند با پیشوندِ `m3-` به Tailwind معرفی شده‌اند (`bg-m3-surface-container` …) ولی در کدِ مشترک استفاده نمی‌شوند (فقط در تمِ Material مقدار دارند).
+
+**رنگ‌های معنایی.** `--success/--warning/--caution/--info/--special` (و `-container`/`on-…-container`) در Material هم تعریف شده‌اند؛ `tone.js` بدونِ تغییر کار می‌کند.
+مقدارها طوری انتخاب شده‌اند که متنِ tone روی tintِ ۱۲٪ در همه‌ی سطح‌های Material (از `surface` تا `highest` و ردیفِ انتخاب‌شده) ≥ ۴٫۵:۱ بماند.
+توجه: سنجشِ contrast برای رنگِ نیمه‌شفاف باید در فضای gamma-sRGB (مثلِ مرورگر) ترکیب شود، نه linear.
+
+**قاعده‌ی className (مهم).** `@layer material` بعد از `utilities` اعلام می‌شود (`@layer theme, base, components, utilities, material;` ابتدای `index.css`)، پس هر چیزی که آنجا بنویسیم
+از کلاس‌های cva **و از `className`ِ مصرف‌کننده** قوی‌تر است. نتیجه:
+
+- `className`ِ مصرف‌کننده برای استایلِ موضعیِ عمدی باید معتبر بماند (مثلاً `text-muted-foreground hover:text-destructive` روی دکمه‌ی حذف، `bg-muted/50` روی فیلدِ فقط‌خواندنی، `rounded-none`، `rounded-2xl shadow-md`).
+- رنگ/شکلِ عمومی از **توکن‌ها** می‌آید (`--radius`، `--md-*`)، نه از CSS تم. در `material-components.css` فقط چیزهایی می‌آید که utility ندارد یا بازنویسی‌اش بی‌ضرر است:
+  focus (outline به‌جای ring)، disabled، state layer (با `background-image` و `currentColor`)، حالتِ `data-state`، سطحِ انتخاب‌شده، سایه‌ها (`shadow-*` → `--md-elev-*`).
+- قوانینِ شکل فقط وقتی اعمال می‌شوند که عنصر هنوز radiusِ پیش‌فرضِ cva را دارد (`[class~="rounded-lg"]`، `[class~="rounded-xl"]`)؛ زمینه‌ی تیره‌ی Input فقط وقتی حذف می‌شود که `bg-muted|background|card` نداشته باشد.
+- `!important` استفاده نمی‌شود. دکمه‌ها با کلاسِ `group/button` انتخاب می‌شوند (نه `data-slot="button"`) چون Radix در `Trigger asChild` مقدارِ data-slot را عوض می‌کند؛ آیتم‌های سایدبار با `data-sidebar`.
+- Radix با `data-state` / `data-highlighted` و Base UI (Combobox) با `data-open` / `data-selected` / `data-highlighted` کار می‌کند؛ هر دو در selectorها پوشش داده شده‌اند.
+
+**چاپ و برچسب** عمداً مستقل از تم‌اند: `LabelSheet`، `UnitLabel`، `BarcodeGraphic`، `print.css` رنگِ صریحِ سیاه/سفید دارند و از توکن استفاده نمی‌کنند.
+
+**حرکت (motion).** CSS-محور؛ کتابخانه‌ی انیمیشن اضافه نشده. توکن‌ها: `--md-duration-short/medium/long` (۱۰۰/۲۰۰/۳۰۰ms) و `--md-ease-standard/emphasized/decelerate/accelerate`.
+Material فقط دو transition اضافه می‌کند (دکمه‌ها و `tabs-trigger`، ۱۰۰ms، روی ویژگی‌های رنگ/سایه) و برای منوها/دیالوگ/Sheet فقط easing را عوض می‌کند (ورود decelerate، خروج accelerate)؛
+مدتِ انیمیشن‌ها همان utilityهای کوتاهِ موجودند (`duration-100/200`). state layerِ hover/pressed فوری است (gradient قابلِ transition نیست). scrimِ دیالوگ بلور (`backdrop-filter`) ندارد.
+`prefers-reduced-motion: reduce` در تمِ Material رعایت می‌شود (توکن‌های مدت و همه‌ی animation/transitionها ≈ ۰؛ `animate-spin` برای نشانگرِ بارگذاری می‌چرخد). تمِ پیش‌فرض/رنگی هنوز این قاعده را ندارد.
+اولویت با تراکمِ ERP و پاسخ‌گویی است، نه حرکتِ تزئینی.
+
+**ابزارهای بررسی.** `/dev/ui` (فقط DEV) نمونه‌ی کامپوننت‌ها در همه‌ی تم‌ها و نمونه‌ی `className`های مصرف‌کننده را دارد (`ComponentShowcase.jsx`؛ در bundle تولید نیست و به API وصل نیست).
+
+### 16.6 رنگِ hard-code و راهنمای توسعه‌دهنده
+
+همه‌ی رنگ‌های سخت‌کد خطا نیستند. این‌ها عمداً ثابت می‌مانند: خروجیِ چاپ/برچسب، UI دوربین/اسکنر، overlayِ روی تصویر (`bg-black/40` + متنِ سفید)،
+تزئینِ برند (پنل ورود)، تصویرِ پلاک، رنگ‌نماهای `ThemeToggle`، و عناصرِ تزئینیِ نمودار/مدال. رنگِ **معنایی** (موفق/هشدار/خطا/…) باید از tone یا توکن بیاید.
+
+وقتی کامپوننت یا صفحه‌ی جدید می‌نویسید، توکنِ معنایی را به پالتِ Tailwind ترجیح دهید:
+
+```text
+بله:   bg-primary  text-primary-foreground  bg-muted  text-muted-foreground  text-destructive  bg-success/12 text-success
+نه:    bg-blue-500  text-red-500  text-emerald-600 dark:text-emerald-400
+```
+
+مگر رنگ تزئینی یا وابسته به نیازِ بیرونی باشد. کلاس‌ها باید رشته‌ی کامل و ثابت باشند تا Tailwind پیدایشان کند.
 
 ---
 
