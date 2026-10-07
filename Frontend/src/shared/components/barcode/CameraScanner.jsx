@@ -4,6 +4,12 @@ import toast from "react-hot-toast";
 
 import { Button } from "@/shared/components/ui/button";
 import { getBarcodeDetector } from "@/shared/domain/barcode/barcodeDetector";
+import {
+  SCAN_TARGET,
+  boxOfHit,
+  pickTargetHit,
+  targetInVideoSpace,
+} from "@/shared/domain/barcode/scanTarget";
 
 /**
  * رزولوشنی که از دوربین می‌خواهیم.
@@ -36,24 +42,13 @@ function pickBackCamera(list) {
 }
 
 function boxOf(hit, videoWidth, videoHeight) {
-  let x, y, width, height;
-  if (hit.boundingBox) {
-    ({ x, y, width, height } = hit.boundingBox);
-  } else if (hit.cornerPoints?.length) {
-    const xs = hit.cornerPoints.map((p) => p.x);
-    const ys = hit.cornerPoints.map((p) => p.y);
-    x = Math.min(...xs);
-    y = Math.min(...ys);
-    width = Math.max(...xs) - x;
-    height = Math.max(...ys) - y;
-  } else {
-    return null;
-  }
+  const box = boxOfHit(hit);
+  if (!box) return null;
   return {
-    left: (x / videoWidth) * 100,
-    top: (y / videoHeight) * 100,
-    width: (width / videoWidth) * 100,
-    height: (height / videoHeight) * 100,
+    left: (box.x / videoWidth) * 100,
+    top: (box.y / videoHeight) * 100,
+    width: (box.width / videoWidth) * 100,
+    height: (box.height / videoHeight) * 100,
   };
 }
 
@@ -68,6 +63,7 @@ export default function CameraScanner({ onDetected }) {
   const [torchSupported, setTorchSupported] = useState(false);
   const [aspectRatio, setAspectRatio] = useState(IDEAL_WIDTH / IDEAL_HEIGHT);
   const [hitBox, setHitBox] = useState(null);
+  const [crowded, setCrowded] = useState(false);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -164,8 +160,18 @@ export default function CameraScanner({ onDetected }) {
         }
         detecting = true;
         try {
-          const [hit] = await detector.detect(video);
-          if (hit?.rawValue) {
+          const hits = await detector.detect(video);
+          // فقط کدِ داخلِ کادرِ هدف؛ ابعادِ نمایش هر فریم خوانده می‌شود تا
+          // چرخشِ گوشی و تغییرِ اندازه‌ی پنجره درست حساب شود.
+          const { status, hit } = pickTargetHit(
+            hits,
+            targetInVideoSpace(
+              { width: video.clientWidth, height: video.clientHeight },
+              { width: video.videoWidth, height: video.videoHeight },
+            ),
+          );
+          setCrowded((prev) => (prev === (status === "ambiguous") ? prev : status === "ambiguous"));
+          if (status === "single") {
             cancelled = true;
             setHitBox(boxOf(hit, video.videoWidth, video.videoHeight));
             onDetectedRef.current(hit.rawValue);
@@ -207,6 +213,7 @@ export default function CameraScanner({ onDetected }) {
       setTorchOn(false);
       setTorchSupported(false);
       setHitBox(null);
+      setCrowded(false);
     };
   }, [deviceId]);
 
@@ -239,6 +246,26 @@ export default function CameraScanner({ onDetected }) {
         muted
         playsInline
       />
+      {/* کادرِ هدف: بیرونش تیره است و فقط کدِ داخلِ آن پذیرفته می‌شود. */}
+      <div
+        className={`pointer-events-none absolute rounded-md border-2 shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] ${
+          crowded ? "border-destructive" : "border-white"
+        }`}
+        style={{
+          left: `${((1 - SCAN_TARGET.width) / 2) * 100}%`,
+          top: `${((1 - SCAN_TARGET.height) / 2) * 100}%`,
+          width: `${SCAN_TARGET.width * 100}%`,
+          height: `${SCAN_TARGET.height * 100}%`,
+        }}
+      />
+      <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center px-2">
+        <span
+          role="status"
+          className={`rounded-md px-2 py-1 text-xs text-white ${crowded ? "bg-destructive" : "bg-black/60"}`}
+        >
+          {crowded ? "چند کد داخل کادر است؛ فقط یک کد را داخل کادر بگیرید" : "کد را داخل کادر قرار دهید"}
+        </span>
+      </div>
       {hitBox && (
         <div
           className="pointer-events-none absolute rounded-md border-4 border-success/50 shadow-[0_0_12px_2px_rgba(52,211,153,0.8)]"

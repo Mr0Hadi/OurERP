@@ -6,8 +6,9 @@ import { barcodeSegments } from "@/shared/domain/barcode/productCode";
 import {
   CODE_SHARE,
   DEFAULT_LABEL_TEMPLATE,
-  FONT_SIZES_PT,
   LABEL_CODE_TYPES,
+  isValidFontSizePt,
+  labelFontPt,
 } from "../domain/labelTemplate";
 import { formatDate } from "../domain/unitVocabulary";
 import { formatDigits } from "@/shared/lib/numberFormat";
@@ -102,7 +103,10 @@ export default function UnitLabel({
   party,
 }) {
   const content = unit.barcode ?? "";
-  const fontPt = FONT_SIZES_PT[template.fontScale] ?? FONT_SIZES_PT.medium;
+  const fontPt = labelFontPt(template);
+  // اندازه‌ی دقیقِ متن: کد ابعادِ ثابت می‌گیرد و اگر متن جا نشد، متن بریده
+  // می‌شود نه کد. بدونِ آن (قالب‌های قدیمی) چیدمانِ قبلی دست‌نخورده می‌ماند.
+  const pinned = isValidFontSizePt(template.fontSizePt);
   const share = CODE_SHARE[template.codeScale] ?? CODE_SHARE.medium;
   const lines = textLinesOf(unit, template.fields, party);
   const innerW = widthMm - 2 * PADDING_MM;
@@ -121,7 +125,11 @@ export default function UnitLabel({
         >
           <QrCodeGraphic value={content} preset="compact" displayValue={false} className="h-full" />
         </div>
-        <div className="flex min-w-0 flex-1 flex-col justify-center gap-[0.6mm]">
+        <div
+          className={`flex min-w-0 flex-1 flex-col gap-[0.6mm] ${
+            pinned ? "max-h-full justify-center-safe overflow-hidden" : "justify-center"
+          }`}
+        >
           <Texts lines={lines} fontPt={fontPt} align="right" />
           {template.fields.codeText && (
             <div className="flex flex-col font-mono leading-tight" style={{ fontSize: `${fontPt - 1}pt` }} dir="ltr">
@@ -141,15 +149,25 @@ export default function UnitLabel({
   const modules = content ? code128Modules(content) : 1;
   const svgHeight = Math.max(10, Math.round((modules * barHeightMm) / innerW));
 
+  // قالبِ قدیمی: بسته‌ها بی‌اثرند (display: contents) و فرزندها مستقیم در ستونِ
+  // اصلی می‌مانند. اندازه‌ی دقیق: بالا و پایینِ کد دو ناحیه‌ی قابل‌بریدن‌اند.
+  const textArea = pinned
+    ? "flex min-h-0 w-full flex-col items-center gap-[0.6mm] overflow-hidden"
+    : "contents";
+
   return (
     <div
       className="flex h-full w-full flex-col items-center justify-center gap-[0.6mm] text-black"
       style={{ padding: `${PADDING_MM}mm` }}
     >
-      {lines.title && <Texts lines={{ ...lines, party: [], meta: [] }} fontPt={fontPt} />}
+      {lines.title && (
+        <div className={textArea}>
+          <Texts lines={{ ...lines, party: [], meta: [] }} fontPt={fontPt} />
+        </div>
+      )}
       {content && (
         <div
-          className="flex w-full justify-center [&_svg]:h-full [&_svg]:w-full"
+          className={`flex w-full justify-center [&_svg]:h-full [&_svg]:w-full ${pinned ? "shrink-0" : ""}`}
           style={{ height: `${barHeightMm}mm` }}
         >
           <Barcode
@@ -165,12 +183,16 @@ export default function UnitLabel({
           />
         </div>
       )}
-      {template.fields.codeText && (
-        <div className="font-mono leading-none tabular-nums" style={{ fontSize: `${fontPt - 0.5}pt` }} dir="ltr">
-          {unit.barcode}
+      {(template.fields.codeText || lines.party.length > 0 || lines.meta.length > 0) && (
+        <div className={textArea}>
+          {template.fields.codeText && (
+            <div className="font-mono leading-none tabular-nums" style={{ fontSize: `${fontPt - 0.5}pt` }} dir="ltr">
+              {unit.barcode}
+            </div>
+          )}
+          <Texts lines={{ ...lines, title: null }} fontPt={fontPt} />
         </div>
       )}
-      <Texts lines={{ ...lines, title: null }} fontPt={fontPt} />
     </div>
   );
 }

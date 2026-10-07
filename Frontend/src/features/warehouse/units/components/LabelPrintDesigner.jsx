@@ -30,6 +30,8 @@ import "@/shared/components/print/print.css";
 
 import {
   CUSTOM_SIZE_KEY,
+  FONT_SIZE_LIMITS,
+  isValidFontSizePt,
   LABEL_CODE_TYPE_LABELS,
   LABEL_FIELDS,
   LABEL_LAYOUTS,
@@ -304,10 +306,40 @@ function Settings({ units, template, geometry }) {
         <Label className="block pt-1 text-xs text-muted-foreground">اندازه‌ی متن</Label>
         <Segmented
           ariaLabel="اندازه‌ی متن"
-          value={template.fontScale}
+          value={isValidFontSizePt(template.fontSizePt) ? null : template.fontScale}
           options={toOptions(LABEL_SCALE_LABELS)}
-          onChange={(fontScale) => updateTemplate({ fontScale })}
+          onChange={(fontScale) => updateTemplate({ fontScale, fontSizePt: null })}
         />
+        <div className="flex items-center gap-2 pt-1">
+          <Label htmlFor="label-font-pt" className="text-xs text-muted-foreground">
+            اندازه‌ی دقیق (pt)
+          </Label>
+          <Input
+            id="label-font-pt"
+            type="number"
+            step="0.5"
+            min={FONT_SIZE_LIMITS.minPt}
+            max={FONT_SIZE_LIMITS.maxPt}
+            placeholder="خودکار"
+            value={template.fontSizePt ?? ""}
+            onChange={(event) =>
+              updateTemplate({ fontSizePt: event.target.value === "" ? null : event.target.value })
+            }
+            aria-invalid={template.fontSizePt != null && !isValidFontSizePt(template.fontSizePt)}
+            className="h-8 w-24"
+          />
+        </div>
+        {isValidFontSizePt(template.fontSizePt) && (
+          <p className="text-xs text-muted-foreground">
+            اندازه‌ی کد ثابت می‌ماند؛ اگر متن جا نشود، ادامه‌ی آن بریده می‌شود.
+          </p>
+        )}
+        {template.fontSizePt != null && !isValidFontSizePt(template.fontSizePt) && (
+          <p role="alert" className="text-xs text-destructive">
+            عدد باید بین {formatNumber(FONT_SIZE_LIMITS.minPt)} و {formatNumber(FONT_SIZE_LIMITS.maxPt)} باشد؛
+            تا اصلاح، اندازه‌ی پیش‌تنظیم استفاده می‌شود.
+          </p>
+        )}
       </section>
 
       <Button
@@ -399,7 +431,7 @@ export default function LabelPrintDesigner({ units, onClose }) {
 
   return createPortal(
     <div dir="rtl" className="print-portal fixed inset-0 z-50 flex flex-col bg-background lg:flex-row">
-      <aside className="print-portal__chrome flex max-h-[55vh] shrink-0 flex-col border-b border-border bg-card lg:max-h-none lg:w-80 lg:border-b-0 lg:border-l">
+      <aside className="print-portal__chrome flex max-h-[55vh] shrink-0 flex-col border-b border-border bg-card lg:max-h-none lg:w-100 lg:border-b-0 lg:border-l">
         <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
           <div>
             <h2 className="text-base font-semibold">چاپ برچسب</h2>

@@ -173,6 +173,20 @@ export const FONT_SIZES_PT = Object.freeze({
   [LABEL_SCALES.LARGE]: 9,
 });
 
+/** اندازه‌ی دقیقِ متن (pt)؛ خارج از این بازه یا نامعتبر = همان اندازه‌ی پیش‌فرضِ `fontScale`. */
+export const FONT_SIZE_LIMITS = Object.freeze({ minPt: 4, maxPt: 16 });
+
+export const isValidFontSizePt = (value) => {
+  const n = Number(value);
+  return value !== null && value !== "" && Number.isFinite(n) && n >= FONT_SIZE_LIMITS.minPt && n <= FONT_SIZE_LIMITS.maxPt;
+};
+
+/** اندازه‌ی مؤثرِ متن: مقدارِ دقیقِ معتبر، وگرنه پیش‌تنظیمِ کوچک/متوسط/بزرگ. */
+export const labelFontPt = (template) =>
+  isValidFontSizePt(template.fontSizePt)
+    ? Number(template.fontSizePt)
+    : (FONT_SIZES_PT[template.fontScale] ?? FONT_SIZES_PT.medium);
+
 // ─── متن‌های روی برچسب ──────────────────────────────────────────────────────
 
 /**
@@ -200,6 +214,8 @@ export const DEFAULT_LABEL_TEMPLATE = Object.freeze({
   codeType: LABEL_CODE_TYPES.BARCODE,
   codeScale: LABEL_SCALES.MEDIUM,
   fontScale: LABEL_SCALES.MEDIUM,
+  // null = از `fontScale` بیا (رفتارِ قبلی)؛ عدد = اندازه‌ی دقیق به pt.
+  fontSizePt: null,
   fields: {
     productName: true,
     codeText: true,
