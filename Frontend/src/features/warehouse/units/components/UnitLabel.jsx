@@ -55,7 +55,7 @@ function Texts({ lines, fontPt, align = "center" }) {
     <>
       {lines.title && (
         <div
-          className="line-clamp-2 font-bold leading-tight"
+          className="break-words font-bold leading-tight"
           style={{ fontSize: `${fontPt + 0.5}pt`, textAlign: align }}
         >
           {lines.title}
@@ -64,7 +64,7 @@ function Texts({ lines, fontPt, align = "center" }) {
       {lines.party.map((text) => (
         <div
           key={text}
-          className="truncate font-bold leading-tight"
+          className="break-words font-bold leading-tight"
           style={{ fontSize: `${fontPt}pt`, textAlign: align }}
         >
           {text}
@@ -72,7 +72,7 @@ function Texts({ lines, fontPt, align = "center" }) {
       ))}
       {lines.meta.length > 0 && (
         <div
-          className="truncate font-bold leading-tight tabular-nums"
+          className="break-words font-bold leading-tight tabular-nums"
           style={{ fontSize: `${fontPt - 0.5}pt`, textAlign: align }}
         >
           {lines.meta.join(" · ")}
@@ -186,7 +186,7 @@ export default function UnitLabel({
       {(template.fields.codeText || lines.party.length > 0 || lines.meta.length > 0) && (
         <div className={textArea}>
           {template.fields.codeText && (
-            <div className="font-mono font-bold leading-none tabular-nums" style={{ fontSize: `${fontPt - 0.5}pt` }} dir="ltr">
+            <div className="break-all text-center font-mono font-bold leading-none tabular-nums" style={{ fontSize: `${fontPt - 0.5}pt` }} dir="ltr">
               {unit.barcode}
             </div>
           )}
