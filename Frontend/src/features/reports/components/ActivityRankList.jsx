@@ -27,9 +27,9 @@ import { toneSolid, toneText } from "@/shared/lib/tone";
 
 // مدال‌های طلا/نقره/برنز: استعاره‌ی تزئینی‌اند، نه tone معنایی؛ عمداً از پالت.
 const RANK_STYLES = [
-  "bg-amber-400/15 text-amber-600 dark:text-amber-400 ring-1 ring-amber-400/30",
+  "bg-amber-400/15 text-amber-800 dark:text-amber-400 ring-1 ring-amber-400/30",
   "bg-slate-400/15 text-slate-600 dark:text-slate-300 ring-1 ring-slate-400/30",
-  "bg-orange-500/12 text-orange-600 dark:text-orange-400 ring-1 ring-orange-500/25",
+  "bg-orange-500/12 text-orange-800 dark:text-orange-400 ring-1 ring-orange-500/25",
 ];
 
 function RankBadge({ rank }) {

@@ -12,11 +12,13 @@ import { useQueueCountsQuery } from "../../services/queries";
 // نگاشت می‌شود (همان معناهای `shared/lib/tone.js`):
 //   sky → info (در جریان: دریافتِ خرید)      violet → primary (ارسالِ فروش)
 //   amber → warning (در انتظار اقدام)        rose → special (گردشِ مرجوعی)
+//   red → danger (عقب‌افتاده: اقساطِ سررسیدگذشته)
 const TONES = {
   sky: "bg-info/10 text-info",
   violet: "bg-primary/10 text-primary",
   amber: "bg-warning/10 text-warning",
   rose: "bg-special/10 text-special",
+  red: "bg-destructive/10 text-destructive",
 };
 
 function QueueTile({ entry }) {

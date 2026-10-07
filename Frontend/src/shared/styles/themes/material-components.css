@@ -52,7 +52,6 @@
     transition-property: background-color, border-color, color, box-shadow;
     transition-duration: var(--md-duration-short);
     transition-timing-function: var(--md-ease-standard);
-    translate: none; /* بدون «فشردنِ» translate-y-px؛ حالتِ pressed با state layer */
   }
 
   /* State layer (hover/pressed) برای دکمه‌های پُر: رنگِ محتوا (currentColor)

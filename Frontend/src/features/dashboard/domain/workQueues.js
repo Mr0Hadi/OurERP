@@ -121,7 +121,7 @@ export const WORK_QUEUES = [
     source: "saleInstallment",
     // «امروز» هنگامِ شمارش حساب می‌شود، نه هنگامِ بارِ ماژول (صفحه‌ای که از دیروز باز مانده).
     parts: [{ label: "سررسیدگذشته", params: () => installmentListParams({ view: "overdue" }) }],
-    tone: "rose",
+    tone: "red",
   },
   {
     id: "saleReturns",
