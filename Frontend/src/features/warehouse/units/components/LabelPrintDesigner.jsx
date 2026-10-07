@@ -35,8 +35,11 @@ import {
   LABEL_LAYOUTS,
   LABEL_LAYOUT_LABELS,
   LABEL_SCALE_LABELS,
+  LABEL_GAP_LIMITS,
   LABEL_SIZE_LIMITS,
   LABEL_SIZE_PRESETS,
+  MAX_LABELS_PER_ROW,
+  MEDIA_WIDTH_LIMITS,
   formatLabelSize,
   sheetGeometryOf,
 } from "../domain/labelTemplate";
@@ -153,10 +156,83 @@ function Settings({ units, template, geometry }) {
 
         <p className="text-xs text-muted-foreground">
           {formatLabelSize(geometry.labelWidthMm, geometry.labelHeightMm)} میلی‌متر،{" "}
-          {geometry.perPage > 1
+          {geometry.layout === LABEL_LAYOUTS.ROLL && geometry.perPage > 1
+            ? `${formatNumber(geometry.perPage)} برچسب کنار هم در هر ردیفِ رول`
+            : geometry.perPage > 1
             ? `${formatNumber(geometry.perPage)} برچسب در هر ورق (${formatNumber(geometry.columns)} ستون، ${formatNumber(geometry.rows)} ردیف)`
             : "هر برچسب یک صفحه (رول)"}
         </p>
+
+        {geometry.layout === LABEL_LAYOUTS.ROLL && (
+          <div className="space-y-2 rounded-lg border border-border p-3">
+            <div className="grid grid-cols-3 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">برچسب در هر ردیف</Label>
+                <Select
+                  value={String(geometry.labelsPerRow)}
+                  onValueChange={(value) => updateTemplate({ labelsPerRow: Number(value) })}
+                >
+                  <SelectTrigger dir="rtl" className="h-9 w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent dir="rtl">
+                    {Array.from({ length: MAX_LABELS_PER_ROW }, (_, index) => index + 1).map((count) => (
+                      <SelectItem
+                        key={count}
+                        value={String(count)}
+                        disabled={count > geometry.maxLabelsPerRow && count !== geometry.labelsPerRow}
+                      >
+                        {formatNumber(count)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="label-gap" className="text-xs text-muted-foreground">
+                  فاصله (mm)
+                </Label>
+                <Input
+                  id="label-gap"
+                  type="number"
+                  min={LABEL_GAP_LIMITS.minMm}
+                  max={LABEL_GAP_LIMITS.maxMm}
+                  disabled={geometry.labelsPerRow === 1}
+                  value={geometry.labelsPerRow === 1 ? 0 : (template.horizontalGapMm ?? "")}
+                  onChange={(event) => updateTemplate({ horizontalGapMm: event.target.value })}
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="label-media" className="text-xs text-muted-foreground">
+                  عرض رسانه (mm)
+                </Label>
+                <Input
+                  id="label-media"
+                  type="number"
+                  min={MEDIA_WIDTH_LIMITS.minMm}
+                  max={MEDIA_WIDTH_LIMITS.maxMm}
+                  disabled={geometry.labelsPerRow === 1}
+                  placeholder="خودکار"
+                  value={template.mediaWidthMm ?? ""}
+                  onChange={(event) => updateTemplate({ mediaWidthMm: event.target.value })}
+                  className="h-9"
+                />
+              </div>
+            </div>
+            {geometry.labelsPerRow > 1 && (
+              <p
+                role={geometry.error ? "alert" : undefined}
+                className={`text-xs ${geometry.error ? "font-medium text-destructive" : "text-muted-foreground"}`}
+              >
+                عرض لازم {formatNumber(geometry.requiredWidthMm)} — عرض رسانه {formatNumber(geometry.mediaWidthMm)}
+                {geometry.error
+                  ? " — جا نمی‌شود؛ تعداد یا فاصله را کم کنید یا عرض رسانه را زیاد کنید."
+                  : ` — باقی‌مانده ${formatNumber(geometry.remainingWidthMm)} میلی‌متر`}
+              </p>
+            )}
+          </div>
+        )}
 
         {geometry.layout === LABEL_LAYOUTS.ROLL && (
           <div className="space-y-1 rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs leading-relaxed text-foreground">
@@ -302,6 +378,7 @@ export default function LabelPrintDesigner({ units, onClose }) {
   if (!open) return null;
 
   const handlePrint = () => {
+    if (geometry.error) return;
     print({ pageSize: geometry.pageSize, pageMarginMm: 0 });
     setAskConfirm(true);
   };
@@ -346,7 +423,13 @@ export default function LabelPrintDesigner({ units, onClose }) {
         </div>
 
         <div className="border-t border-border p-3">
-          <Button type="button" size="lg" className="w-full gap-2" onClick={handlePrint}>
+          <Button
+            type="button"
+            size="lg"
+            className="w-full gap-2"
+            onClick={handlePrint}
+            disabled={Boolean(geometry.error)}
+          >
             <Printer className="h-4 w-4" />
             چاپ {formatNumber(count)} برچسب
           </Button>
@@ -354,7 +437,16 @@ export default function LabelPrintDesigner({ units, onClose }) {
       </aside>
 
       <div ref={scrollRef} className="print-portal__sheet flex-1 bg-muted/60 p-4">
-        <div style={{ transform: `scale(${scale})`, transformOrigin: "top center" }}>
+        <div
+          style={{
+            transform: `scale(${scale})`,
+            transformOrigin: "top center",
+            // عرضِ خودِ ورق، نه کلِ پنل: وگرنه scale(2) یک ورقِ ریز را به
+            // دو برابرِ پنل می‌رساند و اسکرولِ افقی می‌سازد.
+            width: "fit-content",
+            marginInline: "auto",
+          }}
+        >
           <LabelSheet
             items={units}
             preset={geometry}

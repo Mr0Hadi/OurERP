@@ -44,6 +44,21 @@ export const LABEL_SIZE_LIMITS = Object.freeze({
 
 const A4 = { widthMm: 210, heightMm: 297, marginMm: 8, gapMm: 2 };
 
+/** چند برچسب کنار هم روی رول؛ سقفِ انتخاب در UI (جا شدن را اعتبارسنجی تعیین می‌کند). */
+export const MAX_LABELS_PER_ROW = 8;
+export const LABEL_GAP_LIMITS = Object.freeze({ minMm: 0, maxMm: 20 });
+export const MEDIA_WIDTH_LIMITS = Object.freeze({ minMm: 20, maxMm: 300 });
+
+const round1 = (value) => Math.round(value * 10) / 10;
+
+/** عرضِ لازم = n×عرضِ برچسب + (n-1)×فاصله. با n=۱ فاصله بی‌اثر است. */
+export const requiredWidthMm = (labelWidthMm, labelsPerRow, gapMm) =>
+  round1(labelWidthMm * labelsPerRow + gapMm * (labelsPerRow - 1));
+
+/** بیشترین تعدادِ برچسبِ کنار هم که در عرضِ رسانه جا می‌شود (حداقل ۱). */
+export const maxLabelsPerRow = (labelWidthMm, gapMm, mediaWidthMm) =>
+  Math.max(1, Math.floor((mediaWidthMm + gapMm) / (labelWidthMm + gapMm)));
+
 const clamp = (value, min, max) => Math.min(max, Math.max(min, Number(value) || min));
 
 /**
@@ -67,18 +82,40 @@ export function sheetGeometryOf(template) {
   );
 
   if (layout === LABEL_LAYOUTS.ROLL) {
+    // قالب‌های قدیمیِ ذخیره‌شده این فیلدها را ندارند → ۱ برچسب، همان رفتارِ قبلی.
+    const labelsPerRow = Math.min(
+      MAX_LABELS_PER_ROW,
+      Math.max(1, Math.round(Number(template.labelsPerRow)) || 1),
+    );
+    const gapMm =
+      labelsPerRow === 1
+        ? 0
+        : clamp(template.horizontalGapMm ?? 0, LABEL_GAP_LIMITS.minMm, LABEL_GAP_LIMITS.maxMm);
+    const requiredMm = requiredWidthMm(widthMm, labelsPerRow, gapMm);
+    // رسانه‌ی خالی/نامعتبر = «به اندازه‌ی لازم» (رفتارِ قبلی برای تک‌برچسب).
+    const mediaInput = Number(template.mediaWidthMm);
+    const hasMedia = labelsPerRow > 1 && Number.isFinite(mediaInput) && mediaInput > 0;
+    const mediaMm = hasMedia ? mediaInput : requiredMm;
+    const fits = requiredMm <= mediaMm;
+
     return {
       layout,
-      pageSize: `${widthMm}mm ${heightMm}mm`,
-      pageWidthMm: widthMm,
+      pageSize: `${mediaMm}mm ${heightMm}mm`,
+      pageWidthMm: mediaMm,
       pageHeightMm: heightMm,
       pageMarginMm: 0,
-      columns: 1,
+      columns: labelsPerRow,
       rows: 1,
-      perPage: 1,
+      perPage: labelsPerRow,
       labelWidthMm: widthMm,
       labelHeightMm: heightMm,
-      gapMm: 0,
+      gapMm,
+      labelsPerRow,
+      requiredWidthMm: requiredMm,
+      mediaWidthMm: mediaMm,
+      remainingWidthMm: round1(mediaMm - requiredMm),
+      maxLabelsPerRow: hasMedia ? maxLabelsPerRow(widthMm, gapMm, mediaMm) : MAX_LABELS_PER_ROW,
+      error: fits ? null : "overflow",
     };
   }
 
@@ -99,6 +136,7 @@ export function sheetGeometryOf(template) {
     labelWidthMm: widthMm,
     labelHeightMm: heightMm,
     gapMm: A4.gapMm,
+    error: null,
   };
 }
 
@@ -155,6 +193,10 @@ export const LABEL_FIELDS = Object.freeze([
 export const DEFAULT_LABEL_TEMPLATE = Object.freeze({
   sizeKey: "sheet-62x33",
   custom: { layout: LABEL_LAYOUTS.ROLL, widthMm: 50, heightMm: 30 },
+  // فقط برای چیدمانِ رول؛ labelsPerRow=۱ یعنی تک‌برچسب و فاصله/رسانه بی‌اثرند.
+  labelsPerRow: 1,
+  horizontalGapMm: 2,
+  mediaWidthMm: null,
   codeType: LABEL_CODE_TYPES.BARCODE,
   codeScale: LABEL_SCALES.MEDIUM,
   fontScale: LABEL_SCALES.MEDIUM,
