@@ -66,22 +66,27 @@ namespace Application.Features.Product.Commands
     public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand, ResponseDto>
     {
         private readonly IProductRepository _productRepository;
+        private readonly IProductCategoryRepository _productCategoryRepository;
         private readonly IProductUnitService _productUnitService;
         private readonly IInventoryCostingService _inventoryCostingService;
         private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
-        public UpdateProductCommandHandler(IProductRepository productRepository, IProductUnitService productUnitService, IInventoryCostingService inventoryCostingService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
+        public UpdateProductCommandHandler(IProductRepository productRepository, IProductUnitService productUnitService, IInventoryCostingService inventoryCostingService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, IProductCategoryRepository productCategoryRepository)
         {
             _productRepository = productRepository;
             _productUnitService = productUnitService;
             _inventoryCostingService = inventoryCostingService;
             _objectStorageService = objectStorageService;
             _unitOfWork = unitOfWork;
+            _productCategoryRepository = productCategoryRepository;
         }
         public async Task<ResponseDto> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
             var product = await _productRepository.GetByIdAsync(request.Id, cancellationToken) ?? throw new ValidationCustomException("محصول مورد نظر یافت نشد.");
+
+            var category = await _productCategoryRepository.GetByIdAsync(request.ProductCategoryId)
+                    ?? throw new NotFoundCustomException("دسته بندی مورد نظر یافت نشد.");
 
             if (!product.IsIncomplete)
             {
@@ -96,6 +101,7 @@ namespace Application.Features.Product.Commands
             }
 
             product.Name = request.Name;
+            product.ProductCategoryId = request.ProductCategoryId;
             product.RequiresUnitTracking = request.RequiresUnitTracking;
             product.EnglishName = request.EnglishName;
             product.Brand = request.Brand ?? string.Empty;
