@@ -8,7 +8,8 @@ import { registerSW } from "virtual:pwa-register";
  * نکند فعال نمی‌شود (کارِ نیمه‌تمامِ فرم با بارگذاریِ دوباره از دست نرود).
  * سه راهِ رسیدن به نسخه‌ی تازه:
  *
- *  ۱. بررسیِ خودکار — هر ۱۵ دقیقه و هر بار که برگه دوباره دیده می‌شود؛ اگر
+ *  ۱. بررسیِ خودکار — هنگامِ باز شدنِ برنامه (نسخه‌ی تازه بی‌پرسش فعال می‌شود)،
+ *     سپس هر ۱۵ دقیقه، با دیده‌شدنِ دوباره‌ی برگه و با برگشتنِ اینترنت؛ اگر
  *     نسخه‌ای آمده باشد اعلان می‌آید.
  *  ۲. بررسیِ دستی — «بروزرسانی برنامه» در منوی کاربر (`AppUpdateDialog`).
  *  ۳. هنگامِ ورود — کسی که تازه وارد می‌شود کارِ نیمه‌تمامی ندارد، پس نسخه‌ی
@@ -212,6 +213,27 @@ export async function applyUpdateOnLogin({ waitMs = 3000 } = {}) {
   return status === UPDATE_STATUS.AVAILABLE ? applyUpdate() : false;
 }
 
+const LAUNCH_UPDATE_KEY = "app-update-launch-at";
+/** پشتِ‌سرهم خودکار بروزرسانی نمی‌کند؛ اگر نسخه‌ی تازه بعد از بارگذاری هم دیده شود، حلقه نشود. */
+const LAUNCH_UPDATE_COOLDOWN_MS = 5 * 60 * 1000;
+
+/**
+ * هنگامِ باز شدنِ برنامه: همین حالا نسخه‌ی روی سرور را می‌سنجد (نه بعد از ۱۵ دقیقه)
+ * و اگر قدیمی است بی‌پرسش فعالش می‌کند — کاربر تازه آمده و کارِ نیمه‌تمامی ندارد.
+ */
+async function applyUpdateOnLaunch() {
+  try {
+    const last = Number(localStorage.getItem(LAUNCH_UPDATE_KEY)) || 0;
+    if (Date.now() - last < LAUNCH_UPDATE_COOLDOWN_MS) return;
+    const status = await checkForUpdate();
+    if (status !== UPDATE_STATUS.AVAILABLE) return;
+    localStorage.setItem(LAUNCH_UPDATE_KEY, String(Date.now()));
+    applyUpdate();
+  } catch {
+    // localStorage در دسترس نیست؛ بروزرسانیِ دستی و اعلان کار می‌کنند.
+  }
+}
+
 /** یک بار، پیش از رندرِ برنامه (`main.jsx`). */
 export function initAppUpdates({ onOfflineReady } = {}) {
   registerSW({
@@ -223,6 +245,8 @@ export function initAppUpdates({ onOfflineReady } = {}) {
       setState({ supported: true });
       resolveRegistered?.();
       setInterval(checkForUpdate, PERIODIC_CHECK_MS);
+      window.addEventListener("online", checkForUpdate);
+      applyUpdateOnLaunch();
       // برگه‌ای که ساعت‌ها پشتِ برگه‌های دیگر بوده، با برگشتن بررسی می‌شود.
       document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "visible") checkForUpdate();

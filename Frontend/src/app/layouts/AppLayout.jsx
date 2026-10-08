@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { Suspense } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { ArrowRight, WifiOff } from "lucide-react";
 
@@ -21,9 +21,6 @@ import { useAuthStore } from "@/features/auth/store/authStore";
 import { useUserInfoQuery } from "@/features/auth/services/queries";
 import PermissionGate from "../routes/PermissionGate";
 
-// فرمِ ورود هنگامِ تأییدِ توکن (`checking`) از همین chunkِ صفحه‌ی ورود می‌آید.
-const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"));
-
 function ContentSpinner() {
   return (
     <div className="flex flex-1 items-center justify-center">
@@ -41,13 +38,11 @@ export default function AppLayout() {
   const location = useLocation();
 
   // `protectedLoader` فقط یک flagِ پرسیست‌شده در localStorage را چک می‌کند،
-  // نه اعتبار واقعی توکن نزد سرور — flag می‌تواند از یک نشستِ قبلیِ منقضی‌شده
-  // مانده باشد. تا وقتی این کوئری (که هر ۴۰۱ را از طریق interceptor به یک
-  // تلاشِ رفرش واقعی می‌رساند) به یک نتیجه‌ی قطعی نرسیده، محتوای محافظت‌شده
-  // را رندر نمی‌کنیم؛ وگرنه همان چیزی می‌شود که کاربر «فلشِ Home قبل از
-  // ریدایرکت به Login» می‌بیند.
+  // نه اعتبار واقعی توکن نزد سرور. عمداً منتظرِ تأییدش نمی‌مانیم: برنامه با
+  // همان flag بلافاصله رندر می‌شود و کوئریِ نشست (که هر ۴۰۱ را از طریق
+  // interceptor به یک تلاشِ رفرش واقعی می‌رساند) در پس‌زمینه می‌دود؛ اگر نشست
+  // واقعاً از دست رفته بود، پایین به ورود می‌رویم.
   const {
-    isSuccess: sessionConfirmed,
     isError: sessionFailed,
     error: sessionError,
     refetch: retrySession,
@@ -91,17 +86,6 @@ export default function AppLayout() {
           </Button>
         </div>
       </div>
-    );
-  }
-
-  // توکنِ ذخیره‌شده هنوز نزد سرور تأیید نشده: همان فرم ورود با حالتِ اسپینر
-  // نشان داده می‌شود. اگر تأیید شد وارد می‌شود، وگرنه (بالا) به ورود می‌رود و
-  // اسپینر برداشته می‌شود تا کاربر خودش وارد شود.
-  if (!sessionConfirmed) {
-    return (
-      <Suspense fallback={null}>
-        <LoginPage checking />
-      </Suspense>
     );
   }
 
