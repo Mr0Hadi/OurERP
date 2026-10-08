@@ -9,7 +9,6 @@ import {
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import ProductSearchPanel from "@/shared/components/forms/ProductSearchPanel";
-import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import { OFF_SCOPE_KINDS } from "@/shared/domain/returns/scopes";
 import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 import { claimLineKey } from "@/shared/hooks/useClaimsInOtherReturns";
@@ -212,9 +211,6 @@ export default function ReturnItemsSection({
   unlistedPanel,
 }) {
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
-  // فهرستِ کالاها (۲۰۰ ردیف) فقط برای «کالای سفارش‌نداده» لازم است؛ قبلاً با هر بار
-  // باز شدنِ صفحه گرفته می‌شد، حتی وقتی کاربر هیچ‌وقت این بخش را باز نمی‌کرد.
-  const { products, isLoading } = useProductsOptionsQuery({ enabled: isCatalogOpen });
 
   const excessOf = (orderLineId) =>
     offScopeClaims.filter(
@@ -311,14 +307,8 @@ export default function ReturnItemsSection({
             </p>
           )}
 
-          {isCatalogOpen &&
-            (isLoading ? (
-              <p className="text-xs text-muted-foreground text-center py-4">
-                در حال بارگذاری کالاها...
-              </p>
-            ) : (
+          {isCatalogOpen && (
               <ProductSearchPanel
-                products={products}
                 addedQuantityOf={(productId) =>
                   Number(
                     unlisted.find((claim) => claim.productId === productId)
@@ -338,7 +328,7 @@ export default function ReturnItemsSection({
                   )
                 }
               />
-            ))}
+            )}
 
           {unlisted.map((claim) => (
             <div

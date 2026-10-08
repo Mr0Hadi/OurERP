@@ -16,8 +16,6 @@ export default function DocumentItemsSection({
   title,
   items,
   onItemsChange,
-  products = [],
-  isLoadingProducts,
   priceOf,
   trackUnits = false,
   actions,
@@ -41,8 +39,6 @@ export default function DocumentItemsSection({
       <ProductPicker
         items={items}
         onItemsChange={onItemsChange}
-        products={products}
-        isLoading={isLoadingProducts}
         priceOf={priceOf}
         trackUnits={trackUnits}
         showTaxHint

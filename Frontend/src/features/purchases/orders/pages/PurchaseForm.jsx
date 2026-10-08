@@ -11,7 +11,6 @@ import {
   usePurchaseChangesSaver,
   useRemovePurchaseMutation,
 } from "@/features/purchases/orders/services/mutations";
-import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import {
   PURCHASE_SHIPPING_CHOICES,
   missingInvoiceFields,
@@ -85,7 +84,6 @@ export default function PurchaseForm({ purchase }) {
   const saver = usePurchaseChangesSaver(purchase?.id);
   const deleteMutation = useRemovePurchaseMutation();
   const statusMutation = useChangePurchaseStatusMutation(purchase?.id);
-  const { products, isLoading: productsLoading } = useProductsOptionsQuery();
 
   // تامین‌کننده‌ای که از داخلِ همین فرم ساخته شد (تا بکند شناسه را برگرداند —
   // بندِ ۹.۲ سندِ درخواست‌ها — عملاً اجرا نمی‌شود). نام را انتخابگر از سرور می‌خواند.
@@ -221,8 +219,6 @@ export default function PurchaseForm({ purchase }) {
               <DocumentItemsSection
                 title="اقلام خرید"
                 items={items}
-                products={products}
-                isLoadingProducts={productsLoading}
                 onItemsChange={setItems}
                 priceOf={purchasePriceOf}
                 onAddNewProduct={() => openSubPage(ROUTES.WAREHOUSE_PRODUCTS_NEW)}

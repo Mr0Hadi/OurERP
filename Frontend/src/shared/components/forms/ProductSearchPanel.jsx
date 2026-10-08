@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { List, Loader2, Plus, Search, X } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -13,6 +13,13 @@ import {
 } from "@/shared/components/ui/select";
 import RemoteImage from "@/shared/components/files/RemoteImage";
 import CameraScanButton from "@/shared/components/barcode/CameraScanButton";
+import {
+  PRODUCT_SEARCH_LIMIT,
+  useProductDetailLoader,
+  useProductSearchLoader,
+  useProductSearchQuery,
+} from "@/features/warehouse/products/services/queries";
+import { useProductCategoriesQuery } from "@/features/warehouse/categories/services/queries";
 import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 import { parseBarcode } from "@/shared/domain/barcode/productCode";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
@@ -20,7 +27,6 @@ import { formatNumber } from "@/shared/lib/numberFormat";
 import { toneText } from "@/shared/lib/tone";
 import { cn } from "@/shared/lib/utils";
 
-const MAX_RESULTS = 30;
 
 function stockTone(product) {
   if (product.stock === 0) return "danger";
@@ -31,14 +37,14 @@ function stockTone(product) {
 /**
  * جست‌وجو و افزودنِ کالا: یک فیلد برای نام/کد/برند و بارکدِ اسکنر، دکمه‌ی دوربین
  * کنارش، و زیرشان دسته‌بندی و «همه‌ی کالاها» — در هر عرضی دیده می‌شوند.
- *  - تایپ، فهرست را فیلتر می‌کند؛ ↑/↓ بینِ نتیجه‌ها و Enter قلمِ برجسته را
+ *  - تایپ، از سرور جست‌وجو می‌کند (نزدیک‌ترین ۲۰۰ نتیجه به نام، کد، بارکد یا برند)؛ ↑/↓ بینِ نتیجه‌ها و Enter قلمِ برجسته را
  *    اضافه می‌کند — بی موس.
  *  - اسکنرِ دستی در هر دو فیلد کار می‌کند: کد را می‌نویسد و Enter می‌زند؛ اگر
  *    متن بارکدِ کالا (یا دانه) باشد، همان کالا اضافه می‌شود.
  *  - کالای بی‌تصویر جای خالی نمی‌گذارد؛ کادرش «تصویر» نوشته دارد.
  *
- * فهرست تا جست‌وجو یا «نمایش همه» بسته است و بیش از `MAX_RESULTS` ردیف
- * نشان نمی‌دهد.
+ * فهرست تا جست‌وجو، انتخابِ دسته یا «نمایش همه» بسته است. کاتالوگ در مرورگر
+ * نگه داشته نمی‌شود؛ هر جست‌وجو به سرور می‌رود.
  *
  * `onAdd(product, reference?)` قلم را اضافه می‌کند؛ `false` یعنی رد شد (پیامش
  * را خودش داده). `addedQuantityOf(productId)` تعدادِ فعلیِ کالا در فهرست است
@@ -46,7 +52,7 @@ function stockTone(product) {
  * هنوز در راه است (دکمه چرخان می‌شود) و `onPrefetch(product)` جزئیات را پیش از
  * کلیک می‌گیرد تا اولین افزودن هم فوری باشد.
  */
-export default function ProductSearchPanel({ products, addedQuantityOf, isPending, onPrefetch, onAdd }) {
+export default function ProductSearchPanel({ addedQuantityOf, isPending, onPrefetch, onAdd }) {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [browseAll, setBrowseAll] = useState(false);
@@ -54,27 +60,15 @@ export default function ProductSearchPanel({ products, addedQuantityOf, isPendin
   const inputRef = useRef(null);
   const listId = useId();
 
-  const categories = useMemo(
-    () => [...new Set(products.map((p) => p.categoryName).filter(Boolean))].sort(),
-    [products],
-  );
-
-  const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return products.filter((p) => {
-      const matchSearch =
-        !term ||
-        p.name?.toLowerCase().includes(term) ||
-        p.code?.toLowerCase().includes(term) ||
-        p.brand?.toLowerCase().includes(term) ||
-        p.barcode?.toLowerCase().includes(term);
-      return matchSearch && (!categoryFilter || p.categoryName === categoryFilter);
-    });
-  }, [products, search, categoryFilter]);
+  const { data: categories = [] } = useProductCategoriesQuery();
+  const loadDetail = useProductDetailLoader();
+  const loadSearch = useProductSearchLoader();
 
   const isListOpen = Boolean(search.trim() || categoryFilter || browseAll);
-  const shown = filtered.slice(0, MAX_RESULTS);
-  const hiddenCount = filtered.length - shown.length;
+  const { products: shown, isSearching } = useProductSearchQuery(search, categoryFilter, {
+    enabled: isListOpen,
+  });
+  const hiddenCount = shown.length >= PRODUCT_SEARCH_LIMIT ? 1 : 0;
   const activeIndex = Math.min(active, Math.max(shown.length - 1, 0));
 
   const add = (product, reference) => {
@@ -94,12 +88,9 @@ export default function ProductSearchPanel({ products, addedQuantityOf, isPendin
   const scan = (code) => {
     const reference = parseBarcode(code);
     if (reference.kind === BarcodeReferenceKindEnum.UNKNOWN) return false;
-    const product = products.find((p) => Number(p.id) === reference.productId);
-    if (!product) {
-      toast.error(`کالایی با کد «${code}» پیدا نشد`);
-      return true;
-    }
-    add(product, reference);
+    loadDetail(reference.productId)
+      .then((product) => add({ id: reference.productId, ...product }, reference))
+      .catch(() => toast.error(`کالایی با کد «${code}» پیدا نشد`));
     return true;
   };
 
@@ -109,7 +100,7 @@ export default function ProductSearchPanel({ products, addedQuantityOf, isPendin
     inputRef.current?.focus();
   };
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = async (e) => {
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       if (!shown.length) return;
@@ -123,7 +114,16 @@ export default function ProductSearchPanel({ products, addedQuantityOf, isPendin
       const term = search.trim();
       if (!term) return;
       if (scan(term)) return resetSearch();
-      const product = shown[activeIndex];
+      // نتیجه‌ی تأخیری ممکن است هنوز نرسیده باشد؛ همان جست‌وجو بی‌تأخیر (با کش).
+      let results = shown;
+      if (isSearching) {
+        try {
+          results = await loadSearch(term, categoryFilter);
+        } catch {
+          results = [];
+        }
+      }
+      const product = results[Math.min(activeIndex, results.length - 1)];
       if (product) {
         add(product);
         resetSearch();
@@ -180,7 +180,10 @@ export default function ProductSearchPanel({ products, addedQuantityOf, isPendin
       <div className="flex items-center justify-between gap-2">
         <Select
           value={categoryFilter || "all"}
-          onValueChange={(v) => setCategoryFilter(v === "all" ? "" : v)}
+          onValueChange={(v) => {
+            setCategoryFilter(v === "all" ? "" : v);
+            setActive(0);
+          }}
         >
           <SelectTrigger aria-label="دسته‌بندی" size="sm" className="min-w-0 flex-1 sm:w-44 sm:flex-none">
             <SelectValue placeholder="همه دسته‌ها" />
@@ -188,8 +191,8 @@ export default function ProductSearchPanel({ products, addedQuantityOf, isPendin
           <SelectContent>
             <SelectItem value="all">همه دسته‌ها</SelectItem>
             {categories.map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {cat}
+              <SelectItem key={cat.id} value={String(cat.id)}>
+                {cat.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -208,7 +211,7 @@ export default function ProductSearchPanel({ products, addedQuantityOf, isPendin
               onClick={() => setBrowseAll(true)}
             >
               <List className="size-3.5" />
-              همه‌ی کالاها ({formatNumber(products.length)})
+              همه‌ی کالاها
             </Button>
           )
         )}
@@ -218,7 +221,9 @@ export default function ProductSearchPanel({ products, addedQuantityOf, isPendin
         <div className="overflow-hidden rounded-lg border border-border">
           <ul id={listId} role="listbox" className="custom-scroll max-h-72 divide-y divide-border overflow-y-auto bg-card">
             {shown.length === 0 && (
-              <li className="py-6 text-center text-sm text-muted-foreground">کالایی یافت نشد</li>
+              <li className="py-6 text-center text-sm text-muted-foreground">
+                {isSearching ? "در حال جست‌وجو…" : "کالایی یافت نشد"}
+              </li>
             )}
             {shown.map((product, index) => {
               const added = addedQuantityOf(product.id);
@@ -277,7 +282,7 @@ export default function ProductSearchPanel({ products, addedQuantityOf, isPendin
           </ul>
           {hiddenCount > 0 && (
             <p className="border-t border-border bg-muted/40 px-3 py-1.5 text-[11px] text-muted-foreground">
-              {formatNumber(hiddenCount)} کالای دیگر — دقیق‌تر جست‌وجو کنید.
+              فقط {formatNumber(PRODUCT_SEARCH_LIMIT)} نتیجه‌ی اول نشان داده شد — دقیق‌تر جست‌وجو کنید.
             </p>
           )}
         </div>

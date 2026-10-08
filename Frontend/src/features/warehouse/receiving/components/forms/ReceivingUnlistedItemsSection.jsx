@@ -12,7 +12,6 @@ import {
 import ProductSearchPanel from "@/shared/components/forms/ProductSearchPanel";
 import QuantityStepper from "@/shared/components/forms/QuantityStepper";
 import ObservationEditor from "@/shared/components/returns/ObservationEditor";
-import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 import { NO_QUANTITY_CAP } from "../../hooks/useReceivingForm";
 import QuickCreateProductDialog from "./QuickCreateProductDialog";
@@ -35,8 +34,6 @@ export default function ReceivingUnlistedItemsSection({
 }) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  // فهرستِ کالاها فقط وقتی انتخاب‌گر باز است؛ بیشترِ محموله‌ها کالای سفارش‌نداده ندارند.
-  const { products: productOptions, isLoading } = useProductsOptionsQuery({ enabled: isPickerOpen });
 
   const add = (product) => {
     const { rejected } = onAdd(product);
@@ -129,13 +126,7 @@ export default function ReceivingUnlistedItemsSection({
 
         {isPickerOpen && (
           <div className="border border-dashed border-border rounded-lg p-2.5">
-            {isLoading ? (
-              <p className="text-xs text-muted-foreground text-center py-4">
-                در حال بارگذاری کالاها...
-              </p>
-            ) : (
               <ProductSearchPanel
-                products={productOptions}
                 addedQuantityOf={(productId) =>
                   Number(rows.find((row) => row.productId === productId)?.arrivedQuantity) || 0
                 }
@@ -148,7 +139,6 @@ export default function ReceivingUnlistedItemsSection({
                   })
                 }
               />
-            )}
           </div>
         )}
 

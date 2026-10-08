@@ -13,7 +13,7 @@ import {
   useRemoveSaleMutation,
   useSaleChangesSaver,
 } from "@/features/sales/orders/services/mutations";
-import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
+import { useDocumentProducts } from "@/features/warehouse/products/services/queries";
 import {
   missingSaleInvoiceFields,
   saleFormProblem,
@@ -113,7 +113,6 @@ export default function SaleForm({ sale }) {
   const inPersonMutation = useCreateInPersonSaleMutation();
   const saver = useSaleChangesSaver(sale?.id);
   const deleteMutation = useRemoveSaleMutation();
-  const { products, isLoading: productsLoading } = useProductsOptionsQuery();
 
   // مشتری‌ای که از داخلِ همین فرم ساخته شد (تا بکند شناسه را برگرداند —
   // بندِ ۹.۲ — عملاً اجرا نمی‌شود). نام را انتخابگر از سرور می‌خواند.
@@ -135,8 +134,9 @@ export default function SaleForm({ sale }) {
   const totals = invoiceTotals(items);
   const scannedBarcodes = scannedBarcodesOf(items);
   const isInPerson = isNew && Object.keys(scannedBarcodes).length > 0;
+  const { productMap } = useDocumentProducts(items.map((item) => item.productId));
   const isTracked = (productId) =>
-    Boolean(products.find((product) => product.id === productId)?.requiresUnitTracking);
+    Boolean(productMap.get(Number(productId))?.requiresUnitTracking);
   const paid = payments.netPaid;
 
   const isInstallment = Boolean(formData.installment);
@@ -370,8 +370,6 @@ export default function SaleForm({ sale }) {
               <SaleItemsSection
                 items={items}
                 onItemsChange={setItems}
-                products={products}
-                isLoadingProducts={productsLoading}
                 priceMode={formData.priceMode}
                 onPriceModeChange={(priceMode) => setFormData({ priceMode })}
                 onAddNewProduct={() => openSubPage(ROUTES.WAREHOUSE_PRODUCTS_NEW)}

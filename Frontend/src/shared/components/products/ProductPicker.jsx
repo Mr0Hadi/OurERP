@@ -6,7 +6,7 @@ import SelectedItemsTable from "@/shared/components/forms/SelectedItemsTable";
 import SelectedItemsCards from "@/shared/components/forms/SelectedItemsCards";
 import toast from "react-hot-toast";
 import { lineFromProduct } from "@/shared/domain/invoice/lineFromProduct";
-import { useProductDetailLoader } from "@/features/warehouse/products/services/queries";
+import { useDocumentProducts, useProductDetailLoader } from "@/features/warehouse/products/services/queries";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
 import {
@@ -41,14 +41,12 @@ const lineTotalOf = (item) => invoiceLineAmounts(item).totalAmount;
 export default function ProductPicker({
   items,
   onItemsChange,
-  products = [],
-  isLoading = false,
   priceOf = (product) => product.retailPrice ?? 0,
   emptyText = "هنوز کالایی انتخاب نشده",
   collapsible = false,
   openLabel = "انتخاب کالا",
   closeLabel = "بستن لیست کالاها",
-  // حالتِ تاشو: باز/بسته شدنِ فهرست، تا فراخوان کالاها را فقط وقتِ باز بودن بگیرد.
+  // حالتِ تاشو: باز/بسته شدنِ فهرست.
   onPickerOpenChange,
   // اسکنِ بارکدِ دانه، کدش را روی همان قلم نگه می‌دارد (`productUnitBarcodes`).
   trackUnits = false,
@@ -177,13 +175,15 @@ export default function ProductPicker({
   const grandTotal = totals.totalAmount;
 
   /**
-   * قلم‌هایی که از سرور آمده‌اند گاهی نام/کدِ کالا را ندارند؛ از فهرستِ کالاها
-   * (که همین‌جا در دسترس است) پر می‌شوند — فقط برای نمایش، چیزی به state اضافه
-   * نمی‌شود. (واحد و مالیات در ردیفِ لیست نیستند، پس از این راه پر نمی‌شوند.)
+   * قلم‌هایی که از سرور آمده‌اند گاهی نام/کدِ کالا را ندارند؛ جزئیاتِ فقط همان
+   * کالاها گرفته و پر می‌شود — فقط برای نمایش، چیزی به state اضافه نمی‌شود.
    */
+  const { productMap } = useDocumentProducts(
+    items.filter((item) => !(item.productName && item.productCode)).map((item) => item.productId),
+  );
   const displayItems = items.map((item) => {
     if (item.productName && item.productCode) return item;
-    const product = products.find((candidate) => candidate.id === item.productId);
+    const product = productMap.get(Number(item.productId));
     if (!product) return item;
     return {
       ...item,
@@ -219,13 +219,8 @@ export default function ProductPicker({
     </>
   );
 
-  const searchPanel = isLoading ? (
-    <p className="text-xs text-muted-foreground text-center py-4">
-      در حال بارگذاری کالاها...
-    </p>
-  ) : (
+  const searchPanel = (
     <ProductSearchPanel
-      products={products}
       addedQuantityOf={addedQuantityOf}
       isPending={(productId) => pendingIds.includes(productId)}
       onPrefetch={prefetchDetail}

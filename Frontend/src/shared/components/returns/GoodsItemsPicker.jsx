@@ -1,6 +1,4 @@
-import { useState } from "react";
 import ProductPicker from "@/shared/components/products/ProductPicker";
-import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
 
 /**
  * انتخاب کالاهای یک محورِ کالاییِ تصمیم — چه به سمت مشتری برود و چه
@@ -16,8 +14,7 @@ import { useProductsOptionsQuery } from "@/features/warehouse/products/services/
  * هیچ کالایی انتخاب نشود، دامنه خودش کالای ادعا را با تعدادِ تصمیم
  * می‌گذارد.
  *
- * فهرستِ کالاها (۲۰۰ ردیف) فقط وقتی گرفته می‌شود که انتخابگر باز است؛ حالتِ رایج
- * «همان کالا» هیچ‌وقت بازش نمی‌کند.
+ * کالاها فقط با جست‌وجو از سرور می‌آیند.
  */
 export default function GoodsItemsPicker({
   items,
@@ -25,21 +22,14 @@ export default function GoodsItemsPicker({
   openLabel = "انتخاب کالا",
   priceOf,
 }) {
-  // همان مقدارِ اولیه‌ی `ProductPicker`: بی قلمِ انتخاب‌شده باز است.
-  const [isOpen, setIsOpen] = useState(items.length === 0);
-  const { products, isLoading } = useProductsOptionsQuery({ enabled: isOpen });
-
   return (
     <ProductPicker
       items={items}
       onItemsChange={onItemsChange}
-      products={products}
-      isLoading={isLoading}
       collapsible
       openLabel={openLabel}
       priceOf={priceOf}
       closeLabel="بستن لیست کالاها"
-      onPickerOpenChange={setIsOpen}
     />
   );
 }
