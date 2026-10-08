@@ -115,6 +115,7 @@ namespace Application.Features.Sale.Queries
             var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
             var sorted = request.SortBy switch
             {
+                SaleListSortEnum.ID => query.SortBy(x => x.Id, direction),
                 SaleListSortEnum.INVOICE_NUMBER => query.SortBy(x => x.InvoiceNumber, direction),
                 SaleListSortEnum.CUSTOMER_NAME => query.SortBy(x => x.Customer.FirstName + " " + x.Customer.LastName, direction),
                 SaleListSortEnum.INVOICE_DATE => query.SortBy(x => x.InvoiceDate, direction),

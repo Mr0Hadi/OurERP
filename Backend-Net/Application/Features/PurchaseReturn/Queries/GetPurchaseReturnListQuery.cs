@@ -20,6 +20,7 @@ namespace Application.Features.PurchaseReturn.Queries
         STATUS = 5,
         TOTAL_QUANTITY = 6,
         TOTAL_AMOUNT = 7,
+        ID = 8,
     }
 
     public class GetPurchaseReturnListQuery : IRequest<ResponseDto>
@@ -103,6 +104,7 @@ namespace Application.Features.PurchaseReturn.Queries
             var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
             var sorted = request.SortBy switch
             {
+                PurchaseReturnListSortEnum.ID => query.SortBy(x => x.Id, direction),
                 PurchaseReturnListSortEnum.RETURN_NUMBER => query.SortBy(x => x.ReturnNumber, direction),
                 PurchaseReturnListSortEnum.RETURN_DATE => query.SortBy(x => x.ReturnDate, direction),
                 PurchaseReturnListSortEnum.PURCHASE_INVOICE_NUMBER => query.SortBy(x => x.Purchase.InvoiceNumber, direction),

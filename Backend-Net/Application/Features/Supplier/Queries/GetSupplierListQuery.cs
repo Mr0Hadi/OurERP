@@ -54,6 +54,7 @@ namespace Application.Features.Supplier.Queries
             var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
             var sorted = request.SortBy switch
             {
+                SupplierListSortEnum.ID => query.SortBy(x => x.Id, direction),
                 SupplierListSortEnum.COMPANY_NAME => query.SortBy(x => x.CompanyName, direction),
                 SupplierListSortEnum.FIRST_NAME => query.SortBy(x => x.FirstName, direction),
                 SupplierListSortEnum.LAST_NAME => query.SortBy(x => x.LastName, direction),

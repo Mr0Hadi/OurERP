@@ -99,6 +99,7 @@ namespace Application.Features.SaleReturn.Queries
             var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
             var sorted = request.SortBy switch
             {
+                SaleReturnListSortEnum.CREATED_AT => query.SortBy(x => x.CreatedAt, direction),
                 SaleReturnListSortEnum.RETURN_NUMBER => query.SortBy(x => x.ReturnNumber, direction),
                 SaleReturnListSortEnum.RETURN_DATE => query.SortBy(x => x.ReturnDate, direction),
                 SaleReturnListSortEnum.SALE_INVOICE_NUMBER => query.SortBy(x => x.Sale!.InvoiceNumber, direction),

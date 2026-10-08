@@ -82,6 +82,7 @@ namespace Application.Features.Pos.Queries
             var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
             var sorted = request.SortBy switch
             {
+                PosPaymentListSortEnum.PAID_AT => query.SortBy(x => x.PaidAt, direction),
                 PosPaymentListSortEnum.RECORDED_AT => query.SortBy(x => x.RecordedAt, direction),
                 PosPaymentListSortEnum.AMOUNT => query.SortBy(x => x.Amount, direction),
                 _ => query.SortBy(x => x.PaidAt, direction),
