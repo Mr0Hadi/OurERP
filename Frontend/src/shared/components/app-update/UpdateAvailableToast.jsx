@@ -2,7 +2,7 @@ import toast from "react-hot-toast";
 import { Download, X } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import { applyUpdate, setUpdateDialogOpen } from "@/shared/services/appUpdate";
+import { applyUpdate, blockedMessage, setUpdateDialogOpen } from "@/shared/services/appUpdate";
 
 /**
  * اعلانِ «نسخه‌ی تازه آماده است». با «بعداً» بسته می‌شود ولی بروزرسانی از
@@ -27,8 +27,9 @@ export default function UpdateAvailableToast({ id }) {
             type="button"
             size="sm"
             onClick={() => {
-              toast.dismiss(id);
-              applyUpdate();
+              const { started, reason } = applyUpdate();
+              if (started) toast.dismiss(id);
+              else if (reason) toast.error(blockedMessage(reason));
             }}
           >
             بروزرسانی

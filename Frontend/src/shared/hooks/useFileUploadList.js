@@ -11,6 +11,7 @@ import {
 } from "@/shared/services/files/fileConstraints";
 import { useSeedImageUrl } from "@/shared/services/files/queries";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
+import { UPLOADING_REASON, useUpdateGuard } from "@/shared/services/updateSafety";
 
 /**
  * چند فایلِ یک *سند*، نه یک موجودیت — ضمیمه‌ی فاکتور/پیش‌فاکتور
@@ -265,6 +266,7 @@ export function useFileUploadList({
   }, [deleteOrphans]);
 
   const isUploading = items.some((item) => item.status === "uploading");
+  useUpdateGuard({ busy: isUploading, reason: UPLOADING_REASON });
 
   /**
    * فقط قلم‌هایی که کلید گرفته‌اند؛ قلمِ نیمه‌آپلود یا شکست‌خورده هرگز به

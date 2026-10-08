@@ -169,7 +169,9 @@ export function usePosPayment({ record, onRecorded }) {
 
   // از ارسالِ مبلغ تا ثبت: نه بستنِ برگه، نه رفتن به صفحه‌ی دیگرِ برنامه.
   const inFlight = isPosBusy(state.status) || holdsMoney(state.status);
-  const blocker = useUnsavedChangesGuard(inFlight);
+  const blocker = useUnsavedChangesGuard(inFlight, {
+    reason: "کارتخوان یا ثبتِ پرداخت در جریان است",
+  });
   useEffect(() => {
     if (blocker.state !== "blocked") return;
     toast.error("تا پایانِ کارِ کارتخوان و ثبتِ پرداخت نمی‌توانید از این صفحه بروید.");

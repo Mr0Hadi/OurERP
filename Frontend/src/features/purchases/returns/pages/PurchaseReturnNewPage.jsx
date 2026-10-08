@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import { Button } from "@/shared/components/ui/button";
+import { useUpdateGuard } from "@/shared/services/updateSafety";
 import { useGoBack } from "@/shared/hooks/useGoBack";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
@@ -111,6 +112,7 @@ export default function PurchaseReturnNewPage() {
   const isBusy = createMutation.isPending || acceptMutation.isPending;
   const { excessPurchases, offScopeCaps, returnedIn, setPurchase } = form;
   const hasClaims = form.allClaims.length > 0;
+  useUpdateGuard({ dirty: hasClaims, busy: isBusy, reason: "مرجوعیِ خرید در حال ثبت یا ذخیره‌نشده است" });
   const hasPurchases = Object.keys(excessPurchases).length > 0;
 
   const changePurchase = (purchaseId) => {

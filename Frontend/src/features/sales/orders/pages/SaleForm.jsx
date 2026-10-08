@@ -38,6 +38,8 @@ import { paymentTypeOf } from "@/shared/domain/payments/paymentRows";
 import { useDocumentAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
 import { useReturnedNewProduct } from "@/shared/components/products/useReturnedNewProduct";
 import { useDocumentFormDraft } from "@/shared/hooks/useDocumentFormDraft";
+import { isDocumentFormChanged } from "@/shared/store/createDocumentFormStore";
+import { useUpdateGuard } from "@/shared/services/updateSafety";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { reportFormProblem } from "@/shared/lib/scrollToSection";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
@@ -256,6 +258,19 @@ export default function SaleForm({ sale }) {
     Number(formData.status || SaleStatusEnum.PROFORMA) !== SaleStatusEnum.PROFORMA;
   const invoiceErrors = missingSaleInvoiceFields(formData, isInvoice);
 
+  const isBusy =
+    createMutation.isPending ||
+    installmentCreateMutation.isPending ||
+    installmentIssueMutation.isPending ||
+    inPersonMutation.isPending ||
+    saver.isPending ||
+    deleteMutation.isPending ||
+    attachments.isUploading ||
+    posLocked;
+  // نسخه‌ی تازه‌ی برنامه نباید فاکتورِ نیمه‌کاره یا ثبتِ در جریان را از بین ببرد.
+  const changed = useSaleFormStore(isDocumentFormChanged);
+  useUpdateGuard({ dirty: changed, busy: isBusy, reason: "فاکتورِ فروش در حال ثبت یا ذخیره‌نشده است" });
+
   if (!ready) return null;
 
   const onSubmit = (e) => {
@@ -327,15 +342,6 @@ export default function SaleForm({ sale }) {
   };
 
   const canEdit = isNew || allows("SaleUpdate");
-  const isBusy =
-    createMutation.isPending ||
-    installmentCreateMutation.isPending ||
-    installmentIssueMutation.isPending ||
-    inPersonMutation.isPending ||
-    saver.isPending ||
-    deleteMutation.isPending ||
-    attachments.isUploading ||
-    posLocked;
   const submitLabel = isInPerson
     ? "ثبت و تحویل حضوری"
     : isInstallment && isInvoice

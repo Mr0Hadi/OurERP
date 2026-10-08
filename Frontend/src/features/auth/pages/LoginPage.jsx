@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
@@ -23,9 +23,10 @@ import { ThemeToggle } from "@/shared/components/theme/ThemeToggle";
 import { useLoginMutation } from "../services/queries";
 import { ROUTES } from "@/shared/constants/routes";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
+import { useUpdateGuard } from "@/shared/services/updateSafety";
 import {
   UPDATE_STATUS,
-  applyUpdate,
+  applyUpdateAutomatically,
   applyUpdateOnLogin,
   checkForUpdate,
   onUpdateAvailable,
@@ -57,7 +58,7 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
-    getValues,
+    control,
     formState: { errors },
   } = useForm({
     defaultValues: { username: "", password: "" },
@@ -67,22 +68,21 @@ export default function LoginPage() {
   const { mutate: login, isPending } = useLoginMutation();
 
   // کاربر باید با آخرین نسخه وارد شود، نه اینکه بعداً منتظرِ اعلان بماند.
-  // همین که صفحه‌ی ورود باز شد نسخه‌ی تازه بررسی و دریافت می‌شود؛ اگر آماده
-  // شد و هنوز چیزی تایپ نشده، همین‌جا فعال می‌شود (بارگذاریِ دوباره چیزی را
-  // از بین نمی‌برد). وگرنه بعد از ورودِ موفق فعال می‌شود.
-  // «آماده شد» هم از بررسیِ همین‌جا می‌آید و هم از رویدادِ خودِ service
-  // worker که ممکن است دیرتر برسد؛ هر دو به یک تصمیم می‌رسند.
+  // همین که صفحه‌ی ورود باز شد نسخه‌ی تازه بررسی و دریافت می‌شود و اگر آماده شد
+  // فعال می‌شود — مگر چیزی تایپ شده باشد: آن هم مثلِ هر فرمِ دیگر در دفترِ ایمنیِ
+  // بروزرسانی ثبت است، پس نه خودکار فعال می‌شود و نه با «بروزرسانی»ِ دستی. وگرنه
+  // بعد از ورودِ موفق فعال می‌شود. «آماده شد» هم از بررسیِ همین‌جا می‌آید و هم از
+  // رویدادِ خودِ service worker که ممکن است دیرتر برسد؛ هر دو به یک تصمیم می‌رسند.
+  const [username, password] = useWatch({ control, name: ["username", "password"] });
+  useUpdateGuard({ dirty: Boolean(username || password), reason: "اطلاعاتِ فرمِ ورود را وارد کرده‌اید" });
+
   useEffect(() => {
-    const applyIfPristine = () => {
-      const { username, password } = getValues();
-      if (!username && !password) applyUpdate();
-    };
-    const unsubscribe = onUpdateAvailable(applyIfPristine);
+    const unsubscribe = onUpdateAvailable(applyUpdateAutomatically);
     checkForUpdate().then((status) => {
-      if (status === UPDATE_STATUS.AVAILABLE) applyIfPristine();
+      if (status === UPDATE_STATUS.AVAILABLE) applyUpdateAutomatically();
     });
     return unsubscribe;
-  }, [getValues]);
+  }, []);
 
   const onSubmit = (values) => {
     login(values, {

@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { useFormDraftStore } from "@/shared/store/formDraftStore";
+import { useUpdateGuard } from "@/shared/services/updateSafety";
 
 /** کلیدِ `formDraftStore` برای داده‌ای که به صفحه‌ی مبدأ برمی‌گردد. */
 export const returnedDataKey = (path) => `returned:${path}`;
@@ -29,6 +30,13 @@ export function useReturnTo(fallback) {
 
   const returnTo = location.state?.returnTo ?? null;
   const viaHistory = location.state?.returnVia === "back";
+
+  // فرمِ مبدأ (فاکتور، …) پیش‌نویسش را در حافظه نگه داشته و منتظرِ برگشتن است؛
+  // بارگذاریِ دوباره در این فاصله آن را از بین می‌برد. با رفتن از این صفحه برداشته می‌شود.
+  useUpdateGuard({
+    dirty: Boolean(returnTo && viaHistory),
+    reason: "فرمِ نیمه‌کاره‌ای در صفحه‌ی قبل دارید",
+  });
 
   const goBack = useCallback(
     (state) => {

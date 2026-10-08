@@ -4,6 +4,8 @@ import toast from "react-hot-toast";
 import { Ban, Trash2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
+import { isDocumentFormChanged } from "@/shared/store/createDocumentFormStore";
+import { useUpdateGuard } from "@/shared/services/updateSafety";
 import { usePurchaseFormStore } from "@/features/purchases/orders/store/purchaseFormStore";
 import {
   useChangePurchaseStatusMutation,
@@ -99,6 +101,16 @@ export default function PurchaseForm({ purchase }) {
     priceOf: purchasePriceOf,
   });
 
+  const isBusy =
+    createMutation.isPending ||
+    saver.isPending ||
+    deleteMutation.isPending ||
+    statusMutation.isPending ||
+    attachments.isUploading;
+  // نسخه‌ی تازه‌ی برنامه نباید فاکتورِ نیمه‌کاره یا ثبتِ در جریان را از بین ببرد.
+  const changed = usePurchaseFormStore(isDocumentFormChanged);
+  useUpdateGuard({ dirty: changed, busy: isBusy, reason: "فاکتورِ خرید در حال ثبت یا ذخیره‌نشده است" });
+
   if (!ready) return null;
 
   const items = formData.items || [];
@@ -185,12 +197,6 @@ export default function PurchaseForm({ purchase }) {
   const deletable = !isNew && !hasPrepayments && allows("PurchaseDelete");
   const cancellable = !isNew && hasPrepayments && canEdit;
 
-  const isBusy =
-    createMutation.isPending ||
-    saver.isPending ||
-    deleteMutation.isPending ||
-    statusMutation.isPending ||
-    attachments.isUploading;
   const submitLabel = isNew
     ? isInvoice
       ? "ثبت فاکتور"

@@ -1,19 +1,22 @@
 import { create } from "zustand";
 import { registerSW } from "virtual:pwa-register";
 
+import { getUpdateBlocker, useUpdateSafetyStore } from "@/shared/services/updateSafety";
+
 /**
  * نسخه‌ی برنامه و بروزرسانی — تنها جایی که service worker ثبت و مدیریت می‌شود.
  *
- * با `registerType: "prompt"` نسخه‌ی تازه دانلود می‌شود ولی تا کاربر تأیید
- * نکند فعال نمی‌شود (کارِ نیمه‌تمامِ فرم با بارگذاریِ دوباره از دست نرود).
- * سه راهِ رسیدن به نسخه‌ی تازه:
+ * با `registerType: "prompt"` نسخه‌ی تازه دانلود می‌شود ولی تا فعال نشود صفحه
+ * عوض نمی‌شود. فعال‌شدن بارگذاریِ دوباره است و هر کارِ نیمه‌تمام را از بین
+ * می‌برد، پس فقط وقتی انجام می‌شود که `getUpdateBlocker()` (دفترِ
+ * `updateSafety.js`: فرمِ ذخیره‌نشده، کارتخوان، آپلود، ثبتِ در جریان) خالی باشد.
  *
- *  ۱. بررسیِ خودکار — هنگامِ باز شدنِ برنامه (نسخه‌ی تازه بی‌پرسش فعال می‌شود)،
- *     سپس هر ۱۵ دقیقه، با دیده‌شدنِ دوباره‌ی برگه و با برگشتنِ اینترنت؛ اگر
- *     نسخه‌ای آمده باشد اعلان می‌آید.
- *  ۲. بررسیِ دستی — «بروزرسانی برنامه» در منوی کاربر (`AppUpdateDialog`).
- *  ۳. هنگامِ ورود — کسی که تازه وارد می‌شود کارِ نیمه‌تمامی ندارد، پس نسخه‌ی
- *     آماده بی‌پرسش فعال می‌شود (`applyUpdateOnLogin`).
+ * نسخه‌ی تازه از این راه‌ها پیدا می‌شود: هنگامِ باز شدنِ برنامه، هر ۱۵ دقیقه،
+ * با دیده‌شدنِ دوباره‌ی برگه، با برگشتنِ اینترنت و دستی از «بروزرسانی برنامه».
+ * پیدا شدن فقط اعلان می‌دهد؛ بروزرسانی را کاربر با «بروزرسانی» می‌زند
+ * (`applyUpdate`) — حتی آن هم اگر کاری در جریان باشد انجام نمی‌شود و دلیلش گفته
+ * می‌شود. تنها استثنا صفحه‌ی ورودِ دست‌نخورده و لحظه‌ی بعد از ورود است
+ * (`applyUpdateAutomatically`)، با سقفِ تعدادِ تلاش برای جلوگیری از حلقه.
  *
  * در حالتِ توسعه service worker ثبت نمی‌شود و `supported` خاموش می‌ماند.
  */
@@ -33,6 +36,8 @@ export const UPDATE_STATUS = Object.freeze({
 const PERIODIC_CHECK_MS = 15 * 60 * 1000;
 /** نصبِ نسخه‌ی تازه (دانلودِ فایل‌های precache) بیش از این منتظر نمی‌ماند. */
 const INSTALL_TIMEOUT_MS = 30 * 1000;
+/** فعال‌سازی (تغییرِ controller و بارگذاریِ دوباره) بیش از این طول نکشد، وگرنه شکست حساب می‌شود. */
+const ACTIVATION_TIMEOUT_MS = 10 * 1000;
 
 export const useAppUpdateStore = create(() => ({
   supported: false,
@@ -41,12 +46,21 @@ export const useAppUpdateStore = create(() => ({
   // پنجره‌ی «بروزرسانی برنامه» یک بار در `App` سوار است و از منوی کاربر و
   // اعلان باز می‌شود.
   dialogOpen: false,
+  // دلیلِ اینکه «بروزرسانی» الان انجام نشد (کارِ ذخیره‌نشده/در جریان)؛ با رفتنِ دلیل پاک می‌شود.
+  blockedReason: null,
+  // فعال‌سازیِ آخر در مهلت تمام نشد؛ نسخه‌ی تازه هنوز آماده است و می‌شود دوباره زد.
+  activationFailed: false,
 }));
 
 const setState = useAppUpdateStore.setState;
 const getState = useAppUpdateStore.getState;
 
 export const setUpdateDialogOpen = (dialogOpen) => setState({ dialogOpen });
+
+// دلیلِ «انجام نشد» وقتی دیگر درست نیست (کاربر ذخیره کرد) از پنجره برداشته می‌شود.
+useUpdateSafetyStore.subscribe(() => {
+  if (getState().blockedReason && !getUpdateBlocker()) setState({ blockedReason: null });
+});
 
 let registration = null;
 let resolveRegistered;
@@ -122,7 +136,10 @@ async function waitForWorker() {
  * «آخرین نسخه را دارید» غلط گزارش می‌شد.
  */
 export function checkForUpdate() {
-  if (getState().status === UPDATE_STATUS.AVAILABLE) return Promise.resolve(UPDATE_STATUS.AVAILABLE);
+  const { status } = getState();
+  if (status === UPDATE_STATUS.AVAILABLE || status === UPDATE_STATUS.UPDATING) {
+    return Promise.resolve(status);
+  }
   if (pendingCheck) return pendingCheck;
 
   pendingCheck = (async () => {
@@ -160,82 +177,175 @@ export function checkForUpdate() {
   return pendingCheck;
 }
 
-/** worker و کش‌ها را پاک می‌کند و از نو بارگذاری می‌شود (نشست در localStorage می‌ماند). */
-async function hardReload() {
+const HARD_RESET_KEY = "app-update-hard-reset";
+
+/** worker و کش‌ها را پاک می‌کند (نشست در localStorage می‌ماند). */
+async function clearWorkersAndCaches() {
   try {
     const regs = await navigator.serviceWorker.getRegistrations();
     await Promise.all(regs.map((r) => r.unregister()));
     const keys = await caches.keys();
     await Promise.all(keys.map((k) => caches.delete(k)));
-  } finally {
-    window.location.reload();
+  } catch {
+    // پاک‌سازی ناقص هم بهتر از ماندن روی نسخه‌ی کهنه است؛ بارگذاری ادامه می‌یابد.
   }
 }
 
 /**
- * نسخه‌ی آماده را فعال می‌کند؛ صفحه روی همان نشانی از نو بارگذاری می‌شود.
- *
- * بارگذاریِ دوباره اینجا با `controllerchange` انجام می‌شود، نه با
- * `updateSW(true)`ِ vite-plugin-pwa: آن فقط وقتی صفحه را از نو بارگذاری
- * می‌کند که رویدادِ `waiting`ِ workbox قبلاً رسیده باشد، و نسخه‌ای که
- * `checkForUpdate` زودتر پیدا کرده فعال می‌شد ولی صفحه روی نسخه‌ی قبلی
- * می‌ماند.
+ * پاک‌سازیِ کاملِ worker و کش، *بعد از* بارگذاریِ دوباره: اگر کاربر بارگذاریِ
+ * اول را لغو کند (پیامِ «ترکِ صفحه؟») چیزی پاک نشده و برنامه سالم می‌ماند.
+ * `true` یعنی همین حالا پاک‌سازی و بارگذاری در کار است و برنامه نباید بالا بیاید.
  */
-export function applyUpdate() {
-  if (getState().status !== UPDATE_STATUS.AVAILABLE) return false;
-  setState({ status: UPDATE_STATUS.UPDATING });
+function resumeHardReset() {
+  try {
+    if (sessionStorage.getItem(HARD_RESET_KEY) !== "1") return false;
+    sessionStorage.removeItem(HARD_RESET_KEY);
+  } catch {
+    return false;
+  }
+  clearWorkersAndCaches().finally(() => window.location.reload());
+  return true;
+}
+
+/** نسخه‌ای که worker نشانش نداد (کشِ میانی): بارگذاریِ دوباره، و پاک‌سازی در بارِ بعد. */
+function hardReload() {
+  try {
+    sessionStorage.setItem(HARD_RESET_KEY, "1");
+  } catch {
+    // بدونِ نشانه پاک‌سازیِ بعدی ممکن نیست؛ بارگذاریِ ساده بی‌خطر است.
+  }
+  window.location.reload();
+}
+
+let activationTimer = null;
+let onControllerChange = null;
+
+function clearActivation() {
+  clearTimeout(activationTimer);
+  activationTimer = null;
+  if (onControllerChange) {
+    navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
+    onControllerChange = null;
+  }
+}
+
+/** صفحه در مهلت عوض نشد (فعال‌سازی گم شد یا بارگذاری لغو شد): به «آماده» برمی‌گردد. */
+function failActivation() {
+  clearActivation();
+  try {
+    // بارگذاریِ لغوشده نباید پاک‌سازیِ بی‌دلیل را به بارِ بعد منتقل کند.
+    sessionStorage.removeItem(HARD_RESET_KEY);
+  } catch {
+    // sessionStorage در دسترس نیست؛ نشانه‌ای هم گذاشته نشده بود.
+  }
+  setState({ status: UPDATE_STATUS.AVAILABLE, activationFailed: true });
+}
+
+/** فعال‌سازی و بارگذاریِ دوباره، بی‌پرسش از دفترِ ایمنی — فقط از `applyUpdate*`. */
+function activate() {
+  setState({ status: UPDATE_STATUS.UPDATING, blockedReason: null, activationFailed: false });
+  activationTimer = setTimeout(failActivation, ACTIVATION_TIMEOUT_MS);
   const waiting = registration?.waiting;
   if (!waiting) {
     hardReload();
-    return true;
+    return;
   }
-  let reloading = false;
-  navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (reloading) return;
-    reloading = true;
+  // بارگذاریِ دوباره با `controllerchange` است، نه `updateSW(true)`ِ
+  // vite-plugin-pwa: آن فقط وقتی صفحه را بارگذاری می‌کند که رویدادِ `waiting`ِ
+  // workbox قبلاً رسیده باشد، و نسخه‌ای که `checkForUpdate` زودتر پیدا کرده
+  // فعال می‌شد ولی صفحه روی نسخه‌ی قبلی می‌ماند.
+  onControllerChange = () => {
+    clearActivation();
+    // کاربر بین «بروزرسانی» و تغییرِ controller کاری شروع کرده؟ بارگذاری نمی‌شود؛
+    // worker تازه فعال است و «بروزرسانی»ِ بعدی (بدونِ worker منتظر) صفحه را بارگذاری می‌کند.
+    const reason = getUpdateBlocker();
+    if (reason) {
+      setState({ status: UPDATE_STATUS.AVAILABLE, blockedReason: reason });
+      return;
+    }
     window.location.reload();
-  });
+  };
+  navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
   // همان پیامی که service workerِ ساخته‌ی workbox با آن `skipWaiting` می‌کند.
   waiting.postMessage({ type: "SKIP_WAITING" });
+}
+
+/** متنِ «الان نمی‌شود» برای کاربر؛ `reason` از `getUpdateBlocker()`. */
+export const blockedMessage = (reason) =>
+  `الان نمی‌شود بروزرسانی کرد: ${reason}. اول کارتان را ذخیره یا تمام کنید.`;
+
+/**
+ * «بروزرسانی» که کاربر زد. اگر کاری ذخیره‌نشده یا در جریان است بارگذاری نمی‌شود:
+ * نسخه آماده می‌ماند و دلیل در `blockedReason` (و در نتیجه) می‌آید.
+ * @returns {{ started: boolean, reason?: string }}
+ */
+export function applyUpdate() {
+  if (getState().status !== UPDATE_STATUS.AVAILABLE) return { started: false };
+  const reason = getUpdateBlocker();
+  if (reason) {
+    setState({ blockedReason: reason });
+    return { started: false, reason };
+  }
+  activate();
+  return { started: true };
+}
+
+const AUTO_UPDATE_KEY = "app-update-auto-attempts";
+/** برای یک buildِ در حالِ اجرا بیش از این بار خودکار بروزرسانی نمی‌شود. */
+const AUTO_UPDATE_MAX_ATTEMPTS = 2;
+const AUTO_UPDATE_WINDOW_MS = 10 * 60 * 1000;
+
+/**
+ * سقفِ تلاشِ خودکار برای همین build. اگر بعد از بارگذاریِ دوباره هم همین build
+ * بالا آمد (دیپلویِ نیمه‌کاره: `version.json` تازه، `index.html`/`sw.js` هنوز
+ * کهنه) شمارنده می‌ماند و تلاشِ سوم انجام نمی‌شود؛ با build تازه از صفر شروع
+ * می‌شود. بدونِ localStorage سقف را نمی‌شود نگه داشت، پس خودکار نمی‌شود.
+ */
+function reserveAutoAttempt() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(AUTO_UPDATE_KEY) || "null");
+    const recent =
+      saved && saved.build === APP_BUILD.builtAt && Date.now() - saved.at < AUTO_UPDATE_WINDOW_MS;
+    const count = recent ? saved.count : 0;
+    if (count >= AUTO_UPDATE_MAX_ATTEMPTS) return false;
+    localStorage.setItem(
+      AUTO_UPDATE_KEY,
+      JSON.stringify({ build: APP_BUILD.builtAt, count: count + 1, at: Date.now() }),
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * بروزرسانیِ بی‌پرسش — فقط برای جاهایی که کاربر کاری ندارد که از دست برود (صفحه‌ی
+ * ورودِ دست‌نخورده، لحظه‌ی بعد از ورود). اگر چیزی در دفترِ ایمنی باشد یا سقفِ
+ * تلاش پر شده باشد انجام نمی‌شود و اعلانِ معمولی می‌ماند.
+ */
+export function applyUpdateAutomatically() {
+  if (getState().status !== UPDATE_STATUS.AVAILABLE) return false;
+  if (getUpdateBlocker() || !reserveAutoAttempt()) return false;
+  activate();
   return true;
 }
 
 /**
  * بعد از ورود: اگر نسخه‌ی تازه آماده است (یا بررسیِ در جریان در همین چند
- * ثانیه پیدایش کند) بی‌پرسش فعالش می‌کند. ورود منتظرِ سرورِ کُند نمی‌ماند:
- * بعد از `waitMs` هر چه هست همان است و اعلانِ معمولی بقیه را پوشش می‌دهد.
+ * ثانیه پیدایش کند) فعالش می‌کند. ورود منتظرِ سرورِ کُند نمی‌ماند: بعد از
+ * `waitMs` هر چه هست همان است و اعلانِ معمولی بقیه را پوشش می‌دهد.
  */
 export async function applyUpdateOnLogin({ waitMs = 3000 } = {}) {
   const status = await Promise.race([
     checkForUpdate(),
     new Promise((resolve) => setTimeout(() => resolve(getState().status), waitMs)),
   ]);
-  return status === UPDATE_STATUS.AVAILABLE ? applyUpdate() : false;
-}
-
-const LAUNCH_UPDATE_KEY = "app-update-launch-at";
-/** پشتِ‌سرهم خودکار بروزرسانی نمی‌کند؛ اگر نسخه‌ی تازه بعد از بارگذاری هم دیده شود، حلقه نشود. */
-const LAUNCH_UPDATE_COOLDOWN_MS = 5 * 60 * 1000;
-
-/**
- * هنگامِ باز شدنِ برنامه: همین حالا نسخه‌ی روی سرور را می‌سنجد (نه بعد از ۱۵ دقیقه)
- * و اگر قدیمی است بی‌پرسش فعالش می‌کند — کاربر تازه آمده و کارِ نیمه‌تمامی ندارد.
- */
-async function applyUpdateOnLaunch() {
-  try {
-    const last = Number(localStorage.getItem(LAUNCH_UPDATE_KEY)) || 0;
-    if (Date.now() - last < LAUNCH_UPDATE_COOLDOWN_MS) return;
-    const status = await checkForUpdate();
-    if (status !== UPDATE_STATUS.AVAILABLE) return;
-    localStorage.setItem(LAUNCH_UPDATE_KEY, String(Date.now()));
-    applyUpdate();
-  } catch {
-    // localStorage در دسترس نیست؛ بروزرسانیِ دستی و اعلان کار می‌کنند.
-  }
+  return status === UPDATE_STATUS.AVAILABLE ? applyUpdateAutomatically() : false;
 }
 
 /** یک بار، پیش از رندرِ برنامه (`main.jsx`). */
 export function initAppUpdates({ onOfflineReady } = {}) {
+  if (resumeHardReset()) return;
   registerSW({
     onNeedRefresh: markAvailable,
     onOfflineReady,
@@ -246,7 +356,8 @@ export function initAppUpdates({ onOfflineReady } = {}) {
       resolveRegistered?.();
       setInterval(checkForUpdate, PERIODIC_CHECK_MS);
       window.addEventListener("online", checkForUpdate);
-      applyUpdateOnLaunch();
+      // هنگامِ باز شدن فقط بررسی می‌شود؛ باز شدنِ برنامه به معنیِ «کاری ندارم» نیست.
+      checkForUpdate();
       // برگه‌ای که ساعت‌ها پشتِ برگه‌های دیگر بوده، با برگشتن بررسی می‌شود.
       document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "visible") checkForUpdate();

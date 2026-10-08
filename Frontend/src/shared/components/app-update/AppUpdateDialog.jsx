@@ -14,6 +14,7 @@ import {
   APP_BUILD,
   UPDATE_STATUS,
   applyUpdate,
+  blockedMessage,
   checkForUpdate,
   setUpdateDialogOpen,
   useAppUpdateStore,
@@ -40,7 +41,7 @@ function Row({ label, children }) {
 }
 
 /** یک خط برای هر وضعیت — همان چیزی که کاربر باید بداند و کاری که می‌تواند بکند. */
-function StatusLine({ status, supported }) {
+function StatusLine({ status, supported, blockedReason, activationFailed }) {
   if (!supported) {
     return (
       <Notice tone="neutral">
@@ -58,6 +59,20 @@ function StatusLine({ status, supported }) {
       );
     case UPDATE_STATUS.AVAILABLE:
     case UPDATE_STATUS.UPDATING:
+      if (blockedReason) {
+        return (
+          <Notice tone="warning" icon={Download}>
+            نسخه‌ی تازه آماده است. {blockedMessage(blockedReason)} بعد از آن دوباره «بروزرسانی» را بزنید.
+          </Notice>
+        );
+      }
+      if (activationFailed) {
+        return (
+          <Notice tone="warning" icon={Download}>
+            بروزرسانی کامل نشد. دوباره امتحان کنید؛ اگر نشد همه‌ی برگه‌های برنامه را ببندید و دوباره باز کنید.
+          </Notice>
+        );
+      }
       return (
         <Notice tone="info" icon={Download}>
           نسخه‌ی تازه دریافت شده و آماده است. با بروزرسانی، صفحه دوباره بارگذاری می‌شود؛ اگر فرمی را نیمه‌کاره
@@ -91,7 +106,8 @@ function StatusLine({ status, supported }) {
  * تازه» با `setUpdateDialogOpen(true)` باز می‌شود.
  */
 export default function AppUpdateDialog() {
-  const { supported, status, lastCheckedAt, dialogOpen } = useAppUpdateStore();
+  const { supported, status, lastCheckedAt, dialogOpen, blockedReason, activationFailed } =
+    useAppUpdateStore();
   const checking = status === UPDATE_STATUS.CHECKING;
   const available = status === UPDATE_STATUS.AVAILABLE;
   const updating = status === UPDATE_STATUS.UPDATING;
@@ -115,7 +131,12 @@ export default function AppUpdateDialog() {
           {lastCheckedAt && <Row label="آخرین بررسی">{timeFormat.format(lastCheckedAt)}</Row>}
         </div>
 
-        <StatusLine status={status} supported={supported} />
+        <StatusLine
+          status={status}
+          supported={supported}
+          blockedReason={blockedReason}
+          activationFailed={activationFailed}
+        />
 
         <DialogFooter className="gap-2">
           <Button
@@ -128,7 +149,7 @@ export default function AppUpdateDialog() {
             بررسیِ نسخه‌ی تازه
           </Button>
           {(available || updating) && (
-            <Button type="button" disabled={updating} onClick={applyUpdate}>
+            <Button type="button" disabled={updating} onClick={() => applyUpdate()}>
               {updating ? <Loader2 className="animate-spin" /> : <Download />}
               {updating ? "در حال بروزرسانی…" : "بروزرسانی و بارگذاری دوباره"}
             </Button>

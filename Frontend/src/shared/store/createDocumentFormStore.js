@@ -8,12 +8,16 @@ import { create } from "zustand";
  * `initializedForId` می‌گوید فرم از کدام نسخه پر شده: `"new"` یا
  * `"id:updatedAt"`؛ فرم فقط وقتی از سرور پر می‌شود که سند یا نسخه‌اش عوض شود.
  *
+ * `baseline` فرم در لحظه‌ی پر شدن است؛ `isDocumentFormChanged` با آن می‌سنجد کاربر
+ * چیزی ذخیره‌نشده دارد یا نه (بروزرسانیِ برنامه به آن نگاه می‌کند).
+ *
  * @param emptyForm         فیلدهای فرمِ خالی
  * @param formFromDocument  سند (پاسخِ سرور) → فیلدهای فرم
  */
 export function createDocumentFormStore({ emptyForm, formFromDocument }) {
   return create((set, get) => ({
     formData: { ...emptyForm },
+    baseline: emptyForm,
     initializedForId: null,
 
     setFormData: (data) => set((state) => ({ formData: { ...state.formData, ...data } })),
@@ -31,15 +35,20 @@ export function createDocumentFormStore({ emptyForm, formFromDocument }) {
 
     initializeForNew: () => {
       if (get().initializedForId === "new") return;
-      set({ initializedForId: "new", formData: { ...emptyForm } });
+      set({ initializedForId: "new", formData: { ...emptyForm }, baseline: emptyForm });
     },
 
     initializeFrom: (doc) => {
       const version = `${doc.id}:${doc.updatedAt}`;
       if (get().initializedForId === version) return;
-      set({ initializedForId: version, formData: { ...emptyForm, ...formFromDocument(doc) } });
+      const formData = { ...emptyForm, ...formFromDocument(doc) };
+      set({ initializedForId: version, formData, baseline: formData });
     },
 
-    resetForm: () => set({ formData: { ...emptyForm }, initializedForId: null }),
+    resetForm: () => set({ formData: { ...emptyForm }, baseline: emptyForm, initializedForId: null }),
   }));
 }
+
+/** سلکتور: فرم از لحظه‌ی پر شدن تغییر کرده؟ (`useXFormStore(isDocumentFormChanged)`) */
+export const isDocumentFormChanged = (state) =>
+  state.formData !== state.baseline && JSON.stringify(state.formData) !== JSON.stringify(state.baseline);

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/shared/components/ui/button";
+import { useUpdateGuard } from "@/shared/services/updateSafety";
 import { useGoBack } from "@/shared/hooks/useGoBack";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
@@ -91,6 +92,7 @@ export default function SalesReturnNewPage() {
 
   const createMutation = useCreateSalesReturnMutation();
   const hasClaims = form.allClaims.length > 0;
+  useUpdateGuard({ dirty: hasClaims, busy: createMutation.isPending, reason: "مرجوعیِ فروش در حال ثبت یا ذخیره‌نشده است" });
 
   const changeSale = (saleId) => {
     resetForm();
