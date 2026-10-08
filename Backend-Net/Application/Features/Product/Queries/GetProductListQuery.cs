@@ -122,7 +122,11 @@ namespace Application.Features.Product.Queries
         {
             if (!string.IsNullOrEmpty(request.Name))
             {
-                query = query.Where(p => p.Name.Contains(request.Name) || (p.EnglishName != null && p.EnglishName.Contains(request.Name)));
+                var name = request.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                foreach (var word in name)
+                {
+                    query = query.Where(p => p.Name.Contains(word) || (p.EnglishName != null && p.EnglishName.Contains(word)));
+                }
             }
 
             // A whole code means that product only: codes have dashes and no zero padding, so "14050512-12" is also a
