@@ -85,6 +85,30 @@ export function listQuery({ filters = {}, pagination, sorting, sortColumns = {} 
   return compactParams(params);
 }
 
+/** بزرگ‌ترین `take`ای که سرور می‌پذیرد. */
+export const MAX_PAGE_SIZE = 200;
+
+/**
+ * همه‌ی صفحه‌های یک فهرست را پشتِ‌سرهم می‌خواند (سرور هر درخواست را به
+ * `MAX_PAGE_SIZE` ردیف محدود می‌کند) — برای انتخابگرها که کلِ فهرست را لازم دارند.
+ * پاسخِ صفحه‌ی اول با لیستِ ادغام‌شده برمی‌گردد تا شکلش عوض نشود.
+ *
+ * @param fetchPage  `(page: number) => Promise<response>` (صفحه از ۱)
+ * @param itemsKey   کلیدِ لیست در پاسخ (مثلاً `userList`؛ `items` برای پاسخ‌های نرمال‌شده)
+ */
+export async function fetchAllPages(fetchPage, { itemsKey, maxPages = 1000 }) {
+  let first;
+  const items = [];
+  for (let page = 1; page <= maxPages; page += 1) {
+    const raw = await fetchPage(page);
+    first ??= raw;
+    const normalized = normalizeListResponse(raw, { itemsKey });
+    items.push(...normalized.items);
+    if (page >= normalized.totalPages || normalized.items.length === 0) break;
+  }
+  return { ...first, [itemsKey]: items };
+}
+
 // ─── ایدمپوتنسی ─────────────────────────────────────────────────────────────
 
 /**

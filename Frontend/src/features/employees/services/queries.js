@@ -1,10 +1,12 @@
 ﻿import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
+import { fetchAllPages, MAX_PAGE_SIZE } from "@/shared/services/api/contract";
+
 import { getUserList, getUserUpdate } from "./api-v1";
 import { userKeys } from "./queryKeys";
 
 /** فهرست‌های داخلِ کارت‌ها (اعضای تیم، کاندیداها) صفحه‌بندی ندارند. */
-const ALL_ROWS = { page: 1, take: 200 };
+const ALL_ROWS = { take: MAX_PAGE_SIZE };
 
 /** فقط شمارنده می‌خواهیم، پس یک ردیف هم لازم نیست. */
 const COUNT_ONLY = { page: 1, take: 1 };
@@ -25,6 +27,20 @@ export function useUserListQuery(params, queryOptions = {}) {
   return useQuery({
     queryKey: userKeys.list(params),
     queryFn: () => getUserList(params),
+    placeholderData: keepPreviousData,
+    ...queryOptions,
+  });
+}
+
+/**
+ * همه‌ی کارمندانِ یک فیلتر، صفحه‌به‌صفحه (سرور هر درخواست را به ۲۰۰ ردیف محدود
+ * می‌کند). `params` نباید `page` داشته باشد.
+ */
+export function useAllUsersQuery(params, queryOptions = {}) {
+  return useQuery({
+    queryKey: userKeys.list({ ...params, all: true }),
+    queryFn: () =>
+      fetchAllPages((page) => getUserList({ ...params, page }), { itemsKey: "userList" }),
     placeholderData: keepPreviousData,
     ...queryOptions,
   });
@@ -66,7 +82,7 @@ export function useDepartmentUserCountQuery(departmentId) {
  * شود، مدیر تیم راهی برای خارج‌کردنش ندارد.
  */
 export function useTeamMembersQuery(teamId) {
-  const query = useUserListQuery({ ...ALL_ROWS, teamId: teamId ?? "" });
+  const query = useAllUsersQuery({ ...ALL_ROWS, teamId: teamId ?? "" });
 
   const members = query.data?.userList ?? [];
 
@@ -93,7 +109,7 @@ export function useTeamMembersQuery(teamId) {
  * روزمره است و `ChangeUserTeam` دقیقاً برای همین ساخته شده.
  */
 export function useTeamCandidatesQuery(teamId) {
-  const query = useUserListQuery({ ...ALL_ROWS, isActive: true });
+  const query = useAllUsersQuery({ ...ALL_ROWS, isActive: true });
 
   const candidates = (query.data?.userList ?? []).filter(
     (user) => user.teamId != teamId,

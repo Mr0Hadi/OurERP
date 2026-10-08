@@ -1,6 +1,7 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
 import { getDepartmentList, getDepartmentDetail } from "./api-v1";
+import { fetchAllPages } from "@/shared/services/api/contract";
 import { departmentKeys } from "./queryKeys";
 
 const OPTIONS_TAKE = 200;
@@ -38,7 +39,10 @@ export function useDepartmentDetailQuery(id) {
 export function useDepartmentOptionsQuery() {
   const query = useQuery({
     queryKey: departmentKeys.options(),
-    queryFn: () => getDepartmentList({ page: 1, take: OPTIONS_TAKE }),
+    queryFn: () =>
+      fetchAllPages((page) => getDepartmentList({ page, take: OPTIONS_TAKE }), {
+        itemsKey: "departmentList",
+      }),
   });
 
   return { ...query, departments: query.data?.departmentList ?? [] };

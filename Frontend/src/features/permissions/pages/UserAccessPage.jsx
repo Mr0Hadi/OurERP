@@ -15,7 +15,7 @@ import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
 import {
-  useUserListQuery,
+  useAllUsersQuery,
   useUserUpdateQuery,
 } from "@/features/employees/services/queries";
 import { useDepartmentOptionsQuery } from "@/features/organization/departments/services/queries";
@@ -38,8 +38,7 @@ function EmployeeList({ selectedId, className }) {
   const fullName = useDebouncedValue(search);
 
   const { departments } = useDepartmentOptionsQuery();
-  const { data, isLoading } = useUserListQuery({
-    page: 1,
+  const { data, isLoading } = useAllUsersQuery({
     take: 200,
     fullName,
     departmentId,

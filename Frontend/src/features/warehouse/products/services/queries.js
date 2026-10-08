@@ -56,23 +56,47 @@ export function useProductQuery(id) {
 
 // ─── گزینه‌های انتخاب ───────────────────────────────────────────────────────
 
-const OPTIONS_PAGINATION = { pageIndex: 0, pageSize: 200 };
+const OPTIONS_PAGE_SIZE = 200;
+/** سقفِ ایمنی؛ بیشتر از این دیگر صفحه‌ی بعد نمی‌گیرد. */
+const OPTIONS_MAX_PAGES = 1000;
 const OPTIONS_SORTING = { id: "name", desc: false };
-const NO_FILTERS = {};
 const NO_PRODUCTS = [];
 
+async function fetchAllProductOptions() {
+  const items = [];
+  for (let page = 0; page < OPTIONS_MAX_PAGES; page += 1) {
+    const params = listQuery({
+      filters: {},
+      pagination: { pageIndex: page, pageSize: OPTIONS_PAGE_SIZE },
+      sorting: OPTIONS_SORTING,
+      sortColumns: PRODUCT_SORT_COLUMNS,
+    });
+    const result = await fetchProducts(params);
+    items.push(...result.items);
+    if (page + 1 >= result.totalPages || result.items.length === 0) break;
+  }
+  return items;
+}
+
 /**
- * فهرستِ کالاها برای انتخابگرها و نگاشتِ شناسه به کالا در فرم‌ها
- * (حداکثر ۲۰۰ ردیف، مرتب بر اساس نام).
+ * فهرستِ همه‌ی کالاها برای انتخابگرها و نگاشتِ شناسه به کالا در فرم‌ها
+ * (مرتب بر اساس نام). سرور در هر درخواست حداکثر ۲۰۰ ردیف می‌دهد، پس صفحه‌به‌صفحه
+ * خوانده می‌شود تا جست‌وجوی سمتِ کلاینت کلِ کالاها را ببیند.
  *
- * TODO(بکند): با بیش از ۲۰۰ کالا، بقیه در فرمِ خرید/فروش پیدا نمی‌شوند؛ جست‌وجوی سمتِ
- * سرور لازم است (بندِ ۱۳.۵ سندِ frontend-requests.fa.md).
+ * TODO(بکند): با رشد کاتالوگ، جست‌وجوی سمتِ سرور بهتر است (بندِ ۱۳.۵ سندِ
+ * frontend-requests.fa.md).
  *
- * `enabled: false` برای انتخابگرِ تاشو: تا باز نشده، ۲۰۰ ردیف دانلود نمی‌شود.
+ * `enabled: false` برای انتخابگرِ تاشو: تا باز نشده، چیزی دانلود نمی‌شود.
  */
 export function useProductsOptionsQuery({ enabled = true } = {}) {
-  const { data, isLoading } = useProductsQuery(NO_FILTERS, OPTIONS_PAGINATION, OPTIONS_SORTING, { enabled });
-  return { products: data?.items ?? NO_PRODUCTS, isLoading };
+  const { data, isLoading } = useQuery({
+    queryKey: productKeys.options(),
+    queryFn: fetchAllProductOptions,
+    gcTime: 1000 * 60 * 10,
+    staleTime: 30_000,
+    enabled,
+  });
+  return { products: data ?? NO_PRODUCTS, isLoading };
 }
 
 // ─── کالاهای یک سند ─────────────────────────────────────────────────────────

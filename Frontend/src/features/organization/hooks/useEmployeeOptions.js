@@ -1,9 +1,10 @@
 import { useMemo } from "react";
 
-import { useUserListQuery } from "@/features/employees/services/queries";
+import { useAllUsersQuery } from "@/features/employees/services/queries";
+import { MAX_PAGE_SIZE } from "@/shared/services/api/contract";
 import { OrgRoleEnum } from "@/shared/domain/enums/orgRole";
 
-const ALL_ROWS = { page: 1, take: 200 };
+const ALL_ROWS = { take: MAX_PAGE_SIZE };
 
 const nameOf = (user) =>
   `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.username;
@@ -37,7 +38,7 @@ function labelOf(user) {
  * فعلیِ فرم — تا اگر مقدار به کسی اشاره می‌کند، انتخابگر خالی به نظر نرسد.
  */
 export function useEmployeeOptions({ keepIds = [] } = {}) {
-  const { data, isLoading, isError } = useUserListQuery(ALL_ROWS);
+  const { data, isLoading, isError } = useAllUsersQuery(ALL_ROWS);
 
   const keepKey = keepIds.filter((id) => id != null).join(",");
 

@@ -1,6 +1,7 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
 import { getTeamList, getTeamDetail } from "./api-v1";
+import { fetchAllPages } from "@/shared/services/api/contract";
 import { teamKeys } from "./queryKeys";
 
 const OPTIONS_TAKE = 200;
@@ -42,11 +43,15 @@ export function useTeamOptionsQuery(departmentId = "") {
   const query = useQuery({
     queryKey: teamKeys.options(departmentId),
     queryFn: () =>
-      getTeamList({
-        page: 1,
-        take: OPTIONS_TAKE,
-        departmentId: departmentId ?? "",
-      }),
+      fetchAllPages(
+        (page) =>
+          getTeamList({
+            page,
+            take: OPTIONS_TAKE,
+            departmentId: departmentId ?? "",
+          }),
+        { itemsKey: "teamList" },
+      ),
   });
 
   return { ...query, teams: query.data?.teamList ?? [] };
