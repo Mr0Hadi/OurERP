@@ -78,6 +78,7 @@ namespace Application.Features.User.Query
             var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
             var sorted = request.SortBy switch
             {
+                UserListSortEnum.ID => query.SortBy(x => x.Id, direction),
                 UserListSortEnum.FIRST_NAME => query.SortBy(x => x.FirstName, direction),
                 UserListSortEnum.LAST_NAME => query.SortBy(x => x.LastName, direction),
                 UserListSortEnum.USERNAME => query.SortBy(x => x.Username, direction),

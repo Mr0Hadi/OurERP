@@ -79,7 +79,8 @@ namespace Application.Features.Product.Queries
             var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
             var sorted = request.SortBy switch
             {
-                ProductListSortEnum.CODE => projected.SortBy(x => x.Code, direction),
+                ProductListSortEnum.ID => projected.SortBy(x => x.Id, direction),
+                ProductListSortEnum.CODE => projected.SortBy(x => x.Id, direction),
                 ProductListSortEnum.NAME => projected.SortBy(x => x.Name, direction),
                 ProductListSortEnum.BRAND => projected.SortBy(x => x.Brand, direction),
                 ProductListSortEnum.CATEGORY_NAME => projected.SortBy(x => x.CategoryName, direction),

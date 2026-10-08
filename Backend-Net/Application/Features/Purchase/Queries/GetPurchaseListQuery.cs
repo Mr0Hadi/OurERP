@@ -114,6 +114,7 @@ namespace Application.Features.Purchase.Queries
             var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
             var sorted = request.SortBy switch
             {
+                PurchaseListSortEnum.ID => query.SortBy(x => x.Id, direction),
                 PurchaseListSortEnum.INVOICE_NUMBER => query.SortBy(x => x.InvoiceNumber, direction),
                 PurchaseListSortEnum.SUPPLIER_NAME => query.SortBy(x => x.Supplier.CompanyName, direction),
                 PurchaseListSortEnum.INVOICE_DATE => query.SortBy(x => x.InvoiceDate, direction),

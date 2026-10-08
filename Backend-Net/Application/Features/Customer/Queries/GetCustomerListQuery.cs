@@ -53,6 +53,7 @@ namespace Application.Features.Customer.Queries
             var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
             var sorted = request.SortBy switch
             {
+                CustomerListSortEnum.ID => query.SortBy(x => x.Id, direction),
                 CustomerListSortEnum.FIRST_NAME => query.SortBy(x => x.FirstName, direction),
                 CustomerListSortEnum.LAST_NAME => query.SortBy(x => x.LastName, direction),
                 CustomerListSortEnum.BALANCE => query.SortBy(x => x.Balance, direction),

@@ -54,6 +54,7 @@ namespace Application.Features.ProductCategory.Queries
             var sorted = request.SortBy switch
             {
                 ProductCategoryListSortEnum.ID => projected.SortBy(x => x.Id, direction),
+                ProductCategoryListSortEnum.NAME => projected.SortBy(x => x.Name, direction),
                 ProductCategoryListSortEnum.PRODUCT_COUNT => projected.SortBy(x => x.ProductCount, direction),
                 _ => projected.SortBy(x => x.Name, direction),
             };

@@ -46,6 +46,7 @@ namespace Application.Features.PosTerminal.Queries
             var sorted = request.SortBy switch
             {
                 PosTerminalListSortEnum.ID => query.SortBy(x => x.Id, direction),
+                PosTerminalListSortEnum.NAME => query.SortBy(x => x.Name, direction),
                 PosTerminalListSortEnum.VENDOR => query.SortBy(x => x.Vendor, direction),
                 _ => query.SortBy(x => x.Name, direction),
             };

@@ -76,6 +76,7 @@ namespace Application.Features.Report.Queries
             var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
             var sorted = request.SortBy switch
             {
+                SalesPerformanceByEmployeeSortEnum.TOTAL_INVOICE_AMOUNT => grouped.SortBy(x => x.TotalInvoiceAmount, direction),
                 SalesPerformanceByEmployeeSortEnum.FULL_NAME => grouped.SortBy(x => x.FullName, direction),
                 SalesPerformanceByEmployeeSortEnum.SALES_COUNT => grouped.SortBy(x => x.SalesCount, direction),
                 _ => grouped.SortBy(x => x.TotalInvoiceAmount, direction),

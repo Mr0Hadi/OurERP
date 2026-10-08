@@ -169,12 +169,12 @@ Authorization: Bearer {accessToken}
 |---|---|---|
 | `Customer/GetCustomerList` | `CustomerListSortEnum`: `ID=0, FIRST_NAME=1, LAST_NAME=2, BALANCE=3, BALANCE_TYPE=4` | `ID` نزولی |
 | `Supplier/GetSupplierList` | `SupplierListSortEnum`: `ID=0, COMPANY_NAME=1, FIRST_NAME=2, LAST_NAME=3, BALANCE=4, BALANCE_TYPE=5` | `ID` نزولی |
-| `Product/GetProductList` | `ProductListSortEnum`: `ID=0, CODE=1, NAME=2, BRAND=3, CATEGORY_NAME=4, RETAIL_PRICE=5, WHOLESALE_PRICE=6, STOCK=7, QUARANTINED_COUNT=8` | `ID` نزولی |
-| `Product/GetProductUnitList` | `ProductUnitListSortEnum`: `SERIAL_NUMBER=0, PRODUCT_NAME=1, STATUS=2, SOLD_AT=3, CREATED_AT=4, LAST_PRINTED_AT=5, QUARANTINED_AT=6` | محصول، سپس سریال، صعودی |
+| `Product/GetProductList` | `ProductListSortEnum`: `ID=0, CODE=1, NAME=2, BRAND=3, CATEGORY_NAME=4, RETAIL_PRICE=5, WHOLESALE_PRICE=6, STOCK=7, QUARANTINED_COUNT=8` (توجه: `CODE` عملاً روی `id` مرتب می‌کند، زیر جدول را ببینید) | `ID` نزولی |
+| `Product/GetProductUnitList` | `ProductUnitListSortEnum`: `SERIAL_NUMBER=0, PRODUCT_NAME=1, STATUS=2, SOLD_AT=3, CREATED_AT=4, LAST_PRINTED_AT=5, QUARANTINED_AT=6, ID=7` | محصول، سپس سریال، صعودی |
 | `ProductCategory/GetProductCategoryList` | `ProductCategoryListSortEnum`: `ID=0, NAME=1, PRODUCT_COUNT=2` | `NAME` صعودی |
 | `Purchase/GetPurchaseList` | `PurchaseListSortEnum`: `ID=0, INVOICE_NUMBER=1, SUPPLIER_NAME=2, INVOICE_DATE=3, PAYMENT_DATE=4, STATUS=5, PAYMENT_TYPE=6, TOTAL_AMOUNT=7, PAID_AMOUNT=8` | `ID` نزولی |
 | `Sale/GetSaleList` | `SaleListSortEnum`: `ID=0, INVOICE_NUMBER=1, CUSTOMER_NAME=2, INVOICE_DATE=3, PAYMENT_DATE=4, STATUS=5, PAYMENT_TYPE=6, TOTAL_AMOUNT=7, PAID_AMOUNT=8` | `ID` نزولی |
-| `PurchaseReturn/GetPurchaseReturnList` | `PurchaseReturnListSortEnum`: `CREATED_AT=0, RETURN_NUMBER=1, RETURN_DATE=2, PURCHASE_INVOICE_NUMBER=3, SUPPLIER_NAME=4, STATUS=5, TOTAL_QUANTITY=6, TOTAL_AMOUNT=7` | `CREATED_AT` نزولی |
+| `PurchaseReturn/GetPurchaseReturnList` | `PurchaseReturnListSortEnum`: `CREATED_AT=0, RETURN_NUMBER=1, RETURN_DATE=2, PURCHASE_INVOICE_NUMBER=3, SUPPLIER_NAME=4, STATUS=5, TOTAL_QUANTITY=6, TOTAL_AMOUNT=7, ID=8` | `CREATED_AT` نزولی |
 | `SaleReturn/GetSaleReturnList` | `SaleReturnListSortEnum`: `CREATED_AT=0, RETURN_NUMBER=1, RETURN_DATE=2, SALE_INVOICE_NUMBER=3, CUSTOMER_NAME=4, STATUS=5, TOTAL_QUANTITY=6, TOTAL_AMOUNT=7` | `CREATED_AT` نزولی |
 | `SaleInstallment/GetSaleInstallmentList` | `SaleInstallmentListSortEnum`: `DUE_DATE=0, NUMBER=1, AMOUNT=2, STATUS=3, PAID_AT=4, INVOICE_NUMBER=5, CUSTOMER_NAME=6` | `DUE_DATE` صعودی |
 | `SaleInstallment/GetSaleInstallmentPlanList` | `SaleInstallmentPlanListSortEnum`: `ID=0, CREATED_AT=1, INVOICE_NUMBER=2, CUSTOMER_NAME=3, TOTAL_AMOUNT=4, PAID_AMOUNT=5, REMAINING_AMOUNT=6, NEXT_DUE_DATE=7, STATUS=8` | `ID` نزولی |
@@ -187,6 +187,10 @@ Authorization: Bearer {accessToken}
 | `Report/GetSupplierSalesStatistics` | `SupplierSalesStatisticsSortEnum`: `TOTAL_INVOICE_AMOUNT=0, COMPANY_NAME=1, PURCHASES_COUNT=2, TOTAL_PAID_AMOUNT=3` | `TOTAL_INVOICE_AMOUNT` نزولی |
 | `Report/GetSalesPerformanceByEmployee` | `SalesPerformanceByEmployeeSortEnum`: `TOTAL_INVOICE_AMOUNT=0, FULL_NAME=1, SALES_COUNT=2` | `TOTAL_INVOICE_AMOUNT` نزولی |
 | `Report/GetSupplyPerformanceByEmployee` | `SupplyPerformanceByEmployeeSortEnum`: `TOTAL_INVOICE_AMOUNT=0, FULL_NAME=1, PURCHASES_COUNT=2` | `TOTAL_INVOICE_AMOUNT` نزولی |
+
+**مرتب‌سازی بر اساس کد محصول (`GetProductList?SortBy=1`، یعنی `CODE`):** عمداً روی `id` عددی مرتب می‌شود، نه روی متن `code`. کد محصول به شکل `DateSegment-ProductId` است و مرتب‌سازی متنی آن ترتیب‌های عجیب می‌دهد (مثلاً `…-10` قبل از `…-2`). چون `id` همزمان با ساخت محصول و با همان ترتیب کدها اختصاص می‌یابد، مرتب‌سازی روی `id` ترتیب «طبیعی» کد را می‌دهد و `CODE` و `ID` نتیجه‌ی یکسان دارند. برای مرتب‌سازی بر اساس خودِ متن کد، فعلاً گزینه‌ای وجود ندارد.
+
+**عضوهای `ID` اضافه‌شده:** `ProductUnitListSortEnum.ID=7` و `PurchaseReturnListSortEnum.ID=8` برای مرتب‌سازی بر اساس شناسه‌ی ردیف (ترتیب ایجاد). مقدار عددی عضوهای قبلی عوض نشده است. در لیست واحدها و مرجوعی خرید ترتیب پیش‌فرض همان قبلی می‌ماند؛ `ID` فقط وقتی اعمال می‌شود که صریحاً بفرستید.
 
 لیست‌های بدون صفحه‌بندی (`GetPurchaseReturnPendingEffects`، `GetSaleReturnPendingEffects`، `GetProductUnitHistory`، لیست دسترسی‌ها، گزارش‌های دوره‌ای) مرتب‌سازی قابل انتخاب ندارند و ترتیب ثابت خودشان را دارند.
 
@@ -3536,6 +3540,16 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | همه‌ی لیست‌ها | ردیف‌های برابر روی ستون مرتب‌سازی ترتیب ثابتی نداشتند | با `id` شکسته می‌شوند | همان |
 
 هیچ فیلدی حذف یا تغییرنام نشده و درخواستی که این دو پارامتر را نفرستد معتبر می‌ماند؛ فقط ترتیب پیش‌فرضِ لیست‌هایی که قبلاً ترتیبی نداشتند حالا مشخص است.
+
+### تغییرات قرارداد — ۲۰۲۶-۱۰-۰۸ (تکمیل مرتب‌سازی لیست‌ها) — افزودنی
+
+| کجا | قبل | بعد | چرا |
+|---|---|---|---|
+| `GetProductUnitList` | `SortBy` بدون گزینه‌ی شناسه | `ProductUnitListSortEnum.ID = 7` | مرتب‌سازی بر اساس ترتیب ایجاد |
+| `GetPurchaseReturnList` | همان | `PurchaseReturnListSortEnum.ID = 8` | همان |
+| `GetProductList` با `SortBy=CODE` | مرتب‌سازی متنی روی `code` | مرتب‌سازی عددی روی `id` | کد `DateSegment-ProductId` است؛ مرتب‌سازی متنی `…-10` را قبل از `…-2` می‌گذاشت. **تغییر رفتار:** ترتیب نتیجه برای این مقدار عوض می‌شود |
+
+عضوهای عددی قبلی تغییر نکرده‌اند. در چند لیست دیگر (مشتری، تامین‌کننده، خرید، فروش، مرجوعی فروش، پایانه‌ی POS، دسته‌بندی، اقساط، گزارش‌های عملکرد) فقط شاخه‌ی صریح برای مقدارهایی اضافه شد که از قبل در enum و مستندات بودند و همان ستون پیش‌فرض را مرتب می‌کردند؛ رفتارشان عوض نشده است.
 
 ### تغییرات قرارداد — ۲۰۲۶-۰۹-۲۴ (خروج از پیش‌فاکتور با اولین پرداخت) — تغییر رفتار، بدون شکستِ شکل
 

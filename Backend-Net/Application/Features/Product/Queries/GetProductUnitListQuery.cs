@@ -21,6 +21,7 @@ namespace Application.Features.Product.Queries
         CREATED_AT = 4,
         LAST_PRINTED_AT = 5,
         QUARANTINED_AT = 6,
+        ID = 7,
     }
 
     /// <summary>Label filter: UNPRINTED = IN_STOCK or QUARANTINED with no label printed yet (the print queue); PRINTED = printed at least once.</summary>
@@ -164,6 +165,7 @@ namespace Application.Features.Product.Queries
             var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.ASC);
             var sorted = request.SortBy switch
             {
+                ProductUnitListSortEnum.ID => query.SortBy(x => x.Id, direction),
                 ProductUnitListSortEnum.SERIAL_NUMBER => query.SortBy(x => x.SerialNumber, direction),
                 ProductUnitListSortEnum.PRODUCT_NAME => query.SortBy(x => x.Product.Name, direction).ThenSortBy(x => x.SerialNumber, direction),
                 ProductUnitListSortEnum.STATUS => query.SortBy(x => x.Status, direction),

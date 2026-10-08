@@ -100,6 +100,7 @@ namespace Application.Features.SaleInstallment.Queries
             var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.ASC);
             var sorted = request.SortBy switch
             {
+                SaleInstallmentListSortEnum.DUE_DATE => query.SortBy(x => x.DueDate, direction),
                 SaleInstallmentListSortEnum.NUMBER => query.SortBy(x => x.Number, direction),
                 SaleInstallmentListSortEnum.AMOUNT => query.SortBy(x => x.Amount, direction),
                 SaleInstallmentListSortEnum.STATUS => query.SortBy(x => x.Status, direction),
