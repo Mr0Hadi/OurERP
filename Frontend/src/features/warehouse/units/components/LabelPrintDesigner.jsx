@@ -236,27 +236,6 @@ function Settings({ units, template, geometry }) {
           </div>
         )}
 
-        {geometry.layout === LABEL_LAYOUTS.ROLL && (
-          <div className="space-y-1 rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs leading-relaxed text-foreground">
-            <p className="font-medium">پیش از چاپِ رول</p>
-            <p>
-              مرورگر اندازه‌ی کاغذِ پرینتر را عوض نمی‌کند؛ فقط اگر پرینتر کاغذی به همین اندازه
-              داشته باشد آن را برمی‌دارد. وگرنه کاغذِ پیش‌فرضِ پرینتر (مثلاً A4 یا Letter) را
-              می‌گیرد و برچسب ریز در گوشه‌اش می‌افتد.
-            </p>
-            <ul className="list-disc space-y-0.5 pr-4">
-              <li>
-                در «Printing Preferences» پرینترِ برچسب، اندازه‌ی کاغذ را دقیقاً{" "}
-                {formatLabelSize(geometry.labelWidthMm, geometry.labelHeightMm)} میلی‌متر تعریف و پیش‌فرض کنید.
-              </li>
-              <li>در پنجره‌ی چاپ: Margins روی None و Scale روی ۱۰۰ (Default).</li>
-              <li>
-                «Microsoft Print to PDF» این اندازه را ندارد؛ برای آزمایش «Save as PDF»
-                خودِ مرورگر را انتخاب کنید.
-              </li>
-            </ul>
-          </div>
-        )}
       </section>
 
       <section className="space-y-2">
