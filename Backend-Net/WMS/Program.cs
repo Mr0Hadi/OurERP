@@ -155,14 +155,14 @@ namespace WMS
 
             // HTTPS-only from the browser's side too. Not in Development, where the API runs on plain
             // http://localhost and a remembered HSTS entry for localhost breaks every other local app.
-            if (!app.Environment.IsDevelopment())
-            {
-                app.UseHsts();
-            }
+            //if (!app.Environment.IsDevelopment())
+            //{
+            //    app.UseHsts();
+            //}
 
             app.UseCors("AllowAll");
 
-            app.UseHttpsRedirection();
+            //app.UseHttpsRedirection();
 
             app.UseRouting();
 
