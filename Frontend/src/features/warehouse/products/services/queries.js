@@ -1,6 +1,6 @@
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { keepPreviousData } from "@tanstack/react-query";
-import { listQuery } from "@/shared/services/api/contract";
+import { fetchAllPages, listQuery } from "@/shared/services/api/contract";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { useDebouncedFilters } from "@/shared/hooks/useDebouncedFilters";
 
@@ -58,24 +58,22 @@ export function useProductQuery(id) {
 // ─── گزینه‌های انتخاب ───────────────────────────────────────────────────────
 
 const OPTIONS_PAGE_SIZE = 200;
-/** سقفِ ایمنی؛ بیشتر از این دیگر صفحه‌ی بعد نمی‌گیرد. */
-const OPTIONS_MAX_PAGES = 1000;
 const OPTIONS_SORTING = { id: "name", desc: false };
 const NO_PRODUCTS = [];
 
 async function fetchAllProductOptions() {
-  const items = [];
-  for (let page = 0; page < OPTIONS_MAX_PAGES; page += 1) {
-    const params = listQuery({
-      filters: {},
-      pagination: { pageIndex: page, pageSize: OPTIONS_PAGE_SIZE },
-      sorting: OPTIONS_SORTING,
-      sortColumns: PRODUCT_SORT_COLUMNS,
-    });
-    const result = await fetchProducts(params);
-    items.push(...result.items);
-    if (page + 1 >= result.totalPages || result.items.length === 0) break;
-  }
+  const { items } = await fetchAllPages(
+    (page) =>
+      fetchProducts(
+        listQuery({
+          filters: {},
+          pagination: { pageIndex: page - 1, pageSize: OPTIONS_PAGE_SIZE },
+          sorting: OPTIONS_SORTING,
+          sortColumns: PRODUCT_SORT_COLUMNS,
+        }),
+      ),
+    { itemsKey: "items" },
+  );
   return items;
 }
 

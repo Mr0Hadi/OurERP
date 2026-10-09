@@ -21,7 +21,7 @@ import { salesRoutes } from "@/features/sales/routes";
 import { employeesRoutes } from "@/features/employees/routes";
 import { organizationRoutes } from "@/features/organization/routes";
 import { permissionsRoutes } from "@/features/permissions/routes";
-import { notifyNavigationStart } from "@/shared/lib/routeTransitionBus";
+import { notifyNavigationSettled, notifyNavigationStart } from "@/shared/lib/routeTransitionBus";
 
 // راهنمای استایل فقط در توسعه؛ در build تولید شاخه‌ی DEV حذف می‌شود و
 // صفحه اصلاً وارد باندل نمی‌شود.
@@ -83,10 +83,21 @@ const originalNavigate = router.navigate.bind(router);
 router.navigate = (to, options) => {
   const targetPathname = resolveTargetPathname(to);
   const currentPathname = router.state.location.pathname;
+  const started = targetPathname === null || targetPathname !== currentPathname;
 
-  if (targetPathname === null || targetPathname !== currentPathname) {
-    notifyNavigationStart();
+  const navigationId = started ? notifyNavigationStart() : null;
+
+  const result = originalNavigate(to, options);
+
+  // وقتی روتر ناوبری را تمام کرد، مسیرِ نهاییِ او را به `RouteLoadingOverlay`
+  // می‌گوییم: اگر همان مسیری باشد که الان روی صفحه است (ناوبری با `useBlocker`
+  // متوقف شد، لغو شد، یا کاربر به صفحه‌ی فعلی برگشت) هیچ‌وقت «رسیدنی» در کار
+  // نیست و اسپینر باید همین‌جا خاموش شود.
+  // `navigate(-1)` (عدد) مسیر را با popstate و بعداً عوض می‌کند؛ آنجا چیزی گزارش نمی‌شود.
+  if (navigationId !== null && typeof to !== "number") {
+    const report = () => notifyNavigationSettled(navigationId, router.state.location.pathname);
+    Promise.resolve(result).then(report, report);
   }
 
-  return originalNavigate(to, options);
+  return result;
 };
