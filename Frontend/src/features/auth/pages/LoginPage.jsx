@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
@@ -23,14 +23,6 @@ import { ThemeToggle } from "@/shared/components/theme/ThemeToggle";
 import { useLoginMutation } from "../services/queries";
 import { ROUTES } from "@/shared/constants/routes";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
-import { useUpdateGuard } from "@/shared/services/updateSafety";
-import {
-  UPDATE_STATUS,
-  applyUpdateAutomatically,
-  applyUpdateOnLogin,
-  checkForUpdate,
-  onUpdateAvailable,
-} from "@/shared/services/appUpdate";
 
 const FEATURES = [
   {
@@ -58,7 +50,6 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
-    control,
     formState: { errors },
   } = useForm({
     defaultValues: { username: "", password: "" },
@@ -67,32 +58,12 @@ export default function LoginPage() {
 
   const { mutate: login, isPending } = useLoginMutation();
 
-  // کاربر باید با آخرین نسخه وارد شود، نه اینکه بعداً منتظرِ اعلان بماند.
-  // همین که صفحه‌ی ورود باز شد نسخه‌ی تازه بررسی و دریافت می‌شود و اگر آماده شد
-  // فعال می‌شود — مگر چیزی تایپ شده باشد: آن هم مثلِ هر فرمِ دیگر در دفترِ ایمنیِ
-  // بروزرسانی ثبت است، پس نه خودکار فعال می‌شود و نه با «بروزرسانی»ِ دستی. وگرنه
-  // بعد از ورودِ موفق فعال می‌شود. «آماده شد» هم از بررسیِ همین‌جا می‌آید و هم از
-  // رویدادِ خودِ service worker که ممکن است دیرتر برسد؛ هر دو به یک تصمیم می‌رسند.
-  const [username, password] = useWatch({ control, name: ["username", "password"] });
-  useUpdateGuard({ dirty: Boolean(username || password), reason: "اطلاعاتِ فرمِ ورود را وارد کرده‌اید" });
-
-  useEffect(() => {
-    const unsubscribe = onUpdateAvailable(applyUpdateAutomatically);
-    checkForUpdate("login-page").then((status) => {
-      if (status === UPDATE_STATUS.AVAILABLE) applyUpdateAutomatically();
-    });
-    return unsubscribe;
-  }, []);
-
   const onSubmit = (values) => {
     login(values, {
       onSuccess: () => {
         toast.success("خوش آمدید 👋");
         const from = searchParams.get("from") || ROUTES.DASHBOARD;
         navigate(from, { replace: true });
-        // نسخه‌ی آماده همین حالا، پیش از شروعِ کار، فعال می‌شود؛ بارگذاریِ
-        // دوباره روی همان صفحه‌ی مقصد انجام می‌شود و نشست می‌ماند.
-        applyUpdateOnLogin();
       },
       onError: (error) => {
         // پیامِ سرور (مثلاً «کاربر با این اطلاعات یافت نشد») مقدم است؛ در قطعیِ

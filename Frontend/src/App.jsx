@@ -3,7 +3,6 @@ import { RouterProvider } from "react-router-dom";
 import { router } from "./app/routes/routers";
 import { AppProviders } from "./app/providers/AppProviders";
 import { useAuthStore } from "@/features/auth/store/authStore";
-import AppUpdateDialog from "@/shared/components/app-update/AppUpdateDialog";
 
 function App() {
   // تا وقتی auth-storage از localStorage rehydrate نشده، protectedLoader
@@ -25,7 +24,6 @@ function App() {
   return (
     <AppProviders>
       <RouterProvider router={router} />
-      <AppUpdateDialog />
     </AppProviders>
   );
 }
