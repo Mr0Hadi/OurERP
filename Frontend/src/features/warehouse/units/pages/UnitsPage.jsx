@@ -2,7 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react
 import { useSearchParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
 
-import { Printer } from "lucide-react";
+import { ListChecks, Printer } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
@@ -350,16 +350,23 @@ export default function UnitsPage() {
                     .join("، ")}
                 </p>
               </div>
-              {isPrintQueue && totalResults > 0 && selectedUnits.length === 0 && (
+              {totalResults > 0 && selectedUnits.length === 0 && (
                 <Button
                   type="button"
                   size="sm"
+                  variant={isPrintQueue ? "default" : "outline"}
                   className="gap-1.5"
                   disabled={isFetchingAll}
                   onClick={selectAllResults}
                 >
-                  <Printer className="size-4" />
-                  {isFetchingAll ? "در حال انتخاب…" : "انتخاب همه برای چاپ"}
+                  {isPrintQueue ? <Printer className="size-4" /> : <ListChecks className="size-4" />}
+                  {isFetchingAll
+                    ? "در حال انتخاب…"
+                    : isPrintQueue
+                      ? "انتخاب همه برای چاپ"
+                      : productName
+                        ? `انتخاب همه‌ی دانه‌های ${productName}`
+                        : "انتخاب همه‌ی دانه‌ها"}
                 </Button>
               )}
             </div>
