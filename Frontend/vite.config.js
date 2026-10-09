@@ -4,6 +4,7 @@ import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
+import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 import pkg from "./package.json" with { type: "json" };
 
@@ -23,16 +24,29 @@ function buildInfo() {
 const build = buildInfo();
 
 /**
- * `version.json` کنارِ build — بررسیِ بروزرسانی نسخه‌ی در حالِ اجرا را با این
- * فایل (بدونِ کش) مقایسه می‌کند؛ مستقل از اینکه مرورگر `sw.js` را چطور
- * بازیابی کرده یا پروکسی آن را کش کرده باشد.
+ * `version.json` کنارِ build — راهنمای بررسیِ بروزرسانی (بدونِ کش)؛ حکمِ نهایی با
+ * buildِ خودِ worker است (`sw-build-*.js`)، چون این فایل ممکن است از کشِ پروکسی
+ * کهنه بیاید.
  */
 const emitVersionFile = () => ({
   name: "emit-version-file",
   generateBundle() {
     this.emitFile({ type: "asset", fileName: "version.json", source: JSON.stringify(build) });
+    this.emitFile({ type: "asset", fileName: swBuildFile, source: swBuildSource });
   },
 });
+
+/**
+ * به service worker می‌گوید کدام buildاست تا صفحه بتواند بپرسد (`GET_BUILD`) و
+ * worker منتظر را با buildِ خودش مقایسه کند. نامش با build عوض می‌شود تا
+ * نسخه‌ی کهنه‌ی این فایل (کش مرورگر/پروکسی) جای نسخه‌ی تازه را نگیرد.
+ */
+const swBuildFile = `sw-build-${createHash("md5").update(build.builtAt).digest("hex").slice(0, 8)}.js`;
+const swBuildSource =
+  'self.addEventListener("message",function(e){' +
+  'if(e.data&&e.data.type==="GET_BUILD"&&e.ports[0])e.ports[0].postMessage(' +
+  JSON.stringify(build) +
+  ")});";
 
 export default defineConfig({
   define: {
@@ -89,6 +103,9 @@ export default defineConfig({
       workbox: {
         // فایل‌های build شده که precache می‌شن (app shell)
         globPatterns: ["**/*.{js,css,html,svg,png,woff,woff2}"],
+        // شناسه‌ی build را worker با `importScripts` می‌خواند؛ precache نمی‌شود.
+        globIgnores: ["sw-build-*.js"],
+        importScripts: [swBuildFile],
         navigateFallbackDenylist: [/^\/api\//], // آدرس API آینده رو از fallback مستثنی کن
 
         runtimeCaching: [

@@ -78,7 +78,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     const unsubscribe = onUpdateAvailable(applyUpdateAutomatically);
-    checkForUpdate().then((status) => {
+    checkForUpdate("login-page").then((status) => {
       if (status === UPDATE_STATUS.AVAILABLE) applyUpdateAutomatically();
     });
     return unsubscribe;
