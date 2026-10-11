@@ -47,7 +47,7 @@ const ALL_ID = "all";
 const PAGE_SIZE = 20;
 const detailPath = (id) => routeWithId(ROUTES.WAREHOUSE_VEHICLES_DETAIL, id);
 
-function VehicleList({ selectedId, className, canManage, onCreate, data, isLoading }) {
+function VehicleList({ selectedId, className, canManage, onCreate, data, isLoading, isError }) {
   const [search, setSearch] = useState("");
   const term = search.trim().toLowerCase();
   // خودروها یک‌جا گرفته شده‌اند؛ جست‌وجو همین‌جا فیلتر می‌کند.
@@ -86,7 +86,13 @@ function VehicleList({ selectedId, className, canManage, onCreate, data, isLoadi
         icon: <Car className="size-4" />,
         to: detailPath(v.id),
       }))}
-      emptyText={search ? "خودرویی پیدا نشد." : "هنوز خودرویی تعریف نشده."}
+      emptyText={
+        isError
+          ? "فهرست خودروها دریافت نشد. اگر سرور هنوز به‌روز نشده، این بخش کار نمی‌کند."
+          : search
+            ? "خودرویی پیدا نشد."
+            : "هنوز خودرویی تعریف نشده."
+      }
       footerText={`${formatNumber(data?.total ?? vehicles.length)} خودرو`}
     />
   );
@@ -338,7 +344,8 @@ export default function VehiclesPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { can } = usePermission();
-  const canManage = can("VehicleManage");
+  // سرور خودروها را با دسترسی‌های دسته‌بندی هم می‌پذیرد (کاربرانِ فعلی بی‌تنظیمِ تازه).
+  const canManage = can(["VehicleManage", "ProductCategoryManage"]);
 
   usePageHeader({ title: "خودروها" });
 
@@ -347,10 +354,7 @@ export default function VehiclesPage() {
     id && id !== ALL_ID
       ? (vehiclesQuery.data?.items ?? []).find((v) => String(v.id) === String(id))
       : null;
-  // نشانیِ دست‌کاری‌شده (`/vehicles/abc`) هم مثلِ خودروی حذف‌شده: بدونِ درخواست به سرور.
-  const isValidId = !id || id === ALL_ID || /^\d+$/.test(id);
-  const vehicleMissing =
-    !isValidId || (id && id !== ALL_ID && vehiclesQuery.isSuccess && !vehicle);
+  const vehicleMissing = id && id !== ALL_ID && vehiclesQuery.isSuccess && !vehicle;
 
   const [formState, setFormState] = useState({ open: false, vehicle: null });
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -366,6 +370,7 @@ export default function VehiclesPage() {
         onCreate={() => setFormState({ open: true, vehicle: null })}
         data={vehiclesQuery.data}
         isLoading={vehiclesQuery.isLoading}
+        isError={vehiclesQuery.isError}
       />
 
       <main className={id ? "flex min-h-[calc(100svh-7rem)] min-w-0 flex-col lg:min-h-0" : "hidden min-h-0 min-w-0 lg:flex"}>

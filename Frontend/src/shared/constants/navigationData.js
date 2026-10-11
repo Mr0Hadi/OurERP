@@ -180,7 +180,7 @@ export const navigationData = {
         {
           title: "خودروها",
           url: ROUTES.WAREHOUSE_VEHICLES,
-          permission: "VehicleView",
+          permission: ["VehicleView", "ProductCategoryView"],
           icon: Car,
           description: "خودروها و کالاهای مربوط به هر خودرو",
         },
