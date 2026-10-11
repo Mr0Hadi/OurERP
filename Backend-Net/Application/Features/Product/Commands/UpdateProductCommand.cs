@@ -20,6 +20,7 @@ namespace Application.Features.Product.Commands
         public int Id { get; set; }
         public string Name { get; set; }
         public string? EnglishName { get; set; }
+        public string? Description { get; set; }
         public string Brand { get; set; }
         public ProductUnitEnum Unit { get; set; }
         public UInt64 PurchasePrice { get; set; }
@@ -98,6 +99,8 @@ namespace Application.Features.Product.Commands
             product.Name = request.Name;
             product.RequiresUnitTracking = request.RequiresUnitTracking;
             product.EnglishName = request.EnglishName;
+            // null clears the note; the frontend always sends the current value.
+            product.Description = request.Description;
             product.Brand = request.Brand ?? string.Empty;
             product.Unit = request.Unit;
             product.PurchasePrice = request.PurchasePrice;

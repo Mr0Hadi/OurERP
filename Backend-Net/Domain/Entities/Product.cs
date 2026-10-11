@@ -21,6 +21,7 @@ namespace Domain.Entities
         public int Id { get; set; }
         public string Name { get; set; }
         public string? EnglishName { get; set; }
+        public string? Description { get; set; }
         public string Code { get; set; }
         public string BarCode { get; set; }
         public string? SupplierBarCode { get; set; }
