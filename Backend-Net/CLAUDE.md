@@ -136,6 +136,7 @@ Backend-Net/
 │   │   └── Mapping/     # MappingProfile
 │   ├── Features/
 │   │   ├── Account/     # Command/ (login, logout, refresh, logout-by-id; forget-password/otp removed 2026-10-04)
+│   │   ├── Accounting/  # Queries/, Dtos/, DataTransfer/ (read-only dashboard + journals, 2026-10-12)
 │   │   ├── Customer/    # Commands/, Queries/, Dtos/
 │   │   ├── FileStorage/ # Commands/ (UploadImage, DeleteImage), Queries/ (GetImageUrl)
 │   │   │                # (named FileStorage, not File, to avoid System.IO.File shadowing;
@@ -1954,10 +1955,56 @@ ordinary TRANSFER row through the existing payment endpoints. Answers to 11.x/12
   `DataTransferDefinitionTests` (run without SQL Server: 94 pass); `Integration/DataTransferTests` and
   `Functional/DataTransferFunctionalTests` need SQL Server and were not run on the machine that wrote them.
 
+**Accounting dashboard and journals (2026-10-12).** Read-only `api/Accounting/*` (10 endpoints), one permission
+`AccountingView = 260` (group `Accounting = 14`). API: `docs/api-guide.fa.md` section 20 and the 2026-10-12 table in 16.
+
+- **Endpoints:** `GetAccountingDashboard` (tiles + chart series), `GetPartyBalanceList` (customers and suppliers in one
+  table, ledger balance + aging), `GetPartyLedgerEntryList` (every party-ledger row), `GetSaleJournal` /
+  `GetPurchaseJournal` (one row per invoice), `GetSaleLineJournal`, `GetPaymentJournal` (every payment row, not only card
+  readers), `GetTaxReport` (VAT per Persian period, quarterly by default), `GetInventoryValuation`, `GetTradeBreakdown`
+  (sales or purchases by product/category/party/user). Every list returns a `summary` over the whole filter, not the page.
+- **Invoice-based, no cost of goods or profit.** Sales and purchases count issued invoices (not PROFORMA/CANCELLED,
+  active) by `InvoiceDate`, with the stored line amounts. COGS/profit is deliberately absent: the user wants costing
+  (بهای تمام‌شده) as a **separate feature, not designed yet** - do not add it here. `GetInventoryValuation` only reads the
+  existing cost ledger's latest row per product (highest Id, the `LatestEntryAsync` rule); it computes no cost.
+- **One definition per figure**, in `Application/Features/Accounting/`: `AccountingDocuments.SaleRows`/`PurchaseRows` (a
+  journal row per invoice: payable = live plan total or invoice total; purchase payable = total minus the short-closed
+  share, the `InvoiceLineMath.ShareOfTotal` rule in SQL), `AccountingDocuments.LoadOpenItemsAsync` (aging input: unpaid
+  installments of live plans at their own due dates + remainders of other issued documents at `PaymentDate ?? InvoiceDate`),
+  `PartyBalances.Rows` (UNION ALL of customers and suppliers with ledger totals). The dashboard calls the journals'
+  `SummarizeAsync`, so a tile and its table cannot disagree.
+- **EF translation gotcha (EF Core 10, SQL Server):** a grouped derived table LEFT JOINed onto a document projects fine,
+  but a later `Where` on one of its columns throws "could not be translated". All aggregates are therefore correlated
+  subqueries in the projection; `GroupBy(x => 1)` footers over those subqueries do translate. `ListSortingTests` runs
+  every sort of every new list (and all 8 breakdown side/group pairs) so a regression shows up there.
+- **Balance vs aging:** balance comes from the party ledger, aging from open documents. They differ by whatever is on the
+  account outside an open document (on-account return settlements, unallocated prepayments). Aging is as of now.
+- **Exports:** seven export-only `IDataTransferDefinition`s in `Accounting/DataTransfer/` (`party-balances`, `party-ledger`,
+  `sale-journal`, `purchase-journal`, `sale-lines`, `payment-journal`, `inventory-valuation`), filtered and ordered exactly
+  like the table. Columns filled after paging (aging, overdue days) are not exported.
+- `IWMSDbContext` now exposes `SaleItems`/`PurchaseItems` (closes half of the old "Known gaps" entry about them).
+- **Party-ledger backfill** - migration `20261011202414_party-ledger-backfill`, data only, **generated, not applied**.
+  The ledger started empty on 2026-09-24 by agreement; the user has now asked for the history. It writes, from the
+  documents' current state, the rows `PartyLedger` would have written: issued sale invoices, installment charges of live
+  plans, purchase invoices (minus supplement rows already in the ledger), lines still closed short, non-voided payments,
+  and the ON_ACCOUNT part of applied return money. Cancelled/voided/reversed history nets to zero and is skipped.
+  **Idempotent**: each block skips a document/payment/line/claim the ledger already has, so it only fills gaps on a
+  database where the ledger was live for a while. Every row's Description ends in «(ثبت تکمیلی)»; `Down` deletes those
+  rows unless a later REVERSAL points at one. `UpStatements` is public so `AccountingTests` replays it: wipe the ledger of a
+  history written through the real handlers, backfill, and the balances must come back identical (and a second run
+  writes nothing).
+- **Deferred by the user, keep in mind:** cash-box/bank accounts (صندوق و بانک) - the payment journal splits by payment
+  method only; cheque due dates/statuses do not exist either.
+- **Not verified on real data:** `scripts/seed-mock-data.sql` is stale (old return model, `RequestDate`, `PaymentDetail`
+  table name) and no longer loads, so the backfill was checked by the integration tests and by applying the whole
+  migration chain to an empty throwaway database, not against mock data.
+- Tests: `Integration/AccountingTests.cs` (11) and the sorting smoke test. Suite 934/937 - the 3 documented environmental
+  failures.
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
 - ~~`PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK.~~ **Fixed 2026-09-20** - see the installment-sales entry above: both ids are `int`, both relationships are configured explicitly, and the shadow FK is gone.
-- `IWMSDbContext` does not expose `DbSet<PurchaseItem>`/`DbSet<SaleItem>` (the concrete `WMSDbContext` does), and the two concrete DbSet properties use `{ get; set; }` while the rest use `=> Set<T>()`.
+- ~~`IWMSDbContext` does not expose `DbSet<PurchaseItem>`/`DbSet<SaleItem>`~~ (exposed 2026-10-12, for the accounting journals). The two concrete DbSet properties still use `{ get; set; }` while the rest use `=> Set<T>()`.
 - List DTOs/queries do not yet surface or filter on `IsActive`; soft-deleted rows are only hidden if a query explicitly filters. Consider adding `IsActive` filters to list queries. (Note: `PurchaseReturn` has no `IsActive` — its lifecycle is `Status` alone, with per-decision `ResolvedAt`; purchase-return queries intentionally do not filter `IsActive`.)
 - Validator class naming is inconsistent: `CreateCustomerCommandValidation`/`CreateSupplierCommandValidation` vs the standard `...CommandValidator` suffix.
 - `Customer.longitude/latitude` and `Supplier.longitude/latitude` are lowercase in entities while commands use `Longitude/Latitude` — AutoMapper needs config for these.
