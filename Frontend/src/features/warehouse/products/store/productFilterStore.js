@@ -8,6 +8,7 @@ import { createFilterStore } from "@/shared/store/createFilterStore";
  */
 export const useProductFilterStore = createFilterStore({
   filters: {
+    code: "", // جست‌وجوی کد/بارکد: کدِ کامل فقط همان کالا، نیمه‌کاره کالاهای مشابه
     name: "",
     brand: "",
     productCategoryId: "",

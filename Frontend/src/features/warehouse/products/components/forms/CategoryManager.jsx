@@ -2,18 +2,12 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
+import EntitySelect from "@/shared/components/filters/EntitySelect";
 import { useProductCategoriesQuery } from "@/features/warehouse/categories/services/queries";
 import CategoryFormDialog from "@/features/warehouse/categories/components/CategoryFormDialog";
 
 /**
- * انتخابِ دسته‌بندیِ کالا (با `productCategoryId`، نه نام) و افزودنِ دسته‌ی
+ * انتخابِ دسته‌بندیِ کالا، با جست‌وجو با تایپ (با `productCategoryId`، نه نام) و افزودنِ دسته‌ی
  * تازه از همان‌جا — با همان دیالوگِ صفحه‌ی دسته‌بندی‌ها. دسته‌ی تازه بلافاصله
  * انتخاب می‌شود؛ کاربر برای همین ساختش.
  */
@@ -23,18 +17,17 @@ export default function CategoryManager({ value, onChange }) {
 
   return (
     <div className="flex items-center gap-2">
-      <Select value={value ? String(value) : ""} onValueChange={onChange}>
-        <SelectTrigger className="flex-1" dir="rtl">
-          <SelectValue placeholder={isLoading ? "در حال بارگذاری..." : "انتخاب کنید"} />
-        </SelectTrigger>
-        <SelectContent dir="rtl">
-          {categories.map((category) => (
-            <SelectItem key={category.id} value={String(category.id)}>
-              {category.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <div className="min-w-0 flex-1">
+        <EntitySelect
+          placeholder="انتخاب کنید"
+          emptyText="دسته‌بندی‌ای یافت نشد"
+          items={categories}
+          value={value ? String(value) : ""}
+          onSelect={onChange}
+          isLoading={isLoading}
+          allowClear={false}
+        />
+      </div>
 
       <Button
         type="button"

@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Search, X, ChevronDown, Check } from "lucide-react";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
+import { Popover, PopoverAnchor, PopoverContent } from "@/shared/components/ui/popover";
 import { getPartyName } from "./filterUtils";
 
 /**
@@ -21,6 +22,12 @@ import { getPartyName } from "./filterUtils";
  *                                  `item` برای فیلترهایی است که سرور
  *                                  به‌جای شناسه، نام می‌خواهد.
  *  isLoading                     - در حال دریافت لیست
+ *  allowClear                    - `false` برای فیلدِ فرمِ اجباری: ردیفِ «همه»، ضربدر و
+ *                                  «برداشتنِ انتخاب با کلیکِ دوباره» حذف می‌شود
+ *  label                         - اختیاری؛ فرم‌ها برچسبِ خودشان را دارند
+ *
+ * فهرست در پورتال باز می‌شود (نه absolute داخلِ والد)؛ وگرنه داخلِ کارتِ
+ * `overflow-hidden` (مثلِ بخشِ اقلامِ فرمِ خرید/فروش) بریده می‌شد.
  *  getKey, getLabel              - استخراج کلید و برچسب هر گزینه
  *  renderMeta                    - اطلاعات فرعی کنار هر گزینه (اختیاری)
  */
@@ -32,6 +39,7 @@ export default function EntitySelect({
   value = "",
   onSelect,
   isLoading = false,
+  allowClear = true,
   getKey = (item) => item.id,
   getLabel = getPartyName,
   renderMeta,
@@ -54,27 +62,17 @@ export default function EntitySelect({
     return items.filter((item) => getLabel(item).toLowerCase().includes(search));
   }, [inputValue, items, getLabel]);
 
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
   // انتخابِ گزینه‌ی فعلی یعنی «برداشتنِ فیلتر» — همان رفتاری که کلیک
   // دوباره روی یک رادیو انتظار می‌رود، و راهِ برگشت به «همه» بدون
   // رفتن سراغ ضربدرِ کنارِ فیلد.
   const handleSelect = useCallback(
     (key, item) => {
-      const isUnset = String(key) === String(value);
+      const isUnset = allowClear && String(key) === String(value);
       onSelect(isUnset ? "" : key, isUnset ? null : item);
       setInputValue("");
       setIsOpen(false);
     },
-    [onSelect, value],
+    [onSelect, value, allowClear],
   );
 
   const handleClear = useCallback(
@@ -88,11 +86,15 @@ export default function EntitySelect({
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-start gap-2">
-      <Label className="whitespace-nowrap font-medium text-foreground text-sm sm:pt-2">
-        {label}
-      </Label>
+      {label && (
+        <Label className="whitespace-nowrap font-medium text-foreground text-sm sm:pt-2">
+          {label}
+        </Label>
+      )}
 
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
       <div ref={wrapperRef} className="relative flex-1">
+        <PopoverAnchor asChild>
         <div
           className="w-full bg-transparent rounded-lg border border-input px-3 py-2 text-sm cursor-pointer hover:border-ring transition-colors dark:bg-input/30 dark:hover:bg-input/50"
           onClick={() => setIsOpen(!isOpen)}
@@ -105,7 +107,7 @@ export default function EntitySelect({
             )}
 
             <div className="flex items-center gap-1 flex-shrink-0">
-              {selectedItem && (
+              {allowClear && selectedItem && (
                 <button
                   type="button"
                   onClick={handleClear}
@@ -122,9 +124,17 @@ export default function EntitySelect({
             </div>
           </div>
         </div>
+        </PopoverAnchor>
 
-        {isOpen && (
-          <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
+        <PopoverContent
+          align="start"
+          className="w-(--radix-popover-trigger-width) p-0"
+          // کلیک روی خودِ فیلد را `onClick`ِ آن باز/بسته می‌کند، نه بستنِ بیرونی.
+          onInteractOutside={(event) => {
+            if (wrapperRef.current?.contains(event.target)) event.preventDefault();
+          }}
+        >
+          <div>
             <div className="p-2 border-b">
               <div className="relative">
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
@@ -149,20 +159,22 @@ export default function EntitySelect({
                 </div>
               ) : (
                 <div className="py-1">
-                  <button
-                    type="button"
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors ${
-                      selectedItem ? "" : "bg-accent/50"
-                    }`}
-                    onClick={() => handleSelect("")}
-                  >
-                    <div className="h-4 w-4 flex items-center justify-center flex-shrink-0">
-                      {!selectedItem && <Check className="h-3.5 w-3.5 text-primary" />}
-                    </div>
-                    <span className="text-right flex-1 text-muted-foreground">
-                      {placeholder}
-                    </span>
-                  </button>
+                  {allowClear && (
+                    <button
+                      type="button"
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors ${
+                        selectedItem ? "" : "bg-accent/50"
+                      }`}
+                      onClick={() => handleSelect("")}
+                    >
+                      <div className="h-4 w-4 flex items-center justify-center flex-shrink-0">
+                        {!selectedItem && <Check className="h-3.5 w-3.5 text-primary" />}
+                      </div>
+                      <span className="text-right flex-1 text-muted-foreground">
+                        {placeholder}
+                      </span>
+                    </button>
+                  )}
 
                   {filtered.map((item) => {
                     const key = getKey(item);
@@ -193,8 +205,9 @@ export default function EntitySelect({
               )}
             </div>
           </div>
-        )}
+        </PopoverContent>
       </div>
+      </Popover>
     </div>
   );
 }

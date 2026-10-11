@@ -12,10 +12,10 @@ import {
 import { useProductFilterStore } from "../store/productFilterStore";
 import { productKeys } from "./queryKeys";
 
-/** فیلترهای فعلیِ لیستِ کالا؛ نام، برند و قیمت با تأخیر. */
+/** فیلترهای فعلیِ لیستِ کالا؛ کد، نام، برند و قیمت با تأخیر. */
 export function useProductListFilters() {
   return useDebouncedFilters(useProductFilterStore, {
-    text: ["name", "brand", "fromPrice", "toPrice"],
+    text: ["code", "name", "brand", "fromPrice", "toPrice"],
     instant: ["productCategoryId", "isLowOnStock", "isIncomplete"],
   });
 }

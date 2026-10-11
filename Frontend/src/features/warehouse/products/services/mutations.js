@@ -4,6 +4,7 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  fetchProductByBarcode,
 } from "./api-v1";
 import { productKeys } from "./queryKeys";
 import { productUnitKeys } from "@/features/warehouse/units/services/queryKeys";
@@ -61,3 +62,17 @@ export const useDeleteProductMutation = () => {
     },
   });
 };
+
+/**
+ * شناساییِ دقیقِ کالا با کد یا بارکد (`ScanBarcode`): نتیجه کالا یا `null`.
+ *
+ * mutation است نه query: اسکن یک «کار» است و نتیجه‌اش همان لحظه مصرف می‌شود
+ * (رفتن به جزئیاتِ کالا)، نه داده‌ای که در کش بماند.
+ */
+export const useScanProductMutation = () =>
+  useMutation({
+    mutationFn: fetchProductByBarcode,
+    onError: (error) => {
+      toast.error(getErrorMessage(error, "جست‌وجوی کد انجام نشد"));
+    },
+  });
