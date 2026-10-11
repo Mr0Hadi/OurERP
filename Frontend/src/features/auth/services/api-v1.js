@@ -1,10 +1,18 @@
 import axiosInstance from "@/shared/services/api/axios";
 
+/**
+ * اولین درخواستِ بعد از بیکاریِ سرور (راه‌اندازیِ دوباره‌ی application pool روی IIS،
+ * اتصالِ اولِ دیتابیس) می‌تواند از سقفِ پیش‌فرضِ ۱۵ ثانیه بگذرد؛ لاگین معمولاً همان
+ * درخواستِ اول است، پس سقفِ بلندتری دارد تا به‌جای خطا فقط کند باشد.
+ */
+const LOGIN_TIMEOUT_MS = 45_000;
+
 export async function login({ username, password }) {
-  const { data } = await axiosInstance.post("/Account/Login", {
-    username,
-    password,
-  });
+  const { data } = await axiosInstance.post(
+    "/Account/Login",
+    { username, password },
+    { timeout: LOGIN_TIMEOUT_MS },
+  );
   return data;
 }
 
