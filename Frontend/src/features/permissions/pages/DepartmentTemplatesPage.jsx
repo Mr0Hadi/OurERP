@@ -8,7 +8,7 @@ import { usePermission } from "@/features/auth/hooks/usePermission";
 import { useDepartmentOptionsQuery } from "@/features/organization/departments/services/queries";
 import { useDepartmentUserCountQuery } from "@/features/employees/services/queries";
 
-import AccessListPane from "../components/AccessListPane";
+import MasterListPane from "@/shared/components/layout/MasterListPane";
 import DepartmentTemplatePanel from "../components/DepartmentTemplatePanel";
 import UnsavedChangesDialog from "../components/UnsavedChangesDialog";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
@@ -83,7 +83,7 @@ export default function DepartmentTemplatesPage() {
 
   return (
     <div className="grid w-full min-w-0 grid-cols-1 gap-4 lg:h-[calc(100svh-6.5rem)] lg:grid-cols-[17rem_minmax(0,1fr)]">
-      <AccessListPane
+      <MasterListPane
         className={id ? "hidden lg:flex" : "flex h-[calc(100svh-7rem)] lg:h-auto"}
         search={search}
         onSearchChange={setSearch}

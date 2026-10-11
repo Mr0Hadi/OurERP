@@ -11,6 +11,7 @@ import { useScanProductMutation } from "../../services/mutations";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import ProductCodeSearchField from "./ProductCodeSearchField";
 import { useProductCategoriesQuery } from "@/features/warehouse/categories/services/queries";
+import { useVehiclesQuery } from "@/features/warehouse/vehicles/services/queries";
 
 // سرور فقط `isLowOnStock` دارد: «کم‌موجود» یعنی موجودی ≤ آستانه‌ی هشدار (ناموجودها هم جزوش‌اند).
 const STOCK_OPTIONS = [
@@ -47,11 +48,13 @@ export default function ProductFilters() {
   const navigate = useNavigate();
   const scanProduct = useScanProductMutation();
   const { data: categories = [], isLoading: isCategoriesLoading } = useProductCategoriesQuery();
+  const { data: vehicleData, isLoading: isVehiclesLoading } = useVehiclesQuery();
   const {
     code,
     name,
     brand,
     productCategoryId,
+    vehicleId,
     fromPrice,
     toPrice,
     isLowOnStock,
@@ -60,6 +63,7 @@ export default function ProductFilters() {
     setName,
     setBrand,
     setProductCategoryId,
+    setVehicleId,
     setPriceRange,
     setIsLowOnStock,
     setIsIncomplete,
@@ -86,7 +90,7 @@ export default function ProductFilters() {
         isBusy={scanProduct.isPending}
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
         <FilterSearchInput
           placeholder="نام فارسی یا انگلیسی کالا..."
           value={name}
@@ -106,6 +110,16 @@ export default function ProductFilters() {
           value={productCategoryId}
           onSelect={setProductCategoryId}
           isLoading={isCategoriesLoading}
+        />
+        <EntitySelect
+          label="خودرو"
+          placeholder="همه خودروها"
+          emptyText="خودرویی یافت نشد"
+          items={vehicleData?.items ?? []}
+          getLabel={(vehicle) => vehicle.name}
+          value={vehicleId}
+          onSelect={setVehicleId}
+          isLoading={isVehiclesLoading}
         />
         <FilterSelect
           label="وضعیت موجودی"

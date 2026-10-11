@@ -27,6 +27,8 @@ const EMPTY_PRODUCT = {
   tax: "",
   taxExempt: false,
   requiresUnitTracking: false,
+  // خالی یعنی «همه‌ی خودروها».
+  vehicleIds: [],
 };
 
 function buildDefaultValues(product) {
@@ -41,6 +43,7 @@ function buildDefaultValues(product) {
     tax: product.tax || "",
     taxExempt: product.taxCategory === TaxCategoryEnum.EXEMPT,
     requiresUnitTracking: Boolean(product.requiresUnitTracking),
+    vehicleIds: (product.vehicles ?? []).map((vehicle) => vehicle.id),
   };
 }
 
@@ -86,6 +89,8 @@ export function useProductForm(initialData = null) {
     tax: Number(formData.tax) || 0,
     taxCategory: formData.taxExempt ? TaxCategoryEnum.EXEMPT : TaxCategoryEnum.TAXABLE,
     requiresUnitTracking: Boolean(formData.requiresUnitTracking),
+    // همیشه فرستاده می‌شود: آرایه‌ی خالی یعنی «همه‌ی خودروها» (null در سرور یعنی «دست نزن»).
+    vehicleIds: (formData.vehicleIds ?? []).map(Number),
     imageKey: imageUpload.imageKeyPayload,
   });
 
