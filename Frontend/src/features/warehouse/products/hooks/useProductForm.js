@@ -13,6 +13,7 @@ import { useImageUpload } from "@/shared/hooks/useImageUpload";
 const EMPTY_PRODUCT = {
   name: "",
   englishName: "",
+  description: "",
   code: "",
   barCode: "",
   productCategoryId: "",
@@ -73,6 +74,7 @@ export function useProductForm(initialData = null) {
   const buildProductPayload = (formData) => ({
     name: formData.name,
     englishName: formData.englishName || null,
+    description: formData.description?.trim() || null,
     brand: formData.brand,
     unit: Number(formData.unit),
     productCategoryId: Number(formData.productCategoryId) || 0,
