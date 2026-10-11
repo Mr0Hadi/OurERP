@@ -7,9 +7,10 @@ import { useProductCategoriesQuery } from "@/features/warehouse/categories/servi
 import CategoryFormDialog from "@/features/warehouse/categories/components/CategoryFormDialog";
 
 /**
- * انتخابِ دسته‌بندیِ کالا، با جست‌وجو با تایپ (با `productCategoryId`، نه نام) و افزودنِ دسته‌ی
- * تازه از همان‌جا — با همان دیالوگِ صفحه‌ی دسته‌بندی‌ها. دسته‌ی تازه بلافاصله
- * انتخاب می‌شود؛ کاربر برای همین ساختش.
+ * انتخابِ دسته‌بندیِ کالا (با `productCategoryId`، نه نام) با جست‌وجوی تایپی،
+ * و افزودنِ دسته‌ی تازه از همان‌جا — با همان دیالوگِ صفحه‌ی دسته‌بندی‌ها.
+ * دسته‌ی تازه بلافاصله انتخاب می‌شود؛ کاربر برای همین ساختش. فیلدِ فرم
+ * اجباری است، پس انتخاب با کلیکِ دوباره برداشته نمی‌شود (`allowClear={false}`).
  */
 export default function CategoryManager({ value, onChange }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
