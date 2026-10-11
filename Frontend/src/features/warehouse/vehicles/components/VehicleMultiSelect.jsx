@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Car, Check, ChevronDown, Plus, Search, X } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
@@ -28,6 +28,14 @@ export default function VehicleMultiSelect({ value = [], onChange }) {
   const vehicles = useMemo(() => data?.items ?? [], [data]);
 
   const nameOf = useMemo(() => new Map(vehicles.map((v) => [v.id, v.name])), [vehicles]);
+
+  // خودرویی که دیگر در فهرست نیست (مثلاً از جای دیگری حذف شده) از انتخاب بیرون می‌رود؛
+  // وگرنه با نامِ «خودرو N» نمایش داده و هنگامِ ذخیره به سرور فرستاده و رد می‌شد.
+  useEffect(() => {
+    if (!data) return;
+    const live = value.map(Number).filter((id) => nameOf.has(id));
+    if (live.length !== value.length) onChange(live);
+  }, [data, value, nameOf, onChange]);
 
   const selected = new Set(value.map(Number));
   const filtered = vehicles.filter((v) =>
@@ -157,7 +165,7 @@ export default function VehicleMultiSelect({ value = [], onChange }) {
               key={id}
               className="inline-flex max-w-full items-center gap-1 rounded-full border border-border bg-muted/50 py-0.5 pr-2.5 pl-1 text-xs"
             >
-              <span className="truncate">{nameOf.get(id) ?? `خودرو ${id}`}</span>
+              <span className="truncate">{nameOf.get(id) ?? "…"}</span>
               <button
                 type="button"
                 onClick={() => toggle(id)}

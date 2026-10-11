@@ -50,9 +50,13 @@ export const useUpdateVehicleMutation = () => {
 
 export const useDeleteVehicleMutation = () => {
   const invalidate = useInvalidateVehicles();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: deleteVehicle,
     onSuccess: () => {
+      // جزئیاتِ کالا فرمِ ویرایش را یک‌بار از کش می‌سازد؛ «کهنه» علامت‌زدن کافی نیست و
+      // فرم با خودروی حذف‌شده باز می‌شد. پاک‌کردن یعنی بارِ بعد از سرور خوانده شود.
+      queryClient.removeQueries({ queryKey: productKeys.details() });
       invalidate();
       toast.success("خودرو حذف شد");
     },
