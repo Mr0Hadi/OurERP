@@ -18,7 +18,7 @@ import VehicleFormDialog from "./VehicleFormDialog";
  */
 export default function VehicleMultiSelect({ value = [], onChange }) {
   const { can } = usePermission();
-  const canManage = can("VehicleManage");
+  const canManage = can(["VehicleManage", "ProductCategoryManage"]);
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);

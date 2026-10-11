@@ -72,12 +72,12 @@ export const warehouseRoutes = [
   // فهرست/جزئیات در یک کامپوننت: `:id` فقط انتخابِ سمتِ چپ است ("all" = همه‌ی خودروها).
   {
     path: ROUTES.WAREHOUSE_VEHICLES,
-    handle: { permission: "VehicleView" },
+    handle: { permission: ["VehicleView", "ProductCategoryView"] },
     element: <VehiclesPage />,
   },
   {
     path: ROUTES.WAREHOUSE_VEHICLES_DETAIL,
-    handle: { permission: "VehicleView" },
+    handle: { permission: ["VehicleView", "ProductCategoryView"] },
     element: <VehiclesPage />,
   },
   {
