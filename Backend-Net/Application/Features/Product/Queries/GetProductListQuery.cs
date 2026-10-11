@@ -33,6 +33,9 @@ namespace Application.Features.Product.Queries
         public string? BarCode { get; set; }
         public string? Brand { get; set; }
         public int? ProductCategoryId { get; set; }
+
+        /// <summary>Products that fit this vehicle: the ones linked to it plus the all-vehicles ones (linked to none).</summary>
+        public int? VehicleId { get; set; }
         public bool? IsLowOnStock { get; set; }
         public UInt64? FromPrice { get; set; }
         public UInt64? ToPrice { get; set; }
@@ -155,6 +158,12 @@ namespace Application.Features.Product.Queries
             if (request.ProductCategoryId.HasValue)
             {
                 query = query.Where(p => p.ProductCategoryId == request.ProductCategoryId);
+            }
+
+            if (request.VehicleId.HasValue)
+            {
+                var vehicleId = request.VehicleId.Value;
+                query = query.Where(p => !p.Vehicles.Any() || p.Vehicles.Any(v => v.VehicleId == vehicleId));
             }
 
             if(request.IsLowOnStock.HasValue && request.IsLowOnStock.Value)

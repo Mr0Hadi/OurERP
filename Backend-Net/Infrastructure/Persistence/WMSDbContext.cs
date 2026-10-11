@@ -46,6 +46,8 @@ namespace Infrastructure.Persistence
         public DbSet<Sale> Sales => Set<Sale>();
         public DbSet<Purchase> Purchases => Set<Purchase>();
         public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
+        public DbSet<Vehicle> Vehicles => Set<Vehicle>();
+        public DbSet<ProductVehicle> ProductVehicles => Set<ProductVehicle>();
         public DbSet<Product> Products => Set<Product>();
         public DbSet<Department> Departments => Set<Department>();
         public DbSet<Customer> Customers => Set<Customer>();
@@ -212,6 +214,35 @@ namespace Infrastructure.Persistence
                 .HasMany(x => x.Items)
                 .WithOne(x => x.Purchase)
                 .HasForeignKey(xx => xx.PurchaseId);
+
+            modelBuilder.Entity<Vehicle>()
+                .Property(x => x.Name)
+                .HasMaxLength(100);
+
+            // Unique among live vehicles only: a deleted name can be reused.
+            modelBuilder.Entity<Vehicle>()
+                .HasIndex(x => x.Name)
+                .IsUnique()
+                .HasFilter("[IsActive] = 1");
+
+            modelBuilder.Entity<ProductVehicle>()
+                .HasKey(x => new { x.ProductId, x.VehicleId });
+
+            modelBuilder.Entity<ProductVehicle>()
+                .HasOne(x => x.Product)
+                .WithMany(x => x.Vehicles)
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ProductVehicle>()
+                .HasOne(x => x.Vehicle)
+                .WithMany(x => x.Products)
+                .HasForeignKey(x => x.VehicleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // "Products of this vehicle" reads by VehicleId; the PK already covers ProductId.
+            modelBuilder.Entity<ProductVehicle>()
+                .HasIndex(x => x.VehicleId);
 
             modelBuilder.Entity<Product>()
                 .HasOne(x => x.ProductCategory)

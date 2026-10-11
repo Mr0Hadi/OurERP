@@ -1,15 +1,19 @@
-﻿using Application.Common.Contracts.InventoryCosting;
+﻿using Application.Common.Contracts.Context;
+using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Features.Vehicle;
 using Common.Exceptions;
 using Common.Extensions;
+using Domain.Entities;
 using Domain.Enums;
 using FluentValidation;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Application.Features.Product.Commands
 {
@@ -45,6 +49,12 @@ namespace Application.Features.Product.Commands
         public string? ImageKey { get; set; }
         public int ProductCategoryId { get; set; }
         public bool RequiresUnitTracking { get; set; }
+
+        /// <summary>
+        /// The vehicles this product fits, replacing the current ones. Empty: it fits every vehicle. Null: leave the
+        /// current vehicles untouched, for callers that do not edit them.
+        /// </summary>
+        public List<int>? VehicleIds { get; set; }
     }
 
     // Brand and the three prices are required only once a product is complete - which the validator cannot know - so those
@@ -71,8 +81,10 @@ namespace Application.Features.Product.Commands
         private readonly IInventoryCostingService _inventoryCostingService;
         private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
-        public UpdateProductCommandHandler(IProductRepository productRepository, IProductUnitService productUnitService, IInventoryCostingService inventoryCostingService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
+        private readonly IWMSDbContext _context;
+        public UpdateProductCommandHandler(IProductRepository productRepository, IProductUnitService productUnitService, IInventoryCostingService inventoryCostingService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, IWMSDbContext context)
         {
+            _context = context;
             _productRepository = productRepository;
             _productUnitService = productUnitService;
             _inventoryCostingService = inventoryCostingService;
@@ -133,6 +145,15 @@ namespace Application.Features.Product.Commands
             // make it "complete" with no brand or prices.
             if (product.IsIncomplete && product.HasCompleteCatalogData)
                 product.IsIncomplete = false;
+
+            if (request.VehicleIds != null)
+            {
+                var vehicleIds = await VehicleRules.ResolveVehicleIdsAsync(_context, request.VehicleIds, cancellationToken);
+                var current = await _context.ProductVehicles.Where(x => x.ProductId == product.Id).ToListAsync(cancellationToken);
+                _context.ProductVehicles.RemoveRange(current.Where(x => !vehicleIds.Contains(x.VehicleId)));
+                foreach (var vehicleId in vehicleIds.Where(id => current.All(x => x.VehicleId != id)))
+                    _context.ProductVehicles.Add(new ProductVehicle { ProductId = product.Id, VehicleId = vehicleId });
+            }
 
             _productRepository.Update(product);
             await _unitOfWork.SaveChangesAsync(cancellationToken);

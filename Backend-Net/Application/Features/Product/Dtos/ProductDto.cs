@@ -29,6 +29,9 @@ namespace Application.Features.Product.Dtos
         public bool RequiresUnitTracking { get; set; }
         public bool IsIncomplete { get; set; }
 
+        /// <summary>The vehicles this product fits, by name. Empty: it fits every vehicle.</summary>
+        public List<Application.Features.Vehicle.Dtos.VehicleDto> Vehicles { get; set; } = new();
+
         /// <summary>Units held in quarantine - physically here, not sellable, not part of Stock.</summary>
         public int QuarantinedCount { get; set; }
     }
