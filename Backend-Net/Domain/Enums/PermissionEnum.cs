@@ -339,6 +339,12 @@ namespace Domain.Enums
         // --- حساب اشخاص ---
         [PermissionGroup(PermissionGroupEnum.PartyAccounts)]
         [Description("مشاهده گردش حساب مشتریان و تامین‌کنندگان")]
-        PartyStatementView = 250
+        PartyStatementView = 250,
+
+        // --- حسابداری ---
+        /// <summary>The accounting dashboard and every journal behind it (api/Accounting), and their exports.</summary>
+        [PermissionGroup(PermissionGroupEnum.Accounting)]
+        [Description("مشاهده داشبورد و دفترهای حسابداری")]
+        AccountingView = 260
     }
 }

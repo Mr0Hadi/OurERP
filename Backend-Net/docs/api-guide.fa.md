@@ -31,6 +31,7 @@
 17. [بارگذاری تصاویر (File)](#17-بارگذاری-تصاویر-file)
 18. [گزارش‌ها و سود خالص (Report)](#18-گزارش‌ها-و-سود-خالص-report)
 19. [ورود و خروجِ اطلاعات با CSV/Excel (DataTransfer)](#19-ورود-و-خروجِ-اطلاعات-با-csvexcel-datatransfer)
+20. [داشبورد و دفترهای حسابداری (Accounting)](#20-داشبورد-و-دفترهای-حسابداری-accounting)
 
 ---
 
@@ -687,6 +688,7 @@ Authorization: Bearer {accessToken}
 | کارت‌خوان | `Pos/Charge` | `PosCharge` |
 | | `GetPosTerminalList/Detail` / بقیه | `PosTerminalView` **یا** `PosCharge` (از ۲۰۲۶-۱۰-۰۵، تا صندوق‌دار بتواند دستگاه را انتخاب کند) / `PosTerminalManage` |
 | حساب اشخاص | `PartyAccount/GetPartyStatement` | `PartyStatementView` |
+| حسابداری | تمام `Accounting/*` و خروجی‌های اکسلِ آن‌ها | `AccountingView` |
 
 `CreateInPersonSale` و `Shipment/*` داخل خودشان چند کامند دیگر را اجرا می‌کنند؛ فقط همان یک دسترسیِ بالا لازم است، نه دسترسی‌های کامندهای داخلی.
 
@@ -2964,6 +2966,8 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 10 | اسناد و چاپ |
 | 11 | گزارش‌ها |
 | 12 | کارت‌خوان |
+| 13 | حساب اشخاص |
+| 14 | حسابداری |
 
 گروه فقط برای چیدمان صفحه‌ی مدیریت دسترسی است؛ هیچ‌وقت خودِ گروه به کسی داده نمی‌شود.
 
@@ -3045,6 +3049,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 233 | PosManualRecord | ثبت دستی پرداخت کارتخوان از روی رسید (فعلاً لازمه‌ی هر پرداخت کارتخوان) |
 | 234 | PosPaymentReportView | مشاهده گزارش پرداخت‌های کارتخوان (`Pos/GetPosPaymentList`) |
 | 250 | PartyStatementView | مشاهده گردش حساب مشتریان و تامین‌کنندگان |
+| 260 | AccountingView | مشاهده داشبورد و دفترهای حسابداری (`Accounting/*`) |
 
 ### `OrgRoleEnum` (نقش کاربر در چارت سازمانی)
 | مقدار | معنی |
@@ -3393,6 +3398,15 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 ## 16. نکات و محدودیت‌های شناخته‌شده
 
 این نکات برای جلوگیری از سردرگمی هنگام توسعه فرانت مهم هستند:
+
+### تغییرات قرارداد — ۲۰۲۶-۱۰-۱۲ (داشبورد و دفترهای حسابداری) — افزودنی
+
+| کجا | قبل | بعد |
+|---|---|---|
+| `api/Accounting/*` | — | ۱۰ endpointِ تازه (بخش ۲۰) |
+| `PermissionEnum` / `PermissionGroupEnum` | — | `AccountingView = 260` در گروهِ تازه‌ی `14` (حسابداری) |
+| `DataTransfer` | `products`، `customers`، `suppliers` | + هفت جدولِ فقط‌خروجی: `party-balances`، `party-ledger`، `sale-journal`، `purchase-journal`، `sale-lines`، `payment-journal`، `inventory-valuation` (دسترسی: `AccountingView`) |
+| مانده‌ی اشخاص (`ledgerBalance`، گردشِ حساب) | فقط از روزِ اجرای migrationِ `party-ledger`؛ اسنادِ قدیمی‌تر در حساب نبودند | migrationِ `party-ledger-backfill` ردیف‌های جاافتاده‌ی اسنادِ قدیمی را می‌نویسد (شرحشان با «(ثبت تکمیلی)» تمام می‌شود). بعد از اجرای آن مانده‌ها ممکن است عوض شوند؛ درست‌تر می‌شوند |
 
 ### تغییرات قرارداد — ۲۰۲۶-۱۰-۰۵ (جستجوی کد و بارکد) — تغییر رفتار، بدون تغییرِ شکل
 
@@ -4017,3 +4031,194 @@ migration: `quarantine-unit-cost` (ستون `ProductUnits.QuarantineCost`، `dec
 پیدا می‌شود و هرگز ساخته نمی‌شود. تکراری: کالا = نام + برند؛ مشتری = شماره تماس یا کد ملی؛ تامین‌کننده = نام شرکت، کد
 اقتصادی یا شناسه ملی — ردیفِ تکراری وارد نمی‌شود (رکوردِ موجود دست نمی‌خورد). موجودیِ کالا از فایل وارد نمی‌شود (موجودی
 از دریافت می‌آید). سقف‌ها: ۵ مگابایت، ۵۰۰۰ ردیف. فایلِ CSV باید UTF-8 باشد؛ Excelِ فرمول‌دار یا ماکرودار رد می‌شود.
+
+---
+
+## 20. داشبورد و دفترهای حسابداری (Accounting)
+
+> از ۲۰۲۶-۱۰-۱۲. همه `GET` و فقط‌خواندنی‌اند. دسترسی: **`AccountingView`** (یک دسترسی برای کلِ صفحه).
+
+**مبنای ارقام.** فروش و خرید **بر اساسِ فاکتورِ صادرشده** است: با `InvoiceDate`، فقط فاکتورهای غیرِ پیش‌فاکتور، غیرِ
+لغوشده و حذف‌نشده (مگر با فیلترِ `statuses` خلافش را بخواهید). مبالغِ هر فاکتور همان‌هایی است که روی اقلامش ذخیره شده
+(ناخالص، تخفیف، خالص، مالیات، جمع). **بهای تمام‌شده و سود در این بخش نیست**؛ آن فیچرِ جداگانه‌ای است که بعداً طراحی
+می‌شود (گزارشِ سودِ فعلی همان `Report/GetSaleReport` در بخش ۱۸ است).
+
+**قواعدِ مشترک**
+- بازه‌ی تاریخ (`fromDate`/`toDate`، `fromDueDate`/`toDueDate`) هر دو روز را شامل می‌شود، ساعت هرچه باشد.
+- فهرست‌ها صفحه‌بندی دارند (`page`، `take`) و `sortBy`/`sortDirection` می‌گیرند (بخش ۱، «مرتب‌سازی»). کنارِ ردیف‌ها یک
+  `summary` می‌آید که **جمعِ همه‌ی ردیف‌های فیلتر** است، نه فقط همان صفحه؛ برای پاورقیِ جدول.
+- مبالغ عددِ اعشاری و به ریال‌اند. «مانده» = قابل‌پرداخت منهای پرداخت‌شده؛ منفی یعنی اضافه‌پرداخت.
+- **سررسید** (`dueDate`) = `paymentDate`، و اگر خالی بود `invoiceDate`. «سررسیدگذشته» یعنی چیزی مانده و سررسید قبل از
+  امروز است. قسطِ اقساطی با سررسیدِ خودش حساب می‌شود، نه با سررسیدِ فاکتور.
+- **مانده‌ی حساب** (`balance`) از دفترِ حسابِ اشخاص می‌آید: مثبت یعنی طرف به ما بدهکار است، منفی یعنی ما بدهکاریم؛ برای
+  مشتری و تامین‌کننده یک معنا. **سنی‌بندی** (`aging`) از اسنادِ باز و اقساطِ پرداخت‌نشده می‌آید. این دو می‌توانند به اندازه‌ی
+  چیزی که بیرون از هر سندِ بازی روی حساب است (مثلاً تسویه‌ی مرجوعی «در حساب») با هم فرق داشته باشند.
+- **خروجیِ اکسل/CSV:** همان پارامترهای فیلترِ جدول با `api/DataTransfer/Export?resource=…` (بخش ۱۹). ستون‌هایی که بعد از
+  صفحه‌بندی حساب می‌شوند (سنی‌بندی، روزهای دیرکرد) در فایل نیستند. ترتیبِ فایل همان ترتیبِ جدول است.
+
+| Endpoint | چه چیزی | resourceِ خروجی |
+|---|---|---|
+| `GetAccountingDashboard` | کاشی‌ها و نمودارِ داشبورد | — |
+| `GetPartyBalanceList` | جدولِ حسابِ اشخاص | `party-balances` |
+| `GetPartyLedgerEntryList` | همه‌ی ردیف‌های دفترِ حسابِ اشخاص | `party-ledger` |
+| `GetSaleJournal` | دفترِ فروش (هر فاکتور یک ردیف) | `sale-journal` |
+| `GetPurchaseJournal` | دفترِ خرید | `purchase-journal` |
+| `GetSaleLineJournal` | ریزِ اقلامِ فروش | `sale-lines` |
+| `GetPaymentJournal` | دفترِ دریافت و پرداخت | `payment-journal` |
+| `GetTaxReport` | مالیاتِ ارزش افزوده به تفکیکِ دوره | — |
+| `GetInventoryValuation` | ارزشِ موجودی | `inventory-valuation` |
+| `GetTradeBreakdown` | تفکیکِ فروش/خرید بر اساسِ کالا، دسته، طرف‌حساب یا کاربر | — |
+
+### `GET api/Accounting/GetAccountingDashboard`
+
+پارامترها: `fromDate`، `toDate` (پیش‌فرض: دوازده ماهِ منتهی به امروز)، `periodType` (`ReportPeriodTypeEnum`، پیش‌فرض `2`
+= ماهانه؛ برای `series`).
+
+دو نوع رقم دارد: **لحظه‌ای** (همین حالا، مستقل از بازه) و **دوره‌ای** (در بازه).
+
+| فیلد | نوع | معنی |
+|---|---|---|
+| `receivables` | لحظه‌ای | `total` = جمعِ مانده‌ی مثبتِ مشتری‌ها (طلبِ ما)، `partyCount`؛ `oppositeTotal`/`oppositePartyCount` = آنچه ما به مشتری‌ها بدهکاریم (اضافه‌پرداخت، اعتبارِ مرجوعی)؛ `aging` |
+| `payables` | لحظه‌ای | `total` = بدهیِ ما به تامین‌کننده‌ها (عددِ مثبت)؛ `oppositeTotal` = طلبِ ما از آن‌ها؛ `aging` |
+| `sales` / `purchases` | دوره‌ای | همان `summary`ِ دفترِ فروش/خرید برای بازه (`count`، `grossAmount`، `discountAmount`، `netAmount`، `taxAmount`، `totalAmount`، `installmentChargeAmount`، `shortClosedAmount`، `payableAmount`، `paidAmount`، `remainingAmount`) |
+| `cash` | دوره‌ای | همان `summary`ِ دفترِ دریافت و پرداخت برای بازه (`totalIn`، `totalOut`، `net`، `byType[]`) |
+| `tax` | دوره‌ای | `outputTax`، `inputTax`، `netTaxPayable` |
+| `overdueSales` / `overduePurchases` | لحظه‌ای | `count`، `amount`ِ فاکتورهای باز و سررسیدگذشته (فروشِ اقساطی اینجا نیست؛ در `installments` است) |
+| `installments` | لحظه‌ای | `activePlanCount`، `outstandingCount`/`outstandingAmount`، `overdueCount`/`overdueAmount`، `dueNext30DaysCount`/`dueNext30DaysAmount` |
+| `inventory` | لحظه‌ای | همان `summary`ِ ارزشِ موجودی |
+| `pendingReturnMoney` | لحظه‌ای | پولِ تصمیم‌گرفته‌شده ولی پرداخت‌نشده‌ی مرجوعی‌های باز: `saleReturnMoneyIn`، `saleReturnMoneyOut`، `purchaseReturnMoneyIn`، `purchaseReturnMoneyOut`، `effectCount` |
+| `series[]` | دوره‌ای | برای هر دوره: `periodStart`، `periodEnd` (شروعِ دوره‌ی بعد)، `saleCount`، `salesTotal`، `purchaseCount`، `purchasesTotal`، `cashIn`، `cashOut`، `outputTax`، `inputTax` |
+
+`aging` (`AgingDto`): `notDue`، `days1To30`، `days31To60`، `days61To90`، `over90Days`، `overdue` (جمعِ چهارتای آخر)، `total`.
+
+جمعِ `series` با کاشی‌های همان بازه برابر است.
+
+### `GET api/Accounting/GetPartyBalanceList`
+
+پارامترها: `partyType` (`1` مشتری، `2` تامین‌کننده، خالی = هر دو)، `balanceState` (`1` بدهکار، `2` بستانکار، `3` تسویه)،
+`minBalance`، `maxBalance`، `overdueOnly`، `search` (نام یا تلفن)، `sortBy` (`0` مانده، `1` نام، `2` جمعِ بدهکار، `3` جمعِ
+بستانکار، `4` آخرین گردش، `5` آخرین پرداخت)، `sortDirection`. پیش‌فرض: بزرگ‌ترین مانده اول.
+
+پاسخ: `{ partyBalanceList: [...], summary, page }`.
+
+ردیف: `partyType`، `partyId`، `name`، `phone`، `isActive`، `creditLimit` (فقط مشتری)، `totalDebit`، `totalCredit`،
+`balance`، `lastEntryAt`، `lastPaymentAt`، `openItemCount` (فاکتورهای باز + اقساطِ پرداخت‌نشده)، `aging`.
+
+`summary`: `count`، `totalDebit`، `totalCredit`، `totalReceivable`، `totalPayable`، `net`، `debtorCount`، `creditorCount`،
+`receivableAging` (مشتری‌ها)، `payableAging` (تامین‌کننده‌ها).
+
+مشتری یا تامین‌کننده‌ی غیرفعال فقط وقتی می‌آید که در حساب ردیفی داشته باشد. گردشِ یک نفر با مانده‌ی جاری همان
+`PartyAccount/GetPartyStatement` (بخش ۵ب) است.
+
+### `GET api/Accounting/GetPartyLedgerEntryList`
+
+پارامترها: `fromDate`، `toDate` (روی `occurredAt`)، `partyType`، `customerId`، `supplierId`، `entryTypes` (چندتایی،
+`?entryTypes=1&entryTypes=5`)، `direction` (`1` بدهکار، `2` بستانکار)، `saleId`، `purchaseId`، `excludeReversed`
+(ردیف‌های برگشت‌خورده و خودِ ردیف‌های برگشت را کنار می‌گذارد)، `search` (شرح، شماره فاکتور یا نامِ طرف‌حساب)، `sortBy`
+(`0` تاریخ، `1` مبلغ، `2` نامِ طرف‌حساب). پیش‌فرض: تازه‌ترین اول.
+
+ردیف: `id`، `occurredAt`، `createdAt`، `partyType`، `partyId`، `partyName`، `entryType`، `entryTypeTitle`، `direction`،
+`debit`، `credit`، `description`، `saleId`، `purchaseId`، `invoiceNumber`، `paymentDetailId`، `paymentType`،
+`saleReturnClaimId`، `purchaseReturnClaimId`، `purchaseItemId`، `reversalOfEntryId`، `isReversed`.
+
+`summary`: `count`، `totalDebit`، `totalCredit`، `net`. مانده‌ی جاری ندارد، چون صفحه‌بندی‌شده است.
+
+### `GET api/Accounting/GetSaleJournal` و `GetPurchaseJournal`
+
+پارامترها: `fromDate`، `toDate` (روی `invoiceDate`)، `fromDueDate`، `toDueDate`، `statuses` (چندتایی؛ خالی = همه‌ی
+وضعیت‌ها به‌جز پیش‌فاکتور و لغوشده)، `customerId`/`supplierId`، `salesUserId`/`purchasingUserId`، `paymentType`،
+`paymentState` (`1` باز، `2` تسویه، `3` سررسیدگذشته)، `search` (شماره فاکتور یا نامِ طرف)، `sortBy` (`0` تاریخ فاکتور،
+`1` شماره، `2` نامِ طرف، `3` سررسید، `4` جمع، `5` پرداخت‌شده، `6` مانده). پیش‌فرض: تازه‌ترین اول.
+
+ردیفِ فروش: `id`، `invoiceNumber`، `invoiceDate`، `paymentDate`، `dueDate`، `status`، `paymentType`، `customerId`،
+`customerName`، `salesUserId`، `salesUserName`، `itemCount`، `grossAmount`، `discountAmount`، `netAmount`، `taxAmount`،
+`totalAmount`، `hasInstallmentPlan`، `installmentChargeAmount`، `payableAmount` (جمعِ قراردادِ اقساطیِ زنده، وگرنه
+`totalAmount`)، `paidAmount`، `remainingAmount`، `overdueDays` (فقط وقتی چیزی مانده و سررسید گذشته).
+
+ردیفِ خرید: همان، با `supplierId`/`supplierName`/`purchasingUserId`/`purchasingUserName`، و به‌جای سودِ اقساط
+`shortClosedAmount` (سهمِ اقلامِ بسته‌شده با کسری)؛ `payableAmount = totalAmount − shortClosedAmount`.
+
+`summary` (`JournalSummaryDto`): `count` و جمعِ همه‌ی ستون‌های مبلغ. `remainingAmount` فقط مانده‌های مثبت را جمع می‌زند
+(اضافه‌پرداختِ یک فاکتور، بدهیِ فاکتورِ دیگر را صفر نمی‌کند).
+
+### `GET api/Accounting/GetSaleLineJournal`
+
+پارامترها: `fromDate`، `toDate`، `statuses`، `saleId`، `customerId`، `productId`، `productCategoryId`، `taxCategory`،
+`search` (شماره فاکتور، مشتری، نام یا کدِ کالا)، `sortBy` (`0` تاریخ، `1` شماره فاکتور، `2` نامِ کالا، `3` تعداد،
+`4` خالص، `5` جمع).
+
+ردیف: `id`، `saleId`، `invoiceNumber`، `invoiceDate`، `status`، `customerId`، `customerName`، `productId`، `productCode`،
+`productName`، `productCategoryId`، `productCategoryName`، `unit`، `quantity`، `shippedQuantity`، `unitPrice`،
+`discountPercent`، `grossAmount`، `discountAmount`، `netAmount`، `taxCategory`، `taxPercent`، `taxAmount`، `totalAmount`.
+`summary`: `count`، `quantity` و جمعِ مبالغ.
+
+### `GET api/Accounting/GetPaymentJournal`
+
+همه‌ی ردیف‌های پرداختِ فروش و خرید (اقساط هم)، چه با کارتخوان چه بدونِ آن. **هنوز حسابِ صندوق و بانک نداریم**؛ تفکیک
+فقط بر اساسِ روشِ پرداخت است.
+
+پارامترها: `fromDate`، `toDate` (روی `paidAt`)، `direction` (`1` ورود به ما، `2` خروج از ما)، `types` (چندتاییِ
+`PaymentTypeEnum`)، `purpose` (`PaymentPurposeEnum`)، `documentSide` (`1` فروش، `2` خرید)، `saleId`، `purchaseId`،
+`customerId`، `supplierId`، `posTerminalId`، `recordedByUserId`، `includeVoided` (ردیف‌های باطل‌شده را هم نشان بده)،
+`search` (شماره فاکتور، نامِ طرف، شماره چک، شماره پیگیری)، `sortBy` (`0` تاریخ پرداخت، `1` زمانِ ثبت، `2` مبلغ،
+`3` نامِ طرف).
+
+ردیف: `id`، `paidAt`، `recordedAt`، `direction`، `type`، `purpose`، `amount`، `voidedAt`، `documentSide`، `saleId`،
+`purchaseId`، `invoiceNumber`، `partyType`، `partyId`، `partyName`، `checkNumber`، `transferRef`، `posTerminalId`،
+`posTerminalName`، `recordedByUserId`، `recordedByName`.
+
+`summary`: `count`، `totalIn`، `totalOut`، `net`، `byType[]` (`type`، `count`، `in`، `out`، `net`). **ردیفِ باطل‌شده
+هیچ‌وقت در `summary` شمرده نمی‌شود**، حتی با `includeVoided`.
+
+### `GET api/Accounting/GetTaxReport`
+
+پارامترها: `periodType` (پیش‌فرض `3` = فصلی)، `fromDate`، `toDate` (پیش‌فرض دوازده ماه).
+
+پاسخ: `{ periods: [...], totals }`. هر کدام: `periodStart`، `periodEnd`، `saleInvoiceCount`، `taxableSalesNet`،
+`exemptSalesNet`، `outputTax`، `purchaseInvoiceCount`، `taxablePurchasesNet`، `exemptPurchasesNet`، `inputTax`،
+`netTaxPayable` (منفی = اعتبارِ مالیاتی). ریزِ هر فاکتور، ستونِ `taxAmount` در دفترِ فروش/خرید با همان تاریخ‌هاست.
+مرجوعی‌ها مالیات را تعدیل نمی‌کنند، چون فاکتورِ صادرشده هیچ‌وقت ویرایش نمی‌شود.
+
+### `GET api/Accounting/GetInventoryValuation`
+
+ارزشِ موجودیِ همین حالا، همان‌طور که دفترِ ارزشِ موجودی ثبت کرده (آخرین ردیفِ هر کالا). اینجا هیچ محاسبه‌ی بهایی انجام
+نمی‌شود. پارامترها: `productCategoryId`، `onlyWithValue`، `search` (نام یا کد)، `sortBy` (`0` ارزش کل، `1` نام، `2` کد،
+`3` موجودی، `4` میانگین بها، `5` ارزش قرنطینه).
+
+ردیف: `productId`، `code`، `name`، `productCategoryId`، `productCategoryName`، `unit`، `isActive`، `stock`،
+`ledgerQuantity`، `averageCost`، `poolValue` (موجودیِ قابل‌فروش)، `quarantinedQuantity`، `offPoolValue` (کالای
+پول‌داده‌شده در قرنطینه)، `totalValue`. `summary`: `productCount`، `stock`، `quarantinedQuantity`، `poolValue`،
+`offPoolValue`، `totalValue`.
+
+### `GET api/Accounting/GetTradeBreakdown`
+
+پارامترها: `side` (`1` فروش، `2` خرید)، `groupBy` (`1` کالا، `2` دسته، `3` طرف‌حساب، `4` کاربر)، `fromDate`، `toDate`،
+`partyId`، `productId`، `productCategoryId`، `search` (عنوانِ گروه)، `sortBy` (`0` خالص، `1` عنوان، `2` تعداد، `3` تعدادِ
+فاکتور، `4` جمع). پیش‌فرض: بزرگ‌ترین خالص اول.
+
+ردیف: `id` (برای کاربر، `0` یعنی اسنادِ بدونِ کاربر)، `title`، `code` (فقط کالا)، `invoiceCount`، `quantity`،
+`grossAmount`، `discountAmount`، `netAmount`، `taxAmount`، `totalAmount`، `netSharePercent` (سهم از خالصِ کلِ دوره).
+`summary`: `groupCount` و جمعِ کلِ دوره (بدونِ اعمالِ `search`).
+
+### مقادیرِ Enumهای این بخش
+
+| Enum | مقادیر |
+|---|---|
+| `AccountingPartyTypeEnum` | `1` مشتری، `2` تامین‌کننده |
+| `PartyBalanceStateEnum` | `1` بدهکار، `2` بستانکار، `3` تسویه |
+| `InvoicePaymentStateEnum` | `1` باز، `2` تسویه‌شده، `3` سررسیدگذشته |
+| `DocumentSideEnum` | `1` فروش، `2` خرید |
+| `TradeBreakdownGroupEnum` | `1` کالا، `2` دسته، `3` طرف‌حساب، `4` کاربر |
+
+### پر کردنِ دفترِ حسابِ اسنادِ قدیمی (migrationِ `party-ledger-backfill`)
+
+دفترِ حسابِ اشخاص روزِ اجرای migrationِ `party-ledger` خالی شروع شده بود، پس اسنادِ قبل از آن در مانده‌ها نبودند. این
+migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های جاافتاده را با همان قواعدِ دفتر می‌نویسد:
+- فاکتورِ فروشِ صادرشده، و سودِ اقساطِ قراردادِ زنده‌اش؛
+- فاکتورِ خرید (منهای ضمیمه‌هایی که از قبل در دفتر هستند)، و کسریِ اقلامی که هنوز بسته‌اند؛
+- هر پرداختِ باطل‌نشده؛
+- بخشِ «در حساب»ِ پولِ مرجوعی‌ها.
+
+هر چیزی که لغو، باطل یا برگشت خورده، چون خالصش صفر است، نوشته نمی‌شود. هر سند، پرداخت، قلم یا ادعایی که از قبل در دفتر
+هست دوباره نوشته نمی‌شود؛ پس اجرایش روی دیتابیسی که دفتر مدتی در آن زنده بوده فقط جاهای خالی را پر می‌کند. شرحِ همه‌ی
+ردیف‌هایش با «(ثبت تکمیلی)» تمام می‌شود. بعد از اجرایش مانده‌ی اشخاص ممکن است عوض شود؛ درست‌تر می‌شود.
