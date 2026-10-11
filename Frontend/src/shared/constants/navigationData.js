@@ -26,6 +26,7 @@ import {
   UserCog,
   Users,
   Warehouse,
+  Car,
 } from "lucide-react";
 
 export const navigationData = {
@@ -175,6 +176,13 @@ export const navigationData = {
           permission: "ProductCategoryView",
           icon: Tags,
           description: "ایجاد، ویرایش و حذف دسته‌بندی‌های کالا",
+        },
+        {
+          title: "خودروها",
+          url: ROUTES.WAREHOUSE_VEHICLES,
+          permission: "VehicleView",
+          icon: Car,
+          description: "خودروها و کالاهای مربوط به هر خودرو",
         },
         {
           title: "تعریف کالای جدید",

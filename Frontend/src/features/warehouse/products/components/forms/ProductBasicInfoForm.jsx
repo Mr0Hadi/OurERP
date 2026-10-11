@@ -20,6 +20,7 @@ import {
 
 import StatusBadge from "@/shared/components/status/StatusBadge";
 import CategoryManager from "./CategoryManager";
+import VehicleMultiSelect from "@/features/warehouse/vehicles/components/VehicleMultiSelect";
 import { PRODUCT_UNIT_LABELS } from "@/shared/domain/enums/productUnit";
 
 /**
@@ -187,6 +188,17 @@ export default function ProductBasicInfoForm({
           {errors.unit && (
             <span className="text-xs text-destructive">{errors.unit.message}</span>
           )}
+        </div>
+
+        <div className="space-y-2 md:col-span-2">
+          <Label>خودروها</Label>
+          <Controller
+            name="vehicleIds"
+            control={control}
+            render={({ field }) => (
+<VehicleMultiSelect value={field.value ?? []} onChange={field.onChange} />
+            )}
+          />
         </div>
 
         <div className="md:col-span-2">

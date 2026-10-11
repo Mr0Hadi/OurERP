@@ -148,6 +148,15 @@ namespace Domain.Enums
         [Description("ورود گروهی تأمین‌کننده از فایل")]
         SupplierImport = 59,
 
+        // The basic-data block (40-59) is full; 60-69 are its overflow, before purchases start at 70.
+        [PermissionGroup(PermissionGroupEnum.BasicData)]
+        [Description("مشاهده خودروها")]
+        VehicleView = 60,
+
+        [PermissionGroup(PermissionGroupEnum.BasicData)]
+        [Description("مدیریت خودروها و کالاهای هر خودرو")]
+        VehicleManage = 61,
+
         // --- خرید ---
         [PermissionGroup(PermissionGroupEnum.Purchase)]
         [Description("مشاهده خریدها")]

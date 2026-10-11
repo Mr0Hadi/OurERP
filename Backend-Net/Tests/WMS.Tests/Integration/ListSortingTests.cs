@@ -9,6 +9,7 @@ using Application.Features.Product.Dtos;
 using Application.Features.Product.Queries;
 using Application.Features.ProductCategory.Dtos;
 using Application.Features.ProductCategory.Queries;
+using Application.Features.Vehicle.Queries;
 using Application.Features.Purchase.Queries;
 using Application.Features.PurchaseReturn.Queries;
 using Application.Features.Report.Queries;
@@ -47,6 +48,8 @@ namespace WMS.Tests.Integration
             await RunAll<ProductListSortEnum>((s, d) => new GetProductListQueryHandler(scope.Db, storage).Handle(new GetProductListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<ProductUnitListSortEnum>((s, d) => new GetProductUnitListQueryHandler(scope.Db, scope.ProductCodeService).Handle(new GetProductUnitListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<ProductCategoryListSortEnum>((s, d) => new GetProductCategoryListQueryHandler(scope.Db).Handle(new GetProductCategoryListQuery { SortBy = s, SortDirection = d }, ct));
+            await RunAll<VehicleListSortEnum>((s, d) => new GetVehicleListQueryHandler(scope.Db).Handle(new GetVehicleListQuery { SortBy = s, SortDirection = d }, ct));
+            await RunAll<VehicleProductListSortEnum>((s, d) => new GetVehicleProductListQueryHandler(scope.Db, storage).Handle(new GetVehicleProductListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<PurchaseListSortEnum>((s, d) => new GetPurchaseListQueryHandler(scope.Db).Handle(new GetPurchaseListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<SaleListSortEnum>((s, d) => new GetSaleListQueryHandler(scope.Db).Handle(new GetSaleListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<PurchaseReturnListSortEnum>((s, d) => new GetPurchaseReturnListQueryHandler(scope.Db).Handle(new GetPurchaseReturnListQuery { SortBy = s, SortDirection = d }, ct));

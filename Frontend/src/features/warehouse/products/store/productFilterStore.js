@@ -12,6 +12,7 @@ export const useProductFilterStore = createFilterStore({
     name: "",
     brand: "",
     productCategoryId: "",
+    vehicleId: "", // کالاهای همان خودرو + کالاهای «همه‌ی خودروها»
     fromPrice: "",
     toPrice: "",
     isLowOnStock: "", // "" | "true" | "false"

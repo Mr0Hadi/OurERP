@@ -1,4 +1,5 @@
-﻿using Application.Common.Contracts.InventoryCosting;
+﻿using Application.Common.Contracts.Context;
+using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductCode;
 using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.Repositories;
@@ -6,6 +7,7 @@ using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Features.Vehicle;
 using AutoMapper;
 using Common.Extensions;
 using Domain.Entities;
@@ -42,6 +44,9 @@ namespace Application.Features.Product.Commands
         public string? ImageKey { get; set; }
         public int ProductCategoryId { get; set; }
         public bool RequiresUnitTracking { get; set; }
+
+        /// <summary>The vehicles this product fits. Null or empty: it fits every vehicle.</summary>
+        public List<int>? VehicleIds { get; set; }
 
         /// <summary>
         /// Quick-create at the warehouse door for an off-document product: only name, unit and category are required; brand and
@@ -83,9 +88,11 @@ namespace Application.Features.Product.Commands
         private readonly IInventoryCostingService _inventoryCostingService;
         private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IWMSDbContext _context;
 
-        public CreateProductCommandHandler(IProductRepository productRepository, IMapper mapper, IProductCodeService productCodeService, IProductUnitService productUnitService, IInventoryCostingService inventoryCostingService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
+        public CreateProductCommandHandler(IProductRepository productRepository, IMapper mapper, IProductCodeService productCodeService, IProductUnitService productUnitService, IInventoryCostingService inventoryCostingService, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, IWMSDbContext context)
         {
+            _context = context;
             _productRepository = productRepository;
             _mapper = mapper;
             _productCodeService = productCodeService;
@@ -100,6 +107,8 @@ namespace Application.Features.Product.Commands
             var res = new ResponseDto();
 
             var product = BuildEntity(request, _mapper, _objectStorageService);
+            var vehicleIds = await VehicleRules.ResolveVehicleIdsAsync(_context, request.VehicleIds, cancellationToken);
+            product.Vehicles = vehicleIds.Select(id => new ProductVehicle { VehicleId = id }).ToList();
 
             await _productRepository.AddAsync(product, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);

@@ -84,6 +84,8 @@ namespace Application.Common.Mapping
 				// IObjectStorageService.NormalizeKey, so AutoMapper must not set it by convention -
 				// that would let a full URL echoed back by the frontend land in the column verbatim.
 				.ForMember(dest => dest.ImageUrl, opt => opt.Ignore())
+				// Linked from VehicleIds by the handler, after checking every vehicle is live.
+				.ForMember(dest => dest.Vehicles, opt => opt.Ignore())
 				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
 			// The entity's ImageUrl column holds the bucket object key (signed URLs expire, so
@@ -94,7 +96,9 @@ namespace Application.Common.Mapping
 				.ForMember(dest => dest.ImageKey, opt => opt.MapFrom(src => src.ImageUrl))
 				.ForMember(dest => dest.ImageUrl, opt => opt.Ignore())
 				// Counted from ProductUnits by the query, not a column.
-				.ForMember(dest => dest.QuarantinedCount, opt => opt.Ignore());
+				.ForMember(dest => dest.QuarantinedCount, opt => opt.Ignore())
+				// Read with the vehicle names by the detail query.
+				.ForMember(dest => dest.Vehicles, opt => opt.Ignore());
 
 			CreateMap<CreateProductCategoryCommand, ProductCategory>()
 				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));

@@ -99,6 +99,7 @@ namespace WMS.Tests.Support
             // rows build their own guard for a user holding PosManualRecord (PosPaymentGuardFor).
             PosPaymentGuard = PosPaymentGuardFor(1);
             ProductCategoryRepository = new ProductCategoryRepository(context);
+            VehicleRepository = new VehicleRepository(context);
             DepartmentRepository = new DepartmentRepository(context);
             TeamRepository = new TeamRepository(context);
             SaleInstallmentPlanRepository = new SaleInstallmentPlanRepository(context);
@@ -129,6 +130,7 @@ namespace WMS.Tests.Support
         public IPosPaymentGuard PosPaymentGuard { get; }
         public IPosPaymentGuard PosPaymentGuardFor(int userId) => new PosPaymentGuard(Context, PermissionService, FakeUserContext.WithUserId(userId));
         public IProductCategoryRepository ProductCategoryRepository { get; }
+        public IVehicleRepository VehicleRepository { get; }
         public IDepartmentRepository DepartmentRepository { get; }
         public ITeamRepository TeamRepository { get; }
         public ISaleInstallmentPlanRepository SaleInstallmentPlanRepository { get; }
