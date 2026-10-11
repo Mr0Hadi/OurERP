@@ -347,7 +347,10 @@ export default function VehiclesPage() {
     id && id !== ALL_ID
       ? (vehiclesQuery.data?.items ?? []).find((v) => String(v.id) === String(id))
       : null;
-  const vehicleMissing = id && id !== ALL_ID && vehiclesQuery.isSuccess && !vehicle;
+  // نشانیِ دست‌کاری‌شده (`/vehicles/abc`) هم مثلِ خودروی حذف‌شده: بدونِ درخواست به سرور.
+  const isValidId = !id || id === ALL_ID || /^\d+$/.test(id);
+  const vehicleMissing =
+    !isValidId || (id && id !== ALL_ID && vehiclesQuery.isSuccess && !vehicle);
 
   const [formState, setFormState] = useState({ open: false, vehicle: null });
   const [deleteTarget, setDeleteTarget] = useState(null);
