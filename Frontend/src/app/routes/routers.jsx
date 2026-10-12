@@ -14,6 +14,7 @@ import { warehouseRoutes } from "@/features/warehouse/routes";
 import { invoiceRoutes } from "@/features/invoice/routes";
 import { suppliersRoutes } from "@/features/suppliers/routes";
 import { reportsRoutes } from "@/features/reports/routes";
+import { accountingRoutes } from "@/features/accounting/routes";
 import { settingsRoutes } from "@/features/settings/routes";
 import { transactionsRoutes } from "@/features/transactions/routes";
 import { purchasesRoutes } from "@/features/purchases/routes";
@@ -52,6 +53,7 @@ export const router = createBrowserRouter([
       ...salesRoutes,
       ...suppliersRoutes,
       ...reportsRoutes,
+      ...accountingRoutes,
       ...settingsRoutes,
       ...transactionsRoutes,
     ],

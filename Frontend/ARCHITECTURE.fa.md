@@ -207,7 +207,7 @@ main.jsx
                                       errorElement: NotFoundPage
    ├ dashboardRoutes, customersRoutes, employeesRoutes, organizationRoutes,
    │ permissionsRoutes, purchasesRoutes, warehouseRoutes, invoiceRoutes,
-   │ salesRoutes, suppliersRoutes, reportsRoutes, settingsRoutes, transactionsRoutes
+   │ salesRoutes, suppliersRoutes, reportsRoutes, accountingRoutes, settingsRoutes, transactionsRoutes
 /dev/ui          → (فقط DEV)
 *                → NotFoundPage
 ```
@@ -646,7 +646,7 @@ const query = usePurchasesQuery(filters, pagination, sorting);   // listQuery + 
 | `ui/` | primitiveهای **shadcn** (تولید CLI، فقط در صورت نیاز واقعی دست بخورند) + ورودی‌های ایرانی (قیمت، کد ملی، موبایل، پلاک، بانک، تقویم شمسی، شهر) |
 | `layout/` | `AppSidebar`, `NavMain/NavUser/NavTools/NavSecondary/NavWorkspace`, `AppBreadcrumb`, `ListPageLayout`, `RouteLoadingOverlay` |
 | `table/` | `DataTable`, `ServerTable`, `DataTablePagination`, `columns` (`detailsColumn`), `DetailsLink`, `SortIcon`, `PaymentProgress`, `TableLoadingSkeleton` |
-| `filters/` | `FilterPanel`, `FilterSearchInput`, `FilterSelect`, `FilterDateInput`, `EntitySelect` |
+| `filters/` | `FilterPanel`, `FilterSearchInput`, `FilterSelect`, `FilterDateInput`, `EntitySelect`, `FilterMultiChoice` (پارامترِ فهرستیِ سرور)، `FilterSwitch` (پارامترِ بولین)، `DateRangeToolbar` (بازه با دکمه‌های آماده‌ی شمسی از `shared/lib/dateRanges`) |
 | `forms/` | `DocumentFormLayout`, `FormField`, `FormSectionCard`, `OrderInfoCard`, `PartyPickerCard`, `ProductSearchPanel`, `SelectedItemsTable/Cards`, `QuantityStepper`, `AmountInWords`, `MixedPaymentList`, `TransporterSection`… |
 | `status/` | `StatusBadge`, `StatusText`, `PurchaseStatusBadge`, `SaleStatusBadge`, `PaymentTypeBadge`, `statusIcons` |
 | `feedback/` | `ConfirmDialog`, `DetailErrorState`, `QueryErrorState`, `FetchingOverlay`, `Notice`, `ProgressStat` |
@@ -815,6 +815,7 @@ Material فقط دو transition اضافه می‌کند (دکمه‌ها و `ta
 | **sales** | 33 | `/sales…` | `Sale*`, `SaleReturn*`, `SaleInstallment*` | `orders` + `returns` (قرینه‌ی خرید) + `installments` |
 | **warehouse** | 93 | `/warehouse…` | `Product*`, `PurchaseReceive`, `SaleShip`, `ProductUnitView`, … | کالا، دسته، دانه‌ها، دریافت، ارسال |
 | **reports** | 21 | `/reports…` | `ReportView` | فعالیت کارمند/مشتری/تامین‌کننده، فروش، خرید، مالی، سود و زیان، انبار |
+| **accounting** | 55 | `/accounting…` | `AccountingView` | داشبورد مالی و دفترهای فقط‌خواندنیِ `api/Accounting`؛ بخش ۱۷.۵ |
 | **settings** | 10 | `/settings…` | — | **placeholder** (هر صفحه ~۶ خط) |
 | **invoice** | 2 | `/invoice` | — | **placeholder** |
 | **transactions** | 2 | `/transactions` | — | **placeholder** |
@@ -845,6 +846,20 @@ Material فقط دو transition اضافه می‌کند (دکمه‌ها و `ta
 `dashboardContext` تنها ورودی تصمیم: `GetUserInfo` + `GetMyPermissions` → `scopes` (ME / TEAM / DEPARTMENT از `ReportScopeEnum`)؛ سازمان به `ReportView` بسته است نه نقش.
 گروه‌ها: کار روزانه، عملکرد من، تیم من، واحد من، نمای کل سازمان. `span` عرض در گرید ۳ستونه؛ `periodic` یعنی به بازه‌ی تاریخ نوار بالا گوش می‌دهد؛ `locked` غیرقابل‌خاموش.
 ویجت‌ها: Welcome، QuickActions، WorkQueues، ScopePerformance، TopSellers، MemberRankList، OrgWidgets. فعلاً چیدمان فقط در مرورگر ذخیره می‌شود (بین دستگاه‌ها sync نیست؛ `frontend-requests` بخش ۶.۳).
+
+### 17.5 accounting (داشبورد و دفترهای حسابداری)
+روی `api/Accounting` (بخش ۲۰ api-guide)، همه فقط‌خواندنی و پشتِ یک دسترسی. ده صفحه با یک نوارِ بالایی (`AccountingNav`):
+داشبورد، حسابِ اشخاص، دفترِ اشخاص، دفترِ فروش و خرید (**یک** صفحه‌ی `InvoiceJournalPage` با واژگانِ `domain/journalSides`)،
+ریزِ اقلامِ فروش، دریافت و پرداخت، مالیاتِ ارزش افزوده، ارزشِ موجودی، تفکیکِ فروش/خرید.
+- هر فهرست کنارِ ردیف‌ها `summary`ِ کلِ فیلتر را دارد؛ `api-v1` آن را کنارِ خروجیِ `normalizeListResponse` نگه می‌دارد و
+  `SummaryStrip` بالای جدول نشانش می‌دهد (`DataTable` پاورقی ندارد).
+- پیوند بینِ صفحه‌ها با فیلترِ آماده در نشانی (`?paymentState=3&customerId=5`): `withFilters` می‌سازد و `useUrlPreset` یک‌بار
+  پیش از اولین درخواست با `applyPreset` (بقیه‌ی فیلترها به پیش‌فرض) اعمال می‌کند. شناسه‌هایی که در پنل جا ندارند
+  (`saleId`، `productId`) با `IdFilterChips` دیده و برداشته می‌شوند.
+- داشبورد ارقامِ «همین حالا» (مانده، سنی‌بندی، اقساط، موجودی) را از ارقامِ «در بازه» جدا نشان می‌دهد؛ هر کاشی دفترِ پشتِ
+  عددش را با همان بازه باز می‌کند.
+- خروجیِ اکسل با `DataTransferActions` و فیلترها + مرتب‌سازیِ جدول (ترتیبِ فایل = ترتیبِ جدول).
+- بهای تمام‌شده و سود اینجا نیست (فیچرِ جدا). کمبودهای بکند: بخشِ ۲۱ سندِ درخواست‌ها.
 
 ### 17.4 permissions / organization / employees
 - مدل سازمانی: هر کاربر **دقیقاً یک واحد** و حداکثر یک تیم؛ نقش (`OrgRoleEnum` MEMBER/DEPARTMENT_HEAD/DEPUTY/TEAM_HEAD/DEPUTY) از `headId/deputyId` در سرور مشتق می‌شود.
@@ -904,7 +919,7 @@ Material فقط دو transition اضافه می‌کند (دکمه‌ها و `ta
   نامعتبر کنار گذاشته شوند» اگر لازم است ← ثبت (همان فایل دوباره، با `Idempotency-Key`) ← نتیجه.
 - سرویس: `shared/services/dataTransfer/` (`api-v1`, `queryKeys`, `queries`, `mutations`). دانلودها با
   `shared/lib/saveBlob.js` و خطای پاسخِ Blob با `shared/services/api/blob.js` (همان که فاکتور PDF استفاده می‌کند).
-- امروز روی کالاها، مشتریان و تامین‌کنندگان.
+- امروز روی کالاها، مشتریان و تامین‌کنندگان (ورود و خروج)، و هفت دفترِ حسابداری (فقط خروجی).
 
 ---
 

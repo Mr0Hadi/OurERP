@@ -15,9 +15,7 @@ import LedgerBalanceBadge from "./LedgerBalanceBadge";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { formatNumber } from "@/shared/lib/numberFormat";
-
-/** `PartyLedgerEntryTypeEnum.REVERSAL` — ردیفی که ردیفِ دیگری را پس می‌گیرد. */
-const REVERSAL_ENTRY_TYPE = 7;
+import { PartyLedgerEntryTypeEnum } from "@/shared/domain/enums/partyLedger";
 
 /** مانده با علامتِ خوانا: مثبت بدهکار، منفی بستانکار. */
 function BalanceText({ value }) {
@@ -179,7 +177,7 @@ export default function PartyStatementCard({
                   <tbody className="divide-y divide-border">
                     {entries.map((entry) => {
                       const isReversal =
-                        entry.entryType === REVERSAL_ENTRY_TYPE;
+                        entry.entryType === PartyLedgerEntryTypeEnum.REVERSAL;
                       const source = sourceLinkOf(entry);
                       return (
                         <tr

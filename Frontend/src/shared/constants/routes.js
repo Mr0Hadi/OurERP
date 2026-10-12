@@ -88,6 +88,18 @@ export const ROUTES = {
   TRANSACTIONS_PAYMENTS: "/transactions/payments",
   TRANSACTIONS_RETURNS: "/transactions/returns",
 
+  // حسابداری — داشبورد و دفترهای `api/Accounting` (بخش ۲۰ سند)، همه فقط‌خواندنی.
+  ACCOUNTING: "/accounting",
+  ACCOUNTING_PARTIES: "/accounting/parties",
+  ACCOUNTING_PARTY_LEDGER: "/accounting/party-ledger",
+  ACCOUNTING_SALES: "/accounting/sales",
+  ACCOUNTING_PURCHASES: "/accounting/purchases",
+  ACCOUNTING_SALE_LINES: "/accounting/sale-lines",
+  ACCOUNTING_PAYMENTS: "/accounting/payments",
+  ACCOUNTING_TAX: "/accounting/tax",
+  ACCOUNTING_INVENTORY: "/accounting/inventory",
+  ACCOUNTING_BREAKDOWN: "/accounting/breakdown",
+
   // گزارشات
   REPORTS: "/reports",
   REPORTS_SALES: "/reports/sales",

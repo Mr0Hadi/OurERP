@@ -1,7 +1,7 @@
 import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
 import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
 
-import ActivityRangeToolbar from "./ActivityRangeToolbar";
+import DateRangeToolbar from "@/shared/components/filters/DateRangeToolbar";
 import ActivityRankList from "./ActivityRankList";
 import ActivitySummary from "./ActivitySummary";
 
@@ -52,7 +52,7 @@ export default function ActivityReportSection({
 
   return (
     <div className="space-y-3">
-      <ActivityRangeToolbar
+      <DateRangeToolbar
         fromDate={fromDate}
         toDate={toDate}
         onRangeChange={handleRangeChange}
