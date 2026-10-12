@@ -45,9 +45,10 @@ export const SCAN_FORMATS = ["qr_code", "code_128"];
  * درخواستِ شبکه‌ای به بیرون نمی‌زند، پس نبودنِ Play Services یا
  * دسترسی‌نداشتن به سرویس‌های گوگل اسکنر را از کار نمی‌اندازد.
  */
-let detectorPromise = null;
+let backendPromise = null;
+const detectors = new Map();
 
-async function createWasmDetector() {
+async function loadWasmBackend() {
   const { BarcodeDetector, prepareZXingModule } = await import(
     "barcode-detector/ponyfill"
   );
@@ -62,18 +63,20 @@ async function createWasmDetector() {
     fireImmediately: true,
   });
 
-  return new BarcodeDetector({ formats: SCAN_FORMATS });
+  return BarcodeDetector;
 }
 
-async function createDetector() {
+/** کلاسِ `BarcodeDetector`ی که واقعاً کار می‌کند: نیتیو اگر سالم بود، وگرنه wasm. */
+async function pickBackend() {
   const Native = globalThis.BarcodeDetector;
 
   if (typeof Native !== "undefined") {
     try {
       const supported = await Native.getSupportedFormats();
       if (SCAN_FORMATS.every((format) => supported.includes(format))) {
-        const native = new Native({ formats: SCAN_FORMATS });
-        if (await isDetectorWorking(native)) return native;
+        if (await isDetectorWorking(new Native({ formats: SCAN_FORMATS }))) {
+          return Native;
+        }
         console.warn(
           "[barcode] BarcodeDetector نیتیو کدِ مرجع را نخواند؛ برگشت به ZXing wasm.",
         );
@@ -83,17 +86,25 @@ async function createDetector() {
     }
   }
 
-  return createWasmDetector();
+  return loadWasmBackend();
 }
 
-export function getBarcodeDetector() {
-  if (!detectorPromise) {
-    detectorPromise = createDetector().catch((error) => {
+/**
+ * detector برای یک زیرمجموعه از `SCAN_FORMATS` (مثلاً فقط `["qr_code"]`).
+ * محدود کردنِ فرمت هم اسکن را سریع‌تر می‌کند و هم جلوی خواندنِ نمادِ
+ * ناخواسته را می‌گیرد.
+ */
+export async function getBarcodeDetector(formats = SCAN_FORMATS) {
+  if (!backendPromise) {
+    backendPromise = pickBackend().catch((error) => {
       // تا دفعه‌ی بعد دوباره تلاش شود؛ کششِ ناموفقِ wasm نباید اسکنر را
       // برای همیشه بسوزاند.
-      detectorPromise = null;
+      backendPromise = null;
       throw error;
     });
   }
-  return detectorPromise;
+  const Detector = await backendPromise;
+  const key = formats.join(",");
+  if (!detectors.has(key)) detectors.set(key, new Detector({ formats }));
+  return detectors.get(key);
 }
