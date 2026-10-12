@@ -3,7 +3,7 @@ import { QrCode, ScanBarcode, SwitchCamera, Zap, ZapOff } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { Button } from "@/shared/components/ui/button";
-import { getBarcodeDetector } from "@/shared/domain/barcode/barcodeDetector";
+import { createFrameReader } from "@/shared/domain/barcode/frameReader";
 
 /**
  * رزولوشنی که از دوربین می‌خواهیم. ۷۲۰p: در ۶۴۰×۴۸۰ میله‌های باریکِ
@@ -14,10 +14,7 @@ const IDEAL_WIDTH = 1280;
 const IDEAL_HEIGHT = 720;
 
 /** حالت‌های اسکن؛ هر حالت فقط نمادِ خودش را دیکد می‌کند. */
-const MODES = {
-  barcode: { formats: ["code_128"], label: "بارکد" },
-  qr: { formats: ["qr_code"], label: "کد QR" },
-};
+const MODE_LABELS = { barcode: "بارکد", qr: "کد QR" };
 
 /** فاصله‌ی حلقه وقتی مرورگر `requestVideoFrameCallback` ندارد (فایرفاکس). */
 const FALLBACK_FRAME_MS = 100;
@@ -47,7 +44,6 @@ export default function CameraScanner({ onDetected }) {
   const [deviceId, setDeviceId] = useState(null);
   const [torchOn, setTorchOn] = useState(false);
   const [torchSupported, setTorchSupported] = useState(false);
-  const [aspectRatio, setAspectRatio] = useState(IDEAL_WIDTH / IDEAL_HEIGHT);
   const [mode, setMode] = useState("barcode");
 
   const videoRef = useRef(null);
@@ -78,8 +74,8 @@ export default function CameraScanner({ onDetected }) {
     };
 
     const start = async () => {
-      // موازی: کششِ wasm (در صورت نیاز) همزمان با بالا آمدنِ دوربین.
-      const detectorPromise = getBarcodeDetector(MODES[mode].formats);
+      // موازی: کششِ wasm همزمان با بالا آمدنِ دوربین.
+      const readerPromise = createFrameReader(mode);
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -102,9 +98,6 @@ export default function CameraScanner({ onDetected }) {
       video.srcObject = stream;
       await video.play();
 
-      if (video.videoWidth && video.videoHeight) {
-        setAspectRatio(video.videoWidth / video.videoHeight);
-      }
 
       const track = stream.getVideoTracks()[0];
       setTorchSupported(Boolean(track?.getCapabilities?.().torch));
@@ -132,7 +125,7 @@ export default function CameraScanner({ onDetected }) {
         if (activeId) setDeviceId(activeId);
       }
 
-      const detector = await detectorPromise;
+      const read = await readerPromise;
       if (cancelled) return;
 
       const loop = async () => {
@@ -145,11 +138,11 @@ export default function CameraScanner({ onDetected }) {
         }
         detecting = true;
         try {
-          const [hit] = await detector.detect(video);
-          if (hit?.rawValue) {
+          const text = await read(video);
+          if (text) {
             cancelled = true;
-            onDetectedRef.current(hit.rawValue);
-            toast.success(`${MODES[mode].label} خوانده شد`);
+            onDetectedRef.current(text);
+            toast.success(`${MODE_LABELS[mode]} خوانده شد`);
             return;
           }
         } catch {
@@ -207,8 +200,8 @@ export default function CameraScanner({ onDetected }) {
 
   return (
     <div
-      className="relative w-full bg-black rounded-md overflow-hidden"
-      style={{ aspectRatio }}
+      // مربع، دقیقاً همان ناحیه‌ای که ZXing دیکد می‌کند (`frameReader`).
+      className="relative aspect-square w-full bg-black rounded-md overflow-hidden"
     >
       <video
         ref={videoRef}
@@ -218,13 +211,13 @@ export default function CameraScanner({ onDetected }) {
       />
       {/* فقط راهنمای نشانه‌گیری؛ کدِ بیرونِ کادر هم خوانده می‌شود. */}
       <div
-        className={`pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-md border-2 border-white/80 ${
-          mode === "qr" ? "h-3/5 aspect-square" : "w-4/5 h-2/5"
+        className={`pointer-events-none absolute rounded-md border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)] ${
+          mode === "qr" ? "inset-[17.5%]" : "inset-x-[7.5%] inset-y-[32%]"
         }`}
       />
       <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center px-2">
         <span role="status" className="rounded-md bg-black/60 px-2 py-1 text-xs text-white">
-          {MODES[mode].label} را جلوی دوربین بگیرید
+          {MODE_LABELS[mode]} را جلوی دوربین بگیرید
         </span>
       </div>
 

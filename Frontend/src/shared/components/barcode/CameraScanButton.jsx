@@ -63,7 +63,7 @@ export default function CameraScanButton({
           {open && (
             <Suspense
               fallback={
-                <div className="flex aspect-video w-full items-center justify-center rounded-md bg-black text-sm text-white">
+                <div className="flex aspect-square w-full items-center justify-center rounded-md bg-black text-sm text-white">
                   در حال آماده‌سازی دوربین...
                 </div>
               }
