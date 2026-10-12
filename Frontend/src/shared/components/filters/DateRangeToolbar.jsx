@@ -80,19 +80,19 @@ export default function DateRangeToolbar({
             : emptyLabel}
         </span>
 
-        <div className="flex flex-1 flex-wrap items-center gap-2 sm:justify-end">
+        <div className="flex flex-1 sm:flex-row flex-col items-center gap-2 sm:justify-end">
           {extra}
           <PersianDatePicker
             value={fromDate}
             onChange={(value) => onRangeChange({ fromDate: value || "", toDate })}
             placeholder="از تاریخ"
-            className="min-w-36 flex-1 sm:w-40 sm:flex-none"
+            className="min-w-36 flex-1 sm:flex-none"
           />
           <PersianDatePicker
             value={toDate}
             onChange={(value) => onRangeChange({ fromDate, toDate: value || "" })}
             placeholder="تا تاریخ"
-            className="min-w-36 flex-1 sm:w-40 sm:flex-none"
+            className="min-w-36 flex-1 sm:flex-none"
           />
         </div>
       </div>
