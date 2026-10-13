@@ -1,7 +1,7 @@
 import { Users } from "lucide-react";
 
 import ActivityReportSection from "../components/ActivityReportSection";
-import ReportPageHeader from "../components/ReportPageHeader";
+import AccountingPageLayout from "../../components/AccountingPageLayout";
 import { useCustomerActivityFilterStore } from "../store/activityFilterStore";
 import { useCustomerPurchaseStatisticsQuery } from "../services/queries";
 
@@ -14,13 +14,11 @@ import { useCustomerPurchaseStatisticsQuery } from "../services/queries";
  */
 export default function CustomerActivityPage() {
   return (
-    <div className="container mx-auto max-w-4xl space-y-4 px-2 sm:px-4">
-      <ReportPageHeader
-        icon={Users}
-        title="آمار خرید مشتریان"
-        description="رتبه‌بندی مشتریان بر اساس مبلغ کل خریدشان، همراه با مانده‌ی تسویه‌نشده. بازه روی تاریخ فاکتور اعمال می‌شود."
-      />
-
+    <AccountingPageLayout
+      icon={Users}
+      title="آمار خرید مشتریان"
+      description="رتبه‌بندی مشتریان بر اساس مبلغ کل خریدشان، همراه با مانده‌ی تسویه‌نشده. بازه روی تاریخ فاکتور اعمال می‌شود."
+    >
       <ActivityReportSection
         useFilterStore={useCustomerActivityFilterStore}
         useReportQuery={useCustomerPurchaseStatisticsQuery}
@@ -30,6 +28,6 @@ export default function CustomerActivityPage() {
         showPayment
         emptyMessage="در این بازه فروشی به مشتریان ثبت نشده است."
       />
-    </div>
+    </AccountingPageLayout>
   );
 }

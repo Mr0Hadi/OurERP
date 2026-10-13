@@ -207,7 +207,7 @@ main.jsx
                                       errorElement: NotFoundPage
    ├ dashboardRoutes, customersRoutes, employeesRoutes, organizationRoutes,
    │ permissionsRoutes, purchasesRoutes, warehouseRoutes, invoiceRoutes,
-   │ salesRoutes, suppliersRoutes, reportsRoutes, accountingRoutes, settingsRoutes, transactionsRoutes
+   │ salesRoutes, suppliersRoutes, accountingRoutes, settingsRoutes, transactionsRoutes
 /dev/ui          → (فقط DEV)
 *                → NotFoundPage
 ```
@@ -775,11 +775,11 @@ shadcn / Radix / Base UI          (JSX و APIِ کامپوننت‌ها دست�
 
 **چاپ و برچسب** عمداً مستقل از تم‌اند: `LabelSheet`، `UnitLabel`، `BarcodeGraphic`، `print.css` رنگِ صریحِ سیاه/سفید دارند و از توکن استفاده نمی‌کنند.
 
-**حرکت (motion).** CSS-محور؛ کتابخانه‌ی انیمیشن اضافه نشده. توکن‌ها: `--md-duration-short/medium/long` (۱۰۰/۲۰۰/۳۰۰ms) و `--md-ease-standard/emphasized/decelerate/accelerate`.
-Material فقط دو transition اضافه می‌کند (دکمه‌ها و `tabs-trigger`، ۱۰۰ms، روی ویژگی‌های رنگ/سایه) و برای منوها/دیالوگ/Sheet فقط easing را عوض می‌کند (ورود decelerate، خروج accelerate)؛
-مدتِ انیمیشن‌ها همان utilityهای کوتاهِ موجودند (`duration-100/200`). state layerِ hover/pressed فوری است (gradient قابلِ transition نیست). scrimِ دیالوگ بلور (`backdrop-filter`) ندارد.
+**حرکت (motion).** CSS-محور؛ کتابخانه‌ی انیمیشن اضافه نشده. توکن‌ها: `--md-duration-short/medium/long/exit` (۱۲۰/۲۰۰/۳۰۰/۱۵۰ms) و `--md-ease-standard/emphasized/decelerate/accelerate`
+(منحنی‌های M3؛ decelerate = emphasized-decelerate، accelerate = emphasized-accelerate). ورودِ منو/دیالوگ/Sheet با decelerate و مدتِ medium (دیالوگ/Sheet: long)، خروج با accelerate و `--md-duration-exit`.
+state layerِ دکمه‌های پُر با custom propertyِ ثبت‌شده‌ی `--md-state-o` (`@property`) نرم transition می‌شود. Switch (thumb با emphasized)، Checkbox (pop تیک)، Input/Select، آیتم‌های منو/سایدبار/ردیف، Progress و Skeleton (shimmer) هم transition/انیمیشن‌ِ Material دارند.
 `prefers-reduced-motion: reduce` در تمِ Material رعایت می‌شود (توکن‌های مدت و همه‌ی animation/transitionها ≈ ۰؛ `animate-spin` برای نشانگرِ بارگذاری می‌چرخد). تمِ پیش‌فرض/رنگی هنوز این قاعده را ندارد.
-اولویت با تراکمِ ERP و پاسخ‌گویی است، نه حرکتِ تزئینی.
+اولویت با تراکمِ ERP و پاسخ‌گویی است، نه حرکتِ تزئینی. رنگ‌ها پالتِ Google (آبیِ `#0B57D0`، secondary-containerِ آسمانی، سطح‌های خنثی) هستند.
 
 **ابزارهای بررسی.** `/dev/ui` (فقط DEV) نمونه‌ی کامپوننت‌ها در همه‌ی تم‌ها و نمونه‌ی `className`های مصرف‌کننده را دارد (`ComponentShowcase.jsx`؛ در bundle تولید نیست و به API وصل نیست).
 
@@ -814,8 +814,7 @@ Material فقط دو transition اضافه می‌کند (دکمه‌ها و `ta
 | **purchases** | 33 | `/purchases…` | `Purchase*`, `PurchaseReturn*` | `orders` + `returns` |
 | **sales** | 33 | `/sales…` | `Sale*`, `SaleReturn*`, `SaleInstallment*` | `orders` + `returns` (قرینه‌ی خرید) + `installments` |
 | **warehouse** | 93 | `/warehouse…` | `Product*`, `PurchaseReceive`, `SaleShip`, `ProductUnitView`, … | کالا، دسته، دانه‌ها، دریافت، ارسال |
-| **reports** | 21 | `/reports…` | `ReportView` | فعالیت کارمند/مشتری/تامین‌کننده، فروش، خرید، مالی، سود و زیان، انبار |
-| **accounting** | 55 | `/accounting…` | `AccountingView` | داشبورد مالی و دفترهای فقط‌خواندنیِ `api/Accounting`؛ بخش ۱۷.۵ |
+| **accounting** | 64 | `/accounting…` | `AccountingView` / `ReportView` | «حسابداری و گزارش‌ها»: داشبورد مالی و دفترهای `api/Accounting`، و گزارش‌های فعالیتِ `api/Report` (`activity/`)؛ بخش ۱۷.۵. بخشِ جدای `reports` حذف شد و `/reports/*` به اینجا هدایت می‌شود |
 | **settings** | 10 | `/settings…` | — | **placeholder** (هر صفحه ~۶ خط) |
 | **invoice** | 2 | `/invoice` | — | **placeholder** |
 | **transactions** | 2 | `/transactions` | — | **placeholder** |
@@ -859,6 +858,8 @@ Material فقط دو transition اضافه می‌کند (دکمه‌ها و `ta
 - داشبورد ارقامِ «همین حالا» (مانده، سنی‌بندی، اقساط، موجودی) را از ارقامِ «در بازه» جدا نشان می‌دهد؛ هر کاشی دفترِ پشتِ
   عددش را با همان بازه باز می‌کند.
 - خروجیِ اکسل با `DataTransferActions` و فیلترها + مرتب‌سازیِ جدول (ترتیبِ فایل = ترتیبِ جدول).
+- گزارش‌های فعالیت (رتبه‌بندیِ کارمندان، مشتریان، تامین‌کنندگان) زیرِ `accounting/activity/` و پشتِ `ReportView`اند؛
+  `AccountingNav` صفحه‌ها را در دو گروه و فقط به اندازه‌ی دسترسیِ کاربر نشان می‌دهد.
 - بهای تمام‌شده و سود اینجا نیست (فیچرِ جدا). کمبودهای بکند: بخشِ ۲۱ سندِ درخواست‌ها.
 
 ### 17.4 permissions / organization / employees

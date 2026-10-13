@@ -19,7 +19,7 @@ export default function SummaryStrip({ items, isLoading, caption = "جمعِ ه�
   return (
     <section aria-label={caption} className="space-y-1.5">
       <p className="px-1 text-[11px] text-muted-foreground">{caption}</p>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9.5rem),1fr))] gap-2">
         {items.map((item) => (
           <div
             key={item.key}

@@ -3,7 +3,30 @@ import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
 
 import DateRangeToolbar from "@/shared/components/filters/DateRangeToolbar";
 import ActivityRankList from "./ActivityRankList";
-import ActivitySummary from "./ActivitySummary";
+import SummaryStrip from "../../components/SummaryStrip";
+import { formatPercent } from "@/shared/components/charts/chartUtils";
+
+/**
+ * خلاصه‌ی بالای فهرست، فقط از ردیف‌های **همین صفحه** (سرور جمعِ کل را برنمی‌گرداند و گرفتنِ
+ * همه‌ی صفحه‌ها برای یک عدد سنگین است؛ عنوانِ نوار همین را می‌گوید).
+ */
+function pageSummary(items, { nameKey, countKey, countLabel }) {
+  const totalAmount = items.reduce((sum, row) => sum + (Number(row.totalInvoiceAmount) || 0), 0);
+  const totalCount = items.reduce((sum, row) => sum + (Number(row[countKey]) || 0), 0);
+  const top = items[0];
+  const topShare = top && totalAmount > 0 ? ((Number(top.totalInvoiceAmount) || 0) / totalAmount) * 100 : null;
+
+  return [
+    { key: "amount", label: "جمع مبلغ", value: totalAmount, emphasis: true },
+    { key: "count", label: countLabel, value: totalCount, format: "count" },
+    {
+      key: "top",
+      label: topShare != null ? `صدرنشین (${formatPercent(topShare)})` : "صدرنشین",
+      value: top?.[nameKey] || "—",
+      format: "text",
+    },
+  ];
+}
 
 /**
  * یک گزارشِ فعالیتِ کامل: نوارِ بازه، خلاصه، و فهرستِ رتبه‌بندی.
@@ -63,11 +86,10 @@ export default function ActivityReportSection({
         <QueryErrorState error={error} onRetry={() => refetch()} />
       ) : (
         <>
-          <ActivitySummary
-            items={items}
+          <SummaryStrip
+            items={pageSummary(items, { nameKey, countKey, countLabel })}
             isLoading={isLoading}
-            countLabel={{ label: countLabel, key: countKey }}
-            nameKey={nameKey}
+            caption="جمعِ همین صفحه — سرور جمعِ کلِ گزارش را نمی‌دهد"
           />
 
           <FetchingOverlay active={isFetching && !isLoading}>

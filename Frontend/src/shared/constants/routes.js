@@ -99,18 +99,13 @@ export const ROUTES = {
   ACCOUNTING_TAX: "/accounting/tax",
   ACCOUNTING_INVENTORY: "/accounting/inventory",
   ACCOUNTING_BREAKDOWN: "/accounting/breakdown",
+  // گزارش‌های فعالیت (`api/Report`، بخش ۱۸) — پیش‌تر بخشِ جدای «گزارش‌ها».
+  ACCOUNTING_EMPLOYEES: "/accounting/employees",
+  ACCOUNTING_CUSTOMERS: "/accounting/customers",
+  ACCOUNTING_SUPPLIERS: "/accounting/suppliers",
 
-  // گزارشات
+  // نشانیِ قدیمیِ بخشِ «گزارش‌ها»؛ به حسابداری هدایت می‌شود (پیوندهای ذخیره‌شده نشکنند).
   REPORTS: "/reports",
-  REPORTS_SALES: "/reports/sales",
-  REPORTS_PURCHASES: "/reports/purchases",
-  REPORTS_FINANCIAL: "/reports/financial",
-  REPORTS_PROFIT_LOSS: "/reports/profit-loss",
-  REPORTS_WAREHOUSE: "/reports/warehouse",
-  // مانیتورینگ فعالیت — روی `api/Report` واقعی سوارند (بخش ۱۸ سند).
-  REPORTS_EMPLOYEES: "/reports/employees",
-  REPORTS_CUSTOMERS: "/reports/customers",
-  REPORTS_SUPPLIERS: "/reports/suppliers",
 
   // تنظیمات
   SETTINGS: "/settings",

@@ -32,16 +32,19 @@ html.theme-material {
   --md-disabled-content: 38%;
   --md-disabled-container: 12%;
 
-  /* ── Motion ── */
-  /* easing: standard = تغییرِ حالتِ عمومی؛ decelerate = ورود؛ accelerate = خروج */
+  /* ── Motion ── (M3 easing) */
+  /* standard = تغییرِ حالتِ عمومی؛ emphasized = حرکتِ مکانی (switch، sheet)؛
+     decelerate = ورودِ عنصر (emphasized-decelerate)؛ accelerate = خروج (emphasized-accelerate) */
   --md-ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --md-ease-emphasized: cubic-bezier(0.3, 0, 0, 1);
-  --md-ease-decelerate: cubic-bezier(0, 0, 0, 1);
-  --md-ease-accelerate: cubic-bezier(0.3, 0, 1, 1);
-  /* مدت‌ها عمداً کوتاه‌اند (ERP): short = تغییرِ حالتِ کنترل‌ها */
-  --md-duration-short: 100ms;
+  --md-ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --md-ease-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --md-ease-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+  /* short = تغییرِ حالتِ کنترل‌ها؛ medium = منو/ورود؛ long = دیالوگ/Sheet. خروج همیشه
+     کوتاه‌تر از ورود است (M3). مدت‌ها برای ERP عمداً کوتاه نگه داشته شده‌اند. */
+  --md-duration-short: 120ms;
   --md-duration-medium: 200ms;
   --md-duration-long: 300ms;
+  --md-duration-exit: 150ms;
 
   /* ── Typography ── فونت و letter-spacing: فارسی نباید tracking بگیرد
      (حروفِ متصل جدا می‌شوند)؛ فقط اندازه، وزن و line-height. */
@@ -69,4 +72,22 @@ html.theme-material.dark {
     --md-duration-medium: 0.01ms;
     --md-duration-long: 0.01ms;
   }
+}
+
+/* لایه‌ی حالت (hover/pressed) به‌صورت custom property ثبت‌شده تا قابلِ transition باشد
+   (gradient مستقیم قابلِ transition نیست). ثبتِ @property سراسری است و بی‌اثر مگر
+   اینکه قانونِ تم آن را بخواند. */
+@property --md-state-o {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+@keyframes md-check-in {
+  from { transform: scale(0.4); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes md-shimmer {
+  from { background-position: 150% 0; }
+  to { background-position: -50% 0; }
 }

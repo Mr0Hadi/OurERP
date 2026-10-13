@@ -2,7 +2,6 @@ import { ROUTES } from "./routes";
 
 import {
   ArrowLeftRight,
-  BarChart3,
   BookOpenText,
   Boxes,
   Calculator,
@@ -305,6 +304,8 @@ export const navigationData = {
       ],
     },
     {
+      // حسابداری و گزارش‌های فعالیت یک بخش‌اند؛ هر آیتم دسترسیِ خودش را دارد
+      // (`AccountingView` برای دفترها، `ReportView` برای رتبه‌بندی‌ها).
       title: "حسابداری",
       url: ROUTES.ACCOUNTING,
       icon: Calculator,
@@ -380,31 +381,23 @@ export const navigationData = {
           icon: ChartPie,
           description: "فروش و خرید بر اساسِ کالا، دسته، طرف‌حساب یا کاربر",
         },
-      ],
-    },
-    {
-      title: "گزارش‌ها",
-      url: ROUTES.REPORTS,
-      icon: BarChart3,
-      isActive: false,
-      items: [
         {
           title: "فعالیت کارمندان",
-          url: ROUTES.REPORTS_EMPLOYEES,
+          url: ROUTES.ACCOUNTING_EMPLOYEES,
           permission: "ReportView",
           icon: UserCog,
           description: "رتبه‌بندی کارمندان بر اساس فروش و خرید ثبت‌شده",
         },
         {
           title: "آمار خرید مشتریان",
-          url: ROUTES.REPORTS_CUSTOMERS,
+          url: ROUTES.ACCOUNTING_CUSTOMERS,
           permission: "ReportView",
           icon: Users,
           description: "پرخریدترین مشتریان و مانده‌ی تسویه‌نشده",
         },
         {
           title: "آمار خرید از تامین‌کنندگان",
-          url: ROUTES.REPORTS_SUPPLIERS,
+          url: ROUTES.ACCOUNTING_SUPPLIERS,
           permission: "ReportView",
           icon: Truck,
           description: "خرید از هر تامین‌کننده و وضعیت پرداخت",

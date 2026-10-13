@@ -17,35 +17,35 @@
 /* ─── Material Light ─── */
 html.theme-material {
   /* ── نقش‌های Material 3 ── */
-  --md-primary: oklch(0.48 0.20 268);
+  --md-primary: oklch(0.495 0.199 261);
   --md-on-primary: oklch(1 0 0);
-  --md-primary-container: oklch(0.92 0.045 275);
-  --md-on-primary-container: oklch(0.26 0.13 270);
-  --md-secondary: oklch(0.50 0.04 270);
+  --md-primary-container: oklch(0.912 0.040 260);
+  --md-on-primary-container: oklch(0.246 0.087 260);
+  --md-secondary: oklch(0.447 0.034 261);
   --md-on-secondary: oklch(1 0 0);
-  --md-secondary-container: oklch(0.92 0.025 275);
-  --md-on-secondary-container: oklch(0.28 0.04 270);
-  --md-tertiary: oklch(0.50 0.12 350);
+  --md-secondary-container: oklch(0.909 0.051 237);
+  --md-on-secondary-container: oklch(0.224 0.059 247);
+  --md-tertiary: oklch(0.467 0.125 148);
   --md-on-tertiary: oklch(1 0 0);
-  --md-tertiary-container: oklch(0.93 0.04 350);
-  --md-on-tertiary-container: oklch(0.28 0.10 350);
-  --md-error: oklch(0.52 0.20 27);
+  --md-tertiary-container: oklch(0.911 0.060 154);
+  --md-on-tertiary-container: oklch(0.243 0.056 150);
+  --md-error: oklch(0.501 0.178 29);
   --md-on-error: oklch(1 0 0);
-  --md-error-container: oklch(0.93 0.04 25);
-  --md-on-error-container: oklch(0.32 0.14 27);
-  --md-surface: oklch(0.985 0.004 285);
+  --md-error-container: oklch(0.922 0.030 23);
+  --md-on-error-container: oklch(0.254 0.079 28);
+  --md-surface: oklch(0.984 0.005 258);
   --md-surface-container-lowest: oklch(1 0 0);
-  --md-surface-container-low: oklch(0.972 0.005 285);
-  --md-surface-container: oklch(0.955 0.007 285);
-  --md-surface-container-high: oklch(0.94 0.009 285);
-  --md-surface-container-highest: oklch(0.925 0.011 285);
-  --md-on-surface: oklch(0.20 0.012 285);
-  --md-on-surface-variant: oklch(0.44 0.016 285);
-  --md-outline: oklch(0.55 0.016 285);
-  --md-outline-variant: oklch(0.83 0.012 285);
-  --md-inverse-surface: oklch(0.30 0.012 285);
-  --md-inverse-on-surface: oklch(0.96 0.005 285);
-  --md-inverse-primary: oklch(0.80 0.10 275);
+  --md-surface-container-low: oklch(0.973 0.009 265);
+  --md-surface-container: oklch(0.957 0.012 265);
+  --md-surface-container-high: oklch(0.940 0.012 260);
+  --md-surface-container-highest: oklch(0.913 0.012 252);
+  --md-on-surface: oklch(0.239 0 90);
+  --md-on-surface-variant: oklch(0.395 0.004 174);
+  --md-outline: oklch(0.566 0.005 157);
+  --md-outline-variant: oklch(0.827 0.004 157);
+  --md-inverse-surface: oklch(0.309 0 90);
+  --md-inverse-on-surface: oklch(0.961 0 90);
+  --md-inverse-primary: oklch(0.825 0.080 260);
   --md-scrim: oklch(0 0 0);
   --md-shadow: oklch(0 0 0);
   /* ── رنگ‌های معنایی (برای tone.js) و container هرکدام ── */
@@ -64,11 +64,11 @@ html.theme-material {
   --on-info-container: oklch(0.30 0.08 235);
   --special-container: oklch(0.93 0.05 305);
   --on-special-container: oklch(0.30 0.12 305);
-  --chart-1: oklch(0.55 0.19 268);
-  --chart-2: oklch(0.55 0.16 350);
-  --chart-3: oklch(0.58 0.12 195);
-  --chart-4: oklch(0.70 0.15 80);
-  --chart-5: oklch(0.58 0.18 35);
+  --chart-1: oklch(0.55 0.20 261);
+  --chart-2: oklch(0.58 0.19 27);
+  --chart-3: oklch(0.62 0.15 150);
+  --chart-4: oklch(0.78 0.16 85);
+  --chart-5: oklch(0.58 0.15 305);
 
   /* ── Snackbar (react-hot-toast) ── سطحِ inverse؛ آیکن‌ها روی آن روشن‌اند */
   --toast-bg: var(--md-inverse-surface);
@@ -109,35 +109,35 @@ html.theme-material {
 /* ─── Material Dark ─── */
 html.theme-material.dark {
   /* ── نقش‌های Material 3 ── */
-  --md-primary: oklch(0.80 0.10 275);
-  --md-on-primary: oklch(0.30 0.14 270);
-  --md-primary-container: oklch(0.38 0.15 270);
-  --md-on-primary-container: oklch(0.92 0.045 275);
-  --md-secondary: oklch(0.80 0.03 270);
-  --md-on-secondary: oklch(0.30 0.03 270);
-  --md-secondary-container: oklch(0.30 0.03 270);
-  --md-on-secondary-container: oklch(0.92 0.025 275);
-  --md-tertiary: oklch(0.82 0.09 350);
-  --md-on-tertiary: oklch(0.32 0.10 350);
-  --md-tertiary-container: oklch(0.40 0.11 350);
-  --md-on-tertiary-container: oklch(0.93 0.04 350);
-  --md-error: oklch(0.78 0.13 25);
-  --md-on-error: oklch(0.30 0.12 25);
-  --md-error-container: oklch(0.40 0.14 27);
-  --md-on-error-container: oklch(0.93 0.04 25);
-  --md-surface: oklch(0.17 0.008 285);
-  --md-surface-container-lowest: oklch(0.14 0.008 285);
-  --md-surface-container-low: oklch(0.21 0.010 285);
-  --md-surface-container: oklch(0.24 0.011 285);
-  --md-surface-container-high: oklch(0.27 0.012 285);
-  --md-surface-container-highest: oklch(0.30 0.013 285);
-  --md-on-surface: oklch(0.93 0.006 285);
-  --md-on-surface-variant: oklch(0.78 0.014 285);
-  --md-outline: oklch(0.62 0.016 285);
-  --md-outline-variant: oklch(0.40 0.012 285);
-  --md-inverse-surface: oklch(0.93 0.006 285);
-  --md-inverse-on-surface: oklch(0.28 0.01 285);
-  --md-inverse-primary: oklch(0.48 0.20 268);
+  --md-primary: oklch(0.825 0.080 260);
+  --md-on-primary: oklch(0.321 0.121 260);
+  --md-primary-container: oklch(0.409 0.163 261);
+  --md-on-primary-container: oklch(0.912 0.040 260);
+  --md-secondary: oklch(0.909 0.051 237);
+  --md-on-secondary: oklch(0.280 0.060 245);
+  --md-secondary-container: oklch(0.395 0.099 245);
+  --md-on-secondary-container: oklch(0.909 0.051 237);
+  --md-tertiary: oklch(0.792 0.143 152);
+  --md-on-tertiary: oklch(0.300 0.070 150);
+  --md-tertiary-container: oklch(0.386 0.100 149);
+  --md-on-tertiary-container: oklch(0.911 0.060 154);
+  --md-error: oklch(0.834 0.068 22);
+  --md-on-error: oklch(0.325 0.109 28);
+  --md-error-container: oklch(0.420 0.147 28);
+  --md-on-error-container: oklch(0.922 0.030 23);
+  --md-surface: oklch(0.187 0.002 286);
+  --md-surface-container-lowest: oklch(0.164 0 90);
+  --md-surface-container-low: oklch(0.222 0 90);
+  --md-surface-container: oklch(0.239 0.002 248);
+  --md-surface-container-high: oklch(0.284 0.005 248);
+  --md-surface-container-highest: oklch(0.328 0.004 248);
+  --md-on-surface: oklch(0.916 0 90);
+  --md-on-surface-variant: oklch(0.827 0.004 157);
+  --md-outline: oklch(0.654 0.005 157);
+  --md-outline-variant: oklch(0.395 0.004 174);
+  --md-inverse-surface: oklch(0.916 0 90);
+  --md-inverse-on-surface: oklch(0.309 0 90);
+  --md-inverse-primary: oklch(0.495 0.199 261);
   --md-scrim: oklch(0 0 0);
   --md-shadow: oklch(0 0 0);
   /* ── رنگ‌های معنایی (برای tone.js) و container هرکدام ── */
@@ -156,11 +156,11 @@ html.theme-material.dark {
   --on-info-container: oklch(0.92 0.05 235);
   --special-container: oklch(0.36 0.07 305);
   --on-special-container: oklch(0.92 0.05 305);
-  --chart-1: oklch(0.74 0.13 272);
-  --chart-2: oklch(0.76 0.11 350);
-  --chart-3: oklch(0.76 0.10 195);
-  --chart-4: oklch(0.82 0.13 85);
-  --chart-5: oklch(0.74 0.14 35);
+  --chart-1: oklch(0.76 0.11 260);
+  --chart-2: oklch(0.78 0.10 22);
+  --chart-3: oklch(0.80 0.13 152);
+  --chart-4: oklch(0.86 0.13 90);
+  --chart-5: oklch(0.76 0.11 305);
 
   /* ── Snackbar (react-hot-toast) ── سطحِ inverse؛ آیکن‌ها روی آن روشن‌اند */
   --toast-bg: var(--md-inverse-surface);

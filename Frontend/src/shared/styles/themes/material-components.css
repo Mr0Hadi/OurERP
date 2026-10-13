@@ -31,8 +31,8 @@
   .theme-material .shadow-md { --tw-shadow: var(--md-elev-2); }
   .theme-material .shadow-lg { --tw-shadow: var(--md-elev-3); }
 
-  /* ── Motion ── (فقط easing؛ مدت‌ها همان مقدارِ کوتاهِ utilityهاست)
-     ورود با decelerate و خروج با accelerate. Radix: data-state؛ Base UI: data-open/data-closed. */
+  /* ── Motion ── ورود: emphasized-decelerate با مدتِ بلندتر؛ خروج: accelerate و کوتاه‌تر.
+     Radix: data-state؛ Base UI: data-open/data-closed. */
   .theme-material :is(
       [data-slot="dialog-content"],
       [data-slot="alert-dialog-content"],
@@ -41,9 +41,14 @@
       [data-slot="dropdown-menu-content"],
       [data-slot="dropdown-menu-sub-content"],
       [data-slot="popover-content"],
-      [data-slot="combobox-content"]
+      [data-slot="combobox-content"],
+      [data-slot="dialog-overlay"],
+      [data-slot="alert-dialog-overlay"],
+      [data-slot="sheet-overlay"]
     ):is([data-state="open"], [data-open]:not([data-open="false"])) {
     animation-timing-function: var(--md-ease-decelerate);
+    animation-duration: var(--md-duration-medium);
+    transition-timing-function: var(--md-ease-decelerate);
   }
   .theme-material :is(
       [data-slot="dialog-content"],
@@ -53,9 +58,22 @@
       [data-slot="dropdown-menu-content"],
       [data-slot="dropdown-menu-sub-content"],
       [data-slot="popover-content"],
-      [data-slot="combobox-content"]
+      [data-slot="combobox-content"],
+      [data-slot="dialog-overlay"],
+      [data-slot="alert-dialog-overlay"],
+      [data-slot="sheet-overlay"]
     ):is([data-state="closed"], [data-closed]:not([data-closed="false"])) {
     animation-timing-function: var(--md-ease-accelerate);
+    animation-duration: var(--md-duration-exit);
+    transition-timing-function: var(--md-ease-accelerate);
+  }
+  .theme-material :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"], [data-slot="sheet-content"]):is([data-state="open"], [data-open]:not([data-open="false"])) {
+    animation-duration: var(--md-duration-long);
+    transition-duration: var(--md-duration-long);
+  }
+  .theme-material [data-slot="tooltip-content"] {
+    animation-duration: var(--md-duration-short);
+    animation-timing-function: var(--md-ease-standard);
   }
 
   /* scrim ساده است؛ Material بلور (backdrop-filter) ندارد. */
@@ -95,27 +113,32 @@
 
   /* ════════════════ Button ════════════════ */
   .theme-material .group\/button {
-    transition-property: background-color, border-color, color, box-shadow;
+    transition-property: background-color, border-color, color, box-shadow, --md-state-o;
     transition-duration: var(--md-duration-short);
     transition-timing-function: var(--md-ease-standard);
   }
 
   /* State layer (hover/pressed) برای دکمه‌های پُر: رنگِ محتوا (currentColor)
-     روی هر رنگِ زمینه. outline/ghost/… hover زمینه‌ی خودشان را دارند. */
-  .theme-material .group\/button:is([data-variant="default"], [data-variant="secondary"], [data-variant="destructive"]):hover:not(:disabled) {
+     روی هر رنگِ زمینه؛ با --md-state-o نرم تغییر می‌کند. outline/ghost/… hover
+     زمینه‌ی خودشان را دارند. */
+  .theme-material .group\/button:is([data-variant="default"], [data-variant="secondary"], [data-variant="destructive"]) {
     background-image: linear-gradient(
-      color-mix(in oklch, transparent, currentColor var(--md-state-hover)),
-      color-mix(in oklch, transparent, currentColor var(--md-state-hover))
+      color-mix(in oklch, transparent, currentColor var(--md-state-o)),
+      color-mix(in oklch, transparent, currentColor var(--md-state-o))
     );
   }
+  .theme-material .group\/button:is([data-variant="default"], [data-variant="secondary"], [data-variant="destructive"]):hover:not(:disabled) {
+    --md-state-o: var(--md-state-hover);
+  }
   .theme-material .group\/button:is([data-variant="default"], [data-variant="secondary"], [data-variant="destructive"]):active:not(:disabled) {
-    background-image: linear-gradient(
-      color-mix(in oklch, transparent, currentColor var(--md-state-pressed)),
-      color-mix(in oklch, transparent, currentColor var(--md-state-pressed))
-    );
+    --md-state-o: var(--md-state-pressed);
+    transition-duration: 0ms;
   }
   .theme-material .group\/button[data-variant="default"]:hover:not(:disabled) {
     box-shadow: var(--md-elev-1);
+  }
+  .theme-material .group\/button:active:not(:disabled) {
+    box-shadow: none;
   }
 
   /* Disabled: محتوا ۳۸٪ و container ۱۲٪ (به‌جای opacity کلِ دکمه) */
@@ -181,6 +204,56 @@
   .theme-material [data-slot="sheet-content"][data-side="left"] {
     border-top-right-radius: var(--md-shape-xl);
     border-bottom-right-radius: var(--md-shape-xl);
+  }
+
+  /* ════════════════ حرکتِ تکمیلی ════════════════ */
+  /* Input/Select: تغییرِ border و inset-ring نرم */
+  .theme-material :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"], [data-slot="combobox-input-group"]) {
+    transition-property: border-color, box-shadow, background-color, color;
+    transition-duration: var(--md-duration-short);
+    transition-timing-function: var(--md-ease-standard);
+  }
+  /* منو/سایدبار/ردیف جدول */
+  .theme-material :is([data-sidebar="menu-button"], [data-sidebar="menu-sub-button"], [data-slot="table-row"], [data-slot="dropdown-menu-item"], [data-slot="select-item"], [data-slot="combobox-item"]) {
+    transition-property: background-color, color;
+    transition-duration: var(--md-duration-short);
+    transition-timing-function: var(--md-ease-standard);
+  }
+  /* Switch: thumb با emphasized حرکت می‌کند؛ track با standard رنگ عوض می‌کند */
+  .theme-material [data-slot="switch"] {
+    transition-property: background-color, border-color;
+    transition-duration: var(--md-duration-medium);
+    transition-timing-function: var(--md-ease-standard);
+  }
+  .theme-material [data-slot="switch-thumb"] {
+    transition-property: translate, transform, scale, background-color;
+    transition-duration: var(--md-duration-medium);
+    transition-timing-function: var(--md-ease-emphasized);
+  }
+  /* Checkbox: رنگ نرم + علامتِ تیک با pop */
+  .theme-material [data-slot="checkbox"] {
+    transition-property: background-color, border-color;
+    transition-duration: var(--md-duration-short);
+    transition-timing-function: var(--md-ease-standard);
+  }
+  .theme-material [data-slot="checkbox-indicator"] {
+    animation: md-check-in var(--md-duration-short) var(--md-ease-decelerate);
+  }
+  /* Progress */
+  .theme-material [data-slot="progress-indicator"] {
+    transition-duration: var(--md-duration-long);
+    transition-timing-function: var(--md-ease-emphasized);
+  }
+  /* Skeleton: shimmer به‌جای pulse */
+  .theme-material [data-slot="skeleton"] {
+    animation: md-shimmer 1.6s var(--md-ease-standard) infinite;
+    background-image: linear-gradient(
+      100deg,
+      transparent 30%,
+      color-mix(in oklch, transparent, var(--md-on-surface) 6%) 50%,
+      transparent 70%
+    );
+    background-size: 250% 100%;
   }
 
   /* ════════════════ Table ════════════════ (فقط ظاهر؛ ستون، مرتب‌سازی و

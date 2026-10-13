@@ -8,7 +8,7 @@ import {
 } from "@/shared/components/ui/tabs";
 
 import ActivityReportSection from "../components/ActivityReportSection";
-import ReportPageHeader from "../components/ReportPageHeader";
+import AccountingPageLayout from "../../components/AccountingPageLayout";
 import EmployeeScopeFilter from "../components/EmployeeScopeFilter";
 import { useEmployeeActivityFilterStore } from "../store/activityFilterStore";
 import {
@@ -31,13 +31,11 @@ import {
  */
 export default function EmployeeActivityPage() {
   return (
-    <div className="container mx-auto max-w-4xl space-y-4 px-2 sm:px-4">
-      <ReportPageHeader
-        icon={UserCog}
-        title="فعالیت کارمندان"
-        description="رتبه‌بندی کارمندان بر اساس اسنادی که خودشان ثبت کرده‌اند. بازه روی تاریخ فاکتور اعمال می‌شود."
-      />
-
+    <AccountingPageLayout
+      icon={UserCog}
+      title="فعالیت کارمندان"
+      description="رتبه‌بندی کارمندان بر اساس اسنادی که خودشان ثبت کرده‌اند. بازه روی تاریخ فاکتور اعمال می‌شود."
+    >
       <EmployeeScopeFilter useFilterStore={useEmployeeActivityFilterStore} />
 
       <Tabs defaultValue="sales" className="gap-3">
@@ -72,6 +70,6 @@ export default function EmployeeActivityPage() {
           />
         </TabsContent>
       </Tabs>
-    </div>
+    </AccountingPageLayout>
   );
 }

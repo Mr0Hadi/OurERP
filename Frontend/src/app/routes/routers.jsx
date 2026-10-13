@@ -13,7 +13,6 @@ import { customersRoutes } from "@/features/customers/routes";
 import { warehouseRoutes } from "@/features/warehouse/routes";
 import { invoiceRoutes } from "@/features/invoice/routes";
 import { suppliersRoutes } from "@/features/suppliers/routes";
-import { reportsRoutes } from "@/features/reports/routes";
 import { accountingRoutes } from "@/features/accounting/routes";
 import { settingsRoutes } from "@/features/settings/routes";
 import { transactionsRoutes } from "@/features/transactions/routes";
@@ -52,7 +51,6 @@ export const router = createBrowserRouter([
       ...invoiceRoutes,
       ...salesRoutes,
       ...suppliersRoutes,
-      ...reportsRoutes,
       ...accountingRoutes,
       ...settingsRoutes,
       ...transactionsRoutes,

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { login, logout, getUserInfo, getMyPermissions } from "./api-v1";
 import { authKeys } from "./queryKeys";
@@ -14,6 +15,41 @@ export function useLoginMutation() {
     onSuccess: ({ accessToken, refreshToken }) =>
       loginSuccess({ accessToken, refreshToken }),
   });
+}
+
+/**
+ * سنجشِ توکنِ ذخیره‌شده روی صفحه‌ی ورود — تنها جایی که این کار انجام می‌شود.
+ *
+ * اگر در localStorage توکن هست ولی در این بارگذاری هنوز تأیید نشده،
+ * `GetUserInfo` زده می‌شود (۴۰۱ از طریقِ interceptor یک تلاشِ رفرش می‌گیرد).
+ * موفق ← `sessionVerified` و صفحه به مقصد می‌رود؛ پاسخِ نامعتبر ← توکن‌ها پاک
+ * و فرم نشان داده می‌شود. خطای شبکه توکن را پاک نمی‌کند (شاید سرور موقتاً در
+ * دسترس نیست) ولی فرم را آزاد می‌کند. نتیجه در کشِ `useUserInfoQuery` می‌ماند.
+ */
+export function useSessionCheck() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const verified = useAuthStore((s) => s.sessionVerified);
+  const markSessionVerified = useAuthStore((s) => s.markSessionVerified);
+  const logout = useAuthStore((s) => s.logout);
+
+  const { isSuccess, isError, error, isFetching } = useQuery({
+    queryKey: authKeys.session(),
+    queryFn: getUserInfo,
+    enabled: isAuthenticated && !verified,
+    retry: false,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  useEffect(() => {
+    if (verified || !isAuthenticated) return;
+    if (isSuccess) markSessionVerified();
+    else if (isError && error?.response) logout();
+  }, [verified, isAuthenticated, isSuccess, isError, error, markSessionVerified, logout]);
+
+  return {
+    checking: isAuthenticated && !verified && (isFetching || isSuccess),
+    verified,
+  };
 }
 
 export function useLogoutMutation() {

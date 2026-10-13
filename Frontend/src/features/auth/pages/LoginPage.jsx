@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -20,7 +20,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { ThemeToggle } from "@/shared/components/theme/ThemeToggle";
 
-import { useLoginMutation } from "../services/queries";
+import { useLoginMutation, useSessionCheck } from "../services/queries";
 import { ROUTES } from "@/shared/constants/routes";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
 
@@ -57,14 +57,17 @@ export default function LoginPage() {
   });
 
   const { mutate: login, isPending } = useLoginMutation();
+  const { checking, verified } = useSessionCheck();
+  const from = searchParams.get("from") || ROUTES.DASHBOARD;
+
+  // توکنِ ذخیره‌شده هنوز معتبر است (یا همین الان وارد شد): به مقصد.
+  useEffect(() => {
+    if (verified) navigate(from, { replace: true });
+  }, [verified, from, navigate]);
 
   const onSubmit = (values) => {
     login(values, {
-      onSuccess: () => {
-        toast.success("خوش آمدید 👋");
-        const from = searchParams.get("from") || ROUTES.DASHBOARD;
-        navigate(from, { replace: true });
-      },
+      onSuccess: () => toast.success("خوش آمدید 👋"),
       onError: (error) => {
         // پیامِ سرور (مثلاً «کاربر با این اطلاعات یافت نشد») مقدم است؛ در قطعیِ
         // شبکه هم به‌جای «رمز اشتباه است» علتِ واقعی نشان داده می‌شود.
@@ -192,6 +195,12 @@ export default function LoginPage() {
           <div
             className="relative rounded-3xl border border-border/60 bg-card/80 p-8 shadow-xl shadow-black/[0.03] backdrop-blur-sm"
           >
+            {/* تا سنجشِ توکنِ ذخیره‌شده تمام نشده، فرم قابل استفاده نیست. */}
+            {(checking || verified) && (
+              <div className="absolute inset-0 z-20 flex items-center justify-center rounded-3xl bg-card/80 backdrop-blur-sm">
+                <Loader2 className="size-8 animate-spin text-primary" />
+              </div>
+            )}
             <div className="mb-7 space-y-1.5 text-center">
               <h2 className="text-2xl font-bold text-foreground">
                 ورود به سامانه
