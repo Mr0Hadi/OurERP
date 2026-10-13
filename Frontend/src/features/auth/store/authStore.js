@@ -21,6 +21,11 @@ export const useAuthStore = create(
       // false غیرقابل‌اعتماده — رندر کردنِ روت‌ها قبل از این یعنی کاربرِ
       // واردشده هم برای یک لحظه به لاگین پرتاب بشه (یا برعکس).
       hasHydrated: false,
+      // آیا در *همین بارگذاریِ صفحه* سرور توکن را تأیید کرده است؟ عمداً
+      // پرسیست نمی‌شود: با هر بازشدنِ برنامه false است، پس `protectedLoader`
+      // اول به صفحه‌ی ورود می‌فرستد و آنجا توکنِ ذخیره‌شده سنجیده می‌شود.
+      // `isAuthenticated` فقط یعنی «توکنی در localStorage هست».
+      sessionVerified: false,
 
       // بعد از رفرش موفق فقط توکن‌ها آپدیت می‌شن
       setTokens: (accessToken, refreshToken) =>
@@ -35,7 +40,10 @@ export const useAuthStore = create(
           accessToken,
           refreshToken,
           isAuthenticated: true,
+          sessionVerified: true,
         }),
+
+      markSessionVerified: () => set({ sessionVerified: true }),
 
       setHasHydrated: (hasHydrated) => set({ hasHydrated }),
 
@@ -44,6 +52,7 @@ export const useAuthStore = create(
           accessToken: null,
           refreshToken: null,
           isAuthenticated: false,
+          sessionVerified: false,
         }),
     }),
     {

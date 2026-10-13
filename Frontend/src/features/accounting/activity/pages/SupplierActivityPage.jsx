@@ -1,0 +1,33 @@
+import { Truck } from "lucide-react";
+
+import ActivityReportSection from "../components/ActivityReportSection";
+import AccountingPageLayout from "../../components/AccountingPageLayout";
+import { useSupplierActivityFilterStore } from "../store/activityFilterStore";
+import { useSupplierSalesStatisticsQuery } from "../services/queries";
+
+/**
+ * آمار خرید از تامین‌کنندگان — از هرکدام چقدر خریده‌ایم و چقدرش تسویه
+ * شده. نامِ endpoint سمتِ سرور `GetSupplierSalesStatistics` است («فروشِ
+ * آن‌ها به ما»)، ولی از دیدِ این سیستم همان *خرید* است و عنوان‌ها هم
+ * همین را می‌گویند.
+ */
+export default function SupplierActivityPage() {
+  return (
+    <AccountingPageLayout
+      icon={Truck}
+      title="آمار خرید از تامین‌کنندگان"
+      description="رتبه‌بندی تامین‌کنندگان بر اساس مبلغ کل خریدِ ما از آن‌ها، همراه با مانده‌ی پرداخت‌نشده. بازه روی تاریخ فاکتور اعمال می‌شود."
+    >
+      <ActivityReportSection
+        useFilterStore={useSupplierActivityFilterStore}
+        useReportQuery={useSupplierSalesStatisticsQuery}
+        nameKey="companyName"
+        countKey="purchasesCount"
+        countLabel="تعداد فاکتور"
+        countUnit="فاکتور"
+        showPayment
+        emptyMessage="در این بازه خریدی از تامین‌کنندگان ثبت نشده است."
+      />
+    </AccountingPageLayout>
+  );
+}

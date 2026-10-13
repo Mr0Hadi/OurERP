@@ -11,8 +11,12 @@ namespace Application.Common.Contracts.Context
         DbSet<Supplier> Suppliers { get; }
         DbSet <Sale> Sales { get; }
         DbSet<Purchase> Purchases { get; }
+        DbSet<SaleItem> SaleItems { get; }
+        DbSet<PurchaseItem> PurchaseItems { get; }
         DbSet<ProductCategory> ProductCategories { get; }
         DbSet <Product> Products { get; }
+        DbSet<Vehicle> Vehicles { get; }
+        DbSet<ProductVehicle> ProductVehicles { get; }
         DbSet<Department> Departments { get; }
         DbSet<Customer> Customers { get; }
         DbSet<Domain.Entities.PurchaseReturn> PurchaseReturns { get; }

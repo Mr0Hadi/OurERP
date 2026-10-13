@@ -207,7 +207,7 @@ main.jsx
                                       errorElement: NotFoundPage
    ├ dashboardRoutes, customersRoutes, employeesRoutes, organizationRoutes,
    │ permissionsRoutes, purchasesRoutes, warehouseRoutes, invoiceRoutes,
-   │ salesRoutes, suppliersRoutes, reportsRoutes, settingsRoutes, transactionsRoutes
+   │ salesRoutes, suppliersRoutes, accountingRoutes, settingsRoutes, transactionsRoutes
 /dev/ui          → (فقط DEV)
 *                → NotFoundPage
 ```
@@ -646,7 +646,7 @@ const query = usePurchasesQuery(filters, pagination, sorting);   // listQuery + 
 | `ui/` | primitiveهای **shadcn** (تولید CLI، فقط در صورت نیاز واقعی دست بخورند) + ورودی‌های ایرانی (قیمت، کد ملی، موبایل، پلاک، بانک، تقویم شمسی، شهر) |
 | `layout/` | `AppSidebar`, `NavMain/NavUser/NavTools/NavSecondary/NavWorkspace`, `AppBreadcrumb`, `ListPageLayout`, `RouteLoadingOverlay` |
 | `table/` | `DataTable`, `ServerTable`, `DataTablePagination`, `columns` (`detailsColumn`), `DetailsLink`, `SortIcon`, `PaymentProgress`, `TableLoadingSkeleton` |
-| `filters/` | `FilterPanel`, `FilterSearchInput`, `FilterSelect`, `FilterDateInput`, `EntitySelect` |
+| `filters/` | `FilterPanel`, `FilterSearchInput`, `FilterSelect`, `FilterDateInput`, `EntitySelect`, `FilterMultiChoice` (پارامترِ فهرستیِ سرور)، `FilterSwitch` (پارامترِ بولین)، `DateRangeToolbar` (بازه با دکمه‌های آماده‌ی شمسی از `shared/lib/dateRanges`) |
 | `forms/` | `DocumentFormLayout`, `FormField`, `FormSectionCard`, `OrderInfoCard`, `PartyPickerCard`, `ProductSearchPanel`, `SelectedItemsTable/Cards`, `QuantityStepper`, `AmountInWords`, `MixedPaymentList`, `TransporterSection`… |
 | `status/` | `StatusBadge`, `StatusText`, `PurchaseStatusBadge`, `SaleStatusBadge`, `PaymentTypeBadge`, `statusIcons` |
 | `feedback/` | `ConfirmDialog`, `DetailErrorState`, `QueryErrorState`, `FetchingOverlay`, `Notice`, `ProgressStat` |
@@ -775,11 +775,11 @@ shadcn / Radix / Base UI          (JSX و APIِ کامپوننت‌ها دست�
 
 **چاپ و برچسب** عمداً مستقل از تم‌اند: `LabelSheet`، `UnitLabel`، `BarcodeGraphic`، `print.css` رنگِ صریحِ سیاه/سفید دارند و از توکن استفاده نمی‌کنند.
 
-**حرکت (motion).** CSS-محور؛ کتابخانه‌ی انیمیشن اضافه نشده. توکن‌ها: `--md-duration-short/medium/long` (۱۰۰/۲۰۰/۳۰۰ms) و `--md-ease-standard/emphasized/decelerate/accelerate`.
-Material فقط دو transition اضافه می‌کند (دکمه‌ها و `tabs-trigger`، ۱۰۰ms، روی ویژگی‌های رنگ/سایه) و برای منوها/دیالوگ/Sheet فقط easing را عوض می‌کند (ورود decelerate، خروج accelerate)؛
-مدتِ انیمیشن‌ها همان utilityهای کوتاهِ موجودند (`duration-100/200`). state layerِ hover/pressed فوری است (gradient قابلِ transition نیست). scrimِ دیالوگ بلور (`backdrop-filter`) ندارد.
+**حرکت (motion).** CSS-محور؛ کتابخانه‌ی انیمیشن اضافه نشده. توکن‌ها: `--md-duration-short/medium/long/exit` (۱۲۰/۲۰۰/۳۰۰/۱۵۰ms) و `--md-ease-standard/emphasized/decelerate/accelerate`
+(منحنی‌های M3؛ decelerate = emphasized-decelerate، accelerate = emphasized-accelerate). ورودِ منو/دیالوگ/Sheet با decelerate و مدتِ medium (دیالوگ/Sheet: long)، خروج با accelerate و `--md-duration-exit`.
+state layerِ دکمه‌های پُر با custom propertyِ ثبت‌شده‌ی `--md-state-o` (`@property`) نرم transition می‌شود. Switch (thumb با emphasized)، Checkbox (pop تیک)، Input/Select، آیتم‌های منو/سایدبار/ردیف، Progress و Skeleton (shimmer) هم transition/انیمیشن‌ِ Material دارند.
 `prefers-reduced-motion: reduce` در تمِ Material رعایت می‌شود (توکن‌های مدت و همه‌ی animation/transitionها ≈ ۰؛ `animate-spin` برای نشانگرِ بارگذاری می‌چرخد). تمِ پیش‌فرض/رنگی هنوز این قاعده را ندارد.
-اولویت با تراکمِ ERP و پاسخ‌گویی است، نه حرکتِ تزئینی.
+اولویت با تراکمِ ERP و پاسخ‌گویی است، نه حرکتِ تزئینی. رنگ‌ها پالتِ Google (آبیِ `#0B57D0`، secondary-containerِ آسمانی، سطح‌های خنثی) هستند.
 
 **ابزارهای بررسی.** `/dev/ui` (فقط DEV) نمونه‌ی کامپوننت‌ها در همه‌ی تم‌ها و نمونه‌ی `className`های مصرف‌کننده را دارد (`ComponentShowcase.jsx`؛ در bundle تولید نیست و به API وصل نیست).
 
@@ -814,7 +814,7 @@ Material فقط دو transition اضافه می‌کند (دکمه‌ها و `ta
 | **purchases** | 33 | `/purchases…` | `Purchase*`, `PurchaseReturn*` | `orders` + `returns` |
 | **sales** | 33 | `/sales…` | `Sale*`, `SaleReturn*`, `SaleInstallment*` | `orders` + `returns` (قرینه‌ی خرید) + `installments` |
 | **warehouse** | 93 | `/warehouse…` | `Product*`, `PurchaseReceive`, `SaleShip`, `ProductUnitView`, … | کالا، دسته، دانه‌ها، دریافت، ارسال |
-| **reports** | 21 | `/reports…` | `ReportView` | فعالیت کارمند/مشتری/تامین‌کننده، فروش، خرید، مالی، سود و زیان، انبار |
+| **accounting** | 64 | `/accounting…` | `AccountingView` / `ReportView` | «حسابداری و گزارش‌ها»: داشبورد مالی و دفترهای `api/Accounting`، و گزارش‌های فعالیتِ `api/Report` (`activity/`)؛ بخش ۱۷.۵. بخشِ جدای `reports` حذف شد و `/reports/*` به اینجا هدایت می‌شود |
 | **settings** | 10 | `/settings…` | — | **placeholder** (هر صفحه ~۶ خط) |
 | **invoice** | 2 | `/invoice` | — | **placeholder** |
 | **transactions** | 2 | `/transactions` | — | **placeholder** |
@@ -846,6 +846,22 @@ Material فقط دو transition اضافه می‌کند (دکمه‌ها و `ta
 گروه‌ها: کار روزانه، عملکرد من، تیم من، واحد من، نمای کل سازمان. `span` عرض در گرید ۳ستونه؛ `periodic` یعنی به بازه‌ی تاریخ نوار بالا گوش می‌دهد؛ `locked` غیرقابل‌خاموش.
 ویجت‌ها: Welcome، QuickActions، WorkQueues، ScopePerformance، TopSellers، MemberRankList، OrgWidgets. فعلاً چیدمان فقط در مرورگر ذخیره می‌شود (بین دستگاه‌ها sync نیست؛ `frontend-requests` بخش ۶.۳).
 
+### 17.5 accounting (داشبورد و دفترهای حسابداری)
+روی `api/Accounting` (بخش ۲۰ api-guide)، همه فقط‌خواندنی و پشتِ یک دسترسی. ده صفحه با یک نوارِ بالایی (`AccountingNav`):
+داشبورد، حسابِ اشخاص، دفترِ اشخاص، دفترِ فروش و خرید (**یک** صفحه‌ی `InvoiceJournalPage` با واژگانِ `domain/journalSides`)،
+ریزِ اقلامِ فروش، دریافت و پرداخت، مالیاتِ ارزش افزوده، ارزشِ موجودی، تفکیکِ فروش/خرید.
+- هر فهرست کنارِ ردیف‌ها `summary`ِ کلِ فیلتر را دارد؛ `api-v1` آن را کنارِ خروجیِ `normalizeListResponse` نگه می‌دارد و
+  `SummaryStrip` بالای جدول نشانش می‌دهد (`DataTable` پاورقی ندارد).
+- پیوند بینِ صفحه‌ها با فیلترِ آماده در نشانی (`?paymentState=3&customerId=5`): `withFilters` می‌سازد و `useUrlPreset` یک‌بار
+  پیش از اولین درخواست با `applyPreset` (بقیه‌ی فیلترها به پیش‌فرض) اعمال می‌کند. شناسه‌هایی که در پنل جا ندارند
+  (`saleId`، `productId`) با `IdFilterChips` دیده و برداشته می‌شوند.
+- داشبورد ارقامِ «همین حالا» (مانده، سنی‌بندی، اقساط، موجودی) را از ارقامِ «در بازه» جدا نشان می‌دهد؛ هر کاشی دفترِ پشتِ
+  عددش را با همان بازه باز می‌کند.
+- خروجیِ اکسل با `DataTransferActions` و فیلترها + مرتب‌سازیِ جدول (ترتیبِ فایل = ترتیبِ جدول).
+- گزارش‌های فعالیت (رتبه‌بندیِ کارمندان، مشتریان، تامین‌کنندگان) زیرِ `accounting/activity/` و پشتِ `ReportView`اند؛
+  `AccountingNav` صفحه‌ها را در دو گروه و فقط به اندازه‌ی دسترسیِ کاربر نشان می‌دهد.
+- بهای تمام‌شده و سود اینجا نیست (فیچرِ جدا). کمبودهای بکند: بخشِ ۲۱ سندِ درخواست‌ها.
+
 ### 17.4 permissions / organization / employees
 - مدل سازمانی: هر کاربر **دقیقاً یک واحد** و حداکثر یک تیم؛ نقش (`OrgRoleEnum` MEMBER/DEPARTMENT_HEAD/DEPUTY/TEAM_HEAD/DEPUTY) از `headId/deputyId` در سرور مشتق می‌شود.
 - `UserAccessPage`/`DepartmentTemplatesPage`: `AccessListPane` + `PermissionEditor` + `GroupChips` + `SaveBar` + `TemplateBar`.
@@ -855,7 +871,7 @@ Material فقط دو transition اضافه می‌کند (دکمه‌ها و `ta
 ## 18. PWA و بروزرسانی برنامه
 
 - `vite-plugin-pwa` با **`registerType: "prompt"`**: نسخه‌ی جدید دانلود می‌شود ولی تا تأیید کاربر فعال نمی‌شود (کار نیمه‌تمام فرم از بین نرود).
-- **پیدا شدن و فعال‌شدن نسخه‌ی تازه** (`shared/services/appUpdate.js` — تنها جای ثبت SW): پیدا شدن (هنگام باز شدن، هر ۱۵ دقیقه، دیده‌شدن مجدد برگه، برگشت اینترنت، دستی از `AppUpdateDialog`) فقط اعلان می‌دهد. فعال‌شدن (= بارگذاری دوباره) را کاربر با «بروزرسانی» می‌زند و فقط وقتی انجام می‌شود که دفترِ ایمنیِ `shared/services/updateSafety.js` خالی باشد: فرم‌ها/کارتخوان/آپلودها با `useUpdateGuard` (و `useUnsavedChangesGuard`) خودشان را ثبت می‌کنند؛ اگر چیزی ثبت باشد بارگذاری نمی‌شود و دلیلش به کاربر گفته می‌شود. تنها فعال‌سازیِ بی‌پرسش: صفحه‌ی ورودِ دست‌نخورده و بعد از ورود (`applyUpdateAutomatically`) با سقفِ ۲ تلاش برای هر build. فعال‌سازیِ بی‌نتیجه بعد از ۱۰ ثانیه به «آماده» برمی‌گردد.
+- **پیدا شدن و فعال‌شدن نسخه‌ی تازه** (`shared/services/appUpdate.js` — تنها جای ثبت SW): پیدا شدن (هنگام باز شدن، هر ۱۵ دقیقه، دیده‌شدن مجدد برگه، برگشت اینترنت، دستی از `AppUpdateDialog`) فقط اعلان می‌دهد. فعال‌شدن (= بارگذاری دوباره) را کاربر با «بروزرسانی» می‌زند و فقط وقتی انجام می‌شود که دفترِ ایمنیِ `shared/services/updateSafety.js` خالی باشد: فرم‌ها/کارتخوان/آپلودها با `useUpdateGuard` (و `useUnsavedChangesGuard`) خودشان را ثبت می‌کنند؛ اگر چیزی ثبت باشد بارگذاری نمی‌شود و دلیلش به کاربر گفته می‌شود. تنها فعال‌سازیِ بی‌پرسش: صفحه‌ی ورودِ دست‌نخورده و بعد از ورود (`applyUpdateAutomatically`) با سقفِ ۲ تلاش برای هر build. فعال‌سازیِ بی‌نتیجه بعد از ۱۰ ثانیه به «آماده» برمی‌گردد. «نسخه‌ی تازه» یعنی buildِ *جدیدتر* از buildِ در حالِ اجرا: worker منتظر خودش buildش را می‌گوید (`GET_BUILD` از `sw-build-*.js`، ساخته‌ی `vite.config.js`)؛ `version.json` فقط راهنماست و کهنه‌تر/برابرش هرگز اعلان نمی‌دهد، و ادعای بی‌worker فقط یک‌بار با بروزرسانیِ کامل امتحان می‌شود (`app-update-claim-tried`). اگر `sw-build-*.js` روی سرور نباشد worker ناقص نصب می‌شود (جواب `GET_BUILD` نمی‌دهد)؛ فرانت آن را «ناشناس» می‌شمارد و کلیکِ دوم بعد از شکستِ فعال‌سازی با بارگذاریِ کامل جلو می‌رود — کل `dist` را با هم منتشر کنید. ردیابی: `localStorage["app-update-debug"]="1"`.
 - **کش runtime**: tile‌های نقشه (CacheFirst، ۲۰۰ مورد/۳۰ روز)، فونت‌ها (۱ سال)، `*.wasm` اسکنر بارکد (CacheFirst؛ عمداً precache نیست چون ~۱MB و فقط مرورگرهای بدون `BarcodeDetector` نیتیو نیاز دارند).
 - **پاسخ API عمداً کش نمی‌شود**: داده‌ی مالی/شخصی است، کلید کش توکن را نمی‌شناسد (کاربر بعدی همان دستگاه پاسخ قبلی را می‌دید)، و در کندی شبکه داده‌ی کهنه نشان می‌داد. `purgeLegacyApiCache` کش قدیمی `api-cache` را پاک می‌کند.
 - `devOptions.enabled: false` (HMR به‌هم نریزد). precache حدود ۳.۹MB (مبنا قبل از ریفکتور).
@@ -904,7 +920,7 @@ Material فقط دو transition اضافه می‌کند (دکمه‌ها و `ta
   نامعتبر کنار گذاشته شوند» اگر لازم است ← ثبت (همان فایل دوباره، با `Idempotency-Key`) ← نتیجه.
 - سرویس: `shared/services/dataTransfer/` (`api-v1`, `queryKeys`, `queries`, `mutations`). دانلودها با
   `shared/lib/saveBlob.js` و خطای پاسخِ Blob با `shared/services/api/blob.js` (همان که فاکتور PDF استفاده می‌کند).
-- امروز روی کالاها، مشتریان و تامین‌کنندگان.
+- امروز روی کالاها، مشتریان و تامین‌کنندگان (ورود و خروج)، و هفت دفترِ حسابداری (فقط خروجی).
 
 ---
 

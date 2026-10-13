@@ -1,7 +1,17 @@
 import { ROUTES } from "./routes";
 
 import {
-  BarChart3,
+  ArrowLeftRight,
+  BookOpenText,
+  Boxes,
+  Calculator,
+  ChartPie,
+  LayoutDashboard,
+  Percent,
+  Receipt,
+  Rows3,
+  Scale,
+  ShoppingBag,
   Barcode,
   BookOpen,
   Box,
@@ -26,6 +36,7 @@ import {
   UserCog,
   Users,
   Warehouse,
+  Car,
 } from "lucide-react";
 
 export const navigationData = {
@@ -177,6 +188,13 @@ export const navigationData = {
           description: "ایجاد، ویرایش و حذف دسته‌بندی‌های کالا",
         },
         {
+          title: "خودروها",
+          url: ROUTES.WAREHOUSE_VEHICLES,
+          permission: ["VehicleView", "ProductCategoryView"],
+          icon: Car,
+          description: "خودروها و کالاهای مربوط به هر خودرو",
+        },
+        {
           title: "تعریف کالای جدید",
           url: ROUTES.WAREHOUSE_PRODUCTS_NEW,
           permission: "ProductCreate",
@@ -286,28 +304,100 @@ export const navigationData = {
       ],
     },
     {
-      title: "گزارش‌ها",
-      url: ROUTES.REPORTS,
-      icon: BarChart3,
+      // حسابداری و گزارش‌های فعالیت یک بخش‌اند؛ هر آیتم دسترسیِ خودش را دارد
+      // (`AccountingView` برای دفترها، `ReportView` برای رتبه‌بندی‌ها).
+      title: "حسابداری",
+      url: ROUTES.ACCOUNTING,
+      icon: Calculator,
       isActive: false,
       items: [
         {
+          title: "داشبورد مالی",
+          url: ROUTES.ACCOUNTING,
+          permission: "AccountingView",
+          icon: LayoutDashboard,
+          description: "طلب و بدهی، فروش و خرید، جریان نقد و موارد نیازمند پیگیری",
+        },
+        {
+          title: "حساب اشخاص",
+          url: ROUTES.ACCOUNTING_PARTIES,
+          permission: "AccountingView",
+          icon: Scale,
+          description: "مانده و سنی‌بندی بدهیِ مشتریان و تامین‌کنندگان",
+        },
+        {
+          title: "دفتر حساب اشخاص",
+          url: ROUTES.ACCOUNTING_PARTY_LEDGER,
+          permission: "AccountingView",
+          icon: BookOpenText,
+          description: "همه‌ی ردیف‌های بدهکار و بستانکارِ اشخاص",
+        },
+        {
+          title: "دفتر فروش",
+          url: ROUTES.ACCOUNTING_SALES,
+          permission: "AccountingView",
+          icon: Receipt,
+          description: "فاکتورهای فروش با مانده و سررسید",
+        },
+        {
+          title: "دفتر خرید",
+          url: ROUTES.ACCOUNTING_PURCHASES,
+          permission: "AccountingView",
+          icon: ShoppingBag,
+          description: "فاکتورهای خرید با مانده و سررسید",
+        },
+        {
+          title: "ریز اقلام فروش",
+          url: ROUTES.ACCOUNTING_SALE_LINES,
+          permission: "AccountingView",
+          icon: Rows3,
+          description: "هر قلمِ هر فاکتورِ فروش",
+        },
+        {
+          title: "دریافت و پرداخت",
+          url: ROUTES.ACCOUNTING_PAYMENTS,
+          permission: "AccountingView",
+          icon: ArrowLeftRight,
+          description: "همه‌ی پرداخت‌ها و دریافت‌ها به تفکیکِ روش",
+        },
+        {
+          title: "مالیات ارزش افزوده",
+          url: ROUTES.ACCOUNTING_TAX,
+          permission: "AccountingView",
+          icon: Percent,
+          description: "مالیاتِ فروش و خرید به تفکیکِ دوره",
+        },
+        {
+          title: "ارزش موجودی",
+          url: ROUTES.ACCOUNTING_INVENTORY,
+          permission: "AccountingView",
+          icon: Boxes,
+          description: "ارزشِ موجودیِ هر کالا و کالای قرنطینه",
+        },
+        {
+          title: "تفکیک فروش و خرید",
+          url: ROUTES.ACCOUNTING_BREAKDOWN,
+          permission: "AccountingView",
+          icon: ChartPie,
+          description: "فروش و خرید بر اساسِ کالا، دسته، طرف‌حساب یا کاربر",
+        },
+        {
           title: "فعالیت کارمندان",
-          url: ROUTES.REPORTS_EMPLOYEES,
+          url: ROUTES.ACCOUNTING_EMPLOYEES,
           permission: "ReportView",
           icon: UserCog,
           description: "رتبه‌بندی کارمندان بر اساس فروش و خرید ثبت‌شده",
         },
         {
           title: "آمار خرید مشتریان",
-          url: ROUTES.REPORTS_CUSTOMERS,
+          url: ROUTES.ACCOUNTING_CUSTOMERS,
           permission: "ReportView",
           icon: Users,
           description: "پرخریدترین مشتریان و مانده‌ی تسویه‌نشده",
         },
         {
           title: "آمار خرید از تامین‌کنندگان",
-          url: ROUTES.REPORTS_SUPPLIERS,
+          url: ROUTES.ACCOUNTING_SUPPLIERS,
           permission: "ReportView",
           icon: Truck,
           description: "خرید از هر تامین‌کننده و وضعیت پرداخت",

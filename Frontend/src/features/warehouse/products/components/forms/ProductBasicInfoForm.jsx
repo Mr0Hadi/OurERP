@@ -2,6 +2,7 @@ import { Controller, useWatch } from "react-hook-form";
 
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
+import { Textarea } from "@/shared/components/ui/textarea";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import {
   Card,
@@ -19,6 +20,7 @@ import {
 
 import StatusBadge from "@/shared/components/status/StatusBadge";
 import CategoryManager from "./CategoryManager";
+import VehicleMultiSelect from "@/features/warehouse/vehicles/components/VehicleMultiSelect";
 import { PRODUCT_UNIT_LABELS } from "@/shared/domain/enums/productUnit";
 
 /**
@@ -188,6 +190,17 @@ export default function ProductBasicInfoForm({
           )}
         </div>
 
+        <div className="space-y-2 md:col-span-2">
+          <Label>خودروها</Label>
+          <Controller
+            name="vehicleIds"
+            control={control}
+            render={({ field }) => (
+<VehicleMultiSelect value={field.value ?? []} onChange={field.onChange} />
+            )}
+          />
+        </div>
+
         <div className="md:col-span-2">
           <Controller
             name="requiresUnitTracking"
@@ -208,6 +221,16 @@ export default function ProductBasicInfoForm({
                 </span>
               </label>
             )}
+          />
+        </div>
+
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="description">توضیحات</Label>
+          <Textarea
+            id="description"
+            placeholder="یادداشت یا توضیحات مربوط به کالا..."
+            className="min-h-[90px] resize-y"
+            {...register("description")}
           />
         </div>
       </CardContent>

@@ -18,7 +18,18 @@ import { getUpdateBlocker, useUpdateSafetyStore } from "@/shared/services/update
  * می‌شود. تنها استثنا صفحه‌ی ورودِ دست‌نخورده و لحظه‌ی بعد از ورود است
  * (`applyUpdateAutomatically`)، با سقفِ تعدادِ تلاش برای جلوگیری از حلقه.
  *
+ * «نسخه‌ی تازه» یعنی buildی که *جدیدتر* از buildِ در حالِ اجرا (`APP_BUILD.builtAt`)
+ * است، و گواهش یکی از این‌هاست:
+ *  - worker منتظر که خودش اعلام می‌کند کدام buildاست (`GET_BUILD`، فایلِ
+ *    `sw-build-*.js` در `vite.config.js`) و جدیدتر است؛
+ *  - یا worker منتظری که نمی‌توان buildش را فهمید *و* `version.json` جدیدتر می‌گوید.
+ * `version.json` به‌تنهایی فقط یک ادعاست: اگر هیچ worker آن را تأیید نکند یک‌بار
+ * بروزرسانیِ کامل (پاک‌کردنِ worker و کش) امتحان می‌شود و اگر باز هم همان build
+ * بالا آمد (کش/پروکسیِ میانی، دیپلویِ نیمه‌کاره) همان ادعا دوباره اعلان نمی‌دهد.
+ * `version.json` کهنه‌تر یا برابر هرگز اعلان نمی‌دهد.
+ *
  * در حالتِ توسعه service worker ثبت نمی‌شود و `supported` خاموش می‌ماند.
+ * برای عیب‌یابی: `localStorage.setItem("app-update-debug", "1")` و کنسول (سطحِ debug).
  */
 
 /** شناسه‌ی همین build — از `define` در `vite.config.js`. */
@@ -38,6 +49,30 @@ const PERIODIC_CHECK_MS = 15 * 60 * 1000;
 const INSTALL_TIMEOUT_MS = 30 * 1000;
 /** فعال‌سازی (تغییرِ controller و بارگذاریِ دوباره) بیش از این طول نکشد، وگرنه شکست حساب می‌شود. */
 const ACTIVATION_TIMEOUT_MS = 10 * 1000;
+/** پاسخِ worker منتظر به «تو کدام buildای؟» بیش از این منتظر نمی‌ماند. */
+const WORKER_BUILD_TIMEOUT_MS = 3 * 1000;
+/** `version.json` بیش از این منتظر نمی‌ماند؛ بررسیِ آویزان همه‌ی بررسی‌های بعدی را قفل می‌کرد. */
+const REMOTE_TIMEOUT_MS = 10 * 1000;
+
+function debugEnabled() {
+  try {
+    return import.meta.env.DEV || localStorage.getItem("app-update-debug") === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** ردیابیِ تصمیم‌ها؛ فقط با `app-update-debug` (یا در توسعه)، نه در هر بررسیِ عادی. */
+function trace(event, data) {
+  if (debugEnabled()) console.debug("[app-update]", event, data ?? "");
+}
+
+/** `candidate` یک زمانِ ISO جدیدتر از buildِ در حالِ اجرا است؟ (نامعتبر ⇒ نه) */
+function isNewerBuild(candidate) {
+  const next = Date.parse(candidate);
+  const current = Date.parse(APP_BUILD.builtAt);
+  return Number.isFinite(next) && Number.isFinite(current) && next > current;
+}
 
 export const useAppUpdateStore = create(() => ({
   supported: false,
@@ -79,8 +114,10 @@ const REGISTER_WAIT_MS = 10 * 1000;
 let pendingCheck = null;
 const availableListeners = new Set();
 
-function markAvailable() {
+function markAvailable(reason) {
   if (getState().status === UPDATE_STATUS.UPDATING) return;
+  availableReason = reason ?? availableReason;
+  trace("available", { reason, running: APP_BUILD.builtAt });
   setState({ status: UPDATE_STATUS.AVAILABLE, lastCheckedAt: new Date() });
   availableListeners.forEach((listener) => listener());
 }
@@ -108,13 +145,29 @@ function waitForInstall(worker) {
 /** شناسه‌ی build منتشرشده روی سرور؛ null اگر در دسترس نبود (آفلاین/توسعه). */
 async function fetchRemoteBuild() {
   try {
-    const res = await fetch(`/version.json?t=${Date.now()}`, { cache: "no-store" });
+    const res = await fetch(`/version.json?t=${Date.now()}`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(REMOTE_TIMEOUT_MS),
+    });
     if (!res.ok) return null;
     const data = await res.json();
     return typeof data?.builtAt === "string" ? data : null;
   } catch {
     return null;
   }
+}
+
+/** از worker می‌پرسد کدام buildاست (`sw-build-*.js`)؛ null اگر جواب نداد. */
+function fetchWorkerBuild(worker) {
+  return new Promise((resolve) => {
+    const channel = new MessageChannel();
+    const timer = setTimeout(() => resolve(null), WORKER_BUILD_TIMEOUT_MS);
+    channel.port1.onmessage = (event) => {
+      clearTimeout(timer);
+      resolve(typeof event.data?.builtAt === "string" ? event.data : null);
+    };
+    worker.postMessage({ type: "GET_BUILD" }, [channel.port2]);
+  });
 }
 
 /** منتظرِ پیدایشِ worker در حالِ نصب یا منتظر (تا سقفِ زمان). */
@@ -127,15 +180,76 @@ async function waitForWorker() {
   }
 }
 
+// ادعایی از `version.json` که یک بار با بروزرسانیِ کامل امتحان شد: `{ build, at }`.
+// فقط اعلانِ *همین ادعا* را خاموش می‌کند و اثبات نمی‌کند کدام نسخه اجرا می‌شود (آن
+// را همیشه `APP_BUILD` می‌گوید). وقتی buildِ در حالِ اجرا به آن رسید (بروزرسانی
+// موفق بود) پاک می‌شود، بعد از `CLAIM_TRIED_TTL_MS` منقضی می‌شود تا دیپلویِ
+// نیمه‌کاره‌ی موقت برای همیشه جلوی تشخیص را نگیرد، و worker منتظرِ تأییدشده
+// همیشه از آن رد می‌شود (`judge`).
+const CLAIM_TRIED_KEY = "app-update-claim-tried";
+const CLAIM_TRIED_TTL_MS = 60 * 60 * 1000;
+
+function claimWasTried(builtAt) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CLAIM_TRIED_KEY) || "null");
+    if (!saved) return false;
+    if (!isNewerBuild(saved.build) || Date.now() - saved.at > CLAIM_TRIED_TTL_MS) {
+      localStorage.removeItem(CLAIM_TRIED_KEY);
+      return false;
+    }
+    return saved.build === builtAt;
+  } catch {
+    return false;
+  }
+}
+
+/** build ادعاشده‌ای که بروزرسانیِ کاملش در جریان است (برای `CLAIM_TRIED_KEY`). */
+let claimedBuild = null;
+/** چرا وضعیتِ فعلی AVAILABLE شد (`judge`)؛ بروزرسانیِ خودکار با ادعای بی‌worker انجام نمی‌شود. */
+let availableReason = null;
+
+/**
+ * حکمِ یک بررسی: دلیلِ «نسخه‌ی تازه هست» یا null.
+ * - worker منتظرِ شناخته‌شده: فقط اگر جدیدتر باشد؛ کهنه‌تر/برابر (مثلاً sw.jsِ کهنه از
+ *   کشِ میانی) اعلان نمی‌دهد.
+ * - worker منتظرِ ناشناس: فقط با تأییدِ `version.json` که جدیدتر می‌گوید (و یک بار، مثلِ ادعا).
+ * - بدونِ worker: ادعای جدیدترِ `version.json`، مگر همین ادعا قبلاً بی‌نتیجه مانده.
+ */
+async function judge(remote, remoteNewer) {
+  claimedBuild = null;
+  const waiting = registration.waiting;
+  if (waiting) {
+    const workerBuild = await fetchWorkerBuild(waiting);
+    trace("worker", { workerBuild: workerBuild?.builtAt ?? null, running: APP_BUILD.builtAt });
+    if (workerBuild) {
+      if (isNewerBuild(workerBuild.builtAt)) return "worker-newer";
+    } else if (remoteNewer && !claimWasTried(remote.builtAt)) {
+      // worker جواب نداد (مثلاً `sw-build-*.js` روی سرور نیست و worker نیمه‌کاره نصب شده):
+      // فقط با تأییدِ `version.json` و یک بار، چون ممکن است فعال‌شدنش ممکن نباشد.
+      claimedBuild = remote.builtAt;
+      return "worker-unidentified+remote-newer";
+    }
+  }
+  if (remoteNewer && !claimWasTried(remote.builtAt)) {
+    claimedBuild = remote.builtAt;
+    return "remote-claim";
+  }
+  return null;
+}
+
 /**
  * از سرور می‌پرسد نسخه‌ی تازه‌ای هست یا نه، و اگر هست تا آماده‌شدنش صبر
  * می‌کند. بررسی‌های هم‌زمان یکی می‌شوند. وضعیتِ نهایی را برمی‌گرداند.
  *
- * مرجعِ تصمیم `version.json` است نه فقط service worker: `update()` گاهی
- * پیش از شروعِ نصب تمام می‌شود یا فایلِ `sw.js` از کشِ میانی می‌آید و آنوقت
- * «آخرین نسخه را دارید» غلط گزارش می‌شد.
+ * مرجعِ تصمیم خودِ buildِ worker است و `version.json` فقط راهنما/پشتیبان
+ * (`judge`): `update()` گاهی پیش از شروعِ نصب تمام می‌شود یا `sw.js` از کشِ
+ * میانی می‌آید، و `version.json`ِ کهنه هم نباید «نسخه‌ی تازه» بسازد.
+ * نتیجه فقط وقتی نوشته می‌شود که وضعیت هنوز CHECKING باشد؛ بررسیِ کهنه نه
+ * بروزرسانیِ در جریان را بهم می‌زند و نه اعلانِ تازه را پاک می‌کند.
+ *
+ * @param trigger چه چیزی بررسی را شروع کرد (فقط برای ردیابی)
  */
-export function checkForUpdate() {
+export function checkForUpdate(trigger = "manual") {
   const { status } = getState();
   if (status === UPDATE_STATUS.AVAILABLE || status === UPDATE_STATUS.UPDATING) {
     return Promise.resolve(status);
@@ -146,29 +260,31 @@ export function checkForUpdate() {
     if (!registration) {
       await Promise.race([registered, new Promise((r) => setTimeout(r, REGISTER_WAIT_MS))]);
     }
-    if (!registration || getState().status === UPDATE_STATUS.AVAILABLE) {
+    const early = getState().status;
+    if (!registration || early === UPDATE_STATUS.AVAILABLE || early === UPDATE_STATUS.UPDATING) {
       pendingCheck = null;
-      return getState().status;
+      return early;
     }
     setState({ status: UPDATE_STATUS.CHECKING });
+    const settle = (next) => {
+      if (getState().status === UPDATE_STATUS.CHECKING) setState(next);
+    };
     try {
       const remote = await fetchRemoteBuild();
-      const outdated = remote !== null && remote.builtAt !== APP_BUILD.builtAt;
+      const remoteNewer = remote !== null && isNewerBuild(remote.builtAt);
+      trace("check", { trigger, running: APP_BUILD.builtAt, remote: remote?.builtAt ?? null, remoteNewer });
       await registration.update();
       if (registration.installing) await waitForInstall(registration.installing);
-      if (outdated && !registration.waiting) await waitForWorker();
-      if (registration.waiting) {
-        markAvailable();
-      } else if (outdated) {
-        // service worker نسخه‌ی تازه را نشان نداد (کشِ میانی)؛ بروزرسانیِ کامل
-        // با پاک‌کردنِ worker و کش انجام می‌شود.
-        markAvailable();
+      if (remoteNewer && !registration.waiting) await waitForWorker();
+      const reason = await judge(remote, remoteNewer);
+      if (reason) {
+        if (getState().status === UPDATE_STATUS.CHECKING) markAvailable(reason);
       } else {
-        setState({ status: UPDATE_STATUS.UP_TO_DATE, lastCheckedAt: new Date() });
+        settle({ status: UPDATE_STATUS.UP_TO_DATE, lastCheckedAt: new Date() });
       }
     } catch {
       // آفلاین یا سرور در دسترس نیست؛ بررسیِ بعدی دوباره امتحان می‌کند.
-      setState({ status: UPDATE_STATUS.ERROR, lastCheckedAt: new Date() });
+      settle({ status: UPDATE_STATUS.ERROR, lastCheckedAt: new Date() });
     } finally {
       pendingCheck = null;
     }
@@ -211,6 +327,10 @@ function resumeHardReset() {
 function hardReload() {
   try {
     sessionStorage.setItem(HARD_RESET_KEY, "1");
+    // اگر بعد از این هم همین build بالا بیاید، همین ادعا دوباره اعلان نمی‌دهد.
+    if (claimedBuild) {
+      localStorage.setItem(CLAIM_TRIED_KEY, JSON.stringify({ build: claimedBuild, at: Date.now() }));
+    }
   } catch {
     // بدونِ نشانه پاک‌سازیِ بعدی ممکن نیست؛ بارگذاریِ ساده بی‌خطر است.
   }
@@ -238,14 +358,40 @@ function failActivation() {
   } catch {
     // sessionStorage در دسترس نیست؛ نشانه‌ای هم گذاشته نشده بود.
   }
+  trace("activation-failed", { running: APP_BUILD.builtAt });
   setState({ status: UPDATE_STATUS.AVAILABLE, activationFailed: true });
+  // اعلانِ «بروزرسانی» با کلیک بسته شده بود؛ دوباره نشان داده می‌شود تا امتحانِ مجدد ممکن باشد.
+  availableListeners.forEach((listener) => listener());
+}
+
+/**
+ * worker تازه کنترلِ صفحه را گرفت (به درخواستِ همین صفحه یا برگه‌ی دیگر): بارگذاریِ
+ * دوباره فقط اگر دفترِ ایمنی خالی باشد. وگرنه صفحه روی کدِ قدیمی می‌ماند و
+ * «بروزرسانی»ِ بعدی (بدونِ worker منتظر) پس از ذخیره آن را بارگذاری می‌کند.
+ * workbox-window هم همین را از راهِ `onNeedReload` صدا می‌زند؛ بدونِ آن خودش بی‌پرسش
+ * بارگذاری می‌کرد.
+ */
+function reloadIfSafe() {
+  clearActivation();
+  const reason = getUpdateBlocker();
+  trace("takeover", { blocked: reason });
+  if (reason) {
+    setState({ status: UPDATE_STATUS.AVAILABLE, blockedReason: reason });
+    // worker تازه فعال است و صفحه روی کدِ قدیمی مانده؛ اعلان دوباره نشان داده می‌شود.
+    availableListeners.forEach((listener) => listener());
+    return;
+  }
+  window.location.reload();
 }
 
 /** فعال‌سازی و بارگذاریِ دوباره، بی‌پرسش از دفترِ ایمنی — فقط از `applyUpdate*`. */
 function activate() {
+  // worker منتظری که یک بار به `SKIP_WAITING` جواب نداد (ناقص نصب شده) دوباره امتحان
+  // نمی‌شود؛ مسیرِ بارگذاریِ کامل صفحه را به buildِ تازه می‌رساند.
+  const waiting = getState().activationFailed ? null : registration?.waiting;
+  trace("activate", { viaWaitingWorker: Boolean(waiting) });
   setState({ status: UPDATE_STATUS.UPDATING, blockedReason: null, activationFailed: false });
   activationTimer = setTimeout(failActivation, ACTIVATION_TIMEOUT_MS);
-  const waiting = registration?.waiting;
   if (!waiting) {
     hardReload();
     return;
@@ -254,17 +400,7 @@ function activate() {
   // vite-plugin-pwa: آن فقط وقتی صفحه را بارگذاری می‌کند که رویدادِ `waiting`ِ
   // workbox قبلاً رسیده باشد، و نسخه‌ای که `checkForUpdate` زودتر پیدا کرده
   // فعال می‌شد ولی صفحه روی نسخه‌ی قبلی می‌ماند.
-  onControllerChange = () => {
-    clearActivation();
-    // کاربر بین «بروزرسانی» و تغییرِ controller کاری شروع کرده؟ بارگذاری نمی‌شود؛
-    // worker تازه فعال است و «بروزرسانی»ِ بعدی (بدونِ worker منتظر) صفحه را بارگذاری می‌کند.
-    const reason = getUpdateBlocker();
-    if (reason) {
-      setState({ status: UPDATE_STATUS.AVAILABLE, blockedReason: reason });
-      return;
-    }
-    window.location.reload();
-  };
+  onControllerChange = reloadIfSafe;
   navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
   // همان پیامی که service workerِ ساخته‌ی workbox با آن `skipWaiting` می‌کند.
   waiting.postMessage({ type: "SKIP_WAITING" });
@@ -325,6 +461,9 @@ function reserveAutoAttempt() {
  */
 export function applyUpdateAutomatically() {
   if (getState().status !== UPDATE_STATUS.AVAILABLE) return false;
+  // بی‌پرسش فقط برای worker که خودش buildِ جدیدتر را تأیید کرده؛ ادعای `version.json`
+  // و worker ناشناس ممکن است به پاک‌کردنِ worker و کش برسد.
+  if (availableReason !== "worker-newer") return false;
   if (getUpdateBlocker() || !reserveAutoAttempt()) return false;
   activate();
   return true;
@@ -337,30 +476,38 @@ export function applyUpdateAutomatically() {
  */
 export async function applyUpdateOnLogin({ waitMs = 3000 } = {}) {
   const status = await Promise.race([
-    checkForUpdate(),
+    checkForUpdate("after-login"),
     new Promise((resolve) => setTimeout(() => resolve(getState().status), waitMs)),
   ]);
   return status === UPDATE_STATUS.AVAILABLE ? applyUpdateAutomatically() : false;
 }
 
+let initialized = false;
+
 /** یک بار، پیش از رندرِ برنامه (`main.jsx`). */
 export function initAppUpdates({ onOfflineReady } = {}) {
+  if (initialized) return;
+  initialized = true;
   if (resumeHardReset()) return;
+  // نشانه‌ی ادعای کهنه/منقضی (یا بروزرسانیِ موفق) همین‌جا پاک می‌شود.
+  claimWasTried(APP_BUILD.builtAt);
   registerSW({
-    onNeedRefresh: markAvailable,
+    // «worker منتظر» رویداد است نه حکم: همان بررسیِ معمول تصمیم می‌گیرد جدیدتر هست یا نه.
+    onNeedRefresh: () => checkForUpdate("waiting-event"),
+    onNeedReload: reloadIfSafe,
     onOfflineReady,
     onRegisteredSW(_swUrl, swRegistration) {
       if (!swRegistration) return;
       registration = swRegistration;
       setState({ supported: true });
       resolveRegistered?.();
-      setInterval(checkForUpdate, PERIODIC_CHECK_MS);
-      window.addEventListener("online", checkForUpdate);
+      setInterval(() => checkForUpdate("interval"), PERIODIC_CHECK_MS);
+      window.addEventListener("online", () => checkForUpdate("online"));
       // هنگامِ باز شدن فقط بررسی می‌شود؛ باز شدنِ برنامه به معنیِ «کاری ندارم» نیست.
-      checkForUpdate();
+      checkForUpdate("launch");
       // برگه‌ای که ساعت‌ها پشتِ برگه‌های دیگر بوده، با برگشتن بررسی می‌شود.
       document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "visible") checkForUpdate();
+        if (document.visibilityState === "visible") checkForUpdate("visible");
       });
     },
   });

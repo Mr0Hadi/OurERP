@@ -22,7 +22,6 @@
     "@tanstack/react-table": "^8.21.3",
     "@zxing/library": "^0.23.0",
     "axios": "^1.16.1",
-    "barcode-detector": "^3.2.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "leaflet": "^1.9.4",

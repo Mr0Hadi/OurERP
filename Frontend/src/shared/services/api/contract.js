@@ -88,24 +88,50 @@ export function listQuery({ filters = {}, pagination, sorting, sortColumns = {} 
 /** بزرگ‌ترین `take`ای که سرور می‌پذیرد. */
 export const MAX_PAGE_SIZE = 200;
 
+/** سقفِ درخواست‌های هم‌زمانِ `fetchAllPages`. */
+const PAGE_CONCURRENCY = 4;
+
 /**
- * همه‌ی صفحه‌های یک فهرست را پشتِ‌سرهم می‌خواند (سرور هر درخواست را به
- * `MAX_PAGE_SIZE` ردیف محدود می‌کند) — برای انتخابگرها که کلِ فهرست را لازم دارند.
+ * همه‌ی صفحه‌های یک فهرست را می‌خواند (سرور هر درخواست را به `MAX_PAGE_SIZE`
+ * ردیف محدود می‌کند) — برای انتخابگرها که کلِ فهرست را لازم دارند.
  * پاسخِ صفحه‌ی اول با لیستِ ادغام‌شده برمی‌گردد تا شکلش عوض نشود.
+ *
+ * صفحه‌ی اول تعدادِ صفحه‌ها را می‌گوید؛ بقیه به‌جای صفِ پشتِ‌سرهم (هر کدام منتظرِ
+ * قبلی) با حداکثر `PAGE_CONCURRENCY` درخواستِ هم‌زمان گرفته می‌شوند — نه همه
+ * با هم: کاتالوگِ کالا دهک‌ها صفحه است و ریختنِ همه‌ی درخواست‌ها یک‌جا هم سرور را
+ * زیر فشار می‌گذارد هم مرورگر را. ترتیبِ ردیف‌ها همان ترتیبِ صفحه‌هاست و اگر یکی
+ * از صفحه‌ها شکست بخورد کلِ فراخوانی شکست می‌خورد (و صفحه‌های باقی‌مانده دیگر
+ * درخواست نمی‌شوند)، مثل قبل.
  *
  * @param fetchPage  `(page: number) => Promise<response>` (صفحه از ۱)
  * @param itemsKey   کلیدِ لیست در پاسخ (مثلاً `userList`؛ `items` برای پاسخ‌های نرمال‌شده)
  */
 export async function fetchAllPages(fetchPage, { itemsKey, maxPages = 1000 }) {
-  let first;
-  const items = [];
-  for (let page = 1; page <= maxPages; page += 1) {
-    const raw = await fetchPage(page);
-    first ??= raw;
-    const normalized = normalizeListResponse(raw, { itemsKey });
-    items.push(...normalized.items);
-    if (page >= normalized.totalPages || normalized.items.length === 0) break;
-  }
+  const first = await fetchPage(1);
+  const { items: firstItems, totalPages } = normalizeListResponse(first, { itemsKey });
+  const remaining = Math.max(0, Math.min(totalPages, maxPages) - 1);
+
+  const rest = new Array(remaining);
+  let next = 0;
+  let failed = false;
+  const worker = async () => {
+    while (!failed && next < remaining) {
+      const index = next;
+      next += 1;
+      try {
+        rest[index] = await fetchPage(index + 2);
+      } catch (error) {
+        failed = true;
+        throw error;
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(PAGE_CONCURRENCY, remaining) }, worker));
+
+  const items = [
+    ...firstItems,
+    ...rest.flatMap((raw) => normalizeListResponse(raw, { itemsKey }).items),
+  ];
   return { ...first, [itemsKey]: items };
 }
 

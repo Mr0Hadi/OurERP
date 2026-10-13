@@ -1,26 +1,20 @@
 import { useEffect, useRef, useState } from "react";
-import { SwitchCamera, Zap, ZapOff } from "lucide-react";
+import { QrCode, ScanBarcode, SwitchCamera, Zap, ZapOff } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { Button } from "@/shared/components/ui/button";
-import { getBarcodeDetector } from "@/shared/domain/barcode/barcodeDetector";
-import {
-  SCAN_TARGET,
-  boxOfHit,
-  pickTargetHit,
-  targetInVideoSpace,
-} from "@/shared/domain/barcode/scanTarget";
+import { createFrameReader } from "@/shared/domain/barcode/frameReader";
 
 /**
- * رزولوشنی که از دوربین می‌خواهیم.
- *
- * ۶۴۰×۴۸۰ عمدی است و نه سهل‌انگاری: برای CODE128 و QRِ برچسب‌های ما
- * کاملاً کافی است، ولی نسبت به ۷۲۰p یک‌چهارمِ پیکسل دارد — یعنی هر
- * عبورِ دیکد حدوداً یک‌چهارم طول می‌کشد. بالا بردنِ این عدد اسکن را
- * *کندتر* می‌کند، نه دقیق‌تر.
+ * رزولوشنی که از دوربین می‌خواهیم. ۷۲۰p: در ۶۴۰×۴۸۰ میله‌های باریکِ
+ * CODE128ِ بلند فقط از فاصله‌ی خیلی نزدیک تفکیک می‌شدند (که آنجا هم
+ * فوکوس نمی‌گیرد).
  */
-const IDEAL_WIDTH = 640;
-const IDEAL_HEIGHT = 480;
+const IDEAL_WIDTH = 1280;
+const IDEAL_HEIGHT = 720;
+
+/** حالت‌های اسکن؛ هر حالت فقط نمادِ خودش را دیکد می‌کند. */
+const MODE_LABELS = { barcode: "بارکد", qr: "کد QR" };
 
 /** فاصله‌ی حلقه وقتی مرورگر `requestVideoFrameCallback` ندارد (فایرفاکس). */
 const FALLBACK_FRAME_MS = 100;
@@ -41,29 +35,16 @@ function pickBackCamera(list) {
   return backs.find((d) => !SECONDARY_CAMERA_RE.test(d.label)) ?? backs[0];
 }
 
-function boxOf(hit, videoWidth, videoHeight) {
-  const box = boxOfHit(hit);
-  if (!box) return null;
-  return {
-    left: (box.x / videoWidth) * 100,
-    top: (box.y / videoHeight) * 100,
-    width: (box.width / videoWidth) * 100,
-    height: (box.height / videoHeight) * 100,
-  };
-}
-
 /**
- * اسکنرِ دوربین برای بارکد و QR.
- *
+ * اسکنرِ دوربین برای بارکد و QR. کلِ فریم دیکد می‌شود (نه فقط داخلِ
+ * کادر)؛ کادر صرفاً راهنمای نشانه‌گیری است.
  */
 export default function CameraScanner({ onDetected }) {
   const [devices, setDevices] = useState([]);
   const [deviceId, setDeviceId] = useState(null);
   const [torchOn, setTorchOn] = useState(false);
   const [torchSupported, setTorchSupported] = useState(false);
-  const [aspectRatio, setAspectRatio] = useState(IDEAL_WIDTH / IDEAL_HEIGHT);
-  const [hitBox, setHitBox] = useState(null);
-  const [crowded, setCrowded] = useState(false);
+  const [mode, setMode] = useState("barcode");
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -93,8 +74,8 @@ export default function CameraScanner({ onDetected }) {
     };
 
     const start = async () => {
-      // موازی: کششِ wasm (در صورت نیاز) همزمان با بالا آمدنِ دوربین.
-      const detectorPromise = getBarcodeDetector();
+      // موازی: کششِ wasm همزمان با بالا آمدنِ دوربین.
+      const readerPromise = createFrameReader(mode);
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -117,9 +98,6 @@ export default function CameraScanner({ onDetected }) {
       video.srcObject = stream;
       await video.play();
 
-      if (video.videoWidth && video.videoHeight) {
-        setAspectRatio(video.videoWidth / video.videoHeight);
-      }
 
       const track = stream.getVideoTracks()[0];
       setTorchSupported(Boolean(track?.getCapabilities?.().torch));
@@ -147,7 +125,7 @@ export default function CameraScanner({ onDetected }) {
         if (activeId) setDeviceId(activeId);
       }
 
-      const detector = await detectorPromise;
+      const read = await readerPromise;
       if (cancelled) return;
 
       const loop = async () => {
@@ -160,24 +138,11 @@ export default function CameraScanner({ onDetected }) {
         }
         detecting = true;
         try {
-          const hits = await detector.detect(video);
-          // فقط کدِ داخلِ کادرِ هدف؛ ابعادِ نمایش هر فریم خوانده می‌شود تا
-          // چرخشِ گوشی و تغییرِ اندازه‌ی پنجره درست حساب شود.
-          const { status, hit } = pickTargetHit(
-            hits,
-            targetInVideoSpace(
-              { width: video.clientWidth, height: video.clientHeight },
-              { width: video.videoWidth, height: video.videoHeight },
-            ),
-          );
-          setCrowded((prev) => (prev === (status === "ambiguous") ? prev : status === "ambiguous"));
-          if (status === "single") {
+          const text = await read(video);
+          if (text) {
             cancelled = true;
-            setHitBox(boxOf(hit, video.videoWidth, video.videoHeight));
-            onDetectedRef.current(hit.rawValue);
-            toast.success(
-              hit.format === "qr_code" ? "کد QR خوانده شد" : "بارکد خوانده شد",
-            );
+            onDetectedRef.current(text);
+            toast.success(`${MODE_LABELS[mode]} خوانده شد`);
             return;
           }
         } catch {
@@ -212,10 +177,8 @@ export default function CameraScanner({ onDetected }) {
       video.srcObject = null;
       setTorchOn(false);
       setTorchSupported(false);
-      setHitBox(null);
-      setCrowded(false);
     };
-  }, [deviceId]);
+  }, [deviceId, mode]);
 
   const toggleCamera = () => {
     if (devices.length < 2) return;
@@ -237,8 +200,8 @@ export default function CameraScanner({ onDetected }) {
 
   return (
     <div
-      className="relative w-full bg-black rounded-md overflow-hidden"
-      style={{ aspectRatio }}
+      // مربع، دقیقاً همان ناحیه‌ای که ZXing دیکد می‌کند (`frameReader`).
+      className="relative aspect-square w-full bg-black rounded-md overflow-hidden"
     >
       <video
         ref={videoRef}
@@ -246,39 +209,29 @@ export default function CameraScanner({ onDetected }) {
         muted
         playsInline
       />
-      {/* کادرِ هدف: بیرونش تیره است و فقط کدِ داخلِ آن پذیرفته می‌شود. */}
+      {/* فقط راهنمای نشانه‌گیری؛ کدِ بیرونِ کادر هم خوانده می‌شود. */}
       <div
-        className={`pointer-events-none absolute rounded-md border-2 shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] ${
-          crowded ? "border-destructive" : "border-white"
+        className={`pointer-events-none absolute rounded-md border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)] ${
+          mode === "qr" ? "inset-[17.5%]" : "inset-x-[7.5%] inset-y-[32%]"
         }`}
-        style={{
-          left: `${((1 - SCAN_TARGET.width) / 2) * 100}%`,
-          top: `${((1 - SCAN_TARGET.height) / 2) * 100}%`,
-          width: `${SCAN_TARGET.width * 100}%`,
-          height: `${SCAN_TARGET.height * 100}%`,
-        }}
       />
       <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center px-2">
-        <span
-          role="status"
-          className={`rounded-md px-2 py-1 text-xs text-white ${crowded ? "bg-destructive" : "bg-black/60"}`}
-        >
-          {crowded ? "چند کد داخل کادر است؛ فقط یک کد را داخل کادر بگیرید" : "کد را داخل کادر قرار دهید"}
+        <span role="status" className="rounded-md bg-black/60 px-2 py-1 text-xs text-white">
+          {MODE_LABELS[mode]} را جلوی دوربین بگیرید
         </span>
       </div>
-      {hitBox && (
-        <div
-          className="pointer-events-none absolute rounded-md border-4 border-success/50 shadow-[0_0_12px_2px_rgba(52,211,153,0.8)]"
-          style={{
-            left: `${hitBox.left}%`,
-            top: `${hitBox.top}%`,
-            width: `${hitBox.width}%`,
-            height: `${hitBox.height}%`,
-          }}
-        />
-      )}
 
       <div className="absolute inset-x-0 bottom-2 flex justify-center gap-2">
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon"
+          onClick={() => setMode((m) => (m === "qr" ? "barcode" : "qr"))}
+          title={mode === "qr" ? "تعویض به بارکدخوان" : "تعویض به QR‌خوان"}
+          aria-label={mode === "qr" ? "تعویض به بارکدخوان" : "تعویض به QR‌خوان"}
+        >
+          {mode === "qr" ? <ScanBarcode className="w-4 h-4" /> : <QrCode className="w-4 h-4" />}
+        </Button>
         {devices.length > 1 && (
           <Button
             type="button"

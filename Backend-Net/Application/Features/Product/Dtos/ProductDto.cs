@@ -8,6 +8,7 @@ namespace Application.Features.Product.Dtos
         public int Id { get; set; }
         public string Name { get; set; }
         public string? EnglishName { get; set; }
+        public string? Description { get; set; }
         public string Code { get; set; }
         public string BarCode { get; set; }
         public string Brand { get; set; }
@@ -27,6 +28,9 @@ namespace Application.Features.Product.Dtos
         public int ProductCategoryId { get; set; }
         public bool RequiresUnitTracking { get; set; }
         public bool IsIncomplete { get; set; }
+
+        /// <summary>The vehicles this product fits, by name. Empty: it fits every vehicle.</summary>
+        public List<Application.Features.Vehicle.Dtos.VehicleDto> Vehicles { get; set; } = new();
 
         /// <summary>Units held in quarantine - physically here, not sellable, not part of Stock.</summary>
         public int QuarantinedCount { get; set; }

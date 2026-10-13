@@ -65,6 +65,8 @@ export const ROUTES = {
   WAREHOUSE_UNITS: "/warehouse/units",
   WAREHOUSE_UNIT_LABELS: "/warehouse/unit-labels",
   WAREHOUSE_CATEGORIES: "/warehouse/categories",
+  WAREHOUSE_VEHICLES: "/warehouse/vehicles",
+  WAREHOUSE_VEHICLES_DETAIL: "/warehouse/vehicles/:id",
   WAREHOUSE_STOCK: "/warehouse/stock",
   WAREHOUSE_TRANSACTIONS: "/warehouse/transactions",
   WAREHOUSE_RECEIVING: "/warehouse/receiving",
@@ -86,17 +88,24 @@ export const ROUTES = {
   TRANSACTIONS_PAYMENTS: "/transactions/payments",
   TRANSACTIONS_RETURNS: "/transactions/returns",
 
-  // گزارشات
+  // حسابداری — داشبورد و دفترهای `api/Accounting` (بخش ۲۰ سند)، همه فقط‌خواندنی.
+  ACCOUNTING: "/accounting",
+  ACCOUNTING_PARTIES: "/accounting/parties",
+  ACCOUNTING_PARTY_LEDGER: "/accounting/party-ledger",
+  ACCOUNTING_SALES: "/accounting/sales",
+  ACCOUNTING_PURCHASES: "/accounting/purchases",
+  ACCOUNTING_SALE_LINES: "/accounting/sale-lines",
+  ACCOUNTING_PAYMENTS: "/accounting/payments",
+  ACCOUNTING_TAX: "/accounting/tax",
+  ACCOUNTING_INVENTORY: "/accounting/inventory",
+  ACCOUNTING_BREAKDOWN: "/accounting/breakdown",
+  // گزارش‌های فعالیت (`api/Report`، بخش ۱۸) — پیش‌تر بخشِ جدای «گزارش‌ها».
+  ACCOUNTING_EMPLOYEES: "/accounting/employees",
+  ACCOUNTING_CUSTOMERS: "/accounting/customers",
+  ACCOUNTING_SUPPLIERS: "/accounting/suppliers",
+
+  // نشانیِ قدیمیِ بخشِ «گزارش‌ها»؛ به حسابداری هدایت می‌شود (پیوندهای ذخیره‌شده نشکنند).
   REPORTS: "/reports",
-  REPORTS_SALES: "/reports/sales",
-  REPORTS_PURCHASES: "/reports/purchases",
-  REPORTS_FINANCIAL: "/reports/financial",
-  REPORTS_PROFIT_LOSS: "/reports/profit-loss",
-  REPORTS_WAREHOUSE: "/reports/warehouse",
-  // مانیتورینگ فعالیت — روی `api/Report` واقعی سوارند (بخش ۱۸ سند).
-  REPORTS_EMPLOYEES: "/reports/employees",
-  REPORTS_CUSTOMERS: "/reports/customers",
-  REPORTS_SUPPLIERS: "/reports/suppliers",
 
   // تنظیمات
   SETTINGS: "/settings",

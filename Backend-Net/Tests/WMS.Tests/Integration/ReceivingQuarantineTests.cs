@@ -1,4 +1,4 @@
-using Application.Common.Dtos.Returns;
+﻿using Application.Common.Dtos.Returns;
 using Application.Features.Product.Commands;
 using Application.Features.Purchase.Commands;
 using Application.Features.Purchase.Dtos;
@@ -290,14 +290,14 @@ namespace WMS.Tests.Integration
             Assert.True(new CreateProductCommandValidator().Validate(command).IsValid);
             Assert.False(new CreateProductCommandValidator().Validate(new CreateProductCommand { Name = "x", Unit = ProductUnitEnum.Number, ProductCategoryId = category.Id, IsIncomplete = true, Stock = 3 }).IsValid);
 
-            await new CreateProductCommandHandler(scope.ProductRepository, TestMapper.Instance, scope.ProductCodeService, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork)
+            await new CreateProductCommandHandler(scope.ProductRepository, TestMapper.Instance, scope.ProductCodeService, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork, scope.Db)
                 .Handle(command, CancellationToken.None);
 
             var created = scope.Context.Products.Single(p => p.Name == command.Name);
             Assert.True(created.IsIncomplete);
             Assert.False(created.Code.Length == 32); // the real generated code, not the Guid placeholder
 
-            var update = new UpdateProductCommandHandler(scope.ProductRepository, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var update = new UpdateProductCommandHandler(scope.ProductRepository, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork, scope.Db);
 
             // A name fix alone leaves brand and prices empty: still incomplete.
             await update.Handle(new UpdateProductCommand { Id = created.Id, Name = "شیر فلکه ۳ اینچی", Unit = ProductUnitEnum.Number, ProductCategoryId = category.Id }, CancellationToken.None);

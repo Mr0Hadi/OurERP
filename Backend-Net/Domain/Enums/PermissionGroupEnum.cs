@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 
 namespace Domain.Enums
 {
@@ -46,6 +46,9 @@ namespace Domain.Enums
         Pos = 12,
 
         [Description("حساب اشخاص")]
-        PartyAccounts = 13
+        PartyAccounts = 13,
+
+        [Description("حسابداری")]
+        Accounting = 14
     }
 }

@@ -3,7 +3,7 @@ import ChartCard from "@/shared/components/charts/ChartCard";
 import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
 import { Button } from "@/shared/components/ui/button";
 import { ROUTES } from "@/shared/constants/routes";
-import { useSalesPerformanceByEmployeeQuery } from "@/features/reports/services/queries";
+import { useSalesPerformanceByEmployeeQuery } from "@/features/accounting/activity/services/queries";
 import MemberRankList from "./MemberRankList";
 
 const TOP = 5;
@@ -47,7 +47,7 @@ export default function TopSellersWidget({ context, params }) {
       isLoading={false}
       action={
         <Button asChild variant="ghost" size="sm" className="text-xs">
-          <Link to={ROUTES.REPORTS_EMPLOYEES}>همه</Link>
+          <Link to={ROUTES.ACCOUNTING_EMPLOYEES}>همه</Link>
         </Button>
       }
     >

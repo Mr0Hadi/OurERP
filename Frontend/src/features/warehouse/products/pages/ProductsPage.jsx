@@ -5,6 +5,7 @@ import { ROUTES } from "@/shared/constants/routes";
 
 import ProductFilters from "../components/table/ProductFilters";
 import ProductTable from "../components/table/ProductTable";
+import { useOpenProductOnExactCode } from "../hooks/useOpenProductOnExactCode";
 import { useProductListFilters, useProductsQuery } from "../services/queries";
 import { productKeys } from "../services/queryKeys";
 import { useProductFilterStore } from "../store/productFilterStore";
@@ -13,6 +14,7 @@ export default function ProductsPage() {
   const listState = useProductFilterStore();
   const filters = useProductListFilters();
   const query = useProductsQuery(filters, listState.pagination, listState.sorting);
+  useOpenProductOnExactCode(query, filters);
 
   return (
     <ListPageLayout

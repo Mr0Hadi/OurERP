@@ -39,6 +39,12 @@ namespace Application.Features.Product.Queries
             dto.ImageUrl = _objectStorageService.GetFixedUrl(dto.ImageKey);
             dto.QuarantinedCount = await _context.ProductUnits.CountAsync(u => u.ProductId == data.Id && u.Status == ProductUnitStatusEnum.QUARANTINED, cancellationToken);
 
+            dto.Vehicles = await _context.ProductVehicles
+                .Where(x => x.ProductId == data.Id && x.Vehicle.IsActive)
+                .OrderBy(x => x.Vehicle.Name)
+                .Select(x => new Application.Features.Vehicle.Dtos.VehicleDto { Id = x.VehicleId, Name = x.Vehicle.Name })
+                .ToListAsync(cancellationToken);
+
             res.Data = dto;
 
             res.Message = "اطلاعات محصول با موفقیت ارسال شد.";

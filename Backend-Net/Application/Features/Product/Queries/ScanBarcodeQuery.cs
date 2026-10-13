@@ -76,6 +76,7 @@ namespace Application.Features.Product.Queries
                     Id = product.Id,
                     Name = product.Name,
                     EnglishName = product.EnglishName,
+                    Description = product.Description,
                     Code = product.Code,
                     BarCode = product.BarCode,
                     Brand = product.Brand,

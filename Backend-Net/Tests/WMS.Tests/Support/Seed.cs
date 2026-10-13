@@ -19,6 +19,13 @@ namespace WMS.Tests.Support
             IsActive = true,
         };
 
+        public static Vehicle Vehicle(string name = "پراید ۱۱۱") => new()
+        {
+            Name = name,
+            IsActive = true,
+            CreatedAt = DateTime.Now,
+        };
+
         public static Product Product(ProductCategory category, string name = "کالای تست", int stock = 0, ulong purchasePrice = 1000, ulong retailPrice = 1500)
             => new()
             {

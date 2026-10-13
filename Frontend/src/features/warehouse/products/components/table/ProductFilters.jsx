@@ -1,19 +1,17 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
 
 import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
 import { PriceInput } from "@/shared/components/ui/price-input";
-import BarcodeScanField from "@/shared/components/barcode/BarcodeScanField";
+import EntitySelect from "@/shared/components/filters/EntitySelect";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
 import { useProductFilterStore } from "../../store/productFilterStore";
-// اسکن یک کارِ لحظه‌ای است، نه داده‌ای که در کش بماند؛ پس خودِ تابعِ API.
-import { fetchProductByBarcode } from "../../services/api-v1";
+import { useScanProductMutation } from "../../services/mutations";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
+import ProductCodeSearchField from "./ProductCodeSearchField";
 import { useProductCategoriesQuery } from "@/features/warehouse/categories/services/queries";
-import { getErrorMessage } from "@/shared/lib/errorMessage";
+import { useVehiclesQuery } from "@/features/warehouse/vehicles/services/queries";
 
 // سرور فقط `isLowOnStock` دارد: «کم‌موجود» یعنی موجودی ≤ آستانه‌ی هشدار (ناموجودها هم جزوش‌اند).
 const STOCK_OPTIONS = [
@@ -39,7 +37,7 @@ function PriceRangeInput({ label, value, onChange, placeholder }) {
 
 /**
  * فیلترهای لیستِ کالا (همه در `useProductFilterStore`، با نامِ پارامترهای
- * `GetProductList`): اسکنِ بارکد، نام، برند، دسته‌بندی، موجودی، کامل‌بودن و
+ * `GetProductList`): کد/بارکد، نام، برند، دسته‌بندی، موجودی، کامل‌بودن و
  * بازه‌ی قیمت.
  *
  * برند متنِ آزاد است (سرور «شامل» جست‌وجو می‌کند). پیش‌تر یک فهرستِ ثابتِ ۱۷
@@ -48,55 +46,51 @@ function PriceRangeInput({ label, value, onChange, placeholder }) {
  */
 export default function ProductFilters() {
   const navigate = useNavigate();
-  const { data: categories = [] } = useProductCategoriesQuery();
-  const categoryOptions = categories.map((category) => ({
-    value: category.id,
-    label: category.name,
-  }));
-  const [isScanning, setIsScanning] = useState(false);
+  const scanProduct = useScanProductMutation();
+  const { data: categories = [], isLoading: isCategoriesLoading } = useProductCategoriesQuery();
+  const { data: vehicleData, isLoading: isVehiclesLoading } = useVehiclesQuery();
   const {
+    code,
     name,
     brand,
     productCategoryId,
+    vehicleId,
     fromPrice,
     toPrice,
     isLowOnStock,
     isIncomplete,
+    setCode,
     setName,
     setBrand,
     setProductCategoryId,
+    setVehicleId,
     setPriceRange,
     setIsLowOnStock,
     setIsIncomplete,
     resetFilters,
   } = useProductFilterStore();
 
-  // اسکن یک کالا را دقیقاً شناسایی می‌کند، پس به‌جای فیلترکردن لیست،
-  // مستقیم کاربر را به جزئیات همان کالا می‌برد — همان «انتخاب».
-  const handleScan = async (code) => {
-    setIsScanning(true);
-    try {
-      const product = await fetchProductByBarcode(code);
-      if (!product) {
-        toast.error(`کالایی با کد «${code}» پیدا نشد`);
-        return;
-      }
-      navigate(routeWithId(ROUTES.WAREHOUSE_PRODUCTS_DETAIL, product.id));
-    } catch (error) {
-      toast.error(getErrorMessage(error, "جست‌وجوی بارکد انجام نشد"));
-    } finally {
-      setIsScanning(false);
-    }
-  };
+  // Enter، اسکنر یا دوربین: کدِ دقیق مستقیم به جزئیات می‌رود؛ وگرنه همان متن
+  // فیلترِ لیست می‌ماند و کالاهای مشابه دیده می‌شوند.
+  const handleScan = (scanned) =>
+    scanProduct.mutate(scanned, {
+      onSuccess: (product) => {
+        if (!product) return setCode(scanned);
+        setCode("");
+        navigate(routeWithId(ROUTES.WAREHOUSE_PRODUCTS_DETAIL, product.id));
+      },
+    });
 
   return (
     <div className="p-3 bg-card border border-border rounded-xl shadow-sm space-y-3">
-      <BarcodeScanField
+      <ProductCodeSearchField
+        value={code}
+        onChange={setCode}
         onScan={handleScan}
-        placeholder={isScanning ? "در حال جست‌وجو..." : "اسکن بارکد برای رفتن به کالا..."}
+        isBusy={scanProduct.isPending}
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
         <FilterSearchInput
           placeholder="نام فارسی یا انگلیسی کالا..."
           value={name}
@@ -108,13 +102,24 @@ export default function ProductFilters() {
           value={brand}
           onChange={(event) => setBrand(event.target.value)}
         />
-        <FilterSelect
+        <EntitySelect
           label="دسته‌بندی"
+          placeholder="همه دسته‌ها"
+          emptyText="دسته‌بندی‌ای یافت نشد"
+          items={categories}
           value={productCategoryId}
-          onChange={setProductCategoryId}
-          allLabel="همه دسته‌ها"
-          options={categoryOptions}
-          numeric
+          onSelect={setProductCategoryId}
+          isLoading={isCategoriesLoading}
+        />
+        <EntitySelect
+          label="خودرو"
+          placeholder="همه خودروها"
+          emptyText="خودرویی یافت نشد"
+          items={vehicleData?.items ?? []}
+          getLabel={(vehicle) => vehicle.name}
+          value={vehicleId}
+          onSelect={setVehicleId}
+          isLoading={isVehiclesLoading}
         />
         <FilterSelect
           label="وضعیت موجودی"

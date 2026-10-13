@@ -4,9 +4,13 @@ import { ROUTES } from "@/shared/constants/routes";
 import { extractServerMessage, getErrorMessage } from "@/shared/lib/errorMessage";
 import { releaseIdempotencyKey } from "./contract";
 
+// `VITE_API_TIMEOUT` (میلی‌ثانیه) سقفِ پیش‌فرضِ همه‌ی درخواست‌هاست؛ مقدارِ نامعتبر یعنی ۱۵ ثانیه.
+const configuredTimeout = Number(import.meta.env.VITE_API_TIMEOUT);
+const DEFAULT_TIMEOUT_MS = configuredTimeout > 0 ? configuredTimeout : 15000;
+
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5083/api",
-  timeout: 15000,
+  timeout: DEFAULT_TIMEOUT_MS,
   // آرایه‌ها به شکلِ `statuses=2&statuses=3` (نه `statuses[]=2`)؛ همان شکلی که
   // ASP.NET برای `List<>` در query می‌خواند.
   paramsSerializer: { indexes: null },

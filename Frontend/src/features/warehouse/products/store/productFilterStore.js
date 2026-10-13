@@ -8,9 +8,11 @@ import { createFilterStore } from "@/shared/store/createFilterStore";
  */
 export const useProductFilterStore = createFilterStore({
   filters: {
+    code: "", // جست‌وجوی کد/بارکد: کدِ کامل فقط همان کالا، نیمه‌کاره کالاهای مشابه
     name: "",
     brand: "",
     productCategoryId: "",
+    vehicleId: "", // کالاهای همان خودرو + کالاهای «همه‌ی خودروها»
     fromPrice: "",
     toPrice: "",
     isLowOnStock: "", // "" | "true" | "false"

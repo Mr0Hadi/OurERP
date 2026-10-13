@@ -20,8 +20,8 @@ import {
 } from "@/features/employees/services/queries";
 import { useDepartmentOptionsQuery } from "@/features/organization/departments/services/queries";
 
-import AccessListPane from "../components/AccessListPane";
-import { initialsOf } from "../components/initialsOf";
+import MasterListPane from "@/shared/components/layout/MasterListPane";
+import { initialsOf } from "@/shared/lib/initialsOf";
 import UserPermissionsPanel from "../components/UserPermissionsPanel";
 import UnsavedChangesDialog from "../components/UnsavedChangesDialog";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
@@ -47,7 +47,7 @@ function EmployeeList({ selectedId, className }) {
   const users = data?.userList ?? [];
 
   return (
-    <AccessListPane
+    <MasterListPane
       className={className}
       search={search}
       onSearchChange={setSearch}

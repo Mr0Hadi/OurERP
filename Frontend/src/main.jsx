@@ -2,23 +2,13 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
-import toast from 'react-hot-toast'
 
 import { DirectionProvider } from "@/shared/components/ui/direction"
-import { initAppUpdates, onUpdateAvailable } from "@/shared/services/appUpdate"
-import UpdateAvailableToast from "@/shared/components/app-update/UpdateAvailableToast"
 import { purgeLegacyApiCache } from "@/shared/services/sessionCleanup"
 
-// ثبت service worker و بررسیِ نسخه‌ی تازه — جزئیات در `shared/services/appUpdate.js`.
-// شناسه‌ی ثابت: اعلانِ تکراری روی هم انباشته نمی‌شود.
-onUpdateAvailable(() =>
-  toast.custom((t) => <UpdateAvailableToast id={t.id} />, { id: 'app-update', duration: Infinity }),
-)
-initAppUpdates({
-  onOfflineReady() {
-    toast.success('برنامه برای استفاده آفلاین آماده‌ست', { duration: 3000 })
-  },
-})
+// PWA/service worker غیرفعال است: برنامه با هر بازشدن آخرین نسخه‌ی منتشرشده را از سرور می‌گیرد.
+// کارگرِ قدیمیِ نصب‌شده را `sw.js`ِ خودنابودشونده (`selfDestroying` در vite.config.js) پاک می‌کند.
+// بروزرسانی (appUpdate.js و اعلان/پنجره‌اش) فعلاً به کار گرفته نمی‌شود.
 
 // نسخه‌های قبلی پاسخ‌های API را در Cache Storage نگه می‌داشتند.
 purgeLegacyApiCache()

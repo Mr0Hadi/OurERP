@@ -4,13 +4,7 @@ import toast from "react-hot-toast";
 
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
+import EntitySelect from "@/shared/components/filters/EntitySelect";
 import RemoteImage from "@/shared/components/files/RemoteImage";
 import CameraScanButton from "@/shared/components/barcode/CameraScanButton";
 import {
@@ -178,25 +172,18 @@ export default function ProductSearchPanel({ addedQuantityOf, isPending, onPrefe
       </div>
 
       <div className="flex items-center justify-between gap-2">
-        <Select
-          value={categoryFilter || "all"}
-          onValueChange={(v) => {
-            setCategoryFilter(v === "all" ? "" : v);
-            setActive(0);
-          }}
-        >
-          <SelectTrigger aria-label="دسته‌بندی" size="sm" className="min-w-0 flex-1 sm:w-44 sm:flex-none">
-            <SelectValue placeholder="همه دسته‌ها" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">همه دسته‌ها</SelectItem>
-            {categories.map((cat) => (
-              <SelectItem key={cat.id} value={String(cat.id)}>
-                {cat.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="min-w-0 flex-1 sm:w-44 sm:flex-none">
+          <EntitySelect
+            placeholder="همه دسته‌ها"
+            emptyText="دسته‌بندی‌ای یافت نشد"
+            items={categories}
+            value={categoryFilter}
+            onSelect={(id) => {
+              setCategoryFilter(String(id));
+              setActive(0);
+            }}
+          />
+        </div>
         {browseAll && !search.trim() && !categoryFilter ? (
           <Button type="button" size="sm" variant="ghost" className="shrink-0 whitespace-nowrap text-xs" onClick={() => setBrowseAll(false)}>
             بستن فهرست

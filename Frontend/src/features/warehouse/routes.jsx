@@ -9,6 +9,7 @@ const ReceivingListPage = lazy(() => import("./receiving/pages/ReceivingListPage
 const ReceivingDetailPage = lazy(() => import("./receiving/pages/ReceivingDetailPage"));
 const UnitsPage = lazy(() => import("./units/pages/UnitsPage"));
 const CategoriesPage = lazy(() => import("./categories/pages/CategoriesPage"));
+const VehiclesPage = lazy(() => import("./vehicles/pages/VehiclesPage"));
 const ShippingListPage = lazy(() => import("./shipping/pages/ShippingListPage"));
 const ShippingDetailPage = lazy(() => import("./shipping/pages/ShippingDetailPage"));
 const ReceivingReturnDetailPage = lazy(() => import("./receiving/pages/ReceivingReturnDetailPage"));
@@ -67,6 +68,17 @@ export const warehouseRoutes = [
     path: ROUTES.WAREHOUSE_CATEGORIES,
     handle: { permission: "ProductCategoryView" },
     element: <CategoriesPage />,
+  },
+  // فهرست/جزئیات در یک کامپوننت: `:id` فقط انتخابِ سمتِ چپ است ("all" = همه‌ی خودروها).
+  {
+    path: ROUTES.WAREHOUSE_VEHICLES,
+    handle: { permission: ["VehicleView", "ProductCategoryView"] },
+    element: <VehiclesPage />,
+  },
+  {
+    path: ROUTES.WAREHOUSE_VEHICLES_DETAIL,
+    handle: { permission: ["VehicleView", "ProductCategoryView"] },
+    element: <VehiclesPage />,
   },
   {
     path: ROUTES.WAREHOUSE_SHIPPING,

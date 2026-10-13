@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { BadgeCheck, ChevronsUpDown, LogOut, RefreshCw } from "lucide-react";
+import { BadgeCheck, ChevronsUpDown, LogOut } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/shared/components/ui/avatar";
 import {
@@ -23,21 +23,6 @@ import {
   useUserInfoQuery,
   useLogoutMutation,
 } from "@/features/auth/services/queries";
-import {
-  UPDATE_STATUS,
-  setUpdateDialogOpen,
-  useAppUpdateStore,
-} from "@/shared/services/appUpdate";
-
-/** نقطه‌ی «نسخه‌ی تازه آماده است» — روی آواتار و کنارِ آیتمِ منو. */
-function UpdateDot({ className = "" }) {
-  return (
-    <span
-      aria-hidden
-      className={`size-2 rounded-full bg-primary ${className}`}
-    />
-  );
-}
 
 /**
  * حرفِ اولِ نام و نام خانوادگی.
@@ -65,9 +50,6 @@ export function NavUser() {
   // همیشه `isPending` می‌ماند و اسکلتون هرگز تمام نمی‌شد.
   const { data: user, isLoading, isError } = useUserInfoQuery();
   const logoutMutation = useLogoutMutation();
-  const updateReady = useAppUpdateStore(
-    (state) => state.status === UPDATE_STATUS.AVAILABLE,
-  );
 
   if (isLoading) {
     return (
@@ -113,7 +95,6 @@ export function NavUser() {
                     {initialsOf(user)}
                   </AvatarFallback>
                 </Avatar>
-                {updateReady && <UpdateDot className="absolute -top-0.5 -end-0.5 size-2.5 ring-2 ring-sidebar" />}
               </span>
               <div className="grid flex-1 text-sm leading-tight">
                 <span className="truncate font-medium">{fullNameOf(user)}</span>
@@ -167,16 +148,6 @@ export function NavUser() {
             <DropdownMenuItem onClick={openAccount}>
               <BadgeCheck />
               حساب کاربری
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setUpdateDialogOpen(true)}>
-              <RefreshCw />
-              بروزرسانی برنامه
-              {updateReady && (
-                <span className="ms-auto flex items-center gap-1.5 text-xs text-primary">
-                  نسخه‌ی تازه
-                  <UpdateDot />
-                </span>
-              )}
             </DropdownMenuItem>
 
             <DropdownMenuSeparator />

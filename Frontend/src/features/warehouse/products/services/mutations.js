@@ -4,8 +4,10 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  fetchProductByBarcode,
 } from "./api-v1";
 import { productKeys } from "./queryKeys";
+import { vehicleKeys } from "@/features/warehouse/vehicles/services/queryKeys";
 import { productUnitKeys } from "@/features/warehouse/units/services/queryKeys";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
 
@@ -18,6 +20,8 @@ export const useCreateProductMutation = () => {
     onSuccess: () => {
       toast.success("کالا ثبت شد");
       queryClient.invalidateQueries({ queryKey: productKeys.lists() });
+      // شمارِ کالاهای هر خودرو و فهرستِ «همه‌ی خودروها».
+      queryClient.invalidateQueries({ queryKey: vehicleKeys.all });
     },
     onError: (error) => {
       toast.error(getErrorMessage(error, "ثبت کالا انجام نشد"));
@@ -37,6 +41,8 @@ export const useUpdateProductMutation = (id) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: productKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: productKeys.lists() });
+      // شمارِ کالاهای هر خودرو و فهرستِ «همه‌ی خودروها».
+      queryClient.invalidateQueries({ queryKey: vehicleKeys.all });
       queryClient.invalidateQueries({ queryKey: productUnitKeys.all });
       toast.success("تغییرات کالا ذخیره شد");
     },
@@ -54,6 +60,8 @@ export const useDeleteProductMutation = () => {
     onSuccess: (_, id) => {
       queryClient.removeQueries({ queryKey: productKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: productKeys.lists() });
+      // شمارِ کالاهای هر خودرو و فهرستِ «همه‌ی خودروها».
+      queryClient.invalidateQueries({ queryKey: vehicleKeys.all });
       toast.success("کالا حذف شد");
     },
     onError: (error) => {
@@ -61,3 +69,17 @@ export const useDeleteProductMutation = () => {
     },
   });
 };
+
+/**
+ * شناساییِ دقیقِ کالا با کد یا بارکد (`ScanBarcode`): نتیجه کالا یا `null`.
+ *
+ * mutation است نه query: اسکن یک «کار» است و نتیجه‌اش همان لحظه مصرف می‌شود
+ * (رفتن به جزئیاتِ کالا)، نه داده‌ای که در کش بماند.
+ */
+export const useScanProductMutation = () =>
+  useMutation({
+    mutationFn: fetchProductByBarcode,
+    onError: (error) => {
+      toast.error(getErrorMessage(error, "جست‌وجوی کد انجام نشد"));
+    },
+  });
