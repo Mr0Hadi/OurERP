@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
-import { fetchProductCategories } from "./api-v1";
+import { fetchCategoryProducts, fetchProductCategories } from "./api-v1";
 import { productCategoryKeys } from "./queryKeys";
 
 /**
@@ -16,5 +16,14 @@ export function useProductCategoriesQuery(search = "") {
     queryKey: productCategoryKeys.list({ search }),
     queryFn: () => fetchProductCategories({ limit: 100, name: search || undefined }),
     select: (data) => data.items ?? [],
+  });
+}
+
+/** کالاهای یک دسته؛ `categoryId` تهی یعنی همه‌ی کالاها. */
+export function useCategoryProductsQuery({ categoryId, search, page, take }) {
+  return useQuery({
+    queryKey: productCategoryKeys.productList({ categoryId, search, page, take }),
+    queryFn: () => fetchCategoryProducts({ categoryId, search, page, take }),
+    placeholderData: keepPreviousData,
   });
 }

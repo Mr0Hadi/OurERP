@@ -12,6 +12,22 @@ export const fetchProductCategories = async (params = {}) => {
 };
 
 /**
+ * کالاهای یک دسته — `GetProductList` با `ProductCategoryId`؛ بدونِ دسته یعنی همه‌ی کالاها.
+ * هر کالا فقط یک دسته دارد، پس برخلافِ خودروها فهرستِ دسته‌ها روی کالا نمی‌آید.
+ */
+export const fetchCategoryProducts = async ({ categoryId, search, page = 1, take = 20 }) => {
+  const { data } = await axiosInstance.get("/Product/GetProductList", {
+    params: {
+      ProductCategoryId: categoryId ?? undefined,
+      Name: search || undefined,
+      Page: page,
+      Take: take,
+    },
+  });
+  return normalizeListResponse(data, { itemsKey: "productList" });
+};
+
+/**
  * `POST api/ProductCategory/CreateProductCategory` — بدنه فقط `name`.
  *
  * سرور دسته‌ی ساخته‌شده را برنمی‌گرداند (`Data` خالی)، پس فرمِ کالا نمی‌توانست

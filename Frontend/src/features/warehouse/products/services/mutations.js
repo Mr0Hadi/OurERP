@@ -7,6 +7,7 @@ import {
   fetchProductByBarcode,
 } from "./api-v1";
 import { productKeys } from "./queryKeys";
+import { productCategoryKeys } from "@/features/warehouse/categories/services/queryKeys";
 import { vehicleKeys } from "@/features/warehouse/vehicles/services/queryKeys";
 import { productUnitKeys } from "@/features/warehouse/units/services/queryKeys";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
@@ -20,8 +21,9 @@ export const useCreateProductMutation = () => {
     onSuccess: () => {
       toast.success("کالا ثبت شد");
       queryClient.invalidateQueries({ queryKey: productKeys.lists() });
-      // شمارِ کالاهای هر خودرو و فهرستِ «همه‌ی خودروها».
+      // شمارِ کالاهای هر خودرو/دسته و فهرستِ «همه‌ی خودروها».
       queryClient.invalidateQueries({ queryKey: vehicleKeys.all });
+      queryClient.invalidateQueries({ queryKey: productCategoryKeys.all });
     },
     onError: (error) => {
       toast.error(getErrorMessage(error, "ثبت کالا انجام نشد"));
@@ -41,8 +43,9 @@ export const useUpdateProductMutation = (id) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: productKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: productKeys.lists() });
-      // شمارِ کالاهای هر خودرو و فهرستِ «همه‌ی خودروها».
+      // شمارِ کالاهای هر خودرو/دسته و فهرستِ «همه‌ی خودروها».
       queryClient.invalidateQueries({ queryKey: vehicleKeys.all });
+      queryClient.invalidateQueries({ queryKey: productCategoryKeys.all });
       queryClient.invalidateQueries({ queryKey: productUnitKeys.all });
       toast.success("تغییرات کالا ذخیره شد");
     },
@@ -60,8 +63,9 @@ export const useDeleteProductMutation = () => {
     onSuccess: (_, id) => {
       queryClient.removeQueries({ queryKey: productKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: productKeys.lists() });
-      // شمارِ کالاهای هر خودرو و فهرستِ «همه‌ی خودروها».
+      // شمارِ کالاهای هر خودرو/دسته و فهرستِ «همه‌ی خودروها».
       queryClient.invalidateQueries({ queryKey: vehicleKeys.all });
+      queryClient.invalidateQueries({ queryKey: productCategoryKeys.all });
       toast.success("کالا حذف شد");
     },
     onError: (error) => {

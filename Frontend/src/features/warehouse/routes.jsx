@@ -64,8 +64,14 @@ export const warehouseRoutes = [
     path: ROUTES.WAREHOUSE_UNIT_LABELS,
     element: <RedirectKeepingSearch to={ROUTES.WAREHOUSE_UNITS} />,
   },
+  // فهرست/جزئیات در یک کامپوننت: `:id` فقط انتخابِ سمتِ چپ است ("all" = همه‌ی کالاها).
   {
     path: ROUTES.WAREHOUSE_CATEGORIES,
+    handle: { permission: "ProductCategoryView" },
+    element: <CategoriesPage />,
+  },
+  {
+    path: ROUTES.WAREHOUSE_CATEGORIES_DETAIL,
     handle: { permission: "ProductCategoryView" },
     element: <CategoriesPage />,
   },
