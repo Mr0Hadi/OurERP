@@ -1,6 +1,13 @@
 import { Link } from "react-router-dom";
-import { Search } from "lucide-react";
+import { MoreVertical, Search } from "lucide-react";
 
+import { Button } from "@/shared/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
 import { Input } from "@/shared/components/ui/input";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { cn } from "@/shared/lib/utils";
@@ -10,9 +17,10 @@ import { initialsOf } from "@/shared/lib/initialsOf";
  * ستونِ فهرستِ صفحه‌های فهرست/جزئیات (دسترسی کارمندان، خودروها): جست‌وجو،
  * فیلترهای اختیاری، و ردیف‌هایی که هر کدام لینکِ همان صفحه با `:id` خودشان‌اند.
  *
- * @param items   `[{ id, title, subtitle, to, icon?, trailing? }]` — `icon` جای
- *                حروفِ اولِ نام می‌نشیند و `trailing` کنارِ ردیف (مثلاً شمار).
- * @param header  اختیاری؛ بالای جست‌وجو (مثلاً دکمه‌ی افزودن).
+ * @param items   `[{ id, title, subtitle, to, icon?, trailing?, menu? }]` — `icon` جای
+ *                حروفِ اولِ نام می‌نشیند، `trailing` کنارِ ردیف (مثلاً شمار) و
+ *                `menu` (`[{ label, icon, onSelect, destructive? }]`) منوی سه‌نقطه.
+ * @param header  اختیاری؛ کنارِ ورودیِ جست‌وجو (مثلاً دکمه‌ی افزودن).
  * @param pinned  اختیاری؛ ردیف‌هایی بالای فهرست که با جست‌وجو فیلتر نمی‌شوند.
  */
 export default function MasterListPane({
@@ -32,34 +40,61 @@ export default function MasterListPane({
   const renderRow = (item) => {
     const active = String(item.id) === String(selectedId);
     return (
-      <Link
+      <div
         key={item.id}
-        to={item.to}
         className={cn(
-          "flex items-center gap-2.5 rounded-lg px-2 py-2 transition-colors",
+          "flex items-center rounded-lg transition-colors",
           active ? "bg-primary/10" : "hover:bg-muted/60",
         )}
       >
-        <span
-          className={cn(
-            "flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-            active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
-          )}
-        >
-          {item.icon ?? initialsOf(item.title)}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className={cn("block truncate text-sm", active && "font-semibold text-primary")}>
-            {item.title}
+        <Link to={item.to} className="flex min-w-0 flex-1 items-center gap-2.5 px-2 py-2">
+          <span
+            className={cn(
+              "flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+              active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+            )}
+          >
+            {item.icon ?? initialsOf(item.title)}
           </span>
-          {item.subtitle && (
-            <span className="block truncate text-xs text-muted-foreground">{item.subtitle}</span>
+          <span className="min-w-0 flex-1">
+            <span className={cn("block truncate text-sm", active && "font-semibold text-primary")}>
+              {item.title}
+            </span>
+            {item.subtitle && (
+              <span className="block truncate text-xs text-muted-foreground">{item.subtitle}</span>
+            )}
+          </span>
+          {item.trailing != null && (
+            <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{item.trailing}</span>
           )}
-        </span>
-        {item.trailing != null && (
-          <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{item.trailing}</span>
+        </Link>
+        {item.menu?.length > 0 && (
+          <DropdownMenu dir="rtl">
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8 shrink-0 text-muted-foreground"
+                aria-label={`گزینه‌های ${item.title}`}
+              >
+                <MoreVertical className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {item.menu.map((entry) => (
+                <DropdownMenuItem
+                  key={entry.label}
+                  variant={entry.destructive ? "destructive" : undefined}
+                  onSelect={entry.onSelect}
+                >
+                  {entry.icon}
+                  {entry.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
-      </Link>
+      </div>
     );
   };
 
@@ -71,15 +106,17 @@ export default function MasterListPane({
       )}
     >
       <div className="space-y-2 border-b border-border p-3">
-        {header}
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={searchPlaceholder}
-            className="h-9 pr-8"
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder={searchPlaceholder}
+              className="h-9 pr-8"
+            />
+          </div>
+          {header}
         </div>
         {filters}
       </div>

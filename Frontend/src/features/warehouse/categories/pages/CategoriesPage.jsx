@@ -4,7 +4,6 @@ import {
   ArrowRight,
   ChevronLeft,
   ChevronRight,
-  Layers,
   MoreVertical,
   Package,
   Pencil,
@@ -38,26 +37,22 @@ import { useCategoryProductsQuery, useProductCategoriesQuery } from "../services
 import { useDeleteProductCategoryMutation } from "../services/mutations";
 import CategoryFormDialog from "../components/CategoryFormDialog";
 
-/** شناسه‌ی مسیرِ «همه‌ی کالاها»: کالاهای همه‌ی دسته‌ها. */
-const ALL_ID = "all";
 const PAGE_SIZE = 20;
 const detailPath = (id) => routeWithId(ROUTES.WAREHOUSE_CATEGORIES_DETAIL, id);
 
-function CategoryList({ selectedId, className, canManage, onCreate, categories, isLoading, isError }) {
+function CategoryList({ selectedId, className, canManage, onCreate, onRename, onDelete, categories, isLoading, isError }) {
   const [search, setSearch] = useState("");
   const term = search.trim().toLowerCase();
   // دسته‌ها یک‌جا گرفته شده‌اند؛ جست‌وجو همین‌جا فیلتر می‌کند.
   const visible = categories.filter((c) => c.name.toLowerCase().includes(term));
-  const totalProducts = categories.reduce((sum, c) => sum + (c.productCount ?? 0), 0);
 
   return (
     <MasterListPane
       className={className}
       header={
         canManage && (
-          <Button onClick={onCreate} size="sm" className="w-full gap-1.5">
+          <Button onClick={onCreate} size="icon" className="size-9 shrink-0" aria-label="دسته‌بندی جدید" title="دسته‌بندی جدید">
             <Plus className="size-4" />
-            دسته‌بندی جدید
           </Button>
         )
       }
@@ -66,22 +61,18 @@ function CategoryList({ selectedId, className, canManage, onCreate, categories, 
       searchPlaceholder="جست‌وجوی دسته‌بندی..."
       isLoading={isLoading}
       selectedId={selectedId}
-      pinned={[
-        {
-          id: ALL_ID,
-          title: "همه‌ی کالاها",
-          subtitle: "کالاهای همه‌ی دسته‌بندی‌ها",
-          icon: <Layers className="size-4" />,
-          trailing: formatNumber(totalProducts),
-          to: detailPath(ALL_ID),
-        },
-      ]}
       items={visible.map((c) => ({
         id: c.id,
         title: c.name,
         subtitle: c.productCount > 0 ? `${formatNumber(c.productCount)} کالا` : "بدون کالا",
         icon: <Tags className="size-4" />,
         to: detailPath(c.id),
+        menu: canManage
+          ? [
+              { label: "ویرایش نام", icon: <Pencil className="size-4" />, onSelect: () => onRename(c) },
+              { label: "حذف دسته‌بندی", icon: <Trash2 className="size-4" />, destructive: true, onSelect: () => onDelete(c) },
+            ]
+          : undefined,
       }))}
       emptyText={
         isError
@@ -122,7 +113,6 @@ function ProductRow({ product }) {
 }
 
 function CategoryDetail({ id, category, canManage, onRename, onDelete }) {
-  const isAll = id === ALL_ID;
   const [search, setSearch] = useState("");
   const term = useDebouncedValue(search);
   const [page, setPage] = useState(1);
@@ -133,7 +123,7 @@ function CategoryDetail({ id, category, canManage, onRename, onDelete }) {
   }
 
   const query = useCategoryProductsQuery({
-    categoryId: isAll ? null : Number(id),
+    categoryId: Number(id),
     search: term,
     page,
     take: PAGE_SIZE,
@@ -142,7 +132,7 @@ function CategoryDetail({ id, category, canManage, onRename, onDelete }) {
   const totalPages = query.data?.totalPages ?? 1;
   const total = query.data?.total ?? 0;
 
-  const title = isAll ? "همه‌ی کالاها" : category?.name ?? "…";
+  const title = category?.name ?? "…";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
@@ -153,15 +143,15 @@ function CategoryDetail({ id, category, canManage, onRename, onDelete }) {
           </Link>
         </Button>
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-          {isAll ? <Layers className="size-5" /> : <Tags className="size-5" />}
+          <Tags className="size-5" />
         </span>
         <div className="min-w-0 flex-1">
           <h2 className="truncate font-bold">{title}</h2>
           <p className="truncate text-xs text-muted-foreground">
-            {isAll ? "کالاهای همه‌ی دسته‌بندی‌ها" : `${formatNumber(total)} کالا`}
+            {`${formatNumber(total)} کالا`}
           </p>
         </div>
-        {canManage && !isAll && category && (
+        {canManage && category && (
           <>
             <Button variant="outline" size="sm" className="hidden gap-1.5 md:inline-flex" onClick={onRename}>
               <Pencil className="size-3.5" />
@@ -223,7 +213,7 @@ function CategoryDetail({ id, category, canManage, onRename, onDelete }) {
               <p className="text-sm text-muted-foreground">
                 {term ? "کالایی با این جست‌وجو پیدا نشد." : "هنوز کالایی در این دسته‌بندی نیست."}
               </p>
-              {!term && !isAll && canManage && (
+              {!term && canManage && (
                 <Button asChild size="sm" variant="outline" className="mt-1 gap-1.5">
                   <Link to={ROUTES.WAREHOUSE_PRODUCTS_NEW}>
                     <Plus className="size-4" />
@@ -289,8 +279,8 @@ export default function CategoriesPage() {
   const categoriesQuery = useProductCategoriesQuery();
   const categories = categoriesQuery.data ?? [];
   const category =
-    id && id !== ALL_ID ? categories.find((c) => String(c.id) === String(id)) : null;
-  const categoryMissing = id && id !== ALL_ID && categoriesQuery.isSuccess && !category;
+    id ? categories.find((c) => String(c.id) === String(id)) : null;
+  const categoryMissing = id && categoriesQuery.isSuccess && !category;
 
   const [formState, setFormState] = useState({ open: false, category: null });
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -303,6 +293,8 @@ export default function CategoriesPage() {
         className={id ? "hidden lg:flex" : "flex h-[calc(100svh-7rem)] lg:h-auto"}
         canManage={canManage}
         onCreate={() => setFormState({ open: true, category: null })}
+        onRename={(c) => setFormState({ open: true, category: c })}
+        onDelete={setDeleteTarget}
         categories={categories}
         isLoading={categoriesQuery.isLoading}
         isError={categoriesQuery.isError}

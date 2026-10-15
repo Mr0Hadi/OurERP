@@ -306,7 +306,7 @@ export const navigationData = {
     {
       // حسابداری و گزارش‌های فعالیت یک بخش‌اند؛ هر آیتم دسترسیِ خودش را دارد
       // (`AccountingView` برای دفترها، `ReportView` برای رتبه‌بندی‌ها).
-      title: "حسابداری",
+      title: "دفتر حساب‌ها",
       url: ROUTES.ACCOUNTING,
       icon: Calculator,
       isActive: false,

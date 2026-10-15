@@ -28,7 +28,7 @@ const REPORT = "ReportView";
 export const ACCOUNTING_PAGE_GROUPS = Object.freeze([
   {
     key: "accounting",
-    label: "حسابداری",
+    label: "دفتر حساب‌ها",
     pages: [
       { to: ROUTES.ACCOUNTING, label: "داشبورد مالی", icon: LayoutDashboard, end: true, permission: ACCOUNTING },
       { to: ROUTES.ACCOUNTING_PARTIES, label: "حساب اشخاص", icon: Scale, permission: ACCOUNTING },

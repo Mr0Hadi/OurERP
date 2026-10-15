@@ -29,7 +29,7 @@ export default function AccountingNav() {
   })).filter((group) => group.pages.length > 0);
 
   return (
-    <nav aria-label="صفحه‌های حسابداری" className="-mx-1 overflow-x-auto px-1 scrollbar-hide">
+    <nav aria-label="صفحه‌های دفتر حساب‌ها" className="-mx-1 overflow-x-auto px-1 scrollbar-hide">
       <div className="flex w-max items-center gap-1 rounded-xl border border-border bg-card p-1">
         {groups.map((group, index) => (
           <Fragment key={group.key}>

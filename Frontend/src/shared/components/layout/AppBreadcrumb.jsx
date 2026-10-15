@@ -68,7 +68,7 @@ const ROUTE_TITLES = {
   [ROUTES.TRANSACTIONS_PAYMENTS]: "پرداخت‌ها",
   [ROUTES.TRANSACTIONS_RETURNS]: "مرجوعی‌ها",
 
-  [ROUTES.ACCOUNTING]: "حسابداری",
+  [ROUTES.ACCOUNTING]: "دفتر حساب‌ها",
   [ROUTES.ACCOUNTING_PARTIES]: "حساب اشخاص",
   [ROUTES.ACCOUNTING_PARTY_LEDGER]: "دفتر حساب اشخاص",
   [ROUTES.ACCOUNTING_SALES]: "دفتر فروش",

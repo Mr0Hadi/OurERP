@@ -47,7 +47,7 @@ const ALL_ID = "all";
 const PAGE_SIZE = 20;
 const detailPath = (id) => routeWithId(ROUTES.WAREHOUSE_VEHICLES_DETAIL, id);
 
-function VehicleList({ selectedId, className, canManage, onCreate, data, isLoading, isError }) {
+function VehicleList({ selectedId, className, canManage, onCreate, onRename, onDelete, data, isLoading, isError }) {
   const [search, setSearch] = useState("");
   const term = search.trim().toLowerCase();
   // خودروها یک‌جا گرفته شده‌اند؛ جست‌وجو همین‌جا فیلتر می‌کند.
@@ -58,9 +58,8 @@ function VehicleList({ selectedId, className, canManage, onCreate, data, isLoadi
       className={className}
       header={
         canManage && (
-          <Button onClick={onCreate} size="sm" className="w-full gap-1.5">
+          <Button onClick={onCreate} size="icon" className="size-9 shrink-0" aria-label="خودروی جدید" title="خودروی جدید">
             <Plus className="size-4" />
-            خودروی جدید
           </Button>
         )
       }
@@ -85,6 +84,12 @@ function VehicleList({ selectedId, className, canManage, onCreate, data, isLoadi
         subtitle: v.productCount > 0 ? `${formatNumber(v.productCount)} کالا` : "بدون کالا",
         icon: <Car className="size-4" />,
         to: detailPath(v.id),
+        menu: canManage
+          ? [
+              { label: "ویرایش نام", icon: <Pencil className="size-4" />, onSelect: () => onRename(v) },
+              { label: "حذف خودرو", icon: <Trash2 className="size-4" />, destructive: true, onSelect: () => onDelete(v) },
+            ]
+          : undefined,
       }))}
       emptyText={
         isError
@@ -368,6 +373,8 @@ export default function VehiclesPage() {
         className={id ? "hidden lg:flex" : "flex h-[calc(100svh-7rem)] lg:h-auto"}
         canManage={canManage}
         onCreate={() => setFormState({ open: true, vehicle: null })}
+        onRename={(v) => setFormState({ open: true, vehicle: v })}
+        onDelete={setDeleteTarget}
         data={vehiclesQuery.data}
         isLoading={vehiclesQuery.isLoading}
         isError={vehiclesQuery.isError}
