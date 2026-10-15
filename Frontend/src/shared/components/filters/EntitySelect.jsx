@@ -143,7 +143,8 @@ export default function EntitySelect({
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 className="pr-8 h-8"
-                autoFocus
+                // روی صفحه‌ی لمسی فوکوس نمی‌شود تا کیبورد، فهرستِ گزینه‌ها را نپوشاند.
+                autoFocus={!window.matchMedia("(pointer: coarse)").matches}
               />
             </div>
           </div>

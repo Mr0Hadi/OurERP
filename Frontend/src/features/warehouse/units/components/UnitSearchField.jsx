@@ -18,7 +18,14 @@ const SCAN_MODES = [
 export default function UnitSearchField({ value, onChange, onScan, isBusy, scanToSelect, onScanModeChange }) {
   const inputRef = useRef(null);
 
+  // فقط وقتی کاربر حالتِ اسکن را عوض می‌کند فوکوس می‌شود؛ نه با بازشدنِ صفحه
+  // (روی گوشی کیبورد را بی‌دلیل بالا می‌آورد).
+  const isFirstRender = useRef(true);
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     inputRef.current?.focus();
   }, [scanToSelect]);
 
