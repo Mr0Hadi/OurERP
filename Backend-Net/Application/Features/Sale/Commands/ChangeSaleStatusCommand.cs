@@ -11,6 +11,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.Sale.Commands
 {
@@ -20,6 +21,7 @@ namespace Application.Features.Sale.Commands
     /// the first payment, PARTIALLY_DELIVERED/SHIPPED by shipping, RETURNED by returns. CANCELLED is final.
     /// Payments stay on a cancelled sale; money given back to the customer is recorded with AddSalePayment (OUT).
     /// </summary>
+    [AuditAction(AuditActionEnum.ChangeSaleStatus)]
     public class ChangeSaleStatusCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

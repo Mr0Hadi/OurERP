@@ -12,10 +12,12 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.Sale.Commands
 {
     /// <summary>Replaces a sale's attachments, in any status - attachments are evidence, not part of the invoice.</summary>
+    [AuditAction(AuditActionEnum.UpdateSaleAttachments)]
     public class UpdateSaleAttachmentsCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

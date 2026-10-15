@@ -12,6 +12,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.SaleReturn.Commands
 {
@@ -20,6 +21,7 @@ namespace Application.Features.SaleReturn.Commands
     /// UpdatePurchaseAttachments. Attachments are evidence about the return, not part of its state, so a closed
     /// return still takes them (a signed receipt often arrives after the goods have gone).
     /// </summary>
+    [AuditAction(AuditActionEnum.UpdateSaleReturnAttachments)]
     public class UpdateSaleReturnAttachmentsCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

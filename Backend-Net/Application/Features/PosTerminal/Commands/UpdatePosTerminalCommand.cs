@@ -7,9 +7,11 @@ using Common.Extensions;
 using Domain.Enums;
 using FluentValidation;
 using MediatR;
+using Application.Common.Audit;
 
 namespace Application.Features.PosTerminal.Commands
 {
+    [AuditAction(AuditActionEnum.UpdatePosTerminal)]
     public class UpdatePosTerminalCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

@@ -10,6 +10,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.Purchase.Commands
 {
@@ -17,6 +18,7 @@ namespace Application.Features.Purchase.Commands
     // Business Central's / Odoo's short close). Without it a purchase whose supplier never delivers the remainder stays
     // PARTIALLY_RECEIVED forever. Physical only: nothing moves in stock, units or the cost ledger, and no money is inferred -
     // any refund for goods that were paid for and never came is the purchasing staff's to record.
+    [AuditAction(AuditActionEnum.ClosePurchaseItem)]
     public class ClosePurchaseItemCommand : IRequest<ResponseDto>
     {
         public int PurchaseItemId { get; set; }

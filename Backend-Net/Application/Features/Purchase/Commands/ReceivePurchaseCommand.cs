@@ -15,6 +15,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.Purchase.Commands
 {
@@ -35,6 +36,7 @@ namespace Application.Features.Purchase.Commands
     // Problems are recorded as PurchaseReceivingDiscrepancy rows for the discrepancy form and the audit trail. Claim quotas come
     // from the units' CustodyReason, never from those rows. Problems with received goods are still reported explicitly through
     // CreatePurchaseReturnCommand; nothing here creates a return.
+    [AuditAction(AuditActionEnum.ReceivePurchase)]
     public class ReceivePurchaseCommand : IRequest<ResponseDto>
     {
         public int PurchaseId { get; set; }

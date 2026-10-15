@@ -8,11 +8,13 @@ using MediatR;
 using PurchaseReturnCommands = Application.Features.PurchaseReturn.Commands;
 using SaleCommands = Application.Features.Sale.Commands;
 using SaleReturnCommands = Application.Features.SaleReturn.Commands;
+using Application.Common.Audit;
 
 namespace Application.Features.Shipment.Commands
 {
     // One outbound vehicle, recorded atomically: order lines of a sale, replacement goods for sale returns, and goods going back
     // to a supplier - the mirror of ReceiveShipmentCommand. Outbound only: every return round line must target a GOODS_OUT effect.
+    [AuditAction(AuditActionEnum.DispatchShipment)]
     public class DispatchShipmentCommand : IRequest<ResponseDto>
     {
         public SaleCommands.ShipSaleCommand? Sale { get; set; }

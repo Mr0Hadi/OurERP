@@ -13,9 +13,11 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.SaleReturn.Commands
 {
+    [AuditAction(AuditActionEnum.CancelSaleReturn)]
     public class CancelSaleReturnCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

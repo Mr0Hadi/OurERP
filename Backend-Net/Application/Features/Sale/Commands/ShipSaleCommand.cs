@@ -12,6 +12,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.Sale.Commands
 {
@@ -20,6 +21,7 @@ namespace Application.Features.Sale.Commands
     // without an "issues" concept - problems with what shipped are only ever reported later by
     // the customer, through SaleReturn. Excess sent by mistake is recorded here as a warehouse fact
     // (ExcessQuantity), so the units the customer holds are no longer counted on our shelf.
+    [AuditAction(AuditActionEnum.ShipSale)]
     public class ShipSaleCommand : IRequest<ResponseDto>
     {
         public int SaleId { get; set; }

@@ -4,9 +4,12 @@ using Application.Common.Dtos;
 using Application.Common.Enums;
 using Common.Exceptions;
 using MediatR;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.Customer.Commands
 {
+    [AuditAction(AuditActionEnum.DeleteCustomer)]
     public class DeleteCustomerCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

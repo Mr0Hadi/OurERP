@@ -12,6 +12,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.Purchase.Commands
 {
@@ -20,6 +21,7 @@ namespace Application.Features.Purchase.Commands
     /// invoice; a purchase leaves PROFORMA when the supplier's invoice is recorded). Direction defaults to OUT (we pay);
     /// IN is money the supplier gives back. PaidAmount is recomputed from the rows.
     /// </summary>
+    [AuditAction(AuditActionEnum.AddPurchasePayment)]
     public class AddPurchasePaymentCommand : PaymentInput, IRequest<ResponseDto>
     {
         public int PurchaseId { get; set; }

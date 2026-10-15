@@ -8,9 +8,12 @@ using Common.Extensions;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Configuration;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.Account.Command
 {
+    [AuditAction(AuditActionEnum.Login)]
     public class LoginUserCommand : IRequest<ResponseDto>
     {
         public string Username { get; set; }

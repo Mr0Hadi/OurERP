@@ -15,6 +15,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.Sale.Commands
 {
@@ -24,6 +25,7 @@ namespace Application.Features.Sale.Commands
     /// through a payment (AddSalePayment) or an installment plan's down payment. Payments, status, attachments and the
     /// due date have their own commands, which stay open after the invoice is issued.
     /// </summary>
+    [AuditAction(AuditActionEnum.UpdateSale)]
     public class UpdateSaleCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

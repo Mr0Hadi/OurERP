@@ -11,6 +11,8 @@ using Common.Exceptions;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.Sale.Commands
 {
@@ -18,6 +20,7 @@ namespace Application.Features.Sale.Commands
     /// Takes back a payment row recorded by mistake. The row stays, marked VoidedAt, and leaves PaidAmount. An issued
     /// invoice stays issued even if its paid amount falls back to 0 - leaving PROFORMA is one-way.
     /// </summary>
+    [AuditAction(AuditActionEnum.VoidSalePayment)]
     public class VoidSalePaymentCommand : IRequest<ResponseDto>
     {
         public int PaymentId { get; set; }

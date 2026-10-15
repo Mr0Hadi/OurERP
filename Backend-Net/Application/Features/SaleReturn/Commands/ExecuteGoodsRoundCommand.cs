@@ -16,6 +16,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.SaleReturn.Commands
 {
@@ -23,6 +24,7 @@ namespace Application.Features.SaleReturn.Commands
     // coming in to us from the customer (GOODS_IN) or going out to them (GOODS_OUT).
     // Replaces both ConfirmReturnInspectionCommand and ConfirmReplacementShipmentCommand: goods
     // rounds now target a specific effect explicitly on either side of the movement.
+    [AuditAction(AuditActionEnum.ExecuteSaleReturnGoodsRound)]
     public class ExecuteGoodsRoundCommand : IRequest<ResponseDto>
     {
         public int SaleReturnId { get; set; }

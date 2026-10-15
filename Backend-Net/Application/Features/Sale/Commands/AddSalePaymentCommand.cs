@@ -14,6 +14,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.Sale.Commands
 {
@@ -22,6 +23,7 @@ namespace Application.Features.Sale.Commands
     /// customer. The first IN on a PROFORMA issues the invoice (SaleInvoiceFinalizer) - a proforma is a sale nobody has
     /// paid a rial towards. PaidAmount is recomputed from the rows.
     /// </summary>
+    [AuditAction(AuditActionEnum.AddSalePayment)]
     public class AddSalePaymentCommand : PaymentInput, IRequest<ResponseDto>
     {
         public int SaleId { get; set; }

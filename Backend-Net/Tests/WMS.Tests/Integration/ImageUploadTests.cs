@@ -208,7 +208,7 @@ namespace WMS.Tests.Integration
             Assert.StartsWith(FakeObjectStorage.ApiHost, detail.ImageUrl);
 
             // Echo the signed URL back, exactly as a naive frontend would.
-            var updateHandler = new UpdateProductCommandHandler(scope.ProductRepository, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork, scope.Db);
+            var updateHandler = new UpdateProductCommandHandler(scope.ProductRepository, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork, scope.Db, scope.ProductCategoryRepository);
             await updateHandler.Handle(new UpdateProductCommand
             {
                 Id = productId,

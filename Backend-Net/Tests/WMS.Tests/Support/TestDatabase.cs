@@ -1,5 +1,7 @@
 ﻿using Application.Common.Contracts.Pos;
+using Application.Common.Contracts.Audit;
 using Application.Common.Contracts.Barcode;
+using Application.Common.Contracts.UserContextService;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.OrgStructure;
 using Application.Common.Contracts.Permissions;
@@ -61,12 +63,25 @@ namespace WMS.Tests.Support
         /// </summary>
         public WMSDbContext NewContext() => new(_options);
 
+        /// <summary>A context that records audit events as the signed-in <paramref name="userContext"/>, under <paramref name="auditScope"/>.</summary>
+        public WMSDbContext NewContext(IUserContextService? userContext, IAuditScope? auditScope) => new(_options, userContext, auditScope);
+
         /// <summary>
         /// One scope's worth of the real infrastructure wiring: a context, the real repositories,
         /// the real UnitOfWork and the real calculation services, all sharing a single context -
         /// which is exactly how they are registered (Scoped) in production.
         /// </summary>
-        public TestScope NewScope() => new(NewContext());
+        public TestScope NewScope() => NewScope(null);
+
+        /// <summary>
+        /// A scope whose context records audit events under <see cref="TestScope.AuditScope"/> - the same wiring as production,
+        /// so commands sent through a real MediatR pipeline (AuditBehavior) land in one event each.
+        /// </summary>
+        public TestScope NewScope(IUserContextService? userContext)
+        {
+            var auditScope = new AuditScope();
+            return new TestScope(NewContext(userContext, auditScope), auditScope);
+        }
 
         public void Dispose()
         {
@@ -77,9 +92,10 @@ namespace WMS.Tests.Support
 
     public sealed class TestScope : IDisposable
     {
-        public TestScope(WMSDbContext context)
+        public TestScope(WMSDbContext context, IAuditScope auditScope)
         {
             Context = context;
+            AuditScope = auditScope;
             // Fully qualified: the `using Application.Common.Contracts.UnitOfWork` above makes the
             // bare name `UnitOfWork` resolve to that namespace rather than the type.
             UnitOfWork = new Infrastructure.UnitOfWork.UnitOfWork(context);
@@ -116,6 +132,7 @@ namespace WMS.Tests.Support
         }
 
         public WMSDbContext Context { get; }
+        public IAuditScope AuditScope { get; }
         public IWMSDbContext Db => Context;
         public IUnitOfWork UnitOfWork { get; }
         public ISaleReturnRepository SaleReturnRepository { get; }

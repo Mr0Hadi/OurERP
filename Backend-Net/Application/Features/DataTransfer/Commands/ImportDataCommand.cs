@@ -7,6 +7,8 @@ using Common.Exceptions;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Options;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.DataTransfer.Commands
 {
@@ -16,6 +18,7 @@ namespace Application.Features.DataTransfer.Commands
     /// file: nothing is stored on the server between them, so there is no upload to clean up and no stale preview
     /// to trust.
     /// </summary>
+    [AuditAction(AuditActionEnum.ImportData)]
     public class ImportDataCommand : IRequest<ResponseDto>
     {
         public string Resource { get; set; } = string.Empty;

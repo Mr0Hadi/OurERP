@@ -7,6 +7,8 @@ using Application.Common.Payments;
 using Common.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.Purchase.Commands
 {
@@ -15,6 +17,7 @@ namespace Application.Features.Purchase.Commands
     /// deleted. A draft that carries a prepayment is refused until those payments are voided - money that moved must
     /// not disappear with the document.
     /// </summary>
+    [AuditAction(AuditActionEnum.DeletePurchase)]
     public class DeletePurchaseCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

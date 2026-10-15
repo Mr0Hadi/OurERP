@@ -4,9 +4,12 @@ using Application.Common.Dtos;
 using Application.Common.Enums;
 using Common.Exceptions;
 using MediatR;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.PosTerminal.Commands
 {
+    [AuditAction(AuditActionEnum.DeletePosTerminal)]
     public class DeletePosTerminalCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

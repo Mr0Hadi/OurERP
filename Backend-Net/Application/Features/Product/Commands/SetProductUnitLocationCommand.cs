@@ -9,6 +9,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.Product.Commands
 {
@@ -16,6 +17,7 @@ namespace Application.Features.Product.Commands
     /// Puts these units on a shelf (<see cref="BinLocation"/>, normalised) or clears it (blank). Only units that are here - IN_STOCK
     /// or QUARANTINED. Moving between shelves is not a change of status, so no ProductUnitMovement row. All or nothing.
     /// </summary>
+    [AuditAction(AuditActionEnum.SetProductUnitLocation)]
     public class SetProductUnitLocationCommand : IRequest<ResponseDto>
     {
         public List<int> ProductUnitIds { get; set; } = new();

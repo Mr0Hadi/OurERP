@@ -16,12 +16,14 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.PurchaseReturn.Commands
 {
     // A physical round against one or more goods effects on a return: goods coming in from the supplier (GOODS_IN), leaving us
     // back to them (GOODS_OUT), or moving out of quarantine inside the company (GOODS_RELEASE into stock, GOODS_SCRAP).
     // Goods rounds target a specific effect explicitly; where the units come from is stated on the line, never inferred.
+    [AuditAction(AuditActionEnum.ExecutePurchaseReturnGoodsRound)]
     public class ExecuteGoodsRoundCommand : IRequest<ResponseDto>
     {
         public int PurchaseReturnId { get; set; }

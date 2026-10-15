@@ -10,6 +10,7 @@ using Domain.Entities;
 using Domain.Enums;
 using FluentValidation;
 using MediatR;
+using Application.Common.Audit;
 
 namespace Application.Features.Team.Commands
 {
@@ -19,6 +20,7 @@ namespace Application.Features.Team.Commands
     /// DepartmentId/TeamId are written together by <see cref="IOrgRoleService.AssignAsync"/>, so they
     /// can never disagree. No separate "move the user first" call is needed.
     /// </summary>
+    [AuditAction(AuditActionEnum.CreateTeam)]
     public class CreateTeamCommand : IRequest<ResponseDto>
     {
         public string Name { get; set; }

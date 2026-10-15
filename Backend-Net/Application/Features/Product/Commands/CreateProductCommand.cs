@@ -14,9 +14,11 @@ using Domain.Entities;
 using Domain.Enums;
 using FluentValidation;
 using MediatR;
+using Application.Common.Audit;
 
 namespace Application.Features.Product.Commands
 {
+    [AuditAction(AuditActionEnum.CreateProduct)]
     public class CreateProductCommand : IRequest<ResponseDto>
     {
         // Code/BarCode are NOT settable here - they are auto-generated after the row gets an

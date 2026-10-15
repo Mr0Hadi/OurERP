@@ -11,6 +11,8 @@ using Common.Exceptions;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.Purchase.Commands
 {
@@ -18,6 +20,7 @@ namespace Application.Features.Purchase.Commands
     /// Corrects a payment row: the old row is voided and a new one with these values takes its place, in one save. The
     /// direction is kept. The response lists both rows, so the correction itself stays visible.
     /// </summary>
+    [AuditAction(AuditActionEnum.EditPurchasePayment)]
     public class EditPurchasePaymentCommand : PaymentInput, IRequest<ResponseDto>
     {
         public int PaymentId { get; set; }

@@ -11,6 +11,7 @@ using Common.Extensions;
 using Domain.Enums;
 using FluentValidation;
 using MediatR;
+using Application.Common.Audit;
 
 namespace Application.Features.User.Command
 {
@@ -26,6 +27,7 @@ namespace Application.Features.User.Command
     /// <see cref="Role"/> is optional: omit it to leave the role as it is (kept when the user stays
     /// put, dropped when they move), or send one to promote/demote them from this page.
     /// </summary>
+    [AuditAction(AuditActionEnum.UpdateUser)]
     public class UpdateUserCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

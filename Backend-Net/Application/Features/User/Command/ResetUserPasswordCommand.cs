@@ -9,6 +9,8 @@ using Common.Exceptions;
 using Common.Extensions;
 using FluentValidation;
 using MediatR;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.User.Command
 {
@@ -17,6 +19,7 @@ namespace Application.Features.User.Command
 	/// را فراموش کرده بازنشانی می‌کند. برخلاف <see cref="ChangePasswordCommand"/>
 	/// روی کاربرِ *جاریِ* توکن کار نمی‌کند و رمز قبلی هم نمی‌خواهد.
 	/// </summary>
+	[AuditAction(AuditActionEnum.ResetUserPassword)]
 	public class ResetUserPasswordCommand : IRequest<ResponseDto>
 	{
 		public int UserId { get; set; }

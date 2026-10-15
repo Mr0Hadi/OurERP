@@ -15,6 +15,7 @@ using Common.Extensions;
 using Domain.Enums;
 using FluentValidation;
 using MediatR;
+using Application.Common.Audit;
 
 namespace Application.Features.Sale.Commands
 {
@@ -22,6 +23,7 @@ namespace Application.Features.Sale.Commands
     /// A sale is always born PROFORMA and leaves it on its first payment, which issues the official invoice number
     /// (SaleInvoiceFinalizer). There is no status to send: nobody chooses to issue an invoice nobody has paid towards.
     /// </summary>
+    [AuditAction(AuditActionEnum.CreateSale)]
     public class CreateSaleCommand : IRequest<ResponseDto>
     {
         /// <summary>Optional on a proforma; set by the finalizer when the invoice is issued, if still empty.</summary>

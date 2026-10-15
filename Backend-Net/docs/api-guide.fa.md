@@ -689,6 +689,7 @@ Authorization: Bearer {accessToken}
 | | `GetPosTerminalList/Detail` / بقیه | `PosTerminalView` **یا** `PosCharge` (از ۲۰۲۶-۱۰-۰۵، تا صندوق‌دار بتواند دستگاه را انتخاب کند) / `PosTerminalManage` |
 | حساب اشخاص | `PartyAccount/GetPartyStatement` | `PartyStatementView` |
 | حسابداری | تمام `Accounting/*` و خروجی‌های اکسلِ آن‌ها | `AccountingView` |
+| تاریخچه تغییرات | تمام `Audit/*` | `AuditLogView` |
 
 `CreateInPersonSale` و `Shipment/*` داخل خودشان چند کامند دیگر را اجرا می‌کنند؛ فقط همان یک دسترسیِ بالا لازم است، نه دسترسی‌های کامندهای داخلی.
 
@@ -2968,6 +2969,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 12 | کارت‌خوان |
 | 13 | حساب اشخاص |
 | 14 | حسابداری |
+| 15 | تاریخچه تغییرات |
 
 گروه فقط برای چیدمان صفحه‌ی مدیریت دسترسی است؛ هیچ‌وقت خودِ گروه به کسی داده نمی‌شود.
 
@@ -3050,6 +3052,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 234 | PosPaymentReportView | مشاهده گزارش پرداخت‌های کارتخوان (`Pos/GetPosPaymentList`) |
 | 250 | PartyStatementView | مشاهده گردش حساب مشتریان و تامین‌کنندگان |
 | 260 | AccountingView | مشاهده داشبورد و دفترهای حسابداری (`Accounting/*`) |
+| 270 | AuditLogView | مشاهده تاریخچه تغییرات (`Audit/*`) |
 
 ### `OrgRoleEnum` (نقش کاربر در چارت سازمانی)
 | مقدار | معنی |
@@ -3398,6 +3401,14 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 ## 16. نکات و محدودیت‌های شناخته‌شده
 
 این نکات برای جلوگیری از سردرگمی هنگام توسعه فرانت مهم هستند:
+
+### تغییرات قرارداد — ۲۰۲۶-۱۰-۱۵ (تاریخچه تغییرات) — افزودنی
+
+| کجا | قبل | بعد |
+|---|---|---|
+| `api/Audit/*` | — | سه endpointِ تازه (بخش ۲۱) |
+| `PermissionEnum` / `PermissionGroupEnum` | — | `AuditLogView = 270` در گروهِ تازه‌ی `15` (تاریخچه تغییرات) |
+| همه‌ی کامندها | — | بدونِ تغییر در درخواست و پاسخ؛ هر تغییری که ذخیره می‌کنند حالا در تاریخچه ثبت می‌شود |
 
 ### تغییرات قرارداد — ۲۰۲۶-۱۰-۱۲ (داشبورد و دفترهای حسابداری) — افزودنی
 
@@ -4222,3 +4233,203 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 هر چیزی که لغو، باطل یا برگشت خورده، چون خالصش صفر است، نوشته نمی‌شود. هر سند، پرداخت، قلم یا ادعایی که از قبل در دفتر
 هست دوباره نوشته نمی‌شود؛ پس اجرایش روی دیتابیسی که دفتر مدتی در آن زنده بوده فقط جاهای خالی را پر می‌کند. شرحِ همه‌ی
 ردیف‌هایش با «(ثبت تکمیلی)» تمام می‌شود. بعد از اجرایش مانده‌ی اشخاص ممکن است عوض شود؛ درست‌تر می‌شود.
+
+---
+
+## 21. تاریخچه تغییرات (Audit)
+
+> از ۲۰۲۶-۱۰-۱۵. همه `GET` و فقط‌خواندنی‌اند. دسترسی: **`AuditLogView`**.
+
+### مفهوم کلی
+
+هر کامندی که چیزی ذخیره کند یک **رویداد** (`AuditEvent`) می‌سازد: چه کسی، کِی، کدام عملیات (`action`). زیرِ هر رویداد،
+برای هر سطری از دیتابیس که اضافه، ویرایش یا حذف شده یک **تغییر** (`AuditEntityChange`) هست با مقدارهای قبل و بعد.
+- یک کامند همیشه یک رویداد است، حتی اگر چند بار ذخیره کند یا کامندهای دیگری را صدا بزند (`CreateInPersonSale`،
+  `Shipment/*`): همه زیرِ عملیاتِ بیرونی ثبت می‌شوند.
+- ثبتِ تاریخچه با خودِ تغییر در یک تراکنش است: تغییری بدونِ تاریخچه، یا تاریخچه‌ای بدونِ تغییر، وجود ندارد.
+- هر تغییر، سندی را که به آن تعلق دارد هم نگه می‌دارد (`documentKind` + `documentId`): ردیفِ فاکتور، پرداخت، قسط،
+  پیوست، راننده و یادداشتِ فروشِ ۴۲ همه به «فروش ۴۲» وصل‌اند؛ ردیف‌های مرجوعی (ادعا، تصمیم، اثر، دور، ...) به خودِ مرجوعی.
+  سطرهایی که به سندی تعلق ندارند (مشتری، کالا، کاربر، دانه‌ی کالا) با `entityType` + `entityKey` پیدا می‌شوند.
+- ثبت نمی‌شوند: دفترهایی که خودشان تاریخچه‌اند (`PartyLedgerEntry`، `InventoryCostLedgerEntry`، `ProductUnitMovement`)،
+  و توکنِ نشست (`RefreshToken`). رمزِ عبور فقط به‌صورتِ «تغییر کرد» ثبت می‌شود و مقدارش `"***"` است.
+- جدول‌ها فقط‌افزودنی‌اند؛ هیچ ردیفی از تاریخچه ویرایش یا حذف نمی‌شود.
+
+### شکلِ یک رویداد
+
+```json
+{
+  "id": 1203,
+  "occurredAt": "2026-10-15T10:42:11",
+  "userId": 7,
+  "userName": "علی رضایی",
+  "action": 406,
+  "actionTitle": "ثبت دریافت فروش",
+  "changes": [
+    {
+      "id": 5531,
+      "entityType": "Sale",
+      "entityKey": "42",
+      "operation": 2,
+      "documentKind": 2,
+      "documentId": 42,
+      "fields": [
+        { "name": "Status", "oldValue": 0, "newValue": 1 },
+        { "name": "PaidAmount", "oldValue": 0, "newValue": 500000 }
+      ]
+    },
+    {
+      "id": 5530,
+      "entityType": "PaymentDetail",
+      "entityKey": "88",
+      "operation": 1,
+      "documentKind": 2,
+      "documentId": 42,
+      "fields": [ { "name": "Amount", "oldValue": null, "newValue": 500000 } ]
+    }
+  ]
+}
+```
+
+- `fields`: در ویرایش فقط ستون‌هایی که واقعاً عوض شده‌اند؛ در ایجاد کلِ سطر با `oldValue: null`؛ در حذف کلِ سطر با `newValue: null`.
+- مقدارها همان چیزی‌اند که ذخیره شده: enum عدد است، تاریخ متنِ ISO، مبلغ عدد. نامِ فیلد نامِ ستون در کد است (`Status`، `PaidAmount`).
+- `userId`/`userName` برای درخواستِ بی‌نام (ورودِ ناموفق) `null` است. `action` برای تغییری که خارج از هر کامندی ذخیره شده `null` است.
+- `entityKey` کلیدِ سطر به‌صورتِ متن است: `"42"`، یا برای کلیدِ چندبخشی (`UserPermission`، `ProductVehicle`) بخش‌ها با ویرگول: `"5,3"`.
+
+### `GET api/Audit/GetDocumentHistory?documentKind=2&documentId=42`
+
+تاریخچه‌ی یک سند، جدیدترین اول، **بدونِ صفحه‌بندی** (مثل گردشِ حساب). `data` آرایه‌ای از رویدادها با همان شکلِ بالاست، ولی در
+هر رویداد فقط تغییراتِ **همین سند** آمده؛ اثرِ همان رویداد روی جاهای دیگر (موجودی کالا، دانه‌ها، خودِ مرجوعی) در
+`GetAuditEventDetail` است. `documentKind`: `1` خرید، `2` فروش، `3` مرجوعی خرید، `4` مرجوعی فروش (`DocumentKindEnum`).
+
+### `GET api/Audit/GetAuditEventList`
+
+فهرستِ صفحه‌بندی‌شده‌ی رویدادها (`data.auditEventList` + `data.page`). هر سطر: `id`، `occurredAt`، `userId`، `userName`، `action`،
+`actionTitle`، `changeCount` (بدونِ جزئیاتِ تغییرات).
+
+| پارامتر | توضیح |
+|---|---|
+| `page`، `take` | صفحه‌بندی |
+| `userId` | کارهای یک کاربر |
+| `action` | یک عملیات (`AuditActionEnum`) |
+| `fromDate`، `toDate` | روی `occurredAt`، شاملِ هر دو روز |
+| `entityType`، `entityKey` | رویدادهایی که سطری از این نوع (`Customer`) را تغییر داده‌اند؛ با `entityKey` فقط همان یک سطر (مشتریِ ۵) |
+| `documentKind`، `documentId` | رویدادهایی که سندی را تغییر داده‌اند؛ هر دو لازم است |
+| `sortBy` | `0` زمان (پیش‌فرض، جدیدترین اول)، `1` عملیات، `2` کاربر |
+| `sortDirection` | مثلِ بقیه‌ی فهرست‌ها |
+
+### `GET api/Audit/GetAuditEventDetail?id=1203`
+
+یک رویداد با **همه‌ی** تغییراتش، به هر سندی که تعلق داشته باشند. رویدادِ ناموجود ۴۰۴.
+
+### `AuditOperationEnum`
+| مقدار | معنی |
+|---|---|
+| 1 | ایجاد (`INSERT`) |
+| 2 | ویرایش (`UPDATE`) |
+| 3 | حذف (`DELETE`) |
+
+### `AuditActionEnum`
+
+یک عضو برای هر کامند. عددها ذخیره می‌شوند و هرگز عوض نمی‌شوند. `actionTitle` در پاسخ همان متنِ فارسیِ این جدول است.
+
+| مقدار | نام | معنی |
+|---|---|---|
+| 1 | `Login` | ورود به سامانه |
+| 2 | `Logout` | خروج از سامانه |
+| 3 | `LogoutUserById` | خاتمه‌ی نشست کاربر |
+| 4 | `RefreshToken` | تمدید نشست |
+| 5 | `ChangePassword` | تغییر رمز عبور |
+| 20 | `CreateUser` | ایجاد کاربر |
+| 21 | `UpdateUser` | ویرایش کاربر |
+| 22 | `UpdateUserInfo` | ویرایش اطلاعات شخصی |
+| 23 | `DeleteUser` | حذف کاربر |
+| 24 | `ChangeUserTeam` | تغییر تیم کاربر |
+| 25 | `ResetUserPassword` | بازنشانی رمز عبور کاربر |
+| 26 | `UpdateUserPermissions` | ویرایش دسترسی‌های کاربر |
+| 40 | `CreateDepartment` | ایجاد واحد |
+| 41 | `UpdateDepartment` | ویرایش واحد |
+| 42 | `DeleteDepartment` | حذف واحد |
+| 43 | `UpdateDepartmentPermissionTemplate` | ویرایش الگوی دسترسی واحد |
+| 44 | `CreateTeam` | ایجاد تیم |
+| 45 | `UpdateTeam` | ویرایش تیم |
+| 46 | `DeleteTeam` | حذف تیم |
+| 100 | `CreateCustomer` | ایجاد مشتری |
+| 101 | `UpdateCustomer` | ویرایش مشتری |
+| 102 | `DeleteCustomer` | حذف مشتری |
+| 110 | `CreateSupplier` | ایجاد تأمین‌کننده |
+| 111 | `UpdateSupplier` | ویرایش تأمین‌کننده |
+| 112 | `DeleteSupplier` | حذف تأمین‌کننده |
+| 120 | `CreateProduct` | ایجاد کالا |
+| 121 | `UpdateProduct` | ویرایش کالا |
+| 122 | `DeleteProduct` | حذف کالا |
+| 130 | `CreateProductCategory` | ایجاد دسته‌بندی کالا |
+| 131 | `UpdateProductCategory` | ویرایش دسته‌بندی کالا |
+| 132 | `DeleteProductCategory` | حذف دسته‌بندی کالا |
+| 140 | `CreateVehicle` | ایجاد خودرو |
+| 141 | `UpdateVehicle` | ویرایش خودرو |
+| 142 | `DeleteVehicle` | حذف خودرو |
+| 143 | `AddProductsToVehicle` | افزودن کالا به خودرو |
+| 144 | `RemoveProductFromVehicle` | حذف کالا از خودرو |
+| 150 | `UploadImage` | بارگذاری فایل |
+| 151 | `DeleteImage` | حذف فایل |
+| 160 | `ImportData` | ورود اطلاعات از فایل |
+| 200 | `CreatePurchase` | ایجاد خرید |
+| 201 | `UpdatePurchase` | ویرایش پیش‌فاکتور خرید |
+| 202 | `DeletePurchase` | حذف خرید |
+| 203 | `ChangePurchaseStatus` | تغییر وضعیت خرید |
+| 204 | `UpdatePurchaseAttachments` | ویرایش پیوست‌های خرید |
+| 205 | `UpdatePurchasePaymentDate` | ویرایش مهلت پرداخت خرید |
+| 206 | `AddPurchasePayment` | ثبت پرداخت خرید |
+| 207 | `EditPurchasePayment` | اصلاح پرداخت خرید |
+| 208 | `VoidPurchasePayment` | ابطال پرداخت خرید |
+| 209 | `ReceivePurchase` | دریافت کالای خرید |
+| 210 | `ClosePurchaseItem` | بستن ردیف خرید |
+| 211 | `ReopenPurchaseItem` | بازگشایی ردیف خرید |
+| 212 | `AcceptPurchaseExcess` | خرید کالای مازاد |
+| 300 | `CreatePurchaseReturn` | ایجاد مرجوعی خرید |
+| 301 | `DeletePurchaseReturn` | حذف مرجوعی خرید |
+| 302 | `CancelPurchaseReturn` | لغو مرجوعی خرید |
+| 303 | `RejectPurchaseReturn` | رد مرجوعی خرید |
+| 304 | `ReopenPurchaseReturn` | بازگشایی مرجوعی خرید |
+| 305 | `AddPurchaseReturnResolution` | ثبت تصمیم مرجوعی خرید |
+| 306 | `RemovePurchaseReturnResolution` | حذف تصمیم مرجوعی خرید |
+| 307 | `ExecutePurchaseReturnGoodsRound` | اجرای جابه‌جایی کالای مرجوعی خرید |
+| 308 | `ExecutePurchaseReturnMoneyEffect` | ثبت پرداخت مرجوعی خرید |
+| 309 | `UpdatePurchaseReturnAttachments` | ویرایش پیوست‌های مرجوعی خرید |
+| 400 | `CreateSale` | ایجاد فروش |
+| 401 | `UpdateSale` | ویرایش پیش‌فاکتور فروش |
+| 402 | `DeleteSale` | حذف فروش |
+| 403 | `ChangeSaleStatus` | تغییر وضعیت فروش |
+| 404 | `UpdateSaleAttachments` | ویرایش پیوست‌های فروش |
+| 405 | `UpdateSalePaymentDate` | ویرایش مهلت پرداخت فروش |
+| 406 | `AddSalePayment` | ثبت دریافت فروش |
+| 407 | `EditSalePayment` | اصلاح دریافت فروش |
+| 408 | `VoidSalePayment` | ابطال دریافت فروش |
+| 409 | `ShipSale` | ارسال کالای فروش |
+| 410 | `CreateInPersonSale` | فروش حضوری |
+| 500 | `CreateSaleInstallmentPlan` | ایجاد طرح اقساط |
+| 501 | `UpdateSaleInstallmentPlan` | ویرایش طرح اقساط |
+| 502 | `DeleteSaleInstallmentPlan` | حذف طرح اقساط |
+| 503 | `PaySaleInstallment` | پرداخت قسط |
+| 504 | `SettleSaleInstallmentPlan` | تسویه‌ی طرح اقساط |
+| 600 | `CreateSaleReturn` | ایجاد مرجوعی فروش |
+| 601 | `DeleteSaleReturn` | حذف مرجوعی فروش |
+| 602 | `CancelSaleReturn` | لغو مرجوعی فروش |
+| 603 | `RejectSaleReturn` | رد مرجوعی فروش |
+| 604 | `ReopenSaleReturn` | بازگشایی مرجوعی فروش |
+| 605 | `AddSaleReturnResolution` | ثبت تصمیم مرجوعی فروش |
+| 606 | `RemoveSaleReturnResolution` | حذف تصمیم مرجوعی فروش |
+| 607 | `ExecuteSaleReturnGoodsRound` | اجرای جابه‌جایی کالای مرجوعی فروش |
+| 608 | `ExecuteSaleReturnMoneyEffect` | ثبت پرداخت مرجوعی فروش |
+| 609 | `UpdateSaleReturnAttachments` | ویرایش پیوست‌های مرجوعی فروش |
+| 700 | `ReceiveShipment` | دریافت محموله |
+| 701 | `DispatchShipment` | ارسال محموله |
+| 800 | `ApplyProductUnitAction` | اقدام روی واحد کالا |
+| 801 | `MarkProductUnitsPrinted` | ثبت چاپ برچسب |
+| 802 | `SetProductUnitLocation` | تعیین محل قفسه |
+| 803 | `EnsureProductCodes` | تکمیل کد کالاها |
+| 804 | `EnsureInventoryCostLedger` | تکمیل دفتر بهای موجودی |
+| 900 | `ChargePos` | پرداخت با کارت‌خوان |
+| 901 | `CreatePosTerminal` | ایجاد کارت‌خوان |
+| 902 | `UpdatePosTerminal` | ویرایش کارت‌خوان |
+| 903 | `DeletePosTerminal` | حذف کارت‌خوان |

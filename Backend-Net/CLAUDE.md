@@ -125,9 +125,10 @@ Backend-Net/
 │                        # ReturnPaymentMethodEnum; InventoryCostEventTypeEnum
 ├── Application/
 │   ├── Common/
-│   │   ├── Behaviors/   # ValidationBehavior
+│   │   ├── Audit/       # AuditActionAttribute (on every command)
+│   │   ├── Behaviors/   # AuditBehavior, ValidationBehavior
 │   │   ├── Contracts/   # Repositories/, Context/ (IWMSDbContext), UnitOfWork/, Token/,
-│   │   │                # UserContextService/, Environment/, PurchaseReturn/ (IPurchaseReturnCalculationService),
+│   │   │                # UserContextService/, Environment/, Audit/ (IAuditScope), PurchaseReturn/ (IPurchaseReturnCalculationService),
 │   │   │                # SaleReturn/ (ISaleReturnCalculationService),
 │   │   │                # Storage/ (IObjectStorageService, ObjectStorageOptions, UploadedFileDto),
 │   │   │                # (Captcha/ present, unused)
@@ -137,6 +138,7 @@ Backend-Net/
 │   ├── Features/
 │   │   ├── Account/     # Command/ (login, logout, refresh, logout-by-id; forget-password/otp removed 2026-10-04)
 │   │   ├── Accounting/  # Queries/, Dtos/, DataTransfer/ (read-only dashboard + journals, 2026-10-12)
+│   │   ├── Audit/       # Queries/, Dtos/ (audit log read side, 2026-10-15)
 │   │   ├── Customer/    # Commands/, Queries/, Dtos/
 │   │   ├── FileStorage/ # Commands/ (UploadImage, DeleteImage), Queries/ (GetImageUrl)
 │   │   │                # (named FileStorage, not File, to avoid System.IO.File shadowing;
@@ -156,7 +158,7 @@ Backend-Net/
 │   │   └── User/        # Command/, Query/, Dto/ (singular — legacy)
 │   └── Ioc/             # ApplicationServiceRegistration (AddApplicationServices)
 ├── Infrastructure/
-│   ├── Persistence/     # WMSDbContext
+│   ├── Persistence/     # WMSDbContext, Auditing/AuditRecorder (audit log capture)
 │   ├── Repositories/    # GenericRepository<T> + per-entity repositories
 │   ├── UnitOfWork/      # UnitOfWork
 │   ├── Ioc/             # InfrastructureServiceRegistration (AddInfrastructureServices)
@@ -2000,6 +2002,53 @@ ordinary TRANSFER row through the existing payment endpoints. Answers to 11.x/12
   migration chain to an empty throwaway database, not against mock data.
 - Tests: `Integration/AccountingTests.cs` (11) and the sorting smoke test. Suite 934/937 - the 3 documented environmental
   failures.
+
+**Audit log (2026-10-15).** Who changed what, when, from which value to which, for every saved row. API:
+`docs/api-guide.fa.md` section 21 and the 2026-10-15 table in 16.
+
+- **An audit log, not event sourcing.** Business tables stay the source of truth; the log is a side record written in
+  the same transaction. Two tables: `AuditEvent` (one per outermost command: `OccurredAt`, `UserId`, `Action`) and
+  `AuditEntityChange` (one per row: `EntityType`, `EntityKey`, `Operation`, `DocumentKind`/`DocumentId`,
+  `OldValues`/`NewValues`). Both append-only, no IsActive, `long` ids.
+- **`AuditActionEnum` is the event-type catalogue - no lookup table**, the PermissionEnum decision again. One member per
+  MediatR command (99), attached with `[AuditAction(...)]` (`Application/Common/Audit/`). `Unit/AuditActionCoverageTests`
+  fails when a command has none, a query has one, two commands share one, or a member has no Persian `[Description]`.
+  Persisted - never renumber; groups start at round numbers.
+- **Capture is generic, in `WMSDbContext.SaveChangesAsync`** via `Infrastructure/Persistence/Auditing/AuditRecorder`: every
+  Added/Modified/Deleted entry, so a new table is audited without anyone remembering it. Updates store only the columns
+  whose value really changed (repository `Update()` flags every column); inserts store the whole row after the save (real
+  ids, sequence defaults); deletes store the whole old row. Values are JSON objects in `nvarchar(max)` with
+  `ISJSON(x, OBJECT)` checks - SQL Server 2022 has no json type (the user no longer runs 2019; 2025's type would be a later
+  migration).
+- **One event per command.** `AuditBehavior` (registered before ValidationBehavior) opens `IAuditScope` (Scoped,
+  `Infrastructure/Services/AuditScope`) with the command's action; only the outermost `Begin` counts, so
+  `CreateInPersonSale`/`Shipment/*` record under the outer action, and a command that saves twice (`CreateProduct`) keeps
+  adding to the same event through `CurrentEventId`. Outside any command each save is its own event with `Action = null`.
+- **Atomic**: the save and its audit rows share a transaction - the caller's (`ExecuteInTransactionAsync`) or one opened
+  for the purpose. Two `base.SaveChangesAsync` calls inside it (data, then audit) because inserted rows need real ids.
+  `SaveChangesAsync(false)` is left unaudited (nothing uses it; it would double-write). The **sync `SaveChanges()` is not
+  audited** - only test seeding uses it, which is why every test starts with an empty log.
+- **Per document.** Each change resolves its document: sale/purchase and their lines, payments, drivers, notes,
+  receiving rows, installment plan and installments; attachments by their own kind/id; return trees down to observations
+  and money parts. Parents are read from the change tracker, else one query; deleted rows resolve before the save.
+  `GetDocumentHistory` narrows each event to that document's rows; `GetAuditEventDetail` shows all of them.
+- **Not recorded:** `PartyLedgerEntry`, `InventoryCostLedgerEntry`, `ProductUnitMovement` (already history) and the audit
+  tables; `User.RefreshToken`/`ExpireRefreshToken` (so a refresh writes nothing); `User.PasswordHash` is recorded as
+  changed with `"***"`. `ExecuteUpdate`/`ExecuteDelete`/raw SQL bypass the change tracker - don't use them on business tables.
+  Rows removed by a database cascade without being loaded are not recorded (their parent's delete is).
+- `AuditEvent.UserId` is a plain id with no FK: recording a change must never be what makes it fail. Names are joined on read.
+- **Read side** (`AuditLogView = 270`, group `Audit = 15`, `WMS/Controllers/AuditController`): `GetAuditEventList` (paged,
+  filters user/action/date/entity/document, `AuditEventListSortEnum`, in the sorting smoke test), `GetAuditEventDetail`,
+  `GetDocumentHistory` (not paged). Fields come back as `{ name, oldValue, newValue }` with raw JSON values
+  (`Features/Audit/Queries/AuditFields`).
+- **Migration `20261015152459_audit-log`**, with hand-added `INSTEAD OF UPDATE, DELETE` triggers that THROW on both tables
+  (retention pruning means disabling them on purpose). Applied cleanly from scratch to a throwaway database (dropped) and the
+  triggers verified. **Not applied** to any real database.
+- **Fixed on the way:** PR #56 gave `UpdateProductCommandHandler` an `IProductCategoryRepository` parameter and left 6 test
+  call sites (and the token on its `GetByIdAsync`) behind, so the test project did not compile on `main`.
+- Tests: `Integration/AuditLogTests` (10), `Unit/AuditActionCoverageTests` (4), one functional test through the real host.
+  `TestDatabase.NewScope` now wires an `AuditScope` into the context (`TestScope.AuditScope`), and the hand-built MediatR
+  containers in `InPersonSaleTests`/`ShipmentTests` register it. Suite 949/952 - the 3 documented environmental failures.
 
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.

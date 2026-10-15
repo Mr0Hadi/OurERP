@@ -13,6 +13,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.Purchase.Commands
 {
@@ -21,6 +22,7 @@ namespace Application.Features.Purchase.Commands
     /// PROFORMA (DocumentLockRules). Payments, status, attachments and the due date have their own commands, which stay
     /// open after the invoice is issued.
     /// </summary>
+    [AuditAction(AuditActionEnum.UpdatePurchase)]
     public class UpdatePurchaseCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

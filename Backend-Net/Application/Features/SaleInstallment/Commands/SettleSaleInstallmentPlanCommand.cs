@@ -9,6 +9,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.SaleInstallment.Commands
 {
@@ -22,6 +23,7 @@ namespace Application.Features.SaleInstallment.Commands
     /// <c>EarlySettlementDiscountAmount</c> روی پلن برای ثبت مقدار برگشتی). جزئیات در
     /// docs/sale-installment-guide.fa.md بخش «موارد باز».
     /// </summary>
+    [AuditAction(AuditActionEnum.SettleSaleInstallmentPlan)]
     public class SettleSaleInstallmentPlanCommand : IRequest<ResponseDto>
     {
         public int? SaleId { get; set; }

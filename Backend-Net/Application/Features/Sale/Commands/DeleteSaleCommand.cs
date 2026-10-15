@@ -6,6 +6,7 @@ using Common.Exceptions;
 using Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.Sale.Commands
 {
@@ -14,6 +15,7 @@ namespace Application.Features.Sale.Commands
     /// A proforma has no payments by definition (the first one issues the invoice), but it may carry an installment plan
     /// awaiting its down payment - that plan is deleted first, through its own command.
     /// </summary>
+    [AuditAction(AuditActionEnum.DeleteSale)]
     public class DeleteSaleCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

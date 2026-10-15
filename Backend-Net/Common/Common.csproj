@@ -9,7 +9,7 @@
   <ItemGroup>
     <!-- Needed by Paggination.ToPagedAsync: CountAsync/ToListAsync live in EF Core's
          EntityFrameworkQueryableExtensions. -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.13" />
   </ItemGroup>
 
   <ItemGroup>

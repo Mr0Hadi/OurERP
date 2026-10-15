@@ -6,9 +6,12 @@ using Application.Common.Enums;
 using Common.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.Vehicle.Commands
 {
+    [AuditAction(AuditActionEnum.DeleteVehicle)]
     public class DeleteVehicleCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

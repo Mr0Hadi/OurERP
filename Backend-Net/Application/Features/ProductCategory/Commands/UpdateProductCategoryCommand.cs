@@ -6,9 +6,12 @@ using Common.Exceptions;
 using Common.Extensions;
 using FluentValidation;
 using MediatR;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.ProductCategory.Commands
 {
+    [AuditAction(AuditActionEnum.UpdateProductCategory)]
     public class UpdateProductCategoryCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

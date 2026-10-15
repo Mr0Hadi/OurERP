@@ -9,9 +9,11 @@ using Domain.Entities;
 using Domain.Enums;
 using FluentValidation;
 using MediatR;
+using Application.Common.Audit;
 
 namespace Application.Features.Supplier.Commands
 {
+    [AuditAction(AuditActionEnum.CreateSupplier)]
     public class CreateSupplierCommand : IRequest<ResponseDto>
     {
         public string FirstName { get; set; } = string.Empty;

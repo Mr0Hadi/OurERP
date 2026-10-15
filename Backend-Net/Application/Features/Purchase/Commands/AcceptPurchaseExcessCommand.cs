@@ -14,6 +14,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.Purchase.Commands
 {
@@ -28,6 +29,7 @@ namespace Application.Features.Purchase.Commands
     // Why not a return resolution (GOODS_RELEASE + MONEY_OUT): a release carries the units' own quarantine value, 0 for goods nobody
     // paid for, and a MONEY_OUT is purchase spend with no inventory value - the goods would be sold at a cost of 0 and profit
     // overstated by exactly what we paid. That path now means "free goods"; buying them goes through here.
+    [AuditAction(AuditActionEnum.AcceptPurchaseExcess)]
     public class AcceptPurchaseExcessCommand : IRequest<ResponseDto>
     {
         public int PurchaseId { get; set; }

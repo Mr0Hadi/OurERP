@@ -2,6 +2,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Domain.Enums;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -69,6 +70,45 @@ namespace WMS.Tests.Functional
             var list = GetProperty(data, "customerList");
 
             Assert.True(list.GetArrayLength() >= 1);
+        }
+
+        // Production wiring: AuditScope reaches the DbContext through AddDbContext and AuditBehavior names the command,
+        // so a write through the API is one event, recorded as the signed-in user.
+        [Fact]
+        public async Task CreateCustomer_ThroughTheApi_IsRecordedInTheAuditLog()
+        {
+            using var scope = _factory.Services.CreateScope();
+            var token = await LoginAsSeededAdmin(scope);
+
+            var client = _factory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            var createResponse = await client.PostAsJsonAsync("/api/Customer/CreateCustomer", new
+            {
+                FirstName = "ممیز",
+                LastName = "رضایی",
+                PhoneNumber = "09121234567",
+                Address = "تهران",
+                PostalCode = "1234567890",
+                BalanceType = 0,
+            });
+            Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
+
+            var listResponse = await client.GetAsync($"/api/Audit/GetAuditEventList?action={(int)AuditActionEnum.CreateCustomer}");
+            Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
+            using var listDoc = JsonDocument.Parse(await listResponse.Content.ReadAsStringAsync());
+            var newest = GetProperty(GetProperty(listDoc.RootElement, "data"), "auditEventList")[0];
+            Assert.NotEqual(JsonValueKind.Null, GetProperty(newest, "userId").ValueKind);
+            Assert.Equal("ایجاد مشتری", GetProperty(newest, "actionTitle").GetString());
+
+            var detailResponse = await client.GetAsync($"/api/Audit/GetAuditEventDetail?id={GetProperty(newest, "id").GetInt64()}");
+            Assert.Equal(HttpStatusCode.OK, detailResponse.StatusCode);
+            using var detailDoc = JsonDocument.Parse(await detailResponse.Content.ReadAsStringAsync());
+            var change = GetProperty(GetProperty(detailDoc.RootElement, "data"), "changes")[0];
+            Assert.Equal("Customer", GetProperty(change, "entityType").GetString());
+            var firstName = GetProperty(change, "fields").EnumerateArray().Single(f => GetProperty(f, "name").GetString() == "FirstName");
+            Assert.Equal("ممیز", GetProperty(firstName, "newValue").GetString());
+            Assert.Equal(JsonValueKind.Null, GetProperty(firstName, "oldValue").ValueKind);
         }
 
         // appsettings.json ships the ObjectStorage section with blank credentials, so the real DI

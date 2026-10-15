@@ -10,6 +10,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.SaleInstallment.Commands
 {
@@ -18,6 +19,7 @@ namespace Application.Features.SaleInstallment.Commands
     /// دست‌نخورده می‌مانند. PaymentDetailهای ثبت‌شده حذف نمی‌شوند - رکورد مالی واقعی‌اند - و
     /// به همین دلیل <c>Sale.PaidAmount</c> هم تغییر نمی‌کند.
     /// </summary>
+    [AuditAction(AuditActionEnum.DeleteSaleInstallmentPlan)]
     public class DeleteSaleInstallmentPlanCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

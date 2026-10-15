@@ -1,4 +1,5 @@
 ﻿using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Audit;
 using Application.Common.Contracts.Barcode;
 using Application.Common.Contracts.DataTransfer;
 using Application.Common.Contracts.Documents;
@@ -64,6 +65,7 @@ namespace Infrastructure.Ioc
 
             services.AddScoped<IOrgRoleService, OrgRoleService>();
             services.AddScoped<IPermissionService, PermissionService>();
+            services.AddScoped<IAuditScope, AuditScope>();
             services.AddScoped<IPurchaseReturnCalculationService, PurchaseReturnCalculationService>();
 
             services.AddScoped<ISaleReturnCalculationService, SaleReturnCalculationService>();

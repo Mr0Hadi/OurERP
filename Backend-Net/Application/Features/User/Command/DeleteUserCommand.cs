@@ -9,9 +9,12 @@ using Application.Common.Enums;
 using Common.Exceptions;
 using Common.Extensions;
 using MediatR;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.User.Command
 {
+    [AuditAction(AuditActionEnum.DeleteUser)]
     public class DeleteUserCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

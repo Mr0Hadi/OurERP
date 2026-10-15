@@ -12,9 +12,11 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.PurchaseReturn.Commands
 {
+    [AuditAction(AuditActionEnum.ReopenPurchaseReturn)]
     public class ReopenPurchaseReturnCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

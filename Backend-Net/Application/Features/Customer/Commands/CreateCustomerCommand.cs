@@ -9,9 +9,11 @@ using Domain.Entities;
 using Domain.Enums;
 using FluentValidation;
 using MediatR;
+using Application.Common.Audit;
 
 namespace Application.Features.Customer.Commands
 {
+    [AuditAction(AuditActionEnum.CreateCustomer)]
     public class CreateCustomerCommand : IRequest<ResponseDto>
     {
         public string FirstName { get; set; }

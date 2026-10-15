@@ -15,11 +15,13 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.PurchaseReturn.Commands
 {
     // Replaces RemovePurchaseReturnDecisionCommand. Only removable while untouched - the frontend's
     // exact rule: none of the resolution's goods effects may have any AppliedQuantity yet.
+    [AuditAction(AuditActionEnum.RemovePurchaseReturnResolution)]
     public class RemoveClaimResolutionCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

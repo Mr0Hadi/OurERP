@@ -4,9 +4,12 @@ using Application.Common.Dtos;
 using Application.Common.Enums;
 using Common.Exceptions;
 using MediatR;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.Supplier.Commands
 {
+    [AuditAction(AuditActionEnum.DeleteSupplier)]
     public class DeleteSupplierCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

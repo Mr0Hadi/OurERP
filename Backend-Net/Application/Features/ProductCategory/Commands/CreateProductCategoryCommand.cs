@@ -7,9 +7,12 @@ using Common.Extensions;
 using Domain.Entities;
 using FluentValidation;
 using MediatR;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.ProductCategory.Commands
 {
+    [AuditAction(AuditActionEnum.CreateProductCategory)]
     public class CreateProductCategoryCommand : IRequest<ResponseDto>
     {
         public string Name { get; set; }

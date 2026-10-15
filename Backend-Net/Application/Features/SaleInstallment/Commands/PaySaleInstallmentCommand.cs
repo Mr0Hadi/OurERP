@@ -10,6 +10,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.SaleInstallment.Commands
 {
@@ -18,6 +19,7 @@ namespace Application.Features.SaleInstallment.Commands
     /// <c>installment.Amount</c> برداشته می‌شود، نه از ورودی کاربر. پرداخت زودتر از سررسید و
     /// پرداخت خارج از ترتیب هر دو مجازند - سطر مشخصاً با <c>Id</c> هدف گرفته می‌شود.
     /// </summary>
+    [AuditAction(AuditActionEnum.PaySaleInstallment)]
     public class PaySaleInstallmentCommand : IRequest<ResponseDto>
     {
         public int SaleInstallmentId { get; set; }

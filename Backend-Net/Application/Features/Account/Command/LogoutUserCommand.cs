@@ -7,9 +7,12 @@ using FluentValidation;
 using MediatR;
 using Application.Common.Contracts.Token;
 using Common.Exceptions;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.Account.Command
 {
+    [AuditAction(AuditActionEnum.Logout)]
     public class LogoutUserCommand : IRequest<ResponseDto>
     {
     }

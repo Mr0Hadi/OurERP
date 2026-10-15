@@ -10,6 +10,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.Purchase.Commands
 {
@@ -20,6 +21,7 @@ namespace Application.Features.Purchase.Commands
     /// computed by receiving and never chosen; CANCELLED is final; nothing returns to PROFORMA.
     /// Payments stay on a cancelled purchase; money the supplier gives back is recorded with AddPurchasePayment (IN).
     /// </summary>
+    [AuditAction(AuditActionEnum.ChangePurchaseStatus)]
     public class ChangePurchaseStatusCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

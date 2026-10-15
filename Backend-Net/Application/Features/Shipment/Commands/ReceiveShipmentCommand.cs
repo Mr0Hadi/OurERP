@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using PurchaseCommands = Application.Features.Purchase.Commands;
 using PurchaseReturnCommands = Application.Features.PurchaseReturn.Commands;
 using SaleReturnCommands = Application.Features.SaleReturn.Commands;
+using Application.Common.Audit;
 
 namespace Application.Features.Shipment.Commands
 {
@@ -17,6 +18,7 @@ namespace Application.Features.Shipment.Commands
     // customer sends back, all in one transaction. Each part is the existing command, sent unchanged through MediatR (so its own
     // validator and rules apply); a failure in any part rolls every part back, so a retry of the whole receipt can never add the
     // first part's stock twice. Inbound only: every return round line must target a GOODS_IN effect.
+    [AuditAction(AuditActionEnum.ReceiveShipment)]
     public class ReceiveShipmentCommand : IRequest<ResponseDto>
     {
         public PurchaseCommands.ReceivePurchaseCommand? Purchase { get; set; }
