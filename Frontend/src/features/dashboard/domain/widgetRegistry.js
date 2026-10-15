@@ -163,8 +163,8 @@ export function defaultLayout(ctx) {
 
   const order = [
     "welcome",
-    "workQueues",
     "quickActions",
+    "workQueues",
     ...personal,
     "orgKpis",
     "orgSalesVsPurchase",
