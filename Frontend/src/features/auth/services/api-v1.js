@@ -40,8 +40,8 @@ export async function logout() {
  * یک `teamId` دارد؛ پس «آواتار»، «مجوزها» و فهرستِ «عضویت‌ها» هم اینجا
  * ساخته نمی‌شوند.
  */
-export async function getUserInfo() {
-  const { data } = await axiosInstance.get("/User/GetUserInfo");
+export async function getUserInfo({ signal } = {}) {
+  const { data } = await axiosInstance.get("/User/GetUserInfo", { signal });
   return data;
 }
 

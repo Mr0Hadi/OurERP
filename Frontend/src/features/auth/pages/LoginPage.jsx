@@ -57,7 +57,7 @@ export default function LoginPage() {
   });
 
   const { mutate: login, isPending } = useLoginMutation();
-  const { checking, verified } = useSessionCheck();
+  const { verified, cancel: cancelSessionCheck } = useSessionCheck();
   const from = searchParams.get("from") || ROUTES.DASHBOARD;
 
   // توکنِ ذخیره‌شده هنوز معتبر است (یا همین الان وارد شد): به مقصد.
@@ -66,6 +66,8 @@ export default function LoginPage() {
   }, [verified, from, navigate]);
 
   const onSubmit = (values) => {
+    // ورودِ دستی بر سنجشِ خودکار مقدم است؛ پاسخِ دیرِ آن نباید نشستِ تازه را خراب کند.
+    cancelSessionCheck();
     login(values, {
       onSuccess: () => toast.success("خوش آمدید 👋"),
       onError: (error) => {
@@ -195,12 +197,6 @@ export default function LoginPage() {
           <div
             className="relative rounded-3xl border border-border/60 bg-card/80 p-8 shadow-xl shadow-black/[0.03] backdrop-blur-sm"
           >
-            {/* تا سنجشِ توکنِ ذخیره‌شده تمام نشده، فرم قابل استفاده نیست. */}
-            {(checking || verified) && (
-              <div className="absolute inset-0 z-20 flex items-center justify-center rounded-3xl bg-card/80 backdrop-blur-sm">
-                <Loader2 className="size-8 animate-spin text-primary" />
-              </div>
-            )}
             <div className="mb-7 space-y-1.5 text-center">
               <h2 className="text-2xl font-bold text-foreground">
                 ورود به سامانه

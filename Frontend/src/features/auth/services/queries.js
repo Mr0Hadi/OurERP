@@ -19,6 +19,8 @@ export function useLoginMutation() {
 
 /**
  * سنجشِ توکنِ ذخیره‌شده روی صفحه‌ی ورود — تنها جایی که این کار انجام می‌شود.
+ * در پس‌زمینه است و فرم را قفل نمی‌کند: اگر کاربر زودتر وارد شود، `cancel`
+ * درخواست را لغو می‌کند.
  *
  * اگر در localStorage توکن هست ولی در این بارگذاری هنوز تأیید نشده،
  * `GetUserInfo` زده می‌شود (۴۰۱ از طریقِ interceptor یک تلاشِ رفرش می‌گیرد).
@@ -32,9 +34,10 @@ export function useSessionCheck() {
   const markSessionVerified = useAuthStore((s) => s.markSessionVerified);
   const logout = useAuthStore((s) => s.logout);
 
-  const { isSuccess, isError, error, isFetching } = useQuery({
+  const queryClient = useQueryClient();
+  const { isSuccess, isError, error } = useQuery({
     queryKey: authKeys.session(),
-    queryFn: getUserInfo,
+    queryFn: ({ signal }) => getUserInfo({ signal }),
     enabled: isAuthenticated && !verified,
     retry: false,
     staleTime: 10 * 60 * 1000,
@@ -47,8 +50,8 @@ export function useSessionCheck() {
   }, [verified, isAuthenticated, isSuccess, isError, error, markSessionVerified, logout]);
 
   return {
-    checking: isAuthenticated && !verified && (isFetching || isSuccess),
     verified,
+    cancel: () => queryClient.cancelQueries({ queryKey: authKeys.session() }),
   };
 }
 
