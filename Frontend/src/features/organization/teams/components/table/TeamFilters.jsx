@@ -26,13 +26,16 @@ const TeamFilters = () => {
       dateRowClassName="flex pt-3 border-t border-border"
       resetWrapperClassName="flex items-end lg:justify-end w-full"
       resetButtonClassName="w-full sm:w-auto px-4"
+      store={useTeamFilterStore}
+      primary={
+        <FilterSearchInput
+          placeholder="نام تیم..."
+          value={name}
+          onChange={handleName}
+        />
+      }
     >
       {/* `GetTeamList` فقط روی نامِ تیم جست‌وجو می‌کند. */}
-      <FilterSearchInput
-        placeholder="نام تیم..."
-        value={name}
-        onChange={handleName}
-      />
 
       <FilterSelect
         label="واحد"

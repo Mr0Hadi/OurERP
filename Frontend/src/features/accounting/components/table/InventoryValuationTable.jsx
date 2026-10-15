@@ -10,6 +10,7 @@ import Amount from "../Amount";
 const columns = [
   {
     id: "name",
+    meta: { mobile: "title" },
     accessorKey: "name",
     header: "کالا",
     cell: ({ row }) => {
@@ -36,6 +37,7 @@ const columns = [
   },
   {
     id: "code",
+    meta: { mobile: "subtitle" },
     accessorKey: "code",
     header: "کد",
     cell: (info) => (
@@ -93,6 +95,7 @@ const columns = [
   },
   {
     id: "totalValue",
+    meta: { mobile: "highlight" },
     accessorKey: "totalValue",
     header: "ارزش کل",
     cell: (info) => <Amount value={info.getValue()} strong />,

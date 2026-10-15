@@ -61,13 +61,15 @@ const SaleFilters = ({ customers = [], isCustomersLoading = false }) => {
           />
         </>
       }
+      store={useSaleFilterStore}
+      primary={
+        <FilterSearchInput
+          placeholder="شماره فاکتور، توضیحات..."
+          value={invoiceNumber}
+          onChange={handleGlobalSearch}
+        />
+      }
     >
-      <FilterSearchInput
-        placeholder="شماره فاکتور، توضیحات..."
-        value={invoiceNumber}
-        onChange={handleGlobalSearch}
-      />
-
       <EntitySelect
         label="مشتری"
         placeholder="انتخاب مشتری..."

@@ -21,12 +21,14 @@ function DirectedAmount({ entry }) {
 const columns = [
   {
     id: "occurredAt",
+    meta: { mobile: "subtitle" },
     accessorKey: "occurredAt",
     header: "تاریخ",
     cell: (info) => <DateCell value={info.getValue()} />,
   },
   {
     id: "partyName",
+    meta: { mobile: "title" },
     accessorKey: "partyName",
     header: "طرف حساب",
     cell: ({ row }) => (
@@ -77,6 +79,7 @@ const columns = [
   },
   {
     id: "amount",
+    meta: { mobile: "highlight" },
     // مرتب‌سازی سمتِ سرور است؛ accessor فقط برای اینکه TanStack ستون را قابلِ مرتب‌سازی بداند.
     accessorFn: (entry) => entry.debit || entry.credit,
     header: "مبلغ",
@@ -84,6 +87,7 @@ const columns = [
   },
   {
     id: "id",
+    meta: { mobile: "hidden" },
     accessorKey: "id",
     header: "ردیف",
     enableSorting: false,

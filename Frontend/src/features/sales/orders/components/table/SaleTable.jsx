@@ -13,6 +13,7 @@ import { formatNumber } from "@/shared/lib/numberFormat";
 const COLUMNS = [
   {
     accessorKey: "invoiceNumber",
+    meta: { mobile: "subtitle" },
     header: "شماره فاکتور",
     cell: (info) => (
       <span className="font-mono text-xs text-muted-foreground">
@@ -22,11 +23,13 @@ const COLUMNS = [
   },
   {
     accessorKey: "customerName",
+    meta: { mobile: "title" },
     header: "مشتری",
     cell: (info) => <span className="font-light">{info.getValue()}</span>,
   },
   {
     accessorKey: "invoiceDate",
+    meta: { mobile: "subtitle" },
     header: "تاریخ فاکتور",
     cell: (info) => (
       <span className="tabular-nums text-sm">
@@ -36,6 +39,7 @@ const COLUMNS = [
   },
   {
     accessorKey: "status",
+    meta: { mobile: "badge" },
     header: "وضعیت",
     // وضعیت فقط مرحله‌ی ارسال است؛ مرجوعی سندِ جداست و کنارش نشان داده
     // می‌شود (`returnCount`، و `hasOpenReturn` برای مرجوعیِ هنوز باز).
@@ -82,6 +86,7 @@ const COLUMNS = [
   },
   {
     accessorKey: "totalAmount",
+    meta: { mobile: "highlight" },
     header: "مبلغ پرداخت (ریال)",
     cell: ({ row }) => (
       <PaymentProgress

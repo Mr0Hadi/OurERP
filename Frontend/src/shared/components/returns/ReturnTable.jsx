@@ -25,15 +25,17 @@ const mono = (info) => <span className="font-mono text-xs text-muted-foreground"
 /** ستون‌های فهرستِ مرجوعی برای یک سمت. */
 function columnsFor({ side, invoice, party, problemLabels, problemStyles, detailRoute }) {
   return [
-    { accessorKey: "returnNumber", header: "شماره مرجوعی", cell: mono },
+    { accessorKey: "returnNumber", meta: { mobile: "subtitle" }, header: "شماره مرجوعی", cell: mono },
     { accessorKey: invoice.key, header: invoice.header, cell: mono },
     {
       accessorKey: party.key,
+      meta: { mobile: "title" },
       header: party.header,
       cell: (info) => <span className="font-light">{info.getValue()}</span>,
     },
     {
       accessorKey: "returnDate",
+      meta: { mobile: "subtitle" },
       header: "تاریخ",
       cell: (info) => <span className="text-sm tabular-nums">{gregorianToPersian(info.getValue())}</span>,
     },
@@ -68,11 +70,13 @@ function columnsFor({ side, invoice, party, problemLabels, problemStyles, detail
     },
     {
       accessorKey: "status",
+      meta: { mobile: "badge" },
       header: "وضعیت",
       cell: (info) => <ReturnStatusBadge status={info.getValue()} side={side} />,
     },
     {
       accessorKey: "totalAmount",
+      meta: { mobile: "highlight" },
       header: "مبلغ ادعا (ریال)",
       cell: (info) => <span className="text-sm tabular-nums">{formatNumber(info.getValue())}</span>,
     },

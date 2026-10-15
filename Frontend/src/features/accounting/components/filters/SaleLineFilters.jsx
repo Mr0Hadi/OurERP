@@ -32,12 +32,15 @@ export default function SaleLineFilters() {
           />
         </div>
       }
+      store={useSaleLineFilterStore}
+      primary={
+        <FilterSearchInput
+          placeholder="فاکتور، مشتری، نام یا کدِ کالا..."
+          value={state.search}
+          onChange={(event) => state.setSearch(event.target.value)}
+        />
+      }
     >
-      <FilterSearchInput
-        placeholder="فاکتور، مشتری، نام یا کدِ کالا..."
-        value={state.search}
-        onChange={(event) => state.setSearch(event.target.value)}
-      />
       <PartyFilterSelect
         partyType={AccountingPartyTypeEnum.CUSTOMER}
         value={state.customerId}

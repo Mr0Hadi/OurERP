@@ -19,11 +19,13 @@ function columnsFor({ today, onPay }) {
   return [
     {
       accessorKey: "customerName",
+      meta: { mobile: "title" },
       header: "مشتری",
       cell: (info) => <span className="font-light">{info.getValue()}</span>,
     },
     {
       accessorKey: "invoiceNumber",
+      meta: { mobile: "subtitle" },
       header: "فاکتور",
       cell: ({ row }) => (
         <Link
@@ -46,11 +48,13 @@ function columnsFor({ today, onPay }) {
     },
     {
       accessorKey: "amount",
+      meta: { mobile: "highlight" },
       header: "مبلغ (ریال)",
       cell: (info) => <span className="font-medium tabular-nums">{formatNumber(info.getValue())}</span>,
     },
     {
       accessorKey: "status",
+      meta: { mobile: "badge" },
       header: "وضعیت",
       cell: ({ row }) => <InstallmentStatusBadge installment={row.original} today={today} />,
     },

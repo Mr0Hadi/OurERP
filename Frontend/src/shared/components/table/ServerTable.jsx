@@ -50,6 +50,7 @@ export default function ServerTable({
         data={transform ? transform(items) : items}
         isLoading={isLoading}
         totalPages={singlePage ? 1 : totalPages}
+        totalCount={singlePage ? items.length : data?.total}
         currentPage={currentPage}
         pageSize={pagination.pageSize}
         onPaginationChange={setPagination}

@@ -48,12 +48,14 @@ function ReferenceCell({ payment }) {
 const columns = [
   {
     id: "paidAt",
+    meta: { mobile: "subtitle" },
     accessorKey: "paidAt",
     header: "تاریخ پرداخت",
     cell: (info) => <DateCell value={info.getValue()} />,
   },
   {
     id: "amount",
+    meta: { mobile: "highlight" },
     accessorKey: "amount",
     header: "مبلغ",
     cell: ({ row }) => <SignedAmount payment={row.original} />,
@@ -78,6 +80,7 @@ const columns = [
   },
   {
     id: "partyName",
+    meta: { mobile: "title" },
     accessorKey: "partyName",
     header: "طرف حساب",
     cell: ({ row }) => (

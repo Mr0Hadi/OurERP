@@ -61,13 +61,15 @@ const PurchaseFilters = ({ suppliers = [], isSuppliersLoading = false }) => {
           />
         </>
       }
+      store={usePurchaseFilterStore}
+      primary={
+        <FilterSearchInput
+          placeholder="شماره فاکتور..."
+          value={invoiceNumber}
+          onChange={handleGlobalSearch}
+        />
+      }
     >
-      <FilterSearchInput
-        placeholder="شماره فاکتور..."
-        value={invoiceNumber}
-        onChange={handleGlobalSearch}
-      />
-
       <EntitySelect
         label="تامین‌کننده"
         placeholder="انتخاب تامین‌کننده..."

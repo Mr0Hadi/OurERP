@@ -14,6 +14,7 @@ function StockBadge({ stock, threshold = 10 }) {
 const COLUMNS = [
   {
     accessorKey: "code",
+    meta: { mobile: "subtitle" },
     header: "کد کالا",
     cell: (info) => (
       <span className="font-mono text-xs text-muted-foreground">
@@ -23,6 +24,7 @@ const COLUMNS = [
   },
   {
     accessorKey: "name",
+    meta: { mobile: "title" },
     header: "نام قطعه",
     cell: (info) => (
       <span className="inline-flex flex-wrap items-center justify-center gap-1.5">
@@ -39,6 +41,7 @@ const COLUMNS = [
   { accessorKey: "categoryName", header: "دسته‌بندی" },
   {
     accessorKey: "retailPrice",
+    meta: { mobile: "highlight" },
     header: "قیمت (ریال)",
     cell: (info) => (
 <span className="tabular-nums">{formatNumber(info.getValue())}</span>
@@ -46,6 +49,7 @@ const COLUMNS = [
   },
   {
     accessorKey: "stock",
+    meta: { mobile: "badge" },
     header: "موجودی",
     cell: (info) => (
       <span className="inline-flex flex-col items-center gap-0.5">

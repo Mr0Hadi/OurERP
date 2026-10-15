@@ -42,13 +42,15 @@ export default function QueueFilters({ useStore, party, statusOptions, searchPla
           <FilterDateInput label="تا تاریخ" value={store.toDate} onChange={store.setToDate} />
         </>
       }
+      store={useStore}
+      primary={
+        <FilterSearchInput
+          placeholder={searchPlaceholder}
+          value={store.invoiceNumber}
+          onChange={(event) => store.setInvoiceNumber(event.target.value)}
+        />
+      }
     >
-      <FilterSearchInput
-        placeholder={searchPlaceholder}
-        value={store.invoiceNumber}
-        onChange={(event) => store.setInvoiceNumber(event.target.value)}
-      />
-
       <EntitySelect
         label={party.label}
         placeholder={`انتخاب ${party.label}...`}

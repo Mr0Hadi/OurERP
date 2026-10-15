@@ -42,6 +42,7 @@ function columnsFor(context) {
   return [
     {
       id: "title",
+      meta: { mobile: "title" },
       accessorKey: "title",
       header: "عنوان",
       cell: ({ row }) => {
@@ -86,6 +87,7 @@ function columnsFor(context) {
     },
     {
       id: "netAmount",
+      meta: { mobile: "highlight" },
       accessorKey: "netAmount",
       header: "خالص",
       cell: ({ row }) => {

@@ -59,12 +59,15 @@ export default function InvoiceJournalFilters({ config, useStore }) {
             </div>
           </>
         }
+        store={useStore}
+        primary={
+          <FilterSearchInput
+            placeholder={`شماره فاکتور یا نامِ ${config.partyLabel}...`}
+            value={state.search}
+            onChange={(event) => state.setSearch(event.target.value)}
+          />
+        }
       >
-        <FilterSearchInput
-          placeholder={`شماره فاکتور یا نامِ ${config.partyLabel}...`}
-          value={state.search}
-          onChange={(event) => state.setSearch(event.target.value)}
-        />
         <PartyFilterSelect partyType={partyType} value={state[config.partyIdKey]} onSelect={setParty} />
         <UserFilterSelect label={config.userLabel} value={state[config.userIdKey]} onSelect={setUser} />
         <FilterSelect

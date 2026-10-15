@@ -64,12 +64,15 @@ export default function PaymentJournalFilters() {
             </div>
           </>
         }
+        store={usePaymentJournalFilterStore}
+        primary={
+          <FilterSearchInput
+            placeholder="فاکتور، نام، شماره چک یا پیگیری..."
+            value={state.search}
+            onChange={(event) => state.setSearch(event.target.value)}
+          />
+        }
       >
-        <FilterSearchInput
-          placeholder="فاکتور، نام، شماره چک یا پیگیری..."
-          value={state.search}
-          onChange={(event) => state.setSearch(event.target.value)}
-        />
         <FilterSelect label="سند" value={side} onChange={state.setDocumentSide} options={SIDE_OPTIONS} numeric />
         {side === DocumentSideEnum.SALE || side === DocumentSideEnum.PURCHASE ? (
           <PartyFilterSelect

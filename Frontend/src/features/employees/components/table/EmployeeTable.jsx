@@ -25,6 +25,7 @@ export default function EmployeeTable({
     () => [
       {
         accessorKey: "personelCode",
+        meta: { mobile: "subtitle" },
         header: "کد پرسنلی",
         cell: (info) => (
           <span className="font-mono text-sm text-muted-foreground">
@@ -34,6 +35,7 @@ export default function EmployeeTable({
       },
       {
         id: "fullName",
+        meta: { mobile: "title" },
         accessorFn: (row) => `${row.firstName} ${row.lastName}`.trim(),
         header: "نام و نام‌خانوادگی",
         cell: (info) => <span className="font-medium">{info.getValue()}</span>,
@@ -84,6 +86,7 @@ export default function EmployeeTable({
       },
       {
         accessorKey: "isActive",
+        meta: { mobile: "badge" },
         header: "وضعیت",
         cell: (info) => <EmployeeStatusBadge isActive={info.getValue()} />,
       },

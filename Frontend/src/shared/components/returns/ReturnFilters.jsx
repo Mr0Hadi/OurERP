@@ -27,13 +27,15 @@ export default function ReturnFilters({ useFilterStore, party, side, problemLabe
           <FilterDateInput label="تا تاریخ" value={filters.toDate} onChange={filters.setToDate} />
         </>
       }
+      store={useFilterStore}
+      primary={
+        <FilterSearchInput
+          placeholder={`شماره مرجوعی، فاکتور، ${party.label}...`}
+          value={filters.search}
+          onChange={(e) => filters.setSearch(e.target.value)}
+        />
+      }
     >
-      <FilterSearchInput
-        placeholder={`شماره مرجوعی، فاکتور، ${party.label}...`}
-        value={filters.search}
-        onChange={(e) => filters.setSearch(e.target.value)}
-      />
-
       <EntitySelect
         label={party.label}
         placeholder={`انتخاب ${party.label}...`}

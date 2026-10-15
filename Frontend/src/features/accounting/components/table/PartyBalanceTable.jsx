@@ -26,6 +26,7 @@ function ledgerLinkOf(row) {
 const columns = [
   {
     id: "name",
+    meta: { mobile: "title" },
     accessorKey: "name",
     header: "طرف حساب",
     cell: ({ row }) => {
@@ -60,6 +61,7 @@ const columns = [
   },
   {
     id: "balance",
+    meta: { mobile: "highlight" },
     accessorKey: "balance",
     header: "مانده",
     cell: ({ row }) => {

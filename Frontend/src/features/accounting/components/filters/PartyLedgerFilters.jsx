@@ -66,12 +66,15 @@ export default function PartyLedgerFilters() {
           </div>
         </>
       }
+      store={usePartyLedgerFilterStore}
+      primary={
+        <FilterSearchInput
+          placeholder="شرح، شماره فاکتور یا نام..."
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      }
     >
-      <FilterSearchInput
-        placeholder="شرح، شماره فاکتور یا نام..."
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-      />
       <FilterSelect label="نوع طرف" value={partyType} onChange={setPartyType} options={PARTY_TYPE_OPTIONS} numeric />
       {partyType ? (
         <PartyFilterSelect

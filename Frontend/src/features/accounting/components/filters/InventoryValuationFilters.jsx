@@ -13,12 +13,15 @@ export default function InventoryValuationFilters() {
       firstRowClassName="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
       dateRowClassName="flex justify-end border-t border-border pt-3"
       resetWrapperClassName="w-full sm:w-auto"
+      store={useInventoryValuationFilterStore}
+      primary={
+        <FilterSearchInput
+          placeholder="نام یا کدِ کالا..."
+          value={state.search}
+          onChange={(event) => state.setSearch(event.target.value)}
+        />
+      }
     >
-      <FilterSearchInput
-        placeholder="نام یا کدِ کالا..."
-        value={state.search}
-        onChange={(event) => state.setSearch(event.target.value)}
-      />
       <CategoryFilterSelect value={state.productCategoryId} onSelect={state.setProductCategoryId} />
       <FilterSwitch label="فقط کالاهای دارای ارزش" checked={state.onlyWithValue} onChange={state.setOnlyWithValue} />
     </FilterPanel>

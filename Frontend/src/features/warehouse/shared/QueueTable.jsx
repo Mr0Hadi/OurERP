@@ -29,11 +29,13 @@ export default function QueueTable({ party, StatusBadge, action, emptyMessage, .
   const columns = [
     {
       accessorKey: "invoiceNumber",
+      meta: { mobile: "subtitle" },
       header: "شماره فاکتور",
       cell: (info) => <QueueNumberCell row={info.row.original} />,
     },
     {
       accessorKey: party.key,
+      meta: { mobile: "title" },
       header: party.header,
       cell: (info) => (
         <span className="font-light">
@@ -43,6 +45,7 @@ export default function QueueTable({ party, StatusBadge, action, emptyMessage, .
     },
     {
       accessorKey: "invoiceDate",
+      meta: { mobile: "subtitle" },
       header: "تاریخ",
       cell: (info) => (
         <span className="tabular-nums text-sm">
@@ -54,6 +57,7 @@ export default function QueueTable({ party, StatusBadge, action, emptyMessage, .
     },
     {
       accessorKey: "status",
+      meta: { mobile: "badge" },
       header: "وضعیت",
       cell: (info) =>
         isReturnRow(info.row.original) ? (

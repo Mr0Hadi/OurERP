@@ -35,6 +35,7 @@ export default function InstallmentFilters({ customers = [], isCustomersLoading 
             <FilterDateInput label="سررسید تا" value={toDueDate} onChange={setToDueDate} />
           </>
         }
+        store={useInstallmentFilterStore}
       >
         <EntitySelect
           label="مشتری"

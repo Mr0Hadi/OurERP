@@ -36,7 +36,7 @@ export function createFilterStore({
   // نه بخشی از فیلتر.
   const toFirstPage = (state) => ({ ...state.pagination, pageIndex: 0 });
 
-  return create(
+  const useStore = create(
     devtools((set) => {
       const applyFilters = (values) =>
         set((state) => ({ ...values, pagination: toFirstPage(state) }));
@@ -71,4 +71,8 @@ export function createFilterStore({
       };
     }),
   );
+
+  // مقادیرِ پیش‌فرض برای شمارشِ «فیلترهای فعال» (نشانِ دکمه‌ی فیلتر در موبایل).
+  useStore.filterDefaults = filters;
+  return useStore;
 }

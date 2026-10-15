@@ -16,6 +16,8 @@ import {
 import SortIcon from "./SortIcon";
 import TableLoadingSkeleton from "./TableLoadingSkeleton";
 import DataTablePagination from "./DataTablePagination";
+import MobileRowCards from "./MobileRowCards";
+import { useIsMobile } from "@/shared/hooks/useIsMobile";
 
 /**
  * پوسته‌ی مشترک جدول‌های سرور-ساید (صفحه‌بندی و مرتب‌سازی دستی).
@@ -28,6 +30,7 @@ import DataTablePagination from "./DataTablePagination";
  * @param emptyState   جایگزینِ کاملِ جدول وقتی ردیفی نیست.
  * @param rowClassName `(row) => string` برای رنگ‌آمیزی شرطی ردیف.
  * @param getRowKey    `(row) => key`، وقتی کلیدِ ترکیبی لازم است.
+ * @param totalCount   تعدادِ کلِ نتایج (کنارِ صفحه‌بندی نشان داده می‌شود).
  */
 export default function DataTable({
   data,
@@ -44,7 +47,9 @@ export default function DataTable({
   emptyState,
   rowClassName,
   getRowKey,
+  totalCount,
 }) {
+  const isMobile = useIsMobile();
   const sortingState = useMemo(() => (sorting ? [sorting] : []), [sorting]);
 
   const handleSortingChange = useCallback(
@@ -77,19 +82,42 @@ export default function DataTable({
     pageCount: totalPages,
   });
 
-  if (isLoading) return <TableLoadingSkeleton />;
+  if (isLoading) return <TableLoadingSkeleton cards={isMobile} />;
 
   const rows = table.getRowModel().rows;
 
   // بعضی صفحه‌ها به‌جای ردیف خالی، یک بلوک کامل جایگزین جدول نشان می‌دهند.
   if (rows.length === 0 && emptyState) return emptyState;
 
+  if (isMobile) {
+    return (
+      <div className="space-y-3">
+        <MobileRowCards
+          table={table}
+          rows={rows}
+          emptyMessage={emptyMessage}
+          rowClassName={rowClassName}
+          getRowKey={getRowKey}
+          totalCount={totalCount}
+        />
+        <DataTablePagination
+          totalPages={totalPages}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          onPaginationChange={onPaginationChange}
+          totalCount={totalCount}
+          compact
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
-      <div className="h-[calc(90vh-320px)] overflow-auto custom-scroll">
-        <div className="rounded-md border overflow-x-auto">
+      {/* سرتیتر هنگامِ اسکرولِ داخلیِ جدول ثابت می‌ماند. */}
+      <div className="max-h-[calc(100dvh-300px)] min-h-64 overflow-auto rounded-lg border custom-scroll [&>[data-slot=table-container]]:overflow-visible">
           <Table>
-            <TableHeader>
+            <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur supports-backdrop-filter:bg-muted/60">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => {
@@ -97,7 +125,7 @@ export default function DataTable({
                     const sortDir = header.column.getIsSorted();
 
                     return (
-                      <TableHead key={header.id} className="text-center">
+                      <TableHead key={header.id} className="h-11 text-center text-xs font-semibold text-muted-foreground">
                         {header.isPlaceholder ? null : (
                           <div
                             className={
@@ -139,12 +167,12 @@ export default function DataTable({
                 rows.map((row) => (
                   <TableRow
                     key={getRowKey ? getRowKey(row) : row.id}
-                    className={`hover:bg-muted/50 transition-colors ${
+                    className={`even:bg-muted/20 hover:bg-muted/50 transition-colors ${
                       rowClassName?.(row) ?? ""
                     }`}
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="text-center">
+                      <TableCell key={cell.id} className="py-2.5 text-center">
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext(),
@@ -165,7 +193,6 @@ export default function DataTable({
               )}
             </TableBody>
           </Table>
-        </div>
       </div>
 
       <DataTablePagination
@@ -173,6 +200,7 @@ export default function DataTable({
         currentPage={currentPage}
         pageSize={pageSize}
         onPaginationChange={onPaginationChange}
+        totalCount={totalCount}
       />
     </div>
   );

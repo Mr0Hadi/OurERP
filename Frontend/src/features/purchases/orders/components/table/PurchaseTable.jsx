@@ -10,6 +10,7 @@ import { detailsColumn } from "@/shared/components/table/columns";
 const COLUMNS = [
   {
     accessorKey: "invoiceNumber",
+    meta: { mobile: "subtitle" },
     header: "شماره فاکتور",
     cell: (info) => (
       <span className="font-mono text-xs text-muted-foreground">
@@ -19,11 +20,13 @@ const COLUMNS = [
   },
   {
     accessorKey: "supplierName",
+    meta: { mobile: "title" },
     header: "تامین‌کننده",
     cell: (info) => <span className="font-light">{info.getValue()}</span>,
   },
   {
     accessorKey: "invoiceDate",
+    meta: { mobile: "subtitle" },
     header: "تاریخ فاکتور",
     cell: (info) => (
       <span className="tabular-nums text-sm">
@@ -33,6 +36,7 @@ const COLUMNS = [
   },
   {
     accessorKey: "status",
+    meta: { mobile: "badge" },
     header: "وضعیت",
     cell: (info) => (
       <PurchaseStatusBadge status={info.getValue()} />
@@ -47,6 +51,7 @@ const COLUMNS = [
   },
   {
     accessorKey: "totalAmount",
+    meta: { mobile: "highlight" },
     header: "مبلغ پرداخت (ریال)",
     cell: ({ row }) => (
       <PaymentProgress

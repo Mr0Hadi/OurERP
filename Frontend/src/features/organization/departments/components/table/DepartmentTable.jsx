@@ -23,6 +23,7 @@ export default function DepartmentTable({
     () => [
       {
         accessorKey: "name",
+        meta: { mobile: "title" },
         header: "نام واحد",
         cell: (info) => <span className="font-medium">{info.getValue()}</span>,
       },

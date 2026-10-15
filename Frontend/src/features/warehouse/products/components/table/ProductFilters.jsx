@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/shared/components/ui/button";
+import { ResponsiveFilters } from "@/shared/components/filters/FilterPanel";
 import { Label } from "@/shared/components/ui/label";
 import { PriceInput } from "@/shared/components/ui/price-input";
 import EntitySelect from "@/shared/components/filters/EntitySelect";
@@ -82,14 +83,18 @@ export default function ProductFilters() {
     });
 
   return (
-    <div className="p-3 bg-card border border-border rounded-xl shadow-sm space-y-3">
-      <ProductCodeSearchField
-        value={code}
-        onChange={setCode}
-        onScan={handleScan}
-        isBusy={scanProduct.isPending}
-      />
-
+    <ResponsiveFilters
+      store={useProductFilterStore}
+      onReset={resetFilters}
+      primary={
+        <ProductCodeSearchField
+          value={code}
+          onChange={setCode}
+          onScan={handleScan}
+          isBusy={scanProduct.isPending}
+        />
+      }
+    >
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
         <FilterSearchInput
           placeholder="نام فارسی یا انگلیسی کالا..."
@@ -148,12 +153,13 @@ export default function ProductFilters() {
           onChange={(next) => setPriceRange(fromPrice, next ?? "")}
           placeholder="تا"
         />
-        <div className="flex items-end xs:col-span-2 lg:col-span-1 lg:justify-end">
+        {/* در موبایل ریست در فوترِ شیتِ فیلتر است. */}
+        <div className="hidden md:flex items-end xs:col-span-2 lg:col-span-1 lg:justify-end">
           <Button type="button" variant="outline" onClick={resetFilters} className="w-full px-4">
             حذف همه فیلترها
           </Button>
         </div>
       </div>
-    </div>
+    </ResponsiveFilters>
   );
 }

@@ -62,12 +62,15 @@ export default function PartyBalanceFilters() {
           </div>
         </>
       }
+      store={usePartyBalanceFilterStore}
+      primary={
+        <FilterSearchInput
+          placeholder="نام یا تلفن..."
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      }
     >
-      <FilterSearchInput
-        placeholder="نام یا تلفن..."
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-      />
       <FilterSelect label="نوع" value={partyType} onChange={setPartyType} options={PARTY_TYPE_OPTIONS} numeric />
       <FilterSelect label="مانده" value={balanceState} onChange={setBalanceState} options={BALANCE_STATE_OPTIONS} numeric />
       <FilterSwitch label="فقط سررسیدگذشته‌ها" checked={overdueOnly} onChange={setOverdueOnly} />

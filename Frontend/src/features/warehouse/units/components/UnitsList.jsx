@@ -286,7 +286,7 @@ export default function UnitsList({
 
       <div className="space-y-3 @3xl/units:hidden">
         {isLoading ? (
-          <TableLoadingSkeleton />
+          <TableLoadingSkeleton cards />
         ) : units.length === 0 ? (
           empty
         ) : (
@@ -317,6 +317,7 @@ export default function UnitsList({
               currentPage={currentPage}
               pageSize={pageSize}
               onPaginationChange={onPaginationChange}
+              compact
             />
           </>
         )}

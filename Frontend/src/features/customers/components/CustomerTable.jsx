@@ -8,6 +8,7 @@ import { partyBalanceOf } from "@/features/partyAccount/domain/partyBalance";
 const COLUMNS = [
   {
     accessorKey: "id",
+    meta: { mobile: "subtitle" },
     header: "کد مشتری",
     cell: (info) => (
       <span className="font-mono text-lg text-muted-foreground">{info.getValue()}</span>
@@ -15,6 +16,7 @@ const COLUMNS = [
   },
   {
     id: "fullName",
+    meta: { mobile: "title" },
     accessorFn: (row) => `${row.firstName} ${row.lastName}`,
     header: "نام و نام‌خانوادگی",
     cell: (info) => <span className="font-light text-lg">{info.getValue()}</span>,
@@ -23,6 +25,7 @@ const COLUMNS = [
     // مانده‌ی دفتر حساب اشخاص (یا مانده‌ی دستی، اگر سرور هنوز دفتر ندارد).
     // سرور روی آن مرتب نمی‌کند.
     id: "ledgerBalance",
+    meta: { mobile: "highlight" },
     accessorFn: partyBalanceOf,
     header: "مانده حساب",
     enableSorting: false,

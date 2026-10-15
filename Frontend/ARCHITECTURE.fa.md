@@ -38,20 +38,20 @@
 ## 1. نمای کلی
 
 OurERP یک **SPA** (تک‌صفحه‌ای) برای مدیریتِ انبار و فروشگاهِ لوازم یدکی خودرو است
-(در manifest: «سامانه انبارداری و مدیریت لوازم یدکی خودرو پاسارگاد موتور پارت»).
+(در manifest: «سامانه انبارداری و مدیریت لوازم یدکی خودرو OurERP»).
 کاملاً **فارسی، راست‌به‌چپ (RTL)** و تاریخ **شمسی** است و به‌صورت **PWA** نصب می‌شود.
 
 دامنه‌ی کسب‌وکار:
 
-| حوزه | چه می‌کند |
-|---|---|
-| خرید / فروش | پیش‌فاکتور ← فاکتور، پرداختِ ترکیبی (نقد/حواله/چک/کارتخوان/اقساط)، پیوست، لغو |
-| انبار | کالا، دسته‌بندی، **دانه‌ی فیزیکی** (هر عدد کالا برچسب/بارکد دارد)، صف دریافت و ارسال، قرنطینه، اسقاط، چاپ برچسب |
-| مرجوعی | مرجوعی خرید و فروش با «ادعا ← تصمیم ← اثر» (کالا/پول وارد یا خارج) |
-| طرف‌حساب | مشتری، تامین‌کننده، دفتر حساب و صورت‌حساب |
-| سازمان | کارمند، واحد، تیم، نقش سازمانی |
-| دسترسی | مجوز هر کارمند + الگوی پیشنهادیِ هر واحد |
-| داشبورد/گزارش | ویجت‌های شخصی‌سازی‌شده بر اساس نقش، گزارش فعالیت و مالی |
+| حوزه          | چه می‌کند                                                                                                       |
+| ------------- | --------------------------------------------------------------------------------------------------------------- |
+| خرید / فروش   | پیش‌فاکتور ← فاکتور، پرداختِ ترکیبی (نقد/حواله/چک/کارتخوان/اقساط)، پیوست، لغو                                   |
+| انبار         | کالا، دسته‌بندی، **دانه‌ی فیزیکی** (هر عدد کالا برچسب/بارکد دارد)، صف دریافت و ارسال، قرنطینه، اسقاط، چاپ برچسب |
+| مرجوعی        | مرجوعی خرید و فروش با «ادعا ← تصمیم ← اثر» (کالا/پول وارد یا خارج)                                              |
+| طرف‌حساب      | مشتری، تامین‌کننده، دفتر حساب و صورت‌حساب                                                                       |
+| سازمان        | کارمند، واحد، تیم، نقش سازمانی                                                                                  |
+| دسترسی        | مجوز هر کارمند + الگوی پیشنهادیِ هر واحد                                                                        |
+| داشبورد/گزارش | ویجت‌های شخصی‌سازی‌شده بر اساس نقش، گزارش فعالیت و مالی                                                         |
 
 اندازه‌ی کد (تقریبی): ۶۲۴ فایل زیر `src`، حدود ۶۵ هزار خط JS/JSX، حدود ۵۴۰ کامیت در تاریخچه.
 
@@ -71,28 +71,28 @@ OurERP یک **SPA** (تک‌صفحه‌ای) برای مدیریتِ انبار 
 
 ## 2. پشته‌ی فناوری
 
-| لایه | انتخاب | نکته |
-|---|---|---|
-| UI | **React 19** + **React Compiler** (`babel-plugin-react-compiler`) | بدون `useMemo/useCallback` دستی در بیشترِ جاها؛ کامپایلر مدیریت می‌کند |
-| Build | **Vite 8** (Rolldown) + `@vitejs/plugin-react` | `advancedChunks` برای vendorها |
-| زبان | **JavaScript (JSX)** | بدون TypeScript؛ `jsconfig.json` فقط برای alias `@/` |
-| روتر | **react-router-dom 7** (`createBrowserRouter`، data router) | `loader`، `handle`، `useBlocker`، `useMatches` |
-| داده‌ی سرور | **TanStack Query 5** | کش، invalidation، retry |
-| state کلاینت | **Zustand 5** | `persist` و `devtools` |
-| HTTP | **axios** | اینترسپتور برای توکن، refresh، باز کردن envelope |
-| فرم | **react-hook-form** (فرم‌های ساده) + **Zustand** (فرم‌های سند) | بخش ۱۳ |
-| جدول | **@tanstack/react-table 8** + `DataTable` اختصاصی | سرور-ساید |
-| UI پایه | **shadcn/ui** روی `radix-ui` و `@base-ui/react` | `components/ui/*` تولید CLI است |
-| استایل | **Tailwind CSS 4** (`@tailwindcss/vite`)، `tw-animate-css`، `tailwind-merge`، `cva` | توکن‌ها در `index.css` |
-| آیکن | `lucide-react` | |
-| تاریخ | `react-multi-date-picker` + `react-date-object` (تقویم شمسی) | |
-| نقشه | `leaflet` + `react-leaflet` (lazy) | OSM + Nominatim |
-| بارکد | `barcode-detector`, `@zxing/library`, `zxing-wasm`, `react-barcode` | |
-| لیست بلند | `react-virtuoso` | |
-| Toast | `react-hot-toast` | |
-| PWA | `vite-plugin-pwa` + `workbox-window` | `registerType: "prompt"` |
-| فونت | Vazirmatn Variable (`@fontsource-variable`) | |
-| کیفیت | ESLint 10 (`react-hooks`، `react-refresh`)، **knip** (کد مرده) | |
+| لایه         | انتخاب                                                                              | نکته                                                                   |
+| ------------ | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| UI           | **React 19** + **React Compiler** (`babel-plugin-react-compiler`)                   | بدون `useMemo/useCallback` دستی در بیشترِ جاها؛ کامپایلر مدیریت می‌کند |
+| Build        | **Vite 8** (Rolldown) + `@vitejs/plugin-react`                                      | `advancedChunks` برای vendorها                                         |
+| زبان         | **JavaScript (JSX)**                                                                | بدون TypeScript؛ `jsconfig.json` فقط برای alias `@/`                   |
+| روتر         | **react-router-dom 7** (`createBrowserRouter`، data router)                         | `loader`، `handle`، `useBlocker`، `useMatches`                         |
+| داده‌ی سرور  | **TanStack Query 5**                                                                | کش، invalidation، retry                                                |
+| state کلاینت | **Zustand 5**                                                                       | `persist` و `devtools`                                                 |
+| HTTP         | **axios**                                                                           | اینترسپتور برای توکن، refresh، باز کردن envelope                       |
+| فرم          | **react-hook-form** (فرم‌های ساده) + **Zustand** (فرم‌های سند)                      | بخش ۱۳                                                                 |
+| جدول         | **@tanstack/react-table 8** + `DataTable` اختصاصی                                   | سرور-ساید                                                              |
+| UI پایه      | **shadcn/ui** روی `radix-ui` و `@base-ui/react`                                     | `components/ui/*` تولید CLI است                                        |
+| استایل       | **Tailwind CSS 4** (`@tailwindcss/vite`)، `tw-animate-css`، `tailwind-merge`، `cva` | توکن‌ها در `index.css`                                                 |
+| آیکن         | `lucide-react`                                                                      |                                                                        |
+| تاریخ        | `react-multi-date-picker` + `react-date-object` (تقویم شمسی)                        |                                                                        |
+| نقشه         | `leaflet` + `react-leaflet` (lazy)                                                  | OSM + Nominatim                                                        |
+| بارکد        | `barcode-detector`, `@zxing/library`, `zxing-wasm`, `react-barcode`                 |                                                                        |
+| لیست بلند    | `react-virtuoso`                                                                    |                                                                        |
+| Toast        | `react-hot-toast`                                                                   |                                                                        |
+| PWA          | `vite-plugin-pwa` + `workbox-window`                                                | `registerType: "prompt"`                                               |
+| فونت         | Vazirmatn Variable (`@fontsource-variable`)                                         |                                                                        |
+| کیفیت        | ESLint 10 (`react-hooks`، `react-refresh`)، **knip** (کد مرده)                      |                                                                        |
 
 > **تست خودکار وجود ندارد** (هیچ فایلِ `*.test.*` نیست). اعتبارسنجی با lint + build + تست دستی/E2E
 > روی سرور تست انجام می‌شود (نگاه کنید به بخش ۲۴).
@@ -221,11 +221,11 @@ main.jsx
 
 ### 6.2 لایه‌های محافظت (سه لایه، هر کدام یک مسئولیت)
 
-| لایه | کجا | چه چیزی را چک می‌کند |
-|---|---|---|
-| `protectedLoader` | loader روتِ `/` | فقط پرچمِ `isAuthenticated` در localStorage (**نه** اعتبار واقعی توکن). اگر نبود → `redirect` به `/auth/login?from=...` |
-| تأیید نشست در `AppLayout` | رندر | `useUserInfoQuery` (که ۴۰۱ را از اینترسپتور به refresh واقعی می‌رساند). تا نتیجه‌ی قطعی نیست `null` رندر می‌شود |
-| `PermissionGate` | دورِ `<Outlet/>` | `handle.permission` عمیق‌ترین route (با `useMatches().findLast`) در برابر مجوزهای کاربر |
+| لایه                      | کجا              | چه چیزی را چک می‌کند                                                                                                    |
+| ------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `protectedLoader`         | loader روتِ `/`  | فقط پرچمِ `isAuthenticated` در localStorage (**نه** اعتبار واقعی توکن). اگر نبود → `redirect` به `/auth/login?from=...` |
+| تأیید نشست در `AppLayout` | رندر             | `useUserInfoQuery` (که ۴۰۱ را از اینترسپتور به refresh واقعی می‌رساند). تا نتیجه‌ی قطعی نیست `null` رندر می‌شود         |
+| `PermissionGate`          | دورِ `<Outlet/>` | `handle.permission` عمیق‌ترین route (با `useMatches().findLast`) در برابر مجوزهای کاربر                                 |
 
 سه حالتِ مهمِ `AppLayout`:
 
@@ -308,9 +308,9 @@ access token هم **امضا** و هم **رمزنگاری** می‌شود (JWE �
 
 ```js
 const { can, canAny, allows, names, isPending, isError } = usePermission();
-can("SaleCreate");                    // تا isPending است همیشه false
-can(["SaleView", "PurchaseView"]);    // any-of
-allows("SaleCreate");                 // اگر isError باشد true — برای دکمه‌های داخل صفحه
+can("SaleCreate"); // تا isPending است همیشه false
+can(["SaleView", "PurchaseView"]); // any-of
+allows("SaleCreate"); // اگر isError باشد true — برای دکمه‌های داخل صفحه
 ```
 
 - `satisfies(names, required)`: `null` → true؛ آرایه → any-of؛ رشته → عضویت.
@@ -365,15 +365,15 @@ allows("SaleCreate");                 // اگر isError باشد true — برا
 
 ### 9.4 `contract.js` — قراردادِ مشترکِ لایه‌ی API
 
-| export | کار |
-|---|---|
-| `normalizeListResponse(data, {itemsKey})` | هر پاسخ فهرست را به `{ items, total, page, totalPages }` تبدیل می‌کند (بکند: `{ XList, Page:{Page,PageCount,Take,Total} }`، camel/Pascal هر دو) |
-| `compactParams` | مقادیر `""/null/undefined/"all"` را حذف می‌کند (سرور «خالی» را فیلترِ صفر می‌فهمد، نه «بدون فیلتر») |
-| `listQuery({filters, pagination, sorting, sortColumns})` | پارامترهای استاندارد: `page`, `take`, فیلترها، `sortBy`, `sortDirection` |
-| `idempotencyKeyFor(variables, scope)` | کلید پایدار برای یک «قصدِ کاربر» (بخش ۱۳.۴) |
-| `releaseIdempotencyKey`, `idempotent(key)` | آزادسازی و ساختِ `{ headers: {"Idempotency-Key": key} }` |
-| `documentVersion(doc)` | کلید نسخه‌ی سند برای تشخیص «داده‌ی سرور عوض شده، فرم را دوباره پر کن» (`updatedAt` یا اثرانگشت محتوایی) |
-| `toApiAttachments` | `[ {objectKey, fileName?, note?} ]` |
+| export                                                   | کار                                                                                                                                             |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `normalizeListResponse(data, {itemsKey})`                | هر پاسخ فهرست را به `{ items, total, page, totalPages }` تبدیل می‌کند (بکند: `{ XList, Page:{Page,PageCount,Take,Total} }`، camel/Pascal هر دو) |
+| `compactParams`                                          | مقادیر `""/null/undefined/"all"` را حذف می‌کند (سرور «خالی» را فیلترِ صفر می‌فهمد، نه «بدون فیلتر»)                                             |
+| `listQuery({filters, pagination, sorting, sortColumns})` | پارامترهای استاندارد: `page`, `take`, فیلترها، `sortBy`, `sortDirection`                                                                        |
+| `idempotencyKeyFor(variables, scope)`                    | کلید پایدار برای یک «قصدِ کاربر» (بخش ۱۳.۴)                                                                                                     |
+| `releaseIdempotencyKey`, `idempotent(key)`               | آزادسازی و ساختِ `{ headers: {"Idempotency-Key": key} }`                                                                                        |
+| `documentVersion(doc)`                                   | کلید نسخه‌ی سند برای تشخیص «داده‌ی سرور عوض شده، فرم را دوباره پر کن» (`updatedAt` یا اثرانگشت محتوایی)                                         |
+| `toApiAttachments`                                       | `[ {objectKey, fileName?, note?} ]`                                                                                                             |
 
 `sorting.js`: `SortDirectionEnum {ASC:0, DESC:1}` و `toApiSort(sorting, columns)`؛ ستونی که در نقشه نیست یعنی ترتیب پیش‌فرض سرور.
 
@@ -391,13 +391,13 @@ allows("SaleCreate");                 // اگر isError باشد true — برا
 
 ### 10.1 تنظیمات سراسری (`QueryProvider`)
 
-| گزینه | مقدار | چرا |
-|---|---|---|
-| `staleTime` | `0` | چند کاربر هم‌زمان روی یک داده کار می‌کنند؛ هر mount/focus از سرور می‌خواند |
-| `gcTime` | ۵ دقیقه | |
-| `refetchOnWindowFocus` | `true` | کاربران چندساعته |
-| `retry` (query) | ۴xx → هرگز؛ بقیه حداکثر ۱ بار | خطای ۴xx با تکرار درست نمی‌شود |
-| `retry` (mutation) | **فقط ۴۰۹** تا ۳ بار، فاصله ۱ ثانیه | ۴۰۹ یعنی «درخواستِ اولِ همین کلید ایدمپوتنسی هنوز در جریان است» |
+| گزینه                  | مقدار                               | چرا                                                                        |
+| ---------------------- | ----------------------------------- | -------------------------------------------------------------------------- |
+| `staleTime`            | `0`                                 | چند کاربر هم‌زمان روی یک داده کار می‌کنند؛ هر mount/focus از سرور می‌خواند |
+| `gcTime`               | ۵ دقیقه                             |                                                                            |
+| `refetchOnWindowFocus` | `true`                              | کاربران چندساعته                                                           |
+| `retry` (query)        | ۴xx → هرگز؛ بقیه حداکثر ۱ بار       | خطای ۴xx با تکرار درست نمی‌شود                                             |
+| `retry` (mutation)     | **فقط ۴۰۹** تا ۳ بار، فاصله ۱ ثانیه | ۴۰۹ یعنی «درخواستِ اولِ همین کلید ایدمپوتنسی هنوز در جریان است»            |
 
 استثنا: `useUserInfoQuery` با `staleTime: 10 دقیقه` و `retry: false` (هویت کم‌تغییر است و ۴۰۱ باید سریع به refresh برسد).
 
@@ -415,11 +415,11 @@ services/
 
 ```js
 export const purchaseKeys = {
-  all:     ['purchases'],
-  lists:   () => [...purchaseKeys.all, 'list'],
-  list:    (filters) => [...purchaseKeys.lists(), { ...filters }],
-  details: () => [...purchaseKeys.all, 'detail'],
-  detail:  (id) => [...purchaseKeys.details(), String(id)],   // id همیشه String
+  all: ["purchases"],
+  lists: () => [...purchaseKeys.all, "list"],
+  list: (filters) => [...purchaseKeys.lists(), { ...filters }],
+  details: () => [...purchaseKeys.all, "detail"],
+  detail: (id) => [...purchaseKeys.details(), String(id)], // id همیشه String
 };
 ```
 
@@ -457,15 +457,15 @@ export const purchaseKeys = {
 اصل: **داده‌ی سرور → React Query؛ state رابط/پیش‌نویس → Zustand**. هیچ داده‌ی سروری در Zustand کپی نمی‌شود
 (به‌جز توکن‌ها).
 
-| استور | نوع | محتوا | ماندگاری |
-|---|---|---|---|
-| `useAuthStore` | سراسری | توکن‌ها، `isAuthenticated`, `hasHydrated` | localStorage |
-| `useHeaderStore` | سراسری | عنوان/بازگشت هدر (`usePageHeader`) | حافظه |
-| `useFormDraftStore` | سراسری | پیش‌نویس **یک‌بارمصرف** فرم‌های کوچک + داده‌ی بازگشتی | حافظه |
-| `useDashboardLayoutStore` | فیچر | `{[userId]: {order, hidden}}` | localStorage (جدا برای هر کاربر؛ با logout پاک نمی‌شود) |
-| `*FilterStore` | فیچر | فیلتر/صفحه‌بندی/مرتب‌سازی لیست | حافظه |
-| `*FormStore` | فیچر | پیش‌نویس فرم سند (خرید، فروش، دریافت، ارسال، مرجوعی) | حافظه |
-| `useLabelTemplateStore` | فیچر | قالب برچسب (پرینتر/اسکنر مستقل از دسته) | persist |
+| استور                     | نوع    | محتوا                                                 | ماندگاری                                                |
+| ------------------------- | ------ | ----------------------------------------------------- | ------------------------------------------------------- |
+| `useAuthStore`            | سراسری | توکن‌ها، `isAuthenticated`, `hasHydrated`             | localStorage                                            |
+| `useHeaderStore`          | سراسری | عنوان/بازگشت هدر (`usePageHeader`)                    | حافظه                                                   |
+| `useFormDraftStore`       | سراسری | پیش‌نویس **یک‌بارمصرف** فرم‌های کوچک + داده‌ی بازگشتی | حافظه                                                   |
+| `useDashboardLayoutStore` | فیچر   | `{[userId]: {order, hidden}}`                         | localStorage (جدا برای هر کاربر؛ با logout پاک نمی‌شود) |
+| `*FilterStore`            | فیچر   | فیلتر/صفحه‌بندی/مرتب‌سازی لیست                        | حافظه                                                   |
+| `*FormStore`              | فیچر   | پیش‌نویس فرم سند (خرید، فروش، دریافت، ارسال، مرجوعی)  | حافظه                                                   |
+| `useLabelTemplateStore`   | فیچر   | قالب برچسب (پرینتر/اسکنر مستقل از دسته)               | persist                                                 |
 
 ### 11.1 `createFilterStore({ filters, defaultSorting, defaultPageSize, actions })`
 
@@ -520,10 +520,11 @@ features/<feature>/
 `ListPageLayout` (کارت + عنوان + دکمه‌ی ایجاد) ← فیلترها ← `ServerTable` ← `DataTable`.
 
 ```jsx
-const filters = usePurchaseListFilters();                         // debounce + نام‌های سرور
-const { pagination, sorting, setPagination, setSorting } = usePurchaseFilterStore();
-const query = usePurchasesQuery(filters, pagination, sorting);   // listQuery + keepPreviousData
-<ServerTable query={query} listState={store} table={PurchaseTable} />
+const filters = usePurchaseListFilters(); // debounce + نام‌های سرور
+const { pagination, sorting, setPagination, setSorting } =
+  usePurchaseFilterStore();
+const query = usePurchasesQuery(filters, pagination, sorting); // listQuery + keepPreviousData
+<ServerTable query={query} listState={store} table={PurchaseTable} />;
 ```
 
 - `ServerTable`: خطا با «تلاش دوباره»، `FetchingOverlay` هنگام واکشی صفحه‌ی بعد، محاسبه‌ی صفحه‌ی فعلی
@@ -540,12 +541,12 @@ const query = usePurchasesQuery(filters, pagination, sorting);   // listQuery + 
 
 ### 13.3 فرم‌ها — دو شیوه
 
-| | فرم ساده (`react-hook-form`) | فرم سند (Zustand) |
-|---|---|---|
-| کجا | کالا، مشتری، تامین‌کننده، کارمند، واحد، تیم، لاگین | خرید، فروش، دریافت، ارسال، مرجوعی |
-| state | `useForm` داخل `use<X>Form` | `createDocumentFormStore` |
-| پیش‌نویس بین صفحه‌ها | `useFormDraft` (یک‌بارمصرف، `formDraftStore`) | ذاتی (استور) |
-| قفل ترک صفحه | `useUnsavedChangesGuard` + `useBlocker` + `beforeunload` | همان |
+|                      | فرم ساده (`react-hook-form`)                             | فرم سند (Zustand)                 |
+| -------------------- | -------------------------------------------------------- | --------------------------------- |
+| کجا                  | کالا، مشتری، تامین‌کننده، کارمند، واحد، تیم، لاگین       | خرید، فروش، دریافت، ارسال، مرجوعی |
+| state                | `useForm` داخل `use<X>Form`                              | `createDocumentFormStore`         |
+| پیش‌نویس بین صفحه‌ها | `useFormDraft` (یک‌بارمصرف، `formDraftStore`)            | ذاتی (استور)                      |
+| قفل ترک صفحه         | `useUnsavedChangesGuard` + `useBlocker` + `beforeunload` | همان                              |
 
 اعتبارسنجی‌های ایرانی در `shared/lib`: `nationalId.js`، `iranianMobile.js`، `iranian-bank.js`، `plate.js`، `validationRules.js`.
 ورودی‌های اختصاصی در `components/ui`: `price-input`, `national-id-input`, `mobile-number-input`, `plate-input`,
@@ -559,6 +560,7 @@ const query = usePurchasesQuery(filters, pagination, sorting);   // listQuery + 
 (برای کارتخوان: پولی که یک‌بار کشیده شده و دوبار ثبت شود).
 
 راه‌حل:
+
 - `idempotencyKeyFor(variables, scope)`: کلید به **محتوای** درخواست (`JSON.stringify`) گره خورده، نه شیء variables. تکرارِ
   همان محتوا ⇒ همان کلید؛ `scope` برای دو قصدِ جدا با محتوای یکسان (دو پرداخت نقدیِ هم‌مبلغ).
 - فقط در **لایه‌ی mutation** ساخته می‌شود (نه کامپوننت، نه api-v1) و به `api-v1` به‌صورت `{ idempotencyKey }` می‌رسد؛
@@ -641,28 +643,28 @@ const query = usePurchasesQuery(filters, pagination, sorting);   // listQuery + 
 
 `shared/components` (حدود ۱۷۱ فایل). دسته‌بندی:
 
-| پوشه | محتوا |
-|---|---|
-| `ui/` | primitiveهای **shadcn** (تولید CLI، فقط در صورت نیاز واقعی دست بخورند) + ورودی‌های ایرانی (قیمت، کد ملی، موبایل، پلاک، بانک، تقویم شمسی، شهر) |
-| `layout/` | `AppSidebar`, `NavMain/NavUser/NavTools/NavSecondary/NavWorkspace`, `AppBreadcrumb`, `ListPageLayout`, `RouteLoadingOverlay` |
-| `table/` | `DataTable`, `ServerTable`, `DataTablePagination`, `columns` (`detailsColumn`), `DetailsLink`, `SortIcon`, `PaymentProgress`, `TableLoadingSkeleton` |
-| `filters/` | `FilterPanel`, `FilterSearchInput`, `FilterSelect`, `FilterDateInput`, `EntitySelect`, `FilterMultiChoice` (پارامترِ فهرستیِ سرور)، `FilterSwitch` (پارامترِ بولین)، `DateRangeToolbar` (بازه با دکمه‌های آماده‌ی شمسی از `shared/lib/dateRanges`) |
-| `forms/` | `DocumentFormLayout`, `FormField`, `FormSectionCard`, `OrderInfoCard`, `PartyPickerCard`, `ProductSearchPanel`, `SelectedItemsTable/Cards`, `QuantityStepper`, `AmountInWords`, `MixedPaymentList`, `TransporterSection`… |
-| `status/` | `StatusBadge`, `StatusText`, `PurchaseStatusBadge`, `SaleStatusBadge`, `PaymentTypeBadge`, `statusIcons` |
-| `feedback/` | `ConfirmDialog`, `DetailErrorState`, `QueryErrorState`, `FetchingOverlay`, `Notice`, `ProgressStat` |
-| `payments/` | `PaymentsCard`, `PaymentRow`, `PaymentForm`, `PaymentMethodEditor`, `PaymentTotals`, `useFormPosPayment`, `pos/*` (کارتخوان) |
-| `products/` | `DocumentItemsSection`, `ProductPicker`, `useReturnedNewProduct` |
-| `returns/` | ~۲۹ کامپوننت مرجوعی مشترک خرید/فروش (`ReturnTable`, `ReturnItemsSection`, `ResolutionComposer`, `ClaimRow`, `ReturnStatusBar`, `ReturnChain`, …) |
-| `invoice/` | سند و پیوست فاکتور (`InvoiceDocumentSection`, `useInvoiceAttachments`, `IssuedInvoiceNotice`) |
-| `files/` | `FileUploadList`, `ImageUploadField`, `ImageLightbox`, `RemoteImage` |
-| `dataTransfer/` | `DataTransferActions` (دکمه‌های «ورود از فایل»/«خروجی» برای سرتیترِ لیست)، `ImportDialog`، `ImportResultView` — بخش ۱۹.۵ |
-| `barcode/` | `BarcodeScanField`, `CameraScanButton`, `CameraScanner`, `UnitBarcodeScanList` |
-| `print/` | `usePrint`, `LabelSheet`, `BarcodeGraphic`, `QrCodeGraphic`, `sheetPresets`, `print.css` |
-| `map/` | `LocationPickerMap` (lazy) ← `MapCanvas` (**تنها فایل Leaflet**) + `MapSearchBar` + `nominatim.js` |
-| `charts/` | `TrendChart`, `DonutChart`, `GroupedBarChart`, `Sparkline`, `ChartCard`, … (SVG اختصاصی، بدون کتابخانه‌ی چارت) |
-| `theme/` | `ThemeProvider`, `ThemeToggle`, `themeContext`, `themeClasses` (نگاشتِ مقدارِ تم به کلاس‌های `<html>`) |
-| `app-update/` | `AppUpdateDialog`, `UpdateAvailableToast` |
-| `skeletons/` | `OrderFormSkeleton`, `WarehouseFormSkeleton` |
+| پوشه            | محتوا                                                                                                                                                                                                                                              |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ui/`           | primitiveهای **shadcn** (تولید CLI، فقط در صورت نیاز واقعی دست بخورند) + ورودی‌های ایرانی (قیمت، کد ملی، موبایل، پلاک، بانک، تقویم شمسی، شهر)                                                                                                      |
+| `layout/`       | `AppSidebar`, `NavMain/NavUser/NavTools/NavSecondary/NavWorkspace`, `AppBreadcrumb`, `ListPageLayout`, `RouteLoadingOverlay`                                                                                                                       |
+| `table/`        | `DataTable`, `ServerTable`, `DataTablePagination`, `columns` (`detailsColumn`), `DetailsLink`, `SortIcon`, `PaymentProgress`, `TableLoadingSkeleton`                                                                                               |
+| `filters/`      | `FilterPanel`, `FilterSearchInput`, `FilterSelect`, `FilterDateInput`, `EntitySelect`, `FilterMultiChoice` (پارامترِ فهرستیِ سرور)، `FilterSwitch` (پارامترِ بولین)، `DateRangeToolbar` (بازه با دکمه‌های آماده‌ی شمسی از `shared/lib/dateRanges`) |
+| `forms/`        | `DocumentFormLayout`, `FormField`, `FormSectionCard`, `OrderInfoCard`, `PartyPickerCard`, `ProductSearchPanel`, `SelectedItemsTable/Cards`, `QuantityStepper`, `AmountInWords`, `MixedPaymentList`, `TransporterSection`…                          |
+| `status/`       | `StatusBadge`, `StatusText`, `PurchaseStatusBadge`, `SaleStatusBadge`, `PaymentTypeBadge`, `statusIcons`                                                                                                                                           |
+| `feedback/`     | `ConfirmDialog`, `DetailErrorState`, `QueryErrorState`, `FetchingOverlay`, `Notice`, `ProgressStat`                                                                                                                                                |
+| `payments/`     | `PaymentsCard`, `PaymentRow`, `PaymentForm`, `PaymentMethodEditor`, `PaymentTotals`, `useFormPosPayment`, `pos/*` (کارتخوان)                                                                                                                       |
+| `products/`     | `DocumentItemsSection`, `ProductPicker`, `useReturnedNewProduct`                                                                                                                                                                                   |
+| `returns/`      | ~۲۹ کامپوننت مرجوعی مشترک خرید/فروش (`ReturnTable`, `ReturnItemsSection`, `ResolutionComposer`, `ClaimRow`, `ReturnStatusBar`, `ReturnChain`, …)                                                                                                   |
+| `invoice/`      | سند و پیوست فاکتور (`InvoiceDocumentSection`, `useInvoiceAttachments`, `IssuedInvoiceNotice`)                                                                                                                                                      |
+| `files/`        | `FileUploadList`, `ImageUploadField`, `ImageLightbox`, `RemoteImage`                                                                                                                                                                               |
+| `dataTransfer/` | `DataTransferActions` (دکمه‌های «ورود از فایل»/«خروجی» برای سرتیترِ لیست)، `ImportDialog`، `ImportResultView` — بخش ۱۹.۵                                                                                                                           |
+| `barcode/`      | `BarcodeScanField`, `CameraScanButton`, `CameraScanner`, `UnitBarcodeScanList`                                                                                                                                                                     |
+| `print/`        | `usePrint`, `LabelSheet`, `BarcodeGraphic`, `QrCodeGraphic`, `sheetPresets`, `print.css`                                                                                                                                                           |
+| `map/`          | `LocationPickerMap` (lazy) ← `MapCanvas` (**تنها فایل Leaflet**) + `MapSearchBar` + `nominatim.js`                                                                                                                                                 |
+| `charts/`       | `TrendChart`, `DonutChart`, `GroupedBarChart`, `Sparkline`, `ChartCard`, … (SVG اختصاصی، بدون کتابخانه‌ی چارت)                                                                                                                                     |
+| `theme/`        | `ThemeProvider`, `ThemeToggle`, `themeContext`, `themeClasses` (نگاشتِ مقدارِ تم به کلاس‌های `<html>`)                                                                                                                                             |
+| `app-update/`   | `AppUpdateDialog`, `UpdateAvailableToast`                                                                                                                                                                                                          |
+| `skeletons/`    | `OrderFormSkeleton`, `WarehouseFormSkeleton`                                                                                                                                                                                                       |
 
 ### هوک‌های مشترک (`shared/hooks`)
 
@@ -681,6 +683,7 @@ const query = usePurchasesQuery(filters, pagination, sorting);   // listQuery + 
 ## 16. سیستم طراحی، تم و RTL
 
 ### 16.1 RTL / فارسی
+
 `DirectionProvider direction="rtl"` در ریشه؛ فونت Vazirmatn؛ سایدبار سمت راست (`side="right"`)؛ ارقام فارسی با `formatNumber`/`toLocaleString("fa-IR")`.
 برای متن‌های دوجهته (مثل `۳۳×۶۲`) از جداکننده‌های LRI/PDI استفاده می‌شود (`formatLabelSize`).
 
@@ -689,13 +692,13 @@ const query = usePurchasesQuery(filters, pagination, sorting);   // listQuery + 
 مقدارِ تم در `localStorage["vite-ui-theme"]` نگه داشته می‌شود و `ThemeProvider` (`shared/components/theme/`) آن را به **کلاس‌های `<html>`** تبدیل می‌کند.
 نگاشت در `themeClasses.js` (`resolveThemeClasses`) است:
 
-| مقدار ذخیره‌شده | کلاس‌های `<html>` |
-|---|---|
-| `light` / `dark` | همان یک کلاس |
-| `system` | `light` یا `dark` بر اساس `prefers-color-scheme` (فقط تمِ پایه؛ برای Material معادل ندارد) |
-| `theme-accessible` / `theme-rose` / `theme-forest` | همان یک کلاس (فقط حالتِ روشن دارند) |
-| `material-light` | `theme-material` **و** `light` |
-| `material-dark` | `theme-material` **و** `dark` |
+| مقدار ذخیره‌شده                                    | کلاس‌های `<html>`                                                                          |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `light` / `dark`                                   | همان یک کلاس                                                                               |
+| `system`                                           | `light` یا `dark` بر اساس `prefers-color-scheme` (فقط تمِ پایه؛ برای Material معادل ندارد) |
+| `theme-accessible` / `theme-rose` / `theme-forest` | همان یک کلاس (فقط حالتِ روشن دارند)                                                        |
+| `material-light`                                   | `theme-material` **و** `light`                                                             |
+| `material-dark`                                    | `theme-material` **و** `dark`                                                              |
 
 نکته‌ی کلیدی: تمِ Material **دو کلاسِ هم‌زمان** می‌گیرد. کلاسِ `theme-material` توکن‌های Material را فعال می‌کند و `light|dark` باعث می‌شود
 `@custom-variant dark (&:is(.dark *))` و همه‌ی `dark:`های موجود مثل قبل کار کنند.
@@ -712,16 +715,16 @@ const query = usePurchasesQuery(filters, pagination, sorting);   // listQuery + 
 رنگِ وضعیت **هرگز** مستقیم از پالت Tailwind (`amber-50`, `green-700`) یا `oklch(...)` نوشته نمی‌شود. «معنا» انتخاب می‌شود
 و ظاهر از توکن‌ها می‌آید (`shared/lib/tone.js`):
 
-| tone | معنا |
-|---|---|
-| `neutral` | پیش‌نویس/غیرفعال (پیش‌فاکتور) |
-| `primary` | رنگ برند |
-| `info` | در جریان (ارسال‌شده، چک) |
-| `success` | کامل/فعال (دریافت‌شده، در انبار) |
-| `warning` | در انتظار/نیازمند اقدام |
+| tone      | معنا                                  |
+| --------- | ------------------------------------- |
+| `neutral` | پیش‌نویس/غیرفعال (پیش‌فاکتور)         |
+| `primary` | رنگ برند                              |
+| `info`    | در جریان (ارسال‌شده، چک)              |
+| `success` | کامل/فعال (دریافت‌شده، در انبار)      |
+| `warning` | در انتظار/نیازمند اقدام               |
 | `caution` | ناقص/مسئله‌دار (دریافت ناقص، قرنطینه) |
-| `special` | گردش‌های خاص (مرجوعی، نسیه) |
-| `danger` | لغو/رد/اسقاط/خطا |
+| `special` | گردش‌های خاص (مرجوعی، نسیه)           |
+| `danger`  | لغو/رد/اسقاط/خطا                      |
 
 مصرف: وضعیت → `StatusBadge` (یا `PurchaseStatusBadge`, `SaleStatusBadge`, `PaymentTypeBadge`, `ReturnStatusBadge`)؛
 متن رنگی → `StatusText`؛ باکس هشدار/توضیح → `Notice`؛ پیشرفت شمارشی → `ProgressStat`؛ ردیف جدول → `toneRow`.
@@ -729,6 +732,7 @@ const query = usePurchasesQuery(filters, pagination, sorting);   // listQuery + 
 کلاس `dark:` برای رنگ لازم نیست (توکن‌ها در هر تم تعریف شده‌اند). کلاس‌ها باید **رشته‌ی کامل و ثابت** باشند تا Tailwind پیدایشان کند.
 
 ### 16.4 تایپوگرافی و `cn`
+
 `cn()` (`clsx` + `tailwind-merge`) در `shared/lib/utils`. واریانت‌ها با `cva`.
 
 ### 16.5 تمِ Material (الهام‌گرفته از Material 3)
@@ -747,11 +751,11 @@ shadcn / Radix / Base UI          (JSX و APIِ کامپوننت‌ها دست�
 
 **فایل‌ها** (`src/shared/styles/themes/`، import‌شده در `index.css`):
 
-| فایل | محتوا |
-|---|---|
-| `material.css` | نقش‌های رنگ برای `html.theme-material` (روشن) و `html.theme-material.dark`، نگاشت به توکن‌های shadcn، رنگ‌های معنایی، توکن‌های Toast |
-| `material-tokens.css` | غیررنگی‌ها: shape، elevation، state layer، motion، تایپوگرافی، `--radius` |
-| `material-components.css` | نمای کامپوننت‌ها داخل `@layer material` + بخشِ DatePicker (بدونِ لایه) |
+| فایل                      | محتوا                                                                                                                                |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `material.css`            | نقش‌های رنگ برای `html.theme-material` (روشن) و `html.theme-material.dark`، نگاشت به توکن‌های shadcn، رنگ‌های معنایی، توکن‌های Toast |
+| `material-tokens.css`     | غیررنگی‌ها: shape، elevation، state layer، motion، تایپوگرافی، `--radius`                                                            |
+| `material-components.css` | نمای کامپوننت‌ها داخل `@layer material` + بخشِ DatePicker (بدونِ لایه)                                                               |
 
 **توکن‌ها.** رنگِ واقعی فقط در نقش‌های `--md-*` است (`--md-primary`، `--md-on-primary`، `--md-primary-container`، `--md-secondary-container`، `--md-tertiary*`، `--md-error*`،
 `--md-surface` و `--md-surface-container-lowest…highest`، `--md-on-surface(-variant)`، `--md-outline(-variant)`، `--md-inverse-*`، `--md-scrim`). توکن‌های shadcn
@@ -801,25 +805,26 @@ state layerِ دکمه‌های پُر با custom propertyِ ثبت‌شده‌
 
 ## 17. فیچرها (ماژول‌های کسب‌وکار)
 
-| فیچر | فایل | مسیرها | مجوز اصلی | توضیح |
-|---|---|---|---|---|
-| **auth** | 8 | `/auth/login` | — | لاگین (RHF)، استور توکن، `useUserInfoQuery`, `useMyPermissionsQuery`, `usePermission`, `useCurrentUser` |
-| **dashboard** | 31 | `/dashboard` | — | ویجت‌های نقش‌محور؛ پایین‌تر |
-| **customers** | 13 | `/customers…` | `CustomerView/Create` | CRUD مشتری، فرم آدرس (نقشه)، صورت‌حساب |
-| **suppliers** | 14 | `/suppliers…` | `SupplierView/Create` | هم‌ساختار مشتری |
-| **partyAccount** | 10 | — (مشترک) | — | دفتر حساب اشخاص: `PartyStatementCard`, `LedgerBalanceBadge`, `PartyListFilters`, `PartyAddressForm`, `createPartyFilterStore`, `partyBalance` |
-| **employees** | 20 | `/employees…` | `UserView/Create/Update` | کارمند، واحد/تیم/نقش، ریست رمز |
-| **organization** | 33 | `/organization/{departments,teams}` | `Department/Team View/Manage` | واحدها و تیم‌ها، تعیین مدیر/جانشین |
-| **permissions** | 20 | `/access/{users,templates}` | `PermissionView` | ویرایش دسترسی کارمند، الگوی هر واحد |
-| **purchases** | 33 | `/purchases…` | `Purchase*`, `PurchaseReturn*` | `orders` + `returns` |
-| **sales** | 33 | `/sales…` | `Sale*`, `SaleReturn*`, `SaleInstallment*` | `orders` + `returns` (قرینه‌ی خرید) + `installments` |
-| **warehouse** | 93 | `/warehouse…` | `Product*`, `PurchaseReceive`, `SaleShip`, `ProductUnitView`, … | کالا، دسته، دانه‌ها، دریافت، ارسال |
-| **accounting** | 64 | `/accounting…` | `AccountingView` / `ReportView` | «حسابداری و گزارش‌ها»: داشبورد مالی و دفترهای `api/Accounting`، و گزارش‌های فعالیتِ `api/Report` (`activity/`)؛ بخش ۱۷.۵. بخشِ جدای `reports` حذف شد و `/reports/*` به اینجا هدایت می‌شود |
-| **settings** | 10 | `/settings…` | — | **placeholder** (هر صفحه ~۶ خط) |
-| **invoice** | 2 | `/invoice` | — | **placeholder** |
-| **transactions** | 2 | `/transactions` | — | **placeholder** |
+| فیچر             | فایل | مسیرها                              | مجوز اصلی                                                       | توضیح                                                                                                                                                                                     |
+| ---------------- | ---- | ----------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **auth**         | 8    | `/auth/login`                       | —                                                               | لاگین (RHF)، استور توکن، `useUserInfoQuery`, `useMyPermissionsQuery`, `usePermission`, `useCurrentUser`                                                                                   |
+| **dashboard**    | 31   | `/dashboard`                        | —                                                               | ویجت‌های نقش‌محور؛ پایین‌تر                                                                                                                                                               |
+| **customers**    | 13   | `/customers…`                       | `CustomerView/Create`                                           | CRUD مشتری، فرم آدرس (نقشه)، صورت‌حساب                                                                                                                                                    |
+| **suppliers**    | 14   | `/suppliers…`                       | `SupplierView/Create`                                           | هم‌ساختار مشتری                                                                                                                                                                           |
+| **partyAccount** | 10   | — (مشترک)                           | —                                                               | دفتر حساب اشخاص: `PartyStatementCard`, `LedgerBalanceBadge`, `PartyListFilters`, `PartyAddressForm`, `createPartyFilterStore`, `partyBalance`                                             |
+| **employees**    | 20   | `/employees…`                       | `UserView/Create/Update`                                        | کارمند، واحد/تیم/نقش، ریست رمز                                                                                                                                                            |
+| **organization** | 33   | `/organization/{departments,teams}` | `Department/Team View/Manage`                                   | واحدها و تیم‌ها، تعیین مدیر/جانشین                                                                                                                                                        |
+| **permissions**  | 20   | `/access/{users,templates}`         | `PermissionView`                                                | ویرایش دسترسی کارمند، الگوی هر واحد                                                                                                                                                       |
+| **purchases**    | 33   | `/purchases…`                       | `Purchase*`, `PurchaseReturn*`                                  | `orders` + `returns`                                                                                                                                                                      |
+| **sales**        | 33   | `/sales…`                           | `Sale*`, `SaleReturn*`, `SaleInstallment*`                      | `orders` + `returns` (قرینه‌ی خرید) + `installments`                                                                                                                                      |
+| **warehouse**    | 93   | `/warehouse…`                       | `Product*`, `PurchaseReceive`, `SaleShip`, `ProductUnitView`, … | کالا، دسته، دانه‌ها، دریافت، ارسال                                                                                                                                                        |
+| **accounting**   | 64   | `/accounting…`                      | `AccountingView` / `ReportView`                                 | «حسابداری و گزارش‌ها»: داشبورد مالی و دفترهای `api/Accounting`، و گزارش‌های فعالیتِ `api/Report` (`activity/`)؛ بخش ۱۷.۵. بخشِ جدای `reports` حذف شد و `/reports/*` به اینجا هدایت می‌شود |
+| **settings**     | 10   | `/settings…`                        | —                                                               | **placeholder** (هر صفحه ~۶ خط)                                                                                                                                                           |
+| **invoice**      | 2    | `/invoice`                          | —                                                               | **placeholder**                                                                                                                                                                           |
+| **transactions** | 2    | `/transactions`                     | —                                                               | **placeholder**                                                                                                                                                                           |
 
 ### 17.1 purchases / sales
+
 دو سمتِ قرینه (تامین‌کننده ↔ مشتری). `orders`: لیست، ثبت جدید، جزئیات، `…Form` (پیش‌فاکتور)، `…IssuedView` (صادرشده)، `domain/…Rules|…Payments|…Pricing`.
 `returns`: لیست/ثبت/جزئیات؛ بدنه‌ی منطق در `shared/domain/returns` و `shared/components/returns`، و هر سمت فقط **vocabulary**، store و سرویس خودش را دارد.
 فروش علاوه بر خرید: `useSaleFormPos` (کارتخوان در فرم)، `salePricing`، صدور خودکار فاکتور با اولین دریافت.
@@ -829,6 +834,7 @@ state layerِ دکمه‌های پُر با custom propertyِ ثبت‌شده‌
 (سرور `OVERDUE` نمی‌نویسد). کمبودهای بکند: بخش ۱۷ سندِ درخواست‌ها.
 
 ### 17.2 warehouse
+
 - **products**: لیست/جزئیات/جدید، `useProductForm` (RHF، با **همان نام‌های بکند**: `retailPrice`، `wholeSalePrice`، `tax`، `stock`، `barCode`)، تصویر، بارکد/QR محصول، `CategoryManager` (با همان `CategoryFormDialog`ِ صفحه‌ی دسته‌ها). در ویرایش، تغییرِ «موجودی» اصلاحِ دستی است و دانه می‌سازد/کم می‌کند.
 - **categories**: `ListPageLayout` + جدولِ ساده (بی صفحه‌بندی) + دیالوگ ایجاد/ویرایش + `ConfirmDialog` حذف (حذفِ نرم).
 - **units** («دانه‌ها و برچسب‌ها»): ردیابی هر دانه‌ی فیزیکی (انبار/قرنطینه/نزد مشتری/برگشتی/اسقاط)، دو انتخاب‌گرِ نما (`UnitViewNav`: جایگاه با شمارش و وضعیتِ برچسب)، عملیات گروهی (`UnitBulkBar`, `unitOperations`)، **طراح چاپ برچسب** (`LabelPrintDesigner`, `labelTemplate`, `UnitLabel`). برگه‌ی جزئیات و طراحِ چاپ `lazy`‌اند (JSِ صفحه ~۴۴KB). سریال و شناسه با `formatDigits` (بی جداکننده). فهرستِ طرف‌حساب‌ها فقط با باز شدنِ «فیلترهای بیشتر».
@@ -837,7 +843,9 @@ state layerِ دکمه‌های پُر با custom propertyِ ثبت‌شده‌
 - اطلاعاتِ کالاهای یک سند (تصویر، برند، `requiresUnitTracking`) با `useDocumentProducts` (فقط کالاهای همان سند، با کشِ جزئیات) — نه فهرستِ ۲۰۰ کالای اول. حذفِ این درخواست‌ها منتظرِ بندِ ۱۵.۱ سندِ بکند است.
 
 ### 17.3 dashboard (معماری ویجت)
+
 سه لایه (`widgetRegistry.js`):
+
 1. **در دسترس** (`isAvailable`) از روی نقش سازمانی + مجوز — ویجتی که سرور داده‌اش را نمی‌دهد اصلاً وجود ندارد.
 2. **پیش‌فرض** (`defaultLayout`) بر اساس نقش.
 3. **انتخاب کاربر** در `dashboardLayoutStore` به تفکیک `userId` (`resolveLayout` هر بار با مجوزهای امروز تطبیقش می‌دهد؛ ذخیره‌ی ویجت از‌دست‌رفته بی‌خطر است).
@@ -847,9 +855,11 @@ state layerِ دکمه‌های پُر با custom propertyِ ثبت‌شده‌
 ویجت‌ها: Welcome، QuickActions، WorkQueues، ScopePerformance، TopSellers، MemberRankList، OrgWidgets. فعلاً چیدمان فقط در مرورگر ذخیره می‌شود (بین دستگاه‌ها sync نیست؛ `frontend-requests` بخش ۶.۳).
 
 ### 17.5 accounting (داشبورد و دفترهای حسابداری)
+
 روی `api/Accounting` (بخش ۲۰ api-guide)، همه فقط‌خواندنی و پشتِ یک دسترسی. ده صفحه با یک نوارِ بالایی (`AccountingNav`):
 داشبورد، حسابِ اشخاص، دفترِ اشخاص، دفترِ فروش و خرید (**یک** صفحه‌ی `InvoiceJournalPage` با واژگانِ `domain/journalSides`)،
 ریزِ اقلامِ فروش، دریافت و پرداخت، مالیاتِ ارزش افزوده، ارزشِ موجودی، تفکیکِ فروش/خرید.
+
 - هر فهرست کنارِ ردیف‌ها `summary`ِ کلِ فیلتر را دارد؛ `api-v1` آن را کنارِ خروجیِ `normalizeListResponse` نگه می‌دارد و
   `SummaryStrip` بالای جدول نشانش می‌دهد (`DataTable` پاورقی ندارد).
 - پیوند بینِ صفحه‌ها با فیلترِ آماده در نشانی (`?paymentState=3&customerId=5`): `withFilters` می‌سازد و `useUrlPreset` یک‌بار
@@ -863,6 +873,7 @@ state layerِ دکمه‌های پُر با custom propertyِ ثبت‌شده‌
 - بهای تمام‌شده و سود اینجا نیست (فیچرِ جدا). کمبودهای بکند: بخشِ ۲۱ سندِ درخواست‌ها.
 
 ### 17.4 permissions / organization / employees
+
 - مدل سازمانی: هر کاربر **دقیقاً یک واحد** و حداکثر یک تیم؛ نقش (`OrgRoleEnum` MEMBER/DEPARTMENT_HEAD/DEPUTY/TEAM_HEAD/DEPUTY) از `headId/deputyId` در سرور مشتق می‌شود.
 - `UserAccessPage`/`DepartmentTemplatesPage`: `AccessListPane` + `PermissionEditor` + `GroupChips` + `SaveBar` + `TemplateBar`.
 
@@ -871,7 +882,7 @@ state layerِ دکمه‌های پُر با custom propertyِ ثبت‌شده‌
 ## 18. PWA و بروزرسانی برنامه
 
 - `vite-plugin-pwa` با **`registerType: "prompt"`**: نسخه‌ی جدید دانلود می‌شود ولی تا تأیید کاربر فعال نمی‌شود (کار نیمه‌تمام فرم از بین نرود).
-- **پیدا شدن و فعال‌شدن نسخه‌ی تازه** (`shared/services/appUpdate.js` — تنها جای ثبت SW): پیدا شدن (هنگام باز شدن، هر ۱۵ دقیقه، دیده‌شدن مجدد برگه، برگشت اینترنت، دستی از `AppUpdateDialog`) فقط اعلان می‌دهد. فعال‌شدن (= بارگذاری دوباره) را کاربر با «بروزرسانی» می‌زند و فقط وقتی انجام می‌شود که دفترِ ایمنیِ `shared/services/updateSafety.js` خالی باشد: فرم‌ها/کارتخوان/آپلودها با `useUpdateGuard` (و `useUnsavedChangesGuard`) خودشان را ثبت می‌کنند؛ اگر چیزی ثبت باشد بارگذاری نمی‌شود و دلیلش به کاربر گفته می‌شود. تنها فعال‌سازیِ بی‌پرسش: صفحه‌ی ورودِ دست‌نخورده و بعد از ورود (`applyUpdateAutomatically`) با سقفِ ۲ تلاش برای هر build. فعال‌سازیِ بی‌نتیجه بعد از ۱۰ ثانیه به «آماده» برمی‌گردد. «نسخه‌ی تازه» یعنی buildِ *جدیدتر* از buildِ در حالِ اجرا: worker منتظر خودش buildش را می‌گوید (`GET_BUILD` از `sw-build-*.js`، ساخته‌ی `vite.config.js`)؛ `version.json` فقط راهنماست و کهنه‌تر/برابرش هرگز اعلان نمی‌دهد، و ادعای بی‌worker فقط یک‌بار با بروزرسانیِ کامل امتحان می‌شود (`app-update-claim-tried`). اگر `sw-build-*.js` روی سرور نباشد worker ناقص نصب می‌شود (جواب `GET_BUILD` نمی‌دهد)؛ فرانت آن را «ناشناس» می‌شمارد و کلیکِ دوم بعد از شکستِ فعال‌سازی با بارگذاریِ کامل جلو می‌رود — کل `dist` را با هم منتشر کنید. ردیابی: `localStorage["app-update-debug"]="1"`.
+- **پیدا شدن و فعال‌شدن نسخه‌ی تازه** (`shared/services/appUpdate.js` — تنها جای ثبت SW): پیدا شدن (هنگام باز شدن، هر ۱۵ دقیقه، دیده‌شدن مجدد برگه، برگشت اینترنت، دستی از `AppUpdateDialog`) فقط اعلان می‌دهد. فعال‌شدن (= بارگذاری دوباره) را کاربر با «بروزرسانی» می‌زند و فقط وقتی انجام می‌شود که دفترِ ایمنیِ `shared/services/updateSafety.js` خالی باشد: فرم‌ها/کارتخوان/آپلودها با `useUpdateGuard` (و `useUnsavedChangesGuard`) خودشان را ثبت می‌کنند؛ اگر چیزی ثبت باشد بارگذاری نمی‌شود و دلیلش به کاربر گفته می‌شود. تنها فعال‌سازیِ بی‌پرسش: صفحه‌ی ورودِ دست‌نخورده و بعد از ورود (`applyUpdateAutomatically`) با سقفِ ۲ تلاش برای هر build. فعال‌سازیِ بی‌نتیجه بعد از ۱۰ ثانیه به «آماده» برمی‌گردد. «نسخه‌ی تازه» یعنی buildِ _جدیدتر_ از buildِ در حالِ اجرا: worker منتظر خودش buildش را می‌گوید (`GET_BUILD` از `sw-build-*.js`، ساخته‌ی `vite.config.js`)؛ `version.json` فقط راهنماست و کهنه‌تر/برابرش هرگز اعلان نمی‌دهد، و ادعای بی‌worker فقط یک‌بار با بروزرسانیِ کامل امتحان می‌شود (`app-update-claim-tried`). اگر `sw-build-*.js` روی سرور نباشد worker ناقص نصب می‌شود (جواب `GET_BUILD` نمی‌دهد)؛ فرانت آن را «ناشناس» می‌شمارد و کلیکِ دوم بعد از شکستِ فعال‌سازی با بارگذاریِ کامل جلو می‌رود — کل `dist` را با هم منتشر کنید. ردیابی: `localStorage["app-update-debug"]="1"`.
 - **کش runtime**: tile‌های نقشه (CacheFirst، ۲۰۰ مورد/۳۰ روز)، فونت‌ها (۱ سال)، `*.wasm` اسکنر بارکد (CacheFirst؛ عمداً precache نیست چون ~۱MB و فقط مرورگرهای بدون `BarcodeDetector` نیتیو نیاز دارند).
 - **پاسخ API عمداً کش نمی‌شود**: داده‌ی مالی/شخصی است، کلید کش توکن را نمی‌شناسد (کاربر بعدی همان دستگاه پاسخ قبلی را می‌دید)، و در کندی شبکه داده‌ی کهنه نشان می‌داد. `purgeLegacyApiCache` کش قدیمی `api-cache` را پاک می‌کند.
 - `devOptions.enabled: false` (HMR به‌هم نریزد). precache حدود ۳.۹MB (مبنا قبل از ریفکتور).
@@ -882,6 +893,7 @@ state layerِ دکمه‌های پُر با custom propertyِ ثبت‌شده‌
 ## 19. فایل، تصویر، بارکد، چاپ، نقشه
 
 ### 19.1 فایل و تصویر (`shared/services/files`, `api/File`)
+
 قرارداد سه‌گانه: ۱) آپلود **جدا** از ثبت موجودیت است و فقط `objectKey` می‌گیرد؛ همان کلید در `imageUrl` دستور Create/Update می‌رود.
 ۲) `url` آدرس **ثابت** خودِ API است (`/api/File/GetImage?objectKey=…`، منقضی نمی‌شود چون باکت Liara به User-Agent مرورگر ۴۰۴ می‌دهد)؛ ولی چیزی که **ذخیره** می‌شود `objectKey` است نه URL (URL با هاست عوض می‌شود).
 ۳) سرور هنگام تعویض، فایل قبلی را **پاک نمی‌کند** — پاک‌سازی یتیم‌ها کار فرانت است (`useImageUpload`).
@@ -892,16 +904,19 @@ state layerِ دکمه‌های پُر با custom propertyِ ثبت‌شده‌
 - آزادسازی blob URLها بعد از چاپ تصاویر ضمیمه.
 
 ### 19.2 بارکد
+
 تولید: `react-barcode` (CODE128) + QR با **محتوای یکسان** (وگرنه یک برچسب بسته به ابزار اسکن دو جواب می‌دهد؛ بکند هم همین را رندر می‌کند).
 خواندن: `BarcodeDetector` نیتیو، fallback به ZXing-wasm. `BarcodeScanField` = **یک فیلد** برای جست‌وجو و اسکنر دستی، با دکمه‌ی دوربین (`CameraScanButton`، lazy). `UnitBarcodeScanList` اسکن دانه‌ها هنگام دریافت/ارسال.
 
 ### 19.3 چاپ
+
 `usePrint`: «مسیر خروجی» مرورگر؛ محتوای داخل `[data-print-root]` چاپ می‌شود (`@page` پویا + کلاس `printing` روی body، پاک‌سازی روی `afterprint`).
 مسیر دوم (PDF برای پرینتر حرارتی) قرار است با همان امضا اضافه شود. `sheetPresets`: هندسه‌ی A4 (مثلاً ۳×۸ = ۲۴ برچسب ۶۲×۳۳mm) با قید ریاضی
 `columns×w + (columns−1)×gap ≤ عرضِ مفید` — وگرنه ستون/ردیف آخر بی‌صدا بیرون می‌افتد؛ `perPage` از `columns×rows` محاسبه می‌شود.
 `scripts/build-label-print-check.js` این هندسه را بررسی می‌کند. قالب برچسب (`labelTemplate`) رول (پرینتر برچسب) یا ورق A4.
 
 ### 19.4 نقشه
+
 `LocationPickerMap` lazy است؛ Leaflet فقط در `MapCanvas`. جست‌وجو/معکوس‌یابی با Nominatim (`nominatim.js`). «تأیید موقعیت» تا پیدا شدن آدرس غیرفعال است. فرم آدرس مشتری/تامین‌کننده = `PartyAddressForm`.
 
 ### 19.5 ورود و خروجِ اطلاعات (CSV / Excel)
@@ -949,16 +964,19 @@ recording ─خطا─▶ recordFailed ─retry─▶ recording
 ## 21. قراردادهای کدنویسی
 
 ### 21.1 زبان و کامنت
-- **کامنت‌ها فارسی**، مثل بقیه‌ی کد. برای export‌ها JSDoc کوتاه: «چه می‌کند و *چرا*»، نه تکرار کد.
+
+- **کامنت‌ها فارسی**، مثل بقیه‌ی کد. برای export‌ها JSDoc کوتاه: «چه می‌کند و _چرا_»، نه تکرار کد.
 - کد تازه باید از نظر چگالی کامنت/نام‌گذاری/idiom شبیه اطرافش باشد.
 - پیام‌های کاربر فارسی، با لحن و املای یکسان («پیش‌فاکتور»، «تامین‌کننده»، «دانه»).
 
 ### 21.2 نام‌گذاری
+
 - فایل کامپوننت `PascalCase.jsx`؛ هوک `useX.js`؛ سرویس‌ها `api-v1.js/queries.js/mutations.js/queryKeys.js`.
 - enum: `XxxEnum` + `XXX_LABELS`؛ ثابت‌ها `UPPER_SNAKE`.
 - **فیلد = نام بکند**. اگر نام بکند غلط/ناهمنام است (`FisrtName`, `RefferalCode`, `OrderLineId`) تنها نگاشت‌های مجاز همان‌هاست و توضیح دارد.
 
 ### 21.3 قواعد سخت‌گیرانه (از REFACTOR.md)
+
 1. بدون adapter فقط-تغییرنام.
 2. بدون mock/داده‌ی ساختگی.
 3. بدون رنگ خام Tailwind برای وضعیت؛ فقط tone.
@@ -966,14 +984,16 @@ recording ─خطا─▶ recordFailed ─retry─▶ recording
 5. بدون template-string برای مسیر؛ فقط `routeWithId`.
 6. بدون جدول/لیستِ کپی؛ از `DataTable`/`ServerTable`/`ListPageLayout`.
 7. بدون هوک تکراریِ `setHeader`/`clearHeader`؛ فقط `usePageHeader`.
-8. بدون کپی منطق بین خرید و فروش؛ منطق مشترک به `shared/` می‌رود و هر سمت فقط *برچسب/واژگان* خودش را می‌دهد.
+8. بدون کپی منطق بین خرید و فروش؛ منطق مشترک به `shared/` می‌رود و هر سمت فقط _برچسب/واژگان_ خودش را می‌دهد.
 9. هر تغییر رفتاریِ برنامه (غیر از رفع باگ) ممنوع در فاز ریفکتور؛ باگ در پیام commit ذکر شود.
 10. `components/ui/*` را دستی ویرایش نکنید (مگر نیاز واقعی).
 
 ### 21.4 ESLint
+
 `react-hooks` (v7، با قواعد React Compiler)، `react-refresh/only-export-components` (غیرفعال برای `routes.jsx` و چند فایل shadcn)، `no-unused-vars: warn`. گلوبال `__APP_BUILD__` تعریف شده. فایل‌های Node جدا کانفیگ شده‌اند. هشدارهای «Compilation Skipped» باقی‌مانده مربوط به `useReactTable` و `watch` در RHF است.
 
 ### 21.5 Commit
+
 پیام‌ها با پیشوند فاز (`Returns 3.6: …`, `Purchase/sale 2.8: …`)، و قبل از هر commit: lint + build.
 
 ---
@@ -994,6 +1014,7 @@ recording ─خطا─▶ recordFailed ─retry─▶ recording
 مبنا (قبل از ریفکتور، `main`): کل JS ‏۲.۶۵MB (gzip ‏۸۰۴KB)، JS بارگذاری اولیه ‏۹۷۰KB (gzip ‏۲۹۷KB)، CSS ‏۱۹۶KB، precache PWA ‏۳.۹MB.
 
 تکنیک‌های فعلی:
+
 - **Code-splitting**: همه‌ی صفحه‌ها `lazy`؛ vendor chunkها؛ کامپوننت‌های سنگین lazy (`LocationPickerMap`, `CameraScanButton`, `BankLogo`, `QrCodeGraphic`).
 - **React Compiler** به‌جای memo دستی.
 - `keepPreviousData` برای لیست‌ها؛ `setQueryData` از پاسخ نوشتن (بدون رفت‌وبرگشتِ اضافه)؛ `staleTime: Infinity` برای آدرس تصویر.
@@ -1009,25 +1030,28 @@ recording ─خطا─▶ recordFailed ─retry─▶ recording
 ## 24. وضعیت فعلی، بدهی‌ها و نقاط ضعف
 
 ### 24.1 وضعیت ریفکتور (`REFACTOR.md`)
+
 - ✅ آماده‌سازی؛ لایه‌ی مشترک (پیام خطا، سرویس/lib/hook/store، سیستم tone، جدول‌ها، نقشه، پرداخت، ConfirmDialog)؛ حذف adapterها؛ E2E سرتاسری خرید→فروش→مرجوعی روی سرور تست؛ امنیت POS؛ **خرید، فروش، مرجوعی‌ها** (فاز ۲.x و ۳.x)؛ **انبار** (۴.۱ تا ۴.۶).
 - ⏳ باقی: **auth، customers+suppliers، employees+organization+permissions، partyAccount+invoice+transactions، dashboard+reports+settings**، سند بکند، و فاز پرفرمنس.
 
 ### 24.2 بدهی‌های شناخته‌شده
-| مورد | شدت | توضیح |
-|---|---|---|
-| **نبودِ تست خودکار** | بالا | صفر فایل تست. منطق خالص (`domain/*`, `contract.js`, `resolutions.js`, `posSession.js`, `lineMath.js`) کاندید اولِ unit test (Vitest) است |
-| **بدون TypeScript** | متوسط | قراردادها (شکل DTO، enumها) فقط در JSDoc/کامنت‌اند. حداقل: `// @ts-check` + JSDoc typedef برای DTOهای اصلی |
-| ۳ فیچر placeholder | متوسط | `settings` (۹ صفحه ~۶ خط)، `invoice`، `transactions` — در routes/منو هستند اما محتوا ندارند. یا باید پیاده یا از منو/route حذف شوند |
-| فرم‌های هنوز-نرفتن‌ بر الگوی جدید | متوسط | بخش‌های باقی‌مانده‌ی REFACTOR (مهاجرتِ دیالوگ‌ها به `ConfirmDialog`، حذف adapter در فیچرهای باقی) |
-| وابستگی‌های معکوس `shared → features` | کم | `AppSidebar`→`usePermission`، `axios`→`authStore`، `useQueueRows`→سرویس خرید/فروش (فیچر→فیچر). می‌شود با انتقال `auth` به `shared/auth` یا `app/` رفع کرد |
-| `staleTime: 0` سراسری | کم/عمدی | بیشترین تازگی، ولی روی صفحه‌های پرکوئری درخواست زیاد می‌سازد؛ برای داده‌های مرجع (دسته‌ها، واحدها) می‌توان `staleTime` بلند گذاشت |
-| لایه‌ی چاپ فقط مرورگر | کم | مسیر خروجی PDF/حرارتی «بعداً» است |
-| کارتخوان بدون پیاده‌سازی transport | وابسته به PSP | قرارداد و ماشین وضعیت آماده؛ نیازمند برنامه‌ی واسط و امضا (بند ۱۲.۱ سند درخواست‌ها) |
-| چیدمان داشبورد فقط محلی | کم | بین دستگاه‌ها sync نمی‌شود (درخواست بکند ۶.۳) |
-| ESLint: هشدارهای Compiler | کم | ۴ هشدار «Compilation Skipped» (`useReactTable`, `watch`) |
-| دو سبک ناهمگون در QueryProvider/ThemeProvider | کم | بعضی فایل‌ها با `;` و `"` و بعضی بدون (`main.jsx`, `ThemeProvider`). یک Prettier/EditorConfig یکدست‌شان می‌کند |
+
+| مورد                                          | شدت           | توضیح                                                                                                                                                     |
+| --------------------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **نبودِ تست خودکار**                          | بالا          | صفر فایل تست. منطق خالص (`domain/*`, `contract.js`, `resolutions.js`, `posSession.js`, `lineMath.js`) کاندید اولِ unit test (Vitest) است                  |
+| **بدون TypeScript**                           | متوسط         | قراردادها (شکل DTO، enumها) فقط در JSDoc/کامنت‌اند. حداقل: `// @ts-check` + JSDoc typedef برای DTOهای اصلی                                                |
+| ۳ فیچر placeholder                            | متوسط         | `settings` (۹ صفحه ~۶ خط)، `invoice`، `transactions` — در routes/منو هستند اما محتوا ندارند. یا باید پیاده یا از منو/route حذف شوند                       |
+| فرم‌های هنوز-نرفتن‌ بر الگوی جدید             | متوسط         | بخش‌های باقی‌مانده‌ی REFACTOR (مهاجرتِ دیالوگ‌ها به `ConfirmDialog`، حذف adapter در فیچرهای باقی)                                                         |
+| وابستگی‌های معکوس `shared → features`         | کم            | `AppSidebar`→`usePermission`، `axios`→`authStore`، `useQueueRows`→سرویس خرید/فروش (فیچر→فیچر). می‌شود با انتقال `auth` به `shared/auth` یا `app/` رفع کرد |
+| `staleTime: 0` سراسری                         | کم/عمدی       | بیشترین تازگی، ولی روی صفحه‌های پرکوئری درخواست زیاد می‌سازد؛ برای داده‌های مرجع (دسته‌ها، واحدها) می‌توان `staleTime` بلند گذاشت                         |
+| لایه‌ی چاپ فقط مرورگر                         | کم            | مسیر خروجی PDF/حرارتی «بعداً» است                                                                                                                         |
+| کارتخوان بدون پیاده‌سازی transport            | وابسته به PSP | قرارداد و ماشین وضعیت آماده؛ نیازمند برنامه‌ی واسط و امضا (بند ۱۲.۱ سند درخواست‌ها)                                                                       |
+| چیدمان داشبورد فقط محلی                       | کم            | بین دستگاه‌ها sync نمی‌شود (درخواست بکند ۶.۳)                                                                                                             |
+| ESLint: هشدارهای Compiler                     | کم            | ۴ هشدار «Compilation Skipped» (`useReactTable`, `watch`)                                                                                                  |
+| دو سبک ناهمگون در QueryProvider/ThemeProvider | کم            | بعضی فایل‌ها با `;` و `"` و بعضی بدون (`main.jsx`, `ThemeProvider`). یک Prettier/EditorConfig یکدست‌شان می‌کند                                            |
 
 ### 24.3 ریسک‌هایی که باید در طراحی مراقبشان بود
+
 - **ایدمپوتنسی**: هر mutation مالیِ جدید باید `idempotencyKeyFor` بگیرد و هیچ‌گاه کلید در کامپوننت ساخته نشود.
 - **Invalidation**: mutation جدید روی خرید/فروش/مرجوعی/موجودی ⇒ توابع `invalidate…Ecosystem`، وگرنه صفحه‌ی کالاها/دانه‌ها کهنه می‌ماند.
 - **انقضای نشست**: هیچ‌وقت `window.location` یا `logout` دستی در سرویس‌ها نگذارید؛ مرکزش اینترسپتور و `AppLayout` است.
@@ -1038,6 +1062,7 @@ recording ─خطا─▶ recordFailed ─retry─▶ recording
 ## 25. راهنمای کار: چطور X را اضافه کنم؟
 
 ### 25.1 یک صفحه‌ی لیست جدید
+
 1. `services/api-v1.js`: `fetchX(params)` با `normalizeListResponse`؛ `X_SORT_COLUMNS`.
 2. `services/queryKeys.js` (الگوی سلسله‌مراتبی) و `queries.js` (`useXQuery` با `listQuery` + `keepPreviousData`).
 3. `store/xFilterStore.js` با `createFilterStore` (نام فیلد = نام پارامتر سرور).
@@ -1046,24 +1071,30 @@ recording ─خطا─▶ recordFailed ─retry─▶ recording
 6. route در `routes.jsx` با `lazy` و `handle.permission`؛ ثابت در `ROUTES`؛ آیتم منو در `navigationData.js` با `permission`.
 
 ### 25.2 یک mutation جدید
+
 `api-v1` (تابع خام، اگر مالی: `{idempotencyKey}` + `idempotent()`) ← `mutations.js` (`useMutation` + `idempotencyKeyFor` + toast موفق/`getErrorMessage` + invalidation مرکزی) ← صفحه فقط `mutate`/`isPending` را مصرف می‌کند.
 
 ### 25.3 یک enum/وضعیت جدید
+
 `shared/domain/enums/x.js`: `XEnum` هم‌شماره با بکند + `X_LABELS` + نگاشت tone؛ در صورت نیاز یک `XStatusBadge` که `StatusBadge` را wrap می‌کند.
 
 ### 25.4 یک فرم سند جدید
+
 `createDocumentFormStore` ← `useDocumentFormDraft` ← `DocumentFormLayout` + `DocumentItemsSection` + `PaymentsCard`/`usePaymentDraft` ← `run…Changes`/`use…ChangesSaver` ← `useUnsavedChangesGuard`.
 
 ### 25.5 یک فرم ساده
+
 `use<X>Form` با `react-hook-form`، `useFormDraft` اگر باید بین صفحه‌ها بماند، ورودی‌های `components/ui` ایرانی، `getErrorMessage` در `onError`.
 
 ### 25.6 بررسی قبل از commit
+
 ```bash
 pnpm lint && pnpm build      # هر دو باید موفق باشد
 pnpm knip                    # کد/export مرده
 ```
+
 و تست دستی روی سرور تست (برای قطع شبکه: پیکربندی `ourerp-offline` در `.claude/launch.json` که API را روی پورت بسته می‌گذارد).
 
 ---
 
-*آخرین بروزرسانی: ۲۰۲۶-۱۰-۰۵ — بر اساس برنچ `refactor/frontend-cleanup` (تا گامِ ۴.۶، انبار).*
+_آخرین بروزرسانی: ۲۰۲۶-۱۰-۰۵ — بر اساس برنچ `refactor/frontend-cleanup` (تا گامِ ۴.۶، انبار)._

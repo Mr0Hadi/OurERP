@@ -37,12 +37,15 @@ export default function TradeBreakdownFilters() {
         firstRowClassName="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
         dateRowClassName="flex justify-end border-t border-border pt-3"
         resetWrapperClassName="w-full sm:w-auto"
+        store={useTradeBreakdownFilterStore}
+        primary={
+          <FilterSearchInput
+            placeholder="عنوانِ گروه..."
+            value={state.search}
+            onChange={(event) => state.setSearch(event.target.value)}
+          />
+        }
       >
-        <FilterSearchInput
-          placeholder="عنوانِ گروه..."
-          value={state.search}
-          onChange={(event) => state.setSearch(event.target.value)}
-        />
         <PartyFilterSelect partyType={partyType} value={state.partyId} onSelect={state.setPartyId} />
         <CategoryFilterSelect value={state.productCategoryId} onSelect={state.setProductCategoryId} />
       </FilterPanel>

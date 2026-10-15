@@ -106,14 +106,16 @@ const EmployeeFilters = () => {
           />
         </>
       }
+      store={useEmployeeFilterStore}
+      primary={
+        <FilterSearchInput
+          label="جستجو"
+          placeholder="نام کارمند..."
+          value={fullName}
+          onChange={handleFullName}
+        />
+      }
     >
-      <FilterSearchInput
-        label="جستجو"
-        placeholder="نام کارمند..."
-        value={fullName}
-        onChange={handleFullName}
-      />
-
       <FilterSearchInput
         label="کد پرسنلی"
         placeholder="مثال: 1042"

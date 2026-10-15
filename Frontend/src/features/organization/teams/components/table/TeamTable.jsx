@@ -18,11 +18,13 @@ export default function TeamTable({
     () => [
       {
         accessorKey: "name",
+        meta: { mobile: "title" },
         header: "نام تیم",
         cell: (info) => <span className="font-medium">{info.getValue()}</span>,
       },
       {
         accessorKey: "departmentName",
+        meta: { mobile: "subtitle" },
         header: "واحد سازمانی",
         cell: (info) => (
           <Badge variant="outline" className="font-normal">

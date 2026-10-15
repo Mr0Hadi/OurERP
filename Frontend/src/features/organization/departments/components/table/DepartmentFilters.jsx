@@ -26,14 +26,16 @@ const DepartmentFilters = () => {
       dateRowClassName="flex pt-3 border-t border-border"
       resetWrapperClassName="flex items-end lg:justify-end w-full"
       resetButtonClassName="w-full sm:w-auto px-4"
+      store={useDepartmentFilterStore}
+      primary={
+        <FilterSearchInput
+          label="نام واحد"
+          placeholder="نام واحد..."
+          value={name}
+          onChange={handleName}
+        />
+      }
     >
-      <FilterSearchInput
-        label="نام واحد"
-        placeholder="نام واحد..."
-        value={name}
-        onChange={handleName}
-      />
-
       <FilterSearchInput
         label="مسئول واحد"
         placeholder="نام مسئول..."

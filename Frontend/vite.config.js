@@ -74,7 +74,7 @@ export default defineConfig({
         name: "OurERP",
         short_name: "OurERP",
         description:
-          "سامانه انبارداری و مدیریت لوازم یدکی خودرو پاسارگاد موتور پارت",
+          "سامانه انبارداری و مدیریت لوازم یدکی خودرو OurERP",
         lang: "fa-IR",
         dir: "rtl",
         start_url: "/",

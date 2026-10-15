@@ -1,4 +1,5 @@
 import { Button } from "@/shared/components/ui/button";
+import { ResponsiveFilters } from "@/shared/components/filters/FilterPanel";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { PriceInput } from "@/shared/components/ui/price-input";
@@ -34,18 +35,21 @@ export default function PartyListFilters({ useStore, searchKey, searchPlaceholde
   const { setSearch, setId, setBalanceRange, setQuickFilter, resetFilters } = useStore.getState();
 
   return (
-    <div className="p-3 bg-card border border-border rounded-xl shadow-sm space-y-3">
+    <ResponsiveFilters
+      store={useStore}
+      onReset={resetFilters}
+      primary={
+        <Field label="جستجو">
+          <Input
+            placeholder={searchPlaceholder}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1"
+          />
+        </Field>
+      }
+    >
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <div className="sm:col-span-2">
-          <Field label="جستجو">
-            <Input
-              placeholder={searchPlaceholder}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="flex-1"
-            />
-          </Field>
-        </div>
         <Field label="شناسه">
           <Input
             placeholder="مثال: ۴۲"
@@ -94,7 +98,7 @@ export default function PartyListFilters({ useStore, searchKey, searchPlaceholde
           })}
         </div>
 
-        <div className="flex flex-col items-end justify-between">
+        <div className="hidden md:flex flex-col items-end justify-between">
           <Button
             type="button"
             variant="outline"
@@ -105,6 +109,6 @@ export default function PartyListFilters({ useStore, searchKey, searchPlaceholde
           </Button>
         </div>
       </div>
-    </div>
+    </ResponsiveFilters>
   );
 }

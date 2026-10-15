@@ -14,86 +14,110 @@ import {
 } from "@/shared/components/ui/select";
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 50];
+const fa = (n) => Number(n).toLocaleString("fa-IR");
 
+/**
+ * صفحه‌بندیِ زیرِ جدول.
+ *
+ * @param totalCount تعدادِ کلِ نتایج؛ اگر باشد «۲۱–۳۰ از ۷۵» نشان داده می‌شود.
+ * @param compact    چیدمانِ یک‌ردیفه‌ی موبایل: فقط قبلی/بعدی، بدونِ اول/آخر.
+ */
 export default function DataTablePagination({
   totalPages,
   currentPage,
   pageSize,
   onPaginationChange,
+  totalCount,
+  compact = false,
 }) {
-  const isLastPage = currentPage + 1 >= totalPages;
+  const pages = Math.max(totalPages || 1, 1);
+  const isFirstPage = currentPage === 0;
+  const isLastPage = currentPage + 1 >= pages;
+  const goTo = (pageIndex) => onPaginationChange({ pageIndex, pageSize });
+
+  const from = totalCount ? currentPage * pageSize + 1 : 0;
+  const to = totalCount ? Math.min((currentPage + 1) * pageSize, totalCount) : 0;
+
+  const sizeSelect = (
+    <Select
+      value={pageSize.toString()}
+      onValueChange={(value) => onPaginationChange({ pageIndex: 0, pageSize: Number(value) })}
+    >
+      <SelectTrigger size="sm" className="w-[64px]" aria-label="ردیف در صفحه">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent side="top">
+        {PAGE_SIZE_OPTIONS.map((size) => (
+          <SelectItem key={size} value={size.toString()}>
+            {fa(size)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
+  if (compact) {
+    return (
+      <div className="flex items-center justify-between gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9 gap-1 px-3"
+          onClick={() => goTo(currentPage - 1)}
+          disabled={isFirstPage}
+        >
+          <ChevronRight className="size-4" />
+          قبلی
+        </Button>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="whitespace-nowrap tabular-nums">
+            {fa(currentPage + 1)} / {fa(pages)}
+          </span>
+          {sizeSelect}
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9 gap-1 px-3"
+          onClick={() => goTo(currentPage + 1)}
+          disabled={isLastPage}
+        >
+          بعدی
+          <ChevronLeft className="size-4" />
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row items-center justify-between px-2">
-      <div className="flex items-center gap-2">
-        <p className="text-sm font-light whitespace-nowrap">ردیف در صفحه</p>
-        <Select
-          value={pageSize.toString()}
-          onValueChange={(value) =>
-            onPaginationChange({ pageIndex: 0, pageSize: Number(value) })
-          }
-        >
-          <SelectTrigger className="h-8 w-[70px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent side="top">
-            {PAGE_SIZE_OPTIONS.map((size) => (
-              <SelectItem key={size} value={size.toString()}>
-                {size.toLocaleString("fa-IR")}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+    <div className="flex flex-col items-center justify-between gap-2 px-1 sm:flex-row">
+      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <span className="whitespace-nowrap text-xs">ردیف در صفحه</span>
+          {sizeSelect}
+        </div>
+        {totalCount > 0 && (
+          <span className="whitespace-nowrap text-xs tabular-nums">
+            {fa(from)}–{fa(to)} از {fa(totalCount)}
+          </span>
+        )}
       </div>
 
       <div className="flex items-center gap-1">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onPaginationChange({ pageIndex: 0, pageSize })}
-          disabled={currentPage === 0}
-          aria-label="اولین صفحه"
-        >
-          <ChevronsRight className="h-4 w-4" />
+        <Button variant="outline" size="icon-sm" onClick={() => goTo(0)} disabled={isFirstPage} aria-label="اولین صفحه">
+          <ChevronsRight />
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() =>
-            onPaginationChange({ pageIndex: currentPage - 1, pageSize })
-          }
-          disabled={currentPage === 0}
-          aria-label="صفحه قبل"
-        >
-          <ChevronRight className="h-4 w-4" />
+        <Button variant="outline" size="icon-sm" onClick={() => goTo(currentPage - 1)} disabled={isFirstPage} aria-label="صفحه قبل">
+          <ChevronRight />
         </Button>
-
-        <span className="text-sm px-2 whitespace-nowrap">
-          صفحه {(currentPage + 1).toLocaleString("fa-IR")} از{" "}
-          {totalPages.toLocaleString("fa-IR")}
+        <span className="whitespace-nowrap px-2 text-sm tabular-nums">
+          صفحه {fa(currentPage + 1)} از {fa(pages)}
         </span>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() =>
-            onPaginationChange({ pageIndex: currentPage + 1, pageSize })
-          }
-          disabled={isLastPage}
-          aria-label="صفحه بعد"
-        >
-          <ChevronLeft className="h-4 w-4" />
+        <Button variant="outline" size="icon-sm" onClick={() => goTo(currentPage + 1)} disabled={isLastPage} aria-label="صفحه بعد">
+          <ChevronLeft />
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() =>
-            onPaginationChange({ pageIndex: totalPages - 1, pageSize })
-          }
-          disabled={isLastPage}
-          aria-label="آخرین صفحه"
-        >
-          <ChevronsLeft className="h-4 w-4" />
+        <Button variant="outline" size="icon-sm" onClick={() => goTo(pages - 1)} disabled={isLastPage} aria-label="آخرین صفحه">
+          <ChevronsLeft />
         </Button>
       </div>
     </div>

@@ -12,12 +12,14 @@ import { DateCell, InvoiceLink, PartyLink } from "./cells";
 const columns = [
   {
     id: "invoiceDate",
+    meta: { mobile: "subtitle" },
     accessorKey: "invoiceDate",
     header: "تاریخ",
     cell: (info) => <DateCell value={info.getValue()} />,
   },
   {
     id: "invoiceNumber",
+    meta: { mobile: "subtitle" },
     accessorKey: "invoiceNumber",
     header: "فاکتور",
     cell: ({ row }) => (
@@ -29,6 +31,7 @@ const columns = [
   },
   {
     id: "productName",
+    meta: { mobile: "title" },
     accessorKey: "productName",
     header: "کالا",
     cell: ({ row }) => (
@@ -103,6 +106,7 @@ const columns = [
   },
   {
     id: "totalAmount",
+    meta: { mobile: "highlight" },
     accessorKey: "totalAmount",
     header: "جمع",
     cell: (info) => <Amount value={info.getValue()} strong />,

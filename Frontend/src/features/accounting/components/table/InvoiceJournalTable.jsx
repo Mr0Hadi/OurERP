@@ -27,6 +27,7 @@ function columnsFor(config) {
   return [
     {
       id: "invoiceNumber",
+      meta: { mobile: "subtitle" },
       accessorKey: "invoiceNumber",
       header: "فاکتور",
       cell: ({ row }) => (
@@ -45,12 +46,14 @@ function columnsFor(config) {
     },
     {
       id: "invoiceDate",
+      meta: { mobile: "subtitle" },
       accessorKey: "invoiceDate",
       header: "تاریخ",
       cell: (info) => <DateCell value={info.getValue()} />,
     },
     {
       id: config.partyNameKey,
+      meta: { mobile: "title" },
       accessorKey: config.partyNameKey,
       header: config.partyLabel,
       cell: ({ row }) => (
@@ -76,6 +79,7 @@ function columnsFor(config) {
     },
     {
       id: "totalAmount",
+      meta: { mobile: "highlight" },
       accessorKey: "totalAmount",
       header: "جمع فاکتور",
       cell: ({ row }) => {
@@ -104,6 +108,7 @@ function columnsFor(config) {
     },
     {
       id: "remainingAmount",
+      meta: { mobile: "highlight" },
       accessorKey: "remainingAmount",
       header: "مانده",
       cell: ({ row }) => <Amount value={row.original.remainingAmount} tone={remainingTone(row.original)} strong />,
