@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, Download, FileDown, FileUp, Upload } from "lucide-react";
+import { ArrowLeftRight, ChevronDown, Download, FileDown, FileUp } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -17,7 +17,7 @@ import { useDataTransferResource } from "@/shared/services/dataTransfer/queries"
 import ImportDialog from "./ImportDialog";
 
 /**
- * دکمه‌های «ورود از فایل» و «خروجی» برای سرتیترِ یک صفحه‌ی لیست — یک خط در هر صفحه:
+ * دکمه‌ی «ورود / خروجی» (یک منو؛ در موبایل فقط آیکون) برای سرتیترِ یک صفحه‌ی لیست — یک خط در هر صفحه:
  *
  * ```jsx
  * <ListPageLayout actions={<DataTransferActions resource="customers" filters={filters} invalidateKey={customerKeys.all} />}>
@@ -42,62 +42,58 @@ export default function DataTransferActions({ resource, filters, invalidateKey }
   const runExport = (format) => exportFile.mutate({ resource, format, filters, title: info.title });
   const downloadTemplate = (format) => template.mutate({ resource, format, title: info.title });
 
+  const busy = exportFile.isPending || template.isPending;
+
   return (
     <>
-      {info.canImport && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="gap-1.5">
-              <FileUp className="size-4" />
-              ورود از فایل
-              <ChevronDown className="size-3.5 opacity-60" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-auto min-w-44">
-            <DropdownMenuItem onSelect={() => setImportFormat(DATA_TRANSFER_FORMATS.XLSX)}>
-              <Upload className="size-4" />
-              از فایل Excel
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setImportFormat(DATA_TRANSFER_FORMATS.CSV)}>
-              <Upload className="size-4" />
-              از فایل CSV
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-xs text-muted-foreground">فایل نمونه</DropdownMenuLabel>
-            <DropdownMenuItem disabled={template.isPending} onSelect={() => downloadTemplate(DATA_TRANSFER_FORMATS.XLSX)}>
-              <Download className="size-4" />
-              نمونه‌ی Excel
-            </DropdownMenuItem>
-            <DropdownMenuItem disabled={template.isPending} onSelect={() => downloadTemplate(DATA_TRANSFER_FORMATS.CSV)}>
-              <Download className="size-4" />
-              نمونه‌ی CSV
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
-
-      {info.canExport && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="gap-1.5" disabled={exportFile.isPending}>
-              <FileDown className="size-4" />
-              {exportFile.isPending ? "در حال آماده‌سازی..." : "خروجی"}
-              <ChevronDown className="size-3.5 opacity-60" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-auto min-w-44">
-            <DropdownMenuLabel className="text-xs text-muted-foreground">ردیف‌های فیلترشده‌ی فعلی</DropdownMenuLabel>
-            <DropdownMenuItem onSelect={() => runExport(DATA_TRANSFER_FORMATS.XLSX)}>
-              <Download className="size-4" />
-              خروجی Excel
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => runExport(DATA_TRANSFER_FORMATS.CSV)}>
-              <Download className="size-4" />
-              خروجی CSV
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" className="gap-1.5 max-sm:size-9 max-sm:px-0" disabled={busy} aria-label="ورود و خروج داده">
+            <ArrowLeftRight className="size-4" />
+            <span className="max-sm:hidden">{busy ? "در حال آماده‌سازی..." : "ورود / خروجی"}</span>
+            <ChevronDown className="size-3.5 opacity-60 max-sm:hidden" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-auto min-w-48">
+          {info.canExport && (
+            <>
+              <DropdownMenuLabel className="text-xs text-muted-foreground">خروجی (ردیف‌های فیلترشده)</DropdownMenuLabel>
+              <DropdownMenuItem onSelect={() => runExport(DATA_TRANSFER_FORMATS.XLSX)}>
+                <FileDown className="size-4" />
+                خروجی Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => runExport(DATA_TRANSFER_FORMATS.CSV)}>
+                <FileDown className="size-4" />
+                خروجی CSV
+              </DropdownMenuItem>
+            </>
+          )}
+          {info.canExport && info.canImport && <DropdownMenuSeparator />}
+          {info.canImport && (
+            <>
+              <DropdownMenuLabel className="text-xs text-muted-foreground">ورود از فایل</DropdownMenuLabel>
+              <DropdownMenuItem onSelect={() => setImportFormat(DATA_TRANSFER_FORMATS.XLSX)}>
+                <FileUp className="size-4" />
+                از فایل Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setImportFormat(DATA_TRANSFER_FORMATS.CSV)}>
+                <FileUp className="size-4" />
+                از فایل CSV
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs text-muted-foreground">فایل نمونه</DropdownMenuLabel>
+              <DropdownMenuItem onSelect={() => downloadTemplate(DATA_TRANSFER_FORMATS.XLSX)}>
+                <Download className="size-4" />
+                نمونه‌ی Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => downloadTemplate(DATA_TRANSFER_FORMATS.CSV)}>
+                <Download className="size-4" />
+                نمونه‌ی CSV
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {info.canImport && importFormat && (
         <ImportDialog
