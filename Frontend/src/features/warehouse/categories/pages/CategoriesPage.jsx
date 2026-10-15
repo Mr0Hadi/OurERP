@@ -70,7 +70,7 @@ function CategoryList({ selectedId, className, canManage, onCreate, onRename, on
         menu: canManage
           ? [
               { label: "ویرایش نام", icon: <Pencil className="size-4" />, onSelect: () => onRename(c) },
-              { label: "حذف دسته‌بندی", icon: <Trash2 className="size-4" />, destructive: true, onSelect: () => onDelete(c) },
+              { label: "حذف دسته", icon: <Trash2 className="size-4" />, destructive: true, onSelect: () => onDelete(c) },
             ]
           : undefined,
       }))}
@@ -179,7 +179,7 @@ function CategoryDetail({ id, category, canManage, onRename, onDelete }) {
                 </DropdownMenuItem>
                 <DropdownMenuItem variant="destructive" onSelect={onDelete}>
                   <Trash2 className="size-4" />
-                  حذف دسته‌بندی
+                  حذف دسته
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -339,7 +339,7 @@ export default function CategoriesPage() {
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title={`حذف دسته‌بندی «${deleteTarget?.name ?? ""}»`}
+        title={`حذف دسته «${deleteTarget?.name ?? ""}»`}
         description={
           deleteTarget?.productCount > 0
             ? `${formatNumber(deleteTarget.productCount)} کالا در این دسته است. کالاها پاک نمی‌شوند و دسته‌شان روی آن‌ها می‌ماند؛ فقط این دسته دیگر در فهرست‌ها و انتخاب‌گرها نمی‌آید.`
