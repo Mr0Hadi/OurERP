@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useIsMobile } from "@/shared/hooks/useIsMobile";
 
 import { Button } from "@/shared/components/ui/button";
 import { ResponsiveFilters } from "@/shared/components/filters/FilterPanel";
@@ -47,6 +48,7 @@ function PriceRangeInput({ label, value, onChange, placeholder }) {
  */
 export default function ProductFilters() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const scanProduct = useScanProductMutation();
   const { data: categories = [], isLoading: isCategoriesLoading } = useProductCategoriesQuery();
   const { data: vehicleData, isLoading: isVehiclesLoading } = useVehiclesQuery();
@@ -82,10 +84,19 @@ export default function ProductFilters() {
       },
     });
 
+  const nameSearch = (
+    <FilterSearchInput
+      placeholder="نام فارسی یا انگلیسی کالا..."
+      value={name}
+      onChange={(event) => setName(event.target.value)}
+    />
+  );
+
   return (
     <ResponsiveFilters
       store={useProductFilterStore}
       onReset={resetFilters}
+      secondary={isMobile ? nameSearch : null}
       primary={
         <ProductCodeSearchField
           value={code}
@@ -96,11 +107,7 @@ export default function ProductFilters() {
       }
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
-        <FilterSearchInput
-          placeholder="نام فارسی یا انگلیسی کالا..."
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
+        {!isMobile && nameSearch}
         <FilterSearchInput
           label="برند"
           placeholder="مثلاً بوش"
@@ -153,7 +160,7 @@ export default function ProductFilters() {
           onChange={(next) => setPriceRange(fromPrice, next ?? "")}
           placeholder="تا"
         />
-        {/* در موبایل ریست در فوترِ شیتِ فیلتر است. */}
+        {/* در موبایل ریست در پایینِ پنلِ بازشونده است. */}
         <div className="hidden md:flex items-end xs:col-span-2 lg:col-span-1 lg:justify-end">
           <Button type="button" variant="outline" onClick={resetFilters} className="w-full px-4">
             حذف همه فیلترها

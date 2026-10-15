@@ -1,14 +1,7 @@
 import { useState } from "react";
-import { SlidersHorizontal } from "lucide-react";
+import { ChevronDown, SlidersHorizontal } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/shared/components/ui/sheet";
 import { useIsMobile } from "@/shared/hooks/useIsMobile";
 import { useActiveFilterCount } from "@/shared/hooks/useActiveFilterCount";
 import { formatNumber } from "@/shared/lib/numberFormat";
@@ -17,17 +10,17 @@ import { formatNumber } from "@/shared/lib/numberFormat";
  * پوسته‌ی واکنش‌گرای فیلترها.
  *
  * دسکتاپ: همان کارتِ فیلترِ همیشگی (`children`).
- * موبایل: فقط `primary` (معمولاً جست‌وجو) در صفحه می‌ماند و بقیه در یک
- * bottom-sheet پشتِ دکمه‌ی «فیلترها» با نشانِ تعدادِ فیلترهای فعال — قبلاً
- * فیلترها کلِ صفحه‌ی گوشی را می‌گرفتند و جدول زیرشان گم می‌شد.
+ * موبایل (مثلِ صفحه‌ی دانه‌ها): `primary` بالا در تمامِ عرض، زیرش `secondary` کنارِ
+ * دکمه‌ی «فیلترها» (با نشانِ تعدادِ فیلترهای فعال)، و بقیه‌ی فیلترها در پنلِ
+ * بازشونده‌ی زیرِ همان ردیف — نه شیتِ کشوییِ پایینِ صفحه.
+ * بدونِ `secondary`، خودِ `primary` کنارِ دکمه می‌نشیند.
  *
- * فیلترها زنده اعمال می‌شوند؛ «نمایش نتایج» فقط شیت را می‌بندد.
- *
- * @param primary   کنترلی که در موبایل بیرونِ شیت می‌ماند (در دسکتاپ بالای کارت)
+ * @param primary   کنترلی که در موبایل همیشه دیده می‌شود (معمولاً جست‌وجو)
+ * @param secondary کنترلِ دومِ همیشه‌پیدا (موبایل)، کنارِ دکمه‌ی فیلترها
  * @param store     استورِ `createFilterStore` برای شمارشِ فیلترهای فعال
  * @param onReset   پاک کردنِ همه‌ی فیلترها
  */
-export function ResponsiveFilters({ primary, store, onReset, children, className = "" }) {
+export function ResponsiveFilters({ primary, secondary, store, onReset, children, className = "" }) {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const activeCount = useActiveFilterCount(store);
@@ -36,75 +29,62 @@ export function ResponsiveFilters({ primary, store, onReset, children, className
     return (
       <div className={`p-3 bg-card border border-border rounded-xl shadow-sm space-y-3 ${className}`}>
         {primary}
+        {secondary}
         {children}
       </div>
     );
   }
 
+  const besideToggle = secondary ?? primary;
+  const toggle = (
+    <Button
+      type="button"
+      variant={open ? "secondary" : "outline"}
+      onClick={() => setOpen((value) => !value)}
+      aria-expanded={open}
+      className="h-10 shrink-0 gap-1.5 rounded-xl px-3"
+    >
+      <SlidersHorizontal className="size-4" />
+      فیلترها
+      {activeCount > 0 && (
+        <span className="min-w-5 rounded-full bg-primary px-1.5 text-xs leading-5 text-primary-foreground tabular-nums">
+          {formatNumber(activeCount)}
+        </span>
+      )}
+      <ChevronDown className={`size-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+    </Button>
+  );
+
   return (
-    <>
-      <div className="flex items-end gap-2">
-        {/* برچسبِ «جستجو» در نوارِ فشرده‌ی موبایل جا می‌گیرد؛ placeholder کافی است. */}
-        {primary && (
-          <div className="min-w-0 flex-1 [&_input]:h-10 [&_input]:rounded-xl [&_input]:bg-muted/40 [&_label]:sr-only">
-            {primary}
+    // برچسب‌ها در نوارِ فشرده جا نمی‌گیرند؛ placeholder کافی است.
+    <div className="space-y-2">
+      {secondary && <div className="[&_label]:sr-only">{primary}</div>}
+
+      <div className="flex items-center gap-2">
+        {besideToggle && (
+          <div className="min-w-0 flex-1 [&_input]:h-10 [&_input]:rounded-xl [&_label]:sr-only">
+            {besideToggle}
           </div>
         )}
-        <Button
-          type="button"
-          variant={activeCount ? "secondary" : "outline"}
-          onClick={() => setOpen(true)}
-          className={`relative h-10 gap-2 rounded-xl ${primary ? "w-10 shrink-0 px-0" : "w-full"}`}
-          aria-label="فیلترها"
-        >
-          <SlidersHorizontal className="size-4" />
-          {/* کنارِ جست‌وجو فقط آیکن، تا جست‌وجو عرضِ بیشتری داشته باشد. */}
-          {!primary && "فیلترها"}
-          {activeCount > 0 && (
-            <span
-              className={`min-w-5 rounded-full bg-primary px-1.5 text-xs leading-5 text-primary-foreground ${
-                primary ? "absolute -top-1.5 -left-1.5 ring-2 ring-background" : ""
-              }`}
-            >
-              {formatNumber(activeCount)}
-            </span>
-          )}
-        </Button>
+        {toggle}
       </div>
 
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent
-          side="bottom"
-          className="max-h-[85dvh] gap-0 rounded-t-2xl p-0"
-          showCloseButton={false}
-        >
-          <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-muted-foreground/30" />
-          <SheetHeader className="flex-row items-center justify-between border-b px-4 py-3">
-            <SheetTitle>فیلترها</SheetTitle>
-            {activeCount > 0 && onReset && (
-              <Button type="button" variant="ghost" size="sm" onClick={onReset}>
-                حذف همه
-              </Button>
-            )}
-          </SheetHeader>
-
-          <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4 custom-scroll">
-            {children}
-          </div>
-
-          <SheetFooter className="flex-row gap-2 border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            {onReset && (
-              <Button type="button" variant="outline" className="flex-1" onClick={onReset}>
+      {open && (
+        <div className="space-y-4 rounded-xl border border-border bg-muted/30 p-3">
+          {children}
+          {onReset && (
+            <div className="flex gap-2 border-t border-border pt-3">
+              <Button type="button" variant="outline" className="flex-1" onClick={onReset} disabled={!activeCount}>
                 حذف فیلترها
               </Button>
-            )}
-            <Button type="button" className="flex-[2]" onClick={() => setOpen(false)}>
-              نمایش نتایج
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
-    </>
+              <Button type="button" variant="ghost" className="flex-1" onClick={() => setOpen(false)}>
+                بستن
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -139,7 +119,7 @@ export default function FilterPanel({
       {(dateRow || !isMobile) && (
         <div className={dateRowClassName}>
           {dateRow}
-          {/* در موبایل ریست در فوترِ شیت است. */}
+          {/* در موبایل ریست در پایینِ پنلِ بازشونده است. */}
           {!isMobile && (
             <div className={resetWrapperClassName}>
               <Button

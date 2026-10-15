@@ -31,6 +31,8 @@ import { getPartyName } from "./filterUtils";
  * فهرست در پورتال (`Popover`) باز می‌شود، نه `absolute` داخلِ والد؛ وگرنه
  * داخلِ کارتِ `overflow-hidden` (مثلِ بخشِ اقلامِ فرمِ خرید/فروش) بریده می‌شد.
  */
+const isTouchDevice = () => window.matchMedia("(pointer: coarse)").matches;
+
 export default function EntitySelect({
   label,
   placeholder,
@@ -130,6 +132,13 @@ export default function EntitySelect({
         <PopoverContent
           align="start"
           className="w-(--radix-popover-trigger-width) p-0"
+          // روی صفحه‌ی لمسی، Radix اولین input (جست‌وجو) را فوکوس می‌کرد و کیبورد
+          // بالا می‌آمد؛ جست‌وجو فقط وقتی کاربر خودش رویش بزند فعال می‌شود.
+          onOpenAutoFocus={(event) => {
+            if (!isTouchDevice()) return;
+            event.preventDefault();
+            event.currentTarget.focus();
+          }}
           // کلیک روی خودِ فیلد را `onClick`ِ فیلد باز/بسته می‌کند، نه بستنِ بیرونی.
           onInteractOutside={(event) => {
             if (fieldRef.current?.contains(event.target)) event.preventDefault();
@@ -143,8 +152,7 @@ export default function EntitySelect({
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 className="pr-8 h-8"
-                // روی صفحه‌ی لمسی فوکوس نمی‌شود تا کیبورد، فهرستِ گزینه‌ها را نپوشاند.
-                autoFocus={!window.matchMedia("(pointer: coarse)").matches}
+                autoFocus={!isTouchDevice()}
               />
             </div>
           </div>
