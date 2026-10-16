@@ -225,9 +225,8 @@ export default function ResolutionComposer({
                 />
               )}
 
-              {/* زیرِ همان گزینه با یک خطِ راهنما، نه یک جعبه‌ی تودرتوی دیگر. */}
               {composition[slot].enabled && allowPicker && (
-                <div className="ms-2 border-s-2 border-primary/25 ps-2.5">
+                <div>
                   <GoodsItemsPicker
                     items={composition[slot].items}
                     onItemsChange={(items) => patchSlot(slot, { items })}

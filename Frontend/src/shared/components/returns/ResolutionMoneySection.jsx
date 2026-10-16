@@ -116,8 +116,7 @@ export default function ResolutionMoneySection({
         options={directionOptions}
       />
 
-      {/* جزئیاتِ همان جهت، زیرش با خطِ راهنما — نه جعبه‌ی تودرتوی دیگر. */}
-      <div className="ms-2 space-y-2.5 border-s-2 border-primary/25 ps-2.5">
+      <div className="space-y-2.5">
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground sm:text-[11px]">روش</Label>
           {/* روش پرداخت enum عددی است؛ Radix فقط رشته می‌شناسد. */}
