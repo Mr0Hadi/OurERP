@@ -1,5 +1,7 @@
 using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.ProductUnit;
+using Application.Common.Sales;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
@@ -45,9 +47,11 @@ namespace Application.Features.Sale.Commands
         private readonly IObjectStorageService _objectStorageService;
         private readonly ISaleReturnCalculationService _saleReturnCalculationService;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IProductUnitService _productUnitService;
 
-        public ChangeSaleStatusCommandHandler(IWMSDbContext context, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, ISaleReturnCalculationService saleReturnCalculationService)
+        public ChangeSaleStatusCommandHandler(IWMSDbContext context, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, ISaleReturnCalculationService saleReturnCalculationService, IProductUnitService productUnitService)
         {
+            _productUnitService = productUnitService;
             _context = context;
             _objectStorageService = objectStorageService;
             _saleReturnCalculationService = saleReturnCalculationService;
@@ -85,7 +89,11 @@ namespace Application.Features.Sale.Commands
             // Cancelling an issued invoice takes it (and any installment charge) off the customer's account; the payments
             // stay, so money received and not yet refunded shows as owed back to the customer.
             if (request.Status == SalesStatusEnum.CANCELLED)
+            {
                 await PartyLedger.SaleCancelledAsync(_context, sale, DateTime.Now, cancellationToken);
+                // Nothing has shipped, so every unit reserved for it is still on the shelf: it is free again.
+                await SaleProformaPipeline.ReleaseAsync(_context, _productUnitService, sale, sale.Items.Select(i => i.Id), cancellationToken);
+            }
 
             sale.Status = request.Status;
             sale.UpdatedAt = DateTime.Now;

@@ -8,7 +8,7 @@ namespace WMS.Tests.Unit
 {
     /// <summary>
     /// Permissions are enforced at the HTTP boundary, on the action - not in a MediatR pipeline
-    /// behaviour, because composite commands (CreateInPersonSale, ReceiveShipment) send other
+    /// behaviour, because composite commands (CompleteInPersonSale, ReceiveShipment) send other
     /// commands through IMediator and a behaviour would demand the inner commands' permissions
     /// from a user who only asked for the outer one.
     ///

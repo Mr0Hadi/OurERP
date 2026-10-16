@@ -236,8 +236,17 @@ namespace Domain.Enums
         [Description("ارسال کالای فروش")]
         ShipSale = 409,
 
-        [Description("فروش حضوری")]
-        CreateInPersonSale = 410,
+        [Description("تکمیل فروش حضوری")]
+        CompleteInPersonSale = 410,
+
+        [Description("تأیید مشتری روی پیش‌فاکتور")]
+        ApproveSaleProforma = 411,
+
+        [Description("تأیید انبار و رزرو کالای پیش‌فاکتور")]
+        CheckSaleWarehouse = 412,
+
+        [Description("رسیدگی به گزارش انبار")]
+        ResolveSaleWarehouseIssue = 413,
 
         // --- اقساط ---
         [Description("ایجاد طرح اقساط")]

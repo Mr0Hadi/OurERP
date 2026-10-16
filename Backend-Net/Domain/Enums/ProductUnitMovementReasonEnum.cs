@@ -49,5 +49,11 @@ namespace Domain.Enums
 
         [Description("انتقال به قرنطینه")]
         STOCK_QUARANTINED = 14,
+
+        [Description("رزرو برای پیش‌فاکتور")]
+        SALE_RESERVED = 15,
+
+        [Description("آزادسازی رزرو پیش‌فاکتور")]
+        SALE_RESERVATION_RELEASED = 16,
     }
 }

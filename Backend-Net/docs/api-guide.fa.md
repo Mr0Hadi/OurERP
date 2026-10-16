@@ -667,10 +667,13 @@ Authorization: Bearer {accessToken}
 | | `AcceptPurchaseExcess` | `PurchaseAcceptExcess` |
 | | `ChangePurchaseStatus`، `UpdatePurchaseAttachments`، `UpdatePurchasePaymentDate` | `PurchaseUpdate` |
 | | `Add/Edit/VoidPurchasePayment` | `PurchasePayment` |
-| فروش | `GetSaleList/Detail` | `SaleView` |
+| فروش | `GetSaleList/Detail` | `SaleView` **یا** `SaleWarehouseCheck` (انبار پیش‌فاکتورِ صفش را می‌بیند) |
 | | `CreateSale` / `UpdateSale` / `DeleteSale` | `SaleCreate` / `SaleUpdate` / `SaleDelete` |
 | | `ShipSale`، `Shipment/DispatchShipment` | `SaleShip` |
-| | `CreateInPersonSale` | `SaleInPerson` |
+| | `CompleteInPersonSale` | `SaleInPerson` |
+| | `ApproveSaleProforma` | `SaleUpdate` |
+| | `CheckSaleWarehouse` | `SaleWarehouseCheck` |
+| | `GetSaleWarehouseIssueList` / `ResolveSaleWarehouseIssue` | `AccountingView` یا `SaleWarehouseIssueResolve` / `SaleWarehouseIssueResolve` |
 | | `ChangeSaleStatus`، `UpdateSaleAttachments`، `UpdateSalePaymentDate` | `SaleUpdate` |
 | | `Add/Edit/VoidSalePayment` | `SalePayment` |
 | اقساط | `Get...` / `Create,Update,DeletePlan` / `PaySaleInstallment`،`SettleSaleInstallmentPlan` | `SaleInstallmentView` / `SaleInstallmentManage` / `SaleInstallmentPay` |
@@ -691,7 +694,7 @@ Authorization: Bearer {accessToken}
 | حسابداری | تمام `Accounting/*` و خروجی‌های اکسلِ آن‌ها | `AccountingView` |
 | تاریخچه تغییرات | تمام `Audit/*` | `AuditLogView` |
 
-`CreateInPersonSale` و `Shipment/*` داخل خودشان چند کامند دیگر را اجرا می‌کنند؛ فقط همان یک دسترسیِ بالا لازم است، نه دسترسی‌های کامندهای داخلی.
+`CompleteInPersonSale`، `ResolveSaleWarehouseIssue` و `Shipment/*` داخل خودشان چند کامند دیگر را اجرا می‌کنند؛ فقط همان یک دسترسیِ بالا لازم است، نه دسترسی‌های کامندهای داخلی.
 
 ---
 
@@ -2054,8 +2057,15 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 ## 11. فروش (Sale)
 
 > **قفل پیش‌فاکتور و پرداخت‌ها:** همان قاعده‌ی ابتدای بخش ۹. در فروش، خروج از پیش‌فاکتور **فقط** با پرداخت اتفاق می‌افتد: اولین ریال
-> (`CreateSale` با `paymentDetails`، یا `AddSalePayment`) شماره و تاریخ فاکتور رسمی را صادر و وضعیت را `PROCESSING` می‌کند؛ در فروش اقساطی،
-> ثبت قرارداد با پیش‌پرداخت. هیچ endpointی دیگر اجازه‌ی انتخاب دستیِ خروج نمی‌دهد.
+> (`AddSalePayment`) شماره و تاریخ فاکتور رسمی را صادر و وضعیت را `PROCESSING` می‌کند؛ در فروش اقساطی، ثبت قرارداد با پیش‌پرداخت.
+> هیچ endpointی دیگر اجازه‌ی انتخاب دستیِ خروج نمی‌دهد.
+>
+> **چرخه‌ی تأیید پیش‌فاکتور (از ۲۰۲۶-۱۰-۱۶):** پیش از هر پرداختی، پیش‌فاکتور سه مرحله دارد (`proformaStage`، enum در بخش ۱۵):
+> `DRAFT` (۰) → تأیید مشتری با `ApproveSaleProforma` → `CUSTOMER_APPROVED` (۱، صفِ انبار) → اسکن و رزرو دانه‌ها با `CheckSaleWarehouse` →
+> `WAREHOUSE_CHECKED` (۲، آماده‌ی پرداخت). **تا مرحله‌ی ۲ هیچ پرداختی پذیرفته نمی‌شود** (`AddSalePayment`، پیش‌پرداخت قرارداد اقساطی،
+> `CompleteInPersonSale` ⇒ ۴۰۰). پیش‌فاکتور در همه‌ی مراحل قابل ویرایش است؛ ویرایشِ چیزی که مشتری تأیید کرده آن را به `DRAFT` برمی‌گرداند
+> (جزئیات زیر `UpdateSale`). دانه‌های رزروشده از `stock` کالا بیرون می‌روند و `ShipSale` دقیقاً همان‌ها را می‌فرستد. کالای معیوب/مفقودی که
+> انبار در این بررسی گزارش می‌کند به قرنطینه و صفِ حسابداری (`GetSaleWarehouseIssueList`) می‌رود و پیش‌فاکتور را **متوقف نمی‌کند**.
 >
 > **مبالغ:** همان قاعده‌ی ابتدای بخش ۹ — `totalAmount` از اقلام و مالیات حساب می‌شود و فرستاده نمی‌شود. **`payableAmount`** (تازه، در
 > جزئیات و لیست) مبلغی است که مشتری در کل می‌پردازد: در فروش عادی برابر `totalAmount`، در فروش اقساطیِ دارای قرارداد جاری
@@ -2065,7 +2075,10 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 
 ### `GET api/Sale/GetSaleList`
 
-**Query:** `page`, `take`, `invoiceNumber`, `customerName`, `customerId`, `status` (enum), `statuses` (چندتایی: `?statuses=1&statuses=2`)، `paymentType` (enum), `fromDate`, `toDate`, `fromPaymentDate`, `toPaymentDate`.
+**Query:** `page`, `take`, `invoiceNumber`, `customerName`, `customerId`, `status` (enum), `statuses` (چندتایی: `?statuses=1&statuses=2`)، `proformaStages` (چندتایی، از ۲۰۲۶-۱۰-۱۶)، `paymentType` (enum), `fromDate`, `toDate`, `fromPaymentDate`, `toPaymentDate`.
+
+`proformaStages` فقط پیش‌فاکتورهای در این مراحل را برمی‌گرداند: صفِ انبار `?proformaStages=1`، صفِ صندوق `?proformaStages=2`. هر ردیف لیست
+`proformaStage`، `proformaStageTitle` (فقط برای پیش‌فاکتور؛ بعد از صدور `null`) و `openWarehouseIssueCount` (گزارش‌های انبارِ هنوز بی‌تصمیم) دارد.
 
 `customerId` دقیقاً یک مشتری را می‌گیرد (دو مشتریِ هم‌نام قاطی نمی‌شوند). `statuses` هر کدام از وضعیت‌ها را می‌پذیرد — مثلاً صفِ ارسال انبار: `PROCESSING` و `PARTIALLY_DELIVERED`. همه‌ی فیلترها با هم AND می‌شوند.
 
@@ -2161,9 +2174,6 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   "invoiceDate": null,
   "paymentDate": "2026-09-09T00:00:00",
   "paymentType": 0,
-  "paymentDetails": [
-    { "type": 0, "amount": 10000000, "paidAt": "2026-08-10T00:00:00" }
-  ],
   "description": null,
   "customerId": 1,
   "productIds": [
@@ -2173,10 +2183,10 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 }
 ```
 - فروش **همیشه پیش‌فاکتور ثبت می‌شود**؛ `status` دیگر فرستاده نمی‌شود (اگر بفرستید نادیده گرفته می‌شود).
-- `paymentDetails` اختیاری است: پولی که همراه سفارش گرفته شده. اگر جمعش بیشتر از صفر باشد، همین‌جا فاکتور صادر می‌شود (شماره‌ی رسمی،
-  `invoiceDate` اگر خالی است، `PROCESSING`). هر ردیف: `amount > 0`، `type` یکی از `CASH`/`CREDIT`/`CHECK`/`TRANSFER`. جهت همیشه `IN`.
-- **فروش اقساطی** (`paymentType = 5`): `paymentDetails` باید خالی باشد (۴۰۰) — پیش‌پرداخت و اقساط را قرارداد اقساطی ثبت می‌کند.
-- **`paidAmount` فرستاده نمی‌شود** — جمع ردیف‌هاست. قاعده‌ی قدیمیِ «غیرنقدی بدون `paymentDetails` = ۴۰۰» حذف شد.
+- **`paymentDetails` حذف شد (۲۰۲۶-۱۰-۱۶):** فروش تازه در مرحله‌ی `DRAFT` است و تا تأیید مشتری و انبار پولی نمی‌گیرد (اگر بفرستید نادیده
+  گرفته می‌شود). پرداخت بعد از `CheckSaleWarehouse` با `AddSalePayment` ثبت می‌شود.
+- **موجودی آزاد:** تعداد هر کالا (جمعِ همه‌ی ردیف‌های همان کالا) نباید از `stock` آن بیشتر باشد، وگرنه ۴۰۰. `stock` موجودیِ **آزاد** است:
+  دانه‌هایی که برای پیش‌فاکتورهای دیگر رزرو شده‌اند در آن نیستند.
 - **`totalAmount` فرستاده نمی‌شود** — سرور از اقلام و مالیات کالاها حساب می‌کند (ابتدای بخش ۹). کالای ناموجود ⇒ ۴۰۴.
 - `invoiceDate` اختیاری است؛ `invoiceNumber` را همیشه سرور می‌سازد.
 - نام فیلد آرایه‌ی اقلام گمراه‌کننده `productIds` است اما لیست اقلام کامل (محصول + تعداد + قیمت + تخفیف) است.
@@ -2211,6 +2221,88 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 - اگر پیش‌فاکتور قرارداد اقساطی (بدون پیش‌پرداخت) دارد: `paymentType` باید `INSTALLMENT` بماند و جمع تازه‌ی اقلام نمی‌تواند با اصل قرارداد فرق کند (۴۰۰) — برای تغییر اقلام، اول قرارداد را حذف کنید.
 - **data خروجی:** سند کامل (شکل `GetSaleDetail`).
 
+**ویرایش و چرخه‌ی تأیید (از ۲۰۲۶-۱۰-۱۶):** پیش‌فاکتور در هر مرحله قابل ویرایش است، ولی:
+
+| تغییر | اثر |
+|---|---|
+| کالا یا تعداد یک ردیف، حذف ردیف، ردیف تازه | `revision` یکی بالا، مرحله ⇒ `DRAFT`، **دانه‌های رزروِ همان ردیف به موجودی برمی‌گردند** |
+| قیمت یا تخفیف ردیف، مشتری، `paymentType`، `paymentDate` | `revision` یکی بالا، مرحله ⇒ `DRAFT`؛ رزروها می‌مانند. تأیید دوباره‌ی مشتری اگر همه‌ی ردیف‌ها هنوز کامل رزرو باشند مستقیم به `WAREHOUSE_CHECKED` می‌رود |
+| `description`، `invoiceDate`، `attachments` | هیچ |
+
+بازگشت به `DRAFT` با رویداد `RESET_BY_EDIT` در `proformaEvents` ثبت می‌شود. بررسی موجودی آزاد فقط برای کالاهای ردیف‌های تغییرکرده انجام می‌شود.
+`UpdateSalePaymentDate` روی پیش‌فاکتور هم همین اثرِ «مهلت پرداخت» را دارد.
+
+### `POST api/Sale/ApproveSaleProforma` (از ۲۰۲۶-۱۰-۱۶)
+
+تیکِ «مشتری تأیید کرد» برای فروشنده. دسترسی: `SaleUpdate`.
+
+```json
+{ "saleId": 200, "revision": 0 }
+```
+- فقط پیش‌فاکتور در `DRAFT`. `revision` همان مقدارِ `revision` جزئیاتی است که صفحه نشان داده؛ اگر پیش‌فاکتور در این فاصله ویرایش شده ۴۰۰
+  («صفحه را تازه کنید»).
+- نتیجه: `CUSTOMER_APPROVED` (صفِ انبار)؛ یا مستقیم `WAREHOUSE_CHECKED` اگر همه‌ی ردیف‌ها از بررسی قبلیِ انبار هنوز کامل رزرو مانده‌اند.
+- چه کسی و کِی: ردیفِ `CUSTOMER_APPROVED` در `proformaEvents` (`userId`، `userName`، `occurredAt`، `revision`).
+- **data خروجی:** جزئیات کامل فروش (مثل `GetSaleDetail`).
+
+### `POST api/Sale/CheckSaleWarehouse` (از ۲۰۲۶-۱۰-۱۶)
+
+بررسی انبار: انباردار دانه‌هایی را که برای هر ردیف برمی‌دارد اسکن می‌کند؛ همان دانه‌ها **رزرو** می‌شوند. دسترسی: `SaleWarehouseCheck`.
+
+```json
+{
+  "saleId": 200,
+  "revision": 0,
+  "lines": [
+    { "saleItemId": 501, "productUnitBarcodes": ["1002600010000002", "1002600010000003"] }
+  ],
+  "issues": [
+    { "productUnitBarcode": "1002600010000001", "reason": 1, "description": "کارتن پاره و بدنه ترک خورده" }
+  ],
+  "note": null
+}
+```
+- فقط پیش‌فاکتور در `CUSTOMER_APPROVED` و با `revision` جاری.
+- `lines`: برای هر ردیف دقیقاً به اندازه‌ی کسریِ رزروش بارکد (ردیفی که از قبل کامل رزرو است بارکد لازم ندارد؛ بارکد اضافه ۴۰۰). هر بارکد باید دانه‌ی
+  `IN_STOCK` همان کالا باشد؛ دانه‌ی رزروِ پیش‌فاکتور دیگر ۴۰۰.
+- `issues` (نادر): دانه‌ای که معیوب/مفقود است. `reason` از `UnitActionReasonEnum` (بخش ۱۵؛ `MISSING = 6` تازه است، `INSPECTION_PASSED` پذیرفته
+  نیست)، **`description` الزامی** است. انباردار و زمان خودکار ثبت می‌شوند. دانه‌ی مفقود را نمی‌شود اسکن کرد: فرانت از فهرست دانه‌های `IN_STOCK`
+  همان کالا (`GetProductUnitList`) انتخابش کند. دانه‌ی گزارش‌شده همان لحظه `QUARANTINED` با علت `WAREHOUSE_HOLD` می‌شود (با میانگین جاری، مثل
+  `ApplyProductUnitAction`)، از `stock` کم می‌شود و در صفِ حسابداری می‌نشیند. همان دانه را نمی‌شود هم‌زمان در `lines` آورد.
+- **نتیجه:**
+  - همه‌ی ردیف‌ها کامل ⇒ دانه‌ها `RESERVED` (و از `stock` کم)، مرحله `WAREHOUSE_CHECKED` — مشتری حالا می‌تواند پرداخت کند.
+  - هر ردیفی کم ⇒ **کسری**: هیچ دانه‌ای رزرو نمی‌شود، مرحله ⇒ `DRAFT` با رویداد `WAREHOUSE_SHORTAGE` که `note` آن کسری هر ردیف را می‌گوید
+    (««نام کالا»: ۱ از ۲»). فروش با مشتری اصلاح می‌شود و دوباره چرخه را طی می‌کند. گزارش‌های `issues` در هر دو حالت ثبت می‌مانند.
+- **data خروجی:** جزئیات کامل فروش.
+
+### `GET api/Sale/GetSaleWarehouseIssueList` (از ۲۰۲۶-۱۰-۱۶)
+
+صفِ حسابداری: دانه‌هایی که انبار در بررسی پیش‌فاکتورها گزارش کرده. دسترسی: `AccountingView` **یا** `SaleWarehouseIssueResolve`.
+
+**Query:** `page`, `take`, `isOpen` (`true` = هنوز بی‌تصمیم)، `saleId`, `productId`, `reason`, `fromDate`, `toDate` (روی `reportedAt`)، `sortBy`
+(`0` زمان گزارش — پیش‌فرض، جدیدترین اول؛ `1` نام کالا؛ `2` علت؛ `3` زمان تصمیم)، `sortDirection`.
+
+هر ردیف: `id`, `saleId`, `customerId`, `customerName`, `productId`, `productName`, `productCode`, `productUnitId`, `barcode`, `unitStatus` (وضعیت
+فعلی دانه)، `quarantineCost` (ارزشی که دانه با آن در قرنطینه است — همان زیانِ اسقاط)، `reason`, `reasonTitle`, `description`,
+`reportedByUserId`, `reportedByName`, `reportedAt`, `resolution`, `resolutionTitle`, `resolutionNote`, `resolvedByUserId`, `resolvedByName`,
+`resolvedAt`. همین ردیف‌ها در `warehouseIssues` جزئیاتِ فروش هم هستند.
+
+### `POST api/Sale/ResolveSaleWarehouseIssue` (از ۲۰۲۶-۱۰-۱۶)
+
+تصمیم حسابداری روی یک گزارش. دسترسی: `SaleWarehouseIssueResolve`. پیش‌فاکتور منتظرِ این تصمیم نمی‌ماند.
+
+```json
+{ "id": 7, "resolution": 2, "note": "قابل تعمیر نیست" }
+```
+| `resolution` | اثر |
+|---|---|
+| `1` بازگشت به موجودی (RELEASE) | پیدا شد یا سالم بود: `IN_STOCK`، `stock` +۱، با ارزشِ خودِ دانه وارد میانگین |
+| `2` اسقاط (SCRAP) — **`note` الزامی** | `SCRAPPED`؛ ارزش دانه زیان است (`scrapLoss` گزارش فروش) |
+| `3` نگهداری برای مرجوعی به تامین‌کننده (SUPPLIER_RETURN) | دانه در قرنطینه می‌ماند تا یک مرجوعی خرید ON_ORDER روی قلم خریدش آن را پس بفرستد؛ دانه‌ی بدون قلم خرید ۴۰۰ |
+
+`RELEASE`/`SCRAP` دقیقاً از مسیر `ApplyProductUnitAction` انجام می‌شوند. گزارشی که قبلاً تصمیم گرفته شده، یا دانه‌اش دیگر در قرنطینه نیست، ۴۰۰.
+**data خروجی:** همان ردیف گزارش.
+
 ### `POST api/Sale/ChangeSaleStatus`
 
 `{ "id": 200, "status": 4 }` — فقط دو مقصد:
@@ -2236,7 +2328,7 @@ data: سند کامل. دسترسی: `SaleUpdate`.
 - روی فروش لغوشده فقط `OUT`.
 
 **اطلاعات کارتخوان روی ردیف پرداخت (از ۲۰۲۶-۱۰-۰۵، همه اختیاری).** ردیف «انتقال بانکی» (`type = 3`) می‌تواند این‌ها را هم داشته باشد،
-هم در بدنه‌ی `AddSalePayment`/`EditSalePayment` (و نسخه‌های خرید)، هم در `paymentDetails[]`ِ `CreateSale`/`CreateInPersonSale`/`CreatePurchase`،
+هم در بدنه‌ی `AddSalePayment`/`EditSalePayment` (و نسخه‌های خرید)، هم در `payments[]`ِ `CompleteInPersonSale` و `paymentDetails[]`ِ `CreatePurchase`،
 و همه در `paymentDetails[]`ِ پاسخ برمی‌گردند:
 
 ```json
@@ -2287,35 +2379,35 @@ data: سند کامل. دسترسی: `SaleUpdate`.
 
 دسترسی: `SalePayment`.
 
-### `POST api/Sale/CreateInPersonSale`
+### `POST api/Sale/CompleteInPersonSale` (جایگزینِ `CreateInPersonSale`، ۲۰۲۶-۱۰-۱۶)
 
-فروش حضوری: مشتری همان‌جا کامل پرداخت می‌کند و کالا را با خودش می‌برد. یک دستور **اتمیک** که سه مرحله‌ی موجود را زیر یک تراکنش دیتابیس اجرا می‌کند — `CreateSale` (که با پرداخت کامل خودش شماره و تاریخ فاکتور را صادر می‌کند)، `ShipSale` (کسر موجودی و خروج دانه‌های اسکن‌شده) و نشاندن وضعیت `DELIVERED`. خطا در هر مرحله همه چیز را برمی‌گرداند، پس فروش نیمه‌کاره باقی نمی‌ماند.
+فروش حضوری هم همان چرخه را طی می‌کند، پشتِ سرِ هم در پیشخوان: `CreateSale` ⇒ `ApproveSaleProforma` ⇒ `CheckSaleWarehouse` (اسکن دانه‌ها
+— کسی که دسترسی `SaleWarehouseCheck` دارد). این دستور گام آخر است و **اتمیک**: پرداخت (یا قرارداد اقساط با پیش‌پرداخت) که فاکتور را صادر
+می‌کند، ارسالِ دقیقاً همان دانه‌های رزروشده، و `DELIVERED`. خطا در هر مرحله همه‌چیز را برمی‌گرداند.
 
 **Body:**
 ```json
 {
-  "sale": { "...": "همان بدنه‌ی CreateSale" },
-  "scannedItems": [
-    { "productId": 10, "productUnitBarcodes": ["1002600010000001", "1002600010000002"] }
-  ],
+  "saleId": 200,
+  "payments": [ { "type": 0, "amount": 25000000 } ],
+  "installmentPlan": null,
   "shippingNote": "تحویل حضوری به مشتری"
 }
 ```
-- `sale`: عیناً بدنه‌ی `CreateSale`؛ خود دستور فروش را تا `DELIVERED` جلو می‌برد.
-- **فروش غیر اقساطی:** جمع `sale.paymentDetails[].amount` باید ≥ جمع فاکتوری باشد که سرور از اقلام حساب می‌کند، وگرنه ۴۰۰ («در تحویل حضوری پرداخت باید کامل باشد.») و هیچ‌چیز ثبت نمی‌شود.
-- **فروش اقساطی (`sale.paymentType = INSTALLMENT`، ۵): پشتیبانی می‌شود.** مشتری می‌تواند حضوری خرید کند و روش پرداخت را اقساطی بگذارد؛ آنچه فروش را از پیش‌فاکتور بیرون می‌آورد **پیش‌پرداخت** است، نه پرداخت کامل. در این حالت:
-  - `installmentPlan` **الزامی است** (وگرنه ۴۰۰): عیناً بدنه‌ی `CreateSaleInstallmentPlan` (بخش ۱۱ب) بدون `saleId` — `saleId` هرچه بفرستید نادیده گرفته و با فروشِ تازه‌ساخته‌شده پر می‌شود. در همان تراکنش و **پیش از خروج کالا** ثبت می‌شود.
-  - `installmentPlan.downPaymentAmount` باید **بیشتر از صفر** باشد، وگرنه ۴۰۰. پیش‌فاکتور یعنی خریدی که حتی یک ریال بابتش پرداخت نشده؛ کالا با چنین فروشی از انبار خارج نمی‌شود.
-  - `sale.paymentDetails` را **خالی بفرستید**: رکورد پیش‌پرداخت را خود ثبت قرارداد با `purpose = INSTALLMENT_DOWN_PAYMENT` می‌سازد.
-  - `installmentPlan` روی فروش غیر اقساطی ۴۰۰ می‌گیرد.
-- `scannedItems`: بارکد دانه‌ها، گروه‌شده بر اساس محصول؛ برای هر محصول به ترتیب بین ردیف‌های همان محصول پخش می‌شود. تعداد کمتر یا بیشتر از اقلام فروش ۴۰۰ می‌گیرد. برای کالای بدون ردیابی دانه‌ای می‌توان نفرستاد — مگر `product.requiresUnitTracking` که آن‌وقت خود `ShipSale` الزام می‌کند (بخش ۷).
+- فقط پیش‌فاکتور در `WAREHOUSE_CHECKED`، وگرنه ۴۰۰.
+- **فروش غیر اقساطی:** جمع `payments[].amount` باید **دقیقاً** برابر `totalAmount` باشد (۴۰۰ در غیر این صورت). هر ردیف همان شکلِ بدنه‌ی
+  `AddSalePayment` (کارت‌خوان هم).
+- **فروش اقساطی:** `installmentPlan` الزامی (بدنه‌ی `CreateSaleInstallmentPlan` بدون `saleId`) با `downPaymentAmount > 0`؛ `payments` خالی.
+  `installmentPlan` روی فروش غیر اقساطی ۴۰۰.
+- اسکنِ تازه لازم نیست — دانه‌ها در `CheckSaleWarehouse` اسکن شده‌اند (حتی برای `requiresUnitTracking`).
 - `shippingNote` اختیاری؛ پیش‌فرض «تحویل حضوری به مشتری».
 
 **data خروجی:** `{ "id": 200, "invoiceNumber": "INV-2026-0007", "status": 4 }` (`4 = DELIVERED`).
 
 ### `DELETE api/Sale/DeleteSale?id=200`
 
-حذف نرم — **فقط پیش‌فاکتور** (فروش صادرشده را لغو کنید، ۴۰۰). پیش‌فاکتوری که قرارداد اقساطی دارد ⇒ ۴۰۰ تا قرارداد حذف شود. فروش
+حذف نرم — **فقط پیش‌فاکتور** (فروش صادرشده را لغو کنید، ۴۰۰). پیش‌فاکتوری که قرارداد اقساطی دارد ⇒ ۴۰۰ تا قرارداد حذف شود. دانه‌های رزروِ آن
+به موجودی برمی‌گردند (لغو با `ChangeSaleStatus` هم همین‌طور). فروش
 حذف‌شده در `GetSaleList` نمی‌آید و `GetSaleDetail` ۴۰۴ می‌دهد. **data خروجی:** `{ "id": 200 }`.
 
 ### `POST api/Sale/ShipSale`
@@ -3024,6 +3116,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 94 | SaleShip | ارسال کالا به مشتری |
 | 95 | SaleInPerson | فروش حضوری |
 | 96 | SalePayment | ثبت و ابطال پرداخت فروش |
+| 97 | SaleWarehouseCheck | تأیید انبار برای پیش‌فاکتور (اسکن، رزرو، گزارش کالای معیوب/مفقود) |
 | 110 | SaleInstallmentView | مشاهده اقساط |
 | 111 | SaleInstallmentManage | مدیریت قرارداد اقساطی |
 | 112 | SaleInstallmentPay | دریافت قسط |
@@ -3052,6 +3145,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 234 | PosPaymentReportView | مشاهده گزارش پرداخت‌های کارتخوان (`Pos/GetPosPaymentList`) |
 | 250 | PartyStatementView | مشاهده گردش حساب مشتریان و تامین‌کنندگان |
 | 260 | AccountingView | مشاهده داشبورد و دفترهای حسابداری (`Accounting/*`) |
+| 261 | SaleWarehouseIssueResolve | رسیدگی به کالای معیوب/مفقودِ گزارش‌شده‌ی انبار |
 | 270 | AuditLogView | مشاهده تاریخچه تغییرات (`Audit/*`) |
 
 ### `OrgRoleEnum` (نقش کاربر در چارت سازمانی)
@@ -3172,6 +3266,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 3 | برگشت‌به‌تامین‌کننده (RETURNED_TO_SUPPLIER) |
 | 4 | اسکرپ‌شده/غیرقابل‌فروش (SCRAPPED) |
 | 9 | قرنطینه (QUARANTINED) — فیزیکاً در انبار ولی غیرقابل فروش و خارج از `stock`، منتظر تصمیم مرجوعی (۵ تا ۸ عمداً خالی مانده‌اند) |
+| 10 | رزرو پیش‌فاکتور (RESERVED) — از ۲۰۲۶-۱۰-۱۶: انبار آن را برای یک ردیف فروش اسکن کرده (`CheckSaleWarehouse`). روی قفسه و دارایی ماست (در ارزش موجودی هست) ولی خارج از `stock`؛ `ShipSale` همین را می‌فرستد |
 
 ### `UnitCustodyReasonEnum` (علت نگهداری دانه نسبت به سندش)
 | مقدار | معنی |
@@ -3204,6 +3299,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 3 | تاریخ گذشته (EXPIRED) |
 | 4 | نیاز به بررسی (NEEDS_INSPECTION) |
 | 5 | بررسی شد - سالم (INSPECTION_PASSED) |
+| 6 | مفقود (MISSING) — از ۲۰۲۶-۱۰-۱۶، گزارشِ `CheckSaleWarehouse` |
 | 9 | سایر موارد (OTHER) — یادداشت اجباری |
 
 ### `ProductUnitMovementReasonEnum` (علت یک حرکت دانه، `GetProductUnitHistory`)
@@ -3222,7 +3318,9 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 11 | ارسال مازاد به مشتری (SALE_SHIPPED_EXCESS) |
 | 12 | اسقاط از موجودی (STOCK_SCRAPPED) — کالای معیوبِ روی قفسه، از مرجوعی خرید |
 | 13 | پذیرش مازاد در خرید (PURCHASE_EXCESS_ACCEPTED) — کالای قرنطینه که خریدیم؛ از ۲۰۲۶-۰۹-۲۷ در قرنطینه می‌ماند |
-| 14 | انتقال به قرنطینه (STOCK_QUARANTINED) — `ApplyProductUnitAction` |
+| 14 | انتقال به قرنطینه (STOCK_QUARANTINED) — `ApplyProductUnitAction`، و گزارشِ `CheckSaleWarehouse` |
+| 15 | رزرو برای پیش‌فاکتور (SALE_RESERVED) — `CheckSaleWarehouse` |
+| 16 | آزادسازی رزرو پیش‌فاکتور (SALE_RESERVATION_RELEASED) — ویرایش ردیف، لغو یا حذف پیش‌فاکتور |
 
 ### `DocumentKindEnum` (نوع سند — پیوست‌ها و حرکت دانه‌ها)
 | مقدار | معنی |
@@ -3249,6 +3347,30 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 (عضو قدیمیِ `RETURNED` هم در همان بازشماره‌گذاری کاملاً حذف شد — کد مرده بود، هیچ‌وقت ست نمی‌شد، و فرانت هم هرگز آن را نداشت.)
 
+### `SaleProformaStageEnum` (مرحله‌ی تأیید پیش‌فاکتور، از ۲۰۲۶-۱۰-۱۶)
+| مقدار | معنی |
+|---|---|
+| 0 | پیش‌نویس (DRAFT) — هر ویرایشِ مهم هم به اینجا برمی‌گرداند |
+| 1 | تأیید مشتری (CUSTOMER_APPROVED) — صفِ انبار |
+| 2 | تأیید انبار - آماده‌ی پرداخت (WAREHOUSE_CHECKED) — دانه‌ها رزرو شده‌اند؛ پرداخت فقط در این مرحله |
+
+فقط وقتی `status = PROFORMA` معنا دارد.
+
+### `SaleProformaEventEnum` (رویدادهای `proformaEvents`)
+| مقدار | معنی |
+|---|---|
+| 1 | تأیید مشتری (CUSTOMER_APPROVED) |
+| 2 | تأیید انبار (WAREHOUSE_CHECKED) |
+| 3 | کسری در انبار (WAREHOUSE_SHORTAGE) — `note` کسری هر ردیف را دارد |
+| 4 | بازگشت به پیش‌نویس به‌خاطر ویرایش (RESET_BY_EDIT) |
+
+### `SaleWarehouseIssueResolutionEnum` (تصمیم حسابداری روی گزارش انبار)
+| مقدار | معنی |
+|---|---|
+| 1 | بازگشت به موجودی (RELEASE) |
+| 2 | اسقاط و ثبت زیان (SCRAP) |
+| 3 | نگهداری برای مرجوعی به تامین‌کننده (SUPPLIER_RETURN) |
+
 ### `SalesStatusEnum` (وضعیت سند فروش)
 
 **✅ به‌روزرسانی ۲۰۲۶-۰۹-۰۱:** همین‌طور برای این جدول — علاوه بر شماره‌های قدیمی، عضو `PENDING`
@@ -3257,7 +3379,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 | مقدار | معنی |
 |---|---|
-| 0 | پیش‌فاکتور (PROFORMA) — مشتری هنوز **هیچ** پرداختی نکرده؛ فاکتور رسمی و شماره‌اش وجود ندارد. خروج از این وضعیت **دستی نیست**: به محض این‌که `paidAmount` در `CreateSale`/`UpdateSale` بیشتر از صفر شود (حتی یک ریال)، بکند خودش شماره فاکتور می‌سازد و وضعیت را به `PROCESSING` می‌برد؛ تلاش برای تغییر دستیِ وضعیت با `paidAmount = 0` رد می‌شود. فروش اقساطی: شرط، پلن فعال با پیش‌پرداخت است (بخش ۱۱ب) |
+| 0 | پیش‌فاکتور (PROFORMA) — مشتری هنوز **هیچ** پرداختی نکرده؛ فاکتور رسمی و شماره‌اش وجود ندارد. خروج از این وضعیت **دستی نیست**: پس از تأیید مشتری و انبار (`proformaStage = WAREHOUSE_CHECKED`، از ۲۰۲۶-۱۰-۱۶) اولین پرداخت (`AddSalePayment`، حتی یک ریال) شماره فاکتور را می‌سازد و وضعیت را به `PROCESSING` می‌برد. فروش اقساطی: شرط، پلن فعال با پیش‌پرداخت است (بخش ۱۱ب) |
 | 1 | در حال پردازش (PROCESSING) |
 | 2 | تحویل‌جزئی (PARTIALLY_DELIVERED) |
 | 3 | ارسال‌شده کامل (SHIPPED) |
@@ -3401,6 +3523,29 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 ## 16. نکات و محدودیت‌های شناخته‌شده
 
 این نکات برای جلوگیری از سردرگمی هنگام توسعه فرانت مهم هستند:
+
+### تغییرات قرارداد — ۲۰۲۶-۱۰-۱۶ (چرخه‌ی تأیید پیش‌فاکتور فروش) — **شکستنی**
+
+| کجا | قبل | بعد |
+|---|---|---|
+| `CreateSale` | `paymentDetails` می‌گرفت و پرداخت فاکتور را صادر می‌کرد | `paymentDetails` حذف شد؛ فروش در `DRAFT` ساخته می‌شود؛ تعداد بیش از `stock` آزاد ۴۰۰ |
+| `AddSalePayment`، پیش‌پرداختِ `CreateSaleInstallmentPlan` | روی هر پیش‌فاکتوری | روی پیش‌فاکتور فقط در `WAREHOUSE_CHECKED`، وگرنه ۴۰۰ |
+| `UpdateSale`، `UpdateSalePaymentDate` | — | ویرایشِ تأییدشده‌ها به `DRAFT` برمی‌گرداند و `revision` را بالا می‌برد؛ ویرایش کالا/تعداد رزرو ردیف را آزاد می‌کند |
+| `POST api/Sale/CreateInPersonSale` | ثبت + پرداخت + ارسال + تحویل یک‌جا | **حذف شد**؛ جایش `CompleteInPersonSale` روی پیش‌فاکتورِ `WAREHOUSE_CHECKED` (بخش ۱۱) |
+| `ApproveSaleProforma`، `CheckSaleWarehouse`، `GetSaleWarehouseIssueList`، `ResolveSaleWarehouseIssue` | — | تازه (بخش ۱۱) |
+| `ShipSale` | همیشه از موجودی آزاد | ردیفِ رزروشده دقیقاً دانه‌های رزروش را می‌فرستد و `stock` را دوباره کم نمی‌کند؛ بارکد اختیاری (همان دانه‌ها) |
+| `ChangeSaleStatus` (لغو)، `DeleteSale` | — | دانه‌های رزرو به موجودی برمی‌گردند |
+| `GetSaleDetail` | — | `proformaStage`، `proformaStageTitle`، `revision`، `proformaEvents[]`، `warehouseIssues[]`؛ هر ردیف `reservedQuantity`، `reservedBarcodes`، `freeStock` |
+| `GetSaleList` | — | فیلتر `proformaStages`؛ `proformaStage`، `proformaStageTitle`، `openWarehouseIssueCount` |
+| `GetProductList`/`GetProductDetail` | — | `reservedCount`؛ `stock` حالا موجودی **آزاد** است (رزروشده‌ها بیرونش) |
+| `Accounting/GetInventoryValuation` | — | `reservedQuantity` (ردیف و جمع)؛ `ledgerQuantity = stock + reservedQuantity` |
+| `ProductUnitStatusEnum` / `UnitActionReasonEnum` / `ProductUnitMovementReasonEnum` | — | `RESERVED = 10` / `MISSING = 6` / `SALE_RESERVED = 15`، `SALE_RESERVATION_RELEASED = 16` |
+| enumهای تازه | — | `SaleProformaStageEnum`، `SaleProformaEventEnum`، `SaleWarehouseIssueResolutionEnum` |
+| `PermissionEnum` | — | `SaleWarehouseCheck = 97`، `SaleWarehouseIssueResolve = 261`؛ `GetSaleList/Detail` با `SaleWarehouseCheck` هم باز است |
+| `AuditActionEnum` | `410 = CreateInPersonSale` | `410 = CompleteInPersonSale`؛ تازه: `411 ApproveSaleProforma`، `412 CheckSaleWarehouse`، `413 ResolveSaleWarehouseIssue` |
+
+**برای فرانت:** پیش‌فاکتورهای موجود همه در `DRAFT` هستند و پیش از پرداخت باید چرخه را طی کنند. صفحه‌ی انبار برای `MISSING` باید امکانِ انتخابِ
+دانه از فهرستِ دانه‌های `IN_STOCK` کالا را بدهد (دانه‌ی گم‌شده اسکن‌شدنی نیست).
 
 ### تغییرات قرارداد — ۲۰۲۶-۱۰-۱۵ (تاریخچه تغییرات) — افزودنی
 
@@ -4244,7 +4389,7 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 
 هر کامندی که چیزی ذخیره کند یک **رویداد** (`AuditEvent`) می‌سازد: چه کسی، کِی، کدام عملیات (`action`). زیرِ هر رویداد،
 برای هر سطری از دیتابیس که اضافه، ویرایش یا حذف شده یک **تغییر** (`AuditEntityChange`) هست با مقدارهای قبل و بعد.
-- یک کامند همیشه یک رویداد است، حتی اگر چند بار ذخیره کند یا کامندهای دیگری را صدا بزند (`CreateInPersonSale`،
+- یک کامند همیشه یک رویداد است، حتی اگر چند بار ذخیره کند یا کامندهای دیگری را صدا بزند (`CompleteInPersonSale`،
   `Shipment/*`): همه زیرِ عملیاتِ بیرونی ثبت می‌شوند.
 - ثبتِ تاریخچه با خودِ تغییر در یک تراکنش است: تغییری بدونِ تاریخچه، یا تاریخچه‌ای بدونِ تغییر، وجود ندارد.
 - هر تغییر، سندی را که به آن تعلق دارد هم نگه می‌دارد (`documentKind` + `documentId`): ردیفِ فاکتور، پرداخت، قسط،
@@ -4421,7 +4566,10 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 | 407 | `EditSalePayment` | اصلاح دریافت فروش |
 | 408 | `VoidSalePayment` | ابطال دریافت فروش |
 | 409 | `ShipSale` | ارسال کالای فروش |
-| 410 | `CreateInPersonSale` | فروش حضوری |
+| 410 | `CompleteInPersonSale` | تکمیل فروش حضوری |
+| 411 | `ApproveSaleProforma` | تأیید مشتری روی پیش‌فاکتور |
+| 412 | `CheckSaleWarehouse` | تأیید انبار و رزرو کالای پیش‌فاکتور |
+| 413 | `ResolveSaleWarehouseIssue` | رسیدگی به گزارش انبار |
 | 500 | `CreateSaleInstallmentPlan` | ایجاد طرح اقساط |
 | 501 | `UpdateSaleInstallmentPlan` | ویرایش طرح اقساط |
 | 502 | `DeleteSaleInstallmentPlan` | حذف طرح اقساط |

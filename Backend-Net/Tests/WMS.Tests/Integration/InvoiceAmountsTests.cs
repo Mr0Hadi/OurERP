@@ -19,10 +19,10 @@ namespace WMS.Tests.Integration
     public class InvoiceAmountsTests
     {
         private static CreateSaleCommandHandler CreateSale(TestScope scope, int userId) =>
-            new(scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance, FakeUserContext.WithUserId(userId));
+            new(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance, FakeUserContext.WithUserId(userId));
 
         private static UpdateSaleCommandHandler UpdateSale(TestScope scope) =>
-            new(scope.Db, FakeObjectStorage.Instance, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, TestMapper.Instance, scope.SaleReturnCalculation);
+            new(scope.Db, FakeObjectStorage.Instance, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, TestMapper.Instance, scope.SaleReturnCalculation, scope.ProductUnitService, FakeUserContext.WithUserId(1));
 
         private static async Task<SaleDto> DetailAsync(TestDatabase db, int saleId)
         {
@@ -36,9 +36,10 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0);
+            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 3);
             scenario.Product.Tax = 10;
             var exempt = Seed.Product(scenario.Product.ProductCategory, "کالای معاف");
+            exempt.Stock = 2;
             exempt.Tax = 9;
             exempt.TaxCategory = TaxCategoryEnum.EXEMPT;
             scope.Context.Products.Add(exempt);
@@ -73,6 +74,8 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0, unitPrice: 1_000);
             scenario.Sale.Status = SalesStatusEnum.PROFORMA;
+            // Already through customer and warehouse approval: these tests are about what payment does next.
+            scenario.Sale.ProformaStage = SaleProformaStageEnum.WAREHOUSE_CHECKED;
             scenario.Sale.InvoiceNumber = "";
             scenario.Sale.PaidAmount = 0;
             scenario.Product.Tax = 10;
@@ -154,6 +157,8 @@ namespace WMS.Tests.Integration
         {
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0, unitPrice: unitPrice);
             scenario.Sale.Status = SalesStatusEnum.PROFORMA;
+            // Already through customer and warehouse approval: these tests are about what payment does next.
+            scenario.Sale.ProformaStage = SaleProformaStageEnum.WAREHOUSE_CHECKED;
             scenario.Sale.InvoiceNumber = "";
             scenario.Sale.PaidAmount = 0;
             scenario.Product.Tax = 10;
@@ -167,6 +172,9 @@ namespace WMS.Tests.Integration
                 CustomerId = scenario.Customer.Id,
                 Items = new() { new UpdateSaleItemDto { Id = scenario.Item.Id, ProductId = scenario.Product.Id, Quantity = 1, UnitPrice = unitPrice } },
             }, CancellationToken.None);
+            // Changing the payment type sent it back to DRAFT; the customer and the warehouse approve it again.
+            scenario.Sale.ProformaStage = SaleProformaStageEnum.WAREHOUSE_CHECKED;
+            scope.Context.SaveChanges();
             return scenario;
         }
 

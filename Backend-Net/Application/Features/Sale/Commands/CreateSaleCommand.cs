@@ -1,13 +1,10 @@
-﻿using Application.Common.Contracts.Pos;
-using Application.Common.Ledger;
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Contracts.UserContextService;
 using Application.Common.Documents;
 using Application.Common.Dtos;
 using Application.Common.Enums;
-using Application.Common.Payments;
 using Application.Common.Sales;
 using Application.Features.Sale.Dtos;
 using AutoMapper;
@@ -20,8 +17,10 @@ using Application.Common.Audit;
 namespace Application.Features.Sale.Commands
 {
     /// <summary>
-    /// A sale is always born PROFORMA and leaves it on its first payment, which issues the official invoice number
-    /// (SaleInvoiceFinalizer). There is no status to send: nobody chooses to issue an invoice nobody has paid towards.
+    /// A sale is always born a PROFORMA in DRAFT (docs/proforma-approval-pipeline.md): written against the stock we have, then
+    /// approved by the customer (ApproveSaleProforma) and checked and reserved by the warehouse (CheckSaleWarehouse). Only then
+    /// may the customer pay, and the first payment issues the official invoice number (SaleInvoiceFinalizer). So no payment is
+    /// taken here, and a line asking for more than the free stock (Product.Stock) is refused.
     /// </summary>
     [AuditAction(AuditActionEnum.CreateSale)]
     public class CreateSaleCommand : IRequest<ResponseDto>
@@ -31,11 +30,6 @@ namespace Application.Features.Sale.Commands
         public DateTime? PaymentDate { get; set; }
         public PaymentTypeEnum PaymentType { get; set; }
 
-        /// <summary>
-        /// Payments taken with the order. Optional; always money the customer paid (IN). PaidAmount is their sum - it is
-        /// not accepted from the client. Not allowed on an installment sale, whose payments belong to its plan.
-        /// </summary>
-        public List<PaymentDetailDto> PaymentDetails { get; set; } = new();
         public string? Description { get; set; }
         public int CustomerId { get; set; }
         public List<CreateSaleItemDto> ProductIds { get; set; }
@@ -58,11 +52,6 @@ namespace Application.Features.Sale.Commands
                 item.RuleFor(i => i.Quantity).GreaterThan(0).WithMessage("تعداد هر محصول باید از صفر بیشتر باشد.");
                 item.RuleFor(i => i.Discount).InclusiveBetween(0, 100).WithMessage("تخفیف باید بین ۰ تا ۱۰۰ درصد باشد.");
             });
-            RuleForEach(x => x.PaymentDetails).SetValidator(new PaymentRowValidator());
-            // فروش اقساطی: پیش‌پرداخت و اقساط را خود دستورهای قرارداد اقساطی ثبت می‌کنند.
-            RuleFor(x => x.PaymentDetails).Must(p => p == null || p.Count == 0)
-                .When(x => x.PaymentType == PaymentTypeEnum.INSTALLMENT)
-                .WithMessage("پرداخت‌های فروش اقساطی از مسیر قرارداد اقساطی ثبت می‌شوند.");
             RuleForEach(x => x.Attachments).ChildRules(a =>
             {
                 a.RuleFor(i => i.ObjectKey).NotEmpty().WithMessage(Validation.RequiredMessage("کلید فایل ضمیمه"));
@@ -74,15 +63,13 @@ namespace Application.Features.Sale.Commands
     {
         private readonly IMapper _mapper;
         private readonly IWMSDbContext _context;
-        private readonly IPosPaymentGuard _posPaymentGuard;
         private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUserContextService _userContextService;
 
-        public CreateSaleCommandHandler(IWMSDbContext context, IPosPaymentGuard posPaymentGuard, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService)
+        public CreateSaleCommandHandler(IWMSDbContext context, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, IMapper mapper, IUserContextService userContextService)
         {
             _context = context;
-            _posPaymentGuard = posPaymentGuard;
             _objectStorageService = objectStorageService;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -92,8 +79,6 @@ namespace Application.Features.Sale.Commands
         public async Task<ResponseDto> Handle(CreateSaleCommand request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
-
-            await _posPaymentGuard.CheckAsync(request.PaymentDetails ?? new(), cancellationToken);
 
             var sale = _mapper.Map<Domain.Entities.Sale>(request);
 
@@ -106,22 +91,7 @@ namespace Application.Features.Sale.Commands
                 InvoiceLineMath.Stamp(item, products[item.ProductId]);
             sale.TotalAmount = InvoiceLineMath.DocumentTotal(sale.Items);
 
-            sale.PaymentDetails ??= new();
-            foreach (var payment in sale.PaymentDetails)
-            {
-                payment.Direction = DocumentPayments.SaleDirection;
-                payment.Purpose = PaymentPurposeEnum.NORMAL;
-                if (payment.PaidAt == default)
-                    payment.PaidAt = DateTime.Now;
-            }
-            sale.PaidAmount = DocumentPayments.NetPaid(sale.PaymentDetails, DocumentPayments.SaleDirection);
-            foreach (var payment in sale.PaymentDetails)
-                await PartyLedger.SalePaymentAsync(_context, sale, payment, cancellationToken);
-
-            // پیش‌فاکتور یعنی فروشی که هنوز هیچ پولی بابتش جابه‌جا نشده؛ اولین ریال آن را نهایی می‌کند. فروش اقساطی
-            // اینجا پرداختی ندارد و با ثبت قرارداد و پیش‌پرداخت (CreateSaleInstallmentPlan) نهایی می‌شود.
-            if (sale.PaidAmount > 0)
-                await SaleInvoiceFinalizer.FinalizeAsync(_context, sale, cancellationToken);
+            SaleProformaPipeline.EnsureFreeStock(products, sale.Items.GroupBy(i => i.ProductId).ToDictionary(g => g.Key, g => g.Sum(i => i.Quantity)));
 
             await _context.Sales.AddAsync(sale, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);

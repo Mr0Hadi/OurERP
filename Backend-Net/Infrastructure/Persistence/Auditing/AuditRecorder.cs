@@ -197,6 +197,8 @@ namespace Infrastructure.Persistence.Auditing
                 case SaleItem x: return (DocumentKindEnum.SALE, x.SaleId);
                 case SaleDriver x: return (DocumentKindEnum.SALE, x.SaleId);
                 case SaleShippingNote x: return (DocumentKindEnum.SALE, x.SaleId);
+                case SaleProformaStageEvent x: return (DocumentKindEnum.SALE, x.SaleId);
+                case SaleWarehouseIssue x: return (DocumentKindEnum.SALE, x.SaleId);
                 case SaleInstallmentPlan x: return (DocumentKindEnum.SALE, x.SaleId);
                 case SaleInstallment x:
                     return Of(DocumentKindEnum.SALE, await ParentIdAsync<SaleInstallmentPlan>(x.SaleInstallmentPlanId, nameof(SaleInstallmentPlan.SaleId), ct));

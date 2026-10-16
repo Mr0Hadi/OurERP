@@ -210,6 +210,22 @@ namespace WMS.Tests.Support
             return new SaleScenario(sale, item, product, customer);
         }
 
+        /// <summary>
+        /// A PROFORMA sale at <paramref name="stage"/>, nothing shipped or paid, whose product has <paramref name="stock"/> IN_STOCK
+        /// units. Nothing is reserved even at WAREHOUSE_CHECKED - tests that need reserved units go through CheckSaleWarehouse.
+        /// </summary>
+        public static SaleScenario Proforma(WMSDbContext context, int orderedQuantity = 5, int stock = 20, SaleProformaStageEnum stage = SaleProformaStageEnum.DRAFT, ulong unitPrice = 1500)
+        {
+            var scenario = ShippedSale(context, orderedQuantity, shippedQuantity: 0, stock: stock, unitPrice: unitPrice);
+            scenario.Sale.Status = SalesStatusEnum.PROFORMA;
+            scenario.Sale.ProformaStage = stage;
+            scenario.Sale.InvoiceNumber = "";
+            scenario.Sale.InvoiceDate = null;
+            scenario.Sale.PaidAmount = 0;
+            context.SaveChanges();
+            return scenario;
+        }
+
         /// <summary>A purchase sitting at SHIPPED with nothing received yet.</summary>
         public static PurchaseScenario PendingPurchase(WMSDbContext context, int orderedQuantity = 10, int stock = 0, ulong unitPrice = 1000)
         {

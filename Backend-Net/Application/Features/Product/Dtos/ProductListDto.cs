@@ -11,6 +11,9 @@
         public UInt64 RetailPrice { get; set; }
         public UInt64 WholeSalePrice { get; set; }
         public int Stock { get; set; }
+
+        /// <summary>Units the warehouse reserved for proformas - still on the shelf and still ours, but not free to sell, so not part of Stock.</summary>
+        public int ReservedCount { get; set; }
         public int LowStockThreshold { get; set; }
         public bool RequiresUnitTracking { get; set; }
         public bool IsIncomplete { get; set; }

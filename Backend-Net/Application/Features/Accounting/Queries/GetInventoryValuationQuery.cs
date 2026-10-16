@@ -65,6 +65,7 @@ namespace Application.Features.Accounting.Queries
                         .FirstOrDefault(),
                     OffPool = ledger.Where(e => e.ProductId == p.Id).Sum(e => e.OffPoolValueDelta),
                     Quarantined = units.Count(u => u.ProductId == p.Id && u.Status == ProductUnitStatusEnum.QUARANTINED),
+                    Reserved = units.Count(u => u.ProductId == p.Id && u.Status == ProductUnitStatusEnum.RESERVED),
                 })
                 .Where(x => x.Product.IsActive || (x.Last != null && x.Last.RunningInventoryValue != 0m) || x.OffPool != 0m)
                 .Select(x => new InventoryValuationRowDto
@@ -77,6 +78,7 @@ namespace Application.Features.Accounting.Queries
                     Unit = x.Product.Unit,
                     IsActive = x.Product.IsActive,
                     Stock = x.Product.Stock,
+                    ReservedQuantity = x.Reserved,
                     LedgerQuantity = x.Last != null ? x.Last.RunningQuantity : 0,
                     AverageCost = x.Last != null ? x.Last.RunningAverageCost : 0m,
                     PoolValue = x.Last != null ? x.Last.RunningInventoryValue : 0m,
@@ -120,6 +122,7 @@ namespace Application.Features.Accounting.Queries
                 {
                     ProductCount = g.Count(),
                     Stock = g.Sum(x => x.Stock),
+                    ReservedQuantity = g.Sum(x => x.ReservedQuantity),
                     QuarantinedQuantity = g.Sum(x => x.QuarantinedQuantity),
                     PoolValue = g.Sum(x => x.PoolValue),
                     OffPoolValue = g.Sum(x => x.OffPoolValue),

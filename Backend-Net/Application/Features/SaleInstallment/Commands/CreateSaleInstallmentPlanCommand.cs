@@ -81,6 +81,10 @@ namespace Application.Features.SaleInstallment.Commands
             if (sale.PaymentType != PaymentTypeEnum.INSTALLMENT)
                 throw new ValidationCustomException("روش پرداخت این فروش اقساطی نیست.");
 
+            // The down payment is a customer payment: only once the customer and the warehouse have approved the proforma.
+            if (request.DownPaymentAmount > 0)
+                SaleProformaPipeline.EnsureReadyForPayment(sale);
+
             var existingPlan = await _planRepository.GetActiveBySaleIdAsync(sale.Id, cancellationToken);
             if (existingPlan != null)
                 throw new ValidationCustomException("برای این فروش قرارداد اقساطی فعالی ثبت شده است.");

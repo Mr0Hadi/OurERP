@@ -42,6 +42,8 @@ namespace Application.Common.Contracts.Context
         DbSet<DocumentAttachment> DocumentAttachments { get; }
         DbSet<SaleDriver> SaleDrivers { get; }
         DbSet<SaleShippingNote> SaleShippingNotes { get; }
+        DbSet<SaleProformaStageEvent> SaleProformaStageEvents { get; }
+        DbSet<SaleWarehouseIssue> SaleWarehouseIssues { get; }
         DbSet<PosTerminal> PosTerminals { get; }
         DbSet<InventoryCostLedgerEntry> InventoryCostLedgerEntries { get; }
         DbSet<PaymentDetail> PaymentDetails { get; }

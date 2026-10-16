@@ -12,6 +12,13 @@ namespace Application.Features.Sale.Dtos
         public DateTime? InvoiceDate { get; set; }
         public DateTime? PaymentDate { get; set; }
         public SalesStatusEnum Status { get; set; }
+
+        /// <summary>Approval stage while Status == PROFORMA; ProformaStageTitle is null once the invoice is issued.</summary>
+        public SaleProformaStageEnum ProformaStage { get; set; }
+        public string? ProformaStageTitle { get; set; }
+
+        /// <summary>Units the warehouse reported on this sale that accounting has not decided on yet.</summary>
+        public int OpenWarehouseIssueCount { get; set; }
         public PaymentTypeEnum PaymentType { get; set; }
         public UInt64 TotalAmount { get; set; }
 

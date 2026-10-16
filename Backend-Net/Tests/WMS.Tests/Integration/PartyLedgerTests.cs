@@ -34,6 +34,8 @@ namespace WMS.Tests.Integration
         {
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0, unitPrice: unitPrice);
             scenario.Sale.Status = SalesStatusEnum.PROFORMA;
+            // Already through customer and warehouse approval: these tests are about what payment does next.
+            scenario.Sale.ProformaStage = SaleProformaStageEnum.WAREHOUSE_CHECKED;
             scenario.Sale.InvoiceNumber = "";
             scenario.Sale.PaidAmount = 0;
             scenario.Sale.TotalAmount = unitPrice;
@@ -94,7 +96,7 @@ namespace WMS.Tests.Integration
             await AddSalePayment(scope).Handle(new AddSalePaymentCommand { SaleId = s.Sale.Id, Type = PaymentTypeEnum.CASH, Amount = 10_000 }, CancellationToken.None);
             Assert.Equal(0m, (await StatementAsync(db, customerId: s.Customer.Id)).ClosingBalance);
 
-            await new ChangeSaleStatusCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation)
+            await new ChangeSaleStatusCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation, scope.ProductUnitService)
                 .Handle(new ChangeSaleStatusCommand { Id = s.Sale.Id, Status = SalesStatusEnum.CANCELLED }, CancellationToken.None);
             // The money is still with us: we owe it back.
             Assert.Equal(-10_000m, (await StatementAsync(db, customerId: s.Customer.Id)).ClosingBalance);

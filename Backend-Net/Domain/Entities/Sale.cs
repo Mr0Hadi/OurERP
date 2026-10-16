@@ -11,6 +11,12 @@ namespace Domain.Entities
         /// <summary>مهلت پرداخت - تاریخی که تا آن، خریدار فرصت تسویه دارد. اختیاری (خرید/فروش نقدی مهلت ندارد).</summary>
         public DateTime? PaymentDate { get; set; }
         public SalesStatusEnum Status { get; set; }
+
+        /// <summary>Approval stage while Status == PROFORMA (docs/proforma-approval-pipeline.md); ignored afterwards.</summary>
+        public SaleProformaStageEnum ProformaStage { get; set; }
+
+        /// <summary>Bumped by every edit that changes what was approved; each approval records the revision it approved.</summary>
+        public int Revision { get; set; }
         public PaymentTypeEnum PaymentType { get; set; }
         public List<PaymentDetail> PaymentDetails { get; set; } = new();
         public UInt64 PaidAmount { get; set; }
@@ -30,5 +36,6 @@ namespace Domain.Entities
 
         public List<SaleDriver> Drivers { get; set; } = new();
         public List<SaleShippingNote> ShippingNotes { get; set; } = new();
+        public List<SaleProformaStageEvent> ProformaEvents { get; set; } = new();
     }
 }

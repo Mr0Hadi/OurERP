@@ -2051,6 +2051,52 @@ ordinary TRANSFER row through the existing payment endpoints. Answers to 11.x/12
   `TestDatabase.NewScope` now wires an `AuditScope` into the context (`TestScope.AuditScope`), and the hand-built MediatR
   containers in `InPersonSaleTests`/`ShipmentTests` register it. Suite 949/952 - the 3 documented environmental failures.
 
+**Proforma approval pipeline (2026-10-16).** Sale side only. Design agreed with the user step by step:
+`docs/proforma-approval-pipeline.md`. API: `docs/api-guide.fa.md` section 11 (header block, `ApproveSaleProforma`,
+`CheckSaleWarehouse`, `GetSaleWarehouseIssueList`, `ResolveSaleWarehouseIssue`, `CompleteInPersonSale`), section 15 and the
+2026-10-16 table in section 16.
+
+- **Stages live inside `Status = PROFORMA`** as `Sale.ProformaStage` (`SaleProformaStageEnum`: DRAFT=0, CUSTOMER_APPROVED=1,
+  WAREHOUSE_CHECKED=2), so every existing "PROFORMA = editable" rule is untouched. `Sale.Revision` is bumped by every edit to what
+  was approved; `ApproveSaleProforma`/`CheckSaleWarehouse` take the revision the screen showed and refuse a stale one.
+  `SaleProformaStageEvent` (append-only) records every approval, shortage and reset with user, revision and note.
+  All stage logic is in `Application/Common/Sales/SaleProformaPipeline` (static, never saves).
+- **No payment before WAREHOUSE_CHECKED.** `CreateSale` lost `PaymentDetails`; `AddSalePayment` and
+  `CreateSaleInstallmentPlan` with a down payment call `SaleProformaPipeline.EnsureReadyForPayment`. The first payment still issues
+  the invoice through `SaleInvoiceFinalizer` - unchanged.
+- **Free stock.** `CreateSale`/`UpdateSale` refuse a line asking for more than `Product.Stock` (summed per product; `UpdateSale` only
+  checks products of changed/new lines, net of units already reserved for them).
+- **Reservation = `ProductUnitStatusEnum.RESERVED = 10`** with `ProductUnit.SaleItemId` set. `Product.Stock` drops at reservation, so
+  `Stock == COUNT(IN_STOCK)` still holds and Stock now means *free* stock. The cost ledger is NOT touched (the goods are still ours):
+  `GetInventoryValuation` gained `ReservedQuantity`, and `LedgerQuantity == Stock + ReservedQuantity`. New unit-service methods
+  `ReserveAsync`/`ReleaseReservationAsync`/`CountReservedAsync`/`ConsumeReservedAsync`; movement reasons `SALE_RESERVED = 15`,
+  `SALE_RESERVATION_RELEASED = 16`. `ShipSale` ships a line with reservations from exactly those units (no second Stock decrement,
+  no rescan needed even for `RequiresUnitTracking`); a line without any (sales issued before this) still ships from free stock.
+- **Edits** (`UpdateSale`): product/quantity change or removed line -> that line's units released + back to DRAFT; price, discount,
+  customer, payment type or due date -> back to DRAFT, reservations kept (re-approval then jumps straight to WAREHOUSE_CHECKED when
+  every line is still fully reserved); description/invoice date/attachments -> nothing. `UpdateSalePaymentDate` on a proforma resets
+  too. Cancel (`ChangeSaleStatus`) and `DeleteSale` release every reservation.
+- **Warehouse problems** (`CheckSaleWarehouse.Issues`): exact unit barcode + `UnitActionReasonEnum` (new `MISSING = 6`;
+  INSPECTION_PASSED refused) + mandatory description. The unit goes to QUARANTINED / `WAREHOUSE_HOLD` at the running average (same
+  ledger call as `ApplyProductUnitAction` QUARANTINE) and a `SaleWarehouseIssue` row is written. Any line short -> nothing reserved,
+  stage back to DRAFT with a WAREHOUSE_SHORTAGE event naming the shortfall; reported issues stand either way.
+- **Accounting never gates the proforma** (the user removed the planned company setting: accounting only hears about problems).
+  `ResolveSaleWarehouseIssue` (feature folder `Application/Features/WarehouseIssue/`, not `SaleWarehouseIssue/` - that would shadow
+  the entity) sends RELEASE/SCRAP through `ApplyProductUnitActionCommand` via IMediator inside a transaction; SUPPLIER_RETURN only
+  marks it, leaving the unit for an ON_ORDER purchase-return claim on its line (refused for a unit with no purchase line).
+- **In-person sale was split**: `CreateInPersonSaleCommand` is gone; `CompleteInPersonSaleCommand` (audit value 410 kept, member
+  renamed) runs on a WAREHOUSE_CHECKED proforma: payments summing exactly to the total (or the installment plan with a down payment)
+  + `ShipSale` of the reserved units + DELIVERED, in one transaction.
+- Permissions `SaleWarehouseCheck = 97` (also opens `GetSaleList/Detail`), `SaleWarehouseIssueResolve = 261`. Audit actions 411-413.
+- Migration `20261016184043_proforma-approval-pipeline` (two columns on `Sales`, two tables; existing proformas become DRAFT).
+  **Generated, not applied.**
+- Tests: `Integration/ProformaPipelineTests.cs` (full flow, stale revision, damaged with replacement, missing with shortage, the three
+  edit kinds, reserved units invisible to another proforma, cancel/delete release, the three accounting decisions, list filter);
+  `InPersonSaleTests` rewritten on `Support/ProformaFlow` (drives the pipeline through the real MediatR pipeline; mints scannable
+  units through the real service, since `Seed.MintUnits` payloads don't parse); `SaleCrudTests` adapted (`Seed.Proforma`).
+  Older tests that pay a seeded proforma now seed it at WAREHOUSE_CHECKED. **Verified:** build clean, suite 967/970 - the 3 documented
+  environmental failures (2 LibreOffice `InvoicePdfTests`, the `"***"` object-storage placeholder).
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
 - ~~`PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK.~~ **Fixed 2026-09-20** - see the installment-sales entry above: both ids are `int`, both relationships are configured explicitly, and the shadow FK is gone.

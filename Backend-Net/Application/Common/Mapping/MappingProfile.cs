@@ -57,10 +57,12 @@ namespace Application.Common.Mapping
 
 			CreateMap<CreateSaleCommand, Sale>()
 				.ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.ProductIds))
-				// A sale is born PROFORMA and leaves it only on its first payment (the handler finalizes it);
-				// PaidAmount is the sum of the payment rows.
+				// A sale is born a PROFORMA in DRAFT and takes no money until the customer and the warehouse have approved it
+				// (docs/proforma-approval-pipeline.md); its first payment then issues the invoice.
 				.ForMember(dest => dest.Status, opt => opt.MapFrom(src => SalesStatusEnum.PROFORMA))
+				.ForMember(dest => dest.ProformaStage, opt => opt.MapFrom(src => SaleProformaStageEnum.DRAFT))
 				.ForMember(dest => dest.PaidAmount, opt => opt.Ignore())
+				.ForMember(dest => dest.PaymentDetails, opt => opt.Ignore())
 				// TotalAmount is the sum of the line totals (InvoiceLineMath), set by the handler.
 				.ForMember(dest => dest.TotalAmount, opt => opt.Ignore())
 				.ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.Now))
@@ -97,6 +99,7 @@ namespace Application.Common.Mapping
 				.ForMember(dest => dest.ImageUrl, opt => opt.Ignore())
 				// Counted from ProductUnits by the query, not a column.
 				.ForMember(dest => dest.QuarantinedCount, opt => opt.Ignore())
+				.ForMember(dest => dest.ReservedCount, opt => opt.Ignore())
 				// Read with the vehicle names by the detail query.
 				.ForMember(dest => dest.Vehicles, opt => opt.Ignore());
 

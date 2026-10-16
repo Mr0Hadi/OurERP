@@ -1,4 +1,7 @@
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.ProductUnit;
+using Application.Common.Contracts.UserContextService;
+using Application.Common.Sales;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Storage;
@@ -20,10 +23,15 @@ using Application.Common.Audit;
 namespace Application.Features.Sale.Commands
 {
     /// <summary>
-    /// Edits a sale that is still a PROFORMA - every field and the line items. Refused once the sale has left PROFORMA
-    /// (its first payment issued the invoice; DocumentLockRules). There is no status here: a sale leaves PROFORMA only
-    /// through a payment (AddSalePayment) or an installment plan's down payment. Payments, status, attachments and the
-    /// due date have their own commands, which stay open after the invoice is issued.
+    /// Edits a sale that is still a PROFORMA - every field and the line items, at any approval stage. Refused once the sale has
+    /// left PROFORMA (its first payment issued the invoice; DocumentLockRules). Payments, status, attachments and the due date
+    /// have their own commands, which stay open after the invoice is issued.
+    ///
+    /// Approval pipeline (docs/proforma-approval-pipeline.md): an edit to what the customer approved - a line's product,
+    /// quantity, price or discount, a line added or removed, the customer, the payment type or due date - bumps the revision
+    /// and sends an approved proforma back to DRAFT. A line whose product or quantity changed (or that was removed) also loses
+    /// its reserved units, which go back on the shelf; unchanged lines keep theirs, so the warehouse only re-checks what
+    /// changed. Description, invoice date and attachments change nothing. A line asking for more than the free stock is refused.
     /// </summary>
     [AuditAction(AuditActionEnum.UpdateSale)]
     public class UpdateSaleCommand : IRequest<ResponseDto>
@@ -69,9 +77,13 @@ namespace Application.Features.Sale.Commands
         private readonly ISaleInstallmentPlanRepository _installmentPlanRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IProductUnitService _productUnitService;
+        private readonly IUserContextService _userContextService;
 
-        public UpdateSaleCommandHandler(IWMSDbContext context, IObjectStorageService objectStorageService, ISaleInstallmentPlanRepository installmentPlanRepository, IUnitOfWork unitOfWork, IMapper mapper, ISaleReturnCalculationService saleReturnCalculationService)
+        public UpdateSaleCommandHandler(IWMSDbContext context, IObjectStorageService objectStorageService, ISaleInstallmentPlanRepository installmentPlanRepository, IUnitOfWork unitOfWork, IMapper mapper, ISaleReturnCalculationService saleReturnCalculationService, IProductUnitService productUnitService, IUserContextService userContextService)
         {
+            _productUnitService = productUnitService;
+            _userContextService = userContextService;
             _context = context;
             _objectStorageService = objectStorageService;
             _saleReturnCalculationService = saleReturnCalculationService;
@@ -102,6 +114,43 @@ namespace Application.Features.Sale.Commands
 
             var products = await DocumentProducts.LoadAsync(_context, request.Items.Select(i => i.ProductId), cancellationToken);
 
+            // ── What did this edit change that the customer (and the warehouse) approved? ─────────────────────────────
+            var changed = new List<string>();
+            var releasedLines = new List<int>();
+            if (sale.CustomerId != request.CustomerId)
+                changed.Add("مشتری");
+            if (sale.PaymentType != request.PaymentType)
+                changed.Add("روش پرداخت");
+            if (sale.PaymentDate != request.PaymentDate)
+                changed.Add("مهلت پرداخت");
+            foreach (var existing in sale.Items)
+            {
+                var incoming = request.Items.FirstOrDefault(x => x.Id == existing.Id);
+                if (incoming == null)
+                {
+                    changed.Add("حذف قلم");
+                    releasedLines.Add(existing.Id);
+                }
+                else if (incoming.ProductId != existing.ProductId || incoming.Quantity != existing.Quantity)
+                {
+                    changed.Add("کالا یا تعداد");
+                    releasedLines.Add(existing.Id);
+                }
+                else if (incoming.UnitPrice != existing.UnitPrice || incoming.Discount != existing.Discount)
+                {
+                    changed.Add("قیمت یا تخفیف");
+                }
+            }
+            if (request.Items.Any(x => x.Id == 0))
+                changed.Add("قلم جدید");
+
+            if (changed.Count > 0)
+            {
+                var userId = int.TryParse(_userContextService.GetUserId(), out var id) ? id : (int?)null;
+                await SaleProformaPipeline.ResetByEditAsync(_context, sale, userId, "ویرایش: " + string.Join("، ", changed.Distinct()), cancellationToken);
+            }
+            await SaleProformaPipeline.ReleaseAsync(_context, _productUnitService, sale, releasedLines, cancellationToken);
+
             sale.InvoiceDate = request.InvoiceDate;
             sale.PaymentDate = request.PaymentDate;
             sale.PaymentType = request.PaymentType;
@@ -131,6 +180,16 @@ namespace Application.Features.Sale.Commands
             foreach (var line in sale.Items)
                 InvoiceLineMath.Stamp(line, products[line.ProductId]);
             sale.TotalAmount = InvoiceLineMath.DocumentTotal(sale.Items);
+
+            // Free stock, for the products whose lines this edit touched: what their lines still need beyond their reserved units.
+            var touched = sale.Items.Where(l => l.Id == 0 || releasedLines.Contains(l.Id)).Select(l => l.ProductId).ToHashSet();
+            var needed = new Dictionary<int, int>();
+            foreach (var line in sale.Items.Where(l => touched.Contains(l.ProductId)))
+            {
+                var reserved = line.Id == 0 ? 0 : await _productUnitService.CountReservedAsync(line.Id, cancellationToken);
+                needed[line.ProductId] = needed.GetValueOrDefault(line.ProductId) + Math.Max(0, line.Quantity - reserved);
+            }
+            SaleProformaPipeline.EnsureFreeStock(products, needed);
 
             if (installmentPlan != null && sale.TotalAmount != installmentPlan.CashAmount)
                 throw new ValidationCustomException("این پیش‌فاکتور قرارداد اقساطی دارد و جمع آن نمی‌تواند عوض شود؛ برای تغییر اقلام ابتدا قرارداد را حذف کنید.");

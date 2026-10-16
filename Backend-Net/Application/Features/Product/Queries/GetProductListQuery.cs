@@ -65,6 +65,7 @@ namespace Application.Features.Product.Queries
                 RequiresUnitTracking = x.RequiresUnitTracking,
                 IsIncomplete = x.IsIncomplete,
                 QuarantinedCount = _context.ProductUnits.Count(u => u.ProductId == x.Id && u.Status == Domain.Enums.ProductUnitStatusEnum.QUARANTINED),
+                ReservedCount = _context.ProductUnits.Count(u => u.ProductId == x.Id && u.Status == Domain.Enums.ProductUnitStatusEnum.RESERVED),
                 Id = x.Id,
                 Brand = x.Brand,
                 Code = x.Code,

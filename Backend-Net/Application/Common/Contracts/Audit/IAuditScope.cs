@@ -19,7 +19,7 @@ namespace Application.Common.Contracts.Audit
 
         /// <summary>
         /// Starts an action. Only the outermost call counts: a command sent from inside another command
-        /// (CreateInPersonSale -&gt; CreateSale, ShipSale) records under the outer action. Disposing the outermost handle
+        /// (CompleteInPersonSale -&gt; AddSalePayment, ShipSale) records under the outer action. Disposing the outermost handle
         /// ends the action, so the next command gets a new event.
         /// </summary>
         IDisposable Begin(AuditActionEnum action);

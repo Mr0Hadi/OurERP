@@ -83,9 +83,13 @@ namespace Application.Features.Sale.Commands
 
             // A proforma is still an editable draft that nobody has paid a rial towards: goods never leave against it.
             if (sale.Status == SalesStatusEnum.PROFORMA)
-                throw new ValidationCustomException("پیش‌فاکتور قابل ارسال نیست؛ فروش با ثبت اولین پرداخت از پیش‌فاکتور خارج می‌شود.");
+                throw new ValidationCustomException("پیش‌فاکتور قابل ارسال نیست؛ پس از تأیید مشتری و انبار، فروش با ثبت اولین پرداخت از پیش‌فاکتور خارج می‌شود.");
 
             var saleItems = sale.Items.ToDictionary(x => x.Id);
+
+            // Lines that went through the proforma warehouse check ship their RESERVED units (already out of Product.Stock);
+            // a line without reservations (a sale issued before the pipeline existed) still ships from free stock.
+            var reservedByLine = new Dictionary<int, int>();
 
             foreach (var reqItem in request.Items)
             {
@@ -97,11 +101,19 @@ namespace Application.Features.Sale.Commands
                 if (reqItem.ShippedQuantity > remaining)
                     throw new ValidationCustomException($"مقدار وارد شده برای «{saleItem.Product.Name}» از باقیمانده قابل ارسال این قلم بیشتر است.");
 
-                if (reqItem.ShippedQuantity + reqItem.ExcessQuantity > saleItem.Product.Stock)
+                var reserved = await _productUnitService.CountReservedAsync(saleItem.Id, cancellationToken);
+                reservedByLine[saleItem.Id] = reserved;
+
+                if (reserved > 0 && reqItem.ShippedQuantity > reserved)
+                    throw new ValidationCustomException($"برای «{saleItem.Product.Name}» فقط {reserved} دانه‌ی رزروشده آماده‌ی ارسال است.");
+
+                var fromFreeStock = reqItem.ExcessQuantity + (reserved > 0 ? 0 : reqItem.ShippedQuantity);
+                if (fromFreeStock > saleItem.Product.Stock)
                     throw new ValidationCustomException($"موجودی «{saleItem.Product.Name}» برای ارسال این مقدار کافی نیست.");
 
+                // Reserved units were already scanned one by one at the warehouse check: they are named, not picked.
                 if (saleItem.Product.RequiresUnitTracking
-                    && ((reqItem.ShippedQuantity > 0 && (reqItem.ProductUnitBarcodes?.Count ?? 0) == 0)
+                    && ((reqItem.ShippedQuantity > 0 && reserved == 0 && (reqItem.ProductUnitBarcodes?.Count ?? 0) == 0)
                         || (reqItem.ExcessQuantity > 0 && (reqItem.ExcessProductUnitBarcodes?.Count ?? 0) == 0)))
                     throw new ValidationCustomException($"کالای «{saleItem.Product.Name}» ردیابی دانه‌ای دارد؛ بارکد دانه‌های خروجی باید اسکن شود.");
             }
@@ -116,10 +128,16 @@ namespace Application.Features.Sale.Commands
                 if (reqItem.ShippedQuantity > 0)
                 {
                     saleItem.ShippedQuantity += reqItem.ShippedQuantity;
-                    saleItem.Product.Stock -= reqItem.ShippedQuantity;
-                    await _productUnitService.ConsumeAsync(saleItem.Product, reqItem.ShippedQuantity, saleItem.Id, UnitCustodyReasonEnum.ON_ORDER, reqItem.ProductUnitBarcodes,
-                        new UnitMovementContext(ProductUnitMovementReasonEnum.SALE_SHIPPED, shippedAt, DocumentKindEnum.SALE, sale.Id, CustomerId: sale.CustomerId, Note: request.ShippingNote),
-                        cancellationToken);
+                    var shipMovement = new UnitMovementContext(ProductUnitMovementReasonEnum.SALE_SHIPPED, shippedAt, DocumentKindEnum.SALE, sale.Id, CustomerId: sale.CustomerId, Note: request.ShippingNote);
+                    if (reservedByLine[saleItem.Id] > 0)
+                    {
+                        await _productUnitService.ConsumeReservedAsync(saleItem.Product, reqItem.ShippedQuantity, saleItem.Id, reqItem.ProductUnitBarcodes, shipMovement, cancellationToken);
+                    }
+                    else
+                    {
+                        saleItem.Product.Stock -= reqItem.ShippedQuantity;
+                        await _productUnitService.ConsumeAsync(saleItem.Product, reqItem.ShippedQuantity, saleItem.Id, UnitCustodyReasonEnum.ON_ORDER, reqItem.ProductUnitBarcodes, shipMovement, cancellationToken);
+                    }
                     await _inventoryCostingService.RecordSaleShipmentAsync(saleItem.Product, reqItem.ShippedQuantity, saleItem.UnitPrice, saleItem.Discount, saleItem.Id, now, cancellationToken);
                 }
 

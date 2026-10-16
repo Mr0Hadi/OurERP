@@ -40,6 +40,8 @@ namespace WMS.Tests.Integration
         {
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0, unitPrice: total);
             scenario.Sale.Status = SalesStatusEnum.PROFORMA;
+            // Already through customer and warehouse approval: these tests are about what payment does next.
+            scenario.Sale.ProformaStage = SaleProformaStageEnum.WAREHOUSE_CHECKED;
             scenario.Sale.InvoiceNumber = "";
             scenario.Sale.InvoiceDate = null;
             scenario.Sale.PaidAmount = 0;
@@ -67,7 +69,7 @@ namespace WMS.Tests.Integration
             // B: paid in full, cancelled, refunded.
             var b = ProformaSale(scope, 5_000);
             await addSalePayment.Handle(new AddSalePaymentCommand { SaleId = b.Sale.Id, Type = PaymentTypeEnum.CASH, Amount = 5_000 }, Ct);
-            await new ChangeSaleStatusCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation)
+            await new ChangeSaleStatusCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation, scope.ProductUnitService)
                 .Handle(new ChangeSaleStatusCommand { Id = b.Sale.Id, Status = SalesStatusEnum.CANCELLED }, Ct);
             await addSalePayment.Handle(new AddSalePaymentCommand { SaleId = b.Sale.Id, Type = PaymentTypeEnum.CASH, Amount = 5_000, Direction = PaymentDirectionEnum.OUT }, Ct);
 
@@ -335,6 +337,8 @@ namespace WMS.Tests.Integration
             var draft = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, unitPrice: 999);
             SetLine(draft.Item, net: 999, tax: 99, TaxCategoryEnum.TAXABLE);
             draft.Sale.Status = SalesStatusEnum.PROFORMA;
+            // Already through customer and warehouse approval: these tests are about what payment does next.
+            draft.Sale.ProformaStage = SaleProformaStageEnum.WAREHOUSE_CHECKED;
             scope.Context.SaveChanges();
 
             using var read = db.NewScope();

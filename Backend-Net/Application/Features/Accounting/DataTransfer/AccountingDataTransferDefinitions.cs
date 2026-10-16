@@ -231,6 +231,7 @@ namespace Application.Features.Accounting.DataTransfer
                 new() { Key = "productCategoryName", Header = "دسته‌بندی", Value = r => r.ProductCategoryName },
                 new() { Key = "unit", Header = "واحد", Type = DataFieldTypeEnum.Enum, Value = r => r.Unit },
                 new() { Key = "stock", Header = "موجودی", Type = DataFieldTypeEnum.Integer, Value = r => r.Stock },
+                new() { Key = "reservedQuantity", Header = "رزرو پیش‌فاکتور", Type = DataFieldTypeEnum.Integer, Value = r => r.ReservedQuantity },
                 new() { Key = "averageCost", Header = "میانگین بها", Type = DataFieldTypeEnum.Decimal, Value = r => r.AverageCost },
                 new() { Key = "poolValue", Header = "ارزش قابل فروش", Type = DataFieldTypeEnum.Decimal, Value = r => r.PoolValue },
                 new() { Key = "quarantinedQuantity", Header = "تعداد قرنطینه", Type = DataFieldTypeEnum.Integer, Value = r => r.QuarantinedQuantity },

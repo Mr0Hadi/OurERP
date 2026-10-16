@@ -34,6 +34,27 @@ namespace Application.Common.Contracts.ProductUnit
         Task<List<Domain.Entities.ProductUnit>> ConsumeAsync(Domain.Entities.Product product, int count, int? saleItemId, Domain.Enums.UnitCustodyReasonEnum? custodyReason, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken);
 
         /// <summary>
+        /// Proforma warehouse check: exactly the scanned IN_STOCK units of <paramref name="product"/> become RESERVED for
+        /// <paramref name="saleItemId"/>. The caller lowers Product.Stock - a reserved unit is not free to sell.
+        /// </summary>
+        Task<List<Domain.Entities.ProductUnit>> ReserveAsync(Domain.Entities.Product product, int saleItemId, List<string> barcodes, UnitMovementContext movement, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Every RESERVED unit of <paramref name="saleItemId"/> goes back to IN_STOCK (the line was edited or removed, or the
+        /// sale cancelled/deleted). Returns the units moved; the caller raises each product's Stock by its count.
+        /// </summary>
+        Task<List<Domain.Entities.ProductUnit>> ReleaseReservationAsync(int saleItemId, UnitMovementContext movement, CancellationToken cancellationToken);
+
+        /// <summary>How many units are RESERVED for <paramref name="saleItemId"/>, as this request sees them.</summary>
+        Task<int> CountReservedAsync(int saleItemId, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Ships <paramref name="count"/> of the units RESERVED for <paramref name="saleItemId"/> - the scanned ones (which must be
+        /// among them) or FIFO - marking them SOLD with custody ON_ORDER. Product.Stock is untouched: it already dropped at reservation.
+        /// </summary>
+        Task<List<Domain.Entities.ProductUnit>> ConsumeReservedAsync(Domain.Entities.Product product, int count, int saleItemId, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken);
+
+        /// <summary>
         /// A customer's units coming back on a sale line: <paramref name="healthyCount"/> of the line's SOLD units go back to IN_STOCK
         /// and <paramref name="defectiveCount"/> go to QUARANTINED under custody CUSTOMER_RETURN, carrying
         /// <paramref name="defectiveUnitCost"/> as their QuarantineCost (they used to be SCRAPPED on arrival). Their purchase line is kept,

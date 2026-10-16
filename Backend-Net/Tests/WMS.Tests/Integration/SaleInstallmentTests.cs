@@ -20,6 +20,8 @@ namespace WMS.Tests.Integration
         {
             var scenario = Seed.ShippedSale(context, orderedQuantity: 1, shippedQuantity: 0, stock: 0, unitPrice: totalAmount);
             scenario.Sale.Status = SalesStatusEnum.PROFORMA;
+            // Already through customer and warehouse approval: these tests are about what payment does next.
+            scenario.Sale.ProformaStage = SaleProformaStageEnum.WAREHOUSE_CHECKED;
             scenario.Sale.InvoiceNumber = "";
             scenario.Sale.InvoiceDate = null;
             scenario.Sale.PaymentType = PaymentTypeEnum.INSTALLMENT;

@@ -1,3 +1,5 @@
+using Application.Common.Contracts.UserContextService;
+using Application.Common.Sales;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Contracts.Storage;
@@ -16,7 +18,8 @@ namespace Application.Features.Sale.Commands
 {
     /// <summary>
     /// Sets or clears the payment due date, in any status: a deadline agreed with the customer can move after the
-    /// invoice is issued without the invoice itself changing.
+    /// invoice is issued without the invoice itself changing. On a PROFORMA it is part of the terms the customer approves,
+    /// so a change sends an approved proforma back to DRAFT, as UpdateSale does.
     /// </summary>
     [AuditAction(AuditActionEnum.UpdateSalePaymentDate)]
     public class UpdateSalePaymentDateCommand : IRequest<ResponseDto>
@@ -39,9 +42,11 @@ namespace Application.Features.Sale.Commands
         private readonly IObjectStorageService _objectStorageService;
         private readonly ISaleReturnCalculationService _saleReturnCalculationService;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IUserContextService _userContextService;
 
-        public UpdateSalePaymentDateCommandHandler(IWMSDbContext context, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, ISaleReturnCalculationService saleReturnCalculationService)
+        public UpdateSalePaymentDateCommandHandler(IWMSDbContext context, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, ISaleReturnCalculationService saleReturnCalculationService, IUserContextService userContextService)
         {
+            _userContextService = userContextService;
             _context = context;
             _objectStorageService = objectStorageService;
             _saleReturnCalculationService = saleReturnCalculationService;
@@ -57,6 +62,12 @@ namespace Application.Features.Sale.Commands
 
             if (request.PaymentDate.HasValue && sale.InvoiceDate.HasValue && request.PaymentDate.Value < sale.InvoiceDate.Value)
                 throw new ValidationCustomException("مهلت پرداخت نمی‌تواند قبل از تاریخ فاکتور باشد.");
+
+            if (sale.Status == SalesStatusEnum.PROFORMA && sale.PaymentDate != request.PaymentDate)
+            {
+                var userId = int.TryParse(_userContextService.GetUserId(), out var id) ? id : (int?)null;
+                await SaleProformaPipeline.ResetByEditAsync(_context, sale, userId, "ویرایش: مهلت پرداخت", cancellationToken);
+            }
 
             sale.PaymentDate = request.PaymentDate;
             sale.UpdatedAt = DateTime.Now;

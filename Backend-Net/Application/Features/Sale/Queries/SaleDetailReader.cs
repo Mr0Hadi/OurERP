@@ -30,6 +30,20 @@ namespace Application.Features.Sale.Queries
                     InvoiceDate = x.InvoiceDate,
                     PaymentDate = x.PaymentDate,
                     Status = x.Status,
+                    ProformaStage = x.ProformaStage,
+                    Revision = x.Revision,
+                    ProformaEvents = x.ProformaEvents.OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).Select(e => new SaleProformaEventDto
+                    {
+                        Id = e.Id,
+                        Kind = e.Kind,
+                        FromStage = e.FromStage,
+                        ToStage = e.ToStage,
+                        Revision = e.Revision,
+                        UserId = e.UserId,
+                        UserName = context.Users.Where(u => u.Id == e.UserId).Select(u => u.FirstName + " " + u.LastName).FirstOrDefault(),
+                        Note = e.Note,
+                        OccurredAt = e.OccurredAt,
+                    }).ToList(),
                     PaymentType = x.PaymentType,
                     TotalAmount = x.TotalAmount,
                     // A live plan (not cancelled) adds its charge on top of the invoice.
@@ -79,7 +93,8 @@ namespace Application.Features.Sale.Queries
                         DiscountAmount = y.DiscountAmount,
                         NetAmount = y.NetAmount,
                         TaxAmount = y.TaxAmount,
-                        TotalAmount = y.TotalAmount
+                        TotalAmount = y.TotalAmount,
+                        FreeStock = y.Product.Stock,
                     }).ToList(),
                     Drivers = x.Drivers.Select(d => new SaleDriverDto
                     {
@@ -97,6 +112,7 @@ namespace Application.Features.Sale.Queries
                 .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
 
             await FillClaimCapsAsync(context, saleReturnCalculationService, sale, cancellationToken);
+            await FillPipelineAsync(context, sale, cancellationToken);
 
             sale.Attachments = await DocumentAttachmentWriter.ReadAsync(context, objectStorageService, DocumentKindEnum.SALE, saleId, cancellationToken);
 
@@ -105,6 +121,34 @@ namespace Application.Features.Sale.Queries
             sale.InstallmentSummary = await SaleInstallmentSummaryReader.ReadForSaleAsync(context, saleId, cancellationToken);
 
             return sale;
+        }
+
+        /// <summary>Titles, the units reserved per line and the warehouse's reports - the proforma pipeline's read side.</summary>
+        private static async Task FillPipelineAsync(IWMSDbContext context, SaleDto sale, CancellationToken cancellationToken)
+        {
+            sale.ProformaStageTitle = sale.Status == SalesStatusEnum.PROFORMA ? sale.ProformaStage.GetDescription() : null;
+            foreach (var e in sale.ProformaEvents)
+                e.KindTitle = e.Kind.GetDescription();
+
+            var lineIds = sale.Items.Select(i => i.Id).ToList();
+            var reserved = await context.ProductUnits.AsNoTracking()
+                .Where(u => u.SaleItemId != null && lineIds.Contains(u.SaleItemId.Value) && u.Status == ProductUnitStatusEnum.RESERVED)
+                .OrderBy(u => u.SerialNumber)
+                .Select(u => new { SaleItemId = u.SaleItemId!.Value, u.Barcode })
+                .ToListAsync(cancellationToken);
+            foreach (var item in sale.Items)
+            {
+                item.ReservedBarcodes = reserved.Where(r => r.SaleItemId == item.Id).Select(r => r.Barcode).ToList();
+                item.ReservedQuantity = item.ReservedBarcodes.Count;
+            }
+
+            sale.WarehouseIssues = await context.SaleWarehouseIssues.AsNoTracking()
+                .Where(x => x.SaleId == sale.Id)
+                .OrderBy(x => x.ReportedAt).ThenBy(x => x.Id)
+                .Select(Application.Features.WarehouseIssue.Queries.SaleWarehouseIssueProjection.ToDto(context))
+                .ToListAsync(cancellationToken);
+            foreach (var issue in sale.WarehouseIssues)
+                Application.Features.WarehouseIssue.Queries.SaleWarehouseIssueProjection.FillTitles(issue);
         }
 
         /// <summary>
