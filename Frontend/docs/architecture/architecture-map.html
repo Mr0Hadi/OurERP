@@ -1,0 +1,727 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- نسخه‌ی مستقلِ نقشه‌ی معماری؛ منبعِ حقیقت فایل‌های .md همین پوشه‌اند. -->
+<title>نقشه‌ی معماری فرانت OurERP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: blueprint sheet — sticky section rail on the right (RTL), wide working canvas; each section is an instrument you operate */
+:root{
+  --bg:#f5f6fa; --surface:#ffffff; --sunk:#eceef6; --line:#d9dce8; --fg:#1b1e2b; --muted:#5e6378;
+  --accent:#4b45d6; --accent-soft:#e6e5fb; --accent-fg:#ffffff;
+  --ok:#17803d; --ok-soft:#dcf3e3; --warn:#a35b00; --warn-soft:#fbeed8; --bad:#c2302b; --bad-soft:#fbe1df; --info:#1d6fb8; --info-soft:#dcebf8;
+  --grid:rgba(75,69,214,.06);
+  --f-display:"Vazirmatn",Tahoma,sans-serif; --f-body:"Vazirmatn",Tahoma,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12141d; --surface:#1a1d29; --sunk:#222636; --line:#2f3448; --fg:#e7e9f3; --muted:#9aa0b8;
+  --accent:#8f8bff; --accent-soft:#2a2856; --accent-fg:#12141d;
+  --ok:#5ccf86; --ok-soft:#173326; --warn:#f0b35a; --warn-soft:#3a2c14; --bad:#ff7b72; --bad-soft:#3d1c1c; --info:#6cb6ff; --info-soft:#16304a;
+  --grid:rgba(143,139,255,.07); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12141d; --surface:#1a1d29; --sunk:#222636; --line:#2f3448; --fg:#e7e9f3; --muted:#9aa0b8;
+  --accent:#8f8bff; --accent-soft:#2a2856; --accent-fg:#12141d;
+  --ok:#5ccf86; --ok-soft:#173326; --warn:#f0b35a; --warn-soft:#3a2c14; --bad:#ff7b72; --bad-soft:#3d1c1c; --info:#6cb6ff; --info-soft:#16304a;
+  --grid:rgba(143,139,255,.07); color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.8 var(--f-body);direction:rtl;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:28px 28px}
+code,.mono{font-family:var(--f-mono);font-size:.84em;direction:ltr;unicode-bidi:isolate}
+code{background:var(--sunk);padding:.05em .4em;border-radius:5px;border:1px solid var(--line);white-space:nowrap}
+.wrap{display:grid;grid-template-columns:220px minmax(0,1fr);gap:28px;max-width:1240px;margin:0 auto;padding-inline:20px;padding-block:28px 80px}
+nav.rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px);align-self:start;display:flex;flex-direction:column;gap:2px}
+nav.rail .brand{font:800 1.05rem/1.3 var(--f-display);margin-bottom:12px}
+nav.rail .brand small{display:block;font:400 .75rem var(--f-mono);color:var(--muted);direction:ltr;text-align:right}
+nav.rail a{color:var(--muted);text-decoration:none;padding:5px 10px;border-radius:7px;font-size:.9rem;border-inline-start:2px solid transparent}
+nav.rail a:hover{color:var(--fg);background:var(--sunk)}
+nav.rail a.on{color:var(--accent);border-inline-start-color:var(--accent);background:var(--accent-soft)}
+.themebtn{margin-top:14px;font:inherit;font-size:.82rem;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:5px 10px;cursor:pointer}
+main{min-width:0;display:flex;flex-direction:column;gap:56px}
+section{scroll-margin-top:20px}
+h1{font:800 clamp(1.8rem,3.6vw,2.6rem)/1.25 var(--f-display);margin:0;text-wrap:balance}
+h2{font:800 1.45rem/1.3 var(--f-display);margin:0 0 6px;text-wrap:balance;display:flex;align-items:baseline;gap:10px}
+h2 .tag{font:500 .72rem var(--f-mono);color:var(--accent);direction:ltr;letter-spacing:.04em}
+h3{font:700 1.02rem/1.4 var(--f-display);margin:0}
+p{margin:0;max-width:68ch}
+.lead{color:var(--muted);margin-bottom:18px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn{font:inherit;font-size:.88rem;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:6px 12px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pill{display:inline-block;font-size:.74rem;padding:1px 9px;border-radius:99px;font-weight:600}
+.p-ok{background:var(--ok-soft);color:var(--ok)}.p-warn{background:var(--warn-soft);color:var(--warn)}.p-bad{background:var(--bad-soft);color:var(--bad)}.p-info{background:var(--info-soft);color:var(--info)}.p-acc{background:var(--accent-soft);color:var(--accent)}
+/* hero */
+.hero{display:grid;gap:18px}
+.hero p{font-size:1.05rem;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.stat b{display:block;font:800 1.5rem/1.2 var(--f-display);font-variant-numeric:tabular-nums}
+.stat span{font-size:.8rem;color:var(--muted)}
+.stack{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 .78rem var(--f-mono);direction:ltr;background:var(--surface);border:1px solid var(--line);padding:2px 9px;border-radius:6px}
+/* layers */
+.layers{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px}
+.lstack{display:flex;flex-direction:column;gap:8px}
+.layer{text-align:right;font:inherit;cursor:pointer;border:1.5px solid var(--line);background:var(--surface);border-radius:var(--r);padding:14px 16px;color:var(--fg);display:grid;gap:2px}
+.layer:hover{border-color:var(--accent)}
+.layer.on{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.layer .nm{font:700 1rem var(--f-mono);direction:ltr;text-align:right}
+.layer .ds{font-size:.85rem;color:var(--muted)}
+.arrowcol{display:flex;justify-content:center;color:var(--muted);font-size:.8rem}
+.detail h3{margin-bottom:8px}
+.detail ul{margin:8px 0 0;padding-inline-start:18px;display:grid;gap:4px}
+.detail li,.kv dd,.res span,.recipe li{overflow-wrap:anywhere;min-width:0}
+.yes,.no{border-radius:8px;padding:10px 12px;margin-top:10px;font-size:.9rem}
+.yes{background:var(--ok-soft)}.no{background:var(--bad-soft)}
+.yes b{color:var(--ok)}.no b{color:var(--bad)}
+/* journey */
+.journey{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:16px}
+.steps{display:flex;flex-direction:column;gap:0;position:relative}
+.step{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:start;cursor:pointer;padding:8px 6px;border-radius:8px;background:none;border:0;font:inherit;color:inherit;text-align:right}
+.step .dot{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font:600 .75rem var(--f-mono);background:var(--surface);color:var(--muted);font-variant-numeric:tabular-nums}
+.step.done .dot{border-color:var(--accent);color:var(--accent)}
+.step.on{background:var(--accent-soft)}
+.step.on .dot{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.step .t{font-weight:600;font-size:.92rem}
+.step .f{font:400 .74rem var(--f-mono);color:var(--muted);direction:ltr;text-align:right;overflow-wrap:anywhere}
+.codebox{background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font:400 .8rem/1.65 var(--f-mono);direction:ltr;text-align:left;white-space:pre;overflow-x:auto;margin-top:10px}
+.filebar{font:500 .78rem var(--f-mono);direction:ltr;text-align:left;color:var(--accent);overflow-wrap:anywhere}
+/* sim */
+.sim{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:16px}
+.flow{display:flex;flex-direction:column;gap:6px}
+.node{border:1.5px solid var(--line);border-radius:8px;padding:8px 12px;background:var(--surface);font-size:.88rem;transition:border-color .2s,background .2s,opacity .2s;opacity:.45}
+.node.lit{opacity:1;border-color:var(--accent);background:var(--accent-soft)}
+.node.end-ok{opacity:1;border-color:var(--ok);background:var(--ok-soft)}
+.node.end-bad{opacity:1;border-color:var(--bad);background:var(--bad-soft)}
+.node small{display:block;font:400 .72rem var(--f-mono);color:var(--muted);direction:ltr;text-align:right}
+/* perms */
+.perm{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+label{font-size:.86rem}
+select,input[type=search]{font:inherit;font-size:.9rem;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;width:100%}
+.checks{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.checks label{display:flex;gap:6px;align-items:center;background:var(--sunk);border:1px solid var(--line);border-radius:7px;padding:3px 9px;font:500 .78rem var(--f-mono);direction:ltr;cursor:pointer}
+.results{display:grid;gap:8px}
+.res{display:grid;grid-template-columns:110px minmax(0,1fr);gap:10px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:9px 12px;background:var(--surface)}
+.res .k{font-size:.82rem;color:var(--muted)}
+/* graph */
+.graphwrap{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px}
+.svgbox{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+svg text{font-family:var(--f-mono)}
+.gnode{cursor:pointer}
+.gnode circle{fill:var(--surface);stroke:var(--muted);stroke-width:1.5}
+.gnode text{fill:var(--fg);font-size:11.5px}
+.gnode.on circle{fill:var(--accent);stroke:var(--accent)}
+.gnode.on text{fill:var(--accent)}
+.gnode.out circle{stroke:var(--accent);fill:var(--accent-soft)}
+.gnode.in circle{stroke:var(--warn);fill:var(--warn-soft)}
+.gnode.dim{opacity:.3}
+.edge{stroke:var(--muted);stroke-opacity:.45;fill:none}
+.edge.out,.edge.in{stroke-opacity:1}
+.edge.out{stroke:var(--accent)}
+.edge.in{stroke:var(--warn)}
+.edge.dim{opacity:.15}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.78rem;color:var(--muted);padding:8px 12px;border-top:1px solid var(--line)}
+.legend i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-inline-end:5px}
+.fcard h3{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.kv{display:grid;grid-template-columns:96px minmax(0,1fr);gap:6px 10px;margin-top:10px;font-size:.86rem}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+/* table */
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:680px;font-size:.86rem}
+th,td{padding:8px 12px;text-align:right;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--muted);font-size:.78rem;background:var(--sunk)}
+tr:last-child td{border-bottom:0}
+/* wizard */
+.wiz{display:grid;gap:12px}
+.q{font-weight:700;font-size:1.02rem}
+.trail{display:flex;flex-wrap:wrap;gap:6px;font-size:.8rem;color:var(--muted)}
+.answer{border:1.5px solid var(--ok);background:var(--ok-soft);border-radius:var(--r);padding:14px 16px}
+.answer .mono{font-size:.95rem;color:var(--ok);font-weight:500;display:block;text-align:left;margin-bottom:4px}
+/* invalidation */
+.inv{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:16px}
+.keys{display:flex;flex-wrap:wrap;gap:6px}
+.key{font:500 .78rem var(--f-mono);direction:ltr;padding:4px 10px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--muted);transition:all .2s}
+.key.hit{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.key.set{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+/* debt */
+.debt{display:grid;gap:8px}
+.ditem{display:grid;grid-template-columns:52px minmax(0,1fr);gap:12px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 14px;border-inline-start:4px solid var(--line)}
+.ditem.bug{border-inline-start-color:var(--bad)}.ditem.risk{border-inline-start-color:var(--warn)}.ditem.layer{border-inline-start-color:var(--info)}.ditem.clean{border-inline-start-color:var(--muted)}
+.ditem .id{font:600 .8rem var(--f-mono);color:var(--muted);direction:ltr}
+.ditem .fx{font-size:.83rem;color:var(--muted);margin-top:2px}
+.recipes{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px}
+.recipe{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.recipe ol{margin:8px 0 0;padding-inline-start:18px;font-size:.84rem;display:grid;gap:3px}
+.recipe .src{font:400 .72rem var(--f-mono);color:var(--muted);direction:ltr;text-align:right;margin-top:4px;overflow-wrap:anywhere}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;overflow-x:auto;direction:ltr;margin:0;text-align:left}
+#boot pre.mermaid svg{max-width:none!important;min-width:860px}
+footer{color:var(--muted);font-size:.82rem;border-top:1px solid var(--line);padding-top:16px}
+@media (max-width:900px){
+  .wrap{grid-template-columns:minmax(0,1fr)}
+  nav.rail{position:static;flex-direction:row;flex-wrap:wrap;gap:4px}
+  nav.rail .brand{width:100%}
+  .layers,.journey,.sim,.perm,.graphwrap,.inv{grid-template-columns:minmax(0,1fr)}
+}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+<nav class="rail" id="rail">
+  <div class="brand">نقشه‌ی معماری فرانت<small>OurERP / Frontend</small></div>
+  <a href="#top">نمای کلی</a>
+  <a href="#layers">لایه‌ها</a>
+  <a href="#boot">راه‌اندازی</a>
+  <a href="#journey">مسیرِ یک درخواست</a>
+  <a href="#refresh">۴۰۱ و refresh</a>
+  <a href="#perms">مجوزها</a>
+  <a href="#features">فیچرها</a>
+  <a href="#place">کد را کجا بگذارم؟</a>
+  <a href="#api">لایه‌ی API</a>
+  <a href="#cache">کش و invalidation</a>
+  <a href="#state">state و فرم‌ها</a>
+  <a href="#ui">تم، رنگ و RTL</a>
+  <a href="#components">کامپوننت‌های مشترک</a>
+  <a href="#domain">دامنه و مرجوعی</a>
+  <a href="#recipes">دستورالعمل‌ها</a>
+  <a href="#debt">بدهی‌ها</a>
+  <button class="themebtn" id="themeBtn" type="button">تم: سیستم</button>
+</nav>
+
+<main>
+<section id="top" class="hero">
+  <h1>فرانت‌اندِ OurERP، از بازشدنِ صفحه تا درخواست به سرور</h1>
+  <p>SPAِ فارسی و راست‌به‌چپ برای انبار و فروشِ لوازم یدکی، روی بکندِ ASP.NET. هر بخشِ این صفحه یک ابزار است: روی لایه‌ها، گام‌ها، فیچرها و حالت‌ها کلیک کنید. همه‌ی مسیرها و نام‌ها از کدِ واقعی و از <code>docs/architecture/</code> آمده‌اند.</p>
+  <div class="stats">
+    <div class="stat"><b>۷۲۱</b><span>فایل در <span class="mono">src/</span></span></div>
+    <div class="stat"><b>۶۱٬۵۴۸</b><span>خطِ کد (JSX و JS)</span></div>
+    <div class="stat"><b>۱۷</b><span>پوشه‌ی فیچر، ۱۴ با مسیر</span></div>
+    <div class="stat"><b>۳۰۷۰</b><span>یالِ وابستگی، <b style="display:inline;font-size:1em;color:var(--ok)">۰</b> حلقه</span></div>
+    <div class="stat"><b style="color:var(--bad)">۷</b><span>باگِ شناخته‌شده</span></div>
+  </div>
+  <div class="stack" aria-label="پشته">
+    <span class="chip">React 19</span><span class="chip">Vite 8 + React Compiler</span><span class="chip">JavaScript (no TS)</span><span class="chip">react-router-dom 7</span><span class="chip">TanStack Query 5</span><span class="chip">Zustand 5</span><span class="chip">axios</span><span class="chip">react-hook-form</span><span class="chip">Tailwind 4 + shadcn (RTL)</span><span class="chip">Vazirmatn</span><span class="chip">react-date-object</span>
+  </div>
+</section>
+
+<section id="layers">
+  <h2>سه لایه <span class="tag">src/app · features · shared</span></h2>
+  <p class="lead">هر لایه را انتخاب کنید تا ببینید چه چیزی آن‌جا می‌رود، چه چیزی نه، و از کجا می‌تواند import کند.</p>
+  <div class="layers">
+    <div class="lstack" id="layerBtns"></div>
+    <div class="panel detail" id="layerDetail" aria-live="polite"></div>
+  </div>
+</section>
+
+<section id="boot">
+  <h2>توالیِ راه‌اندازی <span class="tag">index.html → router</span></h2>
+  <p class="lead">چون <code>sessionVerified</code> ذخیره نمی‌شود، هر بارگذاریِ کاملِ صفحه یک بار از صفحه‌ی ورود رد می‌شود تا توکن با سرور سنجیده شود.</p>
+<pre class="mermaid">
+sequenceDiagram
+  participant H as index.html
+  participant M as main.jsx
+  participant A as App.jsx
+  participant Z as useAuthStore
+  participant R as router
+  participant L as protectedLoader
+  participant LP as LoginPage
+  participant AL as AppLayout
+  H->>H: theme class + app-splash
+  H->>M: load module
+  M->>A: StrictMode / DirectionProvider rtl
+  A->>Z: hasHydrated?
+  Z-->>A: rehydrate auth-storage
+  A->>R: AppProviders(Query, Theme, Toast) + RouterProvider
+  R->>L: route under /
+  L-->>R: sessionVerified=false: redirect /auth/login?from=
+  R->>LP: AuthLayout / LoginPage
+  LP->>LP: useSessionCheck: GET /User/GetUserInfo
+  LP->>Z: markSessionVerified()
+  LP->>R: navigate(from)
+  R->>AL: Suspense / PermissionGate / Outlet
+</pre>
+</section>
+
+<section id="journey">
+  <h2>مسیرِ یک درخواست <span class="tag">/customers</span></h2>
+  <p class="lead">کاربر روی «مشتریان» کلیک می‌کند. گام‌ها را یکی‌یکی دنبال کنید؛ هر گام فایل و تابعِ واقعی را نشان می‌دهد.</p>
+  <div class="journey">
+    <div class="panel"><div class="steps" id="steps"></div>
+      <div class="row" style="margin-top:12px"><button class="btn" id="prevStep" type="button">قبلی</button><button class="btn on" id="nextStep" type="button">گامِ بعد</button><button class="btn" id="playSteps" type="button">پخشِ خودکار</button></div>
+    </div>
+    <div class="panel" id="stepDetail" aria-live="polite"></div>
+  </div>
+</section>
+
+<section id="refresh">
+  <h2>۴۰۱ و صفِ refresh <span class="tag">src/shared/services/api/axios.js</span></h2>
+  <p class="lead">یک حالت را انتخاب کنید تا ببینید interceptorِ پاسخ کدام شاخه را طی می‌کند. توکن رمزنگاری‌شده (JWE) است و فرانت انقضایش را نمی‌خواند؛ تنها نشانه ۴۰۱ِ سرور است.</p>
+  <div class="sim">
+    <div class="panel"><div class="row" id="scenarios" style="flex-direction:column;align-items:stretch"></div></div>
+    <div class="panel"><div class="flow" id="flow"></div><p id="flowNote" style="margin-top:12px;font-size:.9rem"></p></div>
+  </div>
+</section>
+
+<section id="perms">
+  <h2>بررسیِ مجوز در سه نقطه <span class="tag">satisfies(names, required)</span></h2>
+  <p class="lead">یک مسیر و مجوزهای کاربر را انتخاب کنید. نتیجه را برای گاردِ مسیر، منو و دکمه‌ی داخلِ صفحه ببینید. آرایه یعنی «هر کدام کافی است».</p>
+  <div class="perm">
+    <div class="panel" style="display:grid;gap:12px">
+      <div><label for="routeSel">مسیر</label><select id="routeSel"></select></div>
+      <div><label for="stateSel">وضعیتِ دریافتِ مجوزها</label><select id="stateSel"><option value="ok">دریافت شد</option><option value="pending">در حال دریافت</option><option value="error">خطای شبکه</option></select></div>
+      <div><span style="font-size:.86rem">مجوزهای کاربر</span><div class="checks" id="permChecks"></div></div>
+    </div>
+    <div class="results" id="permResults" aria-live="polite"></div>
+  </div>
+</section>
+
+<section id="features">
+  <h2>فیچرها و وابستگی‌ها <span class="tag">src/features/*</span></h2>
+  <p class="lead">روی یک فیچر کلیک کنید: آنچه از آن import می‌کند (بنفش) و آنچه به آن وابسته است (نارنجی) روشن می‌شود. عدد روی یال، تعدادِ خطوطِ import است. همه به <code>auth</code> هم وابسته‌اند.</p>
+  <div class="graphwrap">
+    <div class="svgbox"><svg id="graph" viewBox="0 0 560 520" width="100%" style="min-width:420px;display:block" role="img" aria-label="گرافِ وابستگیِ فیچرها"></svg>
+      <div class="legend"><span><i style="background:var(--accent)"></i>import می‌کند</span><span><i style="background:var(--warn)"></i>import می‌شود از</span></div></div>
+    <div class="panel fcard" id="featCard" aria-live="polite"></div>
+  </div>
+  <div style="margin-top:16px;display:grid;gap:8px">
+    <label for="featSearch">جست‌وجو در مسیرها، صفحه‌ها و endpointها</label>
+    <input id="featSearch" type="search" placeholder="مثلاً Sale یا /warehouse یا usePurchase">
+    <div class="tbl"><table><thead><tr><th>ماژول</th><th>پیشوندِ مسیر</th><th>صفحه‌های اصلی</th><th>storeها</th><th>endpointها</th></tr></thead><tbody id="featRows"></tbody></table></div>
+  </div>
+</section>
+
+<section id="place">
+  <h2>کدِ جدید را کجا بگذارم؟ <span class="tag">02-folder-structure.md</span></h2>
+  <p class="lead">به چند سؤال جواب دهید تا مسیرِ درست پیدا شود.</p>
+  <div class="panel wiz" id="wiz"></div>
+</section>
+
+<section id="api">
+  <h2>لایه‌ی API و ایدمپوتنسی <span class="tag">06-api-layer.md</span></h2>
+  <p class="lead">همه‌ی درخواست‌ها از <code>axiosInstance</code> می‌گذرند. نوشتن‌های مالی و موجودی کلیدِ <code>Idempotency-Key</code> دارند که به <em>محتوای</em> درخواست بسته است. یک رویداد را انتخاب کنید تا ببینید کلید چه می‌شود.</p>
+  <div class="sim">
+    <div class="panel"><div class="row" id="idemBtns" style="flex-direction:column;align-items:stretch"></div></div>
+    <div class="panel"><div class="flow" id="idemFlow"></div><p id="idemNote" style="margin-top:12px;font-size:.9rem"></p></div>
+  </div>
+  <div class="tbl" style="margin-top:16px"><table><thead><tr><th>کار</th><th>تابع</th><th>فایل</th></tr></thead><tbody>
+    <tr><td>پارامترهای فهرست (صفحه ۱-مبنا، حذفِ "" و "all")</td><td class="mono">listQuery · compactParams</td><td class="mono">src/shared/services/api/contract.js</td></tr>
+    <tr><td>پاسخِ فهرست → <span class="mono">{ items, total, page, totalPages }</span></td><td class="mono">normalizeListResponse</td><td class="mono">src/shared/services/api/contract.js</td></tr>
+    <tr><td>ستونِ جدول → عددِ SortEnumِ بکند</td><td class="mono">toApiSort · X_SORT_COLUMNS</td><td class="mono">src/shared/services/api/sorting.js</td></tr>
+    <tr><td>کلِ فهرست برای انتخابگر (۴ درخواستِ هم‌زمان، take ≤ ۲۰۰)</td><td class="mono">fetchAllPages</td><td class="mono">src/shared/services/api/contract.js</td></tr>
+    <tr><td>پیامِ فارسیِ خطا</td><td class="mono">getErrorMessage(error, fallback)</td><td class="mono">src/shared/lib/errorMessage.js</td></tr>
+    <tr><td>خطای دانلودِ Blob</td><td class="mono">unwrapBlobError</td><td class="mono">src/shared/services/api/blob.js</td></tr>
+  </tbody></table></div>
+</section>
+
+<section id="cache">
+  <h2>بعد از نوشتن چه چیزی باطل می‌شود؟ <span class="tag">React Query</span></h2>
+  <p class="lead"><code>staleTime: 0</code> سراسری است و هر mutation خودش کلیدهای مربوط را باطل می‌کند. یک mutation را انتخاب کنید؛ سبز یعنی پاسخ مستقیم در کش نشست (<code>setQueryData</code>)، قرمز یعنی باطل و دوباره خوانده می‌شود.</p>
+  <div class="inv">
+    <div class="panel"><div class="row" id="mutBtns" style="flex-direction:column;align-items:stretch"></div></div>
+    <div class="panel"><div class="keys" id="keyGrid"></div><p id="mutNote" style="margin-top:12px;font-size:.88rem;color:var(--muted)"></p></div>
+  </div>
+</section>
+
+<section id="state">
+  <h2>state کلاینت و فرم‌ها <span class="tag">08-client-state-zustand.md</span></h2>
+  <p class="lead">داده‌ی سرور فقط در React Query است. Zustand برای فیلترها، فرمِ سندِ خرید/فروش، پیش‌نویس و هدر. نوعِ فرمتان را انتخاب کنید تا ابزارِ درست را ببینید.</p>
+  <div class="layers">
+    <div class="lstack" id="formBtns"></div>
+    <div class="panel detail" id="formDetail" aria-live="polite"></div>
+  </div>
+  <div class="tbl" style="margin-top:16px"><table><thead><tr><th>نوعِ store</th><th>ساخته با</th><th>نمونه</th><th>ماندگاری</th></tr></thead><tbody>
+    <tr><td>فیلتر و صفحه‌بندیِ لیست</td><td class="mono">createFilterStore</td><td class="mono">customerFilterStore.js</td><td>حافظه</td></tr>
+    <tr><td>فرمِ سندِ خرید/فروش</td><td class="mono">createDocumentFormStore</td><td class="mono">saleFormStore.js · purchaseFormStore.js</td><td>حافظه</td></tr>
+    <tr><td>فرمِ مرجوعی و انبار</td><td class="mono">create (دستی)</td><td class="mono">receivingFormStore.js</td><td>حافظه</td></tr>
+    <tr><td>پیش‌نویسِ یک‌بارمصرف</td><td class="mono">useFormDraftStore</td><td class="mono">src/shared/store/formDraftStore.js</td><td>حافظه</td></tr>
+    <tr><td>عنوانِ هدر</td><td class="mono">useHeaderStore ← usePageHeader</td><td class="mono">src/shared/store/headerStore.js</td><td>حافظه</td></tr>
+    <tr><td>توکن‌ها</td><td class="mono">persist</td><td class="mono">auth-storage</td><td><span class="pill p-warn">localStorage</span></td></tr>
+    <tr><td>چیدمانِ داشبورد · قالبِ برچسب</td><td class="mono">persist</td><td class="mono">dashboard-layout · unit-label-template</td><td><span class="pill p-warn">localStorage، بعد از خروج می‌ماند</span></td></tr>
+  </tbody></table></div>
+</section>
+
+<section id="ui">
+  <h2>تم، رنگِ وضعیت و RTL <span class="tag">09-ui-system-theming-rtl.md</span></h2>
+  <p class="lead">رنگِ پالتِ Tailwind برای معنا نوشته نمی‌شود؛ هر جا یک <em>tone</em> انتخاب می‌شود و ظاهر از توکنِ تمِ فعلی می‌آید. روی یک tone کلیک کنید تا کلاس‌ها و نمونه‌ی وضعیت‌هایش را ببینید.</p>
+  <div class="layers">
+    <div class="panel"><div class="row" id="toneBtns"></div><div id="toneDetail" style="margin-top:14px" aria-live="polite"></div></div>
+    <div class="panel" style="display:grid;gap:10px">
+      <h3>RTL از پنج جا می‌آید</h3>
+      <ul style="margin:0;padding-inline-start:18px;display:grid;gap:4px;font-size:.9rem">
+        <li><span class="mono">index.html</span> — <span class="mono">lang="fa-IR" dir="rtl"</span></li>
+        <li><span class="mono">src/main.jsx</span> — <span class="mono">DirectionProvider direction="rtl"</span></li>
+        <li><span class="mono">components.json</span> — <span class="mono">rtl: true</span> برای shadcn</li>
+        <li><span class="mono">AppLayout.jsx</span> — <span class="mono">AppSidebar side="right"</span></li>
+        <li><span class="mono">ToastProvider.jsx</span> — <span class="mono">direction: "rtl"</span></li>
+      </ul>
+      <h3>۸ تم</h3>
+      <div class="stack"><span class="chip">light</span><span class="chip">dark (پیش‌فرض)</span><span class="chip">system</span><span class="chip">material-light</span><span class="chip">material-dark</span><span class="chip">theme-accessible</span><span class="chip">theme-rose</span><span class="chip">theme-forest</span></div>
+      <p style="font-size:.86rem;color:var(--muted)">i18n وجود ندارد؛ متن‌ها فارسیِ مستقیم‌اند. تاریخ با <span class="mono">gregorianToPersian</span>، عدد با <span class="mono">formatNumber</span>، ارقامِ تایپ‌شده با <span class="mono">normalizePersianDigits</span>.</p>
+    </div>
+  </div>
+</section>
+
+<section id="components">
+  <h2>کامپوننت‌های مشترک <span class="tag">10-shared-components-catalog.md</span></h2>
+  <p class="lead">قبل از ساختنِ کامپوننتِ تازه این‌جا را ببینید. عدد، تعدادِ فایل‌هایی است که آن را import می‌کنند. گروه را انتخاب کنید.</p>
+  <div class="row" id="compTabs" style="margin-bottom:12px"></div>
+  <div class="tbl"><table><thead><tr><th>کامپوننت</th><th>کِی</th><th>#</th></tr></thead><tbody id="compRows"></tbody></table></div>
+</section>
+
+<section id="domain">
+  <h2>لایه‌ی دامنه و مدلِ مرجوعی <span class="tag">11-domain-layer.md</span></h2>
+  <p class="lead">منطقِ خالص (بدونِ React) در <code>src/shared/domain/</code> و <code>domain/</code>ِ هر فیچر. مرجوعیِ خرید و فروش یک مدل دارند؛ فرقشان فقط برچسب است و قرنطینه که فقط در خرید هست.</p>
+  <div class="layers">
+<pre class="mermaid">
+flowchart LR
+  C["claim<br/>claimDrafts.js"] --> R["resolution<br/>resolutions.js"]
+  R --> E["effects<br/>effects.js"]
+  E --> G["GOODS_IN / GOODS_OUT<br/>GOODS_RELEASE / GOODS_SCRAP"]
+  E --> M["MONEY_IN / MONEY_OUT"]
+  G --> O["observation<br/>receivingReport.js"]
+</pre>
+    <div class="panel">
+      <h3>شکلِ یک enum</h3>
+      <div class="codebox">// src/shared/domain/enums/purchaseStatus.js
+export const PurchaseStatusEnum = Object.freeze({
+  PROFORMA: 0, PENDING: 1, SHIPPED: 2,
+  PARTIALLY_RECEIVED: 3, RECEIVED: 4, CANCELLED: 5,
+});
+export const PURCHASE_STATUS_LABELS = { ... }  // فارسی
+export const PURCHASE_STATUS_TONES  = { ... }  // tone</div>
+      <p style="margin-top:10px;font-size:.88rem">روی سیم همیشه عدد است، با <strong>همان اعدادِ بکند</strong>. اگر سرور عضوِ تازه‌ای بفرستد، برای مرجوعی <span class="mono">verifyReturnEnums</span> در dev هشدار می‌دهد؛ برای بقیه‌ی enumها چنین وارسی‌ای نیست.</p>
+    </div>
+  </div>
+</section>
+
+<section id="recipes">
+  <h2>دستورالعمل‌های رایج <span class="tag">13-recipes.md</span></h2>
+  <p class="lead">فایل‌ها به ترتیبی که باید لمس شوند. هر کدام از یک نمونه‌ی واقعی کپی می‌شود.</p>
+  <div class="recipes" id="recipeGrid"></div>
+</section>
+
+<section id="debt">
+  <h2>بدهی‌های شناخته‌شده <span class="tag">14-dependency-graph-and-health.md</span></h2>
+  <p class="lead">هیچ‌کدام هنوز رفع نشده‌اند. با دسته فیلتر کنید. شناسه‌های B و R همان شناسه‌های فایلِ ۱۴‌اند؛ L و C فقط در این صفحه شماره خورده‌اند. فهرستِ کامل (حدودِ ۷۰ مورد) در خودِ فایلِ ۱۴ است.</p>
+  <div class="row" id="debtFilters" style="margin-bottom:12px"></div>
+  <div class="debt" id="debtList"></div>
+</section>
+
+<footer>منبع: <code>Frontend/docs/architecture/</code> (ساخته‌شده از روی کد، 2026-10-16). برای جزئیات و هر مسیرِ فایل، همان اسناد را باز کنید.</footer>
+</main>
+</div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s), el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e};
+
+/* theme toggle */
+const modes=["system","light","dark"], names={system:"سیستم",light:"روشن",dark:"تیره"};
+let mode="system";try{mode=localStorage.getItem("fm-theme")||"system"}catch(e){}
+function applyTheme(){if(mode==="system")document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme",mode);$("#themeBtn").textContent="تم: "+names[mode]}
+$("#themeBtn").onclick=()=>{mode=modes[(modes.indexOf(mode)+1)%3];try{localStorage.setItem("fm-theme",mode)}catch(e){}applyTheme()};applyTheme();
+
+/* rail highlight */
+const links=[...document.querySelectorAll("#rail a")];
+const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(a=>a.classList.toggle("on",a.getAttribute("href")==="#"+e.target.id))}})},{rootMargin:"-30% 0px -60% 0px"});
+document.querySelectorAll("main section").forEach(s=>io.observe(s));
+
+/* layers */
+const LAYERS=[
+ {id:"app",nm:"src/app/",ds:"سیم‌کشیِ برنامه",
+  what:"providerهای سراسری، پوسته‌ها، روتر و گاردها، و صفحه‌های فقط-dev.",
+  files:["providers/AppProviders.jsx — QueryProvider › ThemeProvider › ToastProvider","layouts/AppLayout.jsx — Suspense › PermissionGate › Outlet","routes/routers.jsx — createBrowserRouter و پچِ router.navigate","routes/protectedLoader.jsx، routes/PermissionGate.jsx"],
+  yes:"importِ آزاد از features و shared (مثلاً <code>authStore</code> در loader).",no:"منطقِ کسب‌وکار یا فراخوانیِ API. هیچ فایلی بیرون از app از <code>@/app/</code> import نمی‌کند."},
+ {id:"features",nm:"src/features/<f>/",ds:"یک حوزه‌ی کسب‌وکار",
+  what:"هر چیزی که مالکش یک حوزه است: صفحه، فرم، جدول، endpointهای همان حوزه، storeِ فیلتر و فرم.",
+  files:["routes.jsx — آرایه‌ی مسیرها با lazy() و handle.permission","pages/ · components/ · hooks/","services/ — api-v1.js · queryKeys.js · queries.js · mutations.js","store/ · domain/ (منطقِ خالص بدونِ React)"],
+  yes:"import از shared، و در عمل از فیچرهای دیگر (مثلاً sales → warehouse). جهتِ عادی: سند → داده‌ی پایه، گزارش → هر چیز.",no:"چیزی که دو فیچر به‌طورِ برابر لازم دارند؛ مثلاً منطقِ مرجوعی در <code>src/shared/domain/returns/</code> است. جهتِ «داده‌ی پایه → سند» را اضافه نکنید."},
+ {id:"shared",nm:"src/shared/",ds:"بی‌مالک و چندبارمصرف",
+  what:"کامپوننت‌های مشترک، enum و منطقِ خالص، زیرساختِ شبکه، هوک، کمک‌تابع، storeهای سراسری، ثابتِ ROUTES و منو.",
+  files:["components/ui/ — تولیدِ shadcn","components/table · filters · status · payments · print …","domain/enums · returns · payments · invoice","services/api/axios.js · contract.js","lib/ · hooks/ · store/ · constants/routes.js"],
+  yes:"import فقط از shared.",no:"کامپوننتی که فقط یک فیچر مصرف می‌کند. الان ۹ فایل خلافِ قاعده از features import می‌کنند (مثلاً <code>axios.js</code> → <code>authStore</code>)."}
+];
+function renderLayer(id){const L=LAYERS.find(x=>x.id===id);
+ document.querySelectorAll(".layer").forEach(b=>b.classList.toggle("on",b.dataset.id===id));
+ $("#layerDetail").innerHTML=`<h3 class="mono" style="text-align:left">${L.nm.replace("<","&lt;").replace(">","&gt;")}</h3><p>${L.what}</p><ul>${L.files.map(f=>`<li><span class="mono">${f.split(" — ")[0]}</span>${f.includes(" — ")?" — "+f.split(" — ")[1]:""}</li>`).join("")}</ul><div class="yes"><b>مجاز: </b>${L.yes}</div><div class="no"><b>ممنوع: </b>${L.no}</div>`}
+LAYERS.forEach((L,i)=>{const b=el("button","layer",`<span class="nm">${L.nm.replace("<","&lt;").replace(">","&gt;")}</span><span class="ds">${L.ds}</span>`);b.type="button";b.dataset.id=L.id;b.onclick=()=>renderLayer(L.id);$("#layerBtns").append(b);if(i<2)$("#layerBtns").append(el("div","arrowcol","↓ import می‌کند"))});
+renderLayer("features");
+
+/* journey */
+const STEPS=[
+ {t:"آدرس به روتر می‌رسد",f:"src/app/routes/routers.jsx",d:"<code>customersRoutes</code> زیرِ مسیرِ ریشه با <code>AppLayout</code> پخش شده است. کلیک از <code>router.navigate</code>ِ پچ‌شده می‌گذرد و <code>notifyNavigationStart()</code> اسپینرِ جابه‌جایی را روشن می‌کند.",c:`{ path: ROUTES.ROOT, element: <AppLayout />,
+  loader: protectedLoader, errorElement: <NotFoundPage />,
+  children: [...dashboardRoutes, ...customersRoutes, ...] }`},
+ {t:"loader نشست را می‌سنجد",f:"src/app/routes/protectedLoader.jsx",d:"اگر در این بارگذاری سرور توکن را تأیید نکرده باشد، به صفحه‌ی ورود با <code>?from=</code> می‌فرستد.",c:`if (!useAuthStore.getState().sessionVerified)
+  return redirect(\`\${ROUTES.LOGIN}?\${params}\`);`},
+ {t:"گاردِ مجوز",f:"src/app/routes/PermissionGate.jsx",d:"عمیق‌ترین <code>handle.permission</code> را پیدا می‌کند (<code>\"CustomerView\"</code>) و با <code>satisfies</code> می‌سنجد. تا مجوزها نیامده‌اند چیزی رندر نمی‌شود.",c:`const required = matches.findLast(m => m.handle?.permission != null)
+  ?.handle.permission;
+return satisfies(names, required) ? children : <ForbiddenPage />;`},
+ {t:"صفحه‌ی lazy و store",f:"src/features/customers/pages/CustomersPage.jsx",d:"فیلترها و صفحه‌بندی از storeِ Zustand، فیلترهای متنی با تأخیر از <code>useCustomerListFilters</code>.",c:`const listState = useCustomerFilterStore();
+const filters = useCustomerListFilters();
+const query = useCustomersQuery(filters, listState.pagination, listState.sorting);`},
+ {t:"query و کلیدِ کش",f:"src/features/customers/services/queries.js",d:"پارامترها با <code>listQuery</code> ساخته می‌شوند (صفحه ۱-مبنا، حذفِ مقدارهای خالی و \"all\")؛ <code>keepPreviousData</code> جدول را حینِ تغییر خالی نمی‌کند.",c:`const params = listQuery({ filters, pagination, sorting,
+  sortColumns: CUSTOMER_SORT_COLUMNS });
+return useQuery({ queryKey: customerKeys.list(params),
+  queryFn: () => fetchCustomers(params), placeholderData: keepPreviousData });`},
+ {t:"تابعِ api",f:"src/features/customers/services/api-v1.js",d:"آدرس‌ها REST نیستند: <code>/Controller/Action</code>. پاسخِ فهرست به شکلِ استانداردِ <code>{ items, total, page, totalPages }</code> درمی‌آید.",c:`const { data } = await axiosInstance.get("/Customer/GetCustomerList", { params });
+return normalizeListResponse(data, { itemsKey: "customerList" });`},
+ {t:"axios: توکن و باز کردنِ پوشش",f:"src/shared/services/api/axios.js",d:"interceptorِ درخواست Bearer می‌گذارد؛ interceptorِ پاسخ <code>{ Data, Message, ResponseMessageType }</code> را باز می‌کند و خطا را به پیامِ فارسی تبدیل می‌کند. روی ۴۰۱ صفِ refresh اجرا می‌شود.",c:`config.headers.Authorization = \`Bearer \${token}\`;
+...
+if (isEnvelope(response.data)) response.data = unwrapEnvelope(response.data);`},
+ {t:"رندرِ جدول",f:"src/shared/components/table/ServerTable.jsx",d:"خطا → <code>QueryErrorState</code>؛ واکشیِ دوباره → <code>FetchingOverlay</code>؛ بعد <code>CustomerTable</code> که <code>DataTable</code> را می‌پیچد. در موبایل <code>MobileRowCards</code>.",c:`if (isError) return <QueryErrorState error={error} onRetry={() => refetch()} />;
+return <FetchingOverlay active={isFetching && !isLoading}>
+  <Table data={items} ... /></FetchingOverlay>;`}
+];
+let cur=0,timer=null;
+function renderSteps(){$("#steps").innerHTML="";STEPS.forEach((s,i)=>{const b=el("button","step"+(i===cur?" on":i<cur?" done":""),`<span class="dot">${(i+1).toLocaleString("fa-IR")}</span><span><span class="t">${s.t}</span><span class="f" style="display:block">${s.f}</span></span>`);b.type="button";b.onclick=()=>{stop();cur=i;renderSteps()};$("#steps").append(b)});
+ const s=STEPS[cur];$("#stepDetail").innerHTML=`<div class="filebar">${s.f}</div><h3 style="margin-top:6px">${s.t}</h3><p style="margin-top:6px">${s.d}</p><div class="codebox">${s.c.replace(/</g,"&lt;")}</div>`}
+function stop(){if(timer){clearInterval(timer);timer=null;$("#playSteps").textContent="پخشِ خودکار"}}
+$("#nextStep").onclick=()=>{stop();cur=Math.min(STEPS.length-1,cur+1);renderSteps()};
+$("#prevStep").onclick=()=>{stop();cur=Math.max(0,cur-1);renderSteps()};
+$("#playSteps").onclick=()=>{if(timer){stop();return}$("#playSteps").textContent="توقف";timer=setInterval(()=>{cur=(cur+1)%STEPS.length;renderSteps()},2600)};
+renderSteps();
+
+/* refresh simulator */
+const NODES={
+ a:["درخواست با Bearer","request interceptor"],
+ b:["پاسخ ۴۰۱","status === 401 && !_retry && !isRefreshCall"],
+ c:["refreshToken هست؟","useAuthStore.getState()"],
+ d:["توکنِ فرستاده‌شده ≠ توکنِ فعلی؟","bearerOf(originalRequest) !== accessToken"],
+ e:["refreshِ دیگری در جریان است؟","isRefreshing"],
+ f:["POST /Account/RefreshToken","axios.post (خام، بدونِ interceptor)"],
+ g:["setTokens + onRefreshed","همه‌ی منتظرها تکرار می‌شوند"],
+ h:["تکرارِ درخواستِ اصلی","_retry = true"],
+ i:["صبر در صف","subscribeTokenRefresh"],
+ j:["logout() و بیرون","window.location.href = ROUTES.LOGIN"],
+ k:["فقط reject؛ کاربر می‌ماند","onRefreshFailed (بی‌پاسخ)"],
+ l:["refresh جای دیگر برنده شد","refreshedElsewhere → تکرار با توکنِ تازه"]
+};
+const SC=[
+ {n:"اولین ۴۰۱، refresh موفق",p:["a","b","c","d","e","f","g","h"],end:"h",ok:true,note:"حالتِ عادی: یک refresh، توکن‌های تازه در store، و درخواستِ اصلی دوباره فرستاده می‌شود."},
+ {n:"چند درخواست هم‌زمان ۴۰۱ گرفتند",p:["a","b","c","d","e","i","g","h"],end:"h",ok:true,note:"فقط درخواستِ اول refresh می‌زند؛ بقیه در refreshSubscribers صبر می‌کنند و بعد با توکنِ تازه تکرار می‌شوند."},
+ {n:"تبِ دیگر قبلاً refresh کرده",p:["a","b","c","d","h"],end:"h",ok:true,note:"درخواست با توکنی رفته که دیگر فعلی نیست؛ بدونِ refreshِ دوباره با توکنِ فعلی تکرار می‌شود. رویدادِ storage تب‌ها را همگام می‌کند."},
+ {n:"refreshToken وجود ندارد",p:["a","b","c","j"],end:"j",ok:false,note:"logout() و reject. AppLayout با isAuthenticated=false به صفحه‌ی ورود می‌برد."},
+ {n:"سرور refresh را رد کرد",p:["a","b","c","d","e","f","j"],end:"j",ok:false,note:"هر پاسخِ سرور (مثلاً ۴۰۰ با توکنِ عوض‌نشده) یعنی بن‌بست: logout و بارگذاریِ کاملِ صفحه‌ی ورود."},
+ {n:"۴۰۰، ولی تبِ دیگر توکن را عوض کرد",p:["a","b","c","d","e","f","l","h"],end:"h",ok:true,note:"refreshedElsewhere: منتظرها reject می‌شوند و درخواستِ اصلی با آخرین توکنِ store تکرار می‌شود."},
+ {n:"قطعیِ شبکه حینِ refresh",p:["a","b","c","d","e","f","k"],end:"k",ok:false,note:"بی‌پاسخ یعنی سرور جواب نداده؛ دلیلی برای بیرون‌انداختنِ کاربر نیست. فقط خطا برمی‌گردد."}
+];
+const ORDER=["a","b","c","d","e","f","i","l","g","h","j","k"];
+function renderSc(i){document.querySelectorAll("#scenarios .btn").forEach((b,j)=>b.classList.toggle("on",i===j));const s=SC[i];
+ $("#flow").innerHTML="";ORDER.forEach(k=>{if(!s.p.includes(k))return;const cls=k===s.end?(s.ok?"end-ok":"end-bad"):"lit";const n=el("div","node "+cls,`${NODES[k][0]}<small>${NODES[k][1]}</small>`);$("#flow").append(n)});
+ $("#flowNote").textContent=s.note}
+SC.forEach((s,i)=>{const b=el("button","btn",s.n);b.type="button";b.style.textAlign="right";b.onclick=()=>renderSc(i);$("#scenarios").append(b)});renderSc(0);
+
+/* permissions */
+const ROUTES_P=[
+ ["/customers","CustomerView","مشتریان"],["/customers/new","CustomerCreate","مشتری جدید"],
+ ["/sales/new",["SaleCreate","SaleInPerson"],"فروشِ جدید"],["/sales/installments","SaleInstallmentView","اقساط"],
+ ["/warehouse/vehicles",["VehicleView","ProductCategoryView"],"خودروها"],["/warehouse/receiving","PurchaseReceive","دریافتِ کالا"],
+ ["/employees/:id","UserUpdate","جزئیاتِ کارمند"],["/accounting","AccountingView","دفتر حساب‌ها"],["/accounting/employees","ReportView","فعالیتِ کارمندان"],
+ ["/dashboard",null,"داشبورد"],["/settings",null,"تنظیمات (placeholder)"]
+];
+const ALL=[...new Set(ROUTES_P.flatMap(r=>r[1]==null?[]:[].concat(r[1])))];
+let have=new Set(["CustomerView","SaleCreate"]);
+ROUTES_P.forEach((r,i)=>{const o=el("option",null,`${r[2]} — ${r[0]}`);o.value=i;$("#routeSel").append(o)});
+ALL.forEach(p=>{const l=el("label",null,`<input type="checkbox" id="pc-${p}" ${have.has(p)?"checked":""}> ${p}`);l.querySelector("input").onchange=e=>{e.target.checked?have.add(p):have.delete(p);renderPerm()};$("#permChecks").append(l)});
+const satisfies=(n,req)=>req==null?true:Array.isArray(req)?(req.length===0||req.some(x=>n.has(x))):n.has(req);
+function renderPerm(){const r=ROUTES_P[$("#routeSel").value],st=$("#stateSel").value,req=r[1];
+ const reqTxt=req==null?"ندارد":Array.isArray(req)?req.join(" یا "):req;
+ let gate,menu,btn;
+ if(req==null){gate=["ok","صفحه باز است — مسیر handle.permission ندارد"]}
+ else if(st==="pending"){gate=["info","هیچ (null) — منتظرِ مجوزها"]}
+ else if(st==="error"){gate=["ok","صفحه باز می‌شود؛ سرور اگر لازم باشد ۴۰۳ می‌دهد"]}
+ else gate=satisfies(have,req)?["ok","صفحه رندر می‌شود"]:["bad","ForbiddenPage"];
+ if(st==="pending")menu=["info","منو خالی است تا مجوزها برسند"];
+ else if(st==="error")menu=req==null?["ok","دیده می‌شود"]:["bad","پنهان — names خالی است (باگِ B3)"];
+ else menu=satisfies(have,req)?["ok","دیده می‌شود"]:["warn","پنهان"];
+ const canV=st==="ok"&&satisfies(have,req), allowsV=st==="error"||(st==="ok"&&satisfies(have,req));
+ btn=`<span class="pill ${canV?"p-ok":"p-warn"}">can: ${canV}</span> <span class="pill ${allowsV?"p-ok":"p-warn"}">allows: ${allowsV}</span>`;
+ const pc={ok:"p-ok",bad:"p-bad",warn:"p-warn",info:"p-info"};
+ $("#permResults").innerHTML=`<div class="res"><span class="k">مجوزِ لازم</span><span class="mono" style="text-align:left">${reqTxt}</span></div>
+ <div class="res"><span class="k">PermissionGate</span><span><span class="pill ${pc[gate[0]]}">${gate[1]}</span></span></div>
+ <div class="res"><span class="k">AppSidebar</span><span><span class="pill ${pc[menu[0]]}">${menu[1]}</span></span></div>
+ <div class="res"><span class="k">دکمه در صفحه</span><span>${btn}<div style="font-size:.78rem;color:var(--muted);margin-top:4px">برای دکمه‌ها allows را ترجیح دهید: در خطا دکمه پنهان نمی‌شود.</div></span></div>`}
+$("#routeSel").onchange=renderPerm;$("#stateSel").onchange=renderPerm;renderPerm();
+
+/* features graph */
+const F={
+ sales:{p:"/sales",pages:"SalePage، SaleNewPage، SaleDetailPage (SaleForm / SaleIssuedView)، InstallmentsPage، SalesReturns*Page",stores:"useSaleFormStore، useSaleFilterStore، useSalesReturnFormStore، useInstallmentFilterStore",api:"/Sale/*، /SaleReturn/*، /SaleInstallment/*",sub:"orders · returns · installments",note:"ثبتِ تغییرات با runDocumentChanges؛ invalidateSalesEcosystem."},
+ purchases:{p:"/purchases",pages:"PurchasesPage، PurchasesNewPage، PurchaseDetailPage، PurchaseReturn*Page",stores:"usePurchaseFormStore، usePurchaseFilterStore، usePurchaseReturnFormStore",api:"/Purchase/*، /PurchaseReturn/*",sub:"orders · returns",note:"قرنطینه فقط در مرجوعیِ خرید؛ invalidatePurchaseEcosystem."},
+ warehouse:{p:"/warehouse",pages:"ProductsPage، CategoriesPage، VehiclesPage، UnitsPage، Receiving*Page، Shipping*Page",stores:"useProductFilterStore، useLabelTemplateStore، useReceivingFormStore، useShippingFormStore",api:"/Product/*، /ProductCategory/*، /Vehicle/*، /Shipment/*",sub:"products · categories · units · vehicles · receiving · shipping",note:"باگ: فیلترِ خودرو به سرور نمی‌رسد (B1)."},
+ customers:{p:"/customers",pages:"CustomersPage، CustomerNewPage، CustomerDetailPage",stores:"useCustomerFilterStore",api:"/Customer/*",note:"صورت‌حساب زیرِ customerKeys.all است."},
+ suppliers:{p:"/suppliers",pages:"SuppliersPage، SupplierNewPage، SupplierDetailPage",stores:"useSupplierFilterStore",api:"/Supplier/*",note:"SupplierEditPage placeholderِ مسیردار است."},
+ partyAccount:{p:"— (بدونِ مسیر)",pages:"—",stores:"createPartyFilterStore",api:"/PartyAccount/GetPartyStatement",note:"کتابخانه‌ی مشترکِ مشتری و تامین‌کننده."},
+ employees:{p:"/employees",pages:"EmployeesPage، EmployeeNewPage، EmployeeDetailPage",stores:"useEmployeeFilterStore",api:"/User/*",note:"جزئیات مجوزِ UserUpdate می‌خواهد."},
+ organization:{p:"/organization",pages:"DepartmentsPage، TeamsPage و جزئیات",stores:"useDepartmentFilterStore، useTeamFilterStore",api:"/Department/*، /Team/*",sub:"departments · teams",note:"تغییرِ تیم authKeys.session() را باطل می‌کند."},
+ permissions:{p:"/access",pages:"UserAccessPage، DepartmentTemplatesPage",stores:"— (usePermissionDraft)",api:"/Permission/*",note:"کاتالوگِ چک‌باکس‌ها از سرور می‌آید."},
+ dashboard:{p:"/ ، /dashboard",pages:"DashboardPage",stores:"useDashboardLayoutStore (persist)، useDashboardFilterStore",api:"/Report/GetSaleReport، GetPurchaseReport، GetScopePerformance",note:"ویجت‌ها با buildDashboardContext انتخاب می‌شوند."},
+ accounting:{p:"/accounting",pages:"AccountingDashboardPage، PartyBalancesPage، InvoiceJournalPage، *ActivityPage",stores:"accountingFilterStores.js، activityFilterStore.js",api:"/Accounting/*، /Report/*",sub:"activity",note:"/reports/* قدیمی به این‌جا ریدایرکت می‌شود."},
+ auth:{p:"/auth",pages:"LoginPage",stores:"useAuthStore (persist)",api:"/Account/Login، Logout، RefreshToken؛ /User/GetUserInfo",note:"همه‌ی فیچرها برای مجوز به آن وابسته‌اند."}
+};
+const E=[["accounting","organization",2],["accounting","customers",1],["accounting","employees",1],["accounting","suppliers",1],["accounting","warehouse",1],["customers","partyAccount",9],["customers","sales",1],["dashboard","warehouse",2],["dashboard","accounting",1],["dashboard","sales",1],["employees","organization",6],["employees","permissions",1],["organization","employees",7],["organization","permissions",1],["partyAccount","customers",1],["partyAccount","suppliers",1],["permissions","organization",3],["permissions","employees",2],["purchases","warehouse",6],["purchases","suppliers",4],["purchases","partyAccount",1],["sales","warehouse",8],["sales","customers",6],["sales","partyAccount",1],["sales","dashboard",1],["suppliers","partyAccount",9],["warehouse","purchases",7],["warehouse","sales",5],["warehouse","suppliers",3],["warehouse","customers",2]];
+const order=["sales","warehouse","purchases","suppliers","partyAccount","customers","accounting","organization","employees","permissions","dashboard"];
+const pos={},cx=280,cy=250,R=190;order.forEach((k,i)=>{const a=-Math.PI/2+i*2*Math.PI/order.length;pos[k]=[cx+R*Math.cos(a),cy+R*Math.sin(a)]});pos.auth=[cx,cy];
+const NS="http://www.w3.org/2000/svg",g=$("#graph");
+const defs=document.createElementNS(NS,"defs");
+["base","out","in"].forEach(t=>{const m=document.createElementNS(NS,"marker");m.setAttribute("id","ar-"+t);m.setAttribute("viewBox","0 0 10 10");m.setAttribute("refX","9");m.setAttribute("refY","5");m.setAttribute("markerWidth","6");m.setAttribute("markerHeight","6");m.setAttribute("orient","auto-start-reverse");const p=document.createElementNS(NS,"path");p.setAttribute("d","M0,0L10,5L0,10z");p.setAttribute("style",`fill:var(${t==="out"?"--accent":t==="in"?"--warn":"--line"})`);m.append(p);defs.append(m)});g.append(defs);
+const edgeEls=E.map(([a,b,n])=>{const [x1,y1]=pos[a],[x2,y2]=pos[b];const mx=(x1+x2)/2,my=(y1+y2)/2,dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy);const ox=-dy/len*22,oy=dx/len*22;const qx=mx+ox,qy=my+oy;
+ const ux=(x2-qx),uy=(y2-qy),ul=Math.hypot(ux,uy),ex=x2-ux/ul*30,ey=y2-uy/ul*30;
+ const p=document.createElementNS(NS,"path");p.setAttribute("d",`M${x1},${y1} Q${qx},${qy} ${ex},${ey}`);p.setAttribute("class","edge");p.setAttribute("stroke-width",String(1+Math.min(n,9)*0.35));p.setAttribute("marker-end","url(#ar-base)");g.append(p);
+ const t=document.createElementNS(NS,"text");t.setAttribute("x",qx);t.setAttribute("y",qy);t.setAttribute("text-anchor","middle");t.setAttribute("font-size","10");t.setAttribute("style","fill:var(--muted)");t.textContent=n;t.setAttribute("class","elabel");t.style.opacity="0";g.append(t);
+ return {a,b,p,t}});
+const nodeEls={};Object.keys(pos).forEach(k=>{const [x,y]=pos[k];const gg=document.createElementNS(NS,"g");gg.setAttribute("class","gnode");gg.setAttribute("tabindex","0");gg.setAttribute("role","button");gg.setAttribute("aria-label",k);
+ const c=document.createElementNS(NS,"circle");c.setAttribute("cx",x);c.setAttribute("cy",y);c.setAttribute("r",k==="auth"?24:26);
+ const t=document.createElementNS(NS,"text");t.setAttribute("x",x);t.setAttribute("y",y+(k==="auth"?4:42));t.setAttribute("text-anchor","middle");t.textContent=k;
+ gg.append(c,t);gg.onclick=()=>pick(k);gg.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();pick(k)}};g.append(gg);nodeEls[k]=gg});
+function pick(k){const outs=new Set(E.filter(e=>e[0]===k).map(e=>e[1])),ins=new Set(E.filter(e=>e[1]===k).map(e=>e[0]));
+ Object.entries(nodeEls).forEach(([n,e])=>{e.setAttribute("class","gnode"+(n===k?" on":outs.has(n)?" out":ins.has(n)?" in":(k==="auth"?"":" dim")))});
+ edgeEls.forEach(({a,b,p,t})=>{const o=a===k,i=b===k;p.setAttribute("class","edge"+(o?" out":i?" in":" dim"));p.setAttribute("marker-end",`url(#ar-${o?"out":i?"in":"base"})`);t.style.opacity=(o||i)?"1":"0"});
+ const f=F[k],o=E.filter(e=>e[0]===k),i=E.filter(e=>e[1]===k);
+ $("#featCard").innerHTML=`<h3><span class="mono">src/features/${k}/</span>${f.sub?`<span class="pill p-acc">${f.sub}</span>`:""}</h3><p style="margin-top:6px;font-size:.9rem">${f.note}</p>
+ <dl class="kv"><dt>مسیر</dt><dd class="mono">${f.p}</dd><dt>صفحه‌ها</dt><dd>${f.pages}</dd><dt>storeها</dt><dd>${f.stores}</dd><dt>endpointها</dt><dd class="mono">${f.api}</dd>
+ <dt>import از</dt><dd>${o.length?o.map(e=>`<span class="pill p-acc">${e[1]} ×${e[2]}</span>`).join(" "):(k==="auth"?"—":"فقط auth")}</dd>
+ <dt>وابسته‌ها</dt><dd>${k==="auth"?"تقریباً همه‌ی فیچرها":i.length?i.map(e=>`<span class="pill p-warn">${e[0]} ×${e[2]}</span>`).join(" "):"—"}</dd></dl>`}
+pick("warehouse");
+function renderRows(q){q=(q||"").toLowerCase();$("#featRows").innerHTML="";Object.entries(F).forEach(([k,f])=>{const hay=(k+f.p+f.pages+f.stores+f.api).toLowerCase();if(q&&!hay.includes(q))return;const tr=el("tr",null,`<td><button class="btn" type="button" style="font-family:var(--f-mono);font-size:.78rem">${k}</button></td><td class="mono">${f.p}</td><td>${f.pages}</td><td>${f.stores}</td><td class="mono">${f.api}</td>`);tr.querySelector("button").onclick=()=>{pick(k);document.getElementById("features").scrollIntoView()};$("#featRows").append(tr)});
+ if(!$("#featRows").children.length)$("#featRows").innerHTML=`<tr><td colspan="5" style="color:var(--muted)">چیزی پیدا نشد. نامِ endpoint یا پیشوندِ مسیر را امتحان کنید.</td></tr>`}
+$("#featSearch").oninput=e=>renderRows(e.target.value);renderRows("");
+
+/* wizard */
+const WZ={
+ start:{q:"این کد سیم‌کشیِ کلِ برنامه است؟ (provider، layout، گاردِ مسیر)",a:[["بله","ANS:src/app/|providerها در providers/، پوسته‌ها در layouts/، روتر و گاردها در routes/."],["نه","owner"]]},
+ owner:{q:"فقط یک حوزه‌ی کسب‌وکار به آن نیاز دارد؟",a:[["بله، یک فیچر","sub"],["نه، چند فیچر","kind"]]},
+ sub:{q:"آن فیچر زیرماژول دارد؟ (مثل sales/orders، warehouse/receiving)",a:[["بله","ANS:src/features/<f>/<sub>/<kind>/|kind یکی از pages، components، hooks، services، store، domain. مسیرها فقط در routes.jsxِ ریشه‌ی فیچر."],["نه","ANS:src/features/<f>/<kind>/|kind یکی از pages، components، hooks، services، store، domain."]]},
+ kind:{q:"چه نوع کدی است؟",a:[["کامپوننت","ANS:src/shared/components/<group>/|اول کاتالوگ را ببینید؛ از @/features import نکنید."],["هوک","ANS:src/shared/hooks/|مثل usePageHeader یا useDebouncedFilters."],["منطقِ دامنه (enum، محاسبه)","ANS:src/shared/domain/|بدونِ React؛ enum با همان اعدادِ بکند + _LABELS + _TONES."],["کمک‌تابعِ عمومی","ANS:src/shared/lib/|مثل dateUtils.js یا numberFormat.js."],["فراخوانیِ API","ANS:src/shared/services/<area>/|api-v1.js + queryKeys.js + queries.js/mutations.js."]]}
+};
+let trail=[];
+function renderWiz(node){const w=$("#wiz");w.innerHTML="";
+ if(trail.length)w.append(el("div","trail",trail.map(t=>`<span class="pill p-acc">${t}</span>`).join(" ← ")));
+ if(node.startsWith("ANS:")){const [p,d]=node.slice(4).split("|");w.append(el("div","answer",`<span class="mono">${p.replace(/</g,"&lt;")}</span>${d}`))}
+ else{const n=WZ[node];w.append(el("div","q",n.q));const r=el("div","row");n.a.forEach(([lab,to])=>{const b=el("button","btn",lab);b.type="button";b.onclick=()=>{trail.push(lab);renderWiz(to)};r.append(b)});w.append(r)}
+ if(trail.length){const rb=el("button","btn","از اول");rb.type="button";rb.style.justifySelf="start";rb.onclick=()=>{trail=[];renderWiz("start")};w.append(rb)}}
+renderWiz("start");
+
+/* invalidation */
+const KEYS=["saleKeys.detail","saleKeys.lists","shippingKeys.detail","shippingKeys.lists","salesReturnKeys.*","productKeys.all","productUnitKeys.all","customerKeys.all","purchaseKeys.detail","purchaseKeys.lists","receivingKeys.*","purchaseReturnKeys.*","supplierKeys.all","customerKeys.lists","customerKeys.detail","authKeys.session","authKeys.myPermissions","userKeys.*","teamKeys.all","departmentKeys.all","permissionKeys.user"];
+const MUT=[
+ {n:"useCreateSaleMutation",set:[],hit:["saleKeys.detail","saleKeys.lists","shippingKeys.detail","shippingKeys.lists","salesReturnKeys.*","productKeys.all","productUnitKeys.all","customerKeys.all"],note:"invalidateSalesEcosystem(queryClient, created.id) + customerKeys.all"},
+ {n:"useSaleChangesSaver (ثبت تغییرات)",set:["saleKeys.detail"],hit:["saleKeys.lists","shippingKeys.detail","shippingKeys.lists","salesReturnKeys.*","productKeys.all","productUnitKeys.all","customerKeys.all"],note:"applySale: setQueryData برای جزئیات، بقیه با invalidateSalesEcosystem({ freshSale: true })."},
+ {n:"useCreatePurchaseMutation",set:["purchaseKeys.detail"],hit:["purchaseKeys.lists","receivingKeys.*","purchaseReturnKeys.*","productKeys.all","productUnitKeys.all","supplierKeys.all"],note:"applyPurchase: setQueryData + invalidatePurchaseEcosystem({ freshPurchase: true }) + supplierKeys.all"},
+ {n:"useUpdateCustomerMutation",set:[],hit:["customerKeys.lists","customerKeys.detail"],note:"الگوی ساده: lists() و detail(id)."},
+ {n:"useUpdateUserMutation",set:[],hit:["userKeys.*","teamKeys.all","departmentKeys.all","authKeys.session"],note:"authKeys.session چون سایدبار واحد و تیمِ کاربرِ جاری را نشان می‌دهد."},
+ {n:"useUpdateUserPermissionsMutation",set:[],hit:["permissionKeys.user","authKeys.myPermissions"],note:"اگر ادمین مجوزِ خودش را عوض کرد، منو و گارد فوراً تازه شوند."},
+ {n:"useCreateProductMutation",set:[],hit:["productKeys.all"],note:"باگ B7: productUnitKeys باطل نمی‌شود، در حالی که بکند با Stock > 0 دانه می‌سازد."}
+];
+KEYS.forEach(k=>$("#keyGrid").append(el("span","key",k)));
+function renderMut(i){document.querySelectorAll("#mutBtns .btn").forEach((b,j)=>b.classList.toggle("on",i===j));const m=MUT[i];
+ document.querySelectorAll("#keyGrid .key").forEach(k=>{const t=k.textContent;k.className="key"+(m.set.includes(t)?" set":m.hit.includes(t)?" hit":"")});$("#mutNote").textContent=m.note}
+MUT.forEach((m,i)=>{const b=el("button","btn",`<span class="mono" style="font-size:.8rem">${m.n}</span>`);b.type="button";b.style.textAlign="right";b.onclick=()=>renderMut(i);$("#mutBtns").append(b)});renderMut(0);
+
+
+/* idempotency */
+const IDN={k:["idempotencyKeyFor(payload)","کلیدِ پایدار برای همین محتوا (Map: محتوا → UUID)"],h:["هدرِ Idempotency-Key","idempotent(key) در api-v1.js"],s:["سرور","POST …"],ok:["پاسخِ قطعی (۲xx یا ۴xx غیرِ ۴۰۹)","releaseIdempotencyKey(key) — کلید آزاد می‌شود"],keep:["بی‌پاسخ، ۵xx یا ۴۰۹","کلید می‌ماند تا تکرار همان کلید را ببرد"],retry:["تکرار (کلیکِ دوباره یا retryِ ۴۰۹)","همان کلید → سرور پاسخِ اول را برمی‌گرداند"],dup:["۴۲۲","کلیدِ تکراری برای محتوای متفاوت؛ در dev در کنسول"]};
+const IDS=[
+ {n:"ثبتِ فاکتور، پاسخِ موفق",p:["k","h","s","ok"],end:"ok",ok:true,note:"بعد از پاسخِ قطعی کلید آزاد می‌شود؛ دو سندِ عیناً یکسانِ عمدی هم ممکن است."},
+ {n:"timeout، کاربر دوباره «ثبت» می‌زند",p:["k","h","s","keep","retry"],end:"retry",ok:true,note:"کلید به محتوا بسته است، پس کلیکِ دوباره همان کلید را می‌فرستد و فاکتورِ دوم ساخته نمی‌شود."},
+ {n:"۴۰۹: درخواستِ اول هنوز روی سرور است",p:["k","h","s","keep","retry"],end:"retry",ok:true,note:"QueryProvider mutation را فقط روی ۴۰۹ تا ۳ بار با فاصله‌ی ۱ ثانیه تکرار می‌کند."},
+ {n:"payload بعد از ساختنِ کلید عوض شد",p:["k","h","s","dup"],end:"dup",ok:false,note:"باگِ فرانت: شیءِ payload را بعد از idempotencyKeyFor تغییر ندهید."}
+];
+function renderIdem(i){document.querySelectorAll("#idemBtns .btn").forEach((b,j)=>b.classList.toggle("on",i===j));const s=IDS[i];$("#idemFlow").innerHTML="";
+ s.p.forEach(k=>$("#idemFlow").append(el("div","node "+(k===s.end?(s.ok?"end-ok":"end-bad"):"lit"),`${IDN[k][0]}<small>${IDN[k][1]}</small>`)));$("#idemNote").textContent=s.note}
+IDS.forEach((s,i)=>{const b=el("button","btn",s.n);b.type="button";b.style.textAlign="right";b.onclick=()=>renderIdem(i);$("#idemBtns").append(b)});renderIdem(1);
+
+/* forms */
+const FORMS=[
+ {id:"doc",nm:"سندِ خرید/فروش",ds:"اقلام، پرداخت، پیوست، رفت‌وبرگشت به «کالای جدید»",tool:"createDocumentFormStore + useDocumentFormDraft",files:["src/features/sales/orders/store/saleFormStore.js","src/shared/store/createDocumentFormStore.js","src/shared/hooks/useDocumentFormDraft.js"],why:"فرم در store است تا رفتن به «مشتری/کالای جدید» و برگشت پاکش نکند. فرم فقط وقتی از سرور دوباره پر می‌شود که <code>id:updatedAt</code> عوض شود.",warn:"سرور برای خرید updatedAt نمی‌دهد؛ <code>documentVersion</code> در api-v1 آن را می‌سازد."},
+ {id:"simple",nm:"موجودیتِ ساده",ds:"مشتری، تامین‌کننده، کارمند، کالا، واحد، تیم",tool:"react-hook-form در هوکِ use<X>Form",files:["src/features/customers/hooks/useCustomerForm.js","src/shared/components/forms/FormField.jsx","src/shared/lib/validationRules.js"],why:"هوک فرم، تبدیل به payloadِ بکند (<code>buildCustomerPayload</code>) و آپلودِ تصویر را یک‌جا نگه می‌دارد.",warn:"بعد از ذخیره <code>imageUpload.commit()</code>، در لغو <code>discard()</code>."},
+ {id:"draft",nm:"فرمِ کوچک با رفت‌وبرگشت",ds:"مثلاً از فرمِ کارمند به «واحدِ جدید» و برگشت",tool:"useFormDraft(key)",files:["src/shared/hooks/useFormDraft.js","src/shared/store/formDraftStore.js","src/features/employees/pages/EmployeeNewPage.jsx"],why:"پیش‌نویس یک‌بارمصرف است: هنگامِ mount خوانده و در effect پاک می‌شود (امن در StrictMode).",warn:"کلید باید شناسه داشته باشد (<code>department:5</code>) وگرنه پیش‌نویسِ یک رکورد روی دیگری می‌نشیند."},
+ {id:"filter",nm:"فیلترِ لیست",ds:"جست‌وجو، select، بازه، صفحه‌بندی، مرتب‌سازی",tool:"createFilterStore + useDebouncedFilters",files:["src/shared/store/createFilterStore.js","src/shared/hooks/useDebouncedFilters.js","src/features/partyAccount/store/createPartyFilterStore.js"],why:"برای هر فیلتر اکشنِ <code>set&lt;Field&gt;</code> ساخته می‌شود که صفحه را به اول برمی‌گرداند. نامِ فیلدها همان نامِ پارامترِ سرور است.",warn:"هر کلید باید در <code>text</code> یا <code>instant</code> بیاید، وگرنه فرستاده نمی‌شود (باگِ B1)."}
+];
+function renderForm(id){const f=FORMS.find(x=>x.id===id);document.querySelectorAll("#formBtns .layer").forEach(b=>b.classList.toggle("on",b.dataset.id===id));
+ $("#formDetail").innerHTML=`<div class="filebar">${f.tool.replace(/</g,"&lt;")}</div><h3 style="margin-top:6px">${f.nm}</h3><p style="margin-top:6px">${f.why}</p><ul>${f.files.map(x=>`<li class="mono" style="text-align:left">${x}</li>`).join("")}</ul><div class="no" style="background:var(--warn-soft)"><b style="color:var(--warn)">مراقب باشید: </b>${f.warn}</div>`}
+FORMS.forEach(f=>{const b=el("button","layer",`<span class="nm" style="font-family:var(--f-display);direction:rtl">${f.nm}</span><span class="ds">${f.ds}</span>`);b.type="button";b.dataset.id=f.id;b.onclick=()=>renderForm(f.id);$("#formBtns").append(b)});renderForm("doc");
+
+/* tones */
+const TONES=[["neutral","پیش‌نویس، غیرفعال","پیش‌فاکتور",""],["primary","برند، برجسته‌ی بی‌طرف","ارسال شده (فروش)","p-acc"],["info","در جریان، اطلاع","در حال پردازش","p-info"],["success","کامل، موفق","تحویل کامل","p-ok"],["warning","در انتظار، نیازمندِ اقدام","در انتظار ارسال","p-warn"],["caution","ناقص، مسئله‌دار","تحویل ناقص · قرنطینه","p-warn"],["special","گردش‌های خاص","مرجوعی · نسیه","p-acc"],["danger","لغو، رد، اسقاط، خطا","لغو شده","p-bad"]];
+function renderTone(i){document.querySelectorAll("#toneBtns .btn").forEach((b,j)=>b.classList.toggle("on",i===j));const t=TONES[i];
+ $("#toneDetail").innerHTML=`<div class="row"><span class="pill ${t[3]}" style="${t[3]?"":"background:var(--sunk);color:var(--muted)"}">${t[2]}</span><span style="font-size:.88rem;color:var(--muted)">${t[1]}</span></div><div class="codebox">toneSoft("${t[0]}")   // badge
+toneRow("${t[0]}")    // پس‌زمینه‌ی ردیف
+toneSolid("${t[0]}")  // نقطه و نوارِ پیشرفت
+toneText("${t[0]}")   // فقط رنگِ متن
+
+&lt;StatusBadge tone="${t[0]}"&gt;…&lt;/StatusBadge&gt;</div><p style="font-size:.84rem;color:var(--muted);margin-top:8px">نگاشتِ «وضعیت → tone» کنارِ labelها در <span class="mono">src/shared/domain/enums/*</span> است (مثلاً <span class="mono">SALE_STATUS_TONES</span>). کلاس را با الحاقِ رشته نسازید؛ Tailwind فقط رشته‌ی کامل را پیدا می‌کند.</p>`}
+TONES.forEach((t,i)=>{const b=el("button","btn",`<span class="mono" style="font-size:.8rem">${t[0]}</span>`);b.type="button";b.onclick=()=>renderTone(i);$("#toneBtns").append(b)});renderTone(3);
+
+/* components */
+const COMP={
+ "table":[["ServerTable","لیستِ صفحه‌بندی‌شده‌ی سرور: خطا، overlay و صفحه‌بندی را خودش می‌کند",17],["DataTable","پوسته‌ی جدول؛ مرتب‌سازیِ تک‌ستونی؛ در موبایل MobileRowCards",19],["detailsColumn","ستونِ استانداردِ «جزئیات»",9],["DataTablePagination","صفحه‌بندی بیرون از DataTable",4]],
+ "layout":[["ListPageLayout","پوسته‌ی هر صفحه‌ی لیست: title، create، actions",11],["MasterListPane","ستونِ فهرست در صفحه‌های فهرست/جزئیاتِ کنارِ هم",4]],
+ "filters":[["FilterPanel / ResponsiveFilters","پوسته‌ی فیلترها؛ پنلِ بازشونده در موبایل",17],["FilterSearchInput","جست‌وجوی متنی",15],["FilterSelect","انتخابِ تکیِ کم‌گزینه",13],["EntitySelect","انتخابِ یک موجودیت با جست‌وجو؛ عمداً تک‌انتخابی",12],["DateRangeToolbar","بازه‌ی تاریخ با میان‌بر",8]],
+ "feedback":[["ConfirmDialog","تأییدِ کارِ برگشت‌ناپذیر؛ تا پایانِ درخواست باز می‌ماند",16],["QueryErrorState","خطای لیست با «تلاش دوباره»",15],["DetailErrorState","جزئیات: «پیدا نشد» را از «واکشی شکست خورد» جدا می‌کند",14],["Notice","باکسِ توضیح/هشدار با tone",14],["FetchingOverlay","پوششِ واکشیِ دوباره",9]],
+ "status":[["StatusBadge","هر وضعیت با tone",25],["SaleStatusBadge · PurchaseStatusBadge · PaymentTypeBadge","وضعیت با tone و آیکن از enum",5],["StatusText","متنِ رنگی",2]],
+ "forms":[["FormSectionCard","کارتِ بخشِ فرم با هدرِ آیکون‌دار",11],["SectionCard","کارتِ بخشِ صفحه‌ی سند",8],["StatusChoice","انتخابِ وضعیت با دکمه",7],["FormField · FormSelectField","فیلدِ react-hook-form",6],["DocumentFormLayout","چیدمانِ دوستونیِ فرمِ خرید/فروش",4]],
+ "دیگر":[["PaymentsCard","همه‌ی پرداخت‌های یک سند (پیش‌نویس تا «ثبت تغییرات»)",4],["DataTransferActions","دکمه‌ی ورود/خروجیِ CSV/Excel",9],["ChartCard","پوسته‌ی نمودار؛ نمودارها SVGِ دست‌سازند",12],["RemoteImage · ImageUploadField","تصویر از سرور و آپلود",5],["usePrint · LabelSheet","چاپ با مرورگر",1],["CameraScanButton","اسکنِ بارکد با دوربین",3]]
+};
+let ct="table";
+function renderComp(){document.querySelectorAll("#compTabs .btn").forEach(b=>b.classList.toggle("on",b.dataset.k===ct));$("#compRows").innerHTML=COMP[ct].map(c=>`<tr><td class="mono">${c[0]}</td><td>${c[1]}</td><td class="mono">${c[2]}</td></tr>`).join("")}
+Object.keys(COMP).forEach(k=>{const b=el("button","btn",k);b.type="button";b.dataset.k=k;b.onclick=()=>{ct=k;renderComp()};$("#compTabs").append(b)});renderComp();
+
+/* recipes */
+const REC=[
+ {t:"صفحه‌ی لیست",src:"src/features/customers/",s:["api-v1.js — fetchX + X_SORT_COLUMNS","queryKeys.js — all/lists/list/detail","store/xFilterStore.js — createFilterStore","queries.js — useDebouncedFilters + listQuery","components/XTable.jsx — DataTable","pages/XsPage.jsx — ListPageLayout + ServerTable","ROUTES، routes.jsx، منو، breadcrumb"]},
+ {t:"مسیرِ تازه",src:"src/features/warehouse/routes.jsx (خودروها)",s:["ROUTES در constants/routes.js","صفحه با usePageHeader","routes.jsx — lazy() + handle.permission","routers.jsx (فقط فیچرِ تازه)","navigationData.js — همان permission","AppBreadcrumb.jsx — ROUTE_TITLES"]},
+ {t:"نوشتنِ مالی/موجودی",src:"src/features/sales/orders/services/",s:["api-v1.js — fn(body, { idempotencyKey })","idempotent(key) در config","mutations.js — idempotencyKeyFor(payload)","setQueryData اگر سندِ کامل برگشت","invalidate*Ecosystem"]},
+ {t:"enumِ تازه",src:"src/shared/domain/enums/purchaseStatus.js",s:["XEnum با همان اعدادِ بکند","X_LABELS و X_TONES","Badge روی StatusBadge (اختیاری)","قواعد در domain/xRules.js"]},
+ {t:"فیلترِ تازه",src:"balanceType در لیستِ مشتری",s:["کلید در filtersِ store (نامِ پارامترِ سرور)","افزودن به text یا instant — وگرنه فرستاده نمی‌شود","کنترل با store.setKey"]},
+ {t:"ویجتِ داشبورد",src:"src/features/dashboard/domain/widgetRegistry.js",s:["عضو در WIDGETS با isAvailable(ctx)","components/widgets/XWidget.jsx","ثبت در WIDGET_COMPONENTS","چیدمانِ کاربران خودکار به‌روز می‌شود"]}
+];
+REC.forEach(r=>$("#recipeGrid").append(el("div","recipe",`<h3>${r.t}</h3><div class="src">${r.src}</div><ol>${r.s.map(x=>`<li>${x}</li>`).join("")}</ol>`)));
+
+/* debt */
+const D=[
+ ["B1","bug","فیلترِ خودرو در لیستِ کالا به سرور نمی‌رسد","vehicleId را به instantِ useProductListFilters اضافه کنید."],
+ ["B2","bug","هر خطای رندر یا loader فقط متنِ «NotFoundPage» نشان می‌دهد","صفحه‌ی ۴۰۴ واقعی و errorElementِ جدا با useRouteError."],
+ ["B3","bug","در خطای دریافتِ مجوزها منو خالی است ولی صفحه‌ها باز","در isError منو را بدونِ فیلتر نشان دهید."],
+ ["B4","bug","تمِ system با تغییرِ تمِ سیستم‌عامل عوض نمی‌شود","listenerِ matchMedia در ThemeProvider."],
+ ["B5","bug","breadcrumbِ صفحه‌ی خودروها فقط «انبار» است","ROUTES.WAREHOUSE_VEHICLES را به ROUTE_TITLES اضافه کنید."],
+ ["B6","bug","EmployeeNewPage بعد از ساخت returnTo را نادیده می‌گیرد","useReturnTo().goBack مثل CustomerNewPage."],
+ ["B7","bug","ساختِ کالا با موجودیِ اولیه کشِ دانه‌ها را کهنه می‌گذارد","productUnitKeys.all را به onSuccessِ create اضافه کنید."],
+ ["R1","risk","settings، invoice و transactions بدونِ lazy() و مجوز","تا وقتی placeholderاند از routers.jsx بردارید."],
+ ["R4","risk","دو مسیرِ خروجِ ناهم‌سان","در شکستِ refresh هم leaveSession."],
+ ["R6","risk","نامِ مجوزها با PermissionEnum.cs خودکار سنجیده نمی‌شود","اسکریپتی مثلِ check-docs-paths.mjs."],
+ ["R7","risk","lineMath.js قاعده‌ی سرور را بی‌تست تکرار می‌کند","تستِ واحد با اعدادِ نمونه."],
+ ["R11","risk","useUpdateGuard در ۹ جا صدا زده می‌شود ولی خواننده ندارد","با تصمیمِ PWA برگردانید یا حذف کنید."],
+ ["L1","layer","axios.js از authStoreِ فیچرِ auth import می‌کند","authStore را به src/shared/store/ ببرید."],
+ ["L2","layer","AppSidebar و Nav* از auth import می‌کنند","به src/app/layouts/ منتقل شوند."],
+ ["L3","layer","ProductSearchPanel، ProductPicker و useReturnedNewProduct از warehouse","داده را با props بگیرند یا به فیچر منتقل شوند."],
+ ["L4","layer","useClaimsInOtherReturns از هر دو returns","تابع‌ها را به‌عنوانِ پارامتر بگیرد."],
+ ["C1","clean","کلاس‌های جهتِ فیزیکی رایج‌ترند (۱۰۱ در برابرِ ۱۶)","کلاسِ منطقی برای کدِ تازه."],
+ ["C2","clean","invalidateOrgChart و formatNumber هر کدام دو نسخه دارند","یکی کنید."],
+ ["C3","clean","نامِ صفحه‌های مرجوعیِ انبار گمراه‌کننده است","SaleReturnReceivingPage / PurchaseReturnShippingPage."]
+];
+const CAT={all:"همه",bug:"باگ",risk:"ریسک",layer:"مرزِ لایه",clean:"تمیزی"},PC={bug:"p-bad",risk:"p-warn",layer:"p-info",clean:"p-acc"};
+let df="all";
+function renderDebt(){document.querySelectorAll("#debtFilters .btn").forEach(b=>b.classList.toggle("on",b.dataset.k===df));$("#debtList").innerHTML="";
+ D.filter(d=>df==="all"||d[1]===df).forEach(d=>$("#debtList").append(el("div","ditem "+d[1],`<span class="id">${d[0]}</span><div><div><span class="pill ${PC[d[1]]}">${CAT[d[1]]}</span> ${d[2]}</div><div class="fx">پیشنهاد: ${d[3]}</div></div>`)))}
+Object.keys(CAT).forEach(k=>{const n=k==="all"?D.length:D.filter(d=>d[1]===k).length;const b=el("button","btn",`${CAT[k]} (${n.toLocaleString("fa-IR")})`);b.type="button";b.dataset.k=k;b.onclick=()=>{df=k;renderDebt()};$("#debtFilters").append(b)});renderDebt();
+})();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>
+(function(){if(!window.mermaid)return;var t=document.documentElement.getAttribute("data-theme");var dark=t==="dark"||(!t&&matchMedia("(prefers-color-scheme: dark)").matches);
+mermaid.initialize({startOnLoad:true,theme:dark?"dark":"neutral",fontFamily:"Vazirmatn, Tahoma, sans-serif"});})();
+</script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 # Import / Export guide
 
 How tables are exported to and imported from CSV and Excel (.xlsx), and how to add a table.
-API contract (Persian): `api-guide.fa.md` section 19. Frontend: `Frontend/ARCHITECTURE.fa.md` section 19.5.
+API contract (Persian): `api-guide.fa.md` section 19. Frontend: `Frontend/docs/architecture/13-recipes.md` (recipe 11, import/export) and `Frontend/docs/architecture/10-shared-components-catalog.md` (`dataTransfer/`).
 
 ## 1. Architecture
 

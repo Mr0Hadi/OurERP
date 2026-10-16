@@ -13,7 +13,12 @@ A warehouse management system handling products, customers, suppliers, purchases
 - Object storage via Liara (S3-compatible)
 
 **Frontend** (`Frontend/`)
-- React (Vite)
+- React 19 (Vite), TanStack Query, Zustand, Tailwind + shadcn, RTL Persian UI
+
+## Frontend Docs
+
+- [Frontend Architecture](Frontend/docs/architecture/README.md) — start here: structure, routing, auth, API layer, state, UI, per-feature docs, recipes, known debt (Persian)
+- [Frontend/CLAUDE.md](Frontend/CLAUDE.md) — short summary of commands and conventions
 
 ## Backend Docs
 

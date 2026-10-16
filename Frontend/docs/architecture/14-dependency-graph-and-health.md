@@ -1,0 +1,181 @@
+# ۱۴ — گرافِ وابستگی، کدِ مرده و بدهی‌های شناخته‌شده
+
+## هدف
+
+بدانید سلامتِ ساختاری را چطور بسنجید (حلقه، کدِ مرده، مرزِ لایه‌ها) و فهرستِ کاملِ بدهی‌هایی که در اسنادِ ۰۱ تا ۱۳ پیدا شد، هر کدام با پیشنهادِ رفع. **هیچ‌کدام از این‌ها در این مستندسازی رفع نشده‌اند.**
+
+## ابزارها و نحوه‌ی اجرا
+
+### madge (گرافِ وابستگی و حلقه)
+
+madge بدونِ تنظیم aliasِ `@/` را نمی‌شناسد: اجرای سادهِ `npx madge --circular src` (و حتی با `--ts-config jsconfig.json`) ۳۵۵ import را رد می‌کند و «حلقه ندارد» را **به‌اشتباه** گزارش می‌دهد. با یک پیکربندیِ webpackِ موقت:
+
+```bash
+echo "module.exports={resolve:{alias:{'@':process.cwd()+'/src'},extensions:['.js','.jsx']}}" > /tmp/madge-alias.cjs
+```
+
+```bash
+npx madge --circular --extensions js,jsx --webpack-config /tmp/madge-alias.cjs src
+```
+
+نتیجه (2026-10-16): **۷۲۱ فایل، ۳۰۷۰ یال، هیچ حلقه‌ای نیست.** ۱۴ هشدارِ باقی‌مانده importهای CSS هستند. graphviz نصب نیست؛ برای تصویر از `--json` و نمودارهای Mermaidِ همین اسناد استفاده کنید.
+
+پرمصرف‌ترین ماژول‌ها (fan-in، تعدادِ فایل‌های واردکننده):
+
+| # | فایل |
+| --- | --- |
+| ۱۳۹ | `src/shared/components/ui/button.jsx` |
+| ۱۰۸ | `src/shared/lib/numberFormat.js` |
+| ۱۰۵ | `src/shared/constants/routes.js` |
+| ۹۸ | `src/shared/lib/utils.js` |
+| ۴۶ | `src/shared/services/api/contract.js` |
+| ۴۰ | `src/shared/lib/dateUtils.js` |
+| ۳۳ | `src/shared/lib/errorMessage.js` |
+| ۳۰ | `src/shared/hooks/usePageHeader.js` |
+| ۲۹ | `src/features/auth/hooks/usePermission.js` |
+
+تغییرِ امضای این‌ها اثرِ گسترده دارد. بیشترین fan-out: `src/features/sales/orders/pages/SaleForm.jsx` (۳۵)، `SaleIssuedView.jsx` (۲۸)، `src/features/purchases/returns/pages/PurchaseReturnNewPage.jsx` (۲۶)، `src/features/purchases/orders/pages/PurchaseForm.jsx` (۲۵).
+
+```mermaid
+flowchart TD
+  app["src/app/<br/>providers · layouts · routes"] --> features["src/features/*"]
+  app --> shared["src/shared/*"]
+  features --> shared
+  features -->|"بینِ فیچرها (فایل ۰۲)"| features
+  shared -.->|"۹ فایل — خلافِ قاعده"| features
+```
+
+### knip (کدِ مرده)
+
+```bash
+pnpm knip
+```
+
+نتیجه (2026-10-16):
+- فایل‌های بی‌استفاده: `src/shared/components/app-update/AppUpdateDialog.jsx`، `src/shared/components/app-update/UpdateAvailableToast.jsx`، `src/shared/services/appUpdate.js`.
+- export‌های بی‌استفاده: `MATERIAL_THEMES` (`src/shared/components/theme/themeClasses.js`)، `validateIranianCard` و `validateIranianShaba` (`src/shared/lib/iranian-bank.js`)، `getUpdateBlocker` (`src/shared/services/updateSafety.js`).
+- راهنمای پیکربندی: الگوهای `src/main.jsx` و `structure.js` در `entry`ِ `knip.json` تکراری‌اند.
+
+### بقیه
+
+- `pnpm lint` — تنها بررسیِ ایستا. **نه تست، نه type-check.**
+- `node scripts/check-docs-paths.mjs` — همه‌ی مسیرهای ذکرشده در `docs/architecture/` باید وجود داشته باشند.
+
+## Known debt
+
+ستونِ «شدت»: **باگ** (رفتارِ نادرستِ قابلِ مشاهده)، **ریسک** (ممکن است باگ شود)، **تمیزی** (سبک/ساختار). ترتیب: اول باگ‌ها.
+
+### باگ‌ها (۷)
+
+| # | مورد | شواهد | پیشنهاد |
+| --- | --- | --- | --- |
+| B1 | فیلترِ خودرو در لیستِ کالا به سرور نمی‌رسد | `setVehicleId` در `src/features/warehouse/products/components/table/ProductFilters.jsx`؛ `vehicleId` در `text`/`instant`ِ `useProductListFilters` (`src/features/warehouse/products/services/queries.js`) نیست | `"vehicleId"` را به `instant` اضافه کنید |
+| B2 | هر خطای رندر/loader فقط متنِ «NotFoundPage» نشان می‌دهد | `src/app/layouts/NotFoundPage.jsx` placeholder است و `errorElement`ِ پوسته در `src/app/routes/routers.jsx` | صفحه‌ی ۴۰۴ واقعی + `errorElement` جدا با `useRouteError` |
+| B3 | در خطای دریافتِ مجوزها منو خالی است ولی صفحه‌ها باز | `filterNav` در `src/shared/components/layout/AppSidebar.jsx` در برابرِ `isError` در `src/app/routes/PermissionGate.jsx` | در `isError` منو را بدونِ فیلتر نشان دهید (هم‌خوان با گارد و `allows`) |
+| B4 | تمِ `system` با تغییرِ تمِ سیستم‌عامل عوض نمی‌شود | `src/shared/components/theme/ThemeProvider.jsx` listener ندارد | `matchMedia(...).addEventListener("change", …)` وقتی `theme === "system"` |
+| B5 | breadcrumbِ صفحه‌ی خودروها فقط «انبار» است | `ROUTES.WAREHOUSE_VEHICLES` در `ROUTE_TITLES`ِ `src/shared/components/layout/AppBreadcrumb.jsx` نیست | کلید را اضافه کنید (و `DETAIL_TITLES` برای `:id`) |
+| B6 | `EmployeeNewPage` بعد از ساخت `returnTo` را نادیده می‌گیرد | `navigate(ROUTES.EMPLOYEES)` در `src/features/employees/pages/EmployeeNewPage.jsx` | `useReturnTo().goBack` مثل `CustomerNewPage` |
+| B7 | ساختِ کالا با موجودیِ اولیه کشِ دانه‌ها را کهنه می‌گذارد | `useCreateProductMutation` (`src/features/warehouse/products/services/mutations.js`) `productUnitKeys` را باطل نمی‌کند؛ بکند با `Stock > 0` دانه می‌سازد (`MintAsync` در `Backend-Net/Application/Features/Product/Commands/CreateProductCommand.cs`) | `productUnitKeys.all` را به `onSuccess`ِ create اضافه کنید |
+
+### ریسک
+
+| # | مورد | شواهد | پیشنهاد |
+| --- | --- | --- | --- |
+| R1 | `settings`، `invoice`، `transactions` بدونِ `lazy()` و بدونِ `handle.permission` | `src/features/settings/routes.jsx`، `src/features/invoice/routes.jsx`، `src/features/transactions/routes.jsx` | تا وقتی placeholderاند از `routers.jsx` بردارید؛ یا `lazy` + مجوز |
+| R3 | حذفِ واحد/تیم کمتر از ساخت/ویرایش باطل می‌کند | `src/features/organization/departments/services/mutations.js`، `src/features/organization/teams/services/mutations.js` | در delete هم `invalidateOrgChart` |
+| R4 | دو مسیرِ خروجِ ناهم‌سان | شکستِ refresh در `src/shared/services/api/axios.js` با `window.location.href` در برابرِ `leaveSession` در `src/shared/services/sessionCleanup.js` | در هر دو `leaveSession` |
+| R5 | `unit-label-template` و کلیدِ کارتخوان بعد از خروج می‌مانند | `src/features/warehouse/units/store/unitFilterStore.js`، `src/shared/components/payments/pos/PosReadyForm.jsx` | تصمیم بگیرید ترجیحِ دستگاه است یا کاربر؛ اگر کاربر، در `useLogoutMutation` پاک کنید |
+| R6 | نامِ مجوزها با بکند خودکار سنجیده نمی‌شود | نام‌ها رشته‌اند؛ مرجع `../Backend-Net/Domain/Enums/PermissionEnum.cs` | اسکریپتی شبیهِ `scripts/check-docs-paths.mjs` که نام‌های `permission:`/`can(`/`allows(` را با enum مقایسه کند |
+| R7 | `lineMath.js` قاعده‌ی سرور را بی‌تست تکرار می‌کند | `src/shared/domain/invoice/lineMath.js` | چند تستِ واحد با اعدادِ نمونه‌ی `api-guide.fa.md` |
+| R8 | وارسیِ enumِ ناشناخته فقط برای مرجوعی | `verifyReturnEnums` در `src/shared/domain/returns/apiEnums.js` | همان الگو برای وضعیتِ خرید/فروش/دانه |
+| R9 | `isEnvelope` با هر شیءِ `{ Data, Message }` پوشش فرض می‌کند | `src/shared/services/api/axios.js` | `ResponseMessageType` را هم شرط کنید |
+| R10 | `useDocumentFormDraft` نسخه را از `doc.updatedAt` می‌سازد | `src/shared/hooks/useDocumentFormDraft.js`؛ پرکردنش در `fromApiPurchase`/`fromApiSale` | مستقیم `documentVersion(doc)` از `src/shared/services/api/contract.js` |
+| R11 | `useUpdateGuard` در ۹ جا صدا زده می‌شود ولی خواننده‌ای ندارد | `src/shared/services/updateSafety.js`؛ `appUpdate.js` مرده (knip) | با تصمیمِ PWA: یا برگردانید یا هر دو را حذف کنید |
+| R12 | `useProductsOptionsQuery` همه‌ی کالاها را صفحه‌به‌صفحه می‌خواند | `src/features/warehouse/products/services/queries.js` (TODOِ خودش) | جست‌وجوی سمتِ سرور (بندِ ۱۳.۵ `frontend-requests.fa.md`) |
+
+### مرزِ لایه‌ها: `shared/` → `features/` (۹ فایل)
+
+| فایل | چه چیزی import می‌کند | پیشنهاد |
+| --- | --- | --- |
+| `src/shared/services/api/axios.js` | `useAuthStore` از `@/features/auth/store/authStore` | `authStore` را به `src/shared/store/` ببرید (زیرساخت است، نه فیچر)؛ یا تزریقِ «توکن‌گیر» با یک `setTokenProvider()` در `axios.js` که `auth` صدا بزند |
+| `src/shared/components/layout/AppSidebar.jsx` | `satisfies`، `usePermission` | سایدبار و `Nav*` جزئی از پوسته‌اند: به `src/app/layouts/` منتقل شوند (`app/` مجاز است از فیچرها import کند) |
+| `src/shared/components/layout/NavUser.jsx` | `useUserInfoQuery`، `useLogoutMutation` | همان: به `src/app/layouts/` |
+| `src/shared/components/layout/NavWorkspace.jsx` | `useUserInfoQuery` | همان |
+| `src/shared/components/forms/PartyPickerCard.jsx` | `LedgerBalanceBadge`، `partyBalanceOf`، `partyDisplayName` از `partyAccount` | `partyAccount` در عمل کتابخانه‌ی مشترک است: یا آن را به `src/shared/` (مثلاً `shared/domain/party` و `shared/components/party`) ببرید، یا `PartyPickerCard` را به `partyAccount/components/` |
+| `src/shared/components/forms/ProductSearchPanel.jsx` | `useDocumentProducts`، `useProductDetailLoader`، `useProductCategoriesQuery` | وارونه‌سازی: داده را با props/render-prop بگیرد؛ یا انتقال به `src/features/warehouse/products/components/` |
+| `src/shared/components/products/ProductPicker.jsx` | `useProductDetailLoader` | همان |
+| `src/shared/components/products/useReturnedNewProduct.js` | `useProductDetailLoader` | همان |
+| `src/shared/hooks/useClaimsInOtherReturns.js` | `fetch*ReturnById`، `useRelated*ReturnsQuery`، `*ReturnKeys` از هر دو `returns` | تابع‌ها را به عنوانِ پارامتر بگیرد (مثل `createReturnQueries` در `src/shared/services/returns/`)؛ کامنتش می‌گوید با بندِ ۱۴.۱ `frontend-requests.fa.md` حذف می‌شود |
+
+### جهت‌های غیرمنتظره بینِ فیچرها
+
+| مورد | شواهد | پیشنهاد |
+| --- | --- | --- |
+| `warehouse` → `purchases`/`sales` (۱۲ import) | `src/features/warehouse/shared/shipmentCache.js`، `useQueueRows.js`، صفحه‌های مرجوعی و `services/queries.js` در receiving/shipping | `invalidate*Ecosystem` و کلیدها را به `src/shared/services/` (یک «invalidationِ سند») ببرید |
+| `sales/installments` → `dashboardKeys` | `src/features/sales/installments/services/mutations.js` با کلیدِ دست‌ساز | `dashboardKeys.queue(source)` در `src/features/dashboard/services/queryKeys.js`؛ یا رویدادِ «سند تغییر کرد» که داشبورد گوش دهد |
+| `partyAccount` ↔ `customers`/`suppliers` | `src/features/partyAccount/services/queries.js` | کلیدِ صورت‌حساب را در خودِ `customerKeys`/`supplierKeys` تعریف کنید و به `partyAccount` پاس دهید |
+| `employees` ↔ `organization` | فایل ۰۲ | قابلِ قبول (یک حوزه)؛ در صورتِ رشد، یک فیچرِ `org` |
+| `sales/orders` ↔ `sales/installments` | `src/features/sales/orders/services/mutations.js`، `src/features/sales/installments/services/mutations.js` | قابلِ قبول (یک فیچر)؛ کامنتِ متناقضِ `applyInstallmentPlan` را اصلاح کنید |
+
+### placeholder و کدِ مرده
+
+| مورد | شواهد | پیشنهاد |
+| --- | --- | --- |
+| پوشه‌ی خالی | `src/features/reports/` | حذف |
+| فیچرهای placeholder | `src/features/invoice/`، `src/features/transactions/`، `src/features/settings/` ([12-features/placeholders.md](12-features/placeholders.md)) | حذف تا پیاده‌سازی، یا تکمیل |
+| صفحه‌ی placeholder با مسیر | `src/features/suppliers/pages/SupplierEditPage.jsx` (`ROUTES.SUPPLIERS_EDIT`) | حذفِ مسیر (ویرایش در `SupplierDetailPage` است) |
+| کلیدهای breadcrumb بدونِ صفحه | `INVOICE_*`، `TRANSACTIONS_*`، `WAREHOUSE_STOCK`، `WAREHOUSE_TRANSACTIONS`، `TOOLS_*`، `FEEDBACK` در `AppBreadcrumb.jsx` و `src/shared/constants/routes.js` | حذف |
+| فایل‌های بروزرسانیِ PWA | `src/shared/components/app-update/*`، `src/shared/services/appUpdate.js` | تصمیمِ PWA (فایل ۰۱)؛ اگر برنمی‌گردد حذف |
+| exportهای بی‌استفاده | `MATERIAL_THEMES`، `validateIranianCard`، `validateIranianShaba`، `getUpdateBlocker`، `canAny` در `src/features/auth/hooks/usePermission.js` | حذف |
+
+### پیکربندی و ابزار
+
+| مورد | شواهد | پیشنهاد |
+| --- | --- | --- |
+| ۷ متغیرِ بی‌استفاده | `.env.example` خطوطِ ۱۲، ۱۳، ۱۴، ۱۹، ۲۰، ۲۱، ۲۶ (فایل ۰۱) | حذف |
+| `https` در برابرِ `http` | `.env.example` خطِ ۶ در برابرِ پیش‌فرضِ `src/shared/services/api/axios.js` | یکی کنید |
+| `favicon.svg` وجود ندارد | `index.html` خطِ ۵، `vite.config.js` خطِ ۶۷ | فایل را اضافه یا هر دو ارجاع را حذف کنید |
+| `tailwind.config.js` خالی | ۰ بایت؛ در `components.json` ارجاع‌شده | حذف و مقدارِ `tailwind.config` را در `components.json` خالی کنید (Tailwind 4) |
+| `version` همیشه `0.0.0` | `package.json` | نسخه‌گذاری یا حذف از `__APP_BUILD__` |
+| `Fira Code` بارگذاری نمی‌شود | `--font-mono` در `src/index.css` | فونت را import کنید یا از `--font-mono` حذف |
+| منطقِ تم دو نسخه | اسکریپتِ inline در `index.html` و `src/shared/components/theme/themeClasses.js` | یک تستِ کوچک یا کامنتِ چک‌لیست؛ تولیدِ اسکریپت از `themeClasses.js` در build |
+| تست و type-check نیست | `package.json` | حداقل Vitest برای `src/shared/domain/` و `src/shared/lib/` |
+| `knip.json` entryِ تکراری | خروجیِ `pnpm knip` | حذفِ `src/main.jsx` و `structure.js` از `entry` |
+
+### تمیزی (سبک و نام‌گذاری)
+
+| مورد | شواهد | پیشنهاد |
+| --- | --- | --- |
+| کلاس‌های جهتِ فیزیکی رایج‌ترند (۱۰۱ در برابرِ ۱۶ منطقی) | بیرون از `src/shared/components/ui/` (فایل ۰۹) | قاعده‌ی «منطقی برای کدِ تازه» + جایگزینی تدریجی |
+| رنگِ پالتِ مستقیم | `src/features/accounting/activity/components/ActivityRankList.jsx`، `src/shared/components/ui/plate-input.jsx` | tone/توکن |
+| نامِ ریشه‌ی کلیدهای کش با فیچر نمی‌خواند | `reportKeys` → `["reports"]`، `userKeys` → `["users"]`، `activityKeys` → `["report-activity"]` (فایل ۰۷) | فقط در صورتِ بازنویسی؛ شکستنِ عمدی ندارد |
+| کلید/query درونِ کامپوننت | `src/features/warehouse/vehicles/components/AddProductsToVehicleDialog.jsx` | انتقال به `src/features/warehouse/products/services/queries.js` |
+| `MANUAL_PurchaseStatusEnum` آرایه است | `src/features/purchases/orders/domain/purchaseRules.js` | `MANUAL_PURCHASE_STATUSES` |
+| `useLabelTemplateStore` در `unitFilterStore.js` | `src/features/warehouse/units/store/unitFilterStore.js` | فایلِ جدا `labelTemplateStore.js` |
+| نامِ صفحه‌های مرجوعیِ انبار گمراه‌کننده | `ReceivingReturnDetailPage.jsx` (مرجوعیِ فروش)، `SupplierReturnDetailPage.jsx` (مرجوعیِ خرید) | `SaleReturnReceivingPage` / `PurchaseReturnShippingPage` |
+| `invalidateOrgChart` دو نسخه | `src/features/organization/departments/services/mutations.js`، `src/features/organization/teams/services/mutations.js` | یک فایلِ `src/features/organization/services/invalidation.js` |
+| `formatNumber` دو نسخه | `src/shared/components/charts/chartUtils.js`، `src/shared/lib/numberFormat.js` | نسخه‌ی نمودار را `formatChartNumber` بنامید یا یکی کنید |
+| `fetchCategoryProducts` پارامترها را دستی می‌سازد | `src/features/warehouse/categories/services/api-v1.js` | `listQuery` |
+| `EMPLOYEES_DETAIL` مجوزِ `UserUpdate` می‌خواهد | `src/features/employees/routes.jsx` | اگر صفحه فقط‌خواندنی هم کار می‌کند، `UserView` |
+| `AccountingDashboardPage` از `AccountingPageLayout` استفاده نمی‌کند | `src/features/accounting/pages/AccountingDashboardPage.jsx` | یکسان‌سازی یا کامنتِ دلیل |
+| `createPeriodStore(3)` | `src/features/accounting/store/accountingFilterStores.js` | ثابت از `src/shared/domain/enums/reportPeriod.js` |
+| `isTeamLead` و `isDepartmentLead` ناهم‌سان | `src/features/dashboard/domain/dashboardContext.js` | شرطِ `departmentId != null` یا کامنتِ دلیل |
+| سبکِ import مخلوط داخلِ فیچر | نسبی `../../` و `@/features/<self>/` در `sales`، `purchases`، `organization` | یک قاعده (پیشنهاد: نسبی داخلِ فیچر، `@/` بیرون) |
+| `scopes.js` در دامنه به `tone.js` وابسته | `src/shared/domain/returns/scopes.js` | استایل را به کامپوننت ببرید |
+
+### محدودیت‌های سمتِ بکند (فرانت نمی‌تواند رفع کند)
+
+- فروشِ کاملاً نسیه ممکن نیست؛ فاکتور فقط با اولین دریافت صادر می‌شود (`src/features/sales/orders/pages/SaleForm.jsx`).
+- نامِ فیلدِ `productIds` در `CreateSale` و `refferalCode` در مشتری (فایل‌های ۱۲).
+- `CreateCustomer` و `CreateProductCategory` شناسه‌ی رکوردِ تازه را برنمی‌گردانند (TODOها در `src/features/customers/pages/CustomerNewPage.jsx` و کامنتِ `src/features/warehouse/categories/services/api-v1.js`).
+- هر کدام باید در `Backend-Net/docs/frontend-requests.fa.md` ثبت باشد.
+
+## برای تغییرِ X، به Y بروید
+
+| می‌خواهم… | کجا |
+| --- | --- |
+| حلقه‌ها را بررسی کنم | دستورِ madge بالا (با aliasِ موقت) |
+| کدِ مرده پیدا کنم | `pnpm knip`؛ تنظیم در `knip.json` |
+| یک بدهی را رفع کنم | ردیفِ بالا + فایلِ سندِ مربوط؛ بعد از رفع، ردیف را از این فایل بردارید |
+
+<!-- docs-paths-ignore: src/features/organization/services/invalidation.js -->
