@@ -16,7 +16,7 @@
 
 ### `src/app/` — فقط سیم‌کشی
 
-**اینجا:** providerهای سراسری (`src/app/providers/AppProviders.jsx`، `QueryProvider.jsx`، `ToastProvider.jsx`)، پوسته‌ها (`src/app/layouts/AppLayout.jsx`، `AuthLayout.jsx`، `ForbiddenPage.jsx`، `NotFoundPage.jsx`)، روتر و گاردها (`src/app/routes/routers.jsx`، `protectedLoader.jsx`، `PermissionGate.jsx`)، و صفحه‌های فقط-dev (`src/app/dev/StyleGuidePage.jsx`، `ComponentShowcase.jsx`).
+**اینجا:** providerهای سراسری (`src/app/providers/AppProviders.jsx`، `QueryProvider.jsx`، `ToastProvider.jsx`)، پوسته‌ها (`src/app/layouts/AppLayout.jsx`، `AuthLayout.jsx`، `ForbiddenPage.jsx`، `NotFoundPage.jsx`، `RouteErrorPage.jsx`)، روتر و گاردها (`src/app/routes/routers.jsx`، `protectedLoader.jsx`، `PermissionGate.jsx`)، و صفحه‌های فقط-dev (`src/app/dev/StyleGuidePage.jsx`، `ComponentShowcase.jsx`).
 
 **اینجا نه:** هیچ منطقِ کسب‌وکار یا فراخوانیِ API. مثالِ مرز: سایدبار جزئی از پوسته است ولی در `src/shared/components/layout/AppSidebar.jsx` است، نه در `app/` — `app/layouts` فقط آن را می‌چیند.
 

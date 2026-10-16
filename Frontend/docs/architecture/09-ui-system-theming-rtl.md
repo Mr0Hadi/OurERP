@@ -34,7 +34,7 @@ flowchart LR
   I["index.html inline script"] -.->|"همان منطق، پیش از React"| H
 ```
 
-مقدارهای ممکن (منوی `ThemeToggle.jsx`): `light`، `dark`، `system`، `material-light`، `material-dark`، `theme-accessible`، `theme-rose`، `theme-forest`. `ThemeProvider` قبل از افزودن، همه‌ی `THEME_CLASSES` را از `<html>` برمی‌دارد. تمِ Material دو کلاس می‌گیرد (`theme-material` + `light|dark`) تا واریانتِ `dark:` و توکن‌های پایه هم کار کنند. پیش‌فرضِ واقعی `"dark"` است (`defaultTheme="dark"` در `src/app/providers/AppProviders.jsx`).
+مقدارهای ممکن (منوی `ThemeToggle.jsx`): `light`، `dark`، `system`، `material-light`، `material-dark`، `theme-accessible`، `theme-rose`، `theme-forest`. `ThemeProvider` قبل از افزودن، همه‌ی `THEME_CLASSES` را از `<html>` برمی‌دارد؛ برای `system` به `change`ِ `matchMedia("(prefers-color-scheme: dark)")` گوش می‌دهد تا با تغییرِ تمِ سیستم‌عامل همان لحظه عوض شود. تمِ Material دو کلاس می‌گیرد (`theme-material` + `light|dark`) تا واریانتِ `dark:` و توکن‌های پایه هم کار کنند. پیش‌فرضِ واقعی `"dark"` است (`defaultTheme="dark"` در `src/app/providers/AppProviders.jsx`).
 
 ### توکن‌ها و لایه‌ها
 
@@ -123,7 +123,6 @@ export const SALE_STATUS_TONES = Object.freeze({
 
 ## سؤال‌های باز / بدهی
 
-- **`system` به تغییرِ تمِ سیستم‌عامل گوش نمی‌دهد:** `ThemeProvider` فقط هنگامِ تغییرِ `theme` یک بار `matchMedia` را می‌خواند و listener ندارد.
 - `--font-mono: "Fira Code"` تعریف شده ولی فونت import یا بارگذاری نمی‌شود (جست‌وجوی `Fira` فقط همین خط را پیدا کرد).
 - ۱۰۱ استفاده از کلاس‌های فیزیکیِ جهت (`ml-*`، `mr-*`، `pl-*`، `pr-*`، `left-*`، `right-*`) بیرون از `src/shared/components/ui/` در برابرِ ۱۶ استفاده از کلاس‌های منطقی (`ms-*`، `me-*`، …) در همان محدوده (grep). یعنی در عمل کلاس‌های فیزیکی رایج‌ترند. در RTLِ ثابت درست کار می‌کنند ولی قراردادِ واحدی نیست.
 - `ActivityRankList.jsx` و `plate-input.jsx` رنگِ پالت دارند (فهرستِ بالا).

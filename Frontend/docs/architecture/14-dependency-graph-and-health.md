@@ -65,17 +65,20 @@ pnpm knip
 
 ستونِ «شدت»: **باگ** (رفتارِ نادرستِ قابلِ مشاهده)، **ریسک** (ممکن است باگ شود)، **تمیزی** (سبک/ساختار). ترتیب: اول باگ‌ها.
 
-### باگ‌ها (۷)
+### باگ‌ها (۰ باز)
 
-| # | مورد | شواهد | پیشنهاد |
-| --- | --- | --- | --- |
-| B1 | فیلترِ خودرو در لیستِ کالا به سرور نمی‌رسد | `setVehicleId` در `src/features/warehouse/products/components/table/ProductFilters.jsx`؛ `vehicleId` در `text`/`instant`ِ `useProductListFilters` (`src/features/warehouse/products/services/queries.js`) نیست | `"vehicleId"` را به `instant` اضافه کنید |
-| B2 | هر خطای رندر/loader فقط متنِ «NotFoundPage» نشان می‌دهد | `src/app/layouts/NotFoundPage.jsx` placeholder است و `errorElement`ِ پوسته در `src/app/routes/routers.jsx` | صفحه‌ی ۴۰۴ واقعی + `errorElement` جدا با `useRouteError` |
-| B3 | در خطای دریافتِ مجوزها منو خالی است ولی صفحه‌ها باز | `filterNav` در `src/shared/components/layout/AppSidebar.jsx` در برابرِ `isError` در `src/app/routes/PermissionGate.jsx` | در `isError` منو را بدونِ فیلتر نشان دهید (هم‌خوان با گارد و `allows`) |
-| B4 | تمِ `system` با تغییرِ تمِ سیستم‌عامل عوض نمی‌شود | `src/shared/components/theme/ThemeProvider.jsx` listener ندارد | `matchMedia(...).addEventListener("change", …)` وقتی `theme === "system"` |
-| B5 | breadcrumbِ صفحه‌ی خودروها فقط «انبار» است | `ROUTES.WAREHOUSE_VEHICLES` در `ROUTE_TITLES`ِ `src/shared/components/layout/AppBreadcrumb.jsx` نیست | کلید را اضافه کنید (و `DETAIL_TITLES` برای `:id`) |
-| B6 | `EmployeeNewPage` بعد از ساخت `returnTo` را نادیده می‌گیرد | `navigate(ROUTES.EMPLOYEES)` در `src/features/employees/pages/EmployeeNewPage.jsx` | `useReturnTo().goBack` مثل `CustomerNewPage` |
-| B7 | ساختِ کالا با موجودیِ اولیه کشِ دانه‌ها را کهنه می‌گذارد | `useCreateProductMutation` (`src/features/warehouse/products/services/mutations.js`) `productUnitKeys` را باطل نمی‌کند؛ بکند با `Stock > 0` دانه می‌سازد (`MintAsync` در `Backend-Net/Application/Features/Product/Commands/CreateProductCommand.cs`) | `productUnitKeys.all` را به `onSuccess`ِ create اضافه کنید |
+باگ‌های B1 تا B8 در ۲۰۲۶-۱۰-۱۶ رفع شدند:
+
+| # | مورد | رفع |
+| --- | --- | --- |
+| B1 | فیلترِ خودرو در لیستِ کالا به سرور نمی‌رسید | `"vehicleId"` در `instant`ِ `useProductListFilters` (`src/features/warehouse/products/services/queries.js`) |
+| B2 | هر خطای رندر/loader فقط متنِ «NotFoundPage» نشان می‌داد | `src/app/layouts/NotFoundPage.jsx` صفحه‌ی ۴۰۴ِ واقعی است؛ `errorElement`ها `src/app/layouts/RouteErrorPage.jsx` (با `useRouteError`) در `src/app/routes/routers.jsx` |
+| B3 | در خطای دریافتِ مجوزها منو خالی بود ولی صفحه‌ها باز | `AppSidebar` (`src/shared/components/layout/AppSidebar.jsx`) در `isError` منو را بی‌فیلتر نشان می‌دهد |
+| B4 | تمِ `system` با تغییرِ تمِ سیستم‌عامل عوض نمی‌شد | listenerِ `change`ِ `matchMedia` در `src/shared/components/theme/ThemeProvider.jsx` وقتی `theme === "system"` |
+| B5 | breadcrumbِ صفحه‌ی خودروها فقط «انبار» بود | `ROUTES.WAREHOUSE_VEHICLES` در `ROUTE_TITLES` و `DETAIL_TITLES`ِ `src/shared/components/layout/AppBreadcrumb.jsx` |
+| B6 | `EmployeeNewPage` بعد از ساخت `returnTo` را نادیده می‌گرفت | `useReturnTo(ROUTES.EMPLOYEES).goBack` در `src/features/employees/pages/EmployeeNewPage.jsx` |
+| B7 | ساختِ کالا با موجودیِ اولیه کشِ دانه‌ها را کهنه می‌گذاشت | `productUnitKeys.all` در `onSuccess`ِ `useCreateProductMutation` (`src/features/warehouse/products/services/mutations.js`) |
+| B8 | انتخابِ مرتب‌سازی در موبایل همیشه روی «پیش‌فرض» می‌ماند | `sorting` جدا از `table` به `MobileRowCards` می‌رسد (`src/shared/components/table/DataTable.jsx`)؛ نکته‌ی React Compiler در [10](10-shared-components-catalog.md) |
 
 ### ریسک
 

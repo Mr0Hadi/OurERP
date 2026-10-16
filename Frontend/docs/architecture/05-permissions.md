@@ -47,6 +47,7 @@ flowchart TD
   G -->|نه| F[ForbiddenPage]
 
   M -->|isPending| Empty["منوی خالی"]
+  M -->|isError| All["همه‌ی آیتم‌ها (بی‌فیلتر)"]
   M -->|"والد: satisfies(item.permission)<br/>و دست‌کم یک فرزندِ مجاز"| Show[نمایش]
 
   B -->|"can(x)"| C1["false تا isPending؛ false در isError"]
@@ -54,7 +55,7 @@ flowchart TD
 ```
 
 1. **مسیر** — `PermissionGate` (داخلِ `AppLayout`) آخرین routeِ `useMatches()` را که `handle.permission` دارد پیدا می‌کند (`matches.findLast`). در خطای شبکه صفحه باز می‌شود و سرور ۴۰۳ می‌دهد.
-2. **منو** — `filterNav` در `AppSidebar.jsx`: آیتمِ بی‌فرزند اگر `permission`ش برآورده شود دیده می‌شود؛ والد فقط وقتی دیده می‌شود که دست‌کم یک فرزندِ مجاز داشته باشد. والدها خودشان `permission` ندارند.
+2. **منو** — `filterNav` در `AppSidebar.jsx` (در `isError` اصلاً فیلتر نمی‌شود، هم‌خوان با گارد و `allows`): آیتمِ بی‌فرزند اگر `permission`ش برآورده شود دیده می‌شود؛ والد فقط وقتی دیده می‌شود که دست‌کم یک فرزندِ مجاز داشته باشد. والدها خودشان `permission` ندارند.
 3. **داخلِ صفحه** — دو شکل در کد هست:
 
 ```jsx
@@ -108,7 +109,6 @@ endpointها (`src/features/permissions/services/api-v1.js`): `getUserPermission
 
 ## سؤال‌های باز / بدهی
 
-- **منو و گارد در خطای شبکه ناهم‌خوان‌اند:** با `isError`، `PermissionGate` صفحه را باز می‌کند ولی `filterNav` با `names` خالی همه‌ی آیتم‌های دارای `permission` را پنهان می‌کند — کاربر فقط داشبورد را در منو می‌بیند.
 - مسیرهای `settings`، `invoice`، `transactions` و `dashboard` هیچ `handle.permission` ندارند (فایل ۰۳).
 - `canAny` بی‌استفاده است.
 - هیچ اعتبارسنجیِ خودکاری بینِ نام‌های فرانت و `PermissionEnum.cs` نیست؛ پیشنهاد در فایل ۱۴.

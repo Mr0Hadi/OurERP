@@ -4,6 +4,7 @@ import { Save, X } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { ROUTES } from "@/shared/constants/routes";
 import { useFormDraft } from "@/shared/hooks/useFormDraft";
+import { useReturnTo } from "@/shared/hooks/useReturnTo";
 
 import { useCreateUserMutation } from "../services/mutations";
 import { useEmployeeForm } from "../hooks/useEmployeeForm";
@@ -39,6 +40,8 @@ export default function EmployeeNewPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const createMutation = useCreateUserMutation();
+  // از جای دیگری آمده باشیم (`state.returnTo`) به همان‌جا برمی‌گردیم؛ وگرنه به فهرستِ کارمندان.
+  const { goBack } = useReturnTo(ROUTES.EMPLOYEES);
 
   const { draft, saveDraft, clearDraft } = useFormDraft(DRAFT_KEY);
 
@@ -62,7 +65,7 @@ export default function EmployeeNewPage() {
     createMutation.mutate(buildPayload(data), {
       onSuccess: () => {
         clearDraft();
-        navigate(ROUTES.EMPLOYEES);
+        goBack();
       },
     });
   };
@@ -122,7 +125,7 @@ export default function EmployeeNewPage() {
                 variant="outline"
                 onClick={() => {
                   clearDraft();
-                  navigate(-1);
+                  goBack();
                 }}
                 disabled={isBusy}
                 className="flex-1 gap-2"

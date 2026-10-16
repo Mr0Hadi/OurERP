@@ -31,7 +31,7 @@
 - mutationهای واحد/تیم تابعِ داخلیِ `invalidateOrgChart` را صدا می‌زنند (ریشه‌های واحد، تیم، کاربر + `session`).
 
 **رفت‌وبرگشت با پیش‌نویس (`useFormDraft`)** — [08](../08-client-state-zustand.md):
-- `EmployeeNewPage` (`DRAFT_KEY = "employee:new"`): `leaveForCreate` پیش‌نویس را ذخیره و به `ORG_DEPARTMENTS_NEW` یا `ORG_TEAMS_NEW` با `state: { returnTo: ROUTES.EMPLOYEES_NEW }` می‌رود؛ در برگشت `mergeDraft(draft, location.state)` شناسه‌ی واحدِ تازه را می‌نشاند.
+- `EmployeeNewPage` (`DRAFT_KEY = "employee:new"`): `leaveForCreate` پیش‌نویس را ذخیره و به `ORG_DEPARTMENTS_NEW` یا `ORG_TEAMS_NEW` با `state: { returnTo: ROUTES.EMPLOYEES_NEW }` می‌رود؛ در برگشت `mergeDraft(draft, location.state)` شناسه‌ی واحدِ تازه را می‌نشاند. خودش بعد از ثبت یا انصراف با `useReturnTo(ROUTES.EMPLOYEES).goBack()` به `returnTo` (یا فهرستِ کارمندان) برمی‌گردد.
 - `DepartmentDetailPage` (`department:${id}`): به `ORG_TEAMS_NEW` با `{ departmentId }` یا به جزئیاتِ تیم؛ `TeamNewPage` بعد از ساخت `goBack({ departmentId })`.
 - `EmployeeDetailPage` و `TeamDetailPage` همین الگو را دارند.
 
@@ -44,5 +44,4 @@
 - `EMPLOYEES_DETAIL` مجوزِ `UserUpdate` می‌خواهد نه `UserView` (برخلافِ بقیه‌ی صفحه‌های جزئیات).
 - `invalidateOrgChart` دو بار تعریف شده (`src/features/organization/departments/services/mutations.js` و `src/features/organization/teams/services/mutations.js`).
 - حذفِ واحد `userKeys` و `authKeys.session()` را باطل نمی‌کند؛ حذفِ تیم `authKeys.session()` را. ساخت/ویرایش می‌کنند.
-- `EmployeeNewPage` بعد از ساخت همیشه به `ROUTES.EMPLOYEES` می‌رود و `returnTo` را نادیده می‌گیرد.
 - importِ کلیدها بین `departments` و `teams` نسبی است (`../../teams/...`).

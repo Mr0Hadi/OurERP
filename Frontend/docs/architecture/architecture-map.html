@@ -460,8 +460,9 @@ renderLayer("features");
 /* journey */
 const STEPS=[
  {t:"آدرس به روتر می‌رسد",f:"src/app/routes/routers.jsx",d:"<code>customersRoutes</code> زیرِ مسیرِ ریشه با <code>AppLayout</code> پخش شده است. کلیک از <code>router.navigate</code>ِ پچ‌شده می‌گذرد و <code>notifyNavigationStart()</code> اسپینرِ جابه‌جایی را روشن می‌کند.",c:`{ path: ROUTES.ROOT, element: <AppLayout />,
-  loader: protectedLoader, errorElement: <NotFoundPage />,
-  children: [...dashboardRoutes, ...customersRoutes, ...] }`},
+  loader: protectedLoader, errorElement: <RouteErrorPage />,
+  children: [{ errorElement: <RouteErrorPage />,
+    children: [...dashboardRoutes, ...customersRoutes, ...] }] }`},
  {t:"loader نشست را می‌سنجد",f:"src/app/routes/protectedLoader.jsx",d:"اگر در این بارگذاری سرور توکن را تأیید نکرده باشد، به صفحه‌ی ورود با <code>?from=</code> می‌فرستد.",c:`if (!useAuthStore.getState().sessionVerified)
   return redirect(\`\${ROUTES.LOGIN}?\${params}\`);`},
  {t:"گاردِ مجوز",f:"src/app/routes/PermissionGate.jsx",d:"عمیق‌ترین <code>handle.permission</code> را پیدا می‌کند (<code>\"CustomerView\"</code>) و با <code>satisfies</code> می‌سنجد. تا مجوزها نیامده‌اند چیزی رندر نمی‌شود.",c:`const required = matches.findLast(m => m.handle?.permission != null)
@@ -543,7 +544,7 @@ function renderPerm(){const r=ROUTES_P[$("#routeSel").value],st=$("#stateSel").v
  else if(st==="error"){gate=["ok","صفحه باز می‌شود؛ سرور اگر لازم باشد ۴۰۳ می‌دهد"]}
  else gate=satisfies(have,req)?["ok","صفحه رندر می‌شود"]:["bad","ForbiddenPage"];
  if(st==="pending")menu=["info","منو خالی است تا مجوزها برسند"];
- else if(st==="error")menu=req==null?["ok","دیده می‌شود"]:["bad","پنهان — names خالی است (باگِ B3)"];
+ else if(st==="error")menu=["ok","دیده می‌شود — در خطا منو بی‌فیلتر است"];
  else menu=satisfies(have,req)?["ok","دیده می‌شود"]:["warn","پنهان"];
  const canV=st==="ok"&&satisfies(have,req), allowsV=st==="error"||(st==="ok"&&satisfies(have,req));
  btn=`<span class="pill ${canV?"p-ok":"p-warn"}">can: ${canV}</span> <span class="pill ${allowsV?"p-ok":"p-warn"}">allows: ${allowsV}</span>`;
@@ -558,7 +559,7 @@ $("#routeSel").onchange=renderPerm;$("#stateSel").onchange=renderPerm;renderPerm
 const F={
  sales:{p:"/sales",pages:"SalePage، SaleNewPage، SaleDetailPage (SaleForm / SaleIssuedView)، InstallmentsPage، SalesReturns*Page",stores:"useSaleFormStore، useSaleFilterStore، useSalesReturnFormStore، useInstallmentFilterStore",api:"/Sale/*، /SaleReturn/*، /SaleInstallment/*",sub:"orders · returns · installments",note:"ثبتِ تغییرات با runDocumentChanges؛ invalidateSalesEcosystem."},
  purchases:{p:"/purchases",pages:"PurchasesPage، PurchasesNewPage، PurchaseDetailPage، PurchaseReturn*Page",stores:"usePurchaseFormStore، usePurchaseFilterStore، usePurchaseReturnFormStore",api:"/Purchase/*، /PurchaseReturn/*",sub:"orders · returns",note:"قرنطینه فقط در مرجوعیِ خرید؛ invalidatePurchaseEcosystem."},
- warehouse:{p:"/warehouse",pages:"ProductsPage، CategoriesPage، VehiclesPage، UnitsPage، Receiving*Page، Shipping*Page",stores:"useProductFilterStore، useLabelTemplateStore، useReceivingFormStore، useShippingFormStore",api:"/Product/*، /ProductCategory/*، /Vehicle/*، /Shipment/*",sub:"products · categories · units · vehicles · receiving · shipping",note:"باگ: فیلترِ خودرو به سرور نمی‌رسد (B1)."},
+ warehouse:{p:"/warehouse",pages:"ProductsPage، CategoriesPage، VehiclesPage، UnitsPage، Receiving*Page، Shipping*Page",stores:"useProductFilterStore، useLabelTemplateStore، useReceivingFormStore، useShippingFormStore",api:"/Product/*، /ProductCategory/*، /Vehicle/*، /Shipment/*",sub:"products · categories · units · vehicles · receiving · shipping",note:"فیلترِ خودرو (vehicleId) در instantِ useProductListFilters."},
  customers:{p:"/customers",pages:"CustomersPage، CustomerNewPage، CustomerDetailPage",stores:"useCustomerFilterStore",api:"/Customer/*",note:"صورت‌حساب زیرِ customerKeys.all است."},
  suppliers:{p:"/suppliers",pages:"SuppliersPage، SupplierNewPage، SupplierDetailPage",stores:"useSupplierFilterStore",api:"/Supplier/*",note:"SupplierEditPage placeholderِ مسیردار است."},
  partyAccount:{p:"— (بدونِ مسیر)",pages:"—",stores:"createPartyFilterStore",api:"/PartyAccount/GetPartyStatement",note:"کتابخانه‌ی مشترکِ مشتری و تامین‌کننده."},
@@ -621,7 +622,7 @@ const MUT=[
  {n:"useUpdateCustomerMutation",set:[],hit:["customerKeys.lists","customerKeys.detail"],note:"الگوی ساده: lists() و detail(id)."},
  {n:"useUpdateUserMutation",set:[],hit:["userKeys.*","teamKeys.all","departmentKeys.all","authKeys.session"],note:"authKeys.session چون سایدبار واحد و تیمِ کاربرِ جاری را نشان می‌دهد."},
  {n:"useUpdateUserPermissionsMutation",set:[],hit:["permissionKeys.user","authKeys.myPermissions"],note:"اگر ادمین مجوزِ خودش را عوض کرد، منو و گارد فوراً تازه شوند."},
- {n:"useCreateProductMutation",set:[],hit:["productKeys.all"],note:"باگ B7: productUnitKeys باطل نمی‌شود، در حالی که بکند با Stock > 0 دانه می‌سازد."}
+ {n:"useCreateProductMutation",set:[],hit:["productKeys.all","productUnitKeys.all"],note:"بکند با Stock > 0 دانه می‌سازد، پس کشِ دانه‌ها هم باطل می‌شود."}
 ];
 KEYS.forEach(k=>$("#keyGrid").append(el("span","key",k)));
 function renderMut(i){document.querySelectorAll("#mutBtns .btn").forEach((b,j)=>b.classList.toggle("on",i===j));const m=MUT[i];
@@ -646,7 +647,7 @@ const FORMS=[
  {id:"doc",nm:"سندِ خرید/فروش",ds:"اقلام، پرداخت، پیوست، رفت‌وبرگشت به «کالای جدید»",tool:"createDocumentFormStore + useDocumentFormDraft",files:["src/features/sales/orders/store/saleFormStore.js","src/shared/store/createDocumentFormStore.js","src/shared/hooks/useDocumentFormDraft.js"],why:"فرم در store است تا رفتن به «مشتری/کالای جدید» و برگشت پاکش نکند. فرم فقط وقتی از سرور دوباره پر می‌شود که <code>id:updatedAt</code> عوض شود.",warn:"سرور برای خرید updatedAt نمی‌دهد؛ <code>documentVersion</code> در api-v1 آن را می‌سازد."},
  {id:"simple",nm:"موجودیتِ ساده",ds:"مشتری، تامین‌کننده، کارمند، کالا، واحد، تیم",tool:"react-hook-form در هوکِ use<X>Form",files:["src/features/customers/hooks/useCustomerForm.js","src/shared/components/forms/FormField.jsx","src/shared/lib/validationRules.js"],why:"هوک فرم، تبدیل به payloadِ بکند (<code>buildCustomerPayload</code>) و آپلودِ تصویر را یک‌جا نگه می‌دارد.",warn:"بعد از ذخیره <code>imageUpload.commit()</code>، در لغو <code>discard()</code>."},
  {id:"draft",nm:"فرمِ کوچک با رفت‌وبرگشت",ds:"مثلاً از فرمِ کارمند به «واحدِ جدید» و برگشت",tool:"useFormDraft(key)",files:["src/shared/hooks/useFormDraft.js","src/shared/store/formDraftStore.js","src/features/employees/pages/EmployeeNewPage.jsx"],why:"پیش‌نویس یک‌بارمصرف است: هنگامِ mount خوانده و در effect پاک می‌شود (امن در StrictMode).",warn:"کلید باید شناسه داشته باشد (<code>department:5</code>) وگرنه پیش‌نویسِ یک رکورد روی دیگری می‌نشیند."},
- {id:"filter",nm:"فیلترِ لیست",ds:"جست‌وجو، select، بازه، صفحه‌بندی، مرتب‌سازی",tool:"createFilterStore + useDebouncedFilters",files:["src/shared/store/createFilterStore.js","src/shared/hooks/useDebouncedFilters.js","src/features/partyAccount/store/createPartyFilterStore.js"],why:"برای هر فیلتر اکشنِ <code>set&lt;Field&gt;</code> ساخته می‌شود که صفحه را به اول برمی‌گرداند. نامِ فیلدها همان نامِ پارامترِ سرور است.",warn:"هر کلید باید در <code>text</code> یا <code>instant</code> بیاید، وگرنه فرستاده نمی‌شود (باگِ B1)."}
+ {id:"filter",nm:"فیلترِ لیست",ds:"جست‌وجو، select، بازه، صفحه‌بندی، مرتب‌سازی",tool:"createFilterStore + useDebouncedFilters",files:["src/shared/store/createFilterStore.js","src/shared/hooks/useDebouncedFilters.js","src/features/partyAccount/store/createPartyFilterStore.js"],why:"برای هر فیلتر اکشنِ <code>set&lt;Field&gt;</code> ساخته می‌شود که صفحه را به اول برمی‌گرداند. نامِ فیلدها همان نامِ پارامترِ سرور است.",warn:"هر کلید باید در <code>text</code> یا <code>instant</code> بیاید، وگرنه فرستاده نمی‌شود (همان باگِ رفع‌شده‌ی B1)."}
 ];
 function renderForm(id){const f=FORMS.find(x=>x.id===id);document.querySelectorAll("#formBtns .layer").forEach(b=>b.classList.toggle("on",b.dataset.id===id));
  $("#formDetail").innerHTML=`<div class="filebar">${f.tool.replace(/</g,"&lt;")}</div><h3 style="margin-top:6px">${f.nm}</h3><p style="margin-top:6px">${f.why}</p><ul>${f.files.map(x=>`<li class="mono" style="text-align:left">${x}</li>`).join("")}</ul><div class="no" style="background:var(--warn-soft)"><b style="color:var(--warn)">مراقب باشید: </b>${f.warn}</div>`}
@@ -690,13 +691,6 @@ REC.forEach(r=>$("#recipeGrid").append(el("div","recipe",`<h3>${r.t}</h3><div cl
 
 /* debt */
 const D=[
- ["B1","bug","فیلترِ خودرو در لیستِ کالا به سرور نمی‌رسد","vehicleId را به instantِ useProductListFilters اضافه کنید."],
- ["B2","bug","هر خطای رندر یا loader فقط متنِ «NotFoundPage» نشان می‌دهد","صفحه‌ی ۴۰۴ واقعی و errorElementِ جدا با useRouteError."],
- ["B3","bug","در خطای دریافتِ مجوزها منو خالی است ولی صفحه‌ها باز","در isError منو را بدونِ فیلتر نشان دهید."],
- ["B4","bug","تمِ system با تغییرِ تمِ سیستم‌عامل عوض نمی‌شود","listenerِ matchMedia در ThemeProvider."],
- ["B5","bug","breadcrumbِ صفحه‌ی خودروها فقط «انبار» است","ROUTES.WAREHOUSE_VEHICLES را به ROUTE_TITLES اضافه کنید."],
- ["B6","bug","EmployeeNewPage بعد از ساخت returnTo را نادیده می‌گیرد","useReturnTo().goBack مثل CustomerNewPage."],
- ["B7","bug","ساختِ کالا با موجودیِ اولیه کشِ دانه‌ها را کهنه می‌گذارد","productUnitKeys.all را به onSuccessِ create اضافه کنید."],
  ["R1","risk","settings، invoice و transactions بدونِ lazy() و مجوز","تا وقتی placeholderاند از routers.jsx بردارید."],
  ["R4","risk","دو مسیرِ خروجِ ناهم‌سان","در شکستِ refresh هم leaveSession."],
  ["R6","risk","نامِ مجوزها با PermissionEnum.cs خودکار سنجیده نمی‌شود","اسکریپتی مثلِ check-docs-paths.mjs."],

@@ -19,12 +19,18 @@ const render = (cell) => flexRender(cell.column.columnDef.cell, cell.getContext(
 
 const NO_SORT = "__none__";
 
-/** انتخابِ مرتب‌سازی به‌جای سرتیترهای کلیک‌خورِ جدول. */
-function MobileSortSelect({ table }) {
+/**
+ * انتخابِ مرتب‌سازی به‌جای سرتیترهای کلیک‌خورِ جدول.
+ *
+ * `sorting` جدا از `table` می‌آید: نمونه‌ی `useReactTable` در همه‌ی رندرها همان شیء
+ * است و React Compiler این کامپوننت را با همان `table` دوباره رندر نمی‌کرد؛ خواندنِ
+ * `table.getState().sorting` همیشه مقدارِ اولیه را نشان می‌داد و انتخاب «پیش‌فرض» می‌ماند.
+ */
+function MobileSortSelect({ table, sorting }) {
   const sortable = table.getAllLeafColumns().filter((c) => c.getCanSort() && !isActionColumn(c));
   if (sortable.length === 0) return null;
 
-  const current = table.getState().sorting[0];
+  const current = sorting[0];
   const value = current ? `${current.id}:${current.desc ? "desc" : "asc"}` : NO_SORT;
 
   const handleChange = (next) => {
@@ -164,7 +170,7 @@ function RowCard({ row, rowClassName }) {
  * بقیه‌ی ستون‌ها شبکه‌ی دوستونه‌ی «برچسب/مقدار» می‌شوند؛ `detailsColumn` کلِ کارت را لینک
  * می‌کند و ستون‌های بی‌برچسبِ دیگر (دکمه‌ها) فوترِ کارت‌اند.
  */
-export default function MobileRowCards({ table, rows, emptyMessage, rowClassName, getRowKey, totalCount }) {
+export default function MobileRowCards({ table, sorting, rows, emptyMessage, rowClassName, getRowKey, totalCount }) {
   return (
     <div className="space-y-2">
       <div className="flex min-h-8 items-center justify-between gap-2">
@@ -178,7 +184,7 @@ export default function MobileRowCards({ table, rows, emptyMessage, rowClassName
         ) : (
           <span />
         )}
-        <MobileSortSelect table={table} />
+        <MobileSortSelect table={table} sorting={sorting} />
       </div>
 
       {rows.length === 0 ? (

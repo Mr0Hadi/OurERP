@@ -89,7 +89,7 @@ flowchart LR
 
 1. **آدرس:** یک کلید در `ROUTES` (`src/shared/constants/routes.js`). همه‌ی مسیرهای محافظت‌شده آدرسِ مطلق می‌دهند (`"/customers"`)؛ استثنا: `invoice` و `transactions` رشته‌ی نسبی (`"invoice"`) می‌دهند و `auth` هم `"login"`.
 2. **فیچر:** هر فیچر در `src/features/<f>/routes.jsx` آرایه‌ای تخت export می‌کند (`customersRoutes`، `warehouseRoutes`، …). صفحه‌ها با `lazy(() => import("./pages/X"))` بار می‌شوند. مسیرِ تو در تو (`children`) در هیچ فیچری نیست؛ تنها `index: true` در `src/features/dashboard/routes.jsx` است (`/` → `DashboardPage`).
-3. **ادغام:** `src/app/routes/routers.jsx` همه را زیرِ یک شیءِ `{ path: ROUTES.ROOT, element: <AppLayout />, loader: protectedLoader, errorElement: <NotFoundPage />, children: [...] }` پخش می‌کند. ترتیبِ پخش اهمیتی ندارد (React Router بر اساسِ دقتِ مسیر رتبه می‌دهد).
+3. **ادغام:** `src/app/routes/routers.jsx` همه را زیرِ یک شیءِ `{ path: ROUTES.ROOT, element: <AppLayout />, loader: protectedLoader, errorElement: <RouteErrorPage />, children: [{ errorElement: <RouteErrorPage />, children: [...] }] }` پخش می‌کند. routeِ بی‌مسیرِ میانی فقط برای این است که خطای رندرِ یک صفحه داخلِ پوسته (با سایدبار و هدر) نشان داده شود؛ `errorElement`ِ بیرونی خطای `protectedLoader` یا خودِ `AppLayout` را تمام‌صفحه می‌گیرد. ترتیبِ پخش اهمیتی ندارد (React Router بر اساسِ دقتِ مسیر رتبه می‌دهد).
 4. **مجوز:** `handle: { permission: "CustomerView" }` یا آرایه‌ای که **هر کدام** کافی است (`satisfies` در `src/features/auth/hooks/usePermission.js`)، مثلاً `["VehicleView", "ProductCategoryView"]` در `src/features/warehouse/routes.jsx`. مسیرِ بدونِ `handle.permission` برای هر کاربرِ واردشده باز است. جزئیات در [05](05-permissions.md).
 5. **Suspense:** برای مسیرهای زیرِ `AppLayout` یک `Suspense` مشترک با `ContentSpinner` در خودِ `AppLayout` هست؛ لازم نیست صفحه خودش Suspense بگذارد. زیرِ `AuthLayout` چنین چیزی نیست و `src/features/auth/routes.jsx` خودش `<Suspense fallback={null}>` می‌گذارد.
 
@@ -102,7 +102,7 @@ flowchart LR
 | بدونِ پوسته | `/dev/ui` (فقط `import.meta.env.DEV`) | `StyleGuidePage` | ندارد |
 | بدونِ پوسته | `*` | `NotFoundPage` | — |
 
-`ForbiddenPage` پوسته نیست؛ `PermissionGate` آن را به جای `Outlet` رندر می‌کند. `NotFoundPage` هم برای `*` و هم `errorElement`ِ پوسته‌ی اصلی است.
+`ForbiddenPage` پوسته نیست؛ `PermissionGate` آن را به جای `Outlet` رندر می‌کند. `NotFoundPage` فقط برای `*` است؛ `RouteErrorPage` (`src/app/layouts/RouteErrorPage.jsx`) با `useRouteError` پاسخِ ۴۰۴ِ روتر را به `NotFoundPage` می‌دهد و بقیه‌ی خطاها را با «بارگذاری دوباره» نشان می‌دهد (در DEV پیامِ خطا هم).
 
 ## افزودنِ صفحه یا مسیرِ جدید
 
@@ -127,7 +127,7 @@ flowchart LR
 4. **فقط اگر فیچرِ تازه است:** `export const <f>Routes` را در `src/app/routes/routers.jsx` import و در `children` پخش کنید.
 5. **کلیدِ مجوز** — نامِ یک عضوِ `PermissionEnum` در `../Backend-Net/Domain/Enums/PermissionEnum.cs`؛ فرانت فهرستِ ثابتی ندارد، پس نام را از همان فایل کپی کنید. ببینید [05](05-permissions.md).
 6. **منو** — `src/shared/constants/navigationData.js`، زیرِ `items` گروهِ مربوط: `{ title, url: ROUTES.WAREHOUSE_VEHICLES, permission: [...], icon: Car, description }`. همان `permission`ِ مسیر را بدهید تا منو و گارد هم‌خوان باشند.
-7. **breadcrumb** — `ROUTE_TITLES` در `src/shared/components/layout/AppBreadcrumb.jsx`؛ برای صفحه‌ی جزئیات با `:id`، کلیدِ والد را در `DETAIL_TITLES` بگذارید. **خودروها این را ندارند** (`ROUTES.WAREHOUSE_VEHICLES` در `AppBreadcrumb.jsx` نیست)، پس breadcrumbِ آن فقط «انبار» نشان می‌دهد — الگو برای این گام: `ROUTES.WAREHOUSE_UNITS`.
+7. **breadcrumb** — `ROUTE_TITLES` در `src/shared/components/layout/AppBreadcrumb.jsx`؛ برای صفحه‌ی جزئیات با `:id`، کلیدِ والد را در `DETAIL_TITLES` بگذارید. خودروها هر دو را دارند (`ROUTES.WAREHOUSE_VEHICLES` → «خودروها» و «جزئیات خودرو»).
 
 ## مسیرِ «navigation settled»: اسپینرِ جابه‌جایی
 
@@ -150,7 +150,8 @@ flowchart LR
 | می‌خواهم… | کجا |
 | --- | --- |
 | صفحه‌ی جدید | بخشِ «افزودنِ صفحه یا مسیرِ جدید» بالا |
-| صفحه‌ی ۴۰۴ یا خطا را بسازم | `src/app/layouts/NotFoundPage.jsx` |
+| صفحه‌ی ۴۰۴ | `src/app/layouts/NotFoundPage.jsx` |
+| صفحه‌ی خطای رندر/loader | `src/app/layouts/RouteErrorPage.jsx` |
 | صفحه‌ی «دسترسی ندارید» | `src/app/layouts/ForbiddenPage.jsx` |
 | هدر/سایدبارِ پوسته | `src/app/layouts/AppLayout.jsx`؛ عنوانِ صفحه از `useHeaderStore` (`src/shared/store/headerStore.js`) |
 | رفتارِ اسپینرِ جابه‌جایی | `src/shared/components/layout/RouteLoadingOverlay.jsx` |
@@ -160,7 +161,6 @@ flowchart LR
 ## سؤال‌های باز / بدهی
 
 - **`settings/` نه `lazy()` دارد نه `handle.permission`** (`src/features/settings/routes.jsx`): ۹ صفحه‌ی placeholder در باندلِ اصلی هستند و برای هر کاربرِ واردشده باز. همین‌طور `src/features/invoice/routes.jsx` و `src/features/transactions/routes.jsx` (import مستقیم، بدونِ مجوز). `src/features/dashboard/routes.jsx` هم مجوز ندارد (احتمالاً عمدی؛ داشبورد برای همه).
-- **`NotFoundPage` placeholder است** (`<div>NotFoundPage</div>`) و هم‌زمان `errorElement`ِ پوسته‌ی اصلی؛ هر خطای رندرِ صفحه یا خطای loader همین متن را نشان می‌دهد و پیامِ خطا گم می‌شود.
-- `ROUTES.WAREHOUSE_VEHICLES` در `ROUTE_TITLES`ِ `AppBreadcrumb.jsx` نیست. در عوض `ROUTE_TITLES` کلیدهایی دارد که هیچ مسیرِ ثبت‌شده‌ای ندارند: `INVOICE_LIST`، `INVOICE_NEW`، `TRANSACTIONS_BUY_SELL`، `TRANSACTIONS_PAYMENTS`، `TRANSACTIONS_RETURNS`، `WAREHOUSE_STOCK`، `WAREHOUSE_TRANSACTIONS`، `TOOLS_NUMBER_TO_WORDS`، `TOOLS_CALENDAR`، `FEEDBACK` (همه در `ROUTES` تعریف شده‌اند — بررسی‌شده؛ فقط صفحه ندارند). همه‌ی `ROUTES.*`ِ به‌کاررفته در `AppBreadcrumb.jsx`، `navigationData.js` و `routes.jsx`ها در `src/shared/constants/routes.js` وجود دارند.
+- `ROUTE_TITLES`ِ `AppBreadcrumb.jsx` کلیدهایی دارد که هیچ مسیرِ ثبت‌شده‌ای ندارند: `INVOICE_LIST`، `INVOICE_NEW`، `TRANSACTIONS_BUY_SELL`، `TRANSACTIONS_PAYMENTS`، `TRANSACTIONS_RETURNS`، `WAREHOUSE_STOCK`، `WAREHOUSE_TRANSACTIONS`، `TOOLS_NUMBER_TO_WORDS`، `TOOLS_CALENDAR`، `FEEDBACK` (همه در `ROUTES` تعریف شده‌اند — بررسی‌شده؛ فقط صفحه ندارند). همه‌ی `ROUTES.*`ِ به‌کاررفته در `AppBreadcrumb.jsx`، `navigationData.js` و `routes.jsx`ها در `src/shared/constants/routes.js` وجود دارند.
 - هر بارگذاریِ کامل از صفحه‌ی ورود رد می‌شود (طراحیِ عمدی، ولی URL برای یک لحظه به `/auth/login?from=` می‌رود).
 - منطقِ تم در `index.html` و `themeClasses.js` دو نسخه است.

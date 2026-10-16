@@ -94,6 +94,7 @@ export default function DataTable({
       <div className="space-y-3">
         <MobileRowCards
           table={table}
+          sorting={sortingState}
           rows={rows}
           emptyMessage={emptyMessage}
           rowClassName={rowClassName}

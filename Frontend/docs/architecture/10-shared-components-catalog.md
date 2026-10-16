@@ -35,6 +35,8 @@ flowchart LR
 
 `ServerTable` (`src/shared/components/table/ServerTable.jsx`) کارِ تکراری را می‌کند: خطا → `QueryErrorState`، واکشیِ دوباره → `FetchingOverlay`، و تبدیلِ `{ items, total, page, totalPages }` و `listState` (از `createFilterStore`) به propsِ جدول. جدولِ هر فیچر فقط `DataTable` را با `columns` می‌پیچد (`src/features/customers/components/CustomerTable.jsx`).
 
+**`table` و React Compiler:** نمونه‌ی `useReactTable` در همه‌ی رندرها همان شیء است. Compiler خودِ `DataTable` را memo نمی‌کند (هشدارِ `react-hooks/incompatible-library`)، ولی فرزندی که فقط `table` را prop می‌گیرد با همان `table` دوباره رندر نمی‌شود و `table.getState()` در آن کهنه می‌ماند. هر state‌ی که فرزند لازم دارد (مثلِ `sorting` برای `MobileRowCards`) را جدا prop بدهید.
+
 ## کاتالوگ
 
 ### `table/`

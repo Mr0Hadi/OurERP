@@ -12,7 +12,10 @@ import { vehicleKeys } from "@/features/warehouse/vehicles/services/queryKeys";
 import { productUnitKeys } from "@/features/warehouse/units/services/queryKeys";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
 
-/** رفتن به صفحه‌ی بعد با خودِ صفحه است (`onSuccess`ِ فراخوان)، نه این‌جا. */
+/**
+ * رفتن به صفحه‌ی بعد با خودِ صفحه است (`onSuccess`ِ فراخوان)، نه این‌جا.
+ * کالا با موجودیِ اولیه دانه هم می‌سازد، پس کشِ دانه‌ها هم باطل می‌شود.
+ */
 export const useCreateProductMutation = () => {
   const queryClient = useQueryClient();
 
@@ -24,6 +27,7 @@ export const useCreateProductMutation = () => {
       // شمارِ کالاهای هر خودرو/دسته و فهرستِ «همه‌ی خودروها».
       queryClient.invalidateQueries({ queryKey: vehicleKeys.all });
       queryClient.invalidateQueries({ queryKey: productCategoryKeys.all });
+      queryClient.invalidateQueries({ queryKey: productUnitKeys.all });
     },
     onError: (error) => {
       toast.error(getErrorMessage(error, "ثبت کالا انجام نشد"));

@@ -16,7 +16,7 @@ import { productKeys } from "./queryKeys";
 export function useProductListFilters() {
   return useDebouncedFilters(useProductFilterStore, {
     text: ["code", "name", "brand", "fromPrice", "toPrice"],
-    instant: ["productCategoryId", "isLowOnStock", "isIncomplete"],
+    instant: ["productCategoryId", "vehicleId", "isLowOnStock", "isIncomplete"],
   });
 }
 

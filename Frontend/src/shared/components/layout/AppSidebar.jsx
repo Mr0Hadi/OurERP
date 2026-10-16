@@ -33,12 +33,14 @@ function filterNav(items, names) {
 }
 
 export function AppSidebar({ ...props }) {
-  const { names, isPending } = usePermission();
+  const { names, isPending, isError } = usePermission();
 
-  const navMain = useMemo(
-    () => (isPending ? [] : filterNav(data.navMain, names)),
-    [names, isPending],
-  );
+  // اگر فهرستِ دسترسی نیامد، منو بی‌فیلتر نشان داده می‌شود — مثلِ `allows` و
+  // `PermissionGate` که در این حالت صفحه را باز می‌گذارند و تصمیم با ۴۰۳ِ سرور است.
+  const navMain = useMemo(() => {
+    if (isError) return data.navMain;
+    return isPending ? [] : filterNav(data.navMain, names);
+  }, [names, isPending, isError]);
 
   return (
     <Sidebar variant="inset" {...props}>

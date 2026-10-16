@@ -15,13 +15,20 @@ export function ThemeProvider({
 
   useEffect(() => {
     const root = window.document.documentElement
+    const media = window.matchMedia("(prefers-color-scheme: dark)")
 
-    // پاک کردن همه کلاس‌های تم
-    root.classList.remove(...THEME_CLASSES)
+    const apply = () => {
+      // پاک کردن همه کلاس‌های تم
+      root.classList.remove(...THEME_CLASSES)
+      root.classList.add(...resolveThemeClasses(theme, media.matches))
+      syncThemeColor()
+    }
 
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
-    root.classList.add(...resolveThemeClasses(theme, prefersDark))
-    syncThemeColor()
+    apply()
+    // تمِ «سیستم» باید با عوض‌شدنِ تمِ سیستم‌عامل همان لحظه عوض شود، نه فقط بعد از بارگذاریِ دوباره.
+    if (theme !== "system") return
+    media.addEventListener("change", apply)
+    return () => media.removeEventListener("change", apply)
   }, [theme])
 
   const value = {

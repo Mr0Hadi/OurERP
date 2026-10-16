@@ -63,11 +63,9 @@
 
 ## نکته‌ها و بدهی
 
-- **باگ: فیلترِ خودرو در لیستِ کالا به سرور نمی‌رسد.** `ProductFilters.jsx` مقدارِ `vehicleId` را با `setVehicleId` در `useProductFilterStore` می‌گذارد، ولی `useProductListFilters` (`src/features/warehouse/products/services/queries.js`) `vehicleId` را نه در `text` و نه در `instant` دارد و `useDebouncedFilters` فقط کلیدهای فهرست‌شده را برمی‌دارد؛ پس `useProductsQuery` آن را نمی‌فرستد.
 - نام‌گذاریِ صفحه‌های مرجوعی در انبار گمراه‌کننده است: `ReceivingReturnDetailPage` مرجوعیِ **فروش** است و `SupplierReturnDetailPage` زیرِ `/shipping/` مرجوعیِ **خرید**.
 - `useLabelTemplateStore` در فایلی به نامِ `unitFilterStore.js` است.
 - `fetchCategoryProducts` پارامترها را دستی PascalCase می‌سازد (`ProductCategoryId`، `Page`، `Take`) به جای `listQuery`.
-- **باگ: ساختِ کالا با موجودیِ اولیه کشِ دانه‌ها را کهنه می‌گذارد.** `useCreateProductMutation` برخلافِ `useUpdateProductMutation`، `productUnitKeys` را باطل نمی‌کند؛ در حالی که `CreateProductCommandHandler` اگر `Stock > 0` باشد با `productUnitService.MintAsync` دانه می‌سازد (`Backend-Net/Application/Features/Product/Commands/CreateProductCommand.cs`).
 - mutationهای دسته فقط `productCategoryKeys.lists()` را باطل می‌کنند.
 - `createProductCategory` وقتی سرور شناسه نمی‌دهد، فهرست را با نام می‌گردد (TODO به بکند).
 - `useProductsOptionsQuery` همه‌ی کالاها را صفحه‌به‌صفحه می‌خواند (TODOِ خودش: جست‌وجوی سمتِ سرور).

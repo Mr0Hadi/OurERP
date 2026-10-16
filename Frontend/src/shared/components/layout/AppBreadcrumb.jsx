@@ -54,6 +54,7 @@ const ROUTE_TITLES = {
   [ROUTES.WAREHOUSE_PRODUCTS_NEW]: "کالای جدید",
   [ROUTES.WAREHOUSE_UNITS]: "دانه‌ها و برچسب‌ها",
   [ROUTES.WAREHOUSE_CATEGORIES]: "دسته‌بندی کالاها",
+  [ROUTES.WAREHOUSE_VEHICLES]: "خودروها",
   [ROUTES.WAREHOUSE_RECEIVING]: "دریافت کالا",
   [ROUTES.WAREHOUSE_SHIPPING]: "ارسال کالا",
   [ROUTES.WAREHOUSE_STOCK]: "موجودی انبار",
@@ -125,6 +126,7 @@ const DETAIL_TITLES = {
   [ROUTES.SALES_RETURNS_LIST]: "جزئیات مرجوعی فروش",
 
   [ROUTES.WAREHOUSE_PRODUCTS]: "جزئیات کالا",
+  [ROUTES.WAREHOUSE_VEHICLES]: "جزئیات خودرو",
   [ROUTES.WAREHOUSE_RECEIVING]: "دریافت خرید",
   [ROUTES.WAREHOUSE_SHIPPING]: "ارسال فروش",
   "/warehouse/receiving/returns": "دریافت کالای مرجوعی",

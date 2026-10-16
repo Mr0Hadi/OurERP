@@ -6,6 +6,7 @@ import AppLayout from "../layouts/AppLayout";
 import AuthLayout from "../layouts/AuthLayout";
 import { protectedLoader } from "./protectedLoader";
 import NotFoundPage from "../layouts/NotFoundPage";
+import RouteErrorPage from "../layouts/RouteErrorPage";
 
 import { authRoutes } from "@/features/auth/routes";
 import { dashboardRoutes } from "@/features/dashboard/routes";
@@ -39,21 +40,28 @@ export const router = createBrowserRouter([
     path: ROUTES.ROOT,
     element: <AppLayout />,
     loader: protectedLoader,
-    errorElement: <NotFoundPage />,
+    // خطای loader یا خودِ `AppLayout`: تمام‌صفحه.
+    errorElement: <RouteErrorPage />,
     children: [
-      ...dashboardRoutes,
-      ...customersRoutes,
-      ...employeesRoutes,
-      ...organizationRoutes,
-      ...permissionsRoutes,
-      ...purchasesRoutes,
-      ...warehouseRoutes,
-      ...invoiceRoutes,
-      ...salesRoutes,
-      ...suppliersRoutes,
-      ...accountingRoutes,
-      ...settingsRoutes,
-      ...transactionsRoutes,
+      {
+        // خطای رندرِ یک صفحه داخلِ پوسته نشان داده می‌شود تا سایدبار و هدر بمانند.
+        errorElement: <RouteErrorPage />,
+        children: [
+          ...dashboardRoutes,
+          ...customersRoutes,
+          ...employeesRoutes,
+          ...organizationRoutes,
+          ...permissionsRoutes,
+          ...purchasesRoutes,
+          ...warehouseRoutes,
+          ...invoiceRoutes,
+          ...salesRoutes,
+          ...suppliersRoutes,
+          ...accountingRoutes,
+          ...settingsRoutes,
+          ...transactionsRoutes,
+        ],
+      },
     ],
   },
   ...devRoutes,
