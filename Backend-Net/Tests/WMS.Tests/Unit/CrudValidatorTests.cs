@@ -570,7 +570,6 @@ namespace WMS.Tests.Unit
             InvoiceDate = DateTime.Now,
             CustomerId = 1,
             PaymentType = PaymentTypeEnum.CASH,
-            PaymentDetails = new(),
             ProductIds = new() { new CreateSaleItemDto { ProductId = 1, Quantity = 1, UnitPrice = 100, Discount = 0 } },
         };
 

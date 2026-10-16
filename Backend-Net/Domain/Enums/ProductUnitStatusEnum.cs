@@ -21,5 +21,12 @@ namespace Domain.Enums
         /// of Product.Stock - the invariant Stock == COUNT(IN_STOCK) is unchanged.
         /// </summary>
         QUARANTINED = 9,
+
+        /// <summary>
+        /// Scanned by the warehouse for a proforma (CheckSaleWarehouse) and held for that sale line (ProductUnit.SaleItemId):
+        /// still on our shelf and still ours in value, but not free to sell, so not part of Product.Stock. Shipping the sale
+        /// moves exactly these units to SOLD; editing the line, cancelling or deleting the sale puts them back IN_STOCK.
+        /// </summary>
+        RESERVED = 10,
     }
 }

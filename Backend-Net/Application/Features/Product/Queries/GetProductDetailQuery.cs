@@ -38,6 +38,7 @@ namespace Application.Features.Product.Queries
             var dto = _mapper.Map<ProductDto>(data);
             dto.ImageUrl = _objectStorageService.GetFixedUrl(dto.ImageKey);
             dto.QuarantinedCount = await _context.ProductUnits.CountAsync(u => u.ProductId == data.Id && u.Status == ProductUnitStatusEnum.QUARANTINED, cancellationToken);
+            dto.ReservedCount = await _context.ProductUnits.CountAsync(u => u.ProductId == data.Id && u.Status == ProductUnitStatusEnum.RESERVED, cancellationToken);
 
             dto.Vehicles = await _context.ProductVehicles
                 .Where(x => x.ProductId == data.Id && x.Vehicle.IsActive)

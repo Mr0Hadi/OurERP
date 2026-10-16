@@ -35,5 +35,12 @@
         /// </summary>
         public int ClaimableExcessQuantity { get; set; }
         public int SaleId { get; set; }
+
+        /// <summary>Units the warehouse scanned and reserved for this line (proforma pipeline); shipping takes exactly these.</summary>
+        public int ReservedQuantity { get; set; }
+        public List<string> ReservedBarcodes { get; set; } = new();
+
+        /// <summary>The product's free stock now (Product.Stock - reserved units are already out of it).</summary>
+        public int FreeStock { get; set; }
     }
 }

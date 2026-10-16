@@ -19,6 +19,9 @@ namespace Application.Features.Product.Dtos
         public int Tax { get; set; }
         public Domain.Enums.TaxCategoryEnum TaxCategory { get; set; }
         public int Stock { get; set; }
+
+        /// <summary>Units the warehouse reserved for proformas - still on the shelf and still ours, but not free to sell, so not part of Stock.</summary>
+        public int ReservedCount { get; set; }
         public int LowStockThreshold { get; set; }
         /// <summary>The stable bucket object key - send this back on update to keep the image.</summary>
         public string? ImageKey { get; set; }

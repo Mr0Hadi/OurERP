@@ -219,6 +219,12 @@ namespace Domain.Enums
         [Description("ثبت و ابطال پرداخت فروش")]
         SalePayment = 96,
 
+        // Proforma pipeline (docs/proforma-approval-pipeline.md): the warehouse scans and reserves the units of an approved
+        // proforma and reports damaged/missing ones. Customer approval itself is SaleUpdate.
+        [PermissionGroup(PermissionGroupEnum.Sale)]
+        [Description("تأیید انبار برای پیش‌فاکتور")]
+        SaleWarehouseCheck = 97,
+
         // --- اقساط ---
         [PermissionGroup(PermissionGroupEnum.Installment)]
         [Description("مشاهده اقساط")]
@@ -346,6 +352,12 @@ namespace Domain.Enums
         [PermissionGroup(PermissionGroupEnum.Accounting)]
         [Description("مشاهده داشبورد و دفترهای حسابداری")]
         AccountingView = 260,
+
+        // Decides what happens to units the warehouse reported during a proforma check: release, scrap (a loss) or keep for
+        // a supplier return. Viewing the list also needs only AccountingView.
+        [PermissionGroup(PermissionGroupEnum.Accounting)]
+        [Description("رسیدگی به کالای معیوب/مفقود گزارش‌شده‌ی انبار")]
+        SaleWarehouseIssueResolve = 261,
 
         // --- تاریخچه تغییرات ---
         /// <summary>The audit log (api/Audit): every change, by whom and when, with old and new values.</summary>

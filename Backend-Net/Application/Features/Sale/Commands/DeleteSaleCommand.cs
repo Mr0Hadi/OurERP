@@ -1,4 +1,6 @@
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.ProductUnit;
+using Application.Common.Sales;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -24,11 +26,13 @@ namespace Application.Features.Sale.Commands
     public class DeleteSaleCommandHandler : IRequestHandler<DeleteSaleCommand, ResponseDto>
     {
         private readonly IWMSDbContext _context;
+        private readonly IProductUnitService _productUnitService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public DeleteSaleCommandHandler(IWMSDbContext context, IUnitOfWork unitOfWork)
+        public DeleteSaleCommandHandler(IWMSDbContext context, IProductUnitService productUnitService, IUnitOfWork unitOfWork)
         {
             _context = context;
+            _productUnitService = productUnitService;
             _unitOfWork = unitOfWork;
         }
 
@@ -36,7 +40,7 @@ namespace Application.Features.Sale.Commands
         {
             var res = new ResponseDto();
 
-            var sale = await _context.Sales.FirstOrDefaultAsync(x => x.Id == request.Id && x.IsActive, cancellationToken)
+            var sale = await _context.Sales.Include(x => x.Items).FirstOrDefaultAsync(x => x.Id == request.Id && x.IsActive, cancellationToken)
                 ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
 
             if (sale.Status != SalesStatusEnum.PROFORMA)
@@ -45,6 +49,9 @@ namespace Application.Features.Sale.Commands
             var hasPlan = await _context.SaleInstallmentPlans.AnyAsync(x => x.SaleId == sale.Id && x.IsActive, cancellationToken);
             if (hasPlan)
                 throw new ValidationCustomException("این پیش‌فاکتور قرارداد اقساطی دارد؛ ابتدا قرارداد را حذف کنید.");
+
+            // Units the warehouse reserved for this proforma go back on the shelf.
+            await SaleProformaPipeline.ReleaseAsync(_context, _productUnitService, sale, sale.Items.Select(i => i.Id), cancellationToken);
 
             sale.IsActive = false;
             sale.UpdatedAt = DateTime.Now;

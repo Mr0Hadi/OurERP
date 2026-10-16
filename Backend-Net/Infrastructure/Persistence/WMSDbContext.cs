@@ -157,6 +157,8 @@ namespace Infrastructure.Persistence
         public DbSet<DocumentAttachment> DocumentAttachments => Set<DocumentAttachment>();
         public DbSet<SaleDriver> SaleDrivers => Set<SaleDriver>();
         public DbSet<SaleShippingNote> SaleShippingNotes => Set<SaleShippingNote>();
+        public DbSet<SaleProformaStageEvent> SaleProformaStageEvents => Set<SaleProformaStageEvent>();
+        public DbSet<SaleWarehouseIssue> SaleWarehouseIssues => Set<SaleWarehouseIssue>();
         public DbSet<PosTerminal> PosTerminals => Set<PosTerminal>();
         public DbSet<InventoryCostLedgerEntry> InventoryCostLedgerEntries => Set<InventoryCostLedgerEntry>();
         public DbSet<PaymentDetail> PaymentDetails => Set<PaymentDetail>();
@@ -596,6 +598,49 @@ namespace Infrastructure.Persistence
 
             modelBuilder.Entity<SaleShippingNote>()
                 .HasIndex(x => x.SaleId);
+
+            // Proforma approval pipeline (docs/proforma-approval-pipeline.md): an append-only history and the warehouse's
+            // problem reports. Both go with the sale (cascade); the product and unit are never deleted out from under a report.
+            modelBuilder.Entity<SaleProformaStageEvent>()
+                .HasOne(x => x.Sale)
+                .WithMany(x => x.ProformaEvents)
+                .HasForeignKey(x => x.SaleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SaleProformaStageEvent>()
+                .Property(x => x.Note)
+                .HasMaxLength(1000);
+
+            modelBuilder.Entity<SaleWarehouseIssue>()
+                .HasOne(x => x.Sale)
+                .WithMany()
+                .HasForeignKey(x => x.SaleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SaleWarehouseIssue>()
+                .HasOne(x => x.Product)
+                .WithMany()
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<SaleWarehouseIssue>()
+                .HasOne(x => x.ProductUnit)
+                .WithMany()
+                .HasForeignKey(x => x.ProductUnitId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<SaleWarehouseIssue>()
+                .Property(x => x.Description)
+                .HasMaxLength(1000)
+                .IsRequired();
+
+            modelBuilder.Entity<SaleWarehouseIssue>()
+                .Property(x => x.ResolutionNote)
+                .HasMaxLength(1000);
+
+            // The accounting inbox reads open issues, newest first.
+            modelBuilder.Entity<SaleWarehouseIssue>()
+                .HasIndex(x => new { x.ResolvedAt, x.ReportedAt });
 
             modelBuilder.Entity<PosTerminal>()
                 .HasIndex(x => x.Name)

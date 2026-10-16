@@ -20,7 +20,10 @@ namespace Application.Features.Accounting.Dtos
         /// <summary>Product.Stock: sellable units on hand.</summary>
         public int Stock { get; set; }
 
-        /// <summary>Quantity the cost ledger holds in the pool (equals Stock while the two stay in step).</summary>
+        /// <summary>Units reserved for proformas: on the shelf and still ours (valued in the pool), but out of Stock.</summary>
+        public int ReservedQuantity { get; set; }
+
+        /// <summary>Quantity the cost ledger holds in the pool (equals Stock + ReservedQuantity while the two stay in step).</summary>
         public int LedgerQuantity { get; set; }
         public decimal AverageCost { get; set; }
         public decimal PoolValue { get; set; }
@@ -35,6 +38,7 @@ namespace Application.Features.Accounting.Dtos
     {
         public int ProductCount { get; set; }
         public int Stock { get; set; }
+        public int ReservedQuantity { get; set; }
         public int QuarantinedQuantity { get; set; }
         public decimal PoolValue { get; set; }
         public decimal OffPoolValue { get; set; }

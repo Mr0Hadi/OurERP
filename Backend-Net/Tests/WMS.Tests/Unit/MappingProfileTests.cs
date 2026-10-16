@@ -68,7 +68,6 @@ namespace WMS.Tests.Unit
                 InvoiceDate = DateTime.Now,
                 CustomerId = 1,
                 PaymentType = PaymentTypeEnum.CASH,
-                PaymentDetails = new(),
                 ProductIds = new() { new CreateSaleItemDto { ProductId = 9, Quantity = 2, UnitPrice = 2000, Discount = 0 } },
             };
 
@@ -77,6 +76,7 @@ namespace WMS.Tests.Unit
             Assert.Equal(0UL, sale.TotalAmount);
             Assert.Equal(0UL, sale.PaidAmount);
             Assert.Equal(SalesStatusEnum.PROFORMA, sale.Status);
+            Assert.Equal(SaleProformaStageEnum.DRAFT, sale.ProformaStage);
             var item = Assert.Single(sale.Items);
             Assert.Equal(9, item.ProductId);
         }

@@ -12,25 +12,21 @@ namespace WMS.Tests.Integration
     public class SaleCrudTests
     {
         private static CreateSaleCommandHandler CreateHandler(TestScope scope, int userId) =>
-            new(scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance, FakeUserContext.WithUserId(userId));
+            new(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, TestMapper.Instance, FakeUserContext.WithUserId(userId));
 
         private static UpdateSaleCommandHandler UpdateHandler(TestScope scope) =>
-            new(scope.Db, FakeObjectStorage.Instance, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, TestMapper.Instance, scope.SaleReturnCalculation);
+            new(scope.Db, FakeObjectStorage.Instance, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, TestMapper.Instance, scope.SaleReturnCalculation, scope.ProductUnitService, FakeUserContext.WithUserId(1));
 
         private static AddSalePaymentCommandHandler AddPayment(TestScope scope) => new(scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation);
 
-        private static ChangeSaleStatusCommandHandler StatusHandler(TestScope scope) => new(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation);
+        private static ChangeSaleStatusCommandHandler StatusHandler(TestScope scope) => new(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation, scope.ProductUnitService);
 
-        /// <summary>A sale nothing has been shipped or paid on, turned back into a draft for tests that edit it.</summary>
-        private static SaleScenario ProformaSale(TestScope scope, int orderedQuantity = 5)
-        {
-            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: orderedQuantity, shippedQuantity: 0, stock: 0);
-            scenario.Sale.Status = SalesStatusEnum.PROFORMA;
-            scenario.Sale.InvoiceNumber = "";
-            scenario.Sale.PaidAmount = 0;
-            scope.Context.SaveChanges();
-            return scenario;
-        }
+        /// <summary>
+        /// A proforma nothing has been shipped or paid on, with free stock to edit against, already through the customer and
+        /// warehouse approvals so payment tests can pay it (an edit sends it back to DRAFT, which edit tests do not mind).
+        /// </summary>
+        private static SaleScenario ProformaSale(TestScope scope, int orderedQuantity = 5) =>
+            Seed.Proforma(scope.Context, orderedQuantity: orderedQuantity, stock: 20, stage: SaleProformaStageEnum.WAREHOUSE_CHECKED);
 
         private static UpdateSaleCommand UpdateOf(SaleScenario scenario, Action<UpdateSaleCommand>? change = null)
         {
@@ -50,7 +46,7 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0);
+            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 5);
             var user = Seed.PersistedUser(scope.Context);
 
             var created = await CreateHandler(scope, user.Id).Handle(new CreateSaleCommand
@@ -58,7 +54,6 @@ namespace WMS.Tests.Integration
                 InvoiceDate = DateTime.Now,
                 CustomerId = scenario.Customer.Id,
                 PaymentType = PaymentTypeEnum.CASH,
-                PaymentDetails = new() { new PaymentDetailDto { Type = PaymentTypeEnum.CASH, Amount = 1000 } },
                 ProductIds = new()
                 {
                     new CreateSaleItemDto { ProductId = scenario.Product.Id, Quantity = 2, UnitPrice = 2500, Discount = 0 },
@@ -70,54 +65,34 @@ namespace WMS.Tests.Integration
             var sale = verify.Sales.Include(x => x.Items).Include(x => x.PaymentDetails).Single(x => x.Id == createdId);
 
             Assert.Equal(5000UL, sale.TotalAmount);
-            Assert.Equal(1000UL, sale.PaidAmount);
-            Assert.Equal(PaymentDirectionEnum.IN, Assert.Single(sale.PaymentDetails).Direction);
+            Assert.Equal(0UL, sale.PaidAmount);
+            Assert.Empty(sale.PaymentDetails);
+            Assert.Equal(SalesStatusEnum.PROFORMA, sale.Status);
+            Assert.Equal(SaleProformaStageEnum.DRAFT, sale.ProformaStage);
             var item = Assert.Single(sale.Items);
             Assert.Equal(2, item.Quantity);
             Assert.Equal(scenario.Product.Id, item.ProductId);
         }
 
         [Fact]
-        public async Task CreateSale_PersistsPaymentDetails()
+        public async Task CreateSale_QuantityAboveFreeStock_IsRefused()
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0);
+            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 3);
             var user = Seed.PersistedUser(scope.Context);
 
-            var created = await CreateHandler(scope, user.Id).Handle(new CreateSaleCommand
+            // Two lines of one product: 2 + 2 is more than the 3 on the shelf.
+            await Assert.ThrowsAsync<ValidationCustomException>(() => CreateHandler(scope, user.Id).Handle(new CreateSaleCommand
             {
                 CustomerId = scenario.Customer.Id,
-                PaymentType = PaymentTypeEnum.CHECK,
-                PaymentDetails = new()
+                PaymentType = PaymentTypeEnum.CASH,
+                ProductIds = new()
                 {
-                    new PaymentDetailDto { Type = PaymentTypeEnum.CHECK, Amount = 5000, PaidAt = new DateTime(2026, 8, 10), CheckNumber = "CHK-1" },
+                    new CreateSaleItemDto { ProductId = scenario.Product.Id, Quantity = 2, UnitPrice = 5000 },
+                    new CreateSaleItemDto { ProductId = scenario.Product.Id, Quantity = 2, UnitPrice = 5000 },
                 },
-                ProductIds = new() { new CreateSaleItemDto { ProductId = scenario.Product.Id, Quantity = 1, UnitPrice = 5000, Discount = 0 } },
-            }, CancellationToken.None);
-
-            var createdId = Assert.IsType<CreatedSaleDto>(created.Data).Id;
-
-            using var verify = db.NewContext();
-            var payment = Assert.Single(verify.PaymentDetails.Where(x => x.SaleId == createdId));
-            Assert.Equal(PaymentTypeEnum.CHECK, payment.Type);
-            Assert.Equal(PaymentPurposeEnum.NORMAL, payment.Purpose);
-            Assert.Equal(5000m, payment.Amount);
-            Assert.Equal("CHK-1", payment.CheckNumber);
-        }
-
-        [Fact]
-        public void CreateSaleValidator_PaymentRowsOnAnInstallmentSale_AreInvalid()
-        {
-            var result = new CreateSaleCommandValidator().Validate(new CreateSaleCommand
-            {
-                CustomerId = 1,
-                PaymentType = PaymentTypeEnum.INSTALLMENT,
-                PaymentDetails = new() { new PaymentDetailDto { Type = PaymentTypeEnum.CASH, Amount = 1000 } },
-                ProductIds = new() { new CreateSaleItemDto { ProductId = 1, Quantity = 1, UnitPrice = 5000 } },
-            });
-
-            Assert.False(result.IsValid);
+            }, CancellationToken.None));
         }
 
         [Fact]
@@ -185,7 +160,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = ProformaSale(scope, orderedQuantity: 1);
 
-            await new DeleteSaleCommandHandler(scope.Db, scope.UnitOfWork).Handle(new DeleteSaleCommand { Id = scenario.Sale.Id }, CancellationToken.None);
+            await new DeleteSaleCommandHandler(scope.Db, scope.ProductUnitService, scope.UnitOfWork).Handle(new DeleteSaleCommand { Id = scenario.Sale.Id }, CancellationToken.None);
 
             using var verify = db.NewContext();
             Assert.False(verify.Sales.Single(x => x.Id == scenario.Sale.Id).IsActive);
@@ -204,7 +179,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0);
 
-            await Assert.ThrowsAsync<ValidationCustomException>(() => new DeleteSaleCommandHandler(scope.Db, scope.UnitOfWork)
+            await Assert.ThrowsAsync<ValidationCustomException>(() => new DeleteSaleCommandHandler(scope.Db, scope.ProductUnitService, scope.UnitOfWork)
                 .Handle(new DeleteSaleCommand { Id = scenario.Sale.Id }, CancellationToken.None));
         }
 
@@ -246,7 +221,7 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0);
+            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 1);
             var user = Seed.PersistedUser(scope.Context);
 
             await CreateHandler(scope, user.Id).Handle(new CreateSaleCommand
@@ -265,30 +240,20 @@ namespace WMS.Tests.Integration
             Assert.True(string.IsNullOrEmpty(sale.InvoiceNumber));
         }
 
-        [Fact]
-        public async Task CreateSale_WithAnyPayment_AutoFinalizesWithGeneratedInvoiceNumber()
+        [Theory]
+        [InlineData(SaleProformaStageEnum.DRAFT)]
+        [InlineData(SaleProformaStageEnum.CUSTOMER_APPROVED)]
+        public async Task AddSalePayment_BeforeTheWarehouseCheck_IsRefused(SaleProformaStageEnum stage)
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0);
-            var user = Seed.PersistedUser(scope.Context);
+            var scenario = Seed.Proforma(scope.Context, orderedQuantity: 1, stock: 5, stage: stage);
 
-            await CreateHandler(scope, user.Id).Handle(new CreateSaleCommand
-            {
-                CustomerId = scenario.Customer.Id,
-                PaymentType = PaymentTypeEnum.CASH,
-                // یک ریال کافی است: پیش‌فاکتور یعنی هنوز هیچ پولی جابه‌جا نشده.
-                PaymentDetails = new() { new PaymentDetailDto { Type = PaymentTypeEnum.CASH, Amount = 1 } },
-                ProductIds = new()
-                {
-                    new CreateSaleItemDto { ProductId = scenario.Product.Id, Quantity = 1, UnitPrice = 5000, Discount = 0 },
-                },
-            }, CancellationToken.None);
+            await Assert.ThrowsAsync<ValidationCustomException>(() => AddPayment(scope).Handle(
+                new AddSalePaymentCommand { SaleId = scenario.Sale.Id, Type = PaymentTypeEnum.CASH, Amount = 1 }, CancellationToken.None));
 
             using var verify = db.NewContext();
-            var sale = verify.Sales.Single(x => x.CustomerId == scenario.Customer.Id && x.TotalAmount == 5000);
-            Assert.Equal(SalesStatusEnum.PROCESSING, sale.Status);
-            Assert.False(string.IsNullOrEmpty(sale.InvoiceNumber));
+            Assert.Equal(SalesStatusEnum.PROFORMA, verify.Sales.Single(x => x.Id == scenario.Sale.Id).Status);
         }
 
         [Fact]
@@ -297,7 +262,7 @@ namespace WMS.Tests.Integration
             // تاریخ فاکتور در پیش‌فاکتور واقعاً null ذخیره می‌شود، نه 0001-01-01.
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0);
+            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 1);
             var user = Seed.PersistedUser(scope.Context);
 
             await CreateHandler(scope, user.Id).Handle(new CreateSaleCommand
@@ -323,7 +288,7 @@ namespace WMS.Tests.Integration
         {
             using var db = new TestDatabase();
             using var scope = db.NewScope();
-            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0);
+            var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 1);
             var user = Seed.PersistedUser(scope.Context);
             var invoiceDate = new DateTime(2026, 8, 10);
             var paymentDate = new DateTime(2026, 9, 9);
@@ -359,7 +324,7 @@ namespace WMS.Tests.Integration
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 0, stock: 0);
             var newDue = DateTime.Now.Date.AddMonths(2);
 
-            await new UpdateSalePaymentDateCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation)
+            await new UpdateSalePaymentDateCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation, FakeUserContext.WithUserId(1))
                 .Handle(new UpdateSalePaymentDateCommand { Id = scenario.Sale.Id, PaymentDate = newDue }, CancellationToken.None);
 
             using var verify = db.NewContext();

@@ -20,6 +20,10 @@ namespace Domain.Enums
         [Description("بررسی شد - سالم")]
         INSPECTION_PASSED = 5,
 
+        /// <summary>The system holds it IN_STOCK but it is not on the shelf (lost, stolen). Reported during a proforma check.</summary>
+        [Description("مفقود")]
+        MISSING = 6,
+
         [Description("سایر موارد")]
         OTHER = 9,
     }

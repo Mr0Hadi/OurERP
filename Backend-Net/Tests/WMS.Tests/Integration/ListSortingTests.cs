@@ -17,6 +17,7 @@ using Application.Features.PurchaseReturn.Queries;
 using Application.Features.Report.Queries;
 using Application.Features.Sale.Dtos;
 using Application.Features.Audit.Queries;
+using Application.Features.WarehouseIssue.Queries;
 using Application.Features.Sale.Queries;
 using Application.Features.SaleInstallment.Queries;
 using Application.Features.SaleReturn.Queries;
@@ -70,6 +71,7 @@ namespace WMS.Tests.Integration
             await RunAll<SupplyPerformanceByEmployeeSortEnum>((s, d) => new GetSupplyPerformanceByEmployeeQueryHandler(scope.Db).Handle(new GetSupplyPerformanceByEmployeeQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<PartyBalanceListSortEnum>((s, d) => new GetPartyBalanceListQueryHandler(scope.Db).Handle(new GetPartyBalanceListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<AuditEventListSortEnum>((s, d) => new GetAuditEventListQueryHandler(scope.Db).Handle(new GetAuditEventListQuery { SortBy = s, SortDirection = d }, ct));
+            await RunAll<SaleWarehouseIssueListSortEnum>((s, d) => new GetSaleWarehouseIssueListQueryHandler(scope.Db).Handle(new GetSaleWarehouseIssueListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<PartyLedgerEntryListSortEnum>((s, d) => new GetPartyLedgerEntryListQueryHandler(scope.Db).Handle(new GetPartyLedgerEntryListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<SaleJournalSortEnum>((s, d) => new GetSaleJournalQueryHandler(scope.Db).Handle(new GetSaleJournalQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<PurchaseJournalSortEnum>((s, d) => new GetPurchaseJournalQueryHandler(scope.Db).Handle(new GetPurchaseJournalQuery { SortBy = s, SortDirection = d }, ct));

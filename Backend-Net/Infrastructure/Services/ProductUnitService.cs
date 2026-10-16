@@ -105,6 +105,97 @@ namespace Infrastructure.Services
             return units;
         }
 
+        public async Task<List<Domain.Entities.ProductUnit>> ReserveAsync(Domain.Entities.Product product, int saleItemId, List<string> barcodes, UnitMovementContext movement, CancellationToken cancellationToken)
+        {
+            if (barcodes.Count == 0)
+                return new();
+
+            var units = await ResolveScannedAsync(product.Id, barcodes, barcodes.Count,
+                unit => unit.Status == ProductUnitStatusEnum.IN_STOCK,
+                unit => unit.Status == ProductUnitStatusEnum.RESERVED
+                    ? $"بارکد «{unit.Barcode}» برای پیش‌فاکتور دیگری رزرو شده است."
+                    : $"بارکد «{unit.Barcode}» در انبار موجود نیست.",
+                "تعداد بارکدهای اسکن‌شده با تعداد این قلم مطابقت ندارد.",
+                cancellationToken);
+
+            foreach (var unit in units)
+            {
+                var from = unit.Status;
+                unit.Status = ProductUnitStatusEnum.RESERVED;
+                unit.SaleItemId = saleItemId;
+                await RecordAsync(unit, from, movement, cancellationToken);
+            }
+
+            return units;
+        }
+
+        public async Task<List<Domain.Entities.ProductUnit>> ReleaseReservationAsync(int saleItemId, UnitMovementContext movement, CancellationToken cancellationToken)
+        {
+            var units = await SelectUnitsAsync(
+                ReservedFor(saleItemId),
+                saved => saved.OrderBy(x => x.SerialNumber),
+                tracked => tracked.OrderBy(x => x.SerialNumber),
+                int.MaxValue,
+                cancellationToken);
+
+            foreach (var unit in units)
+            {
+                var from = unit.Status;
+                unit.Status = ProductUnitStatusEnum.IN_STOCK;
+                // Before the movement row, so it still names the line the reservation was for.
+                await RecordAsync(unit, from, movement, cancellationToken);
+                unit.SaleItemId = null;
+            }
+
+            return units;
+        }
+
+        public Task<int> CountReservedAsync(int saleItemId, CancellationToken cancellationToken) =>
+            CountUnitsAsync(ReservedFor(saleItemId), cancellationToken);
+
+        public async Task<List<Domain.Entities.ProductUnit>> ConsumeReservedAsync(Domain.Entities.Product product, int count, int saleItemId, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken)
+        {
+            if (count <= 0)
+                return new();
+
+            var filter = ReservedFor(saleItemId);
+            List<Domain.Entities.ProductUnit> units;
+
+            if (explicitBarcodes is { Count: > 0 })
+            {
+                units = await ResolveScannedAsync(product.Id, explicitBarcodes, count,
+                    filter.Compile(),
+                    unit => $"بارکد «{unit.Barcode}» از دانه‌های رزروشده‌ی این قلم فروش نیست.",
+                    "تعداد بارکدهای اسکن‌شده با مقدار ارسالی مطابقت ندارد.",
+                    cancellationToken);
+            }
+            else
+            {
+                units = await SelectUnitsAsync(filter,
+                    saved => saved.OrderBy(x => x.SerialNumber),
+                    tracked => tracked.OrderBy(x => x.SerialNumber),
+                    count,
+                    cancellationToken);
+
+                if (units.Count < count)
+                    throw new ValidationCustomException($"تعداد دانه‌های رزروشده‌ی «{product.Name}» برای این ارسال کافی نیست.");
+            }
+
+            foreach (var unit in units)
+            {
+                var from = unit.Status;
+                unit.Status = ProductUnitStatusEnum.SOLD;
+                unit.CustodyReason = UnitCustodyReasonEnum.ON_ORDER;
+                unit.SoldAt = DateTime.Now;
+                await RecordAsync(unit, from, movement, cancellationToken);
+            }
+
+            return units;
+        }
+
+        private static Expression<Func<Domain.Entities.ProductUnit, bool>> ReservedFor(int saleItemId) =>
+            x => x.SaleItemId == saleItemId && x.Status == ProductUnitStatusEnum.RESERVED;
+
         public async Task RestoreAsync(int saleItemId, bool excessUnits, int healthyCount, int defectiveCount, decimal defectiveUnitCost, List<string>? barcodes, List<string>? defectiveBarcodes, UnitMovementContext movement, CancellationToken cancellationToken)
         {
             if (healthyCount <= 0 && defectiveCount <= 0)

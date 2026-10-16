@@ -38,6 +38,12 @@ namespace Application.Features.Sale.Queries
         /// PARTIALLY_DELIVERED together. Combines with Status by AND, like every other filter.
         /// </summary>
         public List<SalesStatusEnum>? Statuses { get; set; }
+
+        /// <summary>
+        /// Proformas at any of these approval stages (?proformaStages=1) - e.g. the warehouse's queue is CUSTOMER_APPROVED, the
+        /// cashier's is WAREHOUSE_CHECKED. Implies Status == PROFORMA.
+        /// </summary>
+        public List<SaleProformaStageEnum>? ProformaStages { get; set; }
         public PaymentTypeEnum? PaymentType { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
@@ -84,6 +90,12 @@ namespace Application.Features.Sale.Queries
             {
                 var statuses = request.Statuses;
                 query = query.Where(x => statuses.Contains(x.Status));
+            }
+
+            if (request.ProformaStages is { Count: > 0 })
+            {
+                var stages = request.ProformaStages;
+                query = query.Where(x => x.Status == SalesStatusEnum.PROFORMA && stages.Contains(x.ProformaStage));
             }
 
             if (request.PaymentType.HasValue)
@@ -136,6 +148,8 @@ namespace Application.Features.Sale.Queries
                 InvoiceDate = x.InvoiceDate,
                 PaymentDate = x.PaymentDate,
                 Status = x.Status,
+                ProformaStage = x.ProformaStage,
+                OpenWarehouseIssueCount = _context.SaleWarehouseIssues.Count(i => i.SaleId == x.Id && i.ResolvedAt == null),
                 PaymentType = x.PaymentType,
                 TotalAmount = x.TotalAmount,
                 // A live plan (not cancelled) adds its charge on top of the invoice.
@@ -152,6 +166,7 @@ namespace Application.Features.Sale.Queries
                 _context, paged.Items.Select(x => x.Id).ToList(), cancellationToken);
             foreach (var item in paged.Items)
             {
+                item.ProformaStageTitle = item.Status == SalesStatusEnum.PROFORMA ? item.ProformaStage.GetDescription() : null;
                 if (summaries.TryGetValue(item.Id, out var summary))
                     item.InstallmentSummary = summary;
             }

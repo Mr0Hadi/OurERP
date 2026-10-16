@@ -11,6 +11,19 @@ namespace Application.Features.Sale.Dtos
         public DateTime? InvoiceDate { get; set; }
         public DateTime? PaymentDate { get; set; }
         public SalesStatusEnum Status { get; set; }
+
+        /// <summary>Approval stage while Status == PROFORMA (docs/proforma-approval-pipeline.md). Payment is accepted at WAREHOUSE_CHECKED.</summary>
+        public SaleProformaStageEnum ProformaStage { get; set; }
+        public string? ProformaStageTitle { get; set; }
+
+        /// <summary>Send it back with ApproveSaleProforma / CheckSaleWarehouse: an approval is for the revision the screen showed.</summary>
+        public int Revision { get; set; }
+
+        /// <summary>Approvals, warehouse shortages and edits that sent it back - oldest first.</summary>
+        public List<SaleProformaEventDto> ProformaEvents { get; set; } = new();
+
+        /// <summary>Units the warehouse reported damaged/missing while checking this proforma, and accounting's decision.</summary>
+        public List<Application.Features.WarehouseIssue.Dtos.SaleWarehouseIssueDto> WarehouseIssues { get; set; } = new();
         public PaymentTypeEnum PaymentType { get; set; }
         public List<PaymentDetailDto> PaymentDetails { get; set; } = new();
 

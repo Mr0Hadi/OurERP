@@ -233,6 +233,7 @@ namespace WMS.Tests.Integration
                 var product = Seed.Product(Seed.Category());
                 var sale = Seed.Sale(Seed.Customer(), SalesStatusEnum.PROFORMA, Seed.SaleItem(product, 2, 1000));
                 sale.InvoiceNumber = "";
+                sale.ProformaStage = SaleProformaStageEnum.WAREHOUSE_CHECKED;
                 context.Sales.Add(sale);
                 context.SaveChanges();
                 saleId = sale.Id;
@@ -400,7 +401,7 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
 
-            using (scope.AuditScope.Begin(AuditActionEnum.CreateInPersonSale))
+            using (scope.AuditScope.Begin(AuditActionEnum.CompleteInPersonSale))
             {
                 using (scope.AuditScope.Begin(AuditActionEnum.CreateSale))
                 {
@@ -408,7 +409,7 @@ namespace WMS.Tests.Integration
                     await scope.Context.SaveChangesAsync();
                 }
 
-                Assert.Equal(AuditActionEnum.CreateInPersonSale, scope.AuditScope.Action);
+                Assert.Equal(AuditActionEnum.CompleteInPersonSale, scope.AuditScope.Action);
                 scope.Context.Customers.Add(Seed.Customer("رضا"));
                 await scope.Context.SaveChangesAsync();
             }
@@ -417,7 +418,7 @@ namespace WMS.Tests.Integration
 
             using var verify = db.NewContext();
             var auditEvent = await verify.AuditEvents.Include(x => x.Changes).SingleAsync();
-            Assert.Equal(AuditActionEnum.CreateInPersonSale, auditEvent.Action);
+            Assert.Equal(AuditActionEnum.CompleteInPersonSale, auditEvent.Action);
             Assert.Equal(2, auditEvent.Changes.Count);
         }
 

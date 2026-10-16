@@ -20,8 +20,8 @@ namespace Application.Features.Sale.Commands
 {
     /// <summary>
     /// Records money moving on a sale. Direction defaults to IN (the customer pays); OUT is money given back to the
-    /// customer. The first IN on a PROFORMA issues the invoice (SaleInvoiceFinalizer) - a proforma is a sale nobody has
-    /// paid a rial towards. PaidAmount is recomputed from the rows.
+    /// customer. A PROFORMA takes no payment until it reaches WAREHOUSE_CHECKED (customer and warehouse approved); its first
+    /// IN then issues the invoice (SaleInvoiceFinalizer). PaidAmount is recomputed from the rows.
     /// </summary>
     [AuditAction(AuditActionEnum.AddSalePayment)]
     public class AddSalePaymentCommand : PaymentInput, IRequest<ResponseDto>
@@ -75,6 +75,9 @@ namespace Application.Features.Sale.Commands
             var direction = request.Direction ?? DocumentPayments.SaleDirection;
             if (sale.Status == SalesStatusEnum.CANCELLED && direction == DocumentPayments.SaleDirection)
                 throw new ValidationCustomException("فروش لغوشده پرداخت تازه نمی‌پذیرد؛ فقط پول برگشتی به مشتری ثبت می‌شود.");
+
+            // A proforma takes money only once the customer and the warehouse have approved it (docs/proforma-approval-pipeline.md).
+            SaleProformaPipeline.EnsureReadyForPayment(sale);
 
             var payment = PaymentWriter.NewRow(request, direction);
             sale.PaymentDetails.Add(payment);

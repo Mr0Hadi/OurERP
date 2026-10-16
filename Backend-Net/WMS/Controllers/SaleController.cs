@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Domain.Enums;
 using WMS.Authorization;
+using Application.Features.WarehouseIssue.Commands;
+using Application.Features.WarehouseIssue.Queries;
 
 namespace WMS.Controllers
 {
@@ -20,14 +22,14 @@ namespace WMS.Controllers
             _mediator = mediator;
         }
 
-        [HasPermission(PermissionEnum.SaleView)]
+        [HasPermission(PermissionEnum.SaleView, PermissionEnum.SaleWarehouseCheck)]
         [HttpGet("GetSaleList")]
         public async Task<ActionResult<ResponseDto>> GetSaleList([FromQuery] GetSaleListQuery request)
         {
             return await _mediator.Send(request);
         }
 
-        [HasPermission(PermissionEnum.SaleView)]
+        [HasPermission(PermissionEnum.SaleView, PermissionEnum.SaleWarehouseCheck)]
         [HttpGet("GetSaleDetail")]
         public async Task<ActionResult<ResponseDto>> GetSaleDetail([FromQuery] GetSaleDetailQuery request)
         {
@@ -42,8 +44,37 @@ namespace WMS.Controllers
         }
 
         [HasPermission(PermissionEnum.SaleInPerson)]
-        [HttpPost("CreateInPersonSale")]
-        public async Task<ActionResult<ResponseDto>> CreateInPersonSale([FromBody] CreateInPersonSaleCommand request)
+        [HttpPost("CompleteInPersonSale")]
+        public async Task<ActionResult<ResponseDto>> CompleteInPersonSale([FromBody] CompleteInPersonSaleCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        // ── Proforma approval pipeline (docs/proforma-approval-pipeline.md) ─────────────────────────────────────────
+        [HasPermission(PermissionEnum.SaleUpdate)]
+        [HttpPost("ApproveSaleProforma")]
+        public async Task<ActionResult<ResponseDto>> ApproveSaleProforma([FromBody] ApproveSaleProformaCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.SaleWarehouseCheck)]
+        [HttpPost("CheckSaleWarehouse")]
+        public async Task<ActionResult<ResponseDto>> CheckSaleWarehouse([FromBody] CheckSaleWarehouseCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.AccountingView, PermissionEnum.SaleWarehouseIssueResolve)]
+        [HttpGet("GetSaleWarehouseIssueList")]
+        public async Task<ActionResult<ResponseDto>> GetSaleWarehouseIssueList([FromQuery] GetSaleWarehouseIssueListQuery request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.SaleWarehouseIssueResolve)]
+        [HttpPost("ResolveSaleWarehouseIssue")]
+        public async Task<ActionResult<ResponseDto>> ResolveSaleWarehouseIssue([FromBody] ResolveSaleWarehouseIssueCommand request)
         {
             return await _mediator.Send(request);
         }
