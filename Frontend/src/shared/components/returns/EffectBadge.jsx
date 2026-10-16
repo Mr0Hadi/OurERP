@@ -88,7 +88,7 @@ export default function EffectBadge({ effect, side, showProductName = false }) {
   const observations = observationsOf(effect);
 
   return (
-    <div className="flex items-start gap-1.5 min-w-0 text-[11px] leading-5">
+    <div className="flex items-start gap-1.5 min-w-0 text-xs leading-5 sm:text-[11px]">
       {Icon && (
         <Icon
           className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${ACCENTS[effect.direction] ?? ""}`}
@@ -101,8 +101,12 @@ export default function EffectBadge({ effect, side, showProductName = false }) {
         <span className="tabular-nums font-medium text-card-foreground">
           {value}
         </span>
+        {/* موبایل: جزئیات در سطرِ خودش، تا برچسب و مقدار وسطِ جمله نشکنند. */}
         {details.length > 0 && (
-          <span className="text-muted-foreground"> · {details.join(" · ")}</span>
+          <span className="block text-muted-foreground sm:inline">
+            <span className="hidden sm:inline"> · </span>
+            {details.join(" · ")}
+          </span>
         )}
         {observations.length > 0 && (
           <div className="text-muted-foreground">

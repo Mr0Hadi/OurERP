@@ -16,6 +16,7 @@ import ClaimRow from "./ClaimRow";
 import { ReceivingReportLines } from "./ReceivingReport";
 import { withoutExcess } from "@/shared/domain/returns/receivingReport";
 import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
+import { ACTION_BUTTON_CLASS } from "./actionButtonClass";
 
 const sumQuantity = (claims) =>
   claims.reduce((sum, claim) => sum + (Number(claim.quantity) || 0), 0);
@@ -143,7 +144,7 @@ function LineCard({
           type="button"
           size="sm"
           variant="outline"
-          className="flex-1 h-8 text-xs gap-1.5"
+          className={`flex-1 ${ACTION_BUTTON_CLASS}`}
           onClick={() => onAddClaim(line.lineKey)}
           disabled={remaining <= 0}
         >
@@ -156,7 +157,7 @@ function LineCard({
             type="button"
             size="sm"
             variant="ghost"
-            className="flex-1 h-8 text-xs gap-1.5"
+            className={`flex-1 ${ACTION_BUTTON_CLASS}`}
             onClick={onAddExcess}
           >
             <Plus className="h-3.5 w-3.5" />
@@ -292,7 +293,7 @@ export default function ReturnItemsSection({
             type="button"
             size="sm"
             variant="outline"
-            className="w-full h-8 text-xs gap-1.5"
+            className={`w-full ${ACTION_BUTTON_CLASS}`}
             onClick={() => setIsCatalogOpen((open) => !open)}
           >
             <PackagePlus className="h-3.5 w-3.5" />

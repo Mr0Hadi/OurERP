@@ -8,6 +8,7 @@ import Notice from "@/shared/components/feedback/Notice";
 import { RETURN_STATUSES, isTerminalStatus } from "@/shared/domain/returns/statuses";
 import ClaimResolutionCard from "./ClaimResolutionCard";
 import ReturnStatusReasonDialog from "./ReturnStatusReasonDialog";
+import { ACTION_BUTTON_CLASS } from "./actionButtonClass";
 
 /**
  * ادعاها و تصمیم‌هایشان، و کارهای چرخه‌ی عمرِ مرجوعی (رد، لغو، بازگشایی) —
@@ -47,14 +48,20 @@ export default function ReturnResolutionSection({
           ادعاها و تصمیم‌ها
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 px-3 sm:px-4">
         {!isClosed && warehouseLinks.length > 0 && (
           <Notice tone="warning" icon={Warehouse}>
             <div className="space-y-2">
               <p className="font-medium">کالای این مرجوعی منتظرِ انبار است</p>
               <div className="flex flex-col sm:flex-row gap-2">
                 {warehouseLinks.map(({ to, label }) => (
-                  <Button key={to} asChild size="sm" variant="outline" className="flex-1 h-8 text-xs">
+                  <Button
+                    key={to}
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className={`flex-1 bg-background/80 ${ACTION_BUTTON_CLASS}`}
+                  >
                     <Link to={to}>{label}</Link>
                   </Button>
                 ))}
@@ -72,7 +79,7 @@ export default function ReturnResolutionSection({
               </p>
               <StatusReason reason={statusReason} />
               {canReopen && (
-                <Button type="button" size="sm" className="w-full gap-2" disabled={isBusy} onClick={actions.onReopen}>
+                <Button type="button" size="sm" className={`w-full ${ACTION_BUTTON_CLASS}`} disabled={isBusy} onClick={actions.onReopen}>
                   <RotateCcw className="h-4 w-4" />
                   بازگشایی این مرجوعی
                 </Button>
@@ -115,7 +122,7 @@ export default function ReturnResolutionSection({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="flex-1 gap-2 border-destructive/30 text-destructive hover:bg-destructive/10"
+                className={`flex-1 ${ACTION_BUTTON_CLASS} border-destructive/30 text-destructive hover:bg-destructive/10`}
                 disabled={isBusy}
                 onClick={() => setReasonAction("reject")}
               >
@@ -128,7 +135,7 @@ export default function ReturnResolutionSection({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="gap-2 text-muted-foreground"
+                className={`text-muted-foreground sm:px-4 ${ACTION_BUTTON_CLASS}`}
                 disabled={isBusy}
                 onClick={() => setReasonAction("cancel")}
               >

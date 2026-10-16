@@ -3,6 +3,7 @@ import { CheckCircle2, Plus, X } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import ResolutionLineRow from "./ResolutionLineRow";
+import { ACTION_BUTTON_CLASS } from "./actionButtonClass";
 import {
   claimDecidedQuantity,
   claimRemainingQuantity,
@@ -58,12 +59,16 @@ export default function ClaimResolutionCard({
           <p className="font-medium text-card-foreground text-sm break-words">
             {claim.productName}
           </p>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-[11px] text-muted-foreground font-mono break-all">
             {claim.productCode}
           </p>
         </div>
-        <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">
-          تصمیم‌گرفته: {formatNumber(decided)} از {formatNumber(total)}
+        <span
+          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] tabular-nums ${
+            remaining === 0 ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
+          }`}
+        >
+          {formatNumber(decided)} از {formatNumber(total)} تصمیم
         </span>
       </div>
 
@@ -137,7 +142,7 @@ export default function ClaimResolutionCard({
               type="button"
               size="sm"
               variant="ghost"
-              className="w-full h-7 text-[11px] gap-1 text-muted-foreground"
+              className={`w-full text-muted-foreground ${ACTION_BUTTON_CLASS}`}
               onClick={() => setIsComposerOpen(false)}
             >
               <X className="h-3.5 w-3.5" />
@@ -149,7 +154,7 @@ export default function ClaimResolutionCard({
             type="button"
             size="sm"
             variant="outline"
-            className="w-full h-8 text-xs gap-1.5"
+            className={`w-full ${ACTION_BUTTON_CLASS}`}
             onClick={() => setIsComposerOpen(true)}
             disabled={isBusy}
           >

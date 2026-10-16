@@ -19,6 +19,7 @@ import { useSyncedComputedValue } from "@/shared/hooks/useSyncedComputedValue";
 import GoodsItemsPicker from "./GoodsItemsPicker";
 import ResolutionMoneySection from "./ResolutionMoneySection";
 import EffectBadge from "./EffectBadge";
+import { ACTION_BUTTON_CLASS } from "./actionButtonClass";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { CLAIM_SCOPES } from "@/shared/domain/returns/scopes";
 
@@ -34,7 +35,7 @@ function SourceNote({ quantity, quarantineAvailable, offScope }) {
     fromStock > 0 && `${formatNumber(fromStock)} عدد از موجودیِ قفسه`,
   ].filter(Boolean);
   return (
-    <p className="ps-6 text-[11px] text-muted-foreground">
+    <p className="ps-7 text-[11px] text-muted-foreground">
       همان کالای معیوب: {parts.join("، ")}
       {fromStock > 0 && !offScope && " (عیبی که بعد از دریافت روی قفسه پیدا شده)"}
     </p>
@@ -169,9 +170,11 @@ export default function ResolutionComposer({
     );
 
   return (
-    <div className="rounded-lg border border-dashed border-primary/30 bg-primary/3 p-3 space-y-3">
+    // موبایل: تمام‌عرضِ کارتِ ادعا (فقط خط‌چینِ بالا و پایین) تا جعبه‌های تودرتو
+    // عرضِ فرم را نخورند؛ از sm به بالا جعبه‌ی خط‌چینِ کامل.
+    <div className="-mx-3 space-y-3.5 border-y border-dashed border-primary/30 bg-primary/3 px-3 py-3 sm:mx-0 sm:rounded-lg sm:border-x">
       <div className="space-y-1">
-        <Label className="text-[11px] text-muted-foreground">
+        <Label className="text-xs text-muted-foreground sm:text-[11px]">
           این تصمیم برای چند عدد از این ادعاست؟ (باقیمانده: {formatNumber(remaining)})
         </Label>
         <Input
@@ -180,7 +183,7 @@ export default function ResolutionComposer({
           max={remaining}
           value={composition.quantity}
           onChange={(e) => patch({ quantity: Number(e.target.value) || 0 })}
-          className="h-8 text-xs text-center"
+          className="h-10 text-sm text-center tabular-nums sm:h-8 sm:text-xs"
         />
       </div>
 
@@ -188,7 +191,7 @@ export default function ResolutionComposer({
         <>
           {side.goodsSlots.map(({ slot, label, hint, allowPicker, pickerLabel, withSource }) => (
             <div key={slot} className="space-y-2">
-              <label className="flex items-start gap-2 cursor-pointer">
+              <label className="flex items-start gap-2.5 cursor-pointer py-0.5">
                 <Checkbox
                   checked={composition[slot].enabled}
                   onCheckedChange={(checked) =>
@@ -202,11 +205,11 @@ export default function ResolutionComposer({
                           : [],
                     })
                   }
-                  className="mt-0.5"
+                  className="mt-1 sm:mt-0.5"
                 />
-                <span className="text-xs text-card-foreground">
+                <span className="text-sm leading-6 text-card-foreground sm:text-xs sm:leading-normal">
                   {label}
-                  <span className="block text-[11px] text-muted-foreground">
+                  <span className="block text-xs leading-5 text-muted-foreground sm:text-[11px]">
                     {allowPicker
                       ? hint
                       : `${formatNumber(quantity)} ${claim.unit || "عدد"} از ${claim.productName} — ${hint}`}
@@ -222,13 +225,16 @@ export default function ResolutionComposer({
                 />
               )}
 
+              {/* زیرِ همان گزینه با یک خطِ راهنما، نه یک جعبه‌ی تودرتوی دیگر. */}
               {composition[slot].enabled && allowPicker && (
-                <GoodsItemsPicker
-                  items={composition[slot].items}
-                  onItemsChange={(items) => patchSlot(slot, { items })}
-                  openLabel={pickerLabel}
-                  priceOf={side.priceOf}
-                />
+                <div className="ms-2 border-s-2 border-primary/25 ps-2.5">
+                  <GoodsItemsPicker
+                    items={composition[slot].items}
+                    onItemsChange={(items) => patchSlot(slot, { items })}
+                    openLabel={pickerLabel}
+                    priceOf={side.priceOf}
+                  />
+                </div>
               )}
             </div>
           ))}
@@ -236,15 +242,15 @@ export default function ResolutionComposer({
           {showQuarantine &&
             quarantineSlots.map(({ slot, label, hint, withSource }) => (
               <div key={slot} className="space-y-2">
-                <label className="flex items-start gap-2 cursor-pointer">
+                <label className="flex items-start gap-2.5 cursor-pointer py-0.5">
                   <Checkbox
                     checked={composition[slot].enabled}
                     onCheckedChange={(checked) => patchSlot(slot, { enabled: checked === true })}
-                    className="mt-0.5"
+                    className="mt-1 sm:mt-0.5"
                   />
-                  <span className="text-xs text-card-foreground">
+                  <span className="text-sm leading-6 text-card-foreground sm:text-xs sm:leading-normal">
                     {label}
-                    <span className="block text-[11px] text-muted-foreground">
+                    <span className="block text-xs leading-5 text-muted-foreground sm:text-[11px]">
                       {formatNumber(quantity)} {claim.unit || "عدد"} از {claim.productName} — {hint}
                       {slot === "goodsRelease" &&
                         quarantineAvailable != null &&
@@ -263,7 +269,7 @@ export default function ResolutionComposer({
             ))}
 
           <div className="space-y-1.5">
-            <Label className="text-[11px] text-muted-foreground">جابه‌جایی پول</Label>
+            <Label className="text-xs text-muted-foreground sm:text-[11px]">جابه‌جایی پول</Label>
             <ResolutionMoneySection
               moneyIn={composition.moneyIn}
               moneyOut={composition.moneyOut}
@@ -278,15 +284,15 @@ export default function ResolutionComposer({
         </>
       )}
 
-      <label className="flex items-start gap-2 cursor-pointer">
+      <label className="flex items-start gap-2.5 cursor-pointer py-0.5">
         <Checkbox
           checked={composition.writeOff}
           onCheckedChange={(checked) => toggleWriteOff(checked === true)}
-          className="mt-0.5"
+          className="mt-1 sm:mt-0.5"
         />
-        <span className="text-xs text-card-foreground">
+        <span className="text-sm leading-6 text-card-foreground sm:text-xs sm:leading-normal">
           این تعداد بخشیده شود
-          <span className="block text-[11px] text-muted-foreground">
+          <span className="block text-xs leading-5 text-muted-foreground sm:text-[11px]">
             بدون هیچ جابه‌جایی کالا یا پول بسته می‌شود — مثلاً ادعای ناچیزی که پیگیری‌اش ارزش ندارد
           </span>
         </span>
@@ -296,7 +302,7 @@ export default function ResolutionComposer({
         value={composition.note}
         onChange={(e) => patch({ note: e.target.value })}
         placeholder="یادداشت (اختیاری)..."
-        className="h-8 text-xs"
+        className="h-10 text-sm sm:h-8 sm:text-xs"
       />
 
       {previewEffects.length > 0 && (
@@ -324,7 +330,7 @@ export default function ResolutionComposer({
       <Button
         type="button"
         size="sm"
-        className="w-full gap-1.5 h-8 text-xs"
+        className={`w-full ${ACTION_BUTTON_CLASS}`}
         onClick={handleSubmit}
         disabled={isBusy || errors.length > 0}
       >

@@ -21,7 +21,7 @@ export default function DeleteReturnAction({ returnNumber, onDelete, isPending, 
         type="button"
         variant="ghost"
         size="sm"
-        className="w-full gap-2 text-destructive hover:bg-destructive/10"
+        className="h-10 w-full gap-2 text-destructive hover:bg-destructive/10 sm:h-8"
         disabled={disabled}
         onClick={() => setOpen(true)}
       >

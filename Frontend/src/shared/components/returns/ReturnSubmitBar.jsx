@@ -15,11 +15,11 @@ export default function ReturnSubmitBar({ total, submitLabel, isBusy, onCancel }
         <span className="font-bold text-card-foreground tabular-nums">{formatRial(total)}</span>
       </div>
       <div className="flex gap-2">
-        <Button type="submit" className="flex-1 sm:flex-none gap-2" disabled={isBusy}>
+        <Button type="submit" className="h-10 flex-1 gap-2 sm:h-8 sm:flex-none" disabled={isBusy}>
           <Save className="h-4 w-4" />
           {isBusy ? "در حال ثبت..." : submitLabel}
         </Button>
-        <Button type="button" variant="outline" className="gap-2" onClick={onCancel} disabled={isBusy}>
+        <Button type="button" variant="outline" className="h-10 gap-2 sm:h-8" onClick={onCancel} disabled={isBusy}>
           <X className="h-4 w-4" />
           انصراف
         </Button>

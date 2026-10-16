@@ -231,14 +231,16 @@ export default function ProductPicker({
   if (collapsible) {
     // تاشو یعنی داخلِ کارتِ یک تصمیمِ مرجوعی، با اقلام بالای انتخابگر.
     return (
-      <div className="@container/picker space-y-2 rounded-md border border-border bg-card/60 p-2.5">
+      // بی‌جعبه: صاحبِ تاشو (تصمیمِ مرجوعی) خودش قاب دارد و جعبه‌ی دیگر روی موبایل
+      // فقط عرض می‌خورد.
+      <div className="@container/picker space-y-2">
         {selectedItems}
 
         <Button
           type="button"
           size="sm"
           variant="outline"
-          className="w-full h-8 text-xs gap-1.5"
+          className="w-full h-auto min-h-10 gap-1.5 whitespace-normal py-2 text-sm sm:min-h-8 sm:py-1.5 sm:text-xs"
           onClick={() => {
             setIsPickerOpen(!isPickerOpen);
             onPickerOpenChange?.(!isPickerOpen);

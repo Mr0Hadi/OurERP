@@ -13,6 +13,7 @@ import {
   summarizeEffects,
 } from "@/shared/domain/returns/effects";
 import EffectBadge from "./EffectBadge";
+import { ACTION_BUTTON_CLASS } from "./actionButtonClass";
 
 /**
  * یک تصمیمِ ثبت‌شده روی یک ادعا، به‌همراه اثرهایش.
@@ -72,10 +73,10 @@ export default function ResolutionLineRow({
         : { label: "انجام شد", tone: "success" };
 
   return (
-    <div className="rounded-md border border-border bg-card px-2.5 py-2 space-y-1.5">
+    <div className="rounded-md border border-border bg-muted/30 px-2.5 py-2 space-y-2">
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2 min-w-0">
-          <span className="text-xs font-medium text-card-foreground tabular-nums shrink-0">
+          <span className="text-sm font-semibold text-card-foreground tabular-nums shrink-0 sm:text-xs">
             {quantityText}
           </span>
           {resolution.note && (
@@ -94,7 +95,7 @@ export default function ResolutionLineRow({
               type="button"
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-muted-foreground hover:text-destructive"
+              className="size-8 text-muted-foreground hover:text-destructive sm:size-6"
               onClick={() => setConfirm({ kind: "remove" })}
               disabled={isBusy}
               aria-label="حذف این تصمیم"
@@ -112,7 +113,7 @@ export default function ResolutionLineRow({
       )}
 
       {effects.length > 0 && (
-        <div className="space-y-0.5">
+        <div className="space-y-1.5 border-t border-border/60 pt-2">
           {effects.map((effect) => (
             <EffectBadge
               key={effect.id}
@@ -131,7 +132,7 @@ export default function ResolutionLineRow({
             type="button"
             size="sm"
             variant="outline"
-            className="w-full h-7 text-[11px] gap-1.5"
+            className={`w-full ${ACTION_BUTTON_CLASS}`}
             disabled={isBusy}
             onClick={() => setConfirm({ kind: "money", effect })}
           >

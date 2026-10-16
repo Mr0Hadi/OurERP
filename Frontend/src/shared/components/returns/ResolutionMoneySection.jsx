@@ -116,9 +116,10 @@ export default function ResolutionMoneySection({
         options={directionOptions}
       />
 
-      <div className="space-y-2 rounded-md border border-border bg-card/60 p-2.5">
+      {/* جزئیاتِ همان جهت، زیرش با خطِ راهنما — نه جعبه‌ی تودرتوی دیگر. */}
+      <div className="ms-2 space-y-2.5 border-s-2 border-primary/25 ps-2.5">
         <div className="space-y-1">
-          <Label className="text-[11px] text-muted-foreground">روش</Label>
+          <Label className="text-xs text-muted-foreground sm:text-[11px]">روش</Label>
           {/* روش پرداخت enum عددی است؛ Radix فقط رشته می‌شناسد. */}
           <Select
             value={String(active.method)}
@@ -134,7 +135,7 @@ export default function ResolutionMoneySection({
               });
             }}
           >
-            <SelectTrigger className="h-8 text-xs">
+            <SelectTrigger className="h-10 w-full text-sm sm:h-8 sm:text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -171,7 +172,7 @@ export default function ResolutionMoneySection({
         ) : (
           <>
             <div className="space-y-1">
-              <Label className="text-[11px] text-muted-foreground">
+              <Label className="text-xs text-muted-foreground sm:text-[11px]">
                 مبلغ (ریال)
               </Label>
               <PriceInput
@@ -179,13 +180,13 @@ export default function ResolutionMoneySection({
                 value={active.amount === "" || active.amount == null ? null : Number(active.amount)}
                 onValueChange={(next) => patchActive({ amount: next ?? "" })}
                 placeholder="مبلغ را وارد کنید"
-                className="h-8 text-xs"
+                className="h-10 text-sm sm:h-8 sm:text-xs"
               />
             </div>
 
             {referenceLabel && (
               <div className="space-y-1">
-                <Label className="text-[11px] text-muted-foreground">
+                <Label className="text-xs text-muted-foreground sm:text-[11px]">
                   {referenceLabel}
                 </Label>
                 <Input
@@ -193,7 +194,7 @@ export default function ResolutionMoneySection({
                   value={active.reference ?? ""}
                   onChange={(e) => patchActive({ reference: e.target.value })}
                   placeholder={referenceLabel}
-                  className="h-8 text-xs input-rtl-placeholder"
+                  className="h-10 text-sm sm:h-8 sm:text-xs input-rtl-placeholder"
                 />
               </div>
             )}
@@ -205,11 +206,11 @@ export default function ResolutionMoneySection({
           <Checkbox
             checked={active.paidNow !== false}
             onCheckedChange={(checked) => patchActive({ paidNow: checked === true })}
-            className="mt-0.5"
+            className="mt-1 sm:mt-0.5"
           />
-          <span className="text-[11px] text-card-foreground">
+          <span className="text-sm leading-6 text-card-foreground sm:text-[11px] sm:leading-normal">
             پول همین حالا جابه‌جا شد
-            <span className="block text-muted-foreground">
+            <span className="block text-xs leading-5 text-muted-foreground sm:text-[11px]">
               اگر بعداً پرداخت می‌شود تیک را بردارید؛ تا ثبتِ پرداخت، مرجوعی باز می‌ماند
             </span>
           </span>
@@ -222,7 +223,7 @@ export default function ResolutionMoneySection({
 function DirectionSelect({ direction, onChange, options }) {
   return (
     <Select value={String(direction)} onValueChange={(raw) => onChange(Number(raw))}>
-      <SelectTrigger className="h-8 text-xs">
+      <SelectTrigger className="h-10 w-full text-sm sm:h-8 sm:text-xs">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
