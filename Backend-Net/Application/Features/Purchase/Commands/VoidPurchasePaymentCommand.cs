@@ -10,10 +10,13 @@ using Common.Exceptions;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.Purchase.Commands
 {
     /// <summary>Takes back a payment row recorded by mistake. The row stays, marked VoidedAt, and leaves PaidAmount.</summary>
+    [AuditAction(AuditActionEnum.VoidPurchasePayment)]
     public class VoidPurchasePaymentCommand : IRequest<ResponseDto>
     {
         public int PaymentId { get; set; }

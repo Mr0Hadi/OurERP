@@ -8,9 +8,12 @@ using Common.Exceptions;
 using Common.Extensions;
 using FluentValidation;
 using MediatR;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.User.Command
 {
+	[AuditAction(AuditActionEnum.ChangePassword)]
 	public class ChangePasswordCommand : IRequest<ResponseDto>
 	{
 		public string OldPassword { get; set; }

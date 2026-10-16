@@ -14,9 +14,11 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.Product.Commands
 {
+    [AuditAction(AuditActionEnum.UpdateProduct)]
     public class UpdateProductCommand : IRequest<ResponseDto>
     {
         // Code/BarCode are immutable after creation (they end up printed on physical labels) -
@@ -98,7 +100,7 @@ namespace Application.Features.Product.Commands
             var res = new ResponseDto();
             var product = await _productRepository.GetByIdAsync(request.Id, cancellationToken) ?? throw new ValidationCustomException("محصول مورد نظر یافت نشد.");
 
-            var category = await _productCategoryRepository.GetByIdAsync(request.ProductCategoryId)
+            var category = await _productCategoryRepository.GetByIdAsync(request.ProductCategoryId, cancellationToken)
                     ?? throw new NotFoundCustomException("دسته بندی مورد نظر یافت نشد.");
 
             if (!product.IsIncomplete)

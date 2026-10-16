@@ -10,6 +10,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.Permission.Commands
 {
@@ -22,6 +23,7 @@ namespace Application.Features.Permission.Commands
     /// in a list the caller was never shown. Without that, an ordinary administrator saving the
     /// super user's page would silently strip them of the permissions they could not see.
     /// </summary>
+    [AuditAction(AuditActionEnum.UpdateUserPermissions)]
     public class UpdateUserPermissionsCommand : IRequest<ResponseDto>
     {
         public int UserId { get; set; }

@@ -8,9 +8,12 @@ using Common.Exceptions;
 using Common.Extensions;
 using FluentValidation;
 using MediatR;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.Vehicle.Commands
 {
+    [AuditAction(AuditActionEnum.UpdateVehicle)]
     public class UpdateVehicleCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

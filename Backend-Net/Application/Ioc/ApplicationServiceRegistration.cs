@@ -20,6 +20,8 @@ namespace Application.Ioc
 
             services.AddValidatorsFromAssembly(typeof(ApplicationServiceRegistration).Assembly);
 
+            // Audit first, so the action is named before anything else in the pipeline runs.
+            services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuditBehavior<,>));
             services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
             services.AddAutoMapper(cfg => cfg.AddProfile<MappingProfile>());

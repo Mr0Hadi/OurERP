@@ -8,6 +8,7 @@ using Application.Common.Enums;
 using Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.Product.Commands
 {
@@ -23,6 +24,7 @@ namespace Application.Features.Product.Commands
     /// Run this after applying the ProductUnit migration and before adding the unique index on
     /// Product.Code - see docs/product-code-barcode-invoice-design.fa.md 4.3.
     /// </summary>
+    [AuditAction(AuditActionEnum.EnsureProductCodes)]
     public class EnsureProductCodesCommand : IRequest<ResponseDto>
     {
     }

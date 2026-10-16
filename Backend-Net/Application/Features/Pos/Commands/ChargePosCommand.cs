@@ -5,9 +5,12 @@ using Application.Common.Enums;
 using Common.Extensions;
 using FluentValidation;
 using MediatR;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.Pos.Commands
 {
+    [AuditAction(AuditActionEnum.ChargePos)]
     public class ChargePosCommand : IRequest<ResponseDto>
     {
         public int PosTerminalId { get; set; }

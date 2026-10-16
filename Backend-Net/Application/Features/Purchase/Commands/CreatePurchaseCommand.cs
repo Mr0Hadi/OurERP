@@ -16,9 +16,11 @@ using Common.Extensions;
 using Domain.Enums;
 using FluentValidation;
 using MediatR;
+using Application.Common.Audit;
 
 namespace Application.Features.Purchase.Commands
 {
+    [AuditAction(AuditActionEnum.CreatePurchase)]
     public class CreatePurchaseCommand : IRequest<ResponseDto>
     {
         public List<CreatePurchaseItemDto> ProductItemList { get; set; }

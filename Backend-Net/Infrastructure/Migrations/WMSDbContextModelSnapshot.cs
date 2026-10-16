@@ -25,6 +25,84 @@ namespace Infrastructure.Migrations
             modelBuilder.HasSequence<int>("UserPersonelCode")
                 .StartsAt(1000L);
 
+            modelBuilder.Entity("Domain.Entities.AuditEntityChange", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("AuditEventId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("DocumentId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("DocumentKind")
+                        .HasColumnType("int");
+
+                    b.Property<string>("EntityKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NewValues")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OldValues")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Operation")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuditEventId");
+
+                    b.HasIndex("DocumentKind", "DocumentId");
+
+                    b.HasIndex("EntityType", "EntityKey");
+
+                    b.ToTable("AuditEntityChanges", t =>
+                        {
+                            t.HasCheckConstraint("CK_AuditEntityChanges_NewValuesJson", "ISJSON([NewValues], OBJECT) = 1");
+
+                            t.HasCheckConstraint("CK_AuditEntityChanges_OldValuesJson", "ISJSON([OldValues], OBJECT) = 1");
+                        });
+                });
+
+            modelBuilder.Entity("Domain.Entities.AuditEvent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int?>("Action")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OccurredAt");
+
+                    b.HasIndex("UserId", "OccurredAt");
+
+                    b.ToTable("AuditEvents");
+                });
+
             modelBuilder.Entity("Domain.Entities.Customer", b =>
                 {
                     b.Property<int>("Id")
@@ -2108,6 +2186,17 @@ namespace Infrastructure.Migrations
                     b.ToTable("Vehicles");
                 });
 
+            modelBuilder.Entity("Domain.Entities.AuditEntityChange", b =>
+                {
+                    b.HasOne("Domain.Entities.AuditEvent", "AuditEvent")
+                        .WithMany("Changes")
+                        .HasForeignKey("AuditEventId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AuditEvent");
+                });
+
             modelBuilder.Entity("Domain.Entities.Department", b =>
                 {
                     b.HasOne("Domain.Entities.User", "Deputy")
@@ -2737,6 +2826,11 @@ namespace Infrastructure.Migrations
                     b.Navigation("GrantedBy");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Domain.Entities.AuditEvent", b =>
+                {
+                    b.Navigation("Changes");
                 });
 
             modelBuilder.Entity("Domain.Entities.Department", b =>

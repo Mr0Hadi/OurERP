@@ -5,6 +5,8 @@ using Application.Common.Dtos;
 using Application.Common.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.Product.Commands
 {
@@ -17,6 +19,7 @@ namespace Application.Features.Product.Commands
     /// add-inventory-cost-ledger migration, same as EnsureProductCodes was for the barcode feature.
     /// Products with an existing ledger row, or with Stock &lt;= 0, are skipped.
     /// </summary>
+    [AuditAction(AuditActionEnum.EnsureInventoryCostLedger)]
     public class EnsureInventoryCostLedgerCommand : IRequest<ResponseDto>
     {
     }

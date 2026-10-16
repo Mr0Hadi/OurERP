@@ -10,6 +10,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.Permission.Commands
 {
@@ -21,6 +22,7 @@ namespace Application.Features.Permission.Commands
     /// Changes nobody's access. Users hold only their own rows; the template is a suggestion
     /// the admin applies by hand on the user's screen.
     /// </summary>
+    [AuditAction(AuditActionEnum.UpdateDepartmentPermissionTemplate)]
     public class UpdateDepartmentPermissionTemplateCommand : IRequest<ResponseDto>
     {
         public int DepartmentId { get; set; }

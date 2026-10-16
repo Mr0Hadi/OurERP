@@ -49,6 +49,9 @@ namespace Domain.Enums
         PartyAccounts = 13,
 
         [Description("حسابداری")]
-        Accounting = 14
+        Accounting = 14,
+
+        [Description("تاریخچه تغییرات")]
+        Audit = 15
     }
 }

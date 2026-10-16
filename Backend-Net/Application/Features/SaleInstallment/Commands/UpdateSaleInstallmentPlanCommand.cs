@@ -11,6 +11,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.SaleInstallment.Commands
 {
@@ -21,6 +22,7 @@ namespace Application.Features.SaleInstallment.Commands
     /// شماره‌گذاری از آخرین سطر PAID؛ مبلغ باقیمانده (TotalAmount - PaidAmount) فقط روی همین
     /// سطرهای جدید پخش می‌شود و باقیمانده‌ی رُند باز هم روی آخرین سطر می‌نشیند.
     /// </summary>
+    [AuditAction(AuditActionEnum.UpdateSaleInstallmentPlan)]
     public class UpdateSaleInstallmentPlanCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

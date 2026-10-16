@@ -15,12 +15,14 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.SaleReturn.Commands
 {
     // Records that a promised (PENDING) money effect has actually been paid - the money counterpart of
     // ExecuteGoodsRoundCommand. The effect becomes APPLIED, its ledger row is written at PaidAt, and when it
     // was the resolution's last pending effect the claimed quantity settles on the order line.
+    [AuditAction(AuditActionEnum.ExecuteSaleReturnMoneyEffect)]
     public class ExecuteMoneyEffectCommand : IRequest<ResponseDto>
     {
         public int EffectId { get; set; }

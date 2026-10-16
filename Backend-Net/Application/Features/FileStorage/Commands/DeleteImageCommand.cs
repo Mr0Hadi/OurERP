@@ -4,6 +4,8 @@ using Application.Common.Enums;
 using Common.Extensions;
 using FluentValidation;
 using MediatR;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.FileStorage.Commands
 {
@@ -13,6 +15,7 @@ namespace Application.Features.FileStorage.Commands
     /// frontend that copies a product image onto a variant, for instance), so orphan cleanup is an
     /// explicit call rather than a side effect of an update.
     /// </summary>
+    [AuditAction(AuditActionEnum.DeleteImage)]
     public class DeleteImageCommand : IRequest<ResponseDto>
     {
         public string ObjectKey { get; set; } = string.Empty;

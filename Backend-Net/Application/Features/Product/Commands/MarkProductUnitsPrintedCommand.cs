@@ -8,6 +8,8 @@ using Common.Extensions;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.Product.Commands
 {
@@ -16,6 +18,7 @@ namespace Application.Features.Product.Commands
     /// sends this only on yes). Each call adds one to PrintCount, stamps LastPrintedAt/By and FirstPrintedAt the first time. Not a
     /// movement - printing does not change where a unit is - so it writes no ProductUnitMovement row. All or nothing.
     /// </summary>
+    [AuditAction(AuditActionEnum.MarkProductUnitsPrinted)]
     public class MarkProductUnitsPrintedCommand : IRequest<ResponseDto>
     {
         public List<int> ProductUnitIds { get; set; } = new();

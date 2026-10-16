@@ -12,6 +12,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.Product.Commands
 {
@@ -27,6 +28,7 @@ namespace Application.Features.Product.Commands
     /// Units a purchase-return decision has reserved (IPurchaseReturnCalculationService.GetReservedQuarantineQuantity) cannot be
     /// released or scrapped here. All or nothing.
     /// </summary>
+    [AuditAction(AuditActionEnum.ApplyProductUnitAction)]
     public class ApplyProductUnitActionCommand : IRequest<ResponseDto>
     {
         public ProductUnitActionEnum Action { get; set; }

@@ -10,9 +10,12 @@ using Common.Extensions;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.PurchaseReturn.Commands
 {
+    [AuditAction(AuditActionEnum.DeletePurchaseReturn)]
     public class DeletePurchaseReturnCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

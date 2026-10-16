@@ -9,6 +9,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.Sale.Commands
 {
@@ -21,6 +22,7 @@ namespace Application.Features.Sale.Commands
     // sale it means the down payment - which is exactly what starts the contract and earns the official invoice number.
     // Both are legitimate at the counter, so both are accepted here; what is refused is handing goods over with nothing
     // paid, because the sale would stay PROFORMA while the customer walks out with the stock.
+    [AuditAction(AuditActionEnum.CreateInPersonSale)]
     public class CreateInPersonSaleCommand : IRequest<ResponseDto>
     {
         public CreateSaleCommand Sale { get; set; } = null!;

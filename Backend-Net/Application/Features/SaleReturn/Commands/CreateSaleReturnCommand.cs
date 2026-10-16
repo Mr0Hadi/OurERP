@@ -13,6 +13,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.SaleReturn.Commands
 {
@@ -20,6 +21,7 @@ namespace Application.Features.SaleReturn.Commands
     // PurchaseReturn's old model, but matching PurchaseReturn now too: both sides create a return
     // explicitly, and both allow several returns to be active on the same document at once (see
     // I*ReturnCalculationService.GetOpenClaimQuantity).
+    [AuditAction(AuditActionEnum.CreateSaleReturn)]
     public class CreateSaleReturnCommand : IRequest<ResponseDto>
     {
         public int SaleId { get; set; }

@@ -8,9 +8,11 @@ using Common.Extensions;
 using Domain.Enums;
 using FluentValidation;
 using MediatR;
+using Application.Common.Audit;
 
 namespace Application.Features.Customer.Commands
 {
+    [AuditAction(AuditActionEnum.UpdateCustomer)]
     public class UpdateCustomerCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

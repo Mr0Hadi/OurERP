@@ -16,12 +16,14 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.PurchaseReturn.Commands
 {
     // Registers one decision against a claim's remaining quantity, expressed as a list of effects
     // (goods in / goods out / money in / money out) rather than a single closed decision type.
     // Replaces AddPurchaseReturnDecisionCommand.
+    [AuditAction(AuditActionEnum.AddPurchaseReturnResolution)]
     public class AddClaimResolutionCommand : IRequest<ResponseDto>
     {
         public int ClaimId { get; set; }

@@ -6,12 +6,15 @@ using Common.Extensions;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Options;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.FileStorage.Commands
 {
     // The feature folder is FileStorage rather than File so nothing inside it has to fight the
     // System.IO.File / namespace shadowing that bites the PurchaseReturn feature
     // (see CLAUDE.md section 6). The route is still api/File/UploadImage.
+    [AuditAction(AuditActionEnum.UploadImage)]
     public class UploadImageCommand : IRequest<ResponseDto>
     {
         /// <summary>

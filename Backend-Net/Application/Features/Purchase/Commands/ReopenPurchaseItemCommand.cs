@@ -10,11 +10,13 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.Purchase.Commands
 {
     // Undo a short close: the written-off units are owed again, e.g. the supplier changed their mind. Anything that arrived on
     // the line while it was closed was received as excess and stays excess - it is already in quarantine under that custody.
+    [AuditAction(AuditActionEnum.ReopenPurchaseItem)]
     public class ReopenPurchaseItemCommand : IRequest<ResponseDto>
     {
         public int PurchaseItemId { get; set; }

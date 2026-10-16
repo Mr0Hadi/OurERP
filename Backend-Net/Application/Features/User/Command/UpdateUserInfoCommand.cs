@@ -6,9 +6,12 @@ using Application.Common.Enums;
 using Common.Extensions;
 using FluentValidation;
 using MediatR;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.User.Command
 {
+    [AuditAction(AuditActionEnum.UpdateUserInfo)]
     public class UpdateUserInfoCommand : IRequest<ResponseDto>
     {
 

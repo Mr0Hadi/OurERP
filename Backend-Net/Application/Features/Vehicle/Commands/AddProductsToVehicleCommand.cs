@@ -8,9 +8,12 @@ using Domain.Entities;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.Vehicle.Commands
 {
+    [AuditAction(AuditActionEnum.AddProductsToVehicle)]
     public class AddProductsToVehicleCommand : IRequest<ResponseDto>
     {
         public int VehicleId { get; set; }

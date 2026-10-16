@@ -8,6 +8,7 @@ using Common.Extensions;
 using Domain.Enums;
 using FluentValidation;
 using MediatR;
+using Application.Common.Audit;
 
 namespace Application.Features.Department.Commands
 {
@@ -18,6 +19,7 @@ namespace Application.Features.Department.Commands
     /// All of it runs through <see cref="IOrgRoleService.AssignAsync"/>, so the team and user pages
     /// see the same thing this page just wrote.
     /// </summary>
+    [AuditAction(AuditActionEnum.UpdateDepartment)]
     public class UpdateDepartmentCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

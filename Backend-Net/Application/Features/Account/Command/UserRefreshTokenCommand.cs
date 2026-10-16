@@ -7,9 +7,12 @@ using Common.Exceptions;
 using Common.Extensions;
 using FluentValidation;
 using MediatR;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.Account.Command
 {
+    [AuditAction(AuditActionEnum.RefreshToken)]
     public class UserRefreshTokenCommand : IRequest<ResponseDto>
     {
         public string AccessToken { get; set; }

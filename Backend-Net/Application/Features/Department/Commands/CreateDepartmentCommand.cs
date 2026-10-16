@@ -10,6 +10,7 @@ using Domain.Entities;
 using Domain.Enums;
 using FluentValidation;
 using MediatR;
+using Application.Common.Audit;
 
 namespace Application.Features.Department.Commands
 {
@@ -19,6 +20,7 @@ namespace Application.Features.Department.Commands
     /// team. This used to be rejected outright ("create it, then move the user, then assign"), which
     /// was three calls for one intent; <see cref="IOrgRoleService.AssignAsync"/> now does it in one.
     /// </summary>
+    [AuditAction(AuditActionEnum.CreateDepartment)]
     public class CreateDepartmentCommand : IRequest<ResponseDto>
     {
         public string Name { get; set; }

@@ -9,6 +9,8 @@ using Common.Exceptions;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.Sale.Commands
 {
@@ -16,6 +18,7 @@ namespace Application.Features.Sale.Commands
     /// Sets or clears the payment due date, in any status: a deadline agreed with the customer can move after the
     /// invoice is issued without the invoice itself changing.
     /// </summary>
+    [AuditAction(AuditActionEnum.UpdateSalePaymentDate)]
     public class UpdateSalePaymentDateCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

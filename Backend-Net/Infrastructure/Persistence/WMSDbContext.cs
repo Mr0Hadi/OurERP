@@ -1,6 +1,8 @@
 ﻿using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Audit;
 using Application.Common.Contracts.UserContextService;
 using Domain.Entities;
+using Infrastructure.Persistence.Auditing;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Persistence
@@ -8,28 +10,40 @@ namespace Infrastructure.Persistence
     public class WMSDbContext : DbContext, IWMSDbContext
     {
         private readonly IUserContextService? _userContextService;
+        private readonly IAuditScope? _auditScope;
 
         /// <param name="userContextService">
-        /// Who is signed in, for stamping payment rows (see SaveChangesAsync). Optional: null outside a request
-        /// (design-time tooling, tests building the context by hand), and then the rows are stamped with the time only.
+        /// Who is signed in, for stamping payment rows and audit events (see SaveChangesAsync). Optional: null outside a
+        /// request (design-time tooling, tests building the context by hand), and then rows are stamped with the time only.
         /// </param>
-        public WMSDbContext(DbContextOptions<WMSDbContext> options, IUserContextService? userContextService = null)
+        /// <param name="auditScope">
+        /// Which command is running, so all of its saves land in one audit event. Optional for the same reason; without
+        /// it every save is its own event with no action.
+        /// </param>
+        public WMSDbContext(DbContextOptions<WMSDbContext> options, IUserContextService? userContextService = null, IAuditScope? auditScope = null)
             :base(options)
         {
             _userContextService = userContextService;
+            _auditScope = auditScope;
         }
 
         /// <summary>
         /// Every new payment row gets RecordedAt and RecordedByUserId here, in one place, instead of in each of the
         /// dozen handlers that write payments (documents, payments, installments) - none of them can forget it.
+        ///
+        /// Every inserted, updated and deleted row is also recorded in the audit log here (AuditRecorder), in the same
+        /// transaction: one is opened when the caller has none, and IUnitOfWork.ExecuteInTransactionAsync's is reused, so
+        /// a change and its audit rows are saved together or not at all. Safe because UseSqlServer has no retrying
+        /// execution strategy (see the atomic-shipments note in CLAUDE.md). ExecuteUpdate/ExecuteDelete/raw SQL bypass
+        /// the change tracker and are therefore NOT audited - do not use them on business tables.
         /// </summary>
-        public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
         {
             var added = ChangeTracker.Entries<PaymentDetail>().Where(x => x.State == EntityState.Added).ToList();
             if (added.Count > 0)
             {
                 var now = DateTime.Now;
-                var userId = int.TryParse(_userContextService?.GetUserId(), out var id) && id > 0 ? id : (int?)null;
+                var userId = CurrentUserId();
                 foreach (var entry in added)
                 {
                     entry.Entity.RecordedAt ??= now;
@@ -37,8 +51,75 @@ namespace Infrastructure.Persistence
                 }
             }
 
-            return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+            var recorder = AuditRecorder.Capture(this);
+
+            // Without accepting, the saved rows stay Added/Modified and the audit save would write them a second time.
+            // Nothing in the codebase saves that way; such a save is left unaudited rather than double-written.
+            if (recorder == null || !acceptAllChangesOnSuccess)
+                return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+
+            if (Database.CurrentTransaction != null)
+                return await SaveAuditedAsync(recorder, cancellationToken);
+
+            await using var transaction = await Database.BeginTransactionAsync(cancellationToken);
+            var result = await SaveAuditedAsync(recorder, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return result;
         }
+
+        private async Task<int> SaveAuditedAsync(AuditRecorder recorder, CancellationToken cancellationToken)
+        {
+            // Capture just ran change detection; turning it off keeps the recorder's change-tracker lookups cheap.
+            var autoDetect = ChangeTracker.AutoDetectChangesEnabled;
+            ChangeTracker.AutoDetectChangesEnabled = false;
+            try
+            {
+                await recorder.BeforeSaveAsync(cancellationToken);
+                var result = await base.SaveChangesAsync(true, cancellationToken);
+                var changes = await recorder.AfterSaveAsync(cancellationToken);
+
+                var eventId = _auditScope?.CurrentEventId;
+                AuditEvent? auditEvent = null;
+                if (eventId.HasValue)
+                {
+                    foreach (var change in changes)
+                        change.AuditEventId = eventId.Value;
+                    AuditEntityChanges.AddRange(changes);
+                }
+                else
+                {
+                    auditEvent = new AuditEvent
+                    {
+                        OccurredAt = DateTime.Now,
+                        UserId = CurrentUserId(),
+                        Action = _auditScope?.Action,
+                        Changes = changes,
+                    };
+                    AuditEvents.Add(auditEvent);
+                }
+
+                await base.SaveChangesAsync(true, cancellationToken);
+
+                // Only a running command collects its saves into one event; outside one, every save is its own.
+                if (auditEvent != null && _auditScope?.Action != null)
+                    _auditScope.CurrentEventId = auditEvent.Id;
+
+                // Nothing reads them back through this context; detaching keeps a long import from filling the tracker.
+                if (auditEvent != null)
+                    Entry(auditEvent).State = EntityState.Detached;
+                foreach (var change in changes)
+                    Entry(change).State = EntityState.Detached;
+
+                return result;
+            }
+            finally
+            {
+                ChangeTracker.AutoDetectChangesEnabled = autoDetect;
+            }
+        }
+
+        private int? CurrentUserId() =>
+            int.TryParse(_userContextService?.GetUserId(), out var id) && id > 0 ? id : null;
 
         public DbSet<User> Users => Set<User>();
         public DbSet<Team> Teams => Set<Team>();
@@ -84,6 +165,8 @@ namespace Infrastructure.Persistence
         public DbSet<SaleInstallment> SaleInstallments => Set<SaleInstallment>();
         public DbSet<UserPermission> UserPermissions => Set<UserPermission>();
         public DbSet<DepartmentPermissionTemplate> DepartmentPermissionTemplates => Set<DepartmentPermissionTemplate>();
+        public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
+        public DbSet<AuditEntityChange> AuditEntityChanges => Set<AuditEntityChange>();
 
         public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken)
         {
@@ -685,6 +768,28 @@ namespace Infrastructure.Persistence
 
             modelBuilder.Entity<SaleInstallment>()
                 .HasIndex(x => x.DueDate);
+
+            // Audit log: append-only (the migration adds an INSTEAD OF UPDATE, DELETE trigger). Old/new values are JSON
+            // objects in nvarchar(max) - SQL Server 2022 has no json column type - validated with ISJSON.
+            modelBuilder.Entity<AuditEvent>(entry =>
+            {
+                entry.HasIndex(x => x.OccurredAt);
+                entry.HasIndex(x => new { x.UserId, x.OccurredAt });
+                entry.HasMany(x => x.Changes).WithOne(x => x.AuditEvent).HasForeignKey(x => x.AuditEventId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<AuditEntityChange>(entry =>
+            {
+                entry.ToTable(t =>
+                {
+                    t.HasCheckConstraint("CK_AuditEntityChanges_OldValuesJson", "ISJSON([OldValues], OBJECT) = 1");
+                    t.HasCheckConstraint("CK_AuditEntityChanges_NewValuesJson", "ISJSON([NewValues], OBJECT) = 1");
+                });
+                entry.Property(x => x.EntityType).HasMaxLength(100);
+                entry.Property(x => x.EntityKey).HasMaxLength(100);
+                entry.HasIndex(x => new { x.EntityType, x.EntityKey });
+                entry.HasIndex(x => new { x.DocumentKind, x.DocumentId });
+            });
         }
     }
 }

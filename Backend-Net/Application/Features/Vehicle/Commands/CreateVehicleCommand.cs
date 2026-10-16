@@ -7,9 +7,12 @@ using Application.Features.Vehicle.Dtos;
 using Common.Extensions;
 using FluentValidation;
 using MediatR;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.Vehicle.Commands
 {
+    [AuditAction(AuditActionEnum.CreateVehicle)]
     public class CreateVehicleCommand : IRequest<ResponseDto>
     {
         public string Name { get; set; }

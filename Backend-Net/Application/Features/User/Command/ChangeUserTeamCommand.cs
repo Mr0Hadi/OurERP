@@ -10,6 +10,7 @@ using Common.Extensions;
 using Domain.Enums;
 using FluentValidation;
 using MediatR;
+using Application.Common.Audit;
 
 namespace Application.Features.User.Command
 {
@@ -23,6 +24,7 @@ namespace Application.Features.User.Command
     ///
     /// All of it goes through <see cref="IOrgRoleService.AssignAsync"/>, which owns the invariants.
     /// </summary>
+    [AuditAction(AuditActionEnum.ChangeUserTeam)]
     public class ChangeUserTeamCommand : IRequest<ResponseDto>
     {
         public int UserId { get; set; }

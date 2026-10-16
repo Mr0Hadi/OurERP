@@ -12,6 +12,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.SaleInstallment.Commands
 {
@@ -23,6 +24,7 @@ namespace Application.Features.SaleInstallment.Commands
     /// قیمت نقدی = جمع فاکتور فروش، سود اقساط = round(قیمت نقدی × درصد)، مبلغ قابل پرداخت = جمع این دو؛ هر سه را سرور
     /// می‌نشاند و فاکتور فروش (Sale.TotalAmount) دست نمی‌خورد.
     /// </summary>
+    [AuditAction(AuditActionEnum.CreateSaleInstallmentPlan)]
     public class CreateSaleInstallmentPlanCommand : IRequest<ResponseDto>
     {
         public int SaleId { get; set; }

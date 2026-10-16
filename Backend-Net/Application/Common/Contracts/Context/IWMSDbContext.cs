@@ -50,6 +50,8 @@ namespace Application.Common.Contracts.Context
         DbSet<SaleInstallment> SaleInstallments { get; }
         DbSet<UserPermission> UserPermissions { get; }
         DbSet<DepartmentPermissionTemplate> DepartmentPermissionTemplates { get; }
+        DbSet<AuditEvent> AuditEvents { get; }
+        DbSet<AuditEntityChange> AuditEntityChanges { get; }
 
         DbSet<T> Set<T>() where T : class;
 

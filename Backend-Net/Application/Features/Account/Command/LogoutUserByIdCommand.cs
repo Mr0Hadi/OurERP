@@ -9,9 +9,12 @@ using MediatR;
 using Application.Common.Contracts.Permissions;
 using Application.Common.Contracts.Token;
 using Application.Common.Contracts.UserContextService;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.Account.Command
 {
+	[AuditAction(AuditActionEnum.LogoutUserById)]
 	public class LogoutUserByIdCommand : IRequest<ResponseDto>
 	{
 		public int UserId { get; set; }

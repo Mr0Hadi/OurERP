@@ -4,9 +4,12 @@ using Application.Common.Dtos;
 using Application.Common.Enums;
 using Common.Exceptions;
 using MediatR;
+using Application.Common.Audit;
+using Domain.Enums;
 
 namespace Application.Features.ProductCategory.Commands
 {
+    [AuditAction(AuditActionEnum.DeleteProductCategory)]
     public class DeleteProductCategoryCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }

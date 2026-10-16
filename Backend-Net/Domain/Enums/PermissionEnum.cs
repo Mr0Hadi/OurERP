@@ -345,6 +345,12 @@ namespace Domain.Enums
         /// <summary>The accounting dashboard and every journal behind it (api/Accounting), and their exports.</summary>
         [PermissionGroup(PermissionGroupEnum.Accounting)]
         [Description("مشاهده داشبورد و دفترهای حسابداری")]
-        AccountingView = 260
+        AccountingView = 260,
+
+        // --- تاریخچه تغییرات ---
+        /// <summary>The audit log (api/Audit): every change, by whom and when, with old and new values.</summary>
+        [PermissionGroup(PermissionGroupEnum.Audit)]
+        [Description("مشاهده تاریخچه تغییرات")]
+        AuditLogView = 270
     }
 }

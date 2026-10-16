@@ -13,6 +13,7 @@ using Domain.Enums;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Application.Common.Audit;
 
 namespace Application.Features.PurchaseReturn.Commands
 {
@@ -20,6 +21,7 @@ namespace Application.Features.PurchaseReturn.Commands
     // side (mirrors CreateSaleReturnCommand) rather than being auto-created as a side effect of
     // ReceivePurchaseCommand - ReceivePurchaseCommand only ever records received quantity/stock now.
     // Several returns can be active on the same purchase at once, same as sale returns.
+    [AuditAction(AuditActionEnum.CreatePurchaseReturn)]
     public class CreatePurchaseReturnCommand : IRequest<ResponseDto>
     {
         public int PurchaseId { get; set; }

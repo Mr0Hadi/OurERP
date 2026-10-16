@@ -27,6 +27,7 @@ namespace WMS.Tests.Integration
             services.AddLogging();
             services.AddApplicationServices();
             services.AddSingleton<IWMSDbContext>(scope.Context);
+            services.AddSingleton(scope.AuditScope);
             services.AddSingleton(scope.UnitOfWork);
             services.AddSingleton(scope.PurchaseReturnCalculation);
             services.AddSingleton(scope.SaleReturnCalculation);

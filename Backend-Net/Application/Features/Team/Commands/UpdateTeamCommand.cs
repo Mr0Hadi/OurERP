@@ -8,6 +8,7 @@ using Common.Extensions;
 using Domain.Enums;
 using FluentValidation;
 using MediatR;
+using Application.Common.Audit;
 
 namespace Application.Features.Team.Commands
 {
@@ -18,6 +19,7 @@ namespace Application.Features.Team.Commands
     /// <see cref="IOrgRoleService.AssignAsync"/>, so the user list/detail pages see the same thing
     /// this page just wrote.
     /// </summary>
+    [AuditAction(AuditActionEnum.UpdateTeam)]
     public class UpdateTeamCommand : IRequest<ResponseDto>
     {
         public int Id { get; set; }
