@@ -14,7 +14,7 @@
 | `SALES_RETURNS_NEW` | `/sales/returns/new` | `SaleReturnCreate` | `src/features/sales/returns/pages/SalesReturnNewPage.jsx` |
 | `SALES_RETURNS_DETAIL` | `/sales/returns/:id` | `SaleReturnView` | `src/features/sales/returns/pages/SalesReturnDetailPage.jsx` |
 
-`SaleDetailPage` با `useSaleQuery` سند را می‌گیرد: اگر `isSaleProforma(sale.status)` → `SaleForm.jsx` (ویرایشِ پیش‌فاکتور)، وگرنه `SaleIssuedView.jsx` (فاکتورِ صادرشده؛ مشتری و اقلام فقط‌خواندنی). `SaleNewPage` همان `SaleForm` را بدونِ سند رندر می‌کند.
+`SaleDetailPage` با `useSaleQuery` سند را می‌گیرد: اگر `isSaleProforma(sale.status)` → `SaleForm.jsx` (ویرایشِ پیش‌فاکتور)، وگرنه `SaleIssuedView.jsx` (فاکتورِ صادرشده؛ مشتری و اقلام فقط‌خواندنی). بالای `SaleIssuedView`، `components/forms/SaleDeliveryNotice.jsx` قدمِ بعدیِ تحویل را نشان می‌دهد: در «ارسال شده» دکمه‌ی «ثبت تحویل کامل» (`useMarkSaleDeliveredMutation` → `ChangeSaleStatus`)، در «ارسال ناقص» پیوند به ارسالِ انبار. `SaleNewPage` همان `SaleForm` را بدونِ سند رندر می‌کند.
 
 ## سرویس‌ها (endpointها)
 

@@ -7,6 +7,7 @@ import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 import { newPosReference } from "@/shared/domain/pos/posSession";
 import { useSaleChangesSaver, useSalePosActions } from "@/features/sales/orders/services/mutations";
 import SaleCustomerSection from "../components/forms/SaleCustomerSection";
+import SaleDeliveryNotice from "../components/forms/SaleDeliveryNotice";
 import DocumentFormLayout, {
   OrderSummaryCard,
 } from "@/shared/components/forms/DocumentFormLayout";
@@ -86,6 +87,7 @@ export default function SaleIssuedView({ sale }) {
         onSubmit={onSubmit}
         main={
           <>
+            <SaleDeliveryNotice sale={sale} canDeliver={canUpdate} canShip={allows("SaleShip")} />
             <SaleCustomerSection
               selectedId={sale.customerId}
               selectedName={sale.customerName}

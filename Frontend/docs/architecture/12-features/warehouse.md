@@ -52,7 +52,7 @@
 
 ### دریافت و ارسال
 
-1. صف: `ReceivingListPage` → `useReceivablePurchasesQuery` (`statuses: receivingStatusesOf(status)`)؛ `useQueueRows` اثرهای معلقِ مرجوعی را هم به صف اضافه می‌کند. ارسال قرینه است (`useShippableSalesQuery`).
+1. صف: `ReceivingListPage` → `useReceivablePurchasesQuery` (`statuses: receivingStatusesOf(status)`)؛ `useQueueRows` اثرهای معلقِ مرجوعی را هم به صف اضافه می‌کند. برچسبِ ردیفِ مرجوعیِ خرید نوعِ کار را می‌گوید («مرجوعی خرید: اسقاط، عودت»). صفحه‌های کارِ انبار روی مرجوعی برای کاربرِ بدونِ `*ReturnView` به صفِ انبار برمی‌گردند، نه به صفحه‌ی مرجوعی (خواندن با `*ReturnExecute`: درخواستِ ۲۳ در `Backend-Net/docs/frontend-requests.fa.md`). ارسال قرینه است (`useShippableSalesQuery`).
 2. جزئیات: `ReceivingDetailPage` → `usePurchaseReceivingInfoQuery`.
 3. ثبت: command `{ purchase, purchaseReturnRounds, saleReturnRounds: [] }` → `useReceiveShipmentMutation` → `POST /Shipment/ReceiveShipment`.
 4. موفق: `applyShipmentResult` (`src/features/warehouse/shared/shipmentCache.js`) سندهای مرجوعیِ برگشتی را در کش می‌نشاند و `invalidatePurchaseEcosystem` / `invalidateSalesEcosystem` را صدا می‌زند؛ `receivingKeys.all` باطل؛ ناوبری به `exitRoute`.

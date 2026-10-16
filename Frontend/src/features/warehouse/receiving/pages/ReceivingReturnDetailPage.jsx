@@ -19,6 +19,7 @@ import GoodsRoundSummaryCard from "@/shared/components/returns/GoodsRoundSummary
 
 import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
+import { usePermission } from "@/features/auth/hooks/usePermission";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { withProductInfo } from "../../shared/productInfo";
@@ -85,7 +86,10 @@ function ReceivingReturnDetailForm({ salesReturn }) {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const isBusy = goodsRoundMutation.isPending;
-  const backToReturn = () => navigate(routeWithId(ROUTES.SALES_RETURNS_DETAIL, salesReturn.id));
+  // انباردار به صفحه‌ی مرجوعی‌ها دسترسی ندارد (`SaleReturnView`)؛ او به صفِ انبار برمی‌گردد.
+  const { can } = usePermission();
+  const backToReturn = () =>
+    navigate(can("SaleReturnView") ? routeWithId(ROUTES.SALES_RETURNS_DETAIL, salesReturn.id) : ROUTES.WAREHOUSE_RECEIVING);
 
   const handleSubmit = () => {
     const willStayPending = !isAllComplete;
@@ -196,6 +200,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
 export default function ReceivingReturnDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { can } = usePermission();
 
   const {
     data: salesReturn,
@@ -222,7 +227,7 @@ export default function ReceivingReturnDetailPage() {
         error={error}
         notFoundMessage="مرجوعی مورد نظر یافت نشد."
         onRetry={refetch}
-        onBack={() => navigate(ROUTES.SALES_RETURNS_LIST)}
+        onBack={() => navigate(can("SaleReturnView") ? ROUTES.SALES_RETURNS_LIST : ROUTES.WAREHOUSE_RECEIVING)}
       />
     );
   }

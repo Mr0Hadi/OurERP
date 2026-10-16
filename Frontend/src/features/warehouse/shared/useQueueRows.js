@@ -12,6 +12,7 @@ import { receivingKeys } from "@/features/warehouse/receiving/services/queryKeys
 import { shippingKeys } from "@/features/warehouse/shipping/services/queryKeys";
 import { RECEIVING_AWAITING_STATUSES } from "@/features/warehouse/receiving/domain/receivingVocabulary";
 import { SHIPPING_AWAITING_STATUSES } from "@/features/warehouse/shipping/domain/shippingVocabulary";
+import { usePermission } from "@/features/auth/hooks/usePermission";
 import { QUEUE_FILTER } from "./queueFilters";
 
 const { GOODS_IN, GOODS_OUT, GOODS_RELEASE, GOODS_SCRAP } = EFFECT_DIRECTIONS;
@@ -55,12 +56,24 @@ const QUEUES = {
     separate: {
       side: "purchase",
       directions: [GOODS_OUT, GOODS_RELEASE, GOODS_SCRAP],
-      label: "مرجوعی خرید: عودت/قرنطینه",
+      label: "مرجوعی خرید",
+      // کارِ دقیقِ هر ردیف روی خودش، تا انباردار اسقاط را بی‌باز کردنِ ردیف ببیند.
+      kindLabels: {
+        [GOODS_OUT]: "عودت",
+        [GOODS_RELEASE]: "آزادسازی از قرنطینه",
+        [GOODS_SCRAP]: "اسقاط",
+      },
       link: (row) => routeWithId(ROUTES.WAREHOUSE_SHIPPING_RETURN_DETAIL, row.returnId),
     },
     action: "ثبت ارسال",
     awaitingStatuses: SHIPPING_AWAITING_STATUSES,
   },
+};
+
+/** هرکدام کافی است (`satisfies`). */
+const RETURN_READ = {
+  purchase: ["PurchaseReturnView", "PurchaseReturnExecute"],
+  sale: ["SaleReturnView", "SaleReturnExecute"],
 };
 
 const RETURN_ID_KEY = { purchase: "purchaseReturnId", sale: "saleReturnId" };
@@ -94,6 +107,16 @@ function groupByReturn(effects, side, directions) {
       groups.get(key).lines.push(effect);
     });
   return [...groups.values()];
+}
+
+/** «مرجوعی خرید: اسقاط، عودت» — نوع‌های کارِ منتظر، به ترتیبِ `kindLabels`. */
+function sideLabelOf({ label, kindLabels }, lines) {
+  if (!kindLabels) return label;
+  const present = new Set(lines.map((line) => Number(line.direction)));
+  const kinds = Object.entries(kindLabels)
+    .filter(([direction]) => present.has(Number(direction)))
+    .map(([, kind]) => kind);
+  return kinds.length > 0 ? `${label}: ${kinds.join("، ")}` : label;
 }
 
 const dateOnly = (value) => (value ? String(value).slice(0, 10) : "");
@@ -140,6 +163,7 @@ export function useQueueRows(kind, filters, isFirstPage) {
   const mode = filters.status;
   const withExtras = mode === QUEUE_FILTER.AWAITING && isFirstPage;
 
+  const { can } = usePermission();
   const pendingQueries = useQueries({
     queries: ["purchase", "sale"].map((side) => ({
       queryKey: [...baseKey, "return-rows", side],
@@ -148,6 +172,8 @@ export function useQueueRows(kind, filters, isFirstPage) {
           ? fetchPurchaseReturnPendingEffects(undefined)
           : fetchSaleReturnPendingEffects(undefined),
       refetchOnMount: "always",
+      // بدونِ هیچ‌کدام سرور ۴۰۳ می‌دهد؛ `Execute` همان انباردار است (درخواستِ ۲۳).
+      enabled: can(side === "purchase" ? RETURN_READ.purchase : RETURN_READ.sale),
     })),
   });
   const purchaseEffects = pendingQueries[0]?.data;
@@ -216,7 +242,7 @@ export function useQueueRows(kind, filters, isFirstPage) {
       const row = {
         __return: true,
         ...group,
-        sideLabel: config.separate.label,
+        sideLabel: sideLabelOf(config.separate, group.lines),
         actionLabel: config.action,
       };
       return { ...row, link: config.separate.link(row) };

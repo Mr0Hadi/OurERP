@@ -22,6 +22,7 @@ import GoodsRoundPartySection from "@/shared/components/returns/GoodsRoundPartyS
 import GoodsRoundSummaryCard from "@/shared/components/returns/GoodsRoundSummaryCard";
 import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSkeleton";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
+import { usePermission } from "@/features/auth/hooks/usePermission";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import { trackedLookup, withProductInfo } from "../../shared/productInfo";
 import WarehouseSubmitBar from "../../shared/WarehouseSubmitBar";
@@ -76,8 +77,10 @@ const suggestSource = (line, receivingInfo) => {
 function SupplierReturnShipmentForm({ purchaseReturn }) {
   const navigate = useNavigate();
   const goodsRoundMutation = useExecuteGoodsRoundMutation(purchaseReturn.id);
+  // انباردار به صفحه‌ی مرجوعی‌ها دسترسی ندارد (`PurchaseReturnView`)؛ او به صفِ انبار برمی‌گردد.
+  const { can } = usePermission();
   const backToReturn = () =>
-    navigate(routeWithId(ROUTES.PURCHASES_RETURNS_DETAIL, purchaseReturn.id));
+    navigate(can("PurchaseReturnView") ? routeWithId(ROUTES.PURCHASES_RETURNS_DETAIL, purchaseReturn.id) : ROUTES.WAREHOUSE_SHIPPING);
 
   const lines = useMemo(
     () =>
@@ -235,6 +238,7 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
 export default function SupplierReturnDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { can } = usePermission();
 
   const {
     data: purchaseReturn,
@@ -257,7 +261,7 @@ export default function SupplierReturnDetailPage() {
         error={error}
         notFoundMessage="مرجوعی مورد نظر یافت نشد."
         onRetry={refetch}
-        onBack={() => navigate(ROUTES.PURCHASES_RETURNS_LIST)}
+        onBack={() => navigate(can("PurchaseReturnView") ? ROUTES.PURCHASES_RETURNS_LIST : ROUTES.WAREHOUSE_SHIPPING)}
       />
     );
   }
