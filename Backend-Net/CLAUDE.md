@@ -2039,14 +2039,15 @@ ordinary TRANSFER row through the existing payment endpoints. Answers to 11.x/12
 - `AuditEvent.UserId` is a plain id with no FK: recording a change must never be what makes it fail. Names are joined on read.
 - **Read side** (`AuditLogView = 270`, group `Audit = 15`, `WMS/Controllers/AuditController`): `GetAuditEventList` (paged,
   filters user/action/date/entity/document, `AuditEventListSortEnum`, in the sorting smoke test), `GetAuditEventDetail`,
-  `GetDocumentHistory` (not paged). Fields come back as `{ name, oldValue, newValue }` with raw JSON values
-  (`Features/Audit/Queries/AuditFields`).
+  `GetDocumentHistory` and `GetEntityHistory` (one row with no document - customer, product, user; both not paged, each
+  event narrowed to that document's/row's changes), and `GetAuditActionList` (the enum with titles, for the filter
+  dropdown). Fields come back as `{ name, oldValue, newValue }` with raw JSON values (`Features/Audit/Queries/AuditFields`).
 - **Migration `20261015152459_audit-log`**, with hand-added `INSTEAD OF UPDATE, DELETE` triggers that THROW on both tables
   (retention pruning means disabling them on purpose). Applied cleanly from scratch to a throwaway database (dropped) and the
   triggers verified. **Not applied** to any real database.
 - **Fixed on the way:** PR #56 gave `UpdateProductCommandHandler` an `IProductCategoryRepository` parameter and left 6 test
   call sites (and the token on its `GetByIdAsync`) behind, so the test project did not compile on `main`.
-- Tests: `Integration/AuditLogTests` (10), `Unit/AuditActionCoverageTests` (4), one functional test through the real host.
+- Tests: `Integration/AuditLogTests` (12), `Unit/AuditActionCoverageTests` (4), one functional test through the real host.
   `TestDatabase.NewScope` now wires an `AuditScope` into the context (`TestScope.AuditScope`), and the hand-built MediatR
   containers in `InPersonSaleTests`/`ShipmentTests` register it. Suite 949/952 - the 3 documented environmental failures.
 

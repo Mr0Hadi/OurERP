@@ -134,6 +134,56 @@ namespace WMS.Tests.Integration
         }
 
         [Fact]
+        public async Task EntityHistory_IsTheRowsTimeline_NewestFirst_WithOnlyItsChanges()
+        {
+            using var db = new TestDatabase();
+            var userId = SeedUser(db);
+            using var scope = db.NewScope(FakeUserContext.WithUserId(userId));
+            var mediator = Mediator(scope, userId);
+            await mediator.Send(NewCustomer());
+            await mediator.Send(NewCustomer());
+
+            int customerId;
+            using (var context = db.NewContext())
+                customerId = (await context.Customers.OrderBy(x => x.Id).FirstAsync()).Id;
+
+            await mediator.Send(new UpdateCustomerCommand
+            {
+                Id = customerId,
+                FirstName = "علی",
+                LastName = "محمدی",
+                PhoneNumber = "09121234567",
+                Address = "تهران",
+                PostalCode = "1234567890",
+                BalanceType = BalanceTypeEnum.Debtor,
+            });
+
+            using var verify = db.NewContext();
+            var res = await new GetEntityHistoryQueryHandler(verify)
+                .Handle(new GetEntityHistoryQuery { EntityType = " Customer ", EntityKey = customerId.ToString() }, CancellationToken.None);
+            var history = Assert.IsType<List<AuditEventDto>>(res.Data);
+
+            // The second customer's creation is not this row's history.
+            Assert.Equal(new[] { AuditActionEnum.UpdateCustomer, AuditActionEnum.CreateCustomer }, history.Select(e => e.Action!.Value));
+            var lastName = Assert.Single(history[0].Changes).Fields.Single(f => f.Name == "LastName");
+            Assert.Equal("رضایی", lastName.OldValue!.Value.GetString());
+            Assert.Equal("محمدی", lastName.NewValue!.Value.GetString());
+            Assert.All(history, e => Assert.All(e.Changes, c => Assert.Equal(customerId.ToString(), c.EntityKey)));
+        }
+
+        [Fact]
+        public async Task ActionList_IsTheWholeEnum_WithTitles()
+        {
+            var res = await new GetAuditActionListQueryHandler().Handle(new GetAuditActionListQuery(), CancellationToken.None);
+            var actions = Assert.IsType<List<AuditActionDto>>(res.Data);
+
+            Assert.Equal(Enum.GetValues<AuditActionEnum>().Length, actions.Count);
+            var create = Assert.Single(actions, a => a.Value == (int)AuditActionEnum.CreateCustomer);
+            Assert.Equal(nameof(AuditActionEnum.CreateCustomer), create.Name);
+            Assert.Equal("ایجاد مشتری", create.Title);
+        }
+
+        [Fact]
         public async Task CreateProduct_SavingTwice_IsStillOneEvent()
         {
             using var db = new TestDatabase();

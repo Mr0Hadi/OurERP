@@ -39,5 +39,19 @@ namespace WMS.Controllers
         {
             return await _mediator.Send(request);
         }
+
+        [HasPermission(PermissionEnum.AuditLogView)]
+        [HttpGet("GetEntityHistory")]
+        public async Task<ActionResult<ResponseDto>> GetEntityHistory([FromQuery] GetEntityHistoryQuery request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.AuditLogView)]
+        [HttpGet("GetAuditActionList")]
+        public async Task<ActionResult<ResponseDto>> GetAuditActionList([FromQuery] GetAuditActionListQuery request)
+        {
+            return await _mediator.Send(request);
+        }
     }
 }

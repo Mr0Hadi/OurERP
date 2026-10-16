@@ -49,6 +49,14 @@ namespace Application.Features.Audit.Dtos
         public List<AuditFieldChangeDto> Fields { get; set; } = new();
     }
 
+    public class AuditActionDto
+    {
+        /// <summary>The AuditActionEnum number, as sent in GetAuditEventList's <c>action</c> filter.</summary>
+        public int Value { get; set; }
+        public string Name { get; set; } = null!;
+        public string Title { get; set; } = null!;
+    }
+
     public class AuditFieldChangeDto
     {
         /// <summary>Entity property name, e.g. "Status".</summary>
