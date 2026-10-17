@@ -98,6 +98,22 @@ export default function PurchaseIssuedView({ purchase }) {
               readOnly
             />
             <PurchaseItemsCard purchase={purchase} />
+            <RelatedReturnsCard
+              returns={relatedReturns}
+              side={sideConfig(RETURN_SIDES.PURCHASE)}
+              detailRoute={ROUTES.PURCHASES_RETURNS_DETAIL}
+              title="مرجوعی‌های این خرید"
+            />
+            <OrderLogisticsSection
+              title="تحویل و حمل"
+              drivers={purchase.drivers}
+              notes={purchase.receivingNotes}
+              notesLabel="یادداشت‌های دریافت"
+            />
+          </>
+        }
+        payments={
+          <>
             <PaymentsCard
               draft={draft.payments}
               side={PURCHASE_PAYMENT_SIDE}
@@ -110,18 +126,6 @@ export default function PurchaseIssuedView({ purchase }) {
                   ? "«قابل پرداخت» سهمِ مقدارهای بسته‌شده با کسری را از جمع فاکتور کم کرده است."
                   : undefined
               }
-            />
-            <RelatedReturnsCard
-              returns={relatedReturns}
-              side={sideConfig(RETURN_SIDES.PURCHASE)}
-              detailRoute={ROUTES.PURCHASES_RETURNS_DETAIL}
-              title="مرجوعی‌های این خرید"
-            />
-            <OrderLogisticsSection
-              title="تحویل و حمل"
-              drivers={purchase.drivers}
-              notes={purchase.receivingNotes}
-              notesLabel="یادداشت‌های دریافت"
             />
           </>
         }

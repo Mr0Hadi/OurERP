@@ -15,9 +15,12 @@ import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
  * کناری (اطلاعاتِ فاکتور، سند، جمع و ثبت). فقط یک اسکرول — خودِ صفحه. در عرضِ
  * کم همه زیرِ هم‌اند و کارتِ جمع و ثبت آخرِ صفحه است.
  *
+ * `payments` (کارتِ پرداخت‌ها) در دسکتاپ آخرِ ستونِ اصلی است؛ در موبایل بین «سند
+ * فاکتور/پیش‌فاکتور» و کارتِ جمع و ثبت (آخرین فرزندِ `aside`) می‌نشیند.
+ *
  * کلِ صفحه یک `<form>` است؛ دکمه‌ی اصلیِ `OrderSummaryCard` آن را می‌فرستد.
  */
-export default function DocumentFormLayout({ main, aside, onSubmit }) {
+export default function DocumentFormLayout({ main, payments, aside, onSubmit }) {
   // submitِ فرمِ یک دیالوگ از portal در درختِ React تا اینجا بالا می‌آید؛
   // فقط submitِ خودِ همین فرم سند را ذخیره می‌کند.
   const handleSubmit = (event) => {
@@ -32,10 +35,14 @@ export default function DocumentFormLayout({ main, aside, onSubmit }) {
       className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 space-y-4 animate-in fade-in duration-300"
     >
       {/* دو ستون فقط از xl: کمتر از آن ستونِ اصلی برای جدولِ اقلام جا ندارد. */}
+      {/* زیر xl دو ستون `contents` اند تا فرزندان با `order` در یک جریان مرتب شوند. */}
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_23rem] gap-4 items-start">
-        <div className="space-y-4 min-w-0">{main}</div>
+        <div className="contents min-w-0 xl:flex xl:flex-col xl:gap-4">
+          {main}
+          {payments && <div className="order-1 min-w-0 xl:order-none">{payments}</div>}
+        </div>
         {/* بی اسکرولِ جدا: فقط خودِ صفحه اسکرول می‌خورد. کارتِ جمع و ثبت آخرِ ستون است. */}
-        <aside className="flex min-w-0 flex-col gap-4">
+        <aside className="contents xl:flex xl:min-w-0 xl:flex-col xl:gap-4 max-xl:[&>:last-child]:order-2">
           {aside}
         </aside>
       </div>

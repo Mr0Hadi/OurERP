@@ -230,6 +230,10 @@ export default function PurchaseForm({ purchase }) {
                 onAddNewProduct={() => openSubPage(ROUTES.WAREHOUSE_PRODUCTS_NEW)}
               />
             </FormSection>
+          </>
+        }
+        payments={
+          <>
             {(isInvoice || hasPrepayments) && (
               <PaymentsCard
                 draft={payments}

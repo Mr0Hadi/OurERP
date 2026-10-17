@@ -111,6 +111,22 @@ export default function SaleIssuedView({ sale }) {
               ]}
             />
             {plan && allows("SaleInstallmentView") && <InstallmentPlanCard saleId={sale.id} />}
+            <RelatedReturnsCard
+              returns={relatedReturns}
+              side={sideConfig(RETURN_SIDES.SALES)}
+              detailRoute={ROUTES.SALES_RETURNS_DETAIL}
+              title="مرجوعی‌های این فروش"
+            />
+            <OrderLogisticsSection
+              title="ارسال و حمل"
+              drivers={sale.drivers}
+              notes={sale.shippingNotes}
+              notesLabel="یادداشت‌های ارسال"
+            />
+          </>
+        }
+        payments={
+          <>
             <PaymentsCard
               title="دریافت‌ها"
               draft={draft.payments}
@@ -136,18 +152,6 @@ export default function SaleIssuedView({ sale }) {
                     ? "فروش لغو شده است؛ پولِ مشتری را با «پول برگشتی» برگردانید."
                     : undefined
               }
-            />
-            <RelatedReturnsCard
-              returns={relatedReturns}
-              side={sideConfig(RETURN_SIDES.SALES)}
-              detailRoute={ROUTES.SALES_RETURNS_DETAIL}
-              title="مرجوعی‌های این فروش"
-            />
-            <OrderLogisticsSection
-              title="ارسال و حمل"
-              drivers={sale.drivers}
-              notes={sale.shippingNotes}
-              notesLabel="یادداشت‌های ارسال"
             />
           </>
         }

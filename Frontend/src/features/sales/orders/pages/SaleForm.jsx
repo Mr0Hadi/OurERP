@@ -382,6 +382,10 @@ export default function SaleForm({ sale }) {
                 onAddNewProduct={() => openSubPage(ROUTES.WAREHOUSE_PRODUCTS_NEW)}
               />
             </FormSection>
+          </>
+        }
+        payments={
+          <>
             {isInvoice && isInstallment && (
               <FormSection name="payment">
                 {existingPlan ? (
